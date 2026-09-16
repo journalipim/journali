@@ -237,9 +237,9 @@ table.grid tr.row:focus { outline: none; }
 
 /* ---- Zellen mit Inline-Bearbeitung --------------------------------------- */
 
-td.cell { padding: 2px; min-width: 160px; }
-/* Wertgitter: Spalten nicht vom Inhalt bestimmen lassen — leere Spalten blieben sonst ein paar Pixel schmal. */
-table.values { width: auto; min-width: 100%; }
+/* Wertspalten: 160 bis 320 px — leere Spalten schrumpfen nicht, lange Texte blähen nicht (Rest im Tooltip/Editor). */
+td.cell { padding: 2px; min-width: 160px; max-width: 320px; }
+table.values, table.rows { width: auto; }
 table.values th:first-child, table.values td.attr { min-width: 180px; }
 /* Bearbeitbar: eigener Hintergrund, damit man sieht, wo Eingabe geht. */
 .cell-box {

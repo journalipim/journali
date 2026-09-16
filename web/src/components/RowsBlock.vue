@@ -53,7 +53,7 @@ function move(i, d) {
 </template>
 
 <style scoped>
-table.rows { width: auto; min-width: 50%; }
+table.rows { width: auto; }
 .ops { white-space: nowrap; }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
 .x:hover:not(:disabled) { color: var(--accent); }
