@@ -215,7 +215,7 @@ public static class Commands
         {
             case Roles.Group:
                 var label = new Labels(src.Label);
-                if (suffix) foreach (var k in label.Keys.ToList()) label[k] = label[k] + " (Kopie)";
+                if (suffix) foreach (var k in label.Keys.ToList()) label[k] = "(Kopie) " + label[k];   // vorne, damit man es im Baum sieht
                 id = CreateGroup(c, parent, label).Entry?.Stream; break;
             case Roles.Product:
                 id = CreateProduct(c, parent, src.Family, src.Axes).Entry?.Stream; break;
@@ -239,7 +239,7 @@ public static class Commands
             }
         }
         foreach (var (axis, v) in src.Values.Where(kv => kv.Key.Row is null && kv.Key.Attribute != Model.SkuAttribute))
-            if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, suffix && axis.Attribute == "name" ? v + " (Kopie)" : v, null).Entry is not null) count++;
+            if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, suffix && axis.Attribute == "name" ? "(Kopie) " + v : v, null).Entry is not null) count++;
         foreach (var (axis, l) in src.Lists.Where(kv => kv.Key.Row is null))
             if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, null, l).Entry is not null) count++;
         foreach (var cat in src.Categories)
