@@ -1,0 +1,10 @@
+bin/
+obj/
+*.user
+__pycache__/
+.vs/
+# .claude/ bleibt persoenlich (settings.local.json, Sitzungen) — nur die
+# Agenten-Definitionen gehoeren ins Repo, damit sie auf beiden Rechnern
+# gleich sind.
+.claude/*
+!.claude/agents/
