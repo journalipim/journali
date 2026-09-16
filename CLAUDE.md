@@ -25,7 +25,8 @@ billig, geänderte teuer, gelöschte unmöglich.
 
 - **Keine Pausen bei Mehrfachaufträgen.** Alles durcharbeiten, erst am Ende
   berichten.
-- **Das Programm nie selbst starten.**
+- **Das Programm nie selbst starten.** Läuft es (Taloan hat es gestartet),
+  dürfen die Endpunkte mit curl geprüft werden.
 - **Änderungen mit Python-Patchskripten** über das Write-Werkzeug, nicht mit
   Bash-Heredocs. Anker eindeutig (`assert count == 1`), BOM und CRLF je
   Datei erhalten.
@@ -40,6 +41,11 @@ billig, geänderte teuer, gelöschte unmöglich.
   Einträge, Abbilder
 - `Journali.Sandbox` — Konsole zum Nachrechnen
 - `Journali.Server` — ASP.NET Core Minimal API, net8.0, einziges Paket
-  Npgsql: `PostgresJournal` hinter `IJournal`, vier Endpunkte; Betrieb,
-  Endpunkte und Tabelle in `docs/betrieb.md`
+  Npgsql: `PostgresJournal` hinter `IJournal`, `Catalog` als einziger
+  Schreibpfad (Eintrag + Abbild unter einer Sperre), Befehle und Lesen
+  unter `/api`, Oberfläche aus `wwwroot`; `docs/betrieb.md`, `docs/eintraege.md`
+- `web` — Vue 3 + Vite, Fat-Client-Gefühl: keine Seitenwechsel, Inline-
+  Bearbeitung in der Zelle, Tastatur durch Listen, Journal lebendig daneben.
+  Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
+  Tooltip. Positiv grün, negativ rot.
 - `docs/architektur.md` — das Prinzip, die Schichten, die Achsen, was offen ist

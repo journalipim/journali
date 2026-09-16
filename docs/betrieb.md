@@ -38,22 +38,30 @@ gleichen Namens übersteuert sie.
 
 ## Endpunkte
 
+Alles unter `/api`; alles andere liefert die Oberfläche (`index.html`).
+Befehle (schreiben) brauchen den Kopf `X-Actor` und stehen in
+`docs/eintraege.md`. Lesen:
+
 | Aufruf | Antwort |
 |---|---|
-| `GET /health` | `{"head": N}` — Nummer des letzten Eintrags, 0 bei leerem Journal |
-| `POST /journal` mit `{"actor","stream","type","payload"}` | 201 + der Eintrag mit Nummer und Zeit; `payload` ist beliebiges JSON und kommt in jeder Antwort als eingebettetes JSON zurück, nicht als String |
-| `GET /journal?after=N&limit=M` | Einträge mit Nummer > N, höchstens M (Vorgabe 1000, Obergrenze 10 000) |
-| `GET /journal/{number}` | ein Eintrag oder 404 |
-| `GET /streams/{stream}` | alle Einträge eines Stroms in Reihenfolge |
+| `GET /api/health` | `{"head": N, "products": P}` — letzter Eintrag (0 bei leerem Journal), Zahl der Produkte |
+| `GET /api/model` | Sprachen, Kanäle, Attribute mit Achsen |
+| `GET /api/products?q=` | Liste: SKU, Name (de), Zähler, letzte Änderung; `q` filtert SKU und Name |
+| `GET /api/products/{sku}` | Werte je Achse, Kategorien, Freigaben — oder 404, solange kein Eintrag da ist |
+| `GET /api/journal?after=N&limit=M` | Einträge mit Nummer > N, höchstens M (Vorgabe 1000, Obergrenze 10 000) |
+| `GET /api/journal/{number}` | ein Eintrag oder 404 |
+| `GET /api/streams/{stream}` | alle Einträge eines Stroms in Reihenfolge |
+
+`payload` kommt in jeder Antwort als eingebettetes JSON, nicht als String.
 
 Beispiel:
 
 ```bash
-curl -s -X POST localhost:5000/journal -H "Content-Type: application/json" -d "{\"actor\":\"anna\",\"stream\":\"4711\",\"type\":\"AttributeSet\",\"payload\":{\"attribute\":\"name\",\"locale\":\"de\",\"channel\":null,\"value\":\"Stiefel\"}}"
+curl -s -X POST localhost:5000/api/products/4711/attributes -H "X-Actor: anna" -H "Content-Type: application/json" -d "{\"attribute\":\"name\",\"locale\":\"de\",\"value\":\"Stiefel\"}"
 ```
 
 ```bash
-curl -s "localhost:5000/journal?after=0"
+curl -s "localhost:5000/api/journal?after=0"
 ```
 
 ## Auf der rossibox (Unraid)
@@ -61,15 +69,17 @@ curl -s "localhost:5000/journal?after=0"
 Die Datenbank ist das Template `postgresql18` aus den Community Apps
 (Host-Port 7432, Nutzer `postgres`, Daten unter `/mnt/cache/appdata/postgresql18`).
 
-Für den Server gibt es zwei Wege:
+Der Server bringt die Oberfläche mit (Dockerfile baut sie mit Node in der
+ersten Stufe). Für den Server gibt es zwei Wege:
 
 1. **Image** — `Dockerfile` im Repo. Bauen, wo Docker ist (Compose Manager
    auf der rossibox mit Checkout aus Gitea, oder ein PC mit Docker), dann
    Container mit Port `8080` und den Umgebungsvariablen `JOURNALI_DB`
    (`Host=localhost;Port=7432;Database=journali;Username=postgres`)
    und `JOURNALI_DB_PASSWORD`.
-2. **Publish-Ordner** — ohne Image: vom PC
-   `dotnet publish Journali.Server -c Release -o <Freigabe>\journali`,
+2. **Publish-Ordner** — ohne Image: vom PC erst `tools\server build`, dann
+   `dotnet publish Journali.Server -c Release -o <Freigabe>\journali`
+   (nimmt `wwwroot` mit),
    Container aus `mcr.microsoft.com/dotnet/aspnet:8.0` mit dem Ordner
    als `/app`, Befehl `dotnet Journali.Server.dll`, Port 8080, dieselben
    Umgebungsvariablen. Änderung = neu publishen, Container neu starten.

@@ -1,5 +1,7 @@
 **/bin/
 **/obj/
+**/node_modules/
+Journali.Server/wwwroot/
 .git/
 .claude/
 .vs/

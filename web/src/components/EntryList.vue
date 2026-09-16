@@ -1,0 +1,37 @@
+<script setup>
+// Einträge als dichte Zeilen: Nummer, Zeit, Urheber, [Strom], Typ, Inhalt.
+import { when, describe } from '../api.js'
+defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
+</script>
+
+<template>
+  <table class="grid">
+    <thead>
+      <tr>
+        <th class="num">#</th>
+        <th>Zeit</th>
+        <th>👤</th>
+        <th v-if="showStream">▦</th>
+        <th>Typ</th>
+        <th>Inhalt</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="e in entries" :key="e.number" class="row">
+        <td class="num">{{ e.number }}</td>
+        <td class="mono muted">{{ when(e.at) }}</td>
+        <td>{{ e.actor }}</td>
+        <td v-if="showStream"><router-link :to="`/products/${e.stream}`" class="mono link">{{ e.stream }}</router-link></td>
+        <td class="muted">{{ e.type }}</td>
+        <td :class="{ pos: e.type.endsWith('Granted') || e.type.endsWith('Assigned'), neg: e.type.endsWith('Revoked') || e.type.endsWith('Removed') }">
+          {{ describe(e) }}
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div v-if="!entries.length" class="empty">Keine Einträge</div>
+</template>
+
+<style scoped>
+.link:hover { color: var(--accent); text-decoration: underline; }
+</style>

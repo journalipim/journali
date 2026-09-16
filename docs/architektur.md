@@ -125,8 +125,10 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
 
 - ~~Datenbank für das dauerhafte Journal~~ PostgreSQL 18, Tabelle `journal`
   mit JSONB — entschieden 16.09.2026, `docs/betrieb.md`
-- ~~Server-API~~ ASP.NET Core Minimal API, vier Endpunkte — Fat Client
-  oder Browser bleibt offen
-- Vokabular der Eintragstypen
+- ~~Server-API~~ ASP.NET Core Minimal API unter `/api`, Befehle je Eintragstyp
+- ~~Fat Client oder Browser~~ Browser (Vue 3, `web/`), soll sich wie ein
+  Fat Client anfühlen — entschieden 16.09.2026; ein WPF-Client könnte später
+  auf dieselbe API
+- ~~Vokabular der Eintragstypen~~ erste fünf in `docs/eintraege.md`; wächst
 - Vollständigkeitsregeln je Familie × Kanal × Sprache
 - Import/Export — in der Praxis die Hälfte des Systems
