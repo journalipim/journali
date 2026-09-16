@@ -16,6 +16,7 @@ wenn das steht, wird gebaut.
 - **Freigabe setzt Vollständigkeit voraus:** die Pflichtfelder der Familie
   für diesen Kanal und diese Sprache müssen ausgefüllt sein, sonst lehnt
   der Server `ReleaseGranted` ab. Kein Eintrag, keine Warnung — eine Sperre.
+- **Vermehrbare Attribute** (13) gehören von Anfang an ins Modell.
 
 ## Grundsatz
 
@@ -246,6 +247,43 @@ aus Einfügen" als eine Zeile, aufklappbar. Der Server bekommt dafür einen
 Stapelbefehl (`POST /api/batch` mit einer Liste von Befehlen, ein Aufruf,
 eine Sperre) — und genau der ist auch der Importweg für Plugins.
 
+### 13. Vermehrbare Attribute — entschieden
+
+Taloans Name für das, was OpenDXP objectbricks / fieldcollections / table
+nennt: ein Satz zusammengehöriger Felder, der **n-mal** an einem Knoten
+vorkommt, mit Reihenfolge und Identität je Zeile.
+
+| Fall | Zeile aus |
+|---|---|
+| Verpackungseinheiten | Menge, EAN, Gewicht, Masse — Einzelstück, 6er, Palette |
+| Zertifikate | Name, Nummer, gültig bis, Dokument |
+| Technische Tabelle | Merkmal, Wert, Einheit |
+| Lieferanten | Lieferant, Artikelnummer dort, Einkaufspreis |
+| Stückliste | Teil (Verweis), Anzahl |
+
+Im Modell ist ein vermehrbares Attribut eine **Definition mit Spalten**
+(`attribute:packaging` mit `type: rows`, `columns: [quantity, ean,
+weight, …]` — jede Spalte selbst ein Attribut mit Typ, Einheit, Achsen)
+und in der Familie wie jedes andere Attribut eingehängt, mit Pflicht
+(„mindestens eine Zeile") je Kanal.
+
+Am Knoten ist jede **Zeile ein eigener kleiner Strom** unter dem Produkt,
+so wie Medien: `RowAdded(attribute, rowId)`, Werte per `AttributeSet` mit
+`row: rowId` (Feld im bestehenden Typ, kein neuer), `RowRemoved(rowId)`,
+`RowOrdered(attribute, [rowIds])`. Damit bleibt jede Zelle ein Eintrag
+(„wer hat Zeile 3 geändert", Rückgängig je Zelle), und Zeilen erben nicht —
+eine Verpackungseinheit gehört zu genau einer Variante. *Nicht* gewählt:
+die ganze Tabelle als JSON in einem Wert; das ersetzt bei jeder Änderung
+alles und verliert die Historie je Zeile.
+
+In der Oberfläche ist es das bekannte Gitter, nur mit Zeilen statt Achsen
+als Vertikale: + Zeile, Entf Zeile, Zeilen ziehen, dieselbe
+Zellenbearbeitung. In der Massenpflege (12) erscheint es als
+aufklappbare Unterzeilen je Produkt.
+
+Ein einfaches Attribut mit `multiple: true` (Keywords) bleibt der
+Sonderfall „eine Spalte, keine Identität" — die Liste ist ein Wert.
+
 ## Messlatte: OpenDXP
 
 Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."
@@ -265,7 +303,7 @@ und wo es hier landet:
 | many-to-one / many-to-many / advanced relations, reverse relation | Relationen (7) — typisiert, mit Texten; Gegenrichtung als Ableitung |
 | localizedfields | Achse `locale` (1) — je Attribut, nicht je Block |
 | classificationstore | Familie (3) + Gruppen — Attribute nach Produktart, ohne Klassenwechsel |
-| objectbricks, fieldcollections, block, table, structuredtable | **fehlt.** Wiederholbare Gruppen (drei Adressen, n Tabellenzeilen). Vorschlag: `multiple` auf Gruppenebene, wenn ein Fall kommt |
+| objectbricks, fieldcollections, block, table, structuredtable | vermehrbare Attribute (13) — Zeilen mit Identität und Historie je Zelle |
 | calculatedvalue | Platzhaltertexte (10) — für Zahlen später eine Formel |
 | geopoint, geobounds, … | **fehlt**, bis ein Fall kommt |
 | user, password, CRM-Felder | nicht Gegenstand (kein CDP) |
@@ -330,6 +368,7 @@ Was das JSON nicht hat und ein PIM braucht: Familie (welche Attribute
 | Produkt | `StatusSet` | `status` |
 | Produkt | `AttributeSet` | wie heute, plus `level` fällt weg (der Strom ist die Ebene) |
 | Produkt | `MediaAttached` / `MediaDetached` / `MediaTextSet` / `MediaOrdered` | siehe 6 |
+| Knoten | `RowAdded` / `RowRemoved` / `RowOrdered` | `attribute`, `rowId`; Werte per `AttributeSet` mit `row` — siehe 13 |
 | Produkt | `RelationAdded` / `RelationRemoved` | siehe 7 |
 | `dictionary:<key>` | `TermDefined` / `TermRetired` | `term`, `locale`, `text` |
 | `template:…` | `TemplateDefined` / `TemplateRetired` | `family`, `attribute`, `locale?`, `channel?`, `template` |
@@ -358,7 +397,8 @@ Definitionen ins Journal.
 
 1. Attribute, Wertelisten, Familien im Journal + Modell-Ansicht
 2. `ProductCreated` mit Familie, SKU-Eindeutigkeit, Status
-3. Typisierte Zellen und Gruppen in der Produktansicht, Vollständigkeit
+3. Typisierte Zellen und Gruppen in der Produktansicht, Vollständigkeit,
+   vermehrbare Attribute (Verpackungseinheiten als erster Fall)
 4. Kategoriebaum
 5. Variantenebenen
 6. Wörterbücher und Platzhaltertexte (brauchen 1–3)
@@ -385,6 +425,4 @@ Definitionen ins Journal.
   Eintrag „eingefroren"?
 - Plugins: darf ein Import Handwerte überschreiben — je Attribut regelbar
   (Vorschlag) oder nie?
-- Wiederholbare Gruppen (OpenDXP objectbricks/fieldcollections): jetzt
-  vorsehen oder warten, bis ein Fall kommt (Vorschlag)?
 - DAM: eigener Baustein oder Plugin?
