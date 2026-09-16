@@ -430,9 +430,15 @@ Definitionen ins Journal.
 4. Kategoriebaum
 5. Variantenebenen
 6. Wörterbücher und Platzhaltertexte (brauchen 1–3)
-7. Massengitter mit Stapelbefehl, Einfügen aus Excel, Rückgängig je Aktion
+7. Massengitter mit ~~Stapelbefehl~~ (`POST /api/batch`, 16.09.2026), Einfügen aus Excel, Rückgängig je Aktion
 8. Medien, Relationen
-9. Abnehmer, Cursor, Webhook; erstes Plugin: IXP-Import (`plugins/import-tools/ixp/`)
+9. Abnehmer, Cursor, Webhook; ~~erstes Plugin: IXP-Import~~ 16.09.2026: Ansicht
+   ⇩ Import (läuft im Browser gegen die IXP-API, CORS offen): Quellbaum mit
+   Haken je Teilbaum, Ziel, Familie, Sprachen, Eigenschaften → Attribute
+   (vorhandene oder neu als text/html), Vorschau neu/vorhanden über
+   `ExternalLinked{ixp, masterId}`, ein Stapel; zweiter Lauf schreibt nur
+   Geändertes. Offen: Familie aus `class_identifier`, `sort_nr`, Bilder,
+   Fortschritt bei grossen Bäumen, Token-Anmeldung
 10. Anmeldung und Rechte (je Familie/Attribut/Kanal)
 
 ## Offen — Taloans Wort

@@ -47,7 +47,8 @@ Befehle (schreiben) brauchen den Kopf `X-Actor` und stehen in
 | `GET /api/health` | `{"head": N, "nodes": K}` — letzter Eintrag (0 bei leerem Journal), Zahl der Knoten |
 | `GET /api/model` | Sprachen, Kanäle, Attribute, Wertelisten, Familien, Typen — aus dem Journal (`docs/eintraege.md`) |
 | `GET /api/tree` | alle Knoten flach: Id, Rolle, Eltern, Label, Familie, Achsen, Status, SKU, Zähler |
-| `GET /api/nodes/{id}` | ein Knoten: Werte, **Vorfahren mit ihren Werten** (für die Vererbung), Kategorien, Freigaben — oder 404 |
+| `GET /api/nodes/{id}` | ein Knoten: Werte, **Vorfahren mit ihren Werten** (für die Vererbung), Kategorien, Freigaben, externe Kennungen — oder 404 |
+| `GET /api/nodes/external/{system}/{id}` | der Knoten zu einer externen Kennung — oder 404 |
 | `GET /api/journal?after=N&limit=M` | Einträge mit Nummer > N, höchstens M (Vorgabe 1000, Obergrenze 10 000) |
 | `GET /api/journal/{number}` | ein Eintrag oder 404 |
 | `GET /api/streams/{stream}` | alle Einträge eines Stroms in Reihenfolge |
@@ -99,5 +100,6 @@ Volume. `.env.example` nach `.env` kopieren, Passwort eintragen,
 | `at` | `TIMESTAMPTZ` | `now()` der Datenbank |
 | `actor`, `stream`, `type` | `TEXT` | |
 | `payload` | `JSONB` | Postgres weist ungültiges JSON ab; Leerraum und Reihenfolge werden normalisiert |
+| `batch` | `TEXT`, null | Stapelkennung; kommt per `ALTER TABLE … ADD COLUMN IF NOT EXISTS` in bestehende Tabellen |
 
 Index `journal_stream (stream, number)` für `ReadStream`.

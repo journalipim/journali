@@ -14,7 +14,8 @@ const nav = [
   { to: '/tree', icon: '▣', label: 'Baum', key: '1' },
   { to: '/journal', icon: '≡', label: 'Journal', key: '2' },
   { to: '/model', icon: '⊞', label: 'Modell', key: '3' },
-  { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '4' },
+  { to: '/import', icon: '⇩', label: 'Import', key: '4' },
+  { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '5' },
 ]
 </script>
 

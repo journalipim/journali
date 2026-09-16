@@ -6,7 +6,7 @@ const emit = defineEmits(['save'])
 
 <template>
   <td class="cell">
-    <div v-if="disabled" class="cell-box disabled" tabindex="-1"></div>
+    <div v-if="disabled" class="cell-box disabled"></div>
     <select v-else class="cell-select" :class="{ inherited: value == null && inherited != null }"
       :value="value ?? inherited ?? ''" @change="emit('save', $event.target.value)">
       <option value="">{{ inherited != null ? '' : '—' }}</option>
@@ -16,7 +16,7 @@ const emit = defineEmits(['save'])
 </template>
 
 <style scoped>
-.cell-select { width: 100%; height: 26px; border: 1px solid transparent; background: transparent; padding: 0 4px; font: inherit; }
+.cell-select { width: 100%; height: 24px; border: 1px solid var(--cell-line); border-radius: 3px; background: var(--cell); color: var(--text); padding: 0 4px; font: inherit; }
 .cell-select:focus { border-color: var(--accent); outline: none; background: var(--pane); }
 .cell-select option { background: var(--pane); color: var(--text); }
 .cell-select.inherited { color: var(--muted); font-style: italic; }

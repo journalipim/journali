@@ -14,7 +14,7 @@ function onKey(e, value, inherited) {
 <template>
   <td class="cell">
     <div class="cell-box toggle-box" :class="{ inherited: !disabled && value == null && inherited != null, disabled, on: shown(value, inherited) === 'true' }"
-      :tabindex="disabled ? -1 : 0" @click="!disabled && emit('save', next(value, inherited))" @keydown="onKey($event, value, inherited)">
+      :tabindex="disabled ? undefined : 0" @click="!disabled && emit('save', next(value, inherited))" @keydown="onKey($event, value, inherited)">
       <template v-if="!disabled">{{ shown(value, inherited) === 'true' ? '✓' : shown(value, inherited) === 'false' && !dot ? '✗' : '·' }}</template>
     </div>
   </td>

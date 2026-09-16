@@ -12,7 +12,7 @@ namespace Journali.Server;
 /// </summary>
 public sealed class PostgresJournal : IJournal
 {
-    private const string Columns = "number, at, actor, stream, type, payload::text";
+    private const string Columns = "number, at, actor, stream, type, payload::text, batch";
 
     private readonly NpgsqlDataSource _db;
 
@@ -53,6 +53,7 @@ public sealed class PostgresJournal : IJournal
                 payload JSONB       NOT NULL
             );
             CREATE INDEX IF NOT EXISTS journal_stream ON journal (stream, number);
+            ALTER TABLE journal ADD COLUMN IF NOT EXISTS batch TEXT;
             """, conn);
         cmd.ExecuteNonQuery();
     }
@@ -67,7 +68,7 @@ public sealed class PostgresJournal : IJournal
         }
     }
 
-    public Entry Append(string actor, string stream, string type, string payload)
+    public Entry Append(string actor, string stream, string type, string payload, string? batch = null)
     {
         using var conn = _db.OpenConnection();
         using var tx = conn.BeginTransaction();
@@ -79,8 +80,8 @@ public sealed class PostgresJournal : IJournal
         // JSONB normalisiert (Reihenfolge, Leerraum); zurück kommt die gespeicherte Form,
         // damit Append und ReadAfter denselben Text liefern.
         using var cmd = new NpgsqlCommand($"""
-            INSERT INTO journal (number, at, actor, stream, type, payload)
-            SELECT COALESCE(MAX(number), 0) + 1, now(), @actor, @stream, @type, @payload
+            INSERT INTO journal (number, at, actor, stream, type, payload, batch)
+            SELECT COALESCE(MAX(number), 0) + 1, now(), @actor, @stream, @type, @payload, @batch
             FROM journal
             RETURNING {Columns}
             """, conn, tx);
@@ -88,6 +89,7 @@ public sealed class PostgresJournal : IJournal
         cmd.Parameters.AddWithValue("stream", stream);
         cmd.Parameters.AddWithValue("type", type);
         cmd.Parameters.Add("payload", NpgsqlDbType.Jsonb).Value = payload;
+        cmd.Parameters.Add("batch", NpgsqlDbType.Text).Value = (object?)batch ?? DBNull.Value;
 
         Entry entry;
         using (var reader = cmd.ExecuteReader())
@@ -123,5 +125,6 @@ public sealed class PostgresJournal : IJournal
         r.GetString(2),
         r.GetString(3),
         r.GetString(4),
-        r.GetString(5));
+        r.GetString(5),
+        r.IsDBNull(6) ? null : r.GetString(6));
 }

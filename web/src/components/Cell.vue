@@ -50,7 +50,7 @@ function onEditKey(e) {
 <template>
   <td class="cell">
     <div v-if="!editing" ref="box" class="cell-box" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
-      :tabindex="disabled ? -1 : 0" @dblclick="open()" @keydown="onKey" :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : '')">
+      :tabindex="disabled ? undefined : 0" @dblclick="open()" @keydown="onKey" :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : '')">
       <template v-if="disabled"></template>
       <template v-else-if="value != null">{{ value }}</template>
       <template v-else-if="inherited != null">{{ inherited }}</template>

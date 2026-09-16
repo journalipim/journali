@@ -19,6 +19,7 @@ public sealed class Node
     public string[] Axes { get; set; } = [];                   // Produkt: wonach es variiert
     public Dictionary<string, string> AxisValues { get; } = new(); // Variante
     public string Status { get; set; } = Statuses.Draft;
+    public Dictionary<string, string> External { get; } = new();   // Quellsystem → Kennung dort
     public Dictionary<Axis, string> Values { get; } = new();
     public Dictionary<Axis, string[]> Lists { get; } = new();
     public HashSet<string> Categories { get; } = new();
@@ -48,6 +49,7 @@ public sealed class Tree : IProjection
 {
     private readonly Dictionary<string, Node> _nodes = new();
     private readonly Dictionary<string, HashSet<string>> _children = new();
+    private readonly Dictionary<(string System, string Id), string> _external = new();
 
     public long LastApplied { get; private set; }
 
@@ -73,6 +75,10 @@ public sealed class Tree : IProjection
             if (a.Own(attribute, locale, channel) is { } v) return (v, a);
         return (null, null);
     }
+
+    /// <summary>Knoten zu einer externen Kennung, falls verknüpft.</summary>
+    public Node? ByExternal(string system, string id) =>
+        _external.TryGetValue((system, id), out var nodeId) && _nodes.TryGetValue(nodeId, out var n) ? n : null;
 
     /// <summary>Alle Varianten mit dieser SKU — zur Eindeutigkeitsprüfung.</summary>
     public IEnumerable<Node> BySku(string sku) =>
@@ -147,7 +153,18 @@ public sealed class Tree : IProjection
                 break;
             case Types.NodeRetired:
                 Unlink(n);
+                foreach (var (sys, ext) in n.External) _external.Remove((sys, ext));
                 _nodes.Remove(n.Id);
+                break;
+            case Types.ExternalLinked:
+                var el = Types.Deserialize<ExternalLinked>(entry.Payload);
+                if (n.External.TryGetValue(el.System, out var old)) _external.Remove((el.System, old));
+                n.External[el.System] = el.Id;
+                _external[(el.System, el.Id)] = n.Id;
+                break;
+            case Types.ExternalUnlinked:
+                var eu = Types.Deserialize<ExternalUnlinked>(entry.Payload);
+                if (n.External.Remove(eu.System, out var gone)) _external.Remove((eu.System, gone));
                 break;
             case Types.StatusSet:
                 n.Status = Types.Deserialize<StatusSet>(entry.Payload).Status;

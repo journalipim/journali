@@ -7,6 +7,10 @@ Abbilder: `Projections/Tree.cs` (Knoten), `Projections/ModelCatalog.cs` (Modell)
 Nutzdaten in camelCase, Null-Felder fehlen. Ein fehlendes `locale`/`channel`
 heisst „gilt für alle".
 
+Jeder Eintrag kann eine **Stapelkennung** `batch` tragen (Spalte, kein Feld
+im Payload): alle Einträge einer Aktion — Import, Einfügen aus Excel — haben
+dieselbe. `POST /api/batch` vergibt sie (`b-…`).
+
 ## Baum — ein Strom je Knoten, interne Id
 
 Produktgruppe → … → Produkt → Variante (docs/pflegestruktur.md, 5 und 8).
@@ -23,6 +27,8 @@ Eintrag übergeht das Abbild.
 | `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, sonst unter Gruppe; nie unter sich selbst) |
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles |
 | `StatusSet` | `status` (draft, active, discontinued) | Produkt und Variante; Gruppe hat keinen |
+| `ExternalLinked` | `system`, `id` | externe Kennung je Quellsystem (Import: Update statt Neuanlage); je System nur ein Knoten |
+| `ExternalUnlinked` | `system` | Kennung weg |
 
 Vererbung: `Tree.Resolve` sucht am Knoten (genaue Achse, ohne Kanal, ohne
 Sprache), dann bei den Eltern bis zur Wurzel — und sagt, woher der Wert kam.
@@ -94,6 +100,9 @@ steht im Kopf `X-Actor`.
 | `POST /api/nodes/{id}/releases` `{channel, locale?}` | `ReleaseGranted` — nur Variante |
 | `DELETE /api/nodes/{id}/releases?channel=&locale=` | `ReleaseRevoked` |
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
+| `PUT /api/nodes/{id}/external/{system}` `{id}` | `ExternalLinked` |
+| `DELETE /api/nodes/{id}/external/{system}` | `ExternalUnlinked` |
+| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create, group.rename, product.create, variant.create, node.move, node.retire, status.set, attribute.set, category.assign/remove, release.grant/revoke, external.link/unlink; `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
 | `PUT /api/model/locales/{code}` `{label}` | `LocaleDefined` |
 | `PUT /api/model/channels/{key}` `{label{}}` | `ChannelDefined` |
 | `PUT /api/model/attributes/{key}` Definition | `AttributeDefined` — prüft Typ, Achsen, Einheit nur bei Zahlen, enum ↔ Werteliste |

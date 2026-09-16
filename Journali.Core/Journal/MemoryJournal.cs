@@ -15,11 +15,11 @@ public sealed class MemoryJournal : IJournal
         get { lock (_gate) return _entries.Count; }
     }
 
-    public Entry Append(string actor, string stream, string type, string payload)
+    public Entry Append(string actor, string stream, string type, string payload, string? batch = null)
     {
         lock (_gate)
         {
-            var entry = new Entry(_entries.Count + 1, DateTimeOffset.UtcNow, actor, stream, type, payload);
+            var entry = new Entry(_entries.Count + 1, DateTimeOffset.UtcNow, actor, stream, type, payload, batch);
             _entries.Add(entry);
             return entry;
         }

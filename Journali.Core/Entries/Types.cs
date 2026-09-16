@@ -19,6 +19,8 @@ public static class Types
     public const string NodeMoved = "NodeMoved";
     public const string NodeRetired = "NodeRetired";
     public const string StatusSet = "StatusSet";
+    public const string ExternalLinked = "ExternalLinked";
+    public const string ExternalUnlinked = "ExternalUnlinked";
 
     // Werte an einem Knoten
     public const string AttributeSet = "AttributeSet";
@@ -91,6 +93,11 @@ public sealed record NodeMoved(string Parent);
 public sealed record NodeRetired();
 
 public sealed record StatusSet(string Status);
+
+/// <summary>Externe Kennung je Quellsystem (Import): beim zweiten Lauf Update statt Neuanlage.</summary>
+public sealed record ExternalLinked(string System, string Id);
+
+public sealed record ExternalUnlinked(string System);
 
 // ---- Werte an einem Knoten ------------------------------------------------
 

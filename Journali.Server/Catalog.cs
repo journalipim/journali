@@ -91,11 +91,16 @@ public sealed class Catalog
         lock (_gate) return read(_model);
     }
 
-    /// <summary>Prüfen und Schreiben in einem Schritt unter der Sperre — für Befehle, die das Modell befragen.</summary>
-    public TResult With<TResult>(Func<ModelCatalog, Tree, Func<string, string, string, object, Entry>, TResult> action)
+    /// <summary>
+    /// Prüfen und Schreiben in einem Schritt unter der Sperre — für Befehle, die
+    /// Modell und Baum befragen. Ein Stapel läuft ganz darin; niemand sieht ihn halb.
+    /// </summary>
+    public TResult With<TResult>(Func<ModelCatalog, Tree, Writer, TResult> action)
     {
         lock (_gate)
-            return action(_model, _tree, (actor, stream, type, payload) =>
-                Apply(_journal.Append(actor, stream, type, Types.Serialize(payload))));
+            return action(_model, _tree, (actor, stream, type, payload, batch) =>
+                Apply(_journal.Append(actor, stream, type, Types.Serialize(payload), batch)));
     }
+
+    public delegate Entry Writer(string actor, string stream, string type, object payload, string? batch);
 }

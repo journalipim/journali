@@ -52,6 +52,8 @@ export function describe(e) {
     case 'NodeMoved': return `→ ${p.parent}`
     case 'NodeRetired': return '− Knoten'
     case 'StatusSet': return `Status ${p.status}`
+    case 'ExternalLinked': return `⇩ ${p.system}: ${p.id}`
+    case 'ExternalUnlinked': return `− ${p.system}`
     case 'ChannelDefined': return `${p.key} = ${p.label?.de ?? ''}`
     case 'CategoryAssigned': return `+ ${p.category}`
     case 'CategoryRemoved': return `− ${p.category}`

@@ -138,7 +138,7 @@ public static partial class ModelApi
     {
         if (Actor(req) is not { } actor) return ActorMissing();
         if (!keyOk(key)) return Bad($"Schlüssel „{key}“: nur a-z, 0-9 und _, beginnt mit Buchstabe.");
-        return c.With((model, _, write) => body(model, (stream, type, payload) => Results.Ok(EntryView.Of(write(actor, stream, type, payload)))));
+        return c.With((model, _, write) => body(model, (stream, type, payload) => Results.Ok(EntryView.Of(write(actor, stream, type, payload, null)))));
     }
 
     public static string? Actor(HttpRequest req) =>

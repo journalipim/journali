@@ -6,8 +6,8 @@ namespace Journali.Core.Journal;
 /// </summary>
 public interface IJournal
 {
-    /// <summary>Hängt einen Eintrag an und vergibt die nächste Nummer.</summary>
-    Entry Append(string actor, string stream, string type, string payload);
+    /// <summary>Hängt einen Eintrag an und vergibt die nächste Nummer. <paramref name="batch"/> verbindet die Einträge einer Aktion.</summary>
+    Entry Append(string actor, string stream, string type, string payload, string? batch = null);
 
     /// <summary>Alle Einträge mit Nummer &gt; <paramref name="afterNumber"/>, in Reihenfolge.</summary>
     IEnumerable<Entry> ReadAfter(long afterNumber);

@@ -14,6 +14,7 @@ defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
         <th v-if="showStream">▦</th>
         <th>Typ</th>
         <th>Inhalt</th>
+        <th title="Stapel">⧉</th>
       </tr>
     </thead>
     <tbody>
@@ -26,6 +27,7 @@ defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
         <td :class="{ pos: e.type.endsWith('Granted') || e.type.endsWith('Assigned') || e.type.endsWith('Created'), neg: e.type.endsWith('Revoked') || e.type.endsWith('Removed') || e.type.endsWith('Retired') }">
           {{ describe(e) }}
         </td>
+        <td class="mono muted" :title="e.batch ? 'Stapel ' + e.batch : ''">{{ e.batch ? e.batch.slice(2, 6) : '' }}</td>
       </tr>
     </tbody>
   </table>

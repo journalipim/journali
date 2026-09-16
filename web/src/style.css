@@ -16,6 +16,8 @@
   --hatch: #eef0f3;
   --dirty: #fef3c7;
   --toast: #1f2328;
+  --cell: #eef2f7;
+  --cell-line: #dfe4ec;
   --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
   color-scheme: light;
 }
@@ -40,6 +42,8 @@
     --hatch: #232830;
     --dirty: #433a14;
     --toast: #2c323b;
+    --cell: #262c35;
+    --cell-line: #343b46;
     color-scheme: dark;
   }
 }
@@ -61,6 +65,8 @@
   --hatch: #232830;
   --dirty: #433a14;
   --toast: #2c323b;
+  --cell: #262c35;
+  --cell-line: #343b46;
   color-scheme: dark;
 }
 
@@ -231,25 +237,30 @@ table.grid tr.row:focus { outline: none; }
 
 /* ---- Zellen mit Inline-Bearbeitung --------------------------------------- */
 
-td.cell { padding: 0; }
+td.cell { padding: 2px; }
+/* Bearbeitbar: eigener Hintergrund, damit man sieht, wo Eingabe geht. */
 .cell-box {
-  height: 26px;
-  padding: 3px 8px;
+  height: 24px;
+  padding: 2px 6px;
   cursor: text;
   overflow: hidden; text-overflow: ellipsis;
-  border: 1px solid transparent;
+  border: 1px solid var(--cell-line);
+  border-radius: 3px;
+  background: var(--cell);
 }
 .cell-box:focus { outline: none; border-color: var(--accent); background: var(--pane); }
 .cell-box.inherited { color: var(--muted); font-style: italic; }
-.cell-box.disabled { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--hatch) 4px, var(--hatch) 5px); cursor: default; }
+/* Gesperrt (Achse gibt es nicht): schraffiert, kein Rahmen, nicht fokussierbar, keine Maus. */
+.cell-box.disabled { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--hatch) 4px, var(--hatch) 5px); border-color: transparent; cursor: default; pointer-events: none; }
 .cell-box.dirty { background: var(--dirty); }
-.cell-box.locked { color: var(--muted); cursor: default; }
+.cell-box.locked { color: var(--muted); cursor: default; background: transparent; border-color: transparent; }
 .view-chip { border: 1px solid var(--line); border-radius: 12px; padding: 1px 8px; background: var(--pane); color: var(--muted); cursor: pointer; }
 .view-chip.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-soft); }
 .cell-input {
-  width: 100%; height: 26px;
+  width: 100%; height: 24px;
   border: 1px solid var(--accent);
-  padding: 3px 8px;
+  border-radius: 3px;
+  padding: 2px 6px;
   font: inherit;
   outline: none;
   background: var(--pane);
