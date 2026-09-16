@@ -50,15 +50,15 @@ const visible = computed(() => {
         for (const a of tree.ancestors(r.id)) keep.add(a.id)
       }
     const walk = (parent, depth) => {
-      for (const r of tree.kids(parent)) if (keep.has(r.id)) { out.push({ r, depth, open: true }); walk(r.id, depth + 1) }
+      for (const r of tree.kids(parent)) if (keep.has(r.id)) { out.push({ r, depth, isOpen: true }); walk(r.id, depth + 1) }
     }
     walk(null, 0)
   } else {
     const walk = (parent, depth) => {
       for (const r of tree.kids(parent)) {
-        const open = tree.expanded.has(r.id)
-        out.push({ r, depth, open })
-        if (open) walk(r.id, depth + 1)
+        const isOpen = tree.expanded.has(r.id)
+        out.push({ r, depth, isOpen })
+        if (isOpen) walk(r.id, depth + 1)
       }
     }
     walk(null, 0)
@@ -216,9 +216,10 @@ function toggleAxis(a) {
     </div>
 
     <div ref="list" class="scroll tree" tabindex="0" @keydown="onListKey">
-      <div v-for="{ r, depth, open } in visible" :key="r.id" class="node" :class="[r.role, { selected: r.id === id, [r.status]: true }]"
+      <!-- Flag heisst isOpen, nicht open — sonst verdeckt es die Funktion open(r) des Klicks. -->
+      <div v-for="{ r, depth, isOpen } in visible" :key="r.id" class="node" :class="[r.role, { selected: r.id === id, [r.status]: true }]"
         :style="`padding-left:${8 + depth * 16}px`" @click="open(r)" @contextmenu="contextMenu($event, r)" :title="r.id">
-        <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (open ? '▾' : '▸') : '' }}</span>
+        <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (isOpen ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
         <span class="label">{{ r.label }}</span>
         <span v-if="hits.get(r.id) && !r.label.toLowerCase().includes(q.trim().toLowerCase())" class="muted hit" :title="hits.get(r.id)">{{ hits.get(r.id) }}</span>
