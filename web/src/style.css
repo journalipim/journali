@@ -237,7 +237,10 @@ table.grid tr.row:focus { outline: none; }
 
 /* ---- Zellen mit Inline-Bearbeitung --------------------------------------- */
 
-td.cell { padding: 2px; }
+td.cell { padding: 2px; min-width: 160px; }
+/* Wertgitter: Spalten nicht vom Inhalt bestimmen lassen — leere Spalten blieben sonst ein paar Pixel schmal. */
+table.values { width: auto; min-width: 100%; }
+table.values th:first-child, table.values td.attr { min-width: 180px; }
 /* Bearbeitbar: eigener Hintergrund, damit man sieht, wo Eingabe geht. */
 .cell-box {
   height: 24px;
