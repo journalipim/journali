@@ -1,9 +1,21 @@
 # Pflegestruktur — Entwurf
 
-Stand 16.09.2026, **Vorschlag, nicht entschieden.** Anlass: das Beispielprodukt
-(Smartphone) zeigt, dass vier Attribute mit Sprache/Kanal nicht reichen. Hier
-steht, woraus das Modell besteht, wie das Beispiel darauf abgebildet wird,
-und welche Eintragstypen das braucht. Erst wenn das steht, wird gebaut.
+Stand 16.09.2026, **Vorschlag; entschieden ist, was so markiert ist.**
+Anlass: das Beispielprodukt (Smartphone) zeigt, dass vier Attribute mit
+Sprache/Kanal nicht reichen. Hier steht, woraus das Modell besteht, wie das
+Beispiel darauf abgebildet wird, und welche Eintragstypen das braucht. Erst
+wenn das steht, wird gebaut.
+
+**Entschieden (Taloan, 16.09.2026):**
+
+- Der Strom ist eine **interne Id**, nie die SKU.
+- Die Pflegehierarchie ist **Produktgruppe → Produktgruppe → … →
+  Produktgruppe → Produkt → Variante**. Varianten sind die
+  **verkaufsfähigen Blätter** auf der letzten Ebene; nur sie tragen SKU
+  und GTIN.
+- **Freigabe setzt Vollständigkeit voraus:** die Pflichtfelder der Familie
+  für diesen Kanal und diese Sprache müssen ausgefüllt sein, sonst lehnt
+  der Server `ReleaseGranted` ab. Kein Eintrag, keine Warnung — eine Sperre.
 
 ## Grundsatz
 
@@ -70,11 +82,13 @@ hat genau eine Familie. Die Familie sagt:
   trägt also `required: { web: [de, en], amazon: [de], print: [de] }`
   (oder `*` für „in jeder Sprache"). Das ist die Vollständigkeitsregel;
   das Abbild rechnet daraus je Produkt × Kanal × Sprache eine Zahl
-  („web/en 7 / 9") und die Liste, was fehlt. Freigabe für einen Kanal
-  setzt Vollständigkeit dort voraus — als Warnung oder als Sperre, zu
-  entscheiden.
-- welche **Variantenebenen** es gibt: Smartphone = Modell → Farbe →
-  Speicher; Stiefel = Modell → Farbe → Grösse; Kabel = keine.
+  („web/en 7 / 9") und die Liste, was fehlt. **Freigabe für einen Kanal
+  und eine Sprache setzt Vollständigkeit dort voraus — Sperre, entschieden.**
+  Der Server prüft vor `ReleaseGranted` und antwortet sonst mit der Liste
+  der fehlenden Felder; die Oberfläche zeigt den Schalter erst scharf, wenn
+  die Zahl voll ist.
+- welche **Variantenachsen** erlaubt sind: Smartphone = Farbe, Speicher;
+  Stiefel = Farbe, Grösse; Kabel = keine. Das Produkt wählt daraus.
 
 ### 4. Kategorie (`category:<id>`)
 
@@ -82,18 +96,41 @@ Baum: `CategoryDefined(id, parent, label je Sprache)`. Das Produkt bekommt
 `CategoryAssigned(id)` (gibt es schon). Der Pfad „Elektronik › Smartphones &
 Zubehör › Smartphones" ist Ableitung, nicht Speicher.
 
-### 5. Produkt (`<product-id>`)
+### 5. Knoten: Produktgruppe, Produkt, Variante (`<id>`) — entschieden
 
-Der Strom ist eine **interne Id**, nicht die SKU: SKUs werden umbenannt
-(Lieferantenwechsel, neues Schema), ein Strom nie. Die SKU ist ein Attribut
-mit Eindeutigkeitsprüfung — genau die „kleine synchrone Prüf-Projektion"
-aus `architektur.md`. Erster Eintrag: `ProductCreated(family, sku)`.
+Drei Rollen in einem Baum, jeder Knoten ein Strom mit **interner Id**
+(SKUs werden umbenannt — Lieferantenwechsel, neues Schema —, ein Strom
+nie):
+
+| Rolle | Eltern | Kinder | Trägt |
+|---|---|---|---|
+| **Produktgruppe** | Wurzel oder Produktgruppe | Produktgruppen oder Produkte | Label je Sprache, gemeinsame Werte für alles darunter |
+| **Produkt** | Produktgruppe | Varianten | Familie, die Pflegewerte, die **Variantenachsen** („variiert nach Farbe, Speicher") |
+| **Variante** | Produkt | keine — verkaufsfähiges Blatt | SKU, GTIN, je Variantenachse einen Wert, Abweichungen |
+
+Erste Einträge: `GroupCreated(parent, label)`, `ProductCreated(group,
+family)`, `VariantCreated(product, sku, axisValues)`; Umhängen später
+`NodeMoved(parent)`. SKU und GTIN sind Attribute der Variante mit
+Eindeutigkeitsprüfung — die „kleine synchrone Prüf-Projektion" aus
+`architektur.md`.
+
+**Vererbung** läuft den Pfad hinauf: Variante → Produkt → Gruppe → … →
+Wurzel, und auf jeder Stufe zusätzlich Kanal → Sprache → alle. Ein Wert an
+der Gruppe „TechVibe" (brand) gilt für jedes Produkt und jede Variante
+darunter, bis eines ihn überschreibt. Welche Rolle ein Attribut setzen
+darf, steht in der Definition (`levels: [group, product, variant]`);
+`sku` nur an der Variante, `brand` überall.
 
 `created_at` und `updated_at` werden nicht gespeichert: erster und letzter
 Eintrag des Stroms.
 
-**Status** (`draft`, `active`, `discontinued`) ist global, die Freigabe je
-Kanal bleibt daneben: `discontinued` überstimmt jede Freigabe.
+**Status** (`draft`, `active`, `discontinued`) am Produkt und an der
+Variante; Freigabe je Kanal bleibt daneben. `discontinued` am Produkt
+überstimmt jede Variante und jede Freigabe.
+
+Was ein Produkt ohne Variante ist — eines mit genau einer, unsichtbaren
+Variante, die die SKU trägt (Vorschlag), damit „verkaufsfähig = Variante"
+ohne Ausnahme gilt.
 
 ### 6. Medien
 
@@ -110,15 +147,19 @@ Der Typ (Upsell, Crosssell, Zubehör, Ersatz) kommt aus einer Werteliste.
 Gerichtet: die Gegenrichtung ist ein eigener Eintrag auf dem anderen Strom
 oder eine Ableitung — zu entscheiden.
 
-### 8. Variantenebenen
+### 8. Variantenachsen — entschieden: eine Variantenebene
 
-Die dritte Achse neben Sprache und Kanal. Die Familie definiert die Ebenen,
-ein Produkt auf Ebene n hat einen Elternstrom auf Ebene n−1
-(`ProductCreated(family, sku, parent)`). Vererbung = `Resolve` läuft den
-Elternpfad hoch, wie heute schon über Kanal → Sprache → alle. Das Beispiel
-`SP-PHONE-X10-BLK` ist Ebene 1 (Farbe) unter `SP-PHONE-X10`, und
-`…-BLK-256` wäre Ebene 2 (Speicher). Farbe und Speicher sind dann keine
-freien Attribute mehr, sondern die Ebenenwerte.
+Keine gestaffelten Ebenen (Farbe → Speicher) mehr, sondern **ein** Produkt
+mit n Varianten, und das Produkt sagt, **wonach** es variiert: `axes:
+[color, storage]`. Jede Variante hat je Achse genau einen Wert aus der
+Werteliste (`VariantCreated(…, axisValues: {color: black, storage: 256})`);
+die Kombination ist je Produkt eindeutig. Farbe und Speicher sind damit
+Achsenwerte der Variante, keine freien Attribute — die Oberfläche zeigt
+die Varianten eines Produkts als Matrix (Farbe × Speicher) oder Liste.
+
+`SP-PHONE-X10-BLK` ist eine Variante (color=black) des Produkts „Phone
+X10" in der Produktgruppe „X-Series" unter „TechVibe". Was das Produkt
+und was die Gruppe ist, entscheidet die Pflege, nicht das System.
 
 ### 9. Wörterbücher (`dictionary:<key>`)
 
@@ -244,24 +285,24 @@ Vollständigkeit je Kanal × Sprache als Regel im Modell.
 
 | Im JSON | Wird zu |
 |---|---|
-| `product_id` | Strom-Id |
-| `sku` | Attribut `sku`, `text`, eindeutig — oder Ebenenschlüssel, siehe 8 |
-| `gtin` | Attribut `gtin`, `text`, eindeutig |
+| `product_id` | Strom-Id der **Variante** (das JSON beschreibt eine) |
+| `sku` | Attribut `sku` an der Variante, `text`, eindeutig |
+| `gtin` | Attribut `gtin` an der Variante, `text`, eindeutig |
 | `status` | `StatusSet` |
 | `created_at`, `updated_at` | erster/letzter Eintrag |
 | `structure.category_path` | `CategoryAssigned` auf das Blatt; Pfad ist Ableitung |
 | `structure.brand` | Attribut `brand`, `enum` aus `list:brand` |
-| `structure.model_family` | Ebene 0 der Variantenstruktur (oder Attribut `enum`, wenn keine Varianten) |
+| `structure.model_family` | Produktgruppe „X-Series" — oder Attribut `enum`, wenn die Gruppe anders geschnitten ist |
 | `localization.de.title` | `title`, `text`, Achse locale |
 | `localization.de.summary` | `summary`, `text`, locale |
 | `localization.de.description` | `description`, `html`, locale (+ channel, wenn Shop und Print abweichen) |
 | `localization.de.keywords` | `keywords`, `text` mehrfach, locale |
 | `attributes.technical.display_size_inch` | `display_size`, `decimal`, unit `in`, Gruppe technical |
 | `…display_resolution` | zwei Attribute `display_width_px`, `display_height_px`, `integer` — oder `text`, wenn man es nie rechnen will |
-| `…storage_capacity_gb` | `storage`, `integer`, unit `GB` — Kandidat für Ebene 2 |
+| `…storage_capacity_gb` | Variantenachse `storage` aus `list:storage` (128, 256, 512), wenn das Produkt danach variiert; sonst `integer` mit `GB` |
 | `…ram_gb`, `…battery_capacity_mah`, `…processor_cores` | `integer` mit Einheit |
 | `…operating_system` | `os`, `enum` aus `list:os` |
-| `attributes.physical.color` | Ebene 1 (Farbe), Wert aus `list:color` mit Hexcode als Zusatzfeld — nicht zwei Attribute |
+| `attributes.physical.color` | Variantenachse `color` aus `list:color`, Hexcode als Zusatzfeld des Listenwerts — nicht zwei Attribute |
 | `…weight_g`, `…dimensions.*` | vier Attribute `integer`/`decimal` mit Einheit, Gruppe physical; keine Verschachtelung |
 | `attributes.logistics.*` | dito, Gruppe logistics; `customs_tariff_number` als `text` |
 | `media[]` | `MediaAttached` je Eintrag, `alt_text_de` → `MediaTextSet(id, alt, de, …)` |
@@ -282,7 +323,10 @@ Was das JSON nicht hat und ein PIM braucht: Familie (welche Attribute
 | `list:<key>` | `ListValueDefined` / `ListValueRetired` | `value`, `label{}`, Zusatzfelder |
 | `family:<key>` | `FamilyDefined` | `label{}`, `attributes[]` mit Gruppe und Pflicht je Kanal, `levels[]` |
 | `category:<id>` | `CategoryDefined` / `CategoryRetired` | `parent`, `label{}` |
-| Produkt | `ProductCreated` | `family`, `sku`, `parent?` |
+| Gruppe | `GroupCreated` | `parent`, `label{}` |
+| Produkt | `ProductCreated` | `group`, `family`, `axes[]` |
+| Variante | `VariantCreated` | `product`, `sku`, `axisValues{}` |
+| alle drei | `NodeMoved` | `parent` |
 | Produkt | `StatusSet` | `status` |
 | Produkt | `AttributeSet` | wie heute, plus `level` fällt weg (der Strom ist die Ebene) |
 | Produkt | `MediaAttached` / `MediaDetached` / `MediaTextSet` / `MediaOrdered` | siehe 6 |
@@ -304,7 +348,11 @@ Definitionen ins Journal.
 - Produktansicht wird **familienabhängig**: Gruppen als Abschnitte, Zelle
   nach Typ (Zahl mit Einheit, Schalter, Auswahl, Listeneditor, HTML),
   Pflichtfelder je Kanal markiert, Vollständigkeit als Zahl je Kanal.
-- Anlegen = Familie wählen + SKU; Varianten als Baum unter dem Modell.
+- Links ein **Baum** Produktgruppe → Produkt → Variante (aufklappbar,
+  Tastatur), rechts der gewählte Knoten. Anlegen = im Baum: Gruppe unter
+  Gruppe, Produkt mit Familie unter Gruppe, Variante mit Achsenwerten und
+  SKU unter Produkt. Geerbte Werte stehen kursiv mit Herkunft im Tooltip
+  („von X-Series").
 
 ## Reihenfolge
 
@@ -321,9 +369,13 @@ Definitionen ins Journal.
 
 ## Offen — Taloans Wort
 
-- Strom = interne Id (Vorschlag) oder doch SKU?
-- Farbe/Speicher als Variantenebenen (Vorschlag) oder als normale Attribute
-  und Varianten sind eigene Produkte ohne Vererbung?
+- Ist die **Kategorie** (4, `category_path` fürs Shop-Menü) ein zweiter,
+  eigener Baum neben der Produktgruppe — oder *ist* die Produktgruppe die
+  Kategorie? Vorschlag: zwei Bäume; Struktur (Pflege, Vererbung) und
+  Navigation (Shop) fallen selten zusammen, ein Produkt kann in mehreren
+  Kategorien hängen, aber nur in einer Gruppe.
+- Produkt ohne Variante: unsichtbare Einzelvariante (Vorschlag) oder
+  Produkt darf selbst SKU tragen?
 - `AttributeDefined` als ganze Definition je Eintrag (Vorschlag) oder
   feldweise wie beim Produkt?
 - Relationen gerichtet mit expliziter Gegenrichtung oder abgeleitet?
@@ -333,7 +385,6 @@ Definitionen ins Journal.
   Eintrag „eingefroren"?
 - Plugins: darf ein Import Handwerte überschreiben — je Attribut regelbar
   (Vorschlag) oder nie?
-- Freigabe bei unvollständigem Produkt: Warnung (Vorschlag) oder Sperre?
 - Wiederholbare Gruppen (OpenDXP objectbricks/fieldcollections): jetzt
   vorsehen oder warten, bis ein Fall kommt (Vorschlag)?
 - DAM: eigener Baustein oder Plugin?
