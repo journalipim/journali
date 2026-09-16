@@ -23,6 +23,15 @@ Dann F5 in Visual Studio (Profil `Journali.Server`, `http://localhost:5000`,
 dotnet run --project Journali.Server
 ```
 
+Im Hintergrund, in einem eigenen Fenster „journali":
+
+```bash
+tools\server start
+```
+
+`tools\server stop` beendet `Journali.Server.exe` (das Fenster schliesst
+mit), `restart` beides, `status` ruft `/health`.
+
 Host, Port, Nutzer und Datenbankname stehen in
 `Journali.Server/appsettings.json` unter `JOURNALI_DB`; die Umgebungsvariable
 gleichen Namens übersteuert sie.
