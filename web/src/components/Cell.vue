@@ -55,8 +55,7 @@ function onEditKey(e) {
       <template v-else-if="value != null">{{ value }}</template>
       <template v-else-if="inherited != null">{{ inherited }}</template>
     </div>
-    <div v-else class="cell-box" style="padding:0">
-      <input ref="input" v-model="draft" class="cell-input" @keydown="onEditKey" @blur="commit" />
-    </div>
+    <!-- Das Eingabefeld ersetzt die Box mit denselben Massen — nicht darin, sonst doppelter Rahmen und unten abgeschnitten. -->
+    <input v-else ref="input" v-model="draft" class="cell-input" @keydown="onEditKey" @blur="commit" />
   </td>
 </template>
