@@ -79,6 +79,20 @@ public static partial class ModelApi
                     ? write(Model.ListStream + key, Types.ListValueRetired, new ListValueRetired(value))
                     : Results.NotFound()));
 
+        m.MapPut("/views/{key}", (string key, ViewDefinition body, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) =>
+            {
+                var def = body with { Key = key, Label = body.Label ?? new(), Attributes = body.Attributes ?? new(), Level = Blank(body.Level) };
+                if (def.Level is not null && !Roles.All.Contains(def.Level)) return Bad($"Ebene: {string.Join(", ", Roles.All)} oder leer.");
+                foreach (var a in def.Attributes)
+                    if (!model.Attributes.ContainsKey(a.Key)) return Bad($"Unbekanntes Attribut in der Sicht: {a.Key}");
+                return write(Model.ViewStream + key, Types.ViewDefined, def);
+            }));
+
+        m.MapDelete("/views/{key}", (string key, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) =>
+                model.Views.ContainsKey(key) ? write(Model.ViewStream + key, Types.ViewRetired, new ViewRetired(key)) : Results.NotFound()));
+
         m.MapPut("/units/{key}", (string key, UnitDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, k => k.Length > 0 && k.Length <= 8 && !k.Any(char.IsWhiteSpace), (model, write) =>
                 string.IsNullOrWhiteSpace(body.Quantity) ? Bad("quantity fehlt (mass, length, volume, data, count, …).")
@@ -105,6 +119,8 @@ public static partial class ModelApi
                     }
                 }
                 if (def.Axes?.Except(model.Attributes.Keys).Any() ?? false) return Bad("Variantenachse muss ein Attribut sein.");
+                def = def with { LabelAttribute = Blank(def.LabelAttribute) };
+                if (def.LabelAttribute is not null && !model.Attributes.ContainsKey(def.LabelAttribute)) return Bad($"Label-Attribut {def.LabelAttribute} gibt es nicht.");
                 return write(Model.FamilyStream + key, Types.FamilyDefined, def);
             }));
 
@@ -124,6 +140,7 @@ public static partial class ModelApi
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, values = l.Ordered.ToList() }).ToList(),
         families = model.Families.Values.OrderBy(f => f.Key).ToList(),
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
+        views = model.Views.Values.OrderBy(v => v.Key).ToList(),
         types = AttributeTypes.All,
     };
 

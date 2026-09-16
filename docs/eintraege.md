@@ -65,12 +65,13 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 | `locale:<code>` | `LocaleDefined` | `code`, `label` |
 | `channel:<key>` | `ChannelDefined` | `key`, `label{}` |
 | `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum, **rows**), `unit?` (muss es unter `unit:` geben), `group?`, `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `levels[]?` (group, product, variant; null = überall), `columns[]?` (bei rows: Attribute, keine rows) |
+| `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level?` (group, product, variant; null = alle), `attributes[]` je `{key}` — **Reihenfolge = Anzeige**, Gruppe kommt vom Attribut; die Sicht sagt, wer was sieht, die Familie, was es gibt |
 | `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` |
 | `list:<key>` | `ListDefined` | `key`, `label{}` |
 | `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
 | `list:<key>` | `ListValueRetired` | `value` |
-| `family:<key>` | `FamilyDefined` | `key`, `label{}`, `attributes[]` je `{key, group?, required{kanal: [sprachen] oder ["*"]}}`, `axes[]` (Variantenachsen = Attribute) |
+| `family:<key>` | `FamilyDefined` | `key`, `label{}`, `attributes[]` je `{key, group?, required{kanal: [sprachen] oder ["*"]}}` — **Reihenfolge = Anzeige**, `axes[]` (Variantenachsen = Attribute), `labelAttribute?` (Name im Baum, Vorgabe name) |
 | `family:<key>` | `FamilyRetired` | `key` |
 
 Ein leeres Journal bekommt beim ersten Serverstart das Saatgut aus

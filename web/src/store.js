@@ -12,6 +12,7 @@ export const store = reactive({
   viewLocales: saved.viewLocales || ['de', 'en'],   // Sicht: welche Sprachen als Spalten
   viewChannel: saved.viewChannel ?? null,          // Sicht: welcher Kanal (null = nur *)
   journalOpen: saved.journalOpen ?? true,           // Journal neben dem Knoten auf- oder zugeklappt
+  viewKey: saved.viewKey ?? {},                     // gewählte Attribut-Sicht je Ebene ({ product: 'technik' })
   online: null,          // null = noch nicht gefragt, sonst true/false
   head: 0,
   nodes: 0,
@@ -22,7 +23,7 @@ export const store = reactive({
   stale: false,
 
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen, viewKey: this.viewKey }))
     this.applyTheme()
   },
 

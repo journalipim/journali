@@ -14,7 +14,7 @@ public static class TreeApi
     {
         // ---- Lesen -----------------------------------------------------------
 
-        api.MapGet("/tree", (Catalog c) => c.Read(tree => tree.Nodes.Values.Select(n => NodeRow.Of(tree, n)).ToList()));
+        api.MapGet("/tree", (Catalog c) => c.With((model, tree, _) => tree.Nodes.Values.Select(n => NodeRow.Of(tree, model, n)).ToList()));
 
         api.MapGet("/nodes/{id}", (string id, Catalog c) =>
             c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var n) ? NodeView.Of(tree, model, n) : null)
@@ -24,7 +24,7 @@ public static class TreeApi
         api.MapGet("/search", (string q, Catalog c, int limit = 200) =>
             string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2
                 ? Results.BadRequest(new { error = "q: mindestens 2 Zeichen." })
-                : Results.Ok(c.Read(tree => tree.Search(q.Trim()).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, h.Node), hit = h.Hit }).ToList())));
+                : Results.Ok(c.With((model, tree, _) => tree.Search(q.Trim()).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
 
         api.MapGet("/nodes/external/{system}/{externalId}", (string system, string externalId, Catalog c) =>
             c.With((model, tree, _) => tree.ByExternal(system, externalId) is { } n ? NodeView.Of(tree, model, n) : null)
@@ -99,20 +99,30 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
     Dictionary<string, string> AxisValues, string Status, string? Sku, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {
-    public static NodeRow Of(Tree tree, Node n) => new(
-        n.Id, n.Role, n.Parent, LabelOf(tree, n), n.Family, n.Axes, n.AxisValues, n.Status,
+    public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
+        n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Family, n.Axes, n.AxisValues, n.Status,
         n.Own(Model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor);
 
-    /// <summary>Gruppe: ihr Label; Produkt: sein Name; Variante: SKU oder die Achsenwerte.</summary>
-    public static string LabelOf(Tree tree, Node n) => n.Role switch
+    /// <summary>
+    /// Gruppe: ihr Label. Produkt: das Label-Attribut seiner Familie (Vorgabe name).
+    /// Variante: SKU, sonst die Achsenwerte, sonst das Label-Attribut — geerbt zählt.
+    /// </summary>
+    public static string LabelOf(Tree tree, ModelCatalog model, Node n)
     {
-        Roles.Group => n.Label.GetValueOrDefault("de") ?? n.Label.Values.FirstOrDefault() ?? n.Id,
-        Roles.Product => tree.Resolve(n, "name", "de", null).Value ?? n.Id,
-        _ => n.Own(Model.SkuAttribute, null, null)
-             ?? (n.AxisValues.Count > 0 ? string.Join(" · ", n.AxisValues.Values) : null)
-             ?? n.Own("name", "de", null)
-             ?? n.Id,
-    };
+        if (n.Role == Roles.Group) return n.Label.GetValueOrDefault("de") ?? n.Label.Values.FirstOrDefault() ?? n.Id;
+        var attr = CompletenessRules.FamilyOf(tree, model, n)?.LabelAttribute ?? "name";
+        string? byAttr()
+        {
+            if (tree.Resolve(n, attr, "de", null).Value is { } de) return de;
+            foreach (var l in model.Locales.Keys) if (tree.Resolve(n, attr, l, null).Value is { } v) return v;
+            return tree.Resolve(n, attr, null, null).Value;
+        }
+        if (n.Role == Roles.Product) return byAttr() ?? n.Id;
+        return n.Own(Model.SkuAttribute, null, null)
+            ?? (n.AxisValues.Count > 0 ? string.Join(" · ", n.AxisValues.Values) : null)
+            ?? byAttr()
+            ?? n.Id;
+    }
 }
 
 /// <summary>Ein Wert auf seinen Achsen — einfach oder als Liste, bei vermehrbaren Attributen mit Zeile.</summary>
@@ -135,7 +145,7 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
     public static NodeView Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, n.Label, n.Family, n.Axes, n.AxisValues, n.Status, n.External,
         ValueView.Of(n).ToList(), n.Rows,
-        tree.Ancestors(n).Select(a => new AncestorView(a.Id, a.Role, NodeRow.LabelOf(tree, a), ValueView.Of(a).ToList())).ToList(),
+        tree.Ancestors(n).Select(a => new AncestorView(a.Id, a.Role, NodeRow.LabelOf(tree, model, a), ValueView.Of(a).ToList())).ToList(),
         n.Categories.Order().ToList(), n.Releases.ToList(),
         n.Role == Roles.Group ? [] : CompletenessRules.Of(tree, model, n),
         tree.Children(n.Id).Count(),

@@ -24,6 +24,8 @@ const node = ref(null)
 const entries = ref([])
 const newCategory = ref('')
 const busy = ref(false)
+const arranging = ref(false)   // Anordnen-Modus: Attribute und Gruppen per Drag & Drop, gilt für die Familie
+const dragging = ref(null)     // { key } oder { group }
 
 const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
@@ -57,12 +59,20 @@ const family = computed(() => {
   const key = node.value?.family ?? (productAncestor ? tree.byId.get(productAncestor.id)?.family : null)
   return model.value?.families.find(f => f.key === key)
 })
+// Sichten, die hier passen: ohne Ebene oder für diese Ebene. Gewählt je Ebene, gemerkt.
+const views = computed(() => (model.value?.views ?? []).filter(v => !v.level || v.level === node.value?.role))
+const view = computed(() => views.value.find(v => v.key === store.viewKey[node.value?.role]) ?? null)
+function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save(); if (!k) arranging.value = false }
 const groups = computed(() => {
   if (!model.value || !node.value) return []
   const allowed = a => !a.levels || a.levels.includes(node.value.role)
   let defs
-  if (family.value) {
-    defs = family.value.attributes.map(fa => ({ ...model.value.attributes.find(a => a.key === fa.key), group: fa.group ?? model.value.attributes.find(a => a.key === fa.key)?.group, required: fa.required })).filter(a => a.key)
+  const req = k => family.value?.attributes.find(a => a.key === k)?.required
+  if (view.value) {
+    // Die Sicht bestimmt Auswahl und Reihenfolge; Gruppe kommt vom Attribut, Pflicht aus der Familie.
+    defs = view.value.attributes.map(va => ({ ...model.value.attributes.find(a => a.key === va.key), required: req(va.key) })).filter(a => a.key)
+  } else if (family.value) {
+    defs = family.value.attributes.map(fa => ({ ...model.value.attributes.find(a => a.key === fa.key), required: fa.required })).filter(a => a.key)
     // sku gehört immer zur Variante, auch wenn die Familie es nicht nennt
     if (node.value.role === 'variant' && !defs.some(d => d.key === 'sku')) { const s = model.value.attributes.find(a => a.key === 'sku'); if (s) defs.unshift(s) }
   } else defs = model.value.attributes
@@ -114,6 +124,53 @@ function listLabel(def) {
 }
 function released(channel, locale) { return node.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }
 function axisLabel(a) { return model.value?.attributes.find(x => x.key === a)?.label?.de || a }
+
+// ---- Anordnen: Reihenfolge und Gruppen der Familie ändern, jeder Drop ein FamilyDefined.
+async function saveView(attributes) {
+  try { await api.post(`/api/model/views/${view.value.key}`, { ...view.value, attributes }, 'PUT'); await store.poll(true) }
+  catch (e) { store.toast(e.message) }
+}
+function famAttrs() { return view.value.attributes.map(a => ({ ...a })) }
+// Anordnen ohne Sicht: erst eine anlegen — für diese Ebene, gefüllt mit dem, was jetzt zu sehen ist.
+async function startArranging() {
+  if (view.value) { arranging.value = !arranging.value; return }
+  const key = window.prompt(`Neue Sicht für Ebene ${node.value.role} (key, a-z 0-9 _) — gefüllt mit den Attributen, die hier gerade zu sehen sind:`, 'alles_' + node.value.role)
+  if (!key) return
+  const attrs = groups.value.flatMap(([, defs]) => defs.map(d => ({ key: d.key })))
+  try {
+    await api.post(`/api/model/views/${key.trim()}`, { key: key.trim(), label: { de: key.trim() }, level: node.value.role, attributes: attrs }, 'PUT')
+    await store.poll(true); setView(key.trim()); arranging.value = true
+  } catch (e) { store.toast(e.message) }
+}
+function onDragStart(e, what) { dragging.value = what; e.dataTransfer.effectAllowed = 'move' }
+function onDragOver(e) { if (arranging.value && dragging.value) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }
+// Zeile auf Zeile: davor einsortieren und deren Gruppe übernehmen. Gruppe auf Gruppe: ganze Gruppe davor.
+// Zeile auf Gruppenkopf: an den Anfang dieser Gruppe.
+function onDrop(target) {
+  const d = dragging.value; dragging.value = null
+  if (!d || !view.value) return
+  let attrs = famAttrs()
+  const groupOf = a => model.value.attributes.find(x => x.key === a.key)?.group ?? ''
+  if (d.key !== undefined) {
+    const moving = attrs.find(a => a.key === d.key); if (!moving) return
+    attrs = attrs.filter(a => a.key !== d.key)
+    if (target.key !== undefined) {
+      if (target.key === d.key) return
+      const i = attrs.findIndex(a => a.key === target.key)
+      attrs.splice(i, 0, moving)
+    } else {
+      const i = attrs.findIndex(a => groupOf(a) === target.group)
+      attrs.splice(i < 0 ? attrs.length : i, 0, moving)
+    }
+  } else {
+    if (target.group === undefined || target.group === d.group) return
+    const block = attrs.filter(a => groupOf(a) === d.group)
+    attrs = attrs.filter(a => groupOf(a) !== d.group)
+    const i = attrs.findIndex(a => groupOf(a) === target.group)
+    attrs.splice(i < 0 ? attrs.length : i, 0, ...block)
+  }
+  saveView(attrs)
+}
 
 async function load() {
   try {
@@ -218,6 +275,12 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
         <option value="">nur *</option><option v-for="c in channels" :key="c" :value="c">{{ c }}</option>
       </select>
       <span class="muted">{{ columns.length }} Spalten</span>
+      <span class="grow" />
+      <select :value="view?.key ?? ''" @change="setView($event.target.value)" title="Sicht: welche Attribute, in welcher Reihenfolge — ⊞ Modell → Sichten">
+        <option value="">◫ {{ family ? 'Familie: alles' : 'alles' }}</option>
+        <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}{{ v.level ? '' : ' (alle Ebenen)' }}</option>
+      </select>
+      <button :class="{ primary: arranging }" @click="startArranging" :title="view ? `Reihenfolge der Sicht ${view.label?.de || view.key} per Drag & Drop (Zeilen und ganze Gruppen)` : 'Anordnen braucht eine Sicht — legt eine für diese Ebene an'">⇅ Anordnen</button>
     </div>
 
     <div class="scroll" v-if="model">
@@ -235,19 +298,21 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
           </tr>
         </thead>
         <tbody v-for="[group, defs] in groups" :key="group">
-          <tr class="group-row"><td :colspan="columns.length + 1">{{ group || '—' }}</td></tr>
+          <tr class="group-row" :class="{ drag: arranging }" :draggable="arranging" @dragstart="onDragStart($event, { group })" @dragover="onDragOver" @drop="onDrop({ group })">
+            <td :colspan="columns.length + 1"><span v-if="arranging" class="handle">⋮⋮</span>{{ group || '—' }}</td>
+          </tr>
           <template v-for="def in defs" :key="def.key">
-          <tr v-if="def.type === 'rows'">
-            <td class="attr" :title="def.key">{{ def.label?.de || def.key }} <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
+          <tr v-if="def.type === 'rows'" :class="{ drag: arranging }" :draggable="arranging" @dragstart="onDragStart($event, { key: def.key })" @dragover="onDragOver" @drop="onDrop({ key: def.key })">
+            <td class="attr" :title="def.key"><span v-if="arranging" class="handle">⋮⋮</span>{{ def.label?.de || def.key }} <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
                 @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
                 @add="addRow(def)" @remove="row => removeRow(def, row)" @order="rows => orderRows(def, rows)" />
             </td>
           </tr>
-          <tr v-else>
+          <tr v-else :class="{ drag: arranging }" :draggable="arranging" @dragstart="onDragStart($event, { key: def.key })" @dragover="onDragOver" @drop="onDrop({ key: def.key })">
             <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '')">
-              {{ def.label?.de || def.key }}
+              <span v-if="arranging" class="handle">⋮⋮</span>{{ def.label?.de || def.key }}
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
               <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
               <span v-if="def.required" class="warn" title="Pflicht in der Familie">●</span>
@@ -320,6 +385,9 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
 .view select { font-size: 12px; padding: 1px 4px; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+tr.drag { cursor: grab; }
+tr.drag:hover { outline: 1px dashed var(--accent); }
+.handle { color: var(--muted); margin-right: 6px; cursor: grab; }
 .group-row td { background: var(--bg); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; height: 22px; }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 table.releases { width: auto; }

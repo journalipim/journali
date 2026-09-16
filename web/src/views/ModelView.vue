@@ -11,6 +11,7 @@ const sections = [
   { key: 'attributes', icon: '⊞', label: 'Attribute' },
   { key: 'lists', icon: '☰', label: 'Wertelisten' },
   { key: 'families', icon: '⌂', label: 'Familien' },
+  { key: 'views', icon: '◫', label: 'Sichten' },
   { key: 'units', icon: '⚖', label: 'Einheiten' },
   { key: 'locales', icon: '🗣', label: 'Sprachen' },
   { key: 'channels', icon: '⇶', label: 'Kanäle' },
@@ -20,6 +21,8 @@ const model = computed(() => store.model)
 const newKey = ref('')
 const selectedList = ref(null)
 const selectedFamily = ref(null)
+const selectedView = ref(null)
+const addViewAttr = ref('')
 const newValue = ref('')
 const addAttr = ref('')
 
@@ -108,6 +111,44 @@ function valueAdd() {
   put(`/api/model/lists/${selectedList.value}/values/${encodeURIComponent(v)}`, { value: v, label: {}, order: valueRows.value.length + 1 })
 }
 
+// ---- Sichten: Auswahl und Reihenfolge der Attribute, optional je Ebene; Gruppe kommt vom Attribut
+const levelLabel = { '': 'alle Ebenen', group: '▣ Gruppe', product: '▦ Produkt', variant: '◆ Variante' }
+const viewCols = computed(() => [{ key: 'key', label: 'Key', type: 'ro', width: '120px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' },
+  { key: 'level', label: 'Ebene', type: 'select', options: ['group', 'product', 'variant'], labelOf: k => levelLabel[k] ?? k, width: '140px', title: 'leer = für alle Ebenen' }])
+const viewRows = computed(() => (model.value.views ?? []).map(v => ({ key: v.key, label_de: v.label?.de, label_en: v.label?.en, level: v.level ?? '', _v: v })))
+const currentView = computed(() => (model.value.views ?? []).find(v => v.key === selectedView.value))
+const viewAttrRows = computed(() => (currentView.value?.attributes ?? []).map(a => ({ key: a.key })))
+function viewChange(r, col, v) {
+  const d = { ...r._v, label: { ...(r._v.label || {}) } }
+  if (col.startsWith('label_')) d.label[col.slice(6)] = v
+  else if (col === 'level') d.level = v || null
+  put(`/api/model/views/${r.key}`, d)
+}
+function viewAdd() {
+  const k = newKey.value.trim(); if (!k) return
+  newKey.value = ''
+  put(`/api/model/views/${k}`, { key: k, label: {}, attributes: [] })
+  selectedView.value = k
+}
+function viewAttrAdd() {
+  const k = addViewAttr.value; if (!k || !currentView.value) return
+  addViewAttr.value = ''
+  put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, attributes: [...currentView.value.attributes, { key: k }] })
+}
+function viewAttrRemove(r) { put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, attributes: currentView.value.attributes.filter(a => a.key !== r.key) }) }
+function viewAttrMove(r, d) {
+  const a = [...currentView.value.attributes]; const i = a.findIndex(x => x.key === r.key); const j = i + d
+  if (j < 0 || j >= a.length) return
+  ;[a[i], a[j]] = [a[j], a[i]]
+  put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, attributes: a })
+}
+function viewFillAll() {
+  const lv = currentView.value.level
+  const src = model.value.attributes.filter(a => !lv || !a.levels || a.levels.includes(lv)).map(a => ({ key: a.key }))
+  put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, attributes: src })
+}
+const freeViewAttrs = computed(() => model.value.attributes.map(a => a.key).filter(k => !(currentView.value?.attributes ?? []).some(a => a.key === k)))
+
 // ---- Einheiten
 const unitCols = [{ key: 'key', label: 'Einheit', type: 'ro', width: '80px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'quantity', label: 'Grösse', width: '110px', title: 'mass, length, volume, data, count …' }, { key: 'factor', label: '× Basis', width: '90px', title: 'Faktor zur Basiseinheit der Grösse (Basis = 1)' }]
 const unitRows = computed(() => (model.value.units ?? []).map(u => ({ key: u.key, label_de: u.label?.de, label_en: u.label?.en, quantity: u.quantity, factor: String(u.factor), _u: u })))
@@ -125,16 +166,17 @@ function unitAdd() {
 }
 
 // ---- Familien
-const familyCols = [{ key: 'key', label: 'Key', type: 'ro', width: '120px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'axes', label: 'Variantenachsen', title: 'Attribute, kommagetrennt' }]
-const familyRows = computed(() => model.value.families.map(f => ({ key: f.key, label_de: f.label?.de, label_en: f.label?.en, axes: (f.axes || []).join(', '), _f: f })))
+const familyCols = computed(() => [{ key: 'key', label: 'Key', type: 'ro', width: '120px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'axes', label: 'Variantenachsen', title: 'Attribute, kommagetrennt' },
+  { key: 'labelAttribute', label: 'Name im Baum', type: 'select', options: model.value.attributes.map(a => a.key), width: '140px', title: 'welches Attribut Produkt und Variante im Baum benennt (leer = name)' }])
+const familyRows = computed(() => model.value.families.map(f => ({ key: f.key, label_de: f.label?.de, label_en: f.label?.en, axes: (f.axes || []).join(', '), labelAttribute: f.labelAttribute ?? '', _f: f })))
 const currentFamily = computed(() => model.value.families.find(f => f.key === selectedFamily.value))
 const famAttrCols = computed(() => [
   { key: 'key', label: 'Attribut', type: 'ro', width: '120px' },
-  { key: 'group', label: 'Gruppe', width: '100px' },
+  { key: 'group', label: 'Gruppe', type: 'ro', width: '100px', title: 'kommt vom Attribut' },
   ...model.value.channels.map(c => ({ key: 'req_' + c.key, label: '● ' + c.key, title: 'Pflicht: Sprachen kommagetrennt oder *', width: '90px' })),
 ])
 const famAttrRows = computed(() => (currentFamily.value?.attributes ?? []).map(a => {
-  const r = { key: a.key, group: a.group, _a: a }
+  const r = { key: a.key, group: model.value.attributes.find(x => x.key === a.key)?.group ?? '', _a: a }
   for (const c of model.value.channels) r['req_' + c.key] = (a.required?.[c.key] || []).join(',')
   return r
 }))
@@ -142,6 +184,7 @@ function familyChange(r, col, v) {
   const f = { ...r._f, label: { ...(r._f.label || {}) } }
   if (col.startsWith('label_')) f.label[col.slice(6)] = v
   else if (col === 'axes') f.axes = v.split(',').map(s => s.trim()).filter(Boolean)
+  else if (col === 'labelAttribute') f.labelAttribute = v || null
   put(`/api/model/families/${r.key}`, f)
 }
 function familyAdd() {
@@ -242,6 +285,43 @@ const freeAttrs = computed(() => model.value.attributes.map(a => a.key).filter(k
       </div>
     </template>
 
+    <!-- Sichten -->
+    <template v-else-if="section === 'views'">
+      <div class="toolbar">
+        <h1>Sichten</h1>
+        <span class="muted" title="Welche Attribute in welcher Reihenfolge — redaktionell, technisch, Preise, alles; optional nur für eine Ebene des Baums. Die Familie sagt, was es gibt und was Pflicht ist; die Sicht, wer was sieht. Im Knoten wählbar; ⇅ Anordnen dort ändert die gewählte Sicht per Drag & Drop. Die Gruppe kommt vom Attribut.">ⓘ wer sieht was, in welcher Reihenfolge — je Ebene</span>
+        <span class="grow" />
+        <input v-model="newKey" type="text" placeholder="neue Sicht (key)" style="width:160px" @keydown.enter="viewAdd" />
+        <button class="primary" :disabled="!newKey.trim()" @click="viewAdd">+ Sicht</button>
+      </div>
+      <div class="scroll" style="flex:0 0 auto;max-height:40%">
+        <EditGrid :columns="viewCols" :rows="viewRows" :selected="selectedView" removable @change="viewChange" @select="r => selectedView = r.key" @remove="r => del(`/api/model/views/${r.key}`)" />
+      </div>
+      <div class="toolbar" style="border-top:1px solid var(--line)">
+        <h1 class="mono">{{ selectedView ?? '— Sicht wählen' }}</h1><span class="muted">{{ viewAttrRows.length }} Attribute</span><span class="grow" />
+        <button v-if="currentView" @click="viewFillAll" title="alle Attribute, die es auf dieser Ebene gibt, in Modellreihenfolge">⇊ alles übernehmen</button>
+        <select v-model="addViewAttr" :disabled="!selectedView" style="width:160px">
+          <option value="">Attribut …</option>
+          <option v-for="k in freeViewAttrs" :key="k" :value="k">{{ k }}</option>
+        </select>
+        <button class="primary" :disabled="!addViewAttr" @click="viewAttrAdd">+ dazu</button>
+      </div>
+      <div class="scroll">
+        <table v-if="selectedView" class="grid">
+          <thead><tr><th style="width:40px">#</th><th>Attribut</th><th style="width:120px">Gruppe</th><th style="width:90px"></th></tr></thead>
+          <tbody>
+            <tr v-for="(r, i) in viewAttrRows" :key="r.key" class="row">
+              <td class="num muted">{{ i + 1 }}</td>
+              <td class="mono">{{ r.key }} <span class="muted">{{ model.attributes.find(a => a.key === r.key)?.label?.de }}</span></td>
+              <td class="muted">{{ model.attributes.find(a => a.key === r.key)?.group ?? '—' }}</td>
+              <td class="num"><button class="x" @click="viewAttrMove(r, -1)" :disabled="i === 0">↑</button><button class="x" @click="viewAttrMove(r, 1)" :disabled="i === viewAttrRows.length - 1">↓</button><button class="x" @click="viewAttrRemove(r)">×</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div v-if="selectedView && !viewAttrRows.length" class="empty">Leer — „⇊ alles übernehmen“ oder einzeln dazu; im Knoten dann ⇅ Anordnen.</div>
+      </div>
+    </template>
+
     <!-- Einheiten -->
     <template v-else-if="section === 'units'">
       <div class="toolbar">
@@ -288,4 +368,7 @@ const freeAttrs = computed(() => model.value.attributes.map(a => a.key).filter(k
 .section-btn.active { background: var(--accent-soft); color: var(--accent); }
 .section-btn .icon { width: 16px; text-align: center; }
 .section-btn .count { margin-left: auto; font-size: 11px; }
+.x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
+.x:hover:not(:disabled) { color: var(--accent); }
+.x:disabled { opacity: .3; }
 </style>

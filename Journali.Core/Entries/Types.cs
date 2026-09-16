@@ -42,6 +42,8 @@ public static class Types
     public const string ListValueRetired = "ListValueRetired";
     public const string FamilyDefined = "FamilyDefined";
     public const string FamilyRetired = "FamilyRetired";
+    public const string ViewDefined = "ViewDefined";
+    public const string ViewRetired = "ViewRetired";
     public const string UnitDefined = "UnitDefined";
     public const string UnitRetired = "UnitRetired";
 
@@ -217,9 +219,23 @@ public sealed record FamilyAttribute(string Key, string? Group = null, Dictionar
 /// Eine Familie (3): welche Attribute ein Produkt hat, was Pflicht ist,
 /// welche Variantenachsen erlaubt sind. Strom <c>family:&lt;key&gt;</c>.
 /// </summary>
-public sealed record FamilyDefinition(string Key, Labels Label, List<FamilyAttribute> Attributes, string[]? Axes = null);
+/// <param name="LabelAttribute">welches Attribut den Knoten im Baum benennt; null = <c>name</c></param>
+public sealed record FamilyDefinition(string Key, Labels Label, List<FamilyAttribute> Attributes, string[]? Axes = null, string? LabelAttribute = null);
 
 public sealed record FamilyRetired(string Key);
+
+/// <summary>Ein Attribut in einer Sicht; die Reihenfolge ist die Liste, die Gruppe kommt vom Attribut.</summary>
+public sealed record ViewAttribute(string Key);
+
+/// <summary>
+/// Eine Sicht (15): welche Attribute in welcher Reihenfolge — redaktionell,
+/// technisch, Preise, alles. Optional nur für eine Ebene des Baums
+/// (<see cref="Roles"/>). Die Familie sagt, was es gibt und was Pflicht ist;
+/// die Sicht, wer was sieht. Strom <c>view:&lt;key&gt;</c>, ganze Definition je Eintrag.
+/// </summary>
+public sealed record ViewDefinition(string Key, Labels Label, List<ViewAttribute> Attributes, string? Level = null);
+
+public sealed record ViewRetired(string Key);
 
 /// <summary>
 /// Eine Einheit (14): gehört zu einer Grösse (mass, length, data …) und hat

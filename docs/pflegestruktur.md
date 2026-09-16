@@ -303,6 +303,29 @@ Umrechnung ist Anzeige und Export: Sicht „zeige Gewicht in g" rechnet
 Zoll statt Zentimeter. Noch nicht gebaut: die Umrechnung in der Zelle und
 je Kanal (Feld `unit` an der Kanal- oder Sichtdefinition).
 
+### 15. Sichten (`view:<key>`) — entschieden (Taloan, 16.09.2026)
+
+> Die Reihenfolge gehört in eine Sicht. Später hat einer nur redaktionelle
+> Sichten, der andere auch technische Werte, der Dritte vielleicht Preise —
+> oder eine Sicht, die alles beinhaltet, für den PIM-Editor. Eine Sicht
+> hängt nicht von einer Familie ab, sondern von einer Ebene im Baum. Die
+> Gruppe ist Teil des Attributs.
+
+Die Familie sagt, **was es gibt** und was Pflicht ist; die Sicht sagt,
+**wer was sieht**: eine Auswahl von Attributen in Reihenfolge, optional nur
+für eine Ebene (Gruppe, Produkt, Variante). `ViewDefined{key, label,
+level?, attributes[{key}]}`. Die Gruppierung kommt vom Attribut; ein
+Gruppenkopf steht dort, wo sein erstes Attribut steht. Im Knoten je Ebene
+wählbar (gemerkt), ⇅ Anordnen ändert die gewählte Sicht per Drag & Drop
+(Zeilen und ganze Gruppenblöcke); ohne Sicht zeigt der Knoten die Familie
+„alles". Die Sicht ist der Ort, an dem später Rollen und Rechte greifen
+(Schritt 10): welche Sichten ein Nutzer hat, was er darin ändern darf.
+
+Das **Label-Attribut** (wie Produkt und Variante im Baum heissen) bleibt
+an der Familie — es ist eine Eigenschaft des Dings, nicht der Sicht. Die
+`group`-Angabe je Attribut in der Familie ist damit tot; sie bleibt im
+Eintragstyp (für immer), wird aber nicht mehr gezeigt.
+
 ## Messlatte: OpenDXP
 
 Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."

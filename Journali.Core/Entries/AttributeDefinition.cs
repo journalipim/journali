@@ -13,6 +13,7 @@ public static class Model
     public const string ListStream = "list:";
     public const string FamilyStream = "family:";
     public const string UnitStream = "unit:";
+    public const string ViewStream = "view:";
 
     /// <summary>Die SKU ist ein Attribut der Variante, eindeutig über alle Varianten.</summary>
     public const string SkuAttribute = "sku";

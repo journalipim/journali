@@ -44,6 +44,8 @@ export function describe(e) {
     case 'ListValueDefined': return `+ ${p.value}${p.label?.de ? ' = ' + p.label.de : ''}`
     case 'ListValueRetired': return `− ${p.value}`
     case 'UnitDefined': return `⚖ ${p.key} = ${p.factor} ${p.quantity}`
+    case 'ViewDefined': return `◫ ${p.key}${p.level ? ' (' + p.level + ')' : ''}: ${(p.attributes || []).map(a => a.key).join(', ')}`
+    case 'ViewRetired': return `− ◫ ${p.key}`
     case 'UnitRetired': return `− ⚖ ${p.key}`
     case 'FamilyDefined': return `${p.key}: ${(p.attributes || []).map(a => a.key).join(', ')}`
     case 'LocaleDefined': return `${p.code} = ${p.label}`
