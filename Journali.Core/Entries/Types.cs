@@ -24,6 +24,9 @@ public static class Types
 
     // Werte an einem Knoten
     public const string AttributeSet = "AttributeSet";
+    public const string RowAdded = "RowAdded";
+    public const string RowRemoved = "RowRemoved";
+    public const string RowOrdered = "RowOrdered";
     public const string CategoryAssigned = "CategoryAssigned";
     public const string CategoryRemoved = "CategoryRemoved";
     public const string ReleaseGranted = "ReleaseGranted";
@@ -39,6 +42,8 @@ public static class Types
     public const string ListValueRetired = "ListValueRetired";
     public const string FamilyDefined = "FamilyDefined";
     public const string FamilyRetired = "FamilyRetired";
+    public const string UnitDefined = "UnitDefined";
+    public const string UnitRetired = "UnitRetired";
 
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
@@ -104,9 +109,17 @@ public sealed record ExternalUnlinked(string System);
 /// <summary>
 /// Ein Attributwert auf seinen Achsen. Fehlende Achse = gilt für alle.
 /// <paramref name="Values"/> statt <paramref name="Value"/> bei mehrfachen Attributen.
+/// <paramref name="Row"/>: Zeile eines vermehrbaren Attributs (docs/pflegestruktur.md, 13).
 /// Leerer Wert = eigener Wert weg, Rückfall gilt wieder.
 /// </summary>
-public sealed record AttributeSet(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values = null);
+public sealed record AttributeSet(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values = null, string? Row = null);
+
+/// <summary>Neue Zeile eines vermehrbaren Attributs; die Zellen kommen per <see cref="AttributeSet"/> mit <c>row</c>.</summary>
+public sealed record RowAdded(string Attribute, string Row);
+
+public sealed record RowRemoved(string Attribute, string Row);
+
+public sealed record RowOrdered(string Attribute, string[] Rows);
 
 public sealed record CategoryAssigned(string Category);
 
@@ -141,8 +154,10 @@ public static class AttributeTypes
     public const string Boolean = "boolean";
     public const string Date = "date";
     public const string Enum = "enum";
+    /// <summary>Vermehrbar: n Zeilen aus Spalten, die selbst Attribute sind (13).</summary>
+    public const string Rows = "rows";
 
-    public static readonly IReadOnlyList<string> All = [Text, Html, Integer, Decimal, Boolean, Date, Enum];
+    public static readonly IReadOnlyList<string> All = [Text, Html, Integer, Decimal, Boolean, Date, Enum, Rows];
 }
 
 /// <summary>Die Achsen, die ein Attribut haben kann.</summary>
@@ -166,6 +181,7 @@ public static class Axes
 /// <param name="List">Werteliste bei <c>enum</c></param>
 /// <param name="Multiple">mehrere Werte (Liste)</param>
 /// <param name="Levels">an welchen Rollen setzbar (<see cref="Roles"/>); null = überall</param>
+/// <param name="Columns">bei <c>rows</c>: die Spalten, jede ein Attribut</param>
 public sealed record AttributeDefinition(
     string Key,
     Labels Label,
@@ -176,7 +192,8 @@ public sealed record AttributeDefinition(
     string[]? Channels = null,
     string? List = null,
     bool Multiple = false,
-    string[]? Levels = null)
+    string[]? Levels = null,
+    string[]? Columns = null)
 {
     public bool PerLocale => Axes?.Contains(Entries.Axes.Locale) ?? false;
     public bool PerChannel => Axes?.Contains(Entries.Axes.Channel) ?? false;
@@ -203,3 +220,12 @@ public sealed record FamilyAttribute(string Key, string? Group = null, Dictionar
 public sealed record FamilyDefinition(string Key, Labels Label, List<FamilyAttribute> Attributes, string[]? Axes = null);
 
 public sealed record FamilyRetired(string Key);
+
+/// <summary>
+/// Eine Einheit (14): gehört zu einer Grösse (mass, length, data …) und hat
+/// einen Faktor zur Basiseinheit dieser Grösse (kg = 1, g = 0.001). Damit
+/// rechnet die Anzeige um; im Journal steht der Wert immer in der Einheit des Attributs.
+/// </summary>
+public sealed record UnitDefinition(string Key, Labels Label, string Quantity, decimal Factor = 1);
+
+public sealed record UnitRetired(string Key);

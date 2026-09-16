@@ -35,13 +35,25 @@ public static partial class ModelApi
             Command(req, c, key, ValidKey, (model, write) =>
             {
                 var def = body with { Key = key, Label = body.Label ?? new(), Axes = Clean(body.Axes), Channels = Clean(body.Channels),
-                                      Unit = Blank(body.Unit), Group = Blank(body.Group), List = Blank(body.List) };
+                                      Unit = Blank(body.Unit), Group = Blank(body.Group), List = Blank(body.List), Columns = Clean(body.Columns) };
                 if (!AttributeTypes.All.Contains(def.Type)) return Bad($"Unbekannter Typ: {def.Type}");
                 if (def.Axes?.Except([Axes.Locale, Axes.Channel]).Any() ?? false) return Bad("Achsen: nur locale und channel.");
                 if (def.Channels?.Except(model.Channels.Keys).Any() ?? false) return Bad("Unbekannter Kanal in channels.");
                 if (def.Type == AttributeTypes.Enum && (def.List is null || !model.Lists.ContainsKey(def.List))) return Bad("enum braucht eine vorhandene Werteliste.");
                 if (def.Type != AttributeTypes.Enum && def.List is not null) return Bad("Nur enum hat eine Werteliste.");
                 if (def.Unit is not null && def.Type is not (AttributeTypes.Integer or AttributeTypes.Decimal)) return Bad("Einheit nur bei Zahlen.");
+                if (def.Unit is not null && !model.Units.ContainsKey(def.Unit)) return Bad($"Unbekannte Einheit: {def.Unit} — unter Einheiten anlegen.");
+                if (def.Type == AttributeTypes.Rows)
+                {
+                    if (def.Columns is null) return Bad("rows braucht Spalten (columns) — jede ein Attribut.");
+                    foreach (var col in def.Columns)
+                    {
+                        if (!model.Attributes.TryGetValue(col, out var cd)) return Bad($"Spalte {col}: kein Attribut.");
+                        if (cd.Type == AttributeTypes.Rows) return Bad($"Spalte {col}: keine Zeilen in Zeilen.");
+                    }
+                    if (def.Multiple || def.Axes is not null) return Bad("rows hat keine Achsen und ist nicht mehrfach — das haben die Spalten.");
+                }
+                else if (def.Columns is not null) return Bad("Spalten nur bei rows.");
                 return write(Model.AttributeStream + key, Types.AttributeDefined, def);
             }));
 
@@ -66,6 +78,18 @@ public static partial class ModelApi
                 model.Lists.TryGetValue(key, out var list) && list.Values.ContainsKey(value)
                     ? write(Model.ListStream + key, Types.ListValueRetired, new ListValueRetired(value))
                     : Results.NotFound()));
+
+        m.MapPut("/units/{key}", (string key, UnitDefinition body, HttpRequest req, Catalog c) =>
+            Command(req, c, key, k => k.Length > 0 && k.Length <= 8 && !k.Any(char.IsWhiteSpace), (model, write) =>
+                string.IsNullOrWhiteSpace(body.Quantity) ? Bad("quantity fehlt (mass, length, volume, data, count, …).")
+                : body.Factor <= 0 ? Bad("factor muss > 0 sein.")
+                : write(Model.UnitStream + key, Types.UnitDefined, body with { Key = key, Label = body.Label ?? new(), Quantity = body.Quantity.Trim().ToLowerInvariant() })));
+
+        m.MapDelete("/units/{key}", (string key, HttpRequest req, Catalog c) =>
+            Command(req, c, key, k => true, (model, write) =>
+                !model.Units.ContainsKey(key) ? Results.NotFound()
+                : model.Attributes.Values.Any(a => a.Unit == key) ? Bad($"{key} wird benutzt von: {string.Join(", ", model.Attributes.Values.Where(a => a.Unit == key).Select(a => a.Key))}")
+                : write(Model.UnitStream + key, Types.UnitRetired, new UnitRetired(key))));
 
         m.MapPut("/families/{key}", (string key, FamilyDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
@@ -99,6 +123,7 @@ public static partial class ModelApi
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, values = l.Ordered.ToList() }).ToList(),
         families = model.Families.Values.OrderBy(f => f.Key).ToList(),
+        units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
         types = AttributeTypes.All,
     };
 

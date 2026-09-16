@@ -91,12 +91,21 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.StatusSet, new StatusSet(status!)));
     }
 
-    public static Outcome SetAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values)
+    public static Outcome SetAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values, string? row = null)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (string.IsNullOrWhiteSpace(attribute)) return Outcome.Bad("attribute fehlt.");
         if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
-        if (!def.AllowedAt(n.Role)) return Outcome.Bad($"{def.Key} gibt es nur an: {string.Join(", ", def.Levels!)}");
+        if (def.Type == AttributeTypes.Rows) return Outcome.Bad($"{def.Key} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.");
+        row = Blank(row);
+        if (row is not null)
+        {
+            // Zelle einer Zeile: die Zeile muss es am Knoten geben, das Attribut muss Spalte dieses vermehrbaren Attributs sein.
+            var owner = n.Rows.FirstOrDefault(kv => kv.Value.Contains(row)).Key;
+            if (owner is null) return Outcome.Bad($"Zeile {row} gibt es hier nicht.");
+            if (!(c.Model.Attributes.GetValueOrDefault(owner)?.Columns?.Contains(def.Key) ?? false)) return Outcome.Bad($"{def.Key} ist keine Spalte von {owner}.");
+        }
+        else if (!def.AllowedAt(n.Role)) return Outcome.Bad($"{def.Key} gibt es nur an: {string.Join(", ", def.Levels!)}");
         locale = Blank(locale);
         channel = Blank(channel);
         if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad($"{def.Key} hat diese Achse nicht.");
@@ -107,7 +116,31 @@ public static class Commands
         // SKU: eindeutig über alle Varianten — die kleine synchrone Prüf-Projektion.
         if (def.Key == Model.SkuAttribute && value is not null && c.Tree.BySku(value).Any(o => o.Id != n.Id))
             return Outcome.Bad($"SKU {value} gibt es schon.");
-        return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values)));
+        return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row)));
+    }
+
+    public static Outcome AddRow(Ctx c, string id, string? attribute)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def) || def.Type != AttributeTypes.Rows) return Outcome.Bad($"{attribute} ist kein vermehrbares Attribut.");
+        if (!def.AllowedAt(n.Role)) return Outcome.Bad($"{def.Key} gibt es nur an: {string.Join(", ", def.Levels!)}");
+        var rowId = "r-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(3)).ToLowerInvariant();
+        return Outcome.Ok(c.Write(id, Types.RowAdded, new RowAdded(def.Key, rowId)));
+    }
+
+    public static Outcome RemoveRow(Ctx c, string id, string? attribute, string? row)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (!n.Rows.TryGetValue(attribute ?? "", out var rows) || !rows.Contains(row ?? "")) return Outcome.Bad("Zeile gibt es nicht.");
+        return Outcome.Ok(c.Write(id, Types.RowRemoved, new RowRemoved(attribute!, row!)));
+    }
+
+    public static Outcome OrderRows(Ctx c, string id, string? attribute, string[]? rows)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (!n.Rows.TryGetValue(attribute ?? "", out var have)) return Outcome.Bad("Keine Zeilen.");
+        if (rows is null || rows.Except(have).Any()) return Outcome.Bad("Unbekannte Zeile in der Reihenfolge.");
+        return Outcome.Ok(c.Write(id, Types.RowOrdered, new RowOrdered(attribute!, rows)));
     }
 
     public static Outcome AssignCategory(Ctx c, string id, string? category) =>
@@ -125,6 +158,12 @@ public static class Commands
         if (!c.Model.Channels.ContainsKey(channel ?? "")) return Outcome.Bad("channel fehlt oder unbekannt.");
         locale = Blank(locale);
         if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
+        // Freigabe setzt Vollständigkeit voraus — Sperre (docs/pflegestruktur.md, entschieden).
+        if (CompletenessRules.FamilyOf(c.Tree, c.Model, n) is { } family)
+        {
+            var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, family, channel!, locale);
+            if (missing.Length > 0) return Outcome.Bad($"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}");
+        }
         return Outcome.Ok(c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale)));
     }
 

@@ -134,6 +134,16 @@ async function run() {
       say(`Attribut ${a.key} (${a.type}) angelegt`)
     }
     const attrOf = k => { const m = mapping.value[k]; if (!m) return null; if (m.startsWith('new:')) return newAttrs.value.find(a => a.from === k)?.key; return m }
+    // Zugeordnete Attribute gehören in die Zielfamilie, sonst zeigt das Gitter sie nicht.
+    if (family.value) {
+      const fam = model.value.families.find(f => f.key === family.value)
+      const mapped = Object.keys(mapping.value).map(attrOf).filter(Boolean)
+      const missing = mapped.filter(k => !fam.attributes.some(a => a.key === k))
+      if (missing.length) {
+        await api.post(`/api/model/families/${fam.key}`, { ...fam, attributes: [...fam.attributes, ...missing.map(key => ({ key, group: 'import' }))] }, 'PUT')
+        say(`Familie ${fam.key}: ${missing.join(', ')} aufgenommen`)
+      }
+    }
 
     // Vorhandene Knoten: eigene Werte holen, damit nur Geändertes geschrieben wird.
     const own = new Map()

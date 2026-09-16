@@ -27,6 +27,7 @@ public sealed class ModelCatalog : IProjection
     public Dictionary<string, AttributeDefinition> Attributes { get; } = new();
     public Dictionary<string, ValueList> Lists { get; } = new();
     public Dictionary<string, FamilyDefinition> Families { get; } = new();
+    public Dictionary<string, UnitDefinition> Units { get; } = new();
 
     /// <summary>Ist überhaupt ein Modell da? Sonst sät der Server das Saatgut.</summary>
     public bool IsEmpty => Attributes.Count == 0 && Locales.Count == 0;
@@ -68,6 +69,13 @@ public sealed class ModelCatalog : IProjection
                 break;
             case Types.FamilyRetired:
                 Families.Remove(Types.Deserialize<FamilyRetired>(entry.Payload).Key);
+                break;
+            case Types.UnitDefined:
+                var u = Types.Deserialize<UnitDefinition>(entry.Payload);
+                Units[u.Key] = u;
+                break;
+            case Types.UnitRetired:
+                Units.Remove(Types.Deserialize<UnitRetired>(entry.Payload).Key);
                 break;
         }
     }

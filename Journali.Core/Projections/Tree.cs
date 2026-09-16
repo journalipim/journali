@@ -3,8 +3,8 @@ using Journali.Core.Journal;
 
 namespace Journali.Core.Projections;
 
-/// <summary>Die Achsen eines Werts: Attribut × Sprache × Kanal. Null = gilt für alle.</summary>
-public readonly record struct Axis(string Attribute, string? Locale, string? Channel);
+/// <summary>Die Achsen eines Werts: Attribut × Sprache × Kanal, bei vermehrbaren Attributen × Zeile. Null = gilt für alle.</summary>
+public readonly record struct Axis(string Attribute, string? Locale, string? Channel, string? Row = null);
 
 public readonly record struct Release(string Channel, string? Locale);
 
@@ -22,6 +22,8 @@ public sealed class Node
     public Dictionary<string, string> External { get; } = new();   // Quellsystem → Kennung dort
     public Dictionary<Axis, string> Values { get; } = new();
     public Dictionary<Axis, string[]> Lists { get; } = new();
+    /// <summary>Vermehrbare Attribute: Zeilen in Reihenfolge je Attribut.</summary>
+    public Dictionary<string, List<string>> Rows { get; } = new();
     public HashSet<string> Categories { get; } = new();
     public HashSet<Release> Releases { get; } = new();
     public long LastNumber { get; set; }
@@ -29,13 +31,22 @@ public sealed class Node
     public string LastActor { get; set; } = "";
     public int Entries { get; set; }
 
-    /// <summary>Eigener Wert auf der Achse, sonst weniger spezifisch (Kanal weg, dann Sprache weg) — nur dieser Knoten.</summary>
-    public string? Own(string attribute, string? locale, string? channel)
+    /// <summary>Eigener Wert auf der Achse, sonst weniger spezifisch (Kanal weg, dann Sprache weg) — nur dieser Knoten. Listen zählen als Wert (verbunden mit Komma).</summary>
+    public string? Own(string attribute, string? locale, string? channel, string? row = null)
     {
-        if (Values.TryGetValue(new Axis(attribute, locale, channel), out var v)) return v;
-        if (channel is not null && Values.TryGetValue(new Axis(attribute, locale, null), out v)) return v;
-        if ((locale is not null || channel is not null) && Values.TryGetValue(new Axis(attribute, null, null), out v)) return v;
+        foreach (var axis in Fallback(attribute, locale, channel, row))
+        {
+            if (Values.TryGetValue(axis, out var v)) return v;
+            if (Lists.TryGetValue(axis, out var l)) return string.Join(", ", l);
+        }
         return null;
+    }
+
+    private static IEnumerable<Axis> Fallback(string attribute, string? locale, string? channel, string? row)
+    {
+        yield return new Axis(attribute, locale, channel, row);
+        if (channel is not null) yield return new Axis(attribute, locale, null, row);
+        if (locale is not null || channel is not null) yield return new Axis(attribute, null, null, row);
     }
 }
 
@@ -79,6 +90,40 @@ public sealed class Tree : IProjection
     /// <summary>Knoten zu einer externen Kennung, falls verknüpft.</summary>
     public Node? ByExternal(string system, string id) =>
         _external.TryGetValue((system, id), out var nodeId) && _nodes.TryGetValue(nodeId, out var n) ? n : null;
+
+    /// <summary>Suche über Label, SKU, Id und alle eigenen Werte — ohne Index, gut bis einige zehntausend Knoten.</summary>
+    public IEnumerable<(Node Node, string Hit)> Search(string q)
+    {
+        foreach (var n in _nodes.Values)
+        {
+            if (n.Id.Contains(q, StringComparison.OrdinalIgnoreCase)) { yield return (n, n.Id); continue; }
+            if (n.Label.Values.FirstOrDefault(l => l.Contains(q, StringComparison.OrdinalIgnoreCase)) is { } l) { yield return (n, l); continue; }
+            if (n.AxisValues.Values.FirstOrDefault(v => v.Contains(q, StringComparison.OrdinalIgnoreCase)) is { } av) { yield return (n, av); continue; }
+            var hit = n.Values.FirstOrDefault(kv => kv.Value.Contains(q, StringComparison.OrdinalIgnoreCase));
+            if (hit.Key.Attribute is not null) { yield return (n, $"{hit.Key.Attribute}: {Snippet(hit.Value, q)}"); continue; }
+            var list = n.Lists.FirstOrDefault(kv => kv.Value.Any(v => v.Contains(q, StringComparison.OrdinalIgnoreCase)));
+            if (list.Key.Attribute is not null) yield return (n, $"{list.Key.Attribute}: {string.Join(", ", list.Value)}");
+        }
+    }
+
+    private static string Snippet(string text, string q)
+    {
+        var plain = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]+>", " ");
+        var i = plain.IndexOf(q, StringComparison.OrdinalIgnoreCase);
+        var start = Math.Max(0, i - 30);
+        var s = plain.Substring(start, Math.Min(plain.Length - start, q.Length + 60)).Trim();
+        return (start > 0 ? "…" : "") + s + (start + s.Length < plain.Length ? "…" : "");
+    }
+
+    /// <summary>Alle Nachfahren, tiefste zuerst — die Reihenfolge fürs Zurückziehen.</summary>
+    public IEnumerable<Node> DescendantsDeepestFirst(string id)
+    {
+        foreach (var child in Children(id).ToList())
+        {
+            foreach (var d in DescendantsDeepestFirst(child.Id)) yield return d;
+            yield return child;
+        }
+    }
 
     /// <summary>Alle Varianten mit dieser SKU — zur Eindeutigkeitsprüfung.</summary>
     public IEnumerable<Node> BySku(string sku) =>
@@ -171,7 +216,7 @@ public sealed class Tree : IProjection
                 break;
             case Types.AttributeSet:
                 var a = Types.Deserialize<AttributeSet>(entry.Payload);
-                var axis = new Axis(a.Attribute, a.Locale, a.Channel);
+                var axis = new Axis(a.Attribute, a.Locale, a.Channel, a.Row);
                 // Leer = eigener Wert weg, der Rückfall gilt wieder.
                 if (a.Values is { } list)
                 {
@@ -179,6 +224,28 @@ public sealed class Tree : IProjection
                 }
                 else if (string.IsNullOrEmpty(a.Value)) n.Values.Remove(axis);
                 else n.Values[axis] = a.Value;
+                break;
+            case Types.RowAdded:
+                var ra = Types.Deserialize<RowAdded>(entry.Payload);
+                if (!n.Rows.TryGetValue(ra.Attribute, out var rows)) n.Rows[ra.Attribute] = rows = new();
+                if (!rows.Contains(ra.Row)) rows.Add(ra.Row);
+                break;
+            case Types.RowRemoved:
+                var rr = Types.Deserialize<RowRemoved>(entry.Payload);
+                if (n.Rows.TryGetValue(rr.Attribute, out var rl)) rl.Remove(rr.Row);
+                foreach (var k in n.Values.Keys.Where(k => k.Row == rr.Row).ToList()) n.Values.Remove(k);
+                foreach (var k in n.Lists.Keys.Where(k => k.Row == rr.Row).ToList()) n.Lists.Remove(k);
+                break;
+            case Types.RowOrdered:
+                var ro = Types.Deserialize<RowOrdered>(entry.Payload);
+                if (n.Rows.TryGetValue(ro.Attribute, out var ol))
+                {
+                    // Genannte in der neuen Reihenfolge, ungenannte hinten dran.
+                    var known = ol.ToHashSet();
+                    var ordered = ro.Rows.Where(known.Contains).Distinct().ToList();
+                    ordered.AddRange(ol.Where(r => !ordered.Contains(r)));
+                    ol.Clear(); ol.AddRange(ordered);
+                }
                 break;
             case Types.CategoryAssigned:
                 n.Categories.Add(Types.Deserialize<CategoryAssigned>(entry.Payload).Category);

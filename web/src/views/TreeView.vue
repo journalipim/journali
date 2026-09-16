@@ -13,6 +13,8 @@ const props = defineProps({ id: String })
 const router = useRouter()
 const q = ref('')
 const search = ref(null)
+const hits = ref(new Map())   // Server-Suche: id → Fundstelle
+let searchTimer = null
 const list = ref(null)
 const creating = ref(null)     // null | 'group' | 'product' | 'variant'
 const form = ref({})
@@ -24,6 +26,17 @@ watch(() => props.id, reveal)
 
 const selected = computed(() => props.id ? tree.byId.get(props.id) : null)
 
+// Filter: Label/SKU/Id sofort im Client, ab 2 Zeichen zusätzlich die Server-Suche über alle Werte.
+watch(q, v => {
+  clearTimeout(searchTimer)
+  const s = v.trim()
+  if (s.length < 2) { hits.value = new Map(); return }
+  searchTimer = setTimeout(async () => {
+    try { hits.value = new Map((await api.get(`/api/search?q=${encodeURIComponent(s)}`)).map(h => [h.row.id, h.hit])) }
+    catch (e) { store.toast(e.message) }
+  }, 250)
+})
+
 // Sichtbare Zeilen: aufgeklappt oder — mit Filter — alle Treffer samt Pfad.
 const visible = computed(() => {
   const f = q.value.trim().toLowerCase()
@@ -31,7 +44,7 @@ const visible = computed(() => {
   if (f) {
     const keep = new Set()
     for (const r of tree.rows)
-      if (r.label.toLowerCase().includes(f) || (r.sku ?? '').toLowerCase().includes(f) || r.id.includes(f)) {
+      if (hits.value.has(r.id) || r.label.toLowerCase().includes(f) || (r.sku ?? '').toLowerCase().includes(f) || r.id.includes(f)) {
         keep.add(r.id)
         for (const a of tree.ancestors(r.id)) keep.add(a.id)
       }
@@ -65,8 +78,19 @@ function onListKey(e) {
     if (tree.expanded.has(rows[i].r.id)) tree.toggle(rows[i].r.id)
     else if (rows[i].r.parent) router.push(`/tree/${rows[i].r.parent}`)
   }
+  else if (e.key === 'Delete' && i >= 0) { e.preventDefault(); retire(rows[i].r) }
   else if (e.key === 'Home' && rows.length) open(rows[0].r)
   else if (e.key === 'End' && rows.length) open(rows[rows.length - 1].r)
+}
+function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
+async function retire(r) {
+  const below = countBelow(r.id)
+  if (!window.confirm(below ? `${r.label} mit allen ${below} Knoten darunter zurückziehen?\n\nDas Journal behält alles; der Baum zeigt sie nicht mehr.` : `${r.label} zurückziehen?`)) return
+  try {
+    const res = await api.del(`/api/nodes/${encodeURIComponent(r.id)}${below ? '?recursive=true' : ''}`)
+    if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok')
+    await tree.load(); if (props.id === r.id || !tree.byId.has(props.id)) router.push(r.parent ? `/tree/${r.parent}` : '/tree')
+  } catch (e) { store.toast(e.message) }
 }
 function onGlobalKey(e) {
   if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); search.value?.focus() }
@@ -121,7 +145,7 @@ function toggleAxis(a) {
     <div class="toolbar">
       <h1>▣ Baum</h1>
       <span class="muted">{{ tree.rows.length }}</span>
-      <input ref="search" v-model="q" type="search" placeholder="Filter  /" style="flex:1;min-width:0" @keydown.down.prevent="list?.focus()" />
+      <input ref="search" v-model="q" type="search" placeholder="Suche in allem  /" style="flex:1;min-width:0" @keydown.down.prevent="list?.focus()" />
     </div>
     <div class="toolbar create">
       <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label}` : 'Gruppe an der Wurzel'">+ ▣</button>
@@ -171,6 +195,7 @@ function toggleAxis(a) {
         <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (open ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
         <span class="label">{{ r.label }}</span>
+        <span v-if="hits.get(r.id) && !r.label.toLowerCase().includes(q.trim().toLowerCase())" class="muted hit" :title="hits.get(r.id)">{{ hits.get(r.id) }}</span>
         <span v-if="r.role === 'variant' && r.sku && Object.keys(r.axisValues).length" class="muted axis">{{ Object.values(r.axisValues).join(' · ') }}</span>
         <span v-if="r.status === 'discontinued'" class="neg" title="ausgelaufen">✗</span>
         <span v-else-if="r.status === 'active'" class="pos" title="aktiv">●</span>
@@ -180,7 +205,7 @@ function toggleAxis(a) {
       <div v-else-if="q && !visible.length" class="empty">Nichts zu „{{ q }}“</div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>/</kbd> Filter
+      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche in allem
     </div>
   </div>
 
@@ -205,5 +230,6 @@ function toggleAxis(a) {
 .node.variant .icon { color: var(--warn); }
 .label { overflow: hidden; text-overflow: ellipsis; }
 .axis { font-size: 11px; }
+.hit { font-size: 11px; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
 .count { margin-left: auto; font-size: 11px; }
 </style>

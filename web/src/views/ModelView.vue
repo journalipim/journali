@@ -11,6 +11,7 @@ const sections = [
   { key: 'attributes', icon: '⊞', label: 'Attribute' },
   { key: 'lists', icon: '☰', label: 'Wertelisten' },
   { key: 'families', icon: '⌂', label: 'Familien' },
+  { key: 'units', icon: '⚖', label: 'Einheiten' },
   { key: 'locales', icon: '🗣', label: 'Sprachen' },
   { key: 'channels', icon: '⇶', label: 'Kanäle' },
 ]
@@ -40,19 +41,20 @@ const attrCols = computed(() => [
   { key: 'label_de', label: 'Name de' },
   { key: 'label_en', label: 'Name en' },
   { key: 'type', label: 'Typ', type: 'select', options: model.value.types, width: '110px' },
-  { key: 'unit', label: 'Einheit', width: '60px', title: 'nur bei Zahlen' },
+  { key: 'unit', label: 'Einheit', type: 'select', options: (model.value.units ?? []).map(u => u.key), width: '80px', title: 'nur bei Zahlen; Einheiten unter ⚖' },
   { key: 'group', label: 'Gruppe', width: '90px' },
   { key: 'locale', label: '🗣', type: 'bool', width: '36px', title: 'je Sprache' },
   { key: 'channel', label: '⇶', type: 'bool', width: '36px', title: 'je Kanal' },
   { key: 'list', label: 'Werteliste', type: 'select', options: model.value.lists.map(l => l.key), width: '110px', title: 'bei enum' },
   { key: 'multiple', label: '≣', type: 'bool', width: '36px', title: 'mehrfach' },
+  { key: 'columns', label: 'Spalten', width: '160px', title: 'bei rows: Attribute, kommagetrennt' },
   { key: 'lv_group', label: '▣', type: 'bool', width: '36px', title: 'an Produktgruppen setzbar' },
   { key: 'lv_product', label: '▦', type: 'bool', width: '36px', title: 'an Produkten setzbar' },
   { key: 'lv_variant', label: '◆', type: 'bool', width: '36px', title: 'an Varianten setzbar' },
 ])
 const attrRows = computed(() => model.value.attributes.map(a => ({
   key: a.key, label_de: a.label?.de, label_en: a.label?.en, type: a.type, unit: a.unit, group: a.group,
-  locale: a.perLocale, channel: a.perChannel, list: a.list, multiple: a.multiple,
+  locale: a.perLocale, channel: a.perChannel, list: a.list, multiple: a.multiple, columns: (a.columns ?? []).join(', '),
   lv_group: !a.levels || a.levels.includes('group'), lv_product: !a.levels || a.levels.includes('product'), lv_variant: !a.levels || a.levels.includes('variant'), _a: a,
 })))
 function attrChange(r, col, v) {
@@ -63,6 +65,8 @@ function attrChange(r, col, v) {
     const axes = new Set(a.axes || [])
     v ? axes.add(col) : axes.delete(col)
     a.axes = [...axes]
+  } else if (col === 'columns') {
+    a.columns = v.split(',').map(s => s.trim()).filter(Boolean)
   } else if (col.startsWith('lv_')) {
     const all = ['group', 'product', 'variant']
     const lv = new Set(a.levels ?? all)
@@ -102,6 +106,22 @@ function valueAdd() {
   const v = newValue.value.trim(); if (!v || !selectedList.value) return
   newValue.value = ''
   put(`/api/model/lists/${selectedList.value}/values/${encodeURIComponent(v)}`, { value: v, label: {}, order: valueRows.value.length + 1 })
+}
+
+// ---- Einheiten
+const unitCols = [{ key: 'key', label: 'Einheit', type: 'ro', width: '80px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'quantity', label: 'Grösse', width: '110px', title: 'mass, length, volume, data, count …' }, { key: 'factor', label: '× Basis', width: '90px', title: 'Faktor zur Basiseinheit der Grösse (Basis = 1)' }]
+const unitRows = computed(() => (model.value.units ?? []).map(u => ({ key: u.key, label_de: u.label?.de, label_en: u.label?.en, quantity: u.quantity, factor: String(u.factor), _u: u })))
+function unitChange(r, col, v) {
+  const u = { ...r._u, label: { ...(r._u.label || {}) } }
+  if (col.startsWith('label_')) u.label[col.slice(6)] = v
+  else if (col === 'factor') u.factor = parseFloat(v.replace(',', '.')) || 1
+  else u[col] = v
+  put(`/api/model/units/${encodeURIComponent(r.key)}`, u)
+}
+function unitAdd() {
+  const k = newKey.value.trim(); if (!k) return
+  newKey.value = ''
+  put(`/api/model/units/${encodeURIComponent(k)}`, { key: k, label: {}, quantity: 'other', factor: 1 })
 }
 
 // ---- Familien
@@ -200,7 +220,9 @@ const freeAttrs = computed(() => model.value.attributes.map(a => a.key).filter(k
     <!-- Familien -->
     <template v-else-if="section === 'families'">
       <div class="toolbar">
-        <h1>Familien</h1><span class="grow" />
+        <h1>Familien</h1>
+        <span class="muted" title="Was für ein Ding ist das Produkt? Die Familie sagt, welche Attribute es hat, welche davon Pflicht sind (je Kanal × Sprache = Vollständigkeit) und wonach es variieren darf. Jedes Produkt hat genau eine.">ⓘ Art des Produkts: welche Attribute, welche Pflicht, welche Variantenachsen</span>
+        <span class="grow" />
         <input v-model="newKey" type="text" placeholder="neue Familie (key)" style="width:160px" @keydown.enter="familyAdd" />
         <button class="primary" :disabled="!newKey.trim()" @click="familyAdd">+ Familie</button>
       </div>
@@ -217,6 +239,18 @@ const freeAttrs = computed(() => model.value.attributes.map(a => a.key).filter(k
       </div>
       <div class="scroll">
         <EditGrid v-if="selectedFamily" :columns="famAttrCols" :rows="famAttrRows" removable @change="famAttrChange" @remove="famAttrRemove" />
+      </div>
+    </template>
+
+    <!-- Einheiten -->
+    <template v-else-if="section === 'units'">
+      <div class="toolbar">
+        <h1>Einheiten</h1><span class="muted">je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um</span><span class="grow" />
+        <input v-model="newKey" type="text" placeholder="z. B. oz" style="width:100px" @keydown.enter="unitAdd" />
+        <button class="primary" :disabled="!newKey.trim()" @click="unitAdd">+ Einheit</button>
+      </div>
+      <div class="scroll">
+        <EditGrid :columns="unitCols" :rows="unitRows" removable @change="unitChange" @remove="r => del(`/api/model/units/${encodeURIComponent(r.key)}`)" />
       </div>
     </template>
 

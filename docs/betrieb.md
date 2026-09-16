@@ -49,6 +49,7 @@ Befehle (schreiben) brauchen den Kopf `X-Actor` und stehen in
 | `GET /api/tree` | alle Knoten flach: Id, Rolle, Eltern, Label, Familie, Achsen, Status, SKU, Zähler |
 | `GET /api/nodes/{id}` | ein Knoten: Werte, **Vorfahren mit ihren Werten** (für die Vererbung), Kategorien, Freigaben, externe Kennungen — oder 404 |
 | `GET /api/nodes/external/{system}/{id}` | der Knoten zu einer externen Kennung — oder 404 |
+| `GET /api/search?q=&limit=` | Suche über Label, SKU, Id, Achsenwerte und alle eigenen Werte (auch im HTML); Zeilen mit Fundstelle. Ohne Index — gut bis einige zehntausend Knoten |
 | `GET /api/journal?after=N&limit=M` | Einträge mit Nummer > N, höchstens M (Vorgabe 1000, Obergrenze 10 000) |
 | `GET /api/journal/{number}` | ein Eintrag oder 404 |
 | `GET /api/streams/{stream}` | alle Einträge eines Stroms in Reihenfolge |

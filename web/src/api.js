@@ -37,12 +37,14 @@ export function describe(e) {
   const p = e.payload || {}
   const axis = [p.locale, p.channel].filter(Boolean).join('/')
   switch (e.type) {
-    case 'AttributeSet': return `${p.attribute}${axis ? ' ' + axis : ''} = ${p.values ? p.values.join(', ') : (p.value ?? '∅')}`
+    case 'AttributeSet': return `${p.attribute}${axis ? ' ' + axis : ''}${p.row ? ' [' + p.row + ']' : ''} = ${p.values ? p.values.join(', ') : (p.value == null || p.value === '' ? '∅' : String(p.value).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80))}`
     case 'AttributeDefined': return `${p.key}: ${p.type}${p.unit ? ' ' + p.unit : ''}${p.axes?.length ? ' [' + p.axes.join(',') + ']' : ''}${p.list ? ' ← ' + p.list : ''}${p.multiple ? ' ≣' : ''}`
     case 'AttributeRetired': case 'FamilyRetired': return `− ${p.key}`
     case 'ListDefined': return `${p.key}: ${p.label?.de ?? ''}`
     case 'ListValueDefined': return `+ ${p.value}${p.label?.de ? ' = ' + p.label.de : ''}`
     case 'ListValueRetired': return `− ${p.value}`
+    case 'UnitDefined': return `⚖ ${p.key} = ${p.factor} ${p.quantity}`
+    case 'UnitRetired': return `− ⚖ ${p.key}`
     case 'FamilyDefined': return `${p.key}: ${(p.attributes || []).map(a => a.key).join(', ')}`
     case 'LocaleDefined': return `${p.code} = ${p.label}`
     case 'GroupCreated': return `▣ ${p.label?.de ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
@@ -53,6 +55,9 @@ export function describe(e) {
     case 'NodeRetired': return '− Knoten'
     case 'StatusSet': return `Status ${p.status}`
     case 'ExternalLinked': return `⇩ ${p.system}: ${p.id}`
+    case 'RowAdded': return `+ Zeile ${p.attribute} ${p.row}`
+    case 'RowRemoved': return `− Zeile ${p.attribute} ${p.row}`
+    case 'RowOrdered': return `↕ ${p.attribute}`
     case 'ExternalUnlinked': return `− ${p.system}`
     case 'ChannelDefined': return `${p.key} = ${p.label?.de ?? ''}`
     case 'CategoryAssigned': return `+ ${p.category}`

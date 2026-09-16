@@ -17,11 +17,17 @@ public static class TreeApi
         api.MapGet("/tree", (Catalog c) => c.Read(tree => tree.Nodes.Values.Select(n => NodeRow.Of(tree, n)).ToList()));
 
         api.MapGet("/nodes/{id}", (string id, Catalog c) =>
-            c.Read(tree => tree.Nodes.TryGetValue(id, out var n) ? NodeView.Of(tree, n) : null)
+            c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var n) ? NodeView.Of(tree, model, n) : null)
                 is { } view ? Results.Ok(view) : Results.NotFound());
 
+        // Suche über Label, SKU, Id und Werte; liefert Zeilen mit Fundstelle.
+        api.MapGet("/search", (string q, Catalog c, int limit = 200) =>
+            string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2
+                ? Results.BadRequest(new { error = "q: mindestens 2 Zeichen." })
+                : Results.Ok(c.Read(tree => tree.Search(q.Trim()).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, h.Node), hit = h.Hit }).ToList())));
+
         api.MapGet("/nodes/external/{system}/{externalId}", (string system, string externalId, Catalog c) =>
-            c.Read(tree => tree.ByExternal(system, externalId) is { } n ? NodeView.Of(tree, n) : null)
+            c.With((model, tree, _) => tree.ByExternal(system, externalId) is { } n ? NodeView.Of(tree, model, n) : null)
                 is { } view ? Results.Ok(view) : Results.NotFound());
 
         // ---- Befehle: genau ein Eintrag je Aufruf ------------------------------
@@ -31,9 +37,28 @@ public static class TreeApi
         api.MapPost("/products", (ProductCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateProduct(x, b.Group, b.Family, b.Axes)));
         api.MapPost("/variants", (VariantCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateVariant(x, b.Product, b.AxisValues)));
         api.MapPost("/nodes/{id}/move", (string id, NodeMoved b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Move(x, id, b.Parent)));
-        api.MapDelete("/nodes/{id}", (string id, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Retire(x, id)));
+        api.MapDelete("/nodes/{id}", (string id, bool recursive, HttpRequest req, Catalog c) =>
+        {
+            if (!recursive) return Run(req, c, x => Commands.Retire(x, id));
+            // Unterbaum: tiefste zuerst, alles in einem Stapel — Rückgängig je Aktion.
+            if (Actor(req) is not { } actor) return ActorMissing();
+            var batch = "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
+            var result = c.With((model, tree, write) =>
+            {
+                if (!tree.Nodes.ContainsKey(id)) return (Count: -1, Batch: batch);
+                var ctx = new Ctx { Model = model, Tree = tree, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
+                var n = 0;
+                foreach (var d in tree.DescendantsDeepestFirst(id).ToList()) { Commands.Retire(ctx, d.Id); n++; }
+                Commands.Retire(ctx, id); n++;
+                return (Count: n, Batch: batch);
+            });
+            return result.Count < 0 ? Results.NotFound() : Results.Ok(new { retired = result.Count, batch = result.Batch });
+        });
         api.MapPost("/nodes/{id}/status", (string id, StatusSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetStatus(x, id, b.Status)));
-        api.MapPost("/nodes/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values)));
+        api.MapPost("/nodes/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values, b.Row)));
+        api.MapPost("/nodes/{id}/rows", (string id, RowAdded b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AddRow(x, id, b.Attribute)));
+        api.MapDelete("/nodes/{id}/rows/{attribute}/{row}", (string id, string attribute, string row, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RemoveRow(x, id, attribute, row)));
+        api.MapPut("/nodes/{id}/rows/{attribute}", (string id, string attribute, RowOrdered b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.OrderRows(x, id, attribute, b.Rows)));
         api.MapPost("/nodes/{id}/categories", (string id, CategoryAssigned b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AssignCategory(x, id, b.Category)));
         api.MapDelete("/nodes/{id}/categories/{category}", (string id, string category, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RemoveCategory(x, id, category)));
         api.MapPost("/nodes/{id}/releases", (string id, ReleaseGranted b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.GrantRelease(x, id, b.Channel, b.Locale)));
@@ -81,12 +106,12 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
     };
 }
 
-/// <summary>Ein Wert auf seinen Achsen — einfach oder als Liste.</summary>
-public sealed record ValueView(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values)
+/// <summary>Ein Wert auf seinen Achsen — einfach oder als Liste, bei vermehrbaren Attributen mit Zeile.</summary>
+public sealed record ValueView(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values, string? Row = null)
 {
     public static IEnumerable<ValueView> Of(Node n) =>
-        n.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null))
-            .Concat(n.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value)));
+        n.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row))
+            .Concat(n.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row)));
 }
 
 /// <summary>Ein Vorfahr mit seinen Werten — der Client rechnet die Vererbung damit wie <see cref="Tree.Resolve"/>.</summary>
@@ -94,13 +119,16 @@ public sealed record AncestorView(string Id, string Role, string Label, List<Val
 
 /// <summary>Ein Knoten vollständig — Kopie aus dem Abbild, ausserhalb der Sperre ungefährlich.</summary>
 public sealed record NodeView(string Id, string Role, string? Parent, Labels Label, string? Family, string[] Axes,
-    Dictionary<string, string> AxisValues, string Status, Dictionary<string, string> External, List<ValueView> Values, List<AncestorView> Ancestors,
-    List<string> Categories, List<Release> Releases, int Children, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
+    Dictionary<string, string> AxisValues, string Status, Dictionary<string, string> External, List<ValueView> Values, Dictionary<string, List<string>> Rows,
+    List<AncestorView> Ancestors, List<string> Categories, List<Release> Releases, List<Completeness> Completeness,
+    int Children, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {
-    public static NodeView Of(Tree tree, Node n) => new(
+    public static NodeView Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, n.Label, n.Family, n.Axes, n.AxisValues, n.Status, n.External,
-        ValueView.Of(n).ToList(),
+        ValueView.Of(n).ToList(), n.Rows,
         tree.Ancestors(n).Select(a => new AncestorView(a.Id, a.Role, NodeRow.LabelOf(tree, a), ValueView.Of(a).ToList())).ToList(),
-        n.Categories.Order().ToList(), n.Releases.ToList(), tree.Children(n.Id).Count(),
+        n.Categories.Order().ToList(), n.Releases.ToList(),
+        n.Role == Roles.Group ? [] : CompletenessRules.Of(tree, model, n),
+        tree.Children(n.Id).Count(),
         n.Entries, n.LastNumber, n.LastAt, n.LastActor);
 }

@@ -11,6 +11,9 @@ import { tree, icon } from '../tree.js'
 import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
+import DateCell from '../components/DateCell.vue'
+import HtmlCell from '../components/HtmlCell.vue'
+import RowsBlock from '../components/RowsBlock.vue'
 import EntryList from '../components/EntryList.vue'
 
 const props = defineProps({ id: String })
@@ -71,10 +74,17 @@ const groups = computed(() => {
 const own = computed(() => valueMap(node.value?.values ?? []))
 function valueMap(values) {
   const m = new Map()
-  for (const v of values) m.set(key(v.attribute, v.locale, v.channel), v.values ? v.values.join(', ') : v.value)
+  for (const v of values) m.set(key(v.attribute, v.locale, v.channel, v.row), v.values ? v.values.join(', ') : v.value)
   return m
 }
-function key(a, l, c) { return `${a}|${l ?? ''}|${c ?? ''}` }
+function key(a, l, c, row) { return `${a}|${l ?? ''}|${c ?? ''}${row ? '|' + row : ''}` }
+// Vollständigkeit je Kanal × Sprache aus dem Server; null = die Familie verlangt hier nichts.
+function completeness(channel, locale) { return (node.value?.completeness ?? []).find(c => c.channel === channel && c.locale === locale) ?? null }
+function incomplete(channel, locale) {
+  if (locale) return completeness(channel, locale)?.missing?.length ? completeness(channel, locale) : null
+  const all = (node.value?.completeness ?? []).filter(c => c.channel === channel && c.missing.length)
+  return all.length ? { missing: all.flatMap(c => c.missing.map(m => m + (m.includes('/') ? '' : '/' + c.locale))) } : null
+}
 function ownValue(a, col) { return own.value.get(key(a, col.locale, col.channel)) ?? null }
 // Wie Tree.Resolve: je Stufe genaue Achse, ohne Kanal, ohne Sprache; erst hier, dann den Pfad hinauf.
 function fallback(m, a, col) {
@@ -128,11 +138,14 @@ async function command(fn) {
   finally { busy.value = false }
 }
 const nodeUrl = () => `/api/nodes/${encodeURIComponent(props.id)}`
-const setValue = (def, col, value) => command(() =>
+const setValue = (def, col, value, row = null) => command(() =>
   api.post(`${nodeUrl()}/attributes`,
     def.multiple
-      ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean) }
-      : { attribute: def.key, locale: col.locale, channel: col.channel, value }))
+      ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean), row }
+      : { attribute: def.key, locale: col.locale, channel: col.channel, value, row }))
+const addRow = def => command(() => api.post(`${nodeUrl()}/rows`, { attribute: def.key, row: '' }))
+const removeRow = (def, row) => command(() => api.del(`${nodeUrl()}/rows/${def.key}/${row}`))
+const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def.key}`, { attribute: def.key, rows }, 'PUT'))
 const setLabel = (loc, v) => command(() => api.post(`/api/groups/${encodeURIComponent(props.id)}/label`, { label: { ...node.value.label, [loc]: v } }, 'PUT'))
 const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
 function addCategory() {
@@ -146,10 +159,16 @@ function toggleRelease(channel, locale) {
   command(() => released(channel, locale) ? api.del(`${nodeUrl()}/releases?${q}`) : api.post(`${nodeUrl()}/releases`, { channel, locale }))
 }
 async function retire() {
-  if (node.value.children) { store.toast('Erst die Kinder entfernen'); return }
-  try { await api.del(nodeUrl()); const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree') }
+  const kids = node.value.children
+  if (kids && !window.confirm(`${tree.byId.get(props.id)?.label ?? props.id} mit allen ${countBelow(props.id)} Knoten darunter zurückziehen?\n\nDas Journal behält alles; der Baum zeigt sie nicht mehr.`)) return
+  try {
+    const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
+    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok')
+    const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree')
+  }
   catch (e) { store.toast(e.message) }
 }
+function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
 </script>
 
 <template>
@@ -163,7 +182,7 @@ async function retire() {
       <select v-if="node.role !== 'group'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
         <option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option>
       </select>
-      <button class="x" @click="retire" :disabled="node.children > 0" :title="node.children ? 'hat Kinder' : 'Knoten zurückziehen'">🗑</button>
+      <button class="x" @click="retire" :title="node.children ? `mit ${countBelow(id)} Knoten darunter zurückziehen  (Entf im Baum)` : 'Knoten zurückziehen  (Entf im Baum)'">🗑</button>
     </div>
     <div class="toolbar meta muted">
       <span class="mono">{{ node.id }}</span>
@@ -199,7 +218,16 @@ async function retire() {
         </thead>
         <tbody v-for="[group, defs] in groups" :key="group">
           <tr class="group-row"><td :colspan="columns.length + 1">{{ group || '—' }}</td></tr>
-          <tr v-for="def in defs" :key="def.key">
+          <template v-for="def in defs" :key="def.key">
+          <tr v-if="def.type === 'rows'">
+            <td class="attr" :title="def.key">{{ def.label?.de || def.key }} <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
+            <td :colspan="columns.length" style="padding:0">
+              <RowsBlock :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
+                @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
+                @add="addRow(def)" @remove="row => removeRow(def, row)" @order="rows => orderRows(def, rows)" />
+            </td>
+          </tr>
+          <tr v-else>
             <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '')">
               {{ def.label?.de || def.key }}
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
@@ -209,11 +237,15 @@ async function retire() {
             <template v-for="c in columns" :key="c.label">
               <ToggleCell v-if="def.type === 'boolean'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" />
               <SelectCell v-else-if="def.type === 'enum'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" />
+              <DateCell v-else-if="def.type === 'date'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" />
+              <HtmlCell v-else-if="def.type === 'html'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" :title="`${def.label?.de || def.key} · ${c.label}`"
+                :origin="inherited(def.key, c).from ? `${icon(inherited(def.key, c).from.role)} ${inherited(def.key, c).from.label}` : null" @save="v => setValue(def, c, v)" />
               <td v-else-if="axisValue(def.key, c) != null" class="cell"><div class="cell-box locked" :title="'Variantenachse — festgelegt beim Anlegen'">{{ axisValue(def.key, c) }} 🔒</div></td>
               <Cell v-else :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)"
                 :origin="inherited(def.key, c).from ? `${icon(inherited(def.key, c).from.role)} ${inherited(def.key, c).from.label}` : null" @save="v => setValue(def, c, v)" />
             </template>
           </tr>
+          </template>
         </tbody>
       </table>
 
@@ -225,15 +257,20 @@ async function retire() {
         </div>
       </div>
 
-      <div class="section" v-if="node.role === 'variant'">
-        <h2>✓ Freigaben</h2>
+      <div class="section" v-if="node.role !== 'group'">
+        <h2>✓ Freigaben <span class="muted">· Vollständigkeit aus den Pflichtfeldern der Familie; unvollständig = keine Freigabe</span></h2>
         <table class="grid releases">
-          <thead><tr><th>Kanal</th><th>*</th><th v-for="l in locales" :key="l">{{ l }}</th></tr></thead>
+          <thead><tr><th>Kanal</th><th v-if="node.role === 'variant'">*</th><th v-for="l in locales" :key="l">{{ l }}</th></tr></thead>
           <tbody>
             <tr v-for="ch in channels" :key="ch">
               <td class="mono muted">{{ ch }}</td>
-              <td v-for="l in [null, ...locales]" :key="l ?? '*'">
-                <button class="toggle" :class="{ on: released(ch, l) }" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : '·' }}</button>
+              <td v-if="node.role === 'variant'">
+                <button class="toggle" :class="{ on: released(ch, null) }" :disabled="!released(ch, null) && !!incomplete(ch, null)" :title="incomplete(ch, null) ? 'fehlt: ' + incomplete(ch, null).missing.join(', ') : 'alle Sprachen'" @click="toggleRelease(ch, null)">{{ released(ch, null) ? '✓' : '·' }}</button>
+              </td>
+              <td v-for="l in locales" :key="l" class="rel">
+                <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : '·' }}</button>
+                <span v-if="completeness(ch, l)" class="mono" :class="completeness(ch, l).missing.length ? 'neg' : 'pos'" :title="completeness(ch, l).missing.length ? 'fehlt: ' + completeness(ch, l).missing.join(', ') : 'vollständig'">{{ completeness(ch, l).filled }}/{{ completeness(ch, l).required }}</span>
+                <span v-else class="muted" title="die Familie verlangt hier nichts">–</span>
               </td>
             </tr>
           </tbody>
@@ -266,6 +303,9 @@ async function retire() {
 td.attr { white-space: nowrap; }
 table.releases { width: auto; }
 table.releases td { text-align: center; }
+table.releases td.rel { white-space: nowrap; }
+table.releases td.rel .toggle { margin-right: 6px; }
+.toggle:disabled { opacity: .35; cursor: not-allowed; }
 .toggle { width: 28px; color: var(--muted); }
 .toggle.on { color: var(--pane); background: var(--pos); border-color: var(--pos); }
 .status { border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; background: var(--pane); }

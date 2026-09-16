@@ -288,6 +288,21 @@ aufklappbare Unterzeilen je Produkt.
 Ein einfaches Attribut mit `multiple: true` (Keywords) bleibt der
 Sonderfall „eine Spalte, keine Identität" — die Liste ist ein Wert.
 
+### 14. Einheiten (`unit:<key>`) — Grundstock da
+
+Taloan: „Einheiten müssen auch konfiguriert werden, evtl. mit Umrechnung."
+Eine Einheit gehört zu einer **Grösse** (mass, length, volume, data, count …)
+und hat einen **Faktor zur Basiseinheit** dieser Grösse (kg = 1, g = 0.001,
+in = 0.0254 m). `UnitDefined{key, label{}, quantity, factor}`; ein Attribut
+darf nur eine definierte Einheit tragen; löschen geht nicht, solange ein
+Attribut sie benutzt. Saatgut: kg g m cm mm in l ml GB MB TB pc.
+
+Im Journal steht der Wert **immer in der Einheit des Attributs** — die
+Umrechnung ist Anzeige und Export: Sicht „zeige Gewicht in g" rechnet
+`wert × faktor(attribut) / faktor(sicht)`, ein Kanal (Amazon US) bekommt
+Zoll statt Zentimeter. Noch nicht gebaut: die Umrechnung in der Zelle und
+je Kanal (Feld `unit` an der Kanal- oder Sichtdefinition).
+
 ## Messlatte: OpenDXP
 
 Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."
@@ -425,8 +440,15 @@ Definitionen ins Journal.
    aufgeklappt), Anlegen inline, Knoten mit Pfad, Status, Achsenwert 🔒,
    geerbt kursiv mit Herkunft. **Sicht** statt Matrix: gewählte Sprachen +
    ein Kanal als Spalten (Taloan: 27 Sprachen × 6 Kanäle passen nicht)
-3. Typisierte Zellen und Gruppen in der Produktansicht, Vollständigkeit,
-   vermehrbare Attribute (Verpackungseinheiten als erster Fall)
+3. ~~Typisierte Zellen, Vollständigkeit, vermehrbare Attribute~~ 16.09.2026:
+   Zellen für date (Datumsfeld) und html (Editor: Quelltext + Vorschau,
+   Ctrl+Enter); `CompletenessRules` je Kanal × Sprache aus den Pflichtfeldern
+   der Familie, geerbte Werte zählen, an den Freigaben als `n/m` grün/rot,
+   Schalter gesperrt, Server lehnt `ReleaseGranted` ab und nennt die
+   Fehlenden; `rows` mit `columns`, `RowAdded/Removed/Ordered`, Zellen per
+   `AttributeSet` mit `row`, Zeilenblock im Gitter (+ Zeile, ↑↓, ×); Suche
+   über alle Werte; Unterbaum zurückziehen (Entf, ein Stapel); Einheiten
+   (14) als Modellbereich
 4. Kategoriebaum
 5. Variantenebenen
 6. Wörterbücher und Platzhaltertexte (brauchen 1–3)

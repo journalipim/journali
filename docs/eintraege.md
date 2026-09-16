@@ -37,7 +37,10 @@ Sprache), dann bei den Eltern bis zur Wurzel — und sagt, woher der Wert kam.
 
 | Typ | Nutzdaten | Wirkung im Abbild |
 |---|---|---|
-| `AttributeSet` | `attribute`, `locale?`, `channel?`, `value` oder `values[]` (mehrfach) | Wert auf dieser Achse; der letzte gewinnt. Leerer `value` / leere `values` = eigener Wert weg, Rückfall gilt wieder |
+| `AttributeSet` | `attribute`, `locale?`, `channel?`, `value` oder `values[]` (mehrfach), `row?` | Wert auf dieser Achse; der letzte gewinnt. Leerer `value` / leere `values` = eigener Wert weg, Rückfall gilt wieder. `row`: Zelle einer Zeile eines vermehrbaren Attributs |
+| `RowAdded` | `attribute`, `row` | neue Zeile eines vermehrbaren Attributs (`type: rows`); Kennung `r-…` vergibt der Server |
+| `RowRemoved` | `attribute`, `row` | Zeile weg, samt ihren Zellen im Abbild |
+| `RowOrdered` | `attribute`, `rows[]` | Reihenfolge; ungenannte Zeilen hinten dran |
 | `CategoryAssigned` | `category` | Kategorie dazu |
 | `CategoryRemoved` | `category` | Kategorie weg |
 | `ReleaseGranted` | `channel`, `locale?` | Freigabe für Kanal (je Sprache oder alle) — nur an der Variante |
@@ -61,7 +64,8 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 |---|---|---|
 | `locale:<code>` | `LocaleDefined` | `code`, `label` |
 | `channel:<key>` | `ChannelDefined` | `key`, `label{}` |
-| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum), `unit?`, `group?`, `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `levels[]?` (group, product, variant; null = überall) |
+| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum, **rows**), `unit?` (muss es unter `unit:` geben), `group?`, `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `levels[]?` (group, product, variant; null = überall), `columns[]?` (bei rows: Attribute, keine rows) |
+| `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` |
 | `list:<key>` | `ListDefined` | `key`, `label{}` |
 | `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
@@ -97,12 +101,16 @@ steht im Kopf `X-Actor`.
 | `POST /api/nodes/{id}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` — prüft Attribut, `levels`, Achsen, Kanal, Typ, Werteliste; `sku` eindeutig über alle Varianten |
 | `POST /api/nodes/{id}/categories` `{category}` | `CategoryAssigned` |
 | `DELETE /api/nodes/{id}/categories/{category}` | `CategoryRemoved` |
-| `POST /api/nodes/{id}/releases` `{channel, locale?}` | `ReleaseGranted` — nur Variante |
+| `POST /api/nodes/{id}/releases` `{channel, locale?}` | `ReleaseGranted` — nur Variante; **abgelehnt, wenn Pflichtfelder der Familie für Kanal × Sprache fehlen** (`locale` leer = alle Sprachen) |
+| `POST /api/nodes/{id}/rows` `{attribute}` | `RowAdded` |
+| `DELETE /api/nodes/{id}/rows/{attribute}/{row}` | `RowRemoved` |
+| `PUT /api/nodes/{id}/rows/{attribute}` `{rows[]}` | `RowOrdered` |
+| `DELETE /api/nodes/{id}?recursive=true` | `NodeRetired` für den ganzen Unterbaum, tiefste zuerst, ein Stapel |
 | `DELETE /api/nodes/{id}/releases?channel=&locale=` | `ReleaseRevoked` |
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
 | `PUT /api/nodes/{id}/external/{system}` `{id}` | `ExternalLinked` |
 | `DELETE /api/nodes/{id}/external/{system}` | `ExternalUnlinked` |
-| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create, group.rename, product.create, variant.create, node.move, node.retire, status.set, attribute.set, category.assign/remove, release.grant/revoke, external.link/unlink; `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
+| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create, group.rename, product.create, variant.create, node.move, node.retire, status.set, attribute.set (mit `row`), row.add/remove/order, category.assign/remove, release.grant/revoke, external.link/unlink; `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
 | `PUT /api/model/locales/{code}` `{label}` | `LocaleDefined` |
 | `PUT /api/model/channels/{key}` `{label{}}` | `ChannelDefined` |
 | `PUT /api/model/attributes/{key}` Definition | `AttributeDefined` — prüft Typ, Achsen, Einheit nur bei Zahlen, enum ↔ Werteliste |
@@ -111,4 +119,6 @@ steht im Kopf `X-Actor`.
 | `PUT /api/model/lists/{key}/values/{value}` `{label{}, extra?, order}` | `ListValueDefined` |
 | `DELETE /api/model/lists/{key}/values/{value}` | `ListValueRetired` |
 | `PUT /api/model/families/{key}` Definition | `FamilyDefined` — prüft Attribute, Kanäle, Sprachen, Achsen |
+| `PUT /api/model/units/{key}` `{label{}, quantity, factor}` | `UnitDefined` |
+| `DELETE /api/model/units/{key}` | `UnitRetired` — nicht, solange ein Attribut sie benutzt |
 | `DELETE /api/model/families/{key}` | `FamilyRetired` |

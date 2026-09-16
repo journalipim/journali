@@ -52,7 +52,10 @@ public static class BatchApi
                             "node.move" => Commands.Move(ctx, a.Node(), a.Id("parent")),
                             "node.retire" => Commands.Retire(ctx, a.Node()),
                             "status.set" => Commands.SetStatus(ctx, a.Node(), a.Str("status")),
-                            "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
+                            "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Id("row")),
+                            "row.add" => Commands.AddRow(ctx, a.Node(), a.Str("attribute")),
+                            "row.remove" => Commands.RemoveRow(ctx, a.Node(), a.Str("attribute"), a.Str("row")),
+                            "row.order" => Commands.OrderRows(ctx, a.Node(), a.Str("attribute"), a.Strings("rows")),
                             "category.assign" => Commands.AssignCategory(ctx, a.Node(), a.Str("category")),
                             "category.remove" => Commands.RemoveCategory(ctx, a.Node(), a.Str("category") ?? ""),
                             "release.grant" => Commands.GrantRelease(ctx, a.Node(), a.Str("channel"), a.Str("locale")),
@@ -67,7 +70,8 @@ public static class BatchApi
                     if (outcome.Entry is not { } e)
                         return new Response(batch, results, new Failure(i, cmd.Op, outcome.NotFound ? "Knoten gibt es nicht." : outcome.Error!));
 
-                    if (Blank(cmd.Ref) is { } key) refs[key] = e.Stream;
+                    // Ein neuer Knoten oder eine neue Zeile bekommt den ref; bei Zeilen zeigt er auf die Zeilenkennung.
+                    if (Blank(cmd.Ref) is { } key) refs[key] = e.Type == Types.RowAdded ? Types.Deserialize<RowAdded>(e.Payload).Row : e.Stream;
                     results.Add(new Result(i, cmd.Ref, e.Stream, e.Number, e.Type));
                 }
                 return new Response(batch, results, null);

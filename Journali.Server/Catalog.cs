@@ -46,6 +46,7 @@ public sealed class Catalog
                     Types.LocaleDefined => _model.Locales.ContainsKey(key),
                     Types.ChannelDefined => _model.Channels.ContainsKey(key),
                     Types.AttributeDefined => _model.Attributes.ContainsKey(key),
+                    Types.UnitDefined => _model.Units.ContainsKey(key),
                     _ => true,
                 };
                 if (exists) continue;
