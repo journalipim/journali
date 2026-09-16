@@ -45,6 +45,13 @@ export function describe(e) {
     case 'ListValueRetired': return `− ${p.value}`
     case 'FamilyDefined': return `${p.key}: ${(p.attributes || []).map(a => a.key).join(', ')}`
     case 'LocaleDefined': return `${p.code} = ${p.label}`
+    case 'GroupCreated': return `▣ ${p.label?.de ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
+    case 'GroupRenamed': return `▣ ${p.label?.de ?? ''}`
+    case 'ProductCreated': return `▦ ${p.family} unter ${p.group}${p.axes?.length ? ' · ' + p.axes.join(', ') : ''}`
+    case 'VariantCreated': return `◆ ${Object.entries(p.axisValues || {}).map(([k, v]) => k + '=' + v).join(', ') || 'ohne Achsen'} unter ${p.product}`
+    case 'NodeMoved': return `→ ${p.parent}`
+    case 'NodeRetired': return '− Knoten'
+    case 'StatusSet': return `Status ${p.status}`
     case 'ChannelDefined': return `${p.key} = ${p.label?.de ?? ''}`
     case 'CategoryAssigned': return `+ ${p.category}`
     case 'CategoryRemoved': return `− ${p.category}`

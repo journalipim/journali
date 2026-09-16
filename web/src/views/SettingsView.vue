@@ -7,6 +7,11 @@ const actor = ref(store.actor)
 const server = ref(store.server)
 const theme = ref(store.theme)
 function setTheme(t) { theme.value = t; store.theme = t; store.save() }
+function toggleLocale(l) {
+  const s = new Set(store.viewLocales); s.has(l) ? s.delete(l) : s.add(l)
+  store.viewLocales = (store.model?.locales ?? []).map(x => x.code).filter(c => s.has(c)); store.save()
+}
+function setChannel(c) { store.viewChannel = c || null; store.save() }
 const checking = ref(false)
 
 async function save() {
@@ -43,6 +48,16 @@ async function save() {
             </td>
             <td class="muted">System folgt der Windows-Einstellung.</td>
           </tr>
+          <tr v-if="store.model">
+            <td class="muted">🗣 Sicht</td>
+            <td>
+              <span v-for="l in store.model.locales" :key="l.code" class="view-chip" :class="{ on: store.viewLocales.includes(l.code) }" @click="toggleLocale(l.code)" style="margin-right:4px">{{ l.code }}</span>
+              <select :value="store.viewChannel ?? ''" @change="setChannel($event.target.value)" style="margin-left:8px">
+                <option value="">nur *</option><option v-for="c in store.model.channels" :key="c.key" :value="c.key">{{ c.key }}</option>
+              </select>
+            </td>
+            <td class="muted">Welche Sprachen und welcher Kanal als Spalten stehen — 27 Sprachen × 6 Kanäle passen auf keinen Schirm. Im Knoten jederzeit umschaltbar.</td>
+          </tr>
           <tr>
             <td class="muted">Stand</td>
             <td>
@@ -50,7 +65,7 @@ async function save() {
               <span v-else-if="store.online === false" class="neg">● nicht erreichbar</span>
               <span v-else class="muted">● …</span>
             </td>
-            <td class="muted mono">#{{ store.head }} · ▦ {{ store.products }}<span v-if="store.error"> · {{ store.error }}</span></td>
+            <td class="muted mono">#{{ store.head }} · ▣ {{ store.nodes }}<span v-if="store.error"> · {{ store.error }}</span></td>
           </tr>
           <tr>
             <td></td>

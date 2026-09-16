@@ -218,8 +218,12 @@ Dazu kommt, was heute fehlt:
 - **Kein Code im Server:** Plugins laufen nie im Prozess. Isolation, eigene
   Sprache, eigenes Deployment; die Kosten sind ein HTTP-Aufruf.
 
-Das erste Plugin ist der Import des Beispiel-JSON — er zwingt die Zuordnung
-oben in Code und deckt auf, was im Modell fehlt.
+Das erste Plugin ist der **IXP-Import** (`plugins/import-tools/ixp/`):
+Baum aus der IXP-API lesen, Knoten wählen, Vorschau, Import oder Update
+vorhandener Knoten über die externe Kennung. Dafür braucht jeder Knoten
+eine **externe Kennung** je Quellsystem: Eintrag `ExternalLinked{system,
+id}` auf dem Knotenstrom, Abbild hält `(system, id) → Knoten`. Und der
+**Stapelbefehl** (12) ist der Schreibweg.
 
 ### 12. Massendatenpflege wie in Excel
 
@@ -413,7 +417,14 @@ Definitionen ins Journal.
    Bereich; Produktgitter nach Gruppen, Zelle nach Typ (Text, Schalter,
    Auswahl), mehrfach kommagetrennt, Spalten `*/kanal`. Familien werden
    definiert, aber noch nicht benutzt (Schritt 2)
-2. `ProductCreated` mit Familie, SKU-Eindeutigkeit, Status
+2. ~~Baum~~ 16.09.2026: `GroupCreated/Renamed`, `ProductCreated(group, family,
+   axes)`, `VariantCreated(product, axisValues)`, `NodeMoved`, `NodeRetired`,
+   `StatusSet`; Abbild `Tree` mit `Resolve` den Pfad hinauf und Herkunft;
+   `sku` als Attribut nur an der Variante, eindeutig; `levels` je Attribut;
+   Freigabe nur an der Variante. Ansicht ▣ Baum links (↑↓←→, Filter, Pfad
+   aufgeklappt), Anlegen inline, Knoten mit Pfad, Status, Achsenwert 🔒,
+   geerbt kursiv mit Herkunft. **Sicht** statt Matrix: gewählte Sprachen +
+   ein Kanal als Spalten (Taloan: 27 Sprachen × 6 Kanäle passen nicht)
 3. Typisierte Zellen und Gruppen in der Produktansicht, Vollständigkeit,
    vermehrbare Attribute (Verpackungseinheiten als erster Fall)
 4. Kategoriebaum
@@ -421,7 +432,7 @@ Definitionen ins Journal.
 6. Wörterbücher und Platzhaltertexte (brauchen 1–3)
 7. Massengitter mit Stapelbefehl, Einfügen aus Excel, Rückgängig je Aktion
 8. Medien, Relationen
-9. Abnehmer, Cursor, Webhook; erstes Plugin: Import des Beispiel-JSON
+9. Abnehmer, Cursor, Webhook; erstes Plugin: IXP-Import (`plugins/import-tools/ixp/`)
 10. Anmeldung und Rechte (je Familie/Attribut/Kanal)
 
 ## Offen — Taloans Wort
@@ -431,8 +442,9 @@ Definitionen ins Journal.
   Kategorie? Vorschlag: zwei Bäume; Struktur (Pflege, Vererbung) und
   Navigation (Shop) fallen selten zusammen, ein Produkt kann in mehreren
   Kategorien hängen, aber nur in einer Gruppe.
-- Produkt ohne Variante: unsichtbare Einzelvariante (Vorschlag) oder
-  Produkt darf selbst SKU tragen?
+- Produkt ohne Variante: heute muss eine Variante angelegt werden (ohne
+  Achsen, wenn das Produkt nach nichts variiert); eine „unsichtbare"
+  Einzelvariante gibt es noch nicht
 - `AttributeDefined` als ganze Definition je Eintrag (Vorschlag) oder
   feldweise wie beim Produkt?
 - Relationen gerichtet mit expliziter Gegenrichtung oder abgeleitet?

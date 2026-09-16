@@ -46,8 +46,11 @@ stehen dort als solche markiert.
 - `Journali.Sandbox` — Konsole zum Nachrechnen
 - `Journali.Server` — ASP.NET Core Minimal API, net8.0, einziges Paket
   Npgsql: `PostgresJournal` hinter `IJournal`, `Catalog` als einziger
-  Schreibpfad (Eintrag + Abbild unter einer Sperre), Befehle und Lesen
-  unter `/api`, Oberfläche aus `wwwroot`; `docs/betrieb.md`, `docs/eintraege.md`
+  Schreibpfad (Eintrag + Abbilder `ModelCatalog` und `Tree` unter einer
+  Sperre), `ModelApi` und `TreeApi` unter `/api`, Oberfläche aus `wwwroot`;
+  `docs/betrieb.md`, `docs/eintraege.md`
+- `plugins/import-tools/<quelle>/` — Unterlagen und später Code externer
+  Werkzeuge (OpenAPI, Beispiele, Abbildung); laufen nie im Server
 - `web` — Vue 3 + Vite, Fat-Client-Gefühl: keine Seitenwechsel, Inline-
   Bearbeitung in der Zelle, Tastatur durch Listen, Journal lebendig daneben.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im

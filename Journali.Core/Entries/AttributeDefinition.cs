@@ -13,6 +13,9 @@ public static class Model
     public const string ListStream = "list:";
     public const string FamilyStream = "family:";
 
+    /// <summary>Die SKU ist ein Attribut der Variante, eindeutig über alle Varianten.</summary>
+    public const string SkuAttribute = "sku";
+
     /// <summary>Ein Modell-Eintrag: Strom, Typ, Nutzdaten — fertig zum Anhängen.</summary>
     public sealed record Seed(string Stream, string Type, string Payload);
 
@@ -26,6 +29,7 @@ public static class Model
 
         AttributeDefinition[] attributes =
         [
+            new(SkuAttribute, Labels.Of("SKU", "SKU"), AttributeTypes.Text, Group: "logistics", Levels: [Roles.Variant]),
             new("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "texts", Axes: [Axes.Locale]),
             new("description", Labels.Of("Beschreibung", "Description"), AttributeTypes.Html, Group: "texts", Axes: [Axes.Locale, Axes.Channel]),
             new("weight", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "physical"),

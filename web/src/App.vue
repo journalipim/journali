@@ -11,7 +11,7 @@ onMounted(() => window.addEventListener('keydown', e => {
   }
 }))
 const nav = [
-  { to: '/products', icon: '▦', label: 'Produkte', key: '1' },
+  { to: '/tree', icon: '▣', label: 'Baum', key: '1' },
   { to: '/journal', icon: '≡', label: 'Journal', key: '2' },
   { to: '/model', icon: '⊞', label: 'Modell', key: '3' },
   { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '4' },
@@ -40,7 +40,7 @@ const nav = [
       <span class="dot" :class="{ online: store.online, offline: store.online === false }">●</span>
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>
-      <span>▦ {{ store.products }}</span>
+      <span>▣ {{ store.nodes }}</span>
       <span class="grow" />
       <span v-if="store.actor" class="actor">👤 {{ store.actor }}</span>
       <router-link v-else to="/settings" class="warn">👤 Name fehlt → Einstellungen</router-link>

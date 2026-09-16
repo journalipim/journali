@@ -44,10 +44,10 @@ Befehle (schreiben) brauchen den Kopf `X-Actor` und stehen in
 
 | Aufruf | Antwort |
 |---|---|
-| `GET /api/health` | `{"head": N, "products": P}` — letzter Eintrag (0 bei leerem Journal), Zahl der Produkte |
+| `GET /api/health` | `{"head": N, "nodes": K}` — letzter Eintrag (0 bei leerem Journal), Zahl der Knoten |
 | `GET /api/model` | Sprachen, Kanäle, Attribute, Wertelisten, Familien, Typen — aus dem Journal (`docs/eintraege.md`) |
-| `GET /api/products?q=` | Liste: SKU, Name (de), Zähler, letzte Änderung; `q` filtert SKU und Name |
-| `GET /api/products/{sku}` | Werte je Achse, Kategorien, Freigaben — oder 404, solange kein Eintrag da ist |
+| `GET /api/tree` | alle Knoten flach: Id, Rolle, Eltern, Label, Familie, Achsen, Status, SKU, Zähler |
+| `GET /api/nodes/{id}` | ein Knoten: Werte, **Vorfahren mit ihren Werten** (für die Vererbung), Kategorien, Freigaben — oder 404 |
 | `GET /api/journal?after=N&limit=M` | Einträge mit Nummer > N, höchstens M (Vorgabe 1000, Obergrenze 10 000) |
 | `GET /api/journal/{number}` | ein Eintrag oder 404 |
 | `GET /api/streams/{stream}` | alle Einträge eines Stroms in Reihenfolge |
@@ -57,7 +57,7 @@ Befehle (schreiben) brauchen den Kopf `X-Actor` und stehen in
 Beispiel:
 
 ```bash
-curl -s -X POST localhost:5000/api/products/4711/attributes -H "X-Actor: anna" -H "Content-Type: application/json" -d "{\"attribute\":\"name\",\"locale\":\"de\",\"value\":\"Stiefel\"}"
+curl -s -X POST localhost:5000/api/nodes/v-213865ea/attributes -H "X-Actor: anna" -H "Content-Type: application/json" -d "{\"attribute\":\"name\",\"locale\":\"de\",\"value\":\"Stiefel\"}"
 ```
 
 ```bash

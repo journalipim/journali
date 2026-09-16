@@ -7,6 +7,7 @@ const props = defineProps({
   value: String,          // eigener Wert auf dieser Achse (null = keiner)
   inherited: String,      // was ohne eigenen Wert gilt (Rückfall)
   disabled: Boolean,      // Achse gibt es für dieses Attribut nicht
+  origin: String,         // woher der geerbte Wert kommt (Anzeige im Tooltip)
 })
 const emit = defineEmits(['save'])
 
@@ -49,7 +50,7 @@ function onEditKey(e) {
 <template>
   <td class="cell">
     <div v-if="!editing" ref="box" class="cell-box" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
-      :tabindex="disabled ? -1 : 0" @dblclick="open()" @keydown="onKey" :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt — Enter überschreibt' : '')">
+      :tabindex="disabled ? -1 : 0" @dblclick="open()" @keydown="onKey" :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : '')">
       <template v-if="disabled"></template>
       <template v-else-if="value != null">{{ value }}</template>
       <template v-else-if="inherited != null">{{ inherited }}</template>

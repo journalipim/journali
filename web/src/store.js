@@ -9,15 +9,17 @@ export const store = reactive({
   actor: saved.actor || '',
   server: saved.server || '',
   theme: saved.theme || 'system',   // system | light | dark
+  viewLocales: saved.viewLocales || ['de', 'en'],   // Sicht: welche Sprachen als Spalten
+  viewChannel: saved.viewChannel ?? null,          // Sicht: welcher Kanal (null = nur *)
   online: null,          // null = noch nicht gefragt, sonst true/false
   head: 0,
-  products: 0,
+  nodes: 0,
   model: null,           // { locales, channels, attributes } vom Server
   toasts: [],
   error: '',
 
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel }))
     this.applyTheme()
   },
 
@@ -32,7 +34,7 @@ export const store = reactive({
       this.online = true
       const changed = h.head !== this.head
       this.head = h.head
-      this.products = h.products
+      this.nodes = h.nodes
       this.error = ''
       // Modell-Änderungen kommen durch dasselbe Journal — bei neuem Stand nachladen.
       if (!this.model || changed || force) this.model = await api.get('/api/model')

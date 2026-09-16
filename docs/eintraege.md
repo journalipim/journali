@@ -2,17 +2,39 @@
 
 Das Vokabular des Journals. Ein Typ ist für immer: neue Typen sind billig,
 geänderte teuer, gelöschte unmöglich. Quelle: `Journali.Core/Entries/Types.cs`,
-Abbild: `Journali.Core/Projections/ProductCatalog.cs`.
+Abbilder: `Projections/Tree.cs` (Knoten), `Projections/ModelCatalog.cs` (Modell).
 
-Strom ist immer die SKU des Produkts. Nutzdaten in camelCase, Null-Felder
-fehlen. Ein fehlendes `locale`/`channel` heisst „gilt für alle".
+Nutzdaten in camelCase, Null-Felder fehlen. Ein fehlendes `locale`/`channel`
+heisst „gilt für alle".
+
+## Baum — ein Strom je Knoten, interne Id
+
+Produktgruppe → … → Produkt → Variante (docs/pflegestruktur.md, 5 und 8).
+Der Strom ist die interne Id (`g-…`, `p-…`, `v-…`, `Ids.New`), nie die SKU.
+Der erste Eintrag legt den Knoten an; Einträge auf Strömen ohne Anlege-
+Eintrag übergeht das Abbild.
+
+| Typ | Nutzdaten | Wirkung |
+|---|---|---|
+| `GroupCreated` | `parent?`, `label{}` | Produktgruppe; `parent` null = Wurzel |
+| `GroupRenamed` | `label{}` | |
+| `ProductCreated` | `group`, `family`, `axes[]?` | Produkt unter einer Gruppe; `axes` = wonach es variiert (Attribute aus `family.axes`) |
+| `VariantCreated` | `product`, `axisValues{}` | Variante — das Verkaufbare; je Produktachse ein Wert, Kombination je Produkt eindeutig |
+| `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, sonst unter Gruppe; nie unter sich selbst) |
+| `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles |
+| `StatusSet` | `status` (draft, active, discontinued) | Produkt und Variante; Gruppe hat keinen |
+
+Vererbung: `Tree.Resolve` sucht am Knoten (genaue Achse, ohne Kanal, ohne
+Sprache), dann bei den Eltern bis zur Wurzel — und sagt, woher der Wert kam.
+
+## Werte an einem Knoten
 
 | Typ | Nutzdaten | Wirkung im Abbild |
 |---|---|---|
 | `AttributeSet` | `attribute`, `locale?`, `channel?`, `value` oder `values[]` (mehrfach) | Wert auf dieser Achse; der letzte gewinnt. Leerer `value` / leere `values` = eigener Wert weg, Rückfall gilt wieder |
 | `CategoryAssigned` | `category` | Kategorie dazu |
 | `CategoryRemoved` | `category` | Kategorie weg |
-| `ReleaseGranted` | `channel`, `locale?` | Freigabe für Kanal (je Sprache oder alle) |
+| `ReleaseGranted` | `channel`, `locale?` | Freigabe für Kanal (je Sprache oder alle) — nur an der Variante |
 | `ReleaseRevoked` | `channel`, `locale?` | Freigabe weg |
 
 ## Rückfall über die Achsen
@@ -33,7 +55,7 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 |---|---|---|
 | `locale:<code>` | `LocaleDefined` | `code`, `label` |
 | `channel:<key>` | `ChannelDefined` | `key`, `label{}` |
-| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum), `unit?`, `group?`, `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple` |
+| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum), `unit?`, `group?`, `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `levels[]?` (group, product, variant; null = überall) |
 | `attribute:<key>` | `AttributeRetired` | `key` |
 | `list:<key>` | `ListDefined` | `key`, `label{}` |
 | `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
@@ -43,9 +65,11 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 
 Ein leeres Journal bekommt beim ersten Serverstart das Saatgut aus
 `Model.Seeds()` (`AttributeDefinition.cs`): `de`, `en`; `web`, `print`;
-`name`, `description`, `weight`, `ean` — als Einträge des Urhebers `system`.
+`sku` (nur Variante), `name`, `description`, `weight`, `ean` — als Einträge des
+Urhebers `system`. Fehlende Schlüssel werden bei jedem Start nachgesät
+(`Catalog.SeedMissing`), Geändertes bleibt.
 
-`ProductCatalog` reagiert nur auf Produkt-Typen; Modell-Ströme gehen an ihm
+`Tree` reagiert nur auf Baum- und Wert-Typen; Modell-Ströme gehen an ihm
 vorbei. Werte werden beim Befehl gegen die Definition geprüft (Typ, Achsen,
 erlaubte Kanäle, Werteliste), im Journal steht immer ein String.
 
@@ -57,11 +81,18 @@ steht im Kopf `X-Actor`.
 
 | Aufruf | Eintrag |
 |---|---|
-| `POST /api/products/{sku}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` — prüft Attribut, Achsen, Kanal, Typ, Werteliste |
-| `POST /api/products/{sku}/categories` `{category}` | `CategoryAssigned` |
-| `DELETE /api/products/{sku}/categories/{category}` | `CategoryRemoved` |
-| `POST /api/products/{sku}/releases` `{channel, locale?}` | `ReleaseGranted` |
-| `DELETE /api/products/{sku}/releases?channel=&locale=` | `ReleaseRevoked` |
+| `POST /api/groups` `{parent?, label{}}` | `GroupCreated` — Id vergibt der Server |
+| `PUT /api/groups/{id}/label` `{label{}}` | `GroupRenamed` |
+| `POST /api/products` `{group, family, axes[]?}` | `ProductCreated` — Familie muss es geben, Achsen aus `family.axes` |
+| `POST /api/variants` `{product, axisValues{}}` | `VariantCreated` — genau die Produktachsen, Werte geprüft, Kombination eindeutig |
+| `POST /api/nodes/{id}/move` `{parent}` | `NodeMoved` |
+| `DELETE /api/nodes/{id}` | `NodeRetired` — nur ohne Kinder |
+| `POST /api/nodes/{id}/status` `{status}` | `StatusSet` |
+| `POST /api/nodes/{id}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` — prüft Attribut, `levels`, Achsen, Kanal, Typ, Werteliste; `sku` eindeutig über alle Varianten |
+| `POST /api/nodes/{id}/categories` `{category}` | `CategoryAssigned` |
+| `DELETE /api/nodes/{id}/categories/{category}` | `CategoryRemoved` |
+| `POST /api/nodes/{id}/releases` `{channel, locale?}` | `ReleaseGranted` — nur Variante |
+| `DELETE /api/nodes/{id}/releases?channel=&locale=` | `ReleaseRevoked` |
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
 | `PUT /api/model/locales/{code}` `{label}` | `LocaleDefined` |
 | `PUT /api/model/channels/{key}` `{label{}}` | `ChannelDefined` |

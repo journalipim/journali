@@ -46,10 +46,14 @@ const attrCols = computed(() => [
   { key: 'channel', label: '⇶', type: 'bool', width: '36px', title: 'je Kanal' },
   { key: 'list', label: 'Werteliste', type: 'select', options: model.value.lists.map(l => l.key), width: '110px', title: 'bei enum' },
   { key: 'multiple', label: '≣', type: 'bool', width: '36px', title: 'mehrfach' },
+  { key: 'lv_group', label: '▣', type: 'bool', width: '36px', title: 'an Produktgruppen setzbar' },
+  { key: 'lv_product', label: '▦', type: 'bool', width: '36px', title: 'an Produkten setzbar' },
+  { key: 'lv_variant', label: '◆', type: 'bool', width: '36px', title: 'an Varianten setzbar' },
 ])
 const attrRows = computed(() => model.value.attributes.map(a => ({
   key: a.key, label_de: a.label?.de, label_en: a.label?.en, type: a.type, unit: a.unit, group: a.group,
-  locale: a.perLocale, channel: a.perChannel, list: a.list, multiple: a.multiple, _a: a,
+  locale: a.perLocale, channel: a.perChannel, list: a.list, multiple: a.multiple,
+  lv_group: !a.levels || a.levels.includes('group'), lv_product: !a.levels || a.levels.includes('product'), lv_variant: !a.levels || a.levels.includes('variant'), _a: a,
 })))
 function attrChange(r, col, v) {
   const a = { ...r._a, label: { ...(r._a.label || {}) } }
@@ -59,6 +63,11 @@ function attrChange(r, col, v) {
     const axes = new Set(a.axes || [])
     v ? axes.add(col) : axes.delete(col)
     a.axes = [...axes]
+  } else if (col.startsWith('lv_')) {
+    const all = ['group', 'product', 'variant']
+    const lv = new Set(a.levels ?? all)
+    v ? lv.add(col.slice(3)) : lv.delete(col.slice(3))
+    a.levels = lv.size === all.length ? null : all.filter(x => lv.has(x))   // alle drei = keine Einschränkung
   } else a[col] = v
   put(`/api/model/attributes/${r.key}`, a)
 }

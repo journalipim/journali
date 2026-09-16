@@ -11,7 +11,16 @@ namespace Journali.Core.Entries;
 /// </summary>
 public static class Types
 {
-    // Produkt
+    // Baum: Produktgruppe → … → Produkt → Variante (docs/pflegestruktur.md, 5)
+    public const string GroupCreated = "GroupCreated";
+    public const string GroupRenamed = "GroupRenamed";
+    public const string ProductCreated = "ProductCreated";
+    public const string VariantCreated = "VariantCreated";
+    public const string NodeMoved = "NodeMoved";
+    public const string NodeRetired = "NodeRetired";
+    public const string StatusSet = "StatusSet";
+
+    // Werte an einem Knoten
     public const string AttributeSet = "AttributeSet";
     public const string CategoryAssigned = "CategoryAssigned";
     public const string CategoryRemoved = "CategoryRemoved";
@@ -45,7 +54,45 @@ public static class Types
         ?? throw new InvalidOperationException($"Payload ist null: {typeof(T).Name}");
 }
 
-// ---- Produkt --------------------------------------------------------------
+// ---- Baum -----------------------------------------------------------------
+
+/// <summary>Rollen der Knoten. Nur Varianten sind verkaufsfähig.</summary>
+public static class Roles
+{
+    public const string Group = "group";
+    public const string Product = "product";
+    public const string Variant = "variant";
+    public static readonly IReadOnlyList<string> All = [Group, Product, Variant];
+}
+
+/// <summary>Status eines Produkts oder einer Variante; discontinued am Produkt überstimmt alles darunter.</summary>
+public static class Statuses
+{
+    public const string Draft = "draft";
+    public const string Active = "active";
+    public const string Discontinued = "discontinued";
+    public static readonly IReadOnlyList<string> All = [Draft, Active, Discontinued];
+}
+
+/// <summary>Erster Eintrag einer Produktgruppe. <paramref name="Parent"/> null = Wurzel.</summary>
+public sealed record GroupCreated(string? Parent, Labels Label);
+
+public sealed record GroupRenamed(Labels Label);
+
+/// <summary>Erster Eintrag eines Produkts: unter welcher Gruppe, welche Familie, wonach es variiert (Attribute).</summary>
+public sealed record ProductCreated(string Group, string Family, string[]? Axes = null);
+
+/// <summary>Erster Eintrag einer Variante: je Variantenachse des Produkts ein Wert.</summary>
+public sealed record VariantCreated(string Product, Dictionary<string, string> AxisValues);
+
+public sealed record NodeMoved(string Parent);
+
+/// <summary>Knoten weg — nur ohne Kinder. Das Journal behält alles, das Abbild nimmt ihn heraus.</summary>
+public sealed record NodeRetired();
+
+public sealed record StatusSet(string Status);
+
+// ---- Werte an einem Knoten ------------------------------------------------
 
 /// <summary>
 /// Ein Attributwert auf seinen Achsen. Fehlende Achse = gilt für alle.
@@ -111,6 +158,7 @@ public static class Axes
 /// <param name="Channels">nur für diese Kanäle pflegbar; null = alle</param>
 /// <param name="List">Werteliste bei <c>enum</c></param>
 /// <param name="Multiple">mehrere Werte (Liste)</param>
+/// <param name="Levels">an welchen Rollen setzbar (<see cref="Roles"/>); null = überall</param>
 public sealed record AttributeDefinition(
     string Key,
     Labels Label,
@@ -120,10 +168,12 @@ public sealed record AttributeDefinition(
     string[]? Axes = null,
     string[]? Channels = null,
     string? List = null,
-    bool Multiple = false)
+    bool Multiple = false,
+    string[]? Levels = null)
 {
     public bool PerLocale => Axes?.Contains(Entries.Axes.Locale) ?? false;
     public bool PerChannel => Axes?.Contains(Entries.Axes.Channel) ?? false;
+    public bool AllowedAt(string role) => Levels is null || Levels.Contains(role);
 }
 
 public sealed record AttributeRetired(string Key);

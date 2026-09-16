@@ -21,9 +21,9 @@ defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
         <td class="num">{{ e.number }}</td>
         <td class="mono muted">{{ when(e.at) }}</td>
         <td>{{ e.actor }}</td>
-        <td v-if="showStream"><router-link :to="`/products/${e.stream}`" class="mono link">{{ e.stream }}</router-link></td>
+        <td v-if="showStream"><router-link v-if="!e.stream.includes(':')" :to="`/tree/${e.stream}`" class="mono link">{{ e.stream }}</router-link><router-link v-else to="/model" class="mono link muted">{{ e.stream }}</router-link></td>
         <td class="muted">{{ e.type }}</td>
-        <td :class="{ pos: e.type.endsWith('Granted') || e.type.endsWith('Assigned'), neg: e.type.endsWith('Revoked') || e.type.endsWith('Removed') }">
+        <td :class="{ pos: e.type.endsWith('Granted') || e.type.endsWith('Assigned') || e.type.endsWith('Created'), neg: e.type.endsWith('Revoked') || e.type.endsWith('Removed') || e.type.endsWith('Retired') }">
           {{ describe(e) }}
         </td>
       </tr>
