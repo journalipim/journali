@@ -198,6 +198,7 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
       <select v-if="node.role !== 'group'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
         <option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option>
       </select>
+      <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
       <button class="x" @click="retire" :title="node.children ? `mit ${countBelow(id)} Knoten darunter zurückziehen  (Entf im Baum)` : 'Knoten zurückziehen  (Entf im Baum)'">🗑</button>
     </div>
     <div class="toolbar meta muted">
@@ -300,9 +301,12 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
   </div>
   <div v-else class="pane" style="flex:3"><div class="empty">…</div></div>
 
-  <div class="pane" style="flex:2">
-    <div class="toolbar"><h1>≡ Journal</h1><span class="muted mono">{{ id }}</span><span class="muted">{{ entries.length }}</span></div>
+  <div v-if="store.journalOpen" class="pane" style="flex:2">
+    <div class="toolbar"><h1>≡ Journal</h1><span class="muted mono">{{ id }}</span><span class="muted">{{ entries.length }}</span><span class="grow" /><button class="x" @click="store.journalOpen = false; store.save()" title="Journal zuklappen">▸</button></div>
     <div class="scroll"><EntryList :entries="entries" /></div>
+  </div>
+  <div v-else class="pane rail-pane" @click="store.journalOpen = true; store.save()" title="Journal aufklappen">
+    <span class="vert">◂ ≡ Journal · {{ entries.length }}</span>
   </div>
 </template>
 
@@ -328,4 +332,7 @@ table.releases td.rel .toggle { margin-right: 6px; }
 .status.active { color: var(--pos); }
 .status.discontinued { color: var(--neg); }
 .x { border: 0; background: none; }
+.rail-pane { width: 26px; flex: none; cursor: pointer; align-items: center; padding-top: 8px; }
+.rail-pane:hover { background: var(--hover); }
+.vert { writing-mode: vertical-rl; color: var(--muted); font-size: 12px; white-space: nowrap; }
 </style>
