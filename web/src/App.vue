@@ -44,6 +44,7 @@ const nav = [
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>
       <span class="grow" />
+      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="location.reload()" title="Es liegt eine neue Fassung der Oberfläche — neu laden">↻ neue Fassung</button>
       <span v-if="store.actor" class="actor">👤 {{ store.actor }}</span>
       <router-link v-else to="/settings" class="warn">👤 Name fehlt → Einstellungen</router-link>
     </header>

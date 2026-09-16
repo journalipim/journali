@@ -88,9 +88,21 @@ api.MapGet("/streams/{stream}", (string stream, IJournal j) => j.ReadStream(stre
 
 // ---- Oberfläche: web/ gebaut nach wwwroot, alles Unbekannte an index.html ----
 
+// index.html nie cachen — sonst zeigt ein Browser nach einem Bau noch auf die alte JS-Datei;
+// die Dateien unter /assets tragen einen Hash im Namen und dürfen ewig im Cache bleiben.
+var staticOptions = new StaticFileOptions
+{
+    OnPrepareResponse = ctx =>
+    {
+        var headers = ctx.Context.Response.Headers;
+        headers.CacheControl = ctx.Context.Request.Path.StartsWithSegments("/assets")
+            ? "public, max-age=31536000, immutable"
+            : "no-cache";
+    },
+};
 app.UseDefaultFiles();
-app.UseStaticFiles();
-app.MapFallbackToFile("index.html");
+app.UseStaticFiles(staticOptions);
+app.MapFallbackToFile("index.html", staticOptions);
 
 app.Run();
 

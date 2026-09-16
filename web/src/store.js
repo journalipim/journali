@@ -17,6 +17,8 @@ export const store = reactive({
   model: null,           // { locales, channels, attributes } vom Server
   toasts: [],
   error: '',
+  etag: null,           // ETag der index.html beim Laden — ändert er sich, liegt eine neue Fassung
+  stale: false,
 
   save() {
     localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel }))
@@ -48,6 +50,19 @@ export const store = reactive({
     this.applyTheme()
     this.poll()
     setInterval(() => this.poll(), 3000)
+    this.checkVersion()
+    setInterval(() => this.checkVersion(), 30000)
+  },
+
+  // Neue Fassung der Oberfläche? index.html ohne Cache holen und den ETag vergleichen.
+  async checkVersion() {
+    try {
+      const res = await fetch('/index.html', { method: 'HEAD', cache: 'no-store' })
+      const tag = res.headers.get('etag')
+      if (!tag) return
+      if (this.etag === null) this.etag = tag
+      else if (tag !== this.etag) this.stale = true
+    } catch { /* offline: egal */ }
   },
 
   toast(text, kind = 'error') {
