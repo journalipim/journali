@@ -20,7 +20,7 @@ async function request(method, path, body) {
 
 export const api = {
   get: (path) => request('GET', path),
-  post: (path, body) => request('POST', path, body),
+  post: (path, body, method = 'POST') => request(method, path, body),
   del: (path) => request('DELETE', path),
 }
 
@@ -37,7 +37,15 @@ export function describe(e) {
   const p = e.payload || {}
   const axis = [p.locale, p.channel].filter(Boolean).join('/')
   switch (e.type) {
-    case 'AttributeSet': return `${p.attribute}${axis ? ' ' + axis : ''} = ${p.value}`
+    case 'AttributeSet': return `${p.attribute}${axis ? ' ' + axis : ''} = ${p.values ? p.values.join(', ') : (p.value ?? '∅')}`
+    case 'AttributeDefined': return `${p.key}: ${p.type}${p.unit ? ' ' + p.unit : ''}${p.axes?.length ? ' [' + p.axes.join(',') + ']' : ''}${p.list ? ' ← ' + p.list : ''}${p.multiple ? ' ≣' : ''}`
+    case 'AttributeRetired': case 'FamilyRetired': return `− ${p.key}`
+    case 'ListDefined': return `${p.key}: ${p.label?.de ?? ''}`
+    case 'ListValueDefined': return `+ ${p.value}${p.label?.de ? ' = ' + p.label.de : ''}`
+    case 'ListValueRetired': return `− ${p.value}`
+    case 'FamilyDefined': return `${p.key}: ${(p.attributes || []).map(a => a.key).join(', ')}`
+    case 'LocaleDefined': return `${p.code} = ${p.label}`
+    case 'ChannelDefined': return `${p.key} = ${p.label?.de ?? ''}`
     case 'CategoryAssigned': return `+ ${p.category}`
     case 'CategoryRemoved': return `− ${p.category}`
     case 'ReleaseGranted': return `✓ ${p.channel}${p.locale ? '/' + p.locale : ''}`

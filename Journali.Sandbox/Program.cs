@@ -7,6 +7,10 @@ using Journali.Core.Projections;
 
 var journal = new MemoryJournal();
 
+// Das Modell zuerst — es steht im Journal wie alles andere.
+foreach (var s in Model.Seeds())
+    journal.Append("system", s.Stream, s.Type, s.Payload);
+
 Set("anna", "4711", "name", "de", null, "Stiefel");
 Set("anna", "4711", "name", "en", null, "Boots");
 Set("anna", "4711", "name", "de", "web", "Winterstiefel, gefüttert");
@@ -15,12 +19,15 @@ Set("bert", "4711", "name", "de", null, "Winterstiefel");
 journal.Append("anna", "4711", Types.CategoryAssigned, Types.Serialize(new CategoryAssigned("schuhe/winter")));
 journal.Append("anna", "4711", Types.ReleaseGranted, Types.Serialize(new ReleaseGranted("web", "de")));
 
+var model = new ModelCatalog();
+Projector.CatchUp(journal, model);
 var catalog = new ProductCatalog();
 var applied = Projector.CatchUp(journal, catalog);
 
 Console.WriteLine($"Journal: {journal.Head} Einträge, Abbild nachgezogen um {applied}");
+Console.WriteLine($"Modell: {model.Locales.Count} Sprachen, {model.Channels.Count} Kanäle, {model.Attributes.Count} Attribute: {string.Join(", ", model.Attributes.Values.Select(a => $"{a.Key}:{a.Type}{(a.Unit is null ? "" : " " + a.Unit)}"))}");
 Console.WriteLine();
-foreach (var e in journal.ReadAfter(0))
+foreach (var e in journal.ReadAfter(0).Where(e => !e.Stream.Contains(':')))
     Console.WriteLine($"#{e.Number,-3} {e.At:HH:mm:ss} {e.Actor,-5} {e.Stream,-5} {e.Type,-16} {e.Payload}");
 
 foreach (var p in catalog.Products.Values)

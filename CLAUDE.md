@@ -19,7 +19,11 @@ und weiterarbeiten. Keine Entschuldigung, keine Herleitung.
 `docs/architektur.md` ist verbindlich. Kein Schreibpfad an der
 `IJournal.Append` vorbei; kein Abbild, das nicht aus dem Journal neu
 gebaut werden kann. Ein Eintragstyp ist für immer — neue Typen sind
-billig, geänderte teuer, gelöschte unmöglich.
+billig, geänderte teuer, gelöschte unmöglich. **Auch das Modell** (Sprachen,
+Kanäle, Attribute, Wertelisten, Familien) steht im Journal, nie im Code:
+`Model.Seeds()` ist nur das Saatgut für ein leeres Journal.
+`docs/pflegestruktur.md` ist der Entwurf dazu; Entscheidungen von Taloan
+stehen dort als solche markiert.
 
 ## Arbeitsweise
 

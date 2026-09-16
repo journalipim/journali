@@ -9,7 +9,7 @@ fehlen. Ein fehlendes `locale`/`channel` heisst „gilt für alle".
 
 | Typ | Nutzdaten | Wirkung im Abbild |
 |---|---|---|
-| `AttributeSet` | `attribute`, `locale?`, `channel?`, `value` | Wert auf dieser Achse; der letzte gewinnt. Leerer `value` = eigener Wert weg, Rückfall gilt wieder |
+| `AttributeSet` | `attribute`, `locale?`, `channel?`, `value` oder `values[]` (mehrfach) | Wert auf dieser Achse; der letzte gewinnt. Leerer `value` / leere `values` = eigener Wert weg, Rückfall gilt wieder |
 | `CategoryAssigned` | `category` | Kategorie dazu |
 | `CategoryRemoved` | `category` | Kategorie weg |
 | `ReleaseGranted` | `channel`, `locale?` | Freigabe für Kanal (je Sprache oder alle) |
@@ -22,13 +22,32 @@ dann ohne Kanal, dann ohne Sprache. Ein Wert auf `de/web` überschreibt also
 `de`, das wiederum `*`. Die Variantenebene (Modell → Farbe → Grösse) fehlt
 noch — sie kommt als eigene Achse dazu, nicht als neuer Typ.
 
-## Modell
+## Modell — eigene Ströme, ganze Definition je Eintrag
 
-Welche Attribute es gibt und welche Achsen sie haben, steht vorläufig fest
-in `Model` (`AttributeDefinition.cs`): `name` je Sprache, `description` je
-Sprache und Kanal, `weight` und `ean` ohne Achsen. Sprachen `de`, `en`;
-Kanäle `web`, `print`. Sobald das Modell selbst pflegbar sein soll, wird es
-ein Eintragstyp (`AttributeDefined`) — dann kommt auch das aus dem Journal.
+Das Modell steht im Journal (docs/pflegestruktur.md, Grundsatz). Jeder
+Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
+`…Retired` nimmt den Schlüssel aus dem Abbild `ModelCatalog`. Schlüssel:
+`[a-z][a-z0-9_]*`, für immer.
+
+| Strom | Typ | Nutzdaten |
+|---|---|---|
+| `locale:<code>` | `LocaleDefined` | `code`, `label` |
+| `channel:<key>` | `ChannelDefined` | `key`, `label{}` |
+| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum), `unit?`, `group?`, `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple` |
+| `attribute:<key>` | `AttributeRetired` | `key` |
+| `list:<key>` | `ListDefined` | `key`, `label{}` |
+| `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
+| `list:<key>` | `ListValueRetired` | `value` |
+| `family:<key>` | `FamilyDefined` | `key`, `label{}`, `attributes[]` je `{key, group?, required{kanal: [sprachen] oder ["*"]}}`, `axes[]` (Variantenachsen = Attribute) |
+| `family:<key>` | `FamilyRetired` | `key` |
+
+Ein leeres Journal bekommt beim ersten Serverstart das Saatgut aus
+`Model.Seeds()` (`AttributeDefinition.cs`): `de`, `en`; `web`, `print`;
+`name`, `description`, `weight`, `ean` — als Einträge des Urhebers `system`.
+
+`ProductCatalog` reagiert nur auf Produkt-Typen; Modell-Ströme gehen an ihm
+vorbei. Werte werden beim Befehl gegen die Definition geprüft (Typ, Achsen,
+erlaubte Kanäle, Werteliste), im Journal steht immer ein String.
 
 ## Befehle (Server)
 
@@ -38,9 +57,18 @@ steht im Kopf `X-Actor`.
 
 | Aufruf | Eintrag |
 |---|---|
-| `POST /api/products/{sku}/attributes` `{attribute, locale?, channel?, value}` | `AttributeSet` — prüft, dass das Attribut die Achse hat |
+| `POST /api/products/{sku}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` — prüft Attribut, Achsen, Kanal, Typ, Werteliste |
 | `POST /api/products/{sku}/categories` `{category}` | `CategoryAssigned` |
 | `DELETE /api/products/{sku}/categories/{category}` | `CategoryRemoved` |
 | `POST /api/products/{sku}/releases` `{channel, locale?}` | `ReleaseGranted` |
 | `DELETE /api/products/{sku}/releases?channel=&locale=` | `ReleaseRevoked` |
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
+| `PUT /api/model/locales/{code}` `{label}` | `LocaleDefined` |
+| `PUT /api/model/channels/{key}` `{label{}}` | `ChannelDefined` |
+| `PUT /api/model/attributes/{key}` Definition | `AttributeDefined` — prüft Typ, Achsen, Einheit nur bei Zahlen, enum ↔ Werteliste |
+| `DELETE /api/model/attributes/{key}` | `AttributeRetired` |
+| `PUT /api/model/lists/{key}` `{label{}}` | `ListDefined` |
+| `PUT /api/model/lists/{key}/values/{value}` `{label{}, extra?, order}` | `ListValueDefined` |
+| `DELETE /api/model/lists/{key}/values/{value}` | `ListValueRetired` |
+| `PUT /api/model/families/{key}` Definition | `FamilyDefined` — prüft Attribute, Kanäle, Sprachen, Achsen |
+| `DELETE /api/model/families/{key}` | `FamilyRetired` |

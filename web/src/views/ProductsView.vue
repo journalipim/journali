@@ -93,7 +93,7 @@ function create() {
       </div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> wählen · <kbd>Enter</kbd> öffnen · <kbd>/</kbd> Filter · <kbd>Alt+2</kbd> Journal
+      <kbd>↑</kbd><kbd>↓</kbd> wählen · <kbd>Enter</kbd> öffnen · <kbd>/</kbd> Filter · <kbd>Alt+2</kbd> Journal · <kbd>Alt+3</kbd> Modell
     </div>
   </div>
 </template>

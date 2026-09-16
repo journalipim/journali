@@ -13,7 +13,8 @@ onMounted(() => window.addEventListener('keydown', e => {
 const nav = [
   { to: '/products', icon: '▦', label: 'Produkte', key: '1' },
   { to: '/journal', icon: '≡', label: 'Journal', key: '2' },
-  { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '3' },
+  { to: '/model', icon: '⊞', label: 'Modell', key: '3' },
+  { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '4' },
 ]
 </script>
 

@@ -5,10 +5,11 @@ using Journali.Core.Journal;
 using Journali.Core.Projections;
 using Journali.Server;
 using Npgsql;
+using static Journali.Server.ModelApi;
 
-// Der Server: Journal in PostgreSQL, Abbild „Produkte" im Speicher, Befehle
-// als Endpunkte unter /api, die Oberfläche (web/, gebaut nach wwwroot) daneben.
-// Regel: kein Schreibpfad an Catalog.Execute vorbei (docs/architektur.md).
+// Der Server: Journal in PostgreSQL, Abbilder „Modell" und „Produkte" im
+// Speicher, Befehle als Endpunkte unter /api, die Oberfläche (web/, gebaut
+// nach wwwroot) daneben. Regel: kein Schreibpfad am Catalog vorbei.
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +26,7 @@ var journal = new PostgresJournal(NpgsqlDataSource.Create(connection.ConnectionS
 journal.EnsureSchema();
 var catalog = new Catalog(journal);
 var rebuilt = catalog.Rebuild();
+var seeded = catalog.SeedIfEmpty();
 
 builder.Services.AddSingleton<IJournal>(journal);
 builder.Services.AddSingleton(catalog);
@@ -39,7 +41,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
-app.Logger.LogInformation("Abbild aus {Count} Einträgen gebaut, Stand #{Head}", rebuilt, catalog.Head);
+app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}", rebuilt, catalog.Head, seeded);
 
 if (app.Environment.IsDevelopment()) app.UseCors();
 
@@ -53,12 +55,7 @@ api.MapGet("/health", (Catalog c) => new
     products = c.Read(p => p.Count),
 });
 
-api.MapGet("/model", () => new
-{
-    locales = Model.Locales,
-    channels = Model.Channels,
-    attributes = Model.Attributes,
-});
+ModelApi.Map(api);
 
 // ---- Produkte (Abbild) ---------------------------------------------------
 
@@ -79,23 +76,27 @@ api.MapGet("/products/{sku}", (string sku, Catalog c) =>
 api.MapPost("/products/{sku}/attributes", (string sku, AttributeSet body, HttpRequest req, Catalog c) =>
 {
     if (Actor(req) is not { } actor) return ActorMissing();
-    if (string.IsNullOrWhiteSpace(body.Attribute)) return Results.BadRequest(new { error = "attribute fehlt." });
-    if (Model.Attributes.FirstOrDefault(a => a.Name == body.Attribute) is not { } def)
-        return Results.BadRequest(new { error = $"Unbekanntes Attribut: {body.Attribute}" });
-    var locale = Blank(body.Locale);
-    var channel = Blank(body.Channel);
-    if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel))
-        return Results.BadRequest(new { error = $"{body.Attribute} hat diese Achse nicht." });
-
-    var entry = c.Execute(actor, sku, Types.AttributeSet,
-        new AttributeSet(body.Attribute, locale, channel, body.Value ?? ""));
-    return Results.Ok(EntryView.Of(entry));
+    if (string.IsNullOrWhiteSpace(body.Attribute)) return Bad("attribute fehlt.");
+    return c.With((model, _, write) =>
+    {
+        if (!model.Attributes.TryGetValue(body.Attribute, out var def)) return Bad($"Unbekanntes Attribut: {body.Attribute}");
+        var locale = Blank(body.Locale);
+        var channel = Blank(body.Channel);
+        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Bad($"{body.Attribute} hat diese Achse nicht.");
+        if (locale is not null && !model.Locales.ContainsKey(locale)) return Bad($"Unbekannte Sprache: {locale}");
+        if (channel is not null && !model.Channels.ContainsKey(channel)) return Bad($"Unbekannter Kanal: {channel}");
+        if (channel is not null && def.Channels is { } only && !only.Contains(channel)) return Bad($"{body.Attribute} gibt es nur für: {string.Join(", ", only)}");
+        var value = body.Value;
+        var values = body.Values;
+        if (CheckValue(model, def, ref value, ref values) is { } error) return Bad(error);
+        return Results.Ok(EntryView.Of(write(actor, sku, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values))));
+    });
 });
 
 api.MapPost("/products/{sku}/categories", (string sku, CategoryAssigned body, HttpRequest req, Catalog c) =>
     Actor(req) is { } actor
         ? string.IsNullOrWhiteSpace(body.Category)
-            ? Results.BadRequest(new { error = "category fehlt." })
+            ? Bad("category fehlt.")
             : Results.Ok(EntryView.Of(c.Execute(actor, sku, Types.CategoryAssigned, body)))
         : ActorMissing());
 
@@ -107,7 +108,7 @@ api.MapDelete("/products/{sku}/categories/{category}", (string sku, string categ
 api.MapPost("/products/{sku}/releases", (string sku, ReleaseGranted body, HttpRequest req, Catalog c) =>
     Actor(req) is { } actor
         ? string.IsNullOrWhiteSpace(body.Channel)
-            ? Results.BadRequest(new { error = "channel fehlt." })
+            ? Bad("channel fehlt.")
             : Results.Ok(EntryView.Of(c.Execute(actor, sku, Types.ReleaseGranted, body with { Locale = Blank(body.Locale) })))
         : ActorMissing());
 
@@ -122,7 +123,7 @@ api.MapPost("/journal", (AppendRequest r, Catalog c) =>
 {
     if (string.IsNullOrWhiteSpace(r.Actor) || string.IsNullOrWhiteSpace(r.Stream)
         || string.IsNullOrWhiteSpace(r.Type) || r.Payload.ValueKind is JsonValueKind.Undefined)
-        return Results.BadRequest(new { error = "actor, stream, type und payload sind Pflicht." });
+        return Bad("actor, stream, type und payload sind Pflicht.");
 
     var entry = c.AppendRaw(r.Actor, r.Stream, r.Type, r.Payload.GetRawText());
     return Results.Created($"/api/journal/{entry.Number}", EntryView.Of(entry));
@@ -148,15 +149,6 @@ app.MapFallbackToFile("index.html");
 
 app.Run();
 
-// Wer handelt, sagt der Client im Kopf X-Actor (Einstellungen). Bis es eine
-// Anmeldung gibt, ist das die ganze Wahrheit über den Urheber.
-static string? Actor(HttpRequest req) =>
-    req.Headers.TryGetValue("X-Actor", out var v) && !string.IsNullOrWhiteSpace(v) ? v.ToString() : null;
-
-static IResult ActorMissing() => Results.BadRequest(new { error = "Kopf X-Actor fehlt — Name in den Einstellungen setzen." });
-
-static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s;
-
 /// <summary>Rumpf von POST /api/journal. Payload ist beliebiges JSON, die Form hängt von Type ab.</summary>
 sealed record AppendRequest(string Actor, string Stream, string Type, JsonElement Payload);
 
@@ -177,15 +169,17 @@ sealed record ProductRow(string Sku, string? Name, int Categories, int Releases,
         new(p.Sku, p.Resolve("name", "de", null), p.Categories.Count, p.Releases.Count, p.Entries, p.LastNumber, p.LastAt, p.LastActor);
 }
 
-/// <summary>Ein Wert auf seinen Achsen, wie er im Abbild steht.</summary>
-sealed record ValueView(string Attribute, string? Locale, string? Channel, string Value);
+/// <summary>Ein Wert auf seinen Achsen, wie er im Abbild steht — einfach oder als Liste.</summary>
+sealed record ValueView(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values);
 
 /// <summary>Ein Produkt vollständig — Kopie aus dem Abbild, ausserhalb der Sperre ungefährlich.</summary>
 sealed record ProductView(string Sku, List<ValueView> Values, List<string> Categories, List<Release> Releases, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {
     public static ProductView Of(ProductState p) => new(
         p.Sku,
-        p.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value)).ToList(),
+        p.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null))
+            .Concat(p.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value)))
+            .ToList(),
         p.Categories.Order().ToList(),
         p.Releases.ToList(),
         p.Entries, p.LastNumber, p.LastAt, p.LastActor);

@@ -319,6 +319,17 @@ Wo journali darüber liegt: Historie ohne Versionstabellen, Delta-Export
 ab Nummer, jedes Abbild neu baubar, Platzhaltertexte als Ableitung,
 Vollständigkeit je Kanal × Sprache als Regel im Modell.
 
+Dazu fünf Punkte, die Taloan aus einer OpenDXP-Zusammenfassung nachgereicht
+hat (16.09.2026):
+
+| OpenDXP | journali |
+|---|---|
+| Datenmodell im Browser per Drag-and-Drop, Tabellen und Oberfläche entstehen daraus | Modell-Ansicht (Schritt 1): Definition als Gitterzeile, das Produktgitter baut sich aus dem Modell. Kein Drag-and-Drop; Reihenfolge und Gruppen kommen aus der Familie. Keine Tabellen zu erzeugen — das Journal ist schemafrei, das Abbild rechnet |
+| API-first, REST/GraphQL, Anbindung ERP/CRM/PLM | `/api` + Delta ab Nummer (11). GraphQL: fehlt; kommt, wenn ein Abnehmer es braucht |
+| KI-Bundles: Übersetzung (DeepL), Verschlagwortung, Anreicherung, Validierung | Plugins (11): ein Übersetzungs-Plugin liest das Delta, schreibt `AttributeSet` als `plugin:deepl` — Herkunft sichtbar, Handwert geschützt. Wörterbuch (9) als Gedächtnis dazu. Nichts davon im Server |
+| Datendichtes ExtJS-Backend für Power-User, komplexe Gitter | genau das Ziel der Oberfläche: Gitter, Zelle, Tastatur, kein Formular; Massenpflege (12) |
+| Suche über Millionen Datensätze, Elasticsearch/OpenSearch asynchron | der Suchindex ist ein Abbild, das dasselbe Journal liest (`architektur.md`). Erst Postgres-Volltext im Abbild, OpenSearch als Plugin/Abbild, wenn die Menge es verlangt |
+
 ## Das Beispiel auf dem Modell
 
 | Im JSON | Wird zu |
@@ -395,7 +406,13 @@ Definitionen ins Journal.
 
 ## Reihenfolge
 
-1. Attribute, Wertelisten, Familien im Journal + Modell-Ansicht
+1. ~~Attribute, Wertelisten, Familien im Journal + Modell-Ansicht~~ 16.09.2026:
+   Typen `LocaleDefined`, `ChannelDefined`, `AttributeDefined/Retired`,
+   `ListDefined`, `ListValueDefined/Retired`, `FamilyDefined/Retired`; Abbild
+   `ModelCatalog`; Saatgut; `/api/model`; Ansicht ⊞ Modell mit Gitter je
+   Bereich; Produktgitter nach Gruppen, Zelle nach Typ (Text, Schalter,
+   Auswahl), mehrfach kommagetrennt, Spalten `*/kanal`. Familien werden
+   definiert, aber noch nicht benutzt (Schritt 2)
 2. `ProductCreated` mit Familie, SKU-Eindeutigkeit, Status
 3. Typisierte Zellen und Gruppen in der Produktansicht, Vollständigkeit,
    vermehrbare Attribute (Verpackungseinheiten als erster Fall)

@@ -1,13 +1,15 @@
 <script setup>
-// Ein Produkt: Werte als Gitter Attribut × Achse mit Inline-Bearbeitung,
-// Kategorien als Chips, Freigaben als Schalter, rechts der Strom im Journal.
-// Jede Änderung ist ein Befehl an den Server = ein Eintrag; die Antwort
-// (der Eintrag) landet sofort in Abbild und Liste.
+// Ein Produkt: Werte als Gitter Attribut × Achse mit Zelle nach Typ (Text,
+// Schalter, Auswahl), Gruppen als Abschnitte, Kategorien als Chips, Freigaben
+// als Schalter, rechts der Strom im Journal. Jede Änderung ist ein Befehl an
+// den Server = ein Eintrag; die Antwort landet sofort in Abbild und Liste.
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import Cell from '../components/Cell.vue'
+import ToggleCell from '../components/ToggleCell.vue'
+import SelectCell from '../components/SelectCell.vue'
 import EntryList from '../components/EntryList.vue'
 
 const props = defineProps({ sku: String })
@@ -19,31 +21,53 @@ const newCategory = ref('')
 const busy = ref(false)
 
 const model = computed(() => store.model)
+const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
+const channels = computed(() => model.value?.channels.map(c => c.key) ?? [])
 
-// Spalten: * (alle), je Sprache, je Sprache × Kanal
+// Spalten: * (alle), je Sprache, je Kanal ohne Sprache, je Sprache × Kanal
 const columns = computed(() => {
-  if (!model.value) return []
   const cols = [{ locale: null, channel: null, label: '*' }]
-  for (const l of model.value.locales) cols.push({ locale: l, channel: null, label: l })
-  for (const c of model.value.channels)
-    for (const l of model.value.locales) cols.push({ locale: l, channel: c, label: `${l}/${c}` })
+  for (const l of locales.value) cols.push({ locale: l, channel: null, label: l })
+  for (const c of channels.value) cols.push({ locale: null, channel: c, label: `*/${c}` })
+  for (const c of channels.value)
+    for (const l of locales.value) cols.push({ locale: l, channel: c, label: `${l}/${c}` })
   return cols
+})
+
+// Attribute nach Gruppe, Gruppe ohne Namen zuletzt
+const groups = computed(() => {
+  const g = new Map()
+  for (const a of model.value?.attributes ?? []) {
+    const k = a.group ?? ''
+    if (!g.has(k)) g.set(k, [])
+    g.get(k).push(a)
+  }
+  return [...g.entries()].sort((a, b) => (a[0] === '' ? 1 : b[0] === '' ? -1 : a[0].localeCompare(b[0])))
 })
 
 const values = computed(() => {
   const m = new Map()
-  for (const v of product.value?.values ?? []) m.set(key(v.attribute, v.locale, v.channel), v.value)
+  for (const v of product.value?.values ?? []) m.set(key(v.attribute, v.locale, v.channel), v.values ? v.values.join(', ') : v.value)
   return m
 })
 
 function key(a, l, c) { return `${a}|${l ?? ''}|${c ?? ''}` }
 function own(a, col) { return values.value.get(key(a, col.locale, col.channel)) ?? null }
+// Rückfall wie ProductState.Resolve: genaue Achse, dann ohne Kanal, dann ohne Sprache.
 function inherited(a, col) {
   if (col.channel && values.value.has(key(a, col.locale, null))) return values.value.get(key(a, col.locale, null))
-  if (col.locale && values.value.has(key(a, null, null))) return values.value.get(key(a, null, null))
+  if ((col.locale || col.channel) && values.value.has(key(a, null, null))) return values.value.get(key(a, null, null))
   return null
 }
-function enabled(def, col) { return (!col.locale || def.perLocale) && (!col.channel || def.perChannel) }
+function enabled(def, col) {
+  return (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
+    && (!col.channel || !def.channels || def.channels.includes(col.channel))
+}
+function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
+function listLabel(def) {
+  const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []
+  return v => vals.find(x => x.value === v)?.label?.de || v
+}
 function released(channel, locale) { return product.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }
 
 async function load() {
@@ -60,7 +84,7 @@ watch(() => props.sku, load)
 
 // Esc ausserhalb einer Zelle: zurück zur Liste.
 function onKey(e) {
-  if (e.key === 'Escape' && !['INPUT', 'TEXTAREA'].includes(e.target.tagName)) router.push('/products')
+  if (e.key === 'Escape' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) router.push('/products')
 }
 onMounted(() => window.addEventListener('keydown', onKey))
 onUnmounted(() => window.removeEventListener('keydown', onKey))
@@ -85,8 +109,12 @@ function apply(e) {
   switch (e.type) {
     case 'AttributeSet': {
       const i = p.values.findIndex(v => v.attribute === d.attribute && (v.locale ?? null) === (d.locale ?? null) && (v.channel ?? null) === (d.channel ?? null))
-      const v = { attribute: d.attribute, locale: d.locale ?? null, channel: d.channel ?? null, value: d.value }
-      if (i >= 0) p.values[i] = v; else p.values.push(v)
+      const empty = d.values ? d.values.length === 0 : (d.value == null || d.value === '')
+      if (empty) { if (i >= 0) p.values.splice(i, 1) }
+      else {
+        const v = { attribute: d.attribute, locale: d.locale ?? null, channel: d.channel ?? null, value: d.value ?? null, values: d.values ?? null }
+        if (i >= 0) p.values[i] = v; else p.values.push(v)
+      }
       break
     }
     case 'CategoryAssigned': if (!p.categories.includes(d.category)) p.categories.push(d.category); p.categories.sort(); break
@@ -97,8 +125,11 @@ function apply(e) {
   p.entries++; p.lastNumber = e.number; p.lastAt = e.at; p.lastActor = e.actor
 }
 
-const setValue = (attribute, col, value) => command(() =>
-  api.post(`/api/products/${encodeURIComponent(props.sku)}/attributes`, { attribute, locale: col.locale, channel: col.channel, value }))
+const setValue = (def, col, value) => command(() =>
+  api.post(`/api/products/${encodeURIComponent(props.sku)}/attributes`,
+    def.multiple
+      ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean) }
+      : { attribute: def.key, locale: col.locale, channel: col.channel, value }))
 
 function addCategory() {
   const c = newCategory.value.trim()
@@ -135,12 +166,19 @@ function toggleRelease(channel, locale) {
             <th v-for="c in columns" :key="c.label">{{ c.label }}</th>
           </tr>
         </thead>
-        <tbody>
-          <tr v-for="def in model.attributes" :key="def.name">
-            <td class="mono muted">{{ def.name }}</td>
-            <Cell v-for="c in columns" :key="c.label"
-              :value="own(def.name, c)" :inherited="inherited(def.name, c)" :disabled="!enabled(def, c)"
-              @save="v => setValue(def.name, c, v)" />
+        <tbody v-for="[group, defs] in groups" :key="group">
+          <tr class="group-row"><td :colspan="columns.length + 1">{{ group || '—' }}</td></tr>
+          <tr v-for="def in defs" :key="def.key">
+            <td class="attr" :title="def.key">
+              {{ def.label?.de || def.key }}
+              <span v-if="def.unit" class="muted">{{ def.unit }}</span>
+              <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
+            </td>
+            <template v-for="c in columns" :key="c.label">
+              <ToggleCell v-if="def.type === 'boolean'" :value="own(def.key, c)" :inherited="inherited(def.key, c)" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" />
+              <SelectCell v-else-if="def.type === 'enum'" :value="own(def.key, c)" :inherited="inherited(def.key, c)" :disabled="!enabled(def, c)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" />
+              <Cell v-else :value="own(def.key, c)" :inherited="inherited(def.key, c)" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" />
+            </template>
           </tr>
         </tbody>
       </table>
@@ -157,12 +195,12 @@ function toggleRelease(channel, locale) {
         <h2>✓ Freigaben</h2>
         <table class="grid releases">
           <thead>
-            <tr><th>Kanal</th><th>*</th><th v-for="l in model.locales" :key="l">{{ l }}</th></tr>
+            <tr><th>Kanal</th><th>*</th><th v-for="l in locales" :key="l">{{ l }}</th></tr>
           </thead>
           <tbody>
-            <tr v-for="ch in model.channels" :key="ch">
+            <tr v-for="ch in channels" :key="ch">
               <td class="mono muted">{{ ch }}</td>
-              <td v-for="l in [null, ...model.locales]" :key="l ?? '*'">
+              <td v-for="l in [null, ...locales]" :key="l ?? '*'">
                 <button class="toggle" :class="{ on: released(ch, l) }" @click="toggleRelease(ch, l)">
                   {{ released(ch, l) ? '✓' : '·' }}
                 </button>
@@ -188,8 +226,10 @@ function toggleRelease(channel, locale) {
 <style scoped>
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+.group-row td { background: var(--bg); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; height: 22px; }
+td.attr { white-space: nowrap; }
 table.releases { width: auto; }
 table.releases td { text-align: center; }
 .toggle { width: 28px; color: var(--muted); }
-.toggle.on { color: #fff; background: var(--pos); border-color: var(--pos); }
+.toggle.on { color: var(--pane); background: var(--pos); border-color: var(--pos); }
 </style>

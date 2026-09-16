@@ -5,6 +5,8 @@ import { store } from '../store.js'
 
 const actor = ref(store.actor)
 const server = ref(store.server)
+const theme = ref(store.theme)
+function setTheme(t) { theme.value = t; store.theme = t; store.save() }
 const checking = ref(false)
 
 async function save() {
@@ -35,6 +37,13 @@ async function save() {
             <td class="muted">z. B. <span class="mono">http://localhost:8080</span>; leer heisst: der Server, der diese Seite liefert.</td>
           </tr>
           <tr>
+            <td class="muted">◐ Darstellung</td>
+            <td>
+              <button v-for="t in [['system', 'System'], ['light', 'Hell'], ['dark', 'Dunkel']]" :key="t[0]" :class="{ primary: theme === t[0] }" @click="setTheme(t[0])" style="margin-right:4px">{{ t[1] }}</button>
+            </td>
+            <td class="muted">System folgt der Windows-Einstellung.</td>
+          </tr>
+          <tr>
             <td class="muted">Stand</td>
             <td>
               <span v-if="store.online" class="pos">● erreichbar</span>
@@ -51,8 +60,8 @@ async function save() {
         </tbody>
       </table>
 
-      <div class="section" v-if="store.model">
-        <h2>Modell (vorläufig fest im Server)</h2>
+      <div class="section" v-if="false && store.model">
+        <h2>Modell</h2>
         <table class="grid" style="width:auto">
           <thead><tr><th>Attribut</th><th>je Sprache</th><th>je Kanal</th></tr></thead>
           <tbody>

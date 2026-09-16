@@ -1,23 +1,37 @@
 namespace Journali.Core.Entries;
 
 /// <summary>
-/// Welche Achsen ein Attribut hat (docs/architektur.md, „Die Achsen").
-/// Vorläufig fest im Code; später selbst ein Eintragstyp (<c>AttributeDefined</c>),
-/// damit auch das Modell aus dem Journal kommt.
+/// Ströme des Modells und das Saatgut für ein leeres Journal. Das Modell
+/// selbst steht im Journal (docs/pflegestruktur.md, Grundsatz); dies hier
+/// ist nur, womit ein neues Journal anfängt.
 /// </summary>
-public sealed record AttributeDefinition(string Name, bool PerLocale, bool PerChannel);
-
 public static class Model
 {
-    public static readonly IReadOnlyList<string> Locales = ["de", "en"];
+    public const string LocaleStream = "locale:";
+    public const string ChannelStream = "channel:";
+    public const string AttributeStream = "attribute:";
+    public const string ListStream = "list:";
+    public const string FamilyStream = "family:";
 
-    public static readonly IReadOnlyList<string> Channels = ["web", "print"];
+    /// <summary>Ein Modell-Eintrag: Strom, Typ, Nutzdaten — fertig zum Anhängen.</summary>
+    public sealed record Seed(string Stream, string Type, string Payload);
 
-    public static readonly IReadOnlyList<AttributeDefinition> Attributes =
-    [
-        new("name", PerLocale: true, PerChannel: false),
-        new("description", PerLocale: true, PerChannel: true),
-        new("weight", PerLocale: false, PerChannel: false),
-        new("ean", PerLocale: false, PerChannel: false),
-    ];
+    /// <summary>Was ein leeres Journal als Modell bekommt: zwei Sprachen, zwei Kanäle, vier Attribute.</summary>
+    public static IEnumerable<Seed> Seeds()
+    {
+        yield return new(LocaleStream + "de", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("de", "Deutsch")));
+        yield return new(LocaleStream + "en", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("en", "English")));
+        yield return new(ChannelStream + "web", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("web", Labels.Of("Web", "Web"))));
+        yield return new(ChannelStream + "print", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("print", Labels.Of("Print", "Print"))));
+
+        AttributeDefinition[] attributes =
+        [
+            new("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "texts", Axes: [Axes.Locale]),
+            new("description", Labels.Of("Beschreibung", "Description"), AttributeTypes.Html, Group: "texts", Axes: [Axes.Locale, Axes.Channel]),
+            new("weight", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "physical"),
+            new("ean", Labels.Of("EAN", "EAN"), AttributeTypes.Text, Group: "logistics"),
+        ];
+        foreach (var a in attributes)
+            yield return new(AttributeStream + a.Key, Types.AttributeDefined, Types.Serialize(a));
+    }
 }

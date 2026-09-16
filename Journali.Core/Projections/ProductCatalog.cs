@@ -13,6 +13,8 @@ public sealed class ProductState
 {
     public required string Sku { get; init; }
     public Dictionary<Axis, string> Values { get; } = new();
+    /// <summary>Mehrfache Attribute: die Liste je Achse.</summary>
+    public Dictionary<Axis, string[]> Lists { get; } = new();
     public HashSet<string> Categories { get; } = new();
     public HashSet<Release> Releases { get; } = new();
     public long LastNumber { get; set; }
@@ -43,9 +45,17 @@ public sealed class ProductCatalog : IProjection
 
     public IReadOnlyDictionary<string, ProductState> Products => _products;
 
+    private static readonly HashSet<string> ProductTypes =
+    [
+        Types.AttributeSet, Types.CategoryAssigned, Types.CategoryRemoved, Types.ReleaseGranted, Types.ReleaseRevoked,
+    ];
+
     public void Apply(Entry entry)
     {
         LastApplied = entry.Number;
+
+        // Nur Produkt-Einträge machen ein Produkt; Modell-Ströme (locale:, attribute:, …) gehen hier durch.
+        if (!ProductTypes.Contains(entry.Type)) return;
 
         if (!_products.TryGetValue(entry.Stream, out var p))
             _products[entry.Stream] = p = new ProductState { Sku = entry.Stream };
@@ -54,7 +64,14 @@ public sealed class ProductCatalog : IProjection
         {
             case Types.AttributeSet:
                 var a = Types.Deserialize<AttributeSet>(entry.Payload);
-                p.Values[new Axis(a.Attribute, a.Locale, a.Channel)] = a.Value;
+                var axis = new Axis(a.Attribute, a.Locale, a.Channel);
+                // Leer = eigener Wert weg, der Rückfall gilt wieder.
+                if (a.Values is { } list)
+                {
+                    if (list.Length == 0) p.Lists.Remove(axis); else p.Lists[axis] = list;
+                }
+                else if (string.IsNullOrEmpty(a.Value)) p.Values.Remove(axis);
+                else p.Values[axis] = a.Value;
                 break;
             case Types.CategoryAssigned:
                 p.Categories.Add(Types.Deserialize<CategoryAssigned>(entry.Payload).Category);
@@ -70,7 +87,6 @@ public sealed class ProductCatalog : IProjection
                 var r = Types.Deserialize<ReleaseRevoked>(entry.Payload);
                 p.Releases.Remove(new Release(r.Channel, r.Locale));
                 break;
-            // Unbekannte Typen betreffen dieses Abbild nicht — LastApplied rückt trotzdem vor.
         }
 
         p.LastNumber = entry.Number;

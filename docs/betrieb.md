@@ -45,7 +45,7 @@ Befehle (schreiben) brauchen den Kopf `X-Actor` und stehen in
 | Aufruf | Antwort |
 |---|---|
 | `GET /api/health` | `{"head": N, "products": P}` — letzter Eintrag (0 bei leerem Journal), Zahl der Produkte |
-| `GET /api/model` | Sprachen, Kanäle, Attribute mit Achsen |
+| `GET /api/model` | Sprachen, Kanäle, Attribute, Wertelisten, Familien, Typen — aus dem Journal (`docs/eintraege.md`) |
 | `GET /api/products?q=` | Liste: SKU, Name (de), Zähler, letzte Änderung; `q` filtert SKU und Name |
 | `GET /api/products/{sku}` | Werte je Achse, Kategorien, Freigaben — oder 404, solange kein Eintrag da ist |
 | `GET /api/journal?after=N&limit=M` | Einträge mit Nummer > N, höchstens M (Vorgabe 1000, Obergrenze 10 000) |
