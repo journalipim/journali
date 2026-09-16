@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { store } from './store.js'
+import ContextMenu from './components/ContextMenu.vue'
 import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
@@ -46,6 +47,8 @@ const nav = [
       <span v-if="store.actor" class="actor">👤 {{ store.actor }}</span>
       <router-link v-else to="/settings" class="warn">👤 Name fehlt → Einstellungen</router-link>
     </header>
+
+    <ContextMenu />
 
     <div class="toasts">
       <div v-for="t in store.toasts" :key="t.id" class="toast" :class="t.kind">{{ t.text }}</div>

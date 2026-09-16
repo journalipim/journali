@@ -7,6 +7,7 @@ import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
+import { menu } from '../menu.js'
 import NodeView from './NodeView.vue'
 
 const props = defineProps({ id: String })
@@ -91,6 +92,31 @@ async function retire(r) {
     if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok')
     await tree.load(); if (props.id === r.id || !tree.byId.has(props.id)) router.push(r.parent ? `/tree/${r.parent}` : '/tree')
   } catch (e) { store.toast(e.message) }
+}
+function expandAll(id) { tree.expand(id); for (const k of tree.kids(id)) expandAll(k.id) }
+function collapseAll(id) { for (const k of tree.kids(id)) collapseAll(k.id); if (tree.expanded.has(id)) tree.toggle(id) }
+async function setStatus(r, status) {
+  try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/status`, { status }); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
+}
+// Rechtsklick: was man mit diesem Knoten tun kann — die Tastenkürzel gelten im Menü.
+function contextMenu(e, r) {
+  router.push(`/tree/${r.id}`)
+  const kids = tree.kids(r.id).length
+  const st = s => r.role !== 'group' && r.status !== s ? { label: s === 'draft' ? '○ Entwurf' : s === 'active' ? '● aktiv' : '✗ ausgelaufen', action: () => setStatus(r, s) } : null
+  menu.open(e, [
+    r.role === 'group' ? { label: 'Neue Gruppe darunter', icon: '▣', key: 'g', action: () => start('group') } : null,
+    r.role === 'group' ? { label: 'Neues Produkt darunter', icon: '▦', key: 'p', disabled: !families.value.length, hint: families.value.length ? '' : 'keine Familie', action: () => start('product') } : null,
+    r.role === 'product' ? { label: 'Neue Variante darunter', icon: '◆', key: 'v', action: () => start('variant') } : null,
+    r.role === 'group' ? { label: 'Umbenennen', icon: '✎', key: 'u', hint: 'im Knoten', action: () => router.push(`/tree/${r.id}`) } : null,
+    { sep: true },
+    ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
+    kids ? { label: 'Alles aufklappen', icon: '▾', key: 'a', action: () => expandAll(r.id) } : null,
+    kids ? { label: 'Alles zuklappen', icon: '▸', key: 'z', action: () => collapseAll(r.id) } : null,
+    { label: 'Id kopieren', icon: '⧉', key: 'i', hint: r.id, action: () => navigator.clipboard?.writeText(r.id) },
+    { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
+    { sep: true },
+    { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
+  ])
 }
 function onGlobalKey(e) {
   if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); search.value?.focus() }
@@ -191,7 +217,7 @@ function toggleAxis(a) {
 
     <div ref="list" class="scroll tree" tabindex="0" @keydown="onListKey">
       <div v-for="{ r, depth, open } in visible" :key="r.id" class="node" :class="[r.role, { selected: r.id === id, [r.status]: true }]"
-        :style="`padding-left:${8 + depth * 16}px`" @click="open(r)" :title="r.id">
+        :style="`padding-left:${8 + depth * 16}px`" @click="open(r)" @contextmenu="contextMenu($event, r)" :title="r.id">
         <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (open ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
         <span class="label">{{ r.label }}</span>
@@ -205,7 +231,7 @@ function toggleAxis(a) {
       <div v-else-if="q && !visible.length" class="empty">Nichts zu „{{ q }}“</div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche in allem
+      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · Rechtsklick
     </div>
   </div>
 

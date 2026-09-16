@@ -2,12 +2,15 @@
 // Das ganze Journal, neueste zuerst, lebendig: bei jedem neuen Serverstand
 // werden nur die Einträge nach der letzten bekannten Nummer geholt.
 import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { api, describe } from '../api.js'
 import { store } from '../store.js'
 import EntryList from '../components/EntryList.vue'
 
+const route = useRoute()
 const entries = ref([])
-const filter = ref('')
+const filter = ref(String(route.query.q ?? ''))
+watch(() => route.query.q, q => { if (q != null) filter.value = String(q) })
 let pulling = null   // laufende Abfrage — Einhängen und erster Serverstand kommen fast gleichzeitig
 
 async function pull() {

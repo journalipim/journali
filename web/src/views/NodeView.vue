@@ -8,6 +8,7 @@ import { useRouter } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
+import { menu } from '../menu.js'
 import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
@@ -138,6 +139,21 @@ async function command(fn) {
   finally { busy.value = false }
 }
 const nodeUrl = () => `/api/nodes/${encodeURIComponent(props.id)}`
+// Rechtsklick auf eine Zelle: eigener Wert weg, zur Herkunft, kopieren.
+function cellMenu(e, def, col) {
+  if (!enabled(def, col)) return
+  const ownV = ownValue(def.key, col)
+  const inh = inherited(def.key, col)
+  const shown = ownV ?? inh.value
+  menu.open(e, [
+    { label: `${def.label?.de || def.key} · ${col.label}`, disabled: true },
+    { sep: true },
+    { label: 'Eigenen Wert löschen', icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? 'kein eigener' : (inh.value != null ? 'dann geerbt' : ''), action: () => setValue(def, col, '') },
+    inh.from ? { label: `Zur Herkunft ${icon(inh.from.role)} ${inh.from.label}`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
+    { label: 'Wert kopieren', icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
+    { label: 'Attribut im Modell', icon: '⊞', key: 'm', action: () => router.push('/model') },
+  ])
+}
 const setValue = (def, col, value, row = null) => command(() =>
   api.post(`${nodeUrl()}/attributes`,
     def.multiple
@@ -235,14 +251,14 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
               <span v-if="def.required" class="warn" title="Pflicht in der Familie">●</span>
             </td>
             <template v-for="c in columns" :key="c.label">
-              <ToggleCell v-if="def.type === 'boolean'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" />
-              <SelectCell v-else-if="def.type === 'enum'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" />
-              <DateCell v-else-if="def.type === 'date'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" />
+              <ToggleCell v-if="def.type === 'boolean'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
+              <SelectCell v-else-if="def.type === 'enum'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
+              <DateCell v-else-if="def.type === 'date'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
               <HtmlCell v-else-if="def.type === 'html'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" :title="`${def.label?.de || def.key} · ${c.label}`"
-                :origin="inherited(def.key, c).from ? `${icon(inherited(def.key, c).from.role)} ${inherited(def.key, c).from.label}` : null" @save="v => setValue(def, c, v)" />
+                :origin="inherited(def.key, c).from ? `${icon(inherited(def.key, c).from.role)} ${inherited(def.key, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
               <td v-else-if="axisValue(def.key, c) != null" class="cell"><div class="cell-box locked" :title="'Variantenachse — festgelegt beim Anlegen'">{{ axisValue(def.key, c) }} 🔒</div></td>
               <Cell v-else :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)"
-                :origin="inherited(def.key, c).from ? `${icon(inherited(def.key, c).from.role)} ${inherited(def.key, c).from.label}` : null" @save="v => setValue(def, c, v)" />
+                :origin="inherited(def.key, c).from ? `${icon(inherited(def.key, c).from.role)} ${inherited(def.key, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
             </template>
           </tr>
           </template>
