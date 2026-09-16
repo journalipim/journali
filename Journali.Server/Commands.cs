@@ -181,6 +181,72 @@ public static class Commands
     public static Outcome UnlinkExternal(Ctx c, string id, string system) =>
         c.Tree.Nodes.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.ExternalUnlinked, new ExternalUnlinked(system))) : Outcome.Missing;
 
+    /// <summary>
+    /// Kopie eines Knotens neben dem Original: gleiche Rolle, alle eigenen Werte,
+    /// Zeilen und Kategorien — ohne SKU (eindeutig), ohne Freigaben, ohne externe
+    /// Kennung, Status Entwurf. <paramref name="deep"/> nimmt den Unterbaum mit.
+    /// Varianten mit Achsen lassen sich nicht kopieren: dieselben Achsenwerte gibt es schon.
+    /// Liefert die Id der Kopie oder einen Fehler.
+    /// </summary>
+    public static (string? Id, string? Error, int Count) Duplicate(Ctx c, string id, bool deep)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var src)) return (null, null, 0);
+        if (src.Role == Roles.Variant && src.AxisValues.Count > 0) return (null, "Variante mit Achsen: die Kopie hätte dieselben Achsenwerte — neu anlegen.", 0);
+        var count = 0;
+        var copy = CopyOne(c, src, src.Parent, ref count, suffix: true);
+        if (copy is null) return (null, "Kopie fehlgeschlagen.", count);
+        if (deep) CopyChildren(c, src.Id, copy, ref count);
+        return (copy, null, count);
+    }
+
+    private static void CopyChildren(Ctx c, string fromId, string toId, ref int count)
+    {
+        foreach (var child in c.Tree.Children(fromId).ToList())
+        {
+            var n = CopyOne(c, child, toId, ref count, suffix: false);
+            if (n is not null) CopyChildren(c, child.Id, n, ref count);
+        }
+    }
+
+    private static string? CopyOne(Ctx c, Node src, string? parent, ref int count, bool suffix)
+    {
+        string? id;
+        switch (src.Role)
+        {
+            case Roles.Group:
+                var label = new Labels(src.Label);
+                if (suffix) foreach (var k in label.Keys.ToList()) label[k] = label[k] + " (Kopie)";
+                id = CreateGroup(c, parent, label).Entry?.Stream; break;
+            case Roles.Product:
+                id = CreateProduct(c, parent, src.Family, src.Axes).Entry?.Stream; break;
+            default:
+                id = CreateVariant(c, parent, new(src.AxisValues)).Entry?.Stream; break;
+        }
+        if (id is null) return null;
+        count++;
+        foreach (var (attr, rows) in src.Rows)
+        {
+            foreach (var row in rows)
+            {
+                var added = AddRow(c, id, attr).Entry;
+                if (added is null) continue;
+                count++;
+                var newRow = Types.Deserialize<RowAdded>(added.Payload).Row;
+                foreach (var (axis, v) in src.Values.Where(kv => kv.Key.Row == row))
+                    if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, v, null, newRow).Entry is not null) count++;
+                foreach (var (axis, l) in src.Lists.Where(kv => kv.Key.Row == row))
+                    if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, null, l, newRow).Entry is not null) count++;
+            }
+        }
+        foreach (var (axis, v) in src.Values.Where(kv => kv.Key.Row is null && kv.Key.Attribute != Model.SkuAttribute))
+            if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, suffix && axis.Attribute == "name" ? v + " (Kopie)" : v, null).Entry is not null) count++;
+        foreach (var (axis, l) in src.Lists.Where(kv => kv.Key.Row is null))
+            if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, null, l).Entry is not null) count++;
+        foreach (var cat in src.Categories)
+            if (AssignCategory(c, id, cat).Entry is not null) count++;
+        return id;
+    }
+
     private static bool IsRole(Tree tree, string? id, string role) =>
         id is not null && tree.Nodes.TryGetValue(id, out var n) && n.Role == role;
 }

@@ -54,6 +54,15 @@ public static class TreeApi
             });
             return result.Count < 0 ? Results.NotFound() : Results.Ok(new { retired = result.Count, batch = result.Batch });
         });
+        api.MapPost("/nodes/{id}/duplicate", (string id, bool deep, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            var batch = "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
+            var r = c.With((model, tree, write) => Commands.Duplicate(
+                new Ctx { Model = model, Tree = tree, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) }, id, deep));
+            return r.Id is not null ? Results.Ok(new { id = r.Id, entries = r.Count, batch })
+                : r.Error is not null ? Bad(r.Error) : Results.NotFound();
+        });
         api.MapPost("/nodes/{id}/status", (string id, StatusSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetStatus(x, id, b.Status)));
         api.MapPost("/nodes/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values, b.Row)));
         api.MapPost("/nodes/{id}/rows", (string id, RowAdded b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AddRow(x, id, b.Attribute)));

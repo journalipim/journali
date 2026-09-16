@@ -98,6 +98,13 @@ function collapseAll(id) { for (const k of tree.kids(id)) collapseAll(k.id); if 
 async function setStatus(r, status) {
   try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/status`, { status }); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
 }
+async function duplicate(r, deep) {
+  try {
+    const res = await api.post(`/api/nodes/${encodeURIComponent(r.id)}/duplicate?deep=${deep}`)
+    store.toast(`Kopie: ${res.entries} Einträge (Stapel ${res.batch})`, 'ok')
+    await store.poll(true); await tree.load(); router.push(`/tree/${res.id}`)
+  } catch (e) { store.toast(e.message) }
+}
 // Rechtsklick: was man mit diesem Knoten tun kann — die Tastenkürzel gelten im Menü.
 function contextMenu(e, r) {
   router.push(`/tree/${r.id}`)
@@ -108,6 +115,9 @@ function contextMenu(e, r) {
     r.role === 'group' ? { label: 'Neues Produkt darunter', icon: '▦', key: 'p', disabled: !families.value.length, hint: families.value.length ? '' : 'keine Familie', action: () => start('product') } : null,
     r.role === 'product' ? { label: 'Neue Variante darunter', icon: '◆', key: 'v', action: () => start('variant') } : null,
     r.role === 'group' ? { label: 'Umbenennen', icon: '✎', key: 'u', hint: 'im Knoten', action: () => router.push(`/tree/${r.id}`) } : null,
+    { sep: true },
+    { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
+    r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
     kids ? { label: 'Alles aufklappen', icon: '▾', key: 'a', action: () => expandAll(r.id) } : null,

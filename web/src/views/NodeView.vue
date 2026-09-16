@@ -226,7 +226,8 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
         <tbody><tr><td class="muted">Gruppe</td><Cell v-for="l in locales" :key="l" :value="node.label?.[l] ?? null" @save="v => setLabel(l, v)" /></tr></tbody>
       </table>
 
-      <table class="grid values">
+      <table class="grid values" :style="`width:${180 + columns.length * 220}px`">
+        <colgroup><col style="width:180px" /><col v-for="c in columns" :key="c.label" style="width:220px" /></colgroup>
         <thead>
           <tr>
             <th>Attribut</th>
@@ -320,7 +321,7 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .group-row td { background: var(--bg); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; height: 22px; }
-td.attr { white-space: nowrap; }
+td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 table.releases { width: auto; }
 table.releases td { text-align: center; }
 table.releases td.rel { white-space: nowrap; }

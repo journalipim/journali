@@ -237,10 +237,11 @@ table.grid tr.row:focus { outline: none; }
 
 /* ---- Zellen mit Inline-Bearbeitung --------------------------------------- */
 
-/* Wertspalten: 160 bis 320 px — leere Spalten schrumpfen nicht, lange Texte blähen nicht (Rest im Tooltip/Editor). */
-td.cell { padding: 2px; min-width: 160px; max-width: 320px; }
-table.values, table.rows { width: auto; }
-table.values th:first-child, table.values td.attr { min-width: 180px; }
+/* Wertgitter: festes Layout, Breite ausgerechnet (Attribut 180 + je Spalte 220) — der Inhalt einer Zelle
+   bestimmt nie die Spaltenbreite, sonst schiebt sich beim Bearbeiten die ganze Tabelle. */
+td.cell { padding: 2px; overflow: hidden; }
+table.values, table.rows { table-layout: fixed; }
+.cell-input, .cell-select, .cell-date { min-width: 0; }
 /* Bearbeitbar: eigener Hintergrund, damit man sieht, wo Eingabe geht. */
 .cell-box {
   height: 24px;

@@ -28,7 +28,8 @@ function move(i, d) {
 </script>
 
 <template>
-  <table class="grid rows">
+  <table class="grid rows" :style="`width:${40 + columns.length * 180 + 80}px`">
+    <colgroup><col style="width:40px" /><col v-for="c in columns" :key="c.key" style="width:180px" /><col style="width:80px" /></colgroup>
     <thead>
       <tr>
         <th class="num">#</th>
@@ -53,7 +54,7 @@ function move(i, d) {
 </template>
 
 <style scoped>
-table.rows { width: auto; }
+table.rows th { overflow: hidden; text-overflow: ellipsis; }
 .ops { white-space: nowrap; }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
 .x:hover:not(:disabled) { color: var(--accent); }
