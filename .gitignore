@@ -1,6 +1,8 @@
 bin/
 obj/
 *.user
+# Passwort für compose.yaml — nur .env.example gehört ins Repo.
+.env
 __pycache__/
 .vs/
 # .claude/ bleibt persoenlich (settings.local.json, Sitzungen) — nur die

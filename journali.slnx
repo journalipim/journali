@@ -1,4 +1,5 @@
 <Solution>
   <Project Path="Journali.Core/Journali.Core.csproj" />
   <Project Path="Journali.Sandbox/Journali.Sandbox.csproj" />
+  <Project Path="Journali.Server/Journali.Server.csproj" />
 </Solution>

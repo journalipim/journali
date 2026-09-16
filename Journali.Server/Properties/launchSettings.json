@@ -1,0 +1,13 @@
+{
+  "profiles": {
+    "Journali.Server": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "health",
+      "applicationUrl": "http://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}

@@ -30,6 +30,8 @@ billig, geänderte teuer, gelöschte unmöglich.
   Bash-Heredocs. Anker eindeutig (`assert count == 1`), BOM und CRLF je
   Datei erhalten.
 - **Vor dem Commit:** `dotnet build -c Release` mit 0 Fehlern.
+- **Kein Passwort im Repo.** Das Datenbankpasswort kommt aus user-secrets
+  (`JOURNALI_DB_PASSWORD`) oder der Umgebung; `.env` ist ignoriert.
 - Branch ist `master`. Git-Identität ist pro Repo gesetzt.
 
 ## Aufbau
@@ -37,4 +39,7 @@ billig, geänderte teuer, gelöschte unmöglich.
 - `Journali.Core` — net8.0, **keine NuGet-Pakete**, engine-frei: Journal,
   Einträge, Abbilder
 - `Journali.Sandbox` — Konsole zum Nachrechnen
+- `Journali.Server` — ASP.NET Core Minimal API, net8.0, einziges Paket
+  Npgsql: `PostgresJournal` hinter `IJournal`, vier Endpunkte; Betrieb,
+  Endpunkte und Tabelle in `docs/betrieb.md`
 - `docs/architektur.md` — das Prinzip, die Schichten, die Achsen, was offen ist

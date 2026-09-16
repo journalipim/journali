@@ -1,7 +1,8 @@
 # Architektur
 
-Stand 16.09.2026 — Ergebnis des ersten Gesprächs, noch kein Code dahinter
-ausser dem Grundgerüst in `Journali.Core`.
+Stand 16.09.2026 — Ergebnis des ersten Gesprächs. Code dahinter: das
+Grundgerüst in `Journali.Core` und der Server mit dem dauerhaften Journal
+in PostgreSQL (`Journali.Server`, `docs/betrieb.md`).
 
 ## Das Prinzip in einem Satz
 
@@ -122,9 +123,10 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
 
 ## Offen
 
-- Datenbank für das dauerhafte Journal (PostgreSQL wegen JSONB, oder SQLite
-  für den Anfang)
-- Server-API (ASP.NET Core) — Fat Client oder Browser ist damit offen
+- ~~Datenbank für das dauerhafte Journal~~ PostgreSQL 18, Tabelle `journal`
+  mit JSONB — entschieden 16.09.2026, `docs/betrieb.md`
+- ~~Server-API~~ ASP.NET Core Minimal API, vier Endpunkte — Fat Client
+  oder Browser bleibt offen
 - Vokabular der Eintragstypen
 - Vollständigkeitsregeln je Familie × Kanal × Sprache
 - Import/Export — in der Praxis die Hälfte des Systems

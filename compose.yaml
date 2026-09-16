@@ -1,0 +1,31 @@
+# Das ganze Paket: Server + PostgreSQL 18. Passwort in .env (JOURNALI_DB_PASSWORD).
+# Auf der rossibox mit vorhandenem postgresql18-Template: nur `server` nehmen
+# und JOURNALI_DB auf localhost:7432 zeigen lassen (docs/betrieb.md).
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_PASSWORD: ${JOURNALI_DB_PASSWORD}
+    volumes:
+      # Ab postgres:18 liegt das Datenverzeichnis unter /var/lib/postgresql/<major>/docker;
+      # der Mount gehört auf den Elternordner, damit ein Major-Upgrade später Platz hat.
+      - journali-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  server:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      JOURNALI_DB: Host=db;Port=5432;Database=journali;Username=postgres
+      JOURNALI_DB_PASSWORD: ${JOURNALI_DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  journali-db:
