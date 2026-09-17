@@ -15,17 +15,18 @@ namespace Journali.Core.Entries;
 ///   <c>Die Vase ist {round(height / 10)} cm hoch</c>, <c>{name} ({color})</c>,
 ///   <c>{if(weight &gt; 20, "Speditionsware", "Paket")}</c>.
 ///
-/// Ausdruck: Attributschlüssel (Wert des Knotens, geerbt zählt; bei Text die Sprache der Spalte),
-/// Zahlen, Text in "…", + - * / ( ), unäres -, &amp; verkettet Text, Vergleiche = &lt;&gt; &lt; &lt;= &gt; &gt;=,
-/// and / or / not, Funktionen round(x[, stellen]) min max abs len upper lower trim
-/// if(bedingung, dann, sonst) empty(x) coalesce(a, b, …) trunc floor ceil format(x[, stellen]) — format
-/// schreibt die Zahl in der Sprache der Spalte (de: Komma). Fehlt ein Wert, den ein
-/// Rechenschritt braucht, fehlt das Ergebnis — ausser if/empty/coalesce fangen es ab. Einheiten rechnet
-/// die Formel nicht um; wer cm³ in Litern will, teilt selbst durch 1000.
-///
-/// Schreibweisen aus der Tabellenkalkulation gehen auch (Taloan, 17.09.2026): deutsche Namen
-/// (wenn, und, oder, nicht, runden, kürzen, leer), Semikolon zwischen Argumenten, ein @ vor dem
-/// Schlüssel, ein _ vor der Funktion — <c>_wenn(@height > 100; _trunc(@height / 100); @height)</c>.
+/// Die Vorlage ist Excel (Taloan, 17.09.2026: „nicht alles neu lernen — komplett an Excel orientieren"):
+/// - Bezug auf ein Attribut wie auf eine Tabellenspalte: <c>[@hoehe]</c> (auch <c>@hoehe</c> oder nur <c>hoehe</c>);
+///   Wert des Knotens, geerbt zählt, bei Text in der Sprache der Spalte.
+/// - Operatoren wie in Excel: <c>+ - * / ^</c>, <c>&amp;</c> verkettet Text, Vergleiche <c>= &lt;&gt; &lt; &lt;= &gt; &gt;=</c>,
+///   Text in "…", WAHR/FALSCH.
+/// - Funktionen mit ihren Excel-Namen, deutsch oder englisch, Argumente mit <c>;</c> (oder <c>,</c>):
+///   WENN/IF, UND/AND, ODER/OR, NICHT/NOT, RUNDEN/ROUND, KÜRZEN/TRUNC, GANZZAHL/INT, OBERGRENZE/CEILING,
+///   MIN, MAX, ABS, LÄNGE/LEN, GROSS/UPPER, KLEIN/LOWER, GLÄTTEN/TRIM, LINKS/LEFT, RECHTS/RIGHT,
+///   VERKETTEN/CONCAT, ISTLEER/ISBLANK, WENNFEHLER/IFERROR, TEXT(x; "0,00") — Zahl als Text in der
+///   Sprache der Spalte (de: Komma).
+/// Fehlt ein Wert, den ein Rechenschritt braucht, fehlt das Ergebnis — WENNFEHLER, ISTLEER und
+/// WENN fangen es ab. Einheiten rechnet die Formel nicht um; wer cm³ in Litern will, teilt durch 1000.
 /// </summary>
 public static class Formula
 {
@@ -95,6 +96,8 @@ public static class Formula
 
     private sealed class MissingValue : Exception { }
 
+    private static readonly HashSet<string> Forgiving = ["iferror", "if", "empty", "coalesce"];
+
     /// <summary>Rekursiver Abstieg: or → and → not → Vergleich → &amp; → + - → * / → unär → Primär.</summary>
     private sealed class Parser(string text, Func<string, Value>? value = null, CultureInfo? culture = null)
     {
@@ -158,15 +161,21 @@ public static class Formula
         }
         private Value Term()
         {
-            var v = Unary();
+            var v = Power();
             for (;;)
             {
-                if (Take("*")) v = Value.Of(Num(v) * Num(Unary()));
-                else if (Take("/")) { var d = Num(Unary()); if (d == 0 && !Checking) throw new DivideByZeroException(); v = Value.Of(Checking ? 1 : Num(v) / d); }
+                if (Take("*")) v = Value.Of(Num(v) * Num(Power()));
+                else if (Take("/")) { var d = Num(Power()); if (d == 0 && !Checking) throw new DivideByZeroException(); v = Value.Of(Checking ? 1 : Num(v) / d); }
                 else return v;
             }
         }
-        private Value Unary() => Take("-") ? Value.Of(-Num(Unary())) : Primary();
+        private Value Power()
+        {
+            var v = Unary();
+            while (Take("^")) { var e = Num(Unary()); v = Value.Of(Checking ? 1 : (decimal)Math.Pow((double)Num(v), (double)e)); }
+            return v;
+        }
+        private Value Unary() => Take("-") ? Value.Of(-Num(Unary())) : Take("+") ? Unary() : Primary();
         private decimal Num(Value v) => Checking ? 1 : v.AsNumber ?? throw new MissingValue();
 
         private Value Primary()
@@ -188,13 +197,21 @@ public static class Formula
                 while (_i < text.Length && (char.IsDigit(text[_i]) || text[_i] == '.')) _i++;
                 return Value.Of(decimal.Parse(text[start.._i], NumberStyles.Number, CultureInfo.InvariantCulture));
             }
-            if (c == '@') { _i++; Skip(); c = _i < text.Length ? text[_i] : ' '; }   // @schlüssel wie in der Tabellenkalkulation
+            // [@schlüssel] wie ein Spaltenbezug in einer Excel-Tabelle; @schlüssel und schlüssel gehen auch
+            var bracket = false;
+            if (c == '[') { _i++; Skip(); bracket = true; c = _i < text.Length ? text[_i] : ' '; }
+            if (c == '@') { _i++; Skip(); c = _i < text.Length ? text[_i] : ' '; }
             if (char.IsLetter(c) || c == '_')
             {
                 var start = _i;
                 while (_i < text.Length && (char.IsLetterOrDigit(text[_i]) || text[_i] == '_')) _i++;
                 var name = text[start.._i];
-                if (Take("(")) return Call(Alias(name.TrimStart('_').ToLowerInvariant()));
+                if (bracket) { if (!Take("]")) throw new FormatException("„]“ fehlt."); }
+                else
+                {
+                    if (Take("(")) return Call(Alias(name.TrimStart('_').ToLowerInvariant()));
+                    switch (name.ToLowerInvariant()) { case "wahr": case "true": return Value.Of(1); case "falsch": case "false": return Value.Of(0); }
+                }
                 if (!Regex.IsMatch(name, "^[a-z][a-z0-9_]*$")) throw new FormatException($"Kein Attributschlüssel: {name}");
                 Keys.Add(name);
                 return Checking ? Value.Of(1) : value!(name);
@@ -202,26 +219,65 @@ public static class Formula
             throw new FormatException($"Unerwartet: „{c}“");
         }
 
+        /// <summary>Excel-Namen, deutsch und englisch, auf die eine Umsetzung.</summary>
         private static string Alias(string name) => name switch
         {
-            "wenn" => "if", "runden" => "round", "kürzen" or "kuerzen" or "ganzzahl" => "trunc", "leer" => "empty",
-            "gross" or "groß" => "upper", "klein" => "lower", "länge" or "laenge" => "len", "erster" => "coalesce", "zahl" or "text" => "format",
+            "wenn" => "if", "und" => "and", "oder" => "or", "nicht" => "not",
+            "runden" => "round", "kürzen" or "kuerzen" => "trunc", "ganzzahl" or "int" => "floor", "obergrenze" or "ceiling" => "ceil",
+            "länge" or "laenge" => "len", "gross" or "groß" => "upper", "klein" => "lower", "glätten" or "glaetten" => "trim",
+            "links" => "left", "rechts" => "right", "verketten" or "concat" or "concatenate" => "concat",
+            "istleer" or "isblank" or "leer" => "empty", "wennfehler" or "iferror" => "iferror", "text" or "zahl" or "format" => "format",
+            "erster" => "coalesce",
             _ => name,
         };
+
+        /// <summary>TEXT(x; "0,00"): Stellen aus dem Excel-Muster zählen (Komma oder Punkt), Tausender ohne Trenner.</summary>
+        private static int DecimalsOf(Value pattern)
+        {
+            var s = pattern.AsText ?? "0";
+            var i = Math.Max(s.LastIndexOf(','), s.LastIndexOf('.'));
+            return i < 0 ? 0 : s.Length - i - 1;
+        }
+
+        private Value Arg(string fn)
+        {
+            if (!Forgiving.Contains(fn) || Checking) return Expr();
+            var save = _i;
+            try { return Expr(); }
+            catch (Exception e) when (e is MissingValue or DivideByZeroException) { _i = save; Skip(); SkipArg(); return Value.None; }
+        }
+        /// <summary>Ein Argument überlesen (bis Komma/Semikolon oder schliessende Klammer auf gleicher Tiefe).</summary>
+        private void SkipArg()
+        {
+            var depth = 0; var inText = false;
+            for (; _i < text.Length; _i++)
+            {
+                var ch = text[_i];
+                if (ch == '"') inText = !inText;
+                if (inText) continue;
+                if (ch == '(') depth++;
+                else if (ch == ')') { if (depth == 0) return; depth--; }
+                else if ((ch == ',' || ch == ';') && depth == 0) return;
+            }
+        }
+
+        private static string Cut(string s, int n, bool left) => n >= s.Length ? s : left ? s[..Math.Max(0, n)] : s[^Math.Max(0, n)..];
 
         private Value Call(string name)
         {
             var args = new List<Value>();
             if (!Take(")"))
             {
-                args.Add(Expr());
-                while (Take(",") || Take(";")) args.Add(Expr());   // Semikolon wie in der deutschen Tabellenkalkulation
+                // Argumente einzeln fangen: WENNFEHLER(x; ersatz) und WENN sollen mit fehlenden Werten leben
+                args.Add(Arg(name));
+                while (Take(",") || Take(";")) args.Add(Arg(name));
                 if (!Take(")")) throw new FormatException("„)“ fehlt.");
             }
             Value A(int i) => i < args.Count ? args[i] : throw new FormatException($"{name}: Argument {i + 1} fehlt.");
             if (Checking) return name switch
             {
-                "round" or "min" or "max" or "abs" or "len" or "upper" or "lower" or "trim" or "if" or "empty" or "coalesce" or "trunc" or "floor" or "ceil" or "format" => Value.Of(1),
+                "round" or "min" or "max" or "abs" or "len" or "upper" or "lower" or "trim" or "if" or "empty" or "coalesce" or "trunc" or "floor" or "ceil" or "format"
+                    or "and" or "or" or "not" or "left" or "right" or "concat" or "iferror" => Value.Of(1),
                 _ => throw new FormatException($"Unbekannte Funktion: {name}"),
             };
             return name switch
@@ -234,7 +290,14 @@ public static class Formula
                 "floor" => Value.Of(Math.Floor(Num(A(0)))),
                 "ceil" => Value.Of(Math.Ceiling(Num(A(0)))),
                 // format(x; stellen): Zahl als Text in der Sprache der Spalte — de „1,39“, en „1.39“; Tausender ohne Trenner
-                "format" => Value.Of(Num(A(0)).ToString(args.Count > 1 ? "0." + new string('0', (int)Num(A(1))) : "0.############", culture ?? CultureInfo.InvariantCulture)),
+                "format" => Value.Of(Num(A(0)).ToString(args.Count > 1 ? "0." + new string('0', A(1).Number is { } d ? (int)d : DecimalsOf(A(1))) : "0.############", culture ?? CultureInfo.InvariantCulture)),
+                "and" => Value.Of(args.All(a => a.Truthy) ? 1 : 0),
+                "or" => Value.Of(args.Any(a => a.Truthy) ? 1 : 0),
+                "not" => Value.Of(A(0).Truthy ? 0 : 1),
+                "left" => Value.Of(Cut(A(0).AsText ?? throw new MissingValue(), args.Count > 1 ? (int)Num(A(1)) : 1, true)),
+                "right" => Value.Of(Cut(A(0).AsText ?? throw new MissingValue(), args.Count > 1 ? (int)Num(A(1)) : 1, false)),
+                "concat" => Value.Of(string.Concat(args.Select(a => a.AsText ?? ""))),
+                "iferror" => A(0).IsNone ? A(1) : A(0),
                 "len" => Value.Of((A(0).AsText ?? "").Length),
                 "upper" => Value.Of((A(0).AsText ?? throw new MissingValue()).ToUpperInvariant()),
                 "lower" => Value.Of((A(0).AsText ?? throw new MissingValue()).ToLowerInvariant()),
