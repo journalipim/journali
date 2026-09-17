@@ -184,9 +184,6 @@ const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m
               <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" title="Klick fügt es ein"><code class="hs" v-html="highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
             </div>
             <div class="hrow"><b>Beispiel</b><pre class="hs ex" @click="insert(EXAMPLE)" title="Klick fügt es ein" v-html="highlight(EXAMPLE)"></pre></div>
-            <div class="hrow" v-if="attributes?.length"><b>Attribute</b><div class="chips">
-              <button v-for="a in attributes" :key="a.key" class="chip" @click="insert('$' + a.key)" :title="`${a.label?.de || a.key} · ${a.type}`">${{ a.key }}</button>
-            </div></div>
           </div>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
