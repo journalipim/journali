@@ -194,14 +194,16 @@ function canDrop(src, target) {
   return true
 }
 // Ziehen: gehört die Zeile zur Menge, zieht die ganze Menge mit. Shift beim Ablegen = verknüpfen statt umhängen.
-function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', r.id) }
+// effectAllowed 'all': mit gedrückter Shift-Taste erzwingt Windows/Chrome den Effekt „move“, mit Strg „copy“ — passt der nicht zu
+// effectAllowed, zeigt der Browser das Verbotsschild und liefert kein drop (Taloan, 17.09.). Was Shift bedeutet, entscheiden wir selbst.
+function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'all'; e.dataTransfer.setData('text/plain', r.id) }
 const dragIds = () => picked.value.has(dragId.value) ? [...picked.value] : [dragId.value]
 function onDragOver(e, r) {
   const src = tree.byId.get(dragId.value)
   if (src) hoverOpen(r)
   const ok = e.shiftKey ? dragIds().some(id => id !== r.id) : dragIds().some(id => canDrop(tree.byId.get(id), r))
   if (!ok) { dropId.value = null; return }
-  e.preventDefault(); e.dataTransfer.dropEffect = e.shiftKey ? 'link' : 'move'; dropId.value = r.id
+  e.preventDefault(); e.dataTransfer.dropEffect = e.shiftKey ? 'move' : e.ctrlKey ? 'copy' : 'move'; dropId.value = r.id
 }
 async function onDrop(e, r) {
   const ids = dragIds()
