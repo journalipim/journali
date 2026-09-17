@@ -50,7 +50,7 @@ void Print(IEnumerable<Node> nodes, int depth)
         var pad = new string(' ', depth * 2);
         var head = n.Role switch
         {
-            Roles.Group => $"▣ {n.Label.GetValueOrDefault("de")}",
+            Roles.Group => $"▣ {n.Name}",
             Roles.Product => $"▦ {tree.Resolve(model, n, "name", "de", null).Value}",
             _ => $"◆ sku={n.Own("sku", null, null)}",
         };

@@ -93,16 +93,20 @@ public static class Model
 
         foreach (var role in Roles.All)
         {
-            yield return new(LabelStream + role, Types.TreeLabelDefined, Types.Serialize(new TreeLabelDefined(role, "name")));
             var items = groups.Where(g => g.ActiveAt(role)).Select(g => new ViewItem(g.Key)).ToList();
             yield return new(ViewStream + "defaultview_" + role, Types.ViewDefined, Types.Serialize(new ViewDefinition("defaultview_" + role, Labels.Of("DefaultView", "DefaultView"), items, role)));
         }
     }
 
-    /// <summary>Der Baum eines leeren Journals: ein Wurzelknoten „MasterTree“, an dem alle Saatgut-Gruppen hängen.</summary>
+    /// <summary>
+    /// Der Baum eines leeren Journals: ein Wurzelknoten „MasterTree“, an dem alle
+    /// Saatgut-Gruppen hängen und an dem das Sternchen auf <c>name</c> steht —
+    /// alles darunter ohne eigenen Namen heisst wie sein Name.
+    /// </summary>
     public static IEnumerable<Seed> TreeSeeds()
     {
-        yield return new(RootNode, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("MasterTree", "MasterTree"))));
+        yield return new(RootNode, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("MasterTree", "MasterTree"), "MasterTree")));
         yield return new(RootNode, Types.GroupsAttached, Types.Serialize(new GroupsAttached(["mastergroup", "logistics", "physical"])));
+        yield return new(RootNode, Types.LabelAttributeSet, Types.Serialize(new LabelAttributeSet("name")));
     }
 }

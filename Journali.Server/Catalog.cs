@@ -51,7 +51,6 @@ public sealed class Catalog
                     Types.ViewDefined => _model.Views.ContainsKey(key),
                     Types.UnitDefined => _model.Units.ContainsKey(key),
                     Types.AttributeGroupDefined => _model.Groups.ContainsKey(key),
-                    Types.TreeLabelDefined => _model.TreeLabels.ContainsKey(key),
                     _ => true,
                 };
                 if (exists) continue;

@@ -98,6 +98,12 @@ function collapseAll(id) { for (const k of tree.kids(id)) collapseAll(k.id); if 
 async function setStatus(r, status) {
   try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/status`, { status }); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
 }
+// Eigener Name im Baum (jede Rolle); leer = Automatik (★ Attribut, bei Varianten SKU/Achsen, sonst Id).
+async function rename(r) {
+  const name = window.prompt(`Name im Baum — leer = Automatik\n${r.label}`, r.name ?? '')
+  if (name == null) return
+  try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/name`, { name }, 'PUT'); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
+}
 async function duplicate(r, deep) {
   try {
     const res = await api.post(`/api/nodes/${encodeURIComponent(r.id)}/duplicate?deep=${deep}`)
@@ -114,7 +120,7 @@ function contextMenu(e, r) {
     r.role === 'group' ? { label: 'Neue Gruppe darunter', icon: '▣', key: 'g', action: () => start('group') } : null,
     r.role === 'group' ? { label: 'Neues Produkt darunter', icon: '▦', key: 'p', action: () => start('product') } : null,
     r.role === 'product' ? { label: 'Neue Variante darunter', icon: '◆', key: 'v', action: () => start('variant') } : null,
-    r.role === 'group' ? { label: 'Umbenennen', icon: '✎', key: 'u', hint: 'im Knoten', action: () => router.push(`/tree/${r.id}`) } : null,
+    { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '' : 'Automatik', action: () => rename(r) },
     { sep: true },
     { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
@@ -150,7 +156,7 @@ function listValues(key) { const d = attrDef(key); return (store.model?.lists.fi
 
 function start(kind) {
   creating.value = kind
-  form.value = kind === 'group' ? { de: '', en: '' }
+  form.value = kind === 'group' ? { name: '' }
     : kind === 'product' ? { axes: [] }
     : Object.fromEntries((productTarget.value?.axes ?? []).map(a => [a, '']))
 }
@@ -158,7 +164,7 @@ async function create() {
   const kind = creating.value
   try {
     let entry
-    if (kind === 'group') entry = await api.post('/api/groups', { parent: groupTarget.value?.id ?? null, label: { de: form.value.de, en: form.value.en } })
+    if (kind === 'group') entry = await api.post('/api/groups', { parent: groupTarget.value?.id ?? null, name: form.value.name })
     else if (kind === 'product') entry = await api.post('/api/products', { group: groupTarget.value.id, axes: form.value.axes })
     else entry = await api.post('/api/variants', { product: productTarget.value.id, axisValues: form.value })
     creating.value = null
@@ -191,8 +197,7 @@ function toggleAxis(a) {
     <div v-if="creating" class="create-form">
       <template v-if="creating === 'group'">
         <div class="muted">▣ neue Gruppe {{ groupTarget ? 'unter ' + groupTarget.label : 'an der Wurzel' }}</div>
-        <input v-model="form.de" type="text" placeholder="Name de" @keydown.enter="create" @keydown.esc="creating = null" autofocus />
-        <input v-model="form.en" type="text" placeholder="Name en" @keydown.enter="create" @keydown.esc="creating = null" />
+        <input v-model="form.name" type="text" placeholder="Name im Baum (leer = ★ Automatik)" @keydown.enter="create" @keydown.esc="creating = null" autofocus />
       </template>
       <template v-else-if="creating === 'product'">
         <div class="muted">▦ neues Produkt unter {{ groupTarget.label }}</div>

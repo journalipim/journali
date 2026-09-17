@@ -20,8 +20,10 @@ Eintrag übergeht das Abbild.
 
 | Typ | Nutzdaten | Wirkung |
 |---|---|---|
-| `GroupCreated` | `parent?`, `label{}` | Produktgruppe; `parent` null = Wurzel |
-| `GroupRenamed` | `label{}` | |
+| `GroupCreated` | `parent?`, `name?`, `label{}` | Produktgruppe; `parent` null = Wurzel. `name` = Name im Baum; `label{}` je Sprache ist Altlast und füllt `name`, wenn er fehlt |
+| `GroupRenamed` | `label{}` | **Altlast** (17.09.2026): heute `NodeNamed`; bleibt lesbar |
+| `NodeNamed` | `name?` | eigener Name im Baum, jede Rolle, einsprachig; leer = weg, die Automatik benennt (docs/pflegestruktur.md, 17) |
+| `LabelAttributeSet` | `attribute?` | das ★: welches Attribut ab hier nach unten die Knoten ohne eigenen Namen benennt; jeder Knoten darunter darf es neu setzen; null = weg, es gilt wieder das der Vorfahren |
 | `ProductCreated` | `group`, `axes[]?` | Produkt unter einer Gruppe; `axes` = wonach es variiert (Attribute, optional). `family` ist Altlast und bleibt leer |
 | `VariantCreated` | `product`, `axisValues{}` | Variante — das Verkaufbare; je Produktachse ein Wert, Kombination je Produkt eindeutig |
 | `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, sonst unter Gruppe; nie unter sich selbst) |
@@ -67,7 +69,7 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 | `channel:<key>` | `ChannelDefined` | `key`, `label{}` |
 | `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum, **rows**), `unit?` (muss es unter `unit:` geben), `group` (Attributgruppe), `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `inheritable` (Wert vererbt sich nach unten; Vorgabe nein), `required{kanal: [sprachen] oder ["*"]}?` (Pflicht — gilt überall gleich, Eineindeutigkeit), `levels[]?` (Ausnahme: an welchen Knotentypen; null = Regel der Gruppe), `columns[]?` (bei rows) |
 | `group:<key>` | `AttributeGroupDefined` / `AttributeGroupRetired` | `key`, `label{}`, `activeFrom?` (group, product, variant: ab welchem Knotentyp Werte erfasst werden; darüber sichtbar, gesperrt). Gruppen hängen an Knoten (`GroupsAttached`) |
-| `settings:label:<role>` | `TreeLabelDefined` | `role`, `attribute` — welches Attribut die Knoten dieses Typs im Baum benennt |
+| `settings:label:<role>` | `TreeLabelDefined` | **Altlast** (17.09.2026): Name im Baum je Knotentyp — ersetzt durch das ★ am Knoten (`LabelAttributeSet`); bleibt lesbar, wird nicht mehr gesät |
 | `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — Gruppen in Reihenfolge, darin Attribute in Reihenfolge; ungenannte hängen unten an |
 | `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` |
@@ -80,9 +82,9 @@ Ein leeres Journal bekommt beim ersten Serverstart das Saatgut aus
 `Model.Seeds()` (`AttributeDefinition.cs`): `de`, `en`; `web`, `print`;
 Einheiten, Gruppen `mastergroup` (MasterGroup) / `logistics` (ab Variante) / `physical`, Werteliste
 `color` (20 Farben, RAL), Attribute `name` `description` `color` `sku` `ean`
-`weight`, Sicht `defaultview_<role>` (DefaultView) je Knotentyp, Name im Baum = `name`, und der
-Wurzelknoten `g-mastertree` (MasterTree) mit den drei Gruppen — als Einträge des Urhebers
-`system`. Fehlende Ströme werden bei jedem Start nachgesät
+`weight`, Sicht `defaultview_<role>` (DefaultView) je Knotentyp, und der
+Wurzelknoten `g-mastertree` (MasterTree) mit den drei Gruppen und dem ★ auf
+`name` — als Einträge des Urhebers `system`. Fehlende Ströme werden bei jedem Start nachgesät
 (`Catalog.SeedMissing`), Geändertes bleibt; der Wurzelknoten kommt nur, wenn
 es ihn nie gab.
 
@@ -99,7 +101,9 @@ steht im Kopf `X-Actor`.
 | Aufruf | Eintrag |
 |---|---|
 | `POST /api/groups` `{parent?, label{}}` | `GroupCreated` — Id vergibt der Server |
-| `PUT /api/groups/{id}/label` `{label{}}` | `GroupRenamed` |
+| `PUT /api/groups/{id}/label` `{label{}}` | `GroupRenamed` — Altlast |
+| `PUT /api/nodes/{id}/name` `{name}` | `NodeNamed` — jede Rolle; leer = Automatik |
+| `PUT /api/nodes/{id}/label-attribute` `{attribute}` | `LabelAttributeSet` — nicht html/rows; die Gruppe des Attributs muss am Pfad hängen (aktiv darf sie erst tiefer sein); `attribute` null = weg |
 | `POST /api/products` `{group, axes[]?}` | `ProductCreated` — Achsen optional, jede ein Attribut |
 | `PUT /api/nodes/{id}/groups` `{groups[]}` | `GroupsAttached` |
 | `POST /api/variants` `{product, axisValues{}}` | `VariantCreated` — genau die Produktachsen, Werte geprüft, Kombination eindeutig |
@@ -118,16 +122,15 @@ steht im Kopf `X-Actor`.
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
 | `PUT /api/nodes/{id}/external/{system}` `{id}` | `ExternalLinked` |
 | `DELETE /api/nodes/{id}/external/{system}` | `ExternalUnlinked` |
-| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create, group.rename, product.create, variant.create, node.move, node.retire, status.set, attribute.set (mit `row`), row.add/remove/order, category.assign/remove, release.grant/revoke, external.link/unlink; `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
+| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create (`name`), group.rename (Altlast), node.rename (`name`), label.set (`attribute`), product.create, variant.create, node.move, node.retire, status.set, attribute.set (mit `row`), row.add/remove/order, category.assign/remove, release.grant/revoke, external.link/unlink; `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
 | `PUT /api/model/locales/{code}` `{label}` | `LocaleDefined` |
 | `PUT /api/model/channels/{key}` `{label{}}` | `ChannelDefined` |
 | `PUT /api/model/attributes/{key}` Definition | `AttributeDefined` — prüft Typ, Achsen, Einheit nur bei Zahlen, enum ↔ Werteliste |
-| `DELETE /api/model/attributes/{key}` | `AttributeRetired` |
+| `DELETE /api/model/attributes/{key}` | `AttributeRetired` — **abgelehnt, solange das Attribut an einem Knoten das ★ trägt** (Fehler nennt den Knoten) |
 | `PUT /api/model/lists/{key}` `{label{}}` | `ListDefined` |
 | `PUT /api/model/lists/{key}/values/{value}` `{label{}, extra?, order}` | `ListValueDefined` |
 | `DELETE /api/model/lists/{key}/values/{value}` | `ListValueRetired` |
 | `PUT /api/model/groups/{key}` `{label{}, activeFrom?}` · `DELETE` | `AttributeGroupDefined` / `AttributeGroupRetired` (nicht mit Attributen) |
 | `PUT /api/model/views/{key}` `{label{}, level, items[]}` · `DELETE` | `ViewDefined` / `ViewRetired` |
-| `PUT /api/model/labels/{role}` `{attribute}` | `TreeLabelDefined` |
 | `PUT /api/model/units/{key}` `{label{}, quantity, factor}` | `UnitDefined` |
 | `DELETE /api/model/units/{key}` | `UnitRetired` — nicht, solange ein Attribut sie benutzt |

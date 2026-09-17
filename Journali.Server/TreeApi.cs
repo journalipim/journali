@@ -32,8 +32,10 @@ public static class TreeApi
 
         // ---- Befehle: genau ein Eintrag je Aufruf ------------------------------
 
-        api.MapPost("/groups", (GroupCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateGroup(x, b.Parent, b.Label)));
-        api.MapPut("/groups/{id}/label", (string id, GroupRenamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RenameGroup(x, id, b.Label)));
+        api.MapPost("/groups", (GroupCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateGroup(x, b.Parent, b.Label, b.Name)));
+        api.MapPut("/groups/{id}/label", (string id, GroupRenamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RenameGroup(x, id, b.Label)));   // Altlast
+        api.MapPut("/nodes/{id}/name", (string id, NodeNamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Rename(x, id, b.Name)));
+        api.MapPut("/nodes/{id}/label-attribute", (string id, LabelAttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetLabelAttribute(x, id, b.Attribute)));
         api.MapPost("/products", (ProductCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateProduct(x, b.Group, b.Axes)));
         api.MapPut("/nodes/{id}/groups", (string id, GroupsAttached b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AttachGroups(x, id, b.Groups)));
         api.MapPost("/variants", (VariantCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateVariant(x, b.Product, b.AxisValues)));
@@ -96,33 +98,43 @@ public static class TreeApi
 }
 
 /// <summary>Eine Zeile im Baum: genug für die Anzeige, ohne Werte.</summary>
-public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Groups, string[] Axes,
+public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Name, string? Groups, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, string? Sku, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
-        n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
+        n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
         n.Own(Model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor);
 
     /// <summary>
-    /// Gruppe: ihr Label. Produkt: das Label-Attribut seiner Familie (Vorgabe name).
-    /// Variante: SKU, sonst die Achsenwerte, sonst das Label-Attribut — geerbt zählt.
+    /// Name im Baum (docs/pflegestruktur.md, 17), in dieser Reihenfolge:
+    /// 1. eigener Name (NodeNamed); 2. das Sternchen-Attribut vom Pfad, wenn es hier
+    /// einen Wert hat (de zuerst, dann die anderen Sprachen, dann ohne — geerbt zählt;
+    /// Werteliste zeigt ihr Label); 3. bei der Variante SKU, dann Achsenwerte; 4. die Id.
     /// </summary>
     public static string LabelOf(Tree tree, ModelCatalog model, Node n)
     {
-        if (n.Role == Roles.Group) return n.Label.GetValueOrDefault("de") ?? n.Label.Values.FirstOrDefault() ?? n.Id;
-        var attr = model.TreeLabels.GetValueOrDefault(n.Role) ?? "name";
-        string? byAttr()
+        if (!string.IsNullOrWhiteSpace(n.Name)) return n.Name;
+        if (tree.LabelAttributeOf(n).Attribute is { } attr && ByAttribute(tree, model, n, attr) is { } v) return v;
+        if (n.Role == Roles.Variant)
         {
-            if (tree.Resolve(model, n, attr, "de", null).Value is { } de) return de;
-            foreach (var l in model.Locales.Keys) if (tree.Resolve(model, n, attr, l, null).Value is { } v) return v;
-            return tree.Resolve(model, n, attr, null, null).Value;
+            if (n.Own(Model.SkuAttribute, null, null) is { } sku) return sku;
+            if (n.AxisValues.Count > 0) return string.Join(" · ", n.AxisValues.Values);
         }
-        if (n.Role == Roles.Product) return byAttr() ?? n.Id;
-        return n.Own(Model.SkuAttribute, null, null)
-            ?? (n.AxisValues.Count > 0 ? string.Join(" · ", n.AxisValues.Values) : null)
-            ?? byAttr()
-            ?? n.Id;
+        return n.Id;
+    }
+
+    /// <summary>Wert eines Attributs als Text fürs Label — null, wenn leer.</summary>
+    public static string? ByAttribute(Tree tree, ModelCatalog model, Node n, string attr)
+    {
+        var raw = tree.Resolve(model, n, attr, "de", null).Value;
+        if (raw is null) foreach (var l in model.Locales.Keys) if (tree.Resolve(model, n, attr, l, null).Value is { } lv) { raw = lv; break; }
+        raw ??= tree.Resolve(model, n, attr, null, null).Value;
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+        if (model.Attributes.TryGetValue(attr, out var def) && def.Type == AttributeTypes.Enum
+            && model.Lists.TryGetValue(def.List ?? "", out var list) && list.Values.TryGetValue(raw, out var value)
+            && value.Label.GetValueOrDefault("de") is { Length: > 0 } label) return label;
+        return raw;
     }
 }
 
@@ -141,7 +153,7 @@ public sealed record AncestorView(string Id, string Role, string Label, List<Val
 public sealed record GroupView(string Key, string From, string FromLabel, bool Active, List<string> Attributes);
 
 /// <summary>Ein Knoten vollständig — Kopie aus dem Abbild, ausserhalb der Sperre ungefährlich.</summary>
-public sealed record NodeView(string Id, string Role, string? Parent, Labels Label, string? Family, string[] Axes,
+public sealed record NodeView(string Id, string Role, string? Parent, Labels Label, string? Name, string? LabelAttribute, string? LabelFrom, string? LabelFromLabel, string? Family, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string> External, List<ValueView> Values, Dictionary<string, List<string>> Rows,
     List<AncestorView> Ancestors, string[] AttachedGroups, List<GroupView> Groups, List<string> Orphans,
     List<string> Categories, List<Release> Releases, List<Completeness> Completeness,
@@ -155,8 +167,9 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
         var covered = groups.SelectMany(g => g.Attributes).ToHashSet();
         // Verwaist: eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen).
         var orphans = n.Values.Keys.Select(k => k.Attribute).Concat(n.Lists.Keys.Select(k => k.Attribute)).Concat(n.Rows.Keys).Distinct().Where(a => !covered.Contains(a)).Order().ToList();
+        var (star, starFrom) = tree.LabelAttributeOf(n);
         return new(
-        n.Id, n.Role, n.Parent, n.Label, n.Family, n.Axes, n.AxisValues, n.Status, n.External,
+        n.Id, n.Role, n.Parent, n.Label, n.Name, star, starFrom?.Id, starFrom is null ? null : NodeRow.LabelOf(tree, model, starFrom), n.Family, n.Axes, n.AxisValues, n.Status, n.External,
         ValueView.Of(n).ToList(), n.Rows,
         tree.Ancestors(n).Select(a => new AncestorView(a.Id, a.Role, NodeRow.LabelOf(tree, model, a), ValueView.Of(a).ToList())).ToList(),
         n.Groups, groups, orphans,

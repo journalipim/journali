@@ -121,7 +121,7 @@ const newAttrs = computed(() => Object.entries(mapping.value).filter(([, v]) => 
 
 // ---- Schreiben: fehlende Attribute anlegen, dann ein Stapel
 async function run() {
-  if (!store.actor) { store.toast('Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   if (!plan.value) return
   busy.value = 'schreibe …'
   result.value = null

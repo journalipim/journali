@@ -119,6 +119,20 @@ function incomplete(channel, locale) {
   const all = (node.value?.completeness ?? []).filter(c => c.channel === channel && c.missing.length)
   return all.length ? { missing: all.flatMap(c => c.missing.map(m => m + (m.includes('/') ? '' : '/' + c.locale))) } : null
 }
+// ---- Name im Baum: eigener Name oder Automatik (★ Attribut vom Pfad, bei Varianten SKU/Achsen, sonst Id)
+const shownLabel = computed(() => tree.byId.get(props.id)?.label ?? props.id)
+const starDef = computed(() => node.value?.labelAttribute ? model.value?.attributes.find(a => a.key === node.value.labelAttribute) : null)
+const starOwn = computed(() => !!node.value?.labelAttribute && node.value.labelFrom === props.id)
+const automatic = computed(() => {
+  const n = node.value
+  if (!n) return ''
+  const star = n.labelAttribute ? `★ ${starDef.value?.label?.de || n.labelAttribute} · ${starOwn.value ? 'hier' : n.labelFromLabel}` : '★ —'
+  return n.role === 'variant' ? `${star} → SKU → Achsen → Id` : `${star} → Id`
+})
+function starTitle(def) {
+  if (node.value.labelAttribute === def.key) return starOwn.value ? `★ benennt ab hier nach unten — Klick nimmt es weg` : `★ benennt (von ${node.value.labelFromLabel}) — Klick setzt es hier neu`
+  return `☆ ab hier nach unten mit ${def.label?.de || def.key} benennen`
+}
 const freeGroups = computed(() => (model.value?.groups ?? []).map(g => g.key).filter(k => !(node.value?.groups ?? []).some(g => g.key === k)))
 
 // ---- Laden
@@ -139,7 +153,7 @@ watch(() => store.head, h => { if (h > (entries.value[0]?.number ?? 0)) load() }
 
 // ---- Befehle
 async function command(fn) {
-  if (!store.actor) { store.toast('Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   busy.value = true
   try { const entry = await fn(); entries.value.unshift(entry); await load(); tree.load() }
   catch (e) { store.toast(e.message) }
@@ -153,7 +167,9 @@ const setValue = (def, col, value, row = null) => command(() =>
 const addRow = def => command(() => api.post(`${nodeUrl()}/rows`, { attribute: def.key, row: '' }))
 const removeRow = (def, row) => command(() => api.del(`${nodeUrl()}/rows/${def.key}/${row}`))
 const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def.key}`, { attribute: def.key, rows }, 'PUT'))
-const setLabel = (loc, v) => command(() => api.post(`/api/groups/${encodeURIComponent(props.id)}/label`, { label: { ...node.value.label, [loc]: v } }, 'PUT'))
+const setName = v => command(() => api.post(`${nodeUrl()}/name`, { name: v }, 'PUT'))
+// ★ am eigenen Sternchen nimmt es weg; sonst setzt es dieses Attribut ab hier.
+const setStar = def => command(() => api.post(`${nodeUrl()}/label-attribute`, { attribute: starOwn.value && node.value.labelAttribute === def.key ? null : def.key }, 'PUT'))
 const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
 const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups }, 'PUT'))
 function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
@@ -184,6 +200,7 @@ function cellMenu(e, def, col, block) {
     { label: 'Eigenen Wert löschen', icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? 'kein eigener' : (inh.value != null ? 'dann geerbt' : ''), action: () => setValue(def, col, '') },
     inh.from ? { label: `Zur Herkunft ${icon(inh.from.role)} ${inh.from.label}`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
     { label: 'Wert kopieren', icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
+    def.type !== 'html' && def.type !== 'rows' ? { label: starOwn.value && node.labelAttribute === def.key ? '★ weg — es gilt das von oben' : '★ Name im Baum ab hier', icon: '★', key: 's', action: () => setStar(def) } : null,
     { label: 'Attribut im Modell', icon: '⊞', key: 'm', action: () => router.push('/model') },
   ])
 }
@@ -195,7 +212,7 @@ function cellMenu(e, def, col, block) {
       <template v-for="a in path" :key="a.id">
         <router-link :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }}</router-link><span class="sep">›</span>
       </template>
-      <h1>{{ icon(node.role) }} <span v-if="node.role === 'group'">{{ node.label?.de || node.id }}</span><span v-else class="mono">{{ tree.byId.get(id)?.label ?? id }}</span></h1>
+      <h1>{{ icon(node.role) }} {{ shownLabel }}</h1>
       <span class="grow" />
       <select v-if="node.role !== 'group'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
         <option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option>
@@ -237,9 +254,15 @@ function cellMenu(e, def, col, block) {
     </div>
 
     <div class="scroll" v-if="model">
-      <table v-if="node.role === 'group'" class="grid" style="width:auto">
-        <thead><tr><th>Name</th><th v-for="l in locales" :key="l">{{ l }}</th></tr></thead>
-        <tbody><tr><td class="muted">Gruppe</td><Cell v-for="l in locales" :key="l" :value="node.label?.[l] ?? null" @save="v => setLabel(l, v)" /></tr></tbody>
+      <!-- Name im Baum: eigener Name (leer = Automatik), daneben woher die Automatik ihn nähme. -->
+      <table class="grid" style="width:auto">
+        <colgroup><col style="width:180px" /><col style="width:220px" /></colgroup>
+        <thead><tr><th>Name im Baum</th><th>✎ eigener</th><th class="muted" style="font-weight:normal">Automatik</th></tr></thead>
+        <tbody><tr>
+          <td class="attr" :title="node.id">{{ shownLabel }}</td>
+          <Cell :value="node.name ?? null" :inherited="node.name ? null : shownLabel" :origin="automatic" @save="setName" />
+          <td class="muted" style="white-space:nowrap;padding:0 8px" :title="node.labelAttribute ? `★ ${node.labelAttribute} gesetzt an ${starOwn ? 'diesem Knoten' : node.labelFromLabel} — Sternchen an einem Attribut unten` : 'kein ★ am Pfad — Sternchen an einem Attribut unten setzen'">{{ automatic }}</td>
+        </tr></tbody>
       </table>
 
       <table class="grid values" :style="`width:${180 + columns.length * 220}px`">
@@ -270,6 +293,7 @@ function cellMenu(e, def, col, block) {
           </tr>
           <tr v-else>
             <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')">
+              <button v-if="def.type !== 'html'" class="star" :class="{ on: node.labelAttribute === def.key, own: starOwn && node.labelAttribute === def.key }" :title="starTitle(def)" @click.stop="setStar(def)">{{ node.labelAttribute === def.key ? '★' : '☆' }}</button>
               {{ def.label?.de || def.key }}
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
               <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
@@ -368,6 +392,11 @@ function cellMenu(e, def, col, block) {
 .group-row .from { text-transform: none; font-weight: 400; letter-spacing: 0; }
 .group-row.locked td { color: var(--warn); }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ★ Name im Baum: hohl = möglich, gefüllt = gilt (geerbt gedämpft, hier gesetzt in Warnfarbe) */
+.star { border: 0; background: none; padding: 0 2px 0 0; color: var(--muted); opacity: .45; cursor: pointer; font-size: 12px; line-height: 1; }
+tr:hover .star { opacity: 1; }
+.star.on { opacity: 1; color: var(--muted); }
+.star.own { color: var(--warn); }
 table.releases { width: auto; }
 table.releases td { text-align: center; }
 table.releases td.rel { white-space: nowrap; }

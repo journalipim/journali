@@ -17,7 +17,6 @@ const sections = [
   { key: 'units', icon: '⚖', label: 'Einheiten', part: 'Basics' },
   { key: 'locales', icon: '🗣', label: 'Sprachen', part: 'Basics' },
   { key: 'channels', icon: '⇶', label: 'Kanäle', part: 'Basics' },
-  { key: 'tree', icon: '▣', label: 'Baum', part: 'Basics' },
 ]
 const section = ref('attributes')
 const model = computed(() => store.model)
@@ -33,7 +32,7 @@ const roleLabel = { group: '▣ Produktgruppe', product: '▦ Produkt', variant:
 const roles = ['group', 'product', 'variant']
 
 async function send(fn) {
-  if (!store.actor) { store.toast('Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   try { await fn(); await store.poll(true) } catch (e) { store.toast(e.message) }
 }
 const put = (path, body) => send(() => api.post(path, body, 'PUT'))
@@ -224,8 +223,6 @@ function unitAdd() {
 const localeCols = [{ key: 'code', label: 'Code', type: 'ro', width: '80px' }, { key: 'label', label: 'Name' }]
 const channelCols = [{ key: 'key', label: 'Kanal', type: 'ro', width: '100px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }]
 const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, label_de: c.label?.de, label_en: c.label?.en, _c: c })))
-const treeCols = computed(() => [{ key: 'role', label: 'Knotentyp', type: 'ro', width: '160px' }, { key: 'attribute', label: 'Name im Baum', type: 'select', options: model.value.attributes.map(a => a.key), width: '200px', title: 'welches Attribut die Knoten dieses Typs im Baum benennt (Variante: SKU geht vor)' }])
-const treeRows = computed(() => roles.map(r => ({ key: r, role: roleLabel[r], attribute: model.value.labels?.[r] ?? 'name' })))
 </script>
 
 <template>
@@ -236,7 +233,7 @@ const treeRows = computed(() => roles.map(r => ({ key: r, role: roleLabel[r], at
         <div class="part">{{ part }}</div>
         <button v-for="s in sections.filter(x => x.part === part)" :key="s.key" class="section-btn" :class="{ active: section === s.key }" @click="switchTo(s.key)">
           <span class="icon">{{ s.icon }}</span> {{ s.label }}
-          <span class="muted count">{{ s.key === 'tree' ? '' : (model?.[s.key]?.length ?? '') }}</span>
+          <span class="muted count">{{ model?.[s.key]?.length ?? '' }}</span>
         </button>
       </template>
     </div>
@@ -371,13 +368,6 @@ const treeRows = computed(() => roles.map(r => ({ key: r, role: roleLabel[r], at
       </div>
     </template>
 
-    <!-- Baum -->
-    <template v-else-if="section === 'tree'">
-      <div class="toolbar"><h1>▣ Baum</h1><span class="muted">welches Attribut die Knoten im Baum benennt (Gruppen tragen ihr eigenes Label; Variante: SKU geht vor)</span></div>
-      <div class="scroll">
-        <EditGrid :columns="treeCols" :rows="treeRows" @change="(r, c, v) => put(`/api/model/labels/${r.key}`, { role: r.key, attribute: v })" />
-      </div>
-    </template>
   </div>
   <div v-else class="empty">Modell wird geladen …</div>
 </template>

@@ -45,8 +45,10 @@ public static class BatchApi
                     {
                         outcome = cmd.Op switch
                         {
-                            "group.create" => Commands.CreateGroup(ctx, a.Id("parent"), a.Labels("label")),
-                            "group.rename" => Commands.RenameGroup(ctx, a.Node(), a.Labels("label")),
+                            "group.create" => Commands.CreateGroup(ctx, a.Id("parent"), a.Labels("label"), a.Str("name")),
+                            "group.rename" => Commands.RenameGroup(ctx, a.Node(), a.Labels("label")),   // Altlast
+                            "node.rename" => Commands.Rename(ctx, a.Node(), a.Str("name")),
+                            "label.set" => Commands.SetLabelAttribute(ctx, a.Node(), a.Str("attribute")),
                             "product.create" => Commands.CreateProduct(ctx, a.Id("group"), a.Strings("axes")),
                             "groups.attach" => Commands.AttachGroups(ctx, a.Node(), a.Strings("groups")),
                             "variant.create" => Commands.CreateVariant(ctx, a.Id("product"), a.Map("axisValues")),

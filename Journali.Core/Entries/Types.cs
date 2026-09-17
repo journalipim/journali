@@ -20,6 +20,8 @@ public static class Types
     public const string NodeRetired = "NodeRetired";
     public const string StatusSet = "StatusSet";
     public const string GroupsAttached = "GroupsAttached";
+    public const string NodeNamed = "NodeNamed";
+    public const string LabelAttributeSet = "LabelAttributeSet";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
 
@@ -89,10 +91,28 @@ public static class Statuses
     public static readonly IReadOnlyList<string> All = [Draft, Active, Discontinued];
 }
 
-/// <summary>Erster Eintrag einer Produktgruppe. <paramref name="Parent"/> null = Wurzel.</summary>
-public sealed record GroupCreated(string? Parent, Labels Label);
+/// <summary>
+/// Erster Eintrag einer Produktgruppe. <paramref name="Parent"/> null = Wurzel.
+/// <paramref name="Name"/> ist der Name im Baum (einsprachig); <paramref name="Label"/>
+/// ist Altlast (je Sprache) und füllt den Namen, wenn er fehlt.
+/// </summary>
+public sealed record GroupCreated(string? Parent, Labels Label, string? Name = null);
 
+/// <summary>Altlast (17.09.2026): Gruppe je Sprache umbenennen — heute <see cref="NodeNamed"/>. Bleibt lesbar, wird nicht mehr geschrieben.</summary>
 public sealed record GroupRenamed(Labels Label);
+
+/// <summary>
+/// Eigener Name des Knotens im Baum, jede Rolle, einsprachig (docs/pflegestruktur.md, 17).
+/// Leer = weg, dann benennt die Automatik (<see cref="LabelAttributeSet"/>, SKU, Achsen, Id).
+/// </summary>
+public sealed record NodeNamed(string? Name);
+
+/// <summary>
+/// Das Sternchen: welches Attribut ab hier nach unten die Knoten benennt, die keinen
+/// eigenen Namen haben. Gilt den Pfad hinunter, jeder Knoten darunter darf es neu setzen.
+/// Null = weg, es gilt wieder das der Vorfahren.
+/// </summary>
+public sealed record LabelAttributeSet(string? Attribute);
 
 /// <summary>Erster Eintrag eines Produkts: unter welcher Gruppe, wonach es variiert (Attribute, optional). <paramref name="Family"/> ist Altlast.</summary>
 public sealed record ProductCreated(string Group, string? Family = null, string[]? Axes = null);
@@ -257,7 +277,7 @@ public sealed record AttributeGroupDefinition(string Key, Labels Label, string? 
     public bool ActiveAt(string role) => ActiveFrom is null || Roles.Depth(role) >= Roles.Depth(ActiveFrom);
 }
 
-/// <summary>Welches Attribut die Knoten eines Typs im Baum benennt. Strom <c>settings:label:&lt;role&gt;</c>.</summary>
+/// <summary>Altlast (17.09.2026): Name im Baum je Knotentyp. Ersetzt durch das Sternchen am Knoten (<see cref="LabelAttributeSet"/>). Bleibt lesbar, wird nicht mehr geschrieben.</summary>
 public sealed record TreeLabelDefined(string Role, string Attribute);
 
 public sealed record AttributeGroupRetired(string Key);

@@ -364,8 +364,8 @@ Werkzeug), gelten als undefiniert, aber sichtbar. Saatgut: logistics (ab
 Variante), texts, physical. Die Sicht ist der Ort, an dem später Rollen und Rechte greifen
 (Schritt 10): welche Sichten ein Nutzer hat, was er darin ändern darf.
 
-**Name im Baum**: je Knotentyp eine Einstellung (`TreeLabelDefined`), nicht
-mehr an der Familie.
+**Name im Baum**: siehe 17 — nicht mehr je Knotentyp (`TreeLabelDefined` ist
+Altlast), sondern eigener Name am Knoten oder das ★ am Pfad.
 
 > Ich möchte nicht in einem Ast umsortieren, sondern: ich kenne alle
 > Attribute, ordne sie Gruppen zu, in Sichten sortiere ich Gruppen und darin
@@ -556,3 +556,37 @@ Definitionen ins Journal.
 - Plugins: darf ein Import Handwerte überschreiben — je Attribut regelbar
   (Vorschlag) oder nie?
 - DAM: eigener Baustein oder Plugin?
+
+### 17. Name im Baum — entschieden (Taloan, 17.09.2026)
+
+Der Baum ist zuerst ein Verzeichnisbaum ohne Dateien: jeder Knoten kann von
+Hand benannt werden (`NodeNamed`, einsprachig, jede Rolle; Rechtsklick →
+Umbenennen). Für die Masse — hundert Varianten unter einem Produkt — gibt es
+die Automatik: **das ★** an einem Attribut im rechten Feld (`LabelAttributeSet`).
+Es gilt ab diesem Knoten nach unten und darf in jedem Zweig darunter auf ein
+anderes Attribut gesetzt werden, das dort über eine Gruppe am Pfad gilt.
+
+Reihenfolge (`NodeRow.LabelOf`):
+
+1. eigener Name;
+2. das ★-Attribut vom Pfad, wenn es hier einen Wert hat (de, dann die anderen
+   Sprachen, dann ohne Sprache; geerbt zählt; eine Werteliste zeigt ihr Label);
+3. Variante: SKU, sonst die Achsenwerte;
+4. die interne Id — der Mindest-Rückfall, den es immer gibt.
+
+Nicht gewählt: Name je Attributgruppe (mehrere Gruppen am Knoten → Kollision,
+welche zählt?), Name je Knotentyp im Modell (`TreeLabelDefined`, Altlast: ein
+Attribut, das jemand aus dem Modell nimmt, liesse den Baum namenlos), Name
+aus dem Attribut `name` fest im Code (dasselbe Problem; wer sein Attribut
+`shortdesc` nennt, hätte keinen Baum).
+
+Sperre: ein Attribut, das irgendwo das ★ trägt, lässt sich nicht zurückziehen
+— erst das ★ umsetzen (`DELETE /api/model/attributes/{key}` nennt den Knoten).
+
+Mehrsprachig ist der eigene Name nicht (Vorbild Pimcore `key`; Akeneo,
+Ergonode und OpenPIM führen Kategorienamen je Sprache). Ob der Baum der
+Oberflächensprache folgen soll, ist offen — Taloan: „vielleicht gerade das,
+vielleicht gerade nicht". Der automatische Name nimmt heute fest `de` zuerst.
+
+Saatgut: das ★ steht an `g-mastertree` auf `name`; ein leeres Journal benennt
+damit alles darunter nach seinem Namen, bis jemand es umsetzt.

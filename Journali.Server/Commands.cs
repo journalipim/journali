@@ -27,15 +27,38 @@ public sealed class Ctx
 /// </summary>
 public static class Commands
 {
-    public static Outcome CreateGroup(Ctx c, string? parent, Labels? label)
+    public static Outcome CreateGroup(Ctx c, string? parent, Labels? label, string? name = null)
     {
         parent = Blank(parent);
         if (parent is not null && !IsRole(c.Tree, parent, Roles.Group)) return Outcome.Bad("Eltern müssen eine Produktgruppe sein.");
-        return Outcome.Ok(c.Write(Ids.New(Roles.Group), Types.GroupCreated, new GroupCreated(parent, label ?? new())));
+        return Outcome.Ok(c.Write(Ids.New(Roles.Group), Types.GroupCreated, new GroupCreated(parent, label ?? new(), Blank(name))));
     }
 
+    /// <summary>Altlast: Label je Sprache — nur noch für Stapel und Import, die es so schicken.</summary>
     public static Outcome RenameGroup(Ctx c, string id, Labels? label) =>
         IsRole(c.Tree, id, Roles.Group) ? Outcome.Ok(c.Write(id, Types.GroupRenamed, new GroupRenamed(label ?? new()))) : Outcome.Missing;
+
+    /// <summary>Eigener Name im Baum, jede Rolle; leer = weg, die Automatik greift wieder.</summary>
+    public static Outcome Rename(Ctx c, string id, string? name) =>
+        c.Tree.Nodes.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.NodeNamed, new NodeNamed(Blank(name)))) : Outcome.Missing;
+
+    /// <summary>
+    /// Das Sternchen: ab hier benennt dieses Attribut alle Knoten ohne eigenen Namen.
+    /// Null nimmt es weg. Das Attribut muss über eine Gruppe am Pfad gelten — aktiv
+    /// darf es erst weiter unten sein (SKU am Produkt gesetzt benennt die Varianten).
+    /// </summary>
+    public static Outcome SetLabelAttribute(Ctx c, string id, string? attribute)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        attribute = Blank(attribute);
+        if (attribute is not null)
+        {
+            if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
+            if (def.Type is AttributeTypes.Html or AttributeTypes.Rows) return Outcome.Bad($"{def.Key} ({def.Type}) taugt nicht als Name im Baum.");
+            if (!c.Tree.EffectiveGroups(n).Any(g => g.Group == (def.Group ?? ""))) return Outcome.Bad($"{def.Key} gilt hier nicht: Gruppe {def.Group} hängt an keinem Knoten des Pfads.");
+        }
+        return Outcome.Ok(c.Write(id, Types.LabelAttributeSet, new LabelAttributeSet(attribute)));
+    }
 
     public static Outcome CreateProduct(Ctx c, string? group, string[]? axes)
     {
@@ -233,9 +256,8 @@ public static class Commands
         switch (src.Role)
         {
             case Roles.Group:
-                var label = new Labels(src.Label);
-                if (suffix) foreach (var k in label.Keys.ToList()) label[k] = "(Kopie) " + label[k];   // vorne, damit man es im Baum sieht
-                id = CreateGroup(c, parent, label).Entry?.Stream; break;
+                // „(Kopie)“ vorne, damit man es im Baum sieht.
+                id = CreateGroup(c, parent, new Labels(src.Label), src.Name is { } gn ? (suffix ? "(Kopie) " + gn : gn) : null).Entry?.Stream; break;
             case Roles.Product:
                 id = CreateProduct(c, parent, src.Axes).Entry?.Stream; break;
             default:
@@ -243,6 +265,8 @@ public static class Commands
         }
         if (id is null) return null;
         count++;
+        if (src.Role != Roles.Group && src.Name is { } own && Rename(c, id, suffix ? "(Kopie) " + own : own).Entry is not null) count++;
+        if (src.LabelAttribute is { } star && SetLabelAttribute(c, id, star).Entry is not null) count++;
         if (src.Groups.Length > 0 && AttachGroups(c, id, src.Groups).Entry is not null) count++;
         foreach (var (attr, rows) in src.Rows)
         {

@@ -14,7 +14,11 @@ public sealed class Node
     public required string Id { get; init; }
     public required string Role { get; init; }
     public string? Parent { get; set; }
-    public Labels Label { get; set; } = new();                 // Gruppe
+    public Labels Label { get; set; } = new();                 // Gruppe, Altlast (je Sprache) — der Name kommt daraus, wenn keiner gesetzt ist
+    /// <summary>Eigener Name im Baum (NodeNamed; bei Gruppen aus GroupCreated/GroupRenamed). Null = die Automatik benennt.</summary>
+    public string? Name { get; set; }
+    /// <summary>Das Sternchen: Attribut, das ab hier nach unten benennt. Null = das der Vorfahren gilt.</summary>
+    public string? LabelAttribute { get; set; }
     public string? Family { get; set; }                        // Produkt
     public string[] Axes { get; set; } = [];                   // Produkt: wonach es variiert
     public Dictionary<string, string> AxisValues { get; } = new(); // Variante
@@ -110,6 +114,18 @@ public sealed class Tree : IProjection
         return result;
     }
 
+    /// <summary>Das Sternchen, das hier gilt: am Knoten selbst oder am nächsten Vorfahren — mit Herkunft.</summary>
+    public (string? Attribute, Node? From) LabelAttributeOf(Node node)
+    {
+        if (node.LabelAttribute is not null) return (node.LabelAttribute, node);
+        foreach (var a in Ancestors(node))
+            if (a.LabelAttribute is not null) return (a.LabelAttribute, a);
+        return (null, null);
+    }
+
+    /// <summary>Knoten, an denen dieses Attribut das Sternchen trägt — die Sperre fürs Zurückziehen des Attributs.</summary>
+    public IEnumerable<Node> WithLabelAttribute(string attribute) => _nodes.Values.Where(n => n.LabelAttribute == attribute);
+
     /// <summary>Knoten zu einer externen Kennung, falls verknüpft.</summary>
     public Node? ByExternal(string system, string id) =>
         _external.TryGetValue((system, id), out var nodeId) && _nodes.TryGetValue(nodeId, out var n) ? n : null;
@@ -120,6 +136,7 @@ public sealed class Tree : IProjection
         foreach (var n in _nodes.Values)
         {
             if (n.Id.Contains(q, StringComparison.OrdinalIgnoreCase)) { yield return (n, n.Id); continue; }
+            if (n.Name is { } nm && nm.Contains(q, StringComparison.OrdinalIgnoreCase)) { yield return (n, nm); continue; }
             if (n.Label.Values.FirstOrDefault(l => l.Contains(q, StringComparison.OrdinalIgnoreCase)) is { } l) { yield return (n, l); continue; }
             if (n.AxisValues.Values.FirstOrDefault(v => v.Contains(q, StringComparison.OrdinalIgnoreCase)) is { } av) { yield return (n, av); continue; }
             var hit = n.Values.FirstOrDefault(kv => kv.Value.Contains(q, StringComparison.OrdinalIgnoreCase));
@@ -163,6 +180,7 @@ public sealed class Tree : IProjection
                 var g = Types.Deserialize<GroupCreated>(entry.Payload);
                 n = Create(entry, Roles.Group, g.Parent);
                 n.Label = g.Label;
+                n.Name = string.IsNullOrWhiteSpace(g.Name) ? TextOf(g.Label) : g.Name.Trim();
                 break;
             case Types.ProductCreated:
                 var pc = Types.Deserialize<ProductCreated>(entry.Payload);
@@ -208,12 +226,25 @@ public sealed class Tree : IProjection
         if (_children.TryGetValue(n.Parent ?? "", out var set)) set.Remove(n.Id);
     }
 
+    /// <summary>Altlast-Label je Sprache als ein Name: de, sonst die erste gefüllte Sprache.</summary>
+    private static string? TextOf(Labels label) =>
+        label.GetValueOrDefault("de") is { Length: > 0 } de ? de : label.Values.FirstOrDefault(v => v.Length > 0);
+
     private void ApplyToNode(Node n, Entry entry)
     {
         switch (entry.Type)
         {
             case Types.GroupRenamed:
                 n.Label = Types.Deserialize<GroupRenamed>(entry.Payload).Label;
+                n.Name = TextOf(n.Label);
+                break;
+            case Types.NodeNamed:
+                var nn = Types.Deserialize<NodeNamed>(entry.Payload).Name;
+                n.Name = string.IsNullOrWhiteSpace(nn) ? null : nn.Trim();
+                break;
+            case Types.LabelAttributeSet:
+                var la = Types.Deserialize<LabelAttributeSet>(entry.Payload).Attribute;
+                n.LabelAttribute = string.IsNullOrWhiteSpace(la) ? null : la.Trim();
                 break;
             case Types.NodeMoved:
                 Unlink(n);

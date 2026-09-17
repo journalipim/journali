@@ -65,10 +65,15 @@ public static partial class ModelApi
             }));
 
         m.MapDelete("/attributes/{key}", (string key, HttpRequest req, Catalog c) =>
-            Command(req, c, key, ValidKey, (model, write) =>
-                model.Attributes.ContainsKey(key)
-                    ? write(Model.AttributeStream + key, Types.AttributeRetired, new AttributeRetired(key))
-                    : Results.NotFound()));
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            return c.With((model, tree, write) =>
+                !model.Attributes.ContainsKey(key) ? Results.NotFound()
+                // Sperre: solange das Attribut irgendwo das Sternchen trägt, verlöre der Baum dort seine Namen.
+                : tree.WithLabelAttribute(key).FirstOrDefault() is { } n
+                    ? Bad($"{key} ist ★ Name im Baum ab {NodeRow.LabelOf(tree, model, n)} ({n.Id}) — erst dort das Sternchen umsetzen.")
+                    : Results.Ok(EntryView.Of(write(actor, Model.AttributeStream + key, Types.AttributeRetired, new AttributeRetired(key), null))));
+        });
 
         m.MapPut("/lists/{key}", (string key, ListDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
@@ -123,11 +128,6 @@ public static partial class ModelApi
             Command(req, c, key, ValidKey, (model, write) =>
                 model.Views.ContainsKey(key) ? write(Model.ViewStream + key, Types.ViewRetired, new ViewRetired(key)) : Results.NotFound()));
 
-        m.MapPut("/labels/{role}", (string role, TreeLabelDefined body, HttpRequest req, Catalog c) =>
-            Command(req, c, role, r => Roles.All.Contains(r), (model, write) =>
-                !model.Attributes.ContainsKey(body.Attribute ?? "") ? Bad($"Attribut {body.Attribute} gibt es nicht.")
-                : write(Model.LabelStream + role, Types.TreeLabelDefined, new TreeLabelDefined(role, body.Attribute!))));
-
         m.MapPut("/units/{key}", (string key, UnitDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, k => k.Length > 0 && k.Length <= 8 && !k.Any(char.IsWhiteSpace), (model, write) =>
                 string.IsNullOrWhiteSpace(body.Quantity) ? Bad("quantity fehlt (mass, length, volume, data, count, …).")
@@ -149,7 +149,6 @@ public static partial class ModelApi
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], values = l.Ordered.ToList() }).ToList(),
-        labels = model.TreeLabels,
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
         views = model.Views.Values.OrderBy(v => v.Key).ToList(),
         // Gruppen: definierte plus die, die nur an Attributen vorkommen (z. B. „import“ aus dem Werkzeug) — mit Attributen in Reihenfolge
