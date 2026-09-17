@@ -447,7 +447,7 @@ function cellMenu(e, def, col, block) {
                 <td class="num"><button class="x" @click="retireRel(r)" title="Relation zurückziehen">×</button></td>
               </tr>
               <tr v-for="r in b.in" :key="r.id" :title="r.id">
-                <td class="muted">← {{ relType(b.type)?.reverse?.de || relType(b.type)?.label?.de || b.type }}</td>
+                <td class="muted">{{ relType(b.type)?.symmetric ? '⇄' : '←' }} {{ relType(b.type)?.symmetric ? (relType(b.type)?.label?.de || b.type) : (relType(b.type)?.reverse?.de || relType(b.type)?.label?.de || b.type) }}</td>
                 <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" title="Knoten zurückgezogen">✗ {{ r.other.id }}</span></td>
                 <td v-for="d in relGroupAttrs(b.type)" :key="d.key" class="muted">{{ relValue(r, d) ?? '' }}</td>
                 <td class="num"><button class="x" @click="retireRel(r)" title="Relation zurückziehen">×</button></td>

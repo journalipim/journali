@@ -75,7 +75,7 @@ const rows = computed(() => {
     case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
-    case 'relationTypes': return (m.relationTypes ?? []).map(r => ({ key: r.key, label: r.label?.de, right: [(r.from ?? roles).map(icon).join('') + '→' + (r.to ?? roles).map(x => x === 'media' ? '🖼' : icon(x)).join(''), r.group ? '▤ ' + r.group : ''], _: r })).sort(byKey)
+    case 'relationTypes': return (m.relationTypes ?? []).map(r => ({ key: r.key, label: r.label?.de, right: [(r.from ?? roles).map(icon).join('') + (r.symmetric ? '⇄' : '→') + (r.to ?? roles).map(x => x === 'media' ? '🖼' : icon(x)).join(''), r.group ? '▤ ' + r.group : ''], _: r })).sort(byKey)
     case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : ''] }))
     case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [] }))
   }
@@ -496,8 +496,9 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curRel.label?.de ?? null" @save="v => relSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curRel.label?.en ?? null" @save="v => relSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="Bezeichnung vom Ziel aus gesehen („Zubehör von“)">← umgekehrt de</td><Cell :value="curRel.reverse?.de ?? null" @save="v => relSet('reverse_de', v)" /></tr>
-          <tr><td class="attr">← umgekehrt en</td><Cell :value="curRel.reverse?.en ?? null" @save="v => relSet('reverse_en', v)" /></tr>
+          <tr><td class="attr" title="beidseitig: liest sich von beiden Enden gleich (verwandt), je Paar nur einmal. Einseitig: Lesart hin und zurück (hat Zubehör / ist Zubehör von).">⇄ beidseitig</td><ToggleCell :value="b(!!curRel.symmetric)" @save="v => relSet('symmetric', v === 'true')" /></tr>
+          <tr v-if="!curRel.symmetric"><td class="attr" title="Bezeichnung vom Ziel aus gesehen („Zubehör von“)">← umgekehrt de</td><Cell :value="curRel.reverse?.de ?? null" @save="v => relSet('reverse_de', v)" /></tr>
+          <tr v-if="!curRel.symmetric"><td class="attr">← umgekehrt en</td><Cell :value="curRel.reverse?.en ?? null" @save="v => relSet('reverse_en', v)" /></tr>
           <tr v-for="r in roles" :key="'f' + r"><td class="attr" :title="`darf von ${roleLabel[r]} ausgehen`">von {{ roleLabel[r] }}</td><ToggleCell :value="b(!curRel.from || curRel.from.includes(r))" @save="v => relSet('from_' + r, v === 'true')" /></tr>
           <tr v-for="r in [...roles, 'media']" :key="'t' + r"><td class="attr" :title="`darf zu ${roleLabel[r] ?? '🖼 Medium'} führen`">zu {{ roleLabel[r] ?? '🖼 Medium' }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
           <tr><td class="attr" title="Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte">▤ Werte aus Gruppe</td><SelectCell :value="curRel.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => relSet('group', v || null)" /></tr>

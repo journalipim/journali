@@ -71,6 +71,84 @@ const visible = computed(() => {
 
 function open(row) { router.push(`/tree/${row.id}`) }
 
+// ---- Die Menge (Taloan, 17.09.): Strg+Klick sammelt, Shift+Klick nimmt den Bereich der sichtbaren Zeilen,
+// „☑ Treffer“ nimmt alle sichtbaren (z. B. ein Suchergebnis). Ein einfacher Klick öffnet nur — die Menge bleibt.
+const picked = ref(new Set())
+const pickAnchor = ref(null)
+function onRowClick(e, r) {
+  if (e.ctrlKey || e.metaKey) { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s; pickAnchor.value = r.id; return }
+  if (e.shiftKey && pickAnchor.value) {
+    const ids = visible.value.map(x => x.r.id); const a = ids.indexOf(pickAnchor.value), b = ids.indexOf(r.id)
+    if (a >= 0 && b >= 0) { const s = new Set(picked.value); for (let i = Math.min(a, b); i <= Math.max(a, b); i++) s.add(ids[i]); picked.value = s }
+    return
+  }
+  pickAnchor.value = r.id
+  open(r)
+}
+const pickVisible = () => { picked.value = new Set(visible.value.map(x => x.r.id)) }
+const pickedRows = computed(() => [...picked.value].map(id => tree.byId.get(id)).filter(Boolean))
+
+// ---- Verknüpfen: Menge → Ziel (per Shift+Ablegen oder Suche), dann Typ, Richtung, Werte je Eintrag; ein Stapel
+const link = ref(null)   // { target, type, dir: 'target-first' | 'set-first', q, vals: { id: { attr: v } }, existing }
+const relTypes = computed(() => (store.model?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media')))
+const linkType = computed(() => relTypes.value.find(t => t.key === link.value?.type) ?? null)
+const linkAttrs = computed(() => { const g = linkType.value?.group; return g ? (store.model?.attributes ?? []).filter(a => a.group === g && a.type !== 'rows' && a.type !== 'html') : [] })
+async function openLink(target) {
+  if (!pickedRows.value.length) { store.toast('Erst eine Menge sammeln: Strg+Klick im Baum'); return }
+  link.value = { target, type: relTypes.value[0]?.key ?? '', dir: 'target-first', q: '', vals: {}, existing: null, all: {} }
+  await loadExisting()
+}
+async function loadExisting() {
+  if (!link.value?.target) return
+  try {
+    const rs = await api.get(`/api/nodes/${encodeURIComponent(link.value.target.id)}/relations`)
+    link.value.existing = { out: new Set(rs.out.map(r => `${r.type}|${r.to}`)), in: new Set(rs.in.map(r => `${r.type}|${r.from}`)) }
+  } catch (e) { store.toast(e.message) }
+}
+const linkMatches = computed(() => {
+  const q = (link.value?.q ?? '').trim().toLowerCase(); if (!q) return []
+  return tree.rows.filter(r => !picked.value.has(r.id) && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12)
+})
+// Welche der Menge sind für Typ und Richtung erlaubt, welche gibt es schon?
+const linkRows = computed(() => {
+  const l = link.value, t = linkType.value; if (!l || !t) return []
+  const targetFirst = l.dir === 'target-first'   // Ziel → Eintrag (Ziel hat Zubehör: Eintrag)
+  return pickedRows.value.map(r => {
+    const from = targetFirst ? l.target : r, to = targetFirst ? r : l.target
+    const roleOk = (!t.from || t.from.includes(from.role)) && (!t.to || t.to.includes(to.role))
+    const exists = l.existing && (targetFirst ? l.existing.out.has(`${t.key}|${r.id}`) : l.existing.in.has(`${t.key}|${r.id}`))
+      || (t.symmetric && l.existing && (l.existing.out.has(`${t.key}|${r.id}`) || l.existing.in.has(`${t.key}|${r.id}`)))
+    return { r, ok: roleOk && r.id !== l.target.id, exists: !!exists }
+  })
+})
+const linkCount = computed(() => linkRows.value.filter(x => x.ok && !x.exists).length)
+function fillAll(attr, v) { for (const x of linkRows.value) { link.value.vals[x.r.id] ??= {}; link.value.vals[x.r.id][attr] = v } }
+async function runLink() {
+  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  const l = link.value, t = linkType.value; if (!l || !t) return
+  const cmds = []
+  let n = 0
+  for (const x of linkRows.value) {
+    if (!x.ok || x.exists) continue
+    const ref = 'l' + (++n)
+    const from = l.dir === 'target-first' ? l.target.id : x.r.id, to = l.dir === 'target-first' ? x.r.id : l.target.id
+    cmds.push({ op: 'relation.create', ref, args: { type: t.key, from, to } })
+    for (const a of linkAttrs.value) {
+      const v = (l.vals[x.r.id]?.[a.key] ?? '').trim(); if (!v) continue
+      cmds.push({ op: 'relation.attribute.set', args: { relation: '@' + ref, attribute: a.key, locale: null, ...(a.multiple ? { values: v.split(',').map(s => s.trim()).filter(Boolean) } : { value: v }) } })
+    }
+  }
+  if (!cmds.length) { store.toast('Nichts zu verknüpfen'); return }
+  try {
+    const res = await api.post('/api/batch', { commands: cmds })
+    if (res.error) store.toast(`${res.error.message} — ${res.results.length} Einträge davor geschrieben`)
+    else store.toast(`${n} Relationen ${t.label?.de || t.key} → ${res.results.length} Einträge (Stapel ${res.batch})`, 'ok')
+    link.value = null
+    await store.poll(true)
+  } catch (e) { store.toast(e.message) }
+}
+function onLinkKey(e) { if (e.key === 'Escape') { e.preventDefault(); link.value = null } }
+
 function onListKey(e) {
   const rows = visible.value
   const i = rows.findIndex(x => x.r.id === props.id)
@@ -114,21 +192,30 @@ function canDrop(src, target) {
   for (const a of tree.ancestors(target.id)) if (a.id === src.id) return false
   return true
 }
+// Ziehen: gehört die Zeile zur Menge, zieht die ganze Menge mit. Shift beim Ablegen = verknüpfen statt umhängen.
 function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', r.id) }
+const dragIds = () => picked.value.has(dragId.value) ? [...picked.value] : [dragId.value]
 function onDragOver(e, r) {
   const src = tree.byId.get(dragId.value)
   if (src) hoverOpen(r)
-  if (!canDrop(src, r)) { dropId.value = null; return }
-  e.preventDefault(); e.dataTransfer.dropEffect = 'move'; dropId.value = r.id
+  const ok = e.shiftKey ? dragIds().some(id => id !== r.id) : dragIds().some(id => canDrop(tree.byId.get(id), r))
+  if (!ok) { dropId.value = null; return }
+  e.preventDefault(); e.dataTransfer.dropEffect = e.shiftKey ? 'link' : 'move'; dropId.value = r.id
 }
-async function onDrop(r) {
-  const src = tree.byId.get(dragId.value)
+async function onDrop(e, r) {
+  const ids = dragIds()
   dragId.value = null; dropId.value = null; hoverStop()
-  if (!canDrop(src, r)) return
-  const below = countBelow(src.id)
+  if (e.shiftKey) {   // verknüpfen: die Menge (oder die eine Zeile) mit diesem Ziel
+    if (!picked.value.has(ids[0])) picked.value = new Set(ids)
+    await openLink(r); return
+  }
+  let moved = 0, below = 0
   try {
-    await api.post(`/api/nodes/${encodeURIComponent(src.id)}/move`, { parent: r.id })
-    store.toast(`${icon(src.role)} ${src.label}${below ? ` mit ${below} darunter` : ''} → ${icon(r.role)} ${r.label}`, 'ok')
+    for (const id of ids) {
+      const src = tree.byId.get(id); if (!canDrop(src, r)) continue
+      await api.post(`/api/nodes/${encodeURIComponent(src.id)}/move`, { parent: r.id }); moved++; below += countBelow(src.id)
+    }
+    if (moved) store.toast(`${moved === 1 ? icon(tree.byId.get(ids[0]).role) + ' ' + tree.byId.get(ids[0]).label : moved + ' Einträge'}${below ? ` mit ${below} darunter` : ''} → ${icon(r.role)} ${r.label}`, 'ok')
     await store.poll(true); await tree.load(); tree.expand(r.id)
   } catch (e) { store.toast(e.message) }
 }
@@ -261,6 +348,58 @@ function onDialogKey(e) {
       <button @click="start('product')" :disabled="!groupTarget" :title="groupTarget ? `Produkt unter ${groupTarget.label}` : 'erst eine Gruppe wählen'">+ ▦</button>
       <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? `Variante unter ${productTarget.label}` : 'erst ein Produkt wählen'">+ ◆</button>
       <span class="grow" />
+      <button v-if="q" @click="pickVisible" title="alle sichtbaren Treffer in die Menge">☑ Treffer</button>
+      <template v-if="picked.size">
+        <span class="chip" title="die Menge — Strg+Klick sammelt, Shift+Klick nimmt den Bereich">☑ {{ picked.size }} <button @click="picked = new Set()" title="Menge leeren">×</button></span>
+        <button class="primary" @click="openLink(null)" title="die Menge mit einem Ziel verknüpfen (oder mit Shift auf ein Ziel ziehen)">⇄</button>
+      </template>
+    </div>
+
+    <!-- Verknüpfen: Menge → Ziel, dann Typ und Richtung (Taloan, 17.09.) -->
+    <div v-if="link" class="overlay" @click.self="link = null" @keydown="onLinkKey">
+      <div class="dialog" style="min-width:640px;max-width:92vw">
+        <div class="toolbar"><h1>⇄ {{ pickedRows.length }} Einträge verknüpfen</h1><span class="grow" /><button class="x" @click="link = null" title="Esc">×</button></div>
+        <table class="grid form"><colgroup><col style="width:130px" /><col /></colgroup><tbody>
+          <tr><td class="attr">Ziel</td><td>
+            <span v-if="link.target" class="chip">{{ icon(link.target.role) }} {{ link.target.label }} <button @click="link.target = null; link.existing = null" title="anderes Ziel">×</button></span>
+            <input v-else v-model="link.q" type="search" placeholder="🔍 Name, SKU, Id" style="width:320px" autofocus />
+            <div v-if="!link.target && linkMatches.length" class="picker" style="max-width:420px">
+              <div v-for="m in linkMatches" :key="m.id" class="pick" @click="link.target = m; link.q = ''; loadExisting()">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ m.sku ?? m.id }}</span></div>
+            </div>
+          </td></tr>
+          <tr><td class="attr">Relation</td><td>
+            <select v-model="link.type" style="width:260px"><option v-for="t in relTypes" :key="t.key" :value="t.key">{{ t.symmetric ? '⇄' : '→' }} {{ t.label?.de || t.key }}{{ t.group ? ' · ▤ ' + t.group : '' }}</option></select>
+            <span v-if="linkType" class="muted" style="margin-left:8px">{{ linkType.symmetric ? 'beidseitig — liest sich von beiden Enden gleich' : 'einseitig — zwei Lesarten' }}</span>
+          </td></tr>
+          <tr v-if="linkType && link.target"><td class="attr">Richtung</td><td class="dirs">
+            <label :class="{ on: link.dir === 'target-first' }"><input type="radio" value="target-first" v-model="link.dir" />
+              <b>{{ link.target.label }}</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ pickedRows.length }} Einträge</b>
+              <span v-if="!linkType.symmetric" class="muted"> · die Einträge sind „{{ linkType.reverse?.de || '…' }}“ {{ link.target.label }}</span></label>
+            <label v-if="!linkType.symmetric" :class="{ on: link.dir === 'set-first' }"><input type="radio" value="set-first" v-model="link.dir" />
+              <b>{{ pickedRows.length }} Einträge</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ link.target.label }}</b>
+              <span class="muted"> · {{ link.target.label }} ist „{{ linkType.reverse?.de || '…' }}“ jedes Eintrags</span></label>
+          </td></tr>
+        </tbody></table>
+        <div class="scroll" style="max-height:340px">
+          <table class="grid" style="width:auto">
+            <thead><tr><th style="width:320px">Eintrag</th><th v-for="a in linkAttrs" :key="a.key" style="width:140px" :title="a.key">{{ a.label?.de || a.key }}<span v-if="a.unit" class="muted"> {{ a.unit }}</span></th><th style="width:120px"></th></tr>
+              <tr v-if="linkAttrs.length" class="muted"><td style="font-size:11px;padding:2px 8px">für alle:</td><td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input type="text" style="width:100%" :placeholder="a.label?.de || a.key" @change="fillAll(a.key, $event.target.value)" /></td><td></td></tr>
+            </thead>
+            <tbody>
+              <tr v-for="x in linkRows" :key="x.r.id" :class="{ muted: !x.ok || x.exists }">
+                <td :title="x.r.id">{{ icon(x.r.role) }} {{ x.r.label }}</td>
+                <td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input v-if="x.ok && !x.exists" type="text" style="width:100%" :value="link.vals[x.r.id]?.[a.key] ?? ''" @input="(link.vals[x.r.id] ??= {})[a.key] = $event.target.value" /></td>
+                <td class="muted" style="font-size:11px">{{ x.exists ? 'gibt es schon' : !x.ok ? 'Typ erlaubt das nicht' : '' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="chips" style="padding:8px">
+          <button class="primary" :disabled="!link.target || !linkType || !linkCount" @click="runLink">⇄ {{ linkCount }} verknüpfen</button>
+          <button @click="link = null">Abbrechen</button>
+          <span class="grow" /><span class="muted">ein Stapel · <kbd>Esc</kbd></span>
+        </div>
+      </div>
     </div>
 
     <!-- Anlegen: Dialog mit Pflichtfeldern (Mastersprache); erst vollständig, dann ein Stapel -->
@@ -296,9 +435,9 @@ function onDialogKey(e) {
 
     <div ref="list" class="scroll tree" tabindex="0" @keydown="onListKey">
       <!-- Flag heisst isOpen, nicht open — sonst verdeckt es die Funktion open(r) des Klicks. -->
-      <div v-for="{ r, depth, isOpen } in visible" :key="r.id" class="node" :class="[r.role, { selected: r.id === id, [r.status]: true, drop: dropId === r.id, dragging: dragId === r.id }]"
-        :style="`padding-left:${8 + depth * 16}px`" @click="open(r)" @contextmenu="contextMenu($event, r)" :title="r.id"
-        draggable="true" @dragstart="onDragStart($event, r)" @dragover="onDragOver($event, r)" @dragleave="dropId === r.id && (dropId = null)" @drop.prevent="onDrop(r)" @dragend="dragId = null; dropId = null; hoverStop()">
+      <div v-for="{ r, depth, isOpen } in visible" :key="r.id" class="node" :class="[r.role, { selected: r.id === id, picked: picked.has(r.id), [r.status]: true, drop: dropId === r.id, dragging: dragId === r.id }]"
+        :style="`padding-left:${8 + depth * 16}px`" @click="onRowClick($event, r)" @contextmenu="contextMenu($event, r)" :title="r.id"
+        draggable="true" @dragstart="onDragStart($event, r)" @dragover="onDragOver($event, r)" @dragleave="dropId === r.id && (dropId = null)" @drop.prevent="onDrop($event, r)" @dragend="dragId = null; dropId = null; hoverStop()">
         <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (isOpen ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
         <span class="label" :class="{ pinned: r.name }" :title="r.name ? 'Name angeheftet (kursiv) — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen' : ''">{{ r.label }}</span>
@@ -312,7 +451,7 @@ function onDialogKey(e) {
       <div v-else-if="q && !visible.length" class="empty">Nichts zu „{{ q }}“</div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · Rechtsklick · ziehen = umhängen · <i>kursiv</i> = Name angeheftet
+      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · <kbd>Strg</kbd>+Klick Menge · ziehen = umhängen, mit <kbd>Shift</kbd> = verknüpfen · <i>kursiv</i> = angeheftet
     </div>
   </div>
 
@@ -335,6 +474,13 @@ function onDialogKey(e) {
 .node:hover { background: var(--hover); }
 .node.selected { background: var(--accent-soft); }
 .node.drop { outline: 1px dashed var(--accent); outline-offset: -1px; background: var(--accent-soft); }
+.node.picked { box-shadow: inset 3px 0 0 var(--warn); }
+.node.picked .label::after { content: ' ☑'; color: var(--warn); font-size: 10px; }
+.dirs label { display: block; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
+.dirs label.on { background: var(--accent-soft); }
+.picker { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px; }
+.pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
+.pick:hover { background: var(--hover); }
 .node.dragging { opacity: .5; }
 .twisty { width: 14px; color: var(--muted); font-size: 11px; text-align: center; cursor: pointer; }
 .twisty.leaf { cursor: default; }

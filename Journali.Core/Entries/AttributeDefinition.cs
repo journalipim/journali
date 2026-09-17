@@ -101,7 +101,8 @@ public static class Model
         yield return new(AttributeStream + "quantity", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("quantity", Labels.Of("Menge", "Quantity"), AttributeTypes.Integer, Group: "relation_component")));
         yield return new(RelationStream + "accessory", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("accessory", Labels.Of("Zubehör", "Accessory"), Labels.Of("Zubehör von", "Accessory of"))));
         yield return new(RelationStream + "component", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("component", Labels.Of("Bestandteil", "Component"), Labels.Of("verbaut in", "part of"), Group: "relation_component")));
-        yield return new(RelationStream + "related", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("related", Labels.Of("Verwandt", "Related"), Labels.Of("Verwandt", "Related"))));
+        yield return new(RelationStream + "related", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("related", Labels.Of("Verwandt", "Related"), Labels.Of("Verwandt", "Related"), Symmetric: true)));
+        yield return new(RelationStream + "bom", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("bom", Labels.Of("Stückliste", "Bill of materials"), Labels.Of("Stückliste von", "Part of"), Group: "relation_component")));
 
         // Medien (20): Werte am Medium (Gruppe media), Werte an der Kante Knoten→Medium (Gruppe relation_media), Typen image und document.
         yield return new(GroupStream + "media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("media", Labels.Of("Medium", "Medium"))));

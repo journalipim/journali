@@ -343,9 +343,12 @@ public sealed record MasterLocaleDefined(string Code);
 /// Ein Relationstyp (18): Strom <c>relation:&lt;key&gt;</c>. <paramref name="Reverse"/> ist die Bezeichnung
 /// vom Ziel aus („Zubehör von"); <paramref name="From"/>/<paramref name="To"/> schränken die Rollen ein
 /// (null = alle); <paramref name="Group"/> ist die Attributgruppe, deren Attribute an der Relation
-/// stehen (Menge, Slot …) — ohne Gruppe hat die Relation keine Werte.
+/// stehen (Menge, Slot …) — ohne Gruppe hat die Relation keine Werte. <paramref name="Symmetric"/>
+/// (Taloan, 17.09.2026: „Richtung beidseitig"): die Relation liest sich von beiden Enden gleich
+/// („verwandt"), es gibt sie je Paar nur einmal; sonst einseitig mit Lesart hin (<paramref name="Label"/>,
+/// „hat Zubehör") und zurück (<paramref name="Reverse"/>, „ist Zubehör von").
 /// </summary>
-public sealed record RelationTypeDefinition(string Key, Labels Label, Labels? Reverse = null, string[]? From = null, string[]? To = null, string? Group = null)
+public sealed record RelationTypeDefinition(string Key, Labels Label, Labels? Reverse = null, string[]? From = null, string[]? To = null, string? Group = null, bool Symmetric = false)
 {
     public bool FromAllowed(string role) => From is null || From.Contains(role);
     public bool ToAllowed(string role) => To is null || To.Contains(role);

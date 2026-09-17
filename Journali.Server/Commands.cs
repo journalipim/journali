@@ -320,6 +320,8 @@ public static class Commands
         if (!def.FromAllowed(a.Role)) return Outcome.Bad($"{def.Key} geht nicht von {a.Role} aus (erlaubt: {string.Join(", ", def.From ?? [])}).");
         if (!def.ToAllowed(toRole)) return Outcome.Bad($"{def.Key} geht nicht zu {toRole} (erlaubt: {string.Join(", ", def.To ?? [])}).");
         if (c.Relations.From(a.Id).Any(r => r.Type == def.Key && r.To == toId)) return Outcome.Bad("Diese Relation gibt es schon.");
+        // beidseitig: je Paar nur einmal, egal von welchem Ende aus angelegt
+        if (def.Symmetric && c.Relations.From(toId).Any(r => r.Type == def.Key && r.To == a.Id)) return Outcome.Bad("Diese Relation gibt es schon (vom anderen Ende).");
         return Outcome.Ok(c.Write(Ids.Relation(), Types.RelationCreated, new RelationCreated(def.Key, a.Id, toId)));
     }
 
