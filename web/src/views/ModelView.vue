@@ -437,17 +437,14 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">⚖ Einheit</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
           <tr v-if="curAttr.type === 'enum'"><td class="attr">☰ Werteliste</td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
           <tr v-if="curAttr.type === 'rows'"><td class="attr" title="Spalten, jede ein Attribut, kommagetrennt">≣ Spalten</td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
-          <tr v-if="curAttr.type === 'text'"><td class="attr" title="Muster als regulärer Ausdruck — jeder Wert muss ganz dazu passen. Auswahl rechts, oder eigenes.">⌗ Muster</td><td style="padding:2px 4px">
-            <div class="chips">
-              <Cell :value="curAttr.pattern ?? null" @save="v => attrSet('pattern', v || null)" style="width:300px;display:table-cell" />
-              <select style="width:170px" @change="attrSet('pattern', $event.target.value || null); $event.target.value = ''"><option value="">Vorlage …</option><option v-for="p in PATTERNS" :key="p.key" :value="p.re">{{ p.label }}</option></select>
-            </div>
-            <div class="chips" style="margin-top:4px"><span class="muted" style="font-size:12px">Hinweis für die Meldung:</span><Cell :value="curAttr.patternHint ?? null" @save="v => attrSet('patternHint', v || null)" style="width:300px;display:table-cell" /></div>
-          </td></tr>
-          <tr><td class="attr" title="Wert je Sprache">🗣 je Sprache</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
-          <tr><td class="attr" title="Wert je Kanal">⇶ je Kanal</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
+          <!-- nur, was zum Typ passt (Taloan, 17.09.): Muster bei Text; Einheit bei Zahlen; Werteliste bei enum; Spalten bei rows -->
+          <tr v-if="curAttr.type === 'text'"><td class="attr" title="Muster als regulärer Ausdruck — jeder Wert muss ganz dazu passen">⌗ Muster</td><Cell :value="curAttr.pattern ?? null" @save="v => attrSet('pattern', v || null)" /></tr>
+          <tr v-if="curAttr.type === 'text'"><td class="attr" title="ein übliches Muster einsetzen">⌗ Vorlage</td><SelectCell :value="''" :options="PATTERNS.map(p => p.key)" :label-of="k => PATTERNS.find(p => p.key === k)?.label ?? k" @save="k => { const p = PATTERNS.find(x => x.key === k); if (p) attrSet('pattern', p.re) }" /></tr>
+          <tr v-if="curAttr.type === 'text' && curAttr.pattern"><td class="attr" title="steht in der Fehlermeldung statt des Musters">⌗ Hinweis</td><Cell :value="curAttr.patternHint ?? null" @save="v => attrSet('patternHint', v || null)" /></tr>
+          <tr v-if="curAttr.type !== 'rows'"><td class="attr" title="Wert je Sprache">🗣 je Sprache</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
+          <tr v-if="!['rows', 'formula'].includes(curAttr.type)"><td class="attr" title="Wert je Kanal">⇶ je Kanal</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
           <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
-          <tr><td class="attr" title="mehrere Werte, kommagetrennt">≣ mehrfach</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
+          <tr v-if="!['rows', 'formula', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" title="mehrere Werte, kommagetrennt">≣ mehrfach</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
           <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für Kanal ${c.key}: Sprachen kommagetrennt oder * für alle; leer = keine Pflicht`">● Pflicht {{ c.key }}</td><Cell :value="(curAttr.required?.[c.key] ?? []).join(',') || null" @save="v => attrSet('req_' + c.key, v)" /></tr>
           <tr v-for="r in roles" :key="r"><td class="attr" :title="`Ausnahme: an ${roleLabel[r]} setzbar (sonst gilt die Regel der Gruppe)`">{{ roleLabel[r] }}</td><ToggleCell :value="b(!curAttr.levels || curAttr.levels.includes(r))" @save="v => attrSet('lv_' + r, v === 'true')" /></tr>
         </tbody></table>
