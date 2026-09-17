@@ -119,28 +119,28 @@ function fallback(m, a, col) {
 }
 const ancestorMaps = computed(() => (node.value?.ancestors ?? []).map(an => ({ an, m: valueMap(an.values) })))
 // Wie Tree.Resolve: hier (genaue Achse, ohne Kanal, ohne Sprache), dann den Pfad hinauf — nur wenn das Attribut vererbbar ist.
-// Sprachabhängig: * ist die Mastersprache (Taloan) — eine leere Sprache zeigt den Master-Wert (◌), nicht *.
-function masterCol(col) { return { locale: master.value, channel: col.channel } }
+// Sprachabhängig (Taloan, 17.09.): * ist der sprachneutrale Grundtext (SAP-Kurzbezeichnung) und änderbar;
+// leer zeigt * den Master (◌). Kette je Sprache: eigen → Master → * → dasselbe bei den Vorfahren (wenn vererbbar).
+// Rückgabe: { value, from (Vorfahr oder null), master (true = kommt aus der Mastersprache) }
+function resolveIn(m, def, col) {
+  const at = (l, c) => m.get(key(def.key, l, c)) ?? (c ? m.get(key(def.key, l, null)) : undefined)
+  if (!def.perLocale) { const v = fallback(m, def.key, col); return v != null ? { value: v } : null }
+  const own = at(col.locale, col.channel); if (own != null) return { value: own }
+  if (col.locale !== master.value) { const mv = at(master.value, col.channel); if (mv != null) return { value: mv, master: true } }
+  if (col.locale) { const sv = at(null, col.channel); if (sv != null) return { value: sv } }
+  return null
+}
 function inherited(def, col) {
-  const here = fallback(own.value, def.key, col)
-  if (here != null) return { value: here, from: null }
-  if (def.perLocale && col.locale && col.locale !== master.value) {
-    const m = own.value.get(key(def.key, master.value, col.channel)) ?? fallback(own.value, def.key, masterCol(col))
-    if (m != null) return { value: m, from: null, master: true }
-  }
+  const here = resolveIn(own.value, def, col)
+  if (here) return { ...here, from: null }
   if (!def.inheritable) return { value: null, from: null }
   for (const { an, m } of ancestorMaps.value) {
-    const v = m.get(key(def.key, col.locale, col.channel)) ?? fallback(m, def.key, col)
-    if (v != null) return { value: v, from: an }
-    if (def.perLocale && col.locale && col.locale !== master.value) {
-      const mv = m.get(key(def.key, master.value, col.channel)) ?? fallback(m, def.key, masterCol(col))
-      if (mv != null) return { value: mv, from: an, master: true }
-    }
+    const v = resolveIn(m, def, col)
+    if (v) return { ...v, from: an }
   }
   return { value: null, from: null }
 }
 function enabled(def, col, block) {
-  if (def.perLocale && !col.locale) return false   // * gibt es bei Sprachachse nicht — die Mastersprache ist die Basis
   return block.active && (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
     && (!col.channel || !def.channels || def.channels.includes(col.channel))
 }
@@ -427,7 +427,7 @@ function cellMenu(e, def, col, block) {
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <td v-else-if="axisValue(def.key, c) != null" class="cell"><div class="cell-box locked" title="Variantenachse — festgelegt beim Anlegen">{{ axisValue(def.key, c) }} 🔒</div></td>
               <Cell v-else :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)"
-                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten — ${master} wurde später geändert` : `nicht übersetzt — zeigt ${master}; Enter überschreibt`"
+                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten — ${master} wurde später geändert` : (c.locale ? `nicht übersetzt — zeigt ${master}; Enter überschreibt` : `kein Grundtext — zeigt ${master}; Enter setzt den sprachneutralen Text (z. B. Kurzbezeichnung)`)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
           </tr>

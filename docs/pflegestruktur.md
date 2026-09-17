@@ -61,12 +61,16 @@ bullet_points = `text` mehrfach mit Achsen locale+channel).
 
 **Sprachabhängig** ist kein Typ, sondern die Achse `locale` in `axes`:
 `title` hat sie (ein Wert je Sprache), `weight` nicht (ein Wert für alle).
-**`*` ist bei Sprachachse die Mastersprache** (Taloan, 17.09.2026): eine
-`*`-Zelle gibt es dort nicht, ein sprachabhängiges Feld ohne Wert in `en`
-zeigt den Master-Wert gedämpft mit „◌ de" (nicht übersetzt; ⟳ heisst:
-übersetzt, aber der Master ist neuer). Die Vollständigkeit für `en` zählt
-es weiter als fehlend. `*` bleibt für Attribute ohne Sprachachse und als
-Kanal-Rückfall (`de` = alle Kanäle, `de/print` überschreibt).
+**`*` bei Sprachachse** (Taloan, 17.09.2026) ist der **sprachneutrale
+Grundtext** — wie die 35-Zeichen-Kurzbezeichnung aus SAP, während `de` der
+ausgeschriebene Titel ist. Die Zelle ist änderbar; solange sie leer ist,
+zeigt sie gedämpft den Master mit „◌ de". Kette je Sprache: eigener Wert →
+Master → `*` → dasselbe bei den Vorfahren (wenn vererbbar). Drei Zustände
+sichtbar: eigener Wert · ◌ aus dem Master (nicht übersetzt) · ⟳ zu
+überarbeiten (übersetzt, aber der Master ist neuer). Leer ist eine Zelle
+nur, wenn auch Master und `*` leer sind. Die Vollständigkeit für `en` zählt
+weiter je Sprache. Ohne Sprachachse ist `*` die eine Zelle; der Kanal
+fällt zurück (`de` = alle Kanäle, `de/print` überschreibt).
 
 ### 2. Werteliste (`list:<key>`) — Einträge mit eigenen Spalten
 
