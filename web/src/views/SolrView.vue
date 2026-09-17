@@ -266,14 +266,14 @@ async function run() {
       </div>
       <div v-if="!connected" class="empty">Verbinden — Solr liest sich ohne Anmeldung.</div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> · <kbd>Leer</kbd> Haken · {{ checked.size }} gewählt</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> · <kbd>Leer</kbd> Haken · Klick zeigt den Knoten · {{ checked.size }} gewählt</div>
   </div>
 
-  <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>{{ current ? icon(roleOf(current)) + ' ' + (current.name || current.master_id) : 'Knoten' }}</h1><span class="grow" /><span v-if="current" class="mono muted">{{ current.master_id }}</span></div>
+  <!-- Der angeklickte Knoten: nur dann, sonst gehört der Platz dem Plan (Taloan, 17.09.) -->
+  <div class="pane" style="flex:1" v-if="current">
+    <div class="toolbar"><h1>{{ icon(roleOf(current)) + ' ' + (current.name || current.master_id) }}</h1><span class="mono muted">{{ current.master_id }}</span><span class="grow" /><button class="x" @click="current = null" title="zuklappen">×</button></div>
     <div class="scroll">
-      <div v-if="!current" class="empty">Knoten links anklicken — hier steht, was er hat und was davon nach journali geht.</div>
-      <template v-else>
+      <template>
         <div class="toolbar meta muted">
           <span v-if="current.product_number">SKU {{ current.product_number }}</span>
           <span v-if="current.main_level != null">· Ebene {{ current.main_level }}</span>
@@ -359,6 +359,8 @@ async function run() {
 </template>
 
 <style scoped>
+.x { border: 0; background: none; color: var(--muted); padding: 0 4px; }
+.x:hover { color: var(--neg); }
 .sources { gap: 4px; }
 .form { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
 .row { display: flex; gap: 4px; }
