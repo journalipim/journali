@@ -46,7 +46,29 @@ watch(locale, load)
 onMounted(async () => { if (!tree.loaded) await tree.load(); load() })
 
 // Spalten: nach Sicht geordnet (und beschränkt), sonst alle in Gruppenreihenfolge des Modells; Achsen der Variante sind fest
-const columns = computed(() => {
+// Feste Spalten sind virtuelle Spalten in derselben Liste (Taloan: ★-Spalte links fest, je Zeile ihr eigenes Attribut):
+// #label = die Zelle des ★-Attributs der Zeile (bearbeitbar), #sku und #axes nur lesend. Ein Attribut, das ALLE Zeilen
+// benennt, steht rechts nicht noch einmal.
+const VIRTUAL = [
+  { key: '#label', virtual: 'label', type: 'text', label: { de: '★' } },
+  { key: '#sku', virtual: 'sku', type: 'text', label: { de: 'SKU' } },
+  { key: '#axes', virtual: 'axes', type: 'text', label: { de: 'Achsen' } },
+]
+// Kein ★ (auch kein geerbtes) und kein fixierter Name: die erste Spalte (Taloan)
+const labelKeyOf = r => r.row.labelAttribute ?? (r.row.name ? null : baseColumns.value[0]?.key ?? null)
+const labelCol = r => { const k = labelKeyOf(r); return k ? data.value?.columns.find(c => c.key === k) ?? null : null }
+const commonDef = computed(() => commonLabel.value ? data.value?.columns.find(x => x.key === commonLabel.value) : null)
+const headText = c => c.virtual === 'label' ? '★ ' + (commonDef.value ? (commonDef.value.label?.de || commonDef.value.key) : roleLabel[childRole.value]) : (c.label?.de || c.key)
+const headLocale = c => c.perLocale || (c.virtual === 'label' && commonDef.value?.perLocale)
+const headTitle = c => c.virtual === 'label'
+  ? (commonDef.value ? `★ ${commonDef.value.label?.de || commonDef.value.key} benennt alle Zeilen — hier bearbeiten` : 'je Zeile ihr ★-Attribut (Tooltip an der Zelle); fixierte Namen sind fest')
+  : c.virtual ? 'fest' : `${c.key} · ${c.type}${c.perLocale ? ' · je Sprache' : ''}${c.unit ? ' · ' + c.unit : ''}`
+// Die wirkliche Spalte hinter einer Zelle: bei #label das ★-Attribut der Zeile
+const eff = (r, c) => c.virtual === 'label' ? labelCol(r) : c
+const commonLabel = computed(() => { const keys = new Set((data.value?.rows ?? []).map(labelKeyOf)); return keys.size === 1 && !keys.has(null) ? [...keys][0] : null })
+const columns = computed(() => [...VIRTUAL, ...attrColumns.value])
+const attrColumns = computed(() => baseColumns.value.filter(c => c.key !== commonLabel.value))
+const baseColumns = computed(() => {
   if (!data.value) return []
   const all = data.value.columns
   const v = views.value.find(x => x.key === viewKey.value)
@@ -56,18 +78,19 @@ const columns = computed(() => {
   const wanted = new Set([...order, ...v.items.flatMap(it => it.group ? groupsOf.get(it.group) ?? [] : [])])
   return all.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999))
 })
-const editable = c => !['rows', 'formula'].includes(c.type)   // html: eigener Editor (HtmlCell)
+const editable = c => !c.virtual && !['rows', 'formula'].includes(c.type)   // html: eigener Editor (HtmlCell); virtuelle: siehe canWrite
 const rows = computed(() => {
   if (!data.value) return []
   const q = filter.value.trim().toLowerCase()
   if (!q) return data.value.rows
   return data.value.rows.filter(r => r.row.label.toLowerCase().includes(q) || (r.row.sku ?? '').toLowerCase().includes(q) || Object.values(r.values).some(v => String(v.value ?? '').toLowerCase().includes(q)))
 })
-const key = (r, c) => `${r.row.id}|${c.key}`
-const shown = (r, c) => dirty.value.has(key(r, c)) ? (dirty.value.get(key(r, c)) || null) : (r.values[c.key]?.own ? r.values[c.key].value : null)
-const inherited = (r, c) => r.values[c.key]?.own ? null : r.values[c.key]?.value ?? null
+const key = (r, c) => `${r.row.id}|${eff(r, c)?.key ?? c.key}`
+const shown = (r, c0) => { const c = eff(r, c0); if (!c) return null; return dirty.value.has(key(r, c)) ? (dirty.value.get(key(r, c)) || null) : (r.values[c.key]?.own ? r.values[c.key].value : null) }
+const inherited = (r, c0) => { const c = eff(r, c0); if (!c) return c0.virtual === 'label' ? r.row.label : null; if (c.virtual === 'sku') return r.row.sku ?? null; if (c.virtual === 'axes') return Object.values(r.row.axisValues ?? {}).join(' · ') || null; return r.values[c.key]?.own ? null : r.values[c.key]?.value ?? null }
 const isAxis = (r, c) => r.row.role === 'variant' && (tree.byId.get(r.row.parent)?.axes ?? []).includes(c.key)
-function set(r, c, v) {
+function set(r, c0, v) {
+  const c = eff(r, c0); if (!c || c.virtual) return
   const k = key(r, c); const cur = r.values[c.key]?.own ? r.values[c.key].value : null
   const val = v == null ? '' : String(v)
   const m = new Map(dirty.value)
@@ -116,7 +139,7 @@ function onPaste(e) {
   })
   store.toast(`${n} Zellen eingefügt${locked ? `, ${locked} gesperrt` : ''}${bad ? `, ${bad} nicht in der Liste` : ''} — noch nicht gespeichert`)
 }
-const FIXED = 3   // feste Spalten vor den Attributen: Name, SKU, Achsen
+const FIXED = 0   // alle Spalten in einer Liste (virtuelle voran), td-Index = Spaltenindex
 // Spaltenbreite wie Excel-Autofit (Taloan: „viel zu breit“): längster sichtbarer Wert oder Kopf, 70–260 px; am Kopfrand ziehbar
 const widths = ref({})   // key → px (von Hand gezogen)
 // gemessen, nicht geschätzt (Taloan: „0537…“ bei sechs Zeichen): Textbreite im Zellfont + Innenabstand der Box
@@ -128,12 +151,12 @@ const autoWidth = computed(() => {
   for (const c of columns.value) {
     let w = measure((c.label?.de || c.key) + (c.perLocale ? ' ' + locale.value : '') + (c.unit ? ' ' + c.unit : ''), 'bold ' + font)
     for (const r of rows.value.slice(0, 300)) { const v = c.type === 'enum' && !c.multiple ? labelOf(c)(textOf(r, c)) : textOf(r, c); if (v) w = Math.max(w, measure(String(v).replace(/<[^>]+>/g, '').slice(0, 60), font)) }
-    out[c.key] = Math.ceil(Math.max(60, Math.min(320, w + pad)))
+    out[c.key] = Math.ceil(Math.max(c.virtual === 'label' ? 140 : 60, Math.min(320, w + pad + (c.virtual === 'label' ? 20 : 0))))
   }
   return out
 })
 const colWidth = c => widths.value[c.key] ?? autoWidth.value[c.key] ?? 120
-const tableWidth = computed(() => 420 + columns.value.reduce((s, c) => s + colWidth(c), 0))
+const tableWidth = computed(() => columns.value.reduce((s, c) => s + colWidth(c), 0))
 function startResize(e, c) { e.preventDefault(); e.stopPropagation(); drag = { kind: 'resize', key: c.key, x: e.clientX, w: colWidth(c) } }
 
 // ---- Bereich wie in Excel (Taloan): Klick = Anker, Shift+Klick = Rechteck, Strg+A = alles; Zeilen/Spalten als Indizes
@@ -204,11 +227,12 @@ watch(sel, async () => {
 const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
 const inSel = (ri, ci) => !!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1
 const selCells = () => { const s = sel.value; if (!s) return []; const out = []; for (let ri = s.r0; ri <= s.r1; ri++) for (let ci = s.c0; ci <= s.c1; ci++) { const r = rows.value[ri], c = columns.value[ci]; if (r && c) out.push({ r, c, ri, ci }) } return out }
-const canWrite = (r, c) => editable(c) && !isAxis(r, c)
+const canWrite = (r, c) => c.virtual === 'label' ? !!labelCol(r) && editable(labelCol(r)) : editable(c) && !isAxis(r, c)
 // Text in eine Zelle schreiben, je Typ aufgelöst: Auswahl über Wert oder Label (Gross/Klein egal), Ja/Nein über
 // ja/nein/true/false/1/0; leer löscht den eigenen Wert. Gibt 'ok' | 'locked' | 'bad' zurück.
-function write(r, c, text) {
-  if (!canWrite(r, c)) return 'locked'
+function write(r, c0, text) {
+  if (!canWrite(r, c0)) return 'locked'
+  const c = eff(r, c0)
   const t = String(text ?? '').trim()
   if (c.type === 'enum' && !c.multiple) {
     if (!t) { set(r, c, ''); return 'ok' }
@@ -350,8 +374,8 @@ onUnmounted(() => { document.removeEventListener('paste', onPaste); document.rem
 // Export der Tabelle, wie sie dasteht (CSV, Semikolon, UTF-8 mit BOM — Excel öffnet das direkt)
 function exportCsv() {
   const esc = v => { const s = v == null ? '' : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s }
-  const head = ['id', 'name', 'sku', ...columns.value.map(c => c.perLocale ? `${c.key}_${locale.value}` : c.key)]
-  const lines = [head.join(';'), ...rows.value.map(r => [r.row.id, r.row.label, r.row.sku ?? '', ...columns.value.map(c => shown(r, c) ?? inherited(r, c) ?? '')].map(esc).join(';'))]
+  const head = ['id', 'name', 'sku', ...attrColumns.value.map(c => c.perLocale ? `${c.key}_${locale.value}` : c.key)]
+  const lines = [head.join(';'), ...rows.value.map(r => [r.row.id, r.row.label, r.row.sku ?? '', ...attrColumns.value.map(c => shown(r, c) ?? inherited(r, c) ?? '')].map(esc).join(';'))]
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${data.value.node.label}-${childRole.value}-${locale.value}.csv`; a.click(); URL.revokeObjectURL(a.href)
 }
@@ -404,18 +428,19 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
     <div class="scroll" ref="scrollBox" style="position:relative">
       <div v-if="handle" class="fill-handle" :style="`top:${handle.top}px;left:${handle.left}px`" title="Ausfüllkästchen: nach unten ziehen füllt — ein Wert wiederholt sich, zwei Zahlen setzen die Reihe fort" />
       <table class="grid values tab" :style="`width:${tableWidth}px`">
-        <colgroup><col style="width:220px" /><col style="width:110px" /><col style="width:90px" /><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
+        <colgroup><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
         <thead><tr>
-          <th>{{ roleLabel[childRole] }}</th><th>SKU</th><th>Achsen</th>
-          <th v-for="c in columns" :key="c.key" :title="`${c.key} · ${c.type}${c.perLocale ? ' · je Sprache' : ''}${c.unit ? ' · ' + c.unit : ''}`" :class="{ ro: !editable(c) }" style="position:sticky">{{ c.label?.de || c.key }}<span v-if="c.perLocale" class="muted"> {{ locale }}</span><span v-if="c.unit" class="muted"> {{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
+          <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="{ ro: !editable(c) && c.virtual !== 'label' }" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="muted"> {{ locale }}</span><span v-if="c.unit" class="muted"> {{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
         </tr></thead>
         <tbody>
           <tr v-for="(r, ri) in rows" :key="r.row.id" :data-id="r.row.id">
-            <td class="attr"><router-link :to="`/tree/${r.row.id}`" :title="r.row.id">{{ icon(r.row.role) }} {{ r.row.label }}</router-link></td>
-            <td class="mono muted">{{ r.row.sku ?? '' }}</td>
-            <td class="muted" style="font-size:11px">{{ Object.values(r.row.axisValues ?? {}).join(' · ') }}</td>
             <template v-for="(c, ci) in columns" :key="c.key">
-              <td v-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
+              <!-- ★-Spalte: die Zelle des Attributs, das diese Zeile benennt; ohne ★ (fixierter Name, SKU/Id) nur lesend -->
+              <td v-if="c.virtual === 'label' && !labelCol(r)" class="cell label" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="r.row.name ? 'fixierter Name (Rechtsklick im Baum → Benennung lösen)' : 'kein ★-Attribut gilt hier — Name aus SKU/Achsen/Id'">{{ icon(r.row.role) }} {{ r.row.label }}</div></td>
+              <SelectCell v-else-if="c.virtual === 'label' && labelCol(r).type === 'enum' && !labelCol(r).multiple" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(labelCol(r))?.values.map(v => v.value) ?? []" :label-of="labelOf(labelCol(r))" :required="!!labelCol(r).required" @save="v => set(r, c, v)" />
+              <Cell v-else-if="c.virtual === 'label'" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :origin="`★ ${labelCol(r).label?.de || labelCol(r).key}`" @save="v => set(r, c, v)" />
+              <td v-else-if="c.virtual" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked mono" tabindex="0" :title="c.virtual === 'sku' ? 'SKU — fest' : 'Variantenachsen — fest'">{{ inherited(r, c) ?? '' }}</div></td>
+              <td v-else-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
               <HtmlCell v-else-if="c.type === 'html'" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :title="`${c.label?.de || c.key} · ${r.row.label}`" @save="v => set(r, c, v)" />
@@ -445,7 +470,8 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
 .tab :deep(.cell-box:focus) { border-color: var(--accent); background: transparent; }
 .tab :deep(.cell-input) { border-color: var(--accent); background: var(--pane); }
 /* Erste Spalte (Name) bleibt beim Rollen nach rechts stehen — man muss wissen, was man bearbeitet (Taloan) */
-.tab th:first-child, .tab td.attr { position: sticky; left: 0; z-index: 2; background: var(--bg); box-shadow: 1px 0 0 var(--line); }
+.tab th:first-child, .tab :deep(td:first-child) { position: sticky; left: 0; z-index: 2; background: var(--bg); box-shadow: 1px 0 0 var(--line); }
+.tab :deep(td.label .cell-box:not(.locked)) { font-weight: 600; }
 .tab th:first-child { z-index: 3; }
 .tab :deep(td.cell.dirty .cell-box), .tab :deep(td.dirty .cell-box) { background: var(--dirty); color: var(--dirty-text); font-style: normal; }
 .cell-box.locked { color: var(--muted); font-style: italic; cursor: default; }

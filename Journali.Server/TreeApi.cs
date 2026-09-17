@@ -126,11 +126,26 @@ public static class TreeApi
 /// <summary>Eine Zeile im Baum: genug für die Anzeige, ohne Werte.</summary>
 public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Name, string? Groups, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, string? Sku, Dictionary<string, string> External,
-    int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
+    int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
-        n.Own(Model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor);
+        n.Own(Model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n));
+
+    /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle, Taloan): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
+    /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>
+    public static string? LabelAttributeOf(Tree tree, ModelCatalog model, Node n)
+    {
+        if (!string.IsNullOrWhiteSpace(n.Name)) return null;
+        string? first = null;
+        foreach (var (attr, _) in tree.LabelAttributesOf(n))
+        {
+            if (!AppliesAt(model, attr, n.Role)) continue;
+            if (ByAttribute(tree, model, n, attr) is not null) return attr;
+            first ??= attr;
+        }
+        return first;
+    }
 
     /// <summary>
     /// Name im Baum (docs/pflegestruktur.md, 17), in dieser Reihenfolge:
