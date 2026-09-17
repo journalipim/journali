@@ -436,6 +436,17 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
 .crumb { color: var(--muted); text-decoration: none; }
 .crumb:hover { color: var(--text); }
 .tab th.ro { color: var(--muted); font-style: italic; }
+/* Tabellengefühl (Taloan): Zellen dicht an dicht mit Gitterlinien statt Kästchen mit Luft; Zeilen flacher */
+.tab th, .tab td { padding: 0; border-right: 1px solid var(--line); height: 24px; }
+.tab th { padding: 0 6px; }
+.tab td.attr, .tab td.mono { padding: 0 6px; }
+.tab :deep(td.cell) { padding: 0; }
+.tab :deep(.cell-box), .tab :deep(.cell-input), .tab :deep(.cell-select), .tab :deep(.cell-date) { height: 24px; border-radius: 0; border-color: transparent; background: transparent; }
+.tab :deep(.cell-box:focus) { border-color: var(--accent); background: transparent; }
+.tab :deep(.cell-input) { border-color: var(--accent); background: var(--pane); }
+/* Erste Spalte (Name) bleibt beim Rollen nach rechts stehen — man muss wissen, was man bearbeitet (Taloan) */
+.tab th:first-child, .tab td.attr { position: sticky; left: 0; z-index: 2; background: var(--bg); box-shadow: 1px 0 0 var(--line); }
+.tab th:first-child { z-index: 3; }
 .tab :deep(td.cell.dirty .cell-box), .tab :deep(td.dirty .cell-box) { background: var(--dirty); color: var(--dirty-text); font-style: normal; }
 .cell-box.locked { color: var(--muted); font-style: italic; cursor: default; }
 .chip.dirty { background: var(--dirty); color: var(--dirty-text); }
