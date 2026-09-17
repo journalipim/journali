@@ -48,22 +48,54 @@ function insert(s) {
 // ---- Vorschläge (Taloan, 17.09.): $ oder @ tippen zeigt die Attribute, Buchstaben filtern, ↑↓ wählen,
 // Enter/Tab fügt $schlüssel ein (ein getipptes @ wird dabei zu $ — @ ist keine Syntax, nur der Griff).
 const ac = ref({ open: false, items: [], i: 0, start: 0, top: 0, left: 0 })
+// Funktionen mit Signatur — dieselbe Liste wie Formula.cs; ab zwei getippten Buchstaben vorgeschlagen
+const SIGS = { round: 'round(x, n)', trunc: 'trunc(x)', floor: 'floor(x)', ceil: 'ceil(x)', abs: 'abs(x)', min: 'min(a, b)', max: 'max(a, b)', sqrt: 'sqrt(x)',
+  len: 'len(s)', upper: 'upper(s)', lower: 'lower(s)', trim: 'trim(s)', left: 'left(s, n)', right: 'right(s, n)', contains: 'contains(s, t)', replace: 'replace(s, a, b)',
+  split: 'split(s, sep, i)', pad: 'pad(s, n, "0")', number: 'number(x)', str: 'str(x)', format: 'format(x, n)', isblank: 'isblank(x)', coalesce: 'coalesce(a, b)' }
 function acUpdate() {
   const el = ta.value; if (!el) { ac.value.open = false; return }
   const before = text.value.slice(0, el.selectionStart)
+  let items = [], start
   const m = /[$@]([A-Za-z0-9_]*)$/.exec(before)
-  if (!m || !props.attributes?.length) { ac.value.open = false; return }
-  const q = m[1].toLowerCase()
-  const items = props.attributes.filter(a => a.key.includes(q) || (a.label?.de ?? '').toLowerCase().includes(q)).slice(0, 12)
+  if (m && props.attributes?.length) {
+    const q = m[1].toLowerCase()
+    items = props.attributes.filter(a => a.key.includes(q) || (a.label?.de ?? '').toLowerCase().includes(q)).slice(0, 12).map(a => ({ kind: 'attr', insert: '$' + a.key, show: '$' + a.key, note: `${a.label?.de || ''} · ${a.type}${a.perLocale ? ' 🗣' : ''}` }))
+    start = el.selectionStart - m[0].length
+  } else {
+    const f = /(?:^|[^A-Za-z0-9_$.])([a-z][a-z0-9_]*)$/.exec(before)
+    if (f && f[1].length >= 2) {
+      items = Object.keys(SIGS).filter(k => k.startsWith(f[1])).map(k => ({ kind: 'fn', insert: k + '(', show: SIGS[k], note: '' }))
+      for (const k of ['if', 'else', 'return', 'true', 'false', 'null']) if (k.startsWith(f[1]) && k !== f[1]) items.push({ kind: 'kw', insert: k + (k === 'if' ? ' (' : ' '), show: k, note: '' })
+      start = el.selectionStart - f[1].length
+    }
+  }
   if (!items.length) { ac.value.open = false; return }
   const line = before.split('\n').length
-  ac.value = { open: true, items, i: 0, start: el.selectionStart - m[0].length, top: 10 + line * 19.5 - el.scrollTop, left: 12 + Math.min(40, (before.length - before.lastIndexOf('\n') - 1)) * 7.8 - el.scrollLeft }
+  ac.value = { open: true, items, i: 0, start, top: 10 + line * 19.5 - el.scrollTop, left: 12 + Math.min(40, (before.length - before.lastIndexOf('\n') - 1)) * 7.8 - el.scrollLeft }
 }
 function acPick(a) {
-  const el = ta.value; const s = '$' + a.key
-  text.value = text.value.slice(0, ac.value.start) + s + text.value.slice(el.selectionStart)
+  const el = ta.value; const s = a.insert
+  const after = text.value.slice(el.selectionStart)
+  // Funktion: Klammer gleich schliessen, Cursor hinein — ausser die Klammer ist schon da
+  const close = a.kind === 'fn' && !after.startsWith('(') && !after.startsWith(')') ? ')' : ''
+  text.value = text.value.slice(0, ac.value.start) + s + close + after
   ac.value.open = false
   nextTick(() => { el.focus(); el.selectionStart = el.selectionEnd = ac.value.start + s.length })
+}
+// Klammern und Anführungszeichen schliessen sich von selbst; das schliessende Zeichen tippen springt darüber
+const PAIRS = { '(': ')', '{': '}', '[': ']', '"': '"', "'": "'", '`': '`' }
+function autoPair(e) {
+  const el = ta.value; if (!el || e.ctrlKey || e.altKey || e.metaKey) return false
+  const a = el.selectionStart, b = el.selectionEnd, next = text.value[a] ?? ''
+  if (a === b && [')', '}', ']', '"', "'", '`'].includes(e.key) && next === e.key) { e.preventDefault(); el.selectionStart = el.selectionEnd = a + 1; return true }
+  if (!(e.key in PAIRS)) return false
+  const closeCh = PAIRS[e.key]
+  const selected = text.value.slice(a, b)
+  if (a === b && /[A-Za-z0-9_$]/.test(next)) return false   // vor einem Wort keine Klammer aufdrängen
+  e.preventDefault()
+  text.value = text.value.slice(0, a) + e.key + selected + closeCh + text.value.slice(b)
+  nextTick(() => { el.selectionStart = a + 1; el.selectionEnd = a + 1 + selected.length })
+  return true
 }
 function onKey(e) {
   if (ac.value.open && e.target === ta.value) {
@@ -75,6 +107,18 @@ function onKey(e) {
   if (e.key === 'Escape') { e.preventDefault(); emit('close') }
   else if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); save() }
   else if (e.key === 'Tab' && e.target === ta.value) { e.preventDefault(); insert('  ') }
+  else if (e.target === ta.value && autoPair(e)) return
+  else if (e.key === 'Enter' && e.target === ta.value) {
+    // Zeilenumbruch übernimmt die Einrückung; zwischen { und } eine Stufe tiefer
+    const el = ta.value, a = el.selectionStart
+    const lineStart = text.value.lastIndexOf('\n', a - 1) + 1
+    const indent = /^[ \t]*/.exec(text.value.slice(lineStart, a))[0]
+    const between = text.value[a - 1] === '{' && text.value[a] === '}'
+    e.preventDefault()
+    const ins = '\n' + indent + (between ? '  \n' + indent : '')
+    text.value = text.value.slice(0, a) + ins + text.value.slice(el.selectionEnd)
+    nextTick(() => { el.selectionStart = el.selectionEnd = a + 1 + indent.length + (between ? 2 : 0) })
+  }
 }
 function syncScroll() { if (pre.value && ta.value) { pre.value.scrollTop = ta.value.scrollTop; pre.value.scrollLeft = ta.value.scrollLeft } }
 
@@ -82,11 +126,11 @@ function syncScroll() { if (pre.value && ta.value) { pre.value.scrollTop = ta.va
 const FUNCS = ['round', 'trunc', 'floor', 'ceil', 'abs', 'min', 'max', 'sqrt', 'len', 'upper', 'lower', 'trim', 'left', 'right', 'contains', 'replace', 'split', 'pad', 'number', 'str', 'format', 'isblank', 'coalesce']
 const KEYWORDS = ['if', 'else', 'return', 'true', 'false', 'null']
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-const highlighted = computed(() => {
+function highlight(src) {
   const re = /(\/\/[^\n]*)|(`(?:\\.|[^`])*`|"(?:\\.|[^"\n])*"|'(?:\\.|[^'\n])*')|(\$[A-Za-z_][A-Za-z0-9_]*)|(\b\d+(?:\.\d+)?\b)|(\b[A-Za-z_][A-Za-z0-9_]*\b)/g
   let out = '', last = 0
-  for (const m of text.value.matchAll(re)) {
-    out += esc(text.value.slice(last, m.index))
+  for (const m of src.matchAll(re)) {
+    out += esc(src.slice(last, m.index))
     const [s, c, str, attr, num, word] = m
     if (c) out += `<span class="c">${esc(s)}</span>`
     else if (str) out += `<span class="s">${esc(s).replace(/\$\{[^}]*\}/g, x => `<span class="t">${x}</span>`)}</span>`
@@ -95,18 +139,20 @@ const highlighted = computed(() => {
     else if (word) out += KEYWORDS.includes(s) ? `<span class="k">${s}</span>` : FUNCS.includes(s) ? `<span class="f">${s}</span>` : s
     last = m.index + s.length
   }
-  return out + esc(text.value.slice(last)) + '\n'
-})
+  return out + esc(src.slice(last))
+}
+const highlighted = computed(() => highlight(text.value) + '\n')
+// Hilfe (Taloan, 17.09.): je Zeile ein Baustein mit Syntaxfarben, Klick fügt ihn ein; kein „·“ mehr
 const HELP = [
-  ['Attribut lesen', '$schlüssel — der Wert am Knoten, geerbt zählt; Text in der Sprache der Spalte. $ oder @ tippen zeigt die Liste, ↑↓ Enter fügt ein'],
-  ['Werte', 'Zahl · "Text" · `Vorlage ${ausdruck}` · true false null'],
-  ['Rechnen', '+ - * / % **   (+ verkettet, wenn Text dabei ist)'],
-  ['Vergleichen', '== != < <= > >=   · mit null immer false'],
-  ['Logik', '&& || !   ·   bedingung ? a : b   ·   a ?? b (Ersatz, wenn a leer)'],
-  ['Anweisungen', 'x = …  ·  if (…) { … } else { … }  ·  return …  ·  // Kommentar\nZeilenende oder ; trennt; die letzte Anweisung ist das Ergebnis'],
-  ['Zahlen', 'round(x, n) trunc floor ceil abs min max sqrt · format(x, n) — in der Sprache der Spalte (de 1,39)'],
-  ['Text', 'len upper lower trim left(s, n) right(s, n) contains(s, t) replace(s, a, b) split(s, sep, i) pad(s, n, "0") str(x) number(x)'],
-  ['Leer', 'isblank(x) · coalesce(a, b, …) · fehlt ein Wert, ist das Ergebnis leer (—)'],
+  ['Attribut lesen', [['$key', 'Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte. $ tippen zeigt die Liste']]],
+  ['Werte', [['42', 'Zahl'], ['"Text"', 'Text'], ['`Vorlage ${$key}`', 'Vorlage mit Ausdrücken'], ['true', ''], ['false', ''], ['null', 'kein Wert']]],
+  ['Rechnen', [['a + b', 'auch Text anhängen'], ['a - b', ''], ['a * b', ''], ['a / b', ''], ['a % b', 'Rest'], ['a ** b', 'Potenz']]],
+  ['Vergleichen', [['a == b', ''], ['a != b', ''], ['a < b', 'auch <= > >= — mit null immer false']]],
+  ['Logik', [['a && b', 'und'], ['a || b', 'oder'], ['!a', 'nicht'], ['c ? a : b', 'wenn c, dann a, sonst b'], ['a ?? b', 'b, wenn a leer ist']]],
+  ['Anweisungen', [['x = $key', 'Variable'], ['if (c) {\n  \n} else {\n  \n}', 'Verzweigung'], ['return x', 'Ergebnis — sonst zählt die letzte Anweisung'], ['// Kommentar', '']]],
+  ['Zahlen', [['round(x, 2)', 'runden'], ['trunc(x)', 'abschneiden'], ['floor(x)', ''], ['ceil(x)', ''], ['abs(x)', ''], ['min(a, b)', ''], ['max(a, b)', ''], ['sqrt(x)', ''], ['format(x, 2)', 'Zahl als Text in der Sprache der Spalte (de 1,39)']]],
+  ['Text', [['len(s)', 'Länge'], ['upper(s)', ''], ['lower(s)', ''], ['trim(s)', ''], ['left(s, 3)', ''], ['right(s, 3)', ''], ['contains(s, "x")', ''], ['replace(s, "a", "b")', ''], ['split(s, "-", 1)', 'Teil i'], ['pad(s, 5, "0")', 'links auffüllen'], ['str(x)', 'als Text'], ['number(x)', 'als Zahl']]],
+  ['Leer', [['isblank(x)', 'fehlt oder leer'], ['coalesce(a, b)', 'das erste, das nicht leer ist']]],
 ]
 const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m`\n}\nreturn `${h} cm`'
 </script>
@@ -128,14 +174,16 @@ const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m
             <pre ref="pre" class="hl" aria-hidden="true" v-html="highlighted"></pre>
             <textarea ref="ta" v-model="text" spellcheck="false" wrap="off" @scroll="syncScroll(); acUpdate()" @input="acUpdate" @click="acUpdate" @keyup.left="acUpdate" @keyup.right="acUpdate" :placeholder="EXAMPLE"></textarea>
             <div v-if="ac.open" class="ac" :style="`top:${ac.top}px;left:${ac.left}px`">
-              <div v-for="(a, i) in ac.items" :key="a.key" class="acrow" :class="{ on: i === ac.i }" @mousedown.prevent="acPick(a)">
-                <span class="a">${{ a.key }}</span><span class="muted">{{ a.label?.de || '' }} · {{ a.type }}{{ a.perLocale ? ' 🗣' : '' }}</span>
+              <div v-for="(a, i) in ac.items" :key="a.show" class="acrow" :class="{ on: i === ac.i }" @mousedown.prevent="acPick(a)">
+                <span :class="a.kind === 'attr' ? 'a' : a.kind === 'fn' ? 'f' : 'k'">{{ a.show }}</span><span class="muted">{{ a.note }}</span>
               </div>
             </div>
           </div>
           <div v-if="help" class="help">
-            <div v-for="[h, t] in HELP" :key="h" class="hrow"><b>{{ h }}</b><div class="mono">{{ t }}</div></div>
-            <div class="hrow"><b>Beispiel</b><pre class="mono ex" @click="insert(EXAMPLE)" title="Klick fügt es ein">{{ EXAMPLE }}</pre></div>
+            <div v-for="[h, items] in HELP" :key="h" class="hrow"><b>{{ h }}</b>
+              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" title="Klick fügt es ein"><code class="hs" v-html="highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
+            </div>
+            <div class="hrow"><b>Beispiel</b><pre class="hs ex" @click="insert(EXAMPLE)" title="Klick fügt es ein" v-html="highlight(EXAMPLE)"></pre></div>
             <div class="hrow" v-if="attributes?.length"><b>Attribute</b><div class="chips">
               <button v-for="a in attributes" :key="a.key" class="chip" @click="insert('$' + a.key)" :title="`${a.label?.de || a.key} · ${a.type}`">${{ a.key }}</button>
             </div></div>
@@ -176,8 +224,15 @@ textarea::placeholder { color: var(--muted); opacity: .5; }
 .help { width: 380px; border-left: 1px solid var(--line); overflow: auto; padding: 8px 10px; font-size: 12px; }
 .hrow { margin-bottom: 8px; }
 .hrow b { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
-.hrow .mono { white-space: pre-wrap; }
-.ex { margin: 0; padding: 6px; background: var(--cell); border-radius: 4px; cursor: pointer; }
+.hitem { display: flex; gap: 10px; align-items: baseline; padding: 1px 4px; border-radius: 3px; cursor: pointer; }
+.hitem:hover { background: var(--hover); }
+.hitem code { font: 12px var(--mono); white-space: pre; }
+.hitem .muted { font-size: 11px; }
+.ex { margin: 0; padding: 6px; background: var(--cell); border-radius: 4px; cursor: pointer; font: 12px/1.5 var(--mono); }
+.help :deep(.c) { color: var(--muted); font-style: italic; }
+.help :deep(.s) { color: #9ccc65; } .help :deep(.t) { color: #ffd54f; } .help :deep(.a) { color: #64b5f6; font-weight: 600; } .help :deep(.n) { color: #ffb74d; } .help :deep(.k) { color: #ce93d8; font-weight: 600; } .help :deep(.f) { color: #4dd0e1; }
+.acrow .f { font-family: var(--mono); color: #4dd0e1; }
+.acrow .k { font-family: var(--mono); color: #ce93d8; font-weight: 600; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { font: 11px var(--mono); padding: 1px 6px; }
 </style>
