@@ -54,7 +54,26 @@ const targetPick = ref(false)
 function pickTarget(r) { target.value = r; targetQ.value = r.label; targetPick.value = false; planned.value = null }
 
 // ---- Quelle
-async function takeFile(file) {
+// Datei-Handle (File System Access API, Chrome/Edge): damit liest ↻ die Datei jederzeit neu von der Platte —
+// ein File aus <input type=file> ist ein Schnappschuss und lässt sich nach einer Änderung nicht mehr lesen.
+const fileHandle = ref(null)
+const canPick = typeof window.showOpenFilePicker === 'function'
+async function pickFile(e) {
+  if (!canPick) return   // Fallback: das <input type=file> im Label
+  e.preventDefault()
+  try {
+    const [h] = await window.showOpenFilePicker({ multiple: false })
+    fileHandle.value = h
+    await takeFile(await h.getFile())
+  } catch (err) { if (err?.name !== 'AbortError') store.toast(err.message) }
+}
+async function reloadFile() {
+  if (fileHandle.value) {
+    try { await takeFile(await fileHandle.value.getFile(), true); store.toast(`${source.value?.name}: neu gelesen`, 'ok') } catch (err) { store.toast(err.message) }
+  } else document.querySelector('#table-file-input')?.click()
+}
+async function takeFile(file, keepSheet = false) {
+  const sheet = keepSheet ? source.value?.sheet : null
   const imp = plugins.importerFor(file.name)
   busy.value = `lese ${file.name} …`
   try {
@@ -64,6 +83,7 @@ async function takeFile(file) {
     else if (/\.json$/i.test(file.name)) { const { fromObjects } = await import('../mapper.js'); const j = JSON.parse(await file.text()); t = fromObjects(Array.isArray(j) ? j : (j.rows ?? j.items ?? j.data ?? [])) }
     else throw new Error(`Kein Importer für ${file.name} — Plugin für dieses Format einschalten (⌁ Plugins)`)
     setSource({ ...t, name: file.name, importer: imp?.key ?? null })
+    if (sheet && source.value?.sheets?.some(s => s.name === sheet)) pickSheet(sheet)
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 function setSource(t) {
@@ -176,8 +196,9 @@ onMounted(() => { if (!tree.loaded) tree.load() })
   <div class="pane" :style="`width:${leftW}px;flex:none`">
     <ImportHead source="table" plugin="table" :busy="busy" :get="profileGet" :set="profileSet">
       <tr><td class="attr">Datei</td><td class="row drop" :class="{ over: dragOver }" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
-        <label class="primary btn" :title="'CSV, TSV, JSON' + (plugins.importers.length ? ', ' + plugins.importers.flatMap(i => i.accept ?? []).join(', ') : '') + ' — oder hierher ziehen'">📂 wählen<input type="file" style="display:none" @change="takeFile($event.target.files[0])" /></label>
+        <label class="primary btn" :title="'CSV, TSV, JSON' + (plugins.importers.length ? ', ' + plugins.importers.flatMap(i => i.accept ?? []).join(', ') : '') + ' — oder hierher ziehen'" @click="pickFile">📂 wählen<input id="table-file-input" type="file" style="display:none" @change="fileHandle = null; takeFile($event.target.files[0])" /></label>
         <span v-if="source" class="chip" :title="`${source.rows.length} Zeilen · ${source.columns.length} Spalten`">📄 {{ source.name }} <span class="muted">{{ source.rows.length }}</span></span>
+        <button v-if="source" class="x" @click="reloadFile" :title="fileHandle ? 'Datei neu von der Platte lesen (zwischendurch in Excel geändert?)' : 'Datei neu wählen — dieser Browser kann Dateien nicht erneut lesen'">↻</button>
         <select v-if="source?.sheets?.length > 1" :value="source.sheet" @change="pickSheet($event.target.value)" title="Blatt" style="width:140px"><option v-for="s in source.sheets" :key="s.name" :value="s.name">{{ s.name }} ({{ s.rows.length }})</option></select>
         <span v-else-if="!source" class="muted" style="font-size:12px">oder hierher ziehen</span>
         <span class="grow" />
