@@ -112,7 +112,8 @@ const linkMatches = computed(() => {
 })
 // Welche der Menge sind für Typ und Richtung erlaubt, welche gibt es schon?
 const linkRows = computed(() => {
-  const l = link.value, t = linkType.value; if (!l || !t) return []
+  // ohne Ziel (⇄ aus der Leiste: Ziel wird erst gesucht) keine Zeilen — sonst l.target.id auf null (Taloan, 17.09.: Absturz)
+  const l = link.value, t = linkType.value; if (!l || !t || !l.target) return []
   const targetFirst = l.dir === 'target-first'   // Ziel → Eintrag (Ziel hat Zubehör: Eintrag)
   return pickedRows.value.map(r => {
     const from = targetFirst ? l.target : r, to = targetFirst ? r : l.target
@@ -256,6 +257,11 @@ function contextMenu(e, r) {
     { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r) },
     { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: r.name ? '★' : '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r) },
     { sep: true },
+    // Massenbearbeitung wie in Excel (Taloan, 17.09.): die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
+    r.role === 'product' && kids ? { label: `Varianten tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', action: () => router.push(`/table/${r.id}`) } : null,
+    r.role === 'group' && kids ? { label: 'Kinder tabellarisch bearbeiten', icon: '⊞', key: 'b', hint: `${kids}`, action: () => router.push(`/table/${r.id}`) } : null,
+    r.role === 'group' && kids ? { label: 'Alle Varianten darunter tabellarisch', icon: '⊞', key: 'w', action: () => router.push(`/table/${r.id}?role=variant&deep=1`) } : null,
+    (r.role !== 'variant' && kids) ? { sep: true } : null,
     { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },

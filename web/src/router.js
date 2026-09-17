@@ -5,6 +5,7 @@ import ModelView from './views/ModelView.vue'
 import ImportView from './views/ImportView.vue'
 import SolrView from './views/SolrView.vue'
 import TableImportView from './views/TableImportView.vue'
+import TableEditView from './views/TableEditView.vue'
 import MediaView from './views/MediaView.vue'
 import PluginsView from './views/PluginsView.vue'
 import PluginHost from './views/PluginHost.vue'
@@ -17,6 +18,7 @@ export const router = createRouter({
     { path: '/products', redirect: '/tree' },
     { path: '/tree', component: TreeView },
     { path: '/tree/:id', component: TreeView, props: true },
+    { path: '/table/:id', component: TableEditView, props: r => ({ id: r.params.id, role: r.query.role, deep: r.query.deep }) },
     { path: '/journal', component: JournalView },
     { path: '/model', component: ModelView },
     { path: '/import', component: ImportView },
