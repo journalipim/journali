@@ -11,17 +11,20 @@ const crashed = ref(null)
 onErrorCaptured(e => { crashed.value = e?.message ?? String(e); console.error(e); return false })
 watch(() => route.fullPath, () => { crashed.value = null })
 onMounted(() => window.addEventListener('keydown', e => {
-  if (e.altKey && !e.ctrlKey && nav.some(n => n.key === e.key)) {
+  if (e.altKey && !e.ctrlKey && [...nav, ...navBottom].some(n => n.key === e.key)) {
     e.preventDefault()
-    router.push(nav.find(n => n.key === e.key).to)
+    router.push([...nav, ...navBottom].find(n => n.key === e.key).to)
   }
 }))
 const nav = [
   { to: '/tree', icon: '▣', label: 'Baum', key: '1' },
-  { to: '/journal', icon: '≡', label: 'Journal', key: '2' },
   { to: '/model', icon: '⊞', label: 'Modell', key: '3' },
   { to: '/import', icon: '⇩', label: 'Import', key: '4' },
   { to: '/media', icon: '🖼', label: 'Medien', key: '5' },
+]
+// unten in der Leiste (Taloan, 17.09.): Journal und Einstellungen
+const navBottom = [
+  { to: '/journal', icon: '≡', label: 'Journal', key: '2' },
   { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '6' },
 ]
 </script>
@@ -36,6 +39,10 @@ const nav = [
         <span class="icon">{{ n.icon }}</span>
       </router-link>
       <div class="rail-spacer" />
+      <router-link v-for="n in navBottom" :key="n.to" :to="n.to" class="rail-item"
+        :class="{ active: route.path.startsWith(n.to) }" :title="`${n.label}  (Alt+${n.key})`">
+        <span class="icon">{{ n.icon }}</span>
+      </router-link>
       <div class="rail-status" :class="{ online: store.online, offline: store.online === false }"
         :title="store.online ? `Server erreichbar · #${store.head}` : store.error || 'Server wird gesucht …'">
         ●
