@@ -88,7 +88,7 @@ const rows = computed(() => {
     case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
-    case 'relationTypes': return (m.relationTypes ?? []).map(r => ({ key: r.key, label: r.label?.de, right: [(r.from ?? roles).map(icon).join('') + (r.symmetric ? '⇄' : '→') + (r.to ?? roles).map(x => x === 'media' ? '🖼' : icon(x)).join(''), r.group ? '▤ ' + r.group : ''], _: r })).sort(byKey)
+    case 'relationTypes': return (m.relationTypes ?? []).map(r => ({ key: r.key, label: r.label?.de, right: [(r.from ?? roles).map(icon).join('') + (r.symmetric ? '⇄' : '→') + (r.to ?? roles).map(x => x === 'media' ? '🖼' : icon(x)).join(''), r.group ? '▤ ' + groupLabel(r.group) : ''], _: r })).sort(byKey)   // Gruppe mit Label, nicht Key (Taloan: heisst überall gleich)
     case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : ''] }))
     case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [] }))
   }
@@ -596,9 +596,11 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 .li:hover { background: var(--hover); }
 .li.selected { background: var(--accent-soft); }
 .li.current { box-shadow: inset 2px 0 0 var(--accent); }
-.li .k { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
-.li .l { overflow: hidden; text-overflow: ellipsis; }
-.li .r { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 6px; }
+.li .k { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); max-width: 140px; flex: 0 0 auto; overflow: hidden; text-overflow: ellipsis; }
+.li .l { flex: 1 1 auto; min-width: 4em; overflow: hidden; text-overflow: ellipsis; }
+/* rechte Seite (Rollen, Gruppe) gibt zuerst nach — Key und Name bleiben lesbar (Taloan: „compone… Bestand…“) */
+.li .r { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 6px; flex: 0 1 auto; min-width: 0; overflow: hidden; }
+.li .r > span { overflow: hidden; text-overflow: ellipsis; }
 /* Das Formular rechts: Bezeichnung links, Wert rechts, dieselben Zellen wie im Knoten */
 .form { width: auto; margin-bottom: 4px; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
