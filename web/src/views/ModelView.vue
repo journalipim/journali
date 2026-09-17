@@ -66,6 +66,13 @@ function groupAdd() {
   newKey.value = ''
   put(`/api/model/groups/${k}`, { key: k, label: {}, activeFrom: null })
 }
+// Umgekehrt: eine gewählte Gruppe zeigt ihre Attribute; zuordnen/herausnehmen schreibt das Attribut neu (AttributeDefined mit anderer group).
+const groupSel = computed(() => sel.value.size === 1 && section.value === 'groups' ? (model.value.groups ?? []).find(g => g.key === [...sel.value][0]) ?? null : null)
+const groupAttrs = computed(() => model.value.attributes.filter(a => a.group === groupSel.value?.key))
+const otherAttrs = computed(() => model.value.attributes.filter(a => a.group !== groupSel.value?.key).sort((x, y) => (x.group ?? '').localeCompare(y.group ?? '') || x.key.localeCompare(y.key)))
+const addAttr = ref('')
+function assign(a, gkey) { put(`/api/model/attributes/${a.key}`, { ...a, group: gkey }) }
+function assignAdd() { const a = model.value.attributes.find(x => x.key === addAttr.value); addAttr.value = ''; if (a && groupSel.value) assign(a, groupSel.value.key) }
 
 // ---- Attribute
 const attrCols = computed(() => [
@@ -269,6 +276,17 @@ const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, 
       <div class="toolbar sel" v-if="count"><span>{{ count }} gewählt</span><button @click="sel = new Set()">keine</button><button class="x" @click="bulkRemove(k => `/api/model/groups/${k}`)">🗑 zurückziehen</button></div>
       <div class="scroll">
         <EditGrid :columns="groupCols" :rows="groupRows" :selection="sel" removable @selection="s => sel = s" @change="groupChange" @remove="r => del(`/api/model/groups/${r.key}`)" />
+        <div v-if="groupSel" class="group-attrs">
+          <h2>▤ {{ groupSel.label?.de || groupSel.key }} <span class="mono muted">{{ groupSel.key }}</span> · ⊞ {{ groupAttrs.length }}<span class="muted" v-if="groupSel.activeFrom"> · aktiv ab {{ roleLabel[groupSel.activeFrom] }}</span></h2>
+          <div class="chips">
+            <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
+              <router-link :to="{ path: '/model', query: { section: 'attributes', key: a.key } }" @click="switchTo('attributes'); sel = new Set([a.key])">{{ a.label?.de || a.key }}</router-link>
+              <button @click="assign(a, null)" title="aus der Gruppe nehmen — das Attribut bleibt, ohne Gruppe gilt es an keinem Knoten">×</button>
+            </span>
+            <select v-model="addAttr" style="width:260px"><option value="">+ Attribut …</option><option v-for="a in otherAttrs" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}{{ a.group ? ' ← ' + a.group : ' (ohne Gruppe)' }}</option></select>
+            <button class="primary" :disabled="!addAttr" @click="assignAdd">zuordnen</button>
+          </div>
+        </div>
       </div>
     </template>
 
@@ -390,6 +408,9 @@ const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, 
 </template>
 
 <style scoped>
+.group-attrs { padding: 10px 8px; border-top: 1px solid var(--line); }
+.group-attrs h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+.group-attrs .chip a { color: inherit; text-decoration: none; }
 .sections { display: flex; flex-direction: column; padding: 4px; gap: 2px; }
 .part { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 8px 8px 2px; }
 .section-btn { text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 4px; display: flex; gap: 6px; align-items: center; }
