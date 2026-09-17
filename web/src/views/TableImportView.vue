@@ -175,7 +175,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
       <tr v-if="fixed"><td class="attr">Knoten</td><td class="row">
         <router-link :to="`/tree/${fixed.row.id}`" class="chip" :title="fixed.row.id">{{ icon(fixed.row.role) }} {{ fixed.row.label }}</router-link>
-        <span class="muted">→ {{ roleLabel[fixed.childRole] }} darunter · {{ fixed.allowed.size }} mögliche Spalten</span>
+        <span class="muted">→ {{ roleLabel[fixed.childRole] }} · {{ fixed.allowed.size }} mögliche Spalten</span>
         <span class="grow" /><button class="x" @click="router.replace('/import/table')" title="Knotenmodus verlassen — frei zuordnen">×</button>
       </td></tr>
       <tr v-if="!fixed"><td class="attr">Ziel</td><td class="row" style="position:relative">

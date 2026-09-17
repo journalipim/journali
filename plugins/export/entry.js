@@ -91,8 +91,8 @@ async function mount(root, ctx) {
   return () => {}
 }
 
-// ---- Excel am Knoten (Taloan, 17.09.: Rechtsklick auf Gruppe/Produkt → Vorlage, Kinder exportieren, Excel importieren):
-// dieselben Spalten in allen drei — id, sku, Achsen, dann die Attribute, die hier für die Kinder gelten (childColumns).
+// ---- Excel am Knoten (Taloan, 17.09.: Rechtsklick auf Gruppe/Produkt → Vorlage, Varianten/Produkte exportieren, Excel importieren):
+// dieselben Spalten in allen drei — id, sku, Achsen, dann die Attribute, die hier eine Ebene tiefer gelten (childColumns).
 // Blatt „Legende“ erklärt jede Spalte (Label, Typ, Pflicht, Einheit, Listenwerte). Der Import am selben Knoten ist streng.
 async function nodeColumns(ctx, nodeId) {
   const { api, store, tree } = ctx; if (!tree.loaded) await tree.load()
@@ -133,9 +133,9 @@ async function nodeWorkbook(ctx, nodeId, withData) {
 export default {
   views: [{ path: 'export', label: 'Export', icon: '⇪', mount }],
   nodeActions: [
-    { label: 'Excel: Vorlage für Kinder', icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, false).catch(e => ctx.store.toast(e.message)) },
-    { label: 'Excel: Kinder exportieren', icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, true).catch(e => ctx.store.toast(e.message)) },
-    { label: 'Excel: Kinder importieren …', icon: '⇩', roles: ['group', 'product'], run: (id, ctx) => ctx.go?.(`/import/table?node=${encodeURIComponent(id)}`) },
+    { label: (r, below) => `Excel: Vorlage für ${below}`, icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, false).catch(e => ctx.store.toast(e.message)) },
+    { label: (r, below) => `Excel: ${below} exportieren`, icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, true).catch(e => ctx.store.toast(e.message)) },
+    { label: (r, below) => `Excel: ${below} importieren …`, icon: '⇩', roles: ['group', 'product'], run: (id, ctx) => ctx.go?.(`/import/table?node=${encodeURIComponent(id)}`) },
     { label: 'Exportieren … (Teilbaum)', icon: '⇪', roles: ['group', 'product'], run(nodeId, ctx) { localStorage.setItem('journali.export.root', nodeId); ctx.go?.('/p/export/export') } },
   ],
   build, toCsv, toJson, toXlsx, nodeWorkbook,

@@ -246,6 +246,8 @@ async function duplicate(r, deep) {
   } catch (e) { store.toast(e.message) }
 }
 // Rechtsklick: was man mit diesem Knoten tun kann — die Tastenkürzel gelten im Menü.
+// Was unter einem Knoten liegt, heisst „Subitems“ — nicht „Kinder“ (Taloan, 17.09.)
+const below = () => 'Subitems'
 function contextMenu(e, r) {
   router.push(`/tree/${r.id}`)
   const kids = tree.kids(r.id).length
@@ -258,8 +260,7 @@ function contextMenu(e, r) {
     { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: r.name ? '★' : '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r) },
     { sep: true },
     // Massenbearbeitung wie in Excel (Taloan, 17.09.): die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
-    r.role === 'product' && kids ? { label: `Varianten tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', action: () => router.push(`/table/${r.id}`) } : null,
-    r.role === 'group' && kids ? { label: 'Kinder tabellarisch bearbeiten', icon: '⊞', key: 'b', hint: `${kids}`, action: () => router.push(`/table/${r.id}`) } : null,
+    r.role !== 'variant' && kids ? { label: `Subitems tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', action: () => router.push(`/table/${r.id}`) } : null,
     r.role === 'group' && kids ? { label: 'Alle Varianten darunter tabellarisch', icon: '⊞', key: 'w', action: () => router.push(`/table/${r.id}?role=variant&deep=1`) } : null,
     (r.role !== 'variant' && kids) ? { sep: true } : null,
     { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
@@ -272,7 +273,7 @@ function contextMenu(e, r) {
     picked.value.size ? { label: `Menge auflösen (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: 'Id kopieren', icon: '⧉', key: 'i', hint: r.id, action: () => navigator.clipboard?.writeText(r.id) },
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
-    ...(plugins.nodeActions.some(a => !a.roles || a.roles.includes(r.role)) ? [{ sep: true }, ...plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role)).map(a => ({ label: a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) }))] : []),
+    ...(plugins.nodeActions.some(a => !a.roles || a.roles.includes(r.role)) ? [{ sep: true }, ...plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role)).map(a => ({ label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) }))] : []),
     { sep: true },
     { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])

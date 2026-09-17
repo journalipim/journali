@@ -319,7 +319,7 @@ function cellMenu(e, def, col, block) {
       <span>· {{ roleLabel[node.role] }}</span>
       <span v-if="node.role === 'product' && node.axes.length">· variiert nach {{ node.axes.map(axisLabel).join(', ') }}</span>
       <span v-if="node.role === 'variant'">· <span v-for="(v, a) in node.axisValues" :key="a" class="chip">{{ axisLabel(a) }}: {{ v }}</span></span>
-      <span v-if="node.children">· {{ node.children }} Kinder</span>
+      <span v-if="node.children">· {{ node.children }} Subitems</span>
       <span class="grow" />
       <span>≡ {{ node.entries }} · #{{ node.lastNumber }} {{ when(node.lastAt) }} 👤 {{ node.lastActor }}</span>
       <span v-if="busy">…</span>

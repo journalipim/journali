@@ -123,7 +123,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
     <div class="toolbar path">
       <router-link v-for="a in tree.ancestors(id)" :key="a.id" :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }} ›</router-link>
       <router-link :to="`/tree/${id}`" class="crumb">{{ icon(data.node.role) }} {{ data.node.label }}</router-link>
-      <h1>⊞ {{ roleLabel[childRole] ?? childRole }}{{ deep === '1' ? ' darunter' : '' }} <span class="muted">· {{ rows.length }}{{ filter ? ' von ' + data.rows.length : '' }}</span></h1>
+      <h1>⊞ {{ deep === '1' ? 'Alle ' + (roleLabel[childRole] ?? childRole) + ' darunter' : 'Subitems' }} <span class="muted">· {{ rows.length }}{{ filter ? ' von ' + data.rows.length : '' }}</span></h1>
       <span class="grow" />
       <span v-if="busy" class="muted">{{ busy }}</span>
       <span v-if="dirty.size" class="chip dirty" :title="`${dirty.size} geänderte Zellen — Strg+S speichert`">✎ {{ dirty.size }}</span>
