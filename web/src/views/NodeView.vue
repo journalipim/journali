@@ -571,7 +571,8 @@ function cellMenu(e, def, col, block) {
 .tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
 .tabbtn { border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--bg); color: var(--muted); padding: 1px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .tabbtn .n { font-size: 10px; }
-.tabbtn.on { background: var(--pane); color: var(--text); font-weight: 600; }
+/* aktiv: Farbe und Kante, nie fett — fett ist breiter und liesse die Reiterzeile anders umbrechen */
+.tabbtn.on { background: var(--pane); color: var(--accent); border-color: var(--accent); }
 .tabbtn.locked { opacity: .6; }
 /* Abschnitte des Knotens: dieselbe Stufe wie ein Gruppenkopf im Gitter — Band in Akzentfarbe mit Oberkante (Taloan, 17.09.) */
 .section { padding: 0 8px 10px; border-top: 0; }
