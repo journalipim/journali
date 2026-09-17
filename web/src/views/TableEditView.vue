@@ -12,6 +12,7 @@ import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
 import DateCell from '../components/DateCell.vue'
+import HtmlCell from '../components/HtmlCell.vue'
 
 const props = defineProps({ id: String, role: String, deep: String })
 const router = useRouter()
@@ -55,7 +56,7 @@ const columns = computed(() => {
   const wanted = new Set([...order, ...v.items.flatMap(it => it.group ? groupsOf.get(it.group) ?? [] : [])])
   return all.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999))
 })
-const editable = c => !['rows', 'html', 'formula'].includes(c.type)
+const editable = c => !['rows', 'formula'].includes(c.type)   // html: eigener Editor (HtmlCell)
 const rows = computed(() => {
   if (!data.value) return []
   const q = filter.value.trim().toLowerCase()
@@ -116,6 +117,20 @@ function onPaste(e) {
   store.toast(`${n} Zellen eingefügt${locked ? `, ${locked} gesperrt` : ''}${bad ? `, ${bad} nicht in der Liste` : ''} — noch nicht gespeichert`)
 }
 const FIXED = 3   // feste Spalten vor den Attributen: Name, SKU, Achsen
+// Spaltenbreite wie Excel-Autofit (Taloan: „viel zu breit“): längster sichtbarer Wert oder Kopf, 70–260 px; am Kopfrand ziehbar
+const widths = ref({})   // key → px (von Hand gezogen)
+const autoWidth = computed(() => {
+  const out = {}
+  for (const c of columns.value) {
+    let n = (c.label?.de || c.key).length + (c.perLocale ? 3 : 0) + (c.unit ? c.unit.length + 1 : 0)
+    for (const r of rows.value.slice(0, 200)) { const v = c.type === 'enum' && !c.multiple ? labelOf(c)(textOf(r, c)) : textOf(r, c); if (v) n = Math.max(n, String(v).replace(/<[^>]+>/g, '').length) }
+    out[c.key] = Math.max(70, Math.min(260, 18 + n * 7))
+  }
+  return out
+})
+const colWidth = c => widths.value[c.key] ?? autoWidth.value[c.key] ?? 120
+const tableWidth = computed(() => 420 + columns.value.reduce((s, c) => s + colWidth(c), 0))
+function startResize(e, c) { e.preventDefault(); e.stopPropagation(); drag = { kind: 'resize', key: c.key, x: e.clientX, w: colWidth(c) } }
 
 // ---- Bereich wie in Excel (Taloan): Klick = Anker, Shift+Klick = Rechteck, Strg+A = alles; Zeilen/Spalten als Indizes
 // über die sichtbaren Zeilen und die Attributspalten (columns), Achsen und gesperrte Spalten werden beim Schreiben übersprungen.
@@ -144,6 +159,7 @@ function onMouseDown(e) {
 }
 function onMouseMove(e) {
   if (!drag) return
+  if (drag.kind === 'resize') { widths.value = { ...widths.value, [drag.key]: Math.max(50, drag.w + e.clientX - drag.x) }; return }
   const at = cellAt(document.elementFromPoint(e.clientX, e.clientY)); if (!at) return
   if (drag.kind === 'select') sel.value = norm(anchor.value, at)
   else { const b = drag.base; sel.value = { r0: b.r0, c0: b.c0, c1: b.c1, r1: Math.max(b.r1, at.ri) } }
@@ -279,12 +295,26 @@ function move(e, dr, dc) {
   else { anchor.value = to; sel.value = norm(to, to) }
   return true
 }
+// Eingabe übernehmen (die Zelle macht das auf Enter) und den Cursor versetzen
+function commitAndMove(e, dr, dc) {
+  const at = cellAt(e.target); if (!at) return
+  e.preventDefault(); e.target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }))
+  setTimeout(() => { const to = focusCell(at.ri + dr, at.ci + dc); if (to) { anchor.value = to; sel.value = norm(to, to) } }, 0)
+}
 function onKey(e) {
   const inField = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) && !e.target.closest('td.cell')
   const editing = e.target.classList?.contains('cell-input')
   // im Eingabefeld: Enter speichert (macht die Zelle) und springt nach unten, Tab nach rechts
-  if (editing && (e.key === 'Enter' || e.key === 'Tab') && !e.shiftKey) {
-    const at = cellAt(e.target); if (at) { e.preventDefault(); e.target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); setTimeout(() => { const to = focusCell(at.ri + (e.key === 'Enter' ? 1 : 0), at.ci + (e.key === 'Tab' ? 1 : 0)); if (to) { anchor.value = to; sel.value = norm(to, to) } }, 0) }
+  if (editing && (e.key === 'Enter' || e.key === 'Tab') && !e.shiftKey) { commitAndMove(e, e.key === 'Enter' ? 1 : 0, e.key === 'Tab' ? 1 : 0); return }
+  // Pfeile in der Eingabe (Taloan): hoch/runter übernehmen und wechseln; links/rechts nur, wenn die Zelle durch Tippen
+  // geöffnet wurde (Excel: Eingeben-Modus) oder der Cursor schon am Rand steht (Bearbeiten-Modus: F2, Doppelklick)
+  if (editing && e.key.startsWith('Arrow')) {
+    const typed = e.target.dataset.mode === 'typed', len = e.target.value.length
+    const s0 = e.target.selectionStart, s1 = e.target.selectionEnd
+    if (e.key === 'ArrowUp') commitAndMove(e, -1, 0)
+    else if (e.key === 'ArrowDown') commitAndMove(e, 1, 0)
+    else if (e.key === 'ArrowLeft' && (typed || (s0 === 0 && s1 === 0))) commitAndMove(e, 0, -1)
+    else if (e.key === 'ArrowRight' && (typed || (s0 === len && s1 === len))) commitAndMove(e, 0, 1)
     return
   }
   if (!inField && !editing && e.target.closest?.('td.cell')) {
@@ -354,7 +384,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       <button @click="fillDown" :disabled="!sel" title="runterziehen: oberste Zelle des Bereichs in alle darunter (Strg+D)">⇩ füllen</button>
       <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe</button>
       <button :class="{ primary: replaceOpen }" @click="replaceOpen = !replaceOpen" title="Suchen & Ersetzen (Strg+H)">⇄ ersetzen</button>
-      <span class="muted" style="font-size:12px" title="Pfeile bewegen den Cursor, Shift+Pfeil zieht den Bereich auf, Enter speichert und springt nach unten, Tab nach rechts, Tippen überschreibt, F2 bearbeitet · Strg+D füllen, Strg+Shift+D Reihe, Strg+H ersetzen, Strg+C/V mit Excel, Entf leert, Strg+A alles">🖱 ziehen = Bereich · Doppelklick/F2/Tippen = bearbeiten · ▪ Kästchen ziehen = füllen · Strg+D/H/C/V · <i>kursiv</i> = geerbt</span>
+      <span class="muted" style="font-size:12px" title="Pfeile bewegen den Cursor, Shift+Pfeil zieht den Bereich auf, Enter speichert und springt nach unten, Tab nach rechts, Tippen überschreibt, F2 bearbeitet · Strg+D füllen, Strg+Shift+D Reihe, Strg+H ersetzen, Strg+C/V mit Excel, Entf leert, Strg+A alles">🖱 ziehen = Bereich · Doppelklick/F2/Tippen = bearbeiten (lang/HTML: grosser Editor) · ▪ Kästchen ziehen = füllen · Strg+D/H/C/V · <i>kursiv</i> = geerbt</span>
     </div>
     <div v-if="replaceOpen" class="toolbar replace">
       <span class="muted">⇄</span>
@@ -369,11 +399,11 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
     </div>
     <div class="scroll" ref="scrollBox" style="position:relative">
       <div v-if="handle" class="fill-handle" :style="`top:${handle.top}px;left:${handle.left}px`" title="Ausfüllkästchen: nach unten ziehen füllt — ein Wert wiederholt sich, zwei Zahlen setzen die Reihe fort" />
-      <table class="grid values tab" :style="`width:${420 + columns.length * 180}px`">
-        <colgroup><col style="width:220px" /><col style="width:110px" /><col style="width:90px" /><col v-for="c in columns" :key="c.key" style="width:180px" /></colgroup>
+      <table class="grid values tab" :style="`width:${tableWidth}px`">
+        <colgroup><col style="width:220px" /><col style="width:110px" /><col style="width:90px" /><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
         <thead><tr>
           <th>{{ roleLabel[childRole] }}</th><th>SKU</th><th>Achsen</th>
-          <th v-for="c in columns" :key="c.key" :title="`${c.key} · ${c.type}${c.perLocale ? ' · je Sprache' : ''}${c.unit ? ' · ' + c.unit : ''}`" :class="{ ro: !editable(c) }">{{ c.label?.de || c.key }}<span v-if="c.perLocale" class="muted"> {{ locale }}</span><span v-if="c.unit" class="muted"> {{ c.unit }}</span></th>
+          <th v-for="c in columns" :key="c.key" :title="`${c.key} · ${c.type}${c.perLocale ? ' · je Sprache' : ''}${c.unit ? ' · ' + c.unit : ''}`" :class="{ ro: !editable(c) }" style="position:sticky">{{ c.label?.de || c.key }}<span v-if="c.perLocale" class="muted"> {{ locale }}</span><span v-if="c.unit" class="muted"> {{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
         </tr></thead>
         <tbody>
           <tr v-for="(r, ri) in rows" :key="r.row.id" :data-id="r.row.id">
@@ -384,6 +414,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
               <td v-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
+              <HtmlCell v-else-if="c.type === 'html'" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :title="`${c.label?.de || c.key} · ${r.row.label}`" @save="v => set(r, c, v)" />
               <DateCell v-else-if="c.type === 'date'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <Cell v-else :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
             </template>
@@ -409,6 +440,9 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
 .tab :deep(td.cell.sel .cell-box) { background: transparent; }
 .tab :deep(.cell-box), .tab td.attr, .tab td.mono, .tab th { user-select: none; }
 .tab :deep(.cell-box) { cursor: cell; }
+.tab th { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.col-resize { position: absolute; top: 0; right: -3px; width: 7px; height: 100%; cursor: col-resize; z-index: 1; }
+.col-resize:hover { background: var(--accent); opacity: .5; }
 .fill-handle { position: absolute; width: 7px; height: 7px; background: var(--accent); border: 1px solid var(--bg); cursor: crosshair; z-index: 2; }
 .replace { gap: 6px; font-size: 12px; background: var(--bg); }
 .replace label { display: inline-flex; gap: 3px; align-items: center; }

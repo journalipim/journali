@@ -14,8 +14,8 @@
   --rail-text: #9ca3af;
   --hover: #f8fafc;
   --hatch: #eef0f3;
-  --dirty: #fef3c7;
-  --dirty-text: #713f12;
+  --dirty: #dcfce7;
+  --dirty-text: #166534;
   --toast: #1f2328;
   --cell: #eef2f7;
   --cell-line: #dfe4ec;
@@ -41,8 +41,8 @@
     --rail-text: #8b93a0;
     --hover: #1f242b;
     --hatch: #232830;
-    --dirty: #4a3f0f;
-    --dirty-text: #fde68a;
+    --dirty: #14532d;
+    --dirty-text: #bbf7d0;
     --toast: #2c323b;
     --cell: #262c35;
     --cell-line: #343b46;
@@ -65,8 +65,8 @@
   --rail-text: #8b93a0;
   --hover: #1f242b;
   --hatch: #232830;
-  --dirty: #4a3f0f;
-  --dirty-text: #fde68a;
+  --dirty: #14532d;
+  --dirty-text: #bbf7d0;
   --toast: #2c323b;
   --cell: #262c35;
   --cell-line: #343b46;

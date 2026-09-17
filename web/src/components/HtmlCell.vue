@@ -4,7 +4,7 @@
 // Umschalter auf den Quelltext (Taloan, 17.09.). Ctrl+Enter speichert, Esc verwirft.
 import { ref, computed, nextTick } from 'vue'
 
-const props = defineProps({ value: String, inherited: String, disabled: Boolean, origin: String, title: String })
+const props = defineProps({ value: String, inherited: String, disabled: Boolean, origin: String, title: String, clickEdit: { type: Boolean, default: true } })   // clickEdit=false (Tabelle): Doppelklick/Enter öffnet
 const emit = defineEmits(['save'])
 
 const open = ref(false)
@@ -52,7 +52,7 @@ function onEditKey(e) {
 <template>
   <td class="cell">
     <div class="cell-box html" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
-      :tabindex="disabled ? undefined : 0" @click="edit" @keydown="onKey"
+      :tabindex="disabled ? undefined : 0" @click="clickEdit && edit()" @dblclick="clickEdit || edit()" @keydown="onKey"
       :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : (plain ? plain.slice(0, 400) + '\n\n' : '') + 'Klick oder Enter öffnet den Editor')">
       <template v-if="!disabled"><span v-if="plain" class="muted tag">‹›</span>{{ brief }}</template>
     </div>
