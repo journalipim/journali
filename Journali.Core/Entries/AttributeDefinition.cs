@@ -15,6 +15,7 @@ public static class Model
     public const string UnitStream = "unit:";
     public const string ViewStream = "view:";
     public const string GroupStream = "group:";
+    public const string LabelStream = "settings:label:";
 
     /// <summary>Die SKU ist ein Attribut der Variante, eindeutig über alle Varianten.</summary>
     public const string SkuAttribute = "sku";
@@ -50,22 +51,25 @@ public static class Model
 
         AttributeGroupDefinition[] groups =
         [
-            new("logistics", Labels.Of("Logistik", "Logistics"), ["sku", "ean"]),
-            new("texts", Labels.Of("Texte", "Texts"), ["name", "description"]),
-            new("physical", Labels.Of("Physisch", "Physical"), ["weight"]),
+            new("logistics", Labels.Of("Logistik", "Logistics"), ActiveFrom: Roles.Variant),
+            new("texts", Labels.Of("Texte", "Texts")),
+            new("physical", Labels.Of("Physisch", "Physical")),
         ];
         foreach (var g in groups)
             yield return new(GroupStream + g.Key, Types.AttributeGroupDefined, Types.Serialize(g));
 
         AttributeDefinition[] attributes =
         [
-            new(SkuAttribute, Labels.Of("SKU", "SKU"), AttributeTypes.Text, Group: "logistics", Levels: [Roles.Variant]),
-            new("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "texts", Axes: [Axes.Locale]),
+            new(SkuAttribute, Labels.Of("SKU", "SKU"), AttributeTypes.Text, Group: "logistics", Required: new() { ["web"] = ["*"], ["print"] = ["*"] }),
+            new("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "texts", Axes: [Axes.Locale], Required: new() { ["web"] = ["*"], ["print"] = ["de"] }),
             new("description", Labels.Of("Beschreibung", "Description"), AttributeTypes.Html, Group: "texts", Axes: [Axes.Locale, Axes.Channel]),
             new("weight", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "physical"),
             new("ean", Labels.Of("EAN", "EAN"), AttributeTypes.Text, Group: "logistics"),
         ];
         foreach (var a in attributes)
             yield return new(AttributeStream + a.Key, Types.AttributeDefined, Types.Serialize(a));
+
+        foreach (var role in Roles.All)
+            yield return new(LabelStream + role, Types.TreeLabelDefined, Types.Serialize(new TreeLabelDefined(role, "name")));
     }
 }

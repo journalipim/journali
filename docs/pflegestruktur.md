@@ -65,13 +65,33 @@ Ein sprachabhängiges Feld ohne Wert in `en` fällt auf `*` zurück, wenn es
 dort einen gibt — sonst ist es leer, und die Vollständigkeit für `en`
 zählt es als fehlend. Der Kanal ist die zweite Achse nach demselben Muster.
 
-### 2. Werteliste (`list:<key>`)
+### 2. Wörterbuch (`list:<key>`, in der Oberfläche „Wörterbücher")
 
 Marke, Farbe, Betriebssystem, Relationstyp, Medienrolle: ein Schlüssel je
 Wert, Label je Sprache, optional Zusatzfelder (Farbe: Hexcode). Eine
 Werteliste ist ein Strom, jeder Wert ein Eintrag `ListValueDefined`.
 
-### 3. Familie (`family:<key>`)
+### 3. ~~Familie~~ → Attributgruppen am Baum (entschieden, Taloan, 17.09.2026)
+
+> Nach den Beschreibungen ist eine Familie definiert durch meine Baumstruktur.
+> Supermaster bekommt Name (Pflicht) und Beschreibung; Hardware darunter fügt
+> das vererbbare Attribut Kategorie hinzu; PC, Laptops setzen es; Gaming-PCs
+> hat damit automatisch Name, Beschreibung, Kategorie = PC.
+
+Die Familie ist gestrichen. Stattdessen hängen **Attributgruppen an
+Baumknoten** (`GroupsAttached`, an jedem Knotentyp); die *Definition*
+vererbt sich nach unten — alles darunter hat diese Attribute dazu. Ob der
+*Wert* vererbt wird, sagt das Attribut (`inheritable`, Vorgabe nein: Name
+nein, Kategorie ja). Pflicht (je Kanal × Sprache) steht am Attribut und
+gilt überall gleich — **Eineindeutigkeit**: soll es anders sein, heisst es
+anders. Eine Gruppe sagt, **ab welchem Knotentyp** ihre Werte erfasst
+werden (`activeFrom`): „Variantenmaster" mit SKU hängt am Supermaster, ist
+ab Variante aktiv, darüber sichtbar und gesperrt; Vollständigkeit prüft nur,
+wo aktiv. Ein Knoten kann gesperrte Gruppen ausblenden („nur bearbeitbare").
+Werte für Attribute, die nach dem Umhängen über keine Gruppe mehr gelten,
+bleiben im Journal und stehen am Knoten als „verwaist".
+
+#### alt: Familie
 
 Was für ein Ding ist das Produkt, und welche Attribute hat es. Ein Produkt
 hat genau eine Familie. Die Familie sagt:
@@ -326,17 +346,25 @@ Gruppe, nicht die Sicht); ohne Sicht zeigt der Knoten die Familie „alles".
 
 ### 16. Attributgruppen (`group:<key>`)
 
-Gruppen sind eigene Modell-Dinge: Label je Sprache und die **Reihenfolge
-ihrer Attribute** (`AttributeGroupDefined{key, label, order[]}`). Das
-Attribut verweist mit `group`; Gruppen, die nur an Attributen vorkommen
-(z. B. „import" aus dem Werkzeug), gelten als undefiniert, aber sichtbar.
-Saatgut: logistics, texts, physical. Die Sicht ist der Ort, an dem später Rollen und Rechte greifen
+Gruppen sind eigene Modell-Dinge: Label je Sprache und **aktiv ab
+Knotentyp** (`AttributeGroupDefined{key, label, activeFrom}`); die
+Reihenfolge der Attribute liegt in der Sicht. Das Attribut verweist mit
+`group`; Gruppen, die nur an Attributen vorkommen (z. B. „import" aus dem
+Werkzeug), gelten als undefiniert, aber sichtbar. Saatgut: logistics (ab
+Variante), texts, physical. Die Sicht ist der Ort, an dem später Rollen und Rechte greifen
 (Schritt 10): welche Sichten ein Nutzer hat, was er darin ändern darf.
 
-Das **Label-Attribut** (wie Produkt und Variante im Baum heissen) bleibt
-an der Familie — es ist eine Eigenschaft des Dings, nicht der Sicht. Die
-`group`-Angabe je Attribut in der Familie ist damit tot; sie bleibt im
-Eintragstyp (für immer), wird aber nicht mehr gezeigt.
+**Name im Baum**: je Knotentyp eine Einstellung (`TreeLabelDefined`), nicht
+mehr an der Familie.
+
+> Ich möchte nicht in einem Ast umsortieren, sondern: ich kenne alle
+> Attribute, ordne sie Gruppen zu, in Sichten sortiere ich Gruppen und darin
+> Attribute per Drag & Drop; neu zugeordnete hängen unten an; eine Sicht
+> gilt für einen Knotentyp; im Knoten schalte ich um zwischen alles und
+> einer Sicht, rechts zwischen flach und Reitern.
+
+So gebaut (17.09.2026): ⊞ Modell → Attributsichten mit Drag & Drop; im
+Knoten Sicht je Knotentyp, ☰ flach / ⧉ Reiter, ✎ nur bearbeitbare.
 
 ## Messlatte: OpenDXP
 

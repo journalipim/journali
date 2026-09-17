@@ -35,7 +35,14 @@ public static partial class ModelApi
             Command(req, c, key, ValidKey, (model, write) =>
             {
                 var def = body with { Key = key, Label = body.Label ?? new(), Axes = Clean(body.Axes), Channels = Clean(body.Channels),
-                                      Unit = Blank(body.Unit), Group = Blank(body.Group), List = Blank(body.List), Columns = Clean(body.Columns) };
+                                      Unit = Blank(body.Unit), Group = Blank(body.Group), List = Blank(body.List), Columns = Clean(body.Columns),
+                                      Required = body.Required is { Count: > 0 } r ? r.Where(kv => kv.Value is { Length: > 0 }).ToDictionary(kv => kv.Key, kv => kv.Value) : null };
+                foreach (var (channel, locales) in def.Required ?? new())
+                {
+                    if (!model.Channels.ContainsKey(channel)) return Bad($"Pflicht für unbekannten Kanal: {channel}");
+                    if (locales.Except(model.Locales.Keys).Except(["*"]).Any()) return Bad($"Pflicht für unbekannte Sprache bei {channel}");
+                }
+                if (def.Required is { Count: 0 }) def = def with { Required = null };
                 if (!AttributeTypes.All.Contains(def.Type)) return Bad($"Unbekannter Typ: {def.Type}");
                 if (def.Axes?.Except([Axes.Locale, Axes.Channel]).Any() ?? false) return Bad("Achsen: nur locale und channel.");
                 if (def.Channels?.Except(model.Channels.Keys).Any() ?? false) return Bad("Unbekannter Kanal in channels.");
@@ -82,9 +89,9 @@ public static partial class ModelApi
         m.MapPut("/groups/{key}", (string key, AttributeGroupDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
             {
-                var order = Clean(body.Order);
-                if (order?.Except(model.Attributes.Keys).Any() ?? false) return Bad("Reihenfolge nennt ein unbekanntes Attribut.");
-                return write(Model.GroupStream + key, Types.AttributeGroupDefined, body with { Key = key, Label = body.Label ?? new(), Order = order });
+                var from = Blank(body.ActiveFrom);
+                if (from is not null && !Roles.All.Contains(from)) return Bad($"activeFrom: {string.Join(", ", Roles.All)} oder leer.");
+                return write(Model.GroupStream + key, Types.AttributeGroupDefined, body with { Key = key, Label = body.Label ?? new(), ActiveFrom = from, Order = null });
             }));
 
         m.MapDelete("/groups/{key}", (string key, HttpRequest req, Catalog c) =>
@@ -96,20 +103,26 @@ public static partial class ModelApi
         m.MapPut("/views/{key}", (string key, ViewDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
             {
-                var def = body with { Key = key, Label = body.Label ?? new(), Items = body.Items ?? new(), Level = Blank(body.Level) };
-                if (def.Level is not null && !Roles.All.Contains(def.Level)) return Bad($"Ebene: {string.Join(", ", Roles.All)} oder leer.");
+                var def = body with { Key = key, Label = body.Label ?? new(), Items = body.Items ?? new(), Level = Blank(body.Level) ?? "" };
+                if (!Roles.All.Contains(def.Level)) return Bad($"Eine Sicht gilt für einen Knotentyp: {string.Join(", ", Roles.All)}.");
                 foreach (var it in def.Items)
                 {
-                    if (it.Group is not null && !model.Groups.ContainsKey(it.Group) && !model.Attributes.Values.Any(a => a.Group == it.Group)) return Bad($"Unbekannte Gruppe in der Sicht: {it.Group}");
-                    if (it.Key is not null && !model.Attributes.ContainsKey(it.Key)) return Bad($"Unbekanntes Attribut in der Sicht: {it.Key}");
-                    if (it.Group is null && it.Key is null) return Bad("Sicht-Eintrag ohne group und key.");
+                    if (string.IsNullOrWhiteSpace(it.Group)) return Bad("Sicht-Eintrag ohne group.");
+                    if (!model.Groups.ContainsKey(it.Group) && !model.Attributes.Values.Any(a => a.Group == it.Group)) return Bad($"Unbekannte Gruppe in der Sicht: {it.Group}");
+                    if (it.Order?.Except(model.Attributes.Keys).Any() ?? false) return Bad($"Reihenfolge in {it.Group} nennt ein unbekanntes Attribut.");
                 }
+                if (def.Items.Select(i => i.Group).Distinct().Count() != def.Items.Count) return Bad("Eine Gruppe nur einmal je Sicht.");
                 return write(Model.ViewStream + key, Types.ViewDefined, def);
             }));
 
         m.MapDelete("/views/{key}", (string key, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
                 model.Views.ContainsKey(key) ? write(Model.ViewStream + key, Types.ViewRetired, new ViewRetired(key)) : Results.NotFound()));
+
+        m.MapPut("/labels/{role}", (string role, TreeLabelDefined body, HttpRequest req, Catalog c) =>
+            Command(req, c, role, r => Roles.All.Contains(r), (model, write) =>
+                !model.Attributes.ContainsKey(body.Attribute ?? "") ? Bad($"Attribut {body.Attribute} gibt es nicht.")
+                : write(Model.LabelStream + role, Types.TreeLabelDefined, new TreeLabelDefined(role, body.Attribute!))));
 
         m.MapPut("/units/{key}", (string key, UnitDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, k => k.Length > 0 && k.Length <= 8 && !k.Any(char.IsWhiteSpace), (model, write) =>
@@ -123,30 +136,6 @@ public static partial class ModelApi
                 : model.Attributes.Values.Any(a => a.Unit == key) ? Bad($"{key} wird benutzt von: {string.Join(", ", model.Attributes.Values.Where(a => a.Unit == key).Select(a => a.Key))}")
                 : write(Model.UnitStream + key, Types.UnitRetired, new UnitRetired(key))));
 
-        m.MapPut("/families/{key}", (string key, FamilyDefinition body, HttpRequest req, Catalog c) =>
-            Command(req, c, key, ValidKey, (model, write) =>
-            {
-                var def = body with { Key = key, Label = body.Label ?? new(), Attributes = body.Attributes ?? new(), Axes = Clean(body.Axes) };
-                foreach (var a in def.Attributes)
-                {
-                    if (!model.Attributes.ContainsKey(a.Key)) return Bad($"Unbekanntes Attribut in der Familie: {a.Key}");
-                    foreach (var (channel, locales) in a.Required ?? new())
-                    {
-                        if (!model.Channels.ContainsKey(channel)) return Bad($"Pflicht für unbekannten Kanal: {channel}");
-                        if (locales.Except(model.Locales.Keys).Except(["*"]).Any()) return Bad($"Pflicht für unbekannte Sprache bei {a.Key}/{channel}");
-                    }
-                }
-                if (def.Axes?.Except(model.Attributes.Keys).Any() ?? false) return Bad("Variantenachse muss ein Attribut sein.");
-                def = def with { LabelAttribute = Blank(def.LabelAttribute) };
-                if (def.LabelAttribute is not null && !model.Attributes.ContainsKey(def.LabelAttribute)) return Bad($"Label-Attribut {def.LabelAttribute} gibt es nicht.");
-                return write(Model.FamilyStream + key, Types.FamilyDefined, def);
-            }));
-
-        m.MapDelete("/families/{key}", (string key, HttpRequest req, Catalog c) =>
-            Command(req, c, key, ValidKey, (model, write) =>
-                model.Families.ContainsKey(key)
-                    ? write(Model.FamilyStream + key, Types.FamilyRetired, new FamilyRetired(key))
-                    : Results.NotFound()));
     }
 
     /// <summary>Das Modell, wie die Oberfläche es braucht.</summary>
@@ -156,12 +145,12 @@ public static partial class ModelApi
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, values = l.Ordered.ToList() }).ToList(),
-        families = model.Families.Values.OrderBy(f => f.Key).ToList(),
+        labels = model.TreeLabels,
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
         views = model.Views.Values.OrderBy(v => v.Key).ToList(),
         // Gruppen: definierte plus die, die nur an Attributen vorkommen (z. B. „import“ aus dem Werkzeug) — mit Attributen in Reihenfolge
         groups = model.Groups.Keys.Union(model.Attributes.Values.Select(a => a.Group ?? "")).Where(g => g.Length > 0).Distinct().Order()
-            .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g) }).ToList(),
+            .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), activeFrom = model.Groups.GetValueOrDefault(g)?.ActiveFrom, attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g) }).ToList(),
         types = AttributeTypes.All,
     };
 

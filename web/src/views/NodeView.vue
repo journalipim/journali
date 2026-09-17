@@ -1,8 +1,10 @@
 <script setup>
-// Ein Knoten: Pfad oben, Kopf nach Rolle (Gruppe: Name; Produkt: Familie,
-// Achsen, Status; Variante: Achsenwerte, Status), Werte als Gitter Attribut ×
-// Achse mit Zelle nach Typ und Vererbung den Pfad hinauf (Herkunft im
-// Tooltip), Kategorien, Freigaben (nur Variante), rechts das Journal.
+// Ein Knoten: Pfad, Kopf nach Rolle, die Attributgruppen, die hier gelten (am Pfad
+// angehängt, Definition vererbt), darin die Attribute als Gitter Attribut × Achse.
+// Gruppen, die hier nicht aktiv sind (aktiv ab tieferem Knotentyp), sind sichtbar,
+// aber gesperrt — oder mit „nur bearbeitbare“ weg. Sicht je Knotentyp ordnet
+// Gruppen und Attribute; flach untereinander oder als Reiter. Jede Änderung ist
+// ein Befehl an den Server = ein Eintrag.
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, when } from '../api.js'
@@ -24,16 +26,16 @@ const node = ref(null)
 const entries = ref([])
 const newCategory = ref('')
 const busy = ref(false)
-const arranging = ref(false)   // Anordnen-Modus: Attribute und Gruppen per Drag & Drop, gilt für die Familie
-const dragging = ref(null)     // { key } oder { group }
+const tab = ref('')
+const addGroup = ref('')
 
 const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
 const channels = computed(() => model.value?.channels.map(c => c.key) ?? [])
 const path = computed(() => tree.ancestors(props.id))
+const roleLabel = { group: 'Produktgruppe', product: 'Produkt', variant: 'Variante' }
 
-// Die Sicht: * (alle), die gewählten Sprachen, und bei gewähltem Kanal */kanal und sprache/kanal.
-// Nicht alle Sprachen × alle Kanäle — 27 × 6 passen auf keinen Schirm.
+// ---- Sicht (Sprachen/Kanal als Spalten)
 const viewLocales = computed(() => locales.value.filter(l => store.viewLocales.includes(l)))
 const columns = computed(() => {
   const cols = [{ locale: null, channel: null, label: '*' }]
@@ -45,49 +47,38 @@ const columns = computed(() => {
   }
   return cols
 })
-function toggleLocale(l) {
-  const s = new Set(store.viewLocales); s.has(l) ? s.delete(l) : s.add(l)
-  store.viewLocales = locales.value.filter(c => s.has(c)); store.save()
-}
+function toggleLocale(l) { const s = new Set(store.viewLocales); s.has(l) ? s.delete(l) : s.add(l); store.viewLocales = locales.value.filter(c => s.has(c)); store.save() }
 function setChannel(c) { store.viewChannel = c || null; store.save() }
-// Achsenwert der Variante (z. B. storage=256): steht in der *-Zelle, gesperrt — er ist die Identität der Variante.
-function axisValue(a, col) { return node.value?.role === 'variant' && !col.locale && !col.channel && a in node.value.axisValues ? node.value.axisValues[a] : null }
 
-// Welche Attribute hier: an der Rolle erlaubt; bei Produkt/Variante die der Familie in deren Reihenfolge.
-const family = computed(() => {
-  const productAncestor = node.value?.ancestors.find(a => a.role === 'product')
-  const key = node.value?.family ?? (productAncestor ? tree.byId.get(productAncestor.id)?.family : null)
-  return model.value?.families.find(f => f.key === key)
-})
-// Eine Sicht gilt im ganzen Baum (gemerkt); passt ihre Ebene nicht zum Knoten, zeigt er „alles“.
-// Die Sicht nennt Gruppen — jeder Knoten zeigt darin automatisch die Attribute, die er hat.
-const views = computed(() => model.value?.views ?? [])
-const view = computed(() => { const v = views.value.find(v => v.key === store.viewKey); return v && (!v.level || v.level === node.value?.role) ? v : null })
-function setView(k) { store.viewKey = k; store.save(); if (!k) arranging.value = false }
-const groups = computed(() => {
+// ---- Attributsicht je Knotentyp
+const views = computed(() => (model.value?.views ?? []).filter(v => v.level === node.value?.role))
+const view = computed(() => views.value.find(v => v.key === store.viewKey[node.value?.role]) ?? null)
+function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save() }
+function setLayout(l) { store.layout = l; store.save() }
+function toggleEditableOnly() { store.editableOnly = !store.editableOnly; store.save() }
+
+// ---- Die Gruppen, die hier gelten, in Sichtreihenfolge; darin die Attribute in Sichtreihenfolge
+const blocks = computed(() => {
   if (!model.value || !node.value) return []
-  const allowed = a => !a.levels || a.levels.includes(node.value.role)
-  let defs
-  const req = k => family.value?.attributes.find(a => a.key === k)?.required
-  const inFamily = k => !family.value || family.value.attributes.some(a => a.key === k) || k === 'sku'
-  const ofGroup = g => (model.value.groups.find(x => x.key === g)?.attributes ?? []).map(k => model.value.attributes.find(a => a.key === k)).filter(Boolean)
-  if (view.value) {
-    defs = view.value.items.flatMap(it => it.group ? ofGroup(it.group) : [model.value.attributes.find(a => a.key === it.key)].filter(Boolean))
-      .filter(a => inFamily(a.key)).map(a => ({ ...a, required: req(a.key) }))
-  } else if (family.value) {
-    // Familie „alles“: Gruppen in Modellreihenfolge, darin die Attribute der Familie in Gruppenreihenfolge
-    const keys = new Set(family.value.attributes.map(a => a.key))
-    defs = model.value.groups.flatMap(g => ofGroup(g.key)).filter(a => keys.has(a.key)).map(a => ({ ...a, required: req(a.key) }))
-    for (const fa of family.value.attributes) if (!defs.some(d => d.key === fa.key)) { const a = model.value.attributes.find(x => x.key === fa.key); if (a) defs.push({ ...a, required: fa.required }) }
-    // sku gehört immer zur Variante, auch wenn die Familie es nicht nennt
-    if (node.value.role === 'variant' && !defs.some(d => d.key === 'sku')) { const s = model.value.attributes.find(a => a.key === 'sku'); if (s) defs.unshift(s) }
-  } else defs = model.value.groups.flatMap(g => ofGroup(g.key)).concat(model.value.attributes.filter(a => !a.group))
-  defs = defs.filter(allowed)
-  const g = new Map()
-  for (const a of defs) { const k = a.group ?? ''; if (!g.has(k)) g.set(k, []); g.get(k).push(a) }
-  return [...g.entries()]
+  const eff = node.value.groups ?? []               // [{ key, from, fromLabel, active, attributes }]
+  const byKey = new Map(eff.map(g => [g.key, g]))
+  const order = view.value ? view.value.items.map(it => it.group).filter(k => byKey.has(k)) : eff.map(g => g.key)
+  if (view.value) for (const g of eff) if (!order.includes(g.key)) order.push(g.key)   // Gruppen ohne Platz in der Sicht: unten
+  const req = k => model.value.attributes.find(a => a.key === k)?.required
+  return order.map(k => {
+    const g = byKey.get(k)
+    const it = view.value?.items.find(x => x.group === k)
+    const ord = (it?.order ?? []).filter(a => g.attributes.includes(a))
+    const keys = [...ord, ...g.attributes.filter(a => !ord.includes(a))]
+    const defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key) }))
+    const def = model.value.groups.find(x => x.key === k)
+    return { key: k, label: def?.label?.de || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, active: g.active, defs }
+  }).filter(b => b.defs.length && (!store.editableOnly || b.active))
 })
+watch(blocks, b => { if (store.layout === 'tabs' && !b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
+const shownBlocks = computed(() => store.layout === 'tabs' ? blocks.value.filter(b => b.key === tab.value) : blocks.value)
 
+// ---- Werte
 const own = computed(() => valueMap(node.value?.values ?? []))
 function valueMap(values) {
   const m = new Map()
@@ -95,88 +86,42 @@ function valueMap(values) {
   return m
 }
 function key(a, l, c, row) { return `${a}|${l ?? ''}|${c ?? ''}${row ? '|' + row : ''}` }
-// Vollständigkeit je Kanal × Sprache aus dem Server; null = die Familie verlangt hier nichts.
-function completeness(channel, locale) { return (node.value?.completeness ?? []).find(c => c.channel === channel && c.locale === locale) ?? null }
-function incomplete(channel, locale) {
-  if (locale) return completeness(channel, locale)?.missing?.length ? completeness(channel, locale) : null
-  const all = (node.value?.completeness ?? []).filter(c => c.channel === channel && c.missing.length)
-  return all.length ? { missing: all.flatMap(c => c.missing.map(m => m + (m.includes('/') ? '' : '/' + c.locale))) } : null
-}
 function ownValue(a, col) { return own.value.get(key(a, col.locale, col.channel)) ?? null }
-// Wie Tree.Resolve: je Stufe genaue Achse, ohne Kanal, ohne Sprache; erst hier, dann den Pfad hinauf.
 function fallback(m, a, col) {
   if (col.channel && m.has(key(a, col.locale, null))) return m.get(key(a, col.locale, null))
   if ((col.locale || col.channel) && m.has(key(a, null, null))) return m.get(key(a, null, null))
   return null
 }
 const ancestorMaps = computed(() => (node.value?.ancestors ?? []).map(an => ({ an, m: valueMap(an.values) })))
-function inherited(a, col) {
-  const here = fallback(own.value, a, col)
+// Wie Tree.Resolve: hier (genaue Achse, ohne Kanal, ohne Sprache), dann den Pfad hinauf — nur wenn das Attribut vererbbar ist.
+function inherited(def, col) {
+  const here = fallback(own.value, def.key, col)
   if (here != null) return { value: here, from: null }
+  if (!def.inheritable) return { value: null, from: null }
   for (const { an, m } of ancestorMaps.value) {
-    const v = m.get(key(a, col.locale, col.channel)) ?? fallback(m, a, col)
+    const v = m.get(key(def.key, col.locale, col.channel)) ?? fallback(m, def.key, col)
     if (v != null) return { value: v, from: an }
   }
   return { value: null, from: null }
 }
-function enabled(def, col) {
-  return (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
+function enabled(def, col, block) {
+  return block.active && (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
     && (!col.channel || !def.channels || def.channels.includes(col.channel))
 }
 function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
-function listLabel(def) {
-  const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []
-  return v => vals.find(x => x.value === v)?.label?.de || v
-}
+function listLabel(def) { const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []; return v => vals.find(x => x.value === v)?.label?.de || v }
 function released(channel, locale) { return node.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }
 function axisLabel(a) { return model.value?.attributes.find(x => x.key === a)?.label?.de || a }
+function axisValue(a, col) { return node.value?.role === 'variant' && !col.locale && !col.channel && a in node.value.axisValues ? node.value.axisValues[a] : null }
+function completeness(channel, locale) { return (node.value?.completeness ?? []).find(c => c.channel === channel && c.locale === locale) ?? null }
+function incomplete(channel, locale) {
+  if (locale) return completeness(channel, locale)?.missing?.length ? completeness(channel, locale) : null
+  const all = (node.value?.completeness ?? []).filter(c => c.channel === channel && c.missing.length)
+  return all.length ? { missing: all.flatMap(c => c.missing.map(m => m + (m.includes('/') ? '' : '/' + c.locale))) } : null
+}
+const freeGroups = computed(() => (model.value?.groups ?? []).map(g => g.key).filter(k => !(node.value?.groups ?? []).some(g => g.key === k)))
 
-// ---- Anordnen: Reihenfolge und Gruppen der Familie ändern, jeder Drop ein FamilyDefined.
-async function saveView(items) {
-  try { await api.post(`/api/model/views/${view.value.key}`, { ...view.value, items }, 'PUT'); await store.poll(true) }
-  catch (e) { store.toast(e.message) }
-}
-async function saveGroupOrder(groupKey, order) {
-  const g = model.value.groups.find(x => x.key === groupKey)
-  try { await api.post(`/api/model/groups/${groupKey}`, { key: groupKey, label: g?.label ?? {}, order }, 'PUT'); await store.poll(true) }
-  catch (e) { store.toast(e.message) }
-}
-// Anordnen ohne Sicht: erst eine anlegen — für diese Ebene, gefüllt mit dem, was jetzt zu sehen ist.
-async function startArranging() {
-  if (view.value) { arranging.value = !arranging.value; return }
-  const key = window.prompt('Neue Sicht (key, a-z 0-9 _) — gefüllt mit den Gruppen, die hier gerade zu sehen sind:', 'alles')
-  if (!key) return
-  const items = groups.value.map(([g]) => g).filter(Boolean).map(g => ({ group: g }))
-  try {
-    await api.post(`/api/model/views/${key.trim()}`, { key: key.trim(), label: { de: key.trim() }, items }, 'PUT')
-    await store.poll(true); setView(key.trim()); arranging.value = true
-  } catch (e) { store.toast(e.message) }
-}
-function onDragStart(e, what) { dragging.value = what; e.dataTransfer.effectAllowed = 'move' }
-function onDragOver(e) { if (arranging.value && dragging.value) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }
-// Gruppe auf Gruppe: Gruppenblock in der Sicht davor (schreibt die Sicht).
-// Zeile auf Zeile derselben Gruppe: davor einsortieren (schreibt die Gruppenreihenfolge).
-// Zeile in eine andere Gruppe: nicht hier — die Gruppe ist Sache des Attributs (⊞ Modell).
-function onDrop(target) {
-  const d = dragging.value; dragging.value = null
-  if (!d || !view.value) return
-  const groupOf = k => model.value.attributes.find(x => x.key === k)?.group ?? ''
-  if (d.key !== undefined) {
-    if (target.key === undefined || target.key === d.key) return
-    const g = groupOf(d.key)
-    if (groupOf(target.key) !== g) { store.toast('Die Gruppe eines Attributs änderst du unter ⊞ Modell → Attribute'); return }
-    const order = (model.value.groups.find(x => x.key === g)?.attributes ?? []).filter(k => k !== d.key)
-    order.splice(order.indexOf(target.key), 0, d.key)
-    saveGroupOrder(g, order)
-  } else {
-    if (target.group === undefined || target.group === d.group) return
-    const items = view.value.items.filter(it => it.group !== d.group)
-    const i = items.findIndex(it => it.group === target.group)
-    items.splice(i < 0 ? items.length : i, 0, { group: d.group })
-    saveView(items)
-  }
-}
-
+// ---- Laden
 async function load() {
   try {
     node.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}`)
@@ -187,25 +132,51 @@ async function load() {
   }
 }
 onMounted(load)
+function onKey(e) { if (e.key === 'Escape' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) router.push('/tree') }
+onMounted(() => window.addEventListener('keydown', onKey))
+onUnmounted(() => window.removeEventListener('keydown', onKey))
 watch(() => store.head, h => { if (h > (entries.value[0]?.number ?? 0)) load() })
 
+// ---- Befehle
 async function command(fn) {
   if (!store.actor) { store.toast('Name fehlt → Einstellungen'); return }
   busy.value = true
-  try {
-    const entry = await fn()
-    entries.value.unshift(entry)
-    await load()             // Herkunft und Baum-Label können sich ändern — der Server hat es schon
-    tree.load()
-  } catch (e) { store.toast(e.message) }
+  try { const entry = await fn(); entries.value.unshift(entry); await load(); tree.load() }
+  catch (e) { store.toast(e.message) }
   finally { busy.value = false }
 }
 const nodeUrl = () => `/api/nodes/${encodeURIComponent(props.id)}`
-// Rechtsklick auf eine Zelle: eigener Wert weg, zur Herkunft, kopieren.
-function cellMenu(e, def, col) {
-  if (!enabled(def, col)) return
+const setValue = (def, col, value, row = null) => command(() =>
+  api.post(`${nodeUrl()}/attributes`, def.multiple
+    ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean), row }
+    : { attribute: def.key, locale: col.locale, channel: col.channel, value, row }))
+const addRow = def => command(() => api.post(`${nodeUrl()}/rows`, { attribute: def.key, row: '' }))
+const removeRow = (def, row) => command(() => api.del(`${nodeUrl()}/rows/${def.key}/${row}`))
+const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def.key}`, { attribute: def.key, rows }, 'PUT'))
+const setLabel = (loc, v) => command(() => api.post(`/api/groups/${encodeURIComponent(props.id)}/label`, { label: { ...node.value.label, [loc]: v } }, 'PUT'))
+const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
+const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups }, 'PUT'))
+function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
+function addCategory() { const c = newCategory.value.trim(); if (!c) return; newCategory.value = ''; command(() => api.post(`${nodeUrl()}/categories`, { category: c })) }
+const removeCategory = c => command(() => api.del(`${nodeUrl()}/categories/${encodeURIComponent(c)}`))
+function toggleRelease(channel, locale) {
+  const q = `channel=${encodeURIComponent(channel)}` + (locale ? `&locale=${encodeURIComponent(locale)}` : '')
+  command(() => released(channel, locale) ? api.del(`${nodeUrl()}/releases?${q}`) : api.post(`${nodeUrl()}/releases`, { channel, locale }))
+}
+function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
+async function retire() {
+  const kids = node.value.children
+  if (kids && !window.confirm(`${tree.byId.get(props.id)?.label ?? props.id} mit allen ${countBelow(props.id)} Knoten darunter zurückziehen?\n\nDas Journal behält alles; der Baum zeigt sie nicht mehr.`)) return
+  try {
+    const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
+    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok')
+    const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree')
+  } catch (e) { store.toast(e.message) }
+}
+function cellMenu(e, def, col, block) {
+  if (!enabled(def, col, block)) return
   const ownV = ownValue(def.key, col)
-  const inh = inherited(def.key, col)
+  const inh = inherited(def, col)
   const shown = ownV ?? inh.value
   menu.open(e, [
     { label: `${def.label?.de || def.key} · ${col.label}`, disabled: true },
@@ -216,37 +187,6 @@ function cellMenu(e, def, col) {
     { label: 'Attribut im Modell', icon: '⊞', key: 'm', action: () => router.push('/model') },
   ])
 }
-const setValue = (def, col, value, row = null) => command(() =>
-  api.post(`${nodeUrl()}/attributes`,
-    def.multiple
-      ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean), row }
-      : { attribute: def.key, locale: col.locale, channel: col.channel, value, row }))
-const addRow = def => command(() => api.post(`${nodeUrl()}/rows`, { attribute: def.key, row: '' }))
-const removeRow = (def, row) => command(() => api.del(`${nodeUrl()}/rows/${def.key}/${row}`))
-const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def.key}`, { attribute: def.key, rows }, 'PUT'))
-const setLabel = (loc, v) => command(() => api.post(`/api/groups/${encodeURIComponent(props.id)}/label`, { label: { ...node.value.label, [loc]: v } }, 'PUT'))
-const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
-function addCategory() {
-  const c = newCategory.value.trim(); if (!c) return
-  newCategory.value = ''
-  command(() => api.post(`${nodeUrl()}/categories`, { category: c }))
-}
-const removeCategory = c => command(() => api.del(`${nodeUrl()}/categories/${encodeURIComponent(c)}`))
-function toggleRelease(channel, locale) {
-  const q = `channel=${encodeURIComponent(channel)}` + (locale ? `&locale=${encodeURIComponent(locale)}` : '')
-  command(() => released(channel, locale) ? api.del(`${nodeUrl()}/releases?${q}`) : api.post(`${nodeUrl()}/releases`, { channel, locale }))
-}
-async function retire() {
-  const kids = node.value.children
-  if (kids && !window.confirm(`${tree.byId.get(props.id)?.label ?? props.id} mit allen ${countBelow(props.id)} Knoten darunter zurückziehen?\n\nDas Journal behält alles; der Baum zeigt sie nicht mehr.`)) return
-  try {
-    const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
-    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok')
-    const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree')
-  }
-  catch (e) { store.toast(e.message) }
-}
-function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
 </script>
 
 <template>
@@ -265,9 +205,10 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
     </div>
     <div class="toolbar meta muted">
       <span class="mono">{{ node.id }}</span>
-      <span v-if="node.role === 'product'">· Familie <b>{{ family?.label?.de || node.family }}</b><span v-if="node.axes.length"> · variiert nach {{ node.axes.map(axisLabel).join(', ') }}</span></span>
+      <span>· {{ roleLabel[node.role] }}</span>
+      <span v-if="node.role === 'product' && node.axes.length">· variiert nach {{ node.axes.map(axisLabel).join(', ') }}</span>
       <span v-if="node.role === 'variant'">· <span v-for="(v, a) in node.axisValues" :key="a" class="chip">{{ axisLabel(a) }}: {{ v }}</span></span>
-      <span v-if="node.role === 'group'">· {{ node.children }} Kinder</span>
+      <span v-if="node.children">· {{ node.children }} Kinder</span>
       <span class="grow" />
       <span>≡ {{ node.entries }} · #{{ node.lastNumber }} {{ when(node.lastAt) }} 👤 {{ node.lastActor }}</span>
       <span v-if="busy">…</span>
@@ -279,14 +220,20 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
       <select :value="store.viewChannel ?? ''" @change="setChannel($event.target.value)" title="Kanal der Sicht">
         <option value="">nur *</option><option v-for="c in channels" :key="c" :value="c">{{ c }}</option>
       </select>
-      <span class="muted">{{ columns.length }} Spalten</span>
-      <span class="grow" />
-      <select :value="store.viewKey" @change="setView($event.target.value)" title="Sicht: welche Gruppen, in welcher Reihenfolge — gilt im ganzen Baum; ⊞ Modell → Sichten">
-        <option value="">◫ {{ family ? 'Familie: alles' : 'alles' }}</option>
-        <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}{{ v.level ? ' (' + v.level + ')' : '' }}</option>
+      <span class="sep">·</span>
+      <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="`Attributsicht für ${roleLabel[node.role]} — ⊞ Modell → Attributsichten`">
+        <option value="">◫ alles</option>
+        <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option>
       </select>
-      <span v-if="store.viewKey && !view" class="warn" title="die gewählte Sicht gilt für eine andere Ebene">⚠ hier: alles</span>
-      <button :class="{ primary: arranging }" @click="startArranging" :title="view ? `Anordnen: Gruppenblöcke ordnen die Sicht ${view.label?.de || view.key}, Zeilen ordnen ihre Gruppe` : 'Anordnen braucht eine Sicht — legt eine an'">⇅ Anordnen</button>
+      <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
+      <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
+      <button :class="{ primary: store.editableOnly }" @click="toggleEditableOnly" title="nur Gruppen zeigen, die hier bearbeitbar sind (gesperrte weg)">✎ nur bearbeitbare</button>
+      <span class="grow" />
+      <span class="muted">{{ columns.length }} Spalten</span>
+    </div>
+
+    <div v-if="store.layout === 'tabs' && blocks.length" class="tabs">
+      <button v-for="b in blocks" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="b.active ? '' : `gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`">▤ {{ b.label }}<span v-if="!b.active"> 🔒</span></button>
     </div>
 
     <div class="scroll" v-if="model">
@@ -303,40 +250,62 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
             <th v-for="c in columns" :key="c.label">{{ c.label }}</th>
           </tr>
         </thead>
-        <tbody v-for="[group, defs] in groups" :key="group">
-          <tr class="group-row" :class="{ drag: arranging }" :draggable="arranging" @dragstart="onDragStart($event, { group })" @dragover="onDragOver" @drop="onDrop({ group })">
-            <td :colspan="columns.length + 1"><span v-if="arranging" class="handle">⋮⋮</span>{{ model.groups?.find(g => g.key === group)?.label?.de || group || '—' }}</td>
+        <tbody v-for="b in shownBlocks" :key="b.key">
+          <tr class="group-row" :class="{ locked: !b.active }">
+            <td :colspan="columns.length + 1">
+              ▤ {{ b.label }}
+              <span class="muted from" :title="`Gruppe hängt an ${b.fromLabel}`">· von {{ b.from === id ? 'hier' : b.fromLabel }}</span>
+              <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">🔒 ab {{ roleLabel[b.activeFrom] }}</span>
+            </td>
           </tr>
-          <template v-for="def in defs" :key="def.key">
-          <tr v-if="def.type === 'rows'" :class="{ drag: arranging }" :draggable="arranging" @dragstart="onDragStart($event, { key: def.key })" @dragover="onDragOver" @drop="onDrop({ key: def.key })">
-            <td class="attr" :title="def.key"><span v-if="arranging" class="handle">⋮⋮</span>{{ def.label?.de || def.key }} <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
+          <template v-for="def in b.defs" :key="def.key">
+          <tr v-if="def.type === 'rows'">
+            <td class="attr" :title="def.key">{{ def.label?.de || def.key }} <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
             <td :colspan="columns.length" style="padding:0">
-              <RowsBlock :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
+              <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
                 @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
                 @add="addRow(def)" @remove="row => removeRow(def, row)" @order="rows => orderRows(def, rows)" />
+              <div v-else class="muted" style="padding:4px 8px">🔒</div>
             </td>
           </tr>
-          <tr v-else :class="{ drag: arranging }" :draggable="arranging" @dragstart="onDragStart($event, { key: def.key })" @dragover="onDragOver" @drop="onDrop({ key: def.key })">
-            <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '')">
-              <span v-if="arranging" class="handle">⋮⋮</span>{{ def.label?.de || def.key }}
+          <tr v-else>
+            <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')">
+              {{ def.label?.de || def.key }}
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
               <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
-              <span v-if="def.required" class="warn" title="Pflicht in der Familie">●</span>
+              <span v-if="def.inheritable" class="muted" title="vererbbar: gilt nach unten">↓</span>
+              <span v-if="def.required" class="warn" title="Pflicht">●</span>
             </td>
             <template v-for="c in columns" :key="c.label">
-              <ToggleCell v-if="def.type === 'boolean'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
-              <SelectCell v-else-if="def.type === 'enum'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
-              <DateCell v-else-if="def.type === 'date'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
-              <HtmlCell v-else-if="def.type === 'html'" :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)" :title="`${def.label?.de || def.key} · ${c.label}`"
-                :origin="inherited(def.key, c).from ? `${icon(inherited(def.key, c).from.role)} ${inherited(def.key, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
-              <td v-else-if="axisValue(def.key, c) != null" class="cell"><div class="cell-box locked" :title="'Variantenachse — festgelegt beim Anlegen'">{{ axisValue(def.key, c) }} 🔒</div></td>
-              <Cell v-else :value="ownValue(def.key, c)" :inherited="inherited(def.key, c).value" :disabled="!enabled(def, c)"
-                :origin="inherited(def.key, c).from ? `${icon(inherited(def.key, c).from.role)} ${inherited(def.key, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c)" />
+              <ToggleCell v-if="def.type === 'boolean'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <SelectCell v-else-if="def.type === 'enum'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <DateCell v-else-if="def.type === 'date'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <HtmlCell v-else-if="def.type === 'html'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${def.label?.de || def.key} · ${c.label}`"
+                :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <td v-else-if="axisValue(def.key, c) != null" class="cell"><div class="cell-box locked" title="Variantenachse — festgelegt beim Anlegen">{{ axisValue(def.key, c) }} 🔒</div></td>
+              <Cell v-else :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)"
+                :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
           </tr>
           </template>
         </tbody>
       </table>
+      <div v-if="!blocks.length" class="empty">Keine Attributgruppe gilt hier — unten eine anhängen, oder oben am Pfad.</div>
+
+      <div class="section">
+        <h2>▤ Attributgruppen an diesem Knoten <span class="muted">· gelten ab hier nach unten</span></h2>
+        <div class="chips">
+          <span v-for="g in node.attachedGroups" :key="g" class="chip" :title="model.groups.find(x => x.key === g)?.label?.de">{{ g }} <button @click="attach(node.attachedGroups.filter(x => x !== g))" title="abhängen">×</button></span>
+          <select v-model="addGroup" style="width:160px"><option value="">+ Gruppe …</option><option v-for="k in freeGroups" :key="k" :value="k">{{ k }}</option></select>
+          <button class="primary" :disabled="!addGroup" @click="attachAdd">anhängen</button>
+          <span class="muted" v-if="node.groups?.some(g => g.from !== id)">· geerbt: {{ node.groups.filter(g => g.from !== id).map(g => g.key).join(', ') }}</span>
+        </div>
+      </div>
+
+      <div class="section" v-if="node.orphans?.length">
+        <h2 class="warn">⚠ Verwaiste Werte</h2>
+        <div class="muted">Eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen): <span class="mono">{{ node.orphans.join(', ') }}</span> — Gruppe anhängen, dann sind sie wieder da.</div>
+      </div>
 
       <div class="section">
         <h2>▤ Kategorien</h2>
@@ -347,7 +316,7 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
       </div>
 
       <div class="section" v-if="node.role !== 'group'">
-        <h2>✓ Freigaben <span class="muted">· Vollständigkeit aus den Pflichtfeldern der Familie; unvollständig = keine Freigabe</span></h2>
+        <h2>✓ Freigaben <span class="muted">· Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig = keine Freigabe</span></h2>
         <table class="grid releases">
           <thead><tr><th>Kanal</th><th v-if="node.role === 'variant'">*</th><th v-for="l in locales" :key="l">{{ l }}</th></tr></thead>
           <tbody>
@@ -359,7 +328,7 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
               <td v-for="l in locales" :key="l" class="rel">
                 <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : '·' }}</button>
                 <span v-if="completeness(ch, l)" class="mono" :class="completeness(ch, l).missing.length ? 'neg' : 'pos'" :title="completeness(ch, l).missing.length ? 'fehlt: ' + completeness(ch, l).missing.join(', ') : 'vollständig'">{{ completeness(ch, l).filled }}/{{ completeness(ch, l).required }}</span>
-                <span v-else class="muted" title="die Familie verlangt hier nichts">–</span>
+                <span v-else class="muted" title="hier ist nichts Pflicht">–</span>
               </td>
             </tr>
           </tbody>
@@ -368,7 +337,7 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
     </div>
 
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>Tab</kbd> Zelle · <kbd>Enter</kbd> bearbeiten/speichern · <kbd>Esc</kbd> verwerfen · <kbd>Entf</kbd> eigenen Wert löschen · schraffiert = Achse gibt es nicht · <i>kursiv</i> = geerbt (Herkunft im Tooltip)
+      <kbd>Tab</kbd> Zelle · <kbd>Enter</kbd> bearbeiten/speichern · <kbd>Esc</kbd> verwerfen · <kbd>Entf</kbd> eigenen Wert löschen · schraffiert = Achse gibt es nicht · 🔒 = Gruppe hier nicht aktiv · <i>kursiv</i> = geerbt
     </div>
   </div>
   <div v-else class="pane" style="flex:3"><div class="empty">…</div></div>
@@ -388,21 +357,24 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
 .crumb:hover { color: var(--accent); }
 .meta { font-size: 12px; min-height: 28px; }
 .view { gap: 4px; font-size: 12px; min-height: 30px; }
-.view select { font-size: 12px; padding: 1px 4px; }
+.view select, .view button { font-size: 12px; padding: 1px 6px; }
+.tabs { display: flex; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
+.tabbtn { border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--bg); color: var(--muted); padding: 4px 10px; }
+.tabbtn.on { background: var(--pane); color: var(--text); font-weight: 600; }
+.tabbtn.locked { opacity: .6; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
-tr.drag { cursor: grab; }
-tr.drag:hover { outline: 1px dashed var(--accent); }
-.handle { color: var(--muted); margin-right: 6px; cursor: grab; }
 .group-row td { background: var(--bg); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; height: 22px; }
+.group-row .from { text-transform: none; font-weight: 400; letter-spacing: 0; }
+.group-row.locked td { color: var(--warn); }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 table.releases { width: auto; }
 table.releases td { text-align: center; }
 table.releases td.rel { white-space: nowrap; }
 table.releases td.rel .toggle { margin-right: 6px; }
-.toggle:disabled { opacity: .35; cursor: not-allowed; }
 .toggle { width: 28px; color: var(--muted); }
 .toggle.on { color: var(--pane); background: var(--pos); border-color: var(--pos); }
+.toggle:disabled { opacity: .35; cursor: not-allowed; }
 .status { border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; background: var(--pane); }
 .status.active { color: var(--pos); }
 .status.discontinued { color: var(--neg); }

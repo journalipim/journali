@@ -34,7 +34,8 @@ public static class TreeApi
 
         api.MapPost("/groups", (GroupCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateGroup(x, b.Parent, b.Label)));
         api.MapPut("/groups/{id}/label", (string id, GroupRenamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RenameGroup(x, id, b.Label)));
-        api.MapPost("/products", (ProductCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateProduct(x, b.Group, b.Family, b.Axes)));
+        api.MapPost("/products", (ProductCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateProduct(x, b.Group, b.Axes)));
+        api.MapPut("/nodes/{id}/groups", (string id, GroupsAttached b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AttachGroups(x, id, b.Groups)));
         api.MapPost("/variants", (VariantCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateVariant(x, b.Product, b.AxisValues)));
         api.MapPost("/nodes/{id}/move", (string id, NodeMoved b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Move(x, id, b.Parent)));
         api.MapDelete("/nodes/{id}", (string id, bool recursive, HttpRequest req, Catalog c) =>
@@ -95,12 +96,12 @@ public static class TreeApi
 }
 
 /// <summary>Eine Zeile im Baum: genug für die Anzeige, ohne Werte.</summary>
-public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Family, string[] Axes,
+public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Groups, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, string? Sku, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
-        n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Family, n.Axes, n.AxisValues, n.Status,
+        n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
         n.Own(Model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor);
 
     /// <summary>
@@ -110,12 +111,12 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
     public static string LabelOf(Tree tree, ModelCatalog model, Node n)
     {
         if (n.Role == Roles.Group) return n.Label.GetValueOrDefault("de") ?? n.Label.Values.FirstOrDefault() ?? n.Id;
-        var attr = CompletenessRules.FamilyOf(tree, model, n)?.LabelAttribute ?? "name";
+        var attr = model.TreeLabels.GetValueOrDefault(n.Role) ?? "name";
         string? byAttr()
         {
-            if (tree.Resolve(n, attr, "de", null).Value is { } de) return de;
-            foreach (var l in model.Locales.Keys) if (tree.Resolve(n, attr, l, null).Value is { } v) return v;
-            return tree.Resolve(n, attr, null, null).Value;
+            if (tree.Resolve(model, n, attr, "de", null).Value is { } de) return de;
+            foreach (var l in model.Locales.Keys) if (tree.Resolve(model, n, attr, l, null).Value is { } v) return v;
+            return tree.Resolve(model, n, attr, null, null).Value;
         }
         if (n.Role == Roles.Product) return byAttr() ?? n.Id;
         return n.Own(Model.SkuAttribute, null, null)
@@ -136,18 +137,32 @@ public sealed record ValueView(string Attribute, string? Locale, string? Channel
 /// <summary>Ein Vorfahr mit seinen Werten — der Client rechnet die Vererbung damit wie <see cref="Tree.Resolve"/>.</summary>
 public sealed record AncestorView(string Id, string Role, string Label, List<ValueView> Values);
 
+/// <summary>Eine Gruppe, die am Knoten gilt: woher (angehängt hier oder oben), ob hier aktiv, welche Attribute sie hier hat.</summary>
+public sealed record GroupView(string Key, string From, string FromLabel, bool Active, List<string> Attributes);
+
 /// <summary>Ein Knoten vollständig — Kopie aus dem Abbild, ausserhalb der Sperre ungefährlich.</summary>
 public sealed record NodeView(string Id, string Role, string? Parent, Labels Label, string? Family, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string> External, List<ValueView> Values, Dictionary<string, List<string>> Rows,
-    List<AncestorView> Ancestors, List<string> Categories, List<Release> Releases, List<Completeness> Completeness,
+    List<AncestorView> Ancestors, string[] AttachedGroups, List<GroupView> Groups, List<string> Orphans,
+    List<string> Categories, List<Release> Releases, List<Completeness> Completeness,
     int Children, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {
-    public static NodeView Of(Tree tree, ModelCatalog model, Node n) => new(
+    public static NodeView Of(Tree tree, ModelCatalog model, Node n)
+    {
+        var effective = tree.EffectiveGroups(n);
+        var groups = effective.Select(g => new GroupView(g.Group, g.From.Id, NodeRow.LabelOf(tree, model, g.From), model.GroupActiveAt(g.Group, n.Role),
+            model.AttributesOf(g.Group).Where(a => a.AllowedAt(n.Role)).Select(a => a.Key).ToList())).ToList();
+        var covered = groups.SelectMany(g => g.Attributes).ToHashSet();
+        // Verwaist: eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen).
+        var orphans = n.Values.Keys.Select(k => k.Attribute).Concat(n.Lists.Keys.Select(k => k.Attribute)).Concat(n.Rows.Keys).Distinct().Where(a => !covered.Contains(a)).Order().ToList();
+        return new(
         n.Id, n.Role, n.Parent, n.Label, n.Family, n.Axes, n.AxisValues, n.Status, n.External,
         ValueView.Of(n).ToList(), n.Rows,
         tree.Ancestors(n).Select(a => new AncestorView(a.Id, a.Role, NodeRow.LabelOf(tree, model, a), ValueView.Of(a).ToList())).ToList(),
+        n.Groups, groups, orphans,
         n.Categories.Order().ToList(), n.Releases.ToList(),
-        n.Role == Roles.Group ? [] : CompletenessRules.Of(tree, model, n),
+        CompletenessRules.Of(tree, model, n),
         tree.Children(n.Id).Count(),
         n.Entries, n.LastNumber, n.LastAt, n.LastActor);
+    }
 }

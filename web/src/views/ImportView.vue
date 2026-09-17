@@ -13,9 +13,8 @@ const base = ref(saved.base || IXP_DEMO)
 const token = ref(saved.token || '')
 const lang = ref(saved.lang || 'de')
 const target = ref(saved.target || '')
-const family = ref(saved.family || '')
 const importLocales = ref(saved.importLocales || null)
-const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, family: family.value, importLocales: importLocales.value }))
+const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, importLocales: importLocales.value }))
 
 let client = null
 const connected = ref(false)
@@ -124,7 +123,6 @@ const newAttrs = computed(() => Object.entries(mapping.value).filter(([, v]) => 
 async function run() {
   if (!store.actor) { store.toast('Name fehlt → Einstellungen'); return }
   if (!plan.value) return
-  if (plan.value.items.some(i => i.role === 'product' && !i.existing) && !family.value) { store.toast('Familie für neue Produkte wählen'); return }
   busy.value = 'schreibe …'
   result.value = null
   try {
@@ -134,15 +132,13 @@ async function run() {
       say(`Attribut ${a.key} (${a.type}) angelegt`)
     }
     const attrOf = k => { const m = mapping.value[k]; if (!m) return null; if (m.startsWith('new:')) return newAttrs.value.find(a => a.from === k)?.key; return m }
-    // Zugeordnete Attribute gehören in die Zielfamilie, sonst zeigt das Gitter sie nicht.
-    if (family.value) {
-      const fam = model.value.families.find(f => f.key === family.value)
-      const mapped = Object.keys(mapping.value).map(attrOf).filter(Boolean)
-      const missing = mapped.filter(k => !fam.attributes.some(a => a.key === k))
-      if (missing.length) {
-        await api.post(`/api/model/families/${fam.key}`, { ...fam, attributes: [...fam.attributes, ...missing.map(key => ({ key, group: 'import' }))] }, 'PUT')
-        say(`Familie ${fam.key}: ${missing.join(', ')} aufgenommen`)
-      }
+    // Die Gruppen der zugeordneten Attribute hängen an der Zielgruppe (oder an jeder neuen Wurzelgruppe), sonst gilt dort nichts.
+    const neededGroups = [...new Set(Object.keys(mapping.value).map(attrOf).filter(Boolean).map(k => model.value.attributes.find(a => a.key === k)?.group ?? (newAttrs.value.some(a => a.key === k) ? 'import' : null)).filter(Boolean))]
+    if (target.value && neededGroups.length) {
+      const t = await api.get(`/api/nodes/${target.value}`)
+      const have = new Set((t.groups ?? []).map(g => g.key))
+      const add = neededGroups.filter(g => !have.has(g))
+      if (add.length) { await api.post(`/api/nodes/${target.value}/groups`, { groups: [...t.attachedGroups, ...add] }, 'PUT'); say(`Zielgruppe: ${add.join(', ')} angehängt`) }
     }
 
     // Vorhandene Knoten: eigene Werte holen, damit nur Geändertes geschrieben wird.
@@ -162,10 +158,13 @@ async function run() {
         const ref = 'n' + (++refNo)
         const parent = it.parentMaster && refOf.has(it.parentMaster) ? refOf.get(it.parentMaster) : (target.value || null)
         const labels = Object.fromEntries(Object.entries(it.versions).map(([l, v]) => [l, v.name]))
-        if (it.role === 'group') cmds.push({ op: 'group.create', ref, args: { parent, label: labels } })
+        if (it.role === 'group') {
+          cmds.push({ op: 'group.create', ref, args: { parent, label: labels } })
+          if (!parent && neededGroups.length) cmds.push({ op: 'groups.attach', args: { node: '@' + ref, groups: neededGroups } })
+        }
         else if (it.role === 'product') {
           if (!parent) throw new Error(`Produkt ${it.doc.name}: keine Zielgruppe`)
-          cmds.push({ op: 'product.create', ref, args: { group: parent, family: family.value } })
+          cmds.push({ op: 'product.create', ref, args: { group: parent } })
         } else {
           if (!parent || !parent.startsWith('@') && tree.byId.get(parent)?.role !== 'product') throw new Error(`Variante ${it.doc.name}: kein Produkt darüber`)
           cmds.push({ op: 'variant.create', ref, args: { product: parent, axisValues: {} } })
@@ -234,10 +233,6 @@ function toggleLocale(l) {
           <tr><td class="muted">Ziel ▣</td><td>
             <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
             <span class="muted">neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</span>
-          </td></tr>
-          <tr><td class="muted">Familie ▦</td><td>
-            <select v-model="family" @change="persist"><option value="">— wählen —</option><option v-for="f in model?.families ?? []" :key="f.key" :value="f.key">{{ f.label?.de || f.key }}</option></select>
-            <span class="muted">für neue Produkte; IXP kennt <span class="mono">class_identifier</span>, das Modell muss eine Familie dazu haben</span>
           </td></tr>
           <tr><td class="muted">Sprachen 🗣</td><td>
             <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>

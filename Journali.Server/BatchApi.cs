@@ -47,7 +47,8 @@ public static class BatchApi
                         {
                             "group.create" => Commands.CreateGroup(ctx, a.Id("parent"), a.Labels("label")),
                             "group.rename" => Commands.RenameGroup(ctx, a.Node(), a.Labels("label")),
-                            "product.create" => Commands.CreateProduct(ctx, a.Id("group"), a.Str("family"), a.Strings("axes")),
+                            "product.create" => Commands.CreateProduct(ctx, a.Id("group"), a.Strings("axes")),
+                            "groups.attach" => Commands.AttachGroups(ctx, a.Node(), a.Strings("groups")),
                             "variant.create" => Commands.CreateVariant(ctx, a.Id("product"), a.Map("axisValues")),
                             "node.move" => Commands.Move(ctx, a.Node(), a.Id("parent")),
                             "node.retire" => Commands.Retire(ctx, a.Node()),

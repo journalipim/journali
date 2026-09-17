@@ -37,13 +37,22 @@ public static class Commands
     public static Outcome RenameGroup(Ctx c, string id, Labels? label) =>
         IsRole(c.Tree, id, Roles.Group) ? Outcome.Ok(c.Write(id, Types.GroupRenamed, new GroupRenamed(label ?? new()))) : Outcome.Missing;
 
-    public static Outcome CreateProduct(Ctx c, string? group, string? familyKey, string[]? axes)
+    public static Outcome CreateProduct(Ctx c, string? group, string[]? axes)
     {
         if (!IsRole(c.Tree, group, Roles.Group)) return Outcome.Bad("Ein Produkt hängt unter einer Produktgruppe.");
-        if (!c.Model.Families.TryGetValue(familyKey ?? "", out var family)) return Outcome.Bad($"Unbekannte Familie: {familyKey}");
         var clean = axes?.Where(a => a.Length > 0).Distinct().ToArray() ?? [];
-        if (clean.Except(family.Axes ?? []).Any()) return Outcome.Bad($"Variantenachsen der Familie {family.Key}: {string.Join(", ", family.Axes ?? [])}");
-        return Outcome.Ok(c.Write(Ids.New(Roles.Product), Types.ProductCreated, new ProductCreated(group!, family.Key, clean.Length > 0 ? clean : null)));
+        if (clean.Except(c.Model.Attributes.Keys).Any()) return Outcome.Bad("Variantenachse muss ein Attribut sein.");
+        return Outcome.Ok(c.Write(Ids.New(Roles.Product), Types.ProductCreated, new ProductCreated(group!, null, clean.Length > 0 ? clean : null)));
+    }
+
+    /// <summary>Attributgruppen an einen Knoten hängen (ganze Liste); die Definition gilt ab hier nach unten.</summary>
+    public static Outcome AttachGroups(Ctx c, string id, string[]? groups)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        var list = groups?.Select(g => g.Trim()).Where(g => g.Length > 0).Distinct().ToArray() ?? [];
+        foreach (var g in list)
+            if (!c.Model.Groups.ContainsKey(g) && !c.Model.Attributes.Values.Any(a => a.Group == g)) return Outcome.Bad($"Unbekannte Gruppe: {g}");
+        return Outcome.Ok(c.Write(id, Types.GroupsAttached, new GroupsAttached(list)));
     }
 
     public static Outcome CreateVariant(Ctx c, string? productId, Dictionary<string, string>? axisValues)
@@ -98,6 +107,9 @@ public static class Commands
         if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad($"{def.Key} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.");
         row = Blank(row);
+        // Gilt das Attribut hier? Über eine Gruppe am Pfad, die an dieser Rolle aktiv ist (oder als Zelle einer Zeile).
+        if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key))
+            return Outcome.Bad(WhyNotActive(c, n, def));
         if (row is not null)
         {
             // Zelle einer Zeile: die Zeile muss es am Knoten geben, das Attribut muss Spalte dieses vermehrbaren Attributs sein.
@@ -105,7 +117,6 @@ public static class Commands
             if (owner is null) return Outcome.Bad($"Zeile {row} gibt es hier nicht.");
             if (!(c.Model.Attributes.GetValueOrDefault(owner)?.Columns?.Contains(def.Key) ?? false)) return Outcome.Bad($"{def.Key} ist keine Spalte von {owner}.");
         }
-        else if (!def.AllowedAt(n.Role)) return Outcome.Bad($"{def.Key} gibt es nur an: {string.Join(", ", def.Levels!)}");
         locale = Blank(locale);
         channel = Blank(channel);
         if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad($"{def.Key} hat diese Achse nicht.");
@@ -119,11 +130,22 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row)));
     }
 
+    /// <summary>Warum ein Attribut an diesem Knoten nicht erfassbar ist — für die Fehlermeldung.</summary>
+    private static string WhyNotActive(Ctx c, Node n, AttributeDefinition def)
+    {
+        var g = def.Group ?? "";
+        var effective = c.Tree.EffectiveGroups(n).Select(x => x.Group).ToHashSet();
+        if (g.Length == 0) return $"{def.Key} hat keine Gruppe — im Modell zuordnen.";
+        if (!effective.Contains(g)) return $"{def.Key} gilt hier nicht: Gruppe {g} hängt an keinem Knoten des Pfads.";
+        if (!c.Model.GroupActiveAt(g, n.Role)) return $"{def.Key} gilt hier nicht: Gruppe {g} ist erst ab {c.Model.Groups[g].ActiveFrom} aktiv.";
+        return $"{def.Key} gibt es nur an: {string.Join(", ", def.Levels ?? [])}";
+    }
+
     public static Outcome AddRow(Ctx c, string id, string? attribute)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def) || def.Type != AttributeTypes.Rows) return Outcome.Bad($"{attribute} ist kein vermehrbares Attribut.");
-        if (!def.AllowedAt(n.Role)) return Outcome.Bad($"{def.Key} gibt es nur an: {string.Join(", ", def.Levels!)}");
+        if (!CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key)) return Outcome.Bad(WhyNotActive(c, n, def));
         var rowId = "r-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(3)).ToLowerInvariant();
         return Outcome.Ok(c.Write(id, Types.RowAdded, new RowAdded(def.Key, rowId)));
     }
@@ -159,11 +181,8 @@ public static class Commands
         locale = Blank(locale);
         if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
         // Freigabe setzt Vollständigkeit voraus — Sperre (docs/pflegestruktur.md, entschieden).
-        if (CompletenessRules.FamilyOf(c.Tree, c.Model, n) is { } family)
-        {
-            var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, family, channel!, locale);
-            if (missing.Length > 0) return Outcome.Bad($"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}");
-        }
+        var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).ToList(), channel!, locale);
+        if (missing.Length > 0) return Outcome.Bad($"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}");
         return Outcome.Ok(c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale)));
     }
 
@@ -218,12 +237,13 @@ public static class Commands
                 if (suffix) foreach (var k in label.Keys.ToList()) label[k] = "(Kopie) " + label[k];   // vorne, damit man es im Baum sieht
                 id = CreateGroup(c, parent, label).Entry?.Stream; break;
             case Roles.Product:
-                id = CreateProduct(c, parent, src.Family, src.Axes).Entry?.Stream; break;
+                id = CreateProduct(c, parent, src.Axes).Entry?.Stream; break;
             default:
                 id = CreateVariant(c, parent, new(src.AxisValues)).Entry?.Stream; break;
         }
         if (id is null) return null;
         count++;
+        if (src.Groups.Length > 0 && AttachGroups(c, id, src.Groups).Entry is not null) count++;
         foreach (var (attr, rows) in src.Rows)
         {
             foreach (var row in rows)

@@ -22,11 +22,12 @@ Eintrag übergeht das Abbild.
 |---|---|---|
 | `GroupCreated` | `parent?`, `label{}` | Produktgruppe; `parent` null = Wurzel |
 | `GroupRenamed` | `label{}` | |
-| `ProductCreated` | `group`, `family`, `axes[]?` | Produkt unter einer Gruppe; `axes` = wonach es variiert (Attribute aus `family.axes`) |
+| `ProductCreated` | `group`, `axes[]?` | Produkt unter einer Gruppe; `axes` = wonach es variiert (Attribute, optional). `family` ist Altlast und bleibt leer |
 | `VariantCreated` | `product`, `axisValues{}` | Variante — das Verkaufbare; je Produktachse ein Wert, Kombination je Produkt eindeutig |
 | `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, sonst unter Gruppe; nie unter sich selbst) |
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles |
 | `StatusSet` | `status` (draft, active, discontinued) | Produkt und Variante; Gruppe hat keinen |
+| `GroupsAttached` | `groups[]` | welche Attributgruppen an diesem Knoten hängen (ganze Liste); die **Definition** vererbt sich nach unten — ob der **Wert** vererbt wird, sagt das Attribut |
 | `ExternalLinked` | `system`, `id` | externe Kennung je Quellsystem (Import: Update statt Neuanlage); je System nur ein Knoten |
 | `ExternalUnlinked` | `system` | Kennung weg |
 
@@ -64,16 +65,16 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 |---|---|---|
 | `locale:<code>` | `LocaleDefined` | `code`, `label` |
 | `channel:<key>` | `ChannelDefined` | `key`, `label{}` |
-| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum, **rows**), `unit?` (muss es unter `unit:` geben), `group?`, `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `levels[]?` (group, product, variant; null = überall), `columns[]?` (bei rows: Attribute, keine rows) |
-| `group:<key>` | `AttributeGroupDefined` / `AttributeGroupRetired` | `key`, `label{}`, `order[]` (Attribute in Reihenfolge); das Attribut verweist mit `group` |
-| `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level?`, `items[]` je `{group}` oder `{key}` — **geordnete Gruppen**, einzelne Attribute als Ausnahme; jeder Knoten zeigt in einer Gruppe automatisch die Attribute, die er hat |
+| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum, **rows**), `unit?` (muss es unter `unit:` geben), `group` (Attributgruppe), `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `inheritable` (Wert vererbt sich nach unten; Vorgabe nein), `required{kanal: [sprachen] oder ["*"]}?` (Pflicht — gilt überall gleich, Eineindeutigkeit), `levels[]?` (Ausnahme: an welchen Knotentypen; null = Regel der Gruppe), `columns[]?` (bei rows) |
+| `group:<key>` | `AttributeGroupDefined` / `AttributeGroupRetired` | `key`, `label{}`, `activeFrom?` (group, product, variant: ab welchem Knotentyp Werte erfasst werden; darüber sichtbar, gesperrt). Gruppen hängen an Knoten (`GroupsAttached`) |
+| `settings:label:<role>` | `TreeLabelDefined` | `role`, `attribute` — welches Attribut die Knoten dieses Typs im Baum benennt |
+| `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — Gruppen in Reihenfolge, darin Attribute in Reihenfolge; ungenannte hängen unten an |
 | `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` |
 | `list:<key>` | `ListDefined` | `key`, `label{}` |
 | `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
 | `list:<key>` | `ListValueRetired` | `value` |
-| `family:<key>` | `FamilyDefined` | `key`, `label{}`, `attributes[]` je `{key, group?, required{kanal: [sprachen] oder ["*"]}}` — **Reihenfolge = Anzeige**, `axes[]` (Variantenachsen = Attribute), `labelAttribute?` (Name im Baum, Vorgabe name) |
-| `family:<key>` | `FamilyRetired` | `key` |
+| `family:<key>` | `FamilyDefined` / `FamilyRetired` | **Altlast** (16.09.2026): Familien sind durch Attributgruppen am Baum ersetzt; der Typ bleibt lesbar, wird nicht mehr geschrieben |
 
 Ein leeres Journal bekommt beim ersten Serverstart das Saatgut aus
 `Model.Seeds()` (`AttributeDefinition.cs`): `de`, `en`; `web`, `print`;
@@ -95,12 +96,13 @@ steht im Kopf `X-Actor`.
 |---|---|
 | `POST /api/groups` `{parent?, label{}}` | `GroupCreated` — Id vergibt der Server |
 | `PUT /api/groups/{id}/label` `{label{}}` | `GroupRenamed` |
-| `POST /api/products` `{group, family, axes[]?}` | `ProductCreated` — Familie muss es geben, Achsen aus `family.axes` |
+| `POST /api/products` `{group, axes[]?}` | `ProductCreated` — Achsen optional, jede ein Attribut |
+| `PUT /api/nodes/{id}/groups` `{groups[]}` | `GroupsAttached` |
 | `POST /api/variants` `{product, axisValues{}}` | `VariantCreated` — genau die Produktachsen, Werte geprüft, Kombination eindeutig |
 | `POST /api/nodes/{id}/move` `{parent}` | `NodeMoved` |
 | `DELETE /api/nodes/{id}` | `NodeRetired` — nur ohne Kinder |
 | `POST /api/nodes/{id}/status` `{status}` | `StatusSet` |
-| `POST /api/nodes/{id}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` — prüft Attribut, `levels`, Achsen, Kanal, Typ, Werteliste; `sku` eindeutig über alle Varianten |
+| `POST /api/nodes/{id}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` — nur, wenn das Attribut hier **gilt** (Gruppe am Pfad, dort aktiv, `levels`); prüft Achsen, Kanal, Typ, Wörterbuch; `sku` eindeutig über alle Varianten |
 | `POST /api/nodes/{id}/categories` `{category}` | `CategoryAssigned` |
 | `DELETE /api/nodes/{id}/categories/{category}` | `CategoryRemoved` |
 | `POST /api/nodes/{id}/releases` `{channel, locale?}` | `ReleaseGranted` — nur Variante; **abgelehnt, wenn Pflichtfelder der Familie für Kanal × Sprache fehlen** (`locale` leer = alle Sprachen) |
@@ -120,7 +122,8 @@ steht im Kopf `X-Actor`.
 | `PUT /api/model/lists/{key}` `{label{}}` | `ListDefined` |
 | `PUT /api/model/lists/{key}/values/{value}` `{label{}, extra?, order}` | `ListValueDefined` |
 | `DELETE /api/model/lists/{key}/values/{value}` | `ListValueRetired` |
-| `PUT /api/model/families/{key}` Definition | `FamilyDefined` — prüft Attribute, Kanäle, Sprachen, Achsen |
+| `PUT /api/model/groups/{key}` `{label{}, activeFrom?}` · `DELETE` | `AttributeGroupDefined` / `AttributeGroupRetired` (nicht mit Attributen) |
+| `PUT /api/model/views/{key}` `{label{}, level, items[]}` · `DELETE` | `ViewDefined` / `ViewRetired` |
+| `PUT /api/model/labels/{role}` `{attribute}` | `TreeLabelDefined` |
 | `PUT /api/model/units/{key}` `{label{}, quantity, factor}` | `UnitDefined` |
 | `DELETE /api/model/units/{key}` | `UnitRetired` — nicht, solange ein Attribut sie benutzt |
-| `DELETE /api/model/families/{key}` | `FamilyRetired` |

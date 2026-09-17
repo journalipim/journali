@@ -30,15 +30,15 @@ public sealed class ModelCatalog : IProjection
     public Dictionary<string, UnitDefinition> Units { get; } = new();
     public Dictionary<string, ViewDefinition> Views { get; } = new();
     public Dictionary<string, AttributeGroupDefinition> Groups { get; } = new();
+    /// <summary>Welches Attribut die Knoten eines Typs im Baum benennt.</summary>
+    public Dictionary<string, string> TreeLabels { get; } = new();
 
-    /// <summary>Attribute einer Gruppe in ihrer Reihenfolge; ungenannte hinten, nach Schlüssel.</summary>
-    public IEnumerable<AttributeDefinition> AttributesOf(string group)
-    {
-        var order = Groups.TryGetValue(group, out var g) ? g.Order ?? [] : [];
-        var pos = order.Select((k, i) => (k, i)).ToDictionary(x => x.k, x => x.i);
-        return Attributes.Values.Where(a => (a.Group ?? "") == group)
-            .OrderBy(a => pos.TryGetValue(a.Key, out var i) ? i : int.MaxValue).ThenBy(a => a.Key);
-    }
+    /// <summary>Attribute einer Gruppe, nach Schlüssel; die Reihenfolge fürs Auge kommt aus der Sicht.</summary>
+    public IEnumerable<AttributeDefinition> AttributesOf(string group) =>
+        Attributes.Values.Where(a => (a.Group ?? "") == group).OrderBy(a => a.Key);
+
+    /// <summary>Ist die Gruppe an dieser Rolle aktiv (Werte erfassbar)? Unbekannte Gruppen (nur an Attributen): überall.</summary>
+    public bool GroupActiveAt(string group, string role) => !Groups.TryGetValue(group, out var g) || g.ActiveAt(role);
 
     /// <summary>Ist überhaupt ein Modell da? Sonst sät der Server das Saatgut.</summary>
     public bool IsEmpty => Attributes.Count == 0 && Locales.Count == 0;
@@ -80,6 +80,10 @@ public sealed class ModelCatalog : IProjection
                 break;
             case Types.FamilyRetired:
                 Families.Remove(Types.Deserialize<FamilyRetired>(entry.Payload).Key);
+                break;
+            case Types.TreeLabelDefined:
+                var tl = Types.Deserialize<TreeLabelDefined>(entry.Payload);
+                TreeLabels[tl.Role] = tl.Attribute;
                 break;
             case Types.AttributeGroupDefined:
                 var ag = Types.Deserialize<AttributeGroupDefinition>(entry.Payload);

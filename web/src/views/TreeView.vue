@@ -112,7 +112,7 @@ function contextMenu(e, r) {
   const st = s => r.role !== 'group' && r.status !== s ? { label: s === 'draft' ? '○ Entwurf' : s === 'active' ? '● aktiv' : '✗ ausgelaufen', action: () => setStatus(r, s) } : null
   menu.open(e, [
     r.role === 'group' ? { label: 'Neue Gruppe darunter', icon: '▣', key: 'g', action: () => start('group') } : null,
-    r.role === 'group' ? { label: 'Neues Produkt darunter', icon: '▦', key: 'p', disabled: !families.value.length, hint: families.value.length ? '' : 'keine Familie', action: () => start('product') } : null,
+    r.role === 'group' ? { label: 'Neues Produkt darunter', icon: '▦', key: 'p', action: () => start('product') } : null,
     r.role === 'product' ? { label: 'Neue Variante darunter', icon: '◆', key: 'v', action: () => start('variant') } : null,
     r.role === 'group' ? { label: 'Umbenennen', icon: '✎', key: 'u', hint: 'im Knoten', action: () => router.push(`/tree/${r.id}`) } : null,
     { sep: true },
@@ -145,15 +145,13 @@ const productTarget = computed(() => {
   while (n && n.role !== 'product') n = tree.byId.get(n.parent)
   return n ?? null
 })
-const families = computed(() => store.model?.families ?? [])
-const familyOf = key => families.value.find(f => f.key === key)
 function attrDef(key) { return store.model?.attributes.find(a => a.key === key) }
 function listValues(key) { const d = attrDef(key); return (store.model?.lists.find(l => l.key === d?.list)?.values ?? []) }
 
 function start(kind) {
   creating.value = kind
   form.value = kind === 'group' ? { de: '', en: '' }
-    : kind === 'product' ? { family: families.value[0]?.key ?? '', axes: [] }
+    : kind === 'product' ? { axes: [] }
     : Object.fromEntries((productTarget.value?.axes ?? []).map(a => [a, '']))
 }
 async function create() {
@@ -161,7 +159,7 @@ async function create() {
   try {
     let entry
     if (kind === 'group') entry = await api.post('/api/groups', { parent: groupTarget.value?.id ?? null, label: { de: form.value.de, en: form.value.en } })
-    else if (kind === 'product') entry = await api.post('/api/products', { group: groupTarget.value.id, family: form.value.family, axes: form.value.axes })
+    else if (kind === 'product') entry = await api.post('/api/products', { group: groupTarget.value.id, axes: form.value.axes })
     else entry = await api.post('/api/variants', { product: productTarget.value.id, axisValues: form.value })
     creating.value = null
     await tree.load()
@@ -185,10 +183,9 @@ function toggleAxis(a) {
     </div>
     <div class="toolbar create">
       <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label}` : 'Gruppe an der Wurzel'">+ ▣</button>
-      <button @click="start('product')" :disabled="!groupTarget || !families.length" :title="groupTarget ? `Produkt unter ${groupTarget.label}` : 'erst eine Gruppe wählen'">+ ▦</button>
+      <button @click="start('product')" :disabled="!groupTarget" :title="groupTarget ? `Produkt unter ${groupTarget.label}` : 'erst eine Gruppe wählen'">+ ▦</button>
       <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? `Variante unter ${productTarget.label}` : 'erst ein Produkt wählen'">+ ◆</button>
       <span class="grow" />
-      <span v-if="!families.length" class="warn" title="Ohne Familie kein Produkt → Modell">⚠ keine Familie</span>
     </div>
 
     <div v-if="creating" class="create-form">
@@ -199,12 +196,9 @@ function toggleAxis(a) {
       </template>
       <template v-else-if="creating === 'product'">
         <div class="muted">▦ neues Produkt unter {{ groupTarget.label }}</div>
-        <select v-model="form.family" @change="form.axes = []">
-          <option v-for="f in families" :key="f.key" :value="f.key">{{ f.label?.de || f.key }}</option>
-        </select>
-        <div v-if="familyOf(form.family)?.axes?.length" class="chips">
-          <span class="muted">variiert nach:</span>
-          <button v-for="a in familyOf(form.family).axes" :key="a" :class="{ primary: form.axes.includes(a) }" @click="toggleAxis(a)">{{ attrDef(a)?.label?.de || a }}</button>
+        <div class="chips">
+          <span class="muted" title="optional: Attribute, nach denen die Varianten sich unterscheiden (Kombination je Produkt eindeutig)">variiert nach:</span>
+          <button v-for="a in (store.model?.attributes ?? []).filter(x => x.type === 'enum' || x.type === 'text' || x.type === 'integer').slice(0, 12)" :key="a.key" :class="{ primary: form.axes.includes(a.key) }" @click="toggleAxis(a.key)">{{ a.label?.de || a.key }}</button>
         </div>
       </template>
       <template v-else>

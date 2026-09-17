@@ -12,7 +12,9 @@ export const store = reactive({
   viewLocales: saved.viewLocales || ['de', 'en'],   // Sicht: welche Sprachen als Spalten
   viewChannel: saved.viewChannel ?? null,          // Sicht: welcher Kanal (null = nur *)
   journalOpen: saved.journalOpen ?? true,           // Journal neben dem Knoten auf- oder zugeklappt
-  viewKey: typeof saved.viewKey === 'string' ? saved.viewKey : '',   // gewählte Sicht — gilt im ganzen Baum
+  viewKey: (saved.viewKey && typeof saved.viewKey === 'object') ? saved.viewKey : {},   // gewählte Sicht je Knotentyp
+  layout: saved.layout ?? 'flat',                    // flat | tabs
+  editableOnly: saved.editableOnly ?? false,         // nur Gruppen zeigen, die hier bearbeitbar sind
   online: null,          // null = noch nicht gefragt, sonst true/false
   head: 0,
   nodes: 0,
@@ -23,7 +25,7 @@ export const store = reactive({
   stale: false,
 
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen, viewKey: this.viewKey }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, editableOnly: this.editableOnly }))
     this.applyTheme()
   },
 

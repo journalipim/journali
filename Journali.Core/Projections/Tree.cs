@@ -20,6 +20,8 @@ public sealed class Node
     public Dictionary<string, string> AxisValues { get; } = new(); // Variante
     public string Status { get; set; } = Statuses.Draft;
     public Dictionary<string, string> External { get; } = new();   // Quellsystem → Kennung dort
+    /// <summary>Attributgruppen, die hier angehängt sind; die Definition vererbt sich nach unten.</summary>
+    public string[] Groups { get; set; } = [];
     public Dictionary<Axis, string> Values { get; } = new();
     public Dictionary<Axis, string[]> Lists { get; } = new();
     /// <summary>Vermehrbare Attribute: Zeilen in Reihenfolge je Attribut.</summary>
@@ -78,13 +80,30 @@ public sealed class Tree : IProjection
             yield return n;
     }
 
-    /// <summary>Wert am Knoten oder von oben geerbt; liefert auch, woher.</summary>
-    public (string? Value, Node? From) Resolve(Node node, string attribute, string? locale, string? channel)
+    /// <summary>Wert am Knoten oder — wenn <paramref name="inheritable"/> — von oben geerbt; liefert auch, woher.</summary>
+    public (string? Value, Node? From) Resolve(Node node, string attribute, string? locale, string? channel, bool inheritable = true)
     {
         if (node.Own(attribute, locale, channel) is { } own) return (own, node);
+        if (!inheritable) return (null, null);
         foreach (var a in Ancestors(node))
             if (a.Own(attribute, locale, channel) is { } v) return (v, a);
         return (null, null);
+    }
+
+    /// <summary>Wert mit der Vererbungsregel des Attributs aus dem Modell.</summary>
+    public (string? Value, Node? From) Resolve(ModelCatalog model, Node node, string attribute, string? locale, string? channel) =>
+        Resolve(node, attribute, locale, channel, model.Attributes.TryGetValue(attribute, out var d) && d.Inheritable);
+
+    /// <summary>Die Attributgruppen, die hier gelten: am Knoten und an allen Vorfahren angehängt — von der Wurzel her, mit Herkunft.</summary>
+    public List<(string Group, Node From)> EffectiveGroups(Node node)
+    {
+        var chain = Ancestors(node).Reverse().Append(node);
+        var seen = new HashSet<string>();
+        var result = new List<(string, Node)>();
+        foreach (var n in chain)
+            foreach (var g in n.Groups)
+                if (seen.Add(g)) result.Add((g, n));
+        return result;
     }
 
     /// <summary>Knoten zu einer externen Kennung, falls verknüpft.</summary>
@@ -213,6 +232,9 @@ public sealed class Tree : IProjection
                 break;
             case Types.StatusSet:
                 n.Status = Types.Deserialize<StatusSet>(entry.Payload).Status;
+                break;
+            case Types.GroupsAttached:
+                n.Groups = Types.Deserialize<GroupsAttached>(entry.Payload).Groups.Distinct().ToArray();
                 break;
             case Types.AttributeSet:
                 var a = Types.Deserialize<AttributeSet>(entry.Payload);

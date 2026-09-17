@@ -19,6 +19,7 @@ public static class Types
     public const string NodeMoved = "NodeMoved";
     public const string NodeRetired = "NodeRetired";
     public const string StatusSet = "StatusSet";
+    public const string GroupsAttached = "GroupsAttached";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
 
@@ -42,6 +43,7 @@ public static class Types
     public const string ListValueRetired = "ListValueRetired";
     public const string FamilyDefined = "FamilyDefined";
     public const string FamilyRetired = "FamilyRetired";
+    public const string TreeLabelDefined = "TreeLabelDefined";
     public const string AttributeGroupDefined = "AttributeGroupDefined";
     public const string AttributeGroupRetired = "AttributeGroupRetired";
     public const string ViewDefined = "ViewDefined";
@@ -74,6 +76,8 @@ public static class Roles
     public const string Product = "product";
     public const string Variant = "variant";
     public static readonly IReadOnlyList<string> All = [Group, Product, Variant];
+    /// <summary>Tiefe im Baum: Gruppe 0, Produkt 1, Variante 2 — für „aktiv ab“.</summary>
+    public static int Depth(string role) => role switch { Group => 0, Product => 1, Variant => 2, _ => 0 };
 }
 
 /// <summary>Status eines Produkts oder einer Variante; discontinued am Produkt überstimmt alles darunter.</summary>
@@ -90,8 +94,8 @@ public sealed record GroupCreated(string? Parent, Labels Label);
 
 public sealed record GroupRenamed(Labels Label);
 
-/// <summary>Erster Eintrag eines Produkts: unter welcher Gruppe, welche Familie, wonach es variiert (Attribute).</summary>
-public sealed record ProductCreated(string Group, string Family, string[]? Axes = null);
+/// <summary>Erster Eintrag eines Produkts: unter welcher Gruppe, wonach es variiert (Attribute, optional). <paramref name="Family"/> ist Altlast.</summary>
+public sealed record ProductCreated(string Group, string? Family = null, string[]? Axes = null);
 
 /// <summary>Erster Eintrag einer Variante: je Variantenachse des Produkts ein Wert.</summary>
 public sealed record VariantCreated(string Product, Dictionary<string, string> AxisValues);
@@ -102,6 +106,13 @@ public sealed record NodeMoved(string Parent);
 public sealed record NodeRetired();
 
 public sealed record StatusSet(string Status);
+
+/// <summary>
+/// Welche Attributgruppen an diesem Knoten hängen (ganze Liste, der letzte gewinnt).
+/// Die Definition vererbt sich nach unten: alles darunter hat diese Attribute dazu.
+/// Ob ein Wert vererbt wird, sagt das Attribut (<see cref="AttributeDefinition.Inheritable"/>).
+/// </summary>
+public sealed record GroupsAttached(string[] Groups);
 
 /// <summary>Externe Kennung je Quellsystem (Import): beim zweiten Lauf Update statt Neuanlage.</summary>
 public sealed record ExternalLinked(string System, string Id);
@@ -184,8 +195,10 @@ public static class Axes
 /// <param name="Channels">nur für diese Kanäle pflegbar; null = alle</param>
 /// <param name="List">Werteliste bei <c>enum</c></param>
 /// <param name="Multiple">mehrere Werte (Liste)</param>
-/// <param name="Levels">an welchen Rollen setzbar (<see cref="Roles"/>); null = überall</param>
+/// <param name="Levels">an welchen Rollen setzbar (<see cref="Roles"/>); null = die Regel der Gruppe gilt</param>
 /// <param name="Columns">bei <c>rows</c>: die Spalten, jede ein Attribut</param>
+/// <param name="Inheritable">Wert vererbt sich nach unten (Kategorie ja, Name nein). Vorgabe nein.</param>
+/// <param name="Required">Pflicht je Kanal: Sprachen oder "*" — gilt überall gleich (Eineindeutigkeit)</param>
 public sealed record AttributeDefinition(
     string Key,
     Labels Label,
@@ -197,7 +210,9 @@ public sealed record AttributeDefinition(
     string? List = null,
     bool Multiple = false,
     string[]? Levels = null,
-    string[]? Columns = null)
+    string[]? Columns = null,
+    bool Inheritable = false,
+    Dictionary<string, string[]>? Required = null)
 {
     public bool PerLocale => Axes?.Contains(Entries.Axes.Locale) ?? false;
     public bool PerChannel => Axes?.Contains(Entries.Axes.Channel) ?? false;
@@ -227,24 +242,30 @@ public sealed record FamilyDefinition(string Key, Labels Label, List<FamilyAttri
 public sealed record FamilyRetired(string Key);
 
 /// <summary>
-/// Eine Attributgruppe (16): Label je Sprache und die Reihenfolge ihrer Attribute.
-/// Das Attribut verweist mit <c>group</c> darauf. Strom <c>group:&lt;key&gt;</c>.
+/// Eine Attributgruppe (16): Label je Sprache und ab welchem Knotentyp ihre Werte
+/// erfasst werden (<paramref name="ActiveFrom"/>, null = überall). Das Attribut
+/// verweist mit <c>group</c> darauf; Gruppen hängen an Knoten (<see cref="GroupsAttached"/>).
 /// </summary>
-public sealed record AttributeGroupDefinition(string Key, Labels Label, string[]? Order = null);
+public sealed record AttributeGroupDefinition(string Key, Labels Label, string? ActiveFrom = null, string[]? Order = null)
+{
+    /// <summary>Aktiv an dieser Rolle: ab <see cref="ActiveFrom"/> abwärts (group → product → variant).</summary>
+    public bool ActiveAt(string role) => ActiveFrom is null || Roles.Depth(role) >= Roles.Depth(ActiveFrom);
+}
+
+/// <summary>Welches Attribut die Knoten eines Typs im Baum benennt. Strom <c>settings:label:&lt;role&gt;</c>.</summary>
+public sealed record TreeLabelDefined(string Role, string Attribute);
 
 public sealed record AttributeGroupRetired(string Key);
 
-/// <summary>Ein Eintrag in einer Sicht: eine ganze Gruppe (<see cref="Group"/>) oder — als Ausnahme — ein einzelnes Attribut (<see cref="Key"/>).</summary>
-public sealed record ViewItem(string? Group = null, string? Key = null);
+/// <summary>Eine Gruppe in einer Sicht mit der Reihenfolge ihrer Attribute dort; ungenannte hängen unten an.</summary>
+public sealed record ViewItem(string Group, string[]? Order = null);
 
 /// <summary>
-/// Eine Sicht (15): welche Gruppen in welcher Reihenfolge — redaktionell,
-/// technisch, Preise, alles. Wer die Gruppe sehen darf, sieht ihre Attribute
-/// in der Gruppenreihenfolge; einzelne Attribute sind die Ausnahme. Optional
-/// nur für eine Ebene des Baums (<see cref="Roles"/>). Die Familie sagt, was
-/// es gibt und was Pflicht ist; die Sicht, wer was sieht. Strom <c>view:&lt;key&gt;</c>.
+/// Eine Sicht (15): für einen Knotentyp die Gruppen in Reihenfolge und darin die
+/// Attribute in Reihenfolge — redaktionell, technisch, Preise, alles.
+/// Strom <c>view:&lt;key&gt;</c>, ganze Definition je Eintrag.
 /// </summary>
-public sealed record ViewDefinition(string Key, Labels Label, List<ViewItem> Items, string? Level = null);
+public sealed record ViewDefinition(string Key, Labels Label, List<ViewItem> Items, string Level);
 
 public sealed record ViewRetired(string Key);
 
