@@ -304,7 +304,15 @@ public static class Formula
             _i++;
             while (_i < src.Length && src[_i] != quote)
             {
-                if (src[_i] == '\\' && _i + 1 < src.Length) { _i++; sb.Append(src[_i] switch { 'n' => '\n', 't' => '\t', var x => x }); }
+                // \n \t \\ \" \' wie in JavaScript; alles andere bleibt samt Backslash — für reguläre Ausdrücke ("\s+")
+                if (src[_i] == '\\' && _i + 1 < src.Length)
+                {
+                    _i++;
+                    var x = src[_i];
+                    if (x == 'n') sb.Append('\n'); else if (x == 't') sb.Append('\t');
+                    else if (x is '\\' or '"' or '\'' or '`') sb.Append(x);
+                    else sb.Append('\\').Append(x);
+                }
                 else sb.Append(src[_i]);
                 _i++;
             }
