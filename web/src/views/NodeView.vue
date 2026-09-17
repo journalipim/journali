@@ -65,6 +65,9 @@ function setLayout(l) { store.layout = l; store.save() }
 const open = k => !store.collapsed.includes(k)
 function toggle(k) { store.collapsed = open(k) ? [...store.collapsed, k] : store.collapsed.filter(x => x !== k); store.save() }
 function toggleEditableOnly() { store.editableOnly = !store.editableOnly; store.save() }
+// Attributnamen: Bezeichnung → Key → beides (Taloan: Vorlagen nutzen die Keys, da darf man nicht raten)
+function cycleNames() { store.attrNames = { label: 'key', key: 'both', both: 'label' }[store.attrNames] ?? 'label'; store.save() }
+const NAMES_TITLE = { label: 'Bezeichnung in der Sicht-Sprache — Klick: technische Keys', key: 'technische Keys — Klick: beides', both: 'Bezeichnung ⟨Key⟩ — Klick: nur Bezeichnung' }
 
 // ---- Die Gruppen, die hier gelten, in Sichtreihenfolge; darin die Attribute in Sichtreihenfolge
 const blocks = computed(() => {
@@ -182,9 +185,9 @@ const star = key => (node.value?.stars ?? []).find(s => s.attribute === key) ?? 
 const starOwn = key => star(key)?.from === props.id
 function starTitle(def) {
   const s = star(def.key)
-  if (!s) return `☆ ab hier nach unten mit ${def.label?.de || def.key} benennen`
+  if (!s) return `☆ ab hier nach unten mit ${store.name(def)} benennen`
   const where = s.from === props.id ? 'hier gesetzt, gilt ab hier nach unten' : `geerbt von ${s.fromLabel} — gilt, bis hier ein eigenes gesetzt wird`
-  const applies = s.applies ? '' : ` — gilt hier nicht (erst wo ${def.label?.de || def.key} erfasst wird), bis dahin zählt das nächste ★ weiter oben`
+  const applies = s.applies ? '' : ` — gilt hier nicht (erst wo ${store.name(def)} erfasst wird), bis dahin zählt das nächste ★ weiter oben`
   return `★ benennt ${where}${applies} — Klick ${s.from === props.id ? 'nimmt es weg' : 'setzt es hier neu'}`
 }
 const freeGroups = computed(() => (model.value?.groups ?? []).filter(g => !(node.value?.groups ?? []).some(x => x.key === g.key)))
@@ -321,7 +324,7 @@ function cellMenu(e, def, col, block) {
   const inh = inherited(def, col)
   const shown = ownV ?? inh.value
   menu.open(e, [
-    { label: `${def.label?.de || def.key} · ${col.label}`, disabled: true },
+    { label: `${store.name(def)} · ${col.label}`, disabled: true },
     { sep: true },
     { label: 'Eigenen Wert löschen', icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? 'kein eigener' : (inh.value != null ? 'dann geerbt' : ''), action: () => setValue(def, col, '') },
     inh.from ? { label: `Zur Herkunft ${icon(inh.from.role)} ${inh.from.label}`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
@@ -379,6 +382,7 @@ function cellMenu(e, def, col, block) {
       <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
       <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
       <button :class="{ primary: store.editableOnly }" @click="toggleEditableOnly" title="nur Gruppen zeigen, die hier bearbeitbar sind (gesperrte weg)">✎ nur bearbeitbare</button>
+      <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
       <span class="grow" />
       <input ref="findBox" v-model="attrFilter" type="search" placeholder="🔍 Attribut oder Wert (sichtbar)" style="width:220px;font-size:12px" title="filtert live über Attributname und die Werte in den gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
       <span v-if="attrFilter" class="muted">{{ hitCount }} Treffer</span>
@@ -409,7 +413,7 @@ function cellMenu(e, def, col, block) {
           </tr>
           <template v-for="def in b.defs" :key="def.key">
           <tr v-if="def.type === 'formula' || def.type === 'template'">
-            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')">{{ def.type === 'template' ? '{}' : 'ƒ' }} {{ def.label?.de || def.key }}<span v-if="def.required" class="warn" title="Pflicht">●</span></td>
+            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')">{{ def.type === 'template' ? '{}' : 'ƒ' }} {{ store.name(def) }}<span v-if="def.required" class="warn" title="Pflicht">●</span></td>
             <template v-for="c in columns" :key="c.label">
               <td v-if="!enabled(def, c, b)" class="cell"><div class="cell-box disabled" /></td>
               <td v-else class="cell">
@@ -423,7 +427,7 @@ function cellMenu(e, def, col, block) {
             </template>
           </tr>
           <tr v-else-if="def.type === 'rows'">
-            <td class="attr" :title="def.key">{{ def.label?.de || def.key }} <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
+            <td class="attr" :title="def.key">{{ store.name(def) }} <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
                 @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
@@ -434,7 +438,7 @@ function cellMenu(e, def, col, block) {
           <tr v-else>
             <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')">
               <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
-              {{ def.label?.de || def.key }}
+              {{ store.name(def) }}
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
               <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
               <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
@@ -445,7 +449,7 @@ function cellMenu(e, def, col, block) {
               <ToggleCell v-if="def.type === 'boolean'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <SelectCell v-else-if="def.type === 'enum'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <DateCell v-else-if="def.type === 'date'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <HtmlCell v-else-if="def.type === 'html'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${def.label?.de || def.key} · ${c.label}`"
+              <HtmlCell v-else-if="def.type === 'html'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <td v-else-if="axisValue(def.key, c) != null" class="cell"><div class="cell-box locked" title="Variantenachse — festgelegt beim Anlegen">{{ axisValue(def.key, c) }} 🔒</div></td>
               <Cell v-else :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)"

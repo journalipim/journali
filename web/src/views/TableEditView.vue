@@ -58,7 +58,7 @@ const VIRTUAL = [
 const labelKeyOf = r => r.row.labelAttribute ?? (r.row.name ? null : baseColumns.value[0]?.key ?? null)
 const labelCol = r => { const k = labelKeyOf(r); return k ? data.value?.columns.find(c => c.key === k) ?? null : null }
 const commonDef = computed(() => commonLabel.value ? data.value?.columns.find(x => x.key === commonLabel.value) : null)
-const headText = c => c.virtual === 'label' ? '★ ' + (commonDef.value ? (commonDef.value.label?.de || commonDef.value.key) : roleLabel[childRole.value]) : (c.label?.de || c.key)
+const headText = c => c.virtual === 'label' ? '★ ' + (commonDef.value ? store.name(commonDef.value) : roleLabel[childRole.value]) : c.virtual ? (c.label?.de || c.key) : store.name(c)
 const headLocale = c => c.perLocale || (c.virtual === 'label' && commonDef.value?.perLocale)
 const headTitle = c => c.virtual === 'label'
   ? (commonDef.value ? `★ ${commonDef.value.label?.de || commonDef.value.key} benennt alle Zeilen — hier bearbeiten` : 'je Zeile ihr ★-Attribut (Tooltip an der Zelle); fixierte Namen sind fest')
@@ -150,7 +150,7 @@ const autoWidth = computed(() => {
   const font = scrollBox.value ? getComputedStyle(scrollBox.value).font : '13px system-ui'
   const pad = 30   // Zellrand, Innenabstand, Zeilenrand — und etwas Luft, damit nie „…“ am Ende steht
   for (const c of columns.value) {
-    let w = measure((c.label?.de || c.key) + (c.perLocale ? ' ' + locale.value : '') + (c.unit ? ' ' + c.unit : ''), 'bold ' + font)
+    let w = measure(headText(c) + (c.perLocale ? ' ' + locale.value : '') + (c.unit ? ' ' + c.unit : ''), 'bold ' + font)
     for (const r of rows.value.slice(0, 300)) { const v = c.type === 'enum' && !c.multiple ? labelOf(c)(textOf(r, c)) : textOf(r, c); if (v) w = Math.max(w, measure(String(v).replace(/<[^>]+>/g, '').slice(0, 60), font)) }
     out[c.key] = Math.ceil(Math.max(c.virtual === 'label' ? 140 : 60, Math.min(320, w + pad + (c.virtual === 'label' ? 20 : 0))))
   }
@@ -448,7 +448,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
               <td v-else-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
-              <HtmlCell v-else-if="c.type === 'html'" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :title="`${c.label?.de || c.key} · ${r.row.label}`" @save="v => set(r, c, v)" />
+              <HtmlCell v-else-if="c.type === 'html'" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :title="`${store.name(c)} · ${r.row.label}`" @save="v => set(r, c, v)" />
               <DateCell v-else-if="c.type === 'date'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <Cell v-else :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
             </template>
