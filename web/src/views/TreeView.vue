@@ -269,7 +269,7 @@ function contextMenu(e, r) {
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
     kids ? { label: 'Alles aufklappen', icon: '▾', key: 'a', action: () => expandAll(r.id) } : null,
     kids ? { label: 'Alles zuklappen', icon: '▸', key: 'z', action: () => collapseAll(r.id) } : null,
-    { label: picked.value.has(r.id) ? 'Aus der Auswahl entfernen' : 'Zur Auswahl hinzufügen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
+    { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: 'Id kopieren', icon: '⧉', key: 'i', hint: r.id, action: () => navigator.clipboard?.writeText(r.id) },
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
