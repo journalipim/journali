@@ -78,6 +78,8 @@ const blocks = computed(() => {
     const def = model.value.groups.find(x => x.key === k)
     return { key: k, label: def?.label?.de || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, active: g.active, defs }
   }).filter(b => b.defs.length && (!store.editableOnly || b.active))
+    // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
+    .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
 })
 watch(blocks, b => { if (store.layout === 'tabs' && !b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
 const shownBlocks = computed(() => store.layout === 'tabs' ? blocks.value.filter(b => b.key === tab.value) : blocks.value)
