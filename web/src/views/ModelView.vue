@@ -4,7 +4,8 @@
 //   Basics:   Einheiten · Sprachen · Kanäle · Baum (Name je Knotentyp)
 // Jede Zelle ein Eintrag mit der ganzen Definition. Mehrfachauswahl: Shift/Strg,
 // alle/keine, dann Stapelaktionen (Gruppe zuweisen, entfernen).
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import EditGrid from '../components/EditGrid.vue'
@@ -38,6 +39,14 @@ async function send(fn) {
 const put = (path, body) => send(() => api.post(path, body, 'PUT'))
 const del = path => send(() => api.del(path))
 function switchTo(k) { section.value = k; sel.value = new Set() }
+// Sprung aus dem Knoten: /model?section=groups&key=<gruppe> öffnet den Abschnitt mit der Zeile markiert.
+const route = useRoute()
+onMounted(() => {
+  const s = route.query.section, k = route.query.key
+  if (s && sections.some(x => x.key === s)) { section.value = s; sel.value = new Set(k ? [k] : []) }
+  if (s === 'lists' && k) selectedList.value = k
+  if (s === 'views' && k) selectedView.value = k
+})
 const count = computed(() => sel.value.size)
 
 // ---- Attributgruppen

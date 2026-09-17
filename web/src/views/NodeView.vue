@@ -217,7 +217,7 @@ function cellMenu(e, def, col, block) {
     inh.from ? { label: `Zur Herkunft ${icon(inh.from.role)} ${inh.from.label}`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
     { label: 'Wert kopieren', icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
     def.type !== 'html' && def.type !== 'rows' ? { label: starOwn(def.key) ? '★ weg — es gilt das von oben' : '★ Name im Baum ab hier', icon: '★', key: 's', action: () => setStar(def) } : null,
-    { label: 'Attribut im Modell', icon: '⊞', key: 'm', action: () => router.push('/model') },
+    { label: 'Attribut im Modell', icon: '⊞', key: 'm', hint: '→ Modell → Attribute', action: () => router.push({ path: '/model', query: { section: 'attributes', key: def.key } }) },
   ])
 }
 </script>
@@ -285,6 +285,7 @@ function cellMenu(e, def, col, block) {
           <tr class="group-row" :class="{ locked: !b.active }">
             <td :colspan="columns.length + 1">
               ▤ {{ b.label }}
+              <router-link :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
               <span class="muted from" :title="`Gruppe hängt an ${b.fromLabel}`">· von {{ b.from === id ? 'hier' : b.fromLabel }}</span>
               <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">🔒 ab {{ roleLabel[b.activeFrom] }}</span>
             </td>
@@ -399,6 +400,8 @@ function cellMenu(e, def, col, block) {
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .group-row td { background: var(--bg); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; height: 22px; }
+.group-row .edit { text-decoration: none; margin-left: 4px; opacity: .5; }
+.group-row:hover .edit { opacity: 1; }
 .group-row .from { text-transform: none; font-weight: 400; letter-spacing: 0; }
 .group-row.locked td { color: var(--warn); }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
