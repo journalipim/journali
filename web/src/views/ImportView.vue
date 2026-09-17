@@ -20,8 +20,9 @@ const token = ref(saved.token || '')
 const lang = ref(saved.lang || 'de')
 const target = ref(saved.target || '')
 const importLocales = ref(saved.importLocales || null)
+const withImages = ref(saved.withImages ?? true)   // Bilder der Quelle (doc.image) als Medien holen und per Relation „image“ anhängen (Taloan, 17.09.)
 const recentBases = ref(recent('ixp'))
-const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, importLocales: importLocales.value }))
+const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, importLocales: importLocales.value, withImages: withImages.value }))
 
 let client = null
 const connected = ref(false)
@@ -46,9 +47,9 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
 
 // Profile (ProfileBar): Quelle, Sprache, Ziel, Sprachen, Zuordnung — ohne Token (der bleibt im Browser, nicht im Journal)
-const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value })
+const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value, withImages: withImages.value })
 async function profileSet(p) {
-  base.value = p.base ?? base.value; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null
+  base.value = p.base ?? base.value; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null; withImages.value = p.withImages ?? true
   if (p.mapping) mapping.value = { ...p.mapping }
   if (base.value) await connect()
 }
@@ -84,6 +85,27 @@ function check(row) { checked.value.has(row.doc.id) ? checked.value.delete(row.d
 function checkedAbove(row) { for (let p = row.parent; p; p = p.parent) if (checked.value.has(p.doc.id)) return true; return false }
 
 // ---- Analysieren: Teilbäume vollständig laden, Sprachfassungen holen, Eigenschaften sammeln
+// Bilder: doc.image (Vorschau-URL der Quelle) holt der Server (POST /api/media/fetch — der Browser scheiterte an CORS),
+// gleiche Datei = gleiches Medium (sha256); dann Relation „image“ Knoten → Medium, wenn sie nicht schon da ist.
+async function importImages(refOf, res) {
+  const byRef = new Map(res.results.filter(r => r.ref).map(r => ['@' + r.ref, r.node]))
+  const items = plan.value.items.filter(it => it.role !== 'group' && (it.doc.image || Object.values(it.versions).find(v => v.image)?.image))
+  if (!items.length) return
+  busy.value = `Bilder …`; let n = 0, had = 0, fail = 0
+  for (const it of items) {
+    const url = it.doc.image || Object.values(it.versions).find(v => v.image)?.image
+    const node = (refOf.get(it.doc.masterId) ?? '').startsWith('@') ? byRef.get(refOf.get(it.doc.masterId)) : refOf.get(it.doc.masterId)
+    if (!node) continue
+    try {
+      const m = await api.post('/api/media/fetch', { url, name: decodeURIComponent(url.split('/').pop().split('?')[0]) })
+      const rels = await api.get(`/api/nodes/${encodeURIComponent(node)}/relations`)
+      if ((rels.out ?? []).some(r => r.to === m.id)) { had++; continue }
+      await api.post('/api/relations', { type: 'image', from: node, to: m.id }); n++
+    } catch (e) { fail++; say(`Bild ${it.doc.name}: ${e.message}`) }
+    busy.value = `Bilder … ${n + had + fail}/${items.length}`
+  }
+  say(`Bilder: ${n} angehängt, ${had} waren schon da${fail ? `, ${fail} fehlgeschlagen` : ''}`)
+}
 async function analyse() {
   if (!checked.value.size) { store.toast('Nichts angehakt'); return }
   busy.value = 'lade …'
@@ -206,6 +228,7 @@ async function run() {
     result.value = res
     say(res.error ? `Fehler bei Befehl ${res.error.index} (${res.error.op}): ${res.error.message} — ${res.results.length} geschrieben` : `fertig: ${res.results.length} Einträge, Stapel ${res.batch}`)
     await store.poll(true); await tree.load()
+    if (withImages.value && !res.error) await importImages(refOf, res)
     plan.value = null
   } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
   finally { busy.value = '' }
@@ -255,6 +278,10 @@ function toggleLocale(l) {
           <tr><td class="muted">Ziel ▣</td><td>
             <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
             <span class="muted">neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</span>
+          </td></tr>
+          <tr><td class="muted">Bilder 🖼</td><td>
+            <label><input type="checkbox" v-model="withImages" @change="persist" /> Vorschaubild der Quelle als Medium holen und als „image“ anhängen</label>
+            <span class="muted">gleiche Datei = ein Medium; der Server lädt</span>
           </td></tr>
           <tr><td class="muted">Sprachen 🗣</td><td>
             <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>
