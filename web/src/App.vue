@@ -24,7 +24,7 @@ const nav = [
   <div class="shell">
     <nav class="rail">
       <!-- Logo: web/public/logo.png (Taloan, 17.09.2026) — Vite legt public/ neben die Seite -->
-      <router-link to="/tree" class="rail-logo" title="journali"><img src="/logo.png" alt="journali" onerror="this.style.display='none'" /></router-link>
+      <router-link to="/tree" class="rail-logo" title="journali"><img :src="'/logo.png'" alt="journali" onerror="this.style.display='none'" /></router-link>
       <router-link v-for="n in nav" :key="n.to" :to="n.to" class="rail-item"
         :class="{ active: route.path.startsWith(n.to) }" :title="`${n.label}  (Alt+${n.key})`">
         <span class="icon">{{ n.icon }}</span>
