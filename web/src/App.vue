@@ -28,7 +28,7 @@ const nav = [
 ]
 // unten in der Leiste (Taloan, 17.09.): Journal und Einstellungen
 const navBottom = [
-  { to: '/plugins', icon: '🔌', label: 'Plugins', key: '7' },
+  { to: '/plugins', icon: '⌁', label: 'Plugins', key: '7' },
   { to: '/journal', icon: '≡', label: 'Journal', key: '2' },
   { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '6' },
 ]
@@ -46,7 +46,7 @@ const navBottom = [
       <!-- Ansichten aus Browser-Plugins -->
       <router-link v-for="v in plugins.views" :key="v.key + v.path" :to="`/p/${v.key}/${v.path}`" class="rail-item"
         :class="{ active: route.path === `/p/${v.key}/${v.path}` }" :title="`${v.label}  (Plugin ${v.key})`">
-        <span class="icon">{{ v.icon || '🔌' }}</span>
+        <span class="icon">{{ v.icon || '⌁' }}</span>
       </router-link>
       <div class="rail-spacer" />
       <router-link v-for="n in navBottom" :key="n.to" :to="n.to" class="rail-item"

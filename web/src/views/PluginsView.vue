@@ -1,5 +1,5 @@
 <script setup>
-// 🔌 Plugins (docs/pflegestruktur.md, 19): links alles, was unter plugins/ liegt oder das Journal kennt,
+// ⌁ Plugins (docs/pflegestruktur.md, 19): links alles, was unter plugins/ liegt oder das Journal kennt,
 // mit Stand und Fassung; rechts das gewählte — installieren, ein/aus, aktualisieren, entfernen,
 // und bei Prozess-Plugins der Start mit Parametern und der Ausgabe.
 import { ref, computed, onMounted } from 'vue'
@@ -44,7 +44,7 @@ function pick(k) { cur.value = k; startParams() }
 
 <template>
   <div class="pane" :style="`width:${listW}px;flex:none`">
-    <div class="toolbar"><h1>🔌 Plugins</h1><span class="muted">{{ plugins.list.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
+    <div class="toolbar"><h1>⌁ Plugins</h1><span class="muted">{{ plugins.list.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="scroll">
       <div v-for="p in plugins.list" :key="p.key" class="li" :class="{ current: cur === p.key, off: !p.enabled }" @click="pick(p.key)" :title="p.key">
         <span class="k">{{ p.key }}</span>
@@ -64,7 +64,7 @@ function pick(k) { cur.value = k; startParams() }
 
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar">
-      <h1>🔌 {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
+      <h1>⌁ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
       <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : '🖥 Browser' }}{{ manifest.process ? ' + ⚙ Prozess' : '' }}</span>
       <span class="grow" />
       <template v-if="current.onDisk && !current.installed"><button class="primary" @click="act(`/api/plugins/${current.key}/install`)">⇩ installieren {{ current.diskVersion }}</button></template>

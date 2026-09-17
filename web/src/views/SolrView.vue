@@ -307,7 +307,7 @@ async function run() {
     <div class="toolbar sources">
       <router-link v-if="plugins.enabled('ixp')" to="/import" class="view-chip">IXP</router-link>
       <router-link to="/import/solr" class="view-chip on">Solr</router-link>
-      <span class="grow" /><router-link v-if="plugins.loaded && !plugins.enabled('solr')" to="/plugins" class="warn" title="Plugin solr ist aus">🔌 aus</router-link><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span>
+      <span class="grow" /><router-link v-if="plugins.loaded && !plugins.enabled('solr')" to="/plugins" class="warn" title="Plugin solr ist aus">⌁ aus</router-link><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span>
     </div>
     <div class="form">
       <div class="row">

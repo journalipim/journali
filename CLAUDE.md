@@ -53,7 +53,7 @@ stehen dort als solche markiert.
 - `plugins/<key>/` — ein Plugin je Verzeichnis mit `plugin.json` (key, version,
   label, kind, runs: browser | process, entry oder process.command/args/params,
   builtin, autoInstall); Stand (installiert, Fassung, an/aus) im Journal
-  `plugin:<key>`, Verwaltung unter 🔌 Plugins (`PluginApi.cs`, `plugins.js`).
+  `plugin:<key>`, Verwaltung unter ⌁ Plugins (`PluginApi.cs`, `plugins.js`).
   Laufen nie im Serverprozess: Browser-Plugins als ES-Modul in der Oberfläche,
   Prozess-Plugins als Kindprozess des Servers, beide nur über `/api`.
   `ixp` und `solr` sind eingebaut (builtin) und werden beim Start installiert

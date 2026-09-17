@@ -214,7 +214,7 @@ function toggleLocale(l) {
     <div class="toolbar" style="gap:4px">
       <router-link to="/import" class="view-chip on">IXP</router-link>
       <router-link v-if="plugins.enabled('solr')" to="/import/solr" class="view-chip">Solr</router-link>
-      <span class="grow" /><router-link v-if="plugins.loaded && !plugins.enabled('ixp')" to="/plugins" class="warn" title="Plugin ixp ist aus">🔌 aus</router-link>
+      <span class="grow" /><router-link v-if="plugins.loaded && !plugins.enabled('ixp')" to="/plugins" class="warn" title="Plugin ixp ist aus">⌁ aus</router-link>
     </div>
     <div class="form">
       <input v-model="base" type="text" list="ixp-recent" placeholder="https://…/api" title="Basis-URL der IXP-API — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />
