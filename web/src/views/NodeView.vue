@@ -90,7 +90,7 @@ const blocks = computed(() => {
 })
 watch(blocks, b => { if (!b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
 // Suche über das Sichtbare: Attributname/Key und die Werte in den gezeigten Spalten (eigen oder geerbt, Auswahl als Label)
-const attrFilter = ref('')
+const attrFilter = computed({ get: () => store.attrFilter, set: v => { store.attrFilter = v } })
 const findBox = ref(null)
 function cellText(def, col) {
   const v = ownValue(def.key, col) ?? inherited(def, col).value

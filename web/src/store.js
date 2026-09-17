@@ -15,6 +15,7 @@ export const store = reactive({
   viewKey: (saved.viewKey && typeof saved.viewKey === 'object') ? saved.viewKey : {},   // gewählte Sicht je Knotentyp
   layout: saved.layout ?? 'flat',                    // flat | tabs
   editableOnly: saved.editableOnly ?? false,         // nur Gruppen zeigen, die hier bearbeitbar sind
+  attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel (Taloan), nicht gespeichert
   collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : [],   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
   online: null,          // null = noch nicht gefragt, sonst true/false
   head: 0,
