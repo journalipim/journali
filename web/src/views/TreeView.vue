@@ -2,7 +2,7 @@
 // Produktgruppe → … → Produkt → Variante als Baum links; Anlegen inline in
 // der Werkzeugleiste; rechts der gewählte Knoten (NodeView). Tastatur: ↑↓
 // wählen, → auf, ← zu, Enter öffnen, / Filter.
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
@@ -310,7 +310,10 @@ async function start(kind) {
       .filter(a => !(kind === 'variant' && (productTarget.value?.axes ?? []).includes(a.key)))   // Achsenwerte fragt der Dialog ohnehin
       .map(a => ({ def: a, locale: a.perLocale ? master.value : null }))
   } catch (e) { store.toast(e.message) }
+  // Cursor gleich ins erste Feld — autofocus greift bei nachträglich eingefügten Elementen nicht (Taloan, 17.09.)
+  await nextTick(); dialog.value?.querySelector('input, select')?.focus()
 }
+const dialog = ref(null)
 const complete = computed(() => required.value.every(r => (vals.value[r.def.key] ?? '').trim() !== '') && Object.values(form.value).every(v => v !== ''))
 async function create() {
   if (!complete.value) return
@@ -408,7 +411,7 @@ function onDialogKey(e) {
 
     <!-- Anlegen: Dialog mit Pflichtfeldern (Mastersprache); erst vollständig, dann ein Stapel -->
     <div v-if="creating" class="overlay" @click.self="creating = null" @keydown="onDialogKey">
-      <div class="dialog">
+      <div class="dialog" ref="dialog">
         <div class="toolbar"><h1>{{ icon(creating) }} {{ creating === 'group' ? 'Neue Gruppe' : creating === 'product' ? 'Neues Produkt' : 'Neue Variante' }}</h1>
           <span class="muted">{{ creating === 'variant' ? 'unter ' + productTarget.label : groupTarget ? 'unter ' + groupTarget.label : 'an der Wurzel' }}</span></div>
         <table class="grid form"><colgroup><col style="width:170px" /><col style="width:300px" /></colgroup><tbody>
