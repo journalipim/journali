@@ -50,6 +50,7 @@ public static class BatchApi
                             "node.rename" => Commands.Rename(ctx, a.Node(), a.Str("name")),
                             "label.set" => Commands.SetLabelAttribute(ctx, a.Node(), a.Str("attribute")),
                             "product.create" => Commands.CreateProduct(ctx, a.Id("group"), a.Strings("axes")),
+                            "axes.set" => Commands.SetAxes(ctx, a.Node(), a.Strings("axes")),
                             "groups.attach" => Commands.AttachGroups(ctx, a.Node(), a.Strings("groups")),
                             "variant.create" => Commands.CreateVariant(ctx, a.Id("product"), a.Map("axisValues")),
                             "node.move" => Commands.Move(ctx, a.Node(), a.Id("parent")),

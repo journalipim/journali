@@ -53,6 +53,7 @@ export function describe(e) {
     case 'LocaleDefined': return `${p.code} = ${p.label}`
     case 'GroupCreated': return `▣ ${p.name ?? p.label?.de ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
     case 'GroupRenamed': return `▣ ${p.label?.de ?? ''}`
+    case 'ProductAxesSet': return `◆ variiert nach ${(p.axes || []).join(', ') || 'nichts'}`
     case 'NodeNamed': return p.name ? `✎ ${p.name}` : '✎ ∅ → Automatik'
     case 'LabelAttributeSet': return p.attribute ? `★ ${p.attribute}` : '★ ∅ → von oben'
     case 'ProductCreated': return `▦ ${p.family} unter ${p.group}${p.axes?.length ? ' · ' + p.axes.join(', ') : ''}`

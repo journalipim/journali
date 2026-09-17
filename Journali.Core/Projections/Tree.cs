@@ -240,6 +240,9 @@ public sealed class Tree : IProjection
                 n.Label = Types.Deserialize<GroupRenamed>(entry.Payload).Label;
                 n.Name = TextOf(n.Label);
                 break;
+            case Types.ProductAxesSet:
+                n.Axes = Types.Deserialize<ProductAxesSet>(entry.Payload).Axes.Distinct().ToArray();
+                break;
             case Types.NodeNamed:
                 var nn = Types.Deserialize<NodeNamed>(entry.Payload).Name;
                 n.Name = string.IsNullOrWhiteSpace(nn) ? null : nn.Trim();

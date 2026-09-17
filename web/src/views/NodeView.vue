@@ -190,6 +190,11 @@ const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def
 const setStar = def => command(() => api.post(`${nodeUrl()}/label-attribute`, { attribute: starOwn(def.key) ? null : def.key }, 'PUT'))
 const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
 const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups }, 'PUT'))
+// Variantenachsen am Produkt — änderbar, solange es keine Varianten hat (ProductAxesSet).
+const addAxis = ref('')
+const setAxes = axes => command(() => api.post(`${nodeUrl()}/axes`, { axes }, 'PUT'))
+const axisChoices = computed(() => (model.value?.attributes ?? []).filter(a => ['enum', 'text', 'integer'].includes(a.type) && !a.multiple && !(node.value?.axes ?? []).includes(a.key))
+  .sort((a, b) => (a.type === 'enum' ? 0 : 1) - (b.type === 'enum' ? 0 : 1) || (a.label?.de ?? a.key).localeCompare(b.label?.de ?? b.key, 'de')))
 function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
 function addCategory() { const c = newCategory.value.trim(); if (!c) return; newCategory.value = ''; command(() => api.post(`${nodeUrl()}/categories`, { category: c })) }
 const removeCategory = c => command(() => api.del(`${nodeUrl()}/categories/${encodeURIComponent(c)}`))
@@ -328,6 +333,17 @@ function cellMenu(e, def, col, block) {
       </table>
       <div v-if="!blocks.length" class="empty">Keine Attributgruppe gilt hier — unten eine anhängen, oder oben am Pfad.</div>
 
+      <div class="section" v-if="node.role === 'product'">
+        <h2>◆ Variantenachsen <span class="muted">· {{ node.children ? 'fest, seit Varianten da sind' : 'optional — je Achse bekommt jede Variante genau einen Wert, Kombination eindeutig' }}</span></h2>
+        <div class="chips">
+          <span v-if="!node.axes.length" class="muted">keine — beliebig viele Varianten</span>
+          <span v-for="k in node.axes" :key="k" class="chip">{{ axisLabel(k) }} <button v-if="!node.children" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg">×</button></span>
+          <template v-if="!node.children">
+            <select v-model="addAxis" style="width:220px"><option value="">+ Achse …</option><option v-for="a in axisChoices" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+            <button class="primary" :disabled="!addAxis" @click="setAxes([...node.axes, addAxis]); addAxis = ''">dazu</button>
+          </template>
+        </div>
+      </div>
       <div class="section">
         <h2>▤ Attributgruppen an diesem Knoten <span class="muted">· gelten ab hier nach unten</span></h2>
         <div class="chips">

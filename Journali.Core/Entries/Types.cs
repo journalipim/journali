@@ -21,6 +21,7 @@ public static class Types
     public const string StatusSet = "StatusSet";
     public const string GroupsAttached = "GroupsAttached";
     public const string NodeNamed = "NodeNamed";
+    public const string ProductAxesSet = "ProductAxesSet";
     public const string LabelAttributeSet = "LabelAttributeSet";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
@@ -116,6 +117,9 @@ public sealed record LabelAttributeSet(string? Attribute);
 
 /// <summary>Erster Eintrag eines Produkts: unter welcher Gruppe, wonach es variiert (Attribute, optional). <paramref name="Family"/> ist Altlast.</summary>
 public sealed record ProductCreated(string Group, string? Family = null, string[]? Axes = null);
+
+/// <summary>Variantenachsen eines Produkts nachträglich (ganze Liste) — nur, solange es keine Varianten hat (Taloan, 17.09.2026).</summary>
+public sealed record ProductAxesSet(string[] Axes);
 
 /// <summary>Erster Eintrag einer Variante: je Variantenachse des Produkts ein Wert.</summary>
 public sealed record VariantCreated(string Product, Dictionary<string, string> AxisValues);

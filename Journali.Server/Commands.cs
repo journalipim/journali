@@ -68,6 +68,17 @@ public static class Commands
         return Outcome.Ok(c.Write(Ids.New(Roles.Product), Types.ProductCreated, new ProductCreated(group!, null, clean.Length > 0 ? clean : null)));
     }
 
+    /// <summary>Variantenachsen eines Produkts setzen (ganze Liste) — nur ohne Varianten, denn deren Achsenwerte sind fest.</summary>
+    public static Outcome SetAxes(Ctx c, string id, string[]? axes)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (n.Role != Roles.Product) return Outcome.Bad("Nur ein Produkt hat Variantenachsen.");
+        if (c.Tree.Children(id).Any()) return Outcome.Bad("Achsen sind fest, sobald Varianten da sind — erst die Varianten zurückziehen.");
+        var clean = axes?.Select(a => a.Trim()).Where(a => a.Length > 0).Distinct().ToArray() ?? [];
+        if (clean.Except(c.Model.Attributes.Keys).Any()) return Outcome.Bad("Variantenachse muss ein Attribut sein.");
+        return Outcome.Ok(c.Write(id, Types.ProductAxesSet, new ProductAxesSet(clean)));
+    }
+
     /// <summary>Attributgruppen an einen Knoten hängen (ganze Liste); die Definition gilt ab hier nach unten.</summary>
     public static Outcome AttachGroups(Ctx c, string id, string[]? groups)
     {
