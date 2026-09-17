@@ -629,3 +629,68 @@ Suche und Vollständigkeit, Medien (eigene Dinge oder Relationen zu
 Medienknoten), und der Import der Solr-Relationen (`*_doc_rel` am Knoten,
 `complex_relation` als attributierte Kante — beide Enden müssen importiert
 sein; mit 109 k Kanten ein eigener Lauf).
+
+### 19. Plugins — Entwurf (Taloan, 17.09.2026: „echte Verwaltung")
+
+Taloans Bild: Plugins werden installiert, aktiviert, gelöscht, haben eine
+Versionsnummer; es werden viele. Genannt: Datenqualität (dpp, ppwr), Export
+(BMEcat, Excel, JSON), Benutzerwerkzeuge (Datenblatt als PDF/Excel,
+Massenbearbeitung mit Excel-Funktionen, OCR), Import (ixp, solr).
+
+Vorschlag, der zum Journal passt:
+
+- **Ein Plugin ist ein Verzeichnis** `plugins/<key>/` mit `plugin.json`
+  (`key`, `version`, `label`, `kind`: import | export | quality | tool,
+  `runs`: browser | process, `entry`, `needs`: Endpunkte/Rechte) und seinem
+  Code. Browser-Plugins sind ein ES-Modul, das die Oberfläche lädt und das
+  eine Ansicht oder eine Aktion am Knoten beisteuert; Prozess-Plugins sind
+  ein Skript/Programm, das der Server als Kindprozess startet und das nur
+  über `/api` redet. **Kein Plugin läuft im Serverprozess** — der bleibt
+  der eine Schreibpfad.
+- **Installiert / aktiv / Version stehen im Journal**: Strom
+  `plugin:<key>`, `PluginInstalled {key, version, manifest}`,
+  `PluginEnabled` / `PluginDisabled`, `PluginRemoved`. Wer welches Werkzeug
+  wann mit welcher Fassung benutzt hat, ist damit nachvollziehbar — und die
+  Stapel eines Plugins tragen seinen Schlüssel als Urheber (`X-Actor`
+  `taloan via solr@1.2`).
+- **Verwaltung** in der Oberfläche unter ⚙ → Plugins: Liste mit Version,
+  Stand, Schalter; „installieren" nimmt ein Verzeichnis/Archiv entgegen und
+  legt es nach `plugins/`; die Oberfläche lädt aktive Browser-Plugins beim
+  Start, Prozess-Plugins bekommen einen Knopf, der `POST /api/plugins/<key>/run`
+  auslöst (Server startet den Prozess, streamt das Protokoll).
+- **Beitragspunkte**: Ansicht (eigener Reiter in der Leiste), Aktion am
+  Knoten (Kontextmenü, mit Auswahl mehrerer), Aktion am Teilbaum, Prüfer
+  (liefert Befunde je Knoten → Abschnitt „Qualität" im Knoten),
+  Exporter (liefert eine Datei).
+
+Offen für Taloan: Verpackung (Verzeichnis im Repo reicht am Anfang; Archiv
+später), ob Prozess-Plugins Python voraussetzen dürfen (Solr-Skript tut es),
+und ob Befunde der Qualitätsprüfer ins Journal gehören (nachvollziehbar,
+aber Masse) oder in ein eigenes Abbild.
+
+### 20. Medien — Entwurf (Taloan, 17.09.2026: „ausserhalb")
+
+Taloan: Binärdaten nicht in die Datenbank — später skalieren, woanders
+speichern. Einverstanden; das Journal bleibt schlank.
+
+- **Die Datei liegt ausserhalb**, der Ort ist austauschbar: erst ein
+  Verzeichnis (`JOURNALI_MEDIA=…`, Unterordner nach Hash), später S3/MinIO
+  — dieselbe Schnittstelle `IMediaStore` (put, get, exists, url).
+- **Im Journal steht nur das Ding**: Strom `m-…`, `MediaCreated {sha256,
+  bytes, mime, name}` — die Datei ist über ihren Hash adressiert (gleiche
+  Datei zweimal = ein Medium), unveränderlich; ein neues Bild ist ein neues
+  Medium. Dazu `AttributeSet` für Titel, Alt-Text, Rechte, Quelle (Gruppe
+  `media`, sprachabhängig).
+- **Zuordnung zum Knoten ist eine Relation** (18): Typ `image` (Bild),
+  `document` (Datenblatt) … von Knoten zu Medium, mit Werten an der Kante:
+  Reihenfolge, Rolle (Hauptbild, Galerie), Kanal. Der Solr-Import hat dafür
+  schon die Felder (`images` als `multi_image_rel`, `preview_image`).
+- **Ausliefern**: `GET /api/media/{id}` (Original) und
+  `/api/media/{id}/{preset}` (Vorschau; gerechnet und im Store abgelegt).
+  Der Server berührt Bytes nur beim Hochladen und Ausliefern; nichts davon
+  im Journal.
+
+Offen: Hochladen im Browser (Drag & Drop in den Knoten) vs. Import aus der
+Quelle (Solr liefert Pfade unter `suppliers/…` — ein Medienimport holt sie
+von einem konfigurierten Basis-URL), Vorschau-Presets, und ob Medien im
+Baum erscheinen (eigener Ast „Media" wie in der Quelle) oder nur am Knoten.
