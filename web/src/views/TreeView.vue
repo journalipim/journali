@@ -301,8 +301,6 @@ async function onDrop(e, r) {
     await store.poll(true); await tree.load(); tree.expand(r.id)
   } catch (e) { store.toast(e.message) }
 }
-function expandAll(id) { tree.expand(id); for (const k of tree.kids(id)) expandAll(k.id) }
-function collapseAll(id) { for (const k of tree.kids(id)) collapseAll(k.id); if (tree.expanded.has(id)) tree.toggle(id) }
 async function setStatus(r, status) {
   try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/status`, { status }); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
 }
@@ -330,10 +328,15 @@ function contextMenu(e, r) {
   router.push(`/tree/${r.id}`)
   const kids = tree.kids(r.id).length
   const st = s => r.role !== 'group' && r.status !== s ? { label: s === 'draft' ? '○ Entwurf' : s === 'active' ? '● aktiv' : '✗ ausgelaufen', action: () => setStatus(r, s) } : null
+  // Aufgeräumt (Taloan): kein Neu-anlegen (die Knöpfe oben), kein Auf-/Zuklappen, kein Id kopieren (Id steht im Tooltip und im Kopf);
+  // Plugin-Einträge je Plugin in einem Untermenü
+  const byPlugin = new Map()
+  for (const a of plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role))) {
+    if (!byPlugin.has(a.key)) byPlugin.set(a.key, [])
+    byPlugin.get(a.key).push({ label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
+  }
+  const pluginLabel = k => { const m = plugins.list.find(p => p.key === k)?.manifest; return m?.label?.de || m?.label?.en || k }
   menu.open(e, [
-    r.role === 'group' ? { label: 'Neue Gruppe darunter', icon: '▣', key: 'g', action: () => start('group') } : null,
-    r.role === 'group' ? { label: 'Neues Produkt darunter', icon: '▦', key: 'p', action: () => start('product') } : null,
-    r.role === 'product' ? { label: 'Neue Variante darunter', icon: '◆', key: 'v', action: () => start('variant') } : null,
     { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r) },
     // Symbol ist der Pin — bei beiden (Taloan: der Pin gehört zu „lösen“); der Hinweis rechts sagt, was danach gilt
     { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r) },
@@ -347,13 +350,10 @@ function contextMenu(e, r) {
     r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
-    kids ? { label: 'Alles aufklappen', icon: '▾', key: 'a', action: () => expandAll(r.id) } : null,
-    kids ? { label: 'Alles zuklappen', icon: '▸', key: 'z', action: () => collapseAll(r.id) } : null,
     { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
-    { label: 'Id kopieren', icon: '⧉', key: 'i', hint: r.id, action: () => navigator.clipboard?.writeText(r.id) },
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
-    ...(plugins.nodeActions.some(a => !a.roles || a.roles.includes(r.role)) ? [{ sep: true }, ...plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role)).map(a => ({ label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) }))] : []),
+    ...(byPlugin.size ? [{ sep: true }, ...[...byPlugin].map(([k, items]) => ({ label: pluginLabel(k), icon: plugins.modules.get(k)?.icon || '⌁', hint: k, items }))] : []),
     { sep: true },
     { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])

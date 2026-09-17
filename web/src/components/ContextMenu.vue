@@ -1,15 +1,20 @@
 <script setup>
 // Das Menü selbst: an der Mausposition, im Fenster gehalten, Esc/Klick daneben schliesst,
-// ↑↓ Enter wählen. Einmal in App.vue eingehängt.
+// ↑↓ Enter wählen. Untermenüs (Taloan: Plugin-Einträge je Plugin): { label, icon, items } — Hover, Klick oder →
+// öffnet rechts daneben, ← schliesst es; Buchstaben gelten im gerade offenen Menü. Einmal in App.vue eingehängt.
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { menu } from '../menu.js'
 
 const box = ref(null)
+const subBox = ref(null)
 const active = ref(-1)
+const sub = ref(-1)          // Index des offenen Untermenüs
+const subActive = ref(-1)
+const subPos = ref({ x: 0, y: 0 })
 
 watch(() => menu.visible, async v => {
-  if (!v) return
-  active.value = -1
+  if (!v) { sub.value = -1; return }
+  active.value = -1; sub.value = -1
   await nextTick()
   const el = box.value; if (!el) return
   const r = el.getBoundingClientRect()
@@ -20,21 +25,46 @@ watch(() => menu.visible, async v => {
 
 function run(item) {
   if (!item || item.sep || item.disabled) return
+  if (item.items) { openSub(menu.items.indexOf(item)); return }
   menu.close()
   item.action?.()
 }
+async function openSub(i) {
+  sub.value = i; subActive.value = -1
+  await nextTick()
+  const row = box.value?.querySelectorAll('.item, .sep')[i]; const b = box.value?.getBoundingClientRect(); const s = subBox.value?.getBoundingClientRect()
+  if (!row || !b || !s) return
+  const r = row.getBoundingClientRect()
+  let x = b.right - 2, y = r.top - 4
+  if (x + s.width > innerWidth - 8) x = Math.max(8, b.left - s.width + 2)   // kein Platz rechts: links
+  if (y + s.height > innerHeight - 8) y = Math.max(8, innerHeight - s.height - 8)
+  subPos.value = { x, y }
+}
+function hover(i) { active.value = i; const it = menu.items[i]; if (it?.items) openSub(i); else sub.value = -1 }
+const subItems = () => menu.items[sub.value]?.items ?? []
 function onKey(e) {
+  if (sub.value >= 0) {
+    const items = subItems().map((it, i) => ({ it, i })).filter(x => !x.it.sep && !x.it.disabled)
+    if (e.key === 'Escape' || e.key === 'ArrowLeft') { e.preventDefault(); sub.value = -1; return }
+    if (e.key === 'ArrowDown') { e.preventDefault(); const k = items.findIndex(x => x.i === subActive.value); subActive.value = items[(k + 1) % items.length]?.i ?? -1; return }
+    if (e.key === 'ArrowUp') { e.preventDefault(); const k = items.findIndex(x => x.i === subActive.value); subActive.value = items[(k - 1 + items.length) % items.length]?.i ?? -1; return }
+    if (e.key === 'Enter') { e.preventDefault(); run(subItems()[subActive.value]); return }
+    const hit = subItems().find(it => it.key && it.key.toLowerCase() === e.key.toLowerCase() && !it.disabled)
+    if (hit) { e.preventDefault(); run(hit); return }
+    if (e.key.length === 1) return
+  }
   const items = menu.items.map((it, i) => ({ it, i })).filter(x => !x.it.sep && !x.it.disabled)
   if (e.key === 'Escape') { e.preventDefault(); menu.close() }
-  else if (e.key === 'ArrowDown') { e.preventDefault(); const k = items.findIndex(x => x.i === active.value); active.value = items[(k + 1) % items.length]?.i ?? -1 }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); const k = items.findIndex(x => x.i === active.value); active.value = items[(k - 1 + items.length) % items.length]?.i ?? -1 }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); const k = items.findIndex(x => x.i === active.value); active.value = items[(k + 1) % items.length]?.i ?? -1; sub.value = -1 }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); const k = items.findIndex(x => x.i === active.value); active.value = items[(k - 1 + items.length) % items.length]?.i ?? -1; sub.value = -1 }
+  else if (e.key === 'ArrowRight' && menu.items[active.value]?.items) { e.preventDefault(); openSub(active.value); subActive.value = 0 }
   else if (e.key === 'Enter') { e.preventDefault(); run(menu.items[active.value]) }
   else {
     const hit = menu.items.find(it => it.key && it.key.toLowerCase() === e.key.toLowerCase() && !it.disabled)
     if (hit) { e.preventDefault(); run(hit) }
   }
 }
-function onDown(e) { if (menu.visible && box.value && !box.value.contains(e.target)) menu.close() }
+function onDown(e) { if (menu.visible && box.value && !box.value.contains(e.target) && !subBox.value?.contains(e.target)) menu.close() }
 onMounted(() => { window.addEventListener('mousedown', onDown); window.addEventListener('blur', menu.close) })
 onUnmounted(() => { window.removeEventListener('mousedown', onDown); window.removeEventListener('blur', menu.close) })
 </script>
@@ -44,7 +74,18 @@ onUnmounted(() => { window.removeEventListener('mousedown', onDown); window.remo
     <div v-if="menu.visible" ref="box" class="ctx" :style="`left:${menu.x}px;top:${menu.y}px`" tabindex="-1" @keydown="onKey" @contextmenu.prevent>
       <template v-for="(it, i) in menu.items" :key="i">
         <div v-if="it.sep" class="sep" />
-        <div v-else class="item" :class="{ disabled: it.disabled, danger: it.danger, active: i === active }" @click="run(it)" @mouseenter="active = i">
+        <div v-else class="item" :class="{ disabled: it.disabled, danger: it.danger, active: i === active || i === sub }" @click="run(it)" @mouseenter="hover(i)">
+          <span class="icon">{{ it.icon ?? '' }}</span>
+          <span class="label">{{ it.label }}</span>
+          <span v-if="it.items" class="hint">▸</span>
+          <span v-else-if="it.hint" class="hint">{{ it.hint }}</span>
+        </div>
+      </template>
+    </div>
+    <div v-if="menu.visible && sub >= 0" ref="subBox" class="ctx" :style="`left:${subPos.x}px;top:${subPos.y}px`" @contextmenu.prevent>
+      <template v-for="(it, i) in subItems()" :key="i">
+        <div v-if="it.sep" class="sep" />
+        <div v-else class="item" :class="{ disabled: it.disabled, danger: it.danger, active: i === subActive }" @click="run(it)" @mouseenter="subActive = i">
           <span class="icon">{{ it.icon ?? '' }}</span>
           <span class="label">{{ it.label }}</span>
           <span v-if="it.hint" class="hint">{{ it.hint }}</span>
