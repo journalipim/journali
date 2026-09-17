@@ -33,7 +33,7 @@ const result = ref(null)
 const model = computed(() => store.model)
 const groups = computed(() => tree.rows.filter(r => r.role === 'group'))
 const attrs = computed(() => new Map((model.value?.attributes ?? []).map(a => [a.key, a])))
-const modelGroups = computed(() => new Set((model.value?.groups ?? []).map(g => g.key)))
+const modelGroups = computed(() => new Map((model.value?.groups ?? []).map(g => [g.key, g])))
 const skip = computed(() => [...DEFAULT_SKIP, ...skipText.value.split(/[,\s]+/).filter(Boolean)])
 const known = computed(() => new Map(tree.rows.filter(r => r.external?.[SYSTEM]).map(r => [r.external[SYSTEM], r])))
 
@@ -169,7 +169,8 @@ async function run() {
   let written = 0, batches = 0
   try {
     const { items, needs } = plan.value
-    for (const [k, label] of needs.newGroups) { await api.post(`/api/model/groups/${k}`, { key: k, label: { de: label, en: label } }, 'PUT'); say(`Attributgruppe ${k} (${label}) angelegt`) }
+    for (const [k, g] of needs.newGroups) { await api.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.label }, activeFrom: g.activeFrom }, 'PUT'); say(`Attributgruppe ${k} (${g.label})${g.activeFrom ? ' ab ' + g.activeFrom : ''} angelegt`) }
+    for (const [k, from] of needs.raise) { const g = modelGroups.value.get(k); await api.post(`/api/model/groups/${k}`, { key: k, label: g.label ?? {}, activeFrom: from }, 'PUT'); say(`Attributgruppe ${k}: aktiv ab ${from ?? 'überall'} (Werte kommen weiter oben vor)`) }
     for (const [k, d] of needs.newAttrs) { await api.post(`/api/model/attributes/${k}`, d, 'PUT'); }
     if (needs.newAttrs.size) say(`${needs.newAttrs.size} Attribute angelegt`)
     await store.poll(true)
@@ -318,14 +319,14 @@ async function run() {
           </tbody>
         </table>
         <div class="section" v-if="plan.needs.newAttrs.size || plan.needs.newGroups.size">
-          <h2>Neu im Modell: ▤ {{ plan.needs.newGroups.size }} · ⊞ {{ plan.needs.newAttrs.size }}</h2>
+          <h2>Neu im Modell: ▤ {{ plan.needs.newGroups.size }} · ⊞ {{ plan.needs.newAttrs.size }}<span v-if="plan.needs.raise.size" class="warn"> · {{ plan.needs.raise.size }} Gruppen „aktiv ab“ anheben: {{ [...plan.needs.raise].map(([k, r]) => `${k} → ${r ?? 'überall'}`).join(', ') }}</span></h2>
           <table class="grid">
             <thead><tr><th>Attribut</th><th>Typ</th><th>▤ Gruppe</th><th class="num">#</th></tr></thead>
             <tbody>
               <tr v-for="[k, d] in plan.needs.newAttrs" :key="k">
                 <td :title="k">{{ d.label.de }} <span class="mono muted">{{ k }}</span></td>
                 <td class="muted">{{ d.type }}{{ d.multiple ? ' ≣' : '' }}{{ d.axes ? ' 🗣' : '' }}</td>
-                <td :class="{ pos: plan.needs.newGroups.has(d.group) }" :title="plan.needs.newGroups.get(d.group)">{{ d.group }}</td>
+                <td :class="{ pos: plan.needs.newGroups.has(d.group) }" :title="plan.needs.newGroups.get(d.group)?.label">{{ d.group }}<span v-if="plan.needs.newGroups.get(d.group)?.activeFrom" class="muted"> · ab {{ icon(plan.needs.newGroups.get(d.group).activeFrom) }}</span></td>
                 <td class="num">{{ plan.needs.counts.get(k) }}</td>
               </tr>
             </tbody>

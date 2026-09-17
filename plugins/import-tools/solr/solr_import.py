@@ -202,17 +202,28 @@ def node_commands(doc, node_ref, model, values_seen, skip):
     return cmds
 
 
+DEPTH = {"group": 0, "product": 1, "variant": 2}
+ROLES = ["group", "product", "variant"]
+
+
 def ensure_model(j, model, docs, pdefs, skip, verbose):
-    """Fehlende Attributgruppen und Attribute anlegen; liefert die Gruppen, die am Wurzelknoten hängen müssen."""
+    """Fehlende Attributgruppen und Attribute anlegen; liefert die Gruppen, die am Wurzelknoten hängen müssen.
+
+    „aktiv ab“ einer neuen Gruppe = die oberste Rolle, an der einer ihrer Werte vorkommt (nur
+    Varianten → ab Variante). Eine vorhandene Gruppe, deren „aktiv ab“ tiefer liegt als eine
+    Fundstelle, wird angehoben — sonst lehnte der Server den Wert ab."""
     groups_needed = {}   # key → label
     attrs_needed = {}    # key → definition
+    top = {}             # Gruppe → oberste Rolle (Tiefe), an der ein Wert vorkommt
     for d in docs:
+        role = ROLE[d["type"].lower()]
         for attr, suffix, raw, _ in own_values(d, skip):
-            if attr in model["attributes"] or attr in attrs_needed:
-                continue
             p = pdefs.get(raw)
             section = (p or {}).get("control__section_id__string") or "solr"
-            gkey = slug(section)
+            gkey = model["attributes"][attr]["group"] if attr in model["attributes"] else attrs_needed[attr]["group"] if attr in attrs_needed else slug(section)
+            top[gkey] = min(top.get(gkey, 9), DEPTH[role])
+            if attr in model["attributes"] or attr in attrs_needed:
+                continue
             groups_needed[gkey] = (p or {}).get("control__section_name__string") or section
             typ, multiple, per_locale = TYPES[suffix]
             attrs_needed[attr] = {
@@ -222,10 +233,19 @@ def ensure_model(j, model, docs, pdefs, skip, verbose):
     for gkey, label in groups_needed.items():
         if gkey in model["groups"]:
             continue
+        active_from = ROLES[top[gkey]] if top.get(gkey, 0) > 0 else None
         if verbose:
-            print(f"  + Attributgruppe {gkey} ({label})")
-        j.send("PUT", f"/api/model/groups/{gkey}", {"key": gkey, "label": {"de": label, "en": label}})
-        model["groups"][gkey] = {"key": gkey}
+            print(f"  + Attributgruppe {gkey} ({label}){' ab ' + active_from if active_from else ''}")
+        j.send("PUT", f"/api/model/groups/{gkey}", {"key": gkey, "label": {"de": label, "en": label}, "activeFrom": active_from})
+        model["groups"][gkey] = {"key": gkey, "activeFrom": active_from}
+    for gkey, t in top.items():
+        g = model["groups"].get(gkey)
+        if g and g.get("activeFrom") and DEPTH.get(g["activeFrom"], 0) > t:
+            active_from = ROLES[t] if t > 0 else None
+            if verbose:
+                print(f"  ~ Attributgruppe {gkey}: aktiv ab {active_from or 'überall'} (Werte kommen weiter oben vor)")
+            j.send("PUT", f"/api/model/groups/{gkey}", {"key": gkey, "label": g.get("label") or {}, "activeFrom": active_from})
+            g["activeFrom"] = active_from
     for attr, d in attrs_needed.items():
         if verbose:
             print(f"  + Attribut {attr}: {d['type']}{' ≣' if d['multiple'] else ''} in {d['group']}")

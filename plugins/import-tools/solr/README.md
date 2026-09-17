@@ -51,6 +51,7 @@ dynamischen Feldern `property__<schlüssel>__<typ>`; der Typ ist das Suffix:
 | `description` | Attribut `description` (locale) |
 | `property__<k>__<typ>` | Attribut `slug(k)`; Typ nach Suffix: string/text → text, xhtml → html, int/long → integer, float/double → decimal, boolean, date/dateTime → date (`JJJJ-MM-TT`); `multi_*` → mehrfach; Text und HTML mit Achse locale |
 | `property`-Dokument `remote_id` | Label und Attributgruppe des Attributs (`control__section_id__string` → Gruppe `slug(section)`, z. B. `techdata_hardware`); ohne Definition → Gruppe `solr` |
+| Fundstellen einer Gruppe | „aktiv ab" der neuen Gruppe = oberste Rolle, an der ein Wert vorkommt (nur Varianten → ab Variante); eine vorhandene Gruppe mit tieferem „aktiv ab" wird angehoben, sonst lehnte der Server den Wert ab |
 | `*_rel`, `image`, `file`, `json`, `loc`, `cur` | übergangen — Medien und Relationen kommen später (docs/pflegestruktur.md, 6) |
 | `*_finder`, `technical_details`, `group_title`, `prodexa_classification` | übergangen (Ableitungen der Quelle); mehr mit `--skip` |
 | `info__changedOn__dateTime` | `--since` holt nur Geändertes |

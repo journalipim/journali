@@ -124,26 +124,37 @@ export function valueCommands(doc, node, attrs, seen, skip) {
   return cmds
 }
 
+const DEPTH = { group: 0, product: 1, variant: 2 }
+const ROLES = ['group', 'product', 'variant']
+
 /// Welche Attribute und Gruppen ein Satz Dokumente braucht: fehlende Definitionen, benutzte Gruppen.
+/// `groups` ist key → { activeFrom }. Eine neue Gruppe bekommt „aktiv ab“ = die oberste Rolle, an der
+/// eine ihrer Werte vorkommt (nur Varianten → ab Variante); eine vorhandene Gruppe, deren „aktiv ab“
+/// tiefer liegt als eine Fundstelle, wird angehoben (`raise`), sonst lehnte der Server den Wert ab.
 export function modelNeeds(docs, attrs, groups, pdefs, skip) {
-  const newGroups = new Map()   // key → label
+  const newGroups = new Map()   // key → { label, activeFrom }
   const newAttrs = new Map()    // key → Definition für PUT /api/model/attributes
   const used = new Set()
   const counts = new Map()      // key → wie oft ein Wert vorkommt
+  const top = new Map()         // Gruppe → oberste Rolle (Tiefe), an der ein Wert vorkommt
+  const seen = (gkey, role) => { const d = DEPTH[role] ?? 0; if (!top.has(gkey) || d < top.get(gkey)) top.set(gkey, d) }
   for (const d of docs) for (const { key, suffix, raw } of ownValues(d, skip)) {
     counts.set(key, (counts.get(key) ?? 0) + 1)
-    if (attrs.has(key)) { used.add(attrs.get(key).group); continue }
-    if (newAttrs.has(key)) continue
+    if (attrs.has(key)) { used.add(attrs.get(key).group); seen(attrs.get(key).group, roleOf(d)); continue }
     const p = pdefs[raw]
-    const section = p?.section || 'solr'
-    const gkey = slug(section)
-    if (!groups.has(gkey)) newGroups.set(gkey, p?.sectionName || section)
+    const gkey = newAttrs.get(key)?.group ?? slug(p?.section || 'solr')
+    seen(gkey, roleOf(d))
+    if (newAttrs.has(key)) continue
+    if (!groups.has(gkey)) newGroups.set(gkey, { label: p?.sectionName || p?.section || 'solr', activeFrom: null })
     used.add(gkey)
     const [type, multiple, perLocale] = TYPES[suffix]
     const label = p?.name || raw
     newAttrs.set(key, { key, label: { de: label, en: label }, type, group: gkey, axes: perLocale ? ['locale'] : null, multiple })
   }
+  for (const [gkey, g] of newGroups) { const t = top.get(gkey) ?? 0; g.activeFrom = t > 0 ? ROLES[t] : null }
+  const raise = new Map()       // vorhandene Gruppe → flacheres „aktiv ab“
+  for (const [gkey, t] of top) { const g = groups.get(gkey); if (g?.activeFrom && DEPTH[g.activeFrom] > t) raise.set(gkey, t > 0 ? ROLES[t] : null) }
   for (const k of ['name', 'description', 'sku']) if (attrs.has(k)) used.add(attrs.get(k).group)
   used.delete(undefined); used.delete(null); used.delete('')
-  return { newGroups, newAttrs, used: [...used].sort(), counts }
+  return { newGroups, newAttrs, raise, used: [...used].sort(), counts }
 }
