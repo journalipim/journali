@@ -96,6 +96,17 @@ const sample = (i) => source.value.rows.slice(0, 200).map(r => r[i]).filter(v =>
 function onTarget(m) { planned.value = null; if (m.target === 'attr' && !m.attribute) m.attribute = attrs.value[0]?.key ?? null; if (m.target === 'new' && !m.newKey) m.newKey = m.column.toLowerCase().replace(/[^a-z0-9]+/g, '_'); syncLocale(m) }
 function syncLocale(m) { const a = attrs.value.find(x => x.key === m.attribute); if (m.target === 'attr' && a && !a.perLocale) m.locale = null; if (m.target === 'attr' && a?.perLocale && !m.locale) m.locale = model.value?.masterLocale ?? locales.value[0] }
 const keyColumn = computed(() => mapping.value.find(m => ['id', 'sku', 'external'].includes(m.target)))
+const groups = computed(() => model.value?.groups ?? [])
+// Schreiben erst, wenn nichts mehr im Weg steht: ungültige Zellen (korrigieren), neue Spalten ohne Gruppe, im Knotenmodus gar keine ungültigen
+const blockers = computed(() => {
+  const p = planned.value; if (!p) return []
+  const out = []
+  if (p.stats.invalid.length) out.push(fixed.value ? `${p.stats.invalid.length} Werte passen nicht zum Typ — Datei abgelehnt, in Excel korrigieren` : `${p.stats.invalid.length} Werte passen nicht zum Typ — unten korrigieren`)
+  if (p.stats.missingGroup.length) out.push(`neue Attribute ohne Attributgruppe: ${p.stats.missingGroup.join(', ')}`)
+  return out
+})
+// Korrektur einer Zelle direkt in der Quelle; danach neu analysieren
+function fixCell(inv, v) { source.value.rows[inv.row][inv.column] = v; planned.value = { ...planned.value, stale: true } }
 
 // ---- Plan
 async function analyse() {
@@ -124,12 +135,13 @@ async function analyse() {
 }
 async function run() {
   if (!planned.value || !store.actor) { if (!store.actor) store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (blockers.value.length || planned.value.stale) { store.toast(blockers.value[0] ?? 'erst neu analysieren'); return }
   const p = planned.value
   busy.value = 'schreibe …'; result.value = null
   try {
     for (const a of p.newAttributes) await api.post(`/api/model/attributes/${a.key}`, a, 'PUT')
-    if (p.newAttributes.length) { await store.poll(true); say(`${p.newAttributes.length} Attribute angelegt (Gruppe import)`) }
-    const cmds = [...p.attach.map(id => ({ op: 'groups.attach', args: { node: id, groups: [...(tree.byId.get(id)?.groups ?? '').split(',').filter(Boolean), 'import'] } })), ...p.commands]   // groups.attach setzt die ganze Liste
+    if (p.newAttributes.length) { await store.poll(true); say(`${p.newAttributes.length} Attribute angelegt: ${p.newAttributes.map(a => a.key + ' → ' + a.group).join(', ')}`) }
+    const cmds = [...p.attach.map(x => ({ op: 'groups.attach', args: { node: x.node, groups: [...(tree.byId.get(x.node)?.groups ?? '').split(',').filter(Boolean), ...x.groups] } })), ...p.commands]   // groups.attach setzt die ganze Liste
     // Stapel in Happen: neue Knoten samt ihren Werten zusammen (Refs gelten nur im selben Aufruf)
     const batch = 'imp-' + Date.now().toString(36)
     let done = 0, i = 0
@@ -149,7 +161,7 @@ async function run() {
 }
 
 // ---- Profil: Zuordnung (je Spaltenname), Ziel, Rolle, Kennung
-const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map(m => [m.column, { target: m.target, attribute: m.attribute, locale: m.locale, newKey: m.newKey, newType: m.newType }])) })
+const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map(m => [m.column, { target: m.target, attribute: m.attribute, locale: m.locale, newKey: m.newKey, newType: m.newType, newGroup: m.newGroup }])) })
 function profileSet(p) {
   if (!p) { target.value = null; targetQ.value = ''; role.value = ''; external.value = ''; planned.value = null; return }
   role.value = p.role ?? ''; external.value = p.external ?? ''
@@ -205,7 +217,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
               <td><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td>
               <td>
                 <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}</option></select>
-                <span v-else-if="m.target === 'new'" style="display:flex;gap:4px"><input v-model="m.newKey" type="text" style="flex:1" placeholder="schlüssel" @change="planned = null" /><select v-model="m.newType" style="width:90px"><option v-for="t in ['text', 'html', 'integer', 'decimal', 'boolean', 'date']" :key="t" :value="t">{{ t }}</option></select></span>
+                <span v-else-if="m.target === 'new'" style="display:flex;gap:4px;flex-wrap:wrap"><input v-model="m.newKey" type="text" style="flex:1;min-width:90px" placeholder="schlüssel" @change="planned = null" /><select v-model="m.newType" style="width:84px" @change="planned = null"><option v-for="t in ['text', 'html', 'integer', 'decimal', 'boolean', 'date']" :key="t" :value="t">{{ t }}</option></select>
+                  <select v-model="m.newGroup" style="width:100%" :class="{ neg: !m.newGroup }" title="Attributgruppe — Pflicht: ohne Gruppe gilt das Attribut nirgends" @change="planned = null"><option :value="undefined">● Gruppe wählen …</option><option v-for="g in groups" :key="g.key" :value="g.key">▤ {{ g.label?.de || g.key }}</option></select></span>
                 <span v-else class="muted">—</span>
               </td>
               <td><select v-if="(m.target === 'attr' && attrs.find(a => a.key === m.attribute)?.perLocale) || m.target === 'new'" v-model="m.locale" style="width:100%" @change="planned = null"><option :value="null">*</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select></td>
@@ -220,7 +233,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>4 · Plan</h1>
       <button class="primary" :disabled="!source || !!busy" @click="analyse">analysieren</button>
-      <button class="primary" :disabled="!planned || !!busy || !planned.commands.length" @click="run" :title="planned ? `${planned.commands.length} Befehle schreiben` : 'erst analysieren'">▶ schreiben</button>
+      <button class="primary" :disabled="!planned || !!busy || !planned.commands.length || blockers.length > 0 || planned.stale" @click="run" :title="!planned ? 'erst analysieren' : blockers[0] ?? (planned.stale ? 'erst erneut analysieren' : `${planned.commands.length} Befehle schreiben`)">▶ schreiben</button>
       <span class="grow" /><span class="muted">{{ store.actor ? '👤 ' + store.actor : '👤 Name fehlt' }}</span>
     </div>
     <div class="scroll" style="padding:8px">
@@ -228,6 +241,17 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span class="pos">+{{ planned.stats.create }} neu</span> · <span>{{ planned.stats.update }} geändert</span> · <span class="muted">{{ planned.stats.unchanged }} unverändert</span> · {{ planned.stats.values }} Werte · {{ planned.commands.length }} Befehle
         <span v-if="planned.newAttributes.length"> · <span class="warn">{{ planned.newAttributes.length }} neue Attribute:</span> {{ planned.newAttributes.map(a => a.key + ' (' + a.type + ')').join(', ') }}</span>
         <div v-if="planned.stats.problems.length" class="neg" style="margin-top:6px;white-space:pre-wrap">{{ planned.stats.problems.slice(0, 30).join('\n') }}<span v-if="planned.stats.problems.length > 30"> … +{{ planned.stats.problems.length - 30 }}</span></div>
+        <div v-for="b in blockers" :key="b" class="neg" style="margin-top:6px">✗ {{ b }}</div>
+        <div v-if="planned.stale" class="warn" style="margin-top:6px">✎ Zellen korrigiert — <button class="primary" @click="analyse">erneut analysieren</button></div>
+        <div v-if="planned.stats.invalid.length" class="section" style="margin-top:8px;padding:0">
+          <h2 class="step-band" style="margin:0 0 4px">Werte prüfen <span class="muted">· {{ planned.stats.invalid.length }} Zellen{{ fixed ? ' — im Knotenmodus in Excel korrigieren und neu laden' : ' — hier korrigieren, dann erneut analysieren' }}</span></h2>
+          <table class="grid" style="width:100%"><thead><tr><th style="width:60px">Zeile</th><th style="width:160px">Spalte</th><th>Grund</th><th style="width:220px">Korrektur</th></tr></thead><tbody>
+            <tr v-for="inv in planned.stats.invalid.slice(0, 200)" :key="inv.row + '|' + inv.column">
+              <td class="mono muted">{{ inv.row + 2 }}</td><td class="mono">{{ source.columns[inv.column] }}</td><td>{{ inv.message }}</td>
+              <td><input v-if="!fixed" type="text" :value="inv.value" style="width:100%" @change="fixCell(inv, $event.target.value)" /><span v-else class="muted">{{ inv.value }}</span></td>
+            </tr>
+          </tbody></table>
+        </div>
         <details style="margin-top:8px"><summary class="muted">Befehle (erste 200)</summary>
           <pre class="out">{{ planned.commands.slice(0, 200).map(c => `${c.op} ${JSON.stringify(c.args)}`).join('\n') }}</pre></details>
       </div>

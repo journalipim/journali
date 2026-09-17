@@ -101,6 +101,27 @@ export function convert(raw, def, model) {
   }
 }
 
+// Passt der (schon umgeformte) Wert zum Typ? null = ja, sonst der Grund. Was hier durchfällt, kommt nicht in den Stapel:
+// im Knotenmodus wird die Datei abgelehnt, im Assistenten muss die Zelle korrigiert werden (Taloan, 17.09.).
+export function validate(v, def, model) {
+  if (v == null || v === '') return null
+  switch (def?.type) {
+    case 'integer': return /^[+-]?\d+$/.test(v) ? null : `„${v}“ ist keine ganze Zahl`
+    case 'decimal': return /^[+-]?\d+(\.\d+)?$/.test(v) ? null : `„${v}“ ist keine Zahl`
+    case 'boolean': return v === 'true' || v === 'false' ? null : `„${v}“ ist nicht ja/nein`
+    case 'date': return /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(Date.parse(v)) ? null : `„${v}“ ist kein Datum (TT.MM.JJJJ)`
+    case 'enum': {
+      const list = model?.lists?.find(l => l.key === def.list); if (!list) return null
+      const bad = String(v).split(',').map(x => x.trim()).filter(x => x && !list.values.some(y => y.value === x))
+      return bad.length ? `„${bad.join(', ')}“ nicht in Liste ${def.list}` : null
+    }
+    default: {
+      if (def?.pattern) { try { if (!new RegExp(def.pattern).test(v)) return `„${String(v).slice(0, 40)}“ passt nicht zum Muster${def.patternHint ? ' (' + def.patternHint + ')' : ''}` } catch {} }
+      return null
+    }
+  }
+}
+
 // Listenwert finden: Schlüssel genau, sonst Label in irgendeiner Sprache, sonst normalisiert — sonst der Rohtext (der Server lehnt ab)
 export function matchListValue(s, def, model) {
   const list = model?.lists?.find(l => l.key === def.list)
@@ -183,12 +204,17 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     if (!key || attrs.has(key)) { m.target = attrs.has(key) ? 'attr' : 'skip'; m.attribute = key; continue }
     const have = newAttrs.get(key)
     if (have) { if (m.locale) have.axes = ['locale']; continue }
-    newAttrs.set(key, { key, label: { de: splitLocale(m.column, (model.locales ?? []).map(l => l.code)).base, en: splitLocale(m.column, (model.locales ?? []).map(l => l.code)).base }, type: m.newType === 'enum' ? 'text' : (m.newType || 'text'), group: 'import', axes: m.locale ? ['locale'] : [], inheritable: false })
+    // Gruppe ist Pflicht (Taloan, 17.09.): ohne Attributgruppe kein neues Attribut — der Plan meldet es, der Import wartet
+    newAttrs.set(key, { key, label: { de: splitLocale(m.column, (model.locales ?? []).map(l => l.code)).base, en: splitLocale(m.column, (model.locales ?? []).map(l => l.code)).base }, type: m.newType === 'enum' ? 'text' : (m.newType || 'text'), group: m.newGroup || null, axes: m.locale ? ['locale'] : [], inheritable: false })
   }
+  const requiredNew = [...newAttrs.values()].filter(a => !a.group).map(a => a.key)
   const defOf = m => attrs.get(m.attribute ?? m.newKey) ?? (newAttrs.get(m.newKey) ? { key: m.newKey, type: newAttrs.get(m.newKey).type, perLocale: newAttrs.get(m.newKey).axes.includes('locale') } : null)
 
-  const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [] }
+  // Zeilennummern in Meldungen sind Excel-Zeilen (Kopfzeile = 1)
+  const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [], invalid: [], missingGroup: requiredNew }
   const targetGroups = new Set()
+  // Pflichtattribute der Kindrolle (irgendein Kanal verlangt sie): beim Anlegen müssen sie da sein
+  const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
   rows.forEach((row, ri) => {
     const id = String(cell(row, iId) ?? '').trim(), sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
     let node = (id && tree.byId.get(id)) || (ext && byExt.get(ext)) || (sku && bySku.get(sku)) || null
@@ -197,14 +223,17 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       // anlegen — wo? Elternteil aus der Spalte (SKU oder Id), sonst das Ziel
       const p = String(cell(row, iParent) ?? '').trim()
       const parent = p ? (tree.byId.get(p) ?? bySku.get(p) ?? null) : target
-      if (!parent) { stats.problems.push(`Zeile ${ri + 1}: Elternteil „${p || '?'}“ nicht gefunden`); stats.skipped++; return }
+      if (!parent) { stats.problems.push(`Zeile ${ri + 2}: Elternteil „${p || '?'}“ nicht gefunden`); stats.skipped++; return }
       const r = role ?? (parent.role === 'product' ? 'variant' : 'product')
-      if (r === 'variant' && parent.role !== 'product') { stats.problems.push(`Zeile ${ri + 1}: Variante braucht ein Produkt als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
-      if (r !== 'variant' && parent.role !== 'group') { stats.problems.push(`Zeile ${ri + 1}: ${r} braucht eine Gruppe als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
+      if (r === 'variant' && parent.role !== 'product') { stats.problems.push(`Zeile ${ri + 2}: Variante braucht ein Produkt als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
+      if (r !== 'variant' && parent.role !== 'group') { stats.problems.push(`Zeile ${ri + 2}: ${r} braucht eine Gruppe als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
+      // Pflicht beim Anlegen: was die Rolle verlangt, muss die Zeile mitbringen (Achsen prüft der Variantenzweig)
+      const miss = requiredFor(r).filter(a => !(parent.axes ?? []).includes(a.key) && !mapping.some((m, ci) => (m.target === 'attr' && m.attribute === a.key) && convert(cell(row, ci), a, model) != null)).map(a => a.key)
+      if (miss.length) { stats.problems.push(`Zeile ${ri + 2}: Pflicht fehlt — ${miss.join(', ')}`); stats.skipped++; return }
       ref = `r${ri}`
       if (r === 'variant') {
         const axisValues = {}
-        for (const a of parent.axes ?? []) { const m = mapping.find(x => x.target === 'attr' && x.attribute === a); const v = m ? convert(cell(row, mapping.indexOf(m)), attrs.get(a), model) : null; if (v == null) { stats.problems.push(`Zeile ${ri + 1}: Achse ${a} fehlt`); } else axisValues[a] = v }
+        for (const a of parent.axes ?? []) { const m = mapping.find(x => x.target === 'attr' && x.attribute === a); const v = m ? convert(cell(row, mapping.indexOf(m)), attrs.get(a), model) : null; if (v == null) { stats.problems.push(`Zeile ${ri + 2}: Achse ${a} fehlt`); } else axisValues[a] = v }
         if (Object.keys(axisValues).length < (parent.axes ?? []).length) { stats.skipped++; return }
         commands.push({ op: 'variant.create', ref, args: { product: parent.id, axisValues } })
       } else if (r === 'group') commands.push({ op: 'group.create', ref, args: { parent: parent.id, label: {}, name: sku || null } })
@@ -221,6 +250,8 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       const def = defOf(m); if (!def) return
       if (node && node.role === 'variant' && (tree.byId.get(node.parent)?.axes ?? []).includes(def.key)) return   // Achsenwert ist fest
       const v = convert(cell(row, ci), def, model)
+      const bad = validate(v, def, model)
+      if (bad) { stats.invalid.push({ row: ri, column: ci, key: def.key, value: cell(row, ci), message: bad }); return }
       const loc = def.perLocale ? m.locale : null
       const k = `${def.key}|${loc ?? ''}`
       if (cur && (cur[k] ?? null) === v) return
@@ -233,8 +264,9 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     stats.values += changed
     if (node) { if (changed) stats.update++; else stats.unchanged++ }
   })
-  // Gruppe „import“ an die Zielknoten hängen, wenn neue Attribute dazukommen (wie beim IXP-Import)
-  const attach = newAttrs.size ? [...targetGroups].filter(id => !(tree.byId.get(id)?.groups ?? '').split(',').includes('import')) : []
+  // Die Gruppen der neuen Attribute an die Zielknoten hängen, wo sie nicht schon gelten
+  const groupsNeeded = [...new Set([...newAttrs.values()].map(a => a.group).filter(Boolean))]
+  const attach = groupsNeeded.length ? [...(target ? [target.id] : []), ...targetGroups].filter((id, i, a) => a.indexOf(id) === i).map(id => ({ node: id, groups: groupsNeeded.filter(g => !(tree.byId.get(id)?.groups ?? '').split(',').includes(g)) })).filter(x => x.groups.length) : []
   return { commands, stats, newAttributes: [...newAttrs.values()], attach }
 }
 
