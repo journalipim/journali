@@ -31,6 +31,10 @@ var seeded = catalog.SeedMissing();
 builder.Services.AddSingleton<IJournal>(journal);
 builder.Services.AddSingleton(catalog);
 
+// Medien: die Bytes liegen ausserhalb der Datenbank — JOURNALI_MEDIA (Verzeichnis), Vorgabe media/ neben dem Programm (docs/betrieb.md).
+var mediaStore = new FileMediaStore(builder.Configuration["JOURNALI_MEDIA"] ?? Path.Combine(builder.Environment.ContentRootPath, "media"));
+builder.Services.AddSingleton<IMediaStore>(mediaStore);
+
 // Umlaute lesbar lassen statt \u00fc — das Journal ist zum Anschauen da.
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
@@ -41,7 +45,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
-app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}", rebuilt, catalog.Head, seeded);
+app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien unter {Media}", rebuilt, catalog.Head, seeded, mediaStore.Root);
 
 if (app.Environment.IsDevelopment()) app.UseCors();
 
@@ -61,6 +65,7 @@ ModelApi.Map(api);
 
 TreeApi.Map(api);
 RelationApi.Map(api);
+MediaApi.Map(api);
 BatchApi.Map(api);
 
 // ---- Journal (roh) ---------------------------------------------------------

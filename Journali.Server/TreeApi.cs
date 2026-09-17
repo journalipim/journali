@@ -50,7 +50,7 @@ public static class TreeApi
             var result = c.With((model, tree, write) =>
             {
                 if (!tree.Nodes.ContainsKey(id)) return (Count: -1, Batch: batch);
-                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
+                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
                 var n = 0;
                 foreach (var d in tree.DescendantsDeepestFirst(id).ToList()) { Commands.Retire(ctx, d.Id); n++; }
                 Commands.Retire(ctx, id); n++;
@@ -63,7 +63,7 @@ public static class TreeApi
             if (Actor(req) is not { } actor) return ActorMissing();
             var batch = "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
             var r = c.With((model, tree, write) => Commands.Duplicate(
-                new Ctx { Model = model, Tree = tree, Relations = c.Relations, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) }, id, deep));
+                new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) }, id, deep));
             return r.Id is not null ? Results.Ok(new { id = r.Id, entries = r.Count, batch })
                 : r.Error is not null ? Bad(r.Error) : Results.NotFound();
         });
@@ -86,7 +86,7 @@ public static class TreeApi
         if (Actor(req) is not { } actor) return ActorMissing();
         var outcome = c.With((model, tree, write) => command(new Ctx
         {
-            Model = model, Tree = tree, Relations = c.Relations,
+            Model = model, Tree = tree, Relations = c.Relations, Media = c.Media,
             Write = (stream, type, payload) => write(actor, stream, type, payload, null),
         }));
         return outcome switch
@@ -149,6 +149,10 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
 /// <param name="Number">Eintrag, der den Wert zuletzt setzte — der Client vergleicht damit Mastersprache gegen Übersetzung.</param>
 public sealed record ValueView(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values, string? Row = null, long Number = 0)
 {
+    public static IEnumerable<ValueView> Of(Medium m) =>
+        m.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, m.SetAt.GetValueOrDefault(kv.Key)))
+            .Concat(m.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, m.SetAt.GetValueOrDefault(kv.Key))));
+
     public static IEnumerable<ValueView> Of(Relation r) =>
         r.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, r.SetAt.GetValueOrDefault(kv.Key)))
             .Concat(r.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, r.SetAt.GetValueOrDefault(kv.Key))));

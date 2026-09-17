@@ -13,3 +13,6 @@ __pycache__/
 # gleich sind.
 .claude/*
 !.claude/agents/
+# Medien: die Bytes liegen im Store (JOURNALI_MEDIA, Vorgabe media/ neben dem Programm), nie im Repo
+media/
+Journali.Server/media/

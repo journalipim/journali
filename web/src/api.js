@@ -13,6 +13,8 @@ async function request(method, path, body) {
   }
   if (res.status === 204) return null
   const text = await res.text()
+  // HTML statt JSON = der Server kennt diesen Pfad nicht und liefert die Oberfläche aus — fast immer eine alte Serverfassung.
+  if (text.trimStart().startsWith('<')) throw new Error(`Server kennt ${method} ${path.split('?')[0]} nicht — Server neu starten (tools\\server restart)?`)
   const data = text ? JSON.parse(text) : null
   if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
   return data
@@ -20,6 +22,15 @@ async function request(method, path, body) {
 
 export const api = {
   get: (path) => request('GET', path),
+  /// Datei hochladen (multipart, Feld file) — X-Actor wie bei jedem Befehl.
+  upload: async (path, file) => {
+    const fd = new FormData(); fd.append('file', file, file.name)
+    let res
+    try { res = await fetch(store.server + path, { method: 'POST', headers: { 'X-Actor': store.actor }, body: fd }) } catch { throw new Error('Server nicht erreichbar') }
+    const data = await res.json().catch(() => null)
+    if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
+    return data
+  },
   post: (path, body, method = 'POST') => request(method, path, body),
   del: (path) => request('DELETE', path),
 }
@@ -54,6 +65,8 @@ export function describe(e) {
     case 'GroupCreated': return `▣ ${p.name ?? p.label?.de ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
     case 'GroupRenamed': return `▣ ${p.label?.de ?? ''}`
     case 'ProductAxesSet': return `◆ variiert nach ${(p.axes || []).join(', ') || 'nichts'}`
+    case 'MediaCreated': return `🖼 ${p.name} · ${p.mime} · ${p.bytes} B`
+    case 'MediaRetired': return '− 🖼 Medium'
     case 'RelationCreated': return `⇄ ${p.type}: ${p.from} → ${p.to}`
     case 'RelationRetired': return '− ⇄ Relation'
     case 'RelationTypeDefined': return `⇄ ${p.key}: ${p.label?.de ?? ''}${p.reverse?.de ? ' / ' + p.reverse.de : ''}${p.group ? ' ▤' + p.group : ''}`

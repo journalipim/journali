@@ -21,6 +21,8 @@ public static class Model
     public const string LabelStream = "settings:label:";
     public const string MasterLocaleStream = "settings:master_locale";
     public const string RelationStream = "relation:";
+    /// <summary>Gruppe der Werte am Medium (20).</summary>
+    public const string MediaGroup = "media";
 
     /// <summary>Die SKU ist ein Attribut der Variante, eindeutig über alle Varianten.</summary>
     public const string SkuAttribute = "sku";
@@ -100,6 +102,16 @@ public static class Model
         yield return new(RelationStream + "accessory", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("accessory", Labels.Of("Zubehör", "Accessory"), Labels.Of("Zubehör von", "Accessory of"))));
         yield return new(RelationStream + "component", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("component", Labels.Of("Bestandteil", "Component"), Labels.Of("verbaut in", "part of"), Group: "relation_component")));
         yield return new(RelationStream + "related", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("related", Labels.Of("Verwandt", "Related"), Labels.Of("Verwandt", "Related"))));
+
+        // Medien (20): Werte am Medium (Gruppe media), Werte an der Kante Knoten→Medium (Gruppe relation_media), Typen image und document.
+        yield return new(GroupStream + "media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("media", Labels.Of("Medium", "Medium"))));
+        yield return new(AttributeStream + "alt_text", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("alt_text", Labels.Of("Alt-Text", "Alt text"), AttributeTypes.Text, Group: "media", Axes: [Axes.Locale])));
+        yield return new(AttributeStream + "copyright", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("copyright", Labels.Of("Rechte", "Copyright"), AttributeTypes.Text, Group: "media")));
+        yield return new(GroupStream + "relation_media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("relation_media", Labels.Of("Medienzuordnung", "Media link"))));
+        yield return new(AttributeStream + "position", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("position", Labels.Of("Reihenfolge", "Position"), AttributeTypes.Integer, Group: "relation_media")));
+        yield return new(AttributeStream + "usage", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("usage", Labels.Of("Verwendung", "Usage"), AttributeTypes.Text, Group: "relation_media")));
+        yield return new(RelationStream + "image", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("image", Labels.Of("Bild", "Image"), Labels.Of("Bild von", "Image of"), To: [Roles.Media], Group: "relation_media")));
+        yield return new(RelationStream + "document", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("document", Labels.Of("Dokument", "Document"), Labels.Of("Dokument zu", "Document of"), To: [Roles.Media], Group: "relation_media")));
 
         var viewNames = new Dictionary<string, (string De, string En)> { [Roles.Group] = ("Gruppe", "Group"), [Roles.Product] = ("Produkt", "Product"), [Roles.Variant] = ("Variante", "Variant") };
         foreach (var role in Roles.All)

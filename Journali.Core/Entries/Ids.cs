@@ -16,6 +16,9 @@ public static class Ids
         _ => throw new ArgumentException(role, nameof(role)),
     };
 
+    /// <summary>Strom eines Mediums: m-…</summary>
+    public static string Media() => "m-" + Random();
+
     /// <summary>Strom einer Relation: r-…</summary>
     public static string Relation() => "r-" + Random();
 

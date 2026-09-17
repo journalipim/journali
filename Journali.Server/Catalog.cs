@@ -16,6 +16,7 @@ public sealed class Catalog
     private readonly ModelCatalog _model = new();
     private readonly Tree _tree = new();
     private readonly Relations _relations = new();
+    private readonly Media _media = new();
     private readonly object _gate = new();
 
     public Catalog(IJournal journal) => _journal = journal;
@@ -27,6 +28,7 @@ public sealed class Catalog
         {
             Projector.CatchUp(_journal, _model);
             Projector.CatchUp(_journal, _relations);
+            Projector.CatchUp(_journal, _media);
             return Projector.CatchUp(_journal, _tree);
         }
     }
@@ -90,8 +92,12 @@ public sealed class Catalog
         _model.Apply(entry);
         _tree.Apply(entry);
         _relations.Apply(entry);
+        _media.Apply(entry);
         return entry;
     }
+
+    /// <summary>Das Abbild der Medien — nur innerhalb von <see cref="With"/> anfassen (dieselbe Sperre).</summary>
+    public Media Media => _media;
 
     /// <summary>Das Abbild der Relationen — nur innerhalb von <see cref="With"/> anfassen (dieselbe Sperre).</summary>
     public Relations Relations => _relations;

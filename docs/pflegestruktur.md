@@ -668,7 +668,7 @@ später), ob Prozess-Plugins Python voraussetzen dürfen (Solr-Skript tut es),
 und ob Befunde der Qualitätsprüfer ins Journal gehören (nachvollziehbar,
 aber Masse) oder in ein eigenes Abbild.
 
-### 20. Medien — Entwurf (Taloan, 17.09.2026: „ausserhalb")
+### 20. Medien — gebaut (Taloan, 17.09.2026: „ausserhalb", „fang mit den Medien an")
 
 Taloan: Binärdaten nicht in die Datenbank — später skalieren, woanders
 speichern. Einverstanden; das Journal bleibt schlank.
@@ -690,7 +690,15 @@ speichern. Einverstanden; das Journal bleibt schlank.
   Der Server berührt Bytes nur beim Hochladen und Ausliefern; nichts davon
   im Journal.
 
-Offen: Hochladen im Browser (Drag & Drop in den Knoten) vs. Import aus der
-Quelle (Solr liefert Pfade unter `suppliers/…` — ein Medienimport holt sie
-von einem konfigurierten Basis-URL), Vorschau-Presets, und ob Medien im
-Baum erscheinen (eigener Ast „Media" wie in der Quelle) oder nur am Knoten.
+Gebaut: `MediaCreated`/`MediaRetired`, Abbild `Media`, `FileMediaStore`
+(`JOURNALI_MEDIA`), `/api/media…`; Saatgut Gruppe `media` (`alt_text`,
+`copyright`), Gruppe `relation_media` (`position`, `usage`), Relationstypen
+`image` und `document` mit Ziel-Rolle `media`. Oberfläche: 🖼 Medien
+(Bibliothek: Kacheln, Suche, Hochladen per Knopf oder Ablegen, Werte) und
+im Knoten der Abschnitt „🖼 Medien" (Kacheln mit Werten an der Kante,
+Ablegen lädt hoch und verknüpft, „aus Medien wählen").
+
+Offen: Vorschau-Presets (heute liefert der Server das Original, der Browser
+skaliert), Medienimport aus der Quelle (Solr: `images` als
+`multi_image_rel`, Pfade unter `suppliers/…` — braucht einen Basis-URL),
+Medien im Baum (eigener Ast) oder nur am Knoten.

@@ -32,7 +32,7 @@ public static partial class ModelApi
             {
                 var from = Clean(body.From); var to = Clean(body.To);
                 if (from?.Except(Roles.All).Any() ?? false) return Bad("from: nur group, product, variant.");
-                if (to?.Except(Roles.All).Any() ?? false) return Bad("to: nur group, product, variant.");
+                if (to?.Except(Roles.All).Except([Roles.Media]).Any() ?? false) return Bad("to: nur group, product, variant, media.");
                 var group = Blank(body.Group);
                 if (group is not null && !model.Groups.ContainsKey(group) && !model.Attributes.Values.Any(a => a.Group == group)) return Bad($"Unbekannte Gruppe: {group}");
                 return write(Model.RelationStream + key, Types.RelationTypeDefined, body with { Key = key, Label = body.Label ?? new(), From = from, To = to, Group = group });

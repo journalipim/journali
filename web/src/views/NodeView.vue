@@ -208,9 +208,10 @@ const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups 
 const relTypes = computed(() => model.value?.relationTypes ?? [])
 const relType = key => relTypes.value.find(t => t.key === key)
 const relGroupAttrs = key => { const g = relType(key)?.group; return g ? (model.value?.attributes ?? []).filter(a => a.group === g && a.type !== 'rows' && a.type !== 'html') : [] }
+const isMediaType = key => (relType(key)?.to ?? []).includes('media')
 const relBlocks = computed(() => {
   const out = new Map()
-  for (const r of rels.value.out ?? []) { if (!out.has(r.type)) out.set(r.type, { type: r.type, out: [], in: [] }); out.get(r.type).out.push(r) }
+  for (const r of rels.value.out ?? []) { if (isMediaType(r.type)) continue; if (!out.has(r.type)) out.set(r.type, { type: r.type, out: [], in: [] }); out.get(r.type).out.push(r) }
   for (const r of rels.value.in ?? []) { if (!out.has(r.type)) out.set(r.type, { type: r.type, out: [], in: [] }); out.get(r.type).in.push(r) }
   return [...out.values()].sort((a, b) => a.type.localeCompare(b.type))
 })
@@ -225,7 +226,32 @@ const relMatches = computed(() => {
   return tree.rows.filter(r => r.id !== props.id && (!t?.to || t.to.includes(r.role)) && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12)
 })
 const addRel = () => { const n = newRel.value; if (!n.type || !n.to) return; command(() => api.post('/api/relations', { type: n.type, from: props.id, to: n.to })); newRel.value = { type: n.type, q: '', to: null } }
-const relTypesFromHere = computed(() => relTypes.value.filter(t => !t.from || t.from.includes(node.value?.role)))
+const relTypesFromHere = computed(() => relTypes.value.filter(t => !isMediaType(t.key) && (!t.from || t.from.includes(node.value?.role))))
+
+// ---- Medien (20): Relationen zu Medien (image, document …) als Kacheln; hochladen per Ablegen oder Knopf, oder aus der Bibliothek wählen
+const mediaRels = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.type)).sort((a, b) => (Number(relValueRaw(a, 'position')) || 9e9) - (Number(relValueRaw(b, 'position')) || 9e9) || a.lastNumber - b.lastNumber))
+const relValueRaw = (r, key) => r.values.find(v => v.attribute === key && !v.locale && !v.channel)?.value ?? null
+const mediaTypes = computed(() => relTypes.value.filter(t => isMediaType(t.key) && (!t.from || t.from.includes(node.value?.role))))
+const mediaDrag = ref(false)
+const mediaFile = ref(null)
+const mediaPick = ref({ open: false, q: '', items: [] })
+const typeFor = file => (file.type || '').startsWith('image/') && mediaTypes.value.some(t => t.key === 'image') ? 'image' : (mediaTypes.value.find(t => t.key === 'document') ?? mediaTypes.value[0])?.key
+async function uploadMedia(files) {
+  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  busy.value = true
+  try {
+    for (const f of files) {
+      const m = await api.upload('/api/media', f)
+      const type = typeFor(f); if (!type) { store.toast('Kein Relationstyp zu Medien für diesen Knotentyp'); break }
+      try { await api.post('/api/relations', { type, from: props.id, to: m.id }) } catch (e) { if (!e.message.includes('schon')) throw e }
+    }
+    await load(); store.poll(true)
+  } catch (e) { store.toast(e.message) }
+  finally { busy.value = false; mediaDrag.value = false }
+}
+async function pickSearch() { try { mediaPick.value.items = await api.get(`/api/media?q=${encodeURIComponent(mediaPick.value.q.trim())}&limit=60`) } catch (e) { store.toast(e.message) } }
+const linkMedium = m => { const type = m.isImage ? 'image' : 'document'; mediaPick.value.open = false; command(() => api.post('/api/relations', { type: mediaTypes.value.some(t => t.key === type) ? type : mediaTypes.value[0]?.key, from: props.id, to: m.id })) }
+const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`
 
 // Variantenachsen am Produkt — änderbar, solange es keine Varianten hat (ProductAxesSet).
 const addAxis = ref('')
@@ -382,6 +408,32 @@ function cellMenu(e, def, col, block) {
           </template>
         </div>
       </div>
+      <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files])">
+        <h2>🖼 Medien <span class="muted">· {{ mediaRels.length }} · Dateien hierher ziehen</span></h2>
+        <div class="tiles">
+          <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${relType(r.type)?.label?.de || r.type}`">
+            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
+            <table class="grid" style="width:auto;margin:0"><tbody>
+              <tr v-for="d in relGroupAttrs(r.type)" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key">{{ d.label?.de || d.key }}</td><Cell :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>
+            </tbody></table>
+            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<button class="x" style="float:right" @click="retireRel(r)" title="Zuordnung lösen (das Medium bleibt in der Bibliothek)">×</button></div>
+          </div>
+        </div>
+        <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
+          <button class="primary" @click="mediaFile.click()">⇧ hochladen</button>
+          <input ref="mediaFile" type="file" multiple style="display:none" @change="uploadMedia([...$event.target.files]); $event.target.value = ''" />
+          <button @click="mediaPick.open = !mediaPick.open; mediaPick.open && pickSearch()">🖼 aus Medien wählen</button>
+          <input v-if="mediaPick.open" v-model="mediaPick.q" type="search" placeholder="🔍 Name" style="width:200px" @input="pickSearch" />
+        </div>
+        <div v-if="mediaPick.open" class="tiles" style="margin-top:6px;max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px">
+          <div v-for="m in mediaPick.items.filter(x => !mediaRels.some(r => r.other.id === x.id))" :key="m.id" class="tile pickable" @click="linkMedium(m)" :title="`${m.name} · ${kb(m.bytes)}`">
+            <img v-if="m.isImage" :src="`/api/media/${m.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '📄' }}</div>
+            <div class="name">{{ m.name }}</div>
+          </div>
+          <div v-if="!mediaPick.items.length" class="muted" style="padding:8px;font-size:12px">nichts</div>
+        </div>
+      </div>
       <div class="section">
         <h2>⇄ Relationen <span class="muted">· {{ relCount }}</span></h2>
         <div v-for="b in relBlocks" :key="b.type" class="relblock">
@@ -489,6 +541,16 @@ function cellMenu(e, def, col, block) {
 .tabbtn.locked { opacity: .6; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .relblock { margin-bottom: 8px; }
+.section.over { outline: 2px dashed var(--accent); outline-offset: -4px; }
+.tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.tile { width: 150px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: var(--pane); }
+.tile.pickable { width: 110px; cursor: pointer; }
+.tile.pickable:hover { background: var(--hover); }
+.tile img, .tile .doc { width: 100%; height: 100px; object-fit: contain; display: grid; place-items: center; background: var(--bg); border-radius: 4px; color: var(--muted); font-size: 12px; }
+.tile.pickable img, .tile.pickable .doc { height: 70px; }
+.tile .name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 4px 0; }
+.tile .name a { text-decoration: none; }
+.tile .meta { font-size: 11px; margin-top: 2px; }
 .relblock a { color: inherit; text-decoration: none; }
 .relblock a:hover { text-decoration: underline; }
 .picker { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px; }

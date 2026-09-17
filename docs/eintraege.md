@@ -52,6 +52,19 @@ Kante von Knoten zu Knoten mit Typ aus dem Modell; Werte wie am Knoten
 Ein zurückgezogener Knoten lässt seine Relationen stehen; sie zeigen dann
 ins Leere (`other.missing`) bis jemand sie zurückzieht.
 
+## Medien — ein Strom je Medium (`m-…`)
+
+Die Datei liegt ausserhalb (Store, Hash-adressiert); im Journal nur das Ding
+(docs/pflegestruktur.md, 20). Zuordnung zum Knoten = Relation (`image`,
+`document`, Ziel-Rolle `media`) mit Werten an der Kante (`position`, `usage`).
+
+| Typ | Nutzdaten | Wirkung |
+|---|---|---|
+| `MediaCreated` | `sha256`, `bytes`, `mime`, `name` | Medium; gleicher Hash = dasselbe Medium (kein zweiter Eintrag) |
+| `MediaRetired` | — | Medium aus dem Abbild; die Datei bleibt im Store |
+| `AttributeSet` | wie am Knoten | Wert am Medium — nur Attribute der Gruppe `media` (Saatgut `alt_text` je Sprache, `copyright`) |
+| `ExternalLinked` / `ExternalUnlinked` | wie am Knoten | Kennung aus der Quelle |
+
 ## Werte an einem Knoten
 
 | Typ | Nutzdaten | Wirkung im Abbild |
@@ -143,11 +156,15 @@ steht im Kopf `X-Actor`.
 | `DELETE /api/relations/{id}` | `RelationRetired` |
 | `POST /api/relations/{id}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` an der Relation |
 | `PUT /api/relations/{id}/external/{system}` `{id}` | `ExternalLinked` an der Relation |
-| `PUT /api/model/relations/{key}` `{label{}, reverse{}, from[], to[], group}` · `DELETE` | `RelationTypeDefined` / `RelationTypeRetired` (nicht mit Relationen) |
+| `PUT /api/model/relations/{key}` `{label{}, reverse{}, from[], to[], group}` · `DELETE` | `RelationTypeDefined` / `RelationTypeRetired` (nicht mit Relationen); `to` darf `media` enthalten |
+| `POST /api/media` (multipart `file`) | `MediaCreated` — oder vorhandenes Medium bei gleichem Hash |
+| `DELETE /api/media/{id}` | `MediaRetired` |
+| `POST /api/media/{id}/attributes` `{attribute, locale?, value | values[]}` | `AttributeSet` am Medium (Gruppe `media`) |
+| `PUT /api/media/{id}/external/{system}` `{id}` | `ExternalLinked` am Medium |
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
 | `PUT /api/nodes/{id}/external/{system}` `{id}` | `ExternalLinked` |
 | `DELETE /api/nodes/{id}/external/{system}` | `ExternalUnlinked` |
-| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create (`name`), group.rename (Altlast), node.rename (`name`), label.set (`attribute`), product.create, axes.set (`axes[]`), variant.create, node.move, node.retire, status.set, attribute.set (mit `row`), row.add/remove/order, category.assign/remove, release.grant/revoke, external.link/unlink, relation.create (`type`, `from`, `to`; bekommt `ref`), relation.retire / relation.attribute.set / relation.external.link (`relation` = Id oder `@ref`); `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
+| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create (`name`), group.rename (Altlast), node.rename (`name`), label.set (`attribute`), product.create, axes.set (`axes[]`), variant.create, node.move, node.retire, status.set, attribute.set (mit `row`), row.add/remove/order, category.assign/remove, release.grant/revoke, external.link/unlink, relation.create (`type`, `from`, `to`; bekommt `ref`), relation.retire / relation.attribute.set / relation.external.link (`relation` = Id oder `@ref`), media.attribute.set / media.external.link / media.retire (`media` = Id); `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
 | `PUT /api/model/locales/{code}` `{label}` | `LocaleDefined` |
 | `PUT /api/model/channels/{key}` `{label{}}` | `ChannelDefined` |
 | `PUT /api/model/attributes/{key}` Definition | `AttributeDefined` — prüft Typ, Achsen, Einheit nur bei Zahlen, enum ↔ Werteliste |

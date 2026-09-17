@@ -23,9 +23,14 @@ services:
     environment:
       JOURNALI_DB: Host=db;Port=5432;Database=journali;Username=postgres
       JOURNALI_DB_PASSWORD: ${JOURNALI_DB_PASSWORD}
+      JOURNALI_MEDIA: /data/media
+    volumes:
+      # Medien liegen ausserhalb der Datenbank (docs/pflegestruktur.md, 20) — eigenes Volume, Hash-adressiert
+      - journali-media:/data/media
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   journali-db:
+  journali-media:

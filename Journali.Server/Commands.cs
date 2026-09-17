@@ -19,6 +19,7 @@ public sealed class Ctx
     public required ModelCatalog Model { get; init; }
     public required Tree Tree { get; init; }
     public required Relations Relations { get; init; }
+    public required Media Media { get; init; }
     public required Func<string, string, object, Entry> Write { get; init; }   // stream, type, payload
 }
 
@@ -310,12 +311,16 @@ public static class Commands
     {
         if (!c.Model.RelationTypes.TryGetValue(type ?? "", out var def)) return Outcome.Bad($"Unbekannter Relationstyp: {type}");
         if (!c.Tree.Nodes.TryGetValue(from ?? "", out var a)) return Outcome.Bad("from: Knoten gibt es nicht.");
-        if (!c.Tree.Nodes.TryGetValue(to ?? "", out var b)) return Outcome.Bad("to: Knoten gibt es nicht.");
-        if (a.Id == b.Id) return Outcome.Bad("Nicht auf sich selbst.");
+        // Ziel: ein Knoten — oder ein Medium (20), dann Rolle „media“.
+        string toId, toRole;
+        if (c.Tree.Nodes.TryGetValue(to ?? "", out var b)) { toId = b.Id; toRole = b.Role; }
+        else if (c.Media.All.TryGetValue(to ?? "", out var m)) { toId = m.Id; toRole = Roles.Media; }
+        else return Outcome.Bad("to: Knoten oder Medium gibt es nicht.");
+        if (a.Id == toId) return Outcome.Bad("Nicht auf sich selbst.");
         if (!def.FromAllowed(a.Role)) return Outcome.Bad($"{def.Key} geht nicht von {a.Role} aus (erlaubt: {string.Join(", ", def.From ?? [])}).");
-        if (!def.ToAllowed(b.Role)) return Outcome.Bad($"{def.Key} geht nicht zu {b.Role} (erlaubt: {string.Join(", ", def.To ?? [])}).");
-        if (c.Relations.From(a.Id).Any(r => r.Type == def.Key && r.To == b.Id)) return Outcome.Bad("Diese Relation gibt es schon.");
-        return Outcome.Ok(c.Write(Ids.Relation(), Types.RelationCreated, new RelationCreated(def.Key, a.Id, b.Id)));
+        if (!def.ToAllowed(toRole)) return Outcome.Bad($"{def.Key} geht nicht zu {toRole} (erlaubt: {string.Join(", ", def.To ?? [])}).");
+        if (c.Relations.From(a.Id).Any(r => r.Type == def.Key && r.To == toId)) return Outcome.Bad("Diese Relation gibt es schon.");
+        return Outcome.Ok(c.Write(Ids.Relation(), Types.RelationCreated, new RelationCreated(def.Key, a.Id, toId)));
     }
 
     public static Outcome RetireRelation(Ctx c, string id) =>
@@ -343,6 +348,34 @@ public static class Commands
         if (!c.Relations.All.TryGetValue(id, out var r)) return Outcome.Missing;
         if (string.IsNullOrWhiteSpace(system) || string.IsNullOrWhiteSpace(externalId)) return Outcome.Bad("system und id sind Pflicht.");
         if (c.Relations.ByExternal(system, externalId) is { } other && other.Id != r.Id) return Outcome.Bad($"{system}:{externalId} hängt schon an {other.Id}.");
+        return Outcome.Ok(c.Write(id, Types.ExternalLinked, new ExternalLinked(system, externalId)));
+    }
+
+    // ---- Medien (20)
+
+    public static Outcome RetireMedium(Ctx c, string id) =>
+        c.Media.All.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.MediaRetired, new MediaRetired())) : Outcome.Missing;
+
+    /// <summary>Wert am Medium: Attribute der Gruppe media (Alt-Text, Rechte …).</summary>
+    public static Outcome SetMediumAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values)
+    {
+        if (!c.Media.All.ContainsKey(id)) return Outcome.Missing;
+        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
+        if (def.Group != Model.MediaGroup) return Outcome.Bad($"{def.Key} gehört nicht zur Gruppe {Model.MediaGroup}.");
+        if (def.Type == AttributeTypes.Rows) return Outcome.Bad("Vermehrbare Attribute gibt es an Medien nicht.");
+        locale = Blank(locale); channel = Blank(channel);
+        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad($"{def.Key} hat diese Achse nicht.");
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
+        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad($"Unbekannter Kanal: {channel}");
+        if (CheckValue(c.Model, def, ref value, ref values) is { } error) return Outcome.Bad(error);
+        return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values)));
+    }
+
+    public static Outcome LinkMediumExternal(Ctx c, string id, string? system, string? externalId)
+    {
+        if (!c.Media.All.TryGetValue(id, out var m)) return Outcome.Missing;
+        if (string.IsNullOrWhiteSpace(system) || string.IsNullOrWhiteSpace(externalId)) return Outcome.Bad("system und id sind Pflicht.");
+        if (c.Media.ByExternal(system, externalId) is { } other && other.Id != m.Id) return Outcome.Bad($"{system}:{externalId} hängt schon an {other.Id}.");
         return Outcome.Ok(c.Write(id, Types.ExternalLinked, new ExternalLinked(system, externalId)));
     }
 

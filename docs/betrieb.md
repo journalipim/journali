@@ -36,6 +36,18 @@ Host, Port, Nutzer und Datenbankname stehen in
 `Journali.Server/appsettings.json` unter `JOURNALI_DB`; die Umgebungsvariable
 gleichen Namens übersteuert sie.
 
+## Medien
+
+Die Bytes liegen ausserhalb der Datenbank (docs/pflegestruktur.md, 20):
+Verzeichnis aus `JOURNALI_MEDIA`, Vorgabe `media/` neben dem Programm (beim
+Entwickeln `Journali.Server/media/`, nicht im Repo), Unterordner nach den
+ersten zwei Hexzeichen des SHA-256. Im Journal steht nur `MediaCreated`
+mit Hash, Grösse, Typ, Name. Gleiche Datei zweimal hochgeladen = ein
+Medium. Im Container: Volume `journali-media` auf `/data/media`
+(`compose.yaml`). Später S3/MinIO hinter derselben Schnittstelle
+`IMediaStore` (`MediaStore.cs`). Sicherung = Datenbank **und** dieses
+Verzeichnis.
+
 ## Endpunkte
 
 Alles unter `/api`; alles andere liefert die Oberfläche (`index.html`).
@@ -53,6 +65,9 @@ Befehle (schreiben) brauchen den Kopf `X-Actor` und stehen in
 | `GET /api/journal?after=N&limit=M` | Einträge mit Nummer > N, höchstens M (Vorgabe 1000, Obergrenze 10 000) |
 | `GET /api/journal/{number}` | ein Eintrag oder 404 |
 | `GET /api/streams/{stream}` | alle Einträge eines Stroms in Reihenfolge |
+| `GET /api/media?q=&limit=` | Medien, neueste zuerst (Name, Id, Werte durchsucht) |
+| `GET /api/media/{id}` · `/file` | ein Medium; die Datei (unveränderlich, `immutable`-Cache, Range) |
+| `POST /api/media` (multipart `file`) | hochladen → `MediaCreated`, oder das vorhandene Medium bei gleichem Hash (`existed`) |
 
 `payload` kommt in jeder Antwort als eingebettetes JSON, nicht als String.
 

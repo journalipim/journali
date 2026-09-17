@@ -34,7 +34,7 @@ public static class BatchApi
             {
                 var refs = new Dictionary<string, string>();
                 var results = new List<Result>();
-                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
+                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
 
                 for (var i = 0; i < r.Commands.Count; i++)
                 {
@@ -69,6 +69,9 @@ public static class BatchApi
                             "relation.create" => Commands.CreateRelation(ctx, a.Str("type"), a.Id("from"), a.Id("to")),
                             "relation.retire" => Commands.RetireRelation(ctx, a.Id("relation") ?? ""),
                             "relation.attribute.set" => Commands.SetRelationAttribute(ctx, a.Id("relation") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
+                            "media.attribute.set" => Commands.SetMediumAttribute(ctx, a.Id("media") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
+                            "media.external.link" => Commands.LinkMediumExternal(ctx, a.Id("media") ?? "", a.Str("system"), a.Str("id")),
+                            "media.retire" => Commands.RetireMedium(ctx, a.Id("media") ?? ""),
                             "relation.external.link" => Commands.LinkRelationExternal(ctx, a.Id("relation") ?? "", a.Str("system"), a.Str("id")),
                             _ => Outcome.Bad($"Unbekannter Befehl: {cmd.Op}"),
                         };

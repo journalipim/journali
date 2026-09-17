@@ -26,6 +26,10 @@ public static class Types
     // Relationen (docs/pflegestruktur.md, 18): eigener Strom r-…, Werte per AttributeSet wie am Knoten
     public const string RelationCreated = "RelationCreated";
     public const string RelationRetired = "RelationRetired";
+
+    // Medien (docs/pflegestruktur.md, 20): eigener Strom m-…, die Bytes liegen ausserhalb (Hash)
+    public const string MediaCreated = "MediaCreated";
+    public const string MediaRetired = "MediaRetired";
     public const string LabelAttributeSet = "LabelAttributeSet";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
@@ -85,6 +89,8 @@ public static class Roles
     public const string Group = "group";
     public const string Product = "product";
     public const string Variant = "variant";
+    /// <summary>Kein Baumknoten: ein Medium als Ziel einer Relation (20).</summary>
+    public const string Media = "media";
     public static readonly IReadOnlyList<string> All = [Group, Product, Variant];
     /// <summary>Tiefe im Baum: Gruppe 0, Produkt 1, Variante 2 — für „aktiv ab“.</summary>
     public static int Depth(string role) => role switch { Group => 0, Product => 1, Variant => 2, _ => 0 };
@@ -150,6 +156,12 @@ public sealed record RelationCreated(string Type, string From, string To);
 
 /// <summary>Relation weg — das Journal behält sie, das Abbild nimmt sie heraus.</summary>
 public sealed record RelationRetired();
+
+/// <summary>Erster Eintrag eines Mediums: die Datei liegt im Store unter ihrem SHA-256; hier nur Hash, Grösse, Typ, Name.</summary>
+public sealed record MediaCreated(string Sha256, long Bytes, string Mime, string Name);
+
+/// <summary>Medium weg — die Datei bleibt im Store (Hash-adressiert, vielleicht geteilt), das Abbild nimmt das Medium heraus.</summary>
+public sealed record MediaRetired();
 
 /// <summary>Externe Kennung je Quellsystem (Import): beim zweiten Lauf Update statt Neuanlage.</summary>
 public sealed record ExternalLinked(string System, string Id);
