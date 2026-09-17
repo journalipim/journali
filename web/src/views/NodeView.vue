@@ -285,10 +285,10 @@ function cellMenu(e, def, col, block) {
         <tbody v-for="b in shownBlocks" :key="b.key">
           <tr class="group-row" :class="{ locked: !b.active }">
             <td :colspan="columns.length + 1">
-              ▤ {{ b.label }}
+              {{ b.label }}
               <router-link :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
               <span class="muted from" :title="`Gruppe hängt an ${b.fromLabel}`">· von {{ b.from === id ? 'hier' : b.fromLabel }}</span>
-              <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">🔒 ab {{ roleLabel[b.activeFrom] }}</span>
+              <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">· 🔒 ab {{ roleLabel[b.activeFrom] }}</span>
             </td>
           </tr>
           <template v-for="def in b.defs" :key="def.key">
@@ -400,11 +400,16 @@ function cellMenu(e, def, col, block) {
 .tabbtn.locked { opacity: .6; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
-.group-row td { background: var(--bg); color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; height: 22px; }
-.group-row .edit { text-decoration: none; margin-left: 4px; opacity: .5; }
+/* Gruppenköpfe (Taloan, 17.09.): bearbeitbare Gruppen deutlich — Band in Akzentfarbe, Text in Schriftfarbe;
+   gesperrte zurückgenommen (gedämpft, 🔒), statt in Warnfarbe ins Auge zu springen. */
+.group-row td { background: var(--accent-soft); color: var(--text); font-size: 12px; font-weight: 600; letter-spacing: .02em; height: 26px; border-top: 2px solid var(--accent); padding-top: 2px; }
+.group-row td::before { content: '▤ '; color: var(--accent); }
+.group-row .edit { text-decoration: none; margin-left: 4px; opacity: .5; color: var(--text); }
 .group-row:hover .edit { opacity: 1; }
-.group-row .from { text-transform: none; font-weight: 400; letter-spacing: 0; }
-.group-row.locked td { color: var(--warn); }
+.group-row .from { font-weight: 400; color: var(--muted); }
+.group-row.locked td { background: var(--bg); color: var(--muted); border-top-color: var(--line); font-weight: 500; }
+.group-row.locked td::before { color: var(--muted); }
+.group-row.locked .warn { color: var(--muted); font-weight: 400; }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* ★ Name im Baum: hohl = nicht gesetzt, blau = geerbt (von oben), gelb = hier gesetzt, halb durchsichtig = gesetzt, gilt hier nicht (Taloan, 17.09.) */
 .star { border: 0; background: none; padding: 0 2px 0 0; color: var(--muted); opacity: .45; cursor: pointer; font-size: 12px; line-height: 1; }
