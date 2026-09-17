@@ -19,8 +19,13 @@ const token = ref(saved.token || '')
 const lang = ref(saved.lang || 'de')
 const target = ref(saved.target || '')
 const importLocales = ref(saved.importLocales || null)
+// Präfix je Quellsystem (Taloan, 17.09.): neue Attribute heissen <prefix><key>, ihre Gruppe <prefix>import —
+// so kollidieren title aus IXP und title aus Solr nicht, und man sieht dem Attribut die Herkunft an.
+const prefix = ref(saved.prefix ?? 'ixp_')
+const cleanPrefix = computed(() => prefix.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^[^a-z]+/, ''))
+const importGroup = computed(() => (cleanPrefix.value || '') + 'import')
 const withImages = ref(saved.withImages ?? true)   // Bilder der Quelle (doc.image) als Medien holen und per Relation „image“ anhängen (Taloan, 17.09.)
-const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, importLocales: importLocales.value, withImages: withImages.value }))
+const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, prefix: prefix.value, importLocales: importLocales.value, withImages: withImages.value }))
 
 let client = null
 const connected = ref(false)
@@ -45,13 +50,13 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
 
 // Profile (ProfileBar): Quelle, Sprache, Ziel, Sprachen, Zuordnung — ohne Token (der bleibt im Browser, nicht im Journal)
-const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value, withImages: withImages.value })
+const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value, withImages: withImages.value, prefix: prefix.value })
 async function profileSet(p) {
   if (!p) {   // „— Profil —“: alles leer, Quelle zu
     base.value = ''; token.value = ''; lang.value = 'de'; target.value = ''; importLocales.value = null; withImages.value = true; mapping.value = {}
     connected.value = false; rows.value = []; checked.value = new Set(); plan.value = null; result.value = null; persist(); return
   }
-  base.value = p.base ?? ''; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null; withImages.value = p.withImages ?? true
+  base.value = p.base ?? ''; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null; prefix.value = p.prefix ?? 'ixp_'; withImages.value = p.withImages ?? true
   if (p.mapping) mapping.value = { ...p.mapping }
   if (base.value) await connect()
 }
@@ -138,7 +143,9 @@ async function analyse() {
     for (const k of Object.keys(props)) {
       // Gibt es das Attribut inzwischen (voriger Lauf hat es angelegt), nicht mehr „neu anlegen“.
       if (mapping.value[k]?.startsWith('new:') && attrKeys.has(k)) mapping.value[k] = k
-      mapping.value[k] ??= k === 'title' ? 'name' : attrKeys.has(k) ? k : (props[k].html ? 'new:html' : 'new:text')
+      const pk = cleanPrefix.value + k.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+      if (mapping.value[k]?.startsWith('new:') && attrKeys.has(pk)) mapping.value[k] = pk
+      mapping.value[k] ??= k === 'title' ? 'name' : attrKeys.has(pk) ? pk : attrKeys.has(k) ? k : (props[k].html ? 'new:html' : 'new:text')
     }
 
     // Neu oder vorhanden? Über die externe Kennung im eigenen Baum.
@@ -155,7 +162,7 @@ const counts = computed(() => {
   for (const it of plan.value?.items ?? []) c[it.role][it.existing ? 1 : 0]++
   return c
 })
-const newAttrs = computed(() => Object.entries(mapping.value).filter(([, v]) => v.startsWith('new:')).map(([k, v]) => ({ key: k.toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^[^a-z]/, 'p_'), type: v.slice(4), from: k })))
+const newAttrs = computed(() => Object.entries(mapping.value).filter(([, v]) => v.startsWith('new:')).map(([k, v]) => ({ key: (cleanPrefix.value + k.toLowerCase().replace(/[^a-z0-9_]/g, '_')).replace(/^[^a-z]/, 'p_'), type: v.slice(4), from: k })))
 
 // ---- Schreiben: fehlende Attribute anlegen, dann ein Stapel
 async function run() {
@@ -164,14 +171,18 @@ async function run() {
   busy.value = 'schreibe …'
   result.value = null
   try {
+    if (newAttrs.value.length && !model.value.groups.some(g => g.key === importGroup.value && g.defined)) {
+      await api.post(`/api/model/groups/${importGroup.value}`, { key: importGroup.value, label: { de: `Import ${cleanPrefix.value.replace(/_$/, '') || 'ixp'}`, en: `Import ${cleanPrefix.value.replace(/_$/, '') || 'ixp'}` }, activeFrom: null }, 'PUT')
+      say(`Gruppe ${importGroup.value} angelegt`)
+    }
     for (const a of newAttrs.value) {
       if (model.value.attributes.some(x => x.key === a.key)) continue
-      await api.post(`/api/model/attributes/${a.key}`, { key: a.key, label: { de: a.from, en: a.from }, type: a.type, group: 'import', axes: ['locale'] }, 'PUT')
+      await api.post(`/api/model/attributes/${a.key}`, { key: a.key, label: { de: a.from, en: a.from }, type: a.type, group: importGroup.value, axes: ['locale'] }, 'PUT')
       say(`Attribut ${a.key} (${a.type}) angelegt`)
     }
     const attrOf = k => { const m = mapping.value[k]; if (!m) return null; if (m.startsWith('new:')) return newAttrs.value.find(a => a.from === k)?.key; return m }
     // Die Gruppen der zugeordneten Attribute hängen an der Zielgruppe (oder an jeder neuen Wurzelgruppe), sonst gilt dort nichts.
-    const neededGroups = [...new Set(Object.keys(mapping.value).map(attrOf).filter(Boolean).map(k => model.value.attributes.find(a => a.key === k)?.group ?? (newAttrs.value.some(a => a.key === k) ? 'import' : null)).filter(Boolean))]
+    const neededGroups = [...new Set(Object.keys(mapping.value).map(attrOf).filter(Boolean).map(k => model.value.attributes.find(a => a.key === k)?.group ?? (newAttrs.value.some(a => a.key === k) ? importGroup.value : null)).filter(Boolean))]
     if (target.value && neededGroups.length) {
       const t = await api.get(`/api/nodes/${target.value}`)
       const have = new Set((t.groups ?? []).map(g => g.key))
@@ -276,6 +287,10 @@ function toggleLocale(l) {
             <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
             <span class="muted">neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</span>
           </td></tr>
+          <tr><td class="muted">Präfix ⊞</td><td>
+            <input v-model="prefix" type="text" style="width:120px" placeholder="z. B. ixp_" @change="persist" />
+            <span class="muted">vor jedem neu angelegten Attribut (<span class="mono">{{ cleanPrefix }}short_title</span>) und als Gruppe <span class="mono">{{ importGroup }}</span> — je Quellsystem eins, dann kollidiert nichts</span>
+          </td></tr>
           <tr><td class="muted">Bilder 🖼</td><td>
             <label><input type="checkbox" v-model="withImages" @change="persist" /> Vorschaubild der Quelle als Medium holen und als „image“ anhängen</label>
             <span class="muted">gleiche Datei = ein Medium; der Server lädt</span>
@@ -306,7 +321,7 @@ function toggleLocale(l) {
             </tr>
           </tbody>
         </table>
-        <p class="muted" v-if="newAttrs.length">Neu im Modell: {{ newAttrs.map(a => `${a.key} (${a.type})`).join(', ') }} — Gruppe „import“, je Sprache.</p>
+        <p class="muted" v-if="newAttrs.length">Neu im Modell: {{ newAttrs.map(a => `${a.key} (${a.type})`).join(', ') }} — Gruppe „{{ importGroup }}“, je Sprache.</p>
       </div>
     </div>
   </div>

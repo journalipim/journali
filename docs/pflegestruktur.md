@@ -263,6 +263,12 @@ Dazu kommt, was heute fehlt:
 - **Kein Code im Server:** Plugins laufen nie im Prozess. Isolation, eigene
   Sprache, eigenes Deployment; die Kosten sind ein HTTP-Aufruf.
 
+**Präfix je Quellsystem** (Taloan, 17.09.2026): ein Import legt neue
+Attribute als `<prefix><key>` an und sammelt sie in der Gruppe
+`<prefix>import` — so kollidieren `title` aus IXP und `title` aus Solr nicht,
+und man sieht dem Attribut die Herkunft an. Das Präfix steht im Profil
+(IXP gebaut; Solr und Tabelle noch ohne).
+
 Das erste Plugin ist der **IXP-Import** (`plugins/ixp/`):
 Baum aus der IXP-API lesen, Knoten wählen, Vorschau, Import oder Update
 vorhandener Knoten über die externe Kennung. Dafür braucht jeder Knoten
