@@ -34,7 +34,6 @@ const filter = ref('')
 const newKey = ref('')
 const newValue = ref('')
 const addViewGroup = ref('')
-const addAttr = ref('')
 const bulkGroup = ref('')
 const roleLabel = { group: '▣ Produktgruppe', product: '▦ Produkt', variant: '◆ Variante' }
 const roles = ['group', 'product', 'variant']
@@ -113,8 +112,29 @@ const groupSet = (col, v) => {
 }
 const groupAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group === curGroup.value?.key))
 const otherAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group !== curGroup.value?.key).sort((x, y) => (x.group ?? '').localeCompare(y.group ?? '') || x.key.localeCompare(y.key)))
-function assign(a, gkey) { put(`/api/model/attributes/${a.key}`, { ...a, group: gkey }) }
-function assignAdd() { const a = model.value.attributes.find(x => x.key === addAttr.value); addAttr.value = ''; if (a && curGroup.value) assign(a, curGroup.value.key) }
+function assign(a, gkey) { return put(`/api/model/attributes/${a.key}`, { ...a, group: gkey }) }
+// Zuordnen in der Masse (Taloan: nicht hunderte einzeln im Dropdown): Filter nach Text und Herkunft
+// (ohne Gruppe / eine Gruppe), Haken, dann alle Gehakten in einem Rutsch.
+const pickText = ref('')
+const pickFrom = ref('')            // '' = alle, '-' = ohne Gruppe, sonst Gruppenschlüssel
+const picked = ref(new Set())
+const pickRows = computed(() => {
+  const f = pickText.value.trim().toLowerCase()
+  return otherAttrs.value.filter(a => (pickFrom.value === '' || (pickFrom.value === '-' ? !a.group : a.group === pickFrom.value))
+    && (!f || a.key.includes(f) || (a.label?.de ?? '').toLowerCase().includes(f)))
+})
+const pickSources = computed(() => {
+  const n = new Map()
+  for (const a of otherAttrs.value) n.set(a.group ?? '-', (n.get(a.group ?? '-') ?? 0) + 1)
+  return [...n].sort((x, y) => (x[0] === '-' ? -1 : y[0] === '-' ? 1 : x[0].localeCompare(y[0])))
+})
+function togglePick(k) { const s = new Set(picked.value); s.has(k) ? s.delete(k) : s.add(k); picked.value = s }
+async function assignPicked() {
+  const g = curGroup.value?.key; if (!g) return
+  for (const a of model.value.attributes.filter(x => picked.value.has(x.key))) await assign(a, g)
+  picked.value = new Set()
+}
+watch(cur, () => { picked.value = new Set() })
 function goto(s, k) { switchTo(s); cur.value = k; sel.value = new Set([k]) }
 
 // ---- Attribute
@@ -325,8 +345,27 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
               <a href="#" @click.prevent="goto('attributes', a.key)">{{ a.label?.de || a.key }}</a>
               <button @click="assign(a, null)" title="aus der Gruppe nehmen — das Attribut bleibt, ohne Gruppe gilt es an keinem Knoten">×</button>
             </span>
-            <select v-model="addAttr" style="width:260px"><option value="">+ Attribut …</option><option v-for="a in otherAttrs" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}{{ a.group ? ' ← ' + a.group : ' (ohne Gruppe)' }}</option></select>
-            <button class="primary" :disabled="!addAttr" @click="assignAdd">zuordnen</button>
+          </div>
+        </div>
+        <div class="section">
+          <h2>+ Attribute zuordnen <span class="muted">· {{ pickRows.length }} von {{ otherAttrs.length }}</span></h2>
+          <div class="chips" style="margin-bottom:6px">
+            <input v-model="pickText" type="search" placeholder="Filter" style="width:180px" />
+            <select v-model="pickFrom" style="width:240px" title="Herkunft: ohne Gruppe oder aus welcher Gruppe">
+              <option value="">alle Herkünfte</option>
+              <option v-for="[g, n] in pickSources" :key="g" :value="g">{{ g === '-' ? '— ohne Gruppe' : '▤ ' + groupLabel(g) + ' · ' + g }} ({{ n }})</option>
+            </select>
+            <button @click="picked = new Set(pickRows.map(a => a.key))" :disabled="!pickRows.length">alle {{ pickRows.length }}</button>
+            <button @click="picked = new Set()" :disabled="!picked.size">keine</button>
+            <button class="primary" :disabled="!picked.size" @click="assignPicked">→ {{ picked.size }} zuordnen</button>
+          </div>
+          <div class="picker">
+            <label v-for="a in pickRows" :key="a.key" class="pick" :class="{ on: picked.has(a.key) }">
+              <input type="checkbox" :checked="picked.has(a.key)" @change="togglePick(a.key)" />
+              <span class="l">{{ a.label?.de || a.key }}</span><span class="mono muted k">{{ a.key }}</span>
+              <span class="muted r">{{ TYPE_SYM[a.type] ?? a.type }} {{ a.group ? '▤ ' + a.group : '— ohne Gruppe' }}</span>
+            </label>
+            <div v-if="!pickRows.length" class="empty">Nichts zu „{{ pickText }}“</div>
           </div>
         </div>
       </div>
@@ -459,6 +498,13 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .chip a { color: inherit; text-decoration: none; }
+/* Auswahlliste zum Zuordnen: gefiltert, mit Haken, viele auf einmal */
+.picker { max-height: 360px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); }
+.pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: default; }
+.pick:hover { background: var(--hover); }
+.pick.on { background: var(--accent-soft); }
+.pick .k { font-size: 12px; }
+.pick .r { margin-left: auto; font-size: 11px; }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
 .x:hover:not(:disabled) { color: var(--neg); }
 .viewedit { padding: 6px 8px; }
