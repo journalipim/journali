@@ -219,6 +219,15 @@ async function create() {
 function toggleAxis(a) {
   const s = new Set(form.value.axes); s.has(a) ? s.delete(a) : s.add(a); form.value.axes = [...s]
 }
+// Variantenachsen zur Auswahl: Werteliste-Attribute zuerst (die typischen Achsen), dann Text und Zahl; mit Suche (Taloan, 17.09.).
+const axisSearch = ref('')
+const axisChoices = computed(() => {
+  const f = axisSearch.value.trim().toLowerCase()
+  const ok = (store.model?.attributes ?? []).filter(x => ['enum', 'text', 'integer'].includes(x.type) && !x.multiple && !(form.value.axes ?? []).includes(x.key))
+  const hit = a => !f || a.key.includes(f) || (a.label?.de ?? '').toLowerCase().includes(f)
+  const rank = a => a.type === 'enum' ? 0 : 1
+  return ok.filter(hit).sort((a, b) => rank(a) - rank(b) || (a.label?.de ?? a.key).localeCompare(b.label?.de ?? b.key, 'de'))
+})
 </script>
 
 <template>
@@ -242,9 +251,18 @@ function toggleAxis(a) {
       </template>
       <template v-else-if="creating === 'product'">
         <div class="muted">▦ neues Produkt unter {{ groupTarget.label }}</div>
+        <div class="muted" style="font-size:12px">Variantenachsen — optional. Attribute, nach denen sich die Varianten unterscheiden (Farbe, Grösse): jede Variante bekommt je Achse genau einen Wert, die Kombination ist je Produkt eindeutig, der Wert sitzt an der Variante fest. Später nicht änderbar. Ohne Achsen: beliebig viele Varianten.</div>
         <div class="chips">
-          <span class="muted" title="optional: Attribute, nach denen die Varianten sich unterscheiden (Kombination je Produkt eindeutig)">variiert nach:</span>
-          <button v-for="a in (store.model?.attributes ?? []).filter(x => x.type === 'enum' || x.type === 'text' || x.type === 'integer').slice(0, 12)" :key="a.key" :class="{ primary: form.axes.includes(a.key) }" @click="toggleAxis(a.key)">{{ a.label?.de || a.key }}</button>
+          <span class="muted">variiert nach:</span>
+          <span v-if="!form.axes.length" class="muted">nichts</span>
+          <span v-for="k in form.axes" :key="k" class="chip">{{ attrDef(k)?.label?.de || k }} <button @click="toggleAxis(k)" title="Achse weg">×</button></span>
+        </div>
+        <input v-model="axisSearch" type="search" placeholder="🔍 Achse suchen" />
+        <div class="axis-list">
+          <div v-for="a in axisChoices.slice(0, 40)" :key="a.key" class="axis" @click="toggleAxis(a.key)" :title="a.key">
+            <span class="muted" style="width:16px">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }}</span>{{ a.label?.de || a.key }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ a.key }}</span>
+          </div>
+          <div v-if="axisChoices.length > 40" class="muted" style="padding:2px 8px;font-size:11px">… {{ axisChoices.length - 40 }} weitere — suchen</div>
         </div>
       </template>
       <template v-else>
@@ -296,6 +314,9 @@ function toggleAxis(a) {
 .create button { min-width: 40px; }
 .create-form { padding: 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
 .create-form input, .create-form select { width: 100%; }
+.axis-list { max-height: 160px; overflow: auto; border: 1px solid var(--line); border-radius: 4px; background: var(--pane); }
+.axis { display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; white-space: nowrap; cursor: pointer; font-size: 12px; }
+.axis:hover { background: var(--hover); }
 .tree { outline: none; }
 .node { display: flex; align-items: center; gap: 4px; height: 24px; cursor: default; white-space: nowrap; padding-right: 8px; }
 .node:hover { background: var(--hover); }
