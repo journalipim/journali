@@ -346,7 +346,7 @@ function cellMenu(e, def, col, block) {
     <template v-if="open('attributes')">
     <div class="toolbar view">
       <span class="muted">Sicht:</span>
-      <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: store.viewLocales.includes(l) }" @click="toggleLocale(l)">{{ l }}</span>
+      <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: store.viewLocales.includes(l), master: l === master }" @click="toggleLocale(l)" :title="l === master ? 'Mastersprache' : ''">{{ l }}</span>
       <select :value="store.viewChannel ?? ''" @change="setChannel($event.target.value)" title="Kanal der Sicht">
         <option value="">nur *</option><option v-for="c in channels" :key="c" :value="c">{{ c }}</option>
       </select>
@@ -373,7 +373,7 @@ function cellMenu(e, def, col, block) {
         <thead>
           <tr>
             <th>Attribut</th>
-            <th v-for="c in columns" :key="c.label">{{ c.label }}</th>
+            <th v-for="c in columns" :key="c.label" :class="{ master: c.locale === master }" :title="c.locale === master ? 'Mastersprache — Basis fuer alle anderen Sprachen' : ''">{{ c.label }}</th>
           </tr>
         </thead>
         <tbody v-for="b in shownBlocks" :key="b.key">
@@ -577,6 +577,9 @@ function cellMenu(e, def, col, block) {
 .crumb:hover { color: var(--accent); }
 .meta { font-size: 12px; min-height: 28px; }
 .view { gap: 4px; font-size: 12px; min-height: 30px; }
+/* Mastersprache: fett und in Akzentfarbe — in der Sicht und im Spaltenkopf */
+.view-chip.master { font-weight: 700; }
+th.master { color: var(--accent); font-weight: 700; }
 .view select, .view button { font-size: 12px; padding: 1px 6px; }
 /* Reiter: einzeilig, klein, umbrechend — mit Echtdaten sind es zwanzig und mehr (Taloan, 17.09.) */
 .tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
