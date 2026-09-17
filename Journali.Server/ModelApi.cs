@@ -96,12 +96,13 @@ public static partial class ModelApi
                 }
                 if (def.Axes?.Except([Axes.Locale, Axes.Channel]).Any() ?? false) return Bad("Achsen: nur locale und channel.");
                 if (def.Channels?.Except(model.Channels.Keys).Any() ?? false) return Bad("Unbekannter Kanal in channels.");
-                if (def.Type == AttributeTypes.Enum && (def.List is null || !model.Lists.ContainsKey(def.List))) return Bad("enum braucht eine vorhandene Werteliste.");
+                // Ein Typwechsel darf unvollständig sein (Taloan, 17.09.: Durchschalten ohne Fehler) — enum ohne Liste, rows ohne Spalten;
+                // Werte setzen geht dann noch nicht, das Modell zeigt den fehlenden Teil an.
+                if (def.List is not null && !model.Lists.ContainsKey(def.List)) return Bad($"Werteliste {def.List} gibt es nicht.");
                 if (def.Unit is not null && !model.Units.ContainsKey(def.Unit)) return Bad($"Unbekannte Einheit: {def.Unit} — unter Einheiten anlegen.");
                 if (def.Type == AttributeTypes.Rows)
                 {
-                    if (def.Columns is null) return Bad("rows braucht Spalten (columns) — jede ein Attribut.");
-                    foreach (var col in def.Columns)
+                    foreach (var col in def.Columns ?? [])
                     {
                         if (!model.Attributes.TryGetValue(col, out var cd)) return Bad($"Spalte {col}: kein Attribut.");
                         if (cd.Type == AttributeTypes.Rows) return Bad($"Spalte {col}: keine Zeilen in Zeilen.");

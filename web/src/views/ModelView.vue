@@ -445,11 +445,11 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curAttr.label?.en ?? null" @save="v => attrSet('label_en', v)" /></tr>
-          <tr><td class="attr">Typ</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${t}`" @save="v => attrSet('type', v)" /></tr>
+          <tr><td class="attr">Typ</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${t}`" required @save="v => attrSet('type', v)" /></tr>
           <tr><td class="attr" title="Gruppe in der Pflege — ohne Gruppe gilt das Attribut an keinem Knoten">▤ Gruppe</td><SelectCell :value="curAttr.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => attrSet('group', v || null)" /></tr>
           <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">⚖ Einheit</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
-          <tr v-if="curAttr.type === 'enum'"><td class="attr">☰ Werteliste</td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
-          <tr v-if="curAttr.type === 'rows'"><td class="attr" title="Spalten, jede ein Attribut, kommagetrennt">≣ Spalten</td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
+          <tr v-if="curAttr.type === 'enum'"><td class="attr">☰ Werteliste<span v-if="!curAttr.list" class="warn" title="ohne Werteliste lässt sich kein Wert setzen"> ●</span></td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
+          <tr v-if="curAttr.type === 'rows'"><td class="attr" title="Spalten, jede ein Attribut, kommagetrennt">≣ Spalten<span v-if="!(curAttr.columns ?? []).length" class="warn" title="ohne Spalten hat eine Zeile nichts"> ●</span></td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
           <!-- nur, was zum Typ passt (Taloan, 17.09.): Muster bei Text; Einheit bei Zahlen; Werteliste bei enum; Spalten bei rows -->
           <tr v-if="curAttr.type === 'text'"><td class="attr" title="Muster als regulärer Ausdruck — jeder Wert muss ganz dazu passen">⌗ Muster</td><Cell :value="curAttr.pattern ?? null" @save="v => attrSet('pattern', v || null)" /></tr>
           <tr v-if="curAttr.type === 'text'"><td class="attr" title="ein übliches Muster einsetzen">⌗ Vorlage</td><SelectCell :value="''" :options="PATTERNS.map(p => p.key)" :label-of="k => PATTERNS.find(p => p.key === k)?.label ?? k" @save="k => { const p = PATTERNS.find(x => x.key === k); if (p) attrSet('pattern', p.re) }" /></tr>
@@ -489,7 +489,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curView.label?.de ?? null" @save="v => viewSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curView.label?.en ?? null" @save="v => viewSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="eine Sicht gilt für einen Knotentyp">Knotentyp</td><SelectCell :value="curView.level" :options="roles" :label-of="k => roleLabel[k]" @save="v => viewSet('level', v)" /></tr>
+          <tr><td class="attr" title="eine Sicht gilt für einen Knotentyp">Knotentyp</td><SelectCell :value="curView.level" :options="roles" :label-of="k => roleLabel[k]" required @save="v => viewSet('level', v)" /></tr>
         </tbody></table>
         <div class="viewedit">
           <div class="muted" style="font-size:12px;margin-bottom:6px">▤ {{ viewItems.length }} Gruppen · Drag & Drop: Gruppen und Attribute darin</div>

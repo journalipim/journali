@@ -1,6 +1,7 @@
 <script setup>
 // Zelle für enum: Auswahl aus einer Werteliste. Leer = eigener Wert weg.
-defineProps({ value: String, inherited: String, disabled: Boolean, options: Array, labelOf: Function })
+// required: keine leere Auswahl (Typ, Knotentyp) — sonst wäre „—“ ein sinnloser Wert (Taloan, 17.09.)
+defineProps({ value: String, inherited: String, disabled: Boolean, options: Array, labelOf: Function, required: Boolean })
 const emit = defineEmits(['save'])
 </script>
 
@@ -9,7 +10,7 @@ const emit = defineEmits(['save'])
     <div v-if="disabled" class="cell-box disabled"></div>
     <select v-else class="cell-select" :class="{ inherited: value == null && inherited != null }"
       :value="value ?? inherited ?? ''" @change="emit('save', $event.target.value)">
-      <option value="">{{ inherited != null ? '' : '—' }}</option>
+      <option v-if="!required" value="">{{ inherited != null ? '' : '—' }}</option>
       <option v-for="o in options" :key="o" :value="o">{{ labelOf ? labelOf(o) : o }}</option>
     </select>
   </td>
