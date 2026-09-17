@@ -220,8 +220,13 @@ public static class AttributeTypes
     public const string Enum = "enum";
     /// <summary>Vermehrbar: n Zeilen aus Spalten, die selbst Attribute sind (13).</summary>
     public const string Rows = "rows";
+    /// <summary>
+    /// Formel (Taloan, 17.09.2026): der Wert ist ein Skript (<see cref="Entries.Formula"/>), gepflegt wie jeder
+    /// andere Wert am Knoten — auch geerbt, auch je Sprache; das Ergebnis wird beim Lesen gerechnet.
+    /// </summary>
+    public const string Formula = "formula";
 
-    public static readonly IReadOnlyList<string> All = [Text, Html, Integer, Decimal, Boolean, Date, Enum, Rows];
+    public static readonly IReadOnlyList<string> All = [Text, Html, Integer, Decimal, Boolean, Date, Enum, Rows, Formula];
 }
 
 /// <summary>Die Achsen, die ein Attribut haben kann.</summary>
@@ -248,7 +253,6 @@ public static class Axes
 /// <param name="Columns">bei <c>rows</c>: die Spalten, jede ein Attribut</param>
 /// <param name="Inheritable">Wert vererbt sich nach unten (Kategorie ja, Name nein). Vorgabe nein.</param>
 /// <param name="Required">Pflicht je Kanal: Sprachen oder "*" — gilt überall gleich (Eineindeutigkeit)</param>
-/// <param name="Formula">kombiniertes Attribut: ein Skript liefert den Wert (<see cref="Entries.Formula"/>); nie ein eigener Wert</param>
 /// <param name="Pattern">Muster (regulärer Ausdruck), dem jeder Wert genügen muss — Telefon, E-Mail, EAN … (Taloan, 17.09.2026); nur bei text</param>
 /// <param name="PatternHint">was das Muster verlangt, für die Fehlermeldung („+49 30 1234567")</param>
 public sealed record AttributeDefinition(
@@ -265,12 +269,11 @@ public sealed record AttributeDefinition(
     string[]? Columns = null,
     bool Inheritable = false,
     Dictionary<string, string[]>? Required = null,
-    string? Formula = null,
     string? Pattern = null,
     string? PatternHint = null)
 {
-    /// <summary>Kombiniert (Taloan, 17.09.2026): kein eigener Wert, gerechnet aus anderen Attributen (<see cref="Entries.Formula"/>).</summary>
-    public bool IsComputed => !string.IsNullOrWhiteSpace(Formula);
+    /// <summary>Typ formula: der Wert ist ein Skript, das Ergebnis wird beim Lesen gerechnet.</summary>
+    public bool IsComputed => Type == AttributeTypes.Formula;
     public bool PerLocale => Axes?.Contains(Entries.Axes.Locale) ?? false;
     public bool PerChannel => Axes?.Contains(Entries.Axes.Channel) ?? false;
     public bool AllowedAt(string role) => Levels is null || Levels.Contains(role);

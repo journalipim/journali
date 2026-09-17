@@ -18,6 +18,7 @@ import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
 import RowsBlock from '../components/RowsBlock.vue'
 import EntryList from '../components/EntryList.vue'
+import ScriptEditor from '../components/ScriptEditor.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 const journalW = paneWidth('journal', 420)
@@ -90,6 +91,8 @@ const shownBlocks = computed(() => store.layout === 'tabs' ? blocks.value.filter
 
 // ---- Werte
 const computedValue = (key, locale = null) => (node.value?.computed ?? []).find(c => c.attribute === key && (c.locale ?? null) === locale)?.value ?? null
+// Formel-Zelle: Klick öffnet den Skript-Editor; Übernehmen schreibt das Skript als Wert (AttributeSet)
+const scriptCell = ref(null)   // { def, col }
 const own = computed(() => valueMap(node.value?.values ?? []))
 // Übersetzungsstand: Wert einer anderen Sprache ist „zu überarbeiten“, wenn der Master-Wert später geschrieben wurde (Eintragsnummer).
 const master = computed(() => model.value?.masterLocale ?? locales.value[0] ?? null)
@@ -363,11 +366,18 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <template v-for="def in b.defs" :key="def.key">
-          <tr v-if="def.formula">
-            <td class="attr" :title="`${def.key} = ${def.formula}`">ƒ {{ def.label?.de || def.key }}<span v-if="def.unit" class="muted"> {{ def.unit }}</span></td>
+          <tr v-if="def.type === 'formula'">
+            <td class="attr" :title="def.key + ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet'">ƒ {{ def.label?.de || def.key }}<span v-if="def.required" class="warn" title="Pflicht">●</span></td>
             <template v-for="c in columns" :key="c.label">
-              <td v-if="c.channel || (c.locale ? !def.perLocale : def.perLocale)" class="cell"><div class="cell-box disabled" /></td>
-              <td v-else class="cell"><div class="cell-box locked" :title="`= ${def.formula}` + (computedValue(def.key, c.locale) == null ? ' — ein Wert fehlt' : '')">{{ computedValue(def.key, c.locale) ?? '—' }}</div></td>
+              <td v-if="!enabled(def, c, b)" class="cell"><div class="cell-box disabled" /></td>
+              <td v-else class="cell">
+                <div class="cell-box formula" :class="{ inherited: ownValue(def.key, c) == null && inherited(def, c).value != null }" tabindex="0"
+                  @click="scriptCell = { def, col: c }" @keydown.enter.prevent="scriptCell = { def, col: c }"
+                  :title="(ownValue(def.key, c) ?? inherited(def, c).value ?? 'kein Skript — Klick öffnet den Editor') + (inherited(def, c).from && ownValue(def.key, c) == null ? '\n\ngeerbt von ' + inherited(def, c).from.label : '')">
+                  <span class="res">{{ computedValue(def.key, c.locale) ?? '—' }}</span>
+                  <span class="src muted">{{ (ownValue(def.key, c) ?? inherited(def, c).value ?? '').split('\n')[0].slice(0, 40) }}</span>
+                </div>
+              </td>
             </template>
           </tr>
           <tr v-else-if="def.type === 'rows'">
@@ -526,6 +536,10 @@ function cellMenu(e, def, col, block) {
   <div v-else class="pane" style="flex:3"><div class="empty">…</div></div>
 
   <Splitter v-if="store.journalOpen" v-model="journalW" side="right" :min="240" :max="1000" />
+  <ScriptEditor v-if="scriptCell" :model-value="ownValue(scriptCell.def.key, scriptCell.col) ?? inherited(scriptCell.def, scriptCell.col).value ?? ''" :title="`${scriptCell.def.label?.de || scriptCell.def.key} · ${scriptCell.col.label} · ${shownLabel}`"
+    :draft-key="`${id}.${scriptCell.def.key}.${scriptCell.col.label}`" type="text"
+    :attributes="(model?.attributes ?? []).filter(a => a.key !== scriptCell.def.key && a.type !== 'rows' && a.type !== 'html')"
+    @save="v => { setValue(scriptCell.def, scriptCell.col, v); scriptCell = null }" @close="scriptCell = null" />
   <div v-if="store.journalOpen" class="pane" :style="`width:${journalW}px;flex:none`">
     <div class="toolbar"><h1>≡ Journal</h1><span class="muted mono">{{ id }}</span><span class="muted">{{ entries.length }}</span><span class="grow" /><button class="x" @click="store.journalOpen = false; store.save()" title="Journal zuklappen">▸</button></div>
     <div class="scroll"><EntryList :entries="entries" /></div>
@@ -568,6 +582,9 @@ function cellMenu(e, def, col, block) {
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 /* Gruppenköpfe (Taloan, 17.09.): bearbeitbare Gruppen deutlich — Band in Akzentfarbe, Text in Schriftfarbe;
    gesperrte zurückgenommen (gedämpft, 🔒), statt in Warnfarbe ins Auge zu springen. */
+.cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
+.cell-box.formula .res { font-weight: 600; }
+.cell-box.formula .src { font: 11px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .group-row td { background: var(--accent-soft); color: var(--text); font-size: 12px; font-weight: 600; letter-spacing: .02em; height: 26px; border-top: 2px solid var(--accent); padding-top: 2px; }
 .group-row td::before { content: '▤ '; color: var(--accent); }
 .group-row .edit { text-decoration: none; margin-left: 4px; opacity: .5; color: var(--text); }

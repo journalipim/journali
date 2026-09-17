@@ -105,13 +105,16 @@ public sealed class Tree : IProjection
         Resolve(node, attribute, locale, channel, model.Attributes.TryGetValue(attribute, out var d) && d.Inheritable);
 
     /// <summary>
-    /// Kombiniertes Attribut rechnen: die Schlüssel der Formel werden wie Werte aufgelöst (geerbt zählt,
-    /// ohne Sprache und Kanal; ein kombiniertes Attribut darf ein anderes kombiniertes benutzen — ohne Kreis).
-    /// Null, wenn ein Wert fehlt oder keine Zahl ist.
+    /// Formel-Attribut rechnen: das Skript ist der Wert am Knoten (eigen oder geerbt, je Sprache, wenn das
+    /// Attribut so definiert ist); die $schlüssel darin werden wie Werte aufgelöst — geerbt zählt, Text in
+    /// der Sprache, Wertelisten mit Label; eine Formel darf eine andere lesen (ohne Kreis, Tiefe 8).
+    /// Null, wenn kein Skript da ist oder ein Wert fehlt.
     /// </summary>
     public string? Compute(ModelCatalog model, Node node, AttributeDefinition def, string? locale, int depth = 0)
     {
         if (!def.IsComputed || depth > 8) return null;
+        var script = Resolve(model, node, def.Key, def.PerLocale ? locale : null, null).Value;
+        if (string.IsNullOrWhiteSpace(script)) return null;
         Entries.Formula.Value value(string key)
         {
             if (!model.Attributes.TryGetValue(key, out var d)) return Entries.Formula.Value.None;
@@ -121,10 +124,7 @@ public sealed class Tree : IProjection
             if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
             return Entries.Formula.Value.Of(raw);
         }
-        var r = Entries.Formula.Run(def.Formula!, value, locale);
-        if (def.Type == AttributeTypes.Text) return r.AsText;
-        if (r.AsNumber is not { } n) return null;
-        return def.Type == AttributeTypes.Integer ? Math.Round(n, 0, MidpointRounding.AwayFromZero).ToString(System.Globalization.CultureInfo.InvariantCulture) : Entries.Formula.Value.Format(n);
+        return Entries.Formula.Run(script, value, locale).AsText;
     }
 
     /// <summary>Die Attributgruppen, die hier gelten: am Knoten und an allen Vorfahren angehängt — von der Wurzel her, mit Herkunft.</summary>

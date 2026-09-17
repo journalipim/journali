@@ -50,7 +50,6 @@ public static class CompletenessRules
         var missing = new List<string>();
         foreach (var def in active)
         {
-            if (def.IsComputed) continue;   // kombiniert: gerechnet, nie Pflicht
             if (def.Required is null || !def.Required.TryGetValue(channel, out var langs)) continue;
             foreach (var l in locales)
             {

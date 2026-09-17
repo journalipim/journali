@@ -76,26 +76,14 @@ public static partial class ModelApi
                 }
                 if (def.Required is { Count: 0 }) def = def with { Required = null };
                 if (!AttributeTypes.All.Contains(def.Type)) return Bad($"Unbekannter Typ: {def.Type}");
-                def = def with { Formula = Blank(body.Formula), Pattern = Blank(body.Pattern), PatternHint = Blank(body.PatternHint) };
+                def = def with { Pattern = Blank(body.Pattern), PatternHint = Blank(body.PatternHint) };
                 if (def.Pattern is not null)
                 {
                     if (def.Type != AttributeTypes.Text) return Bad("Ein Muster gibt es nur bei text.");
                     try { _ = new System.Text.RegularExpressions.Regex(def.Pattern, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromMilliseconds(200)); }
                     catch (ArgumentException e) { return Bad($"Muster: {e.Message}"); }
                 }
-                if (def.Formula is not null)
-                {
-                    // Das Skript liefert den Wert: Zahl bei integer/decimal, Text bei text (darf je Sprache sein). Nie mehrfach, nie je Kanal.
-                    var isText = def.Type == AttributeTypes.Text;
-                    if (!isText && def.Type is not (AttributeTypes.Integer or AttributeTypes.Decimal)) return Bad("Eine Formel gibt es bei integer, decimal und text.");
-                    if (def.Multiple || def.PerChannel || (!isText && def.PerLocale)) return Bad("Ein kombiniertes Attribut ist nicht mehrfach und nicht je Kanal; je Sprache nur bei Text.");
-                    var (keys, error) = Formula.Check(def.Formula);
-                    if (error is not null) return Bad($"Formel: {error}");
-                    if (keys.Contains(key)) return Bad("Formel: nicht auf sich selbst.");
-                    foreach (var k in keys)
-                        if (!model.Attributes.TryGetValue(k, out var other)) return Bad($"Formel: Attribut {k} gibt es nicht.");
-                        else if (other.Type is AttributeTypes.Rows or AttributeTypes.Html) return Bad($"Formel: {k} ({other.Type}) geht nicht in eine Formel.");
-                }
+                if (def.Type == AttributeTypes.Formula && (def.Multiple || def.PerChannel)) return Bad("Eine Formel ist nicht mehrfach und nicht je Kanal.");
                 if (def.Axes?.Except([Axes.Locale, Axes.Channel]).Any() ?? false) return Bad("Achsen: nur locale und channel.");
                 if (def.Channels?.Except(model.Channels.Keys).Any() ?? false) return Bad("Unbekannter Kanal in channels.");
                 if (def.Type == AttributeTypes.Enum && (def.List is null || !model.Lists.ContainsKey(def.List))) return Bad("enum braucht eine vorhandene Werteliste.");
@@ -239,6 +227,7 @@ public static partial class ModelApi
         AttributeTypes.Boolean => v is "true" or "false" ? null : $"{def.Key}: true oder false erwartet.",
         AttributeTypes.Date => DateOnly.TryParseExact(v, "yyyy-MM-dd", out _) ? null : $"{def.Key}: Datum als JJJJ-MM-TT erwartet.",
         AttributeTypes.Enum => model.Lists.TryGetValue(def.List ?? "", out var list) && list.Values.ContainsKey(v) ? null : $"{def.Key}: „{v}“ steht nicht in der Werteliste {def.List}.",
+        AttributeTypes.Formula => Formula.Check(v).Error is { } fe ? $"{def.Key}: Skript — {fe}" : null,
         AttributeTypes.Text when def.Pattern is not null => Matches(def.Pattern, v) ? null : $"{def.Key}: „{v}“ passt nicht zum Muster{(def.PatternHint is not null ? " — " + def.PatternHint : " " + def.Pattern)}.",
         _ => null,
     };

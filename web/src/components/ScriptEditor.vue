@@ -142,7 +142,7 @@ const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m
           </div>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
-          <span class="muted" style="font-size:12px">{{ type === 'text' ? 'Ergebnis: Text' : 'Ergebnis: Zahl' }} · <kbd>Ctrl+Enter</kbd> übernehmen · <kbd>Esc</kbd> schliessen (Entwurf bleibt)</span>
+          <span class="muted" style="font-size:12px">Das Skript ist der Wert des Attributs; das Ergebnis wird beim Lesen gerechnet · <kbd>Ctrl+Enter</kbd> übernehmen · <kbd>Esc</kbd> schliessen (Entwurf bleibt)</span>
           <span class="grow" />
           <button v-if="draftAt" @click="discardDraft" title="zurück zum Stand im Attribut">Entwurf verwerfen</button>
           <button @click="emit('close')">Schliessen</button>
