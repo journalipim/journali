@@ -384,6 +384,7 @@ function cellMenu(e, def, col, block) {
               <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
               {{ def.label?.de || def.key }}
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
+              <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
               <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
               <span v-if="def.inheritable" class="muted" title="vererbbar: gilt nach unten">↓</span>
               <span v-if="def.required" class="warn" title="Pflicht">●</span>

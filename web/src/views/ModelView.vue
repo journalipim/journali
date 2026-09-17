@@ -72,7 +72,7 @@ const rows = computed(() => {
   const m = model.value; if (!m) return []
   switch (section.value) {
     case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: g.label?.de, right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''], _: g })).sort(byKey)
-    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: a.label?.de, right: [TYPE_SYM[a.type] ?? a.type, a.formula ? 'ƒ' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + a.group : ''], _: a })).sort(byKey)
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: a.label?.de, right: [TYPE_SYM[a.type] ?? a.type, a.formula ? 'ƒ' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + a.group : ''], _: a })).sort(byKey)
     case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
@@ -315,6 +315,19 @@ const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v } })
 // Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
 const scriptOpen = ref(false)
+// Muster-Vorlagen (Taloan, 17.09.: Telefon, E-Mail „bis zu dem, was üblich ist“) — ganzer Wert muss passen
+const PATTERNS = [
+  { key: 'email', label: '@ E-Mail', re: String.raw`[^\s@]+@[^\s@]+\.[A-Za-z]{2,}` },
+  { key: 'phone', label: '☎ Telefon', re: String.raw`\+?[0-9][0-9 \-/().]{5,}[0-9]` },
+  { key: 'url', label: '🔗 URL', re: String.raw`https?://[^\s]+` },
+  { key: 'ean13', label: 'EAN-13', re: String.raw`[0-9]{13}` },
+  { key: 'ean8', label: 'EAN-8', re: String.raw`[0-9]{8}` },
+  { key: 'plz', label: 'PLZ (DE)', re: String.raw`[0-9]{5}` },
+  { key: 'iso_date', label: 'Datum JJJJ-MM-TT', re: String.raw`[0-9]{4}-[0-9]{2}-[0-9]{2}` },
+  { key: 'sku', label: 'SKU (Buchstaben, Ziffern, -_)', re: String.raw`[A-Za-z0-9_\-]+` },
+  { key: 'hex', label: '# Hex-Farbe', re: String.raw`#[0-9A-Fa-f]{6}` },
+  { key: 'iban', label: 'IBAN', re: String.raw`[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}` },
+]
 const hasDraft = key => { try { return !!localStorage.getItem('journali.formula.draft.' + key) } catch { return false } }
 const formulaHint = () => 'Kombiniertes Attribut: ein Skript wie JavaScript liefert den Wert — Attribute als $schlüssel (geerbt zählt, Text in der Sprache der Spalte), Variablen, if/else, return, Vorlagen `…${…}…`, + - * / % **, == != < <= > >=, && || !, ?:, ??; Funktionen round trunc floor ceil abs min max sqrt len upper lower trim left right contains replace split pad number str format isblank coalesce. Fehlt ein Wert, ist das Ergebnis leer (?? fängt es ab). Wird gerechnet, nie gesetzt.'
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
@@ -441,6 +454,13 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">⚖ Einheit</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
           <tr v-if="curAttr.type === 'enum'"><td class="attr">☰ Werteliste</td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
           <tr v-if="curAttr.type === 'rows'"><td class="attr" title="Spalten, jede ein Attribut, kommagetrennt">≣ Spalten</td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
+          <tr v-if="curAttr.type === 'text' && !curAttr.formula"><td class="attr" title="Muster als regulärer Ausdruck — jeder Wert muss ganz dazu passen. Auswahl rechts, oder eigenes.">⌗ Muster</td><td style="padding:2px 4px">
+            <div class="chips">
+              <Cell :value="curAttr.pattern ?? null" @save="v => attrSet('pattern', v || null)" style="width:300px;display:table-cell" />
+              <select style="width:170px" @change="attrSet('pattern', $event.target.value || null); $event.target.value = ''"><option value="">Vorlage …</option><option v-for="p in PATTERNS" :key="p.key" :value="p.re">{{ p.label }}</option></select>
+            </div>
+            <div class="chips" style="margin-top:4px"><span class="muted" style="font-size:12px">Hinweis für die Meldung:</span><Cell :value="curAttr.patternHint ?? null" @save="v => attrSet('patternHint', v || null)" style="width:300px;display:table-cell" /></div>
+          </td></tr>
           <tr v-if="['integer', 'decimal', 'text'].includes(curAttr.type)"><td class="attr" :title="formulaHint(curAttr.type)" style="vertical-align:top;padding-top:6px">ƒ Formel</td>
             <td style="padding:2px 4px">
               <pre v-if="curAttr.formula" class="script" @click="scriptOpen = true" title="Klick öffnet den Editor">{{ curAttr.formula }}</pre>
