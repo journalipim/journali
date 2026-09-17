@@ -260,10 +260,6 @@ function toggleLocale(l) {
       </td></tr>
       <tr><td class="attr">Token</td><td class="row"><input v-model="token" type="password" placeholder="leer für die Demo" title="bleibt im Browser, nicht im Profil" style="flex:1" />
         <button class="primary" @click="connect" :disabled="!!busy">Verbinden</button></td></tr>
-      <tr><td class="attr">Präfix</td><td class="row">
-        <input v-model="prefix" type="text" style="width:90px" placeholder="z. B. sap_" @change="persist" title="vor jedem neu angelegten Attribut und als Gruppe — je Quellsystem eins; nach dem ersten Lauf nicht mehr ändern" />
-        <span class="muted" :title="`neue Attribute heissen ${cleanPrefix}<key>, Gruppe ${importGroup}`">→ {{ cleanPrefix }}‹key› · ▤ {{ importGroup }}</span>
-      </td></tr>
       <tr><td class="attr">Bilder</td><td><label title="Vorschaubild der Quelle als Medium holen und als „image“ anhängen; gleiche Datei = ein Medium"><input type="checkbox" v-model="withImages" @change="persist" /> als Medien holen</label></td></tr>
     </ImportHead>
     <div class="step-band">2 · Auswahl <span class="muted">· Haken = Teilbaum</span><span class="grow" />
@@ -287,6 +283,14 @@ function toggleLocale(l) {
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>3 · Zuordnung</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button></div>
     <div class="scroll">
+      <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
+        <tbody>
+          <tr><td class="muted">Präfix ⊞</td><td class="row">
+            <input v-model="prefix" type="text" style="width:90px" placeholder="z. B. sap_" @change="persist" title="vor jedem neu angelegten Attribut und als Gruppe — je Quellsystem eins; nach dem ersten Lauf nicht mehr ändern" />
+            <span class="muted" :title="`neue Attribute heissen ${cleanPrefix}<key>, Gruppe ${importGroup}`">→ {{ cleanPrefix }}‹key› · ▤ {{ importGroup }}</span>
+          </td></tr>
+        </tbody>
+      </table>
 
       <div class="section" v-if="plan">
         <h2>Eigenschaften → Attribute</h2>
