@@ -50,7 +50,7 @@ stehen dort als solche markiert.
   Schreibpfad (Eintrag + Abbilder `ModelCatalog` und `Tree` unter einer
   Sperre), `ModelApi` und `TreeApi` unter `/api`, Oberfläche aus `wwwroot`;
   `docs/betrieb.md`, `docs/eintraege.md`
-- `plugins/import-tools/<quelle>/` — Unterlagen und Code externer Werkzeuge
+- `plugins/<quelle>/` — Unterlagen und Code externer Werkzeuge
   (OpenAPI, Beispiele, Abbildung); laufen nie im Server. `ixp` als Ansicht im
   Browser (CORS erlaubt), `solr` als Python-Skript (kein CORS) — beide nur über
   `/api/model` und `/api/batch`

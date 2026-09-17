@@ -7,6 +7,8 @@ const route = useRoute()
 const router = useRouter()
 // Auffangrahmen (Taloan, 17.09.: leerer Bildschirm ist im Betrieb ein Desaster): ein Fehler beim Zeichnen einer
 // Ansicht landet hier — Meldung mit Ursache, Leiste bleibt bedienbar, der nächste Seitenwechsel räumt auf.
+// „location“ gibt es in Vue-Vorlagen nicht (nur eine Handvoll Globals) — der Knopf tat darum nichts (Taloan, 17.09.)
+const reload = () => window.location.reload()
 const crashed = ref(null)
 onErrorCaptured(e => { crashed.value = e?.message ?? String(e); console.error(e); return false })
 watch(() => route.fullPath, () => { crashed.value = null })
@@ -50,7 +52,7 @@ const navBottom = [
     </nav>
 
     <main class="content">
-      <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">✗ Diese Ansicht ist abgestürzt</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">▣ zum Baum</button> <button @click="location.reload()">↻ neu laden</button></div></div>
+      <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">✗ Diese Ansicht ist abgestürzt</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">▣ zum Baum</button> <button @click="reload">↻ neu laden</button></div></div>
       <router-view v-else />
     </main>
 
@@ -60,7 +62,7 @@ const navBottom = [
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>
       <span class="grow" />
-      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="location.reload()" title="Es liegt eine neue Fassung der Oberfläche — neu laden">↻ neue Fassung</button>
+      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" title="Es liegt eine neue Fassung der Oberfläche — neu laden">↻ neue Fassung</button>
       <span v-if="store.actor" class="actor">👤 {{ store.actor }}</span>
       <router-link v-else to="/settings" class="warn">👤 Name fehlt → Einstellungen</router-link>
     </header>

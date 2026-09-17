@@ -248,7 +248,7 @@ Dazu kommt, was heute fehlt:
 - **Kein Code im Server:** Plugins laufen nie im Prozess. Isolation, eigene
   Sprache, eigenes Deployment; die Kosten sind ein HTTP-Aufruf.
 
-Das erste Plugin ist der **IXP-Import** (`plugins/import-tools/ixp/`):
+Das erste Plugin ist der **IXP-Import** (`plugins/ixp/`):
 Baum aus der IXP-API lesen, Knoten wählen, Vorschau, Import oder Update
 vorhandener Knoten über die externe Kennung. Dafür braucht jeder Knoten
 eine **externe Kennung** je Quellsystem: Eintrag `ExternalLinked{system,

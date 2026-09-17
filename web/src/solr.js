@@ -1,4 +1,4 @@
-// Client für einen Solr-Kern (infolox/prodexa-Export) — plugins/import-tools/solr/README.md.
+// Client für einen Solr-Kern (infolox/prodexa-Export) — plugins/solr/README.md.
 // Solr schickt keinen CORS-Kopf, antwortet aber auf json.wrf mit JSONP: ein <script>-Tag
 // je Anfrage, nur Lesen. Der journali-Server bleibt unbeteiligt; die Abbildung ist
 // dieselbe wie im Skript solr_import.py.

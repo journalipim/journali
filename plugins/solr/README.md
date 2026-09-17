@@ -74,7 +74,7 @@ Beide Enden müssen importiert sein — „Ziel fehlt" zählt, was übersprungen
 wurde; Kanten auf sich selbst (kommt vor) überspringt journali.
 
 ```bash
-python plugins/import-tools/solr/solr_import.py --solr https://…/solr/products --actor Taloan relations --root BYTEC_SHOP_Mobile_Geraete --dry-run
+python plugins/solr/solr_import.py --solr https://…/solr/products --actor Taloan relations --root BYTEC_SHOP_Mobile_Geraete --dry-run
 ```
 
 In der Oberfläche: Plan → „⇄ Relationen" → analysieren / schreiben für die
@@ -83,11 +83,11 @@ angehakten Teilbäume.
 ## Aufruf
 
 ```bash
-python plugins/import-tools/solr/solr_import.py --solr https://…/solr/products list --root BYTEC_SHOP_Netzwerk --depth 2
+python plugins/solr/solr_import.py --solr https://…/solr/products list --root BYTEC_SHOP_Netzwerk --depth 2
 ```
 
 ```bash
-python plugins/import-tools/solr/solr_import.py --solr https://…/solr/products --actor Taloan import --root BYTEC_SHOP_Switche --target g-mastertree --dry-run
+python plugins/solr/solr_import.py --solr https://…/solr/products --actor Taloan import --root BYTEC_SHOP_Switche --target g-mastertree --dry-run
 ```
 
 `--dry-run` zählt nur; `--limit N` nimmt die ersten N Produkte; `--since
