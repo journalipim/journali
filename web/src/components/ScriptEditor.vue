@@ -51,7 +51,11 @@ const ac = ref({ open: false, items: [], i: 0, start: 0, top: 0, left: 0 })
 // Funktionen mit Signatur — dieselbe Liste wie Formula.cs; ab zwei getippten Buchstaben vorgeschlagen
 const SIGS = { round: 'round(x, n)', trunc: 'trunc(x)', floor: 'floor(x)', ceil: 'ceil(x)', abs: 'abs(x)', min: 'min(a, b)', max: 'max(a, b)', sqrt: 'sqrt(x)',
   len: 'len(s)', upper: 'upper(s)', lower: 'lower(s)', trim: 'trim(s)', left: 'left(s, n)', right: 'right(s, n)', contains: 'contains(s, t)', replace: 'replace(s, a, b)',
-  split: 'split(s, sep, i)', pad: 'pad(s, n, "0")', number: 'number(x)', str: 'str(x)', format: 'format(x, n)', isblank: 'isblank(x)', coalesce: 'coalesce(a, b)' }
+  split: 'split(s, sep, i)', pad: 'pad(s, n, "0")', number: 'number(x)', str: 'str(x)', format: 'format(x, n)', isblank: 'isblank(x)', coalesce: 'coalesce(a, b)',
+  substr: 'substr(s, start, len)', indexof: 'indexof(s, t)', startswith: 'startswith(s, t)', endswith: 'endswith(s, t)', capitalize: 'capitalize(s)', title: 'title(s)',
+  repeat: 'repeat(s, n)', padleft: 'padleft(s, n, " ")', padright: 'padright(s, n, " ")', trimstart: 'trimstart(s)', trimend: 'trimend(s)', squeeze: 'squeeze(s)',
+  regextest: 'regextest(s, re)', regexmatch: 'regexmatch(s, re)', regexreplace: 'regexreplace(s, re, repl)', escapehtml: 'escapehtml(s)', striphtml: 'striphtml(s)',
+  slug: 'slug(s)', nl2br: 'nl2br(s)', count: 'count(s, t)', reverse: 'reverse(s)' }
 function acUpdate() {
   const el = ta.value; if (!el) { ac.value.open = false; return }
   const before = text.value.slice(0, el.selectionStart)
@@ -123,7 +127,7 @@ function onKey(e) {
 function syncScroll() { if (pre.value && ta.value) { pre.value.scrollTop = ta.value.scrollTop; pre.value.scrollLeft = ta.value.scrollLeft } }
 
 // ---- Syntaxfarben: derselbe Wortschatz wie Formula.cs
-const FUNCS = ['round', 'trunc', 'floor', 'ceil', 'abs', 'min', 'max', 'sqrt', 'len', 'upper', 'lower', 'trim', 'left', 'right', 'contains', 'replace', 'split', 'pad', 'number', 'str', 'format', 'isblank', 'coalesce']
+const FUNCS = Object.keys(SIGS)
 const KEYWORDS = ['if', 'else', 'return', 'true', 'false', 'null']
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 function highlight(src) {
@@ -151,7 +155,12 @@ const HELP = [
   ['Logik', [['a && b', 'und'], ['a || b', 'oder'], ['!a', 'nicht'], ['c ? a : b', 'wenn c, dann a, sonst b'], ['a ?? b', 'b, wenn a leer ist']]],
   ['Anweisungen', [['x = $key', 'Variable'], ['if (c) {\n  \n} else {\n  \n}', 'Verzweigung'], ['return x', 'Ergebnis — sonst zählt die letzte Anweisung'], ['// Kommentar', '']]],
   ['Zahlen', [['round(x, 2)', 'runden'], ['trunc(x)', 'abschneiden'], ['floor(x)', ''], ['ceil(x)', ''], ['abs(x)', ''], ['min(a, b)', ''], ['max(a, b)', ''], ['sqrt(x)', ''], ['format(x, 2)', 'Zahl als Text in der Sprache der Spalte (de 1,39)']]],
-  ['Text', [['len(s)', 'Länge'], ['upper(s)', ''], ['lower(s)', ''], ['trim(s)', ''], ['left(s, 3)', ''], ['right(s, 3)', ''], ['contains(s, "x")', ''], ['replace(s, "a", "b")', ''], ['split(s, "-", 1)', 'Teil i'], ['pad(s, 5, "0")', 'links auffüllen'], ['str(x)', 'als Text'], ['number(x)', 'als Zahl']]],
+  ['Text', [['len(s)', 'Länge'], ['upper(s)', ''], ['lower(s)', ''], ['capitalize(s)', 'erster Buchstabe gross'], ['title(s)', 'Jedes Wort Gross'], ['trim(s)', 'Leerraum an den Enden weg'], ['trimstart(s)', ''], ['trimend(s)', ''], ['squeeze(s)', 'mehrfachen Leerraum zu einem'],
+    ['left(s, 3)', ''], ['right(s, 3)', ''], ['substr(s, 2, 5)', 'ab Position, so lang'], ['indexof(s, "x")', 'Position oder -1'], ['contains(s, "x")', ''], ['startswith(s, "x")', ''], ['endswith(s, "x")', ''], ['count(s, "x")', 'wie oft'],
+    ['replace(s, "a", "b")', ''], ['split(s, "-", 1)', 'Teil i'], ['repeat(s, 3)', ''], ['reverse(s)', ''], ['padleft(s, 5, "0")', 'links auffüllen'], ['padright(s, 5, " ")', 'rechts auffüllen'],
+    ['regextest(s, "^[0-9]+$")', 'passt?'], ['regexmatch(s, "([0-9]+)")', 'erster Treffer bzw. Gruppe 1'], ['regexreplace(s, "\\s+", " ")', ''],
+    ['striphtml(s)', 'Tags weg'], ['escapehtml(s)', '< > & " maskieren'], ['nl2br(s)', 'Zeilenumbruch → <br>'], ['slug(s)', 'url-tauglich: kleinbuchstaben-mit-strichen'],
+    ['str(x)', 'als Text'], ['number(x)', 'als Zahl']]],
   ['Leer', [['isblank(x)', 'fehlt oder leer'], ['coalesce(a, b)', 'das erste, das nicht leer ist']]],
 ]
 const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m`\n}\nreturn `${h} cm`'

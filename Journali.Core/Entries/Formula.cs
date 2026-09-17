@@ -110,7 +110,9 @@ public static class Formula
         private int _i;
         private readonly List<string> _keys = new();
         private readonly HashSet<string> _vars = new();   // zugewiesene Variablen — ein Name davor ist ein Tippfehler
-        private static readonly HashSet<string> Functions = ["round", "trunc", "floor", "ceil", "abs", "min", "max", "sqrt", "len", "upper", "lower", "trim", "left", "right", "contains", "replace", "split", "pad", "number", "str", "format", "isblank", "coalesce"];
+        private static readonly HashSet<string> Functions = ["round", "trunc", "floor", "ceil", "abs", "min", "max", "sqrt", "len", "upper", "lower", "trim", "left", "right", "contains", "replace", "split", "pad", "number", "str", "format", "isblank", "coalesce",
+            // Textformatierung (Taloan, 17.09.) — Namen wie in JavaScript, klein geschrieben
+            "substr", "indexof", "startswith", "endswith", "capitalize", "title", "repeat", "padleft", "padright", "trimstart", "trimend", "squeeze", "regextest", "regexmatch", "regexreplace", "escapehtml", "striphtml", "slug", "nl2br", "count", "reverse"];
 
         public Prog Program()
         {
@@ -284,6 +286,7 @@ public static class Formula
                 }
                 if (Take("(", newlines: false))
                 {
+                    name = name.ToLowerInvariant();   // startsWith und startswith sind dasselbe
                     if (!Functions.Contains(name)) throw new FormatException($"Unbekannte Funktion: {name}");
                     var args = new List<Node>();
                     if (!Take(")")) { args.Add(Expr()); while (Take(",")) args.Add(Expr()); if (!Take(")")) throw Err("„)“ erwartet"); }
@@ -427,6 +430,12 @@ public static class Formula
             return Value.Of(f(string.Compare(x.AsText, y.AsText, StringComparison.Ordinal)));
         }
 
+        /// <summary>Regulärer Ausdruck mit Zeitgrenze; null, wenn er nicht gültig ist.</summary>
+        private static Regex? SafeRegex(string pattern)
+        {
+            try { return new Regex(pattern, RegexOptions.None, TimeSpan.FromMilliseconds(100)); } catch (ArgumentException) { return null; }
+        }
+
         private Value Func(string name, List<Value> a)
         {
             Value A(int i) => i < a.Count ? a[i] : Value.None;
@@ -459,6 +468,28 @@ public static class Formula
                 case "format": return N(0) is { } f0 ? Value.Of(f0.ToString(a.Count > 1 && N(1) is { } dec ? "0." + new string('0', (int)dec) : "0.############", culture)) : Value.None;
                 case "isblank": return Value.Of(A(0).IsNone || string.IsNullOrWhiteSpace(A(0).AsText));
                 case "coalesce": return a.FirstOrDefault(v => !v.IsNone && !string.IsNullOrEmpty(v.AsText));
+                // ---- Textformatierung
+                case "substr": return Str(s => { var st = Math.Clamp((int)(N(1) ?? 0), 0, s.Length); var ln = N(2) is { } l ? Math.Clamp((int)l, 0, s.Length - st) : s.Length - st; return s.Substring(st, ln); });
+                case "indexof": return S(0) is { } s6 && S(1) is { } t6 ? Value.Of(s6.IndexOf(t6, StringComparison.Ordinal)) : Value.None;
+                case "startswith": return S(0) is { } s7 && S(1) is { } t7 ? Value.Of(s7.StartsWith(t7, StringComparison.Ordinal)) : Value.Of(false);
+                case "endswith": return S(0) is { } s8 && S(1) is { } t8 ? Value.Of(s8.EndsWith(t8, StringComparison.Ordinal)) : Value.Of(false);
+                case "capitalize": return Str(s => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s[1..]);
+                case "title": return Str(s => string.Join(' ', s.Split(' ').Select(w => w.Length == 0 ? w : char.ToUpperInvariant(w[0]) + w[1..].ToLowerInvariant())));
+                case "repeat": return Str(s => string.Concat(Enumerable.Repeat(s, Math.Clamp((int)(N(1) ?? 1), 0, 1000))));
+                case "padleft": return Str(s => s.PadLeft((int)(N(1) ?? 0), (S(2) ?? " ").FirstOrDefault(' ')));
+                case "padright": return Str(s => s.PadRight((int)(N(1) ?? 0), (S(2) ?? " ").FirstOrDefault(' ')));
+                case "trimstart": return Str(s => s.TrimStart());
+                case "trimend": return Str(s => s.TrimEnd());
+                case "squeeze": return Str(s => Regex.Replace(s.Trim(), @"\s+", " "));
+                case "regextest": return S(0) is { } s9 && S(1) is { } r9 ? Value.Of(SafeRegex(r9) is { } rx9 && rx9.IsMatch(s9)) : Value.Of(false);
+                case "regexmatch": { if (S(0) is not { } s10 || S(1) is not { } r10 || SafeRegex(r10) is not { } rx10) return Value.None; var mm = rx10.Match(s10); return mm.Success ? Value.Of(mm.Groups.Count > 1 ? mm.Groups[1].Value : mm.Value) : Value.None; }
+                case "regexreplace": return S(0) is { } s11 && S(1) is { } r11 && SafeRegex(r11) is { } rx11 ? Value.Of(rx11.Replace(s11, S(2) ?? "")) : Value.None;
+                case "escapehtml": return Str(s => s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;"));
+                case "striphtml": return Str(s => Regex.Replace(Regex.Replace(s, "<[^>]+>", " "), @"\s+", " ").Trim());
+                case "slug": return Str(s => Regex.Replace(s.ToLowerInvariant().Replace("ä", "ae").Replace("ö", "oe").Replace("ü", "ue").Replace("ß", "ss"), "[^a-z0-9]+", "-").Trim('-'));
+                case "nl2br": return Str(s => s.Replace("\r\n", "\n").Replace("\n", "<br>"));
+                case "count": return S(0) is { } s12 && S(1) is { Length: > 0 } t12 ? Value.Of((s12.Length - s12.Replace(t12, "").Length) / t12.Length) : Value.None;
+                case "reverse": return Str(s => new string(s.Reverse().ToArray()));
             }
             throw new FormatException($"Unbekannte Funktion: {name}");
         }
