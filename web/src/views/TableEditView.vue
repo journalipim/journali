@@ -102,9 +102,134 @@ function onPaste(e) {
   store.toast(`${n} Zellen eingefügt — noch nicht gespeichert`)
 }
 const FIXED = 3   // feste Spalten vor den Attributen: Name, SKU, Achsen
-function onKey(e) { if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save() } }
-onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey) })
-onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey) })
+
+// ---- Bereich wie in Excel (Taloan): Klick = Anker, Shift+Klick = Rechteck, Strg+A = alles; Zeilen/Spalten als Indizes
+// über die sichtbaren Zeilen und die Attributspalten (columns), Achsen und gesperrte Spalten werden beim Schreiben übersprungen.
+const sel = ref(null)          // { r0, c0, r1, c1 } normalisiert
+const anchor = ref(null)
+const replaceOpen = ref(false)
+const rep = ref({ find: '', with: '', all: false, caseSensitive: false, whole: false })
+function cellAt(el) {
+  const td = el?.closest?.('td.cell'); if (!td) return null
+  const tr = td.parentElement; const ri = rows.value.findIndex(r => r.row.id === tr.dataset.id); const ci = [...tr.children].indexOf(td) - FIXED
+  return ri < 0 || ci < 0 ? null : { ri, ci }
+}
+function onMouseDown(e) {
+  const at = cellAt(e.target); if (!at) return
+  if (!e.target.closest('input, select, textarea')) setTimeout(() => focusCell(at.ri, at.ci), 0)
+  if (e.shiftKey && anchor.value) { e.preventDefault(); sel.value = norm(anchor.value, at) }
+  else { anchor.value = at; sel.value = norm(at, at) }
+}
+const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
+const inSel = (ri, ci) => !!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1
+const selCells = () => { const s = sel.value; if (!s) return []; const out = []; for (let ri = s.r0; ri <= s.r1; ri++) for (let ci = s.c0; ci <= s.c1; ci++) { const r = rows.value[ri], c = columns.value[ci]; if (r && c) out.push({ r, c, ri, ci }) } return out }
+const canWrite = (r, c) => editable(c) && !isAxis(r, c) && c.type !== 'boolean' && c.type !== 'enum'
+const textOf = (r, c) => shown(r, c) ?? inherited(r, c) ?? ''
+// Strg+D: oberste Zelle des Bereichs in alle darunter; bei einer Zelle: die Zelle darüber hinein
+function fillDown() {
+  const s = sel.value; if (!s) return
+  let n = 0
+  for (let ci = s.c0; ci <= s.c1; ci++) {
+    const c = columns.value[ci]; if (!c) continue
+    const srcRow = s.r0 === s.r1 ? rows.value[s.r0 - 1] : rows.value[s.r0]
+    if (!srcRow) continue
+    const v = textOf(srcRow, c)
+    for (let ri = (s.r0 === s.r1 ? s.r0 : s.r0 + 1); ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && canWrite(r, c)) { set(r, c, v); n++ } }
+  }
+  store.toast(`${n} Zellen gefüllt — noch nicht gespeichert`)
+}
+// Strg+Shift+D: Reihe fortsetzen — die ersten zwei Zellen geben Start und Schritt (1, 2 → 3, 4; 10, 20 → 30);
+// Text mit Zahl am Ende zählt hoch (Art-001 → Art-002); ein einzelner Wert wird wiederholt
+function fillSeries() {
+  const s = sel.value; if (!s || s.r1 === s.r0) { store.toast('Bereich über mehrere Zeilen markieren: erste Zellen = Muster'); return }
+  let n = 0
+  for (let ci = s.c0; ci <= s.c1; ci++) {
+    const c = columns.value[ci]; if (!c) continue
+    const a = textOf(rows.value[s.r0], c), b = s.r1 > s.r0 ? textOf(rows.value[s.r0 + 1], c) : ''
+    const num = x => /^-?\d+([.,]\d+)?$/.test(x.trim()) ? parseFloat(x.replace(',', '.')) : null
+    const tail = /^(.*?)(\d+)$/.exec(a)
+    let gen
+    if (num(a) != null && num(b) != null) { const step = num(b) - num(a); const dec = Math.max((a.split(/[.,]/)[1] || '').length, (b.split(/[.,]/)[1] || '').length); gen = i => (num(a) + step * i).toFixed(dec).replace('.', a.includes(',') ? ',' : '.') }
+    else if (num(a) != null && !b) { gen = i => String(num(a) + i) }
+    else if (tail) { const w = tail[2].length; const start = parseInt(tail[2]); const stepT = /^(.*?)(\d+)$/.exec(b); const step = stepT && stepT[1] === tail[1] ? parseInt(stepT[2]) - start : 1; gen = i => tail[1] + String(start + step * i).padStart(w, '0') }
+    else gen = () => a
+    for (let ri = s.r0; ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && canWrite(r, c)) { set(r, c, gen(ri - s.r0)); n++ } }
+  }
+  store.toast(`Reihe: ${n} Zellen — noch nicht gespeichert`)
+}
+// Entf: eigene Werte im Bereich löschen (geerbte bleiben, sie sind nicht hier)
+function clearSel() { let n = 0; for (const { r, c } of selCells()) if (canWrite(r, c) && shown(r, c) != null) { set(r, c, ''); n++ }; if (n) store.toast(`${n} eigene Werte gelöscht — noch nicht gespeichert`) }
+// Strg+C: Bereich als Tab-Text (Excel nimmt das direkt)
+function copySel() {
+  const s = sel.value; if (!s) return
+  const lines = []
+  for (let ri = s.r0; ri <= s.r1; ri++) { const r = rows.value[ri]; if (!r) continue; lines.push(columns.value.slice(s.c0, s.c1 + 1).map(c => textOf(r, c)).join('\t')) }
+  navigator.clipboard?.writeText(lines.join('\n')); store.toast(`${lines.length} Zeilen kopiert`)
+}
+// Suchen & Ersetzen (Strg+H): im Bereich oder in der ganzen Tabelle, nur beschreibbare Zellen
+function matcher() {
+  const f = rep.value.find; if (!f) return null
+  const esc = f.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(rep.value.whole ? `^${esc}$` : esc, rep.value.caseSensitive ? 'g' : 'gi')
+}
+function targets() { return rep.value.all || !sel.value ? rows.value.flatMap(r => columns.value.map(c => ({ r, c }))) : selCells() }
+const replaceHits = computed(() => { const m = matcher(); if (!m) return 0; return targets().filter(({ r, c }) => canWrite(r, c) && m.test(textOf(r, c)) && (m.lastIndex = 0, true)).length })
+function replaceAll() {
+  const m = matcher(); if (!m) return
+  let n = 0
+  for (const { r, c } of targets()) { if (!canWrite(r, c)) continue; const v = textOf(r, c); m.lastIndex = 0; if (!m.test(v)) continue; m.lastIndex = 0; set(r, c, v.replace(m, rep.value.with)); n++ }
+  store.toast(`${n} Zellen ersetzt — noch nicht gespeichert`)
+}
+// ---- Cursor wie in Excel: der Fokus liegt auf einer Zellbox; Pfeile bewegen ihn, Shift+Pfeil zieht den Bereich auf.
+function focusCell(ri, ci) {
+  ri = Math.max(0, Math.min(rows.value.length - 1, ri)); ci = Math.max(0, Math.min(columns.value.length - 1, ci))
+  const r = rows.value[ri]; if (!r) return
+  const tr = document.querySelector(`table.tab tr[data-id="${r.row.id}"]`); const td = tr?.children[FIXED + ci]; if (!td) return
+  const box = td.querySelector('.cell-box, .cell-select, .cell-date, .cell-input'); if (!box) return
+  box.focus({ preventScroll: false }); td.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  return { ri, ci }
+}
+function move(e, dr, dc) {
+  const at = cellAt(e.target); if (!at) return false
+  e.preventDefault()
+  const to = focusCell(at.ri + dr, at.ci + dc); if (!to) return true
+  if (e.shiftKey) { anchor.value ??= at; sel.value = norm(anchor.value, to) }
+  else { anchor.value = to; sel.value = norm(to, to) }
+  return true
+}
+function onKey(e) {
+  const inField = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) && !e.target.closest('td.cell')
+  const editing = e.target.classList?.contains('cell-input')
+  // im Eingabefeld: Enter speichert (macht die Zelle) und springt nach unten, Tab nach rechts
+  if (editing && (e.key === 'Enter' || e.key === 'Tab') && !e.shiftKey) {
+    const at = cellAt(e.target); if (at) { e.preventDefault(); e.target.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); setTimeout(() => { const to = focusCell(at.ri + (e.key === 'Enter' ? 1 : 0), at.ci + (e.key === 'Tab' ? 1 : 0)); if (to) { anchor.value = to; sel.value = norm(to, to) } }, 0) }
+    return
+  }
+  if (!inField && !editing && e.target.closest?.('td.cell')) {
+    const page = 15
+    if (e.key === 'ArrowDown' && move(e, 1, 0)) return
+    if (e.key === 'ArrowUp' && move(e, -1, 0)) return
+    if (e.key === 'ArrowRight' && !e.target.classList.contains('cell-select') && move(e, 0, 1)) return
+    if (e.key === 'ArrowLeft' && !e.target.classList.contains('cell-select') && move(e, 0, -1)) return
+    if (e.key === 'PageDown' && move(e, page, 0)) return
+    if (e.key === 'PageUp' && move(e, -page, 0)) return
+    if (e.key === 'Home' && !e.ctrlKey && move(e, 0, -999)) return
+    if (e.key === 'End' && !e.ctrlKey && move(e, 0, 999)) return
+    if (e.key === 'Home' && e.ctrlKey && move(e, -99999, -999)) return
+    if (e.key === 'End' && e.ctrlKey && move(e, 99999, 999)) return
+    if (e.key === 'Tab') { const at = cellAt(e.target); if (at) { e.preventDefault(); const to = focusCell(at.ri + (e.shiftKey ? (at.ci === 0 ? -1 : 0) : (at.ci === columns.value.length - 1 ? 1 : 0)), e.shiftKey ? (at.ci === 0 ? 999 : at.ci - 1) : (at.ci === columns.value.length - 1 ? 0 : at.ci + 1)); if (to) { anchor.value = to; sel.value = norm(to, to) } } return }
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); return }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') { e.preventDefault(); replaceOpen.value = !replaceOpen.value; return }
+  if (inField || e.target.classList?.contains('cell-input')) return
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); e.shiftKey ? fillSeries() : fillDown() }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && document.activeElement?.closest?.('table.tab')) { e.preventDefault(); sel.value = { r0: 0, r1: rows.value.length - 1, c0: 0, c1: columns.value.length - 1 } }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && sel.value && !window.getSelection()?.toString()) { e.preventDefault(); copySel() }
+  else if (e.key === 'Delete' && sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1)) { e.preventDefault(); clearSel() }
+  else if (e.key === 'Escape' && sel.value) { sel.value = null }
+}
+onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('mousedown', onMouseDown, true) })
+onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouseDown, true) })
 
 // Export der Tabelle, wie sie dasteht (CSV, Semikolon, UTF-8 mit BOM — Excel öffnet das direkt)
 function exportCsv() {
@@ -138,7 +263,21 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       <select v-model="viewKey" title="Attributsicht: welche Spalten, in welcher Reihenfolge"><option value="">◫ alle Attribute ({{ data.columns.length }})</option><option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option></select>
       <input v-model="filter" type="search" placeholder="🔍 filtern" style="width:200px" />
       <span class="grow" />
-      <span class="muted" style="font-size:12px">Einfügen aus Excel: Zelle markieren, Strg+V · <i>kursiv</i> = geerbt · 🔒 Achse</span>
+      <button @click="fillDown" :disabled="!sel" title="runterziehen: oberste Zelle des Bereichs in alle darunter (Strg+D)">⇩ füllen</button>
+      <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe</button>
+      <button :class="{ primary: replaceOpen }" @click="replaceOpen = !replaceOpen" title="Suchen & Ersetzen (Strg+H)">⇄ ersetzen</button>
+      <span class="muted" style="font-size:12px" title="Pfeile bewegen den Cursor, Shift+Pfeil zieht den Bereich auf, Enter speichert und springt nach unten, Tab nach rechts, Tippen überschreibt, F2 bearbeitet · Strg+D füllen, Strg+Shift+D Reihe, Strg+H ersetzen, Strg+C/V mit Excel, Entf leert, Strg+A alles">⌨ Pfeile · Shift+Pfeil · Enter ↓ · Tab → · Strg+D/H/C/V · <i>kursiv</i> = geerbt · 🔒 Achse</span>
+    </div>
+    <div v-if="replaceOpen" class="toolbar replace">
+      <span class="muted">⇄</span>
+      <input v-model="rep.find" type="text" placeholder="suchen" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="replaceOpen = false" autofocus />
+      <input v-model="rep.with" type="text" placeholder="ersetzen durch" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="replaceOpen = false" />
+      <label><input type="checkbox" v-model="rep.all" /> ganze Tabelle</label>
+      <label><input type="checkbox" v-model="rep.caseSensitive" /> Gross/Klein</label>
+      <label><input type="checkbox" v-model="rep.whole" /> ganze Zelle</label>
+      <span class="muted">{{ rep.find ? replaceHits + ' Treffer' + (rep.all || !sel ? '' : ' im Bereich') : '' }}</span>
+      <button class="primary" :disabled="!replaceHits" @click="replaceAll">alle ersetzen</button>
+      <button class="x" @click="replaceOpen = false" title="schliessen (Esc)">×</button>
     </div>
     <div class="scroll">
       <table class="grid values tab" :style="`width:${420 + columns.length * 180}px`">
@@ -148,16 +287,16 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
           <th v-for="c in columns" :key="c.key" :title="`${c.key} · ${c.type}${c.perLocale ? ' · je Sprache' : ''}${c.unit ? ' · ' + c.unit : ''}`" :class="{ ro: !editable(c) }">{{ c.label?.de || c.key }}<span v-if="c.perLocale" class="muted"> {{ locale }}</span><span v-if="c.unit" class="muted"> {{ c.unit }}</span></th>
         </tr></thead>
         <tbody>
-          <tr v-for="r in rows" :key="r.row.id" :data-id="r.row.id">
+          <tr v-for="(r, ri) in rows" :key="r.row.id" :data-id="r.row.id">
             <td class="attr"><router-link :to="`/tree/${r.row.id}`" :title="r.row.id">{{ icon(r.row.role) }} {{ r.row.label }}</router-link></td>
             <td class="mono muted">{{ r.row.sku ?? '' }}</td>
             <td class="muted" style="font-size:11px">{{ Object.values(r.row.axisValues ?? {}).join(' · ') }}</td>
-            <template v-for="c in columns" :key="c.key">
-              <td v-if="!editable(c) || isAxis(r, c)" class="cell"><div class="cell-box locked" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
-              <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
-              <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :class="{ dirty: dirty.has(key(r, c)) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
-              <DateCell v-else-if="c.type === 'date'" :class="{ dirty: dirty.has(key(r, c)) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
-              <Cell v-else :class="{ dirty: dirty.has(key(r, c)) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
+            <template v-for="(c, ci) in columns" :key="c.key">
+              <td v-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
+              <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
+              <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
+              <DateCell v-else-if="c.type === 'date'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
+              <Cell v-else :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
             </template>
           </tr>
         </tbody>
@@ -176,4 +315,9 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
 .tab :deep(td.cell.dirty .cell-box), .tab :deep(td.dirty .cell-box) { background: var(--dirty); color: var(--toast); }
 .cell-box.locked { color: var(--muted); font-style: italic; cursor: default; }
 .chip.dirty { background: var(--dirty); color: var(--toast); }
+/* markierter Bereich wie in Excel */
+.tab :deep(td.cell.sel) { outline: 1px solid var(--accent); outline-offset: -1px; background: var(--accent-soft); }
+.tab :deep(td.cell.sel .cell-box) { background: transparent; }
+.replace { gap: 6px; font-size: 12px; background: var(--bg); }
+.replace label { display: inline-flex; gap: 3px; align-items: center; }
 </style>

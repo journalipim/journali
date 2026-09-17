@@ -278,6 +278,13 @@ id}` auf dem Knotenstrom, Abbild hält `(system, id) → Knoten`. Und der
 
 ### 12. Massendatenpflege wie in Excel
 
+**Gebaut (17.09.2026, Taloan: „so bin ich doch nicht schnell"):** Cursor wie in Excel
+(Pfeile, Shift+Pfeil Bereich, Enter speichert und springt nach unten, Tab nach
+rechts, Tippen überschreibt, F2), Strg+D runterziehen, Strg+Shift+D Reihe
+fortsetzen (Zahlen, Art-001), Strg+H Suchen & Ersetzen (Bereich/Tabelle,
+Gross/Klein, ganze Zelle), Entf leert, Strg+C/V mit Excel. Kein Browser-Limit:
+der Engpass war das fehlende Cursor-Modell, nicht der Client.
+
 Die Produktliste wird zum Gitter: Zeilen = Produkte (gefiltert nach
 Familie, Kategorie, Vollständigkeit, Suche), Spalten = frei gewählte
 Attribute auf einer gewählten Achse (z. B. `title/de`, `weight`,

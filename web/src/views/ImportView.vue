@@ -6,7 +6,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
-import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode } from '../ixp.js'
+import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode, attrType } from '../ixp.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
 import ImportHead from '../components/ImportHead.vue'
@@ -36,7 +36,9 @@ const checked = ref(new Set())  // Haken = dieser Knoten (Teilbaum folgt beim An
 const busy = ref('')
 const log = ref([])
 const plan = ref(null)          // Ergebnis von analyse()
-const mapping = ref({})         // property identifier → attribute key | 'new:text' | 'new:html' | ''
+const mapping = ref({})         // property identifier → attribute key | 'new:<typ>' | ''
+const groupOf = ref({})         // property identifier → Gruppe für ein neues Attribut (Vorschlag: <prefix><class_identifier>)
+const propDefs = ref({})        // Eigenschaftsdefinitionen der Quelle: key → { type, ez }
 const result = ref(null)
 
 const model = computed(() => store.model)
@@ -50,13 +52,13 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
 
 // Profile (ProfileBar): Quelle, Sprache, Ziel, Sprachen, Zuordnung — ohne Token (der bleibt im Browser, nicht im Journal)
-const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value, withImages: withImages.value, prefix: prefix.value })
+const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value, groupOf: groupOf.value, withImages: withImages.value, prefix: prefix.value })
 async function profileSet(p) {
   if (!p) {   // „— Profil —“: alles leer, Quelle zu
     base.value = ''; token.value = ''; lang.value = 'de'; target.value = ''; importLocales.value = null; withImages.value = true; mapping.value = {}
     connected.value = false; rows.value = []; checked.value = new Set(); plan.value = null; result.value = null; persist(); return
   }
-  base.value = p.base ?? ''; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null; prefix.value = p.prefix ?? 'ixp_'; withImages.value = p.withImages ?? true
+  base.value = p.base ?? ''; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null; prefix.value = p.prefix ?? 'ixp_'; groupOf.value = p.groupOf ?? {}; withImages.value = p.withImages ?? true
   if (p.mapping) mapping.value = { ...p.mapping }
   if (base.value) await connect()
 }
@@ -132,20 +134,31 @@ async function analyse() {
     }
     for (const r of picked) await walk(r.doc, r.parent?.doc.masterId ?? null)
 
-    // Eigenschaften über alle Fassungen zählen, Zuordnung vorschlagen
+    // Eigenschaftsdefinitionen der Quelle (Typ), Klasse je Produkt (Gruppe), Werte je Eigenschaft (Wertelisten)
+    busy.value = 'lade Eigenschaftsdefinitionen …'
+    try { propDefs.value = await client.properties(lang.value) } catch (e) { say('keine Eigenschaftsdefinitionen: ' + e.message); propDefs.value = {} }
     const props = {}
-    for (const it of items) for (const v of Object.values(it.versions)) for (const [k, val] of Object.entries(v.properties || {})) {
-      props[k] ??= { count: 0, html: false }
-      props[k].count++
-      if (typeof val === 'string' && /<[a-z][\s\S]*>/i.test(val)) props[k].html = true
+    for (const it of items) {
+      const cls = Object.values(it.versions).map(v => v.metaProperties?.class_identifier).find(Boolean) ?? null
+      it.cls = cls
+      for (const v of Object.values(it.versions)) for (const [k, val] of Object.entries(v.properties || {})) {
+        props[k] ??= { count: 0, html: false, classes: new Set(), values: new Set(), def: propDefs.value[k] ?? null }
+        props[k].count++
+        if (cls) props[k].classes.add(cls)
+        if (typeof val === 'string' && /<[a-z][\s\S]*>/i.test(val)) props[k].html = true
+        if (props[k].def?.ez === 'ezselection' && val != null && val !== '') props[k].values.add(String(val))
+      }
     }
+    for (const p of Object.values(props)) { p.srcType = attrType(p.def, p.html); p.classes = [...p.classes]; p.values = [...p.values] }
     const attrKeys = new Set(localeAttrs.value.map(a => a.key))
     for (const k of Object.keys(props)) {
       // Gibt es das Attribut inzwischen (voriger Lauf hat es angelegt), nicht mehr „neu anlegen“.
       if (mapping.value[k]?.startsWith('new:') && attrKeys.has(k)) mapping.value[k] = k
       const pk = cleanPrefix.value + k.toLowerCase().replace(/[^a-z0-9_]/g, '_')
       if (mapping.value[k]?.startsWith('new:') && attrKeys.has(pk)) mapping.value[k] = pk
-      mapping.value[k] ??= k === 'title' ? 'name' : attrKeys.has(pk) ? pk : attrKeys.has(k) ? k : (props[k].html ? 'new:html' : 'new:text')
+      mapping.value[k] ??= k === 'title' ? 'name' : attrKeys.has(pk) ? pk : attrKeys.has(k) ? k : 'new:' + props[k].srcType
+      // Gruppe für ein neues Attribut: aus der Klasse des Produkts im Quellsystem, sonst <prefix>import
+      groupOf.value[k] ??= props[k].classes[0] ? cleanPrefix.value + props[k].classes[0].toLowerCase().replace(/[^a-z0-9_]/g, '_') : importGroup.value
     }
 
     // Neu oder vorhanden? Über die externe Kennung im eigenen Baum.
@@ -162,7 +175,14 @@ const counts = computed(() => {
   for (const it of plan.value?.items ?? []) c[it.role][it.existing ? 1 : 0]++
   return c
 })
-const newAttrs = computed(() => Object.entries(mapping.value).filter(([, v]) => v.startsWith('new:')).map(([k, v]) => ({ key: (cleanPrefix.value + k.toLowerCase().replace(/[^a-z0-9_]/g, '_')).replace(/^[^a-z]/, 'p_'), type: v.slice(4), from: k })))
+const newAttrs = computed(() => Object.entries(mapping.value).filter(([k, v]) => v.startsWith('new:') && plan.value?.props[k]).map(([k, v]) => {
+  const p = plan.value.props[k]
+  const key = (cleanPrefix.value + k.toLowerCase().replace(/[^a-z0-9_]/g, '_')).replace(/^[^a-z]/, 'p_')
+  return { key, type: v.slice(4), from: k, group: groupOf.value[k] || importGroup.value, multiple: p.def?.type === 'multi_string', list: v.slice(4) === 'enum' ? key : null, values: p.values }
+}))
+const newGroups = computed(() => [...new Set(newAttrs.value.map(a => a.group))].filter(g => !model.value.groups.some(x => x.key === g && x.defined)))
+const groupOptions = computed(() => [...new Set([...(model.value?.groups ?? []).map(g => g.key), ...Object.values(groupOf.value)])].sort())
+const typeOptions = ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum']
 
 // ---- Schreiben: fehlende Attribute anlegen, dann ein Stapel
 async function run() {
@@ -171,18 +191,25 @@ async function run() {
   busy.value = 'schreibe …'
   result.value = null
   try {
-    if (newAttrs.value.length && !model.value.groups.some(g => g.key === importGroup.value && g.defined)) {
-      await api.post(`/api/model/groups/${importGroup.value}`, { key: importGroup.value, label: { de: `Import ${cleanPrefix.value.replace(/_$/, '') || 'ixp'}`, en: `Import ${cleanPrefix.value.replace(/_$/, '') || 'ixp'}` }, activeFrom: null }, 'PUT')
-      say(`Gruppe ${importGroup.value} angelegt`)
+    for (const g of newGroups.value) {
+      const label = g.startsWith(cleanPrefix.value) ? g.slice(cleanPrefix.value.length) : g
+      await api.post(`/api/model/groups/${g}`, { key: g, label: { de: label, en: label }, activeFrom: null }, 'PUT')
+      say(`Gruppe ${g} angelegt`)
     }
     for (const a of newAttrs.value) {
       if (model.value.attributes.some(x => x.key === a.key)) continue
-      await api.post(`/api/model/attributes/${a.key}`, { key: a.key, label: { de: a.from, en: a.from }, type: a.type, group: importGroup.value, axes: ['locale'] }, 'PUT')
-      say(`Attribut ${a.key} (${a.type}) angelegt`)
+      if (a.list && !model.value.lists.some(l => l.key === a.list)) {
+        await api.post(`/api/model/lists/${a.list}`, { key: a.list, label: { de: a.from, en: a.from } }, 'PUT')
+        let i = 0
+        for (const v of a.values) await api.post(`/api/model/lists/${a.list}/values/${encodeURIComponent(v.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 'x')}`, { value: v.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 'x', label: { de: v, en: v }, order: ++i }, 'PUT')
+        say(`Werteliste ${a.list}: ${a.values.length} Werte`)
+      }
+      await api.post(`/api/model/attributes/${a.key}`, { key: a.key, label: { de: a.from, en: a.from }, type: a.type, group: a.group, axes: a.type === 'enum' || a.type === 'boolean' || a.type === 'decimal' || a.type === 'integer' ? [] : ['locale'], multiple: a.multiple, list: a.list }, 'PUT')
+      say(`Attribut ${a.key} (${a.type}${a.multiple ? ', mehrfach' : ''}) in ${a.group} angelegt`)
     }
     const attrOf = k => { const m = mapping.value[k]; if (!m) return null; if (m.startsWith('new:')) return newAttrs.value.find(a => a.from === k)?.key; return m }
     // Die Gruppen der zugeordneten Attribute hängen an der Zielgruppe (oder an jeder neuen Wurzelgruppe), sonst gilt dort nichts.
-    const neededGroups = [...new Set(Object.keys(mapping.value).map(attrOf).filter(Boolean).map(k => model.value.attributes.find(a => a.key === k)?.group ?? (newAttrs.value.some(a => a.key === k) ? importGroup.value : null)).filter(Boolean))]
+    const neededGroups = [...new Set(Object.keys(mapping.value).map(attrOf).filter(Boolean).map(k => model.value.attributes.find(a => a.key === k)?.group ?? newAttrs.value.find(a => a.key === k)?.group ?? null).filter(Boolean))]
     if (target.value && neededGroups.length) {
       const t = await api.get(`/api/nodes/${target.value}`)
       const have = new Set((t.groups ?? []).map(g => g.key))
@@ -230,8 +257,14 @@ async function run() {
         for (const [k, val] of Object.entries(values)) {
           const attribute = attrOf(k)
           if (!attribute || val == null || val === '') continue
-          if (have.get(`${attribute}|${l}`) === val) continue
-          cmds.push({ op: 'attribute.set', args: { node, attribute, locale: l, value: String(val) } })
+          const def = model.value.attributes.find(a => a.key === attribute) ?? newAttrs.value.find(a => a.key === attribute)
+          const perLocale = def?.perLocale ?? (def?.axes ? def.axes.includes('locale') : !['enum', 'boolean', 'decimal', 'integer'].includes(def?.type))
+          const loc = perLocale ? l : null
+          if (!perLocale && l !== Object.keys(it.versions)[0]) continue   // sprachunabhängig: einmal reicht
+          if (have.get(`${attribute}|${loc ?? ''}`) === val) continue
+          if (def?.type === 'enum') cmds.push({ op: 'attribute.set', args: { node, attribute, locale: loc, value: String(val).toLowerCase().replace(/[^a-z0-9_]/g, '_') } })
+          else if (def?.multiple) cmds.push({ op: 'attribute.set', args: { node, attribute, locale: loc, values: String(val).split(/[;,|]\s*/).map(s => s.trim()).filter(Boolean) } })
+          else cmds.push({ op: 'attribute.set', args: { node, attribute, locale: loc, value: String(val) } })
         }
       }
     }
@@ -295,23 +328,30 @@ function toggleLocale(l) {
       <div class="section" v-if="plan">
         <h2>Eigenschaften → Attribute</h2>
         <table class="grid">
-          <thead><tr><th>IXP</th><th class="num">#</th><th>Attribut</th></tr></thead>
+          <thead><tr><th>IXP</th><th class="num">#</th><th title="Typ laut Quelle (property-Dokument), Klasse des Produkts">Quelle</th><th>Attribut</th><th title="Gruppe für ein neues Attribut — Vorschlag: Klasse des Produkts im Quellsystem">Gruppe</th></tr></thead>
           <tbody>
             <tr v-for="[k, p] in Object.entries(plan.props)" :key="k">
               <td class="mono">{{ k }} <span v-if="p.html" class="muted" title="enthält HTML">‹›</span></td>
               <td class="num">{{ p.count }}</td>
+              <td class="muted mono" :title="(p.def ? `${p.def.type}${p.def.ez ? ' / ' + p.def.ez : ''}` : 'keine Definition in der Quelle') + (p.classes.length ? ' · Klassen: ' + p.classes.join(', ') : '')">{{ p.def ? p.def.type : '?' }}<span v-if="p.def?.ez === 'ezselection'"> ☰{{ p.values.length }}</span><span v-if="p.classes.length"> · {{ p.classes[0] }}{{ p.classes.length > 1 ? ' +' + (p.classes.length - 1) : '' }}</span></td>
               <td>
                 <select v-model="mapping[k]">
                   <option value="">— überspringen —</option>
-                  <option v-for="a in localeAttrs" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} ({{ a.type }})</option>
-                  <option value="new:text">neu anlegen: text</option>
-                  <option value="new:html">neu anlegen: html</option>
+                  <option v-for="a in model.attributes" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} ({{ a.type }})</option>
+                  <option v-for="t in typeOptions" :key="t" :value="'new:' + t">neu anlegen: {{ t }}{{ t === p.srcType ? ' ← Quelle' : '' }}</option>
                 </select>
+              </td>
+              <td>
+                <template v-if="mapping[k]?.startsWith('new:')">
+                  <input v-model="groupOf[k]" type="text" list="import-groups" style="width:180px" :title="'Gruppe des neuen Attributs; Vorschlag aus der Klasse ' + (p.classes[0] ?? '—')" />
+                </template>
+                <span v-else class="muted">{{ model.attributes.find(a => a.key === mapping[k])?.group ?? '' }}</span>
               </td>
             </tr>
           </tbody>
         </table>
-        <p class="muted" v-if="newAttrs.length">Neu im Modell: {{ newAttrs.map(a => `${a.key} (${a.type})`).join(', ') }} — Gruppe „{{ importGroup }}“, je Sprache.</p>
+        <datalist id="import-groups"><option v-for="g in groupOptions" :key="g" :value="g" /></datalist>
+        <p class="muted" v-if="newAttrs.length">Neu im Modell: {{ newAttrs.length }} Attribute<span v-if="newGroups.length">, {{ newGroups.length }} Gruppen ({{ newGroups.join(', ') }})</span><span v-if="newAttrs.some(a => a.list)">, {{ newAttrs.filter(a => a.list).length }} Wertelisten</span>.</p>
       </div>
     </div>
   </div>
