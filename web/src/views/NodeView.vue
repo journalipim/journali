@@ -53,6 +53,8 @@ function setChannel(c) { store.viewChannel = c || null; store.save() }
 // ---- Attributsicht je Knotentyp
 const views = computed(() => (model.value?.views ?? []).filter(v => v.level === node.value?.role))
 const view = computed(() => views.value.find(v => v.key === store.viewKey[node.value?.role]) ?? null)
+// „alles“ ordnet nach der Standardsicht des Knotentyps (defaultview_<rolle>), wenn es sie gibt — sonst alphabetisch.
+const orderView = computed(() => view.value ?? views.value.find(v => v.key === 'defaultview_' + node.value?.role) ?? null)
 function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save() }
 function setLayout(l) { store.layout = l; store.save() }
 function toggleEditableOnly() { store.editableOnly = !store.editableOnly; store.save() }
@@ -62,12 +64,13 @@ const blocks = computed(() => {
   if (!model.value || !node.value) return []
   const eff = node.value.groups ?? []               // [{ key, from, fromLabel, active, attributes }]
   const byKey = new Map(eff.map(g => [g.key, g]))
-  const order = view.value ? view.value.items.map(it => it.group).filter(k => byKey.has(k)) : eff.map(g => g.key)
-  if (view.value) for (const g of eff) if (!order.includes(g.key)) order.push(g.key)   // Gruppen ohne Platz in der Sicht: unten
+  const ov = orderView.value
+  const order = ov ? ov.items.map(it => it.group).filter(k => byKey.has(k)) : eff.map(g => g.key)
+  if (ov) for (const g of eff) if (!order.includes(g.key)) order.push(g.key)   // Gruppen ohne Platz in der Sicht: unten
   const req = k => model.value.attributes.find(a => a.key === k)?.required
   return order.map(k => {
     const g = byKey.get(k)
-    const it = view.value?.items.find(x => x.group === k)
+    const it = ov?.items.find(x => x.group === k)
     const ord = (it?.order ?? []).filter(a => g.attributes.includes(a))
     const keys = [...ord, ...g.attributes.filter(a => !ord.includes(a))]
     const defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key) }))
@@ -232,7 +235,7 @@ function cellMenu(e, def, col, block) {
       </select>
       <span class="sep">·</span>
       <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="`Attributsicht für ${roleLabel[node.role]} — ⊞ Modell → Attributsichten`">
-        <option value="">◫ alles</option>
+        <option value="">◫ alles{{ views.some(v => v.key === "defaultview_" + node.role) ? " · Reihenfolge DefaultView" : "" }}</option>
         <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option>
       </select>
       <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
