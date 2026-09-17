@@ -89,7 +89,27 @@ const blocks = computed(() => {
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
 })
 watch(blocks, b => { if (!b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
-const shownBlocks = computed(() => store.layout === 'tabs' ? blocks.value.filter(b => b.key === tab.value) : blocks.value)
+// Suche über das Sichtbare: Attributname/Key und die Werte in den gezeigten Spalten (eigen oder geerbt, Auswahl als Label)
+const attrFilter = ref('')
+const findBox = ref(null)
+function cellText(def, col) {
+  const v = ownValue(def.key, col) ?? inherited(def, col).value
+  if (v == null) return ''
+  if (def.type === 'enum') return `${v} ${listLabel(def)(v)}`
+  if (def.type === 'html') return String(v).replace(/<[^>]+>/g, ' ')
+  return String(v)
+}
+function matches(def, block) {
+  const q = attrFilter.value.trim().toLowerCase(); if (!q) return true
+  if (def.key.toLowerCase().includes(q) || (def.label?.de ?? '').toLowerCase().includes(q) || (def.label?.en ?? '').toLowerCase().includes(q)) return true
+  if (def.type === 'rows') return Object.values(node.value?.rows?.[def.key] ?? {}).length > 0 && [...own.value.entries()].some(([k, v]) => k.startsWith(def.key + '|') && String(v ?? '').toLowerCase().includes(q))
+  return columns.value.some(c => enabled(def, c, block) && cellText(def, c).toLowerCase().includes(q))
+}
+const filteredBlocks = computed(() => attrFilter.value.trim()
+  ? blocks.value.map(b => ({ ...b, defs: b.defs.filter(d => matches(d, b)) })).filter(b => b.defs.length)
+  : blocks.value)
+const hitCount = computed(() => filteredBlocks.value.reduce((n, b) => n + b.defs.length, 0))
+const shownBlocks = computed(() => store.layout === 'tabs' && !attrFilter.value.trim() ? filteredBlocks.value.filter(b => b.key === tab.value) : filteredBlocks.value)
 
 // ---- Werte
 const computedValue = (key, locale = null) => (node.value?.computed ?? []).find(c => c.attribute === key && (c.locale ?? null) === locale)?.value ?? null
@@ -360,6 +380,8 @@ function cellMenu(e, def, col, block) {
       <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
       <button :class="{ primary: store.editableOnly }" @click="toggleEditableOnly" title="nur Gruppen zeigen, die hier bearbeitbar sind (gesperrte weg)">✎ nur bearbeitbare</button>
       <span class="grow" />
+      <input ref="findBox" v-model="attrFilter" type="search" placeholder="🔍 Attribut oder Wert (sichtbar)" style="width:220px;font-size:12px" title="filtert live über Attributname und die Werte in den gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
+      <span v-if="attrFilter" class="muted">{{ hitCount }} Treffer</span>
       <span class="muted">{{ columns.length }} Spalten</span>
     </div>
 
