@@ -86,7 +86,7 @@ const blocks = computed(() => {
     // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
 })
-watch(blocks, b => { if (store.layout === 'tabs' && !b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
+watch(blocks, b => { if (!b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
 const shownBlocks = computed(() => store.layout === 'tabs' ? blocks.value.filter(b => b.key === tab.value) : blocks.value)
 
 // ---- Werte
@@ -323,6 +323,8 @@ function cellMenu(e, def, col, block) {
       <span v-if="busy">…</span>
     </div>
 
+    <!-- Die Sicht (Sprachen, Kanal, Attributsicht, Anordnung) gehört zum Abschnitt Attribute — darum unter dessen Band (Taloan, 17.09.) -->
+    <h2 class="band">▤ Attribute <span class="muted">· {{ blocks.length }} Gruppen · {{ blocks.reduce((n, b) => n + b.defs.length, 0) }} Attribute</span></h2>
     <div class="toolbar view">
       <span class="muted">Sicht:</span>
       <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: store.viewLocales.includes(l) }" @click="toggleLocale(l)">{{ l }}</span>
@@ -342,7 +344,6 @@ function cellMenu(e, def, col, block) {
       <span class="muted">{{ columns.length }} Spalten</span>
     </div>
 
-    <h2 class="band">▤ Attribute <span class="muted">· {{ blocks.length }} Gruppen · {{ blocks.reduce((n, b) => n + b.defs.length, 0) }} Attribute</span></h2>
     <div v-if="store.layout === 'tabs' && blocks.length" class="tabs">
       <button v-for="b in blocks" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="`${b.key} · ${b.defs.length} Attribute` + (b.active ? '' : ` · gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`)">{{ b.label }}<span class="muted n"> {{ b.defs.length }}</span><span v-if="!b.active"> 🔒</span></button>
     </div>
