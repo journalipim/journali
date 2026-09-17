@@ -10,7 +10,7 @@ import { tree, icon } from '../tree.js'
 import { plugins } from '../plugins.js'
 import { suggest, plan as makePlan, parseDelimited, sniffType } from '../mapper.js'
 import Splitter from '../components/Splitter.vue'
-import ProfileBar from '../components/ProfileBar.vue'
+import ImportHead from '../components/ImportHead.vue'
 import { paneWidth } from '../panes.js'
 const leftW = paneWidth('import.table', 720)
 const router = useRouter()
@@ -132,50 +132,34 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 
 <template>
   <div class="pane" :style="`width:${leftW}px;flex:none`">
-    <div class="toolbar"><h1>⇩ Quelle: Tabelle</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
-    <div class="toolbar" style="gap:4px">
-      <router-link v-if="plugins.enabled('ixp')" to="/import" class="view-chip">IXP</router-link>
-      <router-link v-if="plugins.enabled('solr')" to="/import/solr" class="view-chip">Solr</router-link>
-      <router-link to="/import/table" class="view-chip on">Tabelle</router-link>
-      <span class="grow" /><ProfileBar plugin="table" :get="profileGet" :set="profileSet" />
-    </div>
+    <ImportHead source="table" plugin="table" :busy="busy" :get="profileGet" :set="profileSet">
+      <tr><td class="attr">Datei</td><td class="row drop" :class="{ over: dragOver }" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
+        <label class="primary btn" :title="'CSV, TSV, JSON' + (plugins.importers.length ? ', ' + plugins.importers.flatMap(i => i.accept ?? []).join(', ') : '') + ' — oder hierher ziehen'">📂 wählen<input type="file" style="display:none" @change="takeFile($event.target.files[0])" /></label>
+        <span v-if="source" class="chip" :title="`${source.rows.length} Zeilen · ${source.columns.length} Spalten`">📄 {{ source.name }} <span class="muted">{{ source.rows.length }}</span></span>
+        <select v-if="source?.sheets?.length > 1" :value="source.sheet" @change="pickSheet($event.target.value)" title="Blatt" style="width:140px"><option v-for="s in source.sheets" :key="s.name" :value="s.name">{{ s.name }} ({{ s.rows.length }})</option></select>
+        <span v-else-if="!source" class="muted" style="font-size:12px">oder hierher ziehen</span>
+        <span class="grow" />
+        <button v-if="source" class="x" @click="resuggest" title="Zuordnung neu vorschlagen">↻</button>
+      </td></tr>
+      <tr><td class="attr">Einfügen</td><td><input v-model="pasteText" type="text" placeholder="aus Excel kopieren, hier Strg+V (erste Zeile = Spaltennamen)" @paste="setTimeout(takePaste, 0)" /></td></tr>
+      <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden</span></td></tr>
+      <tr><td class="attr">Ziel</td><td class="row" style="position:relative">
+        <input v-if="!target" v-model="targetQ" type="search" placeholder="🔍 Gruppe oder Produkt — wohin neue Zeilen kommen" @focus="targetPick = true" @input="targetPick = true" @keydown.esc="targetPick = false" />
+        <span v-else class="chip" :title="target.id">{{ icon(target.role) }} {{ target.label }} <button @click="target = null; targetQ = ''" title="Ziel weg">×</button></span>
+        <div v-if="!target && targetPick && targets.length" class="picker" style="position:absolute;left:4px;top:28px;z-index:5;width:380px">
+          <div v-for="r in targets" :key="r.id" class="pick" @mousedown.prevent="pickTarget(r)">{{ icon(r.role) }} {{ r.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ r.id }}</span></div>
+        </div>
+      </td></tr>
+      <tr><td class="attr">Neue als</td><td><select v-model="role" title="Rolle neuer Zeilen" @change="planned = null" style="width:100%">
+        <option value="">automatisch (unter Gruppe → Produkt, unter Produkt → Variante)</option><option value="group">▣ Gruppen</option><option value="product">▦ Produkte</option><option value="variant">◆ Varianten</option>
+      </select></td></tr>
+      <tr><td class="attr">Kennung</td><td><input v-model="external" type="text" placeholder="System der externen Kennung (z. B. erp) — findet vorhandene Knoten" @change="resuggest" /></td></tr>
+    </ImportHead>
     <div class="scroll">
-      <div class="section">
-        <h2>1 · Datei <span class="muted">· {{ plugins.importers.length ? plugins.importers.map(i => i.label).join(', ') : 'CSV/JSON eingebaut' }}<template v-if="!plugins.importers.some(i => (i.accept ?? []).includes('.xlsx'))"> · Excel braucht das Plugin xlsx</template></span></h2>
-        <div class="drop" :class="{ over: dragOver }" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
-          <label class="primary btn">📂 Datei wählen<input type="file" style="display:none" @change="takeFile($event.target.files[0])" /></label>
-          <span class="muted">oder hierher ziehen — CSV, TSV, JSON{{ plugins.importers.length ? ', ' + plugins.importers.flatMap(i => i.accept ?? []).join(', ') : '' }}</span>
-          <span class="grow" />
-          <textarea v-model="pasteText" placeholder="… oder aus Excel kopieren und hier einfügen (erste Zeile = Spaltennamen)" rows="1" style="width:320px" @paste="setTimeout(takePaste, 0)"></textarea>
-        </div>
-        <div v-if="source" class="chips" style="margin-top:6px">
-          <span class="chip">📄 {{ source.name }}</span>
-          <select v-if="source.sheets?.length > 1" :value="source.sheet" @change="pickSheet($event.target.value)" title="Blatt"><option v-for="s in source.sheets" :key="s.name" :value="s.name">{{ s.name }} ({{ s.rows.length }})</option></select>
-          <span class="muted">{{ source.rows.length }} Zeilen · {{ source.columns.length }} Spalten</span>
-          <button class="x" @click="resuggest" title="Zuordnung neu vorschlagen">↻</button>
-        </div>
-      </div>
-
-      <div class="section">
-        <h2>2 · Ziel <span class="muted">· wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden</span></h2>
-        <div class="chips">
-          <span style="position:relative">
-            <input v-model="targetQ" type="search" placeholder="🔍 Gruppe oder Produkt" style="width:280px" @focus="targetPick = true" @input="targetPick = true" @keydown.esc="targetPick = false" />
-            <div v-if="targetPick && targets.length" class="picker" style="position:absolute;z-index:5;width:380px">
-              <div v-for="r in targets" :key="r.id" class="pick" @mousedown.prevent="pickTarget(r)">{{ icon(r.role) }} {{ r.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ r.id }}</span></div>
-            </div>
-          </span>
-          <span v-if="target" class="chip" :title="target.id">{{ icon(target.role) }} {{ target.label }} <button @click="target = null; targetQ = ''" title="Ziel weg">×</button></span>
-          <select v-model="role" title="Rolle neuer Zeilen" @change="planned = null">
-            <option value="">automatisch (Gruppe → Produkt, Produkt → Variante)</option><option value="group">▣ Gruppen</option><option value="product">▦ Produkte</option><option value="variant">◆ Varianten</option>
-          </select>
-          <input v-model="external" type="text" placeholder="System der Kennung (z. B. erp)" style="width:180px" title="Spalten mit externer Kennung finden vorhandene Knoten über ExternalLinked" @change="resuggest" />
-        </div>
-        <div v-if="!keyColumn && source" class="muted" style="font-size:12px;margin-top:4px">⚠ Keine Schlüsselspalte (Id, SKU, Kennung) — jede Zeile wird neu angelegt.</div>
-      </div>
+      <div v-if="!keyColumn && source" class="muted" style="font-size:12px;padding:6px 8px">⚠ Keine Schlüsselspalte (Id, SKU, Kennung) — jede Zeile wird neu angelegt.</div>
 
       <div class="section" v-if="source">
-        <h2>3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span></h2>
+        <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span></h2>
         <table class="grid map">
           <thead><tr><th style="width:170px">Spalte</th><th>Beispiele</th><th style="width:130px">Ziel</th><th style="width:220px">Attribut</th><th style="width:60px">Sprache</th><th style="width:150px">Warum</th></tr></thead>
           <tbody>
@@ -198,7 +182,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
   </div>
   <Splitter v-model="leftW" :min="480" :max="1400" />
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>Plan</h1>
+    <div class="toolbar"><h1>4 · Plan</h1>
       <button class="primary" :disabled="!source || !!busy" @click="analyse">analysieren</button>
       <button class="primary" :disabled="!planned || !!busy || !planned.commands.length" @click="run" :title="planned ? `${planned.commands.length} Befehle schreiben` : 'erst analysieren'">▶ schreiben</button>
       <span class="grow" /><span class="muted">{{ store.actor ? '👤 ' + store.actor : '👤 Name fehlt' }}</span>
@@ -223,9 +207,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 .section { padding: 8px; border-bottom: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; }
 .section h2 .muted { font-weight: 400; }
-.drop { display: flex; align-items: center; gap: 8px; padding: 8px; border: 1px dashed var(--line); border-radius: 6px; }
-.drop.over { border-color: var(--accent); background: var(--accent-soft); }
-.btn { display: inline-block; padding: 3px 10px; border-radius: 6px; cursor: pointer; }
+.drop.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.btn { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer; }
 .map td { vertical-align: top; padding: 3px 4px; }
 .map tr.off td { opacity: .5; }
 .samples { font-size: 11px; white-space: normal; max-width: 260px; }

@@ -11,7 +11,7 @@ import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKI
 import { recent, remember } from '../recent.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
-import ProfileBar from '../components/ProfileBar.vue'
+import ImportHead from '../components/ImportHead.vue'
 import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
@@ -322,20 +322,15 @@ async function run() {
 
 <template>
   <div class="pane" :style="`width:${srcW}px;flex:none`">
-    <div class="toolbar"><h1>⇩ Quelle: Solr</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
-    <div class="toolbar sources">
-      <router-link v-if="plugins.enabled('ixp')" to="/import" class="view-chip">IXP</router-link>
-      <router-link to="/import/solr" class="view-chip on">Solr</router-link>
-      <router-link to="/import/table" class="view-chip">Tabelle</router-link>
-      <span class="grow" /><ProfileBar plugin="solr" :get="profileGet" :set="profileSet" /><router-link v-if="plugins.loaded && !plugins.enabled('solr')" to="/plugins" class="warn" title="Plugin solr ist aus">⌁ aus</router-link><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span>
-    </div>
-    <div class="form">
-      <div class="row">
-        <input v-model="base" type="text" list="solr-recent" placeholder="https://…/solr/<kern>" title="URL des Solr-Kerns — Pfeil ab: zuletzt benutzte" style="flex:1" @keydown.enter="connect" />
+    <ImportHead source="solr" plugin="solr" :busy="busy" :get="profileGet" :set="profileSet">
+      <template #status><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span></template>
+      <tr><td class="attr">Quelle</td><td class="row">
+        <input v-model="base" type="text" list="solr-recent" placeholder="https://…/solr/<kern>" title="URL des Solr-Kerns — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />
         <datalist id="solr-recent"><option v-for="u in recentBases" :key="u" :value="u" /></datalist>
         <button class="primary" @click="connect" :disabled="!!busy">Verbinden</button>
-      </div>
-    </div>
+      </td></tr>
+    </ImportHead>
+    <div class="step-band">2 · Auswahl <span class="muted">· Haken = Teilbaum, Klick zeigt den Knoten</span><span class="grow" /><span class="muted">{{ checked.size }} gewählt</span></div>
     <div class="scroll src">
       <div v-for="r in visible" :key="r.doc.id" class="node" :class="[roleOf(r.doc), { on: checked.has(r.doc.id) || checkedAbove(r), current: current?.id === r.doc.id }]"
         :style="`padding-left:${6 + r.depth * 14}px`" :title="r.doc.master_id" tabindex="0" :data-id="r.doc.id" @click="show(r)" @keydown="onKey($event, r)">
@@ -379,9 +374,9 @@ async function run() {
   </div>
 
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>Plan</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button><button class="primary" @click="run" :disabled="!plan || !!busy">Schreiben</button></div>
+    <div class="toolbar"><h1>3 · Plan</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button><button class="primary" @click="run" :disabled="!plan || !!busy">Schreiben</button></div>
     <div class="scroll">
-      <table class="grid form-grid">
+      <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
         <tbody>
           <tr><td class="muted">Ziel ▣</td><td>
             <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
@@ -476,8 +471,10 @@ async function run() {
 .node.variant .icon { color: var(--warn); }
 .label { overflow: hidden; text-overflow: ellipsis; }
 .count { margin-left: auto; font-size: 11px; }
-.form-grid td { white-space: normal; vertical-align: middle; height: 34px; }
-.form-grid select { margin-right: 8px; }
+.form-grid { width: 100%; }
+.form-grid td { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px; }
+.form-grid td:first-child { padding-left: 8px; white-space: nowrap; }
+.form-grid select { margin-right: 8px; min-width: 220px; }
 .val { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }

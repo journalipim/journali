@@ -10,7 +10,7 @@ import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode } from '../ixp.js'
 import { recent, remember } from '../recent.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
-import ProfileBar from '../components/ProfileBar.vue'
+import ImportHead from '../components/ImportHead.vue'
 import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
@@ -241,22 +241,18 @@ function toggleLocale(l) {
 
 <template>
   <div class="pane" :style="`width:${srcW}px;flex:none`">
-    <div class="toolbar"><h1>⇩ Quelle: IXP</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
-    <div class="toolbar" style="gap:4px">
-      <router-link to="/import" class="view-chip on">IXP</router-link>
-      <router-link v-if="plugins.enabled('solr')" to="/import/solr" class="view-chip">Solr</router-link>
-      <router-link to="/import/table" class="view-chip">Tabelle</router-link>
-      <span class="grow" /><ProfileBar plugin="ixp" :get="profileGet" :set="profileSet" /><router-link v-if="plugins.loaded && !plugins.enabled('ixp')" to="/plugins" class="warn" title="Plugin ixp ist aus">⌁ aus</router-link>
-    </div>
-    <div class="form">
-      <input v-model="base" type="text" list="ixp-recent" placeholder="https://…/api" title="Basis-URL der IXP-API — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />
-      <datalist id="ixp-recent"><option v-for="u in recentBases" :key="u" :value="u" /><option v-if="!recentBases.includes(IXP_DEMO)" :value="IXP_DEMO">Demo</option></datalist>
-      <div class="row">
-        <input v-model="token" type="password" placeholder="Token (leer für Demo)" style="flex:1" />
-        <select v-model="lang" title="Sprache zum Blättern"><option v-for="l in (languages.length ? languages : [{ code: lang }])" :key="l.code" :value="l.code">{{ l.code }}</option></select>
-        <button class="primary" @click="connect" :disabled="!!busy">Verbinden</button>
-      </div>
-    </div>
+    <ImportHead source="ixp" plugin="ixp" :busy="busy" :get="profileGet" :set="profileSet">
+      <tr><td class="attr">Quelle</td><td>
+        <input v-model="base" type="text" list="ixp-recent" placeholder="https://…/api" title="Basis-URL der IXP-API — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />
+        <datalist id="ixp-recent"><option v-for="u in recentBases" :key="u" :value="u" /><option v-if="!recentBases.includes(IXP_DEMO)" :value="IXP_DEMO">Demo</option></datalist>
+      </td></tr>
+      <tr><td class="attr">Token</td><td><input v-model="token" type="password" placeholder="leer für die Demo" title="bleibt im Browser, nicht im Profil" /></td></tr>
+      <tr><td class="attr">Sprache</td><td class="row">
+        <select v-model="lang" title="Sprache zum Blättern" style="width:90px"><option v-for="l in (languages.length ? languages : [{ code: lang }])" :key="l.code" :value="l.code">{{ l.code }}</option></select>
+        <span class="grow" /><button class="primary" @click="connect" :disabled="!!busy">Verbinden</button>
+      </td></tr>
+    </ImportHead>
+    <div class="step-band">2 · Auswahl <span class="muted">· Haken = Teilbaum</span><span class="grow" /><span class="muted">{{ checked.size }} gewählt</span></div>
     <div class="scroll src">
       <div v-for="r in visible" :key="r.doc.id" class="node" :class="[r.doc.type, { on: checked.has(r.doc.id) || checkedAbove(r) }]" :style="`padding-left:${6 + r.depth * 14}px`" :title="r.doc.masterId">
         <span class="twisty" @click="toggle(r)">{{ r.doc.type === 'productVariant' ? '' : (expanded.has(r.doc.id) ? '▾' : '▸') }}</span>
@@ -271,9 +267,9 @@ function toggleLocale(l) {
 
   <Splitter v-model="srcW" :min="240" :max="800" />
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>Zuordnung</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button></div>
+    <div class="toolbar"><h1>3 · Zuordnung</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button></div>
     <div class="scroll">
-      <table class="grid form-grid">
+      <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
         <tbody>
           <tr><td class="muted">Ziel ▣</td><td>
             <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
@@ -315,7 +311,7 @@ function toggleLocale(l) {
   </div>
 
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>Vorschau</h1><span class="grow" /><button class="primary" @click="run" :disabled="!plan || !!busy">Schreiben</button></div>
+    <div class="toolbar"><h1>4 · Plan</h1><span class="grow" /><button class="primary" @click="run" :disabled="!plan || !!busy">Schreiben</button></div>
     <div class="scroll">
       <table v-if="plan" class="grid" style="width:auto">
         <thead><tr><th></th><th class="num pos">neu</th><th class="num">vorhanden</th></tr></thead>
@@ -359,8 +355,10 @@ function toggleLocale(l) {
 .node.product .icon { color: var(--accent); }
 .node.productVariant .icon { color: var(--warn); }
 .label { overflow: hidden; text-overflow: ellipsis; }
-.form-grid td { white-space: normal; vertical-align: middle; height: 34px; }
-.form-grid select { margin-right: 8px; }
+.form-grid { width: 100%; }
+.form-grid td { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px; }
+.form-grid td:first-child { padding-left: 8px; white-space: nowrap; }
+.form-grid select { margin-right: 8px; min-width: 220px; }
 .view-chip.off { opacity: .4; cursor: default; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }

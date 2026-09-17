@@ -260,6 +260,10 @@ table.values, table.rows { table-layout: fixed; }
 .cell-box.disabled { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--hatch) 4px, var(--hatch) 5px); border-color: transparent; cursor: default; pointer-events: none; }
 .cell-box.dirty { background: var(--dirty); }
 .cell-box.locked { color: var(--muted); cursor: default; background: transparent; border-color: transparent; }
+/* Schritt-Band (Import: 1 · Quelle, 2 · Auswahl, 3 · Zuordnung, 4 · Plan) — wie die Abschnittsbänder am Knoten */
+.step-band { display: flex; align-items: center; gap: 8px; height: 26px; padding: 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); color: var(--text); white-space: nowrap; }
+.step-band .muted { font-weight: 400; }
+.step-band .grow { flex: 1; }
 .view-chip { border: 1px solid var(--line); border-radius: 12px; padding: 1px 8px; background: var(--pane); color: var(--muted); cursor: pointer; }
 .view-chip.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-soft); }
 /* Gleiche Masse wie .cell-box, damit die Zelle beim Bearbeiten nicht springt. */
