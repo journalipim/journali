@@ -378,10 +378,10 @@ function onDialogKey(e) {
           <tr v-if="linkType && link.target"><td class="attr">Richtung</td><td class="dirs">
             <label :class="{ on: link.dir === 'target-first' }"><input type="radio" value="target-first" v-model="link.dir" />
               <b>{{ link.target.label }}</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ pickedRows.length }} Einträge</b>
-              <span v-if="!linkType.symmetric" class="muted"> · die Einträge sind „{{ linkType.reverse?.de || '…' }}“ {{ link.target.label }}</span></label>
+              <div v-if="!linkType.symmetric" class="muted reading">die Einträge sind „{{ linkType.reverse?.de || '…' }}“ {{ link.target.label }}</div></label>
             <label v-if="!linkType.symmetric" :class="{ on: link.dir === 'set-first' }"><input type="radio" value="set-first" v-model="link.dir" />
               <b>{{ pickedRows.length }} Einträge</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ link.target.label }}</b>
-              <span class="muted"> · {{ link.target.label }} ist „{{ linkType.reverse?.de || '…' }}“ jedes Eintrags</span></label>
+              <div class="muted reading">{{ link.target.label }} ist „{{ linkType.reverse?.de || '…' }}“ jedes Eintrags</div></label>
           </td></tr>
         </tbody></table>
         <div class="scroll" style="max-height:340px">
@@ -482,6 +482,7 @@ function onDialogKey(e) {
 .node.picked .label::after { content: ' ☑'; color: var(--warn); font-size: 10px; }
 .dirs label { display: block; padding: 4px 6px; border-radius: 4px; cursor: pointer; }
 .dirs label.on { background: var(--accent-soft); }
+.dirs .reading { font-size: 12px; padding-left: 22px; }
 .picker { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px; }
 .pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
 .pick:hover { background: var(--hover); }
