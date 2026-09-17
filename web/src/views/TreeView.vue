@@ -21,7 +21,7 @@ const search = ref(null)
 const hits = ref(new Map())   // Server-Suche: id → Fundstelle
 // Suche mit Bedingungen (Taloan): Chips key:value in der Zeile; Vorschläge am Cursor wie in einer IDE —
 // ohne ':' die Schlüssel, danach die passenden Werte. Kein Formular (Taloan: "gut gemeint, schlecht gemacht").
-const hasTerms = computed(() => /(^|\s)[a-z]+:/.test(q.value))
+const hasTerms = computed(() => /(^|\s)-?[a-z]+:/.test(q.value))
 const KEYS = [
   ['attr:', 'Attribut hat eigenen Wert · =Muster · = leer'], ['empty:', 'fehlt, auch geerbt nicht (Attribut/Sprache)'],
   ['incomplete:', 'Vollständigkeit nicht erreicht (Kanal)'], ['role:', 'Gruppe / Produkt / Variante'],
@@ -41,11 +41,16 @@ function suggest() {
   const t = tokenAt(); if (!t) { sugg.value = []; return }
   const tok = t.token, m = store.model, out = []
   const day = d => new Date(Date.now() - d * 864e5).toISOString().slice(0, 10)
-  if (!tok.includes(':')) {
-    const low = tok.toLowerCase()
-    for (const [k, h] of KEYS) if (!low || k.startsWith(low)) out.push({ value: k, label: k, hint: h })
+  const neg = tok.startsWith('-') ? '-' : ''
+  const word = neg ? tok.slice(1) : tok
+  if (!word.includes(':')) {
+    const low = word.toLowerCase()
+    // Schlüssel nur, wenn das Feld leer ist oder gerade ein Schlüssel getippt wird — nicht nach jedem Chip
+    if (!low && q.value.trim()) { sugg.value = []; return }
+    for (const [k, h] of KEYS) if (!low || k.startsWith(low)) out.push({ value: neg + k, label: neg + k, hint: neg ? 'NICHT: ' + h : h })
+    if (!low) out.push({ value: '-', label: '-', hint: 'Minus davor verneint: -empty:x, -role:variant, -Wort' })
   } else {
-    const [key, rest] = [tok.slice(0, tok.indexOf(':') + 1), tok.slice(tok.indexOf(':') + 1)]
+    const [key, rest] = [word.slice(0, word.indexOf(':') + 1), word.slice(word.indexOf(':') + 1)]
     const low = rest.toLowerCase()
     const attrs = (m?.attributes ?? []).filter(a => !low || a.key.toLowerCase().includes(low) || (a.label?.de ?? '').toLowerCase().includes(low))
     if (key === 'attr:' && !rest.includes('=')) {
@@ -64,11 +69,11 @@ function suggest() {
     else if (key === 'since:') for (const [d, l] of [[0, 'heute'], [1, 'seit gestern'], [7, 'letzte 7 Tage'], [30, 'letzte 30 Tage']]) out.push({ value: `since:${day(d)}`, label: l, hint: day(d) })
     else if (key === 'by:' && store.actor && store.actor.toLowerCase().startsWith(low)) out.push({ value: `by:${store.actor}`, label: `👤 ${store.actor}`, hint: 'ich' })
   }
-  sugg.value = out; suggIdx.value = 0
+  sugg.value = neg ? out.map(s => s.value.startsWith('-') ? s : { ...s, value: '-' + s.value, label: '¬ ' + s.label }) : out; suggIdx.value = 0
 }
 function accept(s) {
   const t = tokenAt(); if (!t) return
-  const tail = /[:=/]$/.test(s.value) ? '' : ' '
+  const tail = /[:=/-]$/.test(s.value) ? '' : ' '
   q.value = q.value.slice(0, t.start) + s.value + tail + q.value.slice(t.end).replace(/^\s+/, '')
   nextTick(() => { const pos = t.start + s.value.length + tail.length; search.value?.setSelectionRange(pos, pos); suggest() })
 }
@@ -83,7 +88,7 @@ function onSearchKey(e) {
   if (e.key === 'Escape') { q.value = '' }
 }
 // Erkannte Bedingungen als Chips (× nimmt sie raus); freier Text bleibt nur in der Zeile
-const terms = computed(() => q.value.split(/\s+/).filter(w => /^[a-z]+:/.test(w)))
+const terms = computed(() => q.value.split(/\s+/).filter(w => /^-?[a-z]+:/.test(w)))
 function dropTerm(t) { q.value = q.value.split(/\s+/).filter(w => w !== t).join(' ') }
 let searchTimer = null
 const list = ref(null)
@@ -101,7 +106,7 @@ const selected = computed(() => props.id ? tree.byId.get(props.id) : null)
 watch(q, v => {
   clearTimeout(searchTimer)
   const s = v.trim()
-  if (s.length < 2 && !/^[a-z]+:/.test(s)) { hits.value = new Map(); return }
+  if (s.length < 2 && !/^-?[a-z]+:/.test(s)) { hits.value = new Map(); return }
   searchTimer = setTimeout(async () => {
     try { hits.value = new Map((await api.get(`/api/search?q=${encodeURIComponent(s)}`)).map(h => [h.row.id, h.hit])) }
     catch (e) { store.toast(e.message) }
@@ -441,7 +446,7 @@ function onDialogKey(e) {
       </div>
     </div>
     <div v-if="terms.length" class="chips terms">
-      <span v-for="t in terms" :key="t" class="chip mono" :title="t">{{ t }}<button @click="dropTerm(t)" title="Bedingung entfernen">×</button></span>
+      <span v-for="t in terms" :key="t" class="chip mono" :class="{ not: t.startsWith('-') }" :title="t.startsWith('-') ? 'verneint — Klick dreht um' : 'Klick verneint (Gegenteil)'" @click="q = q.split(/\s+/).map(w => w === t ? (t.startsWith('-') ? t.slice(1) : '-' + t) : w).join(' ')">{{ t }}<button @click.stop="dropTerm(t)" @click="dropTerm(t)" title="Bedingung entfernen">×</button></span>
     </div>
     <div class="toolbar create">
       <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label}` : 'Gruppe an der Wurzel'">+ ▣</button>
@@ -567,6 +572,8 @@ function onDialogKey(e) {
 .sugg-row.on { background: var(--accent-soft); }
 .sugg-row .mono { font-size: 11px; }
 .terms { padding: 4px 8px; border-bottom: 1px solid var(--line); font-size: 12px; }
+.terms .chip { cursor: pointer; }
+.terms .chip.not { border-color: var(--neg); color: var(--neg); }
 .x.on { color: var(--accent); }
 .create button { min-width: 40px; }
 .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: center; z-index: 5; }

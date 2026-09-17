@@ -423,8 +423,10 @@ Knoten Sicht je Knotentyp, ☰ flach / ⧉ Reiter, ✎ nur bearbeitbare.
 
 Die Textsuche findet Text; die Frage „wo steht bei Attribut X überhaupt
 etwas?" ist eine Frage nach der Struktur. Deshalb im Baum-Suchfeld Chips
-`key:value` (englisch, alles UND), aufklappbar mit Baukasten, der dieselben
-Chips schreibt: `attr:function` (eigener Wert da) · `attr:function=*sku*`
+`key:value` (englisch, alles UND) mit Vorschlägen am Cursor (Schlüssel, dann
+Werte — der Baukasten war „gut gemeint, schlecht gemacht“, Taloan); ein Minus
+davor verneint (`-empty:function`, `-role:variant`, `-Wort` — Taloan: „das
+Gegenteil“), Klick auf den Chip dreht um: `attr:function` (eigener Wert da) · `attr:function=*sku*`
 (Muster) · `attr:x=` (kein eigener Wert) · `empty:name/en` (auch geerbt
 nichts) · `incomplete:web` · `role:variant` · `status:active` ·
 `group:logistics` (gilt hier) · `under:<id>` · `by:Taloan` ·
