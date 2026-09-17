@@ -71,7 +71,8 @@ public static class TreeApi
         api.MapPut("/nodes/{id}/groups", (string id, GroupsAttached b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AttachGroups(x, id, b.Groups)));
         api.MapPost("/variants", (VariantCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateVariant(x, b.Product, b.AxisValues)));
         api.MapPost("/nodes/{id}/move", (string id, NodeMoved b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Move(x, id, b.Parent)));
-        api.MapDelete("/nodes/{id}", (string id, bool recursive, HttpRequest req, Catalog c) =>
+        // recursive ohne Vorgabe = Pflichtparameter: ohne ?recursive antwortete ASP.NET mit 400 als Text („Microsoft.AspNetCore…“), Taloan
+        api.MapDelete("/nodes/{id}", (string id, HttpRequest req, Catalog c, bool recursive = false) =>
         {
             if (!recursive) return Run(req, c, x => Commands.Retire(x, id));
             // Unterbaum: tiefste zuerst, alles in einem Stapel — Rückgängig je Aktion.
@@ -88,7 +89,7 @@ public static class TreeApi
             });
             return result.Count < 0 ? Results.NotFound() : Results.Ok(new { retired = result.Count, batch = result.Batch });
         });
-        api.MapPost("/nodes/{id}/duplicate", (string id, bool deep, HttpRequest req, Catalog c) =>
+        api.MapPost("/nodes/{id}/duplicate", (string id, HttpRequest req, Catalog c, bool deep = false) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             var batch = "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();

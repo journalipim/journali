@@ -15,7 +15,9 @@ async function request(method, path, body) {
   const text = await res.text()
   // HTML statt JSON = der Server kennt diesen Pfad nicht und liefert die Oberfläche aus — fast immer eine alte Serverfassung.
   if (text.trimStart().startsWith('<')) throw new Error(`Server kennt ${method} ${path.split('?')[0]} nicht — Server neu starten (tools\\server restart)?`)
-  const data = text ? JSON.parse(text) : null
+  // kein JSON (Ausnahme oder 400 als Text vom Server): die erste Zeile als Meldung, nicht „Unexpected token“ (Taloan)
+  let data = null
+  try { data = text ? JSON.parse(text) : null } catch { throw new Error(`${res.status}: ${text.split(/\r?\n/)[0].slice(0, 200)}`) }
   if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
   return data
 }
