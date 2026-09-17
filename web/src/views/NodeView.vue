@@ -130,7 +130,7 @@ const starOwn = key => star(key)?.from === props.id
 function starTitle(def) {
   const s = star(def.key)
   if (!s) return `☆ ab hier nach unten mit ${def.label?.de || def.key} benennen`
-  const where = s.from === props.id ? 'ab hier' : `von ${s.fromLabel}`
+  const where = s.from === props.id ? 'hier gesetzt, gilt ab hier nach unten' : `geerbt von ${s.fromLabel} — gilt, bis hier ein eigenes gesetzt wird`
   const applies = s.applies ? '' : ` — gilt hier nicht (erst wo ${def.label?.de || def.key} erfasst wird), bis dahin zählt das nächste ★ weiter oben`
   return `★ benennt ${where}${applies} — Klick ${s.from === props.id ? 'nimmt es weg' : 'setzt es hier neu'}`
 }
@@ -399,11 +399,11 @@ function cellMenu(e, def, col, block) {
 .group-row .from { text-transform: none; font-weight: 400; letter-spacing: 0; }
 .group-row.locked td { color: var(--warn); }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* ★ Name im Baum: hohl = möglich, gefüllt = gesetzt (geerbt gedämpft, hier gesetzt in Warnfarbe, gilt hier nicht = halb durchsichtig) */
+/* ★ Name im Baum: hohl = nicht gesetzt, blau = geerbt (von oben), gelb = hier gesetzt, halb durchsichtig = gesetzt, gilt hier nicht (Taloan, 17.09.) */
 .star { border: 0; background: none; padding: 0 2px 0 0; color: var(--muted); opacity: .45; cursor: pointer; font-size: 12px; line-height: 1; }
 tr:hover .star { opacity: 1; }
 .star.idle { opacity: .5; }
-.star.on { opacity: 1; color: var(--muted); }
+.star.on { opacity: 1; color: var(--accent); }
 .star.own { color: var(--warn); }
 table.releases { width: auto; }
 table.releases td { text-align: center; }
