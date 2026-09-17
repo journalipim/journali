@@ -84,11 +84,16 @@ const rows = computed(() => {
   const m = model.value; if (!m) return []
   switch (section.value) {
     case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: g.label?.de, right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''], _: g })).sort(byKey)
-    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: a.label?.de, right: [TYPE_SYM[a.type] ?? a.type, a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + a.group : ''], _: a })).sort(byKey)
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: a.label?.de, right: [TYPE_SYM[a.type] ?? a.type, a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan)
     case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
-    case 'relationTypes': return (m.relationTypes ?? []).map(r => ({ key: r.key, label: r.label?.de, right: [(r.from ?? roles).map(icon).join('') + (r.symmetric ? '⇄' : '→') + (r.to ?? roles).map(x => x === 'media' ? '🖼' : icon(x)).join(''), r.group ? '▤ ' + groupLabel(r.group) : ''], _: r })).sort(byKey)   // Gruppe mit Label, nicht Key (Taloan: heisst überall gleich)
+    // rechts nur, was eingeschränkt ist — keine Symbolketten (Taloan: „komische Zeichen“): „→ Medium“, „Produkt → Variante“, „⇄ beidseitig“, Gruppe mit Label
+    case 'relationTypes': return (m.relationTypes ?? []).map(r => {
+      const names = xs => xs.map(x => x === 'media' ? 'Medium' : roleLabel[x] ?? x).join('/')
+      const ends = (r.from ? names(r.from) + ' ' : '') + (r.symmetric ? '⇄' : '→') + (r.to ? ' ' + names(r.to) : '')
+      return { key: r.key, label: r.label?.de, right: [r.from || r.to || r.symmetric ? ends + (r.symmetric ? ' beidseitig' : '') : '', r.group ? '▤ ' + groupLabel(r.group) : ''], _: r }
+    }).sort(byKey)
     case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : ''] }))
     case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [] }))
   }
