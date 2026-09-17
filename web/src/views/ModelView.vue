@@ -172,7 +172,15 @@ const saveItems = items => put(`/api/model/views/${currentView.value.key}`, { ..
 function viewGroupAdd() { const g = addViewGroup.value; if (!g) return; addViewGroup.value = ''; saveItems([...viewItems.value, { group: g }]) }
 function viewGroupRemove(g) { saveItems(viewItems.value.filter(it => it.group !== g)) }
 function viewFillAll() { saveItems((model.value.groups ?? []).map(g => ({ group: g.key }))) }
-const freeViewGroups = computed(() => (model.value.groups ?? []).map(g => g.key).filter(k => !viewItems.value.some(it => it.group === k)))
+// Gruppen, die noch nicht in der Sicht sind: erst die am Knotentyp der Sicht aktiven, dann die gesperrten (aktiv erst tiefer).
+const DEPTH = { group: 0, product: 1, variant: 2 }
+const activeAt = (g, role) => !g.activeFrom || DEPTH[role] >= DEPTH[g.activeFrom]
+const freeViewGroups = computed(() => {
+  const free = (model.value.groups ?? []).filter(g => !viewItems.value.some(it => it.group === g.key))
+  const level = selectedView.value?.level
+  return [...free.filter(g => activeAt(g, level)).map(g => ({ key: g.key, locked: false })),
+          ...free.filter(g => !activeAt(g, level)).map(g => ({ key: g.key, locked: true, from: g.activeFrom }))]
+})
 // Attribute einer Gruppe in der Reihenfolge der Sicht; neu zugeordnete hängen unten an.
 function orderedAttrs(it) {
   const all = model.value.groups.find(g => g.key === it.group)?.attributes ?? []
@@ -315,7 +323,7 @@ const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, 
       <div class="toolbar" style="border-top:1px solid var(--line)">
         <h1 class="mono">{{ selectedView ?? '— Sicht wählen' }}</h1><span class="muted">{{ viewItems.length }} Gruppen · Drag & Drop: Gruppen und Attribute darin</span><span class="grow" />
         <button v-if="currentView" @click="viewFillAll" title="alle Gruppen">⇊ alle Gruppen</button>
-        <select v-model="addViewGroup" :disabled="!selectedView" style="width:150px"><option value="">▤ Gruppe …</option><option v-for="k in freeViewGroups" :key="k" :value="k">{{ k }}</option></select>
+        <select v-model="addViewGroup" :disabled="!selectedView" style="width:190px"><option value="">▤ Gruppe …</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
         <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">+ dazu</button>
       </div>
       <div class="scroll viewedit">
