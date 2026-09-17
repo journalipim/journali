@@ -436,7 +436,7 @@ function cellMenu(e, def, col, block) {
           </tr>
           <template v-for="def in b.defs" :key="def.key">
           <tr v-if="def.type === 'formula' || def.type === 'template'">
-            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></td>
+            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
               <td v-if="!enabled(def, c, b)" class="cell"><div class="cell-box disabled" /></td>
               <td v-else class="cell">
@@ -450,7 +450,7 @@ function cellMenu(e, def, col, block) {
             </template>
           </tr>
           <tr v-else-if="def.type === 'rows'">
-            <td class="attr" :title="def.key"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
+            <td class="attr" :title="def.key"><div class="nm"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></div></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
                 @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
@@ -459,7 +459,7 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <tr v-else>
-            <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')">
+            <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')"><div class="nm">
               <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
               <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
@@ -467,7 +467,7 @@ function cellMenu(e, def, col, block) {
               <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
               <span v-if="def.inheritable" class="muted" title="vererbbar: gilt nach unten">↓</span>
               <span v-if="def.required" class="warn" title="Pflicht">●</span>
-            </td>
+            </div></td>
             <template v-for="c in columns" :key="c.label">
               <ToggleCell v-if="def.type === 'boolean'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <SelectCell v-else-if="def.type === 'enum'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
@@ -686,7 +686,8 @@ td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* technischer Key neben der Bezeichnung: abgegraut, Schreibmaschine (Taloan) */
 td.attr .key { font-family: var(--mono); font-size: 11px; margin-left: 6px; flex: 0 0 auto; }
 /* Namenszelle als Zeile: Bezeichnung darf mit Ellipse enden, der Key nie (Taloan: nicht raten) */
-td.attr { display: flex; align-items: center; gap: 4px; }
+/* die Zelle bleibt Tabellenzelle (sonst stimmen die Zeilenhöhen nicht mehr, Taloan) — der Flex-Kasten ist ein Div darin */
+td.attr .nm { display: flex; align-items: center; gap: 4px; min-width: 0; }
 td.attr .lbl { flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* ★ Name im Baum: hohl = nicht gesetzt, blau = geerbt (von oben), gelb = hier gesetzt, halb durchsichtig = gesetzt, gilt hier nicht (Taloan, 17.09.) */
 .star { border: 0; background: none; padding: 0 2px 0 0; color: var(--muted); opacity: .45; cursor: pointer; font-size: 12px; line-height: 1; }
