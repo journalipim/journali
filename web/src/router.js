@@ -3,6 +3,7 @@ import TreeView from './views/TreeView.vue'
 import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
 import ImportView from './views/ImportView.vue'
+import SolrView from './views/SolrView.vue'
 import SettingsView from './views/SettingsView.vue'
 
 export const router = createRouter({
@@ -15,6 +16,7 @@ export const router = createRouter({
     { path: '/journal', component: JournalView },
     { path: '/model', component: ModelView },
     { path: '/import', component: ImportView },
+    { path: '/import/solr', component: SolrView },
     { path: '/settings', component: SettingsView },
   ],
 })

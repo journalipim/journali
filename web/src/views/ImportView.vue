@@ -205,6 +205,10 @@ function toggleLocale(l) {
 <template>
   <div class="pane" style="width:340px;flex:none">
     <div class="toolbar"><h1>⇩ Quelle: IXP</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
+    <div class="toolbar" style="gap:4px">
+      <router-link to="/import" class="view-chip on">IXP</router-link>
+      <router-link to="/import/solr" class="view-chip">Solr</router-link>
+    </div>
     <div class="form">
       <input v-model="base" type="text" placeholder="https://…/api" title="Basis-URL der IXP-API" />
       <div class="row">

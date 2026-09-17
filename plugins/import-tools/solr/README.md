@@ -4,9 +4,18 @@ Stand 17.09.2026. Beispiel: `https://solr-admin.144-bytec.preview.infolox.tools/
 — Solr 7.7.3 im Standalone-Modus (kein SolrCloud), ein Kern `products`,
 123 453 Dokumente, nur `lang: de`, Markt `all`. Die Admin-Oberfläche unter
 `/solr/#/` ist eine Angular-App über derselben API; alles Nötige liefert
-`/solr/products/select` und `/solr/products/schema`. **Kein CORS**: der
-Browser darf nicht direkt lesen — deshalb ist das Werkzeug ein Skript
-(`solr_import.py`, nur Standardbibliothek), nicht eine Ansicht wie beim IXP.
+`/solr/products/select` und `/solr/products/schema`. **Kein CORS-Kopf** —
+aber Solr antwortet auf `json.wrf=<callback>` mit JSONP (Content-Type
+text/plain, kein `nosniff`), und das darf ein `<script>`-Tag laden. Darum
+gibt es zwei Werkzeuge mit derselben Abbildung:
+
+- **⇩ Import → Solr** in der Oberfläche (`web/src/views/SolrView.vue`,
+  Client `web/src/solr.js`): Quellbaum aufklappen, Knoten anschauen (alles,
+  was er hat, und was davon wohin geht), Haken = Teilbaum, Analysieren,
+  Schreiben. Belegt 17.09.2026 im eingebauten Browser bis „Analysieren"
+  (PoE Switche: 3 Knoten, 41 neue Attribute in 10 Gruppen).
+- **`solr_import.py`** (nur Standardbibliothek) für die Kommandozeile und
+  grosse Läufe (`--since`, `--limit`).
 
 ## Was drin ist
 
