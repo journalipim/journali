@@ -8,11 +8,13 @@ import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKIP, TYPES } from '../solr.js'
+import { recent, remember } from '../recent.js'
 
 const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
 const base = ref(saved.base || 'https://solr-admin.144-bytec.preview.infolox.tools/solr/products')
 const target = ref(saved.target || '')
 const skipText = ref(saved.skip || '')
+const recentBases = ref(recent('solr'))
 const persist = () => localStorage.setItem('journali.import.solr', JSON.stringify({ base: base.value, target: target.value, skip: skipText.value, auto: connected.value }))
 
 let client = null
@@ -47,7 +49,7 @@ async function connect() {
     rows.value = roots.map(d => ({ doc: d, depth: 0, parent: null, loaded: false, kids: null }))
     expanded.value = new Set(); checked.value = new Set(); plan.value = null; result.value = null; current.value = null
     connected.value = true
-    persist()
+    persist(); recentBases.value = remember('solr', base.value)
     busy.value = 'lade Attribut-Definitionen …'
     pdefs.value = await client.propertyDefs()
     say(`verbunden: ${total.value} Dokumente, ${roots.length} Wurzeln, ${Object.keys(pdefs.value).length} Attribut-Definitionen`)
@@ -246,7 +248,8 @@ async function run() {
     </div>
     <div class="form">
       <div class="row">
-        <input v-model="base" type="text" placeholder="https://…/solr/<kern>" title="URL des Solr-Kerns" style="flex:1" @keydown.enter="connect" />
+        <input v-model="base" type="text" list="solr-recent" placeholder="https://…/solr/<kern>" title="URL des Solr-Kerns — Pfeil ab: zuletzt benutzte" style="flex:1" @keydown.enter="connect" />
+        <datalist id="solr-recent"><option v-for="u in recentBases" :key="u" :value="u" /></datalist>
         <button class="primary" @click="connect" :disabled="!!busy">Verbinden</button>
       </div>
     </div>

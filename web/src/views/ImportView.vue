@@ -7,6 +7,7 @@ import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode } from '../ixp.js'
+import { recent, remember } from '../recent.js'
 
 const saved = JSON.parse(localStorage.getItem('journali.import.ixp') || '{}')
 const base = ref(saved.base || IXP_DEMO)
@@ -14,6 +15,7 @@ const token = ref(saved.token || '')
 const lang = ref(saved.lang || 'de')
 const target = ref(saved.target || '')
 const importLocales = ref(saved.importLocales || null)
+const recentBases = ref(recent('ixp'))
 const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, importLocales: importLocales.value }))
 
 let client = null
@@ -47,7 +49,7 @@ async function connect() {
     rows.value = roots.map(d => ({ doc: d, depth: 0, parent: null, loaded: false }))
     expanded.value = new Set(); checked.value = new Set(); plan.value = null; result.value = null
     connected.value = true
-    persist()
+    persist(); recentBases.value = remember('ixp', base.value)
     say(`verbunden: ${languages.value.length} Sprachen, ${roots.length} Wurzeln (${lang.value})`)
     for (const r of [...rows.value]) await expand(r)   // Kopie: expand fügt Zeilen ein
   } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
@@ -210,7 +212,8 @@ function toggleLocale(l) {
       <router-link to="/import/solr" class="view-chip">Solr</router-link>
     </div>
     <div class="form">
-      <input v-model="base" type="text" placeholder="https://…/api" title="Basis-URL der IXP-API" />
+      <input v-model="base" type="text" list="ixp-recent" placeholder="https://…/api" title="Basis-URL der IXP-API — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />
+      <datalist id="ixp-recent"><option v-for="u in recentBases" :key="u" :value="u" /><option v-if="!recentBases.includes(IXP_DEMO)" :value="IXP_DEMO">Demo</option></datalist>
       <div class="row">
         <input v-model="token" type="password" placeholder="Token (leer für Demo)" style="flex:1" />
         <select v-model="lang" title="Sprache zum Blättern"><option v-for="l in (languages.length ? languages : [{ code: lang }])" :key="l.code" :value="l.code">{{ l.code }}</option></select>
