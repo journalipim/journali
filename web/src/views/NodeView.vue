@@ -62,6 +62,9 @@ const view = computed(() => views.value.find(v => v.key === store.viewKey[node.v
 const orderView = computed(() => view.value ?? views.value.find(v => v.key === 'defaultview_' + node.value?.role) ?? null)
 function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save() }
 function setLayout(l) { store.layout = l; store.save() }
+// Abschnitte (attributes, axes, media, relations, groups, categories, releases) per Klick aufs Band auf-/zuklappen (Taloan, 17.09.)
+const open = k => !store.collapsed.includes(k)
+function toggle(k) { store.collapsed = open(k) ? [...store.collapsed, k] : store.collapsed.filter(x => x !== k); store.save() }
 function toggleEditableOnly() { store.editableOnly = !store.editableOnly; store.save() }
 
 // ---- Die Gruppen, die hier gelten, in Sichtreihenfolge; darin die Attribute in Sichtreihenfolge
@@ -323,8 +326,11 @@ function cellMenu(e, def, col, block) {
       <span v-if="busy">…</span>
     </div>
 
-    <!-- Die Sicht (Sprachen, Kanal, Attributsicht, Anordnung) gehört zum Abschnitt Attribute — darum unter dessen Band (Taloan, 17.09.) -->
-    <h2 class="band">▤ Attribute <span class="muted">· {{ blocks.length }} Gruppen · {{ blocks.reduce((n, b) => n + b.defs.length, 0) }} Attribute</span></h2>
+    <div class="scroll" v-if="model">
+    <!-- Alles rollt mit, die Bänder kleben oben (sticky) — nichts verschwindet hinter einem festen Kopf (Taloan, 17.09.).
+         Die Sicht (Sprachen, Kanal, Attributsicht, Anordnung) gehört zum Abschnitt Attribute — darum unter dessen Band. -->
+    <h2 class="band" @click="toggle('attributes')"><span class="caret">{{ open('attributes') ? '▾' : '▸' }}</span>▤ Attribute <span class="muted">· {{ blocks.length }} Gruppen · {{ blocks.reduce((n, b) => n + b.defs.length, 0) }} Attribute</span></h2>
+    <template v-if="open('attributes')">
     <div class="toolbar view">
       <span class="muted">Sicht:</span>
       <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: store.viewLocales.includes(l) }" @click="toggleLocale(l)">{{ l }}</span>
@@ -348,7 +354,6 @@ function cellMenu(e, def, col, block) {
       <button v-for="b in blocks" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="`${b.key} · ${b.defs.length} Attribute` + (b.active ? '' : ` · gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`)">{{ b.label }}<span class="muted n"> {{ b.defs.length }}</span><span v-if="!b.active"> 🔒</span></button>
     </div>
 
-    <div class="scroll" v-if="model">
 
       <table class="grid values" :style="`width:${180 + columns.length * 220}px`">
         <colgroup><col style="width:180px" /><col v-for="c in columns" :key="c.label" style="width:220px" /></colgroup>
@@ -417,9 +422,11 @@ function cellMenu(e, def, col, block) {
         </tbody>
       </table>
       <div v-if="!blocks.length" class="empty">Keine Attributgruppe gilt hier — unten eine anhängen, oder oben am Pfad.</div>
+    </template>
 
       <div class="section" v-if="node.role === 'product'">
-        <h2>◆ Variantenachsen <span class="muted">· {{ node.children ? 'fest, seit Varianten da sind' : 'optional — je Achse bekommt jede Variante genau einen Wert, Kombination eindeutig' }}</span></h2>
+        <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· {{ node.children ? 'fest, seit Varianten da sind' : 'optional — je Achse bekommt jede Variante genau einen Wert, Kombination eindeutig' }}</span></h2>
+        <template v-if="open('axes')">
         <div class="chips">
           <span v-if="!node.axes.length" class="muted">keine — beliebig viele Varianten</span>
           <span v-for="k in node.axes" :key="k" class="chip">{{ axisLabel(k) }} <button v-if="!node.children" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg">×</button></span>
@@ -428,9 +435,11 @@ function cellMenu(e, def, col, block) {
             <button class="primary" :disabled="!addAxis" @click="setAxes([...node.axes, addAxis]); addAxis = ''">dazu</button>
           </template>
         </div>
+        </template>
       </div>
       <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files])">
-        <h2>🖼 Medien <span class="muted">· {{ mediaRels.length }} · Dateien hierher ziehen</span></h2>
+        <h2 @click="toggle('media')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>🖼 Medien <span class="muted">· {{ mediaRels.length }} · Dateien hierher ziehen</span></h2>
+        <template v-if="open('media')">
         <div class="tiles">
           <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${relType(r.type)?.label?.de || r.type}`">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
@@ -454,9 +463,11 @@ function cellMenu(e, def, col, block) {
           </div>
           <div v-if="!mediaPick.items.length" class="muted" style="padding:8px;font-size:12px">nichts</div>
         </div>
+        </template>
       </div>
       <div class="section">
-        <h2>⇄ Relationen <span class="muted">· {{ relCount }}</span></h2>
+        <h2 @click="toggle('relations')"><span class="caret">{{ open('relations') ? '▾' : '▸' }}</span>⇄ Relationen <span class="muted">· {{ relCount }}</span></h2>
+        <template v-if="open('relations')">
         <div v-for="b in relBlocks" :key="b.type" class="relblock">
           <table class="grid" style="width:auto">
             <thead><tr><th style="width:180px">{{ relType(b.type)?.label?.de || b.type }}</th><th style="width:260px"></th><th v-for="d in relGroupAttrs(b.type)" :key="d.key" style="width:140px" :title="d.key">{{ d.label?.de || d.key }}<span v-if="d.unit" class="muted"> {{ d.unit }}</span></th><th style="width:28px"></th></tr></thead>
@@ -486,15 +497,17 @@ function cellMenu(e, def, col, block) {
           <div v-for="m in relMatches" :key="m.id" class="pick" @click="newRel.to = m.id; newRel.q = m.label">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ m.sku ?? m.id }}</span></div>
           <div v-if="!relMatches.length" class="muted" style="padding:4px 8px;font-size:12px">nichts zu „{{ newRel.q }}“</div>
         </div>
+        </template>
       </div>
       <div class="section">
-        <h2>▤ Attributgruppen an diesem Knoten <span class="muted">· gelten ab hier nach unten</span></h2>
+        <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen an diesem Knoten <span class="muted">· gelten ab hier nach unten</span></h2>
+        <template v-if="open('groups')">
         <div class="chips">
           <span v-for="g in node.attachedGroups" :key="g" class="chip" :title="model.groups.find(x => x.key === g)?.label?.de">{{ g }} <button @click="attach(node.attachedGroups.filter(x => x !== g))" title="abhängen">×</button></span>
           <select v-model="addGroup" style="width:160px"><option value="">+ Gruppe …</option><option v-for="k in freeGroups" :key="k" :value="k">{{ k }}</option></select>
           <button class="primary" :disabled="!addGroup" @click="attachAdd">anhängen</button>
-          <span class="muted" v-if="node.groups?.some(g => g.from !== id)">· geerbt: {{ node.groups.filter(g => g.from !== id).map(g => g.key).join(', ') }}</span>
         </div>
+        </template>
       </div>
 
       <div class="section" v-if="node.orphans?.length">
@@ -503,15 +516,18 @@ function cellMenu(e, def, col, block) {
       </div>
 
       <div class="section">
-        <h2>▤ Kategorien</h2>
+        <h2 @click="toggle('categories')"><span class="caret">{{ open('categories') ? '▾' : '▸' }}</span>▤ Kategorien</h2>
+        <template v-if="open('categories')">
         <div class="chips">
           <span v-for="c in node.categories" :key="c" class="chip">{{ c }} <button @click="removeCategory(c)" title="entfernen">×</button></span>
           <input v-model="newCategory" type="text" placeholder="+ Kategorie" style="width:180px" @keydown.enter="addCategory" />
         </div>
+        </template>
       </div>
 
       <div class="section" v-if="node.role !== 'group'">
-        <h2>✓ Freigaben <span class="muted">· Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig = keine Freigabe</span></h2>
+        <h2 @click="toggle('releases')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>✓ Freigaben <span class="muted">· Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig = keine Freigabe</span></h2>
+        <template v-if="open('releases')">
         <table class="grid releases">
           <thead><tr><th>Kanal</th><th v-if="node.role === 'variant'">*</th><th v-for="l in locales" :key="l">{{ l }}</th></tr></thead>
           <tbody>
@@ -528,6 +544,7 @@ function cellMenu(e, def, col, block) {
             </tr>
           </tbody>
         </table>
+        </template>
       </div>
     </div>
 
@@ -583,9 +600,13 @@ function cellMenu(e, def, col, block) {
 .pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
 .pick:hover { background: var(--hover); }
 /* Abschnittsüberschriften (Attribute, Medien, Relationen, …): oberste Stufe — Band in Akzentfarbe mit Oberkante */
-.section h2, h2.band { font-size: 12px; margin: 0; padding: 4px 8px; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); }
+.section h2, h2.band { font-size: 12px; margin: 0; padding: 0 8px; height: 26px; line-height: 24px; box-sizing: border-box; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent);
+  position: sticky; top: 0; left: 0; z-index: 3; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .section h2 { margin: 0 -8px 8px; }
 .section h2 .muted, h2.band .muted { font-weight: 400; }
+.section h2 .caret, h2.band .caret { display: inline-block; width: 14px; color: var(--muted); }
+/* Tabellenkopf klebt unter dem Band (26px) */
+table.values th { top: 26px; }
 /* Gruppenköpfe (Taloan, 17.09.): eine Stufe unter der Abschnittsüberschrift, darum nicht dasselbe Band —
    Zellton mit Akzentkante links, Name in Akzentfarbe; gesperrte zurückgenommen (gedämpft, 🔒). */
 .cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
