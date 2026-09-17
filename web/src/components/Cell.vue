@@ -12,6 +12,7 @@ const props = defineProps({
   origin: String,         // woher der geerbte Wert kommt (Anzeige im Tooltip)
   mark: String,           // kleines Zeichen rechts in der Zelle (⟳ = Übersetzung zu überarbeiten)
   markTitle: String,
+  clickEdit: { type: Boolean, default: true },   // false (Tabelle): Klick markiert nur, Doppelklick bearbeitet
 })
 const emit = defineEmits(['save'])
 
@@ -24,7 +25,8 @@ const box = ref(null)
 async function open(mode) {
   if (props.disabled) return
   const cur = props.value ?? ''
-  draft.value = mode === 'select' || mode === 'end' ? cur : cur + mode
+  // getipptes Zeichen: Knotenansicht hängt an, Tabelle (clickEdit=false) ersetzt wie Excel
+  draft.value = mode === 'select' || mode === 'end' ? cur : (props.clickEdit ? cur + mode : mode)
   editing.value = true
   await nextTick()
   input.value?.focus()
@@ -57,7 +59,7 @@ function onEditKey(e) {
 <template>
   <td class="cell">
     <div v-if="!editing" ref="box" class="cell-box" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
-      :tabindex="disabled ? undefined : 0" @click="open('end')" @keydown="onKey" :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : '')">
+      :tabindex="disabled ? undefined : 0" @click="clickEdit && open('end')" @dblclick="clickEdit || open('end')" @keydown="onKey" :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : '')">
       <template v-if="disabled"></template>
       <template v-else-if="value != null">{{ value }}</template>
       <template v-else-if="inherited != null">{{ inherited }}</template>

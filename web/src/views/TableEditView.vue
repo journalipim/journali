@@ -3,7 +3,7 @@
 // als Zeilen, Attribute als Spalten; Zellen wie in der Knotenansicht, Änderungen sammeln sich (gelb) und gehen als
 // ein Stapel ins Journal. Einfügen aus Excel (Tab-getrennt) füllt ab der markierten Zelle nach rechts und unten.
 // Quelle: GET /api/nodes/{id}/table — Werte aufgelöst (geerbt kursiv), eigene Werte kennt der Server (own).
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
@@ -128,12 +128,59 @@ function cellAt(el) {
   const tr = td.parentElement; const ri = rows.value.findIndex(r => r.row.id === tr.dataset.id); const ci = [...tr.children].indexOf(td) - FIXED
   return ri < 0 || ci < 0 ? null : { ri, ci }
 }
+// Maus wie in Excel (Taloan): Drücken und Ziehen zieht den Bereich auf — kein Textmarkieren des Browsers;
+// das Ausfüllkästchen (kleines Quadrat unten rechts am Bereich) zieht die Werte nach unten.
+let drag = null   // { kind: 'select' | 'fill', base }
 function onMouseDown(e) {
+  if (e.button !== 0) return
+  if (e.target.closest('.fill-handle')) { e.preventDefault(); drag = { kind: 'fill', base: { ...sel.value } }; return }
   const at = cellAt(e.target); if (!at) return
-  if (!e.target.closest('input, select, textarea')) setTimeout(() => focusCell(at.ri, at.ci), 0)
-  if (e.shiftKey && anchor.value) { e.preventDefault(); sel.value = norm(anchor.value, at) }
+  if (e.target.closest('input, select, textarea')) return   // in der Eingabe: der Browser markiert Text
+  e.preventDefault()
+  setTimeout(() => focusCell(at.ri, at.ci), 0)
+  if (e.shiftKey && anchor.value) sel.value = norm(anchor.value, at)
   else { anchor.value = at; sel.value = norm(at, at) }
+  drag = { kind: 'select' }
 }
+function onMouseMove(e) {
+  if (!drag) return
+  const at = cellAt(document.elementFromPoint(e.clientX, e.clientY)); if (!at) return
+  if (drag.kind === 'select') sel.value = norm(anchor.value, at)
+  else { const b = drag.base; sel.value = { r0: b.r0, c0: b.c0, c1: b.c1, r1: Math.max(b.r1, at.ri) } }
+}
+function onMouseUp() {
+  if (drag?.kind === 'fill' && sel.value.r1 > drag.base.r1) fillFrom(drag.base)
+  drag = null
+}
+// Ausfüllen aus dem Ursprungsbereich in die aufgezogenen Zeilen: ein Wert wird wiederholt, zwei Zahlen (oder Text
+// mit Zahl am Ende) setzen die Reihe fort, mehrere Texte wiederholen sich im Muster
+function fillFrom(base) {
+  const s = sel.value; let n = 0
+  const num = x => /^-?\d+([.,]\d+)?$/.test(String(x).trim()) ? parseFloat(String(x).replace(',', '.')) : null
+  for (let ci = s.c0; ci <= s.c1; ci++) {
+    const c = columns.value[ci]; if (!c) continue
+    const src = []; for (let ri = base.r0; ri <= base.r1; ri++) src.push(textOf(rows.value[ri], c))
+    const a = src[0], b = src[1]
+    const tail = /^(.*?)(\d+)$/.exec(a)
+    let gen
+    if (src.length >= 2 && num(a) != null && num(b) != null) { const step = num(b) - num(a); const dec = Math.max((a.split(/[.,]/)[1] || '').length, (b.split(/[.,]/)[1] || '').length); gen = i => (num(a) + step * i).toFixed(dec).replace('.', a.includes(',') ? ',' : '.') }
+    else if (src.length >= 2 && tail) { const w = tail[2].length; const start = parseInt(tail[2]); const t2 = /^(.*?)(\d+)$/.exec(b); const step = t2 && t2[1] === tail[1] ? parseInt(t2[2]) - start : 1; gen = i => tail[1] + String(start + step * i).padStart(w, '0') }
+    else gen = i => src[i % src.length]
+    for (let ri = base.r1 + 1; ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && canWrite(r, c)) { set(r, c, gen(ri - base.r0)); n++ } }
+  }
+  if (n) store.toast(`${n} Zellen gefüllt — noch nicht gespeichert`)
+}
+// Lage des Ausfüllkästchens: unten rechts an der letzten Zelle des Bereichs, im Rollbereich mitrollend
+const scrollBox = ref(null)
+const handle = ref(null)   // { top, left }
+watch(sel, async () => {
+  handle.value = null; const s = sel.value; if (!s || !scrollBox.value) return
+  await nextTick()
+  const r = rows.value[s.r1]; if (!r) return
+  const tr = scrollBox.value.querySelector(`tr[data-id="${r.row.id}"]`); const td = tr?.children[FIXED + s.c1]; if (!td) return
+  const a = td.getBoundingClientRect(), b = scrollBox.value.getBoundingClientRect()
+  handle.value = { top: a.bottom - b.top + scrollBox.value.scrollTop - 4, left: a.right - b.left + scrollBox.value.scrollLeft - 4 }
+}, { deep: true })
 const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
 const inSel = (ri, ci) => !!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1
 const selCells = () => { const s = sel.value; if (!s) return []; const out = []; for (let ri = s.r0; ri <= s.r1; ri++) for (let ci = s.c0; ci <= s.c1; ci++) { const r = rows.value[ri], c = columns.value[ci]; if (r && c) out.push({ r, c, ri, ci }) } return out }
@@ -242,8 +289,8 @@ function onKey(e) {
   else if (e.key === 'Delete' && sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1)) { e.preventDefault(); clearSel() }
   else if (e.key === 'Escape' && sel.value) { sel.value = null }
 }
-onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('mousedown', onMouseDown, true); window.addEventListener('pagehide', onPageHide) })
-onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouseDown, true); window.removeEventListener('pagehide', onPageHide) })
+onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('mousedown', onMouseDown, true); document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); window.addEventListener('pagehide', onPageHide) })
+onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouseDown, true); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); window.removeEventListener('pagehide', onPageHide) })
 
 // Export der Tabelle, wie sie dasteht (CSV, Semikolon, UTF-8 mit BOM — Excel öffnet das direkt)
 function exportCsv() {
@@ -286,7 +333,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       <button @click="fillDown" :disabled="!sel" title="runterziehen: oberste Zelle des Bereichs in alle darunter (Strg+D)">⇩ füllen</button>
       <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe</button>
       <button :class="{ primary: replaceOpen }" @click="replaceOpen = !replaceOpen" title="Suchen & Ersetzen (Strg+H)">⇄ ersetzen</button>
-      <span class="muted" style="font-size:12px" title="Pfeile bewegen den Cursor, Shift+Pfeil zieht den Bereich auf, Enter speichert und springt nach unten, Tab nach rechts, Tippen überschreibt, F2 bearbeitet · Strg+D füllen, Strg+Shift+D Reihe, Strg+H ersetzen, Strg+C/V mit Excel, Entf leert, Strg+A alles">⌨ Pfeile · Shift+Pfeil · Enter ↓ · Tab → · Strg+D/H/C/V · <i>kursiv</i> = geerbt · 🔒 Achse</span>
+      <span class="muted" style="font-size:12px" title="Pfeile bewegen den Cursor, Shift+Pfeil zieht den Bereich auf, Enter speichert und springt nach unten, Tab nach rechts, Tippen überschreibt, F2 bearbeitet · Strg+D füllen, Strg+Shift+D Reihe, Strg+H ersetzen, Strg+C/V mit Excel, Entf leert, Strg+A alles">🖱 ziehen = Bereich · Doppelklick/F2/Tippen = bearbeiten · ▪ Kästchen ziehen = füllen · Strg+D/H/C/V · <i>kursiv</i> = geerbt</span>
     </div>
     <div v-if="replaceOpen" class="toolbar replace">
       <span class="muted">⇄</span>
@@ -299,7 +346,8 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       <button class="primary" :disabled="!replaceHits" @click="replaceAll">alle ersetzen</button>
       <button class="x" @click="replaceOpen = false" title="schliessen (Esc)">×</button>
     </div>
-    <div class="scroll">
+    <div class="scroll" ref="scrollBox" style="position:relative">
+      <div v-if="handle" class="fill-handle" :style="`top:${handle.top}px;left:${handle.left}px`" title="Ausfüllkästchen: nach unten ziehen füllt — ein Wert wiederholt sich, zwei Zahlen setzen die Reihe fort" />
       <table class="grid values tab" :style="`width:${420 + columns.length * 180}px`">
         <colgroup><col style="width:220px" /><col style="width:110px" /><col style="width:90px" /><col v-for="c in columns" :key="c.key" style="width:180px" /></colgroup>
         <thead><tr>
@@ -316,7 +364,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
               <DateCell v-else-if="c.type === 'date'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
-              <Cell v-else :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
+              <Cell v-else :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
             </template>
           </tr>
         </tbody>
@@ -338,6 +386,9 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
 /* markierter Bereich wie in Excel */
 .tab :deep(td.cell.sel) { outline: 1px solid var(--accent); outline-offset: -1px; background: var(--accent-soft); }
 .tab :deep(td.cell.sel .cell-box) { background: transparent; }
+.tab :deep(.cell-box), .tab td.attr, .tab td.mono, .tab th { user-select: none; }
+.tab :deep(.cell-box) { cursor: cell; }
+.fill-handle { position: absolute; width: 7px; height: 7px; background: var(--accent); border: 1px solid var(--bg); cursor: crosshair; z-index: 2; }
 .replace { gap: 6px; font-size: 12px; background: var(--bg); }
 .replace label { display: inline-flex; gap: 3px; align-items: center; }
 </style>
