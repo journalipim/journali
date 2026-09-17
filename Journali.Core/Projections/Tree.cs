@@ -114,13 +114,15 @@ public sealed class Tree : IProjection
         return result;
     }
 
-    /// <summary>Das Sternchen, das hier gilt: am Knoten selbst oder am nächsten Vorfahren — mit Herkunft.</summary>
-    public (string? Attribute, Node? From) LabelAttributeOf(Node node)
+    /// <summary>
+    /// Alle Sternchen am Pfad, das nächste zuerst: am Knoten selbst, dann die Vorfahren hinauf.
+    /// Der Name nimmt das erste, dessen Attribut an der Rolle gilt und hier einen Wert hat (NodeRow.LabelOf).
+    /// </summary>
+    public IEnumerable<(string Attribute, Node From)> LabelAttributesOf(Node node)
     {
-        if (node.LabelAttribute is not null) return (node.LabelAttribute, node);
+        if (node.LabelAttribute is not null) yield return (node.LabelAttribute, node);
         foreach (var a in Ancestors(node))
-            if (a.LabelAttribute is not null) return (a.LabelAttribute, a);
-        return (null, null);
+            if (a.LabelAttribute is not null) yield return (a.LabelAttribute, a);
     }
 
     /// <summary>Knoten, an denen dieses Attribut das Sternchen trägt — die Sperre fürs Zurückziehen des Attributs.</summary>

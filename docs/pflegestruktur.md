@@ -569,8 +569,13 @@ anderes Attribut gesetzt werden, das dort über eine Gruppe am Pfad gilt.
 Reihenfolge (`NodeRow.LabelOf`):
 
 1. eigener Name;
-2. das ★-Attribut vom Pfad, wenn es hier einen Wert hat (de, dann die anderen
-   Sprachen, dann ohne Sprache; geerbt zählt; eine Werteliste zeigt ihr Label);
+2. die ★ am Pfad, das nächste zuerst — ein ★ zählt nur dort, wo sein Attribut
+   an der Rolle gilt (Gruppe aktiv, `levels`) und einen Wert hat (de, dann die
+   anderen Sprachen, dann ohne Sprache; geerbt zählt; eine Werteliste zeigt
+   ihr Label); sonst das nächste ★ weiter oben. So benennt ein ★ auf SKU an
+   einer Gruppe die Varianten darunter, während Produkte und Gruppen beim ★
+   auf `name` von weiter oben bleiben (Taloan, 17.09.2026: „bei 4 unsicher" —
+   so entschieden);
 3. Variante: SKU, sonst die Achsenwerte;
 4. die interne Id — der Mindest-Rückfall, den es immer gibt.
 

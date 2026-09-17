@@ -108,14 +108,16 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
 
     /// <summary>
     /// Name im Baum (docs/pflegestruktur.md, 17), in dieser Reihenfolge:
-    /// 1. eigener Name (NodeNamed); 2. das Sternchen-Attribut vom Pfad, wenn es hier
-    /// einen Wert hat (de zuerst, dann die anderen Sprachen, dann ohne — geerbt zählt;
-    /// Werteliste zeigt ihr Label); 3. bei der Variante SKU, dann Achsenwerte; 4. die Id.
+    /// 1. eigener Name (NodeNamed); 2. die Sternchen am Pfad, das nächste zuerst — ein ★
+    /// zählt nur, wo sein Attribut an dieser Rolle gilt und einen Wert hat (de zuerst,
+    /// dann die anderen Sprachen, dann ohne — geerbt zählt; Werteliste zeigt ihr Label),
+    /// sonst das nächste weiter oben; 3. bei der Variante SKU, dann Achsenwerte; 4. die Id.
     /// </summary>
     public static string LabelOf(Tree tree, ModelCatalog model, Node n)
     {
         if (!string.IsNullOrWhiteSpace(n.Name)) return n.Name;
-        if (tree.LabelAttributeOf(n).Attribute is { } attr && ByAttribute(tree, model, n, attr) is { } v) return v;
+        foreach (var (attr, _) in tree.LabelAttributesOf(n))
+            if (AppliesAt(model, attr, n.Role) && ByAttribute(tree, model, n, attr) is { } v) return v;
         if (n.Role == Roles.Variant)
         {
             if (n.Own(Model.SkuAttribute, null, null) is { } sku) return sku;
@@ -123,6 +125,10 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
         }
         return n.Id;
     }
+
+    /// <summary>Gilt das Attribut an dieser Rolle (Gruppe aktiv, levels)? Ein ★ an SKU benennt Varianten, nicht die Produkte darüber.</summary>
+    public static bool AppliesAt(ModelCatalog model, string attr, string role) =>
+        model.Attributes.TryGetValue(attr, out var d) && d.AllowedAt(role) && model.GroupActiveAt(d.Group ?? "", role);
 
     /// <summary>Wert eines Attributs als Text fürs Label — null, wenn leer.</summary>
     public static string? ByAttribute(Tree tree, ModelCatalog model, Node n, string attr)
@@ -153,7 +159,10 @@ public sealed record AncestorView(string Id, string Role, string Label, List<Val
 public sealed record GroupView(string Key, string From, string FromLabel, bool Active, List<string> Attributes);
 
 /// <summary>Ein Knoten vollständig — Kopie aus dem Abbild, ausserhalb der Sperre ungefährlich.</summary>
-public sealed record NodeView(string Id, string Role, string? Parent, Labels Label, string? Name, string? LabelAttribute, string? LabelFrom, string? LabelFromLabel, string? Family, string[] Axes,
+/// <summary>Ein ★ am Pfad: Attribut, wo es gesetzt ist, ob es an diesem Knoten gilt.</summary>
+public sealed record StarView(string Attribute, string From, string FromLabel, bool Applies);
+
+public sealed record NodeView(string Id, string Role, string? Parent, Labels Label, string? Name, List<StarView> Stars, string? Family, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string> External, List<ValueView> Values, Dictionary<string, List<string>> Rows,
     List<AncestorView> Ancestors, string[] AttachedGroups, List<GroupView> Groups, List<string> Orphans,
     List<string> Categories, List<Release> Releases, List<Completeness> Completeness,
@@ -167,9 +176,9 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
         var covered = groups.SelectMany(g => g.Attributes).ToHashSet();
         // Verwaist: eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen).
         var orphans = n.Values.Keys.Select(k => k.Attribute).Concat(n.Lists.Keys.Select(k => k.Attribute)).Concat(n.Rows.Keys).Distinct().Where(a => !covered.Contains(a)).Order().ToList();
-        var (star, starFrom) = tree.LabelAttributeOf(n);
+        var stars = tree.LabelAttributesOf(n).Select(s => new StarView(s.Attribute, s.From.Id, NodeRow.LabelOf(tree, model, s.From), NodeRow.AppliesAt(model, s.Attribute, n.Role))).ToList();
         return new(
-        n.Id, n.Role, n.Parent, n.Label, n.Name, star, starFrom?.Id, starFrom is null ? null : NodeRow.LabelOf(tree, model, starFrom), n.Family, n.Axes, n.AxisValues, n.Status, n.External,
+        n.Id, n.Role, n.Parent, n.Label, n.Name, stars, n.Family, n.Axes, n.AxisValues, n.Status, n.External,
         ValueView.Of(n).ToList(), n.Rows,
         tree.Ancestors(n).Select(a => new AncestorView(a.Id, a.Role, NodeRow.LabelOf(tree, model, a), ValueView.Of(a).ToList())).ToList(),
         n.Groups, groups, orphans,

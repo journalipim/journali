@@ -124,11 +124,15 @@ function incomplete(channel, locale) {
 }
 // ---- Name im Baum: eigener Name (Rechtsklick im Baum → Umbenennen) oder das ★ an einem Attribut unten
 const shownLabel = computed(() => tree.byId.get(props.id)?.label ?? props.id)
-const starDef = computed(() => node.value?.labelAttribute ? model.value?.attributes.find(a => a.key === node.value.labelAttribute) : null)
-const starOwn = computed(() => !!node.value?.labelAttribute && node.value.labelFrom === props.id)
+// Alle ★ am Pfad, das nächste zuerst; es zählt das erste, dessen Attribut hier gilt und einen Wert hat.
+const star = key => (node.value?.stars ?? []).find(s => s.attribute === key) ?? null
+const starOwn = key => star(key)?.from === props.id
 function starTitle(def) {
-  if (node.value.labelAttribute === def.key) return starOwn.value ? `★ benennt ab hier nach unten — Klick nimmt es weg` : `★ benennt (von ${node.value.labelFromLabel}) — Klick setzt es hier neu`
-  return `☆ ab hier nach unten mit ${def.label?.de || def.key} benennen`
+  const s = star(def.key)
+  if (!s) return `☆ ab hier nach unten mit ${def.label?.de || def.key} benennen`
+  const where = s.from === props.id ? 'ab hier' : `von ${s.fromLabel}`
+  const applies = s.applies ? '' : ` — gilt hier nicht (erst wo ${def.label?.de || def.key} erfasst wird), bis dahin zählt das nächste ★ weiter oben`
+  return `★ benennt ${where}${applies} — Klick ${s.from === props.id ? 'nimmt es weg' : 'setzt es hier neu'}`
 }
 const freeGroups = computed(() => (model.value?.groups ?? []).map(g => g.key).filter(k => !(node.value?.groups ?? []).some(g => g.key === k)))
 
@@ -180,7 +184,7 @@ const addRow = def => command(() => api.post(`${nodeUrl()}/rows`, { attribute: d
 const removeRow = (def, row) => command(() => api.del(`${nodeUrl()}/rows/${def.key}/${row}`))
 const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def.key}`, { attribute: def.key, rows }, 'PUT'))
 // ★ am eigenen Sternchen nimmt es weg; sonst setzt es dieses Attribut ab hier.
-const setStar = def => command(() => api.post(`${nodeUrl()}/label-attribute`, { attribute: starOwn.value && node.value.labelAttribute === def.key ? null : def.key }, 'PUT'))
+const setStar = def => command(() => api.post(`${nodeUrl()}/label-attribute`, { attribute: starOwn(def.key) ? null : def.key }, 'PUT'))
 const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
 const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups }, 'PUT'))
 function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
@@ -211,7 +215,7 @@ function cellMenu(e, def, col, block) {
     { label: 'Eigenen Wert löschen', icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? 'kein eigener' : (inh.value != null ? 'dann geerbt' : ''), action: () => setValue(def, col, '') },
     inh.from ? { label: `Zur Herkunft ${icon(inh.from.role)} ${inh.from.label}`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
     { label: 'Wert kopieren', icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
-    def.type !== 'html' && def.type !== 'rows' ? { label: starOwn.value && node.labelAttribute === def.key ? '★ weg — es gilt das von oben' : '★ Name im Baum ab hier', icon: '★', key: 's', action: () => setStar(def) } : null,
+    def.type !== 'html' && def.type !== 'rows' ? { label: starOwn(def.key) ? '★ weg — es gilt das von oben' : '★ Name im Baum ab hier', icon: '★', key: 's', action: () => setStar(def) } : null,
     { label: 'Attribut im Modell', icon: '⊞', key: 'm', action: () => router.push('/model') },
   ])
 }
@@ -296,7 +300,7 @@ function cellMenu(e, def, col, block) {
           </tr>
           <tr v-else>
             <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')">
-              <button v-if="def.type !== 'html'" class="star" :class="{ on: node.labelAttribute === def.key, own: starOwn && node.labelAttribute === def.key }" :title="starTitle(def)" @click.stop="setStar(def)">{{ node.labelAttribute === def.key ? '★' : '☆' }}</button>
+              <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
               {{ def.label?.de || def.key }}
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
               <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
@@ -395,9 +399,10 @@ function cellMenu(e, def, col, block) {
 .group-row .from { text-transform: none; font-weight: 400; letter-spacing: 0; }
 .group-row.locked td { color: var(--warn); }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* ★ Name im Baum: hohl = möglich, gefüllt = gilt (geerbt gedämpft, hier gesetzt in Warnfarbe) */
+/* ★ Name im Baum: hohl = möglich, gefüllt = gesetzt (geerbt gedämpft, hier gesetzt in Warnfarbe, gilt hier nicht = halb durchsichtig) */
 .star { border: 0; background: none; padding: 0 2px 0 0; color: var(--muted); opacity: .45; cursor: pointer; font-size: 12px; line-height: 1; }
 tr:hover .star { opacity: 1; }
+.star.idle { opacity: .5; }
 .star.on { opacity: 1; color: var(--muted); }
 .star.own { color: var(--warn); }
 table.releases { width: auto; }
