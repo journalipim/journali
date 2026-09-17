@@ -50,8 +50,10 @@ stehen dort als solche markiert.
   Schreibpfad (Eintrag + Abbilder `ModelCatalog` und `Tree` unter einer
   Sperre), `ModelApi` und `TreeApi` unter `/api`, Oberfläche aus `wwwroot`;
   `docs/betrieb.md`, `docs/eintraege.md`
-- `plugins/import-tools/<quelle>/` — Unterlagen und später Code externer
-  Werkzeuge (OpenAPI, Beispiele, Abbildung); laufen nie im Server
+- `plugins/import-tools/<quelle>/` — Unterlagen und Code externer Werkzeuge
+  (OpenAPI, Beispiele, Abbildung); laufen nie im Server. `ixp` als Ansicht im
+  Browser (CORS erlaubt), `solr` als Python-Skript (kein CORS) — beide nur über
+  `/api/model` und `/api/batch`
 - `web` — Vue 3 + Vite, Fat-Client-Gefühl: keine Seitenwechsel, Inline-
   Bearbeitung in der Zelle, Tastatur durch Listen, Journal lebendig daneben.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im

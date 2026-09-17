@@ -19,6 +19,9 @@ import sys
 import urllib.parse
 import urllib.request
 
+# Windows-Konsole ist cp1252 — die Symbole ▣ ▦ ◆ brauchen UTF-8.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 SYSTEM = "solr"                     # Schlüssel der externen Kennung am Knoten
 ROLE = {"group": "group", "product": "product", "productvariant": "variant"}
 USER_AGENT = "journali-solr-import"
@@ -332,6 +335,7 @@ def cmd_import(solr, args):
     product_queue = []   # (doc, parent_ref)
 
     def walk_groups(doc, ref):
+        direct = []
         for k in kids.get(doc["id"], []):
             role = ROLE[k["type"].lower()]
             if role == "group":
@@ -339,8 +343,15 @@ def cmd_import(solr, args):
             elif role == "product":
                 product_queue.append((k, ref))
             else:
-                # Variante direkt unter einer Gruppe gibt es in journali nicht — Hinweis, übergehen.
-                print(f"  ! Variante {k['master_id']} hängt unter Gruppe {doc['master_id']} — übergangen")
+                direct.append(k)
+        if direct:
+            # Varianten direkt unter einer Gruppe gibt es in journali nicht (Variante hängt unter Produkt):
+            # ein Sammelprodukt mit dem Namen der Gruppe, Kennung <gruppe>#variants — beim zweiten Lauf wiedergefunden.
+            pseudo = {"id": doc["id"] + "#variants", "master_id": doc["master_id"] + "#variants", "type": "product",
+                      "name": doc.get("name") or doc["master_id"], "lang": doc.get("lang"), "main_parent_id": doc["id"]}
+            kids[pseudo["id"]] = direct
+            product_queue.append((pseudo, ref))
+            print(f"  ▦ {pseudo['name']}: Sammelprodukt für {len(direct)} Varianten direkt unter der Gruppe {doc['master_id']}")
     walk_groups(root, root_ref)
     if root["type"].lower() == "product":
         product_queue.insert(0, (root, None))
