@@ -285,23 +285,8 @@ function toggleLocale(l) {
 
   <Splitter v-model="srcW" :min="240" :max="800" />
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>3 · Ziel & Zuordnung</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button></div>
+    <div class="toolbar"><h1>3 · Zuordnung</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button></div>
     <div class="scroll">
-      <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
-        <tbody>
-          <tr><td class="muted">Ziel ▣</td><td>
-            <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
-            <span class="muted">neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</span>
-          </td></tr>
-          <tr><td class="muted">Sprachen 🗣</td><td>
-            <template v-if="languages.length">
-              <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>
-            </template>
-            <span v-else class="muted">nach Verbinden</span>
-            <span v-if="languages.length" class="muted" :title="`Quelle: ${languages.length} Sprachen, Modell: ${modelLocales.length} — weitere unter ⊞ Modell → Sprachen anlegen, dann sind sie hier wählbar`"> importieren · nur Sprachen des Modells ({{ modelLocales.length }})</span>
-          </td></tr>
-        </tbody>
-      </table>
 
       <div class="section" v-if="plan">
         <h2>Eigenschaften → Attribute</h2>
@@ -328,8 +313,23 @@ function toggleLocale(l) {
   </div>
 
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>4 · Plan</h1><span class="grow" /><button class="primary" @click="run" :disabled="!plan || !!busy">Schreiben</button></div>
+    <div class="toolbar"><h1>4 · Ziel & Plan</h1><span class="grow" /><button class="primary" @click="run" :disabled="!plan || !!busy">Schreiben</button></div>
     <div class="scroll">
+      <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
+        <tbody>
+          <tr><td class="muted">Ziel ▣</td><td>
+            <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
+            <span class="muted">neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</span>
+          </td></tr>
+          <tr><td class="muted">Sprachen 🗣</td><td>
+            <template v-if="languages.length">
+              <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>
+            </template>
+            <span v-else class="muted">nach Verbinden</span>
+            <span v-if="languages.length" class="muted" :title="`Quelle: ${languages.length} Sprachen, Modell: ${modelLocales.length} — weitere unter ⊞ Modell → Sprachen anlegen, dann sind sie hier wählbar`"> importieren · nur Sprachen des Modells ({{ modelLocales.length }})</span>
+          </td></tr>
+        </tbody>
+      </table>
       <table v-if="plan" class="grid" style="width:auto">
         <thead><tr><th></th><th class="num pos">neu</th><th class="num">vorhanden</th></tr></thead>
         <tbody>
