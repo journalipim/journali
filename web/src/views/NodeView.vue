@@ -5,7 +5,7 @@
 // aber gesperrt — oder mit „nur bearbeitbare“ weg. Sicht je Knotentyp ordnet
 // Gruppen und Attribute; flach untereinander oder als Reiter. Jede Änderung ist
 // ein Befehl an den Server = ein Eintrag.
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
@@ -64,6 +64,18 @@ function setLayout(l) { store.layout = l; store.save() }
 // Abschnitte (attributes, axes, media, relations, groups, releases) per Klick aufs Band auf-/zuklappen (Taloan, 17.09.)
 const open = k => !store.collapsed.includes(k)
 function toggle(k) { store.collapsed = open(k) ? [...store.collapsed, k] : store.collapsed.filter(x => x !== k); store.save() }
+// Pfad: Schrift verkleinern, bis er in eine Zeile passt (13 → 10 px), statt umzubrechen (Taloan)
+const pathEl = ref(null)
+async function fitPath() {
+  await nextTick(); const el = pathEl.value; if (!el) return
+  el.style.fontSize = ''; el.classList.add('rigid')   // rigid: Glieder schrumpfen nicht, damit die Breite messbar überläuft
+  let size = parseFloat(getComputedStyle(el).fontSize) || 13
+  while (el.scrollWidth > el.clientWidth && size > 10) { size -= 0.5; el.style.fontSize = size + 'px' }
+  if (el.scrollWidth > el.clientWidth) el.classList.remove('rigid')   // reicht auch bei 10 px nicht: Ellipse an den Gliedern
+}
+watch(() => [props.id, path.value?.length, node.value?.label], fitPath)
+onMounted(() => { fitPath(); window.addEventListener('resize', fitPath) })
+onUnmounted(() => window.removeEventListener('resize', fitPath))
 function toggleEditableOnly() { store.editableOnly = !store.editableOnly; store.save() }
 // Attributnamen: Bezeichnung → Key → beides (Taloan: Vorlagen nutzen die Keys, da darf man nicht raten)
 function cycleNames() { store.attrNames = { label: 'key', key: 'both', both: 'label' }[store.attrNames] ?? 'label'; store.save() }
@@ -113,7 +125,7 @@ const filteredBlocks = computed(() => attrFilter.value.trim()
   : blocks.value)
 const hitCount = computed(() => filteredBlocks.value.reduce((n, b) => n + b.defs.length, 0))
 const shownBlocks = computed(() => store.layout === 'tabs' && !attrFilter.value.trim() ? filteredBlocks.value.filter(b => b.key === tab.value) : filteredBlocks.value)
-// Breite der Namensspalte: gemessen am längsten sichtbaren Namen (Bezeichnung + abgegrauter Key), 180–560 px — nichts
+// Breite der Namensspalte: gemessen am längsten sichtbaren Namen (Bezeichnung + abgegrauter Key), 180–360 px — nichts
 // wird abgeschnitten (Taloan); der Rest der Breite gehört den Werten
 const measure = (() => { let ctx = null; return (s, font) => { ctx ??= document.createElement('canvas').getContext('2d'); ctx.font = font; return ctx.measureText(s).width } })()
 const attrColWidth = computed(() => {
@@ -122,7 +134,7 @@ const attrColWidth = computed(() => {
     const label = store.label(def), key = store.attrNames !== 'label' ? def.key : ''
     w = Math.max(w, (label ? measure(label, '13px system-ui, "Segoe UI", sans-serif') : 0) + (key ? measure(key, '11px ui-monospace, Consolas, monospace') + 6 : 0) + (def.unit ? measure(' ' + def.unit, '13px system-ui') : 0))
   }
-  return Math.ceil(Math.max(180, Math.min(560, w + 48)))   // Stern, Innenabstand, Pflichtpunkt
+  return Math.ceil(Math.max(180, Math.min(360, w + 48)))   // Stern, Innenabstand, Pflichtpunkt — Deckel 360 (Taloan: 560 ist harter Tobak), darüber Ellipse an der Bezeichnung, der Key bleibt ganz
 })
 
 // ---- Werte
@@ -348,7 +360,7 @@ function cellMenu(e, def, col, block) {
 
 <template>
   <div class="pane" style="flex:3" v-if="node">
-    <div class="toolbar path">
+    <div class="toolbar path" ref="pathEl">
       <template v-for="a in path" :key="a.id">
         <router-link :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }}</router-link><span class="sep">›</span>
       </template>
@@ -424,7 +436,7 @@ function cellMenu(e, def, col, block) {
           </tr>
           <template v-for="def in b.defs" :key="def.key">
           <tr v-if="def.type === 'formula' || def.type === 'template'">
-            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')">{{ def.type === 'template' ? '{}' : 'ƒ' }} {{ store.label(def) }}<span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></td>
+            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></td>
             <template v-for="c in columns" :key="c.label">
               <td v-if="!enabled(def, c, b)" class="cell"><div class="cell-box disabled" /></td>
               <td v-else class="cell">
@@ -438,7 +450,7 @@ function cellMenu(e, def, col, block) {
             </template>
           </tr>
           <tr v-else-if="def.type === 'rows'">
-            <td class="attr" :title="def.key">{{ store.label(def) }}<span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
+            <td class="attr" :title="def.key"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
                 @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
@@ -449,7 +461,7 @@ function cellMenu(e, def, col, block) {
           <tr v-else>
             <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')">
               <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
-              {{ store.label(def) }}<span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
+              <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
               <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
               <span v-if="def.multiple" class="muted" title="mehrfach, kommagetrennt">≣</span>
@@ -609,11 +621,16 @@ function cellMenu(e, def, col, block) {
 </template>
 
 <style scoped>
-.path { flex-wrap: wrap; row-gap: 2px; }
+/* Pfad bricht nicht um — wird er zu lang, schrumpft die Schrift (fitPath), notfalls Ellipse an den Gliedern (Taloan) */
+.path { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+.path .crumb, .path h1 { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.path .crumb, .path h1 { flex: 0 1 auto; }
+.path.rigid .crumb, .path.rigid h1 { flex: 0 0 auto; }
 .crumb { color: var(--muted); }
 .crumb:hover { color: var(--accent); }
 .meta { font-size: 12px; min-height: 28px; }
-.view { gap: 4px; font-size: 12px; min-height: 30px; }
+/* Sicht-Zeile klebt unter dem Band, damit Sprachen, Sicht und Suchfeld beim Rollen bleiben (Taloan) */
+.view { gap: 4px; font-size: 12px; min-height: 30px; height: 31px; box-sizing: border-box; flex-wrap: nowrap; overflow: hidden; position: sticky; top: 26px; z-index: 3; background: var(--pane); }
 /* Mastersprache: fett und in Akzentfarbe — in der Sicht und im Spaltenkopf */
 .view-chip.master { font-weight: 700; }
 th.master { color: var(--accent); font-weight: 700; }
@@ -650,7 +667,7 @@ th.master { color: var(--accent); font-weight: 700; }
 .section h2 .muted, h2.band .muted { font-weight: 400; }
 .section h2 .caret, h2.band .caret { display: inline-block; width: 14px; color: var(--muted); }
 /* Tabellenkopf klebt unter dem Band (26px) */
-table.values th { top: 26px; }
+table.values th { top: 57px; }   /* Band 26 + Sicht-Zeile 31 */
 /* Gruppenköpfe (Taloan, 17.09.): eine Stufe unter der Abschnittsüberschrift, darum nicht dasselbe Band —
    Zellton mit Akzentkante links, Name in Akzentfarbe; gesperrte zurückgenommen (gedämpft, 🔒). */
 .cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
@@ -667,7 +684,10 @@ table.values th { top: 26px; }
 .group-row.locked .warn { color: var(--muted); font-weight: 400; }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* technischer Key neben der Bezeichnung: abgegraut, Schreibmaschine (Taloan) */
-td.attr .key { font-family: var(--mono); font-size: 11px; margin-left: 6px; }
+td.attr .key { font-family: var(--mono); font-size: 11px; margin-left: 6px; flex: 0 0 auto; }
+/* Namenszelle als Zeile: Bezeichnung darf mit Ellipse enden, der Key nie (Taloan: nicht raten) */
+td.attr { display: flex; align-items: center; gap: 4px; }
+td.attr .lbl { flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* ★ Name im Baum: hohl = nicht gesetzt, blau = geerbt (von oben), gelb = hier gesetzt, halb durchsichtig = gesetzt, gilt hier nicht (Taloan, 17.09.) */
 .star { border: 0; background: none; padding: 0 2px 0 0; color: var(--muted); opacity: .45; cursor: pointer; font-size: 12px; line-height: 1; }
 tr:hover .star { opacity: 1; }
