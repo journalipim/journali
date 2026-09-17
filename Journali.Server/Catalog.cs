@@ -40,7 +40,7 @@ public sealed class Catalog
             var n = 0;
             foreach (var s in Model.Seeds())
             {
-                var key = s.Stream[(s.Stream.IndexOf(':') + 1)..];
+                var key = s.Stream[(s.Stream.LastIndexOf(':') + 1)..];   // settings:label:group hat zwei Doppelpunkte
                 var exists = s.Type switch
                 {
                     Types.LocaleDefined => _model.Locales.ContainsKey(key),
