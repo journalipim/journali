@@ -89,6 +89,8 @@ function onSearchKey(e) {
 }
 // Erkannte Bedingungen als Chips (× nimmt sie raus); freier Text bleibt nur in der Zeile
 const terms = computed(() => q.value.split(/\s+/).filter(w => /^-?[a-z]+:/.test(w)))
+// „setTimeout“ gibt es in Vue-Vorlagen nicht (Absturz „K.setTimeout is not a function“, Taloan) — darum hier
+function hideSugg() { setTimeout(() => { sugg.value = [] }, 150) }
 function dropTerm(t) { q.value = q.value.split(/\s+/).filter(w => w !== t).join(' ') }
 let searchTimer = null
 const list = ref(null)
@@ -437,7 +439,7 @@ function onDialogKey(e) {
       <h1>▣ Baum</h1>
       <span class="muted">{{ tree.rows.length }}</span>
       <input ref="search" v-model="q" type="search" placeholder="Suche in allem  /" style="flex:1;min-width:0" autocomplete="off"
-        @input="suggest" @focus="suggest" @click="suggest" @blur="setTimeout(() => sugg = [], 150)" @keydown="onSearchKey"
+        @input="suggest" @focus="suggest" @click="suggest" @blur="hideSugg" @keydown="onSearchKey"
         title="Text — oder Bedingungen (Vorschläge beim Tippen): attr:function · attr:function=*sku* · attr:x= (leer) · empty:name/en · incomplete:web · role:variant · status:active · group:logistics · under:<id> · by:Taloan · since:2026-09-10" />
     </div>
     <div v-if="sugg.length" class="sugg">
