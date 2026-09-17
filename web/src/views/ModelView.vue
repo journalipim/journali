@@ -15,6 +15,7 @@ import EditGrid from '../components/EditGrid.vue'
 import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
+import ScriptEditor from '../components/ScriptEditor.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 const listW = paneWidth('model.list', 340)
@@ -313,6 +314,8 @@ const localeSet = v => put(`/api/model/locales/${curLocale.value.code}`, { code:
 const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.code })
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v } })
 // Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
+const scriptOpen = ref(false)
+const hasDraft = key => { try { return !!localStorage.getItem('journali.formula.draft.' + key) } catch { return false } }
 const formulaHint = () => 'Kombiniertes Attribut: ein Skript wie JavaScript liefert den Wert — Attribute als $schlüssel (geerbt zählt, Text in der Sprache der Spalte), Variablen, if/else, return, Vorlagen `…${…}…`, + - * / % **, == != < <= > >=, && || !, ?:, ??; Funktionen round trunc floor ceil abs min max sqrt len upper lower trim left right contains replace split pad number str format isblank coalesce. Fehlt ein Wert, ist das Ergebnis leer (?? fängt es ab). Wird gerechnet, nie gesetzt.'
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
 const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de || k
@@ -440,8 +443,10 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="curAttr.type === 'rows'"><td class="attr" title="Spalten, jede ein Attribut, kommagetrennt">≣ Spalten</td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
           <tr v-if="['integer', 'decimal', 'text'].includes(curAttr.type)"><td class="attr" :title="formulaHint(curAttr.type)" style="vertical-align:top;padding-top:6px">ƒ Formel</td>
             <td style="padding:2px 4px">
-              <textarea class="script" :value="curAttr.formula ?? ''" rows="6" spellcheck="false" placeholder="// Skript, z. B.&#10;h = $height&#10;if (h >= 100) { return `${format(h / 100, 2)} m` }&#10;return `${h} cm`" @keydown.ctrl.enter.prevent="attrSet('formula', $event.target.value.trim() || null)" @blur="$event.target.value.trim() !== (curAttr.formula ?? '') && attrSet('formula', $event.target.value.trim() || null)"></textarea>
-              <div class="muted" style="font-size:11px">Skript wie JavaScript: $schlüssel liest das Attribut · Ctrl+Enter oder Verlassen speichert · Fehler kommen als Meldung</div>
+              <pre v-if="curAttr.formula" class="script" @click="scriptOpen = true" title="Klick öffnet den Editor">{{ curAttr.formula }}</pre>
+              <div class="chips"><button class="primary" @click="scriptOpen = true">ƒ {{ curAttr.formula ? 'Skript bearbeiten' : 'Skript schreiben' }}</button>
+                <button v-if="curAttr.formula" class="x" @click="attrSet('formula', null)" title="Formel entfernen — das Attribut wird wieder ein normales">×</button>
+                <span v-if="hasDraft(curAttr.key)" class="warn" title="Entwurf im Browser, noch nicht übernommen">✎ Entwurf</span></div>
             </td></tr>
           <tr><td class="attr" title="Wert je Sprache">🗣 je Sprache</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
           <tr><td class="attr" title="Wert je Kanal">⇶ je Kanal</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
@@ -552,6 +557,9 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <div v-else class="empty">{{ sec.one }} links wählen — oder oben anlegen.</div>
   </div>
+  <ScriptEditor v-if="scriptOpen && curAttr" :model-value="curAttr.formula ?? ''" :title="`${curAttr.label?.de || curAttr.key} · $${curAttr.key}`" :draft-key="curAttr.key" :type="curAttr.type"
+    :attributes="model.attributes.filter(a => a.key !== curAttr.key && a.type !== 'rows' && a.type !== 'html')"
+    @save="v => { attrSet('formula', v || null); scriptOpen = false }" @close="scriptOpen = false" />
   <div v-else class="empty">Modell wird geladen …</div>
 </template>
 
@@ -577,8 +585,8 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 /* Das Formular rechts: Bezeichnung links, Wert rechts, dieselben Zellen wie im Knoten */
 .form { width: auto; margin-bottom: 4px; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
-.script { width: 420px; font: 12px var(--mono); background: var(--cell); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 6px; resize: vertical; }
-.script:focus { border-color: var(--accent); outline: none; }
+.script { max-width: 520px; max-height: 160px; overflow: auto; margin: 0 0 4px; font: 12px/1.5 var(--mono); background: var(--cell); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 6px; cursor: pointer; }
+.script:hover { border-color: var(--accent); }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .chip a { color: inherit; text-decoration: none; }

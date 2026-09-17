@@ -47,6 +47,13 @@ public static partial class ModelApi
                 : Results.Ok(EntryView.Of(write(actor, Model.RelationStream + key, Types.RelationTypeRetired, new RelationTypeRetired(key), null))));
         });
 
+        // Syntaxprüfung fürs Skript beim Tippen — liest nichts, schreibt nichts.
+        m.MapPost("/formula/check", (FormulaCheck body) =>
+        {
+            var (keys, error) = Formula.Check(body.Formula ?? "");
+            return Results.Ok(new { ok = error is null, error, keys });
+        });
+
         m.MapPut("/master-locale", (MasterLocaleDefined body, HttpRequest req, Catalog c) =>
             Command(req, c, body.Code ?? "", ValidKey, (model, write) =>
                 !model.Locales.ContainsKey(body.Code ?? "") ? Bad($"Sprache {body.Code} gibt es nicht.")
@@ -236,6 +243,8 @@ public static partial class ModelApi
         if (!keyOk(key)) return Bad($"Schlüssel „{key}“: nur a-z, 0-9 und _, beginnt mit Buchstabe.");
         return c.With((model, _, write) => body(model, (stream, type, payload) => Results.Ok(EntryView.Of(write(actor, stream, type, payload, null)))));
     }
+
+    public sealed record FormulaCheck(string? Formula);
 
     public static string? Actor(HttpRequest req) =>
         req.Headers.TryGetValue("X-Actor", out var v) && !string.IsNullOrWhiteSpace(v) ? v.ToString() : null;
