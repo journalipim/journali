@@ -29,6 +29,11 @@ export const store = reactive({
 
   // Name eines Attributs/einer Gruppe/einer Liste in der Anzeige: Bezeichnung in der ersten Sicht-Sprache (Rückfall de, Key),
   // technischer Key, oder beides — je Einstellung attrNames
+  label(def) {
+    if (!def) return ''
+    if (this.attrNames === 'key') return ''   // im Key-Modus steht nur der Key (die Ansicht zeigt ihn abgegraut daneben)
+    return def.label?.[this.viewLocales?.[0]] || def.label?.de || Object.values(def.label ?? {}).find(Boolean) || def.key
+  },
   name(def) {
     if (!def) return ''
     const label = def.label?.[this.viewLocales?.[0]] || def.label?.de || Object.values(def.label ?? {}).find(Boolean) || def.key
