@@ -1,6 +1,6 @@
 <script setup>
 // Das Modell (Taloans Struktur, 17.09.2026):
-//   Struktur: Attributgruppen · Attribute · Wörterbücher · Attributsichten
+//   Struktur: Attributgruppen · Attribute · Wertelisten · Attributsichten
 //   Basics:   Einheiten · Sprachen · Kanäle · Baum (Name je Knotentyp)
 // Jede Zelle ein Eintrag mit der ganzen Definition. Mehrfachauswahl: Shift/Strg,
 // alle/keine, dann Stapelaktionen (Gruppe zuweisen, entfernen).
@@ -12,7 +12,7 @@ import EditGrid from '../components/EditGrid.vue'
 const sections = [
   { key: 'groups', icon: '▤', label: 'Attributgruppen', part: 'Struktur' },
   { key: 'attributes', icon: '⊞', label: 'Attribute', part: 'Struktur' },
-  { key: 'lists', icon: '☰', label: 'Wörterbücher', part: 'Struktur' },
+  { key: 'lists', icon: '☰', label: 'Wertelisten', part: 'Struktur' },
   { key: 'views', icon: '◫', label: 'Attributsichten', part: 'Struktur' },
   { key: 'units', icon: '⚖', label: 'Einheiten', part: 'Basics' },
   { key: 'locales', icon: '🗣', label: 'Sprachen', part: 'Basics' },
@@ -70,7 +70,7 @@ const attrCols = computed(() => [
   { key: 'locale', label: '🗣', type: 'bool', width: '34px', title: 'je Sprache' },
   { key: 'channel', label: '⇶', type: 'bool', width: '34px', title: 'je Kanal' },
   { key: 'inheritable', label: '↓', type: 'bool', width: '34px', title: 'vererbbar: der Wert gilt nach unten (Kategorie ja, Name nein)' },
-  { key: 'list', label: 'Wörterbuch', type: 'select', options: model.value.lists.map(l => l.key), width: '110px', title: 'bei enum' },
+  { key: 'list', label: 'Werteliste', type: 'select', options: model.value.lists.map(l => l.key), width: '110px', title: 'bei enum: der Wert ist ein Eintrag der Liste' },
   { key: 'multiple', label: '≣', type: 'bool', width: '34px', title: 'mehrfach' },
   ...model.value.channels.map(c => ({ key: 'req_' + c.key, label: '● ' + c.key, width: '70px', title: `Pflicht für ${c.key}: Sprachen kommagetrennt oder * — gilt überall gleich` })),
   { key: 'columns', label: 'Spalten', width: '140px', title: 'bei rows: Attribute, kommagetrennt' },
@@ -118,13 +118,19 @@ async function bulkRemove(path) {
 }
 const selectAll = rows => { sel.value = new Set(rows.map(r => r.key)) }
 
-// ---- Wörterbücher (Wertelisten)
-const listCols = [{ key: 'key', label: 'Key', type: 'ro', width: '130px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }]
-const listRows = computed(() => model.value.lists.map(l => ({ key: l.key, label_de: l.label?.de, label_en: l.label?.en, _l: l })))
-const valueCols = [{ key: 'value', label: 'Wert', type: 'ro', width: '130px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'order', label: '#', width: '50px' }]
+// ---- Wertelisten: Einträge mit Namen je Sprache und eigenen Spalten (Farbe: ral)
+const listCols = [{ key: 'key', label: 'Key', type: 'ro', width: '130px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'columns', label: 'Spalten', width: '200px', title: 'eigene Felder je Eintrag, kommagetrennt (z. B. ral, hex)' }]
+const listRows = computed(() => model.value.lists.map(l => ({ key: l.key, label_de: l.label?.de, label_en: l.label?.en, columns: (l.columns ?? []).join(', '), _l: l })))
 const currentList = computed(() => model.value.lists.find(l => l.key === selectedList.value))
-const valueRows = computed(() => (currentList.value?.values ?? []).map(v => ({ value: v.value, label_de: v.label?.de, label_en: v.label?.en, order: String(v.order ?? 0), _v: v })))
-function listChange(r, col, v) { put(`/api/model/lists/${r.key}`, { key: r.key, label: { ...(r._l.label || {}), [col.slice(6)]: v } }) }
+const valueCols = computed(() => [{ key: 'value', label: 'Wert', type: 'ro', width: '130px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' },
+  ...(currentList.value?.columns ?? []).map(c => ({ key: 'x_' + c, label: c, width: '120px' })), { key: 'order', label: '#', width: '50px' }])
+const valueRows = computed(() => (currentList.value?.values ?? []).map(v => { const r = { value: v.value, label_de: v.label?.de, label_en: v.label?.en, order: String(v.order ?? 0), _v: v }; for (const c of currentList.value.columns ?? []) r['x_' + c] = v.extra?.[c]; return r }))
+function listChange(r, col, v) {
+  const d = { key: r.key, label: { ...(r._l.label || {}) }, columns: r._l.columns ?? [] }
+  if (col.startsWith('label_')) d.label[col.slice(6)] = v
+  else if (col === 'columns') d.columns = v.split(',').map(s => s.trim()).filter(Boolean)
+  put(`/api/model/lists/${r.key}`, d)
+}
 function listAdd() {
   const k = newKey.value.trim(); if (!k) return
   newKey.value = ''
@@ -132,8 +138,9 @@ function listAdd() {
   selectedList.value = k
 }
 function valueChange(r, col, v) {
-  const d = { ...r._v, label: { ...(r._v.label || {}) } }
+  const d = { ...r._v, label: { ...(r._v.label || {}) }, extra: { ...(r._v.extra || {}) } }
   if (col.startsWith('label_')) d.label[col.slice(6)] = v
+  else if (col.startsWith('x_')) { if (v) d.extra[col.slice(2)] = v; else delete d.extra[col.slice(2)] }
   else if (col === 'order') d.order = parseInt(v) || 0
   put(`/api/model/lists/${selectedList.value}/values/${encodeURIComponent(r.value)}`, d)
 }
@@ -277,15 +284,15 @@ const treeRows = computed(() => roles.map(r => ({ key: r, role: roleLabel[r], at
     <!-- Wörterbücher -->
     <template v-else-if="section === 'lists'">
       <div class="toolbar">
-        <h1>☰ Wörterbücher</h1><span class="muted" title="Wert mit Namen je Sprache: Marke, Farbe, Betriebssystem … — die Auswahl bei enum-Attributen">ⓘ Werte mit Namen je Sprache</span><span class="grow" />
-        <input v-model="newKey" type="text" placeholder="neues Wörterbuch (key)" style="width:160px" @keydown.enter="listAdd" />
-        <button class="primary" :disabled="!newKey.trim()" @click="listAdd">+ Wörterbuch</button>
+        <h1>☰ Wertelisten</h1><span class="muted" title="Ein Attribut vom Typ enum zeigt auf einen Eintrag der Liste, nicht auf ein Wort. Der Eintrag hat Namen je Sprache und eigene Spalten (Farbe: ral) — wer die Liste erweitert, erweitert alle Verweise.">ⓘ referenzierte Einträge mit Namen je Sprache und eigenen Spalten</span><span class="grow" />
+        <input v-model="newKey" type="text" placeholder="neue Werteliste (key)" style="width:160px" @keydown.enter="listAdd" />
+        <button class="primary" :disabled="!newKey.trim()" @click="listAdd">+ Werteliste</button>
       </div>
       <div class="scroll" style="flex:0 0 auto;max-height:40%">
         <EditGrid :columns="listCols" :rows="listRows" :selected="selectedList" @change="listChange" @select="r => selectedList = r.key" />
       </div>
       <div class="toolbar" style="border-top:1px solid var(--line)">
-        <h1 class="mono">{{ selectedList ?? '— Wörterbuch wählen' }}</h1><span class="muted">{{ valueRows.length }}</span><span class="grow" />
+        <h1 class="mono">{{ selectedList ?? '— Werteliste wählen' }}</h1><span class="muted">{{ valueRows.length }}</span><span class="grow" />
         <input v-model="newValue" type="text" placeholder="neuer Wert" style="width:160px" :disabled="!selectedList" @keydown.enter="valueAdd" />
         <button class="primary" :disabled="!newValue.trim() || !selectedList" @click="valueAdd">+ Wert</button>
       </div>

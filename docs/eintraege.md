@@ -71,16 +71,20 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 | `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — Gruppen in Reihenfolge, darin Attribute in Reihenfolge; ungenannte hängen unten an |
 | `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` |
-| `list:<key>` | `ListDefined` | `key`, `label{}` |
+| `list:<key>` | `ListDefined` | `key`, `label{}`, `columns[]?` (eigene Felder je Eintrag, z. B. ral) |
 | `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
 | `list:<key>` | `ListValueRetired` | `value` |
 | `family:<key>` | `FamilyDefined` / `FamilyRetired` | **Altlast** (16.09.2026): Familien sind durch Attributgruppen am Baum ersetzt; der Typ bleibt lesbar, wird nicht mehr geschrieben |
 
 Ein leeres Journal bekommt beim ersten Serverstart das Saatgut aus
 `Model.Seeds()` (`AttributeDefinition.cs`): `de`, `en`; `web`, `print`;
-`sku` (nur Variante), `name`, `description`, `weight`, `ean` — als Einträge des
-Urhebers `system`. Fehlende Schlüssel werden bei jedem Start nachgesät
-(`Catalog.SeedMissing`), Geändertes bleibt.
+Einheiten, Gruppen `mastergroup` (MasterGroup) / `logistics` (ab Variante) / `physical`, Werteliste
+`color` (20 Farben, RAL), Attribute `name` `description` `color` `sku` `ean`
+`weight`, Sicht `defaultview_<role>` (DefaultView) je Knotentyp, Name im Baum = `name`, und der
+Wurzelknoten `g-mastertree` (MasterTree) mit den drei Gruppen — als Einträge des Urhebers
+`system`. Fehlende Ströme werden bei jedem Start nachgesät
+(`Catalog.SeedMissing`), Geändertes bleibt; der Wurzelknoten kommt nur, wenn
+es ihn nie gab.
 
 `Tree` reagiert nur auf Baum- und Wert-Typen; Modell-Ströme gehen an ihm
 vorbei. Werte werden beim Befehl gegen die Definition geprüft (Typ, Achsen,

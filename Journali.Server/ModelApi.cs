@@ -72,7 +72,11 @@ public static partial class ModelApi
 
         m.MapPut("/lists/{key}", (string key, ListDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
-                write(Model.ListStream + key, Types.ListDefined, body with { Key = key, Label = body.Label ?? new() })));
+            {
+                var cols = Clean(body.Columns);
+                if (cols?.Any(x => !ValidKey(x)) ?? false) return Bad("Spalten: nur a-z, 0-9, _.");
+                return write(Model.ListStream + key, Types.ListDefined, body with { Key = key, Label = body.Label ?? new(), Columns = cols });
+            }));
 
         m.MapPut("/lists/{key}/values/{value}", (string key, string value, ListValueDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
@@ -144,7 +148,7 @@ public static partial class ModelApi
         locales = model.Locales.Values.OrderBy(l => l.Code).ToList(),
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
-        lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, values = l.Ordered.ToList() }).ToList(),
+        lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], values = l.Ordered.ToList() }).ToList(),
         labels = model.TreeLabels,
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
         views = model.Views.Values.OrderBy(v => v.Key).ToList(),

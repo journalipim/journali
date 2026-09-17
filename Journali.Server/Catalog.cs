@@ -46,6 +46,9 @@ public sealed class Catalog
                     Types.LocaleDefined => _model.Locales.ContainsKey(key),
                     Types.ChannelDefined => _model.Channels.ContainsKey(key),
                     Types.AttributeDefined => _model.Attributes.ContainsKey(key),
+                    Types.ListDefined => _model.Lists.ContainsKey(key),
+                    Types.ListValueDefined => _model.Lists.TryGetValue(key, out var l) && l.Values.Count > 0,
+                    Types.ViewDefined => _model.Views.ContainsKey(key),
                     Types.UnitDefined => _model.Units.ContainsKey(key),
                     Types.AttributeGroupDefined => _model.Groups.ContainsKey(key),
                     Types.TreeLabelDefined => _model.TreeLabels.ContainsKey(key),
@@ -55,6 +58,9 @@ public sealed class Catalog
                 Apply(_journal.Append("system", s.Stream, s.Type, s.Payload));
                 n++;
             }
+            // Der Wurzelknoten „MasterTree“: nur, wenn es ihn nie gab (auch nicht zurückgezogen).
+            if (!_tree.EverCreated(Model.RootNode))
+                foreach (var s in Model.TreeSeeds()) { Apply(_journal.Append("system", s.Stream, s.Type, s.Payload)); n++; }
             return n;
         }
     }

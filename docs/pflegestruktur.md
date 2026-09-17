@@ -65,7 +65,17 @@ Ein sprachabhängiges Feld ohne Wert in `en` fällt auf `*` zurück, wenn es
 dort einen gibt — sonst ist es leer, und die Vollständigkeit für `en`
 zählt es als fehlend. Der Kanal ist die zweite Achse nach demselben Muster.
 
-### 2. Wörterbuch (`list:<key>`, in der Oberfläche „Wörterbücher")
+### 2. Werteliste (`list:<key>`) — Einträge mit eigenen Spalten
+
+> Der Sinn: bei Farbe nicht „rot" als Text, sondern ein Eintrag aus der
+> Liste. Erweitere ich den Eintrag um ein Feld (RAL), ist das über den
+> Verweis schon da. (Taloan, 17.09.2026 — deshalb wieder „Werteliste", nicht
+> „Wörterbuch".)
+
+Eine Liste hat **Spalten** (`ListDefinition.columns`, z. B. `ral`, `hex`),
+jeder Eintrag füllt sie in `extra`. Saatgut: `color` mit 20 Farben de/en
+und RAL-Classic-Nummer. Offen: der Durchgriff im Produkt (Farbe → RAL als
+abgeleitetes Feld für Export und Anzeige).
 
 Marke, Farbe, Betriebssystem, Relationstyp, Medienrolle: ein Schlüssel je
 Wert, Label je Sprache, optional Zusatzfelder (Farbe: Hexcode). Eine

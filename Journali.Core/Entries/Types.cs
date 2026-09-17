@@ -221,8 +221,13 @@ public sealed record AttributeDefinition(
 
 public sealed record AttributeRetired(string Key);
 
-/// <summary>Eine Werteliste (2): Strom <c>list:&lt;key&gt;</c>; die Werte sind eigene Einträge darauf.</summary>
-public sealed record ListDefinition(string Key, Labels Label);
+/// <summary>
+/// Eine Werteliste (2): Strom <c>list:&lt;key&gt;</c>; die Werte sind eigene Einträge darauf.
+/// <paramref name="Columns"/>: eigene Felder je Eintrag (Farbe: ral, hex) — der Eintrag ist ein
+/// referenziertes Ding mit Eigenschaften, nicht ein Wort; ein Attribut, das auf die Liste
+/// zeigt, sieht damit auch diese Felder.
+/// </summary>
+public sealed record ListDefinition(string Key, Labels Label, string[]? Columns = null);
 
 /// <param name="Extra">Zusatzfelder je Wert, z. B. Farbe: {"hex": "#000000"}</param>
 public sealed record ListValueDefinition(string Value, Labels Label, Dictionary<string, string>? Extra = null, int Order = 0);

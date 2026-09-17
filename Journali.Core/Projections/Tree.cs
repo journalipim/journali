@@ -63,10 +63,14 @@ public sealed class Tree : IProjection
     private readonly Dictionary<string, Node> _nodes = new();
     private readonly Dictionary<string, HashSet<string>> _children = new();
     private readonly Dictionary<(string System, string Id), string> _external = new();
+    private readonly HashSet<string> _ever = new();   // je angelegt — auch zurückgezogene, fürs Saatgut
 
     public long LastApplied { get; private set; }
 
     public IReadOnlyDictionary<string, Node> Nodes => _nodes;
+
+    /// <summary>Gab es diesen Knoten je (auch wenn zurückgezogen)? Damit das Saatgut ihn nicht wieder anlegt.</summary>
+    public bool EverCreated(string id) => _ever.Contains(id);
 
     public IEnumerable<Node> Children(string? parent) =>
         _children.TryGetValue(parent ?? "", out var ids) ? ids.Select(id => _nodes[id]) : [];
@@ -185,6 +189,7 @@ public sealed class Tree : IProjection
 
     private Node Create(Entry entry, string role, string? parent)
     {
+        _ever.Add(entry.Stream);
         var n = new Node { Id = entry.Stream, Role = role, Parent = parent };
         _nodes[entry.Stream] = n;
         Link(n);

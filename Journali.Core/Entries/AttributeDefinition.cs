@@ -3,7 +3,10 @@ namespace Journali.Core.Entries;
 /// <summary>
 /// Ströme des Modells und das Saatgut für ein leeres Journal. Das Modell
 /// selbst steht im Journal (docs/pflegestruktur.md, Grundsatz); dies hier
-/// ist nur, womit ein neues Journal anfängt.
+/// ist nur, womit ein neues Journal anfängt (Taloan, 17.09.2026): Einheiten,
+/// zwei Sprachen, zwei Kanäle, Gruppen mastergroup/logistics/physical, Werteliste
+/// Farben mit RAL, Sicht DefaultView je Knotentyp, Wurzelknoten „MasterTree“.
+/// Fehlende Ströme werden bei jedem Start nachgesät (Catalog.SeedMissing).
 /// </summary>
 public static class Model
 {
@@ -20,10 +23,12 @@ public static class Model
     /// <summary>Die SKU ist ein Attribut der Variante, eindeutig über alle Varianten.</summary>
     public const string SkuAttribute = "sku";
 
+    /// <summary>Der Wurzelknoten des Saatguts — feste Id, damit er nur einmal entsteht.</summary>
+    public const string RootNode = "g-mastertree";
+
     /// <summary>Ein Modell-Eintrag: Strom, Typ, Nutzdaten — fertig zum Anhängen.</summary>
     public sealed record Seed(string Stream, string Type, string Payload);
 
-    /// <summary>Was ein leeres Journal als Modell bekommt: zwei Sprachen, zwei Kanäle, vier Attribute.</summary>
     public static IEnumerable<Seed> Seeds()
     {
         yield return new(LocaleStream + "de", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("de", "Deutsch")));
@@ -51,25 +56,53 @@ public static class Model
 
         AttributeGroupDefinition[] groups =
         [
+            new("mastergroup", Labels.Of("MasterGroup", "MasterGroup")),
             new("logistics", Labels.Of("Logistik", "Logistics"), ActiveFrom: Roles.Variant),
-            new("texts", Labels.Of("Texte", "Texts")),
             new("physical", Labels.Of("Physisch", "Physical")),
         ];
         foreach (var g in groups)
             yield return new(GroupStream + g.Key, Types.AttributeGroupDefined, Types.Serialize(g));
 
+        // Werteliste Farben: Eintrag = Farbe mit Namen je Sprache und RAL-Nummer (RAL Classic).
+        yield return new(ListStream + "color", Types.ListDefined, Types.Serialize(new ListDefinition("color", Labels.Of("Farben", "Colours"), ["ral"])));
+        (string Key, string De, string En, string Ral)[] colors =
+        [
+            ("white", "Weiss", "White", "9010"), ("black", "Schwarz", "Black", "9005"), ("red", "Rot", "Red", "3020"),
+            ("blue", "Blau", "Blue", "5015"), ("green", "Grün", "Green", "6018"), ("yellow", "Gelb", "Yellow", "1023"),
+            ("orange", "Orange", "Orange", "2004"), ("grey", "Grau", "Grey", "7035"), ("anthracite", "Anthrazit", "Anthracite", "7016"),
+            ("brown", "Braun", "Brown", "8017"), ("beige", "Beige", "Beige", "1001"), ("ivory", "Elfenbein", "Ivory", "1015"),
+            ("purple", "Violett", "Purple", "4005"), ("pink", "Rosa", "Pink", "3015"), ("magenta", "Magenta", "Magenta", "4010"),
+            ("turquoise", "Türkis", "Turquoise", "5018"), ("mint", "Mint", "Mint", "6029"), ("navy", "Marineblau", "Navy", "5002"),
+            ("silver", "Silber", "Silver", "9006"), ("gold", "Gold", "Gold", "1036"),
+        ];
+        var i = 0;
+        foreach (var c in colors)
+            yield return new(ListStream + "color", Types.ListValueDefined, Types.Serialize(new ListValueDefinition(c.Key, Labels.Of(c.De, c.En), new() { ["ral"] = c.Ral }, ++i)));
+
         AttributeDefinition[] attributes =
         [
+            new("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "mastergroup", Axes: [Axes.Locale], Required: new() { ["web"] = ["*"], ["print"] = ["de"] }),
+            new("description", Labels.Of("Beschreibung", "Description"), AttributeTypes.Html, Group: "mastergroup", Axes: [Axes.Locale, Axes.Channel]),
+            new("color", Labels.Of("Farbe", "Colour"), AttributeTypes.Enum, Group: "mastergroup", List: "color"),
             new(SkuAttribute, Labels.Of("SKU", "SKU"), AttributeTypes.Text, Group: "logistics", Required: new() { ["web"] = ["*"], ["print"] = ["*"] }),
-            new("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "texts", Axes: [Axes.Locale], Required: new() { ["web"] = ["*"], ["print"] = ["de"] }),
-            new("description", Labels.Of("Beschreibung", "Description"), AttributeTypes.Html, Group: "texts", Axes: [Axes.Locale, Axes.Channel]),
-            new("weight", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "physical"),
             new("ean", Labels.Of("EAN", "EAN"), AttributeTypes.Text, Group: "logistics"),
+            new("weight", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "physical"),
         ];
         foreach (var a in attributes)
             yield return new(AttributeStream + a.Key, Types.AttributeDefined, Types.Serialize(a));
 
         foreach (var role in Roles.All)
+        {
             yield return new(LabelStream + role, Types.TreeLabelDefined, Types.Serialize(new TreeLabelDefined(role, "name")));
+            var items = groups.Where(g => g.ActiveAt(role)).Select(g => new ViewItem(g.Key)).ToList();
+            yield return new(ViewStream + "defaultview_" + role, Types.ViewDefined, Types.Serialize(new ViewDefinition("defaultview_" + role, Labels.Of("DefaultView", "DefaultView"), items, role)));
+        }
+    }
+
+    /// <summary>Der Baum eines leeren Journals: ein Wurzelknoten „MasterTree“, an dem alle Saatgut-Gruppen hängen.</summary>
+    public static IEnumerable<Seed> TreeSeeds()
+    {
+        yield return new(RootNode, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("MasterTree", "MasterTree"))));
+        yield return new(RootNode, Types.GroupsAttached, Types.Serialize(new GroupsAttached(["mastergroup", "logistics", "physical"])));
     }
 }
