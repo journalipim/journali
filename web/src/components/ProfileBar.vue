@@ -22,7 +22,8 @@ async function load() {
   if (last && names.value.includes(last)) await apply(last)
 }
 async function apply(n) {
-  if (!n) { current.value = ''; name.value = ''; return }
+  // „— Profil —“: Felder leeren (set(null)), nichts gemerkt — Taloan, 17.09.
+  if (!n) { current.value = ''; name.value = ''; localStorage.removeItem(`journali.profile.${props.plugin}.${props.scope}`); props.set(null); return }
   busy.value = true
   try { const data = await api.get(`/api/plugins/${props.plugin}/data/${encodeURIComponent(PREFIX + n)}`); props.set(data ?? {}); current.value = n; name.value = n; localStorage.setItem(`journali.profile.${props.plugin}.${props.scope}`, n) }
   catch (e) { store.toast(`Profil ${n}: ${e.message}`) }

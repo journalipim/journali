@@ -8,7 +8,6 @@ import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKIP, TYPES, relFields, complexIds, relationNeeds, REL_GROUP } from '../solr.js'
-import { recent, remember } from '../recent.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
 import ImportHead from '../components/ImportHead.vue'
@@ -19,7 +18,6 @@ const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
 const base = ref(saved.base || '')   // keine Vorgabe — das Plugin ist allgemein, Kundendaten gehören nicht ins Repo (Taloan, 17.09.)
 const target = ref(saved.target || '')
 const skipText = ref(saved.skip || '')
-const recentBases = ref(recent('solr'))
 const persist = () => localStorage.setItem('journali.import.solr', JSON.stringify({ base: base.value, target: target.value, skip: skipText.value, auto: connected.value }))
 
 let client = null
@@ -50,6 +48,9 @@ function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')
 // Profile (ProfileBar): Quelle, Ziel, Auslassungen und die angehakten Wurzeln — im Journal unter plugin:solr
 const profileGet = () => ({ base: base.value, target: target.value, skip: skipText.value, checked: [...checked.value] })
 async function profileSet(p) {
+  if (!p) {   // „— Profil —“: alles leer, Quelle zu
+    base.value = ''; target.value = ''; skipText.value = ''; connected.value = false; rows.value = []; checked.value = new Set(); plan.value = null; result.value = null; current.value = null; persist(); return
+  }
   base.value = p.base ?? ''; target.value = p.target ?? ''; skipText.value = p.skip ?? ''
   if (!base.value) return
   await connect()
@@ -74,7 +75,7 @@ async function connect() {
     rows.value = roots.map(d => ({ doc: d, depth: 0, parent: null, loaded: false, kids: null }))
     expanded.value = new Set(); checked.value = new Set(); plan.value = null; result.value = null; current.value = null
     connected.value = true
-    persist(); recentBases.value = remember('solr', base.value)
+    persist()
     busy.value = 'lade Attribut-Definitionen …'
     pdefs.value = await client.propertyDefs()
     say(`verbunden: ${total.value} Dokumente, ${roots.length} Wurzeln, ${Object.keys(pdefs.value).length} Attribut-Definitionen`)
@@ -325,8 +326,7 @@ async function run() {
     <ImportHead source="solr" plugin="solr" :busy="busy" :get="profileGet" :set="profileSet">
       <template #status><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span></template>
       <tr><td class="attr">Quelle</td><td class="row">
-        <input v-model="base" type="text" list="solr-recent" placeholder="https://…/solr/<kern>" title="URL des Solr-Kerns — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />
-        <datalist id="solr-recent"><option v-for="u in recentBases" :key="u" :value="u" /></datalist>
+        <input v-model="base" type="text" placeholder="https://…/solr/<kern>" title="URL des Solr-Kerns" @keydown.enter="connect" />
         <button class="primary" @click="connect" :disabled="!!busy">Verbinden</button>
       </td></tr>
     </ImportHead>

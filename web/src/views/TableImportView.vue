@@ -122,6 +122,7 @@ async function run() {
 // ---- Profil: Zuordnung (je Spaltenname), Ziel, Rolle, Kennung
 const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map(m => [m.column, { target: m.target, attribute: m.attribute, locale: m.locale, newKey: m.newKey, newType: m.newType }])) })
 function profileSet(p) {
+  if (!p) { target.value = null; targetQ.value = ''; role.value = ''; external.value = ''; planned.value = null; return }
   role.value = p.role ?? ''; external.value = p.external ?? ''
   if (p.target && tree.byId.get(p.target)) pickTarget(tree.byId.get(p.target))
   if (p.mapping && source.value) for (const m of mapping.value) { const s = p.mapping[m.column]; if (s) Object.assign(m, s) }

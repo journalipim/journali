@@ -7,7 +7,6 @@ import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode } from '../ixp.js'
-import { recent, remember } from '../recent.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
 import ImportHead from '../components/ImportHead.vue'
@@ -15,13 +14,12 @@ import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
 const saved = JSON.parse(localStorage.getItem('journali.import.ixp') || '{}')
-const base = ref(saved.base || IXP_DEMO)
+const base = ref(saved.base || '')   // keine Vorgabe; Quellen stehen im Profil (Taloan, 17.09.)
 const token = ref(saved.token || '')
 const lang = ref(saved.lang || 'de')
 const target = ref(saved.target || '')
 const importLocales = ref(saved.importLocales || null)
 const withImages = ref(saved.withImages ?? true)   // Bilder der Quelle (doc.image) als Medien holen und per Relation „image“ anhängen (Taloan, 17.09.)
-const recentBases = ref(recent('ixp'))
 const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, importLocales: importLocales.value, withImages: withImages.value }))
 
 let client = null
@@ -49,7 +47,11 @@ function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')
 // Profile (ProfileBar): Quelle, Sprache, Ziel, Sprachen, Zuordnung — ohne Token (der bleibt im Browser, nicht im Journal)
 const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value, withImages: withImages.value })
 async function profileSet(p) {
-  base.value = p.base ?? base.value; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null; withImages.value = p.withImages ?? true
+  if (!p) {   // „— Profil —“: alles leer, Quelle zu
+    base.value = ''; token.value = ''; lang.value = 'de'; target.value = ''; importLocales.value = null; withImages.value = true; mapping.value = {}
+    connected.value = false; rows.value = []; checked.value = new Set(); plan.value = null; result.value = null; persist(); return
+  }
+  base.value = p.base ?? ''; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null; withImages.value = p.withImages ?? true
   if (p.mapping) mapping.value = { ...p.mapping }
   if (base.value) await connect()
 }
@@ -62,7 +64,7 @@ async function connect() {
     rows.value = roots.map(d => ({ doc: d, depth: 0, parent: null, loaded: false }))
     expanded.value = new Set(); checked.value = new Set(); plan.value = null; result.value = null
     connected.value = true
-    persist(); recentBases.value = remember('ixp', base.value)
+    persist()
     say(`verbunden: ${languages.value.length} Sprachen, ${roots.length} Wurzeln (${lang.value})`)
     for (const r of [...rows.value]) await expand(r)   // Kopie: expand fügt Zeilen ein
   } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
@@ -243,8 +245,7 @@ function toggleLocale(l) {
   <div class="pane" :style="`width:${srcW}px;flex:none`">
     <ImportHead source="ixp" plugin="ixp" :busy="busy" :get="profileGet" :set="profileSet">
       <tr><td class="attr">Quelle</td><td>
-        <input v-model="base" type="text" list="ixp-recent" placeholder="https://…/api" title="Basis-URL der IXP-API — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />
-        <datalist id="ixp-recent"><option v-for="u in recentBases" :key="u" :value="u" /><option v-if="!recentBases.includes(IXP_DEMO)" :value="IXP_DEMO">Demo</option></datalist>
+        <input v-model="base" type="text" :placeholder="'https://…/api  (Demo: ' + IXP_DEMO + ')'" title="Basis-URL der IXP-API" @keydown.enter="connect" />
       </td></tr>
       <tr><td class="attr">Token</td><td><input v-model="token" type="password" placeholder="leer für die Demo" title="bleibt im Browser, nicht im Profil" /></td></tr>
       <tr><td class="attr">Sprache</td><td class="row">

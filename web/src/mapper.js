@@ -127,6 +127,9 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     const sniff = sniffType(values)
     const out = { column: col, target: 'skip', attribute: null, locale, newType: sniff.type === 'id' ? 'text' : sniff.type, newKey: n, score: 0, why: '', sniff }
     const pick = (target, attribute, score, why) => { if (score > out.score) Object.assign(out, { target, attribute, score, why }) }
+    // 0. Spalten des eigenen Exports (Plugin export): role/status/journali_label sind Anzeige, axis_<key> ist die Achse
+    if (n === 'role' || n === 'status' || n === 'journali_label') { out.why = 'Exportspalte, nur Anzeige'; return out }
+    if (n.startsWith('axis_') && attrs.some(a => norm(a.key) === n.slice(5))) pick('attr', attrs.find(a => norm(a.key) === n.slice(5)).key, 1, 'Variantenachse')
     // 1. Schlüsselspalten
     if (sniff.type === 'id' || n === 'id' || n === 'journali_id') pick('id', null, 1, 'journali-Id')
     if (external && (n === norm(external) || n === norm(external) + '_id' || n === 'external' || n === 'externe_kennung' || n === 'remote_id')) pick('external', null, 0.95, `Kennung ${external}`)
