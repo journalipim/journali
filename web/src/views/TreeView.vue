@@ -335,7 +335,8 @@ function contextMenu(e, r) {
     r.role === 'group' ? { label: 'Neues Produkt darunter', icon: '▦', key: 'p', action: () => start('product') } : null,
     r.role === 'product' ? { label: 'Neue Variante darunter', icon: '◆', key: 'v', action: () => start('variant') } : null,
     { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r) },
-    { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: r.name ? '★' : '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r) },
+    // Symbol ist der Pin — bei beiden (Taloan: der Pin gehört zu „lösen“); der Hinweis rechts sagt, was danach gilt
+    { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r) },
     { sep: true },
     // Massenbearbeitung wie in Excel (Taloan, 17.09.): die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
     // Taloan (17.09.): eigenes Fenster, Excel-ähnlich pflegen, Schliessen übernimmt — Popup blockiert? dann im Hauptfenster

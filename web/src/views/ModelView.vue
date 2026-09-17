@@ -247,6 +247,14 @@ function listSet(col, v) {
   else if (col === 'columns') d.columns = v.split(',').map(s => s.trim()).filter(Boolean)
   put(`/api/model/lists/${l.key}`, d)
 }
+const newCol = ref(null)   // null = kein Eingabefeld; '' = Feld offen
+function listColumns(cols) { const l = curList.value; put(`/api/model/lists/${l.key}`, { key: l.key, label: { ...(l.label || {}) }, columns: cols }) }
+function addColumn() {
+  const k = (newCol.value ?? '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'); newCol.value = null
+  if (!k) return
+  if ((curList.value.columns ?? []).includes(k)) { store.toast(`Spalte ${k} gibt es schon`); return }
+  listColumns([...(curList.value.columns ?? []), k])
+}
 const valueCols = computed(() => [{ key: 'value', label: 'Wert', type: 'ro', width: '120px' }, { key: 'label_de', label: 'de', width: '180px' }, { key: 'label_en', label: 'en', width: '180px' },
   ...(curList.value?.columns ?? []).map(c => ({ key: 'x_' + c, label: c, width: '110px' })), { key: 'order', label: '#', width: '50px' }])
 const valueRows = computed(() => (curList.value?.values ?? []).map(v => { const r = { value: v.value, label_de: v.label?.de, label_en: v.label?.en, order: String(v.order ?? 0), _v: v }; for (const c of curList.value.columns ?? []) r['x_' + c] = v.extra?.[c]; return r }))
@@ -472,7 +480,13 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curList.label?.de ?? null" @save="v => listSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curList.label?.en ?? null" @save="v => listSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="eigene Felder je Eintrag, kommagetrennt (z. B. ral, hex)">Spalten</td><Cell :value="(curList.columns ?? []).join(', ') || null" @save="v => listSet('columns', v)" /></tr>
+          <!-- Spalten als Chips (Taloan): × nimmt eine weg (Werte bleiben im Journal), + Spalte fragt nach dem Key -->
+          <tr><td class="attr" title="eigene Felder je Eintrag (z. B. ral, hex) — die Werte einer entfernten Spalte bleiben im Journal und erscheinen wieder, wenn die Spalte zurückkommt">Spalten</td>
+            <td class="cell"><div class="chips" style="min-height:24px">
+              <span v-for="c in curList.columns ?? []" :key="c" class="chip mono">{{ c }}<button @click="listColumns((curList.columns ?? []).filter(x => x !== c))" :title="`Spalte ${c} entfernen — die Werte bleiben im Journal`">×</button></span>
+              <input v-if="newCol !== null" v-model="newCol" class="cell-input" style="width:120px;height:22px" placeholder="key, z. B. hex" autofocus @keydown.enter.prevent="addColumn" @keydown.esc="newCol = null" @blur="addColumn" />
+              <button v-else class="x" @click="newCol = ''" title="Spalte hinzufügen">+ Spalte</button>
+            </div></td></tr>
         </tbody></table>
         <EditGrid :columns="valueCols" :rows="valueRows" row-key="value" removable @change="valueChange" @remove="r => del(`/api/model/lists/${curList.key}/values/${encodeURIComponent(r.value)}`)" />
       </div>
