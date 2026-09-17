@@ -30,7 +30,9 @@ const model = computed(() => store.model)
 const cur = ref(null)               // Schlüssel des gewählten Dings (rechts)
 const sel = ref(new Set())          // Mehrfachauswahl in der Liste
 const anchor = ref(null)
-const filter = ref('')
+const filter = ref('')               // Suche: Text über Key und Name
+const flt = ref({ group: '', type: '', locale: false, channel: false, multiple: false, activeFrom: '', level: '', quantity: '' })   // Filter: Eigenschaften
+const resetFlt = () => { flt.value = { group: '', type: '', locale: false, channel: false, multiple: false, activeFrom: '', level: '', quantity: '' } }
 const newKey = ref('')
 const newValue = ref('')
 const addViewGroup = ref('')
@@ -48,7 +50,7 @@ async function send(fn) {
 const put = (path, body) => send(() => api.post(path, body, 'PUT'))
 const del = path => send(() => api.del(path))
 
-function switchTo(k) { section.value = k; sel.value = new Set(); cur.value = null; filter.value = '' }
+function switchTo(k) { section.value = k; sel.value = new Set(); cur.value = null; filter.value = ''; resetFlt() }
 // Sprung aus dem Knoten: /model?section=groups&key=<gruppe> öffnet den Abschnitt mit dem Ding rechts.
 const route = useRoute()
 function fromQuery(q) {
@@ -64,17 +66,32 @@ const byKey = (a, b) => a.key.localeCompare(b.key)
 const rows = computed(() => {
   const m = model.value; if (!m) return []
   switch (section.value) {
-    case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: g.label?.de, right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''] })).sort(byKey)
-    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: a.label?.de, right: [TYPE_SYM[a.type] ?? a.type, a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + a.group : ''] })).sort(byKey)
-    case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`] })).sort(byKey)
-    case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`] })).sort(byKey)
-    case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`] })).sort(byKey)
+    case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: g.label?.de, right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''], _: g })).sort(byKey)
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: a.label?.de, right: [TYPE_SYM[a.type] ?? a.type, a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + a.group : ''], _: a })).sort(byKey)
+    case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
+    case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
+    case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
     case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [] }))
     case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [] }))
   }
   return []
 })
-const shown = computed(() => { const f = filter.value.trim().toLowerCase(); return f ? rows.value.filter(r => r.key.includes(f) || (r.label ?? '').toLowerCase().includes(f)) : rows.value })
+// Suche (Text) und Filter (Eigenschaften) zusammen
+function passes(r) {
+  const f = flt.value, x = r._ ?? {}
+  switch (section.value) {
+    case 'attributes':
+      return (f.group === '' || (f.group === '-' ? !x.group : x.group === f.group)) && (!f.type || x.type === f.type)
+        && (!f.locale || x.perLocale) && (!f.channel || x.perChannel) && (!f.multiple || x.multiple)
+    case 'groups': return f.activeFrom === '' || (f.activeFrom === '-' ? !x.activeFrom : x.activeFrom === f.activeFrom)
+    case 'views': return !f.level || x.level === f.level
+    case 'units': return !f.quantity || x.quantity === f.quantity
+  }
+  return true
+}
+const shown = computed(() => { const f = filter.value.trim().toLowerCase(); return rows.value.filter(r => passes(r) && (!f || r.key.includes(f) || (r.label ?? '').toLowerCase().includes(f))) })
+const filtered = computed(() => Object.entries(flt.value).some(([, v]) => v !== '' && v !== false))
+const quantities = computed(() => [...new Set((model.value?.units ?? []).map(u => u.quantity))].sort())
 function pick(e, r) {
   const keys = shown.value.map(x => x.key), k = r.key
   const s = new Set(sel.value)
@@ -297,9 +314,24 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
   <div class="pane" style="width:340px;flex:none" v-if="model">
     <div class="toolbar"><h1>{{ sec.icon }} {{ sec.label }}</h1><span class="muted">{{ shown.length }}</span><span class="muted" :title="sec.hint">ⓘ</span><span class="grow" /></div>
     <div class="toolbar" style="gap:4px">
-      <input v-model="filter" type="search" placeholder="Filter" style="flex:1;min-width:0" />
+      <input v-model="filter" type="search" placeholder="🔍 Suche in Key und Name" style="flex:1;min-width:0" />
       <input v-model="newKey" type="text" :placeholder="addPlaceholder[section]" style="width:130px" @keydown.enter="add" />
       <button class="primary" :disabled="!newKey.trim()" @click="add" title="anlegen">+</button>
+    </div>
+    <!-- Filter: Eigenschaften, je Abschnitt andere; leer = alles -->
+    <div class="toolbar flt" v-if="['attributes', 'groups', 'views', 'units'].includes(section)">
+      <template v-if="section === 'attributes'">
+        <select v-model="flt.group" title="Gruppe"><option value="">▤ alle</option><option value="-">— ohne Gruppe</option><option v-for="g in model.groups" :key="g.key" :value="g.key">▤ {{ g.key }}</option></select>
+        <select v-model="flt.type" title="Typ"><option value="">Typ</option><option v-for="t in TYPES" :key="t" :value="t">{{ TYPE_SYM[t] }} {{ t }}</option></select>
+        <button :class="{ primary: flt.locale }" @click="flt.locale = !flt.locale" title="nur je Sprache">🗣</button>
+        <button :class="{ primary: flt.channel }" @click="flt.channel = !flt.channel" title="nur je Kanal">⇶</button>
+        <button :class="{ primary: flt.multiple }" @click="flt.multiple = !flt.multiple" title="nur mehrfach">≣</button>
+      </template>
+      <select v-else-if="section === 'groups'" v-model="flt.activeFrom" title="aktiv ab"><option value="">🔒 alle</option><option value="-">überall aktiv</option><option v-for="r in roles" :key="r" :value="r">🔒 ab {{ roleLabel[r] }}</option></select>
+      <select v-else-if="section === 'views'" v-model="flt.level" title="Knotentyp"><option value="">alle Knotentypen</option><option v-for="r in roles" :key="r" :value="r">{{ roleLabel[r] }}</option></select>
+      <select v-else-if="section === 'units'" v-model="flt.quantity" title="Grösse"><option value="">alle Grössen</option><option v-for="q in quantities" :key="q" :value="q">{{ q }}</option></select>
+      <span class="grow" />
+      <button v-if="filtered" class="x" @click="resetFlt" title="Filter zurücksetzen">✗ {{ shown.length }}</button>
     </div>
     <div class="scroll list" tabindex="0" @keydown="onListKey">
       <div v-for="r in shown" :key="r.key" class="li" :class="{ selected: sel.has(r.key), current: cur === r.key }" @click="pick($event, r)" :title="r.key">
@@ -483,6 +515,8 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 .section-btn.active { background: var(--accent-soft); color: var(--accent); }
 .section-btn .icon { width: 16px; text-align: center; }
 .section-btn .count { margin-left: auto; font-size: 11px; }
+.flt { gap: 4px; min-height: 30px; font-size: 12px; }
+.flt select { max-width: 150px; }
 /* Die Liste: eine Zeile je Ding — Key, Name, rechts die Kennzahlen als Symbole */
 .list { outline: none; }
 .li { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: default; user-select: none; }
