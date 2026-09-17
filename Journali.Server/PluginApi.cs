@@ -104,6 +104,29 @@ public static class PluginApi
                 : Results.NotFound());
         });
 
+        // Plugin-Daten (Vorlagen, Zuordnungen, Regeln): benannte JSON-Texte im Journal, Strom plugin:<key>.
+        // Lesen darf jeder; Schreiben braucht X-Actor. Leerer Wert = weg.
+        api.MapGet("/plugins/{key}/data", (string key, Catalog c) =>
+            c.With((_, _, _) => Results.Ok(c.Plugins.All.TryGetValue(key, out var p) ? p.Data.Keys.Order().ToList() : new List<string>())));
+        api.MapGet("/plugins/{key}/data/{name}", (string key, string name, Catalog c) =>
+            c.With((_, _, _) => c.Plugins.All.TryGetValue(key, out var p) && p.Data.TryGetValue(name, out var v)
+                ? Results.Text(v, "application/json") : Results.NotFound()));
+        api.MapPut("/plugins/{key}/data/{name}", async (string key, string name, HttpRequest req, Catalog c, CancellationToken ct) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (!ValidKey(key) || name.Length is 0 or > 120 || name.Any(ch => ch is '/' or '\\')) return Bad("Schlüssel oder Name ungültig.");
+            using var reader = new StreamReader(req.Body); var value = await reader.ReadToEndAsync(ct);
+            if (value.Length > 4_000_000) return Bad("Höchstens 4 MB je Datensatz.");
+            if (value.Length > 0) { try { JsonDocument.Parse(value).Dispose(); } catch (JsonException e) { return Bad("Kein JSON: " + e.Message); } }
+            return c.With((_, _, write) => Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, value.Length == 0 ? null : value), null))));
+        });
+        api.MapDelete("/plugins/{key}/data/{name}", (string key, string name, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            return c.With((_, _, write) => c.Plugins.All.TryGetValue(key, out var p) && p.Data.ContainsKey(name)
+                ? Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, null), null))) : Results.NotFound());
+        });
+
         // Prozess-Plugin starten: Befehl und Argumente aus dem Manifest, {param} aus dem Aufruf, {journali}/{actor} vom Server.
         // Läuft bis zum Ende (höchstens 30 Minuten), liefert Ausgabe und Rückgabewert. Nur installierte, eingeschaltete Plugins.
         api.MapPost("/plugins/{key}/run", async (string key, RunRequest body, HttpRequest req, Catalog c, CancellationToken ct) =>

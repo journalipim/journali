@@ -62,6 +62,29 @@ public static class MediaApi
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         }).DisableAntiforgery();
 
+        // Von einer URL holen (Import: Bilder der Quelle als Assets). Nur http(s); 50 MB; Name aus dem Pfad, wenn keiner mitkommt.
+        api.MapPost("/media/fetch", async (FetchRequest body, HttpRequest req, Catalog c, IMediaStore store, IHttpClientFactory http, CancellationToken ct) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (!Uri.TryCreate(body.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) return Bad("url: http(s)-Adresse erwartet.");
+            var client = http.CreateClient("media");
+            using var res = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct);
+            if (!res.IsSuccessStatusCode) return Bad($"{uri.Host}: {(int)res.StatusCode} {res.ReasonPhrase}");
+            if (res.Content.Headers.ContentLength > 50_000_000) return Bad("Grösser als 50 MB.");
+            var (sha, bytes) = await store.PutAsync(await res.Content.ReadAsStreamAsync(ct), ct);
+            if (bytes == 0) return Bad("Leere Antwort.");
+            var mime = res.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+            var fromPath = Uri.UnescapeDataString(Path.GetFileName(uri.AbsolutePath));
+            var name = Blank(body.Name) ?? (fromPath.Length > 0 ? fromPath : "datei");
+            var result = c.With((_, _, write) =>
+            {
+                if (c.Media.BySha(sha) is { } have) return (View: MediaView.Of(have, c.Relations.To(have.Id).Count()), Existed: true);
+                var entry = write(actor, Ids.Media(), Types.MediaCreated, new MediaCreated(sha, bytes, mime, name), null);
+                return (View: MediaView.Of(c.Media.All[entry.Stream], 0), Existed: false);
+            });
+            return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
+        });
+
         api.MapDelete("/media/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireMedium(x, id)));
         api.MapPost("/media/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.SetMediumAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values)));
@@ -71,6 +94,8 @@ public static class MediaApi
 }
 
 /// <summary>Ein Medium in der Antwort — plus, an wie vielen Knoten es hängt.</summary>
+public sealed record FetchRequest(string? Url, string? Name);
+
 public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime, string Name, bool IsImage, List<ValueView> Values,
     Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {

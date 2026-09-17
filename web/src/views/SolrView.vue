@@ -15,7 +15,7 @@ import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
 const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
-const base = ref(saved.base || 'https://solr-admin.144-bytec.preview.infolox.tools/solr/products')
+const base = ref(saved.base || '')   // keine Vorgabe — das Plugin ist allgemein, Kundendaten gehören nicht ins Repo (Taloan, 17.09.)
 const target = ref(saved.target || '')
 const skipText = ref(saved.skip || '')
 const recentBases = ref(recent('solr'))

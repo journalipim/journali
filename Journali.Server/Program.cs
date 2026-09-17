@@ -34,6 +34,7 @@ builder.Services.AddSingleton(catalog);
 // Medien: die Bytes liegen ausserhalb der Datenbank — JOURNALI_MEDIA (Verzeichnis), Vorgabe media/ neben dem Programm (docs/betrieb.md).
 var mediaStore = new FileMediaStore(builder.Configuration["JOURNALI_MEDIA"] ?? Path.Combine(builder.Environment.ContentRootPath, "media"));
 builder.Services.AddSingleton<IMediaStore>(mediaStore);
+builder.Services.AddHttpClient("media", h => { h.Timeout = TimeSpan.FromMinutes(2); h.DefaultRequestHeaders.UserAgent.ParseAdd("journali/1.0"); });   // Medien von URL holen (Import)
 
 // Plugins: plugins/<key>/plugin.json — beim Entwickeln das Verzeichnis im Repo, im Container /app/plugins (docs/pflegestruktur.md, 19)
 var pluginDir = builder.Configuration["JOURNALI_PLUGINS"]

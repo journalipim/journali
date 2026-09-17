@@ -13,6 +13,7 @@ public sealed class PluginState
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";
+    public Dictionary<string, string> Data { get; } = new();   // Name → JSON-Text (PluginDataSet)
 }
 
 /// <summary>
@@ -51,6 +52,12 @@ public sealed class Plugins : IProjection
                 break;
             case Types.PluginRemoved:
                 _all.Remove(key);
+                break;
+            case Types.PluginDataSet:
+                var ds = Types.Deserialize<PluginDataSet>(entry.Payload);
+                if (!_all.TryGetValue(key, out var pd)) _all[key] = pd = new PluginState { Key = key };
+                if (string.IsNullOrEmpty(ds.Value)) pd.Data.Remove(ds.Name); else pd.Data[ds.Name] = ds.Value;
+                Touch(pd, entry);
                 break;
         }
     }

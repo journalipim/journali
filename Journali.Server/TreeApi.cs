@@ -20,6 +20,31 @@ public static class TreeApi
             c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var n) ? NodeView.Of(tree, model, n) : null)
                 is { } view ? Results.Ok(view) : Results.NotFound());
 
+        // Tabelle unter einem Knoten (Massenpflege, Export, Datenqualität): die Kinder — oder mit deep=true alle
+        // Nachfahren — als Zeilen, die Attribute als Spalten, Werte wie in der Knotenansicht aufgelöst (geerbt zählt,
+        // own sagt, ob der Wert am Knoten selbst steht). role filtert die Zeilen; attributes (a,b,c) die Spalten,
+        // sonst alle Attribute, die an der Rolle der Zeilen gelten. locale/channel = die Achse; ohne = Grundwert.
+        api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false) =>
+            c.With((model, tree, _) =>
+            {
+                if (!tree.Nodes.TryGetValue(id, out var root)) return Results.NotFound();
+                var nodes = (deep ? tree.DescendantsDeepestFirst(id).Reverse() : tree.Children(id)).Where(n => role is null || n.Role == role).ToList();
+                var wanted = attributes?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                var cols = wanted is { Length: > 0 }
+                    ? wanted.Select(k => model.Attributes.GetValueOrDefault(k)).Where(a => a is not null).Select(a => a!).ToList()
+                    : nodes.SelectMany(n => CompletenessRules.ActiveAttributes(tree, model, n)).DistinctBy(a => a.Key).ToList();
+                var rows = nodes.Select(n => new
+                {
+                    row = NodeRow.Of(tree, model, n),
+                    values = cols.ToDictionary(a => a.Key, a =>
+                    {
+                        var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.Channels.Length > 0 ? channel : null);
+                        return new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null };
+                    }),
+                }).ToList();
+                return Results.Ok(new { node = NodeRow.Of(tree, model, root), columns = cols.Select(a => new { a.Key, a.Type, a.Label, a.Unit, a.PerLocale, a.Required, a.List, a.Inheritable, a.Multiple, a.Pattern, computed = a.IsComputed }).ToList(), rows });
+            }));
+
         // Suche über Label, SKU, Id und Werte; liefert Zeilen mit Fundstelle.
         api.MapGet("/search", (string q, Catalog c, int limit = 200) =>
             string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2

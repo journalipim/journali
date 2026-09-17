@@ -70,6 +70,7 @@ public static class Types
     public const string PluginEnabled = "PluginEnabled";
     public const string PluginDisabled = "PluginDisabled";
     public const string PluginRemoved = "PluginRemoved";
+    public const string PluginDataSet = "PluginDataSet";      // benannter Datensatz eines Plugins (Vorlage, Zuordnung, Regel) — JSON-Text
 
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
@@ -378,3 +379,5 @@ public sealed record PluginInstalled(string Version, string Manifest);
 public sealed record PluginEnabled();
 public sealed record PluginDisabled();
 public sealed record PluginRemoved();
+/// <summary>Benannter Datensatz eines Plugins (Datenblatt-Vorlage, Import-Zuordnung, Prüfregel …); Value ist JSON-Text, leer = weg. Der letzte gewinnt.</summary>
+public sealed record PluginDataSet(string Name, string? Value);

@@ -1,6 +1,6 @@
 # Solr (infolox/prodexa-Export) — Quelle für den Import
 
-Stand 17.09.2026. Beispiel: `https://solr-admin.144-bytec.preview.infolox.tools/solr/`
+Stand 17.09.2026. Untersucht an einer Kundeninstanz (Adresse nicht im Repo)
 — Solr 7.7.3 im Standalone-Modus (kein SolrCloud), ein Kern `products`,
 123 453 Dokumente, nur `lang: de`, Markt `all`. Die Admin-Oberfläche unter
 `/solr/#/` ist eine Angular-App über derselben API; alles Nötige liefert
@@ -23,7 +23,7 @@ Ein Dokument je Ding und Sprache, Schlüssel `id` = `<master_id>_<lang>`.
 
 | Typ (`type`) | Anzahl | Bedeutung |
 |---|---|---|
-| `group` | 192 | Baumknoten (Wurzel `node_group_root`, dann `BYTEC_SHOP_Produkte` → Hardware → Netzwerk → Switche …) |
+| `group` | 192 | Baumknoten (Wurzel `node_group_root`, dann `<KUNDE>_SHOP_Produkte` → Hardware → Netzwerk → Switche …) |
 | `product` | 363 | die unterste Ebene des Baums, fast immer mit Varianten darunter (`hasChilds`) |
 | `productVariant` | 7 323 | Artikel mit `product_number`; hängen unter `product`, vereinzelt direkt unter `group` |
 | `property` | 796 | **Attribut-Definitionen**: `remote_id` = Schlüssel, `name` = Label, `control__section_id__string` = Gruppe (`techData_Hardware`, `propertyGroup_intern` …) |
@@ -74,7 +74,7 @@ Beide Enden müssen importiert sein — „Ziel fehlt" zählt, was übersprungen
 wurde; Kanten auf sich selbst (kommt vor) überspringt journali.
 
 ```bash
-python plugins/solr/solr_import.py --solr https://…/solr/products --actor Taloan relations --root BYTEC_SHOP_Mobile_Geraete --dry-run
+python plugins/solr/solr_import.py --solr https://…/solr/products --actor Taloan relations --root <KUNDE>_SHOP_Mobile_Geraete --dry-run
 ```
 
 In der Oberfläche: Plan → „⇄ Relationen" → analysieren / schreiben für die
@@ -83,11 +83,11 @@ angehakten Teilbäume.
 ## Aufruf
 
 ```bash
-python plugins/solr/solr_import.py --solr https://…/solr/products list --root BYTEC_SHOP_Netzwerk --depth 2
+python plugins/solr/solr_import.py --solr https://…/solr/products list --root <KUNDE>_SHOP_Netzwerk --depth 2
 ```
 
 ```bash
-python plugins/solr/solr_import.py --solr https://…/solr/products --actor Taloan import --root BYTEC_SHOP_Switche --target g-mastertree --dry-run
+python plugins/solr/solr_import.py --solr https://…/solr/products --actor Taloan import --root <KUNDE>_SHOP_Switche --target g-mastertree --dry-run
 ```
 
 `--dry-run` zählt nur; `--limit N` nimmt die ersten N Produkte; `--since
@@ -100,6 +100,6 @@ Stapel mit seinen Varianten (`POST /api/batch`, unter 9 000 Befehlen je
 Stapel). Ein vorhandener Knoten (Kennung `solr`) wird gelesen
 (`GET /api/nodes/{id}`) und bekommt nur Werte, die sich unterscheiden.
 
-Belegt 17.09.2026 im Trockenlauf gegen `BYTEC_SHOP_Switche`: 117 Dokumente
+Belegt 17.09.2026 im Trockenlauf gegen `<KUNDE>_SHOP_Switche`: 117 Dokumente
 → 118 Knoten (1 Sammelprodukt), 157 neue Attribute in 21 Gruppen, 5 471
 Werte, 7 Stapel.

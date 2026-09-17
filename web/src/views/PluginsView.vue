@@ -97,7 +97,7 @@ function pick(k) { cur.value = k; startParams() }
           <tr v-for="p in manifest.process.params ?? []" :key="p.key"><td class="attr" :title="p.key">{{ p.label || p.key }}</td>
             <td style="padding:2px 4px">
               <select v-if="p.type === 'bool'" v-model="run.params[p.key]" style="width:100%"><option value="true">✓ ja</option><option value="false">✗ nein</option></select>
-              <input v-else v-model="run.params[p.key]" type="text" style="width:100%" />
+              <input v-else v-model="run.params[p.key]" type="text" style="width:100%" :placeholder="p.placeholder || ''" />
             </td></tr>
         </tbody></table>
         <div class="chips" style="padding:6px 8px"><button class="primary" :disabled="!current.enabled || !!busy" @click="execute">▶ starten</button><span class="muted" style="font-size:12px">läuft im eigenen Prozess, redet nur über /api; Ausgabe kommt am Ende</span></div>
