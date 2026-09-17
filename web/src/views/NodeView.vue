@@ -342,6 +342,7 @@ function cellMenu(e, def, col, block) {
       <span class="muted">{{ columns.length }} Spalten</span>
     </div>
 
+    <h2 class="band">▤ Attribute <span class="muted">· {{ blocks.length }} Gruppen · {{ blocks.reduce((n, b) => n + b.defs.length, 0) }} Attribute</span></h2>
     <div v-if="store.layout === 'tabs' && blocks.length" class="tabs">
       <button v-for="b in blocks" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="`${b.key} · ${b.defs.length} Attribute` + (b.active ? '' : ` · gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`)">{{ b.label }}<span class="muted n"> {{ b.defs.length }}</span><span v-if="!b.active"> 🔒</span></button>
     </div>
@@ -580,20 +581,23 @@ function cellMenu(e, def, col, block) {
 .picker { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px; }
 .pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
 .pick:hover { background: var(--hover); }
-.section h2 { font-size: 12px; margin: 0 -8px 8px; padding: 4px 8px; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); }
-.section h2 .muted { font-weight: 400; }
-/* Gruppenköpfe (Taloan, 17.09.): bearbeitbare Gruppen deutlich — Band in Akzentfarbe, Text in Schriftfarbe;
-   gesperrte zurückgenommen (gedämpft, 🔒), statt in Warnfarbe ins Auge zu springen. */
+/* Abschnittsüberschriften (Attribute, Medien, Relationen, …): oberste Stufe — Band in Akzentfarbe mit Oberkante */
+.section h2, h2.band { font-size: 12px; margin: 0; padding: 4px 8px; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); }
+.section h2 { margin: 0 -8px 8px; }
+.section h2 .muted, h2.band .muted { font-weight: 400; }
+/* Gruppenköpfe (Taloan, 17.09.): eine Stufe unter der Abschnittsüberschrift, darum nicht dasselbe Band —
+   Zellton mit Akzentkante links, Name in Akzentfarbe; gesperrte zurückgenommen (gedämpft, 🔒). */
 .cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
 .cell-box.formula .res { font-weight: 600; }
 .cell-box.formula .src { font: 11px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.group-row td { background: var(--accent-soft); color: var(--text); font-size: 12px; font-weight: 600; letter-spacing: .02em; height: 26px; border-top: 2px solid var(--accent); padding-top: 2px; }
-.group-row td::before { content: '▤ '; color: var(--accent); }
+.group-row td { background: var(--cell); color: var(--accent); font-size: 12px; font-weight: 600; height: 26px; border-top: 1px solid var(--line); }
+.group-row td:first-child { border-left: 3px solid var(--accent); padding-left: 6px; }
+.group-row td::before { content: '▤ '; }
 .group-row .edit { text-decoration: none; margin-left: 4px; opacity: .5; color: var(--text); }
 .group-row:hover .edit { opacity: 1; }
 .group-row .from { font-weight: 400; color: var(--muted); }
-.group-row.locked td { background: var(--bg); color: var(--muted); border-top-color: var(--line); font-weight: 500; }
-.group-row.locked td::before { color: var(--muted); }
+.group-row.locked td { background: var(--bg); color: var(--muted); font-weight: 500; }
+.group-row.locked td:first-child { border-left-color: var(--line); }
 .group-row.locked .warn { color: var(--muted); font-weight: 400; }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* ★ Name im Baum: hohl = nicht gesetzt, blau = geerbt (von oben), gelb = hier gesetzt, halb durchsichtig = gesetzt, gilt hier nicht (Taloan, 17.09.) */
