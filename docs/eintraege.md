@@ -37,6 +37,21 @@ Eintrag übergeht das Abbild.
 Vererbung: `Tree.Resolve` sucht am Knoten (genaue Achse, ohne Kanal, ohne
 Sprache), dann bei den Eltern bis zur Wurzel — und sagt, woher der Wert kam.
 
+## Relationen — ein Strom je Relation (`r-…`)
+
+Kante von Knoten zu Knoten mit Typ aus dem Modell; Werte wie am Knoten
+(attributierte Relation: Menge, Slot …), docs/pflegestruktur.md, 18.
+
+| Typ | Nutzdaten | Wirkung |
+|---|---|---|
+| `RelationCreated` | `type`, `from`, `to` | Relation; je Typ nur einmal zwischen denselben Knoten; Rollen laut Typ |
+| `RelationRetired` | — | Relation aus dem Abbild |
+| `AttributeSet` | wie am Knoten | Wert an der Relation — nur Attribute der Gruppe des Relationstyps |
+| `ExternalLinked` / `ExternalUnlinked` | wie am Knoten | Kennung aus der Quelle (Import) |
+
+Ein zurückgezogener Knoten lässt seine Relationen stehen; sie zeigen dann
+ins Leere (`other.missing`) bis jemand sie zurückzieht.
+
 ## Werte an einem Knoten
 
 | Typ | Nutzdaten | Wirkung im Abbild |
@@ -70,6 +85,7 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 | `channel:<key>` | `ChannelDefined` | `key`, `label{}` |
 | `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum, **rows**), `unit?` (muss es unter `unit:` geben), `group` (Attributgruppe), `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `inheritable` (Wert vererbt sich nach unten; Vorgabe nein), `required{kanal: [sprachen] oder ["*"]}?` (Pflicht — gilt überall gleich, Eineindeutigkeit), `levels[]?` (Ausnahme: an welchen Knotentypen; null = Regel der Gruppe), `columns[]?` (bei rows) |
 | `group:<key>` | `AttributeGroupDefined` / `AttributeGroupRetired` | `key`, `label{}`, `activeFrom?` (group, product, variant: ab welchem Knotentyp Werte erfasst werden; darüber sichtbar, gesperrt). Gruppen hängen an Knoten (`GroupsAttached`) |
+| `relation:<key>` | `RelationTypeDefined` / `RelationTypeRetired` | `key`, `label{}`, `reverse{}` (Bezeichnung vom Ziel aus), `from[]?`/`to[]?` (erlaubte Rollen, null = alle), `group?` (Attributgruppe der Werte an der Relation). Saatgut: accessory, component (Gruppe relation_component mit `quantity`), related |
 | `settings:master_locale` | `MasterLocaleDefined` | `code` — die Mastersprache (Saatgut `de`): Pflichtfelder beim Anlegen werden in ihr erfasst; liegt ihr Wert nach dem einer anderen Sprache (Eintragsnummer), gilt die als „zu überarbeiten“ — abgeleitet, kein eigener Eintrag |
 | `settings:label:<role>` | `TreeLabelDefined` | **Altlast** (17.09.2026): Name im Baum je Knotentyp — ersetzt durch das ★ am Knoten (`LabelAttributeSet`); bleibt lesbar, wird nicht mehr gesät |
 | `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — **nur diese** Gruppen, in dieser Reihenfolge; darin Attribute in Reihenfolge, ungenannte Attribute hängen unten an ihrer Gruppe |
@@ -122,10 +138,16 @@ steht im Kopf `X-Actor`.
 | `PUT /api/nodes/{id}/rows/{attribute}` `{rows[]}` | `RowOrdered` |
 | `DELETE /api/nodes/{id}?recursive=true` | `NodeRetired` für den ganzen Unterbaum, tiefste zuerst, ein Stapel |
 | `DELETE /api/nodes/{id}/releases?channel=&locale=` | `ReleaseRevoked` |
+| `GET /api/nodes/{id}/relations` | `{out[], in[]}` — je Relation Typ, das andere Ende (`other.label`, `missing`), Werte |
+| `POST /api/relations` `{type, from, to}` | `RelationCreated` — Id vergibt der Server (`r-…`) |
+| `DELETE /api/relations/{id}` | `RelationRetired` |
+| `POST /api/relations/{id}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` an der Relation |
+| `PUT /api/relations/{id}/external/{system}` `{id}` | `ExternalLinked` an der Relation |
+| `PUT /api/model/relations/{key}` `{label{}, reverse{}, from[], to[], group}` · `DELETE` | `RelationTypeDefined` / `RelationTypeRetired` (nicht mit Relationen) |
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
 | `PUT /api/nodes/{id}/external/{system}` `{id}` | `ExternalLinked` |
 | `DELETE /api/nodes/{id}/external/{system}` | `ExternalUnlinked` |
-| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create (`name`), group.rename (Altlast), node.rename (`name`), label.set (`attribute`), product.create, axes.set (`axes[]`), variant.create, node.move, node.retire, status.set, attribute.set (mit `row`), row.add/remove/order, category.assign/remove, release.grant/revoke, external.link/unlink; `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
+| `POST /api/batch` `{commands: [{op, ref?, args}]}` | viele Befehle, eine Sperre, eine Stapelkennung. `op`: group.create (`name`), group.rename (Altlast), node.rename (`name`), label.set (`attribute`), product.create, axes.set (`axes[]`), variant.create, node.move, node.retire, status.set, attribute.set (mit `row`), row.add/remove/order, category.assign/remove, release.grant/revoke, external.link/unlink, relation.create (`type`, `from`, `to`; bekommt `ref`), relation.retire / relation.attribute.set / relation.external.link (`relation` = Id oder `@ref`); `args` wie beim Einzelbefehl plus `node`; ein neuer Knoten bekommt `ref`, spätere Befehle verweisen mit `@ref`. Hält beim ersten Fehler an und sagt, wie weit er kam |
 | `PUT /api/model/locales/{code}` `{label}` | `LocaleDefined` |
 | `PUT /api/model/channels/{key}` `{label{}}` | `ChannelDefined` |
 | `PUT /api/model/attributes/{key}` Definition | `AttributeDefined` — prüft Typ, Achsen, Einheit nur bei Zahlen, enum ↔ Werteliste |

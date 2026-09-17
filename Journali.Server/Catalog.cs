@@ -15,6 +15,7 @@ public sealed class Catalog
     private readonly IJournal _journal;
     private readonly ModelCatalog _model = new();
     private readonly Tree _tree = new();
+    private readonly Relations _relations = new();
     private readonly object _gate = new();
 
     public Catalog(IJournal journal) => _journal = journal;
@@ -25,6 +26,7 @@ public sealed class Catalog
         lock (_gate)
         {
             Projector.CatchUp(_journal, _model);
+            Projector.CatchUp(_journal, _relations);
             return Projector.CatchUp(_journal, _tree);
         }
     }
@@ -52,6 +54,7 @@ public sealed class Catalog
                     Types.UnitDefined => _model.Units.ContainsKey(key),
                     Types.AttributeGroupDefined => _model.Groups.ContainsKey(key),
                     Types.MasterLocaleDefined => _model.MasterLocale is not null,
+                    Types.RelationTypeDefined => _model.RelationTypes.ContainsKey(key),
                     _ => true,
                 };
                 if (exists) continue;
@@ -86,8 +89,12 @@ public sealed class Catalog
     {
         _model.Apply(entry);
         _tree.Apply(entry);
+        _relations.Apply(entry);
         return entry;
     }
+
+    /// <summary>Das Abbild der Relationen — nur innerhalb von <see cref="With"/> anfassen (dieselbe Sperre).</summary>
+    public Relations Relations => _relations;
 
     /// <summary>Liest unter der Sperre und gibt eine Kopie heraus, die der Aufrufer behalten darf.</summary>
     public TResult Read<TResult>(Func<Tree, TResult> read)

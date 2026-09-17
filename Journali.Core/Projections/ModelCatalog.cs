@@ -32,6 +32,8 @@ public sealed class ModelCatalog : IProjection
     public Dictionary<string, FamilyDefinition> Families { get; } = new();
     public Dictionary<string, UnitDefinition> Units { get; } = new();
     public Dictionary<string, ViewDefinition> Views { get; } = new();
+    /// <summary>Relationstypen (18): relation:&lt;key&gt;.</summary>
+    public Dictionary<string, RelationTypeDefinition> RelationTypes { get; } = new();
     public Dictionary<string, AttributeGroupDefinition> Groups { get; } = new();
     /// <summary>Welches Attribut die Knoten eines Typs im Baum benennt.</summary>
     public Dictionary<string, string> TreeLabels { get; } = new();
@@ -98,6 +100,13 @@ public sealed class ModelCatalog : IProjection
                 break;
             case Types.AttributeGroupRetired:
                 Groups.Remove(Types.Deserialize<AttributeGroupRetired>(entry.Payload).Key);
+                break;
+            case Types.RelationTypeDefined:
+                var rt = Types.Deserialize<RelationTypeDefinition>(entry.Payload);
+                RelationTypes[rt.Key] = rt;
+                break;
+            case Types.RelationTypeRetired:
+                RelationTypes.Remove(Types.Deserialize<RelationTypeRetired>(entry.Payload).Key);
                 break;
             case Types.ViewDefined:
                 var vw = Types.Deserialize<ViewDefinition>(entry.Payload);

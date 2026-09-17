@@ -595,3 +595,37 @@ vielleicht gerade nicht". Der automatische Name nimmt heute fest `de` zuerst.
 
 Saatgut: das ★ steht an `g-mastertree` auf `name`; ein leeres Journal benennt
 damit alles darunter nach seinem Namen, bis jemand es umsetzt.
+
+### 18. Relationen — gebaut (Taloan, 17.09.2026: „bau mal gleich")
+
+Andere PIMs haben Relationen und attributierte Relationen; die Solr-Quelle
+zeigt es: 109 376 `complex_relation`-Dokumente (Konfigurator: „in diesen
+ThinkCentre passt dieses RAM-Modul, Menge 1, Slot 1") neben einfachen
+`*_doc_rel`-Feldern (Zubehör, Bestandteile, Bilder).
+
+Ein Mechanismus für beides: **eine Relation ist ein Ding mit eigenem
+Strom** `r-…`, wie ein Knoten.
+
+- `RelationCreated {type, from, to}` — der Typ kommt aus dem Modell
+  (`relation:<key>`: Bezeichnung hin und zurück, erlaubte Rollen je Ende,
+  Attributgruppe der Werte). Je Typ nur einmal zwischen denselben Knoten,
+  nie auf sich selbst.
+- Werte an der Relation sind dieselben `AttributeSet`-Einträge wie am
+  Knoten — erlaubt sind die Attribute der Gruppe des Relationstyps
+  (Saatgut: `component` mit `relation_component` → `quantity`). Eine
+  einfache Relation ist dieselbe Sache ohne Gruppe.
+- `RelationRetired` nimmt sie aus dem Abbild; `ExternalLinked` trägt die
+  Kennung der Quelle (Import: Update statt Neuanlage).
+- Abbild `Relations`: je Knoten ausgehend und eingehend. Ein
+  zurückgezogener Knoten lässt seine Relationen stehen; sie zeigen ins Leere
+  (`other.missing`), bis jemand sie zurückzieht — wie verwaiste Werte.
+- Im Knoten: Abschnitt „⇄ Relationen" je Typ, → ausgehend mit den Werten
+  als Zellen, ← eingehend mit der umgekehrten Bezeichnung; neue Relation
+  über Typ + Suche nach dem Ziel (Name, SKU, Id). Modell → Relationen
+  pflegt die Typen.
+
+Offen: Reihenfolge der Relationen (heute nach Eintrag), Relationen in der
+Suche und Vollständigkeit, Medien (eigene Dinge oder Relationen zu
+Medienknoten), und der Import der Solr-Relationen (`*_doc_rel` am Knoten,
+`complex_relation` als attributierte Kante — beide Enden müssen importiert
+sein; mit 109 k Kanten ein eigener Lauf).

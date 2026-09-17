@@ -18,6 +18,7 @@ public sealed class Ctx
 {
     public required ModelCatalog Model { get; init; }
     public required Tree Tree { get; init; }
+    public required Relations Relations { get; init; }
     public required Func<string, string, object, Entry> Write { get; init; }   // stream, type, payload
 }
 
@@ -300,6 +301,49 @@ public static class Commands
         foreach (var cat in src.Categories)
             if (AssignCategory(c, id, cat).Entry is not null) count++;
         return id;
+    }
+
+    // ---- Relationen (18)
+
+    /// <summary>Relation anlegen: Typ aus dem Modell, Rollen erlaubt, nicht auf sich selbst, je Typ nur einmal zwischen denselben Knoten.</summary>
+    public static Outcome CreateRelation(Ctx c, string? type, string? from, string? to)
+    {
+        if (!c.Model.RelationTypes.TryGetValue(type ?? "", out var def)) return Outcome.Bad($"Unbekannter Relationstyp: {type}");
+        if (!c.Tree.Nodes.TryGetValue(from ?? "", out var a)) return Outcome.Bad("from: Knoten gibt es nicht.");
+        if (!c.Tree.Nodes.TryGetValue(to ?? "", out var b)) return Outcome.Bad("to: Knoten gibt es nicht.");
+        if (a.Id == b.Id) return Outcome.Bad("Nicht auf sich selbst.");
+        if (!def.FromAllowed(a.Role)) return Outcome.Bad($"{def.Key} geht nicht von {a.Role} aus (erlaubt: {string.Join(", ", def.From ?? [])}).");
+        if (!def.ToAllowed(b.Role)) return Outcome.Bad($"{def.Key} geht nicht zu {b.Role} (erlaubt: {string.Join(", ", def.To ?? [])}).");
+        if (c.Relations.From(a.Id).Any(r => r.Type == def.Key && r.To == b.Id)) return Outcome.Bad("Diese Relation gibt es schon.");
+        return Outcome.Ok(c.Write(Ids.Relation(), Types.RelationCreated, new RelationCreated(def.Key, a.Id, b.Id)));
+    }
+
+    public static Outcome RetireRelation(Ctx c, string id) =>
+        c.Relations.All.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.RelationRetired, new RelationRetired())) : Outcome.Missing;
+
+    /// <summary>Wert an der Relation: nur Attribute der Gruppe des Relationstyps; Achsen und Wert wie am Knoten.</summary>
+    public static Outcome SetRelationAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values)
+    {
+        if (!c.Relations.All.TryGetValue(id, out var r)) return Outcome.Missing;
+        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
+        var type = c.Model.RelationTypes.GetValueOrDefault(r.Type);
+        if (type?.Group is null) return Outcome.Bad($"Relationstyp {r.Type} hat keine Attributgruppe — im Modell zuordnen.");
+        if (def.Group != type.Group) return Outcome.Bad($"{def.Key} gehört nicht zur Gruppe {type.Group} des Relationstyps.");
+        if (def.Type == AttributeTypes.Rows) return Outcome.Bad("Vermehrbare Attribute gibt es an Relationen nicht.");
+        locale = Blank(locale); channel = Blank(channel);
+        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad($"{def.Key} hat diese Achse nicht.");
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
+        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad($"Unbekannter Kanal: {channel}");
+        if (CheckValue(c.Model, def, ref value, ref values) is { } error) return Outcome.Bad(error);
+        return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values)));
+    }
+
+    public static Outcome LinkRelationExternal(Ctx c, string id, string? system, string? externalId)
+    {
+        if (!c.Relations.All.TryGetValue(id, out var r)) return Outcome.Missing;
+        if (string.IsNullOrWhiteSpace(system) || string.IsNullOrWhiteSpace(externalId)) return Outcome.Bad("system und id sind Pflicht.");
+        if (c.Relations.ByExternal(system, externalId) is { } other && other.Id != r.Id) return Outcome.Bad($"{system}:{externalId} hängt schon an {other.Id}.");
+        return Outcome.Ok(c.Write(id, Types.ExternalLinked, new ExternalLinked(system, externalId)));
     }
 
     private static bool IsRole(Tree tree, string? id, string role) =>

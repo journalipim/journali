@@ -34,7 +34,7 @@ public static class BatchApi
             {
                 var refs = new Dictionary<string, string>();
                 var results = new List<Result>();
-                var ctx = new Ctx { Model = model, Tree = tree, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
+                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
 
                 for (var i = 0; i < r.Commands.Count; i++)
                 {
@@ -66,6 +66,10 @@ public static class BatchApi
                             "release.revoke" => Commands.RevokeRelease(ctx, a.Node(), a.Str("channel") ?? "", a.Str("locale")),
                             "external.link" => Commands.LinkExternal(ctx, a.Node(), a.Str("system"), a.Str("id")),
                             "external.unlink" => Commands.UnlinkExternal(ctx, a.Node(), a.Str("system") ?? ""),
+                            "relation.create" => Commands.CreateRelation(ctx, a.Str("type"), a.Id("from"), a.Id("to")),
+                            "relation.retire" => Commands.RetireRelation(ctx, a.Id("relation") ?? ""),
+                            "relation.attribute.set" => Commands.SetRelationAttribute(ctx, a.Id("relation") ?? "", a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values")),
+                            "relation.external.link" => Commands.LinkRelationExternal(ctx, a.Id("relation") ?? "", a.Str("system"), a.Str("id")),
                             _ => Outcome.Bad($"Unbekannter Befehl: {cmd.Op}"),
                         };
                     }

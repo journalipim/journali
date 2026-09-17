@@ -20,6 +20,7 @@ public static class Model
     public const string GroupStream = "group:";
     public const string LabelStream = "settings:label:";
     public const string MasterLocaleStream = "settings:master_locale";
+    public const string RelationStream = "relation:";
 
     /// <summary>Die SKU ist ein Attribut der Variante, eindeutig über alle Varianten.</summary>
     public const string SkuAttribute = "sku";
@@ -92,6 +93,13 @@ public static class Model
         ];
         foreach (var a in attributes)
             yield return new(AttributeStream + a.Key, Types.AttributeDefined, Types.Serialize(a));
+
+        // Relationen (18): Zubehör, Bestandteil (mit Menge), Verwandt — die Gruppe relation_component trägt die Werte am Bestandteil.
+        yield return new(GroupStream + "relation_component", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("relation_component", Labels.Of("Bestandteil", "Component"))));
+        yield return new(AttributeStream + "quantity", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("quantity", Labels.Of("Menge", "Quantity"), AttributeTypes.Integer, Group: "relation_component")));
+        yield return new(RelationStream + "accessory", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("accessory", Labels.Of("Zubehör", "Accessory"), Labels.Of("Zubehör von", "Accessory of"))));
+        yield return new(RelationStream + "component", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("component", Labels.Of("Bestandteil", "Component"), Labels.Of("verbaut in", "part of"), Group: "relation_component")));
+        yield return new(RelationStream + "related", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("related", Labels.Of("Verwandt", "Related"), Labels.Of("Verwandt", "Related"))));
 
         var viewNames = new Dictionary<string, (string De, string En)> { [Roles.Group] = ("Gruppe", "Group"), [Roles.Product] = ("Produkt", "Product"), [Roles.Variant] = ("Variante", "Variant") };
         foreach (var role in Roles.All)

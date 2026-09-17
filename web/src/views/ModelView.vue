@@ -21,6 +21,7 @@ const sections = [
   { key: 'attributes', icon: '⊞', label: 'Attribute', part: 'Struktur', one: 'Attribut', hint: 'Ein Attribut hat Typ, Gruppe, Achsen (Sprache, Kanal) und Pflicht je Kanal. Der Schlüssel ist für immer.' },
   { key: 'lists', icon: '☰', label: 'Wertelisten', part: 'Struktur', one: 'Werteliste', hint: 'Ein Attribut vom Typ enum zeigt auf einen Eintrag der Liste, nicht auf ein Wort. Der Eintrag hat Namen je Sprache und eigene Spalten (Farbe: ral).' },
   { key: 'views', icon: '◫', label: 'Attributsichten', part: 'Struktur', one: 'Sicht', hint: 'Je Knotentyp: welche Gruppen in welcher Reihenfolge, darin die Attribute in welcher Reihenfolge. Der Knoten zeigt in einer Sicht nur deren Gruppen.' },
+  { key: 'relationTypes', icon: '⇄', label: 'Relationen', part: 'Struktur', one: 'Relationstyp', hint: 'Ein Relationstyp verbindet Knoten (Zubehör, Bestandteil …): Bezeichnung hin und zurück, erlaubte Knotentypen, und eine Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot).' },
   { key: 'units', icon: '⚖', label: 'Einheiten', part: 'Basics', one: 'Einheit', hint: 'Je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um.' },
   { key: 'locales', icon: '🗣', label: 'Sprachen', part: 'Basics', one: 'Sprache', hint: 'Die Achse locale der Attribute.' },
   { key: 'channels', icon: '⇶', label: 'Kanäle', part: 'Basics', one: 'Kanal', hint: 'Die Achse channel; Pflichtfelder und Freigaben gelten je Kanal.' },
@@ -71,6 +72,7 @@ const rows = computed(() => {
     case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
+    case 'relationTypes': return (m.relationTypes ?? []).map(r => ({ key: r.key, label: r.label?.de, right: [(r.from ?? roles).map(icon).join('') + '→' + (r.to ?? roles).map(icon).join(''), r.group ? '▤ ' + r.group : ''], _: r })).sort(byKey)
     case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : ''] }))
     case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [] }))
   }
@@ -116,6 +118,18 @@ const curAttr = computed(() => model.value?.attributes.find(a => a.key === cur.v
 const curList = computed(() => model.value?.lists.find(l => l.key === cur.value) ?? null)
 const curView = computed(() => (model.value?.views ?? []).find(v => v.key === cur.value) ?? null)
 const curUnit = computed(() => (model.value?.units ?? []).find(u => u.key === cur.value) ?? null)
+const curRel = computed(() => (model.value?.relationTypes ?? []).find(r => r.key === cur.value) ?? null)
+function relSet(col, v) {
+  const r = { ...curRel.value, label: { ...(curRel.value.label || {}) }, reverse: { ...(curRel.value.reverse || {}) } }
+  if (col.startsWith('label_')) r.label[col.slice(6)] = v
+  else if (col.startsWith('reverse_')) r.reverse[col.slice(8)] = v
+  else if (col.startsWith('from_') || col.startsWith('to_')) {
+    const [side, role] = col.split('_'); const cur = new Set(r[side] ?? roles)
+    v ? cur.add(role) : cur.delete(role)
+    r[side] = cur.size === roles.length ? null : roles.filter(x => cur.has(x))
+  } else r[col] = v
+  put(`/api/model/relations/${r.key}`, r)
+}
 const curLocale = computed(() => model.value?.locales.find(l => l.code === cur.value) ?? null)
 const curChannel = computed(() => model.value?.channels.find(c => c.key === cur.value) ?? null)
 const b = v => v ? 'true' : 'false'
@@ -178,6 +192,7 @@ async function bulkAssignGroup() {
 const removePath = {
   groups: k => `/api/model/groups/${k}`, attributes: k => `/api/model/attributes/${k}`, lists: null,
   views: k => `/api/model/views/${k}`, units: k => `/api/model/units/${encodeURIComponent(k)}`, locales: null, channels: null,
+  relationTypes: k => `/api/model/relations/${k}`,
 }
 async function bulkRemove() {
   const p = removePath[section.value]; if (!p) return
@@ -201,11 +216,12 @@ function add() {
   else if (s === 'lists') put(`/api/model/lists/${k}`, { key: k, label: {} })
   else if (s === 'views') put(`/api/model/views/${k}`, { key: k, label: {}, level: 'product', items: [] })
   else if (s === 'units') put(`/api/model/units/${encodeURIComponent(k)}`, { key: k, label: {}, quantity: 'other', factor: 1 })
+  else if (s === 'relationTypes') put(`/api/model/relations/${k}`, { key: k, label: {}, reverse: {} })
   else if (s === 'locales') put(`/api/model/locales/${k}`, { code: k, label: '' })
   else if (s === 'channels') put(`/api/model/channels/${k}`, { key: k, label: {} })
   cur.value = k; sel.value = new Set([k])
 }
-const addPlaceholder = { groups: 'neue Gruppe (key)', attributes: 'neuer key (a-z, 0-9, _)', lists: 'neue Werteliste (key)', views: 'neue Sicht (key)', units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app' }
+const addPlaceholder = { relationTypes: 'neuer Relationstyp (key)', groups: 'neue Gruppe (key)', attributes: 'neuer key (a-z, 0-9, _)', lists: 'neue Werteliste (key)', views: 'neue Sicht (key)', units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app' }
 
 // ---- Wertelisten: Einträge mit Namen je Sprache und eigenen Spalten (Farbe: ral)
 function listSet(col, v) {
@@ -466,6 +482,23 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           </div>
           <div v-if="!viewItems.length" class="empty">Leer — „⇊ alle Gruppen“ oder einzeln dazu, dann ziehen.</div>
         </div>
+      </div>
+    </template>
+
+    <!-- Relationstyp -->
+    <template v-else-if="section === 'relationTypes' && curRel">
+      <div class="toolbar"><h1>⇄ {{ curRel.label?.de || curRel.key }}</h1><span class="mono muted">{{ curRel.key }}</span><span class="grow" /><button class="x" @click="removeCur" title="Relationstyp zurückziehen (nicht, solange es Relationen gibt)">🗑</button></div>
+      <div class="scroll">
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr><td class="attr">Name de</td><Cell :value="curRel.label?.de ?? null" @save="v => relSet('label_de', v)" /></tr>
+          <tr><td class="attr">Name en</td><Cell :value="curRel.label?.en ?? null" @save="v => relSet('label_en', v)" /></tr>
+          <tr><td class="attr" title="Bezeichnung vom Ziel aus gesehen („Zubehör von“)">← umgekehrt de</td><Cell :value="curRel.reverse?.de ?? null" @save="v => relSet('reverse_de', v)" /></tr>
+          <tr><td class="attr">← umgekehrt en</td><Cell :value="curRel.reverse?.en ?? null" @save="v => relSet('reverse_en', v)" /></tr>
+          <tr v-for="r in roles" :key="'f' + r"><td class="attr" :title="`darf von ${roleLabel[r]} ausgehen`">von {{ roleLabel[r] }}</td><ToggleCell :value="b(!curRel.from || curRel.from.includes(r))" @save="v => relSet('from_' + r, v === 'true')" /></tr>
+          <tr v-for="r in roles" :key="'t' + r"><td class="attr" :title="`darf zu ${roleLabel[r]} führen`">zu {{ roleLabel[r] }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
+          <tr><td class="attr" title="Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte">▤ Werte aus Gruppe</td><SelectCell :value="curRel.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => relSet('group', v || null)" /></tr>
+        </tbody></table>
+        <div class="section muted" style="font-size:12px" v-if="curRel.group">⊞ an der Relation: {{ model.attributes.filter(a => a.group === curRel.group).map(a => a.label?.de || a.key).join(', ') || '— die Gruppe hat noch keine Attribute' }}</div>
       </div>
     </template>
 

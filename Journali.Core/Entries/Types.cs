@@ -22,6 +22,10 @@ public static class Types
     public const string GroupsAttached = "GroupsAttached";
     public const string NodeNamed = "NodeNamed";
     public const string ProductAxesSet = "ProductAxesSet";
+
+    // Relationen (docs/pflegestruktur.md, 18): eigener Strom r-…, Werte per AttributeSet wie am Knoten
+    public const string RelationCreated = "RelationCreated";
+    public const string RelationRetired = "RelationRetired";
     public const string LabelAttributeSet = "LabelAttributeSet";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
@@ -54,6 +58,8 @@ public static class Types
     public const string UnitDefined = "UnitDefined";
     public const string UnitRetired = "UnitRetired";
     public const string MasterLocaleDefined = "MasterLocaleDefined";
+    public const string RelationTypeDefined = "RelationTypeDefined";
+    public const string RelationTypeRetired = "RelationTypeRetired";
 
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
@@ -138,6 +144,12 @@ public sealed record StatusSet(string Status);
 /// Ob ein Wert vererbt wird, sagt das Attribut (<see cref="AttributeDefinition.Inheritable"/>).
 /// </summary>
 public sealed record GroupsAttached(string[] Groups);
+
+/// <summary>Erster Eintrag einer Relation: Typ aus dem Modell, von Knoten zu Knoten. Werte danach per <see cref="AttributeSet"/> auf demselben Strom.</summary>
+public sealed record RelationCreated(string Type, string From, string To);
+
+/// <summary>Relation weg — das Journal behält sie, das Abbild nimmt sie heraus.</summary>
+public sealed record RelationRetired();
 
 /// <summary>Externe Kennung je Quellsystem (Import): beim zweiten Lauf Update statt Neuanlage.</summary>
 public sealed record ExternalLinked(string System, string Id);
@@ -314,3 +326,17 @@ public sealed record UnitRetired(string Key);
 /// als „zu überarbeiten“ (abgeleitet aus den Eintragsnummern, kein eigener Eintrag).
 /// </summary>
 public sealed record MasterLocaleDefined(string Code);
+
+/// <summary>
+/// Ein Relationstyp (18): Strom <c>relation:&lt;key&gt;</c>. <paramref name="Reverse"/> ist die Bezeichnung
+/// vom Ziel aus („Zubehör von"); <paramref name="From"/>/<paramref name="To"/> schränken die Rollen ein
+/// (null = alle); <paramref name="Group"/> ist die Attributgruppe, deren Attribute an der Relation
+/// stehen (Menge, Slot …) — ohne Gruppe hat die Relation keine Werte.
+/// </summary>
+public sealed record RelationTypeDefinition(string Key, Labels Label, Labels? Reverse = null, string[]? From = null, string[]? To = null, string? Group = null)
+{
+    public bool FromAllowed(string role) => From is null || From.Contains(role);
+    public bool ToAllowed(string role) => To is null || To.Contains(role);
+}
+
+public sealed record RelationTypeRetired(string Key);

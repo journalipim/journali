@@ -23,6 +23,7 @@ const props = defineProps({ id: String })
 const router = useRouter()
 
 const node = ref(null)
+const rels = ref({ out: [], in: [] })   // Relationen dieses Knotens: ausgehend, eingehend
 const entries = ref([])
 const newCategory = ref('')
 const busy = ref(false)
@@ -152,6 +153,7 @@ const freeGroups = computed(() => (model.value?.groups ?? []).map(g => g.key).fi
 async function load() {
   try {
     node.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}`)
+    rels.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/relations`)
     entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}`)).reverse()
   } catch (e) {
     if (e.message.startsWith('404')) router.push('/tree')
@@ -199,6 +201,29 @@ const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def
 const setStar = def => command(() => api.post(`${nodeUrl()}/label-attribute`, { attribute: starOwn(def.key) ? null : def.key }, 'PUT'))
 const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
 const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups }, 'PUT'))
+// ---- Relationen (18): je Typ ausgehend (→) und eingehend (←, mit umgekehrter Bezeichnung); Werte an der Relation aus der Gruppe des Typs
+const relTypes = computed(() => model.value?.relationTypes ?? [])
+const relType = key => relTypes.value.find(t => t.key === key)
+const relGroupAttrs = key => { const g = relType(key)?.group; return g ? (model.value?.attributes ?? []).filter(a => a.group === g && a.type !== 'rows' && a.type !== 'html') : [] }
+const relBlocks = computed(() => {
+  const out = new Map()
+  for (const r of rels.value.out ?? []) { if (!out.has(r.type)) out.set(r.type, { type: r.type, out: [], in: [] }); out.get(r.type).out.push(r) }
+  for (const r of rels.value.in ?? []) { if (!out.has(r.type)) out.set(r.type, { type: r.type, out: [], in: [] }); out.get(r.type).in.push(r) }
+  return [...out.values()].sort((a, b) => a.type.localeCompare(b.type))
+})
+const relCount = computed(() => (rels.value.out?.length ?? 0) + (rels.value.in?.length ?? 0))
+const relValue = (r, def) => { const loc = def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null; return r.values.find(v => v.attribute === def.key && (v.locale ?? null) === loc && !v.channel)?.value ?? null }
+const setRelValue = (r, def, v) => command(() => api.post(`/api/relations/${r.id}/attributes`, { attribute: def.key, locale: def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null, value: v }))
+const retireRel = r => command(() => api.del(`/api/relations/${r.id}`))
+const newRel = ref({ type: '', q: '', to: null })
+const relMatches = computed(() => {
+  const q = newRel.value.q.trim().toLowerCase(); if (q.length < 1) return []
+  const t = relType(newRel.value.type)
+  return tree.rows.filter(r => r.id !== props.id && (!t?.to || t.to.includes(r.role)) && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12)
+})
+const addRel = () => { const n = newRel.value; if (!n.type || !n.to) return; command(() => api.post('/api/relations', { type: n.type, from: props.id, to: n.to })); newRel.value = { type: n.type, q: '', to: null } }
+const relTypesFromHere = computed(() => relTypes.value.filter(t => !t.from || t.from.includes(node.value?.role)))
+
 // Variantenachsen am Produkt — änderbar, solange es keine Varianten hat (ProductAxesSet).
 const addAxis = ref('')
 const setAxes = axes => command(() => api.post(`${nodeUrl()}/axes`, { axes }, 'PUT'))
@@ -355,6 +380,38 @@ function cellMenu(e, def, col, block) {
         </div>
       </div>
       <div class="section">
+        <h2>⇄ Relationen <span class="muted">· {{ relCount }}</span></h2>
+        <div v-for="b in relBlocks" :key="b.type" class="relblock">
+          <table class="grid" style="width:auto">
+            <thead><tr><th style="width:180px">{{ relType(b.type)?.label?.de || b.type }}</th><th style="width:260px"></th><th v-for="d in relGroupAttrs(b.type)" :key="d.key" style="width:140px" :title="d.key">{{ d.label?.de || d.key }}<span v-if="d.unit" class="muted"> {{ d.unit }}</span></th><th style="width:28px"></th></tr></thead>
+            <tbody>
+              <tr v-for="r in b.out" :key="r.id" :title="r.id">
+                <td class="muted">→ {{ relType(b.type)?.label?.de || b.type }}</td>
+                <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" title="Knoten zurückgezogen">✗ {{ r.other.id }}</span></td>
+                <Cell v-for="d in relGroupAttrs(b.type)" :key="d.key" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" />
+                <td class="num"><button class="x" @click="retireRel(r)" title="Relation zurückziehen">×</button></td>
+              </tr>
+              <tr v-for="r in b.in" :key="r.id" :title="r.id">
+                <td class="muted">← {{ relType(b.type)?.reverse?.de || relType(b.type)?.label?.de || b.type }}</td>
+                <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" title="Knoten zurückgezogen">✗ {{ r.other.id }}</span></td>
+                <td v-for="d in relGroupAttrs(b.type)" :key="d.key" class="muted">{{ relValue(r, d) ?? '' }}</td>
+                <td class="num"><button class="x" @click="retireRel(r)" title="Relation zurückziehen">×</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="chips" style="margin-top:6px">
+          <select v-model="newRel.type" style="width:170px" title="Relationstyp — ⊞ Modell → Relationen"><option value="">⇄ Typ …</option><option v-for="t in relTypesFromHere" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
+          <input v-model="newRel.q" type="search" placeholder="🔍 Ziel: Name, SKU, Id" style="width:240px" :disabled="!newRel.type" @input="newRel.to = null" />
+          <span v-if="newRel.to" class="chip">→ {{ tree.byId.get(newRel.to)?.label }} <button @click="newRel.to = null; newRel.q = ''">×</button></span>
+          <button class="primary" :disabled="!newRel.type || !newRel.to" @click="addRel">verbinden</button>
+        </div>
+        <div v-if="newRel.q && !newRel.to" class="picker" style="max-width:520px">
+          <div v-for="m in relMatches" :key="m.id" class="pick" @click="newRel.to = m.id; newRel.q = m.label">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ m.sku ?? m.id }}</span></div>
+          <div v-if="!relMatches.length" class="muted" style="padding:4px 8px;font-size:12px">nichts zu „{{ newRel.q }}“</div>
+        </div>
+      </div>
+      <div class="section">
         <h2>▤ Attributgruppen an diesem Knoten <span class="muted">· gelten ab hier nach unten</span></h2>
         <div class="chips">
           <span v-for="g in node.attachedGroups" :key="g" class="chip" :title="model.groups.find(x => x.key === g)?.label?.de">{{ g }} <button @click="attach(node.attachedGroups.filter(x => x !== g))" title="abhängen">×</button></span>
@@ -427,6 +484,12 @@ function cellMenu(e, def, col, block) {
 .tabbtn.on { background: var(--pane); color: var(--text); font-weight: 600; }
 .tabbtn.locked { opacity: .6; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
+.relblock { margin-bottom: 8px; }
+.relblock a { color: inherit; text-decoration: none; }
+.relblock a:hover { text-decoration: underline; }
+.picker { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px; }
+.pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
+.pick:hover { background: var(--hover); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 /* Gruppenköpfe (Taloan, 17.09.): bearbeitbare Gruppen deutlich — Band in Akzentfarbe, Text in Schriftfarbe;
    gesperrte zurückgenommen (gedämpft, 🔒), statt in Warnfarbe ins Auge zu springen. */

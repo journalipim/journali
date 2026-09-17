@@ -16,5 +16,8 @@ public static class Ids
         _ => throw new ArgumentException(role, nameof(role)),
     };
 
+    /// <summary>Strom einer Relation: r-…</summary>
+    public static string Relation() => "r-" + Random();
+
     private static string Random() => Convert.ToHexString(RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
 }

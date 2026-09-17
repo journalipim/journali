@@ -60,6 +60,7 @@ ModelApi.Map(api);
 // ---- Baum: Knoten, Werte, Kategorien, Freigaben — einzeln und im Stapel ---------
 
 TreeApi.Map(api);
+RelationApi.Map(api);
 BatchApi.Map(api);
 
 // ---- Journal (roh) ---------------------------------------------------------

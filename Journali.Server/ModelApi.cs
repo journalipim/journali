@@ -27,6 +27,26 @@ public static partial class ModelApi
             Command(req, c, code, ValidKey, (model, write) =>
                 write(Model.LocaleStream + code, Types.LocaleDefined, body with { Code = code })));
 
+        m.MapPut("/relations/{key}", (string key, RelationTypeDefinition body, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) =>
+            {
+                var from = Clean(body.From); var to = Clean(body.To);
+                if (from?.Except(Roles.All).Any() ?? false) return Bad("from: nur group, product, variant.");
+                if (to?.Except(Roles.All).Any() ?? false) return Bad("to: nur group, product, variant.");
+                var group = Blank(body.Group);
+                if (group is not null && !model.Groups.ContainsKey(group) && !model.Attributes.Values.Any(a => a.Group == group)) return Bad($"Unbekannte Gruppe: {group}");
+                return write(Model.RelationStream + key, Types.RelationTypeDefined, body with { Key = key, Label = body.Label ?? new(), From = from, To = to, Group = group });
+            }));
+
+        m.MapDelete("/relations/{key}", (string key, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            return c.With((model, _, write) =>
+                !model.RelationTypes.ContainsKey(key) ? Results.NotFound()
+                : c.Relations.OfType(key).Any() ? Bad($"{key} hat noch {c.Relations.OfType(key).Count()} Relationen.")
+                : Results.Ok(EntryView.Of(write(actor, Model.RelationStream + key, Types.RelationTypeRetired, new RelationTypeRetired(key), null))));
+        });
+
         m.MapPut("/master-locale", (MasterLocaleDefined body, HttpRequest req, Catalog c) =>
             Command(req, c, body.Code ?? "", ValidKey, (model, write) =>
                 !model.Locales.ContainsKey(body.Code ?? "") ? Bad($"Sprache {body.Code} gibt es nicht.")
@@ -157,6 +177,7 @@ public static partial class ModelApi
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], values = l.Ordered.ToList() }).ToList(),
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
         views = model.Views.Values.OrderBy(v => v.Key).ToList(),
+        relationTypes = model.RelationTypes.Values.OrderBy(r => r.Key).ToList(),
         // Gruppen: definierte plus die, die nur an Attributen vorkommen (z. B. „import“ aus dem Werkzeug) — mit Attributen in Reihenfolge
         groups = model.Groups.Keys.Union(model.Attributes.Values.Select(a => a.Group ?? "")).Where(g => g.Length > 0).Distinct().Order()
             .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), activeFrom = model.Groups.GetValueOrDefault(g)?.ActiveFrom, attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g) }).ToList(),
