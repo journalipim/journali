@@ -67,6 +67,16 @@ export function solr(core) {
     roots: async () => (await select(NODES, { fq: ['main_parent_id:""'], rows: 200 })).response.docs.filter(isNode),
     children: async id => (await select(NODES, { fq: [`main_parent_id:"${id}"`], rows: 1000 })).response.docs.filter(isNode),
     doc: async id => (await select(`id:"${id}"`, { rows: 1 })).response.docs[0] ?? null,
+    /// Dokumente zu Ids, in Stücken (die URL hat Grenzen).
+    byIds: async (ids, onPage) => {
+      const out = []
+      for (let i = 0; i < ids.length; i += 80) {
+        const chunk = ids.slice(i, i + 80)
+        out.push(...(await select('*:*', { fq: [`id:(${chunk.map(x => `"${x}"`).join(' OR ')})`], rows: chunk.length, sort: 'id asc' })).response.docs)
+        onPage?.(out.length, ids.length)
+      }
+      return out
+    },
     /// Ein Teilbaum vollständig (inklusive Wurzel) — main_path_id enthält die eigene Id.
     subtree: (rootId, onPage) => all(NODES, { fq: [`main_path_id:"${rootId}"`] }, onPage).then(ds => ds.filter(isNode)),
     /// Die Attribut-Definitionen der Quelle: remote_id → { name, section, sectionName }.
@@ -157,4 +167,100 @@ export function modelNeeds(docs, attrs, groups, pdefs, skip) {
   for (const k of ['name', 'description', 'sku']) if (attrs.has(k)) used.add(attrs.get(k).group)
   used.delete(undefined); used.delete(null); used.delete('')
   return { newGroups, newAttrs, raise, used: [...used].sort(), counts }
+}
+
+// ---- Relationen (docs/pflegestruktur.md, 18): *_doc_rel-Felder am Knoten sind einfache Kanten (Typ = Schlüssel),
+// component_complex zeigt auf complex_relation-Dokumente — die attributierten Kanten des Typs component
+// (Menge, Min/Max/Schritt, Slots …). Beide Enden müssen importiert sein (Kennung solr:<master_id>).
+const REL_POINTER = 'component_complex'                     // kein eigener Typ: die Werte zur component-Kante
+export const REL_GROUP = 'relation_component'               // Gruppe der Werte an der component-Kante (Saatgut)
+export const stripLang = (id, lang) => lang && id.endsWith('_' + lang) ? id.slice(0, -(lang.length + 1)) : id
+
+/// Die Kanten eines Dokuments: [{ type, targets[] (Solr-Ids) }] — Bilder/Dateien/Videos sind keine Relationen.
+export function relFields(doc) {
+  const out = []
+  for (const [k, v] of Object.entries(doc)) {
+    const m = /^property__(.+?)__(multi_)?doc_rel$/.exec(k)
+    if (!m || m[1] === REL_POINTER) continue
+    const targets = (Array.isArray(v) ? v : [v]).filter(Boolean)
+    if (targets.length) out.push({ type: slug(m[1]), raw: m[1], targets })
+  }
+  return out
+}
+/// Die Ids der complex_relation-Dokumente, auf die ein Knoten zeigt.
+export const complexIds = doc => { const v = doc[`property__${REL_POINTER}__multi_doc_rel`]; return Array.isArray(v) ? v : v ? [v] : [] }
+
+/// Werte einer attributierten Kante aus dem complex_relation-Dokument: control__quantity* und direction, dazu property__* (ohne Zeiger).
+export function complexValues(cdoc, skip = DEFAULT_SKIP) {
+  const out = []
+  for (const [k, v] of Object.entries(cdoc)) {
+    let m = /^control__(quantity|quantity_min|quantity_max|quantity_step|direction)__(\w+)$/.exec(k)
+    if (!m) { m = /^property__(.+?)__(\w+)$/.exec(k); if (!m || m[1] === 'relation') continue }
+    const [, raw, suffix] = m
+    if (matches(raw, skip) || !TYPES[suffix] || v == null || v === '') continue
+    out.push({ key: slug(raw), suffix, raw, value: v })
+  }
+  return out
+}
+
+/// Der Plan für die Relationen eines Satzes Dokumente.
+/// byExt: master_id → journali-Id; complexById: Solr-Id → complex_relation-Dokument;
+/// existing: Kennung solr → { id, values: Map("attr|locale" → Wert) } der schon vorhandenen Relationen;
+/// types/attrs/groups: das Modell. Liefert neue Typen/Attribute, Befehle je Quellknoten, Zahlen je Typ.
+export function relationNeeds(docs, byExt, complexById, existing, model) {
+  const types = new Map((model.relationTypes ?? []).map(t => [t.key, t]))
+  const attrs = new Map(model.attributes.map(a => [a.key, a]))
+  const groups = new Set((model.groups ?? []).map(g => g.key))
+  const newTypes = new Map(), newAttrs = new Map()
+  const perNode = new Map()      // from-Id → Befehle
+  const stats = new Map()        // Typ → { neu, gleich, geaendert, zielFehlt }
+  const st = t => { if (!stats.has(t)) stats.set(t, { neu: 0, gleich: 0, geaendert: 0, zielFehlt: 0, selbst: 0 }); return stats.get(t) }
+  let missingFrom = 0, refNo = 0
+  const needGroup = !groups.has(REL_GROUP)
+  for (const d of docs) {
+    const from = byExt.get(d.master_id)
+    const fields = relFields(d)
+    if (!fields.length) continue
+    if (!from) { missingFrom++; continue }
+    const cmds = perNode.get(from) ?? []; perNode.set(from, cmds)
+    // attributierte Werte je Ziel (component): aus den complex_relation-Dokumenten dieses Knotens
+    const valuesByTarget = new Map(), extByTarget = new Map()
+    for (const cid of complexIds(d)) {
+      const c = complexById.get(cid); if (!c) continue
+      const tgt = (c.property__relation__multi_doc_rel ?? [])[0]; if (!tgt) continue
+      valuesByTarget.set(tgt, complexValues(c)); extByTarget.set(tgt, c.master_id)
+    }
+    for (const f of fields) {
+      if (!types.has(f.type) && !newTypes.has(f.type)) newTypes.set(f.type, { key: f.type, label: { de: f.raw, en: f.raw }, reverse: { de: f.raw + ' von', en: f.raw + ' of' }, group: f.type === 'component' ? REL_GROUP : null })
+      const s = st(f.type)
+      for (const t of f.targets) {
+        const toMaster = stripLang(t, d.lang)
+        if (toMaster === d.master_id) { s.selbst++; continue }   // die Quelle kennt Kanten auf sich selbst — journali nicht
+        const to = byExt.get(toMaster)
+        if (!to) { s.zielFehlt++; continue }
+        const vals = f.type === 'component' ? (valuesByTarget.get(t) ?? []) : []
+        const ext = extByTarget.get(t) ?? `${d.master_id}>${f.type}>${toMaster}`
+        // Attribute der Werte: Gruppe relation_component, Typ nach Suffix, keine Achsen
+        for (const v of vals) if (!attrs.has(v.key) && !newAttrs.has(v.key)) {
+          const [type, multiple] = TYPES[v.suffix]
+          newAttrs.set(v.key, { key: v.key, label: { de: v.raw, en: v.raw }, type, group: REL_GROUP, multiple })
+        }
+        const have = existing.get(ext)
+        const rel = have ? have.id : '@r' + (++refNo)
+        if (!have) cmds.push({ op: 'relation.create', ref: rel.slice(1), args: { type: f.type, from, to } }, { op: 'relation.external.link', args: { relation: rel, system: SYSTEM, id: ext } })
+        let changed = 0
+        for (const v of vals) {
+          const def = attrs.get(v.key) ?? newAttrs.get(v.key)
+          const value = asStrings(v.suffix, v.value)
+          const args = { relation: rel, attribute: v.key, locale: null }
+          if (def.multiple) args.values = Array.isArray(value) ? value : [value]; else args.value = Array.isArray(value) ? value.join(', ') : value
+          const cur = have?.values.get(`${v.key}|`)
+          if (have && JSON.stringify(cur) === JSON.stringify(args.values ?? args.value)) continue
+          cmds.push({ op: 'relation.attribute.set', args }); changed++
+        }
+        if (!have) s.neu++; else if (changed) s.geaendert++; else s.gleich++
+      }
+    }
+  }
+  return { newTypes, newAttrs, needGroup, perNode, stats, missingFrom }
 }

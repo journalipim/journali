@@ -60,6 +60,26 @@ Die Attributgruppen, die der Teilbaum braucht, werden an die importierte
 Wurzel gehängt (`groups.attach`), das ★ dort auf `name` gesetzt — der Baum
 heisst dann wie in der Quelle.
 
+## Relationen (zweiter Lauf)
+
+Kanten stehen in der Quelle an den Knoten: `property__<typ>__multi_doc_rel`
+(`accessory` 108 Knoten, `component` 129, `service` 70 …) → einfache
+Relation mit Typ = Schlüssel (fehlende Typen werden angelegt: Label = Schlüssel,
+umgekehrt „… von"). `component_complex` zeigt auf die `complex_relation`-
+Dokumente (109 376): je Kante Menge, Min/Max/Schritt, Richtung, Slots — das
+werden die Werte der `component`-Kante (Gruppe `relation_component`,
+Attribute nach Suffix). Kennung der Kante: `master_id` des complex-Dokuments,
+sonst `<quelle>><typ>><ziel>`; zweiter Lauf schreibt nur Unterschiede.
+Beide Enden müssen importiert sein — „Ziel fehlt" zählt, was übersprungen
+wurde; Kanten auf sich selbst (kommt vor) überspringt journali.
+
+```bash
+python plugins/import-tools/solr/solr_import.py --solr https://…/solr/products --actor Taloan relations --root BYTEC_SHOP_Mobile_Geraete --dry-run
+```
+
+In der Oberfläche: Plan → „⇄ Relationen" → analysieren / schreiben für die
+angehakten Teilbäume.
+
 ## Aufruf
 
 ```bash

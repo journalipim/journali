@@ -256,6 +256,155 @@ def ensure_model(j, model, docs, pdefs, skip, verbose):
     return sorted(g for g in used if g)
 
 
+# ---------------------------------------------------------------- Relationen (docs/pflegestruktur.md, 18)
+
+REL_POINTER = "component_complex"     # zeigt auf die complex_relation-Dokumente: die Werte der component-Kante
+REL_GROUP = "relation_component"      # Gruppe der Werte an der Kante (Saatgut)
+REL_CONTROLS = ("quantity", "quantity_min", "quantity_max", "quantity_step", "direction")
+
+
+def strip_lang(doc_id, lang):
+    return doc_id[:-(len(lang) + 1)] if lang and doc_id.endswith("_" + lang) else doc_id
+
+
+def rel_fields(doc):
+    """Kanten eines Dokuments: (typ, roh, [Solr-Ids]) aus property__<k>__(multi_)doc_rel — ohne den Zeiger."""
+    out = []
+    for k, v in doc.items():
+        m = re.fullmatch(r"property__(.+?)__(?:multi_)?doc_rel", k)
+        if not m or m.group(1) == REL_POINTER:
+            continue
+        targets = [t for t in (v if isinstance(v, list) else [v]) if t]
+        if targets:
+            out.append((slug(m.group(1)), m.group(1), targets))
+    return out
+
+
+def complex_values(cdoc, skip):
+    """Werte einer attributierten Kante: control__quantity*/direction und property__* (ohne den Zeiger relation)."""
+    for k, v in cdoc.items():
+        m = re.fullmatch(r"control__(" + "|".join(REL_CONTROLS) + r")__(\w+)", k)
+        if not m:
+            m = re.fullmatch(r"property__(.+?)__(\w+)", k)
+            if not m or m.group(1) == "relation":
+                continue
+        raw, suffix = m.group(1), m.group(2)
+        if matches(raw, skip) or suffix not in TYPES or v in (None, ""):
+            continue
+        yield slug(raw), suffix, raw, v
+
+
+def cmd_relations(solr, args):
+    """Kanten der Knoten eines Teilbaums: *_doc_rel als einfache Relation (Typ = Schlüssel), component mit den
+    Werten aus complex_relation. Beide Enden müssen importiert sein (Kennung solr:<master_id>)."""
+    j = Journali(args.journali, args.actor, args.dry_run)
+    skip = DEFAULT_SKIP + (args.skip or [])
+    raw_model = j.get("/api/model")
+    types = {t["key"]: t for t in raw_model.get("relationTypes", [])}
+    attrs = {a["key"]: a for a in raw_model["attributes"]}
+    groups = {g["key"] for g in raw_model.get("groups", [])}
+    by_ext = {r["external"][SYSTEM]: r["id"] for r in j.get("/api/tree") if r.get("external", {}).get(SYSTEM)}
+
+    root, docs = subtree(solr, args.root, args.since)
+    with_rel = [d for d in docs if rel_fields(d)]
+    print(f"Solr: {len(docs)} Dokumente unter {root['master_id']}, {len(with_rel)} mit Kanten; journali kennt {len(by_ext)} Knoten")
+
+    # Werte der component-Kanten: die complex_relation-Dokumente, in Stücken
+    cids = sorted({c for d in with_rel for c in (d.get(f"property__{REL_POINTER}__multi_doc_rel") or [])})
+    complex_by_id = {}
+    for i in range(0, len(cids), 100):
+        chunk = cids[i:i + 100]
+        for c in solr.select("*:*", fq=["id:(" + " OR ".join(f'"{x}"' for x in chunk) + ")"], rows=len(chunk)):
+            complex_by_id[c["id"]] = c
+    print(f"  {len(complex_by_id)} Kanten mit Werten (complex_relation)")
+
+    # Modell: Typen und Attribute, die fehlen
+    if REL_GROUP not in groups:
+        j.send("PUT", f"/api/model/groups/{REL_GROUP}", {"key": REL_GROUP, "label": {"de": "Bestandteil", "en": "Component"}})
+    new_attrs = {}
+    stats = {}
+    missing_from = 0
+    per_node = {}
+    for d in with_rel:
+        src = by_ext.get(d["master_id"])
+        if not src:
+            missing_from += 1
+            continue
+        existing = {}
+        if not args.dry_run or True:
+            for r in j.get(f"/api/nodes/{urllib.parse.quote(src)}/relations")["out"]:
+                ext = (r.get("external") or {}).get(SYSTEM)
+                if ext:
+                    existing[ext] = (r["id"], {(v["attribute"], v.get("locale")): (v["values"] if v.get("values") is not None else v.get("value")) for v in r["values"]})
+        values_by_target, ext_by_target = {}, {}
+        for cid in d.get(f"property__{REL_POINTER}__multi_doc_rel") or []:
+            c = complex_by_id.get(cid)
+            if not c or not c.get("property__relation__multi_doc_rel"):
+                continue
+            tgt = c["property__relation__multi_doc_rel"][0]
+            values_by_target[tgt] = list(complex_values(c, skip))
+            ext_by_target[tgt] = c["master_id"]
+        cmds = per_node.setdefault(src, [])
+        for typ, raw, targets in rel_fields(d):
+            if typ not in types:
+                t = {"key": typ, "label": {"de": raw, "en": raw}, "reverse": {"de": raw + " von", "en": raw + " of"}, "group": REL_GROUP if typ == "component" else None}
+                if args.verbose:
+                    print(f"  + Relationstyp {typ}")
+                j.send("PUT", f"/api/model/relations/{typ}", t)
+                types[typ] = t
+            s = stats.setdefault(typ, {"neu": 0, "gleich": 0, "geaendert": 0, "zielFehlt": 0, "selbst": 0})
+            for t in targets:
+                to_master = strip_lang(t, d.get("lang"))
+                if to_master == d["master_id"]:
+                    s["selbst"] += 1
+                    continue
+                dst = by_ext.get(to_master)
+                if not dst:
+                    s["zielFehlt"] += 1
+                    continue
+                vals = values_by_target.get(t, []) if typ == "component" else []
+                ext = ext_by_target.get(t) or f"{d['master_id']}>{typ}>{to_master}"
+                for key, suffix, raw_key, _ in vals:
+                    if key not in attrs and key not in new_attrs:
+                        jt, multiple, _pl = TYPES[suffix]
+                        new_attrs[key] = {"key": key, "label": {"de": raw_key, "en": raw_key}, "type": jt, "group": REL_GROUP, "multiple": multiple}
+                        j.send("PUT", f"/api/model/attributes/{key}", new_attrs[key])
+                        attrs[key] = {"key": key, "multiple": multiple, "group": REL_GROUP}
+                have = existing.get(ext)
+                ref = have[0] if have else f"@r{len(cmds)}"
+                if not have:
+                    cmds.append({"op": "relation.create", "ref": ref[1:], "args": {"type": typ, "from": src, "to": dst}})
+                    cmds.append({"op": "relation.external.link", "args": {"relation": ref, "system": SYSTEM, "id": ext}})
+                changed = 0
+                for key, suffix, _, v in vals:
+                    value = as_strings(suffix, v)
+                    a = {"relation": ref, "attribute": key, "locale": None}
+                    if attrs[key].get("multiple"):
+                        a["values"] = value if isinstance(value, list) else [value]
+                    else:
+                        a["value"] = ", ".join(value) if isinstance(value, list) else value
+                    if have and have[1].get((key, None)) == a.get("values", a.get("value")):
+                        continue
+                    cmds.append({"op": "relation.attribute.set", "args": a})
+                    changed += 1
+                if not have:
+                    s["neu"] += 1
+                elif changed:
+                    s["geaendert"] += 1
+                else:
+                    s["gleich"] += 1
+    total = 0
+    for src, cmds in per_node.items():
+        if cmds and not args.dry_run:
+            j.batch(cmds)
+        total += len(cmds)
+    print(f"  {len(new_attrs)} neue Attribute in {REL_GROUP}: {', '.join(new_attrs) or '—'}")
+    for typ, s in sorted(stats.items()):
+        print(f"  ⇄ {typ}: neu {s['neu']}, vorhanden {s['gleich']}, geändert {s['geaendert']}, Ziel fehlt {s['zielFehlt']}, auf sich selbst {s['selbst']}")
+    mode = "Trockenlauf — nichts geschrieben" if args.dry_run else f"{j.written} Befehle geschrieben"
+    print(f"\n{mode}. {total} Befehle für {len(per_node)} Quellknoten; {missing_from} Quellen nicht importiert")
+
+
 # ---------------------------------------------------------------- Befehle
 
 def cmd_list(solr, args):
@@ -429,10 +578,19 @@ def main():
     i.add_argument("--skip", action="append", help="Property-Schlüssel übergehen (Muster mit *), zusätzlich zu " + ", ".join(DEFAULT_SKIP))
     i.add_argument("--verbose", action="store_true")
 
+    r = sub.add_parser("relations", help="Kanten der Knoten eines Teilbaums (zweiter Lauf nach import; beide Enden müssen drin sein)")
+    r.add_argument("--root", required=True, help="master_id der Solr-Wurzel")
+    r.add_argument("--dry-run", action="store_true")
+    r.add_argument("--since", help="nur Dokumente mit changedOn ab diesem Zeitpunkt (ISO)")
+    r.add_argument("--skip", action="append", help="Werte-Schlüssel an der Kante übergehen (Muster mit *)")
+    r.add_argument("--verbose", action="store_true")
+
     args = ap.parse_args()
     solr = Solr(args.solr)
     if args.cmd == "list":
         cmd_list(solr, args)
+    elif args.cmd == "relations":
+        cmd_relations(solr, args)
     else:
         cmd_import(solr, args)
 

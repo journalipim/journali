@@ -7,7 +7,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
-import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKIP, TYPES } from '../solr.js'
+import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKIP, TYPES, relFields, complexIds, relationNeeds, REL_GROUP } from '../solr.js'
 import { recent, remember } from '../recent.js'
 
 const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
@@ -29,6 +29,8 @@ const busy = ref('')
 const log = ref([])
 const plan = ref(null)
 const result = ref(null)
+const relPlan = ref(null)       // Plan für die Relationen der angehakten Teilbäume
+const relResult = ref(null)
 
 const model = computed(() => store.model)
 const groups = computed(() => tree.rows.filter(r => r.role === 'group'))
@@ -160,6 +162,62 @@ const counts = computed(() => {
   for (const it of plan.value?.items ?? []) c[it.role][it.existing ? 1 : 0]++
   return c
 })
+
+// ---- Relationen (18): zweiter Lauf nach den Knoten — Kanten aus *_doc_rel und den complex_relation-Dokumenten
+async function analyseRelations() {
+  if (!checked.value.size) { store.toast('Nichts angehakt'); return }
+  busy.value = 'lade …'; relPlan.value = null; relResult.value = null
+  try {
+    const picked = rows.value.filter(r => checked.value.has(r.doc.id) && !checkedAbove(r))
+    const docs = []
+    for (const r of picked) docs.push(...await client.subtree(r.doc.id, (n, of) => { busy.value = `lade … ${n}/${of}` }))
+    const withRel = docs.filter(d => relFields(d).length)
+    // Kennungen: Knoten (beide Enden) und schon vorhandene Relationen der Quellknoten
+    const byExt = new Map(tree.rows.filter(r => r.external?.[SYSTEM]).map(r => [r.external[SYSTEM], r.id]))
+    const existing = new Map()
+    let n = 0
+    for (const d of withRel) {
+      const from = byExt.get(d.master_id); if (!from) continue
+      busy.value = `vorhandene Relationen … ${++n}/${withRel.length}`
+      const rs = await api.get(`/api/nodes/${encodeURIComponent(from)}/relations`)
+      for (const r of rs.out) if (r.external?.[SYSTEM]) existing.set(r.external[SYSTEM], { id: r.id, values: new Map(r.values.map(v => [`${v.attribute}|${v.locale ?? ''}`, v.values ?? v.value])) })
+    }
+    const cids = [...new Set(withRel.flatMap(complexIds))]
+    const complexById = new Map((await client.byIds(cids, (k, of) => { busy.value = `Kanten mit Werten … ${k}/${of}` })).map(c => [c.id, c]))
+    const needs = relationNeeds(withRel, byExt, complexById, existing, store.model)
+    const total = [...needs.stats.values()].reduce((a, s) => a + s.neu + s.gleich + s.geaendert + s.zielFehlt, 0)
+    relPlan.value = { needs, docs: withRel.length, cmds: [...needs.perNode.values()].reduce((a, c) => a + c.length, 0), total }
+    say(`Relationen analysiert: ${withRel.length} Knoten mit Kanten, ${total} Kanten, ${needs.newTypes.size} neue Typen, ${needs.newAttrs.size} neue Attribute, ${needs.missingFrom} Quellen nicht importiert`)
+  } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
+  finally { busy.value = '' }
+}
+async function runRelations() {
+  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!relPlan.value) return
+  busy.value = 'schreibe …'; relResult.value = null
+  let written = 0, batches = 0
+  try {
+    const { needs } = relPlan.value
+    if (needs.needGroup) await api.post(`/api/model/groups/${REL_GROUP}`, { key: REL_GROUP, label: { de: 'Bestandteil', en: 'Component' } }, 'PUT')
+    for (const [k, d] of needs.newAttrs) await api.post(`/api/model/attributes/${k}`, d, 'PUT')
+    for (const [k, t] of needs.newTypes) { await api.post(`/api/model/relations/${k}`, t, 'PUT'); say(`Relationstyp ${k} angelegt`) }
+    if (needs.newAttrs.size) say(`${needs.newAttrs.size} Attribute in ${REL_GROUP} angelegt`)
+    let n = 0
+    for (const [, cmds] of needs.perNode) {
+      busy.value = `schreibe … ${++n}/${needs.perNode.size}`
+      for (let i = 0; i < cmds.length; i += 9000) {
+        const res = await api.post('/api/batch', { commands: cmds.slice(i, i + 9000) })
+        written += res.results.length; batches++
+        if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`)
+      }
+    }
+    relResult.value = { written, batches, error: null }
+    say(written ? `Relationen fertig: ${written} Einträge in ${batches} Stapeln` : 'Relationen: nichts zu schreiben')
+    await store.poll(true)
+    relPlan.value = null
+  } catch (e) { relResult.value = { written, batches, error: e.message }; store.toast(e.message); say('Fehler: ' + e.message) }
+  finally { busy.value = '' }
+}
 
 // ---- Schreiben: Modell, dann Wurzel + Gruppen, dann je Produkt ein Stapel (unter der Obergrenze)
 async function run() {
@@ -344,6 +402,26 @@ async function run() {
           </table>
         </div>
       </template>
+      <div class="section">
+        <h2>⇄ Relationen <span class="muted">· zweiter Lauf, wenn die Knoten drin sind (beide Enden müssen importiert sein)</span></h2>
+        <div class="chips">
+          <button class="primary" @click="analyseRelations" :disabled="!connected || !checked.size || !!busy">⇄ analysieren</button>
+          <button class="primary" @click="runRelations" :disabled="!relPlan || !!busy">⇄ schreiben</button>
+          <span v-if="relPlan" class="muted">{{ relPlan.docs }} Knoten mit Kanten · {{ relPlan.cmds }} Befehle<span v-if="relPlan.needs.missingFrom" class="warn"> · {{ relPlan.needs.missingFrom }} Quellen nicht importiert</span></span>
+        </div>
+        <table v-if="relPlan" class="grid" style="width:auto;margin-top:6px">
+          <thead><tr><th>Typ</th><th class="num pos">neu</th><th class="num">vorhanden</th><th class="num warn">geändert</th><th class="num neg">Ziel fehlt</th><th class="num muted">auf sich selbst</th></tr></thead>
+          <tbody>
+            <tr v-for="[t, s] in relPlan.needs.stats" :key="t"><td>⇄ {{ t }}<span v-if="relPlan.needs.newTypes.has(t)" class="pos"> +</span></td><td class="num pos">{{ s.neu }}</td><td class="num">{{ s.gleich }}</td><td class="num warn">{{ s.geaendert }}</td><td class="num neg">{{ s.zielFehlt }}</td><td class="num muted">{{ s.selbst }}</td></tr>
+          </tbody>
+        </table>
+        <p v-if="relPlan?.needs.newAttrs.size" class="muted" style="font-size:12px">Neu in ▤ {{ REL_GROUP }}: {{ [...relPlan.needs.newAttrs.keys()].join(', ') }}</p>
+        <div v-if="relResult" style="margin-top:6px">
+          <div v-if="relResult.error" class="neg">{{ relResult.error }} — {{ relResult.written }} Einträge davor geschrieben.</div>
+          <div v-else-if="relResult.written" class="pos">{{ relResult.written }} Einträge in {{ relResult.batches }} Stapeln</div>
+          <div v-else class="muted">Nichts zu schreiben.</div>
+        </div>
+      </div>
       <div v-if="result" class="section">
         <h2>Ergebnis</h2>
         <div v-if="result.error" class="neg">{{ result.error }} — {{ result.written }} Einträge in {{ result.batches }} Stapeln davor geschrieben.</div>
