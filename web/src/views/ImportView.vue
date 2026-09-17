@@ -258,19 +258,30 @@ function toggleLocale(l) {
       <tr><td class="attr">Quelle</td><td>
         <input v-model="base" type="text" :placeholder="'https://…/api  (Demo: ' + IXP_DEMO + ')'" title="Basis-URL der IXP-API" @keydown.enter="connect" />
       </td></tr>
-      <tr><td class="attr">Token</td><td><input v-model="token" type="password" placeholder="leer für die Demo" title="bleibt im Browser, nicht im Profil" /></td></tr>
-      <tr><td class="attr">Sprache</td><td class="row">
-        <select v-model="lang" title="Sprache zum Blättern" style="width:90px"><option v-for="l in (languages.length ? languages : [{ code: lang }])" :key="l.code" :value="l.code">{{ l.code }}</option></select>
-        <span class="grow" /><button class="primary" @click="connect" :disabled="!!busy">Verbinden</button>
+      <tr><td class="attr">Token</td><td class="row"><input v-model="token" type="password" placeholder="leer für die Demo" title="bleibt im Browser, nicht im Profil" style="flex:1" />
+        <button class="primary" @click="connect" :disabled="!!busy">Verbinden</button></td></tr>
+      <tr><td class="attr">Präfix</td><td class="row">
+        <input v-model="prefix" type="text" style="width:90px" placeholder="z. B. sap_" @change="persist" title="vor jedem neu angelegten Attribut und als Gruppe — je Quellsystem eins; nach dem ersten Lauf nicht mehr ändern" />
+        <span class="muted" :title="`neue Attribute heissen ${cleanPrefix}<key>, Gruppe ${importGroup}`">→ {{ cleanPrefix }}‹key› · ▤ {{ importGroup }}</span>
       </td></tr>
+      <tr><td class="attr">Sprachen</td><td>
+        <template v-if="languages.length">
+          <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>
+        </template>
+        <span v-else class="muted">nach Verbinden</span>
+      </td></tr>
+      <tr><td class="attr">Bilder</td><td><label title="Vorschaubild der Quelle als Medium holen und als „image“ anhängen; gleiche Datei = ein Medium"><input type="checkbox" v-model="withImages" @change="persist" /> als Medien holen</label></td></tr>
     </ImportHead>
-    <div class="step-band">2 · Auswahl <span class="muted">· Haken = Teilbaum</span><span class="grow" /><span class="muted">{{ checked.size }} gewählt</span></div>
+    <div class="step-band">2 · Auswahl <span class="muted">· Haken = Teilbaum</span><span class="grow" />
+      <select v-model="lang" @change="connected && connect()" title="Sprache zum Blättern — Import nimmt die Sprachen aus 1" style="width:70px;font-size:12px"><option v-for="l in (languages.length ? languages : [{ code: lang }])" :key="l.code" :value="l.code">{{ l.code }}</option></select>
+      <span class="muted">{{ checked.size }} gewählt</span></div>
     <div class="scroll src">
       <div v-for="r in visible" :key="r.doc.id" class="node" :class="[r.doc.type, { on: checked.has(r.doc.id) || checkedAbove(r) }]" :style="`padding-left:${6 + r.depth * 14}px`" :title="r.doc.masterId">
         <span class="twisty" @click="toggle(r)">{{ r.doc.type === 'productVariant' ? '' : (expanded.has(r.doc.id) ? '▾' : '▸') }}</span>
         <input type="checkbox" :checked="checked.has(r.doc.id) || checkedAbove(r)" :disabled="checkedAbove(r)" @change="check(r)" title="Teilbaum importieren" />
         <span class="icon">{{ icon(ROLE[r.doc.type]) }}</span>
         <span class="label">{{ r.doc.name }}</span>
+        <span v-if="r.depth === 0 && r.doc.meta?.market?.length" class="muted" title="Markt der Wurzel">· {{ r.doc.meta.market.join(', ') }}</span>
       </div>
       <div v-if="!connected" class="empty">Verbinden — die Demo geht ohne Token.</div>
     </div>
@@ -279,7 +290,7 @@ function toggleLocale(l) {
 
   <Splitter v-model="srcW" :min="240" :max="800" />
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>3 · Zuordnung</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button></div>
+    <div class="toolbar"><h1>3 · Ziel & Zuordnung</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button></div>
     <div class="scroll">
       <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
         <tbody>
@@ -287,15 +298,7 @@ function toggleLocale(l) {
             <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
             <span class="muted">neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</span>
           </td></tr>
-          <tr><td class="muted">Präfix ⊞</td><td>
-            <input v-model="prefix" type="text" style="width:120px" placeholder="z. B. ixp_" @change="persist" />
-            <span class="muted">vor jedem neu angelegten Attribut (<span class="mono">{{ cleanPrefix }}short_title</span>) und als Gruppe <span class="mono">{{ importGroup }}</span> — je Quellsystem eins, dann kollidiert nichts</span>
-          </td></tr>
-          <tr><td class="muted">Bilder 🖼</td><td>
-            <label><input type="checkbox" v-model="withImages" @change="persist" /> Vorschaubild der Quelle als Medium holen und als „image“ anhängen</label>
-            <span class="muted">gleiche Datei = ein Medium; der Server lädt</span>
-          </td></tr>
-          <tr><td class="muted">Sprachen 🗣</td><td>
+          <tr v-if="false"><td class="muted">Sprachen 🗣</td><td>
             <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>
             <span class="muted">nur Sprachen des Modells</span>
           </td></tr>
