@@ -5,7 +5,7 @@
 
 const RULES = [
   { key: 'required', label: 'Pflichtattribut fehlt', severity: 'error',
-    run({ row, values, columns, locale }) { return columns.filter(c => c.required && Object.values(c.required).some(ls => ls.includes('*') || ls.includes(locale)) && (values[c.key]?.value == null || values[c.key].value === '')).map(c => ({ attribute: c.key, message: `Pflicht (${locale}), leer` })) } },
+    run({ row, values, columns, locale, master }) { return columns.filter(c => c.required && (c.perLocale || locale === master) && Object.values(c.required).some(ls => ls.includes('*') || ls.includes(locale)) && (values[c.key]?.value == null || values[c.key].value === '')).map(c => ({ attribute: c.key, message: c.perLocale ? `Pflicht (${locale}), leer` : 'Pflicht, leer' })) } },
   { key: 'pattern', label: 'Muster verletzt', severity: 'error',
     run({ values, columns }) { const out = []; for (const c of columns) { const v = values[c.key]?.value; if (c.pattern && v) { try { if (!new RegExp(c.pattern).test(v)) out.push({ attribute: c.key, message: `„${v}“ passt nicht zu ${c.pattern}` }) } catch {} } } return out } },
   { key: 'number', label: 'Zahl nicht lesbar', severity: 'error',
@@ -43,11 +43,12 @@ async function check(ctx, rootId, rules, say) {
   const extra = (ctx.checks ?? []).map(c => ({ key: `${c.key}:${c.check}`, label: c.label, severity: c.severity ?? 'warn', run: c.run }))
   for (const l of locales) for (const r of all) {
     const values = byLocale.get(l).get(r.row.id)
+    const cols = columns.filter(c => !(r.inactive ?? []).includes(c.key))   // nur, was an diesem Knoten gilt
     for (const rule of [...RULES, ...extra]) {
       if (!rules.has(rule.key)) continue
       if (l !== master && !['required', 'untranslated', 'status', 'pattern'].includes(rule.key) && !rule.perLocale) continue   // sprachunabhängige Regeln einmal
       let out = []
-      try { out = rule.run({ row: r.row, values, columns, locale: l, master, byLocale, all, model }) ?? [] } catch (e) { out = [{ attribute: null, message: `Regel ${rule.key}: ${e.message}` }] }
+      try { out = rule.run({ row: r.row, values, columns: cols, locale: l, master, byLocale, all, model }) ?? [] } catch (e) { out = [{ attribute: null, message: `Regel ${rule.key}: ${e.message}` }] }
       for (const f of out) findings.push({ rule: rule.key, label: rule.label, severity: f.severity ?? rule.severity, locale: l, node: r.row, attribute: f.attribute, message: f.message })
     }
   }

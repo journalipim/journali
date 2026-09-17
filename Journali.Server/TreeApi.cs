@@ -36,6 +36,9 @@ public static class TreeApi
                 var rows = nodes.Select(n => new
                 {
                     row = NodeRow.Of(tree, model, n),
+                    // Spalten, die an diesem Knoten nicht gelten (Gruppe erst ab tieferer Rolle, Attribut nicht erlaubt) —
+                    // bei deep ist die Spaltenliste die Vereinigung über alle Knoten (Datenqualität, Taloan)
+                    inactive = cols.Where(a => !CompletenessRules.ActiveAttributes(tree, model, n).Any(x => x.Key == a.Key)).Select(a => a.Key).ToList(),
                     values = cols.ToDictionary(a => a.Key, a =>
                     {
                         var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null);

@@ -89,6 +89,7 @@ const key = (r, c) => `${r.row.id}|${eff(r, c)?.key ?? c.key}`
 const shown = (r, c0) => { const c = eff(r, c0); if (!c) return null; return dirty.value.has(key(r, c)) ? (dirty.value.get(key(r, c)) || null) : (r.values[c.key]?.own ? r.values[c.key].value : null) }
 const inherited = (r, c0) => { const c = eff(r, c0); if (!c) return c0.virtual === 'label' ? r.row.label : null; if (c.virtual === 'sku') return r.row.sku ?? null; if (c.virtual === 'axes') return Object.values(r.row.axisValues ?? {}).join(' · ') || null; return r.values[c.key]?.own ? null : r.values[c.key]?.value ?? null }
 const isAxis = (r, c) => r.row.role === 'variant' && (tree.byId.get(r.row.parent)?.axes ?? []).includes(c.key)
+const inactive = (r, c) => !c.virtual && (r.inactive ?? []).includes(c.key)   // gilt an diesem Knoten nicht (Gruppe ab tieferer Rolle)
 function set(r, c0, v) {
   const c = eff(r, c0); if (!c || c.virtual) return
   const k = key(r, c); const cur = r.values[c.key]?.own ? r.values[c.key].value : null
@@ -230,7 +231,7 @@ watch([tableWidth, dirty, rows], placeHandle)
 const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
 const inSel = (ri, ci) => !!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1
 const selCells = () => { const s = sel.value; if (!s) return []; const out = []; for (let ri = s.r0; ri <= s.r1; ri++) for (let ci = s.c0; ci <= s.c1; ci++) { const r = rows.value[ri], c = columns.value[ci]; if (r && c) out.push({ r, c, ri, ci }) } return out }
-const canWrite = (r, c) => c.virtual === 'label' ? !!labelCol(r) && editable(labelCol(r)) : editable(c) && !isAxis(r, c)
+const canWrite = (r, c) => c.virtual === 'label' ? !!labelCol(r) && editable(labelCol(r)) : editable(c) && !isAxis(r, c) && !inactive(r, c)
 // Text in eine Zelle schreiben, je Typ aufgelöst: Auswahl über Wert oder Label (Gross/Klein egal), Ja/Nein über
 // ja/nein/true/false/1/0; leer löscht den eigenen Wert. Gibt 'ok' | 'locked' | 'bad' zurück.
 function write(r, c0, text) {
@@ -443,6 +444,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
               <SelectCell v-else-if="c.virtual === 'label' && labelCol(r).type === 'enum' && !labelCol(r).multiple" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(labelCol(r))?.values.map(v => v.value) ?? []" :label-of="labelOf(labelCol(r))" :required="!!labelCol(r).required" @save="v => set(r, c, v)" />
               <Cell v-else-if="c.virtual === 'label'" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :origin="`★ ${labelCol(r).label?.de || labelCol(r).key}`" @save="v => set(r, c, v)" />
               <td v-else-if="c.virtual" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked mono" tabindex="0" :title="c.virtual === 'sku' ? 'SKU — fest' : 'Variantenachsen — fest'">{{ inherited(r, c) ?? '' }}</div></td>
+              <td v-else-if="inactive(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box disabled" tabindex="0" title="gilt an diesem Knoten nicht"></div></td>
               <td v-else-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
