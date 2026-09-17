@@ -78,12 +78,18 @@ PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/
-app.MapGet("/plugins/{key}/{**path}", (string key, string path) =>
+app.MapGet("/plugins/{key}/{**path}", (string key, string path, HttpContext ctx) =>
 {
     if (!ModelApi.ValidKey(key) || path.Contains("..")) return Results.NotFound();
     var file = Path.GetFullPath(Path.Combine(pluginDir, key, path));
     if (!file.StartsWith(Path.Combine(pluginDir, key), StringComparison.Ordinal) || !File.Exists(file)) return Results.NotFound();
     var ext = Path.GetExtension(file).ToLowerInvariant();
+    // Office-Manifest: den Origin dieses Servers einsetzen, damit Excel den Aufgabenbereich hier lädt
+    if (ext == ".xml")
+    {
+        var origin = $"{ctx.Request.Scheme}://{ctx.Request.Host}";
+        return Results.Text(File.ReadAllText(file).Replace("{{ORIGIN}}", origin), "application/xml");
+    }
     var mime = ext switch { ".js" or ".mjs" => "text/javascript", ".json" => "application/json", ".css" => "text/css", ".md" => "text/markdown", ".png" => "image/png", ".svg" => "image/svg+xml", ".html" => "text/html", _ => "application/octet-stream" };
     return Results.File(file, mime);
 });

@@ -66,7 +66,7 @@ function pick(k) { cur.value = k; startParams() }
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar">
       <h1>⌁ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
-      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : '🖥 Browser' }}{{ manifest.process ? ' + ⚙ Prozess' : '' }}</span>
+      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : manifest.runs === 'office' ? '📗 Excel-Add-in' : '🖥 Browser' }}{{ manifest.process ? ' + ⚙ Prozess' : '' }}</span>
       <span class="grow" />
       <template v-if="current.onDisk && !current.installed"><button class="primary" @click="act(`/api/plugins/${current.key}/install`)">⇩ installieren {{ current.diskVersion }}</button></template>
       <template v-else-if="current.installed">
@@ -86,6 +86,14 @@ function pick(k) { cur.value = k; startParams() }
       <div class="section" v-if="manifest.builtin">
         <h2>Ansicht</h2>
         <div class="muted" style="font-size:12px">Eingebaut in die Oberfläche — <router-link :to="manifest.builtin === 'solr' ? '/import/solr' : '/import'">⇩ Import → {{ manifest.builtin }}</router-link>{{ current.enabled ? '' : ' (aus — erst einschalten)' }}</div>
+      </div>
+      <div class="section" v-if="manifest.runs === 'office'">
+        <h2>📗 In Excel einrichten</h2>
+        <div class="muted" style="font-size:12px;line-height:1.6">
+          Manifest: <a :href="`/plugins/${current.key}/manifest.xml`" download="manifest.xml">manifest.xml herunterladen</a> — in Excel über einen vertrauenswürdigen Add-In-Katalog (freigegebener Ordner) oder „Mein Add-In hochladen“ einbinden;
+          Anleitung: <a :href="`/plugins/${current.key}/README.md`" target="_blank">README</a>. Aufgabenbereich: <a :href="`/plugins/${current.key}/taskpane.html`" target="_blank">taskpane.html</a> (ausserhalb von Excel nur zur Ansicht).
+          Office verlangt HTTPS — ausser für localhost.
+        </div>
       </div>
       <div class="section" v-if="manifest.runs === 'browser' && !manifest.builtin">
         <h2>Ansichten</h2>

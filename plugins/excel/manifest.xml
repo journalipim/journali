@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+           xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+           xsi:type="TaskPaneApp">
+  <Id>7c1f2a3e-5b6d-4e8f-9a0b-1c2d3e4f5a6b</Id>
+  <Version>0.1.0.0</Version>
+  <ProviderName>journali</ProviderName>
+  <DefaultLocale>de-DE</DefaultLocale>
+  <DisplayName DefaultValue="journali"/>
+  <Description DefaultValue="Produktdaten aus journali im Blatt pflegen: laden, in Excel bearbeiten, nur Geändertes zurückschreiben."/>
+  <IconUrl DefaultValue="{{ORIGIN}}/logo-32.png"/>
+  <HighResolutionIconUrl DefaultValue="{{ORIGIN}}/logo-128.png"/>
+  <SupportUrl DefaultValue="{{ORIGIN}}/plugins/excel/README.md"/>
+  <AppDomains>
+    <AppDomain>{{ORIGIN}}</AppDomain>
+  </AppDomains>
+  <Hosts>
+    <Host Name="Workbook"/>
+  </Hosts>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="{{ORIGIN}}/plugins/excel/taskpane.html"/>
+  </DefaultSettings>
+  <Permissions>ReadWriteDocument</Permissions>
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Workbook">
+        <DesktopFormFactor>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="journali.Group">
+                <Label resid="journali.Group.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="journali.Icon16"/>
+                  <bt:Image size="32" resid="journali.Icon32"/>
+                  <bt:Image size="80" resid="journali.Icon80"/>
+                </Icon>
+                <Control xsi:type="Button" id="journali.Open">
+                  <Label resid="journali.Open.Label"/>
+                  <Supertip>
+                    <Title resid="journali.Open.Label"/>
+                    <Description resid="journali.Open.Tip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="journali.Icon16"/>
+                    <bt:Image size="32" resid="journali.Icon32"/>
+                    <bt:Image size="80" resid="journali.Icon80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>journali.Pane</TaskpaneId>
+                    <SourceLocation resid="journali.Taskpane"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+    <Resources>
+      <bt:Images>
+        <bt:Image id="journali.Icon16" DefaultValue="{{ORIGIN}}/logo-32.png"/>
+        <bt:Image id="journali.Icon32" DefaultValue="{{ORIGIN}}/logo-32.png"/>
+        <bt:Image id="journali.Icon80" DefaultValue="{{ORIGIN}}/logo-128.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="journali.Taskpane" DefaultValue="{{ORIGIN}}/plugins/excel/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="journali.Group.Label" DefaultValue="journali"/>
+        <bt:String id="journali.Open.Label" DefaultValue="journali"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="journali.Open.Tip" DefaultValue="Produktdaten laden, in Excel pflegen, Geändertes zurückschreiben"/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

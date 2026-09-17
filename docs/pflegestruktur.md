@@ -285,6 +285,12 @@ fortsetzen (Zahlen, Art-001), Strg+H Suchen & Ersetzen (Bereich/Tabelle,
 Gross/Klein, ganze Zelle), Entf leert, Strg+C/V mit Excel. Kein Browser-Limit:
 der Engpass war das fehlende Cursor-Modell, nicht der Client.
 
+**Excel-Add-in** (Plugin `excel`, Office.js, 17.09.2026): Aufgabenbereich in
+Excel, Knoten suchen, Tabelle ins Blatt laden, in Excel pflegen, „Geändertes
+speichern" schreibt nur die Differenz zum Schnappschuss als einen Stapel.
+Manifest unter `/plugins/excel/manifest.xml` (Origin vom Server eingesetzt);
+auf der rossibox braucht es HTTPS.
+
 Die Produktliste wird zum Gitter: Zeilen = Produkte (gefiltert nach
 Familie, Kategorie, Vollständigkeit, Suche), Spalten = frei gewählte
 Attribute auf einer gewählten Achse (z. B. `title/de`, `weight`,
