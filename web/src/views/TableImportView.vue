@@ -3,17 +3,34 @@
 // über importers) oder aus der Zwischenablage; der Datenmapper (mapper.js) schlägt die Zuordnung vor, der Mensch
 // richtet nach, der Plan sagt, was passiert, der Stapel schreibt. Profile (Zuordnung, Ziel, Rolle) im Journal.
 import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { plugins } from '../plugins.js'
-import { suggest, plan as makePlan, parseDelimited, sniffType } from '../mapper.js'
+import { suggest, plan as makePlan, parseDelimited, childAttributes, childRoleOf } from '../mapper.js'
 import Splitter from '../components/Splitter.vue'
 import ImportHead from '../components/ImportHead.vue'
 import { paneWidth } from '../panes.js'
 const leftW = paneWidth('import.table', 720)
 const router = useRouter()
+const route = useRoute()
+// Knotenmodus (Taloan, 17.09.: Rechtsklick auf Gruppe/Produkt → Excel importieren): die Tabelle passt 1:1 zum Knoten —
+// Ziel und Rolle sind fest, jede Spalte muss ein Attribut sein, das dort für die Kinder gilt; nichts Neues wird angelegt.
+const fixed = ref(null)         // { row, childRole, allowed: Set<attr> }
+async function fixNode(id) {
+  if (!id) { fixed.value = null; return }
+  if (!tree.loaded) await tree.load()
+  const row = tree.byId.get(id); if (!row) { store.toast(`Knoten ${id} unbekannt`); return }
+  const n = await api.get(`/api/nodes/${encodeURIComponent(id)}`)
+  const childRole = childRoleOf(row, tree.kids(id))
+  const allowed = new Set(childAttributes(model.value, n, childRole).map(a => a.key)); allowed.add('sku')
+  for (const a of row.axes ?? []) allowed.add(a)
+  fixed.value = { row, childRole, allowed }
+  pickTarget(row); role.value = childRole; external.value = ''
+  if (source.value) resuggest()
+}
+watch(() => route.query.node, id => fixNode(id), { immediate: true })
 
 const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
@@ -52,14 +69,26 @@ async function takeFile(file) {
 function setSource(t) {
   if (t.sheets && !t.columns) { t.sheet = t.sheets[0]?.name; const s = t.sheets[0]; t.columns = s?.columns ?? []; t.rows = s?.rows ?? [] }
   source.value = t
-  mapping.value = suggest(t.columns, t.rows, model.value, { external: external.value || null })
+  mapping.value = strictify(suggest(t.columns, t.rows, model.value, { external: external.value || null }))
   planned.value = null; result.value = null
   say(`${t.name}: ${t.rows.length} Zeilen, ${t.columns.length} Spalten — ${mapping.value.filter(m => m.target === 'attr').length} Spalten zugeordnet, ${mapping.value.filter(m => m.target === 'new').length} neu, ${mapping.value.filter(m => m.target === 'skip').length} übergangen`)
 }
 function pickSheet(name) { const s = source.value.sheets.find(x => x.name === name); if (!s) return; setSource({ ...source.value, sheet: name, columns: s.columns, rows: s.rows }) }
 function takePaste() { const t = parseDelimited(pasteText.value); if (!t.columns.length) return; setSource({ ...t, name: 'Zwischenablage' }); pasteText.value = '' }
 function onDrop(e) { dragOver.value = false; const f = e.dataTransfer.files?.[0]; if (f) takeFile(f) }
-function resuggest() { if (source.value) mapping.value = suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null }); planned.value = null }
+function resuggest() { if (source.value) mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); planned.value = null }
+// Knotenmodus: was nicht zum Knoten passt, wird übergangen und gezählt — Vorlage vom Knoten exportieren, dann passt es
+function strictify(m) {
+  if (!fixed.value) return m
+  for (const x of m) {
+    if (x.target === 'new') { x.target = 'skip'; x.why = 'unbekannt — nicht in der Vorlage dieses Knotens'; x.unknown = true }
+    else if (x.target === 'attr' && !fixed.value.allowed.has(x.attribute)) { x.target = 'skip'; x.why = `${x.attribute} gilt hier nicht für ${roleLabel[fixed.value.childRole]}`; x.unknown = true }
+    else if (x.target === 'parent' || x.target === 'external') { x.target = 'skip'; x.why = 'im Knotenmodus ohne Bedeutung' }
+  }
+  return m
+}
+const roleLabel = { group: 'Gruppen', product: 'Produkte', variant: 'Varianten' }
+const unknown = computed(() => mapping.value.filter(m => m.unknown).length)
 
 // ---- Zuordnung: Zeile je Spalte
 const TARGETS = [['attr', 'Attribut'], ['new', 'neues Attribut'], ['id', 'journali-Id'], ['sku', 'SKU (finden)'], ['external', 'externe Kennung'], ['parent', 'Elternteil'], ['skip', 'übergehen']]
@@ -143,21 +172,27 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <button v-if="source" class="x" @click="resuggest" title="Zuordnung neu vorschlagen">↻</button>
       </td></tr>
       <tr><td class="attr">Einfügen</td><td><input v-model="pasteText" type="text" placeholder="aus Excel kopieren, hier Strg+V (erste Zeile = Spaltennamen)" @paste="setTimeout(takePaste, 0)" /></td></tr>
-      <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden</span></td></tr>
-      <tr><td class="attr">Ziel</td><td class="row" style="position:relative">
+      <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
+      <tr v-if="fixed"><td class="attr">Knoten</td><td class="row">
+        <router-link :to="`/tree/${fixed.row.id}`" class="chip" :title="fixed.row.id">{{ icon(fixed.row.role) }} {{ fixed.row.label }}</router-link>
+        <span class="muted">→ {{ roleLabel[fixed.childRole] }} darunter · {{ fixed.allowed.size }} mögliche Spalten</span>
+        <span class="grow" /><button class="x" @click="router.replace('/import/table')" title="Knotenmodus verlassen — frei zuordnen">×</button>
+      </td></tr>
+      <tr v-if="!fixed"><td class="attr">Ziel</td><td class="row" style="position:relative">
         <input v-if="!target" v-model="targetQ" type="search" placeholder="🔍 Gruppe oder Produkt — wohin neue Zeilen kommen" @focus="targetPick = true" @input="targetPick = true" @keydown.esc="targetPick = false" />
         <span v-else class="chip" :title="target.id">{{ icon(target.role) }} {{ target.label }} <button @click="target = null; targetQ = ''" title="Ziel weg">×</button></span>
         <div v-if="!target && targetPick && targets.length" class="picker" style="position:absolute;left:4px;top:28px;z-index:5;width:380px">
           <div v-for="r in targets" :key="r.id" class="pick" @mousedown.prevent="pickTarget(r)">{{ icon(r.role) }} {{ r.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ r.id }}</span></div>
         </div>
       </td></tr>
-      <tr><td class="attr">Neue als</td><td><select v-model="role" title="Rolle neuer Zeilen" @change="planned = null" style="width:100%">
+      <tr v-if="!fixed"><td class="attr">Neue als</td><td><select v-model="role" title="Rolle neuer Zeilen" @change="planned = null" style="width:100%">
         <option value="">automatisch (unter Gruppe → Produkt, unter Produkt → Variante)</option><option value="group">▣ Gruppen</option><option value="product">▦ Produkte</option><option value="variant">◆ Varianten</option>
       </select></td></tr>
-      <tr><td class="attr">Kennung</td><td><input v-model="external" type="text" placeholder="System der externen Kennung (z. B. erp) — findet vorhandene Knoten" @change="resuggest" /></td></tr>
+      <tr v-if="!fixed"><td class="attr">Kennung</td><td><input v-model="external" type="text" placeholder="System der externen Kennung (z. B. erp) — findet vorhandene Knoten" @change="resuggest" /></td></tr>
     </ImportHead>
     <div class="scroll">
       <div v-if="!keyColumn && source" class="muted" style="font-size:12px;padding:6px 8px">⚠ Keine Schlüsselspalte (Id, SKU, Kennung) — jede Zeile wird neu angelegt.</div>
+      <div v-if="unknown" class="warn" style="font-size:12px;padding:6px 8px">⚠ {{ unknown }} Spalten passen nicht zu diesem Knoten und werden übergangen — Vorlage per Rechtsklick am Knoten exportieren, dann stimmen die Spalten.</div>
 
       <div class="section" v-if="source">
         <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span></h2>
@@ -167,9 +202,9 @@ onMounted(() => { if (!tree.loaded) tree.load() })
             <tr v-for="(m, i) in mapping" :key="m.column" :class="{ off: m.target === 'skip' }">
               <td class="attr" :title="m.column"><b>{{ m.column }}</b><div class="muted" style="font-size:11px">{{ m.sniff?.type }} · {{ m.sniff?.distinct }} versch.</div></td>
               <td class="muted samples">{{ sample(i) }}</td>
-              <td><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS" :key="k" :value="k">{{ l }}</option></select></td>
+              <td><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td>
               <td>
-                <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null" style="width:100%"><option v-for="a in attrs" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+                <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}</option></select>
                 <span v-else-if="m.target === 'new'" style="display:flex;gap:4px"><input v-model="m.newKey" type="text" style="flex:1" placeholder="schlüssel" @change="planned = null" /><select v-model="m.newType" style="width:90px"><option v-for="t in ['text', 'html', 'integer', 'decimal', 'boolean', 'date']" :key="t" :value="t">{{ t }}</option></select></span>
                 <span v-else class="muted">—</span>
               </td>

@@ -91,8 +91,52 @@ async function mount(root, ctx) {
   return () => {}
 }
 
+// ---- Excel am Knoten (Taloan, 17.09.: Rechtsklick auf Gruppe/Produkt → Vorlage, Kinder exportieren, Excel importieren):
+// dieselben Spalten in allen drei — id, sku, Achsen, dann die Attribute, die hier für die Kinder gelten (childColumns).
+// Blatt „Legende“ erklärt jede Spalte (Label, Typ, Pflicht, Einheit, Listenwerte). Der Import am selben Knoten ist streng.
+async function nodeColumns(ctx, nodeId) {
+  const { api, store, tree } = ctx; if (!tree.loaded) await tree.load()
+  const row = tree.byId.get(nodeId); const n = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}`)
+  const childRole = ctx.mapper.childRoleOf(row, tree.kids(nodeId))
+  const locales = store.model.locales.map(l => l.code)
+  return { row, childRole, columns: ctx.mapper.childColumns(store.model, n, childRole, row.axes ?? [], locales) }
+}
+function legend(ctx, columns) {
+  const model = ctx.store.model
+  const rows = [['Spalte', 'Label', 'Typ', 'Pflicht', 'Einheit', 'Sprache', 'Werte / Hinweis']]
+  for (const c of columns) {
+    const d = c.def ?? (c.attr ? model.attributes.find(a => a.key === c.attr) : null)
+    const list = d?.list ? model.lists.find(l => l.key === d.list) : null
+    rows.push([c.key, d?.label?.de ?? '', d?.type ?? '', d?.required && Object.keys(d.required).length ? 'ja' : '', d?.unit ?? '', c.locale ?? '', c.note ?? (list ? list.values.map(v => `${v.value} = ${v.label?.de ?? ''}`).join(' | ') : d?.type === 'boolean' ? 'ja / nein' : d?.pattern ? 'Muster: ' + d.pattern : '')])
+  }
+  return rows
+}
+async function nodeWorkbook(ctx, nodeId, withData) {
+  const X = await import('/plugins/xlsx/xlsx.mjs')
+  const { row, childRole, columns } = await nodeColumns(ctx, nodeId)
+  let data = []
+  if (withData) {
+    const { api, store } = ctx; const locales = store.model.locales.map(l => l.code); const byLocale = new Map(); let nodes = []
+    for (const l of locales) { const t = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?locale=${l}&role=${childRole}`); nodes = t.rows; byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values]))) }
+    data = nodes.map(r => columns.map(c => c.key === 'id' ? r.row.id : c.key === 'sku' ? r.row.sku ?? '' : c.key.startsWith('axis:') ? r.row.axisValues?.[c.attr] ?? '' : (byLocale.get(c.locale ?? locales[0])?.get(r.row.id)?.[c.attr]?.value ?? '')))
+  }
+  const ws = X.utils.aoa_to_sheet([columns.map(c => c.key), ...data])
+  ws['!cols'] = columns.map(c => ({ wch: Math.min(40, Math.max(10, c.key.length + 2)) }))
+  const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'Daten')
+  const lg = X.utils.aoa_to_sheet(legend(ctx, columns)); lg['!cols'] = [{ wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 60 }]
+  X.utils.book_append_sheet(wb, lg, 'Legende')
+  const name = `${row.label}-${childRole}${withData ? '' : '-vorlage'}`.replace(/[^\w.-]+/g, '_') + '.xlsx'
+  download(new Blob([X.write(wb, { type: 'array', bookType: 'xlsx' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name)
+  ctx.store.toast(`⇪ ${name}: ${columns.length} Spalten${withData ? `, ${data.length} Zeilen` : ''}`)
+}
+
 export default {
   views: [{ path: 'export', label: 'Export', icon: '⇪', mount }],
-  nodeActions: [{ label: 'Exportieren …', icon: '⇪', run(nodeId, ctx) { localStorage.setItem('journali.export.root', nodeId); ctx.go?.('/p/export/export') } }],
-  build, toCsv, toJson, toXlsx,
+  nodeActions: [
+    { label: 'Excel: Vorlage für Kinder', icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, false).catch(e => ctx.store.toast(e.message)) },
+    { label: 'Excel: Kinder exportieren', icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, true).catch(e => ctx.store.toast(e.message)) },
+    { label: 'Excel: Kinder importieren …', icon: '⇩', roles: ['group', 'product'], run: (id, ctx) => ctx.go?.(`/import/table?node=${encodeURIComponent(id)}`) },
+    { label: 'Exportieren … (Teilbaum)', icon: '⇪', roles: ['group', 'product'], run(nodeId, ctx) { localStorage.setItem('journali.export.root', nodeId); ctx.go?.('/p/export/export') } },
+  ],
+  build, toCsv, toJson, toXlsx, nodeWorkbook,
 }

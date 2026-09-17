@@ -4,7 +4,7 @@
 //
 // Vertrag eines Browser-Plugins (default export), alles optional:
 //   views:       [{ path: 'meine-ansicht', label, icon, mount(el, ctx) → unmount? }]   Ansicht in der Leiste
-//   nodeActions: [{ label, icon, run(nodeId, ctx) }]                                   Eintrag im Kontextmenü des Baums
+//   nodeActions: [{ label, icon, roles?: ['group','product'], run(nodeId, ctx) }]     Eintrag im Kontextmenü des Baums (roles: nur an diesen)
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]

@@ -272,3 +272,29 @@ export function fromObjects(list) {
   const columns = [...new Set(rows.flatMap(r => Object.keys(r)))]
   return { columns, rows: rows.map(r => columns.map(c => r[c] ?? '')) }
 }
+
+// ---- Die Spalten, die unter einem Knoten für seine Kinder gelten (Taloan, 17.09.: „eine Excel passt immer 1:1 zum Importknoten“):
+// Attribute der Gruppen, die am Knoten gelten (angehängt oder geerbt) und an der Kindrolle aktiv sind (activeFrom),
+// erlaubt an der Rolle (levels), ohne Zeilen- und Formelattribute. Vorlage, Export und strenger Import nehmen dieselbe Liste.
+export const DEPTH = { group: 0, product: 1, variant: 2 }
+export function childRoleOf(row, kids) { return row.role === 'product' ? 'variant' : (kids?.[0]?.role ?? 'product') }
+export function childAttributes(model, nodeView, childRole) {
+  const out = []; const seen = new Set()
+  for (const g of nodeView.groups ?? []) {
+    const gd = model.groups.find(x => x.key === g.key)
+    if (gd?.activeFrom && DEPTH[childRole] < DEPTH[gd.activeFrom]) continue
+    for (const k of gd?.attributes ?? g.attributes ?? []) {
+      const a = model.attributes.find(x => x.key === k)
+      if (!a || seen.has(k) || a.type === 'rows' || a.type === 'formula' || (a.levels && !a.levels.includes(childRole))) continue
+      seen.add(k); out.push({ ...a, group: g.key, required: !!(a.required && Object.keys(a.required).length) })
+    }
+  }
+  return out
+}
+// Spaltenköpfe für Vorlage und Export: id, sku, Achsen, dann je Attribut (je Sprache eine Spalte)
+export function childColumns(model, nodeView, childRole, axes, locales) {
+  const attrs = childAttributes(model, nodeView, childRole).filter(a => a.key !== 'sku')
+  return [{ key: 'id', note: 'leer = neu anlegen; gefüllt = diesen Knoten ändern' }, { key: 'sku', note: 'findet vorhandene Knoten, wenn id leer ist' },
+    ...(childRole === 'variant' ? (axes ?? []).map(a => ({ key: 'axis:' + a, note: 'Variantenachse — Pflicht beim Anlegen', attr: a })) : []),
+    ...attrs.flatMap(a => a.perLocale ? locales.map(l => ({ key: `${a.key}_${l}`, attr: a.key, locale: l, def: a })) : [{ key: a.key, attr: a.key, def: a }])]
+}

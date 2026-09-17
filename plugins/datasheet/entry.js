@@ -210,7 +210,7 @@ async function mountDesigner(root, ctx) {
 export default {
   views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '📄', mount: mountDesigner }],
   nodeActions: [{
-    label: 'Datenblatt', icon: '📄',
+    label: 'Datenblatt', icon: '📄', roles: ['product', 'variant'],
     async run(nodeId, ctx) {
       const row = ctx.tree.byId.get(nodeId); if (!row || row.role === 'group') { ctx.store.toast('Datenblatt: für Produkte und Varianten'); return }
       const t = await templateFor(ctx, row.role)
