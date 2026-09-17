@@ -55,7 +55,7 @@ if (builder.Environment.IsDevelopment())
 var app = builder.Build();
 app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien unter {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Root, pluginDir, autoInstalled);
 
-if (app.Environment.IsDevelopment()) app.UseCors();
+app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Editor-Origin; noch keine Anmeldung, daher offen
 
 var api = app.MapGroup("/api");
 
@@ -81,6 +81,18 @@ BatchApi.Map(api);
 app.MapGet("/plugins/{key}/{**path}", (string key, string path, HttpContext ctx) =>
 {
     if (!ModelApi.ValidKey(key) || path.Contains("..")) return Results.NotFound();
+    // Paket: das ganze Plugin-Verzeichnis als ZIP — OnlyOffice installiert eine .plugin-Datei (config.json an der Wurzel)
+    if (path == "package.plugin")
+    {
+        var dir = Path.Combine(pluginDir, key);
+        if (!Directory.Exists(dir)) return Results.NotFound();
+        var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            foreach (var f in Directory.GetFiles(dir))
+                if (!f.EndsWith("plugin.json") && !f.EndsWith(".md")) System.IO.Compression.ZipFileExtensions.CreateEntryFromFile(zip, f, Path.GetFileName(f));
+        ms.Position = 0;
+        return Results.File(ms, "application/zip", $"journali-{key}.plugin");
+    }
     var file = Path.GetFullPath(Path.Combine(pluginDir, key, path));
     if (!file.StartsWith(Path.Combine(pluginDir, key), StringComparison.Ordinal) || !File.Exists(file)) return Results.NotFound();
     var ext = Path.GetExtension(file).ToLowerInvariant();

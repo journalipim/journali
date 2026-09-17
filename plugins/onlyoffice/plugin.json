@@ -1,0 +1,16 @@
+{
+  "key": "onlyoffice",
+  "version": "0.1.0",
+  "label": {
+    "de": "OnlyOffice-Plugin",
+    "en": "OnlyOffice plugin"
+  },
+  "description": {
+    "de": "Seitenleiste in OnlyOffice Tabellen: Knoten suchen, Subitems oder alle Varianten darunter als Tabelle ins Blatt laden (Sicht, Sprache), in OnlyOffice pflegen, dann Speichern schreibt nur die geänderten Zellen als einen Stapel. Installieren: Plugins → Plugin-Manager → Plugin hinzufügen → journali.plugin (unter /plugins/onlyoffice/package.plugin).",
+    "en": "Side panel in OnlyOffice Spreadsheets: find a node, load its children or variants as a table, edit, then Save writes only changed cells as one batch. Install via Plugins → Plugin Manager → Add plugin → journali.plugin."
+  },
+  "kind": "edit",
+  "runs": "office",
+  "entry": "index.html",
+  "autoInstall": true
+}

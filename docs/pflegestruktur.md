@@ -289,7 +289,12 @@ der Engpass war das fehlende Cursor-Modell, nicht der Client.
 Excel, Knoten suchen, Tabelle ins Blatt laden, in Excel pflegen, „Geändertes
 speichern" schreibt nur die Differenz zum Schnappschuss als einen Stapel.
 Manifest unter `/plugins/excel/manifest.xml` (Origin vom Server eingesetzt);
-auf der rossibox braucht es HTTPS.
+auf der rossibox braucht es HTTPS. **OnlyOffice-Plugin** (`plugins/onlyoffice`,
+Taloan: „hab ich eh installiert"): gleiche Bedienung als Seitenleiste in
+OnlyOffice Tabellen, Installation über den Plugin-Manager mit
+`/plugins/onlyoffice/package.plugin` (ZIP vom Server), Schnappschuss im
+versteckten Blatt `_journali`. Der xlsx-Roundtrip bleibt der Weg, der nichts
+voraussetzt.
 
 Die Produktliste wird zum Gitter: Zeilen = Produkte (gefiltert nach
 Familie, Kategorie, Vollständigkeit, Suche), Spalten = frei gewählte
