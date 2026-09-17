@@ -521,9 +521,11 @@ def cmd_import(solr, args):
             kids[pseudo["id"]] = direct
             product_queue.append((pseudo, ref))
             print(f"  ▦ {pseudo['name']}: Sammelprodukt für {len(direct)} Varianten direkt unter der Gruppe {doc['master_id']}")
-    walk_groups(root, root_ref)
+    # Wurzel ist eine Gruppe: Äste ablaufen. Wurzel ist ein Produkt: es selbst mit seinen Varianten (kein Sammelprodukt).
     if root["type"].lower() == "product":
         product_queue.insert(0, (root, None))
+    else:
+        walk_groups(root, root_ref)
     print(f"Stapel Gruppen: {len(cmds)} Befehle")
     if cmds and not args.dry_run:
         j.batch(cmds)
@@ -535,7 +537,7 @@ def cmd_import(solr, args):
             break
         pc, prefs = [], set()
         if parent_ref is None:
-            pref = emit(doc, args.target, pc, prefs)
+            pref = root_ref   # die Wurzel selbst — schon im Gruppen-Stapel angelegt
         else:
             parent_id = by_ext[parent_ref[1:]]["id"] if parent_ref.startswith("@") and parent_ref[1:] in by_ext else parent_ref
             if parent_id.startswith("@") and args.dry_run:
