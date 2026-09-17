@@ -1,6 +1,8 @@
 <script setup>
-// Eine Zelle mit Inline-Bearbeitung. Tab/Klick fokussiert, Enter/F2 oder Tippen
-// öffnet, Enter speichert, Esc verwirft, Tab speichert und springt weiter.
+// Eine Zelle mit Inline-Bearbeitung. Tab fokussiert; Klick öffnet mit dem Cursor
+// am Ende, Enter/F2 mit dem bisherigen Wert vorselektiert, Tippen hängt an den
+// bisherigen Wert an (überschreibt nie, Taloan 17.09.). Enter speichert, Esc
+// verwirft, Tab speichert und springt weiter.
 import { ref, nextTick } from 'vue'
 
 const props = defineProps({
@@ -16,13 +18,16 @@ const draft = ref('')
 const input = ref(null)
 const box = ref(null)
 
-async function open(initial) {
+// mode: 'select' = alles vorselektiert (Enter/F2), 'end' = Cursor ans Ende (Klick), sonst = getippte Taste anhängen
+async function open(mode) {
   if (props.disabled) return
-  draft.value = initial ?? props.value ?? ''
+  const cur = props.value ?? ''
+  draft.value = mode === 'select' || mode === 'end' ? cur : cur + mode
   editing.value = true
   await nextTick()
   input.value?.focus()
-  if (initial === undefined) input.value?.select()
+  if (mode === 'select') input.value?.select()
+  else input.value?.setSelectionRange(draft.value.length, draft.value.length)
 }
 
 function commit() {
@@ -35,7 +40,7 @@ function commit() {
 function cancel() { editing.value = false }
 
 function onKey(e) {
-  if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); open() }
+  if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); open('select') }
   else if (e.key === 'Delete' && props.value != null) { emit('save', '') }
   else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) { e.preventDefault(); open(e.key) }
 }
@@ -50,7 +55,7 @@ function onEditKey(e) {
 <template>
   <td class="cell">
     <div v-if="!editing" ref="box" class="cell-box" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
-      :tabindex="disabled ? undefined : 0" @dblclick="open()" @keydown="onKey" :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : '')">
+      :tabindex="disabled ? undefined : 0" @click="open('end')" @keydown="onKey" :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : '')">
       <template v-if="disabled"></template>
       <template v-else-if="value != null">{{ value }}</template>
       <template v-else-if="inherited != null">{{ inherited }}</template>

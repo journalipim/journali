@@ -143,7 +143,12 @@ async function load() {
   }
 }
 onMounted(load)
-function onKey(e) { if (e.key === 'Escape' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) router.push('/tree') }
+function onKey(e) {
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+  if (e.key === 'Escape') router.push('/tree')
+  else if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo() }
+  else if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo() }
+}
 onMounted(() => window.addEventListener('keydown', onKey))
 onUnmounted(() => window.removeEventListener('keydown', onKey))
 watch(() => store.head, h => { if (h > (entries.value[0]?.number ?? 0)) load() })
@@ -157,7 +162,17 @@ async function command(fn) {
   finally { busy.value = false }
 }
 const nodeUrl = () => `/api/nodes/${encodeURIComponent(props.id)}`
-const setValue = (def, col, value, row = null) => command(() =>
+// Rückgängig/Wiederholen je Knoten: das Journal bleibt append-only — der alte Wert wird als neuer Eintrag geschrieben.
+const history = ref([])   // { def, col, row, before, after }
+const redoStack = ref([])
+const setValue = (def, col, value, row = null) => {
+  const before = own.value.get(key(def.key, col.locale, col.channel, row)) ?? ''
+  history.value.push({ def, col, row, before, after: value }); redoStack.value = []
+  return writeValue(def, col, value, row)
+}
+function undo() { const h = history.value.pop(); if (!h) return; redoStack.value.push(h); writeValue(h.def, h.col, h.before, h.row) }
+function redo() { const h = redoStack.value.pop(); if (!h) return; history.value.push(h); writeValue(h.def, h.col, h.after, h.row) }
+const writeValue = (def, col, value, row = null) => command(() =>
   api.post(`${nodeUrl()}/attributes`, def.multiple
     ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean), row }
     : { attribute: def.key, locale: col.locale, channel: col.channel, value, row }))
@@ -214,6 +229,8 @@ function cellMenu(e, def, col, block) {
         <option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option>
       </select>
       <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
+      <button class="x" @click="undo" :disabled="!history.length" :title="history.length ? `↶ ${history.length} rückgängig: ${history[history.length - 1].def.label?.de || history[history.length - 1].def.key} ← „${history[history.length - 1].before}“  (Strg+Z) — schreibt den alten Wert als neuen Eintrag` : 'nichts rückgängig zu machen'">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
+      <button class="x" @click="redo" :disabled="!redoStack.length" :title="redoStack.length ? `↷ ${redoStack.length} wiederholen  (Strg+Y)` : 'nichts zu wiederholen'">↷<span v-if="redoStack.length" class="muted"> {{ redoStack.length }}</span></button>
       <button class="x" @click="retire" :title="node.children ? `mit ${countBelow(id)} Knoten darunter zurückziehen  (Entf im Baum)` : 'Knoten zurückziehen  (Entf im Baum)'">🗑</button>
     </div>
     <div class="toolbar meta muted">
