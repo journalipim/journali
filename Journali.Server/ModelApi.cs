@@ -69,6 +69,20 @@ public static partial class ModelApi
                 }
                 if (def.Required is { Count: 0 }) def = def with { Required = null };
                 if (!AttributeTypes.All.Contains(def.Type)) return Bad($"Unbekannter Typ: {def.Type}");
+                def = def with { Formula = Blank(body.Formula) };
+                if (def.Formula is not null)
+                {
+                    // Zahl: Ausdruck. Text: Vorlage mit {Ausdrücken}, darf je Sprache sein. Nie mehrfach, nie je Kanal.
+                    var template = def.Type == AttributeTypes.Text;
+                    if (!template && def.Type is not (AttributeTypes.Integer or AttributeTypes.Decimal)) return Bad("Eine Formel gibt es bei integer, decimal (Ausdruck) und text (Vorlage mit {…}).");
+                    if (def.Multiple || def.PerChannel || (!template && def.PerLocale)) return Bad("Ein kombiniertes Attribut ist nicht mehrfach und nicht je Kanal; je Sprache nur als Text-Vorlage.");
+                    var (keys, error) = Formula.Check(def.Formula, template);
+                    if (error is not null) return Bad($"Formel: {error}");
+                    if (keys.Contains(key)) return Bad("Formel: nicht auf sich selbst.");
+                    foreach (var k in keys)
+                        if (!model.Attributes.TryGetValue(k, out var other)) return Bad($"Formel: Attribut {k} gibt es nicht.");
+                        else if (other.Type is AttributeTypes.Rows or AttributeTypes.Html) return Bad($"Formel: {k} ({other.Type}) geht nicht in eine Formel.");
+                }
                 if (def.Axes?.Except([Axes.Locale, Axes.Channel]).Any() ?? false) return Bad("Achsen: nur locale und channel.");
                 if (def.Channels?.Except(model.Channels.Keys).Any() ?? false) return Bad("Unbekannter Kanal in channels.");
                 if (def.Type == AttributeTypes.Enum && (def.List is null || !model.Lists.ContainsKey(def.List))) return Bad("enum braucht eine vorhandene Werteliste.");

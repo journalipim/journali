@@ -162,6 +162,9 @@ public sealed record ValueView(string Attribute, string? Locale, string? Channel
             .Concat(n.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, n.SetAt.GetValueOrDefault(kv.Key))));
 }
 
+/// <summary>Ein kombiniertes Attribut an diesem Knoten: Formel und Ergebnis (null = ein Wert fehlt).</summary>
+public sealed record ComputedView(string Attribute, string Formula, string? Value, string? Locale);
+
 /// <summary>Ein Vorfahr mit seinen Werten — der Client rechnet die Vererbung damit wie <see cref="Tree.Resolve"/>.</summary>
 public sealed record AncestorView(string Id, string Role, string Label, List<ValueView> Values);
 
@@ -174,7 +177,7 @@ public sealed record StarView(string Attribute, string From, string FromLabel, b
 
 public sealed record NodeView(string Id, string Role, string? Parent, Labels Label, string? Name, List<StarView> Stars, string? Family, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string> External, List<ValueView> Values, Dictionary<string, List<string>> Rows,
-    List<AncestorView> Ancestors, string[] AttachedGroups, List<GroupView> Groups, List<string> Orphans,
+    List<AncestorView> Ancestors, string[] AttachedGroups, List<GroupView> Groups, List<string> Orphans, List<ComputedView> Computed,
     List<string> Categories, List<Release> Releases, List<Completeness> Completeness,
     int Children, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
 {
@@ -192,6 +195,8 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
         ValueView.Of(n).ToList(), n.Rows,
         tree.Ancestors(n).Select(a => new AncestorView(a.Id, a.Role, NodeRow.LabelOf(tree, model, a), ValueView.Of(a).ToList())).ToList(),
         n.Groups, groups, orphans,
+        CompletenessRules.ActiveAttributes(tree, model, n).Where(a => a.IsComputed)
+            .SelectMany(a => a.PerLocale ? model.Locales.Keys.Select(l => new ComputedView(a.Key, a.Formula!, tree.Compute(model, n, a, l), l)) : [new ComputedView(a.Key, a.Formula!, tree.Compute(model, n, a, null), null)]).ToList(),
         n.Categories.Order().ToList(), n.Releases.ToList(),
         CompletenessRules.Of(tree, model, n),
         tree.Children(n.Id).Count(),

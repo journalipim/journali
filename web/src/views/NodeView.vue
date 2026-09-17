@@ -89,6 +89,7 @@ watch(blocks, b => { if (store.layout === 'tabs' && !b.some(x => x.key === tab.v
 const shownBlocks = computed(() => store.layout === 'tabs' ? blocks.value.filter(b => b.key === tab.value) : blocks.value)
 
 // ---- Werte
+const computedValue = (key, locale = null) => (node.value?.computed ?? []).find(c => c.attribute === key && (c.locale ?? null) === locale)?.value ?? null
 const own = computed(() => valueMap(node.value?.values ?? []))
 // Übersetzungsstand: Wert einer anderen Sprache ist „zu überarbeiten“, wenn der Master-Wert später geschrieben wurde (Eintragsnummer).
 const master = computed(() => model.value?.masterLocale ?? locales.value[0] ?? null)
@@ -362,7 +363,14 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <template v-for="def in b.defs" :key="def.key">
-          <tr v-if="def.type === 'rows'">
+          <tr v-if="def.formula">
+            <td class="attr" :title="`${def.key} = ${def.formula}`">ƒ {{ def.label?.de || def.key }}<span v-if="def.unit" class="muted"> {{ def.unit }}</span></td>
+            <template v-for="c in columns" :key="c.label">
+              <td v-if="c.channel || (c.locale ? !def.perLocale : def.perLocale)" class="cell"><div class="cell-box disabled" /></td>
+              <td v-else class="cell"><div class="cell-box locked" :title="`= ${def.formula}` + (computedValue(def.key, c.locale) == null ? ' — ein Wert fehlt' : '')">{{ computedValue(def.key, c.locale) ?? '—' }}</div></td>
+            </template>
+          </tr>
+          <tr v-else-if="def.type === 'rows'">
             <td class="attr" :title="def.key">{{ def.label?.de || def.key }} <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"

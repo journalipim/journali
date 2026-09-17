@@ -248,6 +248,7 @@ public static class Axes
 /// <param name="Columns">bei <c>rows</c>: die Spalten, jede ein Attribut</param>
 /// <param name="Inheritable">Wert vererbt sich nach unten (Kategorie ja, Name nein). Vorgabe nein.</param>
 /// <param name="Required">Pflicht je Kanal: Sprachen oder "*" — gilt überall gleich (Eineindeutigkeit)</param>
+/// <param name="Formula">kombiniertes Attribut: Ausdruck über andere Attributschlüssel (<c>length * width * height / 1000</c>); nur bei Zahlen, nie ein eigener Wert</param>
 public sealed record AttributeDefinition(
     string Key,
     Labels Label,
@@ -261,8 +262,11 @@ public sealed record AttributeDefinition(
     string[]? Levels = null,
     string[]? Columns = null,
     bool Inheritable = false,
-    Dictionary<string, string[]>? Required = null)
+    Dictionary<string, string[]>? Required = null,
+    string? Formula = null)
 {
+    /// <summary>Kombiniert (Taloan, 17.09.2026): kein eigener Wert, gerechnet aus anderen Attributen (<see cref="Entries.Formula"/>).</summary>
+    public bool IsComputed => !string.IsNullOrWhiteSpace(Formula);
     public bool PerLocale => Axes?.Contains(Entries.Axes.Locale) ?? false;
     public bool PerChannel => Axes?.Contains(Entries.Axes.Channel) ?? false;
     public bool AllowedAt(string role) => Levels is null || Levels.Contains(role);
