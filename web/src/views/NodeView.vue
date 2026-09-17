@@ -66,7 +66,8 @@ const blocks = computed(() => {
   const byKey = new Map(eff.map(g => [g.key, g]))
   const ov = orderView.value
   const order = ov ? ov.items.map(it => it.group).filter(k => byKey.has(k)) : eff.map(g => g.key)
-  if (ov) for (const g of eff) if (!order.includes(g.key)) order.push(g.key)   // Gruppen ohne Platz in der Sicht: unten
+  // „alles“: Gruppen, die die Standardsicht nicht nennt, unten dran. Eine gewählte Sicht zeigt nur ihre Gruppen (Taloan, 17.09.).
+  if (ov && !view.value) for (const g of eff) if (!order.includes(g.key)) order.push(g.key)
   const req = k => model.value.attributes.find(a => a.key === k)?.required
   return order.map(k => {
     const g = byKey.get(k)

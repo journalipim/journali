@@ -282,7 +282,7 @@ public sealed record TreeLabelDefined(string Role, string Attribute);
 
 public sealed record AttributeGroupRetired(string Key);
 
-/// <summary>Eine Gruppe in einer Sicht mit der Reihenfolge ihrer Attribute dort; ungenannte hängen unten an.</summary>
+/// <summary>Eine Gruppe in einer Sicht mit der Reihenfolge ihrer Attribute dort; ungenannte Attribute hängen unten an. Gruppen, die die Sicht nicht nennt, zeigt sie nicht.</summary>
 public sealed record ViewItem(string Group, string[]? Order = null);
 
 /// <summary>

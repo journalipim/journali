@@ -91,10 +91,12 @@ public static class Model
         foreach (var a in attributes)
             yield return new(AttributeStream + a.Key, Types.AttributeDefined, Types.Serialize(a));
 
+        var viewNames = new Dictionary<string, (string De, string En)> { [Roles.Group] = ("Gruppe", "Group"), [Roles.Product] = ("Produkt", "Product"), [Roles.Variant] = ("Variante", "Variant") };
         foreach (var role in Roles.All)
         {
             var items = groups.Where(g => g.ActiveAt(role)).Select(g => new ViewItem(g.Key)).ToList();
-            yield return new(ViewStream + "defaultview_" + role, Types.ViewDefined, Types.Serialize(new ViewDefinition("defaultview_" + role, Labels.Of("DefaultView", "DefaultView"), items, role)));
+            var (de, en) = viewNames[role];
+            yield return new(ViewStream + "defaultview_" + role, Types.ViewDefined, Types.Serialize(new ViewDefinition("defaultview_" + role, Labels.Of("DefaultView" + de, "DefaultView" + en), items, role)));
         }
     }
 

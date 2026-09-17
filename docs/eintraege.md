@@ -70,7 +70,7 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 | `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum, **rows**), `unit?` (muss es unter `unit:` geben), `group` (Attributgruppe), `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `inheritable` (Wert vererbt sich nach unten; Vorgabe nein), `required{kanal: [sprachen] oder ["*"]}?` (Pflicht — gilt überall gleich, Eineindeutigkeit), `levels[]?` (Ausnahme: an welchen Knotentypen; null = Regel der Gruppe), `columns[]?` (bei rows) |
 | `group:<key>` | `AttributeGroupDefined` / `AttributeGroupRetired` | `key`, `label{}`, `activeFrom?` (group, product, variant: ab welchem Knotentyp Werte erfasst werden; darüber sichtbar, gesperrt). Gruppen hängen an Knoten (`GroupsAttached`) |
 | `settings:label:<role>` | `TreeLabelDefined` | **Altlast** (17.09.2026): Name im Baum je Knotentyp — ersetzt durch das ★ am Knoten (`LabelAttributeSet`); bleibt lesbar, wird nicht mehr gesät |
-| `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — Gruppen in Reihenfolge, darin Attribute in Reihenfolge; ungenannte hängen unten an |
+| `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — **nur diese** Gruppen, in dieser Reihenfolge; darin Attribute in Reihenfolge, ungenannte Attribute hängen unten an ihrer Gruppe |
 | `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` |
 | `list:<key>` | `ListDefined` | `key`, `label{}`, `columns[]?` (eigene Felder je Eintrag, z. B. ral) |
@@ -82,7 +82,7 @@ Ein leeres Journal bekommt beim ersten Serverstart das Saatgut aus
 `Model.Seeds()` (`AttributeDefinition.cs`): `de`, `en`; `web`, `print`;
 Einheiten, Gruppen `mastergroup` (MasterGroup) / `logistics` (ab Variante) / `physical`, Werteliste
 `color` (20 Farben, RAL), Attribute `name` `description` `color` `sku` `ean`
-`weight`, Sicht `defaultview_<role>` (DefaultView) je Knotentyp, und der
+`weight`, Sicht `defaultview_<role>` (DefaultViewGruppe/-Produkt/-Variante) je Knotentyp, und der
 Wurzelknoten `g-mastertree` (MasterTree) mit den drei Gruppen und dem ★ auf
 `name` — als Einträge des Urhebers `system`. Fehlende Ströme werden bei jedem Start nachgesät
 (`Catalog.SeedMissing`), Geändertes bleibt; der Wurzelknoten kommt nur, wenn

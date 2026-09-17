@@ -304,7 +304,7 @@ const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, 
     <template v-else-if="section === 'views'">
       <div class="toolbar">
         <h1>◫ Attributsichten</h1>
-        <span class="muted" title="Je Knotentyp: welche Gruppen in welcher Reihenfolge, und darin die Attribute in welcher Reihenfolge — redaktionell, technisch, Preise, alles. Neu zugeordnete Attribute hängen unten an ihrer Gruppe. Im Knoten wählbar: alles oder eine Sicht dieses Typs.">ⓘ je Knotentyp: Gruppen und Attribute in Reihenfolge</span>
+        <span class="muted" title="Je Knotentyp: welche Gruppen in welcher Reihenfolge, und darin die Attribute in welcher Reihenfolge — redaktionell, technisch, Preise, alles. Der Knoten zeigt in einer Sicht nur deren Gruppen; neu zugeordnete Attribute hängen unten an ihrer Gruppe. Im Knoten wählbar: alles oder eine Sicht dieses Typs.">ⓘ je Knotentyp: Gruppen und Attribute in Reihenfolge</span>
         <span class="grow" />
         <input v-model="newKey" type="text" placeholder="neue Sicht (key)" style="width:160px" @keydown.enter="viewAdd" />
         <button class="primary" :disabled="!newKey.trim()" @click="viewAdd">+ Sicht</button>
