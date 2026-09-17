@@ -19,6 +19,24 @@ const router = useRouter()
 const q = ref('')
 const search = ref(null)
 const hits = ref(new Map())   // Server-Suche: id → Fundstelle
+// Suche mit Bedingungen (Taloan): Chips key:value, aufklappbarer Baukasten schreibt sie in die Zeile
+const qOpen = ref(false)
+const qb = ref({ attr: '', cmp: 'has', value: '', empty: '', incomplete: '', role: '', status: '', group: '', here: false, by: '', since: '' })
+const hasTerms = computed(() => /(^|\s)[a-z]+:/.test(q.value))
+function buildQuery() {
+  const b = qb.value, parts = []
+  if (b.attr) parts.push(b.cmp === 'has' ? `attr:${b.attr}` : b.cmp === 'none' ? `attr:${b.attr}=` : `attr:${b.attr}=${b.cmp === 'contains' ? '*' + b.value + '*' : b.value}`)
+  if (b.empty) parts.push(`empty:${b.empty}`)
+  if (b.incomplete) parts.push(`incomplete:${b.incomplete}`)
+  if (b.role) parts.push(`role:${b.role}`)
+  if (b.status) parts.push(`status:${b.status}`)
+  if (b.group) parts.push(`group:${b.group}`)
+  if (b.here && props.id) parts.push(`under:${props.id}`)
+  if (b.by) parts.push(`by:${b.by}`)
+  if (b.since) parts.push(`since:${b.since}`)
+  const words = q.value.split(/\s+/).filter(w => w && !/^[a-z]+:/.test(w))
+  q.value = [...parts, ...words].join(' ')
+}
 let searchTimer = null
 const list = ref(null)
 const creating = ref(null)     // null | 'group' | 'product' | 'variant'
@@ -35,7 +53,7 @@ const selected = computed(() => props.id ? tree.byId.get(props.id) : null)
 watch(q, v => {
   clearTimeout(searchTimer)
   const s = v.trim()
-  if (s.length < 2) { hits.value = new Map(); return }
+  if (s.length < 2 && !/^[a-z]+:/.test(s)) { hits.value = new Map(); return }
   searchTimer = setTimeout(async () => {
     try { hits.value = new Map((await api.get(`/api/search?q=${encodeURIComponent(s)}`)).map(h => [h.row.id, h.hit])) }
     catch (e) { store.toast(e.message) }
@@ -49,7 +67,7 @@ const visible = computed(() => {
   if (f) {
     const keep = new Set()
     for (const r of tree.rows)
-      if (hits.value.has(r.id) || r.label.toLowerCase().includes(f) || (r.sku ?? '').toLowerCase().includes(f) || r.id.includes(f)) {
+      if (hits.value.has(r.id) || (!hasTerms.value && (r.label.toLowerCase().includes(f) || (r.sku ?? '').toLowerCase().includes(f) || r.id.includes(f)))) {
         keep.add(r.id)
         for (const a of tree.ancestors(r.id)) keep.add(a.id)
       }
@@ -359,7 +377,24 @@ function onDialogKey(e) {
     <div class="toolbar">
       <h1>▣ Baum</h1>
       <span class="muted">{{ tree.rows.length }}</span>
-      <input ref="search" v-model="q" type="search" placeholder="Suche in allem  /" style="flex:1;min-width:0" @keydown.down.prevent="list?.focus()" />
+      <input ref="search" v-model="q" type="search" placeholder="Suche in allem  /" style="flex:1;min-width:0" @keydown.down.prevent="list?.focus()" title="Text — oder Bedingungen: attr:function · attr:function=*sku* · attr:x= (leer) · empty:name/en · incomplete:web · role:variant · status:active · group:logistics · under:<id> · by:Taloan · since:2026-09-10" />
+      <button class="x" :class="{ on: qOpen }" @click="qOpen = !qOpen" title="Suche mit Bedingungen auf-/zuklappen">{{ qOpen ? '⌃' : '⌄' }}</button>
+    </div>
+    <div v-if="qOpen" class="qb">
+      <div class="qrow"><span>attr</span>
+        <select v-model="qb.attr" style="flex:1"><option value="">— Attribut —</option><option v-for="a in store.model?.attributes ?? []" :key="a.key" :value="a.key">{{ a.label?.de || a.key }}</option></select>
+        <select v-model="qb.cmp" title="Vergleich"><option value="has">hat Wert</option><option value="none">kein Wert</option><option value="contains">enthält</option><option value="is">gleich / Muster *</option></select>
+        <input v-if="qb.cmp === 'contains' || qb.cmp === 'is'" v-model="qb.value" type="text" placeholder="Wert" style="width:110px" />
+      </div>
+      <div class="qrow"><span>empty</span><select v-model="qb.empty" style="flex:1" title="fehlt, auch geerbt nicht"><option value="">—</option><template v-for="a in store.model?.attributes ?? []" :key="a.key"><option :value="a.key">{{ a.label?.de || a.key }}</option><option v-for="l in (a.perLocale ? store.model.locales : [])" :key="a.key + l.code" :value="a.key + '/' + l.code">{{ a.label?.de || a.key }} / {{ l.code }}</option></template></select>
+        <span>incomplete</span><select v-model="qb.incomplete" title="Vollständigkeit nicht erreicht"><option value="">—</option><option v-for="c in store.model?.channels ?? []" :key="c.key" :value="c.key">{{ c.key }}</option></select></div>
+      <div class="qrow"><span>role</span><select v-model="qb.role"><option value="">—</option><option value="group">▣ Gruppe</option><option value="product">▦ Produkt</option><option value="variant">◆ Variante</option></select>
+        <span>status</span><select v-model="qb.status"><option value="">—</option><option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option></select>
+        <span>group</span><select v-model="qb.group" style="flex:1" title="Attributgruppe gilt am Knoten"><option value="">—</option><option v-for="g in store.model?.groups ?? []" :key="g.key" :value="g.key">{{ g.label?.de || g.key }}</option></select></div>
+      <div class="qrow"><label title="nur im Teilbaum des gewählten Knotens"><input type="checkbox" v-model="qb.here" :disabled="!id" /> under: hier</label>
+        <span>by</span><input v-model="qb.by" type="text" placeholder="Urheber" style="width:80px" />
+        <span>since</span><input v-model="qb.since" type="date" style="width:130px" /></div>
+      <div class="qrow"><span class="grow" /><button class="primary" @click="buildQuery(); qOpen = false" title="Bedingungen in die Suchzeile schreiben">→ suchen</button><button @click="qb = { attr: '', cmp: 'has', value: '', empty: '', incomplete: '', role: '', status: '', group: '', here: false, by: '', since: '' }; q = ''">leeren</button></div>
     </div>
     <div class="toolbar create">
       <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label}` : 'Gruppe an der Wurzel'">+ ▣</button>
@@ -480,6 +515,11 @@ function onDialogKey(e) {
 
 <style scoped>
 .create { gap: 4px; }
+.qb { padding: 4px 8px 6px; border-bottom: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.qrow { display: flex; gap: 4px; align-items: center; }
+.qrow > span { color: var(--muted); font-family: var(--mono); }
+.qrow select, .qrow input[type=text], .qrow input[type=date] { font-size: 12px; padding: 1px 4px; }
+.x.on { color: var(--accent); }
 .create button { min-width: 40px; }
 .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: center; z-index: 5; }
 .dialog { background: var(--pane); border: 1px solid var(--line); border-radius: 8px; min-width: 500px; box-shadow: 0 12px 40px rgba(0, 0, 0, .4); }

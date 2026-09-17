@@ -165,6 +165,29 @@ public sealed class Tree : IProjection
         _external.TryGetValue((system, id), out var nodeId) && _nodes.TryGetValue(nodeId, out var n) ? n : null;
 
     /// <summary>Suche über Label, SKU, Id und alle eigenen Werte — ohne Index, gut bis einige zehntausend Knoten.</summary>
+    /// <summary>Suche mit Bedingungen: alle Knoten, die die Zeile erfüllen, mit Fundstelle.</summary>
+    public IEnumerable<(Node Node, string Hit)> Query(ModelCatalog model, string q)
+    {
+        var query = Projections.Query.Parse(q);
+        if (!query.HasTerms) { foreach (var h in Search(q)) yield return h; yield break; }
+        foreach (var n in _nodes.Values)
+            if (query.Match(this, model, n) is { } hit) yield return (n, hit);
+    }
+
+    /// <summary>Ein Knoten gegen einen Suchtext: Fundstelle oder null.</summary>
+    public string? SearchOne(Node n, string q)
+    {
+        if (n.Id.Contains(q, StringComparison.OrdinalIgnoreCase)) return n.Id;
+        if (n.Name is { } nm && nm.Contains(q, StringComparison.OrdinalIgnoreCase)) return nm;
+        if (n.Label.Values.FirstOrDefault(l => l.Contains(q, StringComparison.OrdinalIgnoreCase)) is { } l) return l;
+        if (n.AxisValues.Values.FirstOrDefault(v => v.Contains(q, StringComparison.OrdinalIgnoreCase)) is { } av) return av;
+        var hit = n.Values.FirstOrDefault(kv => kv.Value.Contains(q, StringComparison.OrdinalIgnoreCase));
+        if (hit.Key.Attribute is not null) return $"{hit.Key.Attribute}: {Snippet(hit.Value, q)}";
+        var list = n.Lists.FirstOrDefault(kv => kv.Value.Any(v => v.Contains(q, StringComparison.OrdinalIgnoreCase)));
+        if (list.Key.Attribute is not null) return $"{list.Key.Attribute}: {string.Join(", ", list.Value)}";
+        return null;
+    }
+
     public IEnumerable<(Node Node, string Hit)> Search(string q)
     {
         foreach (var n in _nodes.Values)

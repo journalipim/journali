@@ -410,6 +410,23 @@ Altlast), sondern eigener Name am Knoten oder das ★ am Pfad.
 So gebaut (17.09.2026): ⊞ Modell → Attributsichten mit Drag & Drop; im
 Knoten Sicht je Knotentyp, ☰ flach / ⧉ Reiter, ✎ nur bearbeitbare.
 
+### 21. Suche mit Bedingungen (Taloan, 17.09.2026)
+
+> Ich wusste, dass ich in einem Knoten schon mal etwas bei einem
+> Funktionsattribut eingetragen hatte — auf die Wurzel gehen und nach dem
+> Ergebnis suchen funktioniert so nicht.
+
+Die Textsuche findet Text; die Frage „wo steht bei Attribut X überhaupt
+etwas?" ist eine Frage nach der Struktur. Deshalb im Baum-Suchfeld Chips
+`key:value` (englisch, alles UND), aufklappbar mit Baukasten, der dieselben
+Chips schreibt: `attr:function` (eigener Wert da) · `attr:function=*sku*`
+(Muster) · `attr:x=` (kein eigener Wert) · `empty:name/en` (auch geerbt
+nichts) · `incomplete:web` · `role:variant` · `status:active` ·
+`group:logistics` (gilt hier) · `under:<id>` · `by:Taloan` ·
+`since:2026-09-10` · freier Text. Rechnet der Server (`Query.cs`), Treffer
+wie bisher im Baum mit Pfad und Fundstelle. Offen: gespeicherte Suchen →
+virtueller Ordner.
+
 ## Messlatte: OpenDXP
 
 Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."
