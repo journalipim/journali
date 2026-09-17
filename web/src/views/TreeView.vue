@@ -97,6 +97,14 @@ async function retire(r) {
 // Dieselben Regeln wie der Server (Commands.Move): Variante unter Produkt, sonst unter Gruppe, nie unter sich selbst.
 const dragId = ref(null)
 const dropId = ref(null)
+// Zugeklappte Äste öffnen sich, wenn man beim Ziehen eine Weile darüber steht (Taloan, 17.09.).
+let hoverTimer = null, hoverId = null
+function hoverOpen(r) {
+  if (hoverId === r.id) return
+  clearTimeout(hoverTimer); hoverId = r.id
+  if (tree.kids(r.id).length && !tree.expanded.has(r.id)) hoverTimer = setTimeout(() => { if (hoverId === r.id) tree.expand(r.id) }, 700)
+}
+function hoverStop() { clearTimeout(hoverTimer); hoverId = null }
 function canDrop(src, target) {
   if (!src || !target || src.id === target.id || src.parent === target.id) return false
   if (target.role !== (src.role === 'variant' ? 'product' : 'group')) return false
@@ -106,12 +114,13 @@ function canDrop(src, target) {
 function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', r.id) }
 function onDragOver(e, r) {
   const src = tree.byId.get(dragId.value)
+  if (src) hoverOpen(r)
   if (!canDrop(src, r)) { dropId.value = null; return }
   e.preventDefault(); e.dataTransfer.dropEffect = 'move'; dropId.value = r.id
 }
 async function onDrop(r) {
   const src = tree.byId.get(dragId.value)
-  dragId.value = null; dropId.value = null
+  dragId.value = null; dropId.value = null; hoverStop()
   if (!canDrop(src, r)) return
   const below = countBelow(src.id)
   try {
@@ -260,7 +269,7 @@ function toggleAxis(a) {
       <!-- Flag heisst isOpen, nicht open — sonst verdeckt es die Funktion open(r) des Klicks. -->
       <div v-for="{ r, depth, isOpen } in visible" :key="r.id" class="node" :class="[r.role, { selected: r.id === id, [r.status]: true, drop: dropId === r.id, dragging: dragId === r.id }]"
         :style="`padding-left:${8 + depth * 16}px`" @click="open(r)" @contextmenu="contextMenu($event, r)" :title="r.id"
-        draggable="true" @dragstart="onDragStart($event, r)" @dragover="onDragOver($event, r)" @dragleave="dropId === r.id && (dropId = null)" @drop.prevent="onDrop(r)" @dragend="dragId = null; dropId = null">
+        draggable="true" @dragstart="onDragStart($event, r)" @dragover="onDragOver($event, r)" @dragleave="dropId === r.id && (dropId = null)" @drop.prevent="onDrop(r)" @dragend="dragId = null; dropId = null; hoverStop()">
         <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (isOpen ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
         <span class="label">{{ r.label }}</span>
