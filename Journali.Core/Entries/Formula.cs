@@ -18,9 +18,13 @@ namespace Journali.Core.Entries;
 /// Ausdruck: Attributschlüssel (Wert des Knotens, geerbt zählt; bei Text die Sprache der Spalte),
 /// Zahlen, Text in "…", + - * / ( ), unäres -, &amp; verkettet Text, Vergleiche = &lt;&gt; &lt; &lt;= &gt; &gt;=,
 /// and / or / not, Funktionen round(x[, stellen]) min max abs len upper lower trim
-/// if(bedingung, dann, sonst) empty(x) coalesce(a, b, …). Fehlt ein Wert, den ein Rechenschritt
-/// braucht, fehlt das Ergebnis — ausser if/empty/coalesce fangen es ab. Einheiten rechnet die
-/// Formel nicht um; wer cm³ in Litern will, teilt selbst durch 1000.
+/// if(bedingung, dann, sonst) empty(x) coalesce(a, b, …) trunc floor ceil. Fehlt ein Wert, den ein
+/// Rechenschritt braucht, fehlt das Ergebnis — ausser if/empty/coalesce fangen es ab. Einheiten rechnet
+/// die Formel nicht um; wer cm³ in Litern will, teilt selbst durch 1000.
+///
+/// Schreibweisen aus der Tabellenkalkulation gehen auch (Taloan, 17.09.2026): deutsche Namen
+/// (wenn, und, oder, nicht, runden, kürzen, leer), Semikolon zwischen Argumenten, ein @ vor dem
+/// Schlüssel, ein _ vor der Funktion — <c>_wenn(@height > 100; _trunc(@height / 100); @height)</c>.
 /// </summary>
 public static class Formula
 {
@@ -104,16 +108,16 @@ public static class Formula
         public Value Expr()
         {
             var v = And();
-            while (TakeWord("or")) { var r = And(); v = Value.Of(v.Truthy || r.Truthy ? 1 : 0); }
+            while (TakeWord("or") || TakeWord("oder")) { var r = And(); v = Value.Of(v.Truthy || r.Truthy ? 1 : 0); }
             return v;
         }
         private Value And()
         {
             var v = Not();
-            while (TakeWord("and")) { var r = Not(); v = Value.Of(v.Truthy && r.Truthy ? 1 : 0); }
+            while (TakeWord("and") || TakeWord("und")) { var r = Not(); v = Value.Of(v.Truthy && r.Truthy ? 1 : 0); }
             return v;
         }
-        private Value Not() => TakeWord("not") ? Value.Of(Not().Truthy ? 0 : 1) : Compare();
+        private Value Not() => TakeWord("not") || TakeWord("nicht") ? Value.Of(Not().Truthy ? 0 : 1) : Compare();
         private Value Compare()
         {
             var v = Concat();
@@ -175,12 +179,13 @@ public static class Formula
                 while (_i < text.Length && (char.IsDigit(text[_i]) || text[_i] == '.')) _i++;
                 return Value.Of(decimal.Parse(text[start.._i], NumberStyles.Number, CultureInfo.InvariantCulture));
             }
+            if (c == '@') { _i++; Skip(); c = _i < text.Length ? text[_i] : ' '; }   // @schlüssel wie in der Tabellenkalkulation
             if (char.IsLetter(c) || c == '_')
             {
                 var start = _i;
                 while (_i < text.Length && (char.IsLetterOrDigit(text[_i]) || text[_i] == '_')) _i++;
                 var name = text[start.._i];
-                if (Take("(")) return Call(name.ToLowerInvariant());
+                if (Take("(")) return Call(Alias(name.TrimStart('_').ToLowerInvariant()));
                 if (!Regex.IsMatch(name, "^[a-z][a-z0-9_]*$")) throw new FormatException($"Kein Attributschlüssel: {name}");
                 Keys.Add(name);
                 return Checking ? Value.Of(1) : value!(name);
@@ -188,19 +193,26 @@ public static class Formula
             throw new FormatException($"Unerwartet: „{c}“");
         }
 
+        private static string Alias(string name) => name switch
+        {
+            "wenn" => "if", "runden" => "round", "kürzen" or "kuerzen" or "ganzzahl" => "trunc", "leer" => "empty",
+            "gross" or "groß" => "upper", "klein" => "lower", "länge" or "laenge" => "len", "erster" => "coalesce",
+            _ => name,
+        };
+
         private Value Call(string name)
         {
             var args = new List<Value>();
             if (!Take(")"))
             {
                 args.Add(Expr());
-                while (Take(",")) args.Add(Expr());
+                while (Take(",") || Take(";")) args.Add(Expr());   // Semikolon wie in der deutschen Tabellenkalkulation
                 if (!Take(")")) throw new FormatException("„)“ fehlt.");
             }
             Value A(int i) => i < args.Count ? args[i] : throw new FormatException($"{name}: Argument {i + 1} fehlt.");
             if (Checking) return name switch
             {
-                "round" or "min" or "max" or "abs" or "len" or "upper" or "lower" or "trim" or "if" or "empty" or "coalesce" => Value.Of(1),
+                "round" or "min" or "max" or "abs" or "len" or "upper" or "lower" or "trim" or "if" or "empty" or "coalesce" or "trunc" or "floor" or "ceil" => Value.Of(1),
                 _ => throw new FormatException($"Unbekannte Funktion: {name}"),
             };
             return name switch
@@ -209,6 +221,9 @@ public static class Formula
                 "min" => Value.Of(args.Select(Num).Min()),
                 "max" => Value.Of(args.Select(Num).Max()),
                 "abs" => Value.Of(Math.Abs(Num(A(0)))),
+                "trunc" => Value.Of(Math.Truncate(Num(A(0)))),
+                "floor" => Value.Of(Math.Floor(Num(A(0)))),
+                "ceil" => Value.Of(Math.Ceiling(Num(A(0)))),
                 "len" => Value.Of((A(0).AsText ?? "").Length),
                 "upper" => Value.Of((A(0).AsText ?? throw new MissingValue()).ToUpperInvariant()),
                 "lower" => Value.Of((A(0).AsText ?? throw new MissingValue()).ToLowerInvariant()),
