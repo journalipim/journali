@@ -353,7 +353,7 @@ function cellMenu(e, def, col, block) {
     </div>
 
     <div v-if="store.layout === 'tabs' && blocks.length" class="tabs">
-      <button v-for="b in blocks" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="`${b.key} · ${b.defs.length} Attribute` + (b.active ? '' : ` · gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`)">{{ b.label }}<span class="muted n"> {{ b.defs.length }}</span><span v-if="!b.active"> 🔒</span></button>
+      <button v-for="b in blocks" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="`${b.key} · ${b.defs.length} Attribute` + (b.active ? '' : ` · gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`)">{{ b.label }}<span v-if="!b.active"> 🔒</span></button>
     </div>
 
 
