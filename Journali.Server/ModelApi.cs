@@ -47,11 +47,18 @@ public static partial class ModelApi
                 : Results.Ok(EntryView.Of(write(actor, Model.RelationStream + key, Types.RelationTypeRetired, new RelationTypeRetired(key), null))));
         });
 
-        // Syntaxprüfung fürs Skript beim Tippen — liest nichts, schreibt nichts.
-        m.MapPost("/formula/check", (FormulaCheck body) =>
+        // Syntaxprüfung fürs Skript beim Tippen — liest nichts, schreibt nichts. Mit node: dazu das momentane
+        // Ergebnis am Knoten (value; null = kein Wert) und ein Laufzeitfehler (runtime), wenn einer auftritt.
+        m.MapPost("/formula/check", (FormulaCheck body, Catalog c) =>
         {
             var (keys, error) = Formula.Check(body.Formula ?? "");
-            return Results.Ok(new { ok = error is null, error, keys });
+            if (error is not null || body.Node is null) return Results.Ok(new { ok = error is null, error, keys, value = (string?)null, runtime = (string?)null });
+            return c.With((model, tree, _) =>
+            {
+                if (!tree.Nodes.TryGetValue(body.Node, out var node)) return Results.Ok(new { ok = true, error, keys, value = (string?)null, runtime = (string?)"Knoten unbekannt" });
+                var value = tree.Evaluate(model, node, body.Formula, body.Locale, out var runtime);
+                return Results.Ok(new { ok = true, error, keys, value, runtime });
+            });
         });
 
         m.MapPut("/master-locale", (MasterLocaleDefined body, HttpRequest req, Catalog c) =>
@@ -255,7 +262,7 @@ public static partial class ModelApi
         return c.With((model, _, write) => body(model, (stream, type, payload) => Results.Ok(EntryView.Of(write(actor, stream, type, payload, null)))));
     }
 
-    public sealed record FormulaCheck(string? Formula);
+    public sealed record FormulaCheck(string? Formula, string? Node = null, string? Locale = null);
 
     public static string? Actor(HttpRequest req) =>
         req.Headers.TryGetValue("X-Actor", out var v) && !string.IsNullOrWhiteSpace(v) ? v.ToString() : null;

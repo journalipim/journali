@@ -76,14 +76,18 @@ public static class Formula
     }
 
     /// <summary>Skript ausführen; None bei Fehler oder fehlendem Wert.</summary>
-    public static Value Run(string formula, Func<string, Value> attribute, string? locale = null)
+    public static Value Run(string formula, Func<string, Value> attribute, string? locale = null) => Run(formula, attribute, locale, out _);
+
+    /// <summary>Wie Run, aber mit dem Laufzeitfehler als Text — fürs Ergebnis im Editor.</summary>
+    public static Value Run(string formula, Func<string, Value> attribute, string? locale, out string? error)
     {
+        error = null;
         try
         {
             var prog = new Parser(formula).Program();
             return new Runner(attribute, CultureOf(locale)).Run(prog);
         }
-        catch (Exception e) when (e is FormatException or DivideByZeroException or OverflowException or InvalidCastException or ArgumentOutOfRangeException) { return Value.None; }
+        catch (Exception e) when (e is FormatException or DivideByZeroException or OverflowException or InvalidCastException or ArgumentOutOfRangeException) { error = e.Message; return Value.None; }
     }
 
     // ---- Syntaxbaum ------------------------------------------------------------------------

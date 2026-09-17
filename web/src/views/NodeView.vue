@@ -537,7 +537,7 @@ function cellMenu(e, def, col, block) {
 
   <Splitter v-if="store.journalOpen" v-model="journalW" side="right" :min="240" :max="1000" />
   <ScriptEditor v-if="scriptCell" :model-value="ownValue(scriptCell.def.key, scriptCell.col) ?? inherited(scriptCell.def, scriptCell.col).value ?? ''" :title="`${scriptCell.def.label?.de || scriptCell.def.key} · ${scriptCell.col.label} · ${shownLabel}`"
-    :draft-key="`${id}.${scriptCell.def.key}.${scriptCell.col.label}`" type="text"
+    :draft-key="`${id}.${scriptCell.def.key}.${scriptCell.col.label}`" type="text" :node="id" :locale="scriptCell.col.locale ?? undefined"
     :attributes="(model?.attributes ?? []).filter(a => a.key !== scriptCell.def.key && a.type !== 'rows' && a.type !== 'html')"
     @save="v => { setValue(scriptCell.def, scriptCell.col, v); scriptCell = null }" @close="scriptCell = null" />
   <div v-if="store.journalOpen" class="pane" :style="`width:${journalW}px;flex:none`">

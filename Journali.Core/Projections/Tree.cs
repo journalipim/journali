@@ -114,6 +114,13 @@ public sealed class Tree : IProjection
     {
         if (!def.IsComputed || depth > 8) return null;
         var script = Resolve(model, node, def.Key, def.PerLocale ? locale : null, null).Value;
+        return Evaluate(model, node, script, locale, out _, depth);
+    }
+
+    /// <summary>Ein beliebiges Skript im Kontext des Knotens rechnen — der Editor zeigt so das momentane Ergebnis beim Tippen (Taloan, 17.09.).</summary>
+    public string? Evaluate(ModelCatalog model, Node node, string? script, string? locale, out string? error, int depth = 0)
+    {
+        error = null;
         if (string.IsNullOrWhiteSpace(script)) return null;
         Entries.Formula.Value value(string key)
         {
@@ -124,7 +131,7 @@ public sealed class Tree : IProjection
             if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
             return Entries.Formula.Value.Of(raw);
         }
-        return Entries.Formula.Run(script, value, locale).AsText;
+        return Entries.Formula.Run(script, value, locale, out error).AsText;
     }
 
     /// <summary>Die Attributgruppen, die hier gelten: am Knoten und an allen Vorfahren angehängt — von der Wurzel her, mit Herkunft.</summary>

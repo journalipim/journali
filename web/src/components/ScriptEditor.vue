@@ -6,7 +6,8 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { api } from '../api.js'
 
-const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String })
+// node/locale: der Knoten, an dem das Skript gerechnet wird — dann zeigt der Fuss das momentane Ergebnis statt einer Erklärung (Taloan, 17.09.)
+const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String, node: String, locale: String })
 const emit = defineEmits(['save', 'close'])
 
 const text = ref(props.modelValue ?? '')
@@ -28,7 +29,7 @@ let timer = null
 watch(text, () => { clearTimeout(timer); timer = setTimeout(run, 250); keepDraft() })
 async function run() {
   if (!text.value.trim()) { check.value = { ok: true, error: null, keys: [] }; return }
-  try { check.value = await api.post('/api/model/formula/check', { formula: text.value }) }
+  try { check.value = await api.post('/api/model/formula/check', { formula: text.value, node: props.node ?? null, locale: props.locale ?? null }) }
   catch (e) { check.value = { ok: false, error: e.message, keys: [] } }
 }
 function keepDraft() {
@@ -196,7 +197,9 @@ const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m
           </div>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
-          <span class="muted" style="font-size:12px">Das Skript ist der Wert des Attributs; das Ergebnis wird beim Lesen gerechnet · <kbd>Ctrl+Enter</kbd> übernehmen · <kbd>Esc</kbd> schliessen (Entwurf bleibt)</span>
+          <span v-if="check.runtime" class="neg" style="font-size:12px" :title="check.runtime">✗ {{ check.runtime }}</span>
+          <span v-else-if="props.node && check.ok && text.trim()" class="result" :class="{ muted: check.value == null }" :title="check.value == null ? 'kein Ergebnis — ein gelesener Wert fehlt hier' : 'momentanes Ergebnis an diesem Knoten'">= {{ check.value ?? '—' }}</span>
+          <span v-else class="muted" style="font-size:12px"><kbd>Ctrl+Enter</kbd> übernehmen · <kbd>Esc</kbd> schliessen (Entwurf bleibt)</span>
           <span class="grow" />
           <button v-if="draftAt" @click="discardDraft" title="zurück zum Stand im Attribut">Entwurf verwerfen</button>
           <button @click="emit('close')">Schliessen</button>
@@ -208,6 +211,7 @@ const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m
 </template>
 
 <style scoped>
+.result { font-family: var(--mono); font-size: 13px; white-space: pre-wrap; word-break: break-word; max-height: 4.5em; overflow: auto; }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; z-index: 20; }
 .editor { width: min(1100px, 94vw); height: min(680px, 88vh); background: var(--pane); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
 .body { flex: 1; display: flex; min-height: 0; }
