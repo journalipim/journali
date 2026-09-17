@@ -72,8 +72,8 @@ const visible = computed(() => {
 
 function open(row) { router.push(`/tree/${row.id}`) }
 
-// ---- Die Menge (Taloan, 17.09.): Strg+Klick sammelt, Shift+Klick nimmt den Bereich der sichtbaren Zeilen,
-// „☑ Treffer“ nimmt alle sichtbaren (z. B. ein Suchergebnis). Ein einfacher Klick öffnet nur — die Menge bleibt.
+// ---- Die Auswahl (Taloan, 17.09.; Wort „Auswahl“ statt „Menge“): Strg+Klick sammelt, Shift+Klick nimmt den Bereich
+// der sichtbaren Zeilen, „☑ Treffer“ nimmt alle sichtbaren (z. B. ein Suchergebnis). Ein einfacher Klick öffnet nur — die Auswahl bleibt.
 const picked = ref(new Set())
 const pickAnchor = ref(null)
 function onRowClick(e, r) {
@@ -89,13 +89,13 @@ function onRowClick(e, r) {
 const pickVisible = () => { picked.value = new Set(visible.value.map(x => x.r.id)) }
 const pickedRows = computed(() => [...picked.value].map(id => tree.byId.get(id)).filter(Boolean))
 
-// ---- Verknüpfen: Menge → Ziel (per Shift+Ablegen oder Suche), dann Typ, Richtung, Werte je Eintrag; ein Stapel
+// ---- Verknüpfen: Auswahl → Ziel (per Shift+Ablegen oder Suche), dann Typ, Richtung, Werte je Eintrag; ein Stapel
 const link = ref(null)   // { target, type, dir: 'target-first' | 'set-first', q, vals: { id: { attr: v } }, existing }
 const relTypes = computed(() => (store.model?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media')))
 const linkType = computed(() => relTypes.value.find(t => t.key === link.value?.type) ?? null)
 const linkAttrs = computed(() => { const g = linkType.value?.group; return g ? (store.model?.attributes ?? []).filter(a => a.group === g && a.type !== 'rows' && a.type !== 'html') : [] })
 async function openLink(target) {
-  if (!pickedRows.value.length) { store.toast('Erst eine Menge sammeln: Strg+Klick im Baum'); return }
+  if (!pickedRows.value.length) { store.toast('Erst auswählen: Strg+Klick im Baum'); return }
   link.value = { target, type: relTypes.value[0]?.key ?? '', dir: 'target-first', q: '', vals: {}, existing: null, all: {} }
   await loadExisting()
 }
@@ -110,7 +110,7 @@ const linkMatches = computed(() => {
   const q = (link.value?.q ?? '').trim().toLowerCase(); if (!q) return []
   return tree.rows.filter(r => !picked.value.has(r.id) && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12)
 })
-// Welche der Menge sind für Typ und Richtung erlaubt, welche gibt es schon?
+// Welche der Auswahl sind für Typ und Richtung erlaubt, welche gibt es schon?
 const linkRows = computed(() => {
   // ohne Ziel (⇄ aus der Leiste: Ziel wird erst gesucht) keine Zeilen — sonst l.target.id auf null (Taloan, 17.09.: Absturz)
   const l = link.value, t = linkType.value; if (!l || !t || !l.target) return []
@@ -194,7 +194,7 @@ function canDrop(src, target) {
   for (const a of tree.ancestors(target.id)) if (a.id === src.id) return false
   return true
 }
-// Ziehen: gehört die Zeile zur Menge, zieht die ganze Menge mit. Shift beim Ablegen = verknüpfen statt umhängen.
+// Ziehen: gehört die Zeile zur Auswahl, zieht die ganze Auswahl mit. Shift beim Ablegen = verknüpfen statt umhängen.
 // effectAllowed 'all': mit gedrückter Shift-Taste erzwingt Windows/Chrome den Effekt „move“, mit Strg „copy“ — passt der nicht zu
 // effectAllowed, zeigt der Browser das Verbotsschild und liefert kein drop (Taloan, 17.09.). Was Shift bedeutet, entscheiden wir selbst.
 function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'all'; e.dataTransfer.setData('text/plain', r.id) }
@@ -209,7 +209,7 @@ function onDragOver(e, r) {
 async function onDrop(e, r) {
   const ids = dragIds()
   dragId.value = null; dropId.value = null; hoverStop()
-  if (e.shiftKey) {   // verknüpfen: die Menge (oder die eine Zeile) mit diesem Ziel
+  if (e.shiftKey) {   // verknüpfen: die Auswahl (oder die eine Zeile) mit diesem Ziel
     if (!picked.value.has(ids[0])) picked.value = new Set(ids)
     await openLink(r); return
   }
@@ -269,8 +269,8 @@ function contextMenu(e, r) {
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
     kids ? { label: 'Alles aufklappen', icon: '▾', key: 'a', action: () => expandAll(r.id) } : null,
     kids ? { label: 'Alles zuklappen', icon: '▸', key: 'z', action: () => collapseAll(r.id) } : null,
-    { label: picked.value.has(r.id) ? 'Aus der Menge nehmen' : 'In die Menge', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
-    picked.value.size ? { label: `Menge auflösen (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
+    { label: picked.value.has(r.id) ? 'Aus der Auswahl entfernen' : 'Zur Auswahl hinzufügen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
+    picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: 'Id kopieren', icon: '⧉', key: 'i', hint: r.id, action: () => navigator.clipboard?.writeText(r.id) },
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
     ...(plugins.nodeActions.some(a => !a.roles || a.roles.includes(r.role)) ? [{ sep: true }, ...plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role)).map(a => ({ label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) }))] : []),
@@ -280,7 +280,7 @@ function contextMenu(e, r) {
 }
 function onGlobalKey(e) {
   if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); search.value?.focus() }
-  // Esc löst die Menge auf (wenn kein Dialog offen ist) — Taloan, 17.09.: „Wie löse ich eine Selektion wieder auf?“
+  // Esc hebt die Auswahl auf (wenn kein Dialog offen ist) — Taloan, 17.09.: „Wie löse ich eine Selektion wieder auf?“
   if (e.key === 'Escape' && picked.value.size && !creating.value && !link.value && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); picked.value = new Set() }
 }
 onMounted(() => window.addEventListener('keydown', onGlobalKey))
@@ -366,14 +366,14 @@ function onDialogKey(e) {
       <button @click="start('product')" :disabled="!groupTarget" :title="groupTarget ? `Produkt unter ${groupTarget.label}` : 'erst eine Gruppe wählen'">+ ▦</button>
       <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? `Variante unter ${productTarget.label}` : 'erst ein Produkt wählen'">+ ◆</button>
       <span class="grow" />
-      <button v-if="q" @click="pickVisible" title="alle sichtbaren Treffer in die Menge">☑ Treffer</button>
+      <button v-if="q" @click="pickVisible" title="alle sichtbaren Treffer auswählen">☑ Treffer</button>
       <template v-if="picked.size">
-        <span class="chip" title="die Menge — Strg+Klick sammelt, Shift+Klick nimmt den Bereich; × oder Esc löst sie auf">☑ {{ picked.size }} <button @click="picked = new Set()" title="Menge auflösen (Esc)">×</button></span>
-        <button class="primary" @click="openLink(null)" title="die Menge mit einem Ziel verknüpfen (oder mit Shift auf ein Ziel ziehen)">⇄</button>
+        <span class="chip" title="die Auswahl — Strg+Klick sammelt, Shift+Klick nimmt den Bereich; × oder Esc hebt sie auf">☑ {{ picked.size }} <button @click="picked = new Set()" title="Auswahl aufheben (Esc)">×</button></span>
+        <button class="primary" @click="openLink(null)" title="die Auswahl mit einem Ziel verknüpfen (oder mit Shift auf ein Ziel ziehen)">⇄</button>
       </template>
     </div>
 
-    <!-- Verknüpfen: Menge → Ziel, dann Typ und Richtung (Taloan, 17.09.) -->
+    <!-- Verknüpfen: Auswahl → Ziel, dann Typ und Richtung (Taloan, 17.09.) -->
     <div v-if="link" class="overlay" @click.self="link = null" @keydown="onLinkKey">
       <div class="dialog" style="min-width:640px;max-width:92vw">
         <div class="toolbar"><h1>⇄ {{ pickedRows.length }} Einträge verknüpfen</h1><span class="grow" /><button class="x" @click="link = null" title="Esc">×</button></div>
@@ -469,7 +469,7 @@ function onDialogKey(e) {
       <div v-else-if="q && !visible.length" class="empty">Nichts zu „{{ q }}“</div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · <kbd>Strg</kbd>+Klick Menge · ziehen = umhängen, mit <kbd>Shift</kbd> = verknüpfen · <i>kursiv</i> = angeheftet
+      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · <kbd>Strg</kbd>+Klick auswählen · ziehen = umhängen, mit <kbd>Shift</kbd> = verknüpfen · <i>kursiv</i> = angeheftet
     </div>
   </div>
 
