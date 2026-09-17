@@ -107,13 +107,13 @@ function onPaste(e) {
   const tr = td.parentElement; const ri = rows.value.findIndex(r => r.row.id === tr.dataset.id); const ci = [...tr.children].indexOf(td) - FIXED
   if (ri < 0 || ci < 0) return
   const lines = text.replace(/\r/g, '').split('\n').filter((l, i, a) => l !== '' || i < a.length - 1)
-  const cols = columns.value.filter(editable)
-  let n = 0
+  // Spaltenlage bleibt wie in Excel (Taloan): gesperrte Zellen werden ausgelassen, nicht übersprungen
+  let n = 0, locked = 0, bad = 0
   lines.forEach((line, dy) => {
     const r = rows.value[ri + dy]; if (!r) return
-    line.split('\t').forEach((v, dx) => { const c = columns.value.filter((_, i) => i >= ci).filter(editable)[dx]; if (c && !isAxis(r, c)) { set(r, c, v); n++ } })
+    line.split('\t').forEach((v, dx) => { const c = columns.value[ci + dx]; if (!c) return; const w = write(r, c, v); if (w === 'locked') locked++; else if (w === 'bad') bad++; else n++ })
   })
-  store.toast(`${n} Zellen eingefügt — noch nicht gespeichert`)
+  store.toast(`${n} Zellen eingefügt${locked ? `, ${locked} gesperrt` : ''}${bad ? `, ${bad} nicht in der Liste` : ''} — noch nicht gespeichert`)
 }
 const FIXED = 3   // feste Spalten vor den Attributen: Name, SKU, Achsen
 
@@ -166,7 +166,7 @@ function fillFrom(base) {
     if (src.length >= 2 && num(a) != null && num(b) != null) { const step = num(b) - num(a); const dec = Math.max((a.split(/[.,]/)[1] || '').length, (b.split(/[.,]/)[1] || '').length); gen = i => (num(a) + step * i).toFixed(dec).replace('.', a.includes(',') ? ',' : '.') }
     else if (src.length >= 2 && tail) { const w = tail[2].length; const start = parseInt(tail[2]); const t2 = /^(.*?)(\d+)$/.exec(b); const step = t2 && t2[1] === tail[1] ? parseInt(t2[2]) - start : 1; gen = i => tail[1] + String(start + step * i).padStart(w, '0') }
     else gen = i => src[i % src.length]
-    for (let ri = base.r1 + 1; ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && canWrite(r, c)) { set(r, c, gen(ri - base.r0)); n++ } }
+    for (let ri = base.r1 + 1; ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && write(r, c, gen(ri - base.r0)) === 'ok') n++ }
   }
   if (n) store.toast(`${n} Zellen gefüllt — noch nicht gespeichert`)
 }
@@ -184,7 +184,28 @@ watch(sel, async () => {
 const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
 const inSel = (ri, ci) => !!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1
 const selCells = () => { const s = sel.value; if (!s) return []; const out = []; for (let ri = s.r0; ri <= s.r1; ri++) for (let ci = s.c0; ci <= s.c1; ci++) { const r = rows.value[ri], c = columns.value[ci]; if (r && c) out.push({ r, c, ri, ci }) } return out }
-const canWrite = (r, c) => editable(c) && !isAxis(r, c) && c.type !== 'boolean' && c.type !== 'enum'
+const canWrite = (r, c) => editable(c) && !isAxis(r, c)
+// Text in eine Zelle schreiben, je Typ aufgelöst: Auswahl über Wert oder Label (Gross/Klein egal), Ja/Nein über
+// ja/nein/true/false/1/0; leer löscht den eigenen Wert. Gibt 'ok' | 'locked' | 'bad' zurück.
+function write(r, c, text) {
+  if (!canWrite(r, c)) return 'locked'
+  const t = String(text ?? '').trim()
+  if (c.type === 'enum' && !c.multiple) {
+    if (!t) { set(r, c, ''); return 'ok' }
+    const opts = listOf(c)?.values ?? []; const q = t.toLowerCase()
+    const hit = opts.find(o => o.value.toLowerCase() === q) ?? opts.find(o => Object.values(o.label ?? {}).some(l => String(l).toLowerCase() === q))
+    if (!hit) return 'bad'
+    set(r, c, hit.value); return 'ok'
+  }
+  if (c.type === 'boolean') {
+    if (!t) { set(r, c, ''); return 'ok' }
+    const q = t.toLowerCase()
+    if (['ja', 'true', '1', 'x', 'yes', 'wahr'].includes(q)) { set(r, c, 'true'); return 'ok' }
+    if (['nein', 'false', '0', 'no', 'falsch', '-'].includes(q)) { set(r, c, 'false'); return 'ok' }
+    return 'bad'
+  }
+  set(r, c, t); return 'ok'
+}
 const textOf = (r, c) => shown(r, c) ?? inherited(r, c) ?? ''
 // Strg+D: oberste Zelle des Bereichs in alle darunter; bei einer Zelle: die Zelle darüber hinein
 function fillDown() {
@@ -195,7 +216,7 @@ function fillDown() {
     const srcRow = s.r0 === s.r1 ? rows.value[s.r0 - 1] : rows.value[s.r0]
     if (!srcRow) continue
     const v = textOf(srcRow, c)
-    for (let ri = (s.r0 === s.r1 ? s.r0 : s.r0 + 1); ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && canWrite(r, c)) { set(r, c, v); n++ } }
+    for (let ri = (s.r0 === s.r1 ? s.r0 : s.r0 + 1); ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && write(r, c, v) === 'ok') n++ }
   }
   store.toast(`${n} Zellen gefüllt — noch nicht gespeichert`)
 }
@@ -214,7 +235,7 @@ function fillSeries() {
     else if (num(a) != null && !b) { gen = i => String(num(a) + i) }
     else if (tail) { const w = tail[2].length; const start = parseInt(tail[2]); const stepT = /^(.*?)(\d+)$/.exec(b); const step = stepT && stepT[1] === tail[1] ? parseInt(stepT[2]) - start : 1; gen = i => tail[1] + String(start + step * i).padStart(w, '0') }
     else gen = () => a
-    for (let ri = s.r0; ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && canWrite(r, c)) { set(r, c, gen(ri - s.r0)); n++ } }
+    for (let ri = s.r0; ri <= s.r1; ri++) { const r = rows.value[ri]; if (r && write(r, c, gen(ri - s.r0)) === 'ok') n++ }
   }
   store.toast(`Reihe: ${n} Zellen — noch nicht gespeichert`)
 }
@@ -224,7 +245,7 @@ function clearSel() { let n = 0; for (const { r, c } of selCells()) if (canWrite
 function copySel() {
   const s = sel.value; if (!s) return
   const lines = []
-  for (let ri = s.r0; ri <= s.r1; ri++) { const r = rows.value[ri]; if (!r) continue; lines.push(columns.value.slice(s.c0, s.c1 + 1).map(c => textOf(r, c)).join('\t')) }
+  for (let ri = s.r0; ri <= s.r1; ri++) { const r = rows.value[ri]; if (!r) continue; lines.push(columns.value.slice(s.c0, s.c1 + 1).map(c => c.type === 'enum' && !c.multiple ? labelOf(c)(textOf(r, c)) : textOf(r, c)).join('\t')) }
   navigator.clipboard?.writeText(lines.join('\n')); store.toast(`${lines.length} Zeilen kopiert`)
 }
 // Suchen & Ersetzen (Strg+H): im Bereich oder in der ganzen Tabelle, nur beschreibbare Zellen
@@ -238,7 +259,7 @@ const replaceHits = computed(() => { const m = matcher(); if (!m) return 0; retu
 function replaceAll() {
   const m = matcher(); if (!m) return
   let n = 0
-  for (const { r, c } of targets()) { if (!canWrite(r, c)) continue; const v = textOf(r, c); m.lastIndex = 0; if (!m.test(v)) continue; m.lastIndex = 0; set(r, c, v.replace(m, rep.value.with)); n++ }
+  for (const { r, c } of targets()) { if (!canWrite(r, c)) continue; const v = textOf(r, c); m.lastIndex = 0; if (!m.test(v)) continue; m.lastIndex = 0; if (write(r, c, v.replace(m, rep.value.with)) === 'ok') n++ }
   store.toast(`${n} Zellen ersetzt — noch nicht gespeichert`)
 }
 // ---- Cursor wie in Excel: der Fokus liegt auf einer Zellbox; Pfeile bewegen ihn, Shift+Pfeil zieht den Bereich auf.
@@ -362,7 +383,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
             <template v-for="(c, ci) in columns" :key="c.key">
               <td v-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
-              <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
+              <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
               <DateCell v-else-if="c.type === 'date'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <Cell v-else :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
             </template>
@@ -380,9 +401,9 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
 .crumb { color: var(--muted); text-decoration: none; }
 .crumb:hover { color: var(--text); }
 .tab th.ro { color: var(--muted); font-style: italic; }
-.tab :deep(td.cell.dirty .cell-box), .tab :deep(td.dirty .cell-box) { background: var(--dirty); color: var(--toast); }
+.tab :deep(td.cell.dirty .cell-box), .tab :deep(td.dirty .cell-box) { background: var(--dirty); color: var(--dirty-text); font-style: normal; }
 .cell-box.locked { color: var(--muted); font-style: italic; cursor: default; }
-.chip.dirty { background: var(--dirty); color: var(--toast); }
+.chip.dirty { background: var(--dirty); color: var(--dirty-text); }
 /* markierter Bereich wie in Excel */
 .tab :deep(td.cell.sel) { outline: 1px solid var(--accent); outline-offset: -1px; background: var(--accent-soft); }
 .tab :deep(td.cell.sel .cell-box) { background: transparent; }

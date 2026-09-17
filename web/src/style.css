@@ -15,6 +15,7 @@
   --hover: #f8fafc;
   --hatch: #eef0f3;
   --dirty: #fef3c7;
+  --dirty-text: #713f12;
   --toast: #1f2328;
   --cell: #eef2f7;
   --cell-line: #dfe4ec;
@@ -40,7 +41,8 @@
     --rail-text: #8b93a0;
     --hover: #1f242b;
     --hatch: #232830;
-    --dirty: #433a14;
+    --dirty: #4a3f0f;
+    --dirty-text: #fde68a;
     --toast: #2c323b;
     --cell: #262c35;
     --cell-line: #343b46;
@@ -63,7 +65,8 @@
   --rail-text: #8b93a0;
   --hover: #1f242b;
   --hatch: #232830;
-  --dirty: #433a14;
+  --dirty: #4a3f0f;
+  --dirty-text: #fde68a;
   --toast: #2c323b;
   --cell: #262c35;
   --cell-line: #343b46;
@@ -262,7 +265,7 @@ table.values, table.rows { table-layout: fixed; }
 .cell-box.inherited { color: var(--muted); font-style: italic; }
 /* Gesperrt (Achse gibt es nicht): schraffiert, kein Rahmen, nicht fokussierbar, keine Maus. */
 .cell-box.disabled { background: repeating-linear-gradient(45deg, transparent, transparent 4px, var(--hatch) 4px, var(--hatch) 5px); border-color: transparent; cursor: default; pointer-events: none; }
-.cell-box.dirty { background: var(--dirty); }
+.cell-box.dirty { background: var(--dirty); color: var(--dirty-text); }
 .cell-box.locked { color: var(--muted); cursor: default; background: transparent; border-color: transparent; }
 /* Schritt-Band (Import: 1 · Quelle, 2 · Auswahl, 3 · Zuordnung, 4 · Plan) — wie die Abschnittsbänder am Knoten */
 .step-band { display: flex; align-items: center; gap: 8px; height: 26px; padding: 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); color: var(--text); white-space: nowrap; }
