@@ -191,7 +191,9 @@ kbd {
   color: var(--muted);
 }
 
-.scroll { overflow: auto; flex: 1; min-height: 0; }
+/* Platz fuer den senkrechten Scrollbalken immer reservieren — sonst aendert sich die Breite, sobald er kommt oder geht,
+   und alles bricht anders um (Taloan: es ist der Scrollbalken rechts). */
+.scroll { overflow: auto; flex: 1; min-height: 0; scrollbar-gutter: stable; }
 
 table.grid { border-collapse: collapse; width: 100%; }
 table.grid th, table.grid td {
