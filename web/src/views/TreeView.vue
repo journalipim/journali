@@ -19,24 +19,72 @@ const router = useRouter()
 const q = ref('')
 const search = ref(null)
 const hits = ref(new Map())   // Server-Suche: id → Fundstelle
-// Suche mit Bedingungen (Taloan): Chips key:value, aufklappbarer Baukasten schreibt sie in die Zeile
-const qOpen = ref(false)
-const qb = ref({ attr: '', cmp: 'has', value: '', empty: '', incomplete: '', role: '', status: '', group: '', here: false, by: '', since: '' })
+// Suche mit Bedingungen (Taloan): Chips key:value in der Zeile; Vorschläge am Cursor wie in einer IDE —
+// ohne ':' die Schlüssel, danach die passenden Werte. Kein Formular (Taloan: "gut gemeint, schlecht gemacht").
 const hasTerms = computed(() => /(^|\s)[a-z]+:/.test(q.value))
-function buildQuery() {
-  const b = qb.value, parts = []
-  if (b.attr) parts.push(b.cmp === 'has' ? `attr:${b.attr}` : b.cmp === 'none' ? `attr:${b.attr}=` : `attr:${b.attr}=${b.cmp === 'contains' ? '*' + b.value + '*' : b.value}`)
-  if (b.empty) parts.push(`empty:${b.empty}`)
-  if (b.incomplete) parts.push(`incomplete:${b.incomplete}`)
-  if (b.role) parts.push(`role:${b.role}`)
-  if (b.status) parts.push(`status:${b.status}`)
-  if (b.group) parts.push(`group:${b.group}`)
-  if (b.here && props.id) parts.push(`under:${props.id}`)
-  if (b.by) parts.push(`by:${b.by}`)
-  if (b.since) parts.push(`since:${b.since}`)
-  const words = q.value.split(/\s+/).filter(w => w && !/^[a-z]+:/.test(w))
-  q.value = [...parts, ...words].join(' ')
+const KEYS = [
+  ['attr:', 'Attribut hat eigenen Wert · =Muster · = leer'], ['empty:', 'fehlt, auch geerbt nicht (Attribut/Sprache)'],
+  ['incomplete:', 'Vollständigkeit nicht erreicht (Kanal)'], ['role:', 'Gruppe / Produkt / Variante'],
+  ['status:', 'Entwurf / aktiv / ausgelaufen'], ['group:', 'Attributgruppe gilt hier'],
+  ['under:', 'nur im Teilbaum eines Knotens'], ['by:', 'Urheber der letzten Änderung'], ['since:', 'geändert seit (Datum)'],
+]
+const sugg = ref([])          // [{ value, label, hint }]
+const suggIdx = ref(0)
+const de = x => x?.label?.de || x?.key
+function tokenAt() {
+  const el = search.value; if (!el) return null
+  const pos = el.selectionStart ?? q.value.length
+  const before = q.value.slice(0, pos); const start = before.search(/\S+$/)
+  return { start: start < 0 ? pos : start, end: pos, token: start < 0 ? '' : before.slice(start) }
 }
+function suggest() {
+  const t = tokenAt(); if (!t) { sugg.value = []; return }
+  const tok = t.token, m = store.model, out = []
+  const day = d => new Date(Date.now() - d * 864e5).toISOString().slice(0, 10)
+  if (!tok.includes(':')) {
+    const low = tok.toLowerCase()
+    for (const [k, h] of KEYS) if (!low || k.startsWith(low)) out.push({ value: k, label: k, hint: h })
+  } else {
+    const [key, rest] = [tok.slice(0, tok.indexOf(':') + 1), tok.slice(tok.indexOf(':') + 1)]
+    const low = rest.toLowerCase()
+    const attrs = (m?.attributes ?? []).filter(a => !low || a.key.toLowerCase().includes(low) || (a.label?.de ?? '').toLowerCase().includes(low))
+    if (key === 'attr:' && !rest.includes('=')) {
+      const exact = (m?.attributes ?? []).find(a => a.key === rest)
+      if (exact) { out.push({ value: `attr:${rest}`, label: `${de(exact)} hat Wert`, hint: 'eigener Wert, nicht geerbt' }, { value: `attr:${rest}=`, label: `${de(exact)} leer`, hint: 'kein eigener Wert' }, { value: `attr:${rest}=*`, label: `${de(exact)} = Muster…`, hint: '* steht für beliebig, z. B. *sku*' }) }
+      for (const a of attrs.slice(0, 12)) if (a.key !== rest) out.push({ value: `attr:${a.key}`, label: de(a), hint: a.key })
+    } else if (key === 'empty:') {
+      const [ak, loc] = rest.split('/')
+      if (rest.includes('/')) { const a = (m?.attributes ?? []).find(x => x.key === ak); for (const l of (a?.perLocale ? m.locales : [])) if (!loc || l.code.startsWith(loc)) out.push({ value: `empty:${ak}/${l.code}`, label: `${de(a)} / ${l.code}`, hint: 'in dieser Sprache leer' }) }
+      else for (const a of attrs.slice(0, 12)) out.push({ value: `empty:${a.key}` + (a.perLocale ? '/' : ''), label: de(a), hint: a.perLocale ? a.key + ' — dann Sprache' : a.key })
+    } else if (key === 'incomplete:') for (const c of (m?.channels ?? []).filter(c => c.key.startsWith(low))) out.push({ value: `incomplete:${c.key}`, label: de(c), hint: c.key })
+    else if (key === 'role:') for (const [v, l] of [['group', '▣ Gruppe'], ['product', '▦ Produkt'], ['variant', '◆ Variante']]) if (v.startsWith(low)) out.push({ value: `role:${v}`, label: l, hint: v })
+    else if (key === 'status:') for (const [v, l] of [['draft', '○ Entwurf'], ['active', '● aktiv'], ['discontinued', '✗ ausgelaufen']]) if (v.startsWith(low)) out.push({ value: `status:${v}`, label: l, hint: v })
+    else if (key === 'group:') for (const g of (m?.groups ?? []).filter(g => !low || g.key.toLowerCase().includes(low) || (g.label?.de ?? '').toLowerCase().includes(low))) out.push({ value: `group:${g.key}`, label: de(g), hint: g.key })
+    else if (key === 'under:') { for (const a of [...(props.id ? tree.ancestors(props.id) : []), selected.value].filter(Boolean).reverse()) if (!low || a.label.toLowerCase().includes(low) || a.id.includes(low)) out.push({ value: `under:${a.id}`, label: `${icon(a.role)} ${a.label}`, hint: a.id === props.id ? 'hier' : a.id }) }
+    else if (key === 'since:') for (const [d, l] of [[0, 'heute'], [1, 'seit gestern'], [7, 'letzte 7 Tage'], [30, 'letzte 30 Tage']]) out.push({ value: `since:${day(d)}`, label: l, hint: day(d) })
+    else if (key === 'by:' && store.actor && store.actor.toLowerCase().startsWith(low)) out.push({ value: `by:${store.actor}`, label: `👤 ${store.actor}`, hint: 'ich' })
+  }
+  sugg.value = out; suggIdx.value = 0
+}
+function accept(s) {
+  const t = tokenAt(); if (!t) return
+  const tail = /[:=/]$/.test(s.value) ? '' : ' '
+  q.value = q.value.slice(0, t.start) + s.value + tail + q.value.slice(t.end).replace(/^\s+/, '')
+  nextTick(() => { const pos = t.start + s.value.length + tail.length; search.value?.setSelectionRange(pos, pos); suggest() })
+}
+function onSearchKey(e) {
+  if (sugg.value.length) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); suggIdx.value = (suggIdx.value + 1) % sugg.value.length; return }
+    if (e.key === 'ArrowUp') { e.preventDefault(); suggIdx.value = (suggIdx.value + sugg.value.length - 1) % sugg.value.length; return }
+    if (e.key === 'Enter' || (e.key === 'Tab' && tokenAt()?.token)) { e.preventDefault(); accept(sugg.value[suggIdx.value]); return }   // Tab im leeren Feld wandert weiter
+    if (e.key === 'Escape') { e.preventDefault(); sugg.value = []; return }
+  }
+  if (e.key === 'ArrowDown') { e.preventDefault(); list.value?.focus() }
+  if (e.key === 'Escape') { q.value = '' }
+}
+// Erkannte Bedingungen als Chips (× nimmt sie raus); freier Text bleibt nur in der Zeile
+const terms = computed(() => q.value.split(/\s+/).filter(w => /^[a-z]+:/.test(w)))
+function dropTerm(t) { q.value = q.value.split(/\s+/).filter(w => w !== t).join(' ') }
 let searchTimer = null
 const list = ref(null)
 const creating = ref(null)     // null | 'group' | 'product' | 'variant'
@@ -383,24 +431,17 @@ function onDialogKey(e) {
     <div class="toolbar">
       <h1>▣ Baum</h1>
       <span class="muted">{{ tree.rows.length }}</span>
-      <input ref="search" v-model="q" type="search" placeholder="Suche in allem  /" style="flex:1;min-width:0" @keydown.down.prevent="list?.focus()" title="Text — oder Bedingungen: attr:function · attr:function=*sku* · attr:x= (leer) · empty:name/en · incomplete:web · role:variant · status:active · group:logistics · under:<id> · by:Taloan · since:2026-09-10" />
-      <button class="x" :class="{ on: qOpen }" @click="qOpen = !qOpen" title="Suche mit Bedingungen auf-/zuklappen">{{ qOpen ? '⌃' : '⌄' }}</button>
+      <input ref="search" v-model="q" type="search" placeholder="Suche in allem  /" style="flex:1;min-width:0" autocomplete="off"
+        @input="suggest" @focus="suggest" @click="suggest" @blur="setTimeout(() => sugg = [], 150)" @keydown="onSearchKey"
+        title="Text — oder Bedingungen (Vorschläge beim Tippen): attr:function · attr:function=*sku* · attr:x= (leer) · empty:name/en · incomplete:web · role:variant · status:active · group:logistics · under:<id> · by:Taloan · since:2026-09-10" />
     </div>
-    <div v-if="qOpen" class="qb">
-      <div class="qrow"><span>attr</span>
-        <select v-model="qb.attr" style="flex:1"><option value="">— Attribut —</option><option v-for="a in store.model?.attributes ?? []" :key="a.key" :value="a.key">{{ a.label?.de || a.key }}</option></select>
-        <select v-model="qb.cmp" title="Vergleich"><option value="has">hat Wert</option><option value="none">kein Wert</option><option value="contains">enthält</option><option value="is">gleich / Muster *</option></select>
-        <input v-if="qb.cmp === 'contains' || qb.cmp === 'is'" v-model="qb.value" type="text" placeholder="Wert" style="width:110px" />
+    <div v-if="sugg.length" class="sugg">
+      <div v-for="(s, i) in sugg" :key="s.value" class="sugg-row" :class="{ on: i === suggIdx }" @mousedown.prevent="accept(s)" @mousemove="suggIdx = i">
+        <span>{{ s.label }}</span><span class="muted mono">{{ s.hint }}</span>
       </div>
-      <div class="qrow"><span>empty</span><select v-model="qb.empty" style="flex:1" title="fehlt, auch geerbt nicht"><option value="">—</option><template v-for="a in store.model?.attributes ?? []" :key="a.key"><option :value="a.key">{{ a.label?.de || a.key }}</option><option v-for="l in (a.perLocale ? store.model.locales : [])" :key="a.key + l.code" :value="a.key + '/' + l.code">{{ a.label?.de || a.key }} / {{ l.code }}</option></template></select>
-        <span>incomplete</span><select v-model="qb.incomplete" title="Vollständigkeit nicht erreicht"><option value="">—</option><option v-for="c in store.model?.channels ?? []" :key="c.key" :value="c.key">{{ c.key }}</option></select></div>
-      <div class="qrow"><span>role</span><select v-model="qb.role"><option value="">—</option><option value="group">▣ Gruppe</option><option value="product">▦ Produkt</option><option value="variant">◆ Variante</option></select>
-        <span>status</span><select v-model="qb.status"><option value="">—</option><option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option></select>
-        <span>group</span><select v-model="qb.group" style="flex:1" title="Attributgruppe gilt am Knoten"><option value="">—</option><option v-for="g in store.model?.groups ?? []" :key="g.key" :value="g.key">{{ g.label?.de || g.key }}</option></select></div>
-      <div class="qrow"><label title="nur im Teilbaum des gewählten Knotens"><input type="checkbox" v-model="qb.here" :disabled="!id" /> under: hier</label>
-        <span>by</span><input v-model="qb.by" type="text" placeholder="Urheber" style="width:80px" />
-        <span>since</span><input v-model="qb.since" type="date" style="width:130px" /></div>
-      <div class="qrow"><span class="grow" /><button class="primary" @click="buildQuery(); qOpen = false" title="Bedingungen in die Suchzeile schreiben">→ suchen</button><button @click="qb = { attr: '', cmp: 'has', value: '', empty: '', incomplete: '', role: '', status: '', group: '', here: false, by: '', since: '' }; q = ''">leeren</button></div>
+    </div>
+    <div v-if="terms.length" class="chips terms">
+      <span v-for="t in terms" :key="t" class="chip mono" :title="t">{{ t }}<button @click="dropTerm(t)" title="Bedingung entfernen">×</button></span>
     </div>
     <div class="toolbar create">
       <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label}` : 'Gruppe an der Wurzel'">+ ▣</button>
@@ -521,10 +562,11 @@ function onDialogKey(e) {
 
 <style scoped>
 .create { gap: 4px; }
-.qb { padding: 4px 8px 6px; border-bottom: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
-.qrow { display: flex; gap: 4px; align-items: center; }
-.qrow > span { color: var(--muted); font-family: var(--mono); }
-.qrow select, .qrow input[type=text], .qrow input[type=date] { font-size: 12px; padding: 1px 4px; }
+.sugg { border-bottom: 1px solid var(--line); background: var(--pane); font-size: 12px; max-height: 240px; overflow: auto; }
+.sugg-row { display: flex; justify-content: space-between; gap: 8px; padding: 3px 10px; cursor: pointer; }
+.sugg-row.on { background: var(--accent-soft); }
+.sugg-row .mono { font-size: 11px; }
+.terms { padding: 4px 8px; border-bottom: 1px solid var(--line); font-size: 12px; }
 .x.on { color: var(--accent); }
 .create button { min-width: 40px; }
 .overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: center; z-index: 5; }

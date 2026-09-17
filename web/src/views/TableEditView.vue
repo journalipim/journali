@@ -119,12 +119,16 @@ function onPaste(e) {
 const FIXED = 3   // feste Spalten vor den Attributen: Name, SKU, Achsen
 // Spaltenbreite wie Excel-Autofit (Taloan: „viel zu breit“): längster sichtbarer Wert oder Kopf, 70–260 px; am Kopfrand ziehbar
 const widths = ref({})   // key → px (von Hand gezogen)
+// gemessen, nicht geschätzt (Taloan: „0537…“ bei sechs Zeichen): Textbreite im Zellfont + Innenabstand der Box
+const measure = (() => { let ctx = null; return (s, font) => { ctx ??= document.createElement('canvas').getContext('2d'); ctx.font = font; return ctx.measureText(s).width } })()
 const autoWidth = computed(() => {
   const out = {}
+  const font = scrollBox.value ? getComputedStyle(scrollBox.value).font : '13px system-ui'
+  const pad = 30   // Zellrand, Innenabstand, Zeilenrand — und etwas Luft, damit nie „…“ am Ende steht
   for (const c of columns.value) {
-    let n = (c.label?.de || c.key).length + (c.perLocale ? 3 : 0) + (c.unit ? c.unit.length + 1 : 0)
-    for (const r of rows.value.slice(0, 200)) { const v = c.type === 'enum' && !c.multiple ? labelOf(c)(textOf(r, c)) : textOf(r, c); if (v) n = Math.max(n, String(v).replace(/<[^>]+>/g, '').length) }
-    out[c.key] = Math.max(70, Math.min(260, 18 + n * 7))
+    let w = measure((c.label?.de || c.key) + (c.perLocale ? ' ' + locale.value : '') + (c.unit ? ' ' + c.unit : ''), 'bold ' + font)
+    for (const r of rows.value.slice(0, 300)) { const v = c.type === 'enum' && !c.multiple ? labelOf(c)(textOf(r, c)) : textOf(r, c); if (v) w = Math.max(w, measure(String(v).replace(/<[^>]+>/g, '').slice(0, 60), font)) }
+    out[c.key] = Math.ceil(Math.max(60, Math.min(320, w + pad)))
   }
   return out
 })
