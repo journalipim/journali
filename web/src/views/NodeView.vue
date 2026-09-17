@@ -59,23 +59,29 @@ const family = computed(() => {
   const key = node.value?.family ?? (productAncestor ? tree.byId.get(productAncestor.id)?.family : null)
   return model.value?.families.find(f => f.key === key)
 })
-// Sichten, die hier passen: ohne Ebene oder für diese Ebene. Gewählt je Ebene, gemerkt.
-const views = computed(() => (model.value?.views ?? []).filter(v => !v.level || v.level === node.value?.role))
-const view = computed(() => views.value.find(v => v.key === store.viewKey[node.value?.role]) ?? null)
-function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save(); if (!k) arranging.value = false }
+// Eine Sicht gilt im ganzen Baum (gemerkt); passt ihre Ebene nicht zum Knoten, zeigt er „alles“.
+// Die Sicht nennt Gruppen — jeder Knoten zeigt darin automatisch die Attribute, die er hat.
+const views = computed(() => model.value?.views ?? [])
+const view = computed(() => { const v = views.value.find(v => v.key === store.viewKey); return v && (!v.level || v.level === node.value?.role) ? v : null })
+function setView(k) { store.viewKey = k; store.save(); if (!k) arranging.value = false }
 const groups = computed(() => {
   if (!model.value || !node.value) return []
   const allowed = a => !a.levels || a.levels.includes(node.value.role)
   let defs
   const req = k => family.value?.attributes.find(a => a.key === k)?.required
+  const inFamily = k => !family.value || family.value.attributes.some(a => a.key === k) || k === 'sku'
+  const ofGroup = g => (model.value.groups.find(x => x.key === g)?.attributes ?? []).map(k => model.value.attributes.find(a => a.key === k)).filter(Boolean)
   if (view.value) {
-    // Die Sicht bestimmt Auswahl und Reihenfolge; Gruppe kommt vom Attribut, Pflicht aus der Familie.
-    defs = view.value.attributes.map(va => ({ ...model.value.attributes.find(a => a.key === va.key), required: req(va.key) })).filter(a => a.key)
+    defs = view.value.items.flatMap(it => it.group ? ofGroup(it.group) : [model.value.attributes.find(a => a.key === it.key)].filter(Boolean))
+      .filter(a => inFamily(a.key)).map(a => ({ ...a, required: req(a.key) }))
   } else if (family.value) {
-    defs = family.value.attributes.map(fa => ({ ...model.value.attributes.find(a => a.key === fa.key), required: fa.required })).filter(a => a.key)
+    // Familie „alles“: Gruppen in Modellreihenfolge, darin die Attribute der Familie in Gruppenreihenfolge
+    const keys = new Set(family.value.attributes.map(a => a.key))
+    defs = model.value.groups.flatMap(g => ofGroup(g.key)).filter(a => keys.has(a.key)).map(a => ({ ...a, required: req(a.key) }))
+    for (const fa of family.value.attributes) if (!defs.some(d => d.key === fa.key)) { const a = model.value.attributes.find(x => x.key === fa.key); if (a) defs.push({ ...a, required: fa.required }) }
     // sku gehört immer zur Variante, auch wenn die Familie es nicht nennt
     if (node.value.role === 'variant' && !defs.some(d => d.key === 'sku')) { const s = model.value.attributes.find(a => a.key === 'sku'); if (s) defs.unshift(s) }
-  } else defs = model.value.attributes
+  } else defs = model.value.groups.flatMap(g => ofGroup(g.key)).concat(model.value.attributes.filter(a => !a.group))
   defs = defs.filter(allowed)
   const g = new Map()
   for (const a of defs) { const k = a.group ?? ''; if (!g.has(k)) g.set(k, []); g.get(k).push(a) }
@@ -126,50 +132,49 @@ function released(channel, locale) { return node.value?.releases.some(r => r.cha
 function axisLabel(a) { return model.value?.attributes.find(x => x.key === a)?.label?.de || a }
 
 // ---- Anordnen: Reihenfolge und Gruppen der Familie ändern, jeder Drop ein FamilyDefined.
-async function saveView(attributes) {
-  try { await api.post(`/api/model/views/${view.value.key}`, { ...view.value, attributes }, 'PUT'); await store.poll(true) }
+async function saveView(items) {
+  try { await api.post(`/api/model/views/${view.value.key}`, { ...view.value, items }, 'PUT'); await store.poll(true) }
   catch (e) { store.toast(e.message) }
 }
-function famAttrs() { return view.value.attributes.map(a => ({ ...a })) }
+async function saveGroupOrder(groupKey, order) {
+  const g = model.value.groups.find(x => x.key === groupKey)
+  try { await api.post(`/api/model/groups/${groupKey}`, { key: groupKey, label: g?.label ?? {}, order }, 'PUT'); await store.poll(true) }
+  catch (e) { store.toast(e.message) }
+}
 // Anordnen ohne Sicht: erst eine anlegen — für diese Ebene, gefüllt mit dem, was jetzt zu sehen ist.
 async function startArranging() {
   if (view.value) { arranging.value = !arranging.value; return }
-  const key = window.prompt(`Neue Sicht für Ebene ${node.value.role} (key, a-z 0-9 _) — gefüllt mit den Attributen, die hier gerade zu sehen sind:`, 'alles_' + node.value.role)
+  const key = window.prompt('Neue Sicht (key, a-z 0-9 _) — gefüllt mit den Gruppen, die hier gerade zu sehen sind:', 'alles')
   if (!key) return
-  const attrs = groups.value.flatMap(([, defs]) => defs.map(d => ({ key: d.key })))
+  const items = groups.value.map(([g]) => g).filter(Boolean).map(g => ({ group: g }))
   try {
-    await api.post(`/api/model/views/${key.trim()}`, { key: key.trim(), label: { de: key.trim() }, level: node.value.role, attributes: attrs }, 'PUT')
+    await api.post(`/api/model/views/${key.trim()}`, { key: key.trim(), label: { de: key.trim() }, items }, 'PUT')
     await store.poll(true); setView(key.trim()); arranging.value = true
   } catch (e) { store.toast(e.message) }
 }
 function onDragStart(e, what) { dragging.value = what; e.dataTransfer.effectAllowed = 'move' }
 function onDragOver(e) { if (arranging.value && dragging.value) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' } }
-// Zeile auf Zeile: davor einsortieren und deren Gruppe übernehmen. Gruppe auf Gruppe: ganze Gruppe davor.
-// Zeile auf Gruppenkopf: an den Anfang dieser Gruppe.
+// Gruppe auf Gruppe: Gruppenblock in der Sicht davor (schreibt die Sicht).
+// Zeile auf Zeile derselben Gruppe: davor einsortieren (schreibt die Gruppenreihenfolge).
+// Zeile in eine andere Gruppe: nicht hier — die Gruppe ist Sache des Attributs (⊞ Modell).
 function onDrop(target) {
   const d = dragging.value; dragging.value = null
   if (!d || !view.value) return
-  let attrs = famAttrs()
-  const groupOf = a => model.value.attributes.find(x => x.key === a.key)?.group ?? ''
+  const groupOf = k => model.value.attributes.find(x => x.key === k)?.group ?? ''
   if (d.key !== undefined) {
-    const moving = attrs.find(a => a.key === d.key); if (!moving) return
-    attrs = attrs.filter(a => a.key !== d.key)
-    if (target.key !== undefined) {
-      if (target.key === d.key) return
-      const i = attrs.findIndex(a => a.key === target.key)
-      attrs.splice(i, 0, moving)
-    } else {
-      const i = attrs.findIndex(a => groupOf(a) === target.group)
-      attrs.splice(i < 0 ? attrs.length : i, 0, moving)
-    }
+    if (target.key === undefined || target.key === d.key) return
+    const g = groupOf(d.key)
+    if (groupOf(target.key) !== g) { store.toast('Die Gruppe eines Attributs änderst du unter ⊞ Modell → Attribute'); return }
+    const order = (model.value.groups.find(x => x.key === g)?.attributes ?? []).filter(k => k !== d.key)
+    order.splice(order.indexOf(target.key), 0, d.key)
+    saveGroupOrder(g, order)
   } else {
     if (target.group === undefined || target.group === d.group) return
-    const block = attrs.filter(a => groupOf(a) === d.group)
-    attrs = attrs.filter(a => groupOf(a) !== d.group)
-    const i = attrs.findIndex(a => groupOf(a) === target.group)
-    attrs.splice(i < 0 ? attrs.length : i, 0, ...block)
+    const items = view.value.items.filter(it => it.group !== d.group)
+    const i = items.findIndex(it => it.group === target.group)
+    items.splice(i < 0 ? items.length : i, 0, { group: d.group })
+    saveView(items)
   }
-  saveView(attrs)
 }
 
 async function load() {
@@ -276,11 +281,12 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
       </select>
       <span class="muted">{{ columns.length }} Spalten</span>
       <span class="grow" />
-      <select :value="view?.key ?? ''" @change="setView($event.target.value)" title="Sicht: welche Attribute, in welcher Reihenfolge — ⊞ Modell → Sichten">
+      <select :value="store.viewKey" @change="setView($event.target.value)" title="Sicht: welche Gruppen, in welcher Reihenfolge — gilt im ganzen Baum; ⊞ Modell → Sichten">
         <option value="">◫ {{ family ? 'Familie: alles' : 'alles' }}</option>
-        <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}{{ v.level ? '' : ' (alle Ebenen)' }}</option>
+        <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}{{ v.level ? ' (' + v.level + ')' : '' }}</option>
       </select>
-      <button :class="{ primary: arranging }" @click="startArranging" :title="view ? `Reihenfolge der Sicht ${view.label?.de || view.key} per Drag & Drop (Zeilen und ganze Gruppen)` : 'Anordnen braucht eine Sicht — legt eine für diese Ebene an'">⇅ Anordnen</button>
+      <span v-if="store.viewKey && !view" class="warn" title="die gewählte Sicht gilt für eine andere Ebene">⚠ hier: alles</span>
+      <button :class="{ primary: arranging }" @click="startArranging" :title="view ? `Anordnen: Gruppenblöcke ordnen die Sicht ${view.label?.de || view.key}, Zeilen ordnen ihre Gruppe` : 'Anordnen braucht eine Sicht — legt eine an'">⇅ Anordnen</button>
     </div>
 
     <div class="scroll" v-if="model">
@@ -299,7 +305,7 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
         </thead>
         <tbody v-for="[group, defs] in groups" :key="group">
           <tr class="group-row" :class="{ drag: arranging }" :draggable="arranging" @dragstart="onDragStart($event, { group })" @dragover="onDragOver" @drop="onDrop({ group })">
-            <td :colspan="columns.length + 1"><span v-if="arranging" class="handle">⋮⋮</span>{{ group || '—' }}</td>
+            <td :colspan="columns.length + 1"><span v-if="arranging" class="handle">⋮⋮</span>{{ model.groups?.find(g => g.key === group)?.label?.de || group || '—' }}</td>
           </tr>
           <template v-for="def in defs" :key="def.key">
           <tr v-if="def.type === 'rows'" :class="{ drag: arranging }" :draggable="arranging" @dragstart="onDragStart($event, { key: def.key })" @dragover="onDragOver" @drop="onDrop({ key: def.key })">

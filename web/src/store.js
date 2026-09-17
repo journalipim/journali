@@ -12,7 +12,7 @@ export const store = reactive({
   viewLocales: saved.viewLocales || ['de', 'en'],   // Sicht: welche Sprachen als Spalten
   viewChannel: saved.viewChannel ?? null,          // Sicht: welcher Kanal (null = nur *)
   journalOpen: saved.journalOpen ?? true,           // Journal neben dem Knoten auf- oder zugeklappt
-  viewKey: saved.viewKey ?? {},                     // gewählte Attribut-Sicht je Ebene ({ product: 'technik' })
+  viewKey: typeof saved.viewKey === 'string' ? saved.viewKey : '',   // gewählte Sicht — gilt im ganzen Baum
   online: null,          // null = noch nicht gefragt, sonst true/false
   head: 0,
   nodes: 0,

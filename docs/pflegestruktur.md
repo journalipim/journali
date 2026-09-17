@@ -311,14 +311,26 @@ je Kanal (Feld `unit` an der Kanal- oder Sichtdefinition).
 > hängt nicht von einer Familie ab, sondern von einer Ebene im Baum. Die
 > Gruppe ist Teil des Attributs.
 
+> Sichten vererben sich im Baum. Eine Sicht definiert normalerweise die
+> Gruppen, die man sehen darf, nicht einzelne Attribute — kommen tiefer im
+> Baum weitere Attribute einer Gruppe hinzu, tauchen sie automatisch auf.
+
 Die Familie sagt, **was es gibt** und was Pflicht ist; die Sicht sagt,
-**wer was sieht**: eine Auswahl von Attributen in Reihenfolge, optional nur
-für eine Ebene (Gruppe, Produkt, Variante). `ViewDefined{key, label,
-level?, attributes[{key}]}`. Die Gruppierung kommt vom Attribut; ein
-Gruppenkopf steht dort, wo sein erstes Attribut steht. Im Knoten je Ebene
-wählbar (gemerkt), ⇅ Anordnen ändert die gewählte Sicht per Drag & Drop
-(Zeilen und ganze Gruppenblöcke); ohne Sicht zeigt der Knoten die Familie
-„alles". Die Sicht ist der Ort, an dem später Rollen und Rechte greifen
+**wer was sieht**: eine **geordnete Liste von Gruppen** (16), einzelne
+Attribute nur als Ausnahme. `ViewDefined{key, label, level?, items[{group}
+| {key}]}`. Jeder Knoten zeigt in einer Gruppe automatisch die Attribute,
+die er hat (Ebene, Familie) — deshalb gilt eine Sicht für den ganzen Baum
+und „vererbt" sich von selbst. Im Knoten wählbar (gemerkt), ⇅ Anordnen:
+Gruppenblöcke ordnen die Sicht, Zeilen ordnen ihre Gruppe (das schreibt die
+Gruppe, nicht die Sicht); ohne Sicht zeigt der Knoten die Familie „alles".
+
+### 16. Attributgruppen (`group:<key>`)
+
+Gruppen sind eigene Modell-Dinge: Label je Sprache und die **Reihenfolge
+ihrer Attribute** (`AttributeGroupDefined{key, label, order[]}`). Das
+Attribut verweist mit `group`; Gruppen, die nur an Attributen vorkommen
+(z. B. „import" aus dem Werkzeug), gelten als undefiniert, aber sichtbar.
+Saatgut: logistics, texts, physical. Die Sicht ist der Ort, an dem später Rollen und Rechte greifen
 (Schritt 10): welche Sichten ein Nutzer hat, was er darin ändern darf.
 
 Das **Label-Attribut** (wie Produkt und Variante im Baum heissen) bleibt

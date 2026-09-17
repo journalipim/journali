@@ -79,13 +79,31 @@ public static partial class ModelApi
                     ? write(Model.ListStream + key, Types.ListValueRetired, new ListValueRetired(value))
                     : Results.NotFound()));
 
+        m.MapPut("/groups/{key}", (string key, AttributeGroupDefinition body, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) =>
+            {
+                var order = Clean(body.Order);
+                if (order?.Except(model.Attributes.Keys).Any() ?? false) return Bad("Reihenfolge nennt ein unbekanntes Attribut.");
+                return write(Model.GroupStream + key, Types.AttributeGroupDefined, body with { Key = key, Label = body.Label ?? new(), Order = order });
+            }));
+
+        m.MapDelete("/groups/{key}", (string key, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) =>
+                !model.Groups.ContainsKey(key) ? Results.NotFound()
+                : model.Attributes.Values.Any(a => a.Group == key) ? Bad($"{key} hat noch Attribute.")
+                : write(Model.GroupStream + key, Types.AttributeGroupRetired, new AttributeGroupRetired(key))));
+
         m.MapPut("/views/{key}", (string key, ViewDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
             {
-                var def = body with { Key = key, Label = body.Label ?? new(), Attributes = body.Attributes ?? new(), Level = Blank(body.Level) };
+                var def = body with { Key = key, Label = body.Label ?? new(), Items = body.Items ?? new(), Level = Blank(body.Level) };
                 if (def.Level is not null && !Roles.All.Contains(def.Level)) return Bad($"Ebene: {string.Join(", ", Roles.All)} oder leer.");
-                foreach (var a in def.Attributes)
-                    if (!model.Attributes.ContainsKey(a.Key)) return Bad($"Unbekanntes Attribut in der Sicht: {a.Key}");
+                foreach (var it in def.Items)
+                {
+                    if (it.Group is not null && !model.Groups.ContainsKey(it.Group) && !model.Attributes.Values.Any(a => a.Group == it.Group)) return Bad($"Unbekannte Gruppe in der Sicht: {it.Group}");
+                    if (it.Key is not null && !model.Attributes.ContainsKey(it.Key)) return Bad($"Unbekanntes Attribut in der Sicht: {it.Key}");
+                    if (it.Group is null && it.Key is null) return Bad("Sicht-Eintrag ohne group und key.");
+                }
                 return write(Model.ViewStream + key, Types.ViewDefined, def);
             }));
 
@@ -141,6 +159,9 @@ public static partial class ModelApi
         families = model.Families.Values.OrderBy(f => f.Key).ToList(),
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
         views = model.Views.Values.OrderBy(v => v.Key).ToList(),
+        // Gruppen: definierte plus die, die nur an Attributen vorkommen (z. B. „import“ aus dem Werkzeug) — mit Attributen in Reihenfolge
+        groups = model.Groups.Keys.Union(model.Attributes.Values.Select(a => a.Group ?? "")).Where(g => g.Length > 0).Distinct().Order()
+            .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g) }).ToList(),
         types = AttributeTypes.All,
     };
 

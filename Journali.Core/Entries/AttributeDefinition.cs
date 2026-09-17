@@ -14,6 +14,7 @@ public static class Model
     public const string FamilyStream = "family:";
     public const string UnitStream = "unit:";
     public const string ViewStream = "view:";
+    public const string GroupStream = "group:";
 
     /// <summary>Die SKU ist ein Attribut der Variante, eindeutig über alle Varianten.</summary>
     public const string SkuAttribute = "sku";
@@ -46,6 +47,15 @@ public static class Model
         ];
         foreach (var u in units)
             yield return new(UnitStream + u.Key, Types.UnitDefined, Types.Serialize(u));
+
+        AttributeGroupDefinition[] groups =
+        [
+            new("logistics", Labels.Of("Logistik", "Logistics"), ["sku", "ean"]),
+            new("texts", Labels.Of("Texte", "Texts"), ["name", "description"]),
+            new("physical", Labels.Of("Physisch", "Physical"), ["weight"]),
+        ];
+        foreach (var g in groups)
+            yield return new(GroupStream + g.Key, Types.AttributeGroupDefined, Types.Serialize(g));
 
         AttributeDefinition[] attributes =
         [

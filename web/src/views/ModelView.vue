@@ -11,6 +11,7 @@ const sections = [
   { key: 'attributes', icon: '⊞', label: 'Attribute' },
   { key: 'lists', icon: '☰', label: 'Wertelisten' },
   { key: 'families', icon: '⌂', label: 'Familien' },
+  { key: 'groups', icon: '▤', label: 'Gruppen' },
   { key: 'views', icon: '◫', label: 'Sichten' },
   { key: 'units', icon: '⚖', label: 'Einheiten' },
   { key: 'locales', icon: '🗣', label: 'Sprachen' },
@@ -23,6 +24,8 @@ const selectedList = ref(null)
 const selectedFamily = ref(null)
 const selectedView = ref(null)
 const addViewAttr = ref('')
+const selectedGroup = ref(null)
+const addViewGroup = ref('')
 const newValue = ref('')
 const addAttr = ref('')
 
@@ -45,7 +48,7 @@ const attrCols = computed(() => [
   { key: 'label_en', label: 'Name en' },
   { key: 'type', label: 'Typ', type: 'select', options: model.value.types, width: '110px' },
   { key: 'unit', label: 'Einheit', type: 'select', options: (model.value.units ?? []).map(u => u.key), width: '80px', title: 'nur bei Zahlen; Einheiten unter ⚖' },
-  { key: 'group', label: 'Gruppe', width: '90px' },
+  { key: 'group', label: 'Gruppe', type: 'select', options: (model.value.groups ?? []).map(g => g.key), width: '110px', title: 'Attributgruppe (▤); die Sicht zeigt Gruppen' },
   { key: 'locale', label: '🗣', type: 'bool', width: '36px', title: 'je Sprache' },
   { key: 'channel', label: '⇶', type: 'bool', width: '36px', title: 'je Kanal' },
   { key: 'list', label: 'Werteliste', type: 'select', options: model.value.lists.map(l => l.key), width: '110px', title: 'bei enum' },
@@ -111,13 +114,34 @@ function valueAdd() {
   put(`/api/model/lists/${selectedList.value}/values/${encodeURIComponent(v)}`, { value: v, label: {}, order: valueRows.value.length + 1 })
 }
 
-// ---- Sichten: Auswahl und Reihenfolge der Attribute, optional je Ebene; Gruppe kommt vom Attribut
+// ---- Gruppen: Label je Sprache, Reihenfolge der Attribute
+const groupCols = [{ key: 'key', label: 'Gruppe', type: 'ro', width: '120px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'count', label: '#', type: 'ro', width: '40px' }]
+const groupRows = computed(() => (model.value.groups ?? []).map(g => ({ key: g.key, label_de: g.label?.de, label_en: g.label?.en, count: String(g.attributes.length), _g: g })))
+const currentGroup = computed(() => (model.value.groups ?? []).find(g => g.key === selectedGroup.value))
+function groupChange(r, col, v) {
+  const g = model.value.groups.find(x => x.key === r.key)
+  put(`/api/model/groups/${r.key}`, { key: r.key, label: { ...(g.label || {}), [col.slice(6)]: v }, order: g.attributes })
+}
+function groupAdd() {
+  const k = newKey.value.trim(); if (!k) return
+  newKey.value = ''
+  put(`/api/model/groups/${k}`, { key: k, label: {}, order: [] })
+  selectedGroup.value = k
+}
+function groupAttrMove(key, d) {
+  const g = currentGroup.value; const a = [...g.attributes]; const i = a.indexOf(key); const j = i + d
+  if (j < 0 || j >= a.length) return
+  ;[a[i], a[j]] = [a[j], a[i]]
+  put(`/api/model/groups/${g.key}`, { key: g.key, label: g.label, order: a })
+}
+
+// ---- Sichten: geordnete Gruppen (+ einzelne Attribute als Ausnahme), optional je Ebene
 const levelLabel = { '': 'alle Ebenen', group: '▣ Gruppe', product: '▦ Produkt', variant: '◆ Variante' }
 const viewCols = computed(() => [{ key: 'key', label: 'Key', type: 'ro', width: '120px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' },
   { key: 'level', label: 'Ebene', type: 'select', options: ['group', 'product', 'variant'], labelOf: k => levelLabel[k] ?? k, width: '140px', title: 'leer = für alle Ebenen' }])
 const viewRows = computed(() => (model.value.views ?? []).map(v => ({ key: v.key, label_de: v.label?.de, label_en: v.label?.en, level: v.level ?? '', _v: v })))
 const currentView = computed(() => (model.value.views ?? []).find(v => v.key === selectedView.value))
-const viewAttrRows = computed(() => (currentView.value?.attributes ?? []).map(a => ({ key: a.key })))
+const viewItems = computed(() => currentView.value?.items ?? [])
 function viewChange(r, col, v) {
   const d = { ...r._v, label: { ...(r._v.label || {}) } }
   if (col.startsWith('label_')) d.label[col.slice(6)] = v
@@ -127,27 +151,28 @@ function viewChange(r, col, v) {
 function viewAdd() {
   const k = newKey.value.trim(); if (!k) return
   newKey.value = ''
-  put(`/api/model/views/${k}`, { key: k, label: {}, attributes: [] })
+  put(`/api/model/views/${k}`, { key: k, label: {}, items: [] })
   selectedView.value = k
 }
-function viewAttrAdd() {
-  const k = addViewAttr.value; if (!k || !currentView.value) return
-  addViewAttr.value = ''
-  put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, attributes: [...currentView.value.attributes, { key: k }] })
+const saveItems = items => put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, items })
+function viewItemAdd() {
+  if (!currentView.value) return
+  const g = addViewGroup.value, a = addViewAttr.value
+  addViewGroup.value = ''; addViewAttr.value = ''
+  if (g) saveItems([...viewItems.value, { group: g }])
+  else if (a) saveItems([...viewItems.value, { key: a }])
 }
-function viewAttrRemove(r) { put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, attributes: currentView.value.attributes.filter(a => a.key !== r.key) }) }
-function viewAttrMove(r, d) {
-  const a = [...currentView.value.attributes]; const i = a.findIndex(x => x.key === r.key); const j = i + d
+const itemId = it => it.group ? 'g:' + it.group : 'a:' + it.key
+function viewItemRemove(it) { saveItems(viewItems.value.filter(x => itemId(x) !== itemId(it))) }
+function viewItemMove(it, d) {
+  const a = [...viewItems.value]; const i = a.findIndex(x => itemId(x) === itemId(it)); const j = i + d
   if (j < 0 || j >= a.length) return
   ;[a[i], a[j]] = [a[j], a[i]]
-  put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, attributes: a })
+  saveItems(a)
 }
-function viewFillAll() {
-  const lv = currentView.value.level
-  const src = model.value.attributes.filter(a => !lv || !a.levels || a.levels.includes(lv)).map(a => ({ key: a.key }))
-  put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, attributes: src })
-}
-const freeViewAttrs = computed(() => model.value.attributes.map(a => a.key).filter(k => !(currentView.value?.attributes ?? []).some(a => a.key === k)))
+function viewFillAll() { saveItems((model.value.groups ?? []).map(g => ({ group: g.key }))) }
+const freeViewGroups = computed(() => (model.value.groups ?? []).map(g => g.key).filter(k => !viewItems.value.some(it => it.group === k)))
+const freeViewAttrs = computed(() => model.value.attributes.map(a => a.key).filter(k => !viewItems.value.some(it => it.key === k)))
 
 // ---- Einheiten
 const unitCols = [{ key: 'key', label: 'Einheit', type: 'ro', width: '80px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'quantity', label: 'Grösse', width: '110px', title: 'mass, length, volume, data, count …' }, { key: 'factor', label: '× Basis', width: '90px', title: 'Faktor zur Basiseinheit der Grösse (Basis = 1)' }]
@@ -298,27 +323,58 @@ const freeAttrs = computed(() => model.value.attributes.map(a => a.key).filter(k
         <EditGrid :columns="viewCols" :rows="viewRows" :selected="selectedView" removable @change="viewChange" @select="r => selectedView = r.key" @remove="r => del(`/api/model/views/${r.key}`)" />
       </div>
       <div class="toolbar" style="border-top:1px solid var(--line)">
-        <h1 class="mono">{{ selectedView ?? '— Sicht wählen' }}</h1><span class="muted">{{ viewAttrRows.length }} Attribute</span><span class="grow" />
-        <button v-if="currentView" @click="viewFillAll" title="alle Attribute, die es auf dieser Ebene gibt, in Modellreihenfolge">⇊ alles übernehmen</button>
-        <select v-model="addViewAttr" :disabled="!selectedView" style="width:160px">
-          <option value="">Attribut …</option>
+        <h1 class="mono">{{ selectedView ?? '— Sicht wählen' }}</h1><span class="muted">{{ viewItems.length }} Einträge</span><span class="grow" />
+        <button v-if="currentView" @click="viewFillAll" title="alle Gruppen in Modellreihenfolge">⇊ alle Gruppen</button>
+        <select v-model="addViewGroup" :disabled="!selectedView" style="width:140px" title="eine Gruppe — zeigt alle ihre Attribute, die der Knoten hat">
+          <option value="">▤ Gruppe …</option>
+          <option v-for="k in freeViewGroups" :key="k" :value="k">{{ k }}</option>
+        </select>
+        <select v-model="addViewAttr" :disabled="!selectedView" style="width:140px" title="ein einzelnes Attribut — die Ausnahme">
+          <option value="">⊞ Attribut …</option>
           <option v-for="k in freeViewAttrs" :key="k" :value="k">{{ k }}</option>
         </select>
-        <button class="primary" :disabled="!addViewAttr" @click="viewAttrAdd">+ dazu</button>
+        <button class="primary" :disabled="!addViewGroup && !addViewAttr" @click="viewItemAdd">+ dazu</button>
       </div>
       <div class="scroll">
         <table v-if="selectedView" class="grid">
-          <thead><tr><th style="width:40px">#</th><th>Attribut</th><th style="width:120px">Gruppe</th><th style="width:90px"></th></tr></thead>
+          <thead><tr><th style="width:40px">#</th><th>Eintrag</th><th>Attribute</th><th style="width:90px"></th></tr></thead>
           <tbody>
-            <tr v-for="(r, i) in viewAttrRows" :key="r.key" class="row">
+            <tr v-for="(it, i) in viewItems" :key="itemId(it)" class="row">
               <td class="num muted">{{ i + 1 }}</td>
-              <td class="mono">{{ r.key }} <span class="muted">{{ model.attributes.find(a => a.key === r.key)?.label?.de }}</span></td>
-              <td class="muted">{{ model.attributes.find(a => a.key === r.key)?.group ?? '—' }}</td>
-              <td class="num"><button class="x" @click="viewAttrMove(r, -1)" :disabled="i === 0">↑</button><button class="x" @click="viewAttrMove(r, 1)" :disabled="i === viewAttrRows.length - 1">↓</button><button class="x" @click="viewAttrRemove(r)">×</button></td>
+              <td class="mono">{{ it.group ? '▤ ' + it.group : '⊞ ' + it.key }} <span class="muted">{{ it.group ? (model.groups.find(g => g.key === it.group)?.label?.de ?? '') : (model.attributes.find(a => a.key === it.key)?.label?.de ?? '') }}</span></td>
+              <td class="muted" style="white-space:normal">{{ it.group ? (model.groups.find(g => g.key === it.group)?.attributes ?? []).join(', ') : '' }}</td>
+              <td class="num"><button class="x" @click="viewItemMove(it, -1)" :disabled="i === 0">↑</button><button class="x" @click="viewItemMove(it, 1)" :disabled="i === viewItems.length - 1">↓</button><button class="x" @click="viewItemRemove(it)">×</button></td>
             </tr>
           </tbody>
         </table>
-        <div v-if="selectedView && !viewAttrRows.length" class="empty">Leer — „⇊ alles übernehmen“ oder einzeln dazu; im Knoten dann ⇅ Anordnen.</div>
+        <div v-if="selectedView && !viewItems.length" class="empty">Leer — „⇊ alle Gruppen“ oder einzeln dazu; im Knoten dann ⇅ Anordnen.</div>
+      </div>
+    </template>
+
+    <!-- Gruppen -->
+    <template v-else-if="section === 'groups'">
+      <div class="toolbar">
+        <h1>Gruppen</h1>
+        <span class="muted" title="Attributgruppen: Name je Sprache und die Reihenfolge ihrer Attribute. Das Attribut verweist auf seine Gruppe; Sichten zeigen Gruppen.">ⓘ Name und Reihenfolge der Attribute; Sichten zeigen Gruppen</span>
+        <span class="grow" />
+        <input v-model="newKey" type="text" placeholder="neue Gruppe (key)" style="width:160px" @keydown.enter="groupAdd" />
+        <button class="primary" :disabled="!newKey.trim()" @click="groupAdd">+ Gruppe</button>
+      </div>
+      <div class="scroll" style="flex:0 0 auto;max-height:40%">
+        <EditGrid :columns="groupCols" :rows="groupRows" :selected="selectedGroup" removable @change="groupChange" @select="r => selectedGroup = r.key" @remove="r => del(`/api/model/groups/${r.key}`)" />
+      </div>
+      <div class="toolbar" style="border-top:1px solid var(--line)"><h1 class="mono">{{ selectedGroup ?? '— Gruppe wählen' }}</h1><span class="muted">{{ currentGroup?.attributes.length ?? 0 }} Attribute · Reihenfolge mit ↑↓; Attribute wechseln die Gruppe unter ⊞ Attribute</span></div>
+      <div class="scroll">
+        <table v-if="currentGroup" class="grid">
+          <thead><tr><th style="width:40px">#</th><th>Attribut</th><th style="width:90px"></th></tr></thead>
+          <tbody>
+            <tr v-for="(k, i) in currentGroup.attributes" :key="k" class="row">
+              <td class="num muted">{{ i + 1 }}</td>
+              <td class="mono">{{ k }} <span class="muted">{{ model.attributes.find(a => a.key === k)?.label?.de }}</span></td>
+              <td class="num"><button class="x" @click="groupAttrMove(k, -1)" :disabled="i === 0">↑</button><button class="x" @click="groupAttrMove(k, 1)" :disabled="i === currentGroup.attributes.length - 1">↓</button></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </template>
 

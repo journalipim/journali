@@ -42,6 +42,8 @@ public static class Types
     public const string ListValueRetired = "ListValueRetired";
     public const string FamilyDefined = "FamilyDefined";
     public const string FamilyRetired = "FamilyRetired";
+    public const string AttributeGroupDefined = "AttributeGroupDefined";
+    public const string AttributeGroupRetired = "AttributeGroupRetired";
     public const string ViewDefined = "ViewDefined";
     public const string ViewRetired = "ViewRetired";
     public const string UnitDefined = "UnitDefined";
@@ -224,16 +226,25 @@ public sealed record FamilyDefinition(string Key, Labels Label, List<FamilyAttri
 
 public sealed record FamilyRetired(string Key);
 
-/// <summary>Ein Attribut in einer Sicht; die Reihenfolge ist die Liste, die Gruppe kommt vom Attribut.</summary>
-public sealed record ViewAttribute(string Key);
+/// <summary>
+/// Eine Attributgruppe (16): Label je Sprache und die Reihenfolge ihrer Attribute.
+/// Das Attribut verweist mit <c>group</c> darauf. Strom <c>group:&lt;key&gt;</c>.
+/// </summary>
+public sealed record AttributeGroupDefinition(string Key, Labels Label, string[]? Order = null);
+
+public sealed record AttributeGroupRetired(string Key);
+
+/// <summary>Ein Eintrag in einer Sicht: eine ganze Gruppe (<see cref="Group"/>) oder — als Ausnahme — ein einzelnes Attribut (<see cref="Key"/>).</summary>
+public sealed record ViewItem(string? Group = null, string? Key = null);
 
 /// <summary>
-/// Eine Sicht (15): welche Attribute in welcher Reihenfolge — redaktionell,
-/// technisch, Preise, alles. Optional nur für eine Ebene des Baums
-/// (<see cref="Roles"/>). Die Familie sagt, was es gibt und was Pflicht ist;
-/// die Sicht, wer was sieht. Strom <c>view:&lt;key&gt;</c>, ganze Definition je Eintrag.
+/// Eine Sicht (15): welche Gruppen in welcher Reihenfolge — redaktionell,
+/// technisch, Preise, alles. Wer die Gruppe sehen darf, sieht ihre Attribute
+/// in der Gruppenreihenfolge; einzelne Attribute sind die Ausnahme. Optional
+/// nur für eine Ebene des Baums (<see cref="Roles"/>). Die Familie sagt, was
+/// es gibt und was Pflicht ist; die Sicht, wer was sieht. Strom <c>view:&lt;key&gt;</c>.
 /// </summary>
-public sealed record ViewDefinition(string Key, Labels Label, List<ViewAttribute> Attributes, string? Level = null);
+public sealed record ViewDefinition(string Key, Labels Label, List<ViewItem> Items, string? Level = null);
 
 public sealed record ViewRetired(string Key);
 
