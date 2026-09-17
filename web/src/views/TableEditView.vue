@@ -216,14 +216,17 @@ function fillFrom(base) {
 // Lage des Ausfüllkästchens: unten rechts an der letzten Zelle des Bereichs, im Rollbereich mitrollend
 const scrollBox = ref(null)
 const handle = ref(null)   // { top, left }
-watch(sel, async () => {
+async function placeHandle() {
   handle.value = null; const s = sel.value; if (!s || !scrollBox.value) return
   await nextTick()
   const r = rows.value[s.r1]; if (!r) return
   const tr = scrollBox.value.querySelector(`tr[data-id="${r.row.id}"]`); const td = tr?.children[FIXED + s.c1]; if (!td) return
   const a = td.getBoundingClientRect(), b = scrollBox.value.getBoundingClientRect()
   handle.value = { top: a.bottom - b.top + scrollBox.value.scrollTop - 4, left: a.right - b.left + scrollBox.value.scrollLeft - 4 }
-}, { deep: true })
+}
+watch(sel, placeHandle, { deep: true })
+// auch wenn sich die Spalten verschieben — ein neuer Wert macht die Spalte breiter (Autofit), gezogene Breite, Filter (Taloan)
+watch([tableWidth, dirty, rows], placeHandle)
 const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
 const inSel = (ri, ci) => !!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1
 const selCells = () => { const s = sel.value; if (!s) return []; const out = []; for (let ri = s.r0; ri <= s.r1; ri++) for (let ci = s.c0; ci <= s.c1; ci++) { const r = rows.value[ri], c = columns.value[ci]; if (r && c) out.push({ r, c, ri, ci }) } return out }
