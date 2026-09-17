@@ -5,47 +5,57 @@ using System.Text.RegularExpressions;
 namespace Journali.Core.Entries;
 
 /// <summary>
-/// Kombinierte Attribute (Taloan, 17.09.2026: „Volumen = Länge × Breite × Höhe",
-/// „Die Vase ist {round(height / 10)} cm hoch"). Ein Attribut mit <see cref="AttributeDefinition.Formula"/>
-/// hat keinen eigenen Wert im Journal; sein Wert wird beim Lesen gerechnet.
+/// Kombinierte Attribute (Taloan, 17.09.2026): ein Attribut mit <see cref="AttributeDefinition.Formula"/> hat
+/// keinen eigenen Wert im Journal — die Formel ist ein kleines Skript, das beim Lesen läuft und
+/// den Wert liefert. Wer damit arbeitet, ist Techniker (Taloan): also eine Skriptsprache wie
+/// JavaScript/PHP, mehrzeilig, einrückbar, englische Namen — keine Excel-Einzeiler, keine
+/// übersetzten Funktionsnamen.
 ///
-/// Zwei Formen, eine Sprache:
-/// - Zahl-Attribut: die Formel ist ein Ausdruck — <c>length * width * height / 1000</c>.
-/// - Text-Attribut: die Formel ist eine Vorlage — Text mit Ausdrücken in geschweiften Klammern:
-///   <c>Die Vase ist {round(height / 10)} cm hoch</c>, <c>{name} ({color})</c>,
-///   <c>{if(weight &gt; 20, "Speditionsware", "Paket")}</c>.
+/// <code>
+/// // Wert eines Attributs am Knoten: $schlüssel (geerbt zählt; Text in der Sprache der Spalte)
+/// h = $height
+/// if (h >= 100) {
+///   return `${format(h / 100, 2)} m`
+/// }
+/// return `${h} cm`
+/// </code>
 ///
-/// Die Vorlage ist Excel (Taloan, 17.09.2026: „nicht alles neu lernen — komplett an Excel orientieren"):
-/// - Bezug auf ein Attribut wie auf eine Tabellenspalte: <c>[@hoehe]</c> (auch <c>@hoehe</c> oder nur <c>hoehe</c>);
-///   Wert des Knotens, geerbt zählt, bei Text in der Sprache der Spalte.
-/// - Operatoren wie in Excel: <c>+ - * / ^</c>, <c>&amp;</c> verkettet Text, Vergleiche <c>= &lt;&gt; &lt; &lt;= &gt; &gt;=</c>,
-///   Text in "…", WAHR/FALSCH.
-/// - Funktionen mit ihren Excel-Namen, deutsch oder englisch, Argumente mit <c>;</c> (oder <c>,</c>):
-///   WENN/IF, UND/AND, ODER/OR, NICHT/NOT, RUNDEN/ROUND, KÜRZEN/TRUNC, GANZZAHL/INT, OBERGRENZE/CEILING,
-///   MIN, MAX, ABS, LÄNGE/LEN, GROSS/UPPER, KLEIN/LOWER, GLÄTTEN/TRIM, LINKS/LEFT, RECHTS/RIGHT,
-///   VERKETTEN/CONCAT, ISTLEER/ISBLANK, WENNFEHLER/IFERROR, TEXT(x; "0,00") — Zahl als Text in der
-///   Sprache der Spalte (de: Komma).
-/// Fehlt ein Wert, den ein Rechenschritt braucht, fehlt das Ergebnis — WENNFEHLER, ISTLEER und
-/// WENN fangen es ab. Einheiten rechnet die Formel nicht um; wer cm³ in Litern will, teilt durch 1000.
+/// - Werte: Zahl, Text ("…" oder '…'), Vorlage `…${ausdruck}…`, true/false, null.
+/// - Operatoren wie in JavaScript: + - * / % **, + verkettet, wenn eine Seite Text ist;
+///   == != &lt; &lt;= &gt; &gt;=; &amp;&amp; || !; bedingung ? a : b; a ?? b (Ersatz, wenn a null ist).
+/// - Anweisungen: x = …, if (…) { … } else { … }, return …; die letzte Anweisung ist das Ergebnis,
+///   wenn kein return kommt. Zeilenende oder ; trennt. // Kommentar.
+/// - Funktionen: round(x, n) trunc floor ceil abs min max sqrt, len upper lower trim left(s, n)
+///   right(s, n) contains(s, t) replace(s, a, b) split(s, sep, i) pad(s, n) number(x) str(x)
+///   format(x, n) (Zahl als Text in der Sprache der Spalte: de „1,39"), isblank(x), coalesce(a, b, …).
+/// - null rechnet sich durch: $height + 1 ist null, wenn $height fehlt; Vergleiche mit null sind
+///   false; ?? und isblank fangen es ab. Ergebnis null = kein Wert („—").
+/// Einheiten rechnet die Formel nicht um; wer cm³ in Litern will, teilt durch 1000.
 /// </summary>
 public static class Formula
 {
-    /// <summary>Ein Wert im Ausdruck: Zahl, Text oder nichts.</summary>
-    public readonly record struct Value(decimal? Number, string? Text)
+    public enum Kind { None, Number, Text, Bool }
+
+    /// <summary>Ein Wert im Skript.</summary>
+    public readonly record struct Value(Kind Kind, decimal Number, string? Text, bool Bool)
     {
-        public static readonly Value None = new(null, null);
-        public static Value Of(decimal d) => new(d, null);
-        public static Value Of(string? s) => s is null ? None : new(null, s);
-        public bool IsNone => Number is null && Text is null;
-        public bool Truthy => Number is { } n ? n != 0 : !string.IsNullOrEmpty(Text);
-        public decimal? AsNumber => Number ?? (Text is not null && decimal.TryParse(Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : null);
-        public string? AsText => Text ?? (Number is { } n ? Format(n) : null);
+        public static readonly Value None = new(Kind.None, 0, null, false);
+        public static Value Of(decimal d) => new(Kind.Number, d, null, false);
+        public static Value Of(string? s) => s is null ? None : new(Kind.Text, 0, s, false);
+        public static Value Of(bool b) => new(Kind.Bool, 0, null, b);
+        public bool IsNone => Kind == Kind.None;
+        public bool Truthy => Kind switch { Kind.Number => Number != 0, Kind.Text => Text!.Length > 0, Kind.Bool => Bool, _ => false };
+        public decimal? AsNumber => Kind switch
+        {
+            Kind.Number => Number,
+            Kind.Bool => Bool ? 1 : 0,
+            Kind.Text => decimal.TryParse(Text, NumberStyles.Number, CultureInfo.InvariantCulture, out var d) ? d : null,
+            _ => null,
+        };
+        public string? AsText => Kind switch { Kind.Text => Text, Kind.Number => Format(Number), Kind.Bool => Bool ? "true" : "false", _ => null };
         public static string Format(decimal n) => n.ToString("0.############", CultureInfo.InvariantCulture);
     }
 
-    private static readonly Regex Hole = new(@"\{([^{}]+)\}", RegexOptions.Compiled);
-
-    /// <summary>Prüft Formel (Zahl) oder Vorlage (Text); liefert die Schlüssel, die sie braucht — oder eine Fehlermeldung.</summary>
     /// <summary>Kultur zur Sprache der Spalte — für format(): de → Komma, en → Punkt, sonst neutral.</summary>
     public static CultureInfo CultureOf(string? locale)
     {
@@ -53,260 +63,404 @@ public static class Formula
         catch (CultureNotFoundException) { return CultureInfo.InvariantCulture; }
     }
 
-    public static (string[] Keys, string? Error) Check(string formula, bool template)
+    /// <summary>Prüft das Skript; liefert die Attributschlüssel, die es liest — oder eine Fehlermeldung.</summary>
+    public static (string[] Keys, string? Error) Check(string formula)
     {
-        var keys = new List<string>();
         try
         {
-            if (template)
-            {
-                var holes = Hole.Matches(formula);
-                if (formula.Count(c => c == '{') != holes.Count || formula.Count(c => c == '}') != holes.Count) throw new FormatException("Geschweifte Klammern gehen nicht auf.");
-                foreach (Match m in holes) { var p = new Parser(m.Groups[1].Value); p.Expr(); p.End(); keys.AddRange(p.Keys); }
-            }
-            else { var p = new Parser(formula); p.Expr(); p.End(); keys.AddRange(p.Keys); }
-            return (keys.Distinct().ToArray(), null);
+            var p = new Parser(formula);
+            var prog = p.Program();
+            return (prog.Keys.Distinct().ToArray(), null);
         }
         catch (FormatException e) { return ([], e.Message); }
     }
 
-    /// <summary>Zahl-Formel rechnen; null, wenn ein Wert fehlt oder der Ausdruck nicht aufgeht.</summary>
-    public static decimal? Eval(string formula, Func<string, Value> value, string? locale = null)
+    /// <summary>Skript ausführen; None bei Fehler oder fehlendem Wert.</summary>
+    public static Value Run(string formula, Func<string, Value> attribute, string? locale = null)
     {
-        try { var p = new Parser(formula, value, CultureOf(locale)); var r = p.Expr(); p.End(); return r.AsNumber; }
-        catch (Exception e) when (e is FormatException or MissingValue or DivideByZeroException or OverflowException) { return null; }
-    }
-
-    /// <summary>Text-Vorlage füllen; null, wenn ein Loch nicht aufgeht.</summary>
-    public static string? Render(string template, Func<string, Value> value, string? locale = null)
-    {
-        var culture = CultureOf(locale);
-        var sb = new StringBuilder();
-        var last = 0;
-        foreach (Match m in Hole.Matches(template))
+        try
         {
-            sb.Append(template, last, m.Index - last);
-            try { var p = new Parser(m.Groups[1].Value, value, culture); var r = p.Expr(); p.End(); sb.Append(r.AsText ?? throw new MissingValue()); }
-            catch (Exception e) when (e is FormatException or MissingValue or DivideByZeroException or OverflowException) { return null; }
-            last = m.Index + m.Length;
+            var prog = new Parser(formula).Program();
+            return new Runner(attribute, CultureOf(locale)).Run(prog);
         }
-        sb.Append(template, last, template.Length - last);
-        return sb.ToString();
+        catch (Exception e) when (e is FormatException or DivideByZeroException or OverflowException or InvalidCastException or ArgumentOutOfRangeException) { return Value.None; }
     }
 
-    private sealed class MissingValue : Exception { }
+    // ---- Syntaxbaum ------------------------------------------------------------------------
 
-    private static readonly HashSet<string> Forgiving = ["iferror", "if", "empty", "coalesce"];
+    private abstract record Node;
+    private sealed record Lit(Value V) : Node;
+    private sealed record Attr(string Key) : Node;
+    private sealed record Var(string Name) : Node;
+    private sealed record Template(List<object> Parts) : Node;      // string oder Node
+    private sealed record Unary(string Op, Node X) : Node;
+    private sealed record Binary(string Op, Node L, Node R) : Node;
+    private sealed record Ternary(Node C, Node A, Node B) : Node;
+    private sealed record Call(string Name, List<Node> Args) : Node;
+    private sealed record Assign(string Name, Node X) : Node;
+    private sealed record If(Node C, List<Node> Then, List<Node>? Else) : Node;
+    private sealed record Return(Node? X) : Node;
 
-    /// <summary>Rekursiver Abstieg: or → and → not → Vergleich → &amp; → + - → * / → unär → Primär.</summary>
-    private sealed class Parser(string text, Func<string, Value>? value = null, CultureInfo? culture = null)
+    private sealed class Prog { public List<Node> Body = new(); public List<string> Keys = new(); }
+
+    // ---- Lexer + Parser ---------------------------------------------------------------------
+
+    private sealed class Parser(string src)
     {
         private int _i;
-        public readonly List<string> Keys = new();
-        private bool Checking => value is null;
+        private readonly List<string> _keys = new();
+        private readonly HashSet<string> _vars = new();   // zugewiesene Variablen — ein Name davor ist ein Tippfehler
+        private static readonly HashSet<string> Functions = ["round", "trunc", "floor", "ceil", "abs", "min", "max", "sqrt", "len", "upper", "lower", "trim", "left", "right", "contains", "replace", "split", "pad", "number", "str", "format", "isblank", "coalesce"];
 
-        public void End() { Skip(); if (_i < text.Length) throw new FormatException($"Unerwartet: „{text[_i..]}“"); }
-        private void Skip() { while (_i < text.Length && char.IsWhiteSpace(text[_i])) _i++; }
-        private bool Take(string s) { Skip(); if (string.CompareOrdinal(text, _i, s, 0, s.Length) == 0) { _i += s.Length; return true; } return false; }
-        private bool TakeWord(string w)
+        public Prog Program()
         {
-            Skip();
-            if (string.Compare(text, _i, w, 0, w.Length, StringComparison.OrdinalIgnoreCase) != 0) return false;
-            var end = _i + w.Length;
-            if (end < text.Length && (char.IsLetterOrDigit(text[end]) || text[end] == '_')) return false;
-            _i = end; return true;
+            var prog = new Prog();
+            SkipSeparators();
+            while (_i < src.Length)
+            {
+                prog.Body.Add(Statement());
+                SkipSeparators();
+            }
+            prog.Keys = _keys;
+            return prog;
         }
 
-        public Value Expr()
+        private void SkipWs(bool newlines)
         {
-            var v = And();
-            while (TakeWord("or") || TakeWord("oder")) { var r = And(); v = Value.Of(v.Truthy || r.Truthy ? 1 : 0); }
-            return v;
-        }
-        private Value And()
-        {
-            var v = Not();
-            while (TakeWord("and") || TakeWord("und")) { var r = Not(); v = Value.Of(v.Truthy && r.Truthy ? 1 : 0); }
-            return v;
-        }
-        private Value Not() => TakeWord("not") || TakeWord("nicht") ? Value.Of(Not().Truthy ? 0 : 1) : Compare();
-        private Value Compare()
-        {
-            var v = Concat();
-            foreach (var (op, f) in new (string, Func<int, bool>)[] { ("<=", c => c <= 0), (">=", c => c >= 0), ("<>", c => c != 0), ("=", c => c == 0), ("<", c => c < 0), (">", c => c > 0) })
-                if (Take(op)) { var r = Concat(); return Value.Of(f(Cmp(v, r)) ? 1 : 0); }
-            return v;
-        }
-        private static int Cmp(Value a, Value b)
-        {
-            if (a.IsNone || b.IsNone) throw new MissingValue();
-            if (a.AsNumber is { } x && b.AsNumber is { } y) return x.CompareTo(y);
-            return string.Compare(a.AsText, b.AsText, StringComparison.OrdinalIgnoreCase);
-        }
-        private Value Concat()
-        {
-            var v = Sum();
-            while (Take("&")) { var r = Sum(); v = Value.Of((v.AsText ?? "") + (r.AsText ?? "")); }
-            return v;
-        }
-        private Value Sum()
-        {
-            var v = Term();
             for (;;)
             {
-                if (Take("+")) v = Value.Of(Num(v) + Num(Term()));
-                else if (Take("-")) v = Value.Of(Num(v) - Num(Term()));
-                else return v;
+                while (_i < src.Length && (src[_i] == ' ' || src[_i] == '\t' || src[_i] == '\r' || (newlines && src[_i] == '\n'))) _i++;
+                if (_i + 1 < src.Length && src[_i] == '/' && src[_i + 1] == '/') { while (_i < src.Length && src[_i] != '\n') _i++; continue; }
+                return;
             }
         }
-        private Value Term()
+        private void SkipSeparators() { for (;;) { SkipWs(true); if (_i < src.Length && src[_i] == ';') { _i++; continue; } return; } }
+        private bool Peek(string s, bool newlines = true) { SkipWs(newlines); return string.CompareOrdinal(src, _i, s, 0, s.Length) == 0; }
+        private bool Take(string s, bool newlines = true) { if (!Peek(s, newlines)) return false; _i += s.Length; return true; }
+        private bool PeekWord(string w)
         {
-            var v = Power();
+            SkipWs(true);
+            if (string.CompareOrdinal(src, _i, w, 0, w.Length) != 0) return false;
+            var e = _i + w.Length;
+            return e >= src.Length || !(char.IsLetterOrDigit(src[e]) || src[e] == '_');
+        }
+        private bool TakeWord(string w) { if (!PeekWord(w)) return false; _i += w.Length; return true; }
+        private string Word()
+        {
+            SkipWs(true);
+            var start = _i;
+            while (_i < src.Length && (char.IsLetterOrDigit(src[_i]) || src[_i] == '_')) _i++;
+            if (start == _i) throw new FormatException($"Name erwartet bei „{Rest()}“");
+            return src[start.._i];
+        }
+        private string Rest() => src.Length > _i + 20 ? src[_i..(_i + 20)] + "…" : src[_i..];
+        private FormatException Err(string what) => new($"{what} bei „{Rest()}“");
+
+        private Node Statement()
+        {
+            if (TakeWord("if"))
+            {
+                if (!Take("(")) throw Err("„(“ nach if erwartet");
+                var c = Expr();
+                if (!Take(")")) throw Err("„)“ erwartet");
+                var then = Block();
+                List<Node>? els = null;
+                if (TakeWord("else")) els = PeekWord("if") ? [Statement()] : Block();
+                return new If(c, then, els);
+            }
+            if (TakeWord("return")) { SkipWs(false); return new Return(_i < src.Length && src[_i] != '\n' && src[_i] != ';' && src[_i] != '}' ? Expr() : null); }
+            // Zuweisung: name = …  (aber nicht ==)
+            var save = _i;
+            SkipWs(true);
+            if (_i < src.Length && (char.IsLetter(src[_i]) || src[_i] == '_'))
+            {
+                var name = Word();
+                if (Peek("=") && !Peek("==")) { Take("="); var x = Expr(); _vars.Add(name); return new Assign(name, x); }
+                _i = save;
+            }
+            return Expr();
+        }
+
+        private List<Node> Block()
+        {
+            if (!Take("{")) return [Statement()];
+            var body = new List<Node>();
+            SkipSeparators();
+            while (!Take("}"))
+            {
+                if (_i >= src.Length) throw new FormatException("„}“ fehlt.");
+                body.Add(Statement());
+                SkipSeparators();
+            }
+            return body;
+        }
+
+        public Node Expr() => Ternary();
+        private Node Ternary()
+        {
+            var c = Coalesce();
+            if (!Take("?")) return c;
+            var a = Expr();
+            if (!Take(":")) throw Err("„:“ erwartet");
+            return new Ternary(c, a, Expr());
+        }
+        private Node Coalesce() { var l = Or(); while (Take("??")) l = new Binary("??", l, Or()); return l; }
+        private Node Or() { var l = And(); while (Take("||")) l = new Binary("||", l, And()); return l; }
+        private Node And() { var l = Equality(); while (Take("&&")) l = new Binary("&&", l, Equality()); return l; }
+        private Node Equality() { var l = Comparison(); for (;;) { if (Take("==")) l = new Binary("==", l, Comparison()); else if (Take("!=")) l = new Binary("!=", l, Comparison()); else return l; } }
+        private Node Comparison()
+        {
+            var l = Additive();
             for (;;)
             {
-                if (Take("*")) v = Value.Of(Num(v) * Num(Power()));
-                else if (Take("/")) { var d = Num(Power()); if (d == 0 && !Checking) throw new DivideByZeroException(); v = Value.Of(Checking ? 1 : Num(v) / d); }
-                else return v;
+                if (Take("<=")) l = new Binary("<=", l, Additive());
+                else if (Take(">=")) l = new Binary(">=", l, Additive());
+                else if (Take("<")) l = new Binary("<", l, Additive());
+                else if (Take(">")) l = new Binary(">", l, Additive());
+                else return l;
             }
         }
-        private Value Power()
+        private Node Additive()
         {
-            var v = Unary();
-            while (Take("^")) { var e = Num(Unary()); v = Value.Of(Checking ? 1 : (decimal)Math.Pow((double)Num(v), (double)e)); }
-            return v;
-        }
-        private Value Unary() => Take("-") ? Value.Of(-Num(Unary())) : Take("+") ? Unary() : Primary();
-        private decimal Num(Value v) => Checking ? 1 : v.AsNumber ?? throw new MissingValue();
-
-        private Value Primary()
-        {
-            Skip();
-            if (_i >= text.Length) throw new FormatException("Ausdruck endet zu früh.");
-            if (Take("(")) { var v = Expr(); if (!Take(")")) throw new FormatException("„)“ fehlt."); return v; }
-            var c = text[_i];
-            if (c == '"')
+            var l = Multiplicative();
+            for (;;)
             {
-                var end = text.IndexOf('"', _i + 1);
-                if (end < 0) throw new FormatException("Text ohne schliessendes \".");
-                var s = text[(_i + 1)..end]; _i = end + 1;
-                return Value.Of(s);
+                if (Take("+", newlines: false)) l = new Binary("+", l, Multiplicative());
+                else if (Take("-", newlines: false)) l = new Binary("-", l, Multiplicative());
+                else return l;
             }
-            if (char.IsDigit(c) || c == '.')
+        }
+        private Node Multiplicative()
+        {
+            var l = Power();
+            for (;;)
+            {
+                if (Peek("**", newlines: false)) return l;
+                if (Take("*", newlines: false)) l = new Binary("*", l, Power());
+                else if (Take("/", newlines: false) ) l = new Binary("/", l, Power());
+                else if (Take("%", newlines: false)) l = new Binary("%", l, Power());
+                else return l;
+            }
+        }
+        private Node Power() { var l = UnaryExpr(); if (Take("**", newlines: false)) return new Binary("**", l, Power()); return l; }
+        private Node UnaryExpr()
+        {
+            if (Take("!")) return new Unary("!", UnaryExpr());
+            if (Take("-")) return new Unary("-", UnaryExpr());
+            if (Take("+")) return UnaryExpr();
+            return Primary();
+        }
+
+        private Node Primary()
+        {
+            SkipWs(true);
+            if (_i >= src.Length) throw new FormatException("Ausdruck endet zu früh.");
+            var c = src[_i];
+            if (c == '(') { _i++; var e = Expr(); if (!Take(")")) throw Err("„)“ erwartet"); return e; }
+            if (c == '"' || c == '\'') return new Lit(Value.Of(StringLit(c)));
+            if (c == '`') return TemplateLit();
+            if (char.IsDigit(c) || (c == '.' && _i + 1 < src.Length && char.IsDigit(src[_i + 1])))
             {
                 var start = _i;
-                while (_i < text.Length && (char.IsDigit(text[_i]) || text[_i] == '.')) _i++;
-                return Value.Of(decimal.Parse(text[start.._i], NumberStyles.Number, CultureInfo.InvariantCulture));
+                while (_i < src.Length && (char.IsDigit(src[_i]) || src[_i] == '.')) _i++;
+                return new Lit(Value.Of(decimal.Parse(src[start.._i], NumberStyles.Number, CultureInfo.InvariantCulture)));
             }
-            // [@schlüssel] wie ein Spaltenbezug in einer Excel-Tabelle; @schlüssel und schlüssel gehen auch
-            var bracket = false;
-            if (c == '[') { _i++; Skip(); bracket = true; c = _i < text.Length ? text[_i] : ' '; }
-            if (c == '@') { _i++; Skip(); c = _i < text.Length ? text[_i] : ' '; }
+            if (c == '$')
+            {
+                _i++;
+                var key = Word();
+                if (!Regex.IsMatch(key, "^[a-z][a-z0-9_]*$")) throw new FormatException($"Kein Attributschlüssel: ${key}");
+                _keys.Add(key);
+                return new Attr(key);
+            }
             if (char.IsLetter(c) || c == '_')
             {
-                var start = _i;
-                while (_i < text.Length && (char.IsLetterOrDigit(text[_i]) || text[_i] == '_')) _i++;
-                var name = text[start.._i];
-                if (bracket) { if (!Take("]")) throw new FormatException("„]“ fehlt."); }
-                else
+                var name = Word();
+                switch (name)
                 {
-                    if (Take("(")) return Call(Alias(name.TrimStart('_').ToLowerInvariant()));
-                    switch (name.ToLowerInvariant()) { case "wahr": case "true": return Value.Of(1); case "falsch": case "false": return Value.Of(0); }
+                    case "true": return new Lit(Value.Of(true));
+                    case "false": return new Lit(Value.Of(false));
+                    case "null": return new Lit(Value.None);
                 }
-                if (!Regex.IsMatch(name, "^[a-z][a-z0-9_]*$")) throw new FormatException($"Kein Attributschlüssel: {name}");
-                Keys.Add(name);
-                return Checking ? Value.Of(1) : value!(name);
+                if (Take("(", newlines: false))
+                {
+                    if (!Functions.Contains(name)) throw new FormatException($"Unbekannte Funktion: {name}");
+                    var args = new List<Node>();
+                    if (!Take(")")) { args.Add(Expr()); while (Take(",")) args.Add(Expr()); if (!Take(")")) throw Err("„)“ erwartet"); }
+                    return new Call(name, args);
+                }
+                if (!_vars.Contains(name)) throw new FormatException($"Unbekannte Variable: {name} — Attribute heissen $" + name + ", Variablen bekommen vorher einen Wert.");
+                return new Var(name);
             }
-            throw new FormatException($"Unerwartet: „{c}“");
+            throw Err("Unerwartet");
         }
 
-        /// <summary>Excel-Namen, deutsch und englisch, auf die eine Umsetzung.</summary>
-        private static string Alias(string name) => name switch
+        private string StringLit(char quote)
         {
-            "wenn" => "if", "und" => "and", "oder" => "or", "nicht" => "not",
-            "runden" => "round", "kürzen" or "kuerzen" => "trunc", "ganzzahl" or "int" => "floor", "obergrenze" or "ceiling" => "ceil",
-            "länge" or "laenge" => "len", "gross" or "groß" => "upper", "klein" => "lower", "glätten" or "glaetten" => "trim",
-            "links" => "left", "rechts" => "right", "verketten" or "concat" or "concatenate" => "concat",
-            "istleer" or "isblank" or "leer" => "empty", "wennfehler" or "iferror" => "iferror", "text" or "zahl" or "format" => "format",
-            "erster" => "coalesce",
-            _ => name,
+            var sb = new StringBuilder();
+            _i++;
+            while (_i < src.Length && src[_i] != quote)
+            {
+                if (src[_i] == '\\' && _i + 1 < src.Length) { _i++; sb.Append(src[_i] switch { 'n' => '\n', 't' => '\t', var x => x }); }
+                else sb.Append(src[_i]);
+                _i++;
+            }
+            if (_i >= src.Length) throw new FormatException("Text ohne schliessendes Anführungszeichen.");
+            _i++;
+            return sb.ToString();
+        }
+
+        /// <summary>`Text ${ausdruck} Text` — die Ausdrücke werden mit demselben Parser gelesen.</summary>
+        private Node TemplateLit()
+        {
+            _i++;
+            var parts = new List<object>();
+            var sb = new StringBuilder();
+            while (_i < src.Length && src[_i] != '`')
+            {
+                if (src[_i] == '$' && _i + 1 < src.Length && src[_i + 1] == '{')
+                {
+                    if (sb.Length > 0) { parts.Add(sb.ToString()); sb.Clear(); }
+                    _i += 2;
+                    parts.Add(Expr());
+                    if (!Take("}")) throw Err("„}“ in der Vorlage erwartet");
+                    continue;
+                }
+                if (src[_i] == '\\' && _i + 1 < src.Length) { _i++; sb.Append(src[_i]); _i++; continue; }
+                sb.Append(src[_i]); _i++;
+            }
+            if (_i >= src.Length) throw new FormatException("Vorlage ohne schliessendes `.");
+            _i++;
+            if (sb.Length > 0) parts.Add(sb.ToString());
+            return new Template(parts);
+        }
+    }
+
+    // ---- Ausführung -------------------------------------------------------------------------
+
+    private sealed class ReturnSignal(Value v) : Exception { public readonly Value Value = v; }
+
+    private sealed class Runner(Func<string, Value> attribute, CultureInfo culture)
+    {
+        private readonly Dictionary<string, Value> _vars = new();
+
+        public Value Run(Prog prog)
+        {
+            try
+            {
+                var last = Value.None;
+                foreach (var s in prog.Body) last = Exec(s);
+                return last;
+            }
+            catch (ReturnSignal r) { return r.Value; }
+        }
+
+        private Value Exec(Node n)
+        {
+            switch (n)
+            {
+                case Assign a: { var v = Eval(a.X); _vars[a.Name] = v; return v; }
+                case If i:
+                    if (Eval(i.C).Truthy) { Value last = Value.None; foreach (var s in i.Then) last = Exec(s); return last; }
+                    if (i.Else is not null) { Value last = Value.None; foreach (var s in i.Else) last = Exec(s); return last; }
+                    return Value.None;
+                case Return r: throw new ReturnSignal(r.X is null ? Value.None : Eval(r.X));
+                default: return Eval(n);
+            }
+        }
+
+        private Value Eval(Node n) => n switch
+        {
+            Lit l => l.V,
+            Attr a => attribute(a.Key),
+            Var v => _vars.TryGetValue(v.Name, out var x) ? x : throw new FormatException($"Unbekannte Variable: {v.Name}"),
+            Template t => Value.Of(string.Concat(t.Parts.Select(p => p is string s ? s : Eval((Node)p).AsText ?? ""))),
+            Unary u => u.Op == "!" ? Value.Of(!Eval(u.X).Truthy) : Neg(Eval(u.X)),
+            Binary b => Bin(b),
+            Ternary t => Eval(t.C).Truthy ? Eval(t.A) : Eval(t.B),
+            Call c => Func(c.Name, c.Args.Select(Eval).ToList()),
+            _ => throw new FormatException("Anweisung an falscher Stelle."),
         };
 
-        /// <summary>TEXT(x; "0,00"): Stellen aus dem Excel-Muster zählen (Komma oder Punkt), Tausender ohne Trenner.</summary>
-        private static int DecimalsOf(Value pattern)
-        {
-            var s = pattern.AsText ?? "0";
-            var i = Math.Max(s.LastIndexOf(','), s.LastIndexOf('.'));
-            return i < 0 ? 0 : s.Length - i - 1;
-        }
+        private static Value Neg(Value v) => v.AsNumber is { } d ? Value.Of(-d) : Value.None;
 
-        private Value Arg(string fn)
+        private Value Bin(Binary b)
         {
-            if (!Forgiving.Contains(fn) || Checking) return Expr();
-            var save = _i;
-            try { return Expr(); }
-            catch (Exception e) when (e is MissingValue or DivideByZeroException) { _i = save; Skip(); SkipArg(); return Value.None; }
-        }
-        /// <summary>Ein Argument überlesen (bis Komma/Semikolon oder schliessende Klammer auf gleicher Tiefe).</summary>
-        private void SkipArg()
-        {
-            var depth = 0; var inText = false;
-            for (; _i < text.Length; _i++)
+            switch (b.Op)
             {
-                var ch = text[_i];
-                if (ch == '"') inText = !inText;
-                if (inText) continue;
-                if (ch == '(') depth++;
-                else if (ch == ')') { if (depth == 0) return; depth--; }
-                else if ((ch == ',' || ch == ';') && depth == 0) return;
+                case "&&": { var l = Eval(b.L); return l.Truthy ? Value.Of(Eval(b.R).Truthy) : Value.Of(false); }
+                case "||": { var l = Eval(b.L); return l.Truthy ? Value.Of(true) : Value.Of(Eval(b.R).Truthy); }
+                case "??": { var l = Eval(b.L); return l.IsNone ? Eval(b.R) : l; }
             }
+            var x = Eval(b.L); var y = Eval(b.R);
+            switch (b.Op)
+            {
+                case "+":
+                    if (x.Kind == Kind.Text || y.Kind == Kind.Text) return x.IsNone || y.IsNone ? Value.None : Value.Of((x.AsText ?? "") + (y.AsText ?? ""));
+                    return Num2(x, y, (a, c) => a + c);
+                case "-": return Num2(x, y, (a, c) => a - c);
+                case "*": return Num2(x, y, (a, c) => a * c);
+                case "/": return Num2(x, y, (a, c) => c == 0 ? throw new DivideByZeroException() : a / c);
+                case "%": return Num2(x, y, (a, c) => c == 0 ? throw new DivideByZeroException() : a % c);
+                case "**": return Num2(x, y, (a, c) => (decimal)Math.Pow((double)a, (double)c));
+                case "==": return Value.Of(Eq(x, y));
+                case "!=": return Value.Of(!Eq(x, y));
+                case "<": return Cmp(x, y, c => c < 0);
+                case "<=": return Cmp(x, y, c => c <= 0);
+                case ">": return Cmp(x, y, c => c > 0);
+                case ">=": return Cmp(x, y, c => c >= 0);
+            }
+            throw new FormatException($"Operator {b.Op}");
+        }
+        private static Value Num2(Value x, Value y, Func<decimal, decimal, decimal> f) =>
+            x.AsNumber is { } a && y.AsNumber is { } b ? Value.Of(f(a, b)) : Value.None;
+        private static bool Eq(Value x, Value y)
+        {
+            if (x.IsNone || y.IsNone) return x.IsNone && y.IsNone;
+            if (x.AsNumber is { } a && y.AsNumber is { } b && (x.Kind != Kind.Text || y.Kind != Kind.Text)) return a == b;
+            return string.Equals(x.AsText, y.AsText, StringComparison.Ordinal);
+        }
+        private static Value Cmp(Value x, Value y, Func<int, bool> f)
+        {
+            if (x.IsNone || y.IsNone) return Value.Of(false);
+            if (x.AsNumber is { } a && y.AsNumber is { } b && (x.Kind != Kind.Text || y.Kind != Kind.Text)) return Value.Of(f(a.CompareTo(b)));
+            return Value.Of(f(string.Compare(x.AsText, y.AsText, StringComparison.Ordinal)));
         }
 
-        private static string Cut(string s, int n, bool left) => n >= s.Length ? s : left ? s[..Math.Max(0, n)] : s[^Math.Max(0, n)..];
-
-        private Value Call(string name)
+        private Value Func(string name, List<Value> a)
         {
-            var args = new List<Value>();
-            if (!Take(")"))
+            Value A(int i) => i < a.Count ? a[i] : Value.None;
+            decimal? N(int i) => A(i).AsNumber;
+            string? S(int i) => A(i).AsText;
+            Value Num(Func<decimal, decimal> f) => N(0) is { } d ? Value.Of(f(d)) : Value.None;
+            Value Str(Func<string, string> f) => S(0) is { } s ? Value.Of(f(s)) : Value.None;
+            switch (name)
             {
-                // Argumente einzeln fangen: WENNFEHLER(x; ersatz) und WENN sollen mit fehlenden Werten leben
-                args.Add(Arg(name));
-                while (Take(",") || Take(";")) args.Add(Arg(name));
-                if (!Take(")")) throw new FormatException("„)“ fehlt.");
+                case "round": return N(0) is { } r ? Value.Of(Math.Round(r, (int)(N(1) ?? 0), MidpointRounding.AwayFromZero)) : Value.None;
+                case "trunc": return Num(Math.Truncate);
+                case "floor": return Num(Math.Floor);
+                case "ceil": return Num(Math.Ceiling);
+                case "abs": return Num(Math.Abs);
+                case "sqrt": return Num(d => (decimal)Math.Sqrt((double)d));
+                case "min": return a.Count > 0 && a.All(v => v.AsNumber is not null) ? Value.Of(a.Min(v => v.AsNumber!.Value)) : Value.None;
+                case "max": return a.Count > 0 && a.All(v => v.AsNumber is not null) ? Value.Of(a.Max(v => v.AsNumber!.Value)) : Value.None;
+                case "len": return S(0) is { } s0 ? Value.Of(s0.Length) : Value.None;
+                case "upper": return Str(s => s.ToUpperInvariant());
+                case "lower": return Str(s => s.ToLowerInvariant());
+                case "trim": return Str(s => s.Trim());
+                case "left": return Str(s => s[..Math.Min(s.Length, Math.Max(0, (int)(N(1) ?? 1)))]);
+                case "right": return Str(s => s[^Math.Min(s.Length, Math.Max(0, (int)(N(1) ?? 1)))..]);
+                case "contains": return S(0) is { } s1 && S(1) is { } t1 ? Value.Of(s1.Contains(t1, StringComparison.OrdinalIgnoreCase)) : Value.Of(false);
+                case "replace": return S(0) is { } s2 && S(1) is { } from ? Value.Of(s2.Replace(from, S(2) ?? "")) : Value.None;
+                case "split": { if (S(0) is not { } s3) return Value.None; var parts = s3.Split(S(1) ?? ","); var i = (int)(N(2) ?? 0); return i >= 0 && i < parts.Length ? Value.Of(parts[i].Trim()) : Value.None; }
+                case "pad": return S(0) is { } s4 ? Value.Of(s4.PadLeft((int)(N(1) ?? 0), (S(2) ?? "0").FirstOrDefault('0'))) : Value.None;
+                case "number": return N(0) is { } n0 ? Value.Of(n0) : Value.None;
+                case "str": return S(0) is { } s5 ? Value.Of(s5) : Value.None;
+                case "format": return N(0) is { } f0 ? Value.Of(f0.ToString(a.Count > 1 && N(1) is { } dec ? "0." + new string('0', (int)dec) : "0.############", culture)) : Value.None;
+                case "isblank": return Value.Of(A(0).IsNone || string.IsNullOrWhiteSpace(A(0).AsText));
+                case "coalesce": return a.FirstOrDefault(v => !v.IsNone && !string.IsNullOrEmpty(v.AsText));
             }
-            Value A(int i) => i < args.Count ? args[i] : throw new FormatException($"{name}: Argument {i + 1} fehlt.");
-            if (Checking) return name switch
-            {
-                "round" or "min" or "max" or "abs" or "len" or "upper" or "lower" or "trim" or "if" or "empty" or "coalesce" or "trunc" or "floor" or "ceil" or "format"
-                    or "and" or "or" or "not" or "left" or "right" or "concat" or "iferror" => Value.Of(1),
-                _ => throw new FormatException($"Unbekannte Funktion: {name}"),
-            };
-            return name switch
-            {
-                "round" => Value.Of(Math.Round(Num(A(0)), args.Count > 1 ? (int)Num(A(1)) : 0, MidpointRounding.AwayFromZero)),
-                "min" => Value.Of(args.Select(Num).Min()),
-                "max" => Value.Of(args.Select(Num).Max()),
-                "abs" => Value.Of(Math.Abs(Num(A(0)))),
-                "trunc" => Value.Of(Math.Truncate(Num(A(0)))),
-                "floor" => Value.Of(Math.Floor(Num(A(0)))),
-                "ceil" => Value.Of(Math.Ceiling(Num(A(0)))),
-                // format(x; stellen): Zahl als Text in der Sprache der Spalte — de „1,39“, en „1.39“; Tausender ohne Trenner
-                "format" => Value.Of(Num(A(0)).ToString(args.Count > 1 ? "0." + new string('0', A(1).Number is { } d ? (int)d : DecimalsOf(A(1))) : "0.############", culture ?? CultureInfo.InvariantCulture)),
-                "and" => Value.Of(args.All(a => a.Truthy) ? 1 : 0),
-                "or" => Value.Of(args.Any(a => a.Truthy) ? 1 : 0),
-                "not" => Value.Of(A(0).Truthy ? 0 : 1),
-                "left" => Value.Of(Cut(A(0).AsText ?? throw new MissingValue(), args.Count > 1 ? (int)Num(A(1)) : 1, true)),
-                "right" => Value.Of(Cut(A(0).AsText ?? throw new MissingValue(), args.Count > 1 ? (int)Num(A(1)) : 1, false)),
-                "concat" => Value.Of(string.Concat(args.Select(a => a.AsText ?? ""))),
-                "iferror" => A(0).IsNone ? A(1) : A(0),
-                "len" => Value.Of((A(0).AsText ?? "").Length),
-                "upper" => Value.Of((A(0).AsText ?? throw new MissingValue()).ToUpperInvariant()),
-                "lower" => Value.Of((A(0).AsText ?? throw new MissingValue()).ToLowerInvariant()),
-                "trim" => Value.Of((A(0).AsText ?? throw new MissingValue()).Trim()),
-                "if" => A(0).IsNone ? A(2) : A(0).Truthy ? A(1) : A(2),
-                "empty" => Value.Of(A(0).IsNone || string.IsNullOrWhiteSpace(A(0).AsText) ? 1 : 0),
-                "coalesce" => args.FirstOrDefault(a => !a.IsNone && !string.IsNullOrEmpty(a.AsText)),
-                _ => throw new FormatException($"Unbekannte Funktion: {name}"),
-            };
+            throw new FormatException($"Unbekannte Funktion: {name}");
         }
     }
 }

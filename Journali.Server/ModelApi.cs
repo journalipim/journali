@@ -72,11 +72,11 @@ public static partial class ModelApi
                 def = def with { Formula = Blank(body.Formula) };
                 if (def.Formula is not null)
                 {
-                    // Zahl: Ausdruck. Text: Vorlage mit {Ausdrücken}, darf je Sprache sein. Nie mehrfach, nie je Kanal.
-                    var template = def.Type == AttributeTypes.Text;
-                    if (!template && def.Type is not (AttributeTypes.Integer or AttributeTypes.Decimal)) return Bad("Eine Formel gibt es bei integer, decimal (Ausdruck) und text (Vorlage mit {…}).");
-                    if (def.Multiple || def.PerChannel || (!template && def.PerLocale)) return Bad("Ein kombiniertes Attribut ist nicht mehrfach und nicht je Kanal; je Sprache nur als Text-Vorlage.");
-                    var (keys, error) = Formula.Check(def.Formula, template);
+                    // Das Skript liefert den Wert: Zahl bei integer/decimal, Text bei text (darf je Sprache sein). Nie mehrfach, nie je Kanal.
+                    var isText = def.Type == AttributeTypes.Text;
+                    if (!isText && def.Type is not (AttributeTypes.Integer or AttributeTypes.Decimal)) return Bad("Eine Formel gibt es bei integer, decimal und text.");
+                    if (def.Multiple || def.PerChannel || (!isText && def.PerLocale)) return Bad("Ein kombiniertes Attribut ist nicht mehrfach und nicht je Kanal; je Sprache nur bei Text.");
+                    var (keys, error) = Formula.Check(def.Formula);
                     if (error is not null) return Bad($"Formel: {error}");
                     if (keys.Contains(key)) return Bad("Formel: nicht auf sich selbst.");
                     foreach (var k in keys)

@@ -312,10 +312,8 @@ function unitSet(col, v) {
 const localeSet = v => put(`/api/model/locales/${curLocale.value.code}`, { code: curLocale.value.code, label: v })
 const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.code })
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v } })
-// Hilfe zur Formel — wie in Excel (Taloan, 17.09.)
-const formulaHint = type => type === 'text'
-  ? 'Vorlage wie in Excel: Text mit Ausdrücken in {…}, z. B. Die Vase ist {WENN([@hoehe] >= 100; TEXT([@hoehe] / 100; "0,00") & " m"; [@hoehe] & " cm")} hoch Bezug [@schlüssel] · + - * / ^ & · = <> < <= > >= · WENN UND ODER NICHT RUNDEN KÜRZEN GANZZAHL MIN MAX ABS LÄNGE GROSS KLEIN GLÄTTEN LINKS RECHTS VERKETTEN ISTLEER WENNFEHLER TEXT — deutsch oder englisch, Argumente mit ; — wird gerechnet, nie gesetzt.'
-  : 'Formel wie in Excel: Ausdruck über andere Attribute, z. B. [@length] * [@width] * [@height] / 1000 oder RUNDEN([@gewicht] * 1.2; 1). Wird gerechnet, nie gesetzt; Einheiten rechnet die Formel nicht um.'
+// Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
+const formulaHint = () => 'Kombiniertes Attribut: ein Skript wie JavaScript liefert den Wert — Attribute als $schlüssel (geerbt zählt, Text in der Sprache der Spalte), Variablen, if/else, return, Vorlagen `…${…}…`, + - * / % **, == != < <= > >=, && || !, ?:, ??; Funktionen round trunc floor ceil abs min max sqrt len upper lower trim left right contains replace split pad number str format isblank coalesce. Fehlt ein Wert, ist das Ergebnis leer (?? fängt es ab). Wird gerechnet, nie gesetzt.'
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
 const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de || k
 </script>
@@ -440,7 +438,11 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">⚖ Einheit</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
           <tr v-if="curAttr.type === 'enum'"><td class="attr">☰ Werteliste</td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
           <tr v-if="curAttr.type === 'rows'"><td class="attr" title="Spalten, jede ein Attribut, kommagetrennt">≣ Spalten</td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
-          <tr v-if="['integer', 'decimal', 'text'].includes(curAttr.type)"><td class="attr" :title="formulaHint(curAttr.type)">ƒ {{ curAttr.type === 'text' ? 'Vorlage' : 'Formel' }}</td><Cell :value="curAttr.formula ?? null" @save="v => attrSet('formula', v || null)" /></tr>
+          <tr v-if="['integer', 'decimal', 'text'].includes(curAttr.type)"><td class="attr" :title="formulaHint(curAttr.type)" style="vertical-align:top;padding-top:6px">ƒ Formel</td>
+            <td style="padding:2px 4px">
+              <textarea class="script" :value="curAttr.formula ?? ''" rows="6" spellcheck="false" placeholder="// Skript, z. B.&#10;h = $height&#10;if (h >= 100) { return `${format(h / 100, 2)} m` }&#10;return `${h} cm`" @keydown.ctrl.enter.prevent="attrSet('formula', $event.target.value.trim() || null)" @blur="$event.target.value.trim() !== (curAttr.formula ?? '') && attrSet('formula', $event.target.value.trim() || null)"></textarea>
+              <div class="muted" style="font-size:11px">Skript wie JavaScript: $schlüssel liest das Attribut · Ctrl+Enter oder Verlassen speichert · Fehler kommen als Meldung</div>
+            </td></tr>
           <tr><td class="attr" title="Wert je Sprache">🗣 je Sprache</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
           <tr><td class="attr" title="Wert je Kanal">⇶ je Kanal</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
           <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
@@ -575,6 +577,8 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 /* Das Formular rechts: Bezeichnung links, Wert rechts, dieselben Zellen wie im Knoten */
 .form { width: auto; margin-bottom: 4px; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
+.script { width: 420px; font: 12px var(--mono); background: var(--cell); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 6px; resize: vertical; }
+.script:focus { border-color: var(--accent); outline: none; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .chip a { color: inherit; text-decoration: none; }
