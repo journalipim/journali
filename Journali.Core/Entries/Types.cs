@@ -65,6 +65,12 @@ public static class Types
     public const string RelationTypeDefined = "RelationTypeDefined";
     public const string RelationTypeRetired = "RelationTypeRetired";
 
+    // Plugins (docs/pflegestruktur.md, 19): Strom plugin:<key>
+    public const string PluginInstalled = "PluginInstalled";
+    public const string PluginEnabled = "PluginEnabled";
+    public const string PluginDisabled = "PluginDisabled";
+    public const string PluginRemoved = "PluginRemoved";
+
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
     {
@@ -366,3 +372,9 @@ public sealed record RelationTypeDefinition(string Key, Labels Label, Labels? Re
 }
 
 public sealed record RelationTypeRetired(string Key);
+
+/// <summary>Plugin installiert (oder aktualisiert): Fassung und das Manifest (plugin.json), wie es dabei war.</summary>
+public sealed record PluginInstalled(string Version, string Manifest);
+public sealed record PluginEnabled();
+public sealed record PluginDisabled();
+public sealed record PluginRemoved();

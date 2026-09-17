@@ -630,7 +630,7 @@ Medienknoten), und der Import der Solr-Relationen (`*_doc_rel` am Knoten,
 `complex_relation` als attributierte Kante — beide Enden müssen importiert
 sein; mit 109 k Kanten ein eigener Lauf).
 
-### 19. Plugins — Entwurf (Taloan, 17.09.2026: „echte Verwaltung")
+### 19. Plugins — gebaut (Taloan, 17.09.2026: „echte Verwaltung", „jetzt die Plugin-Verwaltung bauen")
 
 Taloans Bild: Plugins werden installiert, aktiviert, gelöscht, haben eine
 Versionsnummer; es werden viele. Genannt: Datenqualität (dpp, ppwr), Export
@@ -663,10 +663,23 @@ Vorschlag, der zum Journal passt:
   (liefert Befunde je Knoten → Abschnitt „Qualität" im Knoten),
   Exporter (liefert eine Datei).
 
-Offen für Taloan: Verpackung (Verzeichnis im Repo reicht am Anfang; Archiv
-später), ob Prozess-Plugins Python voraussetzen dürfen (Solr-Skript tut es),
-und ob Befunde der Qualitätsprüfer ins Journal gehören (nachvollziehbar,
-aber Masse) oder in ein eigenes Abbild.
+Gebaut: `plugins/<key>/plugin.json` (`key`, `version`, `label{}`,
+`description{}`, `kind`, `runs`, `entry` für Browser-Module, `process`
+{command, args mit `{param}` und `{flag?--opt}`, params} für Prozesse,
+`builtin` für die eingebauten Ansichten, `autoInstall`); Abbild `Plugins`
+(`PluginInstalled/Enabled/Disabled/Removed`); 🔌 Plugins in der Leiste:
+Liste mit Stand und Fassung (↑ wenn die Platte neuer ist), installieren,
+ein/aus, aktualisieren, entfernen, Prozess starten mit Parametern und
+Ausgabe. Browser-Plugins: `default export { views: [{path, label, icon,
+mount(el, ctx)}], nodeActions: [{label, icon, run(nodeId, ctx)}] }` —
+Ansichten erscheinen in der Leiste, Aktionen im Kontextmenü des Baums.
+`ixp` und `solr` sind eingebaut (builtin) und werden beim Start installiert;
+der Solr-Import ist zugleich Prozess-Plugin (`solr_import.py`).
+
+Offen: Verpackung als Archiv (heute: Verzeichnis im Repo), Prozess-Plugins
+setzen Python voraus (im Container nicht dabei — `python:3` ins Image oder
+das Skript als Programm), Befunde der Qualitätsprüfer (Journal oder eigenes
+Abbild).
 
 ### 20. Medien — gebaut (Taloan, 17.09.2026: „ausserhalb", „fang mit den Medien an")
 

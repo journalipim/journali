@@ -3,6 +3,7 @@ import { onMounted, onErrorCaptured, ref, watch } from 'vue'
 import { store } from './store.js'
 import ContextMenu from './components/ContextMenu.vue'
 import { useRoute, useRouter } from 'vue-router'
+import { plugins } from './plugins.js'
 const route = useRoute()
 const router = useRouter()
 // Auffangrahmen (Taloan, 17.09.: leerer Bildschirm ist im Betrieb ein Desaster): ein Fehler beim Zeichnen einer
@@ -12,6 +13,7 @@ const reload = () => window.location.reload()
 const crashed = ref(null)
 onErrorCaptured(e => { crashed.value = e?.message ?? String(e); console.error(e); return false })
 watch(() => route.fullPath, () => { crashed.value = null })
+onMounted(() => { plugins.load() })
 onMounted(() => window.addEventListener('keydown', e => {
   if (e.altKey && !e.ctrlKey && [...nav, ...navBottom].some(n => n.key === e.key)) {
     e.preventDefault()
@@ -26,6 +28,7 @@ const nav = [
 ]
 // unten in der Leiste (Taloan, 17.09.): Journal und Einstellungen
 const navBottom = [
+  { to: '/plugins', icon: '🔌', label: 'Plugins', key: '7' },
   { to: '/journal', icon: '≡', label: 'Journal', key: '2' },
   { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '6' },
 ]
@@ -39,6 +42,11 @@ const navBottom = [
       <router-link v-for="n in nav" :key="n.to" :to="n.to" class="rail-item"
         :class="{ active: route.path.startsWith(n.to) }" :title="`${n.label}  (Alt+${n.key})`">
         <span class="icon">{{ n.icon }}</span>
+      </router-link>
+      <!-- Ansichten aus Browser-Plugins -->
+      <router-link v-for="v in plugins.views" :key="v.key + v.path" :to="`/p/${v.key}/${v.path}`" class="rail-item"
+        :class="{ active: route.path === `/p/${v.key}/${v.path}` }" :title="`${v.label}  (Plugin ${v.key})`">
+        <span class="icon">{{ v.icon || '🔌' }}</span>
       </router-link>
       <div class="rail-spacer" />
       <router-link v-for="n in navBottom" :key="n.to" :to="n.to" class="rail-item"

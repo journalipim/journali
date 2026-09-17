@@ -9,6 +9,7 @@ import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKIP, TYPES, relFields, complexIds, relationNeeds, REL_GROUP } from '../solr.js'
 import { recent, remember } from '../recent.js'
+import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
@@ -304,9 +305,9 @@ async function run() {
   <div class="pane" :style="`width:${srcW}px;flex:none`">
     <div class="toolbar"><h1>⇩ Quelle: Solr</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar sources">
-      <router-link to="/import" class="view-chip">IXP</router-link>
+      <router-link v-if="plugins.enabled('ixp')" to="/import" class="view-chip">IXP</router-link>
       <router-link to="/import/solr" class="view-chip on">Solr</router-link>
-      <span class="grow" /><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span>
+      <span class="grow" /><router-link v-if="plugins.loaded && !plugins.enabled('solr')" to="/plugins" class="warn" title="Plugin solr ist aus">🔌 aus</router-link><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span>
     </div>
     <div class="form">
       <div class="row">

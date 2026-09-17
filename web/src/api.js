@@ -65,6 +65,10 @@ export function describe(e) {
     case 'GroupCreated': return `▣ ${p.name ?? p.label?.de ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
     case 'GroupRenamed': return `▣ ${p.label?.de ?? ''}`
     case 'ProductAxesSet': return `◆ variiert nach ${(p.axes || []).join(', ') || 'nichts'}`
+    case 'PluginInstalled': return `🔌 ${p.version}`
+    case 'PluginEnabled': return '🔌 ● an'
+    case 'PluginDisabled': return '🔌 ○ aus'
+    case 'PluginRemoved': return '− 🔌'
     case 'MediaCreated': return `🖼 ${p.name} · ${p.mime} · ${p.bytes} B`
     case 'MediaRetired': return '− 🖼 Medium'
     case 'RelationCreated': return `⇄ ${p.type}: ${p.from} → ${p.to}`

@@ -35,6 +35,13 @@ builder.Services.AddSingleton(catalog);
 var mediaStore = new FileMediaStore(builder.Configuration["JOURNALI_MEDIA"] ?? Path.Combine(builder.Environment.ContentRootPath, "media"));
 builder.Services.AddSingleton<IMediaStore>(mediaStore);
 
+// Plugins: plugins/<key>/plugin.json — beim Entwickeln das Verzeichnis im Repo, im Container /app/plugins (docs/pflegestruktur.md, 19)
+var pluginDir = builder.Configuration["JOURNALI_PLUGINS"]
+    ?? new[] { Path.Combine(builder.Environment.ContentRootPath, "..", "plugins"), Path.Combine(builder.Environment.ContentRootPath, "plugins") }.FirstOrDefault(Directory.Exists)
+    ?? Path.Combine(builder.Environment.ContentRootPath, "plugins");
+pluginDir = Path.GetFullPath(pluginDir);
+var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
+
 // Umlaute lesbar lassen statt \u00fc — das Journal ist zum Anschauen da.
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
@@ -45,7 +52,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
-app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien unter {Media}", rebuilt, catalog.Head, seeded, mediaStore.Root);
+app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien unter {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Root, pluginDir, autoInstalled);
 
 if (app.Environment.IsDevelopment()) app.UseCors();
 
@@ -66,7 +73,19 @@ ModelApi.Map(api);
 TreeApi.Map(api);
 RelationApi.Map(api);
 MediaApi.Map(api);
+PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);
+
+// Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/
+app.MapGet("/plugins/{key}/{**path}", (string key, string path) =>
+{
+    if (!ModelApi.ValidKey(key) || path.Contains("..")) return Results.NotFound();
+    var file = Path.GetFullPath(Path.Combine(pluginDir, key, path));
+    if (!file.StartsWith(Path.Combine(pluginDir, key), StringComparison.Ordinal) || !File.Exists(file)) return Results.NotFound();
+    var ext = Path.GetExtension(file).ToLowerInvariant();
+    var mime = ext switch { ".js" or ".mjs" => "text/javascript", ".json" => "application/json", ".css" => "text/css", ".md" => "text/markdown", ".png" => "image/png", ".svg" => "image/svg+xml", ".html" => "text/html", _ => "application/octet-stream" };
+    return Results.File(file, mime);
+});
 
 // ---- Journal (roh) ---------------------------------------------------------
 

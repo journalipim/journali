@@ -8,6 +8,7 @@ import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
+import { plugins } from '../plugins.js'
 import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
@@ -261,6 +262,7 @@ function contextMenu(e, r) {
     kids ? { label: 'Alles zuklappen', icon: '▸', key: 'z', action: () => collapseAll(r.id) } : null,
     { label: 'Id kopieren', icon: '⧉', key: 'i', hint: r.id, action: () => navigator.clipboard?.writeText(r.id) },
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
+    ...(plugins.nodeActions.length ? [{ sep: true }, ...plugins.nodeActions.map(a => ({ label: a.label, icon: a.icon || '🔌', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) }))] : []),
     { sep: true },
     { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])

@@ -8,6 +8,7 @@ import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode } from '../ixp.js'
 import { recent, remember } from '../recent.js'
+import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
@@ -212,7 +213,8 @@ function toggleLocale(l) {
     <div class="toolbar"><h1>⇩ Quelle: IXP</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:4px">
       <router-link to="/import" class="view-chip on">IXP</router-link>
-      <router-link to="/import/solr" class="view-chip">Solr</router-link>
+      <router-link v-if="plugins.enabled('solr')" to="/import/solr" class="view-chip">Solr</router-link>
+      <span class="grow" /><router-link v-if="plugins.loaded && !plugins.enabled('ixp')" to="/plugins" class="warn" title="Plugin ixp ist aus">🔌 aus</router-link>
     </div>
     <div class="form">
       <input v-model="base" type="text" list="ixp-recent" placeholder="https://…/api" title="Basis-URL der IXP-API — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />

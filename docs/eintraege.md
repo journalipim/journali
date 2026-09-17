@@ -52,6 +52,22 @@ Kante von Knoten zu Knoten mit Typ aus dem Modell; Werte wie am Knoten
 Ein zurückgezogener Knoten lässt seine Relationen stehen; sie zeigen dann
 ins Leere (`other.missing`) bis jemand sie zurückzieht.
 
+## Plugins — Strom `plugin:<key>`
+
+Verwaltung der Plugins (docs/pflegestruktur.md, 19): die Dateien liegen unter
+`plugins/<key>/`, der Stand im Journal.
+
+| Typ | Nutzdaten | Wirkung |
+|---|---|---|
+| `PluginInstalled` | `version`, `manifest` (plugin.json als Text) | installiert oder aktualisiert |
+| `PluginEnabled` / `PluginDisabled` | — | an / aus |
+| `PluginRemoved` | — | aus dem Abbild; die Dateien bleiben |
+
+Befehle: `GET /api/plugins` (Platte + Journal), `POST /api/plugins/{key}/install | enable | disable`,
+`DELETE /api/plugins/{key}`, `POST /api/plugins/{key}/run {params{}}` (Prozess-Plugin: Befehl aus dem
+Manifest, `{param}` aus dem Aufruf, `{journali}`/`{actor}` vom Server; Ausgabe am Ende). Dateien
+eines Plugins: `GET /plugins/{key}/…` (nur lesend).
+
 ## Medien — ein Strom je Medium (`m-…`)
 
 Die Datei liegt ausserhalb (Store, Hash-adressiert); im Journal nur das Ding
