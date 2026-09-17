@@ -9,6 +9,9 @@ import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKIP, TYPES, relFields, complexIds, relationNeeds, REL_GROUP } from '../solr.js'
 import { recent, remember } from '../recent.js'
+import Splitter from '../components/Splitter.vue'
+import { paneWidth } from '../panes.js'
+const srcW = paneWidth('import.src', 340)
 
 const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
 const base = ref(saved.base || 'https://solr-admin.144-bytec.preview.infolox.tools/solr/products')
@@ -298,7 +301,7 @@ async function run() {
 </script>
 
 <template>
-  <div class="pane" style="width:340px;flex:none">
+  <div class="pane" :style="`width:${srcW}px;flex:none`">
     <div class="toolbar"><h1>⇩ Quelle: Solr</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar sources">
       <router-link to="/import" class="view-chip">IXP</router-link>
@@ -327,6 +330,7 @@ async function run() {
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> · <kbd>Leer</kbd> Haken · Klick zeigt den Knoten · {{ checked.size }} gewählt</div>
   </div>
 
+  <Splitter v-model="srcW" :min="240" :max="800" />
   <!-- Der angeklickte Knoten: nur dann, sonst gehört der Platz dem Plan (Taloan, 17.09.) -->
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar"><h1>{{ icon(roleOf(current)) + ' ' + (current.name || current.master_id) }}</h1><span class="mono muted">{{ current.master_id }}</span><span class="grow" /><button class="x" @click="current = null" title="zuklappen">×</button></div>

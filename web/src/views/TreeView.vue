@@ -9,6 +9,9 @@ import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
 import NodeView from './NodeView.vue'
+import Splitter from '../components/Splitter.vue'
+import { paneWidth } from '../panes.js'
+const treeW = paneWidth('tree', 300)
 
 const props = defineProps({ id: String })
 const router = useRouter()
@@ -247,7 +250,7 @@ function onDialogKey(e) {
 </script>
 
 <template>
-  <div class="pane" style="width:300px;flex:none">
+  <div class="pane" :style="`width:${treeW}px;flex:none`">
     <div class="toolbar">
       <h1>▣ Baum</h1>
       <span class="muted">{{ tree.rows.length }}</span>
@@ -313,6 +316,7 @@ function onDialogKey(e) {
     </div>
   </div>
 
+  <Splitter v-model="treeW" :min="200" :max="800" />
   <NodeView v-if="id" :id="id" :key="id" />
   <div v-else class="pane" style="flex:1"><div class="empty">Knoten wählen — oder oben anlegen.</div></div>
 </template>

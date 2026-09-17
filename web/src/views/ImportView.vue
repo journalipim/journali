@@ -8,6 +8,9 @@ import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode } from '../ixp.js'
 import { recent, remember } from '../recent.js'
+import Splitter from '../components/Splitter.vue'
+import { paneWidth } from '../panes.js'
+const srcW = paneWidth('import.src', 340)
 
 const saved = JSON.parse(localStorage.getItem('journali.import.ixp') || '{}')
 const base = ref(saved.base || IXP_DEMO)
@@ -205,7 +208,7 @@ function toggleLocale(l) {
 </script>
 
 <template>
-  <div class="pane" style="width:340px;flex:none">
+  <div class="pane" :style="`width:${srcW}px;flex:none`">
     <div class="toolbar"><h1>⇩ Quelle: IXP</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:4px">
       <router-link to="/import" class="view-chip on">IXP</router-link>
@@ -232,6 +235,7 @@ function toggleLocale(l) {
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">Haken = Teilbaum · {{ checked.size }} gewählt</div>
   </div>
 
+  <Splitter v-model="srcW" :min="240" :max="800" />
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>Zuordnung</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button></div>
     <div class="scroll">

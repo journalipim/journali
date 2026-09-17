@@ -18,6 +18,9 @@ import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
 import RowsBlock from '../components/RowsBlock.vue'
 import EntryList from '../components/EntryList.vue'
+import Splitter from '../components/Splitter.vue'
+import { paneWidth } from '../panes.js'
+const journalW = paneWidth('journal', 420)
 
 const props = defineProps({ id: String })
 const router = useRouter()
@@ -461,7 +464,8 @@ function cellMenu(e, def, col, block) {
   </div>
   <div v-else class="pane" style="flex:3"><div class="empty">…</div></div>
 
-  <div v-if="store.journalOpen" class="pane" style="flex:2">
+  <Splitter v-if="store.journalOpen" v-model="journalW" side="right" :min="240" :max="1000" />
+  <div v-if="store.journalOpen" class="pane" :style="`width:${journalW}px;flex:none`">
     <div class="toolbar"><h1>≡ Journal</h1><span class="muted mono">{{ id }}</span><span class="muted">{{ entries.length }}</span><span class="grow" /><button class="x" @click="store.journalOpen = false; store.save()" title="Journal zuklappen">▸</button></div>
     <div class="scroll"><EntryList :entries="entries" /></div>
   </div>

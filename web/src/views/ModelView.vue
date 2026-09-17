@@ -15,6 +15,9 @@ import EditGrid from '../components/EditGrid.vue'
 import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
+import Splitter from '../components/Splitter.vue'
+import { paneWidth } from '../panes.js'
+const listW = paneWidth('model.list', 340)
 
 const sections = [
   { key: 'groups', icon: '▤', label: 'Attributgruppen', part: 'Struktur', one: 'Gruppe', hint: 'Eine Gruppe bündelt Attribute und hängt an Baumknoten; ihre Definition vererbt sich nach unten. „aktiv ab“ sagt, ab welchem Knotentyp Werte erfasst werden.' },
@@ -328,7 +331,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
   </div>
 
   <!-- Mitte: die Liste -->
-  <div class="pane" style="width:340px;flex:none" v-if="model">
+  <div class="pane" :style="`width:${listW}px;flex:none`" v-if="model">
     <div class="toolbar"><h1>{{ sec.icon }} {{ sec.label }}</h1><span class="muted">{{ shown.length }}</span><span class="muted" :title="sec.hint">ⓘ</span><span class="grow" /></div>
     <div class="toolbar" style="gap:4px">
       <input v-model="filter" type="search" placeholder="🔍 Suche in Key und Name" style="flex:1;min-width:0" />
@@ -361,6 +364,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>Shift</kbd>/<kbd>Strg</kbd>+Klick mehrere · {{ count }} gewählt</div>
   </div>
 
+  <Splitter v-if="model" v-model="listW" :min="220" :max="800" />
   <!-- Rechts: das gewählte Ding -->
   <div class="pane" style="flex:1" v-if="model">
     <!-- Stapel -->
