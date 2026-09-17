@@ -93,6 +93,33 @@ async function retire(r) {
     await tree.load(); if (props.id === r.id || !tree.byId.has(props.id)) router.push(r.parent ? `/tree/${r.parent}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }
+// Umhängen per Drag & Drop (Taloan, 17.09.): Zeile ziehen, auf einer Zeile ablegen = darunter hängen.
+// Dieselben Regeln wie der Server (Commands.Move): Variante unter Produkt, sonst unter Gruppe, nie unter sich selbst.
+const dragId = ref(null)
+const dropId = ref(null)
+function canDrop(src, target) {
+  if (!src || !target || src.id === target.id || src.parent === target.id) return false
+  if (target.role !== (src.role === 'variant' ? 'product' : 'group')) return false
+  for (const a of tree.ancestors(target.id)) if (a.id === src.id) return false
+  return true
+}
+function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', r.id) }
+function onDragOver(e, r) {
+  const src = tree.byId.get(dragId.value)
+  if (!canDrop(src, r)) { dropId.value = null; return }
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move'; dropId.value = r.id
+}
+async function onDrop(r) {
+  const src = tree.byId.get(dragId.value)
+  dragId.value = null; dropId.value = null
+  if (!canDrop(src, r)) return
+  const below = countBelow(src.id)
+  try {
+    await api.post(`/api/nodes/${encodeURIComponent(src.id)}/move`, { parent: r.id })
+    store.toast(`${icon(src.role)} ${src.label}${below ? ` mit ${below} darunter` : ''} → ${icon(r.role)} ${r.label}`, 'ok')
+    await store.poll(true); await tree.load(); tree.expand(r.id)
+  } catch (e) { store.toast(e.message) }
+}
 function expandAll(id) { tree.expand(id); for (const k of tree.kids(id)) expandAll(k.id) }
 function collapseAll(id) { for (const k of tree.kids(id)) collapseAll(k.id); if (tree.expanded.has(id)) tree.toggle(id) }
 async function setStatus(r, status) {
@@ -231,8 +258,9 @@ function toggleAxis(a) {
 
     <div ref="list" class="scroll tree" tabindex="0" @keydown="onListKey">
       <!-- Flag heisst isOpen, nicht open — sonst verdeckt es die Funktion open(r) des Klicks. -->
-      <div v-for="{ r, depth, isOpen } in visible" :key="r.id" class="node" :class="[r.role, { selected: r.id === id, [r.status]: true }]"
-        :style="`padding-left:${8 + depth * 16}px`" @click="open(r)" @contextmenu="contextMenu($event, r)" :title="r.id">
+      <div v-for="{ r, depth, isOpen } in visible" :key="r.id" class="node" :class="[r.role, { selected: r.id === id, [r.status]: true, drop: dropId === r.id, dragging: dragId === r.id }]"
+        :style="`padding-left:${8 + depth * 16}px`" @click="open(r)" @contextmenu="contextMenu($event, r)" :title="r.id"
+        draggable="true" @dragstart="onDragStart($event, r)" @dragover="onDragOver($event, r)" @dragleave="dropId === r.id && (dropId = null)" @drop.prevent="onDrop(r)" @dragend="dragId = null; dropId = null">
         <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (isOpen ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
         <span class="label">{{ r.label }}</span>
@@ -247,7 +275,7 @@ function toggleAxis(a) {
       <div v-else-if="q && !visible.length" class="empty">Nichts zu „{{ q }}“</div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · Rechtsklick
+      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · Rechtsklick · ziehen = umhängen
     </div>
   </div>
 
@@ -264,6 +292,8 @@ function toggleAxis(a) {
 .node { display: flex; align-items: center; gap: 4px; height: 24px; cursor: default; white-space: nowrap; padding-right: 8px; }
 .node:hover { background: var(--hover); }
 .node.selected { background: var(--accent-soft); }
+.node.drop { outline: 1px dashed var(--accent); outline-offset: -1px; background: var(--accent-soft); }
+.node.dragging { opacity: .5; }
 .twisty { width: 14px; color: var(--muted); font-size: 11px; text-align: center; cursor: pointer; }
 .twisty.leaf { cursor: default; }
 .icon { width: 16px; text-align: center; }
