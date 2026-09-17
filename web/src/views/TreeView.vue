@@ -98,12 +98,16 @@ function collapseAll(id) { for (const k of tree.kids(id)) collapseAll(k.id); if 
 async function setStatus(r, status) {
   try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/status`, { status }); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
 }
-// Eigener Name im Baum (jede Rolle); leer = Automatik (★ Attribut, bei Varianten SKU/Achsen, sonst Id).
-async function rename(r) {
-  const name = window.prompt(`Name im Baum — leer = Automatik\n${r.label}`, r.name ?? '')
-  if (name == null) return
+// Eigener Name im Baum (jede Rolle) = fixiert (🔒); leer = Automatik (★ Attribut, bei Varianten SKU/Achsen, sonst Id).
+async function setName(r, name) {
   try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/name`, { name }, 'PUT'); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
 }
+async function rename(r) {
+  const name = window.prompt(`Name im Baum — leer = Automatik (★)\n${r.label}`, r.name ?? r.label)
+  if (name != null) await setName(r, name)
+}
+// Fixieren übernimmt den Namen, den die Automatik gerade zeigt, als eigenen; Freigeben nimmt ihn weg.
+const fix = r => setName(r, r.name ? '' : r.label)
 async function duplicate(r, deep) {
   try {
     const res = await api.post(`/api/nodes/${encodeURIComponent(r.id)}/duplicate?deep=${deep}`)
@@ -120,7 +124,8 @@ function contextMenu(e, r) {
     r.role === 'group' ? { label: 'Neue Gruppe darunter', icon: '▣', key: 'g', action: () => start('group') } : null,
     r.role === 'group' ? { label: 'Neues Produkt darunter', icon: '▦', key: 'p', action: () => start('product') } : null,
     r.role === 'product' ? { label: 'Neue Variante darunter', icon: '◆', key: 'v', action: () => start('variant') } : null,
-    { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '' : 'Automatik', action: () => rename(r) },
+    { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '🔒 fixiert' : '★ Automatik', action: () => rename(r) },
+    { label: r.name ? 'Benennung freigeben' : 'Benennung fixieren', icon: r.name ? '🔓' : '🔒', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r) },
     { sep: true },
     { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
@@ -231,6 +236,7 @@ function toggleAxis(a) {
         <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (isOpen ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
         <span class="label">{{ r.label }}</span>
+        <span v-if="r.name" class="muted lock" title="Benennung fixiert — Rechtsklick → freigeben, dann gilt das ★">🔒</span>
         <span v-if="hits.get(r.id) && !r.label.toLowerCase().includes(q.trim().toLowerCase())" class="muted hit" :title="hits.get(r.id)">{{ hits.get(r.id) }}</span>
         <span v-if="r.role === 'variant' && r.sku && Object.keys(r.axisValues).length" class="muted axis">{{ Object.values(r.axisValues).join(' · ') }}</span>
         <span v-if="r.status === 'discontinued'" class="neg" title="ausgelaufen">✗</span>
@@ -266,6 +272,7 @@ function toggleAxis(a) {
 .node.variant .icon { color: var(--warn); }
 .label { overflow: hidden; text-overflow: ellipsis; }
 .axis { font-size: 11px; }
+.lock { font-size: 10px; opacity: .7; }
 .hit { font-size: 11px; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
 .count { margin-left: auto; font-size: 11px; }
 </style>
