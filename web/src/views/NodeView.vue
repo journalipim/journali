@@ -568,8 +568,9 @@ function cellMenu(e, def, col, block) {
 .view { gap: 4px; font-size: 12px; min-height: 30px; }
 .view select, .view button { font-size: 12px; padding: 1px 6px; }
 /* Reiter: einzeilig, klein, umbrechend — mit Echtdaten sind es zwanzig und mehr (Taloan, 17.09.) */
-.tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
-.tabbtn { border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--bg); color: var(--muted); padding: 1px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+/* Raster mit fester Spaltenbreite: Umbrueche haengen nur von der Fensterbreite ab, nie von Namenslaenge oder aktivem Reiter (Taloan) */
+.tabs { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
+.tabbtn { border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--bg); color: var(--muted); padding: 1px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; max-width: none; text-align: center; overflow: hidden; text-overflow: ellipsis; }
 .tabbtn .n { font-size: 10px; }
 /* aktiv: Farbe und Kante, nie fett — fett ist breiter und liesse die Reiterzeile anders umbrechen */
 .tabbtn.on { background: var(--pane); color: var(--accent); border-color: var(--accent); }
