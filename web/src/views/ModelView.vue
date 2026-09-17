@@ -43,6 +43,19 @@ const addViewGroup = ref('')
 const bulkGroup = ref('')
 const roleLabel = { group: '▣ Produktgruppe', product: '▦ Produkt', variant: '◆ Variante' }
 const roles = ['group', 'product', 'variant']
+// Muster-Vorlagen (Taloan, 17.09.: Telefon, E-Mail „bis zu dem, was üblich ist“) — ganzer Wert muss passen
+const PATTERNS = [
+  { key: 'email', label: '@ E-Mail', re: String.raw`[^\s@]+@[^\s@]+\.[A-Za-z]{2,}` },
+  { key: 'phone', label: '☎ Telefon', re: String.raw`\+?[0-9][0-9 \-/().]{5,}[0-9]` },
+  { key: 'url', label: '🔗 URL', re: String.raw`https?://[^\s]+` },
+  { key: 'ean13', label: 'EAN-13', re: String.raw`[0-9]{13}` },
+  { key: 'ean8', label: 'EAN-8', re: String.raw`[0-9]{8}` },
+  { key: 'plz', label: 'PLZ (DE)', re: String.raw`[0-9]{5}` },
+  { key: 'iso_date', label: 'Datum JJJJ-MM-TT', re: String.raw`[0-9]{4}-[0-9]{2}-[0-9]{2}` },
+  { key: 'sku', label: 'SKU (Buchstaben, Ziffern, -_)', re: String.raw`[A-Za-z0-9_\-]+` },
+  { key: 'hex', label: '# Hex-Farbe', re: String.raw`#[0-9A-Fa-f]{6}` },
+  { key: 'iban', label: 'IBAN', re: String.raw`[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}` },
+]
 const TYPES = ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum', 'rows', 'formula']
 const TYPE_SYM = { text: 'Aa', html: '‹›', integer: '12', decimal: '1.5', boolean: '☑', date: '📅', enum: '☰', rows: '≣', formula: 'ƒ' }
 const sec = computed(() => sections.find(s => s.key === section.value))

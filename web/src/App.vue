@@ -1,10 +1,15 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, onErrorCaptured, ref, watch } from 'vue'
 import { store } from './store.js'
 import ContextMenu from './components/ContextMenu.vue'
 import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
+// Auffangrahmen (Taloan, 17.09.: leerer Bildschirm ist im Betrieb ein Desaster): ein Fehler beim Zeichnen einer
+// Ansicht landet hier — Meldung mit Ursache, Leiste bleibt bedienbar, der nächste Seitenwechsel räumt auf.
+const crashed = ref(null)
+onErrorCaptured(e => { crashed.value = e?.message ?? String(e); console.error(e); return false })
+watch(() => route.fullPath, () => { crashed.value = null })
 onMounted(() => window.addEventListener('keydown', e => {
   if (e.altKey && !e.ctrlKey && nav.some(n => n.key === e.key)) {
     e.preventDefault()
@@ -38,7 +43,8 @@ const nav = [
     </nav>
 
     <main class="content">
-      <router-view />
+      <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">✗ Diese Ansicht ist abgestürzt</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">▣ zum Baum</button> <button @click="location.reload()">↻ neu laden</button></div></div>
+      <router-view v-else />
     </main>
 
     <header class="status">
