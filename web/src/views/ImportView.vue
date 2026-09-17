@@ -264,18 +264,11 @@ function toggleLocale(l) {
         <input v-model="prefix" type="text" style="width:90px" placeholder="z. B. sap_" @change="persist" title="vor jedem neu angelegten Attribut und als Gruppe — je Quellsystem eins; nach dem ersten Lauf nicht mehr ändern" />
         <span class="muted" :title="`neue Attribute heissen ${cleanPrefix}<key>, Gruppe ${importGroup}`">→ {{ cleanPrefix }}‹key› · ▤ {{ importGroup }}</span>
       </td></tr>
-      <tr><td class="attr">Sprachen</td><td>
-        <template v-if="languages.length">
-          <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>
-        </template>
-        <span v-else class="muted">nach Verbinden</span>
-        <span v-if="languages.length" class="muted" :title="`Quelle: ${languages.length} Sprachen, Modell: ${modelLocales.length} — weitere unter ⊞ Modell → Sprachen anlegen, dann sind sie hier wählbar`"> importieren · nur Sprachen des Modells ({{ modelLocales.length }})</span>
-      </td></tr>
       <tr><td class="attr">Bilder</td><td><label title="Vorschaubild der Quelle als Medium holen und als „image“ anhängen; gleiche Datei = ein Medium"><input type="checkbox" v-model="withImages" @change="persist" /> als Medien holen</label></td></tr>
     </ImportHead>
     <div class="step-band">2 · Auswahl <span class="muted">· Haken = Teilbaum</span><span class="grow" />
-      <span class="muted" title="nur zum Lesen der Namen im Quellbaum — importiert werden die Sprachen aus 1">blättern in</span>
-      <select v-model="lang" @change="connected && connect()" title="Sprache zum Blättern — importiert werden die Sprachen aus 1" style="width:70px;font-size:12px"><option v-for="l in (languages.length ? languages : [{ code: lang }])" :key="l.code" :value="l.code">{{ l.code }}</option></select>
+      <span class="muted" title="nur zum Lesen der Namen im Quellbaum — importiert werden die Sprachen aus 3">blättern in</span>
+      <select v-model="lang" @change="connected && connect()" title="Sprache zum Blättern — importiert werden die Sprachen aus 3" style="width:70px;font-size:12px"><option v-for="l in (languages.length ? languages : [{ code: lang }])" :key="l.code" :value="l.code">{{ l.code }}</option></select>
       <span class="muted">{{ checked.size }} gewählt</span></div>
     <div class="scroll src">
       <div v-for="r in visible" :key="r.doc.id" class="node" :class="[r.doc.type, { on: checked.has(r.doc.id) || checkedAbove(r) }]" :style="`padding-left:${6 + r.depth * 14}px`" :title="r.doc.masterId">
@@ -300,9 +293,12 @@ function toggleLocale(l) {
             <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
             <span class="muted">neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</span>
           </td></tr>
-          <tr v-if="false"><td class="muted">Sprachen 🗣</td><td>
-            <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>
-            <span class="muted">nur Sprachen des Modells</span>
+          <tr><td class="muted">Sprachen 🗣</td><td>
+            <template v-if="languages.length">
+              <span v-for="l in languages" :key="l.code" class="view-chip" :class="{ on: selectedLocales.includes(l.code), off: !modelLocales.includes(l.code) }" :title="modelLocales.includes(l.code) ? l.languageName : l.languageName + ' — nicht im Modell'" @click="modelLocales.includes(l.code) && toggleLocale(l.code)">{{ l.code }}</span>
+            </template>
+            <span v-else class="muted">nach Verbinden</span>
+            <span v-if="languages.length" class="muted" :title="`Quelle: ${languages.length} Sprachen, Modell: ${modelLocales.length} — weitere unter ⊞ Modell → Sprachen anlegen, dann sind sie hier wählbar`"> importieren · nur Sprachen des Modells ({{ modelLocales.length }})</span>
           </td></tr>
         </tbody>
       </table>
