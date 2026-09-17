@@ -1,6 +1,7 @@
 <script setup>
-// Zelle für html: in der Zelle nur der Text, Enter oder Doppelklick öffnet den
-// Editor — Quelltext links, Vorschau rechts. Ctrl+Enter speichert, Esc verwirft.
+// Zelle für html: in der Zelle nur der Anfang des Textes (‹› = HTML), Enter oder Doppelklick
+// öffnet den Editor — einfacher Schreibmodus (fett, kursiv, Listen, Überschrift, Link) mit
+// Umschalter auf den Quelltext (Taloan, 17.09.). Ctrl+Enter speichert, Esc verwirft.
 import { ref, computed, nextTick } from 'vue'
 
 const props = defineProps({ value: String, inherited: String, disabled: Boolean, origin: String, title: String })
@@ -8,20 +9,34 @@ const emit = defineEmits(['save'])
 
 const open = ref(false)
 const draft = ref('')
+const source = ref(false)      // Quelltext statt Schreibmodus
 const area = ref(null)
+const rich = ref(null)
 
 const shown = computed(() => props.value ?? props.inherited ?? '')
-const plain = computed(() => shown.value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
+const plain = computed(() => shown.value.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim())
+const LIMIT = 60
+const plainLen = s => (s ?? '').replace(/<[^>]+>/g, '').length
+const brief = computed(() => plain.value.length > LIMIT ? plain.value.slice(0, LIMIT).trimEnd() + '…' : plain.value)
 
 async function edit() {
   if (props.disabled) return
   draft.value = props.value ?? props.inherited ?? ''
+  source.value = false
   open.value = true
   await nextTick()
-  area.value?.focus()
+  if (rich.value) { rich.value.innerHTML = draft.value; rich.value.focus() }
 }
-function save() { open.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value) }
+function save() { syncFromRich(); open.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value) }
 function cancel() { open.value = false }
+function syncFromRich() { if (!source.value && rich.value) draft.value = rich.value.innerHTML.replace(/<div><br><\/div>/g, '<p></p>') }
+async function toggleSource() {
+  if (source.value) { source.value = false; await nextTick(); if (rich.value) { rich.value.innerHTML = draft.value; rich.value.focus() } }
+  else { syncFromRich(); source.value = true; await nextTick(); area.value?.focus() }
+}
+// Schreibbefehle des Browsers — reichen für Absatz, fett, kursiv, Listen, Überschrift, Link; kein Fremdcode.
+function cmd(name, arg = null) { rich.value?.focus(); document.execCommand(name, false, arg) }
+function link() { const url = window.prompt('Link-Adresse (leer = Link entfernen)', 'https://'); if (url == null) return; url ? cmd('createLink', url) : cmd('unlink') }
 function onKey(e) {
   if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); edit() }
   else if (e.key === 'Delete' && props.value != null) emit('save', '')
@@ -29,25 +44,43 @@ function onKey(e) {
 function onEditKey(e) {
   if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); save() }
   else if (e.key === 'Escape') { e.preventDefault(); cancel() }
+  else if (e.ctrlKey && !source.value && e.key === 'b') { e.preventDefault(); cmd('bold') }
+  else if (e.ctrlKey && !source.value && e.key === 'i') { e.preventDefault(); cmd('italic') }
 }
 </script>
 
 <template>
   <td class="cell">
     <div class="cell-box html" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
-      :tabindex="disabled ? undefined : 0" @dblclick="edit" @keydown="onKey"
-      :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : 'Enter öffnet den Editor')">
-      <template v-if="!disabled">{{ plain }}</template>
+      :tabindex="disabled ? undefined : 0" @click="edit" @keydown="onKey"
+      :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : (plain ? plain.slice(0, 400) + '\n\n' : '') + 'Klick oder Enter öffnet den Editor')">
+      <template v-if="!disabled"><span v-if="plain" class="muted tag">‹›</span>{{ brief }}</template>
     </div>
     <Teleport to="body">
       <div v-if="open" class="overlay" @mousedown.self="cancel">
         <div class="editor" @keydown="onEditKey">
           <div class="toolbar"><h1>‹› {{ title }}</h1><span class="grow" /><kbd>Ctrl+Enter</kbd> speichern · <kbd>Esc</kbd> verwerfen</div>
-          <div class="halves">
-            <textarea ref="area" v-model="draft" spellcheck="false"></textarea>
-            <div class="preview" v-html="draft"></div>
+          <div class="toolbar fmt" v-if="!source">
+            <button @mousedown.prevent="cmd('formatBlock', 'p')" title="Absatz">¶</button>
+            <button @mousedown.prevent="cmd('formatBlock', 'h2')" title="Überschrift">H2</button>
+            <button @mousedown.prevent="cmd('formatBlock', 'h3')" title="Überschrift klein">H3</button>
+            <span class="sep">·</span>
+            <button @mousedown.prevent="cmd('bold')" title="fett (Ctrl+B)"><b>B</b></button>
+            <button @mousedown.prevent="cmd('italic')" title="kursiv (Ctrl+I)"><i>I</i></button>
+            <button @mousedown.prevent="cmd('underline')" title="unterstrichen"><u>U</u></button>
+            <span class="sep">·</span>
+            <button @mousedown.prevent="cmd('insertUnorderedList')" title="Liste">•≡</button>
+            <button @mousedown.prevent="cmd('insertOrderedList')" title="nummerierte Liste">1≡</button>
+            <button @mousedown.prevent="link()" title="Link">🔗</button>
+            <span class="sep">·</span>
+            <button @mousedown.prevent="cmd('removeFormat')" title="Formatierung entfernen">✗ Format</button>
+            <span class="grow" />
+            <button @click="toggleSource" title="HTML-Quelltext zeigen">‹› Quelltext</button>
           </div>
-          <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0"><span class="grow" /><button @click="cancel">Verwerfen</button><button class="primary" @click="save">Speichern</button></div>
+          <div class="toolbar fmt" v-else><span class="muted">HTML-Quelltext</span><span class="grow" /><button class="primary" @click="toggleSource" title="zurück zum Schreibmodus">✎ Schreiben</button></div>
+          <div ref="rich" v-if="!source" class="rich" contenteditable="true" spellcheck="true" @input="syncFromRich"></div>
+          <textarea v-else ref="area" v-model="draft" spellcheck="false"></textarea>
+          <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0"><span class="muted" style="font-size:12px">{{ plainLen(draft) }} Zeichen</span><span class="grow" /><button @click="cancel">Verwerfen</button><button class="primary" @click="save">Speichern</button></div>
         </div>
       </div>
     </Teleport>
@@ -55,10 +88,15 @@ function onEditKey(e) {
 </template>
 
 <style scoped>
+.tag { font-size: 10px; margin-right: 4px; }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; z-index: 20; }
-.editor { width: min(1100px, 92vw); height: min(700px, 85vh); background: var(--pane); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
-.halves { flex: 1; display: grid; grid-template-columns: 1fr 1fr; min-height: 0; }
-textarea { border: 0; border-right: 1px solid var(--line); resize: none; padding: 8px; font: 12px var(--mono); background: var(--cell); color: var(--text); outline: none; }
-.preview { overflow: auto; padding: 8px 12px; }
-.preview :deep(p) { margin: 0 0 6px; }
+.editor { width: min(900px, 92vw); height: min(640px, 85vh); background: var(--pane); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
+.fmt { gap: 4px; }
+.fmt button { min-width: 30px; padding: 2px 6px; }
+.rich { flex: 1; overflow: auto; padding: 10px 14px; outline: none; background: var(--cell); color: var(--text); line-height: 1.45; }
+.rich :deep(p) { margin: 0 0 8px; }
+.rich :deep(h2) { font-size: 16px; margin: 10px 0 6px; }
+.rich :deep(h3) { font-size: 14px; margin: 8px 0 4px; }
+.rich :deep(a) { color: var(--accent); }
+textarea { flex: 1; border: 0; resize: none; padding: 8px; font: 12px var(--mono); background: var(--cell); color: var(--text); outline: none; }
 </style>
