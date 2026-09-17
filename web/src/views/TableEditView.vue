@@ -78,7 +78,7 @@ const baseColumns = computed(() => {
   const wanted = new Set([...order, ...v.items.flatMap(it => it.group ? groupsOf.get(it.group) ?? [] : [])])
   return all.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999))
 })
-const editable = c => !c.virtual && !['rows', 'formula'].includes(c.type)   // html: eigener Editor (HtmlCell); virtuelle: siehe canWrite
+const editable = c => !c.virtual && !['rows', 'formula', 'template'].includes(c.type)   // html: eigener Editor (HtmlCell); virtuelle: siehe canWrite
 const rows = computed(() => {
   if (!data.value) return []
   const q = filter.value.trim().toLowerCase()

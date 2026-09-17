@@ -232,8 +232,10 @@ public static class AttributeTypes
     /// andere Wert am Knoten — auch geerbt, auch je Sprache; das Ergebnis wird beim Lesen gerechnet.
     /// </summary>
     public const string Formula = "formula";
+    /// <summary>Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis beim Lesen (Template.cs).</summary>
+    public const string Template = "template";
 
-    public static readonly IReadOnlyList<string> All = [Text, Html, Integer, Decimal, Boolean, Date, Enum, Rows, Formula];
+    public static readonly IReadOnlyList<string> All = [Text, Html, Integer, Decimal, Boolean, Date, Enum, Rows, Formula, Template];
 }
 
 /// <summary>Die Achsen, die ein Attribut haben kann.</summary>
@@ -279,8 +281,9 @@ public sealed record AttributeDefinition(
     string? Pattern = null,
     string? PatternHint = null)
 {
-    /// <summary>Typ formula: der Wert ist ein Skript, das Ergebnis wird beim Lesen gerechnet.</summary>
-    public bool IsComputed => Type == AttributeTypes.Formula;
+    /// <summary>Typ formula oder template: der Wert ist Skript bzw. Vorlage, das Ergebnis wird beim Lesen gerechnet.</summary>
+    public bool IsComputed => Type is AttributeTypes.Formula or AttributeTypes.Template;
+    public bool IsTemplate => Type == AttributeTypes.Template;
     public bool PerLocale => Axes?.Contains(Entries.Axes.Locale) ?? false;
     public bool PerChannel => Axes?.Contains(Entries.Axes.Channel) ?? false;
     public bool AllowedAt(string role) => Levels is null || Levels.Contains(role);

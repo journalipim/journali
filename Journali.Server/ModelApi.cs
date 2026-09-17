@@ -51,12 +51,14 @@ public static partial class ModelApi
         // Ergebnis am Knoten (value; null = kein Wert) und ein Laufzeitfehler (runtime), wenn einer auftritt.
         m.MapPost("/formula/check", (FormulaCheck body, Catalog c) =>
         {
-            var (keys, error) = Formula.Check(body.Formula ?? "");
+            var isTemplate = body.Type == AttributeTypes.Template;
+            var (keys, error) = isTemplate ? Template.Check(body.Formula ?? "") : Formula.Check(body.Formula ?? "");
             if (error is not null || body.Node is null) return Results.Ok(new { ok = error is null, error, keys, value = (string?)null, runtime = (string?)null });
             return c.With((model, tree, _) =>
             {
                 if (!tree.Nodes.TryGetValue(body.Node, out var node)) return Results.Ok(new { ok = true, error, keys, value = (string?)null, runtime = (string?)"Knoten unbekannt" });
-                var value = tree.Evaluate(model, node, body.Formula, body.Locale, out var runtime);
+                string? runtime = null;
+                var value = isTemplate ? tree.Render(model, node, body.Formula, body.Locale) : tree.Evaluate(model, node, body.Formula, body.Locale, out runtime);
                 return Results.Ok(new { ok = true, error, keys, value, runtime });
             });
         });
@@ -262,7 +264,7 @@ public static partial class ModelApi
         return c.With((model, _, write) => body(model, (stream, type, payload) => Results.Ok(EntryView.Of(write(actor, stream, type, payload, null)))));
     }
 
-    public sealed record FormulaCheck(string? Formula, string? Node = null, string? Locale = null);
+    public sealed record FormulaCheck(string? Formula, string? Node = null, string? Locale = null, string? Type = null);
 
     public static string? Actor(HttpRequest req) =>
         req.Headers.TryGetValue("X-Actor", out var v) && !string.IsNullOrWhiteSpace(v) ? v.ToString() : null;

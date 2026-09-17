@@ -42,6 +42,8 @@ public static class TreeApi
                     values = cols.ToDictionary(a => a.Key, a =>
                     {
                         var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null);
+                        // Formel/Vorlage: das Ergebnis zeigen, nicht das Skript — die Spalte ist in der Tabelle ohnehin gesperrt
+                        if (a.IsComputed) v = tree.Compute(model, n, a, locale);
                         return new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null };
                     }),
                 }).ToList();

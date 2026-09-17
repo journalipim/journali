@@ -20,7 +20,7 @@ const RULES = [
     run({ row, all }) { if (row.role !== 'variant') return []; if (!row.sku) return [{ attribute: 'sku', message: 'Variante ohne SKU' }]; const n = all.filter(r => r.row.sku === row.sku).length; return n > 1 ? [{ attribute: 'sku', message: `SKU ${row.sku} ${n}× vergeben` }] : [] } },
   { key: 'untranslated', label: 'Übersetzung fehlt / gleich wie Master', severity: 'warn',
     run({ values, columns, locale, master, byLocale, row }) { if (locale === master) return []; const out = []; for (const c of columns) { if (!c.perLocale || c.type !== 'text' && c.type !== 'html') continue; const m = byLocale.get(master)?.get(row.id)?.[c.key]?.value; const v = values[c.key]?.value; if (m && !v) out.push({ attribute: c.key, message: `${locale}: fehlt (${master} hat „${String(m).slice(0, 40)}“)` }); else if (m && v && m === v && String(m).length > 3) out.push({ attribute: c.key, message: `${locale} gleich wie ${master}` }) } return out } },
-  { key: 'formula', label: 'Formel ohne Ergebnis', severity: 'warn',
+  { key: 'formula', label: 'Formel/Vorlage ohne Ergebnis', severity: 'warn',
     run({ values, columns }) { return columns.filter(c => c.computed && values[c.key]?.value == null).map(c => ({ attribute: c.key, message: 'kein Ergebnis — ein gelesener Wert fehlt oder Skript fehlt' })) } },
   { key: 'status', label: 'Aktiv ohne Freigabe-Chance', severity: 'info',
     run({ row, values, columns, locale }) { if (row.status !== 'active' || row.role !== 'variant') return []; const miss = columns.filter(c => c.required && Object.values(c.required).some(ls => ls.includes('*') || ls.includes(locale)) && !values[c.key]?.value).length; return miss ? [{ attribute: null, message: `aktiv, aber ${miss} Pflichtwerte (${locale}) fehlen` }] : [] } },

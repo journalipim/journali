@@ -114,7 +114,21 @@ public sealed class Tree : IProjection
     {
         if (!def.IsComputed || depth > 8) return null;
         var script = Resolve(model, node, def.Key, def.PerLocale ? locale : null, null).Value;
-        return Evaluate(model, node, script, locale, out _, depth);
+        return def.IsTemplate ? Render(model, node, script, locale, depth) : Evaluate(model, node, script, locale, out _, depth);
+    }
+
+    /// <summary>Vorlage im Kontext des Knotens bauen (Template.cs): {key} wie in der Formel aufgelöst, dazu Zahl und Einheit für |2 und |unit.</summary>
+    public string? Render(ModelCatalog model, Node node, string? template, string? locale, int depth = 0)
+    {
+        if (string.IsNullOrWhiteSpace(template)) return null;
+        Entries.Template.Slot slot(string key)
+        {
+            var v = ValueOf(model, node, key, locale, depth);
+            if (v.IsNone) return Entries.Template.Slot.None;
+            var unit = model.Attributes.TryGetValue(key, out var d) && d.Unit is { Length: > 0 } u ? (model.Units.TryGetValue(u, out var ud) ? ud.Key : u) : null;
+            return new Entries.Template.Slot(v.AsText, v.Kind == Entries.Formula.Kind.Number ? v.Number : null, unit);
+        }
+        return Entries.Template.Render(template, slot, locale);
     }
 
     /// <summary>Ein beliebiges Skript im Kontext des Knotens rechnen — der Editor zeigt so das momentane Ergebnis beim Tippen (Taloan, 17.09.).</summary>
@@ -122,16 +136,18 @@ public sealed class Tree : IProjection
     {
         error = null;
         if (string.IsNullOrWhiteSpace(script)) return null;
-        Entries.Formula.Value value(string key)
-        {
-            if (!model.Attributes.TryGetValue(key, out var d)) return Entries.Formula.Value.None;
-            var raw = d.IsComputed ? Compute(model, node, d, locale, depth + 1) : Resolve(model, node, key, d.PerLocale ? locale : null, null).Value;
-            if (raw is null) return Entries.Formula.Value.None;
-            if (d.Type is AttributeTypes.Integer or AttributeTypes.Decimal && decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var n)) return Entries.Formula.Value.Of(n);
-            if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
-            return Entries.Formula.Value.Of(raw);
-        }
-        return Entries.Formula.Run(script, value, locale, out error).AsText;
+        return Entries.Formula.Run(script, key => ValueOf(model, node, key, locale, depth), locale, out error).AsText;
+    }
+
+    /// <summary>Wert eines Attributs für Formel und Vorlage: geerbt zählt, Zahl als Zahl, Werteliste als Label der Sprache, gerechnete Attribute gerechnet.</summary>
+    private Entries.Formula.Value ValueOf(ModelCatalog model, Node node, string key, string? locale, int depth)
+    {
+        if (!model.Attributes.TryGetValue(key, out var d)) return Entries.Formula.Value.None;
+        var raw = d.IsComputed ? Compute(model, node, d, locale, depth + 1) : Resolve(model, node, key, d.PerLocale ? locale : null, null).Value;
+        if (raw is null) return Entries.Formula.Value.None;
+        if (d.Type is AttributeTypes.Integer or AttributeTypes.Decimal && decimal.TryParse(raw, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var n)) return Entries.Formula.Value.Of(n);
+        if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
+        return Entries.Formula.Value.Of(raw);
     }
 
     /// <summary>Die Attributgruppen, die hier gelten: am Knoten und an allen Vorfahren angehängt — von der Wurzel her, mit Herkunft.</summary>

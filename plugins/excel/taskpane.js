@@ -70,7 +70,7 @@ async function load() {
   try {
     $('load').disabled = true; log('lade …')
     const t = await api(`/api/nodes/${picked.id}/table?${q}`)
-    let cols = t.columns.filter(c => !['rows', 'formula'].includes(c.type))
+    let cols = t.columns.filter(c => !['rows', 'formula', 'template'].includes(c.type))
     const view = (model.views ?? []).find(v => v.key === $('view').value)
     if (view) {
       const groupsOf = new Map((model.groups ?? []).map(g => [g.key, g.attributes]))

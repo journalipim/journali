@@ -29,7 +29,7 @@ let timer = null
 watch(text, () => { clearTimeout(timer); timer = setTimeout(run, 250); keepDraft() })
 async function run() {
   if (!text.value.trim()) { check.value = { ok: true, error: null, keys: [] }; return }
-  try { check.value = await api.post('/api/model/formula/check', { formula: text.value, node: props.node ?? null, locale: props.locale ?? null }) }
+  try { check.value = await api.post('/api/model/formula/check', { formula: text.value, node: props.node ?? null, locale: props.locale ?? null, type: props.type ?? null }) }
   catch (e) { check.value = { ok: false, error: e.message, keys: [] } }
 }
 function keepDraft() {
@@ -49,6 +49,8 @@ function insert(s) {
 // ---- Vorschläge (Taloan, 17.09.): $ oder @ tippen zeigt die Attribute, Buchstaben filtern, ↑↓ wählen,
 // Enter/Tab fügt $schlüssel ein (ein getipptes @ wird dabei zu $ — @ ist keine Syntax, nur der Griff).
 const ac = ref({ open: false, items: [], i: 0, start: 0, top: 0, left: 0 })
+// Vorlage (Taloan): { tippen zeigt die Attribute, Enter fügt {schlüssel} ein — keine Funktionen, keine Schlüsselwörter
+const isTemplate = computed(() => props.type === 'template')
 // Funktionen mit Signatur — dieselbe Liste wie Formula.cs; ab zwei getippten Buchstaben vorgeschlagen
 const SIGS = { round: 'round(x, n)', trunc: 'trunc(x)', floor: 'floor(x)', ceil: 'ceil(x)', abs: 'abs(x)', min: 'min(a, b)', max: 'max(a, b)', sqrt: 'sqrt(x)',
   len: 'len(s)', upper: 'upper(s)', lower: 'lower(s)', trim: 'trim(s)', left: 'left(s, n)', right: 'right(s, n)', contains: 'contains(s, t)', replace: 'replace(s, a, b)',
@@ -61,11 +63,15 @@ function acUpdate() {
   const el = ta.value; if (!el) { ac.value.open = false; return }
   const before = text.value.slice(0, el.selectionStart)
   let items = [], start
-  const m = /[$@]([A-Za-z0-9_]*)$/.exec(before)
+  const m = (isTemplate.value ? /\{([A-Za-z0-9_]*)$/ : /[$@]([A-Za-z0-9_]*)$/).exec(before)
   if (m && props.attributes?.length) {
     const q = m[1].toLowerCase()
-    items = props.attributes.filter(a => a.key.includes(q) || (a.label?.de ?? '').toLowerCase().includes(q)).slice(0, 12).map(a => ({ kind: 'attr', insert: '$' + a.key, show: '$' + a.key, note: `${a.label?.de || ''} · ${a.type}${a.perLocale ? ' 🗣' : ''}` }))
+    const wrap = k => isTemplate.value ? (text.value[el.selectionStart] === '}' ? '{' + k : '{' + k + '}') : '$' + k
+    items = props.attributes.filter(a => a.key.includes(q) || (a.label?.de ?? '').toLowerCase().includes(q)).slice(0, 12).map(a => ({ kind: 'attr', insert: wrap(a.key), show: (isTemplate.value ? '{' : '$') + a.key + (isTemplate.value ? '}' : ''), note: `${a.label?.de || ''} · ${a.type}${a.perLocale ? ' 🗣' : ''}${a.unit ? ' · ' + a.unit : ''}` }))
     start = el.selectionStart - m[0].length
+  } else if (isTemplate.value) {
+    const f = /\|([a-z0-9]*)$/.exec(before)
+    if (f) { items = [['unit', 'Einheit anhängen'], ['0', 'ganze Zahl'], ['1', '1 Nachkommastelle'], ['2', '2 Nachkommastellen'], ['upper', 'GROSS'], ['lower', 'klein'], ['capitalize', 'Erster gross'], ['plain', 'ohne HTML']].filter(([k]) => k.startsWith(f[1])).map(([k, n]) => ({ kind: 'fn', insert: k, show: '|' + k, note: n })); start = el.selectionStart - f[1].length }
   } else {
     const f = /(?:^|[^A-Za-z0-9_$.])([a-z][a-z0-9_]*)$/.exec(before)
     if (f && f[1].length >= 2) {
@@ -82,7 +88,7 @@ function acPick(a) {
   const el = ta.value; const s = a.insert
   const after = text.value.slice(el.selectionStart)
   // Funktion: Klammer gleich schliessen, Cursor hinein — ausser die Klammer ist schon da
-  const close = a.kind === 'fn' && !after.startsWith('(') && !after.startsWith(')') ? ')' : ''
+  const close = a.kind === 'fn' && !isTemplate.value && !after.startsWith('(') && !after.startsWith(')') ? ')' : ''
   text.value = text.value.slice(0, ac.value.start) + s + close + after
   ac.value.open = false
   nextTick(() => { el.focus(); el.selectionStart = el.selectionEnd = ac.value.start + s.length })
@@ -146,7 +152,21 @@ function highlight(src) {
   }
   return out + esc(src.slice(last))
 }
-const highlighted = computed(() => highlight(text.value) + '\n')
+// Vorlage: {platzhalter|zusatz} und [ optionale Abschnitte ] färben
+function highlightTemplate(src) {
+  const re = /(\\.)|(\{[A-Za-z_][A-Za-z0-9_]*(?:\|[A-Za-z0-9]+)*\})|([\[\]])/g
+  let out = '', last = 0
+  for (const m of src.matchAll(re)) {
+    out += esc(src.slice(last, m.index))
+    const [s, e, ph, br] = m
+    if (e) out += `<span class="c">${esc(s)}</span>`
+    else if (ph) { const i = s.indexOf('|'); out += i < 0 ? `<span class="a">${esc(s)}</span>` : `<span class="a">${esc(s.slice(0, i))}</span><span class="f">${esc(s.slice(i, -1))}</span><span class="a">}</span>` }
+    else if (br) out += `<span class="k">${s}</span>`
+    last = m.index + s.length
+  }
+  return out + esc(src.slice(last))
+}
+const highlighted = computed(() => (isTemplate.value ? highlightTemplate(text.value) : highlight(text.value)) + '\n')
 // Hilfe (Taloan, 17.09.): je Zeile ein Baustein mit Syntaxfarben, Klick fügt ihn ein; kein „·“ mehr
 const HELP = [
   ['Attribut lesen', [['$key', 'Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte. $ tippen zeigt die Liste']]],
@@ -164,7 +184,15 @@ const HELP = [
     ['str(x)', 'als Text'], ['number(x)', 'als Zahl']]],
   ['Leer', [['isblank(x)', 'fehlt oder leer'], ['coalesce(a, b)', 'das erste, das nicht leer ist']]],
 ]
-const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m`\n}\nreturn `${h} cm`'
+const EXAMPLE_FORMULA = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m`\n}\nreturn `${h} cm`'
+const EXAMPLE_TEMPLATE = '{name} mit {cpu}[, {ram} GB RAM][, {ssd|unit} SSD][ · {weight|1|unit}]'
+const EXAMPLE = computed(() => isTemplate.value ? EXAMPLE_TEMPLATE : EXAMPLE_FORMULA)
+const HELP_TEMPLATE = [
+  ['Platzhalter', [['{key}', 'Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte, Werteliste als Label. { tippen zeigt die Liste']]],
+  ['Zusätze', [['{weight|unit}', 'Einheit anhängen: 1,5 kg'], ['{price|2}', 'Nachkommastellen in der Sprache (de 1,50)'], ['{weight|1|unit}', 'verkettet'], ['{name|upper}', 'GROSS'], ['{name|lower}', 'klein'], ['{name|capitalize}', 'Erster gross'], ['{description|plain}', 'HTML-Tags weg']]],
+  ['Optional', [['[, {ram} GB RAM]', 'fällt ganz weg, wenn ein Platzhalter darin leer ist'], ['[ · {a}[ / {b}]]', 'darf ineinander liegen']]],
+  ['Zeichen', [['\\{', '{ selbst'], ['\\[', '[ selbst']]],
+]
 </script>
 
 <template>
@@ -172,8 +200,8 @@ const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m
     <div class="overlay" @mousedown.self="emit('close')" @keydown="onKey">
       <div class="editor">
         <div class="toolbar">
-          <h1>ƒ {{ title }}</h1>
-          <span v-if="check.ok" class="pos" title="Syntax stimmt">✓ {{ check.keys.length ? 'liest ' + check.keys.map(k => '$' + k).join(', ') : 'ok' }}</span>
+          <h1>{{ isTemplate ? '{}' : 'ƒ' }} {{ title }}</h1>
+          <span v-if="check.ok" class="pos" title="Syntax stimmt">✓ {{ check.keys.length ? 'liest ' + check.keys.map(k => isTemplate ? '{' + k + '}' : '$' + k).join(', ') : 'ok' }}</span>
           <span v-else class="neg" :title="check.error">✗ {{ check.error }}</span>
           <span class="grow" />
           <span v-if="draftAt" class="warn" title="Entwurf im Browser — noch nicht im Attribut">✎ Entwurf</span>
@@ -190,10 +218,10 @@ const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m
             </div>
           </div>
           <div v-if="help" class="help">
-            <div v-for="[h, items] in HELP" :key="h" class="hrow"><b>{{ h }}</b>
-              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" title="Klick fügt es ein"><code class="hs" v-html="highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
+            <div v-for="[h, items] in (isTemplate ? HELP_TEMPLATE : HELP)" :key="h" class="hrow"><b>{{ h }}</b>
+              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" title="Klick fügt es ein"><code class="hs" v-html="isTemplate ? highlightTemplate(code) : highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
             </div>
-            <div class="hrow"><b>Beispiel</b><pre class="hs ex" @click="insert(EXAMPLE)" title="Klick fügt es ein" v-html="highlight(EXAMPLE)"></pre></div>
+            <div class="hrow"><b>Beispiel</b><pre class="hs ex" @click="insert(EXAMPLE)" title="Klick fügt es ein" v-html="isTemplate ? highlightTemplate(EXAMPLE) : highlight(EXAMPLE)"></pre></div>
           </div>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">

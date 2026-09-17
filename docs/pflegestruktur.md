@@ -434,6 +434,27 @@ nichts) · `incomplete:web` · `role:variant` · `status:active` ·
 wie bisher im Baum mit Pfad und Fundstelle. Offen: gespeicherte Suchen →
 virtueller Ordner.
 
+## 22. Vorlagen — Textbausteine ohne KI (Taloan, 17.09.2026)
+
+> Content generieren, automatische Beschreibungen — braucht man dafür KI?
+
+Zwei Schichten. Erst **Vorlagen** (Attributtyp `template`): der Wert am Knoten
+ist die Vorlage, je Sprache, wenn so definiert; das Ergebnis baut der Server
+beim Lesen wie bei der Formel (`Template.cs`), sichtbar in Knoten, Tabelle,
+Export, Suche. Syntax für Redakteure, nicht Techniker: `{key}` (geerbt zählt,
+Werteliste als Label, Sprache der Spalte), Zusätze `{weight|1|unit}` (Einheit,
+Nachkommastellen in der Sprache, upper/lower/capitalize/plain), optionale
+Abschnitte `[, {ram} GB RAM]`, die ganz wegfallen, wenn darin etwas leer ist —
+so entstehen keine „, GB RAM“-Reste. Deterministisch, reproduzierbar, skaliert
+über 27 Sprachen ohne 27 Korrekturleser. Editor wie bei der Formel: `{` zeigt
+die Attribute, `|` die Zusätze, Vorschau am Knoten beim Tippen.
+
+Dann **KI** als Plugin `ki` (offen): Profil je Zielattribut (Quellattribute,
+Sprache, Ton, Modell), läuft über die Tabelle — Vorschläge landen als
+ungespeicherte Zellen, nie automatisch; ins Journal mit Urheber `ki:<modell>`
+und Stapel; Modell austauschbar (API-Schlüssel bleibt im Browser, oder lokal
+Ollama auf der rossibox).
+
 ## Messlatte: OpenDXP
 
 Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."
