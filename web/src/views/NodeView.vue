@@ -156,7 +156,10 @@ function starTitle(def) {
   const applies = s.applies ? '' : ` — gilt hier nicht (erst wo ${def.label?.de || def.key} erfasst wird), bis dahin zählt das nächste ★ weiter oben`
   return `★ benennt ${where}${applies} — Klick ${s.from === props.id ? 'nimmt es weg' : 'setzt es hier neu'}`
 }
-const freeGroups = computed(() => (model.value?.groups ?? []).map(g => g.key).filter(k => !(node.value?.groups ?? []).some(g => g.key === k)))
+const freeGroups = computed(() => (model.value?.groups ?? []).filter(g => !(node.value?.groups ?? []).some(x => x.key === g.key)))
+// Gruppen heissen überall gleich: Label wie im Reiter, Schlüssel nur im Tooltip.
+const groupLabel = k => model.value?.groups.find(x => x.key === k)?.label?.de || k
+const groupLocked = k => { const g = model.value?.groups.find(x => x.key === k); return g?.activeFrom && node.value && !(node.value.groups ?? []).find(x => x.key === k)?.active }
 
 // ---- Laden
 async function load() {
@@ -502,8 +505,8 @@ function cellMenu(e, def, col, block) {
         <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen NEU ab diesem Knoten <span class="muted">· hier angehängt, gelten ab hier nach unten — geerbte stehen oben mit Herkunft</span></h2>
         <template v-if="open('groups')">
         <div class="chips">
-          <span v-for="g in node.attachedGroups" :key="g" class="chip" :title="model.groups.find(x => x.key === g)?.label?.de">{{ g }} <button @click="attach(node.attachedGroups.filter(x => x !== g))" title="abhängen">×</button></span>
-          <select v-model="addGroup" style="width:160px"><option value="">+ Gruppe …</option><option v-for="k in freeGroups" :key="k" :value="k">{{ k }}</option></select>
+          <span v-for="g in node.attachedGroups" :key="g" class="chip" :title="g + (groupLocked(g) ? ' · hier gesperrt, aktiv ab ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : '')">▤ {{ groupLabel(g) }}<span v-if="groupLocked(g)"> 🔒</span> <button @click="attach(node.attachedGroups.filter(x => x !== g))" title="abhängen">×</button></span>
+          <select v-model="addGroup" style="width:200px"><option value="">+ Gruppe …</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ g.label?.de || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
           <button class="primary" :disabled="!addGroup" @click="attachAdd">anhängen</button>
         </div>
         </template>
