@@ -18,7 +18,8 @@ namespace Journali.Core.Entries;
 /// Ausdruck: Attributschlüssel (Wert des Knotens, geerbt zählt; bei Text die Sprache der Spalte),
 /// Zahlen, Text in "…", + - * / ( ), unäres -, &amp; verkettet Text, Vergleiche = &lt;&gt; &lt; &lt;= &gt; &gt;=,
 /// and / or / not, Funktionen round(x[, stellen]) min max abs len upper lower trim
-/// if(bedingung, dann, sonst) empty(x) coalesce(a, b, …) trunc floor ceil. Fehlt ein Wert, den ein
+/// if(bedingung, dann, sonst) empty(x) coalesce(a, b, …) trunc floor ceil format(x[, stellen]) — format
+/// schreibt die Zahl in der Sprache der Spalte (de: Komma). Fehlt ein Wert, den ein
 /// Rechenschritt braucht, fehlt das Ergebnis — ausser if/empty/coalesce fangen es ab. Einheiten rechnet
 /// die Formel nicht um; wer cm³ in Litern will, teilt selbst durch 1000.
 ///
@@ -44,6 +45,13 @@ public static class Formula
     private static readonly Regex Hole = new(@"\{([^{}]+)\}", RegexOptions.Compiled);
 
     /// <summary>Prüft Formel (Zahl) oder Vorlage (Text); liefert die Schlüssel, die sie braucht — oder eine Fehlermeldung.</summary>
+    /// <summary>Kultur zur Sprache der Spalte — für format(): de → Komma, en → Punkt, sonst neutral.</summary>
+    public static CultureInfo CultureOf(string? locale)
+    {
+        try { return locale is { Length: > 0 } ? CultureInfo.GetCultureInfo(locale) : CultureInfo.InvariantCulture; }
+        catch (CultureNotFoundException) { return CultureInfo.InvariantCulture; }
+    }
+
     public static (string[] Keys, string? Error) Check(string formula, bool template)
     {
         var keys = new List<string>();
@@ -62,21 +70,22 @@ public static class Formula
     }
 
     /// <summary>Zahl-Formel rechnen; null, wenn ein Wert fehlt oder der Ausdruck nicht aufgeht.</summary>
-    public static decimal? Eval(string formula, Func<string, Value> value)
+    public static decimal? Eval(string formula, Func<string, Value> value, string? locale = null)
     {
-        try { var p = new Parser(formula, value); var r = p.Expr(); p.End(); return r.AsNumber; }
+        try { var p = new Parser(formula, value, CultureOf(locale)); var r = p.Expr(); p.End(); return r.AsNumber; }
         catch (Exception e) when (e is FormatException or MissingValue or DivideByZeroException or OverflowException) { return null; }
     }
 
     /// <summary>Text-Vorlage füllen; null, wenn ein Loch nicht aufgeht.</summary>
-    public static string? Render(string template, Func<string, Value> value)
+    public static string? Render(string template, Func<string, Value> value, string? locale = null)
     {
+        var culture = CultureOf(locale);
         var sb = new StringBuilder();
         var last = 0;
         foreach (Match m in Hole.Matches(template))
         {
             sb.Append(template, last, m.Index - last);
-            try { var p = new Parser(m.Groups[1].Value, value); var r = p.Expr(); p.End(); sb.Append(r.AsText ?? throw new MissingValue()); }
+            try { var p = new Parser(m.Groups[1].Value, value, culture); var r = p.Expr(); p.End(); sb.Append(r.AsText ?? throw new MissingValue()); }
             catch (Exception e) when (e is FormatException or MissingValue or DivideByZeroException or OverflowException) { return null; }
             last = m.Index + m.Length;
         }
@@ -87,7 +96,7 @@ public static class Formula
     private sealed class MissingValue : Exception { }
 
     /// <summary>Rekursiver Abstieg: or → and → not → Vergleich → &amp; → + - → * / → unär → Primär.</summary>
-    private sealed class Parser(string text, Func<string, Value>? value = null)
+    private sealed class Parser(string text, Func<string, Value>? value = null, CultureInfo? culture = null)
     {
         private int _i;
         public readonly List<string> Keys = new();
@@ -196,7 +205,7 @@ public static class Formula
         private static string Alias(string name) => name switch
         {
             "wenn" => "if", "runden" => "round", "kürzen" or "kuerzen" or "ganzzahl" => "trunc", "leer" => "empty",
-            "gross" or "groß" => "upper", "klein" => "lower", "länge" or "laenge" => "len", "erster" => "coalesce",
+            "gross" or "groß" => "upper", "klein" => "lower", "länge" or "laenge" => "len", "erster" => "coalesce", "zahl" or "text" => "format",
             _ => name,
         };
 
@@ -212,7 +221,7 @@ public static class Formula
             Value A(int i) => i < args.Count ? args[i] : throw new FormatException($"{name}: Argument {i + 1} fehlt.");
             if (Checking) return name switch
             {
-                "round" or "min" or "max" or "abs" or "len" or "upper" or "lower" or "trim" or "if" or "empty" or "coalesce" or "trunc" or "floor" or "ceil" => Value.Of(1),
+                "round" or "min" or "max" or "abs" or "len" or "upper" or "lower" or "trim" or "if" or "empty" or "coalesce" or "trunc" or "floor" or "ceil" or "format" => Value.Of(1),
                 _ => throw new FormatException($"Unbekannte Funktion: {name}"),
             };
             return name switch
@@ -224,6 +233,8 @@ public static class Formula
                 "trunc" => Value.Of(Math.Truncate(Num(A(0)))),
                 "floor" => Value.Of(Math.Floor(Num(A(0)))),
                 "ceil" => Value.Of(Math.Ceiling(Num(A(0)))),
+                // format(x; stellen): Zahl als Text in der Sprache der Spalte — de „1,39“, en „1.39“; Tausender ohne Trenner
+                "format" => Value.Of(Num(A(0)).ToString(args.Count > 1 ? "0." + new string('0', (int)Num(A(1))) : "0.############", culture ?? CultureInfo.InvariantCulture)),
                 "len" => Value.Of((A(0).AsText ?? "").Length),
                 "upper" => Value.Of((A(0).AsText ?? throw new MissingValue()).ToUpperInvariant()),
                 "lower" => Value.Of((A(0).AsText ?? throw new MissingValue()).ToLowerInvariant()),

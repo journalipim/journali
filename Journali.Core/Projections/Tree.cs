@@ -121,8 +121,8 @@ public sealed class Tree : IProjection
             if (d.Type == AttributeTypes.Enum && model.Lists.TryGetValue(d.List ?? "", out var list) && list.Values.TryGetValue(raw, out var lv) && lv.Label.GetValueOrDefault(locale ?? "de") is { Length: > 0 } label) return Entries.Formula.Value.Of(label);
             return Entries.Formula.Value.Of(raw);
         }
-        if (def.Type == AttributeTypes.Text) return Entries.Formula.Render(def.Formula!, value);
-        var r = Entries.Formula.Eval(def.Formula!, value);
+        if (def.Type == AttributeTypes.Text) return Entries.Formula.Render(def.Formula!, value, locale);
+        var r = Entries.Formula.Eval(def.Formula!, value, locale);
         if (r is null) return null;
         return def.Type == AttributeTypes.Integer ? Math.Round(r.Value, 0, MidpointRounding.AwayFromZero).ToString(System.Globalization.CultureInfo.InvariantCulture) : Entries.Formula.Value.Format(r.Value);
     }
