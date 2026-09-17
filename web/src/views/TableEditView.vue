@@ -288,7 +288,17 @@ function fillSeries() {
   store.toast(`Reihe: ${n} Zellen — noch nicht gespeichert`)
 }
 // Entf: eigene Werte im Bereich löschen (geerbte bleiben, sie sind nicht hier)
-function clearSel() { let n = 0; for (const { r, c } of selCells()) if (canWrite(r, c) && shown(r, c) != null) { set(r, c, ''); n++ }; if (n) store.toast(`${n} eigene Werte gelöscht — noch nicht gespeichert`) }
+// Entf: eigene Werte im Bereich löschen — und sagen, warum nichts passiert (Taloan): gesperrt (Formel, Vorlage, Achse,
+// gilt hier nicht) oder geerbt (der Wert steht am Vorfahren, hier gibt es nichts zu löschen)
+function clearSel() {
+  let n = 0, locked = 0, inheritedN = 0
+  for (const { r, c } of selCells()) {
+    if (!canWrite(r, c)) { locked++; continue }
+    if (shown(r, c) != null) { set(r, c, ''); n++ } else if (inherited(r, c) != null) inheritedN++
+  }
+  if (n) store.toast(`${n} eigene Werte gelöscht — noch nicht gespeichert`)
+  else if (locked || inheritedN) store.toast(`nichts zu löschen: ${locked ? locked + ' gesperrt (Formel/Vorlage/Achse)' : ''}${locked && inheritedN ? ', ' : ''}${inheritedN ? inheritedN + ' geerbt — der Wert steht am Vorfahren' : ''}`)
+}
 // Strg+C: Bereich als Tab-Text (Excel nimmt das direkt)
 function copySel() {
   const s = sel.value; if (!s) return
@@ -369,7 +379,7 @@ function onKey(e) {
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); e.shiftKey ? fillSeries() : fillDown() }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && document.activeElement?.closest?.('table.tab')) { e.preventDefault(); sel.value = { r0: 0, r1: rows.value.length - 1, c0: 0, c1: columns.value.length - 1 } }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && sel.value && !window.getSelection()?.toString()) { e.preventDefault(); copySel() }
-  else if (e.key === 'Delete' && sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1)) { e.preventDefault(); clearSel() }
+  else if (e.key === 'Delete' && sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1 || !canWrite(rows.value[sel.value.r0], columns.value[sel.value.c0]))) { e.preventDefault(); clearSel() }
   else if (e.key === 'Escape' && sel.value) { sel.value = null }
 }
 onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('mousedown', onMouseDown, true); document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); window.addEventListener('pagehide', onPageHide) })
