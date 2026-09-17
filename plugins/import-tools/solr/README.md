@@ -71,5 +71,5 @@ Stapel). Ein vorhandener Knoten (Kennung `solr`) wird gelesen
 (`GET /api/nodes/{id}`) und bekommt nur Werte, die sich unterscheiden.
 
 Belegt 17.09.2026 im Trockenlauf gegen `BYTEC_SHOP_Switche`: 117 Dokumente
-→ 118 Knoten (1 Sammelprodukt), 157 neue Attribute in 30 Gruppen, 5 471
+→ 118 Knoten (1 Sammelprodukt), 157 neue Attribute in 21 Gruppen, 5 471
 Werte, 7 Stapel.
