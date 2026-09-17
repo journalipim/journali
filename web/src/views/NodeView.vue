@@ -53,7 +53,7 @@ function setChannel(c) { store.viewChannel = c || null; store.save() }
 // ---- Attributsicht je Knotentyp
 const views = computed(() => (model.value?.views ?? []).filter(v => v.level === node.value?.role))
 const view = computed(() => views.value.find(v => v.key === store.viewKey[node.value?.role]) ?? null)
-// „alles“ ordnet nach der Standardsicht des Knotentyps (defaultview_<rolle>), wenn es sie gibt — sonst alphabetisch.
+// „komplett“ ordnet nach der Standardsicht des Knotentyps (defaultview_<rolle>), wenn es sie gibt — sonst alphabetisch.
 const orderView = computed(() => view.value ?? views.value.find(v => v.key === 'defaultview_' + node.value?.role) ?? null)
 function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save() }
 function setLayout(l) { store.layout = l; store.save() }
@@ -66,7 +66,7 @@ const blocks = computed(() => {
   const byKey = new Map(eff.map(g => [g.key, g]))
   const ov = orderView.value
   const order = ov ? ov.items.map(it => it.group).filter(k => byKey.has(k)) : eff.map(g => g.key)
-  // „alles“: Gruppen, die die Standardsicht nicht nennt, unten dran. Eine gewählte Sicht zeigt nur ihre Gruppen (Taloan, 17.09.).
+  // „komplett“: Gruppen, die die Standardsicht nicht nennt, unten dran. Eine gewählte Sicht zeigt nur ihre Gruppen (Taloan, 17.09.).
   if (ov && !view.value) for (const g of eff) if (!order.includes(g.key)) order.push(g.key)
   const req = k => model.value.attributes.find(a => a.key === k)?.required
   return order.map(k => {
@@ -257,7 +257,7 @@ function cellMenu(e, def, col, block) {
       </select>
       <span class="sep">·</span>
       <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="`Attributsicht für ${roleLabel[node.role]} — ⊞ Modell → Attributsichten`">
-        <option value="">◫ alles{{ views.some(v => v.key === "defaultview_" + node.role) ? " · Reihenfolge DefaultView" : "" }}</option>
+        <option value="">◫ komplett</option>
         <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option>
       </select>
       <router-link :to="{ path: '/model', query: { section: 'views', key: orderView?.key } }" class="x edit" :title="orderView ? `${orderView.key} bearbeiten → Modell → Attributsichten` : '→ Modell → Attributsichten'">✎</router-link>

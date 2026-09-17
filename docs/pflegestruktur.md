@@ -352,7 +352,7 @@ Attribute nur als Ausnahme. `ViewDefined{key, label, level?, items[{group}
 die er hat (Ebene, Familie) — deshalb gilt eine Sicht für den ganzen Baum
 und „vererbt" sich von selbst. Im Knoten wählbar (gemerkt), ⇅ Anordnen:
 Gruppenblöcke ordnen die Sicht, Zeilen ordnen ihre Gruppe (das schreibt die
-Gruppe, nicht die Sicht); ohne Sicht zeigt der Knoten die Familie „alles".
+Gruppe, nicht die Sicht); ohne Sicht zeigt der Knoten „komplett" (alle Gruppen, Reihenfolge der Standardsicht, Rest in Pfadreihenfolge).
 
 ### 16. Attributgruppen (`group:<key>`)
 
