@@ -314,9 +314,7 @@ const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v } })
 // Hilfe zur Formel — wie in Excel (Taloan, 17.09.)
 const formulaHint = type => type === 'text'
-  ? 'Vorlage wie in Excel: Text mit Ausdrücken in {…}, z. B.
-Die Vase ist {WENN([@hoehe] >= 100; TEXT([@hoehe] / 100; "0,00") & " m"; [@hoehe] & " cm")} hoch
-Bezug [@schlüssel] · + - * / ^ & · = <> < <= > >= · WENN UND ODER NICHT RUNDEN KÜRZEN GANZZAHL MIN MAX ABS LÄNGE GROSS KLEIN GLÄTTEN LINKS RECHTS VERKETTEN ISTLEER WENNFEHLER TEXT — deutsch oder englisch, Argumente mit ; — wird gerechnet, nie gesetzt.'
+  ? 'Vorlage wie in Excel: Text mit Ausdrücken in {…}, z. B. Die Vase ist {WENN([@hoehe] >= 100; TEXT([@hoehe] / 100; "0,00") & " m"; [@hoehe] & " cm")} hoch Bezug [@schlüssel] · + - * / ^ & · = <> < <= > >= · WENN UND ODER NICHT RUNDEN KÜRZEN GANZZAHL MIN MAX ABS LÄNGE GROSS KLEIN GLÄTTEN LINKS RECHTS VERKETTEN ISTLEER WENNFEHLER TEXT — deutsch oder englisch, Argumente mit ; — wird gerechnet, nie gesetzt.'
   : 'Formel wie in Excel: Ausdruck über andere Attribute, z. B. [@length] * [@width] * [@height] / 1000 oder RUNDEN([@gewicht] * 1.2; 1). Wird gerechnet, nie gesetzt; Einheiten rechnet die Formel nicht um.'
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
 const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de || k
