@@ -45,7 +45,33 @@ function insert(s) {
   text.value = text.value.slice(0, a) + s + text.value.slice(b)
   nextTick(() => { el.focus(); el.selectionStart = el.selectionEnd = a + s.length })
 }
+// ---- Vorschläge (Taloan, 17.09.): $ oder @ tippen zeigt die Attribute, Buchstaben filtern, ↑↓ wählen,
+// Enter/Tab fügt $schlüssel ein (ein getipptes @ wird dabei zu $ — @ ist keine Syntax, nur der Griff).
+const ac = ref({ open: false, items: [], i: 0, start: 0, top: 0, left: 0 })
+function acUpdate() {
+  const el = ta.value; if (!el) { ac.value.open = false; return }
+  const before = text.value.slice(0, el.selectionStart)
+  const m = /[$@]([A-Za-z0-9_]*)$/.exec(before)
+  if (!m || !props.attributes?.length) { ac.value.open = false; return }
+  const q = m[1].toLowerCase()
+  const items = props.attributes.filter(a => a.key.includes(q) || (a.label?.de ?? '').toLowerCase().includes(q)).slice(0, 12)
+  if (!items.length) { ac.value.open = false; return }
+  const line = before.split('\n').length
+  ac.value = { open: true, items, i: 0, start: el.selectionStart - m[0].length, top: 10 + line * 19.5 - el.scrollTop, left: 12 + Math.min(40, (before.length - before.lastIndexOf('\n') - 1)) * 7.8 - el.scrollLeft }
+}
+function acPick(a) {
+  const el = ta.value; const s = '$' + a.key
+  text.value = text.value.slice(0, ac.value.start) + s + text.value.slice(el.selectionStart)
+  ac.value.open = false
+  nextTick(() => { el.focus(); el.selectionStart = el.selectionEnd = ac.value.start + s.length })
+}
 function onKey(e) {
+  if (ac.value.open && e.target === ta.value) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); ac.value.i = (ac.value.i + 1) % ac.value.items.length; return }
+    if (e.key === 'ArrowUp') { e.preventDefault(); ac.value.i = (ac.value.i - 1 + ac.value.items.length) % ac.value.items.length; return }
+    if (e.key === 'Enter' && !e.ctrlKey || e.key === 'Tab') { e.preventDefault(); acPick(ac.value.items[ac.value.i]); return }
+    if (e.key === 'Escape') { e.preventDefault(); ac.value.open = false; return }
+  }
   if (e.key === 'Escape') { e.preventDefault(); emit('close') }
   else if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); save() }
   else if (e.key === 'Tab' && e.target === ta.value) { e.preventDefault(); insert('  ') }
@@ -72,7 +98,7 @@ const highlighted = computed(() => {
   return out + esc(text.value.slice(last)) + '\n'
 })
 const HELP = [
-  ['Attribut lesen', '$schlüssel — der Wert am Knoten, geerbt zählt; Text in der Sprache der Spalte'],
+  ['Attribut lesen', '$schlüssel — der Wert am Knoten, geerbt zählt; Text in der Sprache der Spalte. $ oder @ tippen zeigt die Liste, ↑↓ Enter fügt ein'],
   ['Werte', 'Zahl · "Text" · `Vorlage ${ausdruck}` · true false null'],
   ['Rechnen', '+ - * / % **   (+ verkettet, wenn Text dabei ist)'],
   ['Vergleichen', '== != < <= > >=   · mit null immer false'],
@@ -100,7 +126,12 @@ const EXAMPLE = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m
         <div class="body">
           <div class="code">
             <pre ref="pre" class="hl" aria-hidden="true" v-html="highlighted"></pre>
-            <textarea ref="ta" v-model="text" spellcheck="false" wrap="off" @scroll="syncScroll" :placeholder="EXAMPLE"></textarea>
+            <textarea ref="ta" v-model="text" spellcheck="false" wrap="off" @scroll="syncScroll(); acUpdate()" @input="acUpdate" @click="acUpdate" @keyup.left="acUpdate" @keyup.right="acUpdate" :placeholder="EXAMPLE"></textarea>
+            <div v-if="ac.open" class="ac" :style="`top:${ac.top}px;left:${ac.left}px`">
+              <div v-for="(a, i) in ac.items" :key="a.key" class="acrow" :class="{ on: i === ac.i }" @mousedown.prevent="acPick(a)">
+                <span class="a">${{ a.key }}</span><span class="muted">{{ a.label?.de || '' }} · {{ a.type }}{{ a.perLocale ? ' 🗣' : '' }}</span>
+              </div>
+            </div>
           </div>
           <div v-if="help" class="help">
             <div v-for="[h, t] in HELP" :key="h" class="hrow"><b>{{ h }}</b><div class="mono">{{ t }}</div></div>
@@ -138,6 +169,10 @@ textarea::placeholder { color: var(--muted); opacity: .5; }
 .hl :deep(.n) { color: #ffb74d; }
 .hl :deep(.k) { color: #ce93d8; font-weight: 600; }
 .hl :deep(.f) { color: #4dd0e1; }
+.ac { position: absolute; z-index: 3; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35); min-width: 260px; max-height: 260px; overflow: auto; font-size: 12px; }
+.acrow { display: flex; gap: 8px; align-items: center; padding: 3px 8px; white-space: nowrap; cursor: pointer; }
+.acrow.on, .acrow:hover { background: var(--accent-soft); }
+.acrow .a { font-family: var(--mono); color: #64b5f6; font-weight: 600; }
 .help { width: 380px; border-left: 1px solid var(--line); overflow: auto; padding: 8px 10px; font-size: 12px; }
 .hrow { margin-bottom: 8px; }
 .hrow b { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
