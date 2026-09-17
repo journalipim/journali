@@ -121,11 +121,19 @@ hat genau eine Familie. Die Familie sagt:
 - welche **Variantenachsen** erlaubt sind: Smartphone = Farbe, Speicher;
   Stiefel = Farbe, Grösse; Kabel = keine. Das Produkt wählt daraus.
 
-### 4. Kategorie (`category:<id>`)
+### 4. Kategorie — entschieden: weggelassen (Taloan, 17.09.2026)
 
-Baum: `CategoryDefined(id, parent, label je Sprache)`. Das Produkt bekommt
-`CategoryAssigned(id)` (gibt es schon). Der Pfad „Elektronik › Smartphones &
-Zubehör › Smartphones" ist Ableitung, nicht Speicher.
+Es gibt keinen Kategoriebaum neben dem Pflegebaum. Stattdessen:
+
+- Soll ein Knoten in **mehreren Ästen** stehen, wird ein **„Symlink“**
+  angelegt (Verweis auf den Knoten, kein zweiter Knoten) — noch zu bauen.
+- **Kanalbäume** (Web, Print, …) werden **eigene Bäume**. Sie *können* mit dem
+  Pflegebaum übereinstimmen, müssen aber nicht: ein Web-Menü oder eine
+  Navigation folgt oft nicht der Pflegestruktur. Sie sind rein logische
+  Strukturen zur Anordnung — keine Vererbung, keine Pflege darin.
+
+`CategoryAssigned`/`CategoryRemoved` bleiben als Eintragstypen (Journal),
+die Oberfläche zeigt sie nicht mehr; `Node.Categories` im Abbild bleibt.
 
 ### 5. Knoten: Produktgruppe, Produkt, Variante (`<id>`) — entschieden
 
@@ -538,11 +546,8 @@ Definitionen ins Journal.
 
 ## Offen — Taloans Wort
 
-- Ist die **Kategorie** (4, `category_path` fürs Shop-Menü) ein zweiter,
-  eigener Baum neben der Produktgruppe — oder *ist* die Produktgruppe die
-  Kategorie? Vorschlag: zwei Bäume; Struktur (Pflege, Vererbung) und
-  Navigation (Shop) fallen selten zusammen, ein Produkt kann in mehreren
-  Kategorien hängen, aber nur in einer Gruppe.
+- ~~Kategorie als zweiter Baum?~~ Entschieden, siehe 4: keine Kategorien;
+  Symlink für Knoten in mehreren Ästen, Kanalbäume als eigene logische Bäume.
 - Produkt ohne Variante: heute muss eine Variante angelegt werden (ohne
   Achsen, wenn das Produkt nach nichts variiert); eine „unsichtbare"
   Einzelvariante gibt es noch nicht

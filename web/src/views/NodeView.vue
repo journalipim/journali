@@ -29,7 +29,6 @@ const router = useRouter()
 const node = ref(null)
 const rels = ref({ out: [], in: [] })   // Relationen dieses Knotens: ausgehend, eingehend
 const entries = ref([])
-const newCategory = ref('')
 const busy = ref(false)
 const tab = ref('')
 const addGroup = ref('')
@@ -62,7 +61,7 @@ const view = computed(() => views.value.find(v => v.key === store.viewKey[node.v
 const orderView = computed(() => view.value ?? views.value.find(v => v.key === 'defaultview_' + node.value?.role) ?? null)
 function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save() }
 function setLayout(l) { store.layout = l; store.save() }
-// Abschnitte (attributes, axes, media, relations, groups, categories, releases) per Klick aufs Band auf-/zuklappen (Taloan, 17.09.)
+// Abschnitte (attributes, axes, media, relations, groups, releases) per Klick aufs Band auf-/zuklappen (Taloan, 17.09.)
 const open = k => !store.collapsed.includes(k)
 function toggle(k) { store.collapsed = open(k) ? [...store.collapsed, k] : store.collapsed.filter(x => x !== k); store.save() }
 function toggleEditableOnly() { store.editableOnly = !store.editableOnly; store.save() }
@@ -266,8 +265,8 @@ const setAxes = axes => command(() => api.post(`${nodeUrl()}/axes`, { axes }, 'P
 const axisChoices = computed(() => (model.value?.attributes ?? []).filter(a => ['enum', 'text', 'integer'].includes(a.type) && !a.multiple && !(node.value?.axes ?? []).includes(a.key))
   .sort((a, b) => (a.type === 'enum' ? 0 : 1) - (b.type === 'enum' ? 0 : 1) || (a.label?.de ?? a.key).localeCompare(b.label?.de ?? b.key, 'de')))
 function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
-function addCategory() { const c = newCategory.value.trim(); if (!c) return; newCategory.value = ''; command(() => api.post(`${nodeUrl()}/categories`, { category: c })) }
-const removeCategory = c => command(() => api.del(`${nodeUrl()}/categories/${encodeURIComponent(c)}`))
+// Kategorien gibt es in der Oberfläche nicht mehr (Taloan, 17.09.): kein zweiter Baum — ein Knoten in mehreren Ästen wird ein
+// „Symlink“, Kanalbäume (Web, Print) werden eigene, rein logische Bäume. Die Einträge CategoryAssigned/Removed bleiben (Journal).
 function toggleRelease(channel, locale) {
   const q = `channel=${encodeURIComponent(channel)}` + (locale ? `&locale=${encodeURIComponent(locale)}` : '')
   command(() => released(channel, locale) ? api.del(`${nodeUrl()}/releases?${q}`) : api.post(`${nodeUrl()}/releases`, { channel, locale }))
@@ -500,7 +499,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
       <div class="section">
-        <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen an diesem Knoten <span class="muted">· gelten ab hier nach unten</span></h2>
+        <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen NEU ab diesem Knoten <span class="muted">· hier angehängt, gelten ab hier nach unten — geerbte stehen oben mit Herkunft</span></h2>
         <template v-if="open('groups')">
         <div class="chips">
           <span v-for="g in node.attachedGroups" :key="g" class="chip" :title="model.groups.find(x => x.key === g)?.label?.de">{{ g }} <button @click="attach(node.attachedGroups.filter(x => x !== g))" title="abhängen">×</button></span>
@@ -513,16 +512,6 @@ function cellMenu(e, def, col, block) {
       <div class="section" v-if="node.orphans?.length">
         <h2 class="warn">⚠ Verwaiste Werte</h2>
         <div class="muted">Eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen): <span class="mono">{{ node.orphans.join(', ') }}</span> — Gruppe anhängen, dann sind sie wieder da.</div>
-      </div>
-
-      <div class="section">
-        <h2 @click="toggle('categories')"><span class="caret">{{ open('categories') ? '▾' : '▸' }}</span>▤ Kategorien</h2>
-        <template v-if="open('categories')">
-        <div class="chips">
-          <span v-for="c in node.categories" :key="c" class="chip">{{ c }} <button @click="removeCategory(c)" title="entfernen">×</button></span>
-          <input v-model="newCategory" type="text" placeholder="+ Kategorie" style="width:180px" @keydown.enter="addCategory" />
-        </div>
-        </template>
       </div>
 
       <div class="section" v-if="node.role !== 'group'">
