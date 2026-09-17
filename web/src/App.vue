@@ -35,8 +35,8 @@ const navBottom = [
 </script>
 
 <template>
-  <div class="shell">
-    <nav class="rail">
+  <div class="shell" :class="{ popup: route.query.popup }">
+    <nav class="rail" v-if="!route.query.popup">
       <!-- Logo: web/public/logo.png (Taloan, 17.09.2026) — Vite legt public/ neben die Seite -->
       <router-link to="/tree" class="rail-logo" title="journali"><img :src="'/logo-128.png'" alt="journali" onerror="this.style.display='none'" /></router-link>
       <router-link v-for="n in nav" :key="n.to" :to="n.to" class="rail-item"
@@ -64,7 +64,7 @@ const navBottom = [
       <router-view v-else />
     </main>
 
-    <header class="status">
+    <header class="status" v-if="!route.query.popup">
       <span class="dot" :class="{ online: store.online, offline: store.online === false }">●</span>
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>

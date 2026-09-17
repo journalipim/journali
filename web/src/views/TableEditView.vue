@@ -4,7 +4,7 @@
 // ein Stapel ins Journal. Einfügen aus Excel (Tab-getrennt) füllt ab der markierten Zelle nach rechts und unten.
 // Quelle: GET /api/nodes/{id}/table — Werte aufgelöst (geerbt kursiv), eigene Werte kennt der Server (own).
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
@@ -15,6 +15,8 @@ import DateCell from '../components/DateCell.vue'
 
 const props = defineProps({ id: String, role: String, deep: String })
 const router = useRouter()
+// Eigenes Fenster (Taloan, 17.09.): Schliessen übernimmt die Änderungen — ohne Nachfrage, ohne Speichern-Knopf drücken
+const popup = !!useRoute().query.popup
 const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
 const locale = ref(store.viewLocales?.[0] ?? 'de')
@@ -35,6 +37,7 @@ async function load() {
     if (props.deep === '1') q.set('deep', 'true')
     data.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/table?${q}`)
     dirty.value = new Map()
+    if (popup) document.title = `⊞ ${data.value.node.label} · journali`
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 watch(() => [props.id, props.role, props.deep], load)
@@ -75,8 +78,7 @@ async function save() {
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   busy.value = `schreibe ${dirty.value.size} …`
   try {
-    const defs = new Map(data.value.columns.map(c => [c.key, c]))
-    const commands = [...dirty.value].map(([k, v]) => { const [node, attribute] = k.split('|'); const d = defs.get(attribute); return { op: 'attribute.set', args: { node, attribute, locale: d?.perLocale ? locale.value : null, value: v } } })
+    const commands = commandsOf()
     const res = await api.post('/api/batch', { commands, batch: 'tab-' + Date.now().toString(36) })
     if (res.error) store.toast(`✗ ${res.error.message} — ${res.results.length} geschrieben`)
     else store.toast(`✓ ${res.results.length} Werte geschrieben`)
@@ -84,6 +86,18 @@ async function save() {
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 function discard() { dirty.value = new Map() }
+function commandsOf() {
+  const defs = new Map(data.value.columns.map(c => [c.key, c]))
+  return [...dirty.value].map(([k, v]) => { const [node, attribute] = k.split('|'); const d = defs.get(attribute); return { op: 'attribute.set', args: { node, attribute, locale: d?.perLocale ? locale.value : null, value: v } } })
+}
+// Fenster zu (X, Alt+F4): was noch offen ist, geht jetzt — keepalive überlebt das Schliessen (bis ~64 KB Stapel)
+function onPageHide() {
+  if (!popup || !dirty.value.size || !store.actor) return
+  fetch(store.server + '/api/batch', { method: 'POST', keepalive: true, headers: { 'X-Actor': store.actor, 'Content-Type': 'application/json' }, body: JSON.stringify({ commands: commandsOf(), batch: 'tab-' + Date.now().toString(36) }) })
+  dirty.value = new Map()
+}
+async function applyAndClose() { await save(); if (!dirty.value.size) window.close() }
+function discardAndClose() { discard(); window.close() }
 
 // Einfügen aus Excel: Tab-getrennt, Zeilen mit Umbruch — ab der markierten Zelle nach rechts (nur bearbeitbare Spalten) und unten
 function onPaste(e) {
@@ -228,8 +242,8 @@ function onKey(e) {
   else if (e.key === 'Delete' && sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1)) { e.preventDefault(); clearSel() }
   else if (e.key === 'Escape' && sel.value) { sel.value = null }
 }
-onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('mousedown', onMouseDown, true) })
-onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouseDown, true) })
+onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('mousedown', onMouseDown, true); window.addEventListener('pagehide', onPageHide) })
+onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouseDown, true); window.removeEventListener('pagehide', onPageHide) })
 
 // Export der Tabelle, wie sie dasteht (CSV, Semikolon, UTF-8 mit BOM — Excel öffnet das direkt)
 function exportCsv() {
@@ -252,8 +266,14 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       <span class="grow" />
       <span v-if="busy" class="muted">{{ busy }}</span>
       <span v-if="dirty.size" class="chip dirty" :title="`${dirty.size} geänderte Zellen — Strg+S speichert`">✎ {{ dirty.size }}</span>
-      <button class="primary" :disabled="!dirty.size || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 speichern</button>
-      <button :disabled="!dirty.size" @click="discard" title="Änderungen verwerfen">verwerfen</button>
+      <template v-if="popup">
+        <button class="primary" :disabled="!!busy" @click="applyAndClose" title="Änderungen als ein Stapel ins Journal und Fenster schliessen — Schliessen über X tut dasselbe">✓ übernehmen &amp; schliessen</button>
+        <button :disabled="!!busy" @click="discardAndClose" title="Änderungen verwerfen und Fenster schliessen">✗ verwerfen</button>
+      </template>
+      <template v-else>
+        <button class="primary" :disabled="!dirty.size || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 speichern</button>
+        <button :disabled="!dirty.size" @click="discard" title="Änderungen verwerfen">verwerfen</button>
+      </template>
       <button class="x" @click="exportCsv" title="Tabelle als CSV (Excel) herunterladen — Spalte id bringt sie über ⇩ Import → Tabelle zurück">⇪ CSV</button>
     </div>
     <div class="toolbar view">
@@ -292,7 +312,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
             <td class="mono muted">{{ r.row.sku ?? '' }}</td>
             <td class="muted" style="font-size:11px">{{ Object.values(r.row.axisValues ?? {}).join(' · ') }}</td>
             <template v-for="(c, ci) in columns" :key="c.key">
-              <td v-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
+              <td v-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
               <DateCell v-else-if="c.type === 'date'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />

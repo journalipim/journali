@@ -88,6 +88,11 @@ const visible = computed(() => {
   return out
 })
 
+function openTable(path) {
+  const w = Math.min(1400, screen.availWidth - 80), h = Math.min(800, screen.availHeight - 80)
+  const win = window.open(path, 'journali-table', `popup=yes,width=${w},height=${h},left=${(screen.availWidth - w) / 2},top=${(screen.availHeight - h) / 2}`)
+  if (win) win.focus(); else router.push(path.replace(/[?&]popup=1/, ''))
+}
 function open(row) { router.push(`/tree/${row.id}`) }
 
 // ---- Die Auswahl (Taloan, 17.09.; Wort „Auswahl“ statt „Menge“): Strg+Klick sammelt, Shift+Klick nimmt den Bereich
@@ -278,8 +283,9 @@ function contextMenu(e, r) {
     { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: r.name ? '★' : '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r) },
     { sep: true },
     // Massenbearbeitung wie in Excel (Taloan, 17.09.): die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
-    r.role !== 'variant' && kids ? { label: `Subitems tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', action: () => router.push(`/table/${r.id}`) } : null,
-    r.role === 'group' && kids ? { label: 'Alle Varianten darunter tabellarisch', icon: '⊞', key: 'w', action: () => router.push(`/table/${r.id}?role=variant&deep=1`) } : null,
+    // Taloan (17.09.): eigenes Fenster, Excel-ähnlich pflegen, Schliessen übernimmt — Popup blockiert? dann im Hauptfenster
+    r.role !== 'variant' && kids ? { label: `Subitems tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?popup=1`) } : null,
+    r.role === 'group' && kids ? { label: 'Alle Varianten darunter tabellarisch', icon: '⊞', key: 'w', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?role=variant&deep=1&popup=1`) } : null,
     (r.role !== 'variant' && kids) ? { sep: true } : null,
     { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
