@@ -272,8 +272,7 @@ function toggleAxis(a) {
         draggable="true" @dragstart="onDragStart($event, r)" @dragover="onDragOver($event, r)" @dragleave="dropId === r.id && (dropId = null)" @drop.prevent="onDrop(r)" @dragend="dragId = null; dropId = null; hoverStop()">
         <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (isOpen ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
-        <span class="label">{{ r.label }}</span>
-        <span v-if="r.name" class="muted lock" title="Name angeheftet — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen">📌</span>
+        <span class="label" :class="{ pinned: r.name }" :title="r.name ? 'Name angeheftet (kursiv) — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen' : ''">{{ r.label }}</span>
         <span v-if="hits.get(r.id) && !r.label.toLowerCase().includes(q.trim().toLowerCase())" class="muted hit" :title="hits.get(r.id)">{{ hits.get(r.id) }}</span>
         <span v-if="r.role === 'variant' && r.sku && Object.keys(r.axisValues).length" class="muted axis">{{ Object.values(r.axisValues).join(' · ') }}</span>
         <span v-if="r.status === 'discontinued'" class="neg" title="ausgelaufen">✗</span>
@@ -284,7 +283,7 @@ function toggleAxis(a) {
       <div v-else-if="q && !visible.length" class="empty">Nichts zu „{{ q }}“</div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · Rechtsklick · ziehen = umhängen
+      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> auf/zu · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · Rechtsklick · ziehen = umhängen · <i>kursiv</i> = Name angeheftet
     </div>
   </div>
 
@@ -311,7 +310,8 @@ function toggleAxis(a) {
 .node.variant .icon { color: var(--warn); }
 .label { overflow: hidden; text-overflow: ellipsis; }
 .axis { font-size: 11px; }
-.lock { font-size: 10px; opacity: .7; }
+/* angehefteter Name: kursiv, kein Symbol — die Information ist klein (Taloan, 17.09.) */
+.label.pinned { font-style: italic; }
 .hit { font-size: 11px; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
 .count { margin-left: auto; font-size: 11px; }
 </style>
