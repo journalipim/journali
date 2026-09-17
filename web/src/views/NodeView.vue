@@ -562,7 +562,8 @@ function cellMenu(e, def, col, block) {
 .tabbtn .n { font-size: 10px; }
 .tabbtn.on { background: var(--pane); color: var(--text); font-weight: 600; }
 .tabbtn.locked { opacity: .6; }
-.section { padding: 10px 8px; border-top: 1px solid var(--line); }
+/* Abschnitte des Knotens: dieselbe Stufe wie ein Gruppenkopf im Gitter — Band in Akzentfarbe mit Oberkante (Taloan, 17.09.) */
+.section { padding: 0 8px 10px; border-top: 0; }
 .relblock { margin-bottom: 8px; }
 .section.over { outline: 2px dashed var(--accent); outline-offset: -4px; }
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -579,7 +580,8 @@ function cellMenu(e, def, col, block) {
 .picker { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px; }
 .pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
 .pick:hover { background: var(--hover); }
-.section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+.section h2 { font-size: 12px; margin: 0 -8px 8px; padding: 4px 8px; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); }
+.section h2 .muted { font-weight: 400; }
 /* Gruppenköpfe (Taloan, 17.09.): bearbeitbare Gruppen deutlich — Band in Akzentfarbe, Text in Schriftfarbe;
    gesperrte zurückgenommen (gedämpft, 🔒), statt in Warnfarbe ins Auge zu springen. */
 .cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
