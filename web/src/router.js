@@ -4,6 +4,7 @@ import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
 import ImportView from './views/ImportView.vue'
 import SolrView from './views/SolrView.vue'
+import TableImportView from './views/TableImportView.vue'
 import MediaView from './views/MediaView.vue'
 import PluginsView from './views/PluginsView.vue'
 import PluginHost from './views/PluginHost.vue'
@@ -20,6 +21,7 @@ export const router = createRouter({
     { path: '/model', component: ModelView },
     { path: '/import', component: ImportView },
     { path: '/import/solr', component: SolrView },
+    { path: '/import/table', component: TableImportView },
     { path: '/media', component: MediaView },
     { path: '/plugins', component: PluginsView },
     { path: '/p/:key/:path', component: PluginHost },

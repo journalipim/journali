@@ -1,0 +1,16 @@
+{
+  "key": "json",
+  "version": "1.0.0",
+  "label": {
+    "de": "Import: JSON",
+    "en": "Import: JSON"
+  },
+  "description": {
+    "de": "JSON-Dateien (Liste von Objekten, oder { rows | items | data: [...] }) als Tabelle für ⇩ Import → Tabelle; verschachtelte Felder werden a.b.c.",
+    "en": "JSON files (array of objects, or { rows | items | data: [...] }) as a table; nested fields become a.b.c."
+  },
+  "kind": "import",
+  "runs": "browser",
+  "entry": "entry.js",
+  "autoInstall": true
+}

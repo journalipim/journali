@@ -11,6 +11,7 @@ import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKI
 import { recent, remember } from '../recent.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
+import ProfileBar from '../components/ProfileBar.vue'
 import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
@@ -46,6 +47,24 @@ const known = computed(() => new Map(tree.rows.filter(r => r.external?.[SYSTEM])
 onMounted(() => { if (!tree.loaded) tree.load(); if (saved.base && saved.auto) connect() })
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
 
+// Profile (ProfileBar): Quelle, Ziel, Auslassungen und die angehakten Wurzeln — im Journal unter plugin:solr
+const profileGet = () => ({ base: base.value, target: target.value, skip: skipText.value, checked: [...checked.value] })
+async function profileSet(p) {
+  base.value = p.base ?? ''; target.value = p.target ?? ''; skipText.value = p.skip ?? ''
+  if (!base.value) return
+  await connect()
+  for (const id of p.checked ?? []) { await reveal(id); checked.value.add(id) }
+  checked.value = new Set(checked.value)
+}
+// Zeile mit dieser Kennung sichtbar machen: Ebene für Ebene aufklappen, bis sie da ist (höchstens 60 Nachladungen)
+async function reveal(id) {
+  let n = 0
+  while (!rows.value.some(r => r.doc.id === id) && n < 60) {
+    const next = rows.value.find(r => !r.loaded && r.doc.hasChilds !== false && roleOf(r.doc) !== 'variant')
+    if (!next) return
+    await expand(next); n++
+  }
+}
 async function connect() {
   busy.value = 'verbinde …'
   try {
@@ -307,7 +326,8 @@ async function run() {
     <div class="toolbar sources">
       <router-link v-if="plugins.enabled('ixp')" to="/import" class="view-chip">IXP</router-link>
       <router-link to="/import/solr" class="view-chip on">Solr</router-link>
-      <span class="grow" /><router-link v-if="plugins.loaded && !plugins.enabled('solr')" to="/plugins" class="warn" title="Plugin solr ist aus">⌁ aus</router-link><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span>
+      <router-link to="/import/table" class="view-chip">Tabelle</router-link>
+      <span class="grow" /><ProfileBar plugin="solr" :get="profileGet" :set="profileSet" /><router-link v-if="plugins.loaded && !plugins.enabled('solr')" to="/plugins" class="warn" title="Plugin solr ist aus">⌁ aus</router-link><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span>
     </div>
     <div class="form">
       <div class="row">
@@ -336,7 +356,7 @@ async function run() {
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar"><h1>{{ icon(roleOf(current)) + ' ' + (current.name || current.master_id) }}</h1><span class="mono muted">{{ current.master_id }}</span><span class="grow" /><button class="x" @click="current = null" title="zuklappen">×</button></div>
     <div class="scroll">
-      <template>
+        <!-- kein nacktes <template> hier: Vue 3 rendert es als echtes <template>-Element, dessen Inhalt unsichtbar ist (Taloan, 17.09.: „mittlere Spalte leer“) -->
         <div class="toolbar meta muted">
           <span v-if="current.product_number">SKU {{ current.product_number }}</span>
           <span v-if="current.main_level != null">· Ebene {{ current.main_level }}</span>
@@ -355,7 +375,6 @@ async function run() {
           </tbody>
         </table>
         <p v-if="currentSkipped.length" class="muted" style="padding:0 8px;font-size:12px">übergangen: {{ currentSkipped.join(', ') }}</p>
-      </template>
     </div>
   </div>
 

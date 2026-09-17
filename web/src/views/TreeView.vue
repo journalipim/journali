@@ -262,6 +262,8 @@ function contextMenu(e, r) {
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
     kids ? { label: 'Alles aufklappen', icon: '▾', key: 'a', action: () => expandAll(r.id) } : null,
     kids ? { label: 'Alles zuklappen', icon: '▸', key: 'z', action: () => collapseAll(r.id) } : null,
+    { label: picked.value.has(r.id) ? 'Aus der Menge nehmen' : 'In die Menge', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
+    picked.value.size ? { label: `Menge auflösen (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: 'Id kopieren', icon: '⧉', key: 'i', hint: r.id, action: () => navigator.clipboard?.writeText(r.id) },
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
     ...(plugins.nodeActions.length ? [{ sep: true }, ...plugins.nodeActions.map(a => ({ label: a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) }))] : []),
@@ -271,6 +273,8 @@ function contextMenu(e, r) {
 }
 function onGlobalKey(e) {
   if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); search.value?.focus() }
+  // Esc löst die Menge auf (wenn kein Dialog offen ist) — Taloan, 17.09.: „Wie löse ich eine Selektion wieder auf?“
+  if (e.key === 'Escape' && picked.value.size && !creating.value && !link.value && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); picked.value = new Set() }
 }
 onMounted(() => window.addEventListener('keydown', onGlobalKey))
 onUnmounted(() => window.removeEventListener('keydown', onGlobalKey))
@@ -357,7 +361,7 @@ function onDialogKey(e) {
       <span class="grow" />
       <button v-if="q" @click="pickVisible" title="alle sichtbaren Treffer in die Menge">☑ Treffer</button>
       <template v-if="picked.size">
-        <span class="chip" title="die Menge — Strg+Klick sammelt, Shift+Klick nimmt den Bereich">☑ {{ picked.size }} <button @click="picked = new Set()" title="Menge leeren">×</button></span>
+        <span class="chip" title="die Menge — Strg+Klick sammelt, Shift+Klick nimmt den Bereich; × oder Esc löst sie auf">☑ {{ picked.size }} <button @click="picked = new Set()" title="Menge auflösen (Esc)">×</button></span>
         <button class="primary" @click="openLink(null)" title="die Menge mit einem Ziel verknüpfen (oder mit Shift auf ein Ziel ziehen)">⇄</button>
       </template>
     </div>

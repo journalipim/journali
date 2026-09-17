@@ -10,6 +10,7 @@ import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode } from '../ixp.js'
 import { recent, remember } from '../recent.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
+import ProfileBar from '../components/ProfileBar.vue'
 import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
@@ -44,6 +45,13 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
 
+// Profile (ProfileBar): Quelle, Sprache, Ziel, Sprachen, Zuordnung — ohne Token (der bleibt im Browser, nicht im Journal)
+const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value })
+async function profileSet(p) {
+  base.value = p.base ?? base.value; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null
+  if (p.mapping) mapping.value = { ...p.mapping }
+  if (base.value) await connect()
+}
 async function connect() {
   busy.value = 'verbinde …'
   try {
@@ -214,7 +222,8 @@ function toggleLocale(l) {
     <div class="toolbar" style="gap:4px">
       <router-link to="/import" class="view-chip on">IXP</router-link>
       <router-link v-if="plugins.enabled('solr')" to="/import/solr" class="view-chip">Solr</router-link>
-      <span class="grow" /><router-link v-if="plugins.loaded && !plugins.enabled('ixp')" to="/plugins" class="warn" title="Plugin ixp ist aus">⌁ aus</router-link>
+      <router-link to="/import/table" class="view-chip">Tabelle</router-link>
+      <span class="grow" /><ProfileBar plugin="ixp" :get="profileGet" :set="profileSet" /><router-link v-if="plugins.loaded && !plugins.enabled('ixp')" to="/plugins" class="warn" title="Plugin ixp ist aus">⌁ aus</router-link>
     </div>
     <div class="form">
       <input v-model="base" type="text" list="ixp-recent" placeholder="https://…/api" title="Basis-URL der IXP-API — Pfeil ab: zuletzt benutzte" @keydown.enter="connect" />

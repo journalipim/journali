@@ -7,6 +7,7 @@ import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
+import ProfileBar from '../components/ProfileBar.vue'
 import { paneWidth } from '../panes.js'
 
 const listW = paneWidth('plugins.list', 380)
@@ -93,6 +94,7 @@ function pick(k) { cur.value = k; startParams() }
       </div>
       <div class="section" v-if="manifest.process">
         <h2>⚙ Prozess starten <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
+        <div class="chips" style="padding:4px 8px"><ProfileBar :key="current.key" :plugin="current.key" scope="run" :get="() => run.params" :set="p => { run.params = { ...run.params, ...p } }" /><span class="muted" style="font-size:12px">Parametersätze — im Journal, für alle</span></div>
         <table class="grid form"><colgroup><col style="width:180px" /><col style="width:420px" /></colgroup><tbody>
           <tr v-for="p in manifest.process.params ?? []" :key="p.key"><td class="attr" :title="p.key">{{ p.label || p.key }}</td>
             <td style="padding:2px 4px">
