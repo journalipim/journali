@@ -1,36 +1,46 @@
 <script setup>
-// Das Modell (Taloans Struktur, 17.09.2026):
+// Das Modell (Taloans Struktur, 17.09.2026), überall dieselbe Aufteilung wie im Baum:
+//   links die Abschnitte, in der Mitte eine schmale Liste (Key, Name, Kennzahlen als
+//   Symbole), rechts das gewählte Ding mit allen Feldern und seinem Inhalt.
 //   Struktur: Attributgruppen · Attribute · Wertelisten · Attributsichten
-//   Basics:   Einheiten · Sprachen · Kanäle · Baum (Name je Knotentyp)
-// Jede Zelle ein Eintrag mit der ganzen Definition. Mehrfachauswahl: Shift/Strg,
-// alle/keine, dann Stapelaktionen (Gruppe zuweisen, entfernen).
-import { ref, computed, onMounted } from 'vue'
+//   Basics:   Einheiten · Sprachen · Kanäle
+// Jedes Feld speichert sofort = ein Eintrag mit der ganzen Definition. Mehrfachauswahl
+// in der Liste: Shift/Strg+Klick, dann Stapelaktionen rechts (Gruppe zuweisen, zurückziehen).
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { icon } from '../tree.js'
 import EditGrid from '../components/EditGrid.vue'
+import Cell from '../components/Cell.vue'
+import ToggleCell from '../components/ToggleCell.vue'
+import SelectCell from '../components/SelectCell.vue'
 
 const sections = [
-  { key: 'groups', icon: '▤', label: 'Attributgruppen', part: 'Struktur' },
-  { key: 'attributes', icon: '⊞', label: 'Attribute', part: 'Struktur' },
-  { key: 'lists', icon: '☰', label: 'Wertelisten', part: 'Struktur' },
-  { key: 'views', icon: '◫', label: 'Attributsichten', part: 'Struktur' },
-  { key: 'units', icon: '⚖', label: 'Einheiten', part: 'Basics' },
-  { key: 'locales', icon: '🗣', label: 'Sprachen', part: 'Basics' },
-  { key: 'channels', icon: '⇶', label: 'Kanäle', part: 'Basics' },
+  { key: 'groups', icon: '▤', label: 'Attributgruppen', part: 'Struktur', one: 'Gruppe', hint: 'Eine Gruppe bündelt Attribute und hängt an Baumknoten; ihre Definition vererbt sich nach unten. „aktiv ab“ sagt, ab welchem Knotentyp Werte erfasst werden.' },
+  { key: 'attributes', icon: '⊞', label: 'Attribute', part: 'Struktur', one: 'Attribut', hint: 'Ein Attribut hat Typ, Gruppe, Achsen (Sprache, Kanal) und Pflicht je Kanal. Der Schlüssel ist für immer.' },
+  { key: 'lists', icon: '☰', label: 'Wertelisten', part: 'Struktur', one: 'Werteliste', hint: 'Ein Attribut vom Typ enum zeigt auf einen Eintrag der Liste, nicht auf ein Wort. Der Eintrag hat Namen je Sprache und eigene Spalten (Farbe: ral).' },
+  { key: 'views', icon: '◫', label: 'Attributsichten', part: 'Struktur', one: 'Sicht', hint: 'Je Knotentyp: welche Gruppen in welcher Reihenfolge, darin die Attribute in welcher Reihenfolge. Der Knoten zeigt in einer Sicht nur deren Gruppen.' },
+  { key: 'units', icon: '⚖', label: 'Einheiten', part: 'Basics', one: 'Einheit', hint: 'Je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um.' },
+  { key: 'locales', icon: '🗣', label: 'Sprachen', part: 'Basics', one: 'Sprache', hint: 'Die Achse locale der Attribute.' },
+  { key: 'channels', icon: '⇶', label: 'Kanäle', part: 'Basics', one: 'Kanal', hint: 'Die Achse channel; Pflichtfelder und Freigaben gelten je Kanal.' },
 ]
 const section = ref('attributes')
 const model = computed(() => store.model)
+const cur = ref(null)               // Schlüssel des gewählten Dings (rechts)
+const sel = ref(new Set())          // Mehrfachauswahl in der Liste
+const anchor = ref(null)
+const filter = ref('')
 const newKey = ref('')
-const selectedList = ref(null)
-const selectedView = ref(null)
-const selectedGroup = ref(null)
 const newValue = ref('')
 const addViewGroup = ref('')
-const sel = ref(new Set())          // Mehrfachauswahl im aktuellen Gitter
+const addAttr = ref('')
 const bulkGroup = ref('')
 const roleLabel = { group: '▣ Produktgruppe', product: '▦ Produkt', variant: '◆ Variante' }
 const roles = ['group', 'product', 'variant']
+const TYPES = ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum', 'rows']
+const TYPE_SYM = { text: 'Aa', html: '‹›', integer: '12', decimal: '1.5', boolean: '☑', date: '📅', enum: '☰', rows: '≣' }
+const sec = computed(() => sections.find(s => s.key === section.value))
 
 async function send(fn) {
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
@@ -38,162 +48,170 @@ async function send(fn) {
 }
 const put = (path, body) => send(() => api.post(path, body, 'PUT'))
 const del = path => send(() => api.del(path))
-function switchTo(k) { section.value = k; sel.value = new Set() }
-// Sprung aus dem Knoten: /model?section=groups&key=<gruppe> öffnet den Abschnitt mit der Zeile markiert.
+
+function switchTo(k) { section.value = k; sel.value = new Set(); cur.value = null; filter.value = '' }
+// Sprung aus dem Knoten: /model?section=groups&key=<gruppe> öffnet den Abschnitt mit dem Ding rechts.
 const route = useRoute()
-onMounted(() => {
-  const s = route.query.section, k = route.query.key
-  if (s && sections.some(x => x.key === s)) { section.value = s; sel.value = new Set(k ? [k] : []) }
-  if (s === 'lists' && k) selectedList.value = k
-  if (s === 'views' && k) selectedView.value = k
+function fromQuery(q) {
+  if (!q.section || !sections.some(x => x.key === q.section)) return
+  switchTo(q.section)
+  if (q.key) { cur.value = q.key; sel.value = new Set([q.key]) }
+}
+onMounted(() => fromQuery(route.query))
+watch(() => route.query, fromQuery)
+
+// ---- Die Liste in der Mitte: je Abschnitt Zeilen { key, label, right[] }
+const byKey = (a, b) => a.key.localeCompare(b.key)
+const rows = computed(() => {
+  const m = model.value; if (!m) return []
+  switch (section.value) {
+    case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: g.label?.de, right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''] })).sort(byKey)
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: a.label?.de, right: [TYPE_SYM[a.type] ?? a.type, a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + a.group : ''] })).sort(byKey)
+    case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`] })).sort(byKey)
+    case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`] })).sort(byKey)
+    case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`] })).sort(byKey)
+    case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [] }))
+    case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [] }))
+  }
+  return []
 })
+const shown = computed(() => { const f = filter.value.trim().toLowerCase(); return f ? rows.value.filter(r => r.key.includes(f) || (r.label ?? '').toLowerCase().includes(f)) : rows.value })
+function pick(e, r) {
+  const keys = shown.value.map(x => x.key), k = r.key
+  const s = new Set(sel.value)
+  if (e.shiftKey && anchor.value != null) {
+    const a = keys.indexOf(anchor.value), b = keys.indexOf(k)
+    if (a >= 0 && b >= 0) { if (!e.ctrlKey) s.clear(); for (let i = Math.min(a, b); i <= Math.max(a, b); i++) s.add(keys[i]) }
+  } else if (e.ctrlKey || e.metaKey) { s.has(k) ? s.delete(k) : s.add(k); anchor.value = k }
+  else { s.clear(); s.add(k); anchor.value = k }
+  sel.value = s; cur.value = k
+}
+function onListKey(e) {
+  const keys = shown.value.map(x => x.key); const i = keys.indexOf(cur.value)
+  if (e.key === 'ArrowDown' && i < keys.length - 1) { e.preventDefault(); pick({}, shown.value[i + 1]) }
+  else if (e.key === 'ArrowUp' && i > 0) { e.preventDefault(); pick({}, shown.value[i - 1]) }
+}
 const count = computed(() => sel.value.size)
+const many = computed(() => sel.value.size > 1)
+
+// ---- Das gewählte Ding
+const curGroup = computed(() => (model.value?.groups ?? []).find(g => g.key === cur.value) ?? null)
+const curAttr = computed(() => model.value?.attributes.find(a => a.key === cur.value) ?? null)
+const curList = computed(() => model.value?.lists.find(l => l.key === cur.value) ?? null)
+const curView = computed(() => (model.value?.views ?? []).find(v => v.key === cur.value) ?? null)
+const curUnit = computed(() => (model.value?.units ?? []).find(u => u.key === cur.value) ?? null)
+const curLocale = computed(() => model.value?.locales.find(l => l.code === cur.value) ?? null)
+const curChannel = computed(() => model.value?.channels.find(c => c.key === cur.value) ?? null)
+const b = v => v ? 'true' : 'false'
 
 // ---- Attributgruppen
-const groupCols = [{ key: 'key', label: 'Gruppe', type: 'ro', width: '130px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' },
-  { key: 'activeFrom', label: 'aktiv ab', type: 'select', options: roles, labelOf: k => roleLabel[k] ?? k, width: '150px', title: 'ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.' },
-  { key: 'count', label: '#', type: 'ro', width: '40px' }, { key: 'defined', label: '', type: 'ro', width: '60px' }]
-const groupRows = computed(() => (model.value.groups ?? []).map(g => ({ key: g.key, label_de: g.label?.de, label_en: g.label?.en, activeFrom: g.activeFrom ?? '', count: String(g.attributes.length), defined: g.defined ? '' : 'nur Verweis', _g: g })))
-function groupChange(r, col, v) {
-  const g = r._g
-  const d = { key: r.key, label: { ...(g.label || {}) }, activeFrom: g.activeFrom ?? null }
-  if (col.startsWith('label_')) d.label[col.slice(6)] = v
-  else if (col === 'activeFrom') d.activeFrom = v || null
-  put(`/api/model/groups/${r.key}`, d)
+const groupSet = (col, v) => {
+  const g = curGroup.value
+  const d = { key: g.key, label: { ...(g.label || {}) }, activeFrom: g.activeFrom ?? null }
+  if (col.startsWith('label_')) d.label[col.slice(6)] = v; else if (col === 'activeFrom') d.activeFrom = v || null
+  put(`/api/model/groups/${g.key}`, d)
 }
-function groupAdd() {
-  const k = newKey.value.trim(); if (!k) return
-  newKey.value = ''
-  put(`/api/model/groups/${k}`, { key: k, label: {}, activeFrom: null })
-}
-// Umgekehrt: eine gewählte Gruppe zeigt ihre Attribute; zuordnen/herausnehmen schreibt das Attribut neu (AttributeDefined mit anderer group).
-const groupSel = computed(() => sel.value.size === 1 && section.value === 'groups' ? (model.value.groups ?? []).find(g => g.key === [...sel.value][0]) ?? null : null)
-const groupAttrs = computed(() => model.value.attributes.filter(a => a.group === groupSel.value?.key))
-const otherAttrs = computed(() => model.value.attributes.filter(a => a.group !== groupSel.value?.key).sort((x, y) => (x.group ?? '').localeCompare(y.group ?? '') || x.key.localeCompare(y.key)))
-const addAttr = ref('')
+const groupAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group === curGroup.value?.key))
+const otherAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group !== curGroup.value?.key).sort((x, y) => (x.group ?? '').localeCompare(y.group ?? '') || x.key.localeCompare(y.key)))
 function assign(a, gkey) { put(`/api/model/attributes/${a.key}`, { ...a, group: gkey }) }
-function assignAdd() { const a = model.value.attributes.find(x => x.key === addAttr.value); addAttr.value = ''; if (a && groupSel.value) assign(a, groupSel.value.key) }
+function assignAdd() { const a = model.value.attributes.find(x => x.key === addAttr.value); addAttr.value = ''; if (a && curGroup.value) assign(a, curGroup.value.key) }
+function goto(s, k) { switchTo(s); cur.value = k; sel.value = new Set([k]) }
 
 // ---- Attribute
-const attrCols = computed(() => [
-  { key: 'key', label: 'Key', type: 'ro', width: '130px' },
-  { key: 'label_de', label: 'Name de' },
-  { key: 'label_en', label: 'Name en' },
-  { key: 'type', label: 'Typ', type: 'select', options: model.value.types, width: '100px' },
-  { key: 'unit', label: 'Einheit', type: 'select', options: (model.value.units ?? []).map(u => u.key), width: '70px', title: 'nur bei Zahlen; Einheiten unter ⚖' },
-  { key: 'group', label: 'Gruppe', type: 'select', options: (model.value.groups ?? []).map(g => g.key), width: '120px', title: 'Attributgruppe (▤)' },
-  { key: 'locale', label: '🗣', type: 'bool', width: '34px', title: 'je Sprache' },
-  { key: 'channel', label: '⇶', type: 'bool', width: '34px', title: 'je Kanal' },
-  { key: 'inheritable', label: '↓', type: 'bool', width: '34px', title: 'vererbbar: der Wert gilt nach unten (Kategorie ja, Name nein)' },
-  { key: 'list', label: 'Werteliste', type: 'select', options: model.value.lists.map(l => l.key), width: '110px', title: 'bei enum: der Wert ist ein Eintrag der Liste' },
-  { key: 'multiple', label: '≣', type: 'bool', width: '34px', title: 'mehrfach' },
-  ...model.value.channels.map(c => ({ key: 'req_' + c.key, label: '● ' + c.key, width: '70px', title: `Pflicht für ${c.key}: Sprachen kommagetrennt oder * — gilt überall gleich` })),
-  { key: 'columns', label: 'Spalten', width: '140px', title: 'bei rows: Attribute, kommagetrennt' },
-  { key: 'lv_group', label: '▣', type: 'bool', width: '34px', title: 'Ausnahme: an Produktgruppen setzbar' },
-  { key: 'lv_product', label: '▦', type: 'bool', width: '34px', title: 'Ausnahme: an Produkten setzbar' },
-  { key: 'lv_variant', label: '◆', type: 'bool', width: '34px', title: 'Ausnahme: an Varianten setzbar' },
-])
-const attrRows = computed(() => model.value.attributes.map(a => {
-  const r = { key: a.key, label_de: a.label?.de, label_en: a.label?.en, type: a.type, unit: a.unit, group: a.group,
-    locale: a.perLocale, channel: a.perChannel, inheritable: !!a.inheritable, list: a.list, multiple: a.multiple, columns: (a.columns ?? []).join(', '),
-    lv_group: !a.levels || a.levels.includes('group'), lv_product: !a.levels || a.levels.includes('product'), lv_variant: !a.levels || a.levels.includes('variant'), _a: a }
-  for (const c of model.value.channels) r['req_' + c.key] = (a.required?.[c.key] || []).join(',')
-  return r
-}))
-function attrDef(r, col, v) {
-  const a = { ...r._a, label: { ...(r._a.label || {}) }, required: { ...(r._a.required || {}) } }
+function attrWith(a0, col, v) {
+  const a = { ...a0, label: { ...(a0.label || {}) }, required: { ...(a0.required || {}) } }
   if (col === 'label_de') a.label.de = v
   else if (col === 'label_en') a.label.en = v
   else if (col === 'locale' || col === 'channel') { const axes = new Set(a.axes || []); v ? axes.add(col) : axes.delete(col); a.axes = [...axes] }
   else if (col === 'columns') a.columns = v.split(',').map(s => s.trim()).filter(Boolean)
   else if (col.startsWith('req_')) { const l = v.split(',').map(s => s.trim()).filter(Boolean); if (l.length) a.required[col.slice(4)] = l; else delete a.required[col.slice(4)] }
   else if (col.startsWith('lv_')) {
-    const all = ['group', 'product', 'variant']; const lv = new Set(a.levels ?? all)
+    const lv = new Set(a.levels ?? roles)
     v ? lv.add(col.slice(3)) : lv.delete(col.slice(3))
-    a.levels = lv.size === all.length ? null : all.filter(x => lv.has(x))
+    a.levels = lv.size === roles.length ? null : roles.filter(x => lv.has(x))
   } else a[col] = v
   return a
 }
-const attrChange = (r, col, v) => put(`/api/model/attributes/${r.key}`, attrDef(r, col, v))
-function attrAdd() {
-  const k = newKey.value.trim(); if (!k) return
-  newKey.value = ''
-  put(`/api/model/attributes/${k}`, { key: k, label: {}, type: 'text' })
-}
-// Stapel: allen gewählten eine Gruppe geben / entfernen
+const attrSet = (col, v) => put(`/api/model/attributes/${curAttr.value.key}`, attrWith(curAttr.value, col, v))
 async function bulkAssignGroup() {
   const g = bulkGroup.value; if (!g) return
-  for (const r of attrRows.value.filter(x => sel.value.has(x.key))) await put(`/api/model/attributes/${r.key}`, attrDef(r, 'group', g))
+  for (const a of model.value.attributes.filter(x => sel.value.has(x.key))) await put(`/api/model/attributes/${a.key}`, attrWith(a, 'group', g))
   bulkGroup.value = ''
 }
-async function bulkRemove(path) {
-  if (!window.confirm(`${sel.value.size} Einträge zurückziehen?`)) return
-  for (const k of [...sel.value]) await del(path(k))
-  sel.value = new Set()
+const removePath = {
+  groups: k => `/api/model/groups/${k}`, attributes: k => `/api/model/attributes/${k}`, lists: null,
+  views: k => `/api/model/views/${k}`, units: k => `/api/model/units/${encodeURIComponent(k)}`, locales: null, channels: null,
 }
-const selectAll = rows => { sel.value = new Set(rows.map(r => r.key)) }
+async function bulkRemove() {
+  const p = removePath[section.value]; if (!p) return
+  if (!window.confirm(`${sel.value.size} ${sec.value.label} zurückziehen?`)) return
+  for (const k of [...sel.value]) await del(p(k))
+  sel.value = new Set(); cur.value = null
+}
+async function removeCur() {
+  const p = removePath[section.value]; if (!p || !cur.value) return
+  if (!window.confirm(`${sec.value.one} ${cur.value} zurückziehen?`)) return
+  await del(p(cur.value)); cur.value = null; sel.value = new Set()
+}
 
-// ---- Wertelisten: Einträge mit Namen je Sprache und eigenen Spalten (Farbe: ral)
-const listCols = [{ key: 'key', label: 'Key', type: 'ro', width: '130px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'columns', label: 'Spalten', width: '200px', title: 'eigene Felder je Eintrag, kommagetrennt (z. B. ral, hex)' }]
-const listRows = computed(() => model.value.lists.map(l => ({ key: l.key, label_de: l.label?.de, label_en: l.label?.en, columns: (l.columns ?? []).join(', '), _l: l })))
-const currentList = computed(() => model.value.lists.find(l => l.key === selectedList.value))
-const valueCols = computed(() => [{ key: 'value', label: 'Wert', type: 'ro', width: '130px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' },
-  ...(currentList.value?.columns ?? []).map(c => ({ key: 'x_' + c, label: c, width: '120px' })), { key: 'order', label: '#', width: '50px' }])
-const valueRows = computed(() => (currentList.value?.values ?? []).map(v => { const r = { value: v.value, label_de: v.label?.de, label_en: v.label?.en, order: String(v.order ?? 0), _v: v }; for (const c of currentList.value.columns ?? []) r['x_' + c] = v.extra?.[c]; return r }))
-function listChange(r, col, v) {
-  const d = { key: r.key, label: { ...(r._l.label || {}) }, columns: r._l.columns ?? [] }
-  if (col.startsWith('label_')) d.label[col.slice(6)] = v
-  else if (col === 'columns') d.columns = v.split(',').map(s => s.trim()).filter(Boolean)
-  put(`/api/model/lists/${r.key}`, d)
-}
-function listAdd() {
+// ---- Anlegen je Abschnitt
+function add() {
   const k = newKey.value.trim(); if (!k) return
   newKey.value = ''
-  put(`/api/model/lists/${k}`, { key: k, label: {} })
-  selectedList.value = k
+  const s = section.value
+  if (s === 'groups') put(`/api/model/groups/${k}`, { key: k, label: {}, activeFrom: null })
+  else if (s === 'attributes') put(`/api/model/attributes/${k}`, { key: k, label: {}, type: 'text' })
+  else if (s === 'lists') put(`/api/model/lists/${k}`, { key: k, label: {} })
+  else if (s === 'views') put(`/api/model/views/${k}`, { key: k, label: {}, level: 'product', items: [] })
+  else if (s === 'units') put(`/api/model/units/${encodeURIComponent(k)}`, { key: k, label: {}, quantity: 'other', factor: 1 })
+  else if (s === 'locales') put(`/api/model/locales/${k}`, { code: k, label: '' })
+  else if (s === 'channels') put(`/api/model/channels/${k}`, { key: k, label: {} })
+  cur.value = k; sel.value = new Set([k])
 }
+const addPlaceholder = { groups: 'neue Gruppe (key)', attributes: 'neuer key (a-z, 0-9, _)', lists: 'neue Werteliste (key)', views: 'neue Sicht (key)', units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app' }
+
+// ---- Wertelisten: Einträge mit Namen je Sprache und eigenen Spalten (Farbe: ral)
+function listSet(col, v) {
+  const l = curList.value
+  const d = { key: l.key, label: { ...(l.label || {}) }, columns: l.columns ?? [] }
+  if (col.startsWith('label_')) d.label[col.slice(6)] = v
+  else if (col === 'columns') d.columns = v.split(',').map(s => s.trim()).filter(Boolean)
+  put(`/api/model/lists/${l.key}`, d)
+}
+const valueCols = computed(() => [{ key: 'value', label: 'Wert', type: 'ro', width: '120px' }, { key: 'label_de', label: 'de', width: '180px' }, { key: 'label_en', label: 'en', width: '180px' },
+  ...(curList.value?.columns ?? []).map(c => ({ key: 'x_' + c, label: c, width: '110px' })), { key: 'order', label: '#', width: '50px' }])
+const valueRows = computed(() => (curList.value?.values ?? []).map(v => { const r = { value: v.value, label_de: v.label?.de, label_en: v.label?.en, order: String(v.order ?? 0), _v: v }; for (const c of curList.value.columns ?? []) r['x_' + c] = v.extra?.[c]; return r }))
 function valueChange(r, col, v) {
   const d = { ...r._v, label: { ...(r._v.label || {}) }, extra: { ...(r._v.extra || {}) } }
   if (col.startsWith('label_')) d.label[col.slice(6)] = v
   else if (col.startsWith('x_')) { if (v) d.extra[col.slice(2)] = v; else delete d.extra[col.slice(2)] }
   else if (col === 'order') d.order = parseInt(v) || 0
-  put(`/api/model/lists/${selectedList.value}/values/${encodeURIComponent(r.value)}`, d)
+  put(`/api/model/lists/${curList.value.key}/values/${encodeURIComponent(r.value)}`, d)
 }
 function valueAdd() {
-  const v = newValue.value.trim(); if (!v || !selectedList.value) return
+  const v = newValue.value.trim(); if (!v || !curList.value) return
   newValue.value = ''
-  put(`/api/model/lists/${selectedList.value}/values/${encodeURIComponent(v)}`, { value: v, label: {}, order: valueRows.value.length + 1 })
+  put(`/api/model/lists/${curList.value.key}/values/${encodeURIComponent(v)}`, { value: v, label: {}, order: valueRows.value.length + 1 })
 }
 
 // ---- Attributsichten: je Knotentyp, Gruppen in Reihenfolge, darin Attribute in Reihenfolge (Drag & Drop)
-const viewCols = [{ key: 'key', label: 'Key', type: 'ro', width: '130px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' },
-  { key: 'level', label: 'Knotentyp', type: 'select', options: roles, labelOf: k => roleLabel[k] ?? k, width: '150px', title: 'eine Sicht gilt für einen Knotentyp' }]
-const viewRows = computed(() => (model.value.views ?? []).map(v => ({ key: v.key, label_de: v.label?.de, label_en: v.label?.en, level: v.level, _v: v })))
-const currentView = computed(() => (model.value.views ?? []).find(v => v.key === selectedView.value))
-const viewItems = computed(() => currentView.value?.items ?? [])
+const viewItems = computed(() => curView.value?.items ?? [])
 const dragging = ref(null)   // { group } | { group, key }
-function viewChange(r, col, v) {
-  const d = { ...r._v, label: { ...(r._v.label || {}) } }
-  if (col.startsWith('label_')) d.label[col.slice(6)] = v
-  else if (col === 'level') d.level = v
-  put(`/api/model/views/${r.key}`, d)
+function viewSet(col, v) {
+  const d = { ...curView.value, label: { ...(curView.value.label || {}) } }
+  if (col.startsWith('label_')) d.label[col.slice(6)] = v; else if (col === 'level') d.level = v
+  put(`/api/model/views/${curView.value.key}`, d)
 }
-function viewAdd() {
-  const k = newKey.value.trim(); if (!k) return
-  newKey.value = ''
-  put(`/api/model/views/${k}`, { key: k, label: {}, level: 'product', items: [] })
-  selectedView.value = k
-}
-const saveItems = items => put(`/api/model/views/${currentView.value.key}`, { ...currentView.value, items })
+const saveItems = items => put(`/api/model/views/${curView.value.key}`, { ...curView.value, items })
 function viewGroupAdd() { const g = addViewGroup.value; if (!g) return; addViewGroup.value = ''; saveItems([...viewItems.value, { group: g }]) }
 function viewGroupRemove(g) { saveItems(viewItems.value.filter(it => it.group !== g)) }
-function viewFillAll() { saveItems((model.value.groups ?? []).map(g => ({ group: g.key }))) }
+function viewFillAll() { saveItems((model.value.groups ?? []).filter(g => activeAt(g, curView.value.level)).map(g => ({ group: g.key }))) }
 // Gruppen, die noch nicht in der Sicht sind: erst die am Knotentyp der Sicht aktiven, dann die gesperrten (aktiv erst tiefer).
 const DEPTH = { group: 0, product: 1, variant: 2 }
 const activeAt = (g, role) => !g.activeFrom || DEPTH[role] >= DEPTH[g.activeFrom]
 const freeViewGroups = computed(() => {
   const free = (model.value.groups ?? []).filter(g => !viewItems.value.some(it => it.group === g.key))
-  const level = selectedView.value?.level
+  const level = curView.value?.level
   return [...free.filter(g => activeAt(g, level)).map(g => ({ key: g.key, locked: false })),
           ...free.filter(g => !activeAt(g, level)).map(g => ({ key: g.key, locked: true, from: g.activeFrom }))]
 })
@@ -227,26 +245,18 @@ function onDrop(target) {
   }
 }
 
-// ---- Einheiten
-const unitCols = [{ key: 'key', label: 'Einheit', type: 'ro', width: '80px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }, { key: 'quantity', label: 'Grösse', width: '110px', title: 'mass, length, volume, data, count …' }, { key: 'factor', label: '× Basis', width: '90px', title: 'Faktor zur Basiseinheit der Grösse (Basis = 1)' }]
-const unitRows = computed(() => (model.value.units ?? []).map(u => ({ key: u.key, label_de: u.label?.de, label_en: u.label?.en, quantity: u.quantity, factor: String(u.factor), _u: u })))
-function unitChange(r, col, v) {
-  const u = { ...r._u, label: { ...(r._u.label || {}) } }
+// ---- Einheiten, Sprachen, Kanäle
+function unitSet(col, v) {
+  const u = { ...curUnit.value, label: { ...(curUnit.value.label || {}) } }
   if (col.startsWith('label_')) u.label[col.slice(6)] = v
   else if (col === 'factor') u.factor = parseFloat(v.replace(',', '.')) || 1
   else u[col] = v
-  put(`/api/model/units/${encodeURIComponent(r.key)}`, u)
+  put(`/api/model/units/${encodeURIComponent(u.key)}`, u)
 }
-function unitAdd() {
-  const k = newKey.value.trim(); if (!k) return
-  newKey.value = ''
-  put(`/api/model/units/${encodeURIComponent(k)}`, { key: k, label: {}, quantity: 'other', factor: 1 })
-}
-
-// ---- Sprachen, Kanäle, Baum
-const localeCols = [{ key: 'code', label: 'Code', type: 'ro', width: '80px' }, { key: 'label', label: 'Name' }]
-const channelCols = [{ key: 'key', label: 'Kanal', type: 'ro', width: '100px' }, { key: 'label_de', label: 'Name de' }, { key: 'label_en', label: 'Name en' }]
-const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, label_de: c.label?.de, label_en: c.label?.en, _c: c })))
+const localeSet = v => put(`/api/model/locales/${curLocale.value.code}`, { code: curLocale.value.code, label: v })
+const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v } })
+const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
+const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de || k
 </script>
 
 <template>
@@ -263,24 +273,56 @@ const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, 
     </div>
   </div>
 
-  <div class="pane" style="flex:1" v-if="model">
-    <!-- Attributgruppen -->
-    <template v-if="section === 'groups'">
-      <div class="toolbar">
-        <h1>▤ Attributgruppen</h1>
-        <span class="muted" title="Eine Gruppe bündelt Attribute und hängt an Baumknoten; ihre Definition vererbt sich nach unten. „aktiv ab“ sagt, ab welchem Knotentyp Werte erfasst werden.">ⓘ hängen an Knoten, Definition vererbt nach unten</span>
-        <span class="grow" />
-        <input v-model="newKey" type="text" placeholder="neue Gruppe (key)" style="width:160px" @keydown.enter="groupAdd" />
-        <button class="primary" :disabled="!newKey.trim()" @click="groupAdd">+ Gruppe</button>
+  <!-- Mitte: die Liste -->
+  <div class="pane" style="width:340px;flex:none" v-if="model">
+    <div class="toolbar"><h1>{{ sec.icon }} {{ sec.label }}</h1><span class="muted">{{ shown.length }}</span><span class="muted" :title="sec.hint">ⓘ</span><span class="grow" /></div>
+    <div class="toolbar" style="gap:4px">
+      <input v-model="filter" type="search" placeholder="Filter" style="flex:1;min-width:0" />
+      <input v-model="newKey" type="text" :placeholder="addPlaceholder[section]" style="width:130px" @keydown.enter="add" />
+      <button class="primary" :disabled="!newKey.trim()" @click="add" title="anlegen">+</button>
+    </div>
+    <div class="scroll list" tabindex="0" @keydown="onListKey">
+      <div v-for="r in shown" :key="r.key" class="li" :class="{ selected: sel.has(r.key), current: cur === r.key }" @click="pick($event, r)" :title="r.key">
+        <span class="k">{{ r.key }}</span>
+        <span class="l">{{ r.label }}</span>
+        <span class="r"><span v-for="(x, i) in r.right.filter(Boolean)" :key="i">{{ x }}</span></span>
       </div>
-      <div class="toolbar sel" v-if="count"><span>{{ count }} gewählt</span><button @click="sel = new Set()">keine</button><button class="x" @click="bulkRemove(k => `/api/model/groups/${k}`)">🗑 zurückziehen</button></div>
+      <div v-if="!shown.length" class="empty">{{ filter ? 'Nichts zu „' + filter + '“' : 'Noch nichts — oben anlegen.' }}</div>
+    </div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>Shift</kbd>/<kbd>Strg</kbd>+Klick mehrere · {{ count }} gewählt</div>
+  </div>
+
+  <!-- Rechts: das gewählte Ding -->
+  <div class="pane" style="flex:1" v-if="model">
+    <!-- Stapel -->
+    <template v-if="many">
+      <div class="toolbar"><h1>{{ count }} {{ sec.label }} gewählt</h1><span class="grow" /><button @click="sel = new Set()">keine</button></div>
       <div class="scroll">
-        <EditGrid :columns="groupCols" :rows="groupRows" :selection="sel" removable @selection="s => sel = s" @change="groupChange" @remove="r => del(`/api/model/groups/${r.key}`)" />
-        <div v-if="groupSel" class="group-attrs">
-          <h2>▤ {{ groupSel.label?.de || groupSel.key }} <span class="mono muted">{{ groupSel.key }}</span> · ⊞ {{ groupAttrs.length }}<span class="muted" v-if="groupSel.activeFrom"> · aktiv ab {{ roleLabel[groupSel.activeFrom] }}</span></h2>
+        <div class="section">
+          <div class="chips" v-if="section === 'attributes'">
+            <select v-model="bulkGroup" style="width:220px"><option value="">▤ Gruppe zuweisen …</option><option v-for="g in model.groups" :key="g.key" :value="g.key">{{ g.label?.de || g.key }} · {{ g.key }}</option></select>
+            <button class="primary" :disabled="!bulkGroup" @click="bulkAssignGroup">→ {{ count }}</button>
+          </div>
+          <div class="chips" style="margin-top:8px" v-if="removePath[section]"><button class="x" @click="bulkRemove">🗑 {{ count }} zurückziehen</button></div>
+          <div class="chips" style="margin-top:8px"><span v-for="k in sel" :key="k" class="chip mono">{{ k }}</span></div>
+        </div>
+      </div>
+    </template>
+
+    <!-- Attributgruppe -->
+    <template v-else-if="section === 'groups' && curGroup">
+      <div class="toolbar"><h1>▤ {{ curGroup.label?.de || curGroup.key }}</h1><span class="mono muted">{{ curGroup.key }}</span><span class="grow" /><button class="x" @click="removeCur" :disabled="groupAttrs.length > 0" :title="groupAttrs.length ? 'hat noch Attribute' : 'Gruppe zurückziehen'">🗑</button></div>
+      <div class="scroll">
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr><td class="attr">Name de</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
+          <tr><td class="attr">Name en</td><Cell :value="curGroup.label?.en ?? null" @save="v => groupSet('label_en', v)" /></tr>
+          <tr><td class="attr" title="ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.">🔒 aktiv ab</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
+        </tbody></table>
+        <div class="section">
+          <h2>⊞ Attribute: {{ groupAttrs.length }}</h2>
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
-              <router-link :to="{ path: '/model', query: { section: 'attributes', key: a.key } }" @click="switchTo('attributes'); sel = new Set([a.key])">{{ a.label?.de || a.key }}</router-link>
+              <a href="#" @click.prevent="goto('attributes', a.key)">{{ a.label?.de || a.key }}</a>
               <button @click="assign(a, null)" title="aus der Gruppe nehmen — das Attribut bleibt, ohne Gruppe gilt es an keinem Knoten">×</button>
             </span>
             <select v-model="addAttr" style="width:260px"><option value="">+ Attribut …</option><option v-for="a in otherAttrs" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}{{ a.group ? ' ← ' + a.group : ' (ohne Gruppe)' }}</option></select>
@@ -290,127 +332,111 @@ const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, 
       </div>
     </template>
 
-    <!-- Attribute -->
-    <template v-else-if="section === 'attributes'">
-      <div class="toolbar">
-        <h1>⊞ Attribute</h1><span class="muted">{{ attrRows.length }}</span><span class="grow" />
-        <input v-model="newKey" type="text" placeholder="neuer key (a-z, 0-9, _)" style="width:180px" @keydown.enter="attrAdd" />
-        <button class="primary" :disabled="!newKey.trim()" @click="attrAdd">+ Attribut</button>
-      </div>
-      <div class="toolbar sel">
-        <span class="muted">{{ count }} gewählt · <kbd>Shift</kbd>/<kbd>Strg</kbd>+Klick auf den Key</span>
-        <button @click="selectAll(attrRows)">alle</button><button @click="sel = new Set()">keine</button>
-        <template v-if="count">
-          <span class="sep">·</span>
-          <select v-model="bulkGroup" style="width:140px"><option value="">Gruppe zuweisen …</option><option v-for="g in model.groups" :key="g.key" :value="g.key">{{ g.key }}</option></select>
-          <button class="primary" :disabled="!bulkGroup" @click="bulkAssignGroup">→ {{ count }}</button>
-          <span class="sep">·</span>
-          <button class="x" @click="bulkRemove(k => `/api/model/attributes/${k}`)">🗑 {{ count }} zurückziehen</button>
-        </template>
-      </div>
+    <!-- Attribut -->
+    <template v-else-if="section === 'attributes' && curAttr">
+      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span class="grow" /><button class="x" @click="removeCur" title="Attribut zurückziehen">🗑</button></div>
       <div class="scroll">
-        <EditGrid :columns="attrCols" :rows="attrRows" :selection="sel" removable @selection="s => sel = s" @change="attrChange" @remove="r => del(`/api/model/attributes/${r.key}`)" />
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr><td class="attr">Name de</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
+          <tr><td class="attr">Name en</td><Cell :value="curAttr.label?.en ?? null" @save="v => attrSet('label_en', v)" /></tr>
+          <tr><td class="attr">Typ</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${t}`" @save="v => attrSet('type', v)" /></tr>
+          <tr><td class="attr" title="Gruppe in der Pflege — ohne Gruppe gilt das Attribut an keinem Knoten">▤ Gruppe</td><SelectCell :value="curAttr.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => attrSet('group', v || null)" /></tr>
+          <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">⚖ Einheit</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
+          <tr v-if="curAttr.type === 'enum'"><td class="attr">☰ Werteliste</td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
+          <tr v-if="curAttr.type === 'rows'"><td class="attr" title="Spalten, jede ein Attribut, kommagetrennt">≣ Spalten</td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
+          <tr><td class="attr" title="Wert je Sprache">🗣 je Sprache</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
+          <tr><td class="attr" title="Wert je Kanal">⇶ je Kanal</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
+          <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
+          <tr><td class="attr" title="mehrere Werte, kommagetrennt">≣ mehrfach</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
+          <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für Kanal ${c.key}: Sprachen kommagetrennt oder * für alle; leer = keine Pflicht`">● Pflicht {{ c.key }}</td><Cell :value="(curAttr.required?.[c.key] ?? []).join(',') || null" @save="v => attrSet('req_' + c.key, v)" /></tr>
+          <tr v-for="r in roles" :key="r"><td class="attr" :title="`Ausnahme: an ${roleLabel[r]} setzbar (sonst gilt die Regel der Gruppe)`">{{ roleLabel[r] }}</td><ToggleCell :value="b(!curAttr.levels || curAttr.levels.includes(r))" @save="v => attrSet('lv_' + r, v === 'true')" /></tr>
+        </tbody></table>
       </div>
     </template>
 
-    <!-- Wörterbücher -->
-    <template v-else-if="section === 'lists'">
-      <div class="toolbar">
-        <h1>☰ Wertelisten</h1><span class="muted" title="Ein Attribut vom Typ enum zeigt auf einen Eintrag der Liste, nicht auf ein Wort. Der Eintrag hat Namen je Sprache und eigene Spalten (Farbe: ral) — wer die Liste erweitert, erweitert alle Verweise.">ⓘ referenzierte Einträge mit Namen je Sprache und eigenen Spalten</span><span class="grow" />
-        <input v-model="newKey" type="text" placeholder="neue Werteliste (key)" style="width:160px" @keydown.enter="listAdd" />
-        <button class="primary" :disabled="!newKey.trim()" @click="listAdd">+ Werteliste</button>
-      </div>
-      <div class="scroll" style="flex:0 0 auto;max-height:40%">
-        <EditGrid :columns="listCols" :rows="listRows" :selected="selectedList" @change="listChange" @select="r => selectedList = r.key" />
-      </div>
-      <div class="toolbar" style="border-top:1px solid var(--line)">
-        <h1 class="mono">{{ selectedList ?? '— Werteliste wählen' }}</h1><span class="muted">{{ valueRows.length }}</span><span class="grow" />
-        <input v-model="newValue" type="text" placeholder="neuer Wert" style="width:160px" :disabled="!selectedList" @keydown.enter="valueAdd" />
-        <button class="primary" :disabled="!newValue.trim() || !selectedList" @click="valueAdd">+ Wert</button>
-      </div>
-      <div class="toolbar sel" v-if="selectedList"><span class="muted">{{ count }} gewählt</span><button @click="selectAll(valueRows.map(v => ({ key: v.value })))">alle</button><button @click="sel = new Set()">keine</button><button v-if="count" class="x" @click="bulkRemove(k => `/api/model/lists/${selectedList}/values/${encodeURIComponent(k)}`)">🗑 {{ count }} zurückziehen</button></div>
+    <!-- Werteliste -->
+    <template v-else-if="section === 'lists' && curList">
+      <div class="toolbar"><h1>☰ {{ curList.label?.de || curList.key }}</h1><span class="mono muted">{{ curList.key }}</span><span class="muted">· {{ valueRows.length }}</span><span class="grow" />
+        <input v-model="newValue" type="text" placeholder="neuer Wert" style="width:140px" @keydown.enter="valueAdd" /><button class="primary" :disabled="!newValue.trim()" @click="valueAdd">+ Wert</button></div>
       <div class="scroll">
-        <EditGrid v-if="selectedList" :columns="valueCols" :rows="valueRows" row-key="value" :selection="sel" removable @selection="s => sel = s" @change="valueChange"
-          @remove="r => del(`/api/model/lists/${selectedList}/values/${encodeURIComponent(r.value)}`)" />
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr><td class="attr">Name de</td><Cell :value="curList.label?.de ?? null" @save="v => listSet('label_de', v)" /></tr>
+          <tr><td class="attr">Name en</td><Cell :value="curList.label?.en ?? null" @save="v => listSet('label_en', v)" /></tr>
+          <tr><td class="attr" title="eigene Felder je Eintrag, kommagetrennt (z. B. ral, hex)">Spalten</td><Cell :value="(curList.columns ?? []).join(', ') || null" @save="v => listSet('columns', v)" /></tr>
+        </tbody></table>
+        <EditGrid :columns="valueCols" :rows="valueRows" row-key="value" removable @change="valueChange" @remove="r => del(`/api/model/lists/${curList.key}/values/${encodeURIComponent(r.value)}`)" />
       </div>
     </template>
 
-    <!-- Attributsichten -->
-    <template v-else-if="section === 'views'">
-      <div class="toolbar">
-        <h1>◫ Attributsichten</h1>
-        <span class="muted" title="Je Knotentyp: welche Gruppen in welcher Reihenfolge, und darin die Attribute in welcher Reihenfolge — redaktionell, technisch, Preise, alles. Der Knoten zeigt in einer Sicht nur deren Gruppen; neu zugeordnete Attribute hängen unten an ihrer Gruppe. Im Knoten wählbar: alles oder eine Sicht dieses Typs.">ⓘ je Knotentyp: Gruppen und Attribute in Reihenfolge</span>
-        <span class="grow" />
-        <input v-model="newKey" type="text" placeholder="neue Sicht (key)" style="width:160px" @keydown.enter="viewAdd" />
-        <button class="primary" :disabled="!newKey.trim()" @click="viewAdd">+ Sicht</button>
-      </div>
-      <div class="scroll" style="flex:0 0 auto;max-height:35%">
-        <EditGrid :columns="viewCols" :rows="viewRows" :selected="selectedView" removable @change="viewChange" @select="r => selectedView = r.key" @remove="r => del(`/api/model/views/${r.key}`)" />
-      </div>
-      <div class="toolbar" style="border-top:1px solid var(--line)">
-        <h1 class="mono">{{ selectedView ?? '— Sicht wählen' }}</h1><span class="muted">{{ viewItems.length }} Gruppen · Drag & Drop: Gruppen und Attribute darin</span><span class="grow" />
-        <button v-if="currentView" @click="viewFillAll" title="alle Gruppen">⇊ alle Gruppen</button>
-        <select v-model="addViewGroup" :disabled="!selectedView" style="width:190px"><option value="">▤ Gruppe …</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
+    <!-- Attributsicht -->
+    <template v-else-if="section === 'views' && curView">
+      <div class="toolbar"><h1>◫ {{ curView.label?.de || curView.key }}</h1><span class="mono muted">{{ curView.key }}</span><span class="grow" />
+        <button @click="viewFillAll" title="alle am Knotentyp aktiven Gruppen">⇊ alle Gruppen</button>
+        <select v-model="addViewGroup" style="width:190px"><option value="">▤ Gruppe …</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
         <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">+ dazu</button>
-      </div>
-      <div class="scroll viewedit">
-        <div v-for="it in viewItems" :key="it.group" class="vgroup" draggable="true" @dragstart="onDragStart($event, { group: it.group })" @dragover="onDragOver" @drop="onDrop({ group: it.group })">
-          <div class="vhead"><span class="handle">⋮⋮</span> ▤ {{ model.groups.find(g => g.key === it.group)?.label?.de || it.group }} <span class="muted mono">{{ it.group }}</span>
-            <span class="muted" v-if="model.groups.find(g => g.key === it.group)?.activeFrom"> · aktiv ab {{ roleLabel[model.groups.find(g => g.key === it.group).activeFrom] }}</span>
-            <span class="grow" /><button class="x" @click.stop="viewGroupRemove(it.group)">×</button></div>
-          <div v-for="k in orderedAttrs(it)" :key="k" class="vattr" draggable="true" @dragstart.stop="onDragStart($event, { group: it.group, key: k })" @dragover="onDragOver" @drop.stop="onDrop({ group: it.group, key: k })">
-            <span class="handle">⋮⋮</span> {{ model.attributes.find(a => a.key === k)?.label?.de || k }} <span class="muted mono">{{ k }}</span>
-            <span v-if="!(it.order ?? []).includes(k)" class="muted" title="neu in der Gruppe — hängt unten an, bis du es einsortierst">· neu</span>
+        <button class="x" @click="removeCur" title="Sicht zurückziehen">🗑</button></div>
+      <div class="scroll">
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr><td class="attr">Name de</td><Cell :value="curView.label?.de ?? null" @save="v => viewSet('label_de', v)" /></tr>
+          <tr><td class="attr">Name en</td><Cell :value="curView.label?.en ?? null" @save="v => viewSet('label_en', v)" /></tr>
+          <tr><td class="attr" title="eine Sicht gilt für einen Knotentyp">Knotentyp</td><SelectCell :value="curView.level" :options="roles" :label-of="k => roleLabel[k]" @save="v => viewSet('level', v)" /></tr>
+        </tbody></table>
+        <div class="viewedit">
+          <div class="muted" style="font-size:12px;margin-bottom:6px">▤ {{ viewItems.length }} Gruppen · Drag & Drop: Gruppen und Attribute darin</div>
+          <div v-for="it in viewItems" :key="it.group" class="vgroup" draggable="true" @dragstart="onDragStart($event, { group: it.group })" @dragover="onDragOver" @drop="onDrop({ group: it.group })">
+            <div class="vhead"><span class="handle">⋮⋮</span> ▤ {{ groupLabel(it.group) }} <span class="muted mono">{{ it.group }}</span>
+              <span class="muted" v-if="model.groups.find(g => g.key === it.group)?.activeFrom"> · 🔒 ab {{ roleLabel[model.groups.find(g => g.key === it.group).activeFrom] }}</span>
+              <span class="grow" /><button class="x" @click.stop="viewGroupRemove(it.group)">×</button></div>
+            <div v-for="k in orderedAttrs(it)" :key="k" class="vattr" draggable="true" @dragstart.stop="onDragStart($event, { group: it.group, key: k })" @dragover="onDragOver" @drop.stop="onDrop({ group: it.group, key: k })">
+              <span class="handle">⋮⋮</span> {{ attrLabel(k) }} <span class="muted mono">{{ k }}</span>
+              <span v-if="!(it.order ?? []).includes(k)" class="muted" title="neu in der Gruppe — hängt unten an, bis du es einsortierst">· neu</span>
+            </div>
           </div>
+          <div v-if="!viewItems.length" class="empty">Leer — „⇊ alle Gruppen“ oder einzeln dazu, dann ziehen.</div>
         </div>
-        <div v-if="selectedView && !viewItems.length" class="empty">Leer — „⇊ alle Gruppen“ oder einzeln dazu, dann ziehen.</div>
       </div>
     </template>
 
-    <!-- Einheiten -->
-    <template v-else-if="section === 'units'">
-      <div class="toolbar">
-        <h1>⚖ Einheiten</h1><span class="muted">je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um</span><span class="grow" />
-        <input v-model="newKey" type="text" placeholder="z. B. oz" style="width:100px" @keydown.enter="unitAdd" />
-        <button class="primary" :disabled="!newKey.trim()" @click="unitAdd">+ Einheit</button>
-      </div>
+    <!-- Einheit -->
+    <template v-else-if="section === 'units' && curUnit">
+      <div class="toolbar"><h1>⚖ {{ curUnit.key }}</h1><span class="grow" /><button class="x" @click="removeCur" title="Einheit zurückziehen (nicht, solange ein Attribut sie benutzt)">🗑</button></div>
       <div class="scroll">
-        <EditGrid :columns="unitCols" :rows="unitRows" removable @change="unitChange" @remove="r => del(`/api/model/units/${encodeURIComponent(r.key)}`)" />
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr><td class="attr">Name de</td><Cell :value="curUnit.label?.de ?? null" @save="v => unitSet('label_de', v)" /></tr>
+          <tr><td class="attr">Name en</td><Cell :value="curUnit.label?.en ?? null" @save="v => unitSet('label_en', v)" /></tr>
+          <tr><td class="attr" title="mass, length, volume, data, count …">Grösse</td><Cell :value="curUnit.quantity ?? null" @save="v => unitSet('quantity', v)" /></tr>
+          <tr><td class="attr" title="Faktor zur Basiseinheit der Grösse (Basis = 1)">× Basis</td><Cell :value="String(curUnit.factor)" @save="v => unitSet('factor', v)" /></tr>
+        </tbody></table>
       </div>
     </template>
 
-    <!-- Sprachen -->
-    <template v-else-if="section === 'locales'">
-      <div class="toolbar">
-        <h1>🗣 Sprachen</h1><span class="grow" />
-        <input v-model="newKey" type="text" placeholder="code, z. B. fr" style="width:120px" @keydown.enter="put(`/api/model/locales/${newKey.trim()}`, { code: newKey.trim(), label: '' }); newKey = ''" />
-        <button class="primary" :disabled="!newKey.trim()" @click="put(`/api/model/locales/${newKey.trim()}`, { code: newKey.trim(), label: '' }); newKey = ''">+ Sprache</button>
-      </div>
+    <!-- Sprache -->
+    <template v-else-if="section === 'locales' && curLocale">
+      <div class="toolbar"><h1>🗣 {{ curLocale.code }}</h1></div>
       <div class="scroll">
-        <EditGrid :columns="localeCols" :rows="model.locales" row-key="code" @change="(r, c, v) => put(`/api/model/locales/${r.code}`, { code: r.code, label: v })" />
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr><td class="attr">Name</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>
+        </tbody></table>
       </div>
     </template>
 
-    <!-- Kanäle -->
-    <template v-else-if="section === 'channels'">
-      <div class="toolbar">
-        <h1>⇶ Kanäle</h1><span class="grow" />
-        <input v-model="newKey" type="text" placeholder="key, z. B. amazon" style="width:140px" @keydown.enter="put(`/api/model/channels/${newKey.trim()}`, { key: newKey.trim(), label: {} }); newKey = ''" />
-        <button class="primary" :disabled="!newKey.trim()" @click="put(`/api/model/channels/${newKey.trim()}`, { key: newKey.trim(), label: {} }); newKey = ''">+ Kanal</button>
-      </div>
+    <!-- Kanal -->
+    <template v-else-if="section === 'channels' && curChannel">
+      <div class="toolbar"><h1>⇶ {{ curChannel.key }}</h1></div>
       <div class="scroll">
-        <EditGrid :columns="channelCols" :rows="channelRows" @change="(r, c, v) => put(`/api/model/channels/${r.key}`, { key: r.key, label: { ...(r._c.label || {}), [c.slice(6)]: v } })" />
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr><td class="attr">Name de</td><Cell :value="curChannel.label?.de ?? null" @save="v => channelSet('de', v)" /></tr>
+          <tr><td class="attr">Name en</td><Cell :value="curChannel.label?.en ?? null" @save="v => channelSet('en', v)" /></tr>
+        </tbody></table>
       </div>
     </template>
 
+    <div v-else class="empty">{{ sec.one }} links wählen — oder oben anlegen.</div>
   </div>
   <div v-else class="empty">Modell wird geladen …</div>
 </template>
 
 <style scoped>
-.group-attrs { padding: 10px 8px; border-top: 1px solid var(--line); }
-.group-attrs h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
-.group-attrs .chip a { color: inherit; text-decoration: none; }
 .sections { display: flex; flex-direction: column; padding: 4px; gap: 2px; }
 .part { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; padding: 8px 8px 2px; }
 .section-btn { text-align: left; border: 0; background: none; padding: 6px 8px; border-radius: 4px; display: flex; gap: 6px; align-items: center; }
@@ -418,7 +444,21 @@ const channelRows = computed(() => model.value.channels.map(c => ({ key: c.key, 
 .section-btn.active { background: var(--accent-soft); color: var(--accent); }
 .section-btn .icon { width: 16px; text-align: center; }
 .section-btn .count { margin-left: auto; font-size: 11px; }
-.toolbar.sel { font-size: 12px; gap: 6px; min-height: 30px; }
+/* Die Liste: eine Zeile je Ding — Key, Name, rechts die Kennzahlen als Symbole */
+.list { outline: none; }
+.li { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: default; user-select: none; }
+.li:hover { background: var(--hover); }
+.li.selected { background: var(--accent-soft); }
+.li.current { box-shadow: inset 2px 0 0 var(--accent); }
+.li .k { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.li .l { overflow: hidden; text-overflow: ellipsis; }
+.li .r { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 6px; }
+/* Das Formular rechts: Bezeichnung links, Wert rechts, dieselben Zellen wie im Knoten */
+.form { width: auto; margin-bottom: 4px; }
+.form td.attr { white-space: nowrap; color: var(--muted); }
+.section { padding: 10px 8px; border-top: 1px solid var(--line); }
+.section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+.chip a { color: inherit; text-decoration: none; }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
 .x:hover:not(:disabled) { color: var(--neg); }
 .viewedit { padding: 6px 8px; }
