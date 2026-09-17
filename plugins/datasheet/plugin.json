@@ -1,0 +1,16 @@
+{
+  "key": "datasheet",
+  "version": "1.0.0",
+  "label": {
+    "de": "Datenblatt",
+    "en": "Datasheet"
+  },
+  "description": {
+    "de": "Datenblatt-Vorschau mit Layout-Designer: HTML-Vorlagen mit Platzhaltern ({{attr.key}}, Gruppen, Varianten, Bilder), im Journal gespeichert, je Rolle zugeordnet; „Datenblatt“ im Kontextmenü des Baums öffnet das Blatt zum Drucken/PDF.",
+    "en": "Datasheet preview with layout designer: HTML templates with placeholders, stored in the journal, per role; “Datasheet” in the tree's context menu opens the sheet for print/PDF."
+  },
+  "kind": "output",
+  "runs": "browser",
+  "entry": "entry.js",
+  "autoInstall": true
+}

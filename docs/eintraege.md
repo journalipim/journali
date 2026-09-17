@@ -91,6 +91,7 @@ Die Datei liegt ausserhalb (Store, Hash-adressiert); im Journal nur das Ding
 | `RowOrdered` | `attribute`, `rows[]` | Reihenfolge; ungenannte Zeilen hinten dran |
 | `CategoryAssigned` | `category` | Kategorie dazu — Altlast: Kategorien gibt es seit 17.09.2026 nicht mehr (pflegestruktur §4), Einträge bleiben lesbar |
 | `CategoryRemoved` | `category` | Kategorie weg (Altlast, s. o.) |
+| `PluginDataSet` | `name`, `value?` | Strom `plugin:<key>`: benannter JSON-Datensatz des Plugins (Profil `config:…`/`run:…`, Vorlage `template:…`, `settings`); leerer `value` = weg; der letzte gewinnt |
 | `ReleaseGranted` | `channel`, `locale?` | Freigabe für Kanal (je Sprache oder alle) — nur an der Variante |
 | `ReleaseRevoked` | `channel`, `locale?` | Freigabe weg |
 

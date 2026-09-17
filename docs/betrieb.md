@@ -68,6 +68,9 @@ Befehle (schreiben) brauchen den Kopf `X-Actor` und stehen in
 | `GET /api/media?q=&limit=` | Medien, neueste zuerst (Name, Id, Werte durchsucht) |
 | `GET /api/media/{id}` · `/file` | ein Medium; die Datei (unveränderlich, `immutable`-Cache, Range) |
 | `POST /api/media` (multipart `file`) | hochladen → `MediaCreated`, oder das vorhandene Medium bei gleichem Hash (`existed`) |
+| `POST /api/media/fetch` `{url, name?}` | der Server holt die Datei von einer http(s)-Adresse (Import: Bilder der Quelle) — sonst wie hochladen |
+| `GET /api/nodes/{id}/table?role=&attributes=&locale=&channel=&deep=` | Kinder (mit `deep=true` alle Nachfahren) als Zeilen mit aufgelösten Werten je Attribut (`value`, `own`, `from`) — Massenpflege, Export, Datenqualität |
+| `GET/PUT/DELETE /api/plugins/{key}/data/{name}` | benannte JSON-Datensätze eines Plugins im Journal (`PluginDataSet`): Profile, Vorlagen, Regeln; `GET …/data` listet die Namen |
 
 `payload` kommt in jeder Antwort als eingebettetes JSON, nicht als String.
 

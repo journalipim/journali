@@ -56,7 +56,12 @@ stehen dort als solche markiert.
   `plugin:<key>`, Verwaltung unter ⌁ Plugins (`PluginApi.cs`, `plugins.js`).
   Laufen nie im Serverprozess: Browser-Plugins als ES-Modul in der Oberfläche,
   Prozess-Plugins als Kindprozess des Servers, beide nur über `/api`.
-  `ixp` und `solr` sind eingebaut (builtin) und werden beim Start installiert
+  `ixp` und `solr` sind eingebaut (builtin) und werden beim Start installiert;
+  mitgeliefert: `csv`, `json`, `xlsx` (Importer), `datasheet`, `dq`.
+  Beitragspunkte: views, nodeActions, importers, checks; Plugin-Daten im
+  Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
+  (`ProfileBar`). **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,
+  Ansichten oder READMEs — die gehören in ein Profil
 - `web` — Vue 3 + Vite, Fat-Client-Gefühl: keine Seitenwechsel, Inline-
   Bearbeitung in der Zelle, Tastatur durch Listen, Journal lebendig daneben.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im

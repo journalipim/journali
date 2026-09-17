@@ -9,7 +9,7 @@
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
 //                Prüfregeln für die Datenqualität (Plugin dq zeigt sie)
-// ctx = { api, store, tree, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch }
+// ctx = { api, store, tree, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go }
 //   data   — benannte JSON-Datensätze des Plugins im Journal (PluginDataSet, /api/plugins/<key>/data/<name>)
 //   mapper — der Datenmapper (mapper.js): suggest, plan, convert, parseDelimited, fromObjects
 //   batch(commands, batchId?) — POST /api/batch
@@ -61,6 +61,8 @@ export const plugins = reactive({
         del: name => api.del(base + encodeURIComponent(name)),
       },
       batch: (commands, batch = null) => api.post('/api/batch', { commands, batch }),
+      checks: this.checks,                                                      // Prüfregeln aller Plugins (für dq)
+      go: async path => (await import('./router.js')).router.push(path),        // Navigation in der Oberfläche
     }
   },
   // Importer nach Dateiname: der erste, dessen accept passt

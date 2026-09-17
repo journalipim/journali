@@ -681,10 +681,43 @@ Ansichten erscheinen in der Leiste, Aktionen im Kontextmenü des Baums.
 `ixp` und `solr` sind eingebaut (builtin) und werden beim Start installiert;
 der Solr-Import ist zugleich Prozess-Plugin (`solr_import.py`).
 
+**Ausbau (Taloan, 17.09.2026: „Importe, Massenbearbeitung, Datenblatt,
+Datenmapper, Datenqualität — als Plugins, einzeln ausliefer- und auslagerbar;
+je Import-Plugin mehrere Konfigurationen"):**
+
+- **Plugin-Daten im Journal**: `PluginDataSet {name, value}` auf
+  `plugin:<key>` — benannte JSON-Datensätze (Vorlagen, Profile, Regeln),
+  `GET/PUT/DELETE /api/plugins/{key}/data/{name}`; in der Oberfläche
+  `ctx.data.get/set/del/list`. Damit gilt eine Konfiguration für alle,
+  nicht nur für einen Browser, und jede Änderung ist nachvollziehbar.
+- **Profile je Import-Plugin** (`ProfileBar`): `config:<name>` (Ansicht:
+  Quelle, Ziel, Zuordnung …) und `run:<name>` (Parameter eines Prozesses)
+  — an IXP, Solr, Tabelle und den Prozess-Parametern. Kein Token im Profil.
+- **Weitere Beitragspunkte**: `importers` (Quelle für ⇩ Import → Tabelle:
+  `{key, label, accept, parse(file, ctx) → {columns, rows | sheets}}`) und
+  `checks` (Prüfregel: `run({row, values, columns, model, locale}) →
+  [{severity, attribute, message}]`). `ctx` bekommt `mapper` (der
+  Datenmapper), `batch`, `checks`, `go`.
+- **Datenmapper** (`web/src/mapper.js`, im Kern, weil jeder Import ihn
+  braucht): Spalte → Attribut über Schlüssel, Label, Synonyme
+  (Artikelnummer → sku …), Sprache im Spaltennamen (`name_en`), Ähnlichkeit;
+  Typ aus den Werten; Werte normalisiert (Dezimalkomma, ja/nein, Datum,
+  Listenwert über Label); vorhandene Knoten über Id, SKU, externe Kennung →
+  nur Änderungen; Plan vor dem Schreiben.
+- **Mitgelieferte Plugins**: `csv`, `json`, `xlsx` (SheetJS, Apache-2.0)
+  als Importer; `datasheet` (Vorlagen mit Platzhaltern, Designer, Blatt
+  im Kontextmenü); `dq` (Regeln, Funde je Teilbaum, Sprung zum Knoten).
+- **Im Kern statt Plugin**, weil es der Pflegeweg selbst ist:
+  Massenbearbeitung `/table/{id}` (Excel-artig, Einfügen aus Excel, ein
+  Stapel) über `GET /api/nodes/{id}/table` — den nutzen auch dq und Export.
+- **Keine Kundendaten im Repo**: Vorgaben in Manifesten und Ansichten sind
+  leer; Adressen und Wurzeln gehören in ein Profil (Journal des Kunden).
+
 Offen: Verpackung als Archiv (heute: Verzeichnis im Repo), Prozess-Plugins
 setzen Python voraus (im Container nicht dabei — `python:3` ins Image oder
-das Skript als Programm), Befunde der Qualitätsprüfer (Journal oder eigenes
-Abbild).
+das Skript als Programm), Befunde der Qualitätsprüfer dauerhaft (heute:
+Liste im Browser, CSV), Export-Plugins (BMEcat, Excel, JSON) über
+`/api/nodes/{id}/table`, Datenblatt als PDF-Stapel.
 
 ### 20. Medien — gebaut (Taloan, 17.09.2026: „ausserhalb", „fang mit den Medien an")
 
