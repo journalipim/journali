@@ -76,19 +76,27 @@ public static partial class ModelApi
                 }
                 if (def.Required is { Count: 0 }) def = def with { Required = null };
                 if (!AttributeTypes.All.Contains(def.Type)) return Bad($"Unbekannter Typ: {def.Type}");
-                def = def with { Pattern = Blank(body.Pattern), PatternHint = Blank(body.PatternHint) };
+                // Was zum Typ nicht passt, fällt stillschweigend weg (Taloan, 17.09.: kein Fehler für Felder, die nicht infrage kommen) —
+                // ein Typwechsel nimmt Muster, Einheit, Werteliste, Spalten, Achsen, mehrfach mit, wo sie nicht gelten.
+                var number = def.Type is AttributeTypes.Integer or AttributeTypes.Decimal;
+                def = def with
+                {
+                    Pattern = def.Type == AttributeTypes.Text ? Blank(body.Pattern) : null,
+                    PatternHint = def.Type == AttributeTypes.Text ? Blank(body.PatternHint) : null,
+                    Unit = number ? def.Unit : null,
+                    List = def.Type == AttributeTypes.Enum ? def.List : null,
+                    Columns = def.Type == AttributeTypes.Rows ? def.Columns : null,
+                    Multiple = def.Multiple && def.Type is not (AttributeTypes.Rows or AttributeTypes.Formula or AttributeTypes.Boolean or AttributeTypes.Html),
+                    Axes = def.Type == AttributeTypes.Rows ? null : def.Type == AttributeTypes.Formula ? Clean(def.Axes?.Where(a => a == Axes.Locale).ToArray()) : def.Axes,
+                };
                 if (def.Pattern is not null)
                 {
-                    if (def.Type != AttributeTypes.Text) return Bad("Ein Muster gibt es nur bei text.");
                     try { _ = new System.Text.RegularExpressions.Regex(def.Pattern, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromMilliseconds(200)); }
                     catch (ArgumentException e) { return Bad($"Muster: {e.Message}"); }
                 }
-                if (def.Type == AttributeTypes.Formula && (def.Multiple || def.PerChannel)) return Bad("Eine Formel ist nicht mehrfach und nicht je Kanal.");
                 if (def.Axes?.Except([Axes.Locale, Axes.Channel]).Any() ?? false) return Bad("Achsen: nur locale und channel.");
                 if (def.Channels?.Except(model.Channels.Keys).Any() ?? false) return Bad("Unbekannter Kanal in channels.");
                 if (def.Type == AttributeTypes.Enum && (def.List is null || !model.Lists.ContainsKey(def.List))) return Bad("enum braucht eine vorhandene Werteliste.");
-                if (def.Type != AttributeTypes.Enum && def.List is not null) return Bad("Nur enum hat eine Werteliste.");
-                if (def.Unit is not null && def.Type is not (AttributeTypes.Integer or AttributeTypes.Decimal)) return Bad("Einheit nur bei Zahlen.");
                 if (def.Unit is not null && !model.Units.ContainsKey(def.Unit)) return Bad($"Unbekannte Einheit: {def.Unit} — unter Einheiten anlegen.");
                 if (def.Type == AttributeTypes.Rows)
                 {
@@ -98,9 +106,7 @@ public static partial class ModelApi
                         if (!model.Attributes.TryGetValue(col, out var cd)) return Bad($"Spalte {col}: kein Attribut.");
                         if (cd.Type == AttributeTypes.Rows) return Bad($"Spalte {col}: keine Zeilen in Zeilen.");
                     }
-                    if (def.Multiple || def.Axes is not null) return Bad("rows hat keine Achsen und ist nicht mehrfach — das haben die Spalten.");
                 }
-                else if (def.Columns is not null) return Bad("Spalten nur bei rows.");
                 return write(Model.AttributeStream + key, Types.AttributeDefined, def);
             }));
 
