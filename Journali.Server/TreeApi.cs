@@ -38,7 +38,7 @@ public static class TreeApi
                     row = NodeRow.Of(tree, model, n),
                     values = cols.ToDictionary(a => a.Key, a =>
                     {
-                        var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.Channels.Length > 0 ? channel : null);
+                        var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null);
                         return new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null };
                     }),
                 }).ToList();
