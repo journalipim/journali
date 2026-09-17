@@ -86,6 +86,15 @@ const shownBlocks = computed(() => store.layout === 'tabs' ? blocks.value.filter
 
 // ---- Werte
 const own = computed(() => valueMap(node.value?.values ?? []))
+// Übersetzungsstand: Wert einer anderen Sprache ist „zu überarbeiten“, wenn der Master-Wert später geschrieben wurde (Eintragsnummer).
+const master = computed(() => model.value?.masterLocale ?? locales.value[0] ?? null)
+const ownAt = computed(() => { const m = new Map(); for (const v of node.value?.values ?? []) m.set(key(v.attribute, v.locale, v.channel, v.row), v.number ?? 0); return m })
+function stale(def, col) {
+  if (!def.perLocale || !col.locale || col.locale === master.value) return false
+  const mine = ownAt.value.get(key(def.key, col.locale, col.channel)); if (!mine) return false
+  const m = ownAt.value.get(key(def.key, master.value, col.channel)) ?? ownAt.value.get(key(def.key, master.value, null))
+  return !!m && m > mine
+}
 function valueMap(values) {
   const m = new Map()
   for (const v of values) m.set(key(v.attribute, v.locale, v.channel, v.row), v.values ? v.values.join(', ') : v.value)
@@ -325,6 +334,7 @@ function cellMenu(e, def, col, block) {
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <td v-else-if="axisValue(def.key, c) != null" class="cell"><div class="cell-box locked" title="Variantenachse — festgelegt beim Anlegen">{{ axisValue(def.key, c) }} 🔒</div></td>
               <Cell v-else :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)"
+                :mark="stale(def, c) ? '⟳' : null" :mark-title="`zu überarbeiten — ${master} wurde später geändert`"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
           </tr>

@@ -195,26 +195,54 @@ const productTarget = computed(() => {
 function attrDef(key) { return store.model?.attributes.find(a => a.key === key) }
 function listValues(key) { const d = attrDef(key); return (store.model?.lists.find(l => l.key === d?.list)?.values ?? []) }
 
-function start(kind) {
+// Anlegen (Taloan, 17.09.): ein Dialog mit den Pflichtfeldern — die Attribute, die am neuen Knoten gelten
+// (Gruppen am Pfad des Elternknotens, dort aktiv) und für irgendeinen Kanal Pflicht sind, sprachabhängige
+// nur in der Mastersprache. Erst wenn alles gefüllt ist, wird geschrieben: Anlegen + Werte als ein Stapel.
+const DEPTH = { group: 0, product: 1, variant: 2 }
+const required = ref([])      // [{ def, locale }]
+const vals = ref({})          // key → Wert
+const master = computed(() => store.model?.masterLocale ?? store.model?.locales[0]?.code ?? null)
+async function start(kind) {
+  const parent = kind === 'variant' ? productTarget.value : groupTarget.value
   creating.value = kind
-  form.value = kind === 'group' ? { name: '' }
-    : kind === 'product' ? { axes: [] }
-    : Object.fromEntries((productTarget.value?.axes ?? []).map(a => [a, '']))
-}
-async function create() {
-  const kind = creating.value
+  form.value = kind === 'variant' ? Object.fromEntries((productTarget.value?.axes ?? []).map(a => [a, ''])) : {}
+  vals.value = {}; required.value = []
   try {
-    let entry
-    if (kind === 'group') entry = await api.post('/api/groups', { parent: groupTarget.value?.id ?? null, name: form.value.name })
-    else if (kind === 'product') entry = await api.post('/api/products', { group: groupTarget.value.id })   // Achsen später am Produkt (ProductAxesSet)
-    else entry = await api.post('/api/variants', { product: productTarget.value.id, axisValues: form.value })
-    creating.value = null
-    await tree.load()
-    if (entry.payload.parent) tree.expand(entry.payload.parent)
-    if (entry.payload.group) tree.expand(entry.payload.group)
-    if (entry.payload.product) tree.expand(entry.payload.product)
-    router.push(`/tree/${entry.stream}`)
+    const m = store.model
+    const onPath = parent ? (await api.get(`/api/nodes/${encodeURIComponent(parent.id)}`)).groups.map(g => g.key) : []
+    const active = onPath.filter(k => { const g = m.groups.find(x => x.key === k); return !g?.activeFrom || DEPTH[kind] >= DEPTH[g.activeFrom] })
+    required.value = m.attributes
+      .filter(a => active.includes(a.group) && a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(kind)) && a.type !== 'rows' && a.type !== 'html')
+      .filter(a => !(kind === 'variant' && (productTarget.value?.axes ?? []).includes(a.key)))   // Achsenwerte fragt der Dialog ohnehin
+      .map(a => ({ def: a, locale: a.perLocale ? master.value : null }))
   } catch (e) { store.toast(e.message) }
+}
+const complete = computed(() => required.value.every(r => (vals.value[r.def.key] ?? '').trim() !== '') && Object.values(form.value).every(v => v !== ''))
+async function create() {
+  if (!complete.value) return
+  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  const kind = creating.value
+  const parent = kind === 'variant' ? productTarget.value : groupTarget.value
+  const cmds = [kind === 'group' ? { op: 'group.create', ref: 'n', args: { parent: parent?.id ?? null } }
+    : kind === 'product' ? { op: 'product.create', ref: 'n', args: { group: parent.id } }
+    : { op: 'variant.create', ref: 'n', args: { product: parent.id, axisValues: form.value } }]
+  for (const r of required.value) {
+    const v = vals.value[r.def.key].trim()
+    cmds.push({ op: 'attribute.set', args: { node: '@n', attribute: r.def.key, locale: r.locale, ...(r.def.multiple ? { values: v.split(',').map(x => x.trim()).filter(Boolean) } : { value: v }) } })
+  }
+  try {
+    const res = await api.post('/api/batch', { commands: cmds })
+    if (res.error) { store.toast(`${res.error.message} — ${res.results.length} Einträge geschrieben`); }
+    const id = res.results.find(x => x.ref === 'n')?.node
+    creating.value = null
+    await store.poll(true); await tree.load()
+    if (parent) tree.expand(parent.id)
+    if (id) router.push(`/tree/${id}`)
+  } catch (e) { store.toast(e.message) }
+}
+function onDialogKey(e) {
+  if (e.key === 'Escape') { e.preventDefault(); creating.value = null }
+  else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); create() }
 }
 </script>
 
@@ -232,29 +260,34 @@ async function create() {
       <span class="grow" />
     </div>
 
-    <div v-if="creating" class="create-form">
-      <template v-if="creating === 'group'">
-        <div class="muted">▣ neue Gruppe {{ groupTarget ? 'unter ' + groupTarget.label : 'an der Wurzel' }}</div>
-        <input v-model="form.name" type="text" placeholder="Name im Baum (leer = ★ Automatik)" @keydown.enter="create" @keydown.esc="creating = null" autofocus />
-      </template>
-      <template v-else-if="creating === 'product'">
-        <div class="muted">▦ neues Produkt unter {{ groupTarget.label }} — Name und alles Weitere danach rechts</div>
-      </template>
-      <template v-else>
-        <div class="muted">◆ neue Variante unter {{ productTarget.label }}</div>
-        <div v-if="!productTarget.axes.length" class="muted">Produkt variiert nach nichts — eine Variante ohne Achsen.</div>
-        <template v-for="a in productTarget.axes" :key="a">
-          <select v-if="attrDef(a)?.type === 'enum'" v-model="form[a]">
-            <option value="">{{ attrDef(a)?.label?.de || a }} …</option>
-            <option v-for="v in listValues(a)" :key="v.value" :value="v.value">{{ v.label?.de || v.value }}</option>
-          </select>
-          <input v-else v-model="form[a]" type="text" :placeholder="attrDef(a)?.label?.de || a" @keydown.enter="create" @keydown.esc="creating = null" />
-        </template>
-      </template>
-      <div class="chips">
-        <button class="primary" @click="create">Anlegen</button>
-        <button @click="creating = null">Abbrechen</button>
-        <span class="muted"><kbd>Enter</kbd> · <kbd>Esc</kbd></span>
+    <!-- Anlegen: Dialog mit Pflichtfeldern (Mastersprache); erst vollständig, dann ein Stapel -->
+    <div v-if="creating" class="overlay" @click.self="creating = null" @keydown="onDialogKey">
+      <div class="dialog">
+        <div class="toolbar"><h1>{{ icon(creating) }} {{ creating === 'group' ? 'Neue Gruppe' : creating === 'product' ? 'Neues Produkt' : 'Neue Variante' }}</h1>
+          <span class="muted">{{ creating === 'variant' ? 'unter ' + productTarget.label : groupTarget ? 'unter ' + groupTarget.label : 'an der Wurzel' }}</span></div>
+        <table class="grid form"><colgroup><col style="width:170px" /><col style="width:300px" /></colgroup><tbody>
+          <tr v-for="a in (creating === 'variant' ? productTarget.axes : [])" :key="'ax-' + a">
+            <td class="attr" :title="a + ' — Variantenachse'">◆ {{ attrDef(a)?.label?.de || a }}</td>
+            <td>
+              <select v-if="attrDef(a)?.type === 'enum'" v-model="form[a]" style="width:100%"><option value="">…</option><option v-for="v in listValues(a)" :key="v.value" :value="v.value">{{ v.label?.de || v.value }}</option></select>
+              <input v-else v-model="form[a]" type="text" style="width:100%" />
+            </td>
+          </tr>
+          <tr v-for="(r, i) in required" :key="r.def.key">
+            <td class="attr" :title="r.def.key + (r.locale ? ' · ' + r.locale : '')">● {{ r.def.label?.de || r.def.key }}<span v-if="r.locale" class="muted">&nbsp;{{ r.locale }}</span></td>
+            <td>
+              <select v-if="r.def.type === 'enum'" v-model="vals[r.def.key]" style="width:100%"><option value="">…</option><option v-for="v in listValues(r.def.key)" :key="v.value" :value="v.value">{{ v.label?.de || v.value }}</option></select>
+              <select v-else-if="r.def.type === 'boolean'" v-model="vals[r.def.key]" style="width:100%"><option value="">…</option><option value="true">✓ ja</option><option value="false">✗ nein</option></select>
+              <input v-else v-model="vals[r.def.key]" :type="r.def.type === 'date' ? 'date' : 'text'" style="width:100%" :placeholder="r.def.multiple ? 'kommagetrennt' : ''" :autofocus="i === 0" />
+            </td>
+          </tr>
+        </tbody></table>
+        <div v-if="!required.length && !(creating === 'variant' && productTarget.axes.length)" class="muted" style="padding:6px 8px;font-size:12px">Keine Pflichtfelder an diesem Knotentyp — Anlegen, dann rechts pflegen.</div>
+        <div class="chips" style="padding:8px">
+          <button class="primary" :disabled="!complete" @click="create">Anlegen</button>
+          <button @click="creating = null">Abbrechen</button>
+          <span class="grow" /><span class="muted"><kbd>Enter</kbd> · <kbd>Esc</kbd></span>
+        </div>
       </div>
     </div>
 
@@ -287,8 +320,11 @@ async function create() {
 <style scoped>
 .create { gap: 4px; }
 .create button { min-width: 40px; }
-.create-form { padding: 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
-.create-form input, .create-form select { width: 100%; }
+.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, .45); display: grid; place-items: center; z-index: 5; }
+.dialog { background: var(--pane); border: 1px solid var(--line); border-radius: 8px; min-width: 500px; box-shadow: 0 12px 40px rgba(0, 0, 0, .4); }
+.dialog .form { width: auto; margin: 0; }
+.dialog td.attr { white-space: nowrap; color: var(--muted); }
+.dialog td { padding: 3px 8px; }
 
 .tree { outline: none; }
 .node { display: flex; align-items: center; gap: 4px; height: 24px; cursor: default; white-space: nowrap; padding-right: 8px; }

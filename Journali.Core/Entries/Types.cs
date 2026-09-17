@@ -53,6 +53,7 @@ public static class Types
     public const string ViewRetired = "ViewRetired";
     public const string UnitDefined = "UnitDefined";
     public const string UnitRetired = "UnitRetired";
+    public const string MasterLocaleDefined = "MasterLocaleDefined";
 
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
@@ -306,3 +307,10 @@ public sealed record ViewRetired(string Key);
 public sealed record UnitDefinition(string Key, Labels Label, string Quantity, decimal Factor = 1);
 
 public sealed record UnitRetired(string Key);
+
+/// <summary>
+/// Die Mastersprache (Taloan, 17.09.2026): Strom <c>settings:master_locale</c>. Pflichtfelder beim Anlegen
+/// werden in ihr erfasst; ändert sich ein sprachabhängiger Wert in ihr, gelten die anderen Sprachen
+/// als „zu überarbeiten“ (abgeleitet aus den Eintragsnummern, kein eigener Eintrag).
+/// </summary>
+public sealed record MasterLocaleDefined(string Code);

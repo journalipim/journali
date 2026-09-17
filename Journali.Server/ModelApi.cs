@@ -27,6 +27,11 @@ public static partial class ModelApi
             Command(req, c, code, ValidKey, (model, write) =>
                 write(Model.LocaleStream + code, Types.LocaleDefined, body with { Code = code })));
 
+        m.MapPut("/master-locale", (MasterLocaleDefined body, HttpRequest req, Catalog c) =>
+            Command(req, c, body.Code ?? "", ValidKey, (model, write) =>
+                !model.Locales.ContainsKey(body.Code ?? "") ? Bad($"Sprache {body.Code} gibt es nicht.")
+                : write(Model.MasterLocaleStream, Types.MasterLocaleDefined, new MasterLocaleDefined(body.Code!))));
+
         m.MapPut("/channels/{key}", (string key, ChannelDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
                 write(Model.ChannelStream + key, Types.ChannelDefined, body with { Key = key, Label = body.Label ?? new() })));
@@ -146,6 +151,7 @@ public static partial class ModelApi
     public static object View(ModelCatalog model) => new
     {
         locales = model.Locales.Values.OrderBy(l => l.Code).ToList(),
+        masterLocale = model.MasterLocale,
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], values = l.Ordered.ToList() }).ToList(),

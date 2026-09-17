@@ -10,6 +10,8 @@ const props = defineProps({
   inherited: String,      // was ohne eigenen Wert gilt (Rückfall)
   disabled: Boolean,      // Achse gibt es für dieses Attribut nicht
   origin: String,         // woher der geerbte Wert kommt (Anzeige im Tooltip)
+  mark: String,           // kleines Zeichen rechts in der Zelle (⟳ = Übersetzung zu überarbeiten)
+  markTitle: String,
 })
 const emit = defineEmits(['save'])
 
@@ -59,8 +61,14 @@ function onEditKey(e) {
       <template v-if="disabled"></template>
       <template v-else-if="value != null">{{ value }}</template>
       <template v-else-if="inherited != null">{{ inherited }}</template>
+      <span v-if="mark && !disabled" class="mark" :title="markTitle">{{ mark }}</span>
     </div>
     <!-- Das Eingabefeld ersetzt die Box mit denselben Massen — nicht darin, sonst doppelter Rahmen und unten abgeschnitten. -->
     <input v-else ref="input" v-model="draft" class="cell-input" @keydown="onEditKey" @blur="commit" />
   </td>
 </template>
+
+<style scoped>
+.cell-box { position: relative; }
+.mark { position: absolute; right: 6px; top: 2px; color: var(--warn); font-size: 12px; }
+</style>

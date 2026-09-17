@@ -71,7 +71,7 @@ const rows = computed(() => {
     case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
-    case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [] }))
+    case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : ''] }))
     case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [] }))
   }
   return []
@@ -291,6 +291,7 @@ function unitSet(col, v) {
   put(`/api/model/units/${encodeURIComponent(u.key)}`, u)
 }
 const localeSet = v => put(`/api/model/locales/${curLocale.value.code}`, { code: curLocale.value.code, label: v })
+const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.code })
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v } })
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
 const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de || k
@@ -483,11 +484,13 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Sprache -->
     <template v-else-if="section === 'locales' && curLocale">
-      <div class="toolbar"><h1>🗣 {{ curLocale.code }}</h1></div>
+      <div class="toolbar"><h1>🗣 {{ curLocale.code }}</h1><span v-if="model.masterLocale === curLocale.code" class="warn">★ Mastersprache</span><span class="grow" />
+        <button v-if="model.masterLocale !== curLocale.code" class="primary" @click="setMaster" title="Pflichtfelder beim Anlegen werden in der Mastersprache erfasst; ändert sich dort ein sprachabhängiger Wert, gelten die anderen Sprachen als zu überarbeiten (⟳)">★ als Mastersprache</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>
         </tbody></table>
+        <div class="section muted" style="font-size:12px">★ Mastersprache: {{ model.masterLocale ?? '—' }} · In ihr werden Pflichtfelder beim Anlegen erfasst. Wird dort ein sprachabhängiger Wert geändert, zeigen die anderen Sprachen ⟳ „zu überarbeiten“, bis sie nachgezogen sind; Änderungen in einer anderen Sprache lösen nichts aus.</div>
       </div>
     </template>
 

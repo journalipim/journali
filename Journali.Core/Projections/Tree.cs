@@ -27,6 +27,8 @@ public sealed class Node
     /// <summary>Attributgruppen, die hier angehängt sind; die Definition vererbt sich nach unten.</summary>
     public string[] Groups { get; set; } = [];
     public Dictionary<Axis, string> Values { get; } = new();
+    /// <summary>Je Achse die Nummer des Eintrags, der den Wert zuletzt setzte — für „zu überarbeiten“ gegen die Mastersprache.</summary>
+    public Dictionary<Axis, long> SetAt { get; } = new();
     public Dictionary<Axis, string[]> Lists { get; } = new();
     /// <summary>Vermehrbare Attribute: Zeilen in Reihenfolge je Attribut.</summary>
     public Dictionary<string, List<string>> Rows { get; } = new();
@@ -287,6 +289,7 @@ public sealed class Tree : IProjection
                 }
                 else if (string.IsNullOrEmpty(a.Value)) n.Values.Remove(axis);
                 else n.Values[axis] = a.Value;
+                if (n.Values.ContainsKey(axis) || n.Lists.ContainsKey(axis)) n.SetAt[axis] = entry.Number; else n.SetAt.Remove(axis);
                 break;
             case Types.RowAdded:
                 var ra = Types.Deserialize<RowAdded>(entry.Payload);
