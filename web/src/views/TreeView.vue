@@ -247,6 +247,9 @@ function onListKey(e) {
 }
 function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
 // Wiederherstellen (Taloan): der Knoten mit allem, was darunter zurückgezogen wurde — die Einträge bleiben, es kommt NodeRestored dazu
+// Zurückgezogene Wurzel (Taloan): der Rückzug liegt im Stapel '' — den gibt es in keiner Knotenansicht, also hier in der Baum-Leiste
+const rootUndo = computed(() => { const h = store.undo['']?.history ?? []; return h.length ? h[h.length - 1] : null })
+async function undoRoot() { const s = store.undo['']; const h = s?.history.pop(); if (!h) return; s.redo.push(h); await restore(h.id, h.batch) }
 async function restore(id, batch) {
   try {
     const res = batch ? await api.post(`/api/batches/${encodeURIComponent(batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(id)}/restore`)
@@ -260,6 +263,7 @@ async function retire(r) {
   if (!await ask.confirm({ title: `${icon(r.role)} ${r.label} zurückziehen?`, warn: b.total ? `Mit allen ${b.total} Knoten darunter: ${b.summary}` : '', list: b.names, ok: b.total ? `🗑 ${b.total + 1} Knoten zurückziehen` : '🗑 Zurückziehen', danger: true })) return
   try {
     const res = await api.del(`/api/nodes/${encodeURIComponent(r.id)}${below ? '?recursive=true' : ''}`)
+    const ps = (store.undo[r.parent ?? ''] ??= { history: [], redo: [] }); ps.history.push({ kind: 'retire', id: r.id, parent: r.parent, label: r.label, count: res?.retired ?? 1, batch: res?.batch ?? null }); ps.redo.length = 0
     if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok', { label: '↶ wiederherstellen', run: () => restore(r.id, res.batch), title: `stellt ${res.retired} Knoten wieder her: ${icon(r.role)} ${r.label}${res.retired > 1 ? ` mit ${res.retired - 1} darunter` : ''}` })
     await tree.load(); if (props.id === r.id || !tree.byId.has(props.id)) router.push(r.parent ? `/tree/${r.parent}` : '/tree')
   } catch (e) { store.toast(e.message) }
@@ -466,6 +470,7 @@ function onDialogKey(e) {
       <button @click="start('product')" :disabled="!groupTarget" :title="groupTarget ? `Produkt unter ${groupTarget.label}` : 'erst eine Gruppe wählen'">+ ▦</button>
       <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? `Variante unter ${productTarget.label}` : 'erst ein Produkt wählen'">+ ◆</button>
       <span class="grow" />
+      <button v-if="rootUndo" class="x" @click="undoRoot" :title="`↶ ${rootUndo.label}${rootUndo.count > 1 ? ` mit ${rootUndo.count - 1} darunter` : ''} wiederherstellen (Wurzel)`">↶ Wurzel</button>
       <button v-if="q" @click="pickVisible" title="alle sichtbaren Treffer auswählen">☑ Treffer</button>
       <template v-if="picked.size">
         <span class="chip" title="die Auswahl — Strg+Klick sammelt, Shift+Klick nimmt den Bereich; × oder Esc hebt sie auf">☑ {{ picked.size }} <button @click="picked = new Set()" title="Auswahl aufheben (Esc)">×</button></span>
