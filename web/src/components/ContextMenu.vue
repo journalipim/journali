@@ -40,7 +40,7 @@ async function openSub(i) {
   if (y + s.height > innerHeight - 8) y = Math.max(8, innerHeight - s.height - 8)
   subPos.value = { x, y }
 }
-function hover(i) { active.value = i; const it = menu.items[i]; if (it?.items) openSub(i); else sub.value = -1 }
+function hover(i) { active.value = i; const it = menu.items[i]; if (it?.items && !it.disabled) openSub(i); else sub.value = -1 }   // ausgegrautes Untermenü klappt nicht auf
 const subItems = () => menu.items[sub.value]?.items ?? []
 function onKey(e) {
   if (sub.value >= 0) {
@@ -77,7 +77,7 @@ onUnmounted(() => { window.removeEventListener('mousedown', onDown); window.remo
         <div v-else class="item" :class="{ disabled: it.disabled, danger: it.danger, active: i === active || i === sub }" @click="run(it)" @mouseenter="hover(i)">
           <span class="icon">{{ it.icon ?? '' }}</span>
           <span class="label">{{ it.label }}</span>
-          <span v-if="it.items" class="hint">▸</span>
+          <span v-if="it.items && !it.disabled" class="hint">▸</span>
           <span v-else-if="it.hint" class="hint">{{ it.hint }}</span>
         </div>
       </template>

@@ -344,6 +344,23 @@ async function onDrop(e, r) {
     await store.poll(true); await tree.load(); tree.expand(r.id)
   } catch (e) { store.toast(e.message) }
 }
+// Auswahl: Status für alle, Zurückziehen für alle — je Knoten ein Aufruf; ein Dialog vorher mit den Zahlen (Taloan, 18.09.)
+async function setStatusAll(rows, status) {
+  for (const x of rows) { try { await api.post(`/api/nodes/${encodeURIComponent(x.id)}/status`, { status }) } catch (e) { store.toast(`${x.label}: ${e.message}`) } }
+  await store.poll(true); await tree.load()
+}
+async function retireAll(rows) {
+  // nur die obersten der Auswahl: ein Knoten, dessen Vorfahr auch ausgewählt ist, geht mit dem Vorfahren
+  const ids = new Set(rows.map(x => x.id))
+  const tops = rows.filter(x => !tree.ancestors(x.id).some(a => ids.has(a.id)))
+  const below = tops.reduce((k, x) => k + countBelow(x.id), 0)
+  if (!await ask.confirm({ title: `${tops.length} Knoten zurückziehen?`, warn: below ? `Mit allen ${below} Knoten darunter — insgesamt ${tops.length + below}` : `${tops.length} Knoten`, list: tops.slice(0, 8).map(x => `${icon(x.role)} ${x.label}`), ok: `🗑 ${tops.length + below} Knoten zurückziehen`, danger: true })) return
+  let n = 0
+  for (const x of tops) { try { const res = await api.del(`/api/nodes/${encodeURIComponent(x.id)}${countBelow(x.id) ? '?recursive=true' : ''}`); n += res?.retired ?? 1 } catch (e) { store.toast(`${x.label}: ${e.message}`) } }
+  picked.value = new Set()
+  store.toast(`${n} Knoten zurückgezogen`, 'ok')
+  await tree.load(); if (!tree.byId.has(props.id)) router.push('/tree')
+}
 async function setStatus(r, status) {
   try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/status`, { status }); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
 }
@@ -370,7 +387,12 @@ const below = () => 'Subitems'
 function contextMenu(e, r) {
   router.push(`/tree/${r.id}`)
   const kids = tree.kids(r.id).length
-  const st = s => r.role !== 'group' && r.status !== s ? { label: s === 'draft' ? '○ Entwurf' : s === 'active' ? '● aktiv' : '✗ ausgelaufen', action: () => setStatus(r, s) } : null
+  // Mehrfachauswahl (Taloan, 18.09.): liegt die Zeile in der Auswahl, gilt das Menü für die ganze Auswahl — Zurückziehen, Status,
+  // Duplizieren für alle; was nur einzeln geht (Umbenennen, Tabelle, Plugins), ist ausgegraut mit Hinweis
+  const sel = picked.value.has(r.id) && picked.value.size > 1 ? pickedRows.value : null
+  const only1 = sel ? { disabled: true, hint: `nur einzeln (${sel.length} ausgewählt)` } : {}
+  const st = s => (sel ? sel.some(x => x.role !== 'group' && x.status !== s) : (r.role !== 'group' && r.status !== s))
+    ? { label: (s === 'draft' ? '○ Entwurf' : s === 'active' ? '● aktiv' : '✗ ausgelaufen') + (sel ? ` (${sel.filter(x => x.role !== 'group' && x.status !== s).length})` : ''), action: () => sel ? setStatusAll(sel.filter(x => x.role !== 'group' && x.status !== s), s) : setStatus(r, s) } : null
   // Aufgeräumt (Taloan): kein Neu-anlegen (die Knöpfe oben), kein Auf-/Zuklappen, kein Id kopieren (Id steht im Tooltip und im Kopf);
   // Plugin-Einträge je Plugin in einem Untermenü
   // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
@@ -384,27 +406,29 @@ function contextMenu(e, r) {
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
   if (r.role !== 'variant') add('import', { label: 'JSON: Rohdaten hierher …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
-  const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: byTopic.get(k) }))
+  const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: byTopic.get(k), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: 'nur einzeln' } : {}) }))
   menu.open(e, [
-    { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r) },
+    { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r), ...only1 },
     // Symbol ist der Pin — bei beiden (Taloan: der Pin gehört zu „lösen“); der Hinweis rechts sagt, was danach gilt
-    { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r) },
+    { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r), ...only1 },
     { sep: true },
     // Massenbearbeitung wie in Excel (Taloan, 17.09.): die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
     // Taloan (17.09.): eigenes Fenster, Excel-ähnlich pflegen, Schliessen übernimmt — Popup blockiert? dann im Hauptfenster
-    r.role !== 'variant' && kids ? { label: `Subitems tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?popup=1`) } : null,
+    r.role !== 'variant' && kids ? { label: `Subitems tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?popup=1`), ...only1 } : null,
     r.role === 'group' && kids ? { label: 'Alle Varianten darunter tabellarisch', icon: '⊞', key: 'w', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?role=variant&deep=1&popup=1`) } : null,
     (r.role !== 'variant' && kids) ? { sep: true } : null,
-    { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
-    r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
+    sel ? { label: `Duplizieren (${sel.length})`, icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: sel.some(x => x.role === 'variant' && Object.keys(x.axisValues).length > 0), action: async () => { for (const x of sel) await duplicate(x, false) } }
+        : { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
+    !sel && r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
     { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
-    { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
+    { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },
     ...(topicMenus.length ? [{ sep: true }, ...topicMenus] : []),
     { sep: true },
-    { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
+    sel ? { label: `${sel.length} ausgewählte zurückziehen${sel.reduce((k, x) => k + countBelow(x.id), 0) ? ` (mit ${sel.reduce((k, x) => k + countBelow(x.id), 0)} darunter)` : ''}`, icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
+        : { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])
 }
 function onGlobalKey(e) {
