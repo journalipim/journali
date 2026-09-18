@@ -314,6 +314,42 @@ const relCount = computed(() => (rels.value.out?.length ?? 0) + (rels.value.in?.
 const relValue = (r, def) => { const loc = def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null; return r.values.find(v => v.attribute === def.key && (v.locale ?? null) === loc && !v.channel)?.value ?? null }
 const setRelValue = (r, def, v) => command(() => api.post(`/api/relations/${r.id}/attributes`, { attribute: def.key, locale: def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null, value: v }))
 const retireRel = r => command(() => api.del(`/api/relations/${r.id}`))
+// „Bilder der Subitems durch Vererbung ersetzen“ (Taloan, 18.09.): die eigenen Medien dieses Knotens werden vererbt (inherit=true);
+// an allen Nachfahren werden Zuordnungen zu DEMSELBEN Medium (gleicher Typ) gelöst — aber nur, wenn der Nachfahr danach kein
+// eigenes Medium dieses Typs mehr hätte (sonst bräche sein eigenes die Vererbung, und das gleiche Bild wäre weg). Ein Stapel.
+const inheriting = ref('')
+async function inheritToSubitems() {
+  const own = mediaRels.value; if (!own.length) return
+  inheriting.value = 'lese Subitems …'
+  try {
+    const below = []; const walk = id => { for (const k of tree.kids(id)) { below.push(k); walk(k.id) } }; walk(props.id)
+    const mine = new Map(own.map(r => [`${r.type}|${r.other.id}`, r]))
+    const retire = [], keep = []
+    for (const k of below) {
+      inheriting.value = `lese … ${retire.length + keep.length}/${below.length}`
+      const rk = await api.get(`/api/nodes/${encodeURIComponent(k.id)}/relations`)
+      const media = (rk.out ?? []).filter(r => isMediaType(r.type))
+      for (const t of new Set(media.map(r => r.type))) {
+        const ofType = media.filter(r => r.type === t)
+        const dup = ofType.filter(r => mine.has(`${t}|${r.other.id}`)), other = ofType.filter(r => !mine.has(`${t}|${r.other.id}`))
+        if (!dup.length) continue
+        if (other.length) keep.push({ node: k, type: t, n: dup.length })   // eigene andere Bilder: Vererbung bricht dort ohnehin — nicht anfassen
+        else retire.push(...dup.map(r => ({ node: k, rel: r })))
+      }
+    }
+    const toInherit = own.filter(r => relValueRaw(r, 'inherit') !== 'true')
+    const ok = await dialog.confirm({
+      title: `Medien an ${below.length} Subitems vererben?`,
+      warn: `${toInherit.length} Medien hier auf „vererben“ · ${retire.length} gleiche Zuordnungen an Subitems lösen`,
+      list: [...(keep.length ? [`${keep.length} Subitems behalten ihre Zuordnung (haben daneben eigene andere Medien)`] : []), ...retire.slice(0, 6).map(x => `${x.node.label} · ${x.rel.other.label}`), ...(retire.length > 6 ? [`… und ${retire.length - 6} weitere`] : [])],
+      text: 'Die Medien bleiben in der Bibliothek; an den Subitems erscheinen sie danach als geerbt (gestrichelt).', ok: '↓ Vererben' })
+    if (!ok) return
+    const commands = [...toInherit.map(r => ({ op: 'relation.attribute.set', args: { relation: r.id, attribute: 'inherit', value: 'true' } })), ...retire.map(x => ({ op: 'relation.retire', args: { relation: x.rel.id } }))]
+    const res = await api.batchChunked(commands, { label: 'Vererbung', continueOnError: true })
+    store.toast(`✓ ${res.results.length} Einträge${res.errors.length ? ` · ${res.errors.length} Fehler` : ''}`, res.errors.length ? 'error' : 'ok')
+    await store.poll(true); await load()
+  } catch (e) { store.toast(e.message) } finally { inheriting.value = '' }
+}
 const newRel = ref({ type: '', q: '', to: null })
 const relMatches = computed(() => {
   const q = newRel.value.q.trim().toLowerCase(); if (q.length < 1) return []
@@ -557,6 +593,7 @@ function cellMenu(e, def, col, block) {
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
           <button class="primary" @click="mediaFile.click()">⇧ hochladen</button>
+          <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" :title="`die Medien hier an alle Subitems vererben; gleiche Bilder an den Subitems werden durch die Vererbung ersetzt`">{{ inheriting || '↓ an Subitems vererben' }}</button>
           <input ref="mediaFile" type="file" multiple style="display:none" @change="uploadMedia([...$event.target.files]); $event.target.value = ''" />
           <button @click="mediaPick.open = !mediaPick.open; mediaPick.open && pickSearch()">🖼 aus Medien wählen</button>
           <input v-if="mediaPick.open" v-model="mediaPick.q" type="search" placeholder="🔍 Name" style="width:200px" @input="pickSearch" />
