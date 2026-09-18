@@ -215,7 +215,7 @@ export default {
   views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '📄', mount: mountWysiwyg }, { path: 'html', label: 'Datenblatt: HTML-Vorlage', icon: '‹›', mount: mountDesigner }],
   nodeActions: [{
     // an jeder Rolle — auch die Gruppe hat ein Blatt (Datentabelle/Vergleich der Produkte darunter); Layout je Rolle (Taloan, 18.09.: „wo ist Datenblatt geblieben?“)
-    label: 'Datenblatt', icon: '📄',
+    label: 'Datenblatt erstellen', icon: '📄',
     async run(nodeId, ctx) {
       const row = ctx.tree.byId.get(nodeId); if (!row) return
       // Layout der Rolle (WYSIWYG); gibt es keins, aber eine HTML-Vorlage dieses Namens, die
@@ -226,6 +226,10 @@ export default {
       await preloadCompare(ctx, l.layout, d, l.locale)
       openSheet(renderSheet(l.layout, d, ctx.store.model), `Datenblatt ${row.label}`)
     },
+  }, {
+    // Designer mit diesem Knoten als Vorschau (Taloan, 18.09.: „erstellen und designen“)
+    label: 'Datenblatt designen …', icon: '✎',
+    run(nodeId, ctx) { localStorage.setItem('journali.datasheet.node', nodeId); ctx.go?.('/p/datasheet/designer') },
   }],
   // für andere Plugins (Export als PDF-Stapel o. ä.)
   render, dataOf, DEFAULT_TEMPLATE,
