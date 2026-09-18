@@ -64,6 +64,8 @@ export const plugins = reactive({
       batch: (commands, batch = null) => api.post('/api/batch', { commands, batch }),
       checks: this.checks,                                                      // Prüfregeln aller Plugins (für dq)
       go: async path => (await import('./router.js')).router.push(path),        // Navigation in der Oberfläche
+      // JSON-Datei zum Import übergeben und den JSON-Import öffnen (Baum-Drop, Menü, Tabellenimport)
+      importJson: async (file, parent = null) => { store.pendingImport = { file, parent }; (await import('./router.js')).router.push('/p/json/import') },
     }
   },
   // Importer nach Dateiname: der erste, dessen accept passt

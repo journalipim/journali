@@ -41,8 +41,10 @@ export async function mountManager(root, ctx) {
   drop.addEventListener('drop', e => { e.preventDefault(); drop.style.borderColor = 'var(--line)'; const f = e.dataTransfer.files[0]; if (f) analyse(f) })
   const s2 = el('div'), s3 = el('div'), s4 = el('div')
   body.append(band('1 · Datei'), drop, fileIn, s2, s3, s4)
+  // vom Baum (Drop auf einen Knoten), aus dem Menü oder vom Tabellenimport übergeben: gleich analysieren, Ziel steht schon
+  if (store.pendingImport?.file) { const p = store.pendingImport; store.pendingImport = null; await analyse(p.file, p.parent) }
 
-  async function analyse(file) {
+  async function analyse(file, presetParent = null) {
     let j; try { j = JSON.parse(await file.text()) } catch { store.toast('keine gültige JSON-Datei'); return }
     const node = j?.node ?? j, m = j?.model ?? { groups: [], attributes: [], lists: [], units: [] }
     if (!node?.id || !node?.role) { store.toast('Kein Knotenbaum: id und role fehlen. Für Tabellen (Listen von Objekten) gibt es ⇩ Import → Tabelle.'); return }
@@ -63,7 +65,7 @@ export async function mountManager(root, ctx) {
     st.mapA = {}; st.mapG = {}
     for (const a of st.attrs) st.mapA[a.key] = guess(a.key, a.label, a.type, model.attributes)
     for (const g of st.groups) st.mapG[g.key] = guess(g.key, g.label, null, model.groups)
-    st.parent = node.parent && tree.byId.has(node.parent) ? node.parent : (tree.rows.find(r => !r.parent)?.id ?? null)
+    st.parent = presetParent && tree.byId.has(presetParent) ? presetParent : node.parent && tree.byId.has(node.parent) ? node.parent : (tree.rows.find(r => !r.parent)?.id ?? null)
     say(`${file.name}: ${count} Knoten · ${st.attrs.length} Attribute · ${st.groups.length} Gruppen · ${(m.lists ?? []).length} Listen`)
     drawModel(); drawTarget(); drawRun()
   }
@@ -110,12 +112,24 @@ export async function mountManager(root, ctx) {
     s3.innerHTML = ''
     s3.append(band('3 · Ziel — wo die Struktur ansetzt'))
     const n = st.raw.node
-    const inp = el('input', { type: 'search', placeholder: '🔍 Gruppe oder Produkt', style: 'width:320px', value: st.parent ? tree.byId.get(st.parent)?.label ?? '' : '(Wurzel)' })
-    const pick = el('div', { class: 'picker', style: 'position:absolute;z-index:5;width:380px;display:none' })
-    inp.addEventListener('input', () => { const q = inp.value.trim().toLowerCase(); pick.innerHTML = ''; const hits = q ? tree.rows.filter(r => r.role !== 'variant' && (r.label.toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12) : []; for (const r of hits) pick.append(el('div', { class: 'pick', onmousedown: e => { e.preventDefault(); st.parent = r.id; inp.value = r.label; pick.style.display = 'none'; drawRun() } }, `${ICON[r.role]} ${r.label}`)); pick.style.display = hits.length ? 'block' : 'none' })
-    inp.addEventListener('blur', () => setTimeout(() => pick.style.display = 'none', 150))
-    const rootBtn = el('button', { class: 'x', onclick: () => { st.parent = null; inp.value = '(Wurzel)'; drawRun() }, title: 'als eigene Wurzel — nur für Produktgruppen' }, '⌂ Wurzel')
-    s3.append(el('div', { style: 'display:flex;gap:8px;align-items:center;font-size:12px' }, el('span', {}, `${ICON[n.role]} ${n.name ?? n.id}${st.count > 1 ? ` mit ${st.count - 1} darunter` : ''} →`), el('span', { style: 'position:relative' }, inp, pick), n.role === 'group' ? rootBtn : ''))
+    // Zielbaum (Taloan: „wie kommt ein Anwender an die Id?“): Gruppen und Produkte als Baum, Klick wählt; Varianten sind kein Ziel
+    const open = new Set((st.parent ? [...tree.ancestors(st.parent).map(a => a.id), st.parent] : []).concat(tree.rows.filter(r => !r.parent).map(r => r.id)))
+    const box = el('div', { class: 'picker', style: 'max-height:260px;margin-top:4px;width:min(520px,100%)' })
+    const allowed = r => n.role === 'variant' ? r.role === 'product' : r.role === 'group'
+    const drawTree = () => {
+      box.innerHTML = ''
+      const rec = (id, depth) => { for (const r of tree.kids(id)) { if (r.role === 'variant') continue
+        const kids = tree.kids(r.id).filter(k => k.role !== 'variant').length
+        const row = el('div', { class: 'pick', style: `padding-left:${8 + depth * 16}px;${allowed(r) ? '' : 'opacity:.45'}${st.parent === r.id ? ';background:var(--accent-soft)' : ''}`, title: allowed(r) ? r.id : 'kein passendes Ziel für ' + ICON[n.role] })
+        row.append(el('span', { class: 'muted', style: 'width:14px;display:inline-block', onclick: e => { e.stopPropagation(); open.has(r.id) ? open.delete(r.id) : open.add(r.id); drawTree() } }, kids ? (open.has(r.id) ? '▾' : '▸') : ''), el('span', {}, `${ICON[r.role]} ${r.label}`))
+        row.addEventListener('click', () => { if (!allowed(r)) return; st.parent = r.id; drawTree(); drawRun() })
+        box.append(row)
+        if (open.has(r.id)) rec(r.id, depth + 1) } }
+      rec(null, 0)
+    }
+    drawTree()
+    const rootBtn = el('button', { class: 'x', style: 'margin-top:4px', onclick: () => { st.parent = null; drawTree(); drawRun() }, title: 'als eigene Wurzel — nur für Produktgruppen' }, '⌂ als Wurzel')
+    s3.append(el('div', { style: 'font-size:12px' }, `${ICON[n.role]} ${n.name ?? n.id}${st.count > 1 ? ` mit ${st.count - 1} darunter` : ''} → `, el('b', {}, st.parent ? tree.byId.get(st.parent)?.label ?? st.parent : 'Wurzel')), box, n.role === 'group' ? rootBtn : '')
     s3.append(el('div', { class: 'muted', style: 'font-size:12px;margin-top:6px' }, st.existing ? `${st.existing} der ${st.count} Knoten gibt es hier schon (gleiche Id) — sie werden angeglichen, nicht verdoppelt; zurückgezogene kommen zurück.` : 'Kein Knoten mit diesen Ids im System — alles wird neu angelegt (neue Ids).'))
   }
 

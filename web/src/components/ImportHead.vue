@@ -5,7 +5,7 @@
 import { plugins } from '../plugins.js'
 import ProfileBar from './ProfileBar.vue'
 defineProps({ source: String, plugin: String, busy: String, get: Function, set: Function })
-const TABS = [['ixp', 'IXP', '/import'], ['solr', 'Solr', '/import/solr'], ['table', 'Tabelle', '/import/table']]
+const TABS = [['ixp', 'IXP', '/import'], ['solr', 'Solr', '/import/solr'], ['table', 'Tabelle', '/import/table'], ['json', 'JSON', '/p/json/import']]
 const on = k => k === 'table' || plugins.enabled(k)
 </script>
 

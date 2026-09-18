@@ -292,6 +292,8 @@ function canDrop(src, target) {
 function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'all'; e.dataTransfer.setData('text/plain', r.id) }
 const dragIds = () => picked.value.has(dragId.value) ? [...picked.value] : [dragId.value]
 function onDragOver(e, r) {
+  // Datei aus dem Explorer (JSON) auf einen Knoten: der JSON-Import startet mit diesem Ziel (Taloan)
+  if (!dragId.value && e.dataTransfer?.types?.includes('Files')) { if (r.role !== 'variant') { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dropId.value = r.id } else dropId.value = null; return }
   const src = tree.byId.get(dragId.value)
   if (src) hoverOpen(r)
   const ok = e.shiftKey ? dragIds().some(id => id !== r.id) : dragIds().some(id => canDrop(tree.byId.get(id), r))
@@ -299,6 +301,12 @@ function onDragOver(e, r) {
   e.preventDefault(); e.dataTransfer.dropEffect = e.shiftKey ? 'move' : e.ctrlKey ? 'copy' : 'move'; dropId.value = r.id
 }
 async function onDrop(e, r) {
+  if (!dragId.value && e.dataTransfer?.files?.length) {
+    dropId.value = null; const f = e.dataTransfer.files[0]
+    if (!/\.json$/i.test(f.name)) { store.toast('Nur JSON-Dateien lassen sich auf den Baum ziehen (Tabellen: ⇩ Import → Tabelle)'); return }
+    if (r.role === 'variant') { store.toast('Ziel muss eine Gruppe oder ein Produkt sein'); return }
+    store.pendingImport = { file: f, parent: r.id }; router.push('/p/json/import'); return
+  }
   const ids = dragIds()
   dragId.value = null; dropId.value = null; hoverStop()
   if (e.shiftKey) {   // verknüpfen: die Auswahl (oder die eine Zeile) mit diesem Ziel
@@ -367,6 +375,7 @@ function contextMenu(e, r) {
     { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
+    r.role !== 'variant' ? { label: 'JSON hierher importieren …', icon: '⇩', key: 'o', hint: 'Rohdaten', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } } : null,
     ...(byPlugin.size ? [{ sep: true }, ...[...byPlugin].map(([k, items]) => ({ label: pluginLabel(k), icon: plugins.modules.get(k)?.icon || '⌁', hint: k, items }))] : []),
     { sep: true },
     { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },

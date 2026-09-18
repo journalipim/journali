@@ -73,6 +73,10 @@ async function reloadFile() {
   } else document.querySelector('#table-file-input')?.click()
 }
 async function takeFile(file, keepSheet = false) {
+  // Rohdaten-JSON (Knotenbaum { model, node } oder Knoten mit id/role/values) gehört in den JSON-Import, nicht in die Tabelle (Taloan)
+  if (/\.json$/i.test(file.name)) {
+    try { const j = JSON.parse(await file.text()); const n = j?.node ?? j; if (n && !Array.isArray(n) && n.id && n.role && Array.isArray(n.values)) { store.toast('Knotenbaum erkannt → JSON-Import', 'ok'); store.pendingImport = { file, parent: target.value || null }; router.push('/p/json/import'); return } } catch { /* dann wie eine Tabelle */ }
+  }
   const sheet = keepSheet ? source.value?.sheet : null
   const imp = plugins.importerFor(file.name)
   busy.value = `lese ${file.name} …`
