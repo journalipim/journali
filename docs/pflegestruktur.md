@@ -792,6 +792,15 @@ Liste im Browser, CSV), Export-Plugins (BMEcat, Excel, JSON) über
 
 ### 20. Medien — gebaut (Taloan, 17.09.2026: „ausserhalb", „fang mit den Medien an")
 
+**Vererbung (Taloan, 18.09.2026):** ein Medium am Knoten bekommt an seiner
+Zuordnung den Schalter `inherit` („an Subitems vererben“, Gruppe
+`relation_media`). Dann gilt es an allen Knoten darunter — als *geerbtes*
+Medium (gestrichelte Kachel, kursiv, mit Herkunft). Je Relationstyp gilt
+die nächste Ebene, die etwas hat: hängt ein Knoten ein eigenes Medium des
+Typs an, bricht das die Vererbung für diesen Typ an seinem Ast. Der Server
+liefert `inherited` in `GET /api/nodes/{id}/relations`; nichts wird
+kopiert, es ist eine Ableitung.
+
 Taloan: Binärdaten nicht in die Datenbank — später skalieren, woanders
 speichern. Einverstanden; das Journal bleibt schlank.
 
