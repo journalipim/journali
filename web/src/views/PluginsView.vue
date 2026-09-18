@@ -85,7 +85,7 @@ function pick(k) { cur.value = k; startParams() }
       <p style="padding:8px 8px 0">{{ manifest.description?.de || manifest.description?.en || '' }}</p>
       <div class="section" v-if="manifest.builtin">
         <h2>Ansicht</h2>
-        <div class="muted" style="font-size:12px">Eingebaut in die Oberfläche — <router-link :to="manifest.builtin === 'solr' ? '/import/solr' : '/import'">⇩ Import → {{ manifest.builtin }}</router-link>{{ current.enabled ? '' : ' (aus — erst einschalten)' }}</div>
+        <div class="muted" style="font-size:12px">Eingebaut in die Oberfläche — <router-link :to="manifest.builtin === 'solr' ? '/import/solr' : '/import/ixp'">⇩ Import → {{ manifest.builtin }}</router-link>{{ current.enabled ? '' : ' (aus — erst einschalten)' }}</div>
       </div>
       <div class="section" v-if="manifest.runs === 'office' && current.key === 'onlyoffice'">
         <h2>📗 In OnlyOffice einrichten</h2>

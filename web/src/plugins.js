@@ -3,7 +3,8 @@
 // ixp, solr) sind Teil der Oberfläche; ihr Schalter im Journal entscheidet nur, ob sie zu sehen sind.
 //
 // Vertrag eines Browser-Plugins (default export), alles optional:
-//   views:       [{ path: 'meine-ansicht', label, icon, mount(el, ctx) → unmount? }]   Ansicht in der Leiste
+//   views:       [{ path: 'meine-ansicht', label, icon, topic?, mount(el, ctx) → unmount? }]   Ansicht — erscheint in der Übersicht ihres Themas
+//                (topic: import | export | datasheet | analysis | tools; sonst aus kind des Manifests), nicht in der Leiste
 //   nodeActions: [{ label | label(row, below), icon, roles?: ['group','product'], topic?: 'import'|'export'|'datasheet'|'analysis'|'tools', run(nodeId, ctx) }]
 //                Kontextmenü des Baums, ein Untermenü je Thema (roles: nur an diesen; topic sonst aus kind des Manifests; below = „Subitems“)
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]

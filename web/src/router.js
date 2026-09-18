@@ -3,6 +3,7 @@ import TreeView from './views/TreeView.vue'
 import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
 import ImportView from './views/ImportView.vue'
+import HubView from './views/HubView.vue'
 import SolrView from './views/SolrView.vue'
 import TableImportView from './views/TableImportView.vue'
 import TableEditView from './views/TableEditView.vue'
@@ -21,7 +22,13 @@ export const router = createRouter({
     { path: '/table/:id', component: TableEditView, props: r => ({ id: r.params.id, role: r.query.role, deep: r.query.deep }) },
     { path: '/journal', component: JournalView },
     { path: '/model', component: ModelView },
-    { path: '/import', component: ImportView },
+    // Themen (Taloan, 18.09.): erst das Thema, dann das Plugin — /import ist die Übersicht, die Quellen liegen darunter
+    { path: '/import', component: HubView, props: { topic: 'import' } },
+    { path: '/import/ixp', component: ImportView },
+    { path: '/export', component: HubView, props: { topic: 'export' } },
+    { path: '/datasheet', component: HubView, props: { topic: 'datasheet' } },
+    { path: '/analysis', component: HubView, props: { topic: 'analysis' } },
+    { path: '/tools', component: HubView, props: { topic: 'tools' } },
     { path: '/import/solr', component: SolrView },
     { path: '/import/table', component: TableImportView },
     { path: '/media', component: MediaView },

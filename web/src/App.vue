@@ -5,6 +5,7 @@ import ContextMenu from './components/ContextMenu.vue'
 import Dialog from './components/Dialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { plugins } from './plugins.js'
+import { TOPICS, entries, topicOfPath } from './topics.js'
 const route = useRoute()
 const router = useRouter()
 // Auffangrahmen (Taloan, 17.09.: leerer Bildschirm ist im Betrieb ein Desaster): ein Fehler beim Zeichnen einer
@@ -21,10 +22,12 @@ onMounted(() => window.addEventListener('keydown', e => {
     const n = [...nav, ...navBottom].find(n => n.key === e.key); router.push(n.to === '/tree' && store.lastNode ? `/tree/${store.lastNode}` : n.to)
   }
 }))
+// Themen in der Leiste (Taloan, 18.09.): Import, Export, Datenblatt, Datenanalyse, Werkzeuge — jedes führt zur Übersicht
+// seines Themas, dort wählt man das Plugin; kein Plugin bekommt ein eigenes Symbol. Ein Thema ohne Einträge bleibt weg.
 const nav = [
   { to: '/tree', icon: '▣', label: 'Baum', key: '1' },
   { to: '/model', icon: '⊞', label: 'Modell', key: '3' },
-  { to: '/import', icon: '⇩', label: 'Import', key: '4' },
+  ...TOPICS.map(t => ({ to: t.to, icon: t.icon, label: t.label, key: t.hotkey, topic: t.key, always: !!t.always })),
   { to: '/media', icon: '🖼', label: 'Medien', key: '5' },
 ]
 // unten in der Leiste (Taloan, 17.09.): Journal und Einstellungen
@@ -40,7 +43,7 @@ const railTitle = n => `${n.label}  (${n.key ? 'Alt+' + n.key : n.hint}) — zie
 const railItems = computed(() => {
   // ▣ Baum führt zum zuletzt gewählten Knoten zurück (Taloan, 18.09.); Kennung des Eintrags bleibt '/tree' (Reihenfolge, aktiv)
   const treeTo = store.lastNode ? `/tree/${store.lastNode}` : '/tree'
-  const all = [...nav.map(n => n.to === '/tree' ? { ...n, href: treeTo } : n), ...plugins.views.map(v => ({ to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, hint: `Plugin ${v.key}`, exact: true })), { to: 'spacer' }, ...navBottom]
+  const all = [...nav.filter(n => !n.topic || n.always || entries.value[n.topic]?.length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : n), { to: 'spacer' }, ...navBottom]
   const order = store.railOrder ?? []
   const known = new Set(all.map(x => x.to))
   const sorted = order.filter(k => known.has(k)).map(k => all.find(x => x.to === k))
@@ -65,7 +68,7 @@ function railDrop(target) {
       <router-link to="/tree" class="rail-logo" title="journali"><img :src="'/logo-128.png'" alt="journali" onerror="this.style.display='none'" /></router-link>
       <template v-for="n in railItems" :key="n.to">
         <div v-if="n.to === 'spacer'" class="rail-spacer" :class="{ over: dragKey }" @dragover.prevent @drop="railDrop('spacer')" />
-        <router-link v-else :to="n.href ?? n.to" class="rail-item" :class="{ active: n.exact ? route.path === n.to : route.path.startsWith(n.to), dragging: dragKey === n.to }"
+        <router-link v-else :to="n.href ?? n.to" class="rail-item" :class="{ active: n.topic ? topicOfPath(route.path) === n.topic : route.path.startsWith(n.to), dragging: dragKey === n.to }"
           :title="railTitle(n)" draggable="true"
           @dragstart="dragKey = n.to" @dragend="dragKey = null" @dragover.prevent @drop="railDrop(n.to)">
           <span class="icon">{{ n.icon }}</span>
