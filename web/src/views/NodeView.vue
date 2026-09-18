@@ -263,9 +263,7 @@ function stepTitle(h, verb, n, key, redo = false) {
   if (!h) return redo ? 'nichts zu wiederholen' : 'nichts rückgängig zu machen'
   const show = v => v == null || v === '' ? 'leer' : `„${String(v).replace(/<[^>]+>/g, ' ').slice(0, 60)}“`
   const from = redo ? h.before : h.after, to = redo ? h.after : h.before
-  return `${verb} (${key}): ${store.name(h.def)}${h.col?.label ? ' · ' + h.col.label : ''}${h.row ? ' · Zeile ' + h.row : ''}
-${show(from)} → ${show(to)}
-${n} Schritt${n > 1 ? 'e' : ''} in dieser Sitzung — jeder schreibt einen neuen Eintrag ins Journal`
+  return `${store.name(h.def)}${h.col?.label ? ' · ' + h.col.label : ''}${h.row ? ' · Zeile ' + h.row : ''}: ${show(from)} → ${show(to)}  (${key})`
 }
 function undo() { const h = history.value.pop(); if (!h) return; redoStack.value.push(h); writeValue(h.def, h.col, h.before, h.row) }
 function redo() { const h = redoStack.value.pop(); if (!h) return; history.value.push(h); writeValue(h.def, h.col, h.after, h.row) }
