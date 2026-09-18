@@ -1,0 +1,16 @@
+{
+  "key": "dpp",
+  "version": "1.0.0",
+  "label": {
+    "de": "DPP — Digitaler Produktpass",
+    "en": "DPP — Digitaler Produktpass"
+  },
+  "description": {
+    "de": "Prüft Produkte gegen die Datenpunkte des Digitalen Produktpasses (ESPR 2024/1781, Anhang III; Batteriepass 2023/1542): Zuordnung Datenpunkt → Attribut (Best Guess, im Journal gemerkt), fehlende Attribute anlegen, Teilbaum prüfen (erfüllt/leer/fraglich je Knoten), Vorschläge regelbasiert — und mit Claude, wenn ein Schlüssel in den Einstellungen steht.",
+    "en": "Prüft Produkte gegen die Datenpunkte des Digitalen Produktpasses (ESPR 2024/1781, Anhang III; Batteriepass 2023/1542): Zuordnung Datenpunkt → Attribut (Best Guess, im Journal gemerkt), fehlende Attribute anlegen, Teilbaum prüfen (erfüllt/leer/fraglich je Knoten), Vorschläge regelbasiert — und mit Claude, wenn ein Schlüssel in den Einstellungen steht."
+  },
+  "kind": "quality",
+  "runs": "browser",
+  "entry": "entry.js",
+  "autoInstall": true
+}

@@ -13,6 +13,8 @@
 //                Prüfregeln für die Datenqualität (Plugin dq zeigt sie)
 // ctx = { api, store, tree, dialog, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go }
 //   data   — benannte JSON-Datensätze des Plugins im Journal (PluginDataSet, /api/plugins/<key>/data/<name>)
+//   compliance — Prüfkataloge (compliance.js): mount(root, ctx, catalog), check, guessMapping … (Plugins dpp, ppwr)
+//   ai     — Claude, wenn in den Einstellungen ein Schlüssel steht (ai.js): available(), ask({ system, user, json })
 //   mapper — der Datenmapper (mapper.js): suggest, plan, convert, parseDelimited, fromObjects
 //   batch(commands, batchId?) — POST /api/batch
 import { reactive } from 'vue'
@@ -22,6 +24,8 @@ import { tree } from './tree.js'
 import * as mapper from './mapper.js'
 import { dialog } from './dialog.js'
 import * as orphans from './orphans.js'
+import * as compliance from './compliance.js'
+import { ai } from './ai.js'
 
 export const plugins = reactive({
   list: [],
@@ -58,7 +62,7 @@ export const plugins = reactive({
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`
     return {
-      api, store, tree, mapper, dialog, orphans,
+      api, store, tree, mapper, dialog, orphans, compliance, ai,
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {
         list: () => api.get(`/api/plugins/${key}/data`),

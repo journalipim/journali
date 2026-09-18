@@ -2,6 +2,15 @@
 // Einstellungen: wer schreibt (X-Actor), welcher Server, und was er sagt.
 import { ref } from 'vue'
 import { store } from '../store.js'
+import { ai } from '../ai.js'
+// KI-Schlüssel (Taloan, 18.09.): bleibt im Browser (localStorage), nie im Journal — Plugins fragen Claude nur, wenn er da ist
+const aiKey = ref(ai.key), aiModel = ref(ai.model), aiState = ref('')
+async function saveAi() {
+  ai.key = aiKey.value.trim(); ai.model = aiModel.value; ai.save()
+  if (!ai.key) { aiState.value = 'kein Schlüssel — Plugins arbeiten regelbasiert'; return }
+  aiState.value = 'prüfe …'
+  try { aiState.value = (await ai.test()) ? `✓ ${ai.model} antwortet` : '✗ unerwartete Antwort' } catch (e) { aiState.value = '✗ ' + e.message }
+}
 
 const actor = ref(store.actor)
 const server = ref(store.server)
@@ -74,6 +83,15 @@ async function save() {
           </tr>
         </tbody>
       </table>
+
+      <div class="section">
+        <h2>✦ KI (Claude)</h2>
+        <table class="grid" style="width:auto"><colgroup><col style="width:120px" /><col style="width:420px" /><col /></colgroup><tbody>
+          <tr><td class="muted">API-Schlüssel</td><td><input v-model="aiKey" type="password" style="width:100%" placeholder="sk-ant-…" autocomplete="off" @keydown.enter="saveAi" /></td><td class="muted" style="font-size:12px">bleibt in diesem Browser — nicht im Journal, nicht auf dem Server</td></tr>
+          <tr><td class="muted">Modell</td><td><select v-model="aiModel" style="width:100%"><option v-for="m in ai.models" :key="m" :value="m">{{ m }}</option></select></td><td class="muted" style="font-size:12px">Sonnet: schnell und günstig für Vorschläge; Opus: gründlicher</td></tr>
+          <tr><td></td><td><button class="primary" @click="saveAi">Speichern und prüfen</button> <span class="muted" style="font-size:12px">{{ aiState }}</span></td><td class="muted" style="font-size:12px">ohne Schlüssel arbeiten Datenqualität, DPP und PPWR regelbasiert</td></tr>
+        </tbody></table>
+      </div>
 
       <div class="section" v-if="false && store.model">
         <h2>Modell</h2>
