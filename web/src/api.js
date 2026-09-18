@@ -24,6 +24,31 @@ async function request(method, path, body) {
 
 export const api = {
   get: (path) => request('GET', path),
+  // Grosser Stapel in Happen (Taloan, 18.09.: „nirgendwo ein Fortschritt“): je Happen ein POST /api/batch, dazwischen
+  // Fortschritt (store.progress + onProgress). Refs (@n1) aus früheren Happen werden vor dem Senden durch die echten
+  // Ids ersetzt — der Server kennt Refs nur innerhalb eines Aufrufs. Liefert dieselbe Form wie ein einzelner Stapel.
+  // Solange ein Stapel läuft, warnt der Browser vor dem Schliessen (beforeunload); was gesendet ist, schreibt der Server zu Ende.
+  batchChunked: async (commands, { batch = null, size = 500, onProgress = null, label = 'schreibe' } = {}) => {
+    const refs = new Map()
+    const results = []; let error = null; let batchId = batch
+    const REF_KEYS = ['node', 'parent', 'group', 'product', 'from', 'to', 'relation', 'media']
+    const sub = c => { const a = { ...c.args }; for (const k of REF_KEYS) if (typeof a[k] === 'string' && a[k].startsWith('@') && refs.has(a[k].slice(1))) a[k] = refs.get(a[k].slice(1)); return { ...c, args: a } }
+    const guard = e => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', guard)
+    store.progress = { done: 0, total: commands.length, text: label }
+    try {
+      for (let i = 0; i < commands.length; i += size) {
+        const chunk = commands.slice(i, i + size).map(sub)
+        const res = await request('POST', '/api/batch', { commands: chunk, batch: batchId })
+        batchId = res.batch
+        for (const r of res.results) { results.push({ ...r, index: r.index + i }); if (r.ref) refs.set(r.ref, r.node) }
+        if (res.error) { error = { ...res.error, index: res.error.index + i }; break }
+        store.progress = { done: Math.min(i + size, commands.length), total: commands.length, text: label }
+        onProgress?.(store.progress)
+      }
+    } finally { window.removeEventListener('beforeunload', guard); store.progress = null }
+    return { batch: batchId, results, error, refs }
+  },
   /// Datei hochladen (multipart, Feld file) — X-Actor wie bei jedem Befehl.
   upload: async (path, file) => {
     const fd = new FormData(); fd.append('file', file, file.name)

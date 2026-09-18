@@ -63,6 +63,11 @@ function railDrop(target) {
 
 <template>
   <div class="shell" :class="{ popup: route.query.popup }">
+    <!-- Fortschritt eines laufenden Stapels (Taloan, 18.09.): dünner Balken ganz oben, dazu Zahl — sichtbar in jeder Ansicht -->
+    <div v-if="store.progress" class="progress" :title="`${store.progress.text} … ${store.progress.done} von ${store.progress.total} — Fenster offen lassen`">
+      <div class="bar" :style="`width:${Math.round(store.progress.done / Math.max(1, store.progress.total) * 100)}%`" />
+      <span class="txt">{{ store.progress.text }} … {{ store.progress.done }} / {{ store.progress.total }} — Fenster offen lassen</span>
+    </div>
     <nav class="rail" v-if="!route.query.popup">
       <!-- Logo: web/public/logo.png (Taloan, 17.09.2026) — Vite legt public/ neben die Seite -->
       <router-link to="/tree" class="rail-logo" title="journali"><img :src="'/logo-128.png'" alt="journali" onerror="this.style.display='none'" /></router-link>

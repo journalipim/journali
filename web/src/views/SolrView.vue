@@ -229,11 +229,9 @@ async function runRelations() {
     let n = 0
     for (const [, cmds] of needs.perNode) {
       busy.value = `schreibe … ${++n}/${needs.perNode.size}`
-      for (let i = 0; i < cmds.length; i += 9000) {
-        const res = await api.post('/api/batch', { commands: cmds.slice(i, i + 9000) })
-        written += res.results.length; batches++
-        if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`)
-      }
+      const res = await api.batchChunked(cmds, { size: 2000, label: `Relationen ${n}/${needs.perNode.size}` })
+      written += res.results.length; batches++
+      if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`)
     }
     relResult.value = { written, batches, error: null }
     say(written ? `Relationen fertig: ${written} Einträge in ${batches} Stapeln` : 'Relationen: nichts zu schreiben')

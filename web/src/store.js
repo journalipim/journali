@@ -12,7 +12,8 @@ export const store = reactive({
   viewLocales: saved.viewLocales || ['de', 'en'],   // Sicht: welche Sprachen als Spalten
   viewChannel: saved.viewChannel ?? null,          // Sicht: welcher Kanal (null = nur *)
   journalOpen: saved.journalOpen ?? true,           // Journal neben dem Knoten auf- oder zugeklappt
-  lastNode: sessionStorage.getItem('journali.lastNode') || null,   // zuletzt gewählter Knoten — ▣ Baum in der Leiste kehrt dorthin zurück (Taloan, 18.09.)
+  lastNode: sessionStorage.getItem('journali.lastNode') || null,
+  progress: null,        // { done, total, text } — laufender Stapel; Balken oben in der Oberfläche (App.vue)   // zuletzt gewählter Knoten — ▣ Baum in der Leiste kehrt dorthin zurück (Taloan, 18.09.)
   viewKey: (saved.viewKey && typeof saved.viewKey === 'object') ? saved.viewKey : {},   // gewählte Sicht je Knotentyp
   layout: saved.layout ?? 'flat',                    // flat | tabs
   editableOnly: saved.editableOnly ?? false,         // nur Gruppen zeigen, die hier bearbeitbar sind

@@ -270,7 +270,7 @@ async function run() {
     }
     if (!cmds.length) { say('nichts zu schreiben — alles schon so'); result.value = { batch: null, results: [] }; return }
     say(`Stapel mit ${cmds.length} Befehlen …`)
-    const res = await api.post('/api/batch', { commands: cmds })
+    const res = await api.batchChunked(cmds, { label: 'IXP schreibt', onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
     result.value = res
     say(res.error ? `Fehler bei Befehl ${res.error.index} (${res.error.op}): ${res.error.message} — ${res.results.length} geschrieben` : `fertig: ${res.results.length} Einträge, Stapel ${res.batch}`)
     await store.poll(true); await tree.load()
