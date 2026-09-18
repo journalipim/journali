@@ -145,7 +145,10 @@ async function analyse() {
     const picked = rows.value.filter(r => checked.value.has(r.doc.id) && !checkedAbove(r))
     const items = []   // { doc, parentMaster, role, versions: {lang: doc} }
     let n = 0
+    const seenMaster = new Set()   // dieselbe masterId unter zwei Eltern (IXP erlaubt das): nur einmal — sonst scheiterte external.link am Duplikat und der Stapel brach ab
     async function walk(doc, parentMaster) {
+      if (seenMaster.has(doc.masterId)) return
+      seenMaster.add(doc.masterId)
       const item = { doc, parentMaster, role: ROLE[doc.type], versions: {} }
       items.push(item)
       busy.value = `lade … ${++n}`
@@ -292,9 +295,11 @@ async function run() {
     // nichts zu schreiben — die Medien trotzdem nachholen (zweiter Lauf nach einem Import ohne Medien, Taloan 18.09.)
     if (!cmds.length) { say('nichts zu schreiben — alles schon so'); result.value = { batch: null, results: [] }; if (withImages.value) await importImages(refOf, { results: [] }); return }
     say(`Stapel mit ${cmds.length} Befehlen …`)
-    const res = await api.batchChunked(cmds, { label: 'IXP schreibt', onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
+    const res = await api.batchChunked(cmds, { label: 'IXP schreibt', continueOnError: true, onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
     result.value = res
-    say(res.error ? `Fehler bei Befehl ${res.error.index} (${res.error.op}): ${res.error.message} — ${res.results.length} geschrieben` : `fertig: ${res.results.length} Einträge, Stapel ${res.batch}`)
+    for (const e of res.errors.slice(0, 20)) say(`✗ Befehl ${e.index + 1} ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)}: ${e.message}`)
+    say(res.errors.length ? `fertig mit ${res.errors.length} übersprungenen Befehlen: ${res.results.length} Einträge, Stapel ${res.batch}` : `fertig: ${res.results.length} Einträge, Stapel ${res.batch}`)
+    if (res.errors.length) store.toast(`⚠ ${res.errors.length} Befehle übersprungen — Protokoll`, 'error')
     await store.poll(true); await tree.load()
     if (withImages.value && !res.error) await importImages(refOf, res)
     plan.value = null

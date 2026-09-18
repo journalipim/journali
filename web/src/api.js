@@ -28,26 +28,35 @@ export const api = {
   // Fortschritt (store.progress + onProgress). Refs (@n1) aus früheren Happen werden vor dem Senden durch die echten
   // Ids ersetzt — der Server kennt Refs nur innerhalb eines Aufrufs. Liefert dieselbe Form wie ein einzelner Stapel.
   // Solange ein Stapel läuft, warnt der Browser vor dem Schliessen (beforeunload); was gesendet ist, schreibt der Server zu Ende.
-  batchChunked: async (commands, { batch = null, size = 500, onProgress = null, label = 'schreibe' } = {}) => {
+  // continueOnError: der fehlgeschlagene Befehl wird übersprungen (errors[] sammelt sie), der Rest wird geschrieben —
+  // sonst verliert ein Import wegen EINES Fehlers alles danach (Taloan, 18.09.: 7 von 11 Gruppen fehlten).
+  batchChunked: async (commands, { batch = null, size = 500, onProgress = null, label = 'schreibe', continueOnError = false } = {}) => {
     const refs = new Map()
-    const results = []; let error = null; let batchId = batch
+    const results = []; let error = null; let batchId = batch; const errors = []
     const REF_KEYS = ['node', 'parent', 'group', 'product', 'from', 'to', 'relation', 'media']
     const sub = c => { const a = { ...c.args }; for (const k of REF_KEYS) if (typeof a[k] === 'string' && a[k].startsWith('@') && refs.has(a[k].slice(1))) a[k] = refs.get(a[k].slice(1)); return { ...c, args: a } }
     const guard = e => { e.preventDefault(); e.returnValue = '' }
     window.addEventListener('beforeunload', guard)
     store.progress = { done: 0, total: commands.length, text: label }
     try {
-      for (let i = 0; i < commands.length; i += size) {
-        const chunk = commands.slice(i, i + size).map(sub)
+      let i = 0
+      while (i < commands.length) {
+        const end = Math.min(i + size, commands.length)
+        const chunk = commands.slice(i, end).map(sub)
         const res = await request('POST', '/api/batch', { commands: chunk, batch: batchId })
         batchId = res.batch
         for (const r of res.results) { results.push({ ...r, index: r.index + i }); if (r.ref) refs.set(r.ref, r.node) }
-        if (res.error) { error = { ...res.error, index: res.error.index + i }; break }
-        store.progress = { done: Math.min(i + size, commands.length), total: commands.length, text: label }
+        if (res.error) {
+          const at = i + res.error.index
+          const e = { ...res.error, index: at, command: commands[at] }
+          if (!continueOnError) { error = e; break }
+          errors.push(e); i = at + 1   // den einen überspringen, hinter ihm weiter
+        } else i = end
+        store.progress = { done: i, total: commands.length, text: label + (errors.length ? ` · ${errors.length} Fehler` : '') }
         onProgress?.(store.progress)
       }
     } finally { window.removeEventListener('beforeunload', guard); store.progress = null }
-    return { batch: batchId, results, error, refs }
+    return { batch: batchId, results, error, errors, refs }
   },
   /// Datei hochladen (multipart, Feld file) — X-Actor wie bei jedem Befehl.
   upload: async (path, file) => {
