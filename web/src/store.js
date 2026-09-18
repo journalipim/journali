@@ -16,6 +16,8 @@ export const store = reactive({
   layout: saved.layout ?? 'flat',                    // flat | tabs
   editableOnly: saved.editableOnly ?? false,         // nur Gruppen zeigen, die hier bearbeitbar sind
   attrNames: saved.attrNames ?? 'label',             // Attributnamen: label | key | both (Taloan: Vorlagen nutzen die Keys)
+  undoStack: [],                                    // Schritte ↶ der Sitzung (Werte, Rückzüge) — im Store, weil NodeView je Knoten neu gebaut wird (Taloan)
+  redoStack: [],
   attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel (Taloan), nicht gespeichert
   collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : [],   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
   online: null,          // null = noch nicht gefragt, sonst true/false
