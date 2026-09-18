@@ -9,6 +9,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
+import { dialog } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
 import Cell from '../components/Cell.vue'
@@ -257,6 +258,15 @@ const setValue = (def, col, value, row = null) => {
   history.value.push({ def, col, row, before, after: value }); redoStack.value = []
   return writeValue(def, col, value, row)
 }
+// Mouseover auf ↶/↷ (Taloan): was würde der Schritt tun — Attribut, Spalte, alter → neuer Wert; und wie viele Schritte noch
+function stepTitle(h, verb, n, key, redo = false) {
+  if (!h) return redo ? 'nichts zu wiederholen' : 'nichts rückgängig zu machen'
+  const show = v => v == null || v === '' ? 'leer' : `„${String(v).replace(/<[^>]+>/g, ' ').slice(0, 60)}“`
+  const from = redo ? h.before : h.after, to = redo ? h.after : h.before
+  return `${verb} (${key}): ${store.name(h.def)}${h.col?.label ? ' · ' + h.col.label : ''}${h.row ? ' · Zeile ' + h.row : ''}
+${show(from)} → ${show(to)}
+${n} Schritt${n > 1 ? 'e' : ''} in dieser Sitzung — jeder schreibt einen neuen Eintrag ins Journal`
+}
 function undo() { const h = history.value.pop(); if (!h) return; redoStack.value.push(h); writeValue(h.def, h.col, h.before, h.row) }
 function redo() { const h = redoStack.value.pop(); if (!h) return; history.value.push(h); writeValue(h.def, h.col, h.after, h.row) }
 const writeValue = (def, col, value, row = null) => command(() =>
@@ -334,7 +344,9 @@ function toggleRelease(channel, locale) {
 function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
 async function retire() {
   const kids = node.value.children
-  if (kids && !window.confirm(`${tree.byId.get(props.id)?.label ?? props.id} mit allen ${countBelow(props.id)} Knoten darunter zurückziehen?\n\nDas Journal behält alles; der Baum zeigt sie nicht mehr.`)) return
+  // immer fragen (Taloan: der 🗑 oben fragte gar nicht) — eigener Dialog statt window.confirm
+  const label = tree.byId.get(props.id)?.label ?? props.id
+  if (!await dialog.confirm({ title: kids ? `${label} mit ${countBelow(props.id)} Knoten darunter zurückziehen?` : `${label} zurückziehen?`, text: 'Das Journal behält alles — im Journal steht ↶ zum Wiederherstellen.', ok: '🗑 Zurückziehen', danger: true })) return
   try {
     const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
     const gone = props.id
@@ -371,8 +383,8 @@ function cellMenu(e, def, col, block) {
         <option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option>
       </select>
       <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
-      <button class="x" @click="undo" :disabled="!history.length" :title="history.length ? `↶ ${history.length} rückgängig: ${history[history.length - 1].def.label?.de || history[history.length - 1].def.key} ← „${history[history.length - 1].before}“  (Strg+Z) — schreibt den alten Wert als neuen Eintrag` : 'nichts rückgängig zu machen'">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
-      <button class="x" @click="redo" :disabled="!redoStack.length" :title="redoStack.length ? `↷ ${redoStack.length} wiederholen  (Strg+Y)` : 'nichts zu wiederholen'">↷<span v-if="redoStack.length" class="muted"> {{ redoStack.length }}</span></button>
+      <button class="x" @click="undo" :disabled="!history.length" :title="stepTitle(history[history.length - 1], '↶ Rückgängig', history.length, 'Strg+Z')">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
+      <button class="x" @click="redo" :disabled="!redoStack.length" :title="stepTitle(redoStack[redoStack.length - 1], '↷ Wiederholen', redoStack.length, 'Strg+Y', true)">↷<span v-if="redoStack.length" class="muted"> {{ redoStack.length }}</span></button>
       <button class="x" @click="retire" :title="node.children ? `mit ${countBelow(id)} Knoten darunter zurückziehen  (Entf im Baum)` : 'Knoten zurückziehen  (Entf im Baum)'">🗑</button>
     </div>
     <div class="toolbar meta muted">

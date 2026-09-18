@@ -9,7 +9,7 @@
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
 //                Prüfregeln für die Datenqualität (Plugin dq zeigt sie)
-// ctx = { api, store, tree, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go }
+// ctx = { api, store, tree, dialog, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go }
 //   data   — benannte JSON-Datensätze des Plugins im Journal (PluginDataSet, /api/plugins/<key>/data/<name>)
 //   mapper — der Datenmapper (mapper.js): suggest, plan, convert, parseDelimited, fromObjects
 //   batch(commands, batchId?) — POST /api/batch
@@ -18,6 +18,7 @@ import { api } from './api.js'
 import { store } from './store.js'
 import { tree } from './tree.js'
 import * as mapper from './mapper.js'
+import { dialog } from './dialog.js'
 
 export const plugins = reactive({
   list: [],
@@ -52,7 +53,7 @@ export const plugins = reactive({
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`
     return {
-      api, store, tree, mapper,
+      api, store, tree, mapper, dialog,
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {
         list: () => api.get(`/api/plugins/${key}/data`),

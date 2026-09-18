@@ -5,6 +5,7 @@
 import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { dialog } from '../dialog.js'
 
 // scope: „config“ (Ansicht des Plugins) oder „run“ (Parameter des Prozesses) — getrennte Namensräume im selben Strom
 const props = defineProps({ plugin: String, get: Function, set: Function, scope: { type: String, default: 'config' } })
@@ -43,7 +44,7 @@ async function save() {
 }
 async function remove() {
   const n = current.value; if (!n) return
-  if (!confirm(`Profil „${n}“ löschen?`)) return
+  if (!await dialog.confirm({ title: `Profil „${n}“ löschen?`, ok: '🗑 Löschen', danger: true })) return
   try { await api.del(`/api/plugins/${props.plugin}/data/${encodeURIComponent(PREFIX + n)}`); names.value = names.value.filter(x => x !== n); current.value = ''; name.value = ''; localStorage.removeItem(`journali.profile.${props.plugin}.${props.scope}`) }
   catch (e) { store.toast(e.message) }
 }

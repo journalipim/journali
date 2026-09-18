@@ -183,7 +183,7 @@ async function mountDesigner(root, ctx) {
     if (!names.includes(name)) { names.push(name); fillNames() }
     state.name = name; nameSel.value = name; state.dirty = false; store.toast(`💾 Vorlage „${name}“ gespeichert`)
   }
-  async function remove() { if (state.name === 'standard' || !confirm(`Vorlage „${state.name}“ löschen?`)) return; await ctx.data.del(T + state.name); names.splice(names.indexOf(state.name), 1); fillNames(); loadTemplate('standard') }
+  async function remove() { if (state.name === 'standard' || !await ctx.dialog.confirm({ title: `Vorlage „${state.name}“ löschen?`, ok: '🗑 Löschen', danger: true })) return; await ctx.data.del(T + state.name); names.splice(names.indexOf(state.name), 1); fillNames(); loadTemplate('standard') }
   nodeIn.addEventListener('input', () => {
     const q = nodeIn.value.trim().toLowerCase(); pick.innerHTML = ''
     const hits = q ? tree.rows.filter(r => r.role !== 'group' && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12) : []

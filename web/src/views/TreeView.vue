@@ -6,6 +6,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { dialog as ask } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
 import { plugins } from '../plugins.js'
@@ -255,7 +256,7 @@ async function restore(id, batch) {
 }
 async function retire(r) {
   const below = countBelow(r.id)
-  if (!window.confirm(below ? `${r.label} mit allen ${below} Knoten darunter zurückziehen?\n\nDas Journal behält alles; der Baum zeigt sie nicht mehr.` : `${r.label} zurückziehen?`)) return
+  if (!await ask.confirm({ title: below ? `${r.label} mit ${below} Knoten darunter zurückziehen?` : `${r.label} zurückziehen?`, text: 'Das Journal behält alles — im Journal steht ↶ zum Wiederherstellen.', ok: '🗑 Zurückziehen', danger: true })) return
   try {
     const res = await api.del(`/api/nodes/${encodeURIComponent(r.id)}${below ? '?recursive=true' : ''}`)
     if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok', { label: '↶ wiederherstellen', run: () => restore(r.id, res.batch), title: `stellt ${res.retired} Knoten wieder her: ${icon(r.role)} ${r.label}${res.retired > 1 ? ` mit ${res.retired - 1} darunter` : ''}` })
@@ -317,7 +318,7 @@ async function setName(r, name) {
   try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/name`, { name }, 'PUT'); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
 }
 async function rename(r) {
-  const name = window.prompt(`Name im Baum — leer = Automatik (★)\n${r.label}`, r.name ?? r.label)
+  const name = await ask.prompt({ title: 'Name im Baum', text: `${r.label} — leer = Automatik (★ Attribut)`, value: r.name ?? r.label, placeholder: 'leer = Automatik', ok: '✎ Umbenennen' })
   if (name != null) await setName(r, name)
 }
 // Fixieren übernimmt den Namen, den die Automatik gerade zeigt, als eigenen; Freigeben nimmt ihn weg.

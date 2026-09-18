@@ -10,6 +10,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { dialog } from '../dialog.js'
 import { icon } from '../tree.js'
 import EditGrid from '../components/EditGrid.vue'
 import Cell from '../components/Cell.vue'
@@ -217,13 +218,13 @@ const removePath = {
 }
 async function bulkRemove() {
   const p = removePath[section.value]; if (!p) return
-  if (!window.confirm(`${sel.value.size} ${sec.value.label} zurückziehen?`)) return
+  if (!await dialog.confirm({ title: `${sel.value.size} ${sec.value.label} zurückziehen?`, text: 'Das Journal behält die Definitionen; Werte dazu bleiben liegen.', ok: '🗑 Zurückziehen', danger: true })) return
   for (const k of [...sel.value]) await del(p(k))
   sel.value = new Set(); cur.value = null
 }
 async function removeCur() {
   const p = removePath[section.value]; if (!p || !cur.value) return
-  if (!window.confirm(`${sec.value.one} ${cur.value} zurückziehen?`)) return
+  if (!await dialog.confirm({ title: `${sec.value.one} ${cur.value} zurückziehen?`, text: 'Das Journal behält die Definition; Werte dazu bleiben liegen.', ok: '🗑 Zurückziehen', danger: true })) return
   await del(p(cur.value)); cur.value = null; sel.value = new Set()
 }
 
