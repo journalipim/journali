@@ -98,23 +98,44 @@ function checkedAbove(row) { for (let p = row.parent; p; p = p.parent) if (check
 // gleiche Datei = gleiches Medium (sha256); dann Relation „image“ Knoten → Medium, wenn sie nicht schon da ist.
 async function importImages(refOf, res) {
   const byRef = new Map(res.results.filter(r => r.ref).map(r => ['@' + r.ref, r.node]))
-  const items = plan.value.items.filter(it => it.role !== 'group' && (it.doc.image || Object.values(it.versions).find(v => v.image)?.image))
+  const items = plan.value.items.filter(it => it.role !== 'group')
   if (!items.length) return
-  busy.value = `Bilder …`; let n = 0, had = 0, fail = 0
+  busy.value = `Medien …`; let n = 0, had = 0, fail = 0, seen = 0
+  const origin = (() => { try { return new URL(base.value).origin } catch { return '' } })()
+  const abs = u => /^https?:\/\//.test(u) ? u : origin + (u.startsWith('/') ? '' : '/') + u
   for (const it of items) {
-    const url = it.doc.image || Object.values(it.versions).find(v => v.image)?.image
     const node = (refOf.get(it.doc.masterId) ?? '').startsWith('@') ? byRef.get(refOf.get(it.doc.masterId)) : refOf.get(it.doc.masterId)
     if (!node) continue
+    // Quellen: 1. Asset-Dokumente unter dem Knoten (Typen image/media/file, mit uri und mimeType), 2. das Vorschaubild (image-Feld)
+    const wanted = []   // { url, name, type }
     try {
-      const m = await api.post('/api/media/fetch', { url, name: decodeURIComponent(url.split('/').pop().split('?')[0]) })
-      const rels = await api.get(`/api/nodes/${encodeURIComponent(node)}/relations`)
-      if ((rels.out ?? []).some(r => r.to === m.id)) { had++; continue }
-      await api.post('/api/relations', { type: 'image', from: node, to: m.id }); n++
-    } catch (e) { fail++; say(`Bild ${it.doc.name}: ${e.message}`) }
-    busy.value = `Bilder … ${n + had + fail}/${items.length}`
+      for (const a of await client.assets(it.doc.id)) {
+        let asset = a; if (!a.uri) { try { asset = await client.asset(a.id) } catch {} }
+        const url = asset.uri || asset.path || asset.image; if (!url) continue
+        const mime = asset.mimeType || ''
+        wanted.push({ url: abs(url), name: asset.name || decodeURIComponent(url.split('/').pop().split('?')[0]), type: mime.startsWith('image/') || a.type === 'image' ? 'image' : 'document' })
+      }
+    } catch (e) { say(`Assets ${it.doc.name}: ${e.message}`) }
+    const preview = it.doc.image || Object.values(it.versions).find(v => v.image)?.image
+    if (preview && !wanted.some(w => w.url === preview)) wanted.push({ url: preview, name: decodeURIComponent(preview.split('/').pop().split('?')[0]), type: 'image' })
+    if (!wanted.length) continue
+    let rels = null
+    for (const w of wanted) {
+      seen++
+      try {
+        const m = await api.post('/api/media/fetch', { url: w.url, name: w.name })
+        rels ??= await api.get(`/api/nodes/${encodeURIComponent(node)}/relations`)
+        if ((rels.out ?? []).some(r => r.to === m.id)) { had++; continue }
+        const type = mediaTypes.value.some(t => t.key === w.type) ? w.type : (mediaTypes.value[0]?.key ?? 'image')
+        await api.post('/api/relations', { type, from: node, to: m.id }); n++
+      } catch (e) { fail++; say(`Medium ${w.name} (${it.doc.name}): ${e.message}`) }
+      busy.value = `Medien … ${seen} (${n} neu)`
+    }
   }
-  say(`Bilder: ${n} angehängt, ${had} waren schon da${fail ? `, ${fail} fehlgeschlagen` : ''}`)
+  say(`Medien: ${n} angehängt, ${had} waren schon da${fail ? `, ${fail} fehlgeschlagen` : ''}${seen ? '' : ' — die Quelle liefert an diesen Knoten keine Assets und keine Vorschaubilder'}`)
 }
+// Relationstypen für Medien (image, document …) aus dem Modell
+const mediaTypes = computed(() => (model.value?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media')))
 async function analyse() {
   if (!checked.value.size) { store.toast('Nichts angehakt'); return }
   busy.value = 'lade …'
@@ -268,7 +289,8 @@ async function run() {
         }
       }
     }
-    if (!cmds.length) { say('nichts zu schreiben — alles schon so'); result.value = { batch: null, results: [] }; return }
+    // nichts zu schreiben — die Medien trotzdem nachholen (zweiter Lauf nach einem Import ohne Medien, Taloan 18.09.)
+    if (!cmds.length) { say('nichts zu schreiben — alles schon so'); result.value = { batch: null, results: [] }; if (withImages.value) await importImages(refOf, { results: [] }); return }
     say(`Stapel mit ${cmds.length} Befehlen …`)
     const res = await api.batchChunked(cmds, { label: 'IXP schreibt', onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
     result.value = res
@@ -293,7 +315,7 @@ function toggleLocale(l) {
       </td></tr>
       <tr><td class="attr">Token</td><td class="row"><input v-model="token" type="password" placeholder="leer für die Demo" title="bleibt im Browser, nicht im Profil" style="flex:1" />
         <button class="primary" @click="connect" :disabled="!!busy">Verbinden</button></td></tr>
-      <tr><td class="attr">Bilder</td><td><label title="Vorschaubild der Quelle als Medium holen und als „image“ anhängen; gleiche Datei = ein Medium"><input type="checkbox" v-model="withImages" @change="persist" /> als Medien holen</label></td></tr>
+      <tr><td class="attr">Medien</td><td><label title="Asset-Dokumente unter dem Knoten (Bilder als „image“, Dateien als „document“) und das Vorschaubild als Medien holen; gleiche Datei = ein Medium; der Server lädt"><input type="checkbox" v-model="withImages" @change="persist" /> Bilder und Dateien der Quelle als Medien holen</label></td></tr>
     </ImportHead>
     <div class="step-band">2 · Auswahl <span class="muted">· Haken = Teilbaum</span><span class="grow" />
       <span class="muted" title="nur zum Lesen der Namen im Quellbaum — importiert werden die Sprachen aus 3">blättern in</span>
