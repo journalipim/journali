@@ -170,8 +170,8 @@ export async function mount(root, ctx, catalog) {
       chip(st.levels.has('may'), `○ optional ${cnt('may')}`, 'optional — freiwillig', () => { st.levels.has('may') ? st.levels.delete('may') : st.levels.add('may'); drawMapping() }),
       el('span', { class: 'sep' }, '·'),
       chip(st.only === 'all', 'alle', '', () => { st.only = 'all'; drawMapping() }),
-      chip(st.only === 'open', `offen ${all.filter(it => !st.mapping[it.key]?.to).length}`, 'ohne Attribut', () => { st.only = 'open'; drawMapping() }),
-      chip(st.only === 'mapped', `zugeordnet ${mapped}`, 'mit Attribut', () => { st.only = 'mapped'; drawMapping() }),
+      chip(st.only === 'open', `offen ${all.filter(it => st.levels.has(it.level) && !st.mapping[it.key]?.to).length}`, 'ohne Attribut (in den gewählten Pflichtgraden)', () => { st.only = 'open'; drawMapping() }),
+      chip(st.only === 'mapped', `zugeordnet ${all.filter(it => st.levels.has(it.level) && !!st.mapping[it.key]?.to).length}`, 'mit Attribut (in den gewählten Pflichtgraden)', () => { st.only = 'mapped'; drawMapping() }),
       el('span', { class: 'muted', style: 'font-size:12px' }, `${all.filter(show).length} von ${n} gezeigt`)))
     const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:34px' }, ''), el('th', { style: 'width:280px' }, 'Datenpunkt'), el('th', { style: 'width:70px' }, 'Typ'), el('th', { style: 'width:280px' }, 'Attribut im Modell'), el('th', {}, 'Hinweis'))))
     const tb = el('tbody'); tbl.append(tb)
