@@ -261,12 +261,27 @@ const setValue = (def, col, value, row = null) => {
 // Mouseover auf ↶/↷ (Taloan): was würde der Schritt tun — Attribut, Spalte, alter → neuer Wert; und wie viele Schritte noch
 function stepTitle(h, verb, n, key, redo = false) {
   if (!h) return redo ? 'nichts zu wiederholen' : 'nichts rückgängig zu machen'
+  if (h.kind === 'retire') return redo ? `${h.label}${h.count > 1 ? ` mit ${h.count - 1} darunter` : ''} wieder zurückziehen  (${key})` : `${h.label}${h.count > 1 ? ` mit ${h.count - 1} darunter` : ''} wiederherstellen  (${key})`
   const show = v => v == null || v === '' ? 'leer' : `„${String(v).replace(/<[^>]+>/g, ' ').slice(0, 60)}“`
   const from = redo ? h.before : h.after, to = redo ? h.after : h.before
   return `${store.name(h.def)}${h.col?.label ? ' · ' + h.col.label : ''}${h.row ? ' · Zeile ' + h.row : ''}: ${show(from)} → ${show(to)}  (${key})`
 }
-function undo() { const h = history.value.pop(); if (!h) return; redoStack.value.push(h); writeValue(h.def, h.col, h.before, h.row) }
-function redo() { const h = redoStack.value.pop(); if (!h) return; history.value.push(h); writeValue(h.def, h.col, h.after, h.row) }
+// Rückzug als Schritt (Taloan: nach dem Löschen sagte ↶ „nichts rückgängig“): Rückgängig holt über den Stapel zurück,
+// Wiederholen zieht wieder zurück; danach steht die Ansicht wieder auf dem Knoten
+async function undoRetire(h) {
+  try {
+    const x = h.batch ? await api.post(`/api/batches/${encodeURIComponent(h.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(h.id)}/restore`)
+    store.toast(`${x.undone ?? 1} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${h.id}`)
+  } catch (e) { store.toast(e.message); history.value.push(h); redoStack.value.pop() }
+}
+async function redoRetire(h) {
+  try {
+    const r = await api.del(`/api/nodes/${encodeURIComponent(h.id)}${h.count > 1 ? '?recursive=true' : ''}`)
+    h.batch = r?.batch ?? null; store.toast(`${r?.retired ?? 1} Knoten zurückgezogen`, 'ok'); await tree.load(); router.push(h.parent ? `/tree/${h.parent}` : '/tree')
+  } catch (e) { store.toast(e.message); redoStack.value.push(h); history.value.pop() }
+}
+function undo() { const h = history.value.pop(); if (!h) return; redoStack.value.push(h); h.kind === 'retire' ? undoRetire(h) : writeValue(h.def, h.col, h.before, h.row) }
+function redo() { const h = redoStack.value.pop(); if (!h) return; history.value.push(h); h.kind === 'retire' ? redoRetire(h) : writeValue(h.def, h.col, h.after, h.row) }
 const writeValue = (def, col, value, row = null) => command(() =>
   api.post(`${nodeUrl()}/attributes`, def.multiple
     ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean), row }
@@ -349,6 +364,7 @@ async function retire() {
   try {
     const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
     const gone = props.id
+    history.value.push({ kind: 'retire', id: gone, parent: node.value.parent, label, count: r?.retired ?? 1, batch: r?.batch ?? null }); redoStack.value = []
     if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok', { label: '↶ wiederherstellen', run: async () => { try { const x = r.batch ? await api.post(`/api/batches/${encodeURIComponent(r.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(gone)}/restore`); store.toast(`${x.undone ?? 1} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${gone}`) } catch (e) { store.toast(e.message) } }, title: `stellt ${r.retired} Knoten wieder her: ${shownLabel.value}${r.retired > 1 ? ` mit ${r.retired - 1} darunter` : ''}` })
     const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree')
   } catch (e) { store.toast(e.message) }
