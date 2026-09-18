@@ -30,7 +30,9 @@ export const plugins = reactive({
   importers: [],          // { key (Plugin), source (importer.key), label, accept, parse }
   checks: [],             // { key (Plugin), check, label, run }
 
-  async load() {
+  loading: null,          // laufender load() — wer gleichzeitig ruft, wartet darauf (sonst doppelte Einträge in der Leiste)
+  load() { return this.loading ??= this._load().finally(() => { this.loading = null }) },
+  async _load() {
     try { this.list = await api.get('/api/plugins') } catch (e) { this.list = []; this.loaded = true; return }
     this.loaded = true
     for (const p of this.list) {

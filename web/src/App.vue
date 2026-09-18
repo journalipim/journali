@@ -18,7 +18,7 @@ onMounted(() => { plugins.load() })
 onMounted(() => window.addEventListener('keydown', e => {
   if (e.altKey && !e.ctrlKey && [...nav, ...navBottom].some(n => n.key === e.key)) {
     e.preventDefault()
-    router.push([...nav, ...navBottom].find(n => n.key === e.key).to)
+    const n = [...nav, ...navBottom].find(n => n.key === e.key); router.push(n.to === '/tree' && store.lastNode ? `/tree/${store.lastNode}` : n.to)
   }
 }))
 const nav = [
@@ -35,7 +35,9 @@ const navBottom = [
 ]
 // Die Leiste als eine Liste (oben … spacer … unten), Reihenfolge aus den Einstellungen; Neues (Plugin-Ansichten) kommt vor den Spacer
 const railItems = computed(() => {
-  const all = [...nav, ...plugins.views.map(v => ({ to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, hint: `Plugin ${v.key}`, exact: true })), { to: 'spacer' }, ...navBottom]
+  // ▣ Baum führt zum zuletzt gewählten Knoten zurück (Taloan, 18.09.); Kennung des Eintrags bleibt '/tree' (Reihenfolge, aktiv)
+  const treeTo = store.lastNode ? `/tree/${store.lastNode}` : '/tree'
+  const all = [...nav.map(n => n.to === '/tree' ? { ...n, href: treeTo } : n), ...plugins.views.map(v => ({ to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, hint: `Plugin ${v.key}`, exact: true })), { to: 'spacer' }, ...navBottom]
   const order = store.railOrder ?? []
   const known = new Set(all.map(x => x.to))
   const sorted = order.filter(k => known.has(k)).map(k => all.find(x => x.to === k))
@@ -60,7 +62,7 @@ function railDrop(target) {
       <router-link to="/tree" class="rail-logo" title="journali"><img :src="'/logo-128.png'" alt="journali" onerror="this.style.display='none'" /></router-link>
       <template v-for="n in railItems" :key="n.to">
         <div v-if="n.to === 'spacer'" class="rail-spacer" :class="{ over: dragKey }" @dragover.prevent @drop="railDrop('spacer')" />
-        <router-link v-else :to="n.to" class="rail-item" :class="{ active: n.exact ? route.path === n.to : route.path.startsWith(n.to), dragging: dragKey === n.to }"
+        <router-link v-else :to="n.href ?? n.to" class="rail-item" :class="{ active: n.exact ? route.path === n.to : route.path.startsWith(n.to), dragging: dragKey === n.to }"
           :title="`${n.label}  (${n.key ? 'Alt+' + n.key : n.hint}) — ziehen sortiert um`" draggable="true"
           @dragstart="dragKey = n.to" @dragend="dragKey = null" @dragover.prevent @drop="railDrop(n.to)">
           <span class="icon">{{ n.icon }}</span>

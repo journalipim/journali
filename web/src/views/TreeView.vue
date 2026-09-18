@@ -102,6 +102,8 @@ onMounted(async () => { if (!tree.loaded) await tree.load(); reveal() })
 // Der Pfad zum gewählten Knoten ist immer aufgeklappt.
 function reveal() { if (props.id) for (const a of tree.ancestors(props.id)) tree.expand(a.id) }
 watch(() => props.id, reveal)
+// merken, wo man war — der Leistenknopf ▣ Baum kehrt dorthin zurück (auch nach Modell, Plugin …)
+watch(() => props.id, id => { if (id) { store.lastNode = id; try { sessionStorage.setItem('journali.lastNode', id) } catch {} } }, { immediate: true })
 
 const selected = computed(() => props.id ? tree.byId.get(props.id) : null)
 
