@@ -146,13 +146,13 @@ export async function mountManager(root, ctx) {
         const isTarget = st.parent === r.id
         const row = el('div', { class: 'pick' + (allowed(r) ? '' : ' off'), style: `padding-left:${8 + depth * 16}px;${allowed(r) ? '' : 'opacity:.45;cursor:default'}${isTarget ? ';color:var(--accent);font-weight:600' : ''}`, title: allowed(r) ? r.id : 'kein passendes Ziel für ' + ICON[n.role] })
         row.append(el('span', { class: 'muted', style: 'width:14px;display:inline-block', onclick: e => { e.stopPropagation(); open.has(r.id) ? open.delete(r.id) : open.add(r.id); drawTree() } }, kids ? (open.has(r.id) ? '▾' : '▸') : ''), el('span', {}, `${isTarget ? '→ ' : ''}${ICON[r.role]} ${r.label}`))
-        row.addEventListener('click', async () => { if (!allowed(r)) return; st.parent = r.id; drawTree(); await findMissing(); drawRun() })
+        row.addEventListener('click', async () => { if (!allowed(r)) return; st.parent = r.id; drawTarget(); await findMissing(); drawRun() })
         box.append(row)
         if (open.has(r.id)) rec(r.id, depth + 1) } }
       rec(null, 0)
     }
     drawTree()
-    const rootBtn = el('button', { class: 'x', style: 'margin-top:4px', onclick: async () => { st.parent = null; drawTree(); await findMissing(); drawRun() }, title: 'als eigene Wurzel — nur für Produktgruppen' }, '⌂ als Wurzel')
+    const rootBtn = el('button', { class: 'x', style: 'margin-top:4px', onclick: async () => { st.parent = null; drawTarget(); await findMissing(); drawRun() }, title: 'als eigene Wurzel — nur für Produktgruppen' }, '⌂ als Wurzel')
     s3.append(el('div', { style: 'font-size:12px' }, `${ICON[n.role]} ${n.name ?? n.id}${st.count > 1 ? ` mit ${st.count - 1} darunter` : ''} → `, el('b', {}, st.parent ? tree.byId.get(st.parent)?.label ?? st.parent : 'Wurzel')), box, n.role === 'group' ? rootBtn : '')
     s3.append(el('div', { class: 'muted', style: 'font-size:12px;margin-top:6px' }, st.existing ? `${st.existing} der ${st.count} Knoten gibt es hier schon (gleiche Id) — sie werden angeglichen, nicht verdoppelt; zurückgezogene kommen zurück.` : 'Kein Knoten mit diesen Ids im System — alles wird neu angelegt (neue Ids).'))
   }
@@ -178,7 +178,19 @@ export async function mountManager(root, ctx) {
   }
   async function run() {
     const mapA = Object.fromEntries(Object.entries(st.mapA).map(([k, v]) => [k, v.to])), mapG = Object.fromEntries(Object.entries(st.mapG).map(([k, v]) => [k, v.to]))
-    const ok = await ctx.dialog.confirm({ title: `${st.count} Knoten aus ${st.file} einspielen?`, warn: `${st.attrs.filter(a => !mapA[a.key]).length} neue Attribute, ${st.groups.filter(g => !mapG[g.key]).length} neue Gruppen im Modell`, ok: '⇩ Einspielen' })
+    const newA = st.attrs.filter(a => !mapA[a.key]).map(a => st.prefix + a.key), newG = st.groups.filter(g => !mapG[g.key]).map(g => st.prefix + g.key)
+    const attachG = st.missing.length && st.attachMissing ? st.missing.map(m => m.group) : []
+    const target = st.parent ? tree.byId.get(st.parent)?.label ?? st.parent : 'Wurzel'
+    const list = []
+    if (newA.length) list.push(`${newA.length} neue Attribute im Modell: ${newA.join(', ')}`)
+    if (newG.length) list.push(`${newG.length} neue Gruppen im Modell: ${newG.join(', ')}`)
+    if (attachG.length) list.push(`${attachG.length} Gruppen an ${ICON[st.raw.node.role]} ${st.raw.node.name ?? st.raw.node.id} angehängt: ${attachG.join(', ')}`)
+    if (st.missing.length && !st.attachMissing) list.push(`⚠ ${st.missing.reduce((k, m) => k + m.attrs.length, 0)} Attribute mit Werten bleiben verwaist (Gruppen nicht angehängt)`)
+    const ok = await ctx.dialog.confirm({
+      title: `${st.count} Knoten aus ${st.file} → ${target}`,
+      warn: `${st.count - st.existing} Knoten neu${st.existing ? `, ${st.existing} angeglichen` : ''} · ${newA.length} Attribute, ${newG.length} Gruppen neu im Modell`,
+      text: list.length ? '' : 'Nichts Neues im Modell — nur Knoten und Werte.',
+      list, ok: '⇩ Einspielen' })
     if (!ok) return
     try {
       say('spiele ein …')
