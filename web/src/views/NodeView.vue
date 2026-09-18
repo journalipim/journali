@@ -593,12 +593,12 @@ function cellMenu(e, def, col, block) {
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
             <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" title="zum Knoten, an dem das Medium hängt">↑ {{ r.from.label }}</router-link>
-              <button class="x" style="float:right" @click="stopInherited(r)" title="Vererbung hier stoppen — das Medium ist dann hier und an allen Subitems weg (der Stopp lässt sich wieder lösen)">⛔</button></div>
+              <button class="x" style="float:right" @click="stopInherited(r)" title="Verwendung und Vererbung hier stoppen — das Medium steht dann hier und an allen Subitems nicht zur Verfügung (der Stopp lässt sich wieder lösen)">⛔</button></div>
           </div>
         </div>
         <div v-if="stopped.length" class="chips" style="margin-top:6px">
-          <span class="muted" style="font-size:12px">⛔ Vererbung gestoppt:</span>
-          <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt, hier und darunter gestoppt`">{{ r.other.label }} <button @click="retireRel(r)" title="Stopp lösen — das Medium ist wieder geerbt da">×</button></span>
+          <span class="muted" style="font-size:12px" title="von oben vererbt — hier und an allem darunter weder verwendet (Ansicht, Datenblatt, Export, Suche) noch weitervererbt">⛔ Verwendung und Vererbung gestoppt:</span>
+          <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt`">{{ r.other.label }} <button @click="retireRel(r)" title="Stopp lösen — das Medium ist wieder geerbt da">×</button></span>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
           <button class="primary" @click="mediaFile.click()">⇧ hochladen</button>

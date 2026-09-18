@@ -115,7 +115,7 @@ public static class Model
         // Kopie. Ein geerbtes Medium lässt sich an keiner Ebene „entfernen“, nur die Vererbung stoppen: eine Zuordnung zum selben
         // Medium mit stop=true an einem Knoten nimmt es dort und an allem darunter heraus (wieder lösen = wieder da).
         yield return new(AttributeStream + "inherit", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("inherit", Labels.Of("an Subitems vererben", "inherit to subitems"), AttributeTypes.Boolean, Group: "relation_media")));
-        yield return new(AttributeStream + "stop", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("stop", Labels.Of("Vererbung hier stoppen", "stop inheritance here"), AttributeTypes.Boolean, Group: "relation_media")));
+        yield return new(AttributeStream + "stop", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("stop", Labels.Of("Verwendung und Vererbung hier stoppen", "stop use and inheritance here"), AttributeTypes.Boolean, Group: "relation_media")));
         yield return new(RelationStream + "image", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("image", Labels.Of("Bild", "Image"), Labels.Of("Bild von", "Image of"), To: [Roles.Media], Group: "relation_media")));
         yield return new(RelationStream + "document", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("document", Labels.Of("Dokument", "Document"), Labels.Of("Dokument zu", "Document of"), To: [Roles.Media], Group: "relation_media")));
 
