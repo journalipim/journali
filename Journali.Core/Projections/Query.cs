@@ -11,7 +11,8 @@ namespace Journali.Core.Projections;
 /// <c>incomplete:web</c> · <c>role:variant</c> · <c>status:active</c> · <c>group:logistics</c> (gilt hier) ·
 /// <c>under:&lt;id&gt;</c> · <c>by:Taloan</c> · <c>since:2026-09-10</c> · Text wie bisher.
 /// Medien und Relationen (Taloan, 18.09.): <c>media:any</c> (hat Medien) · <c>media:image</c> / <c>media:document</c> (Relationstyp) ·
-/// <c>media:*.pdf</c> oder <c>media:logo</c> (Name des Mediums, * beliebig) · <c>rel:any</c> / <c>rel:accessory</c> (Relation dieses Typs, ein- oder ausgehend).
+/// <c>media:*.pdf</c> oder <c>media:logo</c> (Name des Mediums, * beliebig) · <c>rel:any</c> / <c>rel:accessory</c> (Relation dieses Typs, ein- oder ausgehend) ·
+/// <c>rel:accessory=250R</c> / <c>rel:any=p-0f58</c> (der Partner der Relation: Name, SKU, Id oder Wert enthält …, * beliebig).
 /// Ein Minus davor verneint (Taloan: „das Gegenteil“): <c>-empty:function</c>, <c>-role:variant</c>, <c>-Wort</c>.
 /// </summary>
 public sealed class Query
@@ -82,12 +83,30 @@ public sealed class Query
                 }
                 case "rel":
                 {
-                    // rel:any | rel:<typ> — Relationen zu anderen Knoten (nicht Medien), ein- oder ausgehend
+                    // rel:any | rel:<typ> | rel:<typ>=<partner> — Relationen zu anderen Knoten (nicht Medien), ein- oder ausgehend;
+                    // der Partner ist das andere Ende: Name, SKU, Id oder ein Wert enthält den Text (mit * als Muster auf Name/Id)
                     if (relations is null) return (false, null);
+                    var eq = value.IndexOf('=');
+                    var type = eq < 0 ? value : value[..eq];
+                    var partner = eq < 0 ? null : value[(eq + 1)..];
+                    var any = type.Length == 0 || type.Equals("any", StringComparison.OrdinalIgnoreCase);
                     var all = relations.From(n.Id).Concat(relations.To(n.Id)).Where(r => media is null || !media.All.ContainsKey(r.To)).ToList();
-                    var rels = value.Length == 0 || value.Equals("any", StringComparison.OrdinalIgnoreCase) ? all : all.Where(r => string.Equals(r.Type, value, StringComparison.OrdinalIgnoreCase)).ToList();
+                    var rels = any ? all : all.Where(r => string.Equals(r.Type, type, StringComparison.OrdinalIgnoreCase)).ToList();
                     if (rels.Count == 0) return (false, null);
-                    hit ??= $"⇄ {rels.Count} {(value.Length == 0 || value == "any" ? "Relationen" : value)}";
+                    if (partner is { Length: > 0 })
+                    {
+                        var rx = partner.Contains('*') ? Pattern(partner) : null;
+                        foreach (var r in rels)
+                        {
+                            var otherId = r.From == n.Id ? r.To : r.From;
+                            if (!tree.Nodes.TryGetValue(otherId, out var other)) continue;
+                            var found = rx is null ? tree.SearchOne(other, partner)
+                                : (rx.IsMatch(other.Id) || (other.Name is { } nm && rx.IsMatch(nm)) || other.Label.Values.Any(rx.IsMatch) ? other.Name ?? other.Id : null);
+                            if (found is not null) { hit ??= $"⇄ {r.Type} {(r.From == n.Id ? "→" : "←")} {found}"; return (true, hit); }
+                        }
+                        return (false, null);
+                    }
+                    hit ??= $"⇄ {rels.Count} {(any ? "Relationen" : type)}";
                     break;
                 }
                 case "attr":

@@ -29,7 +29,7 @@ const KEYS = [
   ['incomplete:', 'Vollständigkeit nicht erreicht (Kanal)'], ['role:', 'Gruppe / Produkt / Variante'],
   ['status:', 'Entwurf / aktiv / ausgelaufen'], ['group:', 'Attributgruppe gilt hier'],
   ['under:', 'nur im Teilbaum eines Knotens'], ['by:', 'Urheber der letzten Änderung'], ['since:', 'geändert seit (Datum)'],
-  ['media:', 'hat Medien: any · image / document · Name (*.pdf)'], ['rel:', 'hat Relation: any · Typ (accessory …)'],
+  ['media:', 'hat Medien: any · image / document · Name (*.pdf)'], ['rel:', 'hat Relation: any · Typ · Typ=Partner (Name, SKU, Id)'],
 ]
 const sugg = ref([])          // [{ value, label, hint }]
 const suggIdx = ref(0)
@@ -70,7 +70,8 @@ function suggest() {
     else if (key === 'group:') for (const g of (m?.groups ?? []).filter(g => !low || g.key.toLowerCase().includes(low) || (g.label?.de ?? '').toLowerCase().includes(low))) out.push({ value: `group:${g.key}`, label: de(g), hint: g.key })
     else if (key === 'under:') { for (const a of [...(props.id ? tree.ancestors(props.id) : []), selected.value].filter(Boolean).reverse()) if (!low || a.label.toLowerCase().includes(low) || a.id.includes(low)) out.push({ value: `under:${a.id}`, label: `${icon(a.role)} ${a.label}`, hint: a.id === props.id ? 'hier' : a.id }) }
     else if (key === 'media:') { out.push({ value: 'media:any', label: 'irgendein Medium', hint: 'hat mindestens eines' }); for (const t of (m?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `media:${t.key}`, label: t.label?.de || t.key, hint: 'Relationstyp' }); if (low) out.push({ value: `media:${low}`, label: `Name enthält „${low}“`, hint: '* = beliebig' }) }
-    else if (key === 'rel:') { out.push({ value: 'rel:any', label: 'irgendeine Relation', hint: 'zu anderen Knoten' }); for (const t of (m?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `rel:${t.key}`, label: t.label?.de || t.key, hint: t.symmetric ? 'symmetrisch' : 'gerichtet' }) }
+    else if (key === 'rel:' && rest.includes('=')) { const [t, p] = rest.split('='); for (const r of tree.rows.filter(r => p && (r.label.toLowerCase().includes(p.toLowerCase()) || (r.sku ?? '').toLowerCase().includes(p.toLowerCase()))).slice(0, 8)) out.push({ value: `rel:${t}=${r.sku || r.id}`, label: `${icon(r.role)} ${r.label}`, hint: `Partner der Relation${r.sku ? ' · ' + r.sku : ''}` }) }
+    else if (key === 'rel:') { out.push({ value: 'rel:any', label: 'irgendeine Relation', hint: 'zu anderen Knoten' }); for (const t of (m?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `rel:${t.key}`, label: t.label?.de || t.key, hint: (t.symmetric ? 'symmetrisch' : 'gerichtet') + ' — mit = danach der Partner' }) }
     else if (key === 'since:') for (const [d, l] of [[0, 'heute'], [1, 'seit gestern'], [7, 'letzte 7 Tage'], [30, 'letzte 30 Tage']]) out.push({ value: `since:${day(d)}`, label: l, hint: day(d) })
     else if (key === 'by:' && store.actor && store.actor.toLowerCase().startsWith(low)) out.push({ value: `by:${store.actor}`, label: `👤 ${store.actor}`, hint: 'ich' })
   }
