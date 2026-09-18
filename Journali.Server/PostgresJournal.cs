@@ -109,6 +109,10 @@ public sealed class PostgresJournal : IJournal
         Query($"SELECT {Columns} FROM journal WHERE stream = @s ORDER BY number",
               new NpgsqlParameter("s", stream));
 
+    public IEnumerable<Entry> ReadBatch(string batch) =>
+        Query($"SELECT {Columns} FROM journal WHERE batch = @b ORDER BY number",
+              new NpgsqlParameter("b", batch));
+
     private IEnumerable<Entry> Query(string sql, NpgsqlParameter parameter)
     {
         using var conn = _db.OpenConnection();

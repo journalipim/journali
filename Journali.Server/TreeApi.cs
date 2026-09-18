@@ -1,4 +1,5 @@
 using Journali.Core.Entries;
+using Journali.Core.Journal;
 using Journali.Core.Projections;
 using static Journali.Server.ModelApi;
 
@@ -108,6 +109,47 @@ public static class TreeApi
                 return (Count: n, Batch: batch, Error: null);
             });
             return result.Count < 0 ? Results.NotFound() : result.Error is not null ? Results.BadRequest(new { error = result.Error }) : Results.Ok(new { restored = result.Count, batch = result.Batch });
+        });
+        // Rückgängig je Aktion (Taloan): genau die Knoten zurück, die in DIESEM Stapel zurückgezogen wurden — nicht alles,
+        // was je darunter lag. Von oben nach unten (der Vater muss stehen), Ergebnis wieder ein Stapel.
+        api.MapPost("/batches/{batch}/undo", (string batch, HttpRequest req, IJournal j, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            var retired = j.ReadBatch(batch).Where(e => e.Type == Types.NodeRetired).Select(e => e.Stream).Distinct().ToList();
+            if (retired.Count == 0) return Results.BadRequest(new { error = $"Stapel {batch}: nichts zurückgezogen — Rückgängig gibt es bisher fürs Zurückziehen." });
+            var undo = "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
+            var result = c.With((model, tree, write) =>
+            {
+                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, undo) };
+                var open = retired.Where(tree.Retired.ContainsKey).ToHashSet();
+                var n = 0; string? error = null;
+                // solange einer zurückkann (sein Vater steht), zurückholen — so kommt der Teilbaum von oben nach unten
+                for (var progress = true; progress && open.Count > 0;)
+                {
+                    progress = false;
+                    foreach (var id in open.ToList())
+                    {
+                        var o = Commands.Restore(ctx, id);
+                        if (o.Error is null) { n++; open.Remove(id); progress = true; } else error = o.Error;
+                    }
+                }
+                return (Count: n, Left: open.Count, Error: error);
+            });
+            return result.Count == 0 && result.Left > 0 ? Results.BadRequest(new { error = result.Error ?? "nichts zurückgeholt" })
+                : Results.Ok(new { restored = result.Count, left = result.Left, batch = undo, error = result.Left > 0 ? result.Error : null });
+        });
+        // Vorschau fürs Mouseover (Taloan): was würde Rückgängig tun? Die Knoten des Stapels mit Namen, und ob sie noch weg sind
+        api.MapGet("/batches/{batch}/preview", (string batch, IJournal j, Catalog c) =>
+        {
+            var entries = j.ReadBatch(batch).ToList();
+            var retired = entries.Where(e => e.Type == Types.NodeRetired).Select(e => e.Stream).Distinct().ToList();
+            return c.With((model, tree, _) => Results.Ok(new
+            {
+                entries = entries.Count,
+                actor = entries.FirstOrDefault()?.Actor, at = entries.FirstOrDefault()?.At,
+                types = entries.GroupBy(e => e.Type).ToDictionary(g => g.Key, g => g.Count()),
+                retired = retired.Select(id => tree.Retired.TryGetValue(id, out var n) ? new { id, role = n.Role, label = NodeRow.LabelOf(tree, model, n), gone = true } : new { id, role = "?", label = id, gone = false }).ToList(),
+            }));
         });
         api.MapPost("/nodes/{id}/duplicate", (string id, HttpRequest req, Catalog c, bool deep = false) =>
         {

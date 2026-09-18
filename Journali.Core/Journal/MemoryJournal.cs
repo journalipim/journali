@@ -42,4 +42,13 @@ public sealed class MemoryJournal : IJournal
             if (e.Stream == stream)
                 yield return e;
     }
+
+    public IEnumerable<Entry> ReadBatch(string batch)
+    {
+        Entry[] snapshot;
+        lock (_gate) snapshot = _entries.ToArray();
+        foreach (var e in snapshot)
+            if (e.Batch == batch)
+                yield return e;
+    }
 }

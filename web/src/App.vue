@@ -78,7 +78,7 @@ const navBottom = [
     <ContextMenu />
 
     <div class="toasts">
-      <div v-for="t in store.toasts" :key="t.id" class="toast" :class="t.kind">{{ t.text }}<button v-if="t.action" class="toast-action" @click="store.dismiss(t); t.action.run()">{{ t.action.label }}</button></div>
+      <div v-for="t in store.toasts" :key="t.id" class="toast" :class="t.kind">{{ t.text }}<button v-if="t.action" class="toast-action" :title="t.action.title" @click="store.dismiss(t); t.action.run()">{{ t.action.label }}</button></div>
     </div>
   </div>
 </template>

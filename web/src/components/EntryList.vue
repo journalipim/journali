@@ -1,12 +1,25 @@
 <script setup>
 // Einträge als dichte Zeilen: Nummer, Zeit, Urheber, [Strom], Typ, Inhalt.
+import { reactive } from 'vue'
 import { when, describe, api } from '../api.js'
 import { store } from '../store.js'
 import { tree } from '../tree.js'
 defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
 // ↶ an NodeRetired, solange der Knoten nicht im Baum steht (Taloan: Rückgängig nach Löschen)
-async function restore(id) {
-  try { const x = await api.post(`/api/nodes/${encodeURIComponent(id)}/restore?recursive=true`); store.toast(`${x.restored} Knoten wiederhergestellt (Stapel ${x.batch})`, 'ok'); await store.poll(true); await tree.load() }
+// Mouseover (Taloan): was würde der Schritt tun? Vorschau je Stapel, einmal geladen
+const previews = reactive({})
+async function preview(e) {
+  const k = e.batch ?? e.stream; if (previews[k]) return
+  if (!e.batch) { previews[k] = `stellt 1 Knoten wieder her: ${e.stream}`; return }
+  try {
+    const p = await api.get(`/api/batches/${encodeURIComponent(e.batch)}/preview`)
+    const gone = p.retired.filter(r => r.gone), back = p.retired.length - gone.length
+    const icon = { group: '▣', product: '▦', variant: '◆' }
+    previews[k] = `Rückgängig stellt ${gone.length} Knoten wieder her (Stapel ${e.batch}, ${p.actor})` + (back ? ` — ${back} sind schon zurück` : '') + ':\n' + gone.slice(0, 15).map(r => `${icon[r.role] ?? ''} ${r.label}`).join('\n') + (gone.length > 15 ? `\n… und ${gone.length - 15} weitere` : '')
+  } catch (err) { previews[k] = err.message }
+}
+async function restore(id, batch) {
+  try { const x = batch ? await api.post(`/api/batches/${encodeURIComponent(batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(id)}/restore`); store.toast(`${x.restored} Knoten wiederhergestellt (Stapel ${x.batch})`, 'ok'); await store.poll(true); await tree.load() }
   catch (e) { store.toast(e.message) }
 }
 </script>
@@ -33,7 +46,7 @@ async function restore(id) {
         <td class="muted">{{ e.type }}</td>
         <td :class="{ pos: e.type.endsWith('Granted') || e.type.endsWith('Assigned') || e.type.endsWith('Created'), neg: e.type.endsWith('Revoked') || e.type.endsWith('Removed') || e.type.endsWith('Retired') }">
           {{ describe(e) }}
-          <button v-if="e.type === 'NodeRetired' && !tree.byId.has(e.stream)" class="x" style="margin-left:8px" @click="restore(e.stream)" title="Knoten wiederherstellen — mit allem, was darunter zurückgezogen wurde">↶ wiederherstellen</button>
+          <button v-if="e.type === 'NodeRetired' && !tree.byId.has(e.stream)" class="x" style="margin-left:8px" @click="restore(e.stream, e.batch)" @mouseenter="preview(e)" :title="previews[e.batch ?? e.stream] ?? 'lade Vorschau …'">↶ wiederherstellen</button>
         </td>
         <td class="mono muted" :title="e.batch ? 'Stapel ' + e.batch : ''">{{ e.batch ? e.batch.slice(2, 6) : '' }}</td>
       </tr>

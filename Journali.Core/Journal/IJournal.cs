@@ -15,6 +15,9 @@ public interface IJournal
     /// <summary>Alle Einträge eines Stroms, in Reihenfolge.</summary>
     IEnumerable<Entry> ReadStream(string stream);
 
+    /// <summary>Alle Einträge eines Stapels (eine Aktion: Rückzug eines Teilbaums, Import, Tabelle …), in Reihenfolge — für Rückgängig je Aktion (Taloan).</summary>
+    IEnumerable<Entry> ReadBatch(string batch);
+
     /// <summary>Nummer des letzten Eintrags; 0 bei leerem Journal.</summary>
     long Head { get; }
 }
