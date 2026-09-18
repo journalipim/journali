@@ -231,7 +231,7 @@ export async function mountDesigner(root, ctx) {
   nameSel.addEventListener('change', () => loadLayout(nameSel.value))
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, '📄 Datenblatt-Designer'), nameSel, nameIn,
     el('button', { class: 'primary', onclick: save, title: 'Layout speichern (Strg+S)' }, '💾'), dirtyChip,
-    el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),
+    el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, '▣'), roleSel('group'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),
     el('span', { class: 'grow' }), el('span', { style: 'position:relative' }, nodeIn, pick), localeSel,
     el('button', { onclick: () => { if (!st.node || !st.data) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(renderSheet(st.layout, st.data, model)); w.document.close() }, title: 'fertiges Blatt in neuem Fenster (drucken → PDF)' }, '🖨 Blatt')))
 

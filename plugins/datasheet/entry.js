@@ -202,7 +202,7 @@ async function mountDesigner(root, ctx) {
     el('div', { class: 'chips' }, ...(store.model?.attributes ?? []).slice(0, 400).map(a => el('span', { class: 'chip', style: 'cursor:pointer', title: `${a.label?.de ?? ''} · ${a.type}`, onclick: () => { const s = ta.selectionStart; ta.setRangeText(a.type === 'html' ? `{{{attr.${a.key}}}}` : `{{attr.${a.key}}}`, s, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input')) } }, a.key))))
   root.append(
     el('div', { class: 'toolbar' }, el('h1', {}, '📄 Datenblatt-Designer'), nameSel, nameIn, el('button', { class: 'primary', onclick: save, title: 'Vorlage speichern (Strg+S) — im Journal, für alle' }, '💾'), el('button', { class: 'x', onclick: remove, title: 'Vorlage löschen' }, '✕'),
-      el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, 'Rolle → Vorlage:'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),
+      el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, 'Rolle → Vorlage:'), el('span', { class: 'muted' }, '▣'), roleSel('group'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),
       el('span', { class: 'grow' }), el('span', { style: 'position:relative' }, nodeIn, pick), localeSel, el('button', { onclick: () => { if (state.node) sheet(ctx, state.node, ta.value, localeSel.value).then(h => openSheet(h, 'Datenblatt')) }, title: 'im neuen Fenster öffnen → drucken / PDF' }, '⎙ öffnen'), status),
     el('div', { style: 'display:flex;flex:1;min-height:0' },
       el('div', { style: 'flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)' }, ta, el('div', { style: 'padding:4px 8px;border-top:1px solid var(--line);max-height:180px;overflow:auto' }, help)),
@@ -214,9 +214,10 @@ async function mountDesigner(root, ctx) {
 export default {
   views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '📄', mount: mountWysiwyg }, { path: 'html', label: 'Datenblatt: HTML-Vorlage', icon: '‹›', mount: mountDesigner }],
   nodeActions: [{
-    label: 'Datenblatt', icon: '📄', roles: ['product', 'variant'],
+    // an jeder Rolle — auch die Gruppe hat ein Blatt (Datentabelle/Vergleich der Produkte darunter); Layout je Rolle (Taloan, 18.09.: „wo ist Datenblatt geblieben?“)
+    label: 'Datenblatt', icon: '📄',
     async run(nodeId, ctx) {
-      const row = ctx.tree.byId.get(nodeId); if (!row || row.role === 'group') { ctx.store.toast('Datenblatt: für Produkte und Varianten'); return }
+      const row = ctx.tree.byId.get(nodeId); if (!row) return
       // Layout der Rolle (WYSIWYG); gibt es keins, aber eine HTML-Vorlage dieses Namens, die
       const l = await layoutFor(ctx, row.role)
       const hasLayout = (await ctx.data.get('layout:' + l.name)) != null, hasHtml = (await ctx.data.get(T + l.name)) != null
