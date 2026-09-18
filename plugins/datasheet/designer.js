@@ -396,9 +396,14 @@ export async function mountDesigner(root, ctx) {
   async function reload() {
     if (!st.node) { drawPalette(); draw(); return }
     try {
-      const [d, t] = await Promise.all([dataOf(ctx, st.node, st.locale), api.get(`/api/nodes/${encodeURIComponent(st.node)}/table?deep=true&locale=${st.locale}`)])
+      const [d, t, n] = await Promise.all([dataOf(ctx, st.node, st.locale), api.get(`/api/nodes/${encodeURIComponent(st.node)}/table?deep=true&locale=${st.locale}`), api.get(`/api/nodes/${encodeURIComponent(st.node)}`)])
       d.types = Object.fromEntries(model.attributes.map(a => [a.key, a.type])); d.locale = st.locale; d.cache = {}
-      st.data = d; st.avail = t.columns.filter(c => !['rows', 'formula'].includes(c.type))
+      // Palette: die Attribute, die AM KNOTEN gelten (seine aktiven Gruppen) — plus alles, was an den Nachfahren vorkommt (table?deep).
+      // Nur die Nachfahren zu nehmen liess an einer Variante (kein Kind) die Palette leer (Taloan, 18.09.)
+      const own = (n.groups ?? []).filter(g => g.active).flatMap(g => g.attributes).map(k => model.attributes.find(a => a.key === k)).filter(Boolean)
+      const seen = new Set(); const cols = []
+      for (const c of [...own, ...t.columns]) if (!seen.has(c.key)) { seen.add(c.key); cols.push(c) }
+      st.data = d; st.avail = cols.filter(c => !['rows', 'formula'].includes(c.type))
     } catch (e) { store.toast(e.message) }
     drawPalette(); draw()
   }
