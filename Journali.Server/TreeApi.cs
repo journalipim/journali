@@ -55,7 +55,7 @@ public static class TreeApi
         api.MapGet("/search", (string q, Catalog c, int limit = 200) =>
             string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2
                 ? Results.BadRequest(new { error = "q: mindestens 2 Zeichen." })
-                : Results.Ok(c.With((model, tree, _) => tree.Query(model, q.Trim()).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
+                : Results.Ok(c.With((model, tree, _) => tree.Query(model, q.Trim(), c.Relations, c.Media).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
 
         api.MapGet("/nodes/external/{system}/{externalId}", (string system, string externalId, Catalog c) =>
             c.With((model, tree, _) => tree.ByExternal(system, externalId) is { } n ? NodeView.Of(tree, model, n) : null)

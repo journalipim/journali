@@ -10,6 +10,8 @@ namespace Journali.Core.Projections;
 /// <c>attr:function=</c> (kein eigener Wert) · <c>empty:name/en</c> (auch geerbt nichts) ·
 /// <c>incomplete:web</c> · <c>role:variant</c> · <c>status:active</c> · <c>group:logistics</c> (gilt hier) ·
 /// <c>under:&lt;id&gt;</c> · <c>by:Taloan</c> · <c>since:2026-09-10</c> · Text wie bisher.
+/// Medien und Relationen (Taloan, 18.09.): <c>media:any</c> (hat Medien) · <c>media:image</c> / <c>media:document</c> (Relationstyp) ·
+/// <c>media:*.pdf</c> oder <c>media:logo</c> (Name des Mediums, * beliebig) · <c>rel:any</c> / <c>rel:accessory</c> (Relation dieses Typs, ein- oder ausgehend).
 /// Ein Minus davor verneint (Taloan: „das Gegenteil“): <c>-empty:function</c>, <c>-role:variant</c>, <c>-Wort</c>.
 /// </summary>
 public sealed class Query
@@ -38,12 +40,12 @@ public sealed class Query
         new("^" + Regex.Escape(p).Replace("\\*", ".*") + "$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
     /// <summary>Trifft der Knoten alle Bedingungen? Liefert die Fundstelle für die Anzeige.</summary>
-    public string? Match(Tree tree, ModelCatalog model, Node n)
+    public string? Match(Tree tree, ModelCatalog model, Node n, Relations? relations = null, Media? media = null)
     {
         string? hit = null;
         foreach (var (key, value, not) in Terms)
         {
-            var (ok, h) = Term(tree, model, n, key, value);
+            var (ok, h) = Term(tree, model, n, key, value, relations, media);
             if (ok == not) return null;   // trifft, soll aber nicht — oder umgekehrt
             hit ??= not ? $"¬ {key}:{value}" : h;
         }
@@ -57,12 +59,37 @@ public sealed class Query
     }
 
     /// <summary>Eine Bedingung: trifft sie, und was zeigt man als Fundstelle?</summary>
-    private static (bool Ok, string? Hit) Term(Tree tree, ModelCatalog model, Node n, string key, string value)
+    private static (bool Ok, string? Hit) Term(Tree tree, ModelCatalog model, Node n, string key, string value, Relations? relations, Media? media)
     {
         string? hit = null;
         {
             switch (key)
             {
+                case "media":
+                {
+                    // media:any | media:<relationstyp> | media:<namensmuster> — Medien hängen über Relationen am Knoten (Ziel m-…)
+                    if (relations is null || media is null) return (false, null);
+                    var mine = relations.From(n.Id).Where(r => media.All.ContainsKey(r.To)).Select(r => (Rel: r, Medium: media.All[r.To])).ToList();
+                    if (mine.Count == 0) return (false, null);
+                    if (value.Length == 0 || value.Equals("any", StringComparison.OrdinalIgnoreCase)) { hit ??= $"🖼 {mine.Count} Medien"; break; }
+                    var byType = mine.Where(x => string.Equals(x.Rel.Type, value, StringComparison.OrdinalIgnoreCase)).ToList();
+                    if (byType.Count > 0) { hit ??= $"🖼 {value}: {byType[0].Medium.Name}"; break; }
+                    var rx = value.Contains('*') ? Pattern(value) : null;
+                    var byName = mine.FirstOrDefault(x => rx is null ? x.Medium.Name.Contains(value, StringComparison.OrdinalIgnoreCase) : rx.IsMatch(x.Medium.Name));
+                    if (byName.Medium is null) return (false, null);
+                    hit ??= $"🖼 {byName.Medium.Name}";
+                    break;
+                }
+                case "rel":
+                {
+                    // rel:any | rel:<typ> — Relationen zu anderen Knoten (nicht Medien), ein- oder ausgehend
+                    if (relations is null) return (false, null);
+                    var all = relations.From(n.Id).Concat(relations.To(n.Id)).Where(r => media is null || !media.All.ContainsKey(r.To)).ToList();
+                    var rels = value.Length == 0 || value.Equals("any", StringComparison.OrdinalIgnoreCase) ? all : all.Where(r => string.Equals(r.Type, value, StringComparison.OrdinalIgnoreCase)).ToList();
+                    if (rels.Count == 0) return (false, null);
+                    hit ??= $"⇄ {rels.Count} {(value.Length == 0 || value == "any" ? "Relationen" : value)}";
+                    break;
+                }
                 case "attr":
                 {
                     // attr:<key> | attr:<key>=<muster> | attr:<key>= (leer)

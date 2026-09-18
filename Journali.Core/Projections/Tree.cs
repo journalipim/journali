@@ -187,12 +187,12 @@ public sealed class Tree : IProjection
 
     /// <summary>Suche über Label, SKU, Id und alle eigenen Werte — ohne Index, gut bis einige zehntausend Knoten.</summary>
     /// <summary>Suche mit Bedingungen: alle Knoten, die die Zeile erfüllen, mit Fundstelle.</summary>
-    public IEnumerable<(Node Node, string Hit)> Query(ModelCatalog model, string q)
+    public IEnumerable<(Node Node, string Hit)> Query(ModelCatalog model, string q, Relations? relations = null, Media? media = null)
     {
         var query = Projections.Query.Parse(q);
         if (!query.HasTerms) { foreach (var h in Search(q)) yield return h; yield break; }
         foreach (var n in _nodes.Values)
-            if (query.Match(this, model, n) is { } hit) yield return (n, hit);
+            if (query.Match(this, model, n, relations, media) is { } hit) yield return (n, hit);
     }
 
     /// <summary>Ein Knoten gegen einen Suchtext: Fundstelle oder null.</summary>
