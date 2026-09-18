@@ -129,7 +129,7 @@ export async function dataOf(ctx, id, locale, depth = 0) {
     return { key: g.key, label: gd?.label?.[locale] || gd?.label?.de || g.key, attributes: g.attributes.map(k => ({ key: k, label: label[k], unit: unit[k], value: attr[k], type: defs.get(k)?.type })).filter(a => a.value != null && a.value !== '' && a.type !== 'html' && a.type !== 'rows') }
   }).filter(g => g.attributes.length)
   let images = []
-  try { const rels = await api.get(`/api/nodes/${encodeURIComponent(id)}/relations`); images = [...(rels.out ?? []), ...(rels.inherited ?? []).map(x => x.relation)].filter(r => r.type === 'image' || r.other?.isImage).map(r => ({ id: r.to, url: `${store.server}/api/media/${r.to}/file`, label: r.other?.label })) } catch {}
+  try { const rels = await api.get(`/api/nodes/${encodeURIComponent(id)}/relations`); images = [...(rels.out ?? []).filter(r => !(r.values ?? []).some(v => v.attribute === 'stop' && v.value === 'true')), ...(rels.inherited ?? []).map(x => x.relation)].filter(r => r.type === 'image' || r.other?.isImage).map(r => ({ id: r.to, url: `${store.server}/api/media/${r.to}/file`, label: r.other?.label })) } catch {}
   const axes = Object.entries(n.axisValues ?? {}).map(([k, v]) => ({ key: k, label: label[k] ?? k, value: defs.get(k)?.type === 'enum' ? (model.lists.find(x => x.key === defs.get(k).list)?.values.find(y => y.value === v)?.label?.[locale] ?? v) : v }))
   const row = ctx.tree.byId.get(id)
   const out = { id, role: n.role, name: row?.label ?? n.name ?? id, sku: attr.sku ?? row?.sku ?? '', status: n.status, today: new Date().toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-GB'), attr, label, unit, groups, images, image: images[0]?.url ?? null, axes, variants: [] }

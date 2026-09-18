@@ -801,6 +801,10 @@ Eigene und geerbte Medien bestehen nebeneinander. **Ein geerbtes Medium
 lässt sich an keiner Ebene entfernen, nur die Vererbung stoppen:** ⛔ am
 Knoten legt eine Zuordnung zum selben Medium mit `stop=true` an — damit ist
 es dort und an allem darunter weg; den Stopp lösen (×) bringt es zurück.
+**Bedeutung des Stopps (Taloan):** an dieser Ebene steht das Medium *nicht
+zur Verfügung* — auch nicht für Exporte, Datenblätter, Suche (`media:`).
+Ein Stopp ist keine Zuordnung, nur eine Sperre; wer Medien eines Knotens
+liest, lässt Zuordnungen mit `stop=true` aus.
 Der Server liefert `inherited` in `GET /api/nodes/{id}/relations`. Modell
 „Kopien je Subitem“ wurde verworfen (Kaskaden beim Aufbrechen). Der
 IXP-Import nutzt das: hat ein Subitem dasselbe Bild wie sein Elternteil,

@@ -70,7 +70,8 @@ public sealed class Query
                 {
                     // media:any | media:<relationstyp> | media:<namensmuster> — Medien hängen über Relationen am Knoten (Ziel m-…)
                     if (relations is null || media is null) return (false, null);
-                    var mine = relations.From(n.Id).Where(r => media.All.ContainsKey(r.To)).Select(r => (Rel: r, Medium: media.All[r.To])).ToList();
+                    // ein Stopp (stop=true) ist kein Medium des Knotens — dort steht es gerade NICHT zur Verfügung (Taloan, 18.09.)
+                    var mine = relations.From(n.Id).Where(r => media.All.ContainsKey(r.To) && !(r.Values.TryGetValue(new Axis("stop", null, null), out var st) && st == "true")).Select(r => (Rel: r, Medium: media.All[r.To])).ToList();
                     if (mine.Count == 0) return (false, null);
                     if (value.Length == 0 || value.Equals("any", StringComparison.OrdinalIgnoreCase)) { hit ??= $"🖼 {mine.Count} Medien"; break; }
                     var byType = mine.Where(x => string.Equals(x.Rel.Type, value, StringComparison.OrdinalIgnoreCase)).ToList();
