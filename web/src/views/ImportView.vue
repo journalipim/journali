@@ -102,13 +102,13 @@ async function importImages(refOf, res) {
   if (!items.length) return
   busy.value = `Medien …`; let n = 0, had = 0, fail = 0, seen = 0, done = 0, inherited = 0
   const mediaByNode = new Map()   // Knoten → Map(typ|medium → relation) — Eltern kommen vor ihren Subitems (Reihenfolge des Quellbaums)
-  store.progress = { done: 0, total: items.length, text: 'IXP holt Medien' }
+  store.progress = { done: 0, total: items.length, text: 'Import (IXP): Medien holen' }
   const guard = e => { e.preventDefault(); e.returnValue = '' }; window.addEventListener('beforeunload', guard)
   try {
   const origin = (() => { try { return new URL(base.value).origin } catch { return '' } })()
   const abs = u => /^https?:\/\//.test(u) ? u : origin + (u.startsWith('/') ? '' : '/') + u
   for (const it of items) {
-    store.progress = { done: done++, total: items.length, text: `IXP holt Medien${n ? ` · ${n} neu` : ''}` }
+    store.progress = { done: done++, total: items.length, text: `Import (IXP): Medien holen${n ? ` · ${n} neu` : ''}` }
     const node = (refOf.get(it.doc.masterId) ?? '').startsWith('@') ? byRef.get(refOf.get(it.doc.masterId)) : refOf.get(it.doc.masterId)
     if (!node) continue
     // Quellen: 1. Asset-Dokumente unter dem Knoten (Typen image/media/file, mit uri und mimeType), 2. das Vorschaubild (image-Feld)
@@ -314,7 +314,7 @@ async function run() {
     // nichts zu schreiben — die Medien trotzdem nachholen (zweiter Lauf nach einem Import ohne Medien, Taloan 18.09.)
     if (!cmds.length) { say('nichts zu schreiben — alles schon so'); result.value = { batch: null, results: [] }; if (withImages.value) await importImages(refOf, { results: [] }); return }
     say(`Stapel mit ${cmds.length} Befehlen …`)
-    const res = await api.batchChunked(cmds, { label: 'IXP schreibt', continueOnError: true, onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
+    const res = await api.batchChunked(cmds, { label: 'Import (IXP): schreiben', continueOnError: true, onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
     result.value = res
     for (const e of res.errors.slice(0, 20)) say(`✗ Befehl ${e.index + 1} ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)}: ${e.message}`)
     say(res.errors.length ? `fertig mit ${res.errors.length} übersprungenen Befehlen: ${res.results.length} Einträge, Stapel ${res.batch}` : `fertig: ${res.results.length} Einträge, Stapel ${res.batch}`)

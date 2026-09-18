@@ -229,7 +229,7 @@ async function runRelations() {
     let n = 0
     for (const [, cmds] of needs.perNode) {
       busy.value = `schreibe … ${++n}/${needs.perNode.size}`
-      const res = await api.batchChunked(cmds, { size: 2000, label: `Relationen ${n}/${needs.perNode.size}` })
+      const res = await api.batchChunked(cmds, { size: 2000, label: `Import (Solr): Relationen ${n}/${needs.perNode.size}` })
       written += res.results.length; batches++
       if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`)
     }

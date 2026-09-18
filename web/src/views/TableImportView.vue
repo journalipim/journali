@@ -168,7 +168,7 @@ async function run() {
     const cmds = [...p.attach.map(x => ({ op: 'groups.attach', args: { node: x.node, groups: [...(tree.byId.get(x.node)?.groups ?? '').split(',').filter(Boolean), ...x.groups] } })), ...p.commands]   // groups.attach setzt die ganze Liste
     // Stapel in Happen: neue Knoten samt ihren Werten zusammen (Refs gelten nur im selben Aufruf)
     const batch = 'imp-' + Date.now().toString(36)
-    const res = await api.batchChunked(cmds, { batch, size: 1000, label: 'Tabelle schreibt', onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
+    const res = await api.batchChunked(cmds, { batch, size: 1000, label: 'Import (Tabelle): schreiben', onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
     const done = res.results.length
     if (res.error) throw new Error(`Befehl ${res.error.index + 1} (${res.error.op}): ${res.error.message} — ${done} geschrieben`)
     result.value = { written: done, batch: res.batch }
