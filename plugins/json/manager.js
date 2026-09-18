@@ -120,8 +120,11 @@ export async function mountManager(root, ctx) {
       box.innerHTML = ''
       const rec = (id, depth) => { for (const r of tree.kids(id)) { if (r.role === 'variant') continue
         const kids = tree.kids(r.id).filter(k => k.role !== 'variant').length
-        const row = el('div', { class: 'pick', style: `padding-left:${8 + depth * 16}px;${allowed(r) ? '' : 'opacity:.45'}${st.parent === r.id ? ';background:var(--accent-soft)' : ''}`, title: allowed(r) ? r.id : 'kein passendes Ziel für ' + ICON[n.role] })
-        row.append(el('span', { class: 'muted', style: 'width:14px;display:inline-block', onclick: e => { e.stopPropagation(); open.has(r.id) ? open.delete(r.id) : open.add(r.id); drawTree() } }, kids ? (open.has(r.id) ? '▾' : '▸') : ''), el('span', {}, `${ICON[r.role]} ${r.label}`))
+        // Das gewählte Ziel bekommt einen Pfeil und Akzentschrift, keinen Auswahlbalken (Taloan, 18.09.: Balken heisst „hier steht der Cursor“);
+        // was kein Ziel sein kann, ist gedämpft und reagiert nicht auf die Maus
+        const isTarget = st.parent === r.id
+        const row = el('div', { class: 'pick' + (allowed(r) ? '' : ' off'), style: `padding-left:${8 + depth * 16}px;${allowed(r) ? '' : 'opacity:.45;cursor:default'}${isTarget ? ';color:var(--accent);font-weight:600' : ''}`, title: allowed(r) ? r.id : 'kein passendes Ziel für ' + ICON[n.role] })
+        row.append(el('span', { class: 'muted', style: 'width:14px;display:inline-block', onclick: e => { e.stopPropagation(); open.has(r.id) ? open.delete(r.id) : open.add(r.id); drawTree() } }, kids ? (open.has(r.id) ? '▾' : '▸') : ''), el('span', {}, `${isTarget ? '→ ' : ''}${ICON[r.role]} ${r.label}`))
         row.addEventListener('click', () => { if (!allowed(r)) return; st.parent = r.id; drawTree(); drawRun() })
         box.append(row)
         if (open.has(r.id)) rec(r.id, depth + 1) } }

@@ -277,6 +277,7 @@ table.values, table.rows { table-layout: fixed; }
 .pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
 .pick:hover { background: var(--hover); }
 .pick.on { background: var(--accent-soft); }
+.pick.off, .pick.off:hover { background: none; cursor: default; }   /* nur Anzeige, nichts zu wählen */
 /* Schritt-Band (Import: 1 · Quelle, 2 · Auswahl, 3 · Zuordnung, 4 · Plan) — wie die Abschnittsbänder am Knoten */
 .step-band { display: flex; align-items: center; gap: 8px; height: 26px; padding: 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); color: var(--text); white-space: nowrap; }
 .step-band .muted { font-weight: 400; }
