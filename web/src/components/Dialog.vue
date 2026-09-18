@@ -19,6 +19,7 @@ function onKey(e) {
         <div v-if="dialog.warn" class="warnline">⚠ {{ dialog.warn }}</div>
         <div v-if="dialog.list.length" class="list mono"><div v-for="(l, i) in dialog.list.slice(0, 8)" :key="i">{{ l }}</div><div v-if="dialog.list.length > 8" class="muted">… und {{ dialog.list.length - 8 }} weitere</div></div>
         <div v-if="dialog.text" class="text muted">{{ dialog.text }}</div>
+        <label v-if="dialog.option" class="option"><input type="checkbox" v-model="dialog.option.checked" /> {{ dialog.option.label }}</label>
         <input v-if="dialog.kind === 'prompt'" ref="field" v-model="dialog.value" class="cell-input" style="width:100%;margin-top:10px" :placeholder="dialog.placeholder" />
         <div class="buttons">
           <button @click="dialog.done(false)">{{ dialog.cancel }}</button>
@@ -36,6 +37,7 @@ function onKey(e) {
 .text { margin-top: 6px; white-space: pre-wrap; line-height: 1.45; }
 .warnline { margin-top: 10px; font-size: 15px; font-weight: 700; color: var(--neg); }
 .list { margin-top: 6px; white-space: pre-wrap; line-height: 1.5; color: var(--text); max-height: 200px; overflow: auto; }
+.option { display: flex; align-items: center; gap: 6px; margin-top: 10px; cursor: pointer; }
 .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 button.danger { background: var(--neg); color: #fff; border-color: var(--neg); }
 </style>

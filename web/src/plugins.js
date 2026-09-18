@@ -20,6 +20,7 @@ import { store } from './store.js'
 import { tree } from './tree.js'
 import * as mapper from './mapper.js'
 import { dialog } from './dialog.js'
+import * as orphans from './orphans.js'
 
 export const plugins = reactive({
   list: [],
@@ -56,7 +57,7 @@ export const plugins = reactive({
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`
     return {
-      api, store, tree, mapper, dialog,
+      api, store, tree, mapper, dialog, orphans,
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {
         list: () => api.get(`/api/plugins/${key}/data`),

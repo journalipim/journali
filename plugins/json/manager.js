@@ -165,33 +165,24 @@ export async function mountManager(root, ctx) {
     s4.append(band('4 · Einspielen'))
     s4.append(el('div', { class: 'muted', style: 'font-size:12px;line-height:1.6' },
       `${st.count} Knoten → ${st.parent ? tree.byId.get(st.parent)?.label : 'Wurzel'} · neu im Modell: ${newG.length} Gruppen, ${newA.length} Attribute${st.prefix ? ` (Präfix ${st.prefix})` : ''}${unsure ? ` · ${unsure} unsichere Zuordnungen (gelb) — bitte prüfen` : ''} · ein Stapel, rückgängig im Journal`))
-    if (st.missing.length) {
-      const cb = el('input', { type: 'checkbox' }); cb.checked = st.attachMissing; cb.addEventListener('change', () => { st.attachMissing = cb.checked })
-      const n = st.missing.reduce((k, m) => k + m.attrs.length, 0)
-      s4.append(el('div', { class: 'warn', style: 'font-size:12px;margin-top:6px;line-height:1.6' },
-        `⚠ ${st.missing.length} Attributgruppen gelten am Ziel nicht — ${n} Attribute mit Werten wären dort verwaist: `,
-        el('span', { class: 'mono' }, st.missing.map(m => `${m.group} (${m.attrs.length})`).join(', ')),
-        el('div', {}, el('label', { style: 'cursor:pointer' }, cb, ` fehlende Gruppen am importierten Wurzelknoten ${ICON[st.raw.node.role]} ${st.raw.node.name ?? st.raw.node.id} anhängen — gelten dann ab dort nach unten`)),
-        el('div', { class: 'muted' }, 'oder ein anderes Ziel wählen, an dem die Gruppen schon gelten')))
-    }
+    // Verwaiste Werte: die Warnung samt Schalter steht im Dialog beim Einspielen (Taloan, 18.09.: wie beim Umhängen im Baum)
     s4.append(el('button', { class: 'primary', style: 'margin-top:6px', onclick: run }, `⇩ ${st.count} Knoten einspielen`))
   }
   async function run() {
     const mapA = Object.fromEntries(Object.entries(st.mapA).map(([k, v]) => [k, v.to])), mapG = Object.fromEntries(Object.entries(st.mapG).map(([k, v]) => [k, v.to]))
     const newA = st.attrs.filter(a => !mapA[a.key]).map(a => st.prefix + a.key), newG = st.groups.filter(g => !mapG[g.key]).map(g => st.prefix + g.key)
-    const attachG = st.missing.length && st.attachMissing ? st.missing.map(m => m.group) : []
     const target = st.parent ? tree.byId.get(st.parent)?.label ?? st.parent : 'Wurzel'
     const list = []
     if (newA.length) list.push(`${newA.length} neue Attribute im Modell: ${newA.join(', ')}`)
     if (newG.length) list.push(`${newG.length} neue Gruppen im Modell: ${newG.join(', ')}`)
-    if (attachG.length) list.push(`${attachG.length} Gruppen an ${ICON[st.raw.node.role]} ${st.raw.node.name ?? st.raw.node.id} angehängt: ${attachG.join(', ')}`)
-    if (st.missing.length && !st.attachMissing) list.push(`⚠ ${st.missing.reduce((k, m) => k + m.attrs.length, 0)} Attribute mit Werten bleiben verwaist (Gruppen nicht angehängt)`)
-    const ok = await ctx.dialog.confirm({
+    // derselbe Dialog wie beim Umhängen im Baum (orphans.js): rot das Wesentliche, dann fehlende Gruppen mit Schalter „anhängen“
+    const res = await ctx.orphans.confirmMove({
       title: `${st.count} Knoten aus ${st.file} → ${target}`,
       warn: `${st.count - st.existing} Knoten neu${st.existing ? `, ${st.existing} angeglichen` : ''} · ${newA.length} Attribute, ${newG.length} Gruppen neu im Modell`,
-      text: list.length ? '' : 'Nichts Neues im Modell — nur Knoten und Werte.',
-      list, ok: '⇩ Einspielen' })
-    if (!ok) return
+      text: list.join('\n') || 'Nichts Neues im Modell — nur Knoten und Werte.',
+      missing: st.missing, rootLabel: `${ICON[st.raw.node.role]} ${st.raw.node.name ?? st.raw.node.id}`, ok: '⇩ Einspielen' })
+    if (!res) return
+    st.attachMissing = res.attach
     try {
       say('spiele ein …')
       // fehlende Gruppen an den importierten Wurzelknoten (Zielschlüssel; der Server lässt Modellschlüssel unverändert)

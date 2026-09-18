@@ -9,6 +9,7 @@ import { store } from '../store.js'
 import { dialog as ask } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
+import { groupsAt, neededByNode, missingGroups, confirmMove } from '../orphans.js'
 import { plugins } from '../plugins.js'
 import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
@@ -317,9 +318,23 @@ async function onDrop(e, r) {
   }
   let moved = 0, below = 0
   try {
-    for (const id of ids) {
-      const src = tree.byId.get(id); if (!canDrop(src, r)) continue
+    // Vorher prüfen, ob eigene Werte am neuen Ort verwaisen (orphans.js) — derselbe Dialog wie beim JSON-Import (Taloan, 18.09.)
+    const todo = ids.map(id => tree.byId.get(id)).filter(src => canDrop(src, r))
+    if (!todo.length) return
+    const have = await groupsAt(r.id)
+    const checks = []
+    for (const src of todo) { const { need, own } = await neededByNode(src.id, store.model); checks.push({ src, missing: missingGroups(need, have, own) }) }
+    const missing = new Map(); for (const c of checks) for (const m of c.missing) { if (!missing.has(m.group)) missing.set(m.group, new Set()); for (const a of m.attrs) missing.get(m.group).add(a) }
+    const missingAll = [...missing].map(([group, attrs]) => ({ group, attrs: [...attrs] }))
+    const what = todo.length === 1 ? `${icon(todo[0].role)} ${todo[0].label}${countBelow(todo[0].id) ? ` mit ${countBelow(todo[0].id)} darunter` : ''}` : `${todo.length} Einträge`
+    const res = missingAll.length
+      ? await confirmMove({ title: `${what} → ${icon(r.role)} ${r.label}`, warn: '', missing: missingAll, rootLabel: todo.length === 1 ? `${icon(todo[0].role)} ${todo[0].label}` : 'jedem verschobenen Eintrag', ok: 'Umhängen' })
+      : { attach: false }
+    if (!res) return
+    for (const c of checks) {
+      const src = c.src
       await api.post(`/api/nodes/${encodeURIComponent(src.id)}/move`, { parent: r.id }); moved++; below += countBelow(src.id)
+      if (res.attach && c.missing.length) await api.post(`/api/nodes/${encodeURIComponent(src.id)}/groups`, { groups: [...new Set([...(src.groups ?? '').split(',').filter(Boolean), ...c.missing.map(m => m.group)])] }, 'PUT')
     }
     if (moved) store.toast(`${moved === 1 ? icon(tree.byId.get(ids[0]).role) + ' ' + tree.byId.get(ids[0]).label : moved + ' Einträge'}${below ? ` mit ${below} darunter` : ''} → ${icon(r.role)} ${r.label}`, 'ok')
     await store.poll(true); await tree.load(); tree.expand(r.id)
