@@ -24,7 +24,28 @@ export async function mountManager(root, ctx) {
   const { store, tree, api } = ctx
   if (!tree.loaded) await tree.load()
   const model = store.model
-  const st = { file: null, raw: null, node: null, count: 0, mapA: {}, mapG: {}, prefix: '', parent: null, existing: 0 }
+  const st = { file: null, raw: null, node: null, count: 0, mapA: {}, mapG: {}, prefix: '', parent: null, existing: 0, missing: [], attachMissing: true }
+  // Zielgruppen wie der Server (TransferApi.Remap G()): zugeordnet → Ziel; im Modell → gleich; sonst Präfix + Key
+  const G = k => st.mapG[k]?.to || (model.groups.some(g => g.key === k) ? k : st.prefix + k)
+  // Welche Attributgruppen brauchen die Werte des Baums — und welche davon gelten am Ziel nicht? (Taloan, 18.09.: der Import
+  // warnte nicht, danach waren etliche Werte verwaist.) Am Ziel gelten: die Gruppen am Zielknoten und seinem Pfad; dazu
+  // die, die der importierte Wurzelknoten selbst mitbringt.
+  async function findMissing() {
+    st.missing = []
+    if (!st.raw) return
+    const used = new Set(); const walk = n => { for (const v of n.values ?? []) used.add(v.attribute); for (const k of Object.keys(n.rows ?? {})) used.add(k); for (const c of n.children ?? []) walk(c) }; walk(st.raw.node)
+    const need = new Map()   // Zielgruppe → Attribute
+    for (const a of used) {
+      const to = st.mapA[a]?.to
+      const rawG = to ? null : st.attrs.find(x => x.key === a)?.group ?? null
+      const g = to ? model.attributes.find(x => x.key === to)?.group : (rawG ? G(rawG) : null)
+      if (!g) continue
+      if (!need.has(g)) need.set(g, { raw: rawG, attrs: [] }); need.get(g).attrs.push(to || st.prefix + a)
+    }
+    let have = new Set((st.raw.node.groups ?? []).map(G))
+    if (st.parent) { try { const n = await api.get(`/api/nodes/${encodeURIComponent(st.parent)}`); for (const g of n.groups ?? []) have.add(g.key) } catch {} }
+    st.missing = [...need].filter(([g]) => !have.has(g)).map(([g, x]) => ({ group: g, raw: x.raw, attrs: x.attrs }))
+  }
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 12px' })
@@ -67,7 +88,7 @@ export async function mountManager(root, ctx) {
     for (const g of st.groups) st.mapG[g.key] = guess(g.key, g.label, null, model.groups)
     st.parent = presetParent && tree.byId.has(presetParent) ? presetParent : node.parent && tree.byId.has(node.parent) ? node.parent : (tree.rows.find(r => !r.parent)?.id ?? null)
     say(`${file.name}: ${count} Knoten · ${st.attrs.length} Attribute · ${st.groups.length} Gruppen · ${(m.lists ?? []).length} Listen`)
-    drawModel(); drawTarget(); drawRun()
+    drawModel(); drawTarget(); await findMissing(); drawRun()
   }
 
   // ---- 2 Modell zuordnen
@@ -125,13 +146,13 @@ export async function mountManager(root, ctx) {
         const isTarget = st.parent === r.id
         const row = el('div', { class: 'pick' + (allowed(r) ? '' : ' off'), style: `padding-left:${8 + depth * 16}px;${allowed(r) ? '' : 'opacity:.45;cursor:default'}${isTarget ? ';color:var(--accent);font-weight:600' : ''}`, title: allowed(r) ? r.id : 'kein passendes Ziel für ' + ICON[n.role] })
         row.append(el('span', { class: 'muted', style: 'width:14px;display:inline-block', onclick: e => { e.stopPropagation(); open.has(r.id) ? open.delete(r.id) : open.add(r.id); drawTree() } }, kids ? (open.has(r.id) ? '▾' : '▸') : ''), el('span', {}, `${isTarget ? '→ ' : ''}${ICON[r.role]} ${r.label}`))
-        row.addEventListener('click', () => { if (!allowed(r)) return; st.parent = r.id; drawTree(); drawRun() })
+        row.addEventListener('click', async () => { if (!allowed(r)) return; st.parent = r.id; drawTree(); await findMissing(); drawRun() })
         box.append(row)
         if (open.has(r.id)) rec(r.id, depth + 1) } }
       rec(null, 0)
     }
     drawTree()
-    const rootBtn = el('button', { class: 'x', style: 'margin-top:4px', onclick: () => { st.parent = null; drawTree(); drawRun() }, title: 'als eigene Wurzel — nur für Produktgruppen' }, '⌂ als Wurzel')
+    const rootBtn = el('button', { class: 'x', style: 'margin-top:4px', onclick: async () => { st.parent = null; drawTree(); await findMissing(); drawRun() }, title: 'als eigene Wurzel — nur für Produktgruppen' }, '⌂ als Wurzel')
     s3.append(el('div', { style: 'font-size:12px' }, `${ICON[n.role]} ${n.name ?? n.id}${st.count > 1 ? ` mit ${st.count - 1} darunter` : ''} → `, el('b', {}, st.parent ? tree.byId.get(st.parent)?.label ?? st.parent : 'Wurzel')), box, n.role === 'group' ? rootBtn : '')
     s3.append(el('div', { class: 'muted', style: 'font-size:12px;margin-top:6px' }, st.existing ? `${st.existing} der ${st.count} Knoten gibt es hier schon (gleiche Id) — sie werden angeglichen, nicht verdoppelt; zurückgezogene kommen zurück.` : 'Kein Knoten mit diesen Ids im System — alles wird neu angelegt (neue Ids).'))
   }
@@ -144,6 +165,15 @@ export async function mountManager(root, ctx) {
     s4.append(band('4 · Einspielen'))
     s4.append(el('div', { class: 'muted', style: 'font-size:12px;line-height:1.6' },
       `${st.count} Knoten → ${st.parent ? tree.byId.get(st.parent)?.label : 'Wurzel'} · neu im Modell: ${newG.length} Gruppen, ${newA.length} Attribute${st.prefix ? ` (Präfix ${st.prefix})` : ''}${unsure ? ` · ${unsure} unsichere Zuordnungen (gelb) — bitte prüfen` : ''} · ein Stapel, rückgängig im Journal`))
+    if (st.missing.length) {
+      const cb = el('input', { type: 'checkbox' }); cb.checked = st.attachMissing; cb.addEventListener('change', () => { st.attachMissing = cb.checked })
+      const n = st.missing.reduce((k, m) => k + m.attrs.length, 0)
+      s4.append(el('div', { class: 'warn', style: 'font-size:12px;margin-top:6px;line-height:1.6' },
+        `⚠ ${st.missing.length} Attributgruppen gelten am Ziel nicht — ${n} Attribute mit Werten wären dort verwaist: `,
+        el('span', { class: 'mono' }, st.missing.map(m => `${m.group} (${m.attrs.length})`).join(', ')),
+        el('div', {}, el('label', { style: 'cursor:pointer' }, cb, ` fehlende Gruppen am importierten Wurzelknoten ${ICON[st.raw.node.role]} ${st.raw.node.name ?? st.raw.node.id} anhängen — gelten dann ab dort nach unten`)),
+        el('div', { class: 'muted' }, 'oder ein anderes Ziel wählen, an dem die Gruppen schon gelten')))
+    }
     s4.append(el('button', { class: 'primary', style: 'margin-top:6px', onclick: run }, `⇩ ${st.count} Knoten einspielen`))
   }
   async function run() {
@@ -152,7 +182,9 @@ export async function mountManager(root, ctx) {
     if (!ok) return
     try {
       say('spiele ein …')
-      const r = await api.post('/api/nodes/import', { node: st.raw.node, model: st.raw.model, parent: st.parent, map: { attributes: mapA, groups: mapG, prefix: st.prefix } })
+      // fehlende Gruppen an den importierten Wurzelknoten (Zielschlüssel; der Server lässt Modellschlüssel unverändert)
+      const node = st.missing.length && st.attachMissing ? { ...st.raw.node, groups: [...new Set([...(st.raw.node.groups ?? []), ...st.missing.map(m => model.groups.some(x => x.key === m.group) ? m.group : (m.raw ?? m.group))])] } : st.raw.node
+      const r = await api.post('/api/nodes/import', { node, model: st.raw.model, parent: st.parent, map: { attributes: mapA, groups: mapG, prefix: st.prefix } })
       say(`✓ ${r.created} neu · ${r.restored} zurückgeholt · ${r.updated} angeglichen · ${r.model} Modellteile · ${r.entries} Einträge (Stapel ${r.batch})${r.errors?.length ? ` · ${r.errors.length} Fehler: ${r.errors[0]}` : ''}`)
       store.toast(`⇩ ${r.entries} Einträge — ${r.created} neu, ${r.restored} zurückgeholt, ${r.updated} angeglichen`, r.errors?.length ? 'error' : 'ok')
       await store.poll(true); await tree.load()
