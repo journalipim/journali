@@ -324,32 +324,25 @@ async function inheritToSubitems() {
   try {
     const below = []; const walk = id => { for (const k of tree.kids(id)) { below.push(k); walk(k.id) } }; walk(props.id)
     const mine = new Map(own.map(r => [`${r.type}|${r.other.id}`, r]))
-    const retire = [], keep = [], own2 = [], already = []; let i = 0
+    const retire = [], already = []; let i = 0
     for (const k of below) {
       inheriting.value = `lese … ${++i}/${below.length}`
       const rk = await api.get(`/api/nodes/${encodeURIComponent(k.id)}/relations`)
-      const media = (rk.out ?? []).filter(r => isMediaType(r.type))
-      if (!media.length) { if ((rk.inherited ?? []).length) already.push(k); continue }
-      for (const t of new Set(media.map(r => r.type))) {
-        const ofType = media.filter(r => r.type === t)
-        const dup = ofType.filter(r => mine.has(`${t}|${r.other.id}`)), other = ofType.filter(r => !mine.has(`${t}|${r.other.id}`))
-        if (!dup.length) { own2.push({ node: k, rel: other[0] }); continue }   // eigenes anderes Medium: bricht die Vererbung — bleibt
-        if (other.length) keep.push({ node: k, type: t, n: dup.length })       // gleiches + eigenes anderes: nicht anfassen
-        else retire.push(...dup.map(r => ({ node: k, rel: r })))
-      }
+      const media = (rk.out ?? []).filter(r => isMediaType(r.type) && relValueRaw(r, 'stop') !== 'true')
+      const dup = media.filter(r => mine.has(`${r.type}|${r.other.id}`))
+      if (dup.length) retire.push(...dup.map(r => ({ node: k, rel: r })))
+      else if ((rk.inherited ?? []).length) already.push(k)
     }
     const toInherit = own.filter(r => relValueRaw(r, 'inherit') !== 'true'), alreadyOn = own.length - toInherit.length
     // Der Dialog sagt, was ist — auch wenn nichts zu tun bleibt (Taloan, 18.09.: „0 hier auf vererben?“)
     const list = [
       ...(alreadyOn ? [`${alreadyOn} ${alreadyOn === 1 ? 'Medium ist' : 'Medien sind'} hier schon auf „vererben“`] : []),
       ...(already.length ? [`${already.length} Subitems erben bereits`] : []),
-      ...(own2.length ? [`${own2.length} Subitems haben ein eigenes anderes Medium — das bricht die Vererbung dort: ${own2.slice(0, 3).map(x => `${x.node.label} (${x.rel.other.label})`).join(', ')}${own2.length > 3 ? ' …' : ''}`] : []),
-      ...(keep.length ? [`${keep.length} Subitems behalten ihre gleiche Zuordnung, weil sie daneben eigene andere Medien haben`] : []),
       ...retire.slice(0, 6).map(x => `lösen: ${x.node.label} · ${x.rel.other.label}`), ...(retire.length > 6 ? [`… und ${retire.length - 6} weitere`] : [])]
     const nothing = !toInherit.length && !retire.length
     const ok = await dialog.confirm({
       title: `Medien an ${below.length} Subitems vererben?`,
-      warn: nothing ? 'nichts zu tun' : `${toInherit.length} Medien hier auf „vererben“ · ${retire.length} gleiche Zuordnungen an Subitems lösen`,
+      warn: nothing ? 'nichts zu tun' : `${toInherit.length} Medien hier auf „vererben“ · ${retire.length} gleiche feste Zuordnungen an Subitems durch die Vererbung ersetzen`,
       list, text: nothing ? '' : 'Die Medien bleiben in der Bibliothek; an den Subitems erscheinen sie danach als geerbt (gestrichelt).', ok: nothing ? 'OK' : '↓ Vererben' })
     if (!ok || nothing) return
     const commands = [...toInherit.map(r => ({ op: 'relation.attribute.set', args: { relation: r.id, attribute: 'inherit', value: 'true' } })), ...retire.map(x => ({ op: 'relation.retire', args: { relation: x.rel.id } }))]
@@ -370,7 +363,10 @@ const relTypesFromHere = computed(() => relTypes.value.filter(t => !isMediaType(
 // ---- Medien (20): Relationen zu Medien (image, document …) als Kacheln; hochladen per Ablegen oder Knopf, oder aus der Bibliothek wählen
 // geerbte Medien (Server: inherited) — Kacheln ohne Bearbeitung, mit Herkunft; ein eigenes Medium desselben Typs bricht die Vererbung
 const inheritedMedia = computed(() => (rels.value.inherited ?? []).map(x => ({ ...x.relation, from: x.from })))
-const mediaRels = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.type)).sort((a, b) => (Number(relValueRaw(a, 'position')) || 9e9) - (Number(relValueRaw(b, 'position')) || 9e9) || a.lastNumber - b.lastNumber))
+// Stopps (Taloan, 18.09.): ein geerbtes Medium wird hier nicht „entfernt“, sondern gestoppt — eine Zuordnung zum selben Medium mit stop=true
+const stopped = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.type) && relValueRaw(r, 'stop') === 'true'))
+async function stopInherited(r) { await command(async () => { const e = await api.post('/api/relations', { type: r.type, from: props.id, to: r.other.id }); await api.post(`/api/relations/${e.stream}/attributes`, { attribute: 'stop', value: 'true' }); return e }) }
+const mediaRels = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.type) && relValueRaw(r, 'stop') !== 'true').sort((a, b) => (Number(relValueRaw(a, 'position')) || 9e9) - (Number(relValueRaw(b, 'position')) || 9e9) || a.lastNumber - b.lastNumber))
 const relValueRaw = (r, key) => r.values.find(v => v.attribute === key && !v.locale && !v.channel)?.value ?? null
 const mediaTypes = computed(() => relTypes.value.filter(t => isMediaType(t.key) && (!t.from || t.from.includes(node.value?.role))))
 const mediaDrag = ref(false)
@@ -587,21 +583,26 @@ function cellMenu(e, def, col, block) {
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
-              <tr v-for="d in relGroupAttrs(r.type)" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? 'gilt dann auch an allen Subitems, bis eines ein eigenes Medium dieses Typs hat' : d.key">{{ d.label?.de || d.key }}</td>
+              <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? 'gilt dann an allen Subitems — bis eines die Vererbung stoppt' : d.key">{{ d.label?.de || d.key }}</td>
                 <ToggleCell v-if="d.type === 'boolean'" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /><Cell v-else :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>
             </tbody></table>
             <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" title="wird an die Subitems vererbt"> · ↓ vererbt</span><button class="x" style="float:right" @click="retireRel(r)" title="Zuordnung lösen (das Medium bleibt in der Bibliothek)">×</button></div>
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
-          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — ein eigenes ${relType(r.type)?.label?.de || r.type} hier bricht die Vererbung`">
+          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — nicht löschbar, nur stoppbar: ⛔ nimmt es hier und an allen Subitems heraus`">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
-            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" title="zum Knoten, an dem das Medium hängt">↑ {{ r.from.label }}</router-link></div>
+            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" title="zum Knoten, an dem das Medium hängt">↑ {{ r.from.label }}</router-link>
+              <button class="x" style="float:right" @click="stopInherited(r)" title="Vererbung hier stoppen — das Medium ist dann hier und an allen Subitems weg (der Stopp lässt sich wieder lösen)">⛔</button></div>
           </div>
+        </div>
+        <div v-if="stopped.length" class="chips" style="margin-top:6px">
+          <span class="muted" style="font-size:12px">⛔ Vererbung gestoppt:</span>
+          <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt, hier und darunter gestoppt`">{{ r.other.label }} <button @click="retireRel(r)" title="Stopp lösen — das Medium ist wieder geerbt da">×</button></span>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
           <button class="primary" @click="mediaFile.click()">⇧ hochladen</button>
-          <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" :title="`die Medien hier an alle Subitems vererben; gleiche Bilder an den Subitems werden durch die Vererbung ersetzt`">{{ inheriting || '↓ an Subitems vererben' }}</button>
+          <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" title="Aufräumen: die Medien hier auf „vererben“ setzen und gleiche feste Zuordnungen an den Subitems lösen — sie erben dann">{{ inheriting || '↓ feste Bilder der Subitems durch Vererbung ersetzen' }}</button>
           <input ref="mediaFile" type="file" multiple style="display:none" @change="uploadMedia([...$event.target.files]); $event.target.value = ''" />
           <button @click="mediaPick.open = !mediaPick.open; mediaPick.open && pickSearch()">🖼 aus Medien wählen</button>
           <input v-if="mediaPick.open" v-model="mediaPick.q" type="search" placeholder="🔍 Name" style="width:200px" @input="pickSearch" />

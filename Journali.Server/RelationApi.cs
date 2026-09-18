@@ -16,18 +16,31 @@ public static class RelationApi
     /// Je Relationstyp gilt die nächste Ebene, die etwas hat: hat der Knoten selbst ein Medium dieses Typs, erbt er keins;
     /// sonst zählt der nächste Vorfahr mit vererbten Medien dieses Typs — darunterliegende Vorfahren nicht mehr.
     /// </summary>
+    /// <summary>
+    /// Geerbte Medien (Taloan, 18.09.2026, entschieden): Medien-Zuordnungen der Vorfahren mit inherit=true, als Ableitung — je
+    /// Medium. Ein geerbtes Medium lässt sich an keiner Ebene entfernen, nur stoppen: eine Zuordnung zum selben Medium mit
+    /// stop=true am Knoten oder einem näheren Vorfahren nimmt es dort und darunter heraus. Eigene und geerbte bestehen
+    /// nebeneinander; ein Medium, das der Knoten selbst zugeordnet hat, wird nicht noch einmal als geerbt gezeigt.
+    /// </summary>
     private static List<object> Inherited(Tree tree, ModelCatalog model, Catalog c, string id)
     {
         if (!tree.Nodes.TryGetValue(id, out var node)) return new();
         var mediaTypes = model.RelationTypes.Values.Where(t => t.To is not null && t.To.Contains(Roles.Media)).Select(t => t.Key).ToHashSet();
-        var settled = c.Relations.From(id).Where(r => mediaTypes.Contains(r.Type)).Select(r => r.Type).ToHashSet();   // eigene: Typ ist entschieden
+        static bool Flag(Relation r, string key) => r.Values.TryGetValue(new Axis(key, null, null), out var v) && v == "true";
+        var own = c.Relations.From(id).Where(r => mediaTypes.Contains(r.Type)).ToList();
+        var blocked = own.Where(r => Flag(r, "stop")).Select(r => $"{r.Type}|{r.To}").ToHashSet();
+        var seen = own.Select(r => $"{r.Type}|{r.To}").ToHashSet();
         var outList = new List<object>();
         foreach (var a in tree.Ancestors(node))
         {
-            var here = c.Relations.From(a.Id).Where(r => mediaTypes.Contains(r.Type) && !settled.Contains(r.Type)
-                && r.Values.TryGetValue(new Axis("inherit", null, null), out var v) && v == "true").OrderBy(r => r.LastNumber).ToList();
-            foreach (var r in here) outList.Add(new { relation = RelationView.Of(tree, model, c.Media, r, "out"), from = new { a.Id, Label = NodeRow.LabelOf(tree, model, a) } });
-            foreach (var t in here.Select(r => r.Type).Distinct()) settled.Add(t);
+            var here = c.Relations.From(a.Id).Where(r => mediaTypes.Contains(r.Type)).OrderBy(r => r.LastNumber).ToList();
+            foreach (var r in here)
+            {
+                var key = $"{r.Type}|{r.To}";
+                if (Flag(r, "stop")) { blocked.Add(key); continue; }
+                if (!Flag(r, "inherit") || blocked.Contains(key) || !seen.Add(key)) continue;
+                outList.Add(new { relation = RelationView.Of(tree, model, c.Media, r, "out"), from = new { a.Id, Label = NodeRow.LabelOf(tree, model, a) } });
+            }
         }
         return outList;
     }

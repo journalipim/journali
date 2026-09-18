@@ -111,9 +111,11 @@ public static class Model
         yield return new(GroupStream + "relation_media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("relation_media", Labels.Of("Medienzuordnung", "Media link"))));
         yield return new(AttributeStream + "position", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("position", Labels.Of("Reihenfolge", "Position"), AttributeTypes.Integer, Group: "relation_media")));
         yield return new(AttributeStream + "usage", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("usage", Labels.Of("Verwendung", "Usage"), AttributeTypes.Text, Group: "relation_media")));
-        // Vererbung von Medien (Taloan, 18.09.2026): ein Medium am Produkt gilt mit inherit=true auch an den Subitems — bis ein Knoten
-        // darunter ein eigenes Medium desselben Typs hat (das bricht die Vererbung für diesen Typ an diesem Ast)
+        // Vererbung von Medien (Taloan, 18.09.2026, entschieden): ein Medium mit inherit=true gilt an allen Subitems — als Ableitung, ohne
+        // Kopie. Ein geerbtes Medium lässt sich an keiner Ebene „entfernen“, nur die Vererbung stoppen: eine Zuordnung zum selben
+        // Medium mit stop=true an einem Knoten nimmt es dort und an allem darunter heraus (wieder lösen = wieder da).
         yield return new(AttributeStream + "inherit", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("inherit", Labels.Of("an Subitems vererben", "inherit to subitems"), AttributeTypes.Boolean, Group: "relation_media")));
+        yield return new(AttributeStream + "stop", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("stop", Labels.Of("Vererbung hier stoppen", "stop inheritance here"), AttributeTypes.Boolean, Group: "relation_media")));
         yield return new(RelationStream + "image", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("image", Labels.Of("Bild", "Image"), Labels.Of("Bild von", "Image of"), To: [Roles.Media], Group: "relation_media")));
         yield return new(RelationStream + "document", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("document", Labels.Of("Dokument", "Document"), Labels.Of("Dokument zu", "Document of"), To: [Roles.Media], Group: "relation_media")));
 

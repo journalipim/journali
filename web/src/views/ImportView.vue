@@ -100,7 +100,8 @@ async function importImages(refOf, res) {
   const byRef = new Map(res.results.filter(r => r.ref).map(r => ['@' + r.ref, r.node]))
   const items = plan.value.items.filter(it => it.role !== 'group')
   if (!items.length) return
-  busy.value = `Medien …`; let n = 0, had = 0, fail = 0, seen = 0, done = 0
+  busy.value = `Medien …`; let n = 0, had = 0, fail = 0, seen = 0, done = 0, inherited = 0
+  const mediaByNode = new Map()   // Knoten → Map(typ|medium → relation) — Eltern kommen vor ihren Subitems (Reihenfolge des Quellbaums)
   store.progress = { done: 0, total: items.length, text: 'IXP holt Medien' }
   const guard = e => { e.preventDefault(); e.returnValue = '' }; window.addEventListener('beforeunload', guard)
   try {
@@ -124,20 +125,33 @@ async function importImages(refOf, res) {
     if (preview && !wanted.some(w => w.url === preview)) wanted.push({ url: preview, name: decodeURIComponent(preview.split('/').pop().split('?')[0]), type: 'image' })
     if (!wanted.length) continue
     let rels = null
+    const parentNode = it.parentMaster ? ((refOf.get(it.parentMaster) ?? '').startsWith('@') ? byRef.get(refOf.get(it.parentMaster)) : refOf.get(it.parentMaster)) : null
+    const parentMedia = parentNode ? mediaByNode.get(parentNode) : null
+    const mine = new Map()
     for (const w of wanted) {
       seen++
       try {
         const m = await api.post('/api/media/fetch', { url: w.url, name: w.name })
         rels ??= await api.get(`/api/nodes/${encodeURIComponent(node)}/relations`)
-        if ((rels.out ?? []).some(r => r.to === m.id)) { had++; continue }
         const type = mediaTypes.value.some(t => t.key === w.type) ? w.type : (mediaTypes.value[0]?.key ?? 'image')
-        await api.post('/api/relations', { type, from: node, to: m.id }); n++
+        const up = parentMedia?.get(`${type}|${m.id}`)
+        if (up) {   // dasselbe Medium wie das Elternteil: dort vererben, hier nichts Eigenes — das Subitem erbt (Taloan, 18.09.)
+          if (!up.inherit) { await api.post(`/api/relations/${up.id}/attributes`, { attribute: 'inherit', value: 'true' }); up.inherit = true }
+          const dup = (rels.out ?? []).find(r => r.to === m.id && r.type === type)
+          if (dup) await api.del(`/api/relations/${dup.id}`)   // feste Zuordnung aus einem früheren Lauf: durch die Vererbung ersetzen
+          mine.set(`${type}|${m.id}`, up); inherited++; continue
+        }
+        let rel = (rels.out ?? []).find(r => r.to === m.id && r.type === type)
+        if (rel) had++
+        else { const e = await api.post('/api/relations', { type, from: node, to: m.id }); rel = { id: e.stream }; n++ }
+        mine.set(`${type}|${m.id}`, { id: rel.id, inherit: (rel.values ?? []).some(v => v.attribute === 'inherit' && v.value === 'true') })
       } catch (e) { fail++; say(`Medium ${w.name} (${it.doc.name}): ${e.message}`) }
-      busy.value = `Medien … ${seen} (${n} neu)`
+      busy.value = `Medien … ${seen} (${n} neu${inherited ? `, ${inherited} geerbt` : ''})`
     }
+    mediaByNode.set(node, mine)
   }
   } finally { window.removeEventListener('beforeunload', guard); store.progress = null }
-  say(`Medien: ${n} angehängt, ${had} waren schon da${fail ? `, ${fail} fehlgeschlagen` : ''}${seen ? '' : ' — die Quelle liefert an diesen Knoten keine Assets und keine Vorschaubilder'}`)
+  say(`Medien: ${n} angehängt, ${had} waren schon da${inherited ? `, ${inherited} vom Elternteil geerbt statt einzeln` : ''}${fail ? `, ${fail} fehlgeschlagen` : ''}${seen ? '' : ' — die Quelle liefert an diesen Knoten keine Assets und keine Vorschaubilder'}`)
 }
 // Relationstypen für Medien (image, document …) aus dem Modell
 const mediaTypes = computed(() => (model.value?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media')))
