@@ -196,7 +196,12 @@ const DESIGNER_CSS = `
   .dsd .ds-item:hover > .ds-x, .dsd .ds-blk:hover > .ds-x { display: block; }
   .dsd .ds-blk { position: relative; border: 1px solid transparent; border-radius: 3px; }
   .dsd .ds-blk:hover { border-color: rgba(37,99,235,.35); } .dsd .ds-blk.sel { border-color: #2563eb; } .dsd .ds-blk.over { border-top: 2px solid #2563eb; }
-  .dsd .ds-grip { position: absolute; left: -18px; top: 0; color: #9ca3af; cursor: grab; font-size: 14px; display: none; } .dsd .ds-blk:hover > .ds-grip { display: block; }
+  /* Griff (Taloan, 18.09.: „erreiche ihn nicht — verschwindet, wenn die Maus hinkommt“): er sass ausserhalb des Blocks und war nur bei
+     Hover des Blocks da; auf dem Weg dorthin verliess die Maus den Block. Jetzt immer da (blass), kräftig bei Hover — und der
+     Block reicht nach links bis unter den Griff, damit der Hover nicht abreisst. */
+  .dsd .ds-blk { margin-left: -18px; padding-left: 18px; }
+  .dsd .ds-grip { position: absolute; left: 2px; top: 0; color: #9ca3af; cursor: grab; font-size: 14px; opacity: .35; }
+  .dsd .ds-blk:hover > .ds-grip, .dsd .ds-grip:hover { opacity: 1; color: #2563eb; }
   .dsd .ds-text[contenteditable] { outline: 1px dotted #9ca3af; min-height: 1.4em; padding: 1px 2px; }
 `
 export async function mountDesigner(root, ctx) {
