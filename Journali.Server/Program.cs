@@ -76,6 +76,7 @@ RelationApi.Map(api);
 MediaApi.Map(api);
 PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);
+TransferApi.Map(api);   // Rohdaten eines Teilbaums hin und zurück (JSON, wiederherstellbar — Taloan)
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/
 app.MapGet("/plugins/{key}/{**path}", (string key, string path, HttpContext ctx) =>

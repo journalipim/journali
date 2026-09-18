@@ -1,12 +1,12 @@
 {
   "key": "json",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "label": {
     "de": "Import: JSON",
     "en": "Import: JSON"
   },
   "description": {
-    "de": "JSON-Dateien (Liste von Objekten, oder { rows | items | data: [...] }) als Tabelle für ⇩ Import → Tabelle; verschachtelte Felder werden a.b.c.",
+    "de": "JSON-Import-Manager: einen Knotenbaum im Rohdaten-Format ({ model, node } aus dem Export, auch aus anderen Systemen) analysieren, Attribute und Gruppen auf Bestehendes zuordnen oder neu anlegen (best guess, Präfix), Ziel wählen, einspielen. Dazu JSON-Listen als Tabelle für ⇩ Import → Tabelle.",
     "en": "JSON files (array of objects, or { rows | items | data: [...] }) as a table; nested fields become a.b.c."
   },
   "kind": "import",

@@ -1,5 +1,8 @@
 // Plugin json: Liste von Objekten als Tabelle; Objekte werden flach (a.b.c), Listen von Skalaren kommagetrennt.
+// Dazu (Taloan, 18.09.): der JSON-Import-Manager (manager.js) für Knotenbäume im Rohdaten-Format — analysieren, Modell zuordnen, Ziel, einspielen.
+import { mountManager } from './manager.js'
 export default {
+  views: [{ path: 'import', label: 'JSON-Import', icon: '⇩', mount: mountManager }],
   importers: [{
     key: 'json', label: 'JSON', accept: ['.json', '.jsonl', '.ndjson'],
     async parse(file, ctx) {

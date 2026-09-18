@@ -21,12 +21,12 @@ export const DEFAULT_LAYOUT = () => ({
 const PALETTE = [
   { kind: 'section', columns: 1, label: '▭ Abschnitt, 1 Spalte' }, { kind: 'section', columns: 2, label: '▯▯ Abschnitt, 2 Spalten' },
   { kind: 'section', columns: 3, label: '▯▯▯ Abschnitt, 3 Spalten' }, { kind: 'section', columns: 4, label: '▯▯▯▯ Abschnitt, 4 Spalten' },
-  { kind: 'text', label: '¶ Text' }, { kind: 'image', label: '🖼 Bild' }, { kind: 'variants', label: '⊞ Variantentabelle' }, { kind: 'compare', label: '⊟ Vergleichstabelle' }, { kind: 'pagebreak', label: '⤓ Seitenumbruch' },
+  { kind: 'text', label: '¶ Text' }, { kind: 'image', label: '🖼 Bild' }, { kind: 'variants', label: '⊞ Datentabelle (Subitems)' }, { kind: 'compare', label: '⊟ Vergleichstabelle' }, { kind: 'pagebreak', label: '⤓ Seitenumbruch' },
 ]
 const newItem = t => t.kind === 'section' ? { id: nid(), kind: 'section', title: '', columns: t.columns, cells: Array.from({ length: t.columns }, () => []) }
   : t.kind === 'text' ? { id: nid(), kind: 'text', html: 'Text …' }
   : t.kind === 'image' ? { id: nid(), kind: 'image', which: 'first', height: 50 }
-  : t.kind === 'variants' ? { id: nid(), kind: 'variants', attrs: [] }
+  : t.kind === 'variants' ? { id: nid(), kind: 'variants', attrs: [], group: '' }
   : t.kind === 'compare' ? { id: nid(), kind: 'compare', source: 'variants', nodes: [], group: '', attrs: [], diff: false, empty: false }
   : t.kind === 'group' ? { id: nid(), kind: 'group', group: t.group, title: true, empty: false }
   : t.kind === 'attr' ? { id: nid(), kind: 'attr', attr: t.attr, label: true }
@@ -70,13 +70,15 @@ function renderItem(it, d, model, edit, ctx) {
       if (edit) { e.contentEditable = 'true'; e.addEventListener('input', () => { it.html = e.innerHTML; ctx.dirty() }); e.addEventListener('mousedown', ev => ev.stopPropagation()) }
       break
     case 'variants': {
-      const vs = d.variants ?? []
-      const axes = [...new Set(vs.flatMap(v => v.axes.map(a => a.key)))]
-      const cols = it.attrs?.length ? it.attrs : axes
+      // Datentabelle (Taloan): eine Zeile je Subitem — Varianten am Produkt, Produkte an der Gruppe; Spalten aus einer Gruppe, einzeln oder die Achsen
+      const vs = d.children ?? d.variants ?? []
+      const axes = [...new Set(vs.flatMap(v => (v.axes ?? []).map(a => a.key)))]
+      const cols = it.group ? model.attributes.filter(a => a.group === it.group && !['rows', 'html'].includes(a.type)).map(a => a.key) : it.attrs?.length ? it.attrs : axes
       e = el('table', { class: 'ds-table ds-variants' })
-      e.append(el('tr', {}, el('th', {}, 'SKU'), ...cols.map(k => el('th', {}, label(k)))))
-      for (const v of vs) e.append(el('tr', {}, el('td', { class: 'mono' }, v.sku), ...cols.map(k => el('td', {}, v.axes.find(a => a.key === k)?.value ?? valueCell(v, k) ?? ''))))
-      if (!vs.length) e.append(el('tr', {}, el('td', { class: 'muted', colspan: String(cols.length + 1) }, edit ? '(keine Varianten am gewählten Knoten)' : '')))
+      const first = vs.some(v => v.role === 'variant') ? 'SKU' : 'Name'
+      e.append(el('tr', {}, el('th', {}, first), ...cols.map(k => el('th', {}, label(k)))))
+      for (const v of vs) e.append(el('tr', {}, el('td', { class: first === 'SKU' ? 'mono' : '' }, first === 'SKU' ? v.sku : v.name), ...cols.map(k => el('td', {}, (v.axes ?? []).find(a => a.key === k)?.value ?? valueCell(v, k) ?? ''))))
+      if (!vs.length) e.append(el('tr', {}, el('td', { class: 'muted', colspan: String(cols.length + 1) }, edit ? '(keine Subitems am gewählten Knoten)' : '')))
       break
     }
     case 'compare': {
@@ -108,7 +110,7 @@ function renderItem(it, d, model, edit, ctx) {
 export function compareNodes(it, d, tree) {
   if (it.source === 'pick') return it.nodes ?? []
   if (!d.id || !tree) return []
-  const kids = tree.kids(d.id)
+  const kids = tree.kids(d.id)   // Subitems: Varianten am Produkt, Produkte an der Gruppe
   return (it.source === 'children' ? kids : kids.filter(k => k.role === 'variant')).map(k => k.id)
 }
 /// Vor dem fertigen Blatt: die Daten aller Vergleichsknoten laden
@@ -339,7 +341,7 @@ export async function mountDesigner(root, ctx) {
       props.append(el('div', { class: 'muted', style: 'margin-top:14px;line-height:1.5' }, 'Bausteine links auf die Seite ziehen. Gruppen und Attribute in eine Spalte ziehen. Klick wählt, × entfernt, ⋮⋮ verschiebt Blöcke. Text direkt tippen; {name} {sku} {today} und {attributkey} werden ersetzt.'))
       return
     }
-    props.append(el('b', {}, { header: 'Kopf', footer: 'Fuss', section: 'Abschnitt', group: 'Attributgruppe', attr: 'Attribut', image: 'Bild', text: 'Text', variants: 'Variantentabelle', compare: 'Vergleichstabelle', pagebreak: 'Seitenumbruch' }[x.kind] ?? x.kind))
+    props.append(el('b', {}, { header: 'Kopf', footer: 'Fuss', section: 'Abschnitt', group: 'Attributgruppe', attr: 'Attribut', image: 'Bild', text: 'Text', variants: 'Datentabelle', compare: 'Vergleichstabelle', pagebreak: 'Seitenumbruch' }[x.kind] ?? x.kind))
     switch (x.kind) {
       case 'header': props.append(field('Titel', text(x, 'title')), field('Untertitel', text(x, 'sub')), field('rechts', text(x, 'right'))); break
       case 'footer': props.append(field('Text', text(x, 'text'))); break
@@ -353,7 +355,10 @@ export async function mountDesigner(root, ctx) {
       case 'attr': props.append(el('div', { class: 'mono muted' }, x.attr), check(x, 'label', 'Bezeichnung davor')); break
       case 'image': { const w = el('select', {}, el('option', { value: 'first' }, 'erstes Bild'), el('option', { value: 'all' }, 'alle Bilder')); w.value = x.which; w.addEventListener('change', () => { x.which = w.value; dctx.dirty(); draw() }); props.append(field('Welche', w), field('Höhe (mm)', num(x, 'height', 10, 200))); break }
       case 'variants': {
-        props.append(el('div', { class: 'muted' }, 'Spalten: SKU, dann Achsen — oder eigene Attribute:'))
+        props.append(el('div', { class: 'muted' }, 'Zeilen: die Subitems des Knotens (Produkt → Varianten, Gruppe → Produkte). Spalten: Achsen, eine Gruppe oder eigene Attribute:'))
+        const vg = el('select', {}, el('option', { value: '' }, '— Achsen / einzelne —'), ...model.groups.map(g => el('option', { value: g.key }, g.label?.de || g.key))); vg.value = x.group ?? ''
+        vg.addEventListener('change', () => { x.group = vg.value; dctx.dirty(); draw() })
+        props.append(field('Spalten aus Gruppe', vg))
         const chips = el('div', { class: 'chips', style: 'margin-top:4px' }, ...(x.attrs ?? []).map(k => el('span', { class: 'chip mono' }, k, el('button', { onclick: () => { x.attrs = x.attrs.filter(a => a !== k); dctx.dirty(); draw() } }, '×'))))
         const add = el('select', {}, el('option', { value: '' }, '+ Attribut'), ...(st.avail ?? []).map(c => el('option', { value: c.key }, c.label?.de || c.key)))
         add.addEventListener('change', () => { if (add.value) { x.attrs = [...(x.attrs ?? []), add.value]; dctx.dirty(); draw() } })

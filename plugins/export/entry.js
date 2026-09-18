@@ -81,11 +81,25 @@ async function mount(root, ctx) {
   const locBox = el('div', { class: 'chips' }); for (const l of store.model.locales) { const on = () => state.locales.includes(l.code); const c = el('span', { class: 'view-chip' + (on() ? ' on' : ''), onclick: () => { state.locales = on() ? state.locales.filter(x => x !== l.code) : [...state.locales, l.code]; c.className = 'view-chip' + (on() ? ' on' : ''); remember() } }, l.code); locBox.append(c) }
   const viewSel = el('select', { style: 'width:100%', onchange: e => { state.viewKey = e.target.value; remember() } }, el('option', { value: '' }, '◫ alle Attribute'), ...store.model.views.map(v => el('option', { value: v.key }, `◫ ${v.label?.de || v.key} (${v.level})`))); viewSel.value = state.viewKey
   const ownCb = el('input', { type: 'checkbox' }); ownCb.checked = state.ownOnly; ownCb.addEventListener('change', () => { state.ownOnly = ownCb.checked; remember() })
-  const fmtSel = el('select', { style: 'width:100%', onchange: e => { state.format = e.target.value; remember() } }, el('option', { value: 'xlsx' }, 'Excel (.xlsx)'), el('option', { value: 'csv' }, 'CSV (; UTF-8, Excel-tauglich)'), el('option', { value: 'json' }, 'JSON (Baum, verschachtelt)'), el('option', { value: 'jsonflat' }, 'JSON (flache Liste)')); fmtSel.value = state.format
+  const fmtSel = el('select', { style: 'width:100%', onchange: e => { state.format = e.target.value; remember() } }, el('option', { value: 'xlsx' }, 'Excel (.xlsx)'), el('option', { value: 'csv' }, 'CSV (; UTF-8, Excel-tauglich)'), el('option', { value: 'jsonraw' }, 'JSON Rohdaten (wiederherstellbar)'), el('option', { value: 'json' }, 'JSON ausgewertet (Baum)'), el('option', { value: 'jsonflat' }, 'JSON ausgewertet (flache Liste)')); fmtSel.value = state.format
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const preview = el('div', { class: 'scroll', style: 'flex:1' })
   async function run(downloadIt) {
     if (!state.root) return; if (!state.locales.length) { store.toast('mindestens eine Sprache'); return }
+    // Rohdaten (Taloan): eigene Werte je Achse, Skripte als Skripte — genau das, was /nodes/import wieder einspielt
+    if (state.format === 'jsonraw') {
+      try {
+        const raw = await api.get(`/api/nodes/${encodeURIComponent(state.root)}/export?deep=true`)
+        const count = (n => { let c = 1; for (const k of n.children ?? []) c += count(k); return c })
+        const total = count(raw.node)
+        preview.innerHTML = ''; preview.append(el('pre', { class: 'mono', style: 'padding:8px;font-size:11px;white-space:pre-wrap' }, JSON.stringify(raw, null, 1).slice(0, 6000) + (total > 30 ? '\n…' : '')))
+        say(`${total} Knoten roh · Modell: ${raw.model.groups.length} Gruppen, ${raw.model.attributes.length} Attribute, ${raw.model.lists.length} Listen, ${raw.model.units.length} Einheiten`)
+        if (!downloadIt) return
+        download(new Blob([JSON.stringify(raw, null, 1)], { type: 'application/json' }), `${tree.byId.get(state.root)?.label ?? 'export'}-rohdaten`.replace(/[^\w.-]+/g, '_') + '.json')
+        store.toast(`⇪ ${total} Knoten als Rohdaten gesichert`, 'ok')
+      } catch (e) { say('✗ ' + e.message); store.toast(e.message) }
+      return
+    }
     try {
       const t = await build(ctx, { ...state, say })
       say(`${t.count} Zeilen · ${t.columns.length} Spalten`)
@@ -102,13 +116,38 @@ async function mount(root, ctx) {
       store.toast(`⇪ ${t.count} Zeilen exportiert`)
     } catch (e) { say('✗ ' + e.message); store.toast(e.message) }
   }
+  // Rohdaten zurück (Taloan: exportieren → löschen → importieren → alles wie vorher)
+  async function importRaw() {
+    const input = el('input', { type: 'file', accept: '.json,application/json' })
+    input.addEventListener('change', async () => {
+      const file = input.files[0]; if (!file) return
+      let raw; try { raw = JSON.parse(await file.text()) } catch { store.toast('keine JSON-Datei'); return }
+      const node = raw?.node ?? raw, modelPart = raw?.model ?? null
+      if (!node?.id || !node?.role || !Array.isArray(node.values)) { store.toast('Das ist kein Rohdaten-Export (id, role, values fehlen) — ausgewertete Exporte lassen sich nicht einspielen, sie würden Formeln überschreiben'); return }
+      const count = (n => { let c = 1; for (const k of n.children ?? []) c += count(k); return c }); const total = count(node)
+      const parentOk = node.parent && tree.byId.has(node.parent)
+      const parent = parentOk ? node.parent : state.root
+      const missing = modelPart ? [...modelPart.groups.filter(g => !store.model.groups.some(x => x.key === g.key)).map(g => '▤ ' + g.key), ...modelPart.attributes.filter(a => !store.model.attributes.some(x => x.key === a.key)).map(a => a.key)] : []
+      const ok = await ctx.dialog.confirm({ title: `${total} Knoten aus ${file.name} einspielen?`, warn: `${node.role === 'group' ? '▣' : node.role === 'product' ? '▦' : '◆'} ${node.name ?? node.id} → unter ${tree.byId.get(parent)?.label ?? 'Wurzel'}${parentOk ? '' : ' (der frühere Vater fehlt — der gewählte Teilbaum wird das Ziel)'}`, list: missing.length ? [`Neu im Modell (${missing.length}):`, ...missing] : [], ok: '⇩ Einspielen' })
+      if (!ok) return
+      try {
+        say('spiele ein …')
+        const r = await api.post('/api/nodes/import', { node, parent, model: modelPart })
+        say(`${r.created} neu · ${r.restored} zurückgeholt · ${r.updated} angeglichen · ${r.model} Modellteile · ${r.entries} Einträge (Stapel ${r.batch})${r.errors?.length ? ' · ' + r.errors.length + ' Fehler: ' + r.errors[0] : ''}`)
+        if (r.model) store.reloadModel?.()
+        store.toast(`⇩ ${r.entries} Einträge — ${r.created} neu, ${r.restored} zurückgeholt, ${r.updated} angeglichen`, r.errors?.length ? 'error' : 'ok')
+        await store.poll(true); await tree.load()
+      } catch (e) { say('✗ ' + e.message); store.toast(e.message) }
+    })
+    input.click()
+  }
   const row = (label, ...kids) => el('tr', {}, el('td', { class: 'attr', style: 'color:var(--muted);white-space:nowrap;padding-left:8px;width:84px' }, label), el('td', { style: 'padding:2px 4px;position:relative' }, ...kids))
   const step = t => el('tr', { class: 'step' }, el('td', { colspan: '2', class: 'step-band', style: 'display:table-cell;height:24px' }, t))
   root.append(
     el('div', { class: 'toolbar' }, el('h1', {}, '⇪ Export'), el('span', { class: 'grow' }), status),
     el('table', { class: 'grid', style: 'width:100%;border-bottom:1px solid var(--line)' }, el('tbody', {},
       step('1 · Was'), row('Teilbaum', rootIn, pick), row('Knoten', roleSel), row('Sprachen', locBox), row('Attribute', viewSel), row('Werte', el('label', {}, ownCb, ' nur eigene Werte (geerbte leer lassen)')),
-      step('2 · Wie'), row('Format', fmtSel), row('', el('span', { class: 'row', style: 'display:flex;gap:6px' }, el('button', { onclick: () => run(false) }, 'Vorschau'), el('button', { class: 'primary', onclick: () => run(true) }, '⇪ herunterladen'))))),
+      step('2 · Wie'), row('Format', fmtSel), row('', el('span', { class: 'row', style: 'display:flex;gap:6px' }, el('button', { onclick: () => run(false) }, 'Vorschau'), el('button', { class: 'primary', onclick: () => run(true) }, '⇪ herunterladen'), el('span', { class: 'sep' }, '·'), el('button', { onclick: importRaw, title: 'Rohdaten-JSON (aus „JSON Rohdaten“) einspielen: vorhandene Knoten angleichen, zurückgezogene zurückholen, fehlende anlegen — ein Stapel, rückgängig im Journal' }, '⇩ Rohdaten importieren …'))))),
     el('div', { class: 'step-band' }, '3 · Vorschau ', el('span', { class: 'muted' }, '· erste 200 Zeilen')),
     preview)
   return () => {}
@@ -160,6 +199,7 @@ export default {
     { label: (r, below) => `Excel: ${below} exportieren`, icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, true).catch(e => ctx.store.toast(e.message)) },
     { label: (r, below) => `Excel: ${below} importieren …`, icon: '⇩', roles: ['group', 'product'], run: (id, ctx) => ctx.go?.(`/import/table?node=${encodeURIComponent(id)}`) },
     { label: 'Exportieren … (Teilbaum)', icon: '⇪', roles: ['group', 'product'], run(nodeId, ctx) { localStorage.setItem('journali.export.root', nodeId); ctx.go?.('/p/export/export') } },
+    { label: (r, below) => `JSON: Rohdaten sichern (mit ${below})`, icon: '⇪', roles: ['group', 'product', 'variant'], async run(nodeId, ctx) { try { const raw = await ctx.api.get(`/api/nodes/${encodeURIComponent(nodeId)}/export?deep=true`); download(new Blob([JSON.stringify(raw, null, 1)], { type: 'application/json' }), `${ctx.tree.byId.get(nodeId)?.label ?? nodeId}-rohdaten`.replace(/[^\w.-]+/g, '_') + '.json') } catch (e) { ctx.store.toast(e.message) } } },
   ],
   build, toCsv, toJson, toJsonTree, toXlsx, nodeWorkbook,
 }
