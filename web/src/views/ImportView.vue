@@ -100,10 +100,14 @@ async function importImages(refOf, res) {
   const byRef = new Map(res.results.filter(r => r.ref).map(r => ['@' + r.ref, r.node]))
   const items = plan.value.items.filter(it => it.role !== 'group')
   if (!items.length) return
-  busy.value = `Medien …`; let n = 0, had = 0, fail = 0, seen = 0
+  busy.value = `Medien …`; let n = 0, had = 0, fail = 0, seen = 0, done = 0
+  store.progress = { done: 0, total: items.length, text: 'IXP holt Medien' }
+  const guard = e => { e.preventDefault(); e.returnValue = '' }; window.addEventListener('beforeunload', guard)
+  try {
   const origin = (() => { try { return new URL(base.value).origin } catch { return '' } })()
   const abs = u => /^https?:\/\//.test(u) ? u : origin + (u.startsWith('/') ? '' : '/') + u
   for (const it of items) {
+    store.progress = { done: done++, total: items.length, text: `IXP holt Medien${n ? ` · ${n} neu` : ''}` }
     const node = (refOf.get(it.doc.masterId) ?? '').startsWith('@') ? byRef.get(refOf.get(it.doc.masterId)) : refOf.get(it.doc.masterId)
     if (!node) continue
     // Quellen: 1. Asset-Dokumente unter dem Knoten (Typen image/media/file, mit uri und mimeType), 2. das Vorschaubild (image-Feld)
@@ -132,6 +136,7 @@ async function importImages(refOf, res) {
       busy.value = `Medien … ${seen} (${n} neu)`
     }
   }
+  } finally { window.removeEventListener('beforeunload', guard); store.progress = null }
   say(`Medien: ${n} angehängt, ${had} waren schon da${fail ? `, ${fail} fehlgeschlagen` : ''}${seen ? '' : ' — die Quelle liefert an diesen Knoten keine Assets und keine Vorschaubilder'}`)
 }
 // Relationstypen für Medien (image, document …) aus dem Modell
