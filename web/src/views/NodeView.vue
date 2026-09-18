@@ -324,26 +324,34 @@ async function inheritToSubitems() {
   try {
     const below = []; const walk = id => { for (const k of tree.kids(id)) { below.push(k); walk(k.id) } }; walk(props.id)
     const mine = new Map(own.map(r => [`${r.type}|${r.other.id}`, r]))
-    const retire = [], keep = []
+    const retire = [], keep = [], own2 = [], already = []; let i = 0
     for (const k of below) {
-      inheriting.value = `lese … ${retire.length + keep.length}/${below.length}`
+      inheriting.value = `lese … ${++i}/${below.length}`
       const rk = await api.get(`/api/nodes/${encodeURIComponent(k.id)}/relations`)
       const media = (rk.out ?? []).filter(r => isMediaType(r.type))
+      if (!media.length) { if ((rk.inherited ?? []).length) already.push(k); continue }
       for (const t of new Set(media.map(r => r.type))) {
         const ofType = media.filter(r => r.type === t)
         const dup = ofType.filter(r => mine.has(`${t}|${r.other.id}`)), other = ofType.filter(r => !mine.has(`${t}|${r.other.id}`))
-        if (!dup.length) continue
-        if (other.length) keep.push({ node: k, type: t, n: dup.length })   // eigene andere Bilder: Vererbung bricht dort ohnehin — nicht anfassen
+        if (!dup.length) { own2.push({ node: k, rel: other[0] }); continue }   // eigenes anderes Medium: bricht die Vererbung — bleibt
+        if (other.length) keep.push({ node: k, type: t, n: dup.length })       // gleiches + eigenes anderes: nicht anfassen
         else retire.push(...dup.map(r => ({ node: k, rel: r })))
       }
     }
-    const toInherit = own.filter(r => relValueRaw(r, 'inherit') !== 'true')
+    const toInherit = own.filter(r => relValueRaw(r, 'inherit') !== 'true'), alreadyOn = own.length - toInherit.length
+    // Der Dialog sagt, was ist — auch wenn nichts zu tun bleibt (Taloan, 18.09.: „0 hier auf vererben?“)
+    const list = [
+      ...(alreadyOn ? [`${alreadyOn} ${alreadyOn === 1 ? 'Medium ist' : 'Medien sind'} hier schon auf „vererben“`] : []),
+      ...(already.length ? [`${already.length} Subitems erben bereits`] : []),
+      ...(own2.length ? [`${own2.length} Subitems haben ein eigenes anderes Medium — das bricht die Vererbung dort: ${own2.slice(0, 3).map(x => `${x.node.label} (${x.rel.other.label})`).join(', ')}${own2.length > 3 ? ' …' : ''}`] : []),
+      ...(keep.length ? [`${keep.length} Subitems behalten ihre gleiche Zuordnung, weil sie daneben eigene andere Medien haben`] : []),
+      ...retire.slice(0, 6).map(x => `lösen: ${x.node.label} · ${x.rel.other.label}`), ...(retire.length > 6 ? [`… und ${retire.length - 6} weitere`] : [])]
+    const nothing = !toInherit.length && !retire.length
     const ok = await dialog.confirm({
       title: `Medien an ${below.length} Subitems vererben?`,
-      warn: `${toInherit.length} Medien hier auf „vererben“ · ${retire.length} gleiche Zuordnungen an Subitems lösen`,
-      list: [...(keep.length ? [`${keep.length} Subitems behalten ihre Zuordnung (haben daneben eigene andere Medien)`] : []), ...retire.slice(0, 6).map(x => `${x.node.label} · ${x.rel.other.label}`), ...(retire.length > 6 ? [`… und ${retire.length - 6} weitere`] : [])],
-      text: 'Die Medien bleiben in der Bibliothek; an den Subitems erscheinen sie danach als geerbt (gestrichelt).', ok: '↓ Vererben' })
-    if (!ok) return
+      warn: nothing ? 'nichts zu tun' : `${toInherit.length} Medien hier auf „vererben“ · ${retire.length} gleiche Zuordnungen an Subitems lösen`,
+      list, text: nothing ? '' : 'Die Medien bleiben in der Bibliothek; an den Subitems erscheinen sie danach als geerbt (gestrichelt).', ok: nothing ? 'OK' : '↓ Vererben' })
+    if (!ok || nothing) return
     const commands = [...toInherit.map(r => ({ op: 'relation.attribute.set', args: { relation: r.id, attribute: 'inherit', value: 'true' } })), ...retire.map(x => ({ op: 'relation.retire', args: { relation: x.rel.id } }))]
     const res = await api.batchChunked(commands, { label: 'Vererbung', continueOnError: true })
     store.toast(`✓ ${res.results.length} Einträge${res.errors.length ? ` · ${res.errors.length} Fehler` : ''}`, res.errors.length ? 'error' : 'ok')
