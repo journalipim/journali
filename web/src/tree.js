@@ -33,6 +33,15 @@ export const tree = reactive({
   },
 
   kids(id) { return this.children.get(id ?? '') ?? [] },
+  // Was liegt unter einem Knoten — für die Rückfrage beim Zurückziehen (Taloan: das Wesentliche muss vorne stehen):
+  // Anzahl je Rolle und die Namen der ersten Ebene
+  below(id) {
+    const counts = { group: 0, product: 0, variant: 0 }; let total = 0
+    const walk = x => { for (const k of this.kids(x)) { counts[k.role] = (counts[k.role] ?? 0) + 1; total++; walk(k.id) } }
+    walk(id)
+    const parts = [['group', 'Produktgruppe', 'Produktgruppen'], ['product', 'Produkt', 'Produkte'], ['variant', 'Variante', 'Varianten']].filter(([r]) => counts[r]).map(([r, one, many]) => `${counts[r]} ${counts[r] === 1 ? one : many}`)
+    return { total, summary: parts.join(', '), names: this.kids(id).map(k => `${ICON[k.role] ?? ''} ${k.label}`) }
+  },
 
   toggle(id) {
     this.expanded.has(id) ? this.expanded.delete(id) : this.expanded.add(id)

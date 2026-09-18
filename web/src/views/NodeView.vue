@@ -344,7 +344,8 @@ async function retire() {
   const kids = node.value.children
   // immer fragen (Taloan: der 🗑 oben fragte gar nicht) — eigener Dialog statt window.confirm
   const label = tree.byId.get(props.id)?.label ?? props.id
-  if (!await dialog.confirm({ title: kids ? `${label} mit ${countBelow(props.id)} Knoten darunter zurückziehen?` : `${label} zurückziehen?`, ok: '🗑 Zurückziehen', danger: true })) return
+  const b = tree.below(props.id)
+  if (!await dialog.confirm({ title: `${icon(node.value.role)} ${label} zurückziehen?`, warn: b.total ? `Mit allen ${b.total} Knoten darunter: ${b.summary}` : '', list: b.names, ok: b.total ? `🗑 ${b.total + 1} Knoten zurückziehen` : '🗑 Zurückziehen', danger: true })) return
   try {
     const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
     const gone = props.id
