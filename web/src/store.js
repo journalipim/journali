@@ -84,9 +84,11 @@ export const store = reactive({
     } catch { /* offline: egal */ }
   },
 
-  toast(text, kind = 'error') {
-    const t = { id: Date.now() + Math.random(), text, kind }
+  // action: { label, run } — ein Knopf im Toast (↶ wiederherstellen); der Toast bleibt dann länger
+  toast(text, kind = 'error', action = null) {
+    const t = { id: Date.now() + Math.random(), text, kind, action }
     this.toasts.push(t)
-    setTimeout(() => this.toasts.splice(this.toasts.indexOf(t), 1), 4000)
+    setTimeout(() => { const i = this.toasts.indexOf(t); if (i >= 0) this.toasts.splice(i, 1) }, action ? 12000 : 4000)
   },
+  dismiss(t) { const i = this.toasts.indexOf(t); if (i >= 0) this.toasts.splice(i, 1) },
 })

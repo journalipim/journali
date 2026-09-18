@@ -245,12 +245,20 @@ function onListKey(e) {
   else if (e.key === 'End' && rows.length) open(rows[rows.length - 1].r)
 }
 function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
+// Wiederherstellen (Taloan): der Knoten mit allem, was darunter zurückgezogen wurde — die Einträge bleiben, es kommt NodeRestored dazu
+async function restore(id) {
+  try {
+    const res = await api.post(`/api/nodes/${encodeURIComponent(id)}/restore?recursive=true`)
+    store.toast(`${res.restored} Knoten wiederhergestellt (Stapel ${res.batch})`, 'ok')
+    await store.poll(true); await tree.load(); router.push(`/tree/${id}`)
+  } catch (e) { store.toast(e.message) }
+}
 async function retire(r) {
   const below = countBelow(r.id)
   if (!window.confirm(below ? `${r.label} mit allen ${below} Knoten darunter zurückziehen?\n\nDas Journal behält alles; der Baum zeigt sie nicht mehr.` : `${r.label} zurückziehen?`)) return
   try {
     const res = await api.del(`/api/nodes/${encodeURIComponent(r.id)}${below ? '?recursive=true' : ''}`)
-    if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok')
+    if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok', { label: '↶ wiederherstellen', run: () => restore(r.id) })
     await tree.load(); if (props.id === r.id || !tree.byId.has(props.id)) router.push(r.parent ? `/tree/${r.parent}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }

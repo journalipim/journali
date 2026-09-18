@@ -128,6 +128,14 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.NodeRetired, new NodeRetired()));
     }
 
+    /// <summary>Zurückholen: der Knoten liegt im Papierkorb, sein Vater steht im Baum (oder er ist eine Wurzel).</summary>
+    public static Outcome Restore(Ctx c, string id)
+    {
+        if (!c.Tree.Retired.TryGetValue(id, out var n)) return c.Tree.Nodes.ContainsKey(id) ? Outcome.Bad("Der Knoten ist nicht zurückgezogen.") : Outcome.Missing;
+        if (n.Parent is not null && !c.Tree.Nodes.ContainsKey(n.Parent)) return Outcome.Bad("Erst den Knoten darüber zurückholen.");
+        return Outcome.Ok(c.Write(id, Types.NodeRestored, new NodeRestored()));
+    }
+
     public static Outcome SetStatus(Ctx c, string id, string? status)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;

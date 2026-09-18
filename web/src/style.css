@@ -236,6 +236,8 @@ table.grid tr.row:focus { outline: none; }
 .empty { padding: 24px; color: var(--muted); text-align: center; }
 
 .toasts { position: fixed; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 6px; z-index: 10; }
+.toast-action { margin-left: 12px; border: 1px solid rgba(255,255,255,.5); background: rgba(255,255,255,.12); color: #fff; border-radius: 4px; padding: 2px 8px; cursor: pointer; font: inherit; }
+.toast-action:hover { background: rgba(255,255,255,.25); }
 .toast {
   background: var(--toast); color: #fff;
   padding: 8px 12px; border-radius: 6px;

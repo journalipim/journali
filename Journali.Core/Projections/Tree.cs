@@ -70,10 +70,15 @@ public sealed class Tree : IProjection
     private readonly Dictionary<string, HashSet<string>> _children = new();
     private readonly Dictionary<(string System, string Id), string> _external = new();
     private readonly HashSet<string> _ever = new();   // je angelegt — auch zurückgezogene, fürs Saatgut
+    private readonly Dictionary<string, Node> _retired = new();   // zurückgezogen, mit allem, was sie hatten — für NodeRestored
 
     public long LastApplied { get; private set; }
 
     public IReadOnlyDictionary<string, Node> Nodes => _nodes;
+    /// <summary>Zurückgezogene Knoten (Papierkorb): lassen sich zurückholen, solange der Vater da ist.</summary>
+    public IReadOnlyDictionary<string, Node> Retired => _retired;
+    /// <summary>Zurückgezogene Kinder eines Knotens — zum Zurückholen eines Teilbaums von oben nach unten.</summary>
+    public IEnumerable<Node> RetiredChildren(string id) => _retired.Values.Where(n => n.Parent == id);
 
     /// <summary>Gab es diesen Knoten je (auch wenn zurückgezogen)? Damit das Saatgut ihn nicht wieder anlegt.</summary>
     public bool EverCreated(string id) => _ever.Contains(id);
@@ -266,6 +271,13 @@ public sealed class Tree : IProjection
                 n = Create(entry, Roles.Variant, vc.Product);
                 foreach (var (k, v) in vc.AxisValues) n.AxisValues[k] = v;
                 break;
+            case Types.NodeRestored:
+                // zurück ins Abbild, wie er war — Kennungen wieder eintragen, ausser ein anderer hat sie inzwischen
+                if (!_retired.Remove(entry.Stream, out n)) return;
+                _nodes[n.Id] = n;
+                Link(n);
+                foreach (var (sys, ext) in n.External.ToList()) if (!_external.TryAdd((sys, ext), n.Id)) n.External.Remove(sys);
+                break;
             default:
                 if (!_nodes.TryGetValue(entry.Stream, out n)) return;   // kein Knoten: übergehen
                 ApplyToNode(n, entry);
@@ -331,6 +343,7 @@ public sealed class Tree : IProjection
                 Unlink(n);
                 foreach (var (sys, ext) in n.External) _external.Remove((sys, ext));
                 _nodes.Remove(n.Id);
+                _retired[n.Id] = n;
                 break;
             case Types.ExternalLinked:
                 var el = Types.Deserialize<ExternalLinked>(entry.Payload);

@@ -89,6 +89,26 @@ public static class TreeApi
             });
             return result.Count < 0 ? Results.NotFound() : Results.Ok(new { retired = result.Count, batch = result.Batch });
         });
+        // Wiederherstellen (Taloan): den Knoten, mit recursive auch die zurückgezogenen Knoten darunter — von oben nach unten, ein Stapel
+        api.MapPost("/nodes/{id}/restore", (string id, HttpRequest req, Catalog c, bool recursive = false) =>
+        {
+            if (!recursive) return Run(req, c, x => Commands.Restore(x, id));
+            if (Actor(req) is not { } actor) return ActorMissing();
+            var batch = "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
+            var result = c.With((model, tree, write) =>
+            {
+                if (!tree.Retired.ContainsKey(id)) return (Count: -1, Batch: batch, Error: (string?)null);
+                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
+                var first = Commands.Restore(ctx, id);
+                if (first.Error is not null) return (Count: 0, Batch: batch, Error: first.Error);
+                var n = 1;
+                var queue = new Queue<string>([id]);
+                while (queue.TryDequeue(out var cur))
+                    foreach (var child in tree.RetiredChildren(cur).ToList()) { if (Commands.Restore(ctx, child.Id).Error is null) { n++; queue.Enqueue(child.Id); } }
+                return (Count: n, Batch: batch, Error: null);
+            });
+            return result.Count < 0 ? Results.NotFound() : result.Error is not null ? Results.BadRequest(new { error = result.Error }) : Results.Ok(new { restored = result.Count, batch = result.Batch });
+        });
         api.MapPost("/nodes/{id}/duplicate", (string id, HttpRequest req, Catalog c, bool deep = false) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();

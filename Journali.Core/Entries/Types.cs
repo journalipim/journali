@@ -18,6 +18,8 @@ public static class Types
     public const string VariantCreated = "VariantCreated";
     public const string NodeMoved = "NodeMoved";
     public const string NodeRetired = "NodeRetired";
+    /// <summary>Zurückgezogenen Knoten zurückholen — mit allem, was er hatte (Taloan: „kein Rückgängig nach Löschen?“).</summary>
+    public const string NodeRestored = "NodeRestored";
     public const string StatusSet = "StatusSet";
     public const string GroupsAttached = "GroupsAttached";
     public const string NodeNamed = "NodeNamed";
@@ -148,6 +150,9 @@ public sealed record NodeMoved(string Parent);
 
 /// <summary>Knoten weg — nur ohne Kinder. Das Journal behält alles, das Abbild nimmt ihn heraus.</summary>
 public sealed record NodeRetired();
+
+/// <summary>Knoten zurück ins Abbild — mit Werten, Gruppen, Kennungen, wie er war; der Vater muss da sein.</summary>
+public sealed record NodeRestored();
 
 public sealed record StatusSet(string Status);
 

@@ -28,7 +28,8 @@ Eintrag übergeht das Abbild.
 | `ProductAxesSet` | `axes[]` | Variantenachsen nachträglich (ganze Liste) — nur, solange das Produkt keine Varianten hat |
 | `VariantCreated` | `product`, `axisValues{}` | Variante — das Verkaufbare; je Produktachse ein Wert, Kombination je Produkt eindeutig |
 | `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, sonst unter Gruppe; nie unter sich selbst) |
-| `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles |
+| `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles — das Abbild legt ihn in den Papierkorb |
+| `NodeRestored` | — | Knoten zurück aus dem Papierkorb, mit allem, was er hatte (Werte, Gruppen, Kennungen); der Vater muss im Baum stehen |
 | `StatusSet` | `status` (draft, active, discontinued) | Produkt und Variante; Gruppe hat keinen |
 | `GroupsAttached` | `groups[]` | welche Attributgruppen an diesem Knoten hängen (ganze Liste); die **Definition** vererbt sich nach unten — ob der **Wert** vererbt wird, sagt das Attribut |
 | `ExternalLinked` | `system`, `id` | externe Kennung je Quellsystem (Import: Update statt Neuanlage); je System nur ein Knoten |

@@ -1,7 +1,14 @@
 <script setup>
 // Einträge als dichte Zeilen: Nummer, Zeit, Urheber, [Strom], Typ, Inhalt.
-import { when, describe } from '../api.js'
+import { when, describe, api } from '../api.js'
+import { store } from '../store.js'
+import { tree } from '../tree.js'
 defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
+// ↶ an NodeRetired, solange der Knoten nicht im Baum steht (Taloan: Rückgängig nach Löschen)
+async function restore(id) {
+  try { const x = await api.post(`/api/nodes/${encodeURIComponent(id)}/restore?recursive=true`); store.toast(`${x.restored} Knoten wiederhergestellt (Stapel ${x.batch})`, 'ok'); await store.poll(true); await tree.load() }
+  catch (e) { store.toast(e.message) }
+}
 </script>
 
 <template>
@@ -26,6 +33,7 @@ defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
         <td class="muted">{{ e.type }}</td>
         <td :class="{ pos: e.type.endsWith('Granted') || e.type.endsWith('Assigned') || e.type.endsWith('Created'), neg: e.type.endsWith('Revoked') || e.type.endsWith('Removed') || e.type.endsWith('Retired') }">
           {{ describe(e) }}
+          <button v-if="e.type === 'NodeRetired' && !tree.byId.has(e.stream)" class="x" style="margin-left:8px" @click="restore(e.stream)" title="Knoten wiederherstellen — mit allem, was darunter zurückgezogen wurde">↶ wiederherstellen</button>
         </td>
         <td class="mono muted" :title="e.batch ? 'Stapel ' + e.batch : ''">{{ e.batch ? e.batch.slice(2, 6) : '' }}</td>
       </tr>

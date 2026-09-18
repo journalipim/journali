@@ -337,7 +337,8 @@ async function retire() {
   if (kids && !window.confirm(`${tree.byId.get(props.id)?.label ?? props.id} mit allen ${countBelow(props.id)} Knoten darunter zurückziehen?\n\nDas Journal behält alles; der Baum zeigt sie nicht mehr.`)) return
   try {
     const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
-    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok')
+    const gone = props.id
+    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok', { label: '↶ wiederherstellen', run: async () => { try { const x = await api.post(`/api/nodes/${encodeURIComponent(gone)}/restore?recursive=true`); store.toast(`${x.restored} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${gone}`) } catch (e) { store.toast(e.message) } } })
     const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }
