@@ -139,11 +139,12 @@ function renderBlock(b, d, model, edit, ctx) {
       })
       return s
     }
+    default: return renderItem(b, d, model, edit, ctx)   // Gruppe/Attribut auf oberster Ebene (ältere Layouts) statt „undefined“
   }
 }
 const SHEET_CSS = `
   body { color: #1f2328; margin: 0; }
-  .ds-page { background: #fff; box-sizing: border-box; }
+  .ds-page { background: #fff; color: #1f2328; box-sizing: border-box; }
   .ds-header { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid #2563eb; padding-bottom: 4px; margin-bottom: 8px; }
   .ds-header h1 { font-size: 2em; margin: 0; } .ds-sub { color: #6b7280; }
   .ds-section { display: grid; gap: 6mm; margin: 0 0 5mm; align-items: start; }
@@ -155,7 +156,7 @@ const SHEET_CSS = `
   .ds-attr .k { color: #6b7280; } .ds-images img { max-width: 100%; object-fit: contain; display: block; }
   .ds-footer { margin-top: 6mm; font-size: 0.8em; border-top: 1px solid #ddd; padding-top: 1mm; }
   .ds-break { break-after: page; height: 0; }
-  .muted { color: #9ca3af; } .mono { font-family: ui-monospace, Consolas, monospace; }
+  .ds-page .muted { color: #6b7280; } .ds-page .mono { font-family: ui-monospace, Consolas, monospace; }
 `
 export function renderSheet(layout, d, model) {
   const p = layout.page
