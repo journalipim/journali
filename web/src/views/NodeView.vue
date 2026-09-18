@@ -338,7 +338,7 @@ async function retire() {
   try {
     const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
     const gone = props.id
-    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok', { label: '↶ wiederherstellen', run: async () => { try { const x = r.batch ? await api.post(`/api/batches/${encodeURIComponent(r.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(gone)}/restore`); store.toast(`${x.restored} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${gone}`) } catch (e) { store.toast(e.message) } }, title: `stellt ${r.retired} Knoten wieder her: ${shownLabel.value}${r.retired > 1 ? ` mit ${r.retired - 1} darunter` : ''}` })
+    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok', { label: '↶ wiederherstellen', run: async () => { try { const x = r.batch ? await api.post(`/api/batches/${encodeURIComponent(r.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(gone)}/restore`); store.toast(`${x.undone ?? 1} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${gone}`) } catch (e) { store.toast(e.message) } }, title: `stellt ${r.retired} Knoten wieder her: ${shownLabel.value}${r.retired > 1 ? ` mit ${r.retired - 1} darunter` : ''}` })
     const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }

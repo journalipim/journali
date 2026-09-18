@@ -1,26 +1,53 @@
 <script setup>
 // Einträge als dichte Zeilen: Nummer, Zeit, Urheber, [Strom], Typ, Inhalt.
-import { reactive } from 'vue'
+// Stapel (Taloan, 18.09.): aufeinanderfolgende Einträge derselben Aktion (batch) stehen als EIN Block — eine Kopfzeile
+// mit Anzahl, Urheber, Zeit, aufklappbar, mit ↶ Rückgängig für die ganze Aktion; Mouseover zeigt, was der Schritt täte.
+import { reactive, ref, computed } from 'vue'
 import { when, describe, api } from '../api.js'
 import { store } from '../store.js'
 import { tree } from '../tree.js'
-defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
-// ↶ an NodeRetired, solange der Knoten nicht im Baum steht (Taloan: Rückgängig nach Löschen)
-// Mouseover (Taloan): was würde der Schritt tun? Vorschau je Stapel, einmal geladen
+const props = defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
+
+const open = reactive({})   // batch → aufgeklappt
+const rows = computed(() => {
+  const out = []
+  let i = 0
+  while (i < props.entries.length) {
+    const e = props.entries[i]
+    if (!e.batch) { out.push({ kind: 'one', e }); i++; continue }
+    let j = i
+    while (j < props.entries.length && props.entries[j].batch === e.batch) j++
+    const group = props.entries.slice(i, j)
+    if (group.length === 1) out.push({ kind: 'one', e })
+    else {
+      const types = {}; for (const g of group) types[g.type] = (types[g.type] ?? 0) + 1
+      out.push({ kind: 'head', batch: e.batch, group, first: group[group.length - 1], last: group[0], types })
+      if (open[e.batch]) for (const g of group) out.push({ kind: 'one', e: g, inGroup: true })
+    }
+    i = j
+  }
+  return out
+})
+const typeText = types => Object.entries(types).map(([t, n]) => `${n} ${t}`).join(' · ')
+
+// Mouseover: was würde Rückgängig tun? Vorschau je Stapel, einmal geladen
 const previews = reactive({})
-async function preview(e) {
-  const k = e.batch ?? e.stream; if (previews[k]) return
-  if (!e.batch) { previews[k] = `stellt 1 Knoten wieder her: ${e.stream}`; return }
+async function preview(batch, stream) {
+  const k = batch ?? stream; if (previews[k]) return
+  if (!batch) { previews[k] = `stellt 1 Knoten wieder her: ${stream}`; return }
   try {
-    const p = await api.get(`/api/batches/${encodeURIComponent(e.batch)}/preview`)
-    const gone = p.retired.filter(r => r.gone), back = p.retired.length - gone.length
-    const icon = { group: '▣', product: '▦', variant: '◆' }
-    previews[k] = `Rückgängig stellt ${gone.length} Knoten wieder her (Stapel ${e.batch}, ${p.actor})` + (back ? ` — ${back} sind schon zurück` : '') + ':\n' + gone.slice(0, 15).map(r => `${icon[r.role] ?? ''} ${r.label}`).join('\n') + (gone.length > 15 ? `\n… und ${gone.length - 15} weitere` : '')
+    const p = await api.get(`/api/batches/${encodeURIComponent(batch)}/preview`)
+    const lines = p.steps.slice(0, 15).map(s => `${s.kind === 'NodeRestored' ? '↩' : '←'} ${labelOf(s.stream)}: ${s.what}`)
+    previews[k] = `Rückgängig (Stapel ${batch}, ${p.actor}): ${p.steps.length} Schritte` + (p.skipped.length ? `, ${p.skipped.length} nicht rückgängig-fähig` : '') + '\n' + lines.join('\n') + (p.steps.length > 15 ? `\n… und ${p.steps.length - 15} weitere` : '')
   } catch (err) { previews[k] = err.message }
 }
-async function restore(id, batch) {
-  try { const x = batch ? await api.post(`/api/batches/${encodeURIComponent(batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(id)}/restore`); store.toast(`${x.restored} Knoten wiederhergestellt (Stapel ${x.batch})`, 'ok'); await store.poll(true); await tree.load() }
-  catch (e) { store.toast(e.message) }
+const labelOf = id => tree.byId.get(id)?.label ?? id
+async function undo(batch, stream) {
+  try {
+    const x = batch ? await api.post(`/api/batches/${encodeURIComponent(batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(stream)}/restore`)
+    store.toast(batch ? `↶ ${x.undone} Schritte rückgängig (Stapel ${x.batch})${x.failed?.length ? ` — ${x.failed.length} nicht: ${x.failed[0]}` : ''}` : 'Knoten wiederhergestellt', 'ok')
+    await store.poll(true); await tree.load()
+  } catch (e) { store.toast(e.message) }
 }
 </script>
 
@@ -38,18 +65,31 @@ async function restore(id, batch) {
       </tr>
     </thead>
     <tbody>
-      <tr v-for="e in entries" :key="e.number" class="row">
-        <td class="num">{{ e.number }}</td>
-        <td class="mono muted">{{ when(e.at) }}</td>
-        <td>{{ e.actor }}</td>
-        <td v-if="showStream"><router-link v-if="!e.stream.includes(':')" :to="`/tree/${e.stream}`" class="mono link">{{ e.stream }}</router-link><router-link v-else to="/model" class="mono link muted">{{ e.stream }}</router-link></td>
-        <td class="muted">{{ e.type }}</td>
-        <td :class="{ pos: e.type.endsWith('Granted') || e.type.endsWith('Assigned') || e.type.endsWith('Created'), neg: e.type.endsWith('Revoked') || e.type.endsWith('Removed') || e.type.endsWith('Retired') }">
-          {{ describe(e) }}
-          <button v-if="e.type === 'NodeRetired' && !tree.byId.has(e.stream)" class="x" style="margin-left:8px" @click="restore(e.stream, e.batch)" @mouseenter="preview(e)" :title="previews[e.batch ?? e.stream] ?? 'lade Vorschau …'">↶ wiederherstellen</button>
-        </td>
-        <td class="mono muted" :title="e.batch ? 'Stapel ' + e.batch : ''">{{ e.batch ? e.batch.slice(2, 6) : '' }}</td>
-      </tr>
+      <template v-for="r in rows" :key="r.kind === 'head' ? 'b' + r.batch : r.e.number">
+        <tr v-if="r.kind === 'head'" class="row head" @click="open[r.batch] = !open[r.batch]" :title="`Stapel ${r.batch} — Klick klappt die ${r.group.length} Einträge auf`">
+          <td class="num mono muted">{{ r.first.number }}–{{ r.last.number }}</td>
+          <td class="mono muted">{{ when(r.last.at) }}</td>
+          <td>{{ r.last.actor }}</td>
+          <td v-if="showStream" class="muted">{{ new Set(r.group.map(g => g.stream)).size }} Ströme</td>
+          <td class="muted">{{ open[r.batch] ? '▾' : '▸' }} ⧉ Stapel</td>
+          <td><b>{{ r.group.length }} Einträge</b> <span class="muted">· {{ typeText(r.types) }}</span>
+            <button class="x" style="margin-left:8px" @click.stop="undo(r.batch)" @mouseenter="preview(r.batch)" :title="previews[r.batch] ?? 'lade Vorschau …'">↶ rückgängig</button>
+          </td>
+          <td class="mono muted" :title="'Stapel ' + r.batch">{{ r.batch.slice(2, 6) }}</td>
+        </tr>
+        <tr v-else class="row" :class="{ sub: r.inGroup }">
+          <td class="num">{{ r.e.number }}</td>
+          <td class="mono muted">{{ when(r.e.at) }}</td>
+          <td>{{ r.e.actor }}</td>
+          <td v-if="showStream"><router-link v-if="!r.e.stream.includes(':')" :to="`/tree/${r.e.stream}`" class="mono link">{{ r.e.stream }}</router-link><router-link v-else to="/model" class="mono link muted">{{ r.e.stream }}</router-link></td>
+          <td class="muted">{{ r.e.type }}</td>
+          <td :class="{ pos: r.e.type.endsWith('Granted') || r.e.type.endsWith('Assigned') || r.e.type.endsWith('Created'), neg: r.e.type.endsWith('Revoked') || r.e.type.endsWith('Removed') || r.e.type.endsWith('Retired') }">
+            {{ describe(r.e) }}
+            <button v-if="r.e.type === 'NodeRetired' && !r.inGroup && !tree.byId.has(r.e.stream)" class="x" style="margin-left:8px" @click="undo(r.e.batch, r.e.stream)" @mouseenter="preview(r.e.batch, r.e.stream)" :title="previews[r.e.batch ?? r.e.stream] ?? 'lade Vorschau …'">↶ wiederherstellen</button>
+          </td>
+          <td class="mono muted" :title="r.e.batch ? 'Stapel ' + r.e.batch : ''">{{ r.e.batch ? r.e.batch.slice(2, 6) : '' }}</td>
+        </tr>
+      </template>
     </tbody>
   </table>
   <div v-if="!entries.length" class="empty">Keine Einträge</div>
@@ -57,4 +97,6 @@ async function restore(id, batch) {
 
 <style scoped>
 .link:hover { color: var(--accent); text-decoration: underline; }
+.row.head { background: var(--accent-soft); cursor: pointer; }
+.row.sub td:first-child { padding-left: 18px; }
 </style>

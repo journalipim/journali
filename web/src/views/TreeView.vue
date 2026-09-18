@@ -249,7 +249,7 @@ function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + cou
 async function restore(id, batch) {
   try {
     const res = batch ? await api.post(`/api/batches/${encodeURIComponent(batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(id)}/restore`)
-    store.toast(`${res.restored ?? 1} Knoten wiederhergestellt (Stapel ${res.batch})`, 'ok')
+    store.toast(`${res.undone ?? 1} Knoten wiederhergestellt (Stapel ${res.batch})${res.failed?.length ? ` — ${res.failed.length} nicht: ${res.failed[0]}` : ''}`, 'ok')
     await store.poll(true); await tree.load(); router.push(`/tree/${id}`)
   } catch (e) { store.toast(e.message) }
 }
