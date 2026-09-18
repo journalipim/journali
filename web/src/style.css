@@ -123,6 +123,8 @@ a { color: inherit; text-decoration: none; }
   margin-bottom: 2px;
 }
 .rail-item:hover { background: var(--rail-hover); color: var(--text); }
+.rail-item.dragging { opacity: .4; }
+.rail-spacer.over { outline: 1px dashed var(--accent); outline-offset: -4px; }
 .rail-item.active { background: var(--accent); color: #fff; }
 .rail-spacer { flex: 1; }
 .rail-logo { width: 36px; height: 36px; display: grid; place-items: center; margin-bottom: 6px; }

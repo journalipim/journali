@@ -16,6 +16,7 @@ export const store = reactive({
   layout: saved.layout ?? 'flat',                    // flat | tabs
   editableOnly: saved.editableOnly ?? false,         // nur Gruppen zeigen, die hier bearbeitbar sind
   attrNames: saved.attrNames ?? 'label',             // Attributnamen: label | key | both (Taloan: Vorlagen nutzen die Keys)
+  railOrder: Array.isArray(saved.railOrder) ? saved.railOrder : null,   // Reihenfolge der Leiste links (Taloan: selbst sortieren), 'spacer' trennt oben/unten
   undo: {},                                         // ↶/↷ je Knoten: id → { history, redo } — im Store, weil NodeView je Knoten neu gebaut wird (Taloan)
   attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel (Taloan), nicht gespeichert
   collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : [],   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
@@ -41,7 +42,7 @@ export const store = reactive({
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, editableOnly: this.editableOnly, attrNames: this.attrNames, collapsed: this.collapsed }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, editableOnly: this.editableOnly, attrNames: this.attrNames, railOrder: this.railOrder, collapsed: this.collapsed }))
     this.applyTheme()
   },
 

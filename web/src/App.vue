@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, onErrorCaptured, ref, watch } from 'vue'
+import { onMounted, onErrorCaptured, ref, computed, watch } from 'vue'
 import { store } from './store.js'
 import ContextMenu from './components/ContextMenu.vue'
 import Dialog from './components/Dialog.vue'
@@ -33,6 +33,24 @@ const navBottom = [
   { to: '/journal', icon: '≡', label: 'Journal', key: '2' },
   { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '6' },
 ]
+// Die Leiste als eine Liste (oben … spacer … unten), Reihenfolge aus den Einstellungen; Neues (Plugin-Ansichten) kommt vor den Spacer
+const railItems = computed(() => {
+  const all = [...nav, ...plugins.views.map(v => ({ to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, hint: `Plugin ${v.key}`, exact: true })), { to: 'spacer' }, ...navBottom]
+  const order = store.railOrder ?? []
+  const known = new Set(all.map(x => x.to))
+  const sorted = order.filter(k => known.has(k)).map(k => all.find(x => x.to === k))
+  const rest = all.filter(x => !order.includes(x.to))
+  const si = sorted.findIndex(x => x.to === 'spacer')
+  return si < 0 ? [...sorted, ...rest] : [...sorted.slice(0, si), ...rest.filter(x => x.to !== 'spacer'), ...sorted.slice(si)]
+})
+// Umsortieren per Drag & Drop (Taloan): Symbol packen, auf ein anderes fallen lassen = davor einordnen; auf den Spacer = ans Ende oben
+const dragKey = ref(null)
+function railDrop(target) {
+  if (!dragKey.value || dragKey.value === target) return
+  const keys = railItems.value.map(x => x.to).filter(k => k !== dragKey.value)
+  keys.splice(keys.indexOf(target), 0, dragKey.value)
+  store.railOrder = keys; store.save(); dragKey.value = null
+}
 </script>
 
 <template>
@@ -40,20 +58,14 @@ const navBottom = [
     <nav class="rail" v-if="!route.query.popup">
       <!-- Logo: web/public/logo.png (Taloan, 17.09.2026) — Vite legt public/ neben die Seite -->
       <router-link to="/tree" class="rail-logo" title="journali"><img :src="'/logo-128.png'" alt="journali" onerror="this.style.display='none'" /></router-link>
-      <router-link v-for="n in nav" :key="n.to" :to="n.to" class="rail-item"
-        :class="{ active: route.path.startsWith(n.to) }" :title="`${n.label}  (Alt+${n.key})`">
-        <span class="icon">{{ n.icon }}</span>
-      </router-link>
-      <!-- Ansichten aus Browser-Plugins -->
-      <router-link v-for="v in plugins.views" :key="v.key + v.path" :to="`/p/${v.key}/${v.path}`" class="rail-item"
-        :class="{ active: route.path === `/p/${v.key}/${v.path}` }" :title="`${v.label}  (Plugin ${v.key})`">
-        <span class="icon">{{ v.icon || '⌁' }}</span>
-      </router-link>
-      <div class="rail-spacer" />
-      <router-link v-for="n in navBottom" :key="n.to" :to="n.to" class="rail-item"
-        :class="{ active: route.path.startsWith(n.to) }" :title="`${n.label}  (Alt+${n.key})`">
-        <span class="icon">{{ n.icon }}</span>
-      </router-link>
+      <template v-for="n in railItems" :key="n.to">
+        <div v-if="n.to === 'spacer'" class="rail-spacer" :class="{ over: dragKey }" @dragover.prevent @drop="railDrop('spacer')" />
+        <router-link v-else :to="n.to" class="rail-item" :class="{ active: n.exact ? route.path === n.to : route.path.startsWith(n.to), dragging: dragKey === n.to }"
+          :title="`${n.label}  (${n.key ? 'Alt+' + n.key : n.hint}) — ziehen sortiert um`" draggable="true"
+          @dragstart="dragKey = n.to" @dragend="dragKey = null" @dragover.prevent @drop="railDrop(n.to)">
+          <span class="icon">{{ n.icon }}</span>
+        </router-link>
+      </template>
       <div class="rail-status" :class="{ online: store.online, offline: store.online === false }"
         :title="store.online ? `Server erreichbar · #${store.head}` : store.error || 'Server wird gesucht …'">
         ●

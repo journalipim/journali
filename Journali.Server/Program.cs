@@ -103,6 +103,8 @@ app.MapGet("/plugins/{key}/{**path}", (string key, string path, HttpContext ctx)
         return Results.Text(File.ReadAllText(file).Replace("{{ORIGIN}}", origin), "application/xml");
     }
     var mime = ext switch { ".js" or ".mjs" => "text/javascript", ".json" => "application/json", ".css" => "text/css", ".md" => "text/markdown", ".png" => "image/png", ".svg" => "image/svg+xml", ".html" => "text/html", _ => "application/octet-stream" };
+    // Plugin-Dateien nie aus dem Browser-Cache: sonst laeuft nach einem Update das alte Modul weiter (F5 muss reichen, Taloan)
+    ctx.Response.Headers.CacheControl = "no-cache";
     return Results.File(file, mime);
 });
 

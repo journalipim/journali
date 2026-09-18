@@ -1,4 +1,7 @@
-// Plugin datasheet (Taloan, 17.09.2026): Datenblatt-Vorschau mit Layout-Designer für Produkte und Varianten.
+// Plugin datasheet (Taloan, 17.09.2026): Datenblatt für Produkte und Varianten. Seit 18.09. WYSIWYG-Designer (designer.js:
+// Seite, Drag & Drop, Abschnitte mit Spalten, Attributgruppen ab einem Knoten inkl. Kinder); der HTML-Vorlagen-Editor
+// hier bleibt als zweiter Weg („HTML-Vorlage“) — alte Vorlagen gehen weiter.
+import { mountDesigner as mountWysiwyg, layoutFor, renderSheet } from './designer.js'
 // Vorlagen sind HTML mit Platzhaltern (unten), liegen im Journal (ctx.data, „template:<name>“), je Rolle eine
 // Zuordnung („settings“). Der Designer: links Vorlage (Text), rechts die Vorschau an einem gewählten Knoten;
 // „Datenblatt“ im Kontextmenü des Baums öffnet das fertige Blatt in einem neuen Fenster (drucken → PDF).
@@ -101,7 +104,7 @@ function render(tpl, data) {
 }
 
 // ---- Daten eines Knotens fürs Blatt: aufgelöste Werte (eigen, sonst Vorfahren, wenn vererbbar), Formeln, Bilder, Gruppen, Varianten
-async function dataOf(ctx, id, locale, depth = 0) {
+export async function dataOf(ctx, id, locale, depth = 0) {
   const { api, store } = ctx
   const model = store.model
   const n = await api.get(`/api/nodes/${encodeURIComponent(id)}`)
@@ -150,7 +153,7 @@ function openSheet(html, title) {
 }
 
 // ---- Designer
-function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
+export function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 
 async function mountDesigner(root, ctx) {
   const { store, tree } = ctx
@@ -208,13 +211,17 @@ async function mountDesigner(root, ctx) {
 }
 
 export default {
-  views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '📄', mount: mountDesigner }],
+  views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '📄', mount: mountWysiwyg }, { path: 'html', label: 'Datenblatt: HTML-Vorlage', icon: '‹›', mount: mountDesigner }],
   nodeActions: [{
     label: 'Datenblatt', icon: '📄', roles: ['product', 'variant'],
     async run(nodeId, ctx) {
       const row = ctx.tree.byId.get(nodeId); if (!row || row.role === 'group') { ctx.store.toast('Datenblatt: für Produkte und Varianten'); return }
-      const t = await templateFor(ctx, row.role)
-      openSheet(await sheet(ctx, nodeId, t.html, t.locale), `Datenblatt ${row.label}`)
+      // Layout der Rolle (WYSIWYG); gibt es keins, aber eine HTML-Vorlage dieses Namens, die
+      const l = await layoutFor(ctx, row.role)
+      const hasLayout = (await ctx.data.get('layout:' + l.name)) != null, hasHtml = (await ctx.data.get(T + l.name)) != null
+      if (!hasLayout && hasHtml) { const t = await templateFor(ctx, row.role); openSheet(await sheet(ctx, nodeId, t.html, t.locale), `Datenblatt ${row.label}`); return }
+      const d = await dataOf(ctx, nodeId, l.locale); d.types = Object.fromEntries(ctx.store.model.attributes.map(a => [a.key, a.type])); d.locale = l.locale
+      openSheet(renderSheet(l.layout, d, ctx.store.model), `Datenblatt ${row.label}`)
     },
   }],
   // für andere Plugins (Export als PDF-Stapel o. ä.)
