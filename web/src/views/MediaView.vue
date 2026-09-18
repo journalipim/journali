@@ -48,7 +48,7 @@ async function setValue(m, def, v) {
   catch (e) { store.toast(e.message) }
 }
 async function retire(m) {
-  if (!await dialog.confirm({ title: `${m.name} zurückziehen?`, text: m.used ? `Hängt an ${m.used} Knoten — die Relationen zeigen dann ins Leere. Die Datei bleibt im Store.` : 'Die Datei bleibt im Store.', ok: '🗑 Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: `${m.name} zurückziehen?`, text: m.used ? `hängt an ${m.used} Knoten` : '', ok: '🗑 Zurückziehen', danger: true })) return
   try { await api.del(`/api/media/${m.id}`); cur.value = null; await store.poll(true); await load() } catch (e) { store.toast(e.message) }
 }
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`

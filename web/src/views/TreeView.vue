@@ -256,7 +256,7 @@ async function restore(id, batch) {
 }
 async function retire(r) {
   const below = countBelow(r.id)
-  if (!await ask.confirm({ title: below ? `${r.label} mit ${below} Knoten darunter zurückziehen?` : `${r.label} zurückziehen?`, text: 'Das Journal behält alles — im Journal steht ↶ zum Wiederherstellen.', ok: '🗑 Zurückziehen', danger: true })) return
+  if (!await ask.confirm({ title: below ? `${r.label} mit ${below} Knoten darunter zurückziehen?` : `${r.label} zurückziehen?`, ok: '🗑 Zurückziehen', danger: true })) return
   try {
     const res = await api.del(`/api/nodes/${encodeURIComponent(r.id)}${below ? '?recursive=true' : ''}`)
     if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok', { label: '↶ wiederherstellen', run: () => restore(r.id, res.batch), title: `stellt ${res.retired} Knoten wieder her: ${icon(r.role)} ${r.label}${res.retired > 1 ? ` mit ${res.retired - 1} darunter` : ''}` })

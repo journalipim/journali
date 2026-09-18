@@ -218,13 +218,13 @@ const removePath = {
 }
 async function bulkRemove() {
   const p = removePath[section.value]; if (!p) return
-  if (!await dialog.confirm({ title: `${sel.value.size} ${sec.value.label} zurückziehen?`, text: 'Das Journal behält die Definitionen; Werte dazu bleiben liegen.', ok: '🗑 Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: `${sel.value.size} ${sec.value.label} zurückziehen?`, ok: '🗑 Zurückziehen', danger: true })) return
   for (const k of [...sel.value]) await del(p(k))
   sel.value = new Set(); cur.value = null
 }
 async function removeCur() {
   const p = removePath[section.value]; if (!p || !cur.value) return
-  if (!await dialog.confirm({ title: `${sec.value.one} ${cur.value} zurückziehen?`, text: 'Das Journal behält die Definition; Werte dazu bleiben liegen.', ok: '🗑 Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: `${sec.value.one} ${cur.value} zurückziehen?`, ok: '🗑 Zurückziehen', danger: true })) return
   await del(p(cur.value)); cur.value = null; sel.value = new Set()
 }
 
