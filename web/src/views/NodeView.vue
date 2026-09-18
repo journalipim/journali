@@ -324,6 +324,8 @@ const addRel = () => { const n = newRel.value; if (!n.type || !n.to) return; com
 const relTypesFromHere = computed(() => relTypes.value.filter(t => !isMediaType(t.key) && (!t.from || t.from.includes(node.value?.role))))
 
 // ---- Medien (20): Relationen zu Medien (image, document …) als Kacheln; hochladen per Ablegen oder Knopf, oder aus der Bibliothek wählen
+// geerbte Medien (Server: inherited) — Kacheln ohne Bearbeitung, mit Herkunft; ein eigenes Medium desselben Typs bricht die Vererbung
+const inheritedMedia = computed(() => (rels.value.inherited ?? []).map(x => ({ ...x.relation, from: x.from })))
 const mediaRels = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.type)).sort((a, b) => (Number(relValueRaw(a, 'position')) || 9e9) - (Number(relValueRaw(b, 'position')) || 9e9) || a.lastNumber - b.lastNumber))
 const relValueRaw = (r, key) => r.values.find(v => v.attribute === key && !v.locale && !v.channel)?.value ?? null
 const mediaTypes = computed(() => relTypes.value.filter(t => isMediaType(t.key) && (!t.from || t.from.includes(node.value?.role))))
@@ -534,16 +536,23 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
       <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files])">
-        <h2 @click="toggle('media')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>🖼 Medien <span class="muted">· {{ mediaRels.length }} · Dateien hierher ziehen</span></h2>
+        <h2 @click="toggle('media')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>🖼 Medien <span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length"> · {{ inheritedMedia.length }} geerbt</template> · Dateien hierher ziehen</span></h2>
         <template v-if="open('media')">
         <div class="tiles">
           <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${relType(r.type)?.label?.de || r.type}`">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
-              <tr v-for="d in relGroupAttrs(r.type)" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key">{{ d.label?.de || d.key }}</td><Cell :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>
+              <tr v-for="d in relGroupAttrs(r.type)" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? 'gilt dann auch an allen Subitems, bis eines ein eigenes Medium dieses Typs hat' : d.key">{{ d.label?.de || d.key }}</td>
+                <ToggleCell v-if="d.type === 'boolean'" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /><Cell v-else :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>
             </tbody></table>
-            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<button class="x" style="float:right" @click="retireRel(r)" title="Zuordnung lösen (das Medium bleibt in der Bibliothek)">×</button></div>
+            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" title="wird an die Subitems vererbt"> · ↓ vererbt</span><button class="x" style="float:right" @click="retireRel(r)" title="Zuordnung lösen (das Medium bleibt in der Bibliothek)">×</button></div>
+          </div>
+          <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
+          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — ein eigenes ${relType(r.type)?.label?.de || r.type} hier bricht die Vererbung`">
+            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <div class="name muted"><i>{{ r.other.label }}</i></div>
+            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" title="zum Knoten, an dem das Medium hängt">↑ {{ r.from.label }}</router-link></div>
           </div>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
@@ -681,6 +690,7 @@ th.master { color: var(--accent); font-weight: 700; }
 .relblock { margin-bottom: 8px; }
 .section.over { outline: 2px dashed var(--accent); outline-offset: -4px; }
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; }
+.tile.inherited { opacity: .7; border-style: dashed; }
 .tile { width: 150px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: var(--pane); }
 .tile.pickable { width: 110px; cursor: pointer; }
 .tile.pickable:hover { background: var(--hover); }

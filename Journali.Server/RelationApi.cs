@@ -11,6 +11,27 @@ namespace Journali.Server;
 /// </summary>
 public static class RelationApi
 {
+    /// <summary>
+    /// Geerbte Medien (Taloan, 18.09.2026): Medien-Relationen der Vorfahren mit inherit=true, der nächste Vorfahr zuerst.
+    /// Je Relationstyp gilt die nächste Ebene, die etwas hat: hat der Knoten selbst ein Medium dieses Typs, erbt er keins;
+    /// sonst zählt der nächste Vorfahr mit vererbten Medien dieses Typs — darunterliegende Vorfahren nicht mehr.
+    /// </summary>
+    private static List<object> Inherited(Tree tree, ModelCatalog model, Catalog c, string id)
+    {
+        if (!tree.Nodes.TryGetValue(id, out var node)) return new();
+        var mediaTypes = model.RelationTypes.Values.Where(t => t.To is not null && t.To.Contains(Roles.Media)).Select(t => t.Key).ToHashSet();
+        var settled = c.Relations.From(id).Where(r => mediaTypes.Contains(r.Type)).Select(r => r.Type).ToHashSet();   // eigene: Typ ist entschieden
+        var outList = new List<object>();
+        foreach (var a in tree.Ancestors(node))
+        {
+            var here = c.Relations.From(a.Id).Where(r => mediaTypes.Contains(r.Type) && !settled.Contains(r.Type)
+                && r.Values.TryGetValue(new Axis("inherit", null, null), out var v) && v == "true").OrderBy(r => r.LastNumber).ToList();
+            foreach (var r in here) outList.Add(new { relation = RelationView.Of(tree, model, c.Media, r, "out"), from = new { a.Id, Label = NodeRow.LabelOf(tree, model, a) } });
+            foreach (var t in here.Select(r => r.Type).Distinct()) settled.Add(t);
+        }
+        return outList;
+    }
+
     public static void Map(RouteGroupBuilder api)
     {
         api.MapGet("/nodes/{id}/relations", (string id, Catalog c) =>
@@ -19,6 +40,7 @@ public static class RelationApi
                 {
                     @out = c.Relations.From(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "out")).ToList(),
                     @in = c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in")).ToList(),
+                    inherited = Inherited(tree, model, c, id),
                 }
                 : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
