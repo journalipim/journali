@@ -197,7 +197,7 @@ export default {
   nodeActions: [
     { label: (r, below) => `Excel: Vorlage für ${below}`, icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, false).catch(e => ctx.store.toast(e.message)) },
     { label: (r, below) => `Excel: ${below} exportieren`, icon: '⇪', roles: ['group', 'product'], run: (id, ctx) => nodeWorkbook(ctx, id, true).catch(e => ctx.store.toast(e.message)) },
-    { label: (r, below) => `Excel: ${below} importieren …`, icon: '⇩', roles: ['group', 'product'], run: (id, ctx) => ctx.go?.(`/import/table?node=${encodeURIComponent(id)}`) },
+    { label: (r, below) => `Excel: ${below} importieren …`, icon: '⇩', roles: ['group', 'product'], topic: 'import', run: (id, ctx) => ctx.go?.(`/import/table?node=${encodeURIComponent(id)}`) },
     { label: 'Exportieren … (Teilbaum)', icon: '⇪', roles: ['group', 'product'], run(nodeId, ctx) { localStorage.setItem('journali.export.root', nodeId); ctx.go?.('/p/export/export') } },
     { label: (r, below) => `JSON: Rohdaten sichern (mit ${below})`, icon: '⇪', roles: ['group', 'product', 'variant'], async run(nodeId, ctx) { try { const raw = await ctx.api.get(`/api/nodes/${encodeURIComponent(nodeId)}/export?deep=true`); download(new Blob([JSON.stringify(raw, null, 1)], { type: 'application/json' }), `${ctx.tree.byId.get(nodeId)?.label ?? nodeId}-rohdaten`.replace(/[^\w.-]+/g, '_') + '.json') } catch (e) { ctx.store.toast(e.message) } } },
   ],

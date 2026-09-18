@@ -352,12 +352,18 @@ function contextMenu(e, r) {
   const st = s => r.role !== 'group' && r.status !== s ? { label: s === 'draft' ? '○ Entwurf' : s === 'active' ? '● aktiv' : '✗ ausgelaufen', action: () => setStatus(r, s) } : null
   // Aufgeräumt (Taloan): kein Neu-anlegen (die Knöpfe oben), kein Auf-/Zuklappen, kein Id kopieren (Id steht im Tooltip und im Kopf);
   // Plugin-Einträge je Plugin in einem Untermenü
-  const byPlugin = new Map()
+  // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
+  // Datenanalyse — darin alles dazu, quer über die Plugins. Das Thema nennt die Aktion (topic), sonst die Art des Plugins (kind).
+  const TOPICS = [['import', '⇩ Import'], ['export', '⇪ Export'], ['datasheet', '📄 Datenblatt'], ['analysis', '✓ Datenanalyse'], ['tools', '⌁ Werkzeuge']]
+  const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis' }
+  const byTopic = new Map()
+  const add = (topic, item) => { if (!byTopic.has(topic)) byTopic.set(topic, []); byTopic.get(topic).push(item) }
   for (const a of plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role))) {
-    if (!byPlugin.has(a.key)) byPlugin.set(a.key, [])
-    byPlugin.get(a.key).push({ label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
+    const kind = plugins.list.find(p => p.key === a.key)?.manifest?.kind
+    add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
-  const pluginLabel = k => { const m = plugins.list.find(p => p.key === k)?.manifest; return m?.label?.de || m?.label?.en || k }
+  if (r.role !== 'variant') add('import', { label: 'JSON: Rohdaten hierher …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
+  const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: byTopic.get(k) }))
   menu.open(e, [
     { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r) },
     // Symbol ist der Pin — bei beiden (Taloan: der Pin gehört zu „lösen“); der Hinweis rechts sagt, was danach gilt
@@ -375,8 +381,7 @@ function contextMenu(e, r) {
     { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }) },
-    r.role !== 'variant' ? { label: 'JSON hierher importieren …', icon: '⇩', key: 'o', hint: 'Rohdaten', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } } : null,
-    ...(byPlugin.size ? [{ sep: true }, ...[...byPlugin].map(([k, items]) => ({ label: pluginLabel(k), icon: plugins.modules.get(k)?.icon || '⌁', hint: k, items }))] : []),
+    ...(topicMenus.length ? [{ sep: true }, ...topicMenus] : []),
     { sep: true },
     { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])
