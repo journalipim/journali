@@ -798,10 +798,10 @@ vererben“, Gruppe `relation_media`). Dann gilt es an allen Knoten
 darunter — als *geerbtes* Medium (gestrichelte Kachel, kursiv, mit
 Herkunft), eine Ableitung wie bei Attributwerten, nichts wird kopiert.
 Eigene und geerbte Medien bestehen nebeneinander. **Ein geerbtes Medium
-lässt sich an keiner Ebene entfernen, nur die Vererbung stoppen:** ⛔ am
+lässt sich an keiner Ebene entfernen, nur unterbinden:** ⛔ am
 Knoten legt eine Zuordnung zum selben Medium mit `stop=true` an — damit ist
 es dort und an allem darunter weg; den Stopp lösen (×) bringt es zurück.
-**Bedeutung des Stopps (Taloan):** an dieser Ebene steht das Medium *nicht
+**Bedeutung (Taloan: „Verwendung und Vererbung unterbunden“):** an dieser Ebene steht das Medium *nicht
 zur Verfügung* — auch nicht für Exporte, Datenblätter, Suche (`media:`).
 Ein Stopp ist keine Zuordnung, nur eine Sperre; wer Medien eines Knotens
 liest, lässt Zuordnungen mit `stop=true` aus.
