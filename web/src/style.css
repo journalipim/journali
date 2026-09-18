@@ -129,6 +129,8 @@ a { color: inherit; text-decoration: none; }
 .rail-spacer { flex: 1; }
 .rail-logo { width: 36px; height: 36px; display: grid; place-items: center; margin-bottom: 6px; }
 .rail-logo img { width: 30px; height: 30px; border-radius: 7px; display: block; }
+.rail-item { position: relative; }
+.rail-item .lamp { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 2px var(--rail); }
 .rail-status { color: var(--rail-text); padding-bottom: 8px; }
 .rail-status.online { color: var(--pos); }
 .rail-status.offline { color: var(--neg); }

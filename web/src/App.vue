@@ -34,6 +34,9 @@ const navBottom = [
   { to: '/settings', icon: '⚙', label: 'Einstellungen', key: '6' },
 ]
 // Die Leiste als eine Liste (oben … spacer … unten), Reihenfolge aus den Einstellungen; Neues (Plugin-Ansichten) kommt vor den Spacer
+// Was unter ⌁ Plugins ansteht: Aktualisierungen (Platte neuer als installiert) und noch nicht installierte Plugins
+const pluginNews = computed(() => plugins.list.flatMap(p => p.update ? [`↑ ${p.key}: ${p.version} → ${p.diskVersion}`] : p.onDisk && !p.installed ? [`⇩ ${p.key}: nicht installiert`] : []))
+const railTitle = n => `${n.label}  (${n.key ? 'Alt+' + n.key : n.hint}) — ziehen sortiert um` + (n.to === '/plugins' && pluginNews.value.length ? '\n' + pluginNews.value.join('\n') : '')
 const railItems = computed(() => {
   // ▣ Baum führt zum zuletzt gewählten Knoten zurück (Taloan, 18.09.); Kennung des Eintrags bleibt '/tree' (Reihenfolge, aktiv)
   const treeTo = store.lastNode ? `/tree/${store.lastNode}` : '/tree'
@@ -63,9 +66,11 @@ function railDrop(target) {
       <template v-for="n in railItems" :key="n.to">
         <div v-if="n.to === 'spacer'" class="rail-spacer" :class="{ over: dragKey }" @dragover.prevent @drop="railDrop('spacer')" />
         <router-link v-else :to="n.href ?? n.to" class="rail-item" :class="{ active: n.exact ? route.path === n.to : route.path.startsWith(n.to), dragging: dragKey === n.to }"
-          :title="`${n.label}  (${n.key ? 'Alt+' + n.key : n.hint}) — ziehen sortiert um`" draggable="true"
+          :title="railTitle(n)" draggable="true"
           @dragstart="dragKey = n.to" @dragend="dragKey = null" @dragover.prevent @drop="railDrop(n.to)">
           <span class="icon">{{ n.icon }}</span>
+          <!-- Lämpchen (Taloan, 18.09.): ein Plugin hat eine neuere Fassung auf der Platte oder ist noch nicht installiert -->
+          <span v-if="n.to === '/plugins' && pluginNews.length" class="lamp" />
         </router-link>
       </template>
       <div class="rail-status" :class="{ online: store.online, offline: store.online === false }"
