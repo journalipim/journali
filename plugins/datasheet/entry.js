@@ -1,7 +1,7 @@
 // Plugin datasheet (Taloan, 17.09.2026): Datenblatt für Produkte und Varianten. Seit 18.09. WYSIWYG-Designer (designer.js:
 // Seite, Drag & Drop, Abschnitte mit Spalten, Attributgruppen ab einem Knoten inkl. Kinder); der HTML-Vorlagen-Editor
 // hier bleibt als zweiter Weg („HTML-Vorlage“) — alte Vorlagen gehen weiter.
-import { mountDesigner as mountWysiwyg, layoutFor, renderSheet } from './designer.js'
+import { mountDesigner as mountWysiwyg, layoutFor, renderSheet, preloadCompare } from './designer.js'
 // Vorlagen sind HTML mit Platzhaltern (unten), liegen im Journal (ctx.data, „template:<name>“), je Rolle eine
 // Zuordnung („settings“). Der Designer: links Vorlage (Text), rechts die Vorschau an einem gewählten Knoten;
 // „Datenblatt“ im Kontextmenü des Baums öffnet das fertige Blatt in einem neuen Fenster (drucken → PDF).
@@ -221,6 +221,7 @@ export default {
       const hasLayout = (await ctx.data.get('layout:' + l.name)) != null, hasHtml = (await ctx.data.get(T + l.name)) != null
       if (!hasLayout && hasHtml) { const t = await templateFor(ctx, row.role); openSheet(await sheet(ctx, nodeId, t.html, t.locale), `Datenblatt ${row.label}`); return }
       const d = await dataOf(ctx, nodeId, l.locale); d.types = Object.fromEntries(ctx.store.model.attributes.map(a => [a.key, a.type])); d.locale = l.locale
+      await preloadCompare(ctx, l.layout, d, l.locale)
       openSheet(renderSheet(l.layout, d, ctx.store.model), `Datenblatt ${row.label}`)
     },
   }],

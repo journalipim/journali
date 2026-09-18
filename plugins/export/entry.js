@@ -36,6 +36,28 @@ function toCsv({ columns, rows }) {
   return '﻿' + [columns.map(c => c.key).join(';'), ...rows.map(r => r.map(esc).join(';'))].join('\r\n')
 }
 function toJson({ columns, rows }) { return JSON.stringify(rows.map(r => Object.fromEntries(columns.map((c, i) => [c.key, r[i] === '' ? null : r[i]]))), null, 1) }
+// JSON als Baum (Taloan: „einfach nur eine flache Liste, keine Struktur“): der Teilbaum verschachtelt, je Knoten
+// id, role, name, sku, status, axes, attributes (je Sprache verschachtelt: { de, en }), children
+function toJsonTree({ columns, rows }, rootId) {
+  const byId = new Map()
+  for (const r of rows) {
+    const o = { id: r[0], role: '', parent: null, name: '', sku: null, status: null, axes: {}, attributes: {}, children: [] }
+    columns.forEach((c, i) => {
+      const v = r[i] === '' ? null : r[i]
+      if (c.attr) { if (c.locale && columns.some(x => x.attr === c.attr && x.locale !== c.locale)) (o.attributes[c.attr] ??= {})[c.locale] = v; else o.attributes[c.attr] = v }
+      else if (c.key.startsWith('axis:')) { if (v != null) o.axes[c.key.slice(5)] = v }
+      else if (c.key === 'journali_label') o.name = v
+      else if (c.key === 'parent') o.parent = v
+      else o[c.key] = v
+    })
+    for (const k of Object.keys(o.attributes)) { const a = o.attributes[k]; if (a && typeof a === 'object' && Object.values(a).every(x => x == null)) delete o.attributes[k]; else if (a == null) delete o.attributes[k] }
+    byId.set(o.id, o)
+  }
+  const roots = []
+  for (const o of byId.values()) { const p = o.parent && byId.get(o.parent); if (p) p.children.push(o); else roots.push(o) }
+  const strip = o => { delete o.parent; if (!o.children.length) delete o.children; else o.children.forEach(strip); if (!Object.keys(o.axes).length) delete o.axes; return o }
+  return JSON.stringify(roots.length === 1 ? strip(roots[0]) : roots.map(strip), null, 1)
+}
 async function toXlsx(ctx, { columns, rows }, sheet = 'Daten') {
   const X = await import('/plugins/xlsx/xlsx.mjs')
   const ws = X.utils.aoa_to_sheet([columns.map(c => c.key), ...rows])
@@ -59,7 +81,7 @@ async function mount(root, ctx) {
   const locBox = el('div', { class: 'chips' }); for (const l of store.model.locales) { const on = () => state.locales.includes(l.code); const c = el('span', { class: 'view-chip' + (on() ? ' on' : ''), onclick: () => { state.locales = on() ? state.locales.filter(x => x !== l.code) : [...state.locales, l.code]; c.className = 'view-chip' + (on() ? ' on' : ''); remember() } }, l.code); locBox.append(c) }
   const viewSel = el('select', { style: 'width:100%', onchange: e => { state.viewKey = e.target.value; remember() } }, el('option', { value: '' }, '◫ alle Attribute'), ...store.model.views.map(v => el('option', { value: v.key }, `◫ ${v.label?.de || v.key} (${v.level})`))); viewSel.value = state.viewKey
   const ownCb = el('input', { type: 'checkbox' }); ownCb.checked = state.ownOnly; ownCb.addEventListener('change', () => { state.ownOnly = ownCb.checked; remember() })
-  const fmtSel = el('select', { style: 'width:100%', onchange: e => { state.format = e.target.value; remember() } }, el('option', { value: 'xlsx' }, 'Excel (.xlsx)'), el('option', { value: 'csv' }, 'CSV (; UTF-8, Excel-tauglich)'), el('option', { value: 'json' }, 'JSON (Liste von Objekten)')); fmtSel.value = state.format
+  const fmtSel = el('select', { style: 'width:100%', onchange: e => { state.format = e.target.value; remember() } }, el('option', { value: 'xlsx' }, 'Excel (.xlsx)'), el('option', { value: 'csv' }, 'CSV (; UTF-8, Excel-tauglich)'), el('option', { value: 'json' }, 'JSON (Baum, verschachtelt)'), el('option', { value: 'jsonflat' }, 'JSON (flache Liste)')); fmtSel.value = state.format
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const preview = el('div', { class: 'scroll', style: 'flex:1' })
   async function run(downloadIt) {
@@ -74,7 +96,8 @@ async function mount(root, ctx) {
       if (!downloadIt) return
       const name = `${tree.byId.get(state.root)?.label ?? 'export'}-${state.role || 'alle'}-${state.locales.join('-')}`.replace(/[^\w.-]+/g, '_')
       if (state.format === 'csv') download(new Blob([toCsv(t)], { type: 'text/csv;charset=utf-8' }), name + '.csv')
-      else if (state.format === 'json') download(new Blob([toJson(t)], { type: 'application/json' }), name + '.json')
+      else if (state.format === 'json') download(new Blob([toJsonTree(t, state.root)], { type: 'application/json' }), name + '.json')
+      else if (state.format === 'jsonflat') download(new Blob([toJson(t)], { type: 'application/json' }), name + '.json')
       else download(await toXlsx(ctx, t), name + '.xlsx')
       store.toast(`⇪ ${t.count} Zeilen exportiert`)
     } catch (e) { say('✗ ' + e.message); store.toast(e.message) }
@@ -138,5 +161,5 @@ export default {
     { label: (r, below) => `Excel: ${below} importieren …`, icon: '⇩', roles: ['group', 'product'], run: (id, ctx) => ctx.go?.(`/import/table?node=${encodeURIComponent(id)}`) },
     { label: 'Exportieren … (Teilbaum)', icon: '⇪', roles: ['group', 'product'], run(nodeId, ctx) { localStorage.setItem('journali.export.root', nodeId); ctx.go?.('/p/export/export') } },
   ],
-  build, toCsv, toJson, toXlsx, nodeWorkbook,
+  build, toCsv, toJson, toJsonTree, toXlsx, nodeWorkbook,
 }

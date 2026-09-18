@@ -21,12 +21,13 @@ export const DEFAULT_LAYOUT = () => ({
 const PALETTE = [
   { kind: 'section', columns: 1, label: '▭ Abschnitt, 1 Spalte' }, { kind: 'section', columns: 2, label: '▯▯ Abschnitt, 2 Spalten' },
   { kind: 'section', columns: 3, label: '▯▯▯ Abschnitt, 3 Spalten' }, { kind: 'section', columns: 4, label: '▯▯▯▯ Abschnitt, 4 Spalten' },
-  { kind: 'text', label: '¶ Text' }, { kind: 'image', label: '🖼 Bild' }, { kind: 'variants', label: '⊞ Variantentabelle' }, { kind: 'pagebreak', label: '⤓ Seitenumbruch' },
+  { kind: 'text', label: '¶ Text' }, { kind: 'image', label: '🖼 Bild' }, { kind: 'variants', label: '⊞ Variantentabelle' }, { kind: 'compare', label: '⊟ Vergleichstabelle' }, { kind: 'pagebreak', label: '⤓ Seitenumbruch' },
 ]
 const newItem = t => t.kind === 'section' ? { id: nid(), kind: 'section', title: '', columns: t.columns, cells: Array.from({ length: t.columns }, () => []) }
   : t.kind === 'text' ? { id: nid(), kind: 'text', html: 'Text …' }
   : t.kind === 'image' ? { id: nid(), kind: 'image', which: 'first', height: 50 }
   : t.kind === 'variants' ? { id: nid(), kind: 'variants', attrs: [] }
+  : t.kind === 'compare' ? { id: nid(), kind: 'compare', source: 'variants', nodes: [], group: '', attrs: [], diff: false, empty: false }
   : t.kind === 'group' ? { id: nid(), kind: 'group', group: t.group, title: true, empty: false }
   : t.kind === 'attr' ? { id: nid(), kind: 'attr', attr: t.attr, label: true }
   : { id: nid(), kind: t.kind }
@@ -78,16 +79,52 @@ function renderItem(it, d, model, edit, ctx) {
       if (!vs.length) e.append(el('tr', {}, el('td', { class: 'muted', colspan: String(cols.length + 1) }, edit ? '(keine Varianten am gewählten Knoten)' : '')))
       break
     }
+    case 'compare': {
+      // Spalten: Knoten (Varianten, Subitems oder gewählte); Zeilen: Attribute einer Gruppe oder einzeln; Werte aus dem Cache je Knoten
+      const ids = compareNodes(it, d, ctx?.tree)
+      const keys = it.group ? model.attributes.filter(a => a.group === it.group && !['rows', 'html'].includes(a.type)).map(a => a.key) : (it.attrs ?? [])
+      const datas = ids.map(id => d.cache?.[id] ?? null)
+      ids.forEach((id, i) => { if (!datas[i]) ctx?.need?.(id) })
+      e = el('table', { class: 'ds-table ds-compare' })
+      e.append(el('tr', {}, el('th', {}), ...ids.map((id, i) => el('th', {}, datas[i]?.name ?? (ctx?.tree?.byId.get(id)?.label ?? id)))))
+      let rows = 0
+      for (const k of keys) {
+        const cells = datas.map(x => x ? valueCell(x, k) : null)
+        const texts = datas.map(x => x?.attr?.[k] ?? '')
+        if (!it.empty && texts.every(t => t === '' || t == null)) continue
+        if (it.diff && new Set(texts).size < 2) continue
+        e.append(el('tr', {}, el('td', { class: 'k' }, label(k)), ...cells.map(c => el('td', {}, c ?? '')))); rows++
+      }
+      if (!ids.length) e.append(el('tr', {}, el('td', { class: 'muted', colspan: '2' }, edit ? '(keine Knoten — Quelle rechts wählen)' : '')))
+      else if (!keys.length) e.append(el('tr', {}, el('td', { class: 'muted', colspan: String(ids.length + 1) }, edit ? '(Zeilen: rechts Gruppe oder Attribute wählen)' : '')))
+      else if (!rows) e.append(el('tr', {}, el('td', { class: 'muted', colspan: String(ids.length + 1) }, edit ? (datas.some(x => !x) ? 'lade …' : it.diff ? '(keine Unterschiede)' : '(alles leer)') : '')))
+      break
+    }
     default: e = el('div', {}, it.kind)
   }
   return e
+}
+/// Welche Knoten die Vergleichstabelle zeigt
+export function compareNodes(it, d, tree) {
+  if (it.source === 'pick') return it.nodes ?? []
+  if (!d.id || !tree) return []
+  const kids = tree.kids(d.id)
+  return (it.source === 'children' ? kids : kids.filter(k => k.role === 'variant')).map(k => k.id)
+}
+/// Vor dem fertigen Blatt: die Daten aller Vergleichsknoten laden
+export async function preloadCompare(ctx, layout, d, locale) {
+  d.cache ??= {}
+  const items = layout.blocks.flatMap(b => b.kind === 'section' ? b.cells.flat() : [b]).filter(x => x.kind === 'compare')
+  const ids = [...new Set(items.flatMap(it => compareNodes(it, d, ctx.tree)))].filter(id => !d.cache[id])
+  const types = Object.fromEntries(ctx.store.model.attributes.map(a => [a.key, a.type]))
+  await Promise.all(ids.map(async id => { const x = await dataOf(ctx, id, locale, 1); x.types = types; x.locale = locale; d.cache[id] = x }))
 }
 function renderBlock(b, d, model, edit, ctx) {
   switch (b.kind) {
     case 'header': return el('header', { class: 'ds-header' }, el('div', {}, el('h1', {}, fill(b.title, d)), el('div', { class: 'ds-sub mono' }, fill(b.sub, d))), el('div', { class: 'muted' }, fill(b.right, d)))
     case 'footer': return el('footer', { class: 'ds-footer muted' }, fill(b.text, d))
     case 'pagebreak': return el('div', { class: 'ds-break' }, edit ? '⤓ Seitenumbruch' : '')
-    case 'variants': return renderItem(b, d, model, edit, ctx)
+    case 'variants': case 'compare': return renderItem(b, d, model, edit, ctx)
     case 'text': case 'image': return renderItem(b, d, model, edit, ctx)
     case 'section': {
       const s = el('section', { class: 'ds-section', style: `grid-template-columns: repeat(${b.columns}, 1fr)` })
@@ -111,7 +148,8 @@ const SHEET_CSS = `
   .ds-section h2 { font-size: 1.15em; margin: 2mm 0 1mm; color: #2563eb; border-bottom: 1px solid #dbeafe; }
   .ds-group h3 { font-size: 1em; margin: 0 0 1mm; }
   .ds-table { border-collapse: collapse; width: 100%; } .ds-table td, .ds-table th { padding: 0.6mm 1.5mm; border-bottom: 1px solid #eee; vertical-align: top; text-align: left; }
-  .ds-table td.k { color: #6b7280; width: 42%; } .ds-variants th { background: #eef2f7; }
+  .ds-table td.k { color: #6b7280; width: 42%; } .ds-variants th, .ds-compare th { background: #eef2f7; }
+  .ds-compare td.k { width: auto; white-space: nowrap; }
   .ds-attr .k { color: #6b7280; } .ds-images img { max-width: 100%; object-fit: contain; display: block; }
   .ds-footer { margin-top: 6mm; font-size: 0.8em; border-top: 1px solid #ddd; padding-top: 1mm; }
   .ds-break { break-after: page; height: 0; }
@@ -198,7 +236,10 @@ export async function mountDesigner(root, ctx) {
   // -- drei Bereiche
   const pal = el('div', { class: 'pal' }), canvas = el('div', { class: 'canvas' }), props = el('div', { class: 'props' })
   root.append(el('div', { class: 'dsd' }, pal, canvas, props))
-  const dctx = { dirty() { st.dirty = true; dirtyChip.style.display = '' }, decorateItem, decorateCol }
+  const loading = new Set()
+  const dctx = { dirty() { st.dirty = true; dirtyChip.style.display = '' }, decorateItem, decorateCol, tree,
+    // Vergleichstabelle braucht Daten anderer Knoten: nachladen, dann neu zeichnen
+    need(id) { if (!st.data || st.data.cache?.[id] || loading.has(id)) return; loading.add(id); dataOf(ctx, id, st.locale, 1).then(x => { x.types = st.data.types; x.locale = st.locale; (st.data.cache ??= {})[id] = x; loading.delete(id); draw() }).catch(() => loading.delete(id)) } }
 
   // -- Palette: Bausteine + Gruppen/Attribute ab Knoten (inkl. Kinder)
   const search = el('input', { type: 'search', placeholder: '🔍 Attribut', style: 'width:100%;margin-top:4px' })
@@ -268,7 +309,7 @@ export async function mountDesigner(root, ctx) {
     page.addEventListener('click', () => select(null))
     page.addEventListener('dragover', ev => ev.preventDefault())
     page.addEventListener('drop', ev => { ev.preventDefault(); dropBlock(st.layout.blocks.length, ev) })
-    const d = st.data ?? { name: '(Knoten wählen)', sku: '', today: new Date().toLocaleDateString('de-DE'), attr: {}, unit: {}, types: {}, images: [], variants: [], locale: st.locale }
+    const d = st.data ?? { name: '(Knoten wählen)', sku: '', today: new Date().toLocaleDateString('de-DE'), attr: {}, unit: {}, types: {}, images: [], variants: [], locale: st.locale, cache: {} }
     st.layout.blocks.forEach((b, bi) => {
       const wrap = el('div', { class: 'ds-blk' + (st.sel?.id === b.id ? ' sel' : '') }, renderBlock(b, d, model, true, dctx))
       wrap.append(el('span', { class: 'ds-grip', draggable: 'true', title: 'Block verschieben' }, '⋮⋮'))
@@ -298,7 +339,7 @@ export async function mountDesigner(root, ctx) {
       props.append(el('div', { class: 'muted', style: 'margin-top:14px;line-height:1.5' }, 'Bausteine links auf die Seite ziehen. Gruppen und Attribute in eine Spalte ziehen. Klick wählt, × entfernt, ⋮⋮ verschiebt Blöcke. Text direkt tippen; {name} {sku} {today} und {attributkey} werden ersetzt.'))
       return
     }
-    props.append(el('b', {}, { header: 'Kopf', footer: 'Fuss', section: 'Abschnitt', group: 'Attributgruppe', attr: 'Attribut', image: 'Bild', text: 'Text', variants: 'Variantentabelle', pagebreak: 'Seitenumbruch' }[x.kind] ?? x.kind))
+    props.append(el('b', {}, { header: 'Kopf', footer: 'Fuss', section: 'Abschnitt', group: 'Attributgruppe', attr: 'Attribut', image: 'Bild', text: 'Text', variants: 'Variantentabelle', compare: 'Vergleichstabelle', pagebreak: 'Seitenumbruch' }[x.kind] ?? x.kind))
     switch (x.kind) {
       case 'header': props.append(field('Titel', text(x, 'title')), field('Untertitel', text(x, 'sub')), field('rechts', text(x, 'right'))); break
       case 'footer': props.append(field('Text', text(x, 'text'))); break
@@ -319,6 +360,29 @@ export async function mountDesigner(root, ctx) {
         props.append(chips, add); break
       }
       case 'text': props.append(el('div', { class: 'muted' }, 'Direkt auf der Seite tippen. Platzhalter: {name} {sku} {today} {attributkey}')); break
+      case 'compare': {
+        const src = el('select', {}, el('option', { value: 'variants' }, 'Varianten des Knotens'), el('option', { value: 'children' }, 'Subitems des Knotens'), el('option', { value: 'pick' }, 'gewählte Knoten')); src.value = x.source
+        src.addEventListener('change', () => { x.source = src.value; dctx.dirty(); draw() })
+        props.append(field('Spalten', src))
+        if (x.source === 'pick') {
+          const chips = el('div', { class: 'chips', style: 'margin-top:4px' }, ...(x.nodes ?? []).map(id => el('span', { class: 'chip' }, tree.byId.get(id)?.label ?? id, el('button', { onclick: () => { x.nodes = x.nodes.filter(n => n !== id); dctx.dirty(); draw() } }, '×'))))
+          const find = el('input', { type: 'search', placeholder: '🔍 Knoten dazu', style: 'width:100%;margin-top:4px' })
+          const hits = el('div', { class: 'picker', style: 'display:none' })
+          find.addEventListener('input', () => { const q = find.value.trim().toLowerCase(); hits.innerHTML = ''; const hs = q ? tree.rows.filter(r => r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q)).slice(0, 10) : []; for (const r of hs) hits.append(el('div', { class: 'pick', onmousedown: ev => { ev.preventDefault(); x.nodes = [...(x.nodes ?? []), r.id]; dctx.dirty(); draw() } }, `${{ group: '▣', product: '▦', variant: '◆' }[r.role]} ${r.label}`)); hits.style.display = hs.length ? 'block' : 'none' })
+          props.append(chips, find, hits)
+        }
+        const grp = el('select', {}, el('option', { value: '' }, '— einzelne Attribute —'), ...model.groups.map(g => el('option', { value: g.key }, g.label?.de || g.key))); grp.value = x.group ?? ''
+        grp.addEventListener('change', () => { x.group = grp.value; dctx.dirty(); draw() })
+        props.append(field('Zeilen aus Gruppe', grp))
+        if (!x.group) {
+          props.append(el('div', { class: 'chips', style: 'margin-top:4px' }, ...(x.attrs ?? []).map(k => el('span', { class: 'chip mono' }, k, el('button', { onclick: () => { x.attrs = x.attrs.filter(a => a !== k); dctx.dirty(); draw() } }, '×')))))
+          const add = el('select', {}, el('option', { value: '' }, '+ Attribut'), ...(st.avail ?? model.attributes).map(c => el('option', { value: c.key }, c.label?.de || c.key)))
+          add.addEventListener('change', () => { if (add.value) { x.attrs = [...(x.attrs ?? []), add.value]; dctx.dirty(); draw() } })
+          props.append(add)
+        }
+        props.append(check(x, 'diff', 'nur Unterschiede'), check(x, 'empty', 'auch leere Zeilen'))
+        break
+      }
     }
   }
 
@@ -327,7 +391,7 @@ export async function mountDesigner(root, ctx) {
     if (!st.node) { drawPalette(); draw(); return }
     try {
       const [d, t] = await Promise.all([dataOf(ctx, st.node, st.locale), api.get(`/api/nodes/${encodeURIComponent(st.node)}/table?deep=true&locale=${st.locale}`)])
-      d.types = Object.fromEntries(model.attributes.map(a => [a.key, a.type])); d.locale = st.locale
+      d.types = Object.fromEntries(model.attributes.map(a => [a.key, a.type])); d.locale = st.locale; d.cache = {}
       st.data = d; st.avail = t.columns.filter(c => !['rows', 'formula'].includes(c.type))
     } catch (e) { store.toast(e.message) }
     drawPalette(); draw()
