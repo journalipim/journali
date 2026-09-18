@@ -1,38 +1,42 @@
 <script setup>
 // Übersicht eines Themas (Taloan, 18.09.2026): nach Klick auf ⇩ Import (⇪ Export, 📄 Datenblatt, ✓ Datenanalyse, ⌁ Werkzeuge)
-// wählt man hier das Plugin, das man ausführen will — eine Zeile je Ansicht, mit Plugin und Fassung. Kein festes
-// Spaltenlayout für alle: jede Ansicht hat ihr eigenes.
+// wählt man hier das Plugin, das man ausführen will — als Kacheln (Taloan: „zeitgemässer“): Symbol gross, Name,
+// ein Satz aus dem Manifest, unten Plugin und Fassung. Kein festes Spaltenlayout für alle: jede Ansicht hat ihr eigenes.
 import { computed } from 'vue'
 import { plugins } from '../plugins.js'
 import { TOPICS, entries } from '../topics.js'
 const props = defineProps({ topic: String })
 const t = computed(() => TOPICS.find(x => x.key === props.topic))
 const list = computed(() => entries.value[props.topic] ?? [])
-const version = key => plugins.list.find(p => p.key === key)?.version
+const meta = key => plugins.list.find(p => p.key === key)
+const text = e => e.plugin ? (meta(e.plugin)?.manifest?.description?.de || meta(e.plugin)?.manifest?.description?.en || e.hint) : e.hint
 </script>
 
 <template>
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>{{ t?.icon }} {{ t?.label }}</h1><span class="grow" /><span class="muted">{{ list.length }}</span></div>
-    <div class="scroll" style="padding:8px">
+    <div class="scroll" style="padding:12px">
       <div v-if="!list.length" class="empty">Kein Plugin für {{ t?.label }} eingeschaltet — <router-link to="/plugins">⌁ Plugins</router-link></div>
-      <router-link v-for="e in list" :key="e.to" :to="e.to" class="hub-row">
-        <span class="icon">{{ e.icon }}</span>
-        <span class="name">{{ e.label }}</span>
-        <span class="muted hint">{{ e.hint }}</span>
-        <span class="grow" />
-        <span v-if="e.plugin" class="mono muted small">{{ e.plugin }} {{ version(e.plugin) }}</span>
-        <span v-else class="muted small">eingebaut</span>
-      </router-link>
+      <div class="tiles">
+        <router-link v-for="e in list" :key="e.to" :to="e.to" class="tile">
+          <div class="head"><span class="icon">{{ e.icon }}</span><span class="name">{{ e.label }}</span></div>
+          <div class="text muted">{{ text(e) }}</div>
+          <div class="foot"><span v-if="e.plugin" class="mono muted">{{ e.plugin }} {{ meta(e.plugin)?.version }}</span><span v-else class="muted">eingebaut</span><span class="grow" /><span class="go">öffnen ›</span></div>
+        </router-link>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.hub-row { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 6px; color: var(--text); text-decoration: none; background: var(--pane); }
-.hub-row:hover { background: var(--hover); border-color: var(--accent); }
-.hub-row .icon { width: 22px; text-align: center; }
-.hub-row .name { font-weight: 600; min-width: 120px; }
-.hub-row .hint { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hub-row .small { font-size: 11px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.tile { display: flex; flex-direction: column; gap: 8px; min-height: 150px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--pane); color: var(--text); text-decoration: none; transition: border-color .12s, transform .12s, box-shadow .12s; }
+.tile:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,.18); }
+.tile .head { display: flex; align-items: center; gap: 10px; }
+.tile .icon { font-size: 26px; line-height: 1; width: 34px; text-align: center; }
+.tile .name { font-weight: 600; font-size: 15px; }
+.tile .text { font-size: 12px; line-height: 1.45; flex: 1; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.tile .foot { display: flex; align-items: center; gap: 8px; font-size: 11px; }
+.tile .go { color: var(--accent); font-size: 12px; opacity: 0; transition: opacity .12s; }
+.tile:hover .go { opacity: 1; }
 </style>
