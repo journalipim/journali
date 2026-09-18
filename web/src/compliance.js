@@ -136,7 +136,7 @@ export async function createAttributes(catalog, items, mapping) {
 export async function mount(root, ctx, catalog) {
   if (!tree.loaded) await tree.load()
   const model = store.model
-  const st = { root: localStorage.getItem(`journali.cmp.${catalog.key}.root`) || tree.rows.find(r => !r.parent)?.id, mapping: null, res: null, sugg: [], filter: 'all', picked: new Set() }
+  const st = { root: localStorage.getItem(`journali.cmp.${catalog.key}.root`) || tree.rows.find(r => !r.parent)?.id, mapping: null, res: null, sugg: [], filter: 'all', picked: new Set(), levels: new Set(['must', 'should', 'may']), only: 'all' }
   const saved = await ctx.data.get('mapping')
   st.mapping = guessMapping(catalog, model)
   if (saved) for (const [k, v] of Object.entries(saved)) if (v?.to && model.attributes.some(a => a.key === v.to)) st.mapping[k] = { ...v, why: 'gemerkt', sure: true }
@@ -159,11 +159,26 @@ export async function mount(root, ctx, catalog) {
     const n = catalog.groups.reduce((k, g) => k + g.items.length, 0), mapped = Object.values(st.mapping).filter(m => m.to).length
     s1.append(band(`1 · Datenpunkte → Attribute · ${mapped} von ${n} zugeordnet`))
     s1.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, catalog.description ?? ''))
+    // Filter (Taloan, 18.09.): Pflichtgrad an/aus, dazu nur zugeordnete / nur offene
+    const all = catalog.groups.flatMap(g => g.items)
+    const cnt = lv => all.filter(it => it.level === lv).length
+    const chip = (on, label, title, fn) => el('span', { class: 'view-chip' + (on ? ' on' : ''), title, onclick: fn }, label)
+    const show = it => st.levels.has(it.level) && (st.only === 'all' || (st.only === 'open' ? !st.mapping[it.key]?.to : !!st.mapping[it.key]?.to))
+    s1.append(el('div', { class: 'chips', style: 'margin-bottom:6px' },
+      chip(st.levels.has('must'), `● Pflicht ${cnt('must')}`, 'Pflicht — in Anhang III / Art. 7 genannt', () => { st.levels.has('must') ? st.levels.delete('must') : st.levels.add('must'); drawMapping() }),
+      chip(st.levels.has('should'), `◐ empfohlen ${cnt('should')}`, 'empfohlen — produktgruppenabhängig', () => { st.levels.has('should') ? st.levels.delete('should') : st.levels.add('should'); drawMapping() }),
+      chip(st.levels.has('may'), `○ optional ${cnt('may')}`, 'optional — freiwillig', () => { st.levels.has('may') ? st.levels.delete('may') : st.levels.add('may'); drawMapping() }),
+      el('span', { class: 'sep' }, '·'),
+      chip(st.only === 'all', 'alle', '', () => { st.only = 'all'; drawMapping() }),
+      chip(st.only === 'open', `offen ${all.filter(it => !st.mapping[it.key]?.to).length}`, 'ohne Attribut', () => { st.only = 'open'; drawMapping() }),
+      chip(st.only === 'mapped', `zugeordnet ${mapped}`, 'mit Attribut', () => { st.only = 'mapped'; drawMapping() }),
+      el('span', { class: 'muted', style: 'font-size:12px' }, `${all.filter(show).length} von ${n} gezeigt`)))
     const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:34px' }, ''), el('th', { style: 'width:280px' }, 'Datenpunkt'), el('th', { style: 'width:70px' }, 'Typ'), el('th', { style: 'width:280px' }, 'Attribut im Modell'), el('th', {}, 'Hinweis'))))
     const tb = el('tbody'); tbl.append(tb)
     for (const g of catalog.groups) {
-      tb.append(el('tr', { class: 'group-row' }, el('td', { colspan: '5' }, `▤ ${g.label}`)))
-      for (const it of g.items) {
+      const items = g.items.filter(show); if (!items.length) continue
+      tb.append(el('tr', { class: 'group-row' }, el('td', { colspan: '5' }, `▤ ${g.label}`, el('span', { class: 'muted', style: 'font-weight:400' }, ` · ${items.length}`))))
+      for (const it of items) {
         const m = st.mapping[it.key]
         const sel = el('select', { style: 'width:100%' }, el('option', { value: '' }, '— kein Attribut —'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
         sel.value = m?.to ?? ''
@@ -177,14 +192,14 @@ export async function mount(root, ctx, catalog) {
       }
     }
     s1.append(tbl)
-    const missing = catalog.groups.flatMap(g => g.items).filter(it => !st.mapping[it.key]?.to)
+    const missing = all.filter(it => !st.mapping[it.key]?.to && st.levels.has(it.level))
     const bar = el('div', { class: 'chips', style: 'margin-top:6px' })
     if (missing.length) bar.append(el('button', { class: 'primary', onclick: async () => {
       const ok = await dialog.confirm({ title: `${missing.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“ mit ${missing.length} neuen Attributen im Modell`, list: missing.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.type ?? 'text'}${it.unit ? ' ' + it.unit : ''} — ${it.label}`), text: 'Die Gruppe muss danach an den Knoten hängen, an denen sie gelten soll (Attributgruppen NEU ab diesem Knoten).', ok: 'Anlegen' })
       if (!ok) return
       say('lege an …'); try { await createAttributes(catalog, missing, st.mapping); await remember(); store.toast(`✓ ${missing.length} Attribute in ${catalog.groupKey}`); say('') } catch (e) { store.toast(e.message); say('✗ ' + e.message) }
       drawMapping()
-    } }, `+ ${missing.length} fehlende Attribute anlegen (Gruppe ${catalog.groupKey})`))
+    } }, `+ ${missing.length} fehlende Attribute anlegen (Gruppe ${catalog.groupKey}${st.levels.size < 3 ? ', nur ' + [...st.levels].map(l => ({ must: 'Pflicht', should: 'empfohlen', may: 'optional' })[l]).join('/') : ''})`))
     bar.append(el('button', { onclick: () => { st.mapping = guessMapping(catalog, model); remember(); drawMapping() }, title: 'Zuordnung neu raten' }, '↻ Best Guess'))
     s1.append(bar)
   }
@@ -215,7 +230,7 @@ export async function mount(root, ctx, catalog) {
     for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num pos' }, String(c.ok)), el('td', { class: 'num muted' }, String(c.empty)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut — oben zuordnen oder anlegen'))) }
     s3.append(el('details', { open: '' }, el('summary', { class: 'muted' }, 'je Datenpunkt'), sum))
     // je Knoten: Matrix
-    const items = r.items.filter(it => st.mapping[it.key]?.to)
+    const items = r.items.filter(it => st.mapping[it.key]?.to && st.levels.has(it.level))
     const tbl = el('table', { class: 'grid', style: 'width:auto;margin-top:8px' })
     tbl.append(el('thead', {}, el('tr', {}, el('th', { style: 'width:28px' }, el('input', { type: 'checkbox', title: 'alle für KI-Vorschläge', onchange: e => { st.picked = e.target.checked ? new Set(r.nodes.map(n => n.row.id)) : new Set(); drawResult() } })), el('th', { style: 'width:300px' }, 'Knoten'), el('th', { class: 'num', style: 'width:60px' }, 'Pflicht'), ...items.map(it => el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'writing-mode:vertical-rl;transform:rotate(180deg);max-height:120px;font-weight:400;font-size:11px' }, it.label.slice(0, 22))))))
     const tb = el('tbody'); tbl.append(tb)
