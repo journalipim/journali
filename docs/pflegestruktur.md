@@ -798,8 +798,27 @@ ein/aus, aktualisieren, entfernen, Prozess starten mit Parametern und
 Ausgabe. Browser-Plugins: `default export { views: [{path, label, icon,
 mount(el, ctx)}], nodeActions: [{label, icon, run(nodeId, ctx)}] }` —
 Ansichten erscheinen in der Leiste, Aktionen im Kontextmenü des Baums.
-`ixp` und `solr` sind eingebaut (builtin) und werden beim Start installiert;
-der Solr-Import ist zugleich Prozess-Plugin (`solr_import.py`).
+Der Solr-Import ist zugleich Prozess-Plugin (`solr_import.py`).
+
+**Basis-Plugins (Taloan, 19.09.2026: „einerseits mit einer eigenen Basisfunktion
+ausgestattet und gleichzeitig der Container für Ergänzungs-Plugins“).** Der
+Rahmen im Image ist klein (Journal, Baum, Modell, Medien, Verwaltung, Dienste);
+alles, was man häufiger erweitert oder korrigiert, liegt in `plugins/` und wird im
+Container per Bind-Mount ausgetauscht — ohne neues Image. Ein Basis-Plugin nennt
+im Manifest `base: [Gruppen]` und besitzt damit die Gruppe(n) der Leiste: `table`
+(⇩ Import → Tabelle, ⇪ Export → Tabelle, Excel am Knoten), `dq` (✓ Datenanalyse),
+`tasker` (⏱ Jobs). Ergänzungen nennen `requires: ["table"]` usw.: Einschalten
+braucht die Basis (Server lehnt sonst ab), Ausschalten einer Basis fragt nach und
+nimmt die Ergänzungen mit (in der Oberfläche „◐ an, Basis aus“). Beim Start werden
+Basis-Plugins zuerst installiert. Plugins mit Vue-Ansichten (table, ixp, solr)
+haben `src/*.vue` und ein gebautes `entry.js` im Repo (`web/build-plugins.mjs`);
+sie importieren `vue`, `vue-router` und `journali` (api, store, tree, mapper,
+dialog, treePicker, Splitter, ImportHead, TreePicker …) und teilen dieselben
+Instanzen mit der Oberfläche (`web/src/host.js`, `window.journali`). Der
+PluginHost zeichnet eine `component` direkt, `mount(el, ctx)` bleibt für
+DOM-Plugins. `ctx.use('table').tableExport` gibt einem Plugin das Modul eines
+anderen. Alte Pfade (`/import/table`, `/export/table`, `/import/ixp`,
+`/import/solr`, `/analysis/dq`) leiten auf `/p/<key>/…` weiter.
 
 **Ausbau (Taloan, 17.09.2026: „Importe, Massenbearbeitung, Datenblatt,
 Datenmapper, Datenqualität — als Plugins, einzeln ausliefer- und auslagerbar;

@@ -1,9 +1,8 @@
-// ✓ Datenqualität — fest eingebaut (Taloan, 19.09.2026: Grundfunktion der Gruppe Datenanalyse, wie Tabelle bei Import
-// und Export; vorher Plugin dq). Prüft einen Teilbaum gegen Regeln und zeigt die Funde als Liste (Schwere, Knoten,
+// Basis-Plugin dq (Taloan, 19.09.2026): ✓ Datenqualität — Grundfunktion der Gruppe Datenanalyse und zugleich ihr Container:
+// dpp, ppwr hängen daran (requires: ["dq"]) und liefern Regeln über checks. Prüft einen Teilbaum gegen Regeln und zeigt die Funde als Liste (Schwere, Knoten,
 // Attribut, Meldung) mit Sprung zum Knoten. Eingebaute Regeln unten; weitere Regeln liefern Plugins über `checks`
 // (ctx.checks). Welche Regeln laufen, steht im Journal (ctx.data „settings“ unter plugin:dq).
 // Quelle: GET /api/nodes/{id}/table?deep=true — alle Nachfahren mit aufgelösten Werten, je Sprache ein Aufruf.
-import { treePicker } from './treePicker.js'
 
 const RULES = [
   { key: 'required', label: 'Pflichtattribut fehlt', severity: 'error',
@@ -69,7 +68,7 @@ async function mount(root, ctx) {
   const rootLabel = id => { const r = tree.byId.get(id); return r ? `${r.role === 'group' ? '▣' : r.role === 'product' ? '▦' : '◆'} ${r.label}` : 'Teilbaum wählen' }
   const rootIn = el('button', { class: 'x', title: 'Teilbaum wählen (Gruppe oder Produkt)' }, rootLabel(state.root))
   const pick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
-  treePicker(pick, { value: state.root, roles: ['group', 'product'], height: 300, onPick: r => { state.root = r.id; rootIn.textContent = rootLabel(r.id); pick.style.display = 'none'; localStorage.setItem('journali.dq.root', r.id) } })
+  ctx.treePicker(pick, { value: state.root, roles: ['group', 'product'], height: 300, onPick: r => { state.root = r.id; rootIn.textContent = rootLabel(r.id); pick.style.display = 'none'; localStorage.setItem('journali.dq.root', r.id) } })
   rootIn.addEventListener('click', () => { pick.style.display = pick.style.display === 'none' ? 'block' : 'none' })
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const list = el('div', { class: 'scroll', style: 'flex:1' })
@@ -110,4 +109,8 @@ async function mount(root, ctx) {
   return () => {}
 }
 
-export { mount, RULES }
+export default {
+  views: [{ path: 'check', topic: 'analysis', label: 'Datenqualität', icon: '✓', hint: 'Regeln: Pflicht, Muster, Zahlen, Listen, Leerzeichen, leeres HTML, SKU, Übersetzung, Formel — plus Prüfregeln der Plugins', mount }],
+  nodeActions: [{ topic: 'analysis', roles: ['group', 'product'], icon: '✓', label: (r, below) => `Datenqualität: ${below} prüfen`, run: (id, ctx) => ctx.go(`/p/dq/check?node=${encodeURIComponent(id)}`) }],
+  rules: RULES,
+}

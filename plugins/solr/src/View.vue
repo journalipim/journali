@@ -4,15 +4,8 @@
 // der gewählte Knoten mit allem, was er hat; rechts der Plan und der Stapel.
 // Solr lesen geht per JSONP im Browser; geschrieben wird nur über /api/model und /api/batch.
 import { ref, computed, onMounted } from 'vue'
-import { api } from '../api.js'
-import { store } from '../store.js'
-import { tree, icon } from '../tree.js'
+import { api, store, tree, icon, plugins, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
 import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKIP, TYPES, relFields, complexIds, relationNeeds, REL_GROUP } from '../solr.js'
-import { plugins } from '../plugins.js'
-import Splitter from '../components/Splitter.vue'
-import ImportHead from '../components/ImportHead.vue'
-import TreePicker from '../components/TreePicker.vue'
-import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
 const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')

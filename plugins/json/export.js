@@ -44,7 +44,7 @@ export async function mountExport(root, ctx) {
         say(`${count} Knoten roh · Modell: ${raw.model.groups.length} Gruppen, ${raw.model.attributes.length} Attribute, ${raw.model.lists.length} Listen, ${raw.model.units.length} Einheiten`)
       } else {
         if (!st.locales.length) { store.toast('mindestens eine Sprache'); return }
-        const ex = ctx.tableExport
+        const ex = ctx.use('table')?.tableExport; if (!ex) throw new Error('Basis-Plugin table fehlt')
         const t = await ex.build({ root: st.root, role: '', locales: st.locales, ownOnly: st.ownOnly, viewKey: '', say })
         count = t.count; text = st.format === 'tree' ? ex.toJsonTree(t, st.root) : ex.toJson(t); name = `${label}-${st.format === 'tree' ? 'baum' : 'liste'}-${st.locales.join('-')}`.replace(/[^\w.-]+/g, '_') + '.json'
         say(`${count} Knoten ausgewertet · ${t.columns.length} Spalten`)

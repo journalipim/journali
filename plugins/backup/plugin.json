@@ -1,23 +1,57 @@
 {
   "key": "backup",
   "version": "1.0.0",
-  "label": { "de": "Sicherung (JSON-Rohdaten)", "en": "Backup (raw JSON)" },
+  "label": {
+    "de": "Sicherung (JSON-Rohdaten)",
+    "en": "Backup (raw JSON)"
+  },
   "description": {
-    "de": "Sichert einen Teilbaum (oder alle Wurzeln) als Rohdaten-JSON in ein Verzeichnis — dasselbe Format wie „JSON: Rohdaten sichern“, mit dem JSON-Import wiederherstellbar. Läuft als Prozess: von Hand über ⌁ Plugins oder als Job (⏱ Jobs), z. B. jede Nacht; behält die letzten n Dateien, gzip-komprimiert (.json.gz).",
+    "de": "Sichert einen Teilbaum (oder alle Wurzeln) als Rohdaten-JSON in ein Verzeichnis — dasselbe Format wie „JSON: Rohdaten sichern“, mit dem JSON-Import wiederherstellbar. Läuft als Prozess: von Hand über ⌁ Plugins oder als Job (Basis-Plugin tasker), z. B. jede Nacht; behält die letzten n Dateien, gzip-komprimiert (.json.gz).",
     "en": "Saves a subtree (or all roots) as raw JSON into a directory — restorable with the JSON import. Runs as a process, manually or as a scheduled job; keeps the last n files."
   },
   "kind": "output",
   "runs": "process",
+  "requires": [
+    "tasker"
+  ],
+  "autoInstall": true,
   "process": {
     "command": "node",
-    "args": ["backup.js", "{journali}", "{actor}", "{root}", "{dir}", "{keep}", "{gzip}"],
+    "args": [
+      "backup.js",
+      "{journali}",
+      "{actor}",
+      "{root}",
+      "{dir}",
+      "{keep}",
+      "{gzip}"
+    ],
     "description": "Rohdaten-JSON eines Teilbaums in ein Verzeichnis schreiben",
     "params": [
-      { "key": "root", "label": "Teilbaum (Knoten-Id, leer = alle Wurzeln)", "type": "node", "default": "" },
-      { "key": "dir", "label": "Verzeichnis", "type": "text", "default": "backup" },
-      { "key": "keep", "label": "so viele Dateien je Wurzel behalten", "type": "number", "default": "14" },
-      { "key": "gzip", "label": "komprimieren (gzip, .json.gz — der JSON-Import liest es direkt)", "type": "boolean", "default": "true" }
+      {
+        "key": "root",
+        "label": "Teilbaum (Knoten-Id, leer = alle Wurzeln)",
+        "type": "node",
+        "default": ""
+      },
+      {
+        "key": "dir",
+        "label": "Verzeichnis",
+        "type": "text",
+        "default": "backup"
+      },
+      {
+        "key": "keep",
+        "label": "so viele Dateien je Wurzel behalten",
+        "type": "number",
+        "default": "14"
+      },
+      {
+        "key": "gzip",
+        "label": "komprimieren (gzip, .json.gz — der JSON-Import liest es direkt)",
+        "type": "boolean",
+        "default": "true"
+      }
     ]
-  },
-  "autoInstall": true
+  }
 }

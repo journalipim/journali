@@ -1,7 +1,7 @@
-// Tabellen-Export, der Kern (Taloan, 19.09.2026: Tabellen-Export fest eingebaut wie der Import; der Prozess für Jobs liegt hier):
+// Tabellen-Export, der Kern (Basis-Plugin table, Taloan 19.09.2026; der Job dazu ist das Plugin export, es braucht table):
 // ein Teilbaum als Tabelle — Spalten id, role, parent, sku, journali_label (Name im Baum, nur Anzeige), status, Achsen,
 // dann die Attribute (je Sprache eine Spalte key_de, key_en; ohne Sprachachse key). Genau die Form, die ⇩ Import → Tabelle
-// wieder liest. Kein DOM: env = { api: { get }, model }. Browser (web/src/tableExport.js) und Job (job.mjs) benutzen ihn.
+// wieder liest. Kein DOM: env = { api: { get }, model }. Browser (browser.js) und Job (plugins/export/job.mjs) benutzen ihn.
 
 export async function build(env, { root, role = '', locales, ownOnly = false, viewKey = '', say }) {
   const { api, model } = env

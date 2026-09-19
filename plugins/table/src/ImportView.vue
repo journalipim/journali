@@ -1,18 +1,11 @@
 <script setup>
-// ⇩ Import → Tabelle (Taloan, 17.09.2026): eine Tabelle aus Datei (CSV, Excel, JSON — die Quelle liefert ein Plugin
+// ⇩ Import → Tabelle (Basis-Plugin table; Taloan, 17.09.2026): eine Tabelle aus Datei (CSV, Excel, JSON — die Quelle liefert ein Plugin
 // über importers) oder aus der Zwischenablage; der Datenmapper (mapper.js) schlägt die Zuordnung vor, der Mensch
 // richtet nach, der Plan sagt, was passiert, der Stapel schreibt. Profile (Zuordnung, Ziel, Rolle) im Journal.
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { api } from '../api.js'
-import { store } from '../store.js'
-import { tree, icon } from '../tree.js'
-import { plugins } from '../plugins.js'
-import { suggest, plan as makePlan, parseDelimited, childAttributes, childRoleOf } from '../mapper.js'
-import Splitter from '../components/Splitter.vue'
-import ImportHead from '../components/ImportHead.vue'
-import TreePicker from '../components/TreePicker.vue'
-import { paneWidth } from '../panes.js'
+import { api, store, tree, icon, plugins, mapper, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
+const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper
 const leftW = paneWidth('import.table', 720)
 const router = useRouter()
 const route = useRoute()
@@ -84,7 +77,7 @@ async function takeFile(file, keepSheet = false) {
     let t
     if (imp) t = await imp.parse(file, plugins.ctx(imp.key))
     else if (/\.(csv|txt|tsv)$/i.test(file.name)) t = parseDelimited(await file.text())
-    else if (/\.json$/i.test(file.name)) { const { fromObjects } = await import('../mapper.js'); const j = JSON.parse(await file.text()); t = fromObjects(Array.isArray(j) ? j : (j.rows ?? j.items ?? j.data ?? [])) }
+    else if (/\.json$/i.test(file.name)) { const { fromObjects } = mapper; const j = JSON.parse(await file.text()); t = fromObjects(Array.isArray(j) ? j : (j.rows ?? j.items ?? j.data ?? [])) }
     else throw new Error(`Kein Importer für ${file.name} — Plugin für dieses Format einschalten (⌁ Plugins)`)
     setSource({ ...t, name: file.name, importer: imp?.key ?? null })
     if (sheet && source.value?.sheets?.some(s => s.name === sheet)) pickSheet(sheet)
@@ -207,7 +200,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <tr v-if="fixed"><td class="attr">Knoten</td><td class="row">
         <router-link :to="`/tree/${fixed.row.id}`" class="chip" :title="fixed.row.id">{{ icon(fixed.row.role) }} {{ fixed.row.label }}</router-link>
         <span class="muted">→ {{ roleLabel[fixed.childRole] }} · {{ fixed.allowed.size }} mögliche Spalten</span>
-        <span class="grow" /><button class="x" @click="router.replace('/import/table')" title="Knotenmodus verlassen — frei zuordnen">×</button>
+        <span class="grow" /><button class="x" @click="router.replace('/p/table/import')" title="Knotenmodus verlassen — frei zuordnen">×</button>
       </td></tr>
       <tr v-if="!fixed"><td class="attr">Ziel</td><td>
         <div class="row" style="margin-bottom:4px"><span v-if="target" class="chip" :title="target.id + ' — Klick: im Baum ändern'" style="cursor:pointer" @click="targetPick = !targetPick">{{ icon(target.role) }} {{ target.label }} <button @click.stop="target = null; planned = null" title="Ziel weg">×</button></span><span v-else class="muted">Gruppe oder Produkt — wohin neue Zeilen kommen</span></div>

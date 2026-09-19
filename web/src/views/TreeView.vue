@@ -6,7 +6,6 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
-import { nodeWorkbook } from '../tableExport.js'
 import { dialog as ask } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
@@ -398,7 +397,7 @@ function contextMenu(e, r) {
   // Plugin-Einträge je Plugin in einem Untermenü
   // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
   // Datenanalyse — darin alles dazu, quer über die Plugins. Das Thema nennt die Aktion (topic), sonst die Art des Plugins (kind).
-  const TOPICS = [['import', '⇩ Import'], ['export', '⇪ Export'], ['datasheet', '▤ Datenblatt'], ['analysis', '✓ Datenanalyse'], ['tools', '⌁ Werkzeuge']]
+  const TOPICS = [['import', '⇩ Import'], ['export', '⇪ Export'], ['datasheet', '▤ Datenblatt'], ['analysis', '✓ Datenanalyse'], ['jobs', '⏱ Jobs'], ['tools', '⌁ Werkzeuge']]
   const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis' }
   const byTopic = new Map()
   const add = (topic, item) => { if (!byTopic.has(topic)) byTopic.set(topic, []); byTopic.get(topic).push(item) }
@@ -406,16 +405,8 @@ function contextMenu(e, r) {
     const kind = plugins.list.find(p => p.key === a.key)?.manifest?.kind
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
-  // fest eingebaut (Taloan, 19.09.): Datenqualität — vorher Plugin dq
-  if (r.role !== 'variant') add('analysis', { label: `Datenqualität: ${below(r)} prüfen`, icon: '✓', action: () => router.push(`/analysis/dq?node=${encodeURIComponent(r.id)}`) })
-  // fest eingebaut (Taloan, 19.09.): Excel am Knoten und der Tabellen-Export — vorher Plugin export
-  if (r.role !== 'variant') {
-    add('export', { label: `Excel: Vorlage für ${below(r)}`, icon: '⇪', action: () => nodeWorkbook(r.id, false).catch(e => store.toast(e.message)) })
-    add('export', { label: `Excel: ${below(r)} exportieren`, icon: '⇪', action: () => nodeWorkbook(r.id, true).catch(e => store.toast(e.message)) })
-    add('export', { label: 'Exportieren … (Teilbaum)', icon: '⊞', action: () => { localStorage.setItem('journali.export.root', r.id); router.push(`/export/table?node=${encodeURIComponent(r.id)}`) } })
-    add('import', { label: `Excel: ${below(r)} importieren …`, icon: '⇩', action: () => router.push(`/import/table?node=${encodeURIComponent(r.id)}`) })
-  }
-  if (r.role !== 'variant') add('import', { label: 'JSON: Rohdaten hierher …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
+  // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und dq (Taloan, 19.09.)
+  if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: 'JSON: Rohdaten hierher …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
   const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: byTopic.get(k), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: 'nur einzeln' } : {}) }))
   menu.open(e, [
     { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r), ...only1 },

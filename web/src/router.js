@@ -2,13 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import TreeView from './views/TreeView.vue'
 import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
-import ImportView from './views/ImportView.vue'
-import JobsView from './views/JobsView.vue'
-import DqView from './views/DqView.vue'
 import HubView from './views/HubView.vue'
-import TableExportView from './views/TableExportView.vue'
-import SolrView from './views/SolrView.vue'
-import TableImportView from './views/TableImportView.vue'
 import TableEditView from './views/TableEditView.vue'
 import MediaView from './views/MediaView.vue'
 import PluginsView from './views/PluginsView.vue'
@@ -27,16 +21,14 @@ export const router = createRouter({
     { path: '/model', component: ModelView },
     // Themen (Taloan, 18.09.): erst das Thema, dann das Plugin — /import ist die Übersicht, die Quellen liegen darunter
     { path: '/import', component: HubView, props: { topic: 'import' } },
-    { path: '/import/ixp', component: ImportView },
     { path: '/export', component: HubView, props: { topic: 'export' } },
     { path: '/datasheet', component: HubView, props: { topic: 'datasheet' } },
     { path: '/analysis', component: HubView, props: { topic: 'analysis' } },
-    { path: '/analysis/dq', component: DqView },   // fest eingebaut (Taloan, 19.09.): Grundfunktion der Datenanalyse
     { path: '/tools', component: HubView, props: { topic: 'tools' } },
-    { path: '/jobs', component: JobsView },   // fest eingebaut (Taloan, 19.09.): Grundfunktion, direkt — kein Hub
-    { path: '/import/solr', component: SolrView },
-    { path: '/import/table', component: TableImportView },
-    { path: '/export/table', component: TableExportView },   // fest eingebaut wie der Tabellenimport (Taloan, 19.09.)
+    { path: '/jobs', component: HubView, props: { topic: 'jobs' } },
+    // alte Pfade (bis 19.09.: fest eingebaut) → Basis-Plugins, Abfrage bleibt (?node=, ?new=, ?plugin=)
+    ...Object.entries({ '/import/table': '/p/table/import', '/export/table': '/p/table/export', '/import/ixp': '/p/ixp/import', '/import/solr': '/p/solr/import', '/analysis/dq': '/p/dq/check', '/jobs/list': '/p/tasker/jobs' })
+      .map(([from, to]) => ({ path: from, redirect: r => ({ path: to, query: r.query }) })),
     { path: '/media', component: MediaView },
     { path: '/plugins', component: PluginsView },
     { path: '/p/:key/:path', component: PluginHost },

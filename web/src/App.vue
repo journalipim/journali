@@ -5,7 +5,7 @@ import ContextMenu from './components/ContextMenu.vue'
 import Dialog from './components/Dialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { plugins } from './plugins.js'
-import { TOPICS, entries, topicOfPath } from './topics.js'
+import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 const route = useRoute()
 const router = useRouter()
 // Auffangrahmen (Taloan, 17.09.: leerer Bildschirm ist im Betrieb ein Desaster): ein Fehler beim Zeichnen einer
@@ -48,7 +48,7 @@ const railItems = computed(() => {
   const left = topic => (entries.value[topic] ?? []).filter(e => !e.plugin || !store.railOff.includes(e.plugin))
   // Ein Thema mit genau einem Eintrag (Taloan: „erwarten wir hier weitere Module?“): das Symbol führt direkt hin, die Übersicht wäre nur ein Klick mehr
   const direct = n => n.topic && !n.always && left(n.topic).length === 1 ? { ...n, href: left(n.topic)[0].to } : n
-  const all = [...nav.filter(n => !n.topic || n.always || left(n.topic).length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : direct(n)), { to: 'spacer' }, ...navBottom]
+  const all = [...nav.filter(n => !n.topic || n.always || baseTopics.value.has(n.topic) || left(n.topic).length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : direct(n)), { to: 'spacer' }, ...navBottom]
   const order = store.railOrder ?? []
   const known = new Set(all.map(x => x.to))
   const sorted = order.filter(k => known.has(k)).map(k => all.find(x => x.to === k))

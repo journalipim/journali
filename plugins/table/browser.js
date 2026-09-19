@@ -1,10 +1,7 @@
-// Tabellen-Export im Browser (fest eingebaut, Taloan 19.09.): der Kern liegt in plugins/export/core.mjs (auch für den Job),
+// Tabellen-Export im Browser (Basis-Plugin table, Taloan 19.09.): der Kern liegt in core.mjs (auch für den Job im Plugin export),
 // hier das Browser-Drumherum — Herunterladen, SheetJS laden, Excel am Knoten (Vorlage / Export mit Legende).
-import { api } from './api.js'
-import { store } from './store.js'
-import { tree } from './tree.js'
-import * as mapper from './mapper.js'
-import { build as coreBuild, toCsv, toJson, toJsonTree, workbook } from '../../plugins/export/core.mjs'
+import { api, store, tree, mapper } from 'journali'
+import { build as coreBuild, toCsv, toJson, toJsonTree, workbook } from './core.mjs'
 
 export { toCsv, toJson, toJsonTree }
 export const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000) }

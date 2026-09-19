@@ -1,14 +1,11 @@
 <script setup>
-// ⇪ Export → Tabelle (fest eingebaut, Taloan 19.09.2026 — wie ⇩ Import → Tabelle): ein Teilbaum als Excel oder CSV,
+// ⇪ Export → Tabelle (Basis-Plugin table, Taloan 19.09.2026 — wie ⇩ Import → Tabelle): ein Teilbaum als Excel oder CSV,
 // genau in der Form, die der Tabellenimport wieder liest. Strukturierte Daten (JSON) macht das Plugin json.
 // Als Job: Plugin export (Prozess) mit denselben Einstellungen — ⏱ Jobs → + Job → Export: Tabelle.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { store } from '../store.js'
-import { tree, icon } from '../tree.js'
-import { plugins } from '../plugins.js'
-import { build, toCsv, toXlsx, download } from '../tableExport.js'
-import TreePicker from '../components/TreePicker.vue'
+import { store, tree, icon, plugins, TreePicker } from 'journali'
+import { build, toCsv, toXlsx, download } from '../browser.js'
 
 const route = useRoute()
 const saved = JSON.parse(localStorage.getItem('journali.export.table') || '{}')
@@ -48,7 +45,7 @@ async function run(downloadIt) {
 <template>
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>⇪ Export</h1>
-      <router-link to="/export/table" class="tab on">⊞ Tabelle</router-link>
+      <router-link to="/p/table/export" class="tab on">⊞ Tabelle</router-link>
       <router-link v-if="plugins.enabled('json')" to="/p/json/export" class="tab">{} JSON</router-link>
       <span class="grow" /><span class="muted">{{ busy }}</span></div>
     <table class="grid form"><colgroup><col style="width:84px" /><col /></colgroup><tbody>
@@ -64,7 +61,7 @@ async function run(downloadIt) {
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">2 · Wie</td></tr>
       <tr><td class="attr">Format</td><td><select v-model="format" @change="persist" style="width:100%"><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (; UTF-8, Excel-tauglich)</option></select></td></tr>
       <tr><td class="attr"></td><td><div class="row"><button @click="run(false)">Vorschau</button><button class="primary" @click="run(true)">⇪ herunterladen</button>
-        <router-link v-if="plugins.enabled('export')" to="/jobs?new=export" custom v-slot="{ navigate }"><button @click="navigate" title="denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)">⏱ als Job</button></router-link><router-link v-if="plugins.enabled('export')" to="/jobs?plugin=export" custom v-slot="{ navigate }"><button @click="navigate" title="die Export-Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs">⏱ Jobs verwalten</button></router-link></div></td></tr>
+        <router-link v-if="plugins.enabled('export')" to="/p/tasker/jobs?new=export" custom v-slot="{ navigate }"><button @click="navigate" title="denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)">⏱ als Job</button></router-link><router-link v-if="plugins.enabled('export')" to="/p/tasker/jobs?plugin=export" custom v-slot="{ navigate }"><button @click="navigate" title="die Export-Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs">⏱ Jobs verwalten</button></router-link></div></td></tr>
     </tbody></table>
     <div class="step-band">3 · Vorschau <span class="muted">· erste 200 Zeilen</span></div>
     <div class="scroll">

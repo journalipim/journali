@@ -1,6 +1,6 @@
-// ⏱ Jobs — fest eingebaut (Taloan, 19.09.2026: Grundfunktion, dauerhaft in der Leiste; vorher Plugin tasker). Jobs laufen
-// im Server, nicht im Browser; regelmässig (cron) oder von Hand;
-import { treePicker } from './treePicker.js'
+// Basis-Plugin tasker (Taloan, 19.09.2026): ⏱ Jobs — Grundfunktion der Gruppe Jobs und zugleich ihr Container: Prozess-Plugins
+// (backup, export, json, ixp, datasheet) laufen hier als Job (requires: ["tasker"]). Jobs laufen im Server, nicht im Browser;
+// regelmässig (cron) oder von Hand;
 // hier verwalten, überwachen, Logs lesen. Ein Job = ein Prozess-Plugin (process im Manifest) mit Parametern.
 // API: /api/jobs (JobApi.cs), Läufe und Ausgang im Journal (job:<key>), Log als Datei beim Server.
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
@@ -122,7 +122,7 @@ async function mount(root, ctx) {
           inp = { value: cur }
           const shown = el('span', { class: 'muted' }, cur ? tree.byId.get(cur)?.label ?? cur : '(leer)')
           const box = el('div')
-          treePicker(box, { value: cur || null, roles: ['group', 'product'], height: 180, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
+          ctx.treePicker(box, { value: cur || null, roles: ['group', 'product'], height: 180, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
           paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), box)
         } else if (d.type === 'boolean') {
           inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
@@ -168,4 +168,6 @@ async function mount(root, ctx) {
   return () => { clearInterval(poll); clearTimeout(st.timer) }
 }
 
-export { mount }
+export default {
+  views: [{ path: 'jobs', topic: 'jobs', label: 'Jobs', icon: '⏱', hint: 'im Server, Zeitplan, Läufe, Logs', mount }],
+}

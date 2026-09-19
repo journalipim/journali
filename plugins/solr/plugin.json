@@ -1,20 +1,61 @@
 {
   "key": "solr",
-  "version": "1.1.1",
-  "label": { "de": "Import: Solr", "en": "Import: Solr" },
-  "description": { "de": "Solr-Kern (infolox/prodexa-Export): Baum, Attribute, Relationen — Ansicht im Browser (JSONP) und Skript für grosse Läufe.", "en": "Solr core (infolox/prodexa export): tree, attributes, relations — browser view (JSONP) and a script for big runs." },
+  "version": "1.2.0",
+  "label": {
+    "de": "Import: Solr",
+    "en": "Import: Solr"
+  },
+  "description": {
+    "de": "Solr-Kern (infolox/prodexa-Export): Baum, Attribute, Relationen — Ansicht im Browser (JSONP) und Skript für grosse Läufe.",
+    "en": "Solr core (infolox/prodexa export): tree, attributes, relations — browser view (JSONP) and a script for big runs."
+  },
   "kind": "import",
   "runs": "browser",
-  "builtin": "solr",
+  "entry": "entry.js",
+  "requires": [
+    "table"
+  ],
   "autoInstall": true,
   "process": {
     "command": "python",
-    "args": ["solr_import.py", "--solr", "{solr}", "--journali", "{journali}", "--actor", "{actor}", "import", "--root", "{root}", "--target", "{target}", "{dry_run?--dry-run}"],
+    "args": [
+      "solr_import.py",
+      "--solr",
+      "{solr}",
+      "--journali",
+      "{journali}",
+      "--actor",
+      "{actor}",
+      "import",
+      "--root",
+      "{root}",
+      "--target",
+      "{target}",
+      "{dry_run?--dry-run}"
+    ],
     "params": [
-      { "key": "solr", "label": "Solr-Kern (URL)", "default": "", "placeholder": "https://…/solr/<kern>" },
-      { "key": "root", "label": "master_id der Wurzel", "default": "node_group_root" },
-      { "key": "target", "label": "journali-Gruppe (Id)", "default": "" },
-      { "key": "dry_run", "label": "Trockenlauf", "type": "bool", "default": true }
+      {
+        "key": "solr",
+        "label": "Solr-Kern (URL)",
+        "default": "",
+        "placeholder": "https://…/solr/<kern>"
+      },
+      {
+        "key": "root",
+        "label": "master_id der Wurzel",
+        "default": "node_group_root"
+      },
+      {
+        "key": "target",
+        "label": "journali-Gruppe (Id)",
+        "default": ""
+      },
+      {
+        "key": "dry_run",
+        "label": "Trockenlauf",
+        "type": "bool",
+        "default": true
+      }
     ]
   }
 }

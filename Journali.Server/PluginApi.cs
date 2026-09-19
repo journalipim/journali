@@ -38,11 +38,21 @@ public static class PluginApi
         return found;
     }
 
-    /// <summary>Beim Start: Manifeste mit <c>autoInstall</c>, die das Journal noch nicht kennt, installieren und einschalten (Saatgut).</summary>
+    /// <summary>Was ein Plugin braucht (Manifest <c>requires</c>, Taloan 19.09.2026: Basis-Plugins sind der Container ihrer Ergänzungen).</summary>
+    public static string[] Requires(JsonElement raw) => raw.TryGetProperty("requires", out var r) && r.ValueKind == JsonValueKind.Array
+        ? r.EnumerateArray().Select(x => x.GetString() ?? "").Where(x => x.Length > 0).ToArray() : Array.Empty<string>();
+
+    /// <summary>Beim Start: Manifeste mit <c>autoInstall</c>, die das Journal noch nicht kennt, installieren und einschalten (Saatgut) —
+    /// Basis zuerst: ein Plugin kommt dran, wenn alles, was es braucht, schon da ist (sonst in einer späteren Runde).</summary>
     public static int AutoInstall(Catalog c, string dir)
     {
         var n = 0;
-        foreach (var m in Scan(dir).Values)
+        var all = Scan(dir).Values.ToList();
+        var ordered = new List<Manifest>(); var placed = new HashSet<string>();
+        for (var round = 0; round < all.Count && ordered.Count < all.Count; round++)
+            foreach (var m in all.Where(m => !placed.Contains(m.Key) && Requires(m.Raw).All(r => placed.Contains(r) || all.All(x => x.Key != r)))) { ordered.Add(m); placed.Add(m.Key); }
+        ordered.AddRange(all.Where(m => !placed.Contains(m.Key)));   // Kreise: trotzdem installieren
+        foreach (var m in ordered)
         {
             if (!(m.Raw.TryGetProperty("autoInstall", out var a) && a.ValueKind == JsonValueKind.True)) continue;
             c.With((_, _, write) =>
@@ -166,7 +176,9 @@ public static class PluginApi
     {
         if (Actor(req) is not { } actor) return ActorMissing();
         return c.With((_, _, write) => c.Plugins.All.TryGetValue(key, out var s)
-            ? s.Enabled == on ? Results.Ok(new { unchanged = true })
+            ? on && Requires(JsonDocument.Parse(s.Manifest).RootElement).Where(r => !(c.Plugins.All.TryGetValue(r, out var b) && b.Enabled)).ToList() is { Count: > 0 } missing
+                ? Bad($"{key} braucht {string.Join(", ", missing)} — zuerst einschalten.")   // Ergänzung ohne Basis (Taloan)
+            : s.Enabled == on ? Results.Ok(new { unchanged = true })
                 : Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, on ? Types.PluginEnabled : Types.PluginDisabled, on ? new PluginEnabled() : new PluginDisabled(), null)))
             : Results.NotFound());
     }

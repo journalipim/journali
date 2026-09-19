@@ -12,6 +12,9 @@
   "kind": "import",
   "runs": "browser",
   "entry": "entry.js",
+  "requires": [
+    "table"
+  ],
   "autoInstall": true,
   "process": {
     "command": "node",

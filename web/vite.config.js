@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [vue()],
   server: {
     port: 5173,
-    fs: { allow: ['..'] },   // plugins/ixp/core.mjs liegt ausserhalb von web/ (ein Kern für Browser und Job)
+    fs: { allow: ['..'] },   // Plugin-Dateien liegen ausserhalb von web/
     proxy: { '/api': 'http://localhost:5000' },
   },
   build: {

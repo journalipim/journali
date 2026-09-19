@@ -12,5 +12,8 @@
   "kind": "quality",
   "runs": "browser",
   "entry": "entry.js",
+  "requires": [
+    "dq"
+  ],
   "autoInstall": true
 }

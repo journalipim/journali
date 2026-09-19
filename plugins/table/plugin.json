@@ -1,0 +1,20 @@
+{
+  "key": "table",
+  "version": "1.0.0",
+  "label": {
+    "de": "Tabelle (Import, Export)",
+    "en": "Table (import, export)"
+  },
+  "description": {
+    "de": "Basis-Plugin: ⇩ Import → Tabelle (CSV, Excel, JSON, Zwischenablage — Datenmapper schlägt die Zuordnung vor, Plan, Profile) und ⇪ Export → Tabelle (Excel, CSV in genau der Form, die der Import wieder liest), dazu Excel am Knoten (Vorlage, Export, Import). Grundfunktion der Gruppen Import und Export — Quellen (csv, xlsx, json) und der Export-Job hängen daran (requires: table).",
+    "en": "Base plugin: table import (CSV, Excel, JSON, clipboard with data mapper) and table export (Excel, CSV) plus Excel at a node. The base of the import and export groups — sources and the export job depend on it."
+  },
+  "kind": "import",
+  "runs": "browser",
+  "entry": "entry.js",
+  "base": [
+    "import",
+    "export"
+  ],
+  "autoInstall": true
+}

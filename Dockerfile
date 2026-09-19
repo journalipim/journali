@@ -5,7 +5,8 @@ WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
-RUN npm run build
+# nur die Oberfläche — die gebauten Plugins (plugins/<key>/entry.js) liegen im Repo
+RUN npm run build:web
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src

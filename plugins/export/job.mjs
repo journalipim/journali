@@ -1,9 +1,9 @@
 // Tabellen-Export als Job (Taloan, 19.09.2026: „Export-Plugins jobfertig“): ein Teilbaum als Excel oder CSV in ein
-// Verzeichnis — derselbe Kern wie ⇪ Export → Tabelle (core.mjs). Behält die letzten n Dateien je Wurzel.
+// Verzeichnis — derselbe Kern wie ⇪ Export → Tabelle (plugins/table/core.mjs). Behält die letzten n Dateien je Wurzel.
 // Aufruf: node job.mjs <journali> <actor> <root> <dir> [format] [locales] [role] [view] [ownOnly] [keep] — oder JOURNALI_*.
 import fs from 'node:fs'
 import path from 'node:path'
-import { build, toCsv, workbook } from './core.mjs'
+import { build, toCsv, workbook } from '../table/core.mjs'
 
 const [,, serverArg, actorArg, rootArg, dirArg, fmtArg, locArg, roleArg, viewArg, ownArg, keepArg] = process.argv
 const E = process.env

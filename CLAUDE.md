@@ -56,10 +56,14 @@ stehen dort als solche markiert.
   `plugin:<key>`, Verwaltung unter ⌁ Plugins (`PluginApi.cs`, `plugins.js`).
   Laufen nie im Serverprozess: Browser-Plugins als ES-Modul in der Oberfläche,
   Prozess-Plugins als Kindprozess des Servers, beide nur über `/api`.
-  `ixp` und `solr` sind eingebaut (builtin) und werden beim Start installiert;
-  mitgeliefert: `csv`, `json`, `xlsx` (Importer), `datasheet`; Datenqualität und Jobs sind fest
-  eingebaut (`web/src/dq.js` → `/analysis/dq`, `web/src/jobs.js` → `/jobs`); Plugins liefern
-  Regeln (checks) und Prozesse (process) für Jobs.
+  **Basis-Plugins** (`base: [Gruppen]`) bringen die Grundfunktion einer Gruppe der Leiste
+  mit und sind der Container für Ergänzungen (`requires`): `table` (Import/Export Tabelle),
+  `dq` (Datenanalyse), `tasker` (Jobs). Ergänzungen: `csv`, `xlsx`, `json`, `ixp`, `solr` →
+  table; `dpp`, `ppwr` → dq; `backup`, `export` (Job) → tasker; `datasheet` eigene Gruppe.
+  Plugins mit Vue-Ansichten haben `src/` und ein gebautes `entry.js` (im Repo; `npm run
+  build` in `web/` baut Oberfläche und Plugins, `node build-plugins.mjs <key>` eines) —
+  sie importieren `vue`, `vue-router`, `journali` und teilen die Instanzen der Oberfläche
+  (`web/src/host.js`). Im Container liegt `plugins/` als Bind-Mount: austauschen ohne Image
   Beitragspunkte: views, nodeActions, importers, checks; Plugin-Daten im
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`). **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,

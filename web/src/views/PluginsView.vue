@@ -6,7 +6,8 @@ import { ref, computed, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { plugins } from '../plugins.js'
-import { FIXED_TOPICS, topicOf, entries } from '../topics.js'
+import { baseTopics, topicOf, entries } from '../topics.js'
+import { dialog } from '../dialog.js'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 
@@ -20,9 +21,10 @@ onMounted(async () => { try { jobs.value = await api.get('/api/jobs') } catch {}
 const jobCount = key => jobs.value.filter(j => j.plugin === key).length
 // Leisten-Schalter nur, wenn das Plugin seine Gruppe allein bildet (Taloan: json gehört zu Import/Export, ppwr zu Datenanalyse —
 // Gruppen mit Basis oder mehreren Plugins sind sowieso da; datasheet ist seine Gruppe)
-const railToggle = key => plugins.views.some(v => v.key === key && !FIXED_TOPICS.includes(topicOf(key, v.topic)) && (entries.value[topicOf(key, v.topic)] ?? []).every(e => e.plugin === key))
+const railToggle = key => plugins.views.some(v => v.key === key && !baseTopics.value.has(topicOf(key, v.topic)) && (entries.value[topicOf(key, v.topic)] ?? []).every(e => e.plugin === key))
 function toggleRail(key) { const s = new Set(store.railOff); s.has(key) ? s.delete(key) : s.add(key); store.railOff = [...s]; store.save() }
 const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '⌁ Werkzeug', output: '▤ Ausgabe', edit: '✎ Pflege' }
+const TOPIC_LABEL = { import: '⇩ Import', export: '⇪ Export', analysis: '✓ Datenanalyse', jobs: '⏱ Jobs', datasheet: '▤ Datenblatt', tools: '⌁ Werkzeuge' }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
 const manifest = computed(() => current.value?.manifest ?? {})
 const label = m => m?.label?.de || m?.label?.en || ''
@@ -37,7 +39,15 @@ const shown = computed(() => {
     && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : !p.installed))
     && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (p.manifest?.description?.de ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
 })
-const stateOf = p => !p.installed ? '— nicht installiert' : p.enabled ? '● an' : '○ aus'
+const stateOf = p => !p.installed ? '— nicht installiert' : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : '◐ an, Basis aus'
+const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
+// Ein/Aus (Taloan: Basis-Plugins sind der Container): Einschalten braucht die Basis; Ausschalten einer Basis nimmt die Ergänzungen mit
+async function toggle(p) {
+  if (!p.enabled) { const m = missing(p.key); if (m.length) { store.toast(`braucht ${m.join(', ')} — zuerst einschalten`); return } await act(`/api/plugins/${p.key}/enable`); return }
+  const dep = plugins.dependents(p.key).filter(k => plugins.list.find(x => x.key === k)?.enabled)
+  if (dep.length && !await dialog.confirm({ title: `${label(p.manifest) || p.key} deaktivieren`, warn: `Damit aus: ${dep.join(', ')}`, ok: 'Deaktivieren' })) return
+  await act(`/api/plugins/${p.key}/disable`)
+}
 
 onMounted(async () => { await plugins.load(); if (!cur.value) cur.value = plugins.list[0]?.key ?? null })
 async function act(path, method = 'POST') {
@@ -67,7 +77,7 @@ function pick(k) { cur.value = k }
           <span v-if="p.version" class="mono">{{ p.version }}</span>
           <span v-if="p.update" class="warn" :title="`auf der Platte: ${p.diskVersion}`">↑ {{ p.diskVersion }}</span>
           <span v-if="!p.onDisk" class="neg" title="Verzeichnis fehlt">✗</span>
-          <span :class="p.enabled ? 'pos' : 'muted'">{{ stateOf(p) }}</span>
+          <span :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'">{{ stateOf(p) }}</span>
         </span>
       </div>
       <div v-if="plugins.loaded && !plugins.list.length" class="empty">Kein Plugin — ein Verzeichnis mit plugin.json unter plugins/ anlegen.</div>
@@ -86,7 +96,7 @@ function pick(k) { cur.value = k }
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">↑ aktualisieren auf {{ current.diskVersion }}</button>
         <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? 'nicht in der Leiste links — Klick nimmt es wieder hinein (unter sein Thema)' : 'in der Leiste links unter seinem Thema — Klick nimmt es ganz heraus (nur für dich, in den Einstellungen)'">{{ store.railOff.includes(current.key) ? '▯ nicht in der Leiste' : '▮ in der Leiste' }}</button>
         <!-- Zustandsschalter wie „in der Leiste“ (Taloan): leuchtet, wenn an; Klick kippt -->
-        <button :class="{ primary: current.enabled }" @click="act(`/api/plugins/${current.key}/${current.enabled ? 'disable' : 'enable'}`)" :title="current.enabled ? 'aktiviert — Klick deaktiviert' : 'deaktiviert — Klick aktiviert'">{{ current.enabled ? '● aktiviert' : '○ deaktiviert' }}</button>
+        <button :class="{ primary: current.enabled }" @click="toggle(current)" :title="current.enabled ? (plugins.active(current.key) ? 'aktiviert — Klick deaktiviert' : 'aktiviert, aber ohne Wirkung: ' + missing(current.key).join(', ') + ' ist aus') : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : 'deaktiviert — Klick aktiviert'">{{ current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" title="aus dem Journal entfernen — die Dateien bleiben">🗑</button>
       </template>
     </div>
@@ -97,9 +107,11 @@ function pick(k) { cur.value = k }
     </div>
     <div class="scroll">
       <p style="padding:8px 8px 0">{{ manifest.description?.de || manifest.description?.en || '' }}</p>
-      <div class="section" v-if="manifest.builtin">
-        <h2>Ansicht</h2>
-        <div class="muted" style="font-size:12px">Eingebaut in die Oberfläche — <router-link :to="manifest.builtin === 'solr' ? '/import/solr' : manifest.builtin === 'table' ? '/export/table' : '/import/ixp'">{{ manifest.builtin === 'table' ? '⇪ Export → Tabelle' : '⇩ Import → ' + manifest.builtin }}</router-link>{{ current.enabled ? '' : ' (aus — erst einschalten)' }}</div>
+      <!-- Basis-Plugin und Abhängigkeiten (Taloan, 19.09.): Basis = Grundfunktion einer Gruppe und Container für Ergänzungen -->
+      <div class="chips" style="padding:4px 8px" v-if="manifest.base?.length || manifest.requires?.length || plugins.dependents(current.key).length">
+        <span v-if="manifest.base?.length" class="chip" title="Basis-Plugin: Grundfunktion dieser Gruppe(n) der Leiste — solange es an ist, ist die Gruppe da">◆ Basis · {{ manifest.base.map(t => TOPIC_LABEL[t] ?? t).join(', ') }}</span>
+        <span v-for="r in manifest.requires ?? []" :key="r" class="chip" :class="{ neg: !plugins.active(r) }" :title="plugins.active(r) ? 'braucht dieses Plugin — ist an' : 'braucht dieses Plugin — ist aus, daher ohne Wirkung'" style="cursor:pointer" @click="pick(r)">braucht {{ r }}</span>
+        <span v-for="d in plugins.dependents(current.key)" :key="d" class="chip muted" title="hängt an diesem Plugin — geht mit aus" style="cursor:pointer" @click="pick(d)">↳ {{ d }}</span>
       </div>
       <div class="section" v-if="manifest.runs === 'office' && current.key === 'onlyoffice'">
         <h2>▤ In OnlyOffice einrichten</h2>
@@ -116,7 +128,7 @@ function pick(k) { cur.value = k }
           Office verlangt HTTPS — ausser für localhost.
         </div>
       </div>
-      <div class="section" v-if="manifest.runs === 'browser' && !manifest.builtin">
+      <div class="section" v-if="manifest.runs === 'browser'">
         <h2>Ansichten</h2>
         <div class="chips"><router-link v-for="v in plugins.views.filter(x => x.key === current.key)" :key="v.path" :to="`/p/${current.key}/${v.path}`" class="chip">{{ v.icon }} {{ v.label }}</router-link>
           <span v-if="!plugins.views.some(x => x.key === current.key)" class="muted">{{ current.enabled ? 'keine (oder Modul nicht geladen — neu laden)' : 'aus' }}</span></div>
@@ -126,7 +138,7 @@ function pick(k) { cur.value = k }
         <h2>⚙ Prozess <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ manifest.process.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
           <span v-if="manifest.process.params?.length">Parameter: {{ manifest.process.params.map(p => p.label || p.key).join(' · ') }}.</span></div>
-        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" title="neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button title="die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px">Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job</span></div>
+        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" title="neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button title="die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px">Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job</span></div>
       </div>
       <div class="section">
         <h2>Manifest <span class="mono muted">plugins/{{ current.key }}/plugin.json</span></h2>

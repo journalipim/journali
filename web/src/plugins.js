@@ -1,17 +1,20 @@
 // Plugins in der Oberfläche (docs/pflegestruktur.md, 19): Liste vom Server (/api/plugins), eingeschaltete
-// Browser-Plugins werden als ES-Modul von /plugins/<key>/<entry> geladen und tragen bei. Eingebaute (builtin:
-// ixp, solr) sind Teil der Oberfläche; ihr Schalter im Journal entscheidet nur, ob sie zu sehen sind.
+// Browser-Plugins werden als ES-Modul von /plugins/<key>/<entry> geladen und tragen bei. Basis-Plugins (Manifest
+// base: [Gruppen]) bringen die Grundfunktion einer Gruppe der Leiste mit (table: Import/Export, dq: Datenanalyse,
+// tasker: Jobs) und sind der Container für Plugins, die sie brauchen (requires). Gebaute Plugins (src/ + entry.js aus
+// web/build-plugins.mjs) liefern Vue-Ansichten; sie teilen Vue, Router, Store, Baum mit der Oberfläche (host.js).
 //
 // Vertrag eines Browser-Plugins (default export), alles optional:
-//   views:       [{ path: 'meine-ansicht', label, icon, topic?, mount(el, ctx) → unmount? }]   Ansicht — erscheint in der Übersicht ihres Themas
-//                (topic: import | export | datasheet | analysis | tools; sonst aus kind des Manifests), nicht in der Leiste
+//   views:       [{ path: 'meine-ansicht', label, icon, hint?, topic?, mount(el, ctx) → unmount? | component }]   Ansicht — in der Übersicht ihres Themas
+//                (topic: import | export | datasheet | analysis | jobs | tools; sonst aus kind des Manifests); component = Vue-Komponente (gebaut)
 //   nodeActions: [{ label | label(row, below), icon, roles?: ['group','product'], topic?: 'import'|'export'|'datasheet'|'analysis'|'tools', run(nodeId, ctx) }]
 //                Kontextmenü des Baums, ein Untermenü je Thema (roles: nur an diesen; topic sonst aus kind des Manifests; below = „Subitems“)
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
-//                Prüfregeln für die Datenqualität (✓ Datenanalyse → Datenqualität, fest eingebaut, zeigt sie)
-// ctx = { api, store, tree, dialog, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go }
+//                Prüfregeln für die Datenqualität (Basis-Plugin dq zeigt sie)
+// ctx = { api, store, tree, dialog, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go, use(key) }
+//   use(key) — das Modul eines anderen Plugins (z. B. ctx.use('table').tableExport)
 //   data   — benannte JSON-Datensätze des Plugins im Journal (PluginDataSet, /api/plugins/<key>/data/<name>)
 //   compliance — Prüfkataloge (compliance.js): mount(root, ctx, catalog), check, guessMapping … (Plugins dpp, ppwr)
 //   ai     — Claude, wenn in den Einstellungen ein Schlüssel steht (ai.js): available(), ask({ system, user, json })
@@ -23,7 +26,6 @@ import { store } from './store.js'
 import { tree } from './tree.js'
 import * as mapper from './mapper.js'
 import { dialog } from './dialog.js'
-import * as tableExport from './tableExport.js'
 import { treePicker } from './treePicker.js'
 import * as orphans from './orphans.js'
 import * as compliance from './compliance.js'
@@ -42,10 +44,11 @@ export const plugins = reactive({
   load() { return this.loading ??= this._load().finally(() => { this.loading = null }) },
   async _load() {
     try { this.list = await api.get('/api/plugins') } catch (e) { this.list = []; this.loaded = true; return }
-    this.loaded = true
-    for (const p of this.list) {
+    // Basis-Plugins zuerst (ihre Einträge stehen dann vorn in der Gruppe), dann der Rest in Reihenfolge
+    const order = [...this.list].sort((a, b) => (Array.isArray(b.manifest?.base) ? 1 : 0) - (Array.isArray(a.manifest?.base) ? 1 : 0))
+    for (const p of order) {
       const m = p.manifest ?? {}
-      if (!p.enabled || m.builtin || m.runs !== 'browser' || !m.entry || this.modules.has(p.key)) continue
+      if (!this.active(p.key) || m.runs !== 'browser' || !m.entry || this.modules.has(p.key)) continue
       try {
         const mod = (await import(/* @vite-ignore */ `/plugins/${p.key}/${m.entry}`)).default ?? {}
         this.modules.set(p.key, mod)
@@ -55,16 +58,22 @@ export const plugins = reactive({
         for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })
       } catch (e) { store.toast(`Plugin ${p.key}: ${e.message}`) }
     }
-    // ausgeschaltete Plugins: ihre Beiträge weg (Modul bleibt geladen — ein ES-Modul lässt sich nicht entladen)
-    const on = new Set(this.list.filter(p => p.enabled).map(p => p.key))
+    // ausgeschaltete Plugins (auch: Basis aus): ihre Beiträge weg (Modul bleibt geladen — ein ES-Modul lässt sich nicht entladen)
+    const on = new Set(this.list.filter(p => this.active(p.key)).map(p => p.key))
     for (const k of ['views', 'nodeActions', 'importers', 'checks']) this[k] = this[k].filter(x => on.has(x.key))
+    this.loaded = true   // erst jetzt: vorher sähe die Übersicht eines Themas nur den ersten Eintrag und leitete dorthin
   },
-  enabled(key) { return this.list.some(p => p.key === key && p.enabled) },
+  enabled(key) { return this.active(key) },
+  // wirksam: an, und alles, was es braucht (requires), ist wirksam — eine ausgeschaltete Basis nimmt ihre Ergänzungen mit
+  active(key, seen = new Set()) { const p = this.list.find(x => x.key === key); if (!p?.enabled || seen.has(key)) return false; seen.add(key); return (p.manifest?.requires ?? []).every(r => this.active(r, seen)) },
+  requires(key) { return this.list.find(x => x.key === key)?.manifest?.requires ?? [] },
+  dependents(key) { return this.list.filter(p => (p.manifest?.requires ?? []).includes(key)).map(p => p.key) },
   ctx(key) {
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`
     return {
-      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, tableExport, treePicker,   // build/toJson/toJsonTree/toCsv/toXlsx — fest eingebaut
+      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, treePicker,
+      use: k => this.modules.get(k) ?? null,                                    // Modul eines anderen Plugins (Basis-Plugin)
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {
         list: () => api.get(`/api/plugins/${key}/data`),

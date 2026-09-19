@@ -5,7 +5,8 @@ rem stop    - beendet Journali.Server.exe; das dotnet-run-Fenster schliesst mit
 rem status  - GET /api/health
 rem web     - Vite-Entwicklungsserver in eigenem Fenster (localhost:5173, Hot Reload,
 rem           /api geht an :5000) - zum Arbeiten an der Oberflaeche
-rem build   - Oberflaeche nach Journali.Server\wwwroot bauen; danach liefert :5000 sie aus
+rem build   - Oberflaeche nach Journali.Server\wwwroot bauen und die gebauten Plugins (plugins\<key>\src -> entry.js);
+rem           danach liefert :5000 alles aus. tools\server plugins [key] baut nur die Plugins
 setlocal
 set ROOT=%~dp0..
 
@@ -15,7 +16,8 @@ if "%~1"=="restart" goto restart
 if "%~1"=="status"  goto status
 if "%~1"=="web"     goto web
 if "%~1"=="build"   goto build
-echo Aufruf: tools\server start ^| stop ^| restart ^| status ^| web ^| build
+if "%~1"=="plugins" goto plugins
+echo Aufruf: tools\server start ^| stop ^| restart ^| status ^| web ^| build ^| plugins [key]
 exit /b 2
 
 :start
@@ -45,4 +47,10 @@ exit /b 0
 cd /d "%ROOT%\web"
 if not exist node_modules call npm install
 call npm run build
+exit /b %errorlevel%
+
+:plugins
+cd /d "%ROOT%\web"
+if not exist node_modules call npm install
+call node build-plugins.mjs %2
 exit /b %errorlevel%
