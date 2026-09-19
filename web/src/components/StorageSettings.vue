@@ -19,7 +19,8 @@ const clean = c => ({ ...c, path: c.path || null, bucket: c.bucket || null, endp
 async function load() {
   try {
     const s = await api.get('/api/media/store')
-    state.value = { kind: s.kind, total: s.total, error: s.error }
+    state.value = { kind: s.kind, total: s.total ?? 0, error: s.error ?? (s.config ? null : 'Server älter als die Oberfläche — neu starten') }
+    if (!s.config) return
     cfg.value = { driver: s.config.driver, path: s.config.path ?? '', bucket: s.config.bucket ?? '', endpoint: s.config.endpoint ?? '', key: s.config.key ?? '', secret: s.config.secret ?? '', region: s.config.region ?? 'garage', pathStyle: s.config.pathStyle ?? true, origin: s.config.origin ?? '' }
   } catch (e) { state.value.error = e.message }
 }
