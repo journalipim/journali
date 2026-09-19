@@ -4,6 +4,7 @@ import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
 import ImportView from './views/ImportView.vue'
 import HubView from './views/HubView.vue'
+import TableExportView from './views/TableExportView.vue'
 import SolrView from './views/SolrView.vue'
 import TableImportView from './views/TableImportView.vue'
 import TableEditView from './views/TableEditView.vue'
@@ -32,6 +33,7 @@ export const router = createRouter({
     { path: '/jobs', component: HubView, props: { topic: 'jobs' } },
     { path: '/import/solr', component: SolrView },
     { path: '/import/table', component: TableImportView },
+    { path: '/export/table', component: TableExportView },   // fest eingebaut wie der Tabellenimport (Taloan, 19.09.)
     { path: '/media', component: MediaView },
     { path: '/plugins', component: PluginsView },
     { path: '/p/:key/:path', component: PluginHost },

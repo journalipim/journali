@@ -1,0 +1,1 @@
+{ "type": "module", "private": true, "description": "damit Node die ES-Module des Plugins (entry.js, designer.js, job.js) laden kann" }

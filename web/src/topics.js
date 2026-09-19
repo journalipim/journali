@@ -26,6 +26,7 @@ const label = key => { const m = plugins.list.find(p => p.key === key)?.manifest
 export const entries = computed(() => {
   const out = Object.fromEntries(TOPICS.map(t => [t.key, []]))
   out.import.push({ to: '/import/table', icon: '⊞', label: 'Tabelle', plugin: null, hint: 'CSV, Excel, JSON, Zwischenablage — mit Datenmapper' })
+  out.export.push({ to: '/export/table', icon: '⊞', label: 'Tabelle', plugin: null, hint: 'Excel, CSV — die Form, die der Tabellenimport liest' })   // fest eingebaut (Taloan, 19.09.)
   if (plugins.enabled('ixp')) out.import.push({ to: '/import/ixp', icon: '⇩', label: 'IXP', plugin: 'ixp', hint: label('ixp') })
   if (plugins.enabled('solr')) out.import.push({ to: '/import/solr', icon: '⇩', label: 'Solr', plugin: 'solr', hint: label('solr') })
   for (const v of plugins.views) out[topicOf(v.key, v.topic)].push({ to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, plugin: v.key, hint: label(v.key) })
@@ -35,6 +36,7 @@ export const entries = computed(() => {
 // Zu welchem Thema gehört ein Pfad (für das aktive Symbol in der Leiste)
 export function topicOfPath(path) {
   if (path.startsWith('/import')) return 'import'
+  if (path.startsWith('/export/')) return 'export'
   for (const t of TOPICS) if (path === t.to || path.startsWith(t.to + '/')) return t.key
   const m = path.match(/^\/p\/([^/]+)\/([^/]+)/)
   if (m) { const v = plugins.views.find(x => x.key === m[1] && x.path === m[2]); return topicOf(m[1], v?.topic) }

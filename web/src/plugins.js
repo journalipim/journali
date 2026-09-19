@@ -23,6 +23,7 @@ import { store } from './store.js'
 import { tree } from './tree.js'
 import * as mapper from './mapper.js'
 import { dialog } from './dialog.js'
+import * as tableExport from './tableExport.js'
 import * as orphans from './orphans.js'
 import * as compliance from './compliance.js'
 import { ai } from './ai.js'
@@ -62,7 +63,7 @@ export const plugins = reactive({
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`
     return {
-      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this,   // plugins.enabled('tasker'): Knöpfe „als Job“ nur mit Tasker (Taloan)
+      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, tableExport,   // build/toJson/toJsonTree/toCsv/toXlsx — fest eingebaut   // plugins.enabled('tasker'): Knöpfe „als Job“ nur mit Tasker (Taloan)
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {
         list: () => api.get(`/api/plugins/${key}/data`),

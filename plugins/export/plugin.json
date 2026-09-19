@@ -6,7 +6,7 @@
     "en": "Export: table"
   },
   "description": {
-    "de": "Teilbaum als Tabelle: Excel (.xlsx, über das Plugin xlsx), CSV oder JSON — Spalten id, role, parent, sku, Achsen, Attribute je Sprache (key_de). Genau die Form, die ⇩ Import → Tabelle wieder liest.",
+    "de": "Teilbaum als Tabelle: Excel (.xlsx, über das Plugin xlsx) oder CSV — Spalten id, role, parent, sku, Achsen, Attribute je Sprache; genau die Form, die ⇩ Import → Tabelle wieder liest. Strukturierte Daten (JSON) macht das Plugin json.",
     "en": "Subtree as a table: Excel (.xlsx via plugin xlsx), CSV or JSON — columns id, role, parent, sku, axes, attributes per locale. Exactly what the table import reads back."
   },
   "kind": "export",

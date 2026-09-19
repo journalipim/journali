@@ -2,11 +2,11 @@
   "key": "json",
   "version": "2.1.0",
   "label": {
-    "de": "Import: JSON",
-    "en": "Import: JSON"
+    "de": "JSON (Import, Export)",
+    "en": "JSON (import, export)"
   },
   "description": {
-    "de": "JSON-Import-Manager: einen Knotenbaum im Rohdaten-Format ({ model, node } aus dem Export, auch aus anderen Systemen) analysieren, Attribute und Gruppen auf Bestehendes zuordnen oder neu anlegen (best guess, Präfix), Ziel wählen, einspielen. Dazu JSON-Listen als Tabelle für ⇩ Import → Tabelle.",
+    "de": "Strukturierte Daten als JSON: Export eines Teilbaums als Rohdaten (wiederherstellbar, mit Modellteil) oder ausgewertet (Baum, Liste); Import-Manager mit Analyse, Zuordnung (best guess, Präfix), Zielbaum; als Job (Prozess) einspielbar. Dazu JSON-Listen als Tabelle für ⇩ Import → Tabelle.",
     "en": "JSON files (array of objects, or { rows | items | data: [...] }) as a table; nested fields become a.b.c."
   },
   "kind": "import",

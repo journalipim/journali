@@ -6,6 +6,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { nodeWorkbook } from '../tableExport.js'
 import { dialog as ask } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
@@ -404,6 +405,13 @@ function contextMenu(e, r) {
   for (const a of plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role))) {
     const kind = plugins.list.find(p => p.key === a.key)?.manifest?.kind
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
+  }
+  // fest eingebaut (Taloan, 19.09.): Excel am Knoten und der Tabellen-Export — vorher Plugin export
+  if (r.role !== 'variant') {
+    add('export', { label: `Excel: Vorlage für ${below(r)}`, icon: '⇪', action: () => nodeWorkbook(r.id, false).catch(e => store.toast(e.message)) })
+    add('export', { label: `Excel: ${below(r)} exportieren`, icon: '⇪', action: () => nodeWorkbook(r.id, true).catch(e => store.toast(e.message)) })
+    add('export', { label: 'Exportieren … (Teilbaum)', icon: '⊞', action: () => { localStorage.setItem('journali.export.root', r.id); router.push(`/export/table?node=${encodeURIComponent(r.id)}`) } })
+    add('import', { label: `Excel: ${below(r)} importieren …`, icon: '⇩', action: () => router.push(`/import/table?node=${encodeURIComponent(r.id)}`) })
   }
   if (r.role !== 'variant') add('import', { label: 'JSON: Rohdaten hierher …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
   const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: byTopic.get(k), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: 'nur einzeln' } : {}) }))

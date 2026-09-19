@@ -1,16 +1,62 @@
 {
   "key": "datasheet",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "label": {
     "de": "Datenblatt",
     "en": "Datasheet"
   },
   "description": {
-    "de": "Datenblatt-Designer, WYSIWYG: Seite wie gedruckt, Bausteine per Drag & Drop — Abschnitte mit 1–4 Spalten, Attributgruppen und Attribute ab einem Knoten (inkl. allem darunter), Bild, Text, Variantentabelle, Seitenumbruch; Layouts im Journal, je Rolle zugeordnet; „Datenblatt“ im Kontextmenü des Baums öffnet das Blatt zum Drucken/PDF. HTML-Vorlagen mit Platzhaltern bleiben als zweiter Weg.",
+    "de": "Datenblatt-Designer, WYSIWYG: Seite wie gedruckt, Bausteine per Drag & Drop — Abschnitte mit 1–4 Spalten, Attributgruppen und Attribute ab einem Knoten (inkl. allem darunter), Bild, Text, Variantentabelle, Seitenumbruch; Layouts im Journal, je Rolle zugeordnet; „Datenblatt“ im Kontextmenü des Baums öffnet das Blatt zum Drucken/PDF. HTML-Vorlagen mit Platzhaltern bleiben als zweiter Weg. Als Job: Datenblätter eines Teilbaums als HTML in ein Verzeichnis.",
     "en": "Datasheet preview with layout designer: HTML templates with placeholders, stored in the journal, per role; “Datasheet” in the tree's context menu opens the sheet for print/PDF."
   },
   "kind": "output",
   "runs": "browser",
   "entry": "entry.js",
-  "autoInstall": true
+  "autoInstall": true,
+  "process": {
+    "command": "node",
+    "args": [
+      "job.js",
+      "{journali}",
+      "{actor}",
+      "{root}",
+      "{dir}",
+      "{role}",
+      "{layout}",
+      "{locale}"
+    ],
+    "description": "Datenblätter eines Teilbaums als HTML-Dateien in ein Verzeichnis (mit index.html)",
+    "params": [
+      {
+        "key": "root",
+        "label": "Teilbaum (leer = alle)",
+        "type": "node",
+        "default": ""
+      },
+      {
+        "key": "dir",
+        "label": "Verzeichnis",
+        "type": "text",
+        "default": "datenblaetter"
+      },
+      {
+        "key": "role",
+        "label": "Knoten: product, variant, group oder all",
+        "type": "text",
+        "default": "product"
+      },
+      {
+        "key": "layout",
+        "label": "Layout (Name, leer = das der Rolle)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "locale",
+        "label": "Sprache (leer = wie eingestellt)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  }
 }

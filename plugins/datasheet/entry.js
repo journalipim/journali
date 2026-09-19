@@ -154,7 +154,21 @@ function openSheet(html, title) {
 }
 
 // ---- Designer
-export function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
+// el: im Browser echte Elemente; ohne DOM (Job, Node) ein Ersatz, der nur outerHTML kann — die Wiedergabe des Blatts braucht nicht mehr (Taloan, 19.09.: Datenblätter als Job)
+const escHtml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+const VOID = new Set(['img', 'br', 'hr', 'input', 'meta', 'link'])
+function elText(tag, attrs = {}, ...kids) {
+  const e = { tag, attrs: {}, kids: [], style: {}, classList: { add() {}, remove() {}, toggle() {} }, addEventListener() {}, set contentEditable(v) {}, set innerHTML(v) { this.kids = [{ raw: v }] }, get innerHTML() { return this.kids.map(k => k?.raw ?? (typeof k === 'string' ? escHtml(k) : k?.outerHTML ?? '')).join('') },
+    append(...ks) { for (const k of ks) if (k != null && k !== '') this.kids.push(k) },
+    querySelector() { return null }, querySelectorAll() { return [] },
+    get outerHTML() { const a = Object.entries(this.attrs).map(([k, v]) => ` ${k}="${escHtml(v)}"`).join(''); return VOID.has(this.tag) ? `<${this.tag}${a}>` : `<${this.tag}${a}>${this.innerHTML}</${this.tag}>` } }
+  for (const [k, v] of Object.entries(attrs)) { if (k.startsWith('on')) continue; if (k === 'html') e.innerHTML = v; else e.attrs[k] = v }
+  e.append(...kids); return e
+}
+export function el(tag, attrs = {}, ...kids) {
+  if (typeof document === 'undefined') return elText(tag, attrs, ...kids)
+  const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e
+}
 
 async function mountDesigner(root, ctx) {
   const { store, tree } = ctx
