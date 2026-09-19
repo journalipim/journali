@@ -2,12 +2,16 @@
 // Übersicht eines Themas (Taloan, 18.09.2026): nach Klick auf ⇩ Import (⇪ Export, 📄 Datenblatt, ✓ Datenanalyse, ⌁ Werkzeuge)
 // wählt man hier das Plugin, das man ausführen will — als Kacheln (Taloan: „zeitgemässer“): Symbol gross, Name,
 // ein Satz aus dem Manifest, unten Plugin und Fassung. Kein festes Spaltenlayout für alle: jede Ansicht hat ihr eigenes.
-import { computed } from 'vue'
+import { computed, watchEffect } from 'vue'
+import { useRouter } from 'vue-router'
 import { plugins } from '../plugins.js'
 import { TOPICS, entries } from '../topics.js'
 const props = defineProps({ topic: String })
 const t = computed(() => TOPICS.find(x => x.key === props.topic))
 const list = computed(() => entries.value[props.topic] ?? [])
+// genau ein Eintrag: gleich dorthin — die Übersicht hätte nur eine Kachel (Taloan)
+const router = useRouter()
+watchEffect(() => { if (plugins.loaded && list.value.length === 1) router.replace(list.value[0].to) })
 const meta = key => plugins.list.find(p => p.key === key)
 const text = e => e.plugin ? (meta(e.plugin)?.manifest?.description?.de || meta(e.plugin)?.manifest?.description?.en || e.hint) : e.hint
 </script>

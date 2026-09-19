@@ -45,7 +45,9 @@ const railItems = computed(() => {
   const treeTo = store.lastNode ? `/tree/${store.lastNode}` : '/tree'
   // Plugins, die der Nutzer in die Leiste gestellt hat (⌁ Plugins → „in der Leiste“): ihre Ansichten als eigene Symbole
   const own = plugins.views.filter(v => store.railPlugins.includes(v.key)).map(v => ({ to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, hint: `Plugin ${v.key}`, exact: true }))
-  const all = [...nav.filter(n => !n.topic || n.always || entries.value[n.topic]?.length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : n), ...own, { to: 'spacer' }, ...navBottom]
+  // Ein Thema mit genau einem Eintrag (Taloan: „erwarten wir hier weitere Module?“): das Symbol führt direkt hin, die Übersicht wäre nur ein Klick mehr
+  const direct = n => n.topic && !n.always && entries.value[n.topic]?.length === 1 ? { ...n, href: entries.value[n.topic][0].to } : n
+  const all = [...nav.filter(n => !n.topic || n.always || entries.value[n.topic]?.length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : direct(n)), ...own, { to: 'spacer' }, ...navBottom]
   const order = store.railOrder ?? []
   const known = new Set(all.map(x => x.to))
   const sorted = order.filter(k => known.has(k)).map(k => all.find(x => x.to === k))
