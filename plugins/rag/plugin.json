@@ -1,0 +1,64 @@
+{
+  "key": "rag",
+  "version": "1.0.0",
+  "label": {
+    "de": "RAG-Export",
+    "en": "RAG export"
+  },
+  "description": {
+    "de": "Exportiert je Knoten ein sauberes, zitierfähiges Dokument für Vektor-Stores und RAG-Dienste: Markdown je Knoten und nodes.jsonl mit Id, Pfad, SKU, Sprache, Werten, freigegebener Version und Belegen — als Job, regelmäßig, in ein Verzeichnis. Kein Datenbankzugriff von aussen nötig.",
+    "en": "Exports one clean, citable document per node for vector stores and RAG services (Markdown + nodes.jsonl with metadata, released version and documents) — as a scheduled job."
+  },
+  "kind": "export",
+  "runs": "process",
+  "requires": [
+    "tasker"
+  ],
+  "process": {
+    "command": "node",
+    "args": [
+      "job.mjs",
+      "{journali}",
+      "{actor}",
+      "{root}",
+      "{dir}",
+      "{role}",
+      "{locales}",
+      "{withVersions}"
+    ],
+    "description": "Dokumente je Knoten (Markdown + nodes.jsonl) für RAG in ein Verzeichnis",
+    "params": [
+      {
+        "key": "root",
+        "label": "Teilbaum (leer = alles)",
+        "type": "node",
+        "default": ""
+      },
+      {
+        "key": "dir",
+        "label": "Verzeichnis",
+        "type": "text",
+        "default": "rag"
+      },
+      {
+        "key": "role",
+        "label": "Knoten: product, variant, group oder all",
+        "type": "text",
+        "default": "product"
+      },
+      {
+        "key": "locales",
+        "label": "Sprachen (Codes, mit Komma; leer = Leitsprache)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "withVersions",
+        "label": "freigegebene Version und Belege mitgeben",
+        "type": "boolean",
+        "default": "true"
+      }
+    ]
+  },
+  "autoInstall": true
+}

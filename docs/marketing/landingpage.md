@@ -26,7 +26,7 @@ von Taloan, bevor sie online gehen.
 
 - **URL-Slug:** `/pim-system` (Startseite) — oder Domain-Root **[zu klären]**
 - **Title (≤ 60 Zeichen):** `journali – PIM-System mit unveränderlichem Journal`
-- **Meta Description (≤ 155 Zeichen):** `PIM-System für den Mittelstand: jede Produktdaten-Änderung nachvollziehbar, Versionen mit revisionssicheren Belegen, Docker-Betrieb, Plugins statt Lock-in.`
+- **Meta Description (≤ 155 Zeichen):** `PIM-System mit unveränderlichem Journal: jede Änderung nachvollziehbar, Versionen mit revisionssicheren Belegen, S3-Storage, KI- und RAG-ready, Docker, Plugins statt Lock-in.`
 - **Canonical:** auf die eigene URL
 - **OpenGraph/Twitter:** Titel wie oben, Bild: Screenshot der Pflegeansicht mit Journal daneben (Alt-Text: „journali Pflegeansicht: Produkt mit Attributen links, Journal der Änderungen rechts“)
 - **Sprache:** `de` (`hreflang` erst, wenn eine englische Seite existiert)
@@ -81,6 +81,20 @@ Importe, Sicherungen, Exporte, Datenblätter laufen als geplante Jobs (Zeitplan 
 
 **H3: Ein Paket, das läuft**
 Docker Compose mit PostgreSQL — fertig. Medien wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage (Garage, MinIO, AWS, R2 …); der Wechsel ist ein Kopierlauf, keine Migration. Plugins liegen als Verzeichnis daneben und werden ohne neues Image ausgetauscht.
+
+---
+
+### H2: Gebaut für Object Storage, KI und RAG. (Kicker: Bereit für das, was jetzt zählt)
+
+Taloan, 19.09.: „ruhig auf dicke Hose“ — aber alles hier ist gebaut:
+- **S3 Object Storage ready** — Medien in Postgres, Dateisystem oder S3-kompatibel (Garage, MinIO, AWS, R2, Hetzner); Umschalten in den Einstellungen, Kopierlauf.
+- **KI-ready** — Claude angebunden; Plugins holen Vorschläge (DPP/PPWR-Zuordnungen, Prüfungen). Schlüssel beim Nutzer.
+- **Content-Generierung** — Vorlagen (regelbasiert) + Plugin `geo`: Definitionssatz, Beschreibung, FAQ, Suchbegriffe per Claude, übernommen nur per Klick.
+- **GEO** — Texte, die KI-Antworten zitieren; Schema.org-Product-JSON-LD je Produkt.
+- **RAG-ready** — Plugin `rag`: Markdown + nodes.jsonl je Produkt/Sprache mit Version und Belegen, als Job.
+- **Digitaler Produktpass** — ESPR/PPWR-Prüfungen als Plugins.
+
+Motto (Taloan): **„Hier entsteht etwas ganz Großes — und ihr dürft dabei sein.“** — steht in der Micro-Zeile unter dem Aufmacher.
 
 ---
 

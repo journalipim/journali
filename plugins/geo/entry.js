@@ -1,0 +1,99 @@
+// Plugin geo (Taloan, 19.09.2026: „ein Plugin, das GEO-optimierte Daten vorschlägt“): aus den echten Produktdaten schlägt Claude
+// Texte vor, die Suchmaschinen und KI-Antworten gern zitieren — ein Definitionssatz, eine Kurzbeschreibung, Fragen & Antworten,
+// Suchbegriffe. Je Feld ein Zielattribut (gemerkt im Journal, Plugin-Daten „targets“); „übernehmen“ schreibt den Wert an den
+// Knoten. Dazu Schema.org-Product-JSON-LD aus den Daten (ohne KI). Braucht den Claude-Schlüssel aus den Einstellungen.
+function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
+const ICON = { group: '▣', product: '▦', variant: '◆' }
+const FIELDS = [
+  ['definition', 'Definitionssatz', 'Ein Satz, der das Produkt so beschreibt, dass eine KI-Antwort ihn wörtlich übernehmen kann („X ist ein …, das …“).'],
+  ['description', 'Kurzbeschreibung', 'Zwei bis drei Sätze: Zweck, wichtigste Eigenschaften mit Zahlen, Einsatz.'],
+  ['faq', 'Fragen & Antworten', 'Drei Frage-Antwort-Paare, wie Käufer sie stellen; Antworten mit konkreten Werten.'],
+  ['keywords', 'Suchbegriffe', 'Fünf bis acht Begriffe und Wortgruppen, kommagetrennt.'],
+]
+
+/// Fakten eines Knotens: Name, Pfad, SKU, Attribute mit Label und Wert (eigen oder geerbt) in einer Sprache
+async function facts(ctx, id, locale) {
+  const { api, store, tree } = ctx; const model = store.model
+  const n = await api.get(`/api/nodes/${encodeURIComponent(id)}`)
+  const defs = new Map(model.attributes.map(a => [a.key, a]))
+  const key = v => `${v.attribute}|${v.locale ?? ''}|${v.channel ?? ''}`
+  const own = new Map(n.values.map(v => [key(v), v.values ? v.values.join(', ') : v.value]))
+  const anc = n.ancestors.map(a => new Map(a.values.map(v => [key(v), v.values ? v.values.join(', ') : v.value])))
+  const look = (m, k, loc) => m.get(`${k}|${loc}|`) ?? (loc ? m.get(`${k}||`) : null) ?? null
+  const rows = []
+  for (const d of model.attributes) {
+    if (['html', 'rows', 'template', 'formula'].includes(d.type) && d.type !== 'formula') continue
+    const loc = d.perLocale ? locale : ''
+    let v = d.type === 'formula' ? n.computed.find(c => c.attribute === d.key)?.value ?? null : look(own, d.key, loc)
+    if (v == null && d.inheritable) for (const m of anc) { v = look(m, d.key, loc); if (v != null) break }
+    if (v == null || v === '') continue
+    if (d.type === 'enum') { const list = model.lists.find(x => x.key === d.list); v = String(v).split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[locale] ?? x.trim()).join(', ') }
+    rows.push({ key: d.key, label: d.label?.[locale] || d.label?.de || d.key, value: String(v), unit: d.unit ?? '' })
+  }
+  const row = tree.byId.get(id)
+  const path = tree.ancestors(id).map(a => a.label).reverse().join(' › ')
+  return { id, role: n.role, name: row?.label ?? n.name ?? id, sku: row?.sku ?? '', path, rows, axes: n.axisValues ?? {} }
+}
+
+function jsonLd(f, locale) {
+  const props = f.rows.filter(r => !['sku', 'name'].includes(r.key)).slice(0, 40).map(r => ({ '@type': 'PropertyValue', name: r.label, value: r.value + (r.unit ? ' ' + r.unit : '') }))
+  return { '@context': 'https://schema.org', '@type': 'Product', name: f.name, sku: f.sku || undefined, category: f.path || undefined, inLanguage: locale, additionalProperty: props }
+}
+
+async function mount(root, ctx) {
+  const { api, store, tree, ai } = ctx
+  if (!tree.loaded) await tree.load()
+  const st = { node: localStorage.getItem('journali.geo.node') || tree.rows.find(r => r.role === 'product')?.id, locale: store.model.masterLocale ?? 'de', result: null, targets: (await ctx.data.get('targets')) ?? {} }
+  root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
+  const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
+  const textAttrs = store.model.attributes.filter(a => a.type === 'text' || a.type === 'html')
+  const nodeBtn = el('button', { class: 'x' }, st.node ? `${ICON[tree.byId.get(st.node)?.role] ?? ''} ${tree.byId.get(st.node)?.label ?? ''}` : 'Knoten wählen')
+  const pick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
+  ctx.treePicker(pick, { value: st.node, roles: ['group', 'product', 'variant'], height: 300, onPick: r => { st.node = r.id; nodeBtn.textContent = `${ICON[r.role]} ${r.label}`; pick.style.display = 'none'; localStorage.setItem('journali.geo.node', r.id) } })
+  nodeBtn.addEventListener('click', () => { pick.style.display = pick.style.display === 'none' ? 'block' : 'none' })
+  const locSel = el('select', { onchange: e => { st.locale = e.target.value } }, ...store.model.locales.map(l => el('option', { value: l.code }, l.code))); locSel.value = st.locale
+  const body = el('div', { class: 'scroll', style: 'flex:1;padding:8px' })
+
+  async function suggest() {
+    if (!st.node) return
+    if (!ai?.available?.() && !ai?.key) { store.toast('Kein KI-Schlüssel — Einstellungen → KI (Claude)'); return }
+    say('lese Daten …')
+    try {
+      const f = await facts(ctx, st.node, st.locale)
+      say('frage Claude …')
+      const system = `Du schreibst Produkttexte für Suchmaschinen und KI-Antworten (GEO). Sprache: ${st.locale}. Nur Fakten aus den Daten, keine Erfindungen, keine Superlative. Antworte als JSON: { "definition": string, "description": string, "faq": [{ "q": string, "a": string }] (genau 3), "keywords": string[] (5–8) }.`
+      const user = `Produkt: ${f.name}\nPfad: ${f.path}\nSKU: ${f.sku}\nEigenschaften:\n` + f.rows.map(r => `- ${r.label}: ${r.value}${r.unit ? ' ' + r.unit : ''}`).join('\n')
+      const j = await ai.ask({ system, user, json: true, maxTokens: 1500 })
+      st.result = { facts: f, definition: j.definition ?? '', description: j.description ?? '', faq: Array.isArray(j.faq) ? j.faq : [], keywords: Array.isArray(j.keywords) ? j.keywords.join(', ') : String(j.keywords ?? '') }
+      say(`${f.rows.length} Eigenschaften · Vorschlag von ${ai.model}`); draw()
+    } catch (e) { say('✗ ' + e.message); store.toast(e.message) }
+  }
+  const textOf = k => k === 'faq' ? st.result.faq.map(x => `${x.q}\n${x.a}`).join('\n\n') : st.result[k]
+  async function take(k) {
+    const target = st.targets[k]; if (!target) { store.toast('Zielattribut wählen'); return }
+    const def = store.model.attributes.find(a => a.key === target)
+    try { await api.post(`/api/nodes/${encodeURIComponent(st.node)}/attributes`, { attribute: target, locale: def?.perLocale ? st.locale : null, value: textOf(k) }); store.toast(`✓ ${target} gesetzt`, 'ok'); store.poll(true) }
+    catch (e) { store.toast(e.message) }
+  }
+  function draw() {
+    body.innerHTML = ''
+    if (!st.result) { body.append(el('div', { class: 'empty' }, 'Knoten wählen, dann „Vorschlagen“ — Claude schreibt aus den echten Daten; nichts wird ohne „übernehmen“ gespeichert.')); return }
+    for (const [k, label, hint] of FIELDS) {
+      const sel = el('select', { title: 'Zielattribut', onchange: async e => { st.targets[k] = e.target.value; await ctx.data.set('targets', st.targets) } }, el('option', { value: '' }, 'Zielattribut …'), ...textAttrs.map(a => el('option', { value: a.key }, `${a.label?.de || a.key} (${a.key})`)))
+      sel.value = st.targets[k] ?? ''
+      const ta = el('textarea', { style: 'width:100%;min-height:72px;font:inherit', oninput: e => { if (k === 'faq') return; st.result[k] = e.target.value } }, textOf(k))
+      if (k === 'faq') ta.addEventListener('input', e => { st.result.faq = e.target.value.split(/\n\s*\n/).map(b => { const [q, ...a] = b.split('\n'); return { q, a: a.join('\n') } }) })
+      body.append(el('div', { class: 'section' }, el('h2', {}, label, ' ', el('span', { class: 'muted' }, '· ' + hint)), ta, el('div', { class: 'row', style: 'display:flex;gap:6px;margin-top:4px' }, sel, el('button', { class: 'primary', onclick: () => take(k) }, '⇥ übernehmen'))))
+    }
+    const ld = JSON.stringify(jsonLd(st.result.facts, st.locale), null, 1)
+    body.append(el('div', { class: 'section' }, el('h2', {}, 'Schema.org Product (JSON-LD) ', el('span', { class: 'muted' }, '· aus den Daten, ohne KI — für Shop oder Webseite')), el('pre', { class: 'out', style: 'white-space:pre-wrap;font-size:11px;max-height:240px;overflow:auto' }, ld), el('button', { class: 'x', onclick: () => navigator.clipboard.writeText(ld).then(() => store.toast('kopiert', 'ok')) }, '⧉ kopieren')))
+  }
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '✎ GEO-Texte'), el('span', { style: 'position:relative' }, nodeBtn, pick), locSel, el('button', { class: 'primary', onclick: suggest }, '✦ Vorschlagen'), el('span', { class: 'grow' }), status), body)
+  draw()
+  return () => {}
+}
+
+export default {
+  views: [{ path: 'texts', label: 'GEO-Texte', icon: '✎', topic: 'tools', hint: 'KI-Vorschläge für Suchmaschinen und KI-Antworten aus den Produktdaten; Schema.org JSON-LD', mount }],
+  nodeActions: [{ label: 'GEO-Texte vorschlagen', icon: '✎', topic: 'tools', roles: ['product', 'variant', 'group'], run(id, ctx) { localStorage.setItem('journali.geo.node', id); ctx.go?.('/p/geo/texts') } }],
+}

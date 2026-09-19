@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>journali – PIM-System mit unveränderlichem Journal</title>
-<meta name="description" content="PIM-System für den Mittelstand: jede Produktdaten-Änderung nachvollziehbar, Versionen mit revisionssicheren Belegen, Docker-Betrieb, Plugins statt Lock-in.">
+<meta name="description" content="PIM-System mit unveränderlichem Journal: jede Änderung nachvollziehbar, Versionen mit revisionssicheren Belegen, S3-Storage, KI- und RAG-ready, Docker, Plugins statt Lock-in.">
 <link rel="canonical" href="https://journali.de/">
 <meta property="og:title" content="journali – PIM-System mit unveränderlichem Journal">
 <meta property="og:description" content="Produktdaten, die sich erinnern: jede Änderung ist ein Eintrag im Journal – nachvollziehbar, wiederherstellbar, nie gelöscht.">
@@ -16,10 +16,11 @@
 {"@context":"https://schema.org","@graph":[
  {"@type":"SoftwareApplication","name":"journali","applicationCategory":"BusinessApplication","applicationSubCategory":"Product Information Management (PIM)","operatingSystem":"Docker, Linux, Windows",
   "description":"PIM-System, das jede Änderung an Produktdaten als unveränderlichen Eintrag in einem Journal speichert – nachvollziehbar, wiederherstellbar, mit Versionen und revisionssicheren Belegen.",
-  "featureList":["Unveränderliches Journal aller Änderungen","Versionen mit eingefrorenen Belegdokumenten und Aufbewahrungsfrist","Import aus CSV, Excel, JSON, Zwischenablage mit Datenmapper","Vollständig wiederherstellbarer JSON-Export","Datenblatt-Designer (WYSIWYG) und Datenblätter als Job","Datenqualitätsregeln, Prüfungen für Digitalen Produktpass (ESPR) und PPWR","Jobs mit Zeitplan im Server","Betrieb per Docker mit PostgreSQL; Medien in Postgres, Dateisystem oder S3-kompatiblem Storage","Plugins ohne neues Deployment austauschbar"]},
+  "featureList":["Unveränderliches Journal aller Änderungen","Versionen mit eingefrorenen Belegdokumenten und Aufbewahrungsfrist","Import aus CSV, Excel, JSON, Zwischenablage mit Datenmapper","Vollständig wiederherstellbarer JSON-Export","Datenblatt-Designer (WYSIWYG) und Datenblätter als Job","Datenqualitätsregeln, Prüfungen für Digitalen Produktpass (ESPR) und PPWR","Jobs mit Zeitplan im Server","Betrieb per Docker mit PostgreSQL; Medien in Postgres, Dateisystem oder S3-kompatiblem Storage","Plugins ohne neues Deployment austauschbar","KI-Anbindung (Claude) für Vorschläge und GEO-optimierte Produkttexte","RAG-Export: zitierfähige Dokumente je Produkt mit Version und Belegen","Schema.org Product JSON-LD je Produkt"]},
  {"@type":"FAQPage","mainEntity":[
   {"@type":"Question","name":"Was ist journali?","acceptedAnswer":{"@type":"Answer","text":"journali ist ein PIM-System (Produktinformationsmanagement), das jede Änderung an Produktdaten als unveränderlichen Eintrag in einem Journal speichert. Der aktuelle Datenstand wird aus dem Journal abgeleitet; frühere Stände bleiben jederzeit abrufbar."}},
   {"@type":"Question","name":"Kann ich journali selbst betreiben?","acceptedAnswer":{"@type":"Answer","text":"Ja. journali läuft als Docker-Paket mit PostgreSQL. Medien liegen wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage."}},
+  {"@type":"Question","name":"Kann ich journali als Quelle für RAG und KI-Assistenten nutzen?","acceptedAnswer":{"@type":"Answer","text":"Ja. Der RAG-Export erzeugt je Produkt und Sprache ein Markdown-Dokument und eine nodes.jsonl mit Metadaten (Id, Pfad, SKU, Werte, freigegebene Version, Belege) für jeden Vektor-Store oder Assistenten."}},
   {"@type":"Question","name":"Was bedeutet Version in journali?","acceptedAnswer":{"@type":"Answer","text":"Eine Version ist ein Zeiger auf den Journalstand eines Produkts plus die Dokumente, die zu diesem Stand ausgeliefert wurden. Sie ist unveränderlich, hat eine Aufbewahrungsfrist und kann zurückgezogen, aber nicht gelöscht werden."}}
  ]}
 ]}
@@ -105,7 +106,7 @@ footer a { color:var(--muted); margin:0 8px; }
       <li><b>⌁</b>Plugins ohne neues Deployment</li>
     </ul>
     <div class="actions"><a class="cta" href="#problem">Die Idee entdecken ↓</a><a class="cta alt" href="#kontakt">Stand der Entwicklung</a></div>
-    <p class="micro">Noch nicht veröffentlicht. Hier zeigen wir Schritt für Schritt, was entsteht.</p>
+    <p class="micro">Hier entsteht etwas ganz Großes — und ihr dürft dabei sein. Noch nicht veröffentlicht; wir zeigen Schritt für Schritt, was entsteht.</p>
   </div>
   <div class="visual"><div class="halo"></div><div class="logo-card"><img src="logo.png" alt="journali"></div></div>
 </div>
@@ -148,6 +149,19 @@ footer a { color:var(--muted); margin:0 8px; }
   </div>
 </section>
 
+<section id="bereit">
+  <p class="kicker">Bereit für das, was jetzt zählt</p>
+  <h2>Gebaut für Object Storage, <span class="grad">KI und RAG.</span></h2>
+  <div class="grid">
+    <div class="card"><h3>▨ S3 Object Storage ready</h3><p>Medien in Postgres, im Dateisystem oder in jedem S3-kompatiblen Speicher — Garage, MinIO, AWS, Cloudflare R2, Hetzner. Umschalten in den Einstellungen, Wechsel per Kopierlauf, Ids bleiben.</p></div>
+    <div class="card"><h3>✦ KI-ready</h3><p>Claude ist angebunden; Plugins holen Vorschläge, wo Regeln nicht reichen — Zuordnungen für den Digitalen Produktpass, Verpackungsdaten, Prüfungen. Der Schlüssel bleibt beim Nutzer, nie im Journal.</p></div>
+    <div class="card"><h3>✎ Content-Generierung</h3><p>Vorlagen erzeugen Texte regelbasiert aus Attributen; das GEO-Plugin lässt Claude aus den echten Produktdaten Definitionssatz, Beschreibung, Fragen &amp; Antworten und Suchbegriffe vorschlagen — übernommen wird nur per Klick.</p></div>
+    <div class="card"><h3>◎ GEO — Generative Engine Optimization</h3><p>Texte, die Suchmaschinen und KI-Antworten zitieren, plus Schema.org-Product-JSON-LD je Produkt für Shop und Webseite. Aus den Daten, nicht aus der Luft.</p></div>
+    <div class="card"><h3>⌘ RAG-ready</h3><p>Der RAG-Export liefert je Produkt und Sprache ein sauberes, zitierfähiges Dokument mit Metadaten, freigegebener Version und Belegen — für jeden Vektor-Store, jeden Assistenten, ohne Zugriff auf die Datenbank.</p></div>
+    <div class="card"><h3>◈ Digitaler Produktpass</h3><p>Prüfregeln für ESPR und PPWR als Plugins: Datenpunkte zuordnen, fehlende Attribute anlegen, Teilbäume prüfen — bereit, bevor die Pflicht kommt.</p></div>
+  </div>
+</section>
+
 <section id="ablauf">
   <h2>Von der Struktur <span class="grad">bis zur Auslieferung.</span></h2>
   <ol class="steps">
@@ -185,6 +199,8 @@ footer a { color:var(--muted); margin:0 8px; }
   <details><summary>Wie erzeugt journali Datenblätter?</summary><p>Ein Designer legt Layouts fest (Abschnitte, Attributgruppen, Bilder, Vergleichs- und Datentabellen). Datenblätter entstehen als Vorschau, als Job für ganze Produktgruppen oder als eingefrorener Beleg beim Erzeugen einer Version.</p></details>
   <details><summary>Was bedeutet „Version“ in journali?</summary><p>Eine Version ist ein Zeiger auf den Journalstand eines Produkts plus die Dokumente, die zu diesem Stand ausgeliefert wurden. Sie ist unveränderlich, hat eine Aufbewahrungsfrist und kann zurückgezogen, aber nicht gelöscht werden.</p></details>
   <details><summary>Unterstützt journali den Digitalen Produktpass?</summary><p>Prüfregeln für den Digitalen Produktpass (ESPR) und für Verpackungsdaten (PPWR) sind als Plugins enthalten; sie prüfen Produkte gegen die Datenpunkte und legen fehlende Attribute an.</p></details>
+  <details><summary>Ist journali KI-fähig?</summary><p>Ja. journali bindet Claude an; Plugins nutzen die KI für Vorschläge (Zuordnungen, Prüfungen, GEO-optimierte Produkttexte). Der API-Schlüssel bleibt beim Nutzer im Browser, nie im Journal. Ohne Schlüssel arbeiten alle Plugins regelbasiert weiter.</p></details>
+  <details><summary>Kann ich journali als Quelle für RAG und KI-Assistenten nutzen?</summary><p>Ja. Der RAG-Export erzeugt je Produkt und Sprache ein Markdown-Dokument und eine nodes.jsonl mit Metadaten — Id, Pfad, SKU, Werte, freigegebene Version, Belege. Damit füttern Sie jeden Vektor-Store oder Assistenten, ohne die Datenbank zu öffnen.</p></details>
   <details><summary>Wie sicher sind meine Daten vor Anbieterabhängigkeit?</summary><p>Der JSON-Export enthält Daten und Modell und lässt sich vollständig wieder importieren. Plugins sind einfache Verzeichnisse mit einem Manifest.</p></details>
 </section>
 
