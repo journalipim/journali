@@ -1,0 +1,20 @@
+{
+  "generated": "{now}",
+  "locale": "{locale}",
+  "catalog": "{catalogName}",
+  "count": {count|raw},
+  "products": \[{#products}{^_first},{/_first}
+    {
+      "id": "{id}",
+      "sku": "{sku}",
+      "name": "{name}",
+      "path": "{pathText}",
+      "short": "{f.short|plain}",
+      "long": "{f.long|plain}",
+      "price": "{f.price|dec2}",
+      "media": \[{#media}{^_first},{/_first}
+        { "url": "{url}", "mime": "{mime}", "name": "{name}" }{/media}
+      \]
+    }{/products}
+  \]
+}

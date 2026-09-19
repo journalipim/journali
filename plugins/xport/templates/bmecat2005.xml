@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- BMEcat 2005 (T_NEW_CATALOG) mit ETIM-Merkmalen nach ETIM-BMEcat-Guideline — Vorlage des Plugins xport.
+     Felder (f.*) kommen aus der Zuordnung des Profils: sku, short, long, keywords, manufacturer, manufacturerPid, ean,
+     orderUnit, contentUnit, priceQuantity, price, currency, vat, deliveryTime, etimClass. Alles andere aus attr.* / media / rows. -->
+<BMECAT version="2005" xmlns="http://www.bmecat.org/bmecat/2005">
+  <HEADER>
+    <GENERATOR_INFO>journali</GENERATOR_INFO>
+    <CATALOG>
+      <LANGUAGE default="true">{languageCode}</LANGUAGE>
+      <CATALOG_ID>{catalogId}</CATALOG_ID>
+      <CATALOG_VERSION>{catalogVersion}</CATALOG_VERSION>
+      <CATALOG_NAME>{catalogName}</CATALOG_NAME>
+      <GENERATION_DATE>{now}</GENERATION_DATE>
+      <CURRENCY>{currency}</CURRENCY>
+    </CATALOG>
+    <SUPPLIER>
+      <SUPPLIER_NAME>{supplierName}</SUPPLIER_NAME>
+    </SUPPLIER>
+  </HEADER>
+  <T_NEW_CATALOG>
+    <CATALOG_GROUP_SYSTEM>
+      <GROUP_SYSTEM_ID>journali</GROUP_SYSTEM_ID>
+      <GROUP_SYSTEM_NAME>{catalogName}</GROUP_SYSTEM_NAME>{#groups}
+      <CATALOG_STRUCTURE type="{^children}leaf{/children}{#children}{#_first}node{/_first}{/children}">
+        <GROUP_ID>{id}</GROUP_ID>
+        <GROUP_NAME>{name}</GROUP_NAME>
+        <PARENT_ID>{parent}</PARENT_ID>
+      </CATALOG_STRUCTURE>{/groups}
+    </CATALOG_GROUP_SYSTEM>{#products}
+    <PRODUCT mode="new">
+      <SUPPLIER_PID>{f.sku}</SUPPLIER_PID>
+      <PRODUCT_DETAILS>
+        <DESCRIPTION_SHORT>{f.short|plain|max80}</DESCRIPTION_SHORT>[
+        <DESCRIPTION_LONG>{f.long|plain}</DESCRIPTION_LONG>][
+        <EAN>{f.ean}</EAN>][
+        <MANUFACTURER_PID>{f.manufacturerPid}</MANUFACTURER_PID>][
+        <MANUFACTURER_NAME>{f.manufacturer}</MANUFACTURER_NAME>][
+        <KEYWORD>{f.keywords}</KEYWORD>]
+      </PRODUCT_DETAILS>[
+      <PRODUCT_FEATURES>
+        <REFERENCE_FEATURE_SYSTEM_NAME>ETIM-{etimVersion}</REFERENCE_FEATURE_SYSTEM_NAME>
+        <REFERENCE_FEATURE_GROUP_ID>{f.etimClass}</REFERENCE_FEATURE_GROUP_ID>{#features}
+        <FEATURE>
+          <FNAME>{code}</FNAME>
+          <FVALUE>{value}</FVALUE>[
+          <FUNIT>{unit}</FUNIT>]
+        </FEATURE>{/features}
+      </PRODUCT_FEATURES>]
+      <PRODUCT_ORDER_DETAILS>
+        <ORDER_UNIT>{f.orderUnit}</ORDER_UNIT>
+        <CONTENT_UNIT>{f.contentUnit}</CONTENT_UNIT>
+        <NO_CU_PER_OU>{f.noCuPerOu}</NO_CU_PER_OU>
+        <PRICE_QUANTITY>{f.priceQuantity}</PRICE_QUANTITY>
+        <QUANTITY_MIN>{f.quantityMin}</QUANTITY_MIN>
+        <QUANTITY_INTERVAL>{f.quantityInterval}</QUANTITY_INTERVAL>
+      </PRODUCT_ORDER_DETAILS>[
+      <PRODUCT_PRICE_DETAILS>
+        <PRODUCT_PRICE price_type="net_list">
+          <PRICE_AMOUNT>{f.price|dec2}</PRICE_AMOUNT>
+          <PRICE_CURRENCY>{currency}</PRICE_CURRENCY>[
+          <TAX>{f.vat}</TAX>]
+        </PRODUCT_PRICE>
+      </PRODUCT_PRICE_DETAILS>][
+      <MIME_INFO>{#media}
+        <MIME>
+          <MIME_TYPE>{mime}</MIME_TYPE>
+          <MIME_SOURCE>{url}</MIME_SOURCE>
+          <MIME_DESCR>{name}</MIME_DESCR>
+          <MIME_PURPOSE>{#isImage}normal{/isImage}{^isImage}data_sheet{/isImage}</MIME_PURPOSE>
+        </MIME>{/media}
+      </MIME_INFO>]
+      <PRODUCT_STATUS type="new">{name}</PRODUCT_STATUS>
+    </PRODUCT>{/products}{#products}
+    <PRODUCT_TO_CATALOGGROUP_MAP>
+      <PROD_ID>{f.sku}</PROD_ID>
+      <CATALOG_GROUP_ID>{parentId}</CATALOG_GROUP_ID>
+    </PRODUCT_TO_CATALOGGROUP_MAP>{/products}
+  </T_NEW_CATALOG>
+</BMECAT>

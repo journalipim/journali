@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Google Merchant Center Produktfeed (RSS 2.0) — Vorlage des Plugins xport.
+     Felder (f.*) aus der Zuordnung: sku, title, description, price, brand, gtin, mpn, availability, condition, link.
+     Kopfwerte: catalogName, shopUrl, currency. Bilder aus den Medien des Knotens (erstes = image_link, weitere = additional_image_link). -->
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+  <channel>
+    <title>{catalogName}</title>
+    <link>{shopUrl}</link>
+    <description>{catalogName} — {today}</description>{#products}
+    <item>
+      <g:id>{f.sku}</g:id>
+      <g:title>{f.title|plain|max150}</g:title>
+      <g:description>{f.description|plain|max5000}</g:description>
+      <g:link>{f.link}</g:link>{#media}{#_first}{#isImage}
+      <g:image_link>{url}</g:image_link>{/isImage}{/_first}{^_first}{#isImage}
+      <g:additional_image_link>{url}</g:additional_image_link>{/isImage}{/_first}{/media}
+[
+      <g:price>{f.price|dec2} {currency}</g:price>][
+      <g:brand>{f.brand}</g:brand>][
+      <g:gtin>{f.gtin}</g:gtin>][
+      <g:mpn>{f.mpn}</g:mpn>]
+      <g:availability>{f.availability}</g:availability>
+      <g:condition>{f.condition}</g:condition>
+      <g:product_type>{pathText}</g:product_type>
+    </item>{/products}
+  </channel>
+</rss>

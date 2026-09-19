@@ -1,0 +1,63 @@
+{
+  "key": "xport",
+  "version": "1.0.0",
+  "label": {
+    "de": "Vorlagen-Export",
+    "en": "Template export"
+  },
+  "description": {
+    "de": "Export nach Vorlage: die Vorlage ist Text mit {feldern}, Schleifen und optionalen Abschnitten und steht mit Zuordnung, Kopfwerten, Merkmalen (ETIM), Teilbaum und Sprache in einem Profil. Startvorlagen: BMEcat 2005 mit ETIM-Merkmalen, Google Merchant, JSON — oder die eigene Definition eines Kunden. Vorschau und Herunterladen in der Oberfläche, als Job regelmäßig in ein Verzeichnis. Ohne Datenbankzugriff, alles über /api.",
+    "en": "Template-driven export (BMEcat 2005 + ETIM, Google Merchant, JSON or any customer-specific format): template, mapping, header values and features live in a profile; preview and download in the UI, scheduled as a job."
+  },
+  "kind": "export",
+  "runs": "browser",
+  "entry": "entry.js",
+  "requires": [
+    "table",
+    "tasker"
+  ],
+  "autoInstall": true,
+  "processes": [
+    {
+      "key": "export",
+      "label": "Export: Vorlage",
+      "command": "node",
+      "args": [
+        "job.mjs",
+        "{journali}",
+        "{actor}",
+        "{profile}",
+        "{dir}",
+        "{root}",
+        "{locale}"
+      ],
+      "description": "Teilbaum nach Vorlage in eine Datei — Vorlage, Zuordnung, Kopfwerte und Merkmale aus dem Profil (‹› Vorlagen-Export → ⎘ speichern)",
+      "params": [
+        {
+          "key": "profile",
+          "label": "Profil (Name, wie in ‹› Vorlagen-Export gespeichert)",
+          "type": "text",
+          "default": ""
+        },
+        {
+          "key": "dir",
+          "label": "Verzeichnis",
+          "type": "text",
+          "default": "export"
+        },
+        {
+          "key": "root",
+          "label": "Teilbaum (leer = wie im Profil)",
+          "type": "node",
+          "default": ""
+        },
+        {
+          "key": "locale",
+          "label": "Sprache (leer = wie im Profil)",
+          "type": "text",
+          "default": ""
+        }
+      ]
+    }
+  ]
+}
