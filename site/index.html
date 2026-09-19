@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>journali – PIM-System mit unveränderlichem Journal</title>
+<meta name="description" content="PIM-System für den Mittelstand: jede Produktdaten-Änderung nachvollziehbar, Versionen mit revisionssicheren Belegen, Docker-Betrieb, Plugins statt Lock-in.">
+<link rel="canonical" href="https://journali.de/">
+<meta property="og:title" content="journali – PIM-System mit unveränderlichem Journal">
+<meta property="og:description" content="Produktdaten, die sich erinnern: jede Änderung ist ein Eintrag im Journal – nachvollziehbar, wiederherstellbar, nie gelöscht.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://journali.de/logo.png">
+<link rel="icon" href="logo-32.png">
+<!-- Inhalt und Struktur: docs/marketing/landingpage.md im Repo. Offene Punkte dort als [zu klären]. -->
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"SoftwareApplication","name":"journali","applicationCategory":"BusinessApplication","applicationSubCategory":"Product Information Management (PIM)","operatingSystem":"Docker, Linux, Windows",
+  "description":"PIM-System, das jede Änderung an Produktdaten als unveränderlichen Eintrag in einem Journal speichert – nachvollziehbar, wiederherstellbar, mit Versionen und revisionssicheren Belegen.",
+  "featureList":["Unveränderliches Journal aller Änderungen","Versionen mit eingefrorenen Belegdokumenten und Aufbewahrungsfrist","Import aus CSV, Excel, JSON, Zwischenablage mit Datenmapper","Vollständig wiederherstellbarer JSON-Export","Datenblatt-Designer (WYSIWYG) und Datenblätter als Job","Datenqualitätsregeln, Prüfungen für Digitalen Produktpass (ESPR) und PPWR","Jobs mit Zeitplan im Server","Betrieb per Docker mit PostgreSQL; Medien in Postgres, Dateisystem oder S3-kompatiblem Storage","Plugins ohne neues Deployment austauschbar"]},
+ {"@type":"FAQPage","mainEntity":[
+  {"@type":"Question","name":"Was ist journali?","acceptedAnswer":{"@type":"Answer","text":"journali ist ein PIM-System (Produktinformationsmanagement), das jede Änderung an Produktdaten als unveränderlichen Eintrag in einem Journal speichert. Der aktuelle Datenstand wird aus dem Journal abgeleitet; frühere Stände bleiben jederzeit abrufbar."}},
+  {"@type":"Question","name":"Kann ich journali selbst betreiben?","acceptedAnswer":{"@type":"Answer","text":"Ja. journali läuft als Docker-Paket mit PostgreSQL. Medien liegen wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage."}},
+  {"@type":"Question","name":"Was bedeutet Version in journali?","acceptedAnswer":{"@type":"Answer","text":"Eine Version ist ein Zeiger auf den Journalstand eines Produkts plus die Dokumente, die zu diesem Stand ausgeliefert wurden. Sie ist unveränderlich, hat eine Aufbewahrungsfrist und kann zurückgezogen, aber nicht gelöscht werden."}}
+ ]}
+]}
+</script>
+<style>
+:root { --bg:#f3f4f6; --pane:#fff; --line:#d8dbe0; --text:#1f2328; --muted:#6b7280; --accent:#2563eb; --accent-soft:#dbeafe; --rail:#1f2937; }
+@media (prefers-color-scheme: dark) { :root { --bg:#111418; --pane:#1a1f26; --line:#2b3138; --text:#e6e8eb; --muted:#9aa3ad; --accent:#60a5fa; --accent-soft:#1e3a5f; } }
+* { box-sizing: border-box; }
+body { margin:0; font: 16px/1.5 system-ui, "Segoe UI", sans-serif; color:var(--text); background:var(--bg); font-variant-emoji: text; }
+a { color: var(--accent); }
+header { background: var(--rail); color:#fff; }
+header .in { display:flex; align-items:center; gap:12px; padding:14px 20px; max-width:1040px; margin:0 auto; }
+header img { width:36px; height:36px; border-radius:8px; }
+header b { font-size:18px; letter-spacing:.2px; }
+header nav { margin-left:auto; display:flex; gap:16px; font-size:14px; }
+header nav a { color:#cbd5e1; text-decoration:none; }
+main { max-width:1040px; margin:0 auto; padding:0 20px; }
+.hero { padding:56px 0 32px; }
+h1 { font-size:40px; line-height:1.15; margin:0 0 12px; letter-spacing:-.5px; }
+.hero p.def { font-size:20px; color:var(--text); max-width:760px; margin:0 0 20px; }
+.facts { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 24px; padding:0; list-style:none; }
+.facts li { background:var(--pane); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:14px; }
+.facts li b { font-family: ui-monospace, monospace; margin-right:6px; color:var(--accent); }
+.cta { display:inline-block; background:var(--accent); color:#fff; text-decoration:none; padding:10px 18px; border-radius:6px; font-weight:600; }
+.cta.alt { background:transparent; color:var(--accent); border:1px solid var(--accent); margin-left:8px; }
+section { padding:32px 0; border-top:1px solid var(--line); }
+h2 { font-size:26px; margin:0 0 12px; letter-spacing:-.3px; }
+h3 { font-size:17px; margin:0 0 6px; }
+.grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
+.card { background:var(--pane); border:1px solid var(--line); border-radius:8px; padding:16px; }
+.card p { margin:0; color:var(--muted); font-size:15px; }
+ol.steps { counter-reset: s; list-style:none; padding:0; display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:16px; }
+ol.steps li { background:var(--pane); border:1px solid var(--line); border-radius:8px; padding:16px 16px 16px 52px; position:relative; }
+ol.steps li::before { counter-increment: s; content: counter(s); position:absolute; left:16px; top:14px; width:26px; height:26px; border-radius:50%; background:var(--accent-soft); color:var(--accent); font-weight:700; display:grid; place-items:center; font-size:14px; }
+details { background:var(--pane); border:1px solid var(--line); border-radius:8px; padding:10px 14px; margin-bottom:8px; }
+summary { cursor:pointer; font-weight:600; }
+details p { margin:8px 0 0; color:var(--muted); }
+.muted { color:var(--muted); }
+footer { border-top:1px solid var(--line); padding:20px; text-align:center; font-size:13px; color:var(--muted); }
+footer a { color:var(--muted); margin:0 8px; }
+@media (max-width:640px) { h1 { font-size:30px; } .hero { padding:36px 0 24px; } header nav { display:none; } }
+</style>
+</head>
+<body>
+<header><div class="in"><img src="logo-128.png" alt="journali"><b>journali</b>
+  <nav><a href="#anders">Was anders ist</a><a href="#ablauf">Ablauf</a><a href="#integration">Integration</a><a href="#faq">Fragen</a></nav></div></header>
+
+<main>
+<div class="hero">
+  <h1>Produktdaten, die sich erinnern.</h1>
+  <p class="def">journali ist ein PIM-System, in dem jede Änderung ein Eintrag im Journal ist — nachvollziehbar, wiederherstellbar, nie gelöscht.</p>
+  <ul class="facts">
+    <li><b>≡</b>Journal statt Datenbank-Update — die Wahrheit ist der Eintrag</li>
+    <li><b>⎘</b>Versionen mit eingefrorenen Belegen — was nach draußen ging, bleibt beweisbar</li>
+    <li><b>⌁</b>Plugins austauschen, ohne neu zu deployen</li>
+  </ul>
+  <a class="cta" href="#kontakt">Gespräch vereinbaren</a><a class="cta alt" href="#ablauf">So funktioniert es</a>
+</div>
+
+<section id="problem">
+  <h2>Das Problem, das jedes PIM hat</h2>
+  <p>Produktdaten ändern sich täglich: Importe aus dem ERP, Korrekturen von Kollegen, neue Bilder, neue Vorschriften. Klassische PIM-Systeme überschreiben. Wer wissen will, was vor drei Jahren galt, spielt eine Datensicherung ein — und hofft, dass die Programmversion noch passt.</p>
+  <p>journali überschreibt nichts. Jede Änderung ist ein neuer, nummerierter Eintrag mit Urheber und Zeitpunkt. Der aktuelle Stand ist eine Ableitung daraus, nicht das Original.</p>
+</section>
+
+<section id="anders">
+  <h2>Was journali anders macht</h2>
+  <div class="grid">
+    <div class="card"><h3>≡ Das Journal ist die Wahrheit</h3><p>Jeder Wert, jeder Name, jede Zuordnung, jede Freigabe — ein Eintrag. Das Datenmodell (Sprachen, Kanäle, Attribute, Einheiten, Wertelisten) steht ebenfalls im Journal, nie im Code. Der Stand von jedem Zeitpunkt lässt sich mit der heutigen Software wieder herstellen.</p></div>
+    <div class="card"><h3>⎘ Versionen mit Belegen</h3><p>Eine Freigabe erzeugt eine Version: ein Zeiger auf den Journalstand plus die Dokumente, die nach draußen gingen. Unveränderlich, hash-adressiert, mit Aufbewahrungsfrist. Zurückrollen auf eine frühere Version ist ein Schritt vorwärts, kein Löschen.</p></div>
+    <div class="card"><h3>⊞ Pflege wie in einer Tabelle</h3><p>Inline-Bearbeitung in der Zelle, Tastatur durch die Liste, Massenbearbeitung Excel-ähnlich im eigenen Fenster: Bereich ziehen, ausfüllen, aus der Zwischenablage einfügen. Das Journal läuft live daneben mit.</p></div>
+    <div class="card"><h3>⇩ Import und Export ohne Schmerzen</h3><p>CSV, Excel, JSON, Zwischenablage — der Datenmapper schlägt die Zuordnung vor, ein Plan zeigt vorher, was passiert. Der JSON-Export ist vollständig wiederherstellbar: exportieren, löschen, importieren — identisch.</p></div>
+    <div class="card"><h3>▤ Datenblätter aus den Daten</h3><p>WYSIWYG-Designer: Abschnitte in 1–4 Spalten, Attributgruppen, Bilder, Vergleichs- und Datentabellen. Ein Layout je Rolle oder benannt — als Vorschau, als Job für ganze Teilbäume, als Beleg zur Version.</p></div>
+    <div class="card"><h3>✓ Datenqualität, die mitläuft</h3><p>Regeln für Pflichtfelder, Muster, Zahlen, Listenwerte, Übersetzungen, Formeln. Prüfungen für den Digitalen Produktpass (ESPR) und Verpackung (PPWR) als Plugins. Freigabe setzt Vollständigkeit voraus.</p></div>
+    <div class="card"><h3>⏱ Jobs im Server, nicht im Browser</h3><p>Importe, Sicherungen, Exporte, Datenblätter laufen als geplante Jobs — Zeitplan wie im Terminplaner oder als cron — mit Logs, unabhängig von einem offenen Browserfenster.</p></div>
+    <div class="card"><h3>▨ Ein Paket, das läuft</h3><p>Docker Compose mit PostgreSQL — fertig. Medien wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage; der Wechsel ist ein Kopierlauf. Plugins liegen als Verzeichnis daneben und werden ohne neues Image ausgetauscht.</p></div>
+  </div>
+</section>
+
+<section id="ablauf">
+  <h2>So funktioniert es</h2>
+  <ol class="steps">
+    <li><b>Struktur anlegen.</b> Gruppen, Produkte, Varianten; Attribute mit Vererbung nach unten; Sprachen und Kanäle als Achsen.</li>
+    <li><b>Daten pflegen oder importieren.</b> In der Zelle, in der Tabelle, aus Excel, aus dem ERP per Job.</li>
+    <li><b>Freigeben und ausliefern.</b> Version erzeugen, Belege werden gerendert, Export an Shop, Katalog oder Archiv.</li>
+  </ol>
+</section>
+
+<section id="fuer-wen">
+  <h2>Für wen</h2>
+  <div class="grid">
+    <div class="card"><h3>Hersteller technischer Produkte</h3><p>die nachweisen müssen, welche Unterlagen wann galten.</p></div>
+    <div class="card"><h3>Händler mit Varianten</h3><p>die Excel-Tempo bei der Pflege brauchen.</p></div>
+    <div class="card"><h3>IT-Abteilungen</h3><p>die ein PIM selbst betreiben wollen — mit Postgres und Docker.</p></div>
+    <div class="card"><h3>Agenturen</h3><p>die Datenblätter und Kataloge aus Produktdaten erzeugen.</p></div>
+  </div>
+</section>
+
+<section id="integration">
+  <h2>Integration</h2>
+  <div class="grid">
+    <div class="card"><h3>Quellen</h3><p>JSON-Import als Job, IXP- und Solr-Anbindung als Plugins, Excel-Add-in und OnlyOffice-Plugin zur Pflege direkt in der Tabelle.</p></div>
+    <div class="card"><h3>Ausgabe</h3><p>Excel, CSV, JSON — als Rohdaten oder ausgewertet, als Baum oder Liste; Datenblätter als HTML.</p></div>
+    <div class="card"><h3>Automatisierung</h3><p>Alle Importe und Exporte als Jobs mit Zeitplan, Logs und Zeitgrenze.</p></div>
+  </div>
+</section>
+
+<section id="faq">
+  <h2>Häufige Fragen</h2>
+  <details open><summary>Was ist journali?</summary><p>journali ist ein PIM-System (Produktinformationsmanagement), das jede Änderung an Produktdaten als unveränderlichen Eintrag in einem Journal speichert. Der aktuelle Datenstand wird aus dem Journal abgeleitet; frühere Stände bleiben jederzeit abrufbar.</p></details>
+  <details><summary>Was unterscheidet journali von anderen PIM-Systemen?</summary><p>Andere PIM-Systeme aktualisieren Datensätze. journali hängt Einträge an und löscht nie. Daraus folgen Änderungshistorie, Versionen mit Belegen und Wiederherstellbarkeit ohne Datensicherung — als Eigenschaft der Architektur, nicht als Zusatzmodul.</p></details>
+  <details><summary>Kann ich journali selbst betreiben?</summary><p>Ja. journali läuft als Docker-Paket mit PostgreSQL. Medien liegen wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage.</p></details>
+  <details><summary>Wie importiere ich Produktdaten aus Excel?</summary><p>Datei wählen oder Bereich aus Excel einfügen; der Datenmapper ordnet Spalten Attributen zu, ein Plan zeigt neue und geänderte Werte, dann wird geschrieben. Der Import lässt sich als Profil speichern und als Job wiederholen.</p></details>
+  <details><summary>Wie erzeugt journali Datenblätter?</summary><p>Ein Designer legt Layouts fest (Abschnitte, Attributgruppen, Bilder, Vergleichs- und Datentabellen). Datenblätter entstehen als Vorschau, als Job für ganze Produktgruppen oder als eingefrorener Beleg beim Erzeugen einer Version.</p></details>
+  <details><summary>Was bedeutet „Version“ in journali?</summary><p>Eine Version ist ein Zeiger auf den Journalstand eines Produkts plus die Dokumente, die zu diesem Stand ausgeliefert wurden. Sie ist unveränderlich, hat eine Aufbewahrungsfrist und kann zurückgezogen, aber nicht gelöscht werden.</p></details>
+  <details><summary>Unterstützt journali den Digitalen Produktpass?</summary><p>Prüfregeln für den Digitalen Produktpass (ESPR) und für Verpackungsdaten (PPWR) sind als Plugins enthalten; sie prüfen Produkte gegen die Datenpunkte und legen fehlende Attribute an.</p></details>
+  <details><summary>Wie sicher sind meine Daten vor Anbieterabhängigkeit?</summary><p>Der JSON-Export enthält Daten und Modell und lässt sich vollständig wieder importieren. Plugins sind einfache Verzeichnisse mit einem Manifest.</p></details>
+</section>
+
+<section id="kontakt">
+  <h2>Nächster Schritt</h2>
+  <p>Sie wollen journali sehen oder selbst betreiben? <a href="impressum.html">Kontakt über das Impressum</a>.</p>
+</section>
+</main>
+
+<footer><a href="impressum.html">Impressum</a> · <a href="datenschutz.html">Datenschutz</a> · journali</footer>
+</body>
+</html>
