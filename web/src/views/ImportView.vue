@@ -234,15 +234,17 @@ function toggleLocale(l) {
             <span v-if="languages.length" class="muted" :title="`Quelle: ${languages.length} Sprachen, Modell: ${modelLocales.length} — weitere unter ⊞ Modell → Sprachen anlegen, dann sind sie hier wählbar`"> importieren · nur Sprachen des Modells ({{ modelLocales.length }})</span>
           </td></tr>
           <!-- Regeln (Taloan, 19.09.): was passiert bei was — gelten hier und im Job (Profil) -->
-          <tr><td class="muted" title="Regeln des Imports — stehen im Profil und gelten auch, wenn der Import als Job läuft">Regeln ⚖</td><td>
-            <div class="chips" style="gap:8px;font-size:12px">
-              <label v-for="k in ['unknownAttrs', 'onError', 'missing', 'emptyValues']" :key="k" class="rule" :title="POLICY_TEXT[k][0]">
-                <span class="muted">{{ POLICY_TEXT[k][0] }}:</span>
-                <select v-model="policy[k]" @change="persist"><option v-for="(text, v) in POLICY_TEXT[k][1]" :key="v" :value="v">{{ text }}</option></select>
-              </label>
-              <label class="rule" title="scheitern mehr als so viel Prozent der Befehle, wird abgebrochen — 0 = nie"><span class="muted">Abbruch ab</span> <input type="number" v-model.number="policy.abortAbovePercent" min="0" max="100" style="width:56px" @change="persist" /> <span class="muted">% Fehler</span></label>
-              <label class="rule" title="nur analysieren und den Plan melden, nichts schreiben"><input type="checkbox" v-model="policy.dryRun" @change="persist" /> Trockenlauf</label>
-            </div>
+          <tr><td class="muted" title="Regeln des Imports — stehen im Profil und gelten auch, wenn der Import als Job läuft">Regeln ⚖</td><td style="padding:0">
+            <table class="grid rules"><colgroup><col style="width:220px" /><col style="width:360px" /></colgroup><tbody>
+              <tr v-for="k in ['unknownAttrs', 'onError', 'missing', 'emptyValues']" :key="k">
+                <td class="muted">{{ POLICY_TEXT[k][0] }}</td>
+                <td><select v-model="policy[k]" @change="persist" style="width:100%"><option v-for="(text, v) in POLICY_TEXT[k][1]" :key="v" :value="v">{{ text }}</option></select></td>
+              </tr>
+              <tr><td class="muted" title="scheitern mehr als so viel Prozent der Befehle (ab 5 Fehlern), wird abgebrochen — 0 = nie">Abbruch ab Fehleranteil</td>
+                <td><input type="number" v-model.number="policy.abortAbovePercent" min="0" max="100" style="width:70px" @change="persist" /> <span class="muted">%</span></td></tr>
+              <tr><td class="muted" title="nur analysieren und den Plan melden, nichts schreiben">Trockenlauf</td>
+                <td><label style="display:inline-flex;align-items:center;gap:6px"><input type="checkbox" v-model="policy.dryRun" @change="persist" /> nur analysieren, nichts schreiben</label></td></tr>
+            </tbody></table>
           </td></tr>
         </tbody>
       </table>
@@ -295,6 +297,6 @@ function toggleLocale(l) {
 .view-chip.off { opacity: .4; cursor: default; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
-.rule { display: inline-flex; align-items: center; gap: 4px; }
-.rule select { font-size: 12px; }
+.rules td { padding: 2px 6px; border-bottom: 0; height: 26px; font-size: 12px; }
+.rules select, .rules input { font-size: 12px; }
 </style>
