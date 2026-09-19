@@ -134,6 +134,8 @@ function pick(k) { cur.value = k }
 </template>
 
 <style scoped>
+/* Manifest umbrechen — sonst schiebt eine lange Zeile die Seite breiter als das Fenster und die Knöpfe oben rechts aus dem Bild (Taloan) */
+.out { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .li { display: flex; align-items: center; gap: 8px; height: 26px; padding: 0 8px; white-space: nowrap; cursor: default; }
 .li:hover { background: var(--hover); }
 .li.current { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
