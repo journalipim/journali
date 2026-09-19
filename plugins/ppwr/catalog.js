@@ -12,7 +12,7 @@ const MATERIALS = ['PET', 'HDPE', 'PVC', 'LDPE', 'PP', 'PS', 'Kunststoff sonstig
 const isYesNo = v => ['true', 'false', 'ja', 'nein', 'yes', 'no'].includes(String(v).trim().toLowerCase()) ? null : 'ja/nein erwartet'
 
 export default {
-  key: 'ppwr', label: 'Verpackung (PPWR)', icon: '📦',
+  key: 'ppwr', label: 'Verpackung (PPWR)', icon: '▧',
   source: 'https://eur-lex.europa.eu/eli/reg/2025/40/oj', sourceLabel: 'EUR-Lex 2025/40 ↗',
   description: 'Verpackungsdaten nach PPWR — je Produkt: Materialien und Gewichte der Verpackungsbestandteile, Rezyklatanteil, Recyclingfähigkeitsklasse, Wiederverwendbarkeit, Leerraum, Stoffgrenzen, Kennzeichnung, Register. Attribute wählen oder anlegen, dann einen Teilbaum prüfen.',
   groupKey: 'ppwr', groupLabel: 'Verpackung (PPWR)', prefix: 'pack_',

@@ -1,16 +1,31 @@
 {
   "key": "export",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "label": {
     "de": "Export: Tabelle",
     "en": "Export: table"
   },
   "description": {
-    "de": "Teilbaum als Tabelle: Excel (.xlsx, über das Plugin xlsx) oder CSV — Spalten id, role, parent, sku, Achsen, Attribute je Sprache; genau die Form, die ⇩ Import → Tabelle wieder liest. Strukturierte Daten (JSON) macht das Plugin json.",
-    "en": "Subtree as a table: Excel (.xlsx via plugin xlsx), CSV or JSON — columns id, role, parent, sku, axes, attributes per locale. Exactly what the table import reads back."
+    "de": "Teilbaum als Tabelle: Excel (.xlsx, über das Plugin xlsx) oder CSV — Spalten id, role, parent, sku, Achsen, Attribute je Sprache; genau die Form, die ⇩ Import → Tabelle wieder liest. Die Ansicht ⇪ Export → Tabelle ist eingebaut; dieses Plugin ist der Job dazu (Prozess): dieselbe Tabelle regelmäßig als Datei in ein Verzeichnis. Strukturierte Daten (JSON) macht das Plugin json.",
+    "en": "Subtree as a table: Excel (.xlsx via plugin xlsx) or CSV — columns id, role, parent, sku, axes, attributes per locale. The view is built in; this plugin is the job (process) writing the same table to a directory."
   },
   "kind": "export",
-  "runs": "browser",
-  "entry": "entry.js",
+  "runs": "process",
+  "builtin": "table",
+  "process": {
+    "command": "node",
+    "args": ["job.mjs", "{journali}", "{actor}", "{root}", "{dir}", "{format}", "{locales}", "{role}", "{view}", "{ownOnly}", "{keep}"],
+    "description": "Teilbaum als Excel oder CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben",
+    "params": [
+      { "key": "root", "label": "Teilbaum (leer = alle Wurzeln)", "type": "node", "default": "" },
+      { "key": "dir", "label": "Verzeichnis", "type": "text", "default": "export" },
+      { "key": "format", "label": "Format (xlsx oder csv)", "type": "text", "default": "xlsx" },
+      { "key": "locales", "label": "Sprachen (Codes, mit Komma; leer = Leitsprache)", "type": "text", "default": "" },
+      { "key": "role", "label": "Knoten: group, product, variant oder leer = alle", "type": "text", "default": "" },
+      { "key": "view", "label": "Sicht (Schlüssel; leer = alle Attribute)", "type": "text", "default": "" },
+      { "key": "ownOnly", "label": "nur eigene Werte (geerbte leer lassen)", "type": "boolean", "default": "false" },
+      { "key": "keep", "label": "so viele Dateien je Wurzel behalten", "type": "number", "default": "14" }
+    ]
+  },
   "autoInstall": true
 }

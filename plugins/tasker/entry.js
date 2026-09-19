@@ -9,12 +9,15 @@ const PRESETS = [['', 'nur von Hand'], ['*/15 * * * *', 'alle 15 min'], ['0 * * 
 async function mount(root, ctx) {
   const { api, store, tree, dialog } = ctx
   if (!tree.loaded) await tree.load()
-  const st = { jobs: [], plugins: [], cur: null, detail: null, log: '', timer: null, edit: null }
+  const st = { jobs: [], plugins: [], cur: null, detail: null, log: '', timer: null, edit: null, plugin: new URLSearchParams(location.search).get('plugin') || '' }   // plugin: Liste nur mit den Jobs dieses Plugins (aus „Jobs verwalten“, Taloan)
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const list = el('div', { class: 'scroll', style: 'flex:0 0 auto;max-height:45%' })
   const detail = el('div', { class: 'scroll', style: 'flex:1;border-top:1px solid var(--line)' })
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⏱ Jobs'), el('button', { class: 'primary', onclick: () => openEdit(null) }, '+ Job'), el('span', { class: 'grow' }), status), list, detail)
+  const filterChip = el('span', { class: 'chip', title: 'nur Jobs dieses Plugins — × zeigt alle', style: 'cursor:default' })
+  const drawFilter = () => { filterChip.innerHTML = ''; filterChip.style.display = st.plugin ? '' : 'none'; if (st.plugin) filterChip.append(`Plugin ${st.plugin} `, el('button', { onclick: () => { st.plugin = ''; drawFilter(); drawList() } }, '×')) }
+  drawFilter()
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⏱ Jobs'), el('button', { class: 'primary', onclick: () => openEdit(st.plugin ? { plugin: st.plugin, _new: true } : null) }, '+ Job'), filterChip, el('span', { class: 'grow' }), status), list, detail)
 
   async function load() {
     try { [st.jobs, st.plugins] = await Promise.all([api.get('/api/jobs'), api.get('/api/jobs/plugins')]) } catch (e) { say('✗ ' + e.message); return }
@@ -25,11 +28,12 @@ async function mount(root, ctx) {
   }
   function drawList() {
     list.innerHTML = ''
-    if (!st.jobs.length) { list.append(el('div', { class: 'empty' }, st.plugins.length ? 'Noch kein Job — „+ Job“ legt einen an (z. B. Sicherung jede Nacht).' : 'Kein Plugin mit Prozess installiert — Jobs brauchen eins (z. B. backup).')); return }
+    const jobs = st.plugin ? st.jobs.filter(j => j.plugin === st.plugin) : st.jobs
+    if (!jobs.length) { list.append(el('div', { class: 'empty' }, st.plugin ? `Noch kein Job mit Plugin ${st.plugin} — „+ Job“ legt einen an.` : st.plugins.length ? 'Noch kein Job — „+ Job“ legt einen an (z. B. Sicherung jede Nacht).' : 'Kein Plugin mit Prozess installiert — Jobs brauchen eins (z. B. backup).')); return }
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
     tbl.append(el('thead', {}, el('tr', {}, el('th', {}, ''), el('th', {}, 'Job'), el('th', {}, 'Plugin'), el('th', {}, 'Zeitplan'), el('th', {}, 'nächster Lauf'), el('th', {}, 'letzter Lauf'), el('th', {}, ''))))
     const tb = el('tbody')
-    for (const j of st.jobs) {
+    for (const j of jobs) {
       const [sym, cls] = j.running ? ['▶', 'warn'] : STATUS[j.last?.status] ?? ['·', 'muted']
       const tr = el('tr', { class: 'row' + (st.cur === j.key ? ' selected' : ''), style: 'cursor:default', onclick: () => { st.cur = j.key; drawList(); loadDetail(j.key) } },
         el('td', { class: cls, title: j.running ? 'läuft' : j.last?.status ?? 'noch nie gelaufen' }, sym),
@@ -112,10 +116,12 @@ async function mount(root, ctx) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
         let inp
         if (d.type === 'node') {
-          inp = el('input', { type: 'search', value: cur, placeholder: '🔍 Knoten (leer = ' + (d.label.includes('leer') ? 'wie beschrieben' : 'keiner') + ')', style: 'width:100%' })
-          const pick = el('div', { class: 'picker', style: 'display:none;max-height:160px' })
-          inp.addEventListener('input', () => { const q = inp.value.trim().toLowerCase(); pick.innerHTML = ''; const hits = q && !q.startsWith('g-') && !q.startsWith('p-') ? tree.rows.filter(r => r.role !== 'variant' && r.label.toLowerCase().includes(q)).slice(0, 10) : []; for (const r of hits) pick.append(el('div', { class: 'pick', onmousedown: e => { e.preventDefault(); inp.value = r.id; inp.title = r.label; pick.style.display = 'none' } }, `${r.role === 'group' ? '▣' : '▦'} ${r.label}`, el('span', { class: 'mono muted', style: 'margin-left:auto;font-size:11px' }, r.id))); pick.style.display = hits.length ? 'block' : 'none' })
-          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp, pick)
+          // Auswahlbaum (Taloan): Wert ist die Knoten-Id, sichtbar der Name; „leer“ wählbar (⌂)
+          inp = { value: cur }
+          const shown = el('span', { class: 'muted' }, cur ? tree.byId.get(cur)?.label ?? cur : '(leer)')
+          const box = el('div')
+          ctx.treePicker(box, { value: cur || null, roles: ['group', 'product'], height: 180, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
+          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), box)
         } else if (d.type === 'boolean') {
           inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
           Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })
@@ -155,6 +161,7 @@ async function mount(root, ctx) {
   // aus ⌁ Plugins „Als Job einrichten“: ?new=<plugin> öffnet den Dialog mit diesem Plugin
   const wanted = new URLSearchParams(location.search).get('new')
   if (wanted && st.plugins.some(p => p.key === wanted)) { history.replaceState(null, '', location.pathname); openEdit({ plugin: wanted, _new: true }) }
+  else if (st.plugin) history.replaceState(null, '', location.pathname)
   const poll = setInterval(() => { if (st.jobs.some(j => j.running)) load() }, 5000)
   return () => { clearInterval(poll); clearTimeout(st.timer) }
 }

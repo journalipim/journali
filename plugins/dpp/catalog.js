@@ -11,7 +11,7 @@ const isGtin = v => { const s = String(v).replace(/\s/g, ''); if (!/^\d{8}$|^\d{
 const isUrl = v => /^https?:\/\/\S+$/.test(String(v).trim()) ? null : 'URL (https://…) erwartet'
 
 export default {
-  key: 'dpp', label: 'Digitaler Produktpass (ESPR)', icon: '🪪',
+  key: 'dpp', label: 'Digitaler Produktpass (ESPR)', icon: '◈',
   source: 'https://eur-lex.europa.eu/eli/reg/2024/1781/oj', sourceLabel: 'EUR-Lex 2024/1781 ↗',
   description: 'Datenpunkte des Produktpasses nach ESPR Art. 7/9 und Anhang III. Je Datenpunkt das Attribut im Modell wählen (Best Guess vorbelegt) — oder die fehlenden anlegen; dann einen Teilbaum prüfen. Die Vorschrift gilt je Produktgruppe erst mit ihrem delegierten Rechtsakt; die Tabelle zeigt, wie weit die Daten heute tragen.',
   groupKey: 'dpp', groupLabel: 'DPP (ESPR)', prefix: 'dpp_',

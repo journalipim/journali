@@ -215,7 +215,7 @@ async function mountDesigner(root, ctx) {
     el('pre', { style: 'white-space:pre-wrap;margin:4px 0', html: '{{name}} {{sku}} {{id}} {{today}} · {{attr.key}} {{attr.key@en}} {{label.key}} {{unit.key}} · {{{attr.description}}} (HTML roh)\n{{#if image}}&lt;img src="{{image}}"&gt;{{/if}} · {{#each images}}{{url}}{{/each}}\n{{#each groups}}{{label}} {{#each attributes}}{{label}}: {{value}} {{unit}}{{/each}}{{/each}}\n{{#each variants}}{{sku}} {{name}} {{#each axes}}{{label}}: {{value}}{{/each}}{{/each}} · {{../name}} = Ebene hinauf · {{else}}' }),
     el('div', { class: 'chips' }, ...(store.model?.attributes ?? []).slice(0, 400).map(a => el('span', { class: 'chip', style: 'cursor:pointer', title: `${a.label?.de ?? ''} · ${a.type}`, onclick: () => { const s = ta.selectionStart; ta.setRangeText(a.type === 'html' ? `{{{attr.${a.key}}}}` : `{{attr.${a.key}}}`, s, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input')) } }, a.key))))
   root.append(
-    el('div', { class: 'toolbar' }, el('h1', {}, '📄 Datenblatt-Designer'), nameSel, nameIn, el('button', { class: 'primary', onclick: save, title: 'Vorlage speichern (Strg+S) — im Journal, für alle' }, '💾'), el('button', { class: 'x', onclick: remove, title: 'Vorlage löschen' }, '✕'),
+    el('div', { class: 'toolbar' }, el('h1', {}, '▤ Datenblatt-Designer'), nameSel, nameIn, el('button', { class: 'primary', onclick: save, title: 'Vorlage speichern (Strg+S) — im Journal, für alle' }, '💾'), el('button', { class: 'x', onclick: remove, title: 'Vorlage löschen' }, '✕'),
       el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, 'Rolle → Vorlage:'), el('span', { class: 'muted' }, '▣'), roleSel('group'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),
       el('span', { class: 'grow' }), el('span', { style: 'position:relative' }, nodeIn, pick), localeSel, el('button', { onclick: () => { if (state.node) sheet(ctx, state.node, ta.value, localeSel.value).then(h => openSheet(h, 'Datenblatt')) }, title: 'im neuen Fenster öffnen → drucken / PDF' }, '⎙ öffnen'), status),
     el('div', { style: 'display:flex;flex:1;min-height:0' },
@@ -226,10 +226,10 @@ async function mountDesigner(root, ctx) {
 }
 
 export default {
-  views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '📄', mount: mountWysiwyg }, { path: 'html', label: 'Datenblatt: HTML-Vorlage', icon: '‹›', mount: mountDesigner }],
+  views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '▤', mount: mountWysiwyg }, { path: 'html', label: 'Datenblatt: HTML-Vorlage', icon: '‹›', mount: mountDesigner }],
   nodeActions: [{
     // an jeder Rolle — auch die Gruppe hat ein Blatt (Datentabelle/Vergleich der Produkte darunter); Layout je Rolle (Taloan, 18.09.: „wo ist Datenblatt geblieben?“)
-    label: 'Datenblatt erstellen', icon: '📄',
+    label: 'Datenblatt erstellen', icon: '▤',
     async run(nodeId, ctx) {
       const row = ctx.tree.byId.get(nodeId); if (!row) return
       // Layout der Rolle (WYSIWYG); gibt es keins, aber eine HTML-Vorlage dieses Namens, die

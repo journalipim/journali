@@ -11,6 +11,7 @@ import { plugins } from '../plugins.js'
 import { suggest, plan as makePlan, parseDelimited, childAttributes, childRoleOf } from '../mapper.js'
 import Splitter from '../components/Splitter.vue'
 import ImportHead from '../components/ImportHead.vue'
+import TreePicker from '../components/TreePicker.vue'
 import { paneWidth } from '../panes.js'
 const leftW = paneWidth('import.table', 720)
 const router = useRouter()
@@ -36,7 +37,6 @@ const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
 const source = ref(null)        // { name, columns, rows, sheets?, sheet? , importer? }
 const mapping = ref([])         // aus suggest(), vom Menschen geändert
-const targetQ = ref('')
 const target = ref(null)        // Baumzeile
 const role = ref('')            // '' = automatisch (unter Gruppe: Produkt, unter Produkt: Variante)
 const external = ref('')        // System der externen Kennung (Spalte „external“)
@@ -49,9 +49,9 @@ const dragOver = ref(false)
 const say = m => log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${m}`)
 
 const attrs = computed(() => (model.value?.attributes ?? []).filter(a => a.type !== 'rows'))
-const targets = computed(() => { const q = targetQ.value.trim().toLowerCase(); if (q.length < 1) return []; return tree.rows.filter(r => r.role !== 'variant' && (r.label.toLowerCase().includes(q) || r.id.includes(q) || (r.sku ?? '').toLowerCase().includes(q))).slice(0, 12) })
 const targetPick = ref(false)
-function pickTarget(r) { target.value = r; targetQ.value = r.label; targetPick.value = false; planned.value = null }
+// Ziel per Auswahlbaum (Taloan): ohne Ziel steht der Baum offen, mit Ziel ein Chip — Klick auf den Chip klappt ihn wieder auf
+function pickTarget(r) { target.value = r; targetPick.value = false; planned.value = null }
 
 // ---- Quelle
 // Datei-Handle (File System Access API, Chrome/Edge): damit liest ↻ die Datei jederzeit neu von der Platte —
@@ -181,7 +181,7 @@ async function run() {
 // ---- Profil: Zuordnung (je Spaltenname), Ziel, Rolle, Kennung
 const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map(m => [m.column, { target: m.target, attribute: m.attribute, locale: m.locale, newKey: m.newKey, newType: m.newType, newGroup: m.newGroup }])) })
 function profileSet(p) {
-  if (!p) { target.value = null; targetQ.value = ''; role.value = ''; external.value = ''; planned.value = null; return }
+  if (!p) { target.value = null; role.value = ''; external.value = ''; planned.value = null; return }
   role.value = p.role ?? ''; external.value = p.external ?? ''
   if (p.target && tree.byId.get(p.target)) pickTarget(tree.byId.get(p.target))
   if (p.mapping && source.value) for (const m of mapping.value) { const s = p.mapping[m.column]; if (s) Object.assign(m, s) }
@@ -209,12 +209,9 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span class="muted">→ {{ roleLabel[fixed.childRole] }} · {{ fixed.allowed.size }} mögliche Spalten</span>
         <span class="grow" /><button class="x" @click="router.replace('/import/table')" title="Knotenmodus verlassen — frei zuordnen">×</button>
       </td></tr>
-      <tr v-if="!fixed"><td class="attr">Ziel</td><td class="row" style="position:relative">
-        <input v-if="!target" v-model="targetQ" type="search" placeholder="🔍 Gruppe oder Produkt — wohin neue Zeilen kommen" @focus="targetPick = true" @input="targetPick = true" @keydown.esc="targetPick = false" />
-        <span v-else class="chip" :title="target.id">{{ icon(target.role) }} {{ target.label }} <button @click="target = null; targetQ = ''" title="Ziel weg">×</button></span>
-        <div v-if="!target && targetPick && targets.length" class="picker" style="position:absolute;left:4px;top:28px;z-index:5;width:380px">
-          <div v-for="r in targets" :key="r.id" class="pick" @mousedown.prevent="pickTarget(r)">{{ icon(r.role) }} {{ r.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ r.id }}</span></div>
-        </div>
+      <tr v-if="!fixed"><td class="attr">Ziel</td><td>
+        <div class="row" style="margin-bottom:4px"><span v-if="target" class="chip" :title="target.id + ' — Klick: im Baum ändern'" style="cursor:pointer" @click="targetPick = !targetPick">{{ icon(target.role) }} {{ target.label }} <button @click.stop="target = null; planned = null" title="Ziel weg">×</button></span><span v-else class="muted">Gruppe oder Produkt — wohin neue Zeilen kommen</span></div>
+        <TreePicker v-if="!target || targetPick" :model-value="target?.id ?? ''" :height="200" @pick="pickTarget" />
       </td></tr>
       <tr v-if="!fixed"><td class="attr">Neue als</td><td><select v-model="role" title="Rolle neuer Zeilen" @change="planned = null" style="width:100%">
         <option value="">automatisch (unter Gruppe → Produkt, unter Produkt → Variante)</option><option value="group">▣ Gruppen</option><option value="product">▦ Produkte</option><option value="variant">◆ Varianten</option>

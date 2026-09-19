@@ -17,10 +17,10 @@ export async function mountExport(root, ctx) {
   const remember = () => ctx.data.set('export', { format: st.format, locales: st.locales, ownOnly: st.ownOnly, gzip: st.gzip }).catch(() => {})
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
-  const rootIn = el('input', { type: 'search', placeholder: '🔍 Gruppe oder Produkt', style: 'width:100%', value: tree.byId.get(st.root)?.label ?? '' })
-  const pick = el('div', { class: 'picker', style: 'position:absolute;left:4px;top:28px;z-index:5;width:380px;display:none' })
-  rootIn.addEventListener('input', () => { const q = rootIn.value.trim().toLowerCase(); pick.innerHTML = ''; const hits = q ? tree.rows.filter(r => r.label.toLowerCase().includes(q) || r.id.includes(q)).slice(0, 12) : []; for (const r of hits) pick.append(el('div', { class: 'pick', onmousedown: e => { e.preventDefault(); st.root = r.id; rootIn.value = r.label; pick.style.display = 'none'; localStorage.setItem('journali.export.root', r.id) } }, `${ICON[r.role]} ${r.label}`, el('span', { class: 'mono muted', style: 'margin-left:auto;font-size:11px' }, r.id))); pick.style.display = hits.length ? 'block' : 'none' })
-  rootIn.addEventListener('blur', () => setTimeout(() => pick.style.display = 'none', 150))
+  // Auswahlbaum (Taloan) statt Suche nach Name
+  const chosen = el('div', { class: 'muted', style: 'margin:2px 0 4px' }, st.root ? `${ICON[tree.byId.get(st.root)?.role] ?? ''} ${tree.byId.get(st.root)?.label ?? ''}` : 'im Baum wählen')
+  const treeBox = el('div')
+  ctx.treePicker(treeBox, { value: st.root, roles: ['group', 'product', 'variant'], height: 220, onPick: r => { st.root = r.id; chosen.textContent = `${ICON[r.role]} ${r.label}`; localStorage.setItem('journali.export.root', r.id) } })
   const fmtSel = el('select', { style: 'width:100%', onchange: e => { st.format = e.target.value; remember(); drawOpts() } },
     el('option', { value: 'raw' }, 'Rohdaten — wiederherstellbar (eigene Werte, Skripte, Modellteil)'),
     el('option', { value: 'tree' }, 'ausgewertet, Baum — für Abnehmer (Werte aufgelöst, geerbt zählt)'),
@@ -57,7 +57,7 @@ export async function mountExport(root, ctx) {
     } catch (e) { say('✗ ' + e.message); store.toast(e.message) }
   }
   const table = el('table', { class: 'grid', style: 'width:100%;border-bottom:1px solid var(--line)' }, el('tbody', {},
-    step('1 · Was'), row('Teilbaum', rootIn, pick),
+    step('1 · Was'), row('Teilbaum', chosen, treeBox),
     step('2 · Wie'), row('Form', fmtSel), optsRow2(), row('Datei', el('label', {}, gzCb, ' gzip (.json.gz — Import und Job lesen es direkt)')),
     row('', el('span', { class: 'row', style: 'display:flex;gap:6px' }, el('button', { onclick: () => run(false) }, 'Vorschau'), el('button', { class: 'primary', onclick: () => run(true) }, '⇪ herunterladen')))))
   function drawOpts() { const cur = table.querySelector('tr[data-opts]'); cur?.replaceWith(optsRow2()) }

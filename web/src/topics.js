@@ -8,7 +8,7 @@ import { plugins } from './plugins.js'
 export const TOPICS = [
   { key: 'import', to: '/import', icon: '⇩', label: 'Import', hotkey: '4', always: true },
   { key: 'export', to: '/export', icon: '⇪', label: 'Export' },
-  { key: 'datasheet', to: '/datasheet', icon: '📄', label: 'Datenblatt' },
+  { key: 'datasheet', to: '/datasheet', icon: '▤', label: 'Datenblatt' },
   { key: 'analysis', to: '/analysis', icon: '✓', label: 'Datenanalyse' },
   { key: 'tools', to: '/tools', icon: '⌁', label: 'Werkzeuge' },
   { key: 'jobs', to: '/jobs', icon: '⏱', label: 'Jobs' },   // Plugin tasker (Taloan, 19.09.): Jobs im Server, Zeitplan, Logs

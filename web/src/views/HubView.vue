@@ -1,5 +1,5 @@
 <script setup>
-// Übersicht eines Themas (Taloan, 18.09.2026): nach Klick auf ⇩ Import (⇪ Export, 📄 Datenblatt, ✓ Datenanalyse, ⌁ Werkzeuge)
+// Übersicht eines Themas (Taloan, 18.09.2026): nach Klick auf ⇩ Import (⇪ Export, ▤ Datenblatt, ✓ Datenanalyse, ⌁ Werkzeuge)
 // wählt man hier das Plugin, das man ausführen will — als Kacheln (Taloan: „zeitgemässer“): Symbol gross, Name,
 // ein Satz aus dem Manifest, unten Plugin und Fassung. Kein festes Spaltenlayout für alle: jede Ansicht hat ihr eigenes.
 import { computed, watchEffect } from 'vue'

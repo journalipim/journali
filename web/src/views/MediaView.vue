@@ -1,5 +1,5 @@
 <script setup>
-// 🖼 Medien (docs/pflegestruktur.md, 20): links die Bibliothek als Kacheln (Suche, Hochladen per
+// ▨ Medien (docs/pflegestruktur.md, 20): links die Bibliothek als Kacheln (Suche, Hochladen per
 // Knopf oder Ablegen), rechts das gewählte Medium — Datei, Werte (Alt-Text, Rechte), wo es hängt.
 // Die Bytes liegen im Store des Servers; hier laufen nur /api/media und die Zellen.
 import { ref, computed, onMounted } from 'vue'
@@ -56,7 +56,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 
 <template>
   <div class="pane" :style="`width:${listW}px;flex:none`" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop" :class="{ over: dragOver }">
-    <div class="toolbar"><h1>🖼 Medien</h1><span class="muted">{{ items.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
+    <div class="toolbar"><h1>▨ Medien</h1><span class="muted">{{ items.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:4px">
       <input v-model="q" type="search" placeholder="🔍 Name, Id, Werte" style="flex:1;min-width:0" @input="search" />
       <button class="primary" @click="fileInput.click()" title="Dateien hochladen — oder hierher ziehen">⇧ hochladen</button>
@@ -65,7 +65,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
     <div class="scroll tiles">
       <div v-for="m in items" :key="m.id" class="tile" :class="{ current: cur === m.id }" @click="cur = m.id" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}`">
         <img v-if="m.isImage" :src="`/api/media/${m.id}/file`" loading="lazy" alt="" />
-        <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '📄' }}</div>
+        <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
         <div class="name">{{ m.name }}</div>
         <div class="muted meta">{{ kb(m.bytes) }}<span v-if="m.used"> · ⇄ {{ m.used }}</span></div>
       </div>
@@ -75,7 +75,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
   <Splitter v-model="listW" :min="300" :max="1200" />
 
   <div class="pane" style="flex:1" v-if="current">
-    <div class="toolbar"><h1>🖼 {{ current.name }}</h1><span class="mono muted">{{ current.id }}</span><span class="grow" />
+    <div class="toolbar"><h1>▨ {{ current.name }}</h1><span class="mono muted">{{ current.id }}</span><span class="grow" />
       <a :href="`/api/media/${current.id}/file`" target="_blank" class="muted" title="Datei öffnen">↗ Datei</a>
       <button class="x" @click="retire(current)" title="Medium zurückziehen (die Datei bleibt im Store)">🗑</button></div>
     <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>· ⇄ {{ current.used }} Knoten</span><span class="grow" /><span>≡ {{ current.entries }} · #{{ current.lastNumber }} {{ when(current.lastAt) }} 👤 {{ current.lastActor }}</span></div>

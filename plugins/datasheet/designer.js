@@ -21,7 +21,7 @@ export const DEFAULT_LAYOUT = () => ({
 const PALETTE = [
   { kind: 'section', columns: 1, label: '▭ Abschnitt, 1 Spalte' }, { kind: 'section', columns: 2, label: '▯▯ Abschnitt, 2 Spalten' },
   { kind: 'section', columns: 3, label: '▯▯▯ Abschnitt, 3 Spalten' }, { kind: 'section', columns: 4, label: '▯▯▯▯ Abschnitt, 4 Spalten' },
-  { kind: 'text', label: '¶ Text' }, { kind: 'image', label: '🖼 Bild' }, { kind: 'variants', label: '⊞ Datentabelle (Subitems)' }, { kind: 'compare', label: '⊟ Vergleichstabelle' }, { kind: 'pagebreak', label: '⤓ Seitenumbruch' },
+  { kind: 'text', label: '¶ Text' }, { kind: 'image', label: '▨ Bild' }, { kind: 'variants', label: '⊞ Datentabelle (Subitems)' }, { kind: 'compare', label: '⊟ Vergleichstabelle' }, { kind: 'pagebreak', label: '⤓ Seitenumbruch' },
 ]
 const newItem = t => t.kind === 'section' ? { id: nid(), kind: 'section', title: '', columns: t.columns, cells: Array.from({ length: t.columns }, () => []) }
   : t.kind === 'text' ? { id: nid(), kind: 'text', html: 'Text …' }
@@ -63,7 +63,7 @@ function renderItem(it, d, model, edit, ctx) {
     case 'image': {
       const imgs = it.which === 'all' ? d.images : d.images.slice(0, 1)
       e = el('div', { class: 'ds-images' }, ...imgs.map(i => el('img', { src: i.url, style: `max-height:${it.height ?? 50}mm` })))
-      if (!imgs.length) e.append(el('div', { class: 'ds-noimg muted' }, edit ? '🖼 kein Bild am Knoten' : '')); break
+      if (!imgs.length) e.append(el('div', { class: 'ds-noimg muted' }, edit ? '▨ kein Bild am Knoten' : '')); break
     }
     case 'text':
       e = el('div', { class: 'ds-text', html: fill(it.html, d) })
@@ -220,10 +220,12 @@ export async function mountDesigner(root, ctx) {
   const nameSel = el('select', {}, ...['standard', ...names.filter(n => n !== 'standard')].map(n => el('option', { value: n }, n)))
   const nameIn = el('input', { type: 'text', placeholder: 'neuer Name', style: 'width:110px' })
   const roleSel = role => { const s = el('select', { title: `Vorlage für ${role}` }, ...['standard', ...names.filter(n => n !== 'standard')].map(n => el('option', { value: n }, n))); s.value = sett[role] ?? 'standard'; s.addEventListener('change', async () => { sett[role] = s.value; await ctx.data.set('settings', sett); store.toast(`${role} → ${s.value}`, 'ok') }); return s }
-  const nodeIn = el('input', { type: 'search', placeholder: '🔍 Knoten (Produkt/Variante)', style: 'width:240px', value: st.node ? tree.byId.get(st.node)?.label ?? '' : '' })
-  const pick = el('div', { class: 'picker', style: 'position:absolute;z-index:5;width:360px;display:none' })
-  nodeIn.addEventListener('input', () => { const q = nodeIn.value.trim().toLowerCase(); pick.innerHTML = ''; const hits = q ? tree.rows.filter(r => r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q)).slice(0, 12) : []; for (const r of hits) pick.append(el('div', { class: 'pick', onmousedown: e => { e.preventDefault(); st.node = r.id; nodeIn.value = r.label; pick.style.display = 'none'; localStorage.setItem('journali.datasheet.node', r.id); reload() } }, `${{ group: '▣', product: '▦', variant: '◆' }[r.role]} ${r.label}`)); pick.style.display = hits.length ? 'block' : 'none' })
-  nodeIn.addEventListener('blur', () => setTimeout(() => pick.style.display = 'none', 150))
+  // Knoten per Auswahlbaum (Taloan): Knopf zeigt den gewählten, Klick klappt den Baum darunter auf
+  const nodeBtn = el('button', { class: 'x', title: 'Knoten für die Vorschau wählen' }, st.node ? `${{ group: '▣', product: '▦', variant: '◆' }[tree.byId.get(st.node)?.role] ?? ''} ${tree.byId.get(st.node)?.label ?? ''}` : '🔍 Knoten wählen')
+  const pick = el('div', { class: 'picker', style: 'position:absolute;right:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
+  ctx.treePicker(pick, { value: st.node, roles: ['group', 'product', 'variant'], height: 300, onPick: r => { st.node = r.id; nodeBtn.textContent = `${{ group: '▣', product: '▦', variant: '◆' }[r.role]} ${r.label}`; pick.style.display = 'none'; localStorage.setItem('journali.datasheet.node', r.id); reload() } })
+  nodeBtn.addEventListener('click', () => { pick.style.display = pick.style.display === 'none' ? 'block' : 'none' })
+  const nodeIn = nodeBtn
   const localeSel = el('select', {}, ...(model?.locales ?? []).map(l => el('option', { value: l.code }, l.code))); localeSel.value = st.locale
   localeSel.addEventListener('change', () => { st.locale = localeSel.value; sett.locale = st.locale; ctx.data.set('settings', sett); reload() })
   const dirtyChip = el('span', { class: 'chip', style: 'display:none' }, '✎ ungespeichert')
@@ -235,11 +237,11 @@ export async function mountDesigner(root, ctx) {
   }
   async function loadLayout(n) { const l = await ctx.data.get(L + n); st.layout = l ?? DEFAULT_LAYOUT(); st.name = n; st.sel = null; st.dirty = false; dirtyChip.style.display = 'none'; draw() }
   nameSel.addEventListener('change', () => loadLayout(nameSel.value))
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '📄 Datenblatt-Designer'), nameSel, nameIn,
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '▤ Datenblatt-Designer'), nameSel, nameIn,
     el('button', { class: 'primary', onclick: save, title: 'Layout speichern (Strg+S)' }, '💾'), dirtyChip,
     el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, '▣'), roleSel('group'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),
     el('span', { class: 'grow' }), el('span', { style: 'position:relative' }, nodeIn, pick), localeSel,
-    el('button', { onclick: () => { if (!st.node || !st.data) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(renderSheet(st.layout, st.data, model)); w.document.close() }, title: 'fertiges Blatt in neuem Fenster (drucken → PDF)' }, '🖨 Blatt')))
+    el('button', { onclick: () => { if (!st.node || !st.data) return; const w = window.open('', '_blank'); if (!w) return; w.document.open(); w.document.write(renderSheet(st.layout, st.data, model)); w.document.close() }, title: 'fertiges Blatt in neuem Fenster (drucken → PDF)' }, '⎙ Blatt')))
 
   // -- drei Bereiche
   const pal = el('div', { class: 'pal' }), canvas = el('div', { class: 'canvas' }), props = el('div', { class: 'props' })

@@ -19,7 +19,7 @@ export const store = reactive({
   editableOnly: saved.editableOnly ?? false,         // nur Gruppen zeigen, die hier bearbeitbar sind
   attrNames: saved.attrNames ?? 'label',             // Attributnamen: label | key | both (Taloan: Vorlagen nutzen die Keys)
   railOrder: Array.isArray(saved.railOrder) ? saved.railOrder : null,   // Reihenfolge der Leiste links (Taloan: selbst sortieren), 'spacer' trennt oben/unten
-  railPlugins: Array.isArray(saved.railPlugins) ? saved.railPlugins : [],   // Plugins mit eigenem Symbol in der Leiste (Taloan, 19.09.: je Plugin einstellbar)
+  railOff: Array.isArray(saved.railOff) ? saved.railOff : [],   // Plugins, die nicht in der Leiste sind (Taloan, 19.09.: je Plugin einstellbar; aus = gar nicht in der Leiste, nur über ⌁ Plugins)
   undo: {},                                         // ↶/↷ je Knoten: id → { history, redo } — im Store, weil NodeView je Knoten neu gebaut wird (Taloan)
   pendingImport: null,                              // { file, parent } — JSON-Datei, die der JSON-Import gleich öffnen soll (Baum-Drop, Menü, Tabellenimport)
   attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel (Taloan), nicht gespeichert
@@ -46,7 +46,7 @@ export const store = reactive({
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, editableOnly: this.editableOnly, attrNames: this.attrNames, railOrder: this.railOrder, railPlugins: this.railPlugins, collapsed: this.collapsed }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, editableOnly: this.editableOnly, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
     this.applyTheme()
   },
 

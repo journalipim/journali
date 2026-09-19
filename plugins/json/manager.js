@@ -62,7 +62,8 @@ export async function mountManager(root, ctx) {
   const taskerOn = !!ctx.plugins?.enabled?.('tasker')   // Knopf nur mit Tasker (Taloan)
   const jobBtn = el('button', { class: 'x', title: taskerOn ? 'diesen Import als Job einrichten (Profil speichern, dann Jobs → + Job mit Plugin Import: JSON)' : 'Jobs brauchen das Plugin tasker (⌁ Plugins → einschalten)', onclick: async () => { if (!(profIn.value || profSel.value).trim()) { store.toast('erst ein Profil benennen und speichern'); return } await saveProfile(); ctx.go?.('/p/tasker/jobs?new=json') } }, '⏱ als Job einrichten')
   if (!taskerOn) jobBtn.disabled = true
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⇩ JSON-Import'), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { class: 'x', title: 'Zuordnung, Präfix und Ziel als Profil speichern', onclick: saveProfile }, '💾'), jobBtn, el('span', { class: 'grow' }), status), body)
+  const manageBtn = el('button', { class: 'x', title: 'die JSON-Import-Jobs im Tasker — Zeitplan, Läufe, Logs', onclick: () => ctx.go?.('/p/tasker/jobs?plugin=json') }, '⏱ Jobs verwalten'); if (!taskerOn) manageBtn.disabled = true
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⇩ JSON-Import'), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { class: 'x', title: 'Zuordnung, Präfix und Ziel als Profil speichern', onclick: saveProfile }, '💾'), jobBtn, manageBtn, el('span', { class: 'grow' }), status), body)
   loadProfiles()
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)
 
@@ -150,25 +151,12 @@ export async function mountManager(root, ctx) {
     const n = st.raw.node
     // Zielbaum (Taloan: „wie kommt ein Anwender an die Id?“): Gruppen und Produkte als Baum, Klick wählt; Varianten sind kein Ziel
     const open = new Set((st.parent ? [...tree.ancestors(st.parent).map(a => a.id), st.parent] : []).concat(tree.rows.filter(r => !r.parent).map(r => r.id)))
-    const box = el('div', { class: 'picker', style: 'max-height:260px;margin-top:4px;width:min(520px,100%)' })
-    const allowed = r => n.role === 'variant' ? r.role === 'product' : r.role === 'group'
-    const drawTree = () => {
-      box.innerHTML = ''
-      const rec = (id, depth) => { for (const r of tree.kids(id)) { if (r.role === 'variant') continue
-        const kids = tree.kids(r.id).filter(k => k.role !== 'variant').length
-        // Das gewählte Ziel bekommt einen Pfeil und Akzentschrift, keinen Auswahlbalken (Taloan, 18.09.: Balken heisst „hier steht der Cursor“);
-        // was kein Ziel sein kann, ist gedämpft und reagiert nicht auf die Maus
-        const isTarget = st.parent === r.id
-        const row = el('div', { class: 'pick' + (allowed(r) ? '' : ' off'), style: `padding-left:${8 + depth * 16}px;${allowed(r) ? '' : 'opacity:.45;cursor:default'}${isTarget ? ';color:var(--accent);font-weight:600' : ''}`, title: allowed(r) ? r.id : 'kein passendes Ziel für ' + ICON[n.role] })
-        row.append(el('span', { class: 'muted', style: 'width:14px;display:inline-block', onclick: e => { e.stopPropagation(); open.has(r.id) ? open.delete(r.id) : open.add(r.id); drawTree() } }, kids ? (open.has(r.id) ? '▾' : '▸') : ''), el('span', {}, `${isTarget ? '→ ' : ''}${ICON[r.role]} ${r.label}`))
-        row.addEventListener('click', async () => { if (!allowed(r)) return; st.parent = r.id; drawTarget(); await findMissing(); drawRun() })
-        box.append(row)
-        if (open.has(r.id)) rec(r.id, depth + 1) } }
-      rec(null, 0)
-    }
-    drawTree()
+    const box = el('div', { style: 'margin-top:4px;width:min(520px,100%)' })
+    const roles = n.role === 'variant' ? ['product'] : ['group']
+    const shownTarget = el('b', {}, st.parent ? tree.byId.get(st.parent)?.label ?? st.parent : 'Wurzel')
+    ctx.treePicker(box, { value: st.parent, roles, height: 260, allowRoot: n.role === 'group', onPick: r => { st.parent = r?.id ?? null; shownTarget.textContent = r ? r.label : 'Wurzel'; drawRun() } })
     const rootBtn = el('button', { class: 'x', style: 'margin-top:4px', onclick: async () => { st.parent = null; drawTarget(); await findMissing(); drawRun() }, title: 'als eigene Wurzel — nur für Produktgruppen' }, '⌂ als Wurzel')
-    s3.append(el('div', { style: 'font-size:12px' }, `${ICON[n.role]} ${n.name ?? n.id}${st.count > 1 ? ` mit ${st.count - 1} darunter` : ''} → `, el('b', {}, st.parent ? tree.byId.get(st.parent)?.label ?? st.parent : 'Wurzel')), box, n.role === 'group' ? rootBtn : '')
+    s3.append(el('div', { style: 'font-size:12px' }, `${ICON[n.role]} ${n.name ?? n.id}${st.count > 1 ? ` mit ${st.count - 1} darunter` : ''} → `, shownTarget), box)
     s3.append(el('div', { class: 'muted', style: 'font-size:12px;margin-top:6px' }, st.existing ? `${st.existing} der ${st.count} Knoten gibt es hier schon (gleiche Id) — sie werden angeglichen, nicht verdoppelt; zurückgezogene kommen zurück.` : 'Kein Knoten mit diesen Ids im System — alles wird neu angelegt (neue Ids).'))
   }
 

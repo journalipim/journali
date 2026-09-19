@@ -10,6 +10,7 @@ import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode, attrType, POLICY, POLICY_TEXT, pol
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
 import ImportHead from '../components/ImportHead.vue'
+import TreePicker from '../components/TreePicker.vue'
 import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
@@ -223,8 +224,8 @@ function toggleLocale(l) {
       <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
         <tbody>
           <tr><td class="muted">Ziel ▣</td><td>
-            <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
-            <span class="muted">neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</span>
+            <div class="muted" style="margin-bottom:4px">{{ target ? '▣ ' + (tree.byId.get(target)?.label ?? target) : '⌂ Wurzel' }} · neue Gruppen und Produkte hängen hier unter; im Quellbaum tiefere unter ihre importierten Eltern</div>
+            <TreePicker v-model="target" :roles="['group']" allow-root :height="180" @pick="persist" />
           </td></tr>
           <tr><td class="muted">Sprachen 🗣</td><td>
             <template v-if="languages.length">

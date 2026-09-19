@@ -11,6 +11,7 @@ import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKI
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
 import ImportHead from '../components/ImportHead.vue'
+import TreePicker from '../components/TreePicker.vue'
 import { paneWidth } from '../panes.js'
 const srcW = paneWidth('import.src', 340)
 
@@ -377,8 +378,8 @@ async function run() {
       <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
         <tbody>
           <tr><td class="muted">Ziel ▣</td><td>
-            <select v-model="target" @change="persist"><option value="">— Wurzel —</option><option v-for="g in groups" :key="g.id" :value="g.id">{{ g.label }}</option></select>
-            <span class="muted">angehakte Wurzeln kommen hier unter; tiefere unter ihre importierten Eltern</span>
+            <div class="muted" style="margin-bottom:4px">{{ target ? '▣ ' + (tree.byId.get(target)?.label ?? target) : '⌂ Wurzel' }} · angehakte Wurzeln kommen hier unter; tiefere unter ihre importierten Eltern</div>
+            <TreePicker v-model="target" :roles="['group']" allow-root :height="180" @pick="persist" />
           </td></tr>
           <tr><td class="muted">Übergehen</td><td>
             <input v-model="skipText" type="text" placeholder="weitere Schlüssel, Muster mit *" style="width:260px" @change="persist" />

@@ -8,30 +8,36 @@ import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
 import { plugins } from '../plugins.js'
 import { build, toCsv, toXlsx, download } from '../tableExport.js'
+import TreePicker from '../components/TreePicker.vue'
 
 const route = useRoute()
 const saved = JSON.parse(localStorage.getItem('journali.export.table') || '{}')
-const root = ref(route.query.node || localStorage.getItem('journali.export.root') || '')
+// mehrere Teilbäume mit Haken (Taloan: „mit selektierbaren Knoten“) — Zeilen aller gewählten, jeder Knoten einmal
+const roots = ref(route.query.node ? [route.query.node] : (saved.roots ?? []))
 const role = ref(saved.role ?? '')
 const locales = ref(saved.locales ?? [store.model?.masterLocale ?? 'de'])
 const ownOnly = ref(saved.ownOnly ?? false)
 const viewKey = ref(saved.viewKey ?? '')
 const format = ref(saved.format ?? 'xlsx')
-const q = ref('')
-const hits = computed(() => { const s = q.value.trim().toLowerCase(); return s ? tree.rows.filter(r => r.role !== 'variant' && (r.label.toLowerCase().includes(s) || r.id.includes(s))).slice(0, 12) : [] })
-const rootRow = computed(() => tree.byId.get(root.value))
+const rootRows = computed(() => roots.value.map(id => tree.byId.get(id)).filter(Boolean))
 const busy = ref(''); const table = ref(null)
-const persist = () => localStorage.setItem('journali.export.table', JSON.stringify({ role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, format: format.value }))
-onMounted(async () => { if (!tree.loaded) await tree.load(); if (!root.value) root.value = tree.rows.find(r => !r.parent)?.id ?? '' })
-function pick(r) { root.value = r.id; q.value = ''; localStorage.setItem('journali.export.root', r.id) }
+const persist = () => localStorage.setItem('journali.export.table', JSON.stringify({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, format: format.value }))
+onMounted(async () => { if (!tree.loaded) await tree.load(); if (!roots.value.length) roots.value = tree.rows.filter(r => !r.parent).slice(0, 1).map(r => r.id) })
 function toggleLocale(c) { const s = new Set(locales.value); s.has(c) ? s.delete(c) : s.add(c); locales.value = store.model.locales.map(l => l.code).filter(x => s.has(x)); persist() }
 async function run(downloadIt) {
-  if (!root.value) return; if (!locales.value.length) { store.toast('mindestens eine Sprache'); return }
+  if (!roots.value.length) { store.toast('Teilbaum im Baum anhaken'); return } if (!locales.value.length) { store.toast('mindestens eine Sprache'); return }
   try {
-    const t = await build({ root: root.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, say: m => { busy.value = m } })
+    persist()
+    // je gewählter Wurzel eine Tabelle, zusammengeführt — gleiche Spalten in derselben Reihenfolge, Zeilen einmal
+    const parts = []; for (const r of roots.value) parts.push(await build({ root: r, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, say: m => { busy.value = m } }))
+    const colKeys = [...new Set(parts.flatMap(p => p.columns.map(c => c.key)))]
+    const columns = colKeys.map(k => parts.flatMap(p => p.columns).find(c => c.key === k))
+    const seen = new Set(); const rows = []
+    for (const p of parts) { const idx = p.columns.map(c => colKeys.indexOf(c.key)); for (const r of p.rows) { if (seen.has(r[0])) continue; seen.add(r[0]); const line = colKeys.map(() => ''); r.forEach((v, i) => { line[idx[i]] = v }); rows.push(line) } }
+    const t = { columns, rows, count: rows.length }
     table.value = t; busy.value = `${t.count} Zeilen · ${t.columns.length} Spalten`
     if (!downloadIt) return
-    const name = `${rootRow.value?.label ?? 'export'}-${role.value || 'alle'}-${locales.value.join('-')}`.replace(/[^\w.-]+/g, '_')
+    const name = `${rootRows.value.map(r => r.label).join('+') || 'export'}-${role.value || 'alle'}-${locales.value.join('-')}`.replace(/[^\w.-]+/g, '_').slice(0, 80)
     if (format.value === 'csv') download(new Blob([toCsv(t)], { type: 'text/csv;charset=utf-8' }), name + '.csv')
     else download(await toXlsx(t), name + '.xlsx')
     store.toast(`⇪ ${t.count} Zeilen exportiert`, 'ok')
@@ -47,9 +53,9 @@ async function run(downloadIt) {
       <span class="grow" /><span class="muted">{{ busy }}</span></div>
     <table class="grid form"><colgroup><col style="width:84px" /><col /></colgroup><tbody>
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">1 · Was</td></tr>
-      <tr><td class="attr">Teilbaum</td><td style="position:relative">
-        <div class="row"><span v-if="rootRow" class="chip">{{ icon(rootRow.role) }} {{ rootRow.label }}</span><input v-model="q" type="search" placeholder="🔍 Gruppe oder Produkt" /></div>
-        <div v-if="hits.length" class="picker" style="position:absolute;left:4px;top:28px;z-index:5;width:380px"><div v-for="r in hits" :key="r.id" class="pick" @mousedown.prevent="pick(r)">{{ icon(r.role) }} {{ r.label }}<span class="mono muted" style="margin-left:auto;font-size:11px">{{ r.id }}</span></div></div>
+      <tr><td class="attr">Teilbaum</td><td>
+        <div class="chips" style="margin:2px 0 4px"><span v-for="r in rootRows" :key="r.id" class="chip">{{ icon(r.role) }} {{ r.label }}</span><span v-if="!rootRows.length" class="muted">Teilbäume anhaken — ein Haken gilt für alles darunter</span></div>
+        <TreePicker v-model="roots" multi :height="220" />
       </td></tr>
       <tr><td class="attr">Knoten</td><td><select v-model="role" @change="persist" style="width:100%"><option value="">alle Knoten darunter</option><option value="group">▣ nur Gruppen</option><option value="product">▦ nur Produkte</option><option value="variant">◆ nur Varianten</option></select></td></tr>
       <tr><td class="attr">Sprachen</td><td><div class="chips"><span v-for="l in store.model?.locales ?? []" :key="l.code" class="view-chip" :class="{ on: locales.includes(l.code) }" @click="toggleLocale(l.code)">{{ l.code }}</span></div></td></tr>
@@ -58,7 +64,7 @@ async function run(downloadIt) {
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">2 · Wie</td></tr>
       <tr><td class="attr">Format</td><td><select v-model="format" @change="persist" style="width:100%"><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (; UTF-8, Excel-tauglich)</option></select></td></tr>
       <tr><td class="attr"></td><td><div class="row"><button @click="run(false)">Vorschau</button><button class="primary" @click="run(true)">⇪ herunterladen</button>
-        <router-link v-if="plugins.enabled('tasker') && plugins.enabled('export')" to="/p/tasker/jobs?new=export" custom v-slot="{ navigate }"><button @click="navigate" title="denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)">⏱ als Job</button></router-link></div></td></tr>
+        <router-link v-if="plugins.enabled('tasker') && plugins.enabled('export')" to="/p/tasker/jobs?new=export" custom v-slot="{ navigate }"><button @click="navigate" title="denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)">⏱ als Job</button></router-link><router-link v-if="plugins.enabled('tasker') && plugins.enabled('export')" to="/p/tasker/jobs?plugin=export" custom v-slot="{ navigate }"><button @click="navigate" title="die Export-Jobs im Tasker — Zeitplan, Läufe, Logs">⏱ Jobs verwalten</button></router-link></div></td></tr>
     </tbody></table>
     <div class="step-band">3 · Vorschau <span class="muted">· erste 200 Zeilen</span></div>
     <div class="scroll">

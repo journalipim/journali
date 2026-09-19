@@ -13,8 +13,12 @@ const listW = paneWidth('plugins.list', 380)
 const cur = ref(null)
 const busy = ref('')
 // Symbol in der Leiste je Plugin (Taloan): Einstellung des Nutzers, nicht des Plugins
-function toggleRail(key) { const s = new Set(store.railPlugins); s.has(key) ? s.delete(key) : s.add(key); store.railPlugins = [...s]; store.save() }
-const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '🛠 Werkzeug', output: '📄 Ausgabe', edit: '✎ Pflege' }
+// Jobs je Plugin (für „Jobs verwalten“): einmal geladen, wenn der Tasker an ist
+const jobs = ref([])
+onMounted(async () => { if (plugins.enabled('tasker')) { try { jobs.value = await api.get('/api/jobs') } catch {} } })
+const jobCount = key => jobs.value.filter(j => j.plugin === key).length
+function toggleRail(key) { const s = new Set(store.railOff); s.has(key) ? s.delete(key) : s.add(key); store.railOff = [...s]; store.save() }
+const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '⌁ Werkzeug', output: '▤ Ausgabe', edit: '✎ Pflege' }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
 const manifest = computed(() => current.value?.manifest ?? {})
 const label = m => m?.label?.de || m?.label?.en || ''
@@ -71,12 +75,12 @@ function pick(k) { cur.value = k }
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar">
       <h1>⌁ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
-      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : manifest.runs === 'office' ? (current.key === 'onlyoffice' ? '📗 OnlyOffice' : '📗 Excel-Add-in') : '🖥 Browser' }}{{ manifest.process ? ' + ⚙ Prozess' : '' }}</span>
+      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : manifest.runs === 'office' ? (current.key === 'onlyoffice' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : '▭ Browser' }}{{ manifest.process ? ' + ⚙ Prozess' : '' }}</span>
       <span class="grow" />
       <template v-if="current.onDisk && !current.installed"><button class="primary" @click="act(`/api/plugins/${current.key}/install`)">⇩ installieren {{ current.diskVersion }}</button></template>
       <template v-else-if="current.installed">
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">↑ aktualisieren auf {{ current.diskVersion }}</button>
-        <button v-if="current.enabled && plugins.views.some(x => x.key === current.key)" :class="{ primary: store.railPlugins.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railPlugins.includes(current.key) ? 'eigenes Symbol in der Leiste links — Klick nimmt es weg (bleibt über sein Thema erreichbar)' : 'eigenes Symbol in der Leiste links (nur für dich, in den Einstellungen)'">{{ store.railPlugins.includes(current.key) ? '▮ in der Leiste' : '▯ in die Leiste' }}</button>
+        <button v-if="current.enabled && plugins.views.some(x => x.key === current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? 'nicht in der Leiste links — Klick nimmt es wieder hinein (unter sein Thema)' : 'in der Leiste links unter seinem Thema — Klick nimmt es ganz heraus (nur für dich, in den Einstellungen)'">{{ store.railOff.includes(current.key) ? '▯ nicht in der Leiste' : '▮ in der Leiste' }}</button>
         <button v-if="current.enabled" @click="act(`/api/plugins/${current.key}/disable`)">○ ausschalten</button>
         <button v-else class="primary" @click="act(`/api/plugins/${current.key}/enable`)">● einschalten</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" title="aus dem Journal entfernen — die Dateien bleiben">🗑</button>
@@ -94,14 +98,14 @@ function pick(k) { cur.value = k }
         <div class="muted" style="font-size:12px">Eingebaut in die Oberfläche — <router-link :to="manifest.builtin === 'solr' ? '/import/solr' : manifest.builtin === 'table' ? '/export/table' : '/import/ixp'">{{ manifest.builtin === 'table' ? '⇪ Export → Tabelle' : '⇩ Import → ' + manifest.builtin }}</router-link>{{ current.enabled ? '' : ' (aus — erst einschalten)' }}</div>
       </div>
       <div class="section" v-if="manifest.runs === 'office' && current.key === 'onlyoffice'">
-        <h2>📗 In OnlyOffice einrichten</h2>
+        <h2>▤ In OnlyOffice einrichten</h2>
         <div class="muted" style="font-size:12px;line-height:1.6">
           Paket: <a :href="`/plugins/${current.key}/package.plugin`" download="journali.plugin">journali.plugin herunterladen</a> — in OnlyOffice Tabellen über Plugins → Plugin-Manager → „Plugin hinzufügen“ einbinden;
           Anleitung: <a :href="`/plugins/${current.key}/README.md`" target="_blank">README</a>. Leiste: <a :href="`/plugins/${current.key}/index.html`" target="_blank">index.html</a> (ausserhalb von OnlyOffice nur zur Ansicht).
         </div>
       </div>
       <div class="section" v-if="manifest.runs === 'office' && current.key !== 'onlyoffice'">
-        <h2>📗 In Excel einrichten</h2>
+        <h2>▤ In Excel einrichten</h2>
         <div class="muted" style="font-size:12px;line-height:1.6">
           Manifest: <a :href="`/plugins/${current.key}/manifest.xml`" download="manifest.xml">manifest.xml herunterladen</a> — in Excel über einen vertrauenswürdigen Add-In-Katalog (freigegebener Ordner) oder „Mein Add-In hochladen“ einbinden;
           Anleitung: <a :href="`/plugins/${current.key}/README.md`" target="_blank">README</a>. Aufgabenbereich: <a :href="`/plugins/${current.key}/taskpane.html`" target="_blank">taskpane.html</a> (ausserhalb von Excel nur zur Ansicht).
@@ -118,7 +122,7 @@ function pick(k) { cur.value = k }
         <h2>⚙ Prozess <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ manifest.process.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
           <span v-if="manifest.process.params?.length">Parameter: {{ manifest.process.params.map(p => p.label || p.key).join(' · ') }}.</span></div>
-        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled || !plugins.enabled('tasker')" :title="plugins.enabled('tasker') ? '' : 'Jobs brauchen das Plugin tasker — erst einschalten'" @click="navigate">⏱ Als Job einrichten</button></router-link><span class="muted" style="font-size:12px">{{ plugins.enabled('tasker') ? 'Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job' : 'Jobs brauchen das Plugin tasker (⌁ Plugins → tasker → einschalten)' }}</span></div>
+        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled || !plugins.enabled('tasker')" :title="plugins.enabled('tasker') ? 'neuer Job mit diesem Plugin — der Assistent des Taskers' : 'Jobs brauchen das Plugin tasker — erst einschalten'" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button :disabled="!plugins.enabled('tasker')" title="die Jobs dieses Plugins im Tasker — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px">{{ plugins.enabled('tasker') ? 'Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job' : 'Jobs brauchen das Plugin tasker (⌁ Plugins → tasker → einschalten)' }}</span></div>
       </div>
       <div class="section">
         <h2>Manifest <span class="mono muted">plugins/{{ current.key }}/plugin.json</span></h2>

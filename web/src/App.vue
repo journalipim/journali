@@ -28,7 +28,7 @@ const nav = [
   { to: '/tree', icon: '▣', label: 'Baum', key: '1' },
   { to: '/model', icon: '⊞', label: 'Modell', key: '3' },
   ...TOPICS.map(t => ({ to: t.to, icon: t.icon, label: t.label, key: t.hotkey, topic: t.key, always: !!t.always })),
-  { to: '/media', icon: '🖼', label: 'Medien', key: '5' },
+  { to: '/media', icon: '▨', label: 'Medien', key: '5' },
 ]
 // unten in der Leiste (Taloan, 17.09.): Journal und Einstellungen
 const navBottom = [
@@ -43,11 +43,12 @@ const railTitle = n => `${n.label}  (${n.key ? 'Alt+' + n.key : n.hint}) — zie
 const railItems = computed(() => {
   // ▣ Baum führt zum zuletzt gewählten Knoten zurück (Taloan, 18.09.); Kennung des Eintrags bleibt '/tree' (Reihenfolge, aktiv)
   const treeTo = store.lastNode ? `/tree/${store.lastNode}` : '/tree'
-  // Plugins, die der Nutzer in die Leiste gestellt hat (⌁ Plugins → „in der Leiste“): ihre Ansichten als eigene Symbole
-  const own = plugins.views.filter(v => store.railPlugins.includes(v.key)).map(v => ({ to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, hint: `Plugin ${v.key}`, exact: true }))
+  // Ein Plugin, das der Nutzer aus der Leiste genommen hat (⌁ Plugins → „nicht in der Leiste“), zählt in seinem Thema nicht
+  // (Taloan: „wenn es ausgeschaltet ist, soll es gar nicht in der Leiste sein“) — kein eigenes Symbol, kein Thema nur seinetwegen
+  const left = topic => (entries.value[topic] ?? []).filter(e => !e.plugin || !store.railOff.includes(e.plugin))
   // Ein Thema mit genau einem Eintrag (Taloan: „erwarten wir hier weitere Module?“): das Symbol führt direkt hin, die Übersicht wäre nur ein Klick mehr
-  const direct = n => n.topic && !n.always && entries.value[n.topic]?.length === 1 ? { ...n, href: entries.value[n.topic][0].to } : n
-  const all = [...nav.filter(n => !n.topic || n.always || entries.value[n.topic]?.length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : direct(n)), ...own, { to: 'spacer' }, ...navBottom]
+  const direct = n => n.topic && !n.always && left(n.topic).length === 1 ? { ...n, href: left(n.topic)[0].to } : n
+  const all = [...nav.filter(n => !n.topic || n.always || left(n.topic).length).map(n => n.to === '/tree' ? { ...n, href: treeTo } : direct(n)), { to: 'spacer' }, ...navBottom]
   const order = store.railOrder ?? []
   const known = new Set(all.map(x => x.to))
   const sorted = order.filter(k => known.has(k)).map(k => all.find(x => x.to === k))
