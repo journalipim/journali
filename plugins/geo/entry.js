@@ -93,7 +93,31 @@ async function mount(root, ctx) {
   return () => {}
 }
 
+// Prüfregeln (Taloan: „mit heuristischen Mitteln Texte erkennen, die für GEO nicht geeignet sind“) — laufen in ✓ Datenqualität,
+// ohne KI. Beschreibend = text/html-Attribut mit längerem Wert oder Schlüssel/Label wie description, beschreibung, text, merkmal, seo.
+const DESC = /beschreib|description|text|merkmal|feature|seo|intro|teaser|content|inhalt/i
+const SUPER = /\b(beste[rsn]?|einzigartig|revolutionär|perfekt|unschlagbar|weltklasse|premium-?qualität|best|unique|revolutionary|perfect|unbeatable|world-?class|ultimate)\b/i
+const strip = v => String(v ?? '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+const descriptive = (c, v) => (c.type === 'text' || c.type === 'html') && v && (DESC.test(c.key) || DESC.test(c.label ?? '') || strip(v).length > 80)
+const words = s => s.split(/\s+/).filter(Boolean).length
+const checks = [
+  { key: 'short', label: 'GEO: Beschreibung zu kurz', severity: 'info',
+    run({ values, columns }) { return columns.filter(c => descriptive(c, values[c.key]?.value) && words(strip(values[c.key].value)) < 30).map(c => ({ attribute: c.key, message: `${words(strip(values[c.key].value))} Wörter — KI-Antworten zitieren ab ~30 Wörtern mit Fakten` })) } },
+  { key: 'definition', label: 'GEO: kein Definitionssatz', severity: 'warn',
+    run({ row, values, columns }) {
+      const name = strip(row.label ?? row.name ?? '').toLowerCase()
+      return columns.filter(c => descriptive(c, values[c.key]?.value)).filter(c => { const first = strip(values[c.key].value).split(/(?<=[.!?])\s/)[0].toLowerCase(); return !/\b(ist ein|ist eine|is a|is an|sind|are)\b/.test(first) && !(name && first.includes(name.slice(0, 12))) })
+        .map(c => ({ attribute: c.key, message: 'erster Satz nennt weder das Produkt noch „… ist ein …“ — genau den zitieren KI-Antworten' })) } },
+  { key: 'superlatives', label: 'GEO: Superlative statt Fakten', severity: 'warn',
+    run({ values, columns }) { return columns.filter(c => descriptive(c, values[c.key]?.value) && SUPER.test(strip(values[c.key].value))).map(c => ({ attribute: c.key, message: `„${strip(values[c.key].value).match(SUPER)[0]}“ — Werbewörter werden nicht zitiert, Zahlen schon` })) } },
+  { key: 'nofacts', label: 'GEO: keine konkreten Angaben', severity: 'info',
+    run({ values, columns }) { return columns.filter(c => descriptive(c, values[c.key]?.value) && !/\d/.test(strip(values[c.key].value))).map(c => ({ attribute: c.key, message: 'keine Zahl, kein Maß, keine Einheit im Text' })) } },
+  { key: 'sameasname', label: 'GEO: Text = Name', severity: 'warn',
+    run({ row, values, columns }) { const name = strip(row.label ?? row.name ?? '').toLowerCase(); return columns.filter(c => (c.type === 'text' || c.type === 'html') && values[c.key]?.value && strip(values[c.key].value).toLowerCase() === name && name.length > 0).map(c => ({ attribute: c.key, message: 'nur der Produktname — sagt nichts über das Produkt' })) } },
+]
+
 export default {
-  views: [{ path: 'texts', label: 'GEO-Texte', icon: '✎', topic: 'tools', hint: 'KI-Vorschläge für Suchmaschinen und KI-Antworten aus den Produktdaten; Schema.org JSON-LD', mount }],
-  nodeActions: [{ label: 'GEO-Texte vorschlagen', icon: '✎', topic: 'tools', roles: ['product', 'variant', 'group'], run(id, ctx) { localStorage.setItem('journali.geo.node', id); ctx.go?.('/p/geo/texts') } }],
+  views: [{ path: 'texts', label: 'GEO-Texte', icon: '✎', topic: 'analysis', hint: 'KI-Vorschläge für Suchmaschinen und KI-Antworten aus den Produktdaten; Schema.org JSON-LD; Prüfregeln in der Datenqualität', mount }],
+  nodeActions: [{ label: 'GEO-Texte vorschlagen', icon: '✎', topic: 'analysis', roles: ['product', 'variant', 'group'], run(id, ctx) { localStorage.setItem('journali.geo.node', id); ctx.go?.('/p/geo/texts') } }],
+  checks,
 }

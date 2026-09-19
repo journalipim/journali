@@ -1,16 +1,19 @@
 {
   "key": "geo",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "label": {
     "de": "GEO-Texte (KI)",
     "en": "GEO texts (AI)"
   },
   "description": {
-    "de": "Schlägt aus den echten Produktdaten Texte vor, die Suchmaschinen und KI-Antworten zitieren (Generative Engine Optimization): Definitionssatz, Kurzbeschreibung, Fragen & Antworten, Suchbegriffe — je Feld ein Zielattribut, „übernehmen“ schreibt ins Journal. Dazu Schema.org-Product-JSON-LD ohne KI. Braucht den Claude-Schlüssel aus den Einstellungen; nichts wird ohne Klick gespeichert.",
-    "en": "Suggests GEO-optimised texts from the real product data (definition, description, FAQ, keywords) via Claude; writes on click. Schema.org Product JSON-LD without AI."
+    "de": "Gehört zur Datenanalyse: Prüfregeln erkennen heuristisch Texte, die für Suchmaschinen und KI-Antworten nicht taugen (zu kurz, kein Definitionssatz, Superlative statt Fakten, keine konkreten Angaben, Text = Name) — ohne KI, in ✓ Datenqualität. Dazu die Ansicht GEO-Texte: Claude schlägt aus den echten Produktdaten Definitionssatz, Kurzbeschreibung, Fragen & Antworten, Suchbegriffe vor (Zielattribut je Feld, übernehmen schreibt ins Journal) und Schema.org-Product-JSON-LD. Braucht den Claude-Schlüssel nur für die Vorschläge.",
+    "en": "Part of data analysis: heuristic checks flag texts unsuitable for search engines and AI answers; the GEO texts view lets Claude suggest definition, description, FAQ, keywords from real product data; Schema.org Product JSON-LD."
   },
-  "kind": "tool",
+  "kind": "quality",
   "runs": "browser",
   "entry": "entry.js",
+  "requires": [
+    "da"
+  ],
   "autoInstall": true
 }
