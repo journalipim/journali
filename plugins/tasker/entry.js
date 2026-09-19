@@ -101,7 +101,8 @@ async function mount(root, ctx) {
     const isNew = !j
     const keyIn = el('input', { type: 'text', value: j?.key ?? '', placeholder: 'key (a-z, 0-9, _)', style: 'width:100%' }); if (!isNew) keyIn.disabled = true
     const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: 'Bezeichnung', style: 'width:100%' })
-    const pluginSel = el('select', { style: 'width:100%' }, ...st.plugins.map(p => el('option', { value: p.key }, `${p.label?.de || p.key} — ${p.description ?? ''}`)))
+    const pluginSel = el('select', { style: 'width:100%' }, ...st.plugins.map(p => el('option', { value: p.key, title: p.description ?? '' }, p.label?.de || p.key)))   // nur der Name (Taloan: zu viel Text)
+    const pluginHint = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
     if (j) pluginSel.value = j.plugin
     else if (preset) pluginSel.value = preset
     const schedSel = el('select', { style: 'width:100%' }, ...PRESETS.map(([v, l]) => el('option', { value: v }, l)), el('option', { value: 'custom' }, 'eigener cron-Ausdruck …'))
@@ -114,6 +115,7 @@ async function mount(root, ctx) {
     const drawParams = () => {
       paramsBox.innerHTML = ''
       const p = st.plugins.find(x => x.key === pluginSel.value); const defs = p?.params ?? []
+      pluginHint.textContent = p?.description ?? ''; pluginHint.title = pluginHint.textContent
       for (const d of defs) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
         let inp
@@ -151,7 +153,7 @@ async function mount(root, ctx) {
     dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, isNew ? '+ Job' : `✎ ${j.label}`),
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Key'), keyIn,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Bezeichnung'), labelIn,
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Plugin (Prozess)'), pluginSel, paramsBox,
+      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Plugin (Prozess)'), pluginSel, pluginHint, paramsBox,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitplan'), schedSel, schedIn,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitgrenze (min)'), timeoutIn,
       el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px' }, el('button', { onclick: () => box.remove() }, 'Abbrechen'), el('button', { class: 'primary', onclick: save }, '💾 Speichern')))
