@@ -36,17 +36,32 @@ header img { width:36px; height:36px; border-radius:8px; }
 header b { font-size:18px; letter-spacing:.2px; }
 header nav { margin-left:auto; display:flex; gap:16px; font-size:14px; }
 header nav a { color:#cbd5e1; text-decoration:none; }
+header nav a.navcta { border:1px solid #475569; border-radius:8px; padding:6px 12px; color:#fff; }
 main { max-width:1040px; margin:0 auto; padding:0 20px; }
-.hero { padding:56px 0 32px; }
-h1 { font-size:40px; line-height:1.15; margin:0 0 12px; letter-spacing:-.5px; }
-.hero p.def { font-size:20px; color:var(--text); max-width:760px; margin:0 0 20px; }
+.hero { padding:56px 0 48px; display:grid; grid-template-columns:1.1fr .9fr; gap:56px; align-items:center; }
+.eyebrow { display:inline-flex; gap:9px; align-items:center; padding:7px 13px; border:1px solid var(--line); border-radius:999px; background:var(--pane); font-size:13px; font-weight:700; color:var(--accent); }
+.dot { width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 5px var(--accent-soft); }
+h1 { font-size:clamp(44px, 6vw, 84px); line-height:.96; letter-spacing:-.04em; margin:22px 0 22px; }
+.grad { background:linear-gradient(105deg, #0a2d91, #4d91ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+@media (prefers-color-scheme: dark) { .grad { background:linear-gradient(105deg, #7fb3ff, #cfe0ff); -webkit-background-clip:text; background-clip:text; } }
+.hero p.def { font-size:20px; color:var(--text); max-width:640px; margin:0 0 20px; }
+.actions { display:flex; gap:12px; flex-wrap:wrap; }
+.micro { margin:18px 0 0; color:var(--muted); font-size:13px; }
+.visual { position:relative; min-height:420px; display:grid; place-items:center; }
+.halo { position:absolute; width:440px; height:440px; border-radius:50%; background:radial-gradient(circle, var(--accent-soft) 0, transparent 68%); }
+.logo-card { position:relative; width:min(360px, 85%); aspect-ratio:1; border-radius:31%; overflow:hidden; box-shadow:0 32px 95px rgba(12,45,122,.19); background:var(--pane); }
+.logo-card img { width:100%; height:100%; display:block; }
+.float { position:absolute; background:var(--pane); border:1px solid var(--line); border-radius:12px; padding:10px 14px; font-size:13px; font-weight:700; box-shadow:0 14px 40px rgba(12,45,122,.12); }
+.float.f1 { top:12%; left:0; color:var(--accent); }
+.float.f2 { bottom:12%; right:0; }
 .facts { display:flex; flex-wrap:wrap; gap:10px; margin:0 0 24px; padding:0; list-style:none; }
 .facts li { background:var(--pane); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:14px; }
 .facts li b { font-family: ui-monospace, monospace; margin-right:6px; color:var(--accent); }
 .cta { display:inline-block; background:var(--accent); color:#fff; text-decoration:none; padding:10px 18px; border-radius:6px; font-weight:600; }
 .cta.alt { background:transparent; color:var(--accent); border:1px solid var(--accent); margin-left:8px; }
 section { padding:32px 0; border-top:1px solid var(--line); }
-h2 { font-size:26px; margin:0 0 12px; letter-spacing:-.3px; }
+h2 { font-size:clamp(30px, 4vw, 52px); line-height:1.04; letter-spacing:-.04em; margin:0 0 18px; max-width:820px; }
+section > p { font-size:18px; max-width:760px; }
 h3 { font-size:17px; margin:0 0 6px; }
 .grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
 .card { background:var(--pane); border:1px solid var(--line); border-radius:8px; padding:16px; }
@@ -58,35 +73,68 @@ details { background:var(--pane); border:1px solid var(--line); border-radius:8p
 summary { cursor:pointer; font-weight:600; }
 details p { margin:8px 0 0; color:var(--muted); }
 .muted { color:var(--muted); }
+.kicker { margin:0 0 6px; font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--accent); }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center; }
+@media (max-width:900px) { .two { grid-template-columns:1fr; } }
+.journal { list-style:none; margin:0; padding:10px; background:var(--pane); border:1px solid var(--line); border-radius:12px; box-shadow:0 14px 40px rgba(12,45,122,.10); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; font-size:13px; }
+.journal li { display:grid; grid-template-columns:64px 1fr auto; gap:10px; align-items:center; padding:9px 8px; border-bottom:1px solid var(--line); }
+.journal li:last-child { border-bottom:0; }
+.journal .nr { color:var(--muted); }
+.journal .ok { color:#15803d; font-size:12px; }
+.journal .ok::before { content:"● "; }
 footer { border-top:1px solid var(--line); padding:20px; text-align:center; font-size:13px; color:var(--muted); }
 footer a { color:var(--muted); margin:0 8px; }
-@media (max-width:640px) { h1 { font-size:30px; } .hero { padding:36px 0 24px; } header nav { display:none; } }
+@media (max-width:900px) { .hero { grid-template-columns:1fr; gap:24px; } .visual { min-height:300px; } .halo { width:300px; height:300px; } .logo-card { width:220px; } }
+@media (max-width:640px) { .hero { padding:36px 0 24px; } header nav { display:none; } }
 </style>
 </head>
 <body>
 <header><div class="in"><img src="logo-128.png" alt="journali"><b>journali</b>
-  <nav><a href="#anders">Was anders ist</a><a href="#ablauf">Ablauf</a><a href="#integration">Integration</a><a href="#faq">Fragen</a></nav></div></header>
+  <nav><a href="#problem">Idee</a><a href="#anders">Einblicke</a><a href="#faq">Fragen</a><a class="navcta" href="#kontakt">Dranbleiben</a></nav></div></header>
 
 <main>
 <div class="hero">
-  <h1>Produktdaten, die sich erinnern.</h1>
-  <p class="def">journali ist ein PIM-System, in dem jede Änderung ein Eintrag im Journal ist — nachvollziehbar, wiederherstellbar, nie gelöscht.</p>
-  <ul class="facts">
-    <li><b>≡</b>Journal statt Datenbank-Update — die Wahrheit ist der Eintrag</li>
-    <li><b>⎘</b>Versionen mit eingefrorenen Belegen — was nach draußen ging, bleibt beweisbar</li>
-    <li><b>⌁</b>Plugins austauschen, ohne neu zu deployen</li>
-  </ul>
-  <a class="cta" href="#kontakt">Stand der Entwicklung</a><a class="cta alt" href="#ablauf">So funktioniert es</a>
+  <div>
+    <div class="eyebrow"><span class="dot"></span>In Entwicklung · 2026</div>
+    <h1>Produktdaten,<br><span class="grad">die sich erinnern.</span></h1>
+    <p class="def">journali ist ein PIM-System, in dem jede Änderung ein Eintrag im Journal ist — nachvollziehbar, wiederherstellbar, nie gelöscht.</p>
+    <ul class="facts">
+      <li><b>≡</b>Journal statt Datenbank-Update</li>
+      <li><b>⎘</b>Versionen mit eingefrorenen Belegen</li>
+      <li><b>⌁</b>Plugins ohne neues Deployment</li>
+    </ul>
+    <div class="actions"><a class="cta" href="#problem">Die Idee entdecken ↓</a><a class="cta alt" href="#kontakt">Stand der Entwicklung</a></div>
+    <p class="micro">Noch nicht veröffentlicht. Hier zeigen wir Schritt für Schritt, was entsteht.</p>
+  </div>
+  <div class="visual"><div class="halo"></div><div class="logo-card"><img src="logo.png" alt="journali"></div><div class="float f1">● in Arbeit</div><div class="float f2">Snapshots folgen</div></div>
 </div>
 
 <section id="problem">
-  <h2>journali löst ein Problem, das fast alle anderen PIM-Systeme haben</h2>
+  <h2>journali löst ein Problem, das <span class="grad">fast alle anderen PIM-Systeme</span> haben.</h2>
   <p>Produktdaten ändern sich täglich: Importe aus dem ERP, Korrekturen von Kollegen, neue Bilder, neue Vorschriften. Klassische PIM-Systeme überschreiben. Wer wissen will, was vor drei Jahren galt, spielt eine Datensicherung ein — und hofft, dass die Programmversion noch passt.</p>
   <p>journali überschreibt nichts. Jede Änderung ist ein neuer, nummerierter Eintrag mit Urheber und Zeitpunkt. Der aktuelle Stand ist eine Ableitung daraus, nicht das Original.</p>
 </section>
 
+<section id="fundament">
+  <div class="two">
+    <div>
+      <p class="kicker">Das Fundament</p>
+      <h2>Die Wahrheit ist <span class="grad">der Eintrag.</span></h2>
+      <p>Werte, Namen, Zuordnungen, Freigaben – und sogar das Datenmodell – werden im Journal festgehalten. Damit bleibt nicht nur sichtbar, was heute gilt, sondern auch, wie es dazu kam.</p>
+    </div>
+    <ol class="journal" aria-label="Beispiel: Einträge im Journal">
+      <li><span class="nr">#1842</span><span class="txt">Attributwert aktualisiert · Leistung 24 W → 28 W</span><span class="ok">gespeichert</span></li>
+      <li><span class="nr">#1843</span><span class="txt">Übersetzung ergänzt · de-DE / en-GB</span><span class="ok">gespeichert</span></li>
+      <li><span class="nr">#1844</span><span class="txt">Version freigegeben · Produktstand fixiert</span><span class="ok">gespeichert</span></li>
+      <li><span class="nr">#1845</span><span class="txt">Datenblatt als Beleg erzeugt</span><span class="ok">gespeichert</span></li>
+      <li><span class="nr">#1846</span><span class="txt">Nächste Änderung · ohne Historie zu überschreiben</span><span class="ok">gespeichert</span></li>
+    </ol>
+  </div>
+</section>
+
 <section id="anders">
-  <h2>Was journali anders macht</h2>
+  <p class="kicker">Einblicke</p>
+  <h2>Mehr als eine <span class="grad">Änderungshistorie.</span></h2>
   <div class="grid">
     <div class="card"><h3>≡ Das Journal ist die Wahrheit</h3><p>Jeder Wert, jeder Name, jede Zuordnung, jede Freigabe — ein Eintrag. Das Datenmodell (Sprachen, Kanäle, Attribute, Einheiten, Wertelisten) steht ebenfalls im Journal, nie im Code. Der Stand von jedem Zeitpunkt lässt sich mit der heutigen Software wieder herstellen.</p></div>
     <div class="card"><h3>⎘ Versionen mit Belegen</h3><p>Eine Freigabe erzeugt eine Version: ein Zeiger auf den Journalstand plus die Dokumente, die nach draußen gingen. Unveränderlich, hash-adressiert, mit Aufbewahrungsfrist. Zurückrollen auf eine frühere Version ist ein Schritt vorwärts, kein Löschen.</p></div>
@@ -100,7 +148,7 @@ footer a { color:var(--muted); margin:0 8px; }
 </section>
 
 <section id="ablauf">
-  <h2>So funktioniert es</h2>
+  <h2>Von der Struktur <span class="grad">bis zur Auslieferung.</span></h2>
   <ol class="steps">
     <li><b>Struktur anlegen.</b> Gruppen, Produkte, Varianten; Attribute mit Vererbung nach unten; Sprachen und Kanäle als Achsen.</li>
     <li><b>Daten pflegen oder importieren.</b> In der Zelle, in der Tabelle, aus Excel, aus dem ERP per Job.</li>
@@ -109,7 +157,7 @@ footer a { color:var(--muted); margin:0 8px; }
 </section>
 
 <section id="fuer-wen">
-  <h2>Für wen</h2>
+  <h2>Für Menschen, die Produktdaten <span class="grad">wirklich verantworten.</span></h2>
   <div class="grid">
     <div class="card"><h3>Hersteller technischer Produkte</h3><p>die nachweisen müssen, welche Unterlagen wann galten.</p></div>
     <div class="card"><h3>Händler mit Varianten</h3><p>die Excel-Tempo bei der Pflege brauchen.</p></div>
@@ -128,7 +176,7 @@ footer a { color:var(--muted); margin:0 8px; }
 </section>
 
 <section id="faq">
-  <h2>Häufige Fragen</h2>
+  <h2>Fragen <span class="grad">und Antworten.</span></h2>
   <details open><summary>Was ist journali?</summary><p>journali ist ein PIM-System (Produktinformationsmanagement), das jede Änderung an Produktdaten als unveränderlichen Eintrag in einem Journal speichert. Der aktuelle Datenstand wird aus dem Journal abgeleitet; frühere Stände bleiben jederzeit abrufbar.</p></details>
   <details><summary>Was unterscheidet journali von anderen PIM-Systemen?</summary><p>Andere PIM-Systeme aktualisieren Datensätze. journali hängt Einträge an und löscht nie. Daraus folgen Änderungshistorie, Versionen mit Belegen und Wiederherstellbarkeit ohne Datensicherung — als Eigenschaft der Architektur, nicht als Zusatzmodul.</p></details>
   <details><summary>Kann ich journali selbst betreiben?</summary><p>Ja. journali läuft als Docker-Paket mit PostgreSQL. Medien liegen wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage.</p></details>
@@ -140,7 +188,7 @@ footer a { color:var(--muted); margin:0 8px; }
 </section>
 
 <section id="kontakt">
-  <h2>Stand der Entwicklung</h2>
+  <h2>Noch nicht fertig. <span class="grad">Genau deshalb interessant.</span></h2>
   <p>journali befindet sich in intensiver Entwicklung. Was hier steht, ist gebaut und läuft — noch nicht als fertiges Paket zum Herunterladen. Wir halten diese Seite mit Snapshots aus der Entwicklung auf dem Laufenden: neue Ansichten, neue Plugins, neue Belegerzeuger.</p>
   <p>Sie wollen journali früh sehen oder mit eigenen Daten ausprobieren? <a href="impressum.html">Kontakt über das Impressum</a>.</p>
 </section>
