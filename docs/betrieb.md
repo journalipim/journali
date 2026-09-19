@@ -52,6 +52,10 @@ kennt nur den Hash. **Wo** sie liegen, ist ein Treiber per `JOURNALI_MEDIA`
 und lokal abgelegt, Hochgeladenes dorthin gespiegelt (`/api/media/blob/{key}`) — für einen Entwicklungsrechner neben dem
 Produktivsystem, das dasselbe Journal benutzt.
 
+**Einstellen** unter ⚙ Einstellungen → ▨ Storage: Treiber, Zugang, Ursprung — prüfen, speichern; die Einstellung
+liegt als `media.json` im Datenverzeichnis (`JOURNALI_JOBS`, neben `secrets.json`), nie im Journal, und geht der
+Umgebung vor. Dort auch Fehlbestand zählen und Blobs aus einem anderen Speicher herüberkopieren.
+
 **Treiber wechseln** ohne neue Ids: neue Angabe setzen, starten, dann `POST /api/media/copy {"from": "<alte Angabe>"}`
 (X-Actor) — kopiert alle Blobs, die hier fehlen, Hash-geprüft. `GET /api/media/missing` zeigt Medien ohne Bytes,
 `GET /api/media/store` den aktiven Treiber. Vorschauen (`sha.thumb`, WebP 256 px) rechnet der erste Betrachter im

@@ -3,6 +3,9 @@
 import { ref } from 'vue'
 import { store } from '../store.js'
 import { ai } from '../ai.js'
+import StorageSettings from '../components/StorageSettings.vue'
+// Reiter (Taloan, 19.09.): Allgemein | Storage
+const tab = ref(location.hash === '#storage' ? 'storage' : 'general')
 // KI-Schlüssel (Taloan, 18.09.): bleibt im Browser (localStorage), nie im Journal — Plugins fragen Claude nur, wenn er da ist
 const aiKey = ref(ai.key), aiModel = ref(ai.model), aiState = ref('')
 async function saveAi() {
@@ -36,8 +39,12 @@ async function save() {
 
 <template>
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>⚙ Einstellungen</h1></div>
-    <div class="scroll">
+    <div class="toolbar"><h1>⚙ Einstellungen</h1>
+      <span class="tab" :class="{ on: tab === 'general' }" @click="tab = 'general'">Allgemein</span>
+      <span class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'">▨ Storage</span>
+    </div>
+    <div class="scroll" v-if="tab === 'storage'"><StorageSettings /></div>
+    <div class="scroll" v-else>
       <table class="grid form">
         <tbody>
           <tr>
@@ -115,4 +122,6 @@ async function save() {
 table.form td { white-space: normal; vertical-align: middle; height: 34px; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+.tab { padding: 2px 10px; border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 13px; }
+.tab.on { background: var(--accent-soft); color: var(--text); }
 </style>

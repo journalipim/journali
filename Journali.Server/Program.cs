@@ -34,8 +34,11 @@ builder.Services.AddSingleton(catalog);
 
 // Medien: Treiber per JOURNALI_MEDIA — postgres (Vorgabe: Tabelle media_blob neben dem Journal), Verzeichnis, s3://bucket;
 // JOURNALI_MEDIA_ORIGIN = andere Instanz als Ursprung (docs/betrieb.md). Taloan, 19.09.: Datenbank hier, Assets im Object Storage.
-var mediaStore = MediaStores.Create(builder.Configuration["JOURNALI_MEDIA"], db, builder.Configuration, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("media"), builder.Environment.ContentRootPath);
-builder.Services.AddSingleton(db);   // für den Kopierlauf (/media/copy)
+// Einstellung: media.json im Datenverzeichnis (Einstellungen → Storage), sonst die Umgebung
+var dataDir = Path.GetFullPath(builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs"));
+var mediaStore = new SwitchableMediaStore(MediaConfigFile.Load(dataDir) ?? MediaConfig.FromEnv(builder.Configuration), db, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("media"), builder.Environment.ContentRootPath);
+builder.Services.AddSingleton(db);
+builder.Services.AddSingleton(mediaStore);
 builder.Services.AddSingleton<IMediaStore>(mediaStore);
 builder.Services.AddHttpClient("media", h => { h.Timeout = TimeSpan.FromMinutes(2); h.DefaultRequestHeaders.UserAgent.ParseAdd("journali/1.0"); });   // Medien von URL holen (Import)
 
@@ -48,8 +51,8 @@ var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 
 // Jobs (Plugin tasker, Taloan 19.09.): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
 // unter JOURNALI_JOBS (Vorgabe jobs/ neben dem Programm, im Repo ignoriert)
-var jobDir = builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs");
-var jobRunner = new JobRunner(catalog, pluginDir, Path.GetFullPath(jobDir), LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>());
+var jobDir = dataDir;
+var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>());
 builder.Services.AddSingleton(jobRunner);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
 

@@ -29,6 +29,8 @@ public interface IMediaStore
     Task<Stream?> OpenAsync(string key, CancellationToken ct);
     /// <summary>Alle Schlüssel — für den Kopierlauf zwischen Treibern.</summary>
     IAsyncEnumerable<string> KeysAsync(CancellationToken ct);
+    /// <summary>Verbindung prüfen: null = in Ordnung, sonst die Fehlmeldung (Einstellungen → Storage → prüfen).</summary>
+    Task<string?> ProbeAsync(CancellationToken ct);
 }
 
 public static partial class MediaStores
@@ -100,6 +102,7 @@ public sealed class FileMediaStore : IMediaStore
     private readonly string _root;
     public FileMediaStore(string root) { _root = Path.GetFullPath(root); Directory.CreateDirectory(_root); }
     public string Kind => "file:" + _root;
+    public Task<string?> ProbeAsync(CancellationToken ct) { try { var p = Path.Combine(_root, ".probe"); File.WriteAllText(p, ""); File.Delete(p); return Task.FromResult<string?>(null); } catch (Exception e) { return Task.FromResult<string?>(e.Message); } }
     public string Root => _root;
     private string PathOf(string key) => Path.Combine(_root, key[..2], key);
 
@@ -145,6 +148,7 @@ public sealed class PostgresMediaStore : IMediaStore
         cmd.ExecuteNonQuery();
     }
     public string Kind => "postgres";
+    public async Task<string?> ProbeAsync(CancellationToken ct) { try { await using var conn = await _db.OpenConnectionAsync(ct); await using var cmd = new NpgsqlCommand("SELECT count(*) FROM media_blob", conn); await cmd.ExecuteScalarAsync(ct); return null; } catch (Exception e) { return e.Message; } }
 
     public async Task<(string Sha256, long Bytes)> PutAsync(Stream data, CancellationToken ct)
     {
@@ -210,6 +214,19 @@ public sealed class S3MediaStore : IMediaStore
         _endpoint = new Uri(endpoint.TrimEnd('/'), UriKind.Absolute); _bucket = bucket; _key = key; _secret = secret; _region = region; _pathStyle = pathStyle;
     }
     public string Kind => $"s3://{_bucket} @ {_endpoint.Host}";
+    /// <summary>LIST mit einem Schlüssel — 403 = Key/Secret falsch oder Bucket nicht erlaubt, 404 = Bucket fehlt, sonst Verbindung.</summary>
+    public async Task<string?> ProbeAsync(CancellationToken ct)
+    {
+        try
+        {
+            using var res = await _http.SendAsync(Sign(HttpMethod.Get, UriOf(null, "list-type=2&max-keys=1"), Unsigned), ct);
+            if (res.IsSuccessStatusCode) return null;
+            var body = await res.Content.ReadAsStringAsync(ct);
+            var msg = System.Text.RegularExpressions.Regex.Match(body, "<Message>(.*?)</Message>").Groups[1].Value;
+            return $"{(int)res.StatusCode} {(msg.Length > 0 ? msg : res.ReasonPhrase)}";
+        }
+        catch (Exception e) { return e.Message; }
+    }
 
     private Uri UriOf(string? objectKey, string? query = null)
     {
@@ -306,6 +323,12 @@ public sealed class OriginMediaStore : IMediaStore
     private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(10) };
     public OriginMediaStore(IMediaStore local, string origin, string actor, ILogger log) { _local = local; _origin = origin; _actor = actor; _log = log; }
     public string Kind => $"{_local.Kind} ← {_origin}";
+    public async Task<string?> ProbeAsync(CancellationToken ct)
+    {
+        if (await _local.ProbeAsync(ct) is { } e) return e;
+        try { using var res = await _http.GetAsync($"{_origin}/api/health", ct); return res.IsSuccessStatusCode ? null : $"Ursprung {_origin}: {(int)res.StatusCode}"; }
+        catch (Exception ex) { return $"Ursprung {_origin}: {ex.Message}"; }
+    }
     private string Url(string key) => $"{_origin}/api/media/blob/{key}";
 
     public async Task<(string Sha256, long Bytes)> PutAsync(Stream data, CancellationToken ct)

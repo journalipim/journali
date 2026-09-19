@@ -12,6 +12,10 @@ namespace Journali.Server;
 /// </summary>
 public static class MediaApi
 {
+    /// <summary>Das maskierte Geheimnis aus der Anzeige („••••“) heisst: das gespeicherte behalten.</summary>
+    private static MediaConfig Unmask(MediaConfig body, MediaConfig current) =>
+        body.Secret is null || body.Secret.StartsWith("••") ? body with { Secret = current.Secret } : body;
+
     public static void Map(RouteGroupBuilder api)
     {
         // Liste, neueste zuerst; q sucht in Name und Werten
@@ -90,12 +94,13 @@ public static class MediaApi
             return Results.Ok(new { total = all.Count, missing });
         });
         // Kopierlauf zwischen Treibern (Taloan: Wechsel von Postgres nach S3 ohne neue Ids): alles aus `from` (Angabe wie JOURNALI_MEDIA), was hier fehlt
-        api.MapPost("/media/copy", async (CopyRequest body, HttpRequest req, IMediaStore store, NpgsqlDataSource db, IConfiguration cfg, ILoggerFactory lf, IHostEnvironment env, CancellationToken ct) =>
+        api.MapPost("/media/copy", async (CopyRequest body, HttpRequest req, SwitchableMediaStore store, CancellationToken ct) =>
         {
             if (Actor(req) is null) return ActorMissing();
-            if (Blank(body.From) is not { } from) return Bad("from: postgres | Verzeichnis | s3://bucket");
+            if (body.From is null) return Bad("from: Einstellung des Quell-Speichers (driver, path | bucket, endpoint, key, secret, region)");
             IMediaStore source;
-            try { source = MediaStores.Create(from, db, cfg, lf.CreateLogger("media"), env.ContentRootPath); } catch (Exception e) { return Bad(e.Message); }
+            try { source = store.Build(Unmask(body.From, store.Config)); } catch (Exception e) { return Bad(e.Message); }
+            if (await source.ProbeAsync(ct) is { } perr) return Bad($"Quelle: {perr}");
             var log = new List<string>();
             var (copied, skipped, failed) = await MediaStores.CopyAsync(source, store, ct, k => { if (log.Count < 200) log.Add(k); });
             return Results.Ok(new { from = source.Kind, to = store.Kind, copied, skipped, failed, log });
@@ -145,7 +150,26 @@ public static class MediaApi
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         });
 
-        api.MapGet("/media/store", (IMediaStore store) => Results.Ok(new { kind = store.Kind }));
+        // Einstellungen → Storage (Taloan, 19.09.): Treiber lesen (ohne Geheimnis), prüfen, speichern (media.json im Datenverzeichnis, nie im Journal)
+        api.MapGet("/media/store", async (SwitchableMediaStore store, Catalog c, CancellationToken ct) =>
+        {
+            var total = c.With((_, _, _) => c.Media.All.Count);
+            return Results.Ok(new { kind = store.Kind, config = store.Config.Masked(), total, error = await store.ProbeAsync(ct) });
+        });
+        api.MapPost("/media/store/probe", async (MediaConfig body, SwitchableMediaStore store, CancellationToken ct) =>
+        {
+            var cfg = Unmask(body, store.Config);
+            try { var s = store.Build(cfg); return Results.Ok(new { kind = s.Kind, error = await s.ProbeAsync(ct) }); }
+            catch (Exception e) { return Results.Ok(new { kind = cfg.Spec, error = e.Message }); }
+        });
+        api.MapPut("/media/store", async (MediaConfig body, HttpRequest req, SwitchableMediaStore store, JobRunner runner, CancellationToken ct) =>
+        {
+            if (Actor(req) is null) return ActorMissing();
+            var cfg = Unmask(body, store.Config);
+            if (await store.SwitchAsync(cfg, ct) is { } error) return Bad(error);
+            MediaConfigFile.Save(runner.Dir, cfg);
+            return Results.Ok(new { kind = store.Kind, config = store.Config.Masked() });
+        });
 
         api.MapDelete("/media/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireMedium(x, id)));
         api.MapPost("/media/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) =>
@@ -157,7 +181,7 @@ public static class MediaApi
 
 /// <summary>Ein Medium in der Antwort — plus, an wie vielen Knoten es hängt.</summary>
 public sealed record FetchRequest(string? Url, string? Name);
-public sealed record CopyRequest(string? From);
+public sealed record CopyRequest(MediaConfig? From);
 
 public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime, string Name, bool IsImage, List<ValueView> Values,
     Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
