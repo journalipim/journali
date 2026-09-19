@@ -6,6 +6,75 @@
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const when = iso => iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
 const STATUS = { ok: ['✓', 'pos'], warn: ['⚠', 'warn'], failed: ['✗', 'neg'], timeout: ['⏱✗', 'neg'], cancelled: ['⊘', 'muted'] }
+// Zeitplan-Assistent (Taloan, 19.09.: wie der Terminplaner in Outlook — Wochentage ankreuzen, „jeden zweiten“, „3. Sonntag“ —
+// oder ein cron-Ausdruck). Intern ist es immer cron: fünf Felder, dazu ein sechstes dN:Datum / wN:Datum für „alle N Tage/Wochen ab“
+// (JobRunner.cs, Cron). Tag und Wochentag gelten zusammen: „15-21 * 0“ = 3. Sonntag im Monat.
+const DAYS = [['1', 'Mo'], ['2', 'Di'], ['3', 'Mi'], ['4', 'Do'], ['5', 'Fr'], ['6', 'Sa'], ['0', 'So']]
+const NTH = [['*', 'jeden'], ['1-7', '1.'], ['8-14', '2.'], ['15-21', '3.'], ['22-28', '4.']]
+const MODES = [['manual', 'nur von Hand'], ['minutes', 'alle … Minuten'], ['hourly', 'stündlich'], ['daily', 'täglich'], ['weekly', 'wöchentlich'], ['monthly', 'monatlich'], ['cron', 'cron-Ausdruck']]
+const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const monday = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return iso(d) }
+function fromCron(s) {
+  const f = { mode: 'manual', every: 1, minute: 0, hour: 2, days: new Set(['1']), nth: '*', dom: 1, cron: s ?? '' }
+  if (!s) return f
+  const p = s.trim().split(/\s+/); f.mode = 'cron'
+  const six = p.length === 6 ? p[5].match(/^([dw])(\d+):(\d{4}-\d{2}-\d{2})$/) : null
+  if (p.length !== 5 && !six) return f
+  const [mi, h, dom, mon, dow] = p; const n = x => /^\d+$/.test(x) ? Number(x) : null
+  if (/^\*\/\d+$/.test(mi) && h === '*' && dom === '*' && mon === '*' && dow === '*' && !six) return { ...f, mode: 'minutes', every: Number(mi.slice(2)) }
+  if (n(mi) != null && (h === '*' || /^\*\/\d+$/.test(h)) && dom === '*' && mon === '*' && dow === '*' && !six) return { ...f, mode: 'hourly', minute: n(mi), every: h === '*' ? 1 : Number(h.slice(2)) }
+  if (n(mi) != null && n(h) != null && dom === '*' && mon === '*' && dow === '*' && (!six || six[1] === 'd')) return { ...f, mode: 'daily', minute: n(mi), hour: n(h), every: six ? Number(six[2]) : 1 }
+  if (n(mi) != null && n(h) != null && NTH.some(([v]) => v === dom) && mon === '*' && dow !== '*' && dow.split(',').every(x => /^[0-7]$/.test(x)) && (!six || six[1] === 'w'))
+    return { ...f, mode: 'weekly', minute: n(mi), hour: n(h), nth: dom, days: new Set(dow.split(',').map(x => x === '7' ? '0' : x)), every: six ? Number(six[2]) : 1 }
+  if (n(mi) != null && n(h) != null && n(dom) != null && (mon === '*' || /^\*\/\d+$/.test(mon)) && dow === '*' && !six) return { ...f, mode: 'monthly', minute: n(mi), hour: n(h), dom: n(dom), every: mon === '*' ? 1 : Number(mon.slice(2)) }
+  return f
+}
+function toCron(f) {
+  const e = Math.max(1, Number(f.every) || 1), mi = Math.min(59, Math.max(0, Number(f.minute) || 0)), h = Math.min(23, Math.max(0, Number(f.hour) || 0))
+  switch (f.mode) {
+    case 'manual': return ''
+    case 'minutes': return `*/${e} * * * *`
+    case 'hourly': return `${mi} ${e > 1 ? '*/' + e : '*'} * * *`
+    case 'daily': return `${mi} ${h} * * *${e > 1 ? ` d${e}:${iso(new Date())}` : ''}`
+    case 'weekly': { const d = [...f.days].sort().join(',') || '*'; return `${mi} ${h} ${f.nth} * ${d}${e > 1 && f.nth === '*' ? ` w${e}:${monday()}` : ''}` }
+    case 'monthly': return `${mi} ${h} ${Math.min(31, Math.max(1, Number(f.dom) || 1))} ${e > 1 ? '*/' + e : '*'} *`
+    default: return f.cron.trim()
+  }
+}
+/// Baut den Assistenten; onChange(cron) bei jeder Änderung; value() = aktueller Ausdruck
+function scheduleAssistant(initial, onChange) {
+  const f = fromCron(initial)
+  const box = el('div', { class: 'sched' })
+  const modeSel = el('select', { style: 'width:100%' }, ...MODES.map(([v, l]) => el('option', { value: v }, l))); modeSel.value = f.mode
+  const num = (key, min, max, w = 56) => { const i = el('input', { type: 'number', value: String(f[key]), min: String(min), max: String(max), style: `width:${w}px` }); i.addEventListener('input', () => { f[key] = i.value; emit() }); return i }
+  const time = () => el('span', { style: 'display:inline-flex;align-items:center;gap:4px' }, 'um ', num('hour', 0, 23), ':', num('minute', 0, 59))
+  const cronIn = el('input', { type: 'text', value: f.cron, placeholder: 'm h tag monat wochentag [dN:datum | wN:datum]', style: 'width:100%' }); cronIn.addEventListener('input', () => { f.cron = cronIn.value; emit() })
+  const shown = el('div', { class: 'mono muted', style: 'font-size:11px;margin-top:4px' })
+  const body = el('div', { style: 'margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px' })
+  function draw() {
+    body.innerHTML = ''
+    switch (f.mode) {
+      case 'minutes': body.append('alle ', num('every', 1, 59), ' Minuten'); break
+      case 'hourly': body.append('alle ', num('every', 1, 23), ' Stunden, zur Minute ', num('minute', 0, 59)); break
+      case 'daily': body.append('alle ', num('every', 1, 365), ' Tage ', time()); break
+      case 'weekly': {
+        const nthSel = el('select', {}, ...NTH.map(([v, l]) => el('option', { value: v }, l))); nthSel.value = f.nth; nthSel.addEventListener('change', () => { f.nth = nthSel.value; draw(); emit() })
+        body.append(nthSel)
+        for (const [v, l] of DAYS) { const cb = el('input', { type: 'checkbox' }); cb.checked = f.days.has(v); cb.addEventListener('change', () => { cb.checked ? f.days.add(v) : f.days.delete(v); emit() }); body.append(el('label', { class: 'chip', style: 'cursor:pointer' }, cb, ' ' + l)) }
+        if (f.nth === '*') body.append(el('span', {}, ', alle '), num('every', 1, 52), ' Wochen ')
+        else body.append(el('span', { class: 'muted' }, 'im Monat '))
+        body.append(time()); break
+      }
+      case 'monthly': body.append('am ', num('dom', 1, 31), '. alle ', num('every', 1, 12), ' Monate ', time()); break
+      case 'cron': body.append(cronIn); break
+    }
+    emit(false)
+  }
+  function emit(fire = true) { const c = toCron(f); shown.textContent = c ? `cron: ${c}` : ''; if (fire) onChange(c) }
+  modeSel.addEventListener('change', () => { f.mode = modeSel.value; if (f.mode === 'cron' && !f.cron) f.cron = toCron({ ...f, mode: 'daily', every: 1 }); cronIn.value = f.cron; draw(); emit() })
+  box.append(modeSel, body, shown); draw()
+  return { el: box, value: () => toCron(f) }
+}
 const PRESETS = [['', 'nur von Hand'], ['*/15 * * * *', 'alle 15 min'], ['0 * * * *', 'stündlich'], ['0 2 * * *', 'täglich 02:00'], ['30 6 * * 1-5', 'Mo–Fr 06:30'], ['0 3 * * 0', 'sonntags 03:00'], ['0 4 1 * *', 'monatlich am 1. 04:00']]
 
 async function mount(root, ctx) {
@@ -105,10 +174,7 @@ async function mount(root, ctx) {
     const pluginHint = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
     if (j) pluginSel.value = j.plugin
     else if (preset) pluginSel.value = preset
-    const schedSel = el('select', { style: 'width:100%' }, ...PRESETS.map(([v, l]) => el('option', { value: v }, l)), el('option', { value: 'custom' }, 'eigener cron-Ausdruck …'))
-    const schedIn = el('input', { type: 'text', value: j?.schedule ?? '', placeholder: 'm h tag monat wochentag — z. B. 0 2 * * *', style: 'width:100%;margin-top:4px' })
-    const known = PRESETS.some(([v]) => v === (j?.schedule ?? '')); schedSel.value = known ? (j?.schedule ?? '') : 'custom'; schedIn.style.display = known ? 'none' : ''
-    schedSel.addEventListener('change', () => { if (schedSel.value === 'custom') { schedIn.style.display = ''; schedIn.focus() } else { schedIn.style.display = 'none'; schedIn.value = schedSel.value } })
+    const sched = scheduleAssistant(j?.schedule ?? '', () => {})   // Zeitplan-Assistent (Taloan) statt Vorgaben-Liste
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
     const paramsBox = el('div')
     const paramInputs = {}
@@ -144,7 +210,7 @@ async function mount(root, ctx) {
       if (!key) { store.toast('key fehlt'); return }
       const params = {}
       for (const [k, inp] of Object.entries(paramInputs)) if (inp.value !== '' || inp.type !== 'password') params[k] = inp.value
-      const schedule = schedSel.value === 'custom' ? schedIn.value.trim() : schedSel.value
+      const schedule = sched.value()
       try {
         await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value, params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60 }, 'PUT')
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
@@ -154,7 +220,7 @@ async function mount(root, ctx) {
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Key'), keyIn,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Bezeichnung'), labelIn,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Plugin (Prozess)'), pluginSel, pluginHint, paramsBox,
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitplan'), schedSel, schedIn,
+      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitplan'), sched.el,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitgrenze (min)'), timeoutIn,
       el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px' }, el('button', { onclick: () => box.remove() }, 'Abbrechen'), el('button', { class: 'primary', onclick: save }, '💾 Speichern')))
     box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) box.remove() })

@@ -72,7 +72,7 @@
       },
       {
         "key": "keep",
-        "label": "so viele Dateien je Wurzel behalten",
+        "label": "so viele Stände behalten (je Wurzel, dieser Job)",
         "type": "number",
         "default": "14"
       }

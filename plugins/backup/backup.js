@@ -7,6 +7,7 @@ const gz = (gzArg ?? 'true') !== 'false' && gzArg !== '0' && gzArg !== 'off'   /
 if (!server) { console.error('journali-Adresse fehlt'); process.exit(2) }
 const dir = path.resolve(dirArg || 'backup'); const keep = Math.max(1, parseInt(keepArg || '14', 10) || 14)
 const headers = { 'X-Actor': actor || 'job:backup' }
+const jobKey = process.env.JOURNALI_JOB ? process.env.JOURNALI_JOB + '-' : ''   // vom JobRunner; von Hand: ohne
 async function get(p) { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() }
 ;(async () => {
   fs.mkdirSync(dir, { recursive: true })
@@ -20,13 +21,14 @@ async function get(p) { const r = await fetch(server + p, { headers }); if (!r.o
     const raw = await get(`/api/nodes/${encodeURIComponent(r.id)}/export?deep=true`)
     const count = (n => { let c = 1; for (const k of n.children ?? []) c += count(k); return c })(raw.node)
     const safe = String(r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
-    const file = path.join(dir, `${safe}-${r.id}-${stamp}.json${gz ? '.gz' : ''}`)
+    // Dateiname mit Job-Key (Taloan): zwei Jobs im selben Verzeichnis zählen ihre Stände getrennt
+    const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.json${gz ? '.gz' : ''}`)
     const text = JSON.stringify(raw, null, 1)
     fs.writeFileSync(file, gz ? zlib.gzipSync(text, { level: 9 }) : text)
     total += count
     console.log(`${file}: ${count} Knoten, ${raw.model.attributes.length} Attribute, ${(fs.statSync(file).size / 1024).toFixed(0)} KB${gz ? ` (roh ${(text.length / 1024).toFixed(0)} KB)` : ''}`)
     // alte Stände dieser Wurzel wegräumen
-    const old = fs.readdirSync(dir).filter(f => f.includes(`-${r.id}-`) && (f.endsWith('.json') || f.endsWith('.json.gz'))).sort()
+    const old = fs.readdirSync(dir).filter(f => f.startsWith(jobKey) && f.includes(`-${r.id}-`) && (f.endsWith('.json') || f.endsWith('.json.gz'))).sort()
     for (const f of old.slice(0, Math.max(0, old.length - keep))) { fs.unlinkSync(path.join(dir, f)); console.log(`alt entfernt: ${f}`) }
   }
   console.log(`✓ ${roots.length} Wurzel${roots.length > 1 ? 'n' : ''}, ${total} Knoten gesichert nach ${dir}`)

@@ -174,17 +174,26 @@ public static class Secrets
     public static void Remove(string dir, string key) { lock (Gate) { var all = Load(dir); if (all.Remove(key)) System.IO.File.WriteAllText(File(dir), JsonSerializer.Serialize(all)); } }
 }
 
-/// <summary>cron mit fünf Feldern: Minute Stunde Tag Monat Wochentag — *, n, a-b, */n, a,b; Wochentag 0–7 (0 und 7 = Sonntag).</summary>
+/// <summary>cron mit fünf Feldern: Minute Stunde Tag Monat Wochentag — *, n, a-b, */n, a,b; Wochentag 0–7 (0 und 7 = Sonntag).
+/// Tag und Wochentag gelten zusammen (UND) — „15-21 * 0“ ist der 3. Sonntag im Monat. Sechstes Feld (Taloan, 19.09.: „jeden zweiten“):
+/// dN:JJJJ-MM-TT = nur alle N Tage ab dem Datum, wN:JJJJ-MM-TT = nur alle N Wochen ab dem Datum (Woche = 7 Tage ab Anker).</summary>
 public sealed class Cron
 {
     private readonly bool[][] _f = new bool[5][];
+    private char _everyKind; private int _everyN; private DateOnly _anchor;
     private static readonly int[] Min = [0, 0, 1, 1, 0], Max = [59, 23, 31, 12, 7];
 
     public static bool TryParse(string s, out Cron cron)
     {
         cron = new Cron();
         var parts = s.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length != 5) return false;
+        if (parts.Length == 6)
+        {
+            var e = parts[5]; var colon = e.IndexOf(':');
+            if (e.Length < 4 || (e[0] != 'd' && e[0] != 'w') || colon < 2 || !int.TryParse(e[1..colon], out var n) || n < 1 || !DateOnly.TryParseExact(e[(colon + 1)..], "yyyy-MM-dd", out var anchor)) return false;
+            cron._everyKind = e[0]; cron._everyN = n; cron._anchor = anchor;
+        }
+        else if (parts.Length != 5) return false;
         for (var i = 0; i < 5; i++)
         {
             var set = new bool[Max[i] + 1];
@@ -205,21 +214,32 @@ public sealed class Cron
         return true;
     }
 
-    public bool Matches(DateTimeOffset t) => _f[0][t.Minute] && _f[1][t.Hour] && _f[2][t.Day] && _f[3][t.Month] && _f[4][(int)t.DayOfWeek];
+    public bool Matches(DateTimeOffset t) => _f[0][t.Minute] && _f[1][t.Hour] && _f[2][t.Day] && _f[3][t.Month] && _f[4][(int)t.DayOfWeek] && Every(t);
+    private bool Every(DateTimeOffset t)
+    {
+        if (_everyKind == '\0') return true;
+        var days = DateOnly.FromDateTime(t.LocalDateTime).DayNumber - _anchor.DayNumber;
+        var unit = _everyKind == 'w' ? (int)Math.Floor(days / 7.0) : days;
+        return ((unit % _everyN) + _everyN) % _everyN == 0;
+    }
 
     /// <summary>In Worten, für die Liste: „täglich 02:00“, „alle 15 min“, „Mo–Fr 06:30“ … sonst der Ausdruck selbst.</summary>
     public static string Describe(string? s)
     {
         if (s is null) return "nur von Hand";
         var p = s.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var every = "";
+        if (p.Length == 6 && TryParse(s, out var c6)) { every = c6._everyN > 1 ? $" · alle {c6._everyN} {(c6._everyKind == 'w' ? "Wochen" : "Tage")}" : ""; p = p[..5]; }
         if (p.Length != 5) return s;
         var days = new[] { "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa" };
+        var nth = p[2] switch { "1-7" => "1. ", "8-14" => "2. ", "15-21" => "3. ", "22-28" => "4. ", _ => "" };
         string Dow(string d) => d == "*" ? "" : d == "1-5" ? "Mo–Fr " : d == "0,6" || d == "6,0" ? "Sa/So " : string.Join(",", d.Split(',').Select(x => int.TryParse(x, out var n) && n >= 0 && n <= 7 ? days[n % 7] : x)) + " ";
         if (p[0].StartsWith("*/") && p[1] == "*" && p[2] == "*" && p[3] == "*" && p[4] == "*") return $"alle {p[0][2..]} min";
         if (p[0] == "0" && p[1].StartsWith("*/") && p[2] == "*" && p[3] == "*" && p[4] == "*") return $"alle {p[1][2..]} h";
         if (p[0] == "*" && p[1] == "*" && p[2] == "*" && p[3] == "*" && p[4] == "*") return "jede Minute";
-        if (int.TryParse(p[0], out var mi) && int.TryParse(p[1], out var h) && p[2] == "*" && p[3] == "*") return $"{(p[4] == "*" ? "täglich" : Dow(p[4]).Trim())} {h:00}:{mi:00}";
-        if (int.TryParse(p[0], out mi) && int.TryParse(p[1], out h) && int.TryParse(p[2], out var d) && p[3] == "*" && p[4] == "*") return $"monatlich am {d}. {h:00}:{mi:00}";
-        return s;
+        if (int.TryParse(p[0], out var mi) && int.TryParse(p[1], out var h) && p[2] == "*" && p[3] == "*") return $"{(p[4] == "*" ? "täglich" : Dow(p[4]).Trim())} {h:00}:{mi:00}{every}";
+        if (int.TryParse(p[0], out mi) && int.TryParse(p[1], out h) && nth.Length > 0 && p[3] == "*" && p[4] != "*") return $"{nth}{Dow(p[4]).Trim()} im Monat {h:00}:{mi:00}";
+        if (int.TryParse(p[0], out mi) && int.TryParse(p[1], out h) && int.TryParse(p[2], out var d) && p[4] == "*") return $"{(p[3] == "*" ? "monatlich" : p[3].StartsWith("*/") ? $"alle {p[3][2..]} Monate" : "Monat " + p[3])} am {d}. {h:00}:{mi:00}";
+        return s + every;
     }
 }

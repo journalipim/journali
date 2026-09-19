@@ -18,6 +18,7 @@ const viewKey = viewArg || E.JOURNALI_VIEW || ''
 const ownOnly = (ownArg || E.JOURNALI_OWNONLY || 'false') === 'true'
 const keep = Math.max(1, parseInt(keepArg || E.JOURNALI_KEEP || '14', 10) || 14)
 const headers = { 'X-Actor': actor }
+const jobKey = E.JOURNALI_JOB ? E.JOURNALI_JOB + '-' : ''   // vom JobRunner; von Hand: ohne
 const api = { get: async p => { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() } }
 
 ;(async () => {
@@ -33,11 +34,11 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   for (const r of roots) {
     const t = await build({ api, model }, { root: r.id, role, locales: locs, ownOnly, viewKey, say: m => console.log(m) })
     const safe = String(r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
-    const file = path.join(dir, `${safe}-${r.id}-${stamp}.${format === 'csv' ? 'csv' : 'xlsx'}`)
+    const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.${format === 'csv' ? 'csv' : 'xlsx'}`)   // Job-Key davor: Stände je Job (Taloan)
     if (format === 'csv') fs.writeFileSync(file, toCsv(t), 'utf8')
     else fs.writeFileSync(file, Buffer.from(X.write(workbook(X, t), { type: 'array', bookType: 'xlsx' })))
     console.log(`${file}: ${t.count} Zeilen, ${t.columns.length} Spalten, ${(fs.statSync(file).size / 1024).toFixed(0)} KB`)
-    const old = fs.readdirSync(dir).filter(f => f.includes(`-${r.id}-`) && /\.(xlsx|csv)$/.test(f)).sort()
+    const old = fs.readdirSync(dir).filter(f => f.startsWith(jobKey) && f.includes(`-${r.id}-`) && /\.(xlsx|csv)$/.test(f)).sort()
     for (const f of old.slice(0, Math.max(0, old.length - keep))) { fs.unlinkSync(path.join(dir, f)); console.log(`alt entfernt: ${f}`) }
   }
   console.log(`✓ ${roots.length} Wurzel${roots.length > 1 ? 'n' : ''} exportiert nach ${dir}`)
