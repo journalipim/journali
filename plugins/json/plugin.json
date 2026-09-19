@@ -1,12 +1,12 @@
 {
   "key": "json",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "label": {
     "de": "JSON (Import, Export)",
     "en": "JSON (import, export)"
   },
   "description": {
-    "de": "Strukturierte Daten als JSON: Export eines Teilbaums als Rohdaten (wiederherstellbar, mit Modellteil) oder ausgewertet (Baum, Liste); Import-Manager mit Analyse, Zuordnung (best guess, Präfix), Zielbaum; als Job (Prozess) einspielbar. Dazu JSON-Listen als Tabelle für ⇩ Import → Tabelle.",
+    "de": "Strukturierte Daten als JSON: Export eines Teilbaums als Rohdaten (wiederherstellbar, mit Modellteil) oder ausgewertet (Baum, Liste); Import-Manager mit Analyse, Zuordnung (best guess, Präfix), Zielbaum; als Job (Prozess) einspielbar. Dazu JSON-Listen als Tabelle für ⇩ Import → Tabelle. Als Job: Import (Rohdaten einspielen) und Export (Rohdaten, Baum oder Liste in ein Verzeichnis).",
     "en": "JSON files (array of objects, or { rows | items | data: [...] }) as a table; nested fields become a.b.c."
   },
   "kind": "import",
@@ -55,6 +55,68 @@
           "label": "Trockenlauf (nur zählen, nichts schreiben)",
           "type": "boolean",
           "default": "false"
+        }
+      ]
+    },
+    {
+      "key": "export",
+      "label": "Export: JSON",
+      "command": "node",
+      "args": [
+        "export-job.mjs",
+        "{journali}",
+        "{actor}",
+        "{root}",
+        "{dir}",
+        "{format}",
+        "{locales}",
+        "{ownOnly}",
+        "{gzip}",
+        "{keep}"
+      ],
+      "description": "Teilbaum als JSON in ein Verzeichnis — Rohdaten (wiederherstellbar), ausgewerteter Baum oder flache Liste; je Wurzel eine Datei",
+      "params": [
+        {
+          "key": "root",
+          "label": "Teilbaum (leer = alle Wurzeln)",
+          "type": "node",
+          "default": ""
+        },
+        {
+          "key": "dir",
+          "label": "Verzeichnis",
+          "type": "text",
+          "default": "json"
+        },
+        {
+          "key": "format",
+          "label": "Form: raw (Rohdaten, wiederherstellbar), tree (ausgewertet, Baum), flat (ausgewertet, Liste)",
+          "type": "text",
+          "default": "raw"
+        },
+        {
+          "key": "locales",
+          "label": "Sprachen (Codes, mit Komma; leer = Leitsprache) — nur tree/flat",
+          "type": "text",
+          "default": ""
+        },
+        {
+          "key": "ownOnly",
+          "label": "nur eigene Werte (geerbte leer lassen) — nur tree/flat",
+          "type": "boolean",
+          "default": "false"
+        },
+        {
+          "key": "gzip",
+          "label": "komprimieren (gzip, .json.gz)",
+          "type": "boolean",
+          "default": "true"
+        },
+        {
+          "key": "keep",
+          "label": "so viele Stände behalten (je Wurzel, dieser Job)",
+          "type": "number",
+          "default": "14"
         }
       ]
     }
