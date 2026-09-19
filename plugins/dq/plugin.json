@@ -2,12 +2,12 @@
   "key": "dq",
   "version": "1.1.0",
   "label": {
-    "de": "Datenqualität",
-    "en": "Data quality"
+    "de": "Datenanalyse",
+    "en": "Data analysis"
   },
   "description": {
-    "de": "Basis-Plugin: prüft einen Teilbaum gegen Regeln (Pflicht, Muster, Zahlen, Listenwerte, Leerzeichen, leeres HTML, SKU doppelt, Übersetzung fehlt/gleich, Formel ohne Ergebnis) und listet die Funde mit Sprung zum Knoten. Grundfunktion der Gruppe Datenanalyse — weitere Regeln liefern Plugins über checks (dpp, ppwr; requires: dq).",
-    "en": "Base plugin: checks a subtree against rules and lists findings with a link to the node. The base of the analysis group — other plugins add rules (checks)."
+    "de": "Basis-Plugin der Gruppe Datenanalyse. Grundfunktion: Datenqualität — prüft einen Teilbaum gegen Regeln (Pflicht, Muster, Zahlen, Listenwerte, Leerzeichen, leeres HTML, SKU doppelt, Übersetzung fehlt/gleich, Formel ohne Ergebnis) und listet die Funde mit Sprung zum Knoten. Weitere Prüfungen liefern Plugins über checks (dpp, ppwr; requires: dq).",
+    "en": "Base plugin of the analysis group. Base function: data quality — checks a subtree against rules and lists findings with a link to the node. Other plugins add checks."
   },
   "kind": "quality",
   "runs": "browser",

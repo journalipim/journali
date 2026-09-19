@@ -6,7 +6,7 @@
     "en": "Jobs"
   },
   "description": {
-    "de": "Basis-Plugin: Jobs laufen im Server als Kindprozesse, unabhängig vom Browser — regelmäßig (cron) oder von Hand; anlegen, überwachen, Logs lesen; Geheimnisse bleiben beim Server. Grundfunktion der Gruppe Jobs — Prozess-Plugins (backup, export, json, ixp, datasheet) hängen daran (requires: tasker).",
+    "de": "Basis-Plugin der Gruppe Jobs. Grundfunktion: Jobs im Server als Kindprozesse, unabhängig vom Browser — regelmäßig (cron) oder von Hand; anlegen, überwachen, Logs lesen; Geheimnisse bleiben beim Server. Prozess-Plugins (backup, export, json, ixp, datasheet) hängen daran (requires: tasker).",
     "en": "Base plugin: jobs run in the server as child processes on a schedule or by hand; manage, monitor, read logs. Process plugins depend on it."
   },
   "kind": "tool",
