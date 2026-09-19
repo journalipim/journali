@@ -27,7 +27,7 @@ public static class TransferApi
     public sealed record RawExport(RawModel Model, RawNode Node);
     /// <summary>Zuordnung aus dem Import-Manager (Taloan): JSON-Key → vorhandenes Attribut/Gruppe, oder neu (mit Präfix). Fehlt ein Key hier, gilt: gleicher Key.</summary>
     public sealed record ImportMap(Dictionary<string, string>? Attributes = null, Dictionary<string, string>? Groups = null, string? Prefix = null);
-    public sealed record ImportBody(RawNode Node, string? Parent = null, RawModel? Model = null, ImportMap? Map = null);
+    public sealed record ImportBody(RawNode Node, string? Parent = null, RawModel? Model = null, ImportMap? Map = null, bool DryRun = false);
 
     public static void Map(RouteGroupBuilder api)
     {
@@ -44,15 +44,23 @@ public static class TransferApi
                 var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
                 var s = new Stats();
                 var (node, rawModel) = body.Map is null ? (body.Node, body.Model) : Remap(body.Node, body.Model, body.Map, model);
-                if (rawModel is not null) ImportModel(ctx, rawModel, s);
                 var parent = Blank(body.Parent) ?? node.Parent;
                 if (parent is not null && !tree.Nodes.ContainsKey(parent)) return (s, Error: (string?)$"Vater {parent} steht nicht im Baum — Ziel angeben (parent).");
+                // Trockenlauf (Job): nur zählen, was passieren würde — nichts schreiben
+                if (body.DryRun)
+                {
+                    void Count(RawNode r) { if (tree.Nodes.ContainsKey(r.Id)) s.Updated++; else if (tree.Retired.ContainsKey(r.Id)) s.Restored++; else s.Created++; foreach (var ch in r.Children ?? []) Count(ch); }
+                    Count(node);
+                    if (rawModel is not null) s.ModelAdded = rawModel.Groups.Count(g => !model.Groups.ContainsKey(g.Key)) + rawModel.Attributes.Count(a => !model.Attributes.ContainsKey(a.Key)) + rawModel.Lists.Count(l => !model.Lists.ContainsKey(l.Key)) + rawModel.Units.Count(u => !model.Units.ContainsKey(u.Key));
+                    return (s, Error: null);
+                }
+                if (rawModel is not null) ImportModel(ctx, rawModel, s);
                 Import(ctx, node, parent, s);
                 return (s, Error: s.Errors.Count > 0 && s.Created + s.Restored + s.Updated == 0 ? s.Errors[0] : null);
             });
             var st = result.s;
             return result.Error is not null ? Bad(result.Error)
-                : Results.Ok(new { created = st.Created, restored = st.Restored, updated = st.Updated, entries = st.Entries, model = st.ModelAdded, errors = st.Errors.Take(20), batch, idMap = st.IdMap });
+                : Results.Ok(new { created = st.Created, restored = st.Restored, updated = st.Updated, entries = st.Entries, model = st.ModelAdded, errors = st.Errors.Take(20), batch = body.DryRun ? null : batch, dryRun = body.DryRun, idMap = st.IdMap });
         });
     }
 

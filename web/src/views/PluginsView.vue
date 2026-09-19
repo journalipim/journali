@@ -118,7 +118,7 @@ function pick(k) { cur.value = k }
         <h2>⚙ Prozess <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ manifest.process.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
           <span v-if="manifest.process.params?.length">Parameter: {{ manifest.process.params.map(p => p.label || p.key).join(' · ') }}.</span></div>
-        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" @click="navigate">⏱ Als Job einrichten</button></router-link><span class="muted" style="font-size:12px">Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job</span></div>
+        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled || !plugins.enabled('tasker')" :title="plugins.enabled('tasker') ? '' : 'Jobs brauchen das Plugin tasker — erst einschalten'" @click="navigate">⏱ Als Job einrichten</button></router-link><span class="muted" style="font-size:12px">{{ plugins.enabled('tasker') ? 'Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job' : 'Jobs brauchen das Plugin tasker (⌁ Plugins → tasker → einschalten)' }}</span></div>
       </div>
       <div class="section">
         <h2>Manifest <span class="mono muted">plugins/{{ current.key }}/plugin.json</span></h2>

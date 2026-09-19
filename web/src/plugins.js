@@ -62,7 +62,7 @@ export const plugins = reactive({
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`
     return {
-      api, store, tree, mapper, dialog, orphans, compliance, ai,
+      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this,   // plugins.enabled('tasker'): Knöpfe „als Job“ nur mit Tasker (Taloan)
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {
         list: () => api.get(`/api/plugins/${key}/data`),

@@ -49,7 +49,21 @@ export async function mountManager(root, ctx) {
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 12px' })
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⇩ JSON-Import'), el('span', { class: 'grow' }), status), body)
+  // Profil (Taloan: „als Job einrichten“): Zuordnung, Präfix, Ziel unter profile:<name> im Journal — der Job (job.mjs) nimmt es
+  const profSel = el('select', {}, el('option', { value: '' }, '— Profil —'))
+  const profIn = el('input', { type: 'text', placeholder: 'Name', style: 'width:110px' })
+  async function loadProfiles() { try { const names = (await ctx.data.list()).filter(n => n.startsWith('profile:')).map(n => n.slice(8)); profSel.innerHTML = ''; profSel.append(el('option', { value: '' }, '— Profil —'), ...names.map(n => el('option', { value: n }, n))) } catch {} }
+  profSel.addEventListener('change', async () => { const n = profSel.value; if (!n) return; const p = await ctx.data.get('profile:' + n); if (!p) return; st.prefix = p.prefix ?? ''; if (p.parent && tree.byId.has(p.parent)) st.parent = p.parent; if (st.raw) { for (const [k, v] of Object.entries(p.mapA ?? {})) if (st.mapA[k]) st.mapA[k] = { to: v, why: 'Profil', sure: true }; for (const [k, v] of Object.entries(p.mapG ?? {})) if (st.mapG[k]) st.mapG[k] = { to: v, why: 'Profil', sure: true }; drawModel(); drawTarget(); drawRun() } profIn.value = n; store.toast(`Profil „${n}“ geladen`, 'ok') })
+  async function saveProfile() {
+    const n = (profIn.value || profSel.value).trim(); if (!n) { store.toast('Profilname fehlt'); return }
+    const mapA = Object.fromEntries(Object.entries(st.mapA).map(([k, v]) => [k, v.to])), mapG = Object.fromEntries(Object.entries(st.mapG).map(([k, v]) => [k, v.to]))
+    await ctx.data.set('profile:' + n, { mapA, mapG, prefix: st.prefix, parent: st.parent }); await loadProfiles(); profSel.value = n; store.toast(`Profil „${n}“ gespeichert — als Job: ⏱ Jobs → + Job → Import: JSON`, 'ok')
+  }
+  const taskerOn = !!ctx.plugins?.enabled?.('tasker')   // Knopf nur mit Tasker (Taloan)
+  const jobBtn = el('button', { class: 'x', title: taskerOn ? 'diesen Import als Job einrichten (Profil speichern, dann Jobs → + Job mit Plugin Import: JSON)' : 'Jobs brauchen das Plugin tasker (⌁ Plugins → einschalten)', onclick: async () => { if (!(profIn.value || profSel.value).trim()) { store.toast('erst ein Profil benennen und speichern'); return } await saveProfile(); ctx.go?.('/p/tasker/jobs?new=json') } }, '⏱ als Job einrichten')
+  if (!taskerOn) jobBtn.disabled = true
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⇩ JSON-Import'), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { class: 'x', title: 'Zuordnung, Präfix und Ziel als Profil speichern', onclick: saveProfile }, '💾'), jobBtn, el('span', { class: 'grow' }), status), body)
+  loadProfiles()
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)
 
   // ---- 1 Datei

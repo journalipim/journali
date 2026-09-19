@@ -1,6 +1,6 @@
 {
   "key": "json",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "label": {
     "de": "Import: JSON",
     "en": "Import: JSON"
@@ -12,5 +12,44 @@
   "kind": "import",
   "runs": "browser",
   "entry": "entry.js",
-  "autoInstall": true
+  "autoInstall": true,
+  "process": {
+    "command": "node",
+    "args": [
+      "job.mjs",
+      "{journali}",
+      "{actor}",
+      "{source}",
+      "{profile}",
+      "{parent}",
+      "{dryRun}"
+    ],
+    "description": "Rohdaten-JSON (.json/.json.gz, Datei, Verzeichnis = neueste Datei, oder URL) einspielen — mit gespeichertem Profil des JSON-Imports (Zuordnung, Präfix, Ziel)",
+    "params": [
+      {
+        "key": "source",
+        "label": "Quelle: Datei, Verzeichnis (neueste Datei) oder URL",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "profile",
+        "label": "Profil des JSON-Imports (leer = gleiche Keys, kein Präfix)",
+        "type": "text",
+        "default": ""
+      },
+      {
+        "key": "parent",
+        "label": "Ziel (leer = wie im Profil oder in der Datei)",
+        "type": "node",
+        "default": ""
+      },
+      {
+        "key": "dryRun",
+        "label": "Trockenlauf (nur zählen, nichts schreiben)",
+        "type": "boolean",
+        "default": "false"
+      }
+    ]
+  }
 }
