@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<IXF xmlns="https://www.etim-international.com/etimixf/31" schemaVersion="3.1">
+<Header><Description>Test</Description><ExportDate>2025-01-01T00:00:00</ExportDate><Publication><Name>ETIM 10.0</Name><Number>10</Number><Date>2024-12-01T00:00:00</Date><Prerelease>false</Prerelease></Publication></Header>
+<Units><Unit><Code>EU570448</Code><Translations><Translation language="de-DE"><Description>Volt</Description><Abbreviation>V</Abbreviation></Translation><Translation language="EN"><Description>volt</Description><Abbreviation>V</Abbreviation></Translation></Translations></Unit>
+<Unit><Code>EU570000</Code><Translations><Translation language="de-DE"><Description>Grad Celsius</Description><Abbreviation>°C</Abbreviation></Translation></Translations></Unit></Units>
+<Features><Feature><Code>EF000040</Code><Type>Numeric</Type><Translations><Translation language="de-DE"><Description>Nennspannung</Description></Translation><Translation language="EN"><Description>Rated voltage</Description></Translation></Translations></Feature>
+<Feature><Code>EF000008</Code><Type>Alphanumeric</Type><Translations><Translation language="de-DE"><Description>Schutzart (IP)</Description></Translation></Translations></Feature>
+<Feature><Code>EF007385</Code><Type>Logical</Type><Translations><Translation language="de-DE"><Description>Mit Schalter</Description></Translation></Translations></Feature>
+<Feature><Code>EF007515</Code><Type>Range</Type><Translations><Translation language="de-DE"><Description>Umgebungstemperatur &amp; so</Description></Translation></Translations></Feature></Features>
+<Values><Value><Code>EV000001</Code><Translations><Translation language="de-DE"><Description>IP44</Description></Translation></Translations></Value><Value><Code>EV000002</Code><Translations><Translation language="de-DE"><Description>IP20</Description></Translation><Translation language="EN"><Description>IP20</Description></Translation></Translations></Value></Values>
+<Groups><Group><Code>EG000001</Code><Translations><Translation language="de-DE"><Description>Licht</Description></Translation></Translations></Group></Groups>
+<Classes><Class changeCode="Changed"><Code>EC000042</Code><Version>7</Version><Translations><Translation language="de-DE"><Description>Leuchte</Description><Synonyms><Synonym>Lampe</Synonym><Synonym>Strahler</Synonym></Synonyms></Translation><Translation language="EN"><Description>Luminaire</Description></Translation></Translations>
+<Features><Feature changeCode="Unchanged"><FeatureCode>EF000008</FeatureCode><OrderNumber>2</OrderNumber><Values><Value changeCode="Unchanged"><ValueCode>EV000001</ValueCode><OrderNumber>1</OrderNumber></Value><Value changeCode="New"><ValueCode>EV000002</ValueCode><OrderNumber>2</OrderNumber></Value></Values></Feature>
+<Feature changeCode="Unchanged"><FeatureCode>EF000040</FeatureCode><UnitCode>EU570448</UnitCode><OrderNumber>1</OrderNumber></Feature>
+<Feature changeCode="Unchanged"><FeatureCode>EF007385</FeatureCode><OrderNumber>3</OrderNumber></Feature>
+<Feature changeCode="Unchanged"><FeatureCode>EF007515</FeatureCode><UnitCode>EU570000</UnitCode><OrderNumber>4</OrderNumber></Feature></Features>
+<Status>Published</Status><GroupCode>EG000001</GroupCode></Class>
+<Class changeCode="New"><Code>EC000001</Code><Version>1</Version><Translations><Translation language="de-DE"><Description>Kabel</Description></Translation></Translations><Status>Published</Status><GroupCode>EG000001</GroupCode></Class></Classes>
+</IXF>

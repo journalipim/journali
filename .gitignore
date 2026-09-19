@@ -20,3 +20,6 @@ Journali.Server/media/
 # Jobs: Logs und Geheimnisse (Plugin tasker) — nie im Repo
 jobs/
 Journali.Server/jobs/
+
+# Ausgaben der Export-Jobs (Arbeitsverzeichnis ist das Plugin) — nie im Repo
+plugins/xport/export/

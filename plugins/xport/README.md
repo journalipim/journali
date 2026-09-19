@@ -19,6 +19,7 @@ Dieselbe Schreibweise wie die Vorlagen-Attribute (`Template.cs`), dazu Schleifen
 | `{feld\|2}` / `{feld\|dec2}` | Zahl mit 2 Stellen — Sprachformat (1.234,50) / mit Punkt (1234.50, xs:decimal) |
 | `{feld\|unit}` | Wert mit Einheit des Attributs |
 | `{feld\|upper\|lower\|capitalize\|trim\|max80\|xml\|raw}` | Groß/Klein, Kürzen, doppelt entkommen, roh |
+| `{feld\|or:name}` | wenn leer: Feld `name` aus dem Kontext — gibt es das nicht, der Text selbst (`or:C62`) |
 | `[ … ]` | fällt weg, wenn ein Platzhalter darin leer ist oder eine `{#liste}` darin leer ist. Platzhalter in Schleifen zählen nicht |
 | `{#liste} … {/liste}` | je Element; darin `_index` (ab 1), `_first`, `_last`, `_parent` |
 | `{^liste} … {/liste}` | wenn leer (auch für `false`) |
@@ -29,7 +30,7 @@ bei `;"` und Zeilenumbruch), `json` (JSON-String ohne die Anführungszeichen), `
 
 ## Kontext
 
-Kopf: `products`, `groups` (id, name, parent, children), `count`, `locale`,
+Kopf: `products`, `groups` (id, name, parent, children, type root|node|leaf), `count`, `locale`,
 `languageCode` (deu/eng/…), `today`, `now`, `rootName` — und alle **Kopfwerte**
 des Profils (`{catalogId}`, `{supplierName}` … die Ansicht fragt sie ab).
 
@@ -38,11 +39,17 @@ Je Produkt: `id`, `role`, `sku`, `name`, `status`, `parentId`, `path` (Liste id/
 `attr.<key>` (`value`, `unit`, `label`; geerbt zählt, Listenwerte als Bezeichnung),
 `label.<key>`, `rows.<attribut>` (Zeilen vermehrbarer Attribute, je Spalte
 `{ value, unit, label }`), `media` (`id`, `name`, `mime`, `url`, `type`, `isImage`),
-`features` (aus dem Profil: `code`, `value`, `unit`, `label` — nur, wo das Attribut
-einen Wert hat), `children` (eine Ebene, ohne Kinder), `axes`.
+`features` (`code`, `value`, `values` — Bereich = zwei —, `unit`, `details`, `label`;
+aus dem Profil und, wenn das Plugin etim wirksam ist, aus der ETIM-Klasse am Knoten;
+dazu `etim.classCode`), `children` (eine Ebene, ohne Kinder), `axes`.
 
 ## Startvorlagen (`templates/`)
 
+- `bmecat-etim5.xml` — ETIM BMEcat Guideline 5.0 (Namensraum etim-international.com/bmecat/50):
+  ohne Gruppensystem, PRODUCT_FEATURES und Preis Pflicht, Medien als UDX.EDXF.MIME (MD01/MD22),
+  EAN als INTERNATIONAL_PID gtin. Geprüft gegen `bmecat_etim_501.xsd` (Guideline-Paket): gültig.
+  Kopfwerte catalogId, catalogVersion, catalogName, currency, supplierName, buyerName, territory,
+  etimVersion, priceType (net_customer | net_list | nrp), validFrom.
 - `bmecat2005.xml` — BMEcat 2005 T_NEW_CATALOG nach ETIM-BMEcat-Guideline:
   CATALOG_GROUP_SYSTEM aus den Gruppen, PRODUCT mit PRODUCT_FEATURES (ETIM),
   MIME_INFO, PRODUCT_TO_CATALOGGROUP_MAP. Kopfwerte catalogId, catalogVersion,

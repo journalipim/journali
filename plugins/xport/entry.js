@@ -10,12 +10,14 @@ const download = (text, name, type) => { const a = document.createElement('a'); 
 const ICON = { group: '▣', product: '▦', variant: '◆' }
 const MIME = { xml: 'application/xml', json: 'application/json', csv: 'text/csv', text: 'text/plain' }
 const STARTERS = [
-  { key: 'bmecat2005', label: 'BMEcat 2005 + ETIM', file: 'bmecat2005.xml', mode: 'xml', fileName: 'bmecat-{date}.xml' },
+  { key: 'bmecat-etim5', label: 'ETIM BMEcat 5.0 (Guideline, XSD-konform)', file: 'bmecat-etim5.xml', mode: 'xml', fileName: 'bmecat-etim-{date}.xml' },
+  { key: 'bmecat2005', label: 'BMEcat 2005 mit Gruppen + ETIM', file: 'bmecat2005.xml', mode: 'xml', fileName: 'bmecat-{date}.xml' },
   { key: 'google', label: 'Google Merchant (RSS)', file: 'google-merchant.xml', mode: 'xml', fileName: 'merchant-{locale}.xml' },
   { key: 'json', label: 'JSON-Liste', file: 'products.json', mode: 'json', fileName: 'products-{locale}.json' },
 ]
 // beste Vermutung für die Zuordnung: Feldname der Vorlage → Attribut (Schlüssel oder Bezeichnung)
-const GUESS = {
+const GUESS = {   // Felder (f.*) → Attribut, Schlüssel oder Bezeichnung; $sku/$name/$id sind Knotenfelder
+
   sku: ['$sku'], name: ['$name'], title: ['$name', 'title', 'titel', 'name'], short: ['short', 'kurz', 'description_short', 'kurztext'], long: ['long', 'lang', 'description_long', 'beschreibung', 'description', 'langtext'],
   description: ['description', 'beschreibung', 'long', 'langtext'], keywords: ['keyword', 'schlagw', 'stichw', 'tags'], manufacturer: ['manufacturer', 'hersteller', 'brand', 'marke'], brand: ['brand', 'marke', 'manufacturer', 'hersteller'],
   manufacturerPid: ['manufacturer_pid', 'herstellernummer', 'mpn', 'hersteller_nr'], mpn: ['mpn', 'manufacturer_pid', 'herstellernummer'], ean: ['ean', 'gtin'], gtin: ['gtin', 'ean'], price: ['price', 'preis'], vat: ['vat', 'mwst', 'tax', 'steuer'],
@@ -28,18 +30,18 @@ async function mount(root, ctx) {
   const model = store.model
   const attrs = model.attributes.filter(a => a.type !== 'rows')
   const lbl = a => a.label?.[model.masterLocale] || a.label?.de || a.key
-  const st = { name: '', template: '', mode: 'xml', fileName: 'export-{date}.xml', root: localStorage.getItem('journali.xport.root') || tree.rows.find(r => !r.parent)?.id, role: 'product', locale: model.masterLocale ?? 'de', mapping: {}, vars: {}, features: [], starter: '' }
+  const st = { name: '', template: '', mode: 'xml', fileName: 'export-{date}.xml', etim: true, root: localStorage.getItem('journali.xport.root') || tree.rows.find(r => !r.parent)?.id, role: 'product', locale: model.masterLocale ?? 'de', mapping: {}, vars: {}, features: [], starter: '' }
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
 
   // Profile (Taloan: als Job einrichten → Profil speichern, der Job nimmt den Namen)
   const profSel = el('select', { title: 'gespeichertes Profil laden' }); const profIn = el('input', { placeholder: 'Profil', style: 'width:130px', title: 'Name des Profils — der Job (⏱ Jobs → Export: Vorlage) nimmt ihn' })
   async function loadProfiles(keep) { const names = (await ctx.data.list().catch(() => [])).filter(n => n.startsWith('profile:')).map(n => n.slice(8)); profSel.innerHTML = ''; profSel.append(el('option', { value: '' }, names.length ? '— Profil —' : '— kein Profil —')); for (const n of names) profSel.append(el('option', { value: n }, n)); if (keep) profSel.value = keep }
-  profSel.addEventListener('change', async () => { const n = profSel.value; if (!n) return; const p = await ctx.data.get('profile:' + n); if (!p) return; Object.assign(st, { name: n, template: p.template ?? '', mode: p.mode ?? 'xml', fileName: p.fileName ?? st.fileName, root: p.root || st.root, role: p.role ?? 'product', locale: p.locale ?? st.locale, mapping: p.mapping ?? {}, vars: p.vars ?? {}, features: p.features ?? [], starter: p.starter ?? '' }); profIn.value = n; tplBox.value = st.template; picker.set(st.root); drawSettings(); say(`Profil „${n}“ geladen`) })
+  profSel.addEventListener('change', async () => { const n = profSel.value; if (!n) return; const p = await ctx.data.get('profile:' + n); if (!p) return; Object.assign(st, { name: n, template: p.template ?? '', mode: p.mode ?? 'xml', fileName: p.fileName ?? st.fileName, root: p.root || st.root, role: p.role ?? 'product', locale: p.locale ?? st.locale, mapping: p.mapping ?? {}, vars: p.vars ?? {}, features: p.features ?? [], starter: p.starter ?? '', etim: p.etim !== false }); profIn.value = n; tplBox.value = st.template; picker.set(st.root); drawSettings(); say(`Profil „${n}“ geladen`) })
   async function saveProfile() {
     const n = (profIn.value || profSel.value).trim(); if (!n) { store.toast('Profil benennen'); return null }
     st.name = n; st.template = tplBox.value
-    await ctx.data.set('profile:' + n, { template: st.template, mode: st.mode, fileName: st.fileName, root: st.root, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, starter: st.starter })
+    await ctx.data.set('profile:' + n, { template: st.template, mode: st.mode, fileName: st.fileName, root: st.root, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, starter: st.starter, etim: st.etim })
     await loadProfiles(n); say(`Profil „${n}“ gespeichert`); return n
   }
   const saveBtn = el('button', { class: 'x', title: 'Vorlage, Zuordnung, Kopfwerte, Teilbaum und Sprache als Profil speichern', onclick: saveProfile }, '⎘ speichern')
@@ -87,6 +89,7 @@ async function mount(root, ctx) {
     for (const f of fields) needsBody.append(row('f.' + f, attrSel(st.mapping[f], v => { st.mapping[f] = v })))
     if (/\{#features\}/.test(st.template)) {
       needsBody.append(step('Merkmale', 'Code → Attribut (ETIM & Co.)'))
+      if (ctx.plugins.active('etim')) { const cb = el('input', { type: 'checkbox' }); cb.checked = st.etim !== false; cb.addEventListener('change', () => { st.etim = cb.checked }); needsBody.append(row('ETIM', el('label', { title: 'Merkmale aus der ETIM-Klasse am Knoten (Plugin etim) — dazu die Liste unten' }, cb, ' aus der Klasse am Knoten'))) }
       const featBody = el('tbody'); const featTbl = el('table', { style: 'width:100%;border-collapse:collapse' }, featBody)
       const drawFeat = () => { featBody.innerHTML = ''; for (const [i, fe] of st.features.entries()) featBody.append(el('tr', {}, el('td', { style: 'width:80px;padding:1px' }, el('input', { value: fe.code ?? '', placeholder: 'EF000001', class: 'mono', style: 'width:100%', oninput: e => { fe.code = e.target.value } })), el('td', { style: 'padding:1px' }, attrSel(fe.attr, v => { fe.attr = v })), el('td', { style: 'width:44px;padding:1px' }, el('input', { value: fe.unit ?? '', placeholder: 'EU…', style: 'width:100%', title: 'Einheit (leer = die des Attributs)', oninput: e => { fe.unit = e.target.value } })), el('td', { style: 'width:22px' }, el('button', { class: 'x', title: 'Merkmal entfernen', onclick: () => { st.features.splice(i, 1); drawFeat() } }, '✕')))) }
       drawFeat()
@@ -115,6 +118,8 @@ async function mount(root, ctx) {
     busy = true
     try {
       const env = { api, model, tree: { rows: tree.rows, byId: tree.byId, kids: id => tree.rows.filter(r => (r.parent ?? '') === (id ?? '')) }, server: location.origin }
+      const etim = st.etim !== false && ctx.plugins.active('etim') ? ctx.use('etim') : null   // Merkmale aus der ETIM-Klasse am Knoten
+      if (etim?.featuresOf) env.featuresOf = etim.featuresOf
       const t0 = performance.now()
       const cx = await build(env, { root: st.root, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, limit: all ? 0 : 3, say: m => say(m) })
       const out = render(st.template, cx, st.mode, st.locale)

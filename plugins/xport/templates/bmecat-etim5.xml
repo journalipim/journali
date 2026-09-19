@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ETIM BMEcat Guideline 5.0 (bmecat_etim_501.xsd, Namensraum etim-international.com/bmecat/50) — Vorlage des Plugins xport.
+     Strenger als BMEcat 2005: kein Gruppensystem, PRODUCT_FEATURES und PRODUCT_PRICE_DETAILS Pflicht, Medien als UDX.EDXF.MIME
+     mit MIME_CODE (MD01 Produktbild, MD22 Datenblatt, MD04 Deeplink), EAN als INTERNATIONAL_PID type="gtin", Preis-Typ
+     net_customer | net_list | nrp. Merkmale kommen aus dem Plugin etim (Klasse am Knoten): Logical true/false, Numeric mit Punkt,
+     Range zwei FVALUE, Alphanumeric EV-Code, unbekannt „-“ + FVALUE_DETAILS UN.
+     Kopfwerte: catalogId, catalogVersion, catalogName, currency, supplierName, buyerName, territory, etimVersion, priceType, validFrom.
+     Felder (f.*): sku, short, long, ean, manufacturer, manufacturerPid, keywords, etimClass, orderUnit, contentUnit, noCuPerOu,
+     priceQuantity, quantityMin, quantityInterval, price, vat. -->
+<BMECAT version="2005" xmlns="https://www.etim-international.com/bmecat/50">
+  <HEADER>
+    <GENERATOR_INFO>journali</GENERATOR_INFO>
+    <CATALOG>
+      <LANGUAGE default="true">{languageCode}</LANGUAGE>
+      <CATALOG_ID>{catalogId}</CATALOG_ID>
+      <CATALOG_VERSION>{catalogVersion|or:1.0}</CATALOG_VERSION>
+      <CATALOG_NAME>{catalogName}</CATALOG_NAME>
+      <DATETIME type="generation_date">
+        <DATE>{today}</DATE>
+      </DATETIME>[
+      <TERRITORY>{territory}</TERRITORY>]
+      <CURRENCY>{currency|or:EUR}</CURRENCY>
+    </CATALOG>
+    <BUYER>
+      <BUYER_NAME>{buyerName|or:-}</BUYER_NAME>
+    </BUYER>
+    <SUPPLIER>
+      <SUPPLIER_NAME>{supplierName}</SUPPLIER_NAME>
+    </SUPPLIER>
+    <USER_DEFINED_EXTENSIONS>
+      <UDX.EDXF.VERSION>5.0</UDX.EDXF.VERSION>
+    </USER_DEFINED_EXTENSIONS>
+  </HEADER>
+  <T_NEW_CATALOG>{#products}
+    <PRODUCT mode="new">
+      <SUPPLIER_PID>{f.sku|or:sku}</SUPPLIER_PID>
+      <PRODUCT_DETAILS>
+        <DESCRIPTION_SHORT>{f.short|or:name|plain|max80}</DESCRIPTION_SHORT>[
+        <DESCRIPTION_LONG>{f.long|plain|max64000}</DESCRIPTION_LONG>][
+        <INTERNATIONAL_PID type="gtin">{f.ean}</INTERNATIONAL_PID>][
+        <MANUFACTURER_PID>{f.manufacturerPid}</MANUFACTURER_PID>][
+        <MANUFACTURER_NAME>{f.manufacturer}</MANUFACTURER_NAME>][
+        <KEYWORD>{f.keywords|max50}</KEYWORD>]
+      </PRODUCT_DETAILS>
+      <PRODUCT_FEATURES>
+        <REFERENCE_FEATURE_SYSTEM_NAME>ETIM-{etimVersion}</REFERENCE_FEATURE_SYSTEM_NAME>
+        <REFERENCE_FEATURE_GROUP_ID>{etim.classCode|or:f.etimClass}</REFERENCE_FEATURE_GROUP_ID>{#features}
+        <FEATURE>
+          <FNAME>{code}</FNAME>{#values}
+          <FVALUE>{value}</FVALUE>{/values}[
+          <FVALUE_DETAILS>{details}</FVALUE_DETAILS>]
+        </FEATURE>{/features}
+      </PRODUCT_FEATURES>
+      <PRODUCT_ORDER_DETAILS>
+        <ORDER_UNIT>{f.orderUnit|or:C62}</ORDER_UNIT>
+        <CONTENT_UNIT>{f.contentUnit|or:C62}</CONTENT_UNIT>
+        <NO_CU_PER_OU>{f.noCuPerOu|or:1}</NO_CU_PER_OU>
+        <PRICE_QUANTITY>{f.priceQuantity|or:1}</PRICE_QUANTITY>
+        <QUANTITY_MIN>{f.quantityMin|or:1}</QUANTITY_MIN>
+        <QUANTITY_INTERVAL>{f.quantityInterval|or:1}</QUANTITY_INTERVAL>
+      </PRODUCT_ORDER_DETAILS>
+      <PRODUCT_PRICE_DETAILS>
+        <DATETIME type="valid_start_date">
+          <DATE>{validFrom|or:today}</DATE>
+        </DATETIME>
+        <PRODUCT_PRICE price_type="{priceType|or:net_list}">
+          <PRICE_AMOUNT>{f.price|dec2|or:0}</PRICE_AMOUNT>
+          <PRICE_CURRENCY>{currency|or:EUR}</PRICE_CURRENCY>[
+          <TAX>{f.vat|dec2}</TAX>]
+        </PRODUCT_PRICE>
+      </PRODUCT_PRICE_DETAILS>
+      <USER_DEFINED_EXTENSIONS>[
+        <UDX.EDXF.MIME_INFO>{#media}
+          <UDX.EDXF.MIME>
+            <UDX.EDXF.MIME_SOURCE>{url}</UDX.EDXF.MIME_SOURCE>
+            <UDX.EDXF.MIME_CODE>{#isImage}MD01{/isImage}{^isImage}MD22{/isImage}</UDX.EDXF.MIME_CODE>
+            <UDX.EDXF.MIME_DESIGNATION>{name|max80}</UDX.EDXF.MIME_DESIGNATION>
+          </UDX.EDXF.MIME>{/media}
+        </UDX.EDXF.MIME_INFO>]
+      </USER_DEFINED_EXTENSIONS>
+    </PRODUCT>{/products}
+  </T_NEW_CATALOG>
+</BMECAT>

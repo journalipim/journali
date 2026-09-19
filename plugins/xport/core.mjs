@@ -1,6 +1,6 @@
 // Export mit Vorlagen (Taloan, 19.09.2026: „viele gehen nach Standard, verschiedene Versionen, und Kunden haben eigene
 // Definitionen“ — also Vorlagen als Daten statt ein Plugin je Format). Dieselbe Schreibweise wie die Vorlagen-Attribute
-// (Template.cs): {feld}, Zusätze {feld|unit|2|dec2|upper|plain|xml|raw|max80}, [ … ] fällt weg, wenn ein Platzhalter darin leer ist.
+// (Template.cs): {feld}, Zusätze {feld|unit|2|dec2|upper|plain|xml|raw|max80|or:name}, [ … ] fällt weg, wenn ein Platzhalter darin leer ist.
 // Dazu Schleifen {#name} … {/name} über products, children, media, features, rows.<attribut>, locales — und {^name} … {/name}
 // für „wenn leer“. Werte werden je Ausgabeart entkommen (xml: &<>"; csv: Anführungszeichen; json: JSON-String) — {x|raw} lässt sie roh.
 // Wörtlich: \{ \[ \] \\ — ein { ohne Namen dahinter ({"id": …) bleibt ohnehin Text, JSON-Listen brauchen \[ … \].
@@ -23,6 +23,7 @@ export function render(template, ctx, mode = 'text', locale = 'de') {
     let v = get(scope, path); let raw = false; let unit = null
     if (v && typeof v === 'object' && !Array.isArray(v) && 'value' in v) { unit = v.unit ?? null; v = v.value }
     if (Array.isArray(v)) v = v.map(x => x?.value ?? x).join(', ')
+    if (v == null || v === '') for (const m of mods) { if (!m.startsWith('or:')) continue; const alt = get(scope, m.slice(3)); let a = alt && typeof alt === 'object' && 'value' in alt ? alt.value : alt; if (a === undefined) a = m.slice(3); if (a != null && a !== '') { v = a; break } }
     if (v == null || v === '') return ''
     let s = String(v)
     for (const m of mods) {
@@ -101,8 +102,9 @@ export async function contextOf(env, id, { locale, mapping = {}, depth = 0, with
     if (v != null && d.type === 'enum') { const list = model.lists.find(x => x.key === d.list); v = String(v).split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[locale] ?? x.trim()).join(', ') }
     return v
   }
+  const rawOf = d => { const loc = d.perLocale ? locale : ''; const o = look(own, d.key, loc); if (o) return pick(o); if (d.inheritable) for (const m of anc) { const x = look(m, d.key, loc); if (x) return pick(x) } return null }
   const attr = {}; const label = {}
-  for (const d of model.attributes) { if (d.type === 'rows') continue; const v = val(d); label[d.key] = d.label?.[locale] || d.label?.de || d.key; attr[d.key] = v == null ? null : { value: v, unit: d.unit ?? null, label: label[d.key], key: d.key } }
+  for (const d of model.attributes) { if (d.type === 'rows') continue; const v = val(d); label[d.key] = d.label?.[locale] || d.label?.de || d.key; attr[d.key] = v == null ? null : { value: v, raw: rawOf(d), unit: d.unit ?? null, label: label[d.key], key: d.key } }
   // Zeilen vermehrbarer Attribute: rows.<attribut> = [{ <spalte>: { value, unit } }]
   const rows = {}
   for (const d of model.attributes.filter(a => a.type === 'rows')) rows[d.key] = (n.rows?.[d.key] ?? []).map(rid => Object.fromEntries((d.columns ?? []).map(c => { const cd = defs.get(c); return [c, cd ? { value: val(cd, rid), unit: cd.unit ?? null, label: cd.label?.[locale] || c } : null] })))
@@ -112,8 +114,9 @@ export async function contextOf(env, id, { locale, mapping = {}, depth = 0, with
   let media = []
   if (withMedia) { try { const rels = await api.get(`/api/nodes/${encodeURIComponent(id)}/relations`); media = [...(rels.out ?? []), ...(rels.inherited ?? [])].filter(r => r.other?.role == null && r.other?.mime && !(r.values ?? []).some(v => v.attribute === 'stop' && v.value === 'true')).map(r => ({ id: r.other.id, name: r.other.name, mime: r.other.mime, url: `${env.server ?? ''}/api/media/${r.other.id}/file`, type: r.type, isImage: !!r.other.isImage })) } catch { } }
   // ETIM & Co.: features = [{ code, attr, unit? }] aus dem Profil → Merkmale mit Wert aus dem Attribut
-  const features = (env.features ?? []).map(fe => { const a = attr[fe.attr]; return a ? { code: fe.code, value: a.value, unit: fe.unit ?? a.unit ?? null, label: a.label } : null }).filter(Boolean)
+  let features = (env.features ?? []).map(fe => { const a = attr[fe.attr]; return a ? { code: fe.code, value: a.value, values: [a.value], unit: fe.unit ?? a.unit ?? null, details: null, label: a.label } : null }).filter(Boolean)
   const ctx = { id, role: n.role, sku: row?.sku ?? '', name: row?.label ?? n.name ?? id, status: n.status, parentId: row?.parent ?? null, features, path: crumbs, pathText: crumbs.map(c => c.name).join(' / '), locale, attr, label, rows, f, media, axes: n.axisValues ?? {}, today: new Date().toISOString().slice(0, 10), now: new Date().toISOString() }
+  if (env.featuresOf) { const r = await env.featuresOf(ctx); if (r) { const codes = new Set(r.features.map(f => f.code)); ctx.features = [...features.filter(f => !codes.has(f.code)), ...r.features]; ctx.etim = { classCode: r.classCode, known: r.known, version: r.version ?? null } } }
   if (withChildren && depth === 0) { const kids = tree.kids(id); ctx.children = []; for (const k of kids) ctx.children.push(await contextOf(env, k.id, { locale, mapping, depth: 1, withChildren: false, withMedia })) }
   return ctx
 }
@@ -135,6 +138,6 @@ export async function build(env, { root, role = 'product', locale, mapping = {},
   if (limit > 0) targets = targets.slice(0, limit)
   const products = []
   for (const [i, r] of targets.entries()) { say?.(`${i + 1}/${targets.length} ${r.label}`); products.push(await contextOf(env, r.id, { locale, mapping })) }
-  const groups = tree.rows.filter(r => r.role === 'group' && (root ? r.id === root || under(r.id) : true)).map(g => ({ id: g.id, name: g.label, parent: g.parent && (g.id === root ? null : g.parent), children: tree.kids(g.id).filter(k => k.role === 'group').map(k => ({ id: k.id, name: k.label })) }))
+  const groups = tree.rows.filter(r => r.role === 'group' && (root ? r.id === root || under(r.id) : true)).map(g => { const parent = g.parent && (g.id === root ? null : g.parent); const children = tree.kids(g.id).filter(k => k.role === 'group').map(k => ({ id: k.id, name: k.label })); return { id: g.id, name: g.label, parent, children, type: !parent ? 'root' : children.length ? 'node' : 'leaf' } })
   return { ...vars, products, groups, count: products.length, locale, languageCode: { de: 'deu', en: 'eng', fr: 'fra', it: 'ita', es: 'spa', nl: 'nld' }[locale] ?? locale, today: new Date().toISOString().slice(0, 10), now: new Date().toISOString(), rootName: tree.byId.get(root)?.label ?? '' }
 }

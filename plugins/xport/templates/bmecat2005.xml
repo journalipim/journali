@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- BMEcat 2005 (T_NEW_CATALOG) mit ETIM-Merkmalen nach ETIM-BMEcat-Guideline — Vorlage des Plugins xport.
      Felder (f.*) kommen aus der Zuordnung des Profils: sku, short, long, keywords, manufacturer, manufacturerPid, ean,
-     orderUnit, contentUnit, priceQuantity, price, currency, vat, deliveryTime, etimClass. Alles andere aus attr.* / media / rows. -->
+     orderUnit, contentUnit, priceQuantity, price, vat, etimClass. Merkmale (features) kommen aus dem Plugin etim (Klasse am Knoten)
+     oder aus der Merkmalsliste des Profils. Fehlt ein Wert: |or:… (C62 = Stück). Alles andere aus attr.* / media / rows. -->
 <BMECAT version="2005" xmlns="http://www.bmecat.org/bmecat/2005">
   <HEADER>
     <GENERATOR_INFO>journali</GENERATOR_INFO>
@@ -21,16 +22,16 @@
     <CATALOG_GROUP_SYSTEM>
       <GROUP_SYSTEM_ID>journali</GROUP_SYSTEM_ID>
       <GROUP_SYSTEM_NAME>{catalogName}</GROUP_SYSTEM_NAME>{#groups}
-      <CATALOG_STRUCTURE type="{^children}leaf{/children}{#children}{#_first}node{/_first}{/children}">
+      <CATALOG_STRUCTURE type="{type}">
         <GROUP_ID>{id}</GROUP_ID>
-        <GROUP_NAME>{name}</GROUP_NAME>
-        <PARENT_ID>{parent}</PARENT_ID>
+        <GROUP_NAME>{name}</GROUP_NAME>[
+        <PARENT_ID>{parent}</PARENT_ID>]
       </CATALOG_STRUCTURE>{/groups}
     </CATALOG_GROUP_SYSTEM>{#products}
     <PRODUCT mode="new">
       <SUPPLIER_PID>{f.sku}</SUPPLIER_PID>
       <PRODUCT_DETAILS>
-        <DESCRIPTION_SHORT>{f.short|plain|max80}</DESCRIPTION_SHORT>[
+        <DESCRIPTION_SHORT>{f.short|or:name|plain|max80}</DESCRIPTION_SHORT>[
         <DESCRIPTION_LONG>{f.long|plain}</DESCRIPTION_LONG>][
         <EAN>{f.ean}</EAN>][
         <MANUFACTURER_PID>{f.manufacturerPid}</MANUFACTURER_PID>][
@@ -39,20 +40,21 @@
       </PRODUCT_DETAILS>[
       <PRODUCT_FEATURES>
         <REFERENCE_FEATURE_SYSTEM_NAME>ETIM-{etimVersion}</REFERENCE_FEATURE_SYSTEM_NAME>
-        <REFERENCE_FEATURE_GROUP_ID>{f.etimClass}</REFERENCE_FEATURE_GROUP_ID>{#features}
+        <REFERENCE_FEATURE_GROUP_ID>{etim.classCode|or:f.etimClass}</REFERENCE_FEATURE_GROUP_ID>{#features}
         <FEATURE>
-          <FNAME>{code}</FNAME>
-          <FVALUE>{value}</FVALUE>[
-          <FUNIT>{unit}</FUNIT>]
+          <FNAME>{code}</FNAME>{#values}
+          <FVALUE>{value}</FVALUE>{/values}[
+          <FUNIT>{unit}</FUNIT>][
+          <FVALUE_DETAILS>{details}</FVALUE_DETAILS>]
         </FEATURE>{/features}
       </PRODUCT_FEATURES>]
       <PRODUCT_ORDER_DETAILS>
-        <ORDER_UNIT>{f.orderUnit}</ORDER_UNIT>
-        <CONTENT_UNIT>{f.contentUnit}</CONTENT_UNIT>
-        <NO_CU_PER_OU>{f.noCuPerOu}</NO_CU_PER_OU>
-        <PRICE_QUANTITY>{f.priceQuantity}</PRICE_QUANTITY>
-        <QUANTITY_MIN>{f.quantityMin}</QUANTITY_MIN>
-        <QUANTITY_INTERVAL>{f.quantityInterval}</QUANTITY_INTERVAL>
+        <ORDER_UNIT>{f.orderUnit|or:C62}</ORDER_UNIT>
+        <CONTENT_UNIT>{f.contentUnit|or:C62}</CONTENT_UNIT>
+        <NO_CU_PER_OU>{f.noCuPerOu|or:1}</NO_CU_PER_OU>
+        <PRICE_QUANTITY>{f.priceQuantity|or:1}</PRICE_QUANTITY>
+        <QUANTITY_MIN>{f.quantityMin|or:1}</QUANTITY_MIN>
+        <QUANTITY_INTERVAL>{f.quantityInterval|or:1}</QUANTITY_INTERVAL>
       </PRODUCT_ORDER_DETAILS>[
       <PRODUCT_PRICE_DETAILS>
         <PRODUCT_PRICE price_type="net_list">
