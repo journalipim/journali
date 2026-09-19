@@ -8,6 +8,7 @@ import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import Cell from '../components/Cell.vue'
 import Splitter from '../components/Splitter.vue'
+import MediaThumb from '../components/MediaThumb.vue'
 import { paneWidth } from '../panes.js'
 
 const listW = paneWidth('media.list', 520)
@@ -64,7 +65,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
     </div>
     <div class="scroll tiles">
       <div v-for="m in items" :key="m.id" class="tile" :class="{ current: cur === m.id }" @click="cur = m.id" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}`">
-        <img v-if="m.isImage" :src="`/api/media/${m.id}/file`" loading="lazy" alt="" />
+        <MediaThumb v-if="m.isImage" :id="m.id" />
         <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
         <div class="name">{{ m.name }}</div>
         <div class="muted meta">{{ kb(m.bytes) }}<span v-if="m.used"> · ⇄ {{ m.used }}</span></div>

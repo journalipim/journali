@@ -22,7 +22,8 @@ if (builder.Configuration["JOURNALI_DB_PASSWORD"] is { Length: > 0 } password)
     connection.Password = password;
 
 PostgresJournal.EnsureDatabase(connection.ConnectionString);
-var journal = new PostgresJournal(NpgsqlDataSource.Create(connection.ConnectionString));
+var db = NpgsqlDataSource.Create(connection.ConnectionString);
+var journal = new PostgresJournal(db);
 journal.EnsureSchema();
 var catalog = new Catalog(journal);
 var rebuilt = catalog.Rebuild();
@@ -31,8 +32,10 @@ var seeded = catalog.SeedMissing();
 builder.Services.AddSingleton<IJournal>(journal);
 builder.Services.AddSingleton(catalog);
 
-// Medien: die Bytes liegen ausserhalb der Datenbank — JOURNALI_MEDIA (Verzeichnis), Vorgabe media/ neben dem Programm (docs/betrieb.md).
-var mediaStore = new FileMediaStore(builder.Configuration["JOURNALI_MEDIA"] ?? Path.Combine(builder.Environment.ContentRootPath, "media"));
+// Medien: Treiber per JOURNALI_MEDIA — postgres (Vorgabe: Tabelle media_blob neben dem Journal), Verzeichnis, s3://bucket;
+// JOURNALI_MEDIA_ORIGIN = andere Instanz als Ursprung (docs/betrieb.md). Taloan, 19.09.: Datenbank hier, Assets im Object Storage.
+var mediaStore = MediaStores.Create(builder.Configuration["JOURNALI_MEDIA"], db, builder.Configuration, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("media"), builder.Environment.ContentRootPath);
+builder.Services.AddSingleton(db);   // für den Kopierlauf (/media/copy)
 builder.Services.AddSingleton<IMediaStore>(mediaStore);
 builder.Services.AddHttpClient("media", h => { h.Timeout = TimeSpan.FromMinutes(2); h.DefaultRequestHeaders.UserAgent.ParseAdd("journali/1.0"); });   // Medien von URL holen (Import)
 
@@ -60,7 +63,7 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
-app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien unter {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Root, pluginDir, autoInstalled);
+app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien: {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Kind, pluginDir, autoInstalled);
 
 app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Editor-Origin; noch keine Anmeldung, daher offen
 

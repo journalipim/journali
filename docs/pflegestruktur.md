@@ -881,9 +881,13 @@ wird es dort vererbt und am Subitem nicht eigens zugeordnet.
 Taloan: Binärdaten nicht in die Datenbank — später skalieren, woanders
 speichern. Einverstanden; das Journal bleibt schlank.
 
-- **Die Datei liegt ausserhalb**, der Ort ist austauschbar: erst ein
-  Verzeichnis (`JOURNALI_MEDIA=…`, Unterordner nach Hash), später S3/MinIO
-  — dieselbe Schnittstelle `IMediaStore` (put, get, exists, url).
+- **Die Datei liegt ausserhalb**, der Ort ist ein Treiber (Taloan, 19.09.2026:
+  „Datenbank auf Azure, Assets im günstigeren Object Storage“): `postgres`
+  (Vorgabe, Tabelle `media_blob` neben dem Journal — ein Paket ist lauffähig),
+  Verzeichnis, `s3://` (Garage/MinIO/AWS/R2, ohne SDK); dazu ein Ursprung
+  (`JOURNALI_MEDIA_ORIGIN`) für Zweitinstanzen. Dieselbe Schnittstelle
+  `IMediaStore` (put, open, exists, keys); Wechsel = Kopierlauf nach Hash,
+  Ids und Journal bleiben. Vorschauen rechnet der Browser (`sha.thumb`).
 - **Im Journal steht nur das Ding**: Strom `m-…`, `MediaCreated {sha256,
   bytes, mime, name}` — die Datei ist über ihren Hash adressiert (gleiche
   Datei zweimal = ein Medium), unveränderlich; ein neues Bild ist ein neues

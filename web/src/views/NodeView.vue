@@ -18,6 +18,7 @@ import SelectCell from '../components/SelectCell.vue'
 import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
 import RowsBlock from '../components/RowsBlock.vue'
+import MediaThumb from '../components/MediaThumb.vue'
 import EntryList from '../components/EntryList.vue'
 import ScriptEditor from '../components/ScriptEditor.vue'
 import Splitter from '../components/Splitter.vue'
@@ -580,7 +581,7 @@ function cellMenu(e, def, col, block) {
         <template v-if="open('media')">
         <div class="tiles">
           <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${relType(r.type)?.label?.de || r.type}`">
-            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage" :id="r.other.id" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
               <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? 'gilt dann an allen Subitems — bis eines die Vererbung stoppt' : d.key">{{ d.label?.de || d.key }}</td>
@@ -590,7 +591,7 @@ function cellMenu(e, def, col, block) {
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
           <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — nicht löschbar; ⛔ unterbindet Verwendung und Vererbung hier und an allen Subitems`">
-            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><img v-if="r.other.isImage" :src="`/api/media/${r.other.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage" :id="r.other.id" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
             <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" title="zum Knoten, an dem das Medium hängt">↑ {{ r.from.label }}</router-link>
               <button class="x" style="float:right" @click="stopInherited(r)" title="Verwendung und Vererbung hier unterbinden — das Medium steht dann hier und an allen Subitems nicht zur Verfügung (lässt sich wieder zulassen)">⛔</button></div>
@@ -609,7 +610,7 @@ function cellMenu(e, def, col, block) {
         </div>
         <div v-if="mediaPick.open" class="tiles" style="margin-top:6px;max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px">
           <div v-for="m in mediaPick.items.filter(x => !mediaRels.some(r => r.other.id === x.id))" :key="m.id" class="tile pickable" @click="linkMedium(m)" :title="`${m.name} · ${kb(m.bytes)}`">
-            <img v-if="m.isImage" :src="`/api/media/${m.id}/file`" loading="lazy" alt="" /><div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '📄' }}</div>
+            <MediaThumb v-if="m.isImage" :id="m.id" /><div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '📄' }}</div>
             <div class="name">{{ m.name }}</div>
           </div>
           <div v-if="!mediaPick.items.length" class="muted" style="padding:8px;font-size:12px">nichts</div>

@@ -23,10 +23,18 @@ services:
     environment:
       JOURNALI_DB: Host=db;Port=5432;Database=journali;Username=postgres
       JOURNALI_DB_PASSWORD: ${JOURNALI_DB_PASSWORD}
-      JOURNALI_MEDIA: /data/media
+      # Medien: postgres = Tabelle media_blob in derselben Datenbank (ein Paket, lauffaehig). Alternativen:
+      #   JOURNALI_MEDIA: /data/media  (Verzeichnis, dann das Volume unten) oder
+      #   JOURNALI_MEDIA: s3://journali  + JOURNALI_S3_ENDPOINT/KEY/SECRET (Garage, MinIO, AWS, R2 …; Secret in .env)
+      #   JOURNALI_S3_ENDPOINT: http://garage:3900   (Garage: 3900 = S3-API; 3901 ist RPC)
+      #   JOURNALI_S3_KEY: ${JOURNALI_S3_KEY}
+      #   JOURNALI_S3_SECRET: ${JOURNALI_S3_SECRET}
+      #   JOURNALI_S3_REGION: garage
+      # Wechsel ohne neue Ids: POST /api/media/copy {from: "<alte Angabe>"} kopiert die Blobs (docs/betrieb.md)
+      JOURNALI_MEDIA: postgres
       JOURNALI_JOBS: /data/jobs
     volumes:
-      # Medien liegen ausserhalb der Datenbank (docs/pflegestruktur.md, 20) — eigenes Volume, Hash-adressiert
+      # nur fuer JOURNALI_MEDIA: /data/media (Verzeichnis-Treiber)
       - journali-media:/data/media
       # Jobs: Logs und Geheimnisse (secrets.json) — muessen Neustarts und neue Images ueberleben
       - journali-jobs:/data/jobs

@@ -38,6 +38,25 @@ gleichen Namens übersteuert sie.
 
 ## Medien
 
+Die Bytes liegen ausserhalb des Journals, adressiert über den SHA-256; das Journal
+kennt nur den Hash. **Wo** sie liegen, ist ein Treiber per `JOURNALI_MEDIA`
+(Taloan, 19.09.2026: Datenbank z. B. auf Azure, Assets im günstigen Object Storage):
+
+| `JOURNALI_MEDIA` | Treiber |
+|---|---|
+| `postgres` (Vorgabe) | Tabelle `media_blob` in derselben Datenbank — ein Paket, lauffähig, `pg_dump` sichert alles; für grosse Bestände auf `s3` wechseln |
+| `/pfad` | Verzeichnis, Unterordner nach den ersten zwei Hexzeichen |
+| `s3://bucket` | S3-kompatibel (Garage, MinIO, AWS, R2, Hetzner …), Signature V4 ohne SDK; dazu `JOURNALI_S3_ENDPOINT`, `JOURNALI_S3_KEY`, `JOURNALI_S3_SECRET`, optional `JOURNALI_S3_REGION` (Vorgabe `garage`), `JOURNALI_S3_PATHSTYLE=false` für `bucket.endpoint` |
+
+`JOURNALI_MEDIA_ORIGIN=http://andere-instanz:8080` legt sich über jeden Treiber: Fehlendes wird vom Ursprung geholt
+und lokal abgelegt, Hochgeladenes dorthin gespiegelt (`/api/media/blob/{key}`) — für einen Entwicklungsrechner neben dem
+Produktivsystem, das dasselbe Journal benutzt.
+
+**Treiber wechseln** ohne neue Ids: neue Angabe setzen, starten, dann `POST /api/media/copy {"from": "<alte Angabe>"}`
+(X-Actor) — kopiert alle Blobs, die hier fehlen, Hash-geprüft. `GET /api/media/missing` zeigt Medien ohne Bytes,
+`GET /api/media/store` den aktiven Treiber. Vorschauen (`sha.thumb`, WebP 256 px) rechnet der erste Betrachter im
+Browser und legt sie im selben Store ab (`PUT /api/media/{id}/thumb`); der Server braucht kein Bildpaket.
+
 Die Bytes liegen ausserhalb der Datenbank (docs/pflegestruktur.md, 20):
 Verzeichnis aus `JOURNALI_MEDIA`, Vorgabe `media/` neben dem Programm (beim
 Entwickeln `Journali.Server/media/`, nicht im Repo), Unterordner nach den
