@@ -1,5 +1,5 @@
-// Basis-Plugin dq (Taloan, 19.09.2026): ✓ Datenqualität — Grundfunktion der Gruppe Datenanalyse und zugleich ihr Container:
-// dpp, ppwr hängen daran (requires: ["dq"]) und liefern Regeln über checks. Prüft einen Teilbaum gegen Regeln und zeigt die Funde als Liste (Schwere, Knoten,
+// Basis-Plugin da (Taloan, 19.09.2026): ✓ Datenqualität — Grundfunktion der Gruppe Datenanalyse und zugleich ihr Container:
+// dpp, ppwr hängen daran (requires: ["da"]) und liefern Regeln über checks. Prüft einen Teilbaum gegen Regeln und zeigt die Funde als Liste (Schwere, Knoten,
 // Attribut, Meldung) mit Sprung zum Knoten. Eingebaute Regeln unten; weitere Regeln liefern Plugins über `checks`
 // (ctx.checks). Welche Regeln laufen, steht im Journal (ctx.data „settings“ unter plugin:dq).
 // Quelle: GET /api/nodes/{id}/table?deep=true — alle Nachfahren mit aufgelösten Werten, je Sprache ein Aufruf.
@@ -111,6 +111,6 @@ async function mount(root, ctx) {
 
 export default {
   views: [{ path: 'check', topic: 'analysis', label: 'Datenqualität', icon: '✓', hint: 'Regeln: Pflicht, Muster, Zahlen, Listen, Leerzeichen, leeres HTML, SKU, Übersetzung, Formel — plus Prüfregeln der Plugins', mount }],
-  nodeActions: [{ topic: 'analysis', roles: ['group', 'product'], icon: '✓', label: (r, below) => `Datenqualität: ${below} prüfen`, run: (id, ctx) => ctx.go(`/p/dq/check?node=${encodeURIComponent(id)}`) }],
+  nodeActions: [{ topic: 'analysis', roles: ['group', 'product'], icon: '✓', label: (r, below) => `Datenqualität: ${below} prüfen`, run: (id, ctx) => ctx.go(`/p/da/check?node=${encodeURIComponent(id)}`) }],
   rules: RULES,
 }

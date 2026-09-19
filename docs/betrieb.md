@@ -112,7 +112,7 @@ eine Datei dort tauschen aktualisiert das Plugin ohne neues Image (der
 Server liest Manifeste und Module bei jedem Zugriff, `no-cache`; eine neue
 Fassung erscheint unter ⌁ Plugins als ↑ Update). Prozess-Plugins brauchen
 `node` im Laufzeit-Image — das Dockerfile kopiert die Binärdatei aus
-`node:22`. Basis-Plugins (table, dq, tasker) liegen ebenfalls unter `plugins/`
+`node:22`. Basis-Plugins (table, da, tasker) liegen ebenfalls unter `plugins/`
 — auch ihre Ansichten lassen sich so austauschen; gebaute Plugins (`src/` →
 `entry.js`) kommen fertig gebaut aus dem Repo, das Image baut nur `web/`. Jobs (Logs, `secrets.json`) liegen im Volume `journali-jobs`. `.env.example` nach `.env` kopieren, Passwort eintragen,
 `docker compose up --build`. Der Server wartet, bis Postgres bereit ist

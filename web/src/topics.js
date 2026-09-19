@@ -14,7 +14,7 @@ export const TOPICS = [
   { key: 'tools', to: '/tools', icon: '⌁', label: 'Werkzeuge' },
   { key: 'jobs', to: '/jobs', icon: '⏱', label: 'Jobs' },
 ]
-// Gruppen, die ein eingeschaltetes Basis-Plugin besitzt (table: import, export; dq: analysis; tasker: jobs) — immer in der Leiste
+// Gruppen, die ein eingeschaltetes Basis-Plugin besitzt (table: import, export; da: analysis; tasker: jobs) — immer in der Leiste
 export const baseTopics = computed(() => new Set(plugins.list.filter(p => p.enabled && Array.isArray(p.manifest?.base)).flatMap(p => p.manifest.base)))
 export const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', edit: 'tools', tool: 'tools' }
 

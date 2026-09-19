@@ -13,7 +13,7 @@
   "runs": "browser",
   "entry": "entry.js",
   "requires": [
-    "dq"
+    "da"
   ],
   "autoInstall": true
 }

@@ -806,7 +806,7 @@ Rahmen im Image ist klein (Journal, Baum, Modell, Medien, Verwaltung, Dienste);
 alles, was man häufiger erweitert oder korrigiert, liegt in `plugins/` und wird im
 Container per Bind-Mount ausgetauscht — ohne neues Image. Ein Basis-Plugin nennt
 im Manifest `base: [Gruppen]` und besitzt damit die Gruppe(n) der Leiste: `table`
-(⇩ Import → Tabelle, ⇪ Export → Tabelle, Excel am Knoten), `dq` (✓ Datenanalyse),
+(⇩ Import → Tabelle, ⇪ Export → Tabelle, Excel am Knoten), `da` (✓ Datenanalyse — Grundfunktion Datenqualität),
 `tasker` (⏱ Jobs). Ergänzungen nennen `requires: ["table"]` usw.: Einschalten
 braucht die Basis (Server lehnt sonst ab), Ausschalten einer Basis fragt nach und
 nimmt die Ergänzungen mit (in der Oberfläche „◐ an, Basis aus“). Beim Start werden
@@ -845,7 +845,7 @@ je Import-Plugin mehrere Konfigurationen"):**
   nur Änderungen; Plan vor dem Schreiben.
 - **Mitgelieferte Plugins**: `csv`, `json`, `xlsx` (SheetJS, Apache-2.0)
   als Importer; `datasheet` (Vorlagen mit Platzhaltern, Designer, Blatt
-  im Kontextmenü); `dq` (Regeln, Funde je Teilbaum, Sprung zum Knoten).
+  im Kontextmenü); `dq` (Regeln, Funde je Teilbaum, Sprung zum Knoten; seit 19.09. Basis-Plugin `da`).
 - **Im Kern statt Plugin**, weil es der Pflegeweg selbst ist:
   Massenbearbeitung `/table/{id}` (Excel-artig, Einfügen aus Excel, ein
   Stapel) über `GET /api/nodes/{id}/table` — den nutzen auch dq und Export.

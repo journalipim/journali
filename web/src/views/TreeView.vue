@@ -405,7 +405,7 @@ function contextMenu(e, r) {
     const kind = plugins.list.find(p => p.key === a.key)?.manifest?.kind
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
-  // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und dq (Taloan, 19.09.)
+  // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und da (Taloan, 19.09.)
   if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: 'JSON: Rohdaten hierher …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
   const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: byTopic.get(k), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: 'nur einzeln' } : {}) }))
   menu.open(e, [

@@ -1,6 +1,6 @@
 // Plugins in der Oberfläche (docs/pflegestruktur.md, 19): Liste vom Server (/api/plugins), eingeschaltete
 // Browser-Plugins werden als ES-Modul von /plugins/<key>/<entry> geladen und tragen bei. Basis-Plugins (Manifest
-// base: [Gruppen]) bringen die Grundfunktion einer Gruppe der Leiste mit (table: Import/Export, dq: Datenanalyse,
+// base: [Gruppen]) bringen die Grundfunktion einer Gruppe der Leiste mit (table: Import/Export, da: Datenanalyse,
 // tasker: Jobs) und sind der Container für Plugins, die sie brauchen (requires). Gebaute Plugins (src/ + entry.js aus
 // web/build-plugins.mjs) liefern Vue-Ansichten; sie teilen Vue, Router, Store, Baum mit der Oberfläche (host.js).
 //
@@ -12,7 +12,7 @@
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
-//                Prüfregeln für die Datenqualität (Basis-Plugin dq zeigt sie)
+//                Prüfregeln für die Datenqualität (Basis-Plugin da zeigt sie)
 // ctx = { api, store, tree, dialog, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go, use(key) }
 //   use(key) — das Modul eines anderen Plugins (z. B. ctx.use('table').tableExport)
 //   data   — benannte JSON-Datensätze des Plugins im Journal (PluginDataSet, /api/plugins/<key>/data/<name>)
@@ -82,7 +82,7 @@ export const plugins = reactive({
         del: name => api.del(base + encodeURIComponent(name)),
       },
       batch: (commands, batch = null) => api.post('/api/batch', { commands, batch }),
-      checks: this.checks,                                                      // Prüfregeln aller Plugins (für dq)
+      checks: this.checks,                                                      // Prüfregeln aller Plugins (für da)
       go: async path => (await import('./router.js')).router.push(path),        // Navigation in der Oberfläche
       // JSON-Datei zum Import übergeben und den JSON-Import öffnen (Baum-Drop, Menü, Tabellenimport)
       importJson: async (file, parent = null) => { store.pendingImport = { file, parent }; (await import('./router.js')).router.push('/p/json/import') },

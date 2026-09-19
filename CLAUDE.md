@@ -58,8 +58,8 @@ stehen dort als solche markiert.
   Prozess-Plugins als Kindprozess des Servers, beide nur über `/api`.
   **Basis-Plugins** (`base: [Gruppen]`) bringen die Grundfunktion einer Gruppe der Leiste
   mit und sind der Container für Ergänzungen (`requires`): `table` (Import/Export Tabelle),
-  `dq` (Datenanalyse), `tasker` (Jobs). Ergänzungen: `csv`, `xlsx`, `json`, `ixp`, `solr` →
-  table; `dpp`, `ppwr` → dq; `backup`, `export` (Job) → tasker; `datasheet` eigene Gruppe.
+  `da` (Datenanalyse), `tasker` (Jobs). Ergänzungen: `csv`, `xlsx`, `json`, `ixp`, `solr` →
+  table; `dpp`, `ppwr` → da; `backup`, `export` (Job) → tasker; `datasheet` eigene Gruppe.
   Plugins mit Vue-Ansichten haben `src/` und ein gebautes `entry.js` (im Repo; `npm run
   build` in `web/` baut Oberfläche und Plugins, `node build-plugins.mjs <key>` eines) —
   sie importieren `vue`, `vue-router`, `journali` und teilen die Instanzen der Oberfläche

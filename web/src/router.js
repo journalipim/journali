@@ -27,7 +27,7 @@ export const router = createRouter({
     { path: '/tools', component: HubView, props: { topic: 'tools' } },
     { path: '/jobs', component: HubView, props: { topic: 'jobs' } },
     // alte Pfade (bis 19.09.: fest eingebaut) → Basis-Plugins, Abfrage bleibt (?node=, ?new=, ?plugin=)
-    ...Object.entries({ '/import/table': '/p/table/import', '/export/table': '/p/table/export', '/import/ixp': '/p/ixp/import', '/import/solr': '/p/solr/import', '/analysis/dq': '/p/dq/check', '/jobs/list': '/p/tasker/jobs' })
+    ...Object.entries({ '/import/table': '/p/table/import', '/export/table': '/p/table/export', '/import/ixp': '/p/ixp/import', '/import/solr': '/p/solr/import', '/analysis/dq': '/p/da/check', '/jobs/list': '/p/tasker/jobs' })
       .map(([from, to]) => ({ path: from, redirect: r => ({ path: to, query: r.query }) })),
     { path: '/media', component: MediaView },
     { path: '/plugins', component: PluginsView },
