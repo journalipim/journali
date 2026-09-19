@@ -1,0 +1,19 @@
+{
+  "key": "empco",
+  "version": "1.0.0",
+  "label": {
+    "de": "EmpCo — Greenwashing",
+    "en": "EmpCo — greenwashing"
+  },
+  "description": {
+    "de": "Datenanalyse: prüft alle Text- und HTML-Attribute je Sprache auf Formulierungen, die nach der Richtlinie (EU) 2024/825 (Empowering Consumers, ab 27.09.2026) unzulässig oder belegpflichtig sind — allgemeine Umweltaussagen, klimaneutral/CO₂-Ausgleich, Zukunftsversprechen, Siegel ohne Zertifizierung, Teil-für-Ganzes, recycelbar/abbaubar ohne Bedingung, Haltbarkeit, Vergleiche. Öffentlicher Kriterienkatalog (catalog.js) mit Anker in der Richtlinie; Regeln laufen in ✓ Datenqualität, die Ansicht prüft Teilbäume. Heuristisch, keine Rechtsberatung, keine KI.",
+    "en": "Data analysis: checks all text/HTML attributes for wording that Directive (EU) 2024/825 bans or requires proof for (generic environmental claims, carbon neutral via offsetting, future promises, labels without certification, durability, comparisons). Public criteria catalog with references; rules run in data quality."
+  },
+  "kind": "quality",
+  "runs": "browser",
+  "entry": "entry.js",
+  "requires": [
+    "da"
+  ],
+  "autoInstall": true
+}
