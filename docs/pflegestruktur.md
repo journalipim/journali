@@ -472,12 +472,37 @@ Liste mit Zeitplan, nächstem und letztem Lauf, ▶ jetzt, ⊘ abbrechen, an/aus
 Läufe mit Log (lebendig, solange er läuft). Erstes Prozess-Plugin: `backup`
 (Rohdaten-JSON je Wurzel, behält n Stände).
 
-Offen: der IXP-Import als Job. Bisher läuft er im Browser, der Token bleibt
-dort (Entscheidung 19). Als Job muss der Token beim Server liegen — als
-`secret`-Parameter des Jobs, also in `secrets.json`, nicht im Profil und nicht
-im Journal. Das ist die Ausnahme von 19, die Taloan noch bestätigen muss; dann
-wird der IXP-Import ein Prozess (Node), der dieselbe Analyse und denselben
-Stapel schreibt wie der Browser.
+**Entschieden (Taloan, 19.09.): alle Importe sind als Job ausführbar, anhand
+gespeicherter Profile.** Der Token liegt dann als `secret`-Parameter des Jobs
+in `secrets.json` beim Server — nicht im Profil, nicht im Journal (die eine
+Ausnahme von 19). Der IXP-Import hat dafür einen Kern (`plugins/ixp/core.mjs`),
+den Browser und Prozess (`job.mjs`) gleich benutzen: dieselbe Analyse, derselbe
+Stapel, dieselben Regeln.
+
+## 24. Regeln eines Imports — was passiert bei was (Taloan, 19.09.2026)
+
+> Die Schwierigkeit, was jetzt neu dazukommt, ist die Fehlerbehandlung bzw.
+> Vorab-Einstellungen im jeweiligen Plugin: was passiert bei was?
+
+Im Browser entscheidet der Mensch am Bildschirm; im Job muss es vorher
+feststehen. Darum trägt das Profil **Regeln** (`policy`), die in beiden Fällen
+gelten — sichtbar in ⇩ Import → IXP → 4 · Ziel & Plan:
+
+| Lage | Regel | Vorgabe |
+|---|---|---|
+| Quelle nicht erreichbar, Token abgelaufen, Ziel weg | immer: Lauf scheitert, nichts geschrieben (Analyse kommt vor dem ersten Befehl) | — |
+| Eigenschaft der Quelle ohne Zuordnung | `unknownAttrs`: anlegen (Präfix, Gruppe aus der Klasse) · ignorieren und melden · abbrechen (Mensch ordnet im Browser zu) | anlegen |
+| ein Befehl scheitert (SKU doppelt, Wert nicht in Liste …) | `onError`: überspringen und melden, Lauf „mit Warnungen“ · abbrechen, Rest nicht schreiben (Geschriebenes bleibt — Stapel, rückgängig-fähig) | überspringen |
+| zu viele Fehler | `abortAbovePercent`: ab so viel Prozent (ab 5 Fehlern) abbrechen — die Quelle ist dann wohl kaputt; 0 = nie | 20 |
+| Knoten im Ziel, den die Quelle nicht mehr liefert | `missing`: nur melden · Status „ausgelaufen“ · zurückziehen (tiefste zuerst) | melden |
+| Quelle leer, System gefüllt | `emptyValues`: behalten · leeren | behalten |
+| Medien | `media`: holen und anhängen (Fehler je Medium werden gemeldet, nicht abgebrochen) · nicht anfassen | holen |
+| Probelauf | `dryRun`: nur analysieren, Plan melden | aus |
+
+Der Ausgang eines Laufs: `ok`, `warn` (übersprungene Befehle), `failed`,
+`timeout`, `cancelled` — im Journal (`JobRunFinished`) und in ⏱ Jobs; das
+Log sagt, welcher Befehl warum. Dieselbe Tabelle gilt für Solr und Tabellen,
+sobald sie einen Prozess haben (offen).
 
 ## Messlatte: OpenDXP
 

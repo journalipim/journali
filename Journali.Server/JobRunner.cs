@@ -115,7 +115,7 @@ public sealed class JobRunner : BackgroundService
             cts.CancelAfter(TimeSpan.FromMinutes(Math.Max(1, timeoutMinutes)));
             await p.WaitForExitAsync(cts.Token);
             p.WaitForExit();   // Ausgabe zu Ende lesen
-            if (p.ExitCode != 0) status = "failed";
+            status = p.ExitCode switch { 0 => "ok", 3 => "warn", _ => "failed" };   // 3 = mit Warnungen (übersprungene Befehle) — Vereinbarung mit den Prozess-Plugins
         }
         catch (OperationCanceledException)
         {

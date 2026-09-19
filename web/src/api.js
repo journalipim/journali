@@ -30,7 +30,8 @@ export const api = {
   // Solange ein Stapel läuft, warnt der Browser vor dem Schliessen (beforeunload); was gesendet ist, schreibt der Server zu Ende.
   // continueOnError: der fehlgeschlagene Befehl wird übersprungen (errors[] sammelt sie), der Rest wird geschrieben —
   // sonst verliert ein Import wegen EINES Fehlers alles danach (Taloan, 18.09.: 7 von 11 Gruppen fehlten).
-  batchChunked: async (commands, { batch = null, size = 500, onProgress = null, label = 'schreibe', continueOnError = false } = {}) => {
+  // maxErrorPercent (Regel im Import-Profil): scheitern mehr als so viel Prozent der bisher gesendeten Befehle (ab 5 Fehlern), wird abgebrochen
+  batchChunked: async (commands, { batch = null, size = 500, onProgress = null, label = 'schreibe', continueOnError = false, maxErrorPercent = 0 } = {}) => {
     const refs = new Map()
     const results = []; let error = null; let batchId = batch; const errors = []
     const REF_KEYS = ['node', 'parent', 'group', 'product', 'from', 'to', 'relation', 'media']
@@ -51,6 +52,7 @@ export const api = {
           const e = { ...res.error, index: at, command: commands[at] }
           if (!continueOnError) { error = e; break }
           errors.push(e); i = at + 1   // den einen überspringen, hinter ihm weiter
+          if (maxErrorPercent > 0 && errors.length >= 5 && errors.length * 100 / Math.max(1, i) > maxErrorPercent) { error = { ...e, message: `Fehleranteil über ${maxErrorPercent} % (${errors.length} von ${i}) — abgebrochen: ${e.message}` }; break }
         } else i = end
         store.progress = { done: i, total: commands.length, text: label + (errors.length ? ` · ${errors.length} Fehler` : '') }
         onProgress?.(store.progress)

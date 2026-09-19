@@ -6,7 +6,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { tree, icon } from '../tree.js'
-import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode, attrType } from '../ixp.js'
+import { ixp, IXP_DEMO, SYSTEM, ROLE, isNode, attrType, POLICY, POLICY_TEXT, policyOf, analyse as coreAnalyse, planSummary, run as coreRun } from '../ixp.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
 import ImportHead from '../components/ImportHead.vue'
@@ -24,10 +24,12 @@ const importLocales = ref(saved.importLocales || null)
 const prefix = ref(saved.prefix ?? 'ixp_')
 const cleanPrefix = computed(() => prefix.value.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_').replace(/^[^a-z]+/, ''))
 const importGroup = computed(() => (cleanPrefix.value || '') + 'import')
-const withImages = ref(saved.withImages ?? true)   // Bilder der Quelle (doc.image) als Medien holen und per Relation „image“ anhängen (Taloan, 17.09.)
-const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ base: base.value, token: token.value, lang: lang.value, target: target.value, prefix: prefix.value, importLocales: importLocales.value, withImages: withImages.value }))
+const withImages = ref(saved.withImages ?? true)
+const policy = ref({ ...POLICY, ...(saved.policy ?? {}) })   // Regeln: was passiert bei was (Taloan) — im Profil, gelten im Browser und im Job   // Bilder der Quelle (doc.image) als Medien holen und per Relation „image“ anhängen (Taloan, 17.09.)
+const persist = () => localStorage.setItem('journali.import.ixp', JSON.stringify({ policy: policy.value, base: base.value, token: token.value, lang: lang.value, target: target.value, prefix: prefix.value, importLocales: importLocales.value, withImages: withImages.value }))
 
 let client = null
+let pendingRoots = null   // Auswahl aus dem Profil: nach dem Verbinden anhaken
 const connected = ref(false)
 const languages = ref([])
 const rows = ref([])            // Quellbaum flach: { doc, depth, parent, loaded }
@@ -52,12 +54,14 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
 
 // Profile (ProfileBar): Quelle, Sprache, Ziel, Sprachen, Zuordnung — ohne Token (der bleibt im Browser, nicht im Journal)
-const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value, groupOf: groupOf.value, withImages: withImages.value, prefix: prefix.value })
+const profileGet = () => ({ base: base.value, lang: lang.value, target: target.value, importLocales: importLocales.value, mapping: mapping.value, groupOf: groupOf.value, withImages: withImages.value, prefix: prefix.value, policy: { ...policy.value, media: withImages.value }, roots: [...checked.value] })
 async function profileSet(p) {
   if (!p) {   // „— Profil —“: alles leer, Quelle zu
     base.value = ''; token.value = ''; lang.value = 'de'; target.value = ''; importLocales.value = null; withImages.value = true; mapping.value = {}
     connected.value = false; rows.value = []; checked.value = new Set(); plan.value = null; result.value = null; persist(); return
   }
+  policy.value = { ...POLICY, ...(p.policy ?? {}) }; if (p.policy?.media != null) withImages.value = !!p.policy.media
+  pendingRoots = p.roots ?? null
   base.value = p.base ?? ''; lang.value = p.lang ?? 'de'; target.value = p.target ?? ''; importLocales.value = p.importLocales ?? null; prefix.value = p.prefix ?? 'ixp_'; groupOf.value = p.groupOf ?? {}; withImages.value = p.withImages ?? true
   if (p.mapping) mapping.value = { ...p.mapping }
   if (base.value) await connect()
@@ -74,6 +78,7 @@ async function connect() {
     persist()
     say(`verbunden: ${languages.value.length} Sprachen, ${roots.length} Wurzeln (${lang.value})`)
     for (const r of [...rows.value]) await expand(r)   // Kopie: expand fügt Zeilen ein
+    if (pendingRoots?.length) { checked.value = new Set(rows.value.filter(r => pendingRoots.includes(r.doc.id)).map(r => r.doc.id)); pendingRoots = null }
   } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
   finally { busy.value = '' }
 }
@@ -96,234 +101,44 @@ function checkedAbove(row) { for (let p = row.parent; p; p = p.parent) if (check
 // ---- Analysieren: Teilbäume vollständig laden, Sprachfassungen holen, Eigenschaften sammeln
 // Bilder: doc.image (Vorschau-URL der Quelle) holt der Server (POST /api/media/fetch — der Browser scheiterte an CORS),
 // gleiche Datei = gleiches Medium (sha256); dann Relation „image“ Knoten → Medium, wenn sie nicht schon da ist.
-async function importImages(refOf, res) {
-  const byRef = new Map(res.results.filter(r => r.ref).map(r => ['@' + r.ref, r.node]))
-  const items = plan.value.items.filter(it => it.role !== 'group')
-  if (!items.length) return
-  busy.value = `Medien …`; let n = 0, had = 0, fail = 0, seen = 0, done = 0, inherited = 0
-  const mediaByNode = new Map()   // Knoten → Map(typ|medium → relation) — Eltern kommen vor ihren Subitems (Reihenfolge des Quellbaums)
-  store.progress = { done: 0, total: items.length, text: 'Import (IXP): Medien holen' }
-  const guard = e => { e.preventDefault(); e.returnValue = '' }; window.addEventListener('beforeunload', guard)
-  try {
-  const origin = (() => { try { return new URL(base.value).origin } catch { return '' } })()
-  const abs = u => /^https?:\/\//.test(u) ? u : origin + (u.startsWith('/') ? '' : '/') + u
-  for (const it of items) {
-    store.progress = { done: done++, total: items.length, text: `Import (IXP): Medien holen${n ? ` · ${n} neu` : ''}` }
-    const node = (refOf.get(it.doc.masterId) ?? '').startsWith('@') ? byRef.get(refOf.get(it.doc.masterId)) : refOf.get(it.doc.masterId)
-    if (!node) continue
-    // Quellen: 1. Asset-Dokumente unter dem Knoten (Typen image/media/file, mit uri und mimeType), 2. das Vorschaubild (image-Feld)
-    const wanted = []   // { url, name, type }
-    try {
-      for (const a of await client.assets(it.doc.id)) {
-        let asset = a; if (!a.uri) { try { asset = await client.asset(a.id) } catch {} }
-        const url = asset.uri || asset.path || asset.image; if (!url) continue
-        const mime = asset.mimeType || ''
-        wanted.push({ url: abs(url), name: asset.name || decodeURIComponent(url.split('/').pop().split('?')[0]), type: mime.startsWith('image/') || a.type === 'image' ? 'image' : 'document' })
-      }
-    } catch (e) { say(`Assets ${it.doc.name}: ${e.message}`) }
-    const preview = it.doc.image || Object.values(it.versions).find(v => v.image)?.image
-    if (preview && !wanted.some(w => w.url === preview)) wanted.push({ url: preview, name: decodeURIComponent(preview.split('/').pop().split('?')[0]), type: 'image' })
-    if (!wanted.length) continue
-    let rels = null
-    const parentNode = it.parentMaster ? ((refOf.get(it.parentMaster) ?? '').startsWith('@') ? byRef.get(refOf.get(it.parentMaster)) : refOf.get(it.parentMaster)) : null
-    const parentMedia = parentNode ? mediaByNode.get(parentNode) : null
-    const mine = new Map()
-    for (const w of wanted) {
-      seen++
-      try {
-        const m = await api.post('/api/media/fetch', { url: w.url, name: w.name })
-        rels ??= await api.get(`/api/nodes/${encodeURIComponent(node)}/relations`)
-        const type = mediaTypes.value.some(t => t.key === w.type) ? w.type : (mediaTypes.value[0]?.key ?? 'image')
-        const up = parentMedia?.get(`${type}|${m.id}`)
-        if (up) {   // dasselbe Medium wie das Elternteil: dort vererben, hier nichts Eigenes — das Subitem erbt (Taloan, 18.09.)
-          if (!up.inherit) { await api.post(`/api/relations/${up.id}/attributes`, { attribute: 'inherit', value: 'true' }); up.inherit = true }
-          const dup = (rels.out ?? []).find(r => r.to === m.id && r.type === type)
-          if (dup) await api.del(`/api/relations/${dup.id}`)   // feste Zuordnung aus einem früheren Lauf: durch die Vererbung ersetzen
-          mine.set(`${type}|${m.id}`, up); inherited++; continue
-        }
-        let rel = (rels.out ?? []).find(r => r.to === m.id && r.type === type)
-        if (rel) had++
-        else { const e = await api.post('/api/relations', { type, from: node, to: m.id }); rel = { id: e.stream }; n++ }
-        mine.set(`${type}|${m.id}`, { id: rel.id, inherit: (rel.values ?? []).some(v => v.attribute === 'inherit' && v.value === 'true') })
-      } catch (e) { fail++; say(`Medium ${w.name} (${it.doc.name}): ${e.message}`) }
-      busy.value = `Medien … ${seen} (${n} neu${inherited ? `, ${inherited} geerbt` : ''})`
-    }
-    mediaByNode.set(node, mine)
-  }
-  } finally { window.removeEventListener('beforeunload', guard); store.progress = null }
-  say(`Medien: ${n} angehängt, ${had} waren schon da${inherited ? `, ${inherited} vom Elternteil geerbt statt einzeln` : ''}${fail ? `, ${fail} fehlgeschlagen` : ''}${seen ? '' : ' — die Quelle liefert an diesen Knoten keine Assets und keine Vorschaubilder'}`)
-}
-// Relationstypen für Medien (image, document …) aus dem Modell
-const mediaTypes = computed(() => (model.value?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media')))
 async function analyse() {
   if (!checked.value.size) { store.toast('Nichts angehakt'); return }
   busy.value = 'lade …'
   plan.value = null; result.value = null
   try {
-    // Ausgewählte Wurzeln des Imports: angehakt, aber kein angehakter Vorfahr
-    const picked = rows.value.filter(r => checked.value.has(r.doc.id) && !checkedAbove(r))
-    const items = []   // { doc, parentMaster, role, versions: {lang: doc} }
-    let n = 0
-    const seenMaster = new Set()   // dieselbe masterId unter zwei Eltern (IXP erlaubt das): nur einmal — sonst scheiterte external.link am Duplikat und der Stapel brach ab
-    async function walk(doc, parentMaster) {
-      if (seenMaster.has(doc.masterId)) return
-      seenMaster.add(doc.masterId)
-      const item = { doc, parentMaster, role: ROLE[doc.type], versions: {} }
-      items.push(item)
-      busy.value = `lade … ${++n}`
-      for (const v of await client.versions(doc.masterId)) if (selectedLocales.value.includes(v.meta?.lang)) item.versions[v.meta.lang] = v
-      if (doc.type !== 'productVariant')
-        for (const k of (await client.children(doc.id)).filter(isNode)) await walk(k, doc.masterId)
-    }
-    for (const r of picked) await walk(r.doc, r.parent?.doc.masterId ?? null)
-
-    // Eigenschaftsdefinitionen der Quelle (Typ), Klasse je Produkt (Gruppe), Werte je Eigenschaft (Wertelisten)
-    busy.value = 'lade Eigenschaftsdefinitionen …'
-    try { propDefs.value = await client.properties(lang.value) } catch (e) { say('keine Eigenschaftsdefinitionen: ' + e.message); propDefs.value = {} }
-    const props = {}
-    for (const it of items) {
-      const cls = Object.values(it.versions).map(v => v.metaProperties?.class_identifier).find(Boolean) ?? null
-      it.cls = cls
-      for (const v of Object.values(it.versions)) for (const [k, val] of Object.entries(v.properties || {})) {
-        props[k] ??= { count: 0, html: false, classes: new Set(), values: new Set(), def: propDefs.value[k] ?? null }
-        props[k].count++
-        if (cls) props[k].classes.add(cls)
-        if (typeof val === 'string' && /<[a-z][\s\S]*>/i.test(val)) props[k].html = true
-        if (props[k].def?.ez === 'ezselection' && val != null && val !== '') props[k].values.add(String(val))
-      }
-    }
-    for (const p of Object.values(props)) { p.srcType = attrType(p.def, p.html); p.classes = [...p.classes]; p.values = [...p.values] }
-    const attrKeys = new Set(localeAttrs.value.map(a => a.key))
-    for (const k of Object.keys(props)) {
-      // Gibt es das Attribut inzwischen (voriger Lauf hat es angelegt), nicht mehr „neu anlegen“.
-      if (mapping.value[k]?.startsWith('new:') && attrKeys.has(k)) mapping.value[k] = k
-      const pk = cleanPrefix.value + k.toLowerCase().replace(/[^a-z0-9_]/g, '_')
-      if (mapping.value[k]?.startsWith('new:') && attrKeys.has(pk)) mapping.value[k] = pk
-      mapping.value[k] ??= k === 'title' ? 'name' : attrKeys.has(pk) ? pk : attrKeys.has(k) ? k : 'new:' + props[k].srcType
-      // Gruppe für ein neues Attribut: aus der Klasse des Produkts im Quellsystem, sonst <prefix>import
-      groupOf.value[k] ??= props[k].classes[0] ? cleanPrefix.value + props[k].classes[0].toLowerCase().replace(/[^a-z0-9_]/g, '_') : importGroup.value
-    }
-
-    // Neu oder vorhanden? Über die externe Kennung im eigenen Baum.
-    const known = new Map(tree.rows.filter(r => r.external?.[SYSTEM]).map(r => [r.external[SYSTEM], r]))
-    for (const it of items) it.existing = known.get(it.doc.masterId) ?? null
-    plan.value = { items, props, picked: picked.length }
-    say(`analysiert: ${items.length} Knoten, ${Object.keys(props).length} Eigenschaften, ${items.filter(i => i.existing).length} vorhanden`)
+    const picked = rows.value.filter(r => checked.value.has(r.doc.id) && !checkedAbove(r)).map(r => ({ doc: r.doc, parentMaster: r.parent?.doc.masterId ?? null }))
+    const p = await coreAnalyse(env(), { ...profileGet(), mapping: mapping.value, groupOf: groupOf.value }, picked)
+    mapping.value = p.mapping; groupOf.value = p.groupOf; propDefs.value = p.propDefs
+    plan.value = p
   } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
   finally { busy.value = '' }
 }
+// Der Kern (plugins/ixp/core.mjs) sieht nur das: Client, API, Baum, Modell, Meldungen, Fortschritt
+const env = () => ({ client, api, tree, model: model.value, say, progress: (done, total, text) => { busy.value = text; if (total) store.progress = { done, total, text } } })
 
-const counts = computed(() => {
-  const c = { group: [0, 0], product: [0, 0], variant: [0, 0] }
-  for (const it of plan.value?.items ?? []) c[it.role][it.existing ? 1 : 0]++
-  return c
-})
-const newAttrs = computed(() => Object.entries(mapping.value).filter(([k, v]) => v.startsWith('new:') && plan.value?.props[k]).map(([k, v]) => {
-  const p = plan.value.props[k]
-  const key = (cleanPrefix.value + k.toLowerCase().replace(/[^a-z0-9_]/g, '_')).replace(/^[^a-z]/, 'p_')
-  return { key, type: v.slice(4), from: k, group: groupOf.value[k] || importGroup.value, multiple: p.def?.type === 'multi_string', list: v.slice(4) === 'enum' ? key : null, values: p.values }
-}))
-const newGroups = computed(() => [...new Set(newAttrs.value.map(a => a.group))].filter(g => !model.value.groups.some(x => x.key === g && x.defined)))
+const summary = computed(() => plan.value ? planSummary({ ...plan.value, mapping: mapping.value, groupOf: groupOf.value }, model.value) : { newAttrs: [], newGroups: [], counts: { group: [0, 0], product: [0, 0], variant: [0, 0] } })
+const counts = computed(() => summary.value.counts)
+const newAttrs = computed(() => summary.value.newAttrs)
+const newGroups = computed(() => summary.value.newGroups)
 const groupOptions = computed(() => [...new Set([...(model.value?.groups ?? []).map(g => g.key), ...Object.values(groupOf.value)])].sort())
 const typeOptions = ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum']
 
-// ---- Schreiben: fehlende Attribute anlegen, dann ein Stapel
+// ---- Schreiben: der Kern legt fehlende Modellteile an, schreibt den Stapel, wendet die Regeln an, holt Medien
 async function run() {
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   if (!plan.value) return
   busy.value = 'schreibe …'
   result.value = null
+  const guard = e => { e.preventDefault(); e.returnValue = '' }; window.addEventListener('beforeunload', guard)
   try {
-    for (const g of newGroups.value) {
-      const label = g.startsWith(cleanPrefix.value) ? g.slice(cleanPrefix.value.length) : g
-      await api.post(`/api/model/groups/${g}`, { key: g, label: { de: label, en: label }, activeFrom: null }, 'PUT')
-      say(`Gruppe ${g} angelegt`)
-    }
-    for (const a of newAttrs.value) {
-      if (model.value.attributes.some(x => x.key === a.key)) continue
-      if (a.list && !model.value.lists.some(l => l.key === a.list)) {
-        await api.post(`/api/model/lists/${a.list}`, { key: a.list, label: { de: a.from, en: a.from } }, 'PUT')
-        let i = 0
-        for (const v of a.values) await api.post(`/api/model/lists/${a.list}/values/${encodeURIComponent(v.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 'x')}`, { value: v.toLowerCase().replace(/[^a-z0-9_]/g, '_') || 'x', label: { de: v, en: v }, order: ++i }, 'PUT')
-        say(`Werteliste ${a.list}: ${a.values.length} Werte`)
-      }
-      await api.post(`/api/model/attributes/${a.key}`, { key: a.key, label: { de: a.from, en: a.from }, type: a.type, group: a.group, axes: a.type === 'enum' || a.type === 'boolean' || a.type === 'decimal' || a.type === 'integer' ? [] : ['locale'], multiple: a.multiple, list: a.list }, 'PUT')
-      say(`Attribut ${a.key} (${a.type}${a.multiple ? ', mehrfach' : ''}) in ${a.group} angelegt`)
-    }
-    const attrOf = k => { const m = mapping.value[k]; if (!m) return null; if (m.startsWith('new:')) return newAttrs.value.find(a => a.from === k)?.key; return m }
-    // Die Gruppen der zugeordneten Attribute hängen an der Zielgruppe (oder an jeder neuen Wurzelgruppe), sonst gilt dort nichts.
-    const neededGroups = [...new Set(Object.keys(mapping.value).map(attrOf).filter(Boolean).map(k => model.value.attributes.find(a => a.key === k)?.group ?? newAttrs.value.find(a => a.key === k)?.group ?? null).filter(Boolean))]
-    if (target.value && neededGroups.length) {
-      const t = await api.get(`/api/nodes/${target.value}`)
-      const have = new Set((t.groups ?? []).map(g => g.key))
-      const add = neededGroups.filter(g => !have.has(g))
-      if (add.length) { await api.post(`/api/nodes/${target.value}/groups`, { groups: [...t.attachedGroups, ...add] }, 'PUT'); say(`Zielgruppe: ${add.join(', ')} angehängt`) }
-    }
-
-    // Vorhandene Knoten: eigene Werte holen, damit nur Geändertes geschrieben wird.
-    const own = new Map()
-    for (const it of plan.value.items) if (it.existing) {
-      const n = await api.get(`/api/nodes/${it.existing.id}`)
-      own.set(it.existing.id, new Map(n.values.map(v => [`${v.attribute}|${v.locale ?? ''}`, v.value])))
-    }
-
-    const cmds = []
-    const refOf = new Map()   // masterId → '@ref' oder Knoten-Id
-    let refNo = 0
-    for (const it of plan.value.items) {
-      let node
-      if (it.existing) node = it.existing.id
-      else {
-        const ref = 'n' + (++refNo)
-        const parent = it.parentMaster && refOf.has(it.parentMaster) ? refOf.get(it.parentMaster) : (target.value || null)
-        const labels = Object.fromEntries(Object.entries(it.versions).map(([l, v]) => [l, v.name]))
-        if (it.role === 'group') {
-          cmds.push({ op: 'group.create', ref, args: { parent, label: labels } })
-          if (!parent && neededGroups.length) cmds.push({ op: 'groups.attach', args: { node: '@' + ref, groups: neededGroups } })
-        }
-        else if (it.role === 'product') {
-          if (!parent) throw new Error(`Produkt ${it.doc.name}: keine Zielgruppe`)
-          cmds.push({ op: 'product.create', ref, args: { group: parent } })
-        } else {
-          if (!parent || !parent.startsWith('@') && tree.byId.get(parent)?.role !== 'product') throw new Error(`Variante ${it.doc.name}: kein Produkt darüber`)
-          cmds.push({ op: 'variant.create', ref, args: { product: parent, axisValues: {} } })
-        }
-        node = '@' + ref
-        cmds.push({ op: 'external.link', args: { node, system: SYSTEM, id: it.doc.masterId } })
-      }
-      refOf.set(it.doc.masterId, node)
-      if (it.role === 'group') continue   // Gruppen: nur Label
-      const have = own.get(node) ?? new Map()
-      for (const [l, v] of Object.entries(it.versions)) {
-        const values = { ...(v.properties || {}) }
-        if (!values.title && v.name) values.title = v.name
-        for (const [k, val] of Object.entries(values)) {
-          const attribute = attrOf(k)
-          if (!attribute || val == null || val === '') continue
-          const def = model.value.attributes.find(a => a.key === attribute) ?? newAttrs.value.find(a => a.key === attribute)
-          const perLocale = def?.perLocale ?? (def?.axes ? def.axes.includes('locale') : !['enum', 'boolean', 'decimal', 'integer'].includes(def?.type))
-          const loc = perLocale ? l : null
-          if (!perLocale && l !== Object.keys(it.versions)[0]) continue   // sprachunabhängig: einmal reicht
-          if (have.get(`${attribute}|${loc ?? ''}`) === val) continue
-          if (def?.type === 'enum') cmds.push({ op: 'attribute.set', args: { node, attribute, locale: loc, value: String(val).toLowerCase().replace(/[^a-z0-9_]/g, '_') } })
-          else if (def?.multiple) cmds.push({ op: 'attribute.set', args: { node, attribute, locale: loc, values: String(val).split(/[;,|]\s*/).map(s => s.trim()).filter(Boolean) } })
-          else cmds.push({ op: 'attribute.set', args: { node, attribute, locale: loc, value: String(val) } })
-        }
-      }
-    }
-    // nichts zu schreiben — die Medien trotzdem nachholen (zweiter Lauf nach einem Import ohne Medien, Taloan 18.09.)
-    if (!cmds.length) { say('nichts zu schreiben — alles schon so'); result.value = { batch: null, results: [] }; if (withImages.value) await importImages(refOf, { results: [] }); return }
-    say(`Stapel mit ${cmds.length} Befehlen …`)
-    const res = await api.batchChunked(cmds, { label: 'Import (IXP): schreiben', continueOnError: true, onProgress: p => { busy.value = `schreibe … ${p.done}/${p.total}` } })
+    const res = await coreRun(env(), { ...profileGet(), mapping: mapping.value, groupOf: groupOf.value }, { ...plan.value, mapping: mapping.value, groupOf: groupOf.value })
     result.value = res
-    for (const e of res.errors.slice(0, 20)) say(`✗ Befehl ${e.index + 1} ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)}: ${e.message}`)
-    say(res.errors.length ? `fertig mit ${res.errors.length} übersprungenen Befehlen: ${res.results.length} Einträge, Stapel ${res.batch}` : `fertig: ${res.results.length} Einträge, Stapel ${res.batch}`)
-    if (res.errors.length) store.toast(`⚠ ${res.errors.length} Befehle übersprungen — Protokoll`, 'error')
+    if (res.errors?.length) store.toast(`⚠ ${res.errors.length} Befehle übersprungen — Protokoll`, 'error')
+    if (res.error) store.toast(`✗ abgebrochen: ${res.error.message}`, 'error')
     await store.poll(true); await tree.load()
-    if (withImages.value && !res.error) await importImages(refOf, res)
-    plan.value = null
+    if (!res.dryRun) plan.value = null
   } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
-  finally { busy.value = '' }
+  finally { window.removeEventListener('beforeunload', guard); store.progress = null; busy.value = '' }
 }
 function toggleLocale(l) {
   const s = new Set(selectedLocales.value); s.has(l) ? s.delete(l) : s.add(l)
@@ -418,6 +233,17 @@ function toggleLocale(l) {
             <span v-else class="muted">nach Verbinden</span>
             <span v-if="languages.length" class="muted" :title="`Quelle: ${languages.length} Sprachen, Modell: ${modelLocales.length} — weitere unter ⊞ Modell → Sprachen anlegen, dann sind sie hier wählbar`"> importieren · nur Sprachen des Modells ({{ modelLocales.length }})</span>
           </td></tr>
+          <!-- Regeln (Taloan, 19.09.): was passiert bei was — gelten hier und im Job (Profil) -->
+          <tr><td class="muted" title="Regeln des Imports — stehen im Profil und gelten auch, wenn der Import als Job läuft">Regeln ⚖</td><td>
+            <div class="chips" style="gap:8px;font-size:12px">
+              <label v-for="k in ['unknownAttrs', 'onError', 'missing', 'emptyValues']" :key="k" class="rule" :title="POLICY_TEXT[k][0]">
+                <span class="muted">{{ POLICY_TEXT[k][0] }}:</span>
+                <select v-model="policy[k]" @change="persist"><option v-for="(text, v) in POLICY_TEXT[k][1]" :key="v" :value="v">{{ text }}</option></select>
+              </label>
+              <label class="rule" title="scheitern mehr als so viel Prozent der Befehle, wird abgebrochen — 0 = nie"><span class="muted">Abbruch ab</span> <input type="number" v-model.number="policy.abortAbovePercent" min="0" max="100" style="width:56px" @change="persist" /> <span class="muted">% Fehler</span></label>
+              <label class="rule" title="nur analysieren und den Plan melden, nichts schreiben"><input type="checkbox" v-model="policy.dryRun" @change="persist" /> Trockenlauf</label>
+            </div>
+          </td></tr>
         </tbody>
       </table>
       <table v-if="plan" class="grid" style="width:auto">
@@ -469,4 +295,6 @@ function toggleLocale(l) {
 .view-chip.off { opacity: .4; cursor: default; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+.rule { display: inline-flex; align-items: center; gap: 4px; }
+.rule select { font-size: 12px; }
 </style>
