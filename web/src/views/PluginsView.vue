@@ -82,7 +82,7 @@ function pick(k) { cur.value = k }
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">↑ aktualisieren auf {{ current.diskVersion }}</button>
         <button v-if="current.enabled && plugins.views.some(x => x.key === current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? 'nicht in der Leiste links — Klick nimmt es wieder hinein (unter sein Thema)' : 'in der Leiste links unter seinem Thema — Klick nimmt es ganz heraus (nur für dich, in den Einstellungen)'">{{ store.railOff.includes(current.key) ? '▯ nicht in der Leiste' : '▮ in der Leiste' }}</button>
         <!-- Zustandsschalter wie „in der Leiste“ (Taloan): leuchtet, wenn an; Klick kippt -->
-        <button :class="{ primary: current.enabled }" @click="act(`/api/plugins/${current.key}/${current.enabled ? 'disable' : 'enable'}`)" :title="current.enabled ? 'an — Klick schaltet aus' : 'aus — Klick schaltet ein'">{{ current.enabled ? '● an' : '○ aus' }}</button>
+        <button :class="{ primary: current.enabled }" @click="act(`/api/plugins/${current.key}/${current.enabled ? 'disable' : 'enable'}`)" :title="current.enabled ? 'aktiviert — Klick deaktiviert' : 'deaktiviert — Klick aktiviert'">{{ current.enabled ? '● aktiviert' : '○ deaktiviert' }}</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" title="aus dem Journal entfernen — die Dateien bleiben">🗑</button>
       </template>
     </div>
