@@ -82,6 +82,7 @@ details p { margin:8px 0 0; color:var(--muted); }
 .journal .nr { color:var(--muted); }
 .journal .ok { color:#15803d; font-size:12px; }
 .journal .ok::before { content:"● "; }
+.card.soon { border-style:dashed; }
 footer { border-top:1px solid var(--line); padding:20px; text-align:center; font-size:13px; color:var(--muted); }
 footer a { color:var(--muted); margin:0 8px; }
 @media (max-width:900px) { .hero { grid-template-columns:1fr; gap:24px; } .visual { min-height:300px; } .halo { width:300px; height:300px; } .logo-card { width:220px; } }
@@ -188,9 +189,15 @@ footer a { color:var(--muted); margin:0 8px; }
 </section>
 
 <section id="kontakt">
-  <h2>Noch nicht fertig. <span class="grad">Genau deshalb interessant.</span></h2>
-  <p>journali befindet sich in intensiver Entwicklung. Was hier steht, ist gebaut und läuft — noch nicht als fertiges Paket zum Herunterladen. Wir halten diese Seite mit Snapshots aus der Entwicklung auf dem Laufenden: neue Ansichten, neue Plugins, neue Belegerzeuger.</p>
-  <p>Sie wollen journali früh sehen oder mit eigenen Daten ausprobieren? <a href="impressum.html">Kontakt über das Impressum</a>.</p>
+  <p class="kicker">Build in public</p>
+  <h2>Noch nicht fertig. <span class="grad">Genau deshalb wird es jetzt interessant.</span></h2>
+  <p>Wir wollen journali nicht erst zeigen, wenn alles poliert ist. Auf dem Weg zur Veröffentlichung gibt es Einblicke in echte Funktionen, Oberflächen und technische Entscheidungen.</p>
+  <div class="grid">
+    <div class="card"><h3>Sneak Previews</h3><p>Frühe Screenshots aus Pflegeansicht, Massenbearbeitung, Import-Manager, Datenblatt-Designer, Versionen, Jobs und Storage-Konfiguration.</p></div>
+    <div class="card"><h3>Entwicklungsstand</h3><p>Was bereits funktioniert, was gerade entsteht und welche Bausteine als Nächstes dazukommen – ohne Funktionen vorzutäuschen, die noch nicht gebaut sind.</p></div>
+    <div class="card"><h3>Unter der Haube</h3><p>Warum das Journal das Fundament ist, wie Wiederherstellung gedacht ist und weshalb Plugins und Self-Hosting wichtige Teile des Konzepts sind.</p></div>
+    <div class="card soon"><h3>Und irgendwann: ausprobieren.</h3><p>Bis dahin wächst diese Seite mit dem Produkt. Neue Einblicke erscheinen, sobald sie etwas zu zeigen haben. Fragen vorab: <a href="impressum.html">Kontakt über das Impressum</a>.</p></div>
+  </div>
 </section>
 </main>
 
