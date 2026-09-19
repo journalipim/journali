@@ -67,6 +67,25 @@ public static class MediaApi
             return Results.Ok(new { ok = true });
         });
 
+        // Verzeichnisbrowser für den Treiber Verzeichnis (Taloan): nur Verzeichnisse, vom Server aus gesehen — leer = Laufwerke bzw. /
+        api.MapGet("/media/dirs", (string? path, IHostEnvironment env) =>
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    var roots = OperatingSystem.IsWindows() ? DriveInfo.GetDrives().Where(d => d.IsReady).Select(d => d.RootDirectory.FullName).ToList() : new List<string> { "/" };
+                    return Results.Ok(new { path = "", parent = (string?)null, dirs = roots, here = env.ContentRootPath });
+                }
+                var full = Path.GetFullPath(path);
+                if (!Directory.Exists(full)) return Bad($"{full}: kein Verzeichnis");
+                var dirs = Directory.EnumerateDirectories(full).Where(d => { try { return (new DirectoryInfo(d).Attributes & (FileAttributes.Hidden | FileAttributes.System)) == 0; } catch { return false; } }).OrderBy(d => d, StringComparer.OrdinalIgnoreCase).ToList();
+                var files = 0; long blobs = 0; try { files = Directory.EnumerateFiles(full).Count(); blobs = Directory.EnumerateDirectories(full).Count(d => Path.GetFileName(d).Length == 2); } catch { }
+                return Results.Ok(new { path = full, parent = Path.GetDirectoryName(full), dirs, files, blobs, here = env.ContentRootPath });
+            }
+            catch (Exception e) { return Bad(e.Message); }
+        });
+
         // Blobs nach Schlüssel — für Werkzeuge und Kopierläufe zwischen Instanzen; kein Journal-Eintrag.
         api.MapMethods("/media/blob/{key}", new[] { "GET", "HEAD" }, async (string key, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {
