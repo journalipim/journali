@@ -15,8 +15,8 @@ export const dialog = reactive({
   confirm({ title, text = '', warn = '', list = [], ok = 'OK', cancel = 'Abbrechen', danger = false, option = null }) {
     return new Promise(resolve => { Object.assign(this, { open: true, kind: 'confirm', title, text, warn, list, ok, cancel, danger, option: option ? { ...option } : null, _resolve: resolve }) })
   },
-  prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = 'Abbrechen' }) {
-    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'prompt', title, text, warn: '', list: [], value, placeholder, ok, cancel, danger: false, option: null, _resolve: resolve }) })
+  prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = 'Abbrechen', warn = '', danger = false }) {
+    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'prompt', title, text, warn, list: [], value, placeholder, ok, cancel, danger, option: null, _resolve: resolve }) })
   },
   done(yes) {
     const r = this._resolve; this.open = false; this._resolve = null

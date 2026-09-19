@@ -196,6 +196,20 @@ steht im Kopf `X-Actor`.
 | `PUT /api/model/units/{key}` `{label{}, quantity, factor}` | `UnitDefined` |
 | `DELETE /api/model/units/{key}` | `UnitRetired` — nicht, solange ein Attribut sie benutzt |
 
+## Versionen — am Knotenstrom
+
+Taloan, 19.09.2026: eine Freigabe ist eine Version; nach aussen zählt das Belegdokument (Haftung: „welche Unterlagen galten vor
+5 Jahren“), das Journal ist das Register. Nichts wird kopiert oder gelöscht; zurückgezogen wird nur markiert.
+
+| Typ | Payload | Bedeutung |
+|---|---|---|
+| `VersionCreated` | `nr`, `journalNumber`, `channel`, `locale`, `note`, `retentionYears` | Version `nr` des Knotens = Journalstand `journalNumber` (alles bis dahin ist der Stand, auch das Modell von damals); Aufbewahrung in Jahren (Vorgabe 10) |
+| `VersionDocumentAdded` | `nr`, `kind`, `mediaId`, `sha256`, `mime`, `name`, `bytes`, `renderer` | Beleg zur Version — vom Erzeuger-Plugin gerendert, als Medium hochgeladen (unveränderlich, hash-adressiert); derselbe Erzeuger ersetzt seine Belegart |
+| `VersionWithdrawn` | `nr`, `reason` | Version gilt nicht mehr (fehlerhaft, ersetzt) — bleibt sichtbar |
+
+Zurückrollen erzeugt keine eigenen Typen: es ist ein Stapel (`batch` `rollback-<knoten>-<nr>-…`) aus `AttributeSet`, `NodeNamed`, `StatusSet`
+mit den Werten von damals — eigene Werte des Knotens, nicht die Welt von damals.
+
 ## Jobs (fest eingebaut: ⏱ Jobs) — Strom `job:<key>`
 
 | Typ | Nutzlast | Bedeutung |

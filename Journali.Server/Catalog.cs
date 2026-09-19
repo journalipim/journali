@@ -19,6 +19,7 @@ public sealed class Catalog
     private readonly Media _media = new();
     private readonly Plugins _plugins = new();
     private readonly Jobs _jobs = new();
+    private readonly Versions _versions = new();
     private readonly object _gate = new();
 
     public Catalog(IJournal journal) => _journal = journal;
@@ -33,6 +34,7 @@ public sealed class Catalog
             Projector.CatchUp(_journal, _media);
             Projector.CatchUp(_journal, _plugins);
             Projector.CatchUp(_journal, _jobs);
+            Projector.CatchUp(_journal, _versions);
             return Projector.CatchUp(_journal, _tree);
         }
     }
@@ -99,6 +101,7 @@ public sealed class Catalog
         _media.Apply(entry);
         _plugins.Apply(entry);
         _jobs.Apply(entry);
+        _versions.Apply(entry);
         return entry;
     }
 
@@ -106,6 +109,20 @@ public sealed class Catalog
     public Plugins Plugins => _plugins;
     /// <summary>Das Abbild der Jobs — nur innerhalb von <see cref="With"/> anfassen.</summary>
     public Jobs Jobs => _jobs;
+    /// <summary>Das Abbild der Versionen — nur innerhalb von <see cref="With"/> anfassen.</summary>
+    public Versions Versions => _versions;
+
+    // Stand bei #n (Versionen, Taloan: „eine Version ist ein Zeiger ins Journal“): Modell und Baum von damals, frisch aus dem
+    // Journal gebaut — ohne die Sperre, das Journal ist nur lesend. Die letzten Stände bleiben im Speicher (teuer bei grossem Journal).
+    private readonly Dictionary<long, (ModelCatalog Model, Tree Tree)> _asOf = new();
+    public (ModelCatalog Model, Tree Tree) AsOf(long number)
+    {
+        lock (_asOf) if (_asOf.TryGetValue(number, out var have)) return have;
+        var model = new ModelCatalog(); var tree = new Tree();
+        Projector.CatchUpUntil(_journal, model, number); Projector.CatchUpUntil(_journal, tree, number);
+        lock (_asOf) { if (_asOf.Count >= 4) _asOf.Remove(_asOf.Keys.First()); _asOf[number] = (model, tree); }
+        return (model, tree);
+    }
 
     /// <summary>Das Abbild der Medien — nur innerhalb von <see cref="With"/> anfassen (dieselbe Sperre).</summary>
     public Media Media => _media;

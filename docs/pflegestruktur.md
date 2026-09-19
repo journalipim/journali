@@ -455,6 +455,31 @@ ungespeicherte Zellen, nie automatisch; ins Journal mit Urheber `ki:<modell>`
 und Stapel; Modell austauschbar (API-Schlüssel bleibt im Browser, oder lokal
 Ollama auf der rossibox).
 
+## 25. Versionen — gebaut (Taloan, 19.09.2026)
+
+Taloans Bild aus dem letzten PIM: das Datenblatt dient der Endkontrolle, bei „Version erzeugen“ läuft ein
+Belegerzeuger (dort InBetween/InDesign → PDF/A), das Ergebnis wird mit der Version weggespeichert; für die
+Haftungsfrage zählt nur das Dokument, das nach draussen ging, nicht der Datenbankstand. Entschieden:
+
+- **Version = Zeiger + Belege.** `VersionCreated` hält den Journalstand; Belege hängen als `VersionDocumentAdded`
+  daran (Medium, hash-adressiert, unveränderlich). Aufbewahrung je Version (Vorgabe 10 Jahre) — die spätere
+  Lebensdauer-Regel für Bytes richtet sich danach: was eine laufende Version referenziert, bleibt.
+- **Erzeuger sind Plugins:** Manifest `renderer: { kind, service }` — der Dienst bekommt `node`, `version`, `kind`,
+  rendert, lädt per `POST /api/media` hoch und hängt per `POST /api/nodes/{id}/versions/{nr}/documents` an. Der
+  Server ruft bei „Version erzeugen“ alle eingeschalteten Erzeuger (asynchron); `…/render` wiederholt das.
+  `datasheet` liefert das HTML-Blatt mit Belegfuss (Version, Stand, Datum); PDF/A ist ein weiterer Erzeuger
+  (Headless-Chromium), InBetween ein dritter — ohne Änderung am Kern.
+- **Stand ansehen** (`GET …/versions/{nr}/diff`): Journal bis `journalNumber` abgespielt (`Catalog.AsOf`, die
+  letzten Stände im Speicher), eigene Werte damals gegen heute — geerbte Werte und Baumposition zählen nicht
+  (Taloan: „nicht die Welt von damals, sondern die Beschreibung von Artikel X“).
+- **Zurückrollen** (`POST …/rollback`, erst `dryRun`): Plan mit allem, was gesetzt würde, und allem, was aussen vor
+  bleibt (Attribut gibt es nicht mehr, gilt hier nicht, Zeilen vermehrbarer Attribute); dann ein Stapel vorwärts —
+  wie `git revert`, nie `reset`; rückgängig machbar. Eine neue Version ist kein Schnitt: alle Deltas bleiben.
+- **Zurückziehen** markiert nur (`VersionWithdrawn`), löscht nichts. Mit Kanal wird Vollständigkeit geprüft wie
+  bei der Freigabe. Versionen sind vom Rückgängig ausgenommen.
+- Noch offen: Benutzer und Rollen (Zuständigkeit), Workflow-Zustände über dem Status, grafischer Designer,
+  Lebensdauer-Regel für Bytes, Ausdünnen des Journals nur nach Ablauf einer beschlossenen Frist (nie aus Platzgründen).
+
 ## 23. Jobs — fest eingebaut (Taloan, 19.09.2026; erst Plugin tasker, dann Grundfunktion: „dauerhaft in der Leiste“)
 
 > Jobs wie Import dürfen nicht vom offenen Browserfenster abhängen; regelmässige

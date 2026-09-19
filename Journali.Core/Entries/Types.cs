@@ -80,6 +80,12 @@ public static class Types
     public const string JobRunStarted = "JobRunStarted";
     public const string JobRunFinished = "JobRunFinished";
 
+    // Versionen (Taloan, 19.09.2026: Freigabe = Version, nach draussen zaehlt das Belegdokument): am Knotenstrom —
+    // Zeiger auf den Journalstand, eingefrorene Belege (hash-adressiert im Medienspeicher), zurueckgezogen nur markiert
+    public const string VersionCreated = "VersionCreated";
+    public const string VersionDocumentAdded = "VersionDocumentAdded";
+    public const string VersionWithdrawn = "VersionWithdrawn";
+
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
     {
@@ -405,3 +411,11 @@ public sealed record JobRetired();
 public sealed record JobRunStarted(string Run, string Trigger);
 /// <summary>Lauf zu Ende: ok | failed | timeout | cancelled, Rückgabewert, Dauer, letzte Zeile der Ausgabe, Grösse des Logs.</summary>
 public sealed record JobRunFinished(string Run, string Status, int? Exit, double Seconds, string? Summary, long LogBytes);
+
+/// <summary>Version eines Knotens: laufende Nummer je Knoten, der Journalstand (alles bis dahin ist der Stand — auch das Modell von
+/// damals), wahlweise Kanal/Sprache, Anmerkung, Aufbewahrung in Jahren (Vorgabe 10). Belege kommen als VersionDocumentAdded dazu.</summary>
+public sealed record VersionCreated(int Nr, long JournalNumber, string? Channel, string? Locale, string? Note, int RetentionYears = 10);
+/// <summary>Beleg zur Version: Art (datasheet, sds …), das Medium (Hash, Typ, Name) und welcher Erzeuger (Plugin) es lieferte.</summary>
+public sealed record VersionDocumentAdded(int Nr, string Kind, string MediaId, string Sha256, string Mime, string Name, long Bytes, string? Renderer);
+/// <summary>Version zurückgezogen (fehlerhaft, ersetzt) — bleibt sichtbar, gilt nicht mehr.</summary>
+public sealed record VersionWithdrawn(int Nr, string? Reason);

@@ -131,4 +131,9 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   auf dieselbe API
 - ~~Vokabular der Eintragstypen~~ erste fünf in `docs/eintraege.md`; wächst
 - Vollständigkeitsregeln je Familie × Kanal × Sprache
+- Schnappschüsse der Abbilder (Stand #n sichern, beim Start nur den Rest lesen) — der Aufbau liest heute alles;
+  bei ~25 000 Einträgen am Tag innerhalb eines Jahres nötig. Ausdünnen des Journals dagegen nicht (Taloan, 19.09.2026):
+  ein Eintrag ist für immer; höchstens nach Ablauf einer beschlossenen Frist Einzelschritte zwischen zwei Versionen
+  zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
+- Benutzer und Rollen (Anmeldung, X-Actor verbindlich) — Voraussetzung für Workflow-Zuständigkeiten
 - Import/Export — in der Praxis die Hälfte des Systems

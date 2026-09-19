@@ -162,29 +162,31 @@ public static class PluginApi
             if (!Scan(dir).TryGetValue(key, out var m) || !m.Raw.TryGetProperty("process", out var proc)) return Bad($"Plugin {key} hat keinen Prozess.");
             var values = new Dictionary<string, string> { ["journali"] = $"{req.Scheme}://{req.Host}", ["actor"] = actor };
             foreach (var (k, v) in body.Params ?? new()) values[k] = v;
-            ProcessStartInfo psi;
-            try { psi = BuildProcess(dir, key, proc, values); } catch (InvalidOperationException e) { return Bad(e.Message); }
-            var command = psi.FileName; var args = psi.ArgumentList.ToList();
             var sw = Stopwatch.StartNew();
-            var output = new StringBuilder();
-            try
-            {
-                using var p = Process.Start(psi)!;
-                var stdout = p.StandardOutput.ReadToEndAsync(ct);
-                var stderr = p.StandardError.ReadToEndAsync(ct);
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
-                timeout.CancelAfter(TimeSpan.FromMinutes(30));
-                await p.WaitForExitAsync(timeout.Token);
-                output.Append(await stdout);
-                var err = await stderr;
-                if (err.Length > 0) output.Append("\n--- stderr ---\n").Append(err);
-                var text = output.ToString();
-                if (text.Length > 200_000) text = "…" + text[^200_000..];
-                return Results.Ok(new { exit = p.ExitCode, ms = sw.ElapsedMilliseconds, command, args, output = text });
-            }
-            catch (System.ComponentModel.Win32Exception e) { return Bad($"Prozess {command} startet nicht: {e.Message}"); }
+            try { var (exit, output) = await RunProcessAsync(dir, key, proc, values, TimeSpan.FromMinutes(30), ct); return Results.Ok(new { exit, ms = sw.ElapsedMilliseconds, output }); }
+            catch (InvalidOperationException e) { return Bad(e.Message); }
+            catch (System.ComponentModel.Win32Exception e) { return Bad($"Prozess startet nicht: {e.Message}"); }
             catch (OperationCanceledException) { return Bad("Abgebrochen (Zeitgrenze 30 Minuten)."); }
         });
+    }
+
+    /// <summary>Prozess eines Plugins laufen lassen und auf das Ende warten: Rückgabewert und Ausgabe (stdout, dann stderr). Für /run und die Belegerzeuger (Versionen).</summary>
+    public static async Task<(int Exit, string Output)> RunProcessAsync(string dir, string key, JsonElement proc, Dictionary<string, string> values, TimeSpan limit, CancellationToken ct)
+    {
+        var psi = BuildProcess(dir, key, proc, values);
+        var output = new StringBuilder();
+        using var p = Process.Start(psi)!;
+        var stdout = p.StandardOutput.ReadToEndAsync(ct);
+        var stderr = p.StandardError.ReadToEndAsync(ct);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(limit);
+        try { await p.WaitForExitAsync(timeout.Token); } catch (OperationCanceledException) { try { p.Kill(true); } catch { } throw; }
+        output.Append(await stdout);
+        var err = await stderr;
+        if (err.Length > 0) output.Append("\n--- stderr ---\n").Append(err);
+        var text = output.ToString();
+        if (text.Length > 200_000) text = "…" + text[^200_000..];
+        return (p.ExitCode, text);
     }
 
     private static IResult Toggle(HttpRequest req, Catalog c, string key, bool on)

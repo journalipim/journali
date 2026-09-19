@@ -90,6 +90,7 @@ ModelApi.Map(api);
 TreeApi.Map(api);
 RelationApi.Map(api);
 MediaApi.Map(api);
+VersionApi.Map(api, pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("versions"));   // Versionen (Taloan, 19.09.)
 PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);
 TransferApi.Map(api);   // Rohdaten eines Teilbaums hin und zurück (JSON, wiederherstellbar — Taloan)

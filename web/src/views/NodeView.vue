@@ -18,6 +18,7 @@ import SelectCell from '../components/SelectCell.vue'
 import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
 import RowsBlock from '../components/RowsBlock.vue'
+import VersionsPanel from '../components/VersionsPanel.vue'
 import MediaThumb from '../components/MediaThumb.vue'
 import EntryList from '../components/EntryList.vue'
 import ScriptEditor from '../components/ScriptEditor.vue'
@@ -687,6 +688,12 @@ function cellMenu(e, def, col, block) {
           </tbody>
         </table>
         </template>
+      </div>
+
+      <!-- Versionen (Taloan, 19.09.): Freigabe = Version, Zeiger auf den Journalstand + eingefrorene Belege; Stand ansehen, zurückrollen -->
+      <div class="section">
+        <h2 @click="toggle('versions')"><span class="caret">{{ open('versions') ? '▾' : '▸' }}</span>⎘ Versionen <span class="muted">· Stand einfrieren, Belege der Erzeuger, Stand ansehen, zurückrollen</span></h2>
+        <VersionsPanel v-if="open('versions')" :id="id" :role="node.role" @changed="load(); store.poll(true)" />
       </div>
     </div>
 
