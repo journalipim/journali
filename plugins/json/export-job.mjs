@@ -19,7 +19,7 @@ const ownOnly = (ownArg || E.JOURNALI_OWNONLY || 'false') === 'true'
 const gz = (gzArg || E.JOURNALI_GZIP || 'true') === 'true'
 const keep = Math.max(1, parseInt(keepArg || E.JOURNALI_KEEP || '14', 10) || 14)
 const jobKey = E.JOURNALI_JOB ? E.JOURNALI_JOB + '-' : ''   // vom JobRunner; von Hand: ohne
-const headers = { 'X-Actor': actor }
+const headers = { 'X-Actor': actor, ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }   // mit Benutzern: Dienst-Token des Laufs
 const api = { get: async p => { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() } }
 const countNodes = n => { let c = 1; for (const k of n.children ?? []) c += countNodes(k); return c }
 

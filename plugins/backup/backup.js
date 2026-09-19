@@ -6,7 +6,7 @@ const [,, server, actor, rootArg, dirArg, keepArg, gzArg] = process.argv
 const gz = (gzArg ?? 'true') !== 'false' && gzArg !== '0' && gzArg !== 'off'   // gzip (Taloan: mit Kompression) — .json.gz, der JSON-Import liest es direkt
 if (!server) { console.error('journali-Adresse fehlt'); process.exit(2) }
 const dir = path.resolve(dirArg || 'backup'); const keep = Math.max(1, parseInt(keepArg || '14', 10) || 14)
-const headers = { 'X-Actor': actor || 'job:backup' }
+const headers = { 'X-Actor': actor || 'job:backup', ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }   // mit Benutzern: Dienst-Token des Laufs
 const jobKey = process.env.JOURNALI_JOB ? process.env.JOURNALI_JOB + '-' : ''   // vom JobRunner; von Hand: ohne
 async function get(p) { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() }
 ;(async () => {

@@ -455,6 +455,15 @@ ungespeicherte Zellen, nie automatisch; ins Journal mit Urheber `ki:<modell>`
 und Stapel; Modell austauschbar (API-Schlüssel bleibt im Browser, oder lokal
 Ollama auf der rossibox).
 
+## 26. Benutzer & Rollen — gebaut (Taloan, 19.09.2026)
+
+Voraussetzung für Workflow-Zuständigkeiten und Hosting. Identität und Rolle im Journal (`UserDefined`),
+Geheimnisse in `auth.json` beim Server. Drei Rollen (admin, editor, reader); Rechte als Pfad-Regeln in
+`Auth.Allowed`. Ohne Benutzer bleibt der Server offen (Intranet), mit Benutzern sperrt die Middleware `/api`
+und setzt `X-Actor` aus der Sitzung. Sitzungen per Cookie, API-Token je Nutzer für Add-ins und Skripte,
+Dienst-Token je Job-Lauf. Offen: SSO/OIDC, Passwort-Zurücksetzen per Mail, Rollen je Teilbaum,
+Workflow-Rollen (Prüfer, Freigeber) darüber. Details: `docs/betrieb.md`.
+
 ## 25. Versionen — gebaut (Taloan, 19.09.2026)
 
 Taloans Bild aus dem letzten PIM: das Datenblatt dient der Endkontrolle, bei „Version erzeugen“ läuft ein

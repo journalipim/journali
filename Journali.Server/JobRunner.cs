@@ -83,7 +83,8 @@ public sealed class JobRunner : BackgroundService
         if (!PluginApi.Scan(_pluginDir).TryGetValue(job.Plugin, out var m) || PluginApi.ProcessOf(m.Raw, job.Service) is not { } proc) { error = $"Plugin {job.Plugin} hat keinen Prozess {job.Service}"; return null; }
         var run = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss") + "-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(2)).ToLowerInvariant();
         var actor = "job:" + key;
-        var values = new Dictionary<string, string>(job.Params) { ["journali"] = Origin, ["actor"] = actor, ["job"] = key, ["run"] = run };
+        var token = Auth.IssueServiceToken(actor);   // gilt fuer diesen Lauf (JOURNALI_TOKEN); der Prozess schickt ihn als Bearer
+        var values = new Dictionary<string, string>(job.Params) { ["journali"] = Origin, ["actor"] = actor, ["job"] = key, ["run"] = run, ["token"] = token };
         foreach (var (k, v) in Secrets.Get(Dir, key)) values[k] = v;
         ProcessStartInfo psi;
         try { psi = PluginApi.BuildProcess(_pluginDir, job.Plugin, proc, values); }
@@ -96,11 +97,11 @@ public sealed class JobRunner : BackgroundService
         var cts = new CancellationTokenSource();
         lock (_gate) _running[key] = (p, cts, run);
         _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobRunStarted, new JobRunStarted(run, trigger), null));
-        _ = Task.Run(() => Watch(key, job.TimeoutMinutes, run, p, cts, logPath, actor));
+        _ = Task.Run(() => Watch(key, job.TimeoutMinutes, run, p, cts, logPath, actor, token));
         return run;
     }
 
-    private async Task Watch(string key, int timeoutMinutes, string run, Process p, CancellationTokenSource cts, string logPath, string actor)
+    private async Task Watch(string key, int timeoutMinutes, string run, Process p, CancellationTokenSource cts, string logPath, string actor, string token)
     {
         var sw = Stopwatch.StartNew();
         var status = "ok"; string? last = null;
@@ -126,6 +127,7 @@ public sealed class JobRunner : BackgroundService
         finally
         {
             lock (_gate) _running.Remove(key);
+            Auth.RevokeServiceToken(token);
             var exit = 0; try { exit = p.ExitCode; } catch { }
             var bytes = 0L; try { log.Flush(); bytes = new FileInfo(logPath).Length; } catch { }
             var summary = last is { Length: > 0 } ? (last.Length > 200 ? last[..200] : last) : null;

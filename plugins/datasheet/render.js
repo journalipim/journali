@@ -16,7 +16,7 @@ const layoutName = layoutArg || E.JOURNALI_LAYOUT || ''
 const localeArgv = localeArg || E.JOURNALI_LOCALE || ''
 const kind = E.JOURNALI_KIND || 'datasheet'
 if (!node) { console.error('Knoten fehlt'); process.exit(2) }
-const headers = { 'X-Actor': actor }
+const headers = { 'X-Actor': actor, ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }   // mit Benutzern: Dienst-Token des Laufs
 const api = {
   get: async p => { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() },
   post: async (p, body) => { const r = await fetch(server + p, { method: 'POST', headers: { ...headers, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() },

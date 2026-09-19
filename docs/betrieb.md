@@ -143,6 +143,27 @@ Fassung erscheint unter ⌁ Plugins als ↑ Update). Prozess-Plugins brauchen
 `docker compose up --build`. Der Server wartet, bis Postgres bereit ist
 (Healthcheck), und legt Datenbank und Tabelle selbst an.
 
+## Benutzer & Rollen
+
+Ohne Benutzer ist der Server offen wie bisher (`X-Actor` frei — Intranet). Der erste Aufruf von `/login`
+legt den ersten Administrator an (`POST /api/auth/setup`); ab dann braucht alles unter `/api` ausser
+`/api/health` und `/api/auth/*` eine Sitzung (Cookie `journali.session`, 30 Tage) oder ein Token
+(`Authorization: Bearer …`), und der Urheber jedes Eintrags kommt aus der Sitzung — der Client kann
+`X-Actor` nicht mehr wählen.
+
+| Rolle | darf |
+|---|---|
+| `admin` | alles: Modell, Plugins, Jobs, Storage, Benutzer |
+| `editor` | Daten pflegen, Importe, Versionen, Plugin-Daten; nicht: Modell, Plugin-Verwaltung, Jobs anlegen, Storage, Benutzer |
+| `reader` | nur lesen |
+
+Verwaltung unter ⚙ Einstellungen → 👤 Benutzer (admin) bzw. Konto (jeder: Passwort, API-Token). API-Token
+(`jt_…`) sind für Excel-Add-in, OnlyOffice und Skripte — je Nutzer, widerrufbar, nur beim Anlegen sichtbar.
+Jobs und Belegerzeuger bekommen je Lauf ein Dienst-Token (`JOURNALI_TOKEN`, Rolle editor), das mit dem
+Lauf erlischt. Geheimnisse liegen in `auth.json` im Datenverzeichnis (`JOURNALI_JOBS`, im Container das
+Volume `journali-jobs`), Passwörter als PBKDF2-SHA256 — nie im Journal. Der letzte Administrator lässt
+sich nicht sperren oder entfernen. Hosting: Anmeldung ist Pflicht, bevor eine Instanz ins Internet geht.
+
 ## KI (Claude)
 
 journali bietet keine KI an und hat keinen eigenen Schlüssel. Wer die KI-Funktionen nutzt

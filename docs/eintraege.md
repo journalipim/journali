@@ -210,6 +210,16 @@ Taloan, 19.09.2026: eine Freigabe ist eine Version; nach aussen zählt das Beleg
 Zurückrollen erzeugt keine eigenen Typen: es ist ein Stapel (`batch` `rollback-<knoten>-<nr>-…`) aus `AttributeSet`, `NodeNamed`, `StatusSet`
 mit den Werten von damals — eigene Werte des Knotens, nicht die Welt von damals.
 
+## Benutzer — Strom `user:<key>`
+
+Taloan, 19.09.2026: Benutzer und Rollen. Wer es gibt und welche Rolle gilt, steht im Journal; Passwörter, API-Token und
+Sitzungen liegen in `auth.json` im Datenverzeichnis — nie im Journal (Regel wie bei `secrets.json`).
+
+| Typ | Payload | Bedeutung |
+|---|---|---|
+| `UserDefined` | `name`, `email`, `role` (admin, editor, reader), `enabled` | der Benutzer — der letzte Eintrag gilt ganz |
+| `UserRetired` | — | entfernt; Einträge, die er geschrieben hat, bleiben (X-Actor) |
+
 ## Jobs (fest eingebaut: ⏱ Jobs) — Strom `job:<key>`
 
 | Typ | Nutzlast | Bedeutung |

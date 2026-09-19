@@ -9,7 +9,7 @@ let model = null, picked = null, snapshot = null   // snapshot: { id, locale, mo
 
 function log(text, cls) { const d = document.createElement('div'); d.textContent = text; if (cls) d.className = cls; $('log').prepend(d) }
 async function api(path, opts = {}) {
-  const res = await fetch(base + path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Actor': $('actor').value.trim(), ...(opts.headers || {}) } })
+  const res = await fetch(base + path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Actor': $('actor').value.trim(), ...($('token')?.value.trim() ? { Authorization: 'Bearer ' + $('token').value.trim() } : {}), ...(opts.headers || {}) } })
   const text = await res.text(); const data = text ? JSON.parse(text) : null
   if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
   return data
@@ -18,6 +18,8 @@ async function api(path, opts = {}) {
 Office.onReady(async () => {
   $('actor').value = settings.actor
   $('actor').addEventListener('change', () => localStorage.setItem('journali.actor', $('actor').value.trim()))
+  $('token').value = localStorage.getItem('journali.token') || ''
+  $('token').addEventListener('change', () => localStorage.setItem('journali.token', $('token').value.trim()))
   try {
     const h = await api('/api/health'); model = await api('/api/model')
     $('status').textContent = `· #${h.head} · ${h.nodes} Knoten`

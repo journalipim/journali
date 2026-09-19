@@ -73,7 +73,11 @@ app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Edi
 // Die Adresse, unter der Jobs den Server erreichen: die, mit der die Oberfläche kommt (localhost:5000 oder rossibox)
 app.Use(async (ctx, next) => { if (ctx.Request.Path.StartsWithSegments("/api")) jobRunner.Origin = $"{ctx.Request.Scheme}://{ctx.Request.Host}"; await next(); });
 
+// Benutzer & Rollen (Taloan, 19.09.): ohne Benutzer offen wie bisher; mit Benutzern Sitzung oder Token noetig, X-Actor kommt aus der Sitzung
+app.Use(Auth.Middleware(catalog, dataDir));
+
 var api = app.MapGroup("/api");
+Auth.Map(api, dataDir);
 
 // ---- Stand und Modell ----------------------------------------------------
 

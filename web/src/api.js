@@ -18,6 +18,8 @@ async function request(method, path, body) {
   // kein JSON (Ausnahme oder 400 als Text vom Server): die erste Zeile als Meldung, nicht „Unexpected token“ (Taloan)
   let data = null
   try { data = text ? JSON.parse(text) : null } catch { throw new Error(`${res.status}: ${text.split(/\r?\n/)[0].slice(0, 200)}`) }
+  // 401 mit login: Sitzung fehlt oder abgelaufen — zur Anmeldung, der Weg zurück wird gemerkt
+  if (res.status === 401 && data?.login && !location.pathname.startsWith('/login')) { sessionStorage.setItem('journali.after', location.pathname + location.search); store.auth = { ...store.auth, known: true, enabled: true, user: null, role: null }; (await import('./router.js')).router.push('/login') }
   if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
   return data
 }

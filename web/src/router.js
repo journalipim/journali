@@ -3,6 +3,8 @@ import TreeView from './views/TreeView.vue'
 import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
 import HubView from './views/HubView.vue'
+import LoginView from './views/LoginView.vue'
+import { store } from './store.js'
 import TableEditView from './views/TableEditView.vue'
 import MediaView from './views/MediaView.vue'
 import PluginsView from './views/PluginsView.vue'
@@ -33,5 +35,14 @@ export const router = createRouter({
     { path: '/plugins', component: PluginsView },
     { path: '/p/:key/:path', component: PluginHost },
     { path: '/settings', component: SettingsView },
+    { path: '/login', component: LoginView },
   ],
+})
+
+// Wache (Taloan, 19.09.): mit Benutzern ohne Sitzung → /login; ohne Benutzer bleibt alles offen
+router.beforeEach(async to => {
+  if (to.path === '/login') return true
+  if (!store.auth.known) await store.loadAuth()
+  if (store.auth.enabled && !store.auth.user) { sessionStorage.setItem('journali.after', to.fullPath); return '/login' }
+  return true
 })

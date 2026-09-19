@@ -160,7 +160,7 @@ public static class PluginApi
             var state = c.With((_, _, _) => c.Plugins.All.GetValueOrDefault(key));
             if (state is null || !state.Enabled) return Bad($"Plugin {key} ist nicht installiert oder aus.");
             if (!Scan(dir).TryGetValue(key, out var m) || !m.Raw.TryGetProperty("process", out var proc)) return Bad($"Plugin {key} hat keinen Prozess.");
-            var values = new Dictionary<string, string> { ["journali"] = $"{req.Scheme}://{req.Host}", ["actor"] = actor };
+            var values = new Dictionary<string, string> { ["journali"] = $"{req.Scheme}://{req.Host}", ["actor"] = actor, ["token"] = Auth.IssueServiceToken(actor) };
             foreach (var (k, v) in body.Params ?? new()) values[k] = v;
             var sw = Stopwatch.StartNew();
             try { var (exit, output) = await RunProcessAsync(dir, key, proc, values, TimeSpan.FromMinutes(30), ct); return Results.Ok(new { exit, ms = sw.ElapsedMilliseconds, output }); }

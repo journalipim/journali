@@ -15,7 +15,7 @@ const dir = path.resolve(dirArg || E.JOURNALI_DIR || 'datenblaetter')
 const roleFilter = roleArg || E.JOURNALI_ROLE || 'product'
 const layoutName = layoutArg || E.JOURNALI_LAYOUT || ''
 const localeArgv = localeArg || E.JOURNALI_LOCALE || ''
-const headers = { 'X-Actor': actor }
+const headers = { 'X-Actor': actor, ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }   // mit Benutzern: Dienst-Token des Laufs
 const api = { get: async p => { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() } }
 
 ;(async () => {

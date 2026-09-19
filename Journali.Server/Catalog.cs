@@ -20,6 +20,7 @@ public sealed class Catalog
     private readonly Plugins _plugins = new();
     private readonly Jobs _jobs = new();
     private readonly Versions _versions = new();
+    private readonly Users _users = new();
     private readonly object _gate = new();
 
     public Catalog(IJournal journal) => _journal = journal;
@@ -35,6 +36,7 @@ public sealed class Catalog
             Projector.CatchUp(_journal, _plugins);
             Projector.CatchUp(_journal, _jobs);
             Projector.CatchUp(_journal, _versions);
+            Projector.CatchUp(_journal, _users);
             return Projector.CatchUp(_journal, _tree);
         }
     }
@@ -102,6 +104,7 @@ public sealed class Catalog
         _plugins.Apply(entry);
         _jobs.Apply(entry);
         _versions.Apply(entry);
+        _users.Apply(entry);
         return entry;
     }
 
@@ -111,6 +114,8 @@ public sealed class Catalog
     public Jobs Jobs => _jobs;
     /// <summary>Das Abbild der Versionen — nur innerhalb von <see cref="With"/> anfassen.</summary>
     public Versions Versions => _versions;
+    /// <summary>Das Abbild der Benutzer — nur innerhalb von <see cref="With"/> anfassen.</summary>
+    public Users Users => _users;
 
     // Stand bei #n (Versionen, Taloan: „eine Version ist ein Zeiger ins Journal“): Modell und Baum von damals, frisch aus dem
     // Journal gebaut — ohne die Sperre, das Journal ist nur lesend. Die letzten Stände bleiben im Speicher (teuer bei grossem Journal).

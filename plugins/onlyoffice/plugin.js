@@ -8,7 +8,7 @@ let model = null, picked = null, snapshot = null
 function log(text, cls) { const d = document.createElement('div'); d.textContent = text; if (cls) d.className = cls; $('log').prepend(d) }
 const server = () => $('server').value.trim().replace(/\/+$/, '') || (location.protocol.startsWith('http') ? location.origin : 'http://localhost:5000')
 async function api(path, opts = {}) {
-  const res = await fetch(server() + path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Actor': $('actor').value.trim(), ...(opts.headers || {}) } })
+  const res = await fetch(server() + path, { ...opts, headers: { 'Content-Type': 'application/json', 'X-Actor': $('actor').value.trim(), ...($('token')?.value.trim() ? { Authorization: 'Bearer ' + $('token').value.trim() } : {}), ...(opts.headers || {}) } })
   const text = await res.text(); const data = text ? JSON.parse(text) : null
   if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
   return data
@@ -23,6 +23,8 @@ window.Asc.plugin.init = async function () {
   $('actor').value = localStorage.getItem('journali.actor') || ''
   $('server').addEventListener('change', () => { localStorage.setItem('journali.server', $('server').value.trim()); connect() })
   $('actor').addEventListener('change', () => localStorage.setItem('journali.actor', $('actor').value.trim()))
+  $('token').value = localStorage.getItem('journali.token') || ''
+  $('token').addEventListener('change', () => { localStorage.setItem('journali.token', $('token').value.trim()); connect() })
   await connect()
   // Schnappschuss aus dem versteckten Blatt holen (Datei wurde schon einmal von uns beschrieben)
   const stored = await command(function () {

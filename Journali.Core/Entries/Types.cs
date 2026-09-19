@@ -86,6 +86,10 @@ public static class Types
     public const string VersionDocumentAdded = "VersionDocumentAdded";
     public const string VersionWithdrawn = "VersionWithdrawn";
 
+    // Benutzer (Taloan, 19.09.2026: Benutzer und Rollen): Strom user:<key> — wer es gibt und welche Rolle; Passwoerter nie im Journal
+    public const string UserDefined = "UserDefined";
+    public const string UserRetired = "UserRetired";
+
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
     {
@@ -419,3 +423,7 @@ public sealed record VersionCreated(int Nr, long JournalNumber, string? Channel,
 public sealed record VersionDocumentAdded(int Nr, string Kind, string MediaId, string Sha256, string Mime, string Name, long Bytes, string? Renderer);
 /// <summary>Version zurückgezogen (fehlerhaft, ersetzt) — bleibt sichtbar, gilt nicht mehr.</summary>
 public sealed record VersionWithdrawn(int Nr, string? Reason);
+
+/// <summary>Benutzer: Anzeigename, E-Mail, Rolle (admin | editor | reader), an/aus. Der letzte Eintrag gilt ganz. Kein Geheimnis hier (auth.json).</summary>
+public sealed record UserDefined(string Name, string? Email, string Role, bool Enabled = true);
+public sealed record UserRetired();

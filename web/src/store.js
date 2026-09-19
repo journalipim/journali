@@ -25,6 +25,8 @@ export const store = reactive({
   attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel (Taloan), nicht gespeichert
   collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : [],   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
   online: null,          // null = noch nicht gefragt, sonst true/false
+  // Anmeldung (Taloan, 19.09.): enabled = es gibt Benutzer (Server gesperrt), setup = noch keiner (ersten Admin anlegen), user/role aus der Sitzung
+  auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null },
   head: 0,
   nodes: 0,
   model: null,           // { locales, channels, attributes } vom Server
@@ -55,6 +57,12 @@ export const store = reactive({
     else document.documentElement.dataset.theme = this.theme
   },
 
+  async loadAuth() {
+    try { const s = await api.get('/api/auth/state'); this.auth = { known: true, ...s }; if (s.enabled && s.user) this.actor = s.user } catch { this.auth = { ...this.auth, known: true } }
+    return this.auth
+  },
+  async logout() { try { await api.post('/api/auth/logout', {}) } catch {} this.auth = { known: true, enabled: true, setup: false, user: null, role: null, name: null } },
+
   async poll(force = false) {
     try {
       const h = await api.get('/api/health')
@@ -73,6 +81,7 @@ export const store = reactive({
 
   start() {
     this.applyTheme()
+    this.loadAuth()
     this.poll()
     setInterval(() => this.poll(), 3000)
     this.checkVersion()

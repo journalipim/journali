@@ -16,7 +16,7 @@ const parentArgv = parentArg || E.JOURNALI_PARENT || ''
 const dryRun = (dryArg || E.JOURNALI_DRYRUN || 'false') === 'true'
 if (!source) { console.error('✗ Quelle fehlt (Datei, Verzeichnis oder URL)'); process.exit(1) }
 
-const headers = { 'X-Actor': actor, 'Content-Type': 'application/json' }
+const headers = { 'X-Actor': actor, 'Content-Type': 'application/json', ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }   // mit Benutzern: Dienst-Token des Laufs
 async function request(method, p, body) {
   const res = await fetch(server + p, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
   const text = await res.text(); let data = null
