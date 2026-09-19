@@ -18,7 +18,7 @@ von Taloan, bevor sie online gehen.
 | **Sekundär** | Produktdatenmanagement, Produktinformationsmanagement, PIM Software Mittelstand, PIM Docker, Datenblatt generieren, Produktdaten Versionierung, Digitaler Produktpass PIM |
 | **Long-Tail** | „PIM System selbst hosten“, „Produktdaten revisionssicher“, „Excel Import Produktdaten“, „Datenblatt automatisch aus Produktdaten“, „PIM mit Änderungshistorie“, „PPWR Verpackungsdaten pflegen“ |
 | **Tonalität** | Sachlich, konkret, kurze Sätze. Keine Superlative. Zahlen und Fakten statt Adjektive (passt zur Oberfläche: Symbole und Zahlen statt Wörter). |
-| **CTA** | Demo ansehen / Docker-Paket starten / Gespräch vereinbaren **[zu klären: welcher CTA existiert wirklich?]** |
+| **CTA** | „Stand der Entwicklung“ — in Entwicklung, Snapshots als Neuigkeiten, Kontakt über das Impressum (Taloan, 19.09.) |
 
 ---
 
@@ -137,9 +137,13 @@ Der JSON-Export enthält Daten und Modell und lässt sich vollständig wieder im
 
 ---
 
-### H2: Nächster Schritt (CTA)
+### H2: Stand der Entwicklung (CTA)
 
-**[zu klären]** — Optionen: „Docker-Paket starten“ (Link zu Anleitung), „Demo ansehen“ (Screenshots/Video), „Gespräch vereinbaren“ (Kontakt). Ein CTA, nicht drei.
+journali befindet sich in intensiver Entwicklung. Was hier steht, ist gebaut und läuft — noch nicht als fertiges Paket zum Herunterladen. Wir halten diese Seite mit Snapshots aus der Entwicklung auf dem Laufenden: neue Ansichten, neue Plugins, neue Belegerzeuger.
+
+Sie wollen journali früh sehen oder mit eigenen Daten ausprobieren? Kontakt über das Impressum.
+
+*(Taloan, 19.09.: kein Verkaufs-CTA — ehrlich „in Entwicklung“, Snapshots als Neuigkeiten. Hero-Knopf: „Stand der Entwicklung“.)*
 
 ---
 
