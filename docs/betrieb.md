@@ -114,11 +114,14 @@ Die Datenbank ist das Template `postgresql18` aus den Community Apps
 Der Server bringt die Oberfläche mit (Dockerfile baut sie mit Node in der
 ersten Stufe). Für den Server gibt es zwei Wege:
 
-1. **Image** — `Dockerfile` im Repo. Bauen, wo Docker ist (Compose Manager
-   auf der rossibox mit Checkout aus Gitea, oder ein PC mit Docker), dann
-   Container mit Port `8080` und den Umgebungsvariablen `JOURNALI_DB`
-   (`Host=localhost;Port=7432;Database=journali;Username=postgres`)
-   und `JOURNALI_DB_PASSWORD`.
+1. **Image** — `Dockerfile` im Repo, gegen die vorhandene Datenbank mit
+   `compose.rossibox.yaml`: auf der rossibox im Checkout `cp .env.example .env`,
+   Passwort eintragen, `docker compose -f compose.rossibox.yaml up --build -d`
+   → `http://rossibox:8080`. Das Image baut die Oberfläche selbst (Node-Stufe),
+   die Plugins kommen per Bind-Mount aus dem Checkout, Jobs/Storage-Einstellung
+   liegen im Volume `journali-jobs`. Neuer Stand = `git pull` und dasselbe
+   Kommando; nur Plugin-Änderungen brauchen kein neues Image. Prozess-Plugins
+   auf Python-Basis (solr_import.py) laufen im Image nicht — es enthält nur node.
 2. **Publish-Ordner** — ohne Image: vom PC erst `tools\server build`, dann
    `dotnet publish Journali.Server -c Release -o <Freigabe>\journali`
    (nimmt `wwwroot` mit),
