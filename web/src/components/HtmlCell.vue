@@ -4,8 +4,9 @@
 // Umschalter auf den Quelltext (Taloan, 17.09.). Ctrl+Enter speichert, Esc verwirft.
 import { ref, computed, nextTick } from 'vue'
 import { dialog } from '../dialog.js'
+import AiBar from './AiBar.vue'
 
-const props = defineProps({ value: String, inherited: String, disabled: Boolean, origin: String, title: String, clickEdit: { type: Boolean, default: true } })   // clickEdit=false (Tabelle): Doppelklick/Enter öffnet
+const props = defineProps({ value: String, inherited: String, disabled: Boolean, origin: String, title: String, clickEdit: { type: Boolean, default: true }, node: String, locale: String, label: String })   // clickEdit=false (Tabelle): Doppelklick/Enter öffnet
 const emit = defineEmits(['save'])
 
 const open = ref(false)
@@ -30,6 +31,8 @@ async function edit() {
 }
 function save() { syncFromRich(); open.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value) }
 function cancel() { open.value = false }
+// ✦ KI: neuer Text in den Entwurf — Schreibmodus zeigt ihn sofort, Quelltext ebenso
+function fromAi(text) { draft.value = text; if (rich.value && !source.value) rich.value.innerHTML = text }
 function syncFromRich() { if (!source.value && rich.value) draft.value = rich.value.innerHTML.replace(/<div><br><\/div>/g, '<p></p>') }
 async function toggleSource() {
   if (source.value) { source.value = false; await nextTick(); if (rich.value) { rich.value.innerHTML = draft.value; rich.value.focus() } }
@@ -76,6 +79,7 @@ function onEditKey(e) {
             <span class="sep">·</span>
             <button @mousedown.prevent="cmd('removeFormat')" title="Formatierung entfernen">✗ Format</button>
             <span class="grow" />
+            <AiBar :current="draft" html :label="label || title" :locale="locale" :node="node" @result="fromAi" />
             <button @click="toggleSource" title="HTML-Quelltext zeigen">‹› Quelltext</button>
           </div>
           <div class="toolbar fmt" v-else><span class="muted">HTML-Quelltext</span><span class="grow" /><button class="primary" @click="toggleSource" title="zurück zum Schreibmodus">✎ Schreiben</button></div>

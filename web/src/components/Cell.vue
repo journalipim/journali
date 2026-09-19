@@ -4,6 +4,7 @@
 // bisherigen Wert an (überschreibt nie, Taloan 17.09.). Enter speichert, Esc
 // verwirft, Tab speichert und springt weiter.
 import { ref, nextTick } from 'vue'
+import AiBar from './AiBar.vue'
 
 const props = defineProps({
   value: String,          // eigener Wert auf dieser Achse (null = keiner)
@@ -13,6 +14,7 @@ const props = defineProps({
   mark: String,           // kleines Zeichen rechts in der Zelle (⟳ = Übersetzung zu überarbeiten)
   markTitle: String,
   clickEdit: { type: Boolean, default: true },   // false (Tabelle): Klick markiert nur, Doppelklick bearbeitet
+  node: String, locale: String, label: String,    // für ✦ KI im grossen Editor
 })
 const emit = defineEmits(['save'])
 
@@ -88,7 +90,7 @@ function onEditKey(e) {
       <div v-if="big" class="overlay" @mousedown.self="cancelBig">
         <div class="big">
           <textarea ref="area" v-model="draft" @keydown="onBigKey" spellcheck="false"></textarea>
-          <div class="toolbar"><span class="muted" style="font-size:12px">{{ draft.length }} Zeichen · Strg+Enter speichert · Esc verwirft</span><span class="grow" /><button @click="cancelBig">Verwerfen</button><button class="primary" @click="saveBig">Speichern</button></div>
+          <div class="toolbar"><span class="muted" style="font-size:12px">{{ draft.length }} Zeichen · Strg+Enter speichert · Esc verwirft</span><span class="grow" /><AiBar :current="draft" :html="false" :label="label" :locale="locale" :node="node" @result="t => { draft = t }" /><button @click="cancelBig">Verwerfen</button><button class="primary" @click="saveBig">Speichern</button></div>
         </div>
       </div>
     </Teleport>
