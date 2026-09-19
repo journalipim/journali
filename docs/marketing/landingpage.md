@@ -103,7 +103,7 @@ Docker Compose mit PostgreSQL — fertig. Medien wahlweise in Postgres, im Datei
 
 ### H2: Integration
 
-- ERP/Quellsysteme: JSON-Import als Job, IXP- und Solr-Anbindung als Plugins, Excel-Add-in und OnlyOffice-Plugin zur Pflege direkt in der Tabelle
+- ERP/Quellsysteme: JSON-Import als Job, Anbindung von Quellsystemen und Suchindizes (Solr) als Plugins, Excel-Add-in und OnlyOffice-Plugin zur Pflege direkt in der Tabelle
 - Ausgabe: Excel, CSV, JSON (Rohdaten oder ausgewertet, als Baum oder Liste), Datenblätter als HTML **[PDF/A folgt — nicht bewerben, bis es da ist]**
 - Automatisierung: alle Importe und Exporte als Jobs mit Zeitplan; Webhooks **[nicht gebaut — nicht bewerben]**
 
