@@ -14,10 +14,25 @@ const listW = paneWidth('plugins.list', 380)
 const cur = ref(null)
 const busy = ref('')
 const run = ref({ params: {}, out: null })
-const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '🛠 Werkzeug' }
+// Symbol in der Leiste je Plugin (Taloan): Einstellung des Nutzers, nicht des Plugins
+function toggleRail(key) { const s = new Set(store.railPlugins); s.has(key) ? s.delete(key) : s.add(key); store.railPlugins = [...s]; store.save() }
+// Geheimnisse (secret im Manifest) gehören nicht in den Parametersatz im Journal — nur in den Aufruf
+const publicParams = () => Object.fromEntries(Object.entries(run.value.params).filter(([k]) => !(manifest.value?.process?.params ?? []).some(p => p.key === k && p.secret)))
+const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '🛠 Werkzeug', output: '📄 Ausgabe', edit: '✎ Pflege' }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
 const manifest = computed(() => current.value?.manifest ?? {})
 const label = m => m?.label?.de || m?.label?.en || ''
+// Suche und Filter in der Liste (Taloan): Text über Key, Name, Beschreibung; Art (kind) und Zustand (an, aus, Update, nicht installiert)
+const q = ref('')
+const kindFilter = ref('')
+const stateFilter = ref('')
+const kinds = computed(() => [...new Set(plugins.list.map(p => p.manifest?.kind).filter(Boolean))].sort())
+const shown = computed(() => {
+  const s = q.value.trim().toLowerCase()
+  return plugins.list.filter(p => (!kindFilter.value || p.manifest?.kind === kindFilter.value)
+    && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : !p.installed))
+    && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (p.manifest?.description?.de ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
+})
 const stateOf = p => !p.installed ? '— nicht installiert' : p.enabled ? '● an' : '○ aus'
 
 onMounted(async () => { await plugins.load(); if (!cur.value) cur.value = plugins.list[0]?.key ?? null })
@@ -45,9 +60,15 @@ function pick(k) { cur.value = k; startParams() }
 
 <template>
   <div class="pane" :style="`width:${listW}px;flex:none`">
-    <div class="toolbar"><h1>⌁ Plugins</h1><span class="muted">{{ plugins.list.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
+    <div class="toolbar"><h1>⌁ Plugins</h1><span class="muted">{{ shown.length === plugins.list.length ? plugins.list.length : shown.length + ' von ' + plugins.list.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
+    <div class="toolbar" style="gap:4px;flex-wrap:wrap;font-size:12px">
+      <input v-model="q" type="search" placeholder="🔍 Key, Name, Beschreibung" style="flex:1;min-width:120px" @keydown.esc="q = ''" />
+      <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
+      <span class="sep">·</span>
+      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', '↑ Update'], ['new', '⇩ nicht installiert']]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
+    </div>
     <div class="scroll">
-      <div v-for="p in plugins.list" :key="p.key" class="li" :class="{ current: cur === p.key, off: !p.enabled }" @click="pick(p.key)" :title="p.key">
+      <div v-for="p in shown" :key="p.key" class="li" :class="{ current: cur === p.key, off: !p.enabled }" @click="pick(p.key)" :title="p.key">
         <span class="k">{{ p.key }}</span>
         <span class="l">{{ label(p.manifest) || p.key }}</span>
         <span class="r">
@@ -71,6 +92,7 @@ function pick(k) { cur.value = k; startParams() }
       <template v-if="current.onDisk && !current.installed"><button class="primary" @click="act(`/api/plugins/${current.key}/install`)">⇩ installieren {{ current.diskVersion }}</button></template>
       <template v-else-if="current.installed">
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">↑ aktualisieren auf {{ current.diskVersion }}</button>
+        <button v-if="current.enabled && plugins.views.some(x => x.key === current.key)" :class="{ primary: store.railPlugins.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railPlugins.includes(current.key) ? 'eigenes Symbol in der Leiste links — Klick nimmt es weg (bleibt über sein Thema erreichbar)' : 'eigenes Symbol in der Leiste links (nur für dich, in den Einstellungen)'">{{ store.railPlugins.includes(current.key) ? '▮ in der Leiste' : '▯ in die Leiste' }}</button>
         <button v-if="current.enabled" @click="act(`/api/plugins/${current.key}/disable`)">○ ausschalten</button>
         <button v-else class="primary" @click="act(`/api/plugins/${current.key}/enable`)">● einschalten</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" title="aus dem Journal entfernen — die Dateien bleiben">🗑</button>
@@ -109,11 +131,13 @@ function pick(k) { cur.value = k; startParams() }
       </div>
       <div class="section" v-if="manifest.process">
         <h2>⚙ Prozess starten <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
-        <div class="chips" style="padding:4px 8px"><ProfileBar :key="current.key" :plugin="current.key" scope="run" :get="() => run.params" :set="p => { if (p) run.params = { ...run.params, ...p }; else startParams() }" /><span class="muted" style="font-size:12px">Parametersätze — im Journal, für alle</span></div>
+        <div class="chips" style="padding:4px 8px"><ProfileBar :key="current.key" :plugin="current.key" scope="run" :get="publicParams" :set="p => { if (p) run.params = { ...run.params, ...p }; else startParams() }" /><span class="muted" style="font-size:12px">Parametersätze — im Journal, für alle</span></div>
         <table class="grid form"><colgroup><col style="width:180px" /><col style="width:420px" /></colgroup><tbody>
           <tr v-for="p in manifest.process.params ?? []" :key="p.key"><td class="attr" :title="p.key">{{ p.label || p.key }}</td>
             <td style="padding:2px 4px">
               <select v-if="p.type === 'bool'" v-model="run.params[p.key]" style="width:100%"><option value="true">✓ ja</option><option value="false">✗ nein</option></select>
+              <select v-else-if="p.type === 'boolean'" v-model="run.params[p.key]" style="width:100%"><option value="true">✓ ja</option><option value="false">✗ nein</option></select>
+              <input v-else-if="p.secret" v-model="run.params[p.key]" type="password" style="width:100%" placeholder="🔒 geheim — nur für diesen Aufruf, nicht im Parametersatz" autocomplete="new-password" />
               <input v-else v-model="run.params[p.key]" type="text" style="width:100%" :placeholder="p.placeholder || ''" />
             </td></tr>
         </tbody></table>
