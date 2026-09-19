@@ -884,8 +884,9 @@ speichern. Einverstanden; das Journal bleibt schlank.
 - **Die Datei liegt ausserhalb**, der Ort ist ein Treiber (Taloan, 19.09.2026:
   „Datenbank auf Azure, Assets im günstigeren Object Storage“): `postgres`
   (Vorgabe, Tabelle `media_blob` neben dem Journal — ein Paket ist lauffähig),
-  Verzeichnis, `s3://` (Garage/MinIO/AWS/R2, ohne SDK); dazu ein Ursprung
-  (`JOURNALI_MEDIA_ORIGIN`) für Zweitinstanzen. Dieselbe Schnittstelle
+  Verzeichnis, `s3://` (Garage/MinIO/AWS/R2, ohne SDK); ein Journal, ein
+  Speicher (eine „Ursprung“-Brücke für Zweitinstanzen war gebaut und wieder
+  verworfen: verwirrend). Dieselbe Schnittstelle
   `IMediaStore` (put, open, exists, keys); Wechsel = Kopierlauf nach Hash,
   Ids und Journal bleiben. Vorschauen rechnet der Browser (`sha.thumb`).
 - **Im Journal steht nur das Ding**: Strom `m-…`, `MediaCreated {sha256,

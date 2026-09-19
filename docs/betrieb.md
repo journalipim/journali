@@ -48,11 +48,10 @@ kennt nur den Hash. **Wo** sie liegen, ist ein Treiber per `JOURNALI_MEDIA`
 | `/pfad` | Verzeichnis, Unterordner nach den ersten zwei Hexzeichen |
 | `s3://bucket` | S3-kompatibel (Garage, MinIO, AWS, R2, Hetzner …), Signature V4 ohne SDK; dazu `JOURNALI_S3_ENDPOINT`, `JOURNALI_S3_KEY`, `JOURNALI_S3_SECRET`, optional `JOURNALI_S3_REGION` (Vorgabe `garage`), `JOURNALI_S3_PATHSTYLE=false` für `bucket.endpoint` |
 
-`JOURNALI_MEDIA_ORIGIN=http://andere-instanz:8080` legt sich über jeden Treiber: Fehlendes wird vom Ursprung geholt
-und lokal abgelegt, Hochgeladenes dorthin gespiegelt (`/api/media/blob/{key}`) — für einen Entwicklungsrechner neben dem
-Produktivsystem, das dasselbe Journal benutzt.
+Regel: **ein Journal, ein Speicher.** Zwei Instanzen am selben Journal (PC und Container) zeigen auf denselben
+Speicher — dieselbe Postgres-Datenbank oder denselben Bucket; sonst fehlen der einen die Bytes der anderen.
 
-**Einstellen** unter ⚙ Einstellungen → ▨ Storage: Treiber, Zugang, Ursprung — prüfen, speichern; die Einstellung
+**Einstellen** unter ⚙ Einstellungen → ▨ Storage: Treiber, Zugang — prüfen, speichern; die Einstellung
 liegt als `media.json` im Datenverzeichnis (`JOURNALI_JOBS`, neben `secrets.json`), nie im Journal, und geht der
 Umgebung vor. Dort auch Fehlbestand zählen und Blobs aus einem anderen Speicher herüberkopieren.
 

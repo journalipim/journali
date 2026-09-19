@@ -67,7 +67,7 @@ public static class MediaApi
             return Results.Ok(new { ok = true });
         });
 
-        // Blobs nach Schlüssel — für einen Ursprung (OriginMediaStore einer anderen Instanz) und Kopierläufe; kein Journal-Eintrag.
+        // Blobs nach Schlüssel — für Werkzeuge und Kopierläufe zwischen Instanzen; kein Journal-Eintrag.
         api.MapMethods("/media/blob/{key}", new[] { "GET", "HEAD" }, async (string key, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {
             if (!MediaStores.ValidKey(key)) return Results.NotFound();

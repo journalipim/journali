@@ -32,8 +32,8 @@ var seeded = catalog.SeedMissing();
 builder.Services.AddSingleton<IJournal>(journal);
 builder.Services.AddSingleton(catalog);
 
-// Medien: Treiber per JOURNALI_MEDIA — postgres (Vorgabe: Tabelle media_blob neben dem Journal), Verzeichnis, s3://bucket;
-// JOURNALI_MEDIA_ORIGIN = andere Instanz als Ursprung (docs/betrieb.md). Taloan, 19.09.: Datenbank hier, Assets im Object Storage.
+// Medien: Treiber per JOURNALI_MEDIA — postgres (Vorgabe: Tabelle media_blob neben dem Journal), Verzeichnis, s3://bucket
+// (docs/betrieb.md). Taloan, 19.09.: Datenbank hier, Assets im Object Storage; ein Journal, ein Speicher.
 // Einstellung: media.json im Datenverzeichnis (Einstellungen → Storage), sonst die Umgebung
 var dataDir = Path.GetFullPath(builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs"));
 var mediaStore = new SwitchableMediaStore(MediaConfigFile.Load(dataDir) ?? MediaConfig.FromEnv(builder.Configuration), db, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("media"), builder.Environment.ContentRootPath);

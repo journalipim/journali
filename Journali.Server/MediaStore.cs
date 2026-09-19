@@ -13,8 +13,8 @@ namespace Journali.Server;
 /// Das Journal kennt nur den Hash (<c>MediaCreated</c>); gleiche Bytes = gleicher Hash = dieselbe Datei, unveränderlich.
 /// Der Treiber ist Konfiguration, nicht Bauzeit (Taloan, 19.09.2026: „Datenbank auf Azure, Assets im günstigen Object Storage“):
 /// <c>JOURNALI_MEDIA</c> = <c>postgres</c> (Vorgabe — Tabelle <c>media_blob</c> neben dem Journal, ein Paket = lauffähig),
-/// ein Verzeichnis, oder <c>s3://bucket</c> (Garage, MinIO, AWS, R2, Hetzner …); dazu <c>JOURNALI_MEDIA_ORIGIN</c> = eine andere
-/// journali-Instanz als Ursprung (Read-through/Write-through, für Entwicklung neben dem Produktivsystem).
+/// ein Verzeichnis, oder <c>s3://bucket</c> (Garage, MinIO, AWS, R2, Hetzner …). Ein Journal, ein Speicher — wer wechselt,
+/// kopiert einmal herüber (POST /api/media/copy). Einstellung: media.json (Einstellungen → Storage) oder die Umgebung.
 /// Schlüssel: der Hash, oder Hash + Suffix für Abgeleitetes (<c>.thumb</c> = Vorschau). Der Server berührt Bytes nur beim
 /// Hochladen und Ausliefern.
 /// </summary>
@@ -39,7 +39,7 @@ public static partial class MediaStores
     private static partial Regex KeyRx();
     public static bool ValidKey(string key) => KeyRx().IsMatch(key);
 
-    /// <summary>Treiber aus der Angabe: <c>postgres</c>, <c>s3://bucket</c>, sonst ein Verzeichnis. <c>origin</c> legt sich darüber.</summary>
+    /// <summary>Treiber aus der Angabe: <c>postgres</c>, <c>s3://bucket</c>, sonst ein Verzeichnis.</summary>
     public static IMediaStore Create(string? spec, NpgsqlDataSource db, IConfiguration cfg, ILogger log, string contentRoot)
     {
         var s = (spec ?? "postgres").Trim();
@@ -57,7 +57,6 @@ public static partial class MediaStores
                 !string.Equals(cfg["JOURNALI_S3_PATHSTYLE"], "false", StringComparison.OrdinalIgnoreCase));
         }
         else inner = new FileMediaStore(Path.IsPathRooted(s) ? s : Path.Combine(contentRoot, s));
-        if (cfg["JOURNALI_MEDIA_ORIGIN"] is { Length: > 0 } origin) return new OriginMediaStore(inner, origin.TrimEnd('/'), cfg["JOURNALI_MEDIA_ORIGIN_ACTOR"] ?? "media-origin", log);
         return inner;
     }
 
@@ -313,67 +312,4 @@ public sealed class S3MediaStore : IMediaStore
             token = doc.Descendants(ns + "IsTruncated").FirstOrDefault()?.Value == "true" ? doc.Descendants(ns + "NextContinuationToken").FirstOrDefault()?.Value : null;
         } while (token is not null);
     }
-}
-
-/// <summary>Eine andere journali-Instanz als Ursprung (Taloan, 19.09.: zwei Rechner, ein Journal — die Bytes lagen nur auf einem):
-/// Lesen holt Fehlendes vom Ursprung und legt es lokal ab, Schreiben legt lokal ab und lädt zum Ursprung hoch (/api/media/blob/{key}).</summary>
-public sealed class OriginMediaStore : IMediaStore
-{
-    private readonly IMediaStore _local; private readonly string _origin; private readonly string _actor; private readonly ILogger _log;
-    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromMinutes(10) };
-    public OriginMediaStore(IMediaStore local, string origin, string actor, ILogger log) { _local = local; _origin = origin; _actor = actor; _log = log; }
-    public string Kind => $"{_local.Kind} ← {_origin}";
-    public async Task<string?> ProbeAsync(CancellationToken ct)
-    {
-        if (await _local.ProbeAsync(ct) is { } e) return e;
-        try { using var res = await _http.GetAsync($"{_origin}/api/health", ct); return res.IsSuccessStatusCode ? null : $"Ursprung {_origin}: {(int)res.StatusCode}"; }
-        catch (Exception ex) { return $"Ursprung {_origin}: {ex.Message}"; }
-    }
-    private string Url(string key) => $"{_origin}/api/media/blob/{key}";
-
-    public async Task<(string Sha256, long Bytes)> PutAsync(Stream data, CancellationToken ct)
-    {
-        var r = await _local.PutAsync(data, ct);
-        await PushAsync(r.Sha256, ct);
-        return r;
-    }
-    public async Task PutAsync(string key, Stream data, CancellationToken ct) { await _local.PutAsync(key, data, ct); await PushAsync(key, ct); }
-
-    private async Task PushAsync(string key, CancellationToken ct)
-    {
-        try
-        {
-            using var head = await _http.SendAsync(new HttpRequestMessage(HttpMethod.Head, Url(key)), ct);
-            if (head.IsSuccessStatusCode) return;
-            await using var s = await _local.OpenAsync(key, ct); if (s is null) return;
-            var req = new HttpRequestMessage(HttpMethod.Put, Url(key)) { Content = new StreamContent(s) };
-            req.Headers.Add("X-Actor", _actor);
-            using var res = await _http.SendAsync(req, ct);
-            if (!res.IsSuccessStatusCode) _log.LogWarning("Medien-Ursprung {Origin}: {Key} nicht hochgeladen ({Status})", _origin, key, (int)res.StatusCode);
-        }
-        catch (Exception e) { _log.LogWarning("Medien-Ursprung {Origin} nicht erreichbar: {Error}", _origin, e.Message); }
-    }
-
-    public async Task<bool> ExistsAsync(string key, CancellationToken ct)
-    {
-        if (await _local.ExistsAsync(key, ct)) return true;
-        if (!MediaStores.ValidKey(key)) return false;
-        try { using var head = await _http.SendAsync(new HttpRequestMessage(HttpMethod.Head, Url(key)), ct); return head.IsSuccessStatusCode; } catch { return false; }
-    }
-
-    public async Task<Stream?> OpenAsync(string key, CancellationToken ct)
-    {
-        if (await _local.OpenAsync(key, ct) is { } have) return have;
-        if (!MediaStores.ValidKey(key)) return null;
-        try
-        {
-            using var res = await _http.GetAsync(Url(key), HttpCompletionOption.ResponseHeadersRead, ct);
-            if (!res.IsSuccessStatusCode) return null;
-            await _local.PutAsync(key, await res.Content.ReadAsStreamAsync(ct), ct);   // lokal ablegen — beim nächsten Mal ohne Umweg
-            return await _local.OpenAsync(key, ct);
-        }
-        catch (Exception e) { _log.LogWarning("Medien-Ursprung {Origin} nicht erreichbar: {Error}", _origin, e.Message); return null; }
-    }
-
-    public IAsyncEnumerable<string> KeysAsync(CancellationToken ct) => _local.KeysAsync(ct);
 }

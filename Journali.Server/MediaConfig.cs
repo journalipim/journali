@@ -13,8 +13,7 @@ namespace Journali.Server;
 public sealed record MediaConfig(
     string Driver = "postgres",           // postgres | file | s3
     string? Path = null,                  // file
-    string? Bucket = null, string? Endpoint = null, string? Key = null, string? Secret = null, string? Region = null, bool PathStyle = true,   // s3
-    string? Origin = null)                // andere Instanz als Ursprung (Read-through/Write-through)
+    string? Bucket = null, string? Endpoint = null, string? Key = null, string? Secret = null, string? Region = null, bool PathStyle = true)   // s3
 {
     /// <summary>Kurzform für Meldungen — ohne Geheimnis.</summary>
     public string Spec => Driver switch { "file" => Path ?? "media", "s3" => $"s3://{Bucket}", _ => "postgres" };
@@ -26,7 +25,7 @@ public sealed record MediaConfig(
         var c = s.Equals("postgres", StringComparison.OrdinalIgnoreCase) ? new MediaConfig("postgres")
             : s.StartsWith("s3://", StringComparison.OrdinalIgnoreCase) ? new MediaConfig("s3", Bucket: s[5..].Trim('/'), Endpoint: cfg["JOURNALI_S3_ENDPOINT"], Key: cfg["JOURNALI_S3_KEY"], Secret: cfg["JOURNALI_S3_SECRET"], Region: cfg["JOURNALI_S3_REGION"] ?? "garage", PathStyle: !string.Equals(cfg["JOURNALI_S3_PATHSTYLE"], "false", StringComparison.OrdinalIgnoreCase))
             : new MediaConfig("file", Path: s);
-        return c with { Origin = cfg["JOURNALI_MEDIA_ORIGIN"] };
+        return c;
     }
 }
 
@@ -55,7 +54,7 @@ public sealed class SwitchableMediaStore : IMediaStore
 
     public IMediaStore Build(MediaConfig c)
     {
-        IMediaStore inner = c.Driver switch
+        return c.Driver switch
         {
             "file" => new FileMediaStore(System.IO.Path.IsPathRooted(c.Path ?? "media") ? c.Path! : System.IO.Path.Combine(_contentRoot, c.Path ?? "media")),
             "s3" => new S3MediaStore(
@@ -66,7 +65,6 @@ public sealed class SwitchableMediaStore : IMediaStore
                 c.Region is { Length: > 0 } ? c.Region : "garage", c.PathStyle),
             _ => new PostgresMediaStore(_db),
         };
-        return c.Origin is { Length: > 0 } origin ? new OriginMediaStore(inner, origin.TrimEnd('/'), "media-origin", _log) : inner;
     }
 
     /// <summary>Neue Einstellung: bauen, prüfen, erst dann übernehmen. Liefert die Fehlmeldung, wenn es nicht geht.</summary>
