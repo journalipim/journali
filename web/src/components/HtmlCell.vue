@@ -44,7 +44,7 @@ function onKey(e) {
 }
 function onEditKey(e) {
   if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); save() }
-  else if (e.key === 'Escape') { e.preventDefault(); cancel() }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel() }
   else if (e.ctrlKey && !source.value && e.key === 'b') { e.preventDefault(); cmd('bold') }
   else if (e.ctrlKey && !source.value && e.key === 'i') { e.preventDefault(); cmd('italic') }
 }

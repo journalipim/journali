@@ -237,6 +237,8 @@ async function load() {
 onMounted(load)
 function onKey(e) {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
+  // im grossen Editor (contenteditable) oder in einem Overlay gilt Esc dort — nicht den Knoten verlassen (Taloan: „klick – Anzeige – Esc“ warf den Knoten raus)
+  if (e.target.isContentEditable || e.target.closest?.('.editor, .overlay, .dialog')) return
   if (e.key === 'Escape') router.push('/tree')
   else if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo() }
   else if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo() }

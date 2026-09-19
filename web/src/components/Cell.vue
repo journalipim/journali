@@ -30,7 +30,7 @@ function saveBig() { big.value = false; if (draft.value !== (props.value ?? ''))
 function cancelBig() { big.value = false; nextTick(() => box.value?.focus()) }
 function onBigKey(e) {
   if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); saveBig() }
-  else if (e.key === 'Escape') { e.preventDefault(); cancelBig() }
+  else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelBig() }
 }
 const draft = ref('')
 const input = ref(null)
