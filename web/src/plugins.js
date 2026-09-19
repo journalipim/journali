@@ -10,7 +10,7 @@
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
-//                Prüfregeln für die Datenqualität (Plugin dq zeigt sie)
+//                Prüfregeln für die Datenqualität (✓ Datenanalyse → Datenqualität, fest eingebaut, zeigt sie)
 // ctx = { api, store, tree, dialog, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go }
 //   data   — benannte JSON-Datensätze des Plugins im Journal (PluginDataSet, /api/plugins/<key>/data/<name>)
 //   compliance — Prüfkataloge (compliance.js): mount(root, ctx, catalog), check, guessMapping … (Plugins dpp, ppwr)
@@ -64,7 +64,7 @@ export const plugins = reactive({
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`
     return {
-      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, tableExport, treePicker,   // build/toJson/toJsonTree/toCsv/toXlsx — fest eingebaut   // plugins.enabled('tasker'): Knöpfe „als Job“ nur mit Tasker (Taloan)
+      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, tableExport, treePicker,   // build/toJson/toJsonTree/toCsv/toXlsx — fest eingebaut
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {
         list: () => api.get(`/api/plugins/${key}/data`),

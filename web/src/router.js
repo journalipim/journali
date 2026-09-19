@@ -3,6 +3,8 @@ import TreeView from './views/TreeView.vue'
 import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
 import ImportView from './views/ImportView.vue'
+import JobsView from './views/JobsView.vue'
+import DqView from './views/DqView.vue'
 import HubView from './views/HubView.vue'
 import TableExportView from './views/TableExportView.vue'
 import SolrView from './views/SolrView.vue'
@@ -29,8 +31,9 @@ export const router = createRouter({
     { path: '/export', component: HubView, props: { topic: 'export' } },
     { path: '/datasheet', component: HubView, props: { topic: 'datasheet' } },
     { path: '/analysis', component: HubView, props: { topic: 'analysis' } },
+    { path: '/analysis/dq', component: DqView },   // fest eingebaut (Taloan, 19.09.): Grundfunktion der Datenanalyse
     { path: '/tools', component: HubView, props: { topic: 'tools' } },
-    { path: '/jobs', component: HubView, props: { topic: 'jobs' } },
+    { path: '/jobs', component: JobsView },   // fest eingebaut (Taloan, 19.09.): Grundfunktion, direkt — kein Hub
     { path: '/import/solr', component: SolrView },
     { path: '/import/table', component: TableImportView },
     { path: '/export/table', component: TableExportView },   // fest eingebaut wie der Tabellenimport (Taloan, 19.09.)

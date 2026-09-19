@@ -57,7 +57,9 @@ stehen dort als solche markiert.
   Laufen nie im Serverprozess: Browser-Plugins als ES-Modul in der Oberfläche,
   Prozess-Plugins als Kindprozess des Servers, beide nur über `/api`.
   `ixp` und `solr` sind eingebaut (builtin) und werden beim Start installiert;
-  mitgeliefert: `csv`, `json`, `xlsx` (Importer), `datasheet`, `dq`.
+  mitgeliefert: `csv`, `json`, `xlsx` (Importer), `datasheet`; Datenqualität und Jobs sind fest
+  eingebaut (`web/src/dq.js` → `/analysis/dq`, `web/src/jobs.js` → `/jobs`); Plugins liefern
+  Regeln (checks) und Prozesse (process) für Jobs.
   Beitragspunkte: views, nodeActions, importers, checks; Plugin-Daten im
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`). **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,

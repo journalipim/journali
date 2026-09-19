@@ -64,7 +64,7 @@ async function run(downloadIt) {
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">2 · Wie</td></tr>
       <tr><td class="attr">Format</td><td><select v-model="format" @change="persist" style="width:100%"><option value="xlsx">Excel (.xlsx)</option><option value="csv">CSV (; UTF-8, Excel-tauglich)</option></select></td></tr>
       <tr><td class="attr"></td><td><div class="row"><button @click="run(false)">Vorschau</button><button class="primary" @click="run(true)">⇪ herunterladen</button>
-        <router-link v-if="plugins.enabled('tasker') && plugins.enabled('export')" to="/p/tasker/jobs?new=export" custom v-slot="{ navigate }"><button @click="navigate" title="denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)">⏱ als Job</button></router-link><router-link v-if="plugins.enabled('tasker') && plugins.enabled('export')" to="/p/tasker/jobs?plugin=export" custom v-slot="{ navigate }"><button @click="navigate" title="die Export-Jobs im Tasker — Zeitplan, Läufe, Logs">⏱ Jobs verwalten</button></router-link></div></td></tr>
+        <router-link v-if="plugins.enabled('export')" to="/jobs?new=export" custom v-slot="{ navigate }"><button @click="navigate" title="denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)">⏱ als Job</button></router-link><router-link v-if="plugins.enabled('export')" to="/jobs?plugin=export" custom v-slot="{ navigate }"><button @click="navigate" title="die Export-Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs">⏱ Jobs verwalten</button></router-link></div></td></tr>
     </tbody></table>
     <div class="step-band">3 · Vorschau <span class="muted">· erste 200 Zeilen</span></div>
     <div class="scroll">

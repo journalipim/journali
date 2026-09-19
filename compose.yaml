@@ -24,9 +24,15 @@ services:
       JOURNALI_DB: Host=db;Port=5432;Database=journali;Username=postgres
       JOURNALI_DB_PASSWORD: ${JOURNALI_DB_PASSWORD}
       JOURNALI_MEDIA: /data/media
+      JOURNALI_JOBS: /data/jobs
     volumes:
       # Medien liegen ausserhalb der Datenbank (docs/pflegestruktur.md, 20) — eigenes Volume, Hash-adressiert
       - journali-media:/data/media
+      # Jobs: Logs und Geheimnisse (secrets.json) — muessen Neustarts und neue Images ueberleben
+      - journali-jobs:/data/jobs
+      # Plugins vom Host: Datei tauschen = Plugin aktualisiert (Server liest sie bei jedem Zugriff, no-cache);
+      # neue Fassung unter ⌁ Plugins → ↑ aktualisieren. Kein neues Image noetig (Taloan, 19.09.)
+      - ./plugins:/app/plugins
     depends_on:
       db:
         condition: service_healthy
@@ -34,3 +40,4 @@ services:
 volumes:
   journali-db:
   journali-media:
+  journali-jobs:

@@ -455,7 +455,7 @@ ungespeicherte Zellen, nie automatisch; ins Journal mit Urheber `ki:<modell>`
 und Stapel; Modell austauschbar (API-Schlüssel bleibt im Browser, oder lokal
 Ollama auf der rossibox).
 
-## 23. Jobs — Plugin tasker (Taloan, 19.09.2026)
+## 23. Jobs — fest eingebaut (Taloan, 19.09.2026; erst Plugin tasker, dann Grundfunktion: „dauerhaft in der Leiste“)
 
 > Jobs wie Import dürfen nicht vom offenen Browserfenster abhängen; regelmässige
 > Ausführung; Überwachung, Verwaltung, Logs.

@@ -398,7 +398,7 @@ function contextMenu(e, r) {
   // Plugin-Einträge je Plugin in einem Untermenü
   // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
   // Datenanalyse — darin alles dazu, quer über die Plugins. Das Thema nennt die Aktion (topic), sonst die Art des Plugins (kind).
-  const TOPICS = [['import', '⇩ Import'], ['export', '⇪ Export'], ['datasheet', '📄 Datenblatt'], ['analysis', '✓ Datenanalyse'], ['tools', '⌁ Werkzeuge']]
+  const TOPICS = [['import', '⇩ Import'], ['export', '⇪ Export'], ['datasheet', '▤ Datenblatt'], ['analysis', '✓ Datenanalyse'], ['tools', '⌁ Werkzeuge']]
   const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis' }
   const byTopic = new Map()
   const add = (topic, item) => { if (!byTopic.has(topic)) byTopic.set(topic, []); byTopic.get(topic).push(item) }
@@ -406,6 +406,8 @@ function contextMenu(e, r) {
     const kind = plugins.list.find(p => p.key === a.key)?.manifest?.kind
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
+  // fest eingebaut (Taloan, 19.09.): Datenqualität — vorher Plugin dq
+  if (r.role !== 'variant') add('analysis', { label: `Datenqualität: ${below(r)} prüfen`, icon: '✓', action: () => router.push(`/analysis/dq?node=${encodeURIComponent(r.id)}`) })
   // fest eingebaut (Taloan, 19.09.): Excel am Knoten und der Tabellen-Export — vorher Plugin export
   if (r.role !== 'variant') {
     add('export', { label: `Excel: Vorlage für ${below(r)}`, icon: '⇪', action: () => nodeWorkbook(r.id, false).catch(e => store.toast(e.message)) })

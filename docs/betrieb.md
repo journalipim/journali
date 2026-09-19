@@ -107,7 +107,12 @@ ersten Stufe). Für den Server gibt es zwei Wege:
 ## Verteilen
 
 `compose.yaml` ist das ganze Paket: Server + `postgres:18` mit eigenem
-Volume. `.env.example` nach `.env` kopieren, Passwort eintragen,
+Volume. Plugins kommen per Bind-Mount `./plugins:/app/plugins` vom Host:
+eine Datei dort tauschen aktualisiert das Plugin ohne neues Image (der
+Server liest Manifeste und Module bei jedem Zugriff, `no-cache`; eine neue
+Fassung erscheint unter ⌁ Plugins als ↑ Update). Prozess-Plugins brauchen
+`node` im Laufzeit-Image — das Dockerfile kopiert die Binärdatei aus
+`node:22`. Jobs (Logs, `secrets.json`) liegen im Volume `journali-jobs`. `.env.example` nach `.env` kopieren, Passwort eintragen,
 `docker compose up --build`. Der Server wartet, bis Postgres bereit ist
 (Healthcheck), und legt Datenbank und Tabelle selbst an.
 
@@ -123,7 +128,7 @@ Volume. `.env.example` nach `.env` kopieren, Passwort eintragen,
 
 Index `journal_stream (stream, number)` für `ReadStream`.
 
-## Jobs (Plugin tasker)
+## Jobs (fest eingebaut: ⏱ Jobs)
 
 Jobs laufen im Server als Kindprozesse (`JobRunner`), unabhängig vom
 Browser: nach Zeitplan (cron, geprüft je Minute; nach einem Stillstand werden

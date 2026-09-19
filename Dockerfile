@@ -19,7 +19,11 @@ RUN dotnet publish Journali.Server/Journali.Server.csproj -c Release -o /app --n
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+# node für Prozess-Plugins (Jobs: backup, json, export, datasheet) — nur die Binärdatei, kein npm
+COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=build /app .
+# Plugins liegen im Image als Grundausstattung; compose.yaml legt ./plugins darüber (Bind-Mount) —
+# so lassen sie sich austauschen und aktualisieren, ohne das Image neu zu bauen (Taloan, 19.09.)
 COPY plugins/ ./plugins/
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080

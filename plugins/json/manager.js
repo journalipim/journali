@@ -59,10 +59,8 @@ export async function mountManager(root, ctx) {
     const mapA = Object.fromEntries(Object.entries(st.mapA).map(([k, v]) => [k, v.to])), mapG = Object.fromEntries(Object.entries(st.mapG).map(([k, v]) => [k, v.to]))
     await ctx.data.set('profile:' + n, { mapA, mapG, prefix: st.prefix, parent: st.parent }); await loadProfiles(); profSel.value = n; store.toast(`Profil „${n}“ gespeichert — als Job: ⏱ Jobs → + Job → Import: JSON`, 'ok')
   }
-  const taskerOn = !!ctx.plugins?.enabled?.('tasker')   // Knopf nur mit Tasker (Taloan)
-  const jobBtn = el('button', { class: 'x', title: taskerOn ? 'diesen Import als Job einrichten (Profil speichern, dann Jobs → + Job mit Plugin Import: JSON)' : 'Jobs brauchen das Plugin tasker (⌁ Plugins → einschalten)', onclick: async () => { if (!(profIn.value || profSel.value).trim()) { store.toast('erst ein Profil benennen und speichern'); return } await saveProfile(); ctx.go?.('/p/tasker/jobs?new=json') } }, '⏱ als Job einrichten')
-  if (!taskerOn) jobBtn.disabled = true
-  const manageBtn = el('button', { class: 'x', title: 'die JSON-Import-Jobs im Tasker — Zeitplan, Läufe, Logs', onclick: () => ctx.go?.('/p/tasker/jobs?plugin=json') }, '⏱ Jobs verwalten'); if (!taskerOn) manageBtn.disabled = true
+  const jobBtn = el('button', { class: 'x', title: 'diesen Import als Job einrichten (Profil speichern, dann ⏱ Jobs → + Job mit Plugin Import: JSON)', onclick: async () => { if (!(profIn.value || profSel.value).trim()) { store.toast('erst ein Profil benennen und speichern'); return } await saveProfile(); ctx.go?.('/jobs?new=json') } }, '⏱ als Job einrichten')
+  const manageBtn = el('button', { class: 'x', title: 'die JSON-Import-Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs', onclick: () => ctx.go?.('/jobs?plugin=json') }, '⏱ Jobs verwalten')
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⇩ JSON-Import'), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { class: 'x', title: 'Zuordnung, Präfix und Ziel als Profil speichern', onclick: saveProfile }, '💾'), jobBtn, manageBtn, el('span', { class: 'grow' }), status), body)
   loadProfiles()
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)

@@ -16,10 +16,10 @@ const busy = ref('')
 // Symbol in der Leiste je Plugin (Taloan): Einstellung des Nutzers, nicht des Plugins
 // Jobs je Plugin (für „Jobs verwalten“): einmal geladen, wenn der Tasker an ist
 const jobs = ref([])
-onMounted(async () => { if (plugins.enabled('tasker')) { try { jobs.value = await api.get('/api/jobs') } catch {} } })
+onMounted(async () => { try { jobs.value = await api.get('/api/jobs') } catch {} })
 const jobCount = key => jobs.value.filter(j => j.plugin === key).length
 // Leisten-Schalter nur, wenn das Plugin seine Gruppe allein bildet (Taloan: json gehört zu Import/Export, ppwr zu Datenanalyse —
-// Gruppen mit Basis oder mehreren Plugins sind sowieso da; datasheet und tasker sind ihre Gruppe)
+// Gruppen mit Basis oder mehreren Plugins sind sowieso da; datasheet ist seine Gruppe)
 const railToggle = key => plugins.views.some(v => v.key === key && !FIXED_TOPICS.includes(topicOf(key, v.topic)) && (entries.value[topicOf(key, v.topic)] ?? []).every(e => e.plugin === key))
 function toggleRail(key) { const s = new Set(store.railOff); s.has(key) ? s.delete(key) : s.add(key); store.railOff = [...s]; store.save() }
 const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '⌁ Werkzeug', output: '▤ Ausgabe', edit: '✎ Pflege' }
@@ -126,7 +126,7 @@ function pick(k) { cur.value = k }
         <h2>⚙ Prozess <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ manifest.process.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
           <span v-if="manifest.process.params?.length">Parameter: {{ manifest.process.params.map(p => p.label || p.key).join(' · ') }}.</span></div>
-        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled || !plugins.enabled('tasker')" :title="plugins.enabled('tasker') ? 'neuer Job mit diesem Plugin — der Assistent des Taskers' : 'Jobs brauchen das Plugin tasker — erst einschalten'" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button :disabled="!plugins.enabled('tasker')" title="die Jobs dieses Plugins im Tasker — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px">{{ plugins.enabled('tasker') ? 'Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job' : 'Jobs brauchen das Plugin tasker (⌁ Plugins → tasker → einschalten)' }}</span></div>
+        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" title="neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button title="die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px">Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job</span></div>
       </div>
       <div class="section">
         <h2>Manifest <span class="mono muted">plugins/{{ current.key }}/plugin.json</span></h2>

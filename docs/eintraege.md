@@ -196,7 +196,7 @@ steht im Kopf `X-Actor`.
 | `PUT /api/model/units/{key}` `{label{}, quantity, factor}` | `UnitDefined` |
 | `DELETE /api/model/units/{key}` | `UnitRetired` — nicht, solange ein Attribut sie benutzt |
 
-## Jobs (Plugin tasker) — Strom `job:<key>`
+## Jobs (fest eingebaut: ⏱ Jobs) — Strom `job:<key>`
 
 | Typ | Nutzlast | Bedeutung |
 |---|---|---|

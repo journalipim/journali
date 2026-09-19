@@ -1,7 +1,9 @@
-// Plugin dq (Taloan, 17.09.2026): Datenqualität. Prüft einen Teilbaum gegen Regeln und zeigt die Funde als Liste
-// (Schwere, Knoten, Attribut, Meldung) mit Sprung zum Knoten. Eingebaute Regeln unten; weitere Regeln liefern
-// andere Plugins über `checks` (ctx.checks). Welche Regeln laufen, steht im Journal (ctx.data „settings“).
+// ✓ Datenqualität — fest eingebaut (Taloan, 19.09.2026: Grundfunktion der Gruppe Datenanalyse, wie Tabelle bei Import
+// und Export; vorher Plugin dq). Prüft einen Teilbaum gegen Regeln und zeigt die Funde als Liste (Schwere, Knoten,
+// Attribut, Meldung) mit Sprung zum Knoten. Eingebaute Regeln unten; weitere Regeln liefern Plugins über `checks`
+// (ctx.checks). Welche Regeln laufen, steht im Journal (ctx.data „settings“ unter plugin:dq).
 // Quelle: GET /api/nodes/{id}/table?deep=true — alle Nachfahren mit aufgelösten Werten, je Sprache ein Aufruf.
+import { treePicker } from './treePicker.js'
 
 const RULES = [
   { key: 'required', label: 'Pflichtattribut fehlt', severity: 'error',
@@ -62,10 +64,13 @@ async function mount(root, ctx) {
   const rules = new Set(sett.rules)
   const state = { root: localStorage.getItem('journali.dq.root') || tree.rows.find(r => !r.parent)?.id, result: null, filter: 'all', q: '' }
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
-  const rootIn = el('input', { type: 'search', placeholder: '🔍 Teilbaum (Gruppe/Produkt)', style: 'width:260px', value: tree.byId.get(state.root)?.label ?? '' })
-  const pick = el('div', { class: 'picker', style: 'position:absolute;z-index:5;width:380px;display:none' })
-  rootIn.addEventListener('input', () => { const q = rootIn.value.trim().toLowerCase(); pick.innerHTML = ''; const hits = q ? tree.rows.filter(r => r.role !== 'variant' && (r.label.toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12) : []; for (const r of hits) pick.append(el('div', { class: 'pick', onmousedown: e => { e.preventDefault(); state.root = r.id; rootIn.value = r.label; pick.style.display = 'none'; localStorage.setItem('journali.dq.root', r.id) } }, `${r.role === 'group' ? '▣' : '▦'} ${r.label}`)); pick.style.display = hits.length ? 'block' : 'none' })
-  rootIn.addEventListener('blur', () => setTimeout(() => pick.style.display = 'none', 150))
+  // Teilbaum per Auswahlbaum (Taloan): Knopf zeigt den gewählten, Klick klappt den Baum darunter auf; ?node= aus dem Kontextmenü
+  const fromMenu = new URLSearchParams(location.search).get('node'); if (fromMenu && tree.byId.has(fromMenu)) { state.root = fromMenu; localStorage.setItem('journali.dq.root', fromMenu); history.replaceState(null, '', location.pathname) }
+  const rootLabel = id => { const r = tree.byId.get(id); return r ? `${r.role === 'group' ? '▣' : r.role === 'product' ? '▦' : '◆'} ${r.label}` : 'Teilbaum wählen' }
+  const rootIn = el('button', { class: 'x', title: 'Teilbaum wählen (Gruppe oder Produkt)' }, rootLabel(state.root))
+  const pick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
+  treePicker(pick, { value: state.root, roles: ['group', 'product'], height: 300, onPick: r => { state.root = r.id; rootIn.textContent = rootLabel(r.id); pick.style.display = 'none'; localStorage.setItem('journali.dq.root', r.id) } })
+  rootIn.addEventListener('click', () => { pick.style.display = pick.style.display === 'none' ? 'block' : 'none' })
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const list = el('div', { class: 'scroll', style: 'flex:1' })
   const summary = el('div', { class: 'toolbar', style: 'gap:10px;font-size:12px' })
@@ -105,8 +110,4 @@ async function mount(root, ctx) {
   return () => {}
 }
 
-export default {
-  views: [{ path: 'check', label: 'Datenqualität', icon: '✓', mount }],
-  nodeActions: [{ label: 'Datenqualität prüfen', icon: '✓', run(nodeId, ctx) { localStorage.setItem('journali.dq.root', nodeId); ctx.go?.('/p/dq/check') ?? (location.href = '/p/dq/check') } }],
-  rules: RULES,
-}
+export { mount, RULES }
