@@ -6,7 +6,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { plugins } from '../plugins.js'
-import { FIXED_TOPICS, topicOf } from '../topics.js'
+import { FIXED_TOPICS, topicOf, entries } from '../topics.js'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 
@@ -18,8 +18,9 @@ const busy = ref('')
 const jobs = ref([])
 onMounted(async () => { if (plugins.enabled('tasker')) { try { jobs.value = await api.get('/api/jobs') } catch {} } })
 const jobCount = key => jobs.value.filter(j => j.plugin === key).length
-// Leisten-Schalter nur, wenn eine Ansicht des Plugins in einer Gruppe ohne feste Basis liegt (Taloan: Import/Export sind sowieso da)
-const railToggle = key => plugins.views.some(v => v.key === key && !FIXED_TOPICS.includes(topicOf(key, v.topic)))
+// Leisten-Schalter nur, wenn das Plugin seine Gruppe allein bildet (Taloan: json gehört zu Import/Export, ppwr zu Datenanalyse —
+// Gruppen mit Basis oder mehreren Plugins sind sowieso da; datasheet und tasker sind ihre Gruppe)
+const railToggle = key => plugins.views.some(v => v.key === key && !FIXED_TOPICS.includes(topicOf(key, v.topic)) && (entries.value[topicOf(key, v.topic)] ?? []).every(e => e.plugin === key))
 function toggleRail(key) { const s = new Set(store.railOff); s.has(key) ? s.delete(key) : s.add(key); store.railOff = [...s]; store.save() }
 const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '⌁ Werkzeug', output: '▤ Ausgabe', edit: '✎ Pflege' }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
