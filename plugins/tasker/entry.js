@@ -109,7 +109,7 @@ async function mount(root, ctx) {
       const tr = el('tr', { class: 'row' + (st.cur === j.key ? ' selected' : ''), style: 'cursor:default', onclick: () => { st.cur = j.key; drawList(); loadDetail(j.key) } },
         el('td', { class: cls, title: j.running ? 'läuft' : j.last?.status ?? 'noch nie gelaufen' }, sym),
         el('td', {}, el('b', {}, j.label), el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, j.key)),
-        el('td', { class: 'muted' }, j.plugin),
+        el('td', { class: 'muted' }, j.plugin + (j.service ? '/' + j.service : '')),
         el('td', { title: j.schedule ?? '' }, j.enabled ? j.scheduleText : el('span', { class: 'muted' }, '○ aus')),
         el('td', { class: 'muted' }, j.nextDue ? when(j.nextDue) : ''),
         el('td', { class: 'muted', title: j.last?.summary ?? '' }, j.last ? `${when(j.last.startedAt)} · ${j.last.seconds}s` : ''),
@@ -166,21 +166,23 @@ async function mount(root, ctx) {
     const box = el('div', { class: 'overlay', style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40' })
     const dlg = el('div', { style: 'width:560px;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px' })
     let preset = null
-    if (j?._new) { preset = j.plugin; j = null }   // aus ⌁ Plugins: neuer Job mit diesem Plugin
+    if (j?._new) { preset = j.plugin + '|' + (j.service ?? ''); j = null }   // aus ⌁ Plugins: neuer Job mit diesem Plugin (und Dienst)
     const isNew = !j
     const keyIn = el('input', { type: 'text', value: j?.key ?? '', placeholder: 'key (a-z, 0-9, _)', style: 'width:100%' }); if (!isNew) keyIn.disabled = true
     const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: 'Bezeichnung', style: 'width:100%' })
-    const pluginSel = el('select', { style: 'width:100%' }, ...st.plugins.map(p => el('option', { value: p.key, title: p.description ?? '' }, (typeof p.label === 'string' ? p.label : p.label?.de) || p.key)))   // nur der Name (Taloan: zu viel Text); process.label geht vor
+    // ein Eintrag je Dienst (Taloan: mehrere Dienste je Plugin); Wert = plugin|service
+    const svcId = p => `${p.key}|${p.service ?? ''}`
+    const pluginSel = el('select', { style: 'width:100%' }, ...st.plugins.map(p => el('option', { value: svcId(p), title: p.description ?? '' }, (typeof p.label === 'string' ? p.label : p.label?.de) || p.key)))   // nur der Name (Taloan: zu viel Text)
     const pluginHint = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
-    if (j) pluginSel.value = j.plugin
-    else if (preset) pluginSel.value = preset
+    if (j) pluginSel.value = `${j.plugin}|${j.service ?? ''}`
+    else if (preset) { pluginSel.value = preset; if (pluginSel.value !== preset) pluginSel.value = st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|')) ? svcId(st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|'))) : pluginSel.value }
     const sched = scheduleAssistant(j?.schedule ?? '', () => {})   // Zeitplan-Assistent (Taloan) statt Vorgaben-Liste
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
     const paramsBox = el('div')
     const paramInputs = {}
     const drawParams = () => {
       paramsBox.innerHTML = ''
-      const p = st.plugins.find(x => x.key === pluginSel.value); const defs = p?.params ?? []
+      const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
       pluginHint.textContent = p?.description ?? ''; pluginHint.title = pluginHint.textContent
       for (const d of defs) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
@@ -212,7 +214,7 @@ async function mount(root, ctx) {
       for (const [k, inp] of Object.entries(paramInputs)) if (inp.value !== '' || inp.type !== 'password') params[k] = inp.value
       const schedule = sched.value()
       try {
-        await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value, params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60 }, 'PUT')
+        await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60 }, 'PUT')
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
       } catch (e) { store.toast(e.message) }
     }
@@ -229,8 +231,8 @@ async function mount(root, ctx) {
 
   await load()
   // aus ⌁ Plugins „Als Job einrichten“: ?new=<plugin> öffnet den Dialog mit diesem Plugin
-  const wanted = new URLSearchParams(location.search).get('new')
-  if (wanted && st.plugins.some(p => p.key === wanted)) { history.replaceState(null, '', location.pathname); openEdit({ plugin: wanted, _new: true }) }
+  const q = new URLSearchParams(location.search); const wanted = q.get('new')
+  if (wanted && st.plugins.some(p => p.key === wanted)) { history.replaceState(null, '', location.pathname); openEdit({ plugin: wanted, service: q.get('service') ?? '', _new: true }) }
   else if (st.plugin) history.replaceState(null, '', location.pathname)
   const poll = setInterval(() => { if (st.jobs.some(j => j.running)) load() }, 5000)
   return () => { clearInterval(poll); clearTimeout(st.timer) }

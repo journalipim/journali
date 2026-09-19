@@ -38,6 +38,21 @@ public static class PluginApi
         return found;
     }
 
+    /// <summary>Die Dienste eines Plugins (Taloan, 19.09.: mehrere je Plugin): <c>process</c> (Schlüssel "") und/oder <c>processes[]</c> mit <c>key</c>.</summary>
+    public static IEnumerable<(string Key, JsonElement Proc)> Processes(JsonElement raw)
+    {
+        if (raw.TryGetProperty("process", out var one) && one.ValueKind == JsonValueKind.Object) yield return ("", one);
+        if (raw.TryGetProperty("processes", out var many) && many.ValueKind == JsonValueKind.Array)
+            foreach (var p in many.EnumerateArray()) if (p.ValueKind == JsonValueKind.Object && p.TryGetProperty("key", out var k) && k.GetString() is { Length: > 0 } key) yield return (key, p);
+    }
+    /// <summary>Der Dienst zu einem Schlüssel (leer = der einzige/erste).</summary>
+    public static JsonElement? ProcessOf(JsonElement raw, string? service)
+    {
+        var all = Processes(raw).ToList();
+        if (string.IsNullOrEmpty(service)) return all.Count > 0 ? all[0].Proc : null;
+        return all.Where(x => x.Key == service).Select(x => (JsonElement?)x.Proc).FirstOrDefault();
+    }
+
     /// <summary>Was ein Plugin braucht (Manifest <c>requires</c>, Taloan 19.09.2026: Basis-Plugins sind der Container ihrer Ergänzungen).</summary>
     public static string[] Requires(JsonElement raw) => raw.TryGetProperty("requires", out var r) && r.ValueKind == JsonValueKind.Array
         ? r.EnumerateArray().Select(x => x.GetString() ?? "").Where(x => x.Length > 0).ToArray() : Array.Empty<string>();

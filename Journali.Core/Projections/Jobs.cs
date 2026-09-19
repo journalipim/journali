@@ -24,6 +24,7 @@ public sealed class JobState
     public required string Key { get; init; }
     public string Label { get; set; } = "";
     public string Plugin { get; set; } = "";
+    public string Service { get; set; } = "";           // Dienst im Plugin (processes[].key); leer = process
     public Dictionary<string, string> Params { get; set; } = new();
     public string? Schedule { get; set; }                    // cron „m h dom mon dow“; null = nur von Hand
     public bool Enabled { get; set; } = true;
@@ -58,7 +59,7 @@ public sealed class Jobs : IProjection
             {
                 var d = Types.Deserialize<JobDefined>(entry.Payload);
                 if (!_all.TryGetValue(key, out var j)) _all[key] = j = new JobState { Key = key };
-                j.Label = d.Label; j.Plugin = d.Plugin; j.Params = d.Params ?? new(); j.Schedule = string.IsNullOrWhiteSpace(d.Schedule) ? null : d.Schedule.Trim();
+                j.Label = d.Label; j.Plugin = d.Plugin; j.Service = d.Service ?? ""; j.Params = d.Params ?? new(); j.Schedule = string.IsNullOrWhiteSpace(d.Schedule) ? null : d.Schedule.Trim();
                 j.Enabled = d.Enabled; j.TimeoutMinutes = d.TimeoutMinutes is > 0 ? d.TimeoutMinutes.Value : 60;
                 Touch(j, entry);
                 break;

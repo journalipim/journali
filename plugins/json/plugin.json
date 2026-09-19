@@ -16,44 +16,47 @@
     "table"
   ],
   "autoInstall": true,
-  "process": {
-    "label": "Import: JSON",
-    "command": "node",
-    "args": [
-      "job.mjs",
-      "{journali}",
-      "{actor}",
-      "{source}",
-      "{profile}",
-      "{parent}",
-      "{dryRun}"
-    ],
-    "description": "Rohdaten-JSON (.json/.json.gz, Datei, Verzeichnis = neueste Datei, oder URL) einspielen — mit gespeichertem Profil des JSON-Imports (Zuordnung, Präfix, Ziel)",
-    "params": [
-      {
-        "key": "source",
-        "label": "Quelle: Datei, Verzeichnis (neueste Datei) oder URL",
-        "type": "text",
-        "default": ""
-      },
-      {
-        "key": "profile",
-        "label": "Profil des JSON-Imports (leer = gleiche Keys, kein Präfix)",
-        "type": "text",
-        "default": ""
-      },
-      {
-        "key": "parent",
-        "label": "Ziel (leer = wie im Profil oder in der Datei)",
-        "type": "node",
-        "default": ""
-      },
-      {
-        "key": "dryRun",
-        "label": "Trockenlauf (nur zählen, nichts schreiben)",
-        "type": "boolean",
-        "default": "false"
-      }
-    ]
-  }
+  "processes": [
+    {
+      "key": "import",
+      "label": "Import: JSON",
+      "command": "node",
+      "args": [
+        "job.mjs",
+        "{journali}",
+        "{actor}",
+        "{source}",
+        "{profile}",
+        "{parent}",
+        "{dryRun}"
+      ],
+      "description": "Rohdaten-JSON (.json/.json.gz, Datei, Verzeichnis = neueste Datei, oder URL) einspielen — mit gespeichertem Profil des JSON-Imports (Zuordnung, Präfix, Ziel)",
+      "params": [
+        {
+          "key": "source",
+          "label": "Quelle: Datei, Verzeichnis (neueste Datei) oder URL",
+          "type": "text",
+          "default": ""
+        },
+        {
+          "key": "profile",
+          "label": "Profil des JSON-Imports (leer = gleiche Keys, kein Präfix)",
+          "type": "text",
+          "default": ""
+        },
+        {
+          "key": "parent",
+          "label": "Ziel (leer = wie im Profil oder in der Datei)",
+          "type": "node",
+          "default": ""
+        },
+        {
+          "key": "dryRun",
+          "label": "Trockenlauf (nur zählen, nichts schreiben)",
+          "type": "boolean",
+          "default": "false"
+        }
+      ]
+    }
+  ]
 }

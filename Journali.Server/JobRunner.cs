@@ -80,7 +80,7 @@ public sealed class JobRunner : BackgroundService
         if (job is null) { error = "unbekannter Job"; return null; }
         var state = _catalog.With((_, _, _) => _catalog.Plugins.All.GetValueOrDefault(job.Plugin));
         if (state is null || !state.Enabled) { error = $"Plugin {job.Plugin} ist nicht installiert oder aus"; return null; }
-        if (!PluginApi.Scan(_pluginDir).TryGetValue(job.Plugin, out var m) || !m.Raw.TryGetProperty("process", out var proc)) { error = $"Plugin {job.Plugin} hat keinen Prozess"; return null; }
+        if (!PluginApi.Scan(_pluginDir).TryGetValue(job.Plugin, out var m) || PluginApi.ProcessOf(m.Raw, job.Service) is not { } proc) { error = $"Plugin {job.Plugin} hat keinen Prozess {job.Service}"; return null; }
         var run = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss") + "-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(2)).ToLowerInvariant();
         var actor = "job:" + key;
         var values = new Dictionary<string, string>(job.Params) { ["journali"] = Origin, ["actor"] = actor, ["job"] = key, ["run"] = run };

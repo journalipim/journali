@@ -27,6 +27,8 @@ const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualit�
 const TOPIC_LABEL = { import: '⇩ Import', export: '⇪ Export', analysis: '✓ Datenanalyse', jobs: '⏱ Jobs', datasheet: '▤ Datenblatt', tools: '⌁ Werkzeuge' }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
 const manifest = computed(() => current.value?.manifest ?? {})
+// Dienste: process (Schlüssel '') und processes[] (Taloan, 19.09.: mehrere Dienste je Plugin)
+const services = computed(() => [...(manifest.value.process ? [{ key: '', ...manifest.value.process }] : []), ...(manifest.value.processes ?? [])])
 const label = m => m?.label?.de || m?.label?.en || ''
 // Suche und Filter in der Liste (Taloan): Text über Key, Name, Beschreibung; Art (kind) und Zustand (an, aus, Update, nicht installiert)
 const q = ref('')
@@ -89,7 +91,7 @@ function pick(k) { cur.value = k }
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar">
       <h1>⌁ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
-      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : manifest.runs === 'office' ? (current.key === 'onlyoffice' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : '▭ Browser' }}{{ manifest.process ? ' + ⚙ Prozess' : '' }}</span>
+      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : manifest.runs === 'office' ? (current.key === 'onlyoffice' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : '▭ Browser' }}{{ services.length ? ' + ⚙ ' + (services.length > 1 ? services.length + ' Dienste' : 'Prozess') : '' }}</span>
       <span class="grow" />
       <template v-if="current.onDisk && !current.installed"><button class="primary" @click="act(`/api/plugins/${current.key}/install`)">⇩ installieren {{ current.diskVersion }}</button></template>
       <template v-else-if="current.installed">
@@ -134,11 +136,12 @@ function pick(k) { cur.value = k }
           <span v-if="!plugins.views.some(x => x.key === current.key)" class="muted">{{ current.enabled ? 'keine (oder Modul nicht geladen — neu laden)' : 'aus' }}</span></div>
       </div>
       <!-- Starten und Konfigurieren gehören nicht in die Verwaltung (Taloan, 19.09.): Prozesse laufen als Job (⏱ Jobs) -->
-      <div class="section" v-if="manifest.process">
-        <h2>⚙ Prozess <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
-        <div class="muted" style="font-size:12px;line-height:1.6">{{ manifest.process.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
-          <span v-if="manifest.process.params?.length">Parameter: {{ manifest.process.params.map(p => p.label || p.key).join(' · ') }}.</span></div>
-        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" title="neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button title="die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px">Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job</span></div>
+      <!-- ein Abschnitt je Dienst (Taloan: mehrere Dienste je Plugin) — process oder processes[] -->
+      <div class="section" v-for="svc in services" :key="svc.key">
+        <h2>⚙ {{ svc.label || 'Prozess' }} <span class="muted">· {{ svc.command }} {{ (svc.args ?? []).join(' ') }}</span></h2>
+        <div class="muted" style="font-size:12px;line-height:1.6">{{ svc.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
+          <span v-if="svc.params?.length">Parameter: {{ svc.params.map(p => p.label || p.key).join(' · ') }}.</span></div>
+        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}${svc.key ? '&service=' + svc.key : ''}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" title="neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button title="die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px">Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job</span></div>
       </div>
       <div class="section">
         <h2>Manifest <span class="mono muted">plugins/{{ current.key }}/plugin.json</span></h2>

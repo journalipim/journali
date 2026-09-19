@@ -397,8 +397,9 @@ public sealed record PluginRemoved();
 public sealed record PluginDataSet(string Name, string? Value);
 
 /// <summary>Ein Job: Plugin mit Prozess, Parameter (ohne Geheimnisse — die liegen in jobs/secrets.json), Zeitplan als cron
-/// „m h dom mon dow“ (leer = nur von Hand), an/aus, Zeitgrenze. Der letzte Eintrag gilt ganz.</summary>
-public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null);
+/// „m h dom mon dow“ (leer = nur von Hand), an/aus, Zeitgrenze. Der letzte Eintrag gilt ganz.
+/// Service (Taloan, 19.09.: mehrere Dienste je Plugin): Schlüssel aus processes[] im Manifest; leer = der eine process.</summary>
+public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null);
 public sealed record JobRetired();
 /// <summary>Lauf begonnen: Kennung des Laufs und Auslöser (schedule | manual).</summary>
 public sealed record JobRunStarted(string Run, string Trigger);

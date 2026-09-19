@@ -12,7 +12,7 @@
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
-//   Manifest process.label: Name des Prozesses im Job-Dialog, wenn das Plugin mehr ist als sein Job (json: Import und Export, Job = Import)
+//   Manifest process {…} oder processes: [{ key, label, command, args, params, description }] — mehrere Dienste je Plugin (Taloan); ein Job nennt plugin + service
 //                Prüfregeln für die Datenqualität (Basis-Plugin da zeigt sie)
 // ctx = { api, store, tree, dialog, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go, use(key) }
 //   use(key) — das Modul eines anderen Plugins (z. B. ctx.use('table').tableExport)

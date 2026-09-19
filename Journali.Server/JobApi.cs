@@ -11,7 +11,7 @@ namespace Journali.Server;
 /// </summary>
 public static class JobApi
 {
-    public sealed record JobBody(string? Label, string? Plugin, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets);
+    public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets);
 
     public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
@@ -19,9 +19,15 @@ public static class JobApi
         api.MapGet("/jobs/plugins", (Catalog c) =>
         {
             var manifests = PluginApi.Scan(runner.PluginDir);
-            return c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled && manifests.TryGetValue(p.Key, out var m) && m.Raw.TryGetProperty("process", out _))
-                .Select(p => { var m = manifests[p.Key]; var proc = m.Raw.GetProperty("process"); return new { key = p.Key, label = proc.TryGetProperty("label", out var pl) ? pl : m.Raw.TryGetProperty("label", out var l) ? l : default,   // process.label: Name des Prozesses, wenn das Plugin mehr ist als der Job (json) version = p.Version, params_ = proc.TryGetProperty("params", out var ps) ? ps : default, description = proc.TryGetProperty("description", out var d) ? d.GetString() : null }; })
-                .Select(x => new { x.key, x.label, x.version, @params = x.params_, x.description }).ToList());
+            // eine Zeile je Dienst (Taloan: mehrere Dienste je Plugin): label des Dienstes, sonst des Plugins
+            return c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled && manifests.ContainsKey(p.Key))
+                .SelectMany(p => PluginApi.Processes(manifests[p.Key].Raw).Select(x => new
+                {
+                    key = p.Key, service = x.Key, version = p.Version,
+                    label = x.Proc.TryGetProperty("label", out var pl) ? pl : (manifests[p.Key].Raw.TryGetProperty("label", out var l) ? l : default),
+                    @params = x.Proc.TryGetProperty("params", out var ps) ? ps : default,
+                    description = x.Proc.TryGetProperty("description", out var d) ? d.GetString() : null,
+                })).ToList());
         });
 
         api.MapGet("/jobs", (Catalog c) => c.With((_, _, _) => c.Jobs.All.Values.OrderBy(j => j.Label).Select(j => View(j, runner)).ToList()));
@@ -37,14 +43,15 @@ public static class JobApi
             {
                 var cur = c.Jobs.All.GetValueOrDefault(key);
                 var plugin = Blank(body.Plugin) ?? cur?.Plugin;
-                if (plugin is null || !manifests.TryGetValue(plugin, out var m) || !m.Raw.TryGetProperty("process", out var proc)) return Bad($"Plugin {plugin} hat keinen Prozess — nur solche können Jobs.");
+                var service = body.Service ?? cur?.Service ?? "";
+                if (plugin is null || !manifests.TryGetValue(plugin, out var m) || PluginApi.ProcessOf(m.Raw, service) is not { } proc) return Bad($"Plugin {plugin} hat keinen Prozess{(service.Length > 0 ? " " + service : "")} — nur solche können Jobs.");
                 // Parameter: Geheimnisse (secret: true) gehören nicht ins Journal — raus aus params, rein in secrets.json
                 var secretKeys = SecretKeys(proc);
                 var prms = body.Params ?? cur?.Params ?? new();
                 var secrets = new Dictionary<string, string?>(body.Secrets ?? new());
                 foreach (var k in secretKeys) if (prms.Remove(k, out var v) && v is { Length: > 0 }) secrets[k] = v;
                 if (secrets.Count > 0) Secrets.Set(runner.Dir, key, secrets);
-                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes);
+                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null);
                 write(actor, Jobs.Stream + key, Types.JobDefined, def, null);
                 return Results.Ok(View(c.Jobs.All[key], runner));
             });
@@ -96,7 +103,7 @@ public static class JobApi
         var secrets = Secrets.Get(runner.Dir, j.Key).Keys.ToList();
         return new
         {
-            j.Key, j.Label, j.Plugin, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes,
+            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes,
             secrets, nextDue = j.Enabled ? JobRunner.NextDue(j.Schedule) : null,
             running = runner.RunningId(j.Key),
             last = j.Last is { } l ? Run(l) : null,
