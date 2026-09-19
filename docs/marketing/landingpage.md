@@ -94,7 +94,7 @@ Taloan, 19.09.: „ruhig auf dicke Hose“ — aber alles hier ist gebaut:
 - **RAG-ready** — Plugin `rag`: Markdown + nodes.jsonl je Produkt/Sprache mit Version und Belegen, als Job.
 - **Digitaler Produktpass** — ESPR/PPWR-Prüfungen als Plugins.
 
-Motto (Taloan): **„Hier entsteht etwas ganz Großes — und ihr dürft dabei sein.“** — steht in der Micro-Zeile unter dem Aufmacher.
+Motto (Taloan): **„Hier entsteht etwas ganz Großes — und ihr seid dabei.“** — steht in der Micro-Zeile unter dem Aufmacher.
 
 ---
 
