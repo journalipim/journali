@@ -7,17 +7,13 @@ import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { plugins } from '../plugins.js'
 import Splitter from '../components/Splitter.vue'
-import ProfileBar from '../components/ProfileBar.vue'
 import { paneWidth } from '../panes.js'
 
 const listW = paneWidth('plugins.list', 380)
 const cur = ref(null)
 const busy = ref('')
-const run = ref({ params: {}, out: null })
 // Symbol in der Leiste je Plugin (Taloan): Einstellung des Nutzers, nicht des Plugins
 function toggleRail(key) { const s = new Set(store.railPlugins); s.has(key) ? s.delete(key) : s.add(key); store.railPlugins = [...s]; store.save() }
-// Geheimnisse (secret im Manifest) gehören nicht in den Parametersatz im Journal — nur in den Aufruf
-const publicParams = () => Object.fromEntries(Object.entries(run.value.params).filter(([k]) => !(manifest.value?.process?.params ?? []).some(p => p.key === k && p.secret)))
 const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '🛠 Werkzeug', output: '📄 Ausgabe', edit: '✎ Pflege' }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
 const manifest = computed(() => current.value?.manifest ?? {})
@@ -43,19 +39,7 @@ async function act(path, method = 'POST') {
   catch (e) { store.toast(e.message) }
   finally { busy.value = '' }
 }
-function startParams() {
-  const ps = manifest.value.process?.params ?? []
-  run.value = { params: Object.fromEntries(ps.map(p => [p.key, p.type === 'bool' ? String(p.default ?? false) : String(p.default ?? '')])), out: null }
-}
-async function execute() {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
-  busy.value = 'läuft …'
-  run.value.out = null
-  try { run.value.out = await api.post(`/api/plugins/${cur.value}/run`, { params: run.value.params }); await store.poll(true) }
-  catch (e) { store.toast(e.message) }
-  finally { busy.value = '' }
-}
-function pick(k) { cur.value = k; startParams() }
+function pick(k) { cur.value = k }
 </script>
 
 <template>
@@ -129,23 +113,12 @@ function pick(k) { cur.value = k; startParams() }
         <div class="chips"><router-link v-for="v in plugins.views.filter(x => x.key === current.key)" :key="v.path" :to="`/p/${current.key}/${v.path}`" class="chip">{{ v.icon }} {{ v.label }}</router-link>
           <span v-if="!plugins.views.some(x => x.key === current.key)" class="muted">{{ current.enabled ? 'keine (oder Modul nicht geladen — neu laden)' : 'aus' }}</span></div>
       </div>
+      <!-- Starten und Konfigurieren gehören nicht in die Verwaltung (Taloan, 19.09.): Prozesse laufen als Job (⏱ Jobs) -->
       <div class="section" v-if="manifest.process">
-        <h2>⚙ Prozess starten <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
-        <div class="chips" style="padding:4px 8px"><ProfileBar :key="current.key" :plugin="current.key" scope="run" :get="publicParams" :set="p => { if (p) run.params = { ...run.params, ...p }; else startParams() }" /><span class="muted" style="font-size:12px">Parametersätze — im Journal, für alle</span></div>
-        <table class="grid form"><colgroup><col style="width:180px" /><col style="width:420px" /></colgroup><tbody>
-          <tr v-for="p in manifest.process.params ?? []" :key="p.key"><td class="attr" :title="p.key">{{ p.label || p.key }}</td>
-            <td style="padding:2px 4px">
-              <select v-if="p.type === 'bool'" v-model="run.params[p.key]" style="width:100%"><option value="true">✓ ja</option><option value="false">✗ nein</option></select>
-              <select v-else-if="p.type === 'boolean'" v-model="run.params[p.key]" style="width:100%"><option value="true">✓ ja</option><option value="false">✗ nein</option></select>
-              <input v-else-if="p.secret" v-model="run.params[p.key]" type="password" style="width:100%" placeholder="🔒 geheim — nur für diesen Aufruf, nicht im Parametersatz" autocomplete="new-password" />
-              <input v-else v-model="run.params[p.key]" type="text" style="width:100%" :placeholder="p.placeholder || ''" />
-            </td></tr>
-        </tbody></table>
-        <div class="chips" style="padding:6px 8px"><button class="primary" :disabled="!current.enabled || !!busy" @click="execute">▶ starten</button><span class="muted" style="font-size:12px">läuft im eigenen Prozess, redet nur über /api; Ausgabe kommt am Ende</span></div>
-        <div v-if="run.out" class="section">
-          <h2>Ausgabe <span :class="run.out.exit === 0 ? 'pos' : 'neg'">· Rückgabe {{ run.out.exit }}</span><span class="muted"> · {{ (run.out.ms / 1000).toFixed(1) }} s</span></h2>
-          <pre class="out">{{ run.out.output || '(keine Ausgabe)' }}</pre>
-        </div>
+        <h2>⚙ Prozess <span class="muted">· {{ manifest.process.command }} {{ (manifest.process.args ?? []).join(' ') }}</span></h2>
+        <div class="muted" style="font-size:12px;line-height:1.6">{{ manifest.process.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
+          <span v-if="manifest.process.params?.length">Parameter: {{ manifest.process.params.map(p => p.label || p.key).join(' · ') }}.</span></div>
+        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" @click="navigate">⏱ Als Job einrichten</button></router-link><span class="muted" style="font-size:12px">Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job</span></div>
       </div>
       <div class="section">
         <h2>Manifest <span class="mono muted">plugins/{{ current.key }}/plugin.json</span></h2>
@@ -168,7 +141,6 @@ function pick(k) { cur.value = k; startParams() }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .form { width: auto; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
-.out { margin: 0; padding: 8px; background: var(--cell); border-radius: 4px; font: 12px/1.4 var(--mono); white-space: pre-wrap; max-height: 420px; overflow: auto; }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
 .x:hover { color: var(--neg); }
 </style>

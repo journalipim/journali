@@ -90,11 +90,14 @@ async function mount(root, ctx) {
   async function openEdit(j) {
     const box = el('div', { class: 'overlay', style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40' })
     const dlg = el('div', { style: 'width:560px;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px' })
+    let preset = null
+    if (j?._new) { preset = j.plugin; j = null }   // aus ⌁ Plugins: neuer Job mit diesem Plugin
     const isNew = !j
     const keyIn = el('input', { type: 'text', value: j?.key ?? '', placeholder: 'key (a-z, 0-9, _)', style: 'width:100%' }); if (!isNew) keyIn.disabled = true
     const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: 'Bezeichnung', style: 'width:100%' })
     const pluginSel = el('select', { style: 'width:100%' }, ...st.plugins.map(p => el('option', { value: p.key }, `${p.label?.de || p.key} — ${p.description ?? ''}`)))
     if (j) pluginSel.value = j.plugin
+    else if (preset) pluginSel.value = preset
     const schedSel = el('select', { style: 'width:100%' }, ...PRESETS.map(([v, l]) => el('option', { value: v }, l)), el('option', { value: 'custom' }, 'eigener cron-Ausdruck …'))
     const schedIn = el('input', { type: 'text', value: j?.schedule ?? '', placeholder: 'm h tag monat wochentag — z. B. 0 2 * * *', style: 'width:100%;margin-top:4px' })
     const known = PRESETS.some(([v]) => v === (j?.schedule ?? '')); schedSel.value = known ? (j?.schedule ?? '') : 'custom'; schedIn.style.display = known ? 'none' : ''
@@ -149,6 +152,9 @@ async function mount(root, ctx) {
   }
 
   await load()
+  // aus ⌁ Plugins „Als Job einrichten“: ?new=<plugin> öffnet den Dialog mit diesem Plugin
+  const wanted = new URLSearchParams(location.search).get('new')
+  if (wanted && st.plugins.some(p => p.key === wanted)) { history.replaceState(null, '', location.pathname); openEdit({ plugin: wanted, _new: true }) }
   const poll = setInterval(() => { if (st.jobs.some(j => j.running)) load() }, 5000)
   return () => { clearInterval(poll); clearTimeout(st.timer) }
 }
