@@ -51,7 +51,7 @@ async function one(key) {
   const entry = resolve(pluginsDir, key, 'src', 'entry.js')
   if (!existsSync(entry)) return false
   await build({
-    configFile: false, logLevel: 'warn', root: here,
+    configFile: false, logLevel: 'warn', root: here, publicDir: false,   // sonst landet web/public (Logo) in jedem Plugin
     plugins: [vue(), shims(), inlineCss()],
     build: {
       lib: { entry, formats: ['es'], fileName: () => 'entry.js', cssFileName: 'style' },
