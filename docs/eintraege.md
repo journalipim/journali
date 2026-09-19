@@ -195,3 +195,13 @@ steht im Kopf `X-Actor`.
 | `PUT /api/model/master-locale` `{code}` | `MasterLocaleDefined` — muss eine Sprache des Modells sein |
 | `PUT /api/model/units/{key}` `{label{}, quantity, factor}` | `UnitDefined` |
 | `DELETE /api/model/units/{key}` | `UnitRetired` — nicht, solange ein Attribut sie benutzt |
+
+## Jobs (Plugin tasker) — Strom `job:<key>`
+
+| Typ | Nutzlast | Bedeutung |
+|---|---|---|
+| `JobDefined` | `label`, `plugin`, `params{}`, `schedule` (cron „m h tag monat wochentag“, leer = nur von Hand), `enabled`, `timeoutMinutes` | der Job — Plugin mit Prozess und Parametern; Geheimnisse (`secret: true` im Manifest) stehen nicht hier, sondern in `jobs/secrets.json` beim Server |
+| `JobRetired` | — | Job weg; seine Läufe bleiben im Journal |
+| `JobRunStarted` | `run`, `trigger` (schedule, manual) | Lauf begonnen — Urheber `job:<key>` |
+| `JobRunFinished` | `run`, `status` (ok, failed, timeout, cancelled), `exit`, `seconds`, `summary`, `logBytes` | Lauf zu Ende; das Log liegt als Datei `jobs/<key>/<run>.log` |
+

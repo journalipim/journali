@@ -455,6 +455,30 @@ ungespeicherte Zellen, nie automatisch; ins Journal mit Urheber `ki:<modell>`
 und Stapel; Modell austauschbar (API-Schlüssel bleibt im Browser, oder lokal
 Ollama auf der rossibox).
 
+## 23. Jobs — Plugin tasker (Taloan, 19.09.2026)
+
+> Jobs wie Import dürfen nicht vom offenen Browserfenster abhängen; regelmässige
+> Ausführung; Überwachung, Verwaltung, Logs.
+
+Ein Job ist ein Plugin mit Prozess (`process` im Manifest: Befehl, Argumente,
+Parameter mit `secret`) plus Parameter, Zeitplan (cron, fünf Felder) und
+Zeitgrenze. Der Server (`JobRunner`) startet ihn als Kindprozess — nie im
+Serverprozess selbst, Regel aus 19 —, schreibt die Ausgabe in `jobs/<key>/<run>.log`
+und die Eckdaten ins Journal (`JobDefined`, `JobRunStarted`, `JobRunFinished`,
+Urheber `job:<key>`). Je Job höchstens ein Lauf zugleich; abbrechen geht.
+Geheimnisse (Token) liegen in `jobs/secrets.json` beim Server, nie im Journal,
+nie im Repo — der Job bekommt sie als Parameter. Die Oberfläche (⏱ Jobs):
+Liste mit Zeitplan, nächstem und letztem Lauf, ▶ jetzt, ⊘ abbrechen, an/aus,
+Läufe mit Log (lebendig, solange er läuft). Erstes Prozess-Plugin: `backup`
+(Rohdaten-JSON je Wurzel, behält n Stände).
+
+Offen: der IXP-Import als Job. Bisher läuft er im Browser, der Token bleibt
+dort (Entscheidung 19). Als Job muss der Token beim Server liegen — als
+`secret`-Parameter des Jobs, also in `secrets.json`, nicht im Profil und nicht
+im Journal. Das ist die Ausnahme von 19, die Taloan noch bestätigen muss; dann
+wird der IXP-Import ein Prozess (Node), der dieselbe Analyse und denselben
+Stapel schreibt wie der Browser.
+
 ## Messlatte: OpenDXP
 
 Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."

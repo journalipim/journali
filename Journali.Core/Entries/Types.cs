@@ -74,6 +74,12 @@ public static class Types
     public const string PluginRemoved = "PluginRemoved";
     public const string PluginDataSet = "PluginDataSet";      // benannter Datensatz eines Plugins (Vorlage, Zuordnung, Regel) — JSON-Text
 
+    // Jobs (Plugin tasker, Taloan 19.09.2026): Strom job:<key> — Definition, jeder Lauf mit Ausgang; das Log liegt als Datei
+    public const string JobDefined = "JobDefined";
+    public const string JobRetired = "JobRetired";
+    public const string JobRunStarted = "JobRunStarted";
+    public const string JobRunFinished = "JobRunFinished";
+
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
     {
@@ -389,3 +395,12 @@ public sealed record PluginDisabled();
 public sealed record PluginRemoved();
 /// <summary>Benannter Datensatz eines Plugins (Datenblatt-Vorlage, Import-Zuordnung, Prüfregel …); Value ist JSON-Text, leer = weg. Der letzte gewinnt.</summary>
 public sealed record PluginDataSet(string Name, string? Value);
+
+/// <summary>Ein Job: Plugin mit Prozess, Parameter (ohne Geheimnisse — die liegen in jobs/secrets.json), Zeitplan als cron
+/// „m h dom mon dow“ (leer = nur von Hand), an/aus, Zeitgrenze. Der letzte Eintrag gilt ganz.</summary>
+public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null);
+public sealed record JobRetired();
+/// <summary>Lauf begonnen: Kennung des Laufs und Auslöser (schedule | manual).</summary>
+public sealed record JobRunStarted(string Run, string Trigger);
+/// <summary>Lauf zu Ende: ok | failed | timeout | cancelled, Rückgabewert, Dauer, letzte Zeile der Ausgabe, Grösse des Logs.</summary>
+public sealed record JobRunFinished(string Run, string Status, int? Exit, double Seconds, string? Summary, long LogBytes);

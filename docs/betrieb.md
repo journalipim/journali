@@ -122,3 +122,17 @@ Volume. `.env.example` nach `.env` kopieren, Passwort eintragen,
 | `batch` | `TEXT`, null | Stapelkennung; kommt per `ALTER TABLE … ADD COLUMN IF NOT EXISTS` in bestehende Tabellen |
 
 Index `journal_stream (stream, number)` für `ReadStream`.
+
+## Jobs (Plugin tasker)
+
+Jobs laufen im Server als Kindprozesse (`JobRunner`), unabhängig vom
+Browser: nach Zeitplan (cron, geprüft je Minute; nach einem Stillstand werden
+höchstens die letzten 5 Minuten nachgeholt) oder von Hand. Verzeichnis aus
+`JOURNALI_JOBS`, Vorgabe `jobs/` neben dem Programm (im Repo ignoriert):
+`jobs/<key>/<run>.log` je Lauf, `jobs/secrets.json` für Geheimnisse (Token,
+Passwörter — nie im Journal). Der Prozess bekommt `{journali}` (Adresse des
+Servers), `{actor}` (`job:<key>`) und die Parameter als Argumente laut
+Manifest und als Umgebung `JOURNALI_<PARAM>`. Nur Plugins mit `process` im
+Manifest können Jobs; mitgeliefert: `backup` (Rohdaten-JSON eines Teilbaums
+oder aller Wurzeln, behält die letzten n Dateien).
+

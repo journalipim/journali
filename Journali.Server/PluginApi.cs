@@ -135,24 +135,11 @@ public static class PluginApi
             var state = c.With((_, _, _) => c.Plugins.All.GetValueOrDefault(key));
             if (state is null || !state.Enabled) return Bad($"Plugin {key} ist nicht installiert oder aus.");
             if (!Scan(dir).TryGetValue(key, out var m) || !m.Raw.TryGetProperty("process", out var proc)) return Bad($"Plugin {key} hat keinen Prozess.");
-            var command = proc.TryGetProperty("command", out var cmd) ? cmd.GetString() ?? "" : "";
-            if (command.Length == 0) return Bad("process.command fehlt im Manifest.");
             var values = new Dictionary<string, string> { ["journali"] = $"{req.Scheme}://{req.Host}", ["actor"] = actor };
             foreach (var (k, v) in body.Params ?? new()) values[k] = v;
-            var args = new List<string>();
-            if (proc.TryGetProperty("args", out var arr))
-                foreach (var a in arr.EnumerateArray())
-                {
-                    var s = a.GetString() ?? "";
-                    // {flag?--dry-run}: nur, wenn der Parameter wahr ist
-                    var flag = System.Text.RegularExpressions.Regex.Match(s, @"^\{(\w+)\?(.*)\}$");
-                    if (flag.Success) { if (values.TryGetValue(flag.Groups[1].Value, out var fv) && fv is "true" or "1" or "on") args.Add(flag.Groups[2].Value); continue; }
-                    var filled = System.Text.RegularExpressions.Regex.Replace(s, @"\{(\w+)\}", mm => values.GetValueOrDefault(mm.Groups[1].Value) ?? "");
-                    if (filled.Length > 0 || !s.Contains('{')) args.Add(filled);
-                }
-            var psi = new ProcessStartInfo(command) { WorkingDirectory = Path.Combine(dir, key), RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
-            psi.Environment["PYTHONIOENCODING"] = "utf-8";
-            foreach (var a in args) psi.ArgumentList.Add(a);
+            ProcessStartInfo psi;
+            try { psi = BuildProcess(dir, key, proc, values); } catch (InvalidOperationException e) { return Bad(e.Message); }
+            var command = psi.FileName; var args = psi.ArgumentList.ToList();
             var sw = Stopwatch.StartNew();
             var output = new StringBuilder();
             try
@@ -182,6 +169,27 @@ public static class PluginApi
             ? s.Enabled == on ? Results.Ok(new { unchanged = true })
                 : Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, on ? Types.PluginEnabled : Types.PluginDisabled, on ? new PluginEnabled() : new PluginDisabled(), null)))
             : Results.NotFound());
+    }
+
+    /// <summary>Prozess eines Plugins aufbauen: Befehl und Argumente aus dem Manifest (process.command/args), {param} aus den Werten,
+    /// {flag?--x} nur, wenn der Parameter wahr ist; Arbeitsverzeichnis das Plugin. Für /plugins/{key}/run und den JobRunner.</summary>
+    public static ProcessStartInfo BuildProcess(string dir, string key, JsonElement proc, Dictionary<string, string> values)
+    {
+        var command = proc.TryGetProperty("command", out var cmd) ? cmd.GetString() ?? "" : "";
+        if (command.Length == 0) throw new InvalidOperationException("process.command fehlt im Manifest.");
+        var psi = new ProcessStartInfo(command) { WorkingDirectory = Path.Combine(dir, key), RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
+        psi.Environment["PYTHONIOENCODING"] = "utf-8";
+        foreach (var (k, v) in values) psi.Environment["JOURNALI_" + k.ToUpperInvariant()] = v;   // auch als Umgebung — für Skripte ohne Argumente
+        if (proc.TryGetProperty("args", out var arr))
+            foreach (var a in arr.EnumerateArray())
+            {
+                var s = a.GetString() ?? "";
+                var flag = System.Text.RegularExpressions.Regex.Match(s, @"^\{(\w+)\?(.*)\}$");
+                if (flag.Success) { if (values.TryGetValue(flag.Groups[1].Value, out var fv) && fv is "true" or "1" or "on") psi.ArgumentList.Add(flag.Groups[2].Value); continue; }
+                var filled = System.Text.RegularExpressions.Regex.Replace(s, @"\{(\w+)\}", mm => values.GetValueOrDefault(mm.Groups[1].Value) ?? "");
+                if (filled.Length > 0 || !s.Contains('{')) psi.ArgumentList.Add(filled);
+            }
+        return psi;
     }
 
     public sealed record RunRequest(Dictionary<string, string>? Params);

@@ -18,6 +18,7 @@ public sealed class Catalog
     private readonly Relations _relations = new();
     private readonly Media _media = new();
     private readonly Plugins _plugins = new();
+    private readonly Jobs _jobs = new();
     private readonly object _gate = new();
 
     public Catalog(IJournal journal) => _journal = journal;
@@ -31,6 +32,7 @@ public sealed class Catalog
             Projector.CatchUp(_journal, _relations);
             Projector.CatchUp(_journal, _media);
             Projector.CatchUp(_journal, _plugins);
+            Projector.CatchUp(_journal, _jobs);
             return Projector.CatchUp(_journal, _tree);
         }
     }
@@ -96,11 +98,14 @@ public sealed class Catalog
         _relations.Apply(entry);
         _media.Apply(entry);
         _plugins.Apply(entry);
+        _jobs.Apply(entry);
         return entry;
     }
 
     /// <summary>Das Abbild der Plugins — nur innerhalb von <see cref="With"/> anfassen.</summary>
     public Plugins Plugins => _plugins;
+    /// <summary>Das Abbild der Jobs — nur innerhalb von <see cref="With"/> anfassen.</summary>
+    public Jobs Jobs => _jobs;
 
     /// <summary>Das Abbild der Medien — nur innerhalb von <see cref="With"/> anfassen (dieselbe Sperre).</summary>
     public Media Media => _media;

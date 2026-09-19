@@ -16,3 +16,7 @@ __pycache__/
 # Medien: die Bytes liegen im Store (JOURNALI_MEDIA, Vorgabe media/ neben dem Programm), nie im Repo
 media/
 Journali.Server/media/
+
+# Jobs: Logs und Geheimnisse (Plugin tasker) — nie im Repo
+jobs/
+Journali.Server/jobs/

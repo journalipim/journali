@@ -43,6 +43,13 @@ var pluginDir = builder.Configuration["JOURNALI_PLUGINS"]
 pluginDir = Path.GetFullPath(pluginDir);
 var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 
+// Jobs (Plugin tasker, Taloan 19.09.): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
+// unter JOURNALI_JOBS (Vorgabe jobs/ neben dem Programm, im Repo ignoriert)
+var jobDir = builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs");
+var jobRunner = new JobRunner(catalog, pluginDir, Path.GetFullPath(jobDir), LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>());
+builder.Services.AddSingleton(jobRunner);
+builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
+
 // Umlaute lesbar lassen statt \u00fc — das Journal ist zum Anschauen da.
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
@@ -56,6 +63,9 @@ var app = builder.Build();
 app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien unter {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Root, pluginDir, autoInstalled);
 
 app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Editor-Origin; noch keine Anmeldung, daher offen
+
+// Die Adresse, unter der Jobs den Server erreichen: die, mit der die Oberfläche kommt (localhost:5000 oder rossibox)
+app.Use(async (ctx, next) => { if (ctx.Request.Path.StartsWithSegments("/api")) jobRunner.Origin = $"{ctx.Request.Scheme}://{ctx.Request.Host}"; await next(); });
 
 var api = app.MapGroup("/api");
 
@@ -77,6 +87,7 @@ MediaApi.Map(api);
 PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);
 TransferApi.Map(api);   // Rohdaten eines Teilbaums hin und zurück (JSON, wiederherstellbar — Taloan)
+JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/
 app.MapGet("/plugins/{key}/{**path}", (string key, string path, HttpContext ctx) =>

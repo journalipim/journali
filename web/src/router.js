@@ -29,6 +29,7 @@ export const router = createRouter({
     { path: '/datasheet', component: HubView, props: { topic: 'datasheet' } },
     { path: '/analysis', component: HubView, props: { topic: 'analysis' } },
     { path: '/tools', component: HubView, props: { topic: 'tools' } },
+    { path: '/jobs', component: HubView, props: { topic: 'jobs' } },
     { path: '/import/solr', component: SolrView },
     { path: '/import/table', component: TableImportView },
     { path: '/media', component: MediaView },
