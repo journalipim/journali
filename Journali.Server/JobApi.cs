@@ -20,7 +20,7 @@ public static class JobApi
         {
             var manifests = PluginApi.Scan(runner.PluginDir);
             return c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled && manifests.TryGetValue(p.Key, out var m) && m.Raw.TryGetProperty("process", out _))
-                .Select(p => { var m = manifests[p.Key]; var proc = m.Raw.GetProperty("process"); return new { key = p.Key, label = m.Raw.TryGetProperty("label", out var l) ? l : default, version = p.Version, params_ = proc.TryGetProperty("params", out var ps) ? ps : default, description = proc.TryGetProperty("description", out var d) ? d.GetString() : null }; })
+                .Select(p => { var m = manifests[p.Key]; var proc = m.Raw.GetProperty("process"); return new { key = p.Key, label = proc.TryGetProperty("label", out var pl) ? pl : m.Raw.TryGetProperty("label", out var l) ? l : default,   // process.label: Name des Prozesses, wenn das Plugin mehr ist als der Job (json) version = p.Version, params_ = proc.TryGetProperty("params", out var ps) ? ps : default, description = proc.TryGetProperty("description", out var d) ? d.GetString() : null }; })
                 .Select(x => new { x.key, x.label, x.version, @params = x.params_, x.description }).ToList());
         });
 

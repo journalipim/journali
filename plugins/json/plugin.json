@@ -17,6 +17,7 @@
   ],
   "autoInstall": true,
   "process": {
+    "label": "Import: JSON",
     "command": "node",
     "args": [
       "job.mjs",

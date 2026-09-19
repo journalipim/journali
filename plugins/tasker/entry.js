@@ -170,7 +170,7 @@ async function mount(root, ctx) {
     const isNew = !j
     const keyIn = el('input', { type: 'text', value: j?.key ?? '', placeholder: 'key (a-z, 0-9, _)', style: 'width:100%' }); if (!isNew) keyIn.disabled = true
     const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: 'Bezeichnung', style: 'width:100%' })
-    const pluginSel = el('select', { style: 'width:100%' }, ...st.plugins.map(p => el('option', { value: p.key, title: p.description ?? '' }, p.label?.de || p.key)))   // nur der Name (Taloan: zu viel Text)
+    const pluginSel = el('select', { style: 'width:100%' }, ...st.plugins.map(p => el('option', { value: p.key, title: p.description ?? '' }, (typeof p.label === 'string' ? p.label : p.label?.de) || p.key)))   // nur der Name (Taloan: zu viel Text); process.label geht vor
     const pluginHint = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
     if (j) pluginSel.value = j.plugin
     else if (preset) pluginSel.value = preset
