@@ -6,6 +6,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { plugins } from '../plugins.js'
+import { FIXED_TOPICS, topicOf } from '../topics.js'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 
@@ -17,6 +18,8 @@ const busy = ref('')
 const jobs = ref([])
 onMounted(async () => { if (plugins.enabled('tasker')) { try { jobs.value = await api.get('/api/jobs') } catch {} } })
 const jobCount = key => jobs.value.filter(j => j.plugin === key).length
+// Leisten-Schalter nur, wenn eine Ansicht des Plugins in einer Gruppe ohne feste Basis liegt (Taloan: Import/Export sind sowieso da)
+const railToggle = key => plugins.views.some(v => v.key === key && !FIXED_TOPICS.includes(topicOf(key, v.topic)))
 function toggleRail(key) { const s = new Set(store.railOff); s.has(key) ? s.delete(key) : s.add(key); store.railOff = [...s]; store.save() }
 const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '⌁ Werkzeug', output: '▤ Ausgabe', edit: '✎ Pflege' }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
@@ -80,7 +83,7 @@ function pick(k) { cur.value = k }
       <template v-if="current.onDisk && !current.installed"><button class="primary" @click="act(`/api/plugins/${current.key}/install`)">⇩ installieren {{ current.diskVersion }}</button></template>
       <template v-else-if="current.installed">
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">↑ aktualisieren auf {{ current.diskVersion }}</button>
-        <button v-if="current.enabled && plugins.views.some(x => x.key === current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? 'nicht in der Leiste links — Klick nimmt es wieder hinein (unter sein Thema)' : 'in der Leiste links unter seinem Thema — Klick nimmt es ganz heraus (nur für dich, in den Einstellungen)'">{{ store.railOff.includes(current.key) ? '▯ nicht in der Leiste' : '▮ in der Leiste' }}</button>
+        <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? 'nicht in der Leiste links — Klick nimmt es wieder hinein (unter sein Thema)' : 'in der Leiste links unter seinem Thema — Klick nimmt es ganz heraus (nur für dich, in den Einstellungen)'">{{ store.railOff.includes(current.key) ? '▯ nicht in der Leiste' : '▮ in der Leiste' }}</button>
         <!-- Zustandsschalter wie „in der Leiste“ (Taloan): leuchtet, wenn an; Klick kippt -->
         <button :class="{ primary: current.enabled }" @click="act(`/api/plugins/${current.key}/${current.enabled ? 'disable' : 'enable'}`)" :title="current.enabled ? 'aktiviert — Klick deaktiviert' : 'deaktiviert — Klick aktiviert'">{{ current.enabled ? '● aktiviert' : '○ deaktiviert' }}</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" title="aus dem Journal entfernen — die Dateien bleiben">🗑</button>

@@ -13,6 +13,8 @@ export const TOPICS = [
   { key: 'tools', to: '/tools', icon: '⌁', label: 'Werkzeuge' },
   { key: 'jobs', to: '/jobs', icon: '⏱', label: 'Jobs' },   // Plugin tasker (Taloan, 19.09.): Jobs im Server, Zeitplan, Logs
 ]
+// Gruppen mit fest eingebauter Basis (Tabelle) — immer in der Leiste; ihre Plugins brauchen keinen Leisten-Schalter (Taloan)
+export const FIXED_TOPICS = ['import', 'export']
 export const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', edit: 'tools', tool: 'tools' }
 
 export function topicOf(key, explicit = null) {
