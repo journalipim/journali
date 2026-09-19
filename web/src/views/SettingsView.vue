@@ -92,7 +92,8 @@ async function save() {
       </table>
 
       <div class="section">
-        <h2>✦ KI (Claude)</h2>
+        <h2>✦ KI (Claude) <span class="muted">· eigener Schlüssel — journali bietet keine KI an</span></h2>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Was die KI sieht: die Daten des jeweils gewählten Knotens (Attribute, Werte) gehen direkt aus diesem Browser an api.anthropic.com — mit Ihrem Schlüssel, unter Ihrem Vertrag mit Anthropic, ohne Umweg über den journali-Server. Nichts geschieht ohne Klick; ohne Schlüssel arbeiten alle Plugins regelbasiert.</p>
         <table class="grid" style="width:auto"><colgroup><col style="width:120px" /><col style="width:420px" /><col /></colgroup><tbody>
           <tr><td class="muted">API-Schlüssel</td><td><input v-model="aiKey" type="password" style="width:100%" placeholder="sk-ant-…" autocomplete="off" @keydown.enter="saveAi" /></td><td class="muted" style="font-size:12px">bleibt in diesem Browser — nicht im Journal, nicht auf dem Server</td></tr>
           <tr><td class="muted">Modell</td><td><select v-model="aiModel" style="width:100%"><option v-for="m in ai.models" :key="m" :value="m">{{ m }}</option></select></td><td class="muted" style="font-size:12px">Sonnet: schnell und günstig für Vorschläge; Opus: gründlicher</td></tr>

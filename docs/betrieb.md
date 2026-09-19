@@ -143,6 +143,16 @@ Fassung erscheint unter ⌁ Plugins als ↑ Update). Prozess-Plugins brauchen
 `docker compose up --build`. Der Server wartet, bis Postgres bereit ist
 (Healthcheck), und legt Datenbank und Tabelle selbst an.
 
+## KI (Claude)
+
+journali bietet keine KI an und hat keinen eigenen Schlüssel. Wer die KI-Funktionen nutzt
+(Datenqualität, DPP/PPWR-Zuordnungen, GEO-Texte), trägt seinen Anthropic-Schlüssel unter
+⚙ Einstellungen → KI ein; er bleibt im Browser (localStorage), nie im Journal, nie auf dem Server.
+Die Anfragen gehen direkt aus dem Browser an `api.anthropic.com` — der Betreiber von journali
+ist an diesem Datenfluss nicht beteiligt (für Hosting: Anthropic ist damit kein Unterauftragnehmer
+des Betreibers, sondern Vertragspartner des Kunden). Übertragen werden die Daten des jeweils
+gewählten Knotens, nur auf Klick.
+
 ## Tabelle `journal`
 
 | Spalte | Typ | |
