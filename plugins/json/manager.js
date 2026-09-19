@@ -53,9 +53,9 @@ export async function mountManager(root, ctx) {
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)
 
   // ---- 1 Datei
-  const fileIn = el('input', { type: 'file', accept: '.json,application/json', style: 'display:none' })
+  const fileIn = el('input', { type: 'file', accept: '.json,.gz,application/json,application/gzip', style: 'display:none' })
   fileIn.addEventListener('change', () => fileIn.files[0] && analyse(fileIn.files[0]))
-  const drop = el('div', { class: 'empty', style: 'border:1px dashed var(--line);border-radius:6px;padding:18px;cursor:pointer' }, '📂 JSON wählen oder hierher ziehen — Rohdaten-Export ({ model, node }) oder ein Knotenbaum')
+  const drop = el('div', { class: 'empty', style: 'border:1px dashed var(--line);border-radius:6px;padding:18px;cursor:pointer' }, '📂 JSON wählen oder hierher ziehen — Rohdaten-Export ({ model, node }), auch .json.gz aus der Sicherung')
   drop.addEventListener('click', () => fileIn.click())
   drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = 'var(--accent)' })
   drop.addEventListener('dragleave', () => drop.style.borderColor = 'var(--line)')
@@ -66,7 +66,8 @@ export async function mountManager(root, ctx) {
   if (store.pendingImport?.file) { const p = store.pendingImport; store.pendingImport = null; await analyse(p.file, p.parent) }
 
   async function analyse(file, presetParent = null) {
-    let j; try { j = JSON.parse(await file.text()) } catch { store.toast('keine gültige JSON-Datei'); return }
+    // .json.gz (Sicherung mit Kompression): im Browser entpacken
+    let j; try { const text = /\.gz$/i.test(file.name) ? await new Response(file.stream().pipeThrough(new DecompressionStream('gzip'))).text() : await file.text(); j = JSON.parse(text) } catch { store.toast('keine gültige JSON-Datei (oder .gz nicht lesbar)'); return }
     const node = j?.node ?? j, m = j?.model ?? { groups: [], attributes: [], lists: [], units: [] }
     if (!node?.id || !node?.role) { store.toast('Kein Knotenbaum: id und role fehlen. Für Tabellen (Listen von Objekten) gibt es ⇩ Import → Tabelle.'); return }
     st.file = file.name; st.raw = { model: m, node }

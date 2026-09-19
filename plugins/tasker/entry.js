@@ -113,6 +113,10 @@ async function mount(root, ctx) {
           const pick = el('div', { class: 'picker', style: 'display:none;max-height:160px' })
           inp.addEventListener('input', () => { const q = inp.value.trim().toLowerCase(); pick.innerHTML = ''; const hits = q && !q.startsWith('g-') && !q.startsWith('p-') ? tree.rows.filter(r => r.role !== 'variant' && r.label.toLowerCase().includes(q)).slice(0, 10) : []; for (const r of hits) pick.append(el('div', { class: 'pick', onmousedown: e => { e.preventDefault(); inp.value = r.id; inp.title = r.label; pick.style.display = 'none' } }, `${r.role === 'group' ? '▣' : '▦'} ${r.label}`, el('span', { class: 'mono muted', style: 'margin-left:auto;font-size:11px' }, r.id))); pick.style.display = hits.length ? 'block' : 'none' })
           paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp, pick)
+        } else if (d.type === 'boolean') {
+          inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
+          Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })
+          paramsBox.append(el('label', { style: 'display:flex;gap:6px;align-items:center;margin-top:8px' }, inp, d.label))
         } else {
           inp = el('input', { type: d.secret ? 'password' : d.type === 'number' ? 'number' : 'text', value: d.secret ? '' : cur, placeholder: d.secret ? (j?.secrets?.includes(d.key) ? '•••••• (gesetzt — leer lassen = behalten)' : 'geheim — bleibt beim Server') : '', style: 'width:100%' })
           paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label + (d.secret ? ' 🔒' : '')), inp)

@@ -310,7 +310,7 @@ function onDragOver(e, r) {
 async function onDrop(e, r) {
   if (!dragId.value && e.dataTransfer?.files?.length) {
     dropId.value = null; const f = e.dataTransfer.files[0]
-    if (!/\.json$/i.test(f.name)) { store.toast('Nur JSON-Dateien lassen sich auf den Baum ziehen (Tabellen: ⇩ Import → Tabelle)'); return }
+    if (!/\.json(\.gz)?$/i.test(f.name)) { store.toast('Nur JSON-Dateien lassen sich auf den Baum ziehen (Tabellen: ⇩ Import → Tabelle)'); return }
     if (r.role === 'variant') { store.toast('Ziel muss eine Gruppe oder ein Produkt sein'); return }
     store.pendingImport = { file: f, parent: r.id }; router.push('/p/json/import'); return
   }

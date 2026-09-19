@@ -1,8 +1,9 @@
 // Sicherung als Prozess (Plugin backup): holt GET /api/nodes/{id}/export (Rohdaten, mit Modellteil) und schreibt
 // <dir>/<label>-<id>-<zeitstempel>.json; ohne root alle Wurzeln. Behält je Wurzel die letzten <keep> Dateien.
-// Aufruf: node backup.js <journali> <actor> [root] [dir] [keep] — der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
-const fs = require('fs'); const path = require('path')
-const [,, server, actor, rootArg, dirArg, keepArg] = process.argv
+// Aufruf: node backup.js <journali> <actor> [root] [dir] [keep] [gzip] — der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
+const fs = require('fs'); const path = require('path'); const zlib = require('zlib')
+const [,, server, actor, rootArg, dirArg, keepArg, gzArg] = process.argv
+const gz = (gzArg ?? 'true') !== 'false' && gzArg !== '0' && gzArg !== 'off'   // gzip (Taloan: mit Kompression) — .json.gz, der JSON-Import liest es direkt
 if (!server) { console.error('journali-Adresse fehlt'); process.exit(2) }
 const dir = path.resolve(dirArg || 'backup'); const keep = Math.max(1, parseInt(keepArg || '14', 10) || 14)
 const headers = { 'X-Actor': actor || 'job:backup' }
@@ -19,12 +20,13 @@ async function get(p) { const r = await fetch(server + p, { headers }); if (!r.o
     const raw = await get(`/api/nodes/${encodeURIComponent(r.id)}/export?deep=true`)
     const count = (n => { let c = 1; for (const k of n.children ?? []) c += count(k); return c })(raw.node)
     const safe = String(r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
-    const file = path.join(dir, `${safe}-${r.id}-${stamp}.json`)
-    fs.writeFileSync(file, JSON.stringify(raw, null, 1))
+    const file = path.join(dir, `${safe}-${r.id}-${stamp}.json${gz ? '.gz' : ''}`)
+    const text = JSON.stringify(raw, null, 1)
+    fs.writeFileSync(file, gz ? zlib.gzipSync(text, { level: 9 }) : text)
     total += count
-    console.log(`${file}: ${count} Knoten, ${raw.model.attributes.length} Attribute, ${(fs.statSync(file).size / 1024).toFixed(0)} KB`)
+    console.log(`${file}: ${count} Knoten, ${raw.model.attributes.length} Attribute, ${(fs.statSync(file).size / 1024).toFixed(0)} KB${gz ? ` (roh ${(text.length / 1024).toFixed(0)} KB)` : ''}`)
     // alte Stände dieser Wurzel wegräumen
-    const old = fs.readdirSync(dir).filter(f => f.includes(`-${r.id}-`) && f.endsWith('.json')).sort()
+    const old = fs.readdirSync(dir).filter(f => f.includes(`-${r.id}-`) && (f.endsWith('.json') || f.endsWith('.json.gz'))).sort()
     for (const f of old.slice(0, Math.max(0, old.length - keep))) { fs.unlinkSync(path.join(dir, f)); console.log(`alt entfernt: ${f}`) }
   }
   console.log(`✓ ${roots.length} Wurzel${roots.length > 1 ? 'n' : ''}, ${total} Knoten gesichert nach ${dir}`)
