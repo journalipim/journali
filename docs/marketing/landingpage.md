@@ -48,7 +48,7 @@ journali ist ein PIM-System, in dem jede Änderung ein Eintrag im Journal ist �
 
 ---
 
-### H2: Das Problem, das jedes PIM hat
+### H2: journali löst ein Problem, das fast alle anderen PIM-Systeme haben
 
 Produktdaten ändern sich täglich: Importe aus dem ERP, Korrekturen von Kollegen, neue Bilder, neue Vorschriften. Klassische PIM-Systeme überschreiben. Wer wissen will, was vor drei Jahren galt, spielt eine Datensicherung ein — und hofft, dass die Programmversion noch passt.
 
