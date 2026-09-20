@@ -89,10 +89,10 @@ const byKey = (a, b) => a.key.localeCompare(b.key)
 const rows = computed(() => {
   const m = model.value; if (!m) return []
   switch (section.value) {
-    case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: g.label?.de, right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''], _: g })).sort(byKey)
-    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: a.label?.de, right: [TYPE_SYM[a.type] ?? a.type, a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan)
-    case 'lists': return m.lists.map(l => ({ key: l.key, label: l.label?.de, right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
-    case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: v.label?.de, right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
+    case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: anyLabel(g.label), right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''], _: g })).sort(byKey)
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan)
+    case 'lists': return m.lists.map(l => ({ key: l.key, label: anyLabel(l.label), right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
+    case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: anyLabel(v.label), right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
     // rechts nur, was eingeschränkt ist — keine Symbolketten (Taloan: „komische Zeichen“): „→ Medium“, „Produkt → Variante“, „⇄ beidseitig“, Gruppe mit Label
     case 'relationTypes': return (m.relationTypes ?? []).map(r => {
@@ -118,7 +118,9 @@ function passes(r) {
   }
   return true
 }
-const shown = computed(() => { const f = filter.value.trim().toLowerCase(); return rows.value.filter(r => passes(r) && (!f || r.key.includes(f) || (r.label ?? '').toLowerCase().includes(f))) })
+// Anzeigename: Sprache der Sicht, sonst Master, de, en, irgendeine — nie leer, solange es einen Namen gibt
+const anyLabel = l => typeof l === 'string' ? l : (l?.[store.viewLocales?.[0]] || l?.[model.value?.masterLocale] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || null)
+const shown = computed(() => { const f = filter.value.trim().toLowerCase(); return rows.value.filter(r => passes(r) && (!f || r.key.includes(f) || (r.label ?? '').toLowerCase().includes(f) || Object.values(r._?.label ?? {}).some(x => String(x).toLowerCase().includes(f)))) })
 const filtered = computed(() => Object.entries(flt.value).some(([, v]) => v !== '' && v !== false))
 const quantities = computed(() => [...new Set((model.value?.units ?? []).map(u => u.quantity))].sort())
 function pick(e, r) {

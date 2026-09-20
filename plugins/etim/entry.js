@@ -64,7 +64,8 @@ function modelOps(ctx) {
   const model = () => store.model
   const locale = model().masterLocale ?? 'de'
   const hasAttr = key => model().attributes.some(a => a.key === key)
-  const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!Object.keys(out).length) out[locale] = nameOf(names, locale); return out }
+  // Bezeichnung je Sprache des Modells; fehlt die Mastersprache (ETIM International: nur Englisch), steht dort der englische Name — sonst zeigt die Oberfläche den Schlüssel
+  const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!out[locale]) out[locale] = nameOf(names, locale); return out }
   const put = (path, body) => api.post('/api/model' + path, body, 'PUT')
   async function ensureGroup() { const g = groupKey(); if (!(model().groups ?? []).some(x => x.key === g)) await put(`/groups/${g}`, { key: g, label: { de: g === 'etim' ? 'ETIM' : g, en: g === 'etim' ? 'ETIM' : g }, activeFrom: 'product' }) }
   async function ensureClassAttr() {
@@ -82,7 +83,8 @@ function modelOps(ctx) {
     let i = 0
     if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: groupKey(), inheritable: true })
     // Merkmal-Attribute ohne Bedingung (aus früheren Läufen) bekommen sie nachgetragen — sonst gälten sie an jedem Knoten
-    for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && !a.when)) { const w = { attribute: key, values: [...cache.classes.values()].filter(c => c.features.some(x => x.code === a.key.toUpperCase())).map(c => c.code) }; if (w.values.length) await put(`/attributes/${a.key}`, { ...a, when: w }) }
+    for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && !a.label?.[locale] && Object.keys(a.label ?? {}).length)) await put(`/attributes/${a.key}`, { ...a, label: { ...a.label, [locale]: nameOf(a.label, locale) } })
+    for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && (!a.when || !a.inheritable))) { const w = a.when ?? { attribute: key, values: [...cache.classes.values()].filter(c => c.features.some(x => x.code === a.key.toUpperCase())).map(c => c.code) }; if (w.values.length) await put(`/attributes/${a.key}`, { ...a, when: w, inheritable: true }) }
     return key
   }
   async function unitKeyFor(u) {
@@ -99,8 +101,8 @@ function modelOps(ctx) {
   async function createFeature(f) {
     await ensureGroup()
     const key = f.code.toLowerCase()
-    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code); if (a.group === groupKey() && JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values)) await put(`/attributes/${key}`, { ...a, when: w }); return key }
-    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code) }
+    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code); if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable)) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true }); return key }
+    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true }
     if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
     else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })

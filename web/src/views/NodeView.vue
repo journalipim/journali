@@ -227,7 +227,7 @@ function enabled(def, col, block) {
     && (!col.channel || !def.channels || def.channels.includes(col.channel))
 }
 function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
-function listLabel(def) { const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []; return v => vals.find(x => x.value === v)?.label?.de || v }
+function listLabel(def) { const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []; const first = store.viewLocales?.[0]; return v => { const l = vals.find(x => x.value === v)?.label; return l?.[first] || l?.[master.value] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || v } }
 // Gruppe eines Listenwerts (Spalte „group“ der Werteliste, z. B. ETIM-Klassengruppe) — zum Blättern in grossen Listen
 function listGroup(def) { const list = model.value.lists.find(l => l.key === def.list); if (!(list?.columns ?? []).includes('group')) return null; const vals = list.values ?? []; return v => vals.find(x => x.value === v)?.extra?.group ?? null }
 function released(channel, locale) { return node.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }

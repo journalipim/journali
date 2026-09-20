@@ -429,7 +429,7 @@ onMounted(() => { document.addEventListener('paste', onPaste); document.addEvent
 onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouseDown, true); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); window.removeEventListener('pagehide', onPageHide) })
 
 const listOf = c => model.value?.lists?.find(l => l.key === c.list)
-const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v); return lv?.label?.[locale.value] || lv?.label?.de || v }
+const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)?.label; return l?.[locale.value] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || v }
 </script>
 
 <template>
