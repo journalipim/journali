@@ -48,11 +48,13 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
   const scopeAttr = catalog.groups.some(g => g.scope) ? `${catalog.key}_scope` : null
   const keys = [...new Set([...Object.values(mapping).map(m => m.to).filter(Boolean), ...(scopeAttr && model.attributes.some(a => a.key === scopeAttr) ? [scopeAttr] : [])])]
   say('lese …')
-  const t = await api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&locale=${locale}${keys.length ? '&attributes=' + encodeURIComponent(keys.join(',')) : ''}`)
+  const t = await api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&self=true&locale=${locale}${keys.length ? '&attributes=' + encodeURIComponent(keys.join(',')) : ''}`)
   const root = t.node
-  const rows = [root ? { row: root, values: {} } : null, ...t.rows].filter(Boolean)
-  // Werte der Wurzel selbst (table liefert nur Nachfahren)
-  if (root) { try { const n = await api.get(`/api/nodes/${encodeURIComponent(rootId)}`); const own = new Map(n.values.map(v => [`${v.attribute}|${v.locale ?? ''}`, v.value])); for (const k of keys) { const v = own.get(`${k}|${locale}`) ?? own.get(`${k}|`) ?? null; if (v != null) rows[0].values[k] = { value: v, own: true } } } catch {} }
+  // Wurzel als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt (Taloan, 21.09.: Geltung am Vater, Prüfung am Kind sagte „gilt hier nicht“).
+  // Älterer Server ohne self: wie bisher nur die eigenen Werte der Wurzel
+  const selfRow = root ? t.rows.find(r => r.row.id === root.id) : null
+  const rows = [root && !selfRow ? { row: root, values: {} } : null, ...t.rows].filter(Boolean)
+  if (root && !selfRow) { try { const n = await api.get(`/api/nodes/${encodeURIComponent(rootId)}`); const own = new Map(n.values.map(v => [`${v.attribute}|${v.locale ?? ''}`, v.value])); for (const k of keys) { const v = own.get(`${k}|${locale}`) ?? own.get(`${k}|`) ?? null; if (v != null) rows[0].values[k] = { value: v, own: true } } } catch {} }
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))
   const result = { nodes: [], items, byItem: new Map(), unmapped: items.filter(it => !mapping[it.key]?.to), locale }
@@ -219,7 +221,7 @@ async function suggestScopes(catalog, rootRow, scopes, have) {
 async function pickLevel(row, title, { attr = null, wanted = null } = {}) {
   const chain = [...tree.ancestors(row.id), row]
   const vals = new Map()
-  if (attr && store.model.attributes.some(a => a.key === attr)) { try { const t = await api.get(`/api/nodes/${encodeURIComponent(chain[0].id)}/table?deep=true&attributes=${encodeURIComponent(attr)}`); for (const r of t.rows ?? []) vals.set(r.row.id, String(r.values?.[attr]?.value ?? '')) } catch { } }
+  if (attr && store.model.attributes.some(a => a.key === attr)) { try { const t = await api.get(`/api/nodes/${encodeURIComponent(chain[0].id)}/table?deep=true&self=true&attributes=${encodeURIComponent(attr)}`); for (const r of t.rows ?? []) vals.set(r.row.id, String(r.values?.[attr]?.value ?? '')) } catch { } }
   const under = id => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(id); return out }
   const conflicts = v => { if (!wanted) return false; const list = v.split(',').map(s => s.trim()).filter(Boolean); return list.length > 0 && !list.includes(wanted) }
   const out = chain.map(n => { const ns = n.role === 'group' ? under(n.id) : [n, ...under(n.id)]; return { node: n, products: ns.filter(x => x.role === 'product').length || ns.length, groups: n.role === 'group' ? tree.kids(n.id).filter(k => k.role === 'group').length : 0, other: ns.filter(x => conflicts(vals.get(x.id) ?? '')).length } })

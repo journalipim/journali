@@ -25,11 +25,14 @@ public static class TreeApi
         // Nachfahren — als Zeilen, die Attribute als Spalten, Werte wie in der Knotenansicht aufgelöst (geerbt zählt,
         // own sagt, ob der Wert am Knoten selbst steht). role filtert die Zeilen; attributes (a,b,c) die Spalten,
         // sonst alle Attribute, die an der Rolle der Zeilen gelten. locale/channel = die Achse; ohne = Grundwert.
-        api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false) =>
+        // self: der Knoten selbst als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt (Taloan, 21.09.: Geltung am Vater gesetzt,
+        // Prüfung am Kind sah „gilt hier nicht“, weil das Kind nur seine eigenen Werte las)
+        api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false, bool self = false) =>
             c.With((model, tree, _) =>
             {
                 if (!tree.Nodes.TryGetValue(id, out var root)) return Results.NotFound();
                 var nodes = (deep ? tree.DescendantsDeepestFirst(id).Reverse() : tree.Children(id)).Where(n => role is null || n.Role == role).ToList();
+                if (self) nodes.Insert(0, root);
                 var wanted = attributes?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
                 var cols = wanted is { Length: > 0 }
                     ? wanted.Distinct().Select(k => model.Attributes.GetValueOrDefault(k)).Where(a => a is not null).Select(a => a!).ToList()
