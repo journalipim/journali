@@ -33,7 +33,7 @@ export function guessMapping(catalog, model) {
       }
     }
     if (best && score >= 0.8 && (!it.type || !best.type || sameKind(it.type, best.type))) out[it.key] = { to: best.key, why, sure: score === 1 }
-    else out[it.key] = { to: '', why: best && score >= 0.6 ? `vielleicht ${best.key} (${Math.round(score * 100)} %)` : 'kein Attribut', sure: false }
+    else out[it.key] = { to: '', why: 'kein Attribut', sure: false }
   }
   return out
 }
@@ -165,6 +165,7 @@ export async function mount(root, ctx, catalog) {
   const model = store.model
   const st = { root: localStorage.getItem(`journali.cmp.${catalog.key}.root`) || tree.rows.find(r => !r.parent)?.id, mapping: null, res: null, sugg: [], filter: 'all', picked: new Set(), levels: new Set(['must', 'should', 'may']), only: 'all' }
   const saved = await ctx.data.get('mapping')
+  const savedGroup = await ctx.data.get('group').catch(() => null); if (typeof savedGroup === 'string' && savedGroup) catalog.groupKey = savedGroup
   st.mapping = guessMapping(catalog, model)
   if (saved) for (const [k, v] of Object.entries(saved)) if (v?.to && model.attributes.some(a => a.key === v.to) && !st.mapping[k]?.fixed) st.mapping[k] = { ...v, why: 'gemerkt', sure: true }
   const remember = () => ctx.data.set('mapping', st.mapping).catch(() => {})
@@ -188,7 +189,7 @@ export async function mount(root, ctx, catalog) {
     if (catalog.autoCreate) return   // das Modell pflegt der Katalog selbst — nichts für den Anwender
     const n = catalog.groups.reduce((k, g) => k + g.items.length, 0), mapped = Object.values(st.mapping).filter(m => m.to).length
     const openMissing = catalog.groups.flatMap(g => g.items).filter(it => !st.mapping[it.key]?.to && st.levels.has(it.level)).length
-    st.mapOpen ??= openMissing > 0   // alles zugeordnet → zu; erst aufklappen, wenn man die Zuordnung ändern will
+    st.mapOpen ??= false   // zu — zuordnen und anlegen geht im Ergebnis, Zeile für Zeile; hier nur die ganze Liste zum Nachsehen
     const b1 = band(`${st.mapOpen ? '▾' : '▸'} 3 · Modell: Datenpunkte → Attribute · ${mapped} von ${n} zugeordnet${!st.mapOpen && openMissing ? ` · ${openMissing} ohne Attribut` : ''}`)
     b1.style.cursor = 'pointer'; b1.title = st.mapOpen ? 'zuklappen' : 'aufklappen — welches Attribut im Modell den Datenpunkt trägt: ändern, fehlende anlegen; danach erneut prüfen'
     b1.addEventListener('click', () => { st.mapOpen = !st.mapOpen; drawMapping() })
@@ -230,13 +231,6 @@ export async function mount(root, ctx, catalog) {
     s1.append(tbl)
     const missing = all.filter(it => !st.mapping[it.key]?.to && st.levels.has(it.level))
     const bar = el('div', { class: 'chips', style: 'margin-top:6px' })
-    if (missing.length) bar.append(el('button', { class: 'primary', onclick: async () => {
-      const ok = await dialog.confirm({ title: `${missing.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“ mit ${missing.length} neuen Attributen im Modell`, list: missing.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.type ?? 'text'}${it.unit ? ' ' + it.unit : ''} — ${it.label}`), text: 'Die Gruppe muss danach an den Knoten hängen, an denen sie gelten soll (Attributgruppen NEU ab diesem Knoten).', ok: 'Anlegen' })
-      if (!ok) return
-      say('lege an …'); try { await createAttributes(catalog, missing, st.mapping); await remember(); store.toast(`✓ ${missing.length} Attribute in ${catalog.groupKey}`); say('') } catch (e) { store.toast(e.message); say('✗ ' + e.message) }
-      st.dirty = !!st.res; drawMapping(); drawResult()
-    } }, `+ ${missing.length} fehlende Attribute anlegen (Gruppe ${catalog.groupKey}${st.levels.size < 3 ? ', nur ' + [...st.levels].map(l => ({ must: 'Pflicht', should: 'empfohlen', may: 'optional' })[l]).join('/') : ''})`))
-    bar.append(el('button', { onclick: () => { st.mapping = guessMapping(catalog, model); remember(); st.dirty = !!st.res; drawMapping(); drawResult() }, title: 'Zuordnung neu raten' }, '↻ Best Guess'))
     if (st.dirty) bar.append(el('button', { class: 'primary', onclick: run, title: 'Zuordnung geändert — den Teilbaum mit der neuen Zuordnung prüfen' }, '↻ erneut prüfen'))
     s1.append(bar)
   }
@@ -285,12 +279,17 @@ export async function mount(root, ctx, catalog) {
       const sel = el('select', { style: 'max-width:220px;color:var(--warn)' }, el('option', { value: '' }, 'zuordnen …'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
       sel.addEventListener('change', () => { if (!sel.value) return; st.mapping[it.key] = { to: sel.value, why: 'gewählt', sure: true }; remember(); st.dirty = true; drawMapping(); drawResult() })
       const mk = el('button', { class: 'x', title: `Attribut ${(catalog.prefix ?? '') + it.key} in Gruppe ${catalog.groupKey} anlegen`, onclick: async () => { say('lege an …'); try { await createAttributes(catalog, [it], st.mapping); await remember(); say(''); st.dirty = true; drawMapping(); drawResult() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, '+ anlegen')
+      mk.textContent = `+ anlegen in ${catalog.groupKey}`
       return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
     }
     const unm = r.items.filter(it => !st.mapping[it.key]?.to && !hidden.includes(it))
     for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (hidden.length) sb.append(el('tr', {}, el('td', { class: 'muted', colspan: '5' }, `… ${hidden.length} weitere Datenpunkte gelten an keinem der ${r.nodes.length} Knoten (andere Klasse oder Rolle)`)))
-    if (unm.length > 1) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); st.dirty = true; drawMapping(); drawResult() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`)))
+    // Gruppe fürs Anlegen: wählbar (vorhandene oder neuer Schlüssel), je Katalog gemerkt — steht am Knopf und in jeder Zeile
+    const grpSel = el('select', { title: 'Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu' }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${(model.groups ?? []).find(g => g.key === k)?.label?.de || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, '+ neue Gruppe …'))
+    grpSel.value = catalog.groupKey
+    grpSel.addEventListener('change', async () => { let k = grpSel.value; if (k === '__new__') { k = await dialog.prompt({ title: 'Neue Attributgruppe', value: '', placeholder: 'Schlüssel — a-z, 0-9, _', ok: '+ Gruppe' }); k = (k ?? '').trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_'); if (!k) { grpSel.value = catalog.groupKey; return } } catalog.groupKey = k; await ctx.data.set('group', k).catch(() => {}); drawResult(); drawMapping() })
+    if (unm.length) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); st.dirty = true; drawMapping(); drawResult() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`), el('span', { class: 'muted' }, 'in Gruppe'), grpSel))
     if (catalog.summary) { const s = catalog.summary(r, st.mapping, ctx); if (s) s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, s)) }
     if (r.inactiveGroups?.size) {
       const groups = [...r.inactiveGroups]; const rootRow = tree.byId.get(st.root)

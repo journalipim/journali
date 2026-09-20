@@ -30,7 +30,7 @@ async function loadUsed() {
 const usedClasses = () => { const out = [...cache.used].map(c => cache.classes.get(c)).filter(Boolean); return out.length || cache.classes.size > 50 ? out : [...cache.classes.values()] }
 const classKeyOf = code => `class:${cache.version ?? '0'}:${code}`
 /// Attribut eines Merkmals: Zuordnung (map), sonst die der Datenanalyse (mapping), sonst das eigene ef…
-const attrKeyOf = code => cache.map[code] ?? cache.mapping?.[code.toLowerCase()]?.to ?? code.toLowerCase()
+const attrKeyOf = code => { const m = cache.mapping?.[code.toLowerCase()]; return cache.map[code] ?? (m?.to && !/ähnlich|vielleicht/.test(m.why ?? '') ? m.to : null) ?? code.toLowerCase() }
 const mergedMap = () => { const m = {}; for (const [k, v] of Object.entries(cache.mapping ?? {})) if (v?.to) m[k.toUpperCase()] = v.to; return { ...m, ...cache.map } }
 async function loadCache() {
   try {
@@ -231,16 +231,61 @@ async function classDialog(nodeId, ctx) {
       let n = 0
       for (const f of c.features) { if (!ops.hasAttr(attrKeyOf(f.code))) { say(`lege an ${++n}: ${featureText(f, locale)} …`); await ops.createFeature(f); await store.poll(true) } else await ops.createFeature(f) }
       await store.poll(true); await tree.load()
-      // Schritt 3: fertig
-      body.innerHTML = ''
-      body.append(el('div', { style: 'font-size:14px;margin:6px 0' }, `✓ ${code} ${nameOf(c.name, locale)} an ${row.label}`),
-        el('div', { class: 'muted', style: 'margin-bottom:10px' }, `${c.features.length} Merkmale gelten jetzt hier${n ? `, ${n} Attribute neu angelegt` : ''}. Werte füllen:`),
-        el('div', { class: 'chips' },
-          el('button', { class: 'primary', onclick: () => { close(); ctx.go?.(`/tree/${nodeId}`) } }, `${ICON[row.role] ?? ''} am Knoten`),
-          el('button', { onclick: () => { close(); localStorage.setItem('journali.cmp.etim.root', nodeId); ctx.go?.('/p/etim/coverage?run=1') } }, '✓ in der Prüfung (alle darunter)'),
-          el('button', { onclick: () => close() }, 'schliessen')))
       say('')
+      checkStep(code)
     })
+  }
+
+  // Schritt 3: die Merkmale der Klasse prüfen — Zeilen: der Knoten und alles darunter, das diese Klasse trägt (Produkt, Varianten);
+  // Spalten: die Merkmale; Zelle: Wert (grün), leer (Eingabe), ✗ passt nicht. Eingabe schreibt sofort. Schritt 4 darüber: n von m.
+  async function checkStep(code) {
+    const c = cache.classes.get(code); if (!c) return
+    body.innerHTML = ''; say('lese …')
+    const feats = c.features.map(f => ({ f, key: attrKeyOf(f.code), def: model().attributes.find(a => a.key === attrKeyOf(f.code)) }))
+    const keys = [...new Set([key, ...feats.map(x => x.key)])].join(',')
+    const tbl = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?deep=true&attributes=${encodeURIComponent(keys)}`)
+    // Zeilen: der Knoten selbst (wenn Produkt/Variante) und alles darunter mit dieser Klasse
+    let rows = (tbl.rows ?? []).filter(r => String(r.values?.[key]?.value ?? '').toUpperCase() === code && r.row.role !== 'group')
+    if (row.role !== 'group' && row.parent) { const sib = await api.get(`/api/nodes/${encodeURIComponent(row.parent)}/table?attributes=${encodeURIComponent(keys)}`).catch(() => null); const me = sib?.rows?.find(r => r.row.id === nodeId); if (me && !rows.some(r => r.row.id === nodeId)) rows.unshift(me) }
+    if (row.role !== 'group') rows = rows.filter(r => r.row.id === nodeId || r.row.role === 'variant')   // am Produkt: es selbst und seine Varianten
+    const state = new Map()   // `${nodeId}|${attr}` → 'ok' | 'empty' | 'bad'
+    const listOf = def => (model().lists ?? []).find(l => l.key === def?.list)?.values ?? []
+    const judge = (x, v) => { if (v == null || String(v).trim() === '') return 'empty'; return resolveValue(x.f, v) === null ? 'bad' : 'ok' }
+    for (const r of rows) for (const x of feats) state.set(`${r.row.id}|${x.key}`, judge(x, r.values?.[x.key]?.value))
+    const head = el('div', { style: 'display:flex;gap:10px;align-items:baseline;margin:4px 0 8px' })
+    const summary = el('b')
+    const refresh = () => { const all = [...state.values()]; const ok = all.filter(s => s === 'ok').length, bad = all.filter(s => s === 'bad').length; summary.textContent = `${ok} von ${all.length} Merkmalen gefüllt${bad ? ` · ${bad} passen nicht` : ''}`; summary.className = ok === all.length && !bad ? 'pos' : bad ? 'neg' : 'warn' }
+    refresh()
+    head.append(el('span', {}, `${code} ${nameOf(c.name, locale)} · ${rows.length} Knoten × ${feats.length} Merkmale`), summary, el('span', { class: 'grow' }), el('button', { onclick: () => draw() }, '‹ Klasse'), el('button', { class: 'primary', onclick: () => close() }, 'fertig'))
+    body.append(head)
+    if (!rows.length) { body.append(el('div', { class: 'empty' }, 'kein Knoten mit dieser Klasse darunter')); say(''); return }
+    // Tabelle: Merkmale als Zeilen (35 Zeilen liest sich besser als 35 Spalten), Knoten als Spalten
+    const grid = el('table', { class: 'grid', style: 'width:100%' })
+    grid.append(el('thead', {}, el('tr', {}, el('th', { style: 'width:280px' }, 'Merkmal'), ...rows.map(r => el('th', { title: r.row.id, style: 'min-width:160px' }, `${ICON[r.row.role] ?? ''} ${r.row.label}`)))))
+    const tb = el('tbody'); grid.append(tb)
+    const write = async (r, x, v) => {
+      try { await api.post(`/api/nodes/${encodeURIComponent(r.row.id)}/attributes`, { attribute: x.key, locale: null, channel: null, value: v === '' ? null : v, row: null }); state.set(`${r.row.id}|${x.key}`, judge(x, v)); refresh(); return true }
+      catch (e) { store.toast(e.message); return false }
+    }
+    const cell = (r, x) => {
+      const cur = r.values?.[x.key]?.value ?? ''; const inherited = cur && !r.values?.[x.key]?.own
+      const td = el('td', { class: 'cell', style: 'padding:1px 3px' })
+      const paint = () => { const s = state.get(`${r.row.id}|${x.key}`); td.style.boxShadow = s === 'ok' ? 'inset 3px 0 0 var(--pos)' : s === 'bad' ? 'inset 3px 0 0 var(--neg)' : 'inset 3px 0 0 var(--line)' }
+      if (!x.def) { td.append(el('span', { class: 'muted' }, 'kein Attribut')); return td }
+      let inp
+      if (x.f.type === 'Logical') {
+        inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, '—'), el('option', { value: 'true' }, 'ja'), el('option', { value: 'false' }, 'nein'))
+      } else if (x.f.type === 'Alphanumeric') {
+        inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, '—'), ...listOf(x.def).map(v => el('option', { value: v.value }, `${nameOf(v.label, locale) || v.value}`)))
+      } else {
+        inp = el('input', { style: 'width:100%', placeholder: x.f.type === 'Range' ? 'von - bis' : (x.f.unit ? nameOf(x.f.unit.abbr, locale) || x.f.unit.code : '') })
+      }
+      inp.value = cur; if (inherited) { inp.style.fontStyle = 'italic'; inp.title = 'geerbt' }
+      inp.addEventListener('change', async () => { if (await write(r, x, inp.value.trim())) { inp.style.fontStyle = ''; paint() } })
+      td.append(inp); paint(); return td
+    }
+    for (const x of feats) tb.append(el('tr', {}, el('td', { class: 'attr', title: `${x.f.code} · ${TYPE[x.f.type] ?? x.f.type}` }, featureText(x.f, locale)), ...rows.map(r => cell(r, x))))
+    body.append(grid); say('')
   }
   const line = (code, why) => { const c = cache.classes.get(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, 'nicht in der Bibliothek'), el('span', { class: 'muted', style: 'font-size:11px' }, why ? ' · ' + why : ''), c ? el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale`) : null), c && code !== current ? el('button', { class: 'primary', onclick: () => assign(code) }, '⇢ zuweisen') : null) }
 
@@ -263,7 +308,7 @@ async function classDialog(nodeId, ctx) {
     body.append(current
       ? el('div', { style: 'margin-bottom:8px' }, el('div', { class: 'muted', style: 'font-size:12px' }, ownCode ? 'Klasse an diesem Knoten' : `Klasse geerbt von ${inherited.from}`), line(current, ownCode ? '' : 'geerbt'),
           el('div', { class: 'chips', style: 'margin-top:6px' },
-            el('button', { class: 'primary', title: 'Merkmale der Klasse prüfen und füllen — fehlende Attribute entstehen dabei', onclick: () => { close(); localStorage.setItem('journali.cmp.etim.root', nodeId); ctx.go?.('/p/etim/coverage?run=1') } }, '✓ Merkmale prüfen und füllen'),
+            el('button', { class: 'primary', title: 'Merkmale der Klasse prüfen und füllen — fehlende Attribute entstehen dabei', onclick: () => run('bereite vor …', async () => { const c = cache.classes.get(current); for (const f of c.features) await ops.createFeature(f); await store.poll(true); await checkStep(current) }) }, '✓ Merkmale prüfen und füllen'),
             el('button', { onclick: () => { close(); ctx.go?.(`/tree/${nodeId}`) } }, `${ICON[row.role] ?? ''} Werte am Knoten`),
             el('span', { class: 'muted', style: 'font-size:12px' }, 'andere Klasse: unten wählen')))
       : el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Noch keine Klasse — wählen:'))
