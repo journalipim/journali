@@ -12,7 +12,6 @@ import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
 import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
-import TreePicker from '../components/TreePicker.vue'
 import { paneWidth } from '../panes.js'
 const pubW = paneWidth('pub', 340)
 const srcW = paneWidth('pubsrc', 300)
