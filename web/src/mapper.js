@@ -229,7 +229,8 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       if (r !== 'variant' && parent.role !== 'group') { stats.problems.push(`Zeile ${ri + 2}: ${r} braucht eine Gruppe als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
       // Pflicht beim Anlegen: was die Rolle verlangt, muss die Zeile mitbringen (Achsen prüft der Variantenzweig)
       const miss = requiredFor(r).filter(a => !(parent.axes ?? []).includes(a.key) && !mapping.some((m, ci) => (m.target === 'attr' && m.attribute === a.key) && convert(cell(row, ci), a, model) != null)).map(a => a.key)
-      if (miss.length) { stats.problems.push(`Zeile ${ri + 2}: Pflicht fehlt — ${miss.join(', ')}`); stats.skipped++; return }
+      // die Meldung nennt die Spalte der Datei, nicht nur das Attribut (Taloan, 20.09.: „ich habe keine Spalte name in der Excel“ — es war name_de)
+      if (miss.length) { const colOf = k => { const cs = mapping.filter(m => m.target === 'attr' && m.attribute === k).map(m => m.column); return cs.length ? `${k} (Spalte ${cs.join(' / ')} leer)` : `${k} (keine Spalte zugeordnet)` }; stats.problems.push(`Zeile ${ri + 2}: Pflicht fehlt — ${miss.map(colOf).join(', ')}`); stats.skipped++; return }
       ref = `r${ri}`
       if (r === 'variant') {
         const axisValues = {}
