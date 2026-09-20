@@ -21,7 +21,13 @@ var connection = new NpgsqlConnectionStringBuilder(
 if (builder.Configuration["JOURNALI_DB_PASSWORD"] is { Length: > 0 } password)
     connection.Password = password;
 
-PostgresJournal.EnsureDatabase(connection.ConnectionString);
+// Datenbank nicht erreichbar: ein Satz mit Host und Port statt Stacktrace, Ende mit Fehlercode (Taloan, 21.09.)
+try { PostgresJournal.EnsureDatabase(connection.ConnectionString); }
+catch (NpgsqlException e) when (e.InnerException is System.Net.Sockets.SocketException || e.IsTransient)
+{
+    Console.Error.WriteLine($"journali: Datenbank {connection.Host}:{connection.Port} nicht erreichbar — läuft Postgres? ({e.InnerException?.Message ?? e.Message}; docs/betrieb.md)");
+    return 1;
+}
 var db = NpgsqlDataSource.Create(connection.ConnectionString);
 var journal = new PostgresJournal(db);
 journal.EnsureSchema();
@@ -177,6 +183,7 @@ app.UseStaticFiles(staticOptions);
 app.MapFallbackToFile("index.html", staticOptions);
 
 app.Run();
+return 0;
 
 /// <summary>Rumpf von POST /api/journal. Payload ist beliebiges JSON, die Form hängt von Type ab.</summary>
 sealed record AppendRequest(string Actor, string Stream, string Type, JsonElement Payload);

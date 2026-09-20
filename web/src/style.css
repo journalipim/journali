@@ -194,6 +194,7 @@ button {
 }
 button:hover { background: var(--bg); }
 button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.primary .muted, button.primary .warn, button.primary .neg { color: inherit; opacity: .85; }   /* Zahlen auf dem blauen Knopf lesbar (Ebenen-Chips) */
 button:disabled { opacity: .5; cursor: default; }
 kbd {
   font: 11px var(--mono);
