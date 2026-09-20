@@ -446,7 +446,7 @@ export async function mount(root, ctx, catalog) {
       return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
     }
     const unm = r.items.filter(it => !st.mapping[it.key]?.to && !hidden.includes(it))
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), style: c.empty ? 'cursor:pointer;text-decoration:underline dotted' : '', onclick: c.empty ? () => fillList(it) : null, title: c.empty ? `${c.empty} leer — Klick: Knoten für Knoten eintragen oder „angefragt bei …“` + (c.inactive ? ` · ${c.inactive} ohne gültiges Attribut` : '') : c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), style: c.empty || c.pending ? 'cursor:pointer;text-decoration:underline dotted' : '', onclick: c.empty || c.pending ? () => fillList(it) : null, title: c.empty ? `${c.empty} leer — Klick: Knoten für Knoten eintragen oder „angefragt bei …“` + (c.inactive ? ` · ${c.inactive} ohne gültiges Attribut` : '') : c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive), c.pending ? el('span', { class: 'warn', title: `${c.pending} angefragt (Wiedervorlage) — Klick zeigt bei wem und bis wann` }, ` ⏳${c.pending}`) : null), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (hidden.length) sb.append(el('tr', {}, el('td', { class: 'muted', colspan: '5' }, `… ${hidden.length} weitere Datenpunkte gelten an keinem der ${r.nodes.length} Knoten (andere Klasse oder Rolle)`)))
     // Gruppe fürs Anlegen: wählbar (vorhandene oder neuer Schlüssel), je Katalog gemerkt — steht am Knopf und in jeder Zeile
     const grpSel = el('select', { title: 'Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu' }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${(model.groups ?? []).find(g => g.key === k)?.label?.de || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, '+ neue Gruppe …'))
@@ -456,7 +456,7 @@ export async function mount(root, ctx, catalog) {
     if (scopes.length) {
       const scopeAttr = `${catalog.key}_scope`; const rootRow = tree.byId.get(st.root)
       const have = String(r.nodes.find(n => n.row.id === st.root)?.raw?.[scopeAttr] ?? '').split(',').map(s => s.trim()).filter(Boolean)
-      const line = el('div', { class: 'chips', style: 'margin:4px 0' }, el('span', { class: 'muted' }, `Geltung für ${rootRow?.label ?? ''}:`))
+      const line = el('div', { class: 'muted', style: 'margin:6px 0 0;font-size:12px' }, `Sonderregeln für ${rootRow?.label ?? ''} — je Zeile der Stand, der Grund, und ob etwas zu tun ist:`)
       const setScope = async (s, on) => {
         if (on === have.includes(s.key)) return
         try {
@@ -474,25 +474,28 @@ export async function mount(root, ctx, catalog) {
           await store.poll(true); await tree.load(); await run()
         } catch (e) { store.toast(e.message) }
       }
-      for (const s of scopes) { const on = have.includes(s.key); line.append(el('span', { class: 'grp', style: 'display:inline-flex;align-items:center;gap:4px;margin-right:12px', title: s.hint ?? '' }, el('span', {}, `${s.label}?`),
-        el('button', { class: on ? 'primary' : '', title: on ? 'gilt hier' : 'gilt hier setzen — ab welchem Knoten, fragt der nächste Schritt (vererbbar)', onclick: () => setScope(s, true) }, 'ja'),
-        el('button', { class: on ? '' : 'primary', title: on ? 'wegnehmen' : 'gilt hier nicht', onclick: () => setScope(s, false) }, 'nein'))) }
+      // Eine Zeile je Sonderregel, keine Frage, die schon beantwortet ist (Taloan, 21.09.: „was für eine Bedienung“):
+      //   Stand und Vorschlag einig → Aussage mit Grund und „ändern“ · uneinig → die Frage mit beiden Seiten · kein Vorschlag → ja/nein
       s3.append(line)
-      // „Was gilt für mich?“ (Taloan, 20.09.: „die wissen gerade noch, in welche Kategorie ihr Produkt gehört“): aus der ETIM-Klasse (Regeln
-      // des Katalogs) und der KI je Geltung ein Vorschlag mit Begründung — der Anwender bestätigt mit einem Klick
-      const sug = el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 6px' }); s3.append(sug)
-      suggestScopes(catalog, rootRow, scopes, have).then(list => {
-        sug.innerHTML = ''
-        if (!list) { sug.textContent = 'Vorschlag „was gilt für mich?“: erst die ETIM-Klasse setzen (Rechtsklick → ETIM prüfen) — oder KI-Schlüssel in ⚙ Einstellungen'; return }
-        sug.append(el('span', {}, `Vorschlag${list.ai ? ` (Regeln + KI, ${ai.label()})` : ' (Regeln aus der ETIM-Klasse)'}: `))
-        for (const s of list.items) {
-          const set = have.includes(s.key); const chip = scopes.find(x => x.key === s.key)
-          const span = el('span', { style: 'margin-right:10px' }, el('b', { class: s.applies ? (set ? 'pos' : 'warn') : (set ? 'warn' : '') }, `${chip?.label ?? s.key} — ${s.applies ? 'ja' : 'nein'}`), s.why ? ` (${s.why})` : '')
-          if (s.applies && !set) span.append(' ', el('button', { class: 'x', title: 'Geltung übernehmen — ab welchem Knoten, fragt der nächste Schritt (vererbbar)', onclick: () => setScope(chip, true) }, '→ ja'))
-          if (!s.applies && set) span.append(' ', el('span', { class: 'warn', title: 'gesetzt, aber laut Vorschlag nicht zutreffend — prüfen' }, '⚠ gesetzt'))
-          sug.append(span)
+      const rowsBox = el('div', { style: 'margin:2px 0 6px' }); s3.append(rowsBox)
+      const render = (list) => {
+        rowsBox.innerHTML = ''
+        for (const s of scopes) {
+          const on = have.includes(s.key); const sg = list?.items.find(x => x.key === s.key) ?? null
+          const why = sg?.why ? ` (${sg.why})` : ''
+          const row = el('div', { class: 'chips', style: 'margin:2px 0;font-size:12px', title: s.hint ?? '' })
+          if (sg && sg.applies === on) {
+            row.append(el('span', { class: on ? 'pos' : 'muted' }, `${s.label}: ${on ? 'gilt hier' : 'gilt hier nicht'}${why}`), el('button', { class: 'x', title: on ? 'wegnehmen' : 'doch setzen — ab welchem Knoten, fragt der nächste Schritt', onclick: () => setScope(s, !on) }, 'ändern'))
+          } else if (sg) {
+            row.append(el('span', { class: 'warn' }, `${s.label}: gesetzt „${on ? 'ja' : 'nein'}“, Vorschlag „${sg.applies ? 'ja' : 'nein'}“${why} —`), el('button', { class: 'primary', onclick: () => setScope(s, sg.applies) }, `→ ${sg.applies ? 'ja' : 'nein'} übernehmen`), el('button', { class: 'x', title: 'so lassen', onclick: () => row.remove() }, 'so lassen'))
+          } else {
+            row.append(el('span', {}, `${s.label}?`), el('button', { class: on ? 'primary' : '', onclick: () => setScope(s, true) }, 'ja'), el('button', { class: on ? '' : 'primary', onclick: () => setScope(s, false) }, 'nein'), el('span', { class: 'muted' }, list === null ? '— kein Vorschlag möglich: ETIM-Klasse setzen oder KI-Schlüssel (⚙ Einstellungen)' : ''))
+          }
+          rowsBox.append(row)
         }
-      }).catch(e => { sug.textContent = 'Vorschlag: ' + e.message })
+      }
+      render(undefined)
+      suggestScopes(catalog, rootRow, scopes, have).then(list => render(list)).catch(() => render(null))
     }
     const inactiveN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
     const emptyN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'empty').length, 0), badN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'bad').length, 0)
