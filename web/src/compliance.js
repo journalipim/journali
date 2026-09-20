@@ -225,7 +225,7 @@ async function pickLevel(row, title, { attr = null, wanted = null } = {}) {
   const out = chain.map(n => { const ns = n.role === 'group' ? under(n.id) : [n, ...under(n.id)]; return { node: n, products: ns.filter(x => x.role === 'product').length || ns.length, groups: n.role === 'group' ? tree.kids(n.id).filter(k => k.role === 'group').length : 0, other: ns.filter(x => conflicts(vals.get(x.id) ?? '')).length } })
   let rec = out.length - 1; for (let i = 0; i < out.length; i++) if (out[i].other === 0 && out[i].products > 0 && out[i].groups === 0) { rec = i; break }
   return new Promise(resolve => {
-    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:45' })
+    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:30' })
     const box = el('div', { style: 'width:min(640px,94vw);background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px' })
     let target = out[rec].node
     const note = el('div', { class: 'muted', style: 'font-size:12px;margin:4px 0 8px' })
@@ -242,7 +242,7 @@ async function pickLevel(row, title, { attr = null, wanted = null } = {}) {
 // Knoten wählen: kleiner Auswahlbaum als Fenster, Vorgabe vorbelegt — liefert die Zeile oder null
 function pickNode(preset, title) {
   return new Promise(resolve => {
-    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:45' })
+    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:30' })
     const box = el('div', { style: 'width:420px;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px' })
     let chosen = preset ?? null
     const host = el('div')
@@ -379,7 +379,7 @@ export async function mount(root, ctx, catalog) {
   function fillList(it) {
     const to = st.mapping[it.key]?.to; if (!to) return
     const nodes = st.res.nodes.filter(n => n.states[it.key] === 'empty' || n.states[it.key] === 'pending')
-    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:45' })
+    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:30' })   // unter dem Dialog (40), damit Rückfragen davor liegen
     const box = el('div', { style: 'width:min(640px,94vw);max-height:80vh;display:flex;flex-direction:column;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px' })
     const close = () => overlay.remove()
     overlay.addEventListener('mousedown', e => { if (e.target === overlay) close() })
@@ -395,12 +395,14 @@ export async function mount(root, ctx, catalog) {
       const write = async () => { const v = inp.value.trim(); if (!v) return; try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: null, channel: null, value: v, row: null }); state.textContent = '✓'; state.className = 'pos' } catch (e) { store.toast(e.message) } }
       inp.addEventListener('change', write); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); write() } })
       const state = el('span', { class: pend ? 'warn' : 'muted', style: 'width:120px;font-size:12px' }, pend ? `⏳ ${pend.source ?? 'angefragt'} · ${pend.checkedAt ?? ''}` : '')
-      const pendBtn = el('button', { class: 'x', title: 'weiss ich noch nicht — angefragt bei …, mit Wiedervorlage', onclick: async () => {
-        const who = await dialog.prompt({ title: 'Angefragt bei …', text: `${it.label} · ${n.row.label}`, value: pend?.source ?? '', ok: 'Weiter' }); if (who == null) return
-        const due = await dialog.prompt({ title: 'Wiedervorlage', text: 'Datum JJJJ-MM-TT', value: pend?.checkedAt ?? new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), ok: '⏳ angefragt' }); if (due == null) return
-        try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/sources`, { attribute: to, locale: null, channel: null, row: null, source: who.trim() || null, title: null, note: null, method: 'pending', checkedAt: due.trim() || null }); state.textContent = `⏳ ${who.trim() || 'angefragt'} · ${due.trim()}`; state.className = 'warn' } catch (e) { store.toast(e.message) }
-      } }, '⏳')
-      rows.append(el('div', { style: 'display:flex;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid var(--line)' }, el('span', { style: 'flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', title: n.row.id }, `${n.row.role === 'variant' ? '◆' : n.row.role === 'product' ? '▦' : '▣'} ${n.row.label}`), inp, pendBtn, state))
+      const who = el('input', { style: 'width:170px;display:none', placeholder: 'bei wem? (Lieferant, Abteilung, Person)', value: pend?.source ?? '' })
+      const due = el('input', { type: 'date', style: 'width:140px;display:none', title: 'Wiedervorlage — danach gilt es als überfällig', value: pend?.checkedAt ?? new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10) })
+      const ok = el('button', { class: 'primary', style: 'display:none', title: 'als angefragt merken', onclick: async () => {
+        try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/sources`, { attribute: to, locale: null, channel: null, row: null, source: who.value.trim() || null, title: null, note: null, method: 'pending', checkedAt: due.value || null }); state.textContent = `⏳ ${who.value.trim() || 'angefragt'} · ${due.value}`; state.className = 'warn'; for (const x of [who, due, ok]) x.style.display = 'none'; inp.style.display = '' } catch (e) { store.toast(e.message) }
+      } }, '✓')
+      const pendBtn = el('button', { class: 'x', title: 'weiss ich noch nicht — bei wem angefragt, bis wann (Wiedervorlage)', onclick: () => { const open = who.style.display === 'none'; for (const x of [who, due, ok]) x.style.display = open ? '' : 'none'; inp.style.display = open ? 'none' : ''; if (open) who.focus() } }, '⏳')
+      who.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ok.click() } })
+      rows.append(el('div', { style: 'display:flex;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid var(--line)' }, el('span', { style: 'flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', title: n.row.id }, `${n.row.role === 'variant' ? '◆' : n.row.role === 'product' ? '▦' : '▣'} ${n.row.label}`), inp, who, due, ok, pendBtn, state))
     }
     box.append(el('div', { class: 'chips', style: 'margin-bottom:6px' }, el('b', {}, `${it.label} · ${nodes.length} leer`), el('span', { class: 'grow' }), el('button', { class: 'x', onclick: () => explain(it) }, 'ⓘ'), el('button', { class: 'x', onclick: close }, '✕')),
       el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Wert eintragen (Enter schreibt sofort) — oder ⏳ „angefragt bei …“ mit Wiedervorlage'), rows,
