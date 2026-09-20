@@ -9,7 +9,7 @@ import AiBar from './AiBar.vue'
 const isUrl = s => /^https?:\/\//i.test(String(s ?? ''))
 const props = defineProps({
   value: String,          // eigener Wert auf dieser Achse (null = keiner)
-  inherited: String,      // was ohne eigenen Wert gilt (Rückfall)
+  inherited: String,      // was ohne eigenen Wert gilt (Fallback)
   disabled: Boolean,      // Achse gibt es für dieses Attribut nicht
   origin: String,         // woher der geerbte Wert kommt (Anzeige im Tooltip)
   mark: String,           // kleines Zeichen rechts in der Zelle (⟳ = Übersetzung zu überarbeiten)

@@ -52,7 +52,7 @@ public static partial class ModelApi
 
         m.MapPut("/locales/{code}", (string code, LocaleDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, code, ValidCode, (model, write) =>
-                body.Fallback is { } fb && (fb == code || !model.Locales.ContainsKey(fb)) ? Bad($"Rückfall {fb}: muss eine andere Sprache des Modells sein.")
+                body.Fallback is { } fb && (fb == code || !model.Locales.ContainsKey(fb)) ? Bad($"Fallback {fb}: muss eine andere Sprache des Modells sein.")
                 : write(Model.LocaleStream + code, Types.LocaleDefined, body with { Code = code })));
 
         m.MapPut("/relations/{key}", (string key, RelationTypeDefinition body, HttpRequest req, Catalog c) =>
@@ -111,7 +111,7 @@ public static partial class ModelApi
 
         m.MapPut("/channels/{key}", (string key, ChannelDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidCode, (model, write) =>
-                body.Fallback is { } fb && (fb == key || !model.Channels.ContainsKey(fb)) ? Bad($"Rückfall {fb}: muss ein anderer Kanal des Modells sein.")
+                body.Fallback is { } fb && (fb == key || !model.Channels.ContainsKey(fb)) ? Bad($"Fallback {fb}: muss ein anderer Kanal des Modells sein.")
                 : write(Model.ChannelStream + key, Types.ChannelDefined, body with { Key = key, Label = body.Label ?? new() })));
 
         // Kanal zurückziehen: kein Attribut darf ihn nennen (channels, required)

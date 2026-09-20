@@ -632,7 +632,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>
-          <tr><td class="attr" title="Sprache, deren Wert gilt, wenn diese keinen hat — vor der Mastersprache (fr-ch → fr-fr → Master → *)">↩ Rückfall</td><SelectCell :value="curLocale.fallback ?? ''" :options="model.locales.map(l => l.code).filter(c => c !== curLocale.code)" @save="localeFallback" /></tr>
+          <tr><td class="attr" title="Sprache, deren Wert gilt, wenn diese keinen hat — vor der Mastersprache (fr-ch → fr-fr → Master → *)">↩ Fallback</td><SelectCell :value="curLocale.fallback ?? ''" :options="model.locales.map(l => l.code).filter(c => c !== curLocale.code)" @save="localeFallback" /></tr>
         </tbody></table>
         <div class="section muted" style="font-size:12px">★ Mastersprache: {{ model.masterLocale ?? '—' }} · In ihr werden Pflichtfelder beim Anlegen erfasst. Wird dort ein sprachabhängiger Wert geändert, zeigen die anderen Sprachen ⟳ „zu überarbeiten“, bis sie nachgezogen sind; Änderungen in einer anderen Sprache lösen nichts aus.</div>
       </div>
@@ -647,7 +647,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curChannel.label?.de ?? null" @save="v => channelSet('de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curChannel.label?.en ?? null" @save="v => channelSet('en', v)" /></tr>
-          <tr><td class="attr" title="Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Masterkanal">↩ Rückfall</td><SelectCell :value="curChannel.fallback ?? ''" :options="model.channels.map(c => c.key).filter(k => k !== curChannel.key)" @save="channelFallback" /></tr>
+          <tr><td class="attr" title="Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Masterkanal">↩ Fallback</td><SelectCell :value="curChannel.fallback ?? ''" :options="model.channels.map(c => c.key).filter(k => k !== curChannel.key)" @save="channelFallback" /></tr>
         </tbody></table>
       </div>
     </template>

@@ -44,7 +44,7 @@ export const store = reactive({
   etag: null,           // ETag der index.html beim Laden — ändert er sich, liegt eine neue Fassung
   stale: false,
 
-  // Name eines Attributs/einer Gruppe/einer Liste in der Anzeige: Bezeichnung in der ersten Sicht-Sprache (Rückfall de, Key),
+  // Name eines Attributs/einer Gruppe/einer Liste in der Anzeige: Bezeichnung in der ersten Sicht-Sprache (Fallback de, Key),
   // technischer Key, oder beides — je Einstellung attrNames
   label(def) {
     if (!def) return ''

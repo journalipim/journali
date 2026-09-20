@@ -274,7 +274,7 @@ public sealed record GroupView(string Key, string From, string FromLabel, bool A
 /// <summary>Ein ★ am Pfad: Attribut, wo es gesetzt ist, ob es an diesem Knoten gilt.</summary>
 public sealed record StarView(string Attribute, string From, string FromLabel, bool Applies);
 
-/// <summary>Freigabe, die nicht eigen ist, sondern über den Rückfall-Kanal gilt.</summary>
+/// <summary>Freigabe, die nicht eigen ist, sondern über den Fallback-Kanal gilt.</summary>
 public sealed record ReleasedVia(string Channel, string? Locale, string Via);
 
 public sealed record NodeView(string Id, string Role, string? Parent, Labels Label, string? Name, List<StarView> Stars, string? Family, string[] Axes,
@@ -300,7 +300,7 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
         CompletenessRules.ActiveAttributes(tree, model, n).Where(a => a.IsComputed)
             .SelectMany(a => a.PerLocale ? model.Locales.Keys.Select(l => new ComputedView(a.Key, tree.Compute(model, n, a, l), l)) : [new ComputedView(a.Key, tree.Compute(model, n, a, null), null)]).ToList(),
         n.Categories.Order().ToList(), n.Releases.ToList(),
-        // Freigaben, die über den Rückfall-Kanal gelten (Sortiment geerbt, Taloan 20.09.) — nur die, die nicht eigen sind
+        // Freigaben, die über den Fallback-Kanal gelten (Sortiment geerbt, Taloan 20.09.) — nur die, die nicht eigen sind
         model.Channels.Keys.SelectMany(ch => new string?[] { null }.Concat(model.Locales.Keys).Select(l => (ch, l, via: tree.ReleasedVia(n, ch, l))))
             .Where(x => x.via is not null && x.via != x.ch).Select(x => new ReleasedVia(x.ch, x.l, x.via!)).ToList(),
         CompletenessRules.Of(tree, model, n),

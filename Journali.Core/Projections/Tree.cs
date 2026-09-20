@@ -57,7 +57,7 @@ public sealed class Node
         return null;
     }
 
-    /// <summary>Die Achsen in der Reihenfolge, in der sie gelten: je Achse Wert → Rückfall(e) → Master → Stern, Kanal innen, Sprache aussen — ohne Doppelte.</summary>
+    /// <summary>Die Achsen in der Reihenfolge, in der sie gelten: je Achse Wert → Fallback(s) → Master → Stern, Kanal innen, Sprache aussen — ohne Doppelte.</summary>
     public static IEnumerable<Axis> Fallback(string attribute, string? locale, string? channel, string? row, string? masterLocale = null, string? masterChannel = null, IReadOnlyDictionary<string, string>? localeFallback = null, IReadOnlyDictionary<string, string>? channelFallback = null)
     {
         var seen = new HashSet<Axis>();
@@ -69,7 +69,7 @@ public sealed class Node
             }
     }
 
-    /// <summary>Wert → Rückfall → dessen Rückfall … (ohne Kreis, höchstens 8) → Master → Stern.</summary>
+    /// <summary>Wert → Fallback → dessen Fallback … (ohne Kreis, höchstens 8) → Master → Stern.</summary>
     public static IEnumerable<string?> Chain(string? value, string? master, IReadOnlyDictionary<string, string>? fallback = null)
     {
         yield return value;
@@ -97,10 +97,10 @@ public sealed class Tree : IProjection
     private readonly Dictionary<string, Node> _retired = new();   // zurückgezogen, mit allem, was sie hatten — für NodeRestored
 
     public long LastApplied { get; private set; }
-    /// <summary>Mastersprache und Masterkanal, mitgelesen aus settings:* — die Rückfallkette von <see cref="Resolve"/> braucht sie.</summary>
+    /// <summary>Mastersprache und Masterkanal, mitgelesen aus settings:* — die Fallback-Kette von <see cref="Resolve"/> braucht sie.</summary>
     public string? MasterLocale { get; private set; }
     public string? MasterChannel { get; private set; }
-    /// <summary>Rückfall je Sprache / je Kanal (LocaleDefined.Fallback, ChannelDefined.Fallback), mitgelesen wie die Master.</summary>
+    /// <summary>Fallback je Sprache / je Kanal (LocaleDefined.Fallback, ChannelDefined.Fallback), mitgelesen wie die Master.</summary>
     public Dictionary<string, string> LocaleFallback { get; } = new();
     public Dictionary<string, string> ChannelFallback { get; } = new();
 
@@ -126,7 +126,7 @@ public sealed class Tree : IProjection
     }
 
     /// <summary>
-    /// Wert am Knoten oder — wenn <paramref name="inheritable"/> — von oben geerbt; liefert auch, woher. Je Knoten die ganze Rückfallkette
+    /// Wert am Knoten oder — wenn <paramref name="inheritable"/> — von oben geerbt; liefert auch, woher. Je Knoten die ganze Fallback-Kette
     /// (Master, Stern), erst dann der nächste Vorfahr. <paramref name="masters"/> = false: ohne Master — für die Vollständigkeit, die je Sprache
     /// und Kanal zählt (Taloan, 17.09.: eine fehlende Übersetzung ist fehlend, auch wenn der Master sie hätte).
     /// </summary>
@@ -141,8 +141,8 @@ public sealed class Tree : IProjection
     }
 
     /// <summary>
-    /// Freigabe (Sortiment) für Kanal × Sprache: eigene Freigabe (genau oder für alle Sprachen), sonst die des Rückfall-Kanals
-    /// (Taloan, 20.09.: „China bekommt das Sortiment der Türkei“). Kein Master-Rückfall — eine Freigabe für web ist keine für print.
+    /// Freigabe (Sortiment) für Kanal × Sprache: eigene Freigabe (genau oder für alle Sprachen), sonst die des Fallback-Kanals
+    /// (Taloan, 20.09.: „China bekommt das Sortiment der Türkei“). Kein Master-Fallback — eine Freigabe für web ist keine für print.
     /// Liefert den Kanal, über den sie gilt (null = keine).
     /// </summary>
     public string? ReleasedVia(Node node, string channel, string? locale)
@@ -428,7 +428,7 @@ public sealed class Tree : IProjection
             case Types.AttributeSet:
                 var a = Types.Deserialize<AttributeSet>(entry.Payload);
                 var axis = new Axis(a.Attribute, a.Locale, a.Channel, a.Row);
-                // Leer = eigener Wert weg, der Rückfall gilt wieder.
+                // Leer = eigener Wert weg, der Fallback gilt wieder.
                 if (a.Values is { } list)
                 {
                     if (list.Length == 0) n.Lists.Remove(axis); else n.Lists[axis] = list;

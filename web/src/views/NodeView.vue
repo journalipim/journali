@@ -190,7 +190,7 @@ function key(a, l, c, row) { return `${a}|${l ?? ''}|${c ?? ''}${row ? '|' + row
 function ownValue(a, col) { return own.value.get(key(a, col.locale, col.channel)) ?? null }
 // Achsenwert einer Variante ohne eigenen Attributwert (beim Anlegen vergeben): steht in der Zelle, Bearbeiten schreibt den Attributwert — der wird zum Achsenwert (Taloan, 20.09.: kein Schloss mehr)
 function ownOrAxis(def, col) { return ownValue(def.key, col) ?? axisValue(def.key, col) }
-// Kette je Achse (Taloan, 20.09.): Wert → Rückfall(e) → Master → Stern; erst der Kanal, dann die Sprache — wie Node.Chain im Kern
+// Kette je Achse (Taloan, 20.09.): Wert → Fallback(s) → Master → Stern; erst der Kanal, dann die Sprache — wie Node.Chain im Kern
 const localeFb = computed(() => Object.fromEntries((model.value?.locales ?? []).filter(l => l.fallback).map(l => [l.code, l.fallback])))
 const channelFb = computed(() => Object.fromEntries((model.value?.channels ?? []).filter(c => c.fallback).map(c => [c.key, c.fallback])))
 function chain(v, m, fb) { if (v == null) return [null]; const out = [v]; const seen = new Set([v]); let cur = v; for (let i = 0; i < 8 && fb[cur] && !seen.has(fb[cur]); i++) { cur = fb[cur]; seen.add(cur); out.push(cur) } if (m && !seen.has(m)) out.push(m); out.push(null); return out }
@@ -225,7 +225,7 @@ function enabled(def, col, block) {
 function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
 function listLabel(def) { const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []; return v => vals.find(x => x.value === v)?.label?.de || v }
 function released(channel, locale) { return node.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }
-// Freigabe über den Rückfall-Kanal (Sortiment geerbt): nicht eigen, gilt aber — ◌ mit Herkunft
+// Freigabe über den Fallback-Kanal (Sortiment geerbt): nicht eigen, gilt aber — ◌ mit Herkunft
 function releasedVia(channel, locale) { return node.value?.releasedVia?.find(r => r.channel === channel && r.locale === locale)?.via ?? null }
 function axisLabel(a) { return model.value?.attributes.find(x => x.key === a)?.label?.de || a }
 function axisValue(a, col) { return node.value?.role === 'variant' && !col.locale && !col.channel && a in node.value.axisValues ? node.value.axisValues[a] : null }

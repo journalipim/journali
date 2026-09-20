@@ -74,11 +74,11 @@ weiter je Sprache. Ohne Sprachachse ist `*` die eine Zelle.
 mit je einem Stern. Es gibt eine Mastersprache und einen **Masterkanal**; der
 Master bekommt die Werte des Sterns und kann sie überschreiben; abgeleitete
 Sprachen bzw. Kanäle beziehen ihren Wert aus dem Master. Kette je Achse:
-eigener Wert → Rückfall → Master → `*`, der Kanal fällt vor der Sprache
-(`de/print` → `de/web` → `de` → … → `*`). **Rückfall** (Taloan, 20.09.2026):
+eigener Wert → Fallback → Master → `*`, der Kanal fällt vor der Sprache
+(`de/print` → `de/web` → `de` → … → `*`). **Fallback** (Taloan, 20.09.2026):
 eine Sprache oder ein Kanal kann eine andere Ausprägung nennen, die vor dem
 Master gilt — `fr-ch` → `fr-fr`, `shop_cn` → `shop_tr`. Beim Kanal gilt der
-Rückfall auch für die Freigaben: das Sortiment von China ist das der Türkei,
+Fallback auch für die Freigaben: das Sortiment von China ist das der Türkei,
 solange China nichts Eigenes sagt. Die Vollständigkeit zählt ohne Master.
 
 ### 2. Werteliste (`list:<key>`) — Einträge mit eigenen Spalten
@@ -745,7 +745,7 @@ Reihenfolge (`NodeRow.LabelOf`):
    auf `name` von weiter oben bleiben (Taloan, 17.09.2026: „bei 4 unsicher" —
    so entschieden);
 3. Variante: SKU, sonst die Achsenwerte;
-4. die interne Id — der Mindest-Rückfall, den es immer gibt.
+4. die interne Id — der Mindest-Fallback, den es immer gibt.
 
 Nicht gewählt: Name je Attributgruppe (mehrere Gruppen am Knoten → Kollision,
 welche zählt?), Name je Knotentyp im Modell (`TreeLabelDefined`, Altlast: ein
