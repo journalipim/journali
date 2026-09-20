@@ -2,6 +2,7 @@
 // Einstellungen: wer schreibt (X-Actor), welcher Server, und was er sagt.
 import { ref } from 'vue'
 import { store } from '../store.js'
+import MatrixPicker from '../components/MatrixPicker.vue'
 import { ai } from '../ai.js'
 import StorageSettings from '../components/StorageSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
@@ -22,14 +23,6 @@ const actor = ref(store.actor)
 const server = ref(store.server)
 const theme = ref(store.theme)
 function setTheme(t) { theme.value = t; store.theme = t; store.save() }
-function toggleLocale(l) {
-  const s = new Set(store.viewLocales); s.has(l) ? s.delete(l) : s.add(l)
-  store.viewLocales = (store.model?.locales ?? []).map(x => x.code).filter(c => s.has(c)); store.save()
-}
-function toggleChannel(c) {
-  const s = new Set(store.viewChannels); s.has(c) ? s.delete(c) : s.add(c)
-  store.viewChannels = (store.model?.channels ?? []).map(x => x.key).filter(k => s.has(k)); store.save()
-}
 const checking = ref(false)
 
 async function save() {
@@ -75,11 +68,9 @@ async function save() {
           <tr v-if="store.model">
             <td class="muted">🗣 Sicht</td>
             <td>
-              <span v-for="l in store.model.locales" :key="l.code" class="view-chip" :class="{ on: store.viewLocales.includes(l.code) }" @click="toggleLocale(l.code)" style="margin-right:4px">{{ l.code }}</span>
-              <span class="sep" style="margin:0 4px">·</span>
-              <span v-for="c in store.model.channels" :key="c.key" class="view-chip" :class="{ on: store.viewChannels.includes(c.key) }" @click="toggleChannel(c.key)" style="margin-right:4px">{{ c.key }}</span>
+              <MatrixPicker :model-value="store.viewCells" @update:model-value="v => { store.viewCells = v; store.save() }" :locales="store.model.locales.map(l => l.code)" :channels="store.model.channels.map(c => c.key)" :master-locale="store.model.masterLocale" :master-channel="store.model.masterChannel" />
             </td>
-            <td class="muted">Welche Sprachen und Kanäle als Spalten stehen — 27 Sprachen × 6 Kanäle passen auf keinen Schirm. Im Knoten jederzeit umschaltbar.</td>
+            <td class="muted">Welche Zellen der Matrix Sprache × Kanal als Spalten stehen — 27 Sprachen × 6 Kanäle passen auf keinen Schirm. Im Knoten jederzeit umschaltbar.</td>
           </tr>
           <tr>
             <td class="muted">Stand</td>

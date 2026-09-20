@@ -26,6 +26,8 @@ public sealed class ModelCatalog : IProjection
     public Dictionary<string, LocaleDefinition> Locales { get; } = new();
     /// <summary>Die Mastersprache (settings:master_locale); null, bis gesät.</summary>
     public string? MasterLocale { get; private set; }
+    /// <summary>Der Masterkanal (settings:master_channel); null, bis gesät.</summary>
+    public string? MasterChannel { get; private set; }
     public Dictionary<string, ChannelDefinition> Channels { get; } = new();
     public Dictionary<string, AttributeDefinition> Attributes { get; } = new();
     public Dictionary<string, ValueList> Lists { get; } = new();
@@ -59,6 +61,9 @@ public sealed class ModelCatalog : IProjection
                 break;
             case Types.MasterLocaleDefined:
                 MasterLocale = Types.Deserialize<MasterLocaleDefined>(entry.Payload).Code;
+                break;
+            case Types.MasterChannelDefined:
+                MasterChannel = Types.Deserialize<MasterChannelDefined>(entry.Payload).Key;
                 break;
             case Types.ChannelDefined:
                 var c = Types.Deserialize<ChannelDefinition>(entry.Payload);

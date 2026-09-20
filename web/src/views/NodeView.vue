@@ -26,6 +26,7 @@ import MediaThumb from '../components/MediaThumb.vue'
 import EntryList from '../components/EntryList.vue'
 import ScriptEditor from '../components/ScriptEditor.vue'
 import Splitter from '../components/Splitter.vue'
+import MatrixPicker from '../components/MatrixPicker.vue'
 import { paneWidth } from '../panes.js'
 const journalW = paneWidth('journal', 420)
 
@@ -45,21 +46,17 @@ const channels = computed(() => model.value?.channels.map(c => c.key) ?? [])
 const path = computed(() => tree.ancestors(props.id))
 const roleLabel = { group: 'Produktgruppe', product: 'Produkt', variant: 'Variante' }
 
-// ---- Sicht (Sprachen/Kanal als Spalten)
-const viewLocales = computed(() => locales.value.filter(l => store.viewLocales.includes(l)))
+// ---- Sicht: Spalten aus der Matrix Sprache × Kanal (store.viewCells); Reihenfolge Kanal (Stern zuerst), darin Sprache (Stern zuerst)
 const columns = computed(() => {
-  const cols = [{ locale: null, channel: null, label: '*' }]
-  for (const l of viewLocales.value) cols.push({ locale: l, channel: null, label: l })
-  for (const c of channels.value.filter(c => store.viewChannels.includes(c))) {
-    cols.push({ locale: null, channel: c, label: `*/${c}` })
-    for (const l of viewLocales.value) cols.push({ locale: l, channel: c, label: `${l}/${c}` })
-  }
+  const cells = new Set(store.viewCells ?? ['|'])
+  const cols = []
+  for (const c of [null, ...channels.value]) for (const l of [null, ...locales.value])
+    if ((l == null && c == null) || cells.has(`${l ?? ''}|${c ?? ''}`)) cols.push({ locale: l, channel: c, label: c ? `${l ?? '*'}/${c}` : (l ?? '*') })
   return cols
 })
+function setCells(cells) { store.viewCells = cells; store.save() }
 // Kopfzeile Kanal: je Kanal (erst ohne) ein Block über 1 + Sprachen Spalten
 const headGroups = computed(() => { const out = []; for (const c of columns.value) { const g = out.find(x => x.channel === c.channel); g ? g.n++ : out.push({ channel: c.channel, n: 1 }) } return out })
-function toggleLocale(l) { const s = new Set(store.viewLocales); s.has(l) ? s.delete(l) : s.add(l); store.viewLocales = locales.value.filter(c => s.has(c)); store.save() }
-function toggleChannel(c) { const s = new Set(store.viewChannels); s.has(c) ? s.delete(c) : s.add(c); store.viewChannels = channels.value.filter(x => s.has(x)); store.save() }
 
 // ---- Attributsicht je Knotentyp
 const views = computed(() => (model.value?.views ?? []).filter(v => v.level === node.value?.role))
@@ -176,6 +173,7 @@ async function setSource(def, col) {
 }
 // Übersetzungsstand: Wert einer anderen Sprache ist „zu überarbeiten“, wenn der Master-Wert später geschrieben wurde (Eintragsnummer).
 const master = computed(() => model.value?.masterLocale ?? locales.value[0] ?? null)
+const masterChannel = computed(() => model.value?.masterChannel ?? null)
 const ownAt = computed(() => { const m = new Map(); for (const v of node.value?.values ?? []) m.set(key(v.attribute, v.locale, v.channel, v.row), v.number ?? 0); return m })
 function stale(def, col) {
   if (!def.perLocale || !col.locale || col.locale === master.value) return false
@@ -192,9 +190,11 @@ function key(a, l, c, row) { return `${a}|${l ?? ''}|${c ?? ''}${row ? '|' + row
 function ownValue(a, col) { return own.value.get(key(a, col.locale, col.channel)) ?? null }
 // Achsenwert einer Variante ohne eigenen Attributwert (beim Anlegen vergeben): steht in der Zelle, Bearbeiten schreibt den Attributwert — der wird zum Achsenwert (Taloan, 20.09.: kein Schloss mehr)
 function ownOrAxis(def, col) { return ownValue(def.key, col) ?? axisValue(def.key, col) }
+// Kette je Achse (Taloan, 20.09.): Wert → Master → Stern; erst der Kanal, dann die Sprache — wie Node.Fallback im Kern
+const chain = (v, m) => v == null ? [null] : (m && m !== v ? [v, m, null] : [v, null])
+function* axesOf(a, col) { const seen = new Set(); for (const l of chain(col.locale, master.value)) for (const c of chain(col.channel, masterChannel.value)) { const k = key(a, l, c); if (!seen.has(k)) { seen.add(k); yield { k, l, c } } } }
 function fallback(m, a, col) {
-  if (col.channel && m.has(key(a, col.locale, null))) return m.get(key(a, col.locale, null))
-  if ((col.locale || col.channel) && m.has(key(a, null, null))) return m.get(key(a, null, null))
+  for (const { k, l, c } of axesOf(a, col)) { if (l === col.locale && c === col.channel) continue; if (m.has(k)) return m.get(k) }
   return null
 }
 const ancestorMaps = computed(() => (node.value?.ancestors ?? []).map(an => ({ an, m: valueMap(an.values) })))
@@ -203,11 +203,7 @@ const ancestorMaps = computed(() => (node.value?.ancestors ?? []).map(an => ({ a
 // leer zeigt * den Master (◌). Kette je Sprache: eigen → Master → * → dasselbe bei den Vorfahren (wenn vererbbar).
 // Rückgabe: { value, from (Vorfahr oder null), master (true = kommt aus der Mastersprache) }
 function resolveIn(m, def, col) {
-  const at = (l, c) => m.get(key(def.key, l, c)) ?? (c ? m.get(key(def.key, l, null)) : undefined)
-  if (!def.perLocale) { const v = fallback(m, def.key, col); return v != null ? { value: v } : null }
-  const own = at(col.locale, col.channel); if (own != null) return { value: own }
-  if (col.locale !== master.value) { const mv = at(master.value, col.channel); if (mv != null) return { value: mv, master: true } }
-  if (col.locale) { const sv = at(null, col.channel); if (sv != null) return { value: sv } }
+  for (const { k, l, c } of axesOf(def.key, col)) if (m.has(k)) return { value: m.get(k), master: def.perLocale && col.locale != null && l === master.value && l !== col.locale }
   return null
 }
 function inherited(def, col) {
@@ -538,11 +534,7 @@ function cellMenu(e, def, col, block) {
     <template v-if="open('attributes')">
     <!-- Leiste in drei Gruppen (Taloan, 20.09.): WAS gezeigt wird (Sprachen, Kanal, Sicht, Filter, Suche) · WIE es angeordnet ist (flach/Reiter) · WIE es beschriftet ist (Namen) -->
     <div class="toolbar view">
-      <span class="grp" title="Spalten: Sprachen und Kanal">
-        <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: store.viewLocales.includes(l), master: l === master }" @click="toggleLocale(l)" :title="l === master ? 'Mastersprache' : ''">{{ l }}</span>
-        <span v-if="channels.length" class="sep">·</span>
-        <span v-for="c in channels" :key="c" class="view-chip" :class="{ on: store.viewChannels.includes(c) }" @click="toggleChannel(c)" :title="`Kanal ${c} — Spalten */${c} und je Sprache`">{{ c }}</span>
-      </span>
+      <MatrixPicker :model-value="store.viewCells" @update:model-value="setCells" :locales="locales" :channels="channels" :master-locale="master" :master-channel="masterChannel" />
       <span class="sep">·</span>
       <span class="grp" title="Zeilen: Attributsicht und Filter">
         <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="`Attributsicht für ${roleLabel[node.role]} — ⊞ Modell → Attributsichten`">
@@ -575,7 +567,7 @@ function cellMenu(e, def, col, block) {
         <thead>
           <tr class="chan">
             <th rowspan="2">Attribut</th>
-            <th v-for="g in headGroups" :key="g.channel ?? '*'" :colspan="g.n" :title="g.channel ? `Kanal ${g.channel}` : 'ohne Kanal — gilt für alle Kanäle'">{{ g.channel ?? '*' }}</th>
+            <th v-for="g in headGroups" :key="g.channel ?? '*'" :colspan="g.n" :class="{ master: g.channel && g.channel === masterChannel }" :title="g.channel ? (g.channel === masterChannel ? 'Masterkanal — bekommt die Werte des Sterns, die anderen Kanäle beziehen ihren Wert aus ihm' : `Kanal ${g.channel} — ohne eigenen Wert gilt der Masterkanal`) : 'ohne Kanal — der Stern: gilt, wo kein Kanal etwas anderes sagt'">{{ g.channel ?? '*' }}</th>
           </tr>
           <tr class="loc">
             <th v-for="c in columns" :key="c.label" :class="{ master: c.locale === master }" :title="(c.locale ? (c.locale === master ? 'Mastersprache — Basis für alle anderen Sprachen' : 'Sprache ' + c.locale) : 'ohne Sprache — gilt für alle Sprachen') + (c.channel ? ' · Kanal ' + c.channel : ' · alle Kanäle')">{{ c.locale ?? '*' }}</th>

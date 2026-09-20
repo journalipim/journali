@@ -57,7 +57,7 @@ public static class CompletenessRules
                 required++;
                 var ok = def.Type == AttributeTypes.Rows
                     ? node.Rows.TryGetValue(def.Key, out var rows) && rows.Count > 0
-                    : tree.Resolve(node, def.Key, def.PerLocale ? l : null, def.PerChannel ? channel : null, def.Inheritable).Value is not null;
+                    : tree.Resolve(node, def.Key, def.PerLocale ? l : null, def.PerChannel ? channel : null, def.Inheritable, masters: false).Value is not null;
                 if (!ok) missing.Add(def.PerLocale ? $"{def.Key}/{l}" : def.Key);
             }
         }

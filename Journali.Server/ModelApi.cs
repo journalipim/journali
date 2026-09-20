@@ -91,6 +91,11 @@ public static partial class ModelApi
                 !model.Locales.ContainsKey(body.Code ?? "") ? Bad($"Sprache {body.Code} gibt es nicht.")
                 : write(Model.MasterLocaleStream, Types.MasterLocaleDefined, new MasterLocaleDefined(body.Code!))));
 
+        m.MapPut("/master-channel", (MasterChannelDefined body, HttpRequest req, Catalog c) =>
+            Command(req, c, body.Key ?? "", ValidKey, (model, write) =>
+                !model.Channels.ContainsKey(body.Key ?? "") ? Bad($"Kanal {body.Key} gibt es nicht.")
+                : write(Model.MasterChannelStream, Types.MasterChannelDefined, new MasterChannelDefined(body.Key!))));
+
         // Sprache zurückziehen: nicht die Mastersprache, nicht die letzte; Werte auf ihr bleiben im Journal
         m.MapDelete("/locales/{code}", (string code, HttpRequest req, Catalog c) =>
             Command(req, c, code, ValidKey, (model, write) =>
@@ -108,6 +113,7 @@ public static partial class ModelApi
             Command(req, c, key, ValidKey, (model, write) =>
             {
                 if (!model.Channels.ContainsKey(key)) return Results.NotFound();
+                if (model.MasterChannel == key) return Bad($"{key} ist der Masterkanal — erst einen anderen zum Masterkanal machen.");
                 var users = model.Attributes.Values.Where(a => (a.Channels?.Contains(key) ?? false) || (a.Required?.ContainsKey(key) ?? false)).Select(a => a.Key).ToList();
                 return users.Count > 0 ? Bad($"{key} wird benutzt von: {string.Join(", ", users)}") : write(Model.ChannelStream + key, Types.ChannelRetired, new ChannelRetired(key));
             }));
@@ -250,6 +256,7 @@ public static partial class ModelApi
     {
         locales = model.Locales.Values.OrderBy(l => l.Code).ToList(),
         masterLocale = model.MasterLocale,
+        masterChannel = model.MasterChannel,
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], values = l.Ordered.ToList() }).ToList(),

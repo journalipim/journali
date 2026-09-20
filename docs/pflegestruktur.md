@@ -69,8 +69,13 @@ Master → `*` → dasselbe bei den Vorfahren (wenn vererbbar). Drei Zustände
 sichtbar: eigener Wert · ◌ aus dem Master (nicht übersetzt) · ⟳ zu
 überarbeiten (übersetzt, aber der Master ist neuer). Leer ist eine Zelle
 nur, wenn auch Master und `*` leer sind. Die Vollständigkeit für `en` zählt
-weiter je Sprache. Ohne Sprachachse ist `*` die eine Zelle; der Kanal
-fällt zurück (`de` = alle Kanäle, `de/print` überschreibt).
+weiter je Sprache. Ohne Sprachachse ist `*` die eine Zelle.
+**Kanäle genauso** (Taloan, 20.09.2026): Sprachen und Kanäle sind eine Matrix
+mit je einem Stern. Es gibt eine Mastersprache und einen **Masterkanal**; der
+Master bekommt die Werte des Sterns und kann sie überschreiben; abgeleitete
+Sprachen bzw. Kanäle beziehen ihren Wert aus dem Master. Kette je Achse:
+eigener Wert → Master → `*`, der Kanal fällt vor der Sprache (`de/print` →
+`de/web` → `de` → … → `*`). Die Vollständigkeit zählt ohne Master.
 
 ### 2. Werteliste (`list:<key>`) — Einträge mit eigenen Spalten
 

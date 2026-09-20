@@ -101,7 +101,7 @@ const rows = computed(() => {
       return { key: r.key, label: r.label?.de, right: [r.from || r.to || r.symmetric ? ends + (r.symmetric ? ' beidseitig' : '') : '', r.group ? '▤ ' + groupLabel(r.group) : ''], _: r }
     }).sort(byKey)
     case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : ''] }))
-    case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [] }))
+    case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [m.masterChannel === c.key ? '★ Master' : ''] }))
   }
   return []
 })
@@ -147,7 +147,7 @@ function blockFor(k) {
     case 'groups': return used(a => a.group === k).length ? 'hat noch Attribute' : ''
     case 'lists': { const u = used(a => a.list === k); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
     case 'units': { const u = used(a => a.unit === k); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
-    case 'channels': { const u = used(a => (a.channels ?? []).includes(k) || (a.required && k in a.required)); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
+    case 'channels': { if (m.masterChannel === k) return 'Masterkanal'; const u = used(a => (a.channels ?? []).includes(k) || (a.required && k in a.required)); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
     case 'locales': return m.masterLocale === k ? 'Mastersprache' : m.locales.length <= 1 ? 'die letzte Sprache bleibt' : ''
     default: return ''
   }
@@ -395,6 +395,7 @@ function unitSet(col, v) {
 }
 const localeSet = v => put(`/api/model/locales/${curLocale.value.code}`, { code: curLocale.value.code, label: v })
 const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.code })
+const setMasterChannel = () => put('/api/model/master-channel', { key: curChannel.value.key })
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v } })
 // Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
@@ -636,7 +637,9 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Kanal -->
     <template v-else-if="section === 'channels' && curChannel">
-      <div class="toolbar"><h1>⇶ {{ curChannel.key }}</h1></div>
+      <div class="toolbar"><h1>⇶ {{ curChannel.key }}</h1><span v-if="model.masterChannel === curChannel.key" class="warn">★ Masterkanal</span><span class="grow" />
+        <button v-if="model.masterChannel !== curChannel.key" class="primary" @click="setMasterChannel" title="Der Masterkanal bekommt die Werte des Sterns (ohne Kanal) und kann sie überschreiben; die anderen Kanäle beziehen ihren Wert aus ihm">★ zum Masterkanal machen</button>
+      </div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curChannel.label?.de ?? null" @save="v => channelSet('de', v)" /></tr>

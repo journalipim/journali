@@ -20,6 +20,7 @@ public static class Model
     public const string GroupStream = "group:";
     public const string LabelStream = "settings:label:";
     public const string MasterLocaleStream = "settings:master_locale";
+    public const string MasterChannelStream = "settings:master_channel";
     public const string RelationStream = "relation:";
     /// <summary>Gruppe der Werte am Medium (20).</summary>
     public const string MediaGroup = "media";
@@ -38,6 +39,7 @@ public static class Model
         yield return new(LocaleStream + "de", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("de", "Deutsch")));
         yield return new(LocaleStream + "en", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("en", "English")));
         yield return new(MasterLocaleStream, Types.MasterLocaleDefined, Types.Serialize(new MasterLocaleDefined("de")));
+        yield return new(MasterChannelStream, Types.MasterChannelDefined, Types.Serialize(new MasterChannelDefined("web")));
         yield return new(ChannelStream + "web", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("web", Labels.Of("Web", "Web"))));
         yield return new(ChannelStream + "print", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("print", Labels.Of("Print", "Print"))));
 

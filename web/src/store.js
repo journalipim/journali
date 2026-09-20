@@ -5,12 +5,17 @@ import { api } from './api.js'
 // der Serverstand (head) wird alle 3 s abgefragt — darauf hängen Live-Listen.
 const saved = JSON.parse(localStorage.getItem('journali.settings') || '{}')
 
+// Sprachen × Kanäle als Zellenliste (Stern je Achse dazu)
+function cellsFrom(locales, channels) { const out = ['|']; for (const c of ['', ...channels]) for (const l of ['', ...locales]) out.push(`${l}|${c}`); return [...new Set(out)] }
+
 export const store = reactive({
   actor: saved.actor || '',
   server: saved.server || '',
   theme: saved.theme || 'system',   // system | light | dark
-  viewLocales: saved.viewLocales || ['de', 'en'],   // Sicht: welche Sprachen als Spalten
-  viewChannels: saved.viewChannels ?? (saved.viewChannel ? [saved.viewChannel] : []),   // Sicht: welche Kanäle als Spalten (leer = nur *)
+  viewLocales: saved.viewLocales || ['de', 'en'],   // erste Sprache: Bezeichnungen (store.name); die Spalten kommen aus viewCells
+  // Spalten der Knotenansicht als Matrix Sprache × Kanal (Taloan, 20.09.): Liste „sprache|kanal“, '' = Stern; '|' (der eine Wert) ist immer dabei.
+  // Alte Einstellungen (Sprachen × Kanäle) werden beim ersten Start übernommen.
+  viewCells: saved.viewCells ?? cellsFrom(saved.viewLocales || ['de', 'en'], saved.viewChannels ?? (saved.viewChannel ? [saved.viewChannel] : [])),
   journalOpen: saved.journalOpen ?? true,           // Journal neben dem Knoten auf- oder zugeklappt
   lastNode: sessionStorage.getItem('journali.lastNode') || null,
   progress: null,        // { done, total, text } — laufender Stapel; Balken oben in der Oberfläche (App.vue)   // zuletzt gewählter Knoten — ▣ Baum in der Leiste kehrt dorthin zurück (Taloan, 18.09.)
@@ -52,7 +57,7 @@ export const store = reactive({
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannels: this.viewChannels, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
     this.applyTheme()
   },
 

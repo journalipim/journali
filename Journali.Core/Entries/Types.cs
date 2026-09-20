@@ -68,6 +68,7 @@ public static class Types
     public const string UnitDefined = "UnitDefined";
     public const string UnitRetired = "UnitRetired";
     public const string MasterLocaleDefined = "MasterLocaleDefined";
+    public const string MasterChannelDefined = "MasterChannelDefined";
     public const string RelationTypeDefined = "RelationTypeDefined";
     public const string RelationTypeRetired = "RelationTypeRetired";
 
@@ -399,6 +400,13 @@ public sealed record ChannelRetired(string Key);
 /// als „zu überarbeiten“ (abgeleitet aus den Eintragsnummern, kein eigener Eintrag).
 /// </summary>
 public sealed record MasterLocaleDefined(string Code);
+
+/// <summary>
+/// Der Masterkanal (Taloan, 20.09.2026): Strom <c>settings:master_channel</c>. Sprachen und Kanäle sind eine Matrix mit
+/// je einem Stern (ohne Sprache / ohne Kanal). Der Master bekommt die Werte des Sterns und kann sie überschreiben;
+/// abgeleitete Kanäle beziehen ihren Wert aus dem Masterkanal — wie abgeleitete Sprachen aus der Mastersprache.
+/// </summary>
+public sealed record MasterChannelDefined(string Key);
 
 /// <summary>
 /// Ein Relationstyp (18): Strom <c>relation:&lt;key&gt;</c>. <paramref name="Reverse"/> ist die Bezeichnung

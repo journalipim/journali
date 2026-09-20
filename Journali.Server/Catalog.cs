@@ -64,6 +64,7 @@ public sealed class Catalog
                     Types.UnitDefined => _model.Units.ContainsKey(key),
                     Types.AttributeGroupDefined => _model.Groups.ContainsKey(key),
                     Types.MasterLocaleDefined => _model.MasterLocale is not null,
+                    Types.MasterChannelDefined => _model.MasterChannel is not null,
                     Types.RelationTypeDefined => _model.RelationTypes.ContainsKey(key),
                     _ => true,
                 };

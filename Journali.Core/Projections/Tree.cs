@@ -43,10 +43,13 @@ public sealed class Node
     public string LastActor { get; set; } = "";
     public int Entries { get; set; }
 
-    /// <summary>Eigener Wert auf der Achse, sonst weniger spezifisch (Kanal weg, dann Sprache weg) — nur dieser Knoten. Listen zählen als Wert (verbunden mit Komma).</summary>
-    public string? Own(string attribute, string? locale, string? channel, string? row = null)
+    /// <summary>
+    /// Eigener Wert auf der Achse, sonst weniger spezifisch — nur dieser Knoten. Kette je Achse (Taloan, 20.09.): eigener Wert →
+    /// Master → Stern; der Kanal fällt zuerst, dann die Sprache. Ohne Master (null) nur eigen → Stern. Listen zählen als Wert (verbunden mit Komma).
+    /// </summary>
+    public string? Own(string attribute, string? locale, string? channel, string? row = null, string? masterLocale = null, string? masterChannel = null)
     {
-        foreach (var axis in Fallback(attribute, locale, channel, row))
+        foreach (var axis in Fallback(attribute, locale, channel, row, masterLocale, masterChannel))
         {
             if (Values.TryGetValue(axis, out var v)) return v;
             if (Lists.TryGetValue(axis, out var l)) return string.Join(", ", l);
@@ -54,11 +57,24 @@ public sealed class Node
         return null;
     }
 
-    private static IEnumerable<Axis> Fallback(string attribute, string? locale, string? channel, string? row)
+    /// <summary>Die Achsen in der Reihenfolge, in der sie gelten: (l,c) (l,mc) (l,*) (ml,c) (ml,mc) (ml,*) (*,c) (*,mc) (*,*) — ohne Doppelte.</summary>
+    public static IEnumerable<Axis> Fallback(string attribute, string? locale, string? channel, string? row, string? masterLocale = null, string? masterChannel = null)
     {
-        yield return new Axis(attribute, locale, channel, row);
-        if (channel is not null) yield return new Axis(attribute, locale, null, row);
-        if (locale is not null || channel is not null) yield return new Axis(attribute, null, null, row);
+        var seen = new HashSet<Axis>();
+        foreach (var l in Chain(locale, masterLocale))
+            foreach (var c in Chain(channel, masterChannel))
+            {
+                var axis = new Axis(attribute, l, c, row);
+                if (seen.Add(axis)) yield return axis;
+            }
+    }
+
+    private static IEnumerable<string?> Chain(string? value, string? master)
+    {
+        yield return value;
+        if (value is null) yield break;
+        if (master is not null && master != value) yield return master;
+        yield return null;
     }
 }
 
@@ -77,6 +93,9 @@ public sealed class Tree : IProjection
     private readonly Dictionary<string, Node> _retired = new();   // zurückgezogen, mit allem, was sie hatten — für NodeRestored
 
     public long LastApplied { get; private set; }
+    /// <summary>Mastersprache und Masterkanal, mitgelesen aus settings:* — die Rückfallkette von <see cref="Resolve"/> braucht sie.</summary>
+    public string? MasterLocale { get; private set; }
+    public string? MasterChannel { get; private set; }
 
     public IReadOnlyDictionary<string, Node> Nodes => _nodes;
     /// <summary>Zurückgezogene Knoten (Papierkorb): lassen sich zurückholen, solange der Vater da ist.</summary>
@@ -99,13 +118,18 @@ public sealed class Tree : IProjection
             yield return n;
     }
 
-    /// <summary>Wert am Knoten oder — wenn <paramref name="inheritable"/> — von oben geerbt; liefert auch, woher.</summary>
-    public (string? Value, Node? From) Resolve(Node node, string attribute, string? locale, string? channel, bool inheritable = true)
+    /// <summary>
+    /// Wert am Knoten oder — wenn <paramref name="inheritable"/> — von oben geerbt; liefert auch, woher. Je Knoten die ganze Rückfallkette
+    /// (Master, Stern), erst dann der nächste Vorfahr. <paramref name="masters"/> = false: ohne Master — für die Vollständigkeit, die je Sprache
+    /// und Kanal zählt (Taloan, 17.09.: eine fehlende Übersetzung ist fehlend, auch wenn der Master sie hätte).
+    /// </summary>
+    public (string? Value, Node? From) Resolve(Node node, string attribute, string? locale, string? channel, bool inheritable = true, bool masters = true)
     {
-        if (node.Own(attribute, locale, channel) is { } own) return (own, node);
+        var ml = masters ? MasterLocale : null; var mc = masters ? MasterChannel : null;
+        if (node.Own(attribute, locale, channel, null, ml, mc) is { } own) return (own, node);
         if (!inheritable) return (null, null);
         foreach (var a in Ancestors(node))
-            if (a.Own(attribute, locale, channel) is { } v) return (v, a);
+            if (a.Own(attribute, locale, channel, null, ml, mc) is { } v) return (v, a);
         return (null, null);
     }
 
@@ -254,6 +278,8 @@ public sealed class Tree : IProjection
     public void Apply(Entry entry)
     {
         LastApplied = entry.Number;
+        if (entry.Type == Types.MasterLocaleDefined) { MasterLocale = Types.Deserialize<MasterLocaleDefined>(entry.Payload).Code; return; }
+        if (entry.Type == Types.MasterChannelDefined) { MasterChannel = Types.Deserialize<MasterChannelDefined>(entry.Payload).Key; return; }
 
         Node? n;
         switch (entry.Type)
