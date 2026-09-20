@@ -27,7 +27,11 @@ Eintrag übergeht das Abbild.
 | `ProductCreated` | `group`, `axes[]?` | Produkt unter einer Gruppe; `axes` = wonach es variiert (Attribute, optional). `family` ist Altlast und bleibt leer |
 | `ProductAxesSet` | `axes[]` | Variantenachsen (ganze Liste) — auch mit Varianten (20.09.2026): eine neue Achse nimmt an jeder Variante deren eigenen Wert des Attributs — leere zählen nicht, die Variante bleibt dann ohne Achsenwert und bekommt ihn, sobald der Wert gesetzt wird (`AttributeSet` des Achsenattributs an der Variante = Achsenwert); die Kombination aller Achsen je Produkt bleibt eindeutig (vollständige Kombinationen) — sonst Rückfrage; mit `force` verlieren die doppelten Varianten ihre Achsenzuordnung (Werte bleiben, sie zählen nicht, bis sie unterscheidbar sind); eine entfallene Achse schreibt ihren Wert vorher als `AttributeSet` an die Variante, damit nichts verloren geht |
 | `VariantCreated` | `product`, `axisValues{}` | Variante — das Verkaufbare; je Produktachse ein Wert, Kombination je Produkt eindeutig |
-| `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, sonst unter Gruppe; nie unter sich selbst) |
+| `RubricCreated` | `parent?`, `label{}`, `name?`, `channel?`, `market?` | Rubrik eines Publikationsbaums (Taloan, 20.09.2026; Strom `k-…`, Rolle `rubric`). Ohne `parent` die Wurzel = der Baum eines Kanals, optional für einen Markt (Maximalstruktur; Ausleitungen filtern über das Attribut `markets`). Rubriken tragen Werte wie jeder Knoten (Texte, Bilder, SEO); NodeNamed/NodeMoved/NodeRetired/AttributeSet gelten |
+| `PubTreeSet` | `channel`, `market?` | Kanal und Markt der Wurzel ändern |
+| `NodePlaced` | `node`, `order?` | Verweis: Produktgruppe oder Produkt hängt in dieser Rubrik (Strom = Rubrik); derselbe Knoten darf in mehreren Rubriken hängen; keine Vererbung darüber. `order` = Platz in der Rubrik |
+| `NodeUnplaced` | `node` | Verweis weg |
+| `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, Rubrik unter Rubrik, sonst unter Gruppe; nie unter sich selbst) |
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles — das Abbild legt ihn in den Papierkorb |
 | `NodeRestored` | — | Knoten zurück aus dem Papierkorb, mit allem, was er hatte (Werte, Gruppen, Kennungen); der Vater muss im Baum stehen. Rückgängig je Aktion über den Stapel: `POST /api/batches/{batch}/undo` holt genau die Knoten des Stapels zurück |
 | `StatusSet` | `status` (draft, active, discontinued) | Produkt und Variante; Gruppe hat keinen |

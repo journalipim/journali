@@ -69,6 +69,11 @@ public static class Types
     public const string UnitRetired = "UnitRetired";
     public const string MasterLocaleDefined = "MasterLocaleDefined";
     public const string MasterChannelDefined = "MasterChannelDefined";
+    /// <summary>Publikationsbaum (Taloan, 20.09.2026): Rubriken und Verweise.</summary>
+    public const string RubricCreated = "RubricCreated";
+    public const string PubTreeSet = "PubTreeSet";
+    public const string NodePlaced = "NodePlaced";
+    public const string NodeUnplaced = "NodeUnplaced";
     public const string RelationTypeDefined = "RelationTypeDefined";
     public const string RelationTypeRetired = "RelationTypeRetired";
 
@@ -121,10 +126,16 @@ public static class Roles
     public const string Group = "group";
     public const string Product = "product";
     public const string Variant = "variant";
+    /// <summary>Rubrik (Taloan, 20.09.2026): Knoten eines Publikationsbaums — Wurzel = der Baum eines Kanals (× Markt), darunter Rubriken;
+    /// Produktgruppen und Produkte hängen per Verweis darin (NodePlaced), nie als Kinder — keine Vererbung über den Publikationsbaum.
+    /// Rubriken tragen eigene Werte (Texte, Bilder, SEO) wie jeder Knoten.</summary>
+    public const string Rubric = "rubric";
     /// <summary>Kein Baumknoten: ein Medium als Ziel einer Relation (20).</summary>
     public const string Media = "media";
-    public static readonly IReadOnlyList<string> All = [Group, Product, Variant];
-    /// <summary>Tiefe im Baum: Gruppe 0, Produkt 1, Variante 2 — für „aktiv ab“.</summary>
+    public static readonly IReadOnlyList<string> All = [Group, Product, Variant, Rubric];
+    /// <summary>Die Rollen des Pflegebaums (ohne Rubrik).</summary>
+    public static readonly IReadOnlyList<string> Care = [Group, Product, Variant];
+    /// <summary>Tiefe im Baum: Gruppe 0, Produkt 1, Variante 2 — für „aktiv ab“. Rubrik 0: ein eigener Baum.</summary>
     public static int Depth(string role) => role switch { Group => 0, Product => 1, Variant => 2, _ => 0 };
 }
 
@@ -409,6 +420,20 @@ public sealed record MasterLocaleDefined(string Code);
 /// abgeleitete Kanäle beziehen ihren Wert aus dem Masterkanal — wie abgeleitete Sprachen aus der Mastersprache.
 /// </summary>
 public sealed record MasterChannelDefined(string Key);
+
+/// <summary>
+/// Erster Eintrag einer Rubrik (Taloan, 20.09.2026). Ohne Parent ist sie die Wurzel eines Publikationsbaums: die Maximalstruktur
+/// eines Kanals, optional für einen Markt — Ausleitungen filtern über das Attribut markets, nicht über eigene Bäume.
+/// </summary>
+public sealed record RubricCreated(string? Parent, Labels Label, string? Name = null, string? Channel = null, string? Market = null);
+
+/// <summary>Kanal und Markt der Wurzel ändern.</summary>
+public sealed record PubTreeSet(string? Channel, string? Market);
+
+/// <summary>Verweis: ein Pflegeknoten (Produktgruppe, Produkt) hängt in dieser Rubrik — derselbe Knoten darf in mehreren hängen. Order: Platz in der Rubrik.</summary>
+public sealed record NodePlaced(string Node, int? Order = null);
+
+public sealed record NodeUnplaced(string Node);
 
 /// <summary>
 /// Ein Relationstyp (18): Strom <c>relation:&lt;key&gt;</c>. <paramref name="Reverse"/> ist die Bezeichnung

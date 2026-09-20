@@ -38,6 +38,11 @@ public sealed class Node
     public Dictionary<string, List<string>> Rows { get; } = new();
     public HashSet<string> Categories { get; } = new();
     public HashSet<Release> Releases { get; } = new();
+    /// <summary>Rubrik-Wurzel: Kanal und Markt des Publikationsbaums.</summary>
+    public string? Channel { get; set; }
+    public string? Market { get; set; }
+    /// <summary>Rubrik: die hier per Verweis hängenden Pflegeknoten, in Reihenfolge.</summary>
+    public List<string> Placed { get; } = new();
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";
@@ -116,7 +121,15 @@ public sealed class Tree : IProjection
     public IEnumerable<Node> Children(string? parent) =>
         _children.TryGetValue(parent ?? "", out var ids) ? ids.Select(id => _nodes[id]) : [];
 
-    public IEnumerable<Node> Roots => Children(null);
+    /// <summary>Wurzeln des Pflegebaums (ohne Publikationsbäume).</summary>
+    public IEnumerable<Node> Roots => Children(null).Where(n => n.Role != Roles.Rubric);
+    /// <summary>Die Publikationsbäume: Rubriken ohne Vater.</summary>
+    public IEnumerable<Node> PubTrees => Children(null).Where(n => n.Role == Roles.Rubric);
+    private readonly Dictionary<string, HashSet<string>> _placedIn = new();
+    /// <summary>Rubriken, in denen ein Pflegeknoten hängt.</summary>
+    public IEnumerable<Node> PlacedIn(string nodeId) => _placedIn.TryGetValue(nodeId, out var s) ? s.Select(id => _nodes.GetValueOrDefault(id)).OfType<Node>() : [];
+    /// <summary>Die Wurzel des Publikationsbaums einer Rubrik.</summary>
+    public Node PubTreeOf(Node rubric) { var n = rubric; while (n.Parent is { } p && _nodes.TryGetValue(p, out var up)) n = up; return n; }
 
     /// <summary>Der Pfad von den Eltern bis zur Wurzel.</summary>
     public IEnumerable<Node> Ancestors(Node node)
@@ -325,12 +338,20 @@ public sealed class Tree : IProjection
                 n = Create(entry, Roles.Variant, vc.Product);
                 foreach (var (k, v) in vc.AxisValues) n.AxisValues[k] = v;
                 break;
+            case Types.RubricCreated:
+                var rc = Types.Deserialize<RubricCreated>(entry.Payload);
+                n = Create(entry, Roles.Rubric, rc.Parent);
+                n.Label = rc.Label;
+                n.Name = string.IsNullOrWhiteSpace(rc.Name) ? TextOf(rc.Label) : rc.Name.Trim();
+                n.Channel = rc.Channel; n.Market = rc.Market;
+                break;
             case Types.NodeRestored:
                 // zurück ins Abbild, wie er war — Kennungen wieder eintragen, ausser ein anderer hat sie inzwischen
                 if (!_retired.Remove(entry.Stream, out n)) return;
                 _nodes[n.Id] = n;
                 Link(n);
                 foreach (var (sys, ext) in n.External.ToList()) if (!_external.TryAdd((sys, ext), n.Id)) n.External.Remove(sys);
+                foreach (var p in n.Placed) { if (!_placedIn.TryGetValue(p, out var rs)) _placedIn[p] = rs = new(); rs.Add(n.Id); }
                 break;
             default:
                 if (!_nodes.TryGetValue(entry.Stream, out n)) return;   // kein Knoten: übergehen
@@ -377,6 +398,22 @@ public sealed class Tree : IProjection
                 n.Label = Types.Deserialize<GroupRenamed>(entry.Payload).Label;
                 n.Name = TextOf(n.Label);
                 break;
+            case Types.PubTreeSet:
+                var ps = Types.Deserialize<PubTreeSet>(entry.Payload);
+                n.Channel = ps.Channel; n.Market = ps.Market;
+                break;
+            case Types.NodePlaced:
+                var np = Types.Deserialize<NodePlaced>(entry.Payload);
+                n.Placed.Remove(np.Node);
+                if (np.Order is { } o && o >= 0 && o < n.Placed.Count) n.Placed.Insert(o, np.Node); else n.Placed.Add(np.Node);
+                if (!_placedIn.TryGetValue(np.Node, out var set)) _placedIn[np.Node] = set = new();
+                set.Add(n.Id);
+                break;
+            case Types.NodeUnplaced:
+                var nu = Types.Deserialize<NodeUnplaced>(entry.Payload);
+                n.Placed.Remove(nu.Node);
+                if (_placedIn.TryGetValue(nu.Node, out var s2)) s2.Remove(n.Id);
+                break;
             case Types.ProductAxesSet:
                 n.Axes = Types.Deserialize<ProductAxesSet>(entry.Payload).Axes.Distinct().ToArray();
                 // vorhandene Varianten: neue Achse ← eigener Wert des Attributs; entfallene Achse weg (Taloan, 20.09.: Achsen auch nachträglich)
@@ -405,6 +442,7 @@ public sealed class Tree : IProjection
                 break;
             case Types.NodeRetired:
                 Unlink(n);
+                foreach (var p in n.Placed) if (_placedIn.TryGetValue(p, out var rs)) rs.Remove(n.Id);
                 foreach (var (sys, ext) in n.External) _external.Remove((sys, ext));
                 _nodes.Remove(n.Id);
                 _retired[n.Id] = n;

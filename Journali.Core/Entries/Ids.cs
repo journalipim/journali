@@ -13,6 +13,7 @@ public static class Ids
         Roles.Group => "g-" + Random(),
         Roles.Product => "p-" + Random(),
         Roles.Variant => "v-" + Random(),
+        Roles.Rubric => "k-" + Random(),
         _ => throw new ArgumentException(role, nameof(role)),
     };
 

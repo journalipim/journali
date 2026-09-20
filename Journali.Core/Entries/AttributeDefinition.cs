@@ -121,7 +121,7 @@ public static class Model
         yield return new(RelationStream + "image", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("image", Labels.Of("Bild", "Image"), Labels.Of("Bild von", "Image of"), To: [Roles.Media], Group: "relation_media")));
         yield return new(RelationStream + "document", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("document", Labels.Of("Dokument", "Document"), Labels.Of("Dokument zu", "Document of"), To: [Roles.Media], Group: "relation_media")));
 
-        var viewNames = new Dictionary<string, (string De, string En)> { [Roles.Group] = ("Gruppe", "Group"), [Roles.Product] = ("Produkt", "Product"), [Roles.Variant] = ("Variante", "Variant") };
+        var viewNames = new Dictionary<string, (string De, string En)> { [Roles.Group] = ("Gruppe", "Group"), [Roles.Product] = ("Produkt", "Product"), [Roles.Variant] = ("Variante", "Variant"), [Roles.Rubric] = ("Rubrik", "Rubric") };
         foreach (var role in Roles.All)
         {
             var items = groups.Where(g => g.ActiveAt(role)).Select(g => new ViewItem(g.Key)).ToList();

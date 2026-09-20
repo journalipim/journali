@@ -134,11 +134,78 @@ public static class Commands
         return Outcome.Ok(c.Write(Ids.New(Roles.Variant), Types.VariantCreated, new VariantCreated(product.Id, values)));
     }
 
+    // ---- Publikationsbaum (Taloan, 20.09.2026): Rubriken sind Knoten, Pflegeknoten hängen per Verweis darin
+    public static Outcome CreateRubric(Ctx c, string? parent, Labels? label, string? name = null, string? channel = null, string? market = null)
+    {
+        parent = Blank(parent); channel = Blank(channel); market = Blank(market);
+        if (parent is not null && !IsRole(c.Tree, parent, Roles.Rubric)) return Outcome.Bad("Eine Rubrik hängt unter einer Rubrik.");
+        if (parent is null && (channel is null || !c.Model.Channels.ContainsKey(channel))) return Outcome.Bad("Ein Publikationsbaum gehört zu einem Kanal.");
+        if (parent is not null) { channel = null; market = null; }
+        if (string.IsNullOrWhiteSpace(name) && (label is null || label.Count == 0)) return Outcome.Bad("Name fehlt.");
+        return Outcome.Ok(c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(parent, label ?? new(), Blank(name), channel, market)));
+    }
+
+    public static Outcome SetPubTree(Ctx c, string id, string? channel, string? market)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (n.Role != Roles.Rubric || n.Parent is not null) return Outcome.Bad("Kanal und Markt stehen an der Wurzel des Publikationsbaums.");
+        channel = Blank(channel); market = Blank(market);
+        if (channel is null || !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad("Ein Publikationsbaum gehört zu einem Kanal.");
+        return Outcome.Ok(c.Write(id, Types.PubTreeSet, new PubTreeSet(channel, market)));
+    }
+
+    /// <summary>Pflegeknoten in eine Rubrik hängen (Produktgruppe oder Produkt; Varianten kommen mit dem Produkt).</summary>
+    public static Outcome Place(Ctx c, string rubric, string? node, int? order = null)
+    {
+        if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;
+        if (r.Role != Roles.Rubric) return Outcome.Bad("Verweise hängen in Rubriken.");
+        if (!c.Tree.Nodes.TryGetValue(Blank(node) ?? "", out var n)) return Outcome.Bad("Knoten gibt es nicht.");
+        if (n.Role is not (Roles.Group or Roles.Product)) return Outcome.Bad("In eine Rubrik hängt man Produktgruppen und Produkte — Varianten kommen mit dem Produkt.");
+        if (r.Placed.Contains(n.Id) && order is null) return Outcome.Bad("Hängt hier schon.");
+        return Outcome.Ok(c.Write(rubric, Types.NodePlaced, new NodePlaced(n.Id, order)));
+    }
+
+    public static Outcome Unplace(Ctx c, string rubric, string node)
+    {
+        if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;
+        if (!r.Placed.Contains(node)) return Outcome.Bad("Hängt hier nicht.");
+        return Outcome.Ok(c.Write(rubric, Types.NodeUnplaced, new NodeUnplaced(node)));
+    }
+
+    /// <summary>
+    /// Aus dem Pflegebaum ableiten (Taloan, 20.09.: „den Pflegebaum als Grundlage nehmen und dann umbauen“): unter der Rubrik entsteht je
+    /// Produktgruppe unter <paramref name="from"/> eine Rubrik (rekursiv), jedes Produkt wird ein Verweis. Danach ist der Baum entkoppelt.
+    /// Liefert die Zahl der Einträge.
+    /// </summary>
+    public static Outcome Derive(Ctx c, string rubric, string? from, out int count)
+    {
+        var n = 0; count = 0;
+        if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;
+        if (r.Role != Roles.Rubric) return Outcome.Bad("Ableiten geht in eine Rubrik.");
+        if (!c.Tree.Nodes.TryGetValue(Blank(from) ?? "", out var src) || src.Role != Roles.Group) return Outcome.Bad("Abgeleitet wird ab einer Produktgruppe.");
+        Entry? last = null;
+        void Walk(string target, Node g)
+        {
+            foreach (var child in c.Tree.Children(g.Id).OrderBy(x => x.Name ?? x.Id))
+            {
+                if (child.Role == Roles.Group)
+                {
+                    var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(target, new Labels(child.Label), child.Name)); n++; last = e;
+                    Walk(e.Stream, child);
+                }
+                else if (child.Role == Roles.Product) { last = c.Write(target, Types.NodePlaced, new NodePlaced(child.Id)); n++; }
+            }
+        }
+        Walk(rubric, src);
+        count = n;
+        return last is null ? Outcome.Bad("Nichts abzuleiten: keine Gruppen oder Produkte darunter.") : Outcome.Ok(last);
+    }
+
     public static Outcome Move(Ctx c, string id, string? parent)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (!c.Tree.Nodes.TryGetValue(parent ?? "", out var target)) return Outcome.Bad("Ziel gibt es nicht.");
-        var need = n.Role == Roles.Variant ? Roles.Product : Roles.Group;
+        var need = n.Role == Roles.Variant ? Roles.Product : n.Role == Roles.Rubric ? Roles.Rubric : Roles.Group;
         if (target.Role != need) return Outcome.Bad($"{n.Role} hängt unter {need}.");
         if (target.Id == n.Id || c.Tree.Ancestors(target).Any(a => a.Id == n.Id)) return Outcome.Bad("Nicht unter sich selbst.");
         return Outcome.Ok(c.Write(id, Types.NodeMoved, new NodeMoved(target.Id)));

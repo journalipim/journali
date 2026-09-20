@@ -66,6 +66,17 @@ public static class TreeApi
         api.MapPost("/groups", (GroupCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateGroup(x, b.Parent, b.Label, b.Name)));
         api.MapPut("/groups/{id}/label", (string id, GroupRenamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RenameGroup(x, id, b.Label)));   // Altlast
         api.MapPut("/nodes/{id}/name", (string id, NodeNamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Rename(x, id, b.Name)));
+        // Publikationsbäume (Taloan, 20.09.2026): Wurzel = Baum eines Kanals (× Markt), Rubriken darunter, Pflegeknoten per Verweis
+        api.MapGet("/pub", (Catalog c) => c.With((model, tree, _) => tree.PubTrees.Select(n => new { n.Id, n.Channel, n.Market, label = NodeRow.LabelOf(tree, model, n), rubrics = CountRubrics(tree, n), placed = CountPlaced(tree, n) }).ToList()));
+        api.MapPost("/rubrics", (RubricCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateRubric(x, b.Parent, b.Label, b.Name, b.Channel, b.Market)));
+        api.MapPut("/rubrics/{id}/tree", (string id, PubTreeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetPubTree(x, id, b.Channel, b.Market)));
+        api.MapPost("/rubrics/{id}/place", (string id, NodePlaced b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Place(x, id, b.Node, b.Order)));
+        api.MapDelete("/rubrics/{id}/place/{node}", (string id, string node, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Unplace(x, id, node)));
+        api.MapPost("/rubrics/{id}/derive", (string id, DeriveBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Derive(x, id, b.From, out _)));
+        // die Verweise einer Rubrik als Zeilen (tote Verweise auf zurückgezogene Knoten fallen weg) und wo ein Pflegeknoten überall hängt
+        api.MapGet("/rubrics/{id}/placed", (string id, Catalog c) => c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var r) && r.Role == Roles.Rubric
+            ? Results.Ok(r.Placed.Select(p => tree.Nodes.GetValueOrDefault(p)).Where(n => n is not null).Select(n => NodeRow.Of(tree, model, n!)).ToList()) : Results.NotFound()));
+        api.MapGet("/nodes/{id}/placed-in", (string id, Catalog c) => c.With((model, tree, _) => tree.PlacedIn(id).Select(r => new { r.Id, label = NodeRow.LabelOf(tree, model, r), tree = tree.PubTreeOf(r).Id, path = string.Join(" › ", tree.Ancestors(r).Reverse().Append(r).Select(a => NodeRow.LabelOf(tree, model, a))) }).ToList()));
         api.MapPut("/nodes/{id}/label-attribute", (string id, LabelAttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetLabelAttribute(x, id, b.Attribute)));
         api.MapPost("/products", (ProductCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateProduct(x, b.Group, b.Axes)));
         api.MapPut("/nodes/{id}/axes", (string id, ProductAxesSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAxes(x, id, b.Axes, b.Force)));
@@ -159,6 +170,10 @@ public static class TreeApi
     }
 
     /// <summary>Ein Befehl: Urheber aus dem Kopf, Prüfen und Schreiben unter der Sperre, Ergebnis als HTTP.</summary>
+    static int CountRubrics(Tree tree, Node n) => tree.Children(n.Id).Sum(ch => 1 + CountRubrics(tree, ch));
+    static int CountPlaced(Tree tree, Node n) => n.Placed.Count + tree.Children(n.Id).Sum(ch => CountPlaced(tree, ch));
+    public sealed record DeriveBody(string? From);
+
     public static IResult Run(HttpRequest req, Catalog c, Func<Ctx, Outcome> command)
     {
         if (Actor(req) is not { } actor) return ActorMissing();
@@ -179,11 +194,13 @@ public static class TreeApi
 /// <summary>Eine Zeile im Baum: genug für die Anzeige, ohne Werte.</summary>
 public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Name, string? Groups, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, string? Sku, Dictionary<string, string> External,
-    int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null)
+    int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null,
+    string? Channel = null, string? Market = null, string[]? Placed = null)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
-        n.Own(Model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n));
+        n.Own(Model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
+        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null);
 
     /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle, Taloan): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
     /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>
