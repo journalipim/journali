@@ -18,12 +18,12 @@ const groupKey = () => cache.settings.group || 'etim'
 // release = die aktuelle Version (Zuweisen, Prüfen, Export). Alte Datensätze class:<EC> ohne Version zählen zur Version der damaligen Freigabe.
 // Mit der ganzen Freigabe im Journal (5 640 Klassen, 17 000 Merkmale) heisst „übernommen“ nicht mehr „in Gebrauch“: Attribute, Zuordnung und
 // Datenanalyse richten sich nach den Klassen, die im Baum zugewiesen sind (used); die Freigabe ist der Suchpool.
-const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [], used: new Set() }
+const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [], used: new Set(), usedBy: new Map() }
 async function loadUsed() {
   try {
-    const key = cache.settings.classAttr; const rows = await (await fetch('/api/tree')).json(); const used = new Set()
-    for (const r of rows.filter(r => !r.parent && r.role !== 'rubric')) { const t = await (await fetch(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`)).json(); for (const row of t.rows ?? []) { const c = String(row.values?.[key]?.value ?? '').trim().toUpperCase(); if (c) used.add(c) } }
-    cache.used = used
+    const key = cache.settings.classAttr; const rows = await (await fetch('/api/tree')).json(); const used = new Set(); const by = new Map()
+    for (const r of rows.filter(r => !r.parent && r.role !== 'rubric')) { const t = await (await fetch(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`)).json(); for (const row of t.rows ?? []) { const v = row.values?.[key]; const c = String(v?.value ?? '').trim().toUpperCase(); if (!c) continue; used.add(c); if (v.own) { if (!by.has(c)) by.set(c, []); by.get(c).push({ id: row.row.id, label: row.row.label, role: row.row.role }) } } }
+    cache.used = used; cache.usedBy = by
   } catch { }
 }
 /// Klassen in Gebrauch: die im Baum zugewiesenen; ohne Zuweisung und bei kleinem Bestand (von Hand übernommen) alle
@@ -365,10 +365,10 @@ async function mount(root, ctx) {
       if (!found.length) hits.append(el('div', { class: 'muted', style: 'padding:4px' }, 'nichts gefunden'))
     }
     const taken = usedClasses().sort((a, b) => a.code.localeCompare(b.code))
-    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Version'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
+    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Version'), el('th', { style: 'width:200px' }, 'Knoten'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
       el('tbody', {}, ...taken.map(c => { const missing = c.features.filter(f => !hasAttr(attrKeyOf(f.code))).length; return el('tr', {}, el('td', { class: 'mono' }, c.code), el('td', {}, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, c.group ? ` · ${nameOf(c.group.name, locale)}` : '')), el('td', { class: 'num' }, c.features.length), el('td', { class: missing ? 'warn num' : 'muted num' }, missing || '—'), el('td', { class: 'muted', style: 'font-size:11px' }, `${c.release?.name ?? ''} v${c.version}`),
         el('td', { style: 'position:relative' }, assignBtn(c.code)),
-        el('td', {}, rel && rel.classes.some(x => x.code === c.code && x.version !== c.version) ? el('button', { class: 'x', title: 'aus der gelesenen Freigabe aktualisieren', onclick: async () => { await takeClass(rel.classes.find(x => x.code === c.code)); draw() } }, '↻') : null, el('button', { class: 'x', title: 'Klasse entfernen (Datensatz; Attribute und Werte bleiben)', onclick: async () => { if (!(await ctx.dialog.confirm({ title: `${c.code} entfernen?`, ok: 'entfernen', danger: true }))) return; await ctx.data.del('class:' + c.code); cache.classes.delete(c.code); draw() } }, '✕'))) })))
+        el('td', {}, rel && rel.classes.some(x => x.code === c.code && x.version !== c.version) ? el('button', { class: 'x', title: 'aus der gelesenen Freigabe aktualisieren', onclick: async () => { await takeClass(rel.classes.find(x => x.code === c.code)); draw() } }, '↻') : null, el('button', { class: 'x', title: `Zuweisung an ${(cache.usedBy.get(c.code) ?? []).length} Knoten entfernen — die Klasse bleibt in Version ${cache.version}`, onclick: async () => { const nodes = cache.usedBy.get(c.code) ?? []; if (!(await ctx.dialog.confirm({ title: `${c.code} an ${nodes.length} Knoten entfernen?`, list: nodes.map(n => `${ICON[n.role] ?? ''} ${n.label}`), text: 'Das Klassenattribut wird dort geleert; die Klasse bleibt in der Version.', ok: '✕ Zuweisungen entfernen', danger: true }))) return; await busy(`entferne ${c.code} …`, async () => { await ctx.batch(nodes.map(n => ({ op: 'attribute.set', args: { node: n.id, attribute: cache.settings.classAttr, locale: null, value: '' } }))); await store.poll(true); await loadUsed(); draw() }) } }, '✕')), el('td', { class: 'muted', style: 'font-size:11px' }, (cache.usedBy.get(c.code) ?? []).slice(0, 3).map(n => n.label).join(', ') + ((cache.usedBy.get(c.code) ?? []).length > 3 ? ` … (${cache.usedBy.get(c.code).length})` : ''))) })))
     const assignRow = st.assign ? tree.byId.get(st.assign) : null
     body.append(section('2 · Klassen', `${taken.length} in Gebrauch · ${cache.classes.size} in Version ${cache.version ?? '?'}`,
       assignRow ? assignBox(assignRow, P) : null,
