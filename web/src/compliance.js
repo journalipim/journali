@@ -89,22 +89,27 @@ function vals(res, n, mapping) { const o = {}; for (const it of res.items) { con
 
 // Mit KI: je Knoten die leeren Pflicht-Datenpunkte, dazu die vorhandenen Werte des Knotens (alle Attribute) — Claude schlägt vor,
 // mit Sicherheit und Begründung; nichts wird geschrieben, der Mensch hakt ab.
-export async function aiSuggestions(catalog, mapping, res, nodeIds, say = () => {}) {
+// web: true (Taloan, 20.09.2026: Produkte, die ich handle, nicht herstelle — die Daten stehen beim Hersteller, nicht bei mir):
+// Claude sucht im Internet nach Hersteller, Typ, EAN und liest Datenblätter; jeder Vorschlag nennt seine Quelle.
+export async function aiSuggestions(catalog, mapping, res, nodeIds, say = () => {}, { web = false } = {}) {
   const out = []; const model = store.model
   const locale = res.locale
   for (const id of nodeIds) {
     const n = res.nodes.find(x => x.row.id === id); if (!n) continue
     const missing = res.items.filter(it => n.states[it.key] === 'empty')
     if (!missing.length) continue
-    say(`KI: ${n.row.label} …`)
+    say(`${web ? 'Recherche' : 'KI'}: ${n.row.label} …`)
     const view = await api.get(`/api/nodes/${encodeURIComponent(id)}`)
     const known = view.values.filter(v => !v.locale || v.locale === locale).map(v => `${model.attributes.find(a => a.key === v.attribute)?.label?.[locale] ?? v.attribute}: ${String(v.values ? v.values.join(', ') : v.value).replace(/<[^>]+>/g, ' ').slice(0, 300)}`).join('\n')
     const ask = missing.map(it => `- ${it.key}: ${it.label}${it.type ? ` (${it.type}${it.unit ? ' ' + it.unit : ''})` : ''}${it.hint ? ` — ${it.hint}` : ''}${it.values ? ` — erlaubt: ${it.values.join(' | ')}` : ''}`).join('\n')
     const system = `Du bist Datenpfleger in einem PIM. Vorschrift: ${catalog.label} (${catalog.source}). Du bekommst die vorhandenen Attributwerte eines Produkts und eine Liste fehlender Datenpunkte. Schlage nur vor, was sich aus den vorhandenen Werten belastbar ableiten oder als allgemein bekannt für dieses Produkt annehmen lässt; sonst lass den Datenpunkt weg. Antworte NUR mit JSON: { "<key>": { "value": "<Wert im geforderten Typ>", "confidence": 0.0-1.0, "why": "<ein Satz>" } }. Zahlen ohne Einheit, Datum als JJJJ-MM-TT, ja/nein als true/false.`
     const user = `Produkt: ${n.row.label} (${n.row.role}${n.row.sku ? ', SKU ' + n.row.sku : ''})\n\nVorhandene Werte:\n${known || '(keine)'}\n\nFehlende Datenpunkte:\n${ask}`
+    const research = web ? `\n\nRecherchiere im Internet: Suche das Produkt über Hersteller, Typ-/Artikelnummer, EAN/GTIN und SKU (Herstellerseite, Datenblatt, Katalog, Händler). Nimm nur Werte, die du dort findest; nenne je Datenpunkt die Quelle (url) in "source". Was du nicht findest, lässt du weg. Antworte nur mit dem JSON-Objekt, ohne Text davor oder danach.` : ''
+    const ids = web ? Object.entries(view.external ?? {}).map(([k, v]) => `${k}: ${v}`).join(', ') : ''
     try {
-      const j = await ai.ask({ system, user, json: true, maxTokens: 1500 })
-      for (const it of missing) { const s = j?.[it.key]; if (s && s.value != null && s.value !== '') out.push({ node: n.row, item: it, value: String(s.value), why: s.why ?? '', confidence: s.confidence ?? null, source: 'ai' }) }
+      const j = await ai.ask({ system: system + research, user: user + (ids ? `\nKennungen: ${ids}` : ''), json: true, maxTokens: web ? 3000 : 1500, web, maxSearches: 6 })
+      const src = ai.lastSources
+      for (const it of missing) { const s = j?.[it.key]; if (s && s.value != null && s.value !== '') out.push({ node: n.row, item: it, value: String(s.value), why: s.why ?? '', confidence: s.confidence ?? null, source: web ? 'web' : 'ai', url: s.source ?? src[0]?.url ?? null, sources: src }) }
     } catch (e) { out.push({ node: n.row, item: null, value: '', why: '✗ ' + e.message, source: 'ai', error: true }) }
   }
   return out
@@ -124,6 +129,7 @@ export async function createAttributes(catalog, items, mapping) {
   const gkey = catalog.groupKey
   if (!model.groups.some(g => g.key === gkey)) await api.post(`/api/model/groups/${gkey}`, { key: gkey, label: { de: catalog.groupLabel ?? catalog.label, en: catalog.groupLabel ?? catalog.label }, activeFrom: null }, 'PUT')
   for (const it of items) {
+    if (catalog.createAttribute) { const key = await catalog.createAttribute(it); if (key) mapping[it.key] = { to: key, why: 'angelegt', sure: true }; continue }   // der Katalog weiß es besser (etim: Listen, Einheiten)
     const key = (catalog.prefix ?? '') + it.key.replace(/[^a-z0-9_]/g, '_')
     const body = { key, label: { de: it.label, en: it.labelEn ?? it.label }, type: it.type === 'enum' && !it.values ? 'text' : (it.type ?? 'text'), group: gkey, unit: it.unit ?? null, axes: it.perLocale ? ['locale'] : [], inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null }
     await api.post(`/api/model/attributes/${key}`, body, 'PUT')
@@ -254,6 +260,13 @@ export async function mount(root, ctx, catalog) {
         if (ids.length > 25 && !(await dialog.confirm({ title: `${ids.length} Knoten an die KI?`, warn: `${ids.length} Anfragen an ${ai.model}`, ok: 'Ja' }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say); st.sugg = [...st.sugg.filter(x => x.source !== 'ai'), ...s]; say(`${s.filter(x => !x.error).length} KI-Vorschläge`); drawSugg()
       } }, `✦ Vorschläge mit KI${ai.available() ? '' : ' (kein Schlüssel)'}`),
+      // Fremde Produkte (Handelsware): die Daten stehen beim Hersteller — Claude sucht im Internet, jeder Wert mit Quelle
+      el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? `Claude (${ai.model}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter` : 'kein KI-Schlüssel — Einstellungen → KI (Claude)', onclick: async () => {
+        const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.score != null && n.score < 100).slice(0, 5).map(n => n.row.id)
+        if (!ids.length) { store.toast('keine Knoten mit Lücken'); return }
+        if (ids.length > 10 && !(await dialog.confirm({ title: `${ids.length} Knoten recherchieren?`, warn: `${ids.length} Anfragen mit bis zu 6 Suchen an ${ai.model}`, ok: 'Ja' }))) return
+        const s = await aiSuggestions(catalog, st.mapping, r, ids, say, { web: true }); st.sugg = [...st.sugg.filter(x => x.source !== 'web'), ...s]; say(`${s.filter(x => !x.error).length} Vorschläge aus der Recherche`); drawSugg()
+      } }, `⌕ Recherche im Internet${ai.available() ? '' : ' (kein Schlüssel)'}`),
       el('span', { class: 'muted', style: 'font-size:12px' }, st.picked.size ? `${st.picked.size} Knoten angehakt` : 'ohne Haken: die ersten 10 mit Lücken'))
     box.append(bar); const list = el('div'); box.append(list); s3.append(box)
     function drawSugg() {
@@ -265,7 +278,7 @@ export async function mount(root, ctx, catalog) {
       for (const s of st.sugg) {
         const cb = el('input', { type: 'checkbox' }); cb.checked = take.has(s); cb.disabled = !!s.error; cb.addEventListener('change', () => { cb.checked ? take.add(s) : take.delete(s) })
         const val = el('input', { type: 'text', value: s.value, style: 'width:100%' }); val.addEventListener('input', () => { s.value = val.value })
-        tb.append(el('tr', { class: s.error ? 'neg' : '' }, el('td', {}, cb), el('td', {}, s.node.label), el('td', {}, s.item ? s.item.label : '—'), el('td', {}, s.error ? '' : val), el('td', { class: 'muted', style: 'font-size:11px' }, s.source === 'ai' ? `✦ ${s.confidence != null ? Math.round(s.confidence * 100) + ' %' : ''}` : '⚙'), el('td', { class: 'muted', style: 'font-size:12px;white-space:normal' }, s.why)))
+        tb.append(el('tr', { class: s.error ? 'neg' : '' }, el('td', {}, cb), el('td', {}, s.node.label), el('td', {}, s.item ? s.item.label : '—'), el('td', {}, s.error ? '' : val), el('td', { class: 'muted', style: 'font-size:11px' }, s.source === 'web' ? `⌕ ${s.confidence != null ? Math.round(s.confidence * 100) + ' %' : ''}` : s.source === 'ai' ? `✦ ${s.confidence != null ? Math.round(s.confidence * 100) + ' %' : ''}` : '⚙'), el('td', { class: 'muted', style: 'font-size:12px;white-space:normal' }, s.why, s.url ? el('a', { href: s.url, target: '_blank', style: 'margin-left:6px', title: s.url }, '↗ Quelle') : null)))
       }
       list.append(t, el('div', { class: 'chips', style: 'margin-top:6px' }, el('button', { class: 'primary', onclick: async () => {
         const chosen = [...take]; if (!chosen.length) return

@@ -30,6 +30,7 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
       const etim = await import('../etim/core.mjs')
       const settings = { classAttr: 'etim_class', unknownAs: 'UN', ...((await api.get('/api/plugins/etim/data/settings').catch(() => null)) ?? {}) }
       const map = (await api.get('/api/plugins/etim/data/map').catch(() => null)) ?? {}
+      for (const [k, v] of Object.entries((await api.get('/api/plugins/etim/data/mapping').catch(() => null)) ?? {})) if (v?.to && !map[k.toUpperCase()]) map[k.toUpperCase()] = v.to   // Zuordnung aus der Datenanalyse
       const classes = new Map()
       const getClass = async code => { if (!classes.has(code)) classes.set(code, await api.get('/api/plugins/etim/data/' + encodeURIComponent('class:' + code)).catch(() => null)); return classes.get(code) }
       featuresOf = pctx => etim.featuresOf(pctx, { ...settings, map, getClass })

@@ -30,6 +30,16 @@ erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
    Zahl, Ja/Nein, Bereich, Wert nicht in der Liste), Merkmale ohne Attribut und Belegung (ℹ).
    Dieselbe Regel läuft in ✓ Datenqualität (`checks`).
 
+## Datenanalyse (✓ Datenanalyse → ⌗ ETIM-Merkmale)
+
+Dieselbe Prüfmaschine wie DPP/PPWR (`ctx.compliance`), der Katalog ist dynamisch: Datenpunkte =
+Klasse + alle Merkmale der übernommenen Klassen; ein Merkmal gilt an einem Knoten nur, wenn seine
+Klasse es hat (`appliesIf`). Zuordnung Merkmal → Attribut (Best Guess, gemerkt als `mapping`;
+der Export nimmt sie mit), fehlende Attribute legt der Katalog selbst an (`createAttribute`:
+Listen, Einheiten), je Knoten die Matrix erfüllt/leer/fraglich, Vorschläge aus Regeln, von der
+KI aus den vorhandenen Werten oder mit **Recherche im Internet** (Handelsware — s. Plugin
+`enrich`), übernehmen als Stapel.
+
 ## Export (xport)
 
 `entry.js` exportiert `featuresOf(pctx)`; xport setzt es als `env.featuresOf` (Ansicht:

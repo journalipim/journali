@@ -13,19 +13,109 @@ const TYPE = { Alphanumeric: 'Liste', Numeric: 'Zahl', Range: 'Bereich', Logical
 const DEFAULTS = { classAttr: 'etim_class', unknownAs: 'UN', requireClass: false }
 
 // Klassen und Einstellungen im Speicher — die Prüfregeln laufen synchron (Datenqualität) und brauchen sie ohne Nachschlagen
-const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, loaded: null }
+const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null }
+/// Attribut eines Merkmals: Zuordnung (map), sonst die der Datenanalyse (mapping), sonst das eigene ef…
+const attrKeyOf = code => cache.map[code] ?? cache.mapping?.[code.toLowerCase()]?.to ?? code.toLowerCase()
+const mergedMap = () => { const m = {}; for (const [k, v] of Object.entries(cache.mapping ?? {})) if (v?.to) m[k.toUpperCase()] = v.to; return { ...m, ...cache.map } }
 async function loadCache() {
   try {
     const names = await (await fetch('/api/plugins/etim/data')).json()
     if (!Array.isArray(names)) return
     const get = async n => { const r = await fetch('/api/plugins/etim/data/' + encodeURIComponent(n)); return r.ok ? r.json() : null }
-    cache.settings = { ...DEFAULTS, ...((await get('settings')) ?? {}) }; cache.map = (await get('map')) ?? {}
+    cache.settings = { ...DEFAULTS, ...((await get('settings')) ?? {}) }; cache.map = (await get('map')) ?? {}; cache.mapping = (await get('mapping')) ?? {}
     cache.classes = new Map()
     for (const n of names.filter(n => n.startsWith('class:'))) { const c = await get(n); if (c) cache.classes.set(c.code, c) }
   } catch { }
 }
 cache.loaded = loadCache()
-const cfg = locale => ({ ...cache.settings, map: cache.map, locale })
+const cfg = locale => ({ ...cache.settings, map: mergedMap(), locale })
+
+/// Modell anlegen: Gruppe ETIM, Klassenattribut (Werteliste der übernommenen Klassen), je Merkmal ein Attribut ef…
+function modelOps(ctx) {
+  const { api, store } = ctx
+  const model = () => store.model
+  const locale = model().masterLocale ?? 'de'
+  const hasAttr = key => model().attributes.some(a => a.key === key)
+  const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!Object.keys(out).length) out[locale] = nameOf(names, locale); return out }
+  const put = (path, body) => api.post('/api/model' + path, body, 'PUT')
+  async function ensureGroup() { if (!(model().groups ?? []).some(g => g.key === 'etim')) await put('/groups/etim', { key: 'etim', label: { de: 'ETIM', en: 'ETIM' }, activeFrom: 'product' }) }
+  async function ensureClassAttr() {
+    const key = cache.settings.classAttr
+    await ensureGroup()
+    const existing = model().attributes.find(a => a.key === key)
+    if (existing && !(existing.type === 'enum' && existing.list === key)) return key   // ein vorhandenes Text-/Listenattribut bleibt, wie es ist
+    if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' } })
+    const have = new Set((model().lists ?? []).find(l => l.key === key)?.values?.map(v => v.value) ?? [])
+    let i = 0
+    for (const c of [...cache.classes.values()].sort((a, b) => a.code.localeCompare(b.code))) if (!have.has(c.code)) await put(`/lists/${key}/values/${c.code}`, { value: c.code, label: Object.fromEntries(Object.entries(labelsOf(c.name)).map(([l, n]) => [l, `${c.code} ${n}`])), order: i++ })
+    if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: 'etim', inheritable: true })
+    return key
+  }
+  async function unitKeyFor(u) {
+    if (!u) return null
+    const abbr = nameOf(u.abbr, locale) || u.code; const units = model().units ?? []
+    const hit = units.find(x => x.key === abbr.toLowerCase() || Object.values(x.label ?? {}).some(l => l === abbr)); if (hit) return hit.key
+    const key = ('u_' + abbr.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '')).slice(0, 30)
+    if (!units.some(x => x.key === key)) await put(`/units/${key}`, { key, label: { de: abbr, en: abbr }, quantity: nameOf(u.name, locale) || abbr, factor: 1 })
+    return key
+  }
+  // ein Merkmal → Attribut ef… (Numeric: decimal + Einheit, Logical: boolean, Alphanumeric: enum mit Werteliste EV-Code → Name, Range: text mit Muster)
+  async function createFeature(f) {
+    await ensureGroup()
+    const key = f.code.toLowerCase()
+    if (hasAttr(key)) return key
+    const base = { key, label: labelsOf(f.name), group: 'etim' }
+    if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
+    else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
+    else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
+    else {
+      if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: labelsOf(f.name) })
+      let i = 0; for (const v of f.values) await put(`/lists/${key}/values/${v.code}`, { value: v.code, label: labelsOf(v.name), order: i++ })
+      await put(`/attributes/${key}`, { ...base, type: 'enum', list: key })
+    }
+    if (cache.map[f.code] && cache.map[f.code] !== key) delete cache.map[f.code]
+    return key
+  }
+  return { ensureGroup, ensureClassAttr, createFeature, hasAttr }
+}
+/// Alle Merkmale der übernommenen Klassen, je Code einmal (Werte vereinigt), mit den Klassen, in denen es vorkommt
+function allFeatures() {
+  const feats = new Map()
+  for (const c of cache.classes.values()) for (const f of c.features) { if (!feats.has(f.code)) feats.set(f.code, { ...f, values: [...f.values], classes: [c] }); else { const have = feats.get(f.code); have.classes.push(c); for (const v of f.values) if (!have.values.some(x => x.code === v.code)) have.values.push(v) } }
+  return feats
+}
+
+/// Katalog für die Datenanalyse (ctx.compliance, wie DPP/PPWR — Taloan, 20.09.: „was ich beim Export brauche, vorher analysieren und
+/// vervollständigen“): Datenpunkte = Klasse + alle Merkmale der übernommenen Klassen; ein Merkmal gilt an einem Knoten nur, wenn
+/// seine Klasse es hat. Attribute legt der Katalog selbst an (Listen, Einheiten). Vorschläge: Regeln, KI, Recherche im Internet.
+function buildCatalog(ctx) {
+  const locale = ctx.store.model.masterLocale ?? 'de'
+  const ops = modelOps(ctx)
+  const classKey = cache.settings.classAttr
+  const classOf = (r, mapping) => { const key = mapping?.[classKey]?.to || classKey; const code = String(r.values?.[key]?.value ?? '').trim().toUpperCase(); return cache.classes.get(code) ?? null }
+  const TYPE = { Numeric: 'decimal', Logical: 'boolean', Alphanumeric: 'enum', Range: 'text' }
+  const feats = [...allFeatures().values()].sort((a, b) => b.classes.length - a.classes.length || a.code.localeCompare(b.code))
+  const items = feats.map(f => ({
+    key: f.code.toLowerCase(), label: nameOf(f.name, locale) || f.code, labelEn: f.name.en, level: 'must', type: TYPE[f.type] ?? 'text', unit: f.unit ? (nameOf(f.unit.abbr, locale) || f.unit.code) : null,
+    values: f.type === 'Alphanumeric' ? f.values.map(v => nameOf(v.name, locale)) : null,
+    synonyms: [f.code, ...Object.values(f.name)],
+    hint: `${f.code} · ${f.type}${f.type === 'Range' ? ' (von - bis)' : ''} · in ${f.classes.length} Klasse${f.classes.length === 1 ? '' : 'n'}: ${f.classes.slice(0, 3).map(c => c.code).join(', ')}${f.classes.length > 3 ? ' …' : ''}`,
+    appliesIf: (r, mapping) => { const c = classOf(r, mapping); return !!c && c.features.some(x => x.code === f.code) },
+    rule: v => resolveValue(f, v) === null ? `passt nicht zu ${f.type}${f.type === 'Alphanumeric' ? ' — erlaubt: ' + f.values.slice(0, 5).map(x => nameOf(x.name, locale)).join(', ') + (f.values.length > 5 ? ' …' : '') : ''}` : null,
+    feature: f,
+  }))
+  const n = cache.classes.size
+  return {
+    key: 'etim', label: 'ETIM-Merkmale', icon: '⌗', source: 'https://etim.de/daten/downloads/', sourceLabel: 'etim.de ↗',
+    description: n ? `${n} Klasse${n === 1 ? '' : 'n'} übernommen (⇪ Export → ⌗ ETIM) mit ${feats.length} Merkmalen. Ein Merkmal zählt an einem Knoten nur, wenn seine Klasse es hat; Knoten ohne Klasse bleiben aussen vor. Fehlende Attribute legt der Katalog als ef… mit Werteliste und Einheit an.` : 'Noch keine Klasse übernommen — erst unter ⇪ Export → ⌗ ETIM eine Freigabe lesen und Klassen übernehmen.',
+    groupKey: 'etim', groupLabel: 'ETIM', prefix: '',
+    groups: [
+      { key: 'class', label: 'Klasse', items: [{ key: classKey, label: 'ETIM-Klasse', level: 'must', type: 'enum', synonyms: ['etim', 'etim_class', 'etim klasse', 'etim class'], hint: 'EC-Code der Klasse; Werteliste der übernommenen Klassen', rule: v => cache.classes.has(String(v).trim().toUpperCase()) ? null : `Klasse ${v} nicht übernommen` }] },
+      { key: 'features', label: 'Merkmale', items },
+    ],
+    createAttribute: async it => it.key === classKey ? ops.ensureClassAttr() : it.feature ? ops.createFeature(it.feature) : null,
+  }
+}
 
 /// Merkmale eines Knotens für xport (env.featuresOf) — pctx ist der Produktkontext von xport
 export async function etimFeatures(pctx) { await cache.loaded; return featuresOf(pctx, { ...cfg(pctx.locale), getClass: async code => cache.classes.get(code) ?? null }) }
@@ -47,8 +137,7 @@ async function mount(root, ctx) {
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 8px' })
   const attrs = () => model().attributes.filter(a => a.type !== 'rows')
   const lbl = a => a.label?.[locale] || a.label?.de || a.key
-  const attrKeyOf = code => cache.map[code] ?? code.toLowerCase()
-  const hasAttr = key => model().attributes.some(a => a.key === key)
+  const ops = modelOps(ctx); const hasAttr = ops.hasAttr
   const saveSettings = () => ctx.data.set('settings', cache.settings)
   const saveMap = () => ctx.data.set('map', cache.map)
   const section = (title, hint, ...kids) => el('div', { class: 'section', style: 'margin-top:10px' }, el('div', { class: 'step-band' }, title, hint ? el('span', { class: 'muted' }, ' · ' + hint) : null), ...kids)
@@ -83,47 +172,12 @@ async function mount(root, ctx) {
     })
   }
 
-  // ── Attribute anlegen: Klassenattribut (Werteliste der übernommenen Klassen), je Merkmal ein Attribut in der Gruppe ETIM
-  const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!Object.keys(out).length) out[locale] = nameOf(names, locale); return out }
-  const put = (path, body) => api.post('/api/model' + path, body, 'PUT')
-  async function ensureGroup() { if (!(model().groups ?? []).some(g => g.key === 'etim')) await put('/groups/etim', { key: 'etim', label: { de: 'ETIM', en: 'ETIM' }, activeFrom: 'product' }) }
-  async function ensureClassAttr() {
-    const key = cache.settings.classAttr
-    await ensureGroup()
-    const existing = model().attributes.find(a => a.key === key)
-    if (existing && !(existing.type === 'enum' && existing.list === key)) return   // ein vorhandenes Text-/Listenattribut bleibt, wie es ist
-    if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' } })
-    const have = new Set((model().lists ?? []).find(l => l.key === key)?.values?.map(v => v.value) ?? [])
-    let i = 0
-    for (const c of [...cache.classes.values()].sort((a, b) => a.code.localeCompare(b.code))) if (!have.has(c.code)) await put(`/lists/${key}/values/${c.code}`, { value: c.code, label: Object.fromEntries(Object.entries(labelsOf(c.name)).map(([l, n]) => [l, `${c.code} ${n}`])), order: i++ })
-    if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: 'etim', inheritable: true })
-  }
-  async function unitKeyFor(u) {
-    if (!u) return null
-    const abbr = nameOf(u.abbr, locale) || u.code; const units = model().units ?? []
-    const hit = units.find(x => x.key === abbr.toLowerCase() || Object.values(x.label ?? {}).some(l => l === abbr)); if (hit) return hit.key
-    const key = ('u_' + abbr.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '')).slice(0, 30)
-    if (!units.some(x => x.key === key)) await put(`/units/${key}`, { key, label: { de: abbr, en: abbr }, quantity: nameOf(u.name, locale) || abbr, factor: 1 })
-    return key
-  }
+  // ── Attribute anlegen (modelOps): Klassenattribut, je Merkmal ein Attribut in der Gruppe ETIM
   async function createAttributes() {
     await busy('lege Attribute an …', async () => {
-      await store.poll(true); await ensureClassAttr()
-      const feats = new Map(); for (const c of cache.classes.values()) for (const f of c.features) { if (!feats.has(f.code)) feats.set(f.code, { ...f, values: [...f.values] }); else { const have = feats.get(f.code); for (const v of f.values) if (!have.values.some(x => x.code === v.code)) have.values.push(v) } }
-      let n = 0; const todo = [...feats.values()].filter(f => !hasAttr(attrKeyOf(f.code)))
-      for (const f of todo) {
-        const key = f.code.toLowerCase(); say(`${++n}/${todo.length} ${f.code} ${nameOf(f.name, locale)}`)
-        const base = { key, label: labelsOf(f.name), group: 'etim' }
-        if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
-        else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
-        else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
-        else {
-          if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: labelsOf(f.name) })
-          let i = 0; for (const v of f.values) await put(`/lists/${key}/values/${v.code}`, { value: v.code, label: labelsOf(v.name), order: i++ })
-          await put(`/attributes/${key}`, { ...base, type: 'enum', list: key })
-        }
-        if (cache.map[f.code] && cache.map[f.code] !== key) { delete cache.map[f.code] }
-      }
+      await store.poll(true); await ops.ensureClassAttr()
+      let n = 0; const todo = [...allFeatures().values()].filter(f => !hasAttr(attrKeyOf(f.code)))
+      for (const f of todo) { say(`${++n}/${todo.length} ${f.code} ${nameOf(f.name, locale)}`); await ops.createFeature(f) }
       await saveMap(); await store.poll(true)
       say(`${todo.length} Attribute angelegt · Klassenattribut ${cache.settings.classAttr} mit ${cache.classes.size} Klassen`); draw()
     })
@@ -175,7 +229,7 @@ async function mount(root, ctx) {
     const attachPick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
     ctx.treePicker(attachPick, { roles: ['group'], height: 300, onPick: async r => { attachPick.style.display = 'none'; const groups = [...new Set([...(r.groups ?? '').split(',').filter(Boolean), 'etim'])]; await api.post(`/api/nodes/${encodeURIComponent(r.id)}/groups`, { groups }, 'PUT'); await tree.load?.(); say(`Gruppe ETIM hängt an ${r.label}`); draw() } })
     attachBtn.addEventListener('click', () => { attachPick.style.display = attachPick.style.display === 'none' ? 'block' : 'none' })
-    const allFeats = new Map(); for (const c of taken) for (const f of c.features) if (!allFeats.has(f.code)) allFeats.set(f.code, { ...f, n: 1 }); else allFeats.get(f.code).n++
+    const allFeats = allFeatures(); for (const f of allFeats.values()) f.n = f.classes.length
     const missing = [...allFeats.values()].filter(f => !hasAttr(attrKeyOf(f.code)))
     body.append(section('Attribute', `${allFeats.size} Merkmale · ${missing.length} ohne Attribut`,
       el('div', { style: 'display:flex;gap:12px;align-items:center;padding:6px 0;flex-wrap:wrap' }, el('label', { class: 'muted' }, 'Klasse in ', classSel), unkSel, el('label', {}, reqCb, ' Klasse ist Pflicht (Prüfung)'),
@@ -208,7 +262,11 @@ async function mount(root, ctx) {
 }
 
 export default {
-  views: [{ path: 'etim', label: 'ETIM', icon: '⌗', topic: 'export', hint: 'ETIM-Klassifikation: Freigabe (IXF) lesen, Klassen übernehmen, Attribute je Merkmal, Zuordnung, Prüfung — Merkmale für den BMEcat-Export', mount }],
+  views: [
+    { path: 'etim', label: 'ETIM', icon: '⌗', topic: 'export', hint: 'ETIM-Klassifikation: Freigabe (IXF) lesen, Klassen übernehmen, Attribute je Merkmal, Zuordnung, Prüfung — Merkmale für den BMEcat-Export', mount },
+    { path: 'coverage', label: 'ETIM-Merkmale', icon: '⌗', topic: 'analysis', hint: 'Datenanalyse wie DPP/PPWR: welche Merkmale der ETIM-Klassen fehlen — Attribute anlegen, Vorschläge aus Regeln, KI oder Recherche im Internet, übernehmen', mount: async (root, ctx) => { await cache.loaded; return ctx.compliance.mount(root, ctx, buildCatalog(ctx)) } },
+  ],
+  nodeActions: [{ label: 'ETIM-Merkmale prüfen', icon: '⌗', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.etim.root', id); ctx.go?.('/p/etim/coverage') } }],
   checks,
   featuresOf: etimFeatures,
   resolveValue,

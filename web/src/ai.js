@@ -13,23 +13,28 @@ export const ai = reactive({
   models: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5-20251001'],
   busy: 0,
   lastError: '',
+  lastSources: [],      // Quellen (url, title) der letzten Antwort mit web: true
 
   available() { return !!this.key },
   save() { try { localStorage.setItem(KEY, JSON.stringify({ key: this.key, model: this.model })) } catch {} },
 
   // Eine Frage, eine Antwort. json: true → die Antwort wird als JSON gelesen (Code-Zäune werden entfernt).
-  async ask({ system = '', user, json = false, maxTokens = 2000, temperature = 0 }) {
+  // web: true → Claude darf im Internet suchen (Herstellerseiten, Datenblätter — Taloan, 20.09.: Daten fremder Produkte ergänzen);
+  // die Zitate der Antwort stehen danach in lastSources. Kostet je Suche extra beim Anbieter.
+  async ask({ system = '', user, json = false, maxTokens = 2000, temperature = 0, web = false, maxSearches = 5 }) {
     if (!this.key) throw new Error('Kein KI-Schlüssel — Einstellungen → KI (Claude)')
     this.busy++
     try {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': this.key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model: this.model, max_tokens: maxTokens, temperature, system: system || undefined, messages: [{ role: 'user', content: user }] }),
+        body: JSON.stringify({ model: this.model, max_tokens: maxTokens, temperature, system: system || undefined, messages: [{ role: 'user', content: user }],
+          ...(web ? { tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: maxSearches }] } : {}) }),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error?.message || `${res.status} ${res.statusText}`)
       const text = (data?.content ?? []).filter(c => c.type === 'text').map(c => c.text).join('')
+      const seen = new Set(); this.lastSources = (data?.content ?? []).flatMap(c => c.citations ?? []).filter(c => c.url && !seen.has(c.url) && seen.add(c.url)).map(c => ({ url: c.url, title: c.title ?? c.url }))
       this.lastError = ''
       if (!json) return text
       const m = text.match(/```(?:json)?\s*([\s\S]*?)```/); const raw = (m ? m[1] : text).trim()
