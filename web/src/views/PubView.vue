@@ -146,10 +146,10 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </select>
       <button class="x" @click="newTree" title="neuer Publikationsbaum">+</button>
       <span class="grow" />
-      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced" :title="`${unplaced.length} Produkte hängen in diesem Baum nirgends`">⚠ {{ unplaced.length }}</button>
+      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced" :title="`${unplaced.length} Produkte sind in „${current.label}“ noch nicht einsortiert — Klick zeigt sie`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showUnplaced" class="unplaced">
-      <div class="toolbar"><span class="muted">nicht einsortiert · {{ unplaced.length }}</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `alle in ${selRubric.label} hängen` : 'links eine Rubrik wählen'">alle → ↗</button></div>
+      <div class="toolbar"><span class="muted">{{ unplaced.length }} Produkte noch nicht einsortiert</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `alle ${unplaced.length} in die Rubrik „${selRubric.label}“ einsortieren` : 'erst links eine Rubrik anklicken, dann hier alle einsortieren'">alle in {{ selRubric ? '„' + selRubric.label + '“' : 'Rubrik …' }}</button></div>
       <div class="scroll" style="max-height:200px">
         <div v-for="r in unplaced" :key="r.id" class="node" :title="tree.ancestors(r.id).map(a => a.label).join(' › ')">
           <span class="icon">{{ icon(r.role) }}</span><span class="label">{{ r.label }}</span><span class="grow" />
