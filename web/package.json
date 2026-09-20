@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node build-plugins.mjs",
+    "test": "node --test \"test/**/*.test.mjs\"",
     "build:web": "vite build",
     "build:plugins": "node build-plugins.mjs",
     "preview": "vite preview"

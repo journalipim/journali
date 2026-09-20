@@ -155,7 +155,7 @@ public sealed class Tree : IProjection
 
     /// <summary>
     /// Freigabe (Sortiment) für Kanal × Sprache: eigene Freigabe (genau oder für alle Sprachen), sonst die des Fallback-Kanals
-    /// (Taloan, 20.09.: „China bekommt das Sortiment der Türkei“). Kein Master-Fallback — eine Freigabe für web ist keine für print.
+    /// (Taloan, 20.09.: ein Markt bekommt das Sortiment seines Fallback-Markts). Kein Master-Fallback — eine Freigabe für web ist keine für print.
     /// Liefert den Kanal, über den sie gilt (null = keine).
     /// </summary>
     public string? ReleasedVia(Node node, string channel, string? locale)
@@ -481,8 +481,10 @@ public sealed class Tree : IProjection
             case Types.ValueSourced:
                 var vs = Types.Deserialize<ValueSourced>(entry.Payload);
                 var sax = new Axis(vs.Attribute, vs.Locale, vs.Channel, vs.Row);
-                if (string.IsNullOrWhiteSpace(vs.Source)) n.Sources.Remove(sax);
-                else n.Sources[sax] = new ValueSource(vs.Source.Trim(), vs.Title, vs.Note, vs.Method ?? "manual", string.IsNullOrWhiteSpace(vs.CheckedAt) ? entry.At.ToString("yyyy-MM-dd") : vs.CheckedAt, entry.Number, entry.Actor);
+                // Leere Quelle nimmt den Beleg weg — ausser bei „angefragt“: da ist „bei wem“ noch offen, der Zustand zählt trotzdem
+                // (Test Beleg_pending_bleibt_auch_ohne_Quelle: ✓ ohne Namen liess die Anfrage stumm verschwinden)
+                if (string.IsNullOrWhiteSpace(vs.Source) && vs.Method != "pending") n.Sources.Remove(sax);
+                else n.Sources[sax] = new ValueSource((vs.Source ?? "").Trim(), vs.Title, vs.Note, vs.Method ?? "manual", string.IsNullOrWhiteSpace(vs.CheckedAt) ? entry.At.ToString("yyyy-MM-dd") : vs.CheckedAt, entry.Number, entry.Actor);
                 break;
             case Types.RowAdded:
                 var ra = Types.Deserialize<RowAdded>(entry.Payload);

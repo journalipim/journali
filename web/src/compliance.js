@@ -11,7 +11,8 @@ import { store } from './store.js'
 import { tree } from './tree.js'
 import { dialog } from './dialog.js'
 import { ai } from './ai.js'
-import { norm, similarity, convert, validate } from './mapper.js'
+import { norm, similarity } from './mapper.js'
+import { analyze } from './compliance-core.js'
 import { treePicker } from './treePicker.js'
 
 export function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) if (k != null) e.append(k); return e }
@@ -39,7 +40,7 @@ export function guessMapping(catalog, model) {
 }
 const sameKind = (want, have) => want === have || (want === 'decimal' && have === 'integer') || (want === 'text' && ['text', 'html', 'enum'].includes(have)) || (want === 'enum' && have === 'text')
 
-// ---- 2 Prüfung eines Teilbaums
+// ---- 2 Prüfung eines Teilbaums — Zeilen holen, rechnen tut compliance-core.js (testbar ohne Browser)
 export async function check(catalog, mapping, rootId, say = () => {}) {
   const model = store.model
   const locale = model.masterLocale ?? model.locales[0]?.code ?? 'de'
@@ -51,52 +52,12 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
   const t = await api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&self=true&locale=${locale}${keys.length ? '&attributes=' + encodeURIComponent(keys.join(',')) : ''}`)
   const root = t.node
   // Wurzel als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt (Taloan, 21.09.: Geltung am Vater, Prüfung am Kind sagte „gilt hier nicht“).
-  // Älterer Server ohne self: wie bisher nur die eigenen Werte der Wurzel
+  // Älterer Server ohne self: wie bisher nur die eigenen Werte der Wurzel (Listenwerte stehen dort in values, nicht value)
   const selfRow = root ? t.rows.find(r => r.row.id === root.id) : null
   const rows = [root && !selfRow ? { row: root, values: {} } : null, ...t.rows].filter(Boolean)
-  if (root && !selfRow) { try { const n = await api.get(`/api/nodes/${encodeURIComponent(rootId)}`); const own = new Map(n.values.map(v => [`${v.attribute}|${v.locale ?? ''}`, v.value])); for (const k of keys) { const v = own.get(`${k}|${locale}`) ?? own.get(`${k}|`) ?? null; if (v != null) rows[0].values[k] = { value: v, own: true } } } catch {} }
-  const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
-  const defs = new Map(model.attributes.map(a => [a.key, a]))
-  const result = { nodes: [], items, byItem: new Map(), unmapped: items.filter(it => !mapping[it.key]?.to), locale }
-  for (const it of items) result.byItem.set(it.key, { ok: 0, empty: 0, bad: 0, na: 0, below: 0, inactive: 0, pending: 0 })
-  result.inactiveGroups = new Set()   // Gruppen, die im Teilbaum fehlen (Taloan, 20.09.: „kein Schutzart-Attribut am Knoten“ — die Gruppe hängt nicht am Pfad)
-  // Vollständigkeit zählt am Verkaufbaren (Taloan, 20.09.: „muss an der Variante sein — wie ich sie pflege, ist eine andere Sache“):
-  // ein Knoten mit Kindern gilt als belegt (↓), wenn alle Blätter darunter den Datenpunkt haben — ob er ihn selbst hat, ist egal.
-  const kids = new Map(); for (const r of rows) { const p = r.row.parent ?? ''; if (!kids.has(p)) kids.set(p, []); kids.get(p).push(r) }
-  const ids = new Set(rows.map(r => r.row.id))
-  const leavesOf = r => { const k = (kids.get(r.row.id) ?? []); return k.length ? k.flatMap(leavesOf) : [r] }
-  const isLeaf = r => !(kids.get(r.row.id) ?? []).length
-  const byId = new Map(); const order = [...rows].sort((a, b) => (isLeaf(a) ? 0 : 1) - (isLeaf(b) ? 0 : 1))   // Blätter zuerst, Eltern schauen auf sie
-  void ids
-  for (const r of order) {
-    const node = { row: r.row, raw: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, v.value])), from: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, v.from ?? null])), states: {}, must: 0, mustOk: 0, findings: [], leaf: isLeaf(r) }
-    byId.set(r.row.id, node)
-    for (const it of items) {
-      if (it.roles && !it.roles.includes(r.row.role)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
-      if (it.appliesIf && !it.appliesIf(r, mapping)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
-      if (it.group?.scope && !String(r.values?.[scopeAttr]?.value ?? '').split(',').map(s => s.trim()).includes(it.group.scope.key)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
-      const to = mapping[it.key]?.to
-      const v = to ? r.values[to]?.value ?? null : null
-      let state = !to ? 'unmapped' : v == null || v === '' ? 'empty' : 'ok'
-      // angefragt (Beleg method pending, checkedAt = Wiedervorlage): kein rotes Feld, sondern ⏳ — überfällig, wenn das Datum vorbei ist
-      const src = to ? r.values[to]?.source : null
-      if (state === 'empty' && src?.method === 'pending') { state = 'pending'; node.pending = (node.pending ?? 0) + 1; if (src.checkedAt && src.checkedAt < new Date().toISOString().slice(0, 10)) node.overdue = (node.overdue ?? 0) + 1; node.pendingInfo ??= {}; node.pendingInfo[it.key] = src }
-      if (to && state === 'empty' && (r.inactive ?? []).includes(to)) state = 'inactive'
-      if (state === 'ok') {
-        const def = defs.get(to)
-        const bad = validate(convert(v, def, model), def, model) ?? (it.rule ? it.rule(v, r, model) : null)
-        if (bad) { state = 'bad'; node.findings.push({ item: it, message: bad, value: v }) }
-      }
-      if ((state === 'empty' || state === 'inactive') && !node.leaf) { const below = leavesOf(r).map(l => byId.get(l.row.id)?.states[it.key]); if (below.length && below.every(s => s === 'ok' || s === 'below' || s === 'na')) state = 'below' }
-      if (state === 'inactive') { const g = defs.get(to)?.group; if (g && ![tree.byId.get(r.row.id), ...tree.ancestors(r.row.id)].some(x => (x?.groups ?? '').split(',').includes(g))) result.inactiveGroups.add(g) }
-      node.states[it.key] = state
-      if (it.level === 'must') { node.must++; if (state === 'ok' || state === 'below') node.mustOk++ }
-      if (state !== 'unmapped') result.byItem.get(it.key)[state]++
-    }
-    node.score = node.must ? Math.round(node.mustOk / node.must * 100) : null
-  }
-  for (const r of rows) result.nodes.push(byId.get(r.row.id))   // in Baumfolge
-  return result
+  if (root && !selfRow) { try { const n = await api.get(`/api/nodes/${encodeURIComponent(rootId)}`); const own = new Map(n.values.map(v => [`${v.attribute}|${v.locale ?? ''}`, v.value ?? (v.values ? v.values.join(', ') : null)])); for (const k of keys) { const v = own.get(`${k}|${locale}`) ?? own.get(`${k}|`) ?? null; if (v != null) rows[0].values[k] = { value: v, own: true } } } catch {} }
+  const onPath = (id, g) => [tree.byId.get(id), ...tree.ancestors(id)].some(x => (x?.groups ?? '').split(',').includes(g))
+  return analyze({ catalog, mapping, model, rows, locale, scopeAttr, onPath })
 }
 
 // ---- 3 Vorschläge

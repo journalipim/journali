@@ -55,7 +55,7 @@ const post = (url, body, m) => api.post(url, body, m)
 
 async function newTree() {
   const channels = store.model?.channels ?? []
-  const name = await dialog.prompt({ title: 'Neuer Publikationsbaum', value: '', placeholder: 'Name — z. B. Web China', ok: '+ Baum' })
+  const name = await dialog.prompt({ title: 'Neuer Publikationsbaum', value: '', placeholder: 'Name — z. B. Web Schweiz', ok: '+ Baum' })
   if (!name) return
   const channel = channels.length === 1 ? channels[0].key : await dialog.prompt({ title: 'Kanal', text: channels.map(c => c.key).join(' · '), value: store.model?.masterChannel ?? channels[0]?.key ?? '', ok: 'OK' })
   if (!channel) return

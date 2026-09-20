@@ -78,8 +78,8 @@ eigener Wert → Fallback → Master → `*`, der Kanal fällt vor der Sprache
 (`de/print` → `de/web` → `de` → … → `*`). **Fallback** (Taloan, 20.09.2026):
 eine Sprache oder ein Kanal kann eine andere Ausprägung nennen, die vor dem
 Master gilt — `fr-ch` → `fr-fr`, `shop_cn` → `shop_tr`. Beim Kanal gilt der
-Fallback auch für die Freigaben: das Sortiment von China ist das der Türkei,
-solange China nichts Eigenes sagt. Die Vollständigkeit zählt ohne Master.
+Fallback auch für die Freigaben: das Sortiment von fr-ch ist das von fr-fr,
+solange fr-ch nichts Eigenes sagt. Die Vollständigkeit zählt ohne Master.
 
 ### 2. Werteliste (`list:<key>`) — Einträge mit eigenen Spalten
 
