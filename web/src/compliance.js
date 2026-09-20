@@ -163,6 +163,40 @@ export async function createAttributes(catalog, items, mapping) {
   await store.poll(true)
 }
 
+// Geltungen vorschlagen: (1) Regeln des Katalogs gegen die wirksame ETIM-Klasse des Knotens (Code, Name, Gruppe), (2) die KI mit
+// Produkt, Pfad, Klasse und den Geltungen samt Hinweis — Antwort je Geltung ja/nein mit Begründung. Null, wenn beides fehlt.
+async function suggestScopes(catalog, rootRow, scopes, have) {
+  if (!rootRow) return null
+  // wirksame ETIM-Klasse: eigen oder von oben
+  let code = null
+  try {
+    const n = await api.get(`/api/nodes/${encodeURIComponent(rootRow.id)}`)
+    code = n.values?.find(v => v.attribute === 'etim_class' && !v.locale && !v.channel && !v.row)?.value ?? null
+    if (!code) for (const a of n.ancestors ?? []) { const v = a.values?.find(v => v.attribute === 'etim_class' && !v.locale && !v.channel)?.value; if (v) { code = v; break } }
+  } catch { }
+  let cls = null
+  if (code) { try { const rel = await api.get('/api/plugins/etim/data/release'); const ver = rel?.version ?? (rel?.number != null ? String(rel.number) : null); cls = (ver != null ? await api.get('/api/plugins/etim/data/' + encodeURIComponent(`class:${ver}:${code}`)).catch(() => null) : null) ?? await api.get('/api/plugins/etim/data/' + encodeURIComponent('class:' + code)).catch(() => null) } catch { } }
+  const loc = store.model.masterLocale ?? 'de'
+  const clsText = cls ? `${cls.code} ${cls.name?.[loc] ?? cls.name?.en ?? ''}${cls.group ? ' · Gruppe ' + (cls.group.name?.[loc] ?? cls.group.name?.en ?? cls.group.code) : ''}` : (code ?? '')
+  const items = []
+  const rules = catalog.scopeRules ?? []
+  if (cls) for (const s of scopes) {
+    const hay = `${cls.code} ${Object.values(cls.name ?? {}).join(' ')} ${Object.values(cls.synonyms ?? {}).flat().join(' ')} ${cls.group ? Object.values(cls.group.name ?? {}).join(' ') + ' ' + cls.group.code : ''}`
+    const rule = rules.find(r => r.scope === s.key)
+    if (rule) { const hit = (rule.match ?? []).find(re => re.test(hay)); items.push({ key: s.key, applies: !!hit, why: hit ? `${rule.why ?? 'ETIM'}: ${clsText}` : `ETIM ${cls.code} ${cls.name?.[loc] ?? cls.name?.en ?? ''}` }) }
+  }
+  let usedAi = false
+  if (ai.available()) {
+    try {
+      const j = await ai.ask({ system: 'Du prüfst, welche Sonderregelungen für ein Produkt gelten. Antworte nur als JSON {"items":[{"key":"…","applies":true,"why":"…"}]} für jede Geltung aus der Liste, why in einem kurzen Satz auf Deutsch, vorsichtig: im Zweifel nein mit Begründung.', user: `Produkt: ${rootRow.label}\nPfad: ${tree.ancestors(rootRow.id).map(a => a.label).join(' › ')}\nETIM-Klasse: ${clsText || 'unbekannt'}\nGeltungen:\n${scopes.map(s => `${s.key}: ${s.label}${s.hint ? ' — ' + s.hint : ''}`).join('\n')}`, json: true, maxTokens: 600 })
+      for (const it of j.items ?? []) { const s = scopes.find(x => x.key === it.key); if (!s) continue; const cur = items.find(x => x.key === it.key); if (cur) { if (cur.applies !== !!it.applies) cur.why += ` · KI: ${it.applies ? 'ja' : 'nein'} — ${it.why ?? ''}`; else cur.why = it.why ?? cur.why } else items.push({ key: it.key, applies: !!it.applies, why: it.why ?? '' }) }
+      usedAi = true
+    } catch (e) { if (!items.length) throw e }
+  }
+  if (!items.length) return null
+  return { items: scopes.map(s => items.find(x => x.key === s.key)).filter(Boolean), ai: usedAi, class: clsText }
+}
+
 // Knoten wählen: kleiner Auswahlbaum als Fenster, Vorgabe vorbelegt — liefert die Zeile oder null
 function pickNode(preset, title) {
   return new Promise(resolve => {
@@ -198,7 +232,11 @@ export async function mount(root, ctx, catalog) {
   treePicker(pick, { value: st.root, roles: ['group', 'product'], height: 300, onPick: r => { st.root = r.id; rootIn.textContent = rootLabel(r.id); pick.style.display = 'none'; localStorage.setItem(`journali.cmp.${catalog.key}.root`, r.id); run() } })
   rootIn.addEventListener('click', () => { pick.style.display = pick.style.display === 'none' ? 'block' : 'none' })
   const s1 = el('div'), s2 = el('div'), s3 = el('div')
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, `${catalog.icon ?? '✓'} ${catalog.label}`), el('a', { href: catalog.source, target: '_blank', class: 'muted', style: 'font-size:12px', title: 'Quelle' }, catalog.sourceLabel ?? 'Quelle ↗'), el('span', { class: 'grow' }), status), body)
+  // Keine Rechtsberatung (Taloan, 20.09.: „bei allen Berichten dick fett“): Kataloge, Vorschläge und Geltungen sind Hinweise und Empfehlungen —
+  // verbindlich ist der Rechtstext; die Einordnung verantwortet der Anwender. Steht in jeder Prüfansicht oben, fett, und in jedem Bericht.
+  const disclaimer = el('div', { class: 'warn', style: 'font-weight:700;font-size:12px;padding:4px 8px;border-bottom:1px solid var(--line)', title: 'Die Datenpunkte, Hinweise, Fristen und Vorschläge (auch der KI) sind eine Arbeitshilfe nach bestem Wissen — keine Rechtsberatung. Massgeblich ist der Rechtstext (Quelle oben); ob und wie eine Vorschrift für ein Produkt gilt, entscheidet der Anwender.' },
+    `⚠ Keine Rechtsberatung — Datenpunkte, Fristen, Geltungen und Vorschläge sind Hinweise und Empfehlungen. Massgeblich ist der Rechtstext (${catalog.sourceLabel ?? 'Quelle'}).`)
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, `${catalog.icon ?? '✓'} ${catalog.label}`), el('a', { href: catalog.source, target: '_blank', class: 'muted', style: 'font-size:12px', title: 'Quelle' }, catalog.sourceLabel ?? 'Quelle ↗'), el('span', { class: 'grow' }), status), disclaimer, body)
   body.append(s2, s3, s1)   // 1 Prüfen · 2 Ergebnis · 3 Modell — erst der Knoten, dann was fehlt, dann das Modell dazu (Taloan, 20.09.)
 
   // -- 1 Zuordnung
@@ -329,6 +367,21 @@ export async function mount(root, ctx, catalog) {
         } catch (e) { store.toast(e.message) }
       } }, `${have.includes(s.key) ? '✓ ' : ''}${s.label}`))
       s3.append(line)
+      // „Was gilt für mich?“ (Taloan, 20.09.: „die wissen gerade noch, in welche Kategorie ihr Produkt gehört“): aus der ETIM-Klasse (Regeln
+      // des Katalogs) und der KI je Geltung ein Vorschlag mit Begründung — der Anwender bestätigt mit einem Klick
+      const sug = el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 6px' }); s3.append(sug)
+      suggestScopes(catalog, rootRow, scopes, have).then(list => {
+        sug.innerHTML = ''
+        if (!list) { sug.textContent = 'Vorschlag „was gilt für mich?“: erst die ETIM-Klasse setzen (Rechtsklick → ETIM prüfen) — oder KI-Schlüssel in ⚙ Einstellungen'; return }
+        sug.append(el('span', {}, `Vorschlag${list.ai ? ` (Regeln + KI, ${ai.label()})` : ' (Regeln aus der ETIM-Klasse)'}: `))
+        for (const s of list.items) {
+          const set = have.includes(s.key); const chip = scopes.find(x => x.key === s.key)
+          const span = el('span', { style: 'margin-right:10px' }, el('b', { class: s.applies ? (set ? 'pos' : 'warn') : (set ? 'warn' : '') }, `${chip?.label ?? s.key} — ${s.applies ? 'ja' : 'nein'}`), s.why ? ` (${s.why})` : '')
+          if (s.applies && !set) span.append(' ', el('button', { class: 'x', title: 'Geltung übernehmen — ab diesem Knoten (vererbbar)', onclick: () => line.querySelectorAll('button')[scopes.findIndex(x => x.key === s.key)]?.click() }, 'übernehmen'))
+          if (!s.applies && set) span.append(' ', el('span', { class: 'warn', title: 'gesetzt, aber laut Vorschlag nicht zutreffend — prüfen' }, '⚠ gesetzt'))
+          sug.append(span)
+        }
+      }).catch(e => { sug.textContent = 'Vorschlag: ' + e.message })
     }
     const inactiveN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
     const emptyN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'empty').length, 0), badN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'bad').length, 0)

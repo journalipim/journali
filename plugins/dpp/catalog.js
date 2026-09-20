@@ -12,6 +12,8 @@ const isUrl = v => /^https?:\/\/\S+$/.test(String(v).trim()) ? null : 'URL (http
 
 export default {
   key: 'dpp', label: 'Digitaler Produktpass (ESPR)', icon: '◈',
+  // Geltung aus der ETIM-Klasse (Code, Name, Synonyme, Gruppe): Batteriepass nur für Batterien/Akkus als Produkt — nicht für Geräte mit Akku
+  scopeRules: [{ scope: 'battery', match: [/\bbatter(y|ies|ie)\b/i, /\bakku(mulator)?\b/i, /\baccumulator/i, /\bpower ?bank/i], why: 'ETIM-Gruppe/-Klasse Batterie' }],
   source: 'https://eur-lex.europa.eu/eli/reg/2024/1781/oj', sourceLabel: 'EUR-Lex 2024/1781 ↗',
   description: 'Datenpunkte des Produktpasses nach ESPR Art. 7/9 und Anhang III. Je Datenpunkt das Attribut im Modell wählen (Best Guess vorbelegt) — oder die fehlenden anlegen; dann einen Teilbaum prüfen. Die Vorschrift gilt je Produktgruppe erst mit ihrem delegierten Rechtsakt; die Tabelle zeigt, wie weit die Daten heute tragen.',
   groupKey: 'dpp', groupLabel: 'DPP (ESPR)', prefix: 'dpp_',

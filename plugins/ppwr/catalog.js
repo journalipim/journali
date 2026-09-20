@@ -13,6 +13,13 @@ const isYesNo = v => ['true', 'false', 'ja', 'nein', 'yes', 'no'].includes(Strin
 
 export default {
   key: 'ppwr', label: 'Verpackung (PPWR)', icon: '▧',
+  // Geltung aus der ETIM-Klasse: Gefahrgut (Gasflaschen, Aerosole, Kraftstoffe, Sprengmittel), Medizin/Pharma, Lebensmittelkontakt
+  scopeRules: [
+    { scope: 'hazmat', match: [/gas (cylinder|bottle)/i, /aerosol/i, /\bfuel\b/i, /explosive/i, /flammable/i, /\bacid\b/i, /\bsolvent/i, /lithium/i], why: 'ETIM-Klasse deutet auf Gefahrgut' },
+    { scope: 'medical', match: [/medic/i, /pharma/i, /dental/i, /surgical/i, /hospital/i, /steril/i], why: 'ETIM-Klasse Medizin/Pharma' },
+    { scope: 'food', match: [/\bfood\b/i, /beverage/i, /drinking water/i, /kitchen/i, /lebensmittel/i], why: 'ETIM-Klasse mit Lebensmittelkontakt' },
+    { scope: 'protected', match: [], why: '' },
+  ],
   source: 'https://eur-lex.europa.eu/eli/reg/2025/40/oj', sourceLabel: 'EUR-Lex 2025/40 ↗',
   description: 'Verpackungsdaten nach PPWR — je Produkt: Materialien und Gewichte der Verpackungsbestandteile, Rezyklatanteil, Recyclingfähigkeitsklasse, Wiederverwendbarkeit, Leerraum, Stoffgrenzen, Kennzeichnung, Register. Attribute wählen oder anlegen, dann einen Teilbaum prüfen.',
   groupKey: 'ppwr', groupLabel: 'Verpackung (PPWR)', prefix: 'pack_',
