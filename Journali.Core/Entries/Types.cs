@@ -93,6 +93,8 @@ public static class Types
     // Benutzer (Taloan, 19.09.2026: Benutzer und Rollen): Strom user:<key> — wer es gibt und welche Rolle; Passwoerter nie im Journal
     public const string UserDefined = "UserDefined";
     public const string UserRetired = "UserRetired";
+    public const string RoleDefined = "RoleDefined";
+    public const string RoleRetired = "RoleRetired";
 
     /// <summary>camelCase, Null-Felder weg, Umlaute lesbar — dieselbe Form in Journal und Antworten.</summary>
     public static readonly JsonSerializerOptions Json = new()
@@ -443,4 +445,39 @@ public sealed record VersionWithdrawn(int Nr, string? Reason);
 
 /// <summary>Benutzer: Anzeigename, E-Mail, Rolle (admin | editor | reader), an/aus. Der letzte Eintrag gilt ganz. Kein Geheimnis hier (auth.json).</summary>
 public sealed record UserDefined(string Name, string? Email, string Role, bool Enabled = true);
+
+/// <summary>
+/// Eine Rolle (Taloan, 20.09.2026: „wie die Rollen heißen und was sie können, überlassen wir dem Anwender — wir legen sinnvolle vor“):
+/// Strom <c>role:&lt;key&gt;</c>, Bezeichnung und die Rechte aus dem festen Vokabular <see cref="Rights"/>. Der letzte Eintrag gilt ganz.
+/// </summary>
+public sealed record RoleDefined(string Label, string[] Rights);
+public sealed record RoleRetired();
+
+/// <summary>Das Rechte-Vokabular — fest im Code, denn der Server muss jedes Recht prüfen können; welche Rolle welche hat, steht im Journal.</summary>
+public static class Rights
+{
+    public const string Read = "read";         // lesen: Baum, Werte, Medien, Journal, Modell
+    public const string Write = "write";       // pflegen: Knoten, Werte, Relationen, Medien, Stapel, Plugin-Daten (Profile), Belege
+    public const string Retire = "retire";     // Knoten zurückziehen und wiederherstellen
+    public const string Release = "release";   // Freigaben und Versionen
+    public const string Model = "model";       // Modell ändern: Attribute, Gruppen, Listen, Sichten, Einheiten, Sprachen, Kanäle, Relationstypen
+    public const string Plugins = "plugins";   // Plugins installieren, an/aus, entfernen
+    public const string Jobs = "jobs";         // Jobs anlegen, starten, Logs
+    public const string Storage = "storage";   // Medien-Speicher einstellen und kopieren
+    public const string Users = "users";       // Benutzer und Rollen verwalten
+    public static readonly string[] All = [Read, Write, Retire, Release, Model, Plugins, Jobs, Storage, Users];
+    public static readonly Dictionary<string, string> Label = new()
+    {
+        [Read] = "Lesen", [Write] = "Pflegen", [Retire] = "Zurückziehen", [Release] = "Freigeben, Versionen", [Model] = "Modell ändern",
+        [Plugins] = "Plugins verwalten", [Jobs] = "Jobs", [Storage] = "Storage", [Users] = "Benutzer und Rollen",
+    };
+    /// <summary>Vorbelegte Rollen — Saatgut für ein leeres Journal; der Anwender ändert, ergänzt, entfernt sie (nur „admin“ bleibt als Schlüssel bekannt).</summary>
+    public static IEnumerable<(string Key, RoleDefined Role)> Seeds()
+    {
+        yield return ("admin", new RoleDefined("Administrator", All));
+        yield return ("manager", new RoleDefined("PIM-Manager", [Read, Write, Retire, Release, Model, Jobs]));
+        yield return ("editor", new RoleDefined("PIM-Editor", [Read, Write, Retire, Release]));
+        yield return ("reader", new RoleDefined("Leser", [Read]));
+    }
+}
 public sealed record UserRetired();

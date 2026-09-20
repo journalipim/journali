@@ -18,7 +18,7 @@ export const modelKey = stream => stream.slice(stream.indexOf(':') + 1)
 export const canRestoreModel = e => { const r = MODEL_RETIRE[e.type]; return !!r && !!store.model && !r.has(store.model, modelKey(e.stream)) }
 
 /// Wer darf was wiederherstellen: ohne Benutzer alle; admin alles; sonst nur, was man selbst zurückgezogen hat
-export const mayRestore = e => !store.auth?.enabled || store.auth.role === 'admin' || e.actor === store.auth.user
+export const mayRestore = e => !store.auth?.enabled || store.can('users') || e.actor === store.auth.user
 
 /// Die letzten bis zu n zurückgezogenen eines Bereichs (nur, was im Modell noch fehlt), gefiltert nach Recht
 export async function recentRetired(kind, limit = 5) {

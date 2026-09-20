@@ -16,6 +16,17 @@ public sealed class UserState
     public string LastActor { get; set; } = "";
 }
 
+/// <summary>Eine Rolle: Bezeichnung und Rechte (Vokabular <see cref="Rights"/>).</summary>
+public sealed class RoleState
+{
+    public required string Key { get; init; }
+    public string Label { get; set; } = "";
+    public HashSet<string> Rights { get; set; } = new();
+    public long LastNumber { get; set; }
+    public DateTimeOffset LastAt { get; set; }
+    public string LastActor { get; set; } = "";
+}
+
 /// <summary>Abbild „die Benutzer“ (Taloan, 19.09.2026: Benutzer und Rollen): Strom <c>user:&lt;key&gt;</c>. Der letzte UserDefined gilt ganz; UserRetired nimmt ihn weg.</summary>
 public sealed class Users : IProjection
 {
@@ -23,10 +34,27 @@ public sealed class Users : IProjection
     public long LastApplied { get; private set; }
     public IReadOnlyDictionary<string, UserState> All => _all;
     public const string Stream = "user:";
+    private readonly Dictionary<string, RoleState> _roles = new();
+    public IReadOnlyDictionary<string, RoleState> Roles => _roles;
+    public const string RoleStream = "role:";
+    /// <summary>Die Rechte einer Rolle; unbekannte Rolle = keine Rechte.</summary>
+    public IReadOnlySet<string> RightsOf(string role) => _roles.TryGetValue(role, out var r) ? r.Rights : new HashSet<string>();
 
     public void Apply(Entry entry)
     {
         LastApplied = entry.Number;
+        if (entry.Stream.StartsWith(RoleStream, StringComparison.Ordinal))
+        {
+            var rk = entry.Stream[RoleStream.Length..];
+            if (entry.Type == Types.RoleDefined)
+            {
+                var d = Types.Deserialize<RoleDefined>(entry.Payload);
+                if (!_roles.TryGetValue(rk, out var r)) _roles[rk] = r = new RoleState { Key = rk };
+                r.Label = d.Label; r.Rights = d.Rights.Where(Rights.All.Contains).ToHashSet(); r.LastNumber = entry.Number; r.LastAt = entry.At; r.LastActor = entry.Actor;
+            }
+            else if (entry.Type == Types.RoleRetired) _roles.Remove(rk);
+            return;
+        }
         if (!entry.Stream.StartsWith(Stream, StringComparison.Ordinal)) return;
         var key = entry.Stream[Stream.Length..];
         switch (entry.Type)

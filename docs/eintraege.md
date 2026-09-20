@@ -218,8 +218,19 @@ Sitzungen liegen in `auth.json` im Datenverzeichnis — nie im Journal (Regel wi
 
 | Typ | Payload | Bedeutung |
 |---|---|---|
-| `UserDefined` | `name`, `email`, `role` (admin, editor, reader), `enabled` | der Benutzer — der letzte Eintrag gilt ganz |
+| `UserDefined` | `name`, `email`, `role` (Schlüssel einer Rolle), `enabled` | der Benutzer — der letzte Eintrag gilt ganz |
 | `UserRetired` | — | entfernt; Einträge, die er geschrieben hat, bleiben (X-Actor) |
+
+## Rollen — Strom `role:<key>`
+
+Taloan, 20.09.2026: Rollen sind Daten, Rechte sind Code. Das Vokabular der Rechte (`Rights`: read, write, retire,
+release, model, plugins, jobs, storage, users) ist fest; welche Rolle welche hat, steht hier. Saatgut: admin,
+manager, editor, reader (docs/betrieb.md).
+
+| Typ | Payload | Bedeutung |
+|---|---|---|
+| `RoleDefined` | `label`, `rights[]` | die Rolle — der letzte Eintrag gilt ganz; unbekannte Rechte werden übergangen |
+| `RoleRetired` | — | weg (nur ohne Benutzer; `admin` nie) |
 
 ## Jobs (fest eingebaut: ⏱ Jobs) — Strom `job:<key>`
 

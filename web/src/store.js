@@ -26,7 +26,9 @@ export const store = reactive({
   collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : [],   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
   online: null,          // null = noch nicht gefragt, sonst true/false
   // Anmeldung (Taloan, 19.09.): enabled = es gibt Benutzer (Server gesperrt), setup = noch keiner (ersten Admin anlegen), user/role aus der Sitzung
-  auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null },
+  auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null, rights: null },
+  // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
+  can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,
   nodes: 0,
   model: null,           // { locales, channels, attributes } vom Server

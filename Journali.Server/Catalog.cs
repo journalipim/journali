@@ -71,6 +71,13 @@ public sealed class Catalog
                 Apply(_journal.Append("system", s.Stream, s.Type, s.Payload));
                 n++;
             }
+            // Rollen (Taloan, 20.09.): vorbelegt, was fehlt — was der Anwender geändert oder entfernt hat, bleibt so (nur admin kommt immer wieder)
+            foreach (var (key, role) in Rights.Seeds())
+            {
+                if (_users.Roles.ContainsKey(key)) continue;
+                if (key != "admin" && _users.Roles.Count > 0) continue;   // ein bewusst entferntes Saatgut kommt nicht wieder
+                Apply(_journal.Append("system", Users.RoleStream + key, Types.RoleDefined, Types.Serialize(role))); n++;
+            }
             // Der Wurzelknoten „MasterTree“: nur, wenn es ihn nie gab (auch nicht zurückgezogen).
             if (!_tree.EverCreated(Model.RootNode))
                 foreach (var s in Model.TreeSeeds()) { Apply(_journal.Append("system", s.Stream, s.Type, s.Payload)); n++; }

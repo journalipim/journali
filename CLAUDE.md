@@ -36,7 +36,8 @@ stehen dort als solche markiert.
   Bash-Heredocs. Anker eindeutig (`assert count == 1`), BOM und CRLF je
   Datei erhalten.
 - **Vor dem Commit:** `dotnet build -c Release` mit 0 Fehlern.
-- **Benutzer & Rollen:** Identität/Rolle im Journal (`user:<key>`), Passwörter/Token/Sitzungen
+- **Benutzer & Rollen:** Identität/Rolle im Journal (`user:<key>`), Rollen mit Rechten im Journal (`role:<key>`,
+  Vokabular `Rights` im Kern, `Auth.Needed` sagt je Anfrage das Recht), Passwörter/Token/Sitzungen
   in `auth.json` im Datenverzeichnis (`Auth.cs`). Ohne Benutzer offen; mit Benutzern kommt
   `X-Actor` aus der Sitzung. Jobs bekommen `JOURNALI_TOKEN` (Bearer) je Lauf.
 - **Kein Passwort im Repo.** Das Datenbankpasswort kommt aus user-secrets

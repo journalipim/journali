@@ -44,8 +44,8 @@ async function save() {
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>⚙ Einstellungen</h1>
       <span class="tab" :class="{ on: tab === 'general' }" @click="tab = 'general'">Allgemein</span>
-      <span class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'">▨ Storage</span>
-      <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'">👤 {{ store.auth.role === 'admin' ? 'Benutzer' : 'Konto' }}</span>
+      <span v-if="store.can('storage')" class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'">▨ Storage</span>
+      <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'">👤 {{ store.can('users') ? 'Benutzer & Rollen' : 'Konto' }}</span>
     </div>
     <div class="scroll" v-if="tab === 'storage'"><StorageSettings /></div>
     <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /></div>

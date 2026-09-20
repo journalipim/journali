@@ -151,18 +151,36 @@ legt den ersten Administrator an (`POST /api/auth/setup`); ab dann braucht alles
 (`Authorization: Bearer …`), und der Urheber jedes Eintrags kommt aus der Sitzung — der Client kann
 `X-Actor` nicht mehr wählen.
 
-| Rolle | darf |
-|---|---|
-| `admin` | alles: Modell, Plugins, Jobs, Storage, Benutzer |
-| `editor` | Daten pflegen, Importe, Versionen, Plugin-Daten; nicht: Modell, Plugin-Verwaltung, Jobs anlegen, Storage, Benutzer |
-| `reader` | nur lesen |
+**Rollen sind Daten, Rechte sind Code** (Taloan, 20.09.2026: „wie die Rollen heißen und was sie können,
+überlassen wir dem Anwender — wir legen sinnvolle vor“). Das Rechte-Vokabular (`Rights` im Kern) ist fest,
+weil der Server jedes Recht prüfen muss (`Auth.Needed`: welche Anfrage welches Recht braucht):
 
-Verwaltung unter ⚙ Einstellungen → 👤 Benutzer (admin) bzw. Konto (jeder: Passwort, API-Token). API-Token
+| Recht | erlaubt |
+|---|---|
+| `read` | lesen: Baum, Werte, Medien, Journal, Modell, Jobliste |
+| `write` | pflegen: Knoten, Werte, Relationen, Medien, Stapel, Plugin-Daten (Profile), Plugin-Läufe, Belege |
+| `retire` | Knoten zurückziehen, wiederherstellen, Stapel rückgängig |
+| `release` | Freigaben, Versionen (anlegen, Belege, zurückrollen, zurückziehen) |
+| `model` | Modell ändern: Attribute, Gruppen, Listen, Sichten, Einheiten, Sprachen, Kanäle, Relationstypen |
+| `plugins` | Plugins installieren, an/aus, entfernen |
+| `jobs` | Jobs anlegen, starten, Läufe und Logs |
+| `storage` | Medien-Speicher einstellen, Store lesen, kopieren |
+| `users` | Benutzer und Rollen verwalten („Administrator“ heißt: dieses Recht) |
+
+Welche Rolle welche Rechte hat, steht im Journal (`role:<key>`, `RoleDefined`), Verwaltung unter
+⚙ Einstellungen → 👤 Benutzer & Rollen (Tabelle Rollen × Rechte, neue Rollen, Rechtsklick zieht zurück).
+Vorbelegt in einem leeren Journal: `admin` Administrator (alles), `manager` PIM-Manager (pflegen, Modell,
+Jobs), `editor` PIM-Editor (pflegen, Versionen — Modell nur ansehen), `reader` Leser. Nur `admin` kommt beim
+Start wieder, wenn er fehlt; ohne Lesen geht keine Rolle. Das Recht `users` darf nicht aus der letzten Rolle
+verschwinden, die ein aktiver Benutzer hat; eine Rolle mit Benutzern lässt sich nicht zurückziehen.
+
+Verwaltung unter ⚙ Einstellungen → 👤 Benutzer & Rollen (Recht users) bzw. Konto (jeder: Passwort, API-Token). API-Token
 (`jt_…`) sind für Excel-Add-in, OnlyOffice und Skripte — je Nutzer, widerrufbar, nur beim Anlegen sichtbar.
-Jobs und Belegerzeuger bekommen je Lauf ein Dienst-Token (`JOURNALI_TOKEN`, Rolle editor), das mit dem
+Jobs und Belegerzeuger bekommen je Lauf ein Dienst-Token (`JOURNALI_TOKEN`, Rolle `editor` — fehlt sie, das
+feste Minimum read/write/retire/release), das mit dem
 Lauf erlischt. Geheimnisse liegen in `auth.json` im Datenverzeichnis (`JOURNALI_JOBS`, im Container das
-Volume `journali-jobs`), Passwörter als PBKDF2-SHA256 — nie im Journal. Der letzte Administrator lässt
-sich nicht sperren oder entfernen. Hosting: Anmeldung ist Pflicht, bevor eine Instanz ins Internet geht.
+Volume `journali-jobs`), Passwörter als PBKDF2-SHA256 — nie im Journal. Der letzte Benutzer mit dem Recht
+`users` lässt sich nicht sperren oder entfernen. Hosting: Anmeldung ist Pflicht, bevor eine Instanz ins Internet geht.
 
 ## KI
 
