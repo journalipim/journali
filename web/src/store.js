@@ -24,7 +24,7 @@ export const store = reactive({
   undo: {},                                         // ↶/↷ je Knoten: id → { history, redo } — im Store, weil NodeView je Knoten neu gebaut wird (Taloan)
   pendingImport: null,                              // { file, parent } — JSON-Datei, die der JSON-Import gleich öffnen soll (Baum-Drop, Menü, Tabellenimport)
   attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel (Taloan), nicht gespeichert
-  collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : [],   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
+  collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : ['axes', 'groups', 'versions'],   // Organisatorisches zu, bis der Anwender es anders will (Taloan, 20.09.)   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
   online: null,          // null = noch nicht gefragt, sonst true/false
   // Anmeldung (Taloan, 19.09.): enabled = es gibt Benutzer (Server gesperrt), setup = noch keiner (ersten Admin anlegen), user/role aus der Sitzung
   auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null, rights: null },

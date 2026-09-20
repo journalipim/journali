@@ -602,31 +602,6 @@ function cellMenu(e, def, col, block) {
       <div v-if="!blocks.length" class="empty">Keine Attributgruppe gilt hier — unten eine anhängen, oder oben am Pfad.</div>
     </template>
 
-      <div class="section" v-if="node.role === 'product'">
-        <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· sichern Eindeutigkeit in den gewählten Attributen über alle Varianten</span></h2>
-        <template v-if="open('axes')">
-        <table v-if="node.axes.length" class="grid" style="width:auto">
-          <thead><tr><th style="width:180px">Achse</th><th style="width:260px">Attribut</th><th style="width:30px"></th></tr></thead>
-          <tbody>
-            <tr v-for="(k, i) in node.axes" :key="k" :title="k">
-              <td class="muted">{{ i + 1 }}. {{ axisLabel(k) }}</td>
-              <td><router-link :to="{ path: '/model', query: { section: 'attributes', key: k } }" class="mono">{{ k }}</router-link></td>
-              <td class="num"><button class="x" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg — ihr Wert bleibt als Attributwert an den Varianten">×</button></td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="chips" style="margin-top:6px">
-          <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? '+ weitere Achse (Pflicht) …' : '+ Achse …' }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
-          <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? 'prüfen' : 'dazu' }}</button>
-        </div>
-        <div v-if="wiz" class="picker" style="padding:8px;margin-top:6px">
-          <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">· {{ wiz.total }} Varianten{{ wiz.empty ? `, ${wiz.empty} ohne Wert (zählen nicht)` : '' }}</span></div>
-          <div v-if="wiz.dupes.length" class="warn" style="margin-top:6px">⚠ nicht eindeutig — <span v-for="d in wiz.dupes.slice(0, 6)" :key="d.combo" class="chip" style="margin-right:4px">{{ d.combo }} × {{ d.n }}</span>{{ wiz.dupes.length > 6 ? ` … ${wiz.dupes.length}` : '' }} → oben eine weitere Achse wählen und prüfen</div>
-          <div v-else class="pos" style="margin-top:6px">✓ eindeutig</div>
-          <div class="chips" style="margin-top:6px"><button class="primary" :disabled="wiz.dupes.length > 0" @click="axisCommit">Achsen zufügen</button><button @click="wiz = null">Abbrechen</button></div>
-        </div>
-        </template>
-      </div>
       <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files])">
         <h2 @click="toggle('media')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>🖼 Medien <span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length"> · {{ inheritedMedia.length }} geerbt</template> · Dateien hierher ziehen</span></h2>
         <template v-if="open('media')">
@@ -668,6 +643,7 @@ function cellMenu(e, def, col, block) {
         </div>
         </template>
       </div>
+
       <div class="section">
         <h2 @click="toggle('relations')"><span class="caret">{{ open('relations') ? '▾' : '▸' }}</span>⇄ Relationen <span class="muted">· {{ relCount }}</span></h2>
         <template v-if="open('relations')">
@@ -702,30 +678,6 @@ function cellMenu(e, def, col, block) {
         </div>
         </template>
       </div>
-      <div class="section">
-        <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen NEU ab diesem Knoten <span class="muted">· hier angehängt, gelten ab hier nach unten — geerbte stehen oben mit Herkunft</span></h2>
-        <template v-if="open('groups')">
-        <table v-if="attachedSorted.length" class="grid" style="width:auto">
-          <thead><tr><th style="width:180px">Gruppe</th><th style="width:260px">gilt</th><th style="width:30px"></th></tr></thead>
-          <tbody>
-            <tr v-for="g in attachedSorted" :key="g" :title="g">
-              <td><router-link :to="{ path: '/model', query: { section: 'groups', key: g } }">▤ {{ groupLabel(g) }}</router-link></td>
-              <td class="muted">{{ groupLocked(g) ? '⌖ hier gesperrt — aktiv ab ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : 'ab hier nach unten' }}</td>
-              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" title="Gruppe hier abnehmen">×</button></td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="chips" style="margin-top:6px">
-          <select v-model="addGroup" style="width:200px"><option value="">+ Gruppe …</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ g.label?.de || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
-          <button class="primary" :disabled="!addGroup" @click="attachAdd">anhängen</button>
-        </div>
-        </template>
-      </div>
-
-      <div class="section" v-if="node.orphans?.length">
-        <h2 class="warn">⚠ Verwaiste Werte</h2>
-        <div class="muted">Eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen): <span class="mono">{{ node.orphans.join(', ') }}</span> — Gruppe anhängen, dann sind sie wieder da.</div>
-      </div>
 
       <div class="section" v-if="node.role !== 'group'">
         <h2 @click="toggle('releases')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>✓ Freigaben <span class="muted">· Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig = keine Freigabe</span></h2>
@@ -749,7 +701,57 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <!-- Versionen (Taloan, 19.09.): Freigabe = Version, Zeiger auf den Journalstand + eingefrorene Belege; Stand ansehen, zurückrollen -->
+      <div class="section" v-if="node.orphans?.length">
+        <h2 class="warn">⚠ Verwaiste Werte</h2>
+        <div class="muted">Eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen): <span class="mono">{{ node.orphans.join(', ') }}</span> — Gruppe anhängen, dann sind sie wieder da.</div>
+      </div>
+
+      <div class="section" v-if="node.role === 'product'">
+        <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· sichern Eindeutigkeit in den gewählten Attributen über alle Varianten</span></h2>
+        <template v-if="open('axes')">
+        <table v-if="node.axes.length" class="grid" style="width:auto">
+          <thead><tr><th style="width:180px">Achse</th><th style="width:260px">Attribut</th><th style="width:30px"></th></tr></thead>
+          <tbody>
+            <tr v-for="(k, i) in node.axes" :key="k" :title="k">
+              <td class="muted">{{ i + 1 }}. {{ axisLabel(k) }}</td>
+              <td><router-link :to="{ path: '/model', query: { section: 'attributes', key: k } }" class="mono">{{ k }}</router-link></td>
+              <td class="num"><button class="x" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg — ihr Wert bleibt als Attributwert an den Varianten">×</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="chips" style="margin-top:6px">
+          <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? '+ weitere Achse (Pflicht) …' : '+ Achse …' }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+          <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? 'prüfen' : 'dazu' }}</button>
+        </div>
+        <div v-if="wiz" class="picker" style="padding:8px;margin-top:6px">
+          <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">· {{ wiz.total }} Varianten{{ wiz.empty ? `, ${wiz.empty} ohne Wert (zählen nicht)` : '' }}</span></div>
+          <div v-if="wiz.dupes.length" class="warn" style="margin-top:6px">⚠ nicht eindeutig — <span v-for="d in wiz.dupes.slice(0, 6)" :key="d.combo" class="chip" style="margin-right:4px">{{ d.combo }} × {{ d.n }}</span>{{ wiz.dupes.length > 6 ? ` … ${wiz.dupes.length}` : '' }} → oben eine weitere Achse wählen und prüfen</div>
+          <div v-else class="pos" style="margin-top:6px">✓ eindeutig</div>
+          <div class="chips" style="margin-top:6px"><button class="primary" :disabled="wiz.dupes.length > 0" @click="axisCommit">Achsen zufügen</button><button @click="wiz = null">Abbrechen</button></div>
+        </div>
+        </template>
+      </div>
+
+      <div class="section">
+        <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen NEU ab diesem Knoten <span class="muted">· hier angehängt, gelten ab hier nach unten — geerbte stehen oben mit Herkunft</span></h2>
+        <template v-if="open('groups')">
+        <table v-if="attachedSorted.length" class="grid" style="width:auto">
+          <thead><tr><th style="width:180px">Gruppe</th><th style="width:260px">gilt</th><th style="width:30px"></th></tr></thead>
+          <tbody>
+            <tr v-for="g in attachedSorted" :key="g" :title="g">
+              <td><router-link :to="{ path: '/model', query: { section: 'groups', key: g } }">▤ {{ groupLabel(g) }}</router-link></td>
+              <td class="muted">{{ groupLocked(g) ? '⌖ hier gesperrt — aktiv ab ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : 'ab hier nach unten' }}</td>
+              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" title="Gruppe hier abnehmen">×</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="chips" style="margin-top:6px">
+          <select v-model="addGroup" style="width:200px"><option value="">+ Gruppe …</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ g.label?.de || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
+          <button class="primary" :disabled="!addGroup" @click="attachAdd">anhängen</button>
+        </div>
+        </template>
+      </div>
+
       <div class="section">
         <h2 @click="toggle('versions')"><span class="caret">{{ open('versions') ? '▾' : '▸' }}</span>⎘ Versionen <span class="muted">· Stand einfrieren, Belege der Erzeuger, Stand ansehen, zurückrollen</span></h2>
         <VersionsPanel v-if="open('versions')" :id="id" :role="node.role" @changed="load(); store.poll(true)" />
