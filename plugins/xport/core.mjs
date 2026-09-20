@@ -115,7 +115,8 @@ export async function contextOf(env, id, { locale, mapping = {}, depth = 0, with
   if (withMedia) { try { const rels = await api.get(`/api/nodes/${encodeURIComponent(id)}/relations`); media = [...(rels.out ?? []), ...(rels.inherited ?? [])].filter(r => r.other?.role == null && r.other?.mime && !(r.values ?? []).some(v => v.attribute === 'stop' && v.value === 'true')).map(r => ({ id: r.other.id, name: r.other.name, mime: r.other.mime, url: `${env.server ?? ''}/api/media/${r.other.id}/file`, type: r.type, isImage: !!r.other.isImage })) } catch { } }
   // ETIM & Co.: features = [{ code, attr, unit? }] aus dem Profil → Merkmale mit Wert aus dem Attribut
   let features = (env.features ?? []).map(fe => { const a = attr[fe.attr]; return a ? { code: fe.code, value: a.value, values: [a.value], unit: fe.unit ?? a.unit ?? null, details: null, label: a.label } : null }).filter(Boolean)
-  const ctx = { id, role: n.role, sku: row?.sku ?? '', name: row?.label ?? n.name ?? id, status: n.status, parentId: row?.parent ?? null, features, path: crumbs, pathText: crumbs.map(c => c.name).join(' / '), locale, attr, label, rows, f, media, axes: n.axisValues ?? {}, today: new Date().toISOString().slice(0, 10), now: new Date().toISOString() }
+  const active = new Set((n.groups ?? []).filter(g => g.active).flatMap(g => g.attributes ?? []))   // welche Attribute hier gelten (Gruppe am Pfad, an dieser Rolle aktiv)
+  const ctx = { id, role: n.role, sku: row?.sku ?? '', name: row?.label ?? n.name ?? id, status: n.status, parentId: row?.parent ?? null, features, active, path: crumbs, pathText: crumbs.map(c => c.name).join(' / '), locale, attr, label, rows, f, media, axes: n.axisValues ?? {}, today: new Date().toISOString().slice(0, 10), now: new Date().toISOString() }
   if (env.featuresOf) { const r = await env.featuresOf(ctx); if (r) { const codes = new Set(r.features.map(f => f.code)); ctx.features = [...features.filter(f => !codes.has(f.code)), ...r.features]; ctx.etim = { classCode: r.classCode, known: r.known, version: r.version ?? null } } }
   if (withChildren && depth === 0) { const kids = tree.kids(id); ctx.children = []; for (const k of kids) ctx.children.push(await contextOf(env, k.id, { locale, mapping, depth: 1, withChildren: false, withMedia })) }
   return ctx
@@ -144,7 +145,10 @@ export async function build(env, { root, role = 'product', locale, mapping = {},
     if (env.gate) { const why = await env.gate(p); if (why) failed.push(`${r.label}${r.sku ? ' (' + r.sku + ')' : ''}: ${why}`) }
     products.push(p)
   }
-  if (failed.length) throw new Error(`Export verweigert — ${failed.length} von ${targets.length} Knoten bestehen die Analyse nicht (✓ Datenanalyse → ⌗ ETIM-Merkmale):\n` + failed.slice(0, 8).join('\n') + (failed.length > 8 ? `\n… und ${failed.length - 8} weitere` : ''))
+  if (failed.length) throw new Error(`Export verweigert — ${failed.length} von ${targets.length} Knoten ohne Struktur (✓ Datenanalyse → ⌗ ETIM-Merkmale):\n` + failed.slice(0, 8).join('\n') + (failed.length > 8 ? `\n… und ${failed.length - 8} weitere` : ''))
+  // Werte sind Sache des Anwenders (Taloan, 20.09.: Pflichtfelder) — nur zählen und melden, nicht sperren
+  const stats = { unknown: 0, bad: 0 }
+  for (const p of products) for (const f of p.features ?? []) { if (f.bad != null) stats.bad++; else if (f.details) stats.unknown++ }
   const groups = tree.rows.filter(r => r.role === 'group' && (root ? r.id === root || under(r.id) : true)).map(g => { const parent = g.parent && (g.id === root ? null : g.parent); const children = tree.kids(g.id).filter(k => k.role === 'group').map(k => ({ id: k.id, name: k.label })); return { id: g.id, name: g.label, parent, children, type: !parent ? 'root' : children.length ? 'node' : 'leaf' } })
-  return { ...vars, products, groups, count: products.length, locale, languageCode: { de: 'deu', en: 'eng', fr: 'fra', it: 'ita', es: 'spa', nl: 'nld' }[locale] ?? locale, today: new Date().toISOString().slice(0, 10), now: new Date().toISOString(), rootName: tree.byId.get(root)?.label ?? '' }
+  return { ...vars, products, groups, count: products.length, stats, locale, languageCode: { de: 'deu', en: 'eng', fr: 'fra', it: 'ita', es: 'spa', nl: 'nld' }[locale] ?? locale, today: new Date().toISOString().slice(0, 10), now: new Date().toISOString(), rootName: tree.byId.get(root)?.label ?? '' }
 }

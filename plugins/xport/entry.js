@@ -125,8 +125,9 @@ async function mount(root, ctx) {
       const cx = await build(env, { root: st.root, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, limit: all ? 0 : 3, say: m => say(m) })
       const out = render(st.template, cx, st.mode, st.locale)
       const ms = Math.round(performance.now() - t0)
-      if (all) { const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19); download(out, st.fileName.replace('{date}', stamp).replace('{locale}', st.locale), MIME[st.mode] ?? 'text/plain'); say(`⇓ ${cx.count} Produkte, ${(out.length / 1024).toFixed(0)} KB, ${ms} ms`) }
-      else { preview.textContent = out.length > 200000 ? out.slice(0, 200000) + '\n…' : out; say(`Vorschau: ${cx.count} von ${env.tree.rows.filter(r => r.role === st.role || st.role === 'all').length} Knoten, ${ms} ms`) }
+      const gaps = cx.stats ? `${cx.stats.unknown ? ` · ${cx.stats.unknown} Merkmale leer (UN)` : ''}${cx.stats.bad ? ` · ⚠ ${cx.stats.bad} Werte passen nicht (als UN)` : ''}` : ''
+      if (all) { const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19); download(out, st.fileName.replace('{date}', stamp).replace('{locale}', st.locale), MIME[st.mode] ?? 'text/plain'); say(`⇓ ${cx.count} Produkte, ${(out.length / 1024).toFixed(0)} KB, ${ms} ms${gaps}`) }
+      else { preview.textContent = out.length > 200000 ? out.slice(0, 200000) + '\n…' : out; say(`Vorschau: ${cx.count} von ${env.tree.rows.filter(r => r.role === st.role || st.role === 'all').length} Knoten, ${ms} ms${gaps}`) }
     } catch (e) { say('✗ ' + e.message.split('\n')[0]); preview.textContent = e.message; store.toast(e.message.split('\n')[0]) } finally { busy = false }
   }
 

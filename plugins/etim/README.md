@@ -51,6 +51,25 @@ Einheit steckt im Merkmal. Der Kontext bekommt `features` (`code`, `values`, `de
 `label`) und `etim.classCode`. Startvorlage „ETIM BMEcat 5.0“ in xport — geprüft gegen
 `bmecat_etim_501.xsd`: gültig.
 
+## Der Weg (Taloan, 20.09.2026)
+
+1. **Klassifizieren** — der Anwender weist die ETIM-Klasse zu, und zwar dort, wo sie für alles
+   darunter gilt (Knoten-Menü → Datenanalyse → „ETIM-Klasse zuweisen …“; das Attribut ist
+   vererbbar: an der Produktgruppe gesetzt gilt sie für Produkte und Varianten, unten
+   überschreibbar). An welchem Knoten das sinnvoll ist, weiß nur er.
+2. **Struktur** — die Klasse sagt, welche Merkmale erforderlich sind: je Merkmal ein Attribut im
+   Modell (anlegen oder zuordnen, Abschnitt 3 der Analyse), und die Gruppe ETIM muss am Pfad
+   hängen (⊘ in der Analyse, „an … hängen“). Das prüft die Maschine.
+3. **Werte** — ob die Attribute gefüllt sind, verantwortet der Anwender (Pflichtfelder je Kanal,
+   Datenqualität, Vorschläge/Recherche in der Analyse). Leer geht als „-“/UN hinaus, wie die
+   Guideline es vorsieht.
+
+Der **Export** (xport) führt Schritt 1 und 2 stillschweigend aus, bevor er tätig wird (`gate`):
+ein Knoten ohne Klasse, mit nicht übernommener Klasse, ohne Attribut zu einem Merkmal oder mit
+Attributen, die dort nicht gelten, verweigert den ganzen Export mit Liste. Leere oder unpassende
+Werte sperren nicht — sie werden gezählt und im Status bzw. Job-Log gemeldet
+(„4 Merkmale leer (UN)“, „⚠ n Werte passen nicht (als UN)“).
+
 ## Daten im Journal (Plugin-Daten)
 
 | Name | Inhalt |

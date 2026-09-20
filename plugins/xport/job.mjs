@@ -44,5 +44,6 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   const name = (profile.fileName || `${profileName}-{date}.xml`).replace('{date}', stamp).replace('{locale}', locale)
   const file = path.join(dir, name)
   fs.writeFileSync(file, out, 'utf8')
-  console.log(`✓ ${file}: ${ctx.count} Produkte, ${(out.length / 1024).toFixed(0)} KB (Profil ${profileName}, ${locale})`)
+  const gaps = ctx.stats ? `${ctx.stats.unknown ? `, ${ctx.stats.unknown} Merkmale leer (UN)` : ''}${ctx.stats.bad ? `, ${ctx.stats.bad} Werte passen nicht (als UN)` : ''}` : ''
+  console.log(`✓ ${file}: ${ctx.count} Produkte, ${(out.length / 1024).toFixed(0)} KB (Profil ${profileName}, ${locale})${gaps}`)
 })().catch(e => { console.error('✗ ' + (e.message ?? e)); process.exit(1) })
