@@ -217,6 +217,28 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.NodeMoved, new NodeMoved(target.Id)));
     }
 
+    /// <summary>Einordnen: unter parent (fehlt = bleibt, null bei Wurzeln) vor before (null = ans Ende). Umhängen wie Move; dann die Geschwister
+    /// in ihrer sichtbaren Folge (Platz, sonst Name) neu nummerieren — nur die, deren Platz sich ändert, bekommen einen Eintrag.</summary>
+    public static Outcome Order(Ctx c, string id, string? parent, string? before)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        parent = Blank(parent); before = Blank(before);
+        if (parent != n.Parent)
+        {
+            if (parent is null) return Outcome.Bad("An die Wurzel geht nur ein Publikationsbaum.");
+            var moved = Move(c, id, parent); if (moved.Error is not null) return moved;
+        }
+        var siblings = c.Tree.Children(parent).Where(s => s.Id != id && s.Role == n.Role)
+            .OrderBy(s => s.Order ?? int.MaxValue).ThenBy(s => s.Name ?? s.Id, StringComparer.OrdinalIgnoreCase).ToList();
+        var at = before is null ? siblings.Count : siblings.FindIndex(s => s.Id == before);
+        if (at < 0) return Outcome.Bad("before: kein Geschwister.");
+        siblings.Insert(at, n);
+        Entry? last = null;
+        for (var i = 0; i < siblings.Count; i++)
+            if (siblings[i].Order != i) last = c.Write(siblings[i].Id, Types.NodeOrdered, new NodeOrdered(i));
+        return Outcome.Ok(last ?? c.Write(id, Types.NodeOrdered, new NodeOrdered(at)));   // nichts geändert: der Platz steht trotzdem einmal im Journal
+    }
+
     public static Outcome Retire(Ctx c, string id)
     {
         if (!c.Tree.Nodes.ContainsKey(id)) return Outcome.Missing;

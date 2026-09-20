@@ -130,12 +130,21 @@ async function editTree(r) {
   await run(() => post(`/api/rubrics/${encodeURIComponent(r.id)}/tree`, { channel, market: market || null }, 'PUT'))
 }
 // Ziehen: Rubrik auf Rubrik = umhängen; Verweis auf Rubrik = Verweis umhängen
-const drag = ref(null); const dropId = ref(null)
+const drag = ref(null); const dropId = ref(null); const dropPos = ref('into')   // into · before · after — Einfügelinie zwischen den Zeilen (Taloan, 21.09.)
 function onDragStart(e, row) { drag.value = row; e.dataTransfer.effectAllowed = 'move' }
 function onSrcDragStart(e, row) { drag.value = { kind: 'src', r: row.r }; e.dataTransfer.effectAllowed = 'copy' }
-function onDragOver(e, row) { if (row.kind !== 'rubric' || !drag.value || drag.value.r.id === row.r.id) return; e.preventDefault(); dropId.value = row.r.id }
+function onDragOver(e, row) {
+  if (row.kind !== 'rubric' || !drag.value || drag.value.r.id === row.r.id) return
+  e.preventDefault(); dropId.value = row.r.id
+  // Rubrik auf Rubrik: oberes Drittel = davor, unteres = danach, Mitte = hinein; alles andere geht nur hinein
+  if (drag.value.kind !== 'rubric' || !row.r.parent) { dropPos.value = 'into'; return }
+  const box = e.currentTarget.getBoundingClientRect(); const y = (e.clientY - box.top) / box.height
+  dropPos.value = y < 0.3 ? 'before' : y > 0.7 ? 'after' : 'into'
+}
+// Geschwister nach dem Ziel (für „danach“ = vor dem nächsten)
+function nextSibling(row) { const sib = tree.kids(row.r.parent); const i = sib.findIndex(x => x.id === row.r.id); return sib[i + 1]?.id ?? null }
 async function onDrop(row) {
-  const d = drag.value; drag.value = null; dropId.value = null
+  const d = drag.value; const pos = dropPos.value; drag.value = null; dropId.value = null; dropPos.value = 'into'
   if (!d || row.kind !== 'rubric') return
   if (d.kind === 'src') {
     // aus dem Pflegebaum: Gruppe → Rubrik mit Aufbau (copy) oder Verweis (ref); Produkt → Verweis
@@ -143,7 +152,7 @@ async function onDrop(row) {
     else await run(async () => { await post(`/api/rubrics/${encodeURIComponent(row.r.id)}/place`, { node: d.r.id }); expanded.value.add(row.r.id) })
     return
   }
-  if (d.kind === 'rubric') await run(() => post(`/api/nodes/${encodeURIComponent(d.r.id)}/move`, { parent: row.r.id }))
+  if (d.kind === 'rubric') await run(() => pos === 'into' ? post(`/api/nodes/${encodeURIComponent(d.r.id)}/move`, { parent: row.r.id }) : post(`/api/nodes/${encodeURIComponent(d.r.id)}/order`, { parent: row.r.parent, before: pos === 'before' ? row.r.id : nextSibling(row) }))
   else await run(async () => { await post(`/api/rubrics/${encodeURIComponent(row.r.id)}/place`, { node: d.r.id }); await api.del(`/api/rubrics/${encodeURIComponent(d.rubric)}/place/${encodeURIComponent(d.r.id)}`) })
 }
 const sel = ref(new Set())   // Mehrfachauswahl von Rubriken: Strg-Klick toggelt, Umschalt-Klick nimmt den Bereich bis zur zuletzt geöffneten
@@ -222,7 +231,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </div>
     </div>
     <div class="scroll tree">
-      <div v-for="row in rows" :key="row.kind + row.r.id + (row.rubric ?? '')" class="node" :class="[row.kind, { selected: row.r.id === id || sel.has(row.r.id), drop: dropId === row.r.id }]"
+      <div v-for="row in rows" :key="row.kind + row.r.id + (row.rubric ?? '')" class="node" :class="[row.kind, { selected: row.r.id === id || sel.has(row.r.id), drop: dropId === row.r.id && dropPos === 'into', 'drop-before': dropId === row.r.id && dropPos === 'before', 'drop-after': dropId === row.r.id && dropPos === 'after' }]"
         :style="`padding-left:${8 + row.depth * 16}px`" @click="open(row, $event)" @contextmenu.prevent="contextMenu($event, row)" :title="row.r.id"
         draggable="true" @dragstart="onDragStart($event, row)" @dragover="onDragOver($event, row)" @dragleave="dropId === row.r.id && (dropId = null)" @drop.prevent="onDrop(row)" @dragend="drag = null; dropId = null">
         <span v-if="row.kind === 'rubric'" class="twisty" :class="{ leaf: !row.has }" @click.stop="toggle(row.r.id)">{{ row.has ? (row.isOpen ? '▾' : '▸') : '' }}</span>
@@ -235,7 +244,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <div v-if="!trees.length" class="empty">Kein Publikationsbaum.<div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="newTree">+ Publikationsbaum</button></div><div class="muted" style="margin-top:6px;font-size:12px">Name, Kanal, optional Markt — danach Äste aus dem Pflegebaum links rüberziehen.</div></div>
       <div v-else-if="rows.length === 1" class="empty">Noch leer — einen Ast aus dem Pflegebaum links auf „{{ current.label }}“ ziehen.<div class="chips" style="justify-content:center;margin-top:8px"><button class="x" @click="newRubric(current)" title="eine leere Rubrik anlegen, z. B. für eigene Gliederung">+ Rubrik</button></div></div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis · von links ziehen = übernehmen · hier ziehen = umhängen · Strg-Klick = mehrere · Rechtsklick</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis · von links ziehen = übernehmen · hier ziehen = umhängen, an den Rand einer Zeile = Reihenfolge · Strg-Klick = mehrere · Rechtsklick</div>
   </div>
   <Splitter v-model="pubW" :min="220" :max="800" />
   <NodeView v-if="id" :id="id" :key="id" />
@@ -247,6 +256,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 .node:hover { background: var(--hover); }
 .node.selected { background: var(--accent-soft); }
 .node.drop { outline: 1px dashed var(--accent); outline-offset: -1px; background: var(--accent-soft); }
+.node.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
+.node.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
 .node.placed .label { color: var(--muted); }
 .twisty { width: 14px; color: var(--muted); font-size: 11px; text-align: center; cursor: pointer; }
 .count { font-size: 11px; margin-left: auto; }

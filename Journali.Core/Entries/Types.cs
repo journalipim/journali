@@ -17,6 +17,7 @@ public static class Types
     public const string ProductCreated = "ProductCreated";
     public const string VariantCreated = "VariantCreated";
     public const string NodeMoved = "NodeMoved";
+    public const string NodeOrdered = "NodeOrdered";
     public const string NodeRetired = "NodeRetired";
     /// <summary>Zurückgezogenen Knoten zurückholen — mit allem, was er hatte (Taloan: „kein Rückgängig nach Löschen?“).</summary>
     public const string NodeRestored = "NodeRestored";
@@ -181,6 +182,9 @@ public sealed record ProductAxesSet(string[] Axes, bool Force = false);
 public sealed record VariantCreated(string Product, Dictionary<string, string> AxisValues);
 
 public sealed record NodeMoved(string Parent);
+
+/// <summary>Platz unter den Geschwistern (Rubriken eines Publikationsbaums; Taloan, 21.09.2026). Ohne Eintrag: alphabetisch.</summary>
+public sealed record NodeOrdered(int Order);
 
 /// <summary>Knoten weg — nur ohne Kinder. Das Journal behält alles, das Abbild nimmt ihn heraus.</summary>
 public sealed record NodeRetired();

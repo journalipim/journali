@@ -17,6 +17,7 @@ public sealed class Node
     public required string Id { get; init; }
     public required string Role { get; init; }
     public string? Parent { get; set; }
+    public int? Order { get; set; }   // Platz unter den Geschwistern (NodeOrdered); null = alphabetisch
     public Labels Label { get; set; } = new();                 // Gruppe, Altlast (je Sprache) — der Name kommt daraus, wenn keiner gesetzt ist
     /// <summary>Eigener Name im Baum (NodeNamed; bei Gruppen aus GroupCreated/GroupRenamed). Null = die Automatik benennt.</summary>
     public string? Name { get; set; }
@@ -439,6 +440,9 @@ public sealed class Tree : IProjection
                 Unlink(n);
                 n.Parent = Types.Deserialize<NodeMoved>(entry.Payload).Parent;
                 Link(n);
+                break;
+            case Types.NodeOrdered:
+                n.Order = Types.Deserialize<NodeOrdered>(entry.Payload).Order;
                 break;
             case Types.NodeRetired:
                 Unlink(n);

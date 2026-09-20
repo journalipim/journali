@@ -87,6 +87,8 @@ public static class TreeApi
         api.MapPut("/nodes/{id}/groups", (string id, GroupsAttached b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AttachGroups(x, id, b.Groups)));
         api.MapPost("/variants", (VariantCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateVariant(x, b.Product, b.AxisValues)));
         api.MapPost("/nodes/{id}/move", (string id, NodeMoved b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Move(x, id, b.Parent)));
+        // Einordnen: unter parent (null = Wurzeln) vor den Knoten before (null = ans Ende) — umhängen und Platz in einem (Taloan, 21.09.)
+        api.MapPost("/nodes/{id}/order", (string id, OrderBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Order(x, id, b.Parent, b.Before)));
         // recursive ohne Vorgabe = Pflichtparameter: ohne ?recursive antwortete ASP.NET mit 400 als Text („Microsoft.AspNetCore…“), Taloan
         api.MapDelete("/nodes/{id}", (string id, HttpRequest req, Catalog c, bool recursive = false) =>
         {
@@ -176,7 +178,8 @@ public static class TreeApi
     /// <summary>Ein Befehl: Urheber aus dem Kopf, Prüfen und Schreiben unter der Sperre, Ergebnis als HTTP.</summary>
     static int CountRubrics(Tree tree, Node n) => tree.Children(n.Id).Sum(ch => 1 + CountRubrics(tree, ch));
     static int CountPlaced(Tree tree, Node n) => n.Placed.Count + tree.Children(n.Id).Sum(ch => CountPlaced(tree, ch));
-    public sealed record DeriveBody(string? From, bool Self = false);   // Self: die Gruppe selbst wird Rubrik, darunter ihr Aufbau
+    public sealed record DeriveBody(string? From, bool Self = false);
+    public sealed record OrderBody(string? Parent, string? Before);   // Self: die Gruppe selbst wird Rubrik, darunter ihr Aufbau
 
     public static IResult Run(HttpRequest req, Catalog c, Func<Ctx, Outcome> command)
     {
@@ -199,12 +202,12 @@ public static class TreeApi
 public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Name, string? Groups, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, string? Sku, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null,
-    string? Channel = null, string? Market = null, string[]? Placed = null)
+    string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
         n.Own(Model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
-        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null);
+        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order);
 
     /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle, Taloan): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
     /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>

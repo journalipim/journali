@@ -32,6 +32,7 @@ Eintrag übergeht das Abbild.
 | `NodePlaced` | `node`, `order?` | Verweis: Produktgruppe oder Produkt hängt in dieser Rubrik (Strom = Rubrik); derselbe Knoten darf in mehreren Rubriken hängen; keine Vererbung darüber. `order` = Platz in der Rubrik |
 | `NodeUnplaced` | `node` | Verweis weg |
 | `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, Rubrik unter Rubrik, sonst unter Gruppe; nie unter sich selbst) |
+| `NodeOrdered` | `order` | Platz unter den Geschwistern (Rubriken; Taloan, 21.09.2026 — Reihenfolge per Ziehen). Ohne Eintrag alphabetisch |
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles — das Abbild legt ihn in den Papierkorb |
 | `NodeRestored` | — | Knoten zurück aus dem Papierkorb, mit allem, was er hatte (Werte, Gruppen, Kennungen); der Vater muss im Baum stehen. Rückgängig je Aktion über den Stapel: `POST /api/batches/{batch}/undo` holt genau die Knoten des Stapels zurück |
 | `StatusSet` | `status` (draft, active, discontinued) | Produkt und Variante; Gruppe hat keinen |
@@ -165,6 +166,7 @@ steht im Kopf `X-Actor`.
 | `PUT /api/nodes/{id}/groups` `{groups[]}` | `GroupsAttached` |
 | `POST /api/variants` `{product, axisValues{}}` | `VariantCreated` — genau die Produktachsen, Werte geprüft, Kombination eindeutig |
 | `POST /api/nodes/{id}/move` `{parent}` | `NodeMoved` |
+| `POST /api/nodes/{id}/order` `{parent?, before?}` | `NodeMoved` (wenn der Vater wechselt) + `NodeOrdered` je Geschwister, dessen Platz sich ändert |
 | `DELETE /api/nodes/{id}` | `NodeRetired` — nur ohne Kinder |
 | `POST /api/nodes/{id}/status` `{status}` | `StatusSet` |
 | `POST /api/nodes/{id}/attributes` `{attribute, locale?, channel?, value | values[]}` | `AttributeSet` — nur, wenn das Attribut hier **gilt** (Gruppe am Pfad, dort aktiv, `levels`); prüft Achsen, Kanal, Typ, Wörterbuch; `sku` eindeutig über alle Varianten |

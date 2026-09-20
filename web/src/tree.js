@@ -28,7 +28,7 @@ export const tree = reactive({
       }
       const order = { group: 0, product: 1, variant: 2, rubric: 3 }
       for (const list of children.values())
-        list.sort((a, b) => (order[a.role] - order[b.role]) || a.label.localeCompare(b.label, 'de'))
+        list.sort((a, b) => (order[a.role] - order[b.role]) || ((a.order ?? 1e9) - (b.order ?? 1e9)) || a.label.localeCompare(b.label, 'de'))   // Platz (NodeOrdered), sonst Name
       this.rows = rows; this.byId = byId; this.children = children; this.loaded = true
       this.pubTrees = children.get('#pub') ?? []
     } catch (e) { store.toast(e.message) }

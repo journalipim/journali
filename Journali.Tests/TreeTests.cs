@@ -93,6 +93,25 @@ public class TreeTests
     }
 
     [Fact]
+    public void Platz_unter_den_Geschwistern_kommt_aus_NodeOrdered()
+    {
+        // Reihenfolge per Ziehen (Taloan, 21.09.): NodeOrdered setzt den Platz, ohne Eintrag bleibt er leer (alphabetisch in der Oberfläche)
+        var root = Ids.New(Roles.Rubric); var a = Ids.New(Roles.Rubric); var b = Ids.New(Roles.Rubric);
+        var (journal, _, tree) = Build(j =>
+        {
+            j.Append("t", root, Types.RubricCreated, Types.Serialize(new RubricCreated(null, new(), "Web", "web")));
+            j.Append("t", a, Types.RubricCreated, Types.Serialize(new RubricCreated(root, new(), "Anfang")));
+            j.Append("t", b, Types.RubricCreated, Types.Serialize(new RubricCreated(root, new(), "Ende")));
+        });
+        Assert.Null(tree.Nodes[a].Order); Assert.Null(tree.Nodes[b].Order);
+        journal.Append("t", b, Types.NodeOrdered, Types.Serialize(new NodeOrdered(0)));
+        journal.Append("t", a, Types.NodeOrdered, Types.Serialize(new NodeOrdered(1)));
+        Projector.CatchUp(journal, tree);
+        Assert.Equal(0, tree.Nodes[b].Order); Assert.Equal(1, tree.Nodes[a].Order);
+        Assert.Equal(new[] { b, a }, tree.Children(root).OrderBy(n => n.Order).Select(n => n.Id).ToArray());
+    }
+
+    [Fact]
     public void Beleg_pending_bleibt_auch_ohne_Wert()
     {
         // „angefragt bei herbert bis 2026-10-04“ am leeren Wert — der Beleg steht, der Wert nicht (Taloan, 21.09.: „wo ist der Herbert“)
