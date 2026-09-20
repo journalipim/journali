@@ -1495,10 +1495,24 @@ const loadXlsx = () => import(
   /* @vite-ignore */
   XLSX_URL
 );
+const POLISH_URL = "/plugins/xlsx/polish.mjs";
+async function polished(X, wb, columns, rowCount, tableName) {
+  const raw = X.write(wb, { type: "array", bookType: "xlsx" });
+  try {
+    const { polish } = await import(
+      /* @vite-ignore */
+      POLISH_URL
+    );
+    return await polish(raw, { columns, rowCount, tableName });
+  } catch (e) {
+    console.warn("Excel ohne Politur:", e.message);
+    return new Blob([raw], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  }
+}
 const build = (opts) => build$1({ api, model: store.model }, opts);
 async function toXlsx(table, sheet = "Daten") {
   const X = await loadXlsx();
-  return new Blob([X.write(workbook(X, table, null, sheet), { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  return polished(X, workbook(X, table, null, sheet), table.columns, table.rows.length, sheet);
 }
 async function nodeColumns(nodeId) {
   if (!tree.loaded) await tree.load();
@@ -1535,7 +1549,7 @@ async function nodeWorkbook(nodeId, withData) {
   }
   const wb = workbook(X, { columns, rows: data }, legend(columns));
   const name = `${row.label}-${childRole}${withData ? "" : "-vorlage"}`.replace(/[^\w.-]+/g, "_") + ".xlsx";
-  download(new Blob([X.write(wb, { type: "array", bookType: "xlsx" })], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), name);
+  download(await polished(X, wb, columns, data.length, childRole === "variant" ? "Varianten" : childRole === "product" ? "Produkte" : "Gruppen"), name);
   store.toast(`⇪ ${name}: ${columns.length} Spalten${withData ? `, ${data.length} Zeilen` : ""}`);
 }
 const tableExport = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({

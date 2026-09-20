@@ -8,10 +8,17 @@ export const download = (blob, name) => { const a = document.createElement('a');
 // SheetJS kommt zur Laufzeit aus dem Plugin xlsx (nicht gebündelt) — der Pfad als Variable, damit Vite ihn nicht auflöst
 const XLSX_URL = '/plugins/xlsx/xlsx.mjs'
 export const loadXlsx = () => import(/* @vite-ignore */ XLSX_URL)
+const POLISH_URL = '/plugins/xlsx/polish.mjs'
+// Komfort-Excel (Taloan, 20.09.): Kopf fett, Pflicht rot, Achsen blau, echte Tabelle mit Filter und Streifen, erste Zeile fest — nachträglich in die Datei
+async function polished(X, wb, columns, rowCount, tableName) {
+  const raw = X.write(wb, { type: 'array', bookType: 'xlsx' })
+  try { const { polish } = await import(/* @vite-ignore */ POLISH_URL); return await polish(raw, { columns, rowCount, tableName }) }
+  catch (e) { console.warn('Excel ohne Politur:', e.message); return new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }
+}
 export const build = opts => coreBuild({ api, model: store.model }, opts)
 export async function toXlsx(table, sheet = 'Daten') {
   const X = await loadXlsx()
-  return new Blob([X.write(workbook(X, table, null, sheet), { type: 'array', bookType: 'xlsx' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+  return polished(X, workbook(X, table, null, sheet), table.columns, table.rows.length, sheet)
 }
 
 // ---- Excel am Knoten (Taloan, 17.09.: Rechtsklick auf Gruppe/Produkt → Vorlage, Varianten/Produkte exportieren, Excel importieren):
@@ -45,6 +52,6 @@ export async function nodeWorkbook(nodeId, withData) {
   }
   const wb = workbook(X, { columns, rows: data }, legend(columns))
   const name = `${row.label}-${childRole}${withData ? '' : '-vorlage'}`.replace(/[^\w.-]+/g, '_') + '.xlsx'
-  download(new Blob([X.write(wb, { type: 'array', bookType: 'xlsx' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), name)
+  download(await polished(X, wb, columns, data.length, childRole === 'variant' ? 'Varianten' : childRole === 'product' ? 'Produkte' : 'Gruppen'), name)
   store.toast(`⇪ ${name}: ${columns.length} Spalten${withData ? `, ${data.length} Zeilen` : ''}`)
 }
