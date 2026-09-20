@@ -12,6 +12,7 @@ import { tree } from './tree.js'
 import { dialog } from './dialog.js'
 import { ai } from './ai.js'
 import { norm, similarity, convert, validate } from './mapper.js'
+import { treePicker } from './treePicker.js'
 
 export function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) if (k != null) e.append(k); return e }
 
@@ -169,13 +170,15 @@ export async function mount(root, ctx, catalog) {
   const status = el('span', { class: 'muted' }); const say = m => { status.textContent = m }
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 12px' })
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)
-  const rootIn = el('input', { type: 'search', placeholder: '🔍 Teilbaum (Gruppe/Produkt)', style: 'width:280px', value: tree.byId.get(st.root)?.label ?? '' })
-  const pick = el('div', { class: 'picker', style: 'position:absolute;z-index:5;width:380px;display:none' })
-  rootIn.addEventListener('input', () => { const q = rootIn.value.trim().toLowerCase(); pick.innerHTML = ''; const hits = q ? tree.rows.filter(r => r.role !== 'variant' && (r.label.toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12) : []; for (const r of hits) pick.append(el('div', { class: 'pick', onmousedown: e => { e.preventDefault(); st.root = r.id; rootIn.value = r.label; pick.style.display = 'none'; localStorage.setItem(`journali.cmp.${catalog.key}.root`, r.id) } }, `${r.role === 'group' ? '▣' : '▦'} ${r.label}`)); pick.style.display = hits.length ? 'block' : 'none' })
-  rootIn.addEventListener('blur', () => setTimeout(() => pick.style.display = 'none', 150))
+  // Teilbaum per Auswahlbaum (Taloan: statt Namenssuche); Knopf zeigt den gewählten, Klick klappt den Baum auf
+  const rootLabel = id => { const r = tree.byId.get(id); return r ? `${r.role === 'group' ? '▣' : r.role === 'product' ? '▦' : '◆'} ${r.label}` : 'Teilbaum wählen' }
+  const rootIn = el('button', { class: 'x', title: 'Teilbaum wählen (Gruppe oder Produkt)' }, rootLabel(st.root))
+  const pick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
+  treePicker(pick, { value: st.root, roles: ['group', 'product'], height: 300, onPick: r => { st.root = r.id; rootIn.textContent = rootLabel(r.id); pick.style.display = 'none'; localStorage.setItem(`journali.cmp.${catalog.key}.root`, r.id); run() } })
+  rootIn.addEventListener('click', () => { pick.style.display = pick.style.display === 'none' ? 'block' : 'none' })
   const s1 = el('div'), s2 = el('div'), s3 = el('div')
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, `${catalog.icon ?? '✓'} ${catalog.label}`), el('a', { href: catalog.source, target: '_blank', class: 'muted', style: 'font-size:12px', title: 'Quelle' }, catalog.sourceLabel ?? 'Quelle ↗'), el('span', { class: 'grow' }), status), body)
-  body.append(s1, s2, s3)
+  body.append(s2, s3, s1)   // 1 Prüfen · 2 Ergebnis · 3 Modell — erst der Knoten, dann was fehlt, dann das Modell dazu (Taloan, 20.09.)
 
   // -- 1 Zuordnung
   function drawMapping() {
@@ -183,12 +186,12 @@ export async function mount(root, ctx, catalog) {
     const n = catalog.groups.reduce((k, g) => k + g.items.length, 0), mapped = Object.values(st.mapping).filter(m => m.to).length
     const openMissing = catalog.groups.flatMap(g => g.items).filter(it => !st.mapping[it.key]?.to && st.levels.has(it.level)).length
     st.mapOpen ??= openMissing > 0   // alles zugeordnet → zu; erst aufklappen, wenn man die Zuordnung ändern will
-    const b1 = band(`${st.mapOpen ? '▾' : '▸'} 1 · Datenpunkte → Attribute · ${mapped} von ${n} zugeordnet${!st.mapOpen && openMissing ? ` · ${openMissing} offen` : ''}`)
-    b1.style.cursor = 'pointer'; b1.title = st.mapOpen ? 'zuklappen' : 'aufklappen — Datenpunkt → Attribut ändern, fehlende anlegen'
+    const b1 = band(`${st.mapOpen ? '▾' : '▸'} 3 · Modell: Datenpunkte → Attribute · ${mapped} von ${n} zugeordnet${!st.mapOpen && openMissing ? ` · ${openMissing} ohne Attribut` : ''}`)
+    b1.style.cursor = 'pointer'; b1.title = st.mapOpen ? 'zuklappen' : 'aufklappen — welches Attribut im Modell den Datenpunkt trägt: ändern, fehlende anlegen; danach erneut prüfen'
     b1.addEventListener('click', () => { st.mapOpen = !st.mapOpen; drawMapping() })
     s1.append(b1)
     if (!st.mapOpen) return
-    s1.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, catalog.description ?? ''))
+    s1.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Modellpflege, unabhängig vom Knoten: welches Attribut im Modell den Datenpunkt trägt. Fehlt eines, hier anlegen — ob es am Knoten gilt (Gruppe am Pfad), sagt das Ergebnis oben mit ⊘. ' + (catalog.description ?? '')))
     // Filter (Taloan, 18.09.): Pflichtgrad an/aus, dazu nur zugeordnete / nur offene
     const all = catalog.groups.flatMap(g => g.items)
     const cnt = lv => all.filter(it => it.level === lv).length
@@ -213,7 +216,7 @@ export async function mount(root, ctx, catalog) {
         const sel = el('select', { style: 'width:100%' }, el('option', { value: '' }, '— kein Attribut —'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
         sel.value = m?.to ?? ''
         if (!m?.to) sel.style.color = 'var(--warn)'
-        sel.addEventListener('change', () => { st.mapping[it.key] = { to: sel.value, why: 'gewählt', sure: true }; remember(); st.res = null; drawMapping(); drawResult() })
+        sel.addEventListener('change', () => { st.mapping[it.key] = { to: sel.value, why: 'gewählt', sure: true }; remember(); st.dirty = !!st.res; drawMapping(); drawResult() })
         tb.append(el('tr', {}, el('td', { title: it.level === 'must' ? 'Pflicht' : it.level === 'should' ? 'empfohlen' : 'optional' }, it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'),
           el('td', {}, el('b', {}, it.label), el('div', { class: 'mono muted', style: 'font-size:11px' }, it.key)),
           el('td', { class: 'muted' }, `${it.type ?? 'text'}${it.unit ? ' ' + it.unit : ''}`),
@@ -228,22 +231,23 @@ export async function mount(root, ctx, catalog) {
       const ok = await dialog.confirm({ title: `${missing.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“ mit ${missing.length} neuen Attributen im Modell`, list: missing.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.type ?? 'text'}${it.unit ? ' ' + it.unit : ''} — ${it.label}`), text: 'Die Gruppe muss danach an den Knoten hängen, an denen sie gelten soll (Attributgruppen NEU ab diesem Knoten).', ok: 'Anlegen' })
       if (!ok) return
       say('lege an …'); try { await createAttributes(catalog, missing, st.mapping); await remember(); store.toast(`✓ ${missing.length} Attribute in ${catalog.groupKey}`); say('') } catch (e) { store.toast(e.message); say('✗ ' + e.message) }
-      drawMapping()
+      st.dirty = !!st.res; drawMapping(); drawResult()
     } }, `+ ${missing.length} fehlende Attribute anlegen (Gruppe ${catalog.groupKey}${st.levels.size < 3 ? ', nur ' + [...st.levels].map(l => ({ must: 'Pflicht', should: 'empfohlen', may: 'optional' })[l]).join('/') : ''})`))
-    bar.append(el('button', { onclick: () => { st.mapping = guessMapping(catalog, model); remember(); drawMapping() }, title: 'Zuordnung neu raten' }, '↻ Best Guess'))
+    bar.append(el('button', { onclick: () => { st.mapping = guessMapping(catalog, model); remember(); st.dirty = !!st.res; drawMapping(); drawResult() }, title: 'Zuordnung neu raten' }, '↻ Best Guess'))
+    if (st.dirty) bar.append(el('button', { class: 'primary', onclick: run, title: 'Zuordnung geändert — den Teilbaum mit der neuen Zuordnung prüfen' }, '↻ erneut prüfen'))
     s1.append(bar)
   }
 
   // -- 2 Prüfung
   function drawRun() {
     s2.innerHTML = ''
-    s2.append(band('2 · Prüfen'))
+    s2.append(band('1 · Prüfen'))
     s2.append(el('div', { class: 'chips' }, el('span', { style: 'position:relative' }, rootIn, pick), el('button', { class: 'primary', onclick: run }, '▶ prüfen'),
       el('span', { class: 'muted', style: 'font-size:12px' }, '● Pflicht · ◐ empfohlen · ○ optional — Anteil erfüllter Pflicht-Datenpunkte je Knoten; ↓ = in allen Varianten darunter belegt (zählt als erfüllt)')))
   }
   async function run() {
     if (!st.root) return
-    try { st.res = await check(catalog, st.mapping, st.root, say); st.sugg = deriveSuggestions(catalog, st.mapping, st.res); say(`${st.res.nodes.length} Knoten geprüft`); drawResult() }
+    try { st.res = await check(catalog, st.mapping, st.root, say); st.sugg = deriveSuggestions(catalog, st.mapping, st.res); st.dirty = false; say(`${st.res.nodes.length} Knoten geprüft`); drawResult(); drawMapping() }
     catch (e) { say('✗ ' + e.message); store.toast(e.message) }
   }
   const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '', below: '↓', inactive: '⊘' }
@@ -253,11 +257,11 @@ export async function mount(root, ctx, catalog) {
     const r = st.res; if (!r) return
     const scored = r.nodes.filter(n => n.score != null)
     const avg = scored.length ? Math.round(scored.reduce((k, n) => k + n.score, 0) / scored.length) : null
-    s3.append(band(`3 · Ergebnis · ${r.nodes.length} Knoten${avg != null ? ` · Pflicht im Schnitt ${avg} %` : ''}${r.unmapped.length ? ` · ${r.unmapped.length} Datenpunkte ohne Attribut` : ''}`))
+    s3.append(band(`2 · Ergebnis · ${r.nodes.length} Knoten${avg != null ? ` · Pflicht im Schnitt ${avg} %` : ''}${r.unmapped.length ? ` · ${r.unmapped.length} Datenpunkte ohne Attribut im Modell (3)` : ''}${st.dirty ? ' · Zuordnung geändert — ↻ erneut prüfen' : ''}`))
     // je Datenpunkt: Zusammenfassung
     const sum = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, 'Datenpunkt'), el('th', { class: 'num' }, '✓'), el('th', { class: 'num' }, 'leer'), el('th', { class: 'num' }, '✗'), el('th', {}, ''))))
     const sb = el('tbody'); sum.append(sb)
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut — oben zuordnen oder anlegen'))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut im Modell — unter 3 zuordnen oder anlegen'))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (r.inactiveGroups?.size) {
       const groups = [...r.inactiveGroups]; const rootRow = tree.byId.get(st.root)
       const n = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
