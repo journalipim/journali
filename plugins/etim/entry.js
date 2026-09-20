@@ -236,7 +236,8 @@ async function mount(root, ctx) {
     body.append(section('Freigabe', 'IXF 3.1 — etim.de/daten/downloads bzw. ETIM CMT, frei',
       el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0' }, el('button', { class: 'x', title: 'ETIM-Freigabe als IXF-3.1-Datei lesen — bleibt im Browser; ins Journal kommen nur die übernommenen Klassen', onclick: () => file.click() }, '⇩ IXF lesen'), file, el('span', { class: 'muted', style: 'font-size:12px' }, relLine))))
     // Klassen
-    const q = el('input', { placeholder: 'Klasse suchen — Code, Name, Synonym', value: st.q, style: 'width:360px', oninput: e => { st.q = e.target.value; search() } })
+    // ohne gelesene Freigabe (bleibt im Browser, je Sitzung) gibt es nichts zu suchen — Feld und Knopf sagen das, statt nach dem Klick zu meckern (Taloan, 20.09.)
+    const q = el('input', { placeholder: rel ? 'Klasse suchen — Code, Name, Synonym' : 'erst oben „⇩ IXF lesen“ — dann suchen', value: st.q, style: 'width:360px', disabled: !rel, oninput: e => { st.q = e.target.value; search() } })
     const hits = el('div')
     const search = () => {
       hits.innerHTML = ''; if (!rel || st.q.trim().length < 2) return
@@ -253,7 +254,7 @@ async function mount(root, ctx) {
     const assignRow = st.assign ? tree.byId.get(st.assign) : null
     body.append(section('Klassen', `${taken.length} übernommen`,
       assignRow ? el('div', { class: 'chips', style: 'padding:6px 0' }, el('b', {}, `Klasse zuweisen an ${ICON[assignRow.role] ?? ''} ${assignRow.label}`), el('span', { class: 'muted', style: 'font-size:12px' }, '— unten „⇢ zuweisen“ bei einer übernommenen Klasse oder einem Suchtreffer; vererbbar: an der Gruppe gesetzt gilt sie für alles darunter'), el('button', { class: 'x', title: 'ohne Zuweisung weiter', onclick: () => { st.assign = null; draw() } }, '✕')) : null,
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', title: `alle Klassen, die im Attribut ${cache.settings.classAttr} stehen, aus der Freigabe übernehmen`, onclick: classesFromTree }, '⇩ aus dem Baum')),
+      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', disabled: !rel, title: rel ? `alle Klassen, die im Attribut ${cache.settings.classAttr} im Baum stehen, aus der Freigabe übernehmen` : 'braucht die gelesene Freigabe (oben ⇩ IXF lesen)', onclick: classesFromTree }, '⇩ aus dem Baum')),
       hits, taken.length ? tbl : el('div', { class: 'empty' }, rel ? 'Klasse suchen und mit + übernehmen' : 'erst eine Freigabe lesen')))
     // Attribute
     // Gruppe der ETIM-Daten: „etim“ legen wir an (Attribute direkt zugewiesen); eine vorhandene Gruppe heißt: hier zuordnen (Best Guess über die Namen)
