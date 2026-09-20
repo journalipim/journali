@@ -267,7 +267,7 @@ async function load() {
     rels.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/relations`)
     entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}`)).reverse()
   } catch (e) {
-    if (e.message.startsWith('404')) router.push('/tree')
+    if (e.message.startsWith('404')) router.push(router.currentRoute.value.path.startsWith('/pub') ? '/pub' : '/tree')   // Knoten weg: in derselben Ansicht bleiben (Taloan, 21.09.: „springt ganz raus“)
     else store.toast(e.message)
   }
 }
@@ -276,7 +276,7 @@ function onKey(e) {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
   // im grossen Editor (contenteditable) oder in einem Overlay gilt Esc dort — nicht den Knoten verlassen (Taloan: „klick – Anzeige – Esc“ warf den Knoten raus)
   if (e.target.isContentEditable || e.target.closest?.('.editor, .overlay, .dialog')) return
-  if (e.key === 'Escape') router.push('/tree')
+  if (e.key === 'Escape') router.push(router.currentRoute.value.path.startsWith('/pub') ? '/pub' : '/tree')
   else if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo() }
   else if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo() }
 }

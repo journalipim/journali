@@ -95,6 +95,7 @@ async function retire(r) {
   const n = tree.kids(r.id).length; const p = (r.placed ?? []).length
   const below = (() => { let rub = 0, ref = 0; const walk = x => { for (const k of tree.kids(x.id)) { rub++; walk(k) } ref += (x.placed ?? []).length }; walk(r); return { rub, ref } })()
   if (!await dialog.confirm({ title: `Rubrik „${r.label}“ aus „${current.value?.label ?? ''}“ entfernen?`, text: `${below.rub ? `${below.rub} ${below.rub === 1 ? 'Unterrubrik' : 'Unterrubriken'} und ` : ''}${below.ref} ${below.ref === 1 ? 'Verweis verschwindet' : 'Verweise verschwinden'} aus diesem Publikationsbaum. Die Produkte und Gruppen bleiben im Pflegebaum unverändert; sie gelten hier danach als „noch nicht einsortiert“.`, ok: '✕ Entfernen', danger: true })) return
+  if (props.id === r.id || tree.ancestors(props.id ?? '').some(a => a.id === r.id)) router.push(`/pub/${r.parent}`)   // erst weg von der Rubrik, sonst 404 → Sprung
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
 }
 // Verweise anlegen: Auswahlbaum (Taloan: Knoten immer per Auswahlbaum), mehrere auf einmal
@@ -178,6 +179,7 @@ async function retireMany(ids) {
   const list = ids.map(x => tree.byId.get(x)).filter(r => r && r.parent && !tree.ancestors(r.id).some(a => ids.includes(a.id)))
   if (!list.length) return
   if (!await dialog.confirm({ title: `${list.length} Rubriken aus „${current.value?.label ?? ''}“ entfernen?`, list: list.map(r => r.label), text: 'Mit allem darunter (Unterrubriken, Verweise). Die Produkte bleiben im Pflegebaum und gelten hier danach als „noch nicht einsortiert“.', ok: '✕ Entfernen', danger: true })) return
+  if (list.some(r => r.id === props.id || tree.ancestors(props.id ?? '').some(a => a.id === r.id))) router.push(`/pub/${current.value.id}`)
   await run(async () => { for (const r of list) await api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`) })
   sel.value = new Set()
 }
@@ -186,12 +188,14 @@ async function clearTree(r) {
   const kids = tree.kids(r.id); const refs = (r.placed ?? []).length
   if (!kids.length && !refs) { store.toast('schon leer'); return }
   if (!await dialog.confirm({ title: `„${r.label}“ leeren?`, text: `${kids.length} Rubriken und ${refs} Verweise an der Wurzel verschwinden. Die Produkte bleiben im Pflegebaum. Der Baum selbst (Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}) bleibt.`, ok: '✕ Leeren', danger: true })) return
+  if (props.id && props.id !== r.id) router.push(`/pub/${r.id}`)
   await run(async () => { for (const k of kids) await api.del(`/api/nodes/${encodeURIComponent(k.id)}?recursive=true`); for (const p of r.placed ?? []) await api.del(`/api/rubrics/${encodeURIComponent(r.id)}/place/${encodeURIComponent(p)}`) })
 }
 async function deleteTree(r) {
   if (!await dialog.confirm({ title: `Publikationsbaum „${r.label}“ löschen?`, warn: `Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}`, text: 'Mit allen Rubriken und Verweisen. Die Produkte bleiben im Pflegebaum. Wie alles im Journal: zurückholbar über den Papierkorb.', ok: '✕ Löschen', danger: true })) return
+  router.push('/pub')
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
-  treeKey.value = trees.value[0]?.id ?? ''; if (props.id === r.id) router.push('/pub')
+  treeKey.value = trees.value[0]?.id ?? ''
 }
 onMounted(() => { if (!tree.loaded) tree.load() })
 </script>
