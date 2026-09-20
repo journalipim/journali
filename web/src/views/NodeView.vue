@@ -603,7 +603,7 @@ function cellMenu(e, def, col, block) {
     </template>
 
       <div class="section" v-if="node.role === 'product'">
-        <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· {{ node.children ? 'auch nachträglich — eine neue Achse nimmt an jeder Variante deren Wert des Attributs (muss da sein), Kombination eindeutig' : 'optional — je Achse bekommt jede Variante genau einen Wert, Kombination eindeutig' }}</span></h2>
+        <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· sichern Eindeutigkeit in den gewählten Attributen über alle Varianten</span></h2>
         <template v-if="open('axes')">
         <div class="chips">
           <span v-if="!node.axes.length" class="muted">keine</span>
