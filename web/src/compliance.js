@@ -22,6 +22,8 @@ export function guessMapping(catalog, model) {
   const index = attrs.map(a => ({ a, names: [norm(a.key), ...Object.values(a.label ?? {}).map(norm)].filter(Boolean) }))
   const out = {}
   for (const g of catalog.groups) for (const it of g.items) {
+    // feste Zuordnung (Katalog nennt das Attribut, z. B. ETIM ef… → ef…): nie raten — „Height ≈ Gewicht (80 %)“ war Unsinn (Taloan, 20.09.)
+    if (it.to !== undefined) { const ok = it.to && attrs.some(a => a.key === it.to); out[it.key] = { to: ok ? it.to : '', why: ok ? 'fest' : 'kein Attribut', sure: ok, fixed: true }; continue }
     const wanted = [it.key, ...(it.synonyms ?? [])].map(norm)
     let best = null, score = 0, why = ''
     for (const { a, names } of index) {
@@ -164,7 +166,7 @@ export async function mount(root, ctx, catalog) {
   const st = { root: localStorage.getItem(`journali.cmp.${catalog.key}.root`) || tree.rows.find(r => !r.parent)?.id, mapping: null, res: null, sugg: [], filter: 'all', picked: new Set(), levels: new Set(['must', 'should', 'may']), only: 'all' }
   const saved = await ctx.data.get('mapping')
   st.mapping = guessMapping(catalog, model)
-  if (saved) for (const [k, v] of Object.entries(saved)) if (v?.to && model.attributes.some(a => a.key === v.to)) st.mapping[k] = { ...v, why: 'gemerkt', sure: true }
+  if (saved) for (const [k, v] of Object.entries(saved)) if (v?.to && model.attributes.some(a => a.key === v.to) && !st.mapping[k]?.fixed) st.mapping[k] = { ...v, why: 'gemerkt', sure: true }
   const remember = () => ctx.data.set('mapping', st.mapping).catch(() => {})
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => { status.textContent = m }
@@ -183,6 +185,7 @@ export async function mount(root, ctx, catalog) {
   // -- 1 Zuordnung
   function drawMapping() {
     s1.innerHTML = ''
+    if (catalog.autoCreate) return   // das Modell pflegt der Katalog selbst — nichts für den Anwender
     const n = catalog.groups.reduce((k, g) => k + g.items.length, 0), mapped = Object.values(st.mapping).filter(m => m.to).length
     const openMissing = catalog.groups.flatMap(g => g.items).filter(it => !st.mapping[it.key]?.to && st.levels.has(it.level)).length
     st.mapOpen ??= openMissing > 0   // alles zugeordnet → zu; erst aufklappen, wenn man die Zuordnung ändern will
@@ -213,8 +216,8 @@ export async function mount(root, ctx, catalog) {
       tb.append(el('tr', { class: 'group-row' }, el('td', { colspan: '5' }, `▤ ${g.label}`, el('span', { class: 'muted', style: 'font-weight:400' }, ` · ${items.length}`))))
       for (const it of items) {
         const m = st.mapping[it.key]
-        const sel = el('select', { style: 'width:100%' }, el('option', { value: '' }, '— kein Attribut —'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
-        sel.value = m?.to ?? ''
+        const sel = m?.fixed ? el('span', { class: m.to ? '' : 'warn' }, m.to ? `${model.attributes.find(a => a.key === m.to)?.label?.de || m.to} · ${m.to}` : '— fehlt, wird angelegt —') : el('select', { style: 'width:100%' }, el('option', { value: '' }, '— kein Attribut —'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
+        if (!m?.fixed) sel.value = m?.to ?? ''
         if (!m?.to) sel.style.color = 'var(--warn)'
         sel.addEventListener('change', () => { st.mapping[it.key] = { to: sel.value, why: 'gewählt', sure: true }; remember(); st.dirty = !!st.res; drawMapping(); drawResult() })
         tb.append(el('tr', {}, el('td', { title: it.level === 'must' ? 'Pflicht' : it.level === 'should' ? 'empfohlen' : 'optional' }, it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'),

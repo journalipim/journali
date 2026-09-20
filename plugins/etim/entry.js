@@ -135,6 +135,7 @@ function buildCatalog(ctx) {
     key: f.code.toLowerCase(), label: nameOf(f.name, locale) || f.code, labelEn: f.name.en, level: 'must', type: TYPE[f.type] ?? 'text', unit: f.unit ? (nameOf(f.unit.abbr, locale) || f.unit.code) : null,
     values: f.type === 'Alphanumeric' ? f.values.map(v => nameOf(v.name, locale)) : null,
     synonyms: [f.code, ...Object.values(f.name)],
+    to: ops.hasAttr(attrKeyOf(f.code)) ? attrKeyOf(f.code) : '',   // fest: das Merkmal-Attribut (oder die Zuordnung aus 4) — nie nach Namen raten
     hint: `${f.code} · ${f.type}${f.type === 'Range' ? ' (von - bis)' : ''} · in ${f.classes.length} Klasse${f.classes.length === 1 ? '' : 'n'}: ${f.classes.slice(0, 3).map(c => c.code).join(', ')}${f.classes.length > 3 ? ' …' : ''}`,
     appliesIf: (r, mapping) => { const c = classOf(r, mapping); return !!c && c.features.some(x => x.code === f.code) },
     rule: v => resolveValue(f, v) === null ? `passt nicht zu ${f.type}${f.type === 'Alphanumeric' ? ' — erlaubt: ' + f.values.slice(0, 5).map(x => nameOf(x.name, locale)).join(', ') + (f.values.length > 5 ? ' …' : '') : ''}` : null,
@@ -147,7 +148,7 @@ function buildCatalog(ctx) {
     description: n ? `${n} Klasse${n === 1 ? '' : 'n'} übernommen (⇪ Export → ⌗ ETIM) mit ${feats.length} Merkmalen. Ein Merkmal zählt an einem Knoten nur, wenn seine Klasse es hat; Knoten ohne Klasse bleiben aussen vor. Fehlende Attribute legt der Katalog als ef… mit Werteliste und Einheit an.` : 'Noch keine Klasse übernommen — erst unter ⇪ Export → ⌗ ETIM eine Freigabe lesen und Klassen übernehmen.',
     groupKey: groupKey(), groupLabel: groupKey() === 'etim' ? 'ETIM' : groupKey(), prefix: '',
     groups: [
-      { key: 'class', label: 'Klasse', items: [{ key: classKey, label: 'ETIM-Klasse', level: 'must', type: 'enum', synonyms: ['etim', 'etim_class', 'etim klasse', 'etim class'], values: [...cache.classes.values()].map(c => `${c.code} ${nameOf(c.name, locale)}`), hint: 'EC-Code der Klasse — ohne Klasse gilt kein Merkmal; die KI schlägt eine der übernommenen Klassen vor', rule: v => cache.classes.has(String(v).trim().toUpperCase()) ? null : `Klasse ${v} nicht übernommen` }] },
+      { key: 'class', label: 'Klasse', items: [{ key: classKey, label: 'ETIM-Klasse', level: 'must', type: 'enum', to: ops.hasAttr(classKey) ? classKey : '', synonyms: ['etim', 'etim_class', 'etim klasse', 'etim class'], values: [...cache.classes.values()].map(c => `${c.code} ${nameOf(c.name, locale)}`), hint: 'EC-Code der Klasse — ohne Klasse gilt kein Merkmal; die KI schlägt eine der übernommenen Klassen vor', rule: v => cache.classes.has(String(v).trim().toUpperCase()) ? null : `Klasse ${v} nicht übernommen` }] },
       { key: 'features', label: 'Merkmale', items },
     ],
     createAttribute: async it => it.key === classKey ? ops.ensureClassAttr() : it.feature ? ops.createFeature(it.feature) : null,
@@ -156,10 +157,11 @@ function buildCatalog(ctx) {
       const key = mapping?.[classKey]?.to || classKey; const code = String(n.raw?.[key] ?? '').trim().toUpperCase(); const cls = cache.classes.get(code)
       if (cls) return `${code} · ${cls.features.length} Merkmale`
       if (n.states[classKey] === 'inactive') return ''   // Gruppe fehlt — der ⊘-Knopf oben löst es
-      if (n.leaf || n.row.role !== 'group') { const b = document.createElement('button'); b.className = 'x'; b.textContent = '⌗ Klasse zuweisen …'; b.title = 'ETIM-Klasse für diesen Knoten wählen — sie bestimmt die erforderlichen Merkmale'; b.addEventListener('click', () => c.go?.(`/p/etim/etim?assign=${encodeURIComponent(n.row.id)}`)); return b }
+      if (n.leaf || n.row.role !== 'group') { const b = document.createElement('button'); b.className = 'x'; b.textContent = '⌗ Klasse zuweisen …'; b.title = 'ETIM-Klasse für diesen Knoten wählen — sie bestimmt die erforderlichen Merkmale'; b.addEventListener('click', () => classDialog(n.row.id, c)); return b }
       return ''
     },
-    summary: r => { const noClass = r.nodes.filter(n => n.leaf && n.states[classKey] === 'empty').length; return noClass ? `⌗ ${noClass} Knoten ohne ETIM-Klasse — erst die Klasse zuweisen (sie sagt, welche Merkmale erforderlich sind), dann füllen` : null },
+    // ohne Klasse: das Wesentliche zuerst — der Knopf zum Dialog, bei einem Knoten direkt dafür
+    summary: (r, mapping, c) => { const noClass = r.nodes.filter(n => n.leaf && n.states[classKey] === 'empty'); if (!noClass.length) return null; const b = document.createElement('button'); b.className = 'primary'; b.textContent = '⌗ Klasse zuweisen …'; b.addEventListener('click', () => classDialog(noClass.length === 1 ? noClass[0].row.id : r.nodes[0].row.id, c)); const w = document.createElement('span'); w.append(`⌗ ${noClass.length} Knoten ohne ETIM-Klasse — sie bestimmt die Merkmale `, b); return w },
   }
 }
 
