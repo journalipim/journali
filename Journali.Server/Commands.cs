@@ -75,9 +75,30 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (n.Role != Roles.Product) return Outcome.Bad("Nur ein Produkt hat Variantenachsen.");
-        if (c.Tree.Children(id).Any()) return Outcome.Bad("Achsen sind fest, sobald Varianten da sind — erst die Varianten zurückziehen.");
         var clean = axes?.Select(a => a.Trim()).Where(a => a.Length > 0).Distinct().ToArray() ?? [];
         if (clean.Except(c.Model.Attributes.Keys).Any()) return Outcome.Bad("Variantenachse muss ein Attribut sein.");
+        // Mit Varianten (Taloan, 20.09.: „im Nachhinein kann man keine Achse zufügen — warum nicht?“): eine neue Achse nimmt an jeder Variante
+        // deren eigenen Wert des Attributs — der muss da sein; danach muss die Kombination der Achsenwerte je Produkt eindeutig sein.
+        var variants = c.Tree.Children(id).ToList();
+        if (variants.Count > 0)
+        {
+            var combos = new HashSet<string>();
+            foreach (var v in variants)
+            {
+                var vals = new List<string>();
+                foreach (var a in clean)
+                {
+                    var val = v.AxisValues.TryGetValue(a, out var have) ? have : v.Values.GetValueOrDefault(new Axis(a, null, null));
+                    if (string.IsNullOrEmpty(val)) return Outcome.Bad($"Achse {a}: „{c.Tree.Nodes[v.Id].Name ?? v.Id}“ hat keinen Wert dafür — erst an allen Varianten {a} setzen.");
+                    vals.Add(val);
+                }
+                if (clean.Length > 0 && !combos.Add(string.Join("\u0001", vals))) return Outcome.Bad($"Damit wären zwei Varianten gleich ({string.Join(", ", vals)}).");
+            }
+        }
+        // Entfällt eine Achse, bleibt ihr Wert als eigener Attributwert an der Variante (sonst wäre er nur noch im Journal) — je Variante ein AttributeSet vor dem Achsenwechsel
+        foreach (var v in variants) foreach (var gone in v.AxisValues.Keys.Except(clean).ToList())
+            if (!v.Values.ContainsKey(new Axis(gone, null, null)) && c.Model.Attributes.TryGetValue(gone, out var gd) && gd.Type != AttributeTypes.Rows)
+                c.Write(v.Id, Types.AttributeSet, new AttributeSet(gone, null, null, v.AxisValues[gone]));
         return Outcome.Ok(c.Write(id, Types.ProductAxesSet, new ProductAxesSet(clean)));
     }
 

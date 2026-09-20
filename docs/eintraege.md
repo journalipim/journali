@@ -25,7 +25,7 @@ Eintrag übergeht das Abbild.
 | `NodeNamed` | `name?` | eigener Name im Baum, jede Rolle, einsprachig; leer = weg, die Automatik benennt (docs/pflegestruktur.md, 17) |
 | `LabelAttributeSet` | `attribute?` | das ★: welches Attribut ab hier nach unten die Knoten ohne eigenen Namen benennt; jeder Knoten darunter darf es neu setzen; null = weg, es gilt wieder das der Vorfahren |
 | `ProductCreated` | `group`, `axes[]?` | Produkt unter einer Gruppe; `axes` = wonach es variiert (Attribute, optional). `family` ist Altlast und bleibt leer |
-| `ProductAxesSet` | `axes[]` | Variantenachsen nachträglich (ganze Liste) — nur, solange das Produkt keine Varianten hat |
+| `ProductAxesSet` | `axes[]` | Variantenachsen (ganze Liste) — auch mit Varianten (20.09.2026): eine neue Achse nimmt an jeder Variante deren eigenen Wert des Attributs (muss da sein), die Kombination aller Achsen je Produkt bleibt eindeutig; eine entfallene Achse schreibt ihren Wert vorher als `AttributeSet` an die Variante, damit nichts verloren geht |
 | `VariantCreated` | `product`, `axisValues{}` | Variante — das Verkaufbare; je Produktachse ein Wert, Kombination je Produkt eindeutig |
 | `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, sonst unter Gruppe; nie unter sich selbst) |
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles — das Abbild legt ihn in den Papierkorb |

@@ -329,6 +329,12 @@ public sealed class Tree : IProjection
                 break;
             case Types.ProductAxesSet:
                 n.Axes = Types.Deserialize<ProductAxesSet>(entry.Payload).Axes.Distinct().ToArray();
+                // vorhandene Varianten: neue Achse ← eigener Wert des Attributs; entfallene Achse weg (Taloan, 20.09.: Achsen auch nachträglich)
+                foreach (var v in Children(n.Id).Where(x => x.Role == Roles.Variant))
+                {
+                    foreach (var ax in n.Axes) if (!v.AxisValues.ContainsKey(ax) && v.Values.TryGetValue(new Axis(ax, null, null), out var own) && own.Length > 0) v.AxisValues[ax] = own;
+                    foreach (var k in v.AxisValues.Keys.Where(k => !n.Axes.Contains(k)).ToList()) v.AxisValues.Remove(k);
+                }
                 break;
             case Types.NodeNamed:
                 var nn = Types.Deserialize<NodeNamed>(entry.Payload).Name;

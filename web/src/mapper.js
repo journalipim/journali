@@ -211,6 +211,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const defOf = m => attrs.get(m.attribute ?? m.newKey) ?? (newAttrs.get(m.newKey) ? { key: m.newKey, type: newAttrs.get(m.newKey).type, perLocale: newAttrs.get(m.newKey).axes.includes('locale') } : null)
 
   // Zeilennummern in Meldungen sind Excel-Zeilen (Kopfzeile = 1)
+  const combos = new Map()   // je Produkt die Achsen-Kombinationen (Bestand + Datei)
   const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [], invalid: [], missingGroup: requiredNew, newListValues: {} }
   // Listenwerte, die es noch nicht gibt (Taloan, 20.09.: „Werte sollten zugefügt werden — genau dazu ist die Excel-Bearbeitung da“): der Plan
   // merkt sie je Liste (Schlüssel = normierter Text, Bezeichnung = der Text), das Schreiben legt sie vor dem Stapel an
@@ -246,6 +247,13 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
         const axisValues = {}
         for (const a of parent.axes ?? []) { const m = mapping.find(x => x.target === 'attr' && x.attribute === a); const v = m ? conv(cell(row, mapping.indexOf(m)), attrs.get(a)) : null; if (v == null) { stats.problems.push(`Zeile ${ri + 2}: Achse ${a} fehlt`); } else axisValues[a] = v }
         if (Object.keys(axisValues).length < (parent.axes ?? []).length) { stats.skipped++; return }
+        // Kombination aller Achsen je Produkt eindeutig (Taloan, 20.09.): gegen den Bestand und gegen die Datei selbst — der Server prüft es auch, aber erst beim Schreiben
+        if ((parent.axes ?? []).length) {
+          const combo = parent.axes.map(a => axisValues[a]).join('\u0001')
+          if (!combos.has(parent.id)) combos.set(parent.id, new Set((tree?.rows ?? []).filter(x => x.role === 'variant' && x.parent === parent.id).map(x => parent.axes.map(a => x.axisValues?.[a] ?? '').join('\u0001'))))
+          if (combos.get(parent.id).has(combo)) { stats.problems.push(`Zeile ${ri + 2}: Variante ${parent.axes.map(a => `${a}=${axisValues[a]}`).join(', ')} gibt es schon unter „${parent.label}“ (im Bestand oder doppelt in der Datei)`); stats.skipped++; return }
+          combos.get(parent.id).add(combo)
+        }
         commands.push({ op: 'variant.create', ref, args: { product: parent.id, axisValues } })
       } else if (r === 'group') commands.push({ op: 'group.create', ref, args: { parent: parent.id, label: {}, name: sku || null } })
       else commands.push({ op: 'product.create', ref, args: { group: parent.id, axes: [] } })

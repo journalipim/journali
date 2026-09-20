@@ -583,12 +583,12 @@ function cellMenu(e, def, col, block) {
     </template>
 
       <div class="section" v-if="node.role === 'product'">
-        <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· {{ node.children ? 'fest, seit Varianten da sind' : 'optional — je Achse bekommt jede Variante genau einen Wert, Kombination eindeutig' }}</span></h2>
+        <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· {{ node.children ? 'auch nachträglich — eine neue Achse nimmt an jeder Variante deren Wert des Attributs (muss da sein), Kombination eindeutig' : 'optional — je Achse bekommt jede Variante genau einen Wert, Kombination eindeutig' }}</span></h2>
         <template v-if="open('axes')">
         <div class="chips">
           <span v-if="!node.axes.length" class="muted">keine — beliebig viele Varianten</span>
-          <span v-for="k in node.axes" :key="k" class="chip">{{ axisLabel(k) }} <button v-if="!node.children" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg">×</button></span>
-          <template v-if="!node.children">
+          <span v-for="k in node.axes" :key="k" class="chip">{{ axisLabel(k) }} <button @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg — nur, wenn die Varianten danach noch eindeutig sind">×</button></span>
+          <template>
             <select v-model="addAxis" style="width:220px"><option value="">+ Achse …</option><option v-for="a in axisChoices" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
             <button class="primary" :disabled="!addAxis" @click="setAxes([...node.axes, addAxis]); addAxis = ''">dazu</button>
           </template>

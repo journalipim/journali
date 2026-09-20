@@ -59,7 +59,7 @@ public sealed class Catalog
                     Types.ChannelDefined => _model.Channels.ContainsKey(key),
                     Types.AttributeDefined => _model.Attributes.ContainsKey(key),
                     Types.ListDefined => _model.Lists.ContainsKey(key),
-                    Types.ListValueDefined => _model.Lists.TryGetValue(key, out var l) && l.Values.Count > 0,
+                    Types.ListValueDefined => _model.Lists.TryGetValue(key, out var l) && l.Values.ContainsKey(Types.Deserialize<ListValueDefinition>(s.Payload).Value),   // je Wert, nicht „Liste hat schon Werte“ (sonst kam nur der erste)
                     Types.ViewDefined => _model.Views.ContainsKey(key),
                     Types.UnitDefined => _model.Units.ContainsKey(key),
                     Types.AttributeGroupDefined => _model.Groups.ContainsKey(key),
