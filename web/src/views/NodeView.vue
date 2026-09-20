@@ -535,28 +535,34 @@ function cellMenu(e, def, col, block) {
          Die Sicht (Sprachen, Kanal, Attributsicht, Anordnung) gehört zum Abschnitt Attribute — darum unter dessen Band. -->
     <h2 class="band" @click="toggle('attributes')"><span class="caret">{{ open('attributes') ? '▾' : '▸' }}</span>▤ Attribute <span class="muted">· {{ blocks.length }} Gruppen · {{ blocks.reduce((n, b) => n + b.defs.length, 0) }} Attribute</span></h2>
     <template v-if="open('attributes')">
+    <!-- Leiste in drei Gruppen (Taloan, 20.09.): WAS gezeigt wird (Sprachen, Kanal, Sicht, Filter, Suche) · WIE es angeordnet ist (flach/Reiter) · WIE es beschriftet ist (Namen) -->
     <div class="toolbar view">
-      <span class="muted">Sicht:</span>
-      <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: store.viewLocales.includes(l), master: l === master }" @click="toggleLocale(l)" :title="l === master ? 'Mastersprache' : ''">{{ l }}</span>
-      <select :value="store.viewChannel ?? ''" @change="setChannel($event.target.value)" title="Kanal der Sicht">
-        <option value="">nur *</option><option v-for="c in channels" :key="c" :value="c">{{ c }}</option>
-      </select>
+      <span class="grp" title="Spalten: Sprachen und Kanal">
+        <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: store.viewLocales.includes(l), master: l === master }" @click="toggleLocale(l)" :title="l === master ? 'Mastersprache' : ''">{{ l }}</span>
+        <select :value="store.viewChannel ?? ''" @change="setChannel($event.target.value)" title="Kanal der Sicht">
+          <option value="">nur *</option><option v-for="c in channels" :key="c" :value="c">{{ c }}</option>
+        </select>
+      </span>
       <span class="sep">·</span>
-      <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="`Attributsicht für ${roleLabel[node.role]} — ⊞ Modell → Attributsichten`">
-        <option value="">◫ komplett</option>
-        <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option>
-      </select>
-      <router-link :to="{ path: '/model', query: { section: 'views', key: orderView?.key } }" class="x edit" :title="orderView ? `${orderView.key} bearbeiten → Modell → Attributsichten` : '→ Modell → Attributsichten'">✎</router-link>
-      <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
-      <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
-      <select :value="store.scope" @change="setScope($event.target.value)" :class="{ on: store.scope !== 'all' }" title="Filter — was von den Attributen gezeigt wird; weitere Filter kommen hier dazu">
-        <option v-for="f in SCOPES" :key="f.key" :value="f.key" :title="f.title">{{ f.label }}</option>
-      </select>
-      <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
+      <span class="grp" title="Zeilen: Attributsicht und Filter">
+        <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="`Attributsicht für ${roleLabel[node.role]} — ⊞ Modell → Attributsichten`">
+          <option value="">◫ komplett</option>
+          <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option>
+        </select>
+        <router-link :to="{ path: '/model', query: { section: 'views', key: orderView?.key } }" class="x edit" :title="orderView ? `${orderView.key} bearbeiten → Modell → Attributsichten` : '→ Modell → Attributsichten'">✎</router-link>
+        <select :value="store.scope" @change="setScope($event.target.value)" :class="{ on: store.scope !== 'all' }" title="Filter — was von den Attributen gezeigt wird">
+          <option v-for="f in SCOPES" :key="f.key" :value="f.key" :title="f.title">{{ f.label }}</option>
+        </select>
+        <input ref="findBox" v-model="attrFilter" type="search" placeholder="Attribut oder Wert" style="width:200px;font-size:12px" title="Suche im Sichtbaren: Attributname und die Werte der gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
+        <span v-if="attrFilter" class="muted">{{ hitCount }}</span>
+      </span>
       <span class="grow" />
-      <input ref="findBox" v-model="attrFilter" type="search" placeholder="🔍 Attribut oder Wert (sichtbar)" style="width:220px;font-size:12px" title="filtert live über Attributname und die Werte in den gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
-      <span v-if="attrFilter" class="muted">{{ hitCount }} Treffer</span>
-      <span class="muted">{{ columns.length }} Spalten</span>
+      <span class="grp" title="Anordnung der Gruppen">
+        <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="Gruppen untereinander">☰</button>
+        <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
+      </span>
+      <span class="sep">·</span>
+      <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
     </div>
 
     <div v-if="store.layout === 'tabs' && blocks.length" class="tabs">
@@ -812,6 +818,7 @@ function cellMenu(e, def, col, block) {
 </template>
 
 <style scoped>
+.grp { display: inline-flex; align-items: center; gap: 4px; }
 /* Filter-Dropdown: leuchtet, wenn ein Filter wirkt */
 select.on { color: var(--accent); border-color: var(--accent); }
 /* Pfad bricht nicht um — wird er zu lang, schrumpft die Schrift (fitPath), notfalls Ellipse an den Gliedern (Taloan) */
