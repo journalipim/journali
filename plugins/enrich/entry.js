@@ -72,5 +72,5 @@ async function mount(root, ctx) {
 
 export default {
   views: [{ path: 'enrich', label: 'Anreicherung', icon: '⌕', topic: 'analysis', hint: 'Fehlende Werte gewählter Attribute finden und ergänzen — aus Regeln, KI oder Recherche im Internet (Handelsware: Herstellerdaten, Datenblätter), je Wert mit Quelle', mount }],
-  nodeActions: [{ label: 'Anreichern', icon: '⌕', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.enrich.root', id); ctx.go?.('/p/enrich/enrich') } }],
+  nodeActions: [{ label: 'Anreichern', icon: '⌕', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.enrich.root', id); ctx.go?.('/p/enrich/enrich?run=1') } }],
 }

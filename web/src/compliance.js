@@ -321,5 +321,7 @@ export async function mount(root, ctx, catalog) {
     drawSugg()
   }
   drawMapping(); drawRun(); drawResult()
+  // aus dem Knoten-Menü (?run=1): nicht erst „prüfen“ drücken müssen — der Teilbaum steht schon fest
+  if (new URLSearchParams(location.search).get('run') === '1') { history.replaceState(null, '', location.pathname); run() }
   return () => {}
 }

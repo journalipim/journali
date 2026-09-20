@@ -3,6 +3,6 @@
 import catalog from './catalog.js'
 export default {
   views: [{ path: 'check', label: catalog.label, icon: catalog.icon, topic: 'analysis', mount: (root, ctx) => ctx.compliance.mount(root, ctx, catalog) }],
-  nodeActions: [{ label: `DPP prüfen`, icon: catalog.icon, topic: 'analysis', roles: ['group', 'product'], run(nodeId, ctx) { localStorage.setItem(`journali.cmp.${catalog.key}.root`, nodeId); ctx.go?.('/p/dpp/check') } }],
+  nodeActions: [{ label: `DPP prüfen`, icon: catalog.icon, topic: 'analysis', roles: ['group', 'product'], run(nodeId, ctx) { localStorage.setItem(`journali.cmp.${catalog.key}.root`, nodeId); ctx.go?.('/p/dpp/check?run=1') } }],
   catalog,
 }
