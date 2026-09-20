@@ -2,7 +2,7 @@
 // ⇶ Publikation (Taloan, 20.09.2026): links die Publikationsbäume — je Kanal (× Markt) die Maximalstruktur aus Rubriken, darin
 // Produktgruppen und Produkte per Verweis (↗); rechts der gewählte Knoten (Rubrik mit ihren Texten, oder der verwiesene
 // Pflegeknoten). Ableiten aus dem Pflegebaum als Start, danach frei umbauen: ziehen = Rubrik oder Verweis umhängen,
-// Rechtsklick = Rubrik/Verweis/Ableiten/Zurückziehen. „nicht einsortiert“ zählt die Produkte, die in diesem Baum nirgends hängen.
+// Rechtsklick = Rubrik/Verweis/Ableiten/Entfernen (nur aus dem Publikationsbaum — der Pflegebaum bleibt). „nicht einsortiert“ zählt die Produkte, die in diesem Baum nirgends hängen.
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
@@ -74,7 +74,8 @@ async function rename(r) {
 }
 async function retire(r) {
   const n = tree.kids(r.id).length; const p = (r.placed ?? []).length
-  if (!await dialog.confirm({ title: 'Rubrik zurückziehen', warn: r.label, text: (n ? `${n} Rubriken darunter, ` : '') + (p ? `${p} Verweise` : ''), ok: '✕ Zurückziehen', danger: true })) return
+  const below = (() => { let rub = 0, ref = 0; const walk = x => { for (const k of tree.kids(x.id)) { rub++; walk(k) } ref += (x.placed ?? []).length }; walk(r); return { rub, ref } })()
+  if (!await dialog.confirm({ title: `Rubrik „${r.label}“ aus „${current.value?.label ?? ''}“ entfernen?`, text: `${below.rub ? `${below.rub} ${below.rub === 1 ? 'Unterrubrik' : 'Unterrubriken'} und ` : ''}${below.ref} ${below.ref === 1 ? 'Verweis verschwindet' : 'Verweise verschwinden'} aus diesem Publikationsbaum. Die Produkte und Gruppen bleiben im Pflegebaum unverändert; sie gelten hier danach als „noch nicht einsortiert“.`, ok: '✕ Entfernen', danger: true })) return
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
 }
 // Verweise anlegen: Auswahlbaum (Taloan: Knoten immer per Auswahlbaum), mehrere auf einmal
@@ -105,7 +106,7 @@ function contextMenu(e, row) {
     menu.open(e, [
       { label: 'im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) },
       { sep: true },
-      { label: 'Verweis entfernen', icon: '✕', danger: true, action: () => unplace(row.rubric, r.id) },
+      { label: 'Verweis entfernen', icon: '✕', danger: true, hint: 'nur hier — das Produkt bleibt im Pflegebaum', action: () => unplace(row.rubric, r.id) },
     ]); return
   }
   router.push(`/pub/${r.id}`)
@@ -115,7 +116,7 @@ function contextMenu(e, row) {
     { label: 'aus dem Pflegebaum ableiten …', icon: '⇊', hint: 'ab einer Produktgruppe: Gruppen → Rubriken, Produkte → Verweise', action: () => { deriving.value = { rubric: r, from: null } } },
     { sep: true },
     { label: 'Umbenennen', icon: '✎', action: () => rename(r) },
-    ...(r.parent ? [{ label: 'Zurückziehen', icon: '✕', danger: true, action: () => retire(r) }] : [{ label: 'Kanal / Markt …', icon: '⇶', action: () => editTree(r) }]),
+    ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben im Pflegebaum`, action: () => retire(r) }] : [{ label: 'Kanal / Markt …', icon: '⇶', action: () => editTree(r) }]),
   ])
 }
 async function editTree(r) {
