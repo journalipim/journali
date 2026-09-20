@@ -74,8 +74,12 @@ weiter je Sprache. Ohne Sprachachse ist `*` die eine Zelle.
 mit je einem Stern. Es gibt eine Mastersprache und einen **Masterkanal**; der
 Master bekommt die Werte des Sterns und kann sie überschreiben; abgeleitete
 Sprachen bzw. Kanäle beziehen ihren Wert aus dem Master. Kette je Achse:
-eigener Wert → Master → `*`, der Kanal fällt vor der Sprache (`de/print` →
-`de/web` → `de` → … → `*`). Die Vollständigkeit zählt ohne Master.
+eigener Wert → Rückfall → Master → `*`, der Kanal fällt vor der Sprache
+(`de/print` → `de/web` → `de` → … → `*`). **Rückfall** (Taloan, 20.09.2026):
+eine Sprache oder ein Kanal kann eine andere Ausprägung nennen, die vor dem
+Master gilt — `fr-ch` → `fr-fr`, `shop_cn` → `shop_tr`. Beim Kanal gilt der
+Rückfall auch für die Freigaben: das Sortiment von China ist das der Türkei,
+solange China nichts Eigenes sagt. Die Vollständigkeit zählt ohne Master.
 
 ### 2. Werteliste (`list:<key>`) — Einträge mit eigenen Spalten
 

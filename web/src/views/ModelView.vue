@@ -100,8 +100,8 @@ const rows = computed(() => {
       const ends = (r.from ? names(r.from) + ' ' : '') + (r.symmetric ? '⇄' : '→') + (r.to ? ' ' + names(r.to) : '')
       return { key: r.key, label: r.label?.de, right: [r.from || r.to || r.symmetric ? ends + (r.symmetric ? ' beidseitig' : '') : '', r.group ? '▤ ' + groupLabel(r.group) : ''], _: r }
     }).sort(byKey)
-    case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : ''] }))
-    case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [m.masterChannel === c.key ? '★ Master' : ''] }))
+    case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : l.fallback ? '↩ ' + l.fallback : ''] }))
+    case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [m.masterChannel === c.key ? '★ Master' : c.fallback ? '↩ ' + c.fallback : ''] }))
   }
   return []
 })
@@ -393,10 +393,12 @@ function unitSet(col, v) {
   else u[col] = v
   put(`/api/model/units/${encodeURIComponent(u.key)}`, u)
 }
-const localeSet = v => put(`/api/model/locales/${curLocale.value.code}`, { code: curLocale.value.code, label: v })
+const localeSet = v => put(`/api/model/locales/${curLocale.value.code}`, { code: curLocale.value.code, label: v, fallback: curLocale.value.fallback ?? null })
+const localeFallback = v => put(`/api/model/locales/${curLocale.value.code}`, { code: curLocale.value.code, label: curLocale.value.label, fallback: v || null })
+const channelFallback = v => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: curChannel.value.label ?? {}, fallback: v || null })
 const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.code })
 const setMasterChannel = () => put('/api/model/master-channel', { key: curChannel.value.key })
-const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v } })
+const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v }, fallback: curChannel.value.fallback ?? null })
 // Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
 const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de || k
@@ -630,6 +632,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>
+          <tr><td class="attr" title="Sprache, deren Wert gilt, wenn diese keinen hat — vor der Mastersprache (fr-ch → fr-fr → Master → *)">↩ Rückfall</td><SelectCell :value="curLocale.fallback ?? ''" :options="model.locales.map(l => l.code).filter(c => c !== curLocale.code)" @save="localeFallback" /></tr>
         </tbody></table>
         <div class="section muted" style="font-size:12px">★ Mastersprache: {{ model.masterLocale ?? '—' }} · In ihr werden Pflichtfelder beim Anlegen erfasst. Wird dort ein sprachabhängiger Wert geändert, zeigen die anderen Sprachen ⟳ „zu überarbeiten“, bis sie nachgezogen sind; Änderungen in einer anderen Sprache lösen nichts aus.</div>
       </div>
@@ -644,6 +647,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curChannel.label?.de ?? null" @save="v => channelSet('de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curChannel.label?.en ?? null" @save="v => channelSet('en', v)" /></tr>
+          <tr><td class="attr" title="Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Masterkanal">↩ Rückfall</td><SelectCell :value="curChannel.fallback ?? ''" :options="model.channels.map(c => c.key).filter(k => k !== curChannel.key)" @save="channelFallback" /></tr>
         </tbody></table>
       </div>
     </template>

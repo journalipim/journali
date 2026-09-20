@@ -15,6 +15,10 @@ public static partial class ModelApi
 {
     [GeneratedRegex("^[a-z][a-z0-9_]*$")]
     private static partial Regex KeyPattern();
+    // Sprach- und Kanalschlüssel dürfen einen Bindestrich tragen (fr-ch, Taloan 20.09.) — Attributschlüssel nicht (Vorlagen, Formeln)
+    [GeneratedRegex("^[a-z][a-z0-9_-]*$")]
+    private static partial Regex CodePattern();
+    public static bool ValidCode(string key) => CodePattern().IsMatch(key);
 
     public static bool ValidKey(string key) => KeyPattern().IsMatch(key);
 
@@ -47,8 +51,9 @@ public static partial class ModelApi
         });
 
         m.MapPut("/locales/{code}", (string code, LocaleDefinition body, HttpRequest req, Catalog c) =>
-            Command(req, c, code, ValidKey, (model, write) =>
-                write(Model.LocaleStream + code, Types.LocaleDefined, body with { Code = code })));
+            Command(req, c, code, ValidCode, (model, write) =>
+                body.Fallback is { } fb && (fb == code || !model.Locales.ContainsKey(fb)) ? Bad($"Rückfall {fb}: muss eine andere Sprache des Modells sein.")
+                : write(Model.LocaleStream + code, Types.LocaleDefined, body with { Code = code })));
 
         m.MapPut("/relations/{key}", (string key, RelationTypeDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
@@ -87,30 +92,31 @@ public static partial class ModelApi
         });
 
         m.MapPut("/master-locale", (MasterLocaleDefined body, HttpRequest req, Catalog c) =>
-            Command(req, c, body.Code ?? "", ValidKey, (model, write) =>
+            Command(req, c, body.Code ?? "", ValidCode, (model, write) =>
                 !model.Locales.ContainsKey(body.Code ?? "") ? Bad($"Sprache {body.Code} gibt es nicht.")
                 : write(Model.MasterLocaleStream, Types.MasterLocaleDefined, new MasterLocaleDefined(body.Code!))));
 
         m.MapPut("/master-channel", (MasterChannelDefined body, HttpRequest req, Catalog c) =>
-            Command(req, c, body.Key ?? "", ValidKey, (model, write) =>
+            Command(req, c, body.Key ?? "", ValidCode, (model, write) =>
                 !model.Channels.ContainsKey(body.Key ?? "") ? Bad($"Kanal {body.Key} gibt es nicht.")
                 : write(Model.MasterChannelStream, Types.MasterChannelDefined, new MasterChannelDefined(body.Key!))));
 
         // Sprache zurückziehen: nicht die Mastersprache, nicht die letzte; Werte auf ihr bleiben im Journal
         m.MapDelete("/locales/{code}", (string code, HttpRequest req, Catalog c) =>
-            Command(req, c, code, ValidKey, (model, write) =>
+            Command(req, c, code, ValidCode, (model, write) =>
                 !model.Locales.ContainsKey(code) ? Results.NotFound()
                 : model.MasterLocale == code ? Bad($"{code} ist die Mastersprache — erst eine andere zur Mastersprache machen.")
                 : model.Locales.Count <= 1 ? Bad("Die letzte Sprache bleibt.")
                 : write(Model.LocaleStream + code, Types.LocaleRetired, new LocaleRetired(code))));
 
         m.MapPut("/channels/{key}", (string key, ChannelDefinition body, HttpRequest req, Catalog c) =>
-            Command(req, c, key, ValidKey, (model, write) =>
-                write(Model.ChannelStream + key, Types.ChannelDefined, body with { Key = key, Label = body.Label ?? new() })));
+            Command(req, c, key, ValidCode, (model, write) =>
+                body.Fallback is { } fb && (fb == key || !model.Channels.ContainsKey(fb)) ? Bad($"Rückfall {fb}: muss ein anderer Kanal des Modells sein.")
+                : write(Model.ChannelStream + key, Types.ChannelDefined, body with { Key = key, Label = body.Label ?? new() })));
 
         // Kanal zurückziehen: kein Attribut darf ihn nennen (channels, required)
         m.MapDelete("/channels/{key}", (string key, HttpRequest req, Catalog c) =>
-            Command(req, c, key, ValidKey, (model, write) =>
+            Command(req, c, key, ValidCode, (model, write) =>
             {
                 if (!model.Channels.ContainsKey(key)) return Results.NotFound();
                 if (model.MasterChannel == key) return Bad($"{key} ist der Masterkanal — erst einen anderen zum Masterkanal machen.");

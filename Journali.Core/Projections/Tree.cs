@@ -47,9 +47,9 @@ public sealed class Node
     /// Eigener Wert auf der Achse, sonst weniger spezifisch — nur dieser Knoten. Kette je Achse (Taloan, 20.09.): eigener Wert →
     /// Master → Stern; der Kanal fällt zuerst, dann die Sprache. Ohne Master (null) nur eigen → Stern. Listen zählen als Wert (verbunden mit Komma).
     /// </summary>
-    public string? Own(string attribute, string? locale, string? channel, string? row = null, string? masterLocale = null, string? masterChannel = null)
+    public string? Own(string attribute, string? locale, string? channel, string? row = null, string? masterLocale = null, string? masterChannel = null, IReadOnlyDictionary<string, string>? localeFallback = null, IReadOnlyDictionary<string, string>? channelFallback = null)
     {
-        foreach (var axis in Fallback(attribute, locale, channel, row, masterLocale, masterChannel))
+        foreach (var axis in Fallback(attribute, locale, channel, row, masterLocale, masterChannel, localeFallback, channelFallback))
         {
             if (Values.TryGetValue(axis, out var v)) return v;
             if (Lists.TryGetValue(axis, out var l)) return string.Join(", ", l);
@@ -57,23 +57,27 @@ public sealed class Node
         return null;
     }
 
-    /// <summary>Die Achsen in der Reihenfolge, in der sie gelten: (l,c) (l,mc) (l,*) (ml,c) (ml,mc) (ml,*) (*,c) (*,mc) (*,*) — ohne Doppelte.</summary>
-    public static IEnumerable<Axis> Fallback(string attribute, string? locale, string? channel, string? row, string? masterLocale = null, string? masterChannel = null)
+    /// <summary>Die Achsen in der Reihenfolge, in der sie gelten: je Achse Wert → Rückfall(e) → Master → Stern, Kanal innen, Sprache aussen — ohne Doppelte.</summary>
+    public static IEnumerable<Axis> Fallback(string attribute, string? locale, string? channel, string? row, string? masterLocale = null, string? masterChannel = null, IReadOnlyDictionary<string, string>? localeFallback = null, IReadOnlyDictionary<string, string>? channelFallback = null)
     {
         var seen = new HashSet<Axis>();
-        foreach (var l in Chain(locale, masterLocale))
-            foreach (var c in Chain(channel, masterChannel))
+        foreach (var l in Chain(locale, masterLocale, localeFallback))
+            foreach (var c in Chain(channel, masterChannel, channelFallback))
             {
                 var axis = new Axis(attribute, l, c, row);
                 if (seen.Add(axis)) yield return axis;
             }
     }
 
-    private static IEnumerable<string?> Chain(string? value, string? master)
+    /// <summary>Wert → Rückfall → dessen Rückfall … (ohne Kreis, höchstens 8) → Master → Stern.</summary>
+    public static IEnumerable<string?> Chain(string? value, string? master, IReadOnlyDictionary<string, string>? fallback = null)
     {
         yield return value;
         if (value is null) yield break;
-        if (master is not null && master != value) yield return master;
+        var seen = new HashSet<string> { value };
+        var cur = value;
+        for (var i = 0; i < 8 && fallback is not null && fallback.TryGetValue(cur, out var fb) && seen.Add(fb); i++) { yield return fb; cur = fb; }
+        if (master is not null && seen.Add(master)) yield return master;
         yield return null;
     }
 }
@@ -96,6 +100,9 @@ public sealed class Tree : IProjection
     /// <summary>Mastersprache und Masterkanal, mitgelesen aus settings:* — die Rückfallkette von <see cref="Resolve"/> braucht sie.</summary>
     public string? MasterLocale { get; private set; }
     public string? MasterChannel { get; private set; }
+    /// <summary>Rückfall je Sprache / je Kanal (LocaleDefined.Fallback, ChannelDefined.Fallback), mitgelesen wie die Master.</summary>
+    public Dictionary<string, string> LocaleFallback { get; } = new();
+    public Dictionary<string, string> ChannelFallback { get; } = new();
 
     public IReadOnlyDictionary<string, Node> Nodes => _nodes;
     /// <summary>Zurückgezogene Knoten (Papierkorb): lassen sich zurückholen, solange der Vater da ist.</summary>
@@ -126,11 +133,26 @@ public sealed class Tree : IProjection
     public (string? Value, Node? From) Resolve(Node node, string attribute, string? locale, string? channel, bool inheritable = true, bool masters = true)
     {
         var ml = masters ? MasterLocale : null; var mc = masters ? MasterChannel : null;
-        if (node.Own(attribute, locale, channel, null, ml, mc) is { } own) return (own, node);
+        if (node.Own(attribute, locale, channel, null, ml, mc, LocaleFallback, ChannelFallback) is { } own) return (own, node);
         if (!inheritable) return (null, null);
         foreach (var a in Ancestors(node))
-            if (a.Own(attribute, locale, channel, null, ml, mc) is { } v) return (v, a);
+            if (a.Own(attribute, locale, channel, null, ml, mc, LocaleFallback, ChannelFallback) is { } v) return (v, a);
         return (null, null);
+    }
+
+    /// <summary>
+    /// Freigabe (Sortiment) für Kanal × Sprache: eigene Freigabe (genau oder für alle Sprachen), sonst die des Rückfall-Kanals
+    /// (Taloan, 20.09.: „China bekommt das Sortiment der Türkei“). Kein Master-Rückfall — eine Freigabe für web ist keine für print.
+    /// Liefert den Kanal, über den sie gilt (null = keine).
+    /// </summary>
+    public string? ReleasedVia(Node node, string channel, string? locale)
+    {
+        foreach (var c in Node.Chain(channel, null, ChannelFallback))
+        {
+            if (c is null) break;
+            if (node.Releases.Contains(new Release(c, locale)) || (locale is not null && node.Releases.Contains(new Release(c, null)))) return c;
+        }
+        return null;
     }
 
     /// <summary>Wert mit der Vererbungsregel des Attributs aus dem Modell.</summary>
@@ -280,6 +302,8 @@ public sealed class Tree : IProjection
         LastApplied = entry.Number;
         if (entry.Type == Types.MasterLocaleDefined) { MasterLocale = Types.Deserialize<MasterLocaleDefined>(entry.Payload).Code; return; }
         if (entry.Type == Types.MasterChannelDefined) { MasterChannel = Types.Deserialize<MasterChannelDefined>(entry.Payload).Key; return; }
+        if (entry.Type == Types.LocaleDefined) { var d = Types.Deserialize<LocaleDefinition>(entry.Payload); if (d.Fallback is { } f && f != d.Code) LocaleFallback[d.Code] = f; else LocaleFallback.Remove(d.Code); return; }
+        if (entry.Type == Types.ChannelDefined) { var d = Types.Deserialize<ChannelDefinition>(entry.Payload); if (d.Fallback is { } f && f != d.Key) ChannelFallback[d.Key] = f; else ChannelFallback.Remove(d.Key); return; }
 
         Node? n;
         switch (entry.Type)

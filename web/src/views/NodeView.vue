@@ -190,9 +190,11 @@ function key(a, l, c, row) { return `${a}|${l ?? ''}|${c ?? ''}${row ? '|' + row
 function ownValue(a, col) { return own.value.get(key(a, col.locale, col.channel)) ?? null }
 // Achsenwert einer Variante ohne eigenen Attributwert (beim Anlegen vergeben): steht in der Zelle, Bearbeiten schreibt den Attributwert — der wird zum Achsenwert (Taloan, 20.09.: kein Schloss mehr)
 function ownOrAxis(def, col) { return ownValue(def.key, col) ?? axisValue(def.key, col) }
-// Kette je Achse (Taloan, 20.09.): Wert → Master → Stern; erst der Kanal, dann die Sprache — wie Node.Fallback im Kern
-const chain = (v, m) => v == null ? [null] : (m && m !== v ? [v, m, null] : [v, null])
-function* axesOf(a, col) { const seen = new Set(); for (const l of chain(col.locale, master.value)) for (const c of chain(col.channel, masterChannel.value)) { const k = key(a, l, c); if (!seen.has(k)) { seen.add(k); yield { k, l, c } } } }
+// Kette je Achse (Taloan, 20.09.): Wert → Rückfall(e) → Master → Stern; erst der Kanal, dann die Sprache — wie Node.Chain im Kern
+const localeFb = computed(() => Object.fromEntries((model.value?.locales ?? []).filter(l => l.fallback).map(l => [l.code, l.fallback])))
+const channelFb = computed(() => Object.fromEntries((model.value?.channels ?? []).filter(c => c.fallback).map(c => [c.key, c.fallback])))
+function chain(v, m, fb) { if (v == null) return [null]; const out = [v]; const seen = new Set([v]); let cur = v; for (let i = 0; i < 8 && fb[cur] && !seen.has(fb[cur]); i++) { cur = fb[cur]; seen.add(cur); out.push(cur) } if (m && !seen.has(m)) out.push(m); out.push(null); return out }
+function* axesOf(a, col) { const seen = new Set(); for (const l of chain(col.locale, master.value, localeFb.value)) for (const c of chain(col.channel, masterChannel.value, channelFb.value)) { const k = key(a, l, c); if (!seen.has(k)) { seen.add(k); yield { k, l, c } } } }
 function fallback(m, a, col) {
   for (const { k, l, c } of axesOf(a, col)) { if (l === col.locale && c === col.channel) continue; if (m.has(k)) return m.get(k) }
   return null
@@ -223,6 +225,8 @@ function enabled(def, col, block) {
 function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
 function listLabel(def) { const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []; return v => vals.find(x => x.value === v)?.label?.de || v }
 function released(channel, locale) { return node.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }
+// Freigabe über den Rückfall-Kanal (Sortiment geerbt): nicht eigen, gilt aber — ◌ mit Herkunft
+function releasedVia(channel, locale) { return node.value?.releasedVia?.find(r => r.channel === channel && r.locale === locale)?.via ?? null }
 function axisLabel(a) { return model.value?.attributes.find(x => x.key === a)?.label?.de || a }
 function axisValue(a, col) { return node.value?.role === 'variant' && !col.locale && !col.channel && a in node.value.axisValues ? node.value.axisValues[a] : null }
 function completeness(channel, locale) { return (node.value?.completeness ?? []).find(c => c.channel === channel && c.locale === locale) ?? null }
@@ -722,10 +726,10 @@ function cellMenu(e, def, col, block) {
             <tr v-for="ch in channels" :key="ch">
               <td class="mono muted">{{ ch }}</td>
               <td v-if="node.role === 'variant'">
-                <button class="toggle" :class="{ on: released(ch, null) }" :disabled="!released(ch, null) && !!incomplete(ch, null)" :title="incomplete(ch, null) ? 'fehlt: ' + incomplete(ch, null).missing.join(', ') : 'alle Sprachen'" @click="toggleRelease(ch, null)">{{ released(ch, null) ? '✓' : '·' }}</button>
+                <button class="toggle" :class="{ on: released(ch, null), via: !released(ch, null) && releasedVia(ch, null) }" :disabled="!released(ch, null) && !!incomplete(ch, null)" :title="releasedVia(ch, null) && !released(ch, null) ? `Sortiment von ${releasedVia(ch, null)} — Klick gibt eigens frei` : incomplete(ch, null) ? 'fehlt: ' + incomplete(ch, null).missing.join(', ') : 'alle Sprachen'" @click="toggleRelease(ch, null)">{{ released(ch, null) ? '✓' : releasedVia(ch, null) ? '◌' : '·' }}</button>
               </td>
               <td v-for="l in locales" :key="l" class="rel">
-                <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : '·' }}</button>
+                <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l), via: !released(ch, l) && releasedVia(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="releasedVia(ch, l) && !released(ch, l) ? `Sortiment von ${releasedVia(ch, l)} — Klick gibt eigens frei` : incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : releasedVia(ch, l) ? '◌' : '·' }}</button>
                 <span v-if="completeness(ch, l)" class="mono" :class="completeness(ch, l).missing.length ? 'neg' : 'pos'" :title="completeness(ch, l).missing.length ? 'fehlt: ' + completeness(ch, l).missing.join(', ') : 'vollständig'">{{ completeness(ch, l).filled }}/{{ completeness(ch, l).required }}</span>
                 <span v-else class="muted" title="hier ist nichts Pflicht">–</span>
               </td>
@@ -900,6 +904,7 @@ table.releases td.rel { white-space: nowrap; }
 table.releases td.rel .toggle { margin-right: 6px; }
 .toggle { width: 28px; color: var(--muted); }
 .toggle.on { color: var(--pane); background: var(--pos); border-color: var(--pos); }
+.toggle.via { color: var(--pos); }
 .toggle:disabled { opacity: .35; cursor: not-allowed; }
 .status { border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; background: var(--pane); }
 .status.active { color: var(--pos); }

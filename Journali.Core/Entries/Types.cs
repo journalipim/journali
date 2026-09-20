@@ -247,9 +247,11 @@ public sealed class Labels : Dictionary<string, string>
     public static Labels Of(string de, string en) => new() { ["de"] = de, ["en"] = en };
 }
 
-public sealed record LocaleDefinition(string Code, string Label);
+/// <param name="Fallback">Rückfall (Taloan, 20.09.2026): Sprache, deren Wert gilt, wenn diese keinen hat — vor dem Master (fr_ch → fr_fr → Master → *). Optional, alte Einträge ohne.</param>
+public sealed record LocaleDefinition(string Code, string Label, string? Fallback = null);
 
-public sealed record ChannelDefinition(string Key, Labels Label);
+/// <param name="Fallback">Rückfall (Taloan, 20.09.2026): Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Master.</param>
+public sealed record ChannelDefinition(string Key, Labels Label, string? Fallback = null);
 
 /// <summary>Die Typen eines Attributs; je Typ eine Zelle in der Oberfläche.</summary>
 public static class AttributeTypes
