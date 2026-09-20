@@ -535,7 +535,7 @@ function cellMenu(e, def, col, block) {
       <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
       <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
       <button :class="{ primary: store.editableOnly }" @click="toggleEditableOnly" title="nur Gruppen zeigen, die hier bearbeitbar sind (gesperrte weg)">✎ nur bearbeitbare</button>
-      <button :class="{ primary: store.ownOnly }" @click="store.ownOnly = !store.ownOnly; if (store.ownOnly && store.layout === 'tabs') setLayout('flat')" title="nur Attribute, die dieser Knoten selbst trägt — dazu Variantenachsen und Pflichtfelder; geerbtes ohne eigenen Wert weg">● nur eigene</button>
+      <button :class="{ primary: store.ownOnly }" @click="store.ownOnly = !store.ownOnly" title="nur Attribute, die dieser Knoten selbst trägt — dazu Variantenachsen und Pflichtfelder; geerbtes ohne eigenen Wert weg">● nur eigene</button>
       <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
       <span class="grow" />
       <input ref="findBox" v-model="attrFilter" type="search" placeholder="🔍 Attribut oder Wert (sichtbar)" style="width:220px;font-size:12px" title="filtert live über Attributname und die Werte in den gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
