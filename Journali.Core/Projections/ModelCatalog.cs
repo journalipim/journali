@@ -9,6 +9,8 @@ public sealed class ValueList
     public required string Key { get; init; }
     public Labels Label { get; set; } = new();
     public string[]? Columns { get; set; }
+    /// <summary>geschlossen: Werte kommen aus einer Quelle (ETIM, Norm) — kein Zufügen in der Zelle.</summary>
+    public bool Closed { get; set; }
     public Dictionary<string, ListValueDefinition> Values { get; } = new();
 
     public IEnumerable<ListValueDefinition> Ordered => Values.Values.OrderBy(v => v.Order).ThenBy(v => v.Value);
@@ -80,6 +82,7 @@ public sealed class ModelCatalog : IProjection
                 var ld = Types.Deserialize<ListDefinition>(entry.Payload);
                 List(ld.Key).Label = ld.Label;
                 List(ld.Key).Columns = ld.Columns;
+                List(ld.Key).Closed = ld.Closed;
                 break;
             case Types.ListValueDefined:
                 var v = Types.Deserialize<ListValueDefinition>(entry.Payload);

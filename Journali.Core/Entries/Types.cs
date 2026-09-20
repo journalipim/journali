@@ -348,7 +348,8 @@ public sealed record AttributeRetired(string Key);
 /// referenziertes Ding mit Eigenschaften, nicht ein Wort; ein Attribut, das auf die Liste
 /// zeigt, sieht damit auch diese Felder.
 /// </summary>
-public sealed record ListDefinition(string Key, Labels Label, string[]? Columns = null);
+/// <param name="Closed">geschlossen (Taloan, 20.09.2026): die Werte kommen aus einer Quelle (ETIM, Norm) — kein Zufügen von Hand in der Zelle; Pflege nur über das Modell oder die Quelle</param>
+public sealed record ListDefinition(string Key, Labels Label, string[]? Columns = null, bool Closed = false);
 
 /// <param name="Extra">Zusatzfelder je Wert, z. B. Farbe: {"hex": "#000000"}</param>
 public sealed record ListValueDefinition(string Value, Labels Label, Dictionary<string, string>? Extra = null, int Order = 0);

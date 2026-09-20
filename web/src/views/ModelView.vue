@@ -307,13 +307,14 @@ function reqToggle(ch, l) {
 // ---- Wertelisten: Einträge mit Namen je Sprache und eigenen Spalten (Farbe: ral)
 function listSet(col, v) {
   const l = curList.value
-  const d = { key: l.key, label: { ...(l.label || {}) }, columns: l.columns ?? [] }
+  const d = { key: l.key, label: { ...(l.label || {}) }, columns: l.columns ?? [], closed: !!l.closed }
   if (col.startsWith('label_')) d.label[col.slice(6)] = v
+  else if (col === 'closed') d.closed = v === 'true'
   else if (col === 'columns') d.columns = v.split(',').map(s => s.trim()).filter(Boolean)
   put(`/api/model/lists/${l.key}`, d)
 }
 const newCol = ref(null)   // null = kein Eingabefeld; '' = Feld offen
-function listColumns(cols) { const l = curList.value; put(`/api/model/lists/${l.key}`, { key: l.key, label: { ...(l.label || {}) }, columns: cols }) }
+function listColumns(cols) { const l = curList.value; put(`/api/model/lists/${l.key}`, { key: l.key, label: { ...(l.label || {}) }, columns: cols, closed: !!l.closed }) }
 function addColumn() {
   const k = (newCol.value ?? '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'); newCol.value = null
   if (!k) return
@@ -555,6 +556,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curList.label?.de ?? null" @save="v => listSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curList.label?.en ?? null" @save="v => listSet('label_en', v)" /></tr>
+          <tr><td class="attr" title="geschlossen: die Werte kommen aus einer Quelle (ETIM, Norm) — in der Zelle gibt es kein „+ neuer Wert“, ein fremder Wert wäre im Export ungültig">⌀ geschlossen</td><ToggleCell :value="curList.closed ? 'true' : 'false'" @save="v => listSet('closed', v)" /></tr>
           <!-- Spalten als Chips (Taloan): × nimmt eine weg (Werte bleiben im Journal), + Spalte fragt nach dem Key -->
           <tr><td class="attr" title="eigene Felder je Eintrag (z. B. ral, hex) — die Werte einer entfernten Spalte bleiben im Journal und erscheinen wieder, wenn die Spalte zurückkommt">Spalten</td>
             <td class="cell"><div class="chips" style="min-height:24px">

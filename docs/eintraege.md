@@ -129,7 +129,7 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 | `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — **nur diese** Gruppen, in dieser Reihenfolge; darin Attribute in Reihenfolge, ungenannte Attribute hängen unten an ihrer Gruppe |
 | `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` |
-| `list:<key>` | `ListDefined` / `ListRetired` | `key`, `label{}`, `columns[]?` (eigene Felder je Eintrag, z. B. ral) — zurückziehen nur, wenn kein Attribut die Liste benutzt |
+| `list:<key>` | `ListDefined` / `ListRetired` | `key`, `label{}`, `columns[]?` (eigene Felder je Eintrag, z. B. ral), `closed?` (Taloan, 20.09.2026: geschlossen — Werte aus einer Quelle wie ETIM, kein „+ neuer Wert“ in der Zelle, Werte zufügen nur mit Modell-Recht) — zurückziehen nur, wenn kein Attribut die Liste benutzt |
 | `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
 | `list:<key>` | `ListValueRetired` | `value` |
 | `family:<key>` | `FamilyDefined` / `FamilyRetired` | **Altlast** (16.09.2026): Familien sind durch Attributgruppen am Baum ersetzt; der Typ bleibt lesbar, wird nicht mehr geschrieben |

@@ -201,7 +201,8 @@ public static partial class ModelApi
 
         m.MapPut("/lists/{key}/values/{value}", (string key, string value, ListValueDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
-                model.Lists.ContainsKey(key)
+                model.Lists.ContainsKey(key) && model.Lists[key].Closed && !Auth.Has(req, c, Rights.Model) ? Bad($"Werteliste {key} ist geschlossen — Werte kommen aus der Quelle (Modell-Recht nötig).")
+                : model.Lists.ContainsKey(key)
                     ? write(Model.ListStream + key, Types.ListValueDefined, body with { Value = value, Label = body.Label ?? new() })
                     : Bad($"Werteliste {key} gibt es nicht.")));
 
@@ -211,6 +212,7 @@ public static partial class ModelApi
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!ValidKey(key)) return Bad("Schlüssel ungültig.");
             if (!c.ReadModel(m => m.Lists.ContainsKey(key))) return Bad($"Werteliste {key} gibt es nicht.");
+            if (c.ReadModel(m => m.Lists[key].Closed) && !Auth.Has(req, c, Rights.Model)) return Bad($"Werteliste {key} ist geschlossen — Werte kommen aus der Quelle (Modell-Recht nötig).");
             var items = body.Where(v => !string.IsNullOrWhiteSpace(v.Value)).Select(v => (Model.ListStream + key, Types.ListValueDefined, (object)(v with { Label = v.Label ?? new() }))).ToList();
             if (items.Count == 0) return Bad("Leer.");
             var entries = c.WriteMany(actor, items, Guid.NewGuid().ToString("N")[..12]);
@@ -277,7 +279,7 @@ public static partial class ModelApi
         masterChannel = model.MasterChannel,
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
-        lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], values = l.Ordered.ToList() }).ToList(),
+        lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], closed = l.Closed, values = l.Ordered.ToList() }).ToList(),
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),
         views = model.Views.Values.OrderBy(v => v.Key).ToList(),
         relationTypes = model.RelationTypes.Values.OrderBy(r => r.Key).ToList(),

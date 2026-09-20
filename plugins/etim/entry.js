@@ -73,7 +73,7 @@ function modelOps(ctx) {
     await ensureGroup()
     const existing = model().attributes.find(a => a.key === key)
     if (existing && !(existing.type === 'enum' && existing.list === key)) return key   // ein vorhandenes Text-/Listenattribut bleibt, wie es ist
-    if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, columns: ['group'] })
+    if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, columns: ['group'], closed: true })
     let rewrite = false
     if (!((model().lists ?? []).find(l => l.key === key)?.columns ?? []).includes('group')) { const l = (model().lists ?? []).find(x => x.key === key); if (l) { await put(`/lists/${key}`, { ...l, columns: [...(l.columns ?? []), 'group'] }); rewrite = true } }   // Gruppe nachtragen: alle Werte neu schreiben
     const have = rewrite ? new Set() : new Set((model().lists ?? []).find(l => l.key === key)?.values?.map(v => v.value) ?? [])
@@ -82,6 +82,7 @@ function modelOps(ctx) {
     for (let k = 0; k < missing.length; k += 1000) await put(`/lists/${key}/values`, missing.slice(k, k + 1000))
     let i = 0
     if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: groupKey(), inheritable: true })
+    for (const l of (model().lists ?? []).filter(l => (l.key === key || /^ef\d+$/.test(l.key)) && !l.closed)) await put(`/lists/${l.key}`, { ...l, closed: true })
     // Merkmal-Attribute ohne Bedingung (aus früheren Läufen) bekommen sie nachgetragen — sonst gälten sie an jedem Knoten
     for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && !a.label?.[locale] && Object.keys(a.label ?? {}).length)) await put(`/attributes/${a.key}`, { ...a, label: { ...a.label, [locale]: nameOf(a.label, locale) } })
     for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && (!a.when || !a.inheritable))) { const w = a.when ?? { attribute: key, values: [...cache.classes.values()].filter(c => c.features.some(x => x.code === a.key.toUpperCase())).map(c => c.code) }; if (w.values.length) await put(`/attributes/${a.key}`, { ...a, when: w, inheritable: true }) }
@@ -107,7 +108,7 @@ function modelOps(ctx) {
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
     else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
     else {
-      if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: labelsOf(f.name) })
+      if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: labelsOf(f.name), closed: true })   // EV-Werte sind Norm: geschlossen
       let i = 0; for (const v of f.values) await put(`/lists/${key}/values/${v.code}`, { value: v.code, label: labelsOf(v.name), order: i++ })
       await put(`/attributes/${key}`, { ...base, type: 'enum', list: key })
     }
