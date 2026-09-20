@@ -605,13 +605,19 @@ function cellMenu(e, def, col, block) {
       <div class="section" v-if="node.role === 'product'">
         <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· sichern Eindeutigkeit in den gewählten Attributen über alle Varianten</span></h2>
         <template v-if="open('axes')">
-        <div class="chips">
-          <span v-if="!node.axes.length" class="muted">keine</span>
-          <span v-for="k in node.axes" :key="k" class="chip">{{ axisLabel(k) }} <button @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg — nur, wenn die Varianten danach noch eindeutig sind">×</button></span>
-          <template v-if="true">
-            <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? '+ weitere Achse (Pflicht) …' : '+ Achse …' }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
-            <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? 'prüfen' : 'dazu' }}</button>
-          </template>
+        <table v-if="node.axes.length" class="grid" style="width:auto">
+          <thead><tr><th style="width:180px">Achse</th><th style="width:260px">Attribut</th><th style="width:30px"></th></tr></thead>
+          <tbody>
+            <tr v-for="(k, i) in node.axes" :key="k" :title="k">
+              <td class="muted">{{ i + 1 }}. {{ axisLabel(k) }}</td>
+              <td><router-link :to="{ path: '/model', query: { section: 'attributes', key: k } }" class="mono">{{ k }}</router-link></td>
+              <td class="num"><button class="x" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg — ihr Wert bleibt als Attributwert an den Varianten">×</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="chips" style="margin-top:6px">
+          <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? '+ weitere Achse (Pflicht) …' : '+ Achse …' }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+          <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? 'prüfen' : 'dazu' }}</button>
         </div>
         <div v-if="wiz" class="picker" style="padding:8px;margin-top:6px">
           <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">· {{ wiz.total }} Varianten{{ wiz.empty ? `, ${wiz.empty} ohne Wert (zählen nicht)` : '' }}</span></div>
@@ -699,8 +705,17 @@ function cellMenu(e, def, col, block) {
       <div class="section">
         <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen NEU ab diesem Knoten <span class="muted">· hier angehängt, gelten ab hier nach unten — geerbte stehen oben mit Herkunft</span></h2>
         <template v-if="open('groups')">
-        <div class="chips">
-          <span v-for="g in attachedSorted" :key="g" class="chip" :title="g + (groupLocked(g) ? ' · hier gesperrt, aktiv ab ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : '')">▤ {{ groupLabel(g) }}<span v-if="groupLocked(g)"> 🔒</span> <button @click="attach(node.attachedGroups.filter(x => x !== g))" title="abhängen">×</button></span>
+        <table v-if="attachedSorted.length" class="grid" style="width:auto">
+          <thead><tr><th style="width:180px">Gruppe</th><th style="width:260px">gilt</th><th style="width:30px"></th></tr></thead>
+          <tbody>
+            <tr v-for="g in attachedSorted" :key="g" :title="g">
+              <td><router-link :to="{ path: '/model', query: { section: 'groups', key: g } }">▤ {{ groupLabel(g) }}</router-link></td>
+              <td class="muted">{{ groupLocked(g) ? '⌖ hier gesperrt — aktiv ab ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : 'ab hier nach unten' }}</td>
+              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" title="Gruppe hier abnehmen">×</button></td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="chips" style="margin-top:6px">
           <select v-model="addGroup" style="width:200px"><option value="">+ Gruppe …</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ g.label?.de || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
           <button class="primary" :disabled="!addGroup" @click="attachAdd">anhängen</button>
         </div>
