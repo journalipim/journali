@@ -26,6 +26,7 @@ onMounted(() => window.addEventListener('keydown', e => {
 // seines Themas, dort wählt man das Plugin; kein Plugin bekommt ein eigenes Symbol. Ein Thema ohne Einträge bleibt weg.
 const nav = [
   { to: '/tree', icon: '▣', label: 'Baum', key: '1' },
+  { to: '/pub', icon: '⇶', label: 'Publikation', key: '8' },
   { to: '/model', icon: '⊞', label: 'Modell', key: '3' },
   ...TOPICS.map(t => ({ to: t.to, icon: t.icon, label: t.label, key: t.hotkey, topic: t.key, always: !!t.always })),
   { to: '/media', icon: '▨', label: 'Medien', key: '5' },

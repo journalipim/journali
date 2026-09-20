@@ -5,7 +5,7 @@ import { reactive, watch } from 'vue'
 import { api } from './api.js'
 import { store } from './store.js'
 
-const ICON = { group: '▣', product: '▦', variant: '◆' }
+const ICON = { group: '▣', product: '▦', variant: '◆', rubric: '▥' }
 export const icon = role => ICON[role] ?? '?'
 
 export const tree = reactive({
@@ -14,6 +14,7 @@ export const tree = reactive({
   children: new Map(),
   expanded: new Set(JSON.parse(localStorage.getItem('journali.expanded') || '[]')),
   loaded: false,
+  pubTrees: [],   // Wurzeln der Publikationsbäume (Rolle rubric ohne Vater) — nicht im Pflegebaum
 
   async load() {
     try {
@@ -21,14 +22,15 @@ export const tree = reactive({
       const byId = new Map(rows.map(r => [r.id, r]))
       const children = new Map()
       for (const r of rows) {
-        const k = r.parent ?? ''
+        const k = r.parent ?? (r.role === 'rubric' ? '#pub' : '')   // Rubrik-Wurzeln gehören nicht in den Pflegebaum
         if (!children.has(k)) children.set(k, [])
         children.get(k).push(r)
       }
-      const order = { group: 0, product: 1, variant: 2 }
+      const order = { group: 0, product: 1, variant: 2, rubric: 3 }
       for (const list of children.values())
         list.sort((a, b) => (order[a.role] - order[b.role]) || a.label.localeCompare(b.label, 'de'))
       this.rows = rows; this.byId = byId; this.children = children; this.loaded = true
+      this.pubTrees = children.get('#pub') ?? []
     } catch (e) { store.toast(e.message) }
   },
 

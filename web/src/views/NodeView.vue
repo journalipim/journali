@@ -44,7 +44,7 @@ const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
 const channels = computed(() => model.value?.channels.map(c => c.key) ?? [])
 const path = computed(() => tree.ancestors(props.id))
-const roleLabel = { group: 'Produktgruppe', product: 'Produkt', variant: 'Variante' }
+const roleLabel = { group: 'Produktgruppe', product: 'Produkt', variant: 'Variante', rubric: 'Rubrik' }
 
 // ---- Sicht: Spalten aus der Matrix Sprache × Kanal (store.viewCells); Reihenfolge Kanal (Stern zuerst), darin Sprache (Stern zuerst)
 const columns = computed(() => {
@@ -512,7 +512,7 @@ function cellMenu(e, def, col, block) {
       </template>
       <h1>{{ icon(node.role) }} {{ shownLabel }}</h1>
       <span class="grow" />
-      <select v-if="node.role !== 'group'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
+      <select v-if="node.role !== 'group' && node.role !== 'rubric'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
         <option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option>
       </select>
       <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
@@ -717,7 +717,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section" v-if="node.role !== 'group'">
+      <div class="section" v-if="node.role !== 'group' && node.role !== 'rubric'">
         <h2 @click="toggle('releases')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>✓ Freigaben <span class="muted">· Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig = keine Freigabe</span></h2>
         <template v-if="open('releases')">
         <table class="grid releases">

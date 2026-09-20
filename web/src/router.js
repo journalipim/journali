@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import TreeView from './views/TreeView.vue'
+import PubView from './views/PubView.vue'
 import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
 import HubView from './views/HubView.vue'
@@ -18,6 +19,8 @@ export const router = createRouter({
     { path: '/products', redirect: '/tree' },
     { path: '/tree', component: TreeView },
     { path: '/tree/:id', component: TreeView, props: true },
+    { path: '/pub', component: PubView },
+    { path: '/pub/:id', component: PubView, props: true },
     { path: '/table/:id', component: TableEditView, props: r => ({ id: r.params.id, role: r.query.role, deep: r.query.deep }) },
     { path: '/journal', component: JournalView },
     { path: '/model', component: ModelView },
