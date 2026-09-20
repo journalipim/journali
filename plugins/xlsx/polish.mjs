@@ -52,8 +52,8 @@ function styles(files) {
   const fontId = count('fonts'), fillId = count('fills'), xfId = count('cellXfs')
   const grow = (tag, add, n) => { st = st.replace(new RegExp(`<${tag} count="(\\d+)">([\\s\\S]*?)</${tag}>`), (_, c, inner) => `<${tag} count="${Number(c) + n}">${inner}${add}</${tag}>`) }
   if (!/<fonts /.test(st) || !/<fills /.test(st) || !/<cellXfs /.test(st)) throw new Error('styles.xml unerwartet')
-  grow('fonts', '<font><b/><sz val="11"/><color theme="1"/><name val="Calibri"/><family val="2"/></font>', 1)
-  grow('fills', '<fill><patternFill patternType="solid"><fgColor rgb="FFFFC7CE"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFDDEBF7"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEDEDED"/><bgColor indexed="64"/></patternFill></fill>', 3)
+  grow('fonts', '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>', 1)
+  grow('fills', '<fill><patternFill patternType="solid"><fgColor rgb="FFC00000"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF595959"/><bgColor indexed="64"/></patternFill></fill>', 3)
   grow('cellXfs', `<xf numFmtId="0" fontId="${fontId}" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="${fontId}" fillId="${fillId}" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="${fontId}" fillId="${fillId + 1}" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="${fontId}" fillId="${fillId + 2}" borderId="0" xfId="0" applyFont="1" applyFill="1"/>`, 4)
   files.set('xl/styles.xml', enc.encode(st))
   const ids = { xfHead: xfId, xfReq: xfId + 1, xfAxis: xfId + 2, xfInfo: xfId + 3 }; STYLED.set(files, ids); return ids
@@ -64,7 +64,7 @@ async function polishSheet(files, { columns, rowCount, sheet, tableName, tableId
   const kindOf = c => c.key.startsWith('axis:') ? 'axis' : (c.def?.required && (typeof c.def.required !== 'object' || Object.keys(c.def.required).length)) ? 'required' : c.key === 'id' || c.key === 'sku' ? 'info' : 'plain'
   // Kopfzeile einfärben, Filter durch die Tabelle ersetzen, erste Zeile einfrieren, Tabelle anmelden
   let ws = text(sheet)
-  ws = ws.replace(/<row r="1"[^>]*>[\s\S]*?<\/row>/, row => row.replace(/<c r="([A-Z]+)1"/g, (m, col) => { const i = columns.findIndex((_, k) => colRef(k) === col); const kind = i >= 0 ? kindOf(columns[i]) : 'plain'; return `${m} s="${kind === 'required' ? xfReq : kind === 'axis' ? xfAxis : kind === 'info' ? xfInfo : xfHead}"` }))
+  ws = ws.replace(/<row r="1"[^>]*>[\s\S]*?<\/row>/, row => row.replace(/<c r="([A-Z]+)1"/g, (m, col) => { const i = columns.findIndex((_, k) => colRef(k) === col); const kind = i >= 0 ? kindOf(columns[i]) : 'plain'; return kind === 'plain' ? m : `${m} s="${kind === 'required' ? xfReq : kind === 'axis' ? xfAxis : xfInfo}"` }))
   ws = ws.replace(/<autoFilter [^>]*\/>/, '')
   ws = ws.replace(/<sheetView workbookViewId="0"\/>/, '<sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/></sheetView>')
   if (!/xmlns:r=/.test(ws)) ws = ws.replace('<worksheet ', '<worksheet xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ')
