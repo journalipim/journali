@@ -1,5 +1,5 @@
 // Plugin ppwr: Prüfkatalog (catalog.js) auf der gemeinsamen Prüfmaschine der Oberfläche (ctx.compliance).
-// Ansicht unter ✓ Datenanalyse; Knoten-Aktion prüft den Teilbaum des Knotens. Autark regelbasiert; mit KI-Schlüssel (Einstellungen) auch Vorschläge von Claude.
+// Ansicht unter ✓ Datenanalyse; Knoten-Aktion prüft den Teilbaum des Knotens. Autark regelbasiert; mit KI-Schlüssel (Einstellungen) auch Vorschläge der KI.
 import catalog from './catalog.js'
 export default {
   views: [{ path: 'check', label: catalog.label, icon: catalog.icon, topic: 'analysis', mount: (root, ctx) => ctx.compliance.mount(root, ctx, catalog) }],

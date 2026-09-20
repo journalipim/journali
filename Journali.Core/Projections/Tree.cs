@@ -9,6 +9,9 @@ public readonly record struct Axis(string Attribute, string? Locale, string? Cha
 public readonly record struct Release(string Channel, string? Locale);
 
 /// <summary>Ein Knoten im Baum: Produktgruppe, Produkt oder Variante — mit allem, was sein Strom ergibt.</summary>
+/// <summary>Beleg eines Werts: Quelle (URL oder Text), Titel, Notiz, Weg (web | ai | rule | import | manual), Prüfdatum, Eintrag und Akteur.</summary>
+public sealed record ValueSource(string Source, string? Title, string? Note, string Method, string CheckedAt, long Number, string Actor);
+
 public sealed class Node
 {
     public required string Id { get; init; }
@@ -29,6 +32,7 @@ public sealed class Node
     public Dictionary<Axis, string> Values { get; } = new();
     /// <summary>Je Achse die Nummer des Eintrags, der den Wert zuletzt setzte — für „zu überarbeiten“ gegen die Mastersprache.</summary>
     public Dictionary<Axis, long> SetAt { get; } = new();
+    public Dictionary<Axis, ValueSource> Sources { get; } = new();   // Beleg je Wert (ValueSourced)
     public Dictionary<Axis, string[]> Lists { get; } = new();
     /// <summary>Vermehrbare Attribute: Zeilen in Reihenfolge je Attribut.</summary>
     public Dictionary<string, List<string>> Rows { get; } = new();
@@ -373,6 +377,12 @@ public sealed class Tree : IProjection
                 else n.Values[axis] = a.Value;
                 if (n.Values.ContainsKey(axis) || n.Lists.ContainsKey(axis)) n.SetAt[axis] = entry.Number; else n.SetAt.Remove(axis);
                 break;
+            case Types.ValueSourced:
+                var vs = Types.Deserialize<ValueSourced>(entry.Payload);
+                var sax = new Axis(vs.Attribute, vs.Locale, vs.Channel, vs.Row);
+                if (string.IsNullOrWhiteSpace(vs.Source)) n.Sources.Remove(sax);
+                else n.Sources[sax] = new ValueSource(vs.Source.Trim(), vs.Title, vs.Note, vs.Method ?? "manual", string.IsNullOrWhiteSpace(vs.CheckedAt) ? entry.At.ToString("yyyy-MM-dd") : vs.CheckedAt, entry.Number, entry.Actor);
+                break;
             case Types.RowAdded:
                 var ra = Types.Deserialize<RowAdded>(entry.Payload);
                 if (!n.Rows.TryGetValue(ra.Attribute, out var rows)) n.Rows[ra.Attribute] = rows = new();
@@ -383,6 +393,7 @@ public sealed class Tree : IProjection
                 if (n.Rows.TryGetValue(rr.Attribute, out var rl)) rl.Remove(rr.Row);
                 foreach (var k in n.Values.Keys.Where(k => k.Row == rr.Row).ToList()) n.Values.Remove(k);
                 foreach (var k in n.Lists.Keys.Where(k => k.Row == rr.Row).ToList()) n.Lists.Remove(k);
+                foreach (var k in n.Sources.Keys.Where(k => k.Row == rr.Row).ToList()) n.Sources.Remove(k);
                 break;
             case Types.RowOrdered:
                 var ro = Types.Deserialize<RowOrdered>(entry.Payload);

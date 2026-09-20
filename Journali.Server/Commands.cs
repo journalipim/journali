@@ -144,6 +144,18 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.StatusSet, new StatusSet(status!)));
     }
 
+    /// <summary>Beleg an einem Wert (ValueSourced): das Attribut muss es geben; ob der Wert gerade da ist, ist egal — der Beleg gilt für die Achse.</summary>
+    public static Outcome SourceValue(Ctx c, string id, string? attribute, string? locale, string? channel, string? row, string? source, string? title, string? note, string? method, string? checkedAt)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out _)) return Outcome.Missing;
+        if (string.IsNullOrWhiteSpace(attribute)) return Outcome.Bad("attribute fehlt.");
+        if (!c.Model.Attributes.ContainsKey(attribute)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
+        method = Blank(method) ?? "manual";
+        if (method is not ("web" or "ai" or "rule" or "import" or "manual")) return Outcome.Bad("method: web, ai, rule, import oder manual.");
+        if (Blank(checkedAt) is { } d && !DateOnly.TryParse(d, out _)) return Outcome.Bad("checkedAt: Datum (JJJJ-MM-TT).");
+        return Outcome.Ok(c.Write(id, Types.ValueSourced, new ValueSourced(attribute, Blank(locale), Blank(channel), Blank(row), Blank(source), Blank(title), Blank(note), method, Blank(checkedAt))));
+    }
+
     public static Outcome SetAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values, string? row = null)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;

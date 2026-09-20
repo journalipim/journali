@@ -1,5 +1,5 @@
 // KI im Editor (Taloan, 19.09.2026: „im Editor hätte ich auch den KI-Button erwartet“): ein Text der Zelle wird mit den
-// echten Produktdaten des Knotens an Claude gegeben — verbessern, kürzen, ausführlicher, neu aus den Daten, eigene
+// echten Produktdaten des Knotens an die KI gegeben — verbessern, kürzen, ausführlicher, neu aus den Daten, eigene
 // Anweisung. Ergebnis landet im Entwurf; gespeichert wird erst mit Speichern. Schlüssel des Nutzers (ai.js), nur auf Klick.
 import { api } from './api.js'
 import { store } from './store.js'
@@ -37,7 +37,7 @@ export async function facts(nodeId, locale) {
 
 /// Text umschreiben. instruction: Schlüssel aus PRESETS oder freier Text. html: Ergebnis als HTML (p, ul/li, b, i), sonst reiner Text.
 export async function rewrite({ instruction, current, html, label, locale, node }) {
-  if (!ai.available()) throw new Error('Kein KI-Schlüssel — Einstellungen → KI (Claude)')
+  if (!ai.available()) throw new Error('Kein KI-Schlüssel — Einstellungen → KI')
   const preset = PRESETS.find(p => p[0] === instruction)
   const task = preset ? preset[2] : instruction
   const f = await facts(node, locale).catch(() => null)

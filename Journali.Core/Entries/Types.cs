@@ -38,6 +38,7 @@ public static class Types
 
     // Werte an einem Knoten
     public const string AttributeSet = "AttributeSet";
+    public const string ValueSourced = "ValueSourced";
     public const string RowAdded = "RowAdded";
     public const string RowRemoved = "RowRemoved";
     public const string RowOrdered = "RowOrdered";
@@ -210,6 +211,14 @@ public sealed record AttributeSet(string Attribute, string? Locale, string? Chan
 public sealed record RowAdded(string Attribute, string Row);
 
 public sealed record RowRemoved(string Attribute, string Row);
+
+/// <summary>
+/// Beleg an einem Wert (Taloan, 20.09.2026: „Quelle: URL, geprüft am …“ — Anreicherung fremder Produktdaten, Recherche der KI):
+/// woher der Wert auf dieser Achse stammt. <paramref name="Source"/> ist eine URL oder ein Text (Datenblatt, Katalogseite);
+/// <paramref name="Method"/> web | ai | rule | import | manual; <paramref name="CheckedAt"/> Datum der Prüfung (ISO, leer = Tag des Eintrags).
+/// Leere <paramref name="Source"/> = Beleg weg. Ändert sich der Wert später (AttributeSet danach), gilt der Beleg als veraltet — das Abbild zeigt es.
+/// </summary>
+public sealed record ValueSourced(string Attribute, string? Locale, string? Channel, string? Row, string? Source, string? Title = null, string? Note = null, string? Method = null, string? CheckedAt = null);
 
 public sealed record RowOrdered(string Attribute, string[] Rows);
 

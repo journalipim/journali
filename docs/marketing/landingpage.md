@@ -88,8 +88,8 @@ Docker Compose mit PostgreSQL — fertig. Medien wahlweise in Postgres, im Datei
 
 Taloan, 19.09.: „ruhig auf dicke Hose“ — aber alles hier ist gebaut:
 - **S3 Object Storage ready** — Medien in Postgres, Dateisystem oder S3-kompatibel (Garage, MinIO, AWS, R2, Hetzner); Umschalten in den Einstellungen, Kopierlauf.
-- **KI-ready** — Claude angebunden; Plugins holen Vorschläge (DPP/PPWR-Zuordnungen, Prüfungen). Schlüssel beim Nutzer.
-- **Content-Generierung** — Vorlagen (regelbasiert) + Plugin `geo`: Definitionssatz, Beschreibung, FAQ, Suchbegriffe per Claude, übernommen nur per Klick.
+- **KI-ready** — KI angebunden, Anbieter nach Wahl (eigener Schlüssel); Plugins holen Vorschläge (DPP/PPWR/ETIM-Zuordnungen, Prüfungen, Anreicherung mit Internetrecherche). Schlüssel beim Nutzer.
+- **Content-Generierung** — Vorlagen (regelbasiert) + Plugin `geo`: Definitionssatz, Beschreibung, FAQ, Suchbegriffe per KI, übernommen nur per Klick.
 - **GEO** — Texte, die KI-Antworten zitieren; Schema.org-Product-JSON-LD je Produkt.
 - **RAG-ready** — Plugin `rag`: Markdown + nodes.jsonl je Produkt/Sprache mit Version und Belegen, als Job.
 - **Digitaler Produktpass** — ESPR/PPWR-Prüfungen als Plugins.

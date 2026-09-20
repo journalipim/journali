@@ -4,7 +4,7 @@
 //   1. Zuordnung Datenpunkt → Attribut im Modell (Best Guess über Schlüssel, Label, Synonyme; im Journal gemerkt: „mapping“)
 //   2. Prüfung eines Teilbaums: je Knoten und Datenpunkt — erfüllt, leer, kein Attribut, Wert fraglich (Regel)
 //   3. Vorschläge: fehlende Attribute anlegen (mit Gruppe), leere Werte ergänzen — regelbasiert (aus vorhandenen Werten
-//      ableiten), und mit KI-Schlüssel (Einstellungen) Vorschläge von Claude aus den vorhandenen Werten des Knotens
+//      ableiten), und mit KI-Schlüssel (Einstellungen) Vorschläge der KI aus den vorhandenen Werten des Knotens
 // Nichts wird ohne Klick geschrieben; Übernehmen geht als ein Stapel ins Journal.
 import { api } from './api.js'
 import { store } from './store.js'
@@ -50,9 +50,18 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))
   const result = { nodes: [], items, byItem: new Map(), unmapped: items.filter(it => !mapping[it.key]?.to), locale }
-  for (const it of items) result.byItem.set(it.key, { ok: 0, empty: 0, bad: 0, na: 0 })
-  for (const r of rows) {
-    const node = { row: r.row, raw: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, v.value])), states: {}, must: 0, mustOk: 0, findings: [] }
+  for (const it of items) result.byItem.set(it.key, { ok: 0, empty: 0, bad: 0, na: 0, below: 0 })
+  // Vollständigkeit zählt am Verkaufbaren (Taloan, 20.09.: „muss an der Variante sein — wie ich sie pflege, ist eine andere Sache“):
+  // ein Knoten mit Kindern gilt als belegt (↓), wenn alle Blätter darunter den Datenpunkt haben — ob er ihn selbst hat, ist egal.
+  const kids = new Map(); for (const r of rows) { const p = r.row.parent ?? ''; if (!kids.has(p)) kids.set(p, []); kids.get(p).push(r) }
+  const ids = new Set(rows.map(r => r.row.id))
+  const leavesOf = r => { const k = (kids.get(r.row.id) ?? []); return k.length ? k.flatMap(leavesOf) : [r] }
+  const isLeaf = r => !(kids.get(r.row.id) ?? []).length
+  const byId = new Map(); const order = [...rows].sort((a, b) => (isLeaf(a) ? 0 : 1) - (isLeaf(b) ? 0 : 1))   // Blätter zuerst, Eltern schauen auf sie
+  void ids
+  for (const r of order) {
+    const node = { row: r.row, raw: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, v.value])), states: {}, must: 0, mustOk: 0, findings: [], leaf: isLeaf(r) }
+    byId.set(r.row.id, node)
     for (const it of items) {
       if (it.roles && !it.roles.includes(r.row.role)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
       if (it.appliesIf && !it.appliesIf(r, mapping)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
@@ -64,13 +73,14 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
         const bad = validate(convert(v, def, model), def, model) ?? (it.rule ? it.rule(v, r, model) : null)
         if (bad) { state = 'bad'; node.findings.push({ item: it, message: bad, value: v }) }
       }
+      if (state === 'empty' && !node.leaf) { const below = leavesOf(r).map(l => byId.get(l.row.id)?.states[it.key]); if (below.length && below.every(s => s === 'ok' || s === 'below' || s === 'na')) state = 'below' }
       node.states[it.key] = state
-      if (it.level === 'must') { node.must++; if (state === 'ok') node.mustOk++ }
+      if (it.level === 'must') { node.must++; if (state === 'ok' || state === 'below') node.mustOk++ }
       if (state !== 'unmapped') result.byItem.get(it.key)[state]++
     }
     node.score = node.must ? Math.round(node.mustOk / node.must * 100) : null
-    result.nodes.push(node)
   }
+  for (const r of rows) result.nodes.push(byId.get(r.row.id))   // in Baumfolge
   return result
 }
 
@@ -87,10 +97,10 @@ export function deriveSuggestions(catalog, mapping, res) {
 // alle bekannten Werte eines Knotens (Zuordnung rückwärts: Datenpunkt → Wert), fürs Ableiten und für die KI
 function vals(res, n, mapping) { const o = {}; for (const it of res.items) { const to = mapping[it.key]?.to; if (to && n.states[it.key] === 'ok') o[it.key] = n.raw[to] ?? null } return o }
 
-// Mit KI: je Knoten die leeren Pflicht-Datenpunkte, dazu die vorhandenen Werte des Knotens (alle Attribute) — Claude schlägt vor,
+// Mit KI: je Knoten die leeren Pflicht-Datenpunkte, dazu die vorhandenen Werte des Knotens (alle Attribute) — die KI schlägt vor,
 // mit Sicherheit und Begründung; nichts wird geschrieben, der Mensch hakt ab.
 // web: true (Taloan, 20.09.2026: Produkte, die ich handle, nicht herstelle — die Daten stehen beim Hersteller, nicht bei mir):
-// Claude sucht im Internet nach Hersteller, Typ, EAN und liest Datenblätter; jeder Vorschlag nennt seine Quelle.
+// die KI sucht im Internet nach Hersteller, Typ, EAN und liest Datenblätter; jeder Vorschlag nennt seine Quelle.
 export async function aiSuggestions(catalog, mapping, res, nodeIds, say = () => {}, { web = false } = {}) {
   const out = []; const model = store.model
   const locale = res.locale
@@ -115,10 +125,16 @@ export async function aiSuggestions(catalog, mapping, res, nodeIds, say = () => 
   return out
 }
 
-// Vorschläge schreiben: attribute.set je Vorschlag (nur zugeordnete Datenpunkte), ein Stapel
+// Vorschläge schreiben: attribute.set je Vorschlag (nur zugeordnete Datenpunkte) und dazu der Beleg (value.source: Quelle, Weg,
+// Prüfdatum — Taloan, 20.09.: „Quelle: URL, geprüft am …“ am Wert, nicht nur am Vorschlag), ein Stapel
 export async function applySuggestions(list, mapping, locale) {
-  const model = store.model
-  const commands = list.filter(s => s.item && mapping[s.item.key]?.to).map(s => { const def = model.attributes.find(a => a.key === mapping[s.item.key].to); return { op: 'attribute.set', args: { node: s.node.id, attribute: def.key, locale: def.perLocale ? locale : null, value: convert(s.value, def, model) ?? s.value } } })
+  const model = store.model; const today = new Date().toISOString().slice(0, 10)
+  const commands = list.filter(s => s.item && mapping[s.item.key]?.to).flatMap(s => {
+    const def = model.attributes.find(a => a.key === mapping[s.item.key].to); const loc = def.perLocale ? locale : null
+    const source = s.url ?? (s.source === 'ai' ? `KI (${ai.label()})` : s.source === 'web' ? `Recherche (${ai.label()})` : `Regel: ${s.why || 'abgeleitet'}`)
+    return [{ op: 'attribute.set', args: { node: s.node.id, attribute: def.key, locale: loc, value: convert(s.value, def, model) ?? s.value } },
+      { op: 'value.source', args: { node: s.node.id, attribute: def.key, locale: loc, source, title: s.url ? (s.why || null) : null, note: s.confidence != null ? `Sicherheit ${Math.round(s.confidence * 100)} %` : null, method: s.source === 'web' ? 'web' : s.source === 'ai' ? 'ai' : 'rule', checkedAt: today } }]
+  })
   if (!commands.length) return null
   return api.post('/api/batch', { commands, batch: 'cmp-' + Date.now().toString(36) })
 }
@@ -215,15 +231,15 @@ export async function mount(root, ctx, catalog) {
     s2.innerHTML = ''
     s2.append(band('2 · Prüfen'))
     s2.append(el('div', { class: 'chips' }, el('span', { style: 'position:relative' }, rootIn, pick), el('button', { class: 'primary', onclick: run }, '▶ prüfen'),
-      el('span', { class: 'muted', style: 'font-size:12px' }, '● Pflicht · ◐ empfohlen · ○ optional — Anteil erfüllter Pflicht-Datenpunkte je Knoten')))
+      el('span', { class: 'muted', style: 'font-size:12px' }, '● Pflicht · ◐ empfohlen · ○ optional — Anteil erfüllter Pflicht-Datenpunkte je Knoten; ↓ = in allen Varianten darunter belegt (zählt als erfüllt)')))
   }
   async function run() {
     if (!st.root) return
     try { st.res = await check(catalog, st.mapping, st.root, say); st.sugg = deriveSuggestions(catalog, st.mapping, st.res); say(`${st.res.nodes.length} Knoten geprüft`); drawResult() }
     catch (e) { say('✗ ' + e.message); store.toast(e.message) }
   }
-  const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '' }
-  const CLS = { ok: 'pos', empty: 'muted', bad: 'neg', unmapped: 'muted', na: 'muted' }
+  const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '', below: '↓' }
+  const CLS = { ok: 'pos', empty: 'muted', bad: 'neg', unmapped: 'muted', na: 'muted', below: 'pos' }
   function drawResult() {
     s3.innerHTML = ''
     const r = st.res; if (!r) return
@@ -233,7 +249,7 @@ export async function mount(root, ctx, catalog) {
     // je Datenpunkt: Zusammenfassung
     const sum = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, 'Datenpunkt'), el('th', { class: 'num' }, '✓'), el('th', { class: 'num' }, 'leer'), el('th', { class: 'num' }, '✗'), el('th', {}, ''))))
     const sb = el('tbody'); sum.append(sb)
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num pos' }, String(c.ok)), el('td', { class: 'num muted' }, String(c.empty)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut — oben zuordnen oder anlegen'))) }
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty ? (it.level === 'must' ? 'neg' : 'warn') : 'muted') }, String(c.empty)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut — oben zuordnen oder anlegen'))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     s3.append(el('details', { open: '' }, el('summary', { class: 'muted' }, 'je Datenpunkt'), sum))
     // je Knoten: Matrix
     const items = r.items.filter(it => st.mapping[it.key]?.to && st.levels.has(it.level))
@@ -244,7 +260,7 @@ export async function mount(root, ctx, catalog) {
       const cb = el('input', { type: 'checkbox' }); cb.checked = st.picked.has(n.row.id); cb.addEventListener('change', () => { cb.checked ? st.picked.add(n.row.id) : st.picked.delete(n.row.id) })
       tb.append(el('tr', {}, el('td', {}, cb), el('td', {}, el('a', { href: `/tree/${n.row.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${n.row.id}`) }, title: n.row.id }, `${n.row.role === 'variant' ? '◆' : n.row.role === 'product' ? '▦' : '▣'} ${n.row.label}`)),
         el('td', { class: 'num ' + (n.score == null ? 'muted' : n.score === 100 ? 'pos' : n.score < 50 ? 'neg' : 'warn') }, n.score == null ? '–' : n.score + ' %'),
-        ...items.map(it => { const s = n.states[it.key]; const f = n.findings.find(x => x.item.key === it.key); return el('td', { class: CLS[s], style: 'text-align:center', title: f ? f.message : s === 'ok' ? 'erfüllt' : s === 'empty' ? 'leer' : '' }, SYM[s]) })))
+        ...items.map(it => { const s = n.states[it.key]; const f = n.findings.find(x => x.item.key === it.key); return el('td', { class: CLS[s], style: 'text-align:center', title: f ? f.message : s === 'ok' ? 'erfüllt' : s === 'below' ? 'in allen Varianten darunter belegt' : s === 'empty' ? 'leer' : '' }, SYM[s]) })))
     }
     s3.append(tbl)
     // Befunde (fragliche Werte)
@@ -254,17 +270,17 @@ export async function mount(root, ctx, catalog) {
     const box = el('div', { style: 'margin-top:10px' })
     const bar = el('div', { class: 'chips' },
       el('button', { onclick: () => { st.sugg = deriveSuggestions(catalog, st.mapping, r); drawSugg() }, title: 'aus vorhandenen Werten ableiten (Regeln des Katalogs)' }, '⚙ Vorschläge (regelbasiert)'),
-      el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? `Claude (${ai.model}) schlägt Werte für die angehakten Knoten vor` : 'kein KI-Schlüssel — Einstellungen → KI (Claude)', onclick: async () => {
-        const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.score != null && n.score < 100).slice(0, 10).map(n => n.row.id)
+      el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? `KI (${ai.label()}) schlägt Werte für die angehakten Knoten vor` : 'kein KI-Schlüssel — Einstellungen → KI', onclick: async () => {
+        const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 10).map(n => n.row.id)
         if (!ids.length) { store.toast('keine Knoten mit Lücken'); return }
-        if (ids.length > 25 && !(await dialog.confirm({ title: `${ids.length} Knoten an die KI?`, warn: `${ids.length} Anfragen an ${ai.model}`, ok: 'Ja' }))) return
+        if (ids.length > 25 && !(await dialog.confirm({ title: `${ids.length} Knoten an die KI?`, warn: `${ids.length} Anfragen an ${ai.label()}`, ok: 'Ja' }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say); st.sugg = [...st.sugg.filter(x => x.source !== 'ai'), ...s]; say(`${s.filter(x => !x.error).length} KI-Vorschläge`); drawSugg()
       } }, `✦ Vorschläge mit KI${ai.available() ? '' : ' (kein Schlüssel)'}`),
-      // Fremde Produkte (Handelsware): die Daten stehen beim Hersteller — Claude sucht im Internet, jeder Wert mit Quelle
-      el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? `Claude (${ai.model}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter` : 'kein KI-Schlüssel — Einstellungen → KI (Claude)', onclick: async () => {
-        const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.score != null && n.score < 100).slice(0, 5).map(n => n.row.id)
+      // Fremde Produkte (Handelsware): die Daten stehen beim Hersteller — die KI sucht im Internet, jeder Wert mit Quelle
+      el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? `KI (${ai.label()}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter` : 'kein KI-Schlüssel — Einstellungen → KI', onclick: async () => {
+        const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 5).map(n => n.row.id)
         if (!ids.length) { store.toast('keine Knoten mit Lücken'); return }
-        if (ids.length > 10 && !(await dialog.confirm({ title: `${ids.length} Knoten recherchieren?`, warn: `${ids.length} Anfragen mit bis zu 6 Suchen an ${ai.model}`, ok: 'Ja' }))) return
+        if (ids.length > 10 && !(await dialog.confirm({ title: `${ids.length} Knoten recherchieren?`, warn: `${ids.length} Anfragen mit bis zu 6 Suchen an ${ai.label()}`, ok: 'Ja' }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say, { web: true }); st.sugg = [...st.sugg.filter(x => x.source !== 'web'), ...s]; say(`${s.filter(x => !x.error).length} Vorschläge aus der Recherche`); drawSugg()
       } }, `⌕ Recherche im Internet${ai.available() ? '' : ' (kein Schlüssel)'}`),
       el('span', { class: 'muted', style: 'font-size:12px' }, st.picked.size ? `${st.picked.size} Knoten angehakt` : 'ohne Haken: die ersten 10 mit Lücken'))
@@ -285,7 +301,7 @@ export async function mount(root, ctx, catalog) {
         const ok = await dialog.confirm({ title: `${chosen.length} Werte übernehmen?`, warn: `${chosen.length} Attributwerte als ein Stapel ins Journal`, list: chosen.slice(0, 8).map(s => `${s.node.label} · ${s.item.label} = ${s.value}`), ok: 'Übernehmen' })
         if (!ok) return
         try { const res = await applySuggestions(chosen, st.mapping, r.locale); store.toast(`✓ ${res?.results.length ?? 0} Werte geschrieben`); await store.poll(true); await run() } catch (e) { store.toast(e.message) }
-      } }, '💾 angehakte übernehmen'), el('span', { class: 'muted', style: 'font-size:12px' }, 'Vorschläge ab 70 % Sicherheit sind vorangehakt — jeder Wert lässt sich vorher ändern')))
+      } }, '💾 angehakte übernehmen'), el('span', { class: 'muted', style: 'font-size:12px' }, 'Vorschläge ab 70 % Sicherheit sind vorangehakt — jeder Wert lässt sich vorher ändern; Quelle, Weg und Prüfdatum kommen als Beleg an den Wert (↗ in der Zelle)')))
     }
     drawSugg()
   }

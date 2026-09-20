@@ -57,6 +57,7 @@ public static class BatchApi
                             "node.retire" => Commands.Retire(ctx, a.Node()),
                             "status.set" => Commands.SetStatus(ctx, a.Node(), a.Str("status")),
                             "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Id("row")),
+                            "value.source" => Commands.SourceValue(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Id("row"), a.Str("source"), a.Str("title"), a.Str("note"), a.Str("method"), a.Str("checkedAt")),
                             "row.add" => Commands.AddRow(ctx, a.Node(), a.Str("attribute")),
                             "row.remove" => Commands.RemoveRow(ctx, a.Node(), a.Str("attribute"), a.Str("row")),
                             "row.order" => Commands.OrderRows(ctx, a.Node(), a.Str("attribute"), a.Strings("rows")),

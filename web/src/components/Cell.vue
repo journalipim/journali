@@ -6,6 +6,7 @@
 import { ref, nextTick } from 'vue'
 import AiBar from './AiBar.vue'
 
+const isUrl = s => /^https?:\/\//i.test(String(s ?? ''))
 const props = defineProps({
   value: String,          // eigener Wert auf dieser Achse (null = keiner)
   inherited: String,      // was ohne eigenen Wert gilt (Rückfall)
@@ -13,6 +14,7 @@ const props = defineProps({
   origin: String,         // woher der geerbte Wert kommt (Anzeige im Tooltip)
   mark: String,           // kleines Zeichen rechts in der Zelle (⟳ = Übersetzung zu überarbeiten)
   markTitle: String,
+  source: Object,         // Beleg am Wert (ValueSourced): { source, title, note, method, checkedAt, actor, stale } — ↗ in der Zelle, Klick öffnet die URL
   clickEdit: { type: Boolean, default: true },   // false (Tabelle): Klick markiert nur, Doppelklick bearbeitet
   node: String, locale: String, label: String,    // für ✦ KI im grossen Editor
 })
@@ -83,6 +85,8 @@ function onEditKey(e) {
       <template v-else-if="value != null">{{ value }}</template>
       <template v-else-if="inherited != null">{{ inherited }}</template>
       <span v-if="mark && !disabled" class="mark" :title="markTitle">{{ mark }}</span>
+      <a v-if="source && !disabled && value != null" class="src" :class="{ stale: source.stale, link: isUrl(source.source) }" :href="isUrl(source.source) ? source.source : null" target="_blank" rel="noopener" @mousedown.stop @click.stop="isUrl(source.source) || $event.preventDefault()"
+        :title="(source.stale ? 'Beleg veraltet — der Wert wurde danach geändert · ' : '') + 'Quelle: ' + source.source + (source.title ? ' — ' + source.title : '') + ' · ' + ({ web: 'Recherche', ai: 'KI', rule: 'Regel', import: 'Import', manual: 'von Hand' }[source.method] ?? source.method) + ' · geprüft ' + source.checkedAt + ' · ' + source.actor + (source.note ? ' · ' + source.note : '')">↗</a>
     </div>
     <!-- Das Eingabefeld ersetzt die Box mit denselben Massen — nicht darin, sonst doppelter Rahmen und unten abgeschnitten. -->
     <input v-else ref="input" v-model="draft" class="cell-input" :data-mode="openMode" @keydown="onEditKey" @blur="commit" />
@@ -104,4 +108,7 @@ function onEditKey(e) {
 .big textarea { min-height: 260px; resize: vertical; border: 0; background: var(--cell); color: var(--text); font: inherit; padding: 10px; outline: none; }
 .big .toolbar { border-top: 1px solid var(--line); }
 .mark { position: absolute; right: 6px; top: 2px; color: var(--warn); font-size: 12px; }
+.src { position: absolute; right: 6px; bottom: 1px; font-size: 11px; color: var(--muted); text-decoration: none; }
+.src.link:hover { color: var(--accent); }
+.src.stale { color: var(--warn); }
 </style>

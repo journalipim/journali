@@ -1,7 +1,7 @@
-// Plugin geo (Taloan, 19.09.2026: „ein Plugin, das GEO-optimierte Daten vorschlägt“): aus den echten Produktdaten schlägt Claude
+// Plugin geo (Taloan, 19.09.2026: „ein Plugin, das GEO-optimierte Daten vorschlägt“): aus den echten Produktdaten schlägt die KI
 // Texte vor, die Suchmaschinen und KI-Antworten gern zitieren — ein Definitionssatz, eine Kurzbeschreibung, Fragen & Antworten,
 // Suchbegriffe. Je Feld ein Zielattribut (gemerkt im Journal, Plugin-Daten „targets“); „übernehmen“ schreibt den Wert an den
-// Knoten. Dazu Schema.org-Product-JSON-LD aus den Daten (ohne KI). Braucht den Claude-Schlüssel aus den Einstellungen.
+// Knoten. Dazu Schema.org-Product-JSON-LD aus den Daten (ohne KI). Braucht einen KI-Schlüssel aus den Einstellungen.
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
 const ICON = { group: '▣', product: '▦', variant: '◆' }
 const FIELDS = [
@@ -56,16 +56,16 @@ async function mount(root, ctx) {
 
   async function suggest() {
     if (!st.node) return
-    if (!ai?.available?.() && !ai?.key) { store.toast('Kein KI-Schlüssel — Einstellungen → KI (Claude)'); return }
+    if (!ai?.available?.() && !ai?.key) { store.toast('Kein KI-Schlüssel — Einstellungen → KI'); return }
     say('lese Daten …')
     try {
       const f = await facts(ctx, st.node, st.locale)
-      say('frage Claude …')
+      say(`frage ${ai.label()} …`)
       const system = `Du schreibst Produkttexte für Suchmaschinen und KI-Antworten (GEO). Sprache: ${st.locale}. Nur Fakten aus den Daten, keine Erfindungen, keine Superlative. Antworte als JSON: { "definition": string, "description": string, "faq": [{ "q": string, "a": string }] (genau 3), "keywords": string[] (5–8) }.`
       const user = `Produkt: ${f.name}\nPfad: ${f.path}\nSKU: ${f.sku}\nEigenschaften:\n` + f.rows.map(r => `- ${r.label}: ${r.value}${r.unit ? ' ' + r.unit : ''}`).join('\n')
       const j = await ai.ask({ system, user, json: true, maxTokens: 1500 })
       st.result = { facts: f, definition: j.definition ?? '', description: j.description ?? '', faq: Array.isArray(j.faq) ? j.faq : [], keywords: Array.isArray(j.keywords) ? j.keywords.join(', ') : String(j.keywords ?? '') }
-      say(`${f.rows.length} Eigenschaften · Vorschlag von ${ai.model}`); draw()
+      say(`${f.rows.length} Eigenschaften · Vorschlag von ${ai.label()}`); draw()
     } catch (e) { say('✗ ' + e.message); store.toast(e.message) }
   }
   const textOf = k => k === 'faq' ? st.result.faq.map(x => `${x.q}\n${x.a}`).join('\n\n') : st.result[k]
@@ -77,7 +77,7 @@ async function mount(root, ctx) {
   }
   function draw() {
     body.innerHTML = ''
-    if (!st.result) { body.append(el('div', { class: 'empty' }, 'Knoten wählen, dann „Vorschlagen“ — Claude schreibt aus den echten Daten; nichts wird ohne „übernehmen“ gespeichert.')); return }
+    if (!st.result) { body.append(el('div', { class: 'empty' }, 'Knoten wählen, dann „Vorschlagen“ — die KI schreibt aus den echten Daten; nichts wird ohne „übernehmen“ gespeichert.')); return }
     for (const [k, label, hint] of FIELDS) {
       const sel = el('select', { title: 'Zielattribut', onchange: async e => { st.targets[k] = e.target.value; await ctx.data.set('targets', st.targets) } }, el('option', { value: '' }, 'Zielattribut …'), ...textAttrs.map(a => el('option', { value: a.key }, `${a.label?.de || a.key} (${a.key})`)))
       sel.value = st.targets[k] ?? ''

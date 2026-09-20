@@ -6,8 +6,8 @@
     "en": "PPWR — Verpackung"
   },
   "description": {
-    "de": "Prüft Verpackungsdaten gegen die Verpackungsverordnung (EU) 2025/40: Material und Bestandteile, Rezyklat, Recyclingfähigkeitsklasse, Mehrweg, Leerraum, Stoffgrenzen (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), Kennzeichnung, Register. Zuordnung, fehlende Attribute anlegen, Teilbaum prüfen, Vorschläge regelbasiert oder mit Claude.",
-    "en": "Prüft Verpackungsdaten gegen die Verpackungsverordnung (EU) 2025/40: Material und Bestandteile, Rezyklat, Recyclingfähigkeitsklasse, Mehrweg, Leerraum, Stoffgrenzen (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), Kennzeichnung, Register. Zuordnung, fehlende Attribute anlegen, Teilbaum prüfen, Vorschläge regelbasiert oder mit Claude."
+    "de": "Prüft Verpackungsdaten gegen die Verpackungsverordnung (EU) 2025/40: Material und Bestandteile, Rezyklat, Recyclingfähigkeitsklasse, Mehrweg, Leerraum, Stoffgrenzen (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), Kennzeichnung, Register. Zuordnung, fehlende Attribute anlegen, Teilbaum prüfen, Vorschläge regelbasiert oder mit die KI.",
+    "en": "Prüft Verpackungsdaten gegen die Verpackungsverordnung (EU) 2025/40: Material und Bestandteile, Rezyklat, Recyclingfähigkeitsklasse, Mehrweg, Leerraum, Stoffgrenzen (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), Kennzeichnung, Register. Zuordnung, fehlende Attribute anlegen, Teilbaum prüfen, Vorschläge regelbasiert oder mit die KI."
   },
   "kind": "quality",
   "runs": "browser",

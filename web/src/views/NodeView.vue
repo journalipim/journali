@@ -145,6 +145,15 @@ const computedValue = (key, locale = null) => (node.value?.computed ?? []).find(
 // Formel-Zelle: Klick öffnet den Skript-Editor; Übernehmen schreibt das Skript als Wert (AttributeSet)
 const scriptCell = ref(null)   // { def, col }
 const own = computed(() => valueMap(node.value?.values ?? []))
+// Beleg je Wert (ValueSourced): Quelle, Weg, Prüfdatum — ↗ in der Zelle
+const sources = computed(() => { const m = new Map(); for (const v of node.value?.values ?? []) if (v.source) m.set(key(v.attribute, v.locale, v.channel, v.row), v.source); return m })
+function sourceOf(def, col) { return sources.value.get(key(def.key, col.locale, col.channel)) ?? null }
+async function setSource(def, col) {
+  const cur = sourceOf(def, col)
+  const v = await dialog.prompt({ title: `Quelle für ${store.label(def)}`, text: 'URL oder Text (Datenblatt, Katalogseite …); leer = Beleg weg', value: cur?.source ?? '', placeholder: 'https://…' })
+  if (v === null) return
+  await command(() => api.post(`${nodeUrl()}/sources`, { attribute: def.key, locale: col.locale ?? null, channel: col.channel ?? null, source: v.trim(), method: 'manual', checkedAt: new Date().toISOString().slice(0, 10) }))
+}
 // Übersetzungsstand: Wert einer anderen Sprache ist „zu überarbeiten“, wenn der Master-Wert später geschrieben wurde (Eintragsnummer).
 const master = computed(() => model.value?.masterLocale ?? locales.value[0] ?? null)
 const ownAt = computed(() => { const m = new Map(); for (const v of node.value?.values ?? []) m.set(key(v.attribute, v.locale, v.channel, v.row), v.number ?? 0); return m })
@@ -432,6 +441,7 @@ function cellMenu(e, def, col, block) {
     { label: 'Eigenen Wert löschen', icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? 'kein eigener' : (inh.value != null ? 'dann geerbt' : ''), action: () => setValue(def, col, '') },
     inh.from ? { label: `Zur Herkunft ${icon(inh.from.role)} ${inh.from.label}`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
     { label: 'Wert kopieren', icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
+    { label: sourceOf(def, col) ? 'Quelle ändern …' : 'Quelle …', icon: '↗', key: 'q', hint: sourceOf(def, col) ? `${sourceOf(def, col).method} · ${sourceOf(def, col).checkedAt}` : 'Beleg am Wert', disabled: ownV == null, action: () => setSource(def, col) },
     def.type !== 'html' && def.type !== 'rows' ? { label: starOwn(def.key) ? '★ weg — es gilt das von oben' : '★ Name im Baum ab hier', icon: '★', key: 's', action: () => setStar(def) } : null,
     { label: 'Attribut im Modell', icon: '⊞', key: 'm', hint: '→ Modell → Attribute', action: () => router.push({ path: '/model', query: { section: 'attributes', key: def.key } }) },
   ])
@@ -557,7 +567,7 @@ function cellMenu(e, def, col, block) {
               <td v-else-if="axisValue(def.key, c) != null" class="cell"><div class="cell-box locked" title="Variantenachse — festgelegt beim Anlegen">{{ axisValue(def.key, c) }} 🔒</div></td>
               <Cell v-else :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten — ${master} wurde später geändert` : (c.locale ? `nicht übersetzt — zeigt ${master}; Enter überschreibt` : `kein Grundtext — zeigt ${master}; Enter setzt den sprachneutralen Text (z. B. Kurzbezeichnung)`)"
-                :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+                :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
           </tr>
           </template>

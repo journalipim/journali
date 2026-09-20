@@ -145,6 +145,8 @@ public static class TreeApi
         });
         api.MapPost("/nodes/{id}/status", (string id, StatusSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetStatus(x, id, b.Status)));
         api.MapPost("/nodes/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values, b.Row)));
+        // Beleg an einem Wert: Quelle (URL oder Text), Weg, Prüfdatum — leere Quelle nimmt den Beleg weg
+        api.MapPost("/nodes/{id}/sources", (string id, ValueSourced b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SourceValue(x, id, b.Attribute, b.Locale, b.Channel, b.Row, b.Source, b.Title, b.Note, b.Method, b.CheckedAt)));
         api.MapPost("/nodes/{id}/rows", (string id, RowAdded b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AddRow(x, id, b.Attribute)));
         api.MapDelete("/nodes/{id}/rows/{attribute}/{row}", (string id, string attribute, string row, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RemoveRow(x, id, attribute, row)));
         api.MapPut("/nodes/{id}/rows/{attribute}", (string id, string attribute, RowOrdered b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.OrderRows(x, id, attribute, b.Rows)));
@@ -238,7 +240,7 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
 
 /// <summary>Ein Wert auf seinen Achsen — einfach oder als Liste, bei vermehrbaren Attributen mit Zeile.</summary>
 /// <param name="Number">Eintrag, der den Wert zuletzt setzte — der Client vergleicht damit Mastersprache gegen Übersetzung.</param>
-public sealed record ValueView(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values, string? Row = null, long Number = 0)
+public sealed record ValueView(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values, string? Row = null, long Number = 0, SourceView? Source = null)
 {
     public static IEnumerable<ValueView> Of(Medium m) =>
         m.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, m.SetAt.GetValueOrDefault(kv.Key)))
@@ -249,8 +251,14 @@ public sealed record ValueView(string Attribute, string? Locale, string? Channel
             .Concat(r.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, r.SetAt.GetValueOrDefault(kv.Key))));
 
     public static IEnumerable<ValueView> Of(Node n) =>
-        n.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, n.SetAt.GetValueOrDefault(kv.Key)))
-            .Concat(n.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, n.SetAt.GetValueOrDefault(kv.Key))));
+        n.Values.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Value, null, kv.Key.Row, n.SetAt.GetValueOrDefault(kv.Key), SourceView.Of(n, kv.Key)))
+            .Concat(n.Lists.Select(kv => new ValueView(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, null, kv.Value, kv.Key.Row, n.SetAt.GetValueOrDefault(kv.Key), SourceView.Of(n, kv.Key))));
+}
+
+/// <summary>Beleg am Wert (ValueSourced); <paramref name="Stale"/>: der Wert wurde nach dem Beleg geändert.</summary>
+public sealed record SourceView(string Source, string? Title, string? Note, string Method, string CheckedAt, long Number, string Actor, bool Stale)
+{
+    public static SourceView? Of(Node n, Axis axis) => n.Sources.TryGetValue(axis, out var s) ? new SourceView(s.Source, s.Title, s.Note, s.Method, s.CheckedAt, s.Number, s.Actor, n.SetAt.GetValueOrDefault(axis) > s.Number) : null;
 }
 
 /// <summary>Ergebnis eines Formel-Attributs an diesem Knoten (null = kein Skript oder ein Wert fehlt).</summary>

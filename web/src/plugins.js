@@ -18,7 +18,7 @@
 //   use(key) — das Modul eines anderen Plugins (z. B. ctx.use('table').tableExport)
 //   data   — benannte JSON-Datensätze des Plugins im Journal (PluginDataSet, /api/plugins/<key>/data/<name>)
 //   compliance — Prüfkataloge (compliance.js): mount(root, ctx, catalog), check, guessMapping … (Plugins dpp, ppwr)
-//   ai     — Claude, wenn in den Einstellungen ein Schlüssel steht (ai.js): available(), ask({ system, user, json })
+//   ai     — die KI, wenn in den Einstellungen ein Anbieter-Schlüssel steht (ai.js): available(), active(), label(), ask({ system, user, json, web })
 //   mapper — der Datenmapper (mapper.js): suggest, plan, convert, parseDelimited, fromObjects
 //   batch(commands, batchId?) — POST /api/batch
 import { reactive } from 'vue'

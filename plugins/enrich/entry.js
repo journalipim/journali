@@ -1,7 +1,7 @@
 // Plugin enrich (Taloan, 20.09.2026: „ein Enrichment-Plugin“ — Produkte, die ich handle, nicht herstelle: die Daten stehen beim
 // Hersteller, in Datenblättern, Katalogen, nicht in meinem Bestand. Wie onedot, nur mit dem eigenen KI-Schlüssel):
 // Man wählt die Attribute, die fehlen dürfen nicht, und einen Teilbaum — die Prüfmaschine der Oberfläche (ctx.compliance, dieselbe
-// wie DPP/PPWR/ETIM) zeigt je Knoten, was leer ist, und holt Vorschläge: aus Regeln, von Claude aus den vorhandenen Werten,
+// wie DPP/PPWR/ETIM) zeigt je Knoten, was leer ist, und holt Vorschläge: aus Regeln, von der KI aus den vorhandenen Werten,
 // oder mit Recherche im Internet (Hersteller, Typ, EAN → Datenblatt) — jeder Wert mit Quelle, nichts wird ohne Haken geschrieben.
 // Der Katalog ist hier kein Gesetz, sondern die Auswahl des Nutzers (ctx.data „attributes“).
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }

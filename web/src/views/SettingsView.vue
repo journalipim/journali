@@ -7,14 +7,16 @@ import StorageSettings from '../components/StorageSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
 // Reiter (Taloan, 19.09.): Allgemein | Storage
 const tab = ref(location.hash === '#storage' ? 'storage' : location.hash === '#users' ? 'users' : 'general')
-// KI-Schlüssel (Taloan, 18.09.): bleibt im Browser (localStorage), nie im Journal — Plugins fragen Claude nur, wenn er da ist
-const aiKey = ref(ai.key), aiModel = ref(ai.model), aiState = ref('')
-async function saveAi() {
-  ai.key = aiKey.value.trim(); ai.model = aiModel.value; ai.save()
-  if (!ai.key) { aiState.value = 'kein Schlüssel — Plugins arbeiten regelbasiert'; return }
-  aiState.value = 'prüfe …'
-  try { aiState.value = (await ai.test()) ? `✓ ${ai.model} antwortet` : '✗ unerwartete Antwort' } catch (e) { aiState.value = '✗ ' + e.message }
+// KI-Schlüssel (Taloan, 18.09.): bleiben im Browser (localStorage), nie im Journal — Plugins fragen die KI nur, wenn ein Schlüssel da ist.
+// Je Anbieter ein Schlüssel und ein Modell (Taloan, 20.09.: kein Anbieter fest im Code); die Plugins fragen den gewählten.
+const aiAcc = ref(Object.fromEntries(ai.providers.map(p => [p.key, { ...ai.accounts[p.key] }]))), aiProvider = ref(ai.provider), aiState = ref({})
+async function saveAi(pk) {
+  ai.accounts[pk] = { key: aiAcc.value[pk].key.trim(), model: aiAcc.value[pk].model }; ai.provider = aiProvider.value; ai.save()
+  if (!ai.accounts[pk].key) { aiState.value = { ...aiState.value, [pk]: 'kein Schlüssel' }; return }
+  aiState.value = { ...aiState.value, [pk]: 'prüfe …' }
+  try { aiState.value = { ...aiState.value, [pk]: (await ai.test(pk)) ? `✓ ${ai.accounts[pk].model} antwortet` : '✗ unerwartete Antwort' } } catch (e) { aiState.value = { ...aiState.value, [pk]: '✗ ' + e.message } }
 }
+function setAiProvider() { ai.provider = aiProvider.value; ai.save() }
 
 const actor = ref(store.actor)
 const server = ref(store.server)
@@ -95,12 +97,17 @@ async function save() {
       </table>
 
       <div class="section">
-        <h2>✦ KI (Claude) <span class="muted">· eigener Schlüssel — journali bietet keine KI an</span></h2>
-        <p class="muted" style="font-size:12px;margin:0 0 6px">Was die KI sieht: die Daten des jeweils gewählten Knotens (Attribute, Werte) gehen direkt aus diesem Browser an api.anthropic.com — mit Ihrem Schlüssel, unter Ihrem Vertrag mit Anthropic, ohne Umweg über den journali-Server. Nichts geschieht ohne Klick; ohne Schlüssel arbeiten alle Plugins regelbasiert.</p>
-        <table class="grid" style="width:auto"><colgroup><col style="width:120px" /><col style="width:420px" /><col /></colgroup><tbody>
-          <tr><td class="muted">API-Schlüssel</td><td><input v-model="aiKey" type="password" style="width:100%" placeholder="sk-ant-…" autocomplete="off" @keydown.enter="saveAi" /></td><td class="muted" style="font-size:12px">bleibt in diesem Browser — nicht im Journal, nicht auf dem Server</td></tr>
-          <tr><td class="muted">Modell</td><td><select v-model="aiModel" style="width:100%"><option v-for="m in ai.models" :key="m" :value="m">{{ m }}</option></select></td><td class="muted" style="font-size:12px">Sonnet: schnell und günstig für Vorschläge; Opus: gründlicher</td></tr>
-          <tr><td></td><td><button class="primary" @click="saveAi">Speichern und prüfen</button> <span class="muted" style="font-size:12px">{{ aiState }}</span></td><td class="muted" style="font-size:12px">ohne Schlüssel arbeiten Datenqualität, DPP und PPWR regelbasiert</td></tr>
+        <h2>✦ KI <span class="muted">· eigene Schlüssel — journali bietet keine KI an</span></h2>
+        <p class="muted" style="font-size:12px;margin:0 0 6px">Was die KI sieht: die Daten des jeweils gewählten Knotens (Attribute, Werte) gehen direkt aus diesem Browser an den Anbieter — mit Ihrem Schlüssel, unter Ihrem Vertrag mit dem Anbieter, ohne Umweg über den journali-Server. Nichts geschieht ohne Klick; ohne Schlüssel arbeiten alle Plugins regelbasiert. Recherche im Internet (Anreicherung) kostet je Suche extra.</p>
+        <table class="grid" style="width:auto"><colgroup><col style="width:120px" /><col style="width:360px" /><col style="width:220px" /><col /></colgroup>
+          <thead><tr><th>Anbieter</th><th>API-Schlüssel</th><th>Modell</th><th></th></tr></thead><tbody>
+          <tr v-for="p in ai.providers" :key="p.key">
+            <td :class="ai.accounts[p.key].key ? 'pos' : 'muted'" :title="'Anfragen gehen an ' + p.endpoint">{{ ai.accounts[p.key].key ? '●' : '○' }} {{ p.label }}</td>
+            <td><input v-model="aiAcc[p.key].key" type="password" style="width:100%" :placeholder="p.placeholder" autocomplete="off" @keydown.enter="saveAi(p.key)" /></td>
+            <td><select v-model="aiAcc[p.key].model" style="width:100%" :title="p.hint"><option v-for="m in p.models" :key="m" :value="m">{{ m }}</option></select></td>
+            <td><button class="primary" @click="saveAi(p.key)">Speichern und prüfen</button> <span class="muted" style="font-size:12px">{{ aiState[p.key] ?? '' }}</span></td>
+          </tr>
+          <tr><td class="muted">Plugins fragen</td><td colspan="3"><select v-model="aiProvider" @change="setAiProvider" style="width:200px"><option v-for="p in ai.providers" :key="p.key" :value="p.key" :disabled="!ai.accounts[p.key].key">{{ p.label }}{{ ai.accounts[p.key].key ? '' : ' (kein Schlüssel)' }}</option></select> <span class="muted" style="font-size:12px">{{ ai.active().length ? 'eingerichtet: ' + ai.active().map(p => p.label).join(', ') : 'kein Anbieter eingerichtet — Datenqualität, DPP, PPWR, ETIM arbeiten regelbasiert' }} · Schlüssel bleiben in diesem Browser, nicht im Journal, nicht auf dem Server</span></td></tr>
         </tbody></table>
       </div>
 

@@ -11,14 +11,14 @@ const emit = defineEmits(['result'])
 const open = ref(false); const busy = ref(''); const own = ref('')
 async function run(instruction) {
   if (!instruction) return
-  busy.value = 'fragt Claude …'
+  busy.value = `fragt ${ai.label()} …`
   try { emit('result', await rewrite({ instruction, current: props.current, html: props.html, label: props.label, locale: props.locale, node: props.node })); open.value = false; own.value = '' }
   catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 </script>
 
 <template>
-  <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? 'Text mit Claude bearbeiten — mit den Produktdaten dieses Knotens' : 'Kein KI-Schlüssel — Einstellungen → KI (Claude)'" :disabled="!ai.available()">✦ KI</button>
+  <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? 'Text mit der KI (' + ai.label() + ') bearbeiten — mit den Produktdaten dieses Knotens' : 'Kein KI-Schlüssel — Einstellungen → KI'" :disabled="!ai.available()">✦ KI</button>
   <div v-if="open" class="aibar" @mousedown.stop>
     <button v-for="[k, l, hint] in PRESETS" :key="k" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button>
     <input v-model="own" type="text" placeholder="eigene Anweisung … (Enter)" @keydown.enter.stop="run(own)" @keydown.esc.stop="open = false" :disabled="!!busy" />

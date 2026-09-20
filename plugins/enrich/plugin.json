@@ -6,8 +6,8 @@
     "en": "Enrichment"
   },
   "description": {
-    "de": "Fehlende Werte gewählter Attribute finden und ergänzen — für Handelsware, deren Daten beim Hersteller liegen: Vorschläge aus Regeln, von Claude aus den vorhandenen Werten, oder mit Recherche im Internet (Hersteller, Typ, EAN → Datenblatt, Katalog), jeder Wert mit Quelle und Sicherheit. Nichts wird ohne Haken geschrieben; übernommen wird als ein Stapel ins Journal. Eigener KI-Schlüssel (Einstellungen → KI), journali bietet keine KI an.",
-    "en": "Find and fill missing values of chosen attributes — rule-based, from Claude using existing values, or with web research (manufacturer, type, EAN → data sheet), each value with its source. Nothing is written without a tick."
+    "de": "Fehlende Werte gewählter Attribute finden und ergänzen — für Handelsware, deren Daten beim Hersteller liegen: Vorschläge aus Regeln, von der KI aus den vorhandenen Werten, oder mit Recherche im Internet (Hersteller, Typ, EAN → Datenblatt, Katalog), jeder Wert mit Quelle und Sicherheit. Nichts wird ohne Haken geschrieben; übernommen wird als ein Stapel ins Journal. Eigener KI-Schlüssel (Einstellungen → KI), journali bietet keine KI an.",
+    "en": "Find and fill missing values of chosen attributes — rule-based, from the AI using existing values, or with web research (manufacturer, type, EAN → data sheet), each value with its source. Nothing is written without a tick."
   },
   "kind": "quality",
   "runs": "browser",

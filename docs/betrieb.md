@@ -164,15 +164,19 @@ Lauf erlischt. Geheimnisse liegen in `auth.json` im Datenverzeichnis (`JOURNALI_
 Volume `journali-jobs`), Passwörter als PBKDF2-SHA256 — nie im Journal. Der letzte Administrator lässt
 sich nicht sperren oder entfernen. Hosting: Anmeldung ist Pflicht, bevor eine Instanz ins Internet geht.
 
-## KI (Claude)
+## KI
 
-journali bietet keine KI an und hat keinen eigenen Schlüssel. Wer die KI-Funktionen nutzt
-(Datenqualität, DPP/PPWR-Zuordnungen, GEO-Texte), trägt seinen Anthropic-Schlüssel unter
-⚙ Einstellungen → KI ein; er bleibt im Browser (localStorage), nie im Journal, nie auf dem Server.
-Die Anfragen gehen direkt aus dem Browser an `api.anthropic.com` — der Betreiber von journali
-ist an diesem Datenfluss nicht beteiligt (für Hosting: Anthropic ist damit kein Unterauftragnehmer
+journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt
+(Taloan, 20.09.2026). Wer die KI-Funktionen nutzt (Datenqualität, DPP/PPWR/ETIM-Zuordnungen,
+Anreicherung, GEO-Texte, Editor), trägt unter ⚙ Einstellungen → KI je Anbieter seinen Schlüssel
+und das Modell ein und wählt, wen die Plugins fragen. Eingerichtet werden können (`web/src/ai.js`,
+`PROVIDERS`): **Anthropic** (`api.anthropic.com`) und **OpenAI** (`api.openai.com`); weitere sind
+ein Eintrag in dieser Liste. Schlüssel bleiben im Browser (localStorage), nie im Journal, nie auf
+dem Server. Die Anfragen gehen direkt aus dem Browser an den Anbieter — der Betreiber von journali
+ist an diesem Datenfluss nicht beteiligt (für Hosting: der Anbieter ist damit kein Unterauftragnehmer
 des Betreibers, sondern Vertragspartner des Kunden). Übertragen werden die Daten des jeweils
-gewählten Knotens, nur auf Klick.
+gewählten Knotens, nur auf Klick. Die Recherche im Internet (Anreicherung, Plugin `enrich`) nutzt
+das Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
 
 ## Tabelle `journal`
 
