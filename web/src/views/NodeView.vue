@@ -432,7 +432,9 @@ async function axisAdd() {
   try { const r = await axisCheck(axes); wiz.value = { axes, ...r, next: '' } } catch (e) { store.toast(e.message) }
 }
 async function axisCommit() { if (!wiz.value || wiz.value.dupes.length) return; const axes = wiz.value.axes; wiz.value = null; await setAxes(axes) }
-const axisChoices = computed(() => (model.value?.attributes ?? []).filter(a => ['enum', 'text', 'integer'].includes(a.type) && !a.multiple && !(node.value?.axes ?? []).includes(a.key))
+// nur Attribute, die an den Varianten gelten (Taloan, 20.09.): Gruppen am Pfad (node.groups), Attribut an der Variante erlaubt
+const atVariant = computed(() => { const s = new Set(); for (const g of node.value?.groups ?? []) { const def = model.value?.groups.find(x => x.key === g.key); if (def?.activeFrom && def.activeFrom !== 'group' && def.activeFrom !== 'product' && def.activeFrom !== 'variant') continue; for (const k of g.attributes ?? []) s.add(k) } return s })
+const axisChoices = computed(() => (model.value?.attributes ?? []).filter(a => ['enum', 'text', 'integer'].includes(a.type) && !a.multiple && !(node.value?.axes ?? []).includes(a.key) && atVariant.value.has(a.key) && (!a.levels || a.levels.includes('variant')))
   .sort((a, b) => (a.type === 'enum' ? 0 : 1) - (b.type === 'enum' ? 0 : 1) || (a.label?.de ?? a.key).localeCompare(b.label?.de ?? b.key, 'de')))
 function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
 // Kategorien gibt es in der Oberfläche nicht mehr (Taloan, 17.09.): kein zweiter Baum — ein Knoten in mehreren Ästen wird ein

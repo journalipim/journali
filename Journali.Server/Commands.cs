@@ -77,6 +77,10 @@ public static class Commands
         if (n.Role != Roles.Product) return Outcome.Bad("Nur ein Produkt hat Variantenachsen.");
         var clean = axes?.Select(a => a.Trim()).Where(a => a.Length > 0).Distinct().ToArray() ?? [];
         if (clean.Except(c.Model.Attributes.Keys).Any()) return Outcome.Bad("Variantenachse muss ein Attribut sein.");
+        // Die Achse muss an den Varianten gelten (Taloan, 20.09.: „konnte eine Achse zufügen, die bei der Variante gar nicht zur Verfügung steht“):
+        // Gruppe am Pfad des Produkts, an der Variante aktiv, Attribut an der Variante erlaubt
+        var atVariant = c.Tree.EffectiveGroups(n).Where(g => c.Model.GroupActiveAt(g.Group, Roles.Variant)).SelectMany(g => c.Model.AttributesOf(g.Group)).Where(a => a.AllowedAt(Roles.Variant)).Select(a => a.Key).ToHashSet();
+        foreach (var a in clean) if (!atVariant.Contains(a)) return Outcome.Bad($"{a} gilt an den Varianten von „{n.Name ?? id}“ nicht — die Gruppe des Attributs hängt nicht am Pfad oder ist an Varianten nicht aktiv.");
         // Mit Varianten (Taloan, 20.09.: „im Nachhinein kann man keine Achse zufügen — warum nicht?“): eine neue Achse nimmt an jeder Variante
         // deren eigenen Wert des Attributs — der muss da sein; danach muss die Kombination der Achsenwerte je Produkt eindeutig sein.
         var variants = c.Tree.Children(id).ToList();
