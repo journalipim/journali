@@ -232,11 +232,30 @@ async function mount(root, ctx) {
     const wordsOf = s => String(s ?? '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 4).map(w => w.toLowerCase())
     const near = new Set([...wordsOf(row.label), ...wordsOf(path[path.length - 1])]); const words = [...near]
     const nameHits = P.map(c => { const names = [...Object.values(c.name ?? {}), ...Object.values(c.synonyms ?? {}).flat()].map(n => String(n).toLowerCase()); let score = 0; for (const w of words) if (names.some(n => new RegExp(`(^|[^\p{L}])${w}([^\p{L}]|$)`, 'u').test(n))) score++; return { c, score } }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8)
+    const ai = ctx.ai; const suggest = el('div', { style: 'margin-top:4px' })
+    const gname = c => c.group ? (nameOf(c.group.name, locale) || c.group.code) : '—'
+    const askAi = async () => {
+      suggest.innerHTML = ''; suggest.append(el('span', { class: 'muted' }, '✦ …'))
+      try {
+        const groupsAll = [...new Set(P.map(gname))].sort()
+        const g = await ai.ask({ system: 'Du ordnest Produkte ETIM-Klassengruppen zu. Antworte nur als JSON {"groups":["…","…"]} mit 1 bis 3 Namen exakt aus der Liste.', user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}\nGruppen:\n${groupsAll.join('\n')}`, json: true, maxTokens: 200 })
+        const picked = (g.groups ?? []).filter(x => groupsAll.includes(x)); if (!picked.length) throw new Error('keine Gruppe erkannt')
+        const cands = P.filter(c => picked.includes(gname(c)))
+        const list = cands.map(c => `${c.code} ${nameOf(c.name, locale)}${Object.values(c.synonyms ?? {}).flat().length ? ' (' + Object.values(c.synonyms ?? {}).flat().slice(0, 4).join(', ') + ')' : ''}`).join('\n')
+        const j = await ai.ask({ system: 'Du ordnest ein Produkt genau einer ETIM-Klasse zu. Antworte nur als JSON {"suggestions":[{"code":"EC…","why":"…"}]} mit 1 bis 3 Vorschlägen, Codes exakt aus der Liste, bester zuerst, why in einem kurzen Satz auf Deutsch.', user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}\nKlassen:\n${list}`, json: true, maxTokens: 400 })
+        suggest.innerHTML = ''; suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, `✦ Vorschlag (KI, ${ai.label()}) — Gruppe${picked.length > 1 ? 'n' : ''} ${picked.join(', ')}`))
+        const out = (j.suggestions ?? []).filter(s => cands.some(c => c.code === String(s.code).toUpperCase()))
+        if (!out.length) suggest.append(el('div', { class: 'muted' }, 'kein Vorschlag — unten blättern'))
+        for (const s of out) suggest.append(line(String(s.code).toUpperCase(), s.why ?? ''))
+      } catch (e) { suggest.innerHTML = ''; suggest.append(el('span', { class: 'neg' }, '✗ ' + e.message)) }
+    }
+    if (ai?.available()) { if (P.length) askAi(); else suggest.append(el('span', { class: 'muted' }, 'erst eine ETIM-Version holen')) }
+    else suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, '✦ Vorschläge aus Name und Pfad brauchen einen KI-Schlüssel (⚙ Einstellungen) — ohne: unten blättern oder suchen'))
     const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer für ${words.map(w => '„' + w + '“').join(', ')}` : P.length ? `keine Klasse heisst wie ${words.map(w => '„' + w + '“').join(', ')} — unten suchen (ETIM International: englische Namen)` : 'erst eine ETIM-Version holen'), ...nameHits.map(x => line(x.c.code, `${x.score} Wort${x.score > 1 ? 'e' : ''}`)))
     return el('div', { style: 'padding:6px 0;border:1px solid var(--accent);border-radius:6px;padding:8px;margin:6px 0' },
       el('div', { class: 'chips' }, el('b', {}, `Klasse zuweisen an ${ICON[row.role] ?? ''} ${row.label}`), el('span', { class: 'muted', style: 'font-size:12px' }, path.length ? path.join(' › ') : ''), el('span', { class: 'grow' }), el('button', { class: 'x', title: 'ohne Zuweisung weiter', onclick: () => { st.assign = null; draw() } }, '✕')),
-      current ? line(current, 'gilt hier schon') : el('div', { class: 'muted', style: 'font-size:12px' }, 'hier gilt noch keine Klasse'),
-      env, names)
+      current ? line(current, 'gilt hier schon') : el('div', { class: 'muted', style: 'font-size:12px' }, 'hier gilt noch keine Klasse', row.parent && tree.byId.get(row.parent)?.role === 'group' && tree.kids(row.parent).length > 1 ? el('span', {}, ' — ', el('a', { href: '#', onclick: e => { e.preventDefault(); st.assign = row.parent; draw() } }, `an ${ICON.group} ${tree.byId.get(row.parent).label} zuweisen`), ` gilt für alle ${tree.kids(row.parent).length} darunter (vererbbar)`) : null),
+      env, names, suggest)
   }
   // Klasse einem Knoten zuweisen (Taloan, 20.09.: „muss der Anwender nicht irgendwo definieren, zu welcher Klasse ein Produkt gehört?“):
   // Wert im Klassenattribut (vererbbar — an der Gruppe gesetzt gilt es für alles darunter); fehlt die Gruppe ETIM am Pfad, kommt sie an den Knoten
