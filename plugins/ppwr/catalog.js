@@ -49,6 +49,22 @@ export default {
       { key: 'pack_epr', label: 'Herstellerregister-Nr. (EPR, z. B. LUCID)', level: 'must', type: 'text', synonyms: ['lucid', 'epr', 'registrierungsnummer', 'herstellerregister', 'pack_epr', 'verpackungsregister'], inheritable: true, rule: v => String(v).trim().length >= 6 ? null : 'Registrierungsnummer erwartet (LUCID: DE + 13 Ziffern)' },
       { key: 'pack_producer', label: 'Inverkehrbringer (Name, Anschrift, Kontakt)', level: 'must', type: 'text', synonyms: ['inverkehrbringer', 'producer', 'hersteller', 'manufacturer', 'pack_producer'], inheritable: true },
     ] },
+    // Sondergruppen (Taloan, 20.09.2026, nach Recherche): gelten nur, wenn der Anwender die Geltung am Knoten setzt (ppwr_scope, vererbbar)
+    { key: 'hazmat', label: 'Gefahrgutverpackung (UN-zertifiziert) — Ausnahmen bei Rezyklat/Minimierung, wenn die Transportsicherheit leidet', scope: { key: 'hazmat', label: 'Gefahrgut', hint: 'UN-zertifizierte Gefahrgutverpackung: Ausnahmen oder längere Fristen bei Rezyklat- und Minimierungsvorgaben' }, items: [
+      { key: 'pack_un_approval', label: 'UN-Zulassungsnummer der Verpackung', level: 'must', type: 'text', synonyms: ['un_zulassung', 'un_approval', 'un_kennzeichnung', 'un_marking', 'pack_un_approval'], hint: 'UN-Kennzeichnung nach ADR/RID/IMDG, z. B. 4G/Y…' },
+      { key: 'pack_un_exemption', label: 'Ausnahme Rezyklat/Minimierung begründet (Transportsicherheit)', level: 'should', type: 'text', synonyms: ['gefahrgut_ausnahme', 'hazmat_exemption', 'pack_un_exemption'], hint: 'warum Rezyklat- oder Minimierungsvorgaben die sichere Beförderung beeinträchtigen würden' },
+    ] },
+    { key: 'medical', label: 'Medizinprodukte und Arzneimittel — vorerst ausgenommen von Rezyklat- und Mehrwegquoten (Hygiene, Sterilität)', scope: { key: 'medical', label: 'Medizin/Pharma', hint: 'Verpackungen für Human-/Tierarzneimittel und Medizinprodukte: Ausnahmen von Mindest-Rezyklatquoten und Mehrwegvorgaben' }, items: [
+      { key: 'pack_sterile', label: 'Sterilbarriere / Hygieneanforderung', level: 'must', type: 'boolean', synonyms: ['steril', 'sterile', 'sterilbarriere', 'hygiene', 'pack_sterile'], rule: isYesNo },
+      { key: 'pack_medical_ref', label: 'Rechtsgrundlage der Ausnahme (MDR/IVDR, Arzneimittel-RL)', level: 'should', type: 'text', synonyms: ['ausnahme_medizin', 'medical_exemption', 'pack_medical_ref'] },
+    ] },
+    { key: 'protected', label: 'Geschütztes Design / geografische Angabe — Übermass- und Minimierungsverbot ab 2030 greift nicht', scope: { key: 'protected', label: 'geschütztes Design', hint: 'gesetzlich geschütztes Verpackungsdesign oder geschützte geografische Angabe (z. B. traditionelle Flasche)' }, items: [
+      { key: 'pack_protection', label: 'Schutzrecht / Registrierung (Nummer, Register)', level: 'must', type: 'text', synonyms: ['schutzrecht', 'design_registration', 'geschuetzte_angabe', 'pack_protection', 'g_g_a', 'gu'] },
+    ] },
+    { key: 'food', label: 'Lebensmittelkontakt — PFAS-Grenzwerte, Konformität', scope: { key: 'food', label: 'Lebensmittelkontakt', hint: 'kontaktsensitive Lebensmittelverpackung: PFAS-Grenzwerte ab 12.08.2026, Konformitätsnachweis' }, items: [
+      { key: 'pack_pfas_value', label: 'PFAS-Gehalt (mg/kg, Summe) oder Nachweis „unter Grenzwert“', level: 'must', type: 'text', synonyms: ['pfas_gehalt', 'pfas_content', 'pfas_wert', 'pack_pfas_value'], hint: 'Art. 5 Abs. 5: Grenzwerte für PFAS in kontaktsensitiven Verpackungen' },
+      { key: 'pack_food_doc', label: 'Konformität Lebensmittelkontakt (VO 1935/2004, Nachweis)', level: 'should', type: 'text', synonyms: ['lebensmittelkonformitaet', 'food_contact_doc', 'pack_food_doc', 'konformitaet_1935'] },
+    ] },
   ],
 }
 function isPlastic(r) { return true }   // ohne Materialangabe nicht entscheidbar — prüfen; leer bleibt „leer“, nicht „n/a“
