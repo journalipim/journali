@@ -65,12 +65,12 @@ const headTitle = c => c.virtual === 'label'
 // Die wirkliche Spalte hinter einer Zelle: bei #label das ★-Attribut der Zeile
 const eff = (r, c) => c.virtual === 'label' ? labelCol(r) : c
 const commonLabel = computed(() => { const keys = new Set((data.value?.rows ?? []).map(labelKeyOf)); return keys.size === 1 && !keys.has(null) ? [...keys][0] : null })
-const columns = computed(() => [...VIRTUAL, ...attrColumns.value])
+const columns = computed(() => [...VIRTUAL.filter(v => v.virtual !== 'sku' || !attrColumns.value.some(c => c.key === 'sku')), ...attrColumns.value])
 // Reihenfolge wie in der Excel-Vorlage (Taloan, 20.09.): Achsen, dann Pflicht, dann der Rest; in einer Sicht gilt deren Reihenfolge
 const axisKeys = computed(() => new Set(childRole.value === 'variant' ? (data.value?.node?.axes ?? tree.byId.get(props.id)?.axes ?? []) : []))
 const isReq = c => !!c.required && (typeof c.required !== 'object' || Object.keys(c.required).length > 0)
-const kindOf = c => c.virtual === 'sku' ? 'info' : c.virtual ? '' : axisKeys.value.has(c.key) ? 'axis' : isReq(c) ? 'required' : ''
-const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value); if (viewKey.value) return base; const rank = c => axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
+const kindOf = c => c.virtual === 'sku' || c.key === 'sku' ? 'info' : c.virtual ? '' : axisKeys.value.has(c.key) ? 'axis' : isReq(c) ? 'required' : ''
+const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value); if (viewKey.value) return base; const rank = c => c.key === 'sku' ? -1 : axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
 const baseColumns = computed(() => {
   if (!data.value) return []
   const all = data.value.columns
@@ -195,7 +195,7 @@ function startResize(e, c) { e.preventDefault(); e.stopPropagation(); drag = { k
 // über die sichtbaren Zeilen und die Attributspalten (columns), Achsen und gesperrte Spalten werden beim Schreiben übersprungen.
 const sel = ref(null)          // { r0, c0, r1, c1 } normalisiert
 const anchor = ref(null)
-const replaceOpen = ref(false)
+const repFind = ref(null)
 const rep = ref({ find: '', with: '', all: false, caseSensitive: false, whole: false })
 function cellAt(el) {
   const td = el?.closest?.('td.cell'); if (!td) return null
@@ -405,7 +405,7 @@ function onKey(e) {
     if (e.key === 'Tab') { const at = cellAt(e.target); if (at) { e.preventDefault(); const to = focusCell(at.ri + (e.shiftKey ? (at.ci === 0 ? -1 : 0) : (at.ci === columns.value.length - 1 ? 1 : 0)), e.shiftKey ? (at.ci === 0 ? 999 : at.ci - 1) : (at.ci === columns.value.length - 1 ? 0 : at.ci + 1)); if (to) { anchor.value = to; sel.value = norm(to, to) } } return }
   }
   if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save(); return }
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') { e.preventDefault(); replaceOpen.value = !replaceOpen.value; return }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'h') { e.preventDefault(); repFind.value?.focus(); repFind.value?.select(); return }
   if (inField || e.target.classList?.contains('cell-input')) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); e.shiftKey ? fillSeries() : fillDown() }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && document.activeElement?.closest?.('table.tab')) { e.preventDefault(); sel.value = { r0: 0, r1: rows.value.length - 1, c0: 0, c1: columns.value.length - 1 } }
@@ -419,8 +419,9 @@ onUnmounted(() => { document.removeEventListener('paste', onPaste); document.rem
 // Export der Tabelle, wie sie dasteht (CSV, Semikolon, UTF-8 mit BOM — Excel öffnet das direkt)
 function exportCsv() {
   const esc = v => { const s = v == null ? '' : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s }
-  const head = ['id', 'name', 'sku', ...attrColumns.value.map(c => c.perLocale ? `${c.key}_${locale.value}` : c.key)]
-  const lines = [head.join(';'), ...rows.value.map(r => [r.row.id, r.row.label, r.row.sku ?? '', ...attrColumns.value.map(c => shown(r, c) ?? inherited(r, c) ?? '')].map(esc).join(';'))]
+  const withSku = !attrColumns.value.some(c => c.key === 'sku')   // sku nur einmal: als Attributspalte, sonst fest
+  const head = ['id', 'name', ...(withSku ? ['sku'] : []), ...attrColumns.value.map(c => c.perLocale ? `${c.key}_${locale.value}` : c.key)]
+  const lines = [head.join(';'), ...rows.value.map(r => [r.row.id, r.row.label, ...(withSku ? [r.row.sku ?? ''] : []), ...attrColumns.value.map(c => shown(r, c) ?? inherited(r, c) ?? '')].map(esc).join(';'))]
   const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${data.value.node.label}-${childRole.value}-${locale.value}.csv`; a.click(); URL.revokeObjectURL(a.href)
 }
@@ -457,26 +458,24 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       <button v-if="props.deep !== '1'" @click="addRow" :title="`neue ${roleLabel[childRole]?.replace(/n$/, '') ?? 'Zeile'} unter ${data?.node?.label ?? ''} — Werte eintragen, speichern legt den Knoten an`">+ Zeile</button>
       <button @click="fillDown" :disabled="!sel" title="runterziehen: oberste Zelle des Bereichs in alle darunter (Strg+D)">⇩ füllen</button>
       <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe</button>
-      <button :class="{ primary: replaceOpen }" @click="replaceOpen = !replaceOpen" title="Suchen & Ersetzen (Strg+H)">⇄ ersetzen</button>
-      <span class="muted" style="font-size:12px" title="Pfeile bewegen den Cursor, Shift+Pfeil zieht den Bereich auf, Enter speichert und springt nach unten, Tab nach rechts, Tippen überschreibt, F2 bearbeitet · Strg+D füllen, Strg+Shift+D Reihe, Strg+H ersetzen, Strg+C/V mit Excel, Entf leert, Strg+A alles">🖱 ziehen = Bereich · Doppelklick/F2/Tippen = bearbeiten (lang/HTML: grosser Editor) · ▪ Kästchen ziehen = füllen · Strg+D/H/C/V · <i>kursiv</i> = geerbt</span>
+      <span class="muted" style="font-size:12px" title="Pfeile bewegen den Cursor, Shift+Pfeil zieht den Bereich auf, Enter speichert und springt nach unten, Tab nach rechts, Tippen überschreibt, F2 bearbeitet · Strg+D füllen, Strg+Shift+D Reihe, Strg+H ins Suchfeld, Strg+C/V mit Excel, Entf leert, Strg+A alles">🖱 ziehen = Bereich · Doppelklick/F2/Tippen = bearbeiten (lang/HTML: grosser Editor) · ▪ Kästchen ziehen = füllen · Strg+D/H/C/V · <i>kursiv</i> = geerbt</span>
     </div>
-    <div v-if="replaceOpen" class="toolbar replace">
+    <div class="toolbar replace">
       <span class="muted">⇄</span>
-      <input v-model="rep.find" type="text" placeholder="suchen" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="replaceOpen = false" autofocus />
-      <input v-model="rep.with" type="text" placeholder="ersetzen durch" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="replaceOpen = false" />
+      <input ref="repFind" v-model="rep.find" type="text" placeholder="suchen (Strg+H)" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="rep.find = ''; rep.with = ''" />
+      <input v-model="rep.with" type="text" placeholder="ersetzen durch" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="rep.find = ''; rep.with = ''" />
       <label><input type="checkbox" v-model="rep.all" /> ganze Tabelle</label>
       <label><input type="checkbox" v-model="rep.caseSensitive" /> Gross/Klein</label>
       <label><input type="checkbox" v-model="rep.whole" /> ganze Zelle</label>
       <span class="muted">{{ rep.find ? replaceHits + ' Treffer' + (rep.all || !sel ? '' : ' im Bereich') : '' }}</span>
       <button class="primary" :disabled="!replaceHits" @click="replaceAll">alle ersetzen</button>
-      <button class="x" @click="replaceOpen = false" title="schliessen (Esc)">×</button>
     </div>
     <div class="scroll" ref="scrollBox" style="position:relative">
       <div v-if="handle" class="fill-handle" :style="`top:${handle.top}px;left:${handle.left}px`" title="Ausfüllkästchen: nach unten ziehen füllt — ein Wert wiederholt sich, zwei Zahlen setzen die Reihe fort" />
       <table class="grid values tab" :style="`width:${tableWidth}px`">
         <colgroup><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
         <thead><tr>
-          <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="[{ ro: !editable(c) && c.virtual !== 'label' }, kindOf(c)]" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="muted"> {{ locale }}</span><span v-if="c.unit" class="muted"> {{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
+          <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="[{ ro: !editable(c) && c.virtual !== 'label' }, kindOf(c)]" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="suffix" title="sprachabhängig — Spalte zeigt die gewählte Sprache">{{ locale }}</span><span v-if="c.unit" class="suffix">{{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
         </tr></thead>
         <tbody>
           <tr v-for="(r, ri) in rows" :key="r.row.id" :data-id="r.row.id">
@@ -512,7 +511,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
 .tab th.required { background: #c00000; color: #fff; font-style: normal; }
 .tab th.axis { background: #375623; color: #fff; font-style: normal; }
 .tab th.info { background: #595959; color: #fff; font-style: normal; }
-.tab th.required .muted, .tab th.axis .muted, .tab th.info .muted { color: rgba(255,255,255,.75); }
+.tab th .suffix { margin-left: 5px; font-size: 10px; font-weight: normal; opacity: .6; }
 /* Tabellengefühl (Taloan): Zellen dicht an dicht mit Gitterlinien statt Kästchen mit Luft; Zeilen flacher */
 .tab th, .tab td { padding: 0; border-right: 1px solid var(--line); height: 24px; }
 .tab th { padding: 0 6px; }
