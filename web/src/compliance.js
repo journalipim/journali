@@ -247,7 +247,20 @@ export async function mount(root, ctx, catalog) {
   }
   async function run() {
     if (!st.root) return
-    try { st.res = await check(catalog, st.mapping, st.root, say); st.sugg = deriveSuggestions(catalog, st.mapping, st.res); st.dirty = false; say(`${st.res.nodes.length} Knoten geprüft`); drawResult(); drawMapping() }
+    try {
+      st.res = await check(catalog, st.mapping, st.root, say)
+      if (catalog.autoCreate) {
+        // Modellpflege automatisch (Taloan, 20.09.: der Anwender wählt die Klasse und füllt Werte — Attribute und Gruppe sind Sache des Programms):
+        // fehlende Attribute, die an mindestens einem geprüften Knoten gelten, anlegen; die Gruppe des Katalogs an die Wurzel des Teilbaums
+        let again = false
+        const need = st.res.items.filter(it => !st.mapping[it.key]?.to && st.res.byItem.get(it.key).na < st.res.nodes.length)
+        if (need.length) { say(`lege ${need.length} Attribute an …`); await createAttributes(catalog, need, st.mapping); await remember(); again = true }
+        const rootRow = tree.byId.get(st.root)
+        if (rootRow && st.res.inactiveGroups?.size) { const have = (rootRow.groups ?? '').split(',').filter(Boolean); await api.post(`/api/nodes/${encodeURIComponent(rootRow.id)}/groups`, { groups: [...new Set([...have, ...st.res.inactiveGroups])] }, 'PUT'); await tree.load(); again = true }
+        if (again) { await store.poll(true); st.res = await check(catalog, st.mapping, st.root, say) }
+      }
+      st.sugg = deriveSuggestions(catalog, st.mapping, st.res); st.dirty = false; say(`${st.res.nodes.length} Knoten geprüft`); drawResult(); drawMapping()
+    }
     catch (e) { say('✗ ' + e.message); store.toast(e.message) }
   }
   const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '', below: '↓', inactive: '⊘' }
@@ -264,8 +277,17 @@ export async function mount(root, ctx, catalog) {
     // Datenpunkte, die an keinem geprüften Knoten gelten (Rolle, Klasse), stehen nicht in der Liste — ein Notebook bekommt keine
     // Leitungsschutzschalter-Merkmale vorgehalten (Taloan, 20.09.); eine Zeile nennt, wie viele es sind
     const hidden = r.nodes.length ? r.items.filter(it => r.byItem.get(it.key).na === r.nodes.length) : []
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut im Modell — unter 3 zuordnen oder anlegen'))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
+    // fehlendes Attribut: in der Zeile zuordnen (Auswahl) oder anlegen — nicht „siehe unter 3“
+    const mapCell = it => {
+      const sel = el('select', { style: 'max-width:220px;color:var(--warn)' }, el('option', { value: '' }, 'zuordnen …'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
+      sel.addEventListener('change', () => { if (!sel.value) return; st.mapping[it.key] = { to: sel.value, why: 'gewählt', sure: true }; remember(); st.dirty = true; drawMapping(); drawResult() })
+      const mk = el('button', { class: 'x', title: `Attribut ${(catalog.prefix ?? '') + it.key} in Gruppe ${catalog.groupKey} anlegen`, onclick: async () => { say('lege an …'); try { await createAttributes(catalog, [it], st.mapping); await remember(); say(''); st.dirty = true; drawMapping(); drawResult() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, '+ anlegen')
+      return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
+    }
+    const unm = r.items.filter(it => !st.mapping[it.key]?.to && !hidden.includes(it))
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (hidden.length) sb.append(el('tr', {}, el('td', { class: 'muted', colspan: '5' }, `… ${hidden.length} weitere Datenpunkte gelten an keinem der ${r.nodes.length} Knoten (andere Klasse oder Rolle)`)))
+    if (unm.length > 1) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); st.dirty = true; drawMapping(); drawResult() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`)))
     if (catalog.summary) { const s = catalog.summary(r, st.mapping, ctx); if (s) s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, s)) }
     if (r.inactiveGroups?.size) {
       const groups = [...r.inactiveGroups]; const rootRow = tree.byId.get(st.root)
