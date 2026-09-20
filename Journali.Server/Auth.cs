@@ -106,7 +106,7 @@ public static class Auth
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
         if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
         if (read) return Rights.Read;
-        if (path.StartsWith("/api/model/lists/") && path.Contains("/values/") && method == "PUT") return Rights.Write;   // Listenwert zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)
+        if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)
         if (path.StartsWith("/api/model")) return Rights.Model;
         if (path.StartsWith("/api/plugins") && !path.Contains("/data/") && !path.EndsWith("/data") && !path.EndsWith("/run")) return Rights.Plugins;   // Plugin-Daten (auch der Sammel-PUT …/data) sind Pflege
         if (path.Contains("/retire") || path.Contains("/restore") || path.Contains("/undo") || (method == "DELETE" && path.StartsWith("/api/nodes/") && path.Count(ch => ch == '/') == 3)) return Rights.Retire;

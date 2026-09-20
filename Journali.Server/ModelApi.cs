@@ -130,6 +130,7 @@ public static partial class ModelApi
                 var def = body with { Key = key, Label = body.Label ?? new(), Axes = Clean(body.Axes), Channels = Clean(body.Channels),
                                       Unit = Blank(body.Unit), Group = Blank(body.Group), List = Blank(body.List), Columns = Clean(body.Columns),
                                       Required = body.Required is { Count: > 0 } r ? r.Where(kv => kv.Value is { Length: > 0 }).ToDictionary(kv => kv.Key, kv => kv.Value) : null };
+                if (def.When is { } w && (string.IsNullOrWhiteSpace(w.Attribute) || w.Values is null || w.Values.Length == 0)) return Bad("when: Attribut und mindestens ein Wert.");
                 foreach (var (channel, locales) in def.Required ?? new())
                 {
                     if (!model.Channels.ContainsKey(channel)) return Bad($"Pflicht für unbekannten Kanal: {channel}");
@@ -204,6 +205,17 @@ public static partial class ModelApi
                     ? write(Model.ListStream + key, Types.ListValueDefined, body with { Value = value, Label = body.Label ?? new() })
                     : Bad($"Werteliste {key} gibt es nicht.")));
 
+        // Sammel-PUT: [ { value, label, extra? }, … ] — ein Stapel (etim: alle Klassen einer Version als Werte der Liste ETIM-Klasse)
+        m.MapPut("/lists/{key}/values", (string key, ListValueDefinition[] body, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (!ValidKey(key)) return Bad("Schlüssel ungültig.");
+            if (!c.ReadModel(m => m.Lists.ContainsKey(key))) return Bad($"Werteliste {key} gibt es nicht.");
+            var items = body.Where(v => !string.IsNullOrWhiteSpace(v.Value)).Select(v => (Model.ListStream + key, Types.ListValueDefined, (object)(v with { Label = v.Label ?? new() }))).ToList();
+            if (items.Count == 0) return Bad("Leer.");
+            var entries = c.WriteMany(actor, items, Guid.NewGuid().ToString("N")[..12]);
+            return Results.Ok(new { count = entries.Count, last = EntryView.Of(entries[^1]) });
+        });
         m.MapDelete("/lists/{key}/values/{value}", (string key, string value, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
                 model.Lists.TryGetValue(key, out var list) && list.Values.ContainsKey(value)

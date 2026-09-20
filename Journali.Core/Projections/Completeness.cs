@@ -23,9 +23,13 @@ public static class CompletenessRules
         {
             if (!model.GroupActiveAt(group, node.Role)) continue;
             foreach (var a in model.AttributesOf(group))
-                if (a.AllowedAt(node.Role)) yield return a;
+                if (a.AllowedAt(node.Role) && WhenHolds(tree, model, node, a)) yield return a;
         }
     }
+
+    /// <summary>Bedingung eines Attributs am Knoten: der wirksame Wert (eigen oder geerbt, mit Master/Stern) des Bedingungsattributs ist einer der erlaubten.</summary>
+    public static bool WhenHolds(Tree tree, ModelCatalog model, Node node, AttributeDefinition a) =>
+        a.When is null || a.When.Holds(tree.Resolve(model, node, a.When.Attribute, null, null).Value);
 
     /// <summary>Alle Kanal × Sprache-Paare, für die hier irgendetwas Pflicht ist.</summary>
     public static List<Completeness> Of(Tree tree, ModelCatalog model, Node node)

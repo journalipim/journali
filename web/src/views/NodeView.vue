@@ -115,8 +115,10 @@ const blocks = computed(() => {
     const all = def?.attributes ?? g.attributes
     const keys = [...ord, ...all.filter(a => !ord.includes(a))]
     const role = node.value.role
-    let defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key), hereLocked: !(!a.levels || a.levels.includes(role)) }))   // Gruppe ⌀ steht am Gruppenkopf, hier nur die Ebene des Attributs
-    if (store.scope !== 'all') defs = defs.filter(a => !a.hereLocked && g.active)
+    // Bedingung (when): wirksamer Wert des Bedingungsattributs am Knoten (eigen oder geerbt) muss einer der Werte sein — sonst ⌀ „nur bei …“
+    const whenOk = a => { if (!a.when) return true; const v = effectiveValue(a.when.attribute); return v != null && a.when.values.some(x => x.toLowerCase() === String(v).toLowerCase()) }
+    let defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key), hereLocked: !(!a.levels || a.levels.includes(role)), whenLocked: !whenOk(a) }))   // Gruppe ⌀ steht am Gruppenkopf, hier nur die Ebene des Attributs
+    if (store.scope !== 'all') defs = defs.filter(a => !a.hereLocked && !a.whenLocked && g.active)
     if (store.scope === 'only') defs = defs.filter(a => !ROLES.some(r => r !== role && canAt(a, def, r)))
     return { key: k, label: def?.label?.de || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, active: g.active, defs }
   }).filter(b => b.defs.length && (store.scope === 'all' || b.active))
@@ -188,6 +190,8 @@ function valueMap(values) {
 }
 function key(a, l, c, row) { return `${a}|${l ?? ''}|${c ?? ''}${row ? '|' + row : ''}` }
 function ownValue(a, col) { return own.value.get(key(a, col.locale, col.channel)) ?? null }
+// wirksamer Wert eines Attributs ohne Achse am Knoten: eigen, sonst vom nächsten Vorfahren (für Bedingungen: etim_class)
+function effectiveValue(a) { const k = key(a, null, null); if (own.value.has(k)) return own.value.get(k); for (const { m } of ancestorMaps.value) if (m.has(k)) return m.get(k); return null }
 // Achsenwert einer Variante ohne eigenen Attributwert (beim Anlegen vergeben): steht in der Zelle, Bearbeiten schreibt den Attributwert — der wird zum Achsenwert (Taloan, 20.09.: kein Schloss mehr)
 function ownOrAxis(def, col) { return ownValue(def.key, col) ?? axisValue(def.key, col) }
 // Kette je Achse (Taloan, 20.09.): Wert → Fallback(s) → Master → Stern; erst der Kanal, dann die Sprache — wie Node.Chain im Kern
@@ -219,7 +223,7 @@ function inherited(def, col) {
   return { value: null, from: null }
 }
 function enabled(def, col, block) {
-  return block.active && !def.hereLocked && (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
+  return block.active && !def.hereLocked && !def.whenLocked && (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
     && (!col.channel || !def.channels || def.channels.includes(col.channel))
 }
 function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
@@ -621,6 +625,7 @@ function cellMenu(e, def, col, block) {
               <span v-if="def.inheritable" class="muted" title="vererbbar: gilt nach unten">↓</span>
               <span v-if="def.required" class="warn" title="Pflicht">●</span>
               <span v-if="def.hereLocked" class="warn" :title="`nicht an ${roleLabel[node.role]} — verwendbar an: ${(def.levels ?? []).map(r => roleLabel[r]).join(', ')}`">⌀</span>
+              <span v-else-if="def.whenLocked" class="warn" :title="`gilt nur bei ${store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute })} = ${def.when.values.slice(0, 6).join(', ')}${def.when.values.length > 6 ? ' …' : ''}`">⌀</span>
             </div></td>
             <template v-for="c in columns" :key="c.label">
               <ToggleCell v-if="def.type === 'boolean'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />

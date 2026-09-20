@@ -74,8 +74,10 @@ function modelOps(ctx) {
     if (existing && !(existing.type === 'enum' && existing.list === key)) return key   // ein vorhandenes Text-/Listenattribut bleibt, wie es ist
     if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' } })
     const have = new Set((model().lists ?? []).find(l => l.key === key)?.values?.map(v => v.value) ?? [])
+    // alle Klassen der Version als Listenwerte, ein Stapel (Taloan, 20.09.: „wo habe ich die Chance, die Klasse festzulegen?“ — in der Zelle am Produkt, mit Suche)
+    const missing = [...cache.classes.values()].filter(c => !have.has(c.code)).sort((a, b) => a.code.localeCompare(b.code)).map(c => ({ value: c.code, label: Object.fromEntries(Object.entries(labelsOf(c.name)).map(([l, n]) => [l, `${n}`])) }))
+    for (let k = 0; k < missing.length; k += 1000) await put(`/lists/${key}/values`, missing.slice(k, k + 1000))
     let i = 0
-    for (const c of [...cache.classes.values()].sort((a, b) => a.code.localeCompare(b.code))) if (!have.has(c.code)) await put(`/lists/${key}/values/${c.code}`, { value: c.code, label: Object.fromEntries(Object.entries(labelsOf(c.name)).map(([l, n]) => [l, `${c.code} ${n}`])), order: i++ })
     if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: groupKey(), inheritable: true })
     return key
   }
@@ -88,11 +90,13 @@ function modelOps(ctx) {
     return key
   }
   // ein Merkmal → Attribut ef… (Numeric: decimal + Einheit, Logical: boolean, Alphanumeric: enum mit Werteliste EV-Code → Name, Range: text mit Muster)
+  // Bedingung: das Merkmal gilt nur an Knoten, deren Klasse es hat — alle Klassen der Version, die das Merkmal führen
+  const whenOf = code => ({ attribute: cache.settings.classAttr, values: [...cache.classes.values()].filter(c => c.features.some(x => x.code === code)).map(c => c.code) })
   async function createFeature(f) {
     await ensureGroup()
     const key = f.code.toLowerCase()
-    if (hasAttr(key)) return key
-    const base = { key, label: labelsOf(f.name), group: groupKey() }
+    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code); if (a.group === groupKey() && JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values)) await put(`/attributes/${key}`, { ...a, when: w }); return key }
+    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code) }
     if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
     else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
@@ -278,6 +282,7 @@ async function mount(root, ctx) {
         await api.post('/api/plugins/etim/data', items, 'PUT'); say(`${Math.min(i + CH, all.length)} / ${all.length} Klassen übernommen …`)
       }
       const v = cache.versions.find(x => x.version === cache.version); if (v) { v.all = true; v.classes = all.length; v.languages = [...new Set([...(v.languages ?? []), ...Object.keys(all[0]?.name ?? {})])]; await ctx.data.set('release:' + v.version, v); if (cache.version === v.version) await ctx.data.set('release', v) }
+      await store.poll(true); await ops.ensureClassAttr(); await store.poll(true)
       say(`${all.length} Klassen im Journal — Suche und Zuweisen gehen jetzt ohne die Datei`); draw()
     })
   }
@@ -325,7 +330,7 @@ async function mount(root, ctx) {
     // Quelle, Klassen, Sprachen, geladen am, ● aktuell. Darunter EINE Zeile zum Holen (Liste → Auswahl → laden, oder URL, oder Datei).
     const langs = m.locales.map(l => l.code)
     const verRows = cache.versions.map(v => el('tr', {},
-      el('td', {}, el('button', { class: 'toggle', style: 'width:28px', title: v.version === cache.version ? 'aktuelle Version — gilt für Zuweisen, Prüfen, Export' : 'zur aktuellen Version machen', onclick: async () => { await ctx.data.set('release', v); await loadCache(); draw() } }, v.version === cache.version ? '●' : '○')),
+      el('td', {}, el('button', { class: 'toggle', style: 'width:28px', title: v.version === cache.version ? 'aktuelle Version — gilt für Zuweisen, Prüfen, Export' : 'zur aktuellen Version machen', onclick: async () => { await ctx.data.set('release', v); await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); draw() } }, v.version === cache.version ? '●' : '○')),
       el('td', { class: 'mono' }, `ETIM ${v.version}`),
       el('td', {}, v.url ? el('a', { href: v.url, target: '_blank', rel: 'noopener', title: v.url }, v.file ?? v.name ?? v.url.split('/').pop()) : (v.file ?? v.name ?? '')),
       el('td', { class: 'num' }, String(v.classes ?? '')),
@@ -343,7 +348,7 @@ async function mount(root, ctx) {
       const h0 = (await api.get('/api/health')).head; const t0 = Date.now()
       const tick = setInterval(async () => { try { const h = (await api.get('/api/health')).head; say(`lade ${st.url.split('/').pop()} … ${h - h0} Klassen geschrieben · ${Math.round((Date.now() - t0) / 1000)} s`) } catch { } }, 2000)
       try {
-        const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: langs.join(',') } }); const j = jsonOf(r.output); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || 'Laden fehlgeschlagen'); await loadCache(); say(`ETIM ${j.version}: ${j.classes} Klassen in ${Math.round(j.ms / 1000)} s${j.current !== j.version ? ` — aktuell bleibt ETIM ${j.current}` : ''}`); draw()
+        const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: langs.join(',') } }); const j = jsonOf(r.output); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || 'Laden fehlgeschlagen'); await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); say(`ETIM ${j.version}: ${j.classes} Klassen in ${Math.round(j.ms / 1000)} s${j.current !== j.version ? ` — aktuell bleibt ETIM ${j.current}` : ''}`); draw()
       } finally { clearInterval(tick) }
     }) } }, '⇩ laden')
     const fileBtn = el('button', { class: 'x', title: 'IXF-3.1-Datei vom Rechner (z. B. ETIM Deutschland mit deutschen Namen — ergänzt dieselbe Version)', onclick: () => file.click() }, '⇩ Datei …')

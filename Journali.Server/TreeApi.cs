@@ -304,7 +304,7 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
     {
         var effective = tree.EffectiveGroups(n);
         var groups = effective.Select(g => new GroupView(g.Group, g.From.Id, NodeRow.LabelOf(tree, model, g.From), model.GroupActiveAt(g.Group, n.Role),
-            model.AttributesOf(g.Group).Where(a => a.AllowedAt(n.Role)).Select(a => a.Key).ToList())).ToList();
+            model.AttributesOf(g.Group).Where(a => a.AllowedAt(n.Role) && CompletenessRules.WhenHolds(tree, model, n, a)).Select(a => a.Key).ToList())).ToList();
         var covered = groups.SelectMany(g => g.Attributes).ToHashSet();
         // Verwaist: eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen).
         var orphans = n.Values.Keys.Select(k => k.Attribute).Concat(n.Lists.Keys.Select(k => k.Attribute)).Concat(n.Rows.Keys).Distinct().Where(a => !covered.Contains(a)).Order().ToList();

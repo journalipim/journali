@@ -313,6 +313,7 @@ public static class Axes
 /// <param name="Required">Pflicht je Kanal: Sprachen oder "*" — gilt überall gleich (Eineindeutigkeit)</param>
 /// <param name="Pattern">Muster (regulärer Ausdruck), dem jeder Wert genügen muss — Telefon, E-Mail, EAN … (Taloan, 17.09.2026); nur bei text</param>
 /// <param name="PatternHint">was das Muster verlangt, für die Fehlermeldung („+49 30 1234567")</param>
+/// <param name="When">Bedingung (Taloan, 20.09.2026): gilt an einem Knoten nur, wenn das genannte Attribut dort (wirksam, geerbt zählt) einen der Werte hat — Klassifikationen: Merkmal nur bei seiner Klasse. Null = immer.</param>
 public sealed record AttributeDefinition(
     string Key,
     Labels Label,
@@ -328,7 +329,8 @@ public sealed record AttributeDefinition(
     bool Inheritable = false,
     Dictionary<string, string[]>? Required = null,
     string? Pattern = null,
-    string? PatternHint = null)
+    string? PatternHint = null,
+    AttributeCondition? When = null)
 {
     /// <summary>Typ formula oder template: der Wert ist Skript bzw. Vorlage, das Ergebnis wird beim Lesen gerechnet.</summary>
     public bool IsComputed => Type is AttributeTypes.Formula or AttributeTypes.Template;
@@ -350,6 +352,12 @@ public sealed record ListDefinition(string Key, Labels Label, string[]? Columns 
 
 /// <param name="Extra">Zusatzfelder je Wert, z. B. Farbe: {"hex": "#000000"}</param>
 public sealed record ListValueDefinition(string Value, Labels Label, Dictionary<string, string>? Extra = null, int Order = 0);
+
+/// <summary>Bedingung eines Attributs: <see cref="Attribute"/> hat am Knoten einen der <see cref="Values"/> (Gross/Klein egal).</summary>
+public sealed record AttributeCondition(string Attribute, string[] Values)
+{
+    public bool Holds(string? value) => value is not null && Values.Any(v => string.Equals(v, value, StringComparison.OrdinalIgnoreCase));
+}
 
 public sealed record ListValueRetired(string Value);
 
