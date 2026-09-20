@@ -7,6 +7,7 @@ const props = defineProps({ value: String, inherited: String, disabled: Boolean,
 const emit = defineEmits(['save'])
 const open = ref(false)
 const box = ref(null)
+const editor = ref(null)
 const rows = ref([])          // Entwurf: Strings
 const drag = ref(null)        // Index der gezogenen Zeile
 const split = s => String(s ?? '').split(',').map(x => x.trim()).filter(Boolean)
@@ -17,13 +18,16 @@ function show() {
   rows.value = split(props.value ?? props.inherited); if (!rows.value.length) rows.value = ['']
   open.value = true; nextTick(() => focusRow(rows.value.length - 1))
 }
-function focusRow(i) { const el = box.value?.querySelectorAll('.lrow input, .lrow select')[i]; el?.focus() }
+function focusRow(i) { const el = editor.value?.querySelectorAll('.lrow input, .lrow select')[i]; el?.focus(); el?.select?.() }
 function add(i = rows.value.length) { rows.value.splice(i, 0, ''); nextTick(() => focusRow(i)) }
 function remove(i) { rows.value.splice(i, 1); if (!rows.value.length) rows.value = [''] }
 function save() { open.value = false; const v = rows.value.map(x => x.trim()).filter(Boolean).join(','); if (v !== (props.value ?? '')) emit('save', v) }
 function cancel() { open.value = false }
 function onKey(e, i) {
-  if (e.key === 'Enter') { e.preventDefault(); if (i === rows.value.length - 1) add(); else focusRow(i + 1) }
+  // Enter: neue Zeile darunter, Cursor dorthin (Taloan); ↑ ↓ wechseln die Zeile
+  if (e.key === 'Enter') { e.preventDefault(); add(i + 1) }
+  else if (e.key === 'ArrowDown') { e.preventDefault(); focusRow(Math.min(rows.value.length - 1, i + 1)) }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); focusRow(Math.max(0, i - 1)) }
   else if (e.key === 'Escape') { e.preventDefault(); cancel() }
   else if (e.key === 'Backspace' && rows.value[i] === '' && rows.value.length > 1) { e.preventDefault(); remove(i); nextTick(() => focusRow(Math.max(0, i - 1))) }
 }
@@ -41,7 +45,7 @@ function dropOn(i) { const from = drag.value; drag.value = null; if (from == nul
       <span v-for="(v, i) in shown()" :key="i" class="chip">{{ label(v) }}</span>
       <span class="n muted">{{ shown().length || '' }}</span>
     </div>
-    <div v-if="open" class="editor" @mousedown.stop>
+    <div v-if="open" ref="editor" class="editor" @mousedown.stop>
       <div v-for="(v, i) in rows" :key="i" class="lrow" :class="{ over: drag != null && drag !== i }" @dragover.prevent @drop="dropOn(i)">
         <span class="grip" draggable="true" title="ziehen: umsortieren" @dragstart="drag = i" @dragend="drag = null">⋮⋮</span>
         <select v-if="options" v-model="rows[i]" @keydown="onKey($event, i)"><option value="">—</option><option v-for="o in options" :key="o" :value="o">{{ label(o) }}</option></select>
