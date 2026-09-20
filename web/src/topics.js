@@ -25,10 +25,11 @@ export function topicOf(key, explicit = null) {
 }
 const label = key => { const m = plugins.list.find(p => p.key === key)?.manifest; return m?.label?.de || m?.label?.en || key }
 
-// Die Einträge eines Themas: die Ansichten der Plugins (Basis zuerst, weil zuerst geladen)
+// Die Einträge eines Themas: die Ansichten der Plugins, geordnet (plugins.sorted: Basis, order, Prüfungen vor Vorschlägen, Name)
 export const entries = computed(() => {
   const out = Object.fromEntries(TOPICS.map(t => [t.key, []]))
-  for (const v of plugins.views) (out[topicOf(v.key, v.topic)] ??= []).push({ to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, plugin: v.key, hint: v.hint ?? label(v.key) })
+  for (const v of plugins.views) (out[topicOf(v.key, v.topic)] ??= []).push({ key: v.key, order: v.order, to: `/p/${v.key}/${v.path}`, icon: v.icon || '⌁', label: v.label, plugin: v.key, hint: v.hint ?? label(v.key) })
+  for (const k of Object.keys(out)) out[k] = plugins.sorted(out[k], k)
   return out
 })
 
