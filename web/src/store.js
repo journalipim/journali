@@ -10,7 +10,7 @@ export const store = reactive({
   server: saved.server || '',
   theme: saved.theme || 'system',   // system | light | dark
   viewLocales: saved.viewLocales || ['de', 'en'],   // Sicht: welche Sprachen als Spalten
-  viewChannel: saved.viewChannel ?? null,          // Sicht: welcher Kanal (null = nur *)
+  viewChannels: saved.viewChannels ?? (saved.viewChannel ? [saved.viewChannel] : []),   // Sicht: welche Kanäle als Spalten (leer = nur *)
   journalOpen: saved.journalOpen ?? true,           // Journal neben dem Knoten auf- oder zugeklappt
   lastNode: sessionStorage.getItem('journali.lastNode') || null,
   progress: null,        // { done, total, text } — laufender Stapel; Balken oben in der Oberfläche (App.vue)   // zuletzt gewählter Knoten — ▣ Baum in der Leiste kehrt dorthin zurück (Taloan, 18.09.)
@@ -52,7 +52,7 @@ export const store = reactive({
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannel: this.viewChannel, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewChannels: this.viewChannels, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
     this.applyTheme()
   },
 

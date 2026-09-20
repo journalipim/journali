@@ -50,15 +50,16 @@ const viewLocales = computed(() => locales.value.filter(l => store.viewLocales.i
 const columns = computed(() => {
   const cols = [{ locale: null, channel: null, label: '*' }]
   for (const l of viewLocales.value) cols.push({ locale: l, channel: null, label: l })
-  const c = store.viewChannel
-  if (c && channels.value.includes(c)) {
+  for (const c of channels.value.filter(c => store.viewChannels.includes(c))) {
     cols.push({ locale: null, channel: c, label: `*/${c}` })
     for (const l of viewLocales.value) cols.push({ locale: l, channel: c, label: `${l}/${c}` })
   }
   return cols
 })
+// Kopfzeile Kanal: je Kanal (erst ohne) ein Block über 1 + Sprachen Spalten
+const headGroups = computed(() => { const out = []; for (const c of columns.value) { const g = out.find(x => x.channel === c.channel); g ? g.n++ : out.push({ channel: c.channel, n: 1 }) } return out })
 function toggleLocale(l) { const s = new Set(store.viewLocales); s.has(l) ? s.delete(l) : s.add(l); store.viewLocales = locales.value.filter(c => s.has(c)); store.save() }
-function setChannel(c) { store.viewChannel = c || null; store.save() }
+function toggleChannel(c) { const s = new Set(store.viewChannels); s.has(c) ? s.delete(c) : s.add(c); store.viewChannels = channels.value.filter(x => s.has(x)); store.save() }
 
 // ---- Attributsicht je Knotentyp
 const views = computed(() => (model.value?.views ?? []).filter(v => v.level === node.value?.role))
@@ -539,9 +540,8 @@ function cellMenu(e, def, col, block) {
     <div class="toolbar view">
       <span class="grp" title="Spalten: Sprachen und Kanal">
         <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: store.viewLocales.includes(l), master: l === master }" @click="toggleLocale(l)" :title="l === master ? 'Mastersprache' : ''">{{ l }}</span>
-        <select :value="store.viewChannel ?? ''" @change="setChannel($event.target.value)" title="Kanal der Sicht">
-          <option value="">nur *</option><option v-for="c in channels" :key="c" :value="c">{{ c }}</option>
-        </select>
+        <span v-if="channels.length" class="sep">·</span>
+        <span v-for="c in channels" :key="c" class="view-chip" :class="{ on: store.viewChannels.includes(c) }" @click="toggleChannel(c)" :title="`Kanal ${c} — Spalten */${c} und je Sprache`">{{ c }}</span>
       </span>
       <span class="sep">·</span>
       <span class="grp" title="Zeilen: Attributsicht und Filter">
@@ -573,9 +573,12 @@ function cellMenu(e, def, col, block) {
       <table class="grid values" :style="`width:${180 + columns.length * 220}px`">
         <colgroup><col :style="`width:${attrColWidth}px`" /><col v-for="c in columns" :key="c.label" style="width:220px" /></colgroup>
         <thead>
-          <tr>
-            <th>Attribut</th>
-            <th v-for="c in columns" :key="c.label" :class="{ master: c.locale === master }" :title="c.locale === master ? 'Mastersprache — Basis fuer alle anderen Sprachen' : ''">{{ c.label }}</th>
+          <tr class="chan">
+            <th rowspan="2">Attribut</th>
+            <th v-for="g in headGroups" :key="g.channel ?? '*'" :colspan="g.n" :title="g.channel ? `Kanal ${g.channel}` : 'ohne Kanal — gilt für alle Kanäle'">{{ g.channel ?? '*' }}</th>
+          </tr>
+          <tr class="loc">
+            <th v-for="c in columns" :key="c.label" :class="{ master: c.locale === master }" :title="(c.locale ? (c.locale === master ? 'Mastersprache — Basis für alle anderen Sprachen' : 'Sprache ' + c.locale) : 'ohne Sprache — gilt für alle Sprachen') + (c.channel ? ' · Kanal ' + c.channel : ' · alle Kanäle')">{{ c.locale ?? '*' }}</th>
           </tr>
         </thead>
         <tbody v-for="b in shownBlocks" :key="b.key">
@@ -868,7 +871,10 @@ th.master { color: var(--accent); font-weight: 700; }
 .section h2 .muted, h2.band .muted { font-weight: 400; }
 .section h2 .caret, h2.band .caret { display: inline-block; width: 14px; color: var(--muted); }
 /* Tabellenkopf klebt unter dem Band (26px) */
-table.values th { top: 57px; }   /* Band 26 + Sicht-Zeile 31 */
+table.values tr.chan th { top: 57px; }   /* Band 26 + Sicht-Zeile 31 */
+table.values tr.loc th { top: 80px; }    /* darunter die Sprachzeile (Kanalzeile 23) */
+table.values tr.chan th { text-align: center; height: 23px; box-sizing: border-box; border-bottom: 1px solid var(--line); }
+table.values tr.chan th:first-child { text-align: left; }
 /* Gruppenköpfe (Taloan, 17.09.): eine Stufe unter der Abschnittsüberschrift, darum nicht dasselbe Band —
    Zellton mit Akzentkante links, Name in Akzentfarbe; gesperrte zurückgenommen (gedämpft, 🔒). */
 .cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
