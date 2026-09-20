@@ -126,6 +126,9 @@ public static class Model
             var (de, en) = viewNames[role];
             yield return new(ViewStream + "defaultview_" + role, Types.ViewDefined, Types.Serialize(new ViewDefinition("defaultview_" + role, Labels.Of("DefaultView" + de, "DefaultView" + en), items, role)));
         }
+        // Sicht „Verkaufbares“ (Taloan, 20.09.2026: bei 180 Attributen sieht niemand, welche fünf die Variante selbst trägt): nur die Gruppen,
+        // in denen das Verkaufbare typischerweise eigene Werte hat — Kennungen, Logistik, Physisches; der Anwender passt sie an seine Gruppen an
+        yield return new(ViewStream + "sellable", Types.ViewDefined, Types.Serialize(new ViewDefinition("sellable", Labels.Of("Verkaufbares", "Sellable"), [new ViewItem("logistics"), new ViewItem("physical")], Roles.Variant)));
     }
 
     /// <summary>

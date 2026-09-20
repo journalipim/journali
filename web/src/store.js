@@ -17,6 +17,7 @@ export const store = reactive({
   viewKey: (saved.viewKey && typeof saved.viewKey === 'object') ? saved.viewKey : {},   // gewählte Sicht je Knotentyp
   layout: saved.layout ?? 'flat',                    // flat | tabs
   editableOnly: saved.editableOnly ?? false,         // nur Gruppen zeigen, die hier bearbeitbar sind
+  ownOnly: false,                                     // nur Attribute mit eigenem Wert am Knoten (plus Achsen, Pflicht) — je Sitzung, nicht gemerkt
   attrNames: saved.attrNames ?? 'label',             // Attributnamen: label | key | both (Taloan: Vorlagen nutzen die Keys)
   railOrder: Array.isArray(saved.railOrder) ? saved.railOrder : null,   // Reihenfolge der Leiste links (Taloan: selbst sortieren), 'spacer' trennt oben/unten
   railOff: Array.isArray(saved.railOff) ? saved.railOff : [],   // Plugins, die nicht in der Leiste sind (Taloan, 19.09.: je Plugin einstellbar; aus = gar nicht in der Leiste, nur über ⌁ Plugins)
