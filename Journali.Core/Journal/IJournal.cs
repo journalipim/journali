@@ -18,6 +18,9 @@ public interface IJournal
     /// <summary>Alle Einträge eines Stapels (eine Aktion: Rückzug eines Teilbaums, Import, Tabelle …), in Reihenfolge — für Rückgängig je Aktion (Taloan).</summary>
     IEnumerable<Entry> ReadBatch(string batch);
 
+    /// <summary>Die letzten <paramref name="limit"/> Einträge eines Typs, neueste zuerst (Taloan, 20.09.: zuletzt Zurückgezogenes zum Wiederherstellen anbieten).</summary>
+    IEnumerable<Entry> ReadRecent(string type, int limit);
+
     /// <summary>Nummer des letzten Eintrags; 0 bei leerem Journal.</summary>
     long Head { get; }
 }

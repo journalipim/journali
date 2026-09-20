@@ -109,6 +109,10 @@ public sealed class PostgresJournal : IJournal
         Query($"SELECT {Columns} FROM journal WHERE stream = @s ORDER BY number",
               new NpgsqlParameter("s", stream));
 
+    public IEnumerable<Entry> ReadRecent(string type, int limit) =>
+        Query($"SELECT {Columns} FROM journal WHERE type = @t ORDER BY number DESC LIMIT {Math.Clamp(limit, 1, 100)}",
+              new NpgsqlParameter("t", type));
+
     public IEnumerable<Entry> ReadBatch(string batch) =>
         Query($"SELECT {Columns} FROM journal WHERE batch = @b ORDER BY number",
               new NpgsqlParameter("b", batch));

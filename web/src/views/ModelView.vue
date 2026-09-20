@@ -7,11 +7,13 @@
 // Jedes Feld speichert sofort = ein Eintrag mit der ganzen Definition. Mehrfachauswahl
 // in der Liste: Shift/Strg+Klick, dann Stapelaktionen rechts (Gruppe zuweisen, zurückziehen).
 import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { menu } from '../menu.js'
+import { recentRetired, restoreModel } from '../modelRestore.js'
+import { when } from '../api.js'
 import { icon } from '../tree.js'
 import EditGrid from '../components/EditGrid.vue'
 import Cell from '../components/Cell.vue'
@@ -72,6 +74,7 @@ const del = path => send(() => api.del(path))
 function switchTo(k) { section.value = k; sel.value = new Set(); cur.value = null; filter.value = ''; resetFlt() }
 // Sprung aus dem Knoten: /model?section=groups&key=<gruppe> öffnet den Abschnitt mit dem Ding rechts.
 const route = useRoute()
+const router = useRouter()
 function fromQuery(q) {
   if (!q.section || !sections.some(x => x.key === q.section)) return
   switchTo(q.section)
@@ -147,6 +150,21 @@ function blockFor(k) {
     case 'locales': return m.masterLocale === k ? 'Mastersprache' : m.locales.length <= 1 ? 'die letzte Sprache bleibt' : ''
     default: return ''
   }
+}
+// ↶ im Listenkopf (Taloan, 20.09.): die letzten bis zu 5 zurückgezogenen dieses Bereichs zum Wiederherstellen — admin alles, sonst nur
+// Eigenes; weiter zurück in der Historie: das Journal
+async function restoreMenu(e) {
+  e.preventDefault()
+  let list = []
+  try { list = await recentRetired(section.value, 5) } catch (err) { store.toast(err.message); return }
+  const label = x => { const k = x.stream.slice(x.stream.indexOf(':') + 1); return k }
+  menu.open(e, [
+    { label: list.length ? `zuletzt zurückgezogen · ${sec.value.label}` : `nichts zum Wiederherstellen · ${sec.value.label}`, disabled: true },
+    { sep: true },
+    ...list.map(x => ({ label: `↶ ${label(x)}`, hint: `${x.actor} · ${when(x.at)}`, action: async () => { try { const k = await restoreModel(x); store.toast(`↶ ${k} wiederhergestellt`, 'ok'); cur.value = k; sel.value = new Set([k]) } catch (err) { store.toast(err.message) } } })),
+    { sep: true },
+    { label: 'weiter zurück: Journal', icon: '≡', action: () => router.push({ path: '/journal', query: { q: sec.value.label === 'Relationen' ? 'RelationTypeRetired' : section.value === 'groups' ? 'AttributeGroupRetired' : section.value === 'attributes' ? 'AttributeRetired' : section.value === 'lists' ? 'ListRetired' : section.value === 'views' ? 'ViewRetired' : section.value === 'units' ? 'UnitRetired' : section.value === 'locales' ? 'LocaleRetired' : 'ChannelRetired' } }) },
+  ])
 }
 // Kontextmenü der Liste — wie im Baum: Rechtsklick, „zurückziehen“ für die Zeile oder die Auswahl (Taloan, 20.09.)
 function rowMenu(e, r) {
@@ -394,6 +412,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <input v-model="filter" type="search" placeholder="🔍 Suche in Key und Name" style="flex:1;min-width:0" />
       <input v-model="newKey" type="text" :placeholder="addPlaceholder[section]" style="width:130px" @keydown.enter="add" />
       <button class="primary" :disabled="!newKey.trim()" @click="add" title="anlegen">+</button>
+      <button v-if="removePath[section]" class="x" @click="restoreMenu" title="zuletzt zurückgezogene wiederherstellen (bis zu 5; weiter zurück: Journal)">↶</button>
     </div>
     <!-- Filter: Eigenschaften, je Abschnitt andere; leer = alles -->
     <div class="toolbar flt" v-if="['attributes', 'groups', 'views', 'units'].includes(section)">

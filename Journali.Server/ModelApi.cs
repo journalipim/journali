@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using Journali.Core.Entries;
+using Journali.Core.Journal;
 using Journali.Core.Projections;
 
 namespace Journali.Server;
@@ -22,6 +23,28 @@ public static partial class ModelApi
         var m = api.MapGroup("/model");
 
         m.MapGet("/", (Catalog c) => c.ReadModel(View));
+
+        // Zuletzt Zurückgezogenes je Bereich (Taloan, 20.09.: „bis zu 5 zur Wiederherstellung anbieten — weiter zurück muss man ins Journal“):
+        // nur Schlüssel, die im Abbild noch fehlen; wer was sehen darf (admin alles, sonst nur Eigenes), entscheidet die Oberfläche am Akteur
+        m.MapGet("/retired", (string kind, IJournal j, Catalog c, int limit = 5) =>
+        {
+            var type = kind switch
+            {
+                "attributes" => Types.AttributeRetired, "groups" => Types.AttributeGroupRetired, "lists" => Types.ListRetired, "views" => Types.ViewRetired,
+                "units" => Types.UnitRetired, "relationTypes" => Types.RelationTypeRetired, "locales" => Types.LocaleRetired, "channels" => Types.ChannelRetired, _ => null,
+            };
+            if (type is null) return Bad("kind: attributes, groups, lists, views, units, relationTypes, locales oder channels.");
+            return c.With((model, _, _) =>
+            {
+                bool Missing(string stream) { var key = stream[(stream.IndexOf(':') + 1)..]; return kind switch
+                {
+                    "attributes" => !model.Attributes.ContainsKey(key), "groups" => !model.Groups.ContainsKey(key), "lists" => !model.Lists.ContainsKey(key), "views" => !model.Views.ContainsKey(key),
+                    "units" => !model.Units.ContainsKey(key), "relationTypes" => !model.RelationTypes.ContainsKey(key), "locales" => !model.Locales.ContainsKey(key), _ => !model.Channels.ContainsKey(key),
+                }; }
+                var seen = new HashSet<string>();
+                return Results.Ok(j.ReadRecent(type, Math.Clamp(limit, 1, 100) * 4).Where(e => seen.Add(e.Stream) && Missing(e.Stream)).Take(Math.Clamp(limit, 1, 100)).Select(EntryView.Of).ToList());
+            });
+        });
 
         m.MapPut("/locales/{code}", (string code, LocaleDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, code, ValidKey, (model, write) =>

@@ -43,6 +43,13 @@ public sealed class MemoryJournal : IJournal
                 yield return e;
     }
 
+    public IEnumerable<Entry> ReadRecent(string type, int limit)
+    {
+        Entry[] snapshot;
+        lock (_gate) snapshot = _entries.ToArray();
+        return snapshot.Where(e => e.Type == type).Reverse().Take(limit).ToList();
+    }
+
     public IEnumerable<Entry> ReadBatch(string batch)
     {
         Entry[] snapshot;
