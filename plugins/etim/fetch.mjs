@@ -67,21 +67,21 @@ async function load(probe = false) {
   console.error(`${h.name ?? 'ETIM'} Nr. ${h.number ?? '?'} · ${rel.classes.length} Klassen · ${rel.features.size} Merkmale · ${(buf.length / 1048576).toFixed(1)} MB · ${Date.now() - t0} ms gelesen`)
   const languages = [...new Set(rel.classes.slice(0, 200).flatMap(c => Object.keys(c.name)))]
   if (probe) { out({ name: h.name, number: h.number, date: h.date, classes: rel.classes.length, features: rel.features.size, languages, file, mb: +(buf.length / 1048576).toFixed(1) }); return }
+  const ver = String(h.number ?? '0')
   const CH = 400; let done = 0
   for (let i = 0; i < rel.classes.length; i += CH) {
     const items = {}
-    for (const cls of rel.classes.slice(i, i + CH)) { const rec = classRecord(rel, cls, langs); items['class:' + rec.code] = rec }
+    for (const cls of rel.classes.slice(i, i + CH)) { const rec = classRecord(rel, cls, langs); items[`class:${ver}:${rec.code}`] = rec }
     const r = await fetch(`${server}/api/plugins/etim/data`, { method: 'PUT', headers, body: JSON.stringify(items) })
     if (!r.ok) throw new Error(`Journal: ${r.status} ${await r.text()}`)
     done += Object.keys(items).length; console.error(`${done} / ${rel.classes.length} Klassen …`)
   }
-  const info = { name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: rel.classes.length, features: rel.features.size, languages: langs, file, url, at: new Date().toISOString(), all: true }
-  await fetch(`${server}/api/plugins/etim/data/release`, { method: 'PUT', headers, body: JSON.stringify(info) })
-  // Verlauf: welche Freigaben je geladen wurden (Taloan: Versionen merken)
-  const hist = await fetch(`${server}/api/plugins/etim/data/releases`, { headers }).then(r => r.ok ? r.json() : []).catch(() => [])
-  const releases = [...(Array.isArray(hist) ? hist : []).filter(x => !(x.name === info.name && x.number === info.number)), info]
-  await fetch(`${server}/api/plugins/etim/data/releases`, { method: 'PUT', headers, body: JSON.stringify(releases) })
-  out({ ...info, ms: Date.now() - t0 })
+  const info = { version: ver, name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: rel.classes.length, features: rel.features.size, languages, kept: langs, file, url, at: new Date().toISOString(), all: true }
+  await fetch(`${server}/api/plugins/etim/data/release:${ver}`, { method: 'PUT', headers, body: JSON.stringify(info) })
+  // aktuelle Version: die geladene, wenn noch keine gesetzt ist — sonst bleibt sie (umschalten in der Oberfläche)
+  const cur = await fetch(`${server}/api/plugins/etim/data/release`, { headers }).then(r => r.ok ? r.json() : null).catch(() => null)
+  if (!cur?.version) await fetch(`${server}/api/plugins/etim/data/release`, { method: 'PUT', headers, body: JSON.stringify(info) })
+  out({ ...info, current: cur?.version ?? ver, ms: Date.now() - t0 })
 }
 
 ;(mode === 'list' ? list() : load(mode === 'probe')).catch(e => { console.error('✗ ' + e.message); process.exit(1) })

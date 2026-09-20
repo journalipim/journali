@@ -131,8 +131,17 @@ public static class PluginApi
 
         // Plugin-Daten (Vorlagen, Zuordnungen, Regeln): benannte JSON-Texte im Journal, Strom plugin:<key>.
         // Lesen darf jeder; Schreiben braucht X-Actor. Leerer Wert = weg.
-        api.MapGet("/plugins/{key}/data", (string key, Catalog c) =>
-            c.With((_, _, _) => Results.Ok(c.Plugins.All.TryGetValue(key, out var p) ? p.Data.Keys.Order().ToList() : new List<string>())));
+        // Namen — oder mit ?values=true&prefix=… die Datensätze selbst als ein JSON-Objekt { name: wert } (etim: alle Klassen einer Version)
+        api.MapGet("/plugins/{key}/data", (string key, Catalog c, string? prefix = null, bool values = false) =>
+            c.With((_, _, _) =>
+            {
+                var data = c.Plugins.All.TryGetValue(key, out var p) ? p.Data : new Dictionary<string, string>();
+                var names = data.Keys.Where(n => prefix is null || n.StartsWith(prefix)).Order().ToList();
+                if (!values) return Results.Ok(names);
+                var sb = new StringBuilder("{");
+                foreach (var n in names) { if (sb.Length > 1) sb.Append(','); sb.Append(JsonSerializer.Serialize(n)).Append(':').Append(data[n]); }
+                return Results.Text(sb.Append('}').ToString(), "application/json");
+            }));
         api.MapGet("/plugins/{key}/data/{name}", (string key, string name, Catalog c) =>
             c.With((_, _, _) => c.Plugins.All.TryGetValue(key, out var p) && p.Data.TryGetValue(name, out var v)
                 ? Results.Text(v, "application/json") : Results.NotFound()));

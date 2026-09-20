@@ -14,7 +14,10 @@ const DEFAULTS = { classAttr: 'etim_class', unknownAs: 'UN', requireClass: false
 const groupKey = () => cache.settings.group || 'etim'
 
 // Klassen und Einstellungen im Speicher — die Prüfregeln laufen synchron (Datenqualität) und brauchen sie ohne Nachschlagen
-const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null }
+// Klassen je Version (Taloan, 20.09.: mehrere Versionen nebeneinander): class:<version>:<EC>; release:<version> die Freigabe dazu;
+// release = die aktuelle Version (Zuweisen, Prüfen, Export). Alte Datensätze class:<EC> ohne Version zählen zur Version der damaligen Freigabe.
+const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [] }
+const classKeyOf = code => `class:${cache.version ?? '0'}:${code}`
 /// Attribut eines Merkmals: Zuordnung (map), sonst die der Datenanalyse (mapping), sonst das eigene ef…
 const attrKeyOf = code => cache.map[code] ?? cache.mapping?.[code.toLowerCase()]?.to ?? code.toLowerCase()
 const mergedMap = () => { const m = {}; for (const [k, v] of Object.entries(cache.mapping ?? {})) if (v?.to) m[k.toUpperCase()] = v.to; return { ...m, ...cache.map } }
@@ -24,8 +27,20 @@ async function loadCache() {
     if (!Array.isArray(names)) return
     const get = async n => { const r = await fetch('/api/plugins/etim/data/' + encodeURIComponent(n)); return r.ok ? r.json() : null }
     cache.settings = { ...DEFAULTS, ...((await get('settings')) ?? {}) }; cache.map = (await get('map')) ?? {}; cache.mapping = (await get('mapping')) ?? {}
+    const current = await get('release')
+    cache.versions = []
+    for (const n of names.filter(n => n.startsWith('release:'))) { const r = await get(n); if (r) cache.versions.push({ ...r, version: r.version ?? n.slice(8) }) }
+    // Altbestand ohne Version: zählt zur Version der Freigabe, die damals gelesen wurde
+    const legacy = names.filter(n => /^class:[^:]+$/.test(n))
+    if (legacy.length && current && !cache.versions.some(v => v.version === String(current.number ?? '0'))) cache.versions.push({ ...current, version: String(current.number ?? '0'), legacy: true })
+    cache.versions.sort((a, b) => parseFloat(b.version) - parseFloat(a.version))
+    cache.version = current?.version ?? (current?.number != null ? String(current.number) : null) ?? cache.versions[0]?.version ?? null
     cache.classes = new Map()
-    for (const n of names.filter(n => n.startsWith('class:'))) { const c = await get(n); if (c) cache.classes.set(c.code, c) }
+    if (cache.version != null) {
+      const all = await (await fetch(`/api/plugins/etim/data?values=true&prefix=${encodeURIComponent('class:' + cache.version + ':')}`)).json()
+      for (const c of Object.values(all)) cache.classes.set(c.code, c)
+      if (cache.versions.find(v => v.version === cache.version)?.legacy) { const old = await (await fetch('/api/plugins/etim/data?values=true&prefix=class%3A')).json(); for (const [n, c] of Object.entries(old)) if (/^class:[^:]+$/.test(n) && !cache.classes.has(c.code)) cache.classes.set(c.code, c) }
+    }
   } catch { }
 }
 cache.loaded = loadCache()
@@ -166,7 +181,6 @@ async function mount(root, ctx) {
       const h = st.rel.header
       say(`${h.name ?? 'ETIM'} Nr. ${h.number ?? '?'} · ${st.rel.classes.length} Klassen · ${st.rel.features.size} Merkmale · ${st.rel.values.size} Werte · ${Math.round(performance.now() - t0)} ms`)
       st.relInfo = { name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: st.rel.classes.length, features: st.rel.features.size, languages: [...new Set(st.rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))], file: f.name, at: new Date().toISOString() }
-      await ctx.data.set('release', st.relInfo)
       draw()
     })
     file.value = ''
@@ -225,21 +239,30 @@ async function mount(root, ctx) {
     ? el('button', { class: 'primary', title: `${code} dem gewählten Knoten zuweisen`, onclick: async () => { await assignClass(st.assign, code); draw() } }, '⇢ zuweisen')
     : el('button', { class: 'x', title: `${code} einem Knoten zuweisen — Auswahlbaum`, onclick: e => { assignCode = code; const host = e.currentTarget.parentElement; host.style.position = 'relative'; host.append(assignPick); assignPick.style.display = assignPick.style.display === 'none' ? 'block' : 'none' } }, '⇢')
   async function takeClass(cls, silent) {
-    const rec = classRecord(st.rel, cls); await ctx.data.set('class:' + rec.code, rec); cache.classes.set(rec.code, rec)
+    const rec = classRecord(st.rel, cls, model().locales.map(l => l.code)); await ensureVersion(); await ctx.data.set(classKeyOf(rec.code), rec); cache.classes.set(rec.code, rec)
     if (!silent) say(`${classText(rec, locale)} übernommen · ${rec.features.length} Merkmale`)
   }
   // Die ganze Freigabe ins Journal (Taloan, 20.09.: „warum nicht gegrabbt und lokal gespeichert?“): je Klasse ein Datensatz class:<EC>,
   // nur in den Sprachen des Modells, in Stapeln zu 400 — danach geht Suche, Zuweisen und Prüfen ohne die Datei
+  // Version der gelesenen Datei als Freigabe eintragen und zur aktuellen machen, wenn keine da ist; Namen anderer Sprachen derselben Version bleiben (Datei von etim.de ergänzt die englische)
+  async function ensureVersion() {
+    const h = st.rel.header; const ver = String(h.number ?? '0')
+    if (!cache.versions.some(v => v.version === ver)) { const info = { version: ver, name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: st.rel.classes.length, features: st.rel.features.size, file: st.relInfo?.file, at: new Date().toISOString() }; await ctx.data.set('release:' + ver, info); cache.versions.unshift(info) }
+    if (cache.version == null) { cache.version = ver; await ctx.data.set('release', { ...cache.versions.find(v => v.version === ver) }) }
+    if (cache.version !== ver) { cache.version = ver; await ctx.data.set('release', { ...cache.versions.find(v => v.version === ver) }); await loadCache() }
+  }
+  const merge = (a, b) => !a ? b : { ...b, name: { ...(a.name ?? {}), ...(b.name ?? {}) }, synonyms: { ...(a.synonyms ?? {}), ...(b.synonyms ?? {}) }, features: b.features.map(f => { const o = a.features?.find(x => x.code === f.code); return o ? { ...f, name: { ...(o.name ?? {}), ...(f.name ?? {}) }, values: f.values.map(v => ({ ...v, name: { ...(o.values?.find(x => x.code === v.code)?.name ?? {}), ...(v.name ?? {}) } })) } : f }) }
   async function takeAll() {
     if (!st.rel) return
     const langs = model().locales.map(l => l.code); const all = st.rel.classes; const CH = 400
     await busy(`übernehme ${all.length} Klassen …`, async () => {
+      await ensureVersion()
       for (let i = 0; i < all.length; i += CH) {
         const chunk = all.slice(i, i + CH); const items = {}
-        for (const cls of chunk) { const rec = classRecord(st.rel, cls, langs); items['class:' + rec.code] = rec; cache.classes.set(rec.code, rec) }
+        for (const cls of chunk) { const rec = merge(cache.classes.get(cls.code), classRecord(st.rel, cls, langs)); items[classKeyOf(rec.code)] = rec; cache.classes.set(rec.code, rec) }
         await api.post('/api/plugins/etim/data', items, 'PUT'); say(`${Math.min(i + CH, all.length)} / ${all.length} Klassen übernommen …`)
       }
-      await ctx.data.set('release', { ...(st.relInfo ?? {}), all: true, classes: all.length }); st.relInfo = { ...(st.relInfo ?? {}), all: true }
+      const v = cache.versions.find(x => x.version === cache.version); if (v) { v.all = true; v.classes = all.length; v.languages = [...new Set([...(v.languages ?? []), ...Object.keys(all[0]?.name ?? {})])]; await ctx.data.set('release:' + v.version, v); if (cache.version === v.version) await ctx.data.set('release', v) }
       say(`${all.length} Klassen im Journal — Suche und Zuweisen gehen jetzt ohne die Datei`); draw()
     })
   }
@@ -284,19 +307,29 @@ async function mount(root, ctx) {
     // Freigabe
     // Stand: was im Journal ist (Taloan, 20.09.: „warum muss ich IXF neu einlesen?“ — muss man nicht, die Klassen sind da)
     const inJournal = cache.classes.size
-    const relLine = rel ? `gelesen: ${rel.header.name ?? 'ETIM'} Nr. ${rel.header.number ?? '?'} vom ${(rel.header.date ?? '').slice(0, 10)} · ${rel.classes.length} Klassen · ${rel.features.size} Merkmale${inJournal ? ` · ${inJournal} im Journal` : ''}`
-      : relInfo ? `${relInfo.name ?? 'ETIM'} Nr. ${relInfo.number ?? '?'} · ${inJournal} Klassen im Journal (${(relInfo.at ?? '').slice(0, 10)}${relInfo.languages ? ', ' + relInfo.languages.join('/') : ''})` : inJournal ? `${inJournal} Klassen im Journal` : 'noch keine Freigabe — unten holen oder eine IXF-Datei lesen'
+    const cur = cache.versions.find(v => v.version === cache.version)
+    const verSel = el('select', { title: 'aktuelle Version — gilt für Zuweisen, Prüfen und Export; die anderen bleiben gespeichert', onchange: async e => { const v = cache.versions.find(x => x.version === e.target.value); if (!v) return; await ctx.data.set('release', v); await loadCache(); draw() } },
+      ...cache.versions.map(v => el('option', { value: v.version, selected: v.version === cache.version ? '' : null }, `${v.name ?? 'ETIM'} Nr. ${v.number ?? v.version}${v.classes ? ` · ${v.classes} Klassen` : ''}${v.languages?.length ? ` · ${v.languages.join('/')}` : ''} · ${(v.at ?? '').slice(0, 10)}`)))
+    const relLine = el('span', {}, cache.versions.length ? el('span', { class: 'muted' }, 'Version ') : null, cache.versions.length ? verSel : null,
+      el('span', { class: 'muted' }, cache.versions.length ? ` · ${inJournal} Klassen im Journal` : 'noch keine Freigabe — holen oder eine IXF-Datei lesen', rel ? ` · gelesen: ${rel.header.name ?? 'ETIM'} Nr. ${rel.header.number ?? '?'} (${rel.classes.length} Klassen, ${rel.features.size} Merkmale)` : ''))
     // Holen von etim-international.com (öffentlich): Vorschlagsliste über den Prozess, oder eine URL (Zip oder XML)
     const urlIn = el('input', { placeholder: 'URL einer Freigabe (Zip/XML) — oder aus der Liste wählen', value: st.url ?? '', style: 'width:520px', oninput: e => { st.url = e.target.value } })
     const sel = el('select', { style: 'max-width:520px', onchange: e => { st.url = e.target.value; urlIn.value = st.url } }, el('option', { value: '' }, st.list ? `${st.list.length} Freigaben bei ETIM International …` : 'Liste holen …'), ...(st.list ?? []).map(r => el('option', { value: r.url, selected: r.url === st.url ? '' : null }, `${r.name}${r.added ? ' · ' + r.added : ''}`)))
     const listBtn = el('button', { class: 'x', title: 'Download-Seite von etim-international.com lesen (Modell-Freigaben, IXF)', onclick: () => busy('hole Liste …', async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = JSON.parse((r.output ?? '').trim().split('\n').pop() || '{}'); if (!j.releases) throw new Error(r.output?.slice(0, 200) || 'keine Liste'); st.list = j.releases; st.url ||= j.releases[0]?.url ?? ''; say(`${j.releases.length} IXF-Freigaben`); draw() }) }, '↻ Liste')
-    const loadBtn = el('button', { class: 'primary', title: 'Freigabe laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = Englisch, ETIM Deutschland = als Datei von etim.de)', onclick: () => { if (!st.url) { store.toast('URL fehlt'); return } busy(`lade ${st.url.split('/').pop()} …`, async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: m.locales.map(l => l.code).join(',') } }); const last = (r.output ?? '').trim().split('\n').filter(Boolean); const j = (() => { try { return JSON.parse(last[last.length - 1]) } catch { return null } })(); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || 'Laden fehlgeschlagen'); await loadCache(); st.relInfo = j; say(`${j.name} Nr. ${j.number}: ${j.classes} Klassen im Journal · ${Math.round(j.ms / 1000)} s`); draw() }) } }, '⇩ holen und übernehmen')
+    const loadBtn = el('button', { class: 'primary', title: 'Freigabe laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = Englisch, ETIM Deutschland = als Datei von etim.de)', onclick: () => { if (!st.url) { store.toast('URL fehlt'); return } busy(`lade ${st.url.split('/').pop()} …`, async () => {
+      // Fortschritt (Taloan: „passiert nix“): der Prozess schreibt Stapel ins Journal — der Journalstand zeigt, wie weit er ist
+      const h0 = (await api.get('/api/health')).head; const t0 = Date.now()
+      const tick = setInterval(async () => { try { const h = (await api.get('/api/health')).head; say(`lade ${st.url.split('/').pop()} … ${h - h0} Klassen geschrieben · ${Math.round((Date.now() - t0) / 1000)} s`) } catch { } }, 2000)
+      try {
+        const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: m.locales.map(l => l.code).join(',') } }); const last = (r.output ?? '').trim().split('\n').filter(Boolean); const j = (() => { try { return JSON.parse(last[last.length - 1]) } catch { return null } })(); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || 'Laden fehlgeschlagen'); await loadCache(); say(`${j.name} Nr. ${j.number}: ${j.classes} Klassen im Journal · ${Math.round(j.ms / 1000)} s${j.current !== j.version ? ` — aktuell bleibt Version ${j.current} (oben umschalten)` : ''}`); draw()
+      } finally { clearInterval(tick) }
+    }) } }, '⇩ holen und übernehmen')
     body.append(section('Freigabe', 'etim-international.com/downloads — öffentlich; deutsche Namen: ETIM Deutschland (etim.de) als Datei',
-      el('div', { class: 'muted', style: 'font-size:12px;padding:4px 0' }, relLine),
+      el('div', { style: 'font-size:12px;padding:4px 0' }, relLine),
       el('div', { style: 'display:flex;gap:8px;align-items:center;padding:4px 0;flex-wrap:wrap' }, listBtn, sel, urlIn, loadBtn),
       el('div', { style: 'display:flex;gap:8px;align-items:center;padding:4px 0' }, el('button', { class: 'x', title: 'IXF-3.1-Datei aus dem Dateisystem lesen (z. B. ETIM Deutschland)', onclick: () => file.click() }, '⇩ IXF-Datei lesen'), file,
         rel && !(relInfo?.all && cache.classes.size >= rel.classes.length) ? el('button', { class: 'primary', title: `alle ${rel.classes.length} Klassen der gelesenen Datei ins Journal (Sprachen des Modells)`, onclick: takeAll }, `⇩ alle ${rel.classes.length} Klassen übernehmen`) : null,
-        (st.versions ?? []).length ? el('span', { class: 'muted', style: 'font-size:12px' }, 'Versionen: ' + st.versions.map(v => `${v.name ?? 'ETIM'} Nr. ${v.number ?? '?'} (${(v.at ?? '').slice(0, 10)})`).join(' · ')) : null)))
+        null)))
     // Klassen
     // ohne gelesene Freigabe (bleibt im Browser, je Sitzung) gibt es nichts zu suchen — Feld und Knopf sagen das, statt nach dem Klick zu meckern (Taloan, 20.09.)
     const P = pool()
@@ -372,7 +405,7 @@ async function mount(root, ctx) {
       res ? (res.findings.length ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:280px' }, 'Knoten'), el('th', { style: 'width:140px' }, 'Feld'), el('th', {}, 'Fund'))),
         el('tbody', {}, ...res.findings.slice(0, 1000).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, SEV[x.severity] ?? ''), el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) } }, `${ICON[x.node.role] ?? ''} ${x.node.label}`)), el('td', { class: 'mono' }, x.attribute ?? ''), el('td', {}, x.message))))) : el('div', { class: 'empty' }, '✓ keine Funde')) : null))
   }
-  st.relInfo = await ctx.data.get('release'); st.versions = (await ctx.data.get('releases')) ?? []
+  st.relInfo = await ctx.data.get('release')
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⌗ ETIM'), el('span', { class: 'grow' }), status), body)
   draw()
   return () => {}
