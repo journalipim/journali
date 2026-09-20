@@ -6,8 +6,8 @@
     "en": "ETIM"
   },
   "description": {
-    "de": "ETIM-Klassifikation: eine Freigabe (IXF 3.1, frei unter etim.de/daten/downloads bzw. ETIM CMT) im Browser lesen, die benötigten Klassen ins Journal übernehmen, die Klasse als Attribut am Produkt (Werteliste), je Merkmal ein Attribut in der Gruppe ETIM (Zahl mit Einheit, Ja/Nein, Werteliste mit EV-Codes, Bereich) oder Zuordnung auf vorhandene Attribute. Prüfregel in ✓ Datenqualität (Klasse unbekannt, Wert passt nicht, Belegung). Liefert die Merkmale nach ETIM-BMEcat-Guideline 5.0 an ‹› Vorlagen-Export (BMEcat 2005).",
-    "en": "ETIM classification: read a release (IXF 3.1), take over the classes you need, one attribute per feature or a mapping, checks in data quality, features for the BMEcat template export."
+    "de": "ETIM-Klassifikation: Freigaben von etim-international.com holen (Vorschlagsliste oder URL, öffentlich) oder eine IXF-3.1-Datei lesen — alle Klassen kommen ins Journal (Sprachen des Modells), Versionen werden gemerkt. Die Klasse steht als Attribut am Produkt (Werteliste), je Merkmal ein Attribut in der Gruppe ETIM (Zahl mit Einheit, Ja/Nein, Werteliste mit EV-Codes, Bereich) oder Zuordnung auf vorhandene Attribute. Prüfregel in ✓ Datenqualität (Klasse unbekannt, Wert passt nicht, Belegung). Liefert die Merkmale nach ETIM-BMEcat-Guideline 5.0 an ‹› Vorlagen-Export (BMEcat 2005).",
+    "en": "ETIM classification: fetch releases from etim-international.com (list or URL) or read an IXF 3.1 file — all classes into the journal, versions remembered; one attribute per feature or a mapping, checks in data quality, features for the BMEcat template export."
   },
   "kind": "export",
   "runs": "browser",
@@ -16,5 +16,18 @@
     "da",
     "xport"
   ],
-  "autoInstall": true
+  "autoInstall": true,
+  "process": {
+    "command": "node",
+    "args": [
+      "fetch.mjs",
+      "{journali}",
+      "{actor}",
+      "{mode}",
+      "{url}",
+      "{langs}"
+    ],
+    "description": "ETIM-Freigaben holen: Liste der Downloads (list) oder eine Freigabe laden und alle Klassen ins Journal (load <url>)",
+    "params": []
+  }
 }

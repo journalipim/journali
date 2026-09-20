@@ -198,21 +198,11 @@ async function mount(root, ctx) {
     // Namen: Wörter aus dem Namen und dem Pfad gegen Klassennamen und Synonyme
     const words = [...new Set([row.label, ...path].join(' ').split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 4).map(w => w.toLowerCase()))]
     const nameHits = P.map(c => { const names = [...Object.values(c.name ?? {}), ...Object.values(c.synonyms ?? {}).flat()].map(n => String(n).toLowerCase()); const score = words.filter(w => names.some(n => n.includes(w))).length; return { c, score } }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8)
-    const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer (${words.join(', ')})` : P.length ? `keine Klasse passt zu: ${words.join(', ')}` : ''), ...nameHits.map(x => line(x.c.code, `passt zu ${x.score} Wort${x.score > 1 ? 'en' : ''}`)))
-    // KI: wählt aus den Kandidaten (Umfeld + Namenstreffer + Suchpool bis 60) — ohne Kandidaten ein freier Vorschlag, der nur zählt, wenn die Klasse da ist
-    const ai = ctx.ai; const aiOut = el('div')
-    const aiBtn = el('button', { class: ai?.available() ? 'x' : '', disabled: ai?.available() ? null : 'disabled', title: ai?.available() ? `KI (${ai.label()}) schlägt die ETIM-Klasse vor` : 'kein KI-Schlüssel (Einstellungen)', onclick: async () => {
-      aiOut.textContent = '…'
-      const cands = [...new Set([...nameHits.map(x => x.c), ...P.slice(0, 60)])].map(c => `${c.code} ${nameOf(c.name, locale)}`).join('\n')
-      try {
-        const j = await ai.ask({ system: 'Du ordnest Produkte ETIM-Klassen zu. Antworte als JSON {"code":"EC…","name":"…","why":"…"}.' + (cands ? ' Wähle nur aus den Kandidaten.' : ' Nenne die passendste ETIM-Klasse aus ETIM 10.'), user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}` + (cands ? `\nKandidaten:\n${cands}` : ''), json: true, maxTokens: 300 })
-        aiOut.innerHTML = ''; aiOut.append(line(String(j.code ?? '').toUpperCase(), `KI (${ai.label()}): ${j.why ?? j.name ?? ''}`))
-      } catch (e) { aiOut.textContent = '✗ ' + e.message }
-    } }, '✦ KI fragen')
+    const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer (${words.join(', ')})` : P.length ? `keine Klasse passt zu: ${words.join(', ')} — oben suchen` : 'erst eine Freigabe holen'), ...nameHits.map(x => line(x.c.code, `passt zu ${x.score} Wort${x.score > 1 ? 'en' : ''}`)))
     return el('div', { style: 'padding:6px 0;border:1px solid var(--accent);border-radius:6px;padding:8px;margin:6px 0' },
       el('div', { class: 'chips' }, el('b', {}, `Klasse zuweisen an ${ICON[row.role] ?? ''} ${row.label}`), el('span', { class: 'muted', style: 'font-size:12px' }, path.length ? path.join(' › ') : ''), el('span', { class: 'grow' }), el('button', { class: 'x', title: 'ohne Zuweisung weiter', onclick: () => { st.assign = null; draw() } }, '✕')),
       current ? line(current, 'gilt hier schon') : el('div', { class: 'muted', style: 'font-size:12px' }, 'hier gilt noch keine Klasse'),
-      env, names, el('div', { class: 'chips', style: 'padding-top:4px' }, aiBtn, aiOut))
+      env, names)
   }
   // Klasse einem Knoten zuweisen (Taloan, 20.09.: „muss der Anwender nicht irgendwo definieren, zu welcher Klasse ein Produkt gehört?“):
   // Wert im Klassenattribut (vererbbar — an der Gruppe gesetzt gilt es für alles darunter); fehlt die Gruppe ETIM am Pfad, kommt sie an den Knoten
@@ -292,12 +282,21 @@ async function mount(root, ctx) {
     body.innerHTML = ''
     const m = model(); const rel = st.rel; const relInfo = st.relInfo
     // Freigabe
-    const relLine = rel ? `${rel.header.name ?? 'ETIM'} Nr. ${rel.header.number ?? '?'} vom ${(rel.header.date ?? '').slice(0, 10)} · ${rel.classes.length} Klassen · ${rel.features.size} Merkmale · ${rel.values.size} Werte · ${rel.units.size} Einheiten`
-      : relInfo ? `zuletzt gelesen: ${relInfo.name ?? 'ETIM'} Nr. ${relInfo.number ?? '?'} (${relInfo.file}, ${(relInfo.at ?? '').slice(0, 10)}) — für Suche und Übernahme die Datei erneut lesen` : 'noch keine Freigabe gelesen'
-    body.append(section('Freigabe', 'IXF 3.1 — etim.de/daten/downloads bzw. ETIM CMT, frei',
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0' }, el('button', { class: 'x', title: 'ETIM-Freigabe als IXF-3.1-Datei lesen — bleibt im Browser; ins Journal kommen die übernommenen Klassen', onclick: () => file.click() }, '⇩ IXF lesen'), file,
-      rel && !(relInfo?.all && cache.classes.size >= rel.classes.length) ? el('button', { class: 'primary', title: `alle ${rel.classes.length} Klassen der Freigabe ins Journal (Sprachen des Modells) — danach geht alles ohne die Datei`, onclick: takeAll }, `⇩ alle ${rel.classes.length} Klassen übernehmen`) : null,
-      el('span', { class: 'muted', style: 'font-size:12px' }, relLine))))
+    // Stand: was im Journal ist (Taloan, 20.09.: „warum muss ich IXF neu einlesen?“ — muss man nicht, die Klassen sind da)
+    const inJournal = cache.classes.size
+    const relLine = rel ? `gelesen: ${rel.header.name ?? 'ETIM'} Nr. ${rel.header.number ?? '?'} vom ${(rel.header.date ?? '').slice(0, 10)} · ${rel.classes.length} Klassen · ${rel.features.size} Merkmale${inJournal ? ` · ${inJournal} im Journal` : ''}`
+      : relInfo ? `${relInfo.name ?? 'ETIM'} Nr. ${relInfo.number ?? '?'} · ${inJournal} Klassen im Journal (${(relInfo.at ?? '').slice(0, 10)}${relInfo.languages ? ', ' + relInfo.languages.join('/') : ''})` : inJournal ? `${inJournal} Klassen im Journal` : 'noch keine Freigabe — unten holen oder eine IXF-Datei lesen'
+    // Holen von etim-international.com (öffentlich): Vorschlagsliste über den Prozess, oder eine URL (Zip oder XML)
+    const urlIn = el('input', { placeholder: 'URL einer Freigabe (Zip/XML) — oder aus der Liste wählen', value: st.url ?? '', style: 'width:520px', oninput: e => { st.url = e.target.value } })
+    const sel = el('select', { style: 'max-width:520px', onchange: e => { st.url = e.target.value; urlIn.value = st.url } }, el('option', { value: '' }, st.list ? `${st.list.length} Freigaben bei ETIM International …` : 'Liste holen …'), ...(st.list ?? []).map(r => el('option', { value: r.url, selected: r.url === st.url ? '' : null }, `${r.name}${r.added ? ' · ' + r.added : ''}`)))
+    const listBtn = el('button', { class: 'x', title: 'Download-Seite von etim-international.com lesen (Modell-Freigaben, IXF)', onclick: () => busy('hole Liste …', async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = JSON.parse((r.output ?? '').trim().split('\n').pop() || '{}'); if (!j.releases) throw new Error(r.output?.slice(0, 200) || 'keine Liste'); st.list = j.releases; st.url ||= j.releases[0]?.url ?? ''; say(`${j.releases.length} IXF-Freigaben`); draw() }) }, '↻ Liste')
+    const loadBtn = el('button', { class: 'primary', title: 'Freigabe laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = Englisch, ETIM Deutschland = als Datei von etim.de)', onclick: () => { if (!st.url) { store.toast('URL fehlt'); return } busy(`lade ${st.url.split('/').pop()} …`, async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: m.locales.map(l => l.code).join(',') } }); const last = (r.output ?? '').trim().split('\n').filter(Boolean); const j = (() => { try { return JSON.parse(last[last.length - 1]) } catch { return null } })(); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || 'Laden fehlgeschlagen'); await loadCache(); st.relInfo = j; say(`${j.name} Nr. ${j.number}: ${j.classes} Klassen im Journal · ${Math.round(j.ms / 1000)} s`); draw() }) } }, '⇩ holen und übernehmen')
+    body.append(section('Freigabe', 'etim-international.com/downloads — öffentlich; deutsche Namen: ETIM Deutschland (etim.de) als Datei',
+      el('div', { class: 'muted', style: 'font-size:12px;padding:4px 0' }, relLine),
+      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:4px 0;flex-wrap:wrap' }, listBtn, sel, urlIn, loadBtn),
+      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:4px 0' }, el('button', { class: 'x', title: 'IXF-3.1-Datei aus dem Dateisystem lesen (z. B. ETIM Deutschland)', onclick: () => file.click() }, '⇩ IXF-Datei lesen'), file,
+        rel && !(relInfo?.all && cache.classes.size >= rel.classes.length) ? el('button', { class: 'primary', title: `alle ${rel.classes.length} Klassen der gelesenen Datei ins Journal (Sprachen des Modells)`, onclick: takeAll }, `⇩ alle ${rel.classes.length} Klassen übernehmen`) : null,
+        (st.versions ?? []).length ? el('span', { class: 'muted', style: 'font-size:12px' }, 'Versionen: ' + st.versions.map(v => `${v.name ?? 'ETIM'} Nr. ${v.number ?? '?'} (${(v.at ?? '').slice(0, 10)})`).join(' · ')) : null)))
     // Klassen
     // ohne gelesene Freigabe (bleibt im Browser, je Sitzung) gibt es nichts zu suchen — Feld und Knopf sagen das, statt nach dem Klick zu meckern (Taloan, 20.09.)
     const P = pool()
@@ -373,7 +372,7 @@ async function mount(root, ctx) {
       res ? (res.findings.length ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:280px' }, 'Knoten'), el('th', { style: 'width:140px' }, 'Feld'), el('th', {}, 'Fund'))),
         el('tbody', {}, ...res.findings.slice(0, 1000).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, SEV[x.severity] ?? ''), el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) } }, `${ICON[x.node.role] ?? ''} ${x.node.label}`)), el('td', { class: 'mono' }, x.attribute ?? ''), el('td', {}, x.message))))) : el('div', { class: 'empty' }, '✓ keine Funde')) : null))
   }
-  st.relInfo = await ctx.data.get('release')
+  st.relInfo = await ctx.data.get('release'); st.versions = (await ctx.data.get('releases')) ?? []
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⌗ ETIM'), el('span', { class: 'grow' }), status), body)
   draw()
   return () => {}

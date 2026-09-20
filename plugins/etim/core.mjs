@@ -47,7 +47,7 @@ export function parseIxf(text) {
 /// Klasse aufgelöst — der Datensatz class:<EC> im Journal: alles drin, was Job, Prüfung und Ansicht brauchen
 /// langs: nur diese Sprachen in Namen und Synonymen behalten (eine ganze Freigabe ins Journal — 5000 Klassen × alle Sprachen wären zu viel)
 export function classRecord(rel, cls, langs = null) {
-  const L = o => langs && o ? Object.fromEntries(Object.entries(o).filter(([k]) => langs.includes(k))) : o
+  const L = o => { if (!langs || !o) return o; const kept = Object.fromEntries(Object.entries(o).filter(([k]) => langs.includes(k))); return Object.keys(kept).length ? kept : o }
   return {
     code: cls.code, version: cls.version, status: cls.status, change: cls.change, name: L(cls.name), synonyms: L(cls.synonyms),
     group: cls.group ? { code: cls.group, name: L(rel.groups.get(cls.group)?.name ?? {}) } : null,
