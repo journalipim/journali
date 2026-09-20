@@ -261,11 +261,11 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
 watch(() => store.head, h => { if (h > (entries.value[0]?.number ?? 0)) load() })
 
 // ---- Befehle
-async function command(fn) {
+async function command(fn, rethrow = false) {
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   busy.value = true
   try { const entry = await fn(); entries.value.unshift(entry); await load(); tree.load() }
-  catch (e) { store.toast(e.message) }
+  catch (e) { if (rethrow) throw e; store.toast(e.message) }
   finally { busy.value = false }
 }
 const nodeUrl = () => `/api/nodes/${encodeURIComponent(props.id)}`
@@ -411,7 +411,17 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 
 // Variantenachsen am Produkt — änderbar, solange es keine Varianten hat (ProductAxesSet).
 const addAxis = ref('')
-const setAxes = axes => command(() => api.post(`${nodeUrl()}/axes`, { axes }, 'PUT'))
+// Achsen setzen; ist das Ergebnis nicht eindeutig, fragt der Server — nach Hinweisdialog mit force: die betroffenen Varianten verlieren
+// ihre Achsenzuordnung, die Werte bleiben (Taloan, 20.09.: neue Achsen immer zufügen, ungültige immer entfernen können)
+async function setAxes(axes) {
+  try { await command(() => api.post(`${nodeUrl()}/axes`, { axes }, 'PUT'), true) }
+  catch (e) {
+    if (!/^Nicht eindeutig/.test(e.message)) { store.toast(e.message); return }
+    const what = e.message.replace(/^Nicht eindeutig: /, '').replace(/ — mit force.*$/, '')
+    if (!await dialog.confirm({ title: 'Varianten nicht mehr eindeutig', warn: what, text: 'Diese Varianten verlieren ihre Achsenzuordnung (sie zählen nicht, bis sie unterscheidbar sind); ihre Werte bleiben. Alternativ: abbrechen und eine weitere Achse wählen.', ok: 'Trotzdem', danger: true })) return
+    await command(() => api.post(`${nodeUrl()}/axes`, { axes, force: true }, 'PUT'))
+  }
+}
 // Achse dazu mit Varianten (Taloan, 20.09.): Werte prüfen — leere zählen nicht —, nicht eindeutig → Warnung, nächste Achse ist Pflicht, so lange
 // bis die Kombination eindeutig ist; dann alle zufügen oder abbrechen
 const wiz = ref(null)   // { axes: [...], dupes: [{ combo, n }], empty: n, next: '' }

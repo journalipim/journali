@@ -71,7 +71,8 @@ public static class Commands
     }
 
     /// <summary>Variantenachsen eines Produkts setzen (ganze Liste) — nur ohne Varianten, denn deren Achsenwerte sind fest.</summary>
-    public static Outcome SetAxes(Ctx c, string id, string[]? axes)
+    /// <param name="force">Uneindeutige Kombinationen hinnehmen (Taloan, 20.09.: nach Hinweisdialog) — die betroffenen Varianten verlieren ihre Achsenzuordnung, die Werte bleiben.</param>
+    public static Outcome SetAxes(Ctx c, string id, string[]? axes, bool force = false)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (n.Role != Roles.Product) return Outcome.Bad("Nur ein Produkt hat Variantenachsen.");
@@ -87,12 +88,13 @@ public static class Commands
         var variants = c.Tree.Children(id).ToList();
         if (variants.Count > 0)
         {
-            // leere Felder zählen nicht (Taloan, 20.09.): eine Variante ohne Wert bleibt ohne Achsenwert — eindeutig sein müssen die vollständigen Kombinationen
-            var combos = new HashSet<string>();
-            foreach (var v in variants)
+            // leere Felder zählen nicht (Taloan, 20.09.): eine Variante ohne Wert bleibt ohne Achsenwert — eindeutig sein müssen die vollständigen Kombinationen.
+            // Uneindeutig? Ohne force eine Rückfrage; mit force verlieren die betroffenen Varianten ihre Achsenzuordnung (Projektion), Werte bleiben.
+            if (clean.Length > 0 && !force)
             {
-                var vals = clean.Select(a => v.AxisValues.TryGetValue(a, out var have) ? have : v.Values.GetValueOrDefault(new Axis(a, null, null))).ToList();
-                if (clean.Length > 0 && vals.All(x => !string.IsNullOrEmpty(x)) && !combos.Add(string.Join("\u0001", vals!))) return Outcome.Bad($"Damit wären zwei Varianten gleich ({string.Join(", ", vals)}) — eine weitere Achse dazu, oder Werte ändern.");
+                var dupes = variants.Select(v => clean.Select(a => v.AxisValues.TryGetValue(a, out var have) ? have : v.Values.GetValueOrDefault(new Axis(a, null, null))).ToList())
+                    .Where(vals => vals.All(x => !string.IsNullOrEmpty(x))).GroupBy(vals => string.Join(" · ", vals)).Where(g => g.Count() > 1).Select(g => $"{g.Key} × {g.Count()}").ToList();
+                if (dupes.Count > 0) return Outcome.Bad($"Nicht eindeutig: {string.Join(", ", dupes)} — mit force verlieren diese Varianten ihre Achsenzuordnung (Werte bleiben), oder eine weitere Achse dazu.");
             }
         }
         // Entfällt eine Achse, bleibt ihr Wert als eigener Attributwert an der Variante (sonst wäre er nur noch im Journal) — je Variante ein AttributeSet vor dem Achsenwechsel

@@ -163,7 +163,7 @@ public sealed record LabelAttributeSet(string? Attribute);
 public sealed record ProductCreated(string Group, string? Family = null, string[]? Axes = null);
 
 /// <summary>Variantenachsen eines Produkts nachträglich (ganze Liste) — nur, solange es keine Varianten hat (Taloan, 17.09.2026).</summary>
-public sealed record ProductAxesSet(string[] Axes);
+public sealed record ProductAxesSet(string[] Axes, bool Force = false);
 
 /// <summary>Erster Eintrag einer Variante: je Variantenachse des Produkts ein Wert.</summary>
 public sealed record VariantCreated(string Product, Dictionary<string, string> AxisValues);

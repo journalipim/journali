@@ -335,6 +335,10 @@ public sealed class Tree : IProjection
                     foreach (var ax in n.Axes) if (!v.AxisValues.ContainsKey(ax) && v.Values.TryGetValue(new Axis(ax, null, null), out var own) && own.Length > 0) v.AxisValues[ax] = own;
                     foreach (var k in v.AxisValues.Keys.Where(k => !n.Axes.Contains(k)).ToList()) v.AxisValues.Remove(k);
                 }
+                // doppelte vollständige Kombinationen (nur mit force zugelassen): die betroffenen Varianten verlieren ihre Achsenzuordnung — Werte bleiben, sie „zählen nicht“, bis sie unterscheidbar sind
+                if (n.Axes.Length > 0)
+                    foreach (var grp in Children(n.Id).Where(v => v.Role == Roles.Variant && n.Axes.All(a => v.AxisValues.ContainsKey(a))).GroupBy(v => string.Join("\u0001", n.Axes.Select(a => v.AxisValues[a]))).Where(g => g.Count() > 1))
+                        foreach (var v in grp) v.AxisValues.Clear();
                 break;
             case Types.NodeNamed:
                 var nn = Types.Deserialize<NodeNamed>(entry.Payload).Name;
