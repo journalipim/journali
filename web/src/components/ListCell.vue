@@ -3,7 +3,12 @@
 // je Zeile ein Griff zum Umsortieren (ziehen), das Feld (bei enum eine Auswahl) und −; unten +. Enter im letzten Feld fügt
 // eine Zeile an, Esc verwirft, Speichern schreibt die Liste (kommagetrennt, wie bisher AttributeSet.values). Geerbt zeigt kursiv.
 import { ref, nextTick } from 'vue'
-const props = defineProps({ value: String, inherited: String, disabled: Boolean, options: Array, labelOf: Function, title: String, check: Function })   // check(wert) → Fehlertext oder null
+import { NEW, mayAddListValue, ensureListValue } from '../lists.js'
+import { store } from '../store.js'
+// list: Schlüssel der Werteliste — „+ neuer Wert …“ macht die Zeile zum Textfeld, ✓ legt den Wert an (Taloan, 20.09.: ad hoc wie in Excel)
+const props = defineProps({ value: String, inherited: String, disabled: Boolean, options: Array, labelOf: Function, title: String, check: Function, list: String })   // check(wert) → Fehlertext oder null
+const free = ref(new Set())   // Zeilen, die bei enum als Text eingegeben werden (neuer Wert)
+function onRowChange(i) { if (rows.value[i] === NEW) { rows.value[i] = ''; free.value = new Set([...free.value, i]); nextTick(() => focusRow(i)) } }
 const emit = defineEmits(['save'])
 const open = ref(false)
 const box = ref(null)
@@ -17,13 +22,15 @@ const shown = () => split(props.value ?? props.inherited)
 function show() {
   if (props.disabled) return
   rows.value = split(props.value ?? props.inherited); if (!rows.value.length) rows.value = ['']
-  open.value = true; nextTick(() => focusRow(rows.value.length - 1))
+  free.value = new Set(); open.value = true; nextTick(() => focusRow(rows.value.length - 1))
 }
 function focusRow(i) { const el = editor.value?.querySelectorAll('.lrow input, .lrow select')[i]; el?.focus(); el?.select?.() }
 function add(i = rows.value.length) { rows.value.splice(i, 0, ''); nextTick(() => focusRow(i)) }
 function remove(i) { rows.value.splice(i, 1); if (!rows.value.length) rows.value = [''] }
-function save() {
+async function save() {
   error.value = null
+  // neue Werte (Textzeilen bei enum) zuerst anlegen — danach prüft check wie sonst
+  if (props.list && free.value.size) { for (const i of free.value) { const x = rows.value[i].trim(); if (!x) continue; try { rows.value[i] = await ensureListValue(props.list, x) } catch (e) { error.value = { i, message: e.message }; focusRow(i); return } } free.value = new Set() }
   if (props.check) for (const [i, x] of rows.value.entries()) { const m = x.trim() ? props.check(x.trim()) : null; if (m) { error.value = { i, message: m }; focusRow(i); return } }
   open.value = false; const v = rows.value.map(x => x.trim()).filter(Boolean).join(','); if (v !== (props.value ?? '')) emit('save', v)
 }
@@ -53,8 +60,8 @@ function dropOn(i) { const from = drag.value; drag.value = null; if (from == nul
     <div v-if="open" ref="editor" class="editor" @mousedown.stop>
       <div v-for="(v, i) in rows" :key="i" class="lrow" :class="{ over: drag != null && drag !== i }" @dragover.prevent @drop="dropOn(i)">
         <span class="grip" draggable="true" title="ziehen: umsortieren" @dragstart="drag = i" @dragend="drag = null">⋮⋮</span>
-        <select v-if="options" v-model="rows[i]" @keydown="onKey($event, i)"><option value="">—</option><option v-for="o in options" :key="o" :value="o">{{ label(o) }}</option></select>
-        <input v-else v-model="rows[i]" :class="{ bad: error?.i === i }" @keydown="onKey($event, i)" @input="error = null" />
+        <select v-if="options && !free.has(i)" v-model="rows[i]" @keydown="onKey($event, i)" @change="onRowChange(i)"><option value="">—</option><option v-for="o in options" :key="o" :value="o">{{ label(o) }}</option><option v-if="mayAddListValue(list)" :value="NEW">+ neuer Wert …</option></select>
+        <input v-else v-model="rows[i]" :class="{ bad: error?.i === i }" :placeholder="free.has(i) ? 'neuer Wert' : ''" @keydown="onKey($event, i)" @input="error = null" />
         <button class="x" title="Zeile entfernen" tabindex="-1" @click="remove(i)">−</button>
       </div>
       <div v-if="error" class="neg" style="font-size:12px;padding:2px 4px">✗ {{ error.message }}</div>

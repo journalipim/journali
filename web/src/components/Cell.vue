@@ -17,6 +17,7 @@ const props = defineProps({
   source: Object,         // Beleg am Wert (ValueSourced): { source, title, note, method, checkedAt, actor, stale } — ↗ in der Zelle, Klick öffnet die URL
   clickEdit: { type: Boolean, default: true },   // false (Tabelle): Klick markiert nur, Doppelklick bearbeitet
   node: String, locale: String, label: String,    // für ✦ KI im grossen Editor
+  suggest: Array,         // Ergänzung beim Tippen wie in Excel: Werte, die es in der Spalte schon gibt (Taloan, 20.09.); der Rest steht markiert, Enter nimmt ihn
 })
 const emit = defineEmits(['save'])
 
@@ -52,8 +53,19 @@ async function open(mode) {
   await nextTick()
   input.value?.focus()
   if (mode === 'select') input.value?.select()
-  else input.value?.setSelectionRange(draft.value.length, draft.value.length)
+  else { input.value?.setSelectionRange(draft.value.length, draft.value.length); if (openMode.value === 'typed') complete() }
 }
+// Ergänzen: der erste Vorschlag, der mit dem Getippten beginnt (Gross/Klein egal) — der Rest wird markiert, Tippen ersetzt ihn weiter
+function complete() {
+  const el = input.value; const typed = draft.value; if (!el || !typed || !props.suggest?.length) return
+  if (el.selectionStart !== typed.length) return
+  const q = typed.toLowerCase()
+  const hit = props.suggest.find(s => s.length > typed.length && s.toLowerCase().startsWith(q))
+  if (!hit) return
+  draft.value = typed + hit.slice(typed.length)
+  nextTick(() => el.setSelectionRange(typed.length, draft.value.length))
+}
+function onInput(e) { if (props.suggest?.length && e.inputType?.startsWith('insert')) complete() }
 
 function commit() {
   if (!editing.value) return   // blur nach Enter kommt ein zweites Mal
@@ -89,7 +101,7 @@ function onEditKey(e) {
         :title="(source.stale ? 'Beleg veraltet — der Wert wurde danach geändert · ' : '') + 'Quelle: ' + source.source + (source.title ? ' — ' + source.title : '') + ' · ' + ({ web: 'Recherche', ai: 'KI', rule: 'Regel', import: 'Import', manual: 'von Hand' }[source.method] ?? source.method) + ' · geprüft ' + source.checkedAt + ' · ' + source.actor + (source.note ? ' · ' + source.note : '')">↗</a>
     </div>
     <!-- Das Eingabefeld ersetzt die Box mit denselben Massen — nicht darin, sonst doppelter Rahmen und unten abgeschnitten. -->
-    <input v-else ref="input" v-model="draft" class="cell-input" :data-mode="openMode" @keydown="onEditKey" @blur="commit" />
+    <input v-else ref="input" v-model="draft" class="cell-input" :data-mode="openMode" @keydown="onEditKey" @input="onInput" @blur="commit" />
     <Teleport to="body">
       <div v-if="big" class="overlay" @mousedown.self="cancelBig">
         <div class="big">

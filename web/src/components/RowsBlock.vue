@@ -40,7 +40,7 @@ function move(i, d) {
     <tbody>
       <tr v-for="(row, i) in rows" :key="row">
         <td class="num muted">{{ i + 1 }}</td>
-        <component v-for="c in columns" :key="c.key" :is="cellType(c)" :value="val(c, row)" :options="c.type === 'enum' ? listOptions(c) : undefined"
+        <component v-for="c in columns" :key="c.key" :is="cellType(c)" :value="val(c, row)" :options="c.type === 'enum' ? listOptions(c) : undefined" :list="c.type === 'enum' ? c.list : undefined"
           :title="c.label?.de || c.key" @save="v => emit('set', c, row, v)" />
         <td class="num ops">
           <button class="x" @click="move(i, -1)" :disabled="i === 0" title="nach oben">↑</button>
