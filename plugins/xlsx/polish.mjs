@@ -61,7 +61,7 @@ function styles(files) {
 async function polishSheet(files, { columns, rowCount, sheet, tableName, tableId }) {
   const text = n => dec.decode(files.get(n) ?? new Uint8Array()); const put = (n, s) => files.set(n, enc.encode(s))
   const { xfHead, xfReq, xfAxis, xfInfo } = styles(files)
-  const kindOf = c => c.key.startsWith('axis:') ? 'axis' : (c.def?.required && (typeof c.def.required !== 'object' || Object.keys(c.def.required).length)) ? 'required' : c.key === 'id' || c.key === 'sku' ? 'info' : 'plain'
+  const kindOf = c => c.key.startsWith('axis:') ? 'axis' : (c.def?.required && (typeof c.def.required !== 'object' || Object.keys(c.def.required).length)) ? 'required' : c.key === 'id' || c.key === 'sku' ? 'info' : 'plain'   // sku: Pflicht schlägt grau
   // Kopfzeile einfärben, Filter durch die Tabelle ersetzen, erste Zeile einfrieren, Tabelle anmelden
   let ws = text(sheet)
   ws = ws.replace(/<row r="1"[^>]*>[\s\S]*?<\/row>/, row => row.replace(/<c r="([A-Z]+)1"/g, (m, col) => { const i = columns.findIndex((_, k) => colRef(k) === col); const kind = i >= 0 ? kindOf(columns[i]) : 'plain'; return kind === 'plain' ? m : `${m} s="${kind === 'required' ? xfReq : kind === 'axis' ? xfAxis : xfInfo}"` }))

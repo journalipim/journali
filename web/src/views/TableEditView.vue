@@ -88,7 +88,7 @@ const rows = computed(() => {
 const key = (r, c) => `${r.row.id}|${eff(r, c)?.key ?? c.key}`
 const shown = (r, c0) => { const c = eff(r, c0); if (!c) return null; return dirty.value.has(key(r, c)) ? (dirty.value.get(key(r, c)) || null) : (r.values[c.key]?.own ? r.values[c.key].value : null) }
 const inherited = (r, c0) => { const c = eff(r, c0); if (!c) return c0.virtual === 'label' ? r.row.label : null; if (c.virtual === 'sku') return r.row.sku ?? null; if (c.virtual === 'axes') return Object.values(r.row.axisValues ?? {}).join(' · ') || null; return r.values[c.key]?.own ? null : r.values[c.key]?.value ?? null }
-const isAxis = (r, c) => r.row.role === 'variant' && (tree.byId.get(r.row.parent)?.axes ?? []).includes(c.key)
+const isAxis = (r, c) => !r.isNew && r.row.role === 'variant' && (tree.byId.get(r.row.parent)?.axes ?? []).includes(c.key)   // neue Zeile: Achsenwert wird hier eingetragen
 const inactive = (r, c) => !c.virtual && (r.inactive ?? []).includes(c.key)   // gilt an diesem Knoten nicht (Gruppe ab tieferer Rolle)
 function set(r, c0, v) {
   const c = eff(r, c0); if (!c || c.virtual) return
@@ -99,7 +99,8 @@ function set(r, c0, v) {
   dirty.value = m
 }
 async function save() {
-  if (!dirty.value.size) return
+  const fresh = (data.value?.rows ?? []).filter(r => r.isNew).length
+  if (!dirty.value.size && !fresh) return
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   busy.value = `schreibe ${dirty.value.size} …`
   try {
@@ -110,10 +111,37 @@ async function save() {
     await store.poll(true); await load()
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
-function discard() { dirty.value = new Map() }
+function discard() { dirty.value = new Map(); if (data.value) data.value.rows = data.value.rows.filter(r => !r.isNew) }
+let newSeq = 0
+const parentAxes = computed(() => data.value?.node?.axes ?? tree.byId.get(props.id)?.axes ?? [])
+function addRow() {
+  if (!data.value || props.deep === '1') return
+  const sample = data.value.rows.find(r => !r.isNew)
+  const row = { id: `new-${++newSeq}`, role: childRole.value, parent: props.id, label: '', name: null, sku: null, axisValues: {}, labelAttribute: sample?.row.labelAttribute ?? data.value.node?.labelAttribute ?? null, external: {} }
+  data.value.rows.push({ row, values: {}, inactive: sample?.inactive ?? [], isNew: true })
+  nextTick(() => { const ri = data.value.rows.length - 1; const ci = columns.value.findIndex(c => !c.virtual || c.virtual === 'label'); cursor.value = { r: ri, c: Math.max(0, ci) }; sel.value = null })
+}
 function commandsOf() {
   const defs = new Map(data.value.columns.map(c => [c.key, c]))
-  return [...dirty.value].map(([k, v]) => { const [node, attribute] = k.split('|'); const d = defs.get(attribute); return { op: 'attribute.set', args: { node, attribute, locale: d?.perLocale ? locale.value : null, value: v } } })
+  const out = []
+  // neue Zeilen zuerst anlegen — Achsenwerte einer Variante kommen aus den Spalten der Achsenattribute
+  for (const r of data.value.rows.filter(x => x.isNew)) {
+    const id = r.row.id; const ref = id
+    const val = a => dirty.value.get(`${id}|${a}`) || null
+    if (r.row.role === 'variant') {
+      const axisValues = {}; for (const a of parentAxes.value) { const v = val(a); if (!v) throw new Error(`neue Zeile: Achse ${store.name(defs.get(a) ?? { key: a })} braucht einen Wert`); axisValues[a] = v }
+      out.push({ op: 'variant.create', ref, args: { product: props.id, axisValues } })
+    } else if (r.row.role === 'product') out.push({ op: 'product.create', ref, args: { group: props.id, axes: [] } })
+    else out.push({ op: 'group.create', ref, args: { parent: props.id, label: {}, name: val('name') } })
+  }
+  const axesSet = new Set(parentAxes.value)
+  for (const [k, v] of dirty.value) {
+    const [node, attribute] = k.split('|'); const d = defs.get(attribute); const isNew = node.startsWith('new-')
+    if (isNew && childRole.value === 'variant' && axesSet.has(attribute)) continue   // steckt schon im variant.create
+    if (isNew && !v) continue
+    out.push({ op: 'attribute.set', args: { node: isNew ? '@' + node : node, attribute, locale: d?.perLocale ? locale.value : null, value: v } })
+  }
+  return out
 }
 // Fenster zu (X, Alt+F4): was noch offen ist, geht jetzt — keepalive überlebt das Schliessen (bis ~64 KB Stapel)
 function onPageHide() {
@@ -411,7 +439,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
         <button :disabled="!!busy" @click="discardAndClose" title="Änderungen verwerfen und Fenster schliessen">✗ verwerfen</button>
       </template>
       <template v-else>
-        <button class="primary" :disabled="!dirty.size || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 speichern</button>
+        <button class="primary" :disabled="(!dirty.size && !(data?.rows ?? []).some(r => r.isNew)) || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 speichern</button>
         <button :disabled="!dirty.size" @click="discard" title="Änderungen verwerfen">verwerfen</button>
       </template>
       <button class="x" @click="exportCsv" title="Tabelle als CSV (Excel) herunterladen — Spalte id bringt sie über ⇩ Import → Tabelle zurück">⇪ CSV</button>
@@ -423,6 +451,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       <select v-model="viewKey" title="Attributsicht: welche Spalten, in welcher Reihenfolge"><option value="">◫ alle Attribute ({{ data.columns.length }})</option><option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option></select>
       <input v-model="filter" type="search" placeholder="🔍 filtern" style="width:200px" />
       <span class="grow" />
+      <button v-if="props.deep !== '1'" @click="addRow" :title="`neue ${roleLabel[childRole]?.replace(/n$/, '') ?? 'Zeile'} unter ${data?.node?.label ?? ''} — Werte eintragen, speichern legt den Knoten an`">+ Zeile</button>
       <button @click="fillDown" :disabled="!sel" title="runterziehen: oberste Zelle des Bereichs in alle darunter (Strg+D)">⇩ füllen</button>
       <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe</button>
       <button :class="{ primary: replaceOpen }" @click="replaceOpen = !replaceOpen" title="Suchen & Ersetzen (Strg+H)">⇄ ersetzen</button>
