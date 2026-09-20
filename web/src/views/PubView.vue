@@ -78,7 +78,7 @@ async function newTree() {
   if (!name) return
   const channel = channels.length === 1 ? channels[0].key : await dialog.prompt({ title: 'Kanal', text: channels.map(c => c.key).join(' · '), value: store.model?.masterChannel ?? channels[0]?.key ?? '', ok: 'OK' })
   if (!channel) return
-  const market = await dialog.prompt({ title: 'Markt (leer = alle)', value: '', placeholder: 'z. B. cn', ok: 'OK' })
+  const market = await dialog.prompt({ title: 'Markt (leer = alle)', value: '', placeholder: 'z. B. ch', ok: 'OK' })
   if (market == null) return
   await run(async () => { const e = await post('/api/rubrics', { parent: null, label: {}, name, channel, market: market || null }); treeKey.value = e.stream })
 }
