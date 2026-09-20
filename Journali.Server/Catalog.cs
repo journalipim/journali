@@ -30,14 +30,8 @@ public sealed class Catalog
     {
         lock (_gate)
         {
-            Projector.CatchUp(_journal, _model);
-            Projector.CatchUp(_journal, _relations);
-            Projector.CatchUp(_journal, _media);
-            Projector.CatchUp(_journal, _plugins);
-            Projector.CatchUp(_journal, _jobs);
-            Projector.CatchUp(_journal, _versions);
-            Projector.CatchUp(_journal, _users);
-            return Projector.CatchUp(_journal, _tree);
+            // ein Durchlauf für alle Abbilder — nicht acht (Taloan, 20.09.: Start hing mit 55 000 Einträgen, davon 17 000 ETIM-Klassen)
+            return Projector.CatchUpAll(_journal, _model, _relations, _media, _plugins, _jobs, _versions, _users, _tree);
         }
     }
 

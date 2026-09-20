@@ -26,7 +26,10 @@ var db = NpgsqlDataSource.Create(connection.ConnectionString);
 var journal = new PostgresJournal(db);
 journal.EnsureSchema();
 var catalog = new Catalog(journal);
+Console.WriteLine("journali: Journal wird gelesen …");   // vor dem Logger — damit der Start nicht stumm ist (Taloan, 20.09.)
+var sw0 = System.Diagnostics.Stopwatch.StartNew();
 var rebuilt = catalog.Rebuild();
+Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms");
 var seeded = catalog.SeedMissing();
 
 builder.Services.AddSingleton<IJournal>(journal);

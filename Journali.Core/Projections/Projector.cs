@@ -22,6 +22,24 @@ public static class Projector
         return count;
     }
 
+    /// <summary>
+    /// Alle Abbilder in EINEM Durchlauf durchs Journal (Taloan, 20.09.: der Start las das Journal achtmal — mit 17 000 ETIM-Klassen
+    /// à 5 KB je Lauf 75 MB, der Server „startete nicht“). Ab der kleinsten Stand-Nummer; jedes Abbild bekommt nur, was ihm fehlt.
+    /// Liefert, wie viele Einträge gelesen wurden.
+    /// </summary>
+    public static int CatchUpAll(IJournal journal, params IProjection[] projections)
+    {
+        if (projections.Length == 0) return 0;
+        var from = projections.Min(p => p.LastApplied);
+        var count = 0;
+        foreach (var entry in journal.ReadAfter(from))
+        {
+            foreach (var p in projections) if (p.LastApplied < entry.Number) p.Apply(entry);
+            count++;
+        }
+        return count;
+    }
+
     /// <summary>Wendet alle neuen Einträge an. Liefert, wie viele es waren.</summary>
     public static int CatchUp(IJournal journal, IProjection projection)
     {
