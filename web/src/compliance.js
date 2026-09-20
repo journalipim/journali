@@ -455,7 +455,8 @@ export async function mount(root, ctx, catalog) {
       const scopeAttr = `${catalog.key}_scope`; const rootRow = tree.byId.get(st.root)
       const have = String(r.nodes.find(n => n.row.id === st.root)?.raw?.[scopeAttr] ?? '').split(',').map(s => s.trim()).filter(Boolean)
       const line = el('div', { class: 'chips', style: 'margin:4px 0' }, el('span', { class: 'muted' }, `Geltung für ${rootRow?.label ?? ''}:`))
-      for (const s of scopes) line.append(el('button', { class: have.includes(s.key) ? 'primary' : '', title: (s.hint ? s.hint + ' — ' : '') + (have.includes(s.key) ? 'gilt hier (Klick nimmt es weg)' : 'gilt hier nicht (Klick setzt es — vererbbar, am Knoten oder darüber)'), onclick: async () => {
+      const setScope = async (s, on) => {
+        if (on === have.includes(s.key)) return
         try {
           if (!store.model.attributes.some(a => a.key === scopeAttr)) {
             if (!store.model.lists?.some(l => l.key === scopeAttr)) await api.post(`/api/model/lists/${scopeAttr}`, { key: scopeAttr, label: { de: `${catalog.label} — Geltung`, en: `${catalog.label} — scope` } }, 'PUT')
@@ -470,7 +471,10 @@ export async function mount(root, ctx, catalog) {
           await api.post(`/api/nodes/${encodeURIComponent(target.id)}/attributes`, { attribute: scopeAttr, locale: null, channel: null, value: null, values: next.length ? next : null, row: null })
           await store.poll(true); await tree.load(); await run()
         } catch (e) { store.toast(e.message) }
-      } }, `${have.includes(s.key) ? '✓ ' : ''}${s.label}`))
+      }
+      for (const s of scopes) { const on = have.includes(s.key); line.append(el('span', { class: 'grp', style: 'display:inline-flex;align-items:center;gap:4px;margin-right:12px', title: s.hint ?? '' }, el('span', {}, `${s.label}?`),
+        el('button', { class: on ? 'primary' : '', title: on ? 'gilt hier' : 'gilt hier setzen — ab welchem Knoten, fragt der nächste Schritt (vererbbar)', onclick: () => setScope(s, true) }, 'ja'),
+        el('button', { class: on ? '' : 'primary', title: on ? 'wegnehmen' : 'gilt hier nicht', onclick: () => setScope(s, false) }, 'nein'))) }
       s3.append(line)
       // „Was gilt für mich?“ (Taloan, 20.09.: „die wissen gerade noch, in welche Kategorie ihr Produkt gehört“): aus der ETIM-Klasse (Regeln
       // des Katalogs) und der KI je Geltung ein Vorschlag mit Begründung — der Anwender bestätigt mit einem Klick
@@ -482,7 +486,7 @@ export async function mount(root, ctx, catalog) {
         for (const s of list.items) {
           const set = have.includes(s.key); const chip = scopes.find(x => x.key === s.key)
           const span = el('span', { style: 'margin-right:10px' }, el('b', { class: s.applies ? (set ? 'pos' : 'warn') : (set ? 'warn' : '') }, `${chip?.label ?? s.key} — ${s.applies ? 'ja' : 'nein'}`), s.why ? ` (${s.why})` : '')
-          if (s.applies && !set) span.append(' ', el('button', { class: 'x', title: 'Geltung übernehmen — ab diesem Knoten (vererbbar)', onclick: () => line.querySelectorAll('button')[scopes.findIndex(x => x.key === s.key)]?.click() }, 'übernehmen'))
+          if (s.applies && !set) span.append(' ', el('button', { class: 'x', title: 'Geltung übernehmen — ab welchem Knoten, fragt der nächste Schritt (vererbbar)', onclick: () => setScope(chip, true) }, '→ ja'))
           if (!s.applies && set) span.append(' ', el('span', { class: 'warn', title: 'gesetzt, aber laut Vorschlag nicht zutreffend — prüfen' }, '⚠ gesetzt'))
           sug.append(span)
         }
