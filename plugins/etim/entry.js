@@ -209,25 +209,44 @@ async function classDialog(nodeId, ctx) {
   const current = ownCode || inherited?.code || null
 
   // Schritt 2 (Taloan, 20.09.: „lade die Attribute der Klasse → zuweisen ja/nein → fertig“): zeigen, was passiert, dann tun, dann fertig
-  function assign(code) {
+  async function levels(code) {
+    const chain = [...tree.ancestors(nodeId), row]   // Wurzel … hier
+    const top = chain[0]
+    let vals = new Map()
+    try { const t = await api.get(`/api/nodes/${encodeURIComponent(top.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`); for (const r of t.rows ?? []) vals.set(r.row.id, String(r.values?.[key]?.value ?? '').toUpperCase()) } catch { }
+    const under = id => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(id); return out }   // Produkte und Varianten — Klassen können an beiden stehen
+    const subgroups = id => tree.kids(id).filter(k => k.role === 'group').length
+    const out = chain.map(n => { const ns = n.role === 'group' ? under(n.id) : [n, ...under(n.id)]; const other = ns.filter(p => { const v = vals.get(p.id); return v && v !== code }).length; const same = ns.filter(p => vals.get(p.id) === code).length; return { node: n, products: ns.filter(x => x.role === 'product').length || ns.length, other, same, groups: n.role === 'group' ? subgroups(n.id) : 0 } })
+    // Empfehlung (Taloan, 20.09.): eine Klasse gilt für eine Sorte Produkt — also die höchste Ebene, die nur Produkte enthält (keine Untergruppen)
+    // und keinen Widerspruch hat; eine Gruppe mit Untergruppen (Wurzel, „Hardware“) ist fast immer zu grob
+    let rec = out.length - 1; for (let i = 0; i < out.length; i++) if (out[i].other === 0 && out[i].products > 0 && out[i].groups === 0) { rec = i; break }
+    return { out, rec }
+  }
+  async function assign(code) {
     const c = cache.classes.get(code); if (!c) return
     const missing = c.features.filter(f => !ops.hasAttr(attrKeyOf(f.code)))
-    body.innerHTML = ''
+    body.innerHTML = ''; say('rechne Ebenen …')
+    const { out, rec } = await levels(code); say('')
+    let target = out[rec].node
+    const lvBtns = out.map((l, i) => el('button', { class: l.node.id === target.id ? 'primary' : '', title: `${l.products} Produkt${l.products === 1 ? '' : 'e'} darunter${l.other ? ` · ${l.other} mit anderer Klasse` : ''}${l.same ? ` · ${l.same} schon ${code}` : ''}${i === rec ? ' · Empfehlung' : ''}`, onclick: () => { target = l.node; lvBtns.forEach((b, k) => b.className = k === i ? 'primary' : ''); lvNote.textContent = noteOf(l, i) } }, `${ICON[l.node.role] ?? ''} ${l.node.id === nodeId ? 'hier' : l.node.label} `, el('span', { class: l.other ? 'neg' : l.groups ? 'warn' : 'muted', style: 'font-size:11px' }, `${l.products}${l.groups ? ` · ${l.groups} ▣` : ''}${l.other ? ` · ${l.other} ≠` : ''}`)))
+    const noteOf = (l, i) => l.other ? `⚠ ${l.other} Produkte darunter tragen schon eine andere Klasse — ab hier wäre die Klasse zu grob; granularer setzen (weiter rechts).` : l.groups ? `⚠ ${l.groups} Untergruppen mit ${l.products} Produkten darunter — eine Klasse für alle? Meist zu grob: an den Produktgruppen setzen${i < out.length - 1 ? ' (weiter rechts)' : ' — dort Rechtsklick → ETIM prüfen'}.` : l.products > 1 ? `gilt für ${l.products} Produkte darunter (vererbbar)${i === rec ? ' — Empfehlung: die höchste Ebene ohne Untergruppen und ohne Widerspruch' : ''}` : l.products === 1 ? 'gilt für dieses eine Produkt' : 'keine Produkte darunter — die Klasse gilt, sobald welche kommen'
+    const lvNote = el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 8px' }, noteOf(out[rec], rec))
     body.append(el('div', { style: 'font-size:14px;margin:6px 0' }, el('b', {}, `${code} ${nameOf(c.name, locale)}`), ` → ${ICON[row.role] ?? ''} ${row.label}`),
       el('div', { class: 'muted', style: 'margin-bottom:8px' }, `${c.features.length} Merkmale der Klasse gelten dann an diesem Knoten${row.role === 'group' ? ' und allem darunter' : ''}${missing.length ? ` — ${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()})` : ''}.`),
       el('div', { class: 'scroll', style: 'max-height:40vh;border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:12px' }, ...c.features.map(f => el('div', {}, el('span', { class: 'mono muted' }, f.code), ' ', featureText(f, locale), el('span', { class: 'muted' }, ` · ${TYPE[f.type] ?? f.type}${ops.hasAttr(attrKeyOf(f.code)) ? '' : ' · neu'}`)))),
-      el('div', { class: 'chips', style: 'margin-top:10px' }, el('button', { class: 'primary', onclick: () => doAssign(code) }, '✓ zuweisen'), el('button', { onclick: () => draw() }, 'zurück')))
+      el('div', { style: 'margin-top:10px' }, el('div', { class: 'muted', style: 'font-size:12px' }, 'Gilt ab (Pfad von der Wurzel bis hier — Zahl: Produkte darunter · ▣ Untergruppen · ≠ mit anderer Klasse):'), el('div', { class: 'chips', style: 'margin:4px 0' }, ...lvBtns), lvNote),
+      el('div', { class: 'chips', style: 'margin-top:6px' }, el('button', { class: 'primary', onclick: () => doAssign(code, target.id) }, '✓ zuweisen'), el('button', { onclick: () => draw() }, 'zurück')))
   }
-  async function doAssign(code) {
-    const c = cache.classes.get(code)
+  async function doAssign(code, atId = nodeId) {
+    const c = cache.classes.get(code); const at = tree.byId.get(atId) ?? row
     await run(`weise ${code} zu …`, async () => {
       const k = await ops.ensureClassAttr(); await store.poll(true)
       // Gruppe an die Wurzel des Pflegebaums — mit Bedingungen an den Merkmalen stört sie nirgends
       const root = (() => { let x = row; while (x.parent && tree.byId.get(x.parent)) x = tree.byId.get(x.parent); return x })()
       const have = (root.groups ?? '').split(',').filter(Boolean)
       if (!have.includes(groupKey())) await api.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, groupKey()] }, 'PUT')
-      await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: k, locale: null, channel: null, value: code, row: null })
-      cache.used.add(code)
+      await api.post(`/api/nodes/${encodeURIComponent(atId)}/attributes`, { attribute: k, locale: null, channel: null, value: code, row: null })
+      cache.used.add(code); if (atId !== nodeId) store.toast(`✓ ${code} ab ${at.label}`, 'ok')
       let n = 0
       for (const f of c.features) { if (!ops.hasAttr(attrKeyOf(f.code))) { say(`lege an ${++n}: ${featureText(f, locale)} …`); await ops.createFeature(f); await store.poll(true) } else await ops.createFeature(f) }
       await store.poll(true); await tree.load()
