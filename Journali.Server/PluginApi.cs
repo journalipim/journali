@@ -145,6 +145,20 @@ public static class PluginApi
             if (value.Length > 0) { try { JsonDocument.Parse(value).Dispose(); } catch (JsonException e) { return Bad("Kein JSON: " + e.Message); } }
             return c.With((_, _, write) => Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, value.Length == 0 ? null : value), null))));
         });
+        // Sammel-PUT: { name: wert, … } — alle in einem Stapel (etim: eine ganze Freigabe, tausende Klassen)
+        api.MapPut("/plugins/{key}/data", async (string key, HttpRequest req, Catalog c, CancellationToken ct) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (!ValidKey(key)) return Bad("Schlüssel ungültig.");
+            using var reader = new StreamReader(req.Body); var body = await reader.ReadToEndAsync(ct);
+            if (body.Length > 48_000_000) return Bad("Höchstens 48 MB je Stapel.");
+            Dictionary<string, JsonElement>? items;
+            try { items = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(body); } catch (JsonException e) { return Bad("Kein JSON-Objekt: " + e.Message); }
+            if (items is null || items.Count == 0) return Bad("Leer.");
+            if (items.Keys.Any(n => n.Length is 0 or > 120 || n.Any(ch => ch is '/' or '\\'))) return Bad("Name ungültig.");
+            var batch = Guid.NewGuid().ToString("N")[..12];
+            return c.With((_, _, write) => { Journali.Core.Journal.Entry? last = null; foreach (var (name, v) in items) last = write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, v.GetRawText()), batch); return Results.Ok(new { count = items.Count, batch, last = EntryView.Of(last!) }); });
+        });
         api.MapDelete("/plugins/{key}/data/{name}", (string key, string name, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();

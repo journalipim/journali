@@ -45,17 +45,19 @@ export function parseIxf(text) {
 }
 
 /// Klasse aufgelöst — der Datensatz class:<EC> im Journal: alles drin, was Job, Prüfung und Ansicht brauchen
-export function classRecord(rel, cls) {
+/// langs: nur diese Sprachen in Namen und Synonymen behalten (eine ganze Freigabe ins Journal — 5000 Klassen × alle Sprachen wären zu viel)
+export function classRecord(rel, cls, langs = null) {
+  const L = o => langs && o ? Object.fromEntries(Object.entries(o).filter(([k]) => langs.includes(k))) : o
   return {
-    code: cls.code, version: cls.version, status: cls.status, change: cls.change, name: cls.name, synonyms: cls.synonyms,
-    group: cls.group ? { code: cls.group, name: rel.groups.get(cls.group)?.name ?? {} } : null,
+    code: cls.code, version: cls.version, status: cls.status, change: cls.change, name: L(cls.name), synonyms: L(cls.synonyms),
+    group: cls.group ? { code: cls.group, name: L(rel.groups.get(cls.group)?.name ?? {}) } : null,
     release: { name: rel.header.name, number: rel.header.number, date: rel.header.date },
     features: cls.features.map(f => {
       const def = rel.features.get(f.code) ?? { type: 'Alphanumeric', name: {} }
       const u = f.unit ? rel.units.get(f.unit) : null
-      return { code: f.code, type: def.type, name: def.name, group: def.group ?? null, order: f.order, change: f.change,
-        unit: u ? { code: u.code, abbr: u.abbr, name: u.name } : null,
-        values: f.values.map(v => ({ code: v, name: rel.values.get(v)?.name ?? {} })) }
+      return { code: f.code, type: def.type, name: L(def.name), group: def.group ?? null, order: f.order, change: f.change,
+        unit: u ? { code: u.code, abbr: u.abbr, name: L(u.name) } : null,
+        values: f.values.map(v => ({ code: v, name: L(rel.values.get(v)?.name ?? {}) })) }
     }),
   }
 }

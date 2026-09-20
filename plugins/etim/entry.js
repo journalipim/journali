@@ -165,11 +165,55 @@ async function mount(root, ctx) {
       const t0 = performance.now(); const text = await f.text(); st.rel = parseIxf(text)
       const h = st.rel.header
       say(`${h.name ?? 'ETIM'} Nr. ${h.number ?? '?'} · ${st.rel.classes.length} Klassen · ${st.rel.features.size} Merkmale · ${st.rel.values.size} Werte · ${Math.round(performance.now() - t0)} ms`)
-      await ctx.data.set('release', { name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: st.rel.classes.length, features: st.rel.features.size, languages: [...new Set(st.rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))], file: f.name, at: new Date().toISOString() })
+      st.relInfo = { name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: st.rel.classes.length, features: st.rel.features.size, languages: [...new Set(st.rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))], file: f.name, at: new Date().toISOString() }
+      await ctx.data.set('release', st.relInfo)
       draw()
     })
     file.value = ''
   })
+  // Kontext beim Zuweisen (Taloan, 20.09.: „ich weiss hier gar nicht mehr, um welches Produkt es ging … kein best guess, gar nix“):
+  // Pfad des Knotens, die Klasse, die dort schon gilt, das Umfeld (Klassen an Geschwistern und darunter, mit Zahl), Treffer über die
+  // Namen am Pfad — und die KI, wenn ein Schlüssel da ist. Jeder Vorschlag hat sein ⇢ zuweisen.
+  function assignBox(row, P) {
+    const key = cache.settings.classAttr
+    const path = tree.ancestors(row.id).map(a => a.label)
+    const current = ((tree.byId.get(row.id)?.values ?? {})[key]) ?? null
+    const byCode = c => cache.classes.get(c) ?? P.find(x => x.code === c) ?? null
+    const line = (code, why) => { const c = byCode(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, 'nicht übernommen und nicht in der Freigabe'), el('span', { class: 'muted', style: 'font-size:11px' }, ' · ' + why)), c ? assignBtn(code) : null) }
+    // Umfeld: Klassen an Geschwistern, an Kindern, am Pfad darüber — aus dem Baum (Tabelle liefert die Werte je Knoten)
+    const env = el('div', { class: 'muted', style: 'font-size:12px;padding:2px 0' }, 'Umfeld …')
+    ;(async () => {
+      try {
+        const counts = new Map(); const add = (c, why) => { if (!c) return; const k = c.toUpperCase(); if (!counts.has(k)) counts.set(k, new Map()); counts.get(k).set(why, (counts.get(k).get(why) ?? 0) + 1) }
+        const parent = row.parent ? tree.byId.get(row.parent) : null
+        if (parent) { const t = await api.get(`/api/nodes/${encodeURIComponent(parent.id)}/table?attributes=${key}`); for (const r of t.rows) if (r.row.id !== row.id) add(r.values[key]?.value, 'Geschwister') }
+        const below = await api.get(`/api/nodes/${encodeURIComponent(row.id)}/table?deep=true&attributes=${key}`); for (const r of below.rows) add(r.values[key]?.value, 'darunter')
+        for (const a of tree.ancestors(row.id)) { const v = (a.values ?? {})[key]; if (v) add(v, 'am Pfad: ' + a.label) }
+        env.innerHTML = ''
+        if (!counts.size) { env.append('Umfeld: keine Klasse an Geschwistern, darunter oder am Pfad'); return }
+        env.append(el('div', { class: 'muted' }, 'Umfeld'))
+        for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => `${w} × ${n}`).join(', ')))
+      } catch (e) { env.textContent = 'Umfeld: ' + e.message }
+    })()
+    // Namen: Wörter aus dem Namen und dem Pfad gegen Klassennamen und Synonyme
+    const words = [...new Set([row.label, ...path].join(' ').split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 4).map(w => w.toLowerCase()))]
+    const nameHits = P.map(c => { const names = [...Object.values(c.name ?? {}), ...Object.values(c.synonyms ?? {}).flat()].map(n => String(n).toLowerCase()); const score = words.filter(w => names.some(n => n.includes(w))).length; return { c, score } }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8)
+    const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer (${words.join(', ')})` : P.length ? `keine Klasse passt zu: ${words.join(', ')}` : ''), ...nameHits.map(x => line(x.c.code, `passt zu ${x.score} Wort${x.score > 1 ? 'en' : ''}`)))
+    // KI: wählt aus den Kandidaten (Umfeld + Namenstreffer + Suchpool bis 60) — ohne Kandidaten ein freier Vorschlag, der nur zählt, wenn die Klasse da ist
+    const ai = ctx.ai; const aiOut = el('div')
+    const aiBtn = el('button', { class: ai?.available() ? 'x' : '', disabled: ai?.available() ? null : 'disabled', title: ai?.available() ? `KI (${ai.label()}) schlägt die ETIM-Klasse vor` : 'kein KI-Schlüssel (Einstellungen)', onclick: async () => {
+      aiOut.textContent = '…'
+      const cands = [...new Set([...nameHits.map(x => x.c), ...P.slice(0, 60)])].map(c => `${c.code} ${nameOf(c.name, locale)}`).join('\n')
+      try {
+        const j = await ai.ask({ system: 'Du ordnest Produkte ETIM-Klassen zu. Antworte als JSON {"code":"EC…","name":"…","why":"…"}.' + (cands ? ' Wähle nur aus den Kandidaten.' : ' Nenne die passendste ETIM-Klasse aus ETIM 10.'), user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}` + (cands ? `\nKandidaten:\n${cands}` : ''), json: true, maxTokens: 300 })
+        aiOut.innerHTML = ''; aiOut.append(line(String(j.code ?? '').toUpperCase(), `KI (${ai.label()}): ${j.why ?? j.name ?? ''}`))
+      } catch (e) { aiOut.textContent = '✗ ' + e.message }
+    } }, '✦ KI fragen')
+    return el('div', { style: 'padding:6px 0;border:1px solid var(--accent);border-radius:6px;padding:8px;margin:6px 0' },
+      el('div', { class: 'chips' }, el('b', {}, `Klasse zuweisen an ${ICON[row.role] ?? ''} ${row.label}`), el('span', { class: 'muted', style: 'font-size:12px' }, path.length ? path.join(' › ') : ''), el('span', { class: 'grow' }), el('button', { class: 'x', title: 'ohne Zuweisung weiter', onclick: () => { st.assign = null; draw() } }, '✕')),
+      current ? line(current, 'gilt hier schon') : el('div', { class: 'muted', style: 'font-size:12px' }, 'hier gilt noch keine Klasse'),
+      env, names, el('div', { class: 'chips', style: 'padding-top:4px' }, aiBtn, aiOut))
+  }
   // Klasse einem Knoten zuweisen (Taloan, 20.09.: „muss der Anwender nicht irgendwo definieren, zu welcher Klasse ein Produkt gehört?“):
   // Wert im Klassenattribut (vererbbar — an der Gruppe gesetzt gilt es für alles darunter); fehlt die Gruppe ETIM am Pfad, kommt sie an den Knoten
   async function assignClass(nodeId, code) {
@@ -194,14 +238,31 @@ async function mount(root, ctx) {
     const rec = classRecord(st.rel, cls); await ctx.data.set('class:' + rec.code, rec); cache.classes.set(rec.code, rec)
     if (!silent) say(`${classText(rec, locale)} übernommen · ${rec.features.length} Merkmale`)
   }
+  // Die ganze Freigabe ins Journal (Taloan, 20.09.: „warum nicht gegrabbt und lokal gespeichert?“): je Klasse ein Datensatz class:<EC>,
+  // nur in den Sprachen des Modells, in Stapeln zu 400 — danach geht Suche, Zuweisen und Prüfen ohne die Datei
+  async function takeAll() {
+    if (!st.rel) return
+    const langs = model().locales.map(l => l.code); const all = st.rel.classes; const CH = 400
+    await busy(`übernehme ${all.length} Klassen …`, async () => {
+      for (let i = 0; i < all.length; i += CH) {
+        const chunk = all.slice(i, i + CH); const items = {}
+        for (const cls of chunk) { const rec = classRecord(st.rel, cls, langs); items['class:' + rec.code] = rec; cache.classes.set(rec.code, rec) }
+        await api.post('/api/plugins/etim/data', items, 'PUT'); say(`${Math.min(i + CH, all.length)} / ${all.length} Klassen übernommen …`)
+      }
+      await ctx.data.set('release', { ...(st.relInfo ?? {}), all: true, classes: all.length }); st.relInfo = { ...(st.relInfo ?? {}), all: true }
+      say(`${all.length} Klassen im Journal — Suche und Zuweisen gehen jetzt ohne die Datei`); draw()
+    })
+  }
+  // Klassen, in denen gesucht wird: die gelesene Freigabe, sonst die übernommenen (als Datensätze gleich aufgebaut)
+  const pool = () => st.rel ? st.rel.classes : [...cache.classes.values()]
   async function classesFromTree() {
-    if (!st.rel) { store.toast('erst eine Freigabe lesen'); return }
+    if (!pool().length) { store.toast('erst eine Freigabe lesen oder Klassen übernehmen'); return }
     const key = cache.settings.classAttr; if (!hasAttr(key)) { store.toast(`Attribut ${key} gibt es nicht`); return }
     await busy('suche Klassen im Baum …', async () => {
       const codes = new Set()
       for (const r of tree.rows.filter(r => !r.parent)) { const t = await api.get(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${key}`); for (const row of t.rows) { const c = String(row.values[key]?.value ?? '').trim().toUpperCase(); if (/^EC\d{6}$/.test(c)) codes.add(c) } }
       let n = 0, miss = 0
-      for (const c of codes) { if (cache.classes.has(c)) continue; const cls = st.rel.classes.find(x => x.code === c); if (cls) { await takeClass(cls, true); n++ } else miss++ }
+      for (const c of codes) { if (cache.classes.has(c)) continue; const cls = st.rel?.classes.find(x => x.code === c); if (cls) { await takeClass(cls, true); n++ } else miss++ }
       say(`${codes.size} Klassen im Baum · ${n} neu übernommen${miss ? ` · ${miss} nicht in der Freigabe` : ''}`); draw()
     })
   }
@@ -234,15 +295,18 @@ async function mount(root, ctx) {
     const relLine = rel ? `${rel.header.name ?? 'ETIM'} Nr. ${rel.header.number ?? '?'} vom ${(rel.header.date ?? '').slice(0, 10)} · ${rel.classes.length} Klassen · ${rel.features.size} Merkmale · ${rel.values.size} Werte · ${rel.units.size} Einheiten`
       : relInfo ? `zuletzt gelesen: ${relInfo.name ?? 'ETIM'} Nr. ${relInfo.number ?? '?'} (${relInfo.file}, ${(relInfo.at ?? '').slice(0, 10)}) — für Suche und Übernahme die Datei erneut lesen` : 'noch keine Freigabe gelesen'
     body.append(section('Freigabe', 'IXF 3.1 — etim.de/daten/downloads bzw. ETIM CMT, frei',
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0' }, el('button', { class: 'x', title: 'ETIM-Freigabe als IXF-3.1-Datei lesen — bleibt im Browser; ins Journal kommen nur die übernommenen Klassen', onclick: () => file.click() }, '⇩ IXF lesen'), file, el('span', { class: 'muted', style: 'font-size:12px' }, relLine))))
+      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0' }, el('button', { class: 'x', title: 'ETIM-Freigabe als IXF-3.1-Datei lesen — bleibt im Browser; ins Journal kommen die übernommenen Klassen', onclick: () => file.click() }, '⇩ IXF lesen'), file,
+      rel && !(relInfo?.all && cache.classes.size >= rel.classes.length) ? el('button', { class: 'primary', title: `alle ${rel.classes.length} Klassen der Freigabe ins Journal (Sprachen des Modells) — danach geht alles ohne die Datei`, onclick: takeAll }, `⇩ alle ${rel.classes.length} Klassen übernehmen`) : null,
+      el('span', { class: 'muted', style: 'font-size:12px' }, relLine))))
     // Klassen
     // ohne gelesene Freigabe (bleibt im Browser, je Sitzung) gibt es nichts zu suchen — Feld und Knopf sagen das, statt nach dem Klick zu meckern (Taloan, 20.09.)
-    const q = el('input', { placeholder: rel ? 'Klasse suchen — Code, Name, Synonym' : 'erst oben „⇩ IXF lesen“ — dann suchen', value: st.q, style: 'width:360px', disabled: !rel, oninput: e => { st.q = e.target.value; search() } })
+    const P = pool()
+    const q = el('input', { placeholder: P.length ? `Klasse suchen — Code, Name, Synonym (${P.length})` : 'erst oben „⇩ IXF lesen“ — dann suchen', value: st.q, style: 'width:360px', disabled: !P.length, oninput: e => { st.q = e.target.value; search() } })
     const hits = el('div')
     const search = () => {
-      hits.innerHTML = ''; if (!rel || st.q.trim().length < 2) return
+      hits.innerHTML = ''; if (!P.length || st.q.trim().length < 2) return
       const s = st.q.trim().toLowerCase()
-      const found = rel.classes.filter(c => c.code.toLowerCase().includes(s) || Object.values(c.name).some(n => n.toLowerCase().includes(s)) || Object.values(c.synonyms).some(l => l.some(n => n.toLowerCase().includes(s)))).slice(0, 40)
+      const found = P.filter(c => c.code.toLowerCase().includes(s) || Object.values(c.name).some(n => n.toLowerCase().includes(s)) || Object.values(c.synonyms).some(l => l.some(n => n.toLowerCase().includes(s)))).slice(0, 40)
       for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale · ${c.status}`)), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: 'Klasse übernehmen (ins Journal)', onclick: async () => { await takeClass(c); draw() } }, '+'), st.assign ? el('button', { class: 'primary', title: `übernehmen und ${tree.byId.get(st.assign)?.label} zuweisen`, onclick: async () => { await assignClass(st.assign, c.code); draw() } }, '⇢ zuweisen') : null))
       if (!found.length) hits.append(el('div', { class: 'muted', style: 'padding:4px' }, 'nichts gefunden'))
     }
@@ -253,8 +317,8 @@ async function mount(root, ctx) {
         el('td', {}, rel && rel.classes.some(x => x.code === c.code && x.version !== c.version) ? el('button', { class: 'x', title: 'aus der gelesenen Freigabe aktualisieren', onclick: async () => { await takeClass(rel.classes.find(x => x.code === c.code)); draw() } }, '↻') : null, el('button', { class: 'x', title: 'Klasse entfernen (Datensatz; Attribute und Werte bleiben)', onclick: async () => { if (!(await ctx.dialog.confirm({ title: `${c.code} entfernen?`, ok: 'entfernen', danger: true }))) return; await ctx.data.del('class:' + c.code); cache.classes.delete(c.code); draw() } }, '✕'))) })))
     const assignRow = st.assign ? tree.byId.get(st.assign) : null
     body.append(section('Klassen', `${taken.length} übernommen`,
-      assignRow ? el('div', { class: 'chips', style: 'padding:6px 0' }, el('b', {}, `Klasse zuweisen an ${ICON[assignRow.role] ?? ''} ${assignRow.label}`), el('span', { class: 'muted', style: 'font-size:12px' }, '— unten „⇢ zuweisen“ bei einer übernommenen Klasse oder einem Suchtreffer; vererbbar: an der Gruppe gesetzt gilt sie für alles darunter'), el('button', { class: 'x', title: 'ohne Zuweisung weiter', onclick: () => { st.assign = null; draw() } }, '✕')) : null,
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', disabled: !rel, title: rel ? `alle Klassen, die im Attribut ${cache.settings.classAttr} im Baum stehen, aus der Freigabe übernehmen` : 'braucht die gelesene Freigabe (oben ⇩ IXF lesen)', onclick: classesFromTree }, '⇩ aus dem Baum')),
+      assignRow ? assignBox(assignRow, P) : null,
+      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', disabled: !P.length, title: P.length ? `alle Klassen, die im Attribut ${cache.settings.classAttr} im Baum stehen, übernehmen` : 'braucht die gelesene Freigabe (oben ⇩ IXF lesen)', onclick: classesFromTree }, '⇩ aus dem Baum')),
       hits, taken.length ? tbl : el('div', { class: 'empty' }, rel ? 'Klasse suchen und mit + übernehmen' : 'erst eine Freigabe lesen')))
     // Attribute
     // Gruppe der ETIM-Daten: „etim“ legen wir an (Attribute direkt zugewiesen); eine vorhandene Gruppe heißt: hier zuordnen (Best Guess über die Namen)
