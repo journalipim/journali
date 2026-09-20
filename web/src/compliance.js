@@ -323,7 +323,8 @@ export async function mount(root, ctx, catalog) {
           el('td', {}, el('b', {}, it.label), el('div', { class: 'mono muted', style: 'font-size:11px' }, it.key)),
           el('td', { class: 'muted' }, `${it.type ?? 'text'}${it.unit ? ' ' + it.unit : ''}`),
           el('td', {}, sel, el('div', { class: 'muted', style: 'font-size:11px' }, m?.why ?? '')),
-          el('td', { class: 'muted', style: 'font-size:12px;white-space:normal' }, it.hint ?? '')))
+          // Sondergruppe ohne Geltung am geprüften Knoten (Taloan, 20.09.: „warum fehlen die 4?“): nichts fehlt — sie gilt hier nicht, darum wurde nichts angelegt
+          el('td', { class: 'muted', style: 'font-size:12px;white-space:normal' }, g.scope && st.res && !st.res.items.some(x => x.key === it.key && st.res.byItem.get(x.key).na < st.res.nodes.length) ? el('span', { class: 'warn' }, `gilt am geprüften Knoten nicht (Geltung „${g.scope.label}“ nicht gesetzt) — darum kein Attribut nötig`) : (it.hint ?? ''))))
       }
     }
     s1.append(tbl)
@@ -374,6 +375,39 @@ export async function mount(root, ctx, catalog) {
     return dialog.help({ title: `${it.label} · ${catalog.label}`, rows })
   }
   // Leere Zelle: Wert eintragen — oder „weiss ich nicht, frage bei …“ mit Wiedervorlage (Beleg method pending am Wert)
+  // Liste der Knoten, an denen der Datenpunkt leer ist — je Zeile ein Eingabefeld (Enter schreibt) und ⏳ angefragt
+  function fillList(it) {
+    const to = st.mapping[it.key]?.to; if (!to) return
+    const nodes = st.res.nodes.filter(n => n.states[it.key] === 'empty' || n.states[it.key] === 'pending')
+    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:45' })
+    const box = el('div', { style: 'width:min(640px,94vw);max-height:80vh;display:flex;flex-direction:column;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px' })
+    const close = () => overlay.remove()
+    overlay.addEventListener('mousedown', e => { if (e.target === overlay) close() })
+    const rows = el('div', { class: 'scroll', style: 'flex:1' })
+    const def = store.model.attributes.find(a => a.key === to)
+    const listVals = def?.list ? (store.model.lists.find(l => l.key === def.list)?.values ?? []) : null
+    for (const n of nodes) {
+      const pend = n.pendingInfo?.[it.key]
+      let inp
+      if (listVals) inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), ...listVals.map(v => el('option', { value: v.value }, v.label?.de || v.label?.en || v.value)))
+      else if (def?.type === 'boolean') inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), el('option', { value: 'true' }, 'ja'), el('option', { value: 'false' }, 'nein'))
+      else inp = el('input', { style: 'width:220px', placeholder: it.unit ? `Wert in ${it.unit}` : 'Wert' })
+      const write = async () => { const v = inp.value.trim(); if (!v) return; try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: null, channel: null, value: v, row: null }); state.textContent = '✓'; state.className = 'pos' } catch (e) { store.toast(e.message) } }
+      inp.addEventListener('change', write); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); write() } })
+      const state = el('span', { class: pend ? 'warn' : 'muted', style: 'width:120px;font-size:12px' }, pend ? `⏳ ${pend.source ?? 'angefragt'} · ${pend.checkedAt ?? ''}` : '')
+      const pendBtn = el('button', { class: 'x', title: 'weiss ich noch nicht — angefragt bei …, mit Wiedervorlage', onclick: async () => {
+        const who = await dialog.prompt({ title: 'Angefragt bei …', text: `${it.label} · ${n.row.label}`, value: pend?.source ?? '', ok: 'Weiter' }); if (who == null) return
+        const due = await dialog.prompt({ title: 'Wiedervorlage', text: 'Datum JJJJ-MM-TT', value: pend?.checkedAt ?? new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), ok: '⏳ angefragt' }); if (due == null) return
+        try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/sources`, { attribute: to, locale: null, channel: null, row: null, source: who.trim() || null, title: null, note: null, method: 'pending', checkedAt: due.trim() || null }); state.textContent = `⏳ ${who.trim() || 'angefragt'} · ${due.trim()}`; state.className = 'warn' } catch (e) { store.toast(e.message) }
+      } }, '⏳')
+      rows.append(el('div', { style: 'display:flex;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid var(--line)' }, el('span', { style: 'flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis', title: n.row.id }, `${n.row.role === 'variant' ? '◆' : n.row.role === 'product' ? '▦' : '▣'} ${n.row.label}`), inp, pendBtn, state))
+    }
+    box.append(el('div', { class: 'chips', style: 'margin-bottom:6px' }, el('b', {}, `${it.label} · ${nodes.length} leer`), el('span', { class: 'grow' }), el('button', { class: 'x', onclick: () => explain(it) }, 'ⓘ'), el('button', { class: 'x', onclick: close }, '✕')),
+      el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Wert eintragen (Enter schreibt sofort) — oder ⏳ „angefragt bei …“ mit Wiedervorlage'), rows,
+      el('div', { class: 'chips', style: 'justify-content:flex-end;margin-top:8px' }, el('button', { class: 'primary', onclick: async () => { close(); await run() } }, 'fertig — erneut prüfen')))
+    overlay.append(box); document.body.append(overlay)
+    setTimeout(() => rows.querySelector('input, select')?.focus(), 0)
+  }
   async function askPending(n, it, pend) {
     const to = st.mapping[it.key]?.to; if (!to) return
     const v = await dialog.prompt({ title: `${it.label} · ${n.row.label}`, text: pend ? `⏳ angefragt${pend.source ? ' bei ' + pend.source : ''}, Wiedervorlage ${pend.checkedAt ?? '—'}. Wert eintragen — oder leer lassen und die Anfrage ändern.` : 'Wert eintragen — oder leer lassen: dann „weiss ich noch nicht, frage bei …“ mit Wiedervorlage.', value: '', placeholder: it.unit ? `Wert in ${it.unit}` : 'Wert', ok: 'Eintragen' })
@@ -410,7 +444,7 @@ export async function mount(root, ctx, catalog) {
       return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
     }
     const unm = r.items.filter(it => !st.mapping[it.key]?.to && !hidden.includes(it))
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), style: c.empty ? 'cursor:pointer;text-decoration:underline dotted' : '', onclick: c.empty ? () => fillList(it) : null, title: c.empty ? `${c.empty} leer — Klick: Knoten für Knoten eintragen oder „angefragt bei …“` + (c.inactive ? ` · ${c.inactive} ohne gültiges Attribut` : '') : c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (hidden.length) sb.append(el('tr', {}, el('td', { class: 'muted', colspan: '5' }, `… ${hidden.length} weitere Datenpunkte gelten an keinem der ${r.nodes.length} Knoten (andere Klasse oder Rolle)`)))
     // Gruppe fürs Anlegen: wählbar (vorhandene oder neuer Schlüssel), je Katalog gemerkt — steht am Knopf und in jeder Zeile
     const grpSel = el('select', { title: 'Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu' }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${(model.groups ?? []).find(g => g.key === k)?.label?.de || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, '+ neue Gruppe …'))
@@ -458,7 +492,7 @@ export async function mount(root, ctx, catalog) {
     const emptyN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'empty').length, 0), badN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'bad').length, 0)
     // Der Assistent (Taloan, 20.09.): Analyse → Deltas (zuordnen/anlegen, in welcher Gruppe) → Gruppe im Baum anhängen → erneut → bis alles zugeordnet ist oder der Anwender aufgibt
     const pendN = r.nodes.reduce((k, x) => k + (x.pending ?? 0), 0), overN = r.nodes.reduce((k, x) => k + (x.overdue ?? 0), 0)
-    const next = unm.length ? `Schritt: ${unm.length} Datenpunkte ohne Attribut — unten zuordnen oder anlegen` : inactiveN ? 'Schritt: die Gruppe im Baum anhängen — dann erneut prüfen' : (emptyN || badN) ? `Zuordnung vollständig — ${emptyN} leere${badN ? `, ${badN} falsche` : ''} Werte füllen (Klick in die Zelle: eintragen oder „angefragt bei …“)${pendN ? ` · ⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''}` : ''}` : pendN ? `⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''} — sonst alles da` : '✓ alles zugeordnet und gefüllt'
+    const next = unm.length ? `Schritt: ${unm.length} Datenpunkte ohne Attribut — unten zuordnen oder anlegen` : inactiveN ? 'Schritt: die Gruppe im Baum anhängen — dann erneut prüfen' : (emptyN || badN) ? `Zuordnung vollständig — ${emptyN} leere${badN ? `, ${badN} falsche` : ''} Werte füllen (Klick auf die Zahl „leer“ oder in die Zelle der Knoten-Tabelle)${pendN ? ` · ⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''}` : ''}` : pendN ? `⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''} — sonst alles da` : '✓ alles zugeordnet und gefüllt'
     s3.append(el('div', { class: 'chips', style: 'margin:4px 0;font-weight:600' }, el('span', { class: unm.length || inactiveN ? 'warn' : (emptyN || badN) ? '' : 'pos' }, next)))
     if (unm.length) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`), el('span', { class: 'muted' }, 'in Gruppe'), grpSel))
     if (catalog.summary) { const s = catalog.summary(r, st.mapping, ctx); if (s) s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, s)) }
