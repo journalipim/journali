@@ -281,8 +281,12 @@ export async function mount(root, ctx, catalog) {
     // je Knoten: Matrix
     const items = r.items.filter(it => st.mapping[it.key]?.to && st.levels.has(it.level))
     const tbl = el('table', { class: 'grid', style: 'width:auto;margin-top:8px' })
+    // wenige Spalten (≤ 6): Köpfe waagerecht wie überall — gedreht nur, wenn es eng wird (Taloan, 20.09.: „wieso ist das so gross?“)
+    const rotate = items.length > 6
     const headH = Math.min(110, 16 + 5.6 * Math.max(4, ...items.map(it => Math.min(22, it.label.length))))
-    tbl.append(el('thead', {}, el('tr', {}, el('th', { style: 'width:28px' }, el('input', { type: 'checkbox', title: 'alle für KI-Vorschläge', onchange: e => { st.picked = e.target.checked ? new Set(r.nodes.map(n => n.row.id)) : new Set(); drawResult() } })), el('th', { style: 'width:300px' }, 'Knoten'), el('th', { class: 'num', style: 'width:60px' }, 'Pflicht'), ...(catalog.rowNote ? [el('th', { style: 'width:150px' }, '')] : []), ...items.map(it => el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'height:auto;vertical-align:bottom;padding:4px 2px' }, el('div', { style: 'writing-mode:vertical-rl;transform:rotate(180deg);height:' + headH + 'px;font-weight:400;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, it.label.slice(0, 22)))))))
+    tbl.append(el('thead', {}, el('tr', {}, el('th', { style: 'width:28px' }, el('input', { type: 'checkbox', title: 'alle für KI-Vorschläge', onchange: e => { st.picked = e.target.checked ? new Set(r.nodes.map(n => n.row.id)) : new Set(); drawResult() } })), el('th', { style: 'width:300px' }, 'Knoten'), el('th', { class: 'num', style: 'width:60px' }, 'Pflicht'), ...(catalog.rowNote ? [el('th', { style: 'width:150px' }, '')] : []), ...items.map(it => rotate
+      ? el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'height:auto;vertical-align:bottom;padding:4px 2px' }, el('div', { style: 'writing-mode:vertical-rl;transform:rotate(180deg);height:' + headH + 'px;font-weight:400;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, it.label.slice(0, 22)))
+      : el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'font-weight:400;font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 6px' }, it.label)))))
     const tb = el('tbody'); tbl.append(tb)
     // Einrückung nach Tiefe im geprüften Teilbaum (Taloan, 20.09.: keine flache Liste, die sich nur am Symbol unterscheidet)
     const inRun = new Map(r.nodes.map(n => [n.row.id, n.row.parent]))
