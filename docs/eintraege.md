@@ -113,8 +113,8 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 
 | Strom | Typ | Nutzdaten |
 |---|---|---|
-| `locale:<code>` | `LocaleDefined` | `code`, `label` |
-| `channel:<key>` | `ChannelDefined` | `key`, `label{}` |
+| `locale:<code>` | `LocaleDefined` / `LocaleRetired` | `code`, `label` — zurückziehen nicht für die Mastersprache und nicht die letzte; Werte auf ihr bleiben im Journal |
+| `channel:<key>` | `ChannelDefined` / `ChannelRetired` | `key`, `label{}` — zurückziehen nur, wenn kein Attribut ihn nennt (channels, required) |
 | `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `type` (text, html, integer, decimal, boolean, date, enum, **rows**, **formula** — der Wert ist ein Skript wie JavaScript, gepflegt wie jeder Wert, auch geerbt und je Sprache; das Ergebnis wird beim Lesen gerechnet: `$schlüssel` liest andere Attribute, Variablen, if/else, return, Vorlagen `…${…}…`, `+ - * / % **`, `== != < <= > >=`, `&& || !`, `?:`, `??`, round trunc floor ceil abs min max sqrt format · len upper lower capitalize title trim trimstart trimend squeeze left right substr indexof contains startswith endswith count replace split repeat reverse padleft padright regextest regexmatch regexreplace striphtml escapehtml nl2br slug str number · isblank coalesce; der Server prüft die Syntax beim Setzen; `Formula.cs`), `unit?` (muss es unter `unit:` geben), `group` (Attributgruppe), `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `inheritable` (Wert vererbt sich nach unten; Vorgabe nein), `required{kanal: [sprachen] oder ["*"]}?` (Pflicht — gilt überall gleich, Eineindeutigkeit), `levels[]?` (Ausnahme: an welchen Knotentypen; null = Regel der Gruppe), `columns[]?` (bei rows), `pattern?` (nur text: regulärer Ausdruck, dem jeder Wert ganz genügen muss — E-Mail, Telefon, EAN …; Vorlagen im Modell; `patternHint?` steht in der Fehlermeldung) |
 | `group:<key>` | `AttributeGroupDefined` / `AttributeGroupRetired` | `key`, `label{}`, `activeFrom?` (group, product, variant: ab welchem Knotentyp Werte erfasst werden; darüber sichtbar, gesperrt). Gruppen hängen an Knoten (`GroupsAttached`) |
 | `relation:<key>` | `RelationTypeDefined` / `RelationTypeRetired` | `key`, `label{}`, `reverse{}` (Bezeichnung vom Ziel aus), `from[]?`/`to[]?` (erlaubte Rollen, null = alle), `group?` (Attributgruppe der Werte an der Relation). Saatgut: accessory, component (Gruppe relation_component mit `quantity`), related |
@@ -123,7 +123,7 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 | `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — **nur diese** Gruppen, in dieser Reihenfolge; darin Attribute in Reihenfolge, ungenannte Attribute hängen unten an ihrer Gruppe |
 | `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` |
-| `list:<key>` | `ListDefined` | `key`, `label{}`, `columns[]?` (eigene Felder je Eintrag, z. B. ral) |
+| `list:<key>` | `ListDefined` / `ListRetired` | `key`, `label{}`, `columns[]?` (eigene Felder je Eintrag, z. B. ral) — zurückziehen nur, wenn kein Attribut die Liste benutzt |
 | `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
 | `list:<key>` | `ListValueRetired` | `value` |
 | `family:<key>` | `FamilyDefined` / `FamilyRetired` | **Altlast** (16.09.2026): Familien sind durch Attributgruppen am Baum ersetzt; der Typ bleibt lesbar, wird nicht mehr geschrieben |

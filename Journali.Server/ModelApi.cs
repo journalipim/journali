@@ -68,9 +68,26 @@ public static partial class ModelApi
                 !model.Locales.ContainsKey(body.Code ?? "") ? Bad($"Sprache {body.Code} gibt es nicht.")
                 : write(Model.MasterLocaleStream, Types.MasterLocaleDefined, new MasterLocaleDefined(body.Code!))));
 
+        // Sprache zurückziehen: nicht die Mastersprache, nicht die letzte; Werte auf ihr bleiben im Journal
+        m.MapDelete("/locales/{code}", (string code, HttpRequest req, Catalog c) =>
+            Command(req, c, code, ValidKey, (model, write) =>
+                !model.Locales.ContainsKey(code) ? Results.NotFound()
+                : model.MasterLocale == code ? Bad($"{code} ist die Mastersprache — erst eine andere zur Mastersprache machen.")
+                : model.Locales.Count <= 1 ? Bad("Die letzte Sprache bleibt.")
+                : write(Model.LocaleStream + code, Types.LocaleRetired, new LocaleRetired(code))));
+
         m.MapPut("/channels/{key}", (string key, ChannelDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
                 write(Model.ChannelStream + key, Types.ChannelDefined, body with { Key = key, Label = body.Label ?? new() })));
+
+        // Kanal zurückziehen: kein Attribut darf ihn nennen (channels, required)
+        m.MapDelete("/channels/{key}", (string key, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) =>
+            {
+                if (!model.Channels.ContainsKey(key)) return Results.NotFound();
+                var users = model.Attributes.Values.Where(a => (a.Channels?.Contains(key) ?? false) || (a.Required?.ContainsKey(key) ?? false)).Select(a => a.Key).ToList();
+                return users.Count > 0 ? Bad($"{key} wird benutzt von: {string.Join(", ", users)}") : write(Model.ChannelStream + key, Types.ChannelRetired, new ChannelRetired(key));
+            }));
 
         m.MapPut("/attributes/{key}", (string key, AttributeDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
@@ -138,6 +155,13 @@ public static partial class ModelApi
                 if (cols?.Any(x => !ValidKey(x)) ?? false) return Bad("Spalten: nur a-z, 0-9, _.");
                 return write(Model.ListStream + key, Types.ListDefined, body with { Key = key, Label = body.Label ?? new(), Columns = cols });
             }));
+
+        // Werteliste zurückziehen: kein Attribut darf sie benutzen
+        m.MapDelete("/lists/{key}", (string key, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) =>
+                !model.Lists.ContainsKey(key) ? Results.NotFound()
+                : model.Attributes.Values.Any(a => a.List == key) ? Bad($"{key} wird benutzt von: {string.Join(", ", model.Attributes.Values.Where(a => a.List == key).Select(a => a.Key))}")
+                : write(Model.ListStream + key, Types.ListRetired, new ListRetired(key))));
 
         m.MapPut("/lists/{key}/values/{value}", (string key, string value, ListValueDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>

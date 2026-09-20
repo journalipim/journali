@@ -80,6 +80,15 @@ public sealed class ModelCatalog : IProjection
                 var v = Types.Deserialize<ListValueDefinition>(entry.Payload);
                 List(ListKey(entry.Stream)).Values[v.Value] = v;
                 break;
+            case Types.ListRetired:
+                Lists.Remove(Types.Deserialize<ListRetired>(entry.Payload).Key);
+                break;
+            case Types.LocaleRetired:
+                Locales.Remove(Types.Deserialize<LocaleRetired>(entry.Payload).Code);
+                break;
+            case Types.ChannelRetired:
+                Channels.Remove(Types.Deserialize<ChannelRetired>(entry.Payload).Key);
+                break;
             case Types.ListValueRetired:
                 List(ListKey(entry.Stream)).Values.Remove(Types.Deserialize<ListValueRetired>(entry.Payload).Value);
                 break;

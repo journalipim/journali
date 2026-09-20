@@ -11,6 +11,7 @@ import { useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
+import { menu } from '../menu.js'
 import { icon } from '../tree.js'
 import EditGrid from '../components/EditGrid.vue'
 import Cell from '../components/Cell.vue'
@@ -133,6 +134,34 @@ function onListKey(e) {
 }
 const count = computed(() => sel.value.size)
 const many = computed(() => sel.value.size > 1)
+// Warum „zurückziehen“ gerade nicht geht (Gruppe mit Attributen) — der Server prüft es ebenfalls
+const retireBlock = computed(() => blockFor(cur.value))
+function blockFor(k) {
+  const m = model.value; if (!m || !k) return ''
+  const used = (pred) => m.attributes.filter(pred).map(a => a.key)
+  switch (section.value) {
+    case 'groups': return used(a => a.group === k).length ? 'hat noch Attribute' : ''
+    case 'lists': { const u = used(a => a.list === k); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
+    case 'units': { const u = used(a => a.unit === k); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
+    case 'channels': { const u = used(a => (a.channels ?? []).includes(k) || (a.required && k in a.required)); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
+    case 'locales': return m.masterLocale === k ? 'Mastersprache' : m.locales.length <= 1 ? 'die letzte Sprache bleibt' : ''
+    default: return ''
+  }
+}
+// Kontextmenü der Liste — wie im Baum: Rechtsklick, „zurückziehen“ für die Zeile oder die Auswahl (Taloan, 20.09.)
+function rowMenu(e, r) {
+  if (!sel.value.has(r.key)) { sel.value = new Set([r.key]); cur.value = r.key; anchor.value = r.key }
+  const keys = [...sel.value]; const p = removePath[section.value]
+  const blocked = keys.map(k => [k, blockFor(k)]).filter(([, b]) => b)
+  const label = r.label?.de || r.key
+  menu.open(e, [
+    { label: keys.length > 1 ? `${keys.length} ${sec.value.label} gewählt` : `${sec.value.one} ${label}`, disabled: true },
+    { sep: true },
+    { label: 'Schlüssel kopieren', icon: '⧉', key: 'c', action: () => navigator.clipboard?.writeText(keys.join(', ')) },
+    p ? { label: keys.length > 1 ? `${keys.length} zurückziehen` : 'Zurückziehen', icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : 'aus dem Abbild — das Journal behält alles', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
+      : { label: 'Zurückziehen', icon: '✕', disabled: true, hint: 'hier nicht vorgesehen' },
+  ])
+}
 
 // ---- Das gewählte Ding
 const curGroup = computed(() => (model.value?.groups ?? []).find(g => g.key === cur.value) ?? null)
@@ -212,19 +241,19 @@ async function bulkAssignGroup() {
   bulkGroup.value = ''
 }
 const removePath = {
-  groups: k => `/api/model/groups/${k}`, attributes: k => `/api/model/attributes/${k}`, lists: null,
-  views: k => `/api/model/views/${k}`, units: k => `/api/model/units/${encodeURIComponent(k)}`, locales: null, channels: null,
+  groups: k => `/api/model/groups/${k}`, attributes: k => `/api/model/attributes/${k}`, lists: k => `/api/model/lists/${k}`,
+  views: k => `/api/model/views/${k}`, units: k => `/api/model/units/${encodeURIComponent(k)}`, locales: k => `/api/model/locales/${k}`, channels: k => `/api/model/channels/${k}`,
   relationTypes: k => `/api/model/relations/${k}`,
 }
 async function bulkRemove() {
   const p = removePath[section.value]; if (!p) return
-  if (!await dialog.confirm({ title: `${sel.value.size} ${sec.value.label} zurückziehen?`, ok: '🗑 Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: `${sel.value.size} ${sec.value.label} zurückziehen?`, ok: '✕ Zurückziehen', danger: true })) return
   for (const k of [...sel.value]) await del(p(k))
   sel.value = new Set(); cur.value = null
 }
 async function removeCur() {
   const p = removePath[section.value]; if (!p || !cur.value) return
-  if (!await dialog.confirm({ title: `${sec.value.one} ${cur.value} zurückziehen?`, ok: '🗑 Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: `${sec.value.one} ${cur.value} zurückziehen?`, ok: '✕ Zurückziehen', danger: true })) return
   await del(p(cur.value)); cur.value = null; sel.value = new Set()
 }
 
@@ -382,7 +411,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <button v-if="filtered" class="x" @click="resetFlt" title="Filter zurücksetzen">✗ {{ shown.length }}</button>
     </div>
     <div class="scroll list" tabindex="0" @keydown="onListKey">
-      <div v-for="r in shown" :key="r.key" class="li" :class="{ selected: sel.has(r.key), current: cur === r.key }" @click="pick($event, r)" :title="r.key">
+      <div v-for="r in shown" :key="r.key" class="li" :class="{ selected: sel.has(r.key), current: cur === r.key }" @click="pick($event, r)" @contextmenu="rowMenu($event, r)" :title="r.key">
         <span class="k">{{ r.key }}</span>
         <span class="l">{{ r.label }}</span>
         <span class="r"><span v-for="(x, i) in r.right.filter(Boolean)" :key="i">{{ x }}</span></span>
@@ -404,7 +433,6 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
             <select v-model="bulkGroup" style="width:220px"><option value="">▤ Gruppe zuweisen …</option><option v-for="g in model.groups" :key="g.key" :value="g.key">{{ g.label?.de || g.key }} · {{ g.key }}</option></select>
             <button class="primary" :disabled="!bulkGroup" @click="bulkAssignGroup">→ {{ count }}</button>
           </div>
-          <div class="chips" style="margin-top:8px" v-if="removePath[section]"><button class="x" @click="bulkRemove">🗑 {{ count }} zurückziehen</button></div>
           <div class="chips" style="margin-top:8px"><span v-for="k in sel" :key="k" class="chip mono">{{ k }}</span></div>
         </div>
       </div>
@@ -412,7 +440,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attributgruppe -->
     <template v-else-if="section === 'groups' && curGroup">
-      <div class="toolbar"><h1>▤ {{ curGroup.label?.de || curGroup.key }}</h1><span class="mono muted">{{ curGroup.key }}</span><span class="grow" /><button class="x" @click="removeCur" :disabled="groupAttrs.length > 0" :title="groupAttrs.length ? 'hat noch Attribute — erst die Attribute zurückziehen oder umhängen' : 'Gruppe zurückziehen (AttributeGroupRetired)'">✕ zurückziehen{{ groupAttrs.length ? ' · hat noch Attribute' : '' }}</button></div>
+      <div class="toolbar"><h1>▤ {{ curGroup.label?.de || curGroup.key }}</h1><span class="mono muted">{{ curGroup.key }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
@@ -454,7 +482,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attribut -->
     <template v-else-if="section === 'attributes' && curAttr">
-      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span class="grow" /><button class="x" @click="removeCur" title="Attribut zurückziehen">✕ zurückziehen</button></div>
+      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
@@ -504,7 +532,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <button @click="viewFillAll" title="alle am Knotentyp aktiven Gruppen">⇊ alle Gruppen</button>
         <select v-model="addViewGroup" style="width:190px"><option value="">▤ Gruppe …</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
         <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">+ dazu</button>
-        <button class="x" @click="removeCur" title="Sicht zurückziehen">✕ zurückziehen</button></div>
+        </div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curView.label?.de ?? null" @save="v => viewSet('label_de', v)" /></tr>
@@ -529,7 +557,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Relationstyp -->
     <template v-else-if="section === 'relationTypes' && curRel">
-      <div class="toolbar"><h1>⇄ {{ curRel.label?.de || curRel.key }}</h1><span class="mono muted">{{ curRel.key }}</span><span class="grow" /><button class="x" @click="removeCur" title="Relationstyp zurückziehen (nicht, solange es Relationen gibt)">✕ zurückziehen</button></div>
+      <div class="toolbar"><h1>⇄ {{ curRel.label?.de || curRel.key }}</h1><span class="mono muted">{{ curRel.key }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curRel.label?.de ?? null" @save="v => relSet('label_de', v)" /></tr>
@@ -547,7 +575,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Einheit -->
     <template v-else-if="section === 'units' && curUnit">
-      <div class="toolbar"><h1>⚖ {{ curUnit.key }}</h1><span class="grow" /><button class="x" @click="removeCur" title="Einheit zurückziehen (nicht, solange ein Attribut sie benutzt)">✕ zurückziehen</button></div>
+      <div class="toolbar"><h1>⚖ {{ curUnit.key }}</h1><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curUnit.label?.de ?? null" @save="v => unitSet('label_de', v)" /></tr>

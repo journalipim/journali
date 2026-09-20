@@ -49,10 +49,13 @@ public static class Types
 
     // Modell (docs/pflegestruktur.md) — ganze Definition je Eintrag, der letzte gewinnt
     public const string LocaleDefined = "LocaleDefined";
+    public const string LocaleRetired = "LocaleRetired";
     public const string ChannelDefined = "ChannelDefined";
+    public const string ChannelRetired = "ChannelRetired";
     public const string AttributeDefined = "AttributeDefined";
     public const string AttributeRetired = "AttributeRetired";
     public const string ListDefined = "ListDefined";
+    public const string ListRetired = "ListRetired";
     public const string ListValueDefined = "ListValueDefined";
     public const string ListValueRetired = "ListValueRetired";
     public const string FamilyDefined = "FamilyDefined";
@@ -382,6 +385,11 @@ public sealed record ViewRetired(string Key);
 public sealed record UnitDefinition(string Key, Labels Label, string Quantity, decimal Factor = 1);
 
 public sealed record UnitRetired(string Key);
+
+/// <summary>Werteliste, Sprache, Kanal aus dem Abbild (20.09.2026 — Taloan: „zurückziehen“ überall gleich). Werte auf dieser Sprache/diesem Kanal bleiben im Journal.</summary>
+public sealed record ListRetired(string Key);
+public sealed record LocaleRetired(string Code);
+public sealed record ChannelRetired(string Key);
 
 /// <summary>
 /// Die Mastersprache (Taloan, 17.09.2026): Strom <c>settings:master_locale</c>. Pflichtfelder beim Anlegen
