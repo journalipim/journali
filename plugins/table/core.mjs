@@ -64,6 +64,6 @@ export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten
   // schreibt die freie SheetJS-Fassung nicht, Excel: Einfügen → Tabelle auf dem Bereich
   if (columns.length) ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, rows.length), c: columns.length - 1 } }) }
   const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, sheet)
-  if (legendRows) { const lg = X.utils.aoa_to_sheet(legendRows); lg['!cols'] = [{ wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 60 }]; X.utils.book_append_sheet(wb, lg, 'Legende') }
+  if (legendRows) { const lg = X.utils.aoa_to_sheet(legendRows); lg['!cols'] = [{ wch: 8 }, { wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 60 }]; lg['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, legendRows.length - 1), c: legendRows[0].length - 1 } }) }; X.utils.book_append_sheet(wb, lg, 'Legende') }
   return wb
 }

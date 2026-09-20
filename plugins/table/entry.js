@@ -1503,7 +1503,8 @@ function workbook(X, { columns, rows }, legendRows = null, sheet = "Daten") {
   X.utils.book_append_sheet(wb, ws, sheet);
   if (legendRows) {
     const lg = X.utils.aoa_to_sheet(legendRows);
-    lg["!cols"] = [{ wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 60 }];
+    lg["!cols"] = [{ wch: 8 }, { wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 60 }];
+    lg["!autofilter"] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, legendRows.length - 1), c: legendRows[0].length - 1 } }) };
     X.utils.book_append_sheet(wb, lg, "Legende");
   }
   return wb;
@@ -1521,14 +1522,14 @@ const loadXlsx = () => import(
   XLSX_URL
 );
 const POLISH_URL = "/plugins/xlsx/polish.mjs";
-async function polished(X, wb, columns, rowCount, tableName) {
+async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
   const raw = X.write(wb, { type: "array", bookType: "xlsx" });
   try {
     const { polish } = await import(
       /* @vite-ignore */
       POLISH_URL
     );
-    return await polish(raw, { columns, rowCount, tableName });
+    return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null });
   } catch (e) {
     console.warn("Excel ohne Politur:", e.message);
     return new Blob([raw], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -1549,11 +1550,12 @@ async function nodeColumns(nodeId) {
 }
 function legend(columns) {
   const model = store.model;
-  const rows = [["Spalte", "Label", "Typ", "Pflicht", "Einheit", "Sprache", "Werte / Hinweis"]];
+  const rows = [["Pflicht", "Spalte", "Label", "Typ", "Einheit", "Sprache", "Werte / Hinweis"]];
   for (const c of columns) {
     const d = c.def ?? (c.attr ? model.attributes.find((a) => a.key === c.attr) : null);
     const list = d?.list ? model.lists.find((l) => l.key === d.list) : null;
-    rows.push([c.key, d?.label?.de ?? "", d?.type ?? "", d?.required && Object.keys(d.required).length ? "ja" : "", d?.unit ?? "", c.locale ?? "", c.note ?? (list ? list.values.map((v) => `${v.value} = ${v.label?.de ?? v.value}`).join(" · ") : "")]);
+    const req = d?.required && (typeof d.required !== "object" || Object.keys(d.required).length) || c.key.startsWith("axis:");
+    rows.push([req ? "ja" : "nein", c.key, d?.label?.de ?? "", d?.type ?? "", d?.unit ?? "", c.locale ?? "", c.note ?? (list ? list.values.map((v) => `${v.value} = ${v.label?.de ?? v.value}`).join(" · ") : "")]);
   }
   return rows;
 }
@@ -1572,9 +1574,10 @@ async function nodeWorkbook(nodeId, withData) {
     }
     data = nodes.map((r) => columns.map((c) => c.key === "id" ? r.row.id : c.key === "sku" ? r.row.sku ?? "" : c.key.startsWith("axis:") ? r.row.axisValues?.[c.attr] ?? "" : byLocale.get(c.locale ?? locales[0])?.get(r.row.id)?.[c.attr]?.value ?? ""));
   }
-  const wb = workbook(X, { columns, rows: data }, legend(columns));
+  const lg = legend(columns);
+  const wb = workbook(X, { columns, rows: data }, lg);
   const name = `${row.label}-${childRole}${withData ? "" : "-vorlage"}`.replace(/[^\w.-]+/g, "_") + ".xlsx";
-  download(await polished(X, wb, columns, data.length, childRole === "variant" ? "Varianten" : childRole === "product" ? "Produkte" : "Gruppen"), name);
+  download(await polished(X, wb, columns, data.length, childRole === "variant" ? "Varianten" : childRole === "product" ? "Produkte" : "Gruppen", lg), name);
   store.toast(`⇪ ${name}: ${columns.length} Spalten${withData ? `, ${data.length} Zeilen` : ""}`);
 }
 const tableExport = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
