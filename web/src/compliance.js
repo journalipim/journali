@@ -152,6 +152,17 @@ export async function applySuggestions(list, mapping, locale) {
 }
 
 // Fehlende Attribute anlegen (Gruppe des Katalogs; die Gruppe wird angelegt, wenn es sie nicht gibt) und die Zuordnung setzen
+// Einheit sicherstellen: Symbol wie „kg“, „%“, „kWh“ → vorhandener Schlüssel oder neu (u_…, Grösse = Symbol)
+const UNIT_NAMES = { '%': 'Prozent', 'kg': 'Masse', 'g': 'Masse', 'mm': 'Länge', 'cm': 'Länge', 'm': 'Länge', 'kWh': 'Energie', 'Wh': 'Energie', 'W': 'Leistung', 'V': 'Spannung', 'A': 'Strom', 'l': 'Volumen', 'ml': 'Volumen', 'mg/kg': 'Konzentration', 'ppm': 'Konzentration', 'kg CO₂e': 'Treibhausgas', 'h': 'Zeit', 'a': 'Zeit', 'Jahre': 'Zeit' }
+export async function ensureUnit(sym) {
+  const units = store.model.units ?? []
+  const hit = units.find(u => u.key === sym || u.key === sym.toLowerCase() || Object.values(u.label ?? {}).some(l => l === sym)); if (hit) return hit.key
+  // Einheitenschlüssel ist das Symbol selbst (wie kg, cm, %): höchstens 8 Zeichen, ohne Leerraum — „kg CO₂e“ → „kgCO2e“
+  const key = sym.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '').slice(0, 8) || 'x'
+  if (!units.some(u => u.key === key)) { await api.post(`/api/model/units/${key}`, { key, label: { de: sym, en: sym }, quantity: UNIT_NAMES[sym] ?? sym, factor: 1 }, 'PUT'); await store.poll(true) }
+  return key
+}
+
 export async function createAttributes(catalog, items, mapping) {
   const model = store.model
   const gkey = catalog.groupKey
@@ -159,7 +170,9 @@ export async function createAttributes(catalog, items, mapping) {
   for (const it of items) {
     if (catalog.createAttribute) { const key = await catalog.createAttribute(it); if (key) mapping[it.key] = { to: key, why: 'angelegt', sure: true }; continue }   // der Katalog weiß es besser (etim: Listen, Einheiten)
     const key = (catalog.prefix ?? '') + it.key.replace(/[^a-z0-9_]/g, '_')
-    const body = { key, label: { de: it.label, en: it.labelEn ?? it.label }, type: it.type === 'enum' && !it.values ? 'text' : (it.type ?? 'text'), group: gkey, unit: it.unit ?? null, axes: it.perLocale ? ['locale'] : [], inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null }
+    // Einheit: vorhandene nehmen (Schlüssel oder Bezeichnung), sonst anlegen — „Unbekannte Einheit: %“ war der Abbruch (Taloan, 20.09.)
+    const unit = it.unit ? await ensureUnit(it.unit) : null
+    const body = { key, label: { de: it.label, en: it.labelEn ?? it.label }, type: it.type === 'enum' && !it.values ? 'text' : (it.type ?? 'text'), group: gkey, unit, axes: it.perLocale ? ['locale'] : [], inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null }
     await api.post(`/api/model/attributes/${key}`, body, 'PUT')
     mapping[it.key] = { to: key, why: 'angelegt', sure: true }
   }

@@ -258,7 +258,8 @@ public static partial class ModelApi
                 model.Views.ContainsKey(key) ? write(Model.ViewStream + key, Types.ViewRetired, new ViewRetired(key)) : Results.NotFound()));
 
         m.MapPut("/units/{key}", (string key, UnitDefinition body, HttpRequest req, Catalog c) =>
-            Command(req, c, key, k => k.Length > 0 && k.Length <= 8 && !k.Any(char.IsWhiteSpace), (model, write) =>
+            key.Length is 0 or > 8 || key.Any(char.IsWhiteSpace) ? Bad($"Einheit „{key}“: das Symbol ist der Schlüssel — höchstens 8 Zeichen, kein Leerraum.") :
+            Command(req, c, key, _ => true, (model, write) =>
                 string.IsNullOrWhiteSpace(body.Quantity) ? Bad("quantity fehlt (mass, length, volume, data, count, …).")
                 : body.Factor <= 0 ? Bad("factor muss > 0 sein.")
                 : write(Model.UnitStream + key, Types.UnitDefined, body with { Key = key, Label = body.Label ?? new(), Quantity = body.Quantity.Trim().ToLowerInvariant() })));
