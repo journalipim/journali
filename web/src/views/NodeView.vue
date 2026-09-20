@@ -82,6 +82,12 @@ async function fitPath() {
 watch(() => [props.id, path.value?.length, node.value?.label], fitPath)
 onMounted(() => { fitPath(); window.addEventListener('resize', fitPath) })
 onUnmounted(() => window.removeEventListener('resize', fitPath))
+// Filter am Knoten (Taloan, 20.09.: ein Dropdown, weitere Filter für Editoren kommen dazu): Wortlaut vorläufig, Taloan benennt
+const SCOPES = [
+  { key: 'all', label: 'total', title: 'alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar' },
+  { key: 'can', label: 'kann hier', title: 'was auf dieser Ebene änderbar ist' },
+  { key: 'only', label: 'kann nur hier', title: 'was nur auf dieser Ebene änderbar ist — weder darüber noch darunter' },
+]
 function setScope(s) { store.scope = s; store.save() }
 // Änderbar auf einer Ebene: Gruppe dort aktiv (aktiv ab, Untergrenze) und der Haken des Attributs für den Knotentyp gesetzt (levels) —
 // dieselbe Regel wie am Server (TreeApi: AllowedAt × GroupActiveAt)
@@ -543,11 +549,9 @@ function cellMenu(e, def, col, block) {
       <router-link :to="{ path: '/model', query: { section: 'views', key: orderView?.key } }" class="x edit" :title="orderView ? `${orderView.key} bearbeiten → Modell → Attributsichten` : '→ Modell → Attributsichten'">✎</router-link>
       <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
       <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
-      <span class="seg" title="Umfang">
-        <button :class="{ primary: store.scope === 'all' }" @click="setScope('all')" title="alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar">total</button>
-        <button :class="{ primary: store.scope === 'can' }" @click="setScope('can')" title="was auf dieser Ebene änderbar ist">kann hier</button>
-        <button :class="{ primary: store.scope === 'only' }" @click="setScope('only')" title="was nur auf dieser Ebene änderbar ist — weder darüber noch darunter">kann nur hier</button>
-      </span>
+      <select :value="store.scope" @change="setScope($event.target.value)" :class="{ on: store.scope !== 'all' }" title="Filter — was von den Attributen gezeigt wird; weitere Filter kommen hier dazu">
+        <option v-for="f in SCOPES" :key="f.key" :value="f.key" :title="f.title">{{ f.key === 'all' ? 'Filter: ' : '' }}{{ f.label }}</option>
+      </select>
       <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
       <span class="grow" />
       <input ref="findBox" v-model="attrFilter" type="search" placeholder="🔍 Attribut oder Wert (sichtbar)" style="width:220px;font-size:12px" title="filtert live über Attributname und die Werte in den gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
@@ -808,11 +812,8 @@ function cellMenu(e, def, col, block) {
 </template>
 
 <style scoped>
-/* Dreistufen-Schalter: eine Gruppe von Knöpfen, der aktive leuchtet */
-.seg { display: inline-flex; }
-.seg button { border-radius: 0; margin-left: -1px; }
-.seg button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
-.seg button:last-child { border-radius: 0 4px 4px 0; }
+/* Filter-Dropdown: leuchtet, wenn ein Filter wirkt */
+select.on { color: var(--accent); border-color: var(--accent); }
 /* Pfad bricht nicht um — wird er zu lang, schrumpft die Schrift (fitPath), notfalls Ellipse an den Gliedern (Taloan) */
 .path { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
 .path .crumb, .path h1 { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
