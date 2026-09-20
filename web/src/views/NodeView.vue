@@ -84,7 +84,7 @@ onMounted(() => { fitPath(); window.addEventListener('resize', fitPath) })
 onUnmounted(() => window.removeEventListener('resize', fitPath))
 // Filter am Knoten (Taloan, 20.09.: ein Dropdown, weitere Filter für Editoren kommen dazu): Wortlaut vorläufig, Taloan benennt
 const SCOPES = [
-  { key: 'all', label: 'total', title: 'alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar' },
+  { key: 'all', label: 'Alle Attribute', title: 'alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar' },
   { key: 'can', label: 'kann hier', title: 'was auf dieser Ebene änderbar ist' },
   { key: 'only', label: 'kann nur hier', title: 'was nur auf dieser Ebene änderbar ist — weder darüber noch darunter' },
 ]
@@ -550,7 +550,7 @@ function cellMenu(e, def, col, block) {
       <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
       <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
       <select :value="store.scope" @change="setScope($event.target.value)" :class="{ on: store.scope !== 'all' }" title="Filter — was von den Attributen gezeigt wird; weitere Filter kommen hier dazu">
-        <option v-for="f in SCOPES" :key="f.key" :value="f.key" :title="f.title">{{ f.key === 'all' ? 'Filter: ' : '' }}{{ f.label }}</option>
+        <option v-for="f in SCOPES" :key="f.key" :value="f.key" :title="f.title">{{ f.label }}</option>
       </select>
       <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
       <span class="grow" />
