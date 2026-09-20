@@ -114,6 +114,15 @@ function buildCatalog(ctx) {
       { key: 'features', label: 'Merkmale', items },
     ],
     createAttribute: async it => it.key === classKey ? ops.ensureClassAttr() : it.feature ? ops.createFeature(it.feature) : null,
+    // Erster Schritt je Knoten (Taloan, 20.09.): die Klasse sagt, welche Merkmale erforderlich sind — ohne Klasse steht hier „zuweisen“
+    rowNote: (n, mapping, c) => {
+      const key = mapping?.[classKey]?.to || classKey; const code = String(n.raw?.[key] ?? '').trim().toUpperCase(); const cls = cache.classes.get(code)
+      if (cls) return `${code} · ${cls.features.length} Merkmale`
+      if (n.states[classKey] === 'inactive') return ''   // Gruppe fehlt — der ⊘-Knopf oben löst es
+      if (n.leaf || n.row.role !== 'group') { const b = document.createElement('button'); b.className = 'x'; b.textContent = '⌗ Klasse zuweisen …'; b.title = 'ETIM-Klasse für diesen Knoten wählen — sie bestimmt die erforderlichen Merkmale'; b.addEventListener('click', () => c.go?.(`/p/etim/etim?assign=${encodeURIComponent(n.row.id)}`)); return b }
+      return ''
+    },
+    summary: r => { const noClass = r.nodes.filter(n => n.leaf && n.states[classKey] === 'empty').length; return noClass ? `⌗ ${noClass} Knoten ohne ETIM-Klasse — erst die Klasse zuweisen (sie sagt, welche Merkmale erforderlich sind), dann füllen` : null },
   }
 }
 
@@ -131,7 +140,8 @@ async function mount(root, ctx) {
   await cache.loaded
   const model = () => store.model
   const locale = model().masterLocale ?? 'de'
-  const st = { rel: null, q: '', hits: [], root: localStorage.getItem('journali.etim.root') || tree.rows.find(r => !r.parent)?.id, result: null, busy: false }
+  const assignParam = new URLSearchParams(location.search).get('assign'); if (assignParam) history.replaceState(null, '', location.pathname)
+  const st = { assign: assignParam && tree.byId.has(assignParam) ? assignParam : null, rel: null, q: '', hits: [], root: localStorage.getItem('journali.etim.root') || tree.rows.find(r => !r.parent)?.id, result: null, busy: false }
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 8px' })
@@ -156,6 +166,26 @@ async function mount(root, ctx) {
     })
     file.value = ''
   })
+  // Klasse einem Knoten zuweisen (Taloan, 20.09.: „muss der Anwender nicht irgendwo definieren, zu welcher Klasse ein Produkt gehört?“):
+  // Wert im Klassenattribut (vererbbar — an der Gruppe gesetzt gilt es für alles darunter); fehlt die Gruppe ETIM am Pfad, kommt sie an den Knoten
+  async function assignClass(nodeId, code) {
+    const row = tree.byId.get(nodeId); if (!row) return
+    if (!cache.classes.has(code)) { const cls = st.rel?.classes.find(x => x.code === code); if (!cls) { store.toast(`Klasse ${code} nicht übernommen`); return } await takeClass(cls, true) }
+    await busy(`weise ${code} zu …`, async () => {
+      const key = await ops.ensureClassAttr(); await store.poll(true)
+      const onPath = id => { for (let p = id; p; p = tree.byId.get(p)?.parent) if ((tree.byId.get(p)?.groups ?? '').split(',').includes('etim')) return true; return false }
+      if (!onPath(nodeId)) { const groups = [...new Set([...(row.groups ?? '').split(',').filter(Boolean), 'etim'])]; await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups }, 'PUT') }
+      await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: key, locale: null, channel: null, value: code, row: null })
+      await tree.load?.()
+      say(`${code} → ${row.label}${onPath(nodeId) ? '' : ' (Gruppe ETIM angehängt)'}`); store.toast(`✓ ${code} an ${row.label}`, 'ok')
+    })
+  }
+  const assignPick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:6;width:380px;display:none;padding:6px;background:var(--pane)' })
+  let assignCode = null
+  ctx.treePicker(assignPick, { roles: ['group', 'product', 'variant'], height: 300, onPick: async r => { assignPick.style.display = 'none'; if (assignCode) await assignClass(r.id, assignCode); draw() } })
+  const assignBtn = code => st.assign
+    ? el('button', { class: 'primary', title: `${code} dem gewählten Knoten zuweisen`, onclick: async () => { await assignClass(st.assign, code); draw() } }, '⇢ zuweisen')
+    : el('button', { class: 'x', title: `${code} einem Knoten zuweisen — Auswahlbaum`, onclick: e => { assignCode = code; const host = e.currentTarget.parentElement; host.style.position = 'relative'; host.append(assignPick); assignPick.style.display = assignPick.style.display === 'none' ? 'block' : 'none' } }, '⇢')
   async function takeClass(cls, silent) {
     const rec = classRecord(st.rel, cls); await ctx.data.set('class:' + rec.code, rec); cache.classes.set(rec.code, rec)
     if (!silent) say(`${classText(rec, locale)} übernommen · ${rec.features.length} Merkmale`)
@@ -208,14 +238,17 @@ async function mount(root, ctx) {
       hits.innerHTML = ''; if (!rel || st.q.trim().length < 2) return
       const s = st.q.trim().toLowerCase()
       const found = rel.classes.filter(c => c.code.toLowerCase().includes(s) || Object.values(c.name).some(n => n.toLowerCase().includes(s)) || Object.values(c.synonyms).some(l => l.some(n => n.toLowerCase().includes(s)))).slice(0, 40)
-      for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale · ${c.status}`)), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: 'Klasse übernehmen (ins Journal)', onclick: async () => { await takeClass(c); draw() } }, '+')))
+      for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale · ${c.status}`)), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: 'Klasse übernehmen (ins Journal)', onclick: async () => { await takeClass(c); draw() } }, '+'), st.assign ? el('button', { class: 'primary', title: `übernehmen und ${tree.byId.get(st.assign)?.label} zuweisen`, onclick: async () => { await assignClass(st.assign, c.code); draw() } }, '⇢ zuweisen') : null))
       if (!found.length) hits.append(el('div', { class: 'muted', style: 'padding:4px' }, 'nichts gefunden'))
     }
     const taken = [...cache.classes.values()].sort((a, b) => a.code.localeCompare(b.code))
-    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Freigabe'), el('th', { style: 'width:60px' }, ''))),
+    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Freigabe'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
       el('tbody', {}, ...taken.map(c => { const missing = c.features.filter(f => !hasAttr(attrKeyOf(f.code))).length; return el('tr', {}, el('td', { class: 'mono' }, c.code), el('td', {}, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, c.group ? ` · ${nameOf(c.group.name, locale)}` : '')), el('td', { class: 'num' }, c.features.length), el('td', { class: missing ? 'warn num' : 'muted num' }, missing || '—'), el('td', { class: 'muted', style: 'font-size:11px' }, `${c.release?.name ?? ''} v${c.version}`),
+        el('td', { style: 'position:relative' }, assignBtn(c.code)),
         el('td', {}, rel && rel.classes.some(x => x.code === c.code && x.version !== c.version) ? el('button', { class: 'x', title: 'aus der gelesenen Freigabe aktualisieren', onclick: async () => { await takeClass(rel.classes.find(x => x.code === c.code)); draw() } }, '↻') : null, el('button', { class: 'x', title: 'Klasse entfernen (Datensatz; Attribute und Werte bleiben)', onclick: async () => { if (!(await ctx.dialog.confirm({ title: `${c.code} entfernen?`, ok: 'entfernen', danger: true }))) return; await ctx.data.del('class:' + c.code); cache.classes.delete(c.code); draw() } }, '✕'))) })))
+    const assignRow = st.assign ? tree.byId.get(st.assign) : null
     body.append(section('Klassen', `${taken.length} übernommen`,
+      assignRow ? el('div', { class: 'chips', style: 'padding:6px 0' }, el('b', {}, `Klasse zuweisen an ${ICON[assignRow.role] ?? ''} ${assignRow.label}`), el('span', { class: 'muted', style: 'font-size:12px' }, '— unten „⇢ zuweisen“ bei einer übernommenen Klasse oder einem Suchtreffer; vererbbar: an der Gruppe gesetzt gilt sie für alles darunter'), el('button', { class: 'x', title: 'ohne Zuweisung weiter', onclick: () => { st.assign = null; draw() } }, '✕')) : null,
       el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', title: `alle Klassen, die im Attribut ${cache.settings.classAttr} stehen, aus der Freigabe übernehmen`, onclick: classesFromTree }, '⇩ aus dem Baum')),
       hits, taken.length ? tbl : el('div', { class: 'empty' }, rel ? 'Klasse suchen und mit + übernehmen' : 'erst eine Freigabe lesen')))
     // Attribute
@@ -266,7 +299,10 @@ export default {
     { path: 'etim', label: 'ETIM', icon: '⌗', topic: 'export', hint: 'ETIM-Klassifikation: Freigabe (IXF) lesen, Klassen übernehmen, Attribute je Merkmal, Zuordnung, Prüfung — Merkmale für den BMEcat-Export', mount },
     { path: 'coverage', label: 'ETIM-Merkmale', icon: '⌗', topic: 'analysis', hint: 'Datenanalyse wie DPP/PPWR: welche Merkmale der ETIM-Klassen fehlen — Attribute anlegen, Vorschläge aus Regeln, KI oder Recherche im Internet, übernehmen', mount: async (root, ctx) => { await cache.loaded; return ctx.compliance.mount(root, ctx, buildCatalog(ctx)) } },
   ],
-  nodeActions: [{ label: 'ETIM-Merkmale prüfen', icon: '⌗', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.etim.root', id); ctx.go?.('/p/etim/coverage?run=1') } }],
+  nodeActions: [
+    { label: 'ETIM-Merkmale prüfen', icon: '⌗', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.etim.root', id); ctx.go?.('/p/etim/coverage?run=1') } },
+    { label: 'ETIM-Klasse zuweisen …', icon: '⌗', topic: 'export', roles: ['group', 'product', 'variant'], run(id, ctx) { ctx.go?.(`/p/etim/etim?assign=${encodeURIComponent(id)}`) } },
+  ],
   checks,
   featuresOf: etimFeatures,
   resolveValue,
