@@ -181,7 +181,13 @@ export async function mount(root, ctx, catalog) {
   function drawMapping() {
     s1.innerHTML = ''
     const n = catalog.groups.reduce((k, g) => k + g.items.length, 0), mapped = Object.values(st.mapping).filter(m => m.to).length
-    s1.append(band(`1 · Datenpunkte → Attribute · ${mapped} von ${n} zugeordnet`))
+    const openMissing = catalog.groups.flatMap(g => g.items).filter(it => !st.mapping[it.key]?.to && st.levels.has(it.level)).length
+    st.mapOpen ??= openMissing > 0   // alles zugeordnet → zu; erst aufklappen, wenn man die Zuordnung ändern will
+    const b1 = band(`${st.mapOpen ? '▾' : '▸'} 1 · Datenpunkte → Attribute · ${mapped} von ${n} zugeordnet${!st.mapOpen && openMissing ? ` · ${openMissing} offen` : ''}`)
+    b1.style.cursor = 'pointer'; b1.title = st.mapOpen ? 'zuklappen' : 'aufklappen — Datenpunkt → Attribut ändern, fehlende anlegen'
+    b1.addEventListener('click', () => { st.mapOpen = !st.mapOpen; drawMapping() })
+    s1.append(b1)
+    if (!st.mapOpen) return
     s1.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, catalog.description ?? ''))
     // Filter (Taloan, 18.09.): Pflichtgrad an/aus, dazu nur zugeordnete / nur offene
     const all = catalog.groups.flatMap(g => g.items)
@@ -252,7 +258,6 @@ export async function mount(root, ctx, catalog) {
     const sum = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, 'Datenpunkt'), el('th', { class: 'num' }, '✓'), el('th', { class: 'num' }, 'leer'), el('th', { class: 'num' }, '✗'), el('th', {}, ''))))
     const sb = el('tbody'); sum.append(sb)
     for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut — oben zuordnen oder anlegen'))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
-    s3.append(el('details', { open: '' }, el('summary', { class: 'muted' }, 'je Datenpunkt'), sum))
     if (r.inactiveGroups?.size) {
       const groups = [...r.inactiveGroups]; const rootRow = tree.byId.get(st.root)
       const n = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
@@ -263,10 +268,11 @@ export async function mount(root, ctx, catalog) {
           try { const have = (rootRow.groups ?? '').split(',').filter(Boolean); await api.post(`/api/nodes/${encodeURIComponent(rootRow.id)}/groups`, { groups: [...new Set([...have, ...groups])] }, 'PUT'); await tree.load(); store.toast(`✓ ${groups.join(', ')} an ${rootRow.label}`); await run() } catch (e) { store.toast(e.message) }
         } }, `▤ an ${rootRow?.label ?? 'Wurzel'} hängen`)))
     }
+    s3.append(el('details', { open: '' }, el('summary', { class: 'muted' }, 'je Datenpunkt'), sum))
     // je Knoten: Matrix
     const items = r.items.filter(it => st.mapping[it.key]?.to && st.levels.has(it.level))
     const tbl = el('table', { class: 'grid', style: 'width:auto;margin-top:8px' })
-    tbl.append(el('thead', {}, el('tr', {}, el('th', { style: 'width:28px' }, el('input', { type: 'checkbox', title: 'alle für KI-Vorschläge', onchange: e => { st.picked = e.target.checked ? new Set(r.nodes.map(n => n.row.id)) : new Set(); drawResult() } })), el('th', { style: 'width:300px' }, 'Knoten'), el('th', { class: 'num', style: 'width:60px' }, 'Pflicht'), ...items.map(it => el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'writing-mode:vertical-rl;transform:rotate(180deg);max-height:120px;font-weight:400;font-size:11px' }, it.label.slice(0, 22))))))
+    tbl.append(el('thead', {}, el('tr', {}, el('th', { style: 'width:28px' }, el('input', { type: 'checkbox', title: 'alle für KI-Vorschläge', onchange: e => { st.picked = e.target.checked ? new Set(r.nodes.map(n => n.row.id)) : new Set(); drawResult() } })), el('th', { style: 'width:300px' }, 'Knoten'), el('th', { class: 'num', style: 'width:60px' }, 'Pflicht'), ...items.map(it => el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'height:auto;vertical-align:bottom;padding:4px 2px' }, el('div', { style: 'writing-mode:vertical-rl;transform:rotate(180deg);height:110px;font-weight:400;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, it.label.slice(0, 22)))))))
     const tb = el('tbody'); tbl.append(tb)
     // Einrückung nach Tiefe im geprüften Teilbaum (Taloan, 20.09.: keine flache Liste, die sich nur am Symbol unterscheidet)
     const inRun = new Map(r.nodes.map(n => [n.row.id, n.row.parent]))
