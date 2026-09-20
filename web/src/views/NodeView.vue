@@ -16,6 +16,7 @@ import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
 import ListCell from '../components/ListCell.vue'
+import { validate, convert } from '../mapper.js'
 import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
 import RowsBlock from '../components/RowsBlock.vue'
@@ -561,7 +562,7 @@ function cellMenu(e, def, col, block) {
             </div></td>
             <template v-for="c in columns" :key="c.label">
               <ToggleCell v-if="def.type === 'boolean'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <ListCell v-else-if="def.multiple" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="def.type === 'enum' ? listOptions(def) : null" :label-of="def.type === 'enum' ? listLabel(def) : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <ListCell v-else-if="def.multiple" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="def.type === 'enum' ? listOptions(def) : null" :label-of="def.type === 'enum' ? listLabel(def) : null" :check="v => validate(convert(v, def, store.model), def, store.model)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <SelectCell v-else-if="def.type === 'enum'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="listOptions(def)" :label-of="listLabel(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <DateCell v-else-if="def.type === 'date'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <HtmlCell v-else-if="def.type === 'html'" :value="ownValue(def.key, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
