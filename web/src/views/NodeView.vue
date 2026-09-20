@@ -3,7 +3,7 @@
 // angehängt, Definition vererbt), darin die Attribute als Gitter Attribut × Achse.
 // Gruppen, die hier nicht aktiv sind (aktiv ab tieferem Knotentyp), und Attribute ohne
 // Haken für diesen Knotentyp sind sichtbar, aber gesperrt (⌀) — der Umfang-Schalter
-// (store.scope) engt ein: total · kann hier · kann nur hier. Sicht je Knotentyp ordnet
+// (store.scope) engt ein: Alle · Editierbare · Nur hier editierbare Attribute. Sicht je Knotentyp ordnet
 // Gruppen und Attribute; flach untereinander oder als Reiter. Jede Änderung ist
 // ein Befehl an den Server = ein Eintrag.
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
@@ -82,11 +82,11 @@ async function fitPath() {
 watch(() => [props.id, path.value?.length, node.value?.label], fitPath)
 onMounted(() => { fitPath(); window.addEventListener('resize', fitPath) })
 onUnmounted(() => window.removeEventListener('resize', fitPath))
-// Filter am Knoten (Taloan, 20.09.: ein Dropdown, weitere Filter für Editoren kommen dazu): Wortlaut vorläufig, Taloan benennt
+// Filter am Knoten (Taloan, 20.09.: ein Dropdown, weitere Filter für Editoren kommen dazu); Namen von Taloan
 const SCOPES = [
   { key: 'all', label: 'Alle Attribute', title: 'alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar' },
-  { key: 'can', label: 'kann hier', title: 'was auf dieser Ebene änderbar ist' },
-  { key: 'only', label: 'kann nur hier', title: 'was nur auf dieser Ebene änderbar ist — weder darüber noch darunter' },
+  { key: 'can', label: 'Editierbare Attribute', title: 'was auf dieser Ebene änderbar ist' },
+  { key: 'only', label: 'Nur hier editierbare Attribute', title: 'was nur auf dieser Ebene änderbar ist — weder darüber noch darunter' },
 ]
 function setScope(s) { store.scope = s; store.save() }
 // Änderbar auf einer Ebene: Gruppe dort aktiv (aktiv ab, Untergrenze) und der Haken des Attributs für den Knotentyp gesetzt (levels) —

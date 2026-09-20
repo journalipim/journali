@@ -104,7 +104,7 @@ gilt überall gleich — **Eineindeutigkeit**: soll es anders sein, heisst es
 anders. Eine Gruppe sagt, **ab welchem Knotentyp** ihre Werte erfasst
 werden (`activeFrom`): „Variantenmaster" mit SKU hängt am Supermaster, ist
 ab Variante aktiv, darüber sichtbar und gesperrt; Vollständigkeit prüft nur,
-wo aktiv. Am Knoten engt ein Dreistufen-Schalter ein: total (alles, gesperrtes sichtbar) · kann hier (auf dieser Ebene änderbar) · kann nur hier (weder darüber noch darunter erlaubt).
+wo aktiv. Am Knoten engt ein Filter ein: Alle Attribute (gesperrtes sichtbar) · Editierbare Attribute (auf dieser Ebene änderbar) · Nur hier editierbare Attribute (weder darüber noch darunter erlaubt).
 Werte für Attribute, die nach dem Umhängen über keine Gruppe mehr gelten,
 bleiben im Journal und stehen am Knoten als „verwaist".
 
@@ -413,7 +413,7 @@ Altlast), sondern eigener Name am Knoten oder das ★ am Pfad.
 > einer Sicht, rechts zwischen flach und Reitern.
 
 So gebaut (17.09.2026): ⊞ Modell → Attributsichten mit Drag & Drop; im
-Knoten Sicht je Knotentyp, ☰ flach / ⧉ Reiter, Umfang total · kann hier · kann nur hier.
+Knoten Sicht je Knotentyp, ☰ flach / ⧉ Reiter, Filter Alle · Editierbare · Nur hier editierbare Attribute.
 
 ### 21. Suche mit Bedingungen (Taloan, 17.09.2026)
 
