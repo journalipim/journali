@@ -1,8 +1,9 @@
 <script setup>
 // Ein Knoten: Pfad, Kopf nach Rolle, die Attributgruppen, die hier gelten (am Pfad
 // angehängt, Definition vererbt), darin die Attribute als Gitter Attribut × Achse.
-// Gruppen, die hier nicht aktiv sind (aktiv ab tieferem Knotentyp), sind sichtbar,
-// aber gesperrt — oder mit „✎ erfassbar“ weg. Sicht je Knotentyp ordnet
+// Gruppen, die hier nicht aktiv sind (aktiv ab tieferem Knotentyp), und Attribute ohne
+// Haken für diesen Knotentyp sind sichtbar, aber gesperrt (⌀) — der Umfang-Schalter
+// (store.scope) engt ein: total · kann hier · kann nur hier. Sicht je Knotentyp ordnet
 // Gruppen und Attribute; flach untereinander oder als Reiter. Jede Änderung ist
 // ein Befehl an den Server = ein Eintrag.
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
@@ -81,7 +82,12 @@ async function fitPath() {
 watch(() => [props.id, path.value?.length, node.value?.label], fitPath)
 onMounted(() => { fitPath(); window.addEventListener('resize', fitPath) })
 onUnmounted(() => window.removeEventListener('resize', fitPath))
-function toggleEditableOnly() { store.editableOnly = !store.editableOnly; store.save() }
+function setScope(s) { store.scope = s; store.save() }
+// Änderbar auf einer Ebene: Gruppe dort aktiv (aktiv ab, Untergrenze) und der Haken des Attributs für den Knotentyp gesetzt (levels) —
+// dieselbe Regel wie am Server (TreeApi: AllowedAt × GroupActiveAt)
+const DEPTH = { group: 0, product: 1, variant: 2 }
+const ROLES = ['group', 'product', 'variant']
+const canAt = (a, gdef, role) => (!a.levels || a.levels.includes(role)) && (!gdef?.activeFrom || DEPTH[role] >= DEPTH[gdef.activeFrom])
 // Attributnamen: Bezeichnung → Key → beides (Taloan: Vorlagen nutzen die Keys, da darf man nicht raten)
 function cycleNames() { store.attrNames = { label: 'key', key: 'both', both: 'label' }[store.attrNames] ?? 'label'; store.save() }
 const NAMES_TITLE = { label: 'Bezeichnung in der Sicht-Sprache — Klick: technische Keys', key: 'technische Keys — Klick: beides', both: 'Bezeichnung ⟨Key⟩ — Klick: nur Bezeichnung' }
@@ -100,14 +106,16 @@ const blocks = computed(() => {
     const g = byKey.get(k)
     const it = ov?.items.find(x => x.group === k)
     const ord = (it?.order ?? []).filter(a => g.attributes.includes(a))
-    const keys = [...ord, ...g.attributes.filter(a => !ord.includes(a))]
-    let defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key) }))
-    // „● belegt“ (Taloan, 20.09.): genau die Attribute, an denen dieser Knoten selbst einen Wert hat (in irgendeiner Sprache, irgendeinem Kanal,
-    // als Tabelle) — nicht geerbte, nicht leere. Pflicht und Achsen sind eigene Aussagen (Markierung ●, ⌖) und kein Grund, hier zu erscheinen.
-    if (store.ownOnly) { const ownKeys = new Set([...own.value.keys()].map(k => k.split('|')[0])); defs = defs.filter(a => ownKeys.has(a.key) || (node.value?.rows?.[a.key]?.length)) }
     const def = model.value.groups.find(x => x.key === k)
+    // alle Attribute der Gruppe (Modell), nicht nur die am Knotentyp erlaubten (Server) — total zeigt auch die gesperrten, wie ⌀-Gruppen
+    const all = def?.attributes ?? g.attributes
+    const keys = [...ord, ...all.filter(a => !ord.includes(a))]
+    const role = node.value.role
+    let defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key), hereLocked: !(!a.levels || a.levels.includes(role)) }))   // Gruppe ⌀ steht am Gruppenkopf, hier nur die Ebene des Attributs
+    if (store.scope !== 'all') defs = defs.filter(a => !a.hereLocked && g.active)
+    if (store.scope === 'only') defs = defs.filter(a => !ROLES.some(r => r !== role && canAt(a, def, r)))
     return { key: k, label: def?.label?.de || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, active: g.active, defs }
-  }).filter(b => b.defs.length && (!store.editableOnly || b.active))
+  }).filter(b => b.defs.length && (store.scope === 'all' || b.active))
     // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
 })
@@ -206,7 +214,7 @@ function inherited(def, col) {
   return { value: null, from: null }
 }
 function enabled(def, col, block) {
-  return block.active && (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
+  return block.active && !def.hereLocked && (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
     && (!col.channel || !def.channels || def.channels.includes(col.channel))
 }
 function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
@@ -535,8 +543,11 @@ function cellMenu(e, def, col, block) {
       <router-link :to="{ path: '/model', query: { section: 'views', key: orderView?.key } }" class="x edit" :title="orderView ? `${orderView.key} bearbeiten → Modell → Attributsichten` : '→ Modell → Attributsichten'">✎</router-link>
       <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
       <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
-      <button :class="{ primary: store.editableOnly }" @click="toggleEditableOnly" title="Gruppen, die an diesem Knotentyp erfasst werden — ⌀-Gruppen ausgeblendet">✎ erfassbar</button>
-      <button :class="{ primary: store.ownOnly }" @click="store.ownOnly = !store.ownOnly" title="Attribute mit eigenem Wert an diesem Knoten">● belegt</button>
+      <span class="seg" title="Umfang">
+        <button :class="{ primary: store.scope === 'all' }" @click="setScope('all')" title="alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar">total</button>
+        <button :class="{ primary: store.scope === 'can' }" @click="setScope('can')" title="was auf dieser Ebene änderbar ist">kann hier</button>
+        <button :class="{ primary: store.scope === 'only' }" @click="setScope('only')" title="was nur auf dieser Ebene änderbar ist — weder darüber noch darunter">kann nur hier</button>
+      </span>
       <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
       <span class="grow" />
       <input ref="findBox" v-model="attrFilter" type="search" placeholder="🔍 Attribut oder Wert (sichtbar)" style="width:220px;font-size:12px" title="filtert live über Attributname und die Werte in den gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
@@ -600,6 +611,7 @@ function cellMenu(e, def, col, block) {
               <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" title="Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig">⌖</span>
               <span v-if="def.inheritable" class="muted" title="vererbbar: gilt nach unten">↓</span>
               <span v-if="def.required" class="warn" title="Pflicht">●</span>
+              <span v-if="def.hereLocked" class="warn" :title="`nicht an ${roleLabel[node.role]} — verwendbar an: ${(def.levels ?? []).map(r => roleLabel[r]).join(', ')}`">⌀</span>
             </div></td>
             <template v-for="c in columns" :key="c.label">
               <ToggleCell v-if="def.type === 'boolean'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
@@ -796,6 +808,11 @@ function cellMenu(e, def, col, block) {
 </template>
 
 <style scoped>
+/* Dreistufen-Schalter: eine Gruppe von Knöpfen, der aktive leuchtet */
+.seg { display: inline-flex; }
+.seg button { border-radius: 0; margin-left: -1px; }
+.seg button:first-child { border-radius: 4px 0 0 4px; margin-left: 0; }
+.seg button:last-child { border-radius: 0 4px 4px 0; }
 /* Pfad bricht nicht um — wird er zu lang, schrumpft die Schrift (fitPath), notfalls Ellipse an den Gliedern (Taloan) */
 .path { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
 .path .crumb, .path h1 { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
