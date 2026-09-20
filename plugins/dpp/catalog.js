@@ -62,7 +62,7 @@ export default {
       { key: 'end_of_life', label: 'Entsorgung / Rücknahme', level: 'must', type: 'html', synonyms: ['entsorgung', 'end_of_life', 'ruecknahme', 'take_back', 'disposal', 'weee', 'altgeraet'], perLocale: true, hint: 'Hinweise zur Entsorgung, Rücknahmestellen, WEEE-Reg.-Nr.' },
       { key: 'hazardous_components', label: 'Gefährliche Bauteile (Lage, Entnahme)', level: 'should', type: 'text', synonyms: ['gefaehrliche_bauteile', 'hazardous_components', 'batterie_entnahme'] },
     ] },
-    { key: 'battery', label: 'Batteriepass (EU 2023/1542, ab 18.02.2027 — nur Batterien > 2 kWh, LMT, Industrie, E-Fahrzeug)', items: [
+    { key: 'battery', label: 'Batteriepass (EU 2023/1542, ab 18.02.2027 — nur Batterien > 2 kWh, LMT, Industrie, E-Fahrzeug)', scope: { key: 'battery', label: 'Batteriepass', hint: 'nur Batterien > 2 kWh, LMT, Industrie, E-Fahrzeug (EU 2023/1542)' }, items: [
       { key: 'battery_chemistry', label: 'Batteriechemie', level: 'should', type: 'text', synonyms: ['batteriechemie', 'battery_chemistry', 'zellchemie', 'chemistry', 'akku_typ', 'akkutyp'], appliesIf: r => isBattery(r) },
       { key: 'battery_capacity', label: 'Nennkapazität (kWh)', level: 'should', type: 'decimal', unit: 'kWh', synonyms: ['nennkapazitaet', 'rated_capacity', 'kapazitaet', 'akku_kapazitaet', 'capacity', 'battery_capacity'], appliesIf: r => isBattery(r) },
       { key: 'battery_cycles', label: 'Zyklenfestigkeit', level: 'should', type: 'integer', synonyms: ['zyklen', 'cycle_life', 'ladezyklen', 'zyklenfestigkeit'], appliesIf: r => isBattery(r) },

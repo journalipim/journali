@@ -43,7 +43,10 @@ const sameKind = (want, have) => want === have || (want === 'decimal' && have ==
 export async function check(catalog, mapping, rootId, say = () => {}) {
   const model = store.model
   const locale = model.masterLocale ?? model.locales[0]?.code ?? 'de'
-  const keys = [...new Set(Object.values(mapping).map(m => m.to).filter(Boolean))]
+  // Schritt 0 (Taloan, 20.09.: „der Anwender legt fest, was für den Knoten gilt — Richtlinie oder Sondergruppe“): Gruppen des Katalogs mit
+  // scope gelten nur an Knoten, deren Geltungsattribut (vererbbar, z. B. dpp_scope = battery) die Geltung nennt
+  const scopeAttr = catalog.groups.some(g => g.scope) ? `${catalog.key}_scope` : null
+  const keys = [...new Set([...Object.values(mapping).map(m => m.to).filter(Boolean), ...(scopeAttr && model.attributes.some(a => a.key === scopeAttr) ? [scopeAttr] : [])])]
   say('lese …')
   const t = await api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&locale=${locale}${keys.length ? '&attributes=' + encodeURIComponent(keys.join(',')) : ''}`)
   const root = t.node
@@ -69,6 +72,7 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
     for (const it of items) {
       if (it.roles && !it.roles.includes(r.row.role)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
       if (it.appliesIf && !it.appliesIf(r, mapping)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
+      if (it.group?.scope && !String(r.values?.[scopeAttr]?.value ?? '').split(',').map(s => s.trim()).includes(it.group.scope.key)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
       const to = mapping[it.key]?.to
       const v = to ? r.values[to]?.value ?? null : null
       let state = !to ? 'unmapped' : v == null || v === '' ? 'empty' : 'ok'
@@ -157,6 +161,20 @@ export async function createAttributes(catalog, items, mapping) {
     mapping[it.key] = { to: key, why: 'angelegt', sure: true }
   }
   await store.poll(true)
+}
+
+// Knoten wählen: kleiner Auswahlbaum als Fenster, Vorgabe vorbelegt — liefert die Zeile oder null
+function pickNode(preset, title) {
+  return new Promise(resolve => {
+    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:45' })
+    const box = el('div', { style: 'width:420px;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:13px' })
+    let chosen = preset ?? null
+    const host = el('div')
+    treePicker(host, { value: preset?.id ?? null, roles: ['group', 'product', 'variant'], height: 320, onPick: r => { chosen = r } })
+    const done = v => { overlay.remove(); resolve(v) }
+    box.append(el('div', { style: 'font-weight:600;margin-bottom:6px' }, title), host, el('div', { class: 'chips', style: 'justify-content:flex-end;margin-top:8px' }, el('button', { onclick: () => done(null) }, 'Abbrechen'), el('button', { class: 'primary', onclick: () => done(chosen) }, 'OK')))
+    overlay.append(box); document.body.append(overlay)
+  })
 }
 
 // ---- Die Ansicht — dieselbe für jeden Katalog (das Plugin ruft mount(root, ctx, catalog))
@@ -289,6 +307,29 @@ export async function mount(root, ctx, catalog) {
     const grpSel = el('select', { title: 'Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu' }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${(model.groups ?? []).find(g => g.key === k)?.label?.de || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, '+ neue Gruppe …'))
     grpSel.value = catalog.groupKey
     grpSel.addEventListener('change', async () => { let k = grpSel.value; if (k === '__new__') { k = await dialog.prompt({ title: 'Neue Attributgruppe', value: '', placeholder: 'Schlüssel — a-z, 0-9, _', ok: '+ Gruppe' }); k = (k ?? '').trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_'); if (!k) { grpSel.value = catalog.groupKey; return } } catalog.groupKey = k; await ctx.data.set('group', k).catch(() => {}); drawResult(); drawMapping() })
+    const scopes = catalog.groups.filter(g => g.scope).map(g => g.scope)
+    if (scopes.length) {
+      const scopeAttr = `${catalog.key}_scope`; const rootRow = tree.byId.get(st.root)
+      const have = String(r.nodes.find(n => n.row.id === st.root)?.raw?.[scopeAttr] ?? '').split(',').map(s => s.trim()).filter(Boolean)
+      const line = el('div', { class: 'chips', style: 'margin:4px 0' }, el('span', { class: 'muted' }, `Geltung für ${rootRow?.label ?? ''}:`))
+      for (const s of scopes) line.append(el('button', { class: have.includes(s.key) ? 'primary' : '', title: (s.hint ? s.hint + ' — ' : '') + (have.includes(s.key) ? 'gilt hier (Klick nimmt es weg)' : 'gilt hier nicht (Klick setzt es — vererbbar, am Knoten oder darüber)'), onclick: async () => {
+        try {
+          if (!store.model.attributes.some(a => a.key === scopeAttr)) {
+            if (!store.model.lists?.some(l => l.key === scopeAttr)) await api.post(`/api/model/lists/${scopeAttr}`, { key: scopeAttr, label: { de: `${catalog.label} — Geltung`, en: `${catalog.label} — scope` } }, 'PUT')
+            await api.post(`/api/model/lists/${scopeAttr}/values`, scopes.map(x => ({ value: x.key, label: { de: x.label, en: x.label } })), 'PUT')
+            await api.post(`/api/model/attributes/${scopeAttr}`, { key: scopeAttr, label: { de: `${catalog.label} — Geltung`, en: `${catalog.label} — scope` }, type: 'enum', list: scopeAttr, multiple: true, inheritable: true, group: catalog.groupKey }, 'PUT')
+            await store.poll(true)
+          }
+          const next = have.includes(s.key) ? have.filter(x => x !== s.key) : [...have, s.key]
+          const target = await pickNode(rootRow, `${s.label}: gilt ab welchem Knoten? (vererbbar)`)
+          if (!target) return
+          const th = (target.groups ?? '').split(',').filter(Boolean); if (!th.includes(catalog.groupKey) && !tree.ancestors(target.id).some(a => (a.groups ?? '').split(',').includes(catalog.groupKey))) await api.post(`/api/nodes/${encodeURIComponent(target.id)}/groups`, { groups: [...th, catalog.groupKey] }, 'PUT')
+          await api.post(`/api/nodes/${encodeURIComponent(target.id)}/attributes`, { attribute: scopeAttr, locale: null, channel: null, value: null, values: next.length ? next : null, row: null })
+          await store.poll(true); await tree.load(); await run()
+        } catch (e) { store.toast(e.message) }
+      } }, `${have.includes(s.key) ? '✓ ' : ''}${s.label}`))
+      s3.append(line)
+    }
     const inactiveN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
     const emptyN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'empty').length, 0), badN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'bad').length, 0)
     // Der Assistent (Taloan, 20.09.): Analyse → Deltas (zuordnen/anlegen, in welcher Gruppe) → Gruppe im Baum anhängen → erneut → bis alles zugeordnet ist oder der Anwender aufgibt
