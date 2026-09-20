@@ -335,7 +335,11 @@ async function mount(root, ctx) {
     const urlIn = el('input', { placeholder: 'URL (Zip/XML)', value: st.url ?? '', style: 'width:360px', oninput: e => { st.url = e.target.value } })
     const sel = el('select', { style: 'max-width:420px', onchange: e => { st.url = e.target.value; urlIn.value = st.url } }, el('option', { value: '' }, st.list ? `${st.list.length} Versionen bei ETIM International …` : '↻ Liste erst holen'), ...(st.list ?? []).map(r => el('option', { value: r.url, selected: r.url === st.url ? '' : null }, r.name.replace(/\.zip$/, ''))))
     const listBtn = el('button', { class: 'x', title: 'etim-international.com/downloads lesen — die IXF-Versionen als Auswahl', onclick: () => busy('hole Liste …', async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = jsonOf(r.output); if (!j?.releases) throw new Error(r.output?.slice(0, 200) || 'keine Liste'); st.list = j.releases; st.url ||= j.releases[0]?.url ?? ''; say(`${j.releases.length} Versionen`); draw() }) }, '↻ Liste')
-    const loadBtn = el('button', { class: 'primary', title: 'laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = englisch)', onclick: () => { if (!st.url) { store.toast('erst eine Version wählen oder eine URL eintragen'); return } busy(`lade ${st.url.split('/').pop()} …`, async () => {
+    const loadBtn = el('button', { class: 'primary', title: 'laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = englisch)', onclick: async () => { if (!st.url) { store.toast('erst eine Version wählen oder eine URL eintragen'); return }
+      // schon da? (Taloan klickte dreimal — jedes Mal 5 640 Einträge) — dann fragen
+      const have = cache.versions.find(v => v.url === st.url || (v.file && st.url.endsWith(v.file.replace(/\.xml$/i, '.zip'))))
+      if (have && !(await ctx.dialog.confirm({ title: `ETIM ${have.version} ist schon im Journal`, warn: `${have.classes} Klassen vom ${(have.at ?? '').slice(0, 10)}`, text: 'Erneut laden überschreibt die Klassen dieser Version (neue Einträge im Journal).', ok: 'Erneut laden' }))) return
+      busy(`lade ${st.url.split('/').pop()} …`, async () => {
       const h0 = (await api.get('/api/health')).head; const t0 = Date.now()
       const tick = setInterval(async () => { try { const h = (await api.get('/api/health')).head; say(`lade ${st.url.split('/').pop()} … ${h - h0} Klassen geschrieben · ${Math.round((Date.now() - t0) / 1000)} s`) } catch { } }, 2000)
       try {
