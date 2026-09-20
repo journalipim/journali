@@ -62,7 +62,7 @@ const headText = c => c.virtual === 'label' ? '★ ' + (commonDef.value ? store.
 const headLocale = c => c.perLocale || (c.virtual === 'label' && commonDef.value?.perLocale)
 const headTitle = c => c.virtual === 'label'
   ? (commonDef.value ? `★ ${commonDef.value.label?.de || commonDef.value.key} benennt alle Zeilen — hier bearbeiten` : 'je Zeile ihr ★-Attribut (Tooltip an der Zelle); fixierte Namen sind fest')
-  : c.virtual ? 'fest' : `${c.key} · ${c.type}${c.perLocale ? ' · je Sprache' : ''}${c.unit ? ' · ' + c.unit : ''}`
+  : c.virtual ? 'fest' : `${c.key} · ${c.type}${c.perLocale ? ' · sprachabhängig' : ''}${c.unit ? ' · ' + c.unit : ''}`
 // Die wirkliche Spalte hinter einer Zelle: bei #label das ★-Attribut der Zeile
 const eff = (r, c) => c.virtual === 'label' ? labelCol(r) : c
 const commonLabel = computed(() => { const keys = new Set((data.value?.rows ?? []).map(labelKeyOf)); return keys.size === 1 && !keys.has(null) ? [...keys][0] : null })

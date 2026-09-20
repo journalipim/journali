@@ -25,13 +25,13 @@ const listW = paneWidth('model.list', 340)
 
 const sections = [
   { key: 'groups', icon: '▤', label: 'Attributgruppen', part: 'Struktur', one: 'Gruppe', hint: 'Eine Gruppe bündelt Attribute und hängt an Baumknoten; ihre Definition vererbt sich nach unten. „aktiv ab“ sagt, ab welchem Knotentyp Werte erfasst werden.' },
-  { key: 'attributes', icon: '⊞', label: 'Attribute', part: 'Struktur', one: 'Attribut', hint: 'Ein Attribut hat Typ, Gruppe, Achsen (Sprache, Kanal) und Pflicht je Kanal. Der Schlüssel ist für immer.' },
+  { key: 'attributes', icon: '⊞', label: 'Attribute', part: 'Struktur', one: 'Attribut', hint: 'Ein Attribut hat Typ, Gruppe, Achsen (sprachabhängig, kanalabhängig) und Pflicht je Kanal und Sprache. Der Schlüssel ist für immer.' },
   { key: 'lists', icon: '☰', label: 'Wertelisten', part: 'Struktur', one: 'Werteliste', hint: 'Ein Attribut vom Typ enum zeigt auf einen Eintrag der Liste, nicht auf ein Wort. Der Eintrag hat Namen je Sprache und eigene Spalten (Farbe: ral).' },
   { key: 'views', icon: '◫', label: 'Attributsichten', part: 'Struktur', one: 'Sicht', hint: 'Je Knotentyp: welche Gruppen in welcher Reihenfolge, darin die Attribute in welcher Reihenfolge. Der Knoten zeigt in einer Sicht nur deren Gruppen.' },
   { key: 'relationTypes', icon: '⇄', label: 'Relationen', part: 'Struktur', one: 'Relationstyp', hint: 'Ein Relationstyp verbindet Knoten (Zubehör, Bestandteil …): Bezeichnung hin und zurück, erlaubte Knotentypen, und eine Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot).' },
   { key: 'units', icon: '⚖', label: 'Einheiten', part: 'Basics', one: 'Einheit', hint: 'Je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um.' },
   { key: 'locales', icon: '🗣', label: 'Sprachen', part: 'Basics', one: 'Sprache', hint: 'Die Achse locale der Attribute.' },
-  { key: 'channels', icon: '⇶', label: 'Kanäle', part: 'Basics', one: 'Kanal', hint: 'Die Achse channel; Pflichtfelder und Freigaben gelten je Kanal.' },
+  { key: 'channels', icon: '⇶', label: 'Kanäle', part: 'Basics', one: 'Kanal', hint: 'Die Achse channel: kanalabhängige Werte; Pflichtfelder und Freigaben gelten je Kanal.' },
 ]
 const section = ref('attributes')
 const model = computed(() => store.model)
@@ -292,6 +292,15 @@ function add() {
 }
 const addPlaceholder = { relationTypes: 'neuer Relationstyp (key)', groups: 'neue Gruppe (key)', attributes: 'neuer key (a-z, 0-9, _)', lists: 'neue Werteliste (key)', views: 'neue Sicht (key)', units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app' }
 
+// Pflicht je Kanal × Sprache: required[channel] = ['*'] oder Sprachcodes; * schliesst die Einzelnen ein
+const reqHas = (ch, l) => { const r = curAttr.value?.required?.[ch] ?? []; return l === '*' ? r.includes('*') : r.includes('*') || r.includes(l) }
+function reqToggle(ch, l) {
+  const r = new Set(curAttr.value?.required?.[ch] ?? [])
+  if (l === '*') { r.has('*') ? r.clear() : (r.clear(), r.add('*')) }
+  else if (r.has('*')) { r.clear(); for (const x of model.value.locales) if (x.code !== l) r.add(x.code) }   // aus „alle“ eine herausnehmen
+  else r.has(l) ? r.delete(l) : r.add(l)
+  attrSet('req_' + ch, [...r].join(','))
+}
 // ---- Wertelisten: Einträge mit Namen je Sprache und eigenen Spalten (Farbe: ral)
 function listSet(col, v) {
   const l = curList.value
@@ -419,8 +428,8 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <template v-if="section === 'attributes'">
         <select v-model="flt.group" title="Gruppe"><option value="">▤ alle</option><option value="-">— ohne Gruppe</option><option v-for="g in model.groups" :key="g.key" :value="g.key">▤ {{ g.key }}</option></select>
         <select v-model="flt.type" title="Typ"><option value="">Typ</option><option v-for="t in TYPES" :key="t" :value="t">{{ TYPE_SYM[t] }} {{ t }}</option></select>
-        <button :class="{ primary: flt.locale }" @click="flt.locale = !flt.locale" title="nur je Sprache">🗣</button>
-        <button :class="{ primary: flt.channel }" @click="flt.channel = !flt.channel" title="nur je Kanal">⇶</button>
+        <button :class="{ primary: flt.locale }" @click="flt.locale = !flt.locale" title="nur sprachabhängige">🗣</button>
+        <button :class="{ primary: flt.channel }" @click="flt.channel = !flt.channel" title="nur kanalabhängige">⇶</button>
         <button :class="{ primary: flt.multiple }" @click="flt.multiple = !flt.multiple" title="nur mehrfach">≣</button>
       </template>
       <select v-else-if="section === 'groups'" v-model="flt.activeFrom" title="aktiv ab"><option value="">🔒 alle</option><option value="-">überall aktiv</option><option v-for="r in roles" :key="r" :value="r">🔒 ab {{ roleLabel[r] }}</option></select>
@@ -515,13 +524,17 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="curAttr.type === 'text'"><td class="attr" title="Muster als regulärer Ausdruck — jeder Wert muss ganz dazu passen">⌗ Muster</td><Cell :value="curAttr.pattern ?? null" @save="v => attrSet('pattern', v || null)" />
             <td style="padding-left:6px"><select :value="''" @change="e => { const p = PATTERNS.find(x => x.key === e.target.value); if (p) attrSet('pattern', p.re); e.target.value = '' }" title="ein übliches Muster einsetzen"><option value="">Vorlage …</option><option v-for="p in PATTERNS" :key="p.key" :value="p.key">{{ p.label }}</option></select></td></tr>
           <tr v-if="curAttr.type === 'text' && curAttr.pattern"><td class="attr" title="steht in der Fehlermeldung statt des Musters">⌗ Hinweis</td><Cell :value="curAttr.patternHint ?? null" @save="v => attrSet('patternHint', v || null)" /></tr>
-          <tr v-if="curAttr.type !== 'rows'"><td class="attr" title="Wert je Sprache">🗣 je Sprache</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
+          <tr v-if="curAttr.type !== 'rows'"><td class="attr" title="der Wert ist je Sprache verschieden">🗣 sprachabhängig</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
           <tr class="sub"><td colspan="3">↓ Wert</td></tr>
           <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
           <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" title="mehrere Werte, kommagetrennt">≣ mehrfach</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
-          <tr class="sub"><td colspan="3" title="Pflicht heisst: ohne Wert keine Freigabe in diesem Kanal — unabhängig davon, ob der Wert je Kanal verschieden ist (je Kanal). Ein Wert für alle Kanäle kann für web Pflicht sein und für print nicht.">⇶ Kanal · Pflicht für die Freigabe</td></tr>
-          <tr v-if="!['rows', 'formula', 'template'].includes(curAttr.type)"><td class="attr" title="Wert je Kanal">⇶ je Kanal</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
-          <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für Kanal ${c.key}: Sprachen kommagetrennt oder * für alle; leer = keine Pflicht`">● Pflicht {{ c.key }}</td><Cell :value="(curAttr.required?.[c.key] ?? []).join(',') || null" @save="v => attrSet('req_' + c.key, v)" /></tr>
+          <tr class="sub"><td colspan="3" title="Pflicht heisst: ohne Wert keine Freigabe in diesem Kanal — unabhängig davon, ob der Wert kanalabhängig ist. Ein Wert für alle Kanäle kann für web Pflicht sein und für print nicht.">⇶ Kanal · Pflicht für die Freigabe</td></tr>
+          <tr v-if="!['rows', 'formula', 'template'].includes(curAttr.type)"><td class="attr" title="der Wert ist je Kanal verschieden">⇶ kanalabhängig</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
+          <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für die Freigabe im Kanal ${c.key} — je Sprache, oder * für alle Sprachen; nichts = keine Pflicht`">● Pflicht {{ c.key }}</td>
+            <td colspan="2"><div class="chips" style="padding:2px 4px">
+              <span class="view-chip" :class="{ on: reqHas(c.key, '*') }" title="in allen Sprachen Pflicht" @click="reqToggle(c.key, '*')">* alle</span>
+              <template v-if="curAttr.perLocale"><span v-for="l in model.locales" :key="l.code" class="view-chip" :class="{ on: reqHas(c.key, l.code) }" :title="`Pflicht in ${l.code}`" @click="reqToggle(c.key, l.code)">{{ l.code }}</span></template>
+            </div></td></tr>
           <tr class="sub"><td colspan="3">▣ Verwendbar in der Hierarchie</td></tr>
           <tr v-for="r in roles" :key="r"><td class="attr" :title="`Ausnahme: an ${roleLabel[r]} setzbar (sonst gilt die Regel der Gruppe)`">{{ roleLabel[r] }}</td><ToggleCell :value="b(!curAttr.levels || curAttr.levels.includes(r))" @save="v => attrSet('lv_' + r, v === 'true')" /></tr>
         </tbody></table>

@@ -114,7 +114,7 @@ async function save() {
       <div class="section" v-if="false && store.model">
         <h2>Modell</h2>
         <table class="grid" style="width:auto">
-          <thead><tr><th>Attribut</th><th>je Sprache</th><th>je Kanal</th></tr></thead>
+          <thead><tr><th>Attribut</th><th>sprachabhängig</th><th>kanalabhängig</th></tr></thead>
           <tbody>
             <tr v-for="a in store.model.attributes" :key="a.name">
               <td class="mono">{{ a.name }}</td>
