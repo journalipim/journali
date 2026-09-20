@@ -87,6 +87,8 @@ async function placePicked() {
 async function unplace(rubricId, nodeId) { await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/place/${encodeURIComponent(nodeId)}`)) }
 // Ableiten: ab einer Produktgruppe des Pflegebaums — Gruppen werden Rubriken, Produkte Verweise
 const deriving = ref(null)  // { rubric, from }
+// Vorschau: was aus der Gruppe wird — Untergruppen (rekursiv) zu Rubriken, Produkte zu Verweisen
+function deriveWhat(id) { const c = { group: 0, product: 0 }; const walk = x => { for (const k of tree.kids(x)) { if (k.role in c) c[k.role]++; walk(k.id) } }; walk(id); return `${c.group} ${c.group === 1 ? 'Untergruppe wird Rubrik' : 'Untergruppen werden Rubriken'}, ${c.product} ${c.product === 1 ? 'Produkt wird Verweis' : 'Produkte werden Verweise'}` }
 async function deriveRun() {
   const d = deriving.value; if (!d?.from) return
   await run(async () => { await post(`/api/rubrics/${encodeURIComponent(d.rubric.id)}/derive`, { from: d.from }); expanded.value.add(d.rubric.id) })
@@ -160,8 +162,14 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <TreePicker v-model="picking.values" :roles="['group', 'product']" :height="260" multi />
     </div>
     <div v-if="deriving" class="picker-box">
-      <div class="toolbar"><span class="muted">⇊ ableiten in {{ deriving.rubric.label }} ab …</span><span class="grow" /><button class="primary" :disabled="!deriving.from" @click="deriveRun">ableiten</button><button class="x" @click="deriving = null">✕</button></div>
-      <TreePicker v-model="deriving.from" :roles="['group']" :height="260" />
+      <div class="toolbar"><b>⇊ Ableiten in „{{ deriving.rubric.label }}“</b><span class="grow" /><button class="x" @click="deriving = null">✕</button></div>
+      <div class="muted" style="font-size:12px;padding:0 8px 6px">Eine Produktgruppe des Pflegebaums <b>anklicken</b>: ihre Untergruppen werden Rubriken, ihre Produkte Verweise — der Aufbau wird kopiert, nicht die Produkte (nichts ziehen).</div>
+      <TreePicker v-model="deriving.from" :roles="['group']" :height="240" />
+      <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
+        <span v-if="deriving.from" class="muted" style="font-size:12px">▣ {{ tree.byId.get(deriving.from)?.label }}: {{ deriveWhat(deriving.from) }}</span>
+        <span v-else class="muted" style="font-size:12px">noch keine Gruppe gewählt</span>
+        <span class="grow" /><button class="primary" :disabled="!deriving.from" @click="deriveRun">⇊ ableiten</button>
+      </div>
     </div>
     <div class="scroll tree">
       <div v-for="row in rows" :key="row.kind + row.r.id + (row.rubric ?? '')" class="node" :class="[row.kind, { selected: row.r.id === id, drop: dropId === row.r.id }]"
@@ -175,7 +183,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="`Produktgruppe mit ${tree.below(row.r.id).total} darunter`">{{ tree.below(row.r.id).total }}</span>
       </div>
       <div v-if="!trees.length" class="empty">Kein Publikationsbaum — <b>+</b> legt einen an (Kanal, optional Markt), dann Rechtsklick → ableiten.</div>
-      <div v-else-if="rows.length === 1" class="empty">Leer — Rechtsklick auf die Wurzel: ableiten oder Rubrik anlegen.</div>
+      <div v-else-if="rows.length === 1" class="empty">Noch leer. <div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="deriving = { rubric: current, from: null }" title="ab einer Produktgruppe: Untergruppen → Rubriken, Produkte → Verweise">⇊ aus dem Pflegebaum ableiten</button><button @click="newRubric(current)">+ Rubrik</button></div></div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis auf den Pflegebaum · ziehen = umhängen · Rechtsklick</div>
   </div>
