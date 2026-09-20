@@ -1,5 +1,5 @@
 // Komfort-Excel (Taloan, 20.09.2026: „Pflicht sichtbar, Autofilter, als Tabelle formatiert“): die freie SheetJS-Fassung schreibt weder
-// Farben noch Tabellen. Also nachträglich in die fertige .xlsx (ein Zip aus XML): Kopfzeile fett, Pflichtspalten rot, Achsen blau,
+// Farben noch Tabellen. Also nachträglich in die fertige .xlsx (ein Zip aus XML): Kopfzeile fett, Pflichtspalten rot, Achsen dunkelgrün,
 // eine echte Excel-Tabelle (ListObject mit Streifen und Filter) über den Bereich, erste Zeile eingefroren. Ohne Bibliothek —
 // das Zip lesen wir selbst (SheetJS legt die Teile unkomprimiert ab; komprimierte nimmt DecompressionStream) und schreiben es neu.
 const enc = new TextEncoder(), dec = new TextDecoder()
@@ -53,7 +53,7 @@ function styles(files) {
   const grow = (tag, add, n) => { st = st.replace(new RegExp(`<${tag} count="(\\d+)">([\\s\\S]*?)</${tag}>`), (_, c, inner) => `<${tag} count="${Number(c) + n}">${inner}${add}</${tag}>`) }
   if (!/<fonts /.test(st) || !/<fills /.test(st) || !/<cellXfs /.test(st)) throw new Error('styles.xml unerwartet')
   grow('fonts', '<font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/><family val="2"/></font>', 1)
-  grow('fills', '<fill><patternFill patternType="solid"><fgColor rgb="FFC00000"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF1F4E78"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF595959"/><bgColor indexed="64"/></patternFill></fill>', 3)
+  grow('fills', '<fill><patternFill patternType="solid"><fgColor rgb="FFC00000"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF375623"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FF595959"/><bgColor indexed="64"/></patternFill></fill>', 3)
   grow('cellXfs', `<xf numFmtId="0" fontId="${fontId}" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="0" fontId="${fontId}" fillId="${fillId}" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="${fontId}" fillId="${fillId + 1}" borderId="0" xfId="0" applyFont="1" applyFill="1"/><xf numFmtId="0" fontId="${fontId}" fillId="${fillId + 2}" borderId="0" xfId="0" applyFont="1" applyFill="1"/>`, 4)
   files.set('xl/styles.xml', enc.encode(st))
   const ids = { xfHead: xfId, xfReq: xfId + 1, xfAxis: xfId + 2, xfInfo: xfId + 3 }; STYLED.set(files, ids); return ids
