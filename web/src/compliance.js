@@ -50,7 +50,8 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))
   const result = { nodes: [], items, byItem: new Map(), unmapped: items.filter(it => !mapping[it.key]?.to), locale }
-  for (const it of items) result.byItem.set(it.key, { ok: 0, empty: 0, bad: 0, na: 0, below: 0 })
+  for (const it of items) result.byItem.set(it.key, { ok: 0, empty: 0, bad: 0, na: 0, below: 0, inactive: 0 })
+  result.inactiveGroups = new Set()   // Gruppen, die im Teilbaum fehlen (Taloan, 20.09.: „kein Schutzart-Attribut am Knoten“ — die Gruppe hängt nicht am Pfad)
   // Vollständigkeit zählt am Verkaufbaren (Taloan, 20.09.: „muss an der Variante sein — wie ich sie pflege, ist eine andere Sache“):
   // ein Knoten mit Kindern gilt als belegt (↓), wenn alle Blätter darunter den Datenpunkt haben — ob er ihn selbst hat, ist egal.
   const kids = new Map(); for (const r of rows) { const p = r.row.parent ?? ''; if (!kids.has(p)) kids.set(p, []); kids.get(p).push(r) }
@@ -68,12 +69,13 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
       const to = mapping[it.key]?.to
       const v = to ? r.values[to]?.value ?? null : null
       let state = !to ? 'unmapped' : v == null || v === '' ? 'empty' : 'ok'
+      if (to && state === 'empty' && (r.inactive ?? []).includes(to)) { state = 'inactive'; const g = defs.get(to)?.group; if (g) result.inactiveGroups.add(g) }
       if (state === 'ok') {
         const def = defs.get(to)
         const bad = validate(convert(v, def, model), def, model) ?? (it.rule ? it.rule(v, r, model) : null)
         if (bad) { state = 'bad'; node.findings.push({ item: it, message: bad, value: v }) }
       }
-      if (state === 'empty' && !node.leaf) { const below = leavesOf(r).map(l => byId.get(l.row.id)?.states[it.key]); if (below.length && below.every(s => s === 'ok' || s === 'below' || s === 'na')) state = 'below' }
+      if ((state === 'empty' || state === 'inactive') && !node.leaf) { const below = leavesOf(r).map(l => byId.get(l.row.id)?.states[it.key]); if (below.length && below.every(s => s === 'ok' || s === 'below' || s === 'na')) state = 'below' }
       node.states[it.key] = state
       if (it.level === 'must') { node.must++; if (state === 'ok' || state === 'below') node.mustOk++ }
       if (state !== 'unmapped') result.byItem.get(it.key)[state]++
@@ -238,8 +240,8 @@ export async function mount(root, ctx, catalog) {
     try { st.res = await check(catalog, st.mapping, st.root, say); st.sugg = deriveSuggestions(catalog, st.mapping, st.res); say(`${st.res.nodes.length} Knoten geprüft`); drawResult() }
     catch (e) { say('✗ ' + e.message); store.toast(e.message) }
   }
-  const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '', below: '↓' }
-  const CLS = { ok: 'pos', empty: 'muted', bad: 'neg', unmapped: 'muted', na: 'muted', below: 'pos' }
+  const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '', below: '↓', inactive: '⊘' }
+  const CLS = { ok: 'pos', empty: 'muted', bad: 'neg', unmapped: 'muted', na: 'muted', below: 'pos', inactive: 'warn' }
   function drawResult() {
     s3.innerHTML = ''
     const r = st.res; if (!r) return
@@ -249,8 +251,18 @@ export async function mount(root, ctx, catalog) {
     // je Datenpunkt: Zusammenfassung
     const sum = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, 'Datenpunkt'), el('th', { class: 'num' }, '✓'), el('th', { class: 'num' }, 'leer'), el('th', { class: 'num' }, '✗'), el('th', {}, ''))))
     const sb = el('tbody'); sum.append(sb)
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty ? (it.level === 'must' ? 'neg' : 'warn') : 'muted') }, String(c.empty)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut — oben zuordnen oder anlegen'))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : 'kein Attribut — oben zuordnen oder anlegen'))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     s3.append(el('details', { open: '' }, el('summary', { class: 'muted' }, 'je Datenpunkt'), sum))
+    if (r.inactiveGroups?.size) {
+      const groups = [...r.inactiveGroups]; const rootRow = tree.byId.get(st.root)
+      const n = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
+      s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, el('span', { class: 'warn' }, `⊘ ${n} Werte gelten hier nicht — Gruppe ${groups.map(g => '„' + (store.model.groups.find(x => x.key === g)?.label?.de || g) + '“').join(', ')} hängt an keinem Knoten des Pfads`),
+        el('button', { class: 'primary', title: `die Gruppe an ${rootRow?.label ?? 'die Wurzel'} hängen — dann gelten die Attribute an allen Knoten darunter (GroupsAttached)`, onclick: async () => {
+          if (!rootRow) return
+          if (!(await dialog.confirm({ title: `Gruppe an ${rootRow.label} hängen?`, warn: `${groups.join(', ')} gilt dann an allen Knoten darunter`, ok: 'anhängen' }))) return
+          try { const have = (rootRow.groups ?? '').split(',').filter(Boolean); await api.post(`/api/nodes/${encodeURIComponent(rootRow.id)}/groups`, { groups: [...new Set([...have, ...groups])] }, 'PUT'); await tree.load(); store.toast(`✓ ${groups.join(', ')} an ${rootRow.label}`); await run() } catch (e) { store.toast(e.message) }
+        } }, `▤ an ${rootRow?.label ?? 'Wurzel'} hängen`)))
+    }
     // je Knoten: Matrix
     const items = r.items.filter(it => st.mapping[it.key]?.to && st.levels.has(it.level))
     const tbl = el('table', { class: 'grid', style: 'width:auto;margin-top:8px' })
@@ -263,7 +275,7 @@ export async function mount(root, ctx, catalog) {
       const cb = el('input', { type: 'checkbox' }); cb.checked = st.picked.has(n.row.id); cb.addEventListener('change', () => { cb.checked ? st.picked.add(n.row.id) : st.picked.delete(n.row.id) })
       tb.append(el('tr', {}, el('td', {}, cb), el('td', { style: `padding-left:${6 + depthOf(n.row.id) * 18}px` }, el('a', { href: `/tree/${n.row.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${n.row.id}`) }, title: n.row.id }, `${n.row.role === 'variant' ? '◆' : n.row.role === 'product' ? '▦' : '▣'} ${n.row.label}`)),
         el('td', { class: 'num ' + (n.score == null ? 'muted' : n.score === 100 ? 'pos' : n.score < 50 ? 'neg' : 'warn') }, n.score == null ? '–' : n.score + ' %'),
-        ...items.map(it => { const s = n.states[it.key]; const f = n.findings.find(x => x.item.key === it.key); return el('td', { class: CLS[s], style: 'text-align:center', title: f ? f.message : s === 'ok' ? 'erfüllt' : s === 'below' ? 'in allen Varianten darunter belegt' : s === 'empty' ? 'leer' : '' }, SYM[s]) })))
+        ...items.map(it => { const s = n.states[it.key]; const f = n.findings.find(x => x.item.key === it.key); return el('td', { class: CLS[s], style: 'text-align:center', title: f ? f.message : s === 'ok' ? 'erfüllt' : s === 'below' ? 'in allen Varianten darunter belegt' : s === 'empty' ? 'leer' : s === 'inactive' ? `gilt hier nicht — Gruppe „${store.model.attributes.find(a => a.key === st.mapping[it.key]?.to)?.group ?? '?'}“ hängt an keinem Knoten des Pfads` : '' }, SYM[s]) })))
     }
     s3.append(tbl)
     // Befunde (fragliche Werte)
