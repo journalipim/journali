@@ -72,10 +72,11 @@ public sealed class Catalog
                 n++;
             }
             // Rollen (Taloan, 20.09.): vorbelegt, was fehlt — was der Anwender geändert oder entfernt hat, bleibt so (nur admin kommt immer wieder)
+            var hadRoles = _users.Roles.Count > 0;   // vorher: nur ein leeres Journal bekommt alle Saatgut-Rollen (ein bewusst entferntes kommt nicht wieder), admin immer
             foreach (var (key, role) in Rights.Seeds())
             {
                 if (_users.Roles.ContainsKey(key)) continue;
-                if (key != "admin" && _users.Roles.Count > 0) continue;   // ein bewusst entferntes Saatgut kommt nicht wieder
+                if (key != "admin" && hadRoles) continue;
                 Apply(_journal.Append("system", Users.RoleStream + key, Types.RoleDefined, Types.Serialize(role))); n++;
             }
             // Der Wurzelknoten „MasterTree“: nur, wenn es ihn nie gab (auch nicht zurückgezogen).
