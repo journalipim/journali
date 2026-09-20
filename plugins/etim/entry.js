@@ -16,7 +16,18 @@ const groupKey = () => cache.settings.group || 'etim'
 // Klassen und Einstellungen im Speicher — die Prüfregeln laufen synchron (Datenqualität) und brauchen sie ohne Nachschlagen
 // Klassen je Version (Taloan, 20.09.: mehrere Versionen nebeneinander): class:<version>:<EC>; release:<version> die Freigabe dazu;
 // release = die aktuelle Version (Zuweisen, Prüfen, Export). Alte Datensätze class:<EC> ohne Version zählen zur Version der damaligen Freigabe.
-const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [] }
+// Mit der ganzen Freigabe im Journal (5 640 Klassen, 17 000 Merkmale) heisst „übernommen“ nicht mehr „in Gebrauch“: Attribute, Zuordnung und
+// Datenanalyse richten sich nach den Klassen, die im Baum zugewiesen sind (used); die Freigabe ist der Suchpool.
+const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [], used: new Set() }
+async function loadUsed() {
+  try {
+    const key = cache.settings.classAttr; const rows = await (await fetch('/api/tree')).json(); const used = new Set()
+    for (const r of rows.filter(r => !r.parent && r.role !== 'rubric')) { const t = await (await fetch(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`)).json(); for (const row of t.rows ?? []) { const c = String(row.values?.[key]?.value ?? '').trim().toUpperCase(); if (c) used.add(c) } }
+    cache.used = used
+  } catch { }
+}
+/// Klassen in Gebrauch: die im Baum zugewiesenen; ohne Zuweisung und bei kleinem Bestand (von Hand übernommen) alle
+const usedClasses = () => { const out = [...cache.used].map(c => cache.classes.get(c)).filter(Boolean); return out.length || cache.classes.size > 50 ? out : [...cache.classes.values()] }
 const classKeyOf = code => `class:${cache.version ?? '0'}:${code}`
 /// Attribut eines Merkmals: Zuordnung (map), sonst die der Datenanalyse (mapping), sonst das eigene ef…
 const attrKeyOf = code => cache.map[code] ?? cache.mapping?.[code.toLowerCase()]?.to ?? code.toLowerCase()
@@ -41,6 +52,7 @@ async function loadCache() {
       for (const c of Object.values(all)) cache.classes.set(c.code, c)
       if (cache.versions.find(v => v.version === cache.version)?.legacy) { const old = await (await fetch('/api/plugins/etim/data?values=true&prefix=class%3A')).json(); for (const [n, c] of Object.entries(old)) if (/^class:[^:]+$/.test(n) && !cache.classes.has(c.code)) cache.classes.set(c.code, c) }
     }
+    await loadUsed()
   } catch { }
 }
 cache.loaded = loadCache()
@@ -97,7 +109,7 @@ function modelOps(ctx) {
 /// Alle Merkmale der übernommenen Klassen, je Code einmal (Werte vereinigt), mit den Klassen, in denen es vorkommt
 function allFeatures() {
   const feats = new Map()
-  for (const c of cache.classes.values()) for (const f of c.features) { if (!feats.has(f.code)) feats.set(f.code, { ...f, values: [...f.values], classes: [c] }); else { const have = feats.get(f.code); have.classes.push(c); for (const v of f.values) if (!have.values.some(x => x.code === v.code)) have.values.push(v) } }
+  for (const c of usedClasses()) for (const f of c.features) { if (!feats.has(f.code)) feats.set(f.code, { ...f, values: [...f.values], classes: [c] }); else { const have = feats.get(f.code); have.classes.push(c); for (const v of f.values) if (!have.values.some(x => x.code === v.code)) have.values.push(v) } }
   return feats
 }
 
@@ -210,9 +222,11 @@ async function mount(root, ctx) {
       } catch (e) { env.textContent = 'Umfeld: ' + e.message }
     })()
     // Namen: Wörter aus dem Namen und dem Pfad gegen Klassennamen und Synonyme
-    const words = [...new Set([row.label, ...path].join(' ').split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 4).map(w => w.toLowerCase()))]
-    const nameHits = P.map(c => { const names = [...Object.values(c.name ?? {}), ...Object.values(c.synonyms ?? {}).flat()].map(n => String(n).toLowerCase()); const score = words.filter(w => names.some(n => n.includes(w))).length; return { c, score } }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8)
-    const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer (${words.join(', ')})` : P.length ? `keine Klasse passt zu: ${words.join(', ')} — oben suchen` : 'erst eine Freigabe holen'), ...nameHits.map(x => line(x.c.code, `passt zu ${x.score} Wort${x.score > 1 ? 'en' : ''}`)))
+    // Wörter: eigener Name und der direkte Vater zählen doppelt, ganze Wörter mehr als Teile — sonst trifft „mobile“ jedes Telefon
+    const wordsOf = s => String(s ?? '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 4).map(w => w.toLowerCase())
+    const near = new Set([...wordsOf(row.label), ...wordsOf(path[path.length - 1])]); const words = [...new Set([...near, ...path.flatMap(wordsOf)])]
+    const nameHits = P.map(c => { const names = [...Object.values(c.name ?? {}), ...Object.values(c.synonyms ?? {}).flat()].map(n => String(n).toLowerCase()); let score = 0; for (const w of words) { const whole = names.some(n => new RegExp(`(^|[^\p{L}])${w}([^\p{L}]|$)`, 'u').test(n)); const part = whole || names.some(n => n.includes(w)); if (part) score += (whole ? 3 : 1) * (near.has(w) ? 2 : 1) } return { c, score } }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8)
+    const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer (${words.join(', ')})` : P.length ? `keine Klasse passt zu: ${words.join(', ')} — oben suchen` : 'erst eine Freigabe holen'), ...nameHits.map(x => line(x.c.code, `Treffer ${x.score}`)))
     return el('div', { style: 'padding:6px 0;border:1px solid var(--accent);border-radius:6px;padding:8px;margin:6px 0' },
       el('div', { class: 'chips' }, el('b', {}, `Klasse zuweisen an ${ICON[row.role] ?? ''} ${row.label}`), el('span', { class: 'muted', style: 'font-size:12px' }, path.length ? path.join(' › ') : ''), el('span', { class: 'grow' }), el('button', { class: 'x', title: 'ohne Zuweisung weiter', onclick: () => { st.assign = null; draw() } }, '✕')),
       current ? line(current, 'gilt hier schon') : el('div', { class: 'muted', style: 'font-size:12px' }, 'hier gilt noch keine Klasse'),
@@ -224,6 +238,7 @@ async function mount(root, ctx) {
     const row = tree.byId.get(nodeId); if (!row) return
     if (!cache.classes.has(code)) { const cls = st.rel?.classes.find(x => x.code === code); if (!cls) { store.toast(`Klasse ${code} nicht übernommen`); return } await takeClass(cls, true) }
     await busy(`weise ${code} zu …`, async () => {
+      cache.used.add(code)
       const key = await ops.ensureClassAttr(); await store.poll(true)
       const onPath = id => { for (let p = id; p; p = tree.byId.get(p)?.parent) if ((tree.byId.get(p)?.groups ?? '').split(',').includes(groupKey())) return true; return false }
       if (!onPath(nodeId)) { const groups = [...new Set([...(row.groups ?? '').split(',').filter(Boolean), groupKey()])]; await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups }, 'PUT') }
@@ -342,16 +357,16 @@ async function mount(root, ctx) {
       for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale · ${c.status}`)), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: 'Klasse übernehmen (ins Journal)', onclick: async () => { await takeClass(c); draw() } }, '+'), st.assign ? el('button', { class: 'primary', title: `übernehmen und ${tree.byId.get(st.assign)?.label} zuweisen`, onclick: async () => { await assignClass(st.assign, c.code); draw() } }, '⇢ zuweisen') : null))
       if (!found.length) hits.append(el('div', { class: 'muted', style: 'padding:4px' }, 'nichts gefunden'))
     }
-    const taken = [...cache.classes.values()].sort((a, b) => a.code.localeCompare(b.code))
+    const taken = usedClasses().sort((a, b) => a.code.localeCompare(b.code))
     const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Freigabe'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
       el('tbody', {}, ...taken.map(c => { const missing = c.features.filter(f => !hasAttr(attrKeyOf(f.code))).length; return el('tr', {}, el('td', { class: 'mono' }, c.code), el('td', {}, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, c.group ? ` · ${nameOf(c.group.name, locale)}` : '')), el('td', { class: 'num' }, c.features.length), el('td', { class: missing ? 'warn num' : 'muted num' }, missing || '—'), el('td', { class: 'muted', style: 'font-size:11px' }, `${c.release?.name ?? ''} v${c.version}`),
         el('td', { style: 'position:relative' }, assignBtn(c.code)),
         el('td', {}, rel && rel.classes.some(x => x.code === c.code && x.version !== c.version) ? el('button', { class: 'x', title: 'aus der gelesenen Freigabe aktualisieren', onclick: async () => { await takeClass(rel.classes.find(x => x.code === c.code)); draw() } }, '↻') : null, el('button', { class: 'x', title: 'Klasse entfernen (Datensatz; Attribute und Werte bleiben)', onclick: async () => { if (!(await ctx.dialog.confirm({ title: `${c.code} entfernen?`, ok: 'entfernen', danger: true }))) return; await ctx.data.del('class:' + c.code); cache.classes.delete(c.code); draw() } }, '✕'))) })))
     const assignRow = st.assign ? tree.byId.get(st.assign) : null
-    body.append(section('Klassen', `${taken.length} übernommen`,
+    body.append(section('Klassen', `${taken.length} in Gebrauch · ${cache.classes.size} in der Freigabe`,
       assignRow ? assignBox(assignRow, P) : null,
       el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', disabled: !P.length, title: P.length ? `alle Klassen, die im Attribut ${cache.settings.classAttr} im Baum stehen, übernehmen` : 'braucht die gelesene Freigabe (oben ⇩ IXF lesen)', onclick: classesFromTree }, '⇩ aus dem Baum')),
-      hits, taken.length ? tbl : el('div', { class: 'empty' }, rel ? 'Klasse suchen und mit + übernehmen' : 'erst eine Freigabe lesen')))
+      hits, taken.length ? tbl : el('div', { class: 'empty' }, cache.classes.size ? 'noch keine Klasse im Baum zugewiesen — oben suchen und ⇢ zuweisen' : 'erst eine Freigabe holen')))
     // Attribute
     // Gruppe der ETIM-Daten: „etim“ legen wir an (Attribute direkt zugewiesen); eine vorhandene Gruppe heißt: hier zuordnen (Best Guess über die Namen)
     const groupSel = el('select', { title: 'Attributgruppe, die die ETIM-Daten trägt — gibt es sie nicht, wird sie angelegt', onchange: e => { cache.settings.group = e.target.value; saveSettings(); draw() } },
