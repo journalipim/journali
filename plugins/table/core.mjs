@@ -57,6 +57,12 @@ export function toJsonTree({ columns, rows }) {
 export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten') {
   const ws = X.utils.aoa_to_sheet([columns.map(c => c.key), ...rows])
   ws['!cols'] = columns.map(c => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)) }))
+  // Pflicht und Achsen am Spaltenkopf kennzeichnen (Taloan, 20.09.: „das hätte ich gerne in der Excel gekennzeichnet“): SheetJS schreibt
+  // keine Farben, aber Kommentare — rotes Dreieck in Excel, Text beim Zeigen; die Legende sagt es ausserdem
+  columns.forEach((c, i) => { const req = c.def?.required; const note = c.note ?? (req && typeof req === 'object' && Object.keys(req).length ? 'Pflicht: ' + Object.entries(req).map(([ch, l]) => `${ch} ${l.join(',')}`).join(' · ') : req ? 'Pflicht' : null); if (!note) return; const ref = X.utils.encode_cell({ r: 0, c: i }); ws[ref] ??= { t: 's', v: c.key }; ws[ref].c = [{ a: 'journali', t: note }]; ws[ref].c.hidden = true })
+  // Komfort (Taloan, 20.09.): Autofilter über Kopf und Daten — Sortieren und Filtern in Excel sofort da; eine echte „Tabelle“ (ListObject)
+  // schreibt die freie SheetJS-Fassung nicht, Excel: Einfügen → Tabelle auf dem Bereich
+  if (columns.length) ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, rows.length), c: columns.length - 1 } }) }
   const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, sheet)
   if (legendRows) { const lg = X.utils.aoa_to_sheet(legendRows); lg['!cols'] = [{ wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 8 }, { wch: 60 }]; X.utils.book_append_sheet(wb, lg, 'Legende') }
   return wb

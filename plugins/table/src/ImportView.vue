@@ -180,7 +180,17 @@ function profileSet(p) {
   if (p.mapping && source.value) for (const m of mapping.value) { const s = p.mapping[m.column]; if (s) Object.assign(m, s) }
   planned.value = null
 }
-onMounted(() => { if (!tree.loaded) tree.load() })
+onMounted(async () => {
+  if (!tree.loaded) await tree.load()
+  // vom Baum gezogen (Drag & Drop auf einen Knoten): Datei lesen, Ziel setzen, Analyse gleich starten
+  const p = store.pendingImport
+  if (p?.file && !/\.json(\.gz)?$/i.test(p.file.name)) {
+    store.pendingImport = null
+    await takeFile(p.file)
+    if (p.parent && tree.byId.get(p.parent)) pickTarget(tree.byId.get(p.parent))
+    if (p.analyse && source.value && target.value) await analyse()
+  }
+})
 </script>
 
 <template>

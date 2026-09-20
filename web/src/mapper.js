@@ -326,7 +326,10 @@ export function childAttributes(model, nodeView, childRole) {
 // Spaltenköpfe für Vorlage und Export: id, sku, Achsen, dann je Attribut (je Sprache eine Spalte)
 export function childColumns(model, nodeView, childRole, axes, locales) {
   const attrs = childAttributes(model, nodeView, childRole).filter(a => a.key !== 'sku')
+  const isReq = a => !!a.required && (typeof a.required !== 'object' || Object.keys(a.required).length > 0)   // am Knoten ist required schon ein Ja/Nein
+  const cols = a => a.perLocale ? locales.map(l => ({ key: `${a.key}_${l}`, attr: a.key, locale: l, def: a })) : [{ key: a.key, attr: a.key, def: a }]
+  // Pflicht direkt nach id, sku und Achsen (Taloan, 20.09.) — was fehlen darf, steht hinten
   return [{ key: 'id', note: 'leer = neu anlegen; gefüllt = diesen Knoten ändern' }, { key: 'sku', note: 'findet vorhandene Knoten, wenn id leer ist' },
     ...(childRole === 'variant' ? (axes ?? []).map(a => ({ key: 'axis:' + a, note: 'Variantenachse — Pflicht beim Anlegen', attr: a })) : []),
-    ...attrs.flatMap(a => a.perLocale ? locales.map(l => ({ key: `${a.key}_${l}`, attr: a.key, locale: l, def: a })) : [{ key: a.key, attr: a.key, def: a }])]
+    ...attrs.filter(isReq).flatMap(cols), ...attrs.filter(a => !isReq(a)).flatMap(cols)]
 }

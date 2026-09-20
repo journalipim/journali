@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.section[data-v-c9dc6394] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-c9dc6394] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-c9dc6394] { font-weight: 400;\n}\n.drop.over[data-v-c9dc6394] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-c9dc6394] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-c9dc6394] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-c9dc6394] { opacity: .5;\n}\n.samples[data-v-c9dc6394] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-c9dc6394] { font-size: 13px;\n}\n.out[data-v-c9dc6394] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-c9dc6394] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-c9dc6394] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-c9dc6394]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.section[data-v-3eef294d] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-3eef294d] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-3eef294d] { font-weight: 400;\n}\n.drop.over[data-v-3eef294d] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-3eef294d] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-3eef294d] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-3eef294d] { opacity: .5;\n}\n.samples[data-v-3eef294d] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-3eef294d] { font-size: 13px;\n}\n.out[data-v-3eef294d] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-3eef294d] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-3eef294d] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-3eef294d]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -480,8 +480,15 @@ const _sfc_main$1 = {
       }
       planned.value = null;
     }
-    onMounted(() => {
-      if (!tree.loaded) tree.load();
+    onMounted(async () => {
+      if (!tree.loaded) await tree.load();
+      const p = store.pendingImport;
+      if (p?.file && !/\.json(\.gz)?$/i.test(p.file.name)) {
+        store.pendingImport = null;
+        await takeFile(p.file);
+        if (p.parent && tree.byId.get(p.parent)) pickTarget(tree.byId.get(p.parent));
+        if (p.analyse && source.value && target.value) await analyse();
+      }
     });
     return (_ctx, _cache) => {
       const _component_router_link = resolveComponent("router-link");
@@ -1366,7 +1373,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-c9dc6394"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-3eef294d"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
@@ -1457,6 +1464,16 @@ function toJsonTree({ columns, rows }) {
 function workbook(X, { columns, rows }, legendRows = null, sheet = "Daten") {
   const ws = X.utils.aoa_to_sheet([columns.map((c) => c.key), ...rows]);
   ws["!cols"] = columns.map((c) => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)) }));
+  columns.forEach((c, i) => {
+    const req = c.def?.required;
+    const note = c.note ?? (req && typeof req === "object" && Object.keys(req).length ? "Pflicht: " + Object.entries(req).map(([ch, l]) => `${ch} ${l.join(",")}`).join(" · ") : req ? "Pflicht" : null);
+    if (!note) return;
+    const ref2 = X.utils.encode_cell({ r: 0, c: i });
+    ws[ref2] ??= { t: "s", v: c.key };
+    ws[ref2].c = [{ a: "journali", t: note }];
+    ws[ref2].c.hidden = true;
+  });
+  if (columns.length) ws["!autofilter"] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, rows.length), c: columns.length - 1 } }) };
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, sheet);
   if (legendRows) {

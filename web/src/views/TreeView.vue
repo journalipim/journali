@@ -310,9 +310,11 @@ function onDragOver(e, r) {
 async function onDrop(e, r) {
   if (!dragId.value && e.dataTransfer?.files?.length) {
     dropId.value = null; const f = e.dataTransfer.files[0]
-    if (!/\.json(\.gz)?$/i.test(f.name)) { store.toast('Nur JSON-Dateien lassen sich auf den Baum ziehen (Tabellen: ⇩ Import → Tabelle)'); return }
     if (r.role === 'variant') { store.toast('Ziel muss eine Gruppe oder ein Produkt sein'); return }
-    store.pendingImport = { file: f, parent: r.id }; router.push('/p/json/import'); return
+    if (/\.json(\.gz)?$/i.test(f.name)) { store.pendingImport = { file: f, parent: r.id }; router.push('/p/json/import'); return }
+    // Tabelle (Excel, CSV, …): in den Tabellen-Import mit diesem Ziel, Analyse läuft sofort (Taloan, 20.09.)
+    if (plugins.importerFor(f.name) || /\.(csv|txt|tsv)$/i.test(f.name)) { if (!plugins.enabled('table')) { store.toast('Tabellen-Import ist aus (⌁ Plugins → table)'); return } store.pendingImport = { file: f, parent: r.id, analyse: true }; router.push('/p/table/import'); return }
+    store.toast(`Kein Importer für ${f.name} — JSON, Excel, CSV; andere Formate über ⌁ Plugins`); return
   }
   const ids = dragIds()
   dragId.value = null; dropId.value = null; hoverStop()
