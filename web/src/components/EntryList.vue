@@ -42,6 +42,34 @@ async function preview(batch, stream) {
   } catch (err) { previews[k] = err.message }
 }
 const labelOf = id => tree.byId.get(id)?.label ?? id
+// Modell-Zurückziehen rückgängig (Taloan, 20.09.: „und wie mache ich es jetzt rückgängig?“): die letzte Definition vor dem Zurückziehen
+// steht im Strom — sie wird noch einmal geschrieben (kompensierender Eintrag, nichts wird gelöscht). Wertelisten bekommen ihre Werte mit.
+const MODEL_RETIRE = {
+  AttributeRetired: { defined: 'AttributeDefined', path: k => `/api/model/attributes/${k}`, has: (m, k) => m.attributes.some(a => a.key === k) },
+  AttributeGroupRetired: { defined: 'AttributeGroupDefined', path: k => `/api/model/groups/${k}`, has: (m, k) => m.groups.some(g => g.key === k && g.defined !== false) },
+  ListRetired: { defined: 'ListDefined', path: k => `/api/model/lists/${k}`, has: (m, k) => m.lists.some(l => l.key === k), values: true },
+  ViewRetired: { defined: 'ViewDefined', path: k => `/api/model/views/${k}`, has: (m, k) => m.views.some(v => v.key === k) },
+  UnitRetired: { defined: 'UnitDefined', path: k => `/api/model/units/${encodeURIComponent(k)}`, has: (m, k) => m.units.some(u => u.key === k) },
+  RelationTypeRetired: { defined: 'RelationTypeDefined', path: k => `/api/model/relations/${k}`, has: (m, k) => m.relationTypes.some(r => r.key === k) },
+  LocaleRetired: { defined: 'LocaleDefined', path: k => `/api/model/locales/${k}`, has: (m, k) => m.locales.some(l => l.code === k) },
+  ChannelRetired: { defined: 'ChannelDefined', path: k => `/api/model/channels/${k}`, has: (m, k) => m.channels.some(c => c.key === k) },
+}
+const modelKey = stream => stream.slice(stream.indexOf(':') + 1)
+const canRestoreModel = e => { const r = MODEL_RETIRE[e.type]; return !!r && !!store.model && !r.has(store.model, modelKey(e.stream)) }
+async function restoreModel(e) {
+  const r = MODEL_RETIRE[e.type]; const key = modelKey(e.stream)
+  try {
+    const before = (await api.get(`/api/streams/${encodeURIComponent(e.stream)}`)).filter(x => x.number < e.number)
+    const def = [...before].reverse().find(x => x.type === r.defined)
+    if (!def) { store.toast(`${key}: keine Definition im Strom`); return }
+    await api.post(r.path(key), def.payload, 'PUT')
+    if (r.values) {   // Werte der Liste, Stand beim Zurückziehen: Defined/Retired der Reihe nach
+      const vals = new Map(); for (const x of before) { if (x.type === 'ListValueDefined') vals.set(x.payload.value, x.payload); else if (x.type === 'ListValueRetired') vals.delete(x.payload.value) }
+      for (const v of vals.values()) await api.post(`/api/model/lists/${key}/values/${encodeURIComponent(v.value)}`, v, 'PUT')
+    }
+    store.toast(`↶ ${key} wiederhergestellt`, 'ok'); await store.poll(true)
+  } catch (err) { store.toast(err.message) }
+}
 async function undo(batch, stream) {
   try {
     const x = batch ? await api.post(`/api/batches/${encodeURIComponent(batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(stream)}/restore`)
@@ -86,6 +114,7 @@ async function undo(batch, stream) {
           <td :class="{ pos: r.e.type.endsWith('Granted') || r.e.type.endsWith('Assigned') || r.e.type.endsWith('Created'), neg: r.e.type.endsWith('Revoked') || r.e.type.endsWith('Removed') || r.e.type.endsWith('Retired') }">
             {{ describe(r.e) }}
             <button v-if="r.e.type === 'NodeRetired' && !r.inGroup && !tree.byId.has(r.e.stream)" class="x" style="margin-left:8px" @click="undo(r.e.batch, r.e.stream)" @mouseenter="preview(r.e.batch, r.e.stream)" :title="previews[r.e.batch ?? r.e.stream] ?? 'lade Vorschau …'">↶ wiederherstellen</button>
+            <button v-else-if="!r.inGroup && canRestoreModel(r.e)" class="x" style="margin-left:8px" @click="restoreModel(r.e)" title="die letzte Definition vor dem Zurückziehen noch einmal schreiben">↶ wiederherstellen</button>
           </td>
           <td class="mono muted" :title="r.e.batch ? 'Stapel ' + r.e.batch : ''">{{ r.e.batch ? r.e.batch.slice(2, 6) : '' }}</td>
         </tr>
