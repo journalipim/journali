@@ -256,9 +256,12 @@ export async function mount(root, ctx, catalog) {
     const tbl = el('table', { class: 'grid', style: 'width:auto;margin-top:8px' })
     tbl.append(el('thead', {}, el('tr', {}, el('th', { style: 'width:28px' }, el('input', { type: 'checkbox', title: 'alle für KI-Vorschläge', onchange: e => { st.picked = e.target.checked ? new Set(r.nodes.map(n => n.row.id)) : new Set(); drawResult() } })), el('th', { style: 'width:300px' }, 'Knoten'), el('th', { class: 'num', style: 'width:60px' }, 'Pflicht'), ...items.map(it => el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'writing-mode:vertical-rl;transform:rotate(180deg);max-height:120px;font-weight:400;font-size:11px' }, it.label.slice(0, 22))))))
     const tb = el('tbody'); tbl.append(tb)
+    // Einrückung nach Tiefe im geprüften Teilbaum (Taloan, 20.09.: keine flache Liste, die sich nur am Symbol unterscheidet)
+    const inRun = new Map(r.nodes.map(n => [n.row.id, n.row.parent]))
+    const depthOf = id => { let d = 0; for (let p = inRun.get(id); p && inRun.has(p); p = inRun.get(p)) d++; return d }
     for (const n of r.nodes) {
       const cb = el('input', { type: 'checkbox' }); cb.checked = st.picked.has(n.row.id); cb.addEventListener('change', () => { cb.checked ? st.picked.add(n.row.id) : st.picked.delete(n.row.id) })
-      tb.append(el('tr', {}, el('td', {}, cb), el('td', {}, el('a', { href: `/tree/${n.row.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${n.row.id}`) }, title: n.row.id }, `${n.row.role === 'variant' ? '◆' : n.row.role === 'product' ? '▦' : '▣'} ${n.row.label}`)),
+      tb.append(el('tr', {}, el('td', {}, cb), el('td', { style: `padding-left:${6 + depthOf(n.row.id) * 18}px` }, el('a', { href: `/tree/${n.row.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${n.row.id}`) }, title: n.row.id }, `${n.row.role === 'variant' ? '◆' : n.row.role === 'product' ? '▦' : '▣'} ${n.row.label}`)),
         el('td', { class: 'num ' + (n.score == null ? 'muted' : n.score === 100 ? 'pos' : n.score < 50 ? 'neg' : 'warn') }, n.score == null ? '–' : n.score + ' %'),
         ...items.map(it => { const s = n.states[it.key]; const f = n.findings.find(x => x.item.key === it.key); return el('td', { class: CLS[s], style: 'text-align:center', title: f ? f.message : s === 'ok' ? 'erfüllt' : s === 'below' ? 'in allen Varianten darunter belegt' : s === 'empty' ? 'leer' : '' }, SYM[s]) })))
     }
