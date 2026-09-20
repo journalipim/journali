@@ -197,6 +197,32 @@ async function suggestScopes(catalog, rootRow, scopes, have) {
   return { items: scopes.map(s => items.find(x => x.key === s.key)).filter(Boolean), ai: usedAi, class: clsText }
 }
 
+// Ebene wählen (Taloan, 20.09.: „wir wissen nicht, wo der Anwender anfängt“): der Pfad von der Wurzel bis zum Knoten als Chips —
+// je Ebene Produkte darunter, Untergruppen, Knoten mit anderem Wert (≠). Empfehlung: die höchste Ebene ohne Untergruppen und ohne
+// Widerspruch. Liefert die gewählte Zeile oder null. attr/wanted: welches Attribut und welcher Wert gesetzt werden soll (für ≠).
+async function pickLevel(row, title, { attr = null, wanted = null } = {}) {
+  const chain = [...tree.ancestors(row.id), row]
+  const vals = new Map()
+  if (attr && store.model.attributes.some(a => a.key === attr)) { try { const t = await api.get(`/api/nodes/${encodeURIComponent(chain[0].id)}/table?deep=true&attributes=${encodeURIComponent(attr)}`); for (const r of t.rows ?? []) vals.set(r.row.id, String(r.values?.[attr]?.value ?? '')) } catch { } }
+  const under = id => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(id); return out }
+  const conflicts = v => { if (!wanted) return false; const list = v.split(',').map(s => s.trim()).filter(Boolean); return list.length > 0 && !list.includes(wanted) }
+  const out = chain.map(n => { const ns = n.role === 'group' ? under(n.id) : [n, ...under(n.id)]; return { node: n, products: ns.filter(x => x.role === 'product').length || ns.length, groups: n.role === 'group' ? tree.kids(n.id).filter(k => k.role === 'group').length : 0, other: ns.filter(x => conflicts(vals.get(x.id) ?? '')).length } })
+  let rec = out.length - 1; for (let i = 0; i < out.length; i++) if (out[i].other === 0 && out[i].products > 0 && out[i].groups === 0) { rec = i; break }
+  return new Promise(resolve => {
+    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:45' })
+    const box = el('div', { style: 'width:min(640px,94vw);background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:12px;font-size:13px' })
+    let target = out[rec].node
+    const note = el('div', { class: 'muted', style: 'font-size:12px;margin:4px 0 8px' })
+    const noteOf = (l, i) => l.other ? `⚠ ${l.other} Knoten darunter sind schon anders eingeordnet — ab hier zu grob; granularer setzen.` : l.groups ? `⚠ ${l.groups} Untergruppen mit ${l.products} Produkten darunter — gilt das wirklich für alle? Meist zu grob.` : l.products > 1 ? `gilt für ${l.products} Produkte darunter (vererbbar)${i === rec ? ' — Empfehlung' : ''}` : l.products === 1 ? 'gilt für dieses eine Produkt' : 'keine Produkte darunter — gilt, sobald welche kommen'
+    const btns = out.map((l, i) => el('button', { class: i === rec ? 'primary' : '', title: `${l.products} Produkte darunter${l.groups ? ` · ${l.groups} Untergruppen` : ''}${l.other ? ` · ${l.other} anders eingeordnet` : ''}${i === rec ? ' · Empfehlung' : ''}`, onclick: () => { target = l.node; btns.forEach((b, k) => b.className = k === i ? 'primary' : ''); note.textContent = noteOf(l, i) } }, `${l.node.id === row.id ? 'hier' : l.node.label} `, el('span', { class: l.other ? 'neg' : l.groups ? 'warn' : 'muted', style: 'font-size:11px' }, `${l.products}${l.groups ? ` · ${l.groups} ▣` : ''}${l.other ? ` · ${l.other} ≠` : ''}`)))
+    note.textContent = noteOf(out[rec], rec)
+    const done = v => { overlay.remove(); resolve(v) }
+    box.append(el('div', { style: 'font-weight:600;margin-bottom:6px' }, title), el('div', { class: 'muted', style: 'font-size:12px' }, 'Gilt ab (Pfad von der Wurzel bis hier — Zahl: Produkte darunter · ▣ Untergruppen · ≠ anders eingeordnet):'), el('div', { class: 'chips', style: 'margin:4px 0' }, ...btns), note,
+      el('div', { class: 'chips', style: 'justify-content:flex-end;margin-top:8px' }, el('button', { onclick: () => done(null) }, 'Abbrechen'), el('button', { class: 'primary', onclick: () => done(target) }, 'OK')))
+    overlay.append(box); document.body.append(overlay)
+  })
+}
+
 // Knoten wählen: kleiner Auswahlbaum als Fenster, Vorgabe vorbelegt — liefert die Zeile oder null
 function pickNode(preset, title) {
   return new Promise(resolve => {
@@ -359,7 +385,7 @@ export async function mount(root, ctx, catalog) {
             await store.poll(true)
           }
           const next = have.includes(s.key) ? have.filter(x => x !== s.key) : [...have, s.key]
-          const target = await pickNode(rootRow, `${s.label}: gilt ab welchem Knoten? (vererbbar)`)
+          const target = await pickLevel(rootRow, `${s.label}: gilt ab welchem Knoten? (vererbbar)`, { attr: scopeAttr, wanted: have.includes(s.key) ? null : s.key })
           if (!target) return
           const th = (target.groups ?? '').split(',').filter(Boolean); if (!th.includes(catalog.groupKey) && !tree.ancestors(target.id).some(a => (a.groups ?? '').split(',').includes(catalog.groupKey))) await api.post(`/api/nodes/${encodeURIComponent(target.id)}/groups`, { groups: [...th, catalog.groupKey] }, 'PUT')
           await api.post(`/api/nodes/${encodeURIComponent(target.id)}/attributes`, { attribute: scopeAttr, locale: null, channel: null, value: null, values: next.length ? next : null, row: null })
