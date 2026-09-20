@@ -14,7 +14,8 @@ import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
 import TreePicker from '../components/TreePicker.vue'
 import { paneWidth } from '../panes.js'
-const pubW = paneWidth('pub', 320)
+const pubW = paneWidth('pub', 340)
+const srcW = paneWidth('pubsrc', 300)
 const props = defineProps({ id: String })
 const router = useRouter()
 
@@ -48,6 +49,24 @@ const unplaced = computed(() => {
   return tree.rows.filter(r => r.role === 'product' && !inTree(r.id))
 })
 const showUnplaced = ref(false)
+// Links der Pflegebaum (Taloan, 21.09.: „links mein Pflegebaum, rechts der Publikationsbaum, und ich ziehe die Äste rüber, wie ich sie brauche“):
+// Gruppen und Produkte, aufklappbar, ziehbar; ✓ = in diesem Publikationsbaum schon drin (selbst oder über einen Vorfahren als Verweis)
+const srcExpanded = ref(new Set(JSON.parse(localStorage.getItem('journali.pubsrc.expanded') || '[]')))
+function srcToggle(id) { srcExpanded.value.has(id) ? srcExpanded.value.delete(id) : srcExpanded.value.add(id); srcExpanded.value = new Set(srcExpanded.value); localStorage.setItem('journali.pubsrc.expanded', JSON.stringify([...srcExpanded.value])) }
+const srcFilter = ref('')
+const inTree = id => { for (let x = tree.byId.get(id); x; x = tree.byId.get(x.parent)) if (placedSet.value.has(x.id)) return true; return false }
+const srcRows = computed(() => {
+  const ok = r => r.role === 'group' || r.role === 'product'
+  const q = srcFilter.value.trim().toLowerCase()
+  if (q) return tree.rows.filter(r => ok(r) && r.label.toLowerCase().includes(q)).slice(0, 200).map(r => ({ r, depth: 0, has: false, isOpen: false, path: tree.ancestors(r.id).map(a => a.label).join(' › ') }))
+  const out = []
+  const walk = (n, depth) => { const kids = tree.kids(n.id).filter(ok); const isOpen = srcExpanded.value.has(n.id); out.push({ r: n, depth, has: kids.length > 0, isOpen }); if (isOpen) for (const k of kids) walk(k, depth + 1) }
+  for (const r of tree.rows.filter(r => !r.parent && r.role === 'group')) walk(r, 0)
+  return out
+})
+// Was ein gezogener Ast im Publikationsbaum wird: Gruppe → Rubrik mit ihrem Aufbau (umbaubar) oder → Verweis (folgt dem Pflegebaum); Produkt → immer Verweis
+const dropMode = ref(localStorage.getItem('journali.pubsrc.mode') || 'copy')
+watch(dropMode, m => localStorage.setItem('journali.pubsrc.mode', m))
 const selRubric = computed(() => { const r = tree.byId.get(props.id); return r?.role === 'rubric' ? r : null })
 
 async function run(fn) { try { await fn(); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) } }
@@ -89,10 +108,10 @@ async function unplace(rubricId, nodeId) { await run(() => api.del(`/api/rubrics
 // Ableiten: ab einer Produktgruppe des Pflegebaums — Gruppen werden Rubriken, Produkte Verweise
 const deriving = ref(null)  // { rubric, from }
 // Vorschau: was aus der Gruppe wird — Untergruppen (rekursiv) zu Rubriken, Produkte zu Verweisen
-function deriveWhat(id) { const c = { group: 0, product: 0 }; const walk = x => { for (const k of tree.kids(x)) { if (k.role in c) c[k.role]++; walk(k.id) } }; walk(id); return `${c.group} ${c.group === 1 ? 'Untergruppe wird Rubrik' : 'Untergruppen werden Rubriken'}, ${c.product} ${c.product === 1 ? 'Produkt wird Verweis' : 'Produkte werden Verweise'}` }
+function deriveWhat(id) { const c = { group: 0, product: 0 }; const walk = x => { for (const k of tree.kids(x)) { if (k.role in c) c[k.role]++; walk(k.id) } }; walk(id); return `wird Rubrik „${tree.byId.get(id)?.label}“ mit ${c.group} ${c.group === 1 ? 'Unterrubrik' : 'Unterrubriken'} und ${c.product} ${c.product === 1 ? 'Verweis' : 'Verweisen'}` }
 async function deriveRun() {
   const d = deriving.value; if (!d?.from) return
-  await run(async () => { await post(`/api/rubrics/${encodeURIComponent(d.rubric.id)}/derive`, { from: d.from }); expanded.value.add(d.rubric.id) })
+  await run(async () => { await post(`/api/rubrics/${encodeURIComponent(d.rubric.id)}/derive`, { from: d.from, self: true }); expanded.value.add(d.rubric.id) })
   deriving.value = null
 }
 async function placeUnplaced(ids) {
@@ -113,7 +132,7 @@ function contextMenu(e, row) {
   menu.open(e, [
     { label: 'Rubrik darunter …', icon: '+', action: () => newRubric(r) },
     { label: 'Verweise dazu …', icon: '↗', hint: 'Produktgruppen und Produkte aus dem Pflegebaum', action: () => { picking.value = { rubric: r, values: [] } } },
-    { label: 'aus dem Pflegebaum ableiten …', icon: '⇊', hint: 'ab einer Produktgruppe: Gruppen → Rubriken, Produkte → Verweise', action: () => { deriving.value = { rubric: r, from: null } } },
+    { label: 'aus dem Pflegebaum ableiten …', icon: '⇊', hint: 'eine Produktgruppe mit ihrem Aufbau als Rubrik übernehmen', action: () => { deriving.value = { rubric: r, from: null } } },
     { sep: true },
     { label: 'Umbenennen', icon: '✎', action: () => rename(r) },
     ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben im Pflegebaum`, action: () => retire(r) }] : [{ label: 'Kanal / Markt …', icon: '⇶', action: () => editTree(r) }]),
@@ -127,10 +146,17 @@ async function editTree(r) {
 // Ziehen: Rubrik auf Rubrik = umhängen; Verweis auf Rubrik = Verweis umhängen
 const drag = ref(null); const dropId = ref(null)
 function onDragStart(e, row) { drag.value = row; e.dataTransfer.effectAllowed = 'move' }
+function onSrcDragStart(e, row) { drag.value = { kind: 'src', r: row.r }; e.dataTransfer.effectAllowed = 'copy' }
 function onDragOver(e, row) { if (row.kind !== 'rubric' || !drag.value || drag.value.r.id === row.r.id) return; e.preventDefault(); dropId.value = row.r.id }
 async function onDrop(row) {
   const d = drag.value; drag.value = null; dropId.value = null
   if (!d || row.kind !== 'rubric') return
+  if (d.kind === 'src') {
+    // aus dem Pflegebaum: Gruppe → Rubrik mit Aufbau (copy) oder Verweis (ref); Produkt → Verweis
+    if (d.r.role === 'group' && dropMode.value === 'copy') await run(async () => { await post(`/api/rubrics/${encodeURIComponent(row.r.id)}/derive`, { from: d.r.id, self: true }); expanded.value.add(row.r.id) })
+    else await run(async () => { await post(`/api/rubrics/${encodeURIComponent(row.r.id)}/place`, { node: d.r.id }); expanded.value.add(row.r.id) })
+    return
+  }
   if (d.kind === 'rubric') await run(() => post(`/api/nodes/${encodeURIComponent(d.r.id)}/move`, { parent: row.r.id }))
   else await run(async () => { await post(`/api/rubrics/${encodeURIComponent(row.r.id)}/place`, { node: d.r.id }); await api.del(`/api/rubrics/${encodeURIComponent(d.rubric)}/place/${encodeURIComponent(d.r.id)}`) })
 }
@@ -139,6 +165,26 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 </script>
 
 <template>
+  <div class="pane" :style="`width:${srcW}px;flex:none`">
+    <div class="toolbar">
+      <h1>▣ Pflegebaum</h1>
+      <span class="grow" />
+      <span class="view-chip" :class="{ on: dropMode === 'copy' }" @click="dropMode = 'copy'" title="gezogene Gruppe wird Rubrik mit ihrem Aufbau — danach frei umbaubar (umhängen, umbenennen, entfernen)">⇊ kopieren</span>
+      <span class="view-chip" :class="{ on: dropMode === 'ref' }" @click="dropMode = 'ref'" title="gezogene Gruppe wird ein Verweis — zeigt immer den aktuellen Stand des Pflegebaums">↗ verweisen</span>
+    </div>
+    <div class="toolbar" style="border-bottom:1px solid var(--line)"><input v-model="srcFilter" placeholder="filtern" style="width:100%" /></div>
+    <div class="scroll tree">
+      <div v-for="row in srcRows" :key="row.r.id" class="node" :style="`padding-left:${8 + row.depth * 16}px`" draggable="true" @dragstart="onSrcDragStart($event, row)" :title="row.path ?? row.r.id" @dblclick="router.push(`/tree/${row.r.id}`)">
+        <span class="twisty" :class="{ leaf: !row.has }" @click.stop="srcToggle(row.r.id)">{{ row.has ? (row.isOpen ? '▾' : '▸') : '' }}</span>
+        <span class="icon">{{ icon(row.r.role) }}</span>
+        <span class="label">{{ row.r.label }}</span>
+        <span v-if="row.r.role === 'group'" class="muted count" :title="`${tree.below(row.r.id).summary} darunter`">{{ tree.below(row.r.id).total }}</span>
+        <span v-if="current && inTree(row.r.id)" class="pos count" :title="`in „${current.label}“ als Verweis drin`">✓</span>
+      </div>
+    </div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">Ast nach rechts auf eine Rubrik ziehen · Doppelklick öffnet</div>
+  </div>
+  <Splitter v-model="srcW" :min="200" :max="600" />
   <div class="pane" :style="`width:${pubW}px;flex:none`">
     <div class="toolbar">
       <h1>⇶ Publikation</h1>
@@ -164,10 +210,10 @@ onMounted(() => { if (!tree.loaded) tree.load() })
     </div>
     <div v-if="deriving" class="picker-box">
       <div class="toolbar"><b>⇊ Ableiten in „{{ deriving.rubric.label }}“</b><span class="grow" /><button class="x" @click="deriving = null">✕</button></div>
-      <div class="muted" style="font-size:12px;padding:0 8px 6px">Eine Produktgruppe des Pflegebaums <b>anklicken</b>: ihre Untergruppen werden Rubriken, ihre Produkte Verweise — der Aufbau wird kopiert, nicht die Produkte (nichts ziehen).</div>
+      <div class="muted" style="font-size:12px;padding:0 8px 6px">Eine Produktgruppe des Pflegebaums <b>anklicken</b>: sie wird eine Rubrik mit ihrem Namen, ihre Untergruppen Unterrubriken, ihre Produkte Verweise — der Aufbau wird kopiert, nicht die Produkte.</div>
       <TreePicker v-model="deriving.from" :roles="['group']" :height="240" />
       <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
-        <span v-if="deriving.from" class="muted" style="font-size:12px">▣ {{ tree.byId.get(deriving.from)?.label }}: {{ deriveWhat(deriving.from) }}</span>
+        <span v-if="deriving.from" class="muted" style="font-size:12px">▣ {{ tree.byId.get(deriving.from)?.label }} {{ deriveWhat(deriving.from) }}</span>
         <span v-else class="muted" style="font-size:12px">noch keine Gruppe gewählt</span>
         <span class="grow" /><button class="primary" :disabled="!deriving.from" @click="deriveRun">⇊ ableiten</button>
       </div>
@@ -184,13 +230,13 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="`Produktgruppe mit ${tree.below(row.r.id).total} darunter`">{{ tree.below(row.r.id).total }}</span>
       </div>
       <div v-if="!trees.length" class="empty">Kein Publikationsbaum — <b>+</b> legt einen an (Kanal, optional Markt), dann Rechtsklick → ableiten.</div>
-      <div v-else-if="rows.length === 1" class="empty">Noch leer. <div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="deriving = { rubric: current, from: null }" title="ab einer Produktgruppe: Untergruppen → Rubriken, Produkte → Verweise">⇊ aus dem Pflegebaum ableiten</button><button @click="newRubric(current)">+ Rubrik</button></div></div>
+      <div v-else-if="rows.length === 1" class="empty">Noch leer — einen Ast aus dem Pflegebaum links auf „{{ current.label }}“ ziehen. <div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="deriving = { rubric: current, from: null }" title="eine Produktgruppe mit ihrem Aufbau als Rubrik übernehmen">⇊ aus dem Pflegebaum ableiten</button><button @click="newRubric(current)">+ Rubrik</button></div></div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis auf den Pflegebaum · ziehen = umhängen · Rechtsklick</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis · von links ziehen = übernehmen · hier ziehen = umhängen · Rechtsklick</div>
   </div>
   <Splitter v-model="pubW" :min="220" :max="800" />
   <NodeView v-if="id" :id="id" :key="id" />
-  <div v-else class="pane" style="flex:1"><div class="empty">Rubrik links wählen — ihre Texte und Bilder stehen hier wie an jedem Knoten.</div></div>
+  <div v-else class="pane" style="flex:1"><div class="empty">Rubrik wählen — ihre Texte und Bilder stehen hier wie an jedem Knoten.</div></div>
 </template>
 
 <style scoped>

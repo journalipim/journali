@@ -76,7 +76,7 @@ public static class TreeApi
         api.MapPut("/rubrics/{id}/tree", (string id, PubTreeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetPubTree(x, id, b.Channel, b.Market)));
         api.MapPost("/rubrics/{id}/place", (string id, NodePlaced b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Place(x, id, b.Node, b.Order)));
         api.MapDelete("/rubrics/{id}/place/{node}", (string id, string node, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Unplace(x, id, node)));
-        api.MapPost("/rubrics/{id}/derive", (string id, DeriveBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Derive(x, id, b.From, out _)));
+        api.MapPost("/rubrics/{id}/derive", (string id, DeriveBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Derive(x, id, b.From, b.Self, out _)));
         // die Verweise einer Rubrik als Zeilen (tote Verweise auf zurückgezogene Knoten fallen weg) und wo ein Pflegeknoten überall hängt
         api.MapGet("/rubrics/{id}/placed", (string id, Catalog c) => c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var r) && r.Role == Roles.Rubric
             ? Results.Ok(r.Placed.Select(p => tree.Nodes.GetValueOrDefault(p)).Where(n => n is not null).Select(n => NodeRow.Of(tree, model, n!)).ToList()) : Results.NotFound()));
@@ -176,7 +176,7 @@ public static class TreeApi
     /// <summary>Ein Befehl: Urheber aus dem Kopf, Prüfen und Schreiben unter der Sperre, Ergebnis als HTTP.</summary>
     static int CountRubrics(Tree tree, Node n) => tree.Children(n.Id).Sum(ch => 1 + CountRubrics(tree, ch));
     static int CountPlaced(Tree tree, Node n) => n.Placed.Count + tree.Children(n.Id).Sum(ch => CountPlaced(tree, ch));
-    public sealed record DeriveBody(string? From);
+    public sealed record DeriveBody(string? From, bool Self = false);   // Self: die Gruppe selbst wird Rubrik, darunter ihr Aufbau
 
     public static IResult Run(HttpRequest req, Catalog c, Func<Ctx, Outcome> command)
     {

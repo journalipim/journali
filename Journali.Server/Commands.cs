@@ -177,26 +177,29 @@ public static class Commands
     /// Produktgruppe unter <paramref name="from"/> eine Rubrik (rekursiv), jedes Produkt wird ein Verweis. Danach ist der Baum entkoppelt.
     /// Liefert die Zahl der Einträge.
     /// </summary>
-    public static Outcome Derive(Ctx c, string rubric, string? from, out int count)
+    public static Outcome Derive(Ctx c, string rubric, string? from, bool self, out int count)
     {
         var n = 0; count = 0;
         if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;
         if (r.Role != Roles.Rubric) return Outcome.Bad("Ableiten geht in eine Rubrik.");
         if (!c.Tree.Nodes.TryGetValue(Blank(from) ?? "", out var src) || src.Role != Roles.Group) return Outcome.Bad("Abgeleitet wird ab einer Produktgruppe.");
         Entry? last = null;
+        string NameOf(Node g) { var l = NodeRow.LabelOf(c.Tree, c.Model, g); return l == g.Id ? (g.Name ?? g.Id) : l; }   // wie die Oberfläche den Knoten zeigt
         void Walk(string target, Node g)
         {
             foreach (var child in c.Tree.Children(g.Id).OrderBy(x => x.Name ?? x.Id))
             {
                 if (child.Role == Roles.Group)
                 {
-                    var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(target, new Labels(child.Label), child.Name)); n++; last = e;
+                    var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(target, new Labels(child.Label), NameOf(child))); n++; last = e;
                     Walk(e.Stream, child);
                 }
                 else if (child.Role == Roles.Product) { last = c.Write(target, Types.NodePlaced, new NodePlaced(child.Id)); n++; }
             }
         }
-        Walk(rubric, src);
+        // self (Taloan, 21.09.: Ast von links nach rechts ziehen): die Gruppe selbst wird Rubrik, ihr Aufbau darunter
+        if (self) { var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(rubric, new Labels(src.Label), NameOf(src))); n++; last = e; Walk(e.Stream, src); }
+        else Walk(rubric, src);
         count = n;
         return last is null ? Outcome.Bad("Nichts abzuleiten: keine Gruppen oder Produkte darunter.") : Outcome.Ok(last);
     }
