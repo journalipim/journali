@@ -606,7 +606,7 @@ function cellMenu(e, def, col, block) {
         <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· {{ node.children ? 'auch nachträglich — eine neue Achse nimmt an jeder Variante deren Wert des Attributs (muss da sein), Kombination eindeutig' : 'optional — je Achse bekommt jede Variante genau einen Wert, Kombination eindeutig' }}</span></h2>
         <template v-if="open('axes')">
         <div class="chips">
-          <span v-if="!node.axes.length" class="muted">keine — beliebig viele Varianten</span>
+          <span v-if="!node.axes.length" class="muted">keine</span>
           <span v-for="k in node.axes" :key="k" class="chip">{{ axisLabel(k) }} <button @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg — nur, wenn die Varianten danach noch eindeutig sind">×</button></span>
           <template v-if="true">
             <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? '+ weitere Achse (Pflicht) …' : '+ Achse …' }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
