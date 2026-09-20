@@ -117,6 +117,24 @@ export async function featuresOf(pctx, cfg) {
   return { classCode: code, features, known: true, version: cls.release?.name ?? null }
 }
 
+/// Sperre für den Export (Taloan, 20.09.: „der Export führt stillschweigend die Analyse aus, bevor er tätig wird“): null = bestanden,
+/// sonst der Grund — keine Klasse, Klasse nicht übernommen, oder welche Merkmale fehlen bzw. nicht passen. Dieselben Regeln wie die Analyse.
+export async function gate(pctx, cfg) {
+  const code = String(pctx.attr?.[cfg.classAttr]?.raw ?? pctx.attr?.[cfg.classAttr]?.value ?? '').trim().toUpperCase()
+  if (!code) return 'keine ETIM-Klasse'
+  const cls = await cfg.getClass(code)
+  if (!cls) return `Klasse ${code} nicht übernommen`
+  const missing = [], bad = []
+  for (const f of cls.features) {
+    const key = cfg.map?.[f.code] ?? f.code.toLowerCase(); const a = pctx.attr?.[key]
+    const r = resolveValue(f, a ? (a.raw ?? a.value) : null)
+    if (r === null) bad.push(f.code); else if (r.unknown) missing.push(f.code)
+  }
+  if (!missing.length && !bad.length) return null
+  const say = (l, w) => l.length ? `${l.length} ${w}: ${l.slice(0, 4).join(', ')}${l.length > 4 ? ' …' : ''}` : ''
+  return [say(missing, `von ${cls.features.length} Merkmalen leer`), say(bad, 'passen nicht')].filter(Boolean).join('; ')
+}
+
 /// Prüfung eines Knotens (Datenqualität): values = { key: { value } } wie /table; classes = Map EC → Datensatz
 export function checkNode({ values, columns, classes, cfg }) {
   const out = []

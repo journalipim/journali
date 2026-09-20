@@ -120,13 +120,14 @@ async function mount(root, ctx) {
       const env = { api, model, tree: { rows: tree.rows, byId: tree.byId, kids: id => tree.rows.filter(r => (r.parent ?? '') === (id ?? '')) }, server: location.origin }
       const etim = st.etim !== false && ctx.plugins.active('etim') ? ctx.use('etim') : null   // Merkmale aus der ETIM-Klasse am Knoten
       if (etim?.featuresOf) env.featuresOf = etim.featuresOf
+      if (etim?.gate && /\{#features\}/.test(st.template)) env.gate = etim.gate   // Vorlage braucht Merkmale → Analyse muss bestehen
       const t0 = performance.now()
       const cx = await build(env, { root: st.root, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, limit: all ? 0 : 3, say: m => say(m) })
       const out = render(st.template, cx, st.mode, st.locale)
       const ms = Math.round(performance.now() - t0)
       if (all) { const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19); download(out, st.fileName.replace('{date}', stamp).replace('{locale}', st.locale), MIME[st.mode] ?? 'text/plain'); say(`⇓ ${cx.count} Produkte, ${(out.length / 1024).toFixed(0)} KB, ${ms} ms`) }
       else { preview.textContent = out.length > 200000 ? out.slice(0, 200000) + '\n…' : out; say(`Vorschau: ${cx.count} von ${env.tree.rows.filter(r => r.role === st.role || st.role === 'all').length} Knoten, ${ms} ms`) }
-    } catch (e) { say('✗ ' + e.message); store.toast(e.message) } finally { busy = false }
+    } catch (e) { say('✗ ' + e.message.split('\n')[0]); preview.textContent = e.message; store.toast(e.message.split('\n')[0]) } finally { busy = false }
   }
 
   root.append(

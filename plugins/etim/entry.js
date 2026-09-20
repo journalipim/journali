@@ -4,7 +4,7 @@
 // (Werteliste der übernommenen Klassen), je Merkmal ein Attribut (ef000040: Zahl mit Einheit, Ja/Nein, Werteliste mit
 // EV-Codes, Bereich als Text) in der Attributgruppe ETIM — oder eine Zuordnung auf vorhandene Attribute. Prüfregeln in
 // ✓ Datenqualität (Klasse unbekannt, Wert passt nicht zum Merkmal, Belegung), Merkmale für ‹› Vorlagen-Export (BMEcat).
-import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue } from './core.mjs'
+import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate } from './core.mjs'
 
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
 const ICON = { group: '▣', product: '▦', variant: '◆' }
@@ -128,6 +128,9 @@ function buildCatalog(ctx) {
 
 /// Merkmale eines Knotens für xport (env.featuresOf) — pctx ist der Produktkontext von xport
 export async function etimFeatures(pctx) { await cache.loaded; return featuresOf(pctx, { ...cfg(pctx.locale), getClass: async code => cache.classes.get(code) ?? null }) }
+
+/// Sperre für xport: ein Knoten, der die Analyse nicht besteht, wird nicht exportiert
+export async function etimGate(pctx) { await cache.loaded; return gate(pctx, { ...cfg(pctx.locale), getClass: async code => cache.classes.get(code) ?? null }) }
 
 /// Prüfregeln für ✓ Datenqualität
 const checks = [
@@ -301,9 +304,10 @@ export default {
   ],
   nodeActions: [
     { label: 'ETIM-Merkmale prüfen', icon: '⌗', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.etim.root', id); ctx.go?.('/p/etim/coverage?run=1') } },
-    { label: 'ETIM-Klasse zuweisen …', icon: '⌗', topic: 'export', roles: ['group', 'product', 'variant'], run(id, ctx) { ctx.go?.(`/p/etim/etim?assign=${encodeURIComponent(id)}`) } },
+    { label: 'ETIM-Klasse zuweisen …', icon: '⌗', topic: 'analysis', roles: ['group', 'product', 'variant'], run(id, ctx) { ctx.go?.(`/p/etim/etim?assign=${encodeURIComponent(id)}`) } },
   ],
   checks,
   featuresOf: etimFeatures,
+  gate: etimGate,
   resolveValue,
 }

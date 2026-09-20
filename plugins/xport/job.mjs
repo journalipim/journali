@@ -24,7 +24,7 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   const root = rootArg || E.JOURNALI_ROOT || profile.root || ''
   const locale = localeArg || E.JOURNALI_LOCALE || profile.locale || model.masterLocale || 'de'
   // Merkmale aus ETIM (Plugin etim daneben, Klasse am Knoten) — wenn das Profil es nicht abwählt und etim Daten hat
-  let featuresOf = null
+  let featuresOf = null, gate = null
   if (profile.etim !== false) {
     try {
       const etim = await import('../etim/core.mjs')
@@ -34,9 +34,10 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
       const classes = new Map()
       const getClass = async code => { if (!classes.has(code)) classes.set(code, await api.get('/api/plugins/etim/data/' + encodeURIComponent('class:' + code)).catch(() => null)); return classes.get(code) }
       featuresOf = pctx => etim.featuresOf(pctx, { ...settings, map, getClass })
+      if (/\{#features\}/.test(profile.template)) gate = pctx => etim.gate(pctx, { ...settings, map, getClass })   // Vorlage braucht Merkmale → Analyse muss bestehen
     } catch { }
   }
-  const ctx = await build({ api, model, tree, server, featuresOf }, { root, role: profile.role || 'product', locale, mapping: profile.mapping ?? {}, vars: profile.vars ?? {}, features: profile.features ?? [], say: m => { if (/^\d+\/\d+/.test(m) && Number(m.split('/')[0]) % 50 === 0) console.log(m) } })
+  const ctx = await build({ api, model, tree, server, featuresOf, gate }, { root, role: profile.role || 'product', locale, mapping: profile.mapping ?? {}, vars: profile.vars ?? {}, features: profile.features ?? [], say: m => { if (/^\d+\/\d+/.test(m) && Number(m.split('/')[0]) % 50 === 0) console.log(m) } })
   const out = render(profile.template, ctx, profile.mode || 'xml', locale)
   fs.mkdirSync(dir, { recursive: true })
   const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)

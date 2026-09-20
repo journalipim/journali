@@ -136,8 +136,15 @@ export async function build(env, { root, role = 'product', locale, mapping = {},
   const under = id => { for (let p = tree.byId.get(id)?.parent; p; p = tree.byId.get(p)?.parent) if (p === root) return true; return false }
   let targets = tree.rows.filter(r => (root ? r.id === root || under(r.id) : true) && (role === 'all' || r.role === role))
   if (limit > 0) targets = targets.slice(0, limit)
-  const products = []
-  for (const [i, r] of targets.entries()) { say?.(`${i + 1}/${targets.length} ${r.label}`); products.push(await contextOf(env, r.id, { locale, mapping })) }
+  const products = []; const failed = []
+  for (const [i, r] of targets.entries()) {
+    say?.(`${i + 1}/${targets.length} ${r.label}`)
+    const p = await contextOf(env, r.id, { locale, mapping })
+    // Sperre (Taloan, 20.09.): der Export führt die Analyse aus, bevor er tätig wird — ein Knoten, der sie nicht besteht, sperrt den Export
+    if (env.gate) { const why = await env.gate(p); if (why) failed.push(`${r.label}${r.sku ? ' (' + r.sku + ')' : ''}: ${why}`) }
+    products.push(p)
+  }
+  if (failed.length) throw new Error(`Export verweigert — ${failed.length} von ${targets.length} Knoten bestehen die Analyse nicht (✓ Datenanalyse → ⌗ ETIM-Merkmale):\n` + failed.slice(0, 8).join('\n') + (failed.length > 8 ? `\n… und ${failed.length - 8} weitere` : ''))
   const groups = tree.rows.filter(r => r.role === 'group' && (root ? r.id === root || under(r.id) : true)).map(g => { const parent = g.parent && (g.id === root ? null : g.parent); const children = tree.kids(g.id).filter(k => k.role === 'group').map(k => ({ id: k.id, name: k.label })); return { id: g.id, name: g.label, parent, children, type: !parent ? 'root' : children.length ? 'node' : 'leaf' } })
   return { ...vars, products, groups, count: products.length, locale, languageCode: { de: 'deu', en: 'eng', fr: 'fra', it: 'ita', es: 'spa', nl: 'nld' }[locale] ?? locale, today: new Date().toISOString().slice(0, 10), now: new Date().toISOString(), rootName: tree.byId.get(root)?.label ?? '' }
 }
