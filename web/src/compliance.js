@@ -69,7 +69,7 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
   const byId = new Map(); const order = [...rows].sort((a, b) => (isLeaf(a) ? 0 : 1) - (isLeaf(b) ? 0 : 1))   // Blätter zuerst, Eltern schauen auf sie
   void ids
   for (const r of order) {
-    const node = { row: r.row, raw: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, v.value])), states: {}, must: 0, mustOk: 0, findings: [], leaf: isLeaf(r) }
+    const node = { row: r.row, raw: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, v.value])), from: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, v.from ?? null])), states: {}, must: 0, mustOk: 0, findings: [], leaf: isLeaf(r) }
     byId.set(r.row.id, node)
     for (const it of items) {
       if (it.roles && !it.roles.includes(r.row.role)) { node.states[it.key] = 'na'; result.byItem.get(it.key).na++; continue }
@@ -81,13 +81,14 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
       // angefragt (Beleg method pending, checkedAt = Wiedervorlage): kein rotes Feld, sondern ⏳ — überfällig, wenn das Datum vorbei ist
       const src = to ? r.values[to]?.source : null
       if (state === 'empty' && src?.method === 'pending') { state = 'pending'; node.pending = (node.pending ?? 0) + 1; if (src.checkedAt && src.checkedAt < new Date().toISOString().slice(0, 10)) node.overdue = (node.overdue ?? 0) + 1; node.pendingInfo ??= {}; node.pendingInfo[it.key] = src }
-      if (to && state === 'empty' && (r.inactive ?? []).includes(to)) { state = 'inactive'; const g = defs.get(to)?.group; if (g) result.inactiveGroups.add(g) }
+      if (to && state === 'empty' && (r.inactive ?? []).includes(to)) state = 'inactive'
       if (state === 'ok') {
         const def = defs.get(to)
         const bad = validate(convert(v, def, model), def, model) ?? (it.rule ? it.rule(v, r, model) : null)
         if (bad) { state = 'bad'; node.findings.push({ item: it, message: bad, value: v }) }
       }
       if ((state === 'empty' || state === 'inactive') && !node.leaf) { const below = leavesOf(r).map(l => byId.get(l.row.id)?.states[it.key]); if (below.length && below.every(s => s === 'ok' || s === 'below' || s === 'na')) state = 'below' }
+      if (state === 'inactive') { const g = defs.get(to)?.group; if (g && ![tree.byId.get(r.row.id), ...tree.ancestors(r.row.id)].some(x => (x?.groups ?? '').split(',').includes(g))) result.inactiveGroups.add(g) }
       node.states[it.key] = state
       if (it.level === 'must') { node.must++; if (state === 'ok' || state === 'below') node.mustOk++ }
       if (state !== 'unmapped') result.byItem.get(it.key)[state]++
@@ -469,7 +470,11 @@ export async function mount(root, ctx, catalog) {
             await store.poll(true)
           }
           const next = have.includes(s.key) ? have.filter(x => x !== s.key) : [...have, s.key]
-          const target = await pickLevel(rootRow, `${s.label}: gilt ab welchem Knoten? (vererbbar)`, { attr: scopeAttr, wanted: have.includes(s.key) ? null : s.key })
+          // wegnehmen: an dem Knoten, an dem es steht (geerbt: der Vater) — keine Ebenenfrage; setzen: Ebene wählen
+          const fromId = r.nodes.find(n => n.row.id === st.root)?.from?.[scopeAttr]
+          const target = have.includes(s.key)
+            ? ((await dialog.confirm({ title: `${s.label} wegnehmen?`, text: `gesetzt an „${(fromId ? tree.byId.get(fromId)?.label : null) ?? rootRow?.label ?? ''}“ — gilt danach dort und darunter nicht mehr`, ok: 'Wegnehmen' })) ? (fromId ? tree.byId.get(fromId) : null) ?? rootRow : null)
+            : await pickLevel(rootRow, `${s.label}: gilt ab welchem Knoten? (vererbbar)`, { attr: scopeAttr, wanted: s.key })
           if (!target) return
           const th = (target.groups ?? '').split(',').filter(Boolean); if (!th.includes(catalog.groupKey) && !tree.ancestors(target.id).some(a => (a.groups ?? '').split(',').includes(catalog.groupKey))) await api.post(`/api/nodes/${encodeURIComponent(target.id)}/groups`, { groups: [...th, catalog.groupKey] }, 'PUT')
           await api.post(`/api/nodes/${encodeURIComponent(target.id)}/attributes`, { attribute: scopeAttr, locale: null, channel: null, value: null, values: next.length ? next : null, row: null })
@@ -486,10 +491,14 @@ export async function mount(root, ctx, catalog) {
           const on = have.includes(s.key); const sg = list?.items.find(x => x.key === s.key) ?? null
           const why = sg?.why ? ` (${sg.why})` : ''
           const row = el('div', { class: 'chips', style: 'margin:2px 0;font-size:12px', title: s.hint ?? '' })
-          if (sg && sg.applies === on) {
-            row.append(el('span', { class: on ? 'pos' : 'muted' }, `${s.label}: ${on ? 'gilt hier' : 'gilt hier nicht'}${why}`), el('button', { class: 'x', title: on ? 'wegnehmen' : 'doch setzen — ab welchem Knoten, fragt der nächste Schritt', onclick: () => setScope(s, !on) }, 'ändern'))
+          if (on) {
+            const fromId = r.nodes.find(n => n.row.id === st.root)?.from?.[scopeAttr]; const at = fromId ? tree.byId.get(fromId)?.label ?? fromId : rootRow?.label ?? ''
+            row.append(el('span', { class: 'pos' }, `${s.label}: gilt hier — gesetzt an „${at}“ (vererbbar)`), el('button', { class: 'x', title: 'wegnehmen — am Knoten, an dem es gesetzt ist', onclick: () => setScope(s, false) }, 'ändern'),
+              sg && !sg.applies ? el('span', { class: 'muted', title: 'nur ein Hinweis — deine Entscheidung gilt' }, `Hinweis: Vorschlag wäre „nein“${why}`) : null)
+          } else if (sg && !sg.applies) {
+            row.append(el('span', { class: 'muted' }, `${s.label}: gilt hier nicht${why}`), el('button', { class: 'x', title: 'doch setzen — ab welchem Knoten, fragt der nächste Schritt', onclick: () => setScope(s, true) }, 'ändern'))
           } else if (sg) {
-            row.append(el('span', { class: 'warn' }, `${s.label}: gesetzt „${on ? 'ja' : 'nein'}“, Vorschlag „${sg.applies ? 'ja' : 'nein'}“${why} —`), el('button', { class: 'primary', onclick: () => setScope(s, sg.applies) }, `→ ${sg.applies ? 'ja' : 'nein'} übernehmen`), el('button', { class: 'x', title: 'so lassen', onclick: () => row.remove() }, 'so lassen'))
+            row.append(el('span', { class: 'warn' }, `${s.label}: nicht gesetzt, Vorschlag „ja“${why} —`), el('button', { class: 'primary', title: 'setzen — ab welchem Knoten, fragt der nächste Schritt', onclick: () => setScope(s, true) }, '→ ja'), el('button', { class: 'x', title: 'gilt hier nicht — Hinweis ausblenden', onclick: () => row.remove() }, 'nein'))
           } else {
             row.append(el('span', {}, `${s.label}?`), el('button', { class: on ? 'primary' : '', onclick: () => setScope(s, true) }, 'ja'), el('button', { class: on ? '' : 'primary', onclick: () => setScope(s, false) }, 'nein'), el('span', { class: 'muted' }, list === null ? '— kein Vorschlag möglich: ETIM-Klasse setzen oder KI-Schlüssel (⚙ Einstellungen)' : ''))
           }
