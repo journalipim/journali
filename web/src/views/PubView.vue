@@ -206,7 +206,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
     <div class="toolbar">
       <h1>⇶ Publikation</h1>
       <select v-if="trees.length" v-model="treeKey" title="Publikationsbaum — je Kanal (× Markt) die Maximalstruktur">
-        <option v-for="t in trees" :key="t.id" :value="t.id">{{ t.label }} · {{ t.channel }}{{ t.market ? '/' + t.market : '' }}</option>
+        <option v-for="t in trees" :key="t.id" :value="t.id">{{ t.label }} · {{ t.channel }}{{ t.market ? '/' + t.market : '' }} · {{ tree.below(t.id).total }} Rubriken</option>
       </select>
       <button class="x" @click="newTree" title="neuer Publikationsbaum">+</button>
       <span class="grow" />

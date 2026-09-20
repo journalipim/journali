@@ -142,6 +142,9 @@ public static class Commands
         if (parent is null && (channel is null || !c.Model.Channels.ContainsKey(channel))) return Outcome.Bad("Ein Publikationsbaum gehört zu einem Kanal.");
         if (parent is not null) { channel = null; market = null; }
         if (string.IsNullOrWhiteSpace(name) && (label is null || label.Count == 0)) return Outcome.Bad("Name fehlt.");
+        // Zwei Bäume mit gleichem Namen für denselben Kanal × Markt sind nicht zu unterscheiden (Taloan, 21.09.: „der bestehende wird überschrieben“ — es war ein zweiter)
+        if (parent is null && c.Tree.PubTrees.Any(r => r.Channel == channel && r.Market == market && string.Equals(r.Name, Blank(name), StringComparison.OrdinalIgnoreCase)))
+            return Outcome.Bad($"Es gibt schon einen Publikationsbaum „{name}“ für {channel}{(market is null ? "" : " · " + market)} — anderer Name, oder den vorhandenen weiter benutzen.");
         return Outcome.Ok(c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(parent, label ?? new(), Blank(name), channel, market)));
     }
 
