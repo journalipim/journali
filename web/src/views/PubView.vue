@@ -98,13 +98,6 @@ async function retire(r) {
   if (props.id === r.id || tree.ancestors(props.id ?? '').some(a => a.id === r.id)) router.push(`/pub/${r.parent}`)   // erst weg von der Rubrik, sonst 404 → Sprung
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
 }
-// Verweise anlegen: Auswahlbaum (Taloan: Knoten immer per Auswahlbaum), mehrere auf einmal
-const picking = ref(null)   // { rubric, values: [] }
-async function placePicked() {
-  const p = picking.value; if (!p?.values?.length) return
-  await run(async () => { for (const id of p.values) await post(`/api/rubrics/${encodeURIComponent(p.rubric.id)}/place`, { node: id }).catch(e => { if (!/schon/.test(e.message)) throw e }); expanded.value.add(p.rubric.id) })
-  picking.value = null
-}
 async function unplace(rubricId, nodeId) { await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/place/${encodeURIComponent(nodeId)}`)) }
 async function placeUnplaced(ids) {
   if (!selRubric.value) { store.toast('erst eine Rubrik wählen (links anklicken)'); return }
@@ -124,7 +117,6 @@ function contextMenu(e, row) {
   router.push(`/pub/${r.id}`)
   menu.open(e, [
     { label: 'Rubrik darunter …', icon: '+', action: () => newRubric(r) },
-    { label: 'Verweise dazu …', icon: '↗', hint: 'Produktgruppen und Produkte aus dem Pflegebaum', action: () => { picking.value = { rubric: r, values: [] } } },
     { sep: true },
     { label: 'Umbenennen', icon: '✎', action: () => rename(r) },
     ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben im Pflegebaum`, action: () => retire(r) }]
@@ -229,10 +221,6 @@ onMounted(() => { if (!tree.loaded) tree.load() })
           <button class="x" :disabled="!selRubric" @click="placeUnplaced([r.id])" :title="selRubric ? `in ${selRubric.label} hängen` : 'links eine Rubrik wählen'">↗</button>
         </div>
       </div>
-    </div>
-    <div v-if="picking" class="picker-box">
-      <div class="toolbar"><span class="muted">↗ Verweise in {{ picking.rubric.label }}</span><span class="grow" /><button class="primary" :disabled="!picking.values.length" @click="placePicked">{{ picking.values.length }} hängen</button><button class="x" @click="picking = null">✕</button></div>
-      <TreePicker v-model="picking.values" :roles="['group', 'product']" :height="260" multi />
     </div>
     <div class="scroll tree">
       <div v-for="row in rows" :key="row.kind + row.r.id + (row.rubric ?? '')" class="node" :class="[row.kind, { selected: row.r.id === id || sel.has(row.r.id), drop: dropId === row.r.id }]"
