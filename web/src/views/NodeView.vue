@@ -2,7 +2,7 @@
 // Ein Knoten: Pfad, Kopf nach Rolle, die Attributgruppen, die hier gelten (am Pfad
 // angehängt, Definition vererbt), darin die Attribute als Gitter Attribut × Achse.
 // Gruppen, die hier nicht aktiv sind (aktiv ab tieferem Knotentyp), sind sichtbar,
-// aber gesperrt — oder mit „nur bearbeitbare“ weg. Sicht je Knotentyp ordnet
+// aber gesperrt — oder mit „✎ erfassbar“ weg. Sicht je Knotentyp ordnet
 // Gruppen und Attribute; flach untereinander oder als Reiter. Jede Änderung ist
 // ein Befehl an den Server = ein Eintrag.
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
@@ -102,7 +102,7 @@ const blocks = computed(() => {
     const ord = (it?.order ?? []).filter(a => g.attributes.includes(a))
     const keys = [...ord, ...g.attributes.filter(a => !ord.includes(a))]
     let defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key) }))
-    // „nur eigene“ (Taloan, 20.09.): genau die Attribute, an denen dieser Knoten selbst einen Wert hat (in irgendeiner Sprache, irgendeinem Kanal,
+    // „● belegt“ (Taloan, 20.09.): genau die Attribute, an denen dieser Knoten selbst einen Wert hat (in irgendeiner Sprache, irgendeinem Kanal,
     // als Tabelle) — nicht geerbte, nicht leere. Pflicht und Achsen sind eigene Aussagen (Markierung ●, ⌖) und kein Grund, hier zu erscheinen.
     if (store.ownOnly) { const ownKeys = new Set([...own.value.keys()].map(k => k.split('|')[0])); defs = defs.filter(a => ownKeys.has(a.key) || (node.value?.rows?.[a.key]?.length)) }
     const def = model.value.groups.find(x => x.key === k)
@@ -535,8 +535,8 @@ function cellMenu(e, def, col, block) {
       <router-link :to="{ path: '/model', query: { section: 'views', key: orderView?.key } }" class="x edit" :title="orderView ? `${orderView.key} bearbeiten → Modell → Attributsichten` : '→ Modell → Attributsichten'">✎</router-link>
       <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="alle Gruppen untereinander">☰</button>
       <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
-      <button :class="{ primary: store.editableOnly }" @click="toggleEditableOnly" title="nur Gruppen zeigen, die hier bearbeitbar sind (gesperrte weg)">✎ nur bearbeitbare</button>
-      <button :class="{ primary: store.ownOnly }" @click="store.ownOnly = !store.ownOnly" title="Attribute mit eigenem Wert an diesem Knoten">● nur eigene</button>
+      <button :class="{ primary: store.editableOnly }" @click="toggleEditableOnly" title="Gruppen, die an diesem Knotentyp erfasst werden — ⌀-Gruppen ausgeblendet">✎ erfassbar</button>
+      <button :class="{ primary: store.ownOnly }" @click="store.ownOnly = !store.ownOnly" title="Attribute mit eigenem Wert an diesem Knoten">● belegt</button>
       <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
       <span class="grow" />
       <input ref="findBox" v-model="attrFilter" type="search" placeholder="🔍 Attribut oder Wert (sichtbar)" style="width:220px;font-size:12px" title="filtert live über Attributname und die Werte in den gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
