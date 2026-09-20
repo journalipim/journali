@@ -640,7 +640,7 @@ export default {
     { path: 'coverage', label: 'ETIM-Merkmale', icon: '⌗', topic: 'analysis', hint: 'Datenanalyse wie DPP/PPWR: welche Merkmale der ETIM-Klassen fehlen — Attribute anlegen, Vorschläge aus Regeln, KI oder Recherche im Internet, übernehmen', mount: async (root, ctx) => { await cache.loaded; return ctx.compliance.mount(root, ctx, buildCatalog(ctx)) } },
   ],
   nodeActions: [
-    { label: 'ETIM …', icon: '⌗', topic: 'analysis', order: 1, roles: ['group', 'product', 'variant'], run(id, ctx) { return classDialog(id, ctx) } },
+    { label: 'ETIM prüfen', icon: '⌗', topic: 'analysis', roles: ['group', 'product', 'variant'], run(id, ctx) { return classDialog(id, ctx) } },   // einer wie die anderen Prüfungen — ohne order, sortiert wie alle (Taloan, 20.09.)
   ],
   checks,
   featuresOf: etimFeatures,
