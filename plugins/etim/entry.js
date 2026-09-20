@@ -261,7 +261,11 @@ async function classDialog(nodeId, ctx) {
     }
     // Stand
     body.append(current
-      ? el('div', { style: 'margin-bottom:6px' }, el('div', { class: 'muted', style: 'font-size:12px' }, ownCode ? 'Klasse an diesem Knoten' : `Klasse geerbt von ${inherited.from}`), line(current, ownCode ? '' : 'geerbt'))
+      ? el('div', { style: 'margin-bottom:8px' }, el('div', { class: 'muted', style: 'font-size:12px' }, ownCode ? 'Klasse an diesem Knoten' : `Klasse geerbt von ${inherited.from}`), line(current, ownCode ? '' : 'geerbt'),
+          el('div', { class: 'chips', style: 'margin-top:6px' },
+            el('button', { class: 'primary', title: 'Merkmale der Klasse prüfen und füllen — fehlende Attribute entstehen dabei', onclick: () => { close(); localStorage.setItem('journali.cmp.etim.root', nodeId); ctx.go?.('/p/etim/coverage?run=1') } }, '✓ Merkmale prüfen und füllen'),
+            el('button', { onclick: () => { close(); ctx.go?.(`/tree/${nodeId}`) } }, `${ICON[row.role] ?? ''} Werte am Knoten`),
+            el('span', { class: 'muted', style: 'font-size:12px' }, 'andere Klasse: unten wählen')))
       : el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Noch keine Klasse — wählen:'))
     if (row.parent && tree.byId.get(row.parent)?.role === 'group' && tree.kids(row.parent).length > 1)
       body.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, `Tipp: die Klasse an ${ICON.group} ${tree.byId.get(row.parent).label} gilt für alle ${tree.kids(row.parent).length} darunter (vererbbar) — `, el('a', { href: '#', onclick: e => { e.preventDefault(); close(); classDialog(row.parent, ctx) } }, 'dort wählen')))
@@ -636,8 +640,7 @@ export default {
     { path: 'coverage', label: 'ETIM-Merkmale', icon: '⌗', topic: 'analysis', hint: 'Datenanalyse wie DPP/PPWR: welche Merkmale der ETIM-Klassen fehlen — Attribute anlegen, Vorschläge aus Regeln, KI oder Recherche im Internet, übernehmen', mount: async (root, ctx) => { await cache.loaded; return ctx.compliance.mount(root, ctx, buildCatalog(ctx)) } },
   ],
   nodeActions: [
-    { label: 'ETIM-Merkmale prüfen', icon: '⌗', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.etim.root', id); ctx.go?.('/p/etim/coverage?run=1') } },
-    { label: 'ETIM-Klasse …', icon: '⌗', topic: 'analysis', order: 1, roles: ['group', 'product', 'variant'], run(id, ctx) { return classDialog(id, ctx) } },
+    { label: 'ETIM …', icon: '⌗', topic: 'analysis', order: 1, roles: ['group', 'product', 'variant'], run(id, ctx) { return classDialog(id, ctx) } },
   ],
   checks,
   featuresOf: etimFeatures,
