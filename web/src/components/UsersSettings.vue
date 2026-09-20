@@ -83,7 +83,7 @@ onMounted(load)
       <tbody>
         <tr v-for="u in users" :key="u.key" :class="{ off: !u.enabled }">
           <td class="mono">{{ u.key }}</td><td>{{ u.name }}</td><td class="muted">{{ u.email ?? '' }}</td><td :title="u.role">{{ roles.find(r => r.key === u.role)?.label || u.role }}</td>
-          <td><button class="toggle" :class="{ on: u.enabled }" @click="toggle(u)" :title="u.enabled ? 'aktiv — Klick sperrt' : 'gesperrt — Klick aktiviert'">{{ u.enabled ? '●' : '○' }}</button></td>
+          <td><button class="toggle" :class="{ on: u.enabled, off: !u.enabled }" @click="toggle(u)" :title="u.enabled ? 'aktiv — Klick sperrt' : 'gesperrt — Klick aktiviert'">{{ u.enabled ? '✓' : '✗' }}</button></td>
           <td class="muted" style="font-size:12px">{{ when(u.lastAt) }} 👤 {{ u.lastActor }}</td>
           <td class="row" style="gap:4px"><button class="x" @click="edit(u)">✎</button><button class="x" @click="remove(u)" :disabled="u.key === store.auth.user" title="entfernen">🗑</button></td>
         </tr>
@@ -110,7 +110,7 @@ onMounted(load)
         <tr v-for="r in roles" :key="r.key" @contextmenu="roleMenu($event, r)">
           <td class="mono">{{ r.key }}</td>
           <td><input :value="r.label" style="width:100%" @change="e => roleLabel(r, e.target.value)" /></td>
-          <td v-for="rt in rights" :key="rt.key" style="text-align:center"><button class="toggle" :class="{ on: r.rights.includes(rt.key) }" :disabled="r.key === 'admin'" @click="roleToggle(r, rt.key)" :title="r.rights.includes(rt.key) ? rt.label + ' — Klick nimmt es weg' : rt.label + ' — Klick gibt es'">{{ r.rights.includes(rt.key) ? '●' : '○' }}</button></td>
+          <td v-for="rt in rights" :key="rt.key" style="text-align:center"><button class="toggle" :class="{ on: r.rights.includes(rt.key) }" :disabled="r.key === 'admin'" @click="roleToggle(r, rt.key)" :title="r.rights.includes(rt.key) ? rt.label + ' — Klick nimmt es weg' : rt.label + ' — Klick gibt es'">{{ r.rights.includes(rt.key) ? '✓' : '✗' }}</button></td>
           <td class="num muted">{{ r.users || '' }}</td>
         </tr>
       </tbody>
@@ -120,6 +120,10 @@ onMounted(load)
 </template>
 
 <style scoped>
+.toggle { width: 28px; color: var(--muted); font-weight: 600; }
+.toggle.on { color: var(--pos); }
+.toggle.off { color: var(--neg); }
+.toggle:disabled { opacity: .8; }
 table.form td { white-space: normal; vertical-align: middle; height: 34px; }
 .section { padding: 10px 8px; border-top: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
