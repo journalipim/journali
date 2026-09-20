@@ -128,6 +128,7 @@ function contextMenu(e, row) {
       { label: 'Verweis entfernen', icon: '✕', danger: true, hint: 'nur hier — das Produkt bleibt im Pflegebaum', action: () => unplace(row.rubric, r.id) },
     ]); return
   }
+  if (sel.value.size > 1 && sel.value.has(r.id)) { menu.open(e, [{ label: `${sel.value.size} Rubriken entfernen`, icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben`, action: () => retireMany([...sel.value]) }]); return }
   router.push(`/pub/${r.id}`)
   menu.open(e, [
     { label: 'Rubrik darunter …', icon: '+', action: () => newRubric(r) },
@@ -135,7 +136,10 @@ function contextMenu(e, row) {
     { label: 'aus dem Pflegebaum ableiten …', icon: '⇊', hint: 'eine Produktgruppe mit ihrem Aufbau als Rubrik übernehmen', action: () => { deriving.value = { rubric: r, from: null } } },
     { sep: true },
     { label: 'Umbenennen', icon: '✎', action: () => rename(r) },
-    ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben im Pflegebaum`, action: () => retire(r) }] : [{ label: 'Kanal / Markt …', icon: '⇶', action: () => editTree(r) }]),
+    ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben im Pflegebaum`, action: () => retire(r) }]
+      : [{ label: 'Kanal / Markt …', icon: '⇶', action: () => editTree(r) }, { sep: true },
+         { label: 'Leeren', icon: '✕', danger: true, hint: 'alle Rubriken und Verweise raus, der Baum bleibt', action: () => clearTree(r) },
+         { label: 'Publikationsbaum löschen', icon: '✕', danger: true, hint: 'der ganze Baum — die Produkte bleiben im Pflegebaum', action: () => deleteTree(r) }]),
   ])
 }
 async function editTree(r) {
@@ -160,7 +164,35 @@ async function onDrop(row) {
   if (d.kind === 'rubric') await run(() => post(`/api/nodes/${encodeURIComponent(d.r.id)}/move`, { parent: row.r.id }))
   else await run(async () => { await post(`/api/rubrics/${encodeURIComponent(row.r.id)}/place`, { node: d.r.id }); await api.del(`/api/rubrics/${encodeURIComponent(d.rubric)}/place/${encodeURIComponent(d.r.id)}`) })
 }
-function open(row) { router.push(`/pub/${row.r.id}`) }
+const sel = ref(new Set())   // Mehrfachauswahl von Rubriken: Strg-Klick toggelt, Umschalt-Klick nimmt den Bereich bis zur zuletzt geöffneten
+function open(row, e) {
+  if (row.kind === 'rubric' && e && (e.ctrlKey || e.metaKey)) { sel.value.has(row.r.id) ? sel.value.delete(row.r.id) : sel.value.add(row.r.id); sel.value = new Set(sel.value); return }
+  if (row.kind === 'rubric' && e && e.shiftKey && props.id) {
+    const ids = rows.value.filter(x => x.kind === 'rubric').map(x => x.r.id); const a = ids.indexOf(props.id), b = ids.indexOf(row.r.id)
+    if (a >= 0 && b >= 0) { for (const x of ids.slice(Math.min(a, b), Math.max(a, b) + 1)) sel.value.add(x); sel.value = new Set(sel.value); return }
+  }
+  sel.value = new Set(); router.push(`/pub/${row.r.id}`)
+}
+// mehrere Rubriken auf einmal entfernen (nur aus diesem Publikationsbaum); Wurzeln bleiben, verschachtelte nur einmal
+async function retireMany(ids) {
+  const list = ids.map(x => tree.byId.get(x)).filter(r => r && r.parent && !tree.ancestors(r.id).some(a => ids.includes(a.id)))
+  if (!list.length) return
+  if (!await dialog.confirm({ title: `${list.length} Rubriken aus „${current.value?.label ?? ''}“ entfernen?`, list: list.map(r => r.label), text: 'Mit allem darunter (Unterrubriken, Verweise). Die Produkte bleiben im Pflegebaum und gelten hier danach als „noch nicht einsortiert“.', ok: '✕ Entfernen', danger: true })) return
+  await run(async () => { for (const r of list) await api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`) })
+  sel.value = new Set()
+}
+// Baum leeren oder ganz löschen — die Wurzel ist der Publikationsbaum (Kanal × Markt)
+async function clearTree(r) {
+  const kids = tree.kids(r.id); const refs = (r.placed ?? []).length
+  if (!kids.length && !refs) { store.toast('schon leer'); return }
+  if (!await dialog.confirm({ title: `„${r.label}“ leeren?`, text: `${kids.length} Rubriken und ${refs} Verweise an der Wurzel verschwinden. Die Produkte bleiben im Pflegebaum. Der Baum selbst (Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}) bleibt.`, ok: '✕ Leeren', danger: true })) return
+  await run(async () => { for (const k of kids) await api.del(`/api/nodes/${encodeURIComponent(k.id)}?recursive=true`); for (const p of r.placed ?? []) await api.del(`/api/rubrics/${encodeURIComponent(r.id)}/place/${encodeURIComponent(p)}`) })
+}
+async function deleteTree(r) {
+  if (!await dialog.confirm({ title: `Publikationsbaum „${r.label}“ löschen?`, warn: `Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}`, text: 'Mit allen Rubriken und Verweisen. Die Produkte bleiben im Pflegebaum. Wie alles im Journal: zurückholbar über den Papierkorb.', ok: '✕ Löschen', danger: true })) return
+  await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
+  treeKey.value = trees.value[0]?.id ?? ''; if (props.id === r.id) router.push('/pub')
+}
 onMounted(() => { if (!tree.loaded) tree.load() })
 </script>
 
@@ -219,8 +251,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </div>
     </div>
     <div class="scroll tree">
-      <div v-for="row in rows" :key="row.kind + row.r.id + (row.rubric ?? '')" class="node" :class="[row.kind, { selected: row.r.id === id, drop: dropId === row.r.id }]"
-        :style="`padding-left:${8 + row.depth * 16}px`" @click="open(row)" @contextmenu.prevent="contextMenu($event, row)" :title="row.r.id"
+      <div v-for="row in rows" :key="row.kind + row.r.id + (row.rubric ?? '')" class="node" :class="[row.kind, { selected: row.r.id === id || sel.has(row.r.id), drop: dropId === row.r.id }]"
+        :style="`padding-left:${8 + row.depth * 16}px`" @click="open(row, $event)" @contextmenu.prevent="contextMenu($event, row)" :title="row.r.id"
         draggable="true" @dragstart="onDragStart($event, row)" @dragover="onDragOver($event, row)" @dragleave="dropId === row.r.id && (dropId = null)" @drop.prevent="onDrop(row)" @dragend="drag = null; dropId = null">
         <span v-if="row.kind === 'rubric'" class="twisty" :class="{ leaf: !row.has }" @click.stop="toggle(row.r.id)">{{ row.has ? (row.isOpen ? '▾' : '▸') : '' }}</span>
         <span v-else class="twisty muted">↗</span>
@@ -232,7 +264,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <div v-if="!trees.length" class="empty">Kein Publikationsbaum — <b>+</b> legt einen an (Kanal, optional Markt), dann Rechtsklick → ableiten.</div>
       <div v-else-if="rows.length === 1" class="empty">Noch leer — einen Ast aus dem Pflegebaum links auf „{{ current.label }}“ ziehen. <div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="deriving = { rubric: current, from: null }" title="eine Produktgruppe mit ihrem Aufbau als Rubrik übernehmen">⇊ aus dem Pflegebaum ableiten</button><button @click="newRubric(current)">+ Rubrik</button></div></div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis · von links ziehen = übernehmen · hier ziehen = umhängen · Rechtsklick</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis · von links ziehen = übernehmen · hier ziehen = umhängen · Strg-Klick = mehrere · Rechtsklick</div>
   </div>
   <Splitter v-model="pubW" :min="220" :max="800" />
   <NodeView v-if="id" :id="id" :key="id" />
