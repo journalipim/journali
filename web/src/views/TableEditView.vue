@@ -7,6 +7,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { dialog } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
@@ -70,7 +71,17 @@ const columns = computed(() => [...VIRTUAL.filter(v => v.virtual !== 'sku' || !a
 const axisKeys = computed(() => new Set(childRole.value === 'variant' ? (data.value?.node?.axes ?? tree.byId.get(props.id)?.axes ?? []) : []))
 const isReq = c => !!c.required && (typeof c.required !== 'object' || Object.keys(c.required).length > 0)
 const kindOf = c => c.virtual === 'sku' || c.key === 'sku' ? 'info' : c.virtual ? '' : axisKeys.value.has(c.key) ? 'axis' : isReq(c) ? 'required' : ''
-const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value); if (viewKey.value) return base; const rank = c => c.key === 'sku' ? -1 : axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
+// Spaltenfilter (Taloan, 20.09.): das Feld neben der Sicht sucht Spalten (Name oder Schlüssel), nicht Inhalte
+const colMatch = c => { const q = filter.value.trim().toLowerCase(); return !q || store.name(c).toLowerCase().includes(q) || c.key.toLowerCase().includes(q) }
+const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value && colMatch(c)); if (viewKey.value) return base; const rank = c => c.key === 'sku' ? -1 : axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
+const HELP = [
+  ['Klick · ziehen', 'Zelle wählen · Bereich aufziehen'], ['Shift+Pfeil', 'Bereich vergrössern'], ['Strg+A', 'alles'],
+  ['Tippen', 'überschreibt die Zelle (Ergänzung aus der Spalte: Enter nimmt sie)'], ['F2 · Doppelklick', 'bearbeiten — langer Text/HTML im grossen Editor'],
+  ['Enter · Tab', 'speichern, weiter nach unten · rechts'], ['Esc', 'verwerfen'], ['Entf', 'Zelle leeren (geerbter Wert gilt wieder)'],
+  ['Strg+D', 'füllen: oberste Zelle in den Bereich darunter'], ['Strg+Shift+D', 'Reihe: 1, 2 → 3, 4 · Art-001 → Art-002'], ['▪ Kästchen ziehen', 'füllen wie in Excel'],
+  ['Strg+C · Strg+V', 'mit Excel austauschen (Listen über Wert oder Bezeichnung)'], ['Strg+H', 'ins Suchfeld für Ersetzen'], ['Strg+S', 'alle Änderungen als ein Stapel ins Journal'],
+  ['kursiv', 'geerbter Wert'], ['Buchstabe in Auswahl', 'springt zum passenden Wert; ohne Treffer beginnt ein neuer Listenwert'],
+]
 const baseColumns = computed(() => {
   if (!data.value) return []
   const all = data.value.columns
@@ -82,12 +93,7 @@ const baseColumns = computed(() => {
   return all.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999))
 })
 const editable = c => !c.virtual && !['rows', 'formula', 'template'].includes(c.type)   // html: eigener Editor (HtmlCell); virtuelle: siehe canWrite
-const rows = computed(() => {
-  if (!data.value) return []
-  const q = filter.value.trim().toLowerCase()
-  if (!q) return data.value.rows
-  return data.value.rows.filter(r => r.row.label.toLowerCase().includes(q) || (r.row.sku ?? '').toLowerCase().includes(q) || Object.values(r.values).some(v => String(v.value ?? '').toLowerCase().includes(q)))
-})
+const rows = computed(() => data.value?.rows ?? [])
 const key = (r, c) => `${r.row.id}|${eff(r, c)?.key ?? c.key}`
 const shown = (r, c0) => { const c = eff(r, c0); if (!c) return null; return dirty.value.has(key(r, c)) ? (dirty.value.get(key(r, c)) || null) : (r.values[c.key]?.own ? r.values[c.key].value : (r.row.axisValues?.[c.key] ?? null)) }
 const inherited = (r, c0) => { const c = eff(r, c0); if (!c) return c0.virtual === 'label' ? r.row.label : null; if (c.virtual === 'sku') return r.row.sku ?? null; if (c.virtual === 'axes') return Object.values(r.row.axisValues ?? {}).join(' · ') || null; return r.values[c.key]?.own ? null : r.values[c.key]?.value ?? null }
@@ -418,15 +424,6 @@ function onKey(e) {
 onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('mousedown', onMouseDown, true); document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); window.addEventListener('pagehide', onPageHide) })
 onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouseDown, true); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); window.removeEventListener('pagehide', onPageHide) })
 
-// Export der Tabelle, wie sie dasteht (CSV, Semikolon, UTF-8 mit BOM — Excel öffnet das direkt)
-function exportCsv() {
-  const esc = v => { const s = v == null ? '' : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s }
-  const withSku = !attrColumns.value.some(c => c.key === 'sku')   // sku nur einmal: als Attributspalte, sonst fest
-  const head = ['id', 'name', ...(withSku ? ['sku'] : []), ...attrColumns.value.map(c => c.perLocale ? `${c.key}_${locale.value}` : c.key)]
-  const lines = [head.join(';'), ...rows.value.map(r => [r.row.id, r.row.label, ...(withSku ? [r.row.sku ?? ''] : []), ...attrColumns.value.map(c => shown(r, c) ?? inherited(r, c) ?? '')].map(esc).join(';'))]
-  const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${data.value.node.label}-${childRole.value}-${locale.value}.csv`; a.click(); URL.revokeObjectURL(a.href)
-}
 const listOf = c => model.value?.lists?.find(l => l.key === c.list)
 const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v); return lv?.label?.[locale.value] || lv?.label?.de || v }
 </script>
@@ -436,7 +433,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
     <div class="toolbar path">
       <router-link v-for="a in tree.ancestors(id)" :key="a.id" :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }} ›</router-link>
       <router-link :to="`/tree/${id}`" class="crumb">{{ icon(data.node.role) }} {{ data.node.label }}</router-link>
-      <h1>⊞ {{ deep === '1' ? 'Alle ' + (roleLabel[childRole] ?? childRole) + ' darunter' : 'Subitems' }} <span class="muted">· {{ rows.length }}{{ filter ? ' von ' + data.rows.length : '' }}</span></h1>
+      <h1>⊞ {{ deep === '1' ? 'Alle ' + (roleLabel[childRole] ?? childRole) + ' darunter' : 'Subitems' }} <span class="muted">· {{ rows.length }}</span></h1>
       <span class="grow" />
       <span v-if="busy" class="muted">{{ busy }}</span>
       <span v-if="dirty.size" class="chip dirty" :title="`${dirty.size} geänderte Zellen — Strg+S speichert`">✎ {{ dirty.size }}</span>
@@ -448,19 +445,19 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
         <button class="primary" :disabled="(!dirty.size && !(data?.rows ?? []).some(r => r.isNew)) || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 speichern</button>
         <button :disabled="!dirty.size" @click="discard" title="Änderungen verwerfen">verwerfen</button>
       </template>
-      <button class="x" @click="exportCsv" title="Tabelle als CSV (Excel) herunterladen — Spalte id bringt sie über ⇩ Import → Tabelle zurück">⇪ CSV</button>
     </div>
     <div class="toolbar view">
       <span class="muted">Sprache</span>
       <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: locale === l }" @click="locale = l">{{ l }}</span>
       <span class="sep">·</span>
       <select v-model="viewKey" title="Attributsicht: welche Spalten, in welcher Reihenfolge"><option value="">◫ alle Attribute ({{ data.columns.length }})</option><option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option></select>
-      <input v-model="filter" type="search" placeholder="🔍 filtern" style="width:200px" />
+      <input v-model="filter" type="search" placeholder="Spalte …" style="width:160px" title="Spalten nach Name oder Schlüssel filtern" />
+      <span v-if="filter" class="muted">{{ attrColumns.length }} von {{ data.columns.length }}</span>
       <span class="grow" />
       <button v-if="props.deep !== '1'" @click="addRow" :title="`neue ${roleLabel[childRole]?.replace(/n$/, '') ?? 'Zeile'} unter ${data?.node?.label ?? ''} — Werte eintragen, speichern legt den Knoten an`">+ Zeile</button>
       <button @click="fillDown" :disabled="!sel" title="runterziehen: oberste Zelle des Bereichs in alle darunter (Strg+D)">⇩ füllen</button>
       <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe</button>
-      <span class="muted" style="font-size:12px" title="Pfeile bewegen den Cursor, Shift+Pfeil zieht den Bereich auf, Enter speichert und springt nach unten, Tab nach rechts, Tippen überschreibt, F2 bearbeitet · Strg+D füllen, Strg+Shift+D Reihe, Strg+H ins Suchfeld, Strg+C/V mit Excel, Entf leert, Strg+A alles">🖱 ziehen = Bereich · Doppelklick/F2/Tippen = bearbeiten (lang/HTML: grosser Editor) · ▪ Kästchen ziehen = füllen · Strg+D/H/C/V · <i>kursiv</i> = geerbt</span>
+      <button class="x" title="Bedienung" @click="dialog.help({ title: 'Tabelle bedienen', rows: HELP })">?</button>
     </div>
     <div class="toolbar replace">
       <span class="muted">⇄</span>

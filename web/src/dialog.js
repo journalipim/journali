@@ -15,6 +15,10 @@ export const dialog = reactive({
   confirm({ title, text = '', warn = '', list = [], ok = 'OK', cancel = 'Abbrechen', danger = false, option = null }) {
     return new Promise(resolve => { Object.assign(this, { open: true, kind: 'confirm', title, text, warn, list, ok, cancel, danger, option: option ? { ...option } : null, _resolve: resolve }) })
   },
+  // help: Tabelle Taste/Geste → Wirkung, nur ein Schliessen-Knopf (das ? in einer Leiste)
+  help({ title, rows = [], text = '' }) {
+    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'help', title, text, warn: '', list: rows, ok: 'Schliessen', cancel: '', danger: false, option: null, _resolve: resolve }) })
+  },
   prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = 'Abbrechen', warn = '', danger = false }) {
     return new Promise(resolve => { Object.assign(this, { open: true, kind: 'prompt', title, text, warn, list: [], value, placeholder, ok, cancel, danger, option: null, _resolve: resolve }) })
   },

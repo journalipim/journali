@@ -17,12 +17,13 @@ function onKey(e) {
       <div class="dlg" role="dialog">
         <div class="title">{{ dialog.title }}</div>
         <div v-if="dialog.warn" class="warnline">⚠ {{ dialog.warn }}</div>
-        <div v-if="dialog.list.length" class="list mono"><div v-for="(l, i) in dialog.list.slice(0, 8)" :key="i">{{ l }}</div><div v-if="dialog.list.length > 8" class="muted">… und {{ dialog.list.length - 8 }} weitere</div></div>
+        <table v-if="dialog.kind === 'help'" class="keys"><tr v-for="([k, what], i) in dialog.list" :key="i"><td class="k"><kbd>{{ k }}</kbd></td><td>{{ what }}</td></tr></table>
+        <div v-else-if="dialog.list.length" class="list mono"><div v-for="(l, i) in dialog.list.slice(0, 8)" :key="i">{{ l }}</div><div v-if="dialog.list.length > 8" class="muted">… und {{ dialog.list.length - 8 }} weitere</div></div>
         <div v-if="dialog.text" class="text muted">{{ dialog.text }}</div>
         <label v-if="dialog.option" class="option"><input type="checkbox" v-model="dialog.option.checked" /> {{ dialog.option.label }}</label>
         <input v-if="dialog.kind === 'prompt'" ref="field" v-model="dialog.value" class="cell-input" style="width:100%;margin-top:10px" :placeholder="dialog.placeholder" />
         <div class="buttons">
-          <button @click="dialog.done(false)">{{ dialog.cancel }}</button>
+          <button v-if="dialog.cancel" @click="dialog.done(false)">{{ dialog.cancel }}</button>
           <button ref="okBtn" :class="dialog.danger ? 'danger' : 'primary'" @click="dialog.done(true)">{{ dialog.ok }}</button>
         </div>
       </div>
@@ -36,6 +37,10 @@ function onKey(e) {
 .title { font-weight: 600; font-size: 14px; }
 .text { margin-top: 6px; white-space: pre-wrap; line-height: 1.45; }
 .warnline { margin-top: 10px; font-size: 15px; font-weight: 700; color: var(--neg); }
+.keys { margin-top: 10px; border-collapse: collapse; }
+.keys td { padding: 3px 8px 3px 0; vertical-align: top; line-height: 1.4; }
+.keys td.k { white-space: nowrap; padding-right: 14px; }
+.keys kbd { font: inherit; font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: var(--cell); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
 .list { margin-top: 6px; white-space: pre-wrap; line-height: 1.5; color: var(--text); max-height: 200px; overflow: auto; }
 .option { display: flex; align-items: center; gap: 6px; margin-top: 10px; cursor: pointer; }
 .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
