@@ -158,8 +158,8 @@ function rowMenu(e, r) {
     { label: keys.length > 1 ? `${keys.length} ${sec.value.label} gewählt` : `${sec.value.one} ${label}`, disabled: true },
     { sep: true },
     { label: 'Schlüssel kopieren', icon: '⧉', key: 'c', action: () => navigator.clipboard?.writeText(keys.join(', ')) },
-    p ? { label: keys.length > 1 ? `${keys.length} zurückziehen` : 'Zurückziehen', icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : 'aus dem Abbild — das Journal behält alles', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
-      : { label: 'Zurückziehen', icon: '✕', disabled: true, hint: 'hier nicht vorgesehen' },
+    p ? { label: keys.length > 1 ? `${keys.length} zurückziehen` : 'Zurückziehen', icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : '', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
+      : null,
   ])
 }
 
