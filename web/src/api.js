@@ -100,6 +100,9 @@ export function describe(e) {
     case 'AttributeGroupRetired': return `− ▤ ${p.key}`
     case 'ViewRetired': return `− ◫ ${p.key}`
     case 'UnitRetired': return `− ⚖ ${p.key}`
+    case 'ListRetired': return `− ☰ ${p.key}`
+    case 'LocaleRetired': return `− 🗣 ${p.code}`
+    case 'ChannelRetired': return `− ⇶ ${p.key}`
     case 'FamilyDefined': return `${p.key}: ${(p.attributes || []).map(a => a.key).join(', ')}`
     case 'LocaleDefined': return `${p.code} = ${p.label}`
     case 'GroupCreated': return `▣ ${p.name ?? p.label?.de ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
