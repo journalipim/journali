@@ -73,7 +73,11 @@ const isReq = c => !!c.required && (typeof c.required !== 'object' || Object.key
 const kindOf = c => c.virtual === 'sku' || c.key === 'sku' ? 'info' : c.virtual ? '' : axisKeys.value.has(c.key) ? 'axis' : isReq(c) ? 'required' : ''
 // Spaltenfilter (Taloan, 20.09.): das Feld neben der Sicht sucht Spalten (Name oder Schlüssel), nicht Inhalte
 const colMatch = c => { const q = filter.value.trim().toLowerCase(); return !q || store.name(c).toLowerCase().includes(q) || c.key.toLowerCase().includes(q) }
-const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value && colMatch(c)); if (viewKey.value) return base; const rank = c => c.key === 'sku' ? -1 : axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
+const tab = ref('')   // '' = alle, sonst Schlüssel der Attributgruppe
+const tabs = computed(() => { const keys = new Set((data.value?.columns ?? []).map(c => c.key)); return (model.value?.groups ?? []).map(g => ({ key: g.key, label: g.label?.de || g.label?.en || g.key, n: (g.attributes ?? []).filter(k => keys.has(k)).length })).filter(g => g.n > 0) })
+const inTab = c => !tab.value || (model.value?.groups.find(g => g.key === tab.value)?.attributes ?? []).includes(c.key)
+watch(tabs, ts => { if (tab.value && !ts.some(g => g.key === tab.value)) tab.value = '' })
+const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value && colMatch(c) && inTab(c)); if (viewKey.value) return base; const rank = c => c.key === 'sku' ? -1 : axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
 const HELP = [
   ['Klick · ziehen', 'Zelle wählen · Bereich aufziehen'], ['Shift+Pfeil', 'Bereich vergrössern'], ['Strg+A', 'alles'],
   ['Tippen', 'überschreibt die Zelle (Ergänzung aus der Spalte: Enter nimmt sie)'], ['F2 · Doppelklick', 'bearbeiten — langer Text/HTML im grossen Editor'],
@@ -497,12 +501,22 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       </table>
       <div v-if="!data.rows.length" class="empty">Keine {{ roleLabel[childRole] }} unter {{ data.node.label }}.</div>
     </div>
+    <div v-if="tabs.length > 1" class="toolbar sheets">
+      <span class="sheet" :class="{ on: !tab }" @click="tab = ''" title="alle Attribute">alle</span>
+      <span v-for="g in tabs" :key="g.key" class="sheet" :class="{ on: tab === g.key }" @click="tab = g.key" :title="`${g.label} ⟨${g.key}⟩ · ${g.n} Spalten`"><span class="lbl">{{ g.label }}</span> <span class="muted">{{ g.n }}</span></span>
+    </div>
   </div>
   <div v-else class="pane" style="flex:1"><div class="empty">…</div></div>
 </template>
 
 <style scoped>
 .path { flex-wrap: wrap; row-gap: 2px; }
+/* Blattreiter wie in Excel: unten, das gewählte hell */
+.sheets { gap: 0; padding: 0 6px; border-top: 1px solid var(--line); overflow-x: auto; font-size: 12px; }
+.sheet { padding: 3px 10px; border: 1px solid var(--line); border-top: 0; border-radius: 0 0 6px 6px; margin-right: 2px; color: var(--muted); cursor: pointer; white-space: nowrap; background: var(--pane); }
+.sheet { display: inline-flex; gap: 4px; align-items: center; }
+.sheet .lbl { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
+.sheet.on { color: var(--text); background: var(--bg); font-weight: 600; border-color: var(--accent); }
 .crumb { color: var(--muted); text-decoration: none; }
 .crumb:hover { color: var(--text); }
 .tab th.ro { color: var(--muted); font-style: italic; }
