@@ -52,7 +52,6 @@ onMounted(async () => { if (!tree.loaded) await tree.load(); load() })
 const VIRTUAL = [
   { key: '#label', virtual: 'label', type: 'text', label: { de: '★' } },
   { key: '#sku', virtual: 'sku', type: 'text', label: { de: 'SKU' } },
-  { key: '#axes', virtual: 'axes', type: 'text', label: { de: 'Achsen' } },
 ]
 // Kein ★ (auch kein geerbtes) und kein fixierter Name: die erste Spalte (Taloan)
 const labelKeyOf = r => r.row.labelAttribute ?? (r.row.name ? null : baseColumns.value[0]?.key ?? null)
@@ -67,7 +66,11 @@ const headTitle = c => c.virtual === 'label'
 const eff = (r, c) => c.virtual === 'label' ? labelCol(r) : c
 const commonLabel = computed(() => { const keys = new Set((data.value?.rows ?? []).map(labelKeyOf)); return keys.size === 1 && !keys.has(null) ? [...keys][0] : null })
 const columns = computed(() => [...VIRTUAL, ...attrColumns.value])
-const attrColumns = computed(() => baseColumns.value.filter(c => c.key !== commonLabel.value))
+// Reihenfolge wie in der Excel-Vorlage (Taloan, 20.09.): Achsen, dann Pflicht, dann der Rest; in einer Sicht gilt deren Reihenfolge
+const axisKeys = computed(() => new Set(childRole.value === 'variant' ? (data.value?.node?.axes ?? tree.byId.get(props.id)?.axes ?? []) : []))
+const isReq = c => !!c.required && (typeof c.required !== 'object' || Object.keys(c.required).length > 0)
+const kindOf = c => c.virtual === 'sku' ? 'info' : c.virtual ? '' : axisKeys.value.has(c.key) ? 'axis' : isReq(c) ? 'required' : ''
+const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value); if (viewKey.value) return base; const rank = c => axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
 const baseColumns = computed(() => {
   if (!data.value) return []
   const all = data.value.columns
@@ -86,7 +89,7 @@ const rows = computed(() => {
   return data.value.rows.filter(r => r.row.label.toLowerCase().includes(q) || (r.row.sku ?? '').toLowerCase().includes(q) || Object.values(r.values).some(v => String(v.value ?? '').toLowerCase().includes(q)))
 })
 const key = (r, c) => `${r.row.id}|${eff(r, c)?.key ?? c.key}`
-const shown = (r, c0) => { const c = eff(r, c0); if (!c) return null; return dirty.value.has(key(r, c)) ? (dirty.value.get(key(r, c)) || null) : (r.values[c.key]?.own ? r.values[c.key].value : null) }
+const shown = (r, c0) => { const c = eff(r, c0); if (!c) return null; return dirty.value.has(key(r, c)) ? (dirty.value.get(key(r, c)) || null) : (r.values[c.key]?.own ? r.values[c.key].value : (r.row.axisValues?.[c.key] ?? null)) }
 const inherited = (r, c0) => { const c = eff(r, c0); if (!c) return c0.virtual === 'label' ? r.row.label : null; if (c.virtual === 'sku') return r.row.sku ?? null; if (c.virtual === 'axes') return Object.values(r.row.axisValues ?? {}).join(' · ') || null; return r.values[c.key]?.own ? null : r.values[c.key]?.value ?? null }
 const isAxis = (r, c) => !r.isNew && r.row.role === 'variant' && (tree.byId.get(r.row.parent)?.axes ?? []).includes(c.key)   // neue Zeile: Achsenwert wird hier eingetragen
 const inactive = (r, c) => !c.virtual && (r.inactive ?? []).includes(c.key)   // gilt an diesem Knoten nicht (Gruppe ab tieferer Rolle)
@@ -259,7 +262,7 @@ watch([tableWidth, dirty, rows], placeHandle)
 const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
 const inSel = (ri, ci) => !!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1
 const selCells = () => { const s = sel.value; if (!s) return []; const out = []; for (let ri = s.r0; ri <= s.r1; ri++) for (let ci = s.c0; ci <= s.c1; ci++) { const r = rows.value[ri], c = columns.value[ci]; if (r && c) out.push({ r, c, ri, ci }) } return out }
-const canWrite = (r, c) => c.virtual === 'label' ? !!labelCol(r) && editable(labelCol(r)) : editable(c) && !isAxis(r, c) && !inactive(r, c)
+const canWrite = (r, c) => c.virtual === 'label' ? !!labelCol(r) && editable(labelCol(r)) : editable(c) && !inactive(r, c)
 // Text in eine Zelle schreiben, je Typ aufgelöst: Auswahl über Wert oder Label (Gross/Klein egal), Ja/Nein über
 // ja/nein/true/false/1/0; leer löscht den eigenen Wert. Gibt 'ok' | 'locked' | 'bad' zurück.
 function write(r, c0, text) {
@@ -473,7 +476,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
       <table class="grid values tab" :style="`width:${tableWidth}px`">
         <colgroup><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
         <thead><tr>
-          <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="{ ro: !editable(c) && c.virtual !== 'label' }" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="muted"> {{ locale }}</span><span v-if="c.unit" class="muted"> {{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
+          <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="[{ ro: !editable(c) && c.virtual !== 'label' }, kindOf(c)]" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="muted"> {{ locale }}</span><span v-if="c.unit" class="muted"> {{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
         </tr></thead>
         <tbody>
           <tr v-for="(r, ri) in rows" :key="r.row.id" :data-id="r.row.id">
@@ -484,7 +487,7 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
               <Cell v-else-if="c.virtual === 'label'" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :origin="`★ ${labelCol(r).label?.de || labelCol(r).key}`" @save="v => set(r, c, v)" />
               <td v-else-if="c.virtual" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked mono" tabindex="0" :title="c.virtual === 'sku' ? 'SKU — fest' : 'Variantenachsen — fest'">{{ inherited(r, c) ?? '' }}</div></td>
               <td v-else-if="inactive(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box disabled" tabindex="0" title="gilt an diesem Knoten nicht"></div></td>
-              <td v-else-if="!editable(c) || isAxis(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="isAxis(r, c) ? 'Variantenachse — fest' : c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}<span v-if="isAxis(r, c)"> 🔒</span></div></td>
+              <td v-else-if="!editable(c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}</div></td>
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" @save="v => set(r, c, v)" />
               <HtmlCell v-else-if="c.type === 'html'" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :title="`${store.name(c)} · ${r.row.label}`" @save="v => set(r, c, v)" />
@@ -505,6 +508,11 @@ const labelOf = c => v => { const lv = listOf(c)?.values.find(x => x.value === v
 .crumb { color: var(--muted); text-decoration: none; }
 .crumb:hover { color: var(--text); }
 .tab th.ro { color: var(--muted); font-style: italic; }
+/* Kopf wie im Excel-Export (Taloan, 20.09.): Pflicht dunkelrot, Achse dunkelgrün, Kennung dunkelgrau — weisse Schrift */
+.tab th.required { background: #c00000; color: #fff; font-style: normal; }
+.tab th.axis { background: #375623; color: #fff; font-style: normal; }
+.tab th.info { background: #595959; color: #fff; font-style: normal; }
+.tab th.required .muted, .tab th.axis .muted, .tab th.info .muted { color: rgba(255,255,255,.75); }
 /* Tabellengefühl (Taloan): Zellen dicht an dicht mit Gitterlinien statt Kästchen mit Luft; Zeilen flacher */
 .tab th, .tab td { padding: 0; border-right: 1px solid var(--line); height: 24px; }
 .tab th { padding: 0 6px; }
