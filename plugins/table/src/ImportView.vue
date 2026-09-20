@@ -147,7 +147,8 @@ async function analyse() {
     }
     planned.value = makePlan({ columns: source.value.columns, rows: source.value.rows, mapping: mapping.value.map(m => ({ ...m })), model: model.value, tree, target: target.value, role: role.value || null, existing, external: external.value || null })
     const s = planned.value.stats
-    say(`Plan: ${s.create} neu, ${s.update} geändert, ${s.unchanged} unverändert, ${s.values} Werte, ${planned.value.newAttributes.length} neue Attribute${s.problems.length ? `, ${s.problems.length} Probleme` : ''}`)
+    const nlv = Object.entries(s.newListValues ?? {}).map(([l, v]) => `${l}: ${Object.values(v).join(', ')}`)
+    say(`Plan: ${s.create} neu, ${s.update} geändert, ${s.unchanged} unverändert, ${s.values} Werte, ${planned.value.newAttributes.length} neue Attribute${nlv.length ? `, neue Listenwerte — ${nlv.join('; ')}` : ''}${s.problems.length ? `, ${s.problems.length} Probleme` : ''}`)
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 async function run() {
@@ -157,6 +158,10 @@ async function run() {
   busy.value = 'schreibe …'; result.value = null
   try {
     for (const a of p.newAttributes) await api.post(`/api/model/attributes/${a.key}`, a, 'PUT')
+    // neue Listenwerte zuerst (Taloan, 20.09.): Schlüssel normiert, Bezeichnung in allen Sprachen der Text der Datei
+    let nlv = 0
+    for (const [list, vals] of Object.entries(p.stats.newListValues ?? {})) for (const [key, label] of Object.entries(vals)) { await api.post(`/api/model/lists/${list}/values/${encodeURIComponent(key)}`, { value: key, label: Object.fromEntries(model.value.locales.map(l => [l.code, label])) }, 'PUT'); nlv++ }
+    if (nlv) say(`${nlv} Listenwerte angelegt`)
     if (p.newAttributes.length) { await store.poll(true); say(`${p.newAttributes.length} Attribute angelegt: ${p.newAttributes.map(a => a.key + ' → ' + a.group).join(', ')}`) }
     const cmds = [...p.attach.map(x => ({ op: 'groups.attach', args: { node: x.node, groups: [...(tree.byId.get(x.node)?.groups ?? '').split(',').filter(Boolean), ...x.groups] } })), ...p.commands]   // groups.attach setzt die ganze Liste
     // Stapel in Happen: neue Knoten samt ihren Werten zusammen (Refs gelten nur im selben Aufruf)
@@ -257,7 +262,7 @@ onMounted(async () => {
     </div>
     <div class="scroll" style="padding:8px">
       <div v-if="planned" class="stats">
-        <span class="pos">+{{ planned.stats.create }} neu</span> · <span>{{ planned.stats.update }} geändert</span> · <span class="muted">{{ planned.stats.unchanged }} unverändert</span> · {{ planned.stats.values }} Werte · {{ planned.commands.length }} Befehle
+        <span class="pos">+{{ planned.stats.create }} neu</span> · <span>{{ planned.stats.update }} geändert</span> · <span class="muted">{{ planned.stats.unchanged }} unverändert</span> · {{ planned.stats.values }} Werte · {{ planned.commands.length }} Befehle<template v-if="Object.keys(planned.stats.newListValues ?? {}).length"> · <span class="pos" :title="Object.entries(planned.stats.newListValues).map(([l, v]) => l + ': ' + Object.values(v).join(', ')).join(' · ')">+{{ Object.values(planned.stats.newListValues).reduce((n, v) => n + Object.keys(v).length, 0) }} Listenwerte</span></template>
         <span v-if="planned.newAttributes.length"> · <span class="warn">{{ planned.newAttributes.length }} neue Attribute:</span> {{ planned.newAttributes.map(a => a.key + ' (' + a.type + ')').join(', ') }}</span>
         <div v-if="planned.stats.problems.length" class="neg" style="margin-top:6px;white-space:pre-wrap">{{ planned.stats.problems.slice(0, 30).join('\n') }}<span v-if="planned.stats.problems.length > 30"> … +{{ planned.stats.problems.length - 30 }}</span></div>
         <div v-for="b in blockers" :key="b" class="neg" style="margin-top:6px">✗ {{ b }}</div>

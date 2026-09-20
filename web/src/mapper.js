@@ -211,7 +211,17 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const defOf = m => attrs.get(m.attribute ?? m.newKey) ?? (newAttrs.get(m.newKey) ? { key: m.newKey, type: newAttrs.get(m.newKey).type, perLocale: newAttrs.get(m.newKey).axes.includes('locale') } : null)
 
   // Zeilennummern in Meldungen sind Excel-Zeilen (Kopfzeile = 1)
-  const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [], invalid: [], missingGroup: requiredNew }
+  const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [], invalid: [], missingGroup: requiredNew, newListValues: {} }
+  // Listenwerte, die es noch nicht gibt (Taloan, 20.09.: „Werte sollten zugefügt werden — genau dazu ist die Excel-Bearbeitung da“): der Plan
+  // merkt sie je Liste (Schlüssel = normierter Text, Bezeichnung = der Text), das Schreiben legt sie vor dem Stapel an
+  const conv = (raw, def) => {
+    let v = convert(raw, def, model)
+    if (def.type !== 'enum' || !def.list || v == null || v === '') return v
+    const list = model.lists?.find(l => l.key === def.list); if (!list) return v
+    const known = new Set(list.values.map(x => x.value))
+    return (def.multiple ? String(v).split(',') : [String(v)]).map(x => { x = x.trim(); if (!x || known.has(x)) return x; const key = norm(x) || x; (stats.newListValues[def.list] ??= {})[key] = x; return key }).join(',')
+  }
+  const check = (v, def) => def.type === 'enum' && def.list && stats.newListValues[def.list] ? (() => { const ok = new Set([...(model.lists?.find(l => l.key === def.list)?.values.map(x => x.value) ?? []), ...Object.keys(stats.newListValues[def.list])]); const bad = String(v ?? '').split(',').map(x => x.trim()).filter(x => x && !ok.has(x)); return bad.length ? `„${bad.join(', ')}“ nicht in Liste ${def.list}` : null })() : validate(v, def, model)
   const targetGroups = new Set()
   // Pflichtattribute der Kindrolle (irgendein Kanal verlangt sie): beim Anlegen müssen sie da sein
   const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
@@ -234,7 +244,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       ref = `r${ri}`
       if (r === 'variant') {
         const axisValues = {}
-        for (const a of parent.axes ?? []) { const m = mapping.find(x => x.target === 'attr' && x.attribute === a); const v = m ? convert(cell(row, mapping.indexOf(m)), attrs.get(a), model) : null; if (v == null) { stats.problems.push(`Zeile ${ri + 2}: Achse ${a} fehlt`); } else axisValues[a] = v }
+        for (const a of parent.axes ?? []) { const m = mapping.find(x => x.target === 'attr' && x.attribute === a); const v = m ? conv(cell(row, mapping.indexOf(m)), attrs.get(a)) : null; if (v == null) { stats.problems.push(`Zeile ${ri + 2}: Achse ${a} fehlt`); } else axisValues[a] = v }
         if (Object.keys(axisValues).length < (parent.axes ?? []).length) { stats.skipped++; return }
         commands.push({ op: 'variant.create', ref, args: { product: parent.id, axisValues } })
       } else if (r === 'group') commands.push({ op: 'group.create', ref, args: { parent: parent.id, label: {}, name: sku || null } })
@@ -250,8 +260,8 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       if (m.target !== 'attr' && m.target !== 'new') return
       const def = defOf(m); if (!def) return
       if (node && node.role === 'variant' && (tree.byId.get(node.parent)?.axes ?? []).includes(def.key)) return   // Achsenwert ist fest
-      const v = convert(cell(row, ci), def, model)
-      const bad = validate(v, def, model)
+      const v = conv(cell(row, ci), def)
+      const bad = check(v, def)
       if (bad) { stats.invalid.push({ row: ri, column: ci, key: def.key, value: cell(row, ci), message: bad }); return }
       const loc = def.perLocale ? m.locale : null
       const k = `${def.key}|${loc ?? ''}`
