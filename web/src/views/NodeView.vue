@@ -228,6 +228,8 @@ function enabled(def, col, block) {
 }
 function listOptions(def) { return (model.value.lists.find(l => l.key === def.list)?.values ?? []).map(v => v.value) }
 function listLabel(def) { const vals = model.value.lists.find(l => l.key === def.list)?.values ?? []; return v => vals.find(x => x.value === v)?.label?.de || v }
+// Gruppe eines Listenwerts (Spalte „group“ der Werteliste, z. B. ETIM-Klassengruppe) — zum Blättern in grossen Listen
+function listGroup(def) { const list = model.value.lists.find(l => l.key === def.list); if (!(list?.columns ?? []).includes('group')) return null; const vals = list.values ?? []; return v => vals.find(x => x.value === v)?.extra?.group ?? null }
 function released(channel, locale) { return node.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }
 // Freigabe über den Fallback-Kanal (Sortiment geerbt): nicht eigen, gilt aber — ◌ mit Herkunft
 function releasedVia(channel, locale) { return node.value?.releasedVia?.find(r => r.channel === channel && r.locale === locale)?.via ?? null }
@@ -630,7 +632,7 @@ function cellMenu(e, def, col, block) {
             <template v-for="c in columns" :key="c.label">
               <ToggleCell v-if="def.type === 'boolean'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <ListCell v-else-if="def.multiple" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="def.type === 'enum' ? listOptions(def) : null" :label-of="def.type === 'enum' ? listLabel(def) : null" :list="def.list" :check="v => validate(convert(v, def, store.model), def, store.model)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <SelectCell v-else-if="def.type === 'enum'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="listOptions(def)" :label-of="listLabel(def)" :list="def.list" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <SelectCell v-else-if="def.type === 'enum'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="listOptions(def)" :label-of="listLabel(def)" :list="def.list" :group-of="listGroup(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <DateCell v-else-if="def.type === 'date'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <HtmlCell v-else-if="def.type === 'html'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />

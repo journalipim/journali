@@ -72,10 +72,12 @@ function modelOps(ctx) {
     await ensureGroup()
     const existing = model().attributes.find(a => a.key === key)
     if (existing && !(existing.type === 'enum' && existing.list === key)) return key   // ein vorhandenes Text-/Listenattribut bleibt, wie es ist
-    if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' } })
-    const have = new Set((model().lists ?? []).find(l => l.key === key)?.values?.map(v => v.value) ?? [])
+    if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, columns: ['group'] })
+    let rewrite = false
+    if (!((model().lists ?? []).find(l => l.key === key)?.columns ?? []).includes('group')) { const l = (model().lists ?? []).find(x => x.key === key); if (l) { await put(`/lists/${key}`, { ...l, columns: [...(l.columns ?? []), 'group'] }); rewrite = true } }   // Gruppe nachtragen: alle Werte neu schreiben
+    const have = rewrite ? new Set() : new Set((model().lists ?? []).find(l => l.key === key)?.values?.map(v => v.value) ?? [])
     // alle Klassen der Version als Listenwerte, ein Stapel (Taloan, 20.09.: „wo habe ich die Chance, die Klasse festzulegen?“ — in der Zelle am Produkt, mit Suche)
-    const missing = [...cache.classes.values()].filter(c => !have.has(c.code)).sort((a, b) => a.code.localeCompare(b.code)).map(c => ({ value: c.code, label: Object.fromEntries(Object.entries(labelsOf(c.name)).map(([l, n]) => [l, `${n}`])) }))
+    const missing = [...cache.classes.values()].filter(c => !have.has(c.code)).sort((a, b) => a.code.localeCompare(b.code)).map(c => ({ value: c.code, label: Object.fromEntries(Object.entries(labelsOf(c.name)).map(([l, n]) => [l, `${n}`])), extra: c.group ? { group: nameOf(c.group.name, locale) || c.group.code } : null }))
     for (let k = 0; k < missing.length; k += 1000) await put(`/lists/${key}/values`, missing.slice(k, k + 1000))
     let i = 0
     if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: groupKey(), inheritable: true })
@@ -362,13 +364,24 @@ async function mount(root, ctx) {
     const P = pool()
     const q = el('input', { placeholder: P.length ? `Klasse suchen — Code, Name, Synonym (${P.length})` : 'erst oben „⇩ IXF lesen“ — dann suchen', value: st.q, style: 'width:360px', disabled: !P.length, oninput: e => { st.q = e.target.value; search() } })
     const hits = el('div')
+    // Blättern nach Klassengruppen (Taloan, 20.09.: „wenn ich keine Ahnung habe, wie die Klasse heisst“): ohne Suchbegriff die Gruppen, Klick zeigt die Klassen der Gruppe
+    const groupsOf = () => { const m = new Map(); for (const c of P) { const g = c.group ? (nameOf(c.group.name, locale) || c.group.code) : '—'; if (!m.has(g)) m.set(g, []); m.get(g).push(c) } return [...m].sort((a, b) => a[0].localeCompare(b[0], 'de')) }
+    const row = c => el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale · ${c.status}`)), cache.classes.has(c.code) ? assignBtn(c.code) : el('button', { class: 'x', title: 'Klasse übernehmen', onclick: async () => { await takeClass(c); draw() } }, '+'))
+    const browse = () => {
+      hits.innerHTML = ''
+      if (st.grp) { hits.append(el('div', { class: 'pick', style: 'font-weight:600', onclick: () => { st.grp = null; browse() } }, `‹ ${st.grp}`)); for (const c of (groupsOf().find(([g]) => g === st.grp)?.[1] ?? []).sort((a, b) => nameOf(a.name, locale).localeCompare(nameOf(b.name, locale)))) hits.append(row(c)); return }
+      const wrap = el('div', { style: 'display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 12px' })
+      for (const [g, cs] of groupsOf()) wrap.append(el('div', { class: 'pick', onclick: () => { st.grp = g; browse() } }, `▸ ${g} `, el('span', { class: 'muted' }, String(cs.length))))
+      hits.append(wrap)
+    }
     const search = () => {
-      hits.innerHTML = ''; if (!P.length || st.q.trim().length < 2) return
+      hits.innerHTML = ''; if (!P.length || st.q.trim().length < 2) { if (P.length) browse(); return }
       const s = st.q.trim().toLowerCase()
       const found = P.filter(c => c.code.toLowerCase().includes(s) || Object.values(c.name).some(n => n.toLowerCase().includes(s)) || Object.values(c.synonyms).some(l => l.some(n => n.toLowerCase().includes(s)))).slice(0, 40)
       for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale · ${c.status}`)), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: 'Klasse übernehmen (ins Journal)', onclick: async () => { await takeClass(c); draw() } }, '+'), st.assign ? el('button', { class: 'primary', title: `übernehmen und ${tree.byId.get(st.assign)?.label} zuweisen`, onclick: async () => { await assignClass(st.assign, c.code); draw() } }, '⇢ zuweisen') : null))
       if (!found.length) hits.append(el('div', { class: 'muted', style: 'padding:4px' }, 'nichts gefunden'))
     }
+    if (P.length) search()
     const taken = usedClasses().sort((a, b) => a.code.localeCompare(b.code))
     const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Version'), el('th', { style: 'width:200px' }, 'Knoten'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
       el('tbody', {}, ...taken.map(c => { const missing = c.features.filter(f => !hasAttr(attrKeyOf(f.code))).length; return el('tr', {}, el('td', { class: 'mono' }, c.code), el('td', {}, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, c.group ? ` · ${nameOf(c.group.name, locale)}` : '')), el('td', { class: 'num' }, c.features.length), el('td', { class: missing ? 'warn num' : 'muted num' }, missing || '—'), el('td', { class: 'muted', style: 'font-size:11px' }, `${c.release?.name ?? ''} v${c.version}`),

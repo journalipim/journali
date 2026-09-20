@@ -10,7 +10,8 @@
 import { ref, computed, nextTick } from 'vue'
 import { NEW, mayAddListValue, ensureListValue } from '../lists.js'
 import { store } from '../store.js'
-const props = defineProps({ value: String, inherited: String, disabled: Boolean, options: Array, labelOf: Function, required: Boolean, clickEdit: { type: Boolean, default: true }, list: String })
+// groupOf(wert) → Gruppe (Text) — dann lässt sich die grosse Liste nach Gruppen durchblättern (ETIM: Klassengruppen), nicht nur suchen
+const props = defineProps({ value: String, inherited: String, disabled: Boolean, options: Array, labelOf: Function, required: Boolean, clickEdit: { type: Boolean, default: true }, list: String, groupOf: Function })
 const emit = defineEmits(['save'])
 const open = ref(false)
 const adding = ref(false)
@@ -24,17 +25,20 @@ const big = computed(() => (props.options?.length ?? 0) > 20)
 const q = ref('')
 const idx = ref(0)
 const qIn = ref(null)
+const grp = ref(null)   // gewählte Gruppe beim Blättern (null = Gruppenliste)
+const groups = computed(() => { if (!props.groupOf) return []; const m = new Map(); for (const o of props.options ?? []) { const g = props.groupOf(o) || '—'; m.set(g, (m.get(g) ?? 0) + 1) } return [...m].sort((a, b) => a[0].localeCompare(b[0], 'de')) })
+const browsing = computed(() => props.groupOf && !q.value.trim())
 const hits = computed(() => {
-  const s = q.value.trim().toLowerCase(); const opts = props.options ?? []
+  const s = q.value.trim().toLowerCase(); const opts = browsing.value && grp.value != null ? (props.options ?? []).filter(o => (props.groupOf(o) || '—') === grp.value) : (props.options ?? [])
   const all = s ? opts.filter(o => String(o).toLowerCase().includes(s) || String(label(o)).toLowerCase().includes(s)) : opts
   // ganze Wort-/Anfangstreffer zuerst
   const rank = o => { const v = String(o).toLowerCase(), l = String(label(o)).toLowerCase(); return v === s || l === s ? 0 : v.startsWith(s) || l.startsWith(s) ? 1 : 2 }
-  return (s ? [...all].sort((a, b) => rank(a) - rank(b)) : all).slice(0, 40)
+  return (s ? [...all].sort((a, b) => rank(a) - rank(b)) : all).slice(0, browsing.value && grp.value != null ? 400 : 40)
 })
 async function show() {
   if (props.disabled) return
   open.value = true; await nextTick()
-  if (big.value) { q.value = ''; idx.value = 0; qIn.value?.focus(); return }
+  if (big.value) { q.value = ''; idx.value = 0; grp.value = props.groupOf ? (props.groupOf(props.value ?? props.inherited ?? '') || null) : null; qIn.value?.focus(); return }
   sel.value?.focus()
   try { sel.value?.showPicker?.() } catch { /* nicht überall erlaubt */ }
 }
@@ -55,6 +59,7 @@ function onNewKey(e) {
   else if (e.key === 'Tab') { e.preventDefault(); commitNew() }
 }
 function onSearchKey(e) {
+  if (e.key === 'Backspace' && !q.value && browsing.value && grp.value != null) { e.preventDefault(); grp.value = null; return }
   if (e.key === 'ArrowDown') { e.preventDefault(); idx.value = Math.min(hits.value.length - 1, idx.value + 1) }
   else if (e.key === 'ArrowUp') { e.preventDefault(); idx.value = Math.max(0, idx.value - 1) }
   else if (e.key === 'Enter') { e.preventDefault(); const h = hits.value[idx.value]; if (h != null) pick(h); else if (q.value.trim() && mayAddListValue(props.list)) { const t = q.value.trim(); adding.value = true; draft.value = t; commitNew() } }
@@ -85,12 +90,18 @@ function onKey(e) {
         :title="value == null && inherited != null ? 'geerbt — Enter wählt' : `${options.length} Werte — Enter oder Tippen sucht`"
         @click="clickEdit && show()" @dblclick="show" @keydown="onKey">{{ label(value ?? inherited) }}<span class="caret">▾</span></div>
       <template v-else>
-        <input ref="qIn" v-model="q" class="cell-input" :placeholder="`suchen in ${options.length} …`" @input="idx = 0" @keydown="onSearchKey" @blur="close" />
+        <input ref="qIn" v-model="q" class="cell-input" :placeholder="groupOf ? `suchen in ${options.length} — oder unten blättern` : `suchen in ${options.length} …`" @input="idx = 0" @keydown="onSearchKey" @blur="close" />
         <div class="drop" @mousedown.prevent>
           <div v-if="!required && !q" class="hit muted" :class="{ on: idx === -1 }" @click="pick('')">— leer</div>
+          <template v-if="browsing && grp == null">
+            <div v-for="[g, n] in groups" :key="g" class="hit grp" @click="grp = g; idx = 0">▸ {{ g }} <span class="muted">{{ n }}</span></div>
+          </template>
+          <div v-else-if="browsing" class="hit grp" @click="grp = null; idx = 0">‹ {{ grp }}</div>
+          <template v-if="!(browsing && grp == null)">
           <div v-for="(o, i) in hits" :key="o" class="hit" :class="{ on: i === idx, cur: o === (value ?? inherited) }" @mousemove="idx = i" @click="pick(o)"><span class="mono muted">{{ o }}</span> {{ label(o) }}</div>
           <div v-if="!hits.length" class="hit muted">nichts zu „{{ q }}“{{ mayAddListValue(list) ? ' — Enter legt es als neuen Wert an' : '' }}</div>
           <div v-else-if="hits.length === 40" class="hit muted">… weiter eingrenzen</div>
+          </template>
         </div>
       </template>
     </template>
@@ -118,4 +129,5 @@ function onKey(e) {
 .hit.on { background: var(--accent-soft); }
 .hit.cur { font-weight: 600; }
 .hit .mono { margin-right: 6px; }
+.hit.grp { font-weight: 600; }
 </style>
