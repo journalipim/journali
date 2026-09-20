@@ -359,8 +359,10 @@ async function inheritToSubitems() {
     const nothing = !toInherit.length && !retire.length
     const ok = await dialog.confirm({
       title: `Medien an ${below.length} Subitems vererben?`,
-      warn: nothing ? 'nichts zu tun' : `${toInherit.length} Medien hier auf „vererben“ · ${retire.length} gleiche feste Zuordnungen an Subitems durch die Vererbung ersetzen`,
-      list, text: nothing ? '' : 'Die Medien bleiben in der Bibliothek; an den Subitems erscheinen sie danach als geerbt (gestrichelt).', ok: nothing ? 'OK' : '↓ Vererben' })
+      // zwei Dinge, getrennt gesagt (Taloan, 20.09.: „wenn nicht ersetzt wird, brauch ich vererben auch nicht?“ — doch: Vererben bringt die
+      // Medien an die Subitems; Ersetzen räumt nur auf, wenn ein Subitem dasselbe Medium schon fest hat). Rot nur, wo etwas gelöst wird.
+      warn: nothing ? 'nichts zu tun' : retire.length ? `${retire.length} feste ${retire.length === 1 ? 'Zuordnung' : 'Zuordnungen'} an Subitems werden gelöst — sie erben dann` : '',
+      list, text: nothing ? '' : `${toInherit.length} ${toInherit.length === 1 ? 'Medium' : 'Medien'} von hier ${toInherit.length === 1 ? 'wird' : 'werden'} auf „vererben“ gesetzt — ${below.length} Subitems zeigen ${toInherit.length === 1 ? 'es' : 'sie'} danach als geerbt (gestrichelt).${retire.length ? '' : ' Keine feste Zuordnung an Subitems ist betroffen.'}`, ok: nothing ? 'OK' : '↓ Vererben' })
     if (!ok || nothing) return
     const commands = [...toInherit.map(r => ({ op: 'relation.attribute.set', args: { relation: r.id, attribute: 'inherit', value: 'true' } })), ...retire.map(x => ({ op: 'relation.retire', args: { relation: x.rel.id } }))]
     const res = await api.batchChunked(commands, { label: 'Vererbung', continueOnError: true })
