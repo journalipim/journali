@@ -56,7 +56,7 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
   const items = catalog.groups.flatMap(g => g.items.map(it => ({ ...it, group: g })))
   const defs = new Map(model.attributes.map(a => [a.key, a]))
   const result = { nodes: [], items, byItem: new Map(), unmapped: items.filter(it => !mapping[it.key]?.to), locale }
-  for (const it of items) result.byItem.set(it.key, { ok: 0, empty: 0, bad: 0, na: 0, below: 0, inactive: 0 })
+  for (const it of items) result.byItem.set(it.key, { ok: 0, empty: 0, bad: 0, na: 0, below: 0, inactive: 0, pending: 0 })
   result.inactiveGroups = new Set()   // Gruppen, die im Teilbaum fehlen (Taloan, 20.09.: „kein Schutzart-Attribut am Knoten“ — die Gruppe hängt nicht am Pfad)
   // Vollständigkeit zählt am Verkaufbaren (Taloan, 20.09.: „muss an der Variante sein — wie ich sie pflege, ist eine andere Sache“):
   // ein Knoten mit Kindern gilt als belegt (↓), wenn alle Blätter darunter den Datenpunkt haben — ob er ihn selbst hat, ist egal.
@@ -76,6 +76,9 @@ export async function check(catalog, mapping, rootId, say = () => {}) {
       const to = mapping[it.key]?.to
       const v = to ? r.values[to]?.value ?? null : null
       let state = !to ? 'unmapped' : v == null || v === '' ? 'empty' : 'ok'
+      // angefragt (Beleg method pending, checkedAt = Wiedervorlage): kein rotes Feld, sondern ⏳ — überfällig, wenn das Datum vorbei ist
+      const src = to ? r.values[to]?.source : null
+      if (state === 'empty' && src?.method === 'pending') { state = 'pending'; node.pending = (node.pending ?? 0) + 1; if (src.checkedAt && src.checkedAt < new Date().toISOString().slice(0, 10)) node.overdue = (node.overdue ?? 0) + 1; node.pendingInfo ??= {}; node.pendingInfo[it.key] = src }
       if (to && state === 'empty' && (r.inactive ?? []).includes(to)) { state = 'inactive'; const g = defs.get(to)?.group; if (g) result.inactiveGroups.add(g) }
       if (state === 'ok') {
         const def = defs.get(to)
@@ -342,8 +345,37 @@ export async function mount(root, ctx, catalog) {
     }
     catch (e) { say('✗ ' + e.message); store.toast(e.message) }
   }
-  const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '', below: '↓', inactive: '⊘' }
-  const CLS = { ok: 'pos', empty: 'muted', bad: 'neg', unmapped: 'muted', na: 'muted', below: 'pos', inactive: 'warn' }
+  // Steckbrief: was ist gemeint · wo steht es · ab wann · was, wenn es fehlt · woher man es bekommt — aus dem Katalog (what, law, from,
+  // ifMissing, source), sonst aus hint. Angehängt: Attribut im Modell und der Hinweis „keine Rechtsberatung“.
+  function explain(it) {
+    const rows = []
+    if (it.what || it.hint) rows.push(['Was', it.what || it.hint])
+    if (it.law) rows.push(['Wo steht es', it.law])
+    if (it.from) rows.push(['Ab wann', it.from])
+    if (it.ifMissing) rows.push(['Wenn es fehlt', it.ifMissing])
+    if (it.source) rows.push(['Woher', it.source])
+    if (it.type) rows.push(['Form', `${it.type}${it.unit ? ' in ' + it.unit : ''}${it.values ? ' — ' + it.values.slice(0, 8).join(', ') + (it.values.length > 8 ? ' …' : '') : ''}`])
+    rows.push(['Pflicht', it.level === 'must' ? '● Pflicht' : it.level === 'should' ? '◐ empfohlen' : '○ optional'])
+    const to = st.mapping[it.key]?.to; rows.push(['Attribut', to ? `${store.model.attributes.find(a => a.key === to)?.label?.de || to} · ${to}` : '— noch keins —'])
+    rows.push(['Hinweis', 'keine Rechtsberatung — Hinweis nach bestem Wissen, massgeblich ist der Rechtstext'])
+    return dialog.help({ title: `${it.label} · ${catalog.label}`, rows })
+  }
+  // Leere Zelle: Wert eintragen — oder „weiss ich nicht, frage bei …“ mit Wiedervorlage (Beleg method pending am Wert)
+  async function askPending(n, it, pend) {
+    const to = st.mapping[it.key]?.to; if (!to) return
+    const v = await dialog.prompt({ title: `${it.label} · ${n.row.label}`, text: pend ? `⏳ angefragt${pend.source ? ' bei ' + pend.source : ''}, Wiedervorlage ${pend.checkedAt ?? '—'}. Wert eintragen — oder leer lassen und die Anfrage ändern.` : 'Wert eintragen — oder leer lassen: dann „weiss ich noch nicht, frage bei …“ mit Wiedervorlage.', value: '', placeholder: it.unit ? `Wert in ${it.unit}` : 'Wert', ok: 'Eintragen' })
+    if (v == null) return
+    try {
+      if (v.trim()) { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: null, channel: null, value: v.trim(), row: null }); await run(); return }
+      const who = await dialog.prompt({ title: 'Angefragt bei …', text: 'Lieferant, Abteilung, Person — wer liefert den Wert?', value: pend?.source ?? '', ok: 'Weiter' }); if (who == null) return
+      const due = await dialog.prompt({ title: 'Wiedervorlage', text: 'Datum JJJJ-MM-TT — danach gilt es als überfällig', value: pend?.checkedAt ?? new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), ok: '⏳ angefragt' }); if (due == null) return
+      await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/sources`, { attribute: to, locale: null, channel: null, row: null, source: who.trim() || null, title: null, note: null, method: 'pending', checkedAt: due.trim() || null })
+      await run()
+    } catch (e) { store.toast(e.message) }
+  }
+  const infoBtn = it => el('button', { class: 'x', style: 'padding:0 5px;font-size:11px', title: 'Was ist das? Wo steht es? Woher bekomme ich es?', onclick: () => explain(it) }, 'ⓘ')
+  const SYM = { ok: '✓', empty: '·', bad: '✗', unmapped: '—', na: '', below: '↓', inactive: '⊘', pending: '⏳' }
+  const CLS = { ok: 'pos', empty: 'muted', bad: 'neg', unmapped: 'muted', na: 'muted', below: 'pos', inactive: 'warn', pending: 'warn' }
   function drawResult() {
     s3.innerHTML = ''
     const r = st.res; if (!r) return
@@ -365,7 +397,7 @@ export async function mount(root, ctx, catalog) {
       return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
     }
     const unm = r.items.filter(it => !st.mapping[it.key]?.to && !hidden.includes(it))
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label}`), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? `${c.ok} selbst, ${c.below} über die Varianten darunter` : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), title: c.inactive ? `davon ${c.inactive} ohne gültiges Attribut (Gruppe nicht am Pfad)` : '' }, String(c.empty + c.inactive)), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (hidden.length) sb.append(el('tr', {}, el('td', { class: 'muted', colspan: '5' }, `… ${hidden.length} weitere Datenpunkte gelten an keinem der ${r.nodes.length} Knoten (andere Klasse oder Rolle)`)))
     // Gruppe fürs Anlegen: wählbar (vorhandene oder neuer Schlüssel), je Katalog gemerkt — steht am Knopf und in jeder Zeile
     const grpSel = el('select', { title: 'Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu' }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${(model.groups ?? []).find(g => g.key === k)?.label?.de || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, '+ neue Gruppe …'))
@@ -412,7 +444,8 @@ export async function mount(root, ctx, catalog) {
     const inactiveN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
     const emptyN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'empty').length, 0), badN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'bad').length, 0)
     // Der Assistent (Taloan, 20.09.): Analyse → Deltas (zuordnen/anlegen, in welcher Gruppe) → Gruppe im Baum anhängen → erneut → bis alles zugeordnet ist oder der Anwender aufgibt
-    const next = unm.length ? `Schritt: ${unm.length} Datenpunkte ohne Attribut — unten zuordnen oder anlegen` : inactiveN ? 'Schritt: die Gruppe im Baum anhängen — dann erneut prüfen' : (emptyN || badN) ? `Zuordnung vollständig — ${emptyN} leere${badN ? `, ${badN} falsche` : ''} Werte füllen (unten in der Tabelle, oder Vorschläge)` : '✓ alles zugeordnet und gefüllt'
+    const pendN = r.nodes.reduce((k, x) => k + (x.pending ?? 0), 0), overN = r.nodes.reduce((k, x) => k + (x.overdue ?? 0), 0)
+    const next = unm.length ? `Schritt: ${unm.length} Datenpunkte ohne Attribut — unten zuordnen oder anlegen` : inactiveN ? 'Schritt: die Gruppe im Baum anhängen — dann erneut prüfen' : (emptyN || badN) ? `Zuordnung vollständig — ${emptyN} leere${badN ? `, ${badN} falsche` : ''} Werte füllen (Klick in die Zelle: eintragen oder „angefragt bei …“)${pendN ? ` · ⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''}` : ''}` : pendN ? `⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''} — sonst alles da` : '✓ alles zugeordnet und gefüllt'
     s3.append(el('div', { class: 'chips', style: 'margin:4px 0;font-weight:600' }, el('span', { class: unm.length || inactiveN ? 'warn' : (emptyN || badN) ? '' : 'pos' }, next)))
     if (unm.length) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`), el('span', { class: 'muted' }, 'in Gruppe'), grpSel))
     if (catalog.summary) { const s = catalog.summary(r, st.mapping, ctx); if (s) s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, s)) }
@@ -450,7 +483,7 @@ export async function mount(root, ctx, catalog) {
       tb.append(el('tr', {}, el('td', {}, cb), el('td', { style: `padding-left:${6 + depthOf(n.row.id) * 18}px` }, el('a', { href: `/tree/${n.row.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${n.row.id}`) }, title: n.row.id }, `${n.row.role === 'variant' ? '◆' : n.row.role === 'product' ? '▦' : '▣'} ${n.row.label}`)),
         el('td', { class: 'num ' + (n.score == null ? 'muted' : n.score === 100 ? 'pos' : n.score < 50 ? 'neg' : 'warn') }, n.score == null ? '–' : n.score + ' %'),
         ...(catalog.rowNote ? [el('td', { style: 'font-size:12px' }, catalog.rowNote(n, st.mapping, ctx))] : []),
-        ...items.map(it => { const s = n.states[it.key]; const f = n.findings.find(x => x.item.key === it.key); return el('td', { class: CLS[s], style: 'text-align:center', title: f ? f.message : s === 'ok' ? 'erfüllt' : s === 'below' ? 'in allen Varianten darunter belegt' : s === 'empty' ? 'leer' : s === 'inactive' ? `gilt hier nicht — Gruppe „${store.model.attributes.find(a => a.key === st.mapping[it.key]?.to)?.group ?? '?'}“ hängt an keinem Knoten des Pfads` : '' }, SYM[s]) })))
+        ...items.map(it => { const s = n.states[it.key]; const f = n.findings.find(x => x.item.key === it.key); const pend = n.pendingInfo?.[it.key]; return el('td', { class: CLS[s], style: 'text-align:center' + (s === 'empty' || s === 'pending' ? ';cursor:pointer' : ''), onclick: s === 'empty' || s === 'pending' ? () => askPending(n, it, pend) : null, title: s === 'pending' ? `⏳ angefragt${pend?.source ? ' bei ' + pend.source : ''}${pend?.checkedAt ? ' · Wiedervorlage ' + pend.checkedAt + (pend.checkedAt < new Date().toISOString().slice(0, 10) ? ' — überfällig' : '') : ''}${pend?.note ? ' · ' + pend.note : ''} — Klick: Wert eintragen oder Anfrage ändern` : f ? f.message : s === 'ok' ? 'erfüllt' : s === 'below' ? 'in allen Varianten darunter belegt' : s === 'empty' ? 'leer' : s === 'inactive' ? `gilt hier nicht — Gruppe „${store.model.attributes.find(a => a.key === st.mapping[it.key]?.to)?.group ?? '?'}“ hängt an keinem Knoten des Pfads` : '' }, SYM[s]) })))
     }
     s3.append(tbl)
     // Befunde (fragliche Werte)

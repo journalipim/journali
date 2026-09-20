@@ -98,7 +98,7 @@ function onEditKey(e) {
       <template v-else-if="inherited != null">{{ inherited }}</template>
       <span v-if="mark && !disabled" class="mark" :title="markTitle">{{ mark }}</span>
       <a v-if="source && !disabled && value != null" class="src" :class="{ stale: source.stale, link: isUrl(source.source) }" :href="isUrl(source.source) ? source.source : null" target="_blank" rel="noopener" @mousedown.stop @click.stop="isUrl(source.source) || $event.preventDefault()"
-        :title="(source.stale ? 'Beleg veraltet — der Wert wurde danach geändert · ' : '') + 'Quelle: ' + source.source + (source.title ? ' — ' + source.title : '') + ' · ' + ({ web: 'Recherche', ai: 'KI', rule: 'Regel', import: 'Import', manual: 'von Hand' }[source.method] ?? source.method) + ' · geprüft ' + source.checkedAt + ' · ' + source.actor + (source.note ? ' · ' + source.note : '')">↗</a>
+        :title="(source.stale ? 'Beleg veraltet — der Wert wurde danach geändert · ' : '') + 'Quelle: ' + source.source + (source.title ? ' — ' + source.title : '') + ' · ' + ({ web: 'Recherche', ai: 'KI', rule: 'Regel', import: 'Import', manual: 'von Hand', pending: '⏳ angefragt' }[source.method] ?? source.method) + ' · geprüft ' + source.checkedAt + ' · ' + source.actor + (source.note ? ' · ' + source.note : '')">↗</a>
     </div>
     <!-- Das Eingabefeld ersetzt die Box mit denselben Massen — nicht darin, sonst doppelter Rahmen und unten abgeschnitten. -->
     <input v-else ref="input" v-model="draft" class="cell-input" :data-mode="openMode" @keydown="onEditKey" @input="onInput" @blur="commit" />

@@ -45,7 +45,8 @@ public static class TreeApi
                         var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null);
                         // Formel/Vorlage: das Ergebnis zeigen, nicht das Skript — die Spalte ist in der Tabelle ohnehin gesperrt
                         if (a.IsComputed) v = tree.Compute(model, n, a, locale);
-                        return new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null };
+                        // Beleg am Wert (auch ohne Wert: „angefragt bei … bis …“ — Taloan, 20.09.: ein gültiger Zustand statt rotem Feld)
+                        return new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null, source = SourceView.Of(n, new Axis(a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null)) };
                     }),
                 }).ToList();
                 return Results.Ok(new { node = NodeRow.Of(tree, model, root), columns = cols.Select(a => new { a.Key, a.Type, a.Label, a.Unit, a.PerLocale, a.Required, a.List, a.Inheritable, a.Multiple, a.Pattern, computed = a.IsComputed }).ToList(), rows });

@@ -241,7 +241,7 @@ public static class Commands
         if (string.IsNullOrWhiteSpace(attribute)) return Outcome.Bad("attribute fehlt.");
         if (!c.Model.Attributes.ContainsKey(attribute)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
         method = Blank(method) ?? "manual";
-        if (method is not ("web" or "ai" or "rule" or "import" or "manual")) return Outcome.Bad("method: web, ai, rule, import oder manual.");
+        if (method is not ("web" or "ai" or "rule" or "import" or "manual" or "pending")) return Outcome.Bad("method: web, ai, rule, import, manual oder pending (angefragt — checkedAt = Wiedervorlage).");
         if (Blank(checkedAt) is { } d && !DateOnly.TryParse(d, out _)) return Outcome.Bad("checkedAt: Datum (JJJJ-MM-TT).");
         return Outcome.Ok(c.Write(id, Types.ValueSourced, new ValueSourced(attribute, Blank(locale), Blank(channel), Blank(row), Blank(source), Blank(title), Blank(note), method, Blank(checkedAt))));
     }
