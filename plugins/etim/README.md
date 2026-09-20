@@ -76,7 +76,7 @@ Werte sperren nicht — sie werden gezählt und im Status bzw. Job-Log gemeldet
 |---|---|
 | `release` | zuletzt gelesene Freigabe |
 | `class:<EC>` | Klasse aufgelöst (s. o.) |
-| `settings` | `classAttr` (Vorgabe `etim_class`), `unknownAs` (UN / NA / skip), `requireClass` |
+| `settings` | `group` (Attributgruppe der ETIM-Daten, Vorgabe `etim` — gibt es sie nicht, wird sie angelegt; eine vorhandene heißt: dort zuordnen, „↻ in … zuordnen“ rät nach Namen), `classAttr` (Vorgabe `etim_class`), `unknownAs` (UN / NA / skip), `requireClass` |
 | `map` | EF-Code → Attributschlüssel, wo nicht das eigene `ef…` gilt |
 
 `sample.xml` ist eine kleine IXF-Datei zum Ausprobieren (2 Klassen, 4 Merkmale — erfunden).

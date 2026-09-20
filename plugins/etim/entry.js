@@ -10,7 +10,8 @@ function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); f
 const ICON = { group: '▣', product: '▦', variant: '◆' }
 const SEV = { error: '✗', warn: '⚠', info: 'ℹ' }
 const TYPE = { Alphanumeric: 'Liste', Numeric: 'Zahl', Range: 'Bereich', Logical: 'Ja/Nein' }
-const DEFAULTS = { classAttr: 'etim_class', unknownAs: 'UN', requireClass: false }
+const DEFAULTS = { classAttr: 'etim_class', unknownAs: 'UN', requireClass: false, group: 'etim' }
+const groupKey = () => cache.settings.group || 'etim'
 
 // Klassen und Einstellungen im Speicher — die Prüfregeln laufen synchron (Datenqualität) und brauchen sie ohne Nachschlagen
 const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null }
@@ -38,7 +39,7 @@ function modelOps(ctx) {
   const hasAttr = key => model().attributes.some(a => a.key === key)
   const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!Object.keys(out).length) out[locale] = nameOf(names, locale); return out }
   const put = (path, body) => api.post('/api/model' + path, body, 'PUT')
-  async function ensureGroup() { if (!(model().groups ?? []).some(g => g.key === 'etim')) await put('/groups/etim', { key: 'etim', label: { de: 'ETIM', en: 'ETIM' }, activeFrom: 'product' }) }
+  async function ensureGroup() { const g = groupKey(); if (!(model().groups ?? []).some(x => x.key === g)) await put(`/groups/${g}`, { key: g, label: { de: g === 'etim' ? 'ETIM' : g, en: g === 'etim' ? 'ETIM' : g }, activeFrom: 'product' }) }
   async function ensureClassAttr() {
     const key = cache.settings.classAttr
     await ensureGroup()
@@ -48,7 +49,7 @@ function modelOps(ctx) {
     const have = new Set((model().lists ?? []).find(l => l.key === key)?.values?.map(v => v.value) ?? [])
     let i = 0
     for (const c of [...cache.classes.values()].sort((a, b) => a.code.localeCompare(b.code))) if (!have.has(c.code)) await put(`/lists/${key}/values/${c.code}`, { value: c.code, label: Object.fromEntries(Object.entries(labelsOf(c.name)).map(([l, n]) => [l, `${c.code} ${n}`])), order: i++ })
-    if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: 'etim', inheritable: true })
+    if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: groupKey(), inheritable: true })
     return key
   }
   async function unitKeyFor(u) {
@@ -64,7 +65,7 @@ function modelOps(ctx) {
     await ensureGroup()
     const key = f.code.toLowerCase()
     if (hasAttr(key)) return key
-    const base = { key, label: labelsOf(f.name), group: 'etim' }
+    const base = { key, label: labelsOf(f.name), group: groupKey() }
     if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
     else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
@@ -108,7 +109,7 @@ function buildCatalog(ctx) {
   return {
     key: 'etim', label: 'ETIM-Merkmale', icon: '⌗', source: 'https://etim.de/daten/downloads/', sourceLabel: 'etim.de ↗',
     description: n ? `${n} Klasse${n === 1 ? '' : 'n'} übernommen (⇪ Export → ⌗ ETIM) mit ${feats.length} Merkmalen. Ein Merkmal zählt an einem Knoten nur, wenn seine Klasse es hat; Knoten ohne Klasse bleiben aussen vor. Fehlende Attribute legt der Katalog als ef… mit Werteliste und Einheit an.` : 'Noch keine Klasse übernommen — erst unter ⇪ Export → ⌗ ETIM eine Freigabe lesen und Klassen übernehmen.',
-    groupKey: 'etim', groupLabel: 'ETIM', prefix: '',
+    groupKey: groupKey(), groupLabel: groupKey() === 'etim' ? 'ETIM' : groupKey(), prefix: '',
     groups: [
       { key: 'class', label: 'Klasse', items: [{ key: classKey, label: 'ETIM-Klasse', level: 'must', type: 'enum', synonyms: ['etim', 'etim_class', 'etim klasse', 'etim class'], values: [...cache.classes.values()].map(c => `${c.code} ${nameOf(c.name, locale)}`), hint: 'EC-Code der Klasse — ohne Klasse gilt kein Merkmal; die KI schlägt eine der übernommenen Klassen vor', rule: v => cache.classes.has(String(v).trim().toUpperCase()) ? null : `Klasse ${v} nicht übernommen` }] },
       { key: 'features', label: 'Merkmale', items },
@@ -176,11 +177,11 @@ async function mount(root, ctx) {
     if (!cache.classes.has(code)) { const cls = st.rel?.classes.find(x => x.code === code); if (!cls) { store.toast(`Klasse ${code} nicht übernommen`); return } await takeClass(cls, true) }
     await busy(`weise ${code} zu …`, async () => {
       const key = await ops.ensureClassAttr(); await store.poll(true)
-      const onPath = id => { for (let p = id; p; p = tree.byId.get(p)?.parent) if ((tree.byId.get(p)?.groups ?? '').split(',').includes('etim')) return true; return false }
-      if (!onPath(nodeId)) { const groups = [...new Set([...(row.groups ?? '').split(',').filter(Boolean), 'etim'])]; await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups }, 'PUT') }
+      const onPath = id => { for (let p = id; p; p = tree.byId.get(p)?.parent) if ((tree.byId.get(p)?.groups ?? '').split(',').includes(groupKey())) return true; return false }
+      if (!onPath(nodeId)) { const groups = [...new Set([...(row.groups ?? '').split(',').filter(Boolean), groupKey()])]; await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups }, 'PUT') }
       await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: key, locale: null, channel: null, value: code, row: null })
       await tree.load?.()
-      say(`${code} → ${row.label}${onPath(nodeId) ? '' : ' (Gruppe ETIM angehängt)'}`); store.toast(`✓ ${code} an ${row.label}`, 'ok')
+      say(`${code} → ${row.label}${onPath(nodeId) ? '' : ` (Gruppe ${groupKey()} angehängt)`}`); store.toast(`✓ ${code} an ${row.label}`, 'ok')
     })
   }
   const assignPick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:6;width:380px;display:none;padding:6px;background:var(--pane)' })
@@ -255,21 +256,37 @@ async function mount(root, ctx) {
       el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', title: `alle Klassen, die im Attribut ${cache.settings.classAttr} stehen, aus der Freigabe übernehmen`, onclick: classesFromTree }, '⇩ aus dem Baum')),
       hits, taken.length ? tbl : el('div', { class: 'empty' }, rel ? 'Klasse suchen und mit + übernehmen' : 'erst eine Freigabe lesen')))
     // Attribute
+    // Gruppe der ETIM-Daten: „etim“ legen wir an (Attribute direkt zugewiesen); eine vorhandene Gruppe heißt: hier zuordnen (Best Guess über die Namen)
+    const groupSel = el('select', { title: 'Attributgruppe, die die ETIM-Daten trägt — gibt es sie nicht, wird sie angelegt', onchange: e => { cache.settings.group = e.target.value; saveSettings(); draw() } },
+      el('option', { value: 'etim' }, `etim${(model().groups ?? []).some(g => g.key === 'etim') ? '' : ' (anlegen)'}`),
+      ...(model().groups ?? []).filter(g => g.key !== 'etim').map(g => el('option', { value: g.key }, `${g.label?.[locale] || g.label?.de || g.key} (${g.key})`)))
+    groupSel.value = groupKey()
+    const inGroup = () => attrs().filter(a => a.group === groupKey())
+    const guessInGroup = () => {   // Merkmal → Attribut der gewählten Gruppe nach Namen (alle Sprachen, Code)
+      const { norm, similarity } = ctx.mapper; let n = 0
+      for (const f of allFeatures().values()) {
+        if (cache.map[f.code] || hasAttr(f.code.toLowerCase())) continue
+        const wanted = [f.code, ...Object.values(f.name)].map(norm); let best = null, score = 0
+        for (const a of inGroup()) for (const w of wanted) for (const nme of [a.key, ...Object.values(a.label ?? {})].map(norm)) { const s = nme === w ? 1 : similarity(nme, w); if (s > score) { score = s; best = a } }
+        if (best && score >= 0.8) { cache.map[f.code] = best.key; n++ }
+      }
+      saveMap(); say(`${n} Merkmale in Gruppe ${groupKey()} zugeordnet`); draw()
+    }
     const classSel = el('select', { onchange: e => { cache.settings.classAttr = e.target.value; saveSettings(); draw() } }, el('option', { value: DEFAULTS.classAttr }, `${DEFAULTS.classAttr}${hasAttr(DEFAULTS.classAttr) ? '' : ' (anlegen)'}`), ...attrs().filter(a => a.key !== DEFAULTS.classAttr && (a.type === 'text' || a.type === 'enum')).map(a => el('option', { value: a.key }, `${lbl(a)} (${a.key})`)))
     classSel.value = cache.settings.classAttr
     const unkSel = el('select', { onchange: e => { cache.settings.unknownAs = e.target.value; saveSettings() } }, el('option', { value: 'UN' }, 'unbekannt: „-“ + UN (Guideline)'), el('option', { value: 'NA' }, 'unbekannt: „-“ + NA'), el('option', { value: 'skip' }, 'unbekannt: weglassen')); unkSel.value = cache.settings.unknownAs
     const reqCb = el('input', { type: 'checkbox' }); reqCb.checked = !!cache.settings.requireClass; reqCb.addEventListener('change', () => { cache.settings.requireClass = reqCb.checked; saveSettings() })
     // Gruppe ETIM gilt erst, wenn sie an einem Knoten des Pfads hängt (GroupsAttached) — hier an einen Teilbaum hängen
-    const attached = tree.rows.filter(r => (r.groups ?? '').split(',').includes('etim'))
-    const attachBtn = el('button', { class: 'x', title: 'die Attributgruppe ETIM an einen Teilbaum hängen — erst dann gelten die Attribute an den Knoten darunter' }, `⌗ Gruppe an Teilbaum${attached.length ? ` · ${attached.length}` : ''}`)
+    const attached = tree.rows.filter(r => (r.groups ?? '').split(',').includes(groupKey()))
+    const attachBtn = el('button', { class: 'x', title: `die Attributgruppe ${groupKey()} an einen Teilbaum hängen — erst dann gelten die Attribute an den Knoten darunter` }, `⌗ Gruppe an Teilbaum${attached.length ? ` · ${attached.length}` : ''}`)
     const attachPick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
-    ctx.treePicker(attachPick, { roles: ['group'], height: 300, onPick: async r => { attachPick.style.display = 'none'; const groups = [...new Set([...(r.groups ?? '').split(',').filter(Boolean), 'etim'])]; await api.post(`/api/nodes/${encodeURIComponent(r.id)}/groups`, { groups }, 'PUT'); await tree.load?.(); say(`Gruppe ETIM hängt an ${r.label}`); draw() } })
+    ctx.treePicker(attachPick, { roles: ['group'], height: 300, onPick: async r => { attachPick.style.display = 'none'; const groups = [...new Set([...(r.groups ?? '').split(',').filter(Boolean), groupKey()])]; await api.post(`/api/nodes/${encodeURIComponent(r.id)}/groups`, { groups }, 'PUT'); await tree.load?.(); say(`Gruppe ${groupKey()} hängt an ${r.label}`); draw() } })
     attachBtn.addEventListener('click', () => { attachPick.style.display = attachPick.style.display === 'none' ? 'block' : 'none' })
     const allFeats = allFeatures(); for (const f of allFeats.values()) f.n = f.classes.length
     const missing = [...allFeats.values()].filter(f => !hasAttr(attrKeyOf(f.code)))
     body.append(section('Attribute', `${allFeats.size} Merkmale · ${missing.length} ohne Attribut`,
-      el('div', { style: 'display:flex;gap:12px;align-items:center;padding:6px 0;flex-wrap:wrap' }, el('label', { class: 'muted' }, 'Klasse in ', classSel), unkSel, el('label', {}, reqCb, ' Klasse ist Pflicht (Prüfung)'),
-        el('button', { class: 'primary', title: `Klassenattribut ${cache.settings.classAttr} als Werteliste der übernommenen Klassen und je fehlendem Merkmal ein Attribut (ef…) in der Gruppe ETIM anlegen`, onclick: createAttributes }, `＋ Attribute anlegen (${missing.length + (hasAttr(cache.settings.classAttr) ? 0 : 1)})`),
+      el('div', { style: 'display:flex;gap:12px;align-items:center;padding:6px 0;flex-wrap:wrap' }, el('label', { class: 'muted' }, 'Gruppe ', groupSel), groupKey() !== 'etim' ? el('button', { class: 'x', title: `Merkmale den vorhandenen Attributen der Gruppe ${groupKey()} nach Namen zuordnen (ab 80 % Ähnlichkeit); der Rest wird angelegt`, onclick: guessInGroup }, `↻ in ${groupKey()} zuordnen`) : null, el('label', { class: 'muted' }, 'Klasse in ', classSel), unkSel, el('label', {}, reqCb, ' Klasse ist Pflicht (Prüfung)'),
+        el('button', { class: 'primary', title: `Klassenattribut ${cache.settings.classAttr} als Werteliste der übernommenen Klassen und je fehlendem Merkmal ein Attribut (ef…) in der Gruppe ${groupKey()} anlegen`, onclick: createAttributes }, `＋ Attribute anlegen (${missing.length + (hasAttr(cache.settings.classAttr) ? 0 : 1)})`),
         el('span', { style: 'position:relative' }, attachBtn, attachPick))))
     // Zuordnung
     const mapBody = el('tbody')
