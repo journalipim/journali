@@ -224,9 +224,9 @@ async function mount(root, ctx) {
     // Namen: Wörter aus dem Namen und dem Pfad gegen Klassennamen und Synonyme
     // Wörter: eigener Name und der direkte Vater zählen doppelt, ganze Wörter mehr als Teile — sonst trifft „mobile“ jedes Telefon
     const wordsOf = s => String(s ?? '').split(/[^\p{L}\p{N}]+/u).filter(w => w.length >= 4).map(w => w.toLowerCase())
-    const near = new Set([...wordsOf(row.label), ...wordsOf(path[path.length - 1])]); const words = [...new Set([...near, ...path.flatMap(wordsOf)])]
-    const nameHits = P.map(c => { const names = [...Object.values(c.name ?? {}), ...Object.values(c.synonyms ?? {}).flat()].map(n => String(n).toLowerCase()); let score = 0; for (const w of words) { const whole = names.some(n => new RegExp(`(^|[^\p{L}])${w}([^\p{L}]|$)`, 'u').test(n)); const part = whole || names.some(n => n.includes(w)); if (part) score += (whole ? 3 : 1) * (near.has(w) ? 2 : 1) } return { c, score } }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8)
-    const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer (${words.join(', ')})` : P.length ? `keine Klasse passt zu: ${words.join(', ')} — oben suchen` : 'erst eine Freigabe holen'), ...nameHits.map(x => line(x.c.code, `Treffer ${x.score}`)))
+    const near = new Set([...wordsOf(row.label), ...wordsOf(path[path.length - 1])]); const words = [...near]
+    const nameHits = P.map(c => { const names = [...Object.values(c.name ?? {}), ...Object.values(c.synonyms ?? {}).flat()].map(n => String(n).toLowerCase()); let score = 0; for (const w of words) if (names.some(n => new RegExp(`(^|[^\p{L}])${w}([^\p{L}]|$)`, 'u').test(n))) score++; return { c, score } }).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, 8)
+    const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer für ${words.map(w => '„' + w + '“').join(', ')}` : P.length ? `keine Klasse heisst wie ${words.map(w => '„' + w + '“').join(', ')} — unten suchen (ETIM International: englische Namen)` : 'erst eine ETIM-Version holen'), ...nameHits.map(x => line(x.c.code, `${x.score} Wort${x.score > 1 ? 'e' : ''}`)))
     return el('div', { style: 'padding:6px 0;border:1px solid var(--accent);border-radius:6px;padding:8px;margin:6px 0' },
       el('div', { class: 'chips' }, el('b', {}, `Klasse zuweisen an ${ICON[row.role] ?? ''} ${row.label}`), el('span', { class: 'muted', style: 'font-size:12px' }, path.length ? path.join(' › ') : ''), el('span', { class: 'grow' }), el('button', { class: 'x', title: 'ohne Zuweisung weiter', onclick: () => { st.assign = null; draw() } }, '✕')),
       current ? line(current, 'gilt hier schon') : el('div', { class: 'muted', style: 'font-size:12px' }, 'hier gilt noch keine Klasse'),
@@ -284,14 +284,14 @@ async function mount(root, ctx) {
   // Klassen, in denen gesucht wird: die gelesene Freigabe, sonst die übernommenen (als Datensätze gleich aufgebaut)
   const pool = () => st.rel ? st.rel.classes : [...cache.classes.values()]
   async function classesFromTree() {
-    if (!pool().length) { store.toast('erst eine Freigabe lesen oder Klassen übernehmen'); return }
+    if (!pool().length) { store.toast('erst eine ETIM-Version holen'); return }
     const key = cache.settings.classAttr; if (!hasAttr(key)) { store.toast(`Attribut ${key} gibt es nicht`); return }
     await busy('suche Klassen im Baum …', async () => {
       const codes = new Set()
       for (const r of tree.rows.filter(r => !r.parent)) { const t = await api.get(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${key}`); for (const row of t.rows) { const c = String(row.values[key]?.value ?? '').trim().toUpperCase(); if (/^EC\d{6}$/.test(c)) codes.add(c) } }
       let n = 0, miss = 0
       for (const c of codes) { if (cache.classes.has(c)) continue; const cls = st.rel?.classes.find(x => x.code === c); if (cls) { await takeClass(cls, true); n++ } else miss++ }
-      say(`${codes.size} Klassen im Baum · ${n} neu übernommen${miss ? ` · ${miss} nicht in der Freigabe` : ''}`); draw()
+      say(`${codes.size} Klassen im Baum · ${n} neu übernommen${miss ? ` · ${miss} nicht in Version ${cache.version}` : ''}`); draw()
     })
   }
 
@@ -316,35 +316,38 @@ async function mount(root, ctx) {
     })
   }
 
+  // Ergebnis eines Prozesslaufs: die JSON-Zeile in der Ausgabe (stdout), der Rest ist Fortschritt (stderr)
+  const jsonOf = out => { for (const line of String(out ?? '').split('\n')) { const s = line.trim(); if (s.startsWith('{')) { try { return JSON.parse(s) } catch { } } } return null }
   function draw() {
     body.innerHTML = ''
     const m = model(); const rel = st.rel; const relInfo = st.relInfo
-    // Freigabe
-    // Stand: was im Journal ist (Taloan, 20.09.: „warum muss ich IXF neu einlesen?“ — muss man nicht, die Klassen sind da)
-    const inJournal = cache.classes.size
-    const cur = cache.versions.find(v => v.version === cache.version)
-    const verSel = el('select', { title: 'aktuelle Version — gilt für Zuweisen, Prüfen und Export; die anderen bleiben gespeichert', onchange: async e => { const v = cache.versions.find(x => x.version === e.target.value); if (!v) return; await ctx.data.set('release', v); await loadCache(); draw() } },
-      ...cache.versions.map(v => el('option', { value: v.version, selected: v.version === cache.version ? '' : null }, `${v.name ?? 'ETIM'} Nr. ${v.number ?? v.version}${v.classes ? ` · ${v.classes} Klassen` : ''}${v.languages?.length ? ` · ${v.languages.join('/')}` : ''} · ${(v.at ?? '').slice(0, 10)}`)))
-    const relLine = el('span', {}, cache.versions.length ? el('span', { class: 'muted' }, 'Version ') : null, cache.versions.length ? verSel : null,
-      el('span', { class: 'muted' }, cache.versions.length ? ` · ${inJournal} Klassen im Journal` : 'noch keine Freigabe — holen oder eine IXF-Datei lesen', rel ? ` · gelesen: ${rel.header.name ?? 'ETIM'} Nr. ${rel.header.number ?? '?'} (${rel.classes.length} Klassen, ${rel.features.size} Merkmale)` : ''))
-    // Holen von etim-international.com (öffentlich): Vorschlagsliste über den Prozess, oder eine URL (Zip oder XML)
-    const urlIn = el('input', { placeholder: 'URL einer Freigabe (Zip/XML) — oder aus der Liste wählen', value: st.url ?? '', style: 'width:520px', oninput: e => { st.url = e.target.value } })
-    const sel = el('select', { style: 'max-width:520px', onchange: e => { st.url = e.target.value; urlIn.value = st.url } }, el('option', { value: '' }, st.list ? `${st.list.length} Freigaben bei ETIM International …` : 'Liste holen …'), ...(st.list ?? []).map(r => el('option', { value: r.url, selected: r.url === st.url ? '' : null }, `${r.name}${r.added ? ' · ' + r.added : ''}`)))
-    const listBtn = el('button', { class: 'x', title: 'Download-Seite von etim-international.com lesen (Modell-Freigaben, IXF)', onclick: () => busy('hole Liste …', async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = JSON.parse((r.output ?? '').trim().split('\n').pop() || '{}'); if (!j.releases) throw new Error(r.output?.slice(0, 200) || 'keine Liste'); st.list = j.releases; st.url ||= j.releases[0]?.url ?? ''; say(`${j.releases.length} IXF-Freigaben`); draw() }) }, '↻ Liste')
-    const loadBtn = el('button', { class: 'primary', title: 'Freigabe laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = Englisch, ETIM Deutschland = als Datei von etim.de)', onclick: () => { if (!st.url) { store.toast('URL fehlt'); return } busy(`lade ${st.url.split('/').pop()} …`, async () => {
-      // Fortschritt (Taloan: „passiert nix“): der Prozess schreibt Stapel ins Journal — der Journalstand zeigt, wie weit er ist
+    // 1 · Klassifikation (Taloan, 20.09.: „Felder durcheinander“): eine Tabelle der ETIM-Versionen im Journal — je Zeile Version,
+    // Quelle, Klassen, Sprachen, geladen am, ● aktuell. Darunter EINE Zeile zum Holen (Liste → Auswahl → laden, oder URL, oder Datei).
+    const langs = m.locales.map(l => l.code)
+    const verRows = cache.versions.map(v => el('tr', {},
+      el('td', {}, el('button', { class: 'toggle', style: 'width:28px', title: v.version === cache.version ? 'aktuelle Version — gilt für Zuweisen, Prüfen, Export' : 'zur aktuellen Version machen', onclick: async () => { await ctx.data.set('release', v); await loadCache(); draw() } }, v.version === cache.version ? '●' : '○')),
+      el('td', { class: 'mono' }, `ETIM ${v.version}`),
+      el('td', {}, v.url ? el('a', { href: v.url, target: '_blank', rel: 'noopener', title: v.url }, v.file ?? v.name ?? v.url.split('/').pop()) : (v.file ?? v.name ?? '')),
+      el('td', { class: 'num' }, String(v.classes ?? '')),
+      el('td', {}, (v.languages ?? []).join('/')),
+      el('td', { class: 'muted' }, (v.at ?? '').slice(0, 10))))
+    // Holen: Liste von etim-international.com (Prozess), Auswahl oder URL, laden — Fortschritt am Journalstand
+    const urlIn = el('input', { placeholder: 'URL (Zip/XML)', value: st.url ?? '', style: 'width:360px', oninput: e => { st.url = e.target.value } })
+    const sel = el('select', { style: 'max-width:420px', onchange: e => { st.url = e.target.value; urlIn.value = st.url } }, el('option', { value: '' }, st.list ? `${st.list.length} Versionen bei ETIM International …` : '↻ Liste erst holen'), ...(st.list ?? []).map(r => el('option', { value: r.url, selected: r.url === st.url ? '' : null }, r.name.replace(/\.zip$/, ''))))
+    const listBtn = el('button', { class: 'x', title: 'etim-international.com/downloads lesen — die IXF-Versionen als Auswahl', onclick: () => busy('hole Liste …', async () => { const r = await api.post('/api/plugins/etim/run', { params: { mode: 'list', url: '', langs: '' } }); const j = jsonOf(r.output); if (!j?.releases) throw new Error(r.output?.slice(0, 200) || 'keine Liste'); st.list = j.releases; st.url ||= j.releases[0]?.url ?? ''; say(`${j.releases.length} Versionen`); draw() }) }, '↻ Liste')
+    const loadBtn = el('button', { class: 'primary', title: 'laden und alle Klassen ins Journal (Sprachen des Modells; ETIM International = englisch)', onclick: () => { if (!st.url) { store.toast('erst eine Version wählen oder eine URL eintragen'); return } busy(`lade ${st.url.split('/').pop()} …`, async () => {
       const h0 = (await api.get('/api/health')).head; const t0 = Date.now()
       const tick = setInterval(async () => { try { const h = (await api.get('/api/health')).head; say(`lade ${st.url.split('/').pop()} … ${h - h0} Klassen geschrieben · ${Math.round((Date.now() - t0) / 1000)} s`) } catch { } }, 2000)
       try {
-        const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: m.locales.map(l => l.code).join(',') } }); const last = (r.output ?? '').trim().split('\n').filter(Boolean); const j = (() => { try { return JSON.parse(last[last.length - 1]) } catch { return null } })(); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || 'Laden fehlgeschlagen'); await loadCache(); say(`${j.name} Nr. ${j.number}: ${j.classes} Klassen im Journal · ${Math.round(j.ms / 1000)} s${j.current !== j.version ? ` — aktuell bleibt Version ${j.current} (oben umschalten)` : ''}`); draw()
+        const r = await api.post('/api/plugins/etim/run', { params: { mode: 'load', url: st.url, langs: langs.join(',') } }); const j = jsonOf(r.output); if (!j?.classes) throw new Error((r.output ?? '').slice(-300) || 'Laden fehlgeschlagen'); await loadCache(); say(`ETIM ${j.version}: ${j.classes} Klassen in ${Math.round(j.ms / 1000)} s${j.current !== j.version ? ` — aktuell bleibt ETIM ${j.current}` : ''}`); draw()
       } finally { clearInterval(tick) }
-    }) } }, '⇩ holen und übernehmen')
-    body.append(section('Freigabe', 'etim-international.com/downloads — öffentlich; deutsche Namen: ETIM Deutschland (etim.de) als Datei',
-      el('div', { style: 'font-size:12px;padding:4px 0' }, relLine),
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:4px 0;flex-wrap:wrap' }, listBtn, sel, urlIn, loadBtn),
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:4px 0' }, el('button', { class: 'x', title: 'IXF-3.1-Datei aus dem Dateisystem lesen (z. B. ETIM Deutschland)', onclick: () => file.click() }, '⇩ IXF-Datei lesen'), file,
-        rel && !(relInfo?.all && cache.classes.size >= rel.classes.length) ? el('button', { class: 'primary', title: `alle ${rel.classes.length} Klassen der gelesenen Datei ins Journal (Sprachen des Modells)`, onclick: takeAll }, `⇩ alle ${rel.classes.length} Klassen übernehmen`) : null,
-        null)))
+    }) } }, '⇩ laden')
+    const fileBtn = el('button', { class: 'x', title: 'IXF-3.1-Datei vom Rechner (z. B. ETIM Deutschland mit deutschen Namen — ergänzt dieselbe Version)', onclick: () => file.click() }, '⇩ Datei …')
+    const fileState = rel ? el('span', { class: 'muted' }, `gelesen: ETIM ${rel.header.number ?? '?'} · ${rel.classes.length} Klassen · ${[...new Set(rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))].join('/')} `, el('button', { class: 'primary', onclick: takeAll }, `⇩ ${rel.classes.length} Klassen übernehmen`)) : null
+    body.append(section('1 · Klassifikation', 'ETIM-Versionen im Journal · ● die aktuelle gilt für Zuweisen, Prüfen und Export',
+      cache.versions.length ? el('table', { class: 'grid', style: 'width:auto;min-width:640px' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:34px' }, ''), el('th', { style: 'width:90px' }, 'Version'), el('th', {}, 'Quelle'), el('th', { style: 'width:80px' }, 'Klassen'), el('th', { style: 'width:90px' }, 'Sprachen'), el('th', { style: 'width:100px' }, 'geladen'))), el('tbody', {}, ...verRows))
+        : el('div', { class: 'empty' }, 'noch keine ETIM-Version im Journal'),
+      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:8px 0 2px;flex-wrap:wrap' }, el('span', { class: 'muted' }, 'dazu:'), listBtn, sel, el('span', { class: 'muted' }, 'oder'), urlIn, loadBtn, el('span', { class: 'muted' }, 'oder'), fileBtn, file, fileState)))
     // Klassen
     // ohne gelesene Freigabe (bleibt im Browser, je Sitzung) gibt es nichts zu suchen — Feld und Knopf sagen das, statt nach dem Klick zu meckern (Taloan, 20.09.)
     const P = pool()
@@ -358,15 +361,15 @@ async function mount(root, ctx) {
       if (!found.length) hits.append(el('div', { class: 'muted', style: 'padding:4px' }, 'nichts gefunden'))
     }
     const taken = usedClasses().sort((a, b) => a.code.localeCompare(b.code))
-    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Freigabe'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
+    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Version'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
       el('tbody', {}, ...taken.map(c => { const missing = c.features.filter(f => !hasAttr(attrKeyOf(f.code))).length; return el('tr', {}, el('td', { class: 'mono' }, c.code), el('td', {}, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, c.group ? ` · ${nameOf(c.group.name, locale)}` : '')), el('td', { class: 'num' }, c.features.length), el('td', { class: missing ? 'warn num' : 'muted num' }, missing || '—'), el('td', { class: 'muted', style: 'font-size:11px' }, `${c.release?.name ?? ''} v${c.version}`),
         el('td', { style: 'position:relative' }, assignBtn(c.code)),
         el('td', {}, rel && rel.classes.some(x => x.code === c.code && x.version !== c.version) ? el('button', { class: 'x', title: 'aus der gelesenen Freigabe aktualisieren', onclick: async () => { await takeClass(rel.classes.find(x => x.code === c.code)); draw() } }, '↻') : null, el('button', { class: 'x', title: 'Klasse entfernen (Datensatz; Attribute und Werte bleiben)', onclick: async () => { if (!(await ctx.dialog.confirm({ title: `${c.code} entfernen?`, ok: 'entfernen', danger: true }))) return; await ctx.data.del('class:' + c.code); cache.classes.delete(c.code); draw() } }, '✕'))) })))
     const assignRow = st.assign ? tree.byId.get(st.assign) : null
-    body.append(section('Klassen', `${taken.length} in Gebrauch · ${cache.classes.size} in der Freigabe`,
+    body.append(section('2 · Klassen', `${taken.length} in Gebrauch · ${cache.classes.size} in Version ${cache.version ?? '?'}`,
       assignRow ? assignBox(assignRow, P) : null,
-      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', disabled: !P.length, title: P.length ? `alle Klassen, die im Attribut ${cache.settings.classAttr} im Baum stehen, übernehmen` : 'braucht die gelesene Freigabe (oben ⇩ IXF lesen)', onclick: classesFromTree }, '⇩ aus dem Baum')),
-      hits, taken.length ? tbl : el('div', { class: 'empty' }, cache.classes.size ? 'noch keine Klasse im Baum zugewiesen — oben suchen und ⇢ zuweisen' : 'erst eine Freigabe holen')))
+      el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0;flex-wrap:wrap' }, q, el('button', { class: 'x', disabled: !P.length, title: P.length ? `alle Klassen, die im Attribut ${cache.settings.classAttr} im Baum stehen, übernehmen` : 'braucht eine ETIM-Version (oben holen)', onclick: classesFromTree }, '⇩ aus dem Baum')),
+      hits, taken.length ? tbl : el('div', { class: 'empty' }, cache.classes.size ? 'noch keine Klasse im Baum zugewiesen — oben suchen und ⇢ zuweisen' : 'erst eine ETIM-Version holen')))
     // Attribute
     // Gruppe der ETIM-Daten: „etim“ legen wir an (Attribute direkt zugewiesen); eine vorhandene Gruppe heißt: hier zuordnen (Best Guess über die Namen)
     const groupSel = el('select', { title: 'Attributgruppe, die die ETIM-Daten trägt — gibt es sie nicht, wird sie angelegt', onchange: e => { cache.settings.group = e.target.value; saveSettings(); draw() } },
@@ -396,7 +399,7 @@ async function mount(root, ctx) {
     attachBtn.addEventListener('click', () => { attachPick.style.display = attachPick.style.display === 'none' ? 'block' : 'none' })
     const allFeats = allFeatures(); for (const f of allFeats.values()) f.n = f.classes.length
     const missing = [...allFeats.values()].filter(f => !hasAttr(attrKeyOf(f.code)))
-    body.append(section('Attribute', `${allFeats.size} Merkmale · ${missing.length} ohne Attribut`,
+    body.append(section('3 · Attribute', `${allFeats.size} Merkmale · ${missing.length} ohne Attribut`,
       el('div', { style: 'display:flex;gap:12px;align-items:center;padding:6px 0;flex-wrap:wrap' }, el('label', { class: 'muted' }, 'Gruppe ', groupSel), groupKey() !== 'etim' ? el('button', { class: 'x', title: `Merkmale den vorhandenen Attributen der Gruppe ${groupKey()} nach Namen zuordnen (ab 80 % Ähnlichkeit); der Rest wird angelegt`, onclick: guessInGroup }, `↻ in ${groupKey()} zuordnen`) : null, el('label', { class: 'muted' }, 'Klasse in ', classSel), unkSel, el('label', {}, reqCb, ' Klasse ist Pflicht (Prüfung)'),
         el('button', { class: 'primary', title: `Klassenattribut ${cache.settings.classAttr} als Werteliste der übernommenen Klassen und je fehlendem Merkmal ein Attribut (ef…) in der Gruppe ${groupKey()} anlegen`, onclick: createAttributes }, `＋ Attribute anlegen (${missing.length + (hasAttr(cache.settings.classAttr) ? 0 : 1)})`),
         el('span', { style: 'position:relative' }, attachBtn, attachPick))))
@@ -407,7 +410,7 @@ async function mount(root, ctx) {
       sel.value = cache.map[f.code] ?? ''
       mapBody.append(el('tr', {}, el('td', { class: 'mono' }, f.code), el('td', {}, featureText(f, locale)), el('td', { class: 'muted' }, TYPE[f.type] ?? f.type, f.type === 'Alphanumeric' ? ` (${f.values.length})` : ''), el('td', { class: 'num muted' }, f.n), el('td', { class: hasAttr(cur) ? '' : 'warn' }, sel)))
     }
-    body.append(section('Zuordnung', 'Merkmal → Attribut; leer = eigenes Attribut ef… (wird angelegt)',
+    body.append(section('4 · Zuordnung', 'Merkmal → Attribut; leer = eigenes Attribut ef… (wird angelegt)',
       allFeats.size ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Merkmal'), el('th', {}, 'Name [Einheit]'), el('th', { style: 'width:100px' }, 'Typ'), el('th', { style: 'width:50px' }, 'Kl.'), el('th', { style: 'width:280px' }, 'Attribut'))), mapBody) : el('div', { class: 'empty' }, 'keine Klassen übernommen')))
     // Prüfung
     const rootBtn = el('button', { class: 'x' }, st.root ? `${ICON[tree.byId.get(st.root)?.role] ?? ''} ${tree.byId.get(st.root)?.label ?? ''}` : 'Teilbaum wählen')
@@ -415,7 +418,7 @@ async function mount(root, ctx) {
     ctx.treePicker(pick, { value: st.root, roles: ['group', 'product'], height: 300, onPick: r => { st.root = r.id; rootBtn.textContent = `${ICON[r.role]} ${r.label}`; pick.style.display = 'none'; localStorage.setItem('journali.etim.root', r.id) } })
     rootBtn.addEventListener('click', () => { pick.style.display = pick.style.display === 'none' ? 'block' : 'none' })
     const res = st.result
-    body.append(section('Prüfung', 'dieselbe Regel läuft in ✓ Datenqualität',
+    body.append(section('5 · Prüfung', 'dieselbe Regel läuft in ✓ Datenqualität',
       el('div', { style: 'display:flex;gap:8px;align-items:center;padding:6px 0' }, el('span', { style: 'position:relative' }, rootBtn, pick), el('button', { class: 'primary', onclick: check }, '▶ prüfen'), res ? el('span', { class: 'muted' }, `${res.findings.length} Funde in ${res.nodes} Knoten`) : null),
       res ? (res.findings.length ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:280px' }, 'Knoten'), el('th', { style: 'width:140px' }, 'Feld'), el('th', {}, 'Fund'))),
         el('tbody', {}, ...res.findings.slice(0, 1000).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, SEV[x.severity] ?? ''), el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) } }, `${ICON[x.node.role] ?? ''} ${x.node.label}`)), el('td', { class: 'mono' }, x.attribute ?? ''), el('td', {}, x.message))))) : el('div', { class: 'empty' }, '✓ keine Funde')) : null))

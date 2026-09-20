@@ -25,6 +25,16 @@ public sealed class MemoryJournal : IJournal
         }
     }
 
+    public IReadOnlyList<Entry> AppendMany(string actor, IReadOnlyList<(string Stream, string Type, string Payload)> items, string? batch = null)
+    {
+        lock (_gate)
+        {
+            var list = new List<Entry>(items.Count); var at = DateTimeOffset.UtcNow;
+            foreach (var (s, t, p) in items) { var e = new Entry(_entries.Count + 1, at, actor, s, t, p, batch); _entries.Add(e); list.Add(e); }
+            return list;
+        }
+    }
+
     public IEnumerable<Entry> ReadAfter(long afterNumber)
     {
         Entry[] snapshot;

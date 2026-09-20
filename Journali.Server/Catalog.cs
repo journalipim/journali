@@ -167,4 +167,15 @@ public sealed class Catalog
     }
 
     public delegate Entry Writer(string actor, string stream, string type, object payload, string? batch);
+
+    /// <summary>Viele Einträge als eine Transaktion unter der Sperre, danach die Abbilder — für Stapel, die nicht prüfen müssen (Plugin-Daten).</summary>
+    public IReadOnlyList<Entry> WriteMany(string actor, IReadOnlyList<(string Stream, string Type, object Payload)> items, string? batch = null)
+    {
+        lock (_gate)
+        {
+            var entries = _journal.AppendMany(actor, items.Select(i => (i.Stream, i.Type, Types.Serialize(i.Payload))).ToList(), batch);
+            foreach (var e in entries) Apply(e);
+            return entries;
+        }
+    }
 }

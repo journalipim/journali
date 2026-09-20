@@ -9,6 +9,9 @@ public interface IJournal
     /// <summary>Hängt einen Eintrag an und vergibt die nächste Nummer. <paramref name="batch"/> verbindet die Einträge einer Aktion.</summary>
     Entry Append(string actor, string stream, string type, string payload, string? batch = null);
 
+    /// <summary>Viele Einträge in einer Transaktion (ein Stapel: etim-Freigabe mit tausenden Klassen) — eine Sperre, eine Nummernvergabe, ein Commit.</summary>
+    IReadOnlyList<Entry> AppendMany(string actor, IReadOnlyList<(string Stream, string Type, string Payload)> items, string? batch = null);
+
     /// <summary>Alle Einträge mit Nummer &gt; <paramref name="afterNumber"/>, in Reihenfolge.</summary>
     IEnumerable<Entry> ReadAfter(long afterNumber);
 

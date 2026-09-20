@@ -166,7 +166,8 @@ public static class PluginApi
             if (items is null || items.Count == 0) return Bad("Leer.");
             if (items.Keys.Any(n => n.Length is 0 or > 120 || n.Any(ch => ch is '/' or '\\'))) return Bad("Name ungültig.");
             var batch = Guid.NewGuid().ToString("N")[..12];
-            return c.With((_, _, write) => { Journali.Core.Journal.Entry? last = null; foreach (var (name, v) in items) last = write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, v.GetRawText()), batch); return Results.Ok(new { count = items.Count, batch, last = EntryView.Of(last!) }); });
+            var entries = c.WriteMany(actor, items.Select(kv => (Plugins.Stream + key, Types.PluginDataSet, (object)new PluginDataSet(kv.Key, kv.Value.GetRawText()))).ToList(), batch);
+            return Results.Ok(new { count = entries.Count, batch, last = EntryView.Of(entries[^1]) });
         });
         api.MapDelete("/plugins/{key}/data/{name}", (string key, string name, HttpRequest req, Catalog c) =>
         {

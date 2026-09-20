@@ -101,6 +101,30 @@ public sealed class PostgresJournal : IJournal
         return entry;
     }
 
+    /// <summary>Viele Einträge in einer Transaktion: eine Sperre, MAX(number) einmal, dann ein vorbereitetes INSERT je Eintrag — 5 000 Klassen in Sekunden statt Minuten.</summary>
+    public IReadOnlyList<Entry> AppendMany(string actor, IReadOnlyList<(string Stream, string Type, string Payload)> items, string? batch = null)
+    {
+        var list = new List<Entry>(items.Count);
+        if (items.Count == 0) return list;
+        using var conn = _db.OpenConnection();
+        using var tx = conn.BeginTransaction();
+        using (var gate = new NpgsqlCommand("LOCK TABLE journal IN SHARE ROW EXCLUSIVE MODE", conn, tx)) gate.ExecuteNonQuery();
+        long next;
+        using (var max = new NpgsqlCommand("SELECT COALESCE(MAX(number), 0) FROM journal", conn, tx)) next = (long)max.ExecuteScalar()!;
+        using var cmd = new NpgsqlCommand($"INSERT INTO journal (number, at, actor, stream, type, payload, batch) VALUES (@n, now(), @actor, @stream, @type, @payload, @batch) RETURNING {Columns}", conn, tx);
+        var pn = cmd.Parameters.Add("n", NpgsqlDbType.Bigint); cmd.Parameters.AddWithValue("actor", actor);
+        var ps = cmd.Parameters.Add("stream", NpgsqlDbType.Text); var pt = cmd.Parameters.Add("type", NpgsqlDbType.Text); var pp = cmd.Parameters.Add("payload", NpgsqlDbType.Jsonb);
+        cmd.Parameters.Add("batch", NpgsqlDbType.Text).Value = (object?)batch ?? DBNull.Value;
+        cmd.Prepare();
+        foreach (var (s, t, p) in items)
+        {
+            pn.Value = ++next; ps.Value = s; pt.Value = t; pp.Value = p;
+            using var reader = cmd.ExecuteReader(); reader.Read(); list.Add(Read(reader));
+        }
+        tx.Commit();
+        return list;
+    }
+
     public IEnumerable<Entry> ReadAfter(long afterNumber) =>
         Query($"SELECT {Columns} FROM journal WHERE number > @n ORDER BY number",
               new NpgsqlParameter("n", afterNumber));
