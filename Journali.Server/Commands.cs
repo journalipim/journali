@@ -82,17 +82,12 @@ public static class Commands
         var variants = c.Tree.Children(id).ToList();
         if (variants.Count > 0)
         {
+            // leere Felder zählen nicht (Taloan, 20.09.): eine Variante ohne Wert bleibt ohne Achsenwert — eindeutig sein müssen die vollständigen Kombinationen
             var combos = new HashSet<string>();
             foreach (var v in variants)
             {
-                var vals = new List<string>();
-                foreach (var a in clean)
-                {
-                    var val = v.AxisValues.TryGetValue(a, out var have) ? have : v.Values.GetValueOrDefault(new Axis(a, null, null));
-                    if (string.IsNullOrEmpty(val)) return Outcome.Bad($"Achse {a}: „{c.Tree.Nodes[v.Id].Name ?? v.Id}“ hat keinen Wert dafür — erst an allen Varianten {a} setzen.");
-                    vals.Add(val);
-                }
-                if (clean.Length > 0 && !combos.Add(string.Join("\u0001", vals))) return Outcome.Bad($"Damit wären zwei Varianten gleich ({string.Join(", ", vals)}).");
+                var vals = clean.Select(a => v.AxisValues.TryGetValue(a, out var have) ? have : v.Values.GetValueOrDefault(new Axis(a, null, null))).ToList();
+                if (clean.Length > 0 && vals.All(x => !string.IsNullOrEmpty(x)) && !combos.Add(string.Join("\u0001", vals!))) return Outcome.Bad($"Damit wären zwei Varianten gleich ({string.Join(", ", vals)}) — eine weitere Achse dazu, oder Werte ändern.");
             }
         }
         // Entfällt eine Achse, bleibt ihr Wert als eigener Attributwert an der Variante (sonst wäre er nur noch im Journal) — je Variante ein AttributeSet vor dem Achsenwechsel
@@ -201,6 +196,13 @@ public static class Commands
         if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad($"Unbekannter Kanal: {channel}");
         if (channel is not null && def.Channels is { } only && !only.Contains(channel)) return Outcome.Bad($"{def.Key} gibt es nur für: {string.Join(", ", only)}");
         if (CheckValue(c.Model, def, ref value, ref values) is { } error) return Outcome.Bad(error);
+        // Achsenattribut an einer Variante (Taloan, 20.09.: Lücken später füllen): der Wert wird ihr Achsenwert — die Kombination muss eindeutig bleiben
+        if (n.Role == Roles.Variant && n.Parent is { } pid && c.Tree.Nodes.TryGetValue(pid, out var prod) && prod.Axes.Contains(def.Key) && locale is null && channel is null && row is null && value is not null)
+        {
+            var mine = prod.Axes.Select(a => a == def.Key ? value : n.AxisValues.GetValueOrDefault(a)).ToList();
+            if (mine.All(x => !string.IsNullOrEmpty(x)) && c.Tree.Children(pid).Any(s => s.Id != n.Id && prod.Axes.All(a => s.AxisValues.TryGetValue(a, out var x) && x == mine[Array.IndexOf(prod.Axes, a)])))
+                return Outcome.Bad($"Diese Variante gibt es schon ({string.Join(", ", mine)}).");
+        }
         // SKU: eindeutig über alle Varianten — die kleine synchrone Prüf-Projektion.
         if (def.Key == Model.SkuAttribute && value is not null && c.Tree.BySku(value).Any(o => o.Id != n.Id))
             return Outcome.Bad($"SKU {value} gibt es schon.");

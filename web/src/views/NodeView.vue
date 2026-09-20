@@ -410,6 +410,26 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 // Variantenachsen am Produkt — änderbar, solange es keine Varianten hat (ProductAxesSet).
 const addAxis = ref('')
 const setAxes = axes => command(() => api.post(`${nodeUrl()}/axes`, { axes }, 'PUT'))
+// Achse dazu mit Varianten (Taloan, 20.09.): Werte prüfen — leere zählen nicht —, nicht eindeutig → Warnung, nächste Achse ist Pflicht, so lange
+// bis die Kombination eindeutig ist; dann alle zufügen oder abbrechen
+const wiz = ref(null)   // { axes: [...], dupes: [{ combo, n }], empty: n, next: '' }
+async function axisCheck(axes) {
+  const t = await api.get(`${nodeUrl()}/table?role=variant&attributes=${encodeURIComponent(axes.join(','))}`)
+  const seen = new Map(); let empty = 0
+  for (const r of t.rows) {
+    const vals = axes.map(a => r.row.axisValues?.[a] ?? r.values[a]?.value ?? '')
+    if (vals.some(v => v === '')) { empty++; continue }
+    const k = vals.join(' · '); seen.set(k, (seen.get(k) ?? 0) + 1)
+  }
+  return { dupes: [...seen].filter(([, n]) => n > 1).map(([combo, n]) => ({ combo, n })), empty, total: t.rows.length }
+}
+async function axisAdd() {
+  const a = addAxis.value; if (!a) return; addAxis.value = ''
+  if (!node.value.children) { await setAxes([...node.value.axes, a]); return }
+  const axes = [...(wiz.value?.axes ?? node.value.axes), a]
+  try { const r = await axisCheck(axes); wiz.value = { axes, ...r, next: '' } } catch (e) { store.toast(e.message) }
+}
+async function axisCommit() { if (!wiz.value || wiz.value.dupes.length) return; const axes = wiz.value.axes; wiz.value = null; await setAxes(axes) }
 const axisChoices = computed(() => (model.value?.attributes ?? []).filter(a => ['enum', 'text', 'integer'].includes(a.type) && !a.multiple && !(node.value?.axes ?? []).includes(a.key))
   .sort((a, b) => (a.type === 'enum' ? 0 : 1) - (b.type === 'enum' ? 0 : 1) || (a.label?.de ?? a.key).localeCompare(b.label?.de ?? b.key, 'de')))
 function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
@@ -589,9 +609,15 @@ function cellMenu(e, def, col, block) {
           <span v-if="!node.axes.length" class="muted">keine — beliebig viele Varianten</span>
           <span v-for="k in node.axes" :key="k" class="chip">{{ axisLabel(k) }} <button @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg — nur, wenn die Varianten danach noch eindeutig sind">×</button></span>
           <template>
-            <select v-model="addAxis" style="width:220px"><option value="">+ Achse …</option><option v-for="a in axisChoices" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
-            <button class="primary" :disabled="!addAxis" @click="setAxes([...node.axes, addAxis]); addAxis = ''">dazu</button>
+            <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? '+ weitere Achse (Pflicht) …' : '+ Achse …' }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+            <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? 'prüfen' : 'dazu' }}</button>
           </template>
+        </div>
+        <div v-if="wiz" class="picker" style="padding:8px;margin-top:6px">
+          <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">· {{ wiz.total }} Varianten{{ wiz.empty ? `, ${wiz.empty} ohne Wert (zählen nicht)` : '' }}</span></div>
+          <div v-if="wiz.dupes.length" class="warn" style="margin-top:6px">⚠ nicht eindeutig — <span v-for="d in wiz.dupes.slice(0, 6)" :key="d.combo" class="chip" style="margin-right:4px">{{ d.combo }} × {{ d.n }}</span>{{ wiz.dupes.length > 6 ? ` … ${wiz.dupes.length}` : '' }} → oben eine weitere Achse wählen und prüfen</div>
+          <div v-else class="pos" style="margin-top:6px">✓ eindeutig</div>
+          <div class="chips" style="margin-top:6px"><button class="primary" :disabled="wiz.dupes.length > 0" @click="axisCommit">Achsen zufügen</button><button @click="wiz = null">Abbrechen</button></div>
         </div>
         </template>
       </div>

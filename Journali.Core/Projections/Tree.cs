@@ -382,6 +382,9 @@ public sealed class Tree : IProjection
                 else if (string.IsNullOrEmpty(a.Value)) n.Values.Remove(axis);
                 else n.Values[axis] = a.Value;
                 if (n.Values.ContainsKey(axis) || n.Lists.ContainsKey(axis)) n.SetAt[axis] = entry.Number; else n.SetAt.Remove(axis);
+                // Achsenattribut an einer Variante: der Wert ist ihr Achsenwert, sobald das Produkt die Achse hat (Taloan, 20.09.: Lücken später füllen)
+                if (n.Role == Roles.Variant && a.Locale is null && a.Channel is null && a.Row is null && n.Parent is { } pp && _nodes.TryGetValue(pp, out var prod) && prod.Axes.Contains(a.Attribute))
+                { if (string.IsNullOrEmpty(a.Value)) n.AxisValues.Remove(a.Attribute); else n.AxisValues[a.Attribute] = a.Value; }
                 break;
             case Types.ValueSourced:
                 var vs = Types.Deserialize<ValueSourced>(entry.Payload);
