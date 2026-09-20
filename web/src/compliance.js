@@ -277,8 +277,8 @@ export async function mount(root, ctx, catalog) {
     // fehlendes Attribut: in der Zeile zuordnen (Auswahl) oder anlegen — nicht „siehe unter 3“
     const mapCell = it => {
       const sel = el('select', { style: 'max-width:220px;color:var(--warn)' }, el('option', { value: '' }, 'zuordnen …'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
-      sel.addEventListener('change', () => { if (!sel.value) return; st.mapping[it.key] = { to: sel.value, why: 'gewählt', sure: true }; remember(); st.dirty = true; drawMapping(); drawResult() })
-      const mk = el('button', { class: 'x', title: `Attribut ${(catalog.prefix ?? '') + it.key} in Gruppe ${catalog.groupKey} anlegen`, onclick: async () => { say('lege an …'); try { await createAttributes(catalog, [it], st.mapping); await remember(); say(''); st.dirty = true; drawMapping(); drawResult() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, '+ anlegen')
+      sel.addEventListener('change', async () => { if (!sel.value) return; st.mapping[it.key] = { to: sel.value, why: 'gewählt', sure: true }; await remember(); await run() })
+      const mk = el('button', { class: 'x', title: `Attribut ${(catalog.prefix ?? '') + it.key} in Gruppe ${catalog.groupKey} anlegen`, onclick: async () => { say('lege an …'); try { await createAttributes(catalog, [it], st.mapping); await remember(); say(''); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, '+ anlegen')
       mk.textContent = `+ anlegen in ${catalog.groupKey}`
       return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
     }
@@ -289,17 +289,27 @@ export async function mount(root, ctx, catalog) {
     const grpSel = el('select', { title: 'Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu' }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${(model.groups ?? []).find(g => g.key === k)?.label?.de || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, '+ neue Gruppe …'))
     grpSel.value = catalog.groupKey
     grpSel.addEventListener('change', async () => { let k = grpSel.value; if (k === '__new__') { k = await dialog.prompt({ title: 'Neue Attributgruppe', value: '', placeholder: 'Schlüssel — a-z, 0-9, _', ok: '+ Gruppe' }); k = (k ?? '').trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_'); if (!k) { grpSel.value = catalog.groupKey; return } } catalog.groupKey = k; await ctx.data.set('group', k).catch(() => {}); drawResult(); drawMapping() })
-    if (unm.length) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); st.dirty = true; drawMapping(); drawResult() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`), el('span', { class: 'muted' }, 'in Gruppe'), grpSel))
+    const inactiveN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
+    const emptyN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'empty').length, 0), badN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'bad').length, 0)
+    // Der Assistent (Taloan, 20.09.): Analyse → Deltas (zuordnen/anlegen, in welcher Gruppe) → Gruppe im Baum anhängen → erneut → bis alles zugeordnet ist oder der Anwender aufgibt
+    const next = unm.length ? `Schritt: ${unm.length} Datenpunkte ohne Attribut — unten zuordnen oder anlegen` : inactiveN ? 'Schritt: die Gruppe im Baum anhängen — dann erneut prüfen' : (emptyN || badN) ? `Zuordnung vollständig — ${emptyN} leere${badN ? `, ${badN} falsche` : ''} Werte füllen (unten in der Tabelle, oder Vorschläge)` : '✓ alles zugeordnet und gefüllt'
+    s3.append(el('div', { class: 'chips', style: 'margin:4px 0;font-weight:600' }, el('span', { class: unm.length || inactiveN ? 'warn' : (emptyN || badN) ? '' : 'pos' }, next)))
+    if (unm.length) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`), el('span', { class: 'muted' }, 'in Gruppe'), grpSel))
     if (catalog.summary) { const s = catalog.summary(r, st.mapping, ctx); if (s) s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, s)) }
     if (r.inactiveGroups?.size) {
-      const groups = [...r.inactiveGroups]; const rootRow = tree.byId.get(st.root)
+      // Schritt: die Gruppe hängt an keinem Knoten des Pfads — WO im Baum sie hängen soll, sagt der Anwender (Taloan, 20.09.); Vorgabe: der geprüfte Knoten
+      const groups = [...r.inactiveGroups]; let target = tree.byId.get(st.root)
       const n = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
-      s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, el('span', { class: 'warn' }, `⊘ ${n} Werte gelten hier nicht — Gruppe ${groups.map(g => '„' + (store.model.groups.find(x => x.key === g)?.label?.de || g) + '“').join(', ')} hängt an keinem Knoten des Pfads`),
-        el('button', { class: 'primary', title: `die Gruppe an ${rootRow?.label ?? 'die Wurzel'} hängen — dann gelten die Attribute an allen Knoten darunter (GroupsAttached)`, onclick: async () => {
-          if (!rootRow) return
-          if (!(await dialog.confirm({ title: `Gruppe an ${rootRow.label} hängen?`, warn: `${groups.join(', ')} gilt dann an allen Knoten darunter`, ok: 'anhängen' }))) return
-          try { const have = (rootRow.groups ?? '').split(',').filter(Boolean); await api.post(`/api/nodes/${encodeURIComponent(rootRow.id)}/groups`, { groups: [...new Set([...have, ...groups])] }, 'PUT'); await tree.load(); store.toast(`✓ ${groups.join(', ')} an ${rootRow.label}`); await run() } catch (e) { store.toast(e.message) }
-        } }, `▤ an ${rootRow?.label ?? 'Wurzel'} hängen`)))
+      const tBtn = el('button', { class: 'x', title: 'Knoten wählen, an dem die Gruppe hängen soll — gilt für alles darunter' }, `${target ? `${target.label}` : 'Knoten wählen'} ▾`)
+      const pickBox = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:6;width:380px;display:none;padding:6px;background:var(--pane)' })
+      treePicker(pickBox, { value: target?.id ?? null, roles: ['group', 'product'], height: 300, onPick: r2 => { target = r2; tBtn.textContent = `${r2.label} ▾`; pickBox.style.display = 'none' } })
+      tBtn.addEventListener('click', () => { pickBox.style.display = pickBox.style.display === 'none' ? 'block' : 'none' })
+      s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, el('span', { class: 'warn' }, `⊘ ${n} Werte gelten hier nicht — Gruppe ${groups.map(g => '„' + (store.model.groups.find(x => x.key === g)?.label?.de || g) + '“').join(', ')} hängt an keinem Knoten des Pfads. Anhängen an`),
+        el('span', { style: 'position:relative' }, tBtn, pickBox),
+        el('button', { class: 'primary', onclick: async () => {
+          if (!target) return
+          try { const have = (target.groups ?? '').split(',').filter(Boolean); await api.post(`/api/nodes/${encodeURIComponent(target.id)}/groups`, { groups: [...new Set([...have, ...groups])] }, 'PUT'); await tree.load(); store.toast(`✓ ${groups.join(', ')} an ${target.label}`); await run() } catch (e) { store.toast(e.message) }
+        } }, '▤ anhängen und erneut prüfen')))
     }
     s3.append(el('details', { open: '' }, el('summary', { class: 'muted' }, 'je Datenpunkt'), sum))
     // je Knoten: Matrix
