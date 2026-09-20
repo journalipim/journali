@@ -61,7 +61,8 @@ const PATTERNS = [
   { key: 'iban', label: 'IBAN', re: String.raw`[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}` },
 ]
 const TYPES = ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum', 'rows', 'formula', 'template']
-const TYPE_SYM = { text: 'Aa', html: '‹›', integer: '12', decimal: '1.5', boolean: '☑', date: '📅', enum: '☰', rows: '≣', formula: 'ƒ', template: '{}' }
+const TYPE_SYM = { text: 'Aa', html: '‹›', integer: '12', decimal: '1.5', boolean: '☑', date: '📅', enum: '☰', rows: '⊞', formula: 'ƒ', template: '{}' }
+const TYPE_LABEL = { rows: 'rows · Tabelle (Zeilen aus Spalten)' }   // „vermehrbar“ heißt in der Oberfläche multiple (Taloan, 20.09.); rows ist die Tabelle
 const sec = computed(() => sections.find(s => s.key === section.value))
 
 async function send(fn) {
@@ -430,7 +431,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <select v-model="flt.type" title="Typ"><option value="">Typ</option><option v-for="t in TYPES" :key="t" :value="t">{{ TYPE_SYM[t] }} {{ t }}</option></select>
         <button :class="{ primary: flt.locale }" @click="flt.locale = !flt.locale" title="nur sprachabhängige">🗣</button>
         <button :class="{ primary: flt.channel }" @click="flt.channel = !flt.channel" title="nur kanalabhängige">⇶</button>
-        <button :class="{ primary: flt.multiple }" @click="flt.multiple = !flt.multiple" title="nur mehrfach">≣</button>
+        <button :class="{ primary: flt.multiple }" @click="flt.multiple = !flt.multiple" title="nur vermehrbare">≣</button>
       </template>
       <select v-else-if="section === 'groups'" v-model="flt.activeFrom" title="aktiv ab"><option value="">🔒 alle</option><option value="-">überall aktiv</option><option v-for="r in roles" :key="r" :value="r">🔒 ab {{ roleLabel[r] }}</option></select>
       <select v-else-if="section === 'views'" v-model="flt.level" title="Knotentyp"><option value="">alle Knotentypen</option><option v-for="r in roles" :key="r" :value="r">{{ roleLabel[r] }}</option></select>
@@ -515,7 +516,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curAttr.label?.en ?? null" @save="v => attrSet('label_en', v)" /></tr>
-          <tr><td class="attr">Typ</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${t}`" required @save="v => attrSet('type', v)" /></tr>
+          <tr><td class="attr">Typ</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${TYPE_LABEL[t] ?? t}`" required @save="v => attrSet('type', v)" /></tr>
           <tr><td class="attr" title="Gruppe in der Pflege — ohne Gruppe gilt das Attribut an keinem Knoten">▤ Gruppe</td><SelectCell :value="curAttr.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => attrSet('group', v || null)" /></tr>
           <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">⚖ Einheit</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
           <tr v-if="curAttr.type === 'enum'"><td class="attr">☰ Werteliste<span v-if="!curAttr.list" class="warn" title="ohne Werteliste lässt sich kein Wert setzen"> ●</span></td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
@@ -527,7 +528,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="curAttr.type !== 'rows'"><td class="attr" title="der Wert ist je Sprache verschieden">🗣 sprachabhängig</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
           <tr class="sub"><td colspan="3">↓ Wert</td></tr>
           <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
-          <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" title="mehrere Werte, kommagetrennt">≣ mehrfach</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
+          <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" title="vermehrbar: mehrere Werte — in der Zelle als Liste mit + − und Umsortieren">≣ vermehrbar</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
           <tr class="sub"><td colspan="3" title="Pflicht heisst: ohne Wert keine Freigabe in diesem Kanal — unabhängig davon, ob der Wert kanalabhängig ist. Ein Wert für alle Kanäle kann für web Pflicht sein und für print nicht.">⇶ Kanal · Pflicht für die Freigabe</td></tr>
           <tr v-if="!['rows', 'formula', 'template'].includes(curAttr.type)"><td class="attr" title="der Wert ist je Kanal verschieden">⇶ kanalabhängig</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
           <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für die Freigabe im Kanal ${c.key} — je Sprache, oder * für alle Sprachen; nichts = keine Pflicht`">● Pflicht {{ c.key }}</td>
