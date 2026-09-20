@@ -412,7 +412,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attributgruppe -->
     <template v-else-if="section === 'groups' && curGroup">
-      <div class="toolbar"><h1>▤ {{ curGroup.label?.de || curGroup.key }}</h1><span class="mono muted">{{ curGroup.key }}</span><span class="grow" /><button class="x" @click="removeCur" :disabled="groupAttrs.length > 0" :title="groupAttrs.length ? 'hat noch Attribute' : 'Gruppe zurückziehen'">🗑</button></div>
+      <div class="toolbar"><h1>▤ {{ curGroup.label?.de || curGroup.key }}</h1><span class="mono muted">{{ curGroup.key }}</span><span class="grow" /><button class="x" @click="removeCur" :disabled="groupAttrs.length > 0" :title="groupAttrs.length ? 'hat noch Attribute — erst die Attribute zurückziehen oder umhängen' : 'Gruppe zurückziehen (AttributeGroupRetired)'">✕ zurückziehen{{ groupAttrs.length ? ' · hat noch Attribute' : '' }}</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
@@ -454,7 +454,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attribut -->
     <template v-else-if="section === 'attributes' && curAttr">
-      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span class="grow" /><button class="x" @click="removeCur" title="Attribut zurückziehen">🗑</button></div>
+      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span class="grow" /><button class="x" @click="removeCur" title="Attribut zurückziehen">✕ zurückziehen</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
@@ -504,7 +504,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <button @click="viewFillAll" title="alle am Knotentyp aktiven Gruppen">⇊ alle Gruppen</button>
         <select v-model="addViewGroup" style="width:190px"><option value="">▤ Gruppe …</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
         <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">+ dazu</button>
-        <button class="x" @click="removeCur" title="Sicht zurückziehen">🗑</button></div>
+        <button class="x" @click="removeCur" title="Sicht zurückziehen">✕ zurückziehen</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curView.label?.de ?? null" @save="v => viewSet('label_de', v)" /></tr>
@@ -529,7 +529,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Relationstyp -->
     <template v-else-if="section === 'relationTypes' && curRel">
-      <div class="toolbar"><h1>⇄ {{ curRel.label?.de || curRel.key }}</h1><span class="mono muted">{{ curRel.key }}</span><span class="grow" /><button class="x" @click="removeCur" title="Relationstyp zurückziehen (nicht, solange es Relationen gibt)">🗑</button></div>
+      <div class="toolbar"><h1>⇄ {{ curRel.label?.de || curRel.key }}</h1><span class="mono muted">{{ curRel.key }}</span><span class="grow" /><button class="x" @click="removeCur" title="Relationstyp zurückziehen (nicht, solange es Relationen gibt)">✕ zurückziehen</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curRel.label?.de ?? null" @save="v => relSet('label_de', v)" /></tr>
@@ -547,7 +547,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Einheit -->
     <template v-else-if="section === 'units' && curUnit">
-      <div class="toolbar"><h1>⚖ {{ curUnit.key }}</h1><span class="grow" /><button class="x" @click="removeCur" title="Einheit zurückziehen (nicht, solange ein Attribut sie benutzt)">🗑</button></div>
+      <div class="toolbar"><h1>⚖ {{ curUnit.key }}</h1><span class="grow" /><button class="x" @click="removeCur" title="Einheit zurückziehen (nicht, solange ein Attribut sie benutzt)">✕ zurückziehen</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curUnit.label?.de ?? null" @save="v => unitSet('label_de', v)" /></tr>
