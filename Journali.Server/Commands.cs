@@ -435,11 +435,11 @@ public static class Commands
             foreach (var up in c.Tree.Ancestors(n))
                 foreach (var (wfKey, nw) in c.Workflows.Of(up.Id))
                 {
-                    if (nw.Transition is not null || nw.Note?.StartsWith("zurück: keine Variante mehr für " + channel) != true) continue;
+                    if (nw.Transition is not null || nw.Note?.StartsWith("↓ " + channel + ":") != true) continue;
                     if (!c.Workflows.All.TryGetValue(wfKey, out var wf)) continue;
                     var fwd = wf.Transitions.FirstOrDefault(x => x.From == nw.State && (x.Effects ?? []).Contains("release:" + channel));
                     if (fwd is null) continue;
-                    c.Write(up.Id, Types.WorkflowStateSet, new WorkflowStateSet(wfKey, fwd.To, fwd.Key, $"wieder: Variante {n.Own(Model.SkuAttribute, null, null) ?? n.Id} für {channel} freigegeben"));
+                    c.Write(up.Id, Types.WorkflowStateSet, new WorkflowStateSet(wfKey, fwd.To, fwd.Key, $"↑ {channel}: {n.Own(Model.SkuAttribute, null, null) ?? n.Id}"));
                 }
         return Outcome.Ok(granted);
     }
@@ -468,7 +468,7 @@ public static class Commands
                     if (!c.Workflows.All.TryGetValue(wfKey, out var wf) || nw.Transition is null) continue;
                     var t = wf.Transitions.FirstOrDefault(x => x.Key == nw.Transition);
                     if (t?.Effects?.Contains("release:" + channel) != true || nw.State != t.To) continue;
-                    c.Write(up.Id, Types.WorkflowStateSet, new WorkflowStateSet(wfKey, t.From, null, $"zurück: keine Variante mehr für {channel} freigegeben ({n.Own(Model.SkuAttribute, null, null) ?? n.Id})"));
+                    c.Write(up.Id, Types.WorkflowStateSet, new WorkflowStateSet(wfKey, t.From, null, $"↓ {channel}: {n.Own(Model.SkuAttribute, null, null) ?? n.Id}"));
                 }
             }
         return Outcome.Ok(e);

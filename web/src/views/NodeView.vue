@@ -832,7 +832,7 @@ function cellMenu(e, def, col, block) {
             <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
             <td class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt'">{{ w.stateLabel?.de || w.state }}</span>
-              <span v-if="w.note" class="muted" :title="`Notiz zum Schritt „${w.transition}“ (${w.actor}): ${w.note}`" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✎ {{ w.note }}</span>
+              <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“ (${w.actor}): ${w.note}` : (w.note.startsWith('↓') ? `vom System zurückgesetzt: letzte Freigabe der Variante weg — ${w.note}` : `vom System wieder vorgesetzt: Variante erneut freigegeben — ${w.note}`)" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✎ {{ w.note }}</span>
               <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
                 <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Der Schritt „${w.transition}“ sollte das bewirken, es ist aber nicht passiert — Klick tut es jetzt`">⚠ {{ effLabel(pe.effect) }}</button>
                 <span v-else class="warn" style="font-size:12px" :title="`keine Variante für ${pe.effect.split(':')[1]} freigegeben — ${pe.why}`">⚠ keine Variante freigegeben</span>
