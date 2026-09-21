@@ -192,26 +192,30 @@ async function analyse() {
     const keys = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.attribute))]
     const locs = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.locale ?? ''))]
     const existing = new Map()
-    // Bestand dort holen, wo die Zeilen wirklich liegen (Taloan, 21.09.: alles stand als „— → Wert“, 1077 Werte bei unverändertem Re-Import) —
-    // gefunden wird über Id, Kennung oder SKU, auch ausserhalb des Ziels; also die Wurzeln aller gefundenen Knoten dazunehmen
-    const rootOf = id => { const a = tree.ancestors(id); return a.length ? a[0].id : id }
+    // Bestand nur für die Zeilen holen, die es schon gibt (Taloan, 21.09.: „darf das Vergleichen bei 11 Zeilen eine Minute dauern?“ — vorher die
+    // ganze Wurzel tief): gefunden über Id, Kennung oder SKU; je Elternteil ein Aufruf (die Subitems als Tabelle), je Sprache
     const iId = mapping.value.findIndex(m => m.target === 'id'), iExt = mapping.value.findIndex(m => m.target === 'external')
     const iSku = mapping.value.findIndex(m => m.target === 'sku' || (m.target === 'attr' && m.attribute === 'sku'))
     const bySku = new Map(tree.rows.filter(r => r.sku).map(r => [String(r.sku).trim(), r])), byExt = new Map(external.value ? tree.rows.filter(r => r.external?.[external.value]).map(r => [String(r.external[external.value]), r]) : [])
-    const found = new Set()
+    const parents = new Map()   // Elternteil → Ids der gefundenen Knoten darunter
     for (const row of source.value.rows) {
       const id = String(row[iId] ?? '').trim(), ext = String(row[iExt] ?? '').trim(), sku = String(row[iSku] ?? '').trim()
       const n = (iId >= 0 && id && tree.byId.get(id)) || (iExt >= 0 && ext && byExt.get(ext)) || (iSku >= 0 && sku && bySku.get(sku)) || null
-      if (n) found.add(rootOf(n.id))
+      if (n) { const key = n.parent ?? '#root'; if (!parents.has(key)) parents.set(key, new Set()); parents.get(key).add(n.id) }
     }
-    const roots = [...new Set([...(target.value ? [target.value.id] : tree.rows.filter(r => !r.parent).map(r => r.id)), ...found])]
-    for (const rid of roots) for (const loc of locs) {
-      const t = await api.get(`/api/nodes/${encodeURIComponent(rid)}/table?deep=true&attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`)
+    let done = 0
+    for (const [pid, ids] of parents) for (const loc of locs) {
+      busy.value = `vergleiche mit dem Bestand … ${++done}/${parents.size * locs.length}`
+      const url = pid === '#root' ? null : `/api/nodes/${encodeURIComponent(pid)}/table?attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`
+      const t = url ? await api.get(url) : { rows: [] }
       for (const r of t.rows) {
+        if (!ids.has(r.row.id)) continue
         const cur = existing.get(r.row.id) ?? {}
         for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }
         existing.set(r.row.id, cur)
       }
+      // Wurzelknoten selbst (ohne Elternteil) einzeln
+      if (pid === '#root') for (const id of ids) { const t2 = await api.get(`/api/nodes/${encodeURIComponent(id)}/table?self=true&attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`); for (const r of t2.rows) { if (r.row.id !== id) continue; const cur = existing.get(id) ?? {}; for (const [k, v] of Object.entries(r.values)) if (v.value != null) { cur[`${k}|${loc}`] = v.value; cur[`${k}|${loc}#own`] = v.own }; existing.set(id, cur) } }
     }
     planned.value = makePlan({ columns: source.value.columns, rows: source.value.rows, mapping: mapping.value.map(m => ({ ...m })), model: model.value, tree, target: target.value, role: role.value || null, existing, external: external.value || null })
     const s = planned.value.stats
