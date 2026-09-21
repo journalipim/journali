@@ -433,8 +433,16 @@ function onKey(e) {
   else if (e.key === 'Delete' && sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1 || !canWrite(rows.value[sel.value.r0], columns.value[sel.value.c0]))) { e.preventDefault(); clearSel() }
   else if (e.key === 'Escape' && sel.value) { sel.value = null }
 }
-onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('mousedown', onMouseDown, true); document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); window.addEventListener('pagehide', onPageHide) })
-onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('mousedown', onMouseDown, true); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); window.removeEventListener('pagehide', onPageHide) })
+// Enter auf einer markierten Zelle (nicht in der Eingabe) springt nach unten wie in Excel, Umschalt+Enter nach oben (Taloan, 21.09.) —
+// vor der Zelle selbst (capture), die Enter sonst als „bearbeiten“ nimmt; bearbeiten bleibt F2, Doppelklick oder tippen
+function onEnterCapture(e) {
+  if (e.key !== 'Enter' || e.ctrlKey || e.altKey) return
+  const t = e.target
+  if (!t?.closest?.('td.cell') || t.classList?.contains('cell-input') || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return
+  if (move(e, e.shiftKey ? -1 : 1, 0)) e.stopPropagation()
+}
+onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('keydown', onEnterCapture, true); document.addEventListener('mousedown', onMouseDown, true); document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); window.addEventListener('pagehide', onPageHide) })
+onUnmounted(() => { document.removeEventListener('paste', onPaste); document.removeEventListener('keydown', onKey); document.removeEventListener('keydown', onEnterCapture, true); document.removeEventListener('mousedown', onMouseDown, true); document.removeEventListener('mousemove', onMouseMove); document.removeEventListener('mouseup', onMouseUp); window.removeEventListener('pagehide', onPageHide) })
 
 const listOf = c => model.value?.lists?.find(l => l.key === c.list)
 const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)?.label; return l?.[locale.value] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || v }
