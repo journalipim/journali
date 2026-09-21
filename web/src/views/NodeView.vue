@@ -299,12 +299,15 @@ const shownLabel = computed(() => tree.byId.get(props.id)?.label ?? props.id)
 // Alle ★ am Pfad, das nächste zuerst; es zählt das erste, dessen Attribut hier gilt und einen Wert hat.
 const star = key => (node.value?.stars ?? []).find(s => s.attribute === key) ?? null
 const starOwn = key => star(key)?.from === props.id
+// Tooltip „Klick → Wirkung (Erläuterung)“; der Vorfahr wird beim Namen genannt, nie „von oben“ (Taloan, 22.09.)
 function starTitle(def) {
-  const s = star(def.key)
-  if (!s) return `☆ ab hier nach unten mit ${store.name(def)} benennen`
-  const where = s.from === props.id ? 'hier gesetzt, gilt ab hier nach unten' : `geerbt von ${s.fromLabel} — gilt, bis hier ein eigenes gesetzt wird`
-  const applies = s.applies ? '' : ` — gilt hier nicht (erst wo ${store.name(def)} erfasst wird), bis dahin zählt das nächste ★ weiter oben`
-  return `★ benennt ${where}${applies} — Klick ${s.from === props.id ? 'nimmt es weg' : 'setzt es hier neu'}`
+  const s = star(def.key), name = store.name(def)
+  if (!s) return `Klick benennt ab hier mit „${name}“`
+  if (s.from === props.id) {
+    const next = (node.value?.stars ?? []).find(x => x.attribute === def.key && x.from !== props.id)   // das nächste ★ am Pfad, das danach wieder gilt
+    return `Klick nimmt die Benennung weg (${next ? `danach gilt wieder das ★ von ${next.fromLabel}` : 'danach keine Benennung'})`
+  }
+  return `Klick benennt ab hier mit „${name}“ (${s.applies ? `bisher geerbt von ${s.fromLabel}` : `wirkt erst, wo ein Wert steht — bis dahin zählt das ★ von ${s.fromLabel}`})`
 }
 const freeGroups = computed(() => (model.value?.groups ?? []).filter(g => !(node.value?.groups ?? []).some(x => x.key === g.key)))
 // Gruppen heissen überall gleich: Label wie im Reiter, Schlüssel nur im Tooltip.
