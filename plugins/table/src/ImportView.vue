@@ -152,6 +152,7 @@ const FIELD_LABEL = { find: 'suche', with: 'ersetze durch', text: 'Text', column
 const opHint = op => OPS.find(o => o[0] === op)?.[2] ?? ''
 // je Feld ein sprechender Platzhalter (Taloan, 21.09.: „Was soll bei Index rein?“)
 const FIELD_HINT = { find: 'suchen nach', with: 'ersetzen durch (leer = entfernen)', text: 'Text', columns: 'mit Komma — {} = diese Spalte', sep: 'z. B. , oder ; oder -', index: 'Zahl: 0 = erster, 1 = zweiter, -1 = letzter — leer = alle mit Komma', yes: 'leer = ja, yes, true, 1, x, wahr, y — alles andere wird false', pairs: 'alt=neu; alt2=neu2', other: 'leer = Wert bleibt', value: 'Vergleichswert', then: '{} = Quelle', else: '{} = Quelle' }
+function addColumn(step, col) { if (!col) return; const cur = String(step.columns ?? '').trim(); step.columns = cur ? cur.replace(/,\s*$/, '') + ',' + col : col; planned.value = null }
 function addStep(m, op) { if (!op) return; (m.steps ??= []).push({ op }); planned.value = null }
 function delStep(m, i) { m.steps.splice(i, 1); if (!m.steps.length) delete m.steps; planned.value = null }
 function moveStep(m, i, d) { const j = i + d; if (j < 0 || j >= m.steps.length) return; [m.steps[i], m.steps[j]] = [m.steps[j], m.steps[i]]; planned.value = null }
@@ -317,6 +318,7 @@ onMounted(async () => {
                 <span v-else-if="f === 'decimal'" class="fld"><span class="muted">Dezimalzeichen</span><select v-model="s.decimal" @change="planned = null"><option :value="undefined">raten</option><option value=",">Komma</option><option value=".">Punkt</option></select></span>
                 <span v-else-if="f === 'format'" class="fld"><span class="muted">Quelle im Format</span><select v-model="s.format" @change="planned = null"><option value="dd.MM.yyyy">dd.MM.yyyy</option><option value="MM/dd/yyyy">MM/dd/yyyy</option><option value="yyyyMMdd">yyyyMMdd</option></select></span>
                 <span v-else class="fld"><span class="muted">{{ FIELD_LABEL[f] ?? f }}</span><input type="text" v-model="s[f]" :placeholder="FIELD_HINT[f] ?? f" :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" @input="planned = null" style="width:200px" /></span>
+                <select v-if="f === 'columns'" :value="''" title="Spalte anklicken statt tippen — wird mit Komma angehängt" @change="addColumn(s, $event.target.value); $event.target.value = ''"><option value="">+ Spalte …</option><option value="{}">{} · diese Spalte</option><option v-for="c in source.columns" :key="c" :value="c">{{ c }}</option></select>
               </template>
               <span class="grow" /><button class="x" @click="moveStep(m, si, -1)">↑</button><button class="x" @click="moveStep(m, si, 1)">↓</button><button class="x" @click="delStep(m, si)">×</button>
             </div>
@@ -353,6 +355,7 @@ onMounted(async () => {
                     <span v-else-if="f === 'decimal'" class="fld"><span class="muted">Dezimalzeichen</span><select v-model="s.decimal" @change="planned = null"><option :value="undefined">raten</option><option value=",">Komma</option><option value=".">Punkt</option></select></span>
                     <span v-else-if="f === 'format'" class="fld"><span class="muted">Quelle im Format</span><select v-model="s.format" @change="planned = null"><option value="dd.MM.yyyy">dd.MM.yyyy</option><option value="MM/dd/yyyy">MM/dd/yyyy</option><option value="yyyyMMdd">yyyyMMdd</option></select></span>
                     <span v-else class="fld"><span class="muted">{{ FIELD_LABEL[f] ?? f }}</span><input type="text" v-model="s[f]" :placeholder="FIELD_HINT[f] ?? f" :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" @input="planned = null" :style="f === 'pairs' || f === 'columns' || f === 'index' || f === 'then' || f === 'else' || f === 'yes' ? 'width:250px' : 'width:130px'" /></span>
+                    <select v-if="f === 'columns'" :value="''" title="Spalte anklicken statt tippen (Taloan, 21.09.) — wird mit Komma angehängt" @change="addColumn(s, $event.target.value); $event.target.value = ''"><option value="">+ Spalte …</option><option value="{}">{} · diese Spalte</option><option v-for="c in source.columns" :key="c" :value="c">{{ c }}</option></select>
                   </template>
                   <span class="muted" style="font-size:11px">{{ opHint(s.op) }}</span>
                   <span class="grow" />
