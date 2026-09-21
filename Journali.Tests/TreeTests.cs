@@ -180,6 +180,29 @@ public class TreeTests
     }
 
     [Fact]
+    public void Fallback_Sprache_mit_Wert_zaehlt_als_vollstaendig_Master_nicht()
+    {
+        // Taloan, 21.09.: „wenn eine Fallback-Sprache eingerichtet ist und die einen Wert hat, darf das kein Blocker sein“ — fr-ch → fr-fr zählt;
+        // der Master (de) zählt nicht (17.09.: eine fehlende Übersetzung ist fehlend, auch wenn der Master sie hätte)
+        var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product); var v = Ids.New(Roles.Variant);
+        var (_, model, tree) = Build(j =>
+        {
+            j.Append("t", Model.LocaleStream + "fr-fr", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("fr-fr", "Französisch (FR)")));
+            j.Append("t", Model.LocaleStream + "fr-ch", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("fr-ch", "Französisch (CH)", "fr-fr")));
+            j.Append("t", g, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("G", "G"))));
+            j.Append("t", g, Types.GroupsAttached, Types.Serialize(new GroupsAttached(["mastergroup", "logistics"])));
+            j.Append("t", p, Types.ProductCreated, Types.Serialize(new ProductCreated(g)));
+            j.Append("t", v, Types.VariantCreated, Types.Serialize(new VariantCreated(p, new())));
+            j.Append("t", v, Types.AttributeSet, Types.Serialize(new AttributeSet("sku", null, null, "S-1")));
+            j.Append("t", v, Types.AttributeSet, Types.Serialize(new AttributeSet("name", "de", null, "Name de")));
+            j.Append("t", v, Types.AttributeSet, Types.Serialize(new AttributeSet("name", "fr-fr", null, "Nom")));
+        });
+        var (_, missing) = CompletenessRules.Check(tree, model, tree.Nodes[v], CompletenessRules.ActiveAttributes(tree, model, tree.Nodes[v]).ToList(), "web", null);
+        Assert.DoesNotContain("name/fr-ch", missing);   // über Fallback fr-fr da
+        Assert.Contains("name/en", missing);            // nur über den Master da — fehlt
+    }
+
+    [Fact]
     public void Beleg_pending_bleibt_auch_ohne_Wert()
     {
         // „angefragt bei herbert bis 2026-10-04“ am leeren Wert — der Beleg steht, der Wert nicht (Taloan, 21.09.: „wo ist der Herbert“)
