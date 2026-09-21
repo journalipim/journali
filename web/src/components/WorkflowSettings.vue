@@ -142,7 +142,7 @@ const sketch = computed(() => {
   const d = drag.value
   const curve = (t, p1, p2) => {
     const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1
-    const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len, bend = Math.min(40, 12 + len * 0.12)
+    const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len, bend = Math.min(160, 12 + len * 0.16)
     const cx = mx + nx * bend, cy = my + ny * bend
     const bx = 0.25 * p1.x + 0.5 * cx + 0.25 * p2.x, by = 0.25 * p1.y + 0.5 * cy + 0.25 * p2.y
     const steep = Math.abs(nx) > 0.6   // senkrechter Pfeil: Beschriftung neben den Bogen, vom Nachbarpfeil weg
