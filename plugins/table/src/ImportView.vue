@@ -304,7 +304,7 @@ onMounted(async () => {
               <span class="muted" style="font-size:11px">{{ m.steps?.length ? 'Vorschau: ' + preview(m, mapping.indexOf(m)) : 'Kette zwischen Quelle und Ziel' }}</span></div>
           </template>
         </div>
-        <table v-else class="grid map">
+        <table v-if="layout === 'rows'" class="grid map">
           <thead><tr><th style="width:170px">Spalte</th><th>Beispiele</th><th style="width:130px">Ziel</th><th style="width:220px">Attribut</th><th style="width:60px">Sprache</th><th style="width:150px">Warum</th><th style="width:34px" title="Umwandlung: Kette von Schritten zwischen Quelle und Ziel (Zahl aus „22 mm“, Ja/Nein, Datum, Ersetzen, Aufteilen, Spalten verbinden, Bedingung …)">ƒ</th></tr></thead>
           <tbody>
             <template v-for="(m, i) in mapping" :key="m.column">
@@ -391,7 +391,7 @@ table.map { min-width: 960px; }
 /* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */
 .colsWrap { overflow-x: auto; }
 table.cols { border-collapse: separate; border-spacing: 0; }
-table.cols th.stick { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top; }
+table.cols th.stick { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top; }
 table.cols td { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
 table.cols td.off { opacity: .5; }
 table.cols tr.sample td { white-space: nowrap; font-size: 12px; }
