@@ -279,7 +279,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 
 <template>
   <div class="pub-theme">
-  <div v-if="!srcOpen" class="pane" style="width:30px;flex:none;align-items:center;padding-top:6px;cursor:pointer" title="Klick: Pflegebaum aufklappen" @click="srcOpen = true">
+  <div v-if="!srcOpen" class="pane" style="width:30px;flex:none;align-items:center;padding-top:6px;cursor:pointer" title="Pflegebaum aufklappen" @click="srcOpen = true">
     <span class="muted">▸</span><span class="muted" style="writing-mode:vertical-rl;margin-top:8px;font-size:12px">▣ Pflegebaum</span>
   </div>
   <div v-else class="pane" :style="`width:${srcW}px;flex:none`">
@@ -311,8 +311,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </select>
       <button class="x" @click="newTree" title="neuer Publikationsbaum">+</button>
       <span class="grow" />
-      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`${exp.in} ausgeleitet · ${exp.out} zurückgehalten · Klick: Liste`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
-      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} nicht einsortiert · Klick: Liste`">⚠ {{ unplaced.length }}</button>
+      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Ausleitung anzeigen (${exp.in} ausgeleitet, ${exp.out} zurückgehalten)`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
+      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`Liste der ${unplaced.length} nicht einsortierten anzeigen`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
       <div class="toolbar" style="white-space:nowrap" title="Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).">
@@ -357,7 +357,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </div>
     </div>
     <div v-if="showUnplaced" class="unplaced">
-      <div class="toolbar"><span class="muted">{{ unplaced.length }} Produkte noch nicht einsortiert</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `Klick: alle ${unplaced.length} nach „${selRubric.label}“` : 'erst Rubrik anklicken'">alle in {{ selRubric ? '„' + selRubric.label + '“' : 'Rubrik …' }}</button></div>
+      <div class="toolbar"><span class="muted">{{ unplaced.length }} Produkte noch nicht einsortiert</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `Alle ${unplaced.length} in „${selRubric.label}“ einsortieren` : 'Erst eine Rubrik anklicken'">alle in {{ selRubric ? '„' + selRubric.label + '“' : 'Rubrik …' }}</button></div>
       <div class="scroll" style="max-height:200px">
         <div v-for="r in unplaced" :key="r.id" class="node" :title="tree.ancestors(r.id).map(a => a.label).join(' › ')">
           <span class="icon">{{ icon(r.role) }}</span><span class="label">{{ r.label }}</span><span class="grow" />
