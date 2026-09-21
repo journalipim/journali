@@ -131,6 +131,23 @@ public static class Auth
         await next();
     };
 
+    /// <summary>
+    /// Ausgesperrt (Taloan, 21.09.2026: Benutzer im Journal, aber kein auth.json im Datenverzeichnis dieses Rechners — „Benutzer
+    /// oder Passwort falsch“ bei jedem Versuch): mit JOURNALI_ADMIN_PASSWORD in der Umgebung setzt der Start das Passwort von
+    /// <paramref name="user"/> (Vorgabe admin) neu und legt den Benutzer an, wenn es ihn nicht gibt. Wer die Umgebung des Servers
+    /// setzen kann, hat ohnehin Zugriff auf auth.json. Danach die Variable wieder entfernen.
+    /// </summary>
+    public static string? Recover(Catalog c, string dir, string? password, string? user = null)
+    {
+        if (string.IsNullOrWhiteSpace(password)) return null;
+        var key = Key(user) ?? "admin";
+        if (password.Trim().Length < 8) return $"JOURNALI_ADMIN_PASSWORD: mindestens 8 Zeichen — nichts geändert.";
+        var exists = c.With((_, _, _) => c.Users.All.ContainsKey(key));
+        if (!exists) c.With((_, _, write) => write("system", Stream + key, Types.UserDefined, new UserDefined(key, null, "admin", true), null));
+        With(dir, s => { s.Passwords[key] = Hash(password.Trim()); return 0; }, save: true);
+        return $"Passwort von {key} aus JOURNALI_ADMIN_PASSWORD gesetzt{(exists ? "" : " (Benutzer angelegt, Rolle admin)")} — Variable jetzt wieder entfernen.";
+    }
+
     public static void Map(RouteGroupBuilder api, string dir)
     {
         // Zustand: gesperrt? wer bin ich?

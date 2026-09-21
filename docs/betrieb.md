@@ -182,6 +182,13 @@ Lauf erlischt. Geheimnisse liegen in `auth.json` im Datenverzeichnis (`JOURNALI_
 Volume `journali-jobs`), Passwörter als PBKDF2-SHA256 — nie im Journal. Der letzte Benutzer mit dem Recht
 `users` lässt sich nicht sperren oder entfernen. Hosting: Anmeldung ist Pflicht, bevor eine Instanz ins Internet geht.
 
+**Ausgesperrt?** Die Benutzer stehen im Journal (Datenbank), die Passwörter in `auth.json` im Datenverzeichnis des
+jeweiligen Rechners. Läuft der Server auf einem anderen Rechner (oder mit anderem `JOURNALI_JOBS`) als dem, auf dem der
+Administrator angelegt wurde, gibt es dort kein `auth.json` — jede Anmeldung scheitert mit „Benutzer oder Passwort
+falsch“. Entweder `auth.json` mitnehmen, oder einmalig mit `JOURNALI_ADMIN_PASSWORD=<neues Passwort>` (optional
+`JOURNALI_ADMIN_USER`, Vorgabe `admin`) starten: der Start setzt das Passwort neu, legt den Benutzer an, wenn er fehlt,
+und sagt es in der Konsole. Danach die Variable wieder entfernen.
+
 ## KI
 
 journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt
@@ -207,6 +214,19 @@ das Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
 | `batch` | `TEXT`, null | Stapelkennung; kommt per `ALTER TABLE … ADD COLUMN IF NOT EXISTS` in bestehende Tabellen |
 
 Index `journal_stream (stream, number)` für `ReadStream`.
+
+### Start und der lokale Spiegel
+
+Beim Start baut der Server alle Abbilder aus dem Journal neu (`Catalog.Rebuild`); die Startzeile sagt, wo die
+Zeit hingeht: `61242 Einträge in 31556 ms — lesen 30326 ms · anwenden Plugins 728 ms, Tree 199 ms …` (Taloan,
+21.09.2026). Das Anwenden ist billig; das Lesen über das Netz aus Postgres nicht. Darum führt der Server einen
+**lokalen Spiegel** des Journals (`CachedJournal`): `journal-<host>-<port>-<db>.cache.jsonl` im Datenverzeichnis
+(`JOURNALI_JOBS`), eine JSON-Zeile je Eintrag. Beim Start kommt alles bis zum Spiegelstand von der Platte, nur der
+Rest aus der Datenbank; jeder gelesene oder geschriebene Eintrag wird angehängt. Der Spiegel ist ein Cache, keine
+Wahrheit: beim Start wird sein letzter Eintrag gegen die Datenbank geprüft (Nummer, Strom, Typ, Zeit, Nutzdaten) und
+die Nummernfolge auf Lücken — bei jeder Abweichung wird die Datei verworfen und alles aus der Datenbank gelesen.
+Datei löschen ist jederzeit erlaubt. `JOURNALI_JOURNAL_CACHE=off` schaltet den Spiegel ab. Bei Millionen Einträgen
+bleibt das Anwenden (heute ~18 µs je Eintrag) — dann kommen Schnappschüsse der Abbilder (offen).
 
 ## Jobs (fest eingebaut: ⏱ Jobs)
 

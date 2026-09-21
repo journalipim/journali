@@ -29,10 +29,16 @@ catch (NpgsqlException e) when (e.InnerException is System.Net.Sockets.SocketExc
     return 1;
 }
 var db = NpgsqlDataSource.Create(connection.ConnectionString);
-var journal = new PostgresJournal(db);
-journal.EnsureSchema();
+var pg = new PostgresJournal(db);
+pg.EnsureSchema();
+// Datenverzeichnis (JOURNALI_JOBS): Jobs, Geheimnisse, Medien-Einstellung — und der lokale Spiegel des Journals
+var dataDir = Path.GetFullPath(builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs"));
+Directory.CreateDirectory(dataDir);
+// Spiegel (Taloan, 21.09.: 30 von 31 s Start waren Lesen über das Netz): JOURNALI_JOURNAL_CACHE=off schaltet ihn ab
+IJournal journal = string.Equals(builder.Configuration["JOURNALI_JOURNAL_CACHE"], "off", StringComparison.OrdinalIgnoreCase)
+    ? pg : new CachedJournal(pg, Path.Combine(dataDir, $"journal-{connection.Host}-{connection.Port}-{connection.Database}.cache.jsonl"));
 var catalog = new Catalog(journal);
-Console.WriteLine("journali: Journal wird gelesen …");   // vor dem Logger — damit der Start nicht stumm ist (Taloan, 20.09.)
+Console.WriteLine($"journali: Journal wird gelesen …{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (Spiegel bis #{cj.CachedHead}, Rest aus der Datenbank)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist (Taloan, 20.09.)
 var sw0 = System.Diagnostics.Stopwatch.StartNew();
 var rebuilt = catalog.Rebuild(out var timing);
 Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht (Taloan, 21.09.)
@@ -44,7 +50,6 @@ builder.Services.AddSingleton(catalog);
 // Medien: Treiber per JOURNALI_MEDIA — postgres (Vorgabe: Tabelle media_blob neben dem Journal), Verzeichnis, s3://bucket
 // (docs/betrieb.md). Taloan, 19.09.: Datenbank hier, Assets im Object Storage; ein Journal, ein Speicher.
 // Einstellung: media.json im Datenverzeichnis (Einstellungen → Storage), sonst die Umgebung
-var dataDir = Path.GetFullPath(builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs"));
 var mediaStore = new SwitchableMediaStore(MediaConfigFile.Load(dataDir) ?? MediaConfig.FromEnv(builder.Configuration), db, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("media"), builder.Environment.ContentRootPath);
 builder.Services.AddSingleton(db);
 builder.Services.AddSingleton(mediaStore);
@@ -87,6 +92,7 @@ app.Use(Auth.Middleware(catalog, dataDir));
 
 var api = app.MapGroup("/api");
 Auth.Map(api, dataDir);
+if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWORD"], builder.Configuration["JOURNALI_ADMIN_USER"]) is { } recovered) Console.WriteLine("journali: " + recovered);
 
 // ---- Stand und Modell ----------------------------------------------------
 
