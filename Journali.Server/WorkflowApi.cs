@@ -57,12 +57,34 @@ public static class WorkflowApi
                 {
                     workflow = wf.Key, label = wf.Label, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, final = wf.State(st)?.Final ?? false,
                     since = nw?.At, actor = nw?.Actor, note = nw?.Note, transition = nw?.Transition, assigned = nw?.Assigned,
+                    // Wirkungen des Schritts, der hierher führte, die (noch) nicht eingetreten sind — z. B. „Freigegeben“ ohne Freigabe für web
+                    // (Taloan, 21.09.: „wieso steht das immer noch in der Liste?“ — der Schritt lief, als die Saat noch keine Wirkung hatte)
+                    pending = Pending(tree, n, wf, nw?.Transition),
                     states = wf.States.Select(s => new { s.Key, s.Label, s.Color, s.Final }).ToList(),
                     transitions = Commands.Allowed(c.Workflows, wf, id, role).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label }).ToList(),
                     all = wf.Transitions.Where(t => t.From == st).Select(t => new { t.Key, t.Label, t.To, t.Roles }).ToList(),   // auch die, die ich nicht darf — zum Zeigen, wer dran ist
                 };
             }).ToList());
         }));
+        static List<string> Pending(Tree tree, Node n, WorkflowDef wf, string? transition)
+        {
+            var t = wf.Transitions.FirstOrDefault(x => x.Key == transition); if (t?.Effects is null) return [];
+            var sellables = n.Role == Roles.Product ? tree.Children(n.Id).Where(v => v.Role == Roles.Variant).ToList() : [n];
+            var pending = new List<string>();
+            foreach (var eff in t.Effects)
+            {
+                var i = eff.IndexOf(':'); if (i < 0) continue; var kind = eff[..i]; var arg = eff[(i + 1)..];
+                var done = kind switch
+                {
+                    "release" => sellables.Count > 0 && sellables.Any(v => v.Releases.Contains(new Release(arg, null))),
+                    "revoke" => sellables.All(v => !v.Releases.Contains(new Release(arg, null))),
+                    "status" => n.Status == arg,
+                    _ => true,
+                };
+                if (!done) pending.Add(eff);
+            }
+            return pending;
+        }
         api.MapPost("/nodes/{id}/workflow/{wf}/{transition}", (string id, string wf, string transition, StepBody? body, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.WorkflowStep(x, id, wf, transition, body?.Note)));
         api.MapPut("/nodes/{id}/workflow/{wf}/assign", (string id, string wf, AssignBody body, HttpRequest req, Catalog c) =>

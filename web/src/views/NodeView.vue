@@ -498,6 +498,13 @@ async function wfStep(w, t) {
   }
   await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/${t.key}`, { note: note || null }))
 }
+// Wirkung eines Schritts nachholen (release:web → Freigabe an allen vollständigen Varianten; revoke; status)
+const effLabel = eff => { const [k, a] = eff.split(':'); return k === 'release' ? `Freigabe ${a}` : k === 'revoke' ? `Freigabe ${a} zurück` : `Status ${a}` }
+async function wfEffect(eff) {
+  const [k, a] = eff.split(':')
+  await command(() => k === 'release' ? api.post(`${nodeUrl()}/releases`, { channel: a, locale: null }) : k === 'revoke' ? api.del(`${nodeUrl()}/releases?channel=${encodeURIComponent(a)}`) : setStatus(a))
+  api.get(`${nodeUrl()}/workflow`).then(w => { workflows.value = w }).catch(() => {})
+}
 async function wfAssign(w) {
   const user = await dialog.prompt({ title: `Zuständig für „${w.label?.de || w.workflow}“`, text: 'Benutzer-Key (leer = die Rolle des nächsten Schritts)', value: w.assigned ?? '' })
   if (user === null) return
@@ -808,6 +815,7 @@ function cellMenu(e, def, col, block) {
             <td class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt'">{{ w.stateLabel?.de || w.state }}</span>
               <span v-if="w.note" class="muted" :title="w.note" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">„{{ w.note }}“</span>
+              <button v-for="eff in (w.pending ?? [])" :key="eff" class="x warn" @click="wfEffect(eff)" :title="`Der Schritt „${w.transition}“ sollte das bewirken, es ist aber nicht eingetreten — jetzt nachholen`">⚠ {{ effLabel(eff) }} nachholen</button>
               <button v-for="t in w.transitions" :key="t.key" @click="wfStep(w, t)" :title="`→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.label?.de || t.key }} →</button>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
