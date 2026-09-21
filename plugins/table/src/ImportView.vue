@@ -4,7 +4,7 @@
 // richtet nach, der Plan sagt, was passiert, der Stapel schreibt. Profile (Zuordnung, Ziel, Rolle) im Journal.
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { api, store, tree, icon, plugins, mapper, transform, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
+import { api, store, tree, icon, plugins, mapper, transform, recentFiles, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
 const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper
 const leftW = paneWidth('import.table', 720)
 const router = useRouter()
@@ -51,13 +51,23 @@ function pickTarget(r) { target.value = r; targetPick.value = false; planned.val
 // ein File aus <input type=file> ist ein Schnappschuss und lässt sich nach einer Änderung nicht mehr lesen.
 const fileHandle = ref(null)
 const canPick = typeof window.showOpenFilePicker === 'function'
+// Zuletzt gewählte Dateien (Taloan, 21.09.): 5 Chips im Ablagebereich — mit Handle wieder zu öffnen, hineingezogene nur dem Namen nach
+const recent = ref([])
+async function loadRecent() { recent.value = await recentFiles.list('table') }
+async function remember(name, handle) { await recentFiles.remember('table', name, handle); await loadRecent() }
+async function openRecent(r) {
+  const f = await recentFiles.reopen(r)
+  if (!f) { store.toast(r.handle ? `${r.name}: nicht mehr lesbar — neu wählen` : `${r.name}: war hineingezogen — bitte wieder ziehen oder wählen`); return }
+  fileHandle.value = r.handle; await takeFile(f); remember(f.name, r.handle)
+}
 async function pickFile(e) {
   if (!canPick) return   // Fallback: das <input type=file> im Label
   e.preventDefault()
   try {
     const [h] = await window.showOpenFilePicker({ multiple: false })
     fileHandle.value = h
-    await takeFile(await h.getFile())
+    const f = await h.getFile()
+    await takeFile(f); remember(f.name, h)
   } catch (err) { if (err?.name !== 'AbortError') store.toast(err.message) }
 }
 async function reloadFile() {
@@ -103,7 +113,14 @@ function onPasteAnywhere(e) {
   if (!text.includes('\n') && !text.includes('\t')) return
   pasteText.value = text; takePaste(); e.preventDefault()
 }
-function onDrop(e) { dragOver.value = false; const f = e.dataTransfer.files?.[0]; if (f) takeFile(f) }
+async function onDrop(e) {
+  dragOver.value = false
+  // mit Handle, wenn der Browser es hergibt (Chrome/Edge: getAsFileSystemHandle) — dann ist die Datei später wieder zu öffnen
+  const item = e.dataTransfer.items?.[0]; let h = null
+  try { if (item?.getAsFileSystemHandle) { const x = await item.getAsFileSystemHandle(); if (x?.kind === 'file') h = x } } catch {}
+  const f = e.dataTransfer.files?.[0]; if (!f) return
+  fileHandle.value = h; await takeFile(f); remember(f.name, h)
+}
 function resuggest() { if (source.value) { mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); applyProfile() } planned.value = null }
 // Knotenmodus: was nicht zum Knoten passt, wird übergangen und gezählt — Vorlage vom Knoten exportieren, dann passt es
 function strictify(m) {
@@ -222,6 +239,7 @@ function profileSet(p) {
 onUnmounted(() => window.removeEventListener('paste', onPasteAnywhere))
 onMounted(async () => {
   window.addEventListener('paste', onPasteAnywhere)
+  loadRecent()
   if (!tree.loaded) await tree.load()
   // vom Baum gezogen (Drag & Drop auf einen Knoten): Datei lesen, Ziel setzen, Analyse gleich starten
   const p = store.pendingImport
@@ -244,6 +262,8 @@ onMounted(async () => {
         <select v-if="source?.sheets?.length > 1" :value="source.sheet" @change="pickSheet($event.target.value)" title="Blatt" style="width:140px"><option v-for="s in source.sheets" :key="s.name" :value="s.name">{{ s.name }} ({{ s.rows.length }})</option></select>
         <span v-else-if="!source" class="muted" style="font-size:12px">oder hierher ziehen · oder aus Excel kopieren und Strg+V</span>
         <span class="grow" />
+        <span v-if="recent.length" class="recent" title="zuletzt gewählt — Klick öffnet wieder (Chrome/Edge fragt einmal nach Leserecht)"><span class="muted" style="font-size:11px">zuletzt:</span>
+          <span v-for="r in recent" :key="r.name" class="chip" :class="{ dim: !r.handle }" :title="r.handle ? `${r.name} — wieder öffnen` : `${r.name} — war hineingezogen, kein Zugriff: wieder ziehen`" @click="openRecent(r)">{{ r.name }}<button @click.stop="recentFiles.forget('table', r.name).then(loadRecent)" title="aus der Liste">×</button></span></span>
         <button v-if="source" class="x" @click="resuggest" title="Zuordnung neu vorschlagen">↻</button>
       </td></tr>
       <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
@@ -410,7 +430,10 @@ table.cols tr.sample td { white-space: nowrap; font-size: 12px; }
 .section h2 .muted { font-weight: 400; }
 .drop.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
 /* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */
-.drop.empty { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; }
+.drop.empty { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap; }
+.recent { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.recent .chip { cursor: pointer; }
+.recent .chip.dim { opacity: .55; cursor: default; }
 .btn { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer; }
 .map td { vertical-align: top; padding: 3px 4px; }
 .map tr.off td { opacity: .5; }
