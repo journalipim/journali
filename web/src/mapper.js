@@ -156,9 +156,10 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     if (n === 'role' || n === 'status' || n === 'journali_label') { out.why = 'Exportspalte, nur Anzeige'; return out }
     if (n.startsWith('axis_') && attrs.some(a => norm(a.key) === n.slice(5))) pick('attr', attrs.find(a => norm(a.key) === n.slice(5)).key, 1, 'Variantenachse')
     // 1. Schlüsselspalten
+    // Elternteil vor der Id-Erkennung: eine Spalte „parent“ voller p-…-Ids ist der Vater, nicht die Id des Knotens (Taloan, 21.09.: „doppelt — warum?“)
+    if (SYNONYMS.parent.includes(n)) pick('parent', null, n.startsWith('parent') || sniff.type === 'id' ? 1 : 0.85, 'Elternteil (SKU oder Id des Produkts / der Gruppe)')
     if (sniff.type === 'id' || n === 'id' || n === 'journali_id') pick('id', null, 1, 'journali-Id')
     if (external && (n === norm(external) || n === norm(external) + '_id' || n === 'external' || n === 'externe_kennung' || n === 'remote_id')) pick('external', null, 0.95, `Kennung ${external}`)
-    if (SYNONYMS.parent.includes(n)) pick('parent', null, 0.85, 'Elternteil (SKU oder Id des Produkts / der Gruppe)')
     // 2. Attribute: Schlüssel, Label, Synonyme, Ähnlichkeit
     for (const { a, keys } of index) {
       if (keys.has(n)) pick('attr', a.key, n === norm(a.key) ? 1 : 0.95, n === norm(a.key) ? 'Schlüssel' : 'Label')
