@@ -225,6 +225,11 @@ und was die Gruppe ist, entscheidet die Pflege, nicht das System.
 
 ### 9. Wörterbücher (`dictionary:<key>`)
 
+**Gebaut 21.09.2026 (erster Schnitt):** ein Wörterbuch, Strom `term:<key>`, `TermDefined {text je Sprache, note}` /
+`TermRetired`, `ModelCatalog.Terms`, `/api/model/terms`; gepflegt in ⇄ Übersetzung (Band „Wörterbuch“). Wirkung heute:
+Glossar für KI und DeepL, Gedächtnis in der Einheiten-Tabelle (📖 — der Begriff schlägt die Einheit ◌). Die Auflösung
+`{t:oled}` in Texten und Labels der Wertelisten aus dem Wörterbuch sind offen.
+
 *Lesart (Vorschlag):* ein Begriff → Text je Sprache, an einer Stelle gepflegt
 und überall benutzt: Labels der Wertelisten, Einheiten („Zoll"/„inch"),
 Fachwörter in Texten, Gruppen- und Attributnamen. Eintrag
@@ -555,6 +560,17 @@ Log sagt, welcher Befehl warum. Dieselbe Tabelle gilt für Solr und Tabellen,
 sobald sie einen Prozess haben (offen).
 
 ## 27. Workflow — Entwurf (Taloan, 21.09.2026: „brauchen wir auf jeden Fall — Workflow-Designer mit Freigaben, Korrekturschleifen etc.“)
+
+**Gebaut 21.09.2026 (Kern und erste Oberfläche):** `Workflows.cs` (Abbild), `WorkflowApi.cs`, Befehle in `Commands.cs`, Eintragstypen
+wie unten, Saatgut „Redaktion“ (Entwurf → Prüfung → Korrektur ⟲ → freigegeben; freigeben nur admin) und „Übersetzung“ (nicht
+angefordert → zur Übersetzung → übersetzt → geprüft). Oberfläche: Band ⚑ Workflow am Knoten, Rechtsklick im Baum → Workflow für
+die Auswahl, Einstellungen → ⚑ Workflows (Skizze + Tabellen, kein Ziehen von Pfeilen — der grafische Designer ist offen),
+⚑ Aufgaben in der Leiste, Suche `wf:`. ⇄ Übersetzung filtert auf „zur Übersetzung“ und schaltet nach dem Schreiben weiter.
+Entschieden vorerst so: ein Workflow gilt für Knotentypen (und Familien), mehrere Workflows nebeneinander; Zuständigkeit je
+Person über `WorkflowAssigned` (Aufgaben zeigen nur mir Zugewiesenes oder Unzugewiesenes); keine Fristen; Rubriken der
+Publikation nicht — Taloans Antworten auf die vier Fragen unten stehen aus.
+
+Entwurf:
 
 Heute: `StatusSet` (Entwurf · aktiv · ausgelaufen = Lebenszyklus des Dings) und `ReleaseGranted/Revoked` je Kanal.
 Fehlt: der **Bearbeitungszustand** darüber — wer ist dran, was ist der nächste Schritt, wohin geht es zurück.
