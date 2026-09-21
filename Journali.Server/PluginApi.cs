@@ -240,7 +240,9 @@ public static class PluginApi
                 var flag = System.Text.RegularExpressions.Regex.Match(s, @"^\{(\w+)\?(.*)\}$");
                 if (flag.Success) { if (values.TryGetValue(flag.Groups[1].Value, out var fv) && fv is "true" or "1" or "on") psi.ArgumentList.Add(flag.Groups[2].Value); continue; }
                 var filled = System.Text.RegularExpressions.Regex.Replace(s, @"\{(\w+)\}", mm => values.GetValueOrDefault(mm.Groups[1].Value) ?? "");
-                if (filled.Length > 0 || !s.Contains('{')) psi.ArgumentList.Add(filled);
+                // Ein leerer Platzhalter bleibt als leeres Argument stehen — die Skripte lesen positionsweise (job.mjs: <root> <dir> …);
+                // ihn wegzulassen verschob alle folgenden (Test Leere_Parameter_verschieben_die_Argumente_nicht)
+                if (filled.Length > 0 || !s.Contains('{') || System.Text.RegularExpressions.Regex.IsMatch(s, @"^\{\w+\}$")) psi.ArgumentList.Add(filled);
             }
         return psi;
     }

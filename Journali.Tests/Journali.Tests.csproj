@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../Journali.Core/Journali.Core.csproj" />
+    <ProjectReference Include="../Journali.Server/Journali.Server.csproj" />
   </ItemGroup>
 
 </Project>

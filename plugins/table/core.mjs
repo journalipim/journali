@@ -3,23 +3,25 @@
 // dann die Attribute (je Sprache eine Spalte key_de, key_en; ohne Sprachachse key). Genau die Form, die ⇩ Import → Tabelle
 // wieder liest. Kein DOM: env = { api: { get }, model }. Browser (browser.js) und Job (plugins/export/job.mjs) benutzen ihn.
 
-export async function build(env, { root, role = '', locales, ownOnly = false, viewKey = '', say }) {
+// channel: Werte auf der Kanalachse dieses Kanals (Ausleitung); only: nur diese Knoten-Ids (Set), extra: zusätzliche Spalten je Zeile ({ key, of: rowId → Wert })
+export async function build(env, { root, role = '', locales, ownOnly = false, viewKey = '', channel = '', only = null, extra = [], say }) {
   const { api, model } = env
   const byLocale = new Map(); let cols = [], nodes = []
   for (const l of locales) {
     say?.(`lese ${l} …`)
-    const t = await api.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${role ? '&role=' + role : ''}`)
-    cols = t.columns; nodes = t.rows; byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values])))
+    const t = await api.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${channel ? '&channel=' + encodeURIComponent(channel) : ''}${role ? '&role=' + role : ''}`)
+    cols = t.columns; nodes = only ? t.rows.filter(r => only.has(r.row.id)) : t.rows; byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values])))
   }
   // Spalten der Sicht, sonst alle; Formeln, Vorlagen und Zeilenattribute bleiben draussen (kein Rückweg)
   const v = model.views.find(x => x.key === viewKey)
   if (v) { const order = v.items.flatMap(it => it.order ?? []); const groups = new Map(model.groups.map(g => [g.key, g.attributes])); const wanted = new Set([...order, ...v.items.flatMap(it => it.group ? groups.get(it.group) ?? [] : [])]); cols = cols.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999)) }
   cols = cols.filter(c => c.type !== 'rows' && !c.computed)
   const axes = [...new Set(nodes.flatMap(r => Object.keys(r.row.axisValues ?? {})))]
-  const columns = [{ key: 'id' }, { key: 'role' }, { key: 'parent' }, { key: 'sku' }, { key: 'journali_label' }, { key: 'status' }, ...axes.map(a => ({ key: 'axis:' + a })),
+  const columns = [{ key: 'id' }, { key: 'role' }, { key: 'parent' }, { key: 'sku' }, { key: 'journali_label' }, { key: 'status' }, ...extra.map(x => ({ key: x.key, of: x.of })), ...axes.map(a => ({ key: 'axis:' + a })),
     ...cols.flatMap(c => c.perLocale ? locales.map(l => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }])]
   const rows = nodes.map(r => columns.map(c => {
     if (c.attr) { const x = byLocale.get(c.locale)?.get(r.row.id)?.[c.attr]; return x == null || (ownOnly && !x.own) ? '' : x.value ?? '' }
+    if (c.of) return c.of(r.row.id) ?? ''
     if (c.key.startsWith('axis:')) return r.row.axisValues?.[c.key.slice(5)] ?? ''
     return c.key === 'journali_label' ? r.row.label : c.key === 'parent' ? r.row.parent ?? '' : r.row[c.key] ?? ''
   }))

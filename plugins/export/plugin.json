@@ -1,13 +1,13 @@
 {
   "key": "export",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "label": {
     "de": "Export: Tabelle",
     "en": "Export: table"
   },
   "description": {
-    "de": "Job zu ⇪ Export → Tabelle (Basis-Plugin table): dieselbe Tabelle regelmäßig als Excel oder CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben. Braucht table (Kern) und tasker (Jobs).",
-    "en": "Job for the table export: the same table written to a directory as Excel or CSV on a schedule. Needs table and tasker."
+    "de": "Job zu ⇪ Export → Tabelle (Basis-Plugin table): dieselbe Tabelle regelmäßig als Excel oder CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben. Mit Publikationsbaum: nur die Ausleitung (Freigabe für den Kanal, Markt in den Verkaufsländern), je Zeile der Rubrikpfad. Braucht table (Kern) und tasker (Jobs).",
+    "en": "Job for the table export: the same table written to a directory as Excel or CSV on a schedule. With a publication tree: only what is published (released for the channel, sold in the market), with the rubric path per row. Needs table and tasker."
   },
   "kind": "export",
   "runs": "process",
@@ -24,13 +24,20 @@
       "{role}",
       "{view}",
       "{ownOnly}",
-      "{keep}"
+      "{keep}",
+      "{pub}"
     ],
-    "description": "Teilbaum als Excel oder CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben",
+    "description": "Teilbaum oder Ausleitung eines Publikationsbaums als Excel oder CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben",
     "params": [
       {
+        "key": "pub",
+        "label": "Publikationsbaum (Ausleitung: freigegeben für den Kanal, im Markt verkauft; leer = Teilbaum unten)",
+        "type": "pub",
+        "default": ""
+      },
+      {
         "key": "root",
-        "label": "Teilbaum (leer = alle Wurzeln)",
+        "label": "Teilbaum (nur ohne Publikationsbaum; leer = alle Wurzeln)",
         "type": "node",
         "default": ""
       },

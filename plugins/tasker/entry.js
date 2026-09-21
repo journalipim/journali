@@ -194,6 +194,11 @@ async function mount(root, ctx) {
           const box = el('div')
           ctx.treePicker(box, { value: cur || null, roles: ['group', 'product'], height: 180, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
           paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), box)
+        } else if (d.type === 'pub') {
+          // Publikationsbaum (Taloan, 21.09.: Export-Job an der Ausleitung): Dropdown der Bäume, leer = keiner
+          inp = el('select', {}, el('option', { value: '' }, '(keiner — Teilbaum unten)'), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`)))
+          inp.value = cur
+          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
         } else if (d.type === 'boolean') {
           inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
           Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })
