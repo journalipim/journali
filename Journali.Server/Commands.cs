@@ -428,12 +428,33 @@ public static class Commands
         // Freigabe setzt Vollständigkeit voraus — Sperre (docs/pflegestruktur.md, entschieden).
         var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).ToList(), channel!, locale);
         if (missing.Length > 0) return Outcome.Bad($"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}");
-        return Outcome.Ok(c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale)));
+        var granted = c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale));
+        // Gegenstück zum Zurückgehen (Taloan, 21.09.): hat das System ein Produkt/eine Gruppe zurückgesetzt, weil keine Variante mehr frei war,
+        // geht es mit der ersten neuen Freigabe wieder vor — nur dann; ein von Hand gesetzter Zustand bleibt
+        if (c.Workflows is not null)
+            foreach (var up in c.Tree.Ancestors(n))
+                foreach (var (wfKey, nw) in c.Workflows.Of(up.Id))
+                {
+                    if (nw.Transition is not null || nw.Note?.StartsWith("zurück: keine Variante mehr für " + channel) != true) continue;
+                    if (!c.Workflows.All.TryGetValue(wfKey, out var wf)) continue;
+                    var fwd = wf.Transitions.FirstOrDefault(x => x.From == nw.State && (x.Effects ?? []).Contains("release:" + channel));
+                    if (fwd is null) continue;
+                    c.Write(up.Id, Types.WorkflowStateSet, new WorkflowStateSet(wfKey, fwd.To, fwd.Key, $"wieder: Variante {n.Own(Model.SkuAttribute, null, null) ?? n.Id} für {channel} freigegeben"));
+                }
+        return Outcome.Ok(granted);
     }
 
     public static Outcome RevokeRelease(Ctx c, string id, string channel, string? locale)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        // Am Produkt oder an der Gruppe (Taloan, 21.09.: „die Freigabe hätte ich am Produkt zurückziehen müssen“): alle freigegebenen Varianten darunter
+        if (n.Role is Roles.Product or Roles.Group)
+        {
+            Entry? last = null;
+            foreach (var v in c.Tree.DescendantsDeepestFirst(n.Id).Where(v => v.Role == Roles.Variant && v.Releases.Contains(new Release(channel, Blank(locale)))).ToList())
+                last = c.Write(v.Id, Types.ReleaseRevoked, new ReleaseRevoked(channel, Blank(locale)));
+            return last is null ? Outcome.Bad("schon zurückgenommen") : Outcome.Ok(last);
+        }
         var e = c.Write(id, Types.ReleaseRevoked, new ReleaseRevoked(channel, Blank(locale)));
         // Nach oben (Taloan, 21.09.: „Produkt hat jetzt keine Variante mehr mit Freigabe — müssten die Knoten darüber wieder auf Prüfung?“):
         // ein Produkt oder eine Gruppe, deren Zustand über eine Wirkung release:<kanal> erreicht wurde und unter der jetzt keine Variante

@@ -75,6 +75,17 @@ public class ReleaseTests
         Assert.Null(Commands.RevokeRelease(ctx(), w.V2, "web", null).Error);
         Assert.Equal("review", wfs.StateOf(w.P, wfs.All["review"]));                     // keine mehr → zurück vor das Freigeben
         Assert.Contains("keine Variante mehr", wfs.Of(w.P)["review"].Note);
+        // Gegenstück: die erste neue Freigabe holt das Produkt wieder vor — weil das System es zurückgesetzt hatte, nicht ein Mensch
+        Assert.Null(Commands.GrantRelease(ctx(), w.V1, "web", null).Error);
+        Assert.Equal("approved", wfs.StateOf(w.P, wfs.All["review"]));
+        Assert.Contains("wieder", wfs.Of(w.P)["review"].Note);
+        // von Hand zurückgegangen (reopen): bleibt beim erneuten Freigeben einer Variante, wo es ist
+        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "reopen", "bewusst").Error);   // revoke:web an allen Varianten
+        Assert.Equal("draft", wfs.StateOf(w.P, wfs.All["review"]));
+        Assert.DoesNotContain(new Release("web", null), w.Tree.Nodes[w.V1].Releases);          // am Produkt zurückgenommen = an allen Varianten
+        Assert.DoesNotContain(new Release("web", null), w.Tree.Nodes[w.V2].Releases);
+        Assert.Null(Commands.GrantRelease(ctx(), w.V2, "web", null).Error);
+        Assert.Equal("draft", wfs.StateOf(w.P, wfs.All["review"]));
     }
 
     [Fact]
