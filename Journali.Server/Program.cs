@@ -121,6 +121,7 @@ api.MapGet("/health", (Catalog c) => new
 {
     head = c.Head,
     nodes = c.Read(t => t.Nodes.Count),
+    built = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location),   // Bau-Stand des laufenden Servers (Taloan, 21.09.: „Speichern setzt meine Änderungen zurück“ — alter Server kannte die Felder nicht)
 });
 
 ModelApi.Map(api);

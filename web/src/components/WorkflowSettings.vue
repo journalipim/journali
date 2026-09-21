@@ -20,7 +20,11 @@ async function save() {
   const w = cur.value; if (!w) return
   try {
     await api.post(`/api/workflows/${encodeURIComponent(w.key)}`, { label: w.label, states: w.states.map(s => ({ key: s.key, label: s.label, color: s.color, final: s.final, x: s.x, y: s.y })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label, from: t.from, to: t.to, roles: t.roles.length ? t.roles : null, noteRequired: t.noteRequired, effects: t.effects.length ? t.effects : null, escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles?.length ? t.escalateRoles : null, fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null })), start: w.start, roles: w.roles.length ? w.roles : null, families: null }, 'PUT')
-    dirty.value = false; store.toast(`Workflow „${w.label?.de || w.key}“ gespeichert`, 'ok'); await load()
+    const sent = w; dirty.value = false; await load()
+    // Kam alles zurück, was gesendet wurde? Ein Server mit altem Bau-Stand kennt Lage, Andockpunkte, Beschriftungslage, Eskalation nicht
+    const got = cur.value; const lost = sent.states.some((s, i) => s.x != null && got?.states[i]?.x == null) || sent.transitions.some((t, i) => (t.fromPort && !got?.transitions[i]?.fromPort) || (t.labelX != null && got?.transitions[i]?.labelX == null) || (t.escalateAfterDays != null && got?.transitions[i]?.escalateAfterDays == null))
+    if (lost) store.toast('Gespeichert — aber der Server läuft mit einem alten Stand und hat Lage/Andockpunkte/Eskalation verworfen. Server neu starten, dann noch einmal speichern.')
+    else store.toast(`Workflow „${w.label?.de || w.key}“ gespeichert`, 'ok')
   } catch (e) { store.toast(e.message) }
 }
 async function add() {
