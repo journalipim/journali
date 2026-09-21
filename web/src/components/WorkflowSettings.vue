@@ -101,38 +101,20 @@ function stateUp(j, e) {
   if (d.snapJ != null) portUp(d.snapJ, d.snapPort); else portUp(j, nearestPort(posOf(cur.value.states[j], j), svgPoint(e)))
 }
 function canvasUp() { const d = drag.value; if (d && (d.kind === 'link' || d.kind === 'reattach') && d.snapJ != null) { portUp(d.snapJ, d.snapPort); return } drag.value = null }
-// Automatisch anordnen (Taloan, 21.09.): Ebenen vom Start aus (längster Vorwärtsweg), Ebenen von links nach rechts, in der Ebene nach dem
-// Schwerpunkt der Vorgänger sortiert (weniger Kreuzungen); Rückwege laufen als Bogen unten herum. Andockpunkte und Beschriftungslagen
-// werden zurückgesetzt, damit Pfeil und Text wieder von selbst passen.
-function autoLayout() {
-  const w = cur.value; const keys = w.states.map(s => s.key); const idx = Object.fromEntries(keys.map((k, i) => [k, i]))
-  const start = keys.includes(w.start) ? w.start : keys[0]
-  const succ = Object.fromEntries(keys.map(k => [k, []])); for (const t of w.transitions) if (t.from !== t.to && idx[t.from] != null && idx[t.to] != null) succ[t.from].push(t.to)
-  // Ebene = längster Weg vom Start ohne Rückwege (Tiefensuche, besuchte Knoten auf dem Pfad nicht erneut)
-  const layer = Object.fromEntries(keys.map(k => [k, -1])); layer[start] = 0
-  const visit = (k, path) => { for (const n of succ[k]) { if (path.has(n)) continue; if (layer[k] + 1 > layer[n]) { layer[n] = layer[k] + 1; const p2 = new Set(path); p2.add(n); visit(n, p2) } } }
-  visit(start, new Set([start]))
-  let next = Math.max(0, ...Object.values(layer)) + 1; for (const k of keys) if (layer[k] < 0) layer[k] = next++   // unerreichbare: rechts dahinter
-  const cols = {}; for (const k of keys) (cols[layer[k]] ??= []).push(k)
-  const pred = Object.fromEntries(keys.map(k => [k, []])); for (const t of w.transitions) if (layer[t.from] < layer[t.to]) pred[t.to].push(t.from)
-  const rowOf = {}
-  for (const l of Object.keys(cols).map(Number).sort((a, b) => a - b)) {
-    const col = cols[l]
-    if (l > 0) col.sort((a, b) => { const bc = k => pred[k].length ? pred[k].reduce((s, q) => s + (rowOf[q] ?? 0), 0) / pred[k].length : 0; return bc(a) - bc(b) })
-    col.forEach((k, r) => { rowOf[k] = r })
-  }
-  // Schleifenknoten: haben einen Rückweg auf eine frühere Ebene (Korrektur → Prüfung) — in die Reihe darunter, unter ihren Vorgänger
-  const loop = new Set(w.transitions.filter(t => layer[t.to] < layer[t.from] && pred[t.from].includes(t.to)).map(t => t.from))
+// Automatisch anordnen (Taloan, 21.09.: „da gibt's doch Algorithmen“): dagre — Sugiyama-Verfahren wie Graphviz dot. Ebenen von links nach rechts
+// (Start links, Rückwege werden intern umgedreht), Reihenfolge in der Ebene mit minimierten Kreuzungen, Abstand der Ebenen nach der längsten
+// Beschriftung. Andockpunkte und Beschriftungslagen gehen zurück auf Automatik.
+async function autoLayout() {
+  const w = cur.value
+  const dagre = (await import('dagre')).default   // erst beim Klick laden (eigener Chunk, zieht lodash mit)
   const labelW = Math.max(60, ...w.transitions.map(t => ((t.label?.de || t.key).length + (t.roles?.length ? t.roles.join('/').length + 3 : 0)) * 6.5))
-  const gap = Math.max(80, Math.round(labelW + 30))
-  // Ebenen ohne Schleifenknoten neu nummerieren, damit unten keine Lücke bleibt
-  const top = [...new Set(keys.filter(k => !loop.has(k)).map(k => layer[k]))].sort((a, b) => a - b); const colOf = Object.fromEntries(top.map((l, i) => [l, i]))
-  for (const s of w.states) {
-    const k = s.key
-    if (loop.has(k)) { const p = pred[k].sort((a, b) => layer[b] - layer[a])[0]; const px = w.states.find(x => x.key === p); s.x = px?.x ?? 40 + colOf[layer[p] ?? 0] * (W + gap); s.y = snap((px?.y ?? 60) + H + 90); continue }
-    const l = colOf[layer[k]] ?? 0; const rows = cols[layer[k]].filter(x => !loop.has(x)); const r = rows.indexOf(k)
-    s.x = 40 + l * (W + gap); s.y = snap(60 + r * (H + 60))
-  }
+  const g = new dagre.graphlib.Graph({ multigraph: true }).setGraph({ rankdir: 'LR', nodesep: 50, ranksep: Math.round(labelW + 30), marginx: 40, marginy: 40 }).setDefaultEdgeLabel(() => ({}))
+  for (const s of w.states) g.setNode(s.key, { width: W, height: H })
+  if (w.start && g.hasNode(w.start)) g.setNode(w.start, { width: W, height: H, rank: 'min' })
+  for (const s of w.states) if (s.final && s.key !== w.start) g.setNode(s.key, { width: W, height: H, rank: 'max' })
+  w.transitions.forEach((t, i) => { if (t.from !== t.to && g.hasNode(t.from) && g.hasNode(t.to)) g.setEdge(t.from, t.to, { width: labelW, height: 16, labelpos: 'c' }, 'e' + i) })
+  dagre.layout(g)
+  for (const s of w.states) { const n = g.node(s.key); if (!n) continue; s.x = Math.max(0, snap(n.x - W / 2)); s.y = Math.max(0, snap(n.y - H / 2)) }
   for (const t of w.transitions) { t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null }
   touch()
 }
