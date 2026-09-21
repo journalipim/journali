@@ -27,17 +27,41 @@ public static class Projector
     /// à 5 KB je Lauf 75 MB, der Server „startete nicht“). Ab der kleinsten Stand-Nummer; jedes Abbild bekommt nur, was ihm fehlt.
     /// Liefert, wie viele Einträge gelesen wurden.
     /// </summary>
-    public static int CatchUpAll(IJournal journal, params IProjection[] projections)
+    public static int CatchUpAll(IJournal journal, params IProjection[] projections) => CatchUpAll(journal, out _, projections);
+
+    /// <summary>Wie oben, dazu die Zeiten: Lesen aus dem Journal und Anwenden je Abbild (Millisekunden) — für den Start und die Frage, wo es hängt.</summary>
+    public static int CatchUpAll(IJournal journal, out Timing timing, params IProjection[] projections)
     {
+        timing = new Timing();
         if (projections.Length == 0) return 0;
         var from = projections.Min(p => p.LastApplied);
         var count = 0;
+        var apply = new long[projections.Length];
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        long last = 0;
         foreach (var entry in journal.ReadAfter(from))
         {
-            foreach (var p in projections) if (p.LastApplied < entry.Number) p.Apply(entry);
+            var t0 = sw.ElapsedTicks; timing.ReadTicks += t0 - last;
+            for (var i = 0; i < projections.Length; i++)
+            {
+                var p = projections[i];
+                if (p.LastApplied >= entry.Number) continue;
+                var a = sw.ElapsedTicks; p.Apply(entry); apply[i] += sw.ElapsedTicks - a;
+            }
+            last = sw.ElapsedTicks;
             count++;
         }
+        for (var i = 0; i < projections.Length; i++) timing.Apply[projections[i].GetType().Name] = apply[i] * 1000 / System.Diagnostics.Stopwatch.Frequency;
+        timing.ReadMs = timing.ReadTicks * 1000 / System.Diagnostics.Stopwatch.Frequency;
         return count;
+    }
+
+    public sealed class Timing
+    {
+        public long ReadTicks;
+        public long ReadMs;
+        public Dictionary<string, long> Apply { get; } = new();
+        public override string ToString() => $"lesen {ReadMs} ms · anwenden " + string.Join(", ", Apply.OrderByDescending(kv => kv.Value).Select(kv => $"{kv.Key} {kv.Value} ms"));
     }
 
     /// <summary>Wendet alle neuen Einträge an. Liefert, wie viele es waren.</summary>
