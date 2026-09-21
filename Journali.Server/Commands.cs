@@ -405,10 +405,26 @@ public static class Commands
     public static Outcome GrantRelease(Ctx c, string id, string? channel, string? locale)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
-        if (n.Role != Roles.Variant) return Outcome.Bad("Freigabe nur an der Variante — sie ist das Verkaufbare.");
         if (!c.Model.Channels.ContainsKey(channel ?? "")) return Outcome.Bad("channel fehlt oder unbekannt.");
         locale = Blank(locale);
         if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
+        // Am Produkt (Workflow „freigeben“, Taloan 21.09.): jede vollständige Variante wird freigegeben; keine vollständige = nichts, mit dem, was fehlt
+        if (n.Role == Roles.Product)
+        {
+            var variants = c.Tree.Children(n.Id).Where(v => v.Role == Roles.Variant).ToList();
+            if (variants.Count == 0) return Outcome.Bad("Keine Variante — Freigabe gibt es nur am Verkaufbaren.");
+            Entry? last = null; var failed = new List<string>();
+            foreach (var v in variants)
+            {
+                if (v.Releases.Contains(new Release(channel!, locale))) continue;
+                var r = GrantRelease(c, v.Id, channel, locale);
+                if (r.Entry is { } e) last = e; else failed.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {r.Error}");
+            }
+            if (last is null && failed.Count > 0) return Outcome.Bad("Keine Variante freigegeben — " + string.Join(" · ", failed));
+            if (last is null) return Outcome.Bad("schon freigegeben");
+            return Outcome.Ok(last);
+        }
+        if (n.Role != Roles.Variant) return Outcome.Bad("Freigabe nur an der Variante — sie ist das Verkaufbare.");
         // Freigabe setzt Vollständigkeit voraus — Sperre (docs/pflegestruktur.md, entschieden).
         var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).ToList(), channel!, locale);
         if (missing.Length > 0) return Outcome.Bad($"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}");

@@ -93,6 +93,10 @@ public sealed class Catalog
                 Apply(_journal.Append("system", s.Stream, s.Type, s.Payload));
                 n++;
             }
+            // Redaktions-Workflow aus der Saat ohne Wirkung (vor dem 21.09.2026 gesät): „freigeben“ soll für web freigeben — nur nachziehen,
+            // wenn die Übergänge noch die der Saat sind (der Anwender hat nichts geändert)
+            if (_workflows.All.TryGetValue("review", out var rv) && rv.Transitions.Count == 5 && rv.Transitions.All(x => x.Effects is null or { Length: 0 }))
+                foreach (var s in Model.Seeds().Where(s => s.Stream == Workflows.Stream + "review")) { Apply(_journal.Append("system", s.Stream, s.Type, s.Payload)); n++; }
             // Rollen (Taloan, 20.09.): vorbelegt, was fehlt — was der Anwender geändert oder entfernt hat, bleibt so (nur admin kommt immer wieder)
             var hadRoles = _users.Roles.Count > 0;   // vorher: nur ein leeres Journal bekommt alle Saatgut-Rollen (ein bewusst entferntes kommt nicht wieder), admin immer
             foreach (var (key, role) in Rights.Seeds())

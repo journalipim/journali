@@ -115,8 +115,8 @@ public static class Model
         yield return new(Projections.Workflows.Stream + "review", Types.WorkflowDefined, Types.Serialize(new WorkflowDefined(Labels.Of("Redaktion", "Editorial"),
             [new("draft", Labels.Of("Entwurf", "Draft"), "muted"), new("review", Labels.Of("Prüfung", "Review"), "warn"), new("rework", Labels.Of("Korrektur", "Rework"), "neg"), new("approved", Labels.Of("Freigegeben", "Approved"), "pos", true)],
             [new("submit", "draft", "review", Labels.Of("zur Prüfung", "Submit")), new("resubmit", "rework", "review", Labels.Of("erneut zur Prüfung", "Resubmit")),
-             new("reject", "review", "rework", Labels.Of("zurück zur Korrektur", "Reject"), null, true), new("approve", "review", "approved", Labels.Of("freigeben", "Approve"), ["admin"]),
-             new("reopen", "approved", "draft", Labels.Of("wieder öffnen", "Reopen"), ["admin"], true)], "draft")));
+             new("reject", "review", "rework", Labels.Of("zurück zur Korrektur", "Reject"), null, true), new("approve", "review", "approved", Labels.Of("freigeben", "Approve"), ["admin"], false, ["release:web"]),   // Wirkung: Freigabe für web an allen vollständigen Varianten (Taloan, 21.09.)
+             new("reopen", "approved", "draft", Labels.Of("wieder öffnen", "Reopen"), ["admin"], true, ["revoke:web"])], "draft")));
         yield return new(Projections.Workflows.Stream + "translation", Types.WorkflowDefined, Types.Serialize(new WorkflowDefined(Labels.Of("Übersetzung", "Translation"),
             [new("none", Labels.Of("nicht angefordert", "Not requested"), "muted"), new("to_translate", Labels.Of("zur Übersetzung", "To translate"), "warn"), new("translated", Labels.Of("übersetzt", "Translated"), "accent"), new("checked", Labels.Of("geprüft", "Checked"), "pos", true)],
             [new("request", "none", "to_translate", Labels.Of("zur Übersetzung geben", "Request translation")), new("done", "to_translate", "translated", Labels.Of("übersetzt", "Translated")),

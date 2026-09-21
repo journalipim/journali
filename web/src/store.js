@@ -9,6 +9,7 @@ const saved = JSON.parse(localStorage.getItem('journali.settings') || '{}')
 function cellsFrom(locales, channels) { const out = ['|']; for (const c of ['', ...channels]) for (const l of ['', ...locales]) out.push(`${l}|${c}`); return [...new Set(out)] }
 
 export const store = reactive({
+  pubBack: null,   // { path, label } — woher man aus der Publikation in den Pflegebaum kam (Schnellweg zurück, Taloan 21.09.)
   actor: saved.actor || '',
   server: saved.server || '',
   theme: saved.theme || 'system',   // system | light | dark

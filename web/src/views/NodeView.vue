@@ -588,6 +588,8 @@ function cellMenu(e, def, col, block) {
         <router-link :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }}</router-link><span class="sep">›</span>
       </template>
       <h1>{{ icon(node.role) }} {{ shownLabel }}</h1>
+      <button v-if="props.pub && node.role !== 'rubric'" class="x" title="im Pflegebaum öffnen — dort pflegen und freigeben; ⇶ bringt dich zurück" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
+      <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="const b = store.pubBack; store.pubBack = null; router.push(b.path)">⇶ {{ store.pubBack.label }}</button>
       <span class="grow" />
       <select v-if="node.role !== 'group' && node.role !== 'rubric'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
         <option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option>

@@ -325,6 +325,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
           <span :class="r.in ? 'pos' : 'neg'" style="width:14px;text-align:center">{{ r.in ? '✓' : '✗' }}</span>
           <span class="icon">▦</span><span class="label">{{ r.product.label }}</span>
           <span class="muted" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:6px">{{ r.in ? r.path.slice(1).map(x => x.label).join(' › ') : r.why.join(' · ') }}</span>
+          <button class="x" style="margin-left:auto" title="im Pflegebaum öffnen (freigeben, pflegen); ⇶ bringt dich zurück" @click.stop="store.pubBack = { path: $route.fullPath, label: current.label }; router.push(`/tree/${r.product.id}`)">▣</button>
         </div>
         <div v-if="!expRows.length" class="empty" style="padding:10px">{{ expOnly === 'out' ? 'nichts draussen — alles im Baum wird ausgeleitet' : 'nichts' }}</div>
       </div>
