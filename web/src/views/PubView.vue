@@ -315,10 +315,10 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} Produkte sind in „${current.label}“ noch nicht einsortiert — Klick zeigt sie`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
-      <div class="toolbar" style="white-space:nowrap"><span class="muted">Ausleitung {{ exp.tree.channel }}{{ exp.tree.market ? ' · ' + exp.tree.market : '' }}</span><span class="pos" :title="`${exp.in} ausgeleitet`">✓ {{ exp.in }}</span><span :class="exp.out ? 'neg' : 'muted'" :title="`${exp.out} zurückgehalten`">✗ {{ exp.out }}</span><span class="grow" />
-        <span class="view-chip" :class="{ on: expOnly === 'out' }" @click="expOnly = 'out'" title="was nicht ausgeleitet wird, und warum">zurückgehalten</span>
-        <span class="view-chip" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'">ausgeleitet</span>
-        <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">alle</span></div>
+      <div class="toolbar" style="white-space:nowrap"><span class="muted">Ausleitung {{ exp.tree.channel }}{{ exp.tree.market ? ' · ' + exp.tree.market : '' }}</span><span class="grow" />
+        <span class="view-chip" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'" title="wird ausgeleitet">ausgeleitet <b class="pos">{{ exp.in }}</b></span>
+        <span class="view-chip" :class="{ on: expOnly === 'out' }" @click="expOnly = 'out'" title="wird nicht ausgeleitet — mit Grund">zurückgehalten <b :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</b></span>
+        <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">alle <b class="muted">{{ exp.in + exp.out }}</b></span></div>
       <div class="muted" style="font-size:12px;padding:0 8px 4px">Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).</div>
       <div class="scroll" style="max-height:240px">
         <div v-for="r in expRows" :key="r.path.map(x => x.id).join('/') + r.product.id" class="node" :title="r.path.map(x => x.label).join(' › ') + (r.why.length ? '\n' + r.why.join('\n') : '')" @click="router.push(`/pub/${r.product.id}`)">
