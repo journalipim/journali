@@ -139,16 +139,16 @@ noch — sie kommt als eigene Achse dazu, nicht als neuer Typ.
 
 ## Ausleitung eines Publikationsbaums (Taloan, 21.09.2026 — entschieden)
 
-`GET /api/pub/{id}/export?locale=` — je Produkt im Baum (Verweis selbst oder über eine verwiesene Gruppe) drin oder draussen,
+`GET /api/pub/{id}/export?locale=` — je Produkt im Baum (Verweis selbst oder über eine verwiesene Gruppe) ausgeleitet oder zurückgehalten,
 mit Grund (`Journali.Core/Projections/Publication.cs`, Tests `PublicationTests`):
 
 1. **Freigabe:** eine Variante ist für den Kanal des Baums freigegeben (`ReleaseGranted`; Kanal-Fallback zählt). Das Produkt ist
-   drin, wenn mindestens eine Variante drin ist; ohne Varianten nie (Freigabe gibt es nur an der Variante).
+   ausgeleitet, wenn mindestens eine Variante ausgeleitet wird; ohne Varianten nie (Freigabe gibt es nur an der Variante).
 2. **Markt:** Attribut `markets` (Liste `market`, mehrfach, vererbbar, Saat in `mastergroup`) am Verkaufbaren, geerbt zählt.
    Leer = überall. Sonst muss der Markt des Baums darin stehen — oder ein Markt seiner Fallback-Kette (Spalte `fallback` der Liste
    `market`: ein Markt bekommt das Sortiment seines Fallback-Markts, solange er nichts Eigenes sagt). Baum ohne Markt = kein Filter.
 
-Die Oberfläche (⇶ Publikation) zeigt je Baum „n drin · m draussen“ und die Liste mit Gründen.
+Die Oberfläche (⇶ Publikation) zeigt je Baum „n ausgeleitet · m zurückgehalten“ und die Liste mit Gründen.
 
 **Attributgruppen am Publikationsbaum (Taloan, 21.09.2026 — entschieden):** eine Gruppe, die an einer Rubrik hängt
 (`GroupsAttached` am `k-…`-Knoten), gilt für alles, was darunter verwiesen ist — am Verweis selbst oder an einem Vorfahren

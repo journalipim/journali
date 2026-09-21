@@ -2,7 +2,7 @@
 // Verzeichnis — derselbe Kern wie ⇪ Export → Tabelle (plugins/table/core.mjs). Behält die letzten n Dateien je Wurzel.
 // Aufruf: node job.mjs <journali> <actor> <root> <dir> [format] [locales] [role] [view] [ownOnly] [keep] [pub] — oder JOURNALI_*.
 // pub (Taloan, 21.09.2026): Publikationsbaum statt Teilbaum — exportiert wird die Ausleitung (GET /api/pub/{id}/export: Freigabe für den Kanal,
-// Markt in den Verkaufsländern), Werte auf der Kanalachse des Baums, je Zeile der Rubrikpfad; was draussen bleibt, steht mit Grund im Protokoll.
+// Markt in den Verkaufsländern), Werte auf der Kanalachse des Baums, je Zeile der Rubrikpfad; was zurückgehalten wird, steht mit Grund im Protokoll.
 import fs from 'node:fs'
 import path from 'node:path'
 import { build, toCsv, workbook } from '../table/core.mjs'
@@ -32,20 +32,20 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
   let X = null
   if (format === 'xlsx') X = await import(new URL('../xlsx/xlsx.mjs', import.meta.url).href)
-  // Ausleitung eines Publikationsbaums: die Zeilen sind die Produkte drin (und ihre Varianten drin), je Rubrik einmal; die Pflegebaum-Wurzeln liefern die Tabelle
+  // Ausleitung eines Publikationsbaums: die Zeilen sind die ausgeleiteten Produkte (und ihre ausgeleiteten Varianten), je Rubrik einmal; die Pflegebaum-Wurzeln liefern die Tabelle
   let roots, only = null, pathOf = null, channel = '', at = null
   if (pub) {
     const x = await api.get(`/api/pub/${encodeURIComponent(pub)}/export${locs[0] ? '?locale=' + encodeURIComponent(locs[0]) : ''}`)
     channel = x.tree.channel ?? ''
     only = new Set(); pathOf = new Map()
     for (const r of x.rows) {
-      if (!r.in) { console.log(`draussen: ${r.product.label} — ${r.why.join(' · ')}`); continue }
+      if (!r.in) { console.log(`zurückgehalten: ${r.product.label} — ${r.why.join(' · ')}`); continue }
       const p = r.path.map(s => s.label).join(' › ')
       only.add(r.product.id); pathOf.set(r.product.id, [...(pathOf.get(r.product.id) ?? []), p])
       for (const v of r.variants) if (v.in) { only.add(v.id); pathOf.set(v.id, [...(pathOf.get(v.id) ?? []), p]) }
     }
-    console.log(`Ausleitung ${x.tree.label} · ${channel}${x.tree.market ? ' · ' + x.tree.market : ''}: ${x.in} Produkte drin, ${x.out} draussen`)
-    // Stand (Taloan, 21.09.): ein Stand für alles, was drin ist → die Werte von damals; gemischte Stände je Rubrik → Werte live, mit Hinweis
+    console.log(`Ausleitung ${x.tree.label} · ${channel}${x.tree.market ? ' · ' + x.tree.market : ''}: ${x.in} Produkte ausgeleitet, ${x.out} zurückgehalten`)
+    // Stand (Taloan, 21.09.): ein Stand für alles, was ausgeleitet wird → die Werte von damals; gemischte Stände je Rubrik → Werte live, mit Hinweis
     const stands = [...new Set(x.rows.filter(r => r.in).map(r => r.stand ?? 0))]
     if (stands.length === 1 && stands[0]) { at = stands[0]; console.log(`Stand #${at}: Werte wie damals`) }
     else if (stands.length > 1) console.log(`⚠ gemischte Stände je Rubrik (${stands.map(s => s ? '#' + s : 'live').join(', ')}) — Zugehörigkeit je Stand, Werte live`)

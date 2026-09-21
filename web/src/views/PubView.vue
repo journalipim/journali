@@ -105,13 +105,13 @@ async function removeRule(rubricId, rule) {
   if (!await dialog.confirm({ title: 'Regel entfernen?', text: ruleLabel(rule) + ' — die Treffer verschwinden aus dieser Rubrik; im Pflegebaum ändert sich nichts.', ok: '✕ Entfernen', danger: true })) return
   await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/rules/${encodeURIComponent(rule.id)}`))
 }
-// Ausleitung (Taloan, 21.09.): je Produkt im Baum drin oder draussen, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
+// Ausleitung (Taloan, 21.09.): je Produkt im Baum ausgeleitet oder zurückgehalten, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
 const exp = ref(null); const showExport = ref(false); const expOnly = ref('out')
 async function loadExport() { if (!current.value) { exp.value = null; return } try { exp.value = await api.get(`/api/pub/${encodeURIComponent(current.value.id)}/export`) } catch (e) { exp.value = null } }
 watch([current, () => tree.rows], loadExport, { immediate: true })
 const expRows = computed(() => !exp.value ? [] : exp.value.rows.filter(r => expOnly.value === 'all' || (expOnly.value === 'in') === r.in))
 // Links der Pflegebaum (Taloan, 21.09.: „links mein Pflegebaum, rechts der Publikationsbaum, und ich ziehe die Äste rüber, wie ich sie brauche“):
-// Gruppen und Produkte, aufklappbar, ziehbar; ✓ = in diesem Publikationsbaum schon drin (selbst oder über einen Vorfahren als Verweis)
+// Gruppen und Produkte, aufklappbar, ziehbar; ✓ = in diesem Publikationsbaum schon enthalten (selbst oder über einen Vorfahren als Verweis)
 const srcExpanded = ref(new Set(JSON.parse(localStorage.getItem('journali.pubsrc.expanded') || '[]')))
 function srcToggle(id) { srcExpanded.value.has(id) ? srcExpanded.value.delete(id) : srcExpanded.value.add(id); srcExpanded.value = new Set(srcExpanded.value); localStorage.setItem('journali.pubsrc.expanded', JSON.stringify([...srcExpanded.value])) }
 const srcFilter = ref('')
@@ -297,7 +297,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span class="icon">{{ icon(row.r.role) }}</span>
         <span class="label">{{ row.r.label }}</span>
         <span v-if="row.r.role === 'group'" class="muted count" :title="`${tree.below(row.r.id).summary} darunter`">{{ tree.below(row.r.id).total }}</span>
-        <span v-if="current && inTree(row.r.id)" class="pos count" :title="`in „${current.label}“ als Verweis drin`">✓</span>
+        <span v-if="current && inTree(row.r.id)" class="pos count" :title="`in „${current.label}“ als Verweis enthalten`">✓</span>
       </div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">Ast nach rechts auf eine Rubrik ziehen · Doppelklick öffnet</div>
@@ -311,15 +311,15 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </select>
       <button class="x" @click="newTree" title="neuer Publikationsbaum">+</button>
       <span class="grow" />
-      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Ausleitung ${exp.tree.channel}${exp.tree.market ? ' · ' + exp.tree.market : ''}: ${exp.in} Produkte drin, ${exp.out} draussen (Freigabe, Markt) — Klick zeigt die Liste`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
+      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Ausleitung ${exp.tree.channel}${exp.tree.market ? ' · ' + exp.tree.market : ''}: ${exp.in} Produkte ausgeleitet, ${exp.out} zurückgehalten (Freigabe, Markt) — Klick zeigt die Liste`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
       <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} Produkte sind in „${current.label}“ noch nicht einsortiert — Klick zeigt sie`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
-      <div class="toolbar"><span class="muted">Ausleitung {{ exp.tree.channel }}{{ exp.tree.market ? ' · ' + exp.tree.market : '' }} · <span class="pos">{{ exp.in }} drin</span> · <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }} draussen</span></span><span class="grow" />
-        <span class="view-chip" :class="{ on: expOnly === 'out' }" @click="expOnly = 'out'" title="was nicht ausgeleitet wird, und warum">draussen</span>
-        <span class="view-chip" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'">drin</span>
+      <div class="toolbar"><span class="muted">Ausleitung {{ exp.tree.channel }}{{ exp.tree.market ? ' · ' + exp.tree.market : '' }} · <span class="pos">{{ exp.in }} ausgeleitet</span> · <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }} zurückgehalten</span></span><span class="grow" />
+        <span class="view-chip" :class="{ on: expOnly === 'out' }" @click="expOnly = 'out'" title="was nicht ausgeleitet wird, und warum">zurückgehalten</span>
+        <span class="view-chip" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'">ausgeleitet</span>
         <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">alle</span></div>
-      <div class="muted" style="font-size:12px;padding:0 8px 4px">Drin ist ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).</div>
+      <div class="muted" style="font-size:12px;padding:0 8px 4px">Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).</div>
       <div class="scroll" style="max-height:240px">
         <div v-for="r in expRows" :key="r.path.map(x => x.id).join('/') + r.product.id" class="node" :title="r.path.map(x => x.label).join(' › ') + (r.why.length ? '\n' + r.why.join('\n') : '')" @click="router.push(`/pub/${r.product.id}`)">
           <span :class="r.in ? 'pos' : 'neg'" style="width:14px;text-align:center">{{ r.in ? '✓' : '✗' }}</span>
@@ -327,7 +327,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
           <span class="muted" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:6px">{{ r.in ? r.path.slice(1).map(x => x.label).join(' › ') : r.why.join(' · ') }}</span>
           <button class="x" style="margin-left:auto" title="im Pflegebaum öffnen (freigeben, pflegen); ⇶ bringt dich zurück" @click.stop="store.pubBack = { path: $route.fullPath, label: current.label }; router.push(`/tree/${r.product.id}`)">▣</button>
         </div>
-        <div v-if="!expRows.length" class="empty" style="padding:10px">{{ expOnly === 'out' ? 'nichts draussen — alles im Baum wird ausgeleitet' : 'nichts' }}</div>
+        <div v-if="!expRows.length" class="empty" style="padding:10px">{{ expOnly === 'out' ? 'nichts zurückgehalten — alles im Baum wird ausgeleitet' : 'nichts' }}</div>
       </div>
     </div>
     <div v-if="ruleBox" class="picker-box" style="padding:8px">
