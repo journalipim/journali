@@ -37,7 +37,8 @@ function addState() { const w = cur.value; const k = 'state' + (w.states.length 
 function delState(i) { const w = cur.value; const k = w.states[i].key; if (w.transitions.some(t => t.from === k || t.to === k)) { store.toast('erst die Übergänge davon/dahin entfernen'); return } w.states.splice(i, 1); touch() }
 function addTransition() { const w = cur.value; const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[0]?.key ?? '', to: w.states[1]?.key ?? w.states[0]?.key ?? '', roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); touch() }
 const selState = ref(null), selTrans = ref(null)   // markierte Zeile (Grafik ↔ Tabelle)
-const W = 150, H = 46
+const W = 150, H = 46, GRID = 20
+const snap = v => Math.round(v / GRID) * GRID
 const svgEl = ref(null)
 // Lage: gespeichert (x/y) oder Reihe — beim ersten Ziehen bekommt jede Kachel ihre Lage
 const posOf = (s, i) => ({ x: s.x ?? 20 + i * (W + 40), y: s.y ?? 70 })
@@ -51,7 +52,7 @@ function stateDown(i, e) {
 function linkDown(i, e) { selState.value = i; const p = posOf(cur.value.states[i], i); drag.value = { kind: 'link', i, x: p.x + W, y: p.y + H - 8, tx: p.x + W, ty: p.y + H - 8 } }
 function canvasMove(e) {
   const d = drag.value; if (!d) return; const p = svgPoint(e)
-  if (d.kind === 'move') { const s = cur.value.states[d.i]; s.x = Math.max(0, Math.round(p.x - d.dx)); s.y = Math.max(0, Math.round(p.y - d.dy)); touch() }
+  if (d.kind === 'move') { const s = cur.value.states[d.i]; s.x = Math.max(0, snap(p.x - d.dx)); s.y = Math.max(0, snap(p.y - d.dy)); touch() }
   else { d.tx = p.x; d.ty = p.y }
 }
 function stateUp(j) {
@@ -89,7 +90,7 @@ const sketch = computed(() => {
     const off = bend + 10
     return { t, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: mx + nx * off, ly: my + ny * off + 4, anchor: nx > 0.3 ? 'start' : nx < -0.3 ? 'end' : 'middle' }
   })
-  const width = Math.max(600, ...pos.map(p => p.x + W + 60)), height = Math.max(240, ...pos.map(p => p.y + H + 60))
+  const width = snap(Math.max(600, ...pos.map(p => p.x + W + 60))), height = snap(Math.max(240, ...pos.map(p => p.y + H + 60)))
   return { W, H, pos, width, height, arrows }
 })
 onMounted(load)
@@ -115,7 +116,8 @@ onMounted(load)
       <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · vom ● auf eine andere Kachel ziehen = Übergang · Klick markiert · Entf löscht · Doppelklick = Start <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button></div>
       <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none`" font-size="11" font-family="system-ui"
         @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
-        <defs><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
+        <defs><pattern id="wf-grid" :width="GRID" :height="GRID" patternUnits="userSpaceOnUse"><path :d="`M ${GRID} 0 L 0 0 0 ${GRID}`" fill="none" stroke="var(--line)" stroke-width="0.5" opacity="0.6" /></pattern><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
+        <rect x="0" y="0" :width="sketch.width" :height="sketch.height" fill="url(#wf-grid)" @mousedown="selState = null; selTrans = null" />
         <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'">{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
         <line v-if="drag?.kind === 'link'" :x1="drag.x" :y1="drag.y" :x2="drag.tx" :y2="drag.ty" stroke="var(--accent)" stroke-dasharray="4 3" />
         <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : 'cursor:grab'" @mousedown.prevent.stop="stateDown(i, $event)" @mouseup.stop="stateUp(i); canvasUp()" @dblclick="cur.start = s.key; touch()">
