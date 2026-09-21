@@ -27,12 +27,13 @@ public sealed class Catalog
 
     /// <summary>Abbilder aus dem Journal bauen. Liefert, wie viele Einträge es waren.</summary>
     public int Rebuild() => Rebuild(out _);
-    public int Rebuild(out Projector.Timing timing)
+    public int Rebuild(out Projector.Timing timing) => Rebuild(out timing, null);
+    public int Rebuild(out Projector.Timing timing, Action<int, long>? progress)
     {
         lock (_gate)
         {
             // ein Durchlauf für alle Abbilder — nicht acht (Taloan, 20.09.: Start hing mit 55 000 Einträgen, davon 17 000 ETIM-Klassen)
-            return Projector.CatchUpAll(_journal, out timing, _model, _relations, _media, _plugins, _jobs, _versions, _users, _tree);
+            return Projector.CatchUpAll(_journal, out timing, progress, _model, _relations, _media, _plugins, _jobs, _versions, _users, _tree);
         }
     }
 

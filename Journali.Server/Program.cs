@@ -40,7 +40,15 @@ IJournal journal = string.Equals(builder.Configuration["JOURNALI_JOURNAL_CACHE"]
 var catalog = new Catalog(journal);
 Console.WriteLine($"journali: Journal wird gelesen …{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (Spiegel bis #{cj.CachedHead}, Rest aus der Datenbank)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist (Taloan, 20.09.)
 var sw0 = System.Diagnostics.Stopwatch.StartNew();
-var rebuilt = catalog.Rebuild(out var timing);
+// Fortschritt etwa je Sekunde (Taloan, 21.09.: „damit man sieht, ob was vorangeht“) — Ziel ist der Kopf des Journals
+var head0 = journal.Head; var mirror0 = journal is CachedJournal c0 ? c0.CachedHead : 0; var lastTick = 0L;
+var rebuilt = catalog.Rebuild(out var timing, (n, number) =>
+{
+    if (sw0.ElapsedMilliseconds - lastTick < 1000) return;
+    lastTick = sw0.ElapsedMilliseconds;
+    var src = number <= mirror0 ? "Spiegel" : "Datenbank";   // Stand beim Start — der Spiegel wächst beim Lesen mit
+    Console.WriteLine($"journali:   … #{number} von #{head0} ({number * 100 / Math.Max(1, head0)} %, {n} Einträge, {sw0.Elapsed.TotalSeconds:0} s, {src})");
+});
 Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht (Taloan, 21.09.)
 var seeded = catalog.SeedMissing();
 

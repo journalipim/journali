@@ -30,7 +30,13 @@ public static class Projector
     public static int CatchUpAll(IJournal journal, params IProjection[] projections) => CatchUpAll(journal, out _, projections);
 
     /// <summary>Wie oben, dazu die Zeiten: Lesen aus dem Journal und Anwenden je Abbild (Millisekunden) — für den Start und die Frage, wo es hängt.</summary>
-    public static int CatchUpAll(IJournal journal, out Timing timing, params IProjection[] projections)
+    public static int CatchUpAll(IJournal journal, out Timing timing, params IProjection[] projections) => CatchUpAll(journal, out timing, null, projections);
+
+    /// <summary>
+    /// Wie oben, dazu ein Fortschritt: alle 1000 Einträge (Anzahl gelesen, Nummer des letzten) — damit der Start nicht
+    /// minutenlang stumm ist (Taloan, 21.09.: „damit man sieht, ob was vorangeht“).
+    /// </summary>
+    public static int CatchUpAll(IJournal journal, out Timing timing, Action<int, long>? progress, params IProjection[] projections)
     {
         timing = new Timing();
         if (projections.Length == 0) return 0;
@@ -50,6 +56,7 @@ public static class Projector
             }
             last = sw.ElapsedTicks;
             count++;
+            if (progress is not null && count % 1000 == 0) progress(count, entry.Number);
         }
         for (var i = 0; i < projections.Length; i++) timing.Apply[projections[i].GetType().Name] = apply[i] * 1000 / System.Diagnostics.Stopwatch.Frequency;
         timing.ReadMs = timing.ReadTicks * 1000 / System.Diagnostics.Stopwatch.Frequency;
