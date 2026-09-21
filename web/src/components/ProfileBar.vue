@@ -14,23 +14,24 @@ const names = ref([])
 const current = ref('')
 const name = ref('')
 const busy = ref(false)
-// Ungespeichert? (Taloan, 21.09.: „ich ändere unten Regeln und vergesse das Profil zu speichern“): der Stand der Ansicht (get()) wird jede
-// Sekunde mit dem gespeicherten verglichen. Ist ein Profil gewählt, speichert es sich von selbst (1,5 s nach der letzten Änderung —
-// jede Fassung steht im Journal, nichts geht verloren); ohne Profil pulsiert 💾 und der Hinweis sagt es.
+// Ungespeichert? (Taloan, 21.09.: „ich ändere unten Regeln und vergesse das Profil zu speichern“ — und: „automatisch speichern nervt,
+// ich will eine Vorlage auch mal nur mit zwei geänderten Werten benutzen, ohne sie dauerhaft zu ändern“): der Stand der Ansicht (get())
+// wird jede Sekunde mit dem gespeicherten verglichen; weicht er ab, schwebt unten eine Leiste — speichern, als neues Profil, verwerfen,
+// oder ✕ (Leiste weg, Änderungen bleiben im Browser; bei der nächsten Änderung kommt sie wieder). Nichts speichert sich von selbst.
 const saved = ref('')          // JSON des gespeicherten Standes
 const dirty = ref(false)
-let timer = null, autoTimer = null
+const dismissed = ref('')      // Stand, bei dem die Leiste weggeklickt wurde — bei einer weiteren Änderung kommt sie wieder
+let timer = null
 const snapshot = () => { try { return JSON.stringify(props.get() ?? {}) } catch { return '' } }
-let lastSeen = ''
-function tick() {
-  const now = snapshot()
-  const d = now !== saved.value && now !== '{}'
-  if (d !== dirty.value) dirty.value = d
-  // Timer nur neu starten, wenn sich seit dem letzten Takt etwas geändert hat — sonst wird er jede Sekunde zurückgesetzt und feuert nie („● speichert …“ blieb stehen)
-  if (d && now !== lastSeen && current.value && (name.value === current.value || !name.value)) { clearTimeout(autoTimer); autoTimer = setTimeout(() => { if (!busy.value && snapshot() !== saved.value) save(true) }, 1500) }
-  lastSeen = now
+function tick() { const now = snapshot(); const d = now !== saved.value && now !== '{}'; if (d !== dirty.value) dirty.value = d; if (!d) dismissed.value = '' }
+const showBar = () => dirty.value && snapshot() !== dismissed.value
+async function saveAs() {
+  const n = await dialog.prompt({ title: 'Als neues Profil speichern', text: 'Name', value: current.value ? current.value + '-2' : '', placeholder: 'Name' })
+  if (!n?.trim()) return
+  name.value = n.trim(); await save()
 }
-onUnmounted(() => { clearInterval(timer); clearTimeout(autoTimer) })
+async function discard() { if (current.value) await apply(current.value); else { props.set(null); saved.value = ''; dirty.value = false } }
+onUnmounted(() => clearInterval(timer))
 
 async function load() {
   try { names.value = (await api.get(`/api/plugins/${props.plugin}/data`)).filter(n => n.startsWith(PREFIX)).map(n => n.slice(PREFIX.length)) }
@@ -47,7 +48,7 @@ async function apply(n) {
   catch (e) { store.toast(`Profil ${n}: ${e.message}`) }
   finally { busy.value = false }
 }
-async function save(auto = false) {
+async function save() {
   const n = (name.value || current.value).trim()
   if (!n) { store.toast('Profil: Name fehlt — oben eintragen, dann 💾'); return }
   busy.value = true
@@ -57,7 +58,7 @@ async function save(auto = false) {
     if (!names.value.includes(n)) names.value = [...names.value, n].sort()
     current.value = n; localStorage.setItem(`journali.profile.${props.plugin}.${props.scope}`, n)
     saved.value = JSON.stringify(data ?? {}); dirty.value = false
-    store.toast(auto ? `💾 Profil „${n}“ automatisch gespeichert` : `💾 Profil „${n}“ gespeichert`, 'ok')
+    store.toast(`💾 Profil „${n}“ gespeichert`, 'ok')
   } catch (e) { store.toast(e.message) }
   finally { busy.value = false }
 }
@@ -79,17 +80,26 @@ defineExpose({ load })
       <option v-for="n in names" :key="n" :value="n">{{ n }}</option>
     </select>
     <input v-model="name" type="text" placeholder="Name" style="width:200px" title="Name zum Speichern (neu oder vorhanden = überschreiben)" @keydown.enter="save" />
-    <button class="x" :class="{ pulse: dirty && !current }" @click="save()" :disabled="busy" :title="name && name !== current ? `als „${name}“ speichern` : 'Profil speichern (überschreiben)'">💾</button>
+    <button class="x" @click="save()" :disabled="busy" :title="name && name !== current ? `als „${name}“ speichern` : 'Profil speichern (überschreiben)'">💾</button>
     <button class="x" @click="remove" :disabled="!current || busy" title="Profil löschen">✕</button>
-    <span v-if="dirty && !current" class="unsaved" title="Zuordnung und Umwandlungen sind nur hier im Browser — Name eintragen und 💾, sonst sind sie beim nächsten Mal weg">● ungespeichert — Name eintragen, 💾</span>
-    <span v-else-if="dirty" class="muted" style="font-size:11px">● speichert …</span>
+    <span v-if="dirty" class="unsaved" title="der Stand hier weicht vom gespeicherten Profil ab">● geändert</span>
   </div>
+  <!-- schwebende Leiste unten (Taloan, 21.09.): geändert — speichern, als neues, verwerfen oder weg damit -->
+  <Teleport to="body">
+    <div v-if="showBar()" class="savebar">
+      <span>{{ current ? `Profil „${current}“ geändert` : 'Einstellungen geändert — noch kein Profil' }}</span>
+      <button v-if="current" class="primary" @click="save()" :disabled="busy" title="das gewählte Profil überschreiben">💾 speichern</button>
+      <button @click="saveAs" :disabled="busy" title="unter neuem Namen speichern — das gewählte Profil bleibt, wie es war">als neues Profil …</button>
+      <button v-if="current" @click="discard" :disabled="busy" title="zurück zum gespeicherten Stand">↶ verwerfen</button>
+      <button class="x" @click="dismissed = snapshot()" title="Leiste weg — die Änderungen bleiben hier, gespeichert wird nichts; bei der nächsten Änderung kommt sie wieder">✕</button>
+    </div>
+  </Teleport>
 </template>
 
 <style scoped>
 .unsaved { color: var(--warn); font-size: 12px; font-weight: 600; }
-.x.pulse { color: var(--warn); animation: pulse 1.2s ease-in-out infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
+.savebar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; align-items: center; padding: 8px 14px; background: var(--pane); border: 1px solid var(--warn); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.45); font-size: 13px; }
+.savebar .x { border: 0; background: none; color: var(--muted); padding: 0 4px; }
 .profiles { display: flex; align-items: center; gap: 4px; }
 .profiles select { min-width: 160px; max-width: 260px; }   /* Profilnamen lesbar (Taloan, 21.09.) */
 </style>
