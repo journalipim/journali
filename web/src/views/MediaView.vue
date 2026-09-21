@@ -143,8 +143,12 @@ async function fileMedia(ids, target) {
   await store.poll(true); await loadFolders(); await load()
   store.toast(`${todo.length} ${todo.length === 1 ? 'Medium' : 'Medien'} → ${target ? pathOf(target).map(f => f.name).join(' › ') : 'ohne Ordner'}`, 'ok')
 }
-const moveTargets = computed(() => { const out = []; const rec = (parent, depth) => { for (const f of kids(parent)) { out.push({ id: f.id, label: ' '.repeat(depth * 3) + f.name }); rec(f.id, depth + 1) } }; rec(null, 0); return out })
-function moveSelected(e) { const v = e.target.value; e.target.value = ''; if (v === '') return; fileMedia(sel.value.size ? [...sel.value] : [cur.value], v === '-' ? null : v) }
+// „⇢ verschieben“ (Taloan, 21.09.: das Dropdown daneben sah aus wie ein Filter — „ohne Ordner“ darin nahm das Bild aus Wakol):
+// ein Knopf mit der Zahl der Auswahl, öffnet eine Liste der Ziele; der Filter ist nur die Ordnerliste links
+const moveTargets = computed(() => { const out = []; const rec = (parent, depth) => { for (const f of kids(parent)) { out.push({ id: f.id, depth, name: f.name }); rec(f.id, depth + 1) } }; rec(null, 0); return out })
+const moveOpen = ref(false)
+const moveIds = computed(() => sel.value.size ? [...sel.value] : cur.value ? [cur.value] : [])
+function moveTo(target) { moveOpen.value = false; if (moveIds.value.length) fileMedia(moveIds.value, target) }
 
 // ---- Hochladen: in den gerade gezeigten Ordner
 async function upload(files) {
@@ -203,10 +207,18 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
     <div class="toolbar"><h1>▨ {{ folderTitle }}</h1><span class="muted">{{ items.length }}</span><span v-if="sel.size > 1" class="chip" title="Auswahl — Esc löst sie; Strg+A wählt alle">{{ sel.size }} gewählt</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:4px">
       <input v-model="q" type="search" placeholder="🔍 Name, Id, Werte" style="flex:1;min-width:0" @input="search" />
-      <select v-model="sort" title="Sortierung"><option v-for="[k, l] in SORTS" :key="k" :value="k">{{ l }}</option></select>
+      <select v-model="sort" title="Sortierung — nur die Anzeige"><option v-for="[k, l] in SORTS" :key="k" :value="k">{{ l }}</option></select>
       <button class="x" @click="desc = !desc" :title="desc ? 'absteigend — Klick: aufsteigend' : 'aufsteigend — Klick: absteigend'">{{ desc ? '↓' : '↑' }}</button>
-      <select v-model="group" title="Gruppierung"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
-      <select v-if="sel.size || cur" @change="moveSelected" title="Auswahl in einen Ordner legen (oder Kacheln auf einen Ordner ziehen)"><option value="">📁 verschieben …</option><option value="-">⌂ ohne Ordner</option><option v-for="f in moveTargets" :key="f.id" :value="f.id">{{ f.label }}</option></select>
+      <select v-model="group" title="Gruppierung — nur die Anzeige; der Ordnerfilter ist die Liste links"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
+      <span style="position:relative" v-if="moveIds.length">
+        <button @click="moveOpen = !moveOpen" :title="`${moveIds.length} ${moveIds.length === 1 ? 'Medium' : 'Medien'} in einen Ordner legen — oder Kacheln auf einen Ordner links ziehen`">⇢ {{ moveIds.length }} verschieben nach …</button>
+        <div v-if="moveOpen" class="picker movemenu" @mouseleave="moveOpen = false">
+          <div class="muted" style="padding:4px 8px;font-size:11px">{{ moveIds.length }} {{ moveIds.length === 1 ? 'Medium' : 'Medien' }} verschieben nach</div>
+          <div class="pick" @click="moveTo(null)">⌂ ohne Ordner</div>
+          <div v-for="f in moveTargets" :key="f.id" class="pick" :style="`padding-left:${8 + f.depth * 14}px`" @click="moveTo(f.id)">📁 {{ f.name }}</div>
+          <div v-if="!moveTargets.length" class="muted" style="padding:4px 8px;font-size:12px">noch kein Ordner — links + anlegen</div>
+        </div>
+      </span>
       <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? 'Dateien hochladen — oder hierher ziehen' : `hochladen in „${folderTitle}“ — oder hierher ziehen`">⇧ hochladen</button>
       <input ref="fileInput" type="file" multiple style="display:none" @change="upload([...$event.target.files]); $event.target.value = ''" />
     </div>
@@ -257,6 +269,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 .ftree .cnt { font-size: 11px; }
 .ftree .acts { display: none; gap: 0; }
 .ftree .pick:hover .acts { display: inline-flex; }
+.movemenu { position: absolute; top: 100%; left: 0; z-index: 20; min-width: 220px; max-height: 320px; box-shadow: 0 4px 16px rgba(0,0,0,.35); }
 .ghead { display: flex; gap: 8px; align-items: baseline; padding: 8px 8px 0; font-weight: 600; font-size: 12px; }
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; align-content: flex-start; }
 .tile { width: 120px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: var(--pane); cursor: default; }
