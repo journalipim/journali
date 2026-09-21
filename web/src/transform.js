@@ -4,21 +4,21 @@
 // Jeder Schritt: { op, …felder }. Reihenfolge = Kette. Leere Eingabe bleibt leer, ausser static/default/combine sagen etwas.
 
 export const OPS = [
-  ['trim', 'Leerzeichen kürzen', 'vorne und hinten, mehrere innen zu einem'],
-  ['upper', 'GROSS', ''], ['lower', 'klein', ''],
-  ['replace', 'Ersetzen', 'find → with; regex: als regulärer Ausdruck (Flags gi)'],
-  ['prefix', 'Voranstellen', 'text'], ['suffix', 'Anhängen', 'text'],
-  ['static', 'Fester Wert', 'text — die Quelle wird ignoriert'],
-  ['default', 'Wenn leer', 'text, der bei leerer Quelle gilt'],
-  ['combine', 'Spalten verbinden', 'columns (mit Komma), sep — die Quelle selbst zählt mit, wenn sie in columns steht'],
-  ['split', 'Aufteilen', 'sep, index (0 = erster Teil, -1 = letzter, leer = alle mit Komma)'],
-  ['number', 'Zahl', 'decimal , oder . — Einheit und Tausenderzeichen fallen weg („22 mm“ → 22, „1.234,5“ → 1234.5)'],
-  ['boolean', 'Wahrheitswert', 'Wörter, die „ja“ bedeuten (mit Komma; Vorgabe ja, yes, true, 1, x, wahr, y) → true, alles andere → false; leer bleibt leer'],
-  ['date', 'Datum', 'format dd.MM.yyyy | MM/dd/yyyy | yyyyMMdd → ISO yyyy-MM-dd'],
-  ['htmldecode', 'HTML-Entities auflösen', '&amp; → &'],
-  ['striphtml', 'HTML entfernen', 'Tags weg, Text bleibt'],
-  ['map', 'Werte ersetzen nach Tabelle', 'alt=neu; alt2=neu2 — nichts mit Sprache: „Ja=true; Nein=false“, „rot=RAL3000“; nicht Genanntes bleibt (oder „sonst“)'],
-  ['when', 'Bedingung', 'test: empty | equals | contains | matches (regex) mit value; then/else: Text ({} = Quelle)'],
+  ['trim', 'Leerzeichen kürzen', 'vorne und hinten weg, mehrere innen zu einem'],
+  ['upper', 'GROSS', 'alles in Grossbuchstaben'], ['lower', 'klein', 'alles in Kleinbuchstaben'],
+  ['replace', 'Ersetzen', 'sucht einen Text und ersetzt ihn (leer = entfernen); regex: das Suchfeld ist ein regulärer Ausdruck'],
+  ['prefix', 'Voranstellen', 'Text vor den Wert setzen (nur, wenn der Wert nicht leer ist)'], ['suffix', 'Anhängen', 'Text hinter den Wert setzen (nur, wenn der Wert nicht leer ist)'],
+  ['static', 'Fester Wert', 'immer dieser Text — was in der Spalte steht, ist egal'],
+  ['default', 'Wenn leer', 'dieser Text, wenn die Zelle leer ist; sonst bleibt der Wert'],
+  ['combine', 'Spalten verbinden', 'Spaltennamen mit Komma, {} steht für diese Spalte; dazwischen der Trenner — z. B. Spalten „brand,{}“ Trenner „ “'],
+  ['split', 'Aufteilen', 'zerlegt am Trenner; Teil = eine Zahl: 0 = erster Teil, 1 = zweiter, -1 = letzter; leer = alle Teile, mit Komma verbunden'],
+  ['number', 'Zahl', 'macht eine Zahl daraus: Einheit und Leerzeichen fallen weg, Tausenderzeichen auch („22 mm“ → 22, „1.234,5“ → 1234.5); Dezimalzeichen wird geraten oder gesetzt'],
+  ['boolean', 'Wahrheitswert', 'true, wenn der Wert eines der „ja“-Wörter ist (leer = ja, yes, true, 1, x, wahr, y), sonst false; leere Zelle bleibt leer'],
+  ['date', 'Datum', 'liest das Datum im angegebenen Format und schreibt JJJJ-MM-TT'],
+  ['htmldecode', 'HTML-Entities auflösen', '&amp; → &, &lt; → <, &#65; → A'],
+  ['striphtml', 'HTML entfernen', 'Tags weg, der Text bleibt'],
+  ['map', 'Werte ersetzen nach Tabelle', 'alt=neu; alt2=neu2 — z. B. „Ja=true; Nein=false“ oder „rot=RAL3000“; nicht Genanntes bleibt (oder wird zu „sonst“)'],
+  ['when', 'Bedingung', 'prüft die Quelle (leer / gleich / enthält / passt auf regex) gegen den Wert; dann und sonst sind Texte, {} steht für die Quelle'],
 ]
 
 const S = v => v == null ? '' : String(v)
