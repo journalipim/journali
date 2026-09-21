@@ -43,7 +43,8 @@ test('journali_<feld>_<wurzel>: Wurzel aus dem Spaltenkopf, interne Spalten erka
 test('kopierte Zeilen mit versteckter Id: andere SKU → neuer Knoten, gleiche SKU → übergangen (Taloans Datei)', async () => {
   const { plan } = await import('../src/mapper.js')
   const columns = ['journali_id_g-1', 'journali_parent_g-1', 'sku', 'name_de']
-  const rows = [['v-1', 'p-1', '053797', 'Original'], ['v-1', 'p-1', '1', 'Kopie c1'], ['v-1', 'p-1', '2', 'Kopie c2'], ['v-1', 'p-1', '053797', 'echtes Duplikat']]
+  // Original steht NICHT zuerst (ausgeschnitten und als erste eingefügt): erkannt wird es über die SKU des Knotens, nicht über die Zeile
+  const rows = [['v-1', 'p-1', '1', 'Kopie c1'], ['v-1', 'p-1', '053797', 'Original'], ['v-1', 'p-1', '2', 'Kopie c2'], ['v-1', 'p-1', '053797', 'echtes Duplikat']]
   const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', sku: '053797', axisValues: {} }]
   const byId = new Map(treeRows.map(r => [r.id, r]))
   const tree = { rows: treeRows, byId, ancestors: id => { const out = []; for (let p = byId.get(id)?.parent; p; p = byId.get(p)?.parent) out.unshift(byId.get(p)); return out } }
@@ -53,4 +54,17 @@ test('kopierte Zeilen mit versteckter Id: andere SKU → neuer Knoten, gleiche S
   assert.equal(p.stats.create, 2)      // c1, c2 als neue Varianten unter p-1 (Elternteil aus der Datei)
   assert.equal(p.stats.copied, 2)
   assert.equal(p.stats.skipped, 1)     // echtes Duplikat
+})
+
+test('kopierte Zeilen, Original mit geänderter SKU: die Zeile mit den meisten gleichen Werten ist das Original', async () => {
+  const { plan } = await import('../src/mapper.js')
+  const columns = ['journali_id_g-1', 'journali_parent_g-1', 'sku', 'name_de']
+  const rows = [['v-1', 'p-1', 'NEU-1', 'ganz anders'], ['v-1', 'p-1', 'NEU-2', 'Original']]
+  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', sku: '053797', axisValues: {} }]
+  const byId = new Map(treeRows.map(r => [r.id, r]))
+  const tree = { rows: treeRows, byId, ancestors: id => { const out = []; for (let p = byId.get(id)?.parent; p; p = byId.get(p)?.parent) out.unshift(byId.get(p)); return out } }
+  const m = suggest(columns, rows, model)
+  const p = plan({ columns, rows, mapping: m, model, tree, target: null, role: null, existing: new Map([['v-1', { 'name|de': 'Original', 'name|de#own': true, 'sku|': '053797', 'sku|#own': true }]]) })
+  assert.equal(p.stats.update, 1); assert.equal(p.stats.create, 1)
+  assert.match(p.stats.problems[0], /Zeile 2: kopierte Zeile.*Zeile 3/)   // Zeile 2 ist die Kopie, Zeile 3 (Name „Original“) das Original
 })

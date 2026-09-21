@@ -249,18 +249,29 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   // Pflichtattribute der Kindrolle (irgendein Kanal verlangt sie): beim Anlegen müssen sie da sein
   const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
   // Lücke bei ausgeblendeten Spalten (Taloan, 21.09.: „der Anwender nimmt die letzte Zeile, fügt sie mehrfach ein, ändert Werte — und kopiert die
-  // versteckte Id mit“): dieselbe Id mehrmals in der Datei. Die erste Zeile behält sie; jede weitere mit ANDERER SKU ist eine kopierte Zeile,
-  // also ein neuer Knoten (Id fällt weg, wird gemeldet); mit GLEICHER SKU ist es ein echtes Duplikat und wird übergangen
-  const seenIds = new Map()   // Id → SKU der ersten Zeile
-  stats.copied = 0
-  rows.forEach((row, ri) => {
-    let id = String(cell(row, iId) ?? '').trim(); const sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
-    if (id) {
-      if (seenIds.has(id)) {
-        if (sku && sku !== seenIds.get(id)) { stats.problems.push(`Zeile ${ri + 2}: kopierte Zeile — Id ${id} gehört zu SKU ${seenIds.get(id) || '?'}, hier steht ${sku}: wird als neuer Knoten angelegt`); stats.copied++; id = '' }
-        else { stats.problems.push(`Zeile ${ri + 2}: Id ${id} steht schon in einer Zeile davor (gleiche SKU) — übergangen`); stats.skipped++; return }
-      } else seenIds.set(id, sku)
+  // versteckte Id mit … oder schneidet sie aus und fügt sie als erste ein“): dieselbe Id mehrmals in der Datei. Die Reihenfolge sagt nichts.
+  // Das Original ist die Zeile, die zum Knoten im Bestand passt: erst die SKU des Knotens, sonst die Zeile mit den meisten gleichen Werten.
+  // Alle anderen sind Kopien → neue Knoten (Id fällt weg, gemeldet); eine Kopie ohne jede Änderung (gleiche SKU wie das Original) ist ein Duplikat und wird übergangen.
+  const byIdRows = new Map()
+  rows.forEach((row, ri) => { const id = String(cell(row, iId) ?? '').trim(); if (id) { if (!byIdRows.has(id)) byIdRows.set(id, []); byIdRows.get(id).push(ri) } })
+  const similarity = (row, nodeId) => { const cur = existing?.get(nodeId); if (!cur) return 0; let n = 0; mapping.forEach((m, ci) => { if (m.target !== 'attr') return; const def = attrs.get(m.attribute); if (!def) return; const k = `${def.key}|${def.perLocale ? m.locale ?? '' : ''}`; if (k in cur && String(cur[k] ?? '') === String(convert(cell(row, ci), def, model) ?? '')) n++ }); return n }
+  const dropId = new Set(), dupRow = new Set()   // Zeilen, deren Id nicht zählt (Kopie) / die ganz übergangen werden (Duplikat)
+  for (const [id, ris] of byIdRows) {
+    if (ris.length < 2) continue
+    const node = tree.byId.get(id)
+    const skuOf = ri => String(cell(rows[ri], iSku) ?? '').trim()
+    let orig = node?.sku ? ris.find(ri => skuOf(ri) === String(node.sku).trim()) : undefined
+    if (orig === undefined) { let best = -1; for (const ri of ris) { const sc = node ? similarity(rows[ri], id) : 0; if (sc > best) { best = sc; orig = ri } } }
+    for (const ri of ris) {
+      if (ri === orig) continue
+      if (skuOf(ri) && skuOf(ri) === skuOf(orig)) { dupRow.add(ri); stats.problems.push(`Zeile ${ri + 2}: Duplikat von Zeile ${orig + 2} (gleiche Id, gleiche SKU) — übergangen`) }
+      else { dropId.add(ri); stats.problems.push(`Zeile ${ri + 2}: kopierte Zeile — Id ${id} gehört zu Zeile ${orig + 2} (${node?.sku ? 'SKU ' + node.sku : 'meiste gleiche Werte'}): wird als neuer Knoten angelegt`) }
     }
+  }
+  stats.copied = dropId.size
+  rows.forEach((row, ri) => {
+    if (dupRow.has(ri)) { stats.skipped++; return }
+    const id = dropId.has(ri) ? '' : String(cell(row, iId) ?? '').trim(); const sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
     const want = iRoot >= 0 ? String(cell(row, iRoot) ?? '').trim() : (mapping.find(m => m.target === 'id')?.root ?? '')   // Wurzel aus der Spalte oder aus dem Kopf journali_id_<wurzel>
     const byId = id && tree.byId.get(id); const foreign = !!(byId && want && rootOf(id) !== want)
     let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || (!foreign && sku && bySku.get(sku)) || null
