@@ -77,6 +77,31 @@ function stateUp(j, e) {
   portUp(j, nearestPort(posOf(cur.value.states[j], j), svgPoint(e)))
 }
 function canvasUp() { drag.value = null }
+// Automatisch anordnen (Taloan, 21.09.): Ebenen vom Start aus (längster Vorwärtsweg), Ebenen von links nach rechts, in der Ebene nach dem
+// Schwerpunkt der Vorgänger sortiert (weniger Kreuzungen); Rückwege laufen als Bogen unten herum. Andockpunkte und Beschriftungslagen
+// werden zurückgesetzt, damit Pfeil und Text wieder von selbst passen.
+function autoLayout() {
+  const w = cur.value; const keys = w.states.map(s => s.key); const idx = Object.fromEntries(keys.map((k, i) => [k, i]))
+  const start = keys.includes(w.start) ? w.start : keys[0]
+  const succ = Object.fromEntries(keys.map(k => [k, []])); for (const t of w.transitions) if (t.from !== t.to && idx[t.from] != null && idx[t.to] != null) succ[t.from].push(t.to)
+  // Ebene = längster Weg vom Start ohne Rückwege (Tiefensuche, besuchte Knoten auf dem Pfad nicht erneut)
+  const layer = Object.fromEntries(keys.map(k => [k, -1])); layer[start] = 0
+  const visit = (k, path) => { for (const n of succ[k]) { if (path.has(n)) continue; if (layer[k] + 1 > layer[n]) { layer[n] = layer[k] + 1; const p2 = new Set(path); p2.add(n); visit(n, p2) } } }
+  visit(start, new Set([start]))
+  let next = Math.max(0, ...Object.values(layer)) + 1; for (const k of keys) if (layer[k] < 0) layer[k] = next++   // unerreichbare: rechts dahinter
+  const cols = {}; for (const k of keys) (cols[layer[k]] ??= []).push(k)
+  const pred = Object.fromEntries(keys.map(k => [k, []])); for (const t of w.transitions) if (layer[t.from] < layer[t.to]) pred[t.to].push(t.from)
+  const rowOf = {}
+  for (const l of Object.keys(cols).map(Number).sort((a, b) => a - b)) {
+    const col = cols[l]
+    if (l > 0) col.sort((a, b) => { const bc = k => pred[k].length ? pred[k].reduce((s, q) => s + (rowOf[q] ?? 0), 0) / pred[k].length : 0; return bc(a) - bc(b) })
+    col.forEach((k, r) => { rowOf[k] = r })
+  }
+  const maxRows = Math.max(...Object.values(cols).map(c => c.length))
+  for (const s of w.states) { const l = layer[s.key], r = rowOf[s.key], n = cols[l].length; s.x = 40 + l * (W + 80); s.y = snap(60 + (r + (maxRows - n) / 2) * 110) }
+  for (const t of w.transitions) { t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null }
+  touch()
+}
 function labelDown(n, e) { selTrans.value = n; selState.value = null; const a = sketch.value.arrows[n]; const p = svgPoint(e); drag.value = { kind: 'label', n, dx: p.x - a.lx, dy: p.y - a.ly } }
 async function editLabel(n) { const t = cur.value.transitions[n]; const v = await dialog.prompt({ title: 'Beschriftung des Übergangs', value: t.label?.de ?? '', ok: '✎ OK' }); if (v == null) return; t.label = { ...(t.label ?? {}), de: v.trim() }; touch() }
 async function editState(i) { const s = cur.value.states[i]; const v = await dialog.prompt({ title: 'Bezeichnung des Zustands', value: s.label?.de ?? '', ok: '✎ OK' }); if (v == null) return; s.label = { ...(s.label ?? {}), de: v.trim() }; touch() }
@@ -134,7 +159,7 @@ onMounted(load)
         <span class="muted">gilt für</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
         <span class="muted" style="font-size:11px">(nichts angehakt = alle)</span>
       </div>
-      <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · Kachel markieren, von einem Andockpunkt auf eine andere Kachel ziehen = Übergang · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Entf löscht <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button></div>
+      <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · Kachel markieren, von einem Andockpunkt auf eine andere Kachel ziehen = Übergang · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Entf löscht <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button> <button class="x" @click="autoLayout" title="Ebenen vom Start aus, links nach rechts; Rückwege unten herum; Andockpunkte und Beschriftungen zurück auf Automatik">⟲ anordnen</button></div>
       <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none`" font-size="11" font-family="system-ui"
         @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
         <defs><pattern id="wf-grid" :width="GRID" :height="GRID" patternUnits="userSpaceOnUse"><path :d="`M ${GRID} 0 L 0 0 0 ${GRID}`" fill="none" stroke="var(--line)" stroke-width="0.5" opacity="0.6" /></pattern><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
