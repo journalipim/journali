@@ -248,8 +248,11 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const targetGroups = new Set()
   // Pflichtattribute der Kindrolle (irgendein Kanal verlangt sie): beim Anlegen müssen sie da sein
   const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
+  // Lücke bei ausgeblendeten Spalten (Taloan, 21.09.): kopierte Zeilen tragen dieselbe versteckte Id — die zweite würde die erste überschreiben; also nur die erste zählt
+  const seenIds = new Set()
   rows.forEach((row, ri) => {
     const id = String(cell(row, iId) ?? '').trim(), sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
+    if (id) { if (seenIds.has(id)) { stats.problems.push(`Zeile ${ri + 2}: Id ${id} steht schon in einer Zeile davor (kopierte Zeile mit versteckter Id?) — übergangen`); stats.skipped++; return } seenIds.add(id) }
     const want = iRoot >= 0 ? String(cell(row, iRoot) ?? '').trim() : (mapping.find(m => m.target === 'id')?.root ?? '')   // Wurzel aus der Spalte oder aus dem Kopf journali_id_<wurzel>
     const byId = id && tree.byId.get(id); const foreign = !!(byId && want && rootOf(id) !== want)
     let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || (!foreign && sku && bySku.get(sku)) || null

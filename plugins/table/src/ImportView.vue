@@ -319,6 +319,8 @@ onMounted(async () => {
     </ImportHead>
     <div class="scroll">
       <div v-if="!keyColumn && source" class="muted" style="font-size:12px;padding:6px 8px">⚠ Keine Schlüsselspalte (Id, SKU, Kennung) — jede Zeile wird neu angelegt.</div>
+      <!-- Lücke bei ausgeblendeten Spalten (Taloan, 21.09.): sieht aus wie unser Export, aber die Id-Spalte fehlt — in Excel entfernt oder ohne die versteckten Spalten weitergegeben -->
+      <div v-if="source && mapping.some(m => m.internal) && !mapping.some(m => m.target === 'id')" class="warn" style="font-size:12px;padding:6px 8px">⚠ Das ist ein journali-Export, aber die Spalte <code>journali_id_…</code> fehlt (ausgeblendete Spalten gelöscht oder nur die sichtbaren kopiert?). Ohne Ids werden Zeilen über SKU gefunden — oder neu angelegt, mit Dubletten.</div>
       <div v-if="unknown" class="warn" style="font-size:12px;padding:6px 8px">⚠ {{ unknown }} Spalten passen nicht zu diesem Knoten und werden übergangen — Vorlage per Rechtsklick am Knoten exportieren, dann stimmen die Spalten.</div>
 
       <div class="section" v-if="source">
