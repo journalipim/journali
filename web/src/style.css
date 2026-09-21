@@ -301,6 +301,10 @@ table.values, table.rows { table-layout: fixed; }
 .step-band .grow { flex: 1; }
 .view-chip { border: 1px solid var(--line); border-radius: 12px; padding: 1px 8px; background: var(--pane); color: var(--muted); cursor: pointer; }
 .view-chip.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-soft); }
+/* Chips mit Bedeutung: aktiv in ihrer Farbe, nicht im Akzent (Taloan, 21.09.: „warum ist der Badge grün?“) */
+.view-chip.on.neg { color: var(--neg); background: color-mix(in srgb, var(--neg) 18%, var(--pane)); border-color: transparent; }
+.view-chip.on.pos { color: var(--pos); background: color-mix(in srgb, var(--pos) 18%, var(--pane)); border-color: transparent; }
+.view-chip.on.neg b, .view-chip.on.pos b { color: inherit; }
 /* Gleiche Masse wie .cell-box, damit die Zelle beim Bearbeiten nicht springt. */
 .cell-input {
   display: block;

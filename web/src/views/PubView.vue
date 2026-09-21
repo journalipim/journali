@@ -316,8 +316,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
     </div>
     <div v-if="showExport && exp" class="unplaced">
       <div class="toolbar" style="white-space:nowrap"><span class="muted">Ausleitung {{ exp.tree.channel }}{{ exp.tree.market ? ' · ' + exp.tree.market : '' }}</span><span class="grow" />
-        <span class="view-chip" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'" title="wird ausgeleitet">ausgeleitet <b class="pos">{{ exp.in }}</b></span>
-        <span class="view-chip" :class="{ on: expOnly === 'out' }" @click="expOnly = 'out'" title="wird nicht ausgeleitet — mit Grund">zurückgehalten <b :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</b></span>
+        <span class="view-chip pos" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'" title="wird ausgeleitet">ausgeleitet <b class="pos">{{ exp.in }}</b></span>
+        <span class="view-chip" :class="{ on: expOnly === 'out', neg: exp.out > 0 }" @click="expOnly = 'out'" title="wird nicht ausgeleitet — mit Grund">zurückgehalten <b :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</b></span>
         <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">alle <b class="muted">{{ exp.in + exp.out }}</b></span></div>
       <div class="muted" style="font-size:12px;padding:0 8px 4px">Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).</div>
       <div class="scroll" style="max-height:240px">
