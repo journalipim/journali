@@ -516,7 +516,7 @@ async function wfStep(w, t) {
   }
 }
 // Wirkung eines Schritts nachholen (release:web → Freigabe an allen vollständigen Varianten; revoke; status)
-const effLabel = eff => { const [k, a] = eff.split(':'); return k === 'release' ? `Freigabe ${a}` : k === 'revoke' ? `Freigabe ${a} zurück` : `Status ${a}` }
+const effLabel = eff => { const [k, a] = eff.split(':'); return k === 'release' ? `für ${a} freigeben` : k === 'revoke' ? `Freigabe ${a} zurücknehmen` : `Status ${a} setzen` }
 async function wfEffect(eff) {
   const [k, a] = eff.split(':')
   await command(() => k === 'release' ? api.post(`${nodeUrl()}/releases`, { channel: a, locale: null }) : k === 'revoke' ? api.del(`${nodeUrl()}/releases?channel=${encodeURIComponent(a)}`) : setStatus(a))
@@ -834,7 +834,7 @@ function cellMenu(e, def, col, block) {
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt'">{{ w.stateLabel?.de || w.state }}</span>
               <span v-if="w.note" class="muted" :title="`Notiz zum Schritt „${w.transition}“ (${w.actor}): ${w.note}`" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✎ {{ w.note }}</span>
               <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
-                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Der Schritt „${w.transition}“ sollte das bewirken, es ist aber nicht eingetreten — jetzt nachholen`">⚠ {{ effLabel(pe.effect) }} nachholen</button>
+                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Der Schritt „${w.transition}“ sollte das bewirken, es ist aber nicht passiert — Klick tut es jetzt`">⚠ {{ effLabel(pe.effect) }}</button>
                 <span v-else class="warn" style="font-size:12px" :title="`keine Variante für ${pe.effect.split(':')[1]} freigegeben — ${pe.why}`">⚠ keine Variante freigegeben</span>
               </template>
               <button v-for="t in w.transitions" :key="t.key" @click="wfStep(w, t)" :title="`→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.label?.de || t.key }} →</button>
