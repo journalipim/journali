@@ -498,8 +498,12 @@ table.cols tr.sample td { white-space: nowrap; font-size: 12px; }
 .tstep select, .tstep input[type=text] { font-size: 12px; }
 .fld { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; }
 /* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */
-.tabs button { border: 1px solid var(--line); background: none; padding: 1px 8px; font-size: 11px; font-weight: 600; }
-.tabs button.on { background: var(--accent-soft); border-color: var(--accent); }
+/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */
+.tabs { display: inline-flex; gap: 0; margin-left: 8px; }
+.tabs button { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0; }
+.tabs button:first-child { border-radius: 6px 0 0 6px; } .tabs button:last-child { border-radius: 0 6px 6px 0; }
+.tabs button:hover { background: var(--hover); }
+.tabs button.on { background: var(--accent); color: #fff !important; border-color: var(--accent); }
 table.diff td { font-size: 12px; white-space: normal; }
 table.diff td.old { color: var(--muted); text-decoration: line-through; max-width: 300px; }
 table.diff td.new { color: var(--pos); max-width: 300px; }      /* neuer Wert (vorher keiner) */
