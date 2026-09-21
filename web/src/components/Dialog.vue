@@ -38,12 +38,12 @@ function onKey(e) {
 .title { font-weight: 600; font-size: 14px; }
 .text { margin-top: 6px; white-space: pre-wrap; line-height: 1.45; }
 .warnline { margin-top: 10px; font-size: 15px; font-weight: 700; color: var(--neg); }
-.keys-box { margin-top: 10px; max-height: min(60vh, 520px); overflow: auto; }
+.keys-box { margin-top: 10px; max-height: min(60vh, 520px); overflow-y: scroll; }
 .keys { border-collapse: collapse; }
 .keys td { padding: 3px 8px 3px 0; vertical-align: top; line-height: 1.4; }
 .keys td.k { white-space: nowrap; padding-right: 14px; }
 .keys kbd { font: inherit; font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: var(--cell); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; }
-.list { margin-top: 6px; white-space: pre-wrap; line-height: 1.5; color: var(--text); max-height: 200px; overflow: auto; }
+.list { margin-top: 6px; white-space: pre-wrap; line-height: 1.5; color: var(--text); max-height: 200px; overflow-y: scroll; }
 .option { display: flex; align-items: center; gap: 6px; margin-top: 10px; cursor: pointer; }
 .buttons { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 button.danger { background: var(--neg); color: #fff; border-color: var(--neg); }

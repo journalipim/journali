@@ -213,6 +213,8 @@ kbd {
 /* Platz fuer den senkrechten Scrollbalken immer reservieren — sonst aendert sich die Breite, sobald er kommt oder geht,
    und alles bricht anders um (Taloan: es ist der Scrollbalken rechts). */
 .scroll { overflow: auto; flex: 1; min-height: 0; scrollbar-gutter: stable; }
+/* Dynamischer Inhalt hat die Scrollbar immer als Platzhalter (Taloan, 21.09.2026) — Auswahlbäume, Vorschlagslisten, Aufklappfelder, Dialoglisten */
+.picker, .sugg, .drop, .keys-box, .list { scrollbar-gutter: stable; }
 
 table.grid { border-collapse: collapse; width: 100%; }
 table.grid th, table.grid td {
