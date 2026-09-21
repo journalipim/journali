@@ -634,7 +634,7 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
       <table class="grid values tab" :style="`width:${tableWidth}px`">
         <colgroup><col :style="`width:${ROWSEL_W}px`" /><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
         <thead><tr>
-          <th class="rowsel" title="Klick: alle Zeilen markieren" style="position:sticky">▤</th>
+          <th class="rowsel" title="Klick markiert alle Zeilen" style="position:sticky">▤</th>
           <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="[{ ro: !editable(c) && c.virtual !== 'label' }, kindOf(c)]" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="suffix" title="sprachabhängig — Spalte zeigt die gewählte Sprache">{{ locale }}</span><span v-if="c.unit" class="suffix">{{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
         </tr></thead>
         <tbody>

@@ -54,7 +54,7 @@ onMounted(load)
             <td><span class="chip" :style="`border-color:${color(t.color)};color:${color(t.color)}`">{{ t.stateLabel?.de || t.state }}</span></td>
             <td class="muted" :title="t.since ? `${when(t.since)} · ${t.actor}` : ''">{{ age(t.since) }}</td>
             <td class="muted" style="width:300px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="t.note ?? ''">{{ t.note }}</td>
-            <td><button class="x" @click="assign(t)" :title="t.assigned ? `Zuständigen ändern (jetzt ${t.assigned})` : 'Zuständigen wählen'">{{ t.assigned ? '👤 ' + t.assigned : '👤' }}</button></td>
+            <td><button class="x" @click="assign(t)" :title="t.assigned ? `Klick ändert den Zuständigen (jetzt ${t.assigned})` : 'Klick weist jemanden zu'">{{ t.assigned ? '👤 ' + t.assigned : '👤' }}</button></td>
             <td class="row" style="gap:4px;flex-wrap:wrap"><button v-for="tr in t.transitions" :key="tr.key" @click="step(t, tr)" :title="tr.noteRequired ? 'Notiz Pflicht' : (tr.effects?.join(', ') ?? '')">{{ tr.label?.de || tr.key }} →</button></td>
           </tr>
         </tbody>

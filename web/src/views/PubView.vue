@@ -279,16 +279,16 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 
 <template>
   <div class="pub-theme">
-  <div v-if="!srcOpen" class="pane" style="width:30px;flex:none;align-items:center;padding-top:6px;cursor:pointer" title="Pflegebaum aufklappen" @click="srcOpen = true">
+  <div v-if="!srcOpen" class="pane" style="width:30px;flex:none;align-items:center;padding-top:6px;cursor:pointer" title="Klick klappt den Pflegebaum auf" @click="srcOpen = true">
     <span class="muted">▸</span><span class="muted" style="writing-mode:vertical-rl;margin-top:8px;font-size:12px">▣ Pflegebaum</span>
   </div>
   <div v-else class="pane" :style="`width:${srcW}px;flex:none`">
     <div class="toolbar">
-      <button class="x" title="Pflegebaum einklappen" @click="srcOpen = false">◂</button>
+      <button class="x" title="Klick klappt den Pflegebaum ein" @click="srcOpen = false">◂</button>
       <h1>▣ Pflegebaum</h1>
       <span class="grow" />
-      <span class="view-chip" :class="{ on: dropMode === 'copy' }" @click="dropMode = 'copy'" title="Gruppe → Rubrik mit Aufbau (umbaubar)">⇊ kopieren</span>
-      <span class="view-chip" :class="{ on: dropMode === 'ref' }" @click="dropMode = 'ref'" title="Gruppe → Verweis (folgt dem Pflegebaum)">↗ verweisen</span>
+      <span class="view-chip" :class="{ on: dropMode === 'copy' }" @click="dropMode = 'copy'" title="Ziehen macht aus der Gruppe eine Rubrik mit ihrem Aufbau (danach frei umbaubar)">⇊ kopieren</span>
+      <span class="view-chip" :class="{ on: dropMode === 'ref' }" @click="dropMode = 'ref'" title="Ziehen macht aus der Gruppe einen Verweis (folgt dem Pflegebaum)">↗ verweisen</span>
     </div>
     <div class="toolbar" style="border-bottom:1px solid var(--line)"><input v-model="srcFilter" placeholder="filtern" style="width:100%" /></div>
     <div class="scroll tree">
@@ -311,8 +311,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </select>
       <button class="x" @click="newTree" title="neuer Publikationsbaum">+</button>
       <span class="grow" />
-      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Ausleitung anzeigen (${exp.in} ausgeleitet, ${exp.out} zurückgehalten)`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
-      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`Liste der ${unplaced.length} nicht einsortierten anzeigen`">⚠ {{ unplaced.length }}</button>
+      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Klick zeigt die Ausleitung (${exp.in} ausgeleitet, ${exp.out} zurückgehalten)`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
+      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`Klick zeigt ${unplaced.length} noch nicht einsortierte Produkte`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
       <div class="toolbar" style="white-space:nowrap" title="Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).">
@@ -332,7 +332,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
     <div v-if="ruleBox" class="picker-box" style="padding:8px">
       <div class="toolbar" style="padding:0 0 6px"><b>⚙ Regel in „{{ ruleBox.rubric.label }}“</b><span class="grow" /><button class="x" @click="ruleBox = null">✕</button></div>
       <div class="chips" style="margin-bottom:6px">
-        <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'name' }" @click="ruleBox.rule.kind = 'name'" title="Name gleich · Gruppe mit allem darunter">nach Name</span>
+        <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'name' }" @click="ruleBox.rule.kind = 'name'" title="Regel trifft Knoten mit diesem Namen (eine Gruppe kommt mit allem darunter)">nach Name</span>
         <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'attribute' }" @click="ruleBox.rule.kind = 'attribute'; ruleBox.rule.role = 'product'" title="Produkte, deren Wert (geerbt zählt) passt">nach Wert</span>
       </div>
       <div v-if="ruleBox.rule.kind === 'name'" class="chips" style="margin-bottom:6px">
@@ -357,7 +357,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </div>
     </div>
     <div v-if="showUnplaced" class="unplaced">
-      <div class="toolbar"><span class="muted">{{ unplaced.length }} Produkte noch nicht einsortiert</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `Alle ${unplaced.length} in „${selRubric.label}“ einsortieren` : 'Erst eine Rubrik anklicken'">alle in {{ selRubric ? '„' + selRubric.label + '“' : 'Rubrik …' }}</button></div>
+      <div class="toolbar"><span class="muted">{{ unplaced.length }} Produkte noch nicht einsortiert</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `Klick sortiert alle ${unplaced.length} in „${selRubric.label}“ ein` : 'erst eine Rubrik anklicken'">alle in {{ selRubric ? '„' + selRubric.label + '“' : 'Rubrik …' }}</button></div>
       <div class="scroll" style="max-height:200px">
         <div v-for="r in unplaced" :key="r.id" class="node" :title="tree.ancestors(r.id).map(a => a.label).join(' › ')">
           <span class="icon">{{ icon(r.role) }}</span><span class="label">{{ r.label }}</span><span class="grow" />

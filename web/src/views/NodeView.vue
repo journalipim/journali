@@ -134,7 +134,7 @@ const ROLES = ['group', 'product', 'variant']
 const canAt = (a, gdef, role) => (!a.levels || a.levels.includes(role)) && (!gdef?.activeFrom || DEPTH[role] >= DEPTH[gdef.activeFrom])
 // Attributnamen: Bezeichnung → Key → beides (Taloan: Vorlagen nutzen die Keys, da darf man nicht raten)
 function cycleNames() { store.attrNames = { label: 'key', key: 'both', both: 'label' }[store.attrNames] ?? 'label'; store.save() }
-const NAMES_TITLE = { label: 'Bezeichnung in der Sicht-Sprache — Klick: technische Keys', key: 'technische Keys — Klick: beides', both: 'Bezeichnung ⟨Key⟩ — Klick: nur Bezeichnung' }
+const NAMES_TITLE = { label: 'Klick zeigt technische Keys', key: 'Klick zeigt Bezeichnung und Key', both: 'Klick zeigt nur die Bezeichnung' }
 
 // ---- Die Gruppen, die hier gelten, in Sichtreihenfolge; darin die Attribute in Sichtreihenfolge
 const blocks = computed(() => {
@@ -646,7 +646,7 @@ function cellMenu(e, def, col, block) {
         <router-link :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }}</router-link><span class="sep">›</span>
       </template>
       <h1>{{ icon(node.role) }} {{ shownLabel }}</h1>
-      <button v-if="props.pub && node.role !== 'rubric'" class="x" title="Im Pflegebaum öffnen (⇶ führt zurück)" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
+      <button v-if="props.pub && node.role !== 'rubric'" class="x" title="Klick öffnet den Knoten im Pflegebaum (⇶ führt zurück)" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
       <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="const b = store.pubBack; store.pubBack = null; router.push(b.path)">⇶ {{ store.pubBack.label }}</button>
       <span class="grow" />
       <select v-if="node.role !== 'group' && node.role !== 'rubric'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
@@ -688,7 +688,7 @@ function cellMenu(e, def, col, block) {
         </select>
         <input ref="findBox" v-model="attrFilter" type="search" placeholder="Attribut oder Wert" style="width:200px;font-size:12px" title="Suche im Sichtbaren: Attributname und die Werte der gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
         <span v-if="attrFilter" class="muted">{{ hitCount }}</span>
-        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="`Filter aufheben (zeigt alle Attribute)`" @click="missingOnly = null">✗ fehlt für {{ missingOnly.channel }} <b>{{ missingOnly.cells.size }}</b></span>
+        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="`Klick hebt den Filter auf (zeigt wieder alle Attribute)`" @click="missingOnly = null">✗ fehlt für {{ missingOnly.channel }} <b>{{ missingOnly.cells.size }}</b></span>
       </span>
       <span class="grow" />
       <span class="grp" title="Anordnung der Gruppen">
@@ -756,7 +756,7 @@ function cellMenu(e, def, col, block) {
               <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
               <span v-if="def.multiple" class="muted" title="vermehrbar: mehrere Werte, Liste in der Zelle">≣</span>
               <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" title="Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig">⌖</span>
-              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'Vererbung wiederherstellen (eigener Wert wird durch den geerbten ersetzt)' : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
+              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'Klick stellt die Vererbung wieder her (eigener Wert wird durch den geerbten ersetzt)' : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
               <span v-if="def.required" class="warn" title="Pflicht">●</span>
               <span v-if="def.hereLocked" class="warn" :title="`nicht an ${roleLabel[node.role]} — verwendbar an: ${(def.levels ?? []).map(r => roleLabel[r]).join(', ')}`">⌀</span>
               <span v-else-if="def.whenLocked" class="warn" :title="`gilt nur bei ${store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute })} = ${def.when.values.slice(0, 6).join(', ')}${def.when.values.length > 6 ? ' …' : ''}`">⌀</span>
@@ -769,14 +769,14 @@ function cellMenu(e, def, col, block) {
               <HtmlCell v-else-if="def.type === 'html'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <Cell v-else :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
-                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten · ${master} später geändert` : (c.locale ? `${master}-Text übernehmen (wird eigene Übersetzung)` : `${master}-Text übernehmen (wird Grundtext)`)" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
+                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten · ${master} später geändert` : (c.locale ? `Klick übernimmt den ${master}-Text als Übersetzung` : `Klick übernimmt den ${master}-Text als Grundtext`)" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
           </tr>
           </template>
         </tbody>
       </table>
-      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="`Stand #${pubStand.stand} · gesetzt an „${pubStand.from.label}“ · ändern: Rechtsklick auf die Rubrik`">❄ Stand #{{ pubStand.stand }}{{ standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '' }} · von „{{ pubStand.from.label }}“</span></div>
+      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="`Stand #${pubStand.stand}, gesetzt an „${pubStand.from.label}“ (Rechtsklick auf die Rubrik ändert ihn)`">❄ Stand #{{ pubStand.stand }}{{ standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '' }} · von „{{ pubStand.from.label }}“</span></div>
       <table v-if="sourceRows.length" class="grid values" :style="`width:${180 + columns.length * 220}px;margin-top:8px`">
         <tbody>
           <tr class="group-row locked"><td :colspan="1 + columns.length"><span class="muted">▣ Pflegewerte von „{{ node.sourceLabel }}“ · nur lesen</span> <router-link :to="`/tree/${node.source}`" class="x edit" title="im Pflegebaum öffnen — dort ändern">▣</router-link></td></tr>
@@ -867,18 +867,18 @@ function cellMenu(e, def, col, block) {
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
               <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
-              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="Vererbung wiederherstellen (eigener Zustand wird aufgehoben)">↑ erben</button>
+              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="Klick stellt die Vererbung wieder her (eigener Zustand wird aufgehoben)">↑ erben</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
               <span class="grow" />
               <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
-                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`${effLabel(pe.effect)} (Wirkung des Schritts „${w.transition}“ nachholen)`">⚠ {{ effLabel(pe.effect) }}</button>
+                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Klick holt „${effLabel(pe.effect)}“ nach (Wirkung des Schritts „${w.transition}“ fehlt)`">⚠ {{ effLabel(pe.effect) }}</button>
                 <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben${pe.why ? ' · ' + pe.why : ''}`">⚠ nicht ausgeleitet</span>
               </template>
               <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="flex:0 0 300px;width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto;text-align:right">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
-              <button class="x" @click="wfAssign(w)" :title="w.assigned ? `Zuständigen ändern (jetzt ${w.assigned})` : 'Zuständigen wählen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
-              <button class="x" @click="wfHistory(w)" title="Verlauf anzeigen">≡</button>
+              <button class="x" @click="wfAssign(w)" :title="w.assigned ? `Klick ändert den Zuständigen (jetzt ${w.assigned})` : 'Klick weist jemanden zu'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
+              <button class="x" @click="wfHistory(w)" title="Klick zeigt den Verlauf">≡</button>
             </td>
           </tr>
         </tbody></table>
