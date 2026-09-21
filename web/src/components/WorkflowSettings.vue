@@ -76,7 +76,12 @@ function endDown(n, end, e) { const a = sketch.value.arrows[n]; const q = end ==
 function portUp(j, port) {
   const d = drag.value; if (!d) return; drag.value = null
   const w = cur.value
-  if (d.kind === 'reattach') { const t = w.transitions[d.n]; if (d.end === 'from') { t.from = w.states[j].key; t.fromPort = port } else { t.to = w.states[j].key; t.toPort = port } touch(); return }
+  if (d.kind === 'reattach') {
+    const t = w.transitions[d.n]; const idx = Object.fromEntries(w.states.map((s, i) => [s.key, i]))
+    if (d.end === 'from') { if (!t.toPort) t.toPort = nearestPort(posOf(w.states[idx[t.to]], idx[t.to]), d.fixed); t.from = w.states[j].key; t.fromPort = port }
+    else { if (!t.fromPort) t.fromPort = nearestPort(posOf(w.states[idx[t.from]], idx[t.from]), d.fixed); t.to = w.states[j].key; t.toPort = port }
+    touch(); return
+  }
   if (d.kind !== 'link' || d.i === j) return
   const k = 'step' + (w.transitions.length + 1)
   w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[d.i].key, to: w.states[j].key, roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [], fromPort: d.port, toPort: port }); selTrans.value = w.transitions.length - 1; touch()
