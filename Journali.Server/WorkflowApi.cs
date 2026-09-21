@@ -96,6 +96,6 @@ public static class WorkflowApi
     {
         var counts = new Dictionary<string, int>();
         foreach (var n in tree.Nodes.Values.Where(w.AppliesTo)) { var s = c.Workflows.StateOf(n.Id, w); counts[s] = counts.GetValueOrDefault(s) + 1; }
-        return new { w.Key, w.Label, w.Start, w.Roles, w.Families, states = w.States.Select(s => new { s.Key, s.Label, s.Color, s.Final, count = counts.GetValueOrDefault(s.Key) }).ToList(), transitions = w.Transitions, w.LastNumber };
+        return new { w.Key, w.Label, w.Start, w.Roles, w.Families, states = w.States.Select(s => new { s.Key, s.Label, s.Color, s.Final, s.X, s.Y, count = counts.GetValueOrDefault(s.Key) }).ToList(), transitions = w.Transitions, w.LastNumber };
     }
 }

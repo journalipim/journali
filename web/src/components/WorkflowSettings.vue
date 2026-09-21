@@ -1,7 +1,8 @@
 <script setup>
 // Einstellungen → Workflows (27, Taloan 21.09.2026: „Workflow-Designer mit Freigaben, Korrekturschleifen“): je Workflow die Zustände
 // (Kacheln in der Skizze), die Übergänge (Pfeile: von → nach, Rolle, Notiz-Pflicht, Wirkungen) und wofür er gilt. Alles im Journal
-// (WorkflowDefined); Speichern schreibt die ganze Definition. Die Skizze ist eine Vorschau — gezeichnet wird in den Tabellen.
+// (WorkflowDefined); Speichern schreibt die ganze Definition. Die Grafik ist die Arbeitsfläche (Taloan, 21.09.: „verschieben und anordnen“):
+// Kacheln frei ziehen (Lage wird gespeichert), vom ● auf eine andere Kachel ziehen = Übergang, Klick markiert die Zeile, Entf löscht.
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
@@ -12,13 +13,13 @@ const COLORS = [['muted', 'grau'], ['warn', 'gelb'], ['neg', 'rot'], ['accent', 
 const ROLES = [['group', '▣ Gruppe'], ['product', '▦ Produkt'], ['variant', '◆ Variante']]
 const EFFECTS = computed(() => { const m = store.model; const out = []; for (const c of m?.channels ?? []) { out.push([`release:${c.key}`, `Freigabe ${c.key}`], [`revoke:${c.key}`, `Freigabe ${c.key} zurück`]) } out.push(['status:active', 'Status aktiv'], ['status:draft', 'Status Entwurf'], ['status:discontinued', 'Status ausgelaufen']); return out })
 async function load() { try { list.value = await api.get('/api/workflows'); if (cur.value) cur.value = clone(list.value.find(w => w.key === cur.value.key) ?? list.value[0] ?? null); else cur.value = clone(list.value[0] ?? null) } catch (e) { store.toast(e.message) } try { roles.value = (await api.get('/api/auth/roles')).map(r => r.key) } catch { roles.value = ['admin', 'editor'] } }
-const clone = w => w ? JSON.parse(JSON.stringify({ key: w.key, label: w.label ?? {}, start: w.start, roles: w.roles ?? [], families: w.families ?? [], states: w.states.map(s => ({ key: s.key, label: s.label ?? {}, color: s.color ?? 'muted', final: !!s.final, count: s.count ?? 0 })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label ?? {}, from: t.from, to: t.to, roles: t.roles ?? [], noteRequired: !!t.noteRequired, effects: t.effects ?? [] })) })) : null
+const clone = w => w ? JSON.parse(JSON.stringify({ key: w.key, label: w.label ?? {}, start: w.start, roles: w.roles ?? [], families: w.families ?? [], states: w.states.map(s => ({ key: s.key, label: s.label ?? {}, color: s.color ?? 'muted', final: !!s.final, x: s.x ?? null, y: s.y ?? null, count: s.count ?? 0 })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label ?? {}, from: t.from, to: t.to, roles: t.roles ?? [], noteRequired: !!t.noteRequired, effects: t.effects ?? [], escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles ?? [] })) })) : null
 function pick(w) { cur.value = clone(w); dirty.value = false }
 function touch() { dirty.value = true }
 async function save() {
   const w = cur.value; if (!w) return
   try {
-    await api.post(`/api/workflows/${encodeURIComponent(w.key)}`, { label: w.label, states: w.states.map(s => ({ key: s.key, label: s.label, color: s.color, final: s.final })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label, from: t.from, to: t.to, roles: t.roles.length ? t.roles : null, noteRequired: t.noteRequired, effects: t.effects.length ? t.effects : null })), start: w.start, roles: w.roles.length ? w.roles : null, families: null }, 'PUT')
+    await api.post(`/api/workflows/${encodeURIComponent(w.key)}`, { label: w.label, states: w.states.map(s => ({ key: s.key, label: s.label, color: s.color, final: s.final, x: s.x, y: s.y })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label, from: t.from, to: t.to, roles: t.roles.length ? t.roles : null, noteRequired: t.noteRequired, effects: t.effects.length ? t.effects : null, escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles?.length ? t.escalateRoles : null })), start: w.start, roles: w.roles.length ? w.roles : null, families: null }, 'PUT')
     dirty.value = false; store.toast(`Workflow „${w.label?.de || w.key}“ gespeichert`, 'ok'); await load()
   } catch (e) { store.toast(e.message) }
 }
@@ -36,27 +37,59 @@ function addState() { const w = cur.value; const k = 'state' + (w.states.length 
 function delState(i) { const w = cur.value; const k = w.states[i].key; if (w.transitions.some(t => t.from === k || t.to === k)) { store.toast('erst die Übergänge davon/dahin entfernen'); return } w.states.splice(i, 1); touch() }
 function addTransition() { const w = cur.value; const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[0]?.key ?? '', to: w.states[1]?.key ?? w.states[0]?.key ?? '', roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); touch() }
 const selState = ref(null), selTrans = ref(null)   // markierte Zeile (Grafik ↔ Tabelle)
-const drag = ref(null)   // { kind: 'state' | 'link', i }
-function stateDown(i, e) { drag.value = { kind: e.shiftKey ? 'link' : 'state', i }; selState.value = i; selTrans.value = null }
-function linkDown(i) { drag.value = { kind: 'link', i }; selState.value = i }
+const W = 150, H = 46
+const svgEl = ref(null)
+// Lage: gespeichert (x/y) oder Reihe — beim ersten Ziehen bekommt jede Kachel ihre Lage
+const posOf = (s, i) => ({ x: s.x ?? 20 + i * (W + 40), y: s.y ?? 70 })
+function svgPoint(e) { const m = svgEl.value?.getScreenCTM(); if (!m) return { x: 0, y: 0 }; const p = m.inverse(); return { x: (e.clientX - m.e) / m.a, y: (e.clientY - m.f) / m.d } }
+const drag = ref(null)   // { kind: 'move', i, dx, dy } | { kind: 'link', i, x, y }
+function stateDown(i, e) {
+  selState.value = i; selTrans.value = null
+  const w = cur.value; w.states.forEach((s, k) => { const p = posOf(s, k); s.x = p.x; s.y = p.y })   // Lage festhalten, damit die anderen nicht springen
+  const p = svgPoint(e); drag.value = { kind: 'move', i, dx: p.x - w.states[i].x, dy: p.y - w.states[i].y }
+}
+function linkDown(i, e) { selState.value = i; const p = posOf(cur.value.states[i], i); drag.value = { kind: 'link', i, x: p.x + W, y: p.y + H - 8, tx: p.x + W, ty: p.y + H - 8 } }
+function canvasMove(e) {
+  const d = drag.value; if (!d) return; const p = svgPoint(e)
+  if (d.kind === 'move') { const s = cur.value.states[d.i]; s.x = Math.max(0, Math.round(p.x - d.dx)); s.y = Math.max(0, Math.round(p.y - d.dy)); touch() }
+  else { d.tx = p.x; d.ty = p.y }
+}
 function stateUp(j) {
-  const d = drag.value; drag.value = null; if (!d || d.i === j) return
-  const w = cur.value
-  if (d.kind === 'state') { const [s] = w.states.splice(d.i, 1); w.states.splice(j, 0, s); selState.value = j; touch(); return }
-  // neuer Übergang von d.i nach j
-  const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[d.i].key, to: w.states[j].key, roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); selTrans.value = w.transitions.length - 1; touch()
+  const d = drag.value; drag.value = null; if (!d || d.kind !== 'link' || d.i === j) return
+  const w = cur.value; const k = 'step' + (w.transitions.length + 1)
+  w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[d.i].key, to: w.states[j].key, roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); selTrans.value = w.transitions.length - 1; touch()
+}
+function canvasUp() { drag.value = null }
+function addStateAt() { const w = cur.value; const k = 'state' + (w.states.length + 1); const last = w.states.length ? posOf(w.states[w.states.length - 1], w.states.length - 1) : { x: -W - 40, y: 70 }; w.states.push({ key: k, label: { de: k, en: k }, color: 'muted', final: false, x: last.x + W + 40, y: last.y, count: 0 }); selState.value = w.states.length - 1; touch() }
+function delSelected() {
+  if (selTrans.value != null) { cur.value.transitions.splice(selTrans.value, 1); selTrans.value = null; touch(); return }
+  if (selState.value != null) { const n = cur.value.states.length; delState(selState.value); if (cur.value.states.length < n) selState.value = null }
 }
 function toggleIn(arr, v) { const i = arr.indexOf(v); i < 0 ? arr.push(v) : arr.splice(i, 1); touch() }
 const stateLabel = k => cur.value?.states.find(s => s.key === k)?.label?.de || k
 const color = c => ({ pos: 'var(--pos)', neg: 'var(--neg)', warn: 'var(--warn)', accent: 'var(--accent)' })[c] ?? 'var(--muted)'
-// Skizze: Zustände in einer Reihe, Pfeile darüber (vorwärts) und darunter (zurück — die Korrekturschleife)
+// Skizze: Kacheln an ihrer Lage, Pfeile von Rand zu Rand (leicht gebogen, damit Hin und Zurück nicht aufeinanderliegen), Schleife oben
 const sketch = computed(() => {
   const w = cur.value; if (!w) return null
-  const W = 150, G = 40, H = 46, top = 70, x = i => 20 + i * (W + G)
+  const pos = w.states.map((s, i) => posOf(s, i))
   const idx = Object.fromEntries(w.states.map((s, i) => [s.key, i]))
-  const arrows = w.transitions.map((t, n) => { const a = idx[t.from] ?? 0, b = idx[t.to] ?? 0; const fwd = b > a || a === b; const x1 = x(a) + W / 2, x2 = x(b) + W / 2; const y = fwd ? top : top + H; const lift = fwd ? -(22 + 14 * Math.abs(b - a)) : 22 + 14 * Math.abs(b - a); const cx = (x1 + x2) / 2
-    return { t, d: a === b ? `M${x1 - 20},${y} C${x1 - 40},${y - 40} ${x1 + 40},${y - 40} ${x1 + 20},${y}` : `M${x1},${y} Q${cx},${y + lift} ${x2},${y}`, lx: cx, ly: y + lift / 2 - (fwd ? 4 : -12), back: !fwd } })
-  return { W, H, top, x, width: 40 + w.states.length * (W + G), height: top + H + 90 + 14 * w.states.length, arrows }
+  const edge = (c, to) => {   // Schnittpunkt der Strecke Mitte→to mit dem Kachelrand
+    const dx = to.x - c.x, dy = to.y - c.y; if (!dx && !dy) return c
+    const sx = (W / 2) / Math.abs(dx || 1e-9), sy = (H / 2) / Math.abs(dy || 1e-9); const k = Math.min(sx, sy)
+    return { x: c.x + dx * k, y: c.y + dy * k }
+  }
+  const arrows = w.transitions.map(t => {
+    const a = pos[idx[t.from] ?? 0], b = pos[idx[t.to] ?? 0]
+    const ca = { x: a.x + W / 2, y: a.y + H / 2 }, cb = { x: b.x + W / 2, y: b.y + H / 2 }
+    if (t.from === t.to) return { t, d: `M${ca.x - 20},${a.y} C${ca.x - 40},${a.y - 45} ${ca.x + 40},${a.y - 45} ${ca.x + 20},${a.y}`, lx: ca.x, ly: a.y - 36 }
+    const p1 = edge(ca, cb), p2 = edge(cb, ca)
+    const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1
+    const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len, bend = Math.min(40, 12 + len * 0.12)   // Bogen nach links der Richtung: Hin und Zurück trennen sich
+    const cx = mx + nx * bend, cy = my + ny * bend
+    return { t, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: mx + nx * bend * 0.6, ly: my + ny * bend * 0.6 - 3 }
+  })
+  const width = Math.max(600, ...pos.map(p => p.x + W + 60)), height = Math.max(240, ...pos.map(p => p.y + H + 60))
+  return { W, H, pos, width, height, arrows }
 })
 onMounted(load)
 </script>
@@ -78,13 +111,23 @@ onMounted(load)
         <span class="muted">gilt für</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
         <span class="muted" style="font-size:11px">(nichts angehakt = alle)</span>
       </div>
-      <svg v-if="sketch" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px`" font-size="11" font-family="system-ui">
+      <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · vom ● auf eine andere Kachel ziehen = Übergang · Klick markiert · Entf löscht · Doppelklick = Start <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button></div>
+      <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none`" font-size="11" font-family="system-ui"
+        @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
         <defs><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
-        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" text-anchor="middle" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'">{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan></text></g>
-        <g v-for="(s, i) in cur.states" :key="s.key" style="cursor:grab" @mousedown.prevent="stateDown(i, $event)" @mouseup="stateUp(i)" @dblclick="cur.start = s.key; touch()"><title>ziehen = Reihenfolge · vom ● ziehen = neuer Übergang · Doppelklick = Start</title><rect :x="sketch.x(i)" :y="sketch.top" :width="sketch.W" :height="sketch.H" rx="6" :fill="selState === i ? 'var(--accent-soft)' : 'var(--pane)'" :stroke="color(s.color)" :stroke-width="s.key === cur.start ? 2.5 : 1.5" /><circle v-if="s.key === cur.start" :cx="sketch.x(i) - 12" :cy="sketch.top + sketch.H / 2" r="5" fill="var(--text)"><title>Start</title></circle><g v-if="s.final"><circle :cx="sketch.x(i) + sketch.W + 12" :cy="sketch.top + sketch.H / 2" r="6" fill="none" stroke="var(--text)" stroke-width="1.5" /><circle :cx="sketch.x(i) + sketch.W + 12" :cy="sketch.top + sketch.H / 2" r="3" fill="var(--text)" /></g><circle :cx="sketch.x(i) + sketch.W" :cy="sketch.top + sketch.H - 8" r="5" fill="var(--accent)" style="cursor:crosshair" @mousedown.stop.prevent="linkDown(i)"><title>von hier auf einen anderen Zustand ziehen = neuer Übergang</title></circle><text :x="sketch.x(i) + sketch.W / 2" :y="sketch.top + 20" text-anchor="middle" fill="var(--text)" font-weight="600">{{ s.label?.de || s.key }}</text><text :x="sketch.x(i) + sketch.W / 2" :y="sketch.top + 36" text-anchor="middle" fill="var(--muted)">{{ s.count }} Knoten{{ s.final ? ' · Ende' : '' }}{{ s.key === cur.start ? ' · Start' : '' }}</text></g>
+        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" text-anchor="middle" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'">{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
+        <line v-if="drag?.kind === 'link'" :x1="drag.x" :y1="drag.y" :x2="drag.tx" :y2="drag.ty" stroke="var(--accent)" stroke-dasharray="4 3" />
+        <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : 'cursor:grab'" @mousedown.prevent.stop="stateDown(i, $event)" @mouseup.stop="stateUp(i); canvasUp()" @dblclick="cur.start = s.key; touch()">
+          <rect :x="sketch.pos[i].x" :y="sketch.pos[i].y" :width="W" :height="H" rx="6" :fill="selState === i ? 'var(--accent-soft)' : 'var(--pane)'" :stroke="color(s.color)" :stroke-width="s.key === cur.start ? 2.5 : 1.5" />
+          <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 20" text-anchor="middle" fill="var(--text)" font-weight="600">{{ s.label?.de || s.key }}</text>
+          <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 36" text-anchor="middle" fill="var(--muted)">{{ s.count ?? 0 }} Knoten{{ s.final ? ' · Ende' : '' }}{{ s.key === cur.start ? ' · Start' : '' }}</text>
+          <circle v-if="s.key === cur.start" :cx="sketch.pos[i].x - 12" :cy="sketch.pos[i].y + H / 2" r="5" fill="var(--text)"><title>Start</title></circle>
+          <g v-if="s.final"><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="6" fill="none" stroke="var(--text)" stroke-width="1.5" /><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="3" fill="var(--text)" /></g>
+          <circle :cx="sketch.pos[i].x + W" :cy="sketch.pos[i].y + H - 8" r="5" fill="var(--accent)" style="cursor:crosshair" @mousedown.stop.prevent="linkDown(i, $event)"><title>von hier auf eine andere Kachel ziehen = neuer Übergang</title></circle>
+        </g>
       </svg>
-      <div class="row" style="gap:16px;align-items:flex-start;flex-wrap:wrap">
-        <table class="grid form" style="width:auto"><thead><tr><th colspan="6">Zustände <button class="x" @click="addState" title="Zustand hinzufügen">+</button></th></tr><tr><th>Key</th><th>Bezeichnung</th><th>Farbe</th><th title="Ende des Wegs">Ende</th><th>Knoten</th><th></th></tr></thead><tbody>
+      <div class="row" style="gap:32px;align-items:flex-start;flex-wrap:wrap;margin-top:12px">
+        <table class="grid form" style="width:auto;margin-bottom:16px"><thead><tr><th colspan="6">Zustände <button class="x" @click="addState" title="Zustand hinzufügen">+</button></th></tr><tr><th>Key</th><th>Bezeichnung</th><th>Farbe</th><th title="Ende des Wegs">Ende</th><th>Knoten</th><th></th></tr></thead><tbody>
           <tr v-for="(s, i) in cur.states" :key="i" :class="{ selected: selState === i }" @click="selState = i; selTrans = null"><td><input v-model="s.key" type="text" class="mono" style="width:100px" @input="touch" /></td><td><input v-model="s.label.de" type="text" style="width:140px" @input="touch" /></td>
             <td><select v-model="s.color" @change="touch"><option v-for="[c, l] in COLORS" :key="c" :value="c">{{ l }}</option></select></td><td><input type="checkbox" v-model="s.final" @change="touch" /></td><td class="muted">{{ s.count }}</td><td><button class="x" @click="delState(i)">×</button></td></tr>
         </tbody></table>

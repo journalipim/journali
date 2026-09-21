@@ -478,7 +478,7 @@ public sealed record TermDefined(Labels Text, string? Note = null);
 public sealed record TermRetired();
 
 /// <summary>Zustand eines Workflows (27): Key, Text je Sprache, Farbe (Token oder Hex), Final = Ende des Wegs.</summary>
-public sealed record WfState(string Key, Labels Label, string? Color = null, bool Final = false);
+public sealed record WfState(string Key, Labels Label, string? Color = null, bool Final = false, int? X = null, int? Y = null);   // X/Y: Lage im Designer (Taloan, 21.09.2026), null = Reihe
 /// <summary>Übergang: von → nach, wer ihn gehen darf (Rollen; leer = jede Rolle mit Schreibrecht), Notiz Pflicht (Korrekturschleife),
 /// Wirkungen: <c>release:&lt;kanal&gt;</c>, <c>revoke:&lt;kanal&gt;</c>, <c>status:&lt;wert&gt;</c>.</summary>
 public sealed record WfTransition(string Key, string From, string To, Labels Label, string[]? Roles = null, bool NoteRequired = false, string[]? Effects = null, int? EscalateAfterDays = null, string[]? EscalateRoles = null);   // Eskalation (Taloan, 21.09.2026): nach n Tagen im Zustand dürfen auch EscalateRoles (leer = jede Rolle mit Schreibrecht)
