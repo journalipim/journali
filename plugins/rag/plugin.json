@@ -27,7 +27,14 @@
       "{withVersions}"
     ],
     "description": "Dokumente je Knoten (Markdown + nodes.jsonl) für RAG in ein Verzeichnis",
+    "profile": "generic",
     "params": [
+      {
+        "key": "profile",
+        "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
+        "type": "profile",
+        "default": ""
+      },
       {
         "key": "root",
         "label": "Teilbaum (leer = alles)",

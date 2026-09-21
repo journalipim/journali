@@ -19,7 +19,8 @@ public static class MediaApi
     public static void Map(RouteGroupBuilder api)
     {
         // Liste, neueste zuerst; q sucht in Name und Werten
-        api.MapGet("/media", (Catalog c, string? q = null, int limit = 200) =>
+        // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
+        api.MapGet("/media", (Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null) =>
             c.With((model, tree, _) =>
             {
                 var all = c.Media.All.Values.AsEnumerable();
@@ -29,8 +30,43 @@ public static class MediaApi
                     all = all.Where(m => m.Name.Contains(s, StringComparison.OrdinalIgnoreCase) || m.Id.Contains(s, StringComparison.OrdinalIgnoreCase)
                         || m.Values.Values.Any(v => v.Contains(s, StringComparison.OrdinalIgnoreCase)));
                 }
-                return all.OrderByDescending(m => m.LastNumber).Take(Math.Clamp(limit, 1, 2000)).Select(m => MediaView.Of(m, c.Relations.To(m.Id).Count())).ToList();
+                if (folder == "-") all = all.Where(m => m.Folder is null);
+                else if (!string.IsNullOrWhiteSpace(folder))
+                {
+                    var set = deep ? c.Media.FolderAndBelow(folder).ToHashSet() : new HashSet<string> { folder };
+                    all = all.Where(m => m.Folder is { } f && set.Contains(f));
+                }
+                var rows = all.Select(m => (m, used: c.Relations.To(m.Id).Count()));
+                var down = desc ?? (sort is null or "recent" or "date" or "size" or "used");   // Neuestes/Grösstes/Meistgenutztes zuerst, Namen A→Z
+                Func<(Medium m, int used), object> key = sort switch
+                {
+                    "name" => x => x.m.Name,
+                    "size" => x => x.m.Bytes,
+                    "used" => x => x.used,
+                    "date" => x => x.m.LastAt,
+                    _ => x => x.m.LastNumber,
+                };
+                var sorted = sort == "name"
+                    ? (down ? rows.OrderByDescending(x => x.m.Name, StringComparer.OrdinalIgnoreCase) : rows.OrderBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase))
+                    : (down ? rows.OrderByDescending(key).ThenBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase) : rows.OrderBy(key).ThenBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase));
+                return sorted.Take(Math.Clamp(limit, 1, 5000)).Select(x => MediaView.Of(x.m, x.used)).ToList();
             }));
+
+        // Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren, wie ein interner Dateimanager“)
+        api.MapGet("/media/folders", (Catalog c) => c.With((_, _, _) =>
+        {
+            var count = c.Media.All.Values.Where(m => m.Folder is not null).GroupBy(m => m.Folder!).ToDictionary(g => g.Key, g => g.Count());
+            return new
+            {
+                total = c.Media.All.Count, unfiled = c.Media.All.Values.Count(m => m.Folder is null),
+                folders = c.Media.Folders.Values.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).Select(f => new { f.Id, f.Name, f.Parent, media = count.GetValueOrDefault(f.Id) }).ToList(),
+            };
+        }));
+        api.MapPost("/media/folders", (FolderBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.CreateMediaFolder(x, b.Name, b.Parent)));
+        api.MapPut("/media/folders/{id}/name", (string id, FolderBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RenameMediaFolder(x, id, b.Name)));
+        api.MapPut("/media/folders/{id}/parent", (string id, FolderBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.MoveMediaFolder(x, id, b.Parent)));
+        api.MapDelete("/media/folders/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireMediaFolder(x, id)));
+        api.MapPut("/media/{id}/folder", (string id, FolderBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.FileMedium(x, id, b.Folder)));
 
         api.MapGet("/media/{id}", (string id, Catalog c) =>
             c.With((_, _, _) => c.Media.All.TryGetValue(id, out var m) ? MediaView.Of(m, c.Relations.To(m.Id).Count()) : null) is { } v ? Results.Ok(v) : Results.NotFound());
@@ -181,11 +217,12 @@ public static class MediaApi
 
 /// <summary>Ein Medium in der Antwort — plus, an wie vielen Knoten es hängt.</summary>
 public sealed record FetchRequest(string? Url, string? Name);
+public sealed record FolderBody(string? Name, string? Parent, string? Folder);
 public sealed record CopyRequest(MediaConfig? From);
 
 public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime, string Name, bool IsImage, List<ValueView> Values,
-    Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor)
+    Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Folder)
 {
     public static MediaView Of(Medium m, int used) => new(m.Id, m.Sha256, m.Bytes, m.Mime, m.Name, m.IsImage, ValueView.Of(m).ToList(),
-        m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor);
+        m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor, m.Folder);
 }

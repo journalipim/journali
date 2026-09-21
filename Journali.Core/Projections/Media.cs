@@ -25,6 +25,17 @@ public sealed class Medium
     public string LastActor { get; set; } = "";
     public int Entries { get; set; }
     public bool IsImage => Mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Ordner der Bibliothek (MediaFiled); null = kein Ordner.</summary>
+    public string? Folder { get; set; }
+}
+
+/// <summary>Ein Medienordner (Taloan, 21.09.2026): Name, Vater (null = oberste Ebene). Strom <c>mf-…</c>.</summary>
+public sealed class MediaFolder
+{
+    public required string Id { get; init; }
+    public required string Name { get; set; }
+    public string? Parent { get; set; }
+    public long LastNumber { get; set; }
 }
 
 /// <summary>Abbild „die Medien": alle Medien, Index nach Hash (gleiche Datei zweimal = ein Medium) und externer Kennung.</summary>
@@ -33,10 +44,31 @@ public sealed class Media : IProjection
     private readonly Dictionary<string, Medium> _all = new();
     private readonly Dictionary<string, string> _bySha = new();
     private readonly Dictionary<(string System, string Id), string> _external = new();
+    private readonly Dictionary<string, MediaFolder> _folders = new();
 
     public long LastApplied { get; private set; }
 
     public IReadOnlyDictionary<string, Medium> All => _all;
+    public IReadOnlyDictionary<string, MediaFolder> Folders => _folders;
+
+    /// <summary>Ordner unter diesem (null = oberste Ebene), nach Name.</summary>
+    public IEnumerable<MediaFolder> SubFolders(string? parent) => _folders.Values.Where(f => f.Parent == parent).OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
+    /// <summary>Medien in diesem Ordner (null = ohne Ordner).</summary>
+    public IEnumerable<Medium> InFolder(string? folder) => _all.Values.Where(m => m.Folder == folder);
+    /// <summary>Der Ordner und alles darunter (für „mit Unterordnern“).</summary>
+    public IEnumerable<string> FolderAndBelow(string id)
+    {
+        if (!_folders.ContainsKey(id)) yield break;
+        var stack = new Stack<string>(); stack.Push(id);
+        while (stack.Count > 0) { var f = stack.Pop(); yield return f; foreach (var k in _folders.Values.Where(x => x.Parent == f)) stack.Push(k.Id); }
+    }
+    /// <summary>Pfad vom obersten Ordner bis zu diesem.</summary>
+    public IEnumerable<MediaFolder> PathOf(string? id)
+    {
+        var chain = new List<MediaFolder>();
+        for (var f = id is null ? null : _folders.GetValueOrDefault(id); f is not null; f = f.Parent is null ? null : _folders.GetValueOrDefault(f.Parent)) { if (chain.Contains(f)) break; chain.Add(f); }
+        chain.Reverse(); return chain;
+    }
 
     public Medium? BySha(string sha256) => _bySha.TryGetValue(sha256, out var id) && _all.TryGetValue(id, out var m) ? m : null;
 
@@ -47,6 +79,27 @@ public sealed class Media : IProjection
     {
         LastApplied = entry.Number;
         Medium m;
+        // Medienordner: eigener Strom mf-…
+        switch (entry.Type)
+        {
+            case Types.MediaFolderCreated:
+                var fc = Types.Deserialize<MediaFolderCreated>(entry.Payload);
+                _folders[entry.Stream] = new MediaFolder { Id = entry.Stream, Name = fc.Name, Parent = fc.Parent, LastNumber = entry.Number };
+                return;
+            case Types.MediaFolderRenamed:
+                if (_folders.TryGetValue(entry.Stream, out var fr)) { fr.Name = Types.Deserialize<MediaFolderRenamed>(entry.Payload).Name; fr.LastNumber = entry.Number; }
+                return;
+            case Types.MediaFolderMoved:
+                if (_folders.TryGetValue(entry.Stream, out var fm)) { fm.Parent = Types.Deserialize<MediaFolderMoved>(entry.Payload).Parent; fm.LastNumber = entry.Number; }
+                return;
+            case Types.MediaFolderRetired:
+                if (_folders.Remove(entry.Stream))
+                {   // was noch drin ist (sollte nichts sein — der Befehl prüft), rutscht eine Ebene hoch
+                    foreach (var k in _folders.Values.Where(x => x.Parent == entry.Stream)) k.Parent = null;
+                    foreach (var x in _all.Values.Where(x => x.Folder == entry.Stream)) x.Folder = null;
+                }
+                return;
+        }
         if (entry.Type == Types.MediaCreated)
         {
             var mc = Types.Deserialize<MediaCreated>(entry.Payload);
@@ -59,6 +112,10 @@ public sealed class Media : IProjection
             if (!_all.TryGetValue(entry.Stream, out m!)) return;   // kein Medium: übergehen
             switch (entry.Type)
             {
+                case Types.MediaFiled:
+                    var mf = Types.Deserialize<MediaFiled>(entry.Payload);
+                    m.Folder = mf.Folder is { } f && _folders.ContainsKey(f) ? f : null;
+                    break;
                 case Types.MediaRetired:
                     _all.Remove(m.Id);
                     if (_bySha.GetValueOrDefault(m.Sha256) == m.Id) _bySha.Remove(m.Sha256);

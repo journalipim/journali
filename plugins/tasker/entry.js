@@ -161,6 +161,79 @@ async function mount(root, ctx) {
     detail.style.display = 'flex'; detail.style.flexDirection = 'column'
   }
 
+  // ---- Generischer Profil-Editor (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen — entsprechend muss die GUI der Plugins ausgebaut werden“):
+  // für Prozesse ohne eigene Ansicht ("profile": "generic" im Manifest). Formular aus den Parametern — ohne profile, Dateien/Verzeichnisse
+  // (Sache des Taskers) und Geheimnisse (am Profil beim Server, 🔒). Gespeichert als profile:<name> in den Daten des Plugins (Journal).
+  function profileEditor(p, defs, current, onDone) {
+    const fields = defs.filter(d => !(d.type === 'profile' || d.key === 'profile' || d.type === 'path' || d.type === 'dir'))
+    const box = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50' })
+    const dlg = el('div', { style: 'width:560px;max-height:90vh;overflow:auto;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px' })
+    const sel = el('select', { style: 'flex:1' }, el('option', { value: '' }, '— neues Profil —'))
+    const nameIn = el('input', { type: 'text', placeholder: 'Name des Profils', style: 'flex:1' })
+    const form = el('div'); const inputs = {}; let secretKeys = []
+    const status = el('span', { class: 'muted', style: 'font-size:12px' })
+    const close = () => box.remove()
+    const draw = (data = {}) => {
+      form.innerHTML = ''
+      for (const d of fields) {
+        const cur = data[d.key] ?? d.default ?? ''
+        let inp
+        if (d.secret) {
+          inp = el('input', { type: 'password', placeholder: secretKeys.includes(d.key) ? '•••••• (hinterlegt — leer lassen = behalten)' : 'geheim — bleibt beim Server, am Profil', style: 'width:100%' })
+          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label + ' 🔒'), inp)
+        } else if (d.type === 'node') {
+          inp = { value: cur }
+          const shown = el('span', { class: 'muted' }, cur ? tree.byId.get(cur)?.label ?? cur : '(leer)')
+          const tb = el('div'); ctx.treePicker(tb, { value: cur || null, roles: ['group', 'product'], height: 160, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
+          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), tb)
+        } else if (d.type === 'pub') {
+          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, '(keiner)'), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`))); inp.value = cur
+          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
+        } else if (d.type === 'boolean') {
+          inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
+          Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })
+          form.append(el('label', { style: 'display:flex;gap:6px;align-items:center;margin-top:8px' }, inp, d.label))
+        } else {
+          inp = el('input', { type: d.type === 'number' ? 'number' : 'text', value: String(cur), style: 'width:100%' })
+          form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
+        }
+        inputs[d.key] = inp
+      }
+    }
+    const loadNames = async keep => { const names = (await api.get(`/api/plugins/${p.key}/data?prefix=profile:`).catch(() => [])).map(n => n.slice(8)); sel.innerHTML = ''; sel.append(el('option', { value: '' }, '— neues Profil —'), ...names.map(n => el('option', { value: n }, n))); sel.value = keep && names.includes(keep) ? keep : '' }
+    const loadOne = async n => {
+      nameIn.value = n
+      if (!n) { secretKeys = []; draw({}); return }
+      const data = (await api.get(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`).catch(() => null)) ?? {}
+      secretKeys = (await api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => ({ keys: [] }))).keys
+      draw(data)
+    }
+    sel.addEventListener('change', () => loadOne(sel.value))
+    const save = async () => {
+      const n = nameIn.value.trim(); if (!n || n.includes(':')) { store.toast('Name fehlt (ohne Doppelpunkt)'); return }
+      const data = {}, secrets = {}
+      for (const d of fields) { const v = inputs[d.key]?.value ?? ''; if (d.secret) { if (v) secrets[d.key] = v } else if (v !== '') data[d.key] = d.type === 'boolean' ? v === 'true' : v }
+      try {
+        await api.post(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`, data, 'PUT')
+        if (Object.keys(secrets).length) await api.post(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`, { values: secrets }, 'PUT')
+        store.toast(`Profil „${n}“ gespeichert`, 'ok'); close(); onDone?.(n)
+      } catch (e) { store.toast(e.message) }
+    }
+    const del = async () => {
+      const n = sel.value; if (!n) return
+      if (!await dialog.confirm({ title: `Profil „${n}“ löschen?`, text: 'Jobs, die es nennen, laufen dann ohne diese Werte.', ok: '🗑 Löschen', danger: true })) return
+      try { await api.del(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`); await api.del(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => {}); await loadNames(''); await loadOne(''); onDone?.('') } catch (e) { store.toast(e.message) }
+    }
+    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, `✎ Profile · ${(typeof p.label === 'string' ? p.label : p.label?.de) || p.key}`),
+      el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 8px' }, 'Was der Job braucht, steht im Profil — Dateien und Verzeichnisse setzt der Job selbst.'),
+      el('div', { style: 'display:flex;gap:6px' }, sel, nameIn, el('button', { type: 'button', class: 'x', title: 'Profil löschen', onclick: del }, '🗑')),
+      form,
+      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;align-items:center' }, status, el('span', { class: 'grow' }), el('button', { type: 'button', onclick: close }, 'Abbrechen'), el('button', { type: 'button', class: 'primary', onclick: save }, '💾 Speichern')))
+    box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) close() })
+    document.body.append(box)
+    loadNames(current).then(() => loadOne(current || ''))
+  }
+
   // ---- Anlegen / Bearbeiten: Plugin, Parameter aus dem Manifest, Zeitplan, Zeitgrenze
   async function openEdit(j) {
     const box = el('div', { class: 'overlay', style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40' })
@@ -184,8 +257,18 @@ async function mount(root, ctx) {
       paramsBox.innerHTML = ''
       const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
       pluginHint.textContent = p?.description ?? ''; pluginHint.title = pluginHint.textContent
+      // Mit Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen — Ziel im Baum beim Import, Quelle vom Baum beim Export“):
+      // sichtbar nur Profil, Dateien/Verzeichnisse und Schalter; der Rest klappt unter „Überschreiben“ — leer = wie im Profil
+      const hasProfile = defs.some(d => d.type === 'profile' || d.key === 'profile')
+      const more = el('div', { style: 'display:none;border-left:2px solid var(--line);padding-left:8px;margin-top:6px' })
+      const moreBtn = el('button', { type: 'button', class: 'x', style: 'margin-top:8px', title: 'Ziel/Quelle im Baum, Texte, Geheimnisse einzeln setzen — leer = wie im Profil', onclick: () => { const on = more.style.display === 'none'; more.style.display = on ? '' : 'none'; moreBtn.textContent = (on ? '▾' : '▸') + ' Überschreiben (leer = wie im Profil)' } }, '▸ Überschreiben (leer = wie im Profil)')
+      let secretNote = null
+      const noteSecret = (profileName) => { if (!secretNote || !p) return; if (!profileName) { secretNote.textContent = ''; return } api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(profileName)}`).then(r => { secretNote.textContent = r.keys.length ? `🔒 am Profil hinterlegt: ${r.keys.join(', ')}` : '🔒 am Profil nichts hinterlegt — in der Ansicht des Plugins (🔒) oder unten setzen' }).catch(() => { secretNote.textContent = '' }) }
       for (const d of defs) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
+        // sichtbar bleiben: Profil, Dateien/Verzeichnisse (Taloan: „das Einzige, was der Tasker können muss“), Schalter; Baum-Ziel/-Quelle, Texte, Geheimnisse: aus dem Profil
+        const into = hasProfile && !(d.type === 'profile' || d.key === 'profile' || d.type === 'boolean' || d.type === 'path' || d.type === 'dir') ? more : paramsBox
+        const append = (...nodes) => into.append(...nodes)
         let inp
         if (d.type === 'node') {
           // Auswahlbaum (Taloan): Wert ist die Knoten-Id, sichtbar der Name; „leer“ wählbar (⌂)
@@ -193,33 +276,44 @@ async function mount(root, ctx) {
           const shown = el('span', { class: 'muted' }, cur ? tree.byId.get(cur)?.label ?? cur : '(leer)')
           const box = el('div')
           ctx.treePicker(box, { value: cur || null, roles: ['group', 'product'], height: 180, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
-          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), box)
+          append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), box)
         } else if (d.type === 'pub') {
           // Publikationsbaum (Taloan, 21.09.: Export-Job an der Ausleitung): Dropdown der Bäume, leer = keiner
           inp = el('select', {}, el('option', { value: '' }, '(keiner — Teilbaum unten)'), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`)))
           inp.value = cur
-          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
+          append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
         } else if (d.type === 'path' || d.type === 'dir') {
           // Pfad auf dem Server (Taloan, 21.09.: „Gibt's hier wohl auch nen Browser?“): Textfeld plus 📁 — der Dateibrowser der Oberfläche (ctx.filePicker, /api/files)
           inp = el('input', { type: 'text', value: cur, placeholder: d.type === 'dir' ? 'Verzeichnis auf dem Server' : 'Datei, Verzeichnis oder URL', style: 'flex:1' })
           const pick = el('button', { type: 'button', title: d.type === 'dir' ? 'Verzeichnis auf dem Server wählen' : 'Datei oder Verzeichnis auf dem Server wählen', onclick: () => ctx.filePicker({ value: inp.value, dirOnly: d.type === 'dir', onPick: v => { inp.value = v } }) }, '📁')
-          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, pick))
-        } else if (d.type === 'profile') {
-          // Profil des Plugins (Taloan, 21.09.: „was muss man hier eingeben?“): Dropdown der gespeicherten Profile (profile:<name> im Plugin-Strom) statt Freitext
-          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, d.default === '' && /leer/.test(d.label) ? '(leer)' : '— Profil —'))
+          append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, pick))
+        } else if (d.type === 'profile' || d.key === 'profile') {
+          // Profil des Plugins (Taloan, 21.09.: „was muss man hier eingeben?“ / „muss ich jedes einzeln aufzählen?“): jeder Parameter profile
+          // wird ein Dropdown der gespeicherten Profile — profile:<name> (json, xport) und config:<name> (ProfileBar: ixp, solr) im Plugin-Strom
+          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, /leer/.test(d.label) ? '(leer)' : '— Profil —'))
           if (cur) inp.append(el('option', { value: cur }, cur)); inp.value = cur
-          api.get(`/api/plugins/${p.key}/data?prefix=profile:`).then(names => { for (const n of names.map(x => x.slice(8))) if (n !== cur) inp.append(el('option', { value: n }, n)); if (!names.length && !cur) inp.title = 'noch kein Profil gespeichert — in der Ansicht des Plugins anlegen' }).catch(() => {})
-          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
+          api.get(`/api/plugins/${p.key}/data`).then(all => {
+            const names = [...new Set(all.filter(x => /^(profile|config):/.test(x)).map(x => x.replace(/^(profile|config):/, '')))].sort((a, b) => a.localeCompare(b, 'de'))
+            for (const n of names) if (n !== cur) inp.append(el('option', { value: n }, n))
+            if (!names.length && !cur) inp.title = 'noch kein Profil gespeichert — in der Ansicht des Plugins anlegen'
+          }).catch(() => {})
+          inp.addEventListener('change', () => noteSecret(inp.value))
+          secretNote = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px' })
+          // Prozess ohne eigene Ansicht (export, backup, rag, Datenblatt-Job, JSON-Export): Profile hier anlegen — ein Formular aus den Parametern des Manifests
+          const editBtn = p?.profile === 'generic' ? el('button', { type: 'button', class: 'x', title: 'Profile dieses Prozesses anlegen und ändern', onclick: () => profileEditor(p, defs, inp.value, n => { drawParams(); const sel = paramInputs.profile; if (sel && n) { if (![...sel.options].some(o => o.value === n)) sel.append(el('option', { value: n }, n)); sel.value = n; noteSecret(n) } }) }, '✎') : ''
+          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, editBtn), secretNote)
+          if (cur) noteSecret(cur)
         } else if (d.type === 'boolean') {
           inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
           Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })
           paramsBox.append(el('label', { style: 'display:flex;gap:6px;align-items:center;margin-top:8px' }, inp, d.label))
         } else {
-          inp = el('input', { type: d.secret ? 'password' : d.type === 'number' ? 'number' : 'text', value: d.secret ? '' : cur, placeholder: d.secret ? (j?.secrets?.includes(d.key) ? '•••••• (gesetzt — leer lassen = behalten)' : 'geheim — bleibt beim Server') : '', style: 'width:100%' })
-          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label + (d.secret ? ' 🔒' : '')), inp)
+          inp = el('input', { type: d.secret ? 'password' : d.type === 'number' ? 'number' : 'text', value: d.secret ? '' : cur, placeholder: d.secret ? (j?.secrets?.includes(d.key) ? '•••••• (gesetzt — leer lassen = behalten)' : hasProfile ? 'leer = am Profil hinterlegt' : 'geheim — bleibt beim Server') : '', style: 'width:100%' })
+          append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label + (d.secret ? ' 🔒' : '')), inp)
         }
         paramInputs[d.key] = inp
       }
+      if (hasProfile && more.childElementCount) paramsBox.append(moreBtn, more)
       if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, 'Dieses Plugin hat keine Parameter.'))
     }
     pluginSel.addEventListener('change', drawParams); drawParams()

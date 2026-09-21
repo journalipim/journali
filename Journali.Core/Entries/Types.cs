@@ -33,6 +33,12 @@ public static class Types
     // Medien (docs/pflegestruktur.md, 20): eigener Strom m-…, die Bytes liegen ausserhalb (Hash)
     public const string MediaCreated = "MediaCreated";
     public const string MediaRetired = "MediaRetired";
+    // Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren, wie ein interner Dateimanager“): Strom mf-…
+    public const string MediaFolderCreated = "MediaFolderCreated";
+    public const string MediaFolderRenamed = "MediaFolderRenamed";
+    public const string MediaFolderMoved = "MediaFolderMoved";
+    public const string MediaFolderRetired = "MediaFolderRetired";
+    public const string MediaFiled = "MediaFiled";   // am Medium: in welchem Ordner es liegt
     public const string LabelAttributeSet = "LabelAttributeSet";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
@@ -213,6 +219,19 @@ public sealed record MediaCreated(string Sha256, long Bytes, string Mime, string
 
 /// <summary>Medium weg — die Datei bleibt im Store (Hash-adressiert, vielleicht geteilt), das Abbild nimmt das Medium heraus.</summary>
 public sealed record MediaRetired();
+
+/// <summary>
+/// Medienordner (Taloan, 21.09.2026): ein Strukturbaum nur zum Organisieren der Bibliothek — wie ein Dateimanager. Ein Ordner
+/// hat einen Namen und einen Vater (null = oberste Ebene); ein Medium liegt in höchstens einem Ordner. Die Ordner sagen nichts
+/// über die Verwendung (das sind die Relationen) und nichts über die Datei (die liegt im Store).
+/// </summary>
+public sealed record MediaFolderCreated(string Name, string? Parent);
+public sealed record MediaFolderRenamed(string Name);
+public sealed record MediaFolderMoved(string? Parent);
+/// <summary>Ordner weg — nur leer (keine Unterordner, keine Medien); das prüft der Befehl.</summary>
+public sealed record MediaFolderRetired();
+/// <summary>Am Medium: in diesen Ordner gelegt (null = kein Ordner).</summary>
+public sealed record MediaFiled(string? Folder);
 
 /// <summary>Externe Kennung je Quellsystem (Import): beim zweiten Lauf Update statt Neuanlage.</summary>
 public sealed record ExternalLinked(string System, string Id);

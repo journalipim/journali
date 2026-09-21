@@ -511,6 +511,54 @@ public static class Commands
     public static Outcome RetireMedium(Ctx c, string id) =>
         c.Media.All.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.MediaRetired, new MediaRetired())) : Outcome.Missing;
 
+    // ---- Medienordner (Taloan, 21.09.2026: „wie ein interner Dateimanager“)
+
+    public static Outcome CreateMediaFolder(Ctx c, string? name, string? parent)
+    {
+        if (Blank(name) is not { } n) return Outcome.Bad("Name fehlt.");
+        parent = Blank(parent);
+        if (parent is not null && !c.Media.Folders.ContainsKey(parent)) return Outcome.Bad("Vater: Ordner gibt es nicht.");
+        if (c.Media.SubFolders(parent).Any(f => string.Equals(f.Name, n, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad($"„{n}“ gibt es hier schon.");
+        return Outcome.Ok(c.Write(Ids.MediaFolder(), Types.MediaFolderCreated, new MediaFolderCreated(n, parent)));
+    }
+
+    public static Outcome RenameMediaFolder(Ctx c, string id, string? name)
+    {
+        if (!c.Media.Folders.TryGetValue(id, out var f)) return Outcome.Missing;
+        if (Blank(name) is not { } n) return Outcome.Bad("Name fehlt.");
+        if (c.Media.SubFolders(f.Parent).Any(x => x.Id != id && string.Equals(x.Name, n, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad($"„{n}“ gibt es hier schon.");
+        return Outcome.Ok(c.Write(id, Types.MediaFolderRenamed, new MediaFolderRenamed(n)));
+    }
+
+    public static Outcome MoveMediaFolder(Ctx c, string id, string? parent)
+    {
+        if (!c.Media.Folders.TryGetValue(id, out var f)) return Outcome.Missing;
+        parent = Blank(parent);
+        if (parent is not null && !c.Media.Folders.ContainsKey(parent)) return Outcome.Bad("Ziel: Ordner gibt es nicht.");
+        if (parent is not null && c.Media.FolderAndBelow(id).Contains(parent)) return Outcome.Bad("Nicht in sich selbst.");
+        if (c.Media.SubFolders(parent).Any(x => x.Id != id && string.Equals(x.Name, f.Name, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad($"„{f.Name}“ gibt es dort schon.");
+        return Outcome.Ok(c.Write(id, Types.MediaFolderMoved, new MediaFolderMoved(parent)));
+    }
+
+    /// <summary>Nur leer — was drin ist, erst verschieben (Taloan: kein stilles Aufräumen, das Journal soll jede Ablage nennen).</summary>
+    public static Outcome RetireMediaFolder(Ctx c, string id)
+    {
+        if (!c.Media.Folders.ContainsKey(id)) return Outcome.Missing;
+        var subs = c.Media.SubFolders(id).Count(); var media = c.Media.InFolder(id).Count();
+        if (subs + media > 0) return Outcome.Bad($"Nicht leer: {subs} Unterordner, {media} Medien — erst verschieben.");
+        return Outcome.Ok(c.Write(id, Types.MediaFolderRetired, new MediaFolderRetired()));
+    }
+
+    /// <summary>Medium in einen Ordner legen (null = kein Ordner).</summary>
+    public static Outcome FileMedium(Ctx c, string id, string? folder)
+    {
+        if (!c.Media.All.TryGetValue(id, out var m)) return Outcome.Missing;
+        folder = Blank(folder);
+        if (folder is not null && !c.Media.Folders.ContainsKey(folder)) return Outcome.Bad("Ordner gibt es nicht.");
+        if (m.Folder == folder) return Outcome.Bad("Liegt schon dort.");
+        return Outcome.Ok(c.Write(id, Types.MediaFiled, new MediaFiled(folder)));
+    }
+
     /// <summary>Wert am Medium: Attribute der Gruppe media (Alt-Text, Rechte …).</summary>
     public static Outcome SetMediumAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values)
     {

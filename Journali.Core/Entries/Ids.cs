@@ -20,6 +20,9 @@ public static class Ids
     /// <summary>Strom eines Mediums: m-…</summary>
     public static string Media() => "m-" + Random();
 
+    /// <summary>Strom eines Medienordners: mf-…</summary>
+    public static string MediaFolder() => "mf-" + Random();
+
     /// <summary>Strom einer Relation: r-…</summary>
     public static string Relation() => "r-" + Random();
 

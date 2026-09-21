@@ -32,7 +32,14 @@
         "{locale}"
       ],
       "description": "Datenblätter eines Teilbaums als HTML-Dateien in ein Verzeichnis (mit index.html)",
+      "profile": "generic",
       "params": [
+        {
+          "key": "profile",
+          "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
+          "type": "profile",
+          "default": ""
+        },
         {
           "key": "root",
           "label": "Teilbaum (leer = alle)",

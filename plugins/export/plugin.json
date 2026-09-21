@@ -28,7 +28,14 @@
       "{pub}"
     ],
     "description": "Teilbaum oder Ausleitung eines Publikationsbaums als Excel oder CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben",
+    "profile": "generic",
     "params": [
+      {
+        "key": "profile",
+        "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
+        "type": "profile",
+        "default": ""
+      },
       {
         "key": "pub",
         "label": "Publikationsbaum (Ausleitung: freigegeben für den Kanal, im Markt verkauft; leer = Teilbaum unten)",

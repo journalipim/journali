@@ -27,7 +27,14 @@
       "{gzip}"
     ],
     "description": "Rohdaten-JSON eines Teilbaums in ein Verzeichnis schreiben",
+    "profile": "generic",
     "params": [
+      {
+        "key": "profile",
+        "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
+        "type": "profile",
+        "default": ""
+      },
       {
         "key": "root",
         "label": "Teilbaum (Knoten-Id, leer = alle Wurzeln)",

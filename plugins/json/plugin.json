@@ -75,7 +75,14 @@
         "{keep}"
       ],
       "description": "Teilbaum als JSON in ein Verzeichnis — Rohdaten (wiederherstellbar), ausgewerteter Baum oder flache Liste; je Wurzel eine Datei",
+      "profile": "generic",
       "params": [
+        {
+          "key": "profile",
+          "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
+          "type": "profile",
+          "default": ""
+        },
         {
           "key": "root",
           "label": "Teilbaum (leer = alle Wurzeln)",

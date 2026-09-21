@@ -86,6 +86,14 @@ public sealed class JobRunner : BackgroundService
         var token = Auth.IssueServiceToken(actor);   // gilt fuer diesen Lauf (JOURNALI_TOKEN); der Prozess schickt ihn als Bearer
         var values = new Dictionary<string, string>(job.Params) { ["journali"] = Origin, ["actor"] = actor, ["job"] = key, ["run"] = run, ["token"] = token };
         foreach (var (k, v) in Secrets.Get(Dir, key)) values[k] = v;
+        // Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen“): profile:<name> (sonst config:<name>) aus den Plugin-Daten im Journal
+        // füllt jeden Parameter des Manifests, den der Job nicht selbst setzt — Ziel im Baum, Teilbaum, Format, Sprachen …
+        if (job.Params.TryGetValue("profile", out var profName) && profName is { Length: > 0 } && ProfileOf(state, profName) is { } profile)
+            foreach (var (k, v) in ProfileValues(proc, profile)) if (!values.TryGetValue(k, out var have) || have.Length == 0) values[k] = v;
+        // Geheimnisse am Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen“ — der Token liegt beim Server, am Profil, nicht im Journal):
+        // füllen, was der Job selbst nicht gesetzt hat
+        if (job.Params.TryGetValue("profile", out var prof) && prof is { Length: > 0 })
+            foreach (var (k, v) in Secrets.Get(Dir, Secrets.ProfileKey(job.Plugin, prof))) if (!values.TryGetValue(k, out var have) || have.Length == 0) values[k] = v;
         ProcessStartInfo psi;
         try { psi = PluginApi.BuildProcess(_pluginDir, job.Plugin, proc, values); }
         catch (Exception e) { error = e.Message; return null; }
@@ -149,6 +157,35 @@ public sealed class JobRunner : BackgroundService
 
     public string? RunningId(string key) { lock (_gate) return _running.TryGetValue(key, out var r) ? r.Run : null; }
     public string LogPath(string key, string run) => Path.Combine(Dir, key, run + ".log");
+
+    private static JsonElement? ProfileOf(Journali.Core.Projections.PluginState state, string name)
+    {
+        var raw = state.Data.GetValueOrDefault("profile:" + name) ?? state.Data.GetValueOrDefault("config:" + name);
+        if (raw is null) return null;
+        try { var d = JsonDocument.Parse(raw).RootElement; return d.ValueKind == JsonValueKind.Object ? d : null; } catch { return null; }
+    }
+
+    /// <summary>Werte des Profils für die Parameter des Prozesses (ohne Geheimnisse): Text, Zahl, Wahrheitswert, Liste (mit Komma).</summary>
+    private static IEnumerable<(string Key, string Value)> ProfileValues(JsonElement proc, JsonElement profile)
+    {
+        if (!proc.TryGetProperty("params", out var ps) || ps.ValueKind != JsonValueKind.Array) yield break;
+        foreach (var p in ps.EnumerateArray())
+        {
+            if (!p.TryGetProperty("key", out var k) || k.GetString() is not { Length: > 0 } key || key == "profile") continue;
+            if (p.TryGetProperty("secret", out var sec) && sec.ValueKind == JsonValueKind.True) continue;
+            if (!profile.TryGetProperty(key, out var v)) continue;
+            var s = v.ValueKind switch
+            {
+                JsonValueKind.String => v.GetString(),
+                JsonValueKind.Number => v.GetRawText(),
+                JsonValueKind.True => "true",
+                JsonValueKind.False => "false",
+                JsonValueKind.Array => string.Join(",", v.EnumerateArray().Select(x => x.ValueKind == JsonValueKind.String ? x.GetString() : x.GetRawText())),
+                _ => null,
+            };
+            if (s is { Length: > 0 }) yield return (key, s);
+        }
+    }
 }
 
 /// <summary>Geheimnisse der Jobs (Token, Passwörter): jobs/secrets.json — nie im Journal, nie im Repo (jobs/ ist ignoriert).</summary>
@@ -156,6 +193,8 @@ public static class Secrets
 {
     private static readonly object Gate = new();
     private static string File(string dir) => Path.Combine(dir, "secrets.json");
+    /// <summary>Schlüssel der Geheimnisse eines Profils: plugin:&lt;key&gt;:&lt;profil&gt; — neben den Jobs in derselben Datei.</summary>
+    public static string ProfileKey(string plugin, string profile) => $"plugin:{plugin}:{profile}";
     private static Dictionary<string, Dictionary<string, string>> Load(string dir)
     {
         try { return System.IO.File.Exists(File(dir)) ? JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(System.IO.File.ReadAllText(File(dir))) ?? new() : new(); }

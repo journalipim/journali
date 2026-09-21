@@ -243,8 +243,21 @@ oder aller Wurzeln, behält die letzten n Dateien).
 
 Parameter (`process.params`: `key`, `label`, `type`, `default`, `secret`) — Typen: `text`, `number`, `boolean`,
 `node` (Auswahlbaum, Wert ist die Knoten-Id), `pub` (Publikationsbaum), `profile` (Dropdown der gespeicherten
-Profile des Plugins, `profile:<name>` im Plugin-Strom), `dir` (Verzeichnis auf dem Server) und
-`path` (Datei, Verzeichnis oder URL). Bei `dir` und `path` öffnet 📁 den Dateibrowser des **Servers** — derselbe wie
+Profile des Plugins — `profile:<name>` oder `config:<name>` im Plugin-Strom; jeder Parameter mit `key: profile`
+bekommt es auch ohne den Typ), `dir` (Verzeichnis auf dem Server) und
+`path` (Datei, Verzeichnis oder URL). **Alles im Profil** (Taloan, 21.09.2026: „die Profile definiere ich im Plugin —
+alle Infos müssen deshalb im Profil vorliegen; das Einzige, was der Tasker bei dateibasierten Importen und Exporten
+können muss, ist Verzeichnis/Datei; Ziel im Baum beim Import, Quelle vom Baum beim Export stehen im Profil“): hat ein
+Prozess einen Parameter `profile`, zeigt der Job-Dialog nur Profil, Dateien/Verzeichnisse und Schalter; Baumknoten,
+Texte und Geheimnisse stehen unter „Überschreiben (leer = wie im Profil)“. Der JobRunner liest `profile:<name>`
+(sonst `config:<name>`) aus den Plugin-Daten und füllt jeden Manifest-Parameter gleichen Namens, den der Job nicht
+selbst setzt — die Prozesse selbst bleiben, wie sie sind. Plugins mit eigener Ansicht pflegen ihre Profile dort
+(IXP, JSON-Import, Vorlagen-Export); Prozesse ohne Ansicht tragen `"profile": "generic"` und bekommen im Job-Dialog
+✎ — ein Formular aus ihren Parametern (Tabellen-Export, Backup, RAG, Datenblatt-Job, JSON-Export).
+Geheimnisse (Token) gehören nie ins Journal, also nicht ins Profil selbst — sie liegen **am Profil beim Server**:
+`PUT /api/plugins/{key}/secrets/{profil}` `{values:{token:…}}` (Recht Schreiben; `GET` nennt nur die Schlüssel) in
+`jobs/secrets.json` unter `plugin:<key>:<profil>`; der JobRunner füllt damit, was der Job nicht selbst gesetzt hat.
+⇩ Import → IXP hat dafür 🔒 neben dem Token. Bei `dir` und `path` öffnet 📁 den Dateibrowser des **Servers** — derselbe wie
 unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht Jobs oder Storage; Oberfläche
 `web/src/filePicker.js`, Plugins über `ctx.filePicker`): Wurzeln sind das Datenverzeichnis, das Programm und die
 Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im

@@ -11,6 +11,7 @@ namespace Journali.Server;
 /// </summary>
 public static class JobApi
 {
+    public sealed record ProfileSecrets(Dictionary<string, string?>? Values);
     public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets);
 
     public static void Map(RouteGroupBuilder api, JobRunner runner)
@@ -27,8 +28,21 @@ public static class JobApi
                     label = x.Proc.TryGetProperty("label", out var pl) ? pl : (manifests[p.Key].Raw.TryGetProperty("label", out var l) ? l : default),
                     @params = x.Proc.TryGetProperty("params", out var ps) ? ps : default,
                     description = x.Proc.TryGetProperty("description", out var d) ? d.GetString() : null,
+                    profile = x.Proc.TryGetProperty("profile", out var pr) ? pr.GetString() : null,   // "generic": Profile im Tasker anlegen (✎)
                 })).ToList());
         });
+
+        // Geheimnisse am Profil eines Plugins (Taloan, 21.09.: Token gehört zum Profil, dann braucht der Job kein Feld): PUT {values:{token:…}} setzt (leer = weg),
+        // GET sagt nur, welche Schlüssel gesetzt sind — der Wert verlässt den Server nie
+        api.MapGet("/plugins/{key}/secrets/{name}", (string key, string name) => Results.Ok(new { keys = Secrets.Get(runner.Dir, Secrets.ProfileKey(key, name)).Keys.Order().ToList() }));
+        api.MapPut("/plugins/{key}/secrets/{name}", (string key, string name, ProfileSecrets body, HttpRequest req) =>
+        {
+            if (Actor(req) is null) return ActorMissing();
+            if (!ValidKey(key) || string.IsNullOrWhiteSpace(name) || name.Contains(':')) return Bad("Plugin oder Profilname ungültig.");
+            Secrets.Set(runner.Dir, Secrets.ProfileKey(key, name), body.Values ?? new());
+            return Results.Ok(new { keys = Secrets.Get(runner.Dir, Secrets.ProfileKey(key, name)).Keys.Order().ToList() });
+        });
+        api.MapDelete("/plugins/{key}/secrets/{name}", (string key, string name, HttpRequest req) => { if (Actor(req) is null) return ActorMissing(); Secrets.Remove(runner.Dir, Secrets.ProfileKey(key, name)); return Results.Ok(new { keys = Array.Empty<string>() }); });
 
         api.MapGet("/jobs", (Catalog c) => c.With((_, _, _) => c.Jobs.All.Values.OrderBy(j => j.Label).Select(j => View(j, runner)).ToList()));
         api.MapGet("/jobs/{key}", (string key, Catalog c) => c.With((_, _, _) => c.Jobs.All.TryGetValue(key, out var j) ? Results.Ok(View(j, runner, all: true)) : Results.NotFound()));
