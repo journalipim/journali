@@ -221,7 +221,7 @@ onMounted(async () => {
         <button v-if="source" class="x" @click="resuggest" title="Zuordnung neu vorschlagen">↻</button>
       </td></tr>
       <tr><td class="attr">Einfügen</td><td><input v-model="pasteText" type="text" placeholder="aus Excel kopieren, hier Strg+V (erste Zeile = Spaltennamen)" @paste="setTimeout(takePaste, 0)" /></td></tr>
-      <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
+      <tr class="tstep"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
       <tr v-if="fixed"><td class="attr">Knoten</td><td class="row">
         <router-link :to="`/tree/${fixed.row.id}`" class="chip" :title="fixed.row.id">{{ icon(fixed.row.role) }} {{ fixed.row.label }}</router-link>
         <span class="muted">→ {{ roleLabel[fixed.childRole] }} · {{ fixed.allowed.size }} mögliche Spalten</span>
@@ -261,8 +261,8 @@ onMounted(async () => {
               <td><button class="x" :class="{ on: m.steps?.length }" :title="m.steps?.length ? stepsText(m) + ' — Klick: bearbeiten' : 'Umwandlung hinzufügen'" @click="stepsOpen = stepsOpen === m.column ? null : m.column">ƒ{{ m.steps?.length ? m.steps.length : '' }}</button></td>
             </tr>
             <tr v-if="stepsOpen === m.column" class="steps-row"><td colspan="7">
-              <div class="steps">
-                <div v-for="(s, si) in (m.steps ?? [])" :key="si" class="step">
+              <div class="tsteps">
+                <div v-for="(s, si) in (m.steps ?? [])" :key="si" class="tstep">
                   <span class="muted mono" style="width:18px">{{ si + 1 }}</span>
                   <select v-model="s.op" @change="planned = null" :title="opHint(s.op)"><option v-for="o in OPS" :key="o[0]" :value="o[0]">{{ o[1] }}</option></select>
                   <template v-for="f in (FIELDS[s.op] ?? [])" :key="f">
@@ -275,7 +275,7 @@ onMounted(async () => {
                   <span class="grow" />
                   <button class="x" @click="moveStep(m, si, -1)" title="nach oben">↑</button><button class="x" @click="moveStep(m, si, 1)" title="nach unten">↓</button><button class="x" @click="delStep(m, si)" title="Schritt entfernen">×</button>
                 </div>
-                <div class="step"><select :value="''" @change="addStep(m, $event.target.value); $event.target.value = ''"><option value="">+ Schritt …</option><option v-for="o in OPS" :key="o[0]" :value="o[0]" :title="o[2]">{{ o[1] }}</option></select>
+                <div class="tstep"><select :value="''" @change="addStep(m, $event.target.value); $event.target.value = ''"><option value="">+ Schritt …</option><option v-for="o in OPS" :key="o[0]" :value="o[0]" :title="o[2]">{{ o[1] }}</option></select>
                   <span class="muted" style="font-size:11px">{{ m.steps?.length ? 'Vorschau: ' + preview(m, i) : 'Kette zwischen Quelle und Ziel — die Prüfung des Attributs läuft danach; steht im Profil' }}</span></div>
               </div>
             </td></tr>
@@ -322,9 +322,9 @@ onMounted(async () => {
 <style scoped>
 /* Umwandlung je Spalte (ƒ): Kette unter der Zeile */
 .steps-row td { background: var(--bg); padding: 4px 8px 6px 30px; }
-.steps { display: flex; flex-direction: column; gap: 3px; }
-.step { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
-.step select, .step input[type=text] { font-size: 12px; }
+.tsteps { display: flex; flex-direction: column; gap: 3px; }
+.tstep { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.tstep select, .tstep input[type=text] { font-size: 12px; }
 .x.on { color: var(--accent); font-weight: 600; }
 .section { padding: 8px; border-bottom: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; }

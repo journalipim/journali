@@ -6,6 +6,7 @@
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const ICON = { group: '▣', product: '▦', variant: '◆' }
 const STATE = { missing: ['○', 'neg', 'fehlt'], stale: ['⟳', 'warn', 'veraltet — Quelle ist neuer'], done: ['✓', 'pos', 'fertig'] }
+const MEM = { unit: ['◌', 'Gedächtnis: derselbe Quelltext ist anderswo schon so übersetzt'], term: ['📖', 'Wörterbuch: der Begriff steht dort'] }
 const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000) }
 const strip = s => String(s ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
@@ -31,7 +32,10 @@ async function mount(root, ctx) {
     await ctx.data.set('profile:' + n, { from: st.from, to: st.to, channel: st.channel, scope: st.scope, root: st.root, attributes: [...st.attrs].join(',') })
     await loadProfiles(); profSel.value = n; store.toast(`Profil „${n}“ gespeichert — als Job: ⏱ Jobs → + Job → XLIFF-Export / XLIFF-Import`, 'ok')
   }
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⇄ Übersetzung'), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { class: 'x', title: 'Sprachen, Umfang, Attribute und Teilbaum als Profil speichern (für Jobs)', onclick: saveProfile }, '💾'), el('span', { class: 'grow' }), status), body)
+  // DeepL-Schlüssel am Profil beim Server (Taloan: DeepL als Anbieter — als Job, nie im Browser; Schlüssel nie im Journal)
+  const keyIn = el('input', { type: 'password', placeholder: 'DeepL-Schlüssel', title: 'wird beim Server am Profil hinterlegt (jobs/secrets.json), nie im Journal — der Job „DeepL-Übersetzung“ nimmt ihn', style: 'width:150px' })
+  const keyBtn = el('button', { class: 'x', title: 'DeepL-Schlüssel am Profil hinterlegen', onclick: async () => { const n = (profIn.value || profSel.value).trim(); if (!n) { store.toast('erst ein Profil benennen und speichern'); return } if (!keyIn.value) { store.toast('Schlüssel fehlt'); return } try { await api.post(`/api/plugins/xliff/secrets/${encodeURIComponent(n)}`, { values: { key: keyIn.value } }, 'PUT'); keyIn.value = ''; store.toast(`DeepL-Schlüssel am Profil „${n}“ hinterlegt — Job: ⏱ Jobs → + Job → DeepL-Übersetzung`, 'ok') } catch (e) { store.toast(e.message) } } }, '🔒')
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⇄ Übersetzung'), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { class: 'x', title: 'Sprachen, Umfang, Attribute und Teilbaum als Profil speichern (für Jobs)', onclick: saveProfile }, '💾'), el('span', { class: 'sep' }, '·'), keyIn, keyBtn, el('span', { class: 'grow' }), status), body)
   loadProfiles()
 
   // ---- 1 Sprachen und Umfang
@@ -72,7 +76,8 @@ async function mount(root, ctx) {
   const loadBtn = el('button', { class: 'primary', onclick: loadUnits }, '⟳ Einheiten laden')
   const xliffBtn = el('button', { title: 'XLIFF 2.0 herunterladen — für Agentur oder CAT-Werkzeug (Trados, memoQ, Phrase); zurück über Schritt 4', onclick: async () => {
     try { const r = await fetch(`${store.server}/api/translate/xliff?${q()}`, { headers: { 'X-Actor': store.actor } }); if (!r.ok) throw new Error(await r.text()); download(await r.blob(), `journali-${st.from}-${st.to}.xlf`) } catch (e) { store.toast(e.message) } } }, '⇪ XLIFF exportieren')
-  const aiBtn = el('button', { title: 'leere Ziele mit der KI vorübersetzen (Einstellungen → KI) — nur Vorschläge in der Tabelle, geschrieben wird erst mit 💾', onclick: preTranslate }, '✦ KI vorübersetzen')
+  const aiBtn = el('button', { title: 'leere Ziele mit der KI vorübersetzen (Einstellungen → KI; das Wörterbuch geht als Glossar mit) — nur Vorschläge in der Tabelle, geschrieben wird erst mit 💾', onclick: preTranslate }, '✦ KI vorübersetzen')
+  const memBtn = el('button', { title: 'alle Vorschläge aus Gedächtnis (◌ gleicher Quelltext anderswo fertig) und Wörterbuch (📖) in die Ziele übernehmen — geschrieben wird erst mit 💾', onclick: () => { let n = 0; for (const u of st.units) if (u.memory && !(st.edited.get(u.id) ?? u.target)) { st.edited.set(u.id, u.memory); if (u._ta) u._ta.value = u.memory; n++ } count.textContent = `${st.units.length} Einheiten · ${st.edited.size} geändert`; say(`◌ ${n} übernommen`) } }, '◌ Gedächtnis übernehmen')
   const writeBtn = el('button', { class: 'primary', title: 'die eingetragenen Ziele schreiben (AttributeSet je Einheit) — nur, wo die Quelle seit dem Laden unverändert ist', onclick: writeEdited }, '💾 Ziele schreiben')
   async function loadUnits() {
     say('lade …')
@@ -82,14 +87,15 @@ async function mount(root, ctx) {
     unitsBox.innerHTML = ''
     count.textContent = st.units.length ? `${st.units.length} Einheiten · ${st.edited.size} geändert` : ''
     if (!st.units.length) { unitsBox.append(el('div', { class: 'muted', style: 'padding:6px 0' }, 'noch nichts geladen')); return }
-    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:20px' }), el('th', {}, 'Knoten'), el('th', {}, 'Attribut'), el('th', {}, 'Kanal'), el('th', {}, `Quelle (${st.from})`), el('th', {}, `Ziel (${st.to})`))))
+    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:20px' }), el('th', {}, 'Knoten'), el('th', {}, 'Attribut'), el('th', {}, 'Kanal'), el('th', {}, `Quelle (${st.from})`), el('th', {}, `Ziel (${st.to})`), el('th', { style: 'width:24px', title: 'Gedächtnis / Wörterbuch' }, '◌'))))
     for (const u of st.units.slice(0, 1000)) {
       const [sym, cls, title] = STATE[u.state] ?? ['?', 'muted', u.state]
       const ta = el('textarea', { rows: '1', style: 'width:100%;min-height:24px;resize:vertical', placeholder: u.state === 'missing' ? '…' : '', title: 'Ziel — Änderung wird mit 💾 geschrieben' }); ta.value = st.edited.get(u.id) ?? u.target ?? ''
       ta.addEventListener('input', () => { if (ta.value !== (u.target ?? '')) st.edited.set(u.id, ta.value); else st.edited.delete(u.id); count.textContent = `${st.units.length} Einheiten · ${st.edited.size} geändert` })
       u._ta = ta
+      const mem = u.memory ? el('button', { class: 'x', title: `${MEM[u.memoryFrom]?.[1] ?? 'Vorschlag'}: „${strip(u.memory).slice(0, 120)}“ — Klick übernimmt`, onclick: () => { st.edited.set(u.id, u.memory); ta.value = u.memory; count.textContent = `${st.units.length} Einheiten · ${st.edited.size} geändert` } }, MEM[u.memoryFrom]?.[0] ?? '◌') : ''
       tbl.append(el('tr', { class: 'row' }, el('td', { class: cls, title }, sym), el('td', { title: u.node }, `${ICON[u.role] ?? ''} ${u.label}`), el('td', { class: 'muted', title: u.attribute }, u.attributeLabel), el('td', { class: 'muted' }, u.channel ?? '*'),
-        el('td', { title: strip(u.source), style: 'max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, strip(u.source)), el('td', { style: 'min-width:260px' }, ta)))
+        el('td', { title: strip(u.source), style: 'max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, strip(u.source)), el('td', { style: 'min-width:260px' }, ta), el('td', {}, mem)))
     }
     if (st.units.length > 1000) tbl.append(el('tr', {}, el('td', { colspan: '6', class: 'muted' }, `… ${st.units.length - 1000} weitere — XLIFF nimmt alle`)))
     unitsBox.append(tbl)
@@ -102,7 +108,8 @@ async function mount(root, ctx) {
     for (let i = 0; i < todo.length; i += 20) {
       const batch = todo.slice(i, i + 20); say(`✦ übersetze ${i + batch.length}/${todo.length} …`)
       try {
-        const out = await ai.ask({ system: `Du übersetzt Produktdaten von ${st.from} nach ${st.to}. Antworte nur mit JSON: ein Objekt {id: übersetzung}. HTML-Struktur beibehalten, Zahlen, Einheiten, Marken- und Produktnamen unverändert, keine Erklärungen.`, user: JSON.stringify(Object.fromEntries(batch.map(u => [u.id, u.source]))), json: true, maxTokens: 4000 })
+        const glossary = st.terms.filter(t => t.text?.[st.from] && t.text?.[st.to]).map(t => `${t.text[st.from]} = ${t.text[st.to]}`).slice(0, 200)
+        const out = await ai.ask({ system: `Du übersetzt Produktdaten von ${st.from} nach ${st.to}. Antworte nur mit JSON: ein Objekt {id: übersetzung}. HTML-Struktur beibehalten, Zahlen, Einheiten, Marken- und Produktnamen unverändert, keine Erklärungen.${glossary.length ? ' Glossar (verbindlich): ' + glossary.join('; ') : ''}`, user: JSON.stringify(Object.fromEntries(batch.map(u => [u.id, u.source]))), json: true, maxTokens: 4000 })
         for (const u of batch) { const t = out?.[u.id]; if (typeof t === 'string' && t.trim()) { st.edited.set(u.id, t.trim()); if (u._ta) u._ta.value = t.trim(); n++ } }
       } catch (e) { store.toast(e.message); break }
     }
@@ -113,6 +120,30 @@ async function mount(root, ctx) {
     const units = [...st.edited].map(([id, target]) => ({ id, target, sourceHash: st.units.find(u => u.id === id)?.sourceHash }))
     try { const r = await api.post('/api/translate/import', { from: st.from, to: st.to, units }); store.toast(`${r.written} geschrieben${r.skipped ? `, ${r.skipped} übergangen (Quelle geändert)` : ''}${r.unchanged ? `, ${r.unchanged} unverändert` : ''}`, r.skipped ? 'warn' : 'ok'); await store.poll(true); await loadUnits(); drawOverview() } catch (e) { store.toast(e.message) }
   }
+
+  // ---- Wörterbuch (9): Begriff → Text je Sprache; Glossar für KI/DeepL und Gedächtnis (📖 in der Tabelle)
+  st.terms = []
+  const termsBox = el('div')
+  async function loadTerms() { try { st.terms = await api.get('/api/model/terms') } catch { st.terms = [] } drawTerms() }
+  function drawTerms() {
+    termsBox.innerHTML = ''
+    const locs = model.locales.map(l => l.code)
+    const tbl = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, 'Begriff'), ...locs.map(l => el('th', {}, l)), el('th', {}, 'Notiz'), el('th', {}))))
+    const row = (t, isNew) => {
+      const inputs = {}
+      const save = async () => { const key = isNew ? (inputs.key.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_') : t.key; if (!key) return; const text = Object.fromEntries(locs.map(l => [l, inputs[l].value.trim()]).filter(([, v]) => v)); if (!Object.keys(text).length) return
+        try { await api.post(`/api/model/terms/${encodeURIComponent(key)}`, { text, note: inputs.note.value.trim() || null }, 'PUT'); await loadTerms(); if (st.units.length) loadUnits() } catch (e) { store.toast(e.message) } }
+      const cells = [el('td', {}, isNew ? (inputs.key = el('input', { type: 'text', placeholder: 'key', style: 'width:110px', onchange: save })) : el('span', { class: 'mono' }, t.key))]
+      for (const l of locs) cells.push(el('td', {}, inputs[l] = el('input', { type: 'text', value: t.text?.[l] ?? '', style: 'width:130px', onchange: save })))
+      cells.push(el('td', {}, inputs.note = el('input', { type: 'text', value: t.note ?? '', placeholder: 'Kontext', style: 'width:150px', onchange: save })))
+      cells.push(el('td', {}, isNew ? '' : el('button', { class: 'x', title: 'Begriff entfernen', onclick: async () => { try { await api.del(`/api/model/terms/${encodeURIComponent(t.key)}`); await loadTerms() } catch (e) { store.toast(e.message) } } }, '🗑')))
+      return el('tr', {}, ...cells)
+    }
+    for (const t of st.terms) tbl.append(row(t, false))
+    tbl.append(row({}, true))
+    termsBox.append(tbl)
+  }
+  loadTerms()
 
   // ---- 4 XLIFF zurück
   const fileIn = el('input', { type: 'file', accept: '.xlf,.xliff,.xml' })
@@ -139,7 +170,8 @@ async function mount(root, ctx) {
 
   body.append(band('1 · Sprachen und Umfang'), settings, overview,
     band('2 · Teilbaum'), chosen, treeBox,
-    band('3 · Einheiten'), el('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px' }, loadBtn, xliffBtn, aiBtn, writeBtn, count), unitsBox,
+    band('3 · Einheiten'), el('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px' }, loadBtn, xliffBtn, memBtn, aiBtn, writeBtn, count), unitsBox,
+    band('Wörterbuch'), el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, 'Begriff → Text je Sprache, an einer Stelle gepflegt: Glossar für KI und DeepL, Gedächtnis in der Tabelle (📖). Zeile ausfüllen = speichern.'), termsBox,
     band('4 · XLIFF zurück'), el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, 'Übersetzte Datei der Agentur (XLIFF 2.0 oder 1.2). Geschrieben wird nur, wo die Quelle seit dem Export unverändert ist — der Hash steht in der Datei.'), fileIn, planBox)
   drawSettings(); drawUnits()
 }

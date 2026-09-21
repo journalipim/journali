@@ -1,6 +1,6 @@
 {
   "key": "xliff",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "label": {
     "de": "Übersetzung (XLIFF)",
     "en": "Translation (XLIFF)"
@@ -91,6 +91,41 @@
           "label": "auch schreiben, wenn sich die Quelle seit dem Export geändert hat",
           "type": "boolean",
           "default": "false"
+        }
+      ]
+    },
+    {
+      "key": "deepl",
+      "label": "DeepL-Übersetzung",
+      "command": "node",
+      "args": [
+        "deepl.mjs",
+        "{journali}",
+        "{actor}",
+        "{profile}",
+        "{key}",
+        "{scope}"
+      ],
+      "description": "Offene Einheiten der Sprachrichtung aus dem Profil mit DeepL übersetzen und zurückschreiben (nur bei unveränderter Quelle); der Schlüssel liegt am Profil beim Server (🔒 in ⇄ Übersetzung)",
+      "params": [
+        {
+          "key": "profile",
+          "label": "Profil (⇄ Übersetzung → 💾: Sprachen, Kanal, Attribute, Teilbaum)",
+          "type": "profile",
+          "default": ""
+        },
+        {
+          "key": "key",
+          "label": "DeepL-Schlüssel — leer = am Profil hinterlegt (🔒); bleibt beim Server, nie im Journal",
+          "type": "text",
+          "secret": true,
+          "default": ""
+        },
+        {
+          "key": "scope",
+          "label": "Umfang: missing (nur fehlende) oder open (auch veraltete)",
+          "type": "text",
+          "default": "missing"
         }
       ]
     }

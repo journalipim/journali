@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-710fae6f] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.steps[data-v-710fae6f] { display: flex; flex-direction: column; gap: 3px;\n}\n.step[data-v-710fae6f] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.step select[data-v-710fae6f], .step input[type=text][data-v-710fae6f] { font-size: 12px;\n}\n.x.on[data-v-710fae6f] { color: var(--accent); font-weight: 600;\n}\n.section[data-v-710fae6f] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-710fae6f] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-710fae6f] { font-weight: 400;\n}\n.drop.over[data-v-710fae6f] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-710fae6f] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-710fae6f] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-710fae6f] { opacity: .5;\n}\n.samples[data-v-710fae6f] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-710fae6f] { font-size: 13px;\n}\n.out[data-v-710fae6f] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-710fae6f] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-710fae6f] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-710fae6f]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-62c1687f] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-62c1687f] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-62c1687f] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-62c1687f], .tstep input[type=text][data-v-62c1687f] { font-size: 12px;\n}\n.x.on[data-v-62c1687f] { color: var(--accent); font-weight: 600;\n}\n.section[data-v-62c1687f] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-62c1687f] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-62c1687f] { font-weight: 400;\n}\n.drop.over[data-v-62c1687f] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-62c1687f] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-62c1687f] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-62c1687f] { opacity: .5;\n}\n.samples[data-v-62c1687f] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-62c1687f] { font-size: 13px;\n}\n.out[data-v-62c1687f] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-62c1687f] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-62c1687f] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-62c1687f]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -58,7 +58,7 @@ const _hoisted_7$1 = {
   class: "muted",
   style: { "font-size": "12px" }
 };
-const _hoisted_8$1 = { class: "step" };
+const _hoisted_8$1 = { class: "tstep" };
 const _hoisted_9$1 = { colspan: "2" };
 const _hoisted_10$1 = {
   class: "muted",
@@ -135,7 +135,7 @@ const _hoisted_45 = {
   class: "steps-row"
 };
 const _hoisted_46 = { colspan: "7" };
-const _hoisted_47 = { class: "steps" };
+const _hoisted_47 = { class: "tsteps" };
 const _hoisted_48 = {
   class: "muted mono",
   style: { "width": "18px" }
@@ -154,7 +154,7 @@ const _hoisted_56 = ["onUpdate:modelValue", "placeholder", "title"];
 const _hoisted_57 = ["onClick"];
 const _hoisted_58 = ["onClick"];
 const _hoisted_59 = ["onClick"];
-const _hoisted_60 = { class: "step" };
+const _hoisted_60 = { class: "tstep" };
 const _hoisted_61 = ["onChange"];
 const _hoisted_62 = ["value", "title"];
 const _hoisted_63 = {
@@ -1147,7 +1147,7 @@ const _sfc_main$1 = {
                                       renderList(m2.steps ?? [], (s, si) => {
                                         return openBlock(), createElementBlock("div", {
                                           key: si,
-                                          class: "step"
+                                          class: "tstep"
                                         }, [
                                           createElementVNode(
                                             "span",
@@ -1717,7 +1717,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-710fae6f"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-62c1687f"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
