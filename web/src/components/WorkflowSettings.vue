@@ -89,7 +89,21 @@ function portUp(j, port) {
 }
 function canvasMove(e) {
   const d = drag.value; if (!d) return; const p = svgPoint(e)
-  if (d.kind === 'move') { const s = cur.value.states[d.i]; s.x = Math.max(0, snap(p.x - d.dx)); s.y = Math.max(0, snap(p.y - d.dy)); for (const tr of cur.value.transitions) if ((tr.from === s.key || tr.to === s.key) && tr.route) { tr.route = null; tr.labelX = null; tr.labelY = null } touch() }   // verschoben: der gelegte Weg gilt nicht mehr, zurück zum Bogen
+  if (d.kind === 'move') {
+    const s = cur.value.states[d.i]; const nx = Math.max(0, snap(p.x - d.dx)), ny = Math.max(0, snap(p.y - d.dy)); const ddx = nx - s.x, ddy = ny - s.y
+    if (!ddx && !ddy) return
+    s.x = nx; s.y = ny
+    for (const tr of cur.value.transitions) {
+      if (!tr.route || (tr.from !== s.key && tr.to !== s.key)) continue
+      const n = tr.route.length / 2; const atFrom = tr.from === s.key, atTo = tr.to === s.key
+      for (let i = 0; i < n; i++) {
+        const f = atFrom && atTo ? 1 : atFrom ? 1 - i / (n - 1) : i / (n - 1)   // Anteil: 1 am bewegten Ende, 0 am anderen
+        tr.route[2 * i] = Math.round(tr.route[2 * i] + ddx * f); tr.route[2 * i + 1] = Math.round(tr.route[2 * i + 1] + ddy * f)
+      }
+      if (tr.labelX != null) { const f = atFrom && atTo ? 1 : 0.5; tr.labelX = Math.round(tr.labelX + ddx * f); tr.labelY = Math.round(tr.labelY + ddy * f) }
+    }
+    touch()
+  }
   else if (d.kind === 'label') { const tr = cur.value.transitions[d.n]; tr.labelX = Math.round(p.x - d.dx); tr.labelY = Math.round(p.y - d.dy); touch() }
   else {
     const other = d.kind === 'reattach' ? null : d.i
