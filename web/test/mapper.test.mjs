@@ -39,3 +39,18 @@ test('journali_<feld>_<wurzel>: Wurzel aus dem Spaltenkopf, interne Spalten erka
   assert.equal(m[2].target, 'parent'); assert.equal(m[1].target, 'skip'); assert.equal(m[1].internal, true)
   assert.equal(m[3].attribute, 'sku'); assert.equal(m[6].attribute, 'name')
 })
+
+test('kopierte Zeilen mit versteckter Id: andere SKU → neuer Knoten, gleiche SKU → übergangen (Taloans Datei)', async () => {
+  const { plan } = await import('../src/mapper.js')
+  const columns = ['journali_id_g-1', 'journali_parent_g-1', 'sku', 'name_de']
+  const rows = [['v-1', 'p-1', '053797', 'Original'], ['v-1', 'p-1', '1', 'Kopie c1'], ['v-1', 'p-1', '2', 'Kopie c2'], ['v-1', 'p-1', '053797', 'echtes Duplikat']]
+  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', sku: '053797', axisValues: {} }]
+  const byId = new Map(treeRows.map(r => [r.id, r]))
+  const tree = { rows: treeRows, byId, ancestors: id => { const out = []; for (let p = byId.get(id)?.parent; p; p = byId.get(p)?.parent) out.unshift(byId.get(p)); return out } }
+  const m = suggest(columns, rows, model)
+  const p = plan({ columns, rows, mapping: m, model, tree, target: null, role: null, existing: new Map([['v-1', { 'name|de': 'Original', 'name|de#own': true, 'sku|': '053797', 'sku|#own': true }]]) })
+  assert.equal(p.stats.unchanged, 1)   // Original
+  assert.equal(p.stats.create, 2)      // c1, c2 als neue Varianten unter p-1 (Elternteil aus der Datei)
+  assert.equal(p.stats.copied, 2)
+  assert.equal(p.stats.skipped, 1)     // echtes Duplikat
+})

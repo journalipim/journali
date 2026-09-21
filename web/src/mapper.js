@@ -248,11 +248,19 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const targetGroups = new Set()
   // Pflichtattribute der Kindrolle (irgendein Kanal verlangt sie): beim Anlegen müssen sie da sein
   const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
-  // Lücke bei ausgeblendeten Spalten (Taloan, 21.09.): kopierte Zeilen tragen dieselbe versteckte Id — die zweite würde die erste überschreiben; also nur die erste zählt
-  const seenIds = new Set()
+  // Lücke bei ausgeblendeten Spalten (Taloan, 21.09.: „der Anwender nimmt die letzte Zeile, fügt sie mehrfach ein, ändert Werte — und kopiert die
+  // versteckte Id mit“): dieselbe Id mehrmals in der Datei. Die erste Zeile behält sie; jede weitere mit ANDERER SKU ist eine kopierte Zeile,
+  // also ein neuer Knoten (Id fällt weg, wird gemeldet); mit GLEICHER SKU ist es ein echtes Duplikat und wird übergangen
+  const seenIds = new Map()   // Id → SKU der ersten Zeile
+  stats.copied = 0
   rows.forEach((row, ri) => {
-    const id = String(cell(row, iId) ?? '').trim(), sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
-    if (id) { if (seenIds.has(id)) { stats.problems.push(`Zeile ${ri + 2}: Id ${id} steht schon in einer Zeile davor (kopierte Zeile mit versteckter Id?) — übergangen`); stats.skipped++; return } seenIds.add(id) }
+    let id = String(cell(row, iId) ?? '').trim(); const sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
+    if (id) {
+      if (seenIds.has(id)) {
+        if (sku && sku !== seenIds.get(id)) { stats.problems.push(`Zeile ${ri + 2}: kopierte Zeile — Id ${id} gehört zu SKU ${seenIds.get(id) || '?'}, hier steht ${sku}: wird als neuer Knoten angelegt`); stats.copied++; id = '' }
+        else { stats.problems.push(`Zeile ${ri + 2}: Id ${id} steht schon in einer Zeile davor (gleiche SKU) — übergangen`); stats.skipped++; return }
+      } else seenIds.set(id, sku)
+    }
     const want = iRoot >= 0 ? String(cell(row, iRoot) ?? '').trim() : (mapping.find(m => m.target === 'id')?.root ?? '')   // Wurzel aus der Spalte oder aus dem Kopf journali_id_<wurzel>
     const byId = id && tree.byId.get(id); const foreign = !!(byId && want && rootOf(id) !== want)
     let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || (!foreign && sku && bySku.get(sku)) || null
