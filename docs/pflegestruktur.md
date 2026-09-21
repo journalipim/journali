@@ -554,6 +554,40 @@ Der Ausgang eines Laufs: `ok`, `warn` (übersprungene Befehle), `failed`,
 Log sagt, welcher Befehl warum. Dieselbe Tabelle gilt für Solr und Tabellen,
 sobald sie einen Prozess haben (offen).
 
+## 27. Workflow — Entwurf (Taloan, 21.09.2026: „brauchen wir auf jeden Fall — Workflow-Designer mit Freigaben, Korrekturschleifen etc.“)
+
+Heute: `StatusSet` (Entwurf · aktiv · ausgelaufen = Lebenszyklus des Dings) und `ReleaseGranted/Revoked` je Kanal.
+Fehlt: der **Bearbeitungszustand** darüber — wer ist dran, was ist der nächste Schritt, wohin geht es zurück.
+
+Vorschlag, Journal (alles Modell, nichts im Code):
+
+| Strom | Typ | Nutzdaten |
+|---|---|---|
+| `workflow:<key>` | `WorkflowDefined` | `label`, `states[{key, label, color, final?}]`, `transitions[{key, from, to, label, roles[], noteRequired?, effects[]}]`, `appliesTo{roles[], families[]}`, `start` |
+| `workflow:<key>` | `WorkflowRetired` | — |
+| Knoten | `WorkflowStateSet` | `workflow`, `state`, `transition`, `note?` — der Schritt, der gegangen wurde |
+| Knoten | `WorkflowAssigned` | `workflow`, `user?` (Person oder null = die Rolle des nächsten Übergangs) |
+
+- **Zustände** sind frei (Entwurf → Prüfung → Korrektur → Freigabe → veröffentlicht), ein Workflow je Knotentyp oder je
+  Familie (`appliesTo`); ein Knoten hat je Workflow genau einen Zustand (Abbild `Workflows`).
+- **Übergänge** tragen die Rolle, die sie gehen darf (`roles`, Vokabular aus 26), ob eine Notiz Pflicht ist
+  (Korrekturschleife: „zurück an Redaktion“ ohne Grund gibt es nicht) und **Wirkungen** (`effects`): `release:<kanal>`,
+  `revoke:<kanal>`, `status:<wert>`, `version` — so ist „Freigabe“ ein Übergang, der `ReleaseGranted` schreibt, statt
+  eines eigenen Knopfs. Freigabe je Kanal (25/18) bleibt die Wahrheit für die Ausleitung; der Workflow ist der Weg dorthin.
+- **Designer** (Taloan: „Workflow Designer“): Zustände als Kacheln, Übergänge als Pfeile (SVG, Ziehen von Kachel zu
+  Kachel), je Pfeil Rolle, Notiz-Pflicht, Wirkungen; Vorlagen „Vier-Augen“, „Redaktion–Prüfung–Freigabe“. Speichert
+  `WorkflowDefined`.
+- **Am Knoten**: Band „Workflow“ mit Zustand, den erlaubten Übergängen als Knöpfe (nur die der eigenen Rolle), Notiz,
+  Verlauf aus dem Journal. Kontextmenü auf die Auswahl (Massen-Freigabe). Suche `wf:<zustand>`, `wf:mine`.
+- **Meine Aufgaben**: Ansicht aller Knoten in Zuständen, deren nächster Übergang meiner Rolle (oder mir per
+  `WorkflowAssigned`) gehört — nach Alter im Zustand.
+- Rechte: `Auth` prüft an `POST /api/nodes/{id}/workflow/{transition}` die Rolle des Übergangs; `Rights.Release`
+  bleibt für die Wirkung `release:` nötig.
+
+Entscheidungen von Taloan: ein Workflow je Familie oder einer für alle? Zuständigkeit je Person (`WorkflowAssigned`) oder nur
+je Rolle? Fristen je Zustand (Erinnerung, Eskalation) — jetzt oder später? Gilt der Workflow auch für Rubriken der
+Publikation (Freigabe eines Kanalbaums)?
+
 ## Messlatte: OpenDXP
 
 Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."
