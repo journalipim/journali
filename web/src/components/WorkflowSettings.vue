@@ -111,6 +111,36 @@ function canvasUp() { const d = drag.value; if (d && (d.kind === 'link' || d.kin
 // Automatisch anordnen (Taloan, 21.09.: „da gibt's doch Algorithmen“): dagre — Sugiyama-Verfahren wie Graphviz dot. Ebenen von links nach rechts
 // (Start links, Rückwege werden intern umgedreht), Reihenfolge in der Ebene mit minimierten Kreuzungen, Abstand der Ebenen nach der längsten
 // Beschriftung. Andockpunkte und Beschriftungslagen gehen zurück auf Automatik.
+// Kräfte-Layout (Taloan, 21.09.: „sowas kann der Algo nicht?“ — die symmetrische Form kommt aus einem Federmodell, nicht aus Ebenen):
+// Kanten sind Federn mit Wunschlänge, Kacheln stossen sich ab, der Start zieht nach links, die Enden nach rechts; 400 Schritte, dann Raster.
+function forceLayout() {
+  const w = cur.value; const n = w.states.length; if (!n) return
+  const L = 240, K = 90000
+  const pos = w.states.map((s, i) => ({ x: (s.x ?? 40 + i * (W + 40)) + W / 2 + (Math.random() - 0.5), y: (s.y ?? 70) + H / 2 + (Math.random() - 0.5) * 60 }))
+  const idx = Object.fromEntries(w.states.map((s, i) => [s.key, i]))
+  const edges = w.transitions.filter(t => t.from !== t.to && idx[t.from] != null && idx[t.to] != null).map(t => [idx[t.from], idx[t.to]])
+  const startI = idx[w.start] ?? 0, finals = w.states.map((s, i) => s.final ? i : -1).filter(i => i >= 0)
+  for (let step = 0; step < 400; step++) {
+    const temp = 12 * (1 - step / 400) + 0.5
+    const f = pos.map(() => ({ x: 0, y: 0 }))
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {   // Abstossung
+      const dx = pos[j].x - pos[i].x, dy = pos[j].y - pos[i].y; const d2 = Math.max(400, dx * dx + dy * dy); const d = Math.sqrt(d2); const r = K / d2
+      f[i].x -= r * dx / d; f[i].y -= r * dy / d; f[j].x += r * dx / d; f[j].y += r * dy / d
+    }
+    for (const [a, b] of edges) {   // Federn
+      const dx = pos[b].x - pos[a].x, dy = pos[b].y - pos[a].y; const d = Math.max(1, Math.hypot(dx, dy)); const s = (d - L) * 0.05
+      f[a].x += s * dx / d; f[a].y += s * dy / d; f[b].x -= s * dx / d; f[b].y -= s * dy / d
+    }
+    const cx = pos.reduce((k, p) => k + p.x, 0) / n, cy = pos.reduce((k, p) => k + p.y, 0) / n
+    for (let i = 0; i < n; i++) { f[i].x -= (pos[i].x - cx) * 0.01; f[i].y -= (pos[i].y - cy) * 0.02 }   // leichte Mitte, flacher als hoch
+    f[startI].x -= 6; for (const i of finals) f[i].x += 6                                                  // Start links, Ende rechts
+    for (let i = 0; i < n; i++) { const m = Math.hypot(f[i].x, f[i].y) || 1; const k = Math.min(m, temp) / m; pos[i].x += f[i].x * k; pos[i].y += f[i].y * k }
+  }
+  const minX = Math.min(...pos.map(p => p.x)) - W / 2 - 40, minY = Math.min(...pos.map(p => p.y)) - H / 2 - 40
+  w.states.forEach((s, i) => { s.x = snap(pos[i].x - W / 2 - minX); s.y = snap(pos[i].y - H / 2 - minY) })
+  for (const t of w.transitions) { t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null }
+  touch()
+}
 async function autoLayout() {
   const w = cur.value
   const dagre = (await import('dagre')).default   // erst beim Klick laden (eigener Chunk, zieht lodash mit)
@@ -201,7 +231,8 @@ onMounted(load)
       </div>
       <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">
         <button @click="addStateAt" title="neuen Zustand anlegen (rechts neben dem letzten)">+ Zustand</button>
-        <button @click="autoLayout" title="automatisch anordnen: Ebenen vom Start nach rechts, Schleifen darunter, Beschriftungen zwischen den Kacheln; Andockpunkte und Beschriftungslagen zurück auf Automatik">⟲ anordnen</button>
+        <button @click="autoLayout" title="in Ebenen anordnen (dagre): Start links, Ende rechts, Kreuzungen minimiert — Andockpunkte und Beschriftungslagen zurück auf Automatik">⟲ Ebenen</button>
+        <button @click="forceLayout" title="nach Kräften anordnen (Federmodell): gleichmässige Abstände, symmetrische Formen — jeder Klick ein neuer Versuch">⟲ Kräfte</button>
         <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" title="Markiertes löschen (Entf)">✕</button>
         <span class="grow" />
         <span class="x" style="cursor:help" title="Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht">?</span>
