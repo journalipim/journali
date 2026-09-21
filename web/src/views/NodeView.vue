@@ -854,7 +854,7 @@ function cellMenu(e, def, col, block) {
             <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt'">{{ w.stateLabel?.de || w.state }}</span>
-              <button v-for="t in w.transitions" :key="t.key" @click="wfStep(w, t)" :title="`→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.label?.de || t.key }} →</button>
+              <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? store.toast(t.blocked) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
@@ -1016,7 +1016,8 @@ th.master { color: var(--accent); font-weight: 700; }
 .section h2, h2.band { font-size: 12px; margin: 0; padding: 0 8px; height: 26px; line-height: 24px; box-sizing: border-box; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent);
   position: sticky; top: 0; left: 0; z-index: 3; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .section h2 { margin: 0 -8px 8px; }
-.attr.missing { box-shadow: inset 3px 0 0 var(--neg); }   /* fehlender Pflichtwert (nur Fehlendes) */
+.attr.missing { box-shadow: inset 3px 0 0 var(--neg); }
+button.blocked { opacity: .55; }   /* Schritt geht jetzt nicht — Grund im Tooltip und beim Klick */   /* fehlender Pflichtwert (nur Fehlendes) */
 .section h2 .muted, h2.band .muted { font-weight: 400; }
 .section h2 .caret, h2.band .caret { display: inline-block; width: 14px; color: var(--muted); }
 /* Tabellenkopf klebt unter dem Band (26px) */

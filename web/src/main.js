@@ -7,3 +7,7 @@ import './style.css'
 
 createApp(App).use(router).mount('#app')
 store.start()
+// lange Fehlermeldungen als Fenster statt Toast
+import { store as _store } from './store.js'
+import { dialog as _dialog } from './dialog.js'
+_store.longError = text => _dialog.error(text)

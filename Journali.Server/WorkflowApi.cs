@@ -52,6 +52,7 @@ public static class WorkflowApi
         {
             if (!tree.Nodes.TryGetValue(id, out var n)) return Results.NotFound();
             var role = req.HttpContext.Items["role"] as string;
+            var ctxRead = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Write = (_, _, _) => throw new InvalidOperationException("nur lesen") };
             return Results.Ok(c.Workflows.All.Values.Where(w => w.AppliesTo(n)).OrderBy(w => w.Key).Select(wf =>
             {
                 var st = c.Workflows.StateOf(id, wf); var nw = c.Workflows.Of(id).GetValueOrDefault(wf.Key);
@@ -63,7 +64,7 @@ public static class WorkflowApi
                     // (Taloan, 21.09.: „wieso steht das immer noch in der Liste?“ — der Schritt lief, als die Saat noch keine Wirkung hatte)
                     pending = Pending(c, tree, model, n, wf, nw?.Transition),
                     states = wf.States.Select(s => new { s.Key, s.Label, s.Color, s.Final }).ToList(),
-                    transitions = Commands.Allowed(c.Workflows, wf, id, role).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label }).ToList(),
+                    transitions = Commands.Allowed(c.Workflows, wf, id, role).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label, blocked = Commands.Blocker(ctxRead, n, t) }).ToList(),
                     // auch die, die ich nicht darf — zum Zeigen, wer dran ist; mit Eskalation: ab wann auch wer
                     all = wf.Transitions.Where(t => t.From == st).Select(t => new { t.Key, t.Label, t.To, t.Roles, t.EscalateAfterDays, t.EscalateRoles, escalatesAt = t.EscalateAfterDays is { } d && nw is not null ? nw.At.AddDays(d) : (DateTimeOffset?)null, escalated = t.EscalateAfterDays is { } d2 && nw is not null && (DateTimeOffset.UtcNow - nw.At).TotalDays >= d2 }).ToList(),
                 };

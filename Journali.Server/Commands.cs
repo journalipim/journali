@@ -635,7 +635,38 @@ public static class Commands
         var attr = missing[..i]; var loc = missing[(i + 1)..];
         if (!c.Model.Attributes.TryGetValue(attr, out var def)) return missing;
         var viaMaster = c.Tree.Resolve(v, attr, loc, null, def.Inheritable, masters: true).Value is not null;
-        return viaMaster ? $"{missing} (nur Master-Text — Übersetzung fehlt)" : missing;
+        return viaMaster ? $"{missing} nur Master-Text" : missing;
+    }
+
+    /// <summary>Warum ein Übergang jetzt nicht gehen kann (Wirkung release ohne freigebbare Variante) — null = kann. Auch für die Anzeige, vor dem Klick.</summary>
+    public static string? Blocker(Ctx c, Node n, WfTransition t)
+    {
+        foreach (var eff in t.Effects ?? [])
+        {
+            if (!eff.StartsWith("release:")) continue;
+            foreach (var ch in eff[8..] == "*" ? c.Model.Channels.Keys.ToList() : [eff[8..]])
+            {
+                var sellables = n.Role == Roles.Variant ? [n] : c.Tree.DescendantsDeepestFirst(n.Id).Where(v => v.Role == Roles.Variant).ToList();
+                if (sellables.Count == 0) return $"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ gibt für {ch} frei — hier gibt es aber nichts Verkaufbares (Freigabe nur an Varianten).";
+                var problems = new List<(string Why, string Sku)>();
+                foreach (var v in sellables)
+                {
+                    if (v.Releases.Contains(new Release(ch, null))) { problems.Clear(); break; }
+                    var sku = v.Own(Model.SkuAttribute, null, null) ?? v.Id;
+                    if (v.Id != n.Id && InWork(c, v) is { } w) { problems.Add((w, sku)); continue; }
+                    var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, v, CompletenessRules.ActiveAttributes(c.Tree, c.Model, v).ToList(), ch, null);
+                    if (missing.Length == 0) { problems.Clear(); break; }
+                    problems.Add((string.Join(", ", missing.Select(m => Explain(c, v, m))), sku));
+                }
+                if (problems.Count > 0)
+                {
+                    // gleiche Gründe zusammen, je Grund höchstens 5 SKUs — sonst wird aus 50 Varianten ein roter Bildschirm (Taloan, 21.09.)
+                    var grouped = problems.GroupBy(x => x.Why).Select(g => $"{g.Key} — {g.Count()} {(g.Count() == 1 ? "Variante" : "Varianten")}: {string.Join(", ", g.Take(5).Select(x => x.Sku))}{(g.Count() > 5 ? " …" : "")}");
+                    return $"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: keine Variante freigebbar für {ch} — {string.Join(" · ", grouped)}";
+                }
+            }
+        }
+        return null;
     }
 
     public static Outcome WorkflowStep(Ctx c, string id, string workflow, string transition, string? note)
@@ -651,25 +682,7 @@ public static class Commands
         if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role) && !Escalated(t, role, since, DateTimeOffset.UtcNow)) return Outcome.Bad($"Rolle {role} darf „{t.Label.GetValueOrDefault("de") ?? t.Key}“ nicht (erlaubt: {string.Join(", ", t.Roles)}).");
         note = Blank(note);
         if (t.NoteRequired && note is null) return Outcome.Bad("Notiz ist Pflicht bei diesem Schritt (was ist zu tun?).");
-        foreach (var eff in t.Effects ?? [])
-        {
-            if (!eff.StartsWith("release:")) continue;
-            foreach (var ch in eff[8..] == "*" ? c.Model.Channels.Keys.ToList() : [eff[8..]])
-            {
-            var sellables = n.Role == Roles.Variant ? [n] : c.Tree.DescendantsDeepestFirst(n.Id).Where(v => v.Role == Roles.Variant).ToList();
-            if (sellables.Count == 0) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ gibt für {ch} frei — hier gibt es aber nichts Verkaufbares (Freigabe nur an Varianten).");
-            var problems = new List<string>();
-            foreach (var v in sellables)
-            {
-                if (v.Releases.Contains(new Release(ch, null))) { problems.Clear(); break; }
-                if (v.Id != n.Id && InWork(c, v) is { } w) { problems.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {w}"); continue; }
-                var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, v, CompletenessRules.ActiveAttributes(c.Tree, c.Model, v).ToList(), ch, null);
-                if (missing.Length == 0) { problems.Clear(); break; }
-                problems.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {string.Join(", ", missing.Select(m => Explain(c, v, m)))}");
-            }
-            if (problems.Count > 0) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: keine Variante freigebbar für {ch} — {string.Join(" · ", problems)}");
-            }
-        }
+        if (Blocker(c, n, t) is { } blocked) return Outcome.Bad(blocked);
         var e = c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, t.To, t.Key, note));
         foreach (var eff in t.Effects ?? [])
         {

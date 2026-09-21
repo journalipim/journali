@@ -111,6 +111,8 @@ export const store = reactive({
 
   // action: { label, run } — ein Knopf im Toast (↶ wiederherstellen); der Toast bleibt dann länger
   toast(text, kind = 'error', action = null) {
+    // lange Meldungen (Listen) gehören in ein Fenster mit Scrollbar, nicht in einen Toast (Taloan, 21.09.: „in den paar Sekunden lesen?“)
+    if (kind === 'error' && String(text).length > 160 && this.longError) { this.longError(String(text)); return }
     const t = { id: Date.now() + Math.random(), text, kind, action }
     this.toasts.push(t)
     setTimeout(() => { const i = this.toasts.indexOf(t); if (i >= 0) this.toasts.splice(i, 1) }, action ? 12000 : 4000)
