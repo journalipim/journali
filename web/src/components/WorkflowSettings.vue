@@ -122,7 +122,7 @@ function autoLayout() {
     col.forEach((k, r) => { rowOf[k] = r })
   }
   // Schleifenknoten: haben einen Rückweg auf eine frühere Ebene (Korrektur → Prüfung) — in die Reihe darunter, unter ihren Vorgänger
-  const loop = new Set(w.transitions.filter(t => layer[t.to] < layer[t.from] && layer[t.from] > 0 && pred[t.from].length).map(t => t.from))
+  const loop = new Set(w.transitions.filter(t => layer[t.to] < layer[t.from] && pred[t.from].includes(t.to)).map(t => t.from))
   const labelW = Math.max(60, ...w.transitions.map(t => ((t.label?.de || t.key).length + (t.roles?.length ? t.roles.join('/').length + 3 : 0)) * 6.5))
   const gap = Math.max(80, Math.round(labelW + 30))
   // Ebenen ohne Schleifenknoten neu nummerieren, damit unten keine Lücke bleibt
@@ -163,7 +163,8 @@ const sketch = computed(() => {
     const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len, bend = Math.min(40, 12 + len * 0.12)
     const cx = mx + nx * bend, cy = my + ny * bend
     const bx = 0.25 * p1.x + 0.5 * cx + 0.25 * p2.x, by = 0.25 * p1.y + 0.5 * cy + 0.25 * p2.y
-    return { t, p1, p2, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: t.labelX ?? bx, ly: t.labelY ?? by + 4, anchor: 'middle' }
+    const steep = Math.abs(nx) > 0.6   // senkrechter Pfeil: Beschriftung neben den Bogen, vom Nachbarpfeil weg
+    return { t, p1, p2, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: t.labelX ?? (steep ? bx + nx * 8 : bx), ly: t.labelY ?? by + 4, anchor: t.labelX != null ? 'middle' : steep ? (nx > 0 ? 'start' : 'end') : 'middle' }
   }
   const arrows = w.transitions.map((t, n) => {
     if (d?.kind === 'reattach' && d.n === n) {   // das angefasste Ende hängt an der Maus (bzw. am eingeschnappten Punkt)
