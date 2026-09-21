@@ -605,6 +605,16 @@ public static class Commands
         t.EscalateAfterDays is { } d && since is { } s && (now - s).TotalDays >= d && (t.EscalateRoles is not { Length: > 0 } || t.EscalateRoles.Contains(role));
 
     /// <summary>Einen Schritt gehen: Übergang muss vom aktuellen Zustand ausgehen, die Rolle ihn dürfen, die Notiz da sein — dann Zustand und Wirkungen.</summary>
+    /// <summary>Fehlender Pflichtwert „attr/locale“ mit Grund: steht nur über Master oder Fallback da → „nur Master-Text, Übersetzung fehlt“.</summary>
+    private static string Explain(Ctx c, Node v, string missing)
+    {
+        var i = missing.IndexOf('/'); if (i < 0) return missing;
+        var attr = missing[..i]; var loc = missing[(i + 1)..];
+        if (!c.Model.Attributes.TryGetValue(attr, out var def)) return missing;
+        var viaMaster = c.Tree.Resolve(v, attr, loc, null, def.Inheritable, masters: true).Value is not null;
+        return viaMaster ? $"{missing} (nur Master-Text — Übersetzung fehlt)" : missing;
+    }
+
     public static Outcome WorkflowStep(Ctx c, string id, string workflow, string transition, string? note)
     {
         if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
@@ -630,7 +640,7 @@ public static class Commands
                 if (v.Releases.Contains(new Release(ch, null))) { problems.Clear(); break; }
                 var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, v, CompletenessRules.ActiveAttributes(c.Tree, c.Model, v).ToList(), ch, null);
                 if (missing.Length == 0) { problems.Clear(); break; }
-                problems.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {string.Join(", ", missing)}");
+                problems.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {string.Join(", ", missing.Select(m => Explain(c, v, m)))}");
             }
             if (problems.Count > 0) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: keine Variante ist vollständig für {ch} — {string.Join(" · ", problems)}");
         }
