@@ -173,23 +173,25 @@ const sketch = computed(() => {
   const w = cur.value; if (!w) return null
   const pos = w.states.map((s, i) => posOf(s, i))
   const idx = Object.fromEntries(w.states.map((s, i) => [s.key, i]))
-  const edge = (c, to) => {   // Schnittpunkt der Strecke Mitte→to mit dem Kachelrand
-    const dx = to.x - c.x, dy = to.y - c.y; if (!dx && !dy) return c
-    const sx = (W / 2) / Math.abs(dx || 1e-9), sy = (H / 2) / Math.abs(dy || 1e-9); const k = Math.min(sx, sy)
-    return { x: c.x + dx * k, y: c.y + dy * k }
-  }
   const d = drag.value
-  const twin = t => w.transitions.some(o => o !== t && o.from === t.to && o.to === t.from)   // Gegenpfeil zwischen denselben Kacheln
-  const curve = (t, p1, p2) => {
+  const twinOf = t => w.transitions.find(o => o !== t && o.from === t.to && o.to === t.from)   // Gegenpfeil zwischen denselben Kacheln
+  // Seiten und Punkte aus der Lage: a → b; pair: -1 / 0 / +1 (untere / einzelne / obere Parallele)
+  const autoPorts = (a, b, pair) => {
+    const dx = (b.x + W / 2) - (a.x + W / 2), dy = (b.y + H / 2) - (a.y + H / 2)
+    const horiz = Math.abs(dx) * H >= Math.abs(dy) * W * 0.9   // Verhältnis der Kachelmasse: erst wenn es deutlich steiler ist, oben/unten
+    const f = 0.5 - pair * 0.25
+    if (horiz) return dx >= 0 ? [`right:${f}`, `left:${f}`] : [`left:${f}`, `right:${f}`]
+    return dy >= 0 ? [`bottom:${f}`, `top:${f}`] : [`top:${f}`, `bottom:${f}`]
+  }
+  const curve = (t, p1, p2, pairSide = 0) => {
     const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1
     const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len
-    const bend = twin(t) ? Math.min(28, 10 + len * 0.06) : 0                     // nur Hin und Zurück biegen sich auseinander
-    const cx = mx + nx * bend, cy = my + ny * bend
-    const bx = 0.25 * p1.x + 0.5 * cx + 0.25 * p2.x, by = 0.25 * p1.y + 0.5 * cy + 0.25 * p2.y   // Punkt auf der Linie bzw. dem Bogen
-    const off = bend ? 10 : 8                                                     // Beschriftung neben die Linie, nicht darauf
+    // Beschriftung neben die Linie: bei Parallelen nach aussen (vom Partner weg), sonst zur linken Seite der Richtung
+    const side = pairSide || 1
+    const off = 9 * side
     const steep = Math.abs(nx) > 0.6
-    return { t, p1, p2, d: bend ? `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}` : `M${p1.x},${p1.y} L${p2.x},${p2.y}`,
-      lx: t.labelX ?? bx + nx * off, ly: t.labelY ?? by + ny * off + (ny > 0 ? 10 : -2), anchor: t.labelX != null ? 'middle' : steep ? (nx > 0 ? 'start' : 'end') : 'middle' }
+    return { t, p1, p2, d: `M${p1.x},${p1.y} L${p2.x},${p2.y}`,
+      lx: t.labelX ?? mx + nx * off, ly: t.labelY ?? my + ny * off + (ny * side > 0 ? 10 : -3), anchor: t.labelX != null ? 'middle' : steep ? (nx * side > 0 ? 'start' : 'end') : 'middle' }
   }
   const arrows = w.transitions.map((t, n) => {
     if (d?.kind === 'reattach' && d.n === n) {   // das angefasste Ende hängt an der Maus (bzw. am eingeschnappten Punkt)
@@ -197,12 +199,12 @@ const sketch = computed(() => {
       return { ...c, lx: d.label.x, ly: d.label.y }   // Beschriftung bleibt, wo sie war
     }
     const a = pos[idx[t.from] ?? 0], b = pos[idx[t.to] ?? 0]
-    const ca = { x: a.x + W / 2, y: a.y + H / 2 }, cb = { x: b.x + W / 2, y: b.y + H / 2 }
+    const ca = { x: a.x + W / 2, y: a.y + H / 2 }
     if (t.from === t.to) return { t, p1: { x: ca.x - 20, y: a.y }, p2: { x: ca.x + 20, y: a.y }, d: `M${ca.x - 20},${a.y} C${ca.x - 40},${a.y - 45} ${ca.x + 40},${a.y - 45} ${ca.x + 20},${a.y}`, lx: t.labelX ?? ca.x, ly: t.labelY ?? a.y - 36 }
-    let p1, p2
-    if (t.fromPort && t.toPort) { p1 = portXY(a, t.fromPort); p2 = portXY(b, t.toPort) }
-    else { p1 = t.fromPort ? portXY(a, t.fromPort) : edge(ca, cb); p2 = t.toPort ? portXY(b, t.toPort) : edge(cb, ca); if (!t.fromPort) p1 = portXY(a, nearestPort(a, p2)); if (!t.toPort) p2 = portXY(b, nearestPort(b, p1)) }
-    return curve(t, p1, p2)
+    const tw = twinOf(t); const pair = tw ? ((idx[t.from] < idx[t.to]) ? 1 : -1) : 0   // welche der beiden Parallelen
+    const [fp, tp] = autoPorts(a, b, pair)
+    const p1 = portXY(a, t.fromPort ?? fp), p2 = portXY(b, t.toPort ?? tp)
+    return curve(t, p1, p2, pair)
   })
   // neuer Pfeil beim Ziehen vom ●
   if (d?.kind === 'link') arrows.push({ ...curve({ key: '__new', label: {}, roles: [] }, { x: d.x, y: d.y }, { x: d.tx, y: d.ty }), temp: true })
