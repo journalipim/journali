@@ -89,7 +89,7 @@ public static class WorkflowApi
                 var back = n.Role != Roles.Variant && kind == "release"
                     ? sellables.Where(v => c.Workflows.Of(v.Id).ContainsKey(wf.Key) && c.Workflows.StateOf(v.Id, wf) != t.To).Select(v => $"{NodeRow.LabelOf(tree, model, v)}: {wf.State(c.Workflows.StateOf(v.Id, wf))?.Label.GetValueOrDefault("de") ?? c.Workflows.StateOf(v.Id, wf)}").ToList()
                     : [];
-                pending.Add(new { effect = eff, canFix = back.Count == 0, why = back.Count > 0 ? "Variante zurück im Weg — " + string.Join(" · ", back) : null });
+                pending.Add(new { effect = eff, canFix = back.Count == 0, why = back.Count > 0 ? string.Join(" · ", back) : null });
             }
             return pending;
         }

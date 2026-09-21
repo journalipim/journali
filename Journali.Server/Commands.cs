@@ -431,8 +431,27 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale)));
     }
 
-    public static Outcome RevokeRelease(Ctx c, string id, string channel, string? locale) =>
-        c.Tree.Nodes.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.ReleaseRevoked, new ReleaseRevoked(channel, Blank(locale)))) : Outcome.Missing;
+    public static Outcome RevokeRelease(Ctx c, string id, string channel, string? locale)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        var e = c.Write(id, Types.ReleaseRevoked, new ReleaseRevoked(channel, Blank(locale)));
+        // Nach oben (Taloan, 21.09.: „Produkt hat jetzt keine Variante mehr mit Freigabe — müssten die Knoten darüber wieder auf Prüfung?“):
+        // ein Produkt oder eine Gruppe, deren Zustand über eine Wirkung release:<kanal> erreicht wurde und unter der jetzt keine Variante
+        // mehr für den Kanal freigegeben ist, geht zurück in den Zustand vor dem Freigeben — als eigener Schritt im Journal, mit Notiz
+        if (c.Workflows is not null)
+            foreach (var up in c.Tree.Ancestors(n))
+            {
+                if (c.Tree.DescendantsDeepestFirst(up.Id).Any(v => v.Role == Roles.Variant && v.Releases.Contains(new Release(channel, null)))) continue;
+                foreach (var (wfKey, nw) in c.Workflows.Of(up.Id))
+                {
+                    if (!c.Workflows.All.TryGetValue(wfKey, out var wf) || nw.Transition is null) continue;
+                    var t = wf.Transitions.FirstOrDefault(x => x.Key == nw.Transition);
+                    if (t?.Effects?.Contains("release:" + channel) != true || nw.State != t.To) continue;
+                    c.Write(up.Id, Types.WorkflowStateSet, new WorkflowStateSet(wfKey, t.From, null, $"zurück: keine Variante mehr für {channel} freigegeben ({n.Own(Model.SkuAttribute, null, null) ?? n.Id})"));
+                }
+            }
+        return Outcome.Ok(e);
+    }
 
     public static Outcome LinkExternal(Ctx c, string id, string? system, string? externalId)
     {

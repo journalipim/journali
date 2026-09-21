@@ -61,6 +61,23 @@ public class ReleaseTests
     }
 
     [Fact]
+    public void Letzte_Freigabe_weg_dann_geht_das_Produkt_zurueck_in_den_Zustand_vor_dem_Freigeben()
+    {
+        // Taloan, 21.09.: „Produkt hat jetzt keine Variante mehr mit Freigabe — die Knoten darüber wieder auf Prüfung“ — als eigener Schritt mit Notiz;
+        // solange eine andere Variante freigegeben bleibt, bleibt das Produkt Freigegeben
+        var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
+        var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
+        w.Fill(w.V1); w.Fill(w.V2);
+        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "submit", null).Error);
+        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "approve", null).Error);   // beide Varianten frei
+        Assert.Null(Commands.RevokeRelease(ctx(), w.V1, "web", null).Error);
+        Assert.Equal("approved", wfs.StateOf(w.P, wfs.All["review"]));                   // V2 ist noch frei
+        Assert.Null(Commands.RevokeRelease(ctx(), w.V2, "web", null).Error);
+        Assert.Equal("review", wfs.StateOf(w.P, wfs.All["review"]));                     // keine mehr → zurück vor das Freigeben
+        Assert.Contains("keine Variante mehr", wfs.Of(w.P)["review"].Note);
+    }
+
+    [Fact]
     public void Eskalation_nach_n_Tagen_duerfen_auch_andere_Rollen()
     {
         // Taloan, 21.09.: „alle Redakteure im Urlaub — jemand muss freigeben“: freigeben darf admin; nach 3 Tagen in Prüfung auch manager
