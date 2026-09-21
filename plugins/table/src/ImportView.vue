@@ -2,7 +2,7 @@
 // ⇩ Import → Tabelle (Basis-Plugin table; Taloan, 17.09.2026): eine Tabelle aus Datei (CSV, Excel, JSON — die Quelle liefert ein Plugin
 // über importers) oder aus der Zwischenablage; der Datenmapper (mapper.js) schlägt die Zuordnung vor, der Mensch
 // richtet nach, der Plan sagt, was passiert, der Stapel schreibt. Profile (Zuordnung, Ziel, Rolle) im Journal.
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api, store, tree, icon, plugins, mapper, transform, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
 const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper
@@ -96,6 +96,13 @@ function setSource(t) {
 }
 function pickSheet(name) { const s = source.value.sheets.find(x => x.name === name); if (!s) return; setSource({ ...source.value, sheet: name, columns: s.columns, rows: s.rows }) }
 function takePaste() { const t = parseDelimited(pasteText.value); if (!t.columns.length) return; setSource({ ...t, name: 'Zwischenablage' }); pasteText.value = '' }
+// Strg+V irgendwo in der Ansicht (kein Eingabefeld): die Zwischenablage als Tabelle — die eigene Zeile dafür ist weg (Taloan, 21.09.)
+function onPasteAnywhere(e) {
+  if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return
+  const text = e.clipboardData?.getData('text/plain') ?? ''
+  if (!text.includes('\n') && !text.includes('\t')) return
+  pasteText.value = text; takePaste(); e.preventDefault()
+}
 function onDrop(e) { dragOver.value = false; const f = e.dataTransfer.files?.[0]; if (f) takeFile(f) }
 function resuggest() { if (source.value) { mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); applyProfile() } planned.value = null }
 // Knotenmodus: was nicht zum Knoten passt, wird übergangen und gezählt — Vorlage vom Knoten exportieren, dann passt es
@@ -207,7 +214,9 @@ function profileSet(p) {
   if (source.value) applyProfile()
   planned.value = null
 }
+onUnmounted(() => window.removeEventListener('paste', onPasteAnywhere))
 onMounted(async () => {
+  window.addEventListener('paste', onPasteAnywhere)
   if (!tree.loaded) await tree.load()
   // vom Baum gezogen (Drag & Drop auf einen Knoten): Datei lesen, Ziel setzen, Analyse gleich starten
   const p = store.pendingImport
@@ -223,17 +232,16 @@ onMounted(async () => {
 <template>
   <div class="pane" :style="`width:${leftW}px;flex:none`">
     <ImportHead source="table" plugin="table" :busy="busy" :get="profileGet" :set="profileSet">
-      <tr><td class="attr">Datei</td><td class="row drop" :class="{ over: dragOver }" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
+      <tr><td class="attr">Datei</td><td class="row drop" :class="{ over: dragOver, empty: !source }" :title="source ? '' : 'Datei hierher ziehen — oder aus Excel kopieren und hier Strg+V (erste Zeile = Spaltennamen)'" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
         <label class="primary btn" :title="'CSV, TSV, JSON' + (plugins.importers.length ? ', ' + plugins.importers.flatMap(i => i.accept ?? []).join(', ') : '') + ' — oder hierher ziehen'" @click="pickFile">📂 wählen<input id="table-file-input" type="file" style="display:none" @change="fileHandle = null; takeFile($event.target.files[0])" /></label>
         <span v-if="source" class="chip" :title="`${source.rows.length} Zeilen · ${source.columns.length} Spalten`">📄 {{ source.name }} <span class="muted">{{ source.rows.length }}</span></span>
         <button v-if="source" class="x" @click="reloadFile" :title="fileHandle ? 'Datei neu von der Platte lesen (zwischendurch in Excel geändert?)' : 'Datei neu wählen — dieser Browser kann Dateien nicht erneut lesen'">↻</button>
         <select v-if="source?.sheets?.length > 1" :value="source.sheet" @change="pickSheet($event.target.value)" title="Blatt" style="width:140px"><option v-for="s in source.sheets" :key="s.name" :value="s.name">{{ s.name }} ({{ s.rows.length }})</option></select>
-        <span v-else-if="!source" class="muted" style="font-size:12px">oder hierher ziehen</span>
+        <span v-else-if="!source" class="muted" style="font-size:12px">oder hierher ziehen · oder aus Excel kopieren und Strg+V</span>
         <span class="grow" />
         <button v-if="source" class="x" @click="resuggest" title="Zuordnung neu vorschlagen">↻</button>
       </td></tr>
-      <tr><td class="attr">Einfügen</td><td><input v-model="pasteText" type="text" placeholder="aus Excel kopieren, hier Strg+V (erste Zeile = Spaltennamen)" @paste="setTimeout(takePaste, 0)" /></td></tr>
-      <tr class="tstep"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
+      <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
       <tr v-if="fixed"><td class="attr">Knoten</td><td class="row">
         <router-link :to="`/tree/${fixed.row.id}`" class="chip" :title="fixed.row.id">{{ icon(fixed.row.role) }} {{ fixed.row.label }}</router-link>
         <span class="muted">→ {{ roleLabel[fixed.childRole] }} · {{ fixed.allowed.size }} mögliche Spalten</span>
@@ -347,6 +355,8 @@ onMounted(async () => {
 .section h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; }
 .section h2 .muted { font-weight: 400; }
 .drop.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
+/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */
+.drop.empty { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; }
 .btn { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer; }
 .map td { vertical-align: top; padding: 3px 4px; }
 .map tr.off td { opacity: .5; }

@@ -9,7 +9,7 @@ const NAMES = { ixp: 'IXP', solr: 'Solr', table: 'Tabelle' }
 </script>
 
 <template>
-  <div class="toolbar"><h1><router-link to="/import" class="crumb" title="zur Übersicht Import">⇩ Import</router-link> › {{ NAMES[source] ?? source }}</h1><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span><slot name="status" /></div>
+  <div class="toolbar"><h1><router-link to="/import" class="crumb" title="zur Übersicht Import">⇩ Import</router-link> › {{ NAMES[source] ?? source }}</h1><span class="grow" /><span v-if="busy" class="busy">⏳ {{ busy }}</span><slot name="status" /></div>
   <table class="grid form"><colgroup><col style="width:84px" /><col /></colgroup><tbody>
     <tr class="step"><td colspan="2">1 · Quelle</td></tr>
     <tr><td class="attr">Profil</td><td><ProfileBar :key="plugin" :plugin="plugin" :get="get" :set="set" /></td></tr>
@@ -18,6 +18,9 @@ const NAMES = { ixp: 'IXP', solr: 'Solr', table: 'Tabelle' }
 </template>
 
 <style scoped>
+/* Statusmeldung beim Einlesen/Analysieren — leuchtend, sonst sieht man sie nicht (Taloan, 21.09.) */
+.busy { background: var(--accent); color: #fff; font-weight: 600; padding: 2px 10px; border-radius: 4px; animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
 .crumb { color: var(--muted); text-decoration: none; font-weight: 400; }
 .crumb:hover { color: var(--accent); }
 .form { width: 100%; border-bottom: 1px solid var(--line); }

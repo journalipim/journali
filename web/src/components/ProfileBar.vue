@@ -59,7 +59,7 @@ defineExpose({ load })
       <option value="">— Profil —</option>
       <option v-for="n in names" :key="n" :value="n">{{ n }}</option>
     </select>
-    <input v-model="name" type="text" placeholder="Name" style="width:110px" title="Name zum Speichern (neu oder vorhanden = überschreiben)" @keydown.enter="save" />
+    <input v-model="name" type="text" placeholder="Name" style="width:200px" title="Name zum Speichern (neu oder vorhanden = überschreiben)" @keydown.enter="save" />
     <button class="x" @click="save" :disabled="busy" :title="name && name !== current ? `als „${name}“ speichern` : 'Profil speichern (überschreiben)'">💾</button>
     <button class="x" @click="remove" :disabled="!current || busy" title="Profil löschen">✕</button>
   </div>
@@ -67,5 +67,5 @@ defineExpose({ load })
 
 <style scoped>
 .profiles { display: flex; align-items: center; gap: 4px; }
-.profiles select { max-width: 150px; }
+.profiles select { min-width: 160px; max-width: 260px; }   /* Profilnamen lesbar (Taloan, 21.09.) */
 </style>
