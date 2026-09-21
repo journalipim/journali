@@ -158,6 +158,28 @@ public class TreeTests
     }
 
     [Fact]
+    public void Arbeitsname_eines_Verweises_bleibt_intern_und_geht_mit_dem_Verweis()
+    {
+        var g = Ids.New(Roles.Group); var web = Ids.New(Roles.Rubric);
+        var (journal, _, tree) = Build(j =>
+        {
+            j.Append("t", g, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("Ersatzteile", "Spare parts"))));
+            j.Append("t", web, Types.RubricCreated, Types.Serialize(new RubricCreated(null, new(), "Katalog", "print")));
+            j.Append("t", web, Types.NodePlaced, Types.Serialize(new NodePlaced(g)));
+            j.Append("t", web, Types.PlaceNamed, Types.Serialize(new PlaceNamed(g, "Rasenmäher")));
+        });
+        Assert.Equal("Rasenmäher", tree.Nodes[web].PlacedNames[g]);
+        Assert.Equal("Ersatzteile", tree.Nodes[g].Name);                       // die Pflegegruppe heisst weiter, wie sie heisst
+        journal.Append("t", web, Types.PlaceNamed, Types.Serialize(new PlaceNamed(g, "")));
+        Projector.CatchUp(journal, tree);
+        Assert.False(tree.Nodes[web].PlacedNames.ContainsKey(g));            // leer = Pflegename
+        journal.Append("t", web, Types.PlaceNamed, Types.Serialize(new PlaceNamed(g, "Rasenmäher")));
+        journal.Append("t", web, Types.NodeUnplaced, Types.Serialize(new NodeUnplaced(g)));
+        Projector.CatchUp(journal, tree);
+        Assert.False(tree.Nodes[web].PlacedNames.ContainsKey(g));            // Verweis weg, Name weg
+    }
+
+    [Fact]
     public void Beleg_pending_bleibt_auch_ohne_Wert()
     {
         // „angefragt bei herbert bis 2026-10-04“ am leeren Wert — der Beleg steht, der Wert nicht (Taloan, 21.09.: „wo ist der Herbert“)

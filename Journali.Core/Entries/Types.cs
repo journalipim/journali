@@ -75,6 +75,7 @@ public static class Types
     public const string PubTreeSet = "PubTreeSet";
     public const string NodePlaced = "NodePlaced";
     public const string NodeUnplaced = "NodeUnplaced";
+    public const string PlaceNamed = "PlaceNamed";
     public const string RelationTypeDefined = "RelationTypeDefined";
     public const string RelationTypeRetired = "RelationTypeRetired";
 
@@ -447,6 +448,9 @@ public sealed record PubTreeSet(string? Channel, string? Market);
 public sealed record NodePlaced(string Node, int? Order = null);
 
 public sealed record NodeUnplaced(string Node);
+
+/// <summary>Arbeitsname eines Verweises in dieser Rubrik (Taloan, 21.09.2026): nur für den Überblick im Publikationsbaum, nie für die Ausgabe. Leer = Pflegename.</summary>
+public sealed record PlaceNamed(string Node, string? Name);
 
 /// <summary>
 /// Ein Relationstyp (18): Strom <c>relation:&lt;key&gt;</c>. <paramref name="Reverse"/> ist die Bezeichnung

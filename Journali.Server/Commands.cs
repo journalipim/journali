@@ -158,6 +158,14 @@ public static class Commands
     }
 
     /// <summary>Pflegeknoten in eine Rubrik hängen (Produktgruppe oder Produkt; Varianten kommen mit dem Produkt).</summary>
+    /// <summary>Arbeitsname eines Verweises (nur hier, nur intern); leer nimmt ihn weg.</summary>
+    public static Outcome NamePlace(Ctx c, string rubric, string node, string? name)
+    {
+        if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;
+        if (!r.Placed.Contains(node)) return Outcome.Bad("Der Verweis hängt hier nicht.");
+        return Outcome.Ok(c.Write(rubric, Types.PlaceNamed, new PlaceNamed(node, Blank(name))));
+    }
+
     public static Outcome Place(Ctx c, string rubric, string? node, int? order = null)
     {
         if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;

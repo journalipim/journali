@@ -45,6 +45,7 @@ public sealed class Node
     public string? Source { get; set; }   // Rubrik: die Pflegegruppe, aus der sie kopiert wurde — ihre Werte sind dort, hier nur zu lesen
     /// <summary>Rubrik: die hier per Verweis hängenden Pflegeknoten, in Reihenfolge.</summary>
     public List<string> Placed { get; } = new();
+    public Dictionary<string, string> PlacedNames { get; } = new();   // Arbeitsname je Verweis (PlaceNamed) — intern, nie Ausgabe
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";
@@ -419,9 +420,13 @@ public sealed class Tree : IProjection
                 if (!_placedIn.TryGetValue(np.Node, out var set)) _placedIn[np.Node] = set = new();
                 set.Add(n.Id);
                 break;
+            case Types.PlaceNamed:
+                var pn = Types.Deserialize<PlaceNamed>(entry.Payload);
+                if (string.IsNullOrWhiteSpace(pn.Name)) n.PlacedNames.Remove(pn.Node); else n.PlacedNames[pn.Node] = pn.Name.Trim();
+                break;
             case Types.NodeUnplaced:
                 var nu = Types.Deserialize<NodeUnplaced>(entry.Payload);
-                n.Placed.Remove(nu.Node);
+                n.Placed.Remove(nu.Node); n.PlacedNames.Remove(nu.Node);
                 if (_placedIn.TryGetValue(nu.Node, out var s2)) s2.Remove(n.Id);
                 break;
             case Types.ProductAxesSet:
