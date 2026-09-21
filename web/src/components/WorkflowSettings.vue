@@ -141,22 +141,6 @@ function forceLayout() {
   for (const t of w.transitions) { t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null }
   touch()
 }
-async function autoLayout() {
-  const w = cur.value
-  const dagre = (await import('dagre')).default   // erst beim Klick laden (eigener Chunk, zieht lodash mit)
-  const labelW = Math.max(60, ...w.transitions.map(t => ((t.label?.de || t.key).length + (t.roles?.length ? t.roles.join('/').length + 3 : 0)) * 6.5))
-  const g = new dagre.graphlib.Graph({ multigraph: true }).setGraph({ rankdir: 'LR', nodesep: 60, edgesep: 30, ranksep: Math.round(labelW + 40), marginx: 40, marginy: 40 }).setDefaultEdgeLabel(() => ({}))
-  for (const s of w.states) g.setNode(s.key, { width: W, height: H })
-  if (w.start && g.hasNode(w.start)) g.setNode(w.start, { width: W, height: H, rank: 'min' })
-  for (const s of w.states) if (s.final && s.key !== w.start) g.setNode(s.key, { width: W, height: H, rank: 'max' })
-  const lw = t => ((t.label?.de || t.key).length + (t.roles?.length ? t.roles.join('/').length + 3 : 0)) * 6.5 + 10
-  w.transitions.forEach((t, i) => { if (t.from !== t.to && g.hasNode(t.from) && g.hasNode(t.to)) g.setEdge(t.from, t.to, { width: lw(t), height: 18, labelpos: 'c' }, 'e' + i) })
-  dagre.layout(g)
-  // Kacheln ohne Raster, damit die berechneten Wege genau an den Rändern ansetzen
-  for (const s of w.states) { const n = g.node(s.key); if (!n) continue; s.x = Math.max(0, Math.round(n.x - W / 2)); s.y = Math.max(0, Math.round(n.y - H / 2)) }
-  for (const t of w.transitions) { t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null; t.route = null }
-  touch()
-}
 function labelDown(n, e) { selTrans.value = n; selState.value = null; const a = sketch.value.arrows[n]; const p = svgPoint(e); drag.value = { kind: 'label', n, dx: p.x - a.lx, dy: p.y - a.ly } }
 async function editLabel(n) { const t = cur.value.transitions[n]; const v = await dialog.prompt({ title: 'Beschriftung des Übergangs', value: t.label?.de ?? '', ok: '✎ OK' }); if (v == null) return; t.label = { ...(t.label ?? {}), de: v.trim() }; touch() }
 async function editState(i) { const s = cur.value.states[i]; const v = await dialog.prompt({ title: 'Bezeichnung des Zustands', value: s.label?.de ?? '', ok: '✎ OK' }); if (v == null) return; s.label = { ...(s.label ?? {}), de: v.trim() }; touch() }
@@ -233,8 +217,7 @@ onMounted(load)
       </div>
       <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">
         <button @click="addStateAt" title="neuen Zustand anlegen (rechts neben dem letzten)">+ Zustand</button>
-        <button @click="autoLayout" title="in Ebenen anordnen (dagre): Start links, Ende rechts, Kreuzungen minimiert — Andockpunkte und Beschriftungslagen zurück auf Automatik">⟲ Ebenen</button>
-        <button @click="forceLayout" title="nach Kräften anordnen (Federmodell): gleichmässige Abstände, symmetrische Formen — jeder Klick ein neuer Versuch">⟲ Kräfte</button>
+        <button @click="forceLayout" title="anordnen (Federmodell): gleichmässige Abstände, Start links, Ende rechts — jeder Klick ein neuer Versuch">⟲ anordnen</button>
         <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" title="Markiertes löschen (Entf)">✕</button>
         <span class="grow" />
         <span class="x" style="cursor:help" title="Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht">?</span>
