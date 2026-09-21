@@ -408,7 +408,7 @@ public static class Commands
         if (c.Workflows is null) return null;
         foreach (var (wfKey, nw) in c.Workflows.Of(v.Id))
             if (c.Workflows.All.TryGetValue(wfKey, out var wf) && wf.AppliesTo(v) && wf.State(nw.State) is { Final: false } s)
-                return $"{s.Label.GetValueOrDefault("de") ?? s.Key} ({wf.Label.GetValueOrDefault("de") ?? wfKey})";
+                return $"steht in „{s.Label.GetValueOrDefault("de") ?? s.Key}“ ({wf.Label.GetValueOrDefault("de") ?? wfKey})";
         return null;
     }
 
@@ -432,14 +432,14 @@ public static class Commands
                 if (r.Entry is { } e) last = e; else failed.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {r.Error}");
             }
             if (last is null && variants.Any(v => v.Releases.Contains(new Release(channel!, locale)))) return Outcome.Bad("schon freigegeben");   // eine ist frei, nichts Neues — kein Fehler
-            if (last is null && failed.Count > 0) return Outcome.Bad("Keine Variante freigegeben — " + string.Join(" · ", failed));
+            if (last is null && failed.Count > 0) return Outcome.Bad("Keine Variante konnte freigegeben werden: " + string.Join(" · ", failed));
             if (last is null) return Outcome.Bad("schon freigegeben");
             return Outcome.Ok(last);
         }
         if (n.Role != Roles.Variant) return Outcome.Bad("Freigabe nur an der Variante — sie ist das Verkaufbare.");
         // Freigabe setzt Vollständigkeit voraus — Sperre (docs/pflegestruktur.md, entschieden).
         var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).ToList(), channel!, locale);
-        if (missing.Length > 0) return Outcome.Bad($"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}");
+        if (missing.Length > 0) return Outcome.Bad($"Für {channel}{(locale is null ? "" : "/" + locale)} fehlt: {string.Join(", ", missing.Select(m => Explain(c, n, m)))}");
         return Outcome.Ok(c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale)));
     }
 
@@ -635,7 +635,7 @@ public static class Commands
         var attr = missing[..i]; var loc = missing[(i + 1)..];
         if (!c.Model.Attributes.TryGetValue(attr, out var def)) return missing;
         var viaMaster = c.Tree.Resolve(v, attr, loc, null, def.Inheritable, masters: true).Value is not null;
-        return viaMaster ? $"{missing} nur Master-Text" : missing;
+        return viaMaster ? $"{missing} (nur Master-Text vorhanden, Übersetzung fehlt)" : missing;
     }
 
     /// <summary>Warum ein Übergang jetzt nicht gehen kann (Wirkung release ohne freigebbare Variante) — null = kann. Auch für die Anzeige, vor dem Klick.</summary>
@@ -647,7 +647,7 @@ public static class Commands
             foreach (var ch in eff[8..] == "*" ? c.Model.Channels.Keys.ToList() : [eff[8..]])
             {
                 var sellables = n.Role == Roles.Variant ? [n] : c.Tree.DescendantsDeepestFirst(n.Id).Where(v => v.Role == Roles.Variant).ToList();
-                if (sellables.Count == 0) return $"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ gibt für {ch} frei — hier gibt es aber nichts Verkaufbares (Freigabe nur an Varianten).";
+                if (sellables.Count == 0) return $"Freigabe für {ch} nicht möglich: hier gibt es keine Variante. Freigegeben werden Varianten.";
                 var problems = new List<(string Why, string Sku)>();
                 foreach (var v in sellables)
                 {
@@ -656,14 +656,14 @@ public static class Commands
                     if (v.Id != n.Id && InWork(c, v) is { } w) { problems.Add((w, sku)); continue; }
                     var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, v, CompletenessRules.ActiveAttributes(c.Tree, c.Model, v).ToList(), ch, null);
                     if (missing.Length == 0) { problems.Clear(); break; }
-                    problems.Add((string.Join(", ", missing.Select(m => Explain(c, v, m))), sku));
+                    problems.Add((string.Join(", ", missing.Select(m => Explain(c, v, m))) + " fehlt", sku));
                 }
                 if (problems.Count > 0)
                 {
                     // gleiche Gründe zusammen, je Grund höchstens 5 SKUs — sonst wird aus 50 Varianten ein roter Bildschirm (Taloan, 21.09.)
-                    var grouped = problems.GroupBy(x => x.Why).Select(g => $"{g.Key} — {g.Count()} {(g.Count() == 1 ? "Variante" : "Varianten")}: {string.Join(", ", g.Take(5).Select(x => x.Sku))}{(g.Count() > 5 ? " …" : "")}");
-                    if (n.Role == Roles.Variant) return $"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: nicht freigebbar für {ch} — {problems[0].Why}";
-                    return $"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: keine Variante freigebbar für {ch} — {string.Join(" · ", grouped)}";
+                    var grouped = problems.GroupBy(x => x.Why).Select(g => $"{g.Key} bei {g.Count()} {(g.Count() == 1 ? "Variante" : "Varianten")} ({string.Join(", ", g.Take(5).Select(x => x.Sku))}{(g.Count() > 5 ? ", …" : "")})");
+                    if (n.Role == Roles.Variant) return $"Freigabe für {ch} nicht möglich: {problems[0].Why}.";
+                    return $"Freigabe für {ch} nicht möglich, keine Variante erfüllt die Voraussetzungen: {string.Join(" · ", grouped)}";
                 }
             }
         }
@@ -691,7 +691,7 @@ public static class Commands
             foreach (var ch in kind is "release" or "revoke" && arg == "*" ? c.Model.Channels.Keys.ToList() : [arg])   // * = alle Kanäle (Taloan, 21.09.)
             {
                 var r = kind switch { "release" => GrantRelease(c, id, ch, null), "revoke" => RevokeRelease(c, id, ch, null), "status" => SetStatus(c, id, ch), _ => Outcome.Bad(eff) };
-                if (r.Error is { } err && !err.Contains("schon")) return Outcome.Bad($"Schritt gegangen, Wirkung {eff} nicht: {err}");
+                if (r.Error is { } err && !err.Contains("schon")) return Outcome.Bad($"Der Schritt wurde ausgeführt, die Wirkung {eff} nicht: {err}");
             }
         }
         return Outcome.Ok(e);
