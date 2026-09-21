@@ -192,7 +192,19 @@ async function analyse() {
     const keys = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.attribute))]
     const locs = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.locale ?? ''))]
     const existing = new Map()
-    const roots = target.value ? [target.value.id] : tree.rows.filter(r => !r.parent).map(r => r.id)
+    // Bestand dort holen, wo die Zeilen wirklich liegen (Taloan, 21.09.: alles stand als „— → Wert“, 1077 Werte bei unverändertem Re-Import) —
+    // gefunden wird über Id, Kennung oder SKU, auch ausserhalb des Ziels; also die Wurzeln aller gefundenen Knoten dazunehmen
+    const rootOf = id => { const a = tree.ancestors(id); return a.length ? a[0].id : id }
+    const iId = mapping.value.findIndex(m => m.target === 'id'), iExt = mapping.value.findIndex(m => m.target === 'external')
+    const iSku = mapping.value.findIndex(m => m.target === 'sku' || (m.target === 'attr' && m.attribute === 'sku'))
+    const bySku = new Map(tree.rows.filter(r => r.sku).map(r => [String(r.sku).trim(), r])), byExt = new Map(external.value ? tree.rows.filter(r => r.external?.[external.value]).map(r => [String(r.external[external.value]), r]) : [])
+    const found = new Set()
+    for (const row of source.value.rows) {
+      const id = String(row[iId] ?? '').trim(), ext = String(row[iExt] ?? '').trim(), sku = String(row[iSku] ?? '').trim()
+      const n = (iId >= 0 && id && tree.byId.get(id)) || (iExt >= 0 && ext && byExt.get(ext)) || (iSku >= 0 && sku && bySku.get(sku)) || null
+      if (n) found.add(rootOf(n.id))
+    }
+    const roots = [...new Set([...(target.value ? [target.value.id] : tree.rows.filter(r => !r.parent).map(r => r.id)), ...found])]
     for (const rid of roots) for (const loc of locs) {
       const t = await api.get(`/api/nodes/${encodeURIComponent(rid)}/table?deep=true&attributes=${encodeURIComponent(keys.join(','))}${loc ? '&locale=' + loc : ''}`)
       for (const r of t.rows) {
@@ -411,13 +423,13 @@ onMounted(async () => {
                 <tr class="row" style="cursor:pointer" @click="openRow = openRow === c.row ? null : c.row">
                   <td style="width:20px" class="muted">{{ c.values.length && changeTab !== 'unchanged' ? (openRow === c.row ? '▾' : '▸') : '' }}</td>
                   <td class="mono muted" style="width:50px">{{ c.row + 2 }}</td>
-                  <td><router-link v-if="c.node" :to="`/tree/${c.node}`" @click.stop>{{ icon(c.role) }} {{ c.label }}</router-link><span v-else>+ {{ c.label }}</span></td>
+                  <td><span v-if="c.node">{{ icon(c.role) }} {{ c.label }} <a :href="`/tree/${c.node}`" target="_blank" class="muted" title="im Baum ansehen — neues Fenster, der Import bleibt" @click.stop>↗</a></span><span v-else>+ {{ c.label }}</span></td>
                   <td class="muted" style="text-align:right;white-space:nowrap">{{ c.values.length ? c.values.length + ' Werte' : '' }}</td>
                 </tr>
                 <tr v-if="openRow === c.row && c.values.length"><td></td><td colspan="3">
                   <table class="grid diff"><tbody>
                     <tr v-for="d in c.values" :key="d.attribute + '|' + d.locale"><td class="attr muted">{{ attrLabel(d.attribute) }}<span v-if="d.locale" class="muted"> · {{ d.locale }}</span></td>
-                      <td class="old" :title="d.from ?? ''">{{ d.from == null ? '—' : String(d.from).slice(0, 80) }}</td><td class="muted" style="width:20px">→</td><td class="new" :title="d.to ?? ''">{{ d.to == null ? '— (leeren)' : String(d.to).slice(0, 80) }}</td></tr>
+                      <td class="old" :title="d.from ?? ''">{{ d.from == null ? '' : String(d.from).slice(0, 80) }}</td><td class="muted" style="width:20px">{{ d.from == null ? '+' : '→' }}</td><td :class="d.from == null ? 'new' : 'chg'" :title="d.to ?? ''">{{ d.to == null ? '— (leeren)' : String(d.to).slice(0, 80) }}</td></tr>
                   </tbody></table>
                 </td></tr>
               </template>
@@ -460,7 +472,8 @@ table.cols tr.sample td { white-space: nowrap; font-size: 12px; }
 .tabs button.on { background: var(--accent-soft); border-color: var(--accent); }
 table.diff td { font-size: 12px; white-space: normal; }
 table.diff td.old { color: var(--muted); text-decoration: line-through; max-width: 300px; }
-table.diff td.new { color: var(--pos); max-width: 300px; }
+table.diff td.new { color: var(--pos); max-width: 300px; }      /* neuer Wert (vorher keiner) */
+table.diff td.chg { color: var(--warn); max-width: 300px; }      /* geänderter Wert */
 /* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */
 .x.on { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px; }
 .section { padding: 8px; border-bottom: 1px solid var(--line); }

@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-8542b328] { overflow-x: auto;\n}\ntable.map[data-v-8542b328] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-8542b328] { overflow-x: auto;\n}\ntable.cols[data-v-8542b328] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-8542b328] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-8542b328] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-8542b328] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-8542b328] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-8542b328] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-8542b328] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-8542b328] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-8542b328] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-8542b328] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-8542b328], .tstep input[type=text][data-v-8542b328] { font-size: 12px;\n}\n.fld[data-v-8542b328] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n.tabs button[data-v-8542b328] { border: 1px solid var(--line); background: none; padding: 1px 8px; font-size: 11px; font-weight: 600;\n}\n.tabs button.on[data-v-8542b328] { background: var(--accent-soft); border-color: var(--accent);\n}\ntable.diff td[data-v-8542b328] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-8542b328] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-8542b328] { color: var(--pos); max-width: 300px;\n}\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-8542b328] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-8542b328] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-8542b328] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-8542b328] { font-weight: 400;\n}\n.drop.over[data-v-8542b328] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-8542b328] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-8542b328] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap;\n}\n.recent .chip[data-v-8542b328] { cursor: pointer;\n}\n.recent .chip.dim[data-v-8542b328] { opacity: .55; cursor: default;\n}\n.btn[data-v-8542b328] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-8542b328] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-8542b328] { opacity: .5;\n}\n.samples[data-v-8542b328] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-8542b328] { font-size: 13px;\n}\n.out[data-v-8542b328] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-8542b328] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-8542b328] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-8542b328]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-e8cbc67d] { overflow-x: auto;\n}\ntable.map[data-v-e8cbc67d] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-e8cbc67d] { overflow-x: auto;\n}\ntable.cols[data-v-e8cbc67d] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-e8cbc67d] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-e8cbc67d] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-e8cbc67d] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-e8cbc67d] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-e8cbc67d] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-e8cbc67d] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-e8cbc67d] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-e8cbc67d] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-e8cbc67d] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-e8cbc67d], .tstep input[type=text][data-v-e8cbc67d] { font-size: 12px;\n}\n.fld[data-v-e8cbc67d] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n.tabs button[data-v-e8cbc67d] { border: 1px solid var(--line); background: none; padding: 1px 8px; font-size: 11px; font-weight: 600;\n}\n.tabs button.on[data-v-e8cbc67d] { background: var(--accent-soft); border-color: var(--accent);\n}\ntable.diff td[data-v-e8cbc67d] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-e8cbc67d] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-e8cbc67d] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-e8cbc67d] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-e8cbc67d] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-e8cbc67d] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-e8cbc67d] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-e8cbc67d] { font-weight: 400;\n}\n.drop.over[data-v-e8cbc67d] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-e8cbc67d] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-e8cbc67d] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap;\n}\n.recent .chip[data-v-e8cbc67d] { cursor: pointer;\n}\n.recent .chip.dim[data-v-e8cbc67d] { opacity: .55; cursor: default;\n}\n.btn[data-v-e8cbc67d] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-e8cbc67d] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-e8cbc67d] { opacity: .5;\n}\n.samples[data-v-e8cbc67d] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-e8cbc67d] { font-size: 13px;\n}\n.out[data-v-e8cbc67d] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-e8cbc67d] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-e8cbc67d] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-e8cbc67d]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -373,42 +373,48 @@ const _hoisted_158 = {
   class: "mono muted",
   style: { "width": "50px" }
 };
-const _hoisted_159 = { key: 1 };
-const _hoisted_160 = {
+const _hoisted_159 = { key: 0 };
+const _hoisted_160 = ["href"];
+const _hoisted_161 = { key: 1 };
+const _hoisted_162 = {
   class: "muted",
   style: { "text-align": "right", "white-space": "nowrap" }
 };
-const _hoisted_161 = { key: 0 };
-const _hoisted_162 = { colspan: "3" };
-const _hoisted_163 = { class: "grid diff" };
-const _hoisted_164 = { class: "attr muted" };
-const _hoisted_165 = {
+const _hoisted_163 = { key: 0 };
+const _hoisted_164 = { colspan: "3" };
+const _hoisted_165 = { class: "grid diff" };
+const _hoisted_166 = { class: "attr muted" };
+const _hoisted_167 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_166 = ["title"];
-const _hoisted_167 = ["title"];
-const _hoisted_168 = { key: 0 };
-const _hoisted_169 = { style: { "margin-top": "8px" } };
-const _hoisted_170 = { class: "out" };
-const _hoisted_171 = {
+const _hoisted_168 = ["title"];
+const _hoisted_169 = {
+  class: "muted",
+  style: { "width": "20px" }
+};
+const _hoisted_170 = ["title"];
+const _hoisted_171 = { key: 0 };
+const _hoisted_172 = { style: { "margin-top": "8px" } };
+const _hoisted_173 = { class: "out" };
+const _hoisted_174 = {
   key: 1,
   class: "muted"
 };
-const _hoisted_172 = {
+const _hoisted_175 = {
   key: 2,
   class: "empty"
 };
-const _hoisted_173 = {
+const _hoisted_176 = {
   key: 3,
   class: "pos",
   style: { "margin-top": "8px" }
 };
-const _hoisted_174 = {
+const _hoisted_177 = {
   key: 4,
   class: "section"
 };
-const _hoisted_175 = {
+const _hoisted_178 = {
   class: "mono",
   style: { "font-size": "12px", "white-space": "pre-wrap" }
 };
@@ -717,7 +723,20 @@ const _sfc_main$1 = {
         const keys = [...new Set(mapping.value.filter((m2) => m2.target === "attr").map((m2) => m2.attribute))];
         const locs = [...new Set(mapping.value.filter((m2) => m2.target === "attr").map((m2) => m2.locale ?? ""))];
         const existing = /* @__PURE__ */ new Map();
-        const roots = target.value ? [target.value.id] : tree.rows.filter((r) => !r.parent).map((r) => r.id);
+        const rootOf = (id) => {
+          const a = tree.ancestors(id);
+          return a.length ? a[0].id : id;
+        };
+        const iId = mapping.value.findIndex((m2) => m2.target === "id"), iExt = mapping.value.findIndex((m2) => m2.target === "external");
+        const iSku = mapping.value.findIndex((m2) => m2.target === "sku" || m2.target === "attr" && m2.attribute === "sku");
+        const bySku = new Map(tree.rows.filter((r) => r.sku).map((r) => [String(r.sku).trim(), r])), byExt = new Map(external.value ? tree.rows.filter((r) => r.external?.[external.value]).map((r) => [String(r.external[external.value]), r]) : []);
+        const found = /* @__PURE__ */ new Set();
+        for (const row of source.value.rows) {
+          const id = String(row[iId] ?? "").trim(), ext = String(row[iExt] ?? "").trim(), sku = String(row[iSku] ?? "").trim();
+          const n = iId >= 0 && id && tree.byId.get(id) || iExt >= 0 && ext && byExt.get(ext) || iSku >= 0 && sku && bySku.get(sku) || null;
+          if (n) found.add(rootOf(n.id));
+        }
+        const roots = [.../* @__PURE__ */ new Set([...target.value ? [target.value.id] : tree.rows.filter((r) => !r.parent).map((r) => r.id), ...found])];
         for (const rid of roots) for (const loc of locs) {
           const t = await api.get(`/api/nodes/${encodeURIComponent(rid)}/table?deep=true&attributes=${encodeURIComponent(keys.join(","))}${loc ? "&locale=" + loc : ""}`);
           for (const r of t.rows) {
@@ -2449,7 +2468,7 @@ const _sfc_main$1 = {
                   1
                   /* TEXT */
                 ),
-                _cache[98] || (_cache[98] = createTextVNode(
+                _cache[97] || (_cache[97] = createTextVNode(
                   " · ",
                   -1
                   /* CACHED */
@@ -2461,7 +2480,7 @@ const _sfc_main$1 = {
                   1
                   /* TEXT */
                 ),
-                _cache[99] || (_cache[99] = createTextVNode(
+                _cache[98] || (_cache[98] = createTextVNode(
                   " · ",
                   -1
                   /* CACHED */
@@ -2732,24 +2751,23 @@ const _sfc_main$1 = {
                                   /* TEXT */
                                 ),
                                 createElementVNode("td", null, [
-                                  c.node ? (openBlock(), createBlock(_component_router_link, {
-                                    key: 0,
-                                    to: `/tree/${c.node}`,
-                                    onClick: _cache[39] || (_cache[39] = withModifiers(() => {
-                                    }, ["stop"]))
-                                  }, {
-                                    default: withCtx(() => [
-                                      createTextVNode(
-                                        toDisplayString(unref(icon)(c.role)) + " " + toDisplayString(c.label),
-                                        1
-                                        /* TEXT */
-                                      )
-                                    ]),
-                                    _: 2
-                                    /* DYNAMIC */
-                                  }, 1032, ["to"])) : (openBlock(), createElementBlock(
+                                  c.node ? (openBlock(), createElementBlock("span", _hoisted_159, [
+                                    createTextVNode(
+                                      toDisplayString(unref(icon)(c.role)) + " " + toDisplayString(c.label) + " ",
+                                      1
+                                      /* TEXT */
+                                    ),
+                                    createElementVNode("a", {
+                                      href: `/tree/${c.node}`,
+                                      target: "_blank",
+                                      class: "muted",
+                                      title: "im Baum ansehen — neues Fenster, der Import bleibt",
+                                      onClick: _cache[39] || (_cache[39] = withModifiers(() => {
+                                      }, ["stop"]))
+                                    }, "↗", 8, _hoisted_160)
+                                  ])) : (openBlock(), createElementBlock(
                                     "span",
-                                    _hoisted_159,
+                                    _hoisted_161,
                                     "+ " + toDisplayString(c.label),
                                     1
                                     /* TEXT */
@@ -2757,22 +2775,22 @@ const _sfc_main$1 = {
                                 ]),
                                 createElementVNode(
                                   "td",
-                                  _hoisted_160,
+                                  _hoisted_162,
                                   toDisplayString(c.values.length ? c.values.length + " Werte" : ""),
                                   1
                                   /* TEXT */
                                 )
                               ], 8, _hoisted_156),
-                              openRow.value === c.row && c.values.length ? (openBlock(), createElementBlock("tr", _hoisted_161, [
-                                _cache[95] || (_cache[95] = createElementVNode(
+                              openRow.value === c.row && c.values.length ? (openBlock(), createElementBlock("tr", _hoisted_163, [
+                                _cache[94] || (_cache[94] = createElementVNode(
                                   "td",
                                   null,
                                   null,
                                   -1
                                   /* CACHED */
                                 )),
-                                createElementVNode("td", _hoisted_162, [
-                                  createElementVNode("table", _hoisted_163, [
+                                createElementVNode("td", _hoisted_164, [
+                                  createElementVNode("table", _hoisted_165, [
                                     createElementVNode("tbody", null, [
                                       (openBlock(true), createElementBlock(
                                         Fragment,
@@ -2781,7 +2799,7 @@ const _sfc_main$1 = {
                                           return openBlock(), createElementBlock("tr", {
                                             key: d.attribute + "|" + d.locale
                                           }, [
-                                            createElementVNode("td", _hoisted_164, [
+                                            createElementVNode("td", _hoisted_166, [
                                               createTextVNode(
                                                 toDisplayString(attrLabel(d.attribute)),
                                                 1
@@ -2789,7 +2807,7 @@ const _sfc_main$1 = {
                                               ),
                                               d.locale ? (openBlock(), createElementBlock(
                                                 "span",
-                                                _hoisted_165,
+                                                _hoisted_167,
                                                 " · " + toDisplayString(d.locale),
                                                 1
                                                 /* TEXT */
@@ -2798,21 +2816,18 @@ const _sfc_main$1 = {
                                             createElementVNode("td", {
                                               class: "old",
                                               title: d.from ?? ""
-                                            }, toDisplayString(d.from == null ? "—" : String(d.from).slice(0, 80)), 9, _hoisted_166),
-                                            _cache[94] || (_cache[94] = createElementVNode(
+                                            }, toDisplayString(d.from == null ? "" : String(d.from).slice(0, 80)), 9, _hoisted_168),
+                                            createElementVNode(
                                               "td",
-                                              {
-                                                class: "muted",
-                                                style: { "width": "20px" }
-                                              },
-                                              "→",
-                                              -1
-                                              /* CACHED */
-                                            )),
+                                              _hoisted_169,
+                                              toDisplayString(d.from == null ? "+" : "→"),
+                                              1
+                                              /* TEXT */
+                                            ),
                                             createElementVNode("td", {
-                                              class: "new",
+                                              class: normalizeClass(d.from == null ? "new" : "chg"),
                                               title: d.to ?? ""
-                                            }, toDisplayString(d.to == null ? "— (leeren)" : String(d.to).slice(0, 80)), 9, _hoisted_167)
+                                            }, toDisplayString(d.to == null ? "— (leeren)" : String(d.to).slice(0, 80)), 11, _hoisted_170)
                                           ]);
                                         }),
                                         128
@@ -2830,7 +2845,7 @@ const _sfc_main$1 = {
                         128
                         /* KEYED_FRAGMENT */
                       )),
-                      !planned.value.stats.changes.some((c) => c.kind === changeTab.value) ? (openBlock(), createElementBlock("tr", _hoisted_168, [..._cache[96] || (_cache[96] = [
+                      !planned.value.stats.changes.some((c) => c.kind === changeTab.value) ? (openBlock(), createElementBlock("tr", _hoisted_171, [..._cache[95] || (_cache[95] = [
                         createElementVNode(
                           "td",
                           {
@@ -2846,8 +2861,8 @@ const _sfc_main$1 = {
                     ])
                   ])
                 ])) : createCommentVNode("v-if", true),
-                createElementVNode("details", _hoisted_169, [
-                  _cache[97] || (_cache[97] = createElementVNode(
+                createElementVNode("details", _hoisted_172, [
+                  _cache[96] || (_cache[96] = createElementVNode(
                     "summary",
                     { class: "muted" },
                     "Befehle (erste 200)",
@@ -2856,13 +2871,13 @@ const _sfc_main$1 = {
                   )),
                   createElementVNode(
                     "pre",
-                    _hoisted_170,
+                    _hoisted_173,
                     toDisplayString(planned.value.commands.slice(0, 200).map((c) => `${c.op} ${JSON.stringify(c.args)}`).join("\n")),
                     1
                     /* TEXT */
                   )
                 ])
-              ])) : source.value ? (openBlock(), createElementBlock("div", _hoisted_171, "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")) : (openBlock(), createElementBlock("div", _hoisted_172, [..._cache[100] || (_cache[100] = [
+              ])) : source.value ? (openBlock(), createElementBlock("div", _hoisted_174, "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")) : (openBlock(), createElementBlock("div", _hoisted_175, [..._cache[99] || (_cache[99] = [
                 createTextVNode(
                   "Datei ablegen oder aus Excel einfügen.",
                   -1
@@ -2886,7 +2901,7 @@ const _sfc_main$1 = {
                   /* CACHED */
                 )
               ])])),
-              result.value ? (openBlock(), createElementBlock("div", _hoisted_173, [
+              result.value ? (openBlock(), createElementBlock("div", _hoisted_176, [
                 createTextVNode(
                   "✓ " + toDisplayString(result.value.written) + " Einträge geschrieben · Stapel " + toDisplayString(result.value.batch) + " — ",
                   1
@@ -2895,7 +2910,7 @@ const _sfc_main$1 = {
                 createVNode(_component_router_link, {
                   to: { path: "/journal", query: { q: result.value.batch } }
                 }, {
-                  default: withCtx(() => [..._cache[101] || (_cache[101] = [
+                  default: withCtx(() => [..._cache[100] || (_cache[100] = [
                     createTextVNode(
                       "im Journal",
                       -1
@@ -2906,8 +2921,8 @@ const _sfc_main$1 = {
                   /* STABLE */
                 }, 8, ["to"])
               ])) : createCommentVNode("v-if", true),
-              log.value.length ? (openBlock(), createElementBlock("div", _hoisted_174, [
-                _cache[102] || (_cache[102] = createElementVNode(
+              log.value.length ? (openBlock(), createElementBlock("div", _hoisted_177, [
+                _cache[101] || (_cache[101] = createElementVNode(
                   "h2",
                   null,
                   "Protokoll",
@@ -2916,7 +2931,7 @@ const _sfc_main$1 = {
                 )),
                 createElementVNode(
                   "div",
-                  _hoisted_175,
+                  _hoisted_178,
                   toDisplayString(log.value.join("\n")),
                   1
                   /* TEXT */
@@ -2931,7 +2946,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-8542b328"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-e8cbc67d"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
