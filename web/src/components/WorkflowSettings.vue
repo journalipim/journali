@@ -121,8 +121,18 @@ function autoLayout() {
     if (l > 0) col.sort((a, b) => { const bc = k => pred[k].length ? pred[k].reduce((s, q) => s + (rowOf[q] ?? 0), 0) / pred[k].length : 0; return bc(a) - bc(b) })
     col.forEach((k, r) => { rowOf[k] = r })
   }
-  const maxRows = Math.max(...Object.values(cols).map(c => c.length))
-  for (const s of w.states) { const l = layer[s.key], r = rowOf[s.key], n = cols[l].length; s.x = 40 + l * (W + 80); s.y = snap(60 + (r + (maxRows - n) / 2) * 110) }
+  // Schleifenknoten: haben einen Rückweg auf eine frühere Ebene (Korrektur → Prüfung) — in die Reihe darunter, unter ihren Vorgänger
+  const loop = new Set(w.transitions.filter(t => layer[t.to] < layer[t.from] && layer[t.from] > 0 && pred[t.from].length).map(t => t.from))
+  const labelW = Math.max(60, ...w.transitions.map(t => ((t.label?.de || t.key).length + (t.roles?.length ? t.roles.join('/').length + 3 : 0)) * 6.5))
+  const gap = Math.max(80, Math.round(labelW + 30))
+  // Ebenen ohne Schleifenknoten neu nummerieren, damit unten keine Lücke bleibt
+  const top = [...new Set(keys.filter(k => !loop.has(k)).map(k => layer[k]))].sort((a, b) => a - b); const colOf = Object.fromEntries(top.map((l, i) => [l, i]))
+  for (const s of w.states) {
+    const k = s.key
+    if (loop.has(k)) { const p = pred[k].sort((a, b) => layer[b] - layer[a])[0]; const px = w.states.find(x => x.key === p); s.x = px?.x ?? 40 + colOf[layer[p] ?? 0] * (W + gap); s.y = snap((px?.y ?? 60) + H + 90); continue }
+    const l = colOf[layer[k]] ?? 0; const rows = cols[layer[k]].filter(x => !loop.has(x)); const r = rows.indexOf(k)
+    s.x = 40 + l * (W + gap); s.y = snap(60 + r * (H + 60))
+  }
   for (const t of w.transitions) { t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null }
   touch()
 }
@@ -193,7 +203,13 @@ onMounted(load)
         <span class="muted">gilt für</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
         <span class="muted" style="font-size:11px">(nichts angehakt = alle)</span>
       </div>
-      <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt ein), von innen ziehen = verschieben · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Entf löscht <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button> <button class="x" @click="autoLayout" title="Ebenen vom Start aus, links nach rechts; Rückwege unten herum; Andockpunkte und Beschriftungen zurück auf Automatik">⟲ anordnen</button></div>
+      <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">
+        <button @click="addStateAt" title="neuen Zustand anlegen (rechts neben dem letzten)">+ Zustand</button>
+        <button @click="autoLayout" title="automatisch anordnen: Ebenen vom Start nach rechts, Schleifen darunter, Beschriftungen zwischen den Kacheln; Andockpunkte und Beschriftungslagen zurück auf Automatik">⟲ anordnen</button>
+        <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" title="Markiertes löschen (Entf)">✕</button>
+        <span class="grow" />
+        <span class="x" style="cursor:help" title="Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht">?</span>
+      </div>
       <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none`" font-size="11" font-family="system-ui"
         @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
         <defs><pattern id="wf-grid" :width="GRID" :height="GRID" patternUnits="userSpaceOnUse"><path :d="`M ${GRID} 0 L 0 0 0 ${GRID}`" fill="none" stroke="var(--line)" stroke-width="0.5" opacity="0.6" /></pattern><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
