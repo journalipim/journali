@@ -15,6 +15,18 @@ async function load() {
   try { defs.value = await api.get('/api/workflows'); tasks.value = await api.get(`/api/workflows/tasks?workflow=${wf.value}&state=${state.value}`) } catch (e) { store.toast(e.message) }
   busy.value = ''
 }
+// Zuweisen aus der Liste (Taloan, 21.09.): Vorschlagsliste wie am Knoten — Personen mit der Rolle des nächsten Schritts zuerst
+let people = null
+async function assign(t) {
+  if (!people) { try { people = await api.get('/api/auth/people') } catch { people = [] } }
+  const roles = new Set(t.roles ?? []); const fits = p => roles.size === 0 || roles.has(p.role) || p.role === 'admin'
+  const choices = [{ value: '', label: roles.size ? `— Rolle ${[...roles].join('/')} (jede Person damit)` : '— jede Rolle mit Schreibrecht' },
+    ...people.filter(fits).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role}` })),
+    ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role} (nicht die Rolle des Schritts)` }))]
+  const user = people.length ? await dialog.prompt({ title: `Zuständig · ${t.label}`, value: t.assigned ?? '', choices }) : await dialog.prompt({ title: `Zuständig · ${t.label}`, text: 'Benutzer-Key (leer = Rolle)', value: t.assigned ?? '' })
+  if (user === null) return
+  try { await api.post(`/api/nodes/${encodeURIComponent(t.node)}/workflow/${t.workflow}/assign`, { user: user.trim() || null }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
+}
 async function step(t, tr) {
   let note = null
   if (tr.noteRequired) { note = await dialog.prompt({ title: `${tr.label?.de || tr.key} · ${t.label}`, text: 'Notiz ist Pflicht — was ist zu tun?', placeholder: 'Notiz' }); if (!note?.trim()) return }
@@ -42,7 +54,7 @@ onMounted(load)
             <td><span class="chip" :style="`border-color:${color(t.color)};color:${color(t.color)}`">{{ t.stateLabel?.de || t.state }}</span></td>
             <td class="muted" :title="t.since ? `${when(t.since)} · ${t.actor}` : ''">{{ age(t.since) }}</td>
             <td class="muted" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="t.note ?? ''">{{ t.note }}</td>
-            <td class="muted">{{ t.assigned ?? '' }}</td>
+            <td><button class="x" @click="assign(t)" :title="t.assigned ? `zuständig: ${t.assigned} — ändern` : 'jemandem zuweisen'">{{ t.assigned ? '👤 ' + t.assigned : '👤' }}</button></td>
             <td class="row" style="gap:4px;flex-wrap:wrap"><button v-for="tr in t.transitions" :key="tr.key" @click="step(t, tr)" :title="tr.noteRequired ? 'Notiz Pflicht' : (tr.effects?.join(', ') ?? '')">{{ tr.label?.de || tr.key }} →</button></td>
           </tr>
         </tbody>

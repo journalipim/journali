@@ -40,7 +40,7 @@ public static class WorkflowApi
                     var allowed = Commands.Allowed(c.Workflows, wf, n.Id, role).ToList();
                     if (allowed.Count == 0) continue;
                     if (nw?.Assigned is { } a && user is not null && a != user && state is null) continue;   // jemand anderem zugewiesen
-                    out_.Add((nw?.At, new { node = n.Id, label = NodeRow.LabelOf(tree, model, n), n.Role, workflow = wf.Key, workflowLabel = wf.Label, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, since = nw?.At, actor = nw?.Actor, note = nw?.Note, assigned = nw?.Assigned, transitions = allowed.Select(t => new { t.Key, t.Label, t.NoteRequired, t.Effects }).ToList() }));
+                    out_.Add((nw?.At, new { node = n.Id, label = NodeRow.LabelOf(tree, model, n), n.Role, workflow = wf.Key, workflowLabel = wf.Label, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, since = nw?.At, actor = nw?.Actor, note = nw?.Note, assigned = nw?.Assigned, roles = wf.Transitions.Where(t => t.From == st).SelectMany(t => t.Roles ?? []).Distinct().ToList(), transitions = allowed.Select(t => new { t.Key, t.Label, t.NoteRequired, t.Effects }).ToList() }));
                     if (out_.Count >= limit) break;
                 }
             }
