@@ -7,6 +7,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
+import { menu } from '../menu.js'
 
 const list = ref([]); const cur = ref(null); const roles = ref([]); const dirty = ref(false)
 const COLORS = [['muted', 'grau'], ['warn', 'gelb'], ['neg', 'rot'], ['accent', 'blau'], ['pos', 'grün']]
@@ -106,6 +107,26 @@ function stateUp(j, e) {
   // loslassen auf einer Kachel: eingeschnappter Punkt, sonst der nächste zur Maus
   const d = drag.value; if (!d || d.kind === 'move') { drag.value = null; return }
   if (d.snapJ != null) portUp(d.snapJ, d.snapPort); else portUp(j, nearestPort(posOf(cur.value.states[j], j), svgPoint(e)))
+}
+function arrowMenu(e, n) {
+  selTrans.value = n; selState.value = null; const t = cur.value.transitions[n]
+  menu.open(e, [
+    { label: 'Beschriftung ändern …', icon: '✎', action: () => editLabel(n) },
+    { label: 'Beschriftung zurück auf die Linie', icon: '↺', disabled: t.labelX == null, action: () => { t.labelX = null; t.labelY = null; touch() } },
+    { label: 'Andockpunkte automatisch', icon: '↺', disabled: !t.fromPort && !t.toPort, action: () => { t.fromPort = null; t.toPort = null; touch() } },
+    { sep: true },
+    { label: 'Entfernen', icon: '✕', danger: true, action: () => { cur.value.transitions.splice(n, 1); selTrans.value = null; touch() } },
+  ])
+}
+function stateMenu(e, i) {
+  selState.value = i; selTrans.value = null; const s = cur.value.states[i]
+  menu.open(e, [
+    { label: 'Umbenennen …', icon: '✎', action: () => editState(i) },
+    { label: 'Start', icon: '●', disabled: cur.value.start === s.key, action: () => { cur.value.start = s.key; touch() } },
+    { label: s.final ? 'kein Ende mehr' : 'Ende', icon: '◎', action: () => { s.final = !s.final; touch() } },
+    { sep: true },
+    { label: 'Entfernen', icon: '✕', danger: true, hint: 'nur ohne Übergänge davon/dahin', action: () => delState(i) },
+  ])
 }
 function canvasUp() { const d = drag.value; if (d && (d.kind === 'link' || d.kind === 'reattach') && d.snapJ != null) { portUp(d.snapJ, d.snapPort); return } drag.value = null }
 // Kräfte-Layout (Taloan, 21.09.: „sowas kann der Algo nicht?“ — die symmetrische Form kommt aus einem Federmodell, nicht aus Ebenen):
@@ -219,13 +240,13 @@ onMounted(load)
         <span class="grow" />
         <span class="x" style="cursor:help" title="Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht">?</span>
       </div>
-      <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none`" font-size="11" font-family="system-ui"
+      <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none;user-select:none`" font-size="11" font-family="system-ui"
         @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
         <defs><pattern id="wf-grid" :width="GRID" :height="GRID" patternUnits="userSpaceOnUse"><path :d="`M ${GRID} 0 L 0 0 0 ${GRID}`" fill="none" stroke="var(--line)" stroke-width="0.5" opacity="0.6" /></pattern><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
         <rect x="0" y="0" :width="sketch.width" :height="sketch.height" fill="url(#wf-grid)" @mousedown="selState = null; selTrans = null" />
-        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n || a.temp ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n || a.temp ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'" stroke="var(--bg)" stroke-width="4" paint-order="stroke" stroke-linejoin="round" style="cursor:move;user-select:none" @mousedown.stop.prevent="labelDown(n, $event)" @dblclick.stop="editLabel(n)"><title>ziehen = verschieben · Doppelklick = bearbeiten</title>{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
+        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null" @contextmenu.prevent.stop="arrowMenu($event, n)"><path :d="a.d" fill="none" :stroke="selTrans === n || a.temp ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n || a.temp ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'" stroke="var(--bg)" stroke-width="4" paint-order="stroke" stroke-linejoin="round" style="cursor:move;user-select:none" @mousedown.stop.prevent="labelDown(n, $event)" @dblclick.stop="editLabel(n)"><title>ziehen = verschieben · Doppelklick = bearbeiten</title>{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
         <g v-if="selTrans != null && sketch.arrows[selTrans]"><circle :cx="sketch.arrows[selTrans].p1.x" :cy="sketch.arrows[selTrans].p1.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'from', $event)"><title>Anfang umhängen</title></circle><circle :cx="sketch.arrows[selTrans].p2.x" :cy="sketch.arrows[selTrans].p2.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'to', $event)"><title>Ende umhängen</title></circle></g>
-        <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : hoverEdge === i ? 'cursor:crosshair' : 'cursor:grab'" @mousemove="stateHover(i, $event)" @mouseleave="hoverEdge === i && (hoverEdge = null)" @mousedown.prevent.stop="stateDown(i, $event)" @mouseup.stop="stateUp(i, $event)" @dblclick="editState(i)">
+        <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : hoverEdge === i ? 'cursor:crosshair' : 'cursor:grab'" @mousemove="stateHover(i, $event)" @mouseleave="hoverEdge === i && (hoverEdge = null)" @mousedown.prevent.stop="stateDown(i, $event)" @contextmenu.prevent.stop="stateMenu($event, i)" @mouseup.stop="stateUp(i, $event)" @dblclick="editState(i)">
           <rect :x="sketch.pos[i].x" :y="sketch.pos[i].y" :width="W" :height="H" rx="6" :fill="selState === i ? 'var(--accent-soft)' : 'var(--pane)'" :stroke="hoverEdge === i ? 'var(--accent)' : color(s.color)" :stroke-width="hoverEdge === i ? 2.5 : s.key === cur.start ? 2.5 : 1.5" />
           <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 20" text-anchor="middle" fill="var(--text)" font-weight="600">{{ s.label?.de || s.key }}</text>
           <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 36" text-anchor="middle" fill="var(--muted)">{{ s.count ?? 0 }} Knoten{{ s.final ? ' · Ende' : '' }}{{ s.key === cur.start ? ' · Start' : '' }}</text>
