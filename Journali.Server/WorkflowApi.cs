@@ -25,6 +25,8 @@ public static class WorkflowApi
         api.MapGet("/workflows/tasks", (HttpRequest req, Catalog c, string? workflow = null, string? state = null, int limit = 500) => c.With((model, tree, _) =>
         {
             var role = req.HttpContext.Items["role"] as string; var user = req.HttpContext.Items["user"] as string;
+            // leere Parameter = alle (Taloan, 21.09.: „Korrektur dem admin zugewiesen — aber der hat nichts zu tun“: die Oberfläche schickt workflow= und state= leer)
+            if (string.IsNullOrWhiteSpace(workflow)) workflow = null; if (string.IsNullOrWhiteSpace(state)) state = null;
             var out_ = new List<(DateTimeOffset? Since, object Row)>();
             foreach (var wf in c.Workflows.All.Values.Where(w => workflow is null || w.Key == workflow))
             {
