@@ -101,7 +101,7 @@ public static class Auth
         var path = req.Path.Value ?? ""; var method = req.Method;
         var read = method is "GET" or "HEAD" or "OPTIONS";
         if (path.StartsWith("/api/auth/me") || path.StartsWith("/api/auth/logout") || path.StartsWith("/api/auth/password") || path.StartsWith("/api/auth/tokens")) return null;   // eigenes Konto
-        if (path.StartsWith("/api/auth/rights")) return null;                                                                         // das Vokabular darf jeder lesen
+        if (path.StartsWith("/api/auth/rights") || path.StartsWith("/api/auth/people")) return path.StartsWith("/api/auth/people") ? Rights.Read : null;   // Personen (Key, Name, Rolle) für Zuweisungen darf jeder Leser sehen                                                                         // das Vokabular darf jeder lesen
         if (path.StartsWith("/api/auth/users") || path.StartsWith("/api/auth/roles")) return read && path.StartsWith("/api/auth/roles") ? Rights.Read : Rights.Users;
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
         if (path.StartsWith("/api/media/presets") && !read) return Rights.Model;   // Vorschau-Presets sind Modell
@@ -222,6 +222,7 @@ public static class Auth
         });
 
         // Verwaltung (admin): Liste, anlegen/ändern, Passwort setzen, sperren, entfernen
+        api.MapGet("/auth/people", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.All.Values.Where(u => u.Enabled).OrderBy(u => u.Name ?? u.Key).Select(u => new { u.Key, u.Name, u.Role }).ToList())));   // Zuweisung (Taloan, 21.09.: Vorschlagsliste statt auswendig)
         api.MapGet("/auth/users", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.All.Values.OrderBy(u => u.Key).Select(u => new { u.Key, u.Name, u.Email, u.Role, u.Enabled, u.LastAt, u.LastActor, hasPassword = With(dir, s => s.Passwords.ContainsKey(u.Key)) }).ToList())));
         api.MapPut("/auth/users/{key}", (string key, UserBody body, HttpRequest req, Catalog c) =>
         {

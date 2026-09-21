@@ -19,8 +19,8 @@ export const dialog = reactive({
   help({ title, rows = [], text = '' }) {
     return new Promise(resolve => { Object.assign(this, { open: true, kind: 'help', title, text, warn: '', list: rows, ok: 'Schliessen', cancel: '', danger: false, option: null, _resolve: resolve }) })
   },
-  prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = 'Abbrechen', warn = '', danger = false }) {
-    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'prompt', title, text, warn, list: [], value, placeholder, ok, cancel, danger, option: null, _resolve: resolve }) })
+  prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = 'Abbrechen', warn = '', danger = false, choices = null }) {   // choices: [{ value, label }] → Auswahl statt Eingabe
+    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'prompt', title, text, warn, list: [], value, placeholder, ok, cancel, danger, option: null, choices, _resolve: resolve }) })
   },
   done(yes) {
     const r = this._resolve; this.open = false; this._resolve = null

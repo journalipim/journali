@@ -523,7 +523,16 @@ async function wfEffect(eff) {
   api.get(`${nodeUrl()}/workflow`).then(w => { workflows.value = w }).catch(() => {})
 }
 async function wfAssign(w) {
-  const user = await dialog.prompt({ title: `Zuständig für „${w.label?.de || w.workflow}“`, text: 'Benutzer-Key (leer = die Rolle des nächsten Schritts)', value: w.assigned ?? '' })
+  // Vorschlagsliste (Taloan, 21.09.: „oder soll ich alles auswendig wissen?“): Personen mit einer Rolle des nächsten Schritts zuerst, dann die anderen
+  let people = []; try { people = await api.get('/api/auth/people') } catch {}
+  const roles = new Set(w.all.flatMap(t => t.roles ?? []))
+  const fits = p => roles.size === 0 || roles.has(p.role) || p.role === 'admin'
+  const choices = [{ value: '', label: roles.size ? `— Rolle ${[...roles].join('/')} (jede Person damit)` : '— jede Rolle mit Schreibrecht' },
+    ...people.filter(fits).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role}` })),
+    ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role} (nicht die Rolle des Schritts)` }))]
+  const user = people.length
+    ? await dialog.prompt({ title: `Zuständig für „${w.label?.de || w.workflow}“`, value: w.assigned ?? '', choices })
+    : await dialog.prompt({ title: `Zuständig für „${w.label?.de || w.workflow}“`, text: 'Benutzer-Key (leer = die Rolle des nächsten Schritts)', value: w.assigned ?? '' })
   if (user === null) return
   await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/assign`, { user: user.trim() || null }, 'PUT'))
 }
@@ -832,16 +841,16 @@ function cellMenu(e, def, col, block) {
             <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
             <td class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt'">{{ w.stateLabel?.de || w.state }}</span>
-              <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“ (${w.actor}): ${w.note}` : (w.note.startsWith('↓') ? `vom System zurückgesetzt: letzte Freigabe der Variante weg — ${w.note}` : `vom System wieder vorgesetzt: Variante erneut freigegeben — ${w.note}`)" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✎ {{ w.note }}</span>
-              <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
-                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Der Schritt „${w.transition}“ sollte das bewirken, es ist aber nicht passiert — Klick tut es jetzt`">⚠ {{ effLabel(pe.effect) }}</button>
-                <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben — die Ausleitung lässt dieses Produkt weg, bis eine Variante freigegeben ist${pe.why ? ' · ' + pe.why : ''}`">⚠ nicht ausgeleitet</span>
-              </template>
               <button v-for="t in w.transitions" :key="t.key" @click="wfStep(w, t)" :title="`→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.label?.de || t.key }} →</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px" :title="`${t.label?.de || t.key}: nach ${t.escalateAfterDays} Tagen im Zustand dürfen auch ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen mit Schreibrecht'}`">⏰ {{ t.escalated ? 'eskaliert' : 'Eskalation ' + (t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '') }}{{ t.escalateRoles?.length ? ' → ' + t.escalateRoles.join('/') : '' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
               <span class="grow" />
+              <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
+                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Der Schritt „${w.transition}“ sollte das bewirken, es ist aber nicht passiert — Klick tut es jetzt`">⚠ {{ effLabel(pe.effect) }}</button>
+                <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben — die Ausleitung lässt dieses Produkt weg, bis eine Variante freigegeben ist${pe.why ? ' · ' + pe.why : ''}`">⚠ nicht ausgeleitet</span>
+              </template>
+              <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
               <button class="x" @click="wfAssign(w)" :title="w.assigned ? `zuständig: ${w.assigned} — ändern` : 'jemandem zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
             </td>
           </tr>

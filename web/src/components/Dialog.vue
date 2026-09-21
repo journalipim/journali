@@ -4,7 +4,7 @@ import { ref, watch, nextTick } from 'vue'
 import { dialog } from '../dialog.js'
 const okBtn = ref(null)
 const field = ref(null)
-watch(() => dialog.open, async v => { if (!v) return; await nextTick(); (dialog.kind === 'prompt' ? field.value : okBtn.value)?.focus(); field.value?.select() })
+watch(() => dialog.open, async v => { if (!v) return; await nextTick(); (dialog.kind === 'prompt' ? field.value : okBtn.value)?.focus(); field.value?.select?.() })
 function onKey(e) {
   if (e.key === 'Escape') { e.preventDefault(); dialog.done(false) }
   else if (e.key === 'Enter' && (dialog.kind === 'prompt' || e.target === okBtn.value || !e.target.closest('button'))) { e.preventDefault(); dialog.done(true) }
@@ -21,7 +21,8 @@ function onKey(e) {
         <div v-else-if="dialog.list.length" class="list mono"><div v-for="(l, i) in dialog.list.slice(0, 8)" :key="i">{{ l }}</div><div v-if="dialog.list.length > 8" class="muted">… und {{ dialog.list.length - 8 }} weitere</div></div>
         <div v-if="dialog.text" class="text muted">{{ dialog.text }}</div>
         <label v-if="dialog.option" class="option"><input type="checkbox" v-model="dialog.option.checked" /> {{ dialog.option.label }}</label>
-        <input v-if="dialog.kind === 'prompt'" ref="field" v-model="dialog.value" class="cell-input" style="width:100%;margin-top:10px" :placeholder="dialog.placeholder" />
+        <select v-if="dialog.kind === 'prompt' && dialog.choices" ref="field" v-model="dialog.value" style="width:100%;margin-top:10px"><option v-for="c in dialog.choices" :key="c.value" :value="c.value">{{ c.label }}</option></select>
+        <input v-else-if="dialog.kind === 'prompt'" ref="field" v-model="dialog.value" class="cell-input" style="width:100%;margin-top:10px" :placeholder="dialog.placeholder" />
         <div class="buttons">
           <button v-if="dialog.cancel" @click="dialog.done(false)">{{ dialog.cancel }}</button>
           <button ref="okBtn" :class="dialog.danger ? 'danger' : 'primary'" @click="dialog.done(true)">{{ dialog.ok }}</button>

@@ -77,10 +77,11 @@ public static class WorkflowApi
             foreach (var eff in t.Effects)
             {
                 var i = eff.IndexOf(':'); if (i < 0) continue; var kind = eff[..i]; var arg = eff[(i + 1)..];
+                var chs = arg == "*" ? model.Channels.Keys.ToList() : [arg];
                 var done = kind switch
                 {
-                    "release" => sellables.Count > 0 && sellables.Any(v => v.Releases.Contains(new Release(arg, null))),
-                    "revoke" => sellables.All(v => !v.Releases.Contains(new Release(arg, null))),
+                    "release" => sellables.Count > 0 && chs.All(ch => sellables.Any(v => v.Releases.Contains(new Release(ch, null)))),
+                    "revoke" => chs.All(ch => sellables.All(v => !v.Releases.Contains(new Release(ch, null)))),
                     "status" => n.Status == arg,
                     _ => true,
                 };
