@@ -3090,17 +3090,17 @@ async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey
     for (let p = byId.get(root)?.parent; p; p = byId.get(p)?.parent) rootId = p;
   } catch {
   }
-  const sysCol = (sys) => ({ key: `journali_${sys}_${rootId}`, sys, hidden: sys !== "label" });
+  const sysCol = (sys, note) => ({ key: `journali_${sys}_${rootId}`, sys, note });
   const columns = [
-    sysCol("id"),
-    sysCol("role"),
-    sysCol("parent"),
     { key: "sku" },
-    sysCol("label"),
-    sysCol("status"),
+    sysCol("label", "Name im Baum — nur zum Lesen"),
     ...extra.map((x) => ({ key: x.key, of: x.of })),
     ...axes.map((a) => ({ key: "axis:" + a })),
-    ...cols.flatMap((c) => c.perLocale ? locales.map((l) => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }])
+    ...cols.flatMap((c) => c.perLocale ? locales.map((l) => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }]),
+    sysCol("id", "journali-Id des Knotens — nicht ändern. Zeile kopiert? Dann diese Zelle leeren, sonst erkennt der Import die Kopie an den Werten"),
+    sysCol("parent", "Elternteil (journali-Id) — nicht ändern"),
+    sysCol("role", "Knotentyp — nur zum Lesen"),
+    sysCol("status", "Status — nur zum Lesen")
   ];
   const rows = nodes.map((r) => columns.map((c) => {
     if (c.attr) {
@@ -3163,7 +3163,7 @@ function toJsonTree({ columns, rows }) {
 }
 function workbook(X, { columns, rows }, legendRows = null, sheet = "Daten") {
   const ws = X.utils.aoa_to_sheet([columns.map((c) => c.key), ...rows]);
-  ws["!cols"] = columns.map((c) => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)), hidden: !!c.hidden }));
+  ws["!cols"] = columns.map((c) => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)) }));
   columns.forEach((c, i) => {
     const req = c.def?.required;
     const note = c.note ?? (req && typeof req === "object" && Object.keys(req).length ? "Pflicht: " + Object.entries(req).map(([ch, l]) => `${ch} ${l.join(",")}`).join(" · ") : req ? "Pflicht" : null);
