@@ -45,6 +45,22 @@ public class ReleaseTests
     }
 
     [Fact]
+    public void Schritt_mit_Freigabe_bleibt_aus_wenn_keine_Variante_vollstaendig_ist()
+    {
+        // Taloan, 21.09.: „Schritt gegangen, Wirkung nicht“ ist kein Zustand — freigeben ohne vollständige Variante → der Knoten bleibt in Prüfung
+        var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
+        var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
+        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "submit", null).Error);
+        var r = Commands.WorkflowStep(ctx(), w.P, "review", "approve", null);
+        Assert.NotNull(r.Error); Assert.Contains("keine Variante ist vollständig", r.Error);
+        Assert.Equal("review", wfs.StateOf(w.P, wfs.All["review"]));                    // nicht gegangen
+        w.Fill(w.V1);
+        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "approve", null).Error);
+        Assert.Equal("approved", wfs.StateOf(w.P, wfs.All["review"]));
+        Assert.Contains(new Release("web", null), w.Tree.Nodes[w.V1].Releases);         // Wirkung eingetreten
+    }
+
+    [Fact]
     public void Eskalation_nach_n_Tagen_duerfen_auch_andere_Rollen()
     {
         // Taloan, 21.09.: „alle Redakteure im Urlaub — jemand muss freigeben“: freigeben darf admin; nach 3 Tagen in Prüfung auch manager

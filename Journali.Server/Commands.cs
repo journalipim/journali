@@ -614,9 +614,26 @@ public static class Commands
         if (t is null) return Outcome.Bad($"Unbekannter Übergang {transition}.");
         var state = c.Workflows.StateOf(id, wf);
         if (t.From != state) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht von {t.From} aus, der Knoten ist in {state}.");
-        if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role)) return Outcome.Bad($"Rolle {role} darf „{t.Label.GetValueOrDefault("de") ?? t.Key}“ nicht (erlaubt: {string.Join(", ", t.Roles)}).");
+        var since = c.Workflows.Of(id).GetValueOrDefault(wf.Key)?.At;
+        if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role) && !Escalated(t, role, since, DateTimeOffset.UtcNow)) return Outcome.Bad($"Rolle {role} darf „{t.Label.GetValueOrDefault("de") ?? t.Key}“ nicht (erlaubt: {string.Join(", ", t.Roles)}).");
         note = Blank(note);
         if (t.NoteRequired && note is null) return Outcome.Bad("Notiz ist Pflicht bei diesem Schritt (was ist zu tun?).");
+        foreach (var eff in t.Effects ?? [])
+        {
+            if (!eff.StartsWith("release:")) continue;
+            var ch = eff[8..];
+            var sellables = n.Role == Roles.Product ? c.Tree.Children(n.Id).Where(v => v.Role == Roles.Variant).ToList() : n.Role == Roles.Variant ? [n] : [];
+            if (sellables.Count == 0) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ gibt für {ch} frei — hier gibt es aber nichts Verkaufbares (Freigabe nur an Varianten).");
+            var problems = new List<string>();
+            foreach (var v in sellables)
+            {
+                if (v.Releases.Contains(new Release(ch, null))) { problems.Clear(); break; }
+                var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, v, CompletenessRules.ActiveAttributes(c.Tree, c.Model, v).ToList(), ch, null);
+                if (missing.Length == 0) { problems.Clear(); break; }
+                problems.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {string.Join(", ", missing)}");
+            }
+            if (problems.Count > 0) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: keine Variante ist vollständig für {ch} — {string.Join(" · ", problems)}");
+        }
         var e = c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, t.To, t.Key, note));
         foreach (var eff in t.Effects ?? [])
         {
