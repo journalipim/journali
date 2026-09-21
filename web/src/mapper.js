@@ -154,7 +154,8 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     const pick = (target, attribute, score, why) => { if (score > out.score) Object.assign(out, { target, attribute, score, why }) }
     // 0. Spalten des eigenen Exports (Plugin export): role/status/journali_label sind Anzeige, axis_<key> ist die Achse
     // eigene Spalten (Taloan, 21.09.): journali_<feld>_<wurzel> — die Wurzel steht im Kopf; alte Form (id, parent, role, status, journali_label, journali_root) weiter
-    const own = String(col).trim().match(/^journali_(id|parent|role|status|label|root)(?:_([a-z]-[0-9a-f]{8}))?$/i)
+    // Wurzel-Ids sind nicht immer g-<hex> (Saatgut: g-mastertree) — alles nach journali_<feld>_ ist die Wurzel
+    const own = String(col).trim().match(/^journali_(id|parent|role|status|label|root)(?:_(.+))?$/i)
     if (own) {
       const sys = own[1].toLowerCase(); out.internal = true; out.root = own[2]?.toLowerCase() ?? null
       if (sys === 'id') { out.target = 'id'; out.why = 'journali-Id' + (out.root ? ' · Wurzel ' + out.root : '') }

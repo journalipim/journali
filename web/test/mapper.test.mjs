@@ -31,6 +31,7 @@ test('journali_root: Id zählt nur unter derselben Wurzel — sonst ist die Zeil
 })
 
 test('journali_<feld>_<wurzel>: Wurzel aus dem Spaltenkopf, interne Spalten erkannt', () => {
+  const m2 = suggest(['journali_id_g-mastertree', 'sku'], [['v-1', 'A']], model); assert.equal(m2[0].target, 'id'); assert.equal(m2[0].root, 'g-mastertree')   // Saatgut-Wurzel ohne Hex
   const columns = ['journali_id_g-1a2b3c4d', 'journali_role_g-1a2b3c4d', 'journali_parent_g-1a2b3c4d', 'sku', 'journali_label_g-1a2b3c4d', 'journali_status_g-1a2b3c4d', 'name_de']
   const rows = [['v-1', 'variant', 'p-1', 'A1', 'V1', 'draft', 'Eins']]
   const m = suggest(columns, rows, model)

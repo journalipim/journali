@@ -296,8 +296,9 @@ onMounted(async () => {
         <select v-if="source?.sheets?.length > 1" :value="source.sheet" @change="pickSheet($event.target.value)" title="Blatt" style="width:140px"><option v-for="s in source.sheets" :key="s.name" :value="s.name">{{ s.name }} ({{ s.rows.length }})</option></select>
         <span v-else-if="!source" class="muted" style="font-size:12px">oder hierher ziehen · oder aus Excel kopieren und Strg+V</span>
         <span class="grow" />
-        <span v-if="recent.length" class="recent" title="zuletzt gewählt — Klick öffnet wieder (Chrome/Edge fragt einmal nach Leserecht)"><span class="muted" style="font-size:11px">zuletzt:</span>
-          <span v-for="r in recent" :key="r.name" class="chip" :class="{ dim: !r.handle }" :title="r.handle ? `${r.name} — wieder öffnen` : `${r.name} — war hineingezogen, kein Zugriff: wieder ziehen`" @click="openRecent(r)">{{ r.name }}<button @click.stop="recentFiles.forget('table', r.name).then(loadRecent)" title="aus der Liste">×</button></span></span>
+      </td></tr>
+      <tr v-if="recent.length"><td class="attr muted" style="font-size:11px">zuletzt</td><td class="recent" title="zuletzt gewählt — Klick öffnet wieder (Chrome/Edge fragt einmal nach Leserecht)">
+        <span v-for="r in recent" :key="r.name" class="chip" :class="{ dim: !r.handle }" :title="r.handle ? `${r.name} — wieder öffnen` : `${r.name} — war hineingezogen, kein Zugriff: wieder ziehen`" @click="openRecent(r)">{{ r.name }}<button @click.stop="recentFiles.forget('table', r.name).then(loadRecent)" title="aus der Liste">×</button></span>
       </td></tr>
       <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
       <tr v-if="fixed"><td class="attr">Knoten</td><td class="row">
@@ -500,7 +501,7 @@ table.diff td.chg { color: var(--warn); max-width: 300px; }      /* geänderter 
 .drop.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
 /* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */
 .drop.empty { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap; }
-.recent { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+.recent { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal; }
 .recent .chip { cursor: pointer; }
 .recent .chip.dim { opacity: .55; cursor: default; }
 .btn { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer; }
