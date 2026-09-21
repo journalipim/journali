@@ -425,6 +425,8 @@ onMounted(async () => {
       <div v-if="planned" class="stats">
         <span class="pos">+{{ planned.stats.create }} neu</span> · <span>{{ planned.stats.update }} geändert</span> · <span class="muted">{{ planned.stats.unchanged }} unverändert</span> · {{ planned.stats.values }} Werte · {{ planned.commands.length }} Befehle<template v-if="Object.keys(planned.stats.newListValues ?? {}).length"> · <span class="pos" :title="Object.entries(planned.stats.newListValues).map(([l, v]) => l + ': ' + Object.values(v).join(', ')).join(' · ')">+{{ Object.values(planned.stats.newListValues).reduce((n, v) => n + Object.keys(v).length, 0) }} Listenwerte</span></template>
         <span v-if="planned.newAttributes.length"> · <span class="warn">{{ planned.newAttributes.length }} neue Attribute:</span> {{ planned.newAttributes.map(a => a.key + ' (' + a.type + ')').join(', ') }}</span>
+        <div v-if="planned.stats.notes?.length" class="muted" style="margin-top:6px;white-space:pre-wrap;font-size:12px">ℹ {{ planned.stats.notes.slice(0, 30).join('
+ℹ ') }}</div>
         <div v-if="planned.stats.problems.length" class="neg" style="margin-top:6px;white-space:pre-wrap">{{ planned.stats.problems.slice(0, 30).join('\n') }}<span v-if="planned.stats.problems.length > 30"> … +{{ planned.stats.problems.length - 30 }}</span></div>
         <div v-for="b in blockers" :key="b" class="neg" style="margin-top:6px">✗ {{ b }}</div>
         <div v-if="planned.stale" class="warn" style="margin-top:6px">✎ Zellen korrigiert — <button class="primary" @click="analyse">erneut analysieren</button></div>

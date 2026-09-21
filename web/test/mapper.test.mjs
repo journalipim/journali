@@ -66,5 +66,5 @@ test('kopierte Zeilen, Original mit geänderter SKU: die Zeile mit den meisten g
   const m = suggest(columns, rows, model)
   const p = plan({ columns, rows, mapping: m, model, tree, target: null, role: null, existing: new Map([['v-1', { 'name|de': 'Original', 'name|de#own': true, 'sku|': '053797', 'sku|#own': true }]]) })
   assert.equal(p.stats.update, 1); assert.equal(p.stats.create, 1)
-  assert.match(p.stats.problems[0], /Zeile 2: kopierte Zeile.*Zeile 3/)   // Zeile 2 ist die Kopie, Zeile 3 (Name „Original“) das Original
+  assert.match(p.stats.notes[0], /Zeile 2: kopierte Zeile.*Zeile 3.*neuer Knoten/)   // Zeile 2 ist die Kopie, Zeile 3 (Name „Original“) das Original
 })

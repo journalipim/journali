@@ -255,7 +255,8 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const byIdRows = new Map()
   rows.forEach((row, ri) => { const id = String(cell(row, iId) ?? '').trim(); if (id) { if (!byIdRows.has(id)) byIdRows.set(id, []); byIdRows.get(id).push(ri) } })
   const similarity = (row, nodeId) => { const cur = existing?.get(nodeId); if (!cur) return 0; let n = 0; mapping.forEach((m, ci) => { if (m.target !== 'attr') return; const def = attrs.get(m.attribute); if (!def) return; const k = `${def.key}|${def.perLocale ? m.locale ?? '' : ''}`; if (k in cur && String(cur[k] ?? '') === String(convert(cell(row, ci), def, model) ?? '')) n++ }); return n }
-  const dropId = new Set(), dupRow = new Set()   // Zeilen, deren Id nicht zählt (Kopie) / die ganz übergangen werden (Duplikat)
+  const dropId = new Map(), dupRow = new Set()   // Zeilen, deren Id nicht zählt (Kopie: Zeile → Text fürs Protokoll) / die ganz übergangen werden (Duplikat)
+  stats.notes = []   // Hinweise, keine Fehler (Taloan, 21.09.: rot und „neu“ neben „0 neu“ war verwirrend)
   for (const [id, ris] of byIdRows) {
     if (ris.length < 2) continue
     const node = tree.byId.get(id)
@@ -265,7 +266,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     for (const ri of ris) {
       if (ri === orig) continue
       if (skuOf(ri) && skuOf(ri) === skuOf(orig)) { dupRow.add(ri); stats.problems.push(`Zeile ${ri + 2}: Duplikat von Zeile ${orig + 2} (gleiche Id, gleiche SKU) — übergangen`) }
-      else { dropId.add(ri); stats.problems.push(`Zeile ${ri + 2}: kopierte Zeile — Id ${id} gehört zu Zeile ${orig + 2} (${node?.sku ? 'SKU ' + node.sku : 'meiste gleiche Werte'}): wird als neuer Knoten angelegt`) }
+      else dropId.set(ri, `Zeile ${ri + 2}: kopierte Zeile — die Id ${id} gehört zu Zeile ${orig + 2} (${node?.sku ? 'SKU ' + node.sku : 'meiste gleiche Werte'}) und zählt hier nicht`)
     }
   }
   stats.copied = dropId.size
@@ -275,6 +276,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     const want = iRoot >= 0 ? String(cell(row, iRoot) ?? '').trim() : (mapping.find(m => m.target === 'id')?.root ?? '')   // Wurzel aus der Spalte oder aus dem Kopf journali_id_<wurzel>
     const byId = id && tree.byId.get(id); const foreign = !!(byId && want && rootOf(id) !== want)
     let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || (!foreign && sku && bySku.get(sku)) || null
+    if (dropId.has(ri)) stats.notes.push(dropId.get(ri) + (node ? ` — über ${ext && byExt.get(ext) ? 'Kennung ' + ext : 'SKU ' + sku} gefunden: „${node.label}“ wird aktualisiert` : ' — wird als neuer Knoten angelegt'))
     let ref = null
     if (!node) {
       // anlegen — wo? Elternteil aus der Spalte (SKU oder Id), sonst das Ziel
