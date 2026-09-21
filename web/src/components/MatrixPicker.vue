@@ -9,7 +9,7 @@ const emit = defineEmits(['update:modelValue'])
 const open = ref(false)
 const box = ref(null)
 const at = ref({ top: 0, left: 0 })
-function toggle() { if (!open.value) { const r = box.value?.getBoundingClientRect(); if (r) at.value = { top: r.bottom + 4, left: r.left } } open.value = !open.value }
+function openPop() { if (!open.value) { const r = box.value?.getBoundingClientRect(); if (r) at.value = { top: r.bottom + 4, left: r.left } } open.value = !open.value }
 const cellKey = (l, c) => `${l ?? ''}|${c ?? ''}`
 const rows = computed(() => [null, ...(props.locales ?? [])])
 const cols = computed(() => [null, ...(props.channels ?? [])])
@@ -33,7 +33,7 @@ onUnmounted(() => { document.removeEventListener('mousedown', onDoc); document.r
 
 <template>
   <span ref="box" class="mp">
-    <button :class="{ primary: open }" @click="toggle" title="Spalten: Sprache × Kanal — ankreuzen, was als Spalte steht"><span class="sum">⊞ {{ summary }}</span></button>
+    <button :class="{ primary: open }" @click="openPop" title="Spalten: Sprache × Kanal — ankreuzen, was als Spalte steht"><span class="sum">⊞ {{ summary }}</span></button>
     <div v-if="open" class="pop" :style="`top:${at.top}px;left:${at.left}px`">
       <table>
         <thead><tr><th></th><th v-for="c in cols" :key="c ?? '*'" class="hd" :class="{ master: c && c === masterChannel }" :title="c ? (c === masterChannel ? 'Masterkanal — ganze Spalte an/aus' : `Kanal ${c} — ganze Spalte an/aus`) : 'ohne Kanal — ganze Spalte an/aus'" @click="toggleCol(c)">{{ c ?? '*' }}</th></tr></thead>
