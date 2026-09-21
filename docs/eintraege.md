@@ -87,6 +87,17 @@ Die Datei liegt ausserhalb (Store, Hash-adressiert); im Journal nur das Ding
 | `MediaRetired` | — | Medium aus dem Abbild; die Datei bleibt im Store |
 | `AttributeSet` | wie am Knoten | Wert am Medium — nur Attribute der Gruppe `media` (Saatgut `alt_text` je Sprache, `copyright`) |
 | `ExternalLinked` / `ExternalUnlinked` | wie am Knoten | Kennung aus der Quelle |
+| `MediaFiled` | `folder` (Ordner-Id oder null) | Medium in einen Ordner der Bibliothek gelegt (null = kein Ordner) |
+
+Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren, wie ein interner Dateimanager“) — Strom
+`mf-…`, nur zum Organisieren der Bibliothek; sagt nichts über Verwendung (Relationen) oder Datei (Store):
+
+| Typ | Nutzdaten | Wirkung |
+|---|---|---|
+| `MediaFolderCreated` | `name`, `parent` (Ordner-Id oder null) | Ordner; gleicher Name je Ebene nur einmal (prüft der Befehl) |
+| `MediaFolderRenamed` | `name` | umbenannt |
+| `MediaFolderMoved` | `parent` | anderer Vater (nicht in sich selbst) |
+| `MediaFolderRetired` | — | Ordner weg — nur leer; das Abbild schiebt Reste eine Ebene hoch |
 
 ## Werte an einem Knoten
 
@@ -209,6 +220,8 @@ steht im Kopf `X-Actor`.
 | `DELETE /api/media/{id}` | `MediaRetired` |
 | `POST /api/media/{id}/attributes` `{attribute, locale?, value | values[]}` | `AttributeSet` am Medium (Gruppe `media`) |
 | `PUT /api/media/{id}/external/{system}` `{id}` | `ExternalLinked` am Medium |
+| `PUT /api/media/{id}/folder` `{folder}` | `MediaFiled` (null = kein Ordner) |
+| `POST /api/media/folders` `{name, parent?}` · `PUT …/{id}/name` `{name}` · `PUT …/{id}/parent` `{parent}` · `DELETE …/{id}` | `MediaFolderCreated` / `MediaFolderRenamed` / `MediaFolderMoved` / `MediaFolderRetired`; `GET /api/media/folders` liest, `GET /api/media?folder=&deep=&sort=&desc=` filtert und sortiert |
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
 | `PUT /api/nodes/{id}/external/{system}` `{id}` | `ExternalLinked` |
 | `DELETE /api/nodes/{id}/external/{system}` | `ExternalUnlinked` |

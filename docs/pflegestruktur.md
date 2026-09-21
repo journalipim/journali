@@ -928,6 +928,17 @@ Der Server liefert `inherited` in `GET /api/nodes/{id}/relations`. Modell
 IXP-Import nutzt das: hat ein Subitem dasselbe Bild wie sein Elternteil,
 wird es dort vererbt und am Subitem nicht eigens zugeordnet.
 
+**Ordner (Taloan, 21.09.2026: „Medienorga: sortieren, gruppieren — Strukturbaum, um Medien dort zu organisieren, wie ein
+interner Dateimanager“):** die Bibliothek hat einen eigenen Ordnerbaum (Strom `mf-…`, `MediaFolderCreated/Renamed/Moved/
+Retired`), ein Medium liegt in höchstens einem Ordner (`MediaFiled` am Medium, null = ohne Ordner). Die Ordner sind
+reine Organisation — nichts über Verwendung (das sind die Relationen) oder Datei (Store) — und gehen nie in die Ausleitung.
+Regeln: gleicher Name je Ebene nur einmal, nicht in sich selbst verschieben, löschen nur leer (kein stilles Aufräumen —
+jede Ablage ist ein Eintrag). ▨ Medien: links die Ordner (＋ ✎ 🗑 an der Zeile, Ordner ziehen = verschieben, „mit
+Unterordnern“), Mitte Kacheln mit Sortierung (zuletzt geändert, Name, Datum, Größe, Verwendung, ↑↓) und Gruppierung
+(Art, Dateityp, Monat, verwendet, Ordner), Mehrfachauswahl (Strg/Umschalt-Klick, Strg+A, Esc), Kacheln auf einen Ordner
+oder „⌂ ohne Ordner“ ziehen, „📁 verschieben …“ für die Auswahl, Hochladen landet im gezeigten Ordner. Offen: Medien
+aus der Bibliothek am Knoten zuordnen (heute nur über Import/Relationen), Ordner in der Suche (`folder:`).
+
 Taloan: Binärdaten nicht in die Datenbank — später skalieren, woanders
 speichern. Einverstanden; das Journal bleibt schlank.
 
