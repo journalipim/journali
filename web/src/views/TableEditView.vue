@@ -9,6 +9,8 @@ import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { tree, icon } from '../tree.js'
+import { menu } from '../menu.js'
+import { moveRows, moveTarget, orderCommands, pickRows } from '../rowOps.js'
 import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
@@ -84,6 +86,8 @@ const HELP = [
   ['Enter · Tab', 'speichern, weiter nach unten · rechts'], ['Esc', 'verwerfen'], ['Entf', 'Zelle leeren (geerbter Wert gilt wieder)'],
   ['Strg+D', 'füllen: oberste Zelle in den Bereich darunter'], ['Strg+Shift+D', 'Reihe: 1, 2 → 3, 4 · Art-001 → Art-002'], ['▪ Kästchen ziehen', 'füllen wie in Excel'],
   ['Strg+C · Strg+V', 'mit Excel austauschen (Listen über Wert oder Bezeichnung)'], ['Strg+H', 'ins Suchfeld für Ersetzen'], ['Strg+S', 'alle Änderungen als ein Stapel ins Journal'],
+  ['Zeilenspalte links', 'Klick = ganze Zeile · Strg = dazu/weg · Shift = Bereich · Shift+Leertaste = Zeile der Zelle'], ['ziehen an markierten Zeilen', 'verschieben (Strich = Platz)'],
+  ['Rechtsklick auf Zeile', 'kopieren · einfügen · duplizieren · verschieben · löschen'], ['Strg+−', 'markierte Zeilen löschen (beim Speichern)'],
   ['kursiv', 'geerbter Wert'], ['Buchstabe in Auswahl', 'springt zum passenden Wert; ohne Treffer beginnt ein neuer Listenwert'],
 ]
 const baseColumns = computed(() => {
@@ -111,9 +115,13 @@ function set(r, c0, v) {
   if ((val || null) === cur) m.delete(k); else m.set(k, val)
   dirty.value = m
 }
+// Offene Änderungen: geänderte Zellen, neue, gelöschte, verschobene Zeilen — alles geht als ein Stapel (Taloan, 21.09.)
+const fresh = computed(() => rows.value.filter(r => r.isNew).length)
+const retired = computed(() => rows.value.filter(r => r.retired && !r.isNew).length)
+const moved = computed(() => rows.value.filter(r => r.moved && !r.retired).length)
+const hasChanges = computed(() => dirty.value.size > 0 || fresh.value > 0 || retired.value > 0 || moved.value > 0)
 async function save() {
-  const fresh = (data.value?.rows ?? []).filter(r => r.isNew).length
-  if (!dirty.value.size && !fresh) return
+  if (!hasChanges.value) return
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   busy.value = `schreibe ${dirty.value.size} …`
   try {
@@ -124,23 +132,30 @@ async function save() {
       // als Änderung stehen (grün, Zähler), damit man es korrigiert — nur die geschriebenen Zellen fallen aus der Liste
       const written = new Set(commands.slice(0, res.results.length).map(c => c._key).filter(Boolean))
       const keep = new Map([...dirty.value].filter(([k]) => !written.has(k)))
-      store.toast(`✗ ${res.error.message} — ${res.results.length} geschrieben, ${keep.size} Änderungen bleiben offen: korrigieren und noch einmal speichern`)
+      const keepRetired = new Set(commands.slice(res.results.length).filter(c => c.op === 'node.retire').map(c => c.args.node))
+      store.toast(`✗ ${res.error.message} — ${res.results.length} geschrieben, ${keep.size + keepRetired.size} Änderungen bleiben offen: korrigieren und noch einmal speichern`)
       await store.poll(true); await load(); dirty.value = keep
+      for (const r of rows.value) if (keepRetired.has(r.row.id)) r.retired = true
       return
     }
     store.toast(`✓ ${res.results.length} Werte geschrieben`)
     await store.poll(true); await load()
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
-function discard() { dirty.value = new Map(); if (data.value) data.value.rows = data.value.rows.filter(r => !r.isNew) }
+// verwerfen: gelöschte und verschobene Zeilen stehen nur hier — der Serverstand kommt zurück
+function discard() { dirty.value = new Map(); rowSel.value = new Set(); if (data.value) { data.value.rows = data.value.rows.filter(r => !r.isNew); if (data.value.rows.some(r => r.retired || r.moved)) load() } }
 let newSeq = 0
 const parentAxes = computed(() => data.value?.node?.axes ?? tree.byId.get(props.id)?.axes ?? [])
-function addRow() {
-  if (!data.value || props.deep === '1') return
+// neue Zeile — ans Ende, oder an einen Platz (Rechtsklick: „darunter einfügen“; dann zählt sie als verschoben, damit der Platz bleibt)
+function addRow(at = null) {
+  if (!data.value || props.deep === '1') return null
   const sample = data.value.rows.find(r => !r.isNew)
   const row = { id: `new-${++newSeq}`, role: childRole.value, parent: props.id, label: '', name: null, sku: null, axisValues: {}, labelAttribute: sample?.row.labelAttribute ?? data.value.node?.labelAttribute ?? null, external: {} }
-  data.value.rows.push({ row, values: {}, inactive: sample?.inactive ?? [], isNew: true })
-  nextTick(() => { const ri = data.value.rows.length - 1; const ci = columns.value.findIndex(c => !c.virtual || c.virtual === 'label'); cursor.value = { r: ri, c: Math.max(0, ci) }; sel.value = null })
+  const r = { row, values: {}, inactive: sample?.inactive ?? [], isNew: true, moved: at != null && at < data.value.rows.length }
+  if (at == null || at >= data.value.rows.length) data.value.rows.push(r); else data.value.rows.splice(at, 0, r)
+  const ri = data.value.rows.indexOf(r)
+  nextTick(() => { const ci = columns.value.findIndex(c => !c.virtual || c.virtual === 'label'); const to = focusCell(ri, Math.max(0, ci)); if (to) { anchor.value = to; sel.value = norm(to, to) } })
+  return r
 }
 function commandsOf() {
   const defs = new Map(data.value.columns.map(c => [c.key, c]))
@@ -156,21 +171,28 @@ function commandsOf() {
     else out.push({ op: 'group.create', ref, args: { parent: props.id, label: {}, name: val('name') } })
   }
   const axesSet = new Set(parentAxes.value)
+  const gone = new Set(data.value.rows.filter(r => r.retired).map(r => r.row.id))
   for (const [k, v] of dirty.value) {
     const [node, attribute] = k.split('|'); const d = defs.get(attribute); const isNew = node.startsWith('new-')
+    if (gone.has(node)) continue   // gelöschte Zeile: ihre Zellen sind egal
     if (isNew && childRole.value === 'variant' && axesSet.has(attribute)) continue   // steckt schon im variant.create
     if (isNew && !v) continue
     out.push({ op: 'attribute.set', args: { node: isNew ? '@' + node : node, attribute, locale: d?.perLocale ? locale.value : null, value: v }, _key: k })   // _key: welche Zelle — bleibt bei einem Fehler stehen
   }
+  // gelöschte Zeilen (Taloan, 21.09.: Rechtsklick → löschen), dann die Reihenfolge der verschobenen — beide erst jetzt, im selben Stapel
+  for (const r of data.value.rows) if (r.retired && !r.isNew) out.push({ op: 'node.retire', args: { node: r.row.id }, _key: 'retire|' + r.row.id })
+  if (props.deep !== '1') out.push(...orderCommands(data.value.rows, props.id))
   return out
 }
+// neue Zeilen, die schon gelöscht sind, gibt es gar nicht erst: raus aus der Liste
+function dropNewRetired() { if (data.value) data.value.rows = data.value.rows.filter(r => !(r.isNew && r.retired)) }
 // Fenster zu (X, Alt+F4): was noch offen ist, geht jetzt — keepalive überlebt das Schliessen (bis ~64 KB Stapel)
 function onPageHide() {
-  if (!popup || !dirty.value.size || !store.actor) return
+  if (!popup || !hasChanges.value || !store.actor) return
   fetch(store.server + '/api/batch', { method: 'POST', keepalive: true, headers: { 'X-Actor': store.actor, 'Content-Type': 'application/json' }, body: JSON.stringify({ commands: commandsOf(), batch: 'tab-' + Date.now().toString(36) }) })
   dirty.value = new Map()
 }
-async function applyAndClose() { await save(); if (!dirty.value.size) window.close() }
+async function applyAndClose() { await save(); if (!hasChanges.value) window.close() }
 function discardAndClose() { discard(); window.close() }
 
 // Einfügen aus Excel: Tab-getrennt, Zeilen mit Umbruch — ab der markierten Zelle nach rechts (nur bearbeitbare Spalten) und unten
@@ -198,7 +220,8 @@ function onPaste(e) {
   })
   store.toast(`${n} Zellen eingefügt${locked ? `, ${locked} gesperrt` : ''}${bad ? `, ${bad} nicht in der Liste` : ''} — noch nicht gespeichert`)
 }
-const FIXED = 0   // alle Spalten in einer Liste (virtuelle voran), td-Index = Spaltenindex
+const FIXED = 1   // vorn die Zeilenspalte (Nummer, Zeile markieren), dann alle Spalten in einer Liste (virtuelle voran): td-Index = FIXED + Spaltenindex
+const ROWSEL_W = 40
 // Spaltenbreite wie Excel-Autofit (Taloan: „viel zu breit“): längster sichtbarer Wert oder Kopf, 70–260 px; am Kopfrand ziehbar
 const widths = ref({})   // key → px (von Hand gezogen)
 // gemessen, nicht geschätzt (Taloan: „0537…“ bei sechs Zeichen): Textbreite im Zellfont + Innenabstand der Box
@@ -215,7 +238,7 @@ const autoWidth = computed(() => {
   return out
 })
 const colWidth = c => widths.value[c.key] ?? autoWidth.value[c.key] ?? 120
-const tableWidth = computed(() => columns.value.reduce((s, c) => s + colWidth(c), 0))
+const tableWidth = computed(() => ROWSEL_W + columns.value.reduce((s, c) => s + colWidth(c), 0))
 function startResize(e, c) { e.preventDefault(); e.stopPropagation(); drag = { kind: 'resize', key: c.key, x: e.clientX, w: colWidth(c) } }
 
 // ---- Bereich wie in Excel (Taloan): Klick = Anker, Shift+Klick = Rechteck, Strg+A = alles; Zeilen/Spalten als Indizes
@@ -231,11 +254,30 @@ function cellAt(el) {
 }
 // Maus wie in Excel (Taloan): Drücken und Ziehen zieht den Bereich auf — kein Textmarkieren des Browsers;
 // das Ausfüllkästchen (kleines Quadrat unten rechts am Bereich) zieht die Werte nach unten.
-let drag = null   // { kind: 'select' | 'fill', base }
+let drag = null   // { kind: 'select' | 'fill' | 'resize' | 'rows' | 'rowsel', base }
+// ---- Ganze Zeilen (Taloan, 21.09.): Klick in die Zeilenspalte markiert die Zeile, Strg dazu/weg, Shift den Bereich; ziehen über
+// unmarkierte Zeilen zieht die Auswahl auf, ziehen an markierten Zeilen verschiebt sie (Strich zeigt den Platz).
+// Rechtsklick auf eine Zeile öffnet das Menü: kopieren, einfügen, duplizieren, verschieben, löschen.
+const rowSel = ref(new Set())   // Ids der markierten Zeilen
+const rowAnchor = ref(null)     // Index des Ankers
+const dropAt = ref(null)        // Index, vor den verschoben wird (rows.length = ans Ende)
+const rowIndexAt = el => { const tr = el?.closest?.('tr[data-id]'); return tr ? rows.value.findIndex(r => r.row.id === tr.dataset.id) : -1 }
+const selectedRows = () => rows.value.filter(r => rowSel.value.has(r.row.id))
+function pick(ri, e) { const p = pickRows(rows.value, rowSel.value, rowAnchor.value, ri, { ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey }); rowSel.value = p.sel; rowAnchor.value = p.anchor; sel.value = null }
 function onMouseDown(e) {
   if (e.button !== 0) return
   if (e.target.closest('.fill-handle')) { e.preventDefault(); drag = { kind: 'fill', base: { ...sel.value } }; return }
+  const rs = e.target.closest?.('td.rowsel, th.rowsel')
+  if (rs) {
+    e.preventDefault()
+    if (rs.tagName === 'TH') { rowSel.value = new Set(rows.value.map(r => r.row.id)); rowAnchor.value = 0; sel.value = null; return }
+    const ri = rowIndexAt(rs); if (ri < 0) return
+    if (rowSel.value.has(rows.value[ri].row.id) && !e.ctrlKey && !e.shiftKey && props.deep !== '1') { drag = { kind: 'rows', from: ri, y: e.clientY }; return }
+    pick(ri, e); drag = { kind: 'rowsel' }
+    return
+  }
   const at = cellAt(e.target); if (!at) return
+  if (rowSel.value.size) rowSel.value = new Set()
   if (e.target.closest('input, select, textarea')) return   // in der Eingabe: der Browser markiert Text
   e.preventDefault()
   setTimeout(() => focusCell(at.ri, at.ci), 0)
@@ -246,13 +288,92 @@ function onMouseDown(e) {
 function onMouseMove(e) {
   if (!drag) return
   if (drag.kind === 'resize') { widths.value = { ...widths.value, [drag.key]: Math.max(50, drag.w + e.clientX - drag.x) }; return }
-  const at = cellAt(document.elementFromPoint(e.clientX, e.clientY)); if (!at) return
+  const under = document.elementFromPoint(e.clientX, e.clientY)
+  if (drag.kind === 'rowsel') { const ri = rowIndexAt(under); if (ri >= 0 && rowAnchor.value != null) rowSel.value = pickRows(rows.value, rowSel.value, rowAnchor.value, ri, { shift: true }).sel; return }
+  if (drag.kind === 'rows') {
+    const tr = under?.closest?.('tr[data-id]'); if (!tr) return
+    const ri = rowIndexAt(tr); const b = tr.getBoundingClientRect()
+    dropAt.value = e.clientY > b.top + b.height / 2 ? ri + 1 : ri
+    return
+  }
+  const at = cellAt(under); if (!at) return
   if (drag.kind === 'select') sel.value = norm(anchor.value, at)
   else { const b = drag.base; sel.value = { r0: b.r0, c0: b.c0, c1: b.c1, r1: Math.max(b.r1, at.ri) } }
 }
-function onMouseUp() {
+function onMouseUp(e) {
   if (drag?.kind === 'fill' && sel.value.r1 > drag.base.r1) fillFrom(drag.base)
+  // Klick auf eine markierte Zeile ohne Ziehen: nur noch diese (wie in Excel); gezogen: verschieben
+  if (drag?.kind === 'rows') { if (dropAt.value != null && Math.abs(e.clientY - drag.y) > 3) doMove(dropAt.value); else if (Math.abs(e.clientY - drag.y) <= 3) pick(drag.from, e); dropAt.value = null }
   drag = null
+}
+// ---- Zeilen verschieben, löschen, kopieren, einfügen (alles erst beim Speichern im Journal)
+function doMove(to) {
+  if (props.deep === '1' || !data.value) return
+  const before = data.value.rows.map(r => r.row.id).join()
+  data.value.rows = moveRows(data.value.rows, rowSel.value, to)
+  if (data.value.rows.map(r => r.row.id).join() !== before) store.toast(`${rowSel.value.size} Zeilen verschoben — noch nicht gespeichert`, 'ok')
+}
+function moveSel(where) { const to = moveTarget(rows.value, rowSel.value, where); if (to != null) doMove(to) }
+const kidsOf = r => r.isNew ? 0 : tree.kids(r.row.id).length
+function deleteRows() {
+  const picked = selectedRows(); if (!picked.length) return
+  const blocked = picked.filter(r => kidsOf(r) > 0)
+  for (const r of picked) if (!kidsOf(r)) r.retired = true
+  dropNewRetired(); rowSel.value = new Set(); sel.value = null
+  const n = picked.length - blocked.length
+  if (blocked.length) store.toast(`${blocked.length} Zeilen haben Kinder — erst die Kinder entfernen (im Baum)${n ? `; ${n} zum Löschen vorgemerkt` : ''}`)
+  else store.toast(`${n} Zeilen zum Löschen vorgemerkt — speichern schreibt es, verwerfen holt sie zurück`, 'ok')
+}
+function undeleteRows() { for (const r of selectedRows()) r.retired = false }
+// Zeilen als Tab-Text (alle Spalten, Listen über die Bezeichnung) — Excel nimmt das direkt
+const rowText = r => columns.value.map(c => c.type === 'enum' && !c.multiple ? labelOf(c)(textOf(r, c)) : textOf(r, c)).join('\t')
+function copyRows() { const picked = selectedRows(); if (!picked.length) return; navigator.clipboard?.writeText(picked.map(rowText).join('\n')); store.toast(`${picked.length} Zeilen kopiert`, 'ok') }
+// Zeilen einfügen: aus dem Text neue Zeilen unter der Zeile — Spalten wie hier von links (die ★-Spalte zuerst)
+function pasteRowsText(text, at) {
+  const lines = String(text ?? '').replace(/\r/g, '').split('\n').filter(l => l.trim() !== '')
+  if (!lines.length) { store.toast('Zwischenablage ist leer'); return }
+  let n = 0, locked = 0, bad = 0, i = at
+  for (const line of lines) {
+    const r = addRow(i++); if (!r) return
+    line.split('\t').forEach((v, ci) => { const c = columns.value[ci]; if (!c || !String(v).trim()) return; const w = write(r, c, v); if (w === 'locked') locked++; else if (w === 'bad') bad++; else n++ })
+  }
+  store.toast(`${lines.length} Zeilen eingefügt, ${n} Zellen${locked ? `, ${locked} gesperrt` : ''}${bad ? `, ${bad} nicht in der Liste` : ''} — noch nicht gespeichert`, 'ok')
+}
+async function pasteRows(at) {
+  let text = ''
+  try { text = await navigator.clipboard.readText() } catch { store.toast('Zwischenablage nicht lesbar — Strg+V in einer Zelle fügt dort ein'); return }
+  pasteRowsText(text, at)
+}
+function duplicateRows() {
+  const picked = selectedRows(); if (!picked.length) return
+  const at = rows.value.indexOf(picked[picked.length - 1]) + 1
+  pasteRowsText(picked.map(rowText).join('\n'), at)
+}
+// Rechtsklick auf eine Zeile (Taloan, 21.09.): nicht markierte Zeile wird erst markiert, dann das Menü
+function onRowMenu(e, ri) {
+  if (e.target.closest('input, textarea, select, .cell-input')) return
+  const r = rows.value[ri]; if (!r) return
+  if (!rowSel.value.has(r.row.id)) { rowSel.value = new Set([r.row.id]); rowAnchor.value = ri; sel.value = null }
+  const n = rowSel.value.size, picked = selectedRows(), one = n === 1 ? picked[0] : null
+  const deep = props.deep === '1', lastAt = rows.value.indexOf(picked[picked.length - 1]) + 1
+  const del = picked.filter(x => !x.retired), undel = picked.filter(x => x.retired)
+  const label = roleLabel[childRole.value]?.replace(/n$/, '') ?? 'Zeile'
+  // hint steht rechts in der Menüzeile (kurz), key ist die Taste im Menü; Sätze gehören in die Hilfe (?)
+  menu.open(e, [
+    { label: `${n} Zeile${n > 1 ? 'n' : ''} kopieren`, icon: '⧉', key: 'k', hint: 'Strg+C', action: copyRows },
+    { label: 'darunter einfügen', icon: '⤵', key: 'e', hint: 'Zwischenablage → neue Zeilen', action: () => pasteRows(lastAt), disabled: deep },
+    { label: `${n > 1 ? n + ' Zeilen' : label} duplizieren`, icon: '⧉', key: 'd', hint: 'Kopie darunter', action: duplicateRows, disabled: deep },
+    { label: `neue ${label} darüber`, icon: '＋', key: 'n', action: () => addRow(rows.value.indexOf(picked[0])), disabled: deep },
+    { sep: true },
+    { label: 'nach oben', icon: '↑', key: 'o', action: () => moveSel('up'), disabled: deep },
+    { label: 'nach unten', icon: '↓', key: 'u', action: () => moveSel('down'), disabled: deep },
+    { label: 'an den Anfang', icon: '⤒', key: 'a', action: () => moveSel('top'), disabled: deep },
+    { label: 'ans Ende', icon: '⤓', key: 'z', action: () => moveSel('bottom'), disabled: deep },
+    { sep: true },
+    one && !one.isNew ? { label: 'im Baum öffnen', icon: '↗', key: 'b', hint: '↗ Fenster', action: () => popup ? window.open(`/tree/${one.row.id}`, '_blank') : router.push(`/tree/${one.row.id}`) } : null,
+    undel.length ? { label: `Löschen zurücknehmen (${undel.length})`, icon: '↶', key: 'r', action: undeleteRows } : null,
+    { label: `${del.length} Zeile${del.length > 1 ? 'n' : ''} löschen`, icon: '✕', key: 'l', hint: del.some(kidsOf) ? `${del.filter(kidsOf).length} mit Kindern bleiben` : 'Strg+− · beim Speichern', action: deleteRows, danger: true, disabled: !del.length },
+  ])
 }
 // Ausfüllen aus dem Ursprungsbereich in die aufgezogenen Zeilen: ein Wert wird wiederholt, zwei Zahlen (oder Text
 // mit Zahl am Ende) setzen die Reihe fort, mehrere Texte wiederholen sich im Muster
@@ -287,9 +408,9 @@ watch(sel, placeHandle, { deep: true })
 // auch wenn sich die Spalten verschieben — ein neuer Wert macht die Spalte breiter (Autofit), gezogene Breite, Filter (Taloan)
 watch([tableWidth, dirty, rows], placeHandle)
 const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
-const inSel = (ri, ci) => !!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1
+const inSel = (ri, ci) => (!!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1) || (rowSel.value.size > 0 && rowSel.value.has(rows.value[ri]?.row.id))
 const selCells = () => { const s = sel.value; if (!s) return []; const out = []; for (let ri = s.r0; ri <= s.r1; ri++) for (let ci = s.c0; ci <= s.c1; ci++) { const r = rows.value[ri], c = columns.value[ci]; if (r && c) out.push({ r, c, ri, ci }) } return out }
-const canWrite = (r, c) => c.virtual === 'label' ? !!labelCol(r) && editable(labelCol(r)) : editable(c) && !inactive(r, c)
+const canWrite = (r, c) => !r.retired && (c.virtual === 'label' ? !!labelCol(r) && editable(labelCol(r)) : editable(c) && !inactive(r, c))
 // Text in eine Zelle schreiben, je Typ aufgelöst: Auswahl über Wert oder Label (Gross/Klein egal), Ja/Nein über
 // ja/nein/true/false/1/0; leer löscht den eigenen Wert. Gibt 'ok' | 'locked' | 'bad' zurück.
 function write(r, c0, text) {
@@ -438,9 +559,13 @@ function onKey(e) {
   if (inField || e.target.classList?.contains('cell-input')) return
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') { e.preventDefault(); e.shiftKey ? fillSeries() : fillDown() }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a' && document.activeElement?.closest?.('table.tab')) { e.preventDefault(); sel.value = { r0: 0, r1: rows.value.length - 1, c0: 0, c1: columns.value.length - 1 } }
+  else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && rowSel.value.size && !window.getSelection()?.toString()) { e.preventDefault(); copyRows() }
   else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c' && sel.value && !window.getSelection()?.toString()) { e.preventDefault(); copySel() }
+  else if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === 'Subtract') && rowSel.value.size) { e.preventDefault(); deleteRows() }
+  else if (e.key === ' ' && e.shiftKey && document.activeElement?.closest?.('td.cell')) { const at = cellAt(document.activeElement); if (at) { e.preventDefault(); pick(at.ri, { ctrlKey: e.ctrlKey }) } }
+  else if (e.key === 'Delete' && rowSel.value.size) { e.preventDefault(); const s0 = sel.value; sel.value = { r0: 0, r1: rows.value.length - 1, c0: 0, c1: columns.value.length - 1 }; const keep = rowSel.value; rowSel.value = new Set(); let n = 0; for (const { r, c } of selCells()) if (keep.has(r.row.id) && canWrite(r, c) && shown(r, c) != null) { set(r, c, ''); n++ } rowSel.value = keep; sel.value = s0; store.toast(n ? `${n} eigene Werte gelöscht — noch nicht gespeichert (Zeilen löschen: Strg+− oder Rechtsklick)` : 'nichts zu löschen — Zeilen selbst löschen: Strg+− oder Rechtsklick') }
   else if (e.key === 'Delete' && sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1 || !canWrite(rows.value[sel.value.r0], columns.value[sel.value.c0]))) { e.preventDefault(); clearSel() }
-  else if (e.key === 'Escape' && sel.value) { sel.value = null }
+  else if (e.key === 'Escape' && (sel.value || rowSel.value.size)) { sel.value = null; rowSel.value = new Set() }
 }
 // Enter auf einer markierten Zelle (nicht in der Eingabe) springt nach unten wie in Excel, Umschalt+Enter nach oben (Taloan, 21.09.) —
 // vor der Zelle selbst (capture), die Enter sonst als „bearbeiten“ nimmt; bearbeiten bleibt F2, Doppelklick oder tippen
@@ -469,13 +594,17 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
       <span class="grow" />
       <span v-if="busy" class="muted">{{ busy }}</span>
       <span v-if="dirty.size" class="chip dirty" :title="`${dirty.size} geänderte Zellen — Strg+S speichert`">✎ {{ dirty.size }}</span>
+      <span v-if="fresh" class="chip ok" :title="`${fresh} neue Zeilen — speichern legt die Knoten an`">＋ {{ fresh }}</span>
+      <span v-if="retired" class="chip bad" :title="`${retired} Zeilen zum Löschen vorgemerkt — speichern schreibt es, verwerfen holt sie zurück`">✕ {{ retired }}</span>
+      <span v-if="moved" class="chip" :title="`${moved} Zeilen verschoben — speichern schreibt die Reihenfolge`">↕ {{ moved }}</span>
+      <span v-if="rowSel.size" class="chip" :title="`${rowSel.size} Zeilen markiert — Rechtsklick für kopieren, einfügen, verschieben, löschen`">▤ {{ rowSel.size }}</span>
       <template v-if="popup">
         <button class="primary" :disabled="!!busy" @click="applyAndClose" title="Änderungen als ein Stapel ins Journal und Fenster schliessen — Schliessen über X tut dasselbe">✓ übernehmen &amp; schliessen</button>
         <button :disabled="!!busy" @click="discardAndClose" title="Änderungen verwerfen und Fenster schliessen">✗ verwerfen</button>
       </template>
       <template v-else>
-        <button class="primary" :disabled="(!dirty.size && !(data?.rows ?? []).some(r => r.isNew)) || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 speichern</button>
-        <button :disabled="!dirty.size" @click="discard" title="Änderungen verwerfen">verwerfen</button>
+        <button class="primary" :disabled="!hasChanges || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 speichern</button>
+        <button :disabled="!hasChanges" @click="discard" title="Änderungen verwerfen — auch gelöschte und verschobene Zeilen">verwerfen</button>
       </template>
     </div>
     <div class="toolbar view">
@@ -504,12 +633,14 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
     <div class="scroll" ref="scrollBox" style="position:relative">
       <div v-if="handle" class="fill-handle" :style="`top:${handle.top}px;left:${handle.left}px`" title="Ausfüllkästchen: nach unten ziehen füllt — ein Wert wiederholt sich, zwei Zahlen setzen die Reihe fort" />
       <table class="grid values tab" :style="`width:${tableWidth}px`">
-        <colgroup><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
+        <colgroup><col :style="`width:${ROWSEL_W}px`" /><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
         <thead><tr>
+          <th class="rowsel" title="Klick: alle Zeilen markieren" style="position:sticky">▤</th>
           <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="[{ ro: !editable(c) && c.virtual !== 'label' }, kindOf(c)]" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="suffix" title="sprachabhängig — Spalte zeigt die gewählte Sprache">{{ locale }}</span><span v-if="c.unit" class="suffix">{{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
         </tr></thead>
         <tbody>
-          <tr v-for="(r, ri) in rows" :key="r.row.id" :data-id="r.row.id">
+          <tr v-for="(r, ri) in rows" :key="r.row.id" :data-id="r.row.id" :class="{ del: r.retired, 'drop-before': dropAt === ri, 'drop-after': dropAt === rows.length && ri === rows.length - 1 }" @contextmenu="onRowMenu($event, ri)">
+            <td class="rowsel" :class="{ on: rowSel.has(r.row.id), new: r.isNew, moved: r.moved }" :title="(r.retired ? 'zum Löschen vorgemerkt · ' : r.isNew ? 'neue Zeile · ' : r.moved ? 'verschoben · ' : '') + 'Klick = Zeile markieren, Strg = dazu, Shift = Bereich · Rechtsklick = Menü · markierte Zeilen ziehen = verschieben'">{{ r.retired ? '✕' : r.isNew ? '＋' : ri + 1 }}</td>
             <template v-for="(c, ci) in columns" :key="c.key">
               <!-- ★-Spalte: die Zelle des Attributs, das diese Zeile benennt; ohne ★ (fixierter Name, SKU/Id) nur lesend -->
               <td v-if="c.virtual === 'label' && !labelCol(r)" class="cell label" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="r.row.name ? 'fixierter Name (Rechtsklick im Baum → Benennung lösen)' : 'kein ★-Attribut gilt hier — Name aus SKU/Achsen/Id'">{{ icon(r.row.role) }} {{ r.row.label }}</div></td>
@@ -561,10 +692,24 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
 .tab :deep(.cell-box), .tab :deep(.cell-input), .tab :deep(.cell-select), .tab :deep(.cell-date) { height: 24px; border-radius: 0; border-color: transparent; background: transparent; }
 .tab :deep(.cell-box:focus) { border-color: var(--accent); background: transparent; }
 .tab :deep(.cell-input) { border-color: var(--accent); background: var(--pane); }
-/* Erste Spalte (Name) bleibt beim Rollen nach rechts stehen — man muss wissen, was man bearbeitet (Taloan) */
-.tab th:first-child, .tab :deep(td:first-child) { position: sticky; left: 0; z-index: 2; background: var(--bg); box-shadow: 1px 0 0 var(--line); }
+/* Zeilenspalte (Nummer) und die Namensspalte daneben bleiben beim Rollen nach rechts stehen — man muss wissen, was man bearbeitet (Taloan) */
+.tab th:first-child, .tab :deep(td:first-child) { position: sticky; left: 0; z-index: 2; background: var(--pane); }
+.tab th:nth-child(2), .tab :deep(td:nth-child(2)) { position: sticky; left: 40px; z-index: 2; background: var(--bg); box-shadow: 1px 0 0 var(--line); }
 .tab :deep(td.label .cell-box:not(.locked)) { font-weight: 600; }
-.tab th:first-child { z-index: 3; }
+.tab th:first-child, .tab th:nth-child(2) { z-index: 3; }
+/* Zeilenspalte wie in Excel: grau, Klick markiert die Zeile; markiert = Akzent; gelöscht = durchgestrichen; Strich = Ablageplatz beim Ziehen */
+.tab td.rowsel, .tab th.rowsel { text-align: center; color: var(--muted); font-size: 11px; cursor: pointer; user-select: none; padding: 0; background: var(--pane); border-right: 1px solid var(--line); }
+.tab th.rowsel { font-size: 12px; }
+.tab td.rowsel:hover, .tab th.rowsel:hover { color: var(--text); }
+.tab td.rowsel.on { background: var(--accent); color: #fff; }
+.tab td.rowsel.new { color: var(--ok); }
+.tab td.rowsel.moved::after { content: '↕'; margin-left: 2px; opacity: .6; }
+.tab :deep(tr.del td) { text-decoration: line-through; opacity: .55; }
+.tab :deep(tr.del td.rowsel) { color: var(--bad); text-decoration: none; opacity: 1; }
+.tab :deep(tr.drop-before td) { box-shadow: inset 0 2px 0 var(--accent); }
+.tab :deep(tr.drop-after td) { box-shadow: inset 0 -2px 0 var(--accent); }
+.chip.ok { color: var(--ok); }
+.chip.bad { color: var(--bad); }
 .tab :deep(td.cell.dirty .cell-box), .tab :deep(td.dirty .cell-box) { background: var(--dirty); color: var(--dirty-text); font-style: normal; }
 .cell-box.locked { color: var(--muted); font-style: italic; cursor: default; }
 .chip.dirty { background: var(--dirty); color: var(--dirty-text); }
