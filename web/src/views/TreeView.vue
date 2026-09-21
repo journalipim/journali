@@ -404,6 +404,7 @@ async function duplicate(r, deep) {
 // Was unter einem Knoten liegt, heisst „Subitems“ — nicht „Kinder“ (Taloan, 17.09.)
 const below = () => 'Subitems'
 async function contextMenu(e, r) {
+  e.preventDefault()   // vor dem await — sonst kommt das Browsermenü
   router.push(`/tree/${r.id}`)
   const kids = tree.kids(r.id).length
   // Mehrfachauswahl (Taloan, 18.09.): liegt die Zeile in der Auswahl, gilt das Menü für die ganze Auswahl — Zurückziehen, Status,
