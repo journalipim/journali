@@ -13,7 +13,7 @@ export const OPS = [
   ['combine', 'Spalten verbinden', 'Spaltennamen mit Komma, {} steht für diese Spalte; dazwischen der Trenner — z. B. Spalten „brand,{}“ Trenner „ “'],
   ['split', 'Aufteilen', 'zerlegt am Trenner; Teil = eine Zahl: 0 = erster Teil, 1 = zweiter, -1 = letzter; leer = alle Teile, mit Komma verbunden'],
   ['number', 'Zahl', 'macht eine Zahl daraus: Einheit und Leerzeichen fallen weg, Tausenderzeichen auch („22 mm“ → 22, „1.234,5“ → 1234.5); Dezimalzeichen wird geraten oder gesetzt'],
-  ['boolean', 'Wahrheitswerterkennung', 'ja, yes, true, 1, x, wahr, y, t, j → true · sonst false'],
+  ['boolean', 'Wahrheitswerterkennung', 'steht eines der Wörter in der Zelle → true, sonst false'],
   ['date', 'Datum', 'liest das Datum im angegebenen Format (oder rät es) und schreibt JJJJ-MM-TT; auch Unix-Zeit (Sekunden/Millisekunden) und Excel-Zahlen'],
   ['htmldecode', 'HTML-Entities auflösen', '&amp; → &, &lt; → <, &#65; → A'],
   ['striphtml', 'HTML entfernen', 'Tags weg, der Text bleibt'],
@@ -22,6 +22,7 @@ export const OPS = [
 ]
 
 const S = v => v == null ? '' : String(v)
+export const YES_DEFAULT = 'ja, yes, true, 1, x, wahr, y, t, j'
 
 /// Datumsformate (Taloan, 21.09.: „drei Varianten sind viel zu wenig — Unix-Zeit etc.“): Schlüssel → Bezeichnung
 export const DATE_FORMATS = [
@@ -95,8 +96,8 @@ export function apply(steps, value, ctx = {}) {
         }
         case 'boolean': {
           if (v.trim() === '') break
-          // Vorgabe bleibt immer gültig; eigene Wörter kommen dazu (Taloan, 21.09.: „warum ein Eingabefeld, wenn die Auswertung fest ist?“ — für Dateien, die es anders schreiben)
-          const yes = ('ja,yes,true,1,x,wahr,y,t,j,' + S(st.yes || st.true)).split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+          // das Feld steht vorbelegt mit den Vorgabewörtern, der Benutzer ergänzt oder streicht (Taloan, 21.09.); leer = Vorgabe
+          const yes = S(st.yes || st.true || YES_DEFAULT).split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
           v = yes.includes(v.trim().toLowerCase()) ? 'true' : 'false'; break
         }
         case 'date': { const t = v.trim(); if (!t) break; v = parseDate(t, st.format || 'auto') ?? v; break }

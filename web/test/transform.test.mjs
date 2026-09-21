@@ -14,7 +14,7 @@ test('Zahl aus „22 mm“, „1.234,5“, „2,5 l“ — Dezimalzeichen gerate
 test('Wahrheitswert, Datum, Ersetzen, Aufteilen, Verbinden', () => {
   assert.equal(apply([{ op: 'boolean' }], 'Ja'), 'true')
   assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'vorhanden'), 'true')
-  assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'x'), 'true')   // Vorgabe bleibt
+  assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'x'), 'false')   // das Feld ersetzt die Vorgabe (vorbelegt, Benutzer streicht oder ergänzt)
   assert.equal(apply([{ op: 'boolean' }], 'nein'), 'false')
   assert.equal(apply([{ op: 'boolean' }], 'T'), 'true'); assert.equal(apply([{ op: 'boolean' }], 'F'), 'false')   // T/F (Taloan)
   assert.equal(apply([{ op: 'date' }], '21.09.2026'), '2026-09-21')
