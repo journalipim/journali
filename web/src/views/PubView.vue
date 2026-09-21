@@ -15,6 +15,9 @@ import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 const pubW = paneWidth('pub', 340)
 const srcW = paneWidth('pubsrc', 300)
+// Pflegebaum links einklappbar (Taloan, 21.09.) — Stand gemerkt
+const srcOpen = ref(localStorage.getItem('journali.pubsrc.open') !== '0')
+watch(srcOpen, v => localStorage.setItem('journali.pubsrc.open', v ? '1' : '0'))
 const props = defineProps({ id: String })
 const router = useRouter()
 
@@ -196,8 +199,13 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 </script>
 
 <template>
-  <div class="pane" :style="`width:${srcW}px;flex:none`">
+  <div class="pub-theme">
+  <div v-if="!srcOpen" class="pane" style="width:30px;flex:none;align-items:center;padding-top:6px;cursor:pointer" title="Pflegebaum aufklappen — Äste von hier in den Publikationsbaum ziehen" @click="srcOpen = true">
+    <span class="muted">▸</span><span class="muted" style="writing-mode:vertical-rl;margin-top:8px;font-size:12px">▣ Pflegebaum</span>
+  </div>
+  <div v-else class="pane" :style="`width:${srcW}px;flex:none`">
     <div class="toolbar">
+      <button class="x" title="Pflegebaum einklappen" @click="srcOpen = false">◂</button>
       <h1>▣ Pflegebaum</h1>
       <span class="grow" />
       <span class="view-chip" :class="{ on: dropMode === 'copy' }" @click="dropMode = 'copy'" title="gezogene Gruppe wird Rubrik mit ihrem Aufbau — danach frei umbaubar (umhängen, umbenennen, entfernen)">⇊ kopieren</span>
@@ -215,7 +223,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">Ast nach rechts auf eine Rubrik ziehen · Doppelklick öffnet</div>
   </div>
-  <Splitter v-model="srcW" :min="200" :max="600" />
+  <Splitter v-if="srcOpen" v-model="srcW" :min="200" :max="600" />
   <div class="pane" :style="`width:${pubW}px;flex:none`">
     <div class="toolbar">
       <h1>⇶ Publikation</h1>
@@ -270,6 +278,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
   <Splitter v-model="pubW" :min="220" :max="800" />
   <NodeView v-if="id" :id="id" :key="id" />
   <div v-else class="pane" style="flex:1"><div class="empty">Rubrik wählen — ihre Texte und Bilder stehen hier wie an jedem Knoten.</div></div>
+  </div>
 </template>
 
 <style scoped>

@@ -23,6 +23,11 @@
   color-scheme: light;
 }
 
+/* Publikation (Taloan, 21.09.2026): eigenes Farbset, grün statt blau — damit man sieht, dass man am Kanal baut, nicht an der Pflege */
+.pub-theme { --accent: #15803d; --accent-soft: #dcfce7; display: contents; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pub-theme { --accent: #4ade80; --accent-soft: #14532d; } }
+:root[data-theme="dark"] .pub-theme { --accent: #4ade80; --accent-soft: #14532d; }
+
 /* Dunkel: nach System, solange in den Einstellungen nichts anderes steht. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {

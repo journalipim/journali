@@ -689,7 +689,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section">
+      <div class="section" v-if="node.role !== 'rubric'">
         <h2 @click="toggle('relations')"><span class="caret">{{ open('relations') ? '▾' : '▸' }}</span>⇄ Relationen <span class="muted">· {{ relCount }}</span></h2>
         <template v-if="open('relations')">
         <div v-for="b in relBlocks" :key="b.type" class="relblock">
@@ -797,7 +797,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section">
+      <div class="section" v-if="node.role !== 'rubric'">
         <h2 @click="toggle('versions')"><span class="caret">{{ open('versions') ? '▾' : '▸' }}</span>⎘ Versionen <span class="muted">· Stand einfrieren, Belege der Erzeuger, Stand ansehen, zurückrollen</span></h2>
         <VersionsPanel v-if="open('versions')" :id="id" :role="node.role" @changed="load(); store.poll(true)" />
       </div>
