@@ -18,7 +18,7 @@ async function fixNode(id) {
   const row = tree.byId.get(id); if (!row) { store.toast(`Knoten ${id} unbekannt`); return }
   const n = await api.get(`/api/nodes/${encodeURIComponent(id)}`)
   const childRole = childRoleOf(row, tree.kids(id))
-  const allowed = new Set(childAttributes(model.value, n, childRole).map(a => a.key)); allowed.add(model.value?.skuAttribute ?? 'sku')
+  const allowed = new Set(childAttributes(model.value, n, childRole).map(a => a.key))
   for (const a of row.axes ?? []) allowed.add(a)
   fixed.value = { row, childRole, allowed }
   pickTarget(row); role.value = childRole; external.value = ''
@@ -144,7 +144,7 @@ const roleLabel = { group: 'Gruppen', product: 'Produkte', variant: 'Varianten' 
 const unknown = computed(() => mapping.value.filter(m => m.unknown).length)
 
 // ---- Zuordnung: Zeile je Spalte
-const TARGETS = [['attr', 'Attribut'], ['new', 'neues Attribut'], ['id', 'journali-Id'], ['sku', 'SKU (finden)'], ['external', 'externe Kennung'], ['parent', 'Elternteil'], ['skip', 'übergehen']]
+const TARGETS = [['attr', 'Attribut'], ['new', 'neues Attribut'], ['id', 'journali-Id'], ['external', 'externe Kennung'], ['parent', 'Elternteil'], ['skip', 'übergehen']]
 const sample = (i) => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => String(v ?? '').trim() !== '').slice(0, 3).map(v => String(v).slice(0, 30)).join(' · ')
 // Umwandlung je Spalte (Taloan, 21.09., OpenDXP-Importer: „Werte umwandeln, in die Daten eingreifen“): Kette in m.steps, Editor je Zeile, Vorschau der Beispiele
 const stepsOpen = ref(null)   // Spalte, deren Kette gerade offen ist
@@ -168,7 +168,8 @@ const preview = (m, i) => { const rows = source.value.rows.slice(0, 200).filter(
 const stepsText = m => m.steps?.length ? transform.describe(m.steps) : ''
 function onTarget(m) { planned.value = null; if (m.target === 'attr' && !m.attribute) m.attribute = attrs.value[0]?.key ?? null; if (m.target === 'new' && !m.newKey) m.newKey = m.column.toLowerCase().replace(/[^a-z0-9]+/g, '_'); syncLocale(m) }
 function syncLocale(m) { const a = attrs.value.find(x => x.key === m.attribute); if (m.target === 'attr' && a && !a.perLocale) m.locale = null; if (m.target === 'attr' && a?.perLocale && !m.locale) m.locale = model.value?.masterLocale ?? locales.value[0] }
-const keyColumn = computed(() => mapping.value.find(m => ['id', 'sku', 'external'].includes(m.target)))
+const uniqueKeys = computed(() => new Set((model.value?.attributes ?? []).filter(a => a.unique).map(a => a.key)))
+const keyColumn = computed(() => mapping.value.find(m => ['id', 'external'].includes(m.target) || (m.target === 'attr' && uniqueKeys.value.has(m.attribute))))   // eindeutige Attribute finden (Taloan, 21.09.)
 // Eigene Ids in der Datei (Taloan, 21.09.: „dann dürfen id und parent auf keinen Fall änderbar sein — stillschweigend versteckt, und den Baum
 // braucht man nicht auszusuchen“): trägt die Id-Spalte Ids, die es im Baum gibt, sind id und parent fest und weg aus der Zuordnung;
 // das Ziel braucht es nur für Zeilen, deren Id der Baum nicht kennt (neu) — dann sagt es die Analyse
@@ -212,14 +213,16 @@ async function analyse() {
     const locs = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.locale ?? ''))]
     const existing = new Map()
     // Bestand nur für die Zeilen holen, die es schon gibt (Taloan, 21.09.: „darf das Vergleichen bei 11 Zeilen eine Minute dauern?“ — vorher die
-    // ganze Wurzel tief): gefunden über Id, Kennung oder SKU; je Elternteil ein Aufruf (die Subitems als Tabelle), je Sprache
+    // ganze Wurzel tief): gefunden über Id, externe Kennung oder ein eindeutiges Attribut; je Elternteil ein Aufruf (die Subitems als Tabelle), je Sprache
     const iId = mapping.value.findIndex(m => m.target === 'id'), iExt = mapping.value.findIndex(m => m.target === 'external')
-    const iSku = mapping.value.findIndex(m => m.target === 'sku' || (m.target === 'attr' && m.attribute === (model.value?.skuAttribute ?? 'sku')))
-    const bySku = new Map(tree.rows.filter(r => r.sku).map(r => [String(r.sku).trim(), r])), byExt = new Map(external.value ? tree.rows.filter(r => r.external?.[external.value]).map(r => [String(r.external[external.value]), r]) : [])
+    const keyCols = mapping.value.map((m, i) => m.target === 'attr' && uniqueKeys.value.has(m.attribute) && !m.locale ? i : -1).filter(i => i >= 0)
+    const byKey = new Map(); for (const r of tree.rows) for (const [k, v] of Object.entries(r.keys ?? {})) byKey.set(k + '\u0001' + String(v).trim(), r)
+    const byExt = new Map(external.value ? tree.rows.filter(r => r.external?.[external.value]).map(r => [String(r.external[external.value]), r]) : [])
     const parents = new Map()   // Elternteil → Ids der gefundenen Knoten darunter
     for (const row of source.value.rows) {
-      const id = String(row[iId] ?? '').trim(), ext = String(row[iExt] ?? '').trim(), sku = String(row[iSku] ?? '').trim()
-      const n = (iId >= 0 && id && tree.byId.get(id)) || (iExt >= 0 && ext && byExt.get(ext)) || (iSku >= 0 && sku && bySku.get(sku)) || null
+      const id = String(row[iId] ?? '').trim(), ext = String(row[iExt] ?? '').trim()
+      const viaKey = keyCols.map(i => byKey.get(mapping.value[i].attribute + '\u0001' + String(row[i] ?? '').trim())).find(Boolean)   // über jedes eindeutige Attribut
+      const n = (iId >= 0 && id && tree.byId.get(id)) || (iExt >= 0 && ext && byExt.get(ext)) || viaKey || null
       if (n) { const key = n.parent ?? '#root'; if (!parents.has(key)) parents.set(key, new Set()); parents.get(key).add(n.id) }
     }
     let done = 0

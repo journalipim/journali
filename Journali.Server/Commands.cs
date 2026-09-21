@@ -134,6 +134,10 @@ public static class Commands
         // mit Achsen ist die Kombination je Produkt eindeutig.
         if (product.Axes.Length > 0 && c.Tree.Children(product.Id).Any(s => s.AxisValues.Count == values.Count && s.AxisValues.All(kv => values.TryGetValue(kv.Key, out var x) && x == kv.Value)))
             return Outcome.Bad("Diese Variante gibt es schon.");
+        // eine eindeutige Achse (SKU als Achse, Taloan 21.09.): der Achsenwert darf es nirgends im Baum schon geben
+        foreach (var (axis, v) in values)
+            if (c.Model.Attributes.TryGetValue(axis, out var ad) && ad.Unique && c.Tree.WithOwnValue(axis, v).FirstOrDefault() is { } other)
+                return Outcome.Bad($"{ad.Label.GetValueOrDefault("de") ?? axis} {v} gibt es schon: {NodeRow.LabelOf(c.Tree, c.Model, other)} ({other.Id}).");
         return Outcome.Ok(c.Write(Ids.New(Roles.Variant), Types.VariantCreated, new VariantCreated(product.Id, values)));
     }
 
@@ -316,8 +320,8 @@ public static class Commands
             if (mine.All(x => !string.IsNullOrEmpty(x)) && c.Tree.Children(pid).Any(s => s.Id != n.Id && prod.Axes.All(a => s.AxisValues.TryGetValue(a, out var x) && x == mine[Array.IndexOf(prod.Axes, a)])))
                 return Outcome.Bad($"Diese Variante gibt es schon ({string.Join(", ", mine)}).");
         }
-        // Eindeutig (Kennungsattribut immer, sonst das Merkmal, Taloan 21.09.): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern
-        if (c.Model.IsUnique(def) && value is not null && locale is null && channel is null && row is null && c.Tree.WithOwnValue(def.Key, value).FirstOrDefault(o => o.Id != n.Id) is { } other)
+        // Eindeutig (Merkmal unique, Taloan 21.09.): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern
+        if (def.Unique && value is not null && locale is null && channel is null && row is null && c.Tree.WithOwnValue(def.Key, value).FirstOrDefault(o => o.Id != n.Id) is { } other)
             return Outcome.Bad($"{def.Label.GetValueOrDefault("de") ?? def.Key} {value} gibt es schon: {NodeRow.LabelOf(c.Tree, c.Model, other)} ({other.Id}).");
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row)));
     }
@@ -451,8 +455,8 @@ public static class Commands
                     if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, null, l, newRow).Entry is not null) count++;
             }
         }
-        // eindeutige Werte (Kennung, EAN …) kommen nicht mit — die Kopie bekäme sie sonst nicht, der Rest ginge verloren
-        foreach (var (axis, v) in src.Values.Where(kv => kv.Key.Row is null && !(c.Model.Attributes.TryGetValue(kv.Key.Attribute, out var ad) && c.Model.IsUnique(ad))))
+        // eindeutige Werte (SKU, EAN …) kommen nicht mit — die Kopie bekäme sie sonst nicht, der Rest ginge verloren
+        foreach (var (axis, v) in src.Values.Where(kv => kv.Key.Row is null && !(c.Model.Attributes.TryGetValue(kv.Key.Attribute, out var ad) && ad.Unique)))
             if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, suffix && axis.Attribute == "name" ? "(Kopie) " + v : v, null).Entry is not null) count++;
         foreach (var (axis, l) in src.Lists.Where(kv => kv.Key.Row is null))
             if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, null, l).Entry is not null) count++;

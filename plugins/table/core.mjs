@@ -1,5 +1,5 @@
 // Tabellen-Export, der Kern (Basis-Plugin table, Taloan 19.09.2026; der Job dazu ist das Plugin export, es braucht table):
-// ein Teilbaum als Tabelle — Spalten id, role, parent, sku, journali_label (Name im Baum, nur Anzeige), status, Achsen,
+// ein Teilbaum als Tabelle — Spalten id, role, parent, journali_label (Name im Baum, nur Anzeige), status, Achsen, eindeutige Attribute (Schlüssel) zuerst,
 // dann die Attribute (je Sprache eine Spalte key_de, key_en; ohne Sprachachse key). Genau die Form, die ⇩ Import → Tabelle
 // wieder liest. Kein DOM: env = { api: { get }, model }. Browser (browser.js) und Job (plugins/export/job.mjs) benutzen ihn.
 
@@ -16,6 +16,7 @@ export async function build(env, { root, role = '', locales, ownOnly = false, vi
   const v = model.views.find(x => x.key === viewKey)
   if (v) { const order = v.items.flatMap(it => it.order ?? []); const groups = new Map(model.groups.map(g => [g.key, g.attributes])); const wanted = new Set([...order, ...v.items.flatMap(it => it.group ? groups.get(it.group) ?? [] : [])]); cols = cols.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999)) }
   cols = cols.filter(c => c.type !== 'rows' && !c.computed)
+  cols = [...cols.filter(c => c.unique), ...cols.filter(c => !c.unique)]   // Schlüssel (eindeutig) zuerst — sie finden beim Import den Knoten wieder (Taloan, 21.09.)
   const axes = [...new Set(nodes.flatMap(r => Object.keys(r.row.axisValues ?? {})))]
   // journali_root (Taloan, 21.09.): die Wurzel des Baums — Id + Wurzel macht die Zeile über Datenbanken hinweg eineindeutig; der Import prüft beides
   let rootId = root
@@ -25,7 +26,7 @@ export async function build(env, { root, role = '', locales, ownOnly = false, vi
   // Taloans Ausweg (21.09.): nur die Id-Spalte sichtbar — sie erklärt, was der Anwender tut; parent, role, status ausgeblendet (Kopieren ändert sie nicht)
   const sysCol = (sys, note) => ({ key: `journali_${sys}_${rootId}`, sys, note, hidden: sys !== 'id' && sys !== 'label' })
   const columns = [sysCol('id', 'journali-Id des Knotens — nicht ändern. Zeile kopiert? Dann diese Zelle leeren, sonst erkennt der Import die Kopie an den Werten'), sysCol('parent', 'Elternteil (journali-Id) — nicht ändern'), sysCol('role', 'Knotentyp — nur zum Lesen'), sysCol('status', 'Status — nur zum Lesen'),
-    { key: model.skuAttribute ?? 'sku', sys: 'sku', note: 'Kennung — findet vorhandene Knoten, wenn die Id leer ist' }, sysCol('label', 'Name im Baum — nur zum Lesen'), ...extra.map(x => ({ key: x.key, of: x.of })), ...axes.map(a => ({ key: 'axis:' + a })),
+    sysCol('label', 'Name im Baum — nur zum Lesen'), ...extra.map(x => ({ key: x.key, of: x.of })), ...axes.map(a => ({ key: 'axis:' + a })),
     ...cols.flatMap(c => c.perLocale ? locales.map(l => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }])]
   const rows = nodes.map(r => columns.map(c => {
     if (c.attr) { const x = byLocale.get(c.locale)?.get(r.row.id)?.[c.attr]; return x == null || (ownOnly && !x.own) ? '' : x.value ?? '' }
@@ -42,11 +43,11 @@ export function toCsv({ columns, rows }) {
 }
 export function toJson({ columns, rows }) { return JSON.stringify(rows.map(r => Object.fromEntries(columns.map((c, i) => [c.key, r[i] === '' ? null : r[i]]))), null, 1) }
 // JSON als Baum (Taloan: „einfach nur eine flache Liste, keine Struktur“): der Teilbaum verschachtelt, je Knoten
-// id, role, name, sku, status, axes, attributes (je Sprache verschachtelt: { de, en }), children
+// id, role, name, status, axes, attributes (je Sprache verschachtelt: { de, en }; die Schlüssel stehen darin), children
 export function toJsonTree({ columns, rows }) {
   const byId = new Map()
   for (const r of rows) {
-    const o = { id: r[columns.findIndex(c => c.sys === 'id' || c.key === 'id')] ?? r[0], role: '', parent: null, name: '', sku: null, status: null, axes: {}, attributes: {}, children: [] }
+    const o = { id: r[columns.findIndex(c => c.sys === 'id' || c.key === 'id')] ?? r[0], role: '', parent: null, name: '', status: null, axes: {}, attributes: {}, children: [] }
     columns.forEach((c, i) => {
       const v = r[i] === '' ? null : r[i]
       if (c.attr) { if (c.locale && columns.some(x => x.attr === c.attr && x.locale !== c.locale)) (o.attributes[c.attr] ??= {})[c.locale] = v; else o.attributes[c.attr] = v }

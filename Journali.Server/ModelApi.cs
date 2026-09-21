@@ -101,16 +101,6 @@ public static partial class ModelApi
                 !model.Channels.ContainsKey(body.Key ?? "") ? Bad($"Kanal {body.Key} gibt es nicht.")
                 : write(Model.MasterChannelStream, Types.MasterChannelDefined, new MasterChannelDefined(body.Key!))));
 
-        // Kennungsattribut (Taloan, 21.09.): welches Attribut die Kennung trägt — Text, einwertig, ohne Sprach-/Kanalachse; eindeutig ist es dann immer
-        m.MapPut("/sku-attribute", (SkuAttributeDefined body, HttpRequest req, Catalog c) =>
-            Command(req, c, body.Key ?? "", ValidKey, (model, write) =>
-                !model.Attributes.TryGetValue(body.Key ?? "", out var a) ? Bad($"Attribut {body.Key} gibt es nicht.")
-                : a.Type != AttributeTypes.Text ? Bad($"{a.Key} ist {a.Type} — die Kennung ist Text.")
-                : a.Multiple || a.PerLocale || a.PerChannel ? Bad($"{a.Key} ist mehrfach oder je Sprache/Kanal — die Kennung ist ein Wert je Knoten.")
-                : Clash(c, model, a with { Unique = false }, a with { Unique = true }) is { Count: > 0 } clash
-                    ? Bad($"{clash.Count} Werte von {a.Key} sind nicht eindeutig — z. B. {string.Join(" · ", clash.Examples)}. Erst bereinigen (Suche attr:{a.Key}).")
-                : write(Model.SkuAttributeStream, Types.SkuAttributeDefined, new SkuAttributeDefined(a.Key))));
-
         // Sprache zurückziehen: nicht die Mastersprache, nicht die letzte; Werte auf ihr bleiben im Journal
         m.MapDelete("/locales/{code}", (string code, HttpRequest req, Catalog c) =>
             Command(req, c, code, ValidCode, (model, write) =>
@@ -199,7 +189,6 @@ public static partial class ModelApi
             if (Actor(req) is not { } actor) return ActorMissing();
             return c.With((model, tree, write) =>
                 !model.Attributes.ContainsKey(key) ? Results.NotFound()
-                : key == model.SkuAttribute ? Bad($"{key} ist das Kennungsattribut — erst ein anderes zur Kennung machen.")
                 // Sperre: solange das Attribut irgendwo das Sternchen trägt, verlöre der Baum dort seine Namen.
                 : tree.WithLabelAttribute(key).FirstOrDefault() is { } n
                     ? Bad($"{key} ist ★ Name im Baum ab {NodeRow.LabelOf(tree, model, n)} ({n.Id}) — erst dort das Sternchen umsetzen.")
@@ -309,7 +298,6 @@ public static partial class ModelApi
         locales = model.Locales.Values.OrderBy(l => l.Code).ToList(),
         masterLocale = model.MasterLocale,
         masterChannel = model.MasterChannel,
-        skuAttribute = model.SkuAttribute,
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], closed = l.Closed, values = l.Ordered.ToList() }).ToList(),
@@ -336,7 +324,8 @@ public static partial class ModelApi
             var ax = new Axis(before.Key, null, null); var seen = new Dictionary<string, Node>();
             foreach (var n in tree.Nodes.Values)
             {
-                if (!n.Values.TryGetValue(ax, out var v)) continue;
+                var v = n.Values.GetValueOrDefault(ax) ?? n.AxisValues.GetValueOrDefault(before.Key);   // Achsenwerte zählen mit (SKU als Achse)
+                if (v is null) continue;
                 if (seen.TryGetValue(v, out var first)) { count++; if (examples.Count < 3) examples.Add($"„{v.Truncate(40)}“ an {NodeRow.LabelOf(tree, model, first)} und {NodeRow.LabelOf(tree, model, n)}"); }
                 else seen[v] = n;
             }

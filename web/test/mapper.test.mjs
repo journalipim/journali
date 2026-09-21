@@ -1,9 +1,10 @@
-// Datenmapper: Vorschlag je Spalte — Fälle aus der Bedienung (Taloan, 21.09.: Re-Import des eigenen Exports)
+// Datenmapper: Vorschlag je Spalte — Fälle aus der Bedienung (Taloan, 21.09.: Re-Import des eigenen Exports); sku ist eindeutig (unique) und
+// findet damit vorhandene Knoten — wie jedes andere eindeutige Attribut (Taloan: „alles über eindeutig“)
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { suggest } from '../src/mapper.js'
 
-const model = { masterLocale: 'de', locales: [{ code: 'de' }, { code: 'en' }], attributes: [{ key: 'sku', label: { de: 'SKU' }, type: 'text' }, { key: 'name', label: { de: 'Name' }, type: 'text', perLocale: true }] }
+const model = { masterLocale: 'de', locales: [{ code: 'de' }, { code: 'en' }], attributes: [{ key: 'sku', label: { de: 'SKU' }, type: 'text', unique: true }, { key: 'name', label: { de: 'Name' }, type: 'text', perLocale: true }] }
 
 test('Spalte „parent“ voller Ids ist der Vater, nicht doppelt zur Id', () => {
   const columns = ['id', 'role', 'parent', 'sku', 'name_de']
@@ -45,7 +46,7 @@ test('kopierte Zeilen mit versteckter Id: andere SKU → neuer Knoten, gleiche S
   const columns = ['journali_id_g-1', 'journali_parent_g-1', 'sku', 'name_de']
   // Original steht NICHT zuerst (ausgeschnitten und als erste eingefügt): erkannt wird es über die SKU des Knotens, nicht über die Zeile
   const rows = [['v-1', 'p-1', '1', 'Kopie c1'], ['v-1', 'p-1', '053797', 'Original'], ['v-1', 'p-1', '2', 'Kopie c2'], ['v-1', 'p-1', '053797', 'echtes Duplikat']]
-  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', sku: '053797', axisValues: {} }]
+  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', keys: { sku: '053797' }, axisValues: {} }]
   const byId = new Map(treeRows.map(r => [r.id, r]))
   const tree = { rows: treeRows, byId, ancestors: id => { const out = []; for (let p = byId.get(id)?.parent; p; p = byId.get(p)?.parent) out.unshift(byId.get(p)); return out } }
   const m = suggest(columns, rows, model)
@@ -60,11 +61,25 @@ test('kopierte Zeilen, Original mit geänderter SKU: die Zeile mit den meisten g
   const { plan } = await import('../src/mapper.js')
   const columns = ['journali_id_g-1', 'journali_parent_g-1', 'sku', 'name_de']
   const rows = [['v-1', 'p-1', 'NEU-1', 'ganz anders'], ['v-1', 'p-1', 'NEU-2', 'Original']]
-  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', sku: '053797', axisValues: {} }]
+  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', keys: { sku: '053797' }, axisValues: {} }]
   const byId = new Map(treeRows.map(r => [r.id, r]))
   const tree = { rows: treeRows, byId, ancestors: id => { const out = []; for (let p = byId.get(id)?.parent; p; p = byId.get(p)?.parent) out.unshift(byId.get(p)); return out } }
   const m = suggest(columns, rows, model)
   const p = plan({ columns, rows, mapping: m, model, tree, target: null, role: null, existing: new Map([['v-1', { 'name|de': 'Original', 'name|de#own': true, 'sku|': '053797', 'sku|#own': true }]]) })
   assert.equal(p.stats.update, 1); assert.equal(p.stats.create, 1)
   assert.match(p.stats.notes[0], /Zeile 2: kopierte Zeile.*Zeile 3.*neuer Knoten/)   // Zeile 2 ist die Kopie, Zeile 3 (Name „Original“) das Original
+})
+
+test('jedes eindeutige Attribut findet den Knoten — auch matnr statt sku, und ohne Id', async () => {
+  const { plan } = await import('../src/mapper.js')
+  const m2 = { ...model, attributes: [...model.attributes, { key: 'matnr', label: { de: 'MATNR' }, type: 'text', unique: true }, { key: 'ean', label: { de: 'EAN' }, type: 'text' }] }
+  const columns = ['matnr', 'ean', 'name_de']
+  const rows = [['100', '4006', 'geändert'], ['200', '4006', 'neu']]
+  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: '100', keys: { matnr: '100', sku: 'S-1' }, axisValues: {} }]
+  const byId = new Map(treeRows.map(r => [r.id, r]))
+  const tree = { rows: treeRows, byId, ancestors: () => [] }
+  const m = suggest(columns, rows, m2)
+  assert.equal(m[0].target, 'attr'); assert.equal(m[0].attribute, 'matnr')
+  const p = plan({ columns, rows, mapping: m, model: m2, tree, target: byId.get('p-1'), role: 'variant', existing: new Map([['v-1', { 'name|de': 'alt', 'name|de#own': true, 'matnr|': '100', 'matnr|#own': true }]]) })
+  assert.equal(p.stats.update, 1); assert.equal(p.stats.create, 1)   // 100 gefunden über matnr, 200 neu; ean (nicht eindeutig) findet nichts
 })

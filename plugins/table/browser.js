@@ -49,7 +49,7 @@ export async function nodeWorkbook(nodeId, withData) {
   if (withData) {
     const locales = store.model.locales.map(l => l.code); const byLocale = new Map(); let nodes = []
     for (const l of locales) { const t = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?locale=${l}&role=${childRole}`); nodes = t.rows; byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values]))) }
-    data = nodes.map(r => columns.map(c => c.key === 'id' ? r.row.id : c.key === 'sku' ? r.row.sku ?? '' : c.key.startsWith('axis:') ? r.row.axisValues?.[c.attr] ?? '' : (byLocale.get(c.locale ?? locales[0])?.get(r.row.id)?.[c.attr]?.value ?? '')))
+    data = nodes.map(r => columns.map(c => c.key === 'id' ? r.row.id : c.key.startsWith('axis:') ? r.row.axisValues?.[c.attr] ?? '' : (byLocale.get(c.locale ?? locales[0])?.get(r.row.id)?.[c.attr]?.value ?? '')))
   }
   const lg = legend(columns)
   const wb = workbook(X, { columns, rows: data }, lg)

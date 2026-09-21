@@ -317,12 +317,23 @@ public sealed class Tree : IProjection
         }
     }
 
-    /// <summary>Alle Knoten mit diesem eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) — Eindeutigkeitsprüfung für die Kennung und
-    /// jedes Attribut mit dem Merkmal eindeutig (Taloan, 21.09.2026).</summary>
+    /// <summary>Alle Knoten mit diesem eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) oder als Achsenwert — Eindeutigkeitsprüfung
+    /// für jedes Attribut mit dem Merkmal unique (Taloan, 21.09.2026); Achsenwerte zählen mit, weil eine Achse eindeutig sein kann (SKU als Achse).</summary>
     public IEnumerable<Node> WithOwnValue(string attribute, string value)
     {
         var ax = new Axis(attribute, null, null);
-        return _nodes.Values.Where(n => n.Values.TryGetValue(ax, out var s) && s == value);
+        return _nodes.Values.Where(n => (n.Values.TryGetValue(ax, out var s) && s == value) || (n.AxisValues.TryGetValue(attribute, out var a) && a == value));
+    }
+    /// <summary>Die Schlüssel eines Knotens: eigener Wert (oder Achsenwert) je eindeutigem Attribut, das einen hat; null, wenn keiner.</summary>
+    public Dictionary<string, string>? KeysOf(ModelCatalog model, Node n)
+    {
+        Dictionary<string, string>? keys = null;
+        foreach (var a in model.UniqueAttributes)
+        {
+            var v = n.Own(a.Key, null, null) ?? n.AxisValues.GetValueOrDefault(a.Key);
+            if (!string.IsNullOrEmpty(v)) (keys ??= new())[a.Key] = v;
+        }
+        return keys;
     }
 
     public void Apply(Entry entry)

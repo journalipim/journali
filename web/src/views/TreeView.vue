@@ -71,7 +71,7 @@ function suggest() {
     else if (key === 'under:') { for (const a of [...(props.id ? tree.ancestors(props.id) : []), selected.value].filter(Boolean).reverse()) if (!low || a.label.toLowerCase().includes(low) || a.id.includes(low)) out.push({ value: `under:${a.id}`, label: `${icon(a.role)} ${a.label}`, hint: a.id === props.id ? 'hier' : a.id }) }
     else if (key === 'media:') { out.push({ value: 'media:any', label: 'irgendein Medium', hint: 'hat mindestens eines' }); for (const t of (m?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `media:${t.key}`, label: t.label?.de || t.key, hint: 'Relationstyp' }); if (low) out.push({ value: `media:${low}`, label: `Name enthält „${low}“`, hint: '* = beliebig' }) }
     else if (key === 'folder:') { out.push({ value: 'folder:none', label: '⌂ ohne Ordner', hint: 'ein Medium des Knotens liegt in keinem Ordner' }); mediaFolders().then(fs => { for (const f of fs.filter(f => !low || f.name.toLowerCase().includes(low))) out.push({ value: `folder:${f.id}`, label: `📁 ${f.path}`, hint: 'samt Unterordnern' }); sugg.value = [...out] }) }
-    else if (key === 'rel:' && rest.includes('=')) { const [t, p] = rest.split('='); for (const r of tree.rows.filter(r => p && (r.label.toLowerCase().includes(p.toLowerCase()) || (r.sku ?? '').toLowerCase().includes(p.toLowerCase()))).slice(0, 8)) out.push({ value: `rel:${t}=${r.sku || r.id}`, label: `${icon(r.role)} ${r.label}`, hint: `Partner der Relation${r.sku ? ' · ' + r.sku : ''}` }) }
+    else if (key === 'rel:' && rest.includes('=')) { const [t, p] = rest.split('='); for (const r of tree.rows.filter(r => p && (r.label.toLowerCase().includes(p.toLowerCase()) || tree.keyHit(r, p.toLowerCase()))).slice(0, 8)) out.push({ value: `rel:${t}=${Object.values(r.keys ?? {})[0] || r.id}`, label: `${icon(r.role)} ${r.label}`, hint: `Partner der Relation${r.keys ? ' · ' + tree.keyText(r) : ''}` }) }
     else if (key === 'rel:') { out.push({ value: 'rel:any', label: 'irgendeine Relation', hint: 'zu anderen Knoten' }); for (const t of (m?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `rel:${t.key}`, label: t.label?.de || t.key, hint: (t.symmetric ? 'symmetrisch' : 'gerichtet') + ' — mit = danach der Partner' }) }
     else if (key === 'since:') for (const [d, l] of [[0, 'heute'], [1, 'seit gestern'], [7, 'letzte 7 Tage'], [30, 'letzte 30 Tage']]) out.push({ value: `since:${day(d)}`, label: l, hint: day(d) })
     else if (key === 'by:' && store.actor && store.actor.toLowerCase().startsWith(low)) out.push({ value: `by:${store.actor}`, label: `👤 ${store.actor}`, hint: 'ich' })
@@ -134,7 +134,7 @@ const visible = computed(() => {
   if (f) {
     const keep = new Set()
     for (const r of tree.rows)
-      if (hits.value.has(r.id) || (!hasTerms.value && (r.label.toLowerCase().includes(f) || (r.sku ?? '').toLowerCase().includes(f) || r.id.includes(f)))) {
+      if (hits.value.has(r.id) || (!hasTerms.value && (r.label.toLowerCase().includes(f) || tree.keyHit(r, f) || r.id.includes(f)))) {
         keep.add(r.id)
         for (const a of tree.ancestors(r.id)) keep.add(a.id)
       }
@@ -198,7 +198,7 @@ async function loadExisting() {
 }
 const linkMatches = computed(() => {
   const q = (link.value?.q ?? '').trim().toLowerCase(); if (!q) return []
-  return tree.rows.filter(r => !picked.value.has(r.id) && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12)
+  return tree.rows.filter(r => !picked.value.has(r.id) && (r.label.toLowerCase().includes(q) || tree.keyHit(r, q) || r.id.includes(q))).slice(0, 12)
 })
 // Welche der Auswahl sind für Typ und Richtung erlaubt, welche gibt es schon?
 const linkRows = computed(() => {
@@ -567,7 +567,7 @@ function onDialogKey(e) {
             <span v-if="link.target" class="chip">{{ icon(link.target.role) }} {{ link.target.label }} <button @click="link.target = null; link.existing = null" title="anderes Ziel">×</button></span>
             <input v-else v-model="link.q" type="search" placeholder="🔍 Name, SKU, Id" style="width:320px" autofocus />
             <div v-if="!link.target && linkMatches.length" class="picker" style="max-width:420px">
-              <div v-for="m in linkMatches" :key="m.id" class="pick" @click="link.target = m; link.q = ''; loadExisting()">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ m.sku ?? m.id }}</span></div>
+              <div v-for="m in linkMatches" :key="m.id" class="pick" @click="link.target = m; link.q = ''; loadExisting()">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ tree.keyText(m) || m.id }}</span></div>
             </div>
           </td></tr>
           <tr><td class="attr">Relation</td><td>
@@ -645,7 +645,7 @@ function onDialogKey(e) {
         <span class="icon">{{ icon(r.role) }}</span>
         <span class="label" :class="{ pinned: r.name }" :title="r.name ? 'Name angeheftet (kursiv) — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen' : ''">{{ r.label }}</span>
         <span v-if="hits.get(r.id) && !r.label.toLowerCase().includes(q.trim().toLowerCase())" class="muted hit" :title="hits.get(r.id)">{{ hits.get(r.id) }}</span>
-        <span v-if="r.role === 'variant' && r.sku && Object.keys(r.axisValues).length" class="muted axis">{{ Object.values(r.axisValues).join(' · ') }}</span>
+        <span v-if="r.role === 'variant' && r.keys && Object.keys(r.axisValues).length" class="muted axis">{{ Object.values(r.axisValues).join(' · ') }}</span>
         <span v-if="r.status === 'discontinued'" class="neg" title="ausgelaufen">✗</span>
         <span v-else-if="r.status === 'active'" class="pos" title="aktiv">●</span>
         <span v-if="tree.kids(r.id).length" class="muted count">{{ tree.kids(r.id).length }}</span>

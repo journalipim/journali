@@ -138,7 +138,9 @@ export function matchListValue(s, def, model) {
 
 // ---- Vorschlag: jede Spalte bekommt ein Ziel
 //   { column, target, attribute?, locale?, newType?, newKey?, score, why }
-//   target: 'attr' (vorhandenes Attribut) | 'new' (neues Attribut) | 'id' | 'sku' | 'parent' | 'external' | 'skip'
+//   target: 'attr' (vorhandenes Attribut) | 'new' (neues Attribut) | 'id' | 'parent' | 'external' | 'skip'
+//   (Altlast 'sku' aus gespeicherten Profilen: wird beim Planen wie 'attr' auf ein eindeutiges Attribut gleichen Namens gelesen)
+//   Ein Attribut mit unique (Taloan, 21.09.: „alles über eindeutig“) findet vorhandene Knoten über seinen Wert — SKU, EAN, MATNR, jedes für sich.
 export function suggest(columns, rows, model, { locales = null, external = null } = {}) {
   const locs = locales ?? (model?.locales ?? []).map(l => l.code)
   const attrs = model?.attributes ?? []
@@ -181,7 +183,7 @@ export function suggest(columns, rows, model, { locales = null, external = null 
         if (!words.includes(n)) continue
         const a = attrs.find(x => norm(x.key) === canon) ?? attrs.find(x => words.includes(norm(x.key))) ?? index.find(x => [...x.keys].some(k => words.includes(k)))?.a
         if (a) pick('attr', a.key, 0.9, `Synonym für ${a.key}`)
-        else if (canon === 'sku') pick('sku', null, 0.9, 'Kennung')
+        else if (canon === 'sku') { const u = attrs.find(x => x.unique); if (u) pick('attr', u.key, 0.8, `Schlüssel — ${u.key} ist eindeutig`) }
         else if (canon === 'id') pick('id', null, 0.9, 'journali-Id')
       }
     }
@@ -196,7 +198,7 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     if (out.target === 'attr') { const a = attrs.find(x => x.key === out.attribute); if (a && !a.perLocale) out.locale = null; if (a?.perLocale && !out.locale) out.locale = model?.masterLocale ?? locs[0] ?? null }
     // Doppelte Ziele (zwei Spalten → dasselbe Attribut, dieselbe Sprache) — die zweite wird übersprungen
     const sig = out.target === 'attr' ? `${out.attribute}|${out.locale ?? ''}` : out.target === 'new' ? `new:${out.newKey}|${out.locale ?? ''}` : out.target
-    if (['attr', 'new', 'id', 'sku', 'parent', 'external'].includes(out.target)) { if (seen.has(sig)) { out.target = 'skip'; out.why = 'doppelt' } else seen.add(sig) }
+    if (['attr', 'new', 'id', 'parent', 'external'].includes(out.target)) { if (seen.has(sig)) { out.target = 'skip'; out.why = 'doppelt' } else seen.add(sig) }
     return out
   })
 }
@@ -207,17 +209,23 @@ export function suggest(columns, rows, model, { locales = null, external = null 
 //   external: System der externen Kennung (Spalte target 'external')
 export function plan({ columns, rows, mapping, model, tree, target, role, existing, external = null, actorNote = null }) {
   const col = t => mapping.findIndex(m => m.target === t)
-  // Schlüsselspalten: eigene Ziele — oder das Attribut sku selbst (wird geschrieben und findet zugleich)
+  // Schlüsselspalten: eigene Ziele — und jedes eindeutige Attribut (wird geschrieben und findet zugleich)
   const iId = col('id'), iParent = col('parent'), iExt = col('external'), iRoot = col('root')
   // Id + Wurzel (Taloan, 21.09.): nennt die Datei journali_root, zählt eine Id nur unter genau dieser Wurzel — sonst fremde Datenbank, die Zeile ist neu
   const rootOf = id => { const a = tree.ancestors?.(id) ?? []; return a.length ? a[0].id : id }
-  const skuKey = model?.skuAttribute ?? 'sku'   // Kennungsattribut des Modells (Taloan, 21.09.: sku oder MATNR)
-  const iSku = col('sku') >= 0 ? col('sku') : mapping.findIndex(m => m.target === 'attr' && m.attribute === skuKey)
+  const uniq = new Set((model.attributes ?? []).filter(a => a.unique).map(a => a.key))
+  // Altlast: Ziel 'sku' aus alten Profilen = das eindeutige Attribut sku, wenn es eins gibt
+  mapping = mapping.map(m => m.target === 'sku' ? (uniq.has('sku') ? { ...m, target: 'attr', attribute: 'sku' } : { ...m, target: 'skip' }) : m)
+  const keyCols = mapping.map((m, i) => m.target === 'attr' && uniq.has(m.attribute) && !m.locale ? i : -1).filter(i => i >= 0)   // Spalten eindeutiger Attribute
   const raw = (row, i) => i < 0 ? null : (Array.isArray(row) ? row[i] : row[columns[i]])
   // Umwandlung je Spalte (transform.js, Taloan 21.09.: „zwischendurch in die Daten eingreifen“) — vor Typprüfung und Schreiben
   const cell = (row, i) => { if (i < 0) return null; const steps = mapping[i]?.steps; const v = raw(row, i); return steps?.length ? applySteps(steps, v, { get: c => { const j = columns.indexOf(c); return j < 0 ? '' : raw(row, j) } }) : v }
-  const bySku = new Map(); const byExt = new Map()
-  for (const r of tree.rows) { if (r.sku) bySku.set(String(r.sku).trim(), r); if (external && r.external?.[external]) byExt.set(String(r.external[external]), r) }
+  const byKey = new Map(); const byExt = new Map()   // byKey: „attribut\u0001wert“ → Zeile
+  for (const r of tree.rows) { for (const [k, v] of Object.entries(r.keys ?? {})) byKey.set(k + '\u0001' + String(v).trim(), r); if (external && r.external?.[external]) byExt.set(String(r.external[external]), r) }
+  // Schlüssel einer Dateizeile: { attribut: wert } über die Spalten eindeutiger Attribute; findKey: der erste Knoten, den einer davon trifft
+  const keysOf = row => { const o = {}; for (const i of keyCols) { const v = String(cell(row, i) ?? '').trim(); if (v) o[mapping[i].attribute] = v } return o }
+  const keyText = row => Object.values(keysOf(row))[0] ?? ''
+  const findKey = row => { for (const [k, v] of Object.entries(keysOf(row))) { const hit = byKey.get(k + '\u0001' + v); if (hit) return { node: hit, k, v } } return null }
   const attrs = new Map((model.attributes ?? []).map(a => [a.key, a]))
   // neue Attribute: einmal je newKey (+ Sprache macht nur die Achse)
   const newAttrs = new Map()
@@ -261,28 +269,30 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   for (const [id, ris] of byIdRows) {
     if (ris.length < 2) continue
     const node = tree.byId.get(id)
-    const skuOf = ri => String(cell(rows[ri], iSku) ?? '').trim()
-    let orig = node?.sku ? ris.find(ri => skuOf(ri) === String(node.sku).trim()) : undefined
+    const skuOf = ri => JSON.stringify(keysOf(rows[ri]))
+    // das Original: die Zeile, deren Schlüssel mit denen des Knotens übereinstimmen (irgendeiner)
+    let orig = node?.keys ? ris.find(ri => Object.entries(keysOf(rows[ri])).some(([k, v]) => String(node.keys[k] ?? '').trim() === v)) : undefined
     if (orig === undefined) { let best = -1; for (const ri of ris) { const sc = node ? similarity(rows[ri], id) : 0; if (sc > best) { best = sc; orig = ri } } }
     for (const ri of ris) {
       if (ri === orig) continue
-      if (skuOf(ri) && skuOf(ri) === skuOf(orig)) { dupRow.add(ri); stats.problems.push(`Zeile ${ri + 2}: Duplikat von Zeile ${orig + 2} (gleiche Id, gleiche SKU) — übergangen`) }
-      else dropId.set(ri, `Zeile ${ri + 2}: kopierte Zeile — die Id ${id} gehört zu Zeile ${orig + 2} (${node?.sku ? 'SKU ' + node.sku : 'meiste gleiche Werte'}) und zählt hier nicht`)
+      if (skuOf(ri) !== '{}' && skuOf(ri) === skuOf(orig)) { dupRow.add(ri); stats.problems.push(`Zeile ${ri + 2}: Duplikat von Zeile ${orig + 2} (gleiche Id, gleiche Schlüssel) — übergangen`) }
+      else dropId.set(ri, `Zeile ${ri + 2}: kopierte Zeile — die Id ${id} gehört zu Zeile ${orig + 2} (${node?.keys ? 'Schlüssel ' + Object.values(node.keys).join(' · ') : 'meiste gleiche Werte'}) und zählt hier nicht`)
     }
   }
   stats.copied = dropId.size
   rows.forEach((row, ri) => {
     if (dupRow.has(ri)) { stats.skipped++; return }
-    const id = dropId.has(ri) ? '' : String(cell(row, iId) ?? '').trim(); const sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
+    const id = dropId.has(ri) ? '' : String(cell(row, iId) ?? '').trim(); const sku = keyText(row), ext = String(cell(row, iExt) ?? '').trim()
     const want = iRoot >= 0 ? String(cell(row, iRoot) ?? '').trim() : (mapping.find(m => m.target === 'id')?.root ?? '')   // Wurzel aus der Spalte oder aus dem Kopf journali_id_<wurzel>
     const byId = id && tree.byId.get(id); const foreign = !!(byId && want && rootOf(id) !== want)
-    let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || (!foreign && sku && bySku.get(sku)) || null
-    if (dropId.has(ri)) stats.notes.push(dropId.get(ri) + (node ? ` — über ${ext && byExt.get(ext) ? 'Kennung ' + ext : 'SKU ' + sku} gefunden: „${node.label}“ wird aktualisiert` : ' — wird als neuer Knoten angelegt'))
+    const viaKey = !foreign && !byId && !(ext && byExt.get(ext)) ? findKey(row) : null
+    let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || viaKey?.node || null
+    if (dropId.has(ri)) stats.notes.push(dropId.get(ri) + (node ? ` — über ${ext && byExt.get(ext) ? 'Kennung ' + ext : `${viaKey?.k ?? 'Schlüssel'} ${viaKey?.v ?? sku}`} gefunden: „${node.label}“ wird aktualisiert` : ' — wird als neuer Knoten angelegt'))
     let ref = null
     if (!node) {
-      // anlegen — wo? Elternteil aus der Spalte (SKU oder Id), sonst das Ziel
+      // anlegen — wo? Elternteil aus der Spalte (Id oder ein Schlüsselwert), sonst das Ziel
       const p = String(cell(row, iParent) ?? '').trim()
-      const parent = p ? (tree.byId.get(p) ?? bySku.get(p) ?? null) : target
+      const parent = p ? (tree.byId.get(p) ?? [...uniq].map(k => byKey.get(k + '' + p)).find(Boolean) ?? null) : target
       if (!parent) { stats.problems.push(`Zeile ${ri + 2}: Elternteil „${p || '?'}“ nicht gefunden`); stats.skipped++; return }
       const r = role ?? (parent.role === 'product' ? 'variant' : 'product')
       if (r === 'variant' && parent.role !== 'product') { stats.problems.push(`Zeile ${ri + 2}: Variante braucht ein Produkt als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
@@ -394,14 +404,15 @@ export function childAttributes(model, nodeView, childRole) {
   }
   return out
 }
-// Spaltenköpfe für Vorlage und Export: id, sku, Achsen, dann je Attribut (je Sprache eine Spalte)
+// Spaltenköpfe für Vorlage und Export: id, eindeutige Attribute (Schlüssel), Achsen, dann je Attribut (je Sprache eine Spalte)
 export function childColumns(model, nodeView, childRole, axes, locales) {
-  const skuKey = model?.skuAttribute ?? 'sku'
-  const attrs = childAttributes(model, nodeView, childRole).filter(a => a.key !== skuKey)
+  const all = childAttributes(model, nodeView, childRole)
+  const attrs = all.filter(a => !a.unique)
   const isReq = a => !!a.required && (typeof a.required !== 'object' || Object.keys(a.required).length > 0)   // am Knoten ist required schon ein Ja/Nein
   const cols = a => a.perLocale ? locales.map(l => ({ key: `${a.key}_${l}`, attr: a.key, locale: l, def: a })) : [{ key: a.key, attr: a.key, def: a }]
   // Pflicht direkt nach id, sku und Achsen (Taloan, 20.09.) — was fehlen darf, steht hinten
-  return [{ key: 'id', note: 'leer = neu anlegen; gefüllt = diesen Knoten ändern' }, { key: skuKey, note: 'Kennung — findet vorhandene Knoten, wenn id leer ist', def: model.attributes.find(a => a.key === skuKey) ?? null },   // Pflicht, wenn das Attribut sku Pflicht ist (Taloan, 20.09.)
+  return [{ key: 'id', note: 'leer = neu anlegen; gefüllt = diesen Knoten ändern' },
+    ...all.filter(a => a.unique).flatMap(a => cols(a).map(c => ({ ...c, note: 'eindeutig — findet vorhandene Knoten, wenn id leer ist' }))),   // Schlüssel (Taloan, 21.09.); Pflicht, wenn das Attribut Pflicht ist
     ...(childRole === 'variant' ? (axes ?? []).map(a => ({ key: 'axis:' + a, note: 'Variantenachse — Pflicht beim Anlegen', attr: a })) : []),
     ...attrs.filter(isReq).flatMap(cols), ...attrs.filter(a => !isReq(a)).flatMap(cols)]
 }

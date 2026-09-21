@@ -422,7 +422,7 @@ const newRel = ref({ type: '', q: '', to: null })
 const relMatches = computed(() => {
   const q = newRel.value.q.trim().toLowerCase(); if (q.length < 1) return []
   const t = relType(newRel.value.type)
-  return tree.rows.filter(r => r.id !== props.id && (!t?.to || t.to.includes(r.role)) && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12)
+  return tree.rows.filter(r => r.id !== props.id && (!t?.to || t.to.includes(r.role)) && (r.label.toLowerCase().includes(q) || tree.keyHit(r, q) || r.id.includes(q))).slice(0, 12)
 })
 const addRel = () => { const n = newRel.value; if (!n.type || !n.to) return; command(() => api.post('/api/relations', { type: n.type, from: props.id, to: n.to })); newRel.value = { type: n.type, q: '', to: null } }
 const relTypesFromHere = computed(() => relTypes.value.filter(t => !isMediaType(t.key) && (!t.from || t.from.includes(node.value?.role))))
@@ -772,7 +772,7 @@ function cellMenu(e, def, col, block) {
           <button class="primary" :disabled="!newRel.type || !newRel.to" @click="addRel">verbinden</button>
         </div>
         <div v-if="newRel.q && !newRel.to" class="picker" style="max-width:520px">
-          <div v-for="m in relMatches" :key="m.id" class="pick" @click="newRel.to = m.id; newRel.q = m.label">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ m.sku ?? m.id }}</span></div>
+          <div v-for="m in relMatches" :key="m.id" class="pick" @click="newRel.to = m.id; newRel.q = m.label">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ tree.keyText(m) || m.id }}</span></div>
           <div v-if="!relMatches.length" class="muted" style="padding:4px 8px;font-size:12px">nichts zu „{{ newRel.q }}“</div>
         </div>
         </template>

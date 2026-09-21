@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-0e493297] { overflow-x: auto;\n}\ntable.map[data-v-0e493297] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-0e493297] { overflow-x: auto;\n}\ntable.cols[data-v-0e493297] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-0e493297] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-0e493297] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-0e493297] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-0e493297] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-0e493297] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-0e493297] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-0e493297] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-0e493297] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-0e493297] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-0e493297], .tstep input[type=text][data-v-0e493297] { font-size: 12px;\n}\n.fld[data-v-0e493297] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\r\n/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */\n.tabs[data-v-0e493297] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-0e493297] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-0e493297]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-0e493297]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-0e493297]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-0e493297] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-0e493297] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-0e493297] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-0e493297] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-0e493297] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-0e493297] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-0e493297] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-0e493297] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-0e493297] { font-weight: 400;\n}\n.drop.over[data-v-0e493297] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-0e493297] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-0e493297] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-0e493297] { cursor: pointer;\n}\n.recent .chip.dim[data-v-0e493297] { opacity: .55; cursor: default;\n}\n.btn[data-v-0e493297] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-0e493297] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-0e493297] { opacity: .5;\n}\n.samples[data-v-0e493297] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-0e493297] { font-size: 13px;\n}\n.out[data-v-0e493297] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-0e493297] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-0e493297] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-0e493297]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-4c5e237e] { overflow-x: auto;\n}\ntable.map[data-v-4c5e237e] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-4c5e237e] { overflow-x: auto;\n}\ntable.cols[data-v-4c5e237e] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-4c5e237e] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-4c5e237e] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-4c5e237e] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-4c5e237e] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-4c5e237e] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-4c5e237e] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-4c5e237e] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-4c5e237e] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-4c5e237e] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-4c5e237e], .tstep input[type=text][data-v-4c5e237e] { font-size: 12px;\n}\n.fld[data-v-4c5e237e] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\r\n/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */\n.tabs[data-v-4c5e237e] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-4c5e237e] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-4c5e237e]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-4c5e237e]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-4c5e237e]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-4c5e237e] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-4c5e237e] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-4c5e237e] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-4c5e237e] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-4c5e237e] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-4c5e237e] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-4c5e237e] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-4c5e237e] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-4c5e237e] { font-weight: 400;\n}\n.drop.over[data-v-4c5e237e] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-4c5e237e] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-4c5e237e] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-4c5e237e] { cursor: pointer;\n}\n.recent .chip.dim[data-v-4c5e237e] { opacity: .55; cursor: default;\n}\n.btn[data-v-4c5e237e] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-4c5e237e] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-4c5e237e] { opacity: .5;\n}\n.samples[data-v-4c5e237e] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-4c5e237e] { font-size: 13px;\n}\n.out[data-v-4c5e237e] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-4c5e237e] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-4c5e237e] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-4c5e237e]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -457,7 +457,6 @@ const _sfc_main$1 = {
       const n = await api.get(`/api/nodes/${encodeURIComponent(id)}`);
       const childRole = childRoleOf(row, tree.kids(id));
       const allowed = new Set(childAttributes(model.value, n, childRole).map((a) => a.key));
-      allowed.add(model.value?.skuAttribute ?? "sku");
       for (const a of row.axes ?? []) allowed.add(a);
       fixed.value = { row, childRole, allowed };
       pickTarget(row);
@@ -649,7 +648,7 @@ const _sfc_main$1 = {
     }
     const roleLabel = { group: "Gruppen", product: "Produkte", variant: "Varianten" };
     const unknown = computed(() => mapping.value.filter((m2) => m2.unknown).length);
-    const TARGETS = [["attr", "Attribut"], ["new", "neues Attribut"], ["id", "journali-Id"], ["sku", "SKU (finden)"], ["external", "externe Kennung"], ["parent", "Elternteil"], ["skip", "übergehen"]];
+    const TARGETS = [["attr", "Attribut"], ["new", "neues Attribut"], ["id", "journali-Id"], ["external", "externe Kennung"], ["parent", "Elternteil"], ["skip", "übergehen"]];
     const sample = (i) => source.value.rows.slice(0, 200).map((r) => r[i]).filter((v) => String(v ?? "").trim() !== "").slice(0, 3).map((v) => String(v).slice(0, 30)).join(" · ");
     const stepsOpen = ref(null);
     const layout = ref(localStorage.getItem("journali.import.layout") || "rows");
@@ -704,7 +703,8 @@ const _sfc_main$1 = {
       if (m2.target === "attr" && a && !a.perLocale) m2.locale = null;
       if (m2.target === "attr" && a?.perLocale && !m2.locale) m2.locale = model.value?.masterLocale ?? locales.value[0];
     }
-    const keyColumn = computed(() => mapping.value.find((m2) => ["id", "sku", "external"].includes(m2.target)));
+    const uniqueKeys = computed(() => new Set((model.value?.attributes ?? []).filter((a) => a.unique).map((a) => a.key)));
+    const keyColumn = computed(() => mapping.value.find((m2) => ["id", "external"].includes(m2.target) || m2.target === "attr" && uniqueKeys.value.has(m2.attribute)));
     const rootOfNode = (id) => {
       const a = tree.ancestors(id);
       return a.length ? a[0].id : id;
@@ -775,12 +775,15 @@ const _sfc_main$1 = {
         const locs = [...new Set(mapping.value.filter((m2) => m2.target === "attr").map((m2) => m2.locale ?? ""))];
         const existing = /* @__PURE__ */ new Map();
         const iId = mapping.value.findIndex((m2) => m2.target === "id"), iExt = mapping.value.findIndex((m2) => m2.target === "external");
-        const iSku = mapping.value.findIndex((m2) => m2.target === "sku" || m2.target === "attr" && m2.attribute === (model.value?.skuAttribute ?? "sku"));
-        const bySku = new Map(tree.rows.filter((r) => r.sku).map((r) => [String(r.sku).trim(), r])), byExt = new Map(external.value ? tree.rows.filter((r) => r.external?.[external.value]).map((r) => [String(r.external[external.value]), r]) : []);
+        const keyCols = mapping.value.map((m2, i) => m2.target === "attr" && uniqueKeys.value.has(m2.attribute) && !m2.locale ? i : -1).filter((i) => i >= 0);
+        const byKey = /* @__PURE__ */ new Map();
+        for (const r of tree.rows) for (const [k, v] of Object.entries(r.keys ?? {})) byKey.set(k + "" + String(v).trim(), r);
+        const byExt = new Map(external.value ? tree.rows.filter((r) => r.external?.[external.value]).map((r) => [String(r.external[external.value]), r]) : []);
         const parents = /* @__PURE__ */ new Map();
         for (const row of source.value.rows) {
-          const id = String(row[iId] ?? "").trim(), ext = String(row[iExt] ?? "").trim(), sku = String(row[iSku] ?? "").trim();
-          const n = iId >= 0 && id && tree.byId.get(id) || iExt >= 0 && ext && byExt.get(ext) || iSku >= 0 && sku && bySku.get(sku) || null;
+          const id = String(row[iId] ?? "").trim(), ext = String(row[iExt] ?? "").trim();
+          const viaKey = keyCols.map((i) => byKey.get(mapping.value[i].attribute + "" + String(row[i] ?? "").trim())).find(Boolean);
+          const n = iId >= 0 && id && tree.byId.get(id) || iExt >= 0 && ext && byExt.get(ext) || viaKey || null;
           if (n) {
             const key = n.parent ?? "#root";
             if (!parents.has(key)) parents.set(key, /* @__PURE__ */ new Set());
@@ -3050,7 +3053,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-0e493297"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-4c5e237e"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
@@ -3070,6 +3073,7 @@ async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey
     cols = cols.filter((c) => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999));
   }
   cols = cols.filter((c) => c.type !== "rows" && !c.computed);
+  cols = [...cols.filter((c) => c.unique), ...cols.filter((c) => !c.unique)];
   const axes = [...new Set(nodes.flatMap((r) => Object.keys(r.row.axisValues ?? {})))];
   let rootId = root;
   try {
@@ -3084,7 +3088,6 @@ async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey
     sysCol("parent", "Elternteil (journali-Id) — nicht ändern"),
     sysCol("role", "Knotentyp — nur zum Lesen"),
     sysCol("status", "Status — nur zum Lesen"),
-    { key: model.skuAttribute ?? "sku", sys: "sku", note: "Kennung — findet vorhandene Knoten, wenn die Id leer ist" },
     sysCol("label", "Name im Baum — nur zum Lesen"),
     ...extra.map((x) => ({ key: x.key, of: x.of })),
     ...axes.map((a) => ({ key: "axis:" + a })),
@@ -3114,7 +3117,7 @@ function toJson({ columns, rows }) {
 function toJsonTree({ columns, rows }) {
   const byId = /* @__PURE__ */ new Map();
   for (const r of rows) {
-    const o = { id: r[columns.findIndex((c) => c.sys === "id" || c.key === "id")] ?? r[0], role: "", parent: null, name: "", sku: null, status: null, axes: {}, attributes: {}, children: [] };
+    const o = { id: r[columns.findIndex((c) => c.sys === "id" || c.key === "id")] ?? r[0], role: "", parent: null, name: "", status: null, axes: {}, attributes: {}, children: [] };
     columns.forEach((c, i) => {
       const v = r[i] === "" ? null : r[i];
       if (c.attr) {
@@ -3235,7 +3238,7 @@ async function nodeWorkbook(nodeId, withData) {
       nodes = t.rows;
       byLocale.set(l, new Map(t.rows.map((r) => [r.row.id, r.values])));
     }
-    data = nodes.map((r) => columns.map((c) => c.key === "id" ? r.row.id : c.key === "sku" ? r.row.sku ?? "" : c.key.startsWith("axis:") ? r.row.axisValues?.[c.attr] ?? "" : byLocale.get(c.locale ?? locales[0])?.get(r.row.id)?.[c.attr]?.value ?? ""));
+    data = nodes.map((r) => columns.map((c) => c.key === "id" ? r.row.id : c.key.startsWith("axis:") ? r.row.axisValues?.[c.attr] ?? "" : byLocale.get(c.locale ?? locales[0])?.get(r.row.id)?.[c.attr]?.value ?? ""));
   }
   const lg = legend(columns);
   const wb = workbook(X, { columns, rows: data }, lg);

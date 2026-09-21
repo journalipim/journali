@@ -32,7 +32,7 @@ export async function facts(nodeId, locale) {
     rows.push(`- ${d.label?.[locale] || d.label?.de || d.key}: ${v}${d.unit ? ' ' + d.unit : ''}`)
   }
   const row = tree.byId.get(nodeId)
-  return { name: row?.label ?? n.name ?? nodeId, path: tree.ancestors(nodeId).map(a => a.label).reverse().join(' › '), sku: row?.sku ?? '', rows }
+  return { name: row?.label ?? n.name ?? nodeId, path: tree.ancestors(nodeId).map(a => a.label).reverse().join(' › '), keys: tree.keyText(row), rows }
 }
 
 /// Text umschreiben. instruction: Schlüssel aus PRESETS oder freier Text. html: Ergebnis als HTML (p, ul/li, b, i), sonst reiner Text.
@@ -43,7 +43,7 @@ export async function rewrite({ instruction, current, html, label, locale, node 
   const f = await facts(node, locale).catch(() => null)
   const system = `Du bist Redakteur für Produktdaten. Sprache: ${locale || store.model?.masterLocale || 'de'}. Nur Fakten aus den Produktdaten, keine Erfindungen, keine Superlative. `
     + (html ? 'Antworte nur mit HTML (erlaubt: p, ul, ol, li, b, i, h3, br), ohne Erklärung, ohne Code-Zäune.' : 'Antworte nur mit dem reinen Text, ohne Erklärung, ohne Anführungszeichen.')
-  const user = `Feld: ${label || 'Text'}\n` + (f ? `Produkt: ${f.name}\nPfad: ${f.path}\nSKU: ${f.sku}\nProduktdaten:\n${f.rows.join('\n')}\n\n` : '')
+  const user = `Feld: ${label || 'Text'}\n` + (f ? `Produkt: ${f.name}\nPfad: ${f.path}\nSchlüssel: ${f.keys}\nProduktdaten:\n${f.rows.join('\n')}\n\n` : '')
     + (current ? `Bisheriger Text:\n${current}\n\n` : '') + `Aufgabe: ${task}`
   const out = await ai.ask({ system, user, maxTokens: 1500, temperature: 0.2 })
   return String(out).replace(/^```[a-z]*\n?|```$/g, '').trim()

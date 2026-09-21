@@ -386,7 +386,9 @@ public sealed record AttributeDefinition(
     bool Unique = false)
 {
     /// <summary>Eindeutig (Taloan, 21.09.2026): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) —
-    /// EAN, MATNR, Artikelnummer. Das Kennungsattribut (<c>settings:sku_attribute</c>) ist immer eindeutig, auch ohne dieses Merkmal.</summary>
+    /// SKU, EAN, MATNR, Artikelnummer, beliebig viele je Modell, jedes für sich. Eindeutige Werte sind die Schlüssel eines Knotens:
+    /// sie benennen die Variante ohne ★, stehen als <c>keys</c> in der Baumzeile (Suche, Auswahl), finden beim Tabellen-Import den
+    /// Knoten wieder und kommen beim Kopieren nicht mit. Ein „Kennungsattribut“ gibt es nicht (Taloan: „alles über eindeutig“).</summary>
     public bool IsUnique => Unique;
     /// <summary>Typ formula oder template: der Wert ist Skript bzw. Vorlage, das Ergebnis wird beim Lesen gerechnet.</summary>
     public bool IsComputed => Type is AttributeTypes.Formula or AttributeTypes.Template;
@@ -505,9 +507,9 @@ public sealed record MasterLocaleDefined(string Code);
 public sealed record MasterChannelDefined(string Key);
 
 /// <summary>
-/// Das Kennungsattribut (Taloan, 21.09.2026: „SKU ist ein Attribut wie jedes andere — bei anderen heisst es MATNR“): Strom
-/// <c>settings:sku_attribute</c>. Welches Attribut die Kennung eines Knotens trägt — eindeutig über den ganzen Baum, Name der
-/// Variante ohne ★, Spalte <c>sku</c> in Zeilen und Exporten, Schlüssel beim Tabellen-Import. Saatgut: <c>sku</c>.
+/// Ausser Kraft (Taloan, 21.09.2026, noch am selben Tag: „Kennung raus, alles über eindeutig“): Strom <c>settings:sku_attribute</c>
+/// sollte das eine Kennungsattribut benennen. Es gibt keines mehr — jedes Attribut mit <c>unique</c> ist ein Schlüssel. Der Typ bleibt,
+/// weil Eintragstypen für immer sind; die Abbilder überlesen ihn.
 /// </summary>
 public sealed record SkuAttributeDefined(string Key);
 

@@ -15,7 +15,7 @@ export function treePicker(container, { value = null, values = [], roles = ['gro
   const search = document.createElement('input'); search.type = 'search'; search.placeholder = '🔍 filtern'; search.style.cssText = 'width:100%;margin-bottom:4px'
   search.addEventListener('input', () => { q = search.value.trim().toLowerCase(); if (q) for (const r of tree.rows) if (matches(r)) for (const a of tree.ancestors(r.id)) open.add(a.id); draw() })
   const wrap = document.createElement('div'); wrap.append(search, box); container.append(wrap)
-  const matches = r => q && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q))
+  const matches = r => q && (r.label.toLowerCase().includes(q) || tree.keyHit(r, q))
   const visible = r => !q || matches(r) || tree.rows.some(x => matches(x) && tree.ancestors(x.id).some(a => a.id === r.id))
   function reveal() { if (cur) for (const a of tree.ancestors(cur)) open.add(a.id); for (const r of tree.rows) if (!r.parent) open.add(r.id) }
   function draw() {
@@ -38,7 +38,7 @@ export function treePicker(container, { value = null, values = [], roles = ['gro
         } else row.append(caret)
         const label = document.createElement('span'); label.textContent = `${icon(r.role)} ${r.label}`
         row.append(label)
-        if (r.sku) { const s = document.createElement('span'); s.className = 'mono muted'; s.style.cssText = 'margin-left:auto;font-size:11px'; s.textContent = r.sku; row.append(s) }
+        if (r.keys) { const s = document.createElement('span'); s.className = 'mono muted'; s.style.cssText = 'margin-left:auto;font-size:11px'; s.textContent = tree.keyText(r); row.append(s) }
         row.addEventListener('click', () => { if (!ok) return; if (multi) { if (above(r.id)) return; picked.has(r.id) ? picked.delete(r.id) : picked.add(r.id); draw(); onChange([...picked]); return } cur = r.id; draw(); onPick(r) })
         box.append(row)
         if (open.has(r.id) || (q && kids)) rec(r.id, depth + 1)

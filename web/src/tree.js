@@ -35,6 +35,9 @@ export const tree = reactive({
   },
 
   kids(id) { return this.children.get(id ?? '') ?? [] },
+  // Schlüssel einer Zeile (Taloan, 21.09.: alles über eindeutig): keys = { attribut: wert } je eindeutigem Attribut mit Wert
+  keyText(r) { return Object.values(r?.keys ?? {}).join(' · ') },
+  keyHit(r, q) { return !!q && Object.values(r?.keys ?? {}).some(v => String(v).toLowerCase().includes(q)) },
   // Was liegt unter einem Knoten — für die Rückfrage beim Zurückziehen (Taloan: das Wesentliche muss vorne stehen):
   // Anzahl je Rolle und die Namen der ersten Ebene
   below(id) {

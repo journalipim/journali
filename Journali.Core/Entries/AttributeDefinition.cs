@@ -22,12 +22,11 @@ public static class Model
     public const string LabelStream = "settings:label:";
     public const string MasterLocaleStream = "settings:master_locale";
     public const string MasterChannelStream = "settings:master_channel";
-    public const string SkuAttributeStream = "settings:sku_attribute";
     public const string RelationStream = "relation:";
     /// <summary>Gruppe der Werte am Medium (20).</summary>
     public const string MediaGroup = "media";
 
-    /// <summary>Saatgut für das Kennungsattribut (settings:sku_attribute) — im Journal kann es ein anderes sein (<see cref="Projections.ModelCatalog.SkuAttribute"/>).</summary>
+    /// <summary>Das Saatgut-Attribut SKU — eindeutig (unique) wie jedes andere Schlüsselattribut; im Code sonst nichts Besonderes (Taloan, 21.09.2026).</summary>
     public const string SkuAttribute = "sku";
 
     /// <summary>Der Wurzelknoten des Saatguts — feste Id, damit er nur einmal entsteht.</summary>
@@ -42,7 +41,6 @@ public static class Model
         yield return new(LocaleStream + "en", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("en", "English")));
         yield return new(MasterLocaleStream, Types.MasterLocaleDefined, Types.Serialize(new MasterLocaleDefined("de")));
         yield return new(MasterChannelStream, Types.MasterChannelDefined, Types.Serialize(new MasterChannelDefined("web")));
-        yield return new(SkuAttributeStream, Types.SkuAttributeDefined, Types.Serialize(new SkuAttributeDefined(SkuAttribute)));
         yield return new(ChannelStream + "web", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("web", Labels.Of("Web", "Web"))));
         yield return new(ChannelStream + "print", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("print", Labels.Of("Print", "Print"))));
 

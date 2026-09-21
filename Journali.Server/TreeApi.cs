@@ -79,9 +79,9 @@ public static class TreeApi
             var rows = Publication.Export(tree, model, root, locale).Select(r => new
             {
                 path = r.Rubrics.Select(x => new { x.Id, x.Role, label = NodeRow.LabelOf(tree, model, x) }).ToList(),
-                product = new { r.Product.Id, label = NodeRow.LabelOf(tree, model, r.Product), sku = r.Product.Own(model.SkuAttribute, null, null) },
+                product = new { r.Product.Id, label = NodeRow.LabelOf(tree, model, r.Product), keys = tree.KeysOf(model, r.Product) },
                 r.In, r.Why,
-                variants = r.Variants.Select(v => new { v.Variant.Id, label = NodeRow.LabelOf(tree, model, v.Variant), sku = v.Variant.Own(model.SkuAttribute, null, null), v.Verdict.In, v.Verdict.Why }).ToList(),
+                variants = r.Variants.Select(v => new { v.Variant.Id, label = NodeRow.LabelOf(tree, model, v.Variant), keys = tree.KeysOf(model, v.Variant), v.Verdict.In, v.Verdict.Why }).ToList(),
             }).ToList();
             return Results.Ok(new { tree = new { root.Id, root.Channel, root.Market, label = NodeRow.LabelOf(tree, model, root) }, locale, @in = rows.Count(r => r.In), @out = rows.Count(r => !r.In), rows });
         }));
@@ -216,13 +216,13 @@ public static class TreeApi
 
 /// <summary>Eine Zeile im Baum: genug für die Anzeige, ohne Werte.</summary>
 public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Name, string? Groups, string[] Axes,
-    Dictionary<string, string> AxisValues, string Status, string? Sku, Dictionary<string, string> External,
+    Dictionary<string, string> AxisValues, string Status, Dictionary<string, string>? Keys, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null,
     string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
-        n.Own(model.SkuAttribute, null, null), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
+        tree.KeysOf(model, n), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
         n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null);
 
     /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle, Taloan): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
@@ -254,7 +254,8 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
             if (AppliesAt(model, attr, n.Role) && ByAttribute(tree, model, n, attr) is { } v) return v;
         if (n.Role == Roles.Variant)
         {
-            if (n.Own(model.SkuAttribute, null, null) is { } sku) return sku;
+            // ohne ★: der erste Schlüssel (eindeutiger Wert, Attribute nach Schlüssel geordnet), sonst die Achsenwerte
+            if (tree.KeysOf(model, n) is { } keys) return keys.Values.First();
             if (n.AxisValues.Count > 0) return string.Join(" · ", n.AxisValues.Values);
         }
         return n.Id;

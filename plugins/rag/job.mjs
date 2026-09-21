@@ -50,13 +50,13 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
       }
       const crumbs = pathOf(r.id)
       const title = r.label; const ROLE = { group: 'Produktgruppe', product: 'Produkt', variant: 'Variante' }
-      const md = [`# ${title}`, '', `${ROLE[r.role] ?? r.role} · ${crumbs.join(' › ')}${r.sku ? ` · SKU ${r.sku}` : ''} · Sprache ${locale}`,
+      const md = [`# ${title}`, '', `${ROLE[r.role] ?? r.role} · ${crumbs.join(' › ')}${r.keys ? ' · ' + Object.entries(r.keys).map(([k, v]) => `${k} ${v}`).join(' · ') : ''} · Sprache ${locale}`,
         version ? `Version ${version.nr} · Stand #${version.journalNumber} · ${new Date(version.at).toISOString().slice(0, 10)}` : `Stand #${node.lastNumber ?? ''} (keine freigegebene Version)`, '',
         ...facts.map(f => `- **${f.label}:** ${f.value}${f.unit ? ' ' + f.unit : ''}`),
         ...(version?.documents?.length ? ['', '## Belege', ...version.documents.map(d => `- ${d.kind}: ${server}${d.url} (${d.name})`)] : [])].join('\n')
       const file = path.join(dir, `${String(r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 60)}-${r.id}-${locale}.md`)
       fs.writeFileSync(file, md, 'utf8')
-      lines.push(JSON.stringify({ id: r.id, role: r.role, title, path: crumbs, sku: r.sku ?? null, locale, version: version ? { nr: version.nr, journalNumber: version.journalNumber, at: version.at, documents: version.documents.map(d => ({ kind: d.kind, url: server + d.url })) } : null, url: `${server}/tree/${r.id}`, text: md, facts: Object.fromEntries(facts.map(f => [f.key, f.value + (f.unit ? ' ' + f.unit : '')])) }))
+      lines.push(JSON.stringify({ id: r.id, role: r.role, title, path: crumbs, keys: r.keys ?? null, locale, version: version ? { nr: version.nr, journalNumber: version.journalNumber, at: version.at, documents: version.documents.map(d => ({ kind: d.kind, url: server + d.url })) } : null, url: `${server}/tree/${r.id}`, text: md, facts: Object.fromEntries(facts.map(f => [f.key, f.value + (f.unit ? ' ' + f.unit : '')])) }))
       n++
     }
     if (n % 25 === 0) console.log(`${n} …`)
