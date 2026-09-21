@@ -21,11 +21,14 @@ const saved = ref('')          // JSON des gespeicherten Standes
 const dirty = ref(false)
 let timer = null, autoTimer = null
 const snapshot = () => { try { return JSON.stringify(props.get() ?? {}) } catch { return '' } }
+let lastSeen = ''
 function tick() {
   const now = snapshot()
   const d = now !== saved.value && now !== '{}'
   if (d !== dirty.value) dirty.value = d
-  if (d && current.value && !busy.value && (name.value === current.value || !name.value)) { clearTimeout(autoTimer); autoTimer = setTimeout(() => { if (snapshot() !== saved.value) save(true) }, 1500) }
+  // Timer nur neu starten, wenn sich seit dem letzten Takt etwas geändert hat — sonst wird er jede Sekunde zurückgesetzt und feuert nie („● speichert …“ blieb stehen)
+  if (d && now !== lastSeen && current.value && (name.value === current.value || !name.value)) { clearTimeout(autoTimer); autoTimer = setTimeout(() => { if (!busy.value && snapshot() !== saved.value) save(true) }, 1500) }
+  lastSeen = now
 }
 onUnmounted(() => { clearInterval(timer); clearTimeout(autoTimer) })
 
