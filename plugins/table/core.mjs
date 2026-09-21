@@ -20,13 +20,15 @@ export async function build(env, { root, role = '', locales, ownOnly = false, vi
   // journali_root (Taloan, 21.09.): die Wurzel des Baums — Id + Wurzel macht die Zeile über Datenbanken hinweg eineindeutig; der Import prüft beides
   let rootId = root
   try { const all = await api.get('/api/tree'); const byId = new Map((Array.isArray(all) ? all : all.rows ?? []).map(r => [r.id, r])); for (let p = byId.get(root)?.parent; p; p = byId.get(p)?.parent) rootId = p } catch {}
-  const columns = [{ key: 'id' }, { key: 'role' }, { key: 'parent' }, { key: 'journali_root' }, { key: 'sku' }, { key: 'journali_label' }, { key: 'status' }, ...extra.map(x => ({ key: x.key, of: x.of })), ...axes.map(a => ({ key: 'axis:' + a })),
+  // interne Spalten (Taloan, 21.09.): journali_<feld>_<wurzel> — die Wurzel steckt im Spaltenkopf, in Excel ausgeblendet (sys = was es ist)
+  const sysCol = sys => ({ key: `journali_${sys}_${rootId}`, sys, hidden: sys !== 'label' })
+  const columns = [sysCol('id'), sysCol('role'), sysCol('parent'), { key: 'sku' }, sysCol('label'), sysCol('status'), ...extra.map(x => ({ key: x.key, of: x.of })), ...axes.map(a => ({ key: 'axis:' + a })),
     ...cols.flatMap(c => c.perLocale ? locales.map(l => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }])]
   const rows = nodes.map(r => columns.map(c => {
     if (c.attr) { const x = byLocale.get(c.locale)?.get(r.row.id)?.[c.attr]; return x == null || (ownOnly && !x.own) ? '' : x.value ?? '' }
     if (c.of) return c.of(r.row.id) ?? ''
     if (c.key.startsWith('axis:')) return r.row.axisValues?.[c.key.slice(5)] ?? ''
-    return c.key === 'journali_label' ? r.row.label : c.key === 'journali_root' ? rootId : c.key === 'parent' ? r.row.parent ?? '' : r.row[c.key] ?? ''
+    return c.sys === 'label' ? r.row.label : c.sys === 'parent' ? r.row.parent ?? '' : c.sys ? r.row[c.sys] ?? '' : r.row[c.key] ?? ''
   }))
   return { columns, rows, count: nodes.length }
 }
@@ -41,13 +43,14 @@ export function toJson({ columns, rows }) { return JSON.stringify(rows.map(r => 
 export function toJsonTree({ columns, rows }) {
   const byId = new Map()
   for (const r of rows) {
-    const o = { id: r[0], role: '', parent: null, name: '', sku: null, status: null, axes: {}, attributes: {}, children: [] }
+    const o = { id: r[columns.findIndex(c => c.sys === 'id' || c.key === 'id')] ?? r[0], role: '', parent: null, name: '', sku: null, status: null, axes: {}, attributes: {}, children: [] }
     columns.forEach((c, i) => {
       const v = r[i] === '' ? null : r[i]
       if (c.attr) { if (c.locale && columns.some(x => x.attr === c.attr && x.locale !== c.locale)) (o.attributes[c.attr] ??= {})[c.locale] = v; else o.attributes[c.attr] = v }
       else if (c.key.startsWith('axis:')) { if (v != null) o.axes[c.key.slice(5)] = v }
-      else if (c.key === 'journali_label') o.name = v
-      else if (c.key === 'parent') o.parent = v
+      else if (c.sys === 'label') o.name = v
+      else if (c.sys === 'parent') o.parent = v
+      else if (c.sys) o[c.sys] = v
       else o[c.key] = v
     })
     for (const k of Object.keys(o.attributes)) { const a = o.attributes[k]; if (a && typeof a === 'object' && Object.values(a).every(x => x == null)) delete o.attributes[k]; else if (a == null) delete o.attributes[k] }
@@ -61,7 +64,7 @@ export function toJsonTree({ columns, rows }) {
 /// Excel-Arbeitsmappe (SheetJS X aus dem Plugin xlsx): Blatt „Daten“, wahlweise ein Blatt „Legende“ (Zeilen)
 export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten') {
   const ws = X.utils.aoa_to_sheet([columns.map(c => c.key), ...rows])
-  ws['!cols'] = columns.map(c => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)) }))
+  ws['!cols'] = columns.map(c => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)), hidden: !!c.hidden }))   // interne Spalten ausgeblendet (Taloan, 21.09.)
   // Pflicht und Achsen am Spaltenkopf kennzeichnen (Taloan, 20.09.: „das hätte ich gerne in der Excel gekennzeichnet“): SheetJS schreibt
   // keine Farben, aber Kommentare — rotes Dreieck in Excel, Text beim Zeigen; die Legende sagt es ausserdem
   columns.forEach((c, i) => { const req = c.def?.required; const note = c.note ?? (req && typeof req === 'object' && Object.keys(req).length ? 'Pflicht: ' + Object.entries(req).map(([ch, l]) => `${ch} ${l.join(',')}`).join(' · ') : req ? 'Pflicht' : null); if (!note) return; const ref = X.utils.encode_cell({ r: 0, c: i }); ws[ref] ??= { t: 's', v: c.key }; ws[ref].c = [{ a: 'journali', t: note }]; ws[ref].c.hidden = true })

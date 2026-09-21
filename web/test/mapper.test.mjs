@@ -29,3 +29,12 @@ test('journali_root: Id zählt nur unter derselben Wurzel — sonst ist die Zeil
   assert.equal(p.stats.update, 1)   // v-1 unter g-1: gefunden
   assert.equal(p.stats.create, 1)   // v-2 unter fremder Wurzel: neu, nicht v-2 hier überschreiben
 })
+
+test('journali_<feld>_<wurzel>: Wurzel aus dem Spaltenkopf, interne Spalten erkannt', () => {
+  const columns = ['journali_id_g-1a2b3c4d', 'journali_role_g-1a2b3c4d', 'journali_parent_g-1a2b3c4d', 'sku', 'journali_label_g-1a2b3c4d', 'journali_status_g-1a2b3c4d', 'name_de']
+  const rows = [['v-1', 'variant', 'p-1', 'A1', 'V1', 'draft', 'Eins']]
+  const m = suggest(columns, rows, model)
+  assert.equal(m[0].target, 'id'); assert.equal(m[0].root, 'g-1a2b3c4d'); assert.equal(m[0].internal, true)
+  assert.equal(m[2].target, 'parent'); assert.equal(m[1].target, 'skip'); assert.equal(m[1].internal, true)
+  assert.equal(m[3].attribute, 'sku'); assert.equal(m[6].attribute, 'name')
+})

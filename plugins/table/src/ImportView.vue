@@ -170,11 +170,12 @@ const keyColumn = computed(() => mapping.value.find(m => ['id', 'sku', 'external
 // Id + Wurzel (Taloan, 21.09.: „zwei Datenbanken, per Excel übertragen — ein Zufallstreffer bei der Id reicht nicht“): nennt die Datei
 // journali_root, gilt eine Id nur, wenn der Knoten hier unter genau dieser Wurzel hängt; sonst ist die Zeile fremd (neu)
 const rootOfNode = id => { const a = tree.ancestors(id); return a.length ? a[0].id : id }
-const idOk = row => { const i = mapping.value.findIndex(x => x.target === 'id'); if (i < 0) return false; const id = String(row[i] ?? '').trim(); if (!tree.byId.has(id)) return false; const ir = mapping.value.findIndex(x => x.target === 'root'); if (ir < 0) return true; const want = String(row[ir] ?? '').trim(); return !want || rootOfNode(id) === want }
+const idOk = row => { const m = mapping.value.find(x => x.target === 'id'); if (!m) return false; const i = mapping.value.indexOf(m); const id = String(row[i] ?? '').trim(); if (!tree.byId.has(id)) return false; const ir = mapping.value.findIndex(x => x.target === 'root'); const want = ir >= 0 ? String(row[ir] ?? '').trim() : (m.root ?? ''); return !want || rootOfNode(id) === want }
 const idLocked = computed(() => { if (!source.value || !mapping.value.some(x => x.target === 'id')) return false; return source.value.rows.slice(0, 200).some(idOk) })
 const unknownIds = computed(() => idLocked.value ? source.value.rows.filter(r => !idOk(r)).length : 0)
-const foreignRoot = computed(() => { if (!source.value) return 0; const i = mapping.value.findIndex(x => x.target === 'id'), ir = mapping.value.findIndex(x => x.target === 'root'); if (i < 0 || ir < 0) return 0; return source.value.rows.filter(r => tree.byId.has(String(r[i] ?? '').trim()) && !idOk(r)).length })
-const visibleMapping = computed(() => idLocked.value ? mapping.value.filter(m => m.target !== 'id' && m.target !== 'parent' && m.target !== 'root') : mapping.value.filter(m => m.target !== 'root'))
+const foreignRoot = computed(() => { if (!source.value) return 0; const m = mapping.value.find(x => x.target === 'id'); if (!m) return 0; const i = mapping.value.indexOf(m); if (!m.root && !mapping.value.some(x => x.target === 'root')) return 0; return source.value.rows.filter(r => tree.byId.has(String(r[i] ?? '').trim()) && !idOk(r)).length })
+// gesperrt: alle eigenen Spalten (journali_*, id, parent, role, status) verschwinden aus der Zuordnung (Taloan, 21.09.: „beim Import verstecken“)
+const visibleMapping = computed(() => idLocked.value ? mapping.value.filter(m => !m.internal && m.target !== 'id' && m.target !== 'parent' && m.target !== 'root') : mapping.value.filter(m => m.target !== 'root'))
 const groups = computed(() => model.value?.groups ?? [])
 // Schreiben erst, wenn nichts mehr im Weg steht: ungültige Zellen (korrigieren), neue Spalten ohne Gruppe, im Knotenmodus gar keine ungültigen
 const blockers = computed(() => {
@@ -320,7 +321,7 @@ onMounted(async () => {
       <div v-if="unknown" class="warn" style="font-size:12px;padding:6px 8px">⚠ {{ unknown }} Spalten passen nicht zu diesem Knoten und werden übergangen — Vorlage per Rechtsklick am Knoten exportieren, dann stimmen die Spalten.</div>
 
       <div class="section" v-if="source">
-        <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span><span v-if="idLocked" class="chip" title="id und parent kommen aus der Datei und sind fest — nicht in der Zuordnung">🔒 id · parent</span>
+        <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ visibleMapping.filter(m => m.target !== 'skip').length }} von {{ visibleMapping.length }} Spalten</span><span v-if="idLocked" class="chip" :title="`eigene Spalten (${mapping.filter(m => m.internal || m.target === 'id' || m.target === 'parent').map(m => m.column).join(', ')}) kommen aus der Datei und sind fest — nicht in der Zuordnung`">🔒 {{ mapping.filter(m => m.internal || m.target === 'id' || m.target === 'parent').length }} eigene Spalten</span>
           <button class="x" @click="resuggest()" title="Zuordnung neu vorschlagen — verwirft die Zuordnung des Profils (mit gewähltem Profil wird der neue Vorschlag gespeichert)">↻ neu vorschlagen</button>
           <span class="grow" /><span class="layout"><button :class="{ on: layout === 'rows' }" @click="setLayout('rows')" title="eine Zeile je Spalte — nach unten scrollen">≡ Zeilen</button><button :class="{ on: layout === 'cols' }" @click="setLayout('cols')" title="wie in Excel: eine Spalte je Spalte, Zuordnung in den Kopfzeilen — nach rechts scrollen">⫼ Spalten</button></span></h2>
         <!-- Spalten wie in Excel: Kopfzeilen = Zuordnung, darunter die ersten Zeilen der Datei; erste Spalte klebt -->

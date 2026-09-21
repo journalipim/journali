@@ -153,8 +153,18 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     const out = { column: col, target: 'skip', attribute: null, locale, newType: sniff.type === 'id' ? 'text' : sniff.type, newKey: n, score: 0, why: '', sniff }
     const pick = (target, attribute, score, why) => { if (score > out.score) Object.assign(out, { target, attribute, score, why }) }
     // 0. Spalten des eigenen Exports (Plugin export): role/status/journali_label sind Anzeige, axis_<key> ist die Achse
-    if (n === 'role' || n === 'status' || n === 'journali_label') { out.why = 'Exportspalte, nur Anzeige'; return out }
-    if (n === 'journali_root') { out.target = 'root'; out.why = 'Wurzel — macht die Id eineindeutig'; return out }
+    // eigene Spalten (Taloan, 21.09.): journali_<feld>_<wurzel> — die Wurzel steht im Kopf; alte Form (id, parent, role, status, journali_label, journali_root) weiter
+    const own = String(col).trim().match(/^journali_(id|parent|role|status|label|root)(?:_([a-z]-[0-9a-f]{8}))?$/i)
+    if (own) {
+      const sys = own[1].toLowerCase(); out.internal = true; out.root = own[2]?.toLowerCase() ?? null
+      if (sys === 'id') { out.target = 'id'; out.why = 'journali-Id' + (out.root ? ' · Wurzel ' + out.root : '') }
+      else if (sys === 'parent') { out.target = 'parent'; out.why = 'Elternteil aus der Datei' }
+      else if (sys === 'root') { out.target = 'root'; out.why = 'Wurzel — macht die Id eineindeutig' }
+      else out.why = 'Exportspalte, nur Anzeige'
+      return out
+    }
+    if (n === 'role' || n === 'status' || n === 'journali_label') { out.internal = true; out.why = 'Exportspalte, nur Anzeige'; return out }
+    if (n === 'journali_root') { out.target = 'root'; out.internal = true; out.why = 'Wurzel — macht die Id eineindeutig'; return out }
     if (n.startsWith('axis_') && attrs.some(a => norm(a.key) === n.slice(5))) pick('attr', attrs.find(a => norm(a.key) === n.slice(5)).key, 1, 'Variantenachse')
     // 1. Schlüsselspalten
     // Elternteil vor der Id-Erkennung: eine Spalte „parent“ voller p-…-Ids ist der Vater, nicht die Id des Knotens (Taloan, 21.09.: „doppelt — warum?“)
@@ -239,7 +249,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
   rows.forEach((row, ri) => {
     const id = String(cell(row, iId) ?? '').trim(), sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
-    const want = iRoot >= 0 ? String(cell(row, iRoot) ?? '').trim() : ''
+    const want = iRoot >= 0 ? String(cell(row, iRoot) ?? '').trim() : (mapping.find(m => m.target === 'id')?.root ?? '')   // Wurzel aus der Spalte oder aus dem Kopf journali_id_<wurzel>
     const byId = id && tree.byId.get(id); const foreign = !!(byId && want && rootOf(id) !== want)
     let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || (!foreign && sku && bySku.get(sku)) || null
     let ref = null
