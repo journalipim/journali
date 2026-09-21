@@ -82,6 +82,11 @@ public static class Types
     // Wörterbuch (docs/pflegestruktur.md 9; Taloan 21.09.2026 „Übersetzungsgedächtnis über das Wörterbuch“): Strom term:<key>
     public const string TermDefined = "TermDefined";
     public const string TermRetired = "TermRetired";
+    // Workflows (docs/pflegestruktur.md 27, Taloan 21.09.2026): Strom workflow:<key>; am Knoten der Schritt und die Zuständigkeit
+    public const string WorkflowDefined = "WorkflowDefined";
+    public const string WorkflowRetired = "WorkflowRetired";
+    public const string WorkflowStateSet = "WorkflowStateSet";
+    public const string WorkflowAssigned = "WorkflowAssigned";
     public const string MasterLocaleDefined = "MasterLocaleDefined";
     public const string MasterChannelDefined = "MasterChannelDefined";
     /// <summary>Publikationsbaum (Taloan, 20.09.2026): Rubriken und Verweise.</summary>
@@ -461,6 +466,19 @@ public sealed record UnitRetired(string Key);
 /// für KI und DeepL und Gedächtnis (gleicher Quelltext → derselbe Zieltext). <c>Note</c>: Kontext für Übersetzer.</summary>
 public sealed record TermDefined(Labels Text, string? Note = null);
 public sealed record TermRetired();
+
+/// <summary>Zustand eines Workflows (27): Key, Text je Sprache, Farbe (Token oder Hex), Final = Ende des Wegs.</summary>
+public sealed record WfState(string Key, Labels Label, string? Color = null, bool Final = false);
+/// <summary>Übergang: von → nach, wer ihn gehen darf (Rollen; leer = jede Rolle mit Schreibrecht), Notiz Pflicht (Korrekturschleife),
+/// Wirkungen: <c>release:&lt;kanal&gt;</c>, <c>revoke:&lt;kanal&gt;</c>, <c>status:&lt;wert&gt;</c>.</summary>
+public sealed record WfTransition(string Key, string From, string To, Labels Label, string[]? Roles = null, bool NoteRequired = false, string[]? Effects = null);
+/// <summary>Ein Workflow: Zustände, Übergänge, Start; gilt für Knotentypen (Roles) und Familien (leer = alle).</summary>
+public sealed record WorkflowDefined(Labels Label, List<WfState> States, List<WfTransition> Transitions, string? Start = null, string[]? Roles = null, string[]? Families = null);
+public sealed record WorkflowRetired();
+/// <summary>Am Knoten: ein Schritt gegangen — der Zustand danach, der Übergang, die Notiz.</summary>
+public sealed record WorkflowStateSet(string Workflow, string State, string? Transition = null, string? Note = null);
+/// <summary>Am Knoten: Zuständigkeit für den nächsten Schritt — eine Person (Benutzer-Key) oder null (die Rolle des Übergangs).</summary>
+public sealed record WorkflowAssigned(string Workflow, string? User);
 
 /// <summary>Werteliste, Sprache, Kanal aus dem Abbild (20.09.2026 — Taloan: „zurückziehen“ überall gleich). Werte auf dieser Sprache/diesem Kanal bleiben im Journal.</summary>
 public sealed record ListRetired(string Key);

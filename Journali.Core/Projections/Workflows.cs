@@ -43,6 +43,8 @@ public sealed class Workflows : IProjection
     public const string Stream = "workflow:";
     private readonly Dictionary<string, WorkflowDef> _defs = new();
     private readonly Dictionary<string, Dictionary<string, NodeWorkflow>> _nodes = new();   // Knoten → Workflow → Zustand
+    private readonly HashSet<string> _ever = new();   // je definiert — fürs Saatgut
+    public bool Ever(string key) => _ever.Contains(key);
     public long LastApplied { get; private set; }
     public IReadOnlyDictionary<string, WorkflowDef> All => _defs;
 
@@ -62,6 +64,7 @@ public sealed class Workflows : IProjection
             switch (entry.Type)
             {
                 case Types.WorkflowDefined:
+                    _ever.Add(key);
                     var d = Types.Deserialize<WorkflowDefined>(entry.Payload);
                     _defs[key] = new WorkflowDef { Key = key, Label = d.Label ?? new(), States = d.States ?? new(), Transitions = d.Transitions ?? new(), Start = d.Start ?? d.States?.FirstOrDefault()?.Key ?? "", Roles = d.Roles ?? [], Families = d.Families ?? [], LastNumber = entry.Number };
                     break;

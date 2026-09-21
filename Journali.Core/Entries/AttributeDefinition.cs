@@ -111,6 +111,18 @@ public static class Model
         yield return new(RelationStream + "related", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("related", Labels.Of("Verwandt", "Related"), Labels.Of("Verwandt", "Related"), Symmetric: true)));
         yield return new(RelationStream + "bom", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("bom", Labels.Of("Stückliste", "Bill of materials"), Labels.Of("Stückliste von", "Part of"), Group: "relation_component")));
 
+        // Workflows (27, Taloan 21.09.2026): Redaktion mit Korrekturschleife, und „zur Übersetzung“ — Saatgut, in den Einstellungen änderbar
+        yield return new(Projections.Workflows.Stream + "review", Types.WorkflowDefined, Types.Serialize(new WorkflowDefined(Labels.Of("Redaktion", "Editorial"),
+            [new("draft", Labels.Of("Entwurf", "Draft"), "muted"), new("review", Labels.Of("Prüfung", "Review"), "warn"), new("rework", Labels.Of("Korrektur", "Rework"), "neg"), new("approved", Labels.Of("Freigegeben", "Approved"), "pos", true)],
+            [new("submit", "draft", "review", Labels.Of("zur Prüfung", "Submit")), new("resubmit", "rework", "review", Labels.Of("erneut zur Prüfung", "Resubmit")),
+             new("reject", "review", "rework", Labels.Of("zurück zur Korrektur", "Reject"), null, true), new("approve", "review", "approved", Labels.Of("freigeben", "Approve"), ["admin"]),
+             new("reopen", "approved", "draft", Labels.Of("wieder öffnen", "Reopen"), ["admin"], true)], "draft")));
+        yield return new(Projections.Workflows.Stream + "translation", Types.WorkflowDefined, Types.Serialize(new WorkflowDefined(Labels.Of("Übersetzung", "Translation"),
+            [new("none", Labels.Of("nicht angefordert", "Not requested"), "muted"), new("to_translate", Labels.Of("zur Übersetzung", "To translate"), "warn"), new("translated", Labels.Of("übersetzt", "Translated"), "accent"), new("checked", Labels.Of("geprüft", "Checked"), "pos", true)],
+            [new("request", "none", "to_translate", Labels.Of("zur Übersetzung geben", "Request translation")), new("done", "to_translate", "translated", Labels.Of("übersetzt", "Translated")),
+             new("check", "translated", "checked", Labels.Of("geprüft", "Checked")), new("back", "translated", "to_translate", Labels.Of("zurück zur Übersetzung", "Back to translation"), null, true),
+             new("again", "checked", "to_translate", Labels.Of("erneut zur Übersetzung", "Translate again"))], "none")));
+
         // Vorschau-Presets (Taloan, 21.09.2026): was beim Import je Bild vorausberechnet wird — Saatgut, in den Einstellungen änderbar
         yield return new(Projections.Media.PresetStream + "thumb", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Kachel", "Tile"), 256, 256, "webp", 80)));
         yield return new(Projections.Media.PresetStream + "web", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Web", "Web"), 1200, 1200, "webp", 82)));

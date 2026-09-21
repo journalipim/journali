@@ -59,7 +59,7 @@ public static class TreeApi
         api.MapGet("/search", (string q, Catalog c, int limit = 200) =>
             string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2
                 ? Results.BadRequest(new { error = "q: mindestens 2 Zeichen." })
-                : Results.Ok(c.With((model, tree, _) => tree.Query(model, q.Trim(), c.Relations, c.Media).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
+                : Results.Ok(c.With((model, tree, _) => tree.Query(model, q.Trim(), c.Relations, c.Media, c.Workflows).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
 
         api.MapGet("/nodes/external/{system}/{externalId}", (string system, string externalId, Catalog c) =>
             c.With((model, tree, _) => tree.ByExternal(system, externalId) is { } n ? NodeView.Of(tree, model, n) : null)
@@ -201,7 +201,8 @@ public static class TreeApi
         if (Actor(req) is not { } actor) return ActorMissing();
         var outcome = c.With((model, tree, write) => command(new Ctx
         {
-            Model = model, Tree = tree, Relations = c.Relations, Media = c.Media,
+            Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows,
+            Role = req.HttpContext.Items["role"] as string,   // für Übergänge mit Rollen (null = offen)
             Write = (stream, type, payload) => write(actor, stream, type, payload, null),
         }));
         return outcome switch

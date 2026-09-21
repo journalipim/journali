@@ -110,6 +110,7 @@ public static class Auth
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)
         if (path.StartsWith("/api/model")) return Rights.Model;
+        if (path.StartsWith("/api/workflows/") && method is "PUT" or "DELETE") return Rights.Model;   // Workflow definieren = Modell; Schritte sind Schreiben
         if (path.StartsWith("/api/plugins") && path.Contains("/secrets/")) return Rights.Write;   // Token am Profil: wer importiert, hinterlegt ihn (der Wert bleibt beim Server)
         if (path.StartsWith("/api/plugins") && !path.Contains("/data/") && !path.EndsWith("/data") && !path.EndsWith("/run")) return Rights.Plugins;   // Plugin-Daten (auch der Sammel-PUT …/data) sind Pflege
         if (path.Contains("/retire") || path.Contains("/restore") || path.Contains("/undo") || (method == "DELETE" && path.StartsWith("/api/nodes/") && path.Count(ch => ch == '/') == 3)) return Rights.Retire;

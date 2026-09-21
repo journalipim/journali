@@ -20,6 +20,9 @@ public sealed class Ctx
     public required Tree Tree { get; init; }
     public required Relations Relations { get; init; }
     public required Media Media { get; init; }
+    public Workflows? Workflows { get; init; }
+    /// <summary>Rolle des Anfragenden (null = offen, ohne Benutzer) — für Übergänge mit Rollen.</summary>
+    public string? Role { get; init; }
     public required Func<string, string, object, Entry> Write { get; init; }   // stream, type, payload
 }
 
@@ -510,6 +513,66 @@ public static class Commands
 
     public static Outcome RetireMedium(Ctx c, string id) =>
         c.Media.All.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.MediaRetired, new MediaRetired())) : Outcome.Missing;
+
+    // ---- Workflows (27, Taloan 21.09.2026): ein Schritt gehen — Zustand, Rolle, Notiz, Wirkungen
+
+    public static Outcome DefineWorkflow(Ctx c, string key, WorkflowDefined d)
+    {
+        if (d.States is not { Count: > 0 }) return Outcome.Bad("Mindestens ein Zustand.");
+        var keys = d.States.Select(s => s.Key).ToList();
+        if (keys.Any(k => string.IsNullOrWhiteSpace(k) || !k.All(ch => char.IsAsciiLetterLower(ch) || char.IsAsciiDigit(ch) || ch == '_'))) return Outcome.Bad("Zustands-Keys: a-z, 0-9, _.");
+        if (keys.Distinct().Count() != keys.Count) return Outcome.Bad("Zustands-Keys doppelt.");
+        var start = d.Start ?? keys[0];
+        if (!keys.Contains(start)) return Outcome.Bad($"Start „{start}“ ist kein Zustand.");
+        foreach (var t in d.Transitions ?? new())
+        {
+            if (string.IsNullOrWhiteSpace(t.Key)) return Outcome.Bad("Übergang ohne Key.");
+            if (!keys.Contains(t.From) || !keys.Contains(t.To)) return Outcome.Bad($"Übergang {t.Key}: von/nach muss ein Zustand sein.");
+            foreach (var e in t.Effects ?? []) if (!(e.StartsWith("release:") || e.StartsWith("revoke:") || e.StartsWith("status:"))) return Outcome.Bad($"Übergang {t.Key}: Wirkung „{e}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<wert>).");
+        }
+        if ((d.Transitions ?? new()).Select(t => t.Key).Distinct().Count() != (d.Transitions ?? new()).Count) return Outcome.Bad("Übergangs-Keys doppelt.");
+        return Outcome.Ok(c.Write(Workflows.Stream + key, Types.WorkflowDefined, d with { Start = start }));
+    }
+
+    public static Outcome RetireWorkflow(Ctx c, string key) =>
+        c.Workflows?.All.ContainsKey(key) == true ? Outcome.Ok(c.Write(Workflows.Stream + key, Types.WorkflowRetired, new WorkflowRetired())) : Outcome.Missing;
+
+    /// <summary>Welche Übergänge darf diese Rolle am Knoten jetzt gehen? (null-Rolle = offen, alles)</summary>
+    public static IEnumerable<WfTransition> Allowed(Workflows w, WorkflowDef wf, string nodeId, string? role)
+    {
+        var state = w.StateOf(nodeId, wf);
+        return wf.Transitions.Where(t => t.From == state && (role is null || role == "admin" || t.Roles is not { Length: > 0 } || t.Roles.Contains(role)));
+    }
+
+    /// <summary>Einen Schritt gehen: Übergang muss vom aktuellen Zustand ausgehen, die Rolle ihn dürfen, die Notiz da sein — dann Zustand und Wirkungen.</summary>
+    public static Outcome WorkflowStep(Ctx c, string id, string workflow, string transition, string? note)
+    {
+        if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (!wf.AppliesTo(n)) return Outcome.Bad($"Workflow „{wf.Label.GetValueOrDefault("de") ?? wf.Key}“ gilt nicht für {n.Role}.");
+        var t = wf.Transitions.FirstOrDefault(x => x.Key == transition);
+        if (t is null) return Outcome.Bad($"Unbekannter Übergang {transition}.");
+        var state = c.Workflows.StateOf(id, wf);
+        if (t.From != state) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht von {t.From} aus, der Knoten ist in {state}.");
+        if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role)) return Outcome.Bad($"Rolle {role} darf „{t.Label.GetValueOrDefault("de") ?? t.Key}“ nicht (erlaubt: {string.Join(", ", t.Roles)}).");
+        note = Blank(note);
+        if (t.NoteRequired && note is null) return Outcome.Bad("Notiz ist Pflicht bei diesem Schritt (was ist zu tun?).");
+        var e = c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, t.To, t.Key, note));
+        foreach (var eff in t.Effects ?? [])
+        {
+            var i = eff.IndexOf(':'); var kind = eff[..i]; var arg = eff[(i + 1)..];
+            var r = kind switch { "release" => GrantRelease(c, id, arg, null), "revoke" => RevokeRelease(c, id, arg, null), "status" => SetStatus(c, id, arg), _ => Outcome.Bad(eff) };
+            if (r.Error is { } err && !err.Contains("schon")) return Outcome.Bad($"Schritt gegangen, Wirkung {eff} nicht: {err}");
+        }
+        return Outcome.Ok(e);
+    }
+
+    public static Outcome AssignWorkflow(Ctx c, string id, string workflow, string? user)
+    {
+        if (c.Workflows is null || !c.Workflows.All.ContainsKey(workflow)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
+        if (!c.Tree.Nodes.ContainsKey(id)) return Outcome.Missing;
+        return Outcome.Ok(c.Write(id, Types.WorkflowAssigned, new WorkflowAssigned(workflow, Blank(user))));
+    }
 
     // ---- Medienordner (Taloan, 21.09.2026: „wie ein interner Dateimanager“)
 

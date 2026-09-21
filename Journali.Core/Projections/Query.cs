@@ -14,6 +14,7 @@ namespace Journali.Core.Projections;
 /// <c>media:*.pdf</c> oder <c>media:logo</c> (Name des Mediums, * beliebig) · <c>rel:any</c> / <c>rel:accessory</c> (Relation dieses Typs, ein- oder ausgehend) ·
 /// <c>rel:accessory=250R</c> / <c>rel:any=p-0f58</c> (der Partner der Relation: Name, SKU, Id oder Wert enthält …, * beliebig).
 /// <c>folder:Wakol</c> (Taloan, 21.09.: ein Medium des Knotens liegt in diesem Medienordner oder darunter — Name mit *, Pfad mit /, oder Id) · <c>folder:none</c> (ohne Ordner).
+/// <c>wf:review</c> / <c>wf:translation=to_translate</c> (27): Knoten in diesem Workflow-Zustand.
 /// Ein Minus davor verneint (Taloan: „das Gegenteil“): <c>-empty:function</c>, <c>-role:variant</c>, <c>-Wort</c>.
 /// </summary>
 public sealed class Query
@@ -42,12 +43,12 @@ public sealed class Query
         new("^" + Regex.Escape(p).Replace("\\*", ".*") + "$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
 
     /// <summary>Trifft der Knoten alle Bedingungen? Liefert die Fundstelle für die Anzeige.</summary>
-    public string? Match(Tree tree, ModelCatalog model, Node n, Relations? relations = null, Media? media = null)
+    public string? Match(Tree tree, ModelCatalog model, Node n, Relations? relations = null, Media? media = null, Workflows? workflows = null)
     {
         string? hit = null;
         foreach (var (key, value, not) in Terms)
         {
-            var (ok, h) = Term(tree, model, n, key, value, relations, media);
+            var (ok, h) = Term(tree, model, n, key, value, relations, media, workflows);
             if (ok == not) return null;   // trifft, soll aber nicht — oder umgekehrt
             hit ??= not ? $"¬ {key}:{value}" : h;
         }
@@ -61,12 +62,25 @@ public sealed class Query
     }
 
     /// <summary>Eine Bedingung: trifft sie, und was zeigt man als Fundstelle?</summary>
-    private static (bool Ok, string? Hit) Term(Tree tree, ModelCatalog model, Node n, string key, string value, Relations? relations, Media? media)
+    private static (bool Ok, string? Hit) Term(Tree tree, ModelCatalog model, Node n, string key, string value, Relations? relations, Media? media, Workflows? workflows = null)
     {
         string? hit = null;
         {
             switch (key)
             {
+                case "wf":
+                {
+                    // wf:<zustand> | wf:<workflow>=<zustand> (27): der Knoten ist in diesem Zustand (Start zählt, wenn der Workflow für ihn gilt)
+                    if (workflows is null) return (false, null);
+                    var eq = value.IndexOf('='); var wfKey = eq < 0 ? null : value[..eq]; var state = eq < 0 ? value : value[(eq + 1)..];
+                    foreach (var wf in workflows.All.Values.Where(w => (wfKey is null || w.Key == wfKey) && w.AppliesTo(n)))
+                    {
+                        var st = workflows.StateOf(n.Id, wf);
+                        if (string.Equals(st, state, StringComparison.OrdinalIgnoreCase)) { hit ??= $"⚑ {wf.Label.GetValueOrDefault("de") ?? wf.Key}: {wf.State(st)?.Label.GetValueOrDefault("de") ?? st}"; break; }
+                    }
+                    if (hit is null) return (false, null);
+                    break;
+                }
                 case "media":
                 {
                     // media:any | media:<relationstyp> | media:<namensmuster> — Medien hängen über Relationen am Knoten (Ziel m-…)
