@@ -135,7 +135,7 @@ function forceLayout() {
   }
   const minX = Math.min(...pos.map(p => p.x)) - W / 2 - 40, minY = Math.min(...pos.map(p => p.y)) - H / 2 - 40
   w.states.forEach((s, i) => { s.x = snap(pos[i].x - W / 2 - minX); s.y = snap(pos[i].y - H / 2 - minY) })
-  for (const t of w.transitions) { t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null }
+  for (const t of w.transitions) { t.labelX = null; t.labelY = null }   // Andockpunkte bleiben, wie von Hand gesetzt; Beschriftungen hingen an der alten Lage
   touch()
 }
 function labelDown(n, e) { selTrans.value = n; selState.value = null; const a = sketch.value.arrows[n]; const p = svgPoint(e); drag.value = { kind: 'label', n, dx: p.x - a.lx, dy: p.y - a.ly } }
@@ -214,7 +214,7 @@ onMounted(load)
       </div>
       <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">
         <button @click="addStateAt" title="neuen Zustand anlegen (rechts neben dem letzten)">+ Zustand</button>
-        <button @click="forceLayout" title="anordnen (Federmodell): gleichmässige Abstände, Start links, Ende rechts — jeder Klick ein neuer Versuch">⟲ anordnen</button>
+        <button @click="forceLayout" title="anordnen (Federmodell): gleichmässige Abstände, Start links, Ende rechts — jeder Klick ein neuer Versuch; Andockpunkte bleiben">⟲ anordnen</button>
         <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" title="Markiertes löschen (Entf)">✕</button>
         <span class="grow" />
         <span class="x" style="cursor:help" title="Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht">?</span>
