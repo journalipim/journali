@@ -25,11 +25,11 @@ public static class JobApi
                 .SelectMany(p => PluginApi.Processes(manifests[p.Key].Raw).Select(x => new
                 {
                     key = p.Key, service = x.Key, version = p.Version,
-                    label = x.Proc.TryGetProperty("label", out var pl) ? pl : (manifests[p.Key].Raw.TryGetProperty("label", out var l) ? l : default),
-                    @params = x.Proc.TryGetProperty("params", out var ps) ? ps : default,
+                    label = x.Proc.TryGetProperty("label", out var pl) ? pl : (manifests[p.Key].Raw.TryGetProperty("label", out var l) ? l : (JsonElement?)null),
+                    @params = x.Proc.TryGetProperty("params", out var ps) ? ps : (JsonElement?)null,
                     description = x.Proc.TryGetProperty("description", out var d) ? d.GetString() : null,
                     profile = x.Proc.TryGetProperty("profile", out var pr) ? pr.GetString() : null,   // "generic": Profile im Tasker anlegen (✎)
-                    files = x.Proc.TryGetProperty("files", out var fi) ? fi : default,   // Fächer-Vertrag (in/out) — der Dialog zeigt dann die Fächer
+                    files = x.Proc.TryGetProperty("files", out var fi) ? fi : (JsonElement?)null,   // Fächer-Vertrag (in/out) — der Dialog zeigt dann die Fächer
                 })).ToList());
         });
 

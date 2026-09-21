@@ -79,6 +79,9 @@ public static class Types
     public const string ViewRetired = "ViewRetired";
     public const string UnitDefined = "UnitDefined";
     public const string UnitRetired = "UnitRetired";
+    // Wörterbuch (docs/pflegestruktur.md 9; Taloan 21.09.2026 „Übersetzungsgedächtnis über das Wörterbuch“): Strom term:<key>
+    public const string TermDefined = "TermDefined";
+    public const string TermRetired = "TermRetired";
     public const string MasterLocaleDefined = "MasterLocaleDefined";
     public const string MasterChannelDefined = "MasterChannelDefined";
     /// <summary>Publikationsbaum (Taloan, 20.09.2026): Rubriken und Verweise.</summary>
@@ -453,6 +456,11 @@ public sealed record ViewRetired(string Key);
 public sealed record UnitDefinition(string Key, Labels Label, string Quantity, decimal Factor = 1);
 
 public sealed record UnitRetired(string Key);
+
+/// <summary>Begriff im Wörterbuch (9): Text je Sprache, an einer Stelle gepflegt — Fachwort, Einheit, Listenwert. Übersetzung: Glossar
+/// für KI und DeepL und Gedächtnis (gleicher Quelltext → derselbe Zieltext). <c>Note</c>: Kontext für Übersetzer.</summary>
+public sealed record TermDefined(Labels Text, string? Note = null);
+public sealed record TermRetired();
 
 /// <summary>Werteliste, Sprache, Kanal aus dem Abbild (20.09.2026 — Taloan: „zurückziehen“ überall gleich). Werte auf dieser Sprache/diesem Kanal bleiben im Journal.</summary>
 public sealed record ListRetired(string Key);

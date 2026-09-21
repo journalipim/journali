@@ -16,6 +16,15 @@ public sealed class ValueList
     public IEnumerable<ListValueDefinition> Ordered => Values.Values.OrderBy(v => v.Order).ThenBy(v => v.Value);
 }
 
+/// <summary>Ein Begriff des Wörterbuchs.</summary>
+public sealed class Term
+{
+    public required string Key { get; init; }
+    public Labels Text { get; set; } = new();
+    public string? Note { get; set; }
+    public long LastNumber { get; set; }
+}
+
 /// <summary>
 /// Abbild „das Modell": Sprachen, Kanäle, Attribute, Wertelisten, Familien —
 /// aus den Modell-Einträgen (docs/pflegestruktur.md). Der letzte Eintrag je
@@ -35,6 +44,8 @@ public sealed class ModelCatalog : IProjection
     public Dictionary<string, ValueList> Lists { get; } = new();
     public Dictionary<string, FamilyDefinition> Families { get; } = new();
     public Dictionary<string, UnitDefinition> Units { get; } = new();
+    /// <summary>Wörterbuch (9): Begriff → Text je Sprache (+ Notiz).</summary>
+    public Dictionary<string, Term> Terms { get; } = new();
     public Dictionary<string, ViewDefinition> Views { get; } = new();
     /// <summary>Relationstypen (18): relation:&lt;key&gt;.</summary>
     public Dictionary<string, RelationTypeDefinition> RelationTypes { get; } = new();
@@ -138,6 +149,15 @@ public sealed class ModelCatalog : IProjection
                 break;
             case Types.UnitRetired:
                 Units.Remove(Types.Deserialize<UnitRetired>(entry.Payload).Key);
+                break;
+            case Types.TermDefined when entry.Stream.StartsWith(Model.TermStream, StringComparison.Ordinal):
+            {
+                var t = Types.Deserialize<TermDefined>(entry.Payload); var key = entry.Stream[Model.TermStream.Length..];
+                Terms[key] = new Term { Key = key, Text = t.Text ?? new(), Note = t.Note, LastNumber = entry.Number };
+                break;
+            }
+            case Types.TermRetired when entry.Stream.StartsWith(Model.TermStream, StringComparison.Ordinal):
+                Terms.Remove(entry.Stream[Model.TermStream.Length..]);
                 break;
         }
     }

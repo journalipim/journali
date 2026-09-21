@@ -17,7 +17,29 @@ namespace Journali.Server;
 /// </summary>
 public static class TranslateApi
 {
-    public sealed record Unit(string Id, string Node, string Label, string Role, string Attribute, string AttributeLabel, string Type, string? Channel, string? Row, string Source, string SourceHash, string? Target, string State, long SourceAt, long TargetAt);
+    public sealed record Unit(string Id, string Node, string Label, string Role, string Attribute, string AttributeLabel, string Type, string? Channel, string? Row, string Source, string SourceHash, string? Target, string State, long SourceAt, long TargetAt)
+    {
+        /// <summary>Vorschlag aus dem Gedächtnis: derselbe Quelltext ist anderswo schon übersetzt (unit) oder steht im Wörterbuch (term).</summary>
+        public string? Memory { get; init; }
+        public string? MemoryFrom { get; init; }
+    }
+    private static string Norm(string s) => s.Trim().ToLowerInvariant().Replace("\r\n", "\n");
+
+    /// <summary>Gedächtnis der Sprachrichtung: normierter Quelltext → Zieltext, aus allen fertigen Einheiten (nur gleiches Attribut zählt nicht — ein Text ist ein Text) und aus dem Wörterbuch.</summary>
+    public static Dictionary<string, (string Target, string From)> Memory(ModelCatalog model, Tree tree, string from, string to)
+    {
+        var mem = new Dictionary<string, (string, string)>();
+        var defs = model.Attributes.Values.Where(a => a.PerLocale && a.Type is AttributeTypes.Text or AttributeTypes.Html).Select(a => a.Key).ToHashSet();
+        foreach (var n in tree.Nodes.Values)
+            foreach (var (ax, src) in n.Values.Where(kv => defs.Contains(kv.Key.Attribute) && kv.Key.Locale == from && !string.IsNullOrWhiteSpace(kv.Value)))
+            {
+                var t = new Axis(ax.Attribute, to, ax.Channel, ax.Row);
+                if (n.Values.TryGetValue(t, out var tv) && !string.IsNullOrWhiteSpace(tv) && n.SetAt.GetValueOrDefault(t) >= n.SetAt.GetValueOrDefault(ax)) mem.TryAdd(Norm(src), (tv, "unit"));
+            }
+        foreach (var term in model.Terms.Values)
+            if (term.Text.TryGetValue(from, out var s) && term.Text.TryGetValue(to, out var t) && !string.IsNullOrWhiteSpace(s) && !string.IsNullOrWhiteSpace(t)) mem[Norm(s)] = (t, "term");   // Wörterbuch schlägt die Einheit
+        return mem;
+    }
     public sealed record ImportUnit(string Id, string? Target, string? SourceHash);
     public sealed record ImportBody(string From, string To, List<ImportUnit> Units, bool? Force);
 
@@ -51,6 +73,13 @@ public static class TranslateApi
                     if (units.Count >= Math.Clamp(limit, 1, 50000)) return (null, from, to, units);
                 }
             }
+        }
+        // Gedächtnis dazu — nur für offene Einheiten (Taloan, 21.09.: „Übersetzungsgedächtnis über das Wörterbuch“)
+        if (units.Any(u => u.State != "done"))
+        {
+            var mem = Memory(model, tree, from, to);
+            for (var i = 0; i < units.Count; i++)
+                if (units[i].State != "done" && mem.TryGetValue(Norm(units[i].Source), out var hit) && hit.Target != units[i].Target) units[i] = units[i] with { Memory = hit.Target, MemoryFrom = hit.From };
         }
         return (null, from, to, units);
     }

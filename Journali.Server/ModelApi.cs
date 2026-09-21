@@ -264,6 +264,15 @@ public static partial class ModelApi
                 : body.Factor <= 0 ? Bad("factor muss > 0 sein.")
                 : write(Model.UnitStream + key, Types.UnitDefined, body with { Key = key, Label = body.Label ?? new(), Quantity = body.Quantity.Trim().ToLowerInvariant() })));
 
+        // Wörterbuch (9): Begriff → Text je Sprache — Glossar und Gedächtnis der Übersetzung (Taloan, 21.09.)
+        m.MapGet("/terms", (Catalog c) => c.With((model, _, _) => model.Terms.Values.OrderBy(t => t.Key).Select(t => new { t.Key, text = t.Text, t.Note, t.LastNumber }).ToList()));
+        m.MapPut("/terms/{key}", (string key, TermDefined body, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) =>
+                body.Text is not { Count: > 0 } || body.Text.Values.All(string.IsNullOrWhiteSpace) ? Bad("text: mindestens eine Sprache.")
+                : write(Model.TermStream + key, Types.TermDefined, new TermDefined(new Labels(body.Text.Where(kv => !string.IsNullOrWhiteSpace(kv.Value)).ToDictionary(kv => kv.Key, kv => kv.Value.Trim())), Blank(body.Note)))));
+        m.MapDelete("/terms/{key}", (string key, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidKey, (model, write) => model.Terms.ContainsKey(key) ? write(Model.TermStream + key, Types.TermRetired, new TermRetired()) : Results.NotFound()));
+
         m.MapDelete("/units/{key}", (string key, HttpRequest req, Catalog c) =>
             Command(req, c, key, k => true, (model, write) =>
                 !model.Units.ContainsKey(key) ? Results.NotFound()

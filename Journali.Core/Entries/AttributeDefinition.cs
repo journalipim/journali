@@ -16,6 +16,7 @@ public static class Model
     public const string ListStream = "list:";
     public const string FamilyStream = "family:";
     public const string UnitStream = "unit:";
+    public const string TermStream = "term:";
     public const string ViewStream = "view:";
     public const string GroupStream = "group:";
     public const string LabelStream = "settings:label:";
