@@ -89,7 +89,8 @@ public static class WorkflowApi
                 var back = n.Role != Roles.Variant && kind == "release"
                     ? sellables.Where(v => c.Workflows.Of(v.Id).ContainsKey(wf.Key) && c.Workflows.StateOf(v.Id, wf) != t.To).Select(v => $"{NodeRow.LabelOf(tree, model, v)}: {wf.State(c.Workflows.StateOf(v.Id, wf))?.Label.GetValueOrDefault("de") ?? c.Workflows.StateOf(v.Id, wf)}").ToList()
                     : [];
-                pending.Add(new { effect = eff, canFix = back.Count == 0, why = back.Count > 0 ? string.Join(" · ", back) : null });
+                // Produkt/Gruppe mit Freigabe-Zustand, aber ohne freigegebene Variante: die Ausleitung lässt es weg — Tatsache zeigen, nicht den Zustand ändern (Taloan, 21.09.)
+                pending.Add(new { effect = eff, canFix = back.Count == 0 && n.Role == Roles.Variant, why = back.Count > 0 ? string.Join(" · ", back) : null });
             }
             return pending;
         }

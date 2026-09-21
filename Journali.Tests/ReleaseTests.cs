@@ -61,31 +61,23 @@ public class ReleaseTests
     }
 
     [Fact]
-    public void Letzte_Freigabe_weg_dann_geht_das_Produkt_zurueck_in_den_Zustand_vor_dem_Freigeben()
+    public void Produktzustand_bleibt_die_Ausleitung_folgt_den_Varianten()
     {
-        // Taloan, 21.09.: „Produkt hat jetzt keine Variante mehr mit Freigabe — die Knoten darüber wieder auf Prüfung“ — als eigener Schritt mit Notiz;
-        // solange eine andere Variante freigegeben bleibt, bleibt das Produkt Freigegeben
+        // Taloan, 21.09.: „die Produktseite darf nicht raus, wenn keine Variante freigegeben ist — das muss aus den Daten kommen“:
+        // der Workflow-Zustand am Produkt bleibt redaktionell, die Ausleitung leitet aus den Varianten ab — ohne Freigabe weg, mit Freigabe wieder da
         var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
         var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
         w.Fill(w.V1); w.Fill(w.V2);
         Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "submit", null).Error);
-        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "approve", null).Error);   // beide Varianten frei
-        Assert.Null(Commands.RevokeRelease(ctx(), w.V1, "web", null).Error);
-        Assert.Equal("approved", wfs.StateOf(w.P, wfs.All["review"]));                   // V2 ist noch frei
-        Assert.Null(Commands.RevokeRelease(ctx(), w.V2, "web", null).Error);
-        Assert.Equal("review", wfs.StateOf(w.P, wfs.All["review"]));                     // keine mehr → zurück vor das Freigeben
-        Assert.StartsWith("↓ web:", wfs.Of(w.P)["review"].Note);
-        // Gegenstück: die erste neue Freigabe holt das Produkt wieder vor — weil das System es zurückgesetzt hatte, nicht ein Mensch
+        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "approve", null).Error);
+        var web = Ids.New(Roles.Rubric); w.J.Append("t", web, Types.RubricCreated, Types.Serialize(new RubricCreated(null, new(), "Web", "web"))); w.J.Append("t", web, Types.NodePlaced, Types.Serialize(new NodePlaced(w.P))); w.Catch();
+        bool Out() => Publication.Export(w.Tree, w.Model, w.Tree.Nodes[web]).Single().In;
+        Assert.True(Out());
+        Assert.Null(Commands.RevokeRelease(ctx(), w.V1, "web", null).Error); Assert.Null(Commands.RevokeRelease(ctx(), w.V2, "web", null).Error);
+        Assert.Equal("approved", wfs.StateOf(w.P, wfs.All["review"]));   // Zustand bleibt
+        Assert.False(Out());                                               // Seite geht nicht raus
         Assert.Null(Commands.GrantRelease(ctx(), w.V1, "web", null).Error);
-        Assert.Equal("approved", wfs.StateOf(w.P, wfs.All["review"]));
-        Assert.StartsWith("↑ web:", wfs.Of(w.P)["review"].Note);
-        // von Hand zurückgegangen (reopen): bleibt beim erneuten Freigeben einer Variante, wo es ist
-        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "reopen", "bewusst").Error);   // revoke:web an allen Varianten
-        Assert.Equal("draft", wfs.StateOf(w.P, wfs.All["review"]));
-        Assert.DoesNotContain(new Release("web", null), w.Tree.Nodes[w.V1].Releases);          // am Produkt zurückgenommen = an allen Varianten
-        Assert.DoesNotContain(new Release("web", null), w.Tree.Nodes[w.V2].Releases);
-        Assert.Null(Commands.GrantRelease(ctx(), w.V2, "web", null).Error);
-        Assert.Equal("draft", wfs.StateOf(w.P, wfs.All["review"]));
+        Assert.True(Out());                                                // wieder da — niemand musste am Produkt etwas tun
     }
 
     [Fact]

@@ -440,20 +440,7 @@ public static class Commands
         // Freigabe setzt Vollständigkeit voraus — Sperre (docs/pflegestruktur.md, entschieden).
         var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).ToList(), channel!, locale);
         if (missing.Length > 0) return Outcome.Bad($"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}");
-        var granted = c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale));
-        // Gegenstück zum Zurückgehen (Taloan, 21.09.): hat das System ein Produkt/eine Gruppe zurückgesetzt, weil keine Variante mehr frei war,
-        // geht es mit der ersten neuen Freigabe wieder vor — nur dann; ein von Hand gesetzter Zustand bleibt
-        if (c.Workflows is not null)
-            foreach (var up in c.Tree.Ancestors(n))
-                foreach (var (wfKey, nw) in c.Workflows.Of(up.Id))
-                {
-                    if (nw.Transition is not null || nw.Note?.StartsWith("↓ " + channel + ":") != true) continue;
-                    if (!c.Workflows.All.TryGetValue(wfKey, out var wf)) continue;
-                    var fwd = wf.Transitions.FirstOrDefault(x => x.From == nw.State && (x.Effects ?? []).Contains("release:" + channel));
-                    if (fwd is null) continue;
-                    c.Write(up.Id, Types.WorkflowStateSet, new WorkflowStateSet(wfKey, fwd.To, fwd.Key, $"↑ {channel}: {n.Own(Model.SkuAttribute, null, null) ?? n.Id}"));
-                }
-        return Outcome.Ok(granted);
+        return Outcome.Ok(c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale)));
     }
 
     public static Outcome RevokeRelease(Ctx c, string id, string channel, string? locale)
@@ -467,23 +454,7 @@ public static class Commands
                 last = c.Write(v.Id, Types.ReleaseRevoked, new ReleaseRevoked(channel, Blank(locale)));
             return last is null ? Outcome.Bad("schon zurückgenommen") : Outcome.Ok(last);
         }
-        var e = c.Write(id, Types.ReleaseRevoked, new ReleaseRevoked(channel, Blank(locale)));
-        // Nach oben (Taloan, 21.09.: „Produkt hat jetzt keine Variante mehr mit Freigabe — müssten die Knoten darüber wieder auf Prüfung?“):
-        // ein Produkt oder eine Gruppe, deren Zustand über eine Wirkung release:<kanal> erreicht wurde und unter der jetzt keine Variante
-        // mehr für den Kanal freigegeben ist, geht zurück in den Zustand vor dem Freigeben — als eigener Schritt im Journal, mit Notiz
-        if (c.Workflows is not null)
-            foreach (var up in c.Tree.Ancestors(n))
-            {
-                if (c.Tree.DescendantsDeepestFirst(up.Id).Any(v => v.Role == Roles.Variant && v.Releases.Contains(new Release(channel, null)))) continue;
-                foreach (var (wfKey, nw) in c.Workflows.Of(up.Id))
-                {
-                    if (!c.Workflows.All.TryGetValue(wfKey, out var wf) || nw.Transition is null) continue;
-                    var t = wf.Transitions.FirstOrDefault(x => x.Key == nw.Transition);
-                    if (t?.Effects?.Contains("release:" + channel) != true || nw.State != t.To) continue;
-                    c.Write(up.Id, Types.WorkflowStateSet, new WorkflowStateSet(wfKey, t.From, null, $"↓ {channel}: {n.Own(Model.SkuAttribute, null, null) ?? n.Id}"));
-                }
-            }
-        return Outcome.Ok(e);
+        return Outcome.Ok(c.Write(id, Types.ReleaseRevoked, new ReleaseRevoked(channel, Blank(locale))));
     }
 
     public static Outcome LinkExternal(Ctx c, string id, string? system, string? externalId)

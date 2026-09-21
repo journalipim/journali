@@ -616,6 +616,13 @@ Entscheidungen von Taloan: ein Workflow je Familie oder einer für alle? Zustän
 je Rolle? Fristen je Zustand (Erinnerung, Eskalation) — jetzt oder später? Gilt der Workflow auch für Rubriken der
 Publikation (Freigabe eines Kanalbaums)?
 
+**Produkt und Varianten (Taloan, 21.09.2026, entschieden):** Freigaben hängen an Varianten. „freigeben“ am Produkt oder an
+der Gruppe gibt alle vollständigen Varianten darunter frei — ausser denen, die in ihrem eigenen Workflow nicht am Ende stehen
+(Entwurf, Prüfung, Korrektur): die überfährt der Vater nicht; ist keine freigebbar, bleibt der Schritt aus und nennt sie.
+Zurücknehmen am Produkt trifft alle Varianten. Der Workflow-Zustand des Produkts ist redaktionell und wird vom System nicht
+verändert; ob die Produktseite rausgeht, entscheidet die Ausleitung aus den Varianten (keine freigegeben = nicht ausgeleitet,
+wieder eine = wieder da — nichts zu merken). Das Band zeigt die Tatsache: „⚠ nicht ausgeleitet“.
+
 **Eskalation (Taloan, 21.09.2026, gebaut):** je Übergang optional „nach n Tagen an Rollen“ (`EscalateAfterDays`,
 `EscalateRoles`, leer = jede Rolle mit Schreibrecht): steht ein Knoten so lange im Ausgangszustand, dürfen auch diese
 Rollen den Schritt gehen — alle Redakteure im Urlaub, der Manager gibt frei. Am Knoten steht „⏰ Eskalation ab ⟨Datum⟩ → manager“,
