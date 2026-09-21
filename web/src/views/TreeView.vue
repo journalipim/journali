@@ -403,13 +403,23 @@ async function duplicate(r, deep) {
 // Rechtsklick: was man mit diesem Knoten tun kann — die Tastenkürzel gelten im Menü.
 // Was unter einem Knoten liegt, heisst „Subitems“ — nicht „Kinder“ (Taloan, 17.09.)
 const below = () => 'Subitems'
-function contextMenu(e, r) {
+async function contextMenu(e, r) {
   router.push(`/tree/${r.id}`)
   const kids = tree.kids(r.id).length
   // Mehrfachauswahl (Taloan, 18.09.): liegt die Zeile in der Auswahl, gilt das Menü für die ganze Auswahl — Zurückziehen, Status,
   // Duplizieren für alle; was nur einzeln geht (Umbenennen, Tabelle, Plugins), ist ausgegraut mit Hinweis
   const sel = picked.value.has(r.id) && picked.value.size > 1 ? pickedRows.value : null
   const only1 = sel ? { disabled: true, hint: `nur einzeln (${sel.length} ausgewählt)` } : {}
+  // Workflow-Schritte, die zur Auswahl passen (Server zählt je Übergang, wer jetzt dort steht und darf) — nichts anbieten, was nicht geht
+  let wfItems = []
+  if (r.role !== 'rubric' && wfDefs.value.length) {
+    try {
+      const app = await api.post('/api/workflows/applicable', { ids: (sel ?? [r]).map(x => x.id) })
+      wfItems = app.map(a => ({ label: `${a.workflowLabel?.de || a.workflow}: ${a.label?.de || a.key} → ${a.toLabel?.de || a.to}${a.of > 1 ? ` (${a.count} von ${a.of})` : ''}`, icon: '⚑', disabled: a.count === 0,
+        hint: [a.blocked ? `${a.blocked} gesperrt (Freigabe nicht möglich)` : '', a.noteRequired ? 'Notiz Pflicht' : '', a.effects?.length ? a.effects.join(', ') : ''].filter(Boolean).join(' · '),
+        action: () => wfStepAll(sel ?? [r], { key: a.workflow }, a) }))
+    } catch { wfItems = [] }
+  }
   const st = s => (sel ? sel.some(x => x.role !== 'group' && x.status !== s) : (r.role !== 'group' && r.status !== s))
     ? { label: (s === 'draft' ? '○ Entwurf' : s === 'active' ? '● aktiv' : '✗ ausgelaufen') + (sel ? ` (${sel.filter(x => x.role !== 'group' && x.status !== s).length})` : ''), action: () => sel ? setStatusAll(sel.filter(x => x.role !== 'group' && x.status !== s), s) : setStatus(r, s) } : null
   // Aufgeräumt (Taloan): kein Neu-anlegen (die Knöpfe oben), kein Auf-/Zuklappen, kein Id kopieren (Id steht im Tooltip und im Kopf);
@@ -442,7 +452,7 @@ function contextMenu(e, r) {
     !sel && r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
-    ...(r.role !== 'rubric' && wfDefs.value.some(w => !w.roles?.length || w.roles.includes(r.role)) ? [{ label: 'Workflow' + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfDefs.value.filter(w => !w.roles?.length || w.roles.includes(r.role)).flatMap(w => w.transitions.map(t => ({ label: `${w.label?.de || w.key}: ${t.label?.de || t.key} → ${w.states.find(s => s.key === t.to)?.label?.de || t.to}`, icon: '⚑', hint: t.noteRequired ? 'Notiz Pflicht' : (t.effects?.length ? t.effects.join(', ') : ''), action: () => wfStepAll(sel ?? [r], w, t) }))) }, { sep: true }] : []),
+    ...(wfItems.length ? [{ label: 'Workflow' + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
     { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },

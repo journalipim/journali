@@ -12,6 +12,7 @@ namespace Journali.Server;
 public static class WorkflowApi
 {
     public sealed record StepBody(string? Note);
+    public sealed record IdsBody(string[]? Ids);
     public sealed record AssignBody(string? User);
 
     public static void Map(RouteGroupBuilder api)
@@ -98,6 +99,23 @@ public static class WorkflowApi
             }
             return pending;
         }
+        // Für die Mehrfachauswahl (Taloan, 21.09.: „ich kann Schritte wählen, die gar nicht passen“): je Übergang, wie viele der Knoten ihn jetzt gehen können
+        api.MapPost("/workflows/applicable", (IdsBody body, HttpRequest req, Catalog c) => c.With((model, tree, _) =>
+        {
+            var role = req.HttpContext.Items["role"] as string;
+            var ctxRead = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Write = (_, _, _) => throw new InvalidOperationException("nur lesen") };
+            var nodes = (body.Ids ?? []).Select(id => tree.Nodes.GetValueOrDefault(id)).OfType<Node>().ToList();
+            var out_ = new List<object>();
+            foreach (var wf in c.Workflows.All.Values.OrderBy(w => w.Key))
+                foreach (var t in wf.Transitions)
+                {
+                    var can = nodes.Where(n => wf.AppliesTo(n) && Commands.Allowed(c.Workflows, wf, n.Id, role).Any(x => x.Key == t.Key)).ToList();
+                    if (can.Count == 0) continue;
+                    var blocked = can.Count(n => Commands.Blocker(ctxRead, n, t) is not null);
+                    out_.Add(new { workflow = wf.Key, workflowLabel = wf.Label, t.Key, t.Label, t.To, toLabel = wf.State(t.To)?.Label, t.NoteRequired, t.Effects, count = can.Count - blocked, blocked, of = nodes.Count });
+                }
+            return Results.Ok(out_);
+        }));
         api.MapPost("/nodes/{id}/workflow/{wf}/{transition}", (string id, string wf, string transition, StepBody? body, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.WorkflowStep(x, id, wf, transition, body?.Note)));
         api.MapPut("/nodes/{id}/workflow/{wf}/assign", (string id, string wf, AssignBody body, HttpRequest req, Catalog c) =>
