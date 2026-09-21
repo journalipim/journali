@@ -1,0 +1,43 @@
+{
+  "key": "derive",
+  "version": "1.0.0",
+  "label": {
+    "de": "Vorschauen rechnen",
+    "en": "Render previews"
+  },
+  "description": {
+    "de": "Rechnet für jedes Bild die Ableitungen nach den Vorschau-Presets (Einstellungen → Medien: Kachel, Web, Druck …) voraus und legt sie im Medienspeicher ab — nie live beim Anzeigen (Taloan: 200-MB-TIFFs aus der Konstruktion). Läuft als Prozess (Node + sharp/libvips: TIFF, PNG, JPEG, WebP, AVIF, auch riesige Bilder); der Server stößt ihn nach jedem Hochladen an, sonst von Hand oder nach Zeitplan. Einmalig im Plugin-Verzeichnis: npm install.",
+    "en": "Pre-renders every image's derivatives per preview preset (Settings → Media) into the media store — never live. Runs as a process (Node + sharp); the server triggers it after uploads. Once: npm install in the plugin folder."
+  },
+  "kind": "tool",
+  "runs": "process",
+  "requires": [
+    "tasker"
+  ],
+  "autoInstall": true,
+  "process": {
+    "command": "node",
+    "args": [
+      "job.mjs",
+      "{journali}",
+      "{actor}",
+      "{limit}",
+      "{preset}"
+    ],
+    "description": "Fehlende Ableitungen nach allen Presets mit „automatisch“ rechnen (oder nur ein Preset); läuft, bis nichts mehr fehlt",
+    "params": [
+      {
+        "key": "limit",
+        "label": "Bilder je Runde (der Job holt so lange nach, bis nichts mehr fehlt)",
+        "type": "number",
+        "default": "200"
+      },
+      {
+        "key": "preset",
+        "label": "nur dieses Preset (leer = alle mit „automatisch“)",
+        "type": "text",
+        "default": ""
+      }
+    ]
+  }
+}

@@ -1003,7 +1003,17 @@ Gebaut: `MediaCreated`/`MediaRetired`, Abbild `Media`, `FileMediaStore`
 im Knoten der Abschnitt „🖼 Medien" (Kacheln mit Werten an der Kante,
 Ablegen lädt hoch und verknüpft, „aus Medien wählen").
 
-Offen: Vorschau-Presets (heute liefert der Server das Original, der Browser
+**Vorschau-Presets — gebaut 21.09.2026** (Taloan: „in den Einstellungen Basics definieren, welche Ableitungen beim Bilder-Import
+automatisch berechnet werden, in welchen Größen … 200-MB-TIFFs aus der Konstruktion, davon 20 in ein Dokument, für 1000
+Artikel live umrechnen — nee, das muss alles bereitliegen“): Presets im Journal (`media-preset:<key>`,
+`MediaPresetDefined`: Kante B × H eingepasst, Format webp/jpeg/png/avif, Qualität, auto), Saatgut `thumb` 256, `web` 1200,
+`print` 3000 jpeg. Gerechnet wird nie im Server: das Prozess-Plugin `derive` (Node + sharp/libvips, liest TIFF) holt
+`GET /api/media/pending`, rechnet, legt per `PUT /api/media/{id}/derived/{preset}` ab (Store `sha.<preset>`, Beleg
+`MediaDerived` mit Fingerabdruck des Presets — geändertes Preset = neu rechnen); der Server stösst den Job nach jedem
+Hochladen/Holen an und legt ihn an, wenn er fehlt. Ausliefern `GET /api/media/{id}/{preset}` (404 = liegt noch nicht vor).
+Einstellungen → Storage: Tabelle der Presets mit Stand „gerechnet / Bilder“, „▶ jetzt rechnen“.
+
+Vorher offen: Vorschau-Presets (heute liefert der Server das Original, der Browser
 skaliert), Medienimport aus der Quelle (Solr: `images` als
 `multi_image_rel`, Pfade unter `suppliers/…` — braucht einen Basis-URL),
 Medien im Baum (eigener Ast) oder nur am Knoten.

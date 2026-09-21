@@ -64,4 +64,27 @@ public class MediaFolderTests
         Assert.Null(w.Run(c => Commands.MoveMediaFolder(c, c2, null)).Error);
         Assert.Null(w.Media.Folders[c2].Parent);
     }
+
+    [Fact]
+    public void Presets_sagen_welche_Ableitungen_fehlen_und_ein_geaendertes_Preset_rechnet_neu()
+    {
+        var w = new World();
+        // Saatgut: thumb, web, print
+        Assert.Contains("thumb", w.Media.Presets.Keys); Assert.Contains("web", w.Media.Presets.Keys);
+        var m = w.Medium("foto.png");
+        var doc = w.J.Append("t", Ids.Media(), Types.MediaCreated, Types.Serialize(new MediaCreated("d1", 5, "application/pdf", "blatt.pdf"))).Stream; w.Catch();
+        var web = w.Media.Presets["web"];
+        Assert.Contains(w.Media.Pending(web), x => x.Id == m);
+        Assert.DoesNotContain(w.Media.Pending(web), x => x.Id == doc);   // kein Bild
+        w.J.Append("t", m, Types.MediaDerived, Types.Serialize(new MediaDerived("web", 1200, 800, 40000, web.Fingerprint))); w.Catch();
+        Assert.True(w.Media.HasDerived(w.Media.All[m], web));
+        Assert.DoesNotContain(w.Media.Pending(web), x => x.Id == m);
+        // Preset geändert (andere Kante): Fingerabdruck anders → wieder fällig
+        w.J.Append("t", Media.PresetStream + "web", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Web", "Web"), 1600, 1600, "webp", 82))); w.Catch();
+        Assert.False(w.Media.HasDerived(w.Media.All[m], w.Media.Presets["web"]));
+        Assert.Contains(w.Media.Pending(w.Media.Presets["web"]), x => x.Id == m);
+        // zurückgezogen: weg, aber „je definiert“ bleibt (Saatgut sät nicht nach)
+        w.J.Append("t", Media.PresetStream + "print", Types.MediaPresetRetired, Types.Serialize(new MediaPresetRetired())); w.Catch();
+        Assert.DoesNotContain("print", w.Media.Presets.Keys); Assert.True(w.Media.PresetEver("print"));
+    }
 }

@@ -110,6 +110,11 @@ public static class Model
         yield return new(RelationStream + "related", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("related", Labels.Of("Verwandt", "Related"), Labels.Of("Verwandt", "Related"), Symmetric: true)));
         yield return new(RelationStream + "bom", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("bom", Labels.Of("Stückliste", "Bill of materials"), Labels.Of("Stückliste von", "Part of"), Group: "relation_component")));
 
+        // Vorschau-Presets (Taloan, 21.09.2026): was beim Import je Bild vorausberechnet wird — Saatgut, in den Einstellungen änderbar
+        yield return new(Projections.Media.PresetStream + "thumb", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Kachel", "Tile"), 256, 256, "webp", 80)));
+        yield return new(Projections.Media.PresetStream + "web", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Web", "Web"), 1200, 1200, "webp", 82)));
+        yield return new(Projections.Media.PresetStream + "print", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Druck", "Print"), 3000, 3000, "jpeg", 90)));
+
         // Medien (20): Werte am Medium (Gruppe media), Werte an der Kante Knoten→Medium (Gruppe relation_media), Typen image und document.
         yield return new(GroupStream + "media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("media", Labels.Of("Medium", "Medium"))));
         yield return new(AttributeStream + "alt_text", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("alt_text", Labels.Of("Alt-Text", "Alt text"), AttributeTypes.Text, Group: "media", Axes: [Axes.Locale])));

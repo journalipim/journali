@@ -27,6 +27,26 @@ public sealed class Medium
     public bool IsImage => Mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
     /// <summary>Ordner der Bibliothek (MediaFiled); null = kein Ordner.</summary>
     public string? Folder { get; set; }
+    /// <summary>Ableitungen nach Preset (MediaDerived): Preset → Mass, Grösse, Fingerabdruck des Presets zur Zeit des Rechnens.</summary>
+    public Dictionary<string, Derived> Derived { get; } = new();
+}
+
+public sealed record Derived(int Width, int Height, long Bytes, string Fingerprint, long Number);
+
+/// <summary>Ein Vorschau-Preset (Taloan, 21.09.2026). Strom <c>media-preset:&lt;key&gt;</c>.</summary>
+public sealed class MediaPreset
+{
+    public required string Key { get; init; }
+    public Labels Label { get; set; } = new();
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public string Format { get; set; } = "webp";
+    public int Quality { get; set; } = 82;
+    public bool Auto { get; set; } = true;
+    public long LastNumber { get; set; }
+    /// <summary>Was die Ableitung bestimmt — steht am MediaDerived; anders = neu rechnen.</summary>
+    public string Fingerprint => $"{Width}x{Height}/{Format}/{Quality}";
+    public string Mime => Format switch { "jpeg" or "jpg" => "image/jpeg", "png" => "image/png", "avif" => "image/avif", _ => "image/webp" };
 }
 
 /// <summary>Ein Medienordner (Taloan, 21.09.2026): Name, Vater (null = oberste Ebene). Strom <c>mf-…</c>.</summary>
@@ -45,8 +65,18 @@ public sealed class Media : IProjection
     private readonly Dictionary<string, string> _bySha = new();
     private readonly Dictionary<(string System, string Id), string> _external = new();
     private readonly Dictionary<string, MediaFolder> _folders = new();
+    private readonly Dictionary<string, MediaPreset> _presets = new();
+    private readonly HashSet<string> _presetsEver = new();   // je definiert, auch zurückgezogene — fürs Saatgut
+    public const string PresetStream = "media-preset:";
+    public bool PresetEver(string key) => _presetsEver.Contains(key);
 
     public long LastApplied { get; private set; }
+    public IReadOnlyDictionary<string, MediaPreset> Presets => _presets;
+
+    /// <summary>Bilder, denen eine aktuelle Ableitung nach diesem Preset fehlt (nie gerechnet oder Preset seither geändert).</summary>
+    public IEnumerable<Medium> Pending(MediaPreset preset) => _all.Values.Where(m => m.IsImage && (!m.Derived.TryGetValue(preset.Key, out var d) || d.Fingerprint != preset.Fingerprint));
+    /// <summary>Liegt die Ableitung aktuell vor?</summary>
+    public bool HasDerived(Medium m, MediaPreset preset) => m.Derived.TryGetValue(preset.Key, out var d) && d.Fingerprint == preset.Fingerprint;
 
     public IReadOnlyDictionary<string, Medium> All => _all;
     public IReadOnlyDictionary<string, MediaFolder> Folders => _folders;
@@ -79,6 +109,24 @@ public sealed class Media : IProjection
     {
         LastApplied = entry.Number;
         Medium m;
+        // Vorschau-Presets: Strom media-preset:<key>
+        if (entry.Stream.StartsWith(PresetStream, StringComparison.Ordinal))
+        {
+            var key = entry.Stream[PresetStream.Length..];
+            switch (entry.Type)
+            {
+                case Types.MediaPresetDefined:
+                    var pd = Types.Deserialize<MediaPresetDefined>(entry.Payload);
+                    _presetsEver.Add(key);
+                    if (!_presets.TryGetValue(key, out var p)) _presets[key] = p = new MediaPreset { Key = key };
+                    p.Label = pd.Label; p.Width = pd.Width; p.Height = pd.Height; p.Format = pd.Format; p.Quality = pd.Quality; p.Auto = pd.Auto; p.LastNumber = entry.Number;
+                    break;
+                case Types.MediaPresetRetired:
+                    _presets.Remove(key);
+                    break;
+            }
+            return;
+        }
         // Medienordner: eigener Strom mf-…
         switch (entry.Type)
         {
@@ -115,6 +163,10 @@ public sealed class Media : IProjection
                 case Types.MediaFiled:
                     var mf = Types.Deserialize<MediaFiled>(entry.Payload);
                     m.Folder = mf.Folder is { } f && _folders.ContainsKey(f) ? f : null;
+                    break;
+                case Types.MediaDerived:
+                    var md = Types.Deserialize<MediaDerived>(entry.Payload);
+                    m.Derived[md.Preset] = new Derived(md.Width, md.Height, md.Bytes, md.Fingerprint, entry.Number);
                     break;
                 case Types.MediaRetired:
                     _all.Remove(m.Id);

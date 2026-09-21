@@ -16,6 +16,26 @@ const missing = ref(null)
 const copyFrom = ref({ driver: 'file', path: 'media', bucket: '', endpoint: '', key: '', secret: '', region: 'garage', pathStyle: true })
 const copyResult = ref(null)
 
+// Vorschau-Presets (Taloan, 21.09.: „in den Einstellungen Basics definieren, welche Ableitungen beim Bilder-Import automatisch berechnet werden“)
+const presets = ref([]); const presetBusy = ref('')
+const FORMATS = ['webp', 'jpeg', 'png', 'avif']
+async function loadPresets() { try { presets.value = (await api.get('/api/media/presets')).map(p => ({ ...p, labelDe: p.label?.de ?? p.key })) } catch (e) { store.toast(e.message) } }
+async function savePreset(p) {
+  try { await api.post(`/api/media/presets/${encodeURIComponent(p.key)}`, { label: { de: p.labelDe, en: p.label?.en ?? p.labelDe }, width: Number(p.width), height: Number(p.height), format: p.format, quality: Number(p.quality), auto: p.auto }, 'PUT'); await loadPresets(); store.toast(`Preset „${p.key}“ gespeichert — fehlende Ableitungen rechnet der Job derive`, 'ok') }
+  catch (e) { store.toast(e.message) }
+}
+async function newPreset() {
+  const key = await dialog.prompt({ title: 'Neues Vorschau-Preset', text: 'Key (a-z, 0-9, _) — z. B. shop, katalog, print_hires', placeholder: 'key' })
+  if (!key) return
+  try { await api.post(`/api/media/presets/${encodeURIComponent(key.trim().toLowerCase())}`, { label: { de: key, en: key }, width: 1200, height: 1200, format: 'webp', quality: 82, auto: true }, 'PUT'); await loadPresets() } catch (e) { store.toast(e.message) }
+}
+async function deletePreset(p) {
+  if (!await dialog.confirm({ title: `Preset „${p.key}“ entfernen?`, text: 'Die gerechneten Ableitungen bleiben im Store, werden aber nicht mehr ausgeliefert.', ok: '🗑 Entfernen', danger: true })) return
+  try { await api.del(`/api/media/presets/${encodeURIComponent(p.key)}`); await loadPresets() } catch (e) { store.toast(e.message) }
+}
+async function derive() { presetBusy.value = 'stoße an …'; try { const r = await api.post('/api/media/derive', {}); store.toast(`Job „${r.job}“ läuft — ⏱ Jobs zeigt den Fortschritt`, 'ok'); setTimeout(loadPresets, 3000) } catch (e) { store.toast(e.message) } finally { presetBusy.value = '' } }
+onMounted(loadPresets)
+
 const clean = c => ({ ...c, path: c.path || null, bucket: c.bucket || null, endpoint: c.endpoint || null, key: c.key || null, secret: c.secret || null, region: c.region || null })
 async function load() {
   try {
@@ -69,6 +89,23 @@ onMounted(load)
       </template>
       <tr><td></td><td class="row"><button @click="check">prüfen</button><button class="primary" @click="save">Speichern</button><span class="muted" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
     </tbody></table>
+  </div>
+
+  <div class="section">
+    <h2>▨ Vorschau-Presets <span class="muted">· Ableitungen, die für jedes Bild vorausgerechnet werden — nie live (Konstruktions-TIFFs); rechnet das Plugin derive (Prozess), angestoßen nach jedem Hochladen</span></h2>
+    <table class="grid form" style="width:auto"><thead><tr><th>Key</th><th>Bezeichnung</th><th title="längste Seite wird eingepasst, nie vergrößert">max B × H</th><th>Format</th><th>Qualität</th><th title="beim Import automatisch rechnen">auto</th><th title="gerechnet / Bilder">Stand</th><th></th></tr></thead><tbody>
+      <tr v-for="p in presets" :key="p.key">
+        <td class="mono">{{ p.key }}</td>
+        <td><input v-model="p.labelDe" type="text" style="width:140px" @change="savePreset(p)" /></td>
+        <td class="row" style="gap:4px"><input v-model="p.width" type="number" min="16" max="20000" style="width:70px" @change="savePreset(p)" /> × <input v-model="p.height" type="number" min="16" max="20000" style="width:70px" @change="savePreset(p)" /></td>
+        <td><select v-model="p.format" @change="savePreset(p)"><option v-for="f in FORMATS" :key="f" :value="f">{{ f }}</option></select></td>
+        <td><input v-model="p.quality" type="number" min="1" max="100" style="width:60px" @change="savePreset(p)" /></td>
+        <td><input v-model="p.auto" type="checkbox" @change="savePreset(p)" /></td>
+        <td :class="p.pending ? 'warn' : 'pos'" :title="`${p.have} von ${p.images} Bildern gerechnet${p.pending ? ' — ' + p.pending + ' fehlen' : ''}`">{{ p.have }} / {{ p.images }}</td>
+        <td><button class="x" @click="deletePreset(p)" :disabled="p.key === 'thumb'" :title="p.key === 'thumb' ? 'Kachel der Bibliothek — bleibt' : 'Preset entfernen'">🗑</button></td>
+      </tr>
+    </tbody></table>
+    <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">+ Preset</button><button class="primary" @click="derive" :disabled="!!presetBusy" title="fehlende Ableitungen jetzt rechnen (Job derive)">▶ jetzt rechnen</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
   </div>
 
   <div class="section">

@@ -23,3 +23,4 @@ Journali.Server/jobs/
 
 # Ausgaben der Export-Jobs (Arbeitsverzeichnis ist das Plugin) — nie im Repo
 plugins/xport/export/
+plugins/*/node_modules/

@@ -143,7 +143,7 @@ public static class MediaApi
         });
 
         // Hochladen: multipart mit Feld „file“; Kopf X-Actor wie bei jedem Befehl.
-        api.MapPost("/media", async (HttpRequest req, Catalog c, IMediaStore store, CancellationToken ct) =>
+        api.MapPost("/media", async (HttpRequest req, Catalog c, IMediaStore store, JobRunner runner, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!req.HasFormContentType) return Bad("multipart/form-data mit Feld file erwartet.");
@@ -160,11 +160,12 @@ public static class MediaApi
                 var m = c.Media.All[entry.Stream];
                 return (View: MediaView.Of(m, 0), Existed: false);
             });
+            if (!result.Existed && result.View.IsImage) DeriveApi.Kick(c, runner, actor);   // Vorschauen rechnen lassen (Taloan: „muss alles bereitliegen“)
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         }).DisableAntiforgery();
 
         // Von einer URL holen (Import: Bilder der Quelle als Assets). Nur http(s); 50 MB; Name aus dem Pfad, wenn keiner mitkommt.
-        api.MapPost("/media/fetch", async (FetchRequest body, HttpRequest req, Catalog c, IMediaStore store, IHttpClientFactory http, CancellationToken ct) =>
+        api.MapPost("/media/fetch", async (FetchRequest body, HttpRequest req, Catalog c, IMediaStore store, IHttpClientFactory http, JobRunner runner, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!Uri.TryCreate(body.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) return Bad("url: http(s)-Adresse erwartet.");
@@ -183,6 +184,7 @@ public static class MediaApi
                 var entry = write(actor, Ids.Media(), Types.MediaCreated, new MediaCreated(sha, bytes, mime, name), null);
                 return (View: MediaView.Of(c.Media.All[entry.Stream], 0), Existed: false);
             });
+            if (!result.Existed && result.View.IsImage) DeriveApi.Kick(c, runner, actor);
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         });
 

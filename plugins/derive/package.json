@@ -1,0 +1,9 @@
+{
+  "name": "journali-plugin-derive",
+  "private": true,
+  "type": "module",
+  "description": "journali: Vorschauen rechnen — sharp (libvips) für TIFF/PNG/JPEG/WebP/AVIF. Einmalig: npm install (im Container: Linux-Binärdateien, siehe Dockerfile).",
+  "dependencies": {
+    "sharp": "^0.34.0"
+  }
+}

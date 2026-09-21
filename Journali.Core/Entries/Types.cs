@@ -39,6 +39,11 @@ public static class Types
     public const string MediaFolderMoved = "MediaFolderMoved";
     public const string MediaFolderRetired = "MediaFolderRetired";
     public const string MediaFiled = "MediaFiled";   // am Medium: in welchem Ordner es liegt
+    // Vorschau-Presets (Taloan, 21.09.2026: „in den Einstellungen definieren, welche Ableitungen beim Import automatisch berechnet werden —
+    // 200-MB-TIFFs aus der Konstruktion rechnet man nicht live um; das muss alles bereitliegen“): Strom media-preset:<key>
+    public const string MediaPresetDefined = "MediaPresetDefined";
+    public const string MediaPresetRetired = "MediaPresetRetired";
+    public const string MediaDerived = "MediaDerived";   // am Medium: Ableitung nach Preset liegt im Store (sha.<preset>)
     public const string LabelAttributeSet = "LabelAttributeSet";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
@@ -235,6 +240,17 @@ public sealed record MediaFolderMoved(string? Parent);
 public sealed record MediaFolderRetired();
 /// <summary>Am Medium: in diesen Ordner gelegt (null = kein Ordner).</summary>
 public sealed record MediaFiled(string? Folder);
+
+/// <summary>
+/// Vorschau-Preset (Taloan, 21.09.2026): Ableitung eines Bildes, die beim Import für jedes Bild vorausberechnet wird — Kante
+/// in Pixeln (längste Seite, Bild wird eingepasst, nie vergrössert), Format webp | jpeg | png, Qualität 1–100. Im Journal, weil
+/// die Ableitung Teil der Ausleitung ist (Datenblatt, Shop nehmen <c>/api/media/{id}/{preset}</c>); der Store hält die Bytes
+/// unter <c>sha.&lt;preset&gt;</c>, gerechnet vom Prozess-Plugin <c>derive</c> (nie im Serverprozess).
+/// </summary>
+public sealed record MediaPresetDefined(Labels Label, int Width, int Height, string Format = "webp", int Quality = 82, bool Auto = true);
+public sealed record MediaPresetRetired();
+/// <summary>Am Medium: Ableitung nach diesem Preset liegt im Store — mit Mass und Grösse; <c>Fingerprint</c> = Kante/Format/Qualität, damit ein geändertes Preset neu rechnet.</summary>
+public sealed record MediaDerived(string Preset, int Width, int Height, long Bytes, string Fingerprint);
 
 /// <summary>Externe Kennung je Quellsystem (Import): beim zweiten Lauf Update statt Neuanlage.</summary>
 public sealed record ExternalLinked(string System, string Id);

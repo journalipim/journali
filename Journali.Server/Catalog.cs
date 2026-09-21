@@ -84,6 +84,7 @@ public sealed class Catalog
                     Types.MasterLocaleDefined => _model.MasterLocale is not null,
                     Types.MasterChannelDefined => _model.MasterChannel is not null,
                     Types.RelationTypeDefined => _model.RelationTypes.ContainsKey(key),
+                    Types.MediaPresetDefined => _media.PresetEver(key),   // auch wenn Taloan es zurückgezogen hat — nicht wieder säen
                     _ => true,
                 };
                 if (exists) continue;

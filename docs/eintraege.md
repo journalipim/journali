@@ -88,6 +88,11 @@ Die Datei liegt ausserhalb (Store, Hash-adressiert); im Journal nur das Ding
 | `AttributeSet` | wie am Knoten | Wert am Medium — nur Attribute der Gruppe `media` (Saatgut `alt_text` je Sprache, `copyright`) |
 | `ExternalLinked` / `ExternalUnlinked` | wie am Knoten | Kennung aus der Quelle |
 | `MediaFiled` | `folder` (Ordner-Id oder null) | Medium in einen Ordner der Bibliothek gelegt (null = kein Ordner) |
+| `MediaDerived` | `preset`, `width`, `height`, `bytes`, `fingerprint` | Ableitung nach Preset liegt im Store (`sha.<preset>`); anderer Fingerabdruck als das Preset = neu rechnen |
+
+Vorschau-Presets (Strom `media-preset:<key>`, Taloan 21.09.2026): `MediaPresetDefined {label, width, height, format, quality, auto}` ·
+`MediaPresetRetired`. API: `GET/PUT/DELETE /api/media/presets[/{key}]` (Recht Modell), `GET /api/media/pending`,
+`PUT /api/media/{id}/derived/{preset}` (Bytes, Köpfe X-Width/X-Height/X-Fingerprint), `GET /api/media/{id}/{preset}`, `POST /api/media/derive`.
 
 Jobs (`job:<key>`, `docs/tasker-dateien.md`): `JobDefined` trägt seit 21.09.2026 `files` (`base`, `keep`, `latest`, `archive`);
 Belege je Datei — die Dateien selbst liegen in den Fächern, nicht im Journal:
