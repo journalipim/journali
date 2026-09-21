@@ -52,7 +52,7 @@ public class ReleaseTests
         var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
         Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "submit", null).Error);
         var r = Commands.WorkflowStep(ctx(), w.P, "review", "approve", null);
-        Assert.NotNull(r.Error); Assert.Contains("keine Variante erfüllt die Voraussetzungen", r.Error);
+        Assert.NotNull(r.Error); Assert.Contains("scheitert an", r.Error); Assert.Contains("Name (name) fehlt in → ", r.Error);
         Assert.Equal("review", wfs.StateOf(w.P, wfs.All["review"]));                    // nicht gegangen
         w.Fill(w.V1);
         Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "approve", null).Error);

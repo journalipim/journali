@@ -439,7 +439,7 @@ public static class Commands
         if (n.Role != Roles.Variant) return Outcome.Bad("Freigabe nur an der Variante — sie ist das Verkaufbare.");
         // Freigabe setzt Vollständigkeit voraus — Sperre (docs/pflegestruktur.md, entschieden).
         var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).ToList(), channel!, locale);
-        if (missing.Length > 0) return Outcome.Bad($"Für {channel}{(locale is null ? "" : "/" + locale)} fehlt: {string.Join(", ", missing.Select(m => Explain(c, n, m)))}");
+        if (missing.Length > 0) return Outcome.Bad("Freigabe scheitert an:\n" + string.Join("\n", MissingLines(c, n, missing).Select(l => "• " + l)));
         return Outcome.Ok(c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale)));
     }
 
@@ -629,13 +629,25 @@ public static class Commands
 
     /// <summary>Einen Schritt gehen: Übergang muss vom aktuellen Zustand ausgehen, die Rolle ihn dürfen, die Notiz da sein — dann Zustand und Wirkungen.</summary>
     /// <summary>Fehlender Pflichtwert „attr/locale“ mit Grund: steht nur über Master oder Fallback da → „nur Master-Text, Übersetzung fehlt“.</summary>
-    private static string Explain(Ctx c, Node v, string missing)
+    /// <summary>Fehlende Pflichtwerte als Zeilen (Taloan, 21.09.): „Name (name) fehlt in → en, fr“ — je Attribut eine Zeile, Sprachen gesammelt;
+    /// steht der Wert nur über den Master da: „fehlt (nur Master-Text) in → en“.</summary>
+    private static IEnumerable<string> MissingLines(Ctx c, Node v, IEnumerable<string> missing)
     {
-        var i = missing.IndexOf('/'); if (i < 0) return missing;
-        var attr = missing[..i]; var loc = missing[(i + 1)..];
-        if (!c.Model.Attributes.TryGetValue(attr, out var def)) return missing;
-        var viaMaster = c.Tree.Resolve(v, attr, loc, null, def.Inheritable, masters: true).Value is not null;
-        return viaMaster ? $"{missing} (nur Master-Text vorhanden, Übersetzung fehlt)" : missing;
+        var byAttr = new Dictionary<string, (List<string> Locales, bool Master)>();
+        var order = new List<string>();
+        foreach (var m in missing)
+        {
+            var i = m.IndexOf('/'); var attr = i < 0 ? m : m[..i]; var loc = i < 0 ? null : m[(i + 1)..];
+            if (!byAttr.TryGetValue(attr, out var e)) { byAttr[attr] = e = (new(), false); order.Add(attr); }
+            if (loc is not null) e.Locales.Add(loc);
+            if (loc is not null && c.Model.Attributes.TryGetValue(attr, out var def) && c.Tree.Resolve(v, attr, loc, null, def.Inheritable, masters: true).Value is not null) byAttr[attr] = (e.Locales, true);
+        }
+        foreach (var attr in order)
+        {
+            var (locales, master) = byAttr[attr];
+            var label = c.Model.Attributes.TryGetValue(attr, out var d) ? (d.Label.GetValueOrDefault("de") ?? attr) : attr;
+            yield return $"{label} ({attr}) fehlt{(master ? " (nur Master-Text)" : "")}{(locales.Count > 0 ? " in → " + string.Join(", ", locales) : "")}";
+        }
     }
 
     /// <summary>Warum ein Übergang jetzt nicht gehen kann (Wirkung release ohne freigebbare Variante) — null = kann. Auch für die Anzeige, vor dem Klick.</summary>
@@ -653,17 +665,19 @@ public static class Commands
                 {
                     if (v.Releases.Contains(new Release(ch, null))) { problems.Clear(); break; }
                     var sku = v.Own(Model.SkuAttribute, null, null) ?? v.Id;
-                    if (v.Id != n.Id && InWork(c, v) is { } w) { problems.Add((w, sku)); continue; }
+                        if (v.Id != n.Id && InWork(c, v) is { } w) { problems.Add((w, sku)); continue; }
                     var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, v, CompletenessRules.ActiveAttributes(c.Tree, c.Model, v).ToList(), ch, null);
                     if (missing.Length == 0) { problems.Clear(); break; }
-                    problems.Add((string.Join(", ", missing.Select(m => Explain(c, v, m))) + " fehlt", sku));
+                    foreach (var line in MissingLines(c, v, missing)) problems.Add((line, sku));
                 }
                 if (problems.Count > 0)
                 {
                     // gleiche Gründe zusammen, je Grund höchstens 5 SKUs — sonst wird aus 50 Varianten ein roter Bildschirm (Taloan, 21.09.)
-                    var grouped = problems.GroupBy(x => x.Why).Select(g => $"{g.Key} bei {g.Count()} {(g.Count() == 1 ? "Variante" : "Varianten")} ({string.Join(", ", g.Take(5).Select(x => x.Sku))}{(g.Count() > 5 ? ", …" : "")})");
-                    if (n.Role == Roles.Variant) return $"Freigabe für {ch} nicht möglich: {problems[0].Why}.";
-                    return $"Freigabe für {ch} nicht möglich, keine Variante erfüllt die Voraussetzungen: {string.Join(" · ", grouped)}";
+                    // Variante: je Zeile ein Grund; Produkt/Gruppe: je Zeile Grund und die Varianten (höchstens 5 genannt)
+                    var lines = n.Role == Roles.Variant
+                        ? problems.Select(x => "• " + x.Why)
+                        : problems.GroupBy(x => x.Why).Select(g => $"• {g.Key} — {g.Count()} {(g.Count() == 1 ? "Variante" : "Varianten")}: {string.Join(", ", g.Take(5).Select(x => x.Sku))}{(g.Count() > 5 ? ", …" : "")}");
+                    return $"Freigabe für {ch} scheitert an:\n" + string.Join("\n", lines);
                 }
             }
         }

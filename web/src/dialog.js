@@ -17,7 +17,7 @@ export const dialog = reactive({
   },
   // help: Tabelle Taste/Geste → Wirkung, nur ein Schliessen-Knopf (das ? in einer Leiste)
   // lange Fehlermeldung als Fenster: erster Satz als Kopf, die Teile nach „ · “ als Zeilen (store.toast leitet hierher)
-  error(text) { const [head, ...rest] = String(text).split(' — '); const parts = (rest.join(' — ') || '').split(' · ').filter(Boolean); return this.help({ title: '✗ ' + head, rows: parts.map((p, i) => [String(i + 1), p]) }) },
+  error(text) { const s = String(text); const lines = s.includes('\n') ? s.split('\n') : null; const head = lines ? lines[0] : s.split(' — ')[0]; const parts = lines ? lines.slice(1) : (s.split(' — ').slice(1).join(' — ') || '').split(' · ').filter(Boolean); return this.help({ title: '✗ ' + head, rows: parts.map(p => ['•', p.replace(/^•\s*/, '')]) }) },
   help({ title, rows = [], text = '' }) {
     return new Promise(resolve => { Object.assign(this, { open: true, kind: 'help', title, text, warn: '', list: rows, ok: 'Schliessen', cancel: '', danger: false, option: null, _resolve: resolve }) })
   },
