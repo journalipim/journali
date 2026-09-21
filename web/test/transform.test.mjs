@@ -16,6 +16,7 @@ test('Wahrheitswert, Datum, Ersetzen, Aufteilen, Verbinden', () => {
   assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'vorhanden'), 'true')
   assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'x'), 'true')   // Vorgabe bleibt
   assert.equal(apply([{ op: 'boolean' }], 'nein'), 'false')
+  assert.equal(apply([{ op: 'boolean' }], 'T'), 'true'); assert.equal(apply([{ op: 'boolean' }], 'F'), 'false')   // T/F (Taloan)
   assert.equal(apply([{ op: 'date' }], '21.09.2026'), '2026-09-21')
   assert.equal(apply([{ op: 'date', format: 'MM/dd/yyyy' }], '09/21/2026'), '2026-09-21')
   assert.equal(apply([{ op: 'replace', find: ' WLAN', with: '' }], 'WLAN 2,4 GHz, WLAN 5 GHz'), 'WLAN 2,4 GHz, 5 GHz')
