@@ -29,7 +29,7 @@ const KEYS = [
   ['incomplete:', 'Vollständigkeit nicht erreicht (Kanal)'], ['role:', 'Gruppe / Produkt / Variante'],
   ['status:', 'Entwurf / aktiv / ausgelaufen'], ['group:', 'Attributgruppe gilt hier'],
   ['under:', 'nur im Teilbaum eines Knotens'], ['by:', 'Urheber der letzten Änderung'], ['since:', 'geändert seit (Datum)'],
-  ['media:', 'hat Medien: any · image / document · Name (*.pdf)'], ['rel:', 'hat Relation: any · Typ · Typ=Partner (Name, SKU, Id)'],
+  ['media:', 'hat Medien: any · image / document · Name (*.pdf)'], ['folder:', 'Medium im Medienordner: Name, Pfad (a/b) oder none'], ['rel:', 'hat Relation: any · Typ · Typ=Partner (Name, SKU, Id)'],
 ]
 const sugg = ref([])          // [{ value, label, hint }]
 const suggIdx = ref(0)
@@ -70,6 +70,7 @@ function suggest() {
     else if (key === 'group:') for (const g of (m?.groups ?? []).filter(g => !low || g.key.toLowerCase().includes(low) || (g.label?.de ?? '').toLowerCase().includes(low))) out.push({ value: `group:${g.key}`, label: de(g), hint: g.key })
     else if (key === 'under:') { for (const a of [...(props.id ? tree.ancestors(props.id) : []), selected.value].filter(Boolean).reverse()) if (!low || a.label.toLowerCase().includes(low) || a.id.includes(low)) out.push({ value: `under:${a.id}`, label: `${icon(a.role)} ${a.label}`, hint: a.id === props.id ? 'hier' : a.id }) }
     else if (key === 'media:') { out.push({ value: 'media:any', label: 'irgendein Medium', hint: 'hat mindestens eines' }); for (const t of (m?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `media:${t.key}`, label: t.label?.de || t.key, hint: 'Relationstyp' }); if (low) out.push({ value: `media:${low}`, label: `Name enthält „${low}“`, hint: '* = beliebig' }) }
+    else if (key === 'folder:') { out.push({ value: 'folder:none', label: '⌂ ohne Ordner', hint: 'ein Medium des Knotens liegt in keinem Ordner' }); mediaFolders().then(fs => { for (const f of fs.filter(f => !low || f.name.toLowerCase().includes(low))) out.push({ value: `folder:${f.id}`, label: `📁 ${f.path}`, hint: 'samt Unterordnern' }); sugg.value = [...out] }) }
     else if (key === 'rel:' && rest.includes('=')) { const [t, p] = rest.split('='); for (const r of tree.rows.filter(r => p && (r.label.toLowerCase().includes(p.toLowerCase()) || (r.sku ?? '').toLowerCase().includes(p.toLowerCase()))).slice(0, 8)) out.push({ value: `rel:${t}=${r.sku || r.id}`, label: `${icon(r.role)} ${r.label}`, hint: `Partner der Relation${r.sku ? ' · ' + r.sku : ''}` }) }
     else if (key === 'rel:') { out.push({ value: 'rel:any', label: 'irgendeine Relation', hint: 'zu anderen Knoten' }); for (const t of (m?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `rel:${t.key}`, label: t.label?.de || t.key, hint: (t.symmetric ? 'symmetrisch' : 'gerichtet') + ' — mit = danach der Partner' }) }
     else if (key === 'since:') for (const [d, l] of [[0, 'heute'], [1, 'seit gestern'], [7, 'letzte 7 Tage'], [30, 'letzte 30 Tage']]) out.push({ value: `since:${day(d)}`, label: l, hint: day(d) })
@@ -77,6 +78,9 @@ function suggest() {
   }
   sugg.value = neg ? out.map(s => s.value.startsWith('-') ? s : { ...s, value: '-' + s.value, label: '¬ ' + s.label }) : out; suggIdx.value = 0
 }
+// Medienordner für folder: — einmal geholt, Pfad a › b
+let foldersCache = null
+async function mediaFolders() { if (foldersCache) return foldersCache; try { const d = await api.get('/api/media/folders'); const byId = new Map(d.folders.map(f => [f.id, f])); const path = f => { const out = []; for (let x = f; x; x = x.parent ? byId.get(x.parent) : null) { if (out.includes(x.name)) break; out.unshift(x.name) } return out.join(' › ') }; foldersCache = d.folders.map(f => ({ id: f.id, name: f.name, path: path(f) })); setTimeout(() => { foldersCache = null }, 30000); return foldersCache } catch { return [] } }
 function accept(s) {
   const t = tokenAt(); if (!t) return
   const tail = /[:=/-]$/.test(s.value) ? '' : ' '

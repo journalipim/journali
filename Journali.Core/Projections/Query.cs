@@ -13,6 +13,7 @@ namespace Journali.Core.Projections;
 /// Medien und Relationen (Taloan, 18.09.): <c>media:any</c> (hat Medien) · <c>media:image</c> / <c>media:document</c> (Relationstyp) ·
 /// <c>media:*.pdf</c> oder <c>media:logo</c> (Name des Mediums, * beliebig) · <c>rel:any</c> / <c>rel:accessory</c> (Relation dieses Typs, ein- oder ausgehend) ·
 /// <c>rel:accessory=250R</c> / <c>rel:any=p-0f58</c> (der Partner der Relation: Name, SKU, Id oder Wert enthält …, * beliebig).
+/// <c>folder:Wakol</c> (Taloan, 21.09.: ein Medium des Knotens liegt in diesem Medienordner oder darunter — Name mit *, Pfad mit /, oder Id) · <c>folder:none</c> (ohne Ordner).
 /// Ein Minus davor verneint (Taloan: „das Gegenteil“): <c>-empty:function</c>, <c>-role:variant</c>, <c>-Wort</c>.
 /// </summary>
 public sealed class Query
@@ -80,6 +81,30 @@ public sealed class Query
                     var byName = mine.FirstOrDefault(x => rx is null ? x.Medium.Name.Contains(value, StringComparison.OrdinalIgnoreCase) : rx.IsMatch(x.Medium.Name));
                     if (byName.Medium is null) return (false, null);
                     hit ??= $"🖼 {byName.Medium.Name}";
+                    break;
+                }
+                case "folder":
+                {
+                    // folder:<name|pfad|id> | folder:none — ein (nicht unterbundenes) Medium des Knotens liegt in dem Ordner oder darunter
+                    if (relations is null || media is null) return (false, null);
+                    var mine = relations.From(n.Id).Where(r => media.All.ContainsKey(r.To) && !(r.Values.TryGetValue(new Axis("stop", null, null), out var st) && st == "true")).Select(r => media.All[r.To]).ToList();
+                    if (mine.Count == 0) return (false, null);
+                    if (value.Length == 0 || value.Equals("none", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var loose = mine.FirstOrDefault(m => m.Folder is null);
+                        if (loose is null) return (false, null);
+                        hit ??= $"📁 ohne Ordner: {loose.Name}"; break;
+                    }
+                    var rx = value.Contains('*') ? Pattern(value) : null;
+                    var wanted = media.Folders.Values.Where(f =>
+                        string.Equals(f.Id, value, StringComparison.OrdinalIgnoreCase)
+                        || (rx is null ? string.Equals(f.Name, value, StringComparison.OrdinalIgnoreCase) : rx.IsMatch(f.Name))
+                        || string.Equals(string.Join("/", media.PathOf(f.Id).Select(x => x.Name)), value.Trim('/'), StringComparison.OrdinalIgnoreCase)).ToList();
+                    if (wanted.Count == 0) return (false, null);
+                    var set = wanted.SelectMany(f => media.FolderAndBelow(f.Id)).ToHashSet();
+                    var inside = mine.FirstOrDefault(m => m.Folder is { } f && set.Contains(f));
+                    if (inside is null) return (false, null);
+                    hit ??= $"📁 {string.Join(" › ", media.PathOf(inside.Folder).Select(x => x.Name))}: {inside.Name}";
                     break;
                 }
                 case "rel":

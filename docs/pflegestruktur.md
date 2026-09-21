@@ -968,7 +968,7 @@ Unterordnern“), Mitte Kacheln mit Sortierung (zuletzt geändert, Name, Datum, 
 (Art, Dateityp, Monat, verwendet, Ordner), Mehrfachauswahl (Strg/Umschalt-Klick, Strg+A, Esc), Kacheln auf einen Ordner
 oder „⌂ ohne Ordner“ ziehen, „📁 verschieben …“ für die Auswahl, Hochladen landet im gezeigten Ordner. Am Knoten: „▨ aus der
 Bibliothek …“ (Abschnitt Medien) öffnet dasselbe Bild als Fenster — Ordner, Suche, Mehrfachauswahl, Relationstyp
-(automatisch: Bild → `image`, sonst `document`), was schon hängt ist ausgegraut. Offen: Ordner in der Suche (`folder:`).
+(automatisch: Bild → `image`, sonst `document`), was schon hängt ist ausgegraut. Suche: `folder:<Name|Pfad|Id>` (samt Unterordnern), `folder:none`.
 
 Taloan: Binärdaten nicht in die Datenbank — später skalieren, woanders
 speichern. Einverstanden; das Journal bleibt schlank.
