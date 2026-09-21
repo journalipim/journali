@@ -662,6 +662,7 @@ public static class Commands
                 {
                     // gleiche Gründe zusammen, je Grund höchstens 5 SKUs — sonst wird aus 50 Varianten ein roter Bildschirm (Taloan, 21.09.)
                     var grouped = problems.GroupBy(x => x.Why).Select(g => $"{g.Key} — {g.Count()} {(g.Count() == 1 ? "Variante" : "Varianten")}: {string.Join(", ", g.Take(5).Select(x => x.Sku))}{(g.Count() > 5 ? " …" : "")}");
+                    if (n.Role == Roles.Variant) return $"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: nicht freigebbar für {ch} — {problems[0].Why}";
                     return $"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: keine Variante freigebbar für {ch} — {string.Join(" · ", grouped)}";
                 }
             }
