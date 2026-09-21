@@ -176,10 +176,19 @@ function discardAndClose() { discard(); window.close() }
 // Einfügen aus Excel: Tab-getrennt, Zeilen mit Umbruch — ab der markierten Zelle nach rechts (nur bearbeitbare Spalten) und unten
 function onPaste(e) {
   const td = document.activeElement?.closest?.('td.cell'); if (!td) return
-  const text = e.clipboardData?.getData('text/plain'); if (!text || !text.includes('\t') && !text.includes('\n')) return
+  const text = e.clipboardData?.getData('text/plain'); if (!text) return
+  if (document.activeElement?.classList?.contains('cell-input')) return   // in der Eingabe: normales Einfügen
   e.preventDefault()
   const tr = td.parentElement; const ri = rows.value.findIndex(r => r.row.id === tr.dataset.id); const ci = [...tr.children].indexOf(td) - FIXED
   if (ri < 0 || ci < 0) return
+  // ein einzelner Wert (Taloan, 21.09.: „Strg+C, Zeile runter, Strg+V — nichts“): in die Zelle, oder in den ganzen markierten Bereich wie in Excel
+  if (!text.includes('\t') && !text.includes('\n')) {
+    const v = text.trim(); const s0 = sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1) ? sel.value : { r0: ri, r1: ri, c0: ci, c1: ci }
+    let n = 0, locked = 0, bad = 0
+    for (let r = s0.r0; r <= s0.r1; r++) for (let c = s0.c0; c <= s0.c1; c++) { const row = rows.value[r], col = columns.value[c]; if (!row || !col) continue; const w = write(row, col, v); if (w === 'locked') locked++; else if (w === 'bad') bad++; else n++ }
+    store.toast(`${n} Zellen eingefügt${locked ? `, ${locked} gesperrt` : ''}${bad ? `, ${bad} nicht in der Liste` : ''} — noch nicht gespeichert`)
+    return
+  }
   const lines = text.replace(/\r/g, '').split('\n').filter((l, i, a) => l !== '' || i < a.length - 1)
   // Spaltenlage bleibt wie in Excel (Taloan): gesperrte Zellen werden ausgelassen, nicht übersprungen
   let n = 0, locked = 0, bad = 0
