@@ -42,7 +42,7 @@
         {
           "key": "dir",
           "label": "Verzeichnis",
-          "type": "text",
+          "type": "dir",
           "default": "export"
         },
         {

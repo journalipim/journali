@@ -42,13 +42,15 @@ Console.WriteLine($"journali: Journal wird gelesen …{(journal is CachedJournal
 var sw0 = System.Diagnostics.Stopwatch.StartNew();
 // Fortschritt etwa je Sekunde (Taloan, 21.09.: „damit man sieht, ob was vorangeht“) — Ziel ist der Kopf des Journals
 var head0 = journal.Head; var mirror0 = journal is CachedJournal c0 ? c0.CachedHead : 0; var lastTick = 0L;
-var rebuilt = catalog.Rebuild(out var timing, (n, number) =>
+void Progress(int n, long number, bool final)
 {
-    if (sw0.ElapsedMilliseconds - lastTick < 1000) return;
+    if (!final && sw0.ElapsedMilliseconds - lastTick < 1000) return;
     lastTick = sw0.ElapsedMilliseconds;
     var src = number <= mirror0 ? "Spiegel" : "Datenbank";   // Stand beim Start — der Spiegel wächst beim Lesen mit
-    Console.WriteLine($"journali:   … #{number} von #{head0} ({number * 100 / Math.Max(1, head0)} %, {n} Einträge, {sw0.Elapsed.TotalSeconds:0} s, {src})");
-});
+    Console.WriteLine($"journali:   … #{number} von #{head0} ({Math.Min(100, number * 100 / Math.Max(1, head0))} %, {n} Einträge, {sw0.Elapsed.TotalSeconds:0} s, {src})");
+}
+var rebuilt = catalog.Rebuild(out var timing, (n, number) => Progress(n, number, false));
+if (lastTick > 0) Progress(rebuilt, journal.Head, true);   // der Allerletzte bei 100 % (Taloan, 21.09.)
 Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht (Taloan, 21.09.)
 var seeded = catalog.SeedMissing();
 

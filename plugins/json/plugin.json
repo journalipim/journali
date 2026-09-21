@@ -35,7 +35,7 @@
         {
           "key": "source",
           "label": "Quelle: Datei, Verzeichnis (neueste Datei) oder URL",
-          "type": "text",
+          "type": "path",
           "default": ""
         },
         {
@@ -85,7 +85,7 @@
         {
           "key": "dir",
           "label": "Verzeichnis",
-          "type": "text",
+          "type": "dir",
           "default": "json"
         },
         {

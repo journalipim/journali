@@ -104,7 +104,7 @@ public static class Auth
         if (path.StartsWith("/api/auth/rights")) return null;                                                                         // das Vokabular darf jeder lesen
         if (path.StartsWith("/api/auth/users") || path.StartsWith("/api/auth/roles")) return read && path.StartsWith("/api/auth/roles") ? Rights.Read : Rights.Users;
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
-        if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
+        if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") && !path.StartsWith("/api/jobs/files") ? Rights.Read : Rights.Jobs;   // Dateien des Servers sehen = Jobs
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)
         if (path.StartsWith("/api/model")) return Rights.Model;

@@ -241,3 +241,9 @@ Manifest und als Umgebung `JOURNALI_<PARAM>`. Nur Plugins mit `process` im
 Manifest können Jobs; mitgeliefert: `backup` (Rohdaten-JSON eines Teilbaums
 oder aller Wurzeln, behält die letzten n Dateien).
 
+Parameter (`process.params`: `key`, `label`, `type`, `default`, `secret`) — Typen: `text`, `number`, `boolean`,
+`node` (Auswahlbaum, Wert ist die Knoten-Id), `pub` (Publikationsbaum), `dir` (Verzeichnis auf dem Server) und
+`path` (Datei, Verzeichnis oder URL). Bei `dir` und `path` öffnet 📁 einen Dateibrowser des **Servers**
+(`GET /api/jobs/files?path=…`, Recht Jobs): Wurzeln sind das Datenverzeichnis und die Laufwerke; versteckte Einträge
+bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im Browser (Taloan, 21.09.2026).
+

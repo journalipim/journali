@@ -48,7 +48,6 @@ async function loadSource() {
       .filter(r => r.cells.some(v => v))
   } catch { sourceRows.value = [] }
 }
-watch(() => [node.value?.source, columns.value.length], loadSource)
 const router = useRouter()
 
 const node = ref(null)
@@ -75,6 +74,8 @@ const columns = computed(() => {
   return cols
 })
 function setCells(cells) { store.viewCells = cells; store.save() }
+// erst hier — der Getter läuft sofort und braucht node und columns (TDZ: „Cannot access before initialization“, jede Knotenansicht tot; Taloan, 21.09.)
+watch(() => [node.value?.source, columns.value.length], loadSource)
 // Kopfzeile Kanal: je Kanal (erst ohne) ein Block über 1 + Sprachen Spalten
 const headGroups = computed(() => { const out = []; for (const c of columns.value) { const g = out.find(x => x.channel === c.channel); g ? g.n++ : out.push({ channel: c.channel, n: 1 }) } return out })
 

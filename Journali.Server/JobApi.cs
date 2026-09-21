@@ -30,6 +30,7 @@ public static class JobApi
                 })).ToList());
         });
 
+        api.MapGet("/jobs/files", (string? path) => Files(runner, path));   // Dateibrowser des Servers (Recht Jobs, Auth.Needed)
         api.MapGet("/jobs", (Catalog c) => c.With((_, _, _) => c.Jobs.All.Values.OrderBy(j => j.Label).Select(j => View(j, runner)).ToList()));
         api.MapGet("/jobs/{key}", (string key, Catalog c) => c.With((_, _, _) => c.Jobs.All.TryGetValue(key, out var j) ? Results.Ok(View(j, runner, all: true)) : Results.NotFound()));
 
@@ -88,6 +89,31 @@ public static class JobApi
     }
 
     private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>
+    /// Dateibrowser für Job-Parameter (Taloan, 21.09.2026: „Gibt's hier wohl auch nen Browser?“ — Quelle und Verzeichnis sind
+    /// Pfade auf dem Server, nicht im Browser). Ein Verzeichnis: Unterverzeichnisse und Dateien (Größe, Zeit), dazu Vater und
+    /// die Wurzeln (Datenverzeichnis, Laufwerke). Leer = Datenverzeichnis. Versteckte Einträge bleiben weg. Nur mit Recht Jobs.
+    /// </summary>
+    private static IResult Files(JobRunner runner, string? path)
+    {
+        var dir = Blank(path) is { } p ? p : runner.Dir;
+        try
+        {
+            dir = Path.GetFullPath(dir);
+            if (File.Exists(dir)) dir = Path.GetDirectoryName(dir) ?? dir;   // eine Datei angegeben: ihr Verzeichnis zeigen
+            if (!Directory.Exists(dir)) return Bad($"Verzeichnis nicht gefunden: {dir}");
+            var info = new DirectoryInfo(dir);
+            static bool Hidden(FileSystemInfo f) => f.Name.StartsWith('.') || (f.Attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0;
+            var dirs = info.EnumerateDirectories().Where(d => !Hidden(d)).OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).Select(d => new { d.Name, path = d.FullName }).ToList();
+            var files = info.EnumerateFiles().Where(f => !Hidden(f)).OrderByDescending(f => f.LastWriteTimeUtc).Select(f => new { f.Name, path = f.FullName, size = f.Length, at = f.LastWriteTimeUtc }).ToList();
+            var roots = new List<object> { new { label = "⌂ Datenverzeichnis", path = Path.GetFullPath(runner.Dir) } };
+            roots.AddRange(DriveInfo.GetDrives().Where(d => d.IsReady && d.DriveType is DriveType.Fixed or DriveType.Network or DriveType.Removable).Select(d => new { label = d.Name.TrimEnd('\\', '/') + (string.IsNullOrEmpty(d.VolumeLabel) ? "" : " " + d.VolumeLabel), path = d.RootDirectory.FullName }));
+            return Results.Ok(new { path = dir, parent = info.Parent?.FullName, roots, dirs, files });
+        }
+        catch (UnauthorizedAccessException) { return Bad($"Kein Zugriff: {dir}"); }
+        catch (Exception e) { return Bad(e.Message); }
+    }
 
     private static List<string> SecretKeys(JsonElement proc)
     {
