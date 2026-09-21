@@ -38,7 +38,12 @@ Directory.CreateDirectory(dataDir);
 IJournal journal = string.Equals(builder.Configuration["JOURNALI_JOURNAL_CACHE"], "off", StringComparison.OrdinalIgnoreCase)
     ? pg : new CachedJournal(pg, Path.Combine(dataDir, $"journal-{connection.Host}-{connection.Port}-{connection.Database}.cache.jsonl"));
 var catalog = new Catalog(journal);
-Console.WriteLine($"journali: Journal wird gelesen …{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (Spiegel bis #{cj.CachedHead}, Rest aus der Datenbank)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist (Taloan, 20.09.)
+// Schnappschuss der Abbilder (Taloan, 21.09.: bei Millionen Einträgen ist das Anwenden der Start): Stand #n als Datei, der Start liest nur den Rest;
+// JOURNALI_SNAPSHOT=off schaltet ihn ab. Geschrieben nach dem Start (im Hintergrund) und beim Beenden.
+var snapshotPath = string.Equals(builder.Configuration["JOURNALI_SNAPSHOT"], "off", StringComparison.OrdinalIgnoreCase)
+    ? null : Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json");
+var snapshotAt = snapshotPath is null ? 0 : catalog.LoadSnapshot(snapshotPath);
+Console.WriteLine($"journali: Journal wird gelesen …{(snapshotAt > 0 ? $" (Schnappschuss bis #{snapshotAt})" : "")}{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (Spiegel bis #{cj.CachedHead}, Rest aus der Datenbank)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist (Taloan, 20.09.)
 var sw0 = System.Diagnostics.Stopwatch.StartNew();
 // Fortschritt etwa je Sekunde (Taloan, 21.09.: „damit man sieht, ob was vorangeht“) — Ziel ist der Kopf des Journals
 var head0 = journal.Head; var mirror0 = journal is CachedJournal c0 ? c0.CachedHead : 0; var lastTick = 0L;
@@ -51,6 +56,12 @@ void Progress(int n, long number, bool final)
 }
 var rebuilt = catalog.Rebuild(out var timing, (n, number) => Progress(n, number, false));
 if (lastTick > 0) Progress(rebuilt, journal.Head, true);   // der Allerletzte bei 100 % (Taloan, 21.09.)
+void WriteSnapshot(string why)
+{
+    if (snapshotPath is null) return;
+    try { var sw = System.Diagnostics.Stopwatch.StartNew(); var n = catalog.SaveSnapshot(snapshotPath); if (n > 0) Console.WriteLine($"journali: Schnappschuss bis #{n} geschrieben ({sw.ElapsedMilliseconds} ms, {why})"); }
+    catch (Exception e) { Console.WriteLine($"journali: Schnappschuss nicht geschrieben — {e.Message}"); }
+}
 Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht (Taloan, 21.09.)
 var seeded = catalog.SeedMissing();
 
@@ -199,6 +210,11 @@ app.UseDefaultFiles();
 app.UseStaticFiles(staticOptions);
 app.MapFallbackToFile("index.html", staticOptions);
 
+if (snapshotPath is not null)
+{
+    if (rebuilt > 0) _ = Task.Run(() => WriteSnapshot("nach dem Start"));   // im Hintergrund — der Start wartet nicht
+    app.Lifetime.ApplicationStopping.Register(() => WriteSnapshot("beim Beenden"));
+}
 app.Run();
 return 0;
 

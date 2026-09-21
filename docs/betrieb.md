@@ -225,8 +225,14 @@ Zeit hingeht: `61242 Einträge in 31556 ms — lesen 30326 ms · anwenden Plugin
 Rest aus der Datenbank; jeder gelesene oder geschriebene Eintrag wird angehängt. Der Spiegel ist ein Cache, keine
 Wahrheit: beim Start wird sein letzter Eintrag gegen die Datenbank geprüft (Nummer, Strom, Typ, Zeit, Nutzdaten) und
 die Nummernfolge auf Lücken — bei jeder Abweichung wird die Datei verworfen und alles aus der Datenbank gelesen.
-Datei löschen ist jederzeit erlaubt. `JOURNALI_JOURNAL_CACHE=off` schaltet den Spiegel ab. Bei Millionen Einträgen
-bleibt das Anwenden (heute ~18 µs je Eintrag) — dann kommen Schnappschüsse der Abbilder (offen).
+Datei löschen ist jederzeit erlaubt. `JOURNALI_JOURNAL_CACHE=off` schaltet den Spiegel ab.
+
+**Schnappschuss der Abbilder** (Taloan, 21.09.2026 — gegen das Anwenden, ~18 µs je Eintrag): `snapshot-<host>-<port>-<db>.json`
+im Datenverzeichnis, der Stand aller Abbilder bei #n (`Snapshot.cs` im Kern: System.Text.Json über die Abbild-Klassen samt
+privater Felder). Beim Start werden die Abbilder daraus geladen und nur der Rest ab #n angewandt; geschrieben wird er im
+Hintergrund nach dem Start und beim Beenden. Auch er ist ein Cache: er trägt den Bau-Stempel des Kerns (neue Fassung =
+alter Schnappschuss fällt) und der Eintrag #n wird gegen das Journal geprüft; bei Abweichung wird die Datei gelöscht.
+`JOURNALI_SNAPSHOT=off` schaltet ihn ab. Startzeile: „Schnappschuss bis #n“.
 
 ## Jobs (fest eingebaut: ⏱ Jobs)
 

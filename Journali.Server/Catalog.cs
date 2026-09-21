@@ -13,17 +13,39 @@ namespace Journali.Server;
 public sealed class Catalog
 {
     private readonly IJournal _journal;
-    private readonly ModelCatalog _model = new();
-    private readonly Tree _tree = new();
-    private readonly Relations _relations = new();
-    private readonly Media _media = new();
-    private readonly Plugins _plugins = new();
-    private readonly Jobs _jobs = new();
-    private readonly Versions _versions = new();
-    private readonly Users _users = new();
+    // nicht readonly: ein Schnappschuss tauscht die Instanzen beim Start ein (LoadSnapshot), bevor jemand sie hält
+    private ModelCatalog _model = new();
+    private Tree _tree = new();
+    private Relations _relations = new();
+    private Media _media = new();
+    private Plugins _plugins = new();
+    private Jobs _jobs = new();
+    private Versions _versions = new();
+    private Users _users = new();
     private readonly object _gate = new();
 
     public Catalog(IJournal journal) => _journal = journal;
+
+    private IReadOnlyList<(string Name, IProjection Projection)> Parts => [("Model", _model), ("Tree", _tree), ("Relations", _relations), ("Media", _media), ("Plugins", _plugins), ("Jobs", _jobs), ("Versions", _versions), ("Users", _users)];
+
+    /// <summary>
+    /// Schnappschuss der Abbilder (Taloan, 21.09.2026): vor dem Rebuild laden — dann liest der Start nur den Rest ab #n.
+    /// Liefert #n oder 0 (keine Datei, anderer Bau, Journal passt nicht — Datei ist dann weg).
+    /// </summary>
+    public long LoadSnapshot(string path)
+    {
+        lock (_gate)
+        {
+            var n = Snapshot.Load(path, _journal, Parts.Select(p => (p.Name, p.Projection.GetType())).ToList(), out var loaded);
+            if (n == 0) return 0;
+            _model = (ModelCatalog)loaded["Model"]; _tree = (Tree)loaded["Tree"]; _relations = (Relations)loaded["Relations"]; _media = (Media)loaded["Media"];
+            _plugins = (Plugins)loaded["Plugins"]; _jobs = (Jobs)loaded["Jobs"]; _versions = (Versions)loaded["Versions"]; _users = (Users)loaded["Users"];
+            return n;
+        }
+    }
+
+    /// <summary>Schnappschuss schreiben — unter der Sperre (kein halber Stand). Liefert #n oder 0.</summary>
+    public long SaveSnapshot(string path) { lock (_gate) return Snapshot.Save(path, _journal, Parts); }
 
     /// <summary>Abbilder aus dem Journal bauen. Liefert, wie viele Einträge es waren.</summary>
     public int Rebuild() => Rebuild(out _);
