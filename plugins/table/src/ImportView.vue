@@ -174,6 +174,8 @@ const blockers = computed(() => {
   return out
 })
 // Korrektur einer Zelle direkt in der Quelle; danach neu analysieren
+const changeTab = ref('update'); const openRow = ref(null)
+const attrLabel = key => { const a = attrs.value.find(x => x.key === key) ?? store.model?.attributes?.find(x => x.key === key); return a?.label?.de || key }
 function fixCell(inv, v) { source.value.rows[inv.row][inv.column] = v; planned.value = { ...planned.value, stale: true } }
 // Was das Attribut erwartet (Taloan, 21.09.: „warum ganze Zahl?“ — weil das Attribut so definiert ist; das steht jetzt dabei)
 const TYPE_DE = { text: 'Text', html: 'HTML', integer: 'ganze Zahl', decimal: 'Zahl', boolean: 'ja/nein', date: 'Datum', enum: 'Listenwert' }
@@ -399,6 +401,30 @@ onMounted(async () => {
             </tr>
           </tbody></table>
         </div>
+        <!-- Was passiert, je Zeile (Taloan, 21.09.): Reiter neu / geändert / unverändert, je Knoten die Werte alt → neu -->
+        <div v-if="planned.stats.changes?.length" class="section" style="margin-top:8px;padding:0">
+          <h2 class="step-band" style="margin:0 0 4px;gap:4px">Vorschau
+            <span class="tabs"><button :class="{ on: changeTab === 'create' }" @click="changeTab = 'create'" class="pos">+{{ planned.stats.create }} neu</button><button :class="{ on: changeTab === 'update' }" @click="changeTab = 'update'" class="warn">{{ planned.stats.update }} geändert</button><button :class="{ on: changeTab === 'unchanged' }" @click="changeTab = 'unchanged'" class="muted">{{ planned.stats.unchanged }} unverändert</button></span></h2>
+          <table class="grid" style="width:100%">
+            <tbody>
+              <template v-for="c in planned.stats.changes.filter(c => c.kind === changeTab).slice(0, 300)" :key="c.row">
+                <tr class="row" style="cursor:pointer" @click="openRow = openRow === c.row ? null : c.row">
+                  <td style="width:20px" class="muted">{{ c.values.length && changeTab !== 'unchanged' ? (openRow === c.row ? '▾' : '▸') : '' }}</td>
+                  <td class="mono muted" style="width:50px">{{ c.row + 2 }}</td>
+                  <td><router-link v-if="c.node" :to="`/tree/${c.node}`" @click.stop>{{ icon(c.role) }} {{ c.label }}</router-link><span v-else>+ {{ c.label }}</span></td>
+                  <td class="muted" style="text-align:right;white-space:nowrap">{{ c.values.length ? c.values.length + ' Werte' : '' }}</td>
+                </tr>
+                <tr v-if="openRow === c.row && c.values.length"><td></td><td colspan="3">
+                  <table class="grid diff"><tbody>
+                    <tr v-for="d in c.values" :key="d.attribute + '|' + d.locale"><td class="attr muted">{{ attrLabel(d.attribute) }}<span v-if="d.locale" class="muted"> · {{ d.locale }}</span></td>
+                      <td class="old" :title="d.from ?? ''">{{ d.from == null ? '—' : String(d.from).slice(0, 80) }}</td><td class="muted" style="width:20px">→</td><td class="new" :title="d.to ?? ''">{{ d.to == null ? '— (leeren)' : String(d.to).slice(0, 80) }}</td></tr>
+                  </tbody></table>
+                </td></tr>
+              </template>
+              <tr v-if="!planned.stats.changes.some(c => c.kind === changeTab)"><td colspan="4" class="muted" style="padding:8px">nichts</td></tr>
+            </tbody>
+          </table>
+        </div>
         <details style="margin-top:8px"><summary class="muted">Befehle (erste 200)</summary>
           <pre class="out">{{ planned.commands.slice(0, 200).map(c => `${c.op} ${JSON.stringify(c.args)}`).join('\n') }}</pre></details>
       </div>
@@ -429,6 +455,12 @@ table.cols tr.sample td { white-space: nowrap; font-size: 12px; }
 .tstep { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
 .tstep select, .tstep input[type=text] { font-size: 12px; }
 .fld { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; }
+/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */
+.tabs button { border: 1px solid var(--line); background: none; padding: 1px 8px; font-size: 11px; font-weight: 600; }
+.tabs button.on { background: var(--accent-soft); border-color: var(--accent); }
+table.diff td { font-size: 12px; white-space: normal; }
+table.diff td.old { color: var(--muted); text-decoration: line-through; max-width: 300px; }
+table.diff td.new { color: var(--pos); max-width: 300px; }
 /* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */
 .x.on { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px; }
 .section { padding: 8px; border-bottom: 1px solid var(--line); }

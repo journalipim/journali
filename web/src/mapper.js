@@ -219,7 +219,8 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
 
   // Zeilennummern in Meldungen sind Excel-Zeilen (Kopfzeile = 1)
   const combos = new Map()   // je Produkt die Achsen-Kombinationen (Bestand + Datei)
-  const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [], invalid: [], missingGroup: requiredNew, newListValues: {} }
+  // changes: je Zeile, was passiert — zum Anschauen vor dem Schreiben (Taloan, 21.09.: „die geänderten und die neuen anschauen“)
+  const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [], invalid: [], missingGroup: requiredNew, newListValues: {}, changes: [] }
   // Listenwerte, die es noch nicht gibt (Taloan, 20.09.: „Werte sollten zugefügt werden — genau dazu ist die Excel-Bearbeitung da“): der Plan
   // merkt sie je Liste (Schlüssel = normierter Text, Bezeichnung = der Text), das Schreiben legt sie vor dem Stapel an
   const conv = (raw, def) => {
@@ -271,6 +272,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     const nodeRef = node ? node.id : '@' + ref
     const cur = node ? existing?.get(node.id) ?? null : null
     let changed = 0
+    const diffs = []
     mapping.forEach((m, ci) => {
       if (m.target !== 'attr' && m.target !== 'new') return
       const def = defOf(m); if (!def) return
@@ -285,10 +287,12 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       if (v == null && cur && !(k in cur)) return
       if (cur && v == null && !cur[k + '#own']) return   // geerbt und Quelle leer: nicht löschen
       commands.push({ op: 'attribute.set', args: { node: nodeRef, attribute: def.key, locale: loc, value: v ?? '' } })
+      diffs.push({ attribute: def.key, locale: loc, from: cur ? cur[k] ?? null : null, to: v ?? null })
       changed++
     })
     stats.values += changed
     if (node) { if (changed) stats.update++; else stats.unchanged++ }
+    stats.changes.push({ row: ri, kind: node ? (changed ? 'update' : 'unchanged') : 'create', node: node?.id ?? null, label: node ? node.label : (sku || ext || id || `Zeile ${ri + 2}`), role: node?.role ?? null, values: diffs })
   })
   // Die Gruppen der neuen Attribute an die Zielknoten hängen, wo sie nicht schon gelten
   const groupsNeeded = [...new Set([...newAttrs.values()].map(a => a.group).filter(Boolean))]
