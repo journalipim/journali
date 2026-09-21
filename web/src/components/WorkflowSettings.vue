@@ -234,9 +234,9 @@ onMounted(load)
         <span class="muted" style="font-size:11px">(nichts angehakt = alle)</span>
       </div>
       <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">
-        <button @click="addStateAt" title="Klick legt einen Zustand an">+ Zustand</button>
-        <button @click="forceLayout" title="Klick ordnet die Zustände automatisch an (Andockpunkte bleiben)">⟲ anordnen</button>
-        <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" title="Klick löscht Markiertes (auch Entf)">✕</button>
+        <button @click="addStateAt" title="Zustand anlegen">+ Zustand</button>
+        <button @click="forceLayout" title="Zustände automatisch anordnen (Andockpunkte bleiben)">⟲ anordnen</button>
+        <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" title="Markiertes löschen (auch Entf)">✕</button>
         <span class="grow" />
         <span class="x" style="cursor:help" title="Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht">?</span>
       </div>
