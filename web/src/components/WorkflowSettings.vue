@@ -86,7 +86,8 @@ const sketch = computed(() => {
     const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1
     const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len, bend = Math.min(40, 12 + len * 0.12)   // Bogen nach links der Richtung: Hin und Zurück trennen sich
     const cx = mx + nx * bend, cy = my + ny * bend
-    return { t, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: mx + nx * bend * 0.6, ly: my + ny * bend * 0.6 - 3 }
+    const off = bend + 10
+    return { t, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: mx + nx * off, ly: my + ny * off + 4, anchor: nx > 0.3 ? 'start' : nx < -0.3 ? 'end' : 'middle' }
   })
   const width = Math.max(600, ...pos.map(p => p.x + W + 60)), height = Math.max(240, ...pos.map(p => p.y + H + 60))
   return { W, H, pos, width, height, arrows }
@@ -115,7 +116,7 @@ onMounted(load)
       <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none`" font-size="11" font-family="system-ui"
         @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
         <defs><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
-        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" text-anchor="middle" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'">{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
+        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'">{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
         <line v-if="drag?.kind === 'link'" :x1="drag.x" :y1="drag.y" :x2="drag.tx" :y2="drag.ty" stroke="var(--accent)" stroke-dasharray="4 3" />
         <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : 'cursor:grab'" @mousedown.prevent.stop="stateDown(i, $event)" @mouseup.stop="stateUp(i); canvasUp()" @dblclick="cur.start = s.key; touch()">
           <rect :x="sketch.pos[i].x" :y="sketch.pos[i].y" :width="W" :height="H" rx="6" :fill="selState === i ? 'var(--accent-soft)' : 'var(--pane)'" :stroke="color(s.color)" :stroke-width="s.key === cur.start ? 2.5 : 1.5" />
