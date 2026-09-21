@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.section[data-v-39289a9c] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-39289a9c] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-39289a9c] { font-weight: 400;\n}\n.drop.over[data-v-39289a9c] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-39289a9c] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-39289a9c] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-39289a9c] { opacity: .5;\n}\n.samples[data-v-39289a9c] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-39289a9c] { font-size: 13px;\n}\n.out[data-v-39289a9c] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-39289a9c] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-39289a9c] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-39289a9c]:hover { background: var(--hover);\n}\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.section[data-v-445c3753] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-445c3753] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-445c3753] { font-weight: 400;\n}\n.drop.over[data-v-445c3753] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-445c3753] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-445c3753] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-445c3753] { opacity: .5;\n}\n.samples[data-v-445c3753] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-445c3753] { font-size: 13px;\n}\n.out[data-v-445c3753] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-445c3753] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-445c3753] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-445c3753]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -1398,16 +1398,16 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-39289a9c"]]);
-async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", say }) {
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-445c3753"]]);
+async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
   let cols = [], nodes = [];
   for (const l of locales) {
     say?.(`lese ${l} …`);
-    const t = await api2.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${role ? "&role=" + role : ""}`);
+    const t = await api2.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${channel ? "&channel=" + encodeURIComponent(channel) : ""}${role ? "&role=" + role : ""}`);
     cols = t.columns;
-    nodes = t.rows;
+    nodes = only ? t.rows.filter((r) => only.has(r.row.id)) : t.rows;
     byLocale.set(l, new Map(t.rows.map((r) => [r.row.id, r.values])));
   }
   const v = model.views.find((x) => x.key === viewKey);
@@ -1426,6 +1426,7 @@ async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey
     { key: "sku" },
     { key: "journali_label" },
     { key: "status" },
+    ...extra.map((x) => ({ key: x.key, of: x.of })),
     ...axes.map((a) => ({ key: "axis:" + a })),
     ...cols.flatMap((c) => c.perLocale ? locales.map((l) => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }])
   ];
@@ -1434,6 +1435,7 @@ async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey
       const x = byLocale.get(c.locale)?.get(r.row.id)?.[c.attr];
       return x == null || ownOnly && !x.own ? "" : x.value ?? "";
     }
+    if (c.of) return c.of(r.row.id) ?? "";
     if (c.key.startsWith("axis:")) return r.row.axisValues?.[c.key.slice(5)] ?? "";
     return c.key === "journali_label" ? r.row.label : c.key === "parent" ? r.row.parent ?? "" : r.row[c.key] ?? "";
   }));
