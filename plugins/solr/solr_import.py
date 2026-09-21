@@ -294,6 +294,7 @@ def complex_values(cdoc, skip):
         yield slug(raw), suffix, raw, v
 
 
+@each_root
 def cmd_relations(solr, args):
     """Kanten der Knoten eines Teilbaums: *_doc_rel als einfache Relation (Typ = Schlüssel), component mit den
     Werten aus complex_relation. Beide Enden müssen importiert sein (Kennung solr:<master_id>)."""
@@ -431,6 +432,26 @@ def cmd_list(solr, args):
     print(f"\n▣ {n['group']}  ▦ {n['product']}  ◆ {n['variant']}")
 
 
+def each_root(fn):
+    """--root mit Komma (Job aus dem Profil: die angehakten Wurzeln): je Wurzel ein Lauf, --skip mit Komma aufgeteilt."""
+    def run(solr, args):
+        import os
+        # Job: Parameter kommen auch als Umgebung JOURNALI_<PARAM> — skip (mit Komma) so, weil ein leerer --skip kein Argument sein darf
+        args.skip = [s for x in (args.skip or []) + [os.environ.get("JOURNALI_SKIP", "")] for s in x.split(",") if s]
+        if not getattr(args, "target", None):
+            args.target = None
+        roots = [r for r in (args.root or "").split(",") if r]
+        if not roots:
+            raise SystemExit("journali: --root fehlt (master_id der Wurzel; im Profil die angehakten Wurzeln).")
+        for r in roots:
+            if len(roots) > 1:
+                print(f"\n══ Wurzel {r}")
+            args.root = r
+            fn(solr, args)
+    return run
+
+
+@each_root
 def cmd_import(solr, args):
     j = Journali(args.journali, args.actor, args.dry_run)
     skip = DEFAULT_SKIP + (args.skip or [])
@@ -572,7 +593,7 @@ def main():
     l.add_argument("--variants", action="store_true", help="Varianten mit auflisten")
 
     i = sub.add_parser("import", help="Teilbaum nach journali (zweiter Lauf = Update)")
-    i.add_argument("--root", required=True, help="master_id der Solr-Wurzel, die importiert wird (samt allem darunter)")
+    i.add_argument("--root", default="", help="master_id der Solr-Wurzel, die importiert wird (samt allem darunter); mehrere mit Komma")
     i.add_argument("--target", default=None, help="journali-Gruppe, unter die die Wurzel kommt (leer = ganz oben)")
     i.add_argument("--dry-run", action="store_true", help="nur zählen, nichts schreiben")
     i.add_argument("--limit", type=int, default=0, help="höchstens N Produkte (zum Probieren)")
@@ -581,7 +602,7 @@ def main():
     i.add_argument("--verbose", action="store_true")
 
     r = sub.add_parser("relations", help="Kanten der Knoten eines Teilbaums (zweiter Lauf nach import; beide Enden müssen drin sein)")
-    r.add_argument("--root", required=True, help="master_id der Solr-Wurzel")
+    r.add_argument("--root", default="", help="master_id der Solr-Wurzel; mehrere mit Komma")
     r.add_argument("--dry-run", action="store_true")
     r.add_argument("--since", help="nur Dokumente mit changedOn ab diesem Zeitpunkt (ISO)")
     r.add_argument("--skip", action="append", help="Werte-Schlüssel an der Kante übergehen (Muster mit *)")

@@ -40,7 +40,8 @@ onMounted(() => { if (!tree.loaded) tree.load(); if (saved.base && saved.auto) c
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
 
 // Profile (ProfileBar): Quelle, Ziel, Auslassungen und die angehakten Wurzeln — im Journal unter plugin:solr
-const profileGet = () => ({ base: base.value, target: target.value, skip: skipText.value, checked: [...checked.value] })
+// root: die angehakten Wurzeln mit Komma — so heisst der Parameter des Jobs; der JobRunner füllt ihn aus dem Profil (Taloan, 21.09.: alles im Profil)
+const profileGet = () => ({ base: base.value, target: target.value, skip: skipText.value, checked: [...checked.value], root: [...checked.value].join(',') })
 async function profileSet(p) {
   if (!p) {   // „— Profil —“: alles leer, Quelle zu
     base.value = ''; target.value = ''; skipText.value = ''; connected.value = false; rows.value = []; checked.value = new Set(); plan.value = null; result.value = null; current.value = null; persist(); return

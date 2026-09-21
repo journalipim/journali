@@ -21,7 +21,7 @@
     "args": [
       "solr_import.py",
       "--solr",
-      "{solr}",
+      "{base}",
       "--journali",
       "{journali}",
       "--actor",
@@ -33,28 +33,43 @@
       "{target}",
       "{dry_run?--dry-run}"
     ],
+    "description": "Solr-Import mit gespeichertem Profil (⇩ Import → Solr → Profil: Kern, Ziel, angehakte Wurzeln, übergangene Schlüssel)",
     "params": [
       {
-        "key": "solr",
-        "label": "Solr-Kern (URL)",
-        "default": "",
-        "placeholder": "https://…/solr/<kern>"
+        "key": "profile",
+        "label": "Profil (⇩ Import → Solr → Profil speichern: Kern, Ziel, Wurzeln, übergangene Schlüssel)",
+        "type": "profile",
+        "default": ""
+      },
+      {
+        "key": "base",
+        "label": "Solr-Kern (URL; leer = wie im Profil)",
+        "type": "text",
+        "default": ""
       },
       {
         "key": "root",
-        "label": "master_id der Wurzel",
-        "default": "node_group_root"
+        "label": "master_id der Wurzel(n), mit Komma (leer = die im Profil angehakten)",
+        "type": "text",
+        "default": ""
       },
       {
         "key": "target",
-        "label": "journali-Gruppe (Id)",
+        "label": "Ziel (leer = wie im Profil)",
+        "type": "node",
+        "default": ""
+      },
+      {
+        "key": "skip",
+        "label": "Property-Schlüssel übergehen (Muster mit *, mit Komma; leer = wie im Profil)",
+        "type": "text",
         "default": ""
       },
       {
         "key": "dry_run",
-        "label": "Trockenlauf",
-        "type": "bool",
-        "default": true
+        "label": "Trockenlauf (nur zählen, nichts schreiben)",
+        "type": "boolean",
+        "default": "false"
       }
     ]
   }

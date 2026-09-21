@@ -252,7 +252,8 @@ Prozess einen Parameter `profile`, zeigt der Job-Dialog nur Profil, Dateien/Verz
 Texte und Geheimnisse stehen unter „Überschreiben (leer = wie im Profil)“. Der JobRunner liest `profile:<name>`
 (sonst `config:<name>`) aus den Plugin-Daten und füllt jeden Manifest-Parameter gleichen Namens, den der Job nicht
 selbst setzt — die Prozesse selbst bleiben, wie sie sind. Plugins mit eigener Ansicht pflegen ihre Profile dort
-(IXP, JSON-Import, Vorlagen-Export); Prozesse ohne Ansicht tragen `"profile": "generic"` und bekommen im Job-Dialog
+(IXP, JSON-Import, Solr, Vorlagen-Export — Solr: Kern, Ziel, angehakte Wurzeln als `root` mit Komma, übergangene
+Schlüssel); Prozesse ohne Ansicht tragen `"profile": "generic"` und bekommen im Job-Dialog
 ✎ — ein Formular aus ihren Parametern (Tabellen-Export, Backup, RAG, Datenblatt-Job, JSON-Export).
 Geheimnisse (Token) gehören nie ins Journal, also nicht ins Profil selbst — sie liegen **am Profil beim Server**:
 `PUT /api/plugins/{key}/secrets/{profil}` `{values:{token:…}}` (Recht Schreiben; `GET` nennt nur die Schlüssel) in
