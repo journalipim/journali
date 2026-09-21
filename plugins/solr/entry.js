@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-98cb307a] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-98cb307a]:hover { color: var(--neg);\n}\n.sources[data-v-98cb307a] { gap: 4px;\n}\n.form[data-v-98cb307a] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-98cb307a] { display: flex; gap: 4px;\n}\n.src .node[data-v-98cb307a] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-98cb307a] { background: var(--accent-soft);\n}\n.src .node.current[data-v-98cb307a], .src .node[data-v-98cb307a]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-98cb307a] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-98cb307a] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-98cb307a] { color: var(--muted);\n}\n.node.product .icon[data-v-98cb307a] { color: var(--accent);\n}\n.node.variant .icon[data-v-98cb307a] { color: var(--warn);\n}\n.label[data-v-98cb307a] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-98cb307a] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-98cb307a] { width: 100%;\n}\n.form-grid td[data-v-98cb307a] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-98cb307a]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-98cb307a] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-98cb307a] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-98cb307a] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-98cb307a] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-22253038] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-22253038]:hover { color: var(--neg);\n}\n.sources[data-v-22253038] { gap: 4px;\n}\n.form[data-v-22253038] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-22253038] { display: flex; gap: 4px;\n}\n.src .node[data-v-22253038] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-22253038] { background: var(--accent-soft);\n}\n.src .node.current[data-v-22253038], .src .node[data-v-22253038]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-22253038] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-22253038] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-22253038] { color: var(--muted);\n}\n.node.product .icon[data-v-22253038] { color: var(--accent);\n}\n.node.variant .icon[data-v-22253038] { color: var(--warn);\n}\n.label[data-v-22253038] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-22253038] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-22253038] { width: 100%;\n}\n.form-grid td[data-v-22253038] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-22253038]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-22253038] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-22253038] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-22253038] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-22253038] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\r\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -896,9 +896,11 @@ const _sfc_main = {
         };
         const send = async (cmds2) => {
           if (!cmds2.length) return;
-          const res = await api.post("/api/batch", { commands: cmds2 });
+          const res = await api.batchChunked(cmds2, { size: 2e3, continueOnError: true, maxErrorPercent: 20, label: "Import (Solr): schreiben" });
           written += res.results.length;
           batches++;
+          for (const e of res.errors.slice(0, 20)) say(`✗ übersprungen: ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)} — ${e.message}`);
+          if (res.errors.length > 20) say(`… und ${res.errors.length - 20} weitere übersprungen`);
           if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`);
           for (const r of res.results) if (r.ref) {
             for (const [k, v] of refOf) if (v === "@" + r.ref) refOf.set(k, r.node);
@@ -1786,7 +1788,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-98cb307a"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-22253038"]]);
 const entry = {
   views: [{ path: "import", topic: "import", label: "Solr", icon: "⇩", component: View }]
 };

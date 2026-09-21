@@ -283,8 +283,11 @@ async function run() {
     }
     const send = async cmds => {
       if (!cmds.length) return
-      const res = await api.post('/api/batch', { commands: cmds })
+      // fehlgeschlagene Befehle überspringt der Server (Taloan, 21.09.: doppelte eindeutige Werte — SKU, EAN) und meldet sie; der Rest wird geschrieben
+      const res = await api.batchChunked(cmds, { size: 2000, continueOnError: true, maxErrorPercent: 20, label: 'Import (Solr): schreiben' })
       written += res.results.length; batches++
+      for (const e of res.errors.slice(0, 20)) say(`✗ übersprungen: ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)} — ${e.message}`)
+      if (res.errors.length > 20) say(`… und ${res.errors.length - 20} weitere übersprungen`)
       if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`)
       // Nach dem Stapel sind die Verweise echte Knoten — für die nächsten Stapel auflösen.
       for (const r of res.results) if (r.ref) for (const [k, v] of refOf) if (v === '@' + r.ref) refOf.set(k, r.node)

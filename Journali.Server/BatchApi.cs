@@ -11,7 +11,10 @@ namespace Journali.Server;
 /// Befehle laufen der Reihe nach; ein neuer Knoten bekommt einen <c>ref</c>,
 /// spätere Befehle verweisen mit <c>@ref</c> darauf. Beim ersten Fehler
 /// hält der Stapel an; was davor geschrieben wurde, steht im Journal (append-only)
-/// und in der Antwort — der Aufrufer sieht, wie weit er kam.
+/// und in der Antwort — der Aufrufer sieht, wie weit er kam. Mit <c>?skipErrors=true</c>
+/// (Importe mit der Regel „überspringen“, Taloan 21.09.2026: eindeutige Werte) wird ein
+/// fehlgeschlagener Befehl übersprungen und in <c>skipped</c> genannt, der Rest läuft —
+/// jeder Befehl ist für sich ganz oder gar nicht, ein Fehler schreibt nichts.
 /// </summary>
 public static class BatchApi
 {
@@ -19,11 +22,11 @@ public static class BatchApi
     public sealed record Request(List<Command> Commands, string? Batch);
     public sealed record Result(int Index, string? Ref, string Node, long Number, string Type);
     public sealed record Failure(int Index, string Op, string Message);
-    public sealed record Response(string Batch, List<Result> Results, Failure? Error);
+    public sealed record Response(string Batch, List<Result> Results, Failure? Error, List<Failure>? Skipped = null);
 
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapPost("/batch", (Request r, HttpRequest req, Catalog c) =>
+        api.MapPost("/batch", (Request r, HttpRequest req, Catalog c, bool skipErrors = false) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (r.Commands is null || r.Commands.Count == 0) return Bad("commands fehlt.");
@@ -33,7 +36,7 @@ public static class BatchApi
             var response = c.With((model, tree, write) =>
             {
                 var refs = new Dictionary<string, string>();
-                var results = new List<Result>();
+                var results = new List<Result>(); var skipped = new List<Failure>();
                 var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, batch) };
 
                 for (var i = 0; i < r.Commands.Count; i++)
@@ -81,13 +84,17 @@ public static class BatchApi
                     catch (ArgumentException ex) { outcome = Outcome.Bad(ex.Message); }
 
                     if (outcome.Entry is not { } e)
-                        return new Response(batch, results, new Failure(i, cmd.Op, outcome.NotFound ? "Knoten gibt es nicht." : outcome.Error!));
+                    {
+                        var f = new Failure(i, cmd.Op, outcome.NotFound ? "Knoten gibt es nicht." : outcome.Error!);
+                        if (!skipErrors) return new Response(batch, results, f);
+                        skipped.Add(f); continue;   // überspringen — ein Befehl, der auf diesen ref zeigt, scheitert dann ebenfalls (und wird übersprungen)
+                    }
 
                     // Ein neuer Knoten oder eine neue Zeile bekommt den ref; bei Zeilen zeigt er auf die Zeilenkennung.
                     if (Blank(cmd.Ref) is { } key) refs[key] = e.Type == Types.RowAdded ? Types.Deserialize<RowAdded>(e.Payload).Row : e.Stream;
                     results.Add(new Result(i, cmd.Ref, e.Stream, e.Number, e.Type));
                 }
-                return new Response(batch, results, null);
+                return new Response(batch, results, null, skipped.Count > 0 ? skipped : null);
             });
 
             return Results.Ok(response);

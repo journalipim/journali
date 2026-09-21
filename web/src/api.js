@@ -31,7 +31,8 @@ export const api = {
   // Ids ersetzt — der Server kennt Refs nur innerhalb eines Aufrufs. Liefert dieselbe Form wie ein einzelner Stapel.
   // Solange ein Stapel läuft, warnt der Browser vor dem Schliessen (beforeunload); was gesendet ist, schreibt der Server zu Ende.
   // continueOnError: der fehlgeschlagene Befehl wird übersprungen (errors[] sammelt sie), der Rest wird geschrieben —
-  // sonst verliert ein Import wegen EINES Fehlers alles danach (Taloan, 18.09.: 7 von 11 Gruppen fehlten).
+  // sonst verliert ein Import wegen EINES Fehlers alles danach (Taloan, 18.09.: 7 von 11 Gruppen fehlten). Das Überspringen
+  // macht der Server (?skipErrors=true, Taloan 21.09.: eindeutige Werte) — ein Aufruf je Happen, nicht eine Runde je Fehler.
   // maxErrorPercent (Regel im Import-Profil): scheitern mehr als so viel Prozent der bisher gesendeten Befehle (ab 5 Fehlern), wird abgebrochen
   batchChunked: async (commands, { batch = null, size = 500, onProgress = null, label = 'schreibe', continueOnError = false, maxErrorPercent = 0 } = {}) => {
     const refs = new Map()
@@ -46,9 +47,11 @@ export const api = {
       while (i < commands.length) {
         const end = Math.min(i + size, commands.length)
         const chunk = commands.slice(i, end).map(sub)
-        const res = await request('POST', '/api/batch', { commands: chunk, batch: batchId })
+        const res = await request('POST', '/api/batch' + (continueOnError ? '?skipErrors=true' : ''), { commands: chunk, batch: batchId })
         batchId = res.batch
         for (const r of res.results) { results.push({ ...r, index: r.index + i }); if (r.ref) refs.set(r.ref, r.node) }
+        for (const s of res.skipped ?? []) errors.push({ ...s, index: s.index + i, command: commands[s.index + i] })
+        if (!res.error && maxErrorPercent > 0 && errors.length >= 5 && errors.length * 100 / Math.max(1, end) > maxErrorPercent) { const last = errors[errors.length - 1]; error = { ...last, message: `Fehleranteil über ${maxErrorPercent} % (${errors.length} von ${end}) — abgebrochen: ${last.message}` }; break }
         if (res.error) {
           const at = i + res.error.index
           const e = { ...res.error, index: at, command: commands[at] }

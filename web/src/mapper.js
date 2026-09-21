@@ -226,6 +226,16 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const keysOf = row => { const o = {}; for (const i of keyCols) { const v = String(cell(row, i) ?? '').trim(); if (v) o[mapping[i].attribute] = v } return o }
   const keyText = row => Object.values(keysOf(row))[0] ?? ''
   const findKey = row => { for (const [k, v] of Object.entries(keysOf(row))) { const hit = byKey.get(k + '\u0001' + v); if (hit) return { node: hit, k, v } } return null }
+  // Eindeutig (Taloan, 21.09.: „Import-Plugins müssen auf Eindeutigkeit prüfen“): ein Wert eines eindeutigen Attributs darf weder einem anderen
+  // Knoten im Bestand gehören noch zweimal in der Datei stehen — der Server lehnt es ohnehin ab, hier steht es schon in der Vorschau
+  const seenUnique = new Map()   // „attribut\u0001wert“ → Zeile, die ihn zuerst hatte
+  const uniqueBad = (def, v, node, ri) => {
+    if (!def.unique || v == null || v === '') return null
+    const k = def.key + '\u0001' + String(v).trim()
+    const other = byKey.get(k); if (other && other.id !== node?.id) return `${def.key} ${v} gehört schon zu „${other.label}“ (${other.id}) — eindeutig`
+    if (seenUnique.has(k)) return `${def.key} ${v} steht schon in Zeile ${seenUnique.get(k) + 2} — eindeutig`
+    seenUnique.set(k, ri); return null
+  }
   const attrs = new Map((model.attributes ?? []).map(a => [a.key, a]))
   // neue Attribute: einmal je newKey (+ Sprache macht nur die Achse)
   const newAttrs = new Map()
@@ -329,7 +339,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       const def = defOf(m); if (!def) return
       if (node && node.role === 'variant' && (tree.byId.get(node.parent)?.axes ?? []).includes(def.key)) return   // Achsenwert ist fest
       const v = conv(cell(row, ci), def)
-      const bad = check(v, def)
+      const bad = check(v, def) ?? uniqueBad(def, v, node, ri)
       if (bad) { stats.invalid.push({ row: ri, column: ci, key: def.key, value: cell(row, ci), message: bad }); return }
       const loc = def.perLocale ? m.locale : null
       const k = `${def.key}|${loc ?? ''}`

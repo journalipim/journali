@@ -83,3 +83,20 @@ test('jedes eindeutige Attribut findet den Knoten — auch matnr statt sku, und 
   const p = plan({ columns, rows, mapping: m, model: m2, tree, target: byId.get('p-1'), role: 'variant', existing: new Map([['v-1', { 'name|de': 'alt', 'name|de#own': true, 'matnr|': '100', 'matnr|#own': true }]]) })
   assert.equal(p.stats.update, 1); assert.equal(p.stats.create, 1)   // 100 gefunden über matnr, 200 neu; ean (nicht eindeutig) findet nichts
 })
+
+test('Vorschau prüft Eindeutigkeit: Wert eines anderen Knotens und doppelt in der Datei sind ungültige Zellen (Taloan, 21.09.)', async () => {
+  const { plan } = await import('../src/mapper.js')
+  const columns = ['journali_id_g-1', 'sku', 'name_de']
+  const rows = [['v-1', '053797', 'ok — eigener Wert'], ['v-2', '053797', 'fremd — gehört v-1'], ['', 'NEU', 'neu'], ['', 'NEU', 'doppelt in der Datei']]
+  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] },
+    { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', keys: { sku: '053797' }, axisValues: {} }, { id: 'v-2', role: 'variant', parent: 'p-1', label: 'V2', axisValues: {} }]
+  const byId = new Map(treeRows.map(r => [r.id, r]))
+  const tree = { rows: treeRows, byId, ancestors: id => { const out = []; for (let p = byId.get(id)?.parent; p; p = byId.get(p)?.parent) out.unshift(byId.get(p)); return out } }
+  const m = suggest(columns, rows, model)
+  const p = plan({ columns, rows, mapping: m, model, tree, target: byId.get('p-1'), role: 'variant', existing: new Map() })
+  const inv = p.stats.invalid.map(x => [x.row, x.message])
+  assert.equal(inv.length, 2)
+  assert.match(inv.find(x => x[0] === 1)[1], /gehört schon zu „V1“/)
+  assert.match(inv.find(x => x[0] === 3)[1], /steht schon in Zeile 4/)
+  assert.ok(!p.commands.some(c => c.op === 'attribute.set' && c.args.node === 'v-2' && c.args.attribute === 'sku'), 'der fremde Wert wird nicht geschrieben')
+})
