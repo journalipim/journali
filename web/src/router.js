@@ -29,6 +29,7 @@ export const router = createRouter({
     { path: '/export', component: HubView, props: { topic: 'export' } },
     { path: '/datasheet', component: HubView, props: { topic: 'datasheet' } },
     { path: '/analysis', component: HubView, props: { topic: 'analysis' } },
+    { path: '/translate', component: HubView, props: { topic: 'translate' } },
     { path: '/tools', component: HubView, props: { topic: 'tools' } },
     { path: '/jobs', component: HubView, props: { topic: 'jobs' } },
     // alte Pfade (bis 19.09.: fest eingebaut) → Basis-Plugins, Abfrage bleibt (?node=, ?new=, ?plugin=)

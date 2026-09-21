@@ -11,6 +11,7 @@ export const TOPICS = [
   { key: 'export', to: '/export', icon: '⇪', label: 'Export' },
   { key: 'datasheet', to: '/datasheet', icon: '▤', label: 'Datenblatt' },
   { key: 'analysis', to: '/analysis', icon: '✓', label: 'Datenanalyse' },
+  { key: 'translate', to: '/translate', icon: '⇄', label: 'Übersetzung' },   // Übersetzungsmanagement (Taloan, 21.09.: „haben wir noch gar nicht“)
   { key: 'tools', to: '/tools', icon: '⌁', label: 'Werkzeuge' },
   { key: 'jobs', to: '/jobs', icon: '⏱', label: 'Jobs' },
 ]

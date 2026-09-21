@@ -1,0 +1,98 @@
+{
+  "key": "xliff",
+  "version": "1.0.0",
+  "label": {
+    "de": "Übersetzung (XLIFF)",
+    "en": "Translation (XLIFF)"
+  },
+  "description": {
+    "de": "Übersetzungsmanagement: je Sprachrichtung die Einheiten (Knoten × Textattribut × Kanal) — fehlend, veraltet (Quelle seither geändert), fertig; Ziele direkt eintragen, mit der KI vorübersetzen, XLIFF 2.0 für Agentur und CAT-Werkzeug exportieren und zurücklesen (nur bei unveränderter Quelle). Als Job: Export in das Fach out/, Import aus in/.",
+    "en": "Translation management: units per language pair (node × text attribute × channel) — missing, stale, done; edit targets, AI pre-translation, XLIFF 2.0 export/import for agencies and CAT tools. As a job via the tasker trays."
+  },
+  "kind": "tool",
+  "runs": "browser",
+  "entry": "entry.js",
+  "requires": [
+    "tasker"
+  ],
+  "autoInstall": true,
+  "processes": [
+    {
+      "key": "export",
+      "label": "XLIFF-Export",
+      "command": "node",
+      "args": [
+        "job.mjs",
+        "{journali}",
+        "{actor}",
+        "export",
+        "{profile}",
+        "{dir}"
+      ],
+      "description": "Offene Einheiten (fehlend, veraltet) der Sprachrichtung aus dem Profil als XLIFF 2.0 in ein Verzeichnis — mit Fächern: out/, latest für die Agentur",
+      "files": {
+        "out": {
+          "many": true,
+          "param": "dir"
+        }
+      },
+      "params": [
+        {
+          "key": "profile",
+          "label": "Profil (⇄ Übersetzung → 💾: Sprachen, Kanal, Umfang, Attribute, Teilbaum)",
+          "type": "profile",
+          "default": ""
+        },
+        {
+          "key": "dir",
+          "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
+          "type": "dir",
+          "default": ""
+        }
+      ]
+    },
+    {
+      "key": "import",
+      "label": "XLIFF-Import",
+      "command": "node",
+      "args": [
+        "job.mjs",
+        "{journali}",
+        "{actor}",
+        "import",
+        "{profile}",
+        "{source}",
+        "{force}"
+      ],
+      "description": "Übersetzte XLIFF-Dateien zurücklesen — geschrieben wird nur, wo die Quelle seit dem Export unverändert ist; mit Fächern: die Agentur legt in in/ ab",
+      "files": {
+        "in": {
+          "pattern": "*.xlf;*.xliff",
+          "mode": "all",
+          "order": "name",
+          "param": "source"
+        }
+      },
+      "params": [
+        {
+          "key": "profile",
+          "label": "Profil (Zielsprache aus dem Profil, sonst aus der Datei)",
+          "type": "profile",
+          "default": ""
+        },
+        {
+          "key": "source",
+          "label": "Quelle: XLIFF-Datei oder Verzeichnis — leer = Eingang in/ des Jobs (Fächer)",
+          "type": "path",
+          "default": ""
+        },
+        {
+          "key": "force",
+          "label": "auch schreiben, wenn sich die Quelle seit dem Export geändert hat",
+          "type": "boolean",
+          "default": "false"
+        }
+      ]
+    }
+  ]
+}

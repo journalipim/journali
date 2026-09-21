@@ -131,6 +131,7 @@ TreeApi.Map(api);
 RelationApi.Map(api);
 MediaApi.Map(api);
 DeriveApi.Map(api);   // Vorschau-Presets und Ableitungen (Plugin derive rechnet)
+TranslateApi.Map(api);   // Übersetzungsmanagement: Einheiten je Sprachrichtung, Rückweg mit Quellprüfung (Plugin xliff)
 VersionApi.Map(api, pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("versions"));   // Versionen (Taloan, 19.09.)
 PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);

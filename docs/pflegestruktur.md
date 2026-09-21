@@ -588,6 +588,20 @@ Entscheidungen von Taloan: ein Workflow je Familie oder einer für alle? Zustän
 je Rolle? Fristen je Zustand (Erinnerung, Eskalation) — jetzt oder später? Gilt der Workflow auch für Rubriken der
 Publikation (Freigabe eines Kanalbaums)?
 
+## 28. Übersetzungsmanagement — gebaut (Taloan, 21.09.2026, Blick in OpenDXP: „haben wir noch gar nicht“)
+
+Die Zelle kannte die Zustände schon (◌ nicht übersetzt, ⟳ Master neuer); jetzt gibt es den Prozess darum: **Einheiten**
+je Sprachrichtung — Knoten × sprachabhängiges Textattribut × Kanal × Zeile mit eigenem Quelltext — und ihr Zustand
+`missing` / `stale` (Quelle seit dem Ziel geändert, nach `SetAt`) / `done`; vererbte Werte gehören dem Vorfahren.
+`TranslateApi.cs`: `GET /api/translate/units` (root, from, to, channel, attributes, scope), `GET /api/translate/status`
+(je Zielsprache fehlend/veraltet/fertig), `POST /api/translate/import` (Zieltexte; **nur, wenn der Hash der Quelle noch
+stimmt** — sonst übergangen, `force` schreibt trotzdem), `GET/POST /api/translate/xliff` (XLIFF 2.0 schreiben; 2.0 und 1.2
+lesen — der Hash steht als Notiz in der Datei). Plugin `xliff` (Thema ⇄ Übersetzung): 1 Sprachen/Kanal/Umfang/Attribute
+· 2 Teilbaum · 3 Einheiten als Tabelle, Ziel direkt eintragen, ✦ KI vorübersetzen (nur Vorschlag, geschrieben mit 💾),
+⇪ XLIFF für Agentur/CAT · 4 XLIFF zurück mit Plan. Als Job über die Fächer: Export nach out/ (latest für die Agentur),
+Import aus in/ (Duplikat nach Hash). Tests `TranslateTests`. Offen: Übersetzungsgedächtnis (Wörterbuch 9),
+Übersetzungs-Workflow (27: „zur Übersetzung“ als Zustand), DeepL als Anbieter neben der KI.
+
 ## Messlatte: OpenDXP
 
 Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."
