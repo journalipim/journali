@@ -19,6 +19,14 @@ test('Wahrheitswert, Datum, Ersetzen, Aufteilen, Verbinden', () => {
   assert.equal(apply([{ op: 'boolean' }], 'T'), 'true'); assert.equal(apply([{ op: 'boolean' }], 'F'), 'false')   // T/F (Taloan)
   assert.equal(apply([{ op: 'date' }], '21.09.2026'), '2026-09-21')
   assert.equal(apply([{ op: 'date', format: 'MM/dd/yyyy' }], '09/21/2026'), '2026-09-21')
+  assert.equal(apply([{ op: 'date' }], '21.09.26'), '2026-09-21')                      // zweistelliges Jahr
+  assert.equal(apply([{ op: 'date' }], '2026-09-21T10:30:00Z'), '2026-09-21')          // ISO mit Uhrzeit, raten
+  assert.equal(apply([{ op: 'date' }], '1790000000'), '2026-09-21')                    // Unix-Sekunden (2026-09-21 14:13 UTC)
+  assert.equal(apply([{ op: 'date', format: 'unixms' }], '1790000000000'), '2026-09-21')
+  assert.equal(apply([{ op: 'date', format: 'excel' }], '46286'), '2026-09-21')        // Excel-Zahl
+  assert.equal(apply([{ op: 'date' }], '46286'), '2026-09-21')                         // raten: Excel
+  assert.equal(apply([{ op: 'date', format: 'dd/MM/yyyy' }], '21/09/2026'), '2026-09-21')
+  assert.equal(apply([{ op: 'date' }], 'kein Datum'), 'kein Datum')
   assert.equal(apply([{ op: 'replace', find: ' WLAN', with: '' }], 'WLAN 2,4 GHz, WLAN 5 GHz'), 'WLAN 2,4 GHz, 5 GHz')
   assert.equal(apply([{ op: 'replace', find: String.raw`\s*GHz`, with: '', regex: true }], 'WLAN 2,4 GHz, WLAN 5 GHz'), 'WLAN 2,4, WLAN 5')
   assert.equal(apply([{ op: 'split', sep: ',', index: 0 }, { op: 'trim' }], 'iOS, Android'), 'iOS')
