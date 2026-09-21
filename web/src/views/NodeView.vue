@@ -756,7 +756,7 @@ function cellMenu(e, def, col, block) {
               <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
               <span v-if="def.multiple" class="muted" title="vermehrbar: mehrere Werte, Liste in der Zelle">≣</span>
               <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" title="Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig">⌖</span>
-              <span v-if="def.inheritable" class="muted" title="vererbbar: gilt nach unten">↓</span>
+              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'vererbbar — hier eigene Werte; Klick löscht sie, es gilt wieder der geerbte' : 'vererbbar: gilt nach unten'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
               <span v-if="def.required" class="warn" title="Pflicht">●</span>
               <span v-if="def.hereLocked" class="warn" :title="`nicht an ${roleLabel[node.role]} — verwendbar an: ${(def.levels ?? []).map(r => roleLabel[r]).join(', ')}`">⌀</span>
               <span v-else-if="def.whenLocked" class="warn" :title="`gilt nur bei ${store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute })} = ${def.when.values.slice(0, 6).join(', ')}${def.when.values.length > 6 ? ' …' : ''}`">⌀</span>
