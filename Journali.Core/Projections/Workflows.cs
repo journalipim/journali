@@ -51,7 +51,18 @@ public sealed class Workflows : IProjection
     /// <summary>Zustände eines Knotens (nur, was je gesetzt wurde — der Startzustand steht nirgends).</summary>
     public IReadOnlyDictionary<string, NodeWorkflow> Of(string nodeId) => _nodes.TryGetValue(nodeId, out var d) ? d : new Dictionary<string, NodeWorkflow>();
     /// <summary>Der wirksame Zustand eines Knotens in einem Workflow: gesetzt oder Start.</summary>
-    public string StateOf(string nodeId, WorkflowDef wf) => _nodes.TryGetValue(nodeId, out var d) && d.TryGetValue(wf.Key, out var s) && wf.State(s.State) is not null ? s.State : wf.Start;
+    public string StateOf(string nodeId, WorkflowDef wf) => Own(nodeId, wf) ?? wf.Start;
+    /// <summary>Eigener Zustand am Knoten, null = nie gesetzt.</summary>
+    public string? Own(string nodeId, WorkflowDef wf) => _nodes.TryGetValue(nodeId, out var d) && d.TryGetValue(wf.Key, out var s) && wf.State(s.State) is not null ? s.State : null;
+    /// <summary>Wirksamer Zustand: eigener, sonst der des nächsten Vorfahren mit eigenem (Variante folgt dem Produkt, Produkt der Gruppe — Taloan, 21.09.2026),
+    /// sonst Start. Liefert auch, von wem er kommt (null = eigen oder Start).</summary>
+    public (string State, string? From) StateOf(string nodeId, WorkflowDef wf, Func<string, string?> parentOf)
+    {
+        if (Own(nodeId, wf) is { } own) return (own, null);
+        for (var p = parentOf(nodeId); p is not null; p = parentOf(p))
+            if (Own(p, wf) is { } s) return (s, p);
+        return (wf.Start, null);
+    }
     /// <summary>Alle Knoten, die in diesem Workflow in diesem Zustand gesetzt wurden (Start = auch die ohne Eintrag ist Sache des Aufrufers).</summary>
     public IEnumerable<(string Node, NodeWorkflow State)> InState(string workflow, string state) => _nodes.SelectMany(kv => kv.Value.Values.Where(s => s.Workflow == workflow && s.State == state).Select(s => (kv.Key, s)));
 

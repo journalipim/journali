@@ -102,6 +102,20 @@ public class ReleaseTests
     }
 
     [Fact]
+    public void Variante_ohne_eigenen_Schritt_folgt_dem_Produkt()
+    {
+        // Taloan, 21.09.: „alle Varianten zeigen Entwurf“, obwohl das Produkt freigegeben ist — ohne eigenen Eintrag gilt der Zustand des Vaters
+        var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
+        var wf = wfs.All["review"]; string? parentOf(string id) => w.Tree.Nodes.GetValueOrDefault(id)?.Parent;
+        Assert.Equal(("draft", null), wfs.StateOf(w.V1, wf, parentOf));
+        w.J.Append("t", w.P, Types.WorkflowStateSet, Types.Serialize(new WorkflowStateSet("review", "approved", "approve", null))); Projector.CatchUp(w.J, wfs);
+        Assert.Equal(("approved", w.P), wfs.StateOf(w.V1, wf, parentOf));           // vom Produkt
+        w.J.Append("t", w.V1, Types.WorkflowStateSet, Types.Serialize(new WorkflowStateSet("review", "rework", "reject", "x"))); Projector.CatchUp(w.J, wfs);
+        Assert.Equal(("rework", null), wfs.StateOf(w.V1, wf, parentOf));            // eigener Schritt schlägt den Vater
+        Assert.Equal(("approved", w.P), wfs.StateOf(w.V2, wf, parentOf));           // die andere folgt weiter
+    }
+
+    [Fact]
     public void Eskalation_nach_n_Tagen_duerfen_auch_andere_Rollen()
     {
         // Taloan, 21.09.: „alle Redakteure im Urlaub — jemand muss freigeben“: freigeben darf admin; nach 3 Tagen in Prüfung auch manager

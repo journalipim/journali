@@ -33,12 +33,12 @@ public static class WorkflowApi
             {
                 foreach (var n in tree.Nodes.Values.Where(wf.AppliesTo))
                 {
-                    var st = c.Workflows.StateOf(n.Id, wf);
+                    var (st, _) = c.Workflows.StateOf(n.Id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent);
                     if (state is not null && st != state) continue;
                     if (wf.State(st)?.Final == true && state is null) continue;
                     var nw = c.Workflows.Of(n.Id).GetValueOrDefault(wf.Key);
                     if (state is null && nw is null) continue;   // nie angefasst: keine Aufgabe (sonst wäre jeder Knoten eine)
-                    var allowed = Commands.Allowed(c.Workflows, wf, n.Id, role).ToList();
+                    var allowed = Commands.Allowed(c.Workflows, wf, n.Id, role, null, tree).ToList();
                     if (allowed.Count == 0) continue;
                     if (nw?.Assigned is { } a && user is not null && a != user && state is null) continue;   // jemand anderem zugewiesen
                     out_.Add((nw?.At, new { node = n.Id, label = NodeRow.LabelOf(tree, model, n), n.Role, workflow = wf.Key, workflowLabel = wf.Label, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, since = nw?.At, actor = nw?.Actor, note = nw?.Note, assigned = nw?.Assigned, roles = wf.Transitions.Where(t => t.From == st).SelectMany(t => t.Roles ?? []).Distinct().ToList(), transitions = allowed.Select(t => new { t.Key, t.Label, t.NoteRequired, t.Effects }).ToList() }));
@@ -56,16 +56,17 @@ public static class WorkflowApi
             var ctxRead = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Write = (_, _, _) => throw new InvalidOperationException("nur lesen") };
             return Results.Ok(c.Workflows.All.Values.Where(w => w.AppliesTo(n)).OrderBy(w => w.Key).Select(wf =>
             {
-                var st = c.Workflows.StateOf(id, wf); var nw = c.Workflows.Of(id).GetValueOrDefault(wf.Key);
+                var (st, inheritedFrom) = c.Workflows.StateOf(id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent); var nw = c.Workflows.Of(inheritedFrom ?? id).GetValueOrDefault(wf.Key);
                 return new
                 {
                     workflow = wf.Key, label = wf.Label, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, final = wf.State(st)?.Final ?? false,
                     since = nw?.At, actor = nw?.Actor, note = nw?.Note, transition = nw?.Transition, assigned = nw?.Assigned,
+                    inheritedFrom = inheritedFrom is null ? null : new { id = inheritedFrom, label = NodeRow.LabelOf(tree, model, tree.Nodes[inheritedFrom]), role = tree.Nodes[inheritedFrom].Role },   // Zustand vom Vater (Variante folgt dem Produkt)
                     // Wirkungen des Schritts, der hierher führte, die (noch) nicht eingetreten sind — z. B. „Freigegeben“ ohne Freigabe für web
                     // (Taloan, 21.09.: „wieso steht das immer noch in der Liste?“ — der Schritt lief, als die Saat noch keine Wirkung hatte)
                     pending = Pending(c, tree, model, n, wf, nw?.Transition),
                     states = wf.States.Select(s => new { s.Key, s.Label, s.Color, s.Final }).ToList(),
-                    transitions = Commands.Allowed(c.Workflows, wf, id, role).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label, blocked = Commands.Blocker(ctxRead, n, t) }).ToList(),
+                    transitions = Commands.Allowed(c.Workflows, wf, id, role, null, tree).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label, blocked = Commands.Blocker(ctxRead, n, t) }).ToList(),
                     // auch die, die ich nicht darf — zum Zeigen, wer dran ist; mit Eskalation: ab wann auch wer
                     all = wf.Transitions.Where(t => t.From == st).Select(t => new { t.Key, t.Label, t.To, t.Roles, t.EscalateAfterDays, t.EscalateRoles, escalatesAt = t.EscalateAfterDays is { } d && nw is not null ? nw.At.AddDays(d) : (DateTimeOffset?)null, escalated = t.EscalateAfterDays is { } d2 && nw is not null && (DateTimeOffset.UtcNow - nw.At).TotalDays >= d2 }).ToList(),
                 };
@@ -109,7 +110,7 @@ public static class WorkflowApi
             foreach (var wf in c.Workflows.All.Values.OrderBy(w => w.Key))
                 foreach (var t in wf.Transitions)
                 {
-                    var can = nodes.Where(n => wf.AppliesTo(n) && Commands.Allowed(c.Workflows, wf, n.Id, role).Any(x => x.Key == t.Key)).ToList();
+                    var can = nodes.Where(n => wf.AppliesTo(n) && Commands.Allowed(c.Workflows, wf, n.Id, role, null, tree).Any(x => x.Key == t.Key)).ToList();
                     if (can.Count == 0) continue;
                     var blocked = can.Count(n => Commands.Blocker(ctxRead, n, t) is not null);
                     out_.Add(new { workflow = wf.Key, workflowLabel = wf.Label, t.Key, t.Label, t.To, toLabel = wf.State(t.To)?.Label, t.NoteRequired, t.Effects, count = can.Count - blocked, blocked, of = nodes.Count });
@@ -125,7 +126,7 @@ public static class WorkflowApi
     private static object View(Catalog c, Tree tree, WorkflowDef w)
     {
         var counts = new Dictionary<string, int>();
-        foreach (var n in tree.Nodes.Values.Where(w.AppliesTo)) { var s = c.Workflows.StateOf(n.Id, w); counts[s] = counts.GetValueOrDefault(s) + 1; }
+        foreach (var n in tree.Nodes.Values.Where(w.AppliesTo)) { var s = c.Workflows.StateOf(n.Id, w, x => tree.Nodes.GetValueOrDefault(x)?.Parent).State; counts[s] = counts.GetValueOrDefault(s) + 1; }
         return new { w.Key, w.Label, w.Start, w.Roles, w.Families, states = w.States.Select(s => new { s.Key, s.Label, s.Color, s.Final, s.X, s.Y, count = counts.GetValueOrDefault(s.Key) }).ToList(), transitions = w.Transitions, w.LastNumber };
     }
 }

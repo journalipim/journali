@@ -616,10 +616,10 @@ public static class Commands
         c.Workflows?.All.ContainsKey(key) == true ? Outcome.Ok(c.Write(Workflows.Stream + key, Types.WorkflowRetired, new WorkflowRetired())) : Outcome.Missing;
 
     /// <summary>Welche Übergänge darf diese Rolle am Knoten jetzt gehen? (null-Rolle = offen, alles)</summary>
-    public static IEnumerable<WfTransition> Allowed(Workflows w, WorkflowDef wf, string nodeId, string? role, DateTimeOffset? now = null)
+    public static IEnumerable<WfTransition> Allowed(Workflows w, WorkflowDef wf, string nodeId, string? role, DateTimeOffset? now = null, Tree? tree = null)
     {
-        var state = w.StateOf(nodeId, wf);
-        var since = w.Of(nodeId).GetValueOrDefault(wf.Key)?.At;
+        var (state, from) = tree is null ? (w.StateOf(nodeId, wf), null) : w.StateOf(nodeId, wf, id => tree.Nodes.GetValueOrDefault(id)?.Parent);
+        var since = w.Of(from ?? nodeId).GetValueOrDefault(wf.Key)?.At;
         return wf.Transitions.Where(t => t.From == state && (role is null || role == "admin" || t.Roles is not { Length: > 0 } || t.Roles.Contains(role) || Escalated(t, role, since, now ?? DateTimeOffset.UtcNow)));
     }
 
@@ -691,9 +691,9 @@ public static class Commands
         if (!wf.AppliesTo(n)) return Outcome.Bad($"Workflow „{wf.Label.GetValueOrDefault("de") ?? wf.Key}“ gilt nicht für {n.Role}.");
         var t = wf.Transitions.FirstOrDefault(x => x.Key == transition);
         if (t is null) return Outcome.Bad($"Unbekannter Übergang {transition}.");
-        var state = c.Workflows.StateOf(id, wf);
+        var (state, inheritedFrom) = c.Workflows.StateOf(id, wf, x => c.Tree.Nodes.GetValueOrDefault(x)?.Parent);
         if (t.From != state) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht von {t.From} aus, der Knoten ist in {state}.");
-        var since = c.Workflows.Of(id).GetValueOrDefault(wf.Key)?.At;
+        var since = c.Workflows.Of(inheritedFrom ?? id).GetValueOrDefault(wf.Key)?.At;
         if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role) && !Escalated(t, role, since, DateTimeOffset.UtcNow)) return Outcome.Bad($"Rolle {role} darf „{t.Label.GetValueOrDefault("de") ?? t.Key}“ nicht (erlaubt: {string.Join(", ", t.Roles)}).");
         note = Blank(note);
         if (t.NoteRequired && note is null) return Outcome.Bad("Notiz ist Pflicht bei diesem Schritt (was ist zu tun?).");
