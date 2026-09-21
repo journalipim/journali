@@ -8,6 +8,8 @@ const props = defineProps({ modelValue: Array, locales: Array, channels: Array, 
 const emit = defineEmits(['update:modelValue'])
 const open = ref(false)
 const box = ref(null)
+const at = ref({ top: 0, left: 0 })
+function toggle() { if (!open.value) { const r = box.value?.getBoundingClientRect(); if (r) at.value = { top: r.bottom + 4, left: r.left } } open.value = !open.value }
 const cellKey = (l, c) => `${l ?? ''}|${c ?? ''}`
 const rows = computed(() => [null, ...(props.locales ?? [])])
 const cols = computed(() => [null, ...(props.channels ?? [])])
@@ -31,8 +33,8 @@ onUnmounted(() => { document.removeEventListener('mousedown', onDoc); document.r
 
 <template>
   <span ref="box" class="mp">
-    <button :class="{ primary: open }" @click="open = !open" title="Spalten: Sprache × Kanal — ankreuzen, was als Spalte steht"><span class="sum">⊞ {{ summary }}</span></button>
-    <div v-if="open" class="pop">
+    <button :class="{ primary: open }" @click="toggle" title="Spalten: Sprache × Kanal — ankreuzen, was als Spalte steht"><span class="sum">⊞ {{ summary }}</span></button>
+    <div v-if="open" class="pop" :style="`top:${at.top}px;left:${at.left}px`">
       <table>
         <thead><tr><th></th><th v-for="c in cols" :key="c ?? '*'" class="hd" :class="{ master: c && c === masterChannel }" :title="c ? (c === masterChannel ? 'Masterkanal — ganze Spalte an/aus' : `Kanal ${c} — ganze Spalte an/aus`) : 'ohne Kanal — ganze Spalte an/aus'" @click="toggleCol(c)">{{ c ?? '*' }}</th></tr></thead>
         <tbody>
@@ -49,7 +51,7 @@ onUnmounted(() => { document.removeEventListener('mousedown', onDoc); document.r
 <style scoped>
 .mp { position: relative; display: inline-block; }
 .sum { display: inline-block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
-.pop { position: absolute; top: 100%; left: 0; z-index: 30; margin-top: 4px; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 6px; }
+.pop { position: fixed; z-index: 35; margin-top: 4px; background: var(--pane); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 8px 24px rgba(0,0,0,.35); padding: 6px; }
 table { border-collapse: collapse; font-size: 12px; }
 th, td { padding: 0; }
 .hd { cursor: pointer; color: var(--muted); font-weight: 600; padding: 2px 6px; text-align: center; user-select: none; }

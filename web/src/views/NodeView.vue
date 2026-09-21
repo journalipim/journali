@@ -182,9 +182,21 @@ function matches(def, block) {
   if (def.type === 'rows') return Object.values(node.value?.rows?.[def.key] ?? {}).length > 0 && [...own.value.entries()].some(([k, v]) => k.startsWith(def.key + '|') && String(v ?? '').toLowerCase().includes(q))
   return columns.value.some(c => enabled(def, c, block) && cellText(def, c).toLowerCase().includes(q))
 }
-const filteredBlocks = computed(() => attrFilter.value.trim()
+// „nur Fehlendes“ (Taloan, 21.09.: „freigeben sollte auf die Attribute filtern, an denen es mangelt — sonst such ich mir nen Wolf“):
+// nach einer gescheiterten Freigabe die Pflichtwerte, die für den Kanal fehlen (Vollständigkeit ohne Master), als Filter; Klick auf den Chip hebt ihn auf
+const missingOnly = ref(null)   // { channel, keys: Set<attr>, cells: Set<'attr/locale'> }
+function showMissing(channel) {
+  const list = (node.value?.completeness ?? []).filter(c => c.channel === channel && c.missing?.length)
+  const cells = new Set(list.flatMap(c => c.missing)); if (!cells.size) { missingOnly.value = null; return }
+  missingOnly.value = { channel, cells, keys: new Set([...cells].map(m => m.split('/')[0])) }
+  attrFilter.value = ''; store.scope = 'all'
+}
+const filteredBlocks = computed(() => missingOnly.value
+  ? blocks.value.map(b => ({ ...b, defs: b.defs.filter(d => missingOnly.value.keys.has(d.key)) })).filter(b => b.defs.length)
+  : attrFilter.value.trim()
   ? blocks.value.map(b => ({ ...b, defs: b.defs.filter(d => matches(d, b)) })).filter(b => b.defs.length)
   : blocks.value)
+const isMissing = (def, c) => !!missingOnly.value && missingOnly.value.cells.has(c.locale ? `${def.key}/${c.locale}` : def.key)
 const hitCount = computed(() => filteredBlocks.value.reduce((n, b) => n + b.defs.length, 0))
 const shownBlocks = computed(() => store.layout === 'tabs' && !attrFilter.value.trim() ? filteredBlocks.value.filter(b => b.key === tab.value) : filteredBlocks.value)
 // Breite der Namensspalte: gemessen am längsten sichtbaren Namen (Bezeichnung + abgegrauter Key), 180–360 px — nichts
@@ -496,7 +508,12 @@ async function wfStep(w, t) {
     if (note === null) return
     if (t.noteRequired && !note.trim()) { store.toast('Notiz ist Pflicht bei diesem Schritt'); return }
   }
-  await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/${t.key}`, { note: note || null }))
+  try { await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/${t.key}`, { note: note || null }), true) }
+  catch (e) {
+    store.toast(e.message)
+    // Freigabe gescheitert: zeigen, woran es hängt (nur an der Variante selbst — am Produkt nennt die Meldung die Variante)
+    const rel = (t.effects ?? []).find(x => x.startsWith('release:')); if (rel && node.value?.role === 'variant') { await load(); showMissing(rel.slice(8)); open('attributes') || toggle('attributes') }
+  }
 }
 // Wirkung eines Schritts nachholen (release:web → Freigabe an allen vollständigen Varianten; revoke; status)
 const effLabel = eff => { const [k, a] = eff.split(':'); return k === 'release' ? `Freigabe ${a}` : k === 'revoke' ? `Freigabe ${a} zurück` : `Status ${a}` }
@@ -637,6 +654,7 @@ function cellMenu(e, def, col, block) {
         </select>
         <input ref="findBox" v-model="attrFilter" type="search" placeholder="Attribut oder Wert" style="width:200px;font-size:12px" title="Suche im Sichtbaren: Attributname und die Werte der gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
         <span v-if="attrFilter" class="muted">{{ hitCount }}</span>
+        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="`nur die Pflichtwerte, die für ${missingOnly.channel} fehlen — Klick zeigt wieder alles`" @click="missingOnly = null">✗ fehlt für {{ missingOnly.channel }} <b>{{ missingOnly.cells.size }}</b></span>
       </span>
       <span class="grow" />
       <span class="grp" title="Anordnung der Gruppen">
@@ -648,7 +666,7 @@ function cellMenu(e, def, col, block) {
     </div>
 
     <div v-if="store.layout === 'tabs' && blocks.length" class="tabs">
-      <button v-for="b in (attrFilter.trim() ? filteredBlocks : blocks)" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="`${b.key} · ${b.defs.length} Attribute` + (b.active ? '' : ` · gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`)">{{ b.label }}<span v-if="!b.active"> ⌀</span></button>
+      <button v-for="b in (attrFilter.trim() || missingOnly ? filteredBlocks : blocks)" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="`${b.key} · ${b.defs.length} Attribute` + (b.active ? '' : ` · gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`)">{{ b.label }}<span v-if="!b.active"> ⌀</span></button>
     </div>
 
 
@@ -697,7 +715,7 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <tr v-else>
-            <td class="attr" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')"><div class="nm">
+            <td class="attr" :class="{ missing: missingOnly && missingOnly.keys.has(def.key) }" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')"><div class="nm">
               <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
               <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
@@ -717,7 +735,7 @@ function cellMenu(e, def, col, block) {
               <HtmlCell v-else-if="def.type === 'html'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <Cell v-else :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
-                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten — ${master} wurde später geändert` : (c.locale ? `nicht übersetzt — zeigt ${master}; Enter überschreibt` : `kein Grundtext — zeigt ${master}; Enter setzt den sprachneutralen Text (z. B. Kurzbezeichnung)`)"
+                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten — ${master} wurde später geändert` : (c.locale ? `nicht übersetzt — zeigt ${master}; Klick übernimmt den ${master}-Text als Übersetzung, Enter überschreibt` : `kein Grundtext — zeigt ${master}; Klick übernimmt den ${master}-Text, Enter setzt eigenen`)" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
           </tr>
@@ -972,6 +990,7 @@ th.master { color: var(--accent); font-weight: 700; }
 .section h2, h2.band { font-size: 12px; margin: 0; padding: 0 8px; height: 26px; line-height: 24px; box-sizing: border-box; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent);
   position: sticky; top: 0; left: 0; z-index: 3; cursor: pointer; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .section h2 { margin: 0 -8px 8px; }
+.attr.missing { box-shadow: inset 3px 0 0 var(--neg); }   /* fehlender Pflichtwert (nur Fehlendes) */
 .section h2 .muted, h2.band .muted { font-weight: 400; }
 .section h2 .caret, h2.band .caret { display: inline-block; width: 14px; color: var(--muted); }
 /* Tabellenkopf klebt unter dem Band (26px) */
