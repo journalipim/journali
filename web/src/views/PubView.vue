@@ -38,7 +38,7 @@ const rows = computed(() => {
     out.push({ r, depth, isOpen, has, kind: 'rubric', n: placed.length })
     if (!isOpen) return
     for (const k of tree.kids(r.id)) walk(k, depth + 1)
-    // Anzeige (Taloan, 21.09.: 20 Verweise „Ersatzteile“): Arbeitsname, sonst Pflegename — und wo Geschwister gleich heissen, der Vater dazu
+    // Anzeige (Taloan, 21.09.: 20 Verweise „Ersatzteile“): Anzeigename, sonst Pflegename — und wo Geschwister gleich heissen, der Vater dazu
     const dup = new Set(placed.map(p => p.label).filter((l, i, a) => a.indexOf(l) !== i))
     for (const p of placed) out.push({ r: p, depth: depth + 1, kind: 'placed', rubric: r.id, shown: r.placedNames?.[p.id] ?? (dup.has(p.label) && p.parent ? `${p.label} · ${tree.byId.get(p.parent)?.label ?? ''}` : p.label), work: r.placedNames?.[p.id] ?? null })
   }
@@ -108,7 +108,7 @@ async function retire(r) {
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
 }
 async function namePlace(row) {
-  const name = await dialog.prompt({ title: 'Arbeitsname des Verweises', text: `Pflegename: ${row.r.label} — leer = Pflegename`, value: row.work ?? '', ok: '✎ OK' })
+  const name = await dialog.prompt({ title: 'Anzeigename des Verweises', text: `Pflegename: ${row.r.label} — leer = Pflegename`, value: row.work ?? '', ok: '✎ OK' })
   if (name == null) return
   await run(() => post(`/api/rubrics/${encodeURIComponent(row.rubric)}/place/${encodeURIComponent(row.r.id)}/name`, { name }, 'PUT'))
 }
@@ -123,7 +123,7 @@ function contextMenu(e, row) {
   if (row.kind === 'placed') {
     menu.open(e, [
       { label: 'im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) },
-      { label: 'Arbeitsname …', icon: '✎', hint: 'nur für den Überblick hier — die Ausgabe nimmt Attribute', action: () => namePlace(row) },
+      { label: 'Anzeigename …', icon: '✎', hint: 'nur für den Überblick hier — die Ausgabe nimmt Attribute', action: () => namePlace(row) },
       { sep: true },
       { label: 'Verweis entfernen', icon: '✕', danger: true, hint: 'nur hier — das Produkt bleibt im Pflegebaum', action: () => unplace(row.rubric, r.id) },
     ]); return
@@ -274,7 +274,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-if="row.kind === 'rubric'" class="twisty" :class="{ leaf: !row.has }" @click.stop="toggle(row.r.id)">{{ row.has ? (row.isOpen ? '▾' : '▸') : '' }}</span>
         <span v-else class="twisty muted">↗</span>
         <span class="icon">{{ row.kind === 'rubric' ? '▥' : icon(row.r.role) }}</span>
-        <span class="label" :class="{ work: row.work }" :title="row.work ? `Arbeitsname (nur hier) — Pflegename: ${row.r.label}` : ''">{{ row.shown ?? row.r.label }}</span>
+        <span class="label" :class="{ work: row.work }" :title="row.work ? `Anzeigename (nur hier) — Pflegename: ${row.r.label}` : ''">{{ row.shown ?? row.r.label }}</span>
         <span v-if="row.kind === 'rubric' && row.n" class="muted count" :title="`${row.n} Verweise`">{{ row.n }}</span>
         <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="`Produktgruppe mit ${tree.below(row.r.id).total} darunter`">{{ tree.below(row.r.id).total }}</span>
       </div>
@@ -297,7 +297,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 .node.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 .node.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
 .node.placed .label { color: var(--muted); }
-.node.placed .label.work { color: var(--text); font-style: italic; }   /* Arbeitsname: eigener, interner Name */
+.node.placed .label.work { color: var(--text); font-style: italic; }   /* Anzeigename: eigener, interner Name */
 .twisty { width: 14px; color: var(--muted); font-size: 11px; text-align: center; cursor: pointer; }
 .count { font-size: 11px; margin-left: auto; }
 .unplaced, .picker-box { border-bottom: 1px solid var(--line); background: var(--pane); }

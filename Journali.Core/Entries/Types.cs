@@ -449,7 +449,7 @@ public sealed record NodePlaced(string Node, int? Order = null);
 
 public sealed record NodeUnplaced(string Node);
 
-/// <summary>Arbeitsname eines Verweises in dieser Rubrik (Taloan, 21.09.2026): nur für den Überblick im Publikationsbaum, nie für die Ausgabe. Leer = Pflegename.</summary>
+/// <summary>Anzeigename eines Verweises in dieser Rubrik (Taloan, 21.09.2026): nur für den Überblick im Publikationsbaum, nie für die Ausgabe. Leer = Pflegename.</summary>
 public sealed record PlaceNamed(string Node, string? Name);
 
 /// <summary>

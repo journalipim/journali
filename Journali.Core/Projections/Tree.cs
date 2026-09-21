@@ -45,7 +45,7 @@ public sealed class Node
     public string? Source { get; set; }   // Rubrik: die Pflegegruppe, aus der sie kopiert wurde — ihre Werte sind dort, hier nur zu lesen
     /// <summary>Rubrik: die hier per Verweis hängenden Pflegeknoten, in Reihenfolge.</summary>
     public List<string> Placed { get; } = new();
-    public Dictionary<string, string> PlacedNames { get; } = new();   // Arbeitsname je Verweis (PlaceNamed) — intern, nie Ausgabe
+    public Dictionary<string, string> PlacedNames { get; } = new();   // Anzeigename je Verweis (PlaceNamed) — intern, nie Ausgabe
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";

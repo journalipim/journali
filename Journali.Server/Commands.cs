@@ -158,7 +158,7 @@ public static class Commands
     }
 
     /// <summary>Pflegeknoten in eine Rubrik hängen (Produktgruppe oder Produkt; Varianten kommen mit dem Produkt).</summary>
-    /// <summary>Arbeitsname eines Verweises (nur hier, nur intern); leer nimmt ihn weg.</summary>
+    /// <summary>Anzeigename eines Verweises (nur hier, nur intern); leer nimmt ihn weg.</summary>
     public static Outcome NamePlace(Ctx c, string rubric, string node, string? name)
     {
         if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;
