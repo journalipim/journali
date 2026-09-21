@@ -95,7 +95,12 @@ async function takeFile(file, keepSheet = false) {
 }
 // Zuordnung des gewählten Profils — gilt auch für eine Datei, die erst danach kommt (Taloan, 21.09.: „Profil gespeichert, raus, rein, Datei gedroppt — wo ist meine Funktion?“)
 let profileMapping = null
-function applyProfile() { if (!profileMapping) return; for (const m of mapping.value) { const s = profileMapping[m.column]; if (s) Object.assign(m, JSON.parse(JSON.stringify(s))) } }
+function applyProfile() {
+  if (!profileMapping) return
+  for (const m of mapping.value) { const s = profileMapping[m.column]; if (s) Object.assign(m, JSON.parse(JSON.stringify(s))) }
+  // Datei geladen, Profil darübergelegt = der Ausgangsstand — nicht „geändert“ (Taloan, 21.09.: „kommt sofort die Meldung, ist das richtig?“ — nein)
+  setTimeout(() => window.dispatchEvent(new CustomEvent('journali:profile-applied')), 0)
+}
 function setSource(t) {
   if (t.sheets && !t.columns) { t.sheet = t.sheets[0]?.name; const s = t.sheets[0]; t.columns = s?.columns ?? []; t.rows = s?.rows ?? [] }
   source.value = t

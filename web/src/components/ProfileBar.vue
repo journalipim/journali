@@ -31,7 +31,7 @@ async function saveAs() {
   name.value = n.trim(); await save()
 }
 async function discard() { if (current.value) await apply(current.value); else { props.set(null); saved.value = ''; dirty.value = false } }
-onUnmounted(() => clearInterval(timer))
+onUnmounted(() => { clearInterval(timer); window.removeEventListener('journali:profile-applied', rebase) })
 
 async function load() {
   try { names.value = (await api.get(`/api/plugins/${props.plugin}/data`)).filter(n => n.startsWith(PREFIX)).map(n => n.slice(PREFIX.length)) }
@@ -68,7 +68,9 @@ async function remove() {
   try { await api.del(`/api/plugins/${props.plugin}/data/${encodeURIComponent(PREFIX + n)}`); names.value = names.value.filter(x => x !== n); current.value = ''; name.value = ''; localStorage.removeItem(`journali.profile.${props.plugin}.${props.scope}`) }
   catch (e) { store.toast(e.message) }
 }
-onMounted(() => { load(); timer = setInterval(tick, 1000) })
+// die Ansicht sagt, wenn sie das Profil auf eine neu geladene Datei gelegt hat — das ist dann der Ausgangsstand
+const rebase = () => { saved.value = snapshot(); dirty.value = false; dismissed.value = '' }
+onMounted(() => { load(); timer = setInterval(tick, 1000); window.addEventListener('journali:profile-applied', rebase) })
 defineExpose({ load })
 </script>
 
