@@ -157,7 +157,26 @@ async function mount(root, ctx) {
     }
     if (!d.runs.length) tbl.append(el('tr', {}, el('td', { class: 'muted', style: 'padding:8px' }, 'noch kein Lauf — ▶ startet einen')))
     runs.append(tbl)
-    detail.append(head, el('div', { style: 'display:flex;flex:1;min-height:0' }, runs, logBox))
+    // Fächer (Taloan, 21.09.): Eingang wartend, verarbeitet (✓ ✗, Duplikat grau), Ausgaben (★ latest) — aus /api/jobs/<key>/files
+    const files = el('div', { style: 'border-top:1px solid var(--line);padding:6px 8px;font-size:12px;max-height:40%;overflow:auto;display:none' })
+    if (d.files || d.waiting || d.consumed || d.written) {
+      files.style.display = ''
+      api.get(`/api/jobs/${d.key}/files`).then(f => {
+        if (!f.uses.in && !f.uses.out) { files.style.display = 'none'; return }
+        const size = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB'
+        const col = (title, rows, empty) => el('div', { style: 'flex:1;min-width:200px' }, el('div', { style: 'font-weight:600;margin-bottom:2px' }, title), rows.length ? el('table', { class: 'grid', style: 'width:100%' }, ...rows) : el('div', { class: 'muted' }, empty))
+        const cols = []
+        if (f.uses.in) {
+          cols.push(col(`Eingang · ${f.waiting.length} wartend`, f.waiting.map(w => el('tr', { class: 'row', title: `${w.name} · ${size(w.bytes)} · ${when(w.at)}` }, el('td', {}, w.name), el('td', { class: 'muted', style: 'text-align:right' }, size(w.bytes)))), 'nichts in in/ — ▶ läuft dann nicht'),
+            col(`Verarbeitet · ${f.consumed.length}`, f.consumed.map(c => el('tr', { class: 'row' + (c.status === 'duplicate' ? ' muted' : ''), style: c.run ? 'cursor:pointer' : '', title: `${c.name} · ${size(c.bytes)} · ${when(c.at)} · ${c.status}${c.run ? ' · Lauf ' + c.run : ' · ohne Lauf'}${c.mediaId ? ' · archiviert ' + c.mediaId : ''}\nSHA-256 ${c.hash}`, onclick: () => { if (c.run) loadLog(d.key, c.run) } },
+              el('td', { class: c.status === 'ok' ? 'pos' : c.status === 'failed' ? 'neg' : 'muted', style: 'width:18px' }, c.status === 'ok' ? '✓' : c.status === 'failed' ? '✗' : '≡'), el('td', {}, c.name), el('td', { class: 'muted', style: 'text-align:right;white-space:nowrap' }, when(c.at)))), 'noch nichts verarbeitet'))
+        }
+        if (f.uses.out) cols.push(col(`Ausgaben · ${f.written.length}${f.latest.length ? ' · ★ ' + f.latest.join(', ') : ''}`, f.written.map(o => el('tr', { class: 'row', style: 'cursor:pointer', title: `${o.name} · ${size(o.bytes)} · ${when(o.at)} · Lauf ${o.run}${o.latest ? ' · auch als latest' : ''}${o.mediaId ? ' · archiviert ' + o.mediaId : ''}\nSHA-256 ${o.hash}`, onclick: () => loadLog(d.key, o.run) },
+          el('td', { style: 'width:18px' }, o.latest ? '★' : '·'), el('td', {}, o.name), el('td', { class: 'muted', style: 'text-align:right;white-space:nowrap' }, `${size(o.bytes)} · ${when(o.at)}`))), 'noch keine Ausgabe'))
+        files.append(el('div', { class: 'muted', style: 'margin-bottom:4px' }, `📁 ${f.base}`, f.files?.keep ? ` · Aufbewahrung ${f.files.keep}` : ' · Aufbewahrung: alle', f.files?.latest ? ' · latest' : '', f.files?.archive ? ' · Archiv' : ''), el('div', { style: 'display:flex;gap:16px;flex-wrap:wrap' }, ...cols))
+      }).catch(() => { files.style.display = 'none' })
+    }
+    detail.append(head, el('div', { style: 'display:flex;flex:1;min-height:0' }, runs, logBox), files)
     detail.style.display = 'flex'; detail.style.flexDirection = 'column'
   }
 
@@ -251,6 +270,18 @@ async function mount(root, ctx) {
     else if (preset) { pluginSel.value = preset; if (pluginSel.value !== preset) pluginSel.value = st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|')) ? svcId(st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|'))) : pluginSel.value }
     const sched = scheduleAssistant(j?.schedule ?? '', () => {})   // Zeitplan-Assistent (Taloan) statt Vorgaben-Liste
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
+    // Fächer (docs/tasker-dateien.md, Taloan: der Tasker besitzt die Ablage): Basis, Aufbewahrung, latest, Archiv — nur bei Prozessen mit files im Manifest
+    const fBase = el('input', { type: 'text', value: j?.files?.base ?? '', placeholder: 'leer = jobs/<key> beim Server — oder ein Share, auf dem SAP ablegt', style: 'flex:1' })
+    const fBaseBtn = el('button', { type: 'button', title: 'Basis der Fächer auf dem Server wählen', onclick: () => ctx.filePicker({ value: fBase.value, dirOnly: true, title: '📁 Basis der Fächer (in/, done/, failed/, out/)', onPick: v => { fBase.value = v } }) }, '📁')
+    const fKeep = el('input', { type: 'text', value: j?.files?.keep ?? '', placeholder: 'alle', style: 'width:90px', title: 'Aufbewahrung der Ausgaben: 10 = die letzten 10 Läufe, 30d = 30 Tage, leer = alle; gelöscht wird nur, was der Tasker benannt hat, nie latest' })
+    const fLatest = el('input', { type: 'checkbox' }); fLatest.checked = j?.files?.latest ?? true
+    const fArchive = el('input', { type: 'checkbox' }); fArchive.checked = j?.files?.archive ?? false
+    const fachBox = el('div', { style: 'display:none' },
+      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Fächer · Basis (in/, done/, failed/, out/)'), el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn),
+      el('div', { style: 'display:flex;gap:14px;align-items:center;margin-top:6px;flex-wrap:wrap' },
+        el('label', { style: 'display:flex;gap:6px;align-items:center' }, el('span', { class: 'muted' }, 'Aufbewahrung'), fKeep),
+        el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'nach jedem erfolgreichen Lauf eine Kopie unter stabilem Namen (<key>-latest) — für den, der abholt' }, fLatest, 'latest'),
+        el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'verarbeitete Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher — der Beleg bleibt, auch wenn das Share aufgeräumt wird' }, fArchive, 'Archiv im Medienspeicher')))
     const paramsBox = el('div')
     const paramInputs = {}
     const drawParams = () => {
@@ -315,6 +346,7 @@ async function mount(root, ctx) {
         paramInputs[d.key] = inp
       }
       if (hasProfile && more.childElementCount) paramsBox.append(moreBtn, more)
+      fachBox.style.display = p?.files ? '' : 'none'
       if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, 'Dieses Plugin hat keine Parameter.'))
     }
     // Speichern nur, wenn der Job laufen kann (Taloan, 21.09.: „speichern deaktiviert, solange ein Profil nicht ausführbar ist“):
@@ -331,7 +363,8 @@ async function mount(root, ctx) {
       if (hasProfile && !profile) reasons.push('Profil fehlt — in der Ansicht des Plugins speichern' + (p?.profile === 'generic' ? ' oder ✎' : ''))
       for (const d of defs) {
         const v = paramInputs[d.key]?.value ?? ''
-        if ((d.type === 'path' || d.type === 'dir') && !v) reasons.push(`${d.type === 'dir' ? 'Verzeichnis' : 'Quelle'} fehlt`)
+        // mit Fächern kommt die Datei aus in/ bzw. geht nach out/ — dann ist der Parameter nicht Pflicht
+        if ((d.type === 'path' || d.type === 'dir') && !v && !(d.type === 'dir' ? p?.files?.out : p?.files?.in)) reasons.push(`${d.type === 'dir' ? 'Verzeichnis' : 'Quelle'} fehlt`)
         if (d.secret && !v && !j?.secrets?.includes(d.key) && !profileSecrets.includes(d.key)) reasons.push(`${d.label.split(' —')[0]} fehlt — am Profil hinterlegen (🔒) oder unter „Überschreiben“ setzen`)
       }
       saveBtn.disabled = reasons.length > 0; saveBtn.title = reasons.join(' · ')
@@ -348,14 +381,15 @@ async function mount(root, ctx) {
       for (const [k, inp] of Object.entries(paramInputs)) if (inp.value !== '' || inp.type !== 'password') params[k] = inp.value
       const schedule = sched.value()
       try {
-        await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60 }, 'PUT')
+        const files = fachBox.style.display === 'none' ? null : { base: fBase.value.trim() || null, keep: fKeep.value.trim() || null, latest: fLatest.checked, archive: fArchive.checked }
+        await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60, files }, 'PUT')
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
       } catch (e) { store.toast(e.message) }
     }
     dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, isNew ? '+ Job' : `✎ ${j.label}`),
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Key'), keyIn,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Bezeichnung'), labelIn,
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Plugin (Prozess)'), pluginSel, pluginHint, paramsBox,
+      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Plugin (Prozess)'), pluginSel, pluginHint, paramsBox, fachBox,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitplan'), sched.el,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitgrenze (min)'), timeoutIn,
       el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px' }, why, el('button', { onclick: () => box.remove() }, 'Abbrechen'), saveBtn))

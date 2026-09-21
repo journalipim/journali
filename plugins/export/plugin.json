@@ -29,6 +29,12 @@
     ],
     "description": "Teilbaum oder Ausleitung eines Publikationsbaums als Excel oder CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben",
     "profile": "generic",
+    "files": {
+      "out": {
+        "many": true,
+        "param": "dir"
+      }
+    },
     "params": [
       {
         "key": "profile",
@@ -50,7 +56,7 @@
       },
       {
         "key": "dir",
-        "label": "Verzeichnis",
+        "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
         "type": "dir",
         "default": "export"
       },

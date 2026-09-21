@@ -1,4 +1,16 @@
-# Tasker: Dateien rund um die Jobs — Entwurf
+# Tasker: Dateien rund um die Jobs
+
+**Gebaut 21.09.2026** (Taloan: „Tasker-Dateien → ja“): `JobFach.cs` (Fächer, Auswahl, Duplikat, Aufräumen, latest,
+Aufbewahrung, Archiv), `JobRunner` (vor und nach dem Lauf), `JobFiles` in `JobDefined`, Belege `JobFileConsumed` /
+`JobFileWritten` im Abbild `Jobs`, `GET /api/jobs/{key}/files`, Fächer im Job-Dialog und Dateien im Job-Detail (tasker 1.3.0),
+Tests `JobFachTests`. Abweichungen vom Entwurf unten: der Vertrag heisst `files.in.param` / `files.out.param` — der
+Tasker füllt den **vorhandenen** Parameter (`source`, `dir`), wenn der Job ihn leer lässt; so bleiben die Prozesse
+unverändert, und ein Job kann weiterhin einen festen Pfad nennen. Ausgaben: alle Export-Prozesse sind `many: true` —
+`{outDir}` ist der Laufordner `out/<key>-<JJJJMMTT>-<HHMMSS>-<lauf>/`, das Plugin benennt darin wie bisher, der Tasker
+belegt jede Datei; `latest` ist der Ordner `out/<key>-latest/` (Kopie). Eingänge, die in den letzten 3 s geschrieben
+wurden, bleiben liegen (SAP/SFTP schreibt noch). Die vier offenen Entscheidungen sind wie vorgeschlagen umgesetzt.
+
+Entwurf (Taloan, 21.09.2026):
 
 Taloan, 21.09.2026: „Das Plugin macht die inhaltliche Sache, aber den Dateinamen
 müsste der Tasker übernehmen. Beim Import: welche Datei ist dran, welche war
@@ -116,11 +128,13 @@ kleiner Schritt vor `in/` bzw. nach `out/` („Transport“), den man je Job
 anschalten kann, wenn er gebraucht wird. Erst die Fächer, dann der
 Transport; SAP legt heute ohnehin auf ein Share.
 
-## Offen (Entscheidungen von Taloan)
+## Entschieden (21.09.2026, wie vorgeschlagen — Taloan: „Tasker-Dateien → ja“)
 
-- `latest` als Kopie (robust, doppelter Platz) oder als Link (Unraid/Share:
-  Links sind heikel)? Vorschlag: Kopie.
-- Duplikat nach Hash: still nach `done/`, oder als eigener Zustand sichtbar
-  im Reiter? Vorschlag: sichtbar, grau.
-- Fach-Basis je Job frei wählbar (Share) — ja, sonst kommt SAP nicht dran.
-- Archiv im Medienspeicher: Vorgabe aus oder an? Vorschlag: aus, je Job an.
+- `latest` ist eine **Kopie** (Links auf Shares sind heikel).
+- Duplikat nach Hash: **sichtbar** im Detail (≡, grau, „ohne Lauf“), Datei nach `done/…-dup-…`.
+- Fach-Basis je Job frei wählbar (absoluter Pfad auf dem Server, 📁 im Dialog) — für das Share, auf dem SAP ablegt.
+- Archiv im Medienspeicher: Vorgabe **aus**, je Job an.
+
+Offen: Transport (SFTP/HTTP/Mail vor `in/` und nach `out/`); `keep` der Plugins (`export`, `backup`, `json`) ist noch
+doppelt — die Aufbewahrung des Taskers gilt für den Laufordner, das Plugin-`keep` innerhalb; wer den Tasker nutzt,
+lässt das Plugin-`keep` leer.

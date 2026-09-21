@@ -97,6 +97,9 @@ public static class Types
     public const string JobRetired = "JobRetired";
     public const string JobRunStarted = "JobRunStarted";
     public const string JobRunFinished = "JobRunFinished";
+    // Fächer des Taskers (docs/tasker-dateien.md, Taloan 21.09.2026): Belege je Datei — die Dateien selbst liegen nicht im Journal
+    public const string JobFileConsumed = "JobFileConsumed";
+    public const string JobFileWritten = "JobFileWritten";
 
     // Versionen (Taloan, 19.09.2026: Freigabe = Version, nach draussen zaehlt das Belegdokument): am Knotenstrom —
     // Zeiger auf den Journalstand, eingefrorene Belege (hash-adressiert im Medienspeicher), zurueckgezogen nur markiert
@@ -499,7 +502,19 @@ public sealed record PluginDataSet(string Name, string? Value);
 /// <summary>Ein Job: Plugin mit Prozess, Parameter (ohne Geheimnisse — die liegen in jobs/secrets.json), Zeitplan als cron
 /// „m h dom mon dow“ (leer = nur von Hand), an/aus, Zeitgrenze. Der letzte Eintrag gilt ganz.
 /// Service (Taloan, 19.09.: mehrere Dienste je Plugin): Schlüssel aus processes[] im Manifest; leer = der eine process.</summary>
-public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null);
+public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null);
+
+/// <summary>
+/// Fächer eines Jobs (docs/tasker-dateien.md): <c>Base</c> = Verzeichnis mit in/, done/, failed/, out/ (leer = jobs/&lt;key&gt;;
+/// ein Share, auf dem SAP ablegt, ist erlaubt), <c>Keep</c> = Aufbewahrung der Ausgaben („10“ Läufe, „30d“ Tage, leer = alle),
+/// <c>Latest</c> = nach jedem erfolgreichen Lauf eine Kopie unter stabilem Namen (Kopie, kein Link — Taloan), <c>Archive</c> =
+/// verarbeitete Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher (Vorgabe aus).
+/// </summary>
+public sealed record JobFiles(string? Base = null, string? Keep = null, bool Latest = false, bool Archive = false);
+/// <summary>Eingang verarbeitet: <c>Status</c> ok | failed | duplicate (gleicher Hash schon verarbeitet — ohne Lauf nach done/).</summary>
+public sealed record JobFileConsumed(string Run, string Name, string Hash, long Bytes, string Status, string? MediaId = null);
+/// <summary>Ausgabe geschrieben; <c>Latest</c>: dazu unter dem stabilen Namen kopiert.</summary>
+public sealed record JobFileWritten(string Run, string Name, string Hash, long Bytes, bool Latest = false, string? MediaId = null);
 public sealed record JobRetired();
 /// <summary>Lauf begonnen: Kennung des Laufs und Auslöser (schedule | manual).</summary>
 public sealed record JobRunStarted(string Run, string Trigger);

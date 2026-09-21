@@ -89,6 +89,14 @@ Die Datei liegt ausserhalb (Store, Hash-adressiert); im Journal nur das Ding
 | `ExternalLinked` / `ExternalUnlinked` | wie am Knoten | Kennung aus der Quelle |
 | `MediaFiled` | `folder` (Ordner-Id oder null) | Medium in einen Ordner der Bibliothek gelegt (null = kein Ordner) |
 
+Jobs (`job:<key>`, `docs/tasker-dateien.md`): `JobDefined` trägt seit 21.09.2026 `files` (`base`, `keep`, `latest`, `archive`);
+Belege je Datei — die Dateien selbst liegen in den Fächern, nicht im Journal:
+
+| Typ | Nutzdaten | Wirkung |
+|---|---|---|
+| `JobFileConsumed` | `run` (leer bei Duplikat), `name`, `hash`, `bytes`, `status` ok/failed/duplicate, `mediaId?` | Eingang verarbeitet; `ok`-Hashes merkt das Abbild — gleicher Inhalt läuft nie zweimal |
+| `JobFileWritten` | `run`, `name` (mit Laufordner), `hash`, `bytes`, `latest`, `mediaId?` | Ausgabe geschrieben (`latest`: auch unter dem stabilen Namen) |
+
 Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren, wie ein interner Dateimanager“) — Strom
 `mf-…`, nur zum Organisieren der Bibliothek; sagt nichts über Verwendung (Relationen) oder Datei (Store):
 

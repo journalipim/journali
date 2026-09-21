@@ -87,7 +87,7 @@ var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 // Jobs (Plugin tasker, Taloan 19.09.): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
 // unter JOURNALI_JOBS (Vorgabe jobs/ neben dem Programm, im Repo ignoriert)
 var jobDir = dataDir;
-var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>());
+var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
 

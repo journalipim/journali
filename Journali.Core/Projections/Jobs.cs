@@ -19,6 +19,19 @@ public sealed class JobRun
 }
 
 /// <summary>Ein Job: welches Plugin (Prozess) mit welchen Parametern, wann (cron), an oder aus — und seine Läufe.</summary>
+/// <summary>Ein Beleg je Datei (JobFileConsumed / JobFileWritten).</summary>
+public sealed class JobFile
+{
+    public required string Run { get; init; }
+    public required string Name { get; init; }
+    public required string Hash { get; init; }
+    public long Bytes { get; init; }
+    public string Status { get; init; } = "ok";     // Eingang: ok | failed | duplicate; Ausgabe: ok
+    public bool Latest { get; init; }
+    public string? MediaId { get; init; }
+    public DateTimeOffset At { get; init; }
+}
+
 public sealed class JobState
 {
     public required string Key { get; init; }
@@ -30,6 +43,10 @@ public sealed class JobState
     public bool Enabled { get; set; } = true;
     public int TimeoutMinutes { get; set; } = 60;
     public List<JobRun> Runs { get; } = new();               // jüngste zuerst, höchstens 200
+    public JobFiles? Files { get; set; }                     // Fächer (docs/tasker-dateien.md); null = wie bisher, jobs/<key>
+    public List<JobFile> Consumed { get; } = new();          // verarbeitete Eingänge, jüngste zuerst, höchstens 500
+    public List<JobFile> Written { get; } = new();           // Ausgaben, jüngste zuerst, höchstens 500
+    public HashSet<string> ConsumedHashes { get; } = new();  // alle je erfolgreich verarbeiteten Eingänge — Duplikat nach Inhalt, nicht nach Namen
     public JobRun? Running => Runs.FirstOrDefault(r => r.Status is null);
     public JobRun? Last => Runs.FirstOrDefault(r => r.Status is not null);
     public long LastNumber { get; set; }
@@ -61,6 +78,26 @@ public sealed class Jobs : IProjection
                 if (!_all.TryGetValue(key, out var j)) _all[key] = j = new JobState { Key = key };
                 j.Label = d.Label; j.Plugin = d.Plugin; j.Service = d.Service ?? ""; j.Params = d.Params ?? new(); j.Schedule = string.IsNullOrWhiteSpace(d.Schedule) ? null : d.Schedule.Trim();
                 j.Enabled = d.Enabled; j.TimeoutMinutes = d.TimeoutMinutes is > 0 ? d.TimeoutMinutes.Value : 60;
+                j.Files = d.Files;
+                Touch(j, entry);
+                break;
+            }
+            case Types.JobFileConsumed:
+            {
+                if (!_all.TryGetValue(key, out var j)) break;
+                var f = Types.Deserialize<JobFileConsumed>(entry.Payload);
+                j.Consumed.Insert(0, new JobFile { Run = f.Run, Name = f.Name, Hash = f.Hash, Bytes = f.Bytes, Status = f.Status, MediaId = f.MediaId, At = entry.At });
+                if (j.Consumed.Count > 500) j.Consumed.RemoveRange(500, j.Consumed.Count - 500);
+                if (f.Status == "ok") j.ConsumedHashes.Add(f.Hash);
+                Touch(j, entry);
+                break;
+            }
+            case Types.JobFileWritten:
+            {
+                if (!_all.TryGetValue(key, out var j)) break;
+                var f = Types.Deserialize<JobFileWritten>(entry.Payload);
+                j.Written.Insert(0, new JobFile { Run = f.Run, Name = f.Name, Hash = f.Hash, Bytes = f.Bytes, Latest = f.Latest, MediaId = f.MediaId, At = entry.At });
+                if (j.Written.Count > 500) j.Written.RemoveRange(500, j.Written.Count - 500);
                 Touch(j, entry);
                 break;
             }

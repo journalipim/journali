@@ -12,7 +12,7 @@ namespace Journali.Server;
 public static class JobApi
 {
     public sealed record ProfileSecrets(Dictionary<string, string?>? Values);
-    public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets);
+    public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets, JobFiles? Files);
 
     public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
@@ -29,6 +29,7 @@ public static class JobApi
                     @params = x.Proc.TryGetProperty("params", out var ps) ? ps : default,
                     description = x.Proc.TryGetProperty("description", out var d) ? d.GetString() : null,
                     profile = x.Proc.TryGetProperty("profile", out var pr) ? pr.GetString() : null,   // "generic": Profile im Tasker anlegen (✎)
+                    files = x.Proc.TryGetProperty("files", out var fi) ? fi : default,   // Fächer-Vertrag (in/out) — der Dialog zeigt dann die Fächer
                 })).ToList());
         });
 
@@ -65,7 +66,9 @@ public static class JobApi
                 var secrets = new Dictionary<string, string?>(body.Secrets ?? new());
                 foreach (var k in secretKeys) if (prms.Remove(k, out var v) && v is { Length: > 0 }) secrets[k] = v;
                 if (secrets.Count > 0) Secrets.Set(runner.Dir, key, secrets);
-                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null);
+                var files = body.Files is { } fb ? new JobFiles(Blank(fb.Base), Blank(fb.Keep), fb.Latest, fb.Archive) : cur?.Files;
+                if (files?.Base is { } fbase && (fbase.Contains("..") || !Path.IsPathRooted(fbase))) return Bad("Fächer: Basis muss ein absoluter Pfad sein (auf dem Server).");
+                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files);
                 write(actor, Jobs.Stream + key, Types.JobDefined, def, null);
                 return Results.Ok(View(c.Jobs.All[key], runner));
             });
@@ -89,6 +92,28 @@ public static class JobApi
         api.MapPost("/jobs/{key}/cancel", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing() : runner.Cancel(key) ? Results.Ok(new { cancelled = true }) : Bad("Der Job läuft nicht."));
 
         // Log eines Laufs: ganz oder die letzten n Zeilen — auch während er läuft
+        // Fächer eines Jobs (docs/tasker-dateien.md): wartende Eingänge (Platte), verarbeitete und geschriebene (Journal), latest, Einstellungen
+        api.MapGet("/jobs/{key}/files", (string key, Catalog c) =>
+        {
+            if (!ValidKey(key)) return Results.NotFound();
+            var j = c.With((_, _, _) => c.Jobs.All.GetValueOrDefault(key));
+            if (j is null) return Results.NotFound();
+            var manifests = PluginApi.Scan(runner.PluginDir);
+            var proc = manifests.TryGetValue(j.Plugin, out var m) ? PluginApi.ProcessOf(m.Raw, j.Service) : null;
+            var inSpec = proc is { } p1 ? JobFach.In(p1) : null; var outSpec = proc is { } p2 ? JobFach.Out(p2) : null;
+            var outDir = runner.Fach.Fach(j, "out");
+            var latest = Directory.Exists(outDir) ? Directory.EnumerateFileSystemEntries(outDir).Select(Path.GetFileName).Where(n => n!.StartsWith(key + "-latest")).ToList() : new();
+            return Results.Ok(new
+            {
+                @base = runner.Fach.Base(j), files = j.Files,
+                uses = new { @in = inSpec is not null, @out = outSpec is not null, pattern = inSpec?.Patterns, mode = inSpec?.Mode, many = outSpec?.Many },
+                waiting = runner.Fach.Waiting(j, inSpec).Select(w => new { w.Name, w.Bytes, w.At }).ToList(),
+                consumed = j.Consumed.Take(200).Select(f => new { f.Run, f.Name, f.Hash, f.Bytes, f.Status, f.MediaId, f.At }).ToList(),
+                written = j.Written.Take(200).Select(f => new { f.Run, f.Name, f.Hash, f.Bytes, f.Latest, f.MediaId, f.At }).ToList(),
+                latest,
+            });
+        });
+
         api.MapGet("/jobs/{key}/runs/{run}/log", (string key, string run, int tail = 0) =>
         {
             if (!ValidKey(key) || run.Contains("..") || run.Contains('/') || run.Contains('\\')) return Results.NotFound();
@@ -117,7 +142,8 @@ public static class JobApi
         var secrets = Secrets.Get(runner.Dir, j.Key).Keys.ToList();
         return new
         {
-            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes,
+            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes, files = j.Files,
+            waiting = runner.Fach.Waiting(j, null).Count, consumed = j.Consumed.Count, written = j.Written.Count,
             secrets, nextDue = j.Enabled ? JobRunner.NextDue(j.Schedule) : null,
             running = runner.RunningId(j.Key),
             last = j.Last is { } l ? Run(l) : null,

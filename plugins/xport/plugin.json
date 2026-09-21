@@ -32,6 +32,12 @@
         "{locale}"
       ],
       "description": "Teilbaum nach Vorlage in eine Datei — Vorlage, Zuordnung, Kopfwerte und Merkmale aus dem Profil (‹› Vorlagen-Export → ⎘ speichern)",
+      "files": {
+        "out": {
+          "many": true,
+          "param": "dir"
+        }
+      },
       "params": [
         {
           "key": "profile",
@@ -41,7 +47,7 @@
         },
         {
           "key": "dir",
-          "label": "Verzeichnis",
+          "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
           "type": "dir",
           "default": "export"
         },

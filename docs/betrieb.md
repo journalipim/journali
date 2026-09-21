@@ -261,6 +261,14 @@ selbst setzt — die Prozesse selbst bleiben, wie sie sind. Plugins mit eigener 
 (IXP, JSON-Import, Solr, Vorlagen-Export — Solr: Kern, Ziel, angehakte Wurzeln als `root` mit Komma, übergangene
 Schlüssel); Prozesse ohne Ansicht tragen `"profile": "generic"` und bekommen im Job-Dialog
 ✎ — ein Formular aus ihren Parametern (Tabellen-Export, Backup, RAG, Datenblatt-Job, JSON-Export).
+**Fächer** (`docs/tasker-dateien.md`, Taloan 21.09.2026): Prozesse mit `files` im Manifest bekommen je Job `in/`, `done/`,
+`failed/`, `out/` unter einer Basis (Vorgabe `jobs/<key>`, je Job ein Share). Der Tasker wählt den Eingang (Muster,
+eine oder alle Dateien, Duplikat nach SHA-256 → `done/…-dup-…` ohne Lauf; leerer Eingang → kein Lauf), füllt
+`{inFile}`/`{inDir}`/`{outFile}`/`{outDir}` und den genannten Parameter (`source`, `dir`), wenn der Job ihn leer lässt,
+räumt nach dem Lauf auf (`done/` bzw. `failed/` mit Log daneben), belegt Ausgaben (`JobFileConsumed`/`JobFileWritten`),
+kopiert `latest` (`out/<key>-latest/`), hält die Aufbewahrung (`10` Läufe, `30d`, leer = alle) und archiviert auf Wunsch
+im Medienspeicher. `GET /api/jobs/{key}/files` zeigt es; im Job-Detail steht es unter den Läufen.
+
 Geheimnisse (Token) gehören nie ins Journal, also nicht ins Profil selbst — sie liegen **am Profil beim Server**:
 `PUT /api/plugins/{key}/secrets/{profil}` `{values:{token:…}}` (Recht Schreiben; `GET` nennt nur die Schlüssel) in
 `jobs/secrets.json` unter `plugin:<key>:<profil>`; der JobRunner füllt damit, was der Job nicht selbst gesetzt hat.

@@ -24,12 +24,17 @@ public sealed class JobRunner : BackgroundService
     public string Dir { get; }
     public string PluginDir => _pluginDir;
     public string Origin { get; set; } = "http://localhost:5000";
+    /// <summary>Die Fächer (in/done/failed/out je Job, docs/tasker-dateien.md).</summary>
+    public JobFach Fach { get; }
+    /// <summary>Medienspeicher fürs Archiv (Files.Archive) — vom Programm gesetzt.</summary>
+    public IMediaStore? Store { get; set; }
 
     public JobRunner(Catalog catalog, string pluginDir, string jobDir, ILogger<JobRunner> log)
     {
         _catalog = catalog; _pluginDir = pluginDir; _log = log; Dir = jobDir;
         Directory.CreateDirectory(jobDir);
         _lastMinute = Floor(DateTimeOffset.Now);
+        Fach = new JobFach(jobDir);
     }
 
     private static DateTimeOffset Floor(DateTimeOffset t) => new(t.Year, t.Month, t.Day, t.Hour, t.Minute, 0, t.Offset);
@@ -94,6 +99,14 @@ public sealed class JobRunner : BackgroundService
         // füllen, was der Job selbst nicht gesetzt hat
         if (job.Params.TryGetValue("profile", out var prof) && prof is { Length: > 0 })
             foreach (var (k, v) in Secrets.Get(Dir, Secrets.ProfileKey(job.Plugin, prof))) if (!values.TryGetValue(k, out var have) || have.Length == 0) values[k] = v;
+        // Fächer: Eingang wählen (Duplikate weg), Ausgabeort festlegen, {inFile}/{inDir}/{outFile}/{outDir} füllen
+        JobFach.Plan? plan;
+        try
+        {
+            plan = Fach.Prepare(job, proc, run, values, (type, payload) => _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, type, payload, null).Number), out var skip);
+            if (plan is null) { error = skip; return null; }
+        }
+        catch (Exception e) { error = $"Fächer: {e.Message}"; return null; }
         ProcessStartInfo psi;
         try { psi = PluginApi.BuildProcess(_pluginDir, job.Plugin, proc, values); }
         catch (Exception e) { error = e.Message; return null; }
@@ -105,11 +118,11 @@ public sealed class JobRunner : BackgroundService
         var cts = new CancellationTokenSource();
         lock (_gate) _running[key] = (p, cts, run);
         _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobRunStarted, new JobRunStarted(run, trigger), null));
-        _ = Task.Run(() => Watch(key, job.TimeoutMinutes, run, p, cts, logPath, actor, token));
+        _ = Task.Run(() => Watch(key, job.TimeoutMinutes, run, p, cts, logPath, actor, token, plan, job));
         return run;
     }
 
-    private async Task Watch(string key, int timeoutMinutes, string run, Process p, CancellationTokenSource cts, string logPath, string actor, string token)
+    private async Task Watch(string key, int timeoutMinutes, string run, Process p, CancellationTokenSource cts, string logPath, string actor, string token, JobFach.Plan plan, JobState job)
     {
         var sw = Stopwatch.StartNew();
         var status = "ok"; string? last = null;
@@ -139,10 +152,32 @@ public sealed class JobRunner : BackgroundService
             var exit = 0; try { exit = p.ExitCode; } catch { }
             var bytes = 0L; try { log.Flush(); bytes = new FileInfo(logPath).Length; } catch { }
             var summary = last is { Length: > 0 } ? (last.Length > 200 ? last[..200] : last) : null;
+            // Fächer aufräumen: Eingang nach done/ oder failed/, Ausgaben belegen, latest, Aufbewahrung, Archiv — ins Log des Laufs
+            if (plan.In.Count > 0 || plan.OutDir is not null || plan.OutFile is not null)
+            {
+                try
+                {
+                    await Fach.Finish(job, plan, run, status is "ok" or "warn", logPath,
+                        (type, payload) => _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, type, payload, null).Number),
+                        (path, name) => Archive(actor, path, name),
+                        m => Line("! Fächer: ", m));
+                }
+                catch (Exception e) { Line("! Fächer: ", e.Message); }
+            }
             try { _catalog.With((_, _, write) => write(actor, Jobs.Stream + key, Types.JobRunFinished, new JobRunFinished(run, status, exit, Math.Round(sw.Elapsed.TotalSeconds, 1), summary, bytes), null)); }
             catch (Exception e) { _log.LogError(e, "Job {Key}: Ausgang nicht geschrieben", key); }
             p.Dispose();
         }
+    }
+
+    /// <summary>Archiv (Files.Archive): die Datei als Medium im Medienspeicher — gleicher Hash = dasselbe Medium; liefert die Medien-Id.</summary>
+    private async Task<string?> Archive(string actor, string path, string name)
+    {
+        if (Store is null) return null;
+        await using var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        var (sha, bytes) = await Store.PutAsync(fs, CancellationToken.None);
+        var mime = Path.GetExtension(name).ToLowerInvariant() switch { ".json" => "application/json", ".xml" => "application/xml", ".csv" => "text/csv", ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".pdf" => "application/pdf", ".gz" => "application/gzip", ".html" => "text/html", ".txt" => "text/plain", _ => "application/octet-stream" };
+        return _catalog.With((_, _, write) => _catalog.Media.BySha(sha)?.Id ?? write(actor, Ids.Media(), Types.MediaCreated, new MediaCreated(sha, bytes, mime, Path.GetFileName(name)), null).Stream);
     }
 
     private readonly HashSet<string> _cancelled = new();

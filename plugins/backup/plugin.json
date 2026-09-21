@@ -28,6 +28,12 @@
     ],
     "description": "Rohdaten-JSON eines Teilbaums in ein Verzeichnis schreiben",
     "profile": "generic",
+    "files": {
+      "out": {
+        "many": true,
+        "param": "dir"
+      }
+    },
     "params": [
       {
         "key": "profile",
@@ -43,7 +49,7 @@
       },
       {
         "key": "dir",
-        "label": "Verzeichnis",
+        "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
         "type": "dir",
         "default": "backup"
       },

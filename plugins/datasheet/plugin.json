@@ -33,6 +33,12 @@
       ],
       "description": "Datenblätter eines Teilbaums als HTML-Dateien in ein Verzeichnis (mit index.html)",
       "profile": "generic",
+      "files": {
+        "out": {
+          "many": true,
+          "param": "dir"
+        }
+      },
       "params": [
         {
           "key": "profile",
@@ -48,7 +54,7 @@
         },
         {
           "key": "dir",
-          "label": "Verzeichnis",
+          "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
           "type": "dir",
           "default": "datenblaetter"
         },
