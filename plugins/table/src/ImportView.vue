@@ -311,10 +311,10 @@ onMounted(async () => {
         <div class="row" style="margin-bottom:4px"><span v-if="target" class="chip" :title="target.id + ' — Klick: im Baum ändern'" style="cursor:pointer" @click="targetPick = !targetPick">{{ icon(target.role) }} {{ target.label }} <button @click.stop="target = null; planned = null" title="Ziel weg">×</button></span><span v-else class="muted">Gruppe oder Produkt — wohin neue Zeilen kommen</span></div>
         <TreePicker v-if="!target || targetPick" :model-value="target?.id ?? ''" :height="200" @pick="pickTarget" />
       </td></tr>
-      <tr v-if="!fixed"><td class="attr">Neue als</td><td><select v-model="role" title="Rolle neuer Zeilen" @change="planned = null" style="width:100%">
+      <tr v-if="!fixed && !(idLocked && !unknownIds)"><td class="attr">Neue als</td><td><select v-model="role" title="Rolle neuer Zeilen" @change="planned = null" style="width:100%">
         <option value="">automatisch (unter Gruppe → Produkt, unter Produkt → Variante)</option><option value="group">▣ Gruppen</option><option value="product">▦ Produkte</option><option value="variant">◆ Varianten</option>
       </select></td></tr>
-      <tr v-if="!fixed"><td class="attr">Kennung</td><td><input v-model="external" type="text" placeholder="System der externen Kennung (z. B. erp) — findet vorhandene Knoten" @change="resuggest(true)" /></td></tr>
+      <tr v-if="!fixed && !idLocked"><td class="attr">Kennung</td><td><input v-model="external" type="text" placeholder="System der externen Kennung (z. B. erp) — findet vorhandene Knoten" @change="resuggest(true)" /></td></tr>
     </ImportHead>
     <div class="scroll">
       <div v-if="!keyColumn && source" class="muted" style="font-size:12px;padding:6px 8px">⚠ Keine Schlüsselspalte (Id, SKU, Kennung) — jede Zeile wird neu angelegt.</div>
