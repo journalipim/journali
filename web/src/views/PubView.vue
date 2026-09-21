@@ -315,11 +315,10 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} Produkte sind in „${current.label}“ noch nicht einsortiert — Klick zeigt sie`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
-      <div class="toolbar" style="white-space:nowrap">
+      <div class="toolbar" style="white-space:nowrap" title="Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).">
         <span class="view-chip pos" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'" title="wird ausgeleitet">ausgeleitet <b class="pos">{{ exp.in }}</b></span>
         <span class="view-chip" :class="{ on: expOnly === 'out', neg: exp.out > 0 }" @click="expOnly = 'out'" title="wird nicht ausgeleitet — mit Grund">zurückgehalten <b :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</b></span>
         <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">alle <b class="muted">{{ exp.in + exp.out }}</b></span></div>
-      <div class="muted" style="font-size:12px;padding:0 8px 4px">Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).</div>
       <div class="scroll" style="max-height:240px">
         <div v-for="r in expRows" :key="r.path.map(x => x.id).join('/') + r.product.id" class="node" :title="r.path.map(x => x.label).join(' › ') + (r.why.length ? '\n' + r.why.join('\n') : '')" @click="router.push(`/pub/${r.product.id}`)">
           <span :class="r.in ? 'pos' : 'neg'" style="width:14px;text-align:center">{{ r.in ? '✓' : '✗' }}</span>
