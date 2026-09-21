@@ -127,6 +127,7 @@ public static partial class ModelApi
         m.MapPut("/attributes/{key}", (string key, AttributeDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
             {
+                var force = string.Equals(req.Query["force"], "true", StringComparison.OrdinalIgnoreCase);
                 var def = body with { Key = key, Label = body.Label ?? new(), Axes = Clean(body.Axes), Channels = Clean(body.Channels),
                                       Unit = Blank(body.Unit), Group = Blank(body.Group), List = Blank(body.List), Columns = Clean(body.Columns),
                                       Required = body.Required is { Count: > 0 } r ? r.Where(kv => kv.Value is { Length: > 0 }).ToDictionary(kv => kv.Key, kv => kv.Value) : null };
@@ -162,6 +163,11 @@ public static partial class ModelApi
                 // Werte setzen geht dann noch nicht, das Modell zeigt den fehlenden Teil an.
                 if (def.List is not null && !model.Lists.ContainsKey(def.List)) return Bad($"Werteliste {def.List} gibt es nicht.");
                 if (def.Unit is not null && !model.Units.ContainsKey(def.Unit)) return Bad($"Unbekannte Einheit: {def.Unit} — unter Einheiten anlegen.");
+                // Typwechsel mit Bestand (Taloan, 21.09.: „ich kann wirklich den Datentyp ändern, obwohl schon Werte erfasst sind?“): erst gegen die
+                // vorhandenen Werte prüfen — was zum neuen Typ (oder ohne die Achse) nicht mehr passt, wird gezählt und der Wechsel verweigert;
+                // ?force=true schreibt trotzdem (die Werte bleiben im Journal, lesen sie sich dann als Text ohne Prüfung — die Datenanalyse findet sie)
+                if (model.Attributes.TryGetValue(key, out var before) && !force && Clash(c, model, before, def) is { Count: > 0 } clash)
+                    return Results.BadRequest(new { error = $"{clash.Count} vorhandene Werte passen nicht zur neuen Definition — z. B. {string.Join(" · ", clash.Examples)}. Erst die Werte bereinigen (Suche attr:{key}), oder mit force=true trotzdem ändern.", count = clash.Count, examples = clash.Examples, force = true });
                 if (def.Type == AttributeTypes.Rows)
                 {
                     foreach (var col in def.Columns ?? [])
@@ -298,6 +304,37 @@ public static partial class ModelApi
             .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), activeFrom = model.Groups.GetValueOrDefault(g)?.ActiveFrom, attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g) }).ToList(),
         types = AttributeTypes.All,
     };
+
+    /// <summary>Vorhandene Werte (Knoten, Relationen, Medien), die zur neuen Definition nicht passen: Typ, mehrfach → einfach, Achse weg, Liste.</summary>
+    public static (int Count, List<string> Examples)? Clash(Catalog c, ModelCatalog model, AttributeDefinition before, AttributeDefinition after)
+    {
+        var changed = before.Type != after.Type || (before.Multiple && !after.Multiple) || before.List != after.List || before.Pattern != after.Pattern
+            || (before.PerLocale && !after.PerLocale) || (before.PerChannel && !after.PerChannel);
+        if (!changed) return null;
+        var count = 0; var examples = new List<string>();
+        var tree = c.With((_, t, _) => t);   // die Sperre ist schon gehalten (Command läuft in With) — Monitor ist wiedereintrittsfähig
+        void Check(string where, Axis ax, string? value, string[]? values)
+        {
+            if (ax.Attribute != before.Key) return;
+            string? why = null;
+            if (ax.Locale is not null && !after.PerLocale) why = $"Sprache {ax.Locale}";
+            else if (ax.Channel is not null && !after.PerChannel) why = $"Kanal {ax.Channel}";
+            else if (values is not null && !after.Multiple) why = "mehrfach";
+            else
+            {
+                var v = value; var vs = values;
+                why = CheckValue(model, after, ref v, ref vs);
+            }
+            if (why is null) return;
+            count++;
+            if (examples.Count < 3) examples.Add($"{where}: „{(value ?? string.Join(", ", values ?? [])).Truncate(40)}“ ({why.Replace(before.Key + ": ", "")})");
+        }
+        foreach (var n in tree.Nodes.Values) { foreach (var (ax, v) in n.Values) Check(NodeRow.LabelOf(tree, model, n), ax, v, null); foreach (var (ax, vs) in n.Lists) Check(NodeRow.LabelOf(tree, model, n), ax, null, vs); }
+        foreach (var r in c.Relations.All.Values) { foreach (var (ax, v) in r.Values) Check("Relation " + r.Id, ax, v, null); foreach (var (ax, vs) in r.Lists) Check("Relation " + r.Id, ax, null, vs); }
+        foreach (var mm in c.Media.All.Values) { foreach (var (ax, v) in mm.Values) Check(mm.Name, ax, v, null); foreach (var (ax, vs) in mm.Lists) Check(mm.Name, ax, null, vs); }
+        return (count, examples);
+    }
+    private static string Truncate(this string s, int n) => s.Length <= n ? s : s[..n] + "…";
 
     /// <summary>
     /// Prüft den Wert eines Attributs gegen seine Definition. Liefert den

@@ -115,6 +115,8 @@ const stepsOpen = ref(null)   // Spalte, deren Kette gerade offen ist
 const OPS = transform.OPS
 const FIELDS = { replace: ['find', 'with', 'regex'], prefix: ['text'], suffix: ['text'], static: ['text'], default: ['text'], combine: ['columns', 'sep'], split: ['sep', 'index'], number: ['decimal'], boolean: ['true'], date: ['format'], map: ['pairs', 'other'], when: ['test', 'value', 'then', 'else'] }
 const opHint = op => OPS.find(o => o[0] === op)?.[2] ?? ''
+// je Feld ein sprechender Platzhalter (Taloan, 21.09.: „Was soll bei Index rein?“)
+const FIELD_HINT = { find: 'suchen nach', with: 'ersetzen durch', text: 'Text', columns: 'Spalten mit Komma — {} = diese Spalte', sep: 'Trennzeichen, z. B. , oder ;', index: 'welcher Teil: 0 = erster, 1 = zweiter, -1 = letzter, leer = alle mit Komma', true: 'Wörter für „ja“ mit Komma (ja, yes, 1, x)', pairs: 'alt=neu; alt2=neu2', other: 'sonst (leer = Wert bleibt)', value: 'Vergleichswert', then: 'dann — {} = Quelle', else: 'sonst — {} = Quelle' }
 function addStep(m, op) { if (!op) return; (m.steps ??= []).push({ op }); planned.value = null }
 function delStep(m, i) { m.steps.splice(i, 1); if (!m.steps.length) delete m.steps; planned.value = null }
 function moveStep(m, i, d) { const j = i + d; if (j < 0 || j >= m.steps.length) return; [m.steps[i], m.steps[j]] = [m.steps[j], m.steps[i]]; planned.value = null }
@@ -273,8 +275,9 @@ onMounted(async () => {
                     <select v-else-if="f === 'test'" v-model="s.test" @change="planned = null"><option value="empty">leer</option><option value="equals">gleich</option><option value="contains">enthält</option><option value="matches">passt auf (regex)</option></select>
                     <select v-else-if="f === 'decimal'" v-model="s.decimal" @change="planned = null" title="Dezimalzeichen"><option :value="undefined">raten</option><option value=",">Komma</option><option value=".">Punkt</option></select>
                     <select v-else-if="f === 'format'" v-model="s.format" @change="planned = null"><option value="dd.MM.yyyy">dd.MM.yyyy</option><option value="MM/dd/yyyy">MM/dd/yyyy</option><option value="yyyyMMdd">yyyyMMdd</option></select>
-                    <input v-else type="text" v-model="s[f]" :placeholder="f" :title="opHint(s.op)" @input="planned = null" :style="f === 'pairs' || f === 'columns' ? 'width:220px' : 'width:110px'" />
+                    <input v-else type="text" v-model="s[f]" :placeholder="FIELD_HINT[f] ?? f" :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" @input="planned = null" :style="f === 'pairs' || f === 'columns' || f === 'index' || f === 'then' || f === 'else' ? 'width:260px' : 'width:130px'" />
                   </template>
+                  <span class="muted" style="font-size:11px">{{ opHint(s.op) }}</span>
                   <span class="grow" />
                   <button class="x" @click="moveStep(m, si, -1)" title="nach oben">↑</button><button class="x" @click="moveStep(m, si, 1)" title="nach unten">↓</button><button class="x" @click="delStep(m, si)" title="Schritt entfernen">×</button>
                 </div>

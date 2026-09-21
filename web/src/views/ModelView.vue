@@ -69,7 +69,16 @@ async function send(fn) {
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   try { await fn(); await store.poll(true) } catch (e) { store.toast(e.message) }
 }
-const put = (path, body) => send(() => api.post(path, body, 'PUT'))
+// Typwechsel mit Bestand (Taloan, 21.09.): der Server verweigert, wenn vorhandene Werte nicht mehr passen — nachfragen, dann mit force
+const put = (path, body) => send(async () => {
+  try { await api.post(path, body, 'PUT') }
+  catch (e) {
+    if (!/force=true/.test(e.message)) throw e
+    const ok = await dialog.confirm({ title: 'Vorhandene Werte passen nicht mehr', text: e.message.replace(/, oder mit force=true trotzdem ändern\.?$/, '.'), warn: 'Trotzdem ändern? Die Werte bleiben im Journal, lesen sich dann aber ohne Typprüfung als Text — die Datenanalyse findet sie.', ok: 'Trotzdem ändern', danger: true })
+    if (!ok) return
+    await api.post(path + (path.includes('?') ? '&' : '?') + 'force=true', body, 'PUT')
+  }
+})
 const del = path => send(() => api.del(path))
 
 function switchTo(k) { section.value = k; sel.value = new Set(); cur.value = null; filter.value = ''; resetFlt() }
