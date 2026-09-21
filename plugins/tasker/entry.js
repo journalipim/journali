@@ -263,7 +263,8 @@ async function mount(root, ctx) {
       const more = el('div', { style: 'display:none;border-left:2px solid var(--line);padding-left:8px;margin-top:6px' })
       const moreBtn = el('button', { type: 'button', class: 'x', style: 'margin-top:8px', title: 'Ziel/Quelle im Baum, Texte, Geheimnisse einzeln setzen — leer = wie im Profil', onclick: () => { const on = more.style.display === 'none'; more.style.display = on ? '' : 'none'; moreBtn.textContent = (on ? '▾' : '▸') + ' Überschreiben (leer = wie im Profil)' } }, '▸ Überschreiben (leer = wie im Profil)')
       let secretNote = null
-      const noteSecret = (profileName) => { if (!secretNote || !p) return; if (!profileName) { secretNote.textContent = ''; return } api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(profileName)}`).then(r => { secretNote.textContent = r.keys.length ? `🔒 am Profil hinterlegt: ${r.keys.join(', ')}` : '🔒 am Profil nichts hinterlegt — in der Ansicht des Plugins (🔒) oder unten setzen' }).catch(() => { secretNote.textContent = '' }) }
+      profileSecrets = []
+      const noteSecret = (profileName) => { if (!secretNote || !p) return; if (!profileName) { secretNote.textContent = ''; profileSecrets = []; check(); return } api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(profileName)}`).then(r => { profileSecrets = r.keys; secretNote.textContent = r.keys.length ? `🔒 am Profil hinterlegt: ${r.keys.join(', ')}` : '🔒 am Profil nichts hinterlegt — in der Ansicht des Plugins (🔒) oder unten setzen'; check() }).catch(() => { secretNote.textContent = ''; profileSecrets = []; check() }) }
       for (const d of defs) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
         // sichtbar bleiben: Profil, Dateien/Verzeichnisse (Taloan: „das Einzige, was der Tasker können muss“), Schalter; Baum-Ziel/-Quelle, Texte, Geheimnisse: aus dem Profil
@@ -316,8 +317,31 @@ async function mount(root, ctx) {
       if (hasProfile && more.childElementCount) paramsBox.append(moreBtn, more)
       if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, 'Dieses Plugin hat keine Parameter.'))
     }
-    pluginSel.addEventListener('change', drawParams); drawParams()
+    // Speichern nur, wenn der Job laufen kann (Taloan, 21.09.: „speichern deaktiviert, solange ein Profil nicht ausführbar ist“):
+    // key, Profil (wenn der Prozess eines hat), Dateien/Verzeichnisse, Geheimnis (am Job oder am Profil hinterlegt)
+    let profileSecrets = []
+    const saveBtn = el('button', { class: 'primary', onclick: () => save() }, '💾 Speichern')
+    const why = el('span', { class: 'neg', style: 'font-size:12px;align-self:center;flex:1' })
+    function check() {
+      const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
+      const reasons = []
+      if (isNew && !keyIn.value.trim()) reasons.push('Key fehlt')
+      const hasProfile = defs.some(d => d.type === 'profile' || d.key === 'profile')
+      const profile = paramInputs.profile?.value ?? ''
+      if (hasProfile && !profile) reasons.push('Profil fehlt — in der Ansicht des Plugins speichern' + (p?.profile === 'generic' ? ' oder ✎' : ''))
+      for (const d of defs) {
+        const v = paramInputs[d.key]?.value ?? ''
+        if ((d.type === 'path' || d.type === 'dir') && !v) reasons.push(`${d.type === 'dir' ? 'Verzeichnis' : 'Quelle'} fehlt`)
+        if (d.secret && !v && !j?.secrets?.includes(d.key) && !profileSecrets.includes(d.key)) reasons.push(`${d.label.split(' —')[0]} fehlt — am Profil hinterlegen (🔒) oder unter „Überschreiben“ setzen`)
+      }
+      saveBtn.disabled = reasons.length > 0; saveBtn.title = reasons.join(' · ')
+      why.textContent = reasons.length ? '✗ ' + reasons[0] : ''
+      return reasons.length === 0
+    }
+    pluginSel.addEventListener('change', () => { drawParams(); check() }); drawParams(); check()
+    dlg.addEventListener('input', check); dlg.addEventListener('change', check)
     const save = async () => {
+      if (!check()) return
       const key = (isNew ? keyIn.value : j.key).trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
       if (!key) { store.toast('key fehlt'); return }
       const params = {}
@@ -334,7 +358,7 @@ async function mount(root, ctx) {
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Plugin (Prozess)'), pluginSel, pluginHint, paramsBox,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitplan'), sched.el,
       el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitgrenze (min)'), timeoutIn,
-      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px' }, el('button', { onclick: () => box.remove() }, 'Abbrechen'), el('button', { class: 'primary', onclick: save }, '💾 Speichern')))
+      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px' }, why, el('button', { onclick: () => box.remove() }, 'Abbrechen'), saveBtn))
     box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) box.remove() })
     document.body.append(box); (isNew ? keyIn : labelIn).focus()
   }
