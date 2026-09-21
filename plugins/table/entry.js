@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-ff0c96d9] { overflow-x: auto;\n}\ntable.map[data-v-ff0c96d9] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-ff0c96d9] { overflow-x: auto;\n}\ntable.cols[data-v-ff0c96d9] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-ff0c96d9] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-ff0c96d9] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-ff0c96d9] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-ff0c96d9] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-ff0c96d9] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-ff0c96d9] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-ff0c96d9] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-ff0c96d9] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-ff0c96d9] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-ff0c96d9], .tstep input[type=text][data-v-ff0c96d9] { font-size: 12px;\n}\n.fld[data-v-ff0c96d9] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n.tabs button[data-v-ff0c96d9] { border: 1px solid var(--line); background: none; padding: 1px 8px; font-size: 11px; font-weight: 600;\n}\n.tabs button.on[data-v-ff0c96d9] { background: var(--accent-soft); border-color: var(--accent);\n}\ntable.diff td[data-v-ff0c96d9] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-ff0c96d9] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-ff0c96d9] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-ff0c96d9] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-ff0c96d9] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-ff0c96d9] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-ff0c96d9] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-ff0c96d9] { font-weight: 400;\n}\n.drop.over[data-v-ff0c96d9] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-ff0c96d9] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-ff0c96d9] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-ff0c96d9] { cursor: pointer;\n}\n.recent .chip.dim[data-v-ff0c96d9] { opacity: .55; cursor: default;\n}\n.btn[data-v-ff0c96d9] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-ff0c96d9] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-ff0c96d9] { opacity: .5;\n}\n.samples[data-v-ff0c96d9] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-ff0c96d9] { font-size: 13px;\n}\n.out[data-v-ff0c96d9] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-ff0c96d9] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-ff0c96d9] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-ff0c96d9]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-601f734e] { overflow-x: auto;\n}\ntable.map[data-v-601f734e] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-601f734e] { overflow-x: auto;\n}\ntable.cols[data-v-601f734e] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-601f734e] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-601f734e] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-601f734e] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-601f734e] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-601f734e] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-601f734e] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-601f734e] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-601f734e] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-601f734e] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-601f734e], .tstep input[type=text][data-v-601f734e] { font-size: 12px;\n}\n.fld[data-v-601f734e] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\r\n/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */\n.tabs[data-v-601f734e] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-601f734e] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-601f734e]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-601f734e]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-601f734e]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-601f734e] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-601f734e] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-601f734e] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-601f734e] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-601f734e] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-601f734e] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-601f734e] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-601f734e] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-601f734e] { font-weight: 400;\n}\n.drop.over[data-v-601f734e] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-601f734e] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-601f734e] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-601f734e] { cursor: pointer;\n}\n.recent .chip.dim[data-v-601f734e] { opacity: .55; cursor: default;\n}\n.btn[data-v-601f734e] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-601f734e] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-601f734e] { opacity: .5;\n}\n.samples[data-v-601f734e] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-601f734e] { font-size: 13px;\n}\n.out[data-v-601f734e] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-601f734e] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-601f734e] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-601f734e]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -323,24 +323,28 @@ const _hoisted_139 = {
   key: 0,
   class: "stats"
 };
-const _hoisted_140 = { class: "pos" };
-const _hoisted_141 = { class: "muted" };
-const _hoisted_142 = ["title"];
-const _hoisted_143 = { key: 1 };
-const _hoisted_144 = { class: "warn" };
-const _hoisted_145 = {
+const _hoisted_140 = { class: "muted" };
+const _hoisted_141 = ["title"];
+const _hoisted_142 = { key: 1 };
+const _hoisted_143 = { class: "warn" };
+const _hoisted_144 = {
   key: 2,
+  class: "muted",
+  style: { "margin-top": "6px", "white-space": "pre-wrap", "font-size": "12px" }
+};
+const _hoisted_145 = {
+  key: 3,
   class: "neg",
   style: { "margin-top": "6px", "white-space": "pre-wrap" }
 };
 const _hoisted_146 = { key: 0 };
 const _hoisted_147 = {
-  key: 3,
+  key: 4,
   class: "warn",
   style: { "margin-top": "6px" }
 };
 const _hoisted_148 = {
-  key: 4,
+  key: 5,
   class: "section",
   style: { "margin-top": "8px", "padding": "0" }
 };
@@ -364,7 +368,7 @@ const _hoisted_158 = {
   class: "muted"
 };
 const _hoisted_159 = {
-  key: 5,
+  key: 6,
   class: "section",
   style: { "margin-top": "8px", "padding": "0" }
 };
@@ -740,6 +744,11 @@ const _sfc_main$1 = {
     });
     const changeTab = ref("update");
     const openRow = ref(null);
+    watch(() => planned.value?.stats, (st) => {
+      if (!st) return;
+      changeTab.value = st.create ? "create" : st.update ? "update" : "unchanged";
+      openRow.value = null;
+    });
     const attrLabel = (key) => {
       const a = attrs.value.find((x) => x.key === key) ?? store.model?.attributes?.find((x) => x.key === key);
       return a?.label?.de || key;
@@ -2581,36 +2590,7 @@ const _sfc_main$1 = {
                 createElementVNode(
                   "span",
                   _hoisted_140,
-                  "+" + toDisplayString(planned.value.stats.create) + " neu",
-                  1
-                  /* TEXT */
-                ),
-                _cache[100] || (_cache[100] = createTextVNode(
-                  " · ",
-                  -1
-                  /* CACHED */
-                )),
-                createElementVNode(
-                  "span",
-                  null,
-                  toDisplayString(planned.value.stats.update) + " geändert",
-                  1
-                  /* TEXT */
-                ),
-                _cache[101] || (_cache[101] = createTextVNode(
-                  " · ",
-                  -1
-                  /* CACHED */
-                )),
-                createElementVNode(
-                  "span",
-                  _hoisted_141,
-                  toDisplayString(planned.value.stats.unchanged) + " unverändert",
-                  1
-                  /* TEXT */
-                ),
-                createTextVNode(
-                  " · " + toDisplayString(planned.value.stats.values) + " Werte · " + toDisplayString(planned.value.commands.length) + " Befehle",
+                  toDisplayString(planned.value.stats.values) + " Werte · " + toDisplayString(planned.value.commands.length) + " Befehle",
                   1
                   /* TEXT */
                 ),
@@ -2626,12 +2606,12 @@ const _sfc_main$1 = {
                     createElementVNode("span", {
                       class: "pos",
                       title: Object.entries(planned.value.stats.newListValues).map(([l, v]) => l + ": " + Object.values(v).join(", ")).join(" · ")
-                    }, "+" + toDisplayString(Object.values(planned.value.stats.newListValues).reduce((n, v) => n + Object.keys(v).length, 0)) + " Listenwerte", 9, _hoisted_142)
+                    }, "+" + toDisplayString(Object.values(planned.value.stats.newListValues).reduce((n, v) => n + Object.keys(v).length, 0)) + " Listenwerte", 9, _hoisted_141)
                   ],
                   64
                   /* STABLE_FRAGMENT */
                 )) : createCommentVNode("v-if", true),
-                planned.value.newAttributes.length ? (openBlock(), createElementBlock("span", _hoisted_143, [
+                planned.value.newAttributes.length ? (openBlock(), createElementBlock("span", _hoisted_142, [
                   _cache[92] || (_cache[92] = createTextVNode(
                     " · ",
                     -1
@@ -2639,7 +2619,7 @@ const _sfc_main$1 = {
                   )),
                   createElementVNode(
                     "span",
-                    _hoisted_144,
+                    _hoisted_143,
                     toDisplayString(planned.value.newAttributes.length) + " neue Attribute:",
                     1
                     /* TEXT */
@@ -2650,6 +2630,13 @@ const _sfc_main$1 = {
                     /* TEXT */
                   )
                 ])) : createCommentVNode("v-if", true),
+                planned.value.stats.notes?.length ? (openBlock(), createElementBlock(
+                  "div",
+                  _hoisted_144,
+                  "ℹ " + toDisplayString(planned.value.stats.notes.slice(0, 30).join("\nℹ ")),
+                  1
+                  /* TEXT */
+                )) : createCommentVNode("v-if", true),
                 planned.value.stats.problems.length ? (openBlock(), createElementBlock("div", _hoisted_145, [
                   createTextVNode(
                     toDisplayString(planned.value.stats.problems.slice(0, 30).join("\n")),
@@ -2994,7 +2981,7 @@ const _sfc_main$1 = {
                     /* TEXT */
                   )
                 ])
-              ])) : source.value ? (openBlock(), createElementBlock("div", _hoisted_181, "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")) : (openBlock(), createElementBlock("div", _hoisted_182, [..._cache[102] || (_cache[102] = [
+              ])) : source.value ? (openBlock(), createElementBlock("div", _hoisted_181, "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")) : (openBlock(), createElementBlock("div", _hoisted_182, [..._cache[100] || (_cache[100] = [
                 createTextVNode(
                   "Datei ablegen oder aus Excel einfügen.",
                   -1
@@ -3027,7 +3014,7 @@ const _sfc_main$1 = {
                 createVNode(_component_router_link, {
                   to: { path: "/journal", query: { q: result.value.batch } }
                 }, {
-                  default: withCtx(() => [..._cache[103] || (_cache[103] = [
+                  default: withCtx(() => [..._cache[101] || (_cache[101] = [
                     createTextVNode(
                       "im Journal",
                       -1
@@ -3039,7 +3026,7 @@ const _sfc_main$1 = {
                 }, 8, ["to"])
               ])) : createCommentVNode("v-if", true),
               log.value.length ? (openBlock(), createElementBlock("div", _hoisted_184, [
-                _cache[104] || (_cache[104] = createElementVNode(
+                _cache[102] || (_cache[102] = createElementVNode(
                   "h2",
                   null,
                   "Protokoll",
@@ -3063,7 +3050,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-ff0c96d9"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-601f734e"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
