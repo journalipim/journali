@@ -62,7 +62,7 @@ function snapTo(pt, exceptI) {
   return best
 }
 // Ende eines markierten Übergangs anfassen und an einen anderen Andockpunkt (auch einer anderen Kachel) ziehen
-function endDown(n, end, e) { const a = sketch.value.arrows[n]; const q = end === 'from' ? a.p1 : a.p2; drag.value = { kind: 'reattach', n, end, x: q.x, y: q.y, tx: q.x, ty: q.y, snapJ: null, snapPort: null } }
+function endDown(n, end, e) { const a = sketch.value.arrows[n]; const q = end === 'from' ? a.p1 : a.p2; const o = end === 'from' ? a.p2 : a.p1; drag.value = { kind: 'reattach', n, end, x: q.x, y: q.y, tx: q.x, ty: q.y, fixed: { x: o.x, y: o.y }, snapJ: null, snapPort: null } }
 function portUp(j, port) {
   const d = drag.value; if (!d) return; drag.value = null
   const w = cur.value
@@ -142,8 +142,7 @@ const sketch = computed(() => {
   }
   const arrows = w.transitions.map((t, n) => {
     if (d?.kind === 'reattach' && d.n === n) {   // das angefasste Ende hängt an der Maus (bzw. am eingeschnappten Punkt)
-      const other = d.end === 'from' ? portXY(pos[idx[t.to] ?? 0], t.toPort ?? nearestPort(pos[idx[t.to] ?? 0], { x: d.tx, y: d.ty })) : portXY(pos[idx[t.from] ?? 0], t.fromPort ?? nearestPort(pos[idx[t.from] ?? 0], { x: d.tx, y: d.ty }))
-      return d.end === 'from' ? curve(t, { x: d.tx, y: d.ty }, other) : curve(t, other, { x: d.tx, y: d.ty })
+      return d.end === 'from' ? curve(t, { x: d.tx, y: d.ty }, d.fixed) : curve(t, d.fixed, { x: d.tx, y: d.ty })
     }
     const a = pos[idx[t.from] ?? 0], b = pos[idx[t.to] ?? 0]
     const ca = { x: a.x + W / 2, y: a.y + H / 2 }, cb = { x: b.x + W / 2, y: b.y + H / 2 }
