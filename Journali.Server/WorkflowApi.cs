@@ -59,7 +59,7 @@ public static class WorkflowApi
                     since = nw?.At, actor = nw?.Actor, note = nw?.Note, transition = nw?.Transition, assigned = nw?.Assigned,
                     // Wirkungen des Schritts, der hierher führte, die (noch) nicht eingetreten sind — z. B. „Freigegeben“ ohne Freigabe für web
                     // (Taloan, 21.09.: „wieso steht das immer noch in der Liste?“ — der Schritt lief, als die Saat noch keine Wirkung hatte)
-                    pending = Pending(tree, n, wf, nw?.Transition),
+                    pending = Pending(c, tree, model, n, wf, nw?.Transition),
                     states = wf.States.Select(s => new { s.Key, s.Label, s.Color, s.Final }).ToList(),
                     transitions = Commands.Allowed(c.Workflows, wf, id, role).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label }).ToList(),
                     // auch die, die ich nicht darf — zum Zeigen, wer dran ist; mit Eskalation: ab wann auch wer
@@ -67,11 +67,13 @@ public static class WorkflowApi
                 };
             }).ToList());
         }));
-        static List<string> Pending(Tree tree, Node n, WorkflowDef wf, string? transition)
+        // Ausstehende Wirkung je Zustand: { effect, why, canFix } — canFix false, wenn eine Variante den Weg bewusst zurückging (Taloan, 21.09.:
+        // Variante „wieder geöffnet“ → das Produkt darf die Freigabe nicht einfach nachholen, das würde die Variante wieder freigeben)
+        static List<object> Pending(Catalog c, Tree tree, ModelCatalog model, Node n, WorkflowDef wf, string? transition)
         {
             var t = wf.Transitions.FirstOrDefault(x => x.Key == transition); if (t?.Effects is null) return [];
             var sellables = n.Role == Roles.Product ? tree.Children(n.Id).Where(v => v.Role == Roles.Variant).ToList() : [n];
-            var pending = new List<string>();
+            var pending = new List<object>();
             foreach (var eff in t.Effects)
             {
                 var i = eff.IndexOf(':'); if (i < 0) continue; var kind = eff[..i]; var arg = eff[(i + 1)..];
@@ -82,7 +84,12 @@ public static class WorkflowApi
                     "status" => n.Status == arg,
                     _ => true,
                 };
-                if (!done) pending.Add(eff);
+                if (done) continue;
+                // Varianten mit eigenem Stand in diesem Workflow, der nicht der Zielzustand ist: die haben den Weg bewusst verlassen
+                var back = n.Role == Roles.Product && kind == "release"
+                    ? sellables.Where(v => c.Workflows.Of(v.Id).ContainsKey(wf.Key) && c.Workflows.StateOf(v.Id, wf) != t.To).Select(v => $"{NodeRow.LabelOf(tree, model, v)}: {wf.State(c.Workflows.StateOf(v.Id, wf))?.Label.GetValueOrDefault("de") ?? c.Workflows.StateOf(v.Id, wf)}").ToList()
+                    : [];
+                pending.Add(new { effect = eff, canFix = back.Count == 0, why = back.Count > 0 ? "Variante zurück im Weg — " + string.Join(" · ", back) : null });
             }
             return pending;
         }
