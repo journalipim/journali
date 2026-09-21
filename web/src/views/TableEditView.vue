@@ -439,6 +439,9 @@ function onEnterCapture(e) {
   if (e.key !== 'Enter' || e.ctrlKey || e.altKey) return
   const t = e.target
   if (!t?.closest?.('td.cell') || t.classList?.contains('cell-input') || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return
+  // in der letzten Zeile: Enter hängt eine neue Zeile an und springt hinein (Taloan, 21.09.)
+  const at = cellAt(t)
+  if (at && !e.shiftKey && at.ri === rows.value.length - 1 && data.value && props.deep !== '1') { e.preventDefault(); e.stopPropagation(); addRow(); nextTick(() => { const to = focusCell(rows.value.length - 1, at.ci); if (to) { anchor.value = to; sel.value = norm(to, to) } }); return }
   if (move(e, e.shiftKey ? -1 : 1, 0)) e.stopPropagation()
 }
 onMounted(() => { document.addEventListener('paste', onPaste); document.addEventListener('keydown', onKey); document.addEventListener('keydown', onEnterCapture, true); document.addEventListener('mousedown', onMouseDown, true); document.addEventListener('mousemove', onMouseMove); document.addEventListener('mouseup', onMouseUp); window.addEventListener('pagehide', onPageHide) })
