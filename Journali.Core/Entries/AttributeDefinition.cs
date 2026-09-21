@@ -22,11 +22,12 @@ public static class Model
     public const string LabelStream = "settings:label:";
     public const string MasterLocaleStream = "settings:master_locale";
     public const string MasterChannelStream = "settings:master_channel";
+    public const string SkuAttributeStream = "settings:sku_attribute";
     public const string RelationStream = "relation:";
     /// <summary>Gruppe der Werte am Medium (20).</summary>
     public const string MediaGroup = "media";
 
-    /// <summary>Die SKU ist ein Attribut der Variante, eindeutig über alle Varianten.</summary>
+    /// <summary>Saatgut für das Kennungsattribut (settings:sku_attribute) — im Journal kann es ein anderes sein (<see cref="Projections.ModelCatalog.SkuAttribute"/>).</summary>
     public const string SkuAttribute = "sku";
 
     /// <summary>Der Wurzelknoten des Saatguts — feste Id, damit er nur einmal entsteht.</summary>
@@ -41,6 +42,7 @@ public static class Model
         yield return new(LocaleStream + "en", Types.LocaleDefined, Types.Serialize(new LocaleDefinition("en", "English")));
         yield return new(MasterLocaleStream, Types.MasterLocaleDefined, Types.Serialize(new MasterLocaleDefined("de")));
         yield return new(MasterChannelStream, Types.MasterChannelDefined, Types.Serialize(new MasterChannelDefined("web")));
+        yield return new(SkuAttributeStream, Types.SkuAttributeDefined, Types.Serialize(new SkuAttributeDefined(SkuAttribute)));
         yield return new(ChannelStream + "web", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("web", Labels.Of("Web", "Web"))));
         yield return new(ChannelStream + "print", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("print", Labels.Of("Print", "Print"))));
 
@@ -95,7 +97,7 @@ public static class Model
             new("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "mastergroup", Axes: [Axes.Locale], Required: new() { ["web"] = ["*"], ["print"] = ["de"] }),
             new("description", Labels.Of("Beschreibung", "Description"), AttributeTypes.Html, Group: "mastergroup", Axes: [Axes.Locale, Axes.Channel]),
             new("color", Labels.Of("Farbe", "Colour"), AttributeTypes.Enum, Group: "mastergroup", List: "color"),
-            new(SkuAttribute, Labels.Of("SKU", "SKU"), AttributeTypes.Text, Group: "logistics", Required: new() { ["web"] = ["*"], ["print"] = ["*"] }),
+            new(SkuAttribute, Labels.Of("SKU", "SKU"), AttributeTypes.Text, Group: "logistics", Required: new() { ["web"] = ["*"], ["print"] = ["*"] }, Unique: true),
             new("ean", Labels.Of("EAN", "EAN"), AttributeTypes.Text, Group: "logistics"),
             new("weight", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "physical"),
             new(Projections.Publication.MarketsAttribute, Labels.Of("Verkaufsländer", "Markets"), AttributeTypes.Enum, Group: "mastergroup", List: Projections.Publication.MarketList, Multiple: true, Inheritable: true),

@@ -101,6 +101,16 @@ public static partial class ModelApi
                 !model.Channels.ContainsKey(body.Key ?? "") ? Bad($"Kanal {body.Key} gibt es nicht.")
                 : write(Model.MasterChannelStream, Types.MasterChannelDefined, new MasterChannelDefined(body.Key!))));
 
+        // Kennungsattribut (Taloan, 21.09.): welches Attribut die Kennung trägt — Text, einwertig, ohne Sprach-/Kanalachse; eindeutig ist es dann immer
+        m.MapPut("/sku-attribute", (SkuAttributeDefined body, HttpRequest req, Catalog c) =>
+            Command(req, c, body.Key ?? "", ValidKey, (model, write) =>
+                !model.Attributes.TryGetValue(body.Key ?? "", out var a) ? Bad($"Attribut {body.Key} gibt es nicht.")
+                : a.Type != AttributeTypes.Text ? Bad($"{a.Key} ist {a.Type} — die Kennung ist Text.")
+                : a.Multiple || a.PerLocale || a.PerChannel ? Bad($"{a.Key} ist mehrfach oder je Sprache/Kanal — die Kennung ist ein Wert je Knoten.")
+                : Clash(c, model, a with { Unique = false }, a with { Unique = true }) is { Count: > 0 } clash
+                    ? Bad($"{clash.Count} Werte von {a.Key} sind nicht eindeutig — z. B. {string.Join(" · ", clash.Examples)}. Erst bereinigen (Suche attr:{a.Key}).")
+                : write(Model.SkuAttributeStream, Types.SkuAttributeDefined, new SkuAttributeDefined(a.Key))));
+
         // Sprache zurückziehen: nicht die Mastersprache, nicht die letzte; Werte auf ihr bleiben im Journal
         m.MapDelete("/locales/{code}", (string code, HttpRequest req, Catalog c) =>
             Command(req, c, code, ValidCode, (model, write) =>
@@ -150,6 +160,8 @@ public static partial class ModelApi
                     List = def.Type == AttributeTypes.Enum ? def.List : null,
                     Columns = def.Type == AttributeTypes.Rows ? def.Columns : null,
                     Multiple = def.Multiple && def.Type is not (AttributeTypes.Rows or AttributeTypes.Formula or AttributeTypes.Boolean or AttributeTypes.Html),
+                    // eindeutig nur, wo ein Wert je Knoten steht: Text/Zahl, einwertig — Zeilen, Formeln, Vorlagen, Ja/Nein, HTML nicht
+                    Unique = def.Unique && (def.Type is AttributeTypes.Text or AttributeTypes.Integer or AttributeTypes.Decimal) && !def.Multiple,
                     Axes = def.Type == AttributeTypes.Rows ? null : def.Type == AttributeTypes.Formula ? Clean(def.Axes?.Where(a => a == Axes.Locale).ToArray()) : def.Axes,
                 };
                 if (def.Pattern is not null)
@@ -166,7 +178,10 @@ public static partial class ModelApi
                 // Typwechsel mit Bestand (Taloan, 21.09.: „ich kann wirklich den Datentyp ändern, obwohl schon Werte erfasst sind?“): erst gegen die
                 // vorhandenen Werte prüfen — was zum neuen Typ (oder ohne die Achse) nicht mehr passt, wird gezählt und der Wechsel verweigert;
                 // ?force=true schreibt trotzdem (die Werte bleiben im Journal, lesen sie sich dann als Text ohne Prüfung — die Datenanalyse findet sie)
-                if (model.Attributes.TryGetValue(key, out var before) && !force && Clash(c, model, before, def) is { Count: > 0 } clash)
+                // eindeutig einschalten mit Doppelten im Bestand: kein force — das Merkmal wäre sonst eine Lüge
+                if (model.Attributes.TryGetValue(key, out var b0) && !b0.Unique && def.Unique && Clash(c, model, b0 with { Unique = false }, b0 with { Unique = true }) is { Count: > 0 } dup)
+                    return Bad($"{dup.Count} Werte von {key} sind nicht eindeutig — z. B. {string.Join(" · ", dup.Examples)}. Erst bereinigen (Suche attr:{key}).");
+                if (model.Attributes.TryGetValue(key, out var before) && !force && Clash(c, model, before, def with { Unique = before.Unique }) is { Count: > 0 } clash)
                     return Results.BadRequest(new { error = $"{clash.Count} vorhandene Werte passen nicht zur neuen Definition — z. B. {string.Join(" · ", clash.Examples)}. Erst die Werte bereinigen (Suche attr:{key}), oder mit force=true trotzdem ändern.", count = clash.Count, examples = clash.Examples, force = true });
                 if (def.Type == AttributeTypes.Rows)
                 {
@@ -184,6 +199,7 @@ public static partial class ModelApi
             if (Actor(req) is not { } actor) return ActorMissing();
             return c.With((model, tree, write) =>
                 !model.Attributes.ContainsKey(key) ? Results.NotFound()
+                : key == model.SkuAttribute ? Bad($"{key} ist das Kennungsattribut — erst ein anderes zur Kennung machen.")
                 // Sperre: solange das Attribut irgendwo das Sternchen trägt, verlöre der Baum dort seine Namen.
                 : tree.WithLabelAttribute(key).FirstOrDefault() is { } n
                     ? Bad($"{key} ist ★ Name im Baum ab {NodeRow.LabelOf(tree, model, n)} ({n.Id}) — erst dort das Sternchen umsetzen.")
@@ -293,6 +309,7 @@ public static partial class ModelApi
         locales = model.Locales.Values.OrderBy(l => l.Code).ToList(),
         masterLocale = model.MasterLocale,
         masterChannel = model.MasterChannel,
+        skuAttribute = model.SkuAttribute,
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], closed = l.Closed, values = l.Ordered.ToList() }).ToList(),
@@ -309,10 +326,21 @@ public static partial class ModelApi
     public static (int Count, List<string> Examples)? Clash(Catalog c, ModelCatalog model, AttributeDefinition before, AttributeDefinition after)
     {
         var changed = before.Type != after.Type || (before.Multiple && !after.Multiple) || before.List != after.List || before.Pattern != after.Pattern
-            || (before.PerLocale && !after.PerLocale) || (before.PerChannel && !after.PerChannel);
+            || (before.PerLocale && !after.PerLocale) || (before.PerChannel && !after.PerChannel) || (!before.Unique && after.Unique);
         if (!changed) return null;
         var count = 0; var examples = new List<string>();
         var tree = c.With((_, t, _) => t);   // die Sperre ist schon gehalten (Command läuft in With) — Monitor ist wiedereintrittsfähig
+        // eindeutig wird eingeschaltet (Taloan, 21.09.): jeder Wert, den es schon an einem anderen Knoten gibt, zählt — sonst wäre das Merkmal eine Lüge
+        if (!before.Unique && after.Unique)
+        {
+            var ax = new Axis(before.Key, null, null); var seen = new Dictionary<string, Node>();
+            foreach (var n in tree.Nodes.Values)
+            {
+                if (!n.Values.TryGetValue(ax, out var v)) continue;
+                if (seen.TryGetValue(v, out var first)) { count++; if (examples.Count < 3) examples.Add($"„{v.Truncate(40)}“ an {NodeRow.LabelOf(tree, model, first)} und {NodeRow.LabelOf(tree, model, n)}"); }
+                else seen[v] = n;
+            }
+        }
         void Check(string where, Axis ax, string? value, string[]? values)
         {
             if (ax.Attribute != before.Key) return;

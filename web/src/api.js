@@ -120,6 +120,7 @@ export function describe(e) {
     case 'RelationTypeRetired': return `− ⇄ ${p.key}`
     case 'MasterLocaleDefined': return `★ Mastersprache ${p.code}`
     case 'MasterChannelDefined': return `★ Masterkanal ${p.key}`
+    case 'SkuAttributeDefined': return `🏷 Kennung ${p.key}`
     case 'NodeNamed': return p.name ? `✎ ${p.name}` : '✎ ∅ → Automatik'
     case 'LabelAttributeSet': return p.attribute ? `★ ${p.attribute}` : '★ ∅ → von oben'
     case 'ProductCreated': return `▦ ${p.family} unter ${p.group}${p.axes?.length ? ' · ' + p.axes.join(', ') : ''}`

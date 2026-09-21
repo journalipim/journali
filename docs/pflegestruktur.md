@@ -176,6 +176,17 @@ family)`, `VariantCreated(product, sku, axisValues)`; Umhängen später
 Eindeutigkeitsprüfung — die „kleine synchrone Prüf-Projektion" aus
 `architektur.md`.
 
+**Entscheidung Taloan (21.09.2026):** Die SKU ist ein Attribut wie jedes
+andere („bei anderen heisst es MATNR"). Deshalb zwei Dinge im Journal statt
+im Code: **eindeutig** ist ein Merkmal der Attributdefinition (`unique` —
+Text/Zahl, einwertig; einschalten mit Doppelten im Bestand wird verweigert,
+erst bereinigen), und das **Kennungsattribut** steht in
+`settings:sku_attribute` (`SkuAttributeDefined`, Saatgut `sku`): es ist
+immer eindeutig, benennt die Variante ohne ★, ist das Feld `sku` in Zeilen
+und Exporten und der Schlüssel beim Tabellen-Import; es lässt sich nicht
+zurückziehen, nur wechseln (Modell → Attribut → „zur Kennung machen").
+Eindeutige Werte kommen beim Kopieren eines Knotens nicht mit.
+
 **Vererbung** läuft den Pfad hinauf: Variante → Produkt → Gruppe → … →
 Wurzel, und auf jeder Stufe zusätzlich Kanal → Sprache → alle. Ein Wert an
 der Gruppe „TechVibe" (brand) gilt für jedes Produkt und jede Variante

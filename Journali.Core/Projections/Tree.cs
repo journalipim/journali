@@ -317,9 +317,13 @@ public sealed class Tree : IProjection
         }
     }
 
-    /// <summary>Alle Varianten mit dieser SKU — zur Eindeutigkeitsprüfung.</summary>
-    public IEnumerable<Node> BySku(string sku) =>
-        _nodes.Values.Where(n => n.Role == Roles.Variant && n.Values.TryGetValue(new Axis(Model.SkuAttribute, null, null), out var s) && s == sku);
+    /// <summary>Alle Knoten mit diesem eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) — Eindeutigkeitsprüfung für die Kennung und
+    /// jedes Attribut mit dem Merkmal eindeutig (Taloan, 21.09.2026).</summary>
+    public IEnumerable<Node> WithOwnValue(string attribute, string value)
+    {
+        var ax = new Axis(attribute, null, null);
+        return _nodes.Values.Where(n => n.Values.TryGetValue(ax, out var s) && s == value);
+    }
 
     public void Apply(Entry entry)
     {

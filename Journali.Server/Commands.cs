@@ -316,9 +316,9 @@ public static class Commands
             if (mine.All(x => !string.IsNullOrEmpty(x)) && c.Tree.Children(pid).Any(s => s.Id != n.Id && prod.Axes.All(a => s.AxisValues.TryGetValue(a, out var x) && x == mine[Array.IndexOf(prod.Axes, a)])))
                 return Outcome.Bad($"Diese Variante gibt es schon ({string.Join(", ", mine)}).");
         }
-        // SKU: eindeutig über alle Varianten — die kleine synchrone Prüf-Projektion.
-        if (def.Key == Model.SkuAttribute && value is not null && c.Tree.BySku(value).Any(o => o.Id != n.Id))
-            return Outcome.Bad($"SKU {value} gibt es schon.");
+        // Eindeutig (Kennungsattribut immer, sonst das Merkmal, Taloan 21.09.): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern
+        if (c.Model.IsUnique(def) && value is not null && locale is null && channel is null && row is null && c.Tree.WithOwnValue(def.Key, value).FirstOrDefault(o => o.Id != n.Id) is { } other)
+            return Outcome.Bad($"{def.Label.GetValueOrDefault("de") ?? def.Key} {value} gibt es schon: {NodeRow.LabelOf(c.Tree, c.Model, other)} ({other.Id}).");
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row)));
     }
 
@@ -451,7 +451,8 @@ public static class Commands
                     if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, null, l, newRow).Entry is not null) count++;
             }
         }
-        foreach (var (axis, v) in src.Values.Where(kv => kv.Key.Row is null && kv.Key.Attribute != Model.SkuAttribute))
+        // eindeutige Werte (Kennung, EAN …) kommen nicht mit — die Kopie bekäme sie sonst nicht, der Rest ginge verloren
+        foreach (var (axis, v) in src.Values.Where(kv => kv.Key.Row is null && !(c.Model.Attributes.TryGetValue(kv.Key.Attribute, out var ad) && c.Model.IsUnique(ad))))
             if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, suffix && axis.Attribute == "name" ? "(Kopie) " + v : v, null).Entry is not null) count++;
         foreach (var (axis, l) in src.Lists.Where(kv => kv.Key.Row is null))
             if (SetAttribute(c, id, axis.Attribute, axis.Locale, axis.Channel, null, l).Entry is not null) count++;

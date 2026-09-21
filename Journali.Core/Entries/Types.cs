@@ -89,6 +89,7 @@ public static class Types
     public const string WorkflowAssigned = "WorkflowAssigned";
     public const string MasterLocaleDefined = "MasterLocaleDefined";
     public const string MasterChannelDefined = "MasterChannelDefined";
+    public const string SkuAttributeDefined = "SkuAttributeDefined";
     /// <summary>Publikationsbaum (Taloan, 20.09.2026): Rubriken und Verweise.</summary>
     public const string RubricCreated = "RubricCreated";
     public const string PubTreeSet = "PubTreeSet";
@@ -381,8 +382,12 @@ public sealed record AttributeDefinition(
     Dictionary<string, string[]>? Required = null,
     string? Pattern = null,
     string? PatternHint = null,
-    AttributeCondition? When = null)
+    AttributeCondition? When = null,
+    bool Unique = false)
 {
+    /// <summary>Eindeutig (Taloan, 21.09.2026): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) —
+    /// EAN, MATNR, Artikelnummer. Das Kennungsattribut (<c>settings:sku_attribute</c>) ist immer eindeutig, auch ohne dieses Merkmal.</summary>
+    public bool IsUnique => Unique;
     /// <summary>Typ formula oder template: der Wert ist Skript bzw. Vorlage, das Ergebnis wird beim Lesen gerechnet.</summary>
     public bool IsComputed => Type is AttributeTypes.Formula or AttributeTypes.Template;
     public bool IsTemplate => Type == AttributeTypes.Template;
@@ -498,6 +503,13 @@ public sealed record MasterLocaleDefined(string Code);
 /// abgeleitete Kanäle beziehen ihren Wert aus dem Masterkanal — wie abgeleitete Sprachen aus der Mastersprache.
 /// </summary>
 public sealed record MasterChannelDefined(string Key);
+
+/// <summary>
+/// Das Kennungsattribut (Taloan, 21.09.2026: „SKU ist ein Attribut wie jedes andere — bei anderen heisst es MATNR“): Strom
+/// <c>settings:sku_attribute</c>. Welches Attribut die Kennung eines Knotens trägt — eindeutig über den ganzen Baum, Name der
+/// Variante ohne ★, Spalte <c>sku</c> in Zeilen und Exporten, Schlüssel beim Tabellen-Import. Saatgut: <c>sku</c>.
+/// </summary>
+public sealed record SkuAttributeDefined(string Key);
 
 /// <summary>
 /// Erster Eintrag einer Rubrik (Taloan, 20.09.2026). Ohne Parent ist sie die Wurzel eines Publikationsbaums: die Maximalstruktur

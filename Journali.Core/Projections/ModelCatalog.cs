@@ -39,6 +39,12 @@ public sealed class ModelCatalog : IProjection
     public string? MasterLocale { get; private set; }
     /// <summary>Der Masterkanal (settings:master_channel); null, bis gesät.</summary>
     public string? MasterChannel { get; private set; }
+    /// <summary>Das Kennungsattribut (settings:sku_attribute, Taloan 21.09.2026): bis gesät das Saatgut <c>sku</c>.</summary>
+    public string SkuAttribute => _sku ?? Model.SkuAttribute;
+    public bool SkuAttributeSeeded => _sku is not null;
+    private string? _sku;
+    /// <summary>Eindeutig über den Baum: das Merkmal am Attribut — oder das Kennungsattribut, das ist es immer.</summary>
+    public bool IsUnique(AttributeDefinition a) => a.IsUnique || a.Key == SkuAttribute;
     public Dictionary<string, ChannelDefinition> Channels { get; } = new();
     public Dictionary<string, AttributeDefinition> Attributes { get; } = new();
     public Dictionary<string, ValueList> Lists { get; } = new();
@@ -77,6 +83,9 @@ public sealed class ModelCatalog : IProjection
                 break;
             case Types.MasterChannelDefined:
                 MasterChannel = Types.Deserialize<MasterChannelDefined>(entry.Payload).Key;
+                break;
+            case Types.SkuAttributeDefined:
+                _sku = Types.Deserialize<SkuAttributeDefined>(entry.Payload).Key;
                 break;
             case Types.ChannelDefined:
                 var c = Types.Deserialize<ChannelDefinition>(entry.Payload);

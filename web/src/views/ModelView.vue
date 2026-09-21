@@ -99,7 +99,7 @@ const rows = computed(() => {
   const m = model.value; if (!m) return []
   switch (section.value) {
     case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: anyLabel(g.label), right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''], _: g })).sort(byKey)
-    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan)
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.key === m.skuAttribute ? '🏷' : a.unique ? '①' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan); 🏷 Kennung, ① eindeutig
     case 'lists': return m.lists.map(l => ({ key: l.key, label: anyLabel(l.label), right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: anyLabel(v.label), right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
@@ -410,6 +410,11 @@ const localeFallback = v => put(`/api/model/locales/${curLocale.value.code}`, { 
 const channelFallback = v => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: curChannel.value.label ?? {}, fallback: v || null })
 const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.code })
 const setMasterChannel = () => put('/api/model/master-channel', { key: curChannel.value.key })
+// Kennungsattribut (Taloan, 21.09.: „SKU ist ein Attribut wie jedes andere — bei anderen heisst es MATNR“): welches Attribut die Kennung trägt
+const setSkuAttribute = () => put('/api/model/sku-attribute', { key: curAttr.value.key })
+const isSku = a => a?.key === model.value?.skuAttribute
+const canBeSku = a => a && a.type === 'text' && !a.multiple && !a.perLocale && !a.perChannel
+const canBeUnique = a => a && ['text', 'integer', 'decimal'].includes(a.type) && !a.multiple
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v }, fallback: curChannel.value.fallback ?? null })
 // Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
@@ -526,7 +531,11 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attribut -->
     <template v-else-if="section === 'attributes' && curAttr">
-      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span class="grow" /></div>
+      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span>
+        <span v-if="isSku(curAttr)" class="chip" title="Kennungsattribut: eindeutig über den Baum, Name der Variante ohne ★, Feld sku in Zeilen und Exporten, Schlüssel beim Tabellen-Import — lässt sich nicht zurückziehen">🏷 Kennung</span>
+        <span class="grow" />
+        <button v-if="!isSku(curAttr)" :disabled="!canBeSku(curAttr)" @click="setSkuAttribute" :title="canBeSku(curAttr) ? `${curAttr.key} wird die Kennung (statt ${model.skuAttribute}): eindeutig über den Baum, Name der Variante ohne ★, Feld sku in Zeilen und Exporten — doppelte Werte im Bestand verhindern es` : 'Kennung: nur Text, einwertig, ohne Sprach-/Kanalachse'">🏷 zur Kennung machen</button>
+      </div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
@@ -543,6 +552,10 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="curAttr.type !== 'rows'"><td class="attr" title="der Wert ist je Sprache verschieden">🗣 sprachabhängig</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
           <tr class="sub"><td colspan="3">↓ Wert</td></tr>
           <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
+          <!-- eindeutig (Taloan, 21.09.): kein zweiter Knoten mit demselben Wert — EAN, MATNR; die Kennung ist es immer -->
+          <tr v-if="canBeUnique(curAttr) || curAttr.unique"><td class="attr" :title="isSku(curAttr) ? 'die Kennung ist immer eindeutig' : 'kein zweiter Knoten mit demselben Wert (EAN, Artikelnummer) — einschalten geht nur, wenn der Bestand keine Doppelten hat'">① eindeutig</td>
+            <td v-if="isSku(curAttr)" class="cell"><div class="cell-box locked" title="Kennung — immer eindeutig">✓ Kennung</div></td>
+            <ToggleCell v-else :value="b(curAttr.unique)" @save="v => attrSet('unique', v === 'true')" /></tr>
           <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" title="vermehrbar: mehrere Werte — in der Zelle als Liste mit + − und Umsortieren">≣ vermehrbar</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
           <tr class="sub"><td colspan="3" title="Pflicht heisst: ohne Wert keine Freigabe in diesem Kanal — unabhängig davon, ob der Wert kanalabhängig ist. Ein Wert für alle Kanäle kann für web Pflicht sein und für print nicht.">⇶ Kanal · Pflicht für die Freigabe</td></tr>
           <tr v-if="!['rows', 'formula', 'template'].includes(curAttr.type)"><td class="attr" title="der Wert ist je Kanal verschieden">⇶ kanalabhängig</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>

@@ -68,18 +68,19 @@ const headTitle = c => c.virtual === 'label'
 // Die wirkliche Spalte hinter einer Zelle: bei #label das ★-Attribut der Zeile
 const eff = (r, c) => c.virtual === 'label' ? labelCol(r) : c
 const commonLabel = computed(() => { const keys = new Set((data.value?.rows ?? []).map(labelKeyOf)); return keys.size === 1 && !keys.has(null) ? [...keys][0] : null })
-const columns = computed(() => [...VIRTUAL.filter(v => v.virtual !== 'sku' || !attrColumns.value.some(c => c.key === 'sku')), ...attrColumns.value])
+const skuKey = computed(() => model.value?.skuAttribute ?? 'sku')   // Kennungsattribut des Modells (Taloan, 21.09.: sku oder MATNR)
+const columns = computed(() => [...VIRTUAL.filter(v => v.virtual !== 'sku' || !attrColumns.value.some(c => c.key === skuKey.value)), ...attrColumns.value])
 // Reihenfolge wie in der Excel-Vorlage (Taloan, 20.09.): Achsen, dann Pflicht, dann der Rest; in einer Sicht gilt deren Reihenfolge
 const axisKeys = computed(() => new Set(childRole.value === 'variant' ? (data.value?.node?.axes ?? tree.byId.get(props.id)?.axes ?? []) : []))
 const isReq = c => !!c.required && (typeof c.required !== 'object' || Object.keys(c.required).length > 0)
-const kindOf = c => c.virtual === 'sku' || c.key === 'sku' ? 'info' : c.virtual ? '' : axisKeys.value.has(c.key) ? 'axis' : isReq(c) ? 'required' : ''
+const kindOf = c => c.virtual === 'sku' || c.key === skuKey.value ? 'info' : c.virtual ? '' : axisKeys.value.has(c.key) ? 'axis' : isReq(c) ? 'required' : ''
 // Spaltenfilter (Taloan, 20.09.): das Feld neben der Sicht sucht Spalten (Name oder Schlüssel), nicht Inhalte
 const colMatch = c => { const q = filter.value.trim().toLowerCase(); return !q || store.name(c).toLowerCase().includes(q) || c.key.toLowerCase().includes(q) }
 const tab = ref('')   // '' = alle, sonst Schlüssel der Attributgruppe
 const tabs = computed(() => { const keys = new Set((data.value?.columns ?? []).map(c => c.key)); return (model.value?.groups ?? []).map(g => ({ key: g.key, label: g.label?.de || g.label?.en || g.key, n: (g.attributes ?? []).filter(k => keys.has(k)).length })).filter(g => g.n > 0) })
 const inTab = c => !tab.value || (model.value?.groups.find(g => g.key === tab.value)?.attributes ?? []).includes(c.key)
 watch(tabs, ts => { if (tab.value && !ts.some(g => g.key === tab.value)) tab.value = '' })
-const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value && colMatch(c) && inTab(c)); if (viewKey.value) return base; const rank = c => c.key === 'sku' ? -1 : axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
+const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value && colMatch(c) && inTab(c)); if (viewKey.value) return base; const rank = c => c.key === skuKey.value ? -1 : axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
 const HELP = [
   ['Klick · ziehen', 'Zelle wählen · Bereich aufziehen'], ['Shift+Pfeil', 'Bereich vergrössern'], ['Strg+A', 'alles'],
   ['Tippen', 'überschreibt die Zelle (Ergänzung aus der Spalte: Enter nimmt sie)'], ['F2 · Doppelklick', 'bearbeiten — langer Text/HTML im grossen Editor'],

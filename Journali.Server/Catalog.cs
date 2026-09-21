@@ -84,6 +84,7 @@ public sealed class Catalog
                     Types.AttributeGroupDefined => _model.Groups.ContainsKey(key),
                     Types.MasterLocaleDefined => _model.MasterLocale is not null,
                     Types.MasterChannelDefined => _model.MasterChannel is not null,
+                    Types.SkuAttributeDefined => _model.SkuAttributeSeeded,
                     Types.RelationTypeDefined => _model.RelationTypes.ContainsKey(key),
                     Types.MediaPresetDefined => _media.PresetEver(key),   // auch wenn Taloan es zurückgezogen hat — nicht wieder säen
                     Types.WorkflowDefined => _workflows.Ever(key),

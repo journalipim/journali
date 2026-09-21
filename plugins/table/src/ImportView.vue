@@ -18,7 +18,7 @@ async function fixNode(id) {
   const row = tree.byId.get(id); if (!row) { store.toast(`Knoten ${id} unbekannt`); return }
   const n = await api.get(`/api/nodes/${encodeURIComponent(id)}`)
   const childRole = childRoleOf(row, tree.kids(id))
-  const allowed = new Set(childAttributes(model.value, n, childRole).map(a => a.key)); allowed.add('sku')
+  const allowed = new Set(childAttributes(model.value, n, childRole).map(a => a.key)); allowed.add(model.value?.skuAttribute ?? 'sku')
   for (const a of row.axes ?? []) allowed.add(a)
   fixed.value = { row, childRole, allowed }
   pickTarget(row); role.value = childRole; external.value = ''
@@ -214,7 +214,7 @@ async function analyse() {
     // Bestand nur für die Zeilen holen, die es schon gibt (Taloan, 21.09.: „darf das Vergleichen bei 11 Zeilen eine Minute dauern?“ — vorher die
     // ganze Wurzel tief): gefunden über Id, Kennung oder SKU; je Elternteil ein Aufruf (die Subitems als Tabelle), je Sprache
     const iId = mapping.value.findIndex(m => m.target === 'id'), iExt = mapping.value.findIndex(m => m.target === 'external')
-    const iSku = mapping.value.findIndex(m => m.target === 'sku' || (m.target === 'attr' && m.attribute === 'sku'))
+    const iSku = mapping.value.findIndex(m => m.target === 'sku' || (m.target === 'attr' && m.attribute === (model.value?.skuAttribute ?? 'sku')))
     const bySku = new Map(tree.rows.filter(r => r.sku).map(r => [String(r.sku).trim(), r])), byExt = new Map(external.value ? tree.rows.filter(r => r.external?.[external.value]).map(r => [String(r.external[external.value]), r]) : [])
     const parents = new Map()   // Elternteil → Ids der gefundenen Knoten darunter
     for (const row of source.value.rows) {

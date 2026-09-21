@@ -181,7 +181,7 @@ export function suggest(columns, rows, model, { locales = null, external = null 
         if (!words.includes(n)) continue
         const a = attrs.find(x => norm(x.key) === canon) ?? attrs.find(x => words.includes(norm(x.key))) ?? index.find(x => [...x.keys].some(k => words.includes(k)))?.a
         if (a) pick('attr', a.key, 0.9, `Synonym für ${a.key}`)
-        else if (canon === 'sku') pick('sku', null, 0.9, 'SKU')
+        else if (canon === 'sku') pick('sku', null, 0.9, 'Kennung')
         else if (canon === 'id') pick('id', null, 0.9, 'journali-Id')
       }
     }
@@ -211,7 +211,8 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const iId = col('id'), iParent = col('parent'), iExt = col('external'), iRoot = col('root')
   // Id + Wurzel (Taloan, 21.09.): nennt die Datei journali_root, zählt eine Id nur unter genau dieser Wurzel — sonst fremde Datenbank, die Zeile ist neu
   const rootOf = id => { const a = tree.ancestors?.(id) ?? []; return a.length ? a[0].id : id }
-  const iSku = col('sku') >= 0 ? col('sku') : mapping.findIndex(m => m.target === 'attr' && m.attribute === 'sku')
+  const skuKey = model?.skuAttribute ?? 'sku'   // Kennungsattribut des Modells (Taloan, 21.09.: sku oder MATNR)
+  const iSku = col('sku') >= 0 ? col('sku') : mapping.findIndex(m => m.target === 'attr' && m.attribute === skuKey)
   const raw = (row, i) => i < 0 ? null : (Array.isArray(row) ? row[i] : row[columns[i]])
   // Umwandlung je Spalte (transform.js, Taloan 21.09.: „zwischendurch in die Daten eingreifen“) — vor Typprüfung und Schreiben
   const cell = (row, i) => { if (i < 0) return null; const steps = mapping[i]?.steps; const v = raw(row, i); return steps?.length ? applySteps(steps, v, { get: c => { const j = columns.indexOf(c); return j < 0 ? '' : raw(row, j) } }) : v }
@@ -395,11 +396,12 @@ export function childAttributes(model, nodeView, childRole) {
 }
 // Spaltenköpfe für Vorlage und Export: id, sku, Achsen, dann je Attribut (je Sprache eine Spalte)
 export function childColumns(model, nodeView, childRole, axes, locales) {
-  const attrs = childAttributes(model, nodeView, childRole).filter(a => a.key !== 'sku')
+  const skuKey = model?.skuAttribute ?? 'sku'
+  const attrs = childAttributes(model, nodeView, childRole).filter(a => a.key !== skuKey)
   const isReq = a => !!a.required && (typeof a.required !== 'object' || Object.keys(a.required).length > 0)   // am Knoten ist required schon ein Ja/Nein
   const cols = a => a.perLocale ? locales.map(l => ({ key: `${a.key}_${l}`, attr: a.key, locale: l, def: a })) : [{ key: a.key, attr: a.key, def: a }]
   // Pflicht direkt nach id, sku und Achsen (Taloan, 20.09.) — was fehlen darf, steht hinten
-  return [{ key: 'id', note: 'leer = neu anlegen; gefüllt = diesen Knoten ändern' }, { key: 'sku', note: 'findet vorhandene Knoten, wenn id leer ist', def: model.attributes.find(a => a.key === 'sku') ?? null },   // Pflicht, wenn das Attribut sku Pflicht ist (Taloan, 20.09.)
+  return [{ key: 'id', note: 'leer = neu anlegen; gefüllt = diesen Knoten ändern' }, { key: skuKey, note: 'Kennung — findet vorhandene Knoten, wenn id leer ist', def: model.attributes.find(a => a.key === skuKey) ?? null },   // Pflicht, wenn das Attribut sku Pflicht ist (Taloan, 20.09.)
     ...(childRole === 'variant' ? (axes ?? []).map(a => ({ key: 'axis:' + a, note: 'Variantenachse — Pflicht beim Anlegen', attr: a })) : []),
     ...attrs.filter(isReq).flatMap(cols), ...attrs.filter(a => !isReq(a)).flatMap(cols)]
 }
