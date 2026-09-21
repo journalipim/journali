@@ -192,6 +192,8 @@ const blockers = computed(() => {
 })
 // Korrektur einer Zelle direkt in der Quelle; danach neu analysieren
 const changeTab = ref('update'); const openRow = ref(null)
+// Vorschau öffnet den ersten Reiter, in dem etwas steht (Taloan, 21.09.: „2 neue Zeilen, aber nichts angezeigt“ — der Reiter stand auf „geändert“)
+watch(() => planned.value?.stats, st => { if (!st) return; changeTab.value = st.create ? 'create' : st.update ? 'update' : 'unchanged'; openRow.value = null })
 const attrLabel = key => { const a = attrs.value.find(x => x.key === key) ?? store.model?.attributes?.find(x => x.key === key); return a?.label?.de || key }
 function fixCell(inv, v) { source.value.rows[inv.row][inv.column] = v; planned.value = { ...planned.value, stale: true } }
 // Was das Attribut erwartet (Taloan, 21.09.: „warum ganze Zahl?“ — weil das Attribut so definiert ist; das steht jetzt dabei)
