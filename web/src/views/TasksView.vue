@@ -49,11 +49,11 @@ onMounted(load)
         <thead><tr><th>Knoten</th><th>Workflow</th><th>Zustand</th><th>seit</th><th>Notiz</th><th>zuständig</th><th>Schritt</th></tr></thead>
         <tbody>
           <tr v-for="t in tasks" :key="t.node + t.workflow" class="row">
-            <td><router-link :to="`/tree/${t.node}`" :title="t.node">{{ icon(t.role) }} {{ t.label }}</router-link></td>
+            <td style="max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><router-link :to="`/tree/${t.node}`" :title="`${t.label} · ${t.node}`">{{ icon(t.role) }} {{ t.label }}</router-link></td>
             <td class="muted">{{ t.workflowLabel?.de || t.workflow }}</td>
             <td><span class="chip" :style="`border-color:${color(t.color)};color:${color(t.color)}`">{{ t.stateLabel?.de || t.state }}</span></td>
             <td class="muted" :title="t.since ? `${when(t.since)} · ${t.actor}` : ''">{{ age(t.since) }}</td>
-            <td class="muted" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="t.note ?? ''">{{ t.note }}</td>
+            <td class="muted" style="width:300px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="t.note ?? ''">{{ t.note }}</td>
             <td><button class="x" @click="assign(t)" :title="t.assigned ? `zuständig: ${t.assigned} — ändern` : 'jemandem zuweisen'">{{ t.assigned ? '👤 ' + t.assigned : '👤' }}</button></td>
             <td class="row" style="gap:4px;flex-wrap:wrap"><button v-for="tr in t.transitions" :key="tr.key" @click="step(t, tr)" :title="tr.noteRequired ? 'Notiz Pflicht' : (tr.effects?.join(', ') ?? '')">{{ tr.label?.de || tr.key }} →</button></td>
           </tr>
