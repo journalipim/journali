@@ -522,6 +522,13 @@ async function wfEffect(eff) {
   await command(() => k === 'release' ? api.post(`${nodeUrl()}/releases`, { channel: a, locale: null }) : k === 'revoke' ? api.del(`${nodeUrl()}/releases?channel=${encodeURIComponent(a)}`) : setStatus(a))
   api.get(`${nodeUrl()}/workflow`).then(w => { workflows.value = w }).catch(() => {})
 }
+// Verlauf eines Workflows am Knoten (Taloan, 21.09.): jeder Schritt mit Zeit, Wer, Schritt, Zustand, Notiz — aus dem Journalstrom des Knotens
+function wfHistory(w) {
+  const label = k => w.states?.find(s => s.key === k)?.label?.de || k
+  const rows = entries.value.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
+    .map(e => [when(e.at), e.type === 'WorkflowAssigned' ? `${e.actor} · zuständig: ${e.payload.user || '— (Rolle)'}` : `${e.actor} · ${e.payload.transition ? e.payload.transition + ' → ' : ''}${label(e.payload.state)}${e.payload.note ? ' · ✎ ' + e.payload.note : ''}`])
+  dialog.help({ title: `Verlauf „${w.label?.de || w.workflow}“ · ${shownLabel.value}`, rows: rows.length ? rows : [['—', 'noch kein Schritt']] })
+}
 async function wfAssign(w) {
   // Vorschlagsliste (Taloan, 21.09.: „oder soll ich alles auswendig wissen?“): Personen mit einer Rolle des nächsten Schritts zuerst, dann die anderen
   let people = []; try { people = await api.get('/api/auth/people') } catch {}
@@ -852,6 +859,7 @@ function cellMenu(e, def, col, block) {
               </template>
               <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
               <button class="x" @click="wfAssign(w)" :title="w.assigned ? `zuständig: ${w.assigned} — ändern` : 'jemandem zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
+              <button class="x" @click="wfHistory(w)" title="Verlauf: jeder Schritt mit Zeit, wer, Notiz">≡</button>
             </td>
           </tr>
         </tbody></table>
