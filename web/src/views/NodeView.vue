@@ -646,7 +646,7 @@ function cellMenu(e, def, col, block) {
         <router-link :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }}</router-link><span class="sep">›</span>
       </template>
       <h1>{{ icon(node.role) }} {{ shownLabel }}</h1>
-      <button v-if="props.pub && node.role !== 'rubric'" class="x" title="im Pflegebaum öffnen — dort pflegen und freigeben; ⇶ bringt dich zurück" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
+      <button v-if="props.pub && node.role !== 'rubric'" class="x" title="Klick: im Pflegebaum öffnen · ⇶ zurück" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
       <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="const b = store.pubBack; store.pubBack = null; router.push(b.path)">⇶ {{ store.pubBack.label }}</button>
       <span class="grow" />
       <select v-if="node.role !== 'group' && node.role !== 'rubric'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
@@ -688,7 +688,7 @@ function cellMenu(e, def, col, block) {
         </select>
         <input ref="findBox" v-model="attrFilter" type="search" placeholder="Attribut oder Wert" style="width:200px;font-size:12px" title="Suche im Sichtbaren: Attributname und die Werte der gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
         <span v-if="attrFilter" class="muted">{{ hitCount }}</span>
-        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="`nur die Pflichtwerte, die für ${missingOnly.channel} fehlen — Klick zeigt wieder alles`" @click="missingOnly = null">✗ fehlt für {{ missingOnly.channel }} <b>{{ missingOnly.cells.size }}</b></span>
+        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="`Filter: fehlt für ${missingOnly.channel} · Klick: alle`" @click="missingOnly = null">✗ fehlt für {{ missingOnly.channel }} <b>{{ missingOnly.cells.size }}</b></span>
       </span>
       <span class="grow" />
       <span class="grp" title="Anordnung der Gruppen">
@@ -720,7 +720,7 @@ function cellMenu(e, def, col, block) {
             <td :colspan="columns.length + 1">
               {{ b.label }}
               <router-link :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
-              <span class="muted from" :title="b.fromRole === 'rubric' ? `Gruppe hängt an der Rubrik ${b.fromLabel} — gilt für alles, was darunter verwiesen ist` : (props.pub ? `Gruppe hängt an ${b.fromLabel} im Pflegebaum — hier nur lesen, ändern an der Quelle` : `Gruppe hängt an ${b.fromLabel}`)">· von {{ b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel }}{{ props.pub && b.fromRole !== 'rubric' ? ' · nur lesen' : '' }}</span>
+              <span class="muted from" :title="b.fromRole === 'rubric' ? `Gruppe an Rubrik ${b.fromLabel}` : (props.pub ? `Gruppe an ${b.fromLabel} · nur lesen` : `Gruppe hängt an ${b.fromLabel}`)">· von {{ b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel }}{{ props.pub && b.fromRole !== 'rubric' ? ' · nur lesen' : '' }}</span>
               <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">· ⌀ ab {{ roleLabel[b.activeFrom] }}</span>
             </td>
           </tr>
@@ -728,7 +728,7 @@ function cellMenu(e, def, col, block) {
           <tr v-if="def.type === 'formula' || def.type === 'template'">
             <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
-              <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? 'Pflegewert — im Pflegebaum ändern' : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>
+              <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? 'Pflegewert · ändern im Pflegebaum' : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>
               <td v-else class="cell">
                 <div class="cell-box formula" :class="{ inherited: ownValue(def.key, c) == null && inherited(def, c).value != null }" tabindex="0"
                   @click="scriptCell = { def, col: c }" @keydown.enter.prevent="scriptCell = { def, col: c }"
@@ -756,7 +756,7 @@ function cellMenu(e, def, col, block) {
               <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
               <span v-if="def.multiple" class="muted" title="vermehrbar: mehrere Werte, Liste in der Zelle">≣</span>
               <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" title="Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig">⌖</span>
-              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'vererbbar — hier eigene Werte; Klick löscht sie, es gilt wieder der geerbte' : 'vererbbar: gilt nach unten'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
+              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'vererbbar · eigene Werte · Klick: löschen → geerbt' : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
               <span v-if="def.required" class="warn" title="Pflicht">●</span>
               <span v-if="def.hereLocked" class="warn" :title="`nicht an ${roleLabel[node.role]} — verwendbar an: ${(def.levels ?? []).map(r => roleLabel[r]).join(', ')}`">⌀</span>
               <span v-else-if="def.whenLocked" class="warn" :title="`gilt nur bei ${store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute })} = ${def.when.values.slice(0, 6).join(', ')}${def.when.values.length > 6 ? ' …' : ''}`">⌀</span>
@@ -769,19 +769,19 @@ function cellMenu(e, def, col, block) {
               <HtmlCell v-else-if="def.type === 'html'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <Cell v-else :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
-                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten — ${master} wurde später geändert` : (c.locale ? `nicht übersetzt — zeigt ${master}; Klick übernimmt den ${master}-Text als Übersetzung, Enter überschreibt` : `kein Grundtext — zeigt ${master}; Klick übernimmt den ${master}-Text, Enter setzt eigenen`)" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
+                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten · ${master} später geändert` : (c.locale ? `nicht übersetzt · zeigt ${master} · Klick: übernehmen` : `kein Grundtext · zeigt ${master} · Klick: übernehmen`)" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
           </tr>
           </template>
         </tbody>
       </table>
-      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="`Stand #${pubStand.stand}, gesetzt an „${pubStand.from.label}“ — Pflegewerte hier wie damals; Änderungen in der Pflege seitdem kommen nicht durch, bis der Stand aktualisiert oder aufgehoben wird (Rechtsklick auf die Rubrik)`">❄ Stand #{{ pubStand.stand }}{{ standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '' }} · von „{{ pubStand.from.label }}“</span></div>
+      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="`Stand #${pubStand.stand} · gesetzt an „${pubStand.from.label}“ · ändern: Rechtsklick auf die Rubrik`">❄ Stand #{{ pubStand.stand }}{{ standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '' }} · von „{{ pubStand.from.label }}“</span></div>
       <table v-if="sourceRows.length" class="grid values" :style="`width:${180 + columns.length * 220}px;margin-top:8px`">
         <tbody>
           <tr class="group-row locked"><td :colspan="1 + columns.length"><span class="muted">▣ Pflegewerte von „{{ node.sourceLabel }}“ · nur lesen</span> <router-link :to="`/tree/${node.source}`" class="x edit" title="im Pflegebaum öffnen — dort ändern">▣</router-link></td></tr>
           <tr v-for="r in sourceRows" :key="r.def.key"><td class="attr"><span :title="r.def.key">{{ store.label(r.def) }}</span></td>
-            <td v-for="(c, i) in columns" :key="c.label" class="cell" title="Pflegewert — im Pflegebaum ändern"><div class="cell-box disabled ro">{{ r.cells[i] ?? '' }}</div></td></tr>
+            <td v-for="(c, i) in columns" :key="c.label" class="cell" title="Pflegewert · ändern im Pflegebaum"><div class="cell-box disabled ro">{{ r.cells[i] ?? '' }}</div></td></tr>
         </tbody>
       </table>
       <div v-if="!blocks.length && !sourceRows.length && props.pub && node.role === 'rubric'" class="empty" title="an der Wurzel angehängt gilt sie für alle Rubriken und Verweise darunter, hier nur ab dieser Rubrik">Keine Attributgruppe — unten anhängen.</div>
@@ -867,18 +867,18 @@ function cellMenu(e, def, col, block) {
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
               <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
-              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="eigenen Zustand aufheben — es gilt wieder der des Produkts bzw. der Gruppe">↑ erben</button>
+              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="eigener Zustand · Klick: aufheben → geerbt">↑ erben</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
               <span class="grow" />
               <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
-                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Der Schritt „${w.transition}“ sollte das bewirken, es ist aber nicht passiert — Klick tut es jetzt`">⚠ {{ effLabel(pe.effect) }}</button>
-                <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben — die Ausleitung lässt dieses Produkt weg, bis eine Variante freigegeben ist${pe.why ? ' · ' + pe.why : ''}`">⚠ nicht ausgeleitet</span>
+                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Wirkung von „${w.transition}“ fehlt · Klick: ausführen`">⚠ {{ effLabel(pe.effect) }}</button>
+                <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben${pe.why ? ' · ' + pe.why : ''}`">⚠ nicht ausgeleitet</span>
               </template>
               <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="flex:0 0 300px;width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto;text-align:right">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
-              <button class="x" @click="wfAssign(w)" :title="w.assigned ? `zuständig: ${w.assigned} — ändern` : 'jemandem zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
-              <button class="x" @click="wfHistory(w)" title="Verlauf: jeder Schritt mit Zeit, wer, Notiz">≡</button>
+              <button class="x" @click="wfAssign(w)" :title="w.assigned ? `zuständig: ${w.assigned} · Klick: ändern` : 'Klick: zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
+              <button class="x" @click="wfHistory(w)" title="Klick: Verlauf">≡</button>
             </td>
           </tr>
         </tbody></table>
