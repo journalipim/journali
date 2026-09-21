@@ -123,6 +123,11 @@ const TARGETS = [['attr', 'Attribut'], ['new', 'neues Attribut'], ['id', 'journa
 const sample = (i) => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => String(v ?? '').trim() !== '').slice(0, 3).map(v => String(v).slice(0, 30)).join(' · ')
 // Umwandlung je Spalte (Taloan, 21.09., OpenDXP-Importer: „Werte umwandeln, in die Daten eingreifen“): Kette in m.steps, Editor je Zeile, Vorschau der Beispiele
 const stepsOpen = ref(null)   // Spalte, deren Kette gerade offen ist
+// Zuordnung als Zeilen (eine je Spalte) oder als Spalten wie in Excel — nach rechts scrollen statt nach unten (Taloan, 21.09.:
+// „was hindert mich, endlos nach rechts zu scrollen?“ — nichts; beides bleibt lesbar, die Felder werden nie mehr gequetscht)
+const layout = ref(localStorage.getItem('journali.import.layout') || 'rows')
+function setLayout(l) { layout.value = l; localStorage.setItem('journali.import.layout', l) }
+const samples = i => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => String(v ?? '').trim() !== '').slice(0, 3).map(v => String(v).slice(0, 40))
 const OPS = transform.OPS
 const FIELDS = { replace: ['find', 'with', 'regex'], prefix: ['text'], suffix: ['text'], static: ['text'], default: ['text'], combine: ['columns', 'sep'], split: ['sep', 'index'], number: ['decimal'], boolean: ['yes'], date: ['format'], map: ['pairs', 'other'], when: ['test', 'value', 'then', 'else'] }
 // Beschriftung vor dem Feld — ein Platzhalter allein ist weg, sobald etwas drinsteht (Taloan, 21.09.: „Was soll ich hier eingeben?“)
@@ -261,8 +266,45 @@ onMounted(async () => {
       <div v-if="unknown" class="warn" style="font-size:12px;padding:6px 8px">⚠ {{ unknown }} Spalten passen nicht zu diesem Knoten und werden übergangen — Vorlage per Rechtsklick am Knoten exportieren, dann stimmen die Spalten.</div>
 
       <div class="section" v-if="source">
-        <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span></h2>
-        <table class="grid map">
+        <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span>
+          <span class="grow" /><span class="layout"><button :class="{ on: layout === 'rows' }" @click="setLayout('rows')" title="eine Zeile je Spalte — nach unten scrollen">≡ Zeilen</button><button :class="{ on: layout === 'cols' }" @click="setLayout('cols')" title="wie in Excel: eine Spalte je Spalte, Zuordnung in den Kopfzeilen — nach rechts scrollen">⫼ Spalten</button></span></h2>
+        <!-- Spalten wie in Excel: Kopfzeilen = Zuordnung, darunter die ersten Zeilen der Datei; erste Spalte klebt -->
+        <div v-if="layout === 'cols'" class="colsWrap">
+          <table class="grid cols">
+            <tbody>
+              <tr><th class="stick">Spalte</th><td v-for="m in mapping" :key="m.column" :class="{ off: m.target === 'skip' }" :title="m.column"><b>{{ m.column }}</b><div class="muted" style="font-size:11px">{{ m.sniff?.type }} · {{ m.sniff?.distinct }} versch.</div></td></tr>
+              <tr><th class="stick">Ziel</th><td v-for="m in mapping" :key="m.column"><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td></tr>
+              <tr><th class="stick">Attribut</th><td v-for="m in mapping" :key="m.column">
+                <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+                <span v-else-if="m.target === 'new'" style="display:flex;flex-direction:column;gap:3px"><input v-model="m.newKey" type="text" placeholder="schlüssel" @change="planned = null" /><select v-model="m.newType" @change="planned = null"><option v-for="t in ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum']" :key="t" :value="t">{{ t }}</option></select><select v-model="m.newGroup" :class="{ neg: !m.newGroup }" title="Attributgruppe — Pflicht" @change="planned = null"><option :value="undefined">● Gruppe wählen …</option><option v-for="g in groups" :key="g.key" :value="g.key">▤ {{ g.label?.de || g.key }}</option></select></span>
+                <span v-else class="muted">—</span></td></tr>
+              <tr><th class="stick">Sprache</th><td v-for="m in mapping" :key="m.column"><select v-if="(m.target === 'attr' && attrs.find(a => a.key === m.attribute)?.perLocale) || m.target === 'new'" v-model="m.locale" style="width:100%" @change="planned = null"><option :value="null">*</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select><span v-else class="muted">—</span></td></tr>
+              <tr><th class="stick">ƒ</th><td v-for="m in mapping" :key="m.column"><button class="x" :class="{ on: m.steps?.length }" :title="m.steps?.length ? stepsText(m) + ' — Klick: bearbeiten' : 'Umwandlung hinzufügen'" @click="stepsOpen = stepsOpen === m.column ? null : m.column">ƒ{{ m.steps?.length ? m.steps.length : '' }}</button><span v-if="m.steps?.length" class="muted" style="font-size:11px;margin-left:4px">{{ stepsText(m) }}</span></td></tr>
+              <tr><th class="stick">Warum</th><td v-for="m in mapping" :key="m.column" class="muted" style="font-size:11px;white-space:normal">{{ m.why }}</td></tr>
+              <tr v-for="r in 3" :key="r" class="sample"><th class="stick muted">Zeile {{ r + 1 }}</th><td v-for="(m, i) in mapping" :key="m.column" class="muted" :title="String(source.rows[r - 1]?.[i] ?? '')">{{ String(source.rows[r - 1]?.[i] ?? '').slice(0, 40) }}</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-if="layout === 'cols' && stepsOpen && mapping.find(m => m.column === stepsOpen)" class="tsteps" style="margin-top:6px;padding:6px 8px;background:var(--bg);border-radius:6px">
+          <div class="muted" style="font-size:12px">ƒ Umwandlung für <b>{{ stepsOpen }}</b> <button class="x" @click="stepsOpen = null">×</button></div>
+          <template v-for="m in [mapping.find(m => m.column === stepsOpen)]" :key="m.column">
+            <div v-for="(s, si) in (m.steps ?? [])" :key="si" class="tstep">
+              <span class="muted mono" style="width:18px">{{ si + 1 }}</span>
+              <select v-model="s.op" @change="planned = null" :title="opHint(s.op)"><option v-for="o in OPS" :key="o[0]" :value="o[0]">{{ o[1] }}</option></select>
+              <template v-for="f in (FIELDS[s.op] ?? [])" :key="f">
+                <label v-if="f === 'regex'" title="als regulärer Ausdruck (Flags gi)"><input type="checkbox" v-model="s.regex" @change="planned = null" /> regex</label>
+                <span v-else-if="f === 'test'" class="fld"><span class="muted">Quelle ist</span><select v-model="s.test" @change="planned = null"><option value="empty">leer</option><option value="equals">gleich</option><option value="contains">enthält</option><option value="matches">passt auf (regex)</option></select></span>
+                <span v-else-if="f === 'decimal'" class="fld"><span class="muted">Dezimalzeichen</span><select v-model="s.decimal" @change="planned = null"><option :value="undefined">raten</option><option value=",">Komma</option><option value=".">Punkt</option></select></span>
+                <span v-else-if="f === 'format'" class="fld"><span class="muted">Quelle im Format</span><select v-model="s.format" @change="planned = null"><option value="dd.MM.yyyy">dd.MM.yyyy</option><option value="MM/dd/yyyy">MM/dd/yyyy</option><option value="yyyyMMdd">yyyyMMdd</option></select></span>
+                <span v-else class="fld"><span class="muted">{{ FIELD_LABEL[f] ?? f }}</span><input type="text" v-model="s[f]" :placeholder="FIELD_HINT[f] ?? f" :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" @input="planned = null" style="width:200px" /></span>
+              </template>
+              <span class="grow" /><button class="x" @click="moveStep(m, si, -1)">↑</button><button class="x" @click="moveStep(m, si, 1)">↓</button><button class="x" @click="delStep(m, si)">×</button>
+            </div>
+            <div class="tstep"><select :value="''" @change="addStep(m, $event.target.value); $event.target.value = ''"><option value="">+ Schritt …</option><option v-for="o in OPS" :key="o[0]" :value="o[0]" :title="o[2]">{{ o[1] }}</option></select>
+              <span class="muted" style="font-size:11px">{{ m.steps?.length ? 'Vorschau: ' + preview(m, mapping.indexOf(m)) : 'Kette zwischen Quelle und Ziel' }}</span></div>
+          </template>
+        </div>
+        <table v-else class="grid map">
           <thead><tr><th style="width:170px">Spalte</th><th>Beispiele</th><th style="width:130px">Ziel</th><th style="width:220px">Attribut</th><th style="width:60px">Sprache</th><th style="width:150px">Warum</th><th style="width:34px" title="Umwandlung: Kette von Schritten zwischen Quelle und Ziel (Zahl aus „22 mm“, Ja/Nein, Datum, Ersetzen, Aufteilen, Spalten verbinden, Bedingung …)">ƒ</th></tr></thead>
           <tbody>
             <template v-for="(m, i) in mapping" :key="m.column">
@@ -343,6 +385,18 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */
+.section { overflow-x: auto; }
+table.map { min-width: 960px; }
+/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */
+.colsWrap { overflow-x: auto; }
+table.cols { border-collapse: separate; border-spacing: 0; }
+table.cols th.stick { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top; }
+table.cols td { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis; }
+table.cols td.off { opacity: .5; }
+table.cols tr.sample td { white-space: nowrap; font-size: 12px; }
+.layout button { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400; }
+.layout button.on { background: var(--accent-soft); color: var(--text); border-color: var(--accent); }
 /* Umwandlung je Spalte (ƒ): Kette unter der Zeile */
 .steps-row td { background: var(--bg); padding: 4px 8px 6px 30px; }
 .tsteps { display: flex; flex-direction: column; gap: 3px; }

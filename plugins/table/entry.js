@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-27e4a742] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-27e4a742] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-27e4a742] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-27e4a742], .tstep input[type=text][data-v-27e4a742] { font-size: 12px;\n}\n.fld[data-v-27e4a742] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-27e4a742] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-27e4a742] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-27e4a742] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-27e4a742] { font-weight: 400;\n}\n.drop.over[data-v-27e4a742] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-27e4a742] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0;\n}\n.btn[data-v-27e4a742] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-27e4a742] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-27e4a742] { opacity: .5;\n}\n.samples[data-v-27e4a742] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-27e4a742] { font-size: 13px;\n}\n.out[data-v-27e4a742] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-27e4a742] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-27e4a742] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-27e4a742]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-21a65158] { overflow-x: auto;\n}\ntable.map[data-v-21a65158] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-21a65158] { overflow-x: auto;\n}\ntable.cols[data-v-21a65158] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-21a65158] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-21a65158] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-21a65158] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-21a65158] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-21a65158] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-21a65158] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-21a65158] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-21a65158] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-21a65158] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-21a65158], .tstep input[type=text][data-v-21a65158] { font-size: 12px;\n}\n.fld[data-v-21a65158] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-21a65158] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-21a65158] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-21a65158] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-21a65158] { font-weight: 400;\n}\n.drop.over[data-v-21a65158] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-21a65158] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0;\n}\n.btn[data-v-21a65158] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-21a65158] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-21a65158] { opacity: .5;\n}\n.samples[data-v-21a65158] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-21a65158] { font-size: 13px;\n}\n.out[data-v-21a65158] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-21a65158] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-21a65158] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-21a65158]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -101,165 +101,261 @@ const _hoisted_25 = {
   style: { "margin": "0 -8px 6px" }
 };
 const _hoisted_26 = { class: "muted" };
-const _hoisted_27 = { class: "grid map" };
-const _hoisted_28 = ["title"];
-const _hoisted_29 = {
+const _hoisted_27 = { class: "layout" };
+const _hoisted_28 = {
+  key: 0,
+  class: "colsWrap"
+};
+const _hoisted_29 = { class: "grid cols" };
+const _hoisted_30 = ["title"];
+const _hoisted_31 = {
   class: "muted",
   style: { "font-size": "11px" }
 };
-const _hoisted_30 = { class: "muted samples" };
-const _hoisted_31 = ["onUpdate:modelValue", "onChange"];
-const _hoisted_32 = ["value"];
-const _hoisted_33 = ["onUpdate:modelValue", "onChange"];
-const _hoisted_34 = ["value"];
-const _hoisted_35 = {
+const _hoisted_32 = ["onUpdate:modelValue", "onChange"];
+const _hoisted_33 = ["value"];
+const _hoisted_34 = ["onUpdate:modelValue", "onChange"];
+const _hoisted_35 = ["value"];
+const _hoisted_36 = {
   key: 1,
-  style: { "display": "flex", "gap": "4px", "flex-wrap": "wrap" }
+  style: { "display": "flex", "flex-direction": "column", "gap": "3px" }
 };
-const _hoisted_36 = ["onUpdate:modelValue"];
 const _hoisted_37 = ["onUpdate:modelValue"];
-const _hoisted_38 = ["value"];
-const _hoisted_39 = ["onUpdate:modelValue"];
-const _hoisted_40 = ["value"];
-const _hoisted_41 = {
+const _hoisted_38 = ["onUpdate:modelValue"];
+const _hoisted_39 = ["value"];
+const _hoisted_40 = ["onUpdate:modelValue"];
+const _hoisted_41 = ["value"];
+const _hoisted_42 = {
   key: 2,
   class: "muted"
 };
-const _hoisted_42 = ["onUpdate:modelValue"];
-const _hoisted_43 = ["value"];
-const _hoisted_44 = {
-  class: "muted",
-  style: { "font-size": "11px" }
+const _hoisted_43 = ["onUpdate:modelValue"];
+const _hoisted_44 = ["value"];
+const _hoisted_45 = {
+  key: 1,
+  class: "muted"
 };
-const _hoisted_45 = ["title", "onClick"];
-const _hoisted_46 = {
+const _hoisted_46 = ["title", "onClick"];
+const _hoisted_47 = {
   key: 0,
-  class: "steps-row"
+  class: "muted",
+  style: { "font-size": "11px", "margin-left": "4px" }
 };
-const _hoisted_47 = { colspan: "7" };
-const _hoisted_48 = { class: "tsteps" };
-const _hoisted_49 = {
+const _hoisted_48 = { class: "stick muted" };
+const _hoisted_49 = ["title"];
+const _hoisted_50 = {
+  key: 1,
+  class: "tsteps",
+  style: { "margin-top": "6px", "padding": "6px 8px", "background": "var(--bg)", "border-radius": "6px" }
+};
+const _hoisted_51 = {
+  class: "muted",
+  style: { "font-size": "12px" }
+};
+const _hoisted_52 = {
   class: "muted mono",
   style: { "width": "18px" }
 };
-const _hoisted_50 = ["onUpdate:modelValue", "title"];
-const _hoisted_51 = ["value"];
-const _hoisted_52 = {
+const _hoisted_53 = ["onUpdate:modelValue", "title"];
+const _hoisted_54 = ["value"];
+const _hoisted_55 = {
   key: 0,
   title: "als regulärer Ausdruck (Flags gi)"
 };
-const _hoisted_53 = ["onUpdate:modelValue"];
-const _hoisted_54 = {
+const _hoisted_56 = ["onUpdate:modelValue"];
+const _hoisted_57 = {
   key: 1,
   class: "fld"
 };
-const _hoisted_55 = ["onUpdate:modelValue"];
-const _hoisted_56 = {
+const _hoisted_58 = ["onUpdate:modelValue"];
+const _hoisted_59 = {
   key: 2,
   class: "fld"
 };
-const _hoisted_57 = ["onUpdate:modelValue"];
-const _hoisted_58 = {
+const _hoisted_60 = ["onUpdate:modelValue"];
+const _hoisted_61 = {
   key: 3,
   class: "fld"
 };
-const _hoisted_59 = ["onUpdate:modelValue"];
-const _hoisted_60 = {
+const _hoisted_62 = ["onUpdate:modelValue"];
+const _hoisted_63 = {
   key: 4,
   class: "fld"
 };
-const _hoisted_61 = { class: "muted" };
-const _hoisted_62 = ["onUpdate:modelValue", "placeholder", "title"];
-const _hoisted_63 = {
-  class: "muted",
-  style: { "font-size": "11px" }
-};
-const _hoisted_64 = ["onClick"];
-const _hoisted_65 = ["onClick"];
+const _hoisted_64 = { class: "muted" };
+const _hoisted_65 = ["onUpdate:modelValue", "placeholder", "title"];
 const _hoisted_66 = ["onClick"];
-const _hoisted_67 = { class: "tstep" };
-const _hoisted_68 = ["onChange"];
-const _hoisted_69 = ["value", "title"];
-const _hoisted_70 = {
+const _hoisted_67 = ["onClick"];
+const _hoisted_68 = ["onClick"];
+const _hoisted_69 = { class: "tstep" };
+const _hoisted_70 = ["onChange"];
+const _hoisted_71 = ["value", "title"];
+const _hoisted_72 = {
   class: "muted",
   style: { "font-size": "11px" }
 };
-const _hoisted_71 = {
+const _hoisted_73 = {
+  key: 2,
+  class: "grid map"
+};
+const _hoisted_74 = ["title"];
+const _hoisted_75 = {
+  class: "muted",
+  style: { "font-size": "11px" }
+};
+const _hoisted_76 = { class: "muted samples" };
+const _hoisted_77 = ["onUpdate:modelValue", "onChange"];
+const _hoisted_78 = ["value"];
+const _hoisted_79 = ["onUpdate:modelValue", "onChange"];
+const _hoisted_80 = ["value"];
+const _hoisted_81 = {
+  key: 1,
+  style: { "display": "flex", "gap": "4px", "flex-wrap": "wrap" }
+};
+const _hoisted_82 = ["onUpdate:modelValue"];
+const _hoisted_83 = ["onUpdate:modelValue"];
+const _hoisted_84 = ["value"];
+const _hoisted_85 = ["onUpdate:modelValue"];
+const _hoisted_86 = ["value"];
+const _hoisted_87 = {
+  key: 2,
+  class: "muted"
+};
+const _hoisted_88 = ["onUpdate:modelValue"];
+const _hoisted_89 = ["value"];
+const _hoisted_90 = {
+  class: "muted",
+  style: { "font-size": "11px" }
+};
+const _hoisted_91 = ["title", "onClick"];
+const _hoisted_92 = {
+  key: 0,
+  class: "steps-row"
+};
+const _hoisted_93 = { colspan: "7" };
+const _hoisted_94 = { class: "tsteps" };
+const _hoisted_95 = {
+  class: "muted mono",
+  style: { "width": "18px" }
+};
+const _hoisted_96 = ["onUpdate:modelValue", "title"];
+const _hoisted_97 = ["value"];
+const _hoisted_98 = {
+  key: 0,
+  title: "als regulärer Ausdruck (Flags gi)"
+};
+const _hoisted_99 = ["onUpdate:modelValue"];
+const _hoisted_100 = {
+  key: 1,
+  class: "fld"
+};
+const _hoisted_101 = ["onUpdate:modelValue"];
+const _hoisted_102 = {
+  key: 2,
+  class: "fld"
+};
+const _hoisted_103 = ["onUpdate:modelValue"];
+const _hoisted_104 = {
+  key: 3,
+  class: "fld"
+};
+const _hoisted_105 = ["onUpdate:modelValue"];
+const _hoisted_106 = {
+  key: 4,
+  class: "fld"
+};
+const _hoisted_107 = { class: "muted" };
+const _hoisted_108 = ["onUpdate:modelValue", "placeholder", "title"];
+const _hoisted_109 = {
+  class: "muted",
+  style: { "font-size": "11px" }
+};
+const _hoisted_110 = ["onClick"];
+const _hoisted_111 = ["onClick"];
+const _hoisted_112 = ["onClick"];
+const _hoisted_113 = { class: "tstep" };
+const _hoisted_114 = ["onChange"];
+const _hoisted_115 = ["value", "title"];
+const _hoisted_116 = {
+  class: "muted",
+  style: { "font-size": "11px" }
+};
+const _hoisted_117 = {
   class: "pane",
   style: { "flex": "1" }
 };
-const _hoisted_72 = { class: "toolbar" };
-const _hoisted_73 = ["disabled"];
-const _hoisted_74 = ["disabled", "title"];
-const _hoisted_75 = { class: "muted" };
-const _hoisted_76 = {
+const _hoisted_118 = { class: "toolbar" };
+const _hoisted_119 = ["disabled"];
+const _hoisted_120 = ["disabled", "title"];
+const _hoisted_121 = { class: "muted" };
+const _hoisted_122 = {
   class: "scroll",
   style: { "padding": "8px" }
 };
-const _hoisted_77 = {
+const _hoisted_123 = {
   key: 0,
   class: "stats"
 };
-const _hoisted_78 = { class: "pos" };
-const _hoisted_79 = { class: "muted" };
-const _hoisted_80 = ["title"];
-const _hoisted_81 = { key: 1 };
-const _hoisted_82 = { class: "warn" };
-const _hoisted_83 = {
+const _hoisted_124 = { class: "pos" };
+const _hoisted_125 = { class: "muted" };
+const _hoisted_126 = ["title"];
+const _hoisted_127 = { key: 1 };
+const _hoisted_128 = { class: "warn" };
+const _hoisted_129 = {
   key: 2,
   class: "neg",
   style: { "margin-top": "6px", "white-space": "pre-wrap" }
 };
-const _hoisted_84 = { key: 0 };
-const _hoisted_85 = {
+const _hoisted_130 = { key: 0 };
+const _hoisted_131 = {
   key: 3,
   class: "warn",
   style: { "margin-top": "6px" }
 };
-const _hoisted_86 = {
+const _hoisted_132 = {
   key: 4,
   class: "section",
   style: { "margin-top": "8px", "padding": "0" }
 };
-const _hoisted_87 = {
+const _hoisted_133 = {
   class: "step-band",
   style: { "margin": "0 0 4px" }
 };
-const _hoisted_88 = { class: "muted" };
-const _hoisted_89 = {
+const _hoisted_134 = { class: "muted" };
+const _hoisted_135 = {
   class: "grid",
   style: { "width": "100%", "table-layout": "fixed" }
 };
-const _hoisted_90 = { class: "mono muted" };
-const _hoisted_91 = ["title"];
-const _hoisted_92 = ["title"];
-const _hoisted_93 = { class: "muted" };
-const _hoisted_94 = ["title"];
-const _hoisted_95 = ["value", "onChange"];
-const _hoisted_96 = {
+const _hoisted_136 = { class: "mono muted" };
+const _hoisted_137 = ["title"];
+const _hoisted_138 = ["title"];
+const _hoisted_139 = { class: "muted" };
+const _hoisted_140 = ["title"];
+const _hoisted_141 = ["value", "onChange"];
+const _hoisted_142 = {
   key: 1,
   class: "muted"
 };
-const _hoisted_97 = { style: { "margin-top": "8px" } };
-const _hoisted_98 = { class: "out" };
-const _hoisted_99 = {
+const _hoisted_143 = { style: { "margin-top": "8px" } };
+const _hoisted_144 = { class: "out" };
+const _hoisted_145 = {
   key: 1,
   class: "muted"
 };
-const _hoisted_100 = {
+const _hoisted_146 = {
   key: 2,
   class: "empty"
 };
-const _hoisted_101 = {
+const _hoisted_147 = {
   key: 3,
   class: "pos",
   style: { "margin-top": "8px" }
 };
-const _hoisted_102 = {
+const _hoisted_148 = {
   key: 4,
   class: "section"
 };
-const _hoisted_103 = {
+const _hoisted_149 = {
   class: "mono",
   style: { "font-size": "12px", "white-space": "pre-wrap" }
 };
@@ -448,6 +544,11 @@ const _sfc_main$1 = {
     const TARGETS = [["attr", "Attribut"], ["new", "neues Attribut"], ["id", "journali-Id"], ["sku", "SKU (finden)"], ["external", "externe Kennung"], ["parent", "Elternteil"], ["skip", "übergehen"]];
     const sample = (i) => source.value.rows.slice(0, 200).map((r) => r[i]).filter((v) => String(v ?? "").trim() !== "").slice(0, 3).map((v) => String(v).slice(0, 30)).join(" · ");
     const stepsOpen = ref(null);
+    const layout = ref(localStorage.getItem("journali.import.layout") || "rows");
+    function setLayout(l) {
+      layout.value = l;
+      localStorage.setItem("journali.import.layout", l);
+    }
     const OPS = transform.OPS;
     const FIELDS = { replace: ["find", "with", "regex"], prefix: ["text"], suffix: ["text"], static: ["text"], default: ["text"], combine: ["columns", "sep"], split: ["sep", "index"], number: ["decimal"], boolean: ["yes"], date: ["format"], map: ["pairs", "other"], when: ["test", "value", "then", "else"] };
     const FIELD_LABEL = { find: "suche", with: "ersetze durch", text: "Text", columns: "Spalten", sep: "Trenner", index: "Teil", yes: "„ja“-Wörter", pairs: "alt=neu", other: "sonst", value: "Wert", then: "dann", else: "sonst", decimal: "Dezimal", format: "Format", test: "Prüfung" };
@@ -636,7 +737,7 @@ const _sfc_main$1 = {
               }, {
                 default: withCtx(() => [
                   createElementVNode("tr", null, [
-                    _cache[23] || (_cache[23] = createElementVNode(
+                    _cache[36] || (_cache[36] = createElementVNode(
                       "td",
                       { class: "attr" },
                       "Datei",
@@ -655,7 +756,7 @@ const _sfc_main$1 = {
                         title: "CSV, TSV, JSON" + (unref(plugins).importers.length ? ", " + unref(plugins).importers.flatMap((i) => i.accept ?? []).join(", ") : "") + " — oder hierher ziehen",
                         onClick: pickFile
                       }, [
-                        _cache[21] || (_cache[21] = createTextVNode(
+                        _cache[34] || (_cache[34] = createTextVNode(
                           "📂 wählen",
                           -1
                           /* CACHED */
@@ -720,7 +821,7 @@ const _sfc_main$1 = {
                           /* KEYED_FRAGMENT */
                         ))
                       ], 40, _hoisted_6$1)) : !source.value ? (openBlock(), createElementBlock("span", _hoisted_8$1, "oder hierher ziehen · oder aus Excel kopieren und Strg+V")) : createCommentVNode("v-if", true),
-                      _cache[22] || (_cache[22] = createElementVNode(
+                      _cache[35] || (_cache[35] = createElementVNode(
                         "span",
                         { class: "grow" },
                         null,
@@ -737,7 +838,7 @@ const _sfc_main$1 = {
                   ]),
                   createElementVNode("tr", _hoisted_9$1, [
                     createElementVNode("td", _hoisted_10$1, [
-                      _cache[24] || (_cache[24] = createTextVNode(
+                      _cache[37] || (_cache[37] = createTextVNode(
                         "2 · Ziel ",
                         -1
                         /* CACHED */
@@ -752,7 +853,7 @@ const _sfc_main$1 = {
                     ])
                   ]),
                   fixed.value ? (openBlock(), createElementBlock("tr", _hoisted_12$1, [
-                    _cache[26] || (_cache[26] = createElementVNode(
+                    _cache[39] || (_cache[39] = createElementVNode(
                       "td",
                       { class: "attr" },
                       "Knoten",
@@ -782,7 +883,7 @@ const _sfc_main$1 = {
                         1
                         /* TEXT */
                       ),
-                      _cache[25] || (_cache[25] = createElementVNode(
+                      _cache[38] || (_cache[38] = createElementVNode(
                         "span",
                         { class: "grow" },
                         null,
@@ -797,7 +898,7 @@ const _sfc_main$1 = {
                     ])
                   ])) : createCommentVNode("v-if", true),
                   !fixed.value ? (openBlock(), createElementBlock("tr", _hoisted_15$1, [
-                    _cache[27] || (_cache[27] = createElementVNode(
+                    _cache[40] || (_cache[40] = createElementVNode(
                       "td",
                       { class: "attr" },
                       "Ziel",
@@ -836,7 +937,7 @@ const _sfc_main$1 = {
                     ])
                   ])) : createCommentVNode("v-if", true),
                   !fixed.value ? (openBlock(), createElementBlock("tr", _hoisted_19, [
-                    _cache[29] || (_cache[29] = createElementVNode(
+                    _cache[42] || (_cache[42] = createElementVNode(
                       "td",
                       { class: "attr" },
                       "Neue als",
@@ -852,7 +953,7 @@ const _sfc_main$1 = {
                           onChange: _cache[8] || (_cache[8] = ($event) => planned.value = null),
                           style: { "width": "100%" }
                         },
-                        [..._cache[28] || (_cache[28] = [
+                        [..._cache[41] || (_cache[41] = [
                           createElementVNode(
                             "option",
                             { value: "" },
@@ -890,7 +991,7 @@ const _sfc_main$1 = {
                     ])
                   ])) : createCommentVNode("v-if", true),
                   !fixed.value ? (openBlock(), createElementBlock("tr", _hoisted_20, [
-                    _cache[30] || (_cache[30] = createElementVNode(
+                    _cache[43] || (_cache[43] = createElementVNode(
                       "td",
                       { class: "attr" },
                       "Kennung",
@@ -929,7 +1030,7 @@ const _sfc_main$1 = {
                 )) : createCommentVNode("v-if", true),
                 source.value ? (openBlock(), createElementBlock("div", _hoisted_24, [
                   createElementVNode("h2", _hoisted_25, [
-                    _cache[31] || (_cache[31] = createTextVNode(
+                    _cache[44] || (_cache[44] = createTextVNode(
                       "3 · Zuordnung ",
                       -1
                       /* CACHED */
@@ -940,10 +1041,668 @@ const _sfc_main$1 = {
                       "· " + toDisplayString(mapping.value.filter((m2) => m2.target !== "skip").length) + " von " + toDisplayString(mapping.value.length) + " Spalten",
                       1
                       /* TEXT */
-                    )
+                    ),
+                    _cache[45] || (_cache[45] = createElementVNode(
+                      "span",
+                      { class: "grow" },
+                      null,
+                      -1
+                      /* CACHED */
+                    )),
+                    createElementVNode("span", _hoisted_27, [
+                      createElementVNode(
+                        "button",
+                        {
+                          class: normalizeClass({ on: layout.value === "rows" }),
+                          onClick: _cache[10] || (_cache[10] = ($event) => setLayout("rows")),
+                          title: "eine Zeile je Spalte — nach unten scrollen"
+                        },
+                        "≡ Zeilen",
+                        2
+                        /* CLASS */
+                      ),
+                      createElementVNode(
+                        "button",
+                        {
+                          class: normalizeClass({ on: layout.value === "cols" }),
+                          onClick: _cache[11] || (_cache[11] = ($event) => setLayout("cols")),
+                          title: "wie in Excel: eine Spalte je Spalte, Zuordnung in den Kopfzeilen — nach rechts scrollen"
+                        },
+                        "⫼ Spalten",
+                        2
+                        /* CLASS */
+                      )
+                    ])
                   ]),
-                  createElementVNode("table", _hoisted_27, [
-                    _cache[43] || (_cache[43] = createElementVNode(
+                  createCommentVNode(" Spalten wie in Excel: Kopfzeilen = Zuordnung, darunter die ersten Zeilen der Datei; erste Spalte klebt "),
+                  layout.value === "cols" ? (openBlock(), createElementBlock("div", _hoisted_28, [
+                    createElementVNode("table", _hoisted_29, [
+                      createElementVNode("tbody", null, [
+                        createElementVNode("tr", null, [
+                          _cache[46] || (_cache[46] = createElementVNode(
+                            "th",
+                            { class: "stick" },
+                            "Spalte",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(mapping.value, (m2) => {
+                              return openBlock(), createElementBlock("td", {
+                                key: m2.column,
+                                class: normalizeClass({ off: m2.target === "skip" }),
+                                title: m2.column
+                              }, [
+                                createElementVNode(
+                                  "b",
+                                  null,
+                                  toDisplayString(m2.column),
+                                  1
+                                  /* TEXT */
+                                ),
+                                createElementVNode(
+                                  "div",
+                                  _hoisted_31,
+                                  toDisplayString(m2.sniff?.type) + " · " + toDisplayString(m2.sniff?.distinct) + " versch.",
+                                  1
+                                  /* TEXT */
+                                )
+                              ], 10, _hoisted_30);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ]),
+                        createElementVNode("tr", null, [
+                          _cache[47] || (_cache[47] = createElementVNode(
+                            "th",
+                            { class: "stick" },
+                            "Ziel",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(mapping.value, (m2) => {
+                              return openBlock(), createElementBlock("td", {
+                                key: m2.column
+                              }, [
+                                withDirectives(createElementVNode("select", {
+                                  "onUpdate:modelValue": ($event) => m2.target = $event,
+                                  onChange: ($event) => onTarget(m2),
+                                  style: { "width": "100%" }
+                                }, [
+                                  (openBlock(true), createElementBlock(
+                                    Fragment,
+                                    null,
+                                    renderList(TARGETS.filter(([k]) => !fixed.value || !["new", "parent", "external"].includes(k)), ([k, l]) => {
+                                      return openBlock(), createElementBlock("option", {
+                                        key: k,
+                                        value: k
+                                      }, toDisplayString(l), 9, _hoisted_33);
+                                    }),
+                                    128
+                                    /* KEYED_FRAGMENT */
+                                  ))
+                                ], 40, _hoisted_32), [
+                                  [vModelSelect, m2.target]
+                                ])
+                              ]);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ]),
+                        createElementVNode("tr", null, [
+                          _cache[49] || (_cache[49] = createElementVNode(
+                            "th",
+                            { class: "stick" },
+                            "Attribut",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(mapping.value, (m2) => {
+                              return openBlock(), createElementBlock("td", {
+                                key: m2.column
+                              }, [
+                                m2.target === "attr" ? withDirectives((openBlock(), createElementBlock("select", {
+                                  key: 0,
+                                  "onUpdate:modelValue": ($event) => m2.attribute = $event,
+                                  onChange: ($event) => {
+                                    syncLocale(m2);
+                                    planned.value = null;
+                                    m2.unknown = false;
+                                  },
+                                  style: { "width": "100%" }
+                                }, [
+                                  (openBlock(true), createElementBlock(
+                                    Fragment,
+                                    null,
+                                    renderList(attrs.value.filter((a) => !fixed.value || fixed.value.allowed.has(a.key)), (a) => {
+                                      return openBlock(), createElementBlock("option", {
+                                        key: a.key,
+                                        value: a.key
+                                      }, toDisplayString(a.label?.de || a.key) + " · " + toDisplayString(a.key), 9, _hoisted_35);
+                                    }),
+                                    128
+                                    /* KEYED_FRAGMENT */
+                                  ))
+                                ], 40, _hoisted_34)), [
+                                  [vModelSelect, m2.attribute]
+                                ]) : m2.target === "new" ? (openBlock(), createElementBlock("span", _hoisted_36, [
+                                  withDirectives(createElementVNode("input", {
+                                    "onUpdate:modelValue": ($event) => m2.newKey = $event,
+                                    type: "text",
+                                    placeholder: "schlüssel",
+                                    onChange: _cache[12] || (_cache[12] = ($event) => planned.value = null)
+                                  }, null, 40, _hoisted_37), [
+                                    [vModelText, m2.newKey]
+                                  ]),
+                                  withDirectives(createElementVNode("select", {
+                                    "onUpdate:modelValue": ($event) => m2.newType = $event,
+                                    onChange: _cache[13] || (_cache[13] = ($event) => planned.value = null)
+                                  }, [
+                                    (openBlock(), createElementBlock(
+                                      Fragment,
+                                      null,
+                                      renderList(["text", "html", "integer", "decimal", "boolean", "date", "enum"], (t) => {
+                                        return createElementVNode("option", {
+                                          key: t,
+                                          value: t
+                                        }, toDisplayString(t), 9, _hoisted_39);
+                                      }),
+                                      64
+                                      /* STABLE_FRAGMENT */
+                                    ))
+                                  ], 40, _hoisted_38), [
+                                    [vModelSelect, m2.newType]
+                                  ]),
+                                  withDirectives(createElementVNode("select", {
+                                    "onUpdate:modelValue": ($event) => m2.newGroup = $event,
+                                    class: normalizeClass({ neg: !m2.newGroup }),
+                                    title: "Attributgruppe — Pflicht",
+                                    onChange: _cache[14] || (_cache[14] = ($event) => planned.value = null)
+                                  }, [
+                                    _cache[48] || (_cache[48] = createElementVNode(
+                                      "option",
+                                      { value: void 0 },
+                                      "● Gruppe wählen …",
+                                      -1
+                                      /* CACHED */
+                                    )),
+                                    (openBlock(true), createElementBlock(
+                                      Fragment,
+                                      null,
+                                      renderList(groups.value, (g) => {
+                                        return openBlock(), createElementBlock("option", {
+                                          key: g.key,
+                                          value: g.key
+                                        }, "▤ " + toDisplayString(g.label?.de || g.key), 9, _hoisted_41);
+                                      }),
+                                      128
+                                      /* KEYED_FRAGMENT */
+                                    ))
+                                  ], 42, _hoisted_40), [
+                                    [vModelSelect, m2.newGroup]
+                                  ])
+                                ])) : (openBlock(), createElementBlock("span", _hoisted_42, "—"))
+                              ]);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ]),
+                        createElementVNode("tr", null, [
+                          _cache[51] || (_cache[51] = createElementVNode(
+                            "th",
+                            { class: "stick" },
+                            "Sprache",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(mapping.value, (m2) => {
+                              return openBlock(), createElementBlock("td", {
+                                key: m2.column
+                              }, [
+                                m2.target === "attr" && attrs.value.find((a) => a.key === m2.attribute)?.perLocale || m2.target === "new" ? withDirectives((openBlock(), createElementBlock("select", {
+                                  key: 0,
+                                  "onUpdate:modelValue": ($event) => m2.locale = $event,
+                                  style: { "width": "100%" },
+                                  onChange: _cache[15] || (_cache[15] = ($event) => planned.value = null)
+                                }, [
+                                  _cache[50] || (_cache[50] = createElementVNode(
+                                    "option",
+                                    { value: null },
+                                    "*",
+                                    -1
+                                    /* CACHED */
+                                  )),
+                                  (openBlock(true), createElementBlock(
+                                    Fragment,
+                                    null,
+                                    renderList(locales.value, (l) => {
+                                      return openBlock(), createElementBlock("option", {
+                                        key: l,
+                                        value: l
+                                      }, toDisplayString(l), 9, _hoisted_44);
+                                    }),
+                                    128
+                                    /* KEYED_FRAGMENT */
+                                  ))
+                                ], 40, _hoisted_43)), [
+                                  [vModelSelect, m2.locale]
+                                ]) : (openBlock(), createElementBlock("span", _hoisted_45, "—"))
+                              ]);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ]),
+                        createElementVNode("tr", null, [
+                          _cache[52] || (_cache[52] = createElementVNode(
+                            "th",
+                            { class: "stick" },
+                            "ƒ",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(mapping.value, (m2) => {
+                              return openBlock(), createElementBlock("td", {
+                                key: m2.column
+                              }, [
+                                createElementVNode("button", {
+                                  class: normalizeClass(["x", { on: m2.steps?.length }]),
+                                  title: m2.steps?.length ? stepsText(m2) + " — Klick: bearbeiten" : "Umwandlung hinzufügen",
+                                  onClick: ($event) => stepsOpen.value = stepsOpen.value === m2.column ? null : m2.column
+                                }, "ƒ" + toDisplayString(m2.steps?.length ? m2.steps.length : ""), 11, _hoisted_46),
+                                m2.steps?.length ? (openBlock(), createElementBlock(
+                                  "span",
+                                  _hoisted_47,
+                                  toDisplayString(stepsText(m2)),
+                                  1
+                                  /* TEXT */
+                                )) : createCommentVNode("v-if", true)
+                              ]);
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ]),
+                        createElementVNode("tr", null, [
+                          _cache[53] || (_cache[53] = createElementVNode(
+                            "th",
+                            { class: "stick" },
+                            "Warum",
+                            -1
+                            /* CACHED */
+                          )),
+                          (openBlock(true), createElementBlock(
+                            Fragment,
+                            null,
+                            renderList(mapping.value, (m2) => {
+                              return openBlock(), createElementBlock(
+                                "td",
+                                {
+                                  key: m2.column,
+                                  class: "muted",
+                                  style: { "font-size": "11px", "white-space": "normal" }
+                                },
+                                toDisplayString(m2.why),
+                                1
+                                /* TEXT */
+                              );
+                            }),
+                            128
+                            /* KEYED_FRAGMENT */
+                          ))
+                        ]),
+                        (openBlock(), createElementBlock(
+                          Fragment,
+                          null,
+                          renderList(3, (r) => {
+                            return createElementVNode("tr", {
+                              key: r,
+                              class: "sample"
+                            }, [
+                              createElementVNode(
+                                "th",
+                                _hoisted_48,
+                                "Zeile " + toDisplayString(r + 1),
+                                1
+                                /* TEXT */
+                              ),
+                              (openBlock(true), createElementBlock(
+                                Fragment,
+                                null,
+                                renderList(mapping.value, (m2, i) => {
+                                  return openBlock(), createElementBlock("td", {
+                                    key: m2.column,
+                                    class: "muted",
+                                    title: String(source.value.rows[r - 1]?.[i] ?? "")
+                                  }, toDisplayString(String(source.value.rows[r - 1]?.[i] ?? "").slice(0, 40)), 9, _hoisted_49);
+                                }),
+                                128
+                                /* KEYED_FRAGMENT */
+                              ))
+                            ]);
+                          }),
+                          64
+                          /* STABLE_FRAGMENT */
+                        ))
+                      ])
+                    ])
+                  ])) : createCommentVNode("v-if", true),
+                  layout.value === "cols" && stepsOpen.value && mapping.value.find((m2) => m2.column === stepsOpen.value) ? (openBlock(), createElementBlock("div", _hoisted_50, [
+                    createElementVNode("div", _hoisted_51, [
+                      _cache[54] || (_cache[54] = createTextVNode(
+                        "ƒ Umwandlung für ",
+                        -1
+                        /* CACHED */
+                      )),
+                      createElementVNode(
+                        "b",
+                        null,
+                        toDisplayString(stepsOpen.value),
+                        1
+                        /* TEXT */
+                      ),
+                      _cache[55] || (_cache[55] = createTextVNode()),
+                      createElementVNode("button", {
+                        class: "x",
+                        onClick: _cache[16] || (_cache[16] = ($event) => stepsOpen.value = null)
+                      }, "×")
+                    ]),
+                    (openBlock(true), createElementBlock(
+                      Fragment,
+                      null,
+                      renderList([mapping.value.find((m2) => m2.column === stepsOpen.value)], (m2) => {
+                        return openBlock(), createElementBlock(
+                          Fragment,
+                          {
+                            key: m2.column
+                          },
+                          [
+                            (openBlock(true), createElementBlock(
+                              Fragment,
+                              null,
+                              renderList(m2.steps ?? [], (s, si) => {
+                                return openBlock(), createElementBlock("div", {
+                                  key: si,
+                                  class: "tstep"
+                                }, [
+                                  createElementVNode(
+                                    "span",
+                                    _hoisted_52,
+                                    toDisplayString(si + 1),
+                                    1
+                                    /* TEXT */
+                                  ),
+                                  withDirectives(createElementVNode("select", {
+                                    "onUpdate:modelValue": ($event) => s.op = $event,
+                                    onChange: _cache[17] || (_cache[17] = ($event) => planned.value = null),
+                                    title: opHint(s.op)
+                                  }, [
+                                    (openBlock(true), createElementBlock(
+                                      Fragment,
+                                      null,
+                                      renderList(unref(OPS), (o) => {
+                                        return openBlock(), createElementBlock("option", {
+                                          key: o[0],
+                                          value: o[0]
+                                        }, toDisplayString(o[1]), 9, _hoisted_54);
+                                      }),
+                                      128
+                                      /* KEYED_FRAGMENT */
+                                    ))
+                                  ], 40, _hoisted_53), [
+                                    [vModelSelect, s.op]
+                                  ]),
+                                  (openBlock(true), createElementBlock(
+                                    Fragment,
+                                    null,
+                                    renderList(FIELDS[s.op] ?? [], (f) => {
+                                      return openBlock(), createElementBlock(
+                                        Fragment,
+                                        { key: f },
+                                        [
+                                          f === "regex" ? (openBlock(), createElementBlock("label", _hoisted_55, [
+                                            withDirectives(createElementVNode("input", {
+                                              type: "checkbox",
+                                              "onUpdate:modelValue": ($event) => s.regex = $event,
+                                              onChange: _cache[18] || (_cache[18] = ($event) => planned.value = null)
+                                            }, null, 40, _hoisted_56), [
+                                              [vModelCheckbox, s.regex]
+                                            ]),
+                                            _cache[56] || (_cache[56] = createTextVNode(
+                                              " regex",
+                                              -1
+                                              /* CACHED */
+                                            ))
+                                          ])) : f === "test" ? (openBlock(), createElementBlock("span", _hoisted_57, [
+                                            _cache[58] || (_cache[58] = createElementVNode(
+                                              "span",
+                                              { class: "muted" },
+                                              "Quelle ist",
+                                              -1
+                                              /* CACHED */
+                                            )),
+                                            withDirectives(createElementVNode("select", {
+                                              "onUpdate:modelValue": ($event) => s.test = $event,
+                                              onChange: _cache[19] || (_cache[19] = ($event) => planned.value = null)
+                                            }, [..._cache[57] || (_cache[57] = [
+                                              createElementVNode(
+                                                "option",
+                                                { value: "empty" },
+                                                "leer",
+                                                -1
+                                                /* CACHED */
+                                              ),
+                                              createElementVNode(
+                                                "option",
+                                                { value: "equals" },
+                                                "gleich",
+                                                -1
+                                                /* CACHED */
+                                              ),
+                                              createElementVNode(
+                                                "option",
+                                                { value: "contains" },
+                                                "enthält",
+                                                -1
+                                                /* CACHED */
+                                              ),
+                                              createElementVNode(
+                                                "option",
+                                                { value: "matches" },
+                                                "passt auf (regex)",
+                                                -1
+                                                /* CACHED */
+                                              )
+                                            ])], 40, _hoisted_58), [
+                                              [vModelSelect, s.test]
+                                            ])
+                                          ])) : f === "decimal" ? (openBlock(), createElementBlock("span", _hoisted_59, [
+                                            _cache[60] || (_cache[60] = createElementVNode(
+                                              "span",
+                                              { class: "muted" },
+                                              "Dezimalzeichen",
+                                              -1
+                                              /* CACHED */
+                                            )),
+                                            withDirectives(createElementVNode("select", {
+                                              "onUpdate:modelValue": ($event) => s.decimal = $event,
+                                              onChange: _cache[20] || (_cache[20] = ($event) => planned.value = null)
+                                            }, [..._cache[59] || (_cache[59] = [
+                                              createElementVNode(
+                                                "option",
+                                                { value: void 0 },
+                                                "raten",
+                                                -1
+                                                /* CACHED */
+                                              ),
+                                              createElementVNode(
+                                                "option",
+                                                { value: "," },
+                                                "Komma",
+                                                -1
+                                                /* CACHED */
+                                              ),
+                                              createElementVNode(
+                                                "option",
+                                                { value: "." },
+                                                "Punkt",
+                                                -1
+                                                /* CACHED */
+                                              )
+                                            ])], 40, _hoisted_60), [
+                                              [vModelSelect, s.decimal]
+                                            ])
+                                          ])) : f === "format" ? (openBlock(), createElementBlock("span", _hoisted_61, [
+                                            _cache[62] || (_cache[62] = createElementVNode(
+                                              "span",
+                                              { class: "muted" },
+                                              "Quelle im Format",
+                                              -1
+                                              /* CACHED */
+                                            )),
+                                            withDirectives(createElementVNode("select", {
+                                              "onUpdate:modelValue": ($event) => s.format = $event,
+                                              onChange: _cache[21] || (_cache[21] = ($event) => planned.value = null)
+                                            }, [..._cache[61] || (_cache[61] = [
+                                              createElementVNode(
+                                                "option",
+                                                { value: "dd.MM.yyyy" },
+                                                "dd.MM.yyyy",
+                                                -1
+                                                /* CACHED */
+                                              ),
+                                              createElementVNode(
+                                                "option",
+                                                { value: "MM/dd/yyyy" },
+                                                "MM/dd/yyyy",
+                                                -1
+                                                /* CACHED */
+                                              ),
+                                              createElementVNode(
+                                                "option",
+                                                { value: "yyyyMMdd" },
+                                                "yyyyMMdd",
+                                                -1
+                                                /* CACHED */
+                                              )
+                                            ])], 40, _hoisted_62), [
+                                              [vModelSelect, s.format]
+                                            ])
+                                          ])) : (openBlock(), createElementBlock("span", _hoisted_63, [
+                                            createElementVNode(
+                                              "span",
+                                              _hoisted_64,
+                                              toDisplayString(FIELD_LABEL[f] ?? f),
+                                              1
+                                              /* TEXT */
+                                            ),
+                                            withDirectives(createElementVNode("input", {
+                                              type: "text",
+                                              "onUpdate:modelValue": ($event) => s[f] = $event,
+                                              placeholder: FIELD_HINT[f] ?? f,
+                                              title: (FIELD_HINT[f] ?? f) + " — " + opHint(s.op),
+                                              onInput: _cache[22] || (_cache[22] = ($event) => planned.value = null),
+                                              style: { "width": "200px" }
+                                            }, null, 40, _hoisted_65), [
+                                              [vModelText, s[f]]
+                                            ])
+                                          ]))
+                                        ],
+                                        64
+                                        /* STABLE_FRAGMENT */
+                                      );
+                                    }),
+                                    128
+                                    /* KEYED_FRAGMENT */
+                                  )),
+                                  _cache[63] || (_cache[63] = createElementVNode(
+                                    "span",
+                                    { class: "grow" },
+                                    null,
+                                    -1
+                                    /* CACHED */
+                                  )),
+                                  createElementVNode("button", {
+                                    class: "x",
+                                    onClick: ($event) => moveStep(m2, si, -1)
+                                  }, "↑", 8, _hoisted_66),
+                                  createElementVNode("button", {
+                                    class: "x",
+                                    onClick: ($event) => moveStep(m2, si, 1)
+                                  }, "↓", 8, _hoisted_67),
+                                  createElementVNode("button", {
+                                    class: "x",
+                                    onClick: ($event) => delStep(m2, si)
+                                  }, "×", 8, _hoisted_68)
+                                ]);
+                              }),
+                              128
+                              /* KEYED_FRAGMENT */
+                            )),
+                            createElementVNode("div", _hoisted_69, [
+                              createElementVNode("select", {
+                                value: "",
+                                onChange: ($event) => {
+                                  addStep(m2, $event.target.value);
+                                  $event.target.value = "";
+                                }
+                              }, [
+                                _cache[64] || (_cache[64] = createElementVNode(
+                                  "option",
+                                  { value: "" },
+                                  "+ Schritt …",
+                                  -1
+                                  /* CACHED */
+                                )),
+                                (openBlock(true), createElementBlock(
+                                  Fragment,
+                                  null,
+                                  renderList(unref(OPS), (o) => {
+                                    return openBlock(), createElementBlock("option", {
+                                      key: o[0],
+                                      value: o[0],
+                                      title: o[2]
+                                    }, toDisplayString(o[1]), 9, _hoisted_71);
+                                  }),
+                                  128
+                                  /* KEYED_FRAGMENT */
+                                ))
+                              ], 40, _hoisted_70),
+                              createElementVNode(
+                                "span",
+                                _hoisted_72,
+                                toDisplayString(m2.steps?.length ? "Vorschau: " + preview(m2, mapping.value.indexOf(m2)) : "Kette zwischen Quelle und Ziel"),
+                                1
+                                /* TEXT */
+                              )
+                            ])
+                          ],
+                          64
+                          /* STABLE_FRAGMENT */
+                        );
+                      }),
+                      128
+                      /* KEYED_FRAGMENT */
+                    ))
+                  ])) : (openBlock(), createElementBlock("table", _hoisted_73, [
+                    _cache[76] || (_cache[76] = createElementVNode(
                       "thead",
                       null,
                       [
@@ -993,15 +1752,15 @@ const _sfc_main$1 = {
                                     ),
                                     createElementVNode(
                                       "div",
-                                      _hoisted_29,
+                                      _hoisted_75,
                                       toDisplayString(m2.sniff?.type) + " · " + toDisplayString(m2.sniff?.distinct) + " versch.",
                                       1
                                       /* TEXT */
                                     )
-                                  ], 8, _hoisted_28),
+                                  ], 8, _hoisted_74),
                                   createElementVNode(
                                     "td",
-                                    _hoisted_30,
+                                    _hoisted_76,
                                     toDisplayString(sample(i)),
                                     1
                                     /* TEXT */
@@ -1019,12 +1778,12 @@ const _sfc_main$1 = {
                                           return openBlock(), createElementBlock("option", {
                                             key: k,
                                             value: k
-                                          }, toDisplayString(l), 9, _hoisted_32);
+                                          }, toDisplayString(l), 9, _hoisted_78);
                                         }),
                                         128
                                         /* KEYED_FRAGMENT */
                                       ))
-                                    ], 40, _hoisted_31), [
+                                    ], 40, _hoisted_77), [
                                       [vModelSelect, m2.target]
                                     ])
                                   ]),
@@ -1046,27 +1805,27 @@ const _sfc_main$1 = {
                                           return openBlock(), createElementBlock("option", {
                                             key: a.key,
                                             value: a.key
-                                          }, toDisplayString(a.label?.de || a.key) + " · " + toDisplayString(a.key), 9, _hoisted_34);
+                                          }, toDisplayString(a.label?.de || a.key) + " · " + toDisplayString(a.key), 9, _hoisted_80);
                                         }),
                                         128
                                         /* KEYED_FRAGMENT */
                                       ))
-                                    ], 40, _hoisted_33)), [
+                                    ], 40, _hoisted_79)), [
                                       [vModelSelect, m2.attribute]
-                                    ]) : m2.target === "new" ? (openBlock(), createElementBlock("span", _hoisted_35, [
+                                    ]) : m2.target === "new" ? (openBlock(), createElementBlock("span", _hoisted_81, [
                                       withDirectives(createElementVNode("input", {
                                         "onUpdate:modelValue": ($event) => m2.newKey = $event,
                                         type: "text",
                                         style: { "flex": "1", "min-width": "90px" },
                                         placeholder: "schlüssel",
-                                        onChange: _cache[10] || (_cache[10] = ($event) => planned.value = null)
-                                      }, null, 40, _hoisted_36), [
+                                        onChange: _cache[23] || (_cache[23] = ($event) => planned.value = null)
+                                      }, null, 40, _hoisted_82), [
                                         [vModelText, m2.newKey]
                                       ]),
                                       withDirectives(createElementVNode("select", {
                                         "onUpdate:modelValue": ($event) => m2.newType = $event,
                                         style: { "width": "84px" },
-                                        onChange: _cache[11] || (_cache[11] = ($event) => planned.value = null)
+                                        onChange: _cache[24] || (_cache[24] = ($event) => planned.value = null)
                                       }, [
                                         (openBlock(), createElementBlock(
                                           Fragment,
@@ -1075,12 +1834,12 @@ const _sfc_main$1 = {
                                             return createElementVNode("option", {
                                               key: t,
                                               value: t
-                                            }, toDisplayString(t), 9, _hoisted_38);
+                                            }, toDisplayString(t), 9, _hoisted_84);
                                           }),
                                           64
                                           /* STABLE_FRAGMENT */
                                         ))
-                                      ], 40, _hoisted_37), [
+                                      ], 40, _hoisted_83), [
                                         [vModelSelect, m2.newType]
                                       ]),
                                       withDirectives(createElementVNode("select", {
@@ -1088,9 +1847,9 @@ const _sfc_main$1 = {
                                         style: { "width": "100%" },
                                         class: normalizeClass({ neg: !m2.newGroup }),
                                         title: "Attributgruppe — Pflicht: ohne Gruppe gilt das Attribut nirgends",
-                                        onChange: _cache[12] || (_cache[12] = ($event) => planned.value = null)
+                                        onChange: _cache[25] || (_cache[25] = ($event) => planned.value = null)
                                       }, [
-                                        _cache[32] || (_cache[32] = createElementVNode(
+                                        _cache[65] || (_cache[65] = createElementVNode(
                                           "option",
                                           { value: void 0 },
                                           "● Gruppe wählen …",
@@ -1104,24 +1863,24 @@ const _sfc_main$1 = {
                                             return openBlock(), createElementBlock("option", {
                                               key: g.key,
                                               value: g.key
-                                            }, "▤ " + toDisplayString(g.label?.de || g.key), 9, _hoisted_40);
+                                            }, "▤ " + toDisplayString(g.label?.de || g.key), 9, _hoisted_86);
                                           }),
                                           128
                                           /* KEYED_FRAGMENT */
                                         ))
-                                      ], 42, _hoisted_39), [
+                                      ], 42, _hoisted_85), [
                                         [vModelSelect, m2.newGroup]
                                       ])
-                                    ])) : (openBlock(), createElementBlock("span", _hoisted_41, "—"))
+                                    ])) : (openBlock(), createElementBlock("span", _hoisted_87, "—"))
                                   ]),
                                   createElementVNode("td", null, [
                                     m2.target === "attr" && attrs.value.find((a) => a.key === m2.attribute)?.perLocale || m2.target === "new" ? withDirectives((openBlock(), createElementBlock("select", {
                                       key: 0,
                                       "onUpdate:modelValue": ($event) => m2.locale = $event,
                                       style: { "width": "100%" },
-                                      onChange: _cache[13] || (_cache[13] = ($event) => planned.value = null)
+                                      onChange: _cache[26] || (_cache[26] = ($event) => planned.value = null)
                                     }, [
-                                      _cache[33] || (_cache[33] = createElementVNode(
+                                      _cache[66] || (_cache[66] = createElementVNode(
                                         "option",
                                         { value: null },
                                         "*",
@@ -1135,18 +1894,18 @@ const _sfc_main$1 = {
                                           return openBlock(), createElementBlock("option", {
                                             key: l,
                                             value: l
-                                          }, toDisplayString(l), 9, _hoisted_43);
+                                          }, toDisplayString(l), 9, _hoisted_89);
                                         }),
                                         128
                                         /* KEYED_FRAGMENT */
                                       ))
-                                    ], 40, _hoisted_42)), [
+                                    ], 40, _hoisted_88)), [
                                       [vModelSelect, m2.locale]
                                     ]) : createCommentVNode("v-if", true)
                                   ]),
                                   createElementVNode(
                                     "td",
-                                    _hoisted_44,
+                                    _hoisted_90,
                                     toDisplayString(m2.why),
                                     1
                                     /* TEXT */
@@ -1156,15 +1915,15 @@ const _sfc_main$1 = {
                                       class: normalizeClass(["x", { on: m2.steps?.length }]),
                                       title: m2.steps?.length ? stepsText(m2) + " — Klick: bearbeiten" : "Umwandlung hinzufügen",
                                       onClick: ($event) => stepsOpen.value = stepsOpen.value === m2.column ? null : m2.column
-                                    }, "ƒ" + toDisplayString(m2.steps?.length ? m2.steps.length : ""), 11, _hoisted_45)
+                                    }, "ƒ" + toDisplayString(m2.steps?.length ? m2.steps.length : ""), 11, _hoisted_91)
                                   ])
                                 ],
                                 2
                                 /* CLASS */
                               ),
-                              stepsOpen.value === m2.column ? (openBlock(), createElementBlock("tr", _hoisted_46, [
-                                createElementVNode("td", _hoisted_47, [
-                                  createElementVNode("div", _hoisted_48, [
+                              stepsOpen.value === m2.column ? (openBlock(), createElementBlock("tr", _hoisted_92, [
+                                createElementVNode("td", _hoisted_93, [
+                                  createElementVNode("div", _hoisted_94, [
                                     (openBlock(true), createElementBlock(
                                       Fragment,
                                       null,
@@ -1175,14 +1934,14 @@ const _sfc_main$1 = {
                                         }, [
                                           createElementVNode(
                                             "span",
-                                            _hoisted_49,
+                                            _hoisted_95,
                                             toDisplayString(si + 1),
                                             1
                                             /* TEXT */
                                           ),
                                           withDirectives(createElementVNode("select", {
                                             "onUpdate:modelValue": ($event) => s.op = $event,
-                                            onChange: _cache[14] || (_cache[14] = ($event) => planned.value = null),
+                                            onChange: _cache[27] || (_cache[27] = ($event) => planned.value = null),
                                             title: opHint(s.op)
                                           }, [
                                             (openBlock(true), createElementBlock(
@@ -1192,12 +1951,12 @@ const _sfc_main$1 = {
                                                 return openBlock(), createElementBlock("option", {
                                                   key: o[0],
                                                   value: o[0]
-                                                }, toDisplayString(o[1]), 9, _hoisted_51);
+                                                }, toDisplayString(o[1]), 9, _hoisted_97);
                                               }),
                                               128
                                               /* KEYED_FRAGMENT */
                                             ))
-                                          ], 40, _hoisted_50), [
+                                          ], 40, _hoisted_96), [
                                             [vModelSelect, s.op]
                                           ]),
                                           (openBlock(true), createElementBlock(
@@ -1208,21 +1967,21 @@ const _sfc_main$1 = {
                                                 Fragment,
                                                 { key: f },
                                                 [
-                                                  f === "regex" ? (openBlock(), createElementBlock("label", _hoisted_52, [
+                                                  f === "regex" ? (openBlock(), createElementBlock("label", _hoisted_98, [
                                                     withDirectives(createElementVNode("input", {
                                                       type: "checkbox",
                                                       "onUpdate:modelValue": ($event) => s.regex = $event,
-                                                      onChange: _cache[15] || (_cache[15] = ($event) => planned.value = null)
-                                                    }, null, 40, _hoisted_53), [
+                                                      onChange: _cache[28] || (_cache[28] = ($event) => planned.value = null)
+                                                    }, null, 40, _hoisted_99), [
                                                       [vModelCheckbox, s.regex]
                                                     ]),
-                                                    _cache[34] || (_cache[34] = createTextVNode(
+                                                    _cache[67] || (_cache[67] = createTextVNode(
                                                       " regex",
                                                       -1
                                                       /* CACHED */
                                                     ))
-                                                  ])) : f === "test" ? (openBlock(), createElementBlock("span", _hoisted_54, [
-                                                    _cache[36] || (_cache[36] = createElementVNode(
+                                                  ])) : f === "test" ? (openBlock(), createElementBlock("span", _hoisted_100, [
+                                                    _cache[69] || (_cache[69] = createElementVNode(
                                                       "span",
                                                       { class: "muted" },
                                                       "Quelle ist",
@@ -1231,8 +1990,8 @@ const _sfc_main$1 = {
                                                     )),
                                                     withDirectives(createElementVNode("select", {
                                                       "onUpdate:modelValue": ($event) => s.test = $event,
-                                                      onChange: _cache[16] || (_cache[16] = ($event) => planned.value = null)
-                                                    }, [..._cache[35] || (_cache[35] = [
+                                                      onChange: _cache[29] || (_cache[29] = ($event) => planned.value = null)
+                                                    }, [..._cache[68] || (_cache[68] = [
                                                       createElementVNode(
                                                         "option",
                                                         { value: "empty" },
@@ -1261,11 +2020,11 @@ const _sfc_main$1 = {
                                                         -1
                                                         /* CACHED */
                                                       )
-                                                    ])], 40, _hoisted_55), [
+                                                    ])], 40, _hoisted_101), [
                                                       [vModelSelect, s.test]
                                                     ])
-                                                  ])) : f === "decimal" ? (openBlock(), createElementBlock("span", _hoisted_56, [
-                                                    _cache[38] || (_cache[38] = createElementVNode(
+                                                  ])) : f === "decimal" ? (openBlock(), createElementBlock("span", _hoisted_102, [
+                                                    _cache[71] || (_cache[71] = createElementVNode(
                                                       "span",
                                                       { class: "muted" },
                                                       "Dezimalzeichen",
@@ -1274,8 +2033,8 @@ const _sfc_main$1 = {
                                                     )),
                                                     withDirectives(createElementVNode("select", {
                                                       "onUpdate:modelValue": ($event) => s.decimal = $event,
-                                                      onChange: _cache[17] || (_cache[17] = ($event) => planned.value = null)
-                                                    }, [..._cache[37] || (_cache[37] = [
+                                                      onChange: _cache[30] || (_cache[30] = ($event) => planned.value = null)
+                                                    }, [..._cache[70] || (_cache[70] = [
                                                       createElementVNode(
                                                         "option",
                                                         { value: void 0 },
@@ -1297,11 +2056,11 @@ const _sfc_main$1 = {
                                                         -1
                                                         /* CACHED */
                                                       )
-                                                    ])], 40, _hoisted_57), [
+                                                    ])], 40, _hoisted_103), [
                                                       [vModelSelect, s.decimal]
                                                     ])
-                                                  ])) : f === "format" ? (openBlock(), createElementBlock("span", _hoisted_58, [
-                                                    _cache[40] || (_cache[40] = createElementVNode(
+                                                  ])) : f === "format" ? (openBlock(), createElementBlock("span", _hoisted_104, [
+                                                    _cache[73] || (_cache[73] = createElementVNode(
                                                       "span",
                                                       { class: "muted" },
                                                       "Quelle im Format",
@@ -1310,8 +2069,8 @@ const _sfc_main$1 = {
                                                     )),
                                                     withDirectives(createElementVNode("select", {
                                                       "onUpdate:modelValue": ($event) => s.format = $event,
-                                                      onChange: _cache[18] || (_cache[18] = ($event) => planned.value = null)
-                                                    }, [..._cache[39] || (_cache[39] = [
+                                                      onChange: _cache[31] || (_cache[31] = ($event) => planned.value = null)
+                                                    }, [..._cache[72] || (_cache[72] = [
                                                       createElementVNode(
                                                         "option",
                                                         { value: "dd.MM.yyyy" },
@@ -1333,13 +2092,13 @@ const _sfc_main$1 = {
                                                         -1
                                                         /* CACHED */
                                                       )
-                                                    ])], 40, _hoisted_59), [
+                                                    ])], 40, _hoisted_105), [
                                                       [vModelSelect, s.format]
                                                     ])
-                                                  ])) : (openBlock(), createElementBlock("span", _hoisted_60, [
+                                                  ])) : (openBlock(), createElementBlock("span", _hoisted_106, [
                                                     createElementVNode(
                                                       "span",
-                                                      _hoisted_61,
+                                                      _hoisted_107,
                                                       toDisplayString(FIELD_LABEL[f] ?? f),
                                                       1
                                                       /* TEXT */
@@ -1349,9 +2108,9 @@ const _sfc_main$1 = {
                                                       "onUpdate:modelValue": ($event) => s[f] = $event,
                                                       placeholder: FIELD_HINT[f] ?? f,
                                                       title: (FIELD_HINT[f] ?? f) + " — " + opHint(s.op),
-                                                      onInput: _cache[19] || (_cache[19] = ($event) => planned.value = null),
+                                                      onInput: _cache[32] || (_cache[32] = ($event) => planned.value = null),
                                                       style: normalizeStyle(f === "pairs" || f === "columns" || f === "index" || f === "then" || f === "else" || f === "yes" ? "width:250px" : "width:130px")
-                                                    }, null, 44, _hoisted_62), [
+                                                    }, null, 44, _hoisted_108), [
                                                       [vModelText, s[f]]
                                                     ])
                                                   ]))
@@ -1365,12 +2124,12 @@ const _sfc_main$1 = {
                                           )),
                                           createElementVNode(
                                             "span",
-                                            _hoisted_63,
+                                            _hoisted_109,
                                             toDisplayString(opHint(s.op)),
                                             1
                                             /* TEXT */
                                           ),
-                                          _cache[41] || (_cache[41] = createElementVNode(
+                                          _cache[74] || (_cache[74] = createElementVNode(
                                             "span",
                                             { class: "grow" },
                                             null,
@@ -1381,23 +2140,23 @@ const _sfc_main$1 = {
                                             class: "x",
                                             onClick: ($event) => moveStep(m2, si, -1),
                                             title: "nach oben"
-                                          }, "↑", 8, _hoisted_64),
+                                          }, "↑", 8, _hoisted_110),
                                           createElementVNode("button", {
                                             class: "x",
                                             onClick: ($event) => moveStep(m2, si, 1),
                                             title: "nach unten"
-                                          }, "↓", 8, _hoisted_65),
+                                          }, "↓", 8, _hoisted_111),
                                           createElementVNode("button", {
                                             class: "x",
                                             onClick: ($event) => delStep(m2, si),
                                             title: "Schritt entfernen"
-                                          }, "×", 8, _hoisted_66)
+                                          }, "×", 8, _hoisted_112)
                                         ]);
                                       }),
                                       128
                                       /* KEYED_FRAGMENT */
                                     )),
-                                    createElementVNode("div", _hoisted_67, [
+                                    createElementVNode("div", _hoisted_113, [
                                       createElementVNode("select", {
                                         value: "",
                                         onChange: ($event) => {
@@ -1405,7 +2164,7 @@ const _sfc_main$1 = {
                                           $event.target.value = "";
                                         }
                                       }, [
-                                        _cache[42] || (_cache[42] = createElementVNode(
+                                        _cache[75] || (_cache[75] = createElementVNode(
                                           "option",
                                           { value: "" },
                                           "+ Schritt …",
@@ -1420,15 +2179,15 @@ const _sfc_main$1 = {
                                               key: o[0],
                                               value: o[0],
                                               title: o[2]
-                                            }, toDisplayString(o[1]), 9, _hoisted_69);
+                                            }, toDisplayString(o[1]), 9, _hoisted_115);
                                           }),
                                           128
                                           /* KEYED_FRAGMENT */
                                         ))
-                                      ], 40, _hoisted_68),
+                                      ], 40, _hoisted_114),
                                       createElementVNode(
                                         "span",
-                                        _hoisted_70,
+                                        _hoisted_116,
                                         toDisplayString(m2.steps?.length ? "Vorschau: " + preview(m2, i) : "Kette zwischen Quelle und Ziel — die Prüfung des Attributs läuft danach; steht im Profil"),
                                         1
                                         /* TEXT */
@@ -1446,7 +2205,7 @@ const _sfc_main$1 = {
                         /* KEYED_FRAGMENT */
                       ))
                     ])
-                  ])
+                  ]))
                 ])) : createCommentVNode("v-if", true)
               ])
             ],
@@ -1455,13 +2214,13 @@ const _sfc_main$1 = {
           ),
           createVNode(unref(Splitter), {
             modelValue: unref(leftW),
-            "onUpdate:modelValue": _cache[20] || (_cache[20] = ($event) => isRef(leftW) ? leftW.value = $event : null),
+            "onUpdate:modelValue": _cache[33] || (_cache[33] = ($event) => isRef(leftW) ? leftW.value = $event : null),
             min: 480,
             max: 1400
           }, null, 8, ["modelValue"]),
-          createElementVNode("div", _hoisted_71, [
-            createElementVNode("div", _hoisted_72, [
-              _cache[44] || (_cache[44] = createElementVNode(
+          createElementVNode("div", _hoisted_117, [
+            createElementVNode("div", _hoisted_118, [
+              _cache[77] || (_cache[77] = createElementVNode(
                 "h1",
                 null,
                 "4 · Plan",
@@ -1472,14 +2231,14 @@ const _sfc_main$1 = {
                 class: "primary",
                 disabled: !source.value || !!busy.value,
                 onClick: analyse
-              }, "analysieren", 8, _hoisted_73),
+              }, "analysieren", 8, _hoisted_119),
               createElementVNode("button", {
                 class: "primary",
                 disabled: !planned.value || !!busy.value || !planned.value.commands.length || blockers.value.length > 0 || planned.value.stale,
                 onClick: run,
                 title: !planned.value ? "erst analysieren" : blockers.value[0] ?? (planned.value.stale ? "erst erneut analysieren" : `${planned.value.commands.length} Befehle schreiben`)
-              }, "▶ schreiben", 8, _hoisted_74),
-              _cache[45] || (_cache[45] = createElementVNode(
+              }, "▶ schreiben", 8, _hoisted_120),
+              _cache[78] || (_cache[78] = createElementVNode(
                 "span",
                 { class: "grow" },
                 null,
@@ -1488,22 +2247,22 @@ const _sfc_main$1 = {
               )),
               createElementVNode(
                 "span",
-                _hoisted_75,
+                _hoisted_121,
                 toDisplayString(unref(store).actor ? "👤 " + unref(store).actor : "👤 Name fehlt"),
                 1
                 /* TEXT */
               )
             ]),
-            createElementVNode("div", _hoisted_76, [
-              planned.value ? (openBlock(), createElementBlock("div", _hoisted_77, [
+            createElementVNode("div", _hoisted_122, [
+              planned.value ? (openBlock(), createElementBlock("div", _hoisted_123, [
                 createElementVNode(
                   "span",
-                  _hoisted_78,
+                  _hoisted_124,
                   "+" + toDisplayString(planned.value.stats.create) + " neu",
                   1
                   /* TEXT */
                 ),
-                _cache[52] || (_cache[52] = createTextVNode(
+                _cache[85] || (_cache[85] = createTextVNode(
                   " · ",
                   -1
                   /* CACHED */
@@ -1515,14 +2274,14 @@ const _sfc_main$1 = {
                   1
                   /* TEXT */
                 ),
-                _cache[53] || (_cache[53] = createTextVNode(
+                _cache[86] || (_cache[86] = createTextVNode(
                   " · ",
                   -1
                   /* CACHED */
                 )),
                 createElementVNode(
                   "span",
-                  _hoisted_79,
+                  _hoisted_125,
                   toDisplayString(planned.value.stats.unchanged) + " unverändert",
                   1
                   /* TEXT */
@@ -1536,7 +2295,7 @@ const _sfc_main$1 = {
                   Fragment,
                   { key: 0 },
                   [
-                    _cache[46] || (_cache[46] = createTextVNode(
+                    _cache[79] || (_cache[79] = createTextVNode(
                       " · ",
                       -1
                       /* CACHED */
@@ -1544,20 +2303,20 @@ const _sfc_main$1 = {
                     createElementVNode("span", {
                       class: "pos",
                       title: Object.entries(planned.value.stats.newListValues).map(([l, v]) => l + ": " + Object.values(v).join(", ")).join(" · ")
-                    }, "+" + toDisplayString(Object.values(planned.value.stats.newListValues).reduce((n, v) => n + Object.keys(v).length, 0)) + " Listenwerte", 9, _hoisted_80)
+                    }, "+" + toDisplayString(Object.values(planned.value.stats.newListValues).reduce((n, v) => n + Object.keys(v).length, 0)) + " Listenwerte", 9, _hoisted_126)
                   ],
                   64
                   /* STABLE_FRAGMENT */
                 )) : createCommentVNode("v-if", true),
-                planned.value.newAttributes.length ? (openBlock(), createElementBlock("span", _hoisted_81, [
-                  _cache[47] || (_cache[47] = createTextVNode(
+                planned.value.newAttributes.length ? (openBlock(), createElementBlock("span", _hoisted_127, [
+                  _cache[80] || (_cache[80] = createTextVNode(
                     " · ",
                     -1
                     /* CACHED */
                   )),
                   createElementVNode(
                     "span",
-                    _hoisted_82,
+                    _hoisted_128,
                     toDisplayString(planned.value.newAttributes.length) + " neue Attribute:",
                     1
                     /* TEXT */
@@ -1568,7 +2327,7 @@ const _sfc_main$1 = {
                     /* TEXT */
                   )
                 ])) : createCommentVNode("v-if", true),
-                planned.value.stats.problems.length ? (openBlock(), createElementBlock("div", _hoisted_83, [
+                planned.value.stats.problems.length ? (openBlock(), createElementBlock("div", _hoisted_129, [
                   createTextVNode(
                     toDisplayString(planned.value.stats.problems.slice(0, 30).join("\n")),
                     1
@@ -1576,7 +2335,7 @@ const _sfc_main$1 = {
                   ),
                   planned.value.stats.problems.length > 30 ? (openBlock(), createElementBlock(
                     "span",
-                    _hoisted_84,
+                    _hoisted_130,
                     " … +" + toDisplayString(planned.value.stats.problems.length - 30),
                     1
                     /* TEXT */
@@ -1601,8 +2360,8 @@ const _sfc_main$1 = {
                   128
                   /* KEYED_FRAGMENT */
                 )),
-                planned.value.stale ? (openBlock(), createElementBlock("div", _hoisted_85, [
-                  _cache[48] || (_cache[48] = createTextVNode(
+                planned.value.stale ? (openBlock(), createElementBlock("div", _hoisted_131, [
+                  _cache[81] || (_cache[81] = createTextVNode(
                     "✎ Zellen korrigiert — ",
                     -1
                     /* CACHED */
@@ -1612,23 +2371,23 @@ const _sfc_main$1 = {
                     onClick: analyse
                   }, "erneut analysieren")
                 ])) : createCommentVNode("v-if", true),
-                planned.value.stats.invalid.length ? (openBlock(), createElementBlock("div", _hoisted_86, [
-                  createElementVNode("h2", _hoisted_87, [
-                    _cache[49] || (_cache[49] = createTextVNode(
+                planned.value.stats.invalid.length ? (openBlock(), createElementBlock("div", _hoisted_132, [
+                  createElementVNode("h2", _hoisted_133, [
+                    _cache[82] || (_cache[82] = createTextVNode(
                       "Werte prüfen ",
                       -1
                       /* CACHED */
                     )),
                     createElementVNode(
                       "span",
-                      _hoisted_88,
+                      _hoisted_134,
                       "· " + toDisplayString(planned.value.stats.invalid.length) + " Zellen" + toDisplayString(fixed.value ? " — im Knotenmodus in Excel korrigieren und neu laden" : " — hier korrigieren, dann erneut analysieren"),
                       1
                       /* TEXT */
                     )
                   ]),
-                  createElementVNode("table", _hoisted_89, [
-                    _cache[50] || (_cache[50] = createElementVNode(
+                  createElementVNode("table", _hoisted_135, [
+                    _cache[83] || (_cache[83] = createElementVNode(
                       "thead",
                       null,
                       [
@@ -1656,7 +2415,7 @@ const _sfc_main$1 = {
                           }, [
                             createElementVNode(
                               "td",
-                              _hoisted_90,
+                              _hoisted_136,
                               toDisplayString(inv.row + 2),
                               1
                               /* TEXT */
@@ -1665,7 +2424,7 @@ const _sfc_main$1 = {
                               class: "mono",
                               style: { "overflow": "hidden", "text-overflow": "ellipsis" },
                               title: source.value.columns[inv.column]
-                            }, toDisplayString(source.value.columns[inv.column]), 9, _hoisted_91),
+                            }, toDisplayString(source.value.columns[inv.column]), 9, _hoisted_137),
                             createElementVNode("td", {
                               class: "neg",
                               style: { "white-space": "normal" },
@@ -1678,17 +2437,17 @@ const _sfc_main$1 = {
                               ),
                               createElementVNode(
                                 "span",
-                                _hoisted_93,
+                                _hoisted_139,
                                 " · " + toDisplayString(typeHint(inv)),
                                 1
                                 /* TEXT */
                               )
-                            ], 8, _hoisted_92),
+                            ], 8, _hoisted_138),
                             createElementVNode("td", {
                               class: "muted",
                               style: { "overflow": "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" },
                               title: String(inv.value ?? "")
-                            }, toDisplayString(inv.value), 9, _hoisted_94),
+                            }, toDisplayString(inv.value), 9, _hoisted_140),
                             createElementVNode("td", null, [
                               !fixed.value ? (openBlock(), createElementBlock("input", {
                                 key: 0,
@@ -1697,9 +2456,9 @@ const _sfc_main$1 = {
                                 style: { "width": "100%" },
                                 title: "korrigierter Wert — Enter, dann erneut analysieren",
                                 onChange: ($event) => fixCell(inv, $event.target.value)
-                              }, null, 40, _hoisted_95)) : (openBlock(), createElementBlock(
+                              }, null, 40, _hoisted_141)) : (openBlock(), createElementBlock(
                                 "span",
-                                _hoisted_96,
+                                _hoisted_142,
                                 toDisplayString(inv.value),
                                 1
                                 /* TEXT */
@@ -1713,8 +2472,8 @@ const _sfc_main$1 = {
                     ])
                   ])
                 ])) : createCommentVNode("v-if", true),
-                createElementVNode("details", _hoisted_97, [
-                  _cache[51] || (_cache[51] = createElementVNode(
+                createElementVNode("details", _hoisted_143, [
+                  _cache[84] || (_cache[84] = createElementVNode(
                     "summary",
                     { class: "muted" },
                     "Befehle (erste 200)",
@@ -1723,13 +2482,13 @@ const _sfc_main$1 = {
                   )),
                   createElementVNode(
                     "pre",
-                    _hoisted_98,
+                    _hoisted_144,
                     toDisplayString(planned.value.commands.slice(0, 200).map((c) => `${c.op} ${JSON.stringify(c.args)}`).join("\n")),
                     1
                     /* TEXT */
                   )
                 ])
-              ])) : source.value ? (openBlock(), createElementBlock("div", _hoisted_99, "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")) : (openBlock(), createElementBlock("div", _hoisted_100, [..._cache[54] || (_cache[54] = [
+              ])) : source.value ? (openBlock(), createElementBlock("div", _hoisted_145, "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")) : (openBlock(), createElementBlock("div", _hoisted_146, [..._cache[87] || (_cache[87] = [
                 createTextVNode(
                   "Datei ablegen oder aus Excel einfügen.",
                   -1
@@ -1753,7 +2512,7 @@ const _sfc_main$1 = {
                   /* CACHED */
                 )
               ])])),
-              result.value ? (openBlock(), createElementBlock("div", _hoisted_101, [
+              result.value ? (openBlock(), createElementBlock("div", _hoisted_147, [
                 createTextVNode(
                   "✓ " + toDisplayString(result.value.written) + " Einträge geschrieben · Stapel " + toDisplayString(result.value.batch) + " — ",
                   1
@@ -1762,7 +2521,7 @@ const _sfc_main$1 = {
                 createVNode(_component_router_link, {
                   to: { path: "/journal", query: { q: result.value.batch } }
                 }, {
-                  default: withCtx(() => [..._cache[55] || (_cache[55] = [
+                  default: withCtx(() => [..._cache[88] || (_cache[88] = [
                     createTextVNode(
                       "im Journal",
                       -1
@@ -1773,8 +2532,8 @@ const _sfc_main$1 = {
                   /* STABLE */
                 }, 8, ["to"])
               ])) : createCommentVNode("v-if", true),
-              log.value.length ? (openBlock(), createElementBlock("div", _hoisted_102, [
-                _cache[56] || (_cache[56] = createElementVNode(
+              log.value.length ? (openBlock(), createElementBlock("div", _hoisted_148, [
+                _cache[89] || (_cache[89] = createElementVNode(
                   "h2",
                   null,
                   "Protokoll",
@@ -1783,7 +2542,7 @@ const _sfc_main$1 = {
                 )),
                 createElementVNode(
                   "div",
-                  _hoisted_103,
+                  _hoisted_149,
                   toDisplayString(log.value.join("\n")),
                   1
                   /* TEXT */
@@ -1798,7 +2557,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-27e4a742"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-21a65158"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
