@@ -42,6 +42,7 @@ public sealed class Node
     /// <summary>Rubrik-Wurzel: Kanal und Markt des Publikationsbaums.</summary>
     public string? Channel { get; set; }
     public string? Market { get; set; }
+    public string? Source { get; set; }   // Rubrik: die Pflegegruppe, aus der sie kopiert wurde — ihre Werte sind dort, hier nur zu lesen
     /// <summary>Rubrik: die hier per Verweis hängenden Pflegeknoten, in Reihenfolge.</summary>
     public List<string> Placed { get; } = new();
     public long LastNumber { get; set; }
@@ -352,7 +353,7 @@ public sealed class Tree : IProjection
                 n = Create(entry, Roles.Rubric, rc.Parent);
                 n.Label = rc.Label;
                 n.Name = string.IsNullOrWhiteSpace(rc.Name) ? TextOf(rc.Label) : rc.Name.Trim();
-                n.Channel = rc.Channel; n.Market = rc.Market;
+                n.Channel = rc.Channel; n.Market = rc.Market; n.Source = rc.Source;
                 break;
             case Types.NodeRestored:
                 // zurück ins Abbild, wie er war — Kennungen wieder eintragen, ausser ein anderer hat sie inzwischen

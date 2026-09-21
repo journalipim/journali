@@ -190,18 +190,18 @@ public static class Commands
         string NameOf(Node g) { var l = NodeRow.LabelOf(c.Tree, c.Model, g); return l == g.Id ? (g.Name ?? g.Id) : l; }   // wie die Oberfläche den Knoten zeigt
         void Walk(string target, Node g)
         {
-            foreach (var child in c.Tree.Children(g.Id).OrderBy(x => x.Name ?? x.Id))
+            foreach (var child in c.Tree.Children(g.Id).OrderBy(NameOf, StringComparer.OrdinalIgnoreCase))   // wie im Baum: nach dem sichtbaren Namen (Taloan, 21.09.: „umsortiert nach irgendwas“)
             {
                 if (child.Role == Roles.Group)
                 {
-                    var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(target, new Labels(child.Label), NameOf(child))); n++; last = e;
+                    var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(target, new Labels(child.Label), NameOf(child), Source: child.Id)); n++; last = e;
                     Walk(e.Stream, child);
                 }
                 else if (child.Role == Roles.Product) { last = c.Write(target, Types.NodePlaced, new NodePlaced(child.Id)); n++; }
             }
         }
         // self (Taloan, 21.09.: Ast von links nach rechts ziehen): die Gruppe selbst wird Rubrik, ihr Aufbau darunter
-        if (self) { var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(rubric, new Labels(src.Label), NameOf(src))); n++; last = e; Walk(e.Stream, src); }
+        if (self) { var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(rubric, new Labels(src.Label), NameOf(src), Source: src.Id)); n++; last = e; Walk(e.Stream, src); }
         else Walk(rubric, src);
         count = n;
         return last is null ? Outcome.Bad("Nichts abzuleiten: keine Gruppen oder Produkte darunter.") : Outcome.Ok(last);

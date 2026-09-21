@@ -33,7 +33,7 @@ const rows = computed(() => {
   const out = []
   const walk = (r, depth) => {
     const isOpen = expanded.value.has(r.id)
-    const placed = (r.placed ?? []).map(id => tree.byId.get(id)).filter(Boolean)
+    const placed = (r.placed ?? []).map(id => tree.byId.get(id)).filter(Boolean).sort((a, b) => a.label.localeCompare(b.label, 'de'))   // wie im Pflegebaum: nach Name
     const has = tree.kids(r.id).length + placed.length > 0
     out.push({ r, depth, isOpen, has, kind: 'rubric', n: placed.length })
     if (!isOpen) return

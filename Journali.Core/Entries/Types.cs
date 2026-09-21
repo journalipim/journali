@@ -438,7 +438,7 @@ public sealed record MasterChannelDefined(string Key);
 /// Erster Eintrag einer Rubrik (Taloan, 20.09.2026). Ohne Parent ist sie die Wurzel eines Publikationsbaums: die Maximalstruktur
 /// eines Kanals, optional für einen Markt — Ausleitungen filtern über das Attribut markets, nicht über eigene Bäume.
 /// </summary>
-public sealed record RubricCreated(string? Parent, Labels Label, string? Name = null, string? Channel = null, string? Market = null);
+public sealed record RubricCreated(string? Parent, Labels Label, string? Name = null, string? Channel = null, string? Market = null, string? Source = null);   // Source: die Pflegegruppe, aus der die Rubrik kopiert wurde (Taloan, 21.09.2026)
 
 /// <summary>Kanal und Markt der Wurzel ändern.</summary>
 public sealed record PubTreeSet(string? Channel, string? Market);

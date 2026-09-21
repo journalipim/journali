@@ -143,6 +143,21 @@ public class TreeTests
     }
 
     [Fact]
+    public void Kopierte_Rubrik_kennt_ihre_Quelle_alte_Eintraege_ohne()
+    {
+        var g = Ids.New(Roles.Group); var web = Ids.New(Roles.Rubric); var copy = Ids.New(Roles.Rubric); var old = Ids.New(Roles.Rubric);
+        var (_, _, tree) = Build(j =>
+        {
+            j.Append("t", g, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("Schaumklebstoffe", "Foam adhesives"))));
+            j.Append("t", web, Types.RubricCreated, Types.Serialize(new RubricCreated(null, new(), "Web", "web")));
+            j.Append("t", copy, Types.RubricCreated, Types.Serialize(new RubricCreated(web, new(), "Schaumklebstoffe", Source: g)));
+            j.Append("t", old, Types.RubricCreated, "{\"parent\":\"" + web + "\",\"label\":{},\"name\":\"Alt\"}");   // Eintrag von vor dem Feld
+        });
+        Assert.Equal(g, tree.Nodes[copy].Source);
+        Assert.Null(tree.Nodes[old].Source);
+    }
+
+    [Fact]
     public void Beleg_pending_bleibt_auch_ohne_Wert()
     {
         // „angefragt bei herbert bis 2026-10-04“ am leeren Wert — der Beleg steht, der Wert nicht (Taloan, 21.09.: „wo ist der Herbert“)

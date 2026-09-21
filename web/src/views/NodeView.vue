@@ -34,6 +34,21 @@ const props = defineProps({ id: String, pub: { type: String, default: null } }) 
 // Im Publikationsbaum ist der Verweis ein Fenster auf den Pflegeknoten: Pflegewerte nur lesen (auch als admin — geändert wird an der Quelle),
 // pflegbar nur, was eine Gruppe an einer Rubrik dieses Baums mitbringt (z. B. SEO fürs Web)
 const pubTree = computed(() => props.pub ? tree.byId.get(props.pub) : null)
+// Kopierte Rubrik (Taloan, 21.09.: „im Pflegebaum Überschriften gepflegt — die Rubrik zeigt nichts davon“): die Pflegewerte der Quellgruppe,
+// aufgelöst wie in der Tabelle (geerbt zählt), je Spalte der Ansicht — nur zu lesen, geändert wird an der Quelle
+const sourceRows = ref([])
+async function loadSource() {
+  sourceRows.value = []
+  const src = node.value?.source; if (!props.pub || !src) return
+  try {
+    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(src)}/table?self=true&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === src)).catch(() => null)))
+    const cols = per.find(Boolean)?.values ? Object.keys(per.find(Boolean).values) : []
+    const defs = cols.map(k => model.value.attributes.find(a => a.key === k)).filter(a => a && !['rows', 'formula', 'template'].includes(a.type))
+    sourceRows.value = defs.map(def => ({ def, cells: columns.value.map((c, i) => { const v = per[i]?.values?.[def.key]; return v && (!c.locale || def.perLocale) && (!c.channel || def.perChannel) ? v.value ?? '' : null }) }))
+      .filter(r => r.cells.some(v => v))
+  } catch { sourceRows.value = [] }
+}
+watch(() => [node.value?.source, columns.value.length], loadSource)
 const router = useRouter()
 
 const node = ref(null)
@@ -650,7 +665,14 @@ function cellMenu(e, def, col, block) {
           </template>
         </tbody>
       </table>
-      <div v-if="!blocks.length && props.pub && node.role === 'rubric'" class="empty" title="an der Wurzel angehängt gilt sie für alle Rubriken und Verweise darunter, hier nur ab dieser Rubrik">Keine Attributgruppe — unten anhängen.</div>
+      <table v-if="sourceRows.length" class="grid values" :style="`width:${180 + columns.length * 220}px;margin-top:8px`">
+        <tbody>
+          <tr class="group-row locked"><td :colspan="1 + columns.length"><span class="muted">▣ Pflegewerte von „{{ node.sourceLabel }}“ · nur lesen</span> <router-link :to="`/tree/${node.source}`" class="x edit" title="im Pflegebaum öffnen — dort ändern">▣</router-link></td></tr>
+          <tr v-for="r in sourceRows" :key="r.def.key"><td class="attr"><span :title="r.def.key">{{ store.label(r.def) }}</span></td>
+            <td v-for="(c, i) in columns" :key="c.label" class="cell" title="Pflegewert — im Pflegebaum ändern"><div class="cell-box disabled ro">{{ r.cells[i] ?? '' }}</div></td></tr>
+        </tbody>
+      </table>
+      <div v-if="!blocks.length && !sourceRows.length && props.pub && node.role === 'rubric'" class="empty" title="an der Wurzel angehängt gilt sie für alle Rubriken und Verweise darunter, hier nur ab dieser Rubrik">Keine Attributgruppe — unten anhängen.</div>
       <div v-else-if="!blocks.length" class="empty">Keine Attributgruppe gilt hier — unten eine anhängen, oder oben am Pfad.</div>
     </template>
 
