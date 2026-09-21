@@ -834,7 +834,7 @@ function cellMenu(e, def, col, block) {
       </div>
 
       <div class="section" v-if="workflows.length">
-        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>⚑ Workflow <span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ w.label?.de || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span></span></span></h2>
+        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>⚑ Workflow <span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ w.label?.de || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : 'nicht ausgeleitet').join(' · ')"> ⚠</span></span></span></h2>
         <template v-if="open('workflow')">
         <table class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
           <tr v-for="w in workflows" :key="w.workflow">
