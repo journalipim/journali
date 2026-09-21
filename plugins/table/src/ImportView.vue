@@ -150,10 +150,10 @@ const samples = i => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => 
 const OPS = transform.OPS
 const FIELDS = { replace: ['find', 'with', 'regex'], prefix: ['text'], suffix: ['text'], static: ['text'], default: ['text'], combine: ['columns', 'sep'], split: ['sep', 'index'], number: ['decimal'], boolean: ['yes'], date: ['format'], map: ['pairs', 'other'], when: ['test', 'value', 'then', 'else'] }
 // Beschriftung vor dem Feld — ein Platzhalter allein ist weg, sobald etwas drinsteht (Taloan, 21.09.: „Was soll ich hier eingeben?“)
-const FIELD_LABEL = { find: 'suche', with: 'ersetze durch', text: 'Text', columns: 'Spalten', sep: 'Trenner', index: 'Teil', yes: '„ja“-Wörter', pairs: 'alt=neu', other: 'sonst', value: 'Wert', then: 'dann', else: 'sonst', decimal: 'Dezimal', format: 'Format', test: 'Prüfung' }
+const FIELD_LABEL = { find: 'suche', with: 'ersetze durch', text: 'Text', columns: 'Spalten', sep: 'Trenner', index: 'Teil', yes: 'weitere „ja“-Wörter', pairs: 'alt=neu', other: 'sonst', value: 'Wert', then: 'dann', else: 'sonst', decimal: 'Dezimal', format: 'Format', test: 'Prüfung' }
 const opHint = op => OPS.find(o => o[0] === op)?.[2] ?? ''
 // je Feld ein sprechender Platzhalter (Taloan, 21.09.: „Was soll bei Index rein?“)
-const FIELD_HINT = { find: 'suchen nach', with: 'ersetzen durch (leer = entfernen)', text: 'Text', columns: 'mit Komma — {} = diese Spalte', sep: 'z. B. , oder ; oder -', index: 'Zahl: 0 = erster, 1 = zweiter, -1 = letzter — leer = alle mit Komma', yes: 'leer = ja, yes, true, 1, x, wahr, y — alles andere wird false', pairs: 'alt=neu; alt2=neu2', other: 'leer = Wert bleibt', value: 'Vergleichswert', then: '{} = Quelle', else: '{} = Quelle' }
+const FIELD_HINT = { find: 'suchen nach', with: 'ersetzen durch (leer = entfernen)', text: 'Text', columns: 'mit Komma — {} = diese Spalte', sep: 'z. B. , oder ; oder -', index: 'Zahl: 0 = erster, 1 = zweiter, -1 = letzter — leer = alle mit Komma', yes: 'zusätzlich zu ja, yes, true, 1, x, wahr, y — meist leer lassen', pairs: 'alt=neu; alt2=neu2', other: 'leer = Wert bleibt', value: 'Vergleichswert', then: '{} = Quelle', else: '{} = Quelle' }
 function addColumn(step, col) { if (!col) return; const cur = String(step.columns ?? '').trim(); step.columns = cur ? cur.replace(/,\s*$/, '') + ',' + col : col; planned.value = null }
 function addStep(m, op) { if (!op) return; (m.steps ??= []).push({ op }); planned.value = null }
 function delStep(m, i) { m.steps.splice(i, 1); if (!m.steps.length) delete m.steps; planned.value = null }

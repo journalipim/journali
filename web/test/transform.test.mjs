@@ -13,7 +13,8 @@ test('Zahl aus „22 mm“, „1.234,5“, „2,5 l“ — Dezimalzeichen gerate
 })
 test('Wahrheitswert, Datum, Ersetzen, Aufteilen, Verbinden', () => {
   assert.equal(apply([{ op: 'boolean' }], 'Ja'), 'true')
-  assert.equal(apply([{ op: 'boolean', true: 'x' }], 'x'), 'true')
+  assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'vorhanden'), 'true')
+  assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'x'), 'true')   // Vorgabe bleibt
   assert.equal(apply([{ op: 'boolean' }], 'nein'), 'false')
   assert.equal(apply([{ op: 'date' }], '21.09.2026'), '2026-09-21')
   assert.equal(apply([{ op: 'date', format: 'MM/dd/yyyy' }], '09/21/2026'), '2026-09-21')
