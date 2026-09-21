@@ -39,9 +39,9 @@ public class ReleaseTests
         Assert.Null(one.Error);
         Assert.Contains(new Release("web", null), w.Tree.Nodes[w.V1].Releases);
         Assert.DoesNotContain(new Release("web", null), w.Tree.Nodes[w.V2].Releases);
-        // noch einmal: nichts Neues, V2 weiter unvollständig
+        // noch einmal: nichts Neues — V1 ist frei, das zählt („schon freigegeben“, kein Fehler für den Workflow)
         var again = Commands.GrantRelease(w.Ctx, w.P, "web", null);
-        Assert.NotNull(again.Error); Assert.Contains("Unvollständig", again.Error);
+        Assert.NotNull(again.Error); Assert.Contains("schon", again.Error);
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class ReleaseTests
         var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
         Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "submit", null).Error);
         var r = Commands.WorkflowStep(ctx(), w.P, "review", "approve", null);
-        Assert.NotNull(r.Error); Assert.Contains("keine Variante ist vollständig", r.Error);
+        Assert.NotNull(r.Error); Assert.Contains("keine Variante freigebbar", r.Error);
         Assert.Equal("review", wfs.StateOf(w.P, wfs.All["review"]));                    // nicht gegangen
         w.Fill(w.V1);
         Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "approve", null).Error);
@@ -86,6 +86,27 @@ public class ReleaseTests
         Assert.DoesNotContain(new Release("web", null), w.Tree.Nodes[w.V2].Releases);
         Assert.Null(Commands.GrantRelease(ctx(), w.V2, "web", null).Error);
         Assert.Equal("draft", wfs.StateOf(w.P, wfs.All["review"]));
+    }
+
+    [Fact]
+    public void Variante_im_eigenen_Weg_gibt_der_Vater_nicht_frei()
+    {
+        // Taloan, 21.09.: „ein Produkt mit einer Variante, die nicht freigegeben ist, kann ich auch nicht freigeben“ — Variante in Entwurf (wieder geöffnet):
+        // freigeben am Produkt bleibt aus und nennt sie; erst wenn die Variante ihren Weg zu Ende geht, geht das Produkt
+        var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
+        var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
+        w.Fill(w.V1); w.Fill(w.V2);
+        Assert.Null(Commands.WorkflowStep(ctx(), w.V1, "review", "submit", null).Error);
+        Assert.Null(Commands.WorkflowStep(ctx(), w.V1, "review", "approve", null).Error);
+        Assert.Null(Commands.WorkflowStep(ctx(), w.V1, "review", "reopen", "xs").Error);      // Variante bewusst zurück, Freigabe weg
+        Assert.Null(Commands.WorkflowStep(ctx(), w.V2, "review", "submit", null).Error);      // V2 in Prüfung
+        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "submit", null).Error);
+        var r = Commands.WorkflowStep(ctx(), w.P, "review", "approve", null);
+        Assert.NotNull(r.Error); Assert.Contains("Entwurf", r.Error); Assert.Contains("Prüfung", r.Error);
+        Assert.DoesNotContain(new Release("web", null), w.Tree.Nodes[w.V1].Releases);          // nichts überfahren
+        Assert.Null(Commands.WorkflowStep(ctx(), w.V2, "review", "approve", null).Error);     // V2 fertig → das Produkt darf
+        Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "approve", null).Error);
+        Assert.DoesNotContain(new Release("web", null), w.Tree.Nodes[w.V1].Releases);          // V1 bleibt, wie der Redakteur sie gelassen hat
     }
 
     [Fact]

@@ -402,6 +402,16 @@ public static class Commands
     public static Outcome RemoveCategory(Ctx c, string id, string category) =>
         c.Tree.Nodes.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.CategoryRemoved, new CategoryRemoved(category))) : Outcome.Missing;
 
+    /// <summary>Variante mit eigenem Workflow, der nicht am Ende steht (Entwurf, Prüfung, Korrektur) — die gibt der Vater nicht frei.</summary>
+    private static string? InWork(Ctx c, Node v)
+    {
+        if (c.Workflows is null) return null;
+        foreach (var (wfKey, nw) in c.Workflows.Of(v.Id))
+            if (c.Workflows.All.TryGetValue(wfKey, out var wf) && wf.AppliesTo(v) && wf.State(nw.State) is { Final: false } s)
+                return $"{s.Label.GetValueOrDefault("de") ?? s.Key} ({wf.Label.GetValueOrDefault("de") ?? wfKey})";
+        return null;
+    }
+
     public static Outcome GrantRelease(Ctx c, string id, string? channel, string? locale)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
@@ -417,9 +427,11 @@ public static class Commands
             foreach (var v in variants)
             {
                 if (v.Releases.Contains(new Release(channel!, locale))) continue;
+                if (InWork(c, v) is { } w) { failed.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {w}"); continue; }
                 var r = GrantRelease(c, v.Id, channel, locale);
                 if (r.Entry is { } e) last = e; else failed.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {r.Error}");
             }
+            if (last is null && variants.Any(v => v.Releases.Contains(new Release(channel!, locale)))) return Outcome.Bad("schon freigegeben");   // eine ist frei, nichts Neues — kein Fehler
             if (last is null && failed.Count > 0) return Outcome.Bad("Keine Variante freigegeben — " + string.Join(" · ", failed));
             if (last is null) return Outcome.Bad("schon freigegeben");
             return Outcome.Ok(last);
@@ -678,11 +690,12 @@ public static class Commands
             foreach (var v in sellables)
             {
                 if (v.Releases.Contains(new Release(ch, null))) { problems.Clear(); break; }
+                if (v.Id != n.Id && InWork(c, v) is { } w) { problems.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {w}"); continue; }
                 var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, v, CompletenessRules.ActiveAttributes(c.Tree, c.Model, v).ToList(), ch, null);
                 if (missing.Length == 0) { problems.Clear(); break; }
                 problems.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {string.Join(", ", missing.Select(m => Explain(c, v, m)))}");
             }
-            if (problems.Count > 0) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: keine Variante ist vollständig für {ch} — {string.Join(" · ", problems)}");
+            if (problems.Count > 0) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht nicht: keine Variante freigebbar für {ch} — {string.Join(" · ", problems)}");
         }
         var e = c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, t.To, t.Key, note));
         foreach (var eff in t.Effects ?? [])
