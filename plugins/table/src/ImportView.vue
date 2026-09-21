@@ -164,6 +164,12 @@ const stepsText = m => m.steps?.length ? transform.describe(m.steps) : ''
 function onTarget(m) { planned.value = null; if (m.target === 'attr' && !m.attribute) m.attribute = attrs.value[0]?.key ?? null; if (m.target === 'new' && !m.newKey) m.newKey = m.column.toLowerCase().replace(/[^a-z0-9]+/g, '_'); syncLocale(m) }
 function syncLocale(m) { const a = attrs.value.find(x => x.key === m.attribute); if (m.target === 'attr' && a && !a.perLocale) m.locale = null; if (m.target === 'attr' && a?.perLocale && !m.locale) m.locale = model.value?.masterLocale ?? locales.value[0] }
 const keyColumn = computed(() => mapping.value.find(m => ['id', 'sku', 'external'].includes(m.target)))
+// Eigene Ids in der Datei (Taloan, 21.09.: „dann dürfen id und parent auf keinen Fall änderbar sein — stillschweigend versteckt, und den Baum
+// braucht man nicht auszusuchen“): trägt die Id-Spalte Ids, die es im Baum gibt, sind id und parent fest und weg aus der Zuordnung;
+// das Ziel braucht es nur für Zeilen, deren Id der Baum nicht kennt (neu) — dann sagt es die Analyse
+const idLocked = computed(() => { const m = mapping.value.find(x => x.target === 'id'); if (!m || !source.value) return false; const i = mapping.value.indexOf(m); return source.value.rows.slice(0, 200).some(r => tree.byId.has(String(r[i] ?? '').trim())) })
+const unknownIds = computed(() => { if (!idLocked.value) return 0; const i = mapping.value.findIndex(x => x.target === 'id'); return source.value.rows.filter(r => !tree.byId.has(String(r[i] ?? '').trim())).length })
+const visibleMapping = computed(() => idLocked.value ? mapping.value.filter(m => m.target !== 'id' && m.target !== 'parent') : mapping.value)
 const groups = computed(() => model.value?.groups ?? [])
 // Schreiben erst, wenn nichts mehr im Weg steht: ungültige Zellen (korrigieren), neue Spalten ohne Gruppe, im Knotenmodus gar keine ungültigen
 const blockers = computed(() => {
@@ -184,7 +190,7 @@ function typeHint(inv) { const a = attrs.value.find(x => x.key === inv.key) ?? s
 // ---- Plan
 async function analyse() {
   if (!source.value) return
-  if (!target.value && !mapping.value.some(m => m.target === 'parent')) { store.toast('Ziel wählen (Gruppe oder Produkt) — oder eine Spalte „Elternteil“'); return }
+  if (!target.value && !mapping.value.some(m => m.target === 'parent') && !(idLocked.value && unknownIds.value === 0)) { store.toast(idLocked.value ? `Ziel wählen — ${unknownIds.value} Zeilen tragen Ids, die der Baum nicht kennt (neu)` : 'Ziel wählen (Gruppe oder Produkt) — oder eine Spalte „Elternteil“'); return }
   busy.value = 'vergleiche mit dem Bestand …'
   try {
     await tree.load(true)
@@ -293,7 +299,8 @@ onMounted(async () => {
         <span class="muted">→ {{ roleLabel[fixed.childRole] }} · {{ fixed.allowed.size }} mögliche Spalten</span>
         <span class="grow" /><button class="x" @click="router.replace('/p/table/import')" title="Knotenmodus verlassen — frei zuordnen">×</button>
       </td></tr>
-      <tr v-if="!fixed"><td class="attr">Ziel</td><td>
+      <tr v-if="!fixed && idLocked && !unknownIds"><td class="attr">Ziel</td><td class="muted">🔒 aus der Datei — die Zeilen tragen journali-Ids, jede wird an ihrem Platz aktualisiert{{ mapping.some(m => m.target === 'parent') ? '; Elternteil steht in der Datei' : '' }}</td></tr>
+      <tr v-if="!fixed && !(idLocked && !unknownIds)"><td class="attr">Ziel</td><td>
         <div class="row" style="margin-bottom:4px"><span v-if="target" class="chip" :title="target.id + ' — Klick: im Baum ändern'" style="cursor:pointer" @click="targetPick = !targetPick">{{ icon(target.role) }} {{ target.label }} <button @click.stop="target = null; planned = null" title="Ziel weg">×</button></span><span v-else class="muted">Gruppe oder Produkt — wohin neue Zeilen kommen</span></div>
         <TreePicker v-if="!target || targetPick" :model-value="target?.id ?? ''" :height="200" @pick="pickTarget" />
       </td></tr>
@@ -307,23 +314,23 @@ onMounted(async () => {
       <div v-if="unknown" class="warn" style="font-size:12px;padding:6px 8px">⚠ {{ unknown }} Spalten passen nicht zu diesem Knoten und werden übergangen — Vorlage per Rechtsklick am Knoten exportieren, dann stimmen die Spalten.</div>
 
       <div class="section" v-if="source">
-        <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span>
+        <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span><span v-if="idLocked" class="chip" title="id und parent kommen aus der Datei und sind fest — nicht in der Zuordnung">🔒 id · parent</span>
           <button class="x" @click="resuggest()" title="Zuordnung neu vorschlagen — verwirft die Zuordnung des Profils (mit gewähltem Profil wird der neue Vorschlag gespeichert)">↻ neu vorschlagen</button>
           <span class="grow" /><span class="layout"><button :class="{ on: layout === 'rows' }" @click="setLayout('rows')" title="eine Zeile je Spalte — nach unten scrollen">≡ Zeilen</button><button :class="{ on: layout === 'cols' }" @click="setLayout('cols')" title="wie in Excel: eine Spalte je Spalte, Zuordnung in den Kopfzeilen — nach rechts scrollen">⫼ Spalten</button></span></h2>
         <!-- Spalten wie in Excel: Kopfzeilen = Zuordnung, darunter die ersten Zeilen der Datei; erste Spalte klebt -->
         <div v-if="layout === 'cols'" class="colsWrap">
           <table class="grid cols">
             <tbody>
-              <tr><th class="stick">Spalte</th><td v-for="m in mapping" :key="m.column" :class="{ off: m.target === 'skip' }" :title="m.column"><b>{{ m.column }}</b><div class="muted" style="font-size:11px">{{ m.sniff?.type }} · {{ m.sniff?.distinct }} versch.</div></td></tr>
-              <tr><th class="stick">Ziel</th><td v-for="m in mapping" :key="m.column"><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td></tr>
-              <tr><th class="stick">Attribut</th><td v-for="m in mapping" :key="m.column">
+              <tr><th class="stick">Spalte</th><td v-for="m in visibleMapping" :key="m.column" :class="{ off: m.target === 'skip' }" :title="m.column"><b>{{ m.column }}</b><div class="muted" style="font-size:11px">{{ m.sniff?.type }} · {{ m.sniff?.distinct }} versch.</div></td></tr>
+              <tr><th class="stick">Ziel</th><td v-for="m in visibleMapping" :key="m.column"><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td></tr>
+              <tr><th class="stick">Attribut</th><td v-for="m in visibleMapping" :key="m.column">
                 <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}</option></select>
                 <span v-else-if="m.target === 'new'" style="display:flex;flex-direction:column;gap:3px"><input v-model="m.newKey" type="text" placeholder="schlüssel" @change="planned = null" /><select v-model="m.newType" @change="planned = null"><option v-for="t in ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum']" :key="t" :value="t">{{ t }}</option></select><select v-model="m.newGroup" :class="{ neg: !m.newGroup }" title="Attributgruppe — Pflicht" @change="planned = null"><option :value="undefined">● Gruppe wählen …</option><option v-for="g in groups" :key="g.key" :value="g.key">▤ {{ g.label?.de || g.key }}</option></select></span>
                 <span v-else class="muted">—</span></td></tr>
-              <tr><th class="stick">Sprache</th><td v-for="m in mapping" :key="m.column"><select v-if="(m.target === 'attr' && attrs.find(a => a.key === m.attribute)?.perLocale) || m.target === 'new'" v-model="m.locale" style="width:100%" @change="planned = null"><option :value="null">*</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select><span v-else class="muted">—</span></td></tr>
-              <tr><th class="stick">ƒ</th><td v-for="m in mapping" :key="m.column"><button class="x" :class="{ on: m.steps?.length }" :title="m.steps?.length ? stepsText(m) + ' — Klick: bearbeiten' : 'Umwandlung hinzufügen'" @click="stepsOpen = stepsOpen === m.column ? null : m.column">ƒ{{ m.steps?.length ? m.steps.length : '' }}</button><span v-if="m.steps?.length" class="muted" style="font-size:11px;margin-left:4px">{{ stepsText(m) }}</span></td></tr>
-              <tr><th class="stick">Warum</th><td v-for="m in mapping" :key="m.column" class="muted" style="font-size:11px;white-space:normal">{{ m.why }}</td></tr>
-              <tr v-for="r in 3" :key="r" class="sample"><th class="stick muted">Zeile {{ r + 1 }}</th><td v-for="(m, i) in mapping" :key="m.column" class="muted" :title="String(source.rows[r - 1]?.[i] ?? '')">{{ String(source.rows[r - 1]?.[i] ?? '').slice(0, 40) }}</td></tr>
+              <tr><th class="stick">Sprache</th><td v-for="m in visibleMapping" :key="m.column"><select v-if="(m.target === 'attr' && attrs.find(a => a.key === m.attribute)?.perLocale) || m.target === 'new'" v-model="m.locale" style="width:100%" @change="planned = null"><option :value="null">*</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select><span v-else class="muted">—</span></td></tr>
+              <tr><th class="stick">ƒ</th><td v-for="m in visibleMapping" :key="m.column"><button class="x" :class="{ on: m.steps?.length }" :title="m.steps?.length ? stepsText(m) + ' — Klick: bearbeiten' : 'Umwandlung hinzufügen'" @click="stepsOpen = stepsOpen === m.column ? null : m.column">ƒ{{ m.steps?.length ? m.steps.length : '' }}</button><span v-if="m.steps?.length" class="muted" style="font-size:11px;margin-left:4px">{{ stepsText(m) }}</span></td></tr>
+              <tr><th class="stick">Warum</th><td v-for="m in visibleMapping" :key="m.column" class="muted" style="font-size:11px;white-space:normal">{{ m.why }}</td></tr>
+              <tr v-for="r in 3" :key="r" class="sample"><th class="stick muted">Zeile {{ r + 1 }}</th><td v-for="m in visibleMapping" :key="m.column" class="muted" :title="String(source.rows[r - 1]?.[mapping.indexOf(m)] ?? '')">{{ String(source.rows[r - 1]?.[mapping.indexOf(m)] ?? '').slice(0, 40) }}</td></tr>
             </tbody>
           </table>
         </div>
@@ -350,10 +357,10 @@ onMounted(async () => {
         <table v-if="layout === 'rows'" class="grid map">
           <thead><tr><th style="width:170px">Spalte</th><th>Beispiele</th><th style="width:130px">Ziel</th><th style="width:220px">Attribut</th><th style="width:60px">Sprache</th><th style="width:150px">Warum</th><th style="width:34px" title="Umwandlung: Kette von Schritten zwischen Quelle und Ziel (Zahl aus „22 mm“, Ja/Nein, Datum, Ersetzen, Aufteilen, Spalten verbinden, Bedingung …)">ƒ</th></tr></thead>
           <tbody>
-            <template v-for="(m, i) in mapping" :key="m.column">
+            <template v-for="m in visibleMapping" :key="m.column">
             <tr :class="{ off: m.target === 'skip' }">
               <td class="attr" :title="m.column"><b>{{ m.column }}</b><div class="muted" style="font-size:11px">{{ m.sniff?.type }} · {{ m.sniff?.distinct }} versch.</div></td>
-              <td class="muted samples">{{ sample(i) }}</td>
+              <td class="muted samples">{{ sample(mapping.indexOf(m)) }}</td>
               <td><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td>
               <td>
                 <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}</option></select>
@@ -383,7 +390,7 @@ onMounted(async () => {
                   <button class="x" @click="moveStep(m, si, -1)" title="nach oben">↑</button><button class="x" @click="moveStep(m, si, 1)" title="nach unten">↓</button><button class="x" @click="delStep(m, si)" title="Schritt entfernen">×</button>
                 </div>
                 <div class="tstep"><select :value="''" @change="addStep(m, $event.target.value); $event.target.value = ''"><option value="">+ Schritt …</option><option v-for="o in OPS" :key="o[0]" :value="o[0]" :title="o[2]">{{ o[1] }}</option></select>
-                  <span class="muted" style="font-size:11px">{{ m.steps?.length ? 'Vorschau: ' + preview(m, i) : 'Kette zwischen Quelle und Ziel — die Prüfung des Attributs läuft danach; steht im Profil' }}</span></div>
+                  <span class="muted" style="font-size:11px">{{ m.steps?.length ? 'Vorschau: ' + preview(m, mapping.indexOf(m)) : 'Kette zwischen Quelle und Ziel — die Prüfung des Attributs läuft danach; steht im Profil' }}</span></div>
               </div>
             </td></tr>
             </template>
