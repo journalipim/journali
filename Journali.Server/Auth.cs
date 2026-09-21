@@ -104,7 +104,8 @@ public static class Auth
         if (path.StartsWith("/api/auth/rights")) return null;                                                                         // das Vokabular darf jeder lesen
         if (path.StartsWith("/api/auth/users") || path.StartsWith("/api/auth/roles")) return read && path.StartsWith("/api/auth/roles") ? Rights.Read : Rights.Users;
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
-        if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") && !path.StartsWith("/api/jobs/files") ? Rights.Read : Rights.Jobs;   // Dateien des Servers sehen = Jobs
+        if (path.StartsWith("/api/files")) return Rights.Jobs;   // Dateibrowser des Servers: Jobs — oder Storage (Allowed)
+        if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)
         if (path.StartsWith("/api/model")) return Rights.Model;
@@ -113,7 +114,8 @@ public static class Auth
         if (path.Contains("/release") || path.StartsWith("/api/versions") || path.Contains("/versions")) return Rights.Release;
         return Rights.Write;
     }
-    public static bool Allowed(Catalog c, string role, HttpRequest req) => Needed(req) is not { } need || RightsOf(c, role).Contains(need);
+    public static bool Allowed(Catalog c, string role, HttpRequest req) => Needed(req) is not { } need || RightsOf(c, role).Contains(need)
+        || (req.Path.StartsWithSegments("/api/files") && RightsOf(c, role).Contains(Rights.Storage));   // der Dateibrowser dient auch dem Medienspeicher
     /// <summary>Hat der Anfragende dieses Recht? Ohne Benutzer (offen) ja; sonst die Rolle aus der Sitzung (Middleware legt sie in Items).</summary>
     public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && RightsOf(c, role).Contains(right));
 

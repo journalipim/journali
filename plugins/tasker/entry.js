@@ -161,45 +161,6 @@ async function mount(root, ctx) {
     detail.style.display = 'flex'; detail.style.flexDirection = 'column'
   }
 
-  // ---- Dateibrowser des Servers (Taloan, 21.09.): Wurzeln (Datenverzeichnis, Laufwerke), Pfadzeile, Ordner und Dateien;
-  // dirOnly = nur Verzeichnisse wählbar (Ziel eines Exports), sonst Datei oder Verzeichnis (Quelle eines Imports)
-  function filePicker(start, dirOnly, onPick) {
-    const box = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50' })
-    const dlg = el('div', { style: 'width:640px;height:520px;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:6px' })
-    const pathIn = el('input', { type: 'text', style: 'flex:1', onkeydown: e => { if (e.key === 'Enter') go(pathIn.value) } })
-    const rootsSel = el('select', { style: 'width:170px', onchange: () => go(rootsSel.value) })
-    const list = el('div', { style: 'flex:1;overflow:auto;border:1px solid var(--line);border-radius:4px' })
-    const status = el('div', { class: 'muted', style: 'font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
-    let cur = null, chosen = null
-    const size = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB'
-    const close = () => box.remove()
-    const done = v => { onPick(v); close() }
-    const choose = () => done(chosen ?? cur.path)
-    const go = async p => {
-      try {
-        const d = await api.get('/api/jobs/files' + (p ? '?path=' + encodeURIComponent(p) : ''))
-        cur = d; chosen = null; pathIn.value = d.path; status.textContent = `${d.dirs.length} Ordner · ${d.files.length} Dateien (neueste zuerst)`
-        rootsSel.innerHTML = ''; for (const r of d.roots) rootsSel.append(el('option', { value: r.path }, r.label))
-        const root = d.roots.find(r => d.path.toLowerCase().startsWith(r.path.toLowerCase())); rootsSel.value = root ? root.path : ''
-        list.innerHTML = ''
-        const tbl = el('table', { class: 'grid', style: 'width:100%' })
-        const row = (sym, name, right, onclick, ondbl, title) => { const tr = el('tr', { class: 'row', style: 'cursor:default', title: title ?? name, onclick, ondblclick: ondbl }, el('td', { style: 'width:22px' }, sym), el('td', {}, name), el('td', { class: 'muted', style: 'text-align:right;white-space:nowrap' }, right)); tbl.append(tr); return tr }
-        if (d.parent) row('↑', '..', '', () => go(d.parent), () => go(d.parent), d.parent)
-        for (const x of d.dirs) row('📁', x.name, '', e => { chosen = x.path; for (const t of tbl.querySelectorAll('tr.selected')) t.classList.remove('selected'); e.currentTarget.classList.add('selected') }, () => go(x.path), x.path)
-        for (const x of d.files) row('▤', x.name, `${size(x.size)} · ${when(x.at)}`, e => { if (dirOnly) return; chosen = x.path; for (const t of tbl.querySelectorAll('tr.selected')) t.classList.remove('selected'); e.currentTarget.classList.add('selected') }, () => { if (!dirOnly) done(x.path) }, x.path).style.opacity = dirOnly ? '.45' : ''
-        if (!d.dirs.length && !d.files.length) tbl.append(el('tr', {}, el('td', { class: 'muted', style: 'padding:8px' }, 'leer')))
-        list.append(tbl)
-      } catch (e) { status.textContent = e.message }
-    }
-    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, dirOnly ? '📁 Verzeichnis auf dem Server' : '📁 Datei oder Verzeichnis auf dem Server'),
-      el('div', { style: 'display:flex;gap:6px' }, rootsSel, pathIn, el('button', { type: 'button', title: 'zu diesem Pfad', onclick: () => go(pathIn.value) }, '→')),
-      list, status,
-      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px' }, el('button', { onclick: close }, 'Abbrechen'), el('button', { class: 'primary', title: dirOnly ? 'markierten oder den angezeigten Ordner nehmen' : 'markierte Datei bzw. markierten oder angezeigten Ordner nehmen', onclick: choose }, '✓ Übernehmen')))
-    box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) close() })
-    document.body.append(box)
-    const s = (start ?? '').trim(); go(/^https?:\/\//i.test(s) ? '' : s)
-  }
-
   // ---- Anlegen / Bearbeiten: Plugin, Parameter aus dem Manifest, Zeitplan, Zeitgrenze
   async function openEdit(j) {
     const box = el('div', { class: 'overlay', style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:40' })
@@ -239,10 +200,16 @@ async function mount(root, ctx) {
           inp.value = cur
           paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
         } else if (d.type === 'path' || d.type === 'dir') {
-          // Pfad auf dem Server (Taloan, 21.09.: „Gibt's hier wohl auch nen Browser?“): Textfeld plus 📁 — Dateibrowser über /api/jobs/files
+          // Pfad auf dem Server (Taloan, 21.09.: „Gibt's hier wohl auch nen Browser?“): Textfeld plus 📁 — der Dateibrowser der Oberfläche (ctx.filePicker, /api/files)
           inp = el('input', { type: 'text', value: cur, placeholder: d.type === 'dir' ? 'Verzeichnis auf dem Server' : 'Datei, Verzeichnis oder URL', style: 'flex:1' })
-          const pick = el('button', { type: 'button', title: d.type === 'dir' ? 'Verzeichnis auf dem Server wählen' : 'Datei oder Verzeichnis auf dem Server wählen', onclick: () => filePicker(inp.value, d.type === 'dir', v => { inp.value = v }) }, '📁')
+          const pick = el('button', { type: 'button', title: d.type === 'dir' ? 'Verzeichnis auf dem Server wählen' : 'Datei oder Verzeichnis auf dem Server wählen', onclick: () => ctx.filePicker({ value: inp.value, dirOnly: d.type === 'dir', onPick: v => { inp.value = v } }) }, '📁')
           paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, pick))
+        } else if (d.type === 'profile') {
+          // Profil des Plugins (Taloan, 21.09.: „was muss man hier eingeben?“): Dropdown der gespeicherten Profile (profile:<name> im Plugin-Strom) statt Freitext
+          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, d.default === '' && /leer/.test(d.label) ? '(leer)' : '— Profil —'))
+          if (cur) inp.append(el('option', { value: cur }, cur)); inp.value = cur
+          api.get(`/api/plugins/${p.key}/data?prefix=profile:`).then(names => { for (const n of names.map(x => x.slice(8))) if (n !== cur) inp.append(el('option', { value: n }, n)); if (!names.length && !cur) inp.title = 'noch kein Profil gespeichert — in der Ansicht des Plugins anlegen' }).catch(() => {})
+          paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
         } else if (d.type === 'boolean') {
           inp = el('input', { type: 'checkbox' }); inp.checked = String(cur) === 'true'
           Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })

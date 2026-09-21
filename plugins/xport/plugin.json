@@ -35,8 +35,8 @@
       "params": [
         {
           "key": "profile",
-          "label": "Profil (Name, wie in ‹› Vorlagen-Export gespeichert)",
-          "type": "text",
+          "label": "Profil (‹› Vorlagen-Export → ⎘ speichern: Vorlage, Zuordnung, Kopfwerte)",
+          "type": "profile",
           "default": ""
         },
         {

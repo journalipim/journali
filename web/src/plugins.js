@@ -27,6 +27,7 @@ import { store } from './store.js'
 import { tree } from './tree.js'
 import * as mapper from './mapper.js'
 import { dialog } from './dialog.js'
+import { filePicker } from './filePicker.js'
 import { treePicker } from './treePicker.js'
 import * as orphans from './orphans.js'
 import * as compliance from './compliance.js'
@@ -82,7 +83,7 @@ export const plugins = reactive({
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`
     return {
-      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, treePicker,
+      api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, treePicker, filePicker,
       use: k => this.modules.get(k) ?? null,                                    // Modul eines anderen Plugins (Basis-Plugin)
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {

@@ -40,8 +40,8 @@
         },
         {
           "key": "profile",
-          "label": "Profil des JSON-Imports (leer = gleiche Keys, kein Präfix)",
-          "type": "text",
+          "label": "Profil (⇩ Import → JSON → Profil speichern: Zuordnung, Präfix, Ziel; leer = gleiche Keys, kein Präfix)",
+          "type": "profile",
           "default": ""
         },
         {

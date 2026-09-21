@@ -242,8 +242,11 @@ Manifest können Jobs; mitgeliefert: `backup` (Rohdaten-JSON eines Teilbaums
 oder aller Wurzeln, behält die letzten n Dateien).
 
 Parameter (`process.params`: `key`, `label`, `type`, `default`, `secret`) — Typen: `text`, `number`, `boolean`,
-`node` (Auswahlbaum, Wert ist die Knoten-Id), `pub` (Publikationsbaum), `dir` (Verzeichnis auf dem Server) und
-`path` (Datei, Verzeichnis oder URL). Bei `dir` und `path` öffnet 📁 einen Dateibrowser des **Servers**
-(`GET /api/jobs/files?path=…`, Recht Jobs): Wurzeln sind das Datenverzeichnis und die Laufwerke; versteckte Einträge
-bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im Browser (Taloan, 21.09.2026).
+`node` (Auswahlbaum, Wert ist die Knoten-Id), `pub` (Publikationsbaum), `profile` (Dropdown der gespeicherten
+Profile des Plugins, `profile:<name>` im Plugin-Strom), `dir` (Verzeichnis auf dem Server) und
+`path` (Datei, Verzeichnis oder URL). Bei `dir` und `path` öffnet 📁 den Dateibrowser des **Servers** — derselbe wie
+unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht Jobs oder Storage; Oberfläche
+`web/src/filePicker.js`, Plugins über `ctx.filePicker`): Wurzeln sind das Datenverzeichnis, das Programm und die
+Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im
+Browser (Taloan, 21.09.2026).
 

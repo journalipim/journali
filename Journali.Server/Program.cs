@@ -124,6 +124,7 @@ PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);
 TransferApi.Map(api);   // Rohdaten eines Teilbaums hin und zurück (JSON, wiederherstellbar — Taloan)
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
+FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/
 app.MapGet("/plugins/{key}/{**path}", (string key, string path, HttpContext ctx) =>

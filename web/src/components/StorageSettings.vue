@@ -6,8 +6,7 @@ import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
-import DirPicker from './DirPicker.vue'
-const pick = ref('')   // '' | 'cfg' | 'copy' — welches Verzeichnisfeld gerade blättert
+import { filePicker } from '../filePicker.js'   // Dateibrowser des Servers — derselbe wie bei den Jobs (Taloan, 21.09.)
 
 const DRIVERS = [['postgres', 'Postgres — Tabelle media_blob in der Journal-Datenbank'], ['file', 'Verzeichnis'], ['s3', 'S3 — Garage, MinIO, AWS, R2, Hetzner …']]
 const cfg = ref({ driver: 'postgres', path: '', bucket: '', endpoint: '', key: '', secret: '', region: 'garage', pathStyle: true })
@@ -59,8 +58,7 @@ onMounted(load)
       <tr><td class="muted">Treiber</td><td><select v-model="cfg.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td>
         <td class="muted" style="font-size:12px">Bytes nach SHA-256; das Journal kennt nur den Hash — der Treiber ist jederzeit wechselbar</td></tr>
       <tr v-if="cfg.driver === 'file'"><td class="muted">Verzeichnis</td><td>
-        <div class="row"><input v-model="cfg.path" type="text" style="flex:1" placeholder="media (relativ zum Server) oder /data/media" /><button class="x" @click="pick = pick === 'cfg' ? '' : 'cfg'" title="Verzeichnis auswählen">…</button></div>
-        <DirPicker v-if="pick === 'cfg'" v-model="cfg.path" @close="pick = ''" />
+        <div class="row"><input v-model="cfg.path" type="text" style="flex:1" placeholder="media (relativ zum Server) oder /data/media" /><button class="x" @click="filePicker({ value: cfg.path, dirOnly: true, title: '📁 Verzeichnis des Medienspeichers (auf dem Server)', onPick: p => { cfg.path = p } })" title="Verzeichnis auswählen">…</button></div>
       </td><td class="muted" style="font-size:12px">vom Server aus gesehen — im Container z. B. /data/media</td></tr>
       <template v-if="cfg.driver === 's3'">
         <tr><td class="muted">Endpoint</td><td><input v-model="cfg.endpoint" type="text" style="width:100%" placeholder="http://garage:3900" /></td><td class="muted" style="font-size:12px">Garage: 3900 ist die S3-API</td></tr>
@@ -87,8 +85,7 @@ onMounted(load)
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /></colgroup><tbody>
       <tr><td class="muted">Quelle</td><td><select v-model="copyFrom.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td></tr>
       <tr v-if="copyFrom.driver === 'file'"><td class="muted">Verzeichnis</td><td>
-        <div class="row"><input v-model="copyFrom.path" type="text" style="flex:1" /><button class="x" @click="pick = pick === 'copy' ? '' : 'copy'" title="Verzeichnis auswählen">…</button></div>
-        <DirPicker v-if="pick === 'copy'" v-model="copyFrom.path" @close="pick = ''" />
+        <div class="row"><input v-model="copyFrom.path" type="text" style="flex:1" /><button class="x" @click="filePicker({ value: copyFrom.path, dirOnly: true, title: '📁 Verzeichnis des alten Speichers (auf dem Server)', onPick: p => { copyFrom.path = p } })" title="Verzeichnis auswählen">📁</button></div>
       </td></tr>
       <template v-if="copyFrom.driver === 's3'">
         <tr><td class="muted">Endpoint</td><td><input v-model="copyFrom.endpoint" type="text" style="width:100%" /></td></tr>
