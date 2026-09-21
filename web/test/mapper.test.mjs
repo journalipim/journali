@@ -15,3 +15,17 @@ test('Spalte „parent“ voller Ids ist der Vater, nicht doppelt zur Id', () =>
   assert.equal(m[3].target, 'attr'); assert.equal(m[3].attribute, 'sku')
   assert.equal(m[4].target, 'attr'); assert.equal(m[4].attribute, 'name'); assert.equal(m[4].locale, 'de')
 })
+
+test('journali_root: Id zählt nur unter derselben Wurzel — sonst ist die Zeile neu', async () => {
+  const { plan } = await import('../src/mapper.js')
+  const rows = [['v-1', 'variant', 'p-1', 'g-1', 'A1', 'Neu'], ['v-2', 'variant', 'p-1', 'g-FREMD', 'A2', 'Fremd']]
+  const columns = ['id', 'role', 'parent', 'journali_root', 'sku', 'name_de']
+  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] }, { id: 'v-1', role: 'variant', parent: 'p-1', label: 'V1', axisValues: {} }, { id: 'v-2', role: 'variant', parent: 'p-1', label: 'V2', axisValues: {} }]
+  const byId = new Map(treeRows.map(r => [r.id, r]))
+  const tree = { rows: treeRows, byId, ancestors: id => { const out = []; for (let p = byId.get(id)?.parent; p; p = byId.get(p)?.parent) out.unshift(byId.get(p)); return out } }
+  const m = suggest(columns, rows, model)
+  assert.equal(m[3].target, 'root')
+  const p = plan({ columns, rows, mapping: m, model, tree, target: byId.get('p-1'), role: 'variant', existing: new Map() })
+  assert.equal(p.stats.update, 1)   // v-1 unter g-1: gefunden
+  assert.equal(p.stats.create, 1)   // v-2 unter fremder Wurzel: neu, nicht v-2 hier überschreiben
+})

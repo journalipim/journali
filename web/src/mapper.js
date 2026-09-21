@@ -154,6 +154,7 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     const pick = (target, attribute, score, why) => { if (score > out.score) Object.assign(out, { target, attribute, score, why }) }
     // 0. Spalten des eigenen Exports (Plugin export): role/status/journali_label sind Anzeige, axis_<key> ist die Achse
     if (n === 'role' || n === 'status' || n === 'journali_label') { out.why = 'Exportspalte, nur Anzeige'; return out }
+    if (n === 'journali_root') { out.target = 'root'; out.why = 'Wurzel — macht die Id eineindeutig'; return out }
     if (n.startsWith('axis_') && attrs.some(a => norm(a.key) === n.slice(5))) pick('attr', attrs.find(a => norm(a.key) === n.slice(5)).key, 1, 'Variantenachse')
     // 1. Schlüsselspalten
     // Elternteil vor der Id-Erkennung: eine Spalte „parent“ voller p-…-Ids ist der Vater, nicht die Id des Knotens (Taloan, 21.09.: „doppelt — warum?“)
@@ -196,7 +197,9 @@ export function suggest(columns, rows, model, { locales = null, external = null 
 export function plan({ columns, rows, mapping, model, tree, target, role, existing, external = null, actorNote = null }) {
   const col = t => mapping.findIndex(m => m.target === t)
   // Schlüsselspalten: eigene Ziele — oder das Attribut sku selbst (wird geschrieben und findet zugleich)
-  const iId = col('id'), iParent = col('parent'), iExt = col('external')
+  const iId = col('id'), iParent = col('parent'), iExt = col('external'), iRoot = col('root')
+  // Id + Wurzel (Taloan, 21.09.): nennt die Datei journali_root, zählt eine Id nur unter genau dieser Wurzel — sonst fremde Datenbank, die Zeile ist neu
+  const rootOf = id => { const a = tree.ancestors?.(id) ?? []; return a.length ? a[0].id : id }
   const iSku = col('sku') >= 0 ? col('sku') : mapping.findIndex(m => m.target === 'attr' && m.attribute === 'sku')
   const raw = (row, i) => i < 0 ? null : (Array.isArray(row) ? row[i] : row[columns[i]])
   // Umwandlung je Spalte (transform.js, Taloan 21.09.: „zwischendurch in die Daten eingreifen“) — vor Typprüfung und Schreiben
@@ -236,7 +239,9 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
   rows.forEach((row, ri) => {
     const id = String(cell(row, iId) ?? '').trim(), sku = String(cell(row, iSku) ?? '').trim(), ext = String(cell(row, iExt) ?? '').trim()
-    let node = (id && tree.byId.get(id)) || (ext && byExt.get(ext)) || (sku && bySku.get(sku)) || null
+    const want = iRoot >= 0 ? String(cell(row, iRoot) ?? '').trim() : ''
+    const byId = id && tree.byId.get(id); const foreign = !!(byId && want && rootOf(id) !== want)
+    let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || (!foreign && sku && bySku.get(sku)) || null
     let ref = null
     if (!node) {
       // anlegen — wo? Elternteil aus der Spalte (SKU oder Id), sonst das Ziel

@@ -17,13 +17,16 @@ export async function build(env, { root, role = '', locales, ownOnly = false, vi
   if (v) { const order = v.items.flatMap(it => it.order ?? []); const groups = new Map(model.groups.map(g => [g.key, g.attributes])); const wanted = new Set([...order, ...v.items.flatMap(it => it.group ? groups.get(it.group) ?? [] : [])]); cols = cols.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999)) }
   cols = cols.filter(c => c.type !== 'rows' && !c.computed)
   const axes = [...new Set(nodes.flatMap(r => Object.keys(r.row.axisValues ?? {})))]
-  const columns = [{ key: 'id' }, { key: 'role' }, { key: 'parent' }, { key: 'sku' }, { key: 'journali_label' }, { key: 'status' }, ...extra.map(x => ({ key: x.key, of: x.of })), ...axes.map(a => ({ key: 'axis:' + a })),
+  // journali_root (Taloan, 21.09.): die Wurzel des Baums — Id + Wurzel macht die Zeile über Datenbanken hinweg eineindeutig; der Import prüft beides
+  let rootId = root
+  try { const all = await api.get('/api/tree'); const byId = new Map((Array.isArray(all) ? all : all.rows ?? []).map(r => [r.id, r])); for (let p = byId.get(root)?.parent; p; p = byId.get(p)?.parent) rootId = p } catch {}
+  const columns = [{ key: 'id' }, { key: 'role' }, { key: 'parent' }, { key: 'journali_root' }, { key: 'sku' }, { key: 'journali_label' }, { key: 'status' }, ...extra.map(x => ({ key: x.key, of: x.of })), ...axes.map(a => ({ key: 'axis:' + a })),
     ...cols.flatMap(c => c.perLocale ? locales.map(l => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }])]
   const rows = nodes.map(r => columns.map(c => {
     if (c.attr) { const x = byLocale.get(c.locale)?.get(r.row.id)?.[c.attr]; return x == null || (ownOnly && !x.own) ? '' : x.value ?? '' }
     if (c.of) return c.of(r.row.id) ?? ''
     if (c.key.startsWith('axis:')) return r.row.axisValues?.[c.key.slice(5)] ?? ''
-    return c.key === 'journali_label' ? r.row.label : c.key === 'parent' ? r.row.parent ?? '' : r.row[c.key] ?? ''
+    return c.key === 'journali_label' ? r.row.label : c.key === 'journali_root' ? rootId : c.key === 'parent' ? r.row.parent ?? '' : r.row[c.key] ?? ''
   }))
   return { columns, rows, count: nodes.length }
 }

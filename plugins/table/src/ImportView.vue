@@ -167,9 +167,14 @@ const keyColumn = computed(() => mapping.value.find(m => ['id', 'sku', 'external
 // Eigene Ids in der Datei (Taloan, 21.09.: „dann dürfen id und parent auf keinen Fall änderbar sein — stillschweigend versteckt, und den Baum
 // braucht man nicht auszusuchen“): trägt die Id-Spalte Ids, die es im Baum gibt, sind id und parent fest und weg aus der Zuordnung;
 // das Ziel braucht es nur für Zeilen, deren Id der Baum nicht kennt (neu) — dann sagt es die Analyse
-const idLocked = computed(() => { const m = mapping.value.find(x => x.target === 'id'); if (!m || !source.value) return false; const i = mapping.value.indexOf(m); return source.value.rows.slice(0, 200).some(r => tree.byId.has(String(r[i] ?? '').trim())) })
-const unknownIds = computed(() => { if (!idLocked.value) return 0; const i = mapping.value.findIndex(x => x.target === 'id'); return source.value.rows.filter(r => !tree.byId.has(String(r[i] ?? '').trim())).length })
-const visibleMapping = computed(() => idLocked.value ? mapping.value.filter(m => m.target !== 'id' && m.target !== 'parent') : mapping.value)
+// Id + Wurzel (Taloan, 21.09.: „zwei Datenbanken, per Excel übertragen — ein Zufallstreffer bei der Id reicht nicht“): nennt die Datei
+// journali_root, gilt eine Id nur, wenn der Knoten hier unter genau dieser Wurzel hängt; sonst ist die Zeile fremd (neu)
+const rootOfNode = id => { const a = tree.ancestors(id); return a.length ? a[0].id : id }
+const idOk = row => { const i = mapping.value.findIndex(x => x.target === 'id'); if (i < 0) return false; const id = String(row[i] ?? '').trim(); if (!tree.byId.has(id)) return false; const ir = mapping.value.findIndex(x => x.target === 'root'); if (ir < 0) return true; const want = String(row[ir] ?? '').trim(); return !want || rootOfNode(id) === want }
+const idLocked = computed(() => { if (!source.value || !mapping.value.some(x => x.target === 'id')) return false; return source.value.rows.slice(0, 200).some(idOk) })
+const unknownIds = computed(() => idLocked.value ? source.value.rows.filter(r => !idOk(r)).length : 0)
+const foreignRoot = computed(() => { if (!source.value) return 0; const i = mapping.value.findIndex(x => x.target === 'id'), ir = mapping.value.findIndex(x => x.target === 'root'); if (i < 0 || ir < 0) return 0; return source.value.rows.filter(r => tree.byId.has(String(r[i] ?? '').trim()) && !idOk(r)).length })
+const visibleMapping = computed(() => idLocked.value ? mapping.value.filter(m => m.target !== 'id' && m.target !== 'parent' && m.target !== 'root') : mapping.value.filter(m => m.target !== 'root'))
 const groups = computed(() => model.value?.groups ?? [])
 // Schreiben erst, wenn nichts mehr im Weg steht: ungültige Zellen (korrigieren), neue Spalten ohne Gruppe, im Knotenmodus gar keine ungültigen
 const blockers = computed(() => {
@@ -299,7 +304,8 @@ onMounted(async () => {
         <span class="muted">→ {{ roleLabel[fixed.childRole] }} · {{ fixed.allowed.size }} mögliche Spalten</span>
         <span class="grow" /><button class="x" @click="router.replace('/p/table/import')" title="Knotenmodus verlassen — frei zuordnen">×</button>
       </td></tr>
-      <tr v-if="!fixed && idLocked && !unknownIds"><td class="attr">Ziel</td><td class="muted">🔒 aus der Datei — die Zeilen tragen journali-Ids, jede wird an ihrem Platz aktualisiert{{ mapping.some(m => m.target === 'parent') ? '; Elternteil steht in der Datei' : '' }}</td></tr>
+      <tr v-if="!fixed && idLocked && !unknownIds"><td class="attr">Ziel</td><td class="muted">🔒 aus der Datei — die Zeilen tragen journali-Ids{{ mapping.some(m => m.target === 'root') ? ' samt Wurzel' : '' }}, jede wird an ihrem Platz aktualisiert{{ mapping.some(m => m.target === 'parent') ? '; Elternteil steht in der Datei' : '' }}</td></tr>
+      <tr v-if="!fixed && foreignRoot"><td class="attr"></td><td class="warn" style="font-size:12px">⚠ {{ foreignRoot }} Zeilen tragen Ids, die es hier gibt — aber unter einer anderen Wurzel: fremde Datenbank, Zufallstreffer. Sie gelten als neu und kommen unter das Ziel.</td></tr>
       <tr v-if="!fixed && !(idLocked && !unknownIds)"><td class="attr">Ziel</td><td>
         <div class="row" style="margin-bottom:4px"><span v-if="target" class="chip" :title="target.id + ' — Klick: im Baum ändern'" style="cursor:pointer" @click="targetPick = !targetPick">{{ icon(target.role) }} {{ target.label }} <button @click.stop="target = null; planned = null" title="Ziel weg">×</button></span><span v-else class="muted">Gruppe oder Produkt — wohin neue Zeilen kommen</span></div>
         <TreePicker v-if="!target || targetPick" :model-value="target?.id ?? ''" :height="200" @pick="pickTarget" />
