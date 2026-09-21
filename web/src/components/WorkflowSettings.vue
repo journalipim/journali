@@ -54,9 +54,15 @@ function stateDown(i, e) {
   const w = cur.value; w.states.forEach((s, k) => { const p = posOf(s, k); s.x = p.x; s.y = p.y })   // Lage festhalten, damit die anderen nicht springen
   const p = svgPoint(e); drag.value = { kind: 'move', i, dx: p.x - w.states[i].x, dy: p.y - w.states[i].y }
 }
-function linkDown(i, e, port = 'right:0.75') { selState.value = i; const q = portXY(posOf(cur.value.states[i], i), port); drag.value = { kind: 'link', i, port, x: q.x, y: q.y, tx: q.x, ty: q.y } }
+function linkDown(i, e, port = 'right:0.75') { selState.value = i; const q = portXY(posOf(cur.value.states[i], i), port); drag.value = { kind: 'link', i, port, x: q.x, y: q.y, tx: q.x, ty: q.y, snapJ: null, snapPort: null } }
+// Einschnappen (Taloan, 21.09.): der nächste Andockpunkt irgendeiner Kachel (ausser der Startkachel des Pfeils), wenn er näher als 24 px ist
+function snapTo(pt, exceptI) {
+  const w = cur.value; let best = null
+  w.states.forEach((s, j) => { if (j === exceptI) return; const p = posOf(s, j); for (const k of PORTS) { const q = portXY(p, k); const d = Math.hypot(q.x - pt.x, q.y - pt.y); if (d < 24 && (!best || d < best.d)) best = { j, port: k, x: q.x, y: q.y, d } } })
+  return best
+}
 // Ende eines markierten Übergangs anfassen und an einen anderen Andockpunkt (auch einer anderen Kachel) ziehen
-function endDown(n, end, e) { const a = sketch.value.arrows[n]; const q = end === 'from' ? a.p1 : a.p2; drag.value = { kind: 'reattach', n, end, x: q.x, y: q.y, tx: q.x, ty: q.y } }
+function endDown(n, end, e) { const a = sketch.value.arrows[n]; const q = end === 'from' ? a.p1 : a.p2; drag.value = { kind: 'reattach', n, end, x: q.x, y: q.y, tx: q.x, ty: q.y, snapJ: null, snapPort: null } }
 function portUp(j, port) {
   const d = drag.value; if (!d) return; drag.value = null
   const w = cur.value
@@ -69,14 +75,17 @@ function canvasMove(e) {
   const d = drag.value; if (!d) return; const p = svgPoint(e)
   if (d.kind === 'move') { const s = cur.value.states[d.i]; s.x = Math.max(0, snap(p.x - d.dx)); s.y = Math.max(0, snap(p.y - d.dy)); touch() }
   else if (d.kind === 'label') { const tr = cur.value.transitions[d.n]; tr.labelX = Math.round(p.x - d.dx); tr.labelY = Math.round(p.y - d.dy); touch() }
-  else { d.tx = p.x; d.ty = p.y }
+  else {
+    const other = d.kind === 'reattach' ? null : d.i
+    const s = snapTo(p, other); d.snapJ = s?.j ?? null; d.snapPort = s?.port ?? null; d.tx = s ? s.x : p.x; d.ty = s ? s.y : p.y
+  }
 }
 function stateUp(j, e) {
-  // loslassen auf der Kachel (nicht auf einem Punkt): der nächste Andockpunkt zur Maus
+  // loslassen auf einer Kachel: eingeschnappter Punkt, sonst der nächste zur Maus
   const d = drag.value; if (!d || d.kind === 'move') { drag.value = null; return }
-  portUp(j, nearestPort(posOf(cur.value.states[j], j), svgPoint(e)))
+  if (d.snapJ != null) portUp(d.snapJ, d.snapPort); else portUp(j, nearestPort(posOf(cur.value.states[j], j), svgPoint(e)))
 }
-function canvasUp() { drag.value = null }
+function canvasUp() { const d = drag.value; if (d && (d.kind === 'link' || d.kind === 'reattach') && d.snapJ != null) { portUp(d.snapJ, d.snapPort); return } drag.value = null }
 // Automatisch anordnen (Taloan, 21.09.): Ebenen vom Start aus (längster Vorwärtsweg), Ebenen von links nach rechts, in der Ebene nach dem
 // Schwerpunkt der Vorgänger sortiert (weniger Kreuzungen); Rückwege laufen als Bogen unten herum. Andockpunkte und Beschriftungslagen
 // werden zurückgesetzt, damit Pfeil und Text wieder von selbst passen.
@@ -123,19 +132,29 @@ const sketch = computed(() => {
     const sx = (W / 2) / Math.abs(dx || 1e-9), sy = (H / 2) / Math.abs(dy || 1e-9); const k = Math.min(sx, sy)
     return { x: c.x + dx * k, y: c.y + dy * k }
   }
-  const arrows = w.transitions.map(t => {
+  const d = drag.value
+  const curve = (t, p1, p2) => {
+    const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1
+    const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len, bend = Math.min(40, 12 + len * 0.12)
+    const cx = mx + nx * bend, cy = my + ny * bend
+    const bx = 0.25 * p1.x + 0.5 * cx + 0.25 * p2.x, by = 0.25 * p1.y + 0.5 * cy + 0.25 * p2.y
+    return { t, p1, p2, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: t.labelX ?? bx, ly: t.labelY ?? by + 4, anchor: 'middle' }
+  }
+  const arrows = w.transitions.map((t, n) => {
+    if (d?.kind === 'reattach' && d.n === n) {   // das angefasste Ende hängt an der Maus (bzw. am eingeschnappten Punkt)
+      const other = d.end === 'from' ? portXY(pos[idx[t.to] ?? 0], t.toPort ?? nearestPort(pos[idx[t.to] ?? 0], { x: d.tx, y: d.ty })) : portXY(pos[idx[t.from] ?? 0], t.fromPort ?? nearestPort(pos[idx[t.from] ?? 0], { x: d.tx, y: d.ty }))
+      return d.end === 'from' ? curve(t, { x: d.tx, y: d.ty }, other) : curve(t, other, { x: d.tx, y: d.ty })
+    }
     const a = pos[idx[t.from] ?? 0], b = pos[idx[t.to] ?? 0]
     const ca = { x: a.x + W / 2, y: a.y + H / 2 }, cb = { x: b.x + W / 2, y: b.y + H / 2 }
     if (t.from === t.to) return { t, p1: { x: ca.x - 20, y: a.y }, p2: { x: ca.x + 20, y: a.y }, d: `M${ca.x - 20},${a.y} C${ca.x - 40},${a.y - 45} ${ca.x + 40},${a.y - 45} ${ca.x + 20},${a.y}`, lx: t.labelX ?? ca.x, ly: t.labelY ?? a.y - 36 }
     let p1, p2
     if (t.fromPort && t.toPort) { p1 = portXY(a, t.fromPort); p2 = portXY(b, t.toPort) }
     else { p1 = t.fromPort ? portXY(a, t.fromPort) : edge(ca, cb); p2 = t.toPort ? portXY(b, t.toPort) : edge(cb, ca); if (!t.fromPort) p1 = portXY(a, nearestPort(a, p2)); if (!t.toPort) p2 = portXY(b, nearestPort(b, p1)) }
-    const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1
-    const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len, bend = Math.min(40, 12 + len * 0.12)   // Bogen nach links der Richtung: Hin und Zurück trennen sich
-    const cx = mx + nx * bend, cy = my + ny * bend
-    const bx = 0.25 * p1.x + 0.5 * cx + 0.25 * p2.x, by = 0.25 * p1.y + 0.5 * cy + 0.25 * p2.y   // Punkt auf dem Bogen (t = ½)
-    return { t, p1, p2, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: t.labelX ?? bx, ly: t.labelY ?? by + 4, anchor: 'middle' }
+    return curve(t, p1, p2)
   })
+  // neuer Pfeil beim Ziehen vom ●
+  if (d?.kind === 'link') arrows.push({ ...curve({ key: '__new', label: {}, roles: [] }, { x: d.x, y: d.y }, { x: d.tx, y: d.ty }), temp: true })
   const width = snap(Math.max(600, ...pos.map(p => p.x + W + 60))), height = snap(Math.max(240, ...pos.map(p => p.y + H + 60)))
   return { W, H, pos, width, height, arrows }
 })
@@ -159,13 +178,12 @@ onMounted(load)
         <span class="muted">gilt für</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
         <span class="muted" style="font-size:11px">(nichts angehakt = alle)</span>
       </div>
-      <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · Kachel markieren, von einem Andockpunkt auf eine andere Kachel ziehen = Übergang · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Entf löscht <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button> <button class="x" @click="autoLayout" title="Ebenen vom Start aus, links nach rechts; Rückwege unten herum; Andockpunkte und Beschriftungen zurück auf Automatik">⟲ anordnen</button></div>
+      <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · vom ● auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Entf löscht <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button> <button class="x" @click="autoLayout" title="Ebenen vom Start aus, links nach rechts; Rückwege unten herum; Andockpunkte und Beschriftungen zurück auf Automatik">⟲ anordnen</button></div>
       <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none`" font-size="11" font-family="system-ui"
         @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
         <defs><pattern id="wf-grid" :width="GRID" :height="GRID" patternUnits="userSpaceOnUse"><path :d="`M ${GRID} 0 L 0 0 0 ${GRID}`" fill="none" stroke="var(--line)" stroke-width="0.5" opacity="0.6" /></pattern><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
         <rect x="0" y="0" :width="sketch.width" :height="sketch.height" fill="url(#wf-grid)" @mousedown="selState = null; selTrans = null" />
-        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'" stroke="var(--bg)" stroke-width="4" paint-order="stroke" stroke-linejoin="round" style="cursor:move;user-select:none" @mousedown.stop.prevent="labelDown(n, $event)" @dblclick.stop="editLabel(n)"><title>ziehen = verschieben · Doppelklick = bearbeiten</title>{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
-        <line v-if="drag?.kind === 'link' || drag?.kind === 'reattach'" :x1="drag.x" :y1="drag.y" :x2="drag.tx" :y2="drag.ty" stroke="var(--accent)" stroke-dasharray="4 3" />
+        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n || a.temp ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n || a.temp ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'" stroke="var(--bg)" stroke-width="4" paint-order="stroke" stroke-linejoin="round" style="cursor:move;user-select:none" @mousedown.stop.prevent="labelDown(n, $event)" @dblclick.stop="editLabel(n)"><title>ziehen = verschieben · Doppelklick = bearbeiten</title>{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
         <g v-if="selTrans != null && sketch.arrows[selTrans]"><circle :cx="sketch.arrows[selTrans].p1.x" :cy="sketch.arrows[selTrans].p1.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'from', $event)"><title>Anfang umhängen</title></circle><circle :cx="sketch.arrows[selTrans].p2.x" :cy="sketch.arrows[selTrans].p2.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'to', $event)"><title>Ende umhängen</title></circle></g>
         <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : 'cursor:grab'" @mousedown.prevent.stop="stateDown(i, $event)" @mouseup.stop="stateUp(i, $event)" @dblclick="editState(i)">
           <rect :x="sketch.pos[i].x" :y="sketch.pos[i].y" :width="W" :height="H" rx="6" :fill="selState === i ? 'var(--accent-soft)' : 'var(--pane)'" :stroke="color(s.color)" :stroke-width="s.key === cur.start ? 2.5 : 1.5" />
@@ -173,9 +191,8 @@ onMounted(load)
           <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 36" text-anchor="middle" fill="var(--muted)">{{ s.count ?? 0 }} Knoten{{ s.final ? ' · Ende' : '' }}{{ s.key === cur.start ? ' · Start' : '' }}</text>
           <circle v-if="s.key === cur.start" :cx="sketch.pos[i].x - 12" :cy="sketch.pos[i].y + H / 2" r="5" fill="var(--text)"><title>Start</title></circle>
           <g v-if="s.final"><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="6" fill="none" stroke="var(--text)" stroke-width="1.5" /><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="3" fill="var(--text)" /></g>
-          <template v-if="selState === i || drag">
-            <circle v-for="pk in PORTS" :key="pk" :cx="portXY(sketch.pos[i], pk).x" :cy="portXY(sketch.pos[i], pk).y" r="3.5" :fill="drag ? 'var(--accent)' : 'var(--pane)'" stroke="var(--accent)" stroke-width="1" style="cursor:crosshair" @mousedown.stop.prevent="linkDown(i, $event, pk)" @mouseup.stop="portUp(i, pk)"><title>{{ pk }} — ziehen = Übergang ab hier; loslassen = hier andocken</title></circle>
-          </template>
+          <circle :cx="sketch.pos[i].x + W" :cy="sketch.pos[i].y + H - 8" r="5" fill="var(--accent)" style="cursor:crosshair" @mousedown.stop.prevent="linkDown(i, $event)"><title>von hier auf eine andere Kachel ziehen = neuer Übergang — der Pfeil schnappt am nächsten Andockpunkt ein</title></circle>
+          <circle v-if="drag?.snapJ === i" :cx="drag.tx" :cy="drag.ty" r="5" fill="none" stroke="var(--accent)" stroke-width="2" />
         </g>
       </svg>
       <div class="row" style="gap:32px;align-items:flex-start;flex-wrap:wrap;margin-top:12px">
