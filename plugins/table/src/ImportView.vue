@@ -4,7 +4,7 @@
 // richtet nach, der Plan sagt, was passiert, der Stapel schreibt. Profile (Zuordnung, Ziel, Rolle) im Journal.
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { api, store, tree, icon, plugins, mapper, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
+import { api, store, tree, icon, plugins, mapper, transform, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
 const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper
 const leftW = paneWidth('import.table', 720)
 const router = useRouter()
@@ -110,6 +110,16 @@ const unknown = computed(() => mapping.value.filter(m => m.unknown).length)
 // ---- Zuordnung: Zeile je Spalte
 const TARGETS = [['attr', 'Attribut'], ['new', 'neues Attribut'], ['id', 'journali-Id'], ['sku', 'SKU (finden)'], ['external', 'externe Kennung'], ['parent', 'Elternteil'], ['skip', 'übergehen']]
 const sample = (i) => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => String(v ?? '').trim() !== '').slice(0, 3).map(v => String(v).slice(0, 30)).join(' · ')
+// Umwandlung je Spalte (Taloan, 21.09., OpenDXP-Importer: „Werte umwandeln, in die Daten eingreifen“): Kette in m.steps, Editor je Zeile, Vorschau der Beispiele
+const stepsOpen = ref(null)   // Spalte, deren Kette gerade offen ist
+const OPS = transform.OPS
+const FIELDS = { replace: ['find', 'with', 'regex'], prefix: ['text'], suffix: ['text'], static: ['text'], default: ['text'], combine: ['columns', 'sep'], split: ['sep', 'index'], number: ['decimal'], boolean: ['true'], date: ['format'], map: ['pairs', 'other'], when: ['test', 'value', 'then', 'else'] }
+const opHint = op => OPS.find(o => o[0] === op)?.[2] ?? ''
+function addStep(m, op) { if (!op) return; (m.steps ??= []).push({ op }); planned.value = null }
+function delStep(m, i) { m.steps.splice(i, 1); if (!m.steps.length) delete m.steps; planned.value = null }
+function moveStep(m, i, d) { const j = i + d; if (j < 0 || j >= m.steps.length) return; [m.steps[i], m.steps[j]] = [m.steps[j], m.steps[i]]; planned.value = null }
+const preview = (m, i) => { const rows = source.value.rows.slice(0, 200).filter(r => String(r[i] ?? '').trim() !== '').slice(0, 3); const cols = source.value.columns; return rows.map(r => String(transform.apply(m.steps, r[i], { get: c => { const j = cols.indexOf(c); return j < 0 ? '' : r[j] } })).slice(0, 30)).join(' · ') }
+const stepsText = m => m.steps?.length ? transform.describe(m.steps) : ''
 function onTarget(m) { planned.value = null; if (m.target === 'attr' && !m.attribute) m.attribute = attrs.value[0]?.key ?? null; if (m.target === 'new' && !m.newKey) m.newKey = m.column.toLowerCase().replace(/[^a-z0-9]+/g, '_'); syncLocale(m) }
 function syncLocale(m) { const a = attrs.value.find(x => x.key === m.attribute); if (m.target === 'attr' && a && !a.perLocale) m.locale = null; if (m.target === 'attr' && a?.perLocale && !m.locale) m.locale = model.value?.masterLocale ?? locales.value[0] }
 const keyColumn = computed(() => mapping.value.find(m => ['id', 'sku', 'external'].includes(m.target)))
@@ -177,7 +187,7 @@ async function run() {
 }
 
 // ---- Profil: Zuordnung (je Spaltenname), Ziel, Rolle, Kennung
-const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map(m => [m.column, { target: m.target, attribute: m.attribute, locale: m.locale, newKey: m.newKey, newType: m.newType, newGroup: m.newGroup }])) })
+const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map(m => [m.column, { target: m.target, attribute: m.attribute, locale: m.locale, newKey: m.newKey, newType: m.newType, newGroup: m.newGroup, steps: m.steps?.length ? m.steps : undefined }])) })
 function profileSet(p) {
   if (!p) { target.value = null; role.value = ''; external.value = ''; planned.value = null; return }
   role.value = p.role ?? ''; external.value = p.external ?? ''
@@ -233,9 +243,10 @@ onMounted(async () => {
       <div class="section" v-if="source">
         <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span></h2>
         <table class="grid map">
-          <thead><tr><th style="width:170px">Spalte</th><th>Beispiele</th><th style="width:130px">Ziel</th><th style="width:220px">Attribut</th><th style="width:60px">Sprache</th><th style="width:150px">Warum</th></tr></thead>
+          <thead><tr><th style="width:170px">Spalte</th><th>Beispiele</th><th style="width:130px">Ziel</th><th style="width:220px">Attribut</th><th style="width:60px">Sprache</th><th style="width:150px">Warum</th><th style="width:34px" title="Umwandlung: Kette von Schritten zwischen Quelle und Ziel (Zahl aus „22 mm“, Ja/Nein, Datum, Ersetzen, Aufteilen, Spalten verbinden, Bedingung …)">ƒ</th></tr></thead>
           <tbody>
-            <tr v-for="(m, i) in mapping" :key="m.column" :class="{ off: m.target === 'skip' }">
+            <template v-for="(m, i) in mapping" :key="m.column">
+            <tr :class="{ off: m.target === 'skip' }">
               <td class="attr" :title="m.column"><b>{{ m.column }}</b><div class="muted" style="font-size:11px">{{ m.sniff?.type }} · {{ m.sniff?.distinct }} versch.</div></td>
               <td class="muted samples">{{ sample(i) }}</td>
               <td><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td>
@@ -247,7 +258,28 @@ onMounted(async () => {
               </td>
               <td><select v-if="(m.target === 'attr' && attrs.find(a => a.key === m.attribute)?.perLocale) || m.target === 'new'" v-model="m.locale" style="width:100%" @change="planned = null"><option :value="null">*</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select></td>
               <td class="muted" style="font-size:11px">{{ m.why }}</td>
+              <td><button class="x" :class="{ on: m.steps?.length }" :title="m.steps?.length ? stepsText(m) + ' — Klick: bearbeiten' : 'Umwandlung hinzufügen'" @click="stepsOpen = stepsOpen === m.column ? null : m.column">ƒ{{ m.steps?.length ? m.steps.length : '' }}</button></td>
             </tr>
+            <tr v-if="stepsOpen === m.column" class="steps-row"><td colspan="7">
+              <div class="steps">
+                <div v-for="(s, si) in (m.steps ?? [])" :key="si" class="step">
+                  <span class="muted mono" style="width:18px">{{ si + 1 }}</span>
+                  <select v-model="s.op" @change="planned = null" :title="opHint(s.op)"><option v-for="o in OPS" :key="o[0]" :value="o[0]">{{ o[1] }}</option></select>
+                  <template v-for="f in (FIELDS[s.op] ?? [])" :key="f">
+                    <label v-if="f === 'regex'" title="als regulärer Ausdruck (Flags gi)"><input type="checkbox" v-model="s.regex" @change="planned = null" /> regex</label>
+                    <select v-else-if="f === 'test'" v-model="s.test" @change="planned = null"><option value="empty">leer</option><option value="equals">gleich</option><option value="contains">enthält</option><option value="matches">passt auf (regex)</option></select>
+                    <select v-else-if="f === 'decimal'" v-model="s.decimal" @change="planned = null" title="Dezimalzeichen"><option :value="undefined">raten</option><option value=",">Komma</option><option value=".">Punkt</option></select>
+                    <select v-else-if="f === 'format'" v-model="s.format" @change="planned = null"><option value="dd.MM.yyyy">dd.MM.yyyy</option><option value="MM/dd/yyyy">MM/dd/yyyy</option><option value="yyyyMMdd">yyyyMMdd</option></select>
+                    <input v-else type="text" v-model="s[f]" :placeholder="f" :title="opHint(s.op)" @input="planned = null" :style="f === 'pairs' || f === 'columns' ? 'width:220px' : 'width:110px'" />
+                  </template>
+                  <span class="grow" />
+                  <button class="x" @click="moveStep(m, si, -1)" title="nach oben">↑</button><button class="x" @click="moveStep(m, si, 1)" title="nach unten">↓</button><button class="x" @click="delStep(m, si)" title="Schritt entfernen">×</button>
+                </div>
+                <div class="step"><select :value="''" @change="addStep(m, $event.target.value); $event.target.value = ''"><option value="">+ Schritt …</option><option v-for="o in OPS" :key="o[0]" :value="o[0]" :title="o[2]">{{ o[1] }}</option></select>
+                  <span class="muted" style="font-size:11px">{{ m.steps?.length ? 'Vorschau: ' + preview(m, i) : 'Kette zwischen Quelle und Ziel — die Prüfung des Attributs läuft danach; steht im Profil' }}</span></div>
+              </div>
+            </td></tr>
+            </template>
           </tbody>
         </table>
       </div>
@@ -288,6 +320,12 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */
+.steps-row td { background: var(--bg); padding: 4px 8px 6px 30px; }
+.steps { display: flex; flex-direction: column; gap: 3px; }
+.step { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
+.step select, .step input[type=text] { font-size: 12px; }
+.x.on { color: var(--accent); font-weight: 600; }
 .section { padding: 8px; border-bottom: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; }
 .section h2 .muted { font-weight: 400; }

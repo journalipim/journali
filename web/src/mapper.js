@@ -8,6 +8,9 @@
 //   - Plan: was wird angelegt, was geändert, was ist unverändert — als Stapel für /api/batch
 // Reine Funktionen; die Ansicht (TableImportView) und Plugins (ctx.mapper) rufen sie.
 
+import { apply as applySteps } from './transform.js'
+export { apply as transform, describe as describeSteps, OPS as TRANSFORM_OPS } from './transform.js'
+
 export const SYNONYMS = {
   sku: ['sku', 'artikelnummer', 'artikel_nr', 'artnr', 'art_nr', 'artikel', 'article', 'article_number', 'item_number', 'item_no', 'product_number', 'productnumber', 'materialnummer', 'material', 'part_number', 'partno', 'nummer', 'number', 'code'],
   name: ['name', 'bezeichnung', 'titel', 'title', 'produktname', 'product_name', 'artikelbezeichnung', 'label', 'benennung'],
@@ -193,7 +196,9 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   // Schlüsselspalten: eigene Ziele — oder das Attribut sku selbst (wird geschrieben und findet zugleich)
   const iId = col('id'), iParent = col('parent'), iExt = col('external')
   const iSku = col('sku') >= 0 ? col('sku') : mapping.findIndex(m => m.target === 'attr' && m.attribute === 'sku')
-  const cell = (row, i) => i < 0 ? null : (Array.isArray(row) ? row[i] : row[columns[i]])
+  const raw = (row, i) => i < 0 ? null : (Array.isArray(row) ? row[i] : row[columns[i]])
+  // Umwandlung je Spalte (transform.js, Taloan 21.09.: „zwischendurch in die Daten eingreifen“) — vor Typprüfung und Schreiben
+  const cell = (row, i) => { if (i < 0) return null; const steps = mapping[i]?.steps; const v = raw(row, i); return steps?.length ? applySteps(steps, v, { get: c => { const j = columns.indexOf(c); return j < 0 ? '' : raw(row, j) } }) : v }
   const bySku = new Map(); const byExt = new Map()
   for (const r of tree.rows) { if (r.sku) bySku.set(String(r.sku).trim(), r); if (external && r.external?.[external]) byExt.set(String(r.external[external]), r) }
   const attrs = new Map((model.attributes ?? []).map(a => [a.key, a]))
