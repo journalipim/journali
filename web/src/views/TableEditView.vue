@@ -118,9 +118,17 @@ async function save() {
   busy.value = `schreibe ${dirty.value.size} …`
   try {
     const commands = commandsOf()
-    const res = await api.post('/api/batch', { commands, batch: 'tab-' + Date.now().toString(36) })
-    if (res.error) store.toast(`✗ ${res.error.message} — ${res.results.length} geschrieben`)
-    else store.toast(`✓ ${res.results.length} Werte geschrieben`)
+    const res = await api.post('/api/batch', { commands: commands.map(({ _key, ...c }) => c), batch: 'tab-' + Date.now().toString(36) })
+    if (res.error) {
+      // Fehler (Taloan, 21.09.: „SKU 14 gibt es schon — 0 geschrieben, und alle Änderungen waren weg“): was nicht geschrieben wurde, bleibt
+      // als Änderung stehen (grün, Zähler), damit man es korrigiert — nur die geschriebenen Zellen fallen aus der Liste
+      const written = new Set(commands.slice(0, res.results.length).map(c => c._key).filter(Boolean))
+      const keep = new Map([...dirty.value].filter(([k]) => !written.has(k)))
+      store.toast(`✗ ${res.error.message} — ${res.results.length} geschrieben, ${keep.size} Änderungen bleiben offen: korrigieren und noch einmal speichern`)
+      await store.poll(true); await load(); dirty.value = keep
+      return
+    }
+    store.toast(`✓ ${res.results.length} Werte geschrieben`)
     await store.poll(true); await load()
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
@@ -152,7 +160,7 @@ function commandsOf() {
     const [node, attribute] = k.split('|'); const d = defs.get(attribute); const isNew = node.startsWith('new-')
     if (isNew && childRole.value === 'variant' && axesSet.has(attribute)) continue   // steckt schon im variant.create
     if (isNew && !v) continue
-    out.push({ op: 'attribute.set', args: { node: isNew ? '@' + node : node, attribute, locale: d?.perLocale ? locale.value : null, value: v } })
+    out.push({ op: 'attribute.set', args: { node: isNew ? '@' + node : node, attribute, locale: d?.perLocale ? locale.value : null, value: v }, _key: k })   // _key: welche Zelle — bleibt bei einem Fehler stehen
   }
   return out
 }
