@@ -123,7 +123,8 @@ async function onDrop(e) {
   let h = null; try { const x = await handleP; if (x?.kind === 'file') h = x } catch {}
   fileHandle.value = h; await takeFile(f); remember(f.name, h)
 }
-function resuggest() { if (source.value) { mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); applyProfile() } planned.value = null }
+// ↻ Zuordnung neu vorschlagen: bewusst OHNE das Profil — sonst tut der Knopf nichts (Taloan, 21.09.: „funktioniert nicht“); Kennung ändern behält es
+function resuggest(keepProfile = false) { if (source.value) { mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); if (keepProfile) applyProfile() } planned.value = null }
 // Knotenmodus: was nicht zum Knoten passt, wird übergangen und gezählt — Vorlage vom Knoten exportieren, dann passt es
 function strictify(m) {
   if (!fixed.value) return m
@@ -267,7 +268,6 @@ onMounted(async () => {
         <span class="grow" />
         <span v-if="recent.length" class="recent" title="zuletzt gewählt — Klick öffnet wieder (Chrome/Edge fragt einmal nach Leserecht)"><span class="muted" style="font-size:11px">zuletzt:</span>
           <span v-for="r in recent" :key="r.name" class="chip" :class="{ dim: !r.handle }" :title="r.handle ? `${r.name} — wieder öffnen` : `${r.name} — war hineingezogen, kein Zugriff: wieder ziehen`" @click="openRecent(r)">{{ r.name }}<button @click.stop="recentFiles.forget('table', r.name).then(loadRecent)" title="aus der Liste">×</button></span></span>
-        <button v-if="source" class="x" @click="resuggest" title="Zuordnung neu vorschlagen">↻</button>
       </td></tr>
       <tr class="step"><td colspan="2">2 · Ziel <span class="muted" style="font-weight:400">· {{ fixed ? 'fest: die Tabelle passt 1:1 zu diesem Knoten' : 'wohin neue Zeilen kommen; vorhandene werden über Id, SKU oder Kennung gefunden' }}</span></td></tr>
       <tr v-if="fixed"><td class="attr">Knoten</td><td class="row">
@@ -282,7 +282,7 @@ onMounted(async () => {
       <tr v-if="!fixed"><td class="attr">Neue als</td><td><select v-model="role" title="Rolle neuer Zeilen" @change="planned = null" style="width:100%">
         <option value="">automatisch (unter Gruppe → Produkt, unter Produkt → Variante)</option><option value="group">▣ Gruppen</option><option value="product">▦ Produkte</option><option value="variant">◆ Varianten</option>
       </select></td></tr>
-      <tr v-if="!fixed"><td class="attr">Kennung</td><td><input v-model="external" type="text" placeholder="System der externen Kennung (z. B. erp) — findet vorhandene Knoten" @change="resuggest" /></td></tr>
+      <tr v-if="!fixed"><td class="attr">Kennung</td><td><input v-model="external" type="text" placeholder="System der externen Kennung (z. B. erp) — findet vorhandene Knoten" @change="resuggest(true)" /></td></tr>
     </ImportHead>
     <div class="scroll">
       <div v-if="!keyColumn && source" class="muted" style="font-size:12px;padding:6px 8px">⚠ Keine Schlüsselspalte (Id, SKU, Kennung) — jede Zeile wird neu angelegt.</div>
@@ -290,6 +290,7 @@ onMounted(async () => {
 
       <div class="section" v-if="source">
         <h2 class="step-band" style="margin:0 -8px 6px">3 · Zuordnung <span class="muted">· {{ mapping.filter(m => m.target !== 'skip').length }} von {{ mapping.length }} Spalten</span>
+          <button class="x" @click="resuggest()" title="Zuordnung neu vorschlagen — verwirft die Zuordnung des Profils (mit gewähltem Profil wird der neue Vorschlag gespeichert)">↻ neu vorschlagen</button>
           <span class="grow" /><span class="layout"><button :class="{ on: layout === 'rows' }" @click="setLayout('rows')" title="eine Zeile je Spalte — nach unten scrollen">≡ Zeilen</button><button :class="{ on: layout === 'cols' }" @click="setLayout('cols')" title="wie in Excel: eine Spalte je Spalte, Zuordnung in den Kopfzeilen — nach rechts scrollen">⫼ Spalten</button></span></h2>
         <!-- Spalten wie in Excel: Kopfzeilen = Zuordnung, darunter die ersten Zeilen der Datei; erste Spalte klebt -->
         <div v-if="layout === 'cols'" class="colsWrap">
