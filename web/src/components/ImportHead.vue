@@ -23,7 +23,10 @@ const NAMES = { ixp: 'IXP', solr: 'Solr', table: 'Tabelle' }
 .form { width: 100%; border-bottom: 1px solid var(--line); }
 .form td { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px; }
 .form td.attr { color: var(--muted); white-space: nowrap; padding-left: 8px; }
-.form :deep(tr.step td) { height: 24px; padding: 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); color: var(--text); }
+/* feste Spalten (Taloan, 21.09.: zusammengeschoben verschwanden die Felder — die Bandtexte hielten die Tabelle breiter als die Spalte): die Tabelle bleibt so breit wie die Spalte, lange Bänder werden gekürzt */
+.form { table-layout: fixed; width: 100%; }
+.form :deep(td) { overflow: hidden; text-overflow: ellipsis; }
+.form :deep(tr.step td) { height: 24px; padding: 0 8px; font-size: 12px; font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .form :deep(input[type=text]), .form :deep(input[type=password]), .form :deep(input[type=search]) { width: 100%; box-sizing: border-box; }
 .form :deep(.row) { display: flex; gap: 4px; align-items: center; }
 .form :deep(.row > input) { flex: 1; min-width: 0; }
