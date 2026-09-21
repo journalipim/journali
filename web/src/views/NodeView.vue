@@ -501,6 +501,11 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 // Workflows (27, Taloan 21.09.): je geltendem Workflow der Zustand und die Übergänge, die meine Rolle gehen darf; Notiz-Pflicht → Dialog
 const workflows = ref([])
 const wfColor = c => ({ pos: 'var(--pos)', neg: 'var(--neg)', warn: 'var(--warn)', accent: 'var(--accent)', muted: 'var(--muted)' })[c] ?? (c && /^#/.test(c) ? c : 'var(--muted)')
+function wfBlocked(t) {
+  const rel = (t.effects ?? []).find(x => x.startsWith('release:'))
+  if (rel && node.value?.role === 'variant') { const ch = rel.slice(8) === '*' ? (model.value?.channels?.[0]?.key ?? 'web') : rel.slice(8); showMissing(ch); if (!open('attributes')) toggle('attributes') }
+  store.toast(t.blocked)
+}
 async function wfStep(w, t) {
   let note = null
   if (t.noteRequired || t.effects?.length) {
@@ -854,7 +859,7 @@ function cellMenu(e, def, col, block) {
             <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt'">{{ w.stateLabel?.de || w.state }}</span>
-              <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? store.toast(t.blocked) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
+              <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
