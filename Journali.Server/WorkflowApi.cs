@@ -62,7 +62,8 @@ public static class WorkflowApi
                     pending = Pending(tree, n, wf, nw?.Transition),
                     states = wf.States.Select(s => new { s.Key, s.Label, s.Color, s.Final }).ToList(),
                     transitions = Commands.Allowed(c.Workflows, wf, id, role).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label }).ToList(),
-                    all = wf.Transitions.Where(t => t.From == st).Select(t => new { t.Key, t.Label, t.To, t.Roles }).ToList(),   // auch die, die ich nicht darf — zum Zeigen, wer dran ist
+                    // auch die, die ich nicht darf — zum Zeigen, wer dran ist; mit Eskalation: ab wann auch wer
+                    all = wf.Transitions.Where(t => t.From == st).Select(t => new { t.Key, t.Label, t.To, t.Roles, t.EscalateAfterDays, t.EscalateRoles, escalatesAt = t.EscalateAfterDays is { } d && nw is not null ? nw.At.AddDays(d) : (DateTimeOffset?)null, escalated = t.EscalateAfterDays is { } d2 && nw is not null && (DateTimeOffset.UtcNow - nw.At).TotalDays >= d2 }).ToList(),
                 };
             }).ToList());
         }));

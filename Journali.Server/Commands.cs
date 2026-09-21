@@ -582,6 +582,7 @@ public static class Commands
         {
             if (string.IsNullOrWhiteSpace(t.Key)) return Outcome.Bad("Übergang ohne Key.");
             if (!keys.Contains(t.From) || !keys.Contains(t.To)) return Outcome.Bad($"Übergang {t.Key}: von/nach muss ein Zustand sein.");
+            if (t.EscalateAfterDays is { } ed && ed < 0) return Outcome.Bad($"Übergang {t.Key}: Eskalation nach n Tagen, n ≥ 0.");
             foreach (var e in t.Effects ?? []) if (!(e.StartsWith("release:") || e.StartsWith("revoke:") || e.StartsWith("status:"))) return Outcome.Bad($"Übergang {t.Key}: Wirkung „{e}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<wert>).");
         }
         if ((d.Transitions ?? new()).Select(t => t.Key).Distinct().Count() != (d.Transitions ?? new()).Count) return Outcome.Bad("Übergangs-Keys doppelt.");
@@ -592,11 +593,16 @@ public static class Commands
         c.Workflows?.All.ContainsKey(key) == true ? Outcome.Ok(c.Write(Workflows.Stream + key, Types.WorkflowRetired, new WorkflowRetired())) : Outcome.Missing;
 
     /// <summary>Welche Übergänge darf diese Rolle am Knoten jetzt gehen? (null-Rolle = offen, alles)</summary>
-    public static IEnumerable<WfTransition> Allowed(Workflows w, WorkflowDef wf, string nodeId, string? role)
+    public static IEnumerable<WfTransition> Allowed(Workflows w, WorkflowDef wf, string nodeId, string? role, DateTimeOffset? now = null)
     {
         var state = w.StateOf(nodeId, wf);
-        return wf.Transitions.Where(t => t.From == state && (role is null || role == "admin" || t.Roles is not { Length: > 0 } || t.Roles.Contains(role)));
+        var since = w.Of(nodeId).GetValueOrDefault(wf.Key)?.At;
+        return wf.Transitions.Where(t => t.From == state && (role is null || role == "admin" || t.Roles is not { Length: > 0 } || t.Roles.Contains(role) || Escalated(t, role, since, now ?? DateTimeOffset.UtcNow)));
     }
+
+    /// <summary>Eskalation: der Übergang hat EscalateAfterDays, der Zustand steht so lange, und die Rolle ist eine der EscalateRoles (leer = jede).</summary>
+    public static bool Escalated(WfTransition t, string role, DateTimeOffset? since, DateTimeOffset now) =>
+        t.EscalateAfterDays is { } d && since is { } s && (now - s).TotalDays >= d && (t.EscalateRoles is not { Length: > 0 } || t.EscalateRoles.Contains(role));
 
     /// <summary>Einen Schritt gehen: Übergang muss vom aktuellen Zustand ausgehen, die Rolle ihn dürfen, die Notiz da sein — dann Zustand und Wirkungen.</summary>
     public static Outcome WorkflowStep(Ctx c, string id, string workflow, string transition, string? note)

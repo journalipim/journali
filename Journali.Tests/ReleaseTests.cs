@@ -45,6 +45,20 @@ public class ReleaseTests
     }
 
     [Fact]
+    public void Eskalation_nach_n_Tagen_duerfen_auch_andere_Rollen()
+    {
+        // Taloan, 21.09.: „alle Redakteure im Urlaub — jemand muss freigeben“: freigeben darf admin; nach 3 Tagen in Prüfung auch manager
+        var t = new WfTransition("approve", "review", "approved", Labels.Of("freigeben", "Approve"), ["admin"], false, ["release:web"], 3, ["manager"]);
+        var since = new DateTimeOffset(2026, 9, 21, 0, 0, 0, TimeSpan.Zero);
+        Assert.False(Commands.Escalated(t, "manager", since, since.AddDays(2)));
+        Assert.True(Commands.Escalated(t, "manager", since, since.AddDays(3)));
+        Assert.False(Commands.Escalated(t, "editor", since, since.AddDays(10)));   // nicht in EscalateRoles
+        var any = t with { EscalateRoles = null };
+        Assert.True(Commands.Escalated(any, "editor", since, since.AddDays(3)));    // leer = jede Rolle
+        Assert.False(Commands.Escalated(t with { EscalateAfterDays = null }, "manager", since, since.AddDays(30)));
+    }
+
+    [Fact]
     public void Redaktions_Workflow_freigeben_wirkt_als_Freigabe_fuer_web()
     {
         var seed = Journali.Core.Entries.Model.Seeds().Single(s => s.Stream == Workflows.Stream + "review");

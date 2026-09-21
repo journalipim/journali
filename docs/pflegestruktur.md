@@ -616,6 +616,12 @@ Entscheidungen von Taloan: ein Workflow je Familie oder einer für alle? Zustän
 je Rolle? Fristen je Zustand (Erinnerung, Eskalation) — jetzt oder später? Gilt der Workflow auch für Rubriken der
 Publikation (Freigabe eines Kanalbaums)?
 
+**Eskalation (Taloan, 21.09.2026, gebaut):** je Übergang optional „nach n Tagen an Rollen“ (`EscalateAfterDays`,
+`EscalateRoles`, leer = jede Rolle mit Schreibrecht): steht ein Knoten so lange im Ausgangszustand, dürfen auch diese
+Rollen den Schritt gehen — alle Redakteure im Urlaub, der Manager gibt frei. Am Knoten steht „⏰ Eskalation ab ⟨Datum⟩ → manager“,
+nach Ablauf „⏰ eskaliert“; die Aufgabenliste (⚑ Workflows) zeigt den Schritt dann auch diesen Rollen. Kein Timer nötig:
+der Vergleich läuft beim Lesen (Commands.Allowed/Escalated).
+
 ## 28. Übersetzungsmanagement — gebaut (Taloan, 21.09.2026, Blick in OpenDXP: „haben wir noch gar nicht“)
 
 Die Zelle kannte die Zustände schon (◌ nicht übersetzt, ⟳ Master neuer); jetzt gibt es den Prozess darum: **Einheiten**

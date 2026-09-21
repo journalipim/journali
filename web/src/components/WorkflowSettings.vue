@@ -34,7 +34,7 @@ async function remove() {
 }
 function addState() { const w = cur.value; const k = 'state' + (w.states.length + 1); w.states.push({ key: k, label: { de: k, en: k }, color: 'muted', final: false }); touch() }
 function delState(i) { const w = cur.value; const k = w.states[i].key; if (w.transitions.some(t => t.from === k || t.to === k)) { store.toast('erst die Übergänge davon/dahin entfernen'); return } w.states.splice(i, 1); touch() }
-function addTransition() { const w = cur.value; const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[0]?.key ?? '', to: w.states[1]?.key ?? w.states[0]?.key ?? '', roles: [], noteRequired: false, effects: [] }); touch() }
+function addTransition() { const w = cur.value; const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[0]?.key ?? '', to: w.states[1]?.key ?? w.states[0]?.key ?? '', roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); touch() }
 const selState = ref(null), selTrans = ref(null)   // markierte Zeile (Grafik ↔ Tabelle)
 const drag = ref(null)   // { kind: 'state' | 'link', i }
 function stateDown(i, e) { drag.value = { kind: e.shiftKey ? 'link' : 'state', i }; selState.value = i; selTrans.value = null }
@@ -44,7 +44,7 @@ function stateUp(j) {
   const w = cur.value
   if (d.kind === 'state') { const [s] = w.states.splice(d.i, 1); w.states.splice(j, 0, s); selState.value = j; touch(); return }
   // neuer Übergang von d.i nach j
-  const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[d.i].key, to: w.states[j].key, roles: [], noteRequired: false, effects: [] }); selTrans.value = w.transitions.length - 1; touch()
+  const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[d.i].key, to: w.states[j].key, roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); selTrans.value = w.transitions.length - 1; touch()
 }
 function toggleIn(arr, v) { const i = arr.indexOf(v); i < 0 ? arr.push(v) : arr.splice(i, 1); touch() }
 const stateLabel = k => cur.value?.states.find(s => s.key === k)?.label?.de || k
@@ -88,12 +88,13 @@ onMounted(load)
           <tr v-for="(s, i) in cur.states" :key="i" :class="{ selected: selState === i }" @click="selState = i; selTrans = null"><td><input v-model="s.key" type="text" class="mono" style="width:100px" @input="touch" /></td><td><input v-model="s.label.de" type="text" style="width:140px" @input="touch" /></td>
             <td><select v-model="s.color" @change="touch"><option v-for="[c, l] in COLORS" :key="c" :value="c">{{ l }}</option></select></td><td><input type="checkbox" v-model="s.final" @change="touch" /></td><td class="muted">{{ s.count }}</td><td><button class="x" @click="delState(i)">×</button></td></tr>
         </tbody></table>
-        <table class="grid form" style="width:auto"><thead><tr><th colspan="8">Übergänge <button class="x" @click="addTransition" title="Übergang hinzufügen">+</button></th></tr><tr><th>Key</th><th>Bezeichnung</th><th>von</th><th>nach</th><th title="wer darf; nichts = jede Rolle mit Schreibrecht (admin immer)">Rollen</th><th title="Korrekturschleife: der Schritt braucht eine Notiz">Notiz</th><th title="was der Schritt auslöst">Wirkung</th><th></th></tr></thead><tbody>
+        <table class="grid form" style="width:auto"><thead><tr><th colspan="9">Übergänge <button class="x" @click="addTransition" title="Übergang hinzufügen">+</button></th></tr><tr><th>Key</th><th>Bezeichnung</th><th>von</th><th>nach</th><th title="wer darf; nichts = jede Rolle mit Schreibrecht (admin immer)">Rollen</th><th title="Korrekturschleife: der Schritt braucht eine Notiz">Notiz</th><th title="Eskalation: steht der Zustand so viele Tage, dürfen auch diese Rollen (keine = jede Rolle mit Schreibrecht) — z. B. alle Redakteure im Urlaub">⏰ nach Tagen an</th><th title="was der Schritt auslöst">Wirkung</th><th></th></tr></thead><tbody>
           <tr v-for="(t, i) in cur.transitions" :key="i" :class="{ selected: selTrans === i }" @click="selTrans = i; selState = null"><td><input v-model="t.key" type="text" class="mono" style="width:90px" @input="touch" /></td><td><input v-model="t.label.de" type="text" style="width:150px" @input="touch" /></td>
             <td><select v-model="t.from" @change="touch"><option v-for="s in cur.states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }}</option></select></td>
             <td><select v-model="t.to" @change="touch"><option v-for="s in cur.states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }}</option></select></td>
             <td><label v-for="r in roles" :key="r" style="margin-right:6px"><input type="checkbox" :checked="t.roles.includes(r)" @change="toggleIn(t.roles, r)" /> {{ r }}</label></td>
             <td><input type="checkbox" v-model="t.noteRequired" @change="touch" /></td>
+            <td><input type="number" min="0" style="width:50px" :value="t.escalateAfterDays ?? ''" @input="t.escalateAfterDays = $event.target.value === '' ? null : Number($event.target.value); touch()" placeholder="—" /> <label v-for="r in roles" :key="r" style="margin-right:6px" :class="{ muted: t.escalateAfterDays == null }"><input type="checkbox" :disabled="t.escalateAfterDays == null" :checked="(t.escalateRoles ?? []).includes(r)" @change="t.escalateRoles ??= []; toggleIn(t.escalateRoles, r)" /> {{ r }}</label></td>
             <td><select :value="''" @change="toggleIn(t.effects, $event.target.value); $event.target.value = ''"><option value="">+ …</option><option v-for="[e, l] in EFFECTS" :key="e" :value="e">{{ l }}</option></select><span v-for="e in t.effects" :key="e" class="chip" style="margin-left:3px">{{ e }} <button @click="toggleIn(t.effects, e)">×</button></span></td>
             <td><button class="x" @click="cur.transitions.splice(i, 1); touch()">×</button></td></tr>
         </tbody></table>

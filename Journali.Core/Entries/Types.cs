@@ -481,7 +481,7 @@ public sealed record TermRetired();
 public sealed record WfState(string Key, Labels Label, string? Color = null, bool Final = false);
 /// <summary>Übergang: von → nach, wer ihn gehen darf (Rollen; leer = jede Rolle mit Schreibrecht), Notiz Pflicht (Korrekturschleife),
 /// Wirkungen: <c>release:&lt;kanal&gt;</c>, <c>revoke:&lt;kanal&gt;</c>, <c>status:&lt;wert&gt;</c>.</summary>
-public sealed record WfTransition(string Key, string From, string To, Labels Label, string[]? Roles = null, bool NoteRequired = false, string[]? Effects = null);
+public sealed record WfTransition(string Key, string From, string To, Labels Label, string[]? Roles = null, bool NoteRequired = false, string[]? Effects = null, int? EscalateAfterDays = null, string[]? EscalateRoles = null);   // Eskalation (Taloan, 21.09.2026): nach n Tagen im Zustand dürfen auch EscalateRoles (leer = jede Rolle mit Schreibrecht)
 /// <summary>Ein Workflow: Zustände, Übergänge, Start; gilt für Knotentypen (Roles) und Familien (leer = alle).</summary>
 public sealed record WorkflowDefined(Labels Label, List<WfState> States, List<WfTransition> Transitions, string? Start = null, string[]? Roles = null, string[]? Families = null);
 public sealed record WorkflowRetired();
