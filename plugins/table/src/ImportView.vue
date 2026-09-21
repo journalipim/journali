@@ -113,10 +113,12 @@ const sample = (i) => source.value.rows.slice(0, 200).map(r => r[i]).filter(v =>
 // Umwandlung je Spalte (Taloan, 21.09., OpenDXP-Importer: „Werte umwandeln, in die Daten eingreifen“): Kette in m.steps, Editor je Zeile, Vorschau der Beispiele
 const stepsOpen = ref(null)   // Spalte, deren Kette gerade offen ist
 const OPS = transform.OPS
-const FIELDS = { replace: ['find', 'with', 'regex'], prefix: ['text'], suffix: ['text'], static: ['text'], default: ['text'], combine: ['columns', 'sep'], split: ['sep', 'index'], number: ['decimal'], boolean: ['true'], date: ['format'], map: ['pairs', 'other'], when: ['test', 'value', 'then', 'else'] }
+const FIELDS = { replace: ['find', 'with', 'regex'], prefix: ['text'], suffix: ['text'], static: ['text'], default: ['text'], combine: ['columns', 'sep'], split: ['sep', 'index'], number: ['decimal'], boolean: ['yes'], date: ['format'], map: ['pairs', 'other'], when: ['test', 'value', 'then', 'else'] }
+// Beschriftung vor dem Feld — ein Platzhalter allein ist weg, sobald etwas drinsteht (Taloan, 21.09.: „Was soll ich hier eingeben?“)
+const FIELD_LABEL = { find: 'suche', with: 'ersetze durch', text: 'Text', columns: 'Spalten', sep: 'Trenner', index: 'Teil', yes: '„ja“-Wörter', pairs: 'Paare', other: 'sonst', value: 'Wert', then: 'dann', else: 'sonst', decimal: 'Dezimal', format: 'Format', test: 'Prüfung' }
 const opHint = op => OPS.find(o => o[0] === op)?.[2] ?? ''
 // je Feld ein sprechender Platzhalter (Taloan, 21.09.: „Was soll bei Index rein?“)
-const FIELD_HINT = { find: 'suchen nach', with: 'ersetzen durch', text: 'Text', columns: 'Spalten mit Komma — {} = diese Spalte', sep: 'Trennzeichen, z. B. , oder ;', index: 'welcher Teil: 0 = erster, 1 = zweiter, -1 = letzter, leer = alle mit Komma', true: 'Wörter für „ja“ mit Komma (ja, yes, 1, x)', pairs: 'alt=neu; alt2=neu2', other: 'sonst (leer = Wert bleibt)', value: 'Vergleichswert', then: 'dann — {} = Quelle', else: 'sonst — {} = Quelle' }
+const FIELD_HINT = { find: 'suchen nach', with: 'ersetzen durch (leer = entfernen)', text: 'Text', columns: 'mit Komma — {} = diese Spalte', sep: 'z. B. , oder ; oder -', index: '0 = erster, 1 = zweiter, -1 = letzter, leer = alle mit Komma', yes: 'leer = ja, yes, true, 1, x, wahr, y — alles andere wird false', pairs: 'alt=neu; alt2=neu2', other: 'leer = Wert bleibt', value: 'Vergleichswert', then: '{} = Quelle', else: '{} = Quelle' }
 function addStep(m, op) { if (!op) return; (m.steps ??= []).push({ op }); planned.value = null }
 function delStep(m, i) { m.steps.splice(i, 1); if (!m.steps.length) delete m.steps; planned.value = null }
 function moveStep(m, i, d) { const j = i + d; if (j < 0 || j >= m.steps.length) return; [m.steps[i], m.steps[j]] = [m.steps[j], m.steps[i]]; planned.value = null }
@@ -272,10 +274,10 @@ onMounted(async () => {
                   <select v-model="s.op" @change="planned = null" :title="opHint(s.op)"><option v-for="o in OPS" :key="o[0]" :value="o[0]">{{ o[1] }}</option></select>
                   <template v-for="f in (FIELDS[s.op] ?? [])" :key="f">
                     <label v-if="f === 'regex'" title="als regulärer Ausdruck (Flags gi)"><input type="checkbox" v-model="s.regex" @change="planned = null" /> regex</label>
-                    <select v-else-if="f === 'test'" v-model="s.test" @change="planned = null"><option value="empty">leer</option><option value="equals">gleich</option><option value="contains">enthält</option><option value="matches">passt auf (regex)</option></select>
-                    <select v-else-if="f === 'decimal'" v-model="s.decimal" @change="planned = null" title="Dezimalzeichen"><option :value="undefined">raten</option><option value=",">Komma</option><option value=".">Punkt</option></select>
-                    <select v-else-if="f === 'format'" v-model="s.format" @change="planned = null"><option value="dd.MM.yyyy">dd.MM.yyyy</option><option value="MM/dd/yyyy">MM/dd/yyyy</option><option value="yyyyMMdd">yyyyMMdd</option></select>
-                    <input v-else type="text" v-model="s[f]" :placeholder="FIELD_HINT[f] ?? f" :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" @input="planned = null" :style="f === 'pairs' || f === 'columns' || f === 'index' || f === 'then' || f === 'else' ? 'width:260px' : 'width:130px'" />
+                    <span v-else-if="f === 'test'" class="fld"><span class="muted">Quelle ist</span><select v-model="s.test" @change="planned = null"><option value="empty">leer</option><option value="equals">gleich</option><option value="contains">enthält</option><option value="matches">passt auf (regex)</option></select></span>
+                    <span v-else-if="f === 'decimal'" class="fld"><span class="muted">Dezimalzeichen</span><select v-model="s.decimal" @change="planned = null"><option :value="undefined">raten</option><option value=",">Komma</option><option value=".">Punkt</option></select></span>
+                    <span v-else-if="f === 'format'" class="fld"><span class="muted">Quelle im Format</span><select v-model="s.format" @change="planned = null"><option value="dd.MM.yyyy">dd.MM.yyyy</option><option value="MM/dd/yyyy">MM/dd/yyyy</option><option value="yyyyMMdd">yyyyMMdd</option></select></span>
+                    <span v-else class="fld"><span class="muted">{{ FIELD_LABEL[f] ?? f }}</span><input type="text" v-model="s[f]" :placeholder="FIELD_HINT[f] ?? f" :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" @input="planned = null" :style="f === 'pairs' || f === 'columns' || f === 'index' || f === 'then' || f === 'else' || f === 'yes' ? 'width:250px' : 'width:130px'" /></span>
                   </template>
                   <span class="muted" style="font-size:11px">{{ opHint(s.op) }}</span>
                   <span class="grow" />
@@ -333,6 +335,7 @@ onMounted(async () => {
 .tsteps { display: flex; flex-direction: column; gap: 3px; }
 .tstep { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
 .tstep select, .tstep input[type=text] { font-size: 12px; }
+.fld { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; }
 .x.on { color: var(--accent); font-weight: 600; }
 .section { padding: 8px; border-bottom: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; }

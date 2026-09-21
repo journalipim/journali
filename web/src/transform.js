@@ -13,7 +13,7 @@ export const OPS = [
   ['combine', 'Spalten verbinden', 'columns (mit Komma), sep — die Quelle selbst zählt mit, wenn sie in columns steht'],
   ['split', 'Aufteilen', 'sep, index (0 = erster Teil, -1 = letzter, leer = alle mit Komma)'],
   ['number', 'Zahl', 'decimal , oder . — Einheit und Tausenderzeichen fallen weg („22 mm“ → 22, „1.234,5“ → 1234.5)'],
-  ['boolean', 'Wahrheitswert', 'true: Wörter mit Komma (ja, yes, 1, x …), sonst false; leer bleibt leer'],
+  ['boolean', 'Wahrheitswert', 'Wörter, die „ja“ bedeuten (mit Komma; Vorgabe ja, yes, true, 1, x, wahr, y) → true, alles andere → false; leer bleibt leer'],
   ['date', 'Datum', 'format dd.MM.yyyy | MM/dd/yyyy | yyyyMMdd → ISO yyyy-MM-dd'],
   ['htmldecode', 'HTML-Entities auflösen', '&amp; → &'],
   ['striphtml', 'HTML entfernen', 'Tags weg, Text bleibt'],
@@ -61,7 +61,7 @@ export function apply(steps, value, ctx = {}) {
         }
         case 'boolean': {
           if (v.trim() === '') break
-          const yes = S(st.true || 'ja,yes,true,1,x,wahr,y').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+          const yes = S(st.yes || st.true || 'ja,yes,true,1,x,wahr,y').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
           v = yes.includes(v.trim().toLowerCase()) ? 'true' : 'false'; break
         }
         case 'date': {
