@@ -122,6 +122,13 @@ mit Grund (`Journali.Core/Projections/Publication.cs`, Tests `PublicationTests`)
 
 Die Oberfläche (⇶ Publikation) zeigt je Baum „n drin · m draussen“ und die Liste mit Gründen.
 
+**Attributgruppen am Publikationsbaum (Taloan, 21.09.2026 — entschieden):** eine Gruppe, die an einer Rubrik hängt
+(`GroupsAttached` am `k-…`-Knoten), gilt für alles, was darunter verwiesen ist — am Verweis selbst oder an einem Vorfahren
+(`Tree.EffectiveGroups`, Herkunft = die Rubrik). So hängt der Web-Redakteur „SEO“ an seinen Baum und pflegt es dort, auf der
+Kanalachse seines Baums; ein Print-Baum ohne die Gruppe kennt sie nicht. **Pflegewerte sind in der Publikation nur lesbar,
+auch für admin** — geändert wird an der Quelle, im Pflegebaum. Pflegbar ist im Publikationsbaum nur, was eine Rubrik-Gruppe
+mitbringt.
+
 ## Modell — eigene Ströme, ganze Definition je Eintrag
 
 Das Modell steht im Journal (docs/pflegestruktur.md, Grundsatz). Jeder

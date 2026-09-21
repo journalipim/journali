@@ -222,12 +222,20 @@ public sealed class Tree : IProjection
     /// <summary>Die Attributgruppen, die hier gelten: am Knoten und an allen Vorfahren angehängt — von der Wurzel her, mit Herkunft.</summary>
     public List<(string Group, Node From)> EffectiveGroups(Node node)
     {
-        var chain = Ancestors(node).Reverse().Append(node);
+        var chain = Ancestors(node).Reverse().Append(node).ToList();
         var seen = new HashSet<string>();
         var result = new List<(string, Node)>();
         foreach (var n in chain)
             foreach (var g in n.Groups)
                 if (seen.Add(g)) result.Add((g, n));
+        // Publikationsbäume (Taloan, 21.09.2026): eine Gruppe an einer Rubrik gilt für alles, was darunter verwiesen ist — der Web-Redakteur hängt
+        // „SEO“ an seinen Baum und pflegt es dort; ein Print-Baum ohne die Gruppe kennt sie nicht. Verweis am Knoten selbst oder an einem Vorfahren.
+        if (node.Role != Roles.Rubric)
+            foreach (var n in chain)
+                foreach (var rubric in PlacedIn(n.Id))
+                    foreach (var r in Ancestors(rubric).Reverse().Append(rubric))
+                        foreach (var g in r.Groups)
+                            if (seen.Add(g)) result.Add((g, r));
         return result;
     }
 

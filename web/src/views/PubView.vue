@@ -276,7 +276,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis · von links ziehen = übernehmen · hier ziehen = umhängen, an den Rand einer Zeile = Reihenfolge · Strg-Klick = mehrere · Rechtsklick</div>
   </div>
   <Splitter v-model="pubW" :min="220" :max="800" />
-  <NodeView v-if="id" :id="id" :key="id" />
+  <NodeView v-if="id" :id="id" :key="id" :pub="current?.id ?? null" />
   <div v-else class="pane" style="flex:1"><div class="empty">Rubrik wählen — ihre Texte und Bilder stehen hier wie an jedem Knoten.</div></div>
   </div>
 </template>

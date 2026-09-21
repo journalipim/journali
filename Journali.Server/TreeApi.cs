@@ -305,7 +305,7 @@ public sealed record ComputedView(string Attribute, string? Value, string? Local
 public sealed record AncestorView(string Id, string Role, string Label, List<ValueView> Values);
 
 /// <summary>Eine Gruppe, die am Knoten gilt: woher (angehängt hier oder oben), ob hier aktiv, welche Attribute sie hier hat.</summary>
-public sealed record GroupView(string Key, string From, string FromLabel, bool Active, List<string> Attributes);
+public sealed record GroupView(string Key, string From, string FromLabel, bool Active, List<string> Attributes, string? FromRole = null);   // FromRole rubric: Gruppe aus einem Publikationsbaum
 
 /// <summary>Ein Knoten vollständig — Kopie aus dem Abbild, ausserhalb der Sperre ungefährlich.</summary>
 /// <summary>Ein ★ am Pfad: Attribut, wo es gesetzt ist, ob es an diesem Knoten gilt.</summary>
@@ -324,7 +324,7 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
     {
         var effective = tree.EffectiveGroups(n);
         var groups = effective.Select(g => new GroupView(g.Group, g.From.Id, NodeRow.LabelOf(tree, model, g.From), model.GroupActiveAt(g.Group, n.Role),
-            model.AttributesOf(g.Group).Where(a => a.AllowedAt(n.Role) && CompletenessRules.WhenHolds(tree, model, n, a)).Select(a => a.Key).ToList())).ToList();
+            model.AttributesOf(g.Group).Where(a => a.AllowedAt(n.Role) && CompletenessRules.WhenHolds(tree, model, n, a)).Select(a => a.Key).ToList(), g.From.Role)).ToList();
         var covered = groups.SelectMany(g => g.Attributes).ToHashSet();
         // Verwaist: eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen).
         var orphans = n.Values.Keys.Select(k => k.Attribute).Concat(n.Lists.Keys.Select(k => k.Attribute)).Concat(n.Rows.Keys).Distinct().Where(a => !covered.Contains(a)).Order().ToList();

@@ -30,7 +30,10 @@ import MatrixPicker from '../components/MatrixPicker.vue'
 import { paneWidth } from '../panes.js'
 const journalW = paneWidth('journal', 420)
 
-const props = defineProps({ id: String })
+const props = defineProps({ id: String, pub: { type: String, default: null } })   // pub: Id des Publikationsbaums — Ansicht als Verweis (Taloan, 21.09.)
+// Im Publikationsbaum ist der Verweis ein Fenster auf den Pflegeknoten: Pflegewerte nur lesen (auch als admin — geändert wird an der Quelle),
+// pflegbar nur, was eine Gruppe an einer Rubrik dieses Baums mitbringt (z. B. SEO fürs Web)
+const pubTree = computed(() => props.pub ? tree.byId.get(props.pub) : null)
 const router = useRouter()
 
 const node = ref(null)
@@ -48,6 +51,8 @@ const roleLabel = { group: 'Produktgruppe', product: 'Produkt', variant: 'Varian
 
 // ---- Sicht: Spalten aus der Matrix Sprache × Kanal (store.viewCells); Reihenfolge Kanal (Stern zuerst), darin Sprache (Stern zuerst)
 const columns = computed(() => {
+  // Publikationsbaum: der Grundwert und die Spalten des Kanals dieses Baums — der Redakteur schreibt auf seiner Kanalachse
+  if (pubTree.value?.channel) { const c = pubTree.value.channel; return [{ locale: null, channel: null, label: '*' }, ...[null, ...(store.viewLocales ?? [])].map(l => ({ locale: l, channel: c, label: `${l ?? '*'}/${c}` }))] }
   const cells = new Set(store.viewCells ?? ['|'])
   const cols = []
   for (const c of [null, ...channels.value]) for (const l of [null, ...locales.value])
@@ -120,7 +125,7 @@ const blocks = computed(() => {
     let defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key), hereLocked: !(!a.levels || a.levels.includes(role)), whenLocked: !whenOk(a) }))   // Gruppe ⌀ steht am Gruppenkopf, hier nur die Ebene des Attributs
     if (store.scope !== 'all') defs = defs.filter(a => !a.hereLocked && !a.whenLocked && g.active)
     if (store.scope === 'only') defs = defs.filter(a => !ROLES.some(r => r !== role && canAt(a, def, r)))
-    return { key: k, label: def?.label?.de || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, active: g.active, defs }
+    return { key: k, label: def?.label?.de || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, fromRole: g.fromRole, active: g.active, defs }
   }).filter(b => b.defs.length && (store.scope === 'all' || b.active))
     // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
@@ -223,6 +228,7 @@ function inherited(def, col) {
   return { value: null, from: null }
 }
 function enabled(def, col, block) {
+  if (props.pub && block.fromRole !== 'rubric') return false   // Pflegewert: im Publikationsbaum nur lesen, geändert wird im Pflegebaum
   return block.active && !def.hereLocked && !def.whenLocked && (!col.locale || def.perLocale) && (!col.channel || def.perChannel)
     && (!col.channel || !def.channels || def.channels.includes(col.channel))
 }
@@ -588,7 +594,7 @@ function cellMenu(e, def, col, block) {
             <td :colspan="columns.length + 1">
               {{ b.label }}
               <router-link :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
-              <span class="muted from" :title="`Gruppe hängt an ${b.fromLabel}`">· von {{ b.from === id ? 'hier' : b.fromLabel }}</span>
+              <span class="muted from" :title="b.fromRole === 'rubric' ? `Gruppe hängt an der Rubrik ${b.fromLabel} — gilt für alles, was darunter verwiesen ist` : (props.pub ? `Gruppe hängt an ${b.fromLabel} im Pflegebaum — hier nur lesen, ändern an der Quelle` : `Gruppe hängt an ${b.fromLabel}`)">· von {{ b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel }}{{ props.pub && b.fromRole !== 'rubric' ? ' · nur lesen' : '' }}</span>
               <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">· ⌀ ab {{ roleLabel[b.activeFrom] }}</span>
             </td>
           </tr>
@@ -596,7 +602,7 @@ function cellMenu(e, def, col, block) {
           <tr v-if="def.type === 'formula' || def.type === 'template'">
             <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
-              <td v-if="!enabled(def, c, b)" class="cell"><div class="cell-box disabled" /></td>
+              <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? 'Pflegewert — im Pflegebaum ändern' : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? (ownOrAxis(def, c) ?? inherited(def, c).value ?? '') : '' }}</div></td>
               <td v-else class="cell">
                 <div class="cell-box formula" :class="{ inherited: ownValue(def.key, c) == null && inherited(def, c).value != null }" tabindex="0"
                   @click="scriptCell = { def, col: c }" @keydown.enter.prevent="scriptCell = { def, col: c }"
@@ -777,7 +783,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section">
+      <div class="section" v-if="!props.pub || node.role === 'rubric'">
         <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen NEU ab diesem Knoten <span class="muted">· hier angehängt, gelten ab hier nach unten — geerbte stehen oben mit Herkunft</span></h2>
         <template v-if="open('groups')">
         <table v-if="attachedSorted.length" class="grid" style="width:auto">
@@ -848,6 +854,7 @@ th.master { color: var(--accent); font-weight: 700; }
 /* aktiv: Farbe und Kante, nie fett — fett ist breiter und liesse die Reiterzeile anders umbrechen */
 .tabbtn.on { background: var(--pane); color: var(--accent); border-color: var(--accent); }
 .tabbtn.locked { opacity: .6; }
+.cell-box.disabled.ro { background: none; color: var(--muted); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* Pflegewert im Publikationsbaum: lesbar, nicht schraffiert */
 /* Abschnitte des Knotens: dieselbe Stufe wie ein Gruppenkopf im Gitter — Band in Akzentfarbe mit Oberkante (Taloan, 17.09.) */
 .section { padding: 0 8px 10px; border-top: 0; }
 .relblock { margin-bottom: 8px; }

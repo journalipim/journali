@@ -112,6 +112,37 @@ public class TreeTests
     }
 
     [Fact]
+    public void Gruppe_an_der_Rubrik_gilt_fuer_die_Verweise_darunter()
+    {
+        // Web-Redakteur hängt „seo“ an seinen Baum (Taloan, 21.09.): das verwiesene Produkt und seine Variante bekommen die Gruppe — mit Herkunft Rubrik;
+        // ein zweiter Baum ohne die Gruppe (Print) kennt sie nicht; die Pflegegruppe kommt zuerst
+        var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product); var v = Ids.New(Roles.Variant);
+        var web = Ids.New(Roles.Rubric); var laptops = Ids.New(Roles.Rubric); var print = Ids.New(Roles.Rubric);
+        var (_, model, tree) = Build(j =>
+        {
+            j.Append("t", Model.GroupStream + "seo", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("seo", Labels.Of("SEO", "SEO"))));
+            Define(j, new AttributeDefinition("seo_title", Labels.Of("SEO-Titel", "SEO title"), AttributeTypes.Text, Group: "seo", Axes: [Axes.Locale, Axes.Channel]));
+            j.Append("t", g, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("G", "G"))));
+            j.Append("t", g, Types.GroupsAttached, Types.Serialize(new GroupsAttached(["mastergroup"])));
+            j.Append("t", p, Types.ProductCreated, Types.Serialize(new ProductCreated(g)));
+            j.Append("t", v, Types.VariantCreated, Types.Serialize(new VariantCreated(p, new())));
+            j.Append("t", web, Types.RubricCreated, Types.Serialize(new RubricCreated(null, new(), "Web", "web")));
+            j.Append("t", web, Types.GroupsAttached, Types.Serialize(new GroupsAttached(["seo"])));
+            j.Append("t", laptops, Types.RubricCreated, Types.Serialize(new RubricCreated(web, new(), "Laptops")));
+            j.Append("t", laptops, Types.NodePlaced, Types.Serialize(new NodePlaced(g)));   // die Gruppe als Verweis — das Produkt hängt über sie drin
+            j.Append("t", print, Types.RubricCreated, Types.Serialize(new RubricCreated(null, new(), "Print", "print")));
+            j.Append("t", print, Types.NodePlaced, Types.Serialize(new NodePlaced(p)));
+        });
+        var eff = tree.EffectiveGroups(tree.Nodes[p]);
+        Assert.Equal(new[] { "mastergroup", "seo" }, eff.Select(e => e.Group).ToArray());
+        Assert.Equal(web, eff.Single(e => e.Group == "seo").From.Id);
+        Assert.Contains(tree.EffectiveGroups(tree.Nodes[v]), e => e.Group == "seo");
+        Assert.Contains(CompletenessRules.ActiveAttributes(tree, model, tree.Nodes[p]), a => a.Key == "seo_title");
+        // die Rubrik selbst: nur ihre eigenen Gruppen, keine Rückkopplung über Verweise
+        Assert.Equal(new[] { "seo" }, tree.EffectiveGroups(tree.Nodes[laptops]).Select(e => e.Group).ToArray());
+    }
+
+    [Fact]
     public void Beleg_pending_bleibt_auch_ohne_Wert()
     {
         // „angefragt bei herbert bis 2026-10-04“ am leeren Wert — der Beleg steht, der Wert nicht (Taloan, 21.09.: „wo ist der Herbert“)
