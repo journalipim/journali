@@ -116,9 +116,11 @@ function onPasteAnywhere(e) {
 async function onDrop(e) {
   dragOver.value = false
   // mit Handle, wenn der Browser es hergibt (Chrome/Edge: getAsFileSystemHandle) — dann ist die Datei später wieder zu öffnen
-  const item = e.dataTransfer.items?.[0]; let h = null
-  try { if (item?.getAsFileSystemHandle) { const x = await item.getAsFileSystemHandle(); if (x?.kind === 'file') h = x } } catch {}
+  // Datei und Handle-Anfrage SOFORT greifen — nach dem ersten await ist der DataTransfer leer (Taloan, 21.09.: „liest nichts mehr ein“)
   const f = e.dataTransfer.files?.[0]; if (!f) return
+  const item = e.dataTransfer.items?.[0]
+  const handleP = item?.getAsFileSystemHandle ? item.getAsFileSystemHandle().catch(() => null) : Promise.resolve(null)
+  let h = null; try { const x = await handleP; if (x?.kind === 'file') h = x } catch {}
   fileHandle.value = h; await takeFile(f); remember(f.name, h)
 }
 function resuggest() { if (source.value) { mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); applyProfile() } planned.value = null }
