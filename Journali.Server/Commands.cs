@@ -711,6 +711,17 @@ public static class Commands
         return Outcome.Ok(e);
     }
 
+    /// <summary>Eigenen Zustand aufheben — es gilt wieder der geerbte (Variante → Produkt). Nur, wo es einen eigenen gibt.</summary>
+    public static Outcome ClearWorkflowState(Ctx c, string id, string workflow)
+    {
+        if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (c.Workflows.Own(id, wf) is null) return Outcome.Bad("Hier gibt es keinen eigenen Zustand.");
+        if (n.Parent is null) return Outcome.Bad("An der Wurzel gibt es nichts zu erben.");
+        var (state, from) = c.Workflows.StateOf(n.Parent, wf, x => c.Tree.Nodes.GetValueOrDefault(x)?.Parent);
+        return Outcome.Ok(c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, null, null, $"↑ erbt „{wf.State(state)?.Label.GetValueOrDefault("de") ?? state}“")));
+    }
+
     public static Outcome AssignWorkflow(Ctx c, string id, string workflow, string? user)
     {
         if (c.Workflows is null || !c.Workflows.All.ContainsKey(workflow)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");

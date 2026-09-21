@@ -113,6 +113,10 @@ public class ReleaseTests
         w.J.Append("t", w.V1, Types.WorkflowStateSet, Types.Serialize(new WorkflowStateSet("review", "rework", "reject", "x"))); Projector.CatchUp(w.J, wfs);
         Assert.Equal(("rework", null), wfs.StateOf(w.V1, wf, parentOf));            // eigener Schritt schlägt den Vater
         Assert.Equal(("approved", w.P), wfs.StateOf(w.V2, wf, parentOf));           // die andere folgt weiter
+        // eigenen Zustand aufheben → erbt wieder (Taloan, 22.09.)
+        w.J.Append("t", w.V1, Types.WorkflowStateSet, Types.Serialize(new WorkflowStateSet("review", null, null, "↑ erbt"))); Projector.CatchUp(w.J, wfs);
+        Assert.Null(wfs.Own(w.V1, wf));
+        Assert.Equal(("approved", w.P), wfs.StateOf(w.V1, wf, parentOf));
     }
 
     [Fact]

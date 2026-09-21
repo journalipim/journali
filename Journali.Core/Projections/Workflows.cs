@@ -92,6 +92,7 @@ public sealed class Workflows : IProjection
             {
                 var s = Types.Deserialize<WorkflowStateSet>(entry.Payload);
                 if (!_nodes.TryGetValue(entry.Stream, out var d)) _nodes[entry.Stream] = d = new();
+                if (string.IsNullOrEmpty(s.State)) { d.Remove(s.Workflow); break; }   // aufgehoben: kein eigener Eintrag mehr, der Vater gilt
                 if (!d.TryGetValue(s.Workflow, out var nw)) d[s.Workflow] = nw = new NodeWorkflow { Workflow = s.Workflow };
                 nw.State = s.State; nw.Transition = s.Transition; nw.Note = s.Note; nw.Number = entry.Number; nw.At = entry.At; nw.Actor = entry.Actor;
                 nw.Assigned = null;   // ein Schritt löst die Zuständigkeit — der nächste Übergang gehört wieder der Rolle

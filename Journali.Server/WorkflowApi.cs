@@ -93,7 +93,7 @@ public static class WorkflowApi
                 if (done) continue;
                 // Varianten mit eigenem Stand in diesem Workflow, der nicht der Zielzustand ist: die haben den Weg bewusst verlassen
                 var back = n.Role != Roles.Variant && kind == "release"
-                    ? sellables.Where(v => c.Workflows.Of(v.Id).ContainsKey(wf.Key) && c.Workflows.StateOf(v.Id, wf) != t.To).Select(v => $"{NodeRow.LabelOf(tree, model, v)}: {wf.State(c.Workflows.StateOf(v.Id, wf))?.Label.GetValueOrDefault("de") ?? c.Workflows.StateOf(v.Id, wf)}").ToList()
+                    ? sellables.Where(v => c.Workflows.Own(v.Id, wf) is { } o && o != t.To).Select(v => $"{NodeRow.LabelOf(tree, model, v)}: {wf.State(c.Workflows.StateOf(v.Id, wf))?.Label.GetValueOrDefault("de") ?? c.Workflows.StateOf(v.Id, wf)}").ToList()
                     : [];
                 // Produkt/Gruppe mit Freigabe-Zustand, aber ohne freigegebene Variante: die Ausleitung lässt es weg — Tatsache zeigen, nicht den Zustand ändern (Taloan, 21.09.)
                 pending.Add(new { effect = eff, canFix = back.Count == 0 && n.Role == Roles.Variant, why = back.Count > 0 ? string.Join(" · ", back) : null });
@@ -119,6 +119,7 @@ public static class WorkflowApi
         }));
         api.MapPost("/nodes/{id}/workflow/{wf}/{transition}", (string id, string wf, string transition, StepBody? body, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.WorkflowStep(x, id, wf, transition, body?.Note)));
+        api.MapDelete("/nodes/{id}/workflow/{wf}", (string id, string wf, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.ClearWorkflowState(x, id, wf)));   // eigenen Zustand aufheben → erben
         api.MapPut("/nodes/{id}/workflow/{wf}/assign", (string id, string wf, AssignBody body, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.AssignWorkflow(x, id, wf, body.User)));
     }

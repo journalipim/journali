@@ -486,7 +486,7 @@ public sealed record WfTransition(string Key, string From, string To, Labels Lab
 public sealed record WorkflowDefined(Labels Label, List<WfState> States, List<WfTransition> Transitions, string? Start = null, string[]? Roles = null, string[]? Families = null);
 public sealed record WorkflowRetired();
 /// <summary>Am Knoten: ein Schritt gegangen — der Zustand danach, der Übergang, die Notiz.</summary>
-public sealed record WorkflowStateSet(string Workflow, string State, string? Transition = null, string? Note = null);
+public sealed record WorkflowStateSet(string Workflow, string? State, string? Transition = null, string? Note = null);   // State leer = eigenen Zustand aufheben, es gilt wieder der geerbte (Taloan, 22.09.2026)
 /// <summary>Am Knoten: Zuständigkeit für den nächsten Schritt — eine Person (Benutzer-Key) oder null (die Rolle des Übergangs).</summary>
 public sealed record WorkflowAssigned(string Workflow, string? User);
 

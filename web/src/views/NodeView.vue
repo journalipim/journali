@@ -542,6 +542,11 @@ async function wfHistory(w) {
   }
   dialog.help({ title, rows: rows.length ? rows : [['—', 'noch kein Schritt']] })
 }
+async function wfClear(w) {
+  if (!await dialog.confirm({ title: `„${w.label?.de || w.workflow}“ hier aufheben?`, text: 'Der eigene Zustand fällt weg; es gilt wieder der geerbte.', ok: '↑ erben' })) return
+  await command(() => api.del(`${nodeUrl()}/workflow/${w.workflow}`))
+  api.get(`${nodeUrl()}/workflow`).then(x => { workflows.value = x }).catch(() => {})
+}
 async function wfAssign(w) {
   // Vorschlagsliste (Taloan, 21.09.: „oder soll ich alles auswendig wissen?“): Personen mit einer Rolle des nächsten Schritts zuerst, dann die anderen
   let people = []; try { people = await api.get('/api/auth/people') } catch {}
@@ -862,6 +867,7 @@ function cellMenu(e, def, col, block) {
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
               <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
+              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="eigenen Zustand aufheben — es gilt wieder der des Produkts bzw. der Gruppe">↑ erben</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
