@@ -13,13 +13,13 @@ const COLORS = [['muted', 'grau'], ['warn', 'gelb'], ['neg', 'rot'], ['accent', 
 const ROLES = [['group', '▣ Gruppe'], ['product', '▦ Produkt'], ['variant', '◆ Variante']]
 const EFFECTS = computed(() => { const m = store.model; const out = []; for (const c of m?.channels ?? []) { out.push([`release:${c.key}`, `Freigabe ${c.key}`], [`revoke:${c.key}`, `Freigabe ${c.key} zurück`]) } out.push(['status:active', 'Status aktiv'], ['status:draft', 'Status Entwurf'], ['status:discontinued', 'Status ausgelaufen']); return out })
 async function load() { try { list.value = await api.get('/api/workflows'); if (cur.value) cur.value = clone(list.value.find(w => w.key === cur.value.key) ?? list.value[0] ?? null); else cur.value = clone(list.value[0] ?? null) } catch (e) { store.toast(e.message) } try { roles.value = (await api.get('/api/auth/roles')).map(r => r.key) } catch { roles.value = ['admin', 'editor'] } }
-const clone = w => w ? JSON.parse(JSON.stringify({ key: w.key, label: w.label ?? {}, start: w.start, roles: w.roles ?? [], families: w.families ?? [], states: w.states.map(s => ({ key: s.key, label: s.label ?? {}, color: s.color ?? 'muted', final: !!s.final, x: s.x ?? null, y: s.y ?? null, count: s.count ?? 0 })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label ?? {}, from: t.from, to: t.to, roles: t.roles ?? [], noteRequired: !!t.noteRequired, effects: t.effects ?? [], escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles ?? [] })) })) : null
+const clone = w => w ? JSON.parse(JSON.stringify({ key: w.key, label: w.label ?? {}, start: w.start, roles: w.roles ?? [], families: w.families ?? [], states: w.states.map(s => ({ key: s.key, label: s.label ?? {}, color: s.color ?? 'muted', final: !!s.final, x: s.x ?? null, y: s.y ?? null, count: s.count ?? 0 })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label ?? {}, from: t.from, to: t.to, roles: t.roles ?? [], noteRequired: !!t.noteRequired, effects: t.effects ?? [], escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles ?? [], fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null })) })) : null
 function pick(w) { cur.value = clone(w); dirty.value = false }
 function touch() { dirty.value = true }
 async function save() {
   const w = cur.value; if (!w) return
   try {
-    await api.post(`/api/workflows/${encodeURIComponent(w.key)}`, { label: w.label, states: w.states.map(s => ({ key: s.key, label: s.label, color: s.color, final: s.final, x: s.x, y: s.y })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label, from: t.from, to: t.to, roles: t.roles.length ? t.roles : null, noteRequired: t.noteRequired, effects: t.effects.length ? t.effects : null, escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles?.length ? t.escalateRoles : null })), start: w.start, roles: w.roles.length ? w.roles : null, families: null }, 'PUT')
+    await api.post(`/api/workflows/${encodeURIComponent(w.key)}`, { label: w.label, states: w.states.map(s => ({ key: s.key, label: s.label, color: s.color, final: s.final, x: s.x, y: s.y })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label, from: t.from, to: t.to, roles: t.roles.length ? t.roles : null, noteRequired: t.noteRequired, effects: t.effects.length ? t.effects : null, escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles?.length ? t.escalateRoles : null, fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null })), start: w.start, roles: w.roles.length ? w.roles : null, families: null }, 'PUT')
     dirty.value = false; store.toast(`Workflow „${w.label?.de || w.key}“ gespeichert`, 'ok'); await load()
   } catch (e) { store.toast(e.message) }
 }
@@ -38,6 +38,11 @@ function delState(i) { const w = cur.value; const k = w.states[i].key; if (w.tra
 function addTransition() { const w = cur.value; const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[0]?.key ?? '', to: w.states[1]?.key ?? w.states[0]?.key ?? '', roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); touch() }
 const selState = ref(null), selTrans = ref(null)   // markierte Zeile (Grafik ↔ Tabelle)
 const W = 150, H = 46, GRID = 20
+// Andockpunkte (Taloan, 21.09.): je Seite 0 · ¼ · ½ · ¾ · 1 — Ecken, Mitten, Viertel; Schlüssel „seite:anteil“
+const PORTS = [] ; for (const side of ['top', 'bottom', 'left', 'right']) for (const f of [0, 0.25, 0.5, 0.75, 1]) PORTS.push(`${side}:${f}`)
+function portXY(p, key) { const [side, f] = key.split(':'); const a = Number(f); return side === 'top' ? { x: p.x + W * a, y: p.y } : side === 'bottom' ? { x: p.x + W * a, y: p.y + H } : side === 'left' ? { x: p.x, y: p.y + H * a } : { x: p.x + W, y: p.y + H * a } }
+// nächster Andockpunkt der Kachel zu einem Punkt
+function nearestPort(p, to) { let best = null, bd = Infinity; for (const k of PORTS) { const q = portXY(p, k); const d = Math.hypot(q.x - to.x, q.y - to.y); if (d < bd) { bd = d; best = k } } return best }
 const snap = v => Math.round(v / GRID) * GRID
 const svgEl = ref(null)
 // Lage: gespeichert (x/y) oder Reihe — beim ersten Ziehen bekommt jede Kachel ihre Lage
@@ -49,18 +54,32 @@ function stateDown(i, e) {
   const w = cur.value; w.states.forEach((s, k) => { const p = posOf(s, k); s.x = p.x; s.y = p.y })   // Lage festhalten, damit die anderen nicht springen
   const p = svgPoint(e); drag.value = { kind: 'move', i, dx: p.x - w.states[i].x, dy: p.y - w.states[i].y }
 }
-function linkDown(i, e) { selState.value = i; const p = posOf(cur.value.states[i], i); drag.value = { kind: 'link', i, x: p.x + W, y: p.y + H - 8, tx: p.x + W, ty: p.y + H - 8 } }
+function linkDown(i, e, port = 'right:0.75') { selState.value = i; const q = portXY(posOf(cur.value.states[i], i), port); drag.value = { kind: 'link', i, port, x: q.x, y: q.y, tx: q.x, ty: q.y } }
+// Ende eines markierten Übergangs anfassen und an einen anderen Andockpunkt (auch einer anderen Kachel) ziehen
+function endDown(n, end, e) { const a = sketch.value.arrows[n]; const q = end === 'from' ? a.p1 : a.p2; drag.value = { kind: 'reattach', n, end, x: q.x, y: q.y, tx: q.x, ty: q.y } }
+function portUp(j, port) {
+  const d = drag.value; if (!d) return; drag.value = null
+  const w = cur.value
+  if (d.kind === 'reattach') { const t = w.transitions[d.n]; if (d.end === 'from') { t.from = w.states[j].key; t.fromPort = port } else { t.to = w.states[j].key; t.toPort = port } touch(); return }
+  if (d.kind !== 'link' || d.i === j) return
+  const k = 'step' + (w.transitions.length + 1)
+  w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[d.i].key, to: w.states[j].key, roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [], fromPort: d.port, toPort: port }); selTrans.value = w.transitions.length - 1; touch()
+}
 function canvasMove(e) {
   const d = drag.value; if (!d) return; const p = svgPoint(e)
   if (d.kind === 'move') { const s = cur.value.states[d.i]; s.x = Math.max(0, snap(p.x - d.dx)); s.y = Math.max(0, snap(p.y - d.dy)); touch() }
+  else if (d.kind === 'label') { const tr = cur.value.transitions[d.n]; tr.labelX = Math.round(p.x - d.dx); tr.labelY = Math.round(p.y - d.dy); touch() }
   else { d.tx = p.x; d.ty = p.y }
 }
-function stateUp(j) {
-  const d = drag.value; drag.value = null; if (!d || d.kind !== 'link' || d.i === j) return
-  const w = cur.value; const k = 'step' + (w.transitions.length + 1)
-  w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[d.i].key, to: w.states[j].key, roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); selTrans.value = w.transitions.length - 1; touch()
+function stateUp(j, e) {
+  // loslassen auf der Kachel (nicht auf einem Punkt): der nächste Andockpunkt zur Maus
+  const d = drag.value; if (!d || d.kind === 'move') { drag.value = null; return }
+  portUp(j, nearestPort(posOf(cur.value.states[j], j), svgPoint(e)))
 }
 function canvasUp() { drag.value = null }
+function labelDown(n, e) { selTrans.value = n; selState.value = null; const a = sketch.value.arrows[n]; const p = svgPoint(e); drag.value = { kind: 'label', n, dx: p.x - a.lx, dy: p.y - a.ly } }
+async function editLabel(n) { const t = cur.value.transitions[n]; const v = await dialog.prompt({ title: 'Beschriftung des Übergangs', value: t.label?.de ?? '', ok: '✎ OK' }); if (v == null) return; t.label = { ...(t.label ?? {}), de: v.trim() }; touch() }
+async function editState(i) { const s = cur.value.states[i]; const v = await dialog.prompt({ title: 'Bezeichnung des Zustands', value: s.label?.de ?? '', ok: '✎ OK' }); if (v == null) return; s.label = { ...(s.label ?? {}), de: v.trim() }; touch() }
 function addStateAt() { const w = cur.value; const k = 'state' + (w.states.length + 1); const last = w.states.length ? posOf(w.states[w.states.length - 1], w.states.length - 1) : { x: -W - 40, y: 70 }; w.states.push({ key: k, label: { de: k, en: k }, color: 'muted', final: false, x: last.x + W + 40, y: last.y, count: 0 }); selState.value = w.states.length - 1; touch() }
 function delSelected() {
   if (selTrans.value != null) { cur.value.transitions.splice(selTrans.value, 1); selTrans.value = null; touch(); return }
@@ -82,13 +101,15 @@ const sketch = computed(() => {
   const arrows = w.transitions.map(t => {
     const a = pos[idx[t.from] ?? 0], b = pos[idx[t.to] ?? 0]
     const ca = { x: a.x + W / 2, y: a.y + H / 2 }, cb = { x: b.x + W / 2, y: b.y + H / 2 }
-    if (t.from === t.to) return { t, d: `M${ca.x - 20},${a.y} C${ca.x - 40},${a.y - 45} ${ca.x + 40},${a.y - 45} ${ca.x + 20},${a.y}`, lx: ca.x, ly: a.y - 36 }
-    const p1 = edge(ca, cb), p2 = edge(cb, ca)
+    if (t.from === t.to) return { t, p1: { x: ca.x - 20, y: a.y }, p2: { x: ca.x + 20, y: a.y }, d: `M${ca.x - 20},${a.y} C${ca.x - 40},${a.y - 45} ${ca.x + 40},${a.y - 45} ${ca.x + 20},${a.y}`, lx: t.labelX ?? ca.x, ly: t.labelY ?? a.y - 36 }
+    let p1, p2
+    if (t.fromPort && t.toPort) { p1 = portXY(a, t.fromPort); p2 = portXY(b, t.toPort) }
+    else { p1 = t.fromPort ? portXY(a, t.fromPort) : edge(ca, cb); p2 = t.toPort ? portXY(b, t.toPort) : edge(cb, ca); if (!t.fromPort) p1 = portXY(a, nearestPort(a, p2)); if (!t.toPort) p2 = portXY(b, nearestPort(b, p1)) }
     const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2, len = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1
     const nx = -(p2.y - p1.y) / len, ny = (p2.x - p1.x) / len, bend = Math.min(40, 12 + len * 0.12)   // Bogen nach links der Richtung: Hin und Zurück trennen sich
     const cx = mx + nx * bend, cy = my + ny * bend
-    const off = bend + 10
-    return { t, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: mx + nx * off, ly: my + ny * off + 4, anchor: nx > 0.3 ? 'start' : nx < -0.3 ? 'end' : 'middle' }
+    const bx = 0.25 * p1.x + 0.5 * cx + 0.25 * p2.x, by = 0.25 * p1.y + 0.5 * cy + 0.25 * p2.y   // Punkt auf dem Bogen (t = ½)
+    return { t, p1, p2, d: `M${p1.x},${p1.y} Q${cx},${cy} ${p2.x},${p2.y}`, lx: t.labelX ?? bx, ly: t.labelY ?? by + 4, anchor: 'middle' }
   })
   const width = snap(Math.max(600, ...pos.map(p => p.x + W + 60))), height = snap(Math.max(240, ...pos.map(p => p.y + H + 60)))
   return { W, H, pos, width, height, arrows }
@@ -113,20 +134,23 @@ onMounted(load)
         <span class="muted">gilt für</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
         <span class="muted" style="font-size:11px">(nichts angehakt = alle)</span>
       </div>
-      <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · vom ● auf eine andere Kachel ziehen = Übergang · Klick markiert · Entf löscht · Doppelklick = Start <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button></div>
+      <div v-if="sketch" class="muted" style="font-size:12px;margin-bottom:4px">Kachel ziehen = verschieben · Kachel markieren, von einem Andockpunkt auf eine andere Kachel ziehen = Übergang · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Entf löscht <button class="x" style="margin-left:8px" @click="addStateAt">+ Zustand</button></div>
       <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none`" font-size="11" font-family="system-ui"
         @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
         <defs><pattern id="wf-grid" :width="GRID" :height="GRID" patternUnits="userSpaceOnUse"><path :d="`M ${GRID} 0 L 0 0 0 ${GRID}`" fill="none" stroke="var(--line)" stroke-width="0.5" opacity="0.6" /></pattern><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
         <rect x="0" y="0" :width="sketch.width" :height="sketch.height" fill="url(#wf-grid)" @mousedown="selState = null; selTrans = null" />
-        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'">{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
-        <line v-if="drag?.kind === 'link'" :x1="drag.x" :y1="drag.y" :x2="drag.tx" :y2="drag.ty" stroke="var(--accent)" stroke-dasharray="4 3" />
-        <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : 'cursor:grab'" @mousedown.prevent.stop="stateDown(i, $event)" @mouseup.stop="stateUp(i); canvasUp()" @dblclick="cur.start = s.key; touch()">
+        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null"><path :d="a.d" fill="none" :stroke="selTrans === n ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'" stroke="var(--bg)" stroke-width="4" paint-order="stroke" stroke-linejoin="round" style="cursor:move;user-select:none" @mousedown.stop.prevent="labelDown(n, $event)" @dblclick.stop="editLabel(n)"><title>ziehen = verschieben · Doppelklick = bearbeiten</title>{{ a.t.label?.de || a.t.key }}<tspan v-if="a.t.roles.length" fill="var(--muted)"> · {{ a.t.roles.join('/') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" fill="var(--warn)"> ⏰{{ a.t.escalateAfterDays }}d</tspan></text></g>
+        <line v-if="drag?.kind === 'link' || drag?.kind === 'reattach'" :x1="drag.x" :y1="drag.y" :x2="drag.tx" :y2="drag.ty" stroke="var(--accent)" stroke-dasharray="4 3" />
+        <g v-if="selTrans != null && sketch.arrows[selTrans]"><circle :cx="sketch.arrows[selTrans].p1.x" :cy="sketch.arrows[selTrans].p1.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'from', $event)"><title>Anfang umhängen</title></circle><circle :cx="sketch.arrows[selTrans].p2.x" :cy="sketch.arrows[selTrans].p2.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'to', $event)"><title>Ende umhängen</title></circle></g>
+        <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : 'cursor:grab'" @mousedown.prevent.stop="stateDown(i, $event)" @mouseup.stop="stateUp(i, $event)" @dblclick="editState(i)">
           <rect :x="sketch.pos[i].x" :y="sketch.pos[i].y" :width="W" :height="H" rx="6" :fill="selState === i ? 'var(--accent-soft)' : 'var(--pane)'" :stroke="color(s.color)" :stroke-width="s.key === cur.start ? 2.5 : 1.5" />
           <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 20" text-anchor="middle" fill="var(--text)" font-weight="600">{{ s.label?.de || s.key }}</text>
           <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 36" text-anchor="middle" fill="var(--muted)">{{ s.count ?? 0 }} Knoten{{ s.final ? ' · Ende' : '' }}{{ s.key === cur.start ? ' · Start' : '' }}</text>
           <circle v-if="s.key === cur.start" :cx="sketch.pos[i].x - 12" :cy="sketch.pos[i].y + H / 2" r="5" fill="var(--text)"><title>Start</title></circle>
           <g v-if="s.final"><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="6" fill="none" stroke="var(--text)" stroke-width="1.5" /><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="3" fill="var(--text)" /></g>
-          <circle :cx="sketch.pos[i].x + W" :cy="sketch.pos[i].y + H - 8" r="5" fill="var(--accent)" style="cursor:crosshair" @mousedown.stop.prevent="linkDown(i, $event)"><title>von hier auf eine andere Kachel ziehen = neuer Übergang</title></circle>
+          <template v-if="selState === i || drag">
+            <circle v-for="pk in PORTS" :key="pk" :cx="portXY(sketch.pos[i], pk).x" :cy="portXY(sketch.pos[i], pk).y" r="3.5" :fill="drag ? 'var(--accent)' : 'var(--pane)'" stroke="var(--accent)" stroke-width="1" style="cursor:crosshair" @mousedown.stop.prevent="linkDown(i, $event, pk)" @mouseup.stop="portUp(i, pk)"><title>{{ pk }} — ziehen = Übergang ab hier; loslassen = hier andocken</title></circle>
+          </template>
         </g>
       </svg>
       <div class="row" style="gap:32px;align-items:flex-start;flex-wrap:wrap;margin-top:12px">
