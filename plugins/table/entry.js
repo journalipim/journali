@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-34ea3fa7] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-34ea3fa7] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-34ea3fa7] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-34ea3fa7], .tstep input[type=text][data-v-34ea3fa7] { font-size: 12px;\n}\n.fld[data-v-34ea3fa7] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\n.x.on[data-v-34ea3fa7] { color: var(--accent); font-weight: 600;\n}\n.section[data-v-34ea3fa7] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-34ea3fa7] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-34ea3fa7] { font-weight: 400;\n}\n.drop.over[data-v-34ea3fa7] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-34ea3fa7] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-34ea3fa7] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-34ea3fa7] { opacity: .5;\n}\n.samples[data-v-34ea3fa7] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-34ea3fa7] { font-size: 13px;\n}\n.out[data-v-34ea3fa7] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-34ea3fa7] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-34ea3fa7] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-34ea3fa7]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-461a3afb] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-461a3afb] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-461a3afb] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-461a3afb], .tstep input[type=text][data-v-461a3afb] { font-size: 12px;\n}\n.fld[data-v-461a3afb] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\n.x.on[data-v-461a3afb] { color: var(--accent); font-weight: 600;\n}\n.section[data-v-461a3afb] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-461a3afb] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-461a3afb] { font-weight: 400;\n}\n.drop.over[data-v-461a3afb] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-461a3afb] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-461a3afb] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-461a3afb] { opacity: .5;\n}\n.samples[data-v-461a3afb] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-461a3afb] { font-size: 13px;\n}\n.out[data-v-461a3afb] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-461a3afb] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-461a3afb] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-461a3afb]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -370,6 +370,14 @@ const _sfc_main$1 = {
         busy.value = "";
       }
     }
+    let profileMapping = null;
+    function applyProfile() {
+      if (!profileMapping) return;
+      for (const m2 of mapping.value) {
+        const s = profileMapping[m2.column];
+        if (s) Object.assign(m2, JSON.parse(JSON.stringify(s)));
+      }
+    }
     function setSource(t) {
       if (t.sheets && !t.columns) {
         t.sheet = t.sheets[0]?.name;
@@ -379,6 +387,7 @@ const _sfc_main$1 = {
       }
       source.value = t;
       mapping.value = strictify(suggest(t.columns, t.rows, model.value, { external: external.value || null }));
+      applyProfile();
       planned.value = null;
       result.value = null;
       say(`${t.name}: ${t.rows.length} Zeilen, ${t.columns.length} Spalten — ${mapping.value.filter((m2) => m2.target === "attr").length} Spalten zugeordnet, ${mapping.value.filter((m2) => m2.target === "new").length} neu, ${mapping.value.filter((m2) => m2.target === "skip").length} übergangen`);
@@ -400,7 +409,10 @@ const _sfc_main$1 = {
       if (f) takeFile(f);
     }
     function resuggest() {
-      if (source.value) mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null }));
+      if (source.value) {
+        mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null }));
+        applyProfile();
+      }
       planned.value = null;
     }
     function strictify(m2) {
@@ -566,6 +578,7 @@ const _sfc_main$1 = {
     const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map((m2) => [m2.column, { target: m2.target, attribute: m2.attribute, locale: m2.locale, newKey: m2.newKey, newType: m2.newType, newGroup: m2.newGroup, steps: m2.steps?.length ? m2.steps : void 0 }])) });
     function profileSet(p) {
       if (!p) {
+        profileMapping = null;
         target.value = null;
         role.value = "";
         external.value = "";
@@ -575,10 +588,8 @@ const _sfc_main$1 = {
       role.value = p.role ?? "";
       external.value = p.external ?? "";
       if (p.target && tree.byId.get(p.target)) pickTarget(tree.byId.get(p.target));
-      if (p.mapping && source.value) for (const m2 of mapping.value) {
-        const s = p.mapping[m2.column];
-        if (s) Object.assign(m2, s);
-      }
+      profileMapping = p.mapping ?? null;
+      if (source.value) applyProfile();
       planned.value = null;
     }
     onMounted(async () => {
@@ -1805,7 +1816,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-34ea3fa7"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-461a3afb"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();

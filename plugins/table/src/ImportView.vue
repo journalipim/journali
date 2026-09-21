@@ -83,17 +83,21 @@ async function takeFile(file, keepSheet = false) {
     if (sheet && source.value?.sheets?.some(s => s.name === sheet)) pickSheet(sheet)
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
+// Zuordnung des gewählten Profils — gilt auch für eine Datei, die erst danach kommt (Taloan, 21.09.: „Profil gespeichert, raus, rein, Datei gedroppt — wo ist meine Funktion?“)
+let profileMapping = null
+function applyProfile() { if (!profileMapping) return; for (const m of mapping.value) { const s = profileMapping[m.column]; if (s) Object.assign(m, JSON.parse(JSON.stringify(s))) } }
 function setSource(t) {
   if (t.sheets && !t.columns) { t.sheet = t.sheets[0]?.name; const s = t.sheets[0]; t.columns = s?.columns ?? []; t.rows = s?.rows ?? [] }
   source.value = t
   mapping.value = strictify(suggest(t.columns, t.rows, model.value, { external: external.value || null }))
+  applyProfile()
   planned.value = null; result.value = null
   say(`${t.name}: ${t.rows.length} Zeilen, ${t.columns.length} Spalten — ${mapping.value.filter(m => m.target === 'attr').length} Spalten zugeordnet, ${mapping.value.filter(m => m.target === 'new').length} neu, ${mapping.value.filter(m => m.target === 'skip').length} übergangen`)
 }
 function pickSheet(name) { const s = source.value.sheets.find(x => x.name === name); if (!s) return; setSource({ ...source.value, sheet: name, columns: s.columns, rows: s.rows }) }
 function takePaste() { const t = parseDelimited(pasteText.value); if (!t.columns.length) return; setSource({ ...t, name: 'Zwischenablage' }); pasteText.value = '' }
 function onDrop(e) { dragOver.value = false; const f = e.dataTransfer.files?.[0]; if (f) takeFile(f) }
-function resuggest() { if (source.value) mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); planned.value = null }
+function resuggest() { if (source.value) { mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); applyProfile() } planned.value = null }
 // Knotenmodus: was nicht zum Knoten passt, wird übergangen und gezählt — Vorlage vom Knoten exportieren, dann passt es
 function strictify(m) {
   if (!fixed.value) return m
@@ -196,10 +200,11 @@ async function run() {
 // ---- Profil: Zuordnung (je Spaltenname), Ziel, Rolle, Kennung
 const profileGet = () => ({ target: target.value?.id ?? null, role: role.value, external: external.value, mapping: Object.fromEntries(mapping.value.map(m => [m.column, { target: m.target, attribute: m.attribute, locale: m.locale, newKey: m.newKey, newType: m.newType, newGroup: m.newGroup, steps: m.steps?.length ? m.steps : undefined }])) })
 function profileSet(p) {
-  if (!p) { target.value = null; role.value = ''; external.value = ''; planned.value = null; return }
+  if (!p) { profileMapping = null; target.value = null; role.value = ''; external.value = ''; planned.value = null; return }
   role.value = p.role ?? ''; external.value = p.external ?? ''
   if (p.target && tree.byId.get(p.target)) pickTarget(tree.byId.get(p.target))
-  if (p.mapping && source.value) for (const m of mapping.value) { const s = p.mapping[m.column]; if (s) Object.assign(m, s) }
+  profileMapping = p.mapping ?? null
+  if (source.value) applyProfile()
   planned.value = null
 }
 onMounted(async () => {
