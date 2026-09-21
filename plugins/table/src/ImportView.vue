@@ -148,7 +148,7 @@ const layout = ref(localStorage.getItem('journali.import.layout') || 'rows')
 function setLayout(l) { layout.value = l; localStorage.setItem('journali.import.layout', l) }
 const samples = i => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => String(v ?? '').trim() !== '').slice(0, 3).map(v => String(v).slice(0, 40))
 const OPS = transform.OPS
-const FIELDS = { replace: ['find', 'with', 'regex'], prefix: ['text'], suffix: ['text'], static: ['text'], default: ['text'], combine: ['columns', 'sep'], split: ['sep', 'index'], number: ['decimal'], boolean: ['yes'], date: ['format'], map: ['pairs', 'other'], when: ['test', 'value', 'then', 'else'] }
+const FIELDS = { replace: ['find', 'with', 'regex'], prefix: ['text'], suffix: ['text'], static: ['text'], default: ['text'], combine: ['columns', 'sep'], split: ['sep', 'index'], number: ['decimal'], boolean: [], date: ['format'], map: ['pairs', 'other'], when: ['test', 'value', 'then', 'else'] }
 // Beschriftung vor dem Feld — ein Platzhalter allein ist weg, sobald etwas drinsteht (Taloan, 21.09.: „Was soll ich hier eingeben?“)
 const FIELD_LABEL = { find: 'suche', with: 'ersetze durch', text: 'Text', columns: 'Spalten', sep: 'Trenner', index: 'Teil', yes: 'weitere „ja“-Wörter', pairs: 'alt=neu', other: 'sonst', value: 'Wert', then: 'dann', else: 'sonst', decimal: 'Dezimal', format: 'Format', test: 'Prüfung' }
 const opHint = op => OPS.find(o => o[0] === op)?.[2] ?? ''

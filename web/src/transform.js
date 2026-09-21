@@ -13,7 +13,7 @@ export const OPS = [
   ['combine', 'Spalten verbinden', 'Spaltennamen mit Komma, {} steht für diese Spalte; dazwischen der Trenner — z. B. Spalten „brand,{}“ Trenner „ “'],
   ['split', 'Aufteilen', 'zerlegt am Trenner; Teil = eine Zahl: 0 = erster Teil, 1 = zweiter, -1 = letzter; leer = alle Teile, mit Komma verbunden'],
   ['number', 'Zahl', 'macht eine Zahl daraus: Einheit und Leerzeichen fallen weg, Tausenderzeichen auch („22 mm“ → 22, „1.234,5“ → 1234.5); Dezimalzeichen wird geraten oder gesetzt'],
-  ['boolean', 'Wahrheitswerterkennung', 'true, wenn in der Zelle ja, yes, true, 1, x, wahr, y, t oder j steht — oder eines deiner weiteren Wörter; sonst false; leere Zelle bleibt leer'],
+  ['boolean', 'Wahrheitswerterkennung', 'ja, yes, true, 1, x, wahr, y, t, j → true · sonst false'],
   ['date', 'Datum', 'liest das Datum im angegebenen Format (oder rät es) und schreibt JJJJ-MM-TT; auch Unix-Zeit (Sekunden/Millisekunden) und Excel-Zahlen'],
   ['htmldecode', 'HTML-Entities auflösen', '&amp; → &, &lt; → <, &#65; → A'],
   ['striphtml', 'HTML entfernen', 'Tags weg, der Text bleibt'],
