@@ -3092,15 +3092,15 @@ async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey
   }
   const sysCol = (sys, note) => ({ key: `journali_${sys}_${rootId}`, sys, note });
   const columns = [
+    sysCol("id", "journali-Id des Knotens — nicht ändern. Zeile kopiert? Dann diese Zelle leeren, sonst erkennt der Import die Kopie an den Werten"),
+    sysCol("parent", "Elternteil (journali-Id) — nicht ändern"),
+    sysCol("role", "Knotentyp — nur zum Lesen"),
+    sysCol("status", "Status — nur zum Lesen"),
     { key: "sku" },
     sysCol("label", "Name im Baum — nur zum Lesen"),
     ...extra.map((x) => ({ key: x.key, of: x.of })),
     ...axes.map((a) => ({ key: "axis:" + a })),
-    ...cols.flatMap((c) => c.perLocale ? locales.map((l) => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }]),
-    sysCol("id", "journali-Id des Knotens — nicht ändern. Zeile kopiert? Dann diese Zelle leeren, sonst erkennt der Import die Kopie an den Werten"),
-    sysCol("parent", "Elternteil (journali-Id) — nicht ändern"),
-    sysCol("role", "Knotentyp — nur zum Lesen"),
-    sysCol("status", "Status — nur zum Lesen")
+    ...cols.flatMap((c) => c.perLocale ? locales.map((l) => ({ key: `${c.key}_${l}`, attr: c.key, locale: l })) : [{ key: c.key, attr: c.key, locale: locales[0] }])
   ];
   const rows = nodes.map((r) => columns.map((c) => {
     if (c.attr) {
