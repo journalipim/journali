@@ -3090,7 +3090,7 @@ async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey
     for (let p = byId.get(root)?.parent; p; p = byId.get(p)?.parent) rootId = p;
   } catch {
   }
-  const sysCol = (sys, note) => ({ key: `journali_${sys}_${rootId}`, sys, note });
+  const sysCol = (sys, note) => ({ key: `journali_${sys}_${rootId}`, sys, note, hidden: sys !== "id" && sys !== "label" });
   const columns = [
     sysCol("id", "journali-Id des Knotens — nicht ändern. Zeile kopiert? Dann diese Zelle leeren, sonst erkennt der Import die Kopie an den Werten"),
     sysCol("parent", "Elternteil (journali-Id) — nicht ändern"),
@@ -3163,7 +3163,7 @@ function toJsonTree({ columns, rows }) {
 }
 function workbook(X, { columns, rows }, legendRows = null, sheet = "Daten") {
   const ws = X.utils.aoa_to_sheet([columns.map((c) => c.key), ...rows]);
-  ws["!cols"] = columns.map((c) => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)) }));
+  ws["!cols"] = columns.map((c) => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)), hidden: !!c.hidden }));
   columns.forEach((c, i) => {
     const req = c.def?.required;
     const note = c.note ?? (req && typeof req === "object" && Object.keys(req).length ? "Pflicht: " + Object.entries(req).map(([ch, l]) => `${ch} ${l.join(",")}`).join(" · ") : req ? "Pflicht" : null);
