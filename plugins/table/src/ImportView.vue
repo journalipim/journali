@@ -341,7 +341,8 @@ onMounted(async () => {
 .tstep { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px; }
 .tstep select, .tstep input[type=text] { font-size: 12px; }
 .fld { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; }
-.x.on { color: var(--accent); font-weight: 600; }
+/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */
+.x.on { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px; }
 .section { padding: 8px; border-bottom: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; }
 .section h2 .muted { font-weight: 400; }
