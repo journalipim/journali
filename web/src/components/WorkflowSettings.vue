@@ -13,13 +13,13 @@ const COLORS = [['muted', 'grau'], ['warn', 'gelb'], ['neg', 'rot'], ['accent', 
 const ROLES = [['group', '▣ Gruppe'], ['product', '▦ Produkt'], ['variant', '◆ Variante']]
 const EFFECTS = computed(() => { const m = store.model; const out = []; for (const c of m?.channels ?? []) { out.push([`release:${c.key}`, `Freigabe ${c.key}`], [`revoke:${c.key}`, `Freigabe ${c.key} zurück`]) } out.push(['status:active', 'Status aktiv'], ['status:draft', 'Status Entwurf'], ['status:discontinued', 'Status ausgelaufen']); return out })
 async function load() { try { list.value = await api.get('/api/workflows'); if (cur.value) cur.value = clone(list.value.find(w => w.key === cur.value.key) ?? list.value[0] ?? null); else cur.value = clone(list.value[0] ?? null) } catch (e) { store.toast(e.message) } try { roles.value = (await api.get('/api/auth/roles')).map(r => r.key) } catch { roles.value = ['admin', 'editor'] } }
-const clone = w => w ? JSON.parse(JSON.stringify({ key: w.key, label: w.label ?? {}, start: w.start, roles: w.roles ?? [], families: w.families ?? [], states: w.states.map(s => ({ key: s.key, label: s.label ?? {}, color: s.color ?? 'muted', final: !!s.final, x: s.x ?? null, y: s.y ?? null, count: s.count ?? 0 })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label ?? {}, from: t.from, to: t.to, roles: t.roles ?? [], noteRequired: !!t.noteRequired, effects: t.effects ?? [], escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles ?? [], fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null })) })) : null
+const clone = w => w ? JSON.parse(JSON.stringify({ key: w.key, label: w.label ?? {}, start: w.start, roles: w.roles ?? [], families: w.families ?? [], states: w.states.map(s => ({ key: s.key, label: s.label ?? {}, color: s.color ?? 'muted', final: !!s.final, x: s.x ?? null, y: s.y ?? null, count: s.count ?? 0 })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label ?? {}, from: t.from, to: t.to, roles: t.roles ?? [], noteRequired: !!t.noteRequired, effects: t.effects ?? [], escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles ?? [], fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null, route: t.route ?? null })) })) : null
 function pick(w) { cur.value = clone(w); dirty.value = false }
 function touch() { dirty.value = true }
 async function save() {
   const w = cur.value; if (!w) return
   try {
-    await api.post(`/api/workflows/${encodeURIComponent(w.key)}`, { label: w.label, states: w.states.map(s => ({ key: s.key, label: s.label, color: s.color, final: s.final, x: s.x, y: s.y })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label, from: t.from, to: t.to, roles: t.roles.length ? t.roles : null, noteRequired: t.noteRequired, effects: t.effects.length ? t.effects : null, escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles?.length ? t.escalateRoles : null, fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null })), start: w.start, roles: w.roles.length ? w.roles : null, families: null }, 'PUT')
+    await api.post(`/api/workflows/${encodeURIComponent(w.key)}`, { label: w.label, states: w.states.map(s => ({ key: s.key, label: s.label, color: s.color, final: s.final, x: s.x, y: s.y })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label, from: t.from, to: t.to, roles: t.roles.length ? t.roles : null, noteRequired: t.noteRequired, effects: t.effects.length ? t.effects : null, escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles?.length ? t.escalateRoles : null, fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null, route: t.route?.length ? t.route : null })), start: w.start, roles: w.roles.length ? w.roles : null, families: null }, 'PUT')
     const sent = w; dirty.value = false; await load()
     // Kam alles zurück, was gesendet wurde? Ein Server mit altem Bau-Stand kennt Lage, Andockpunkte, Beschriftungslage, Eskalation nicht
     const got = cur.value; const lost = sent.states.some((s, i) => s.x != null && got?.states[i]?.x == null) || sent.transitions.some((t, i) => (t.fromPort && !got?.transitions[i]?.fromPort) || (t.labelX != null && got?.transitions[i]?.labelX == null) || (t.escalateAfterDays != null && got?.transitions[i]?.escalateAfterDays == null))
@@ -78,6 +78,7 @@ function portUp(j, port) {
   const w = cur.value
   if (d.kind === 'reattach') {
     const t = w.transitions[d.n]; const idx = Object.fromEntries(w.states.map((s, i) => [s.key, i]))
+    t.route = null; t.labelX = null; t.labelY = null
     if (d.end === 'from') { if (!t.toPort) t.toPort = nearestPort(posOf(w.states[idx[t.to]], idx[t.to]), d.fixed); t.from = w.states[j].key; t.fromPort = port }
     else { if (!t.fromPort) t.fromPort = nearestPort(posOf(w.states[idx[t.from]], idx[t.from]), d.fixed); t.to = w.states[j].key; t.toPort = port }
     touch(); return
@@ -88,7 +89,7 @@ function portUp(j, port) {
 }
 function canvasMove(e) {
   const d = drag.value; if (!d) return; const p = svgPoint(e)
-  if (d.kind === 'move') { const s = cur.value.states[d.i]; s.x = Math.max(0, snap(p.x - d.dx)); s.y = Math.max(0, snap(p.y - d.dy)); touch() }
+  if (d.kind === 'move') { const s = cur.value.states[d.i]; s.x = Math.max(0, snap(p.x - d.dx)); s.y = Math.max(0, snap(p.y - d.dy)); for (const tr of cur.value.transitions) if ((tr.from === s.key || tr.to === s.key) && tr.route) { tr.route = null; tr.labelX = null; tr.labelY = null } touch() }   // verschoben: der gelegte Weg gilt nicht mehr, zurück zum Bogen
   else if (d.kind === 'label') { const tr = cur.value.transitions[d.n]; tr.labelX = Math.round(p.x - d.dx); tr.labelY = Math.round(p.y - d.dy); touch() }
   else {
     const other = d.kind === 'reattach' ? null : d.i
@@ -108,14 +109,21 @@ async function autoLayout() {
   const w = cur.value
   const dagre = (await import('dagre')).default   // erst beim Klick laden (eigener Chunk, zieht lodash mit)
   const labelW = Math.max(60, ...w.transitions.map(t => ((t.label?.de || t.key).length + (t.roles?.length ? t.roles.join('/').length + 3 : 0)) * 6.5))
-  const g = new dagre.graphlib.Graph({ multigraph: true }).setGraph({ rankdir: 'LR', nodesep: 50, ranksep: Math.round(labelW + 30), marginx: 40, marginy: 40 }).setDefaultEdgeLabel(() => ({}))
+  const g = new dagre.graphlib.Graph({ multigraph: true }).setGraph({ rankdir: 'LR', nodesep: 60, edgesep: 30, ranksep: Math.round(labelW + 40), marginx: 40, marginy: 40 }).setDefaultEdgeLabel(() => ({}))
   for (const s of w.states) g.setNode(s.key, { width: W, height: H })
   if (w.start && g.hasNode(w.start)) g.setNode(w.start, { width: W, height: H, rank: 'min' })
   for (const s of w.states) if (s.final && s.key !== w.start) g.setNode(s.key, { width: W, height: H, rank: 'max' })
-  w.transitions.forEach((t, i) => { if (t.from !== t.to && g.hasNode(t.from) && g.hasNode(t.to)) g.setEdge(t.from, t.to, { width: labelW, height: 16, labelpos: 'c' }, 'e' + i) })
+  const lw = t => ((t.label?.de || t.key).length + (t.roles?.length ? t.roles.join('/').length + 3 : 0)) * 6.5 + 10
+  w.transitions.forEach((t, i) => { if (t.from !== t.to && g.hasNode(t.from) && g.hasNode(t.to)) g.setEdge(t.from, t.to, { width: lw(t), height: 18, labelpos: 'c' }, 'e' + i) })
   dagre.layout(g)
-  for (const s of w.states) { const n = g.node(s.key); if (!n) continue; s.x = Math.max(0, snap(n.x - W / 2)); s.y = Math.max(0, snap(n.y - H / 2)) }
-  for (const t of w.transitions) { t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null }
+  // Kacheln ohne Raster, damit die berechneten Wege genau an den Rändern ansetzen
+  for (const s of w.states) { const n = g.node(s.key); if (!n) continue; s.x = Math.max(0, Math.round(n.x - W / 2)); s.y = Math.max(0, Math.round(n.y - H / 2)) }
+  w.transitions.forEach((t, i) => {
+    t.fromPort = null; t.toPort = null; t.labelX = null; t.labelY = null; t.route = null
+    const e = t.from !== t.to ? g.edge(t.from, t.to, 'e' + i) : null; if (!e?.points?.length) return
+    t.route = e.points.flatMap(p => [Math.round(p.x), Math.round(p.y)])
+    if (e.x != null) { t.labelX = Math.round(e.x); t.labelY = Math.round(e.y) + 4 }
+  })
   touch()
 }
 function labelDown(n, e) { selTrans.value = n; selState.value = null; const a = sketch.value.arrows[n]; const p = svgPoint(e); drag.value = { kind: 'label', n, dx: p.x - a.lx, dy: p.y - a.ly } }
@@ -156,6 +164,15 @@ const sketch = computed(() => {
     const a = pos[idx[t.from] ?? 0], b = pos[idx[t.to] ?? 0]
     const ca = { x: a.x + W / 2, y: a.y + H / 2 }, cb = { x: b.x + W / 2, y: b.y + H / 2 }
     if (t.from === t.to) return { t, p1: { x: ca.x - 20, y: a.y }, p2: { x: ca.x + 20, y: a.y }, d: `M${ca.x - 20},${a.y} C${ca.x - 40},${a.y - 45} ${ca.x + 40},${a.y - 45} ${ca.x + 20},${a.y}`, lx: t.labelX ?? ca.x, ly: t.labelY ?? a.y - 36 }
+    if (t.route?.length >= 4) {   // Weg aus dem Layout (dagre): weiche Kurve durch die Stützpunkte, Enden auf den nächsten Andockpunkt
+      const pts = []; for (let i = 0; i < t.route.length; i += 2) pts.push({ x: t.route[i], y: t.route[i + 1] })
+      pts[0] = portXY(a, nearestPort(a, pts[0])); pts[pts.length - 1] = portXY(b, nearestPort(b, pts[pts.length - 1]))
+      let d = `M${pts[0].x},${pts[0].y}`
+      if (pts.length === 2) d += ` L${pts[1].x},${pts[1].y}`
+      else { for (let i = 1; i < pts.length - 1; i++) { const m = i < pts.length - 2 ? { x: (pts[i].x + pts[i + 1].x) / 2, y: (pts[i].y + pts[i + 1].y) / 2 } : pts[i + 1]; d += ` Q${pts[i].x},${pts[i].y} ${m.x},${m.y}` } }
+      const mid = pts[Math.floor(pts.length / 2)]
+      return { t, p1: pts[0], p2: pts[pts.length - 1], d, lx: t.labelX ?? mid.x, ly: t.labelY ?? mid.y - 6, anchor: 'middle' }
+    }
     let p1, p2
     if (t.fromPort && t.toPort) { p1 = portXY(a, t.fromPort); p2 = portXY(b, t.toPort) }
     else { p1 = t.fromPort ? portXY(a, t.fromPort) : edge(ca, cb); p2 = t.toPort ? portXY(b, t.toPort) : edge(cb, ca); if (!t.fromPort) p1 = portXY(a, nearestPort(a, p2)); if (!t.toPort) p2 = portXY(b, nearestPort(b, p1)) }
