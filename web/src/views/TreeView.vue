@@ -351,6 +351,19 @@ async function onDrop(e, r) {
   } catch (e) { store.toast(e.message) }
 }
 // Auswahl: Status für alle, Zurückziehen für alle — je Knoten ein Aufruf; ein Dialog vorher mit den Zahlen (Taloan, 18.09.)
+// Workflows im Kontextmenü (27): ein Untermenü ⚑ mit allen Übergängen der Workflows, die für den Knotentyp gelten — für die Auswahl;
+// der Server prüft je Knoten Zustand und Rolle, das Ergebnis sagt „n von m“
+const wfDefs = ref([])
+async function loadWorkflows() { try { wfDefs.value = await api.get('/api/workflows') } catch { wfDefs.value = [] } }
+onMounted(loadWorkflows)
+async function wfStepAll(rows, wf, t) {
+  let note = null
+  if (t.noteRequired) { note = await ask.prompt({ title: `${t.label?.de || t.key} (${rows.length})`, text: 'Notiz ist Pflicht — was ist zu tun?', placeholder: 'Notiz' }); if (!note?.trim()) return }
+  let ok = 0; const why = []
+  for (const x of rows) { try { await api.post(`/api/nodes/${encodeURIComponent(x.id)}/workflow/${wf.key}/${t.key}`, { note }); ok++ } catch (e) { if (why.length < 3) why.push(`${x.label}: ${e.message}`) } }
+  store.toast(`⚑ ${t.label?.de || t.key}: ${ok} von ${rows.length}${why.length ? ' — ' + why.join(' · ') : ''}`, ok ? 'ok' : 'warn')
+  await store.poll(true)
+}
 async function setStatusAll(rows, status) {
   for (const x of rows) { try { await api.post(`/api/nodes/${encodeURIComponent(x.id)}/status`, { status }) } catch (e) { store.toast(`${x.label}: ${e.message}`) } }
   await store.poll(true); await tree.load()
@@ -429,6 +442,7 @@ function contextMenu(e, r) {
     !sel && r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
+    ...(r.role !== 'rubric' && wfDefs.value.some(w => !w.roles?.length || w.roles.includes(r.role)) ? [{ label: 'Workflow' + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfDefs.value.filter(w => !w.roles?.length || w.roles.includes(r.role)).flatMap(w => w.transitions.map(t => ({ label: `${w.label?.de || w.key}: ${t.label?.de || t.key} → ${w.states.find(s => s.key === t.to)?.label?.de || t.to}`, icon: '⚑', hint: t.noteRequired ? 'Notiz Pflicht' : (t.effects?.length ? t.effects.join(', ') : ''), action: () => wfStepAll(sel ?? [r], w, t) }))) }, { sep: true }] : []),
     { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },

@@ -109,10 +109,11 @@ export function convert(raw, def, model) {
 export function validate(v, def, model) {
   if (v == null || v === '') return null
   switch (def?.type) {
-    case 'integer': return /^[+-]?\d+$/.test(v) ? null : `„${v}“ ist keine ganze Zahl`
-    case 'decimal': return /^[+-]?\d+(\.\d+)?$/.test(v) ? null : `„${v}“ ist keine Zahl`
-    case 'boolean': return v === 'true' || v === 'false' ? null : `„${v}“ ist nicht ja/nein`
-    case 'date': return /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(Date.parse(v)) ? null : `„${v}“ ist kein Datum (TT.MM.JJJJ)`
+    // Grund ohne den ganzen Wert (Taloan, 21.09.: „den Grund sieht man erst einen Kilometer rechts“) — der Wert steht daneben
+    case 'integer': return /^[+-]?\d+$/.test(v) ? null : 'keine ganze Zahl'
+    case 'decimal': return /^[+-]?\d+(\.\d+)?$/.test(v) ? null : 'keine Zahl'
+    case 'boolean': return v === 'true' || v === 'false' ? null : 'nicht ja/nein'
+    case 'date': return /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(Date.parse(v)) ? null : 'kein Datum (TT.MM.JJJJ)'
     case 'enum': {
       const list = model?.lists?.find(l => l.key === def.list); if (!list) return null
       const bad = String(v).split(',').map(x => x.trim()).filter(x => x && !list.values.some(y => y.value === x))

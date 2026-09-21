@@ -4,6 +4,7 @@ import PubView from './views/PubView.vue'
 import JournalView from './views/JournalView.vue'
 import ModelView from './views/ModelView.vue'
 import HubView from './views/HubView.vue'
+import TasksView from './views/TasksView.vue'
 import LoginView from './views/LoginView.vue'
 import { store } from './store.js'
 import TableEditView from './views/TableEditView.vue'
@@ -36,6 +37,7 @@ export const router = createRouter({
     ...Object.entries({ '/import/table': '/p/table/import', '/export/table': '/p/table/export', '/import/ixp': '/p/ixp/import', '/import/solr': '/p/solr/import', '/analysis/dq': '/p/da/check', '/jobs/list': '/p/tasker/jobs' })
       .map(([from, to]) => ({ path: from, redirect: r => ({ path: to, query: r.query }) })),
     { path: '/media', component: MediaView },
+    { path: '/tasks', component: TasksView },   // ⚑ Aufgaben (27)
     { path: '/plugins', component: PluginsView },
     { path: '/p/:key/:path', component: PluginHost },
     { path: '/settings', component: SettingsView },

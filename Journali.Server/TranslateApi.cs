@@ -47,7 +47,7 @@ public static class TranslateApi
     private static readonly XNamespace X1 = "urn:oasis:names:tc:xliff:document:1.2";
 
     /// <summary>Einheiten rechnen (gemeinsam für /units und /xliff).</summary>
-    public static (IResult? Error, string From, string To, List<Unit> Units) Collect(ModelCatalog model, Tree tree, string? root, string? from, string? to, string? channel, string? attributes, string scope, int limit)
+    public static (IResult? Error, string From, string To, List<Unit> Units) Collect(ModelCatalog model, Tree tree, string? root, string? from, string? to, string? channel, string? attributes, string scope, int limit, Workflows? workflows = null, string? wf = null, string? wfState = null)
     {
         from = Blank(from) ?? model.MasterLocale; to = Blank(to);
         if (from is null || to is null) return (Bad("from und to (Sprachen) fehlen."), "", "", new());
@@ -56,6 +56,9 @@ public static class TranslateApi
         var wanted = Blank(attributes)?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
         var defs = model.Attributes.Values.Where(a => a.PerLocale && a.Type is AttributeTypes.Text or AttributeTypes.Html && (wanted is null || wanted.Contains(a.Key))).ToList();
         var nodes = (Blank(root) is { } r ? (tree.Nodes.TryGetValue(r, out var rn) ? new[] { rn }.Concat(tree.DescendantsDeepestFirst(r)) : []) : tree.Nodes.Values).Where(n => n.Role != Roles.Rubric);
+        // nur Knoten in einem Workflow-Zustand (27: „zur Übersetzung“) — Taloan, 21.09.
+        if (workflows is not null && Blank(wf) is { } wfKey && workflows.All.TryGetValue(wfKey, out var wfDef) && Blank(wfState) is { } wantedState)
+            nodes = nodes.Where(n => wfDef.AppliesTo(n) && workflows.StateOf(n.Id, wfDef) == wantedState);
         var units = new List<Unit>();
         foreach (var n in nodes)
         {
@@ -140,11 +143,11 @@ public static class TranslateApi
     public static void Map(RouteGroupBuilder api)
     {
         // XLIFF 2.0 herunterladen — Browser (Agentur, CAT-Werkzeug) und Job (Fach out/)
-        api.MapGet("/translate/xliff", (Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 50000) =>
+        api.MapGet("/translate/xliff", (Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 50000, string? wf = null, string? wfState = null) =>
         {
             var (err, f, t, units, xml) = c.With((model, tree, _) =>
             {
-                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit);
+                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState);
                 return (r.Error, r.From, r.To, r.Units.Count, r.Error is null ? ToXliff(r.From, r.To, r.Units, "journali:" + (Blank(root) ?? "*")) : "");
             });
             if (err is not null) return err;
@@ -163,10 +166,10 @@ public static class TranslateApi
         });
 
         // Einheiten: root (leer = alle Wurzeln), from/to (Sprachen), channel (leer = alle Kanäle des Attributs), attributes (Keys mit Komma, leer = alle Textattribute mit Sprachachse), scope = missing | stale | open (beide) | all
-        api.MapGet("/translate/units", (Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 5000) =>
+        api.MapGet("/translate/units", (Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 5000, string? wf = null, string? wfState = null) =>
             c.With((model, tree, _) =>
             {
-                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit);
+                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState);
                 if (r.Error is not null) return r.Error;
                 var units = r.Units;
                 return Results.Ok(new { from = r.From, to = r.To, count = units.Count, missing = units.Count(u => u.State == "missing"), stale = units.Count(u => u.State == "stale"), done = units.Count(u => u.State == "done"), units });
@@ -209,7 +212,7 @@ public static class TranslateApi
             return c.With((model, tree, write) =>
             {
                 if (!model.Locales.ContainsKey(to)) return Bad($"Unbekannte Zielsprache {to}.");
-                int written = 0, unchanged = 0, skipped = 0, missing = 0; var errors = new List<string>();
+                int written = 0, unchanged = 0, skipped = 0, missing = 0; var errors = new List<string>(); var nodes = new HashSet<string>();
                 foreach (var u in units)
                 {
                     if (!TryParse(u.Id, out var nodeId, out var attr, out var ch, out var row) || !tree.Nodes.TryGetValue(nodeId, out var n) || !model.Attributes.TryGetValue(attr, out var d)) { missing++; continue; }
@@ -220,9 +223,9 @@ public static class TranslateApi
                     if ((n.Values.GetValueOrDefault(new Axis(attr, to, ch, row)) ?? "") == target) { unchanged++; continue; }
                     if (!d.PerLocale) { errors.Add($"{u.Id}: {attr} ist nicht sprachabhängig"); continue; }
                     write(actor, n.Id, Types.AttributeSet, new AttributeSet(attr, to, ch, target, null, row), null);
-                    written++;
+                    written++; nodes.Add(n.Id);
                 }
-                return Results.Ok(new { written, unchanged, skipped, missing, errors = errors.Take(200).ToList() });
+                return Results.Ok(new { written, unchanged, skipped, missing, nodes = nodes.ToList(), errors = errors.Take(200).ToList() });
             });
         }
     }

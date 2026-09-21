@@ -6,6 +6,7 @@ import MatrixPicker from '../components/MatrixPicker.vue'
 import { ai } from '../ai.js'
 import StorageSettings from '../components/StorageSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
+import WorkflowSettings from '../components/WorkflowSettings.vue'
 // Reiter (Taloan, 19.09.): Allgemein | Storage
 const tab = ref(location.hash === '#storage' ? 'storage' : location.hash === '#users' ? 'users' : 'general')
 // KI-Schlüssel (Taloan, 18.09.): bleiben im Browser (localStorage), nie im Journal — Plugins fragen die KI nur, wenn ein Schlüssel da ist.
@@ -42,9 +43,11 @@ async function save() {
       <span class="tab" :class="{ on: tab === 'general' }" @click="tab = 'general'">Allgemein</span>
       <span v-if="store.can('storage')" class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'">▨ Storage</span>
       <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'">👤 {{ store.can('users') ? 'Benutzer & Rollen' : 'Konto' }}</span>
+      <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'">⚑ Workflows</span>
     </div>
     <div class="scroll" v-if="tab === 'storage'"><StorageSettings /></div>
     <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /></div>
+    <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>
     <div class="scroll" v-else>
       <table class="grid form">
         <tbody>

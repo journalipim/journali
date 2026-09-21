@@ -40,7 +40,18 @@ async function mount(root, ctx) {
 
   // ---- 1 Sprachen und Umfang
   const settings = el('div'); const overview = el('div', { style: 'margin-top:6px' })
-  const q = () => `root=${encodeURIComponent(st.root ?? '')}&from=${st.from}&to=${st.to}&channel=${encodeURIComponent(st.channel)}&attributes=${encodeURIComponent(st.attrs.size === textAttrs.length ? '' : [...st.attrs].join(','))}&scope=${st.scope}`
+  // Workflow „Übersetzung“ (27): nur Knoten im Zustand „zur Übersetzung“ laden; geschriebene Knoten danach weiterschalten (→ übersetzt)
+  st.wfOnly = false; let wfDef = null
+  api.get('/api/workflows').then(ws => { wfDef = ws.find(w => w.key === 'translation') ?? null; if (wfDef) { st.wfOnly = true; drawSettings() } }).catch(() => {})
+  const q = () => `root=${encodeURIComponent(st.root ?? '')}&from=${st.from}&to=${st.to}&channel=${encodeURIComponent(st.channel)}&attributes=${encodeURIComponent(st.attrs.size === textAttrs.length ? '' : [...st.attrs].join(','))}&scope=${st.scope}${st.wfOnly && wfDef ? '&wf=translation&wfState=to_translate' : ''}`
+  let lastNodes = []
+  async function advance() {
+    if (!wfDef || !lastNodes.length) return
+    let ok = 0
+    for (const id of lastNodes) { try { await api.post(`/api/nodes/${encodeURIComponent(id)}/workflow/translation/done`, { note: `${st.from} → ${st.to}` }); ok++ } catch {} }
+    store.toast(`⚑ ${ok} von ${lastNodes.length} Knoten → übersetzt`, ok ? 'ok' : 'warn'); lastNodes = []; advBtn.style.display = 'none'; await store.poll(true); if (st.wfOnly) loadUnits()
+  }
+  const advBtn = el('button', { style: 'display:none', title: 'die Knoten, deren Ziele gerade geschrieben wurden, im Workflow „Übersetzung“ weiterschalten: zur Übersetzung → übersetzt', onclick: advance }, '⚑ → übersetzt')
   function drawSettings() {
     settings.innerHTML = ''
     const locSel = which => { const s = el('select', { onchange: e => { st[which] = e.target.value; drawOverview() } }, ...model.locales.map(l => el('option', { value: l.code }, `${l.code} · ${l.label ?? ''}`))); s.value = st[which]; return s }
@@ -51,7 +62,8 @@ async function mount(root, ctx) {
       el('tr', {}, el('td', { class: 'attr' }, 'Quelle → Ziel'), el('td', { class: 'row', style: 'gap:6px' }, locSel('from'), '→', locSel('to'))),
       el('tr', {}, el('td', { class: 'attr' }, 'Kanal'), el('td', {}, chSel)),
       el('tr', {}, el('td', { class: 'attr' }, 'Umfang'), el('td', {}, scSel)),
-      el('tr', {}, el('td', { class: 'attr' }, 'Attribute'), el('td', {}, chips)))))
+      el('tr', {}, el('td', { class: 'attr' }, 'Attribute'), el('td', {}, chips)),
+      wfDef ? el('tr', {}, el('td', { class: 'attr' }, 'Workflow'), el('td', {}, el('label', { title: 'nur Knoten, die im Workflow „Übersetzung“ auf „zur Übersetzung“ stehen (Rechtsklick im Baum → Workflow → zur Übersetzung geben)' }, (() => { const cb = el('input', { type: 'checkbox', onchange: e => { st.wfOnly = e.target.checked } }); cb.checked = st.wfOnly; return cb })(), ' nur Knoten „zur Übersetzung“'))) : '')))
     chosen.textContent = st.root ? `${ICON[tree.byId.get(st.root)?.role] ?? ''} ${tree.byId.get(st.root)?.label ?? ''}` : '⌂ alle Wurzeln'
     picker.set?.(st.root)
     drawOverview()
@@ -118,7 +130,7 @@ async function mount(root, ctx) {
   async function writeEdited() {
     if (!st.edited.size) { store.toast('nichts geändert'); return }
     const units = [...st.edited].map(([id, target]) => ({ id, target, sourceHash: st.units.find(u => u.id === id)?.sourceHash }))
-    try { const r = await api.post('/api/translate/import', { from: st.from, to: st.to, units }); store.toast(`${r.written} geschrieben${r.skipped ? `, ${r.skipped} übergangen (Quelle geändert)` : ''}${r.unchanged ? `, ${r.unchanged} unverändert` : ''}`, r.skipped ? 'warn' : 'ok'); await store.poll(true); await loadUnits(); drawOverview() } catch (e) { store.toast(e.message) }
+    try { const r = await api.post('/api/translate/import', { from: st.from, to: st.to, units }); store.toast(`${r.written} geschrieben${r.skipped ? `, ${r.skipped} übergangen (Quelle geändert)` : ''}${r.unchanged ? `, ${r.unchanged} unverändert` : ''}`, r.skipped ? 'warn' : 'ok'); lastNodes = r.nodes ?? []; advBtn.style.display = wfDef && lastNodes.length ? '' : 'none'; advBtn.textContent = `⚑ ${lastNodes.length} Knoten → übersetzt`; await store.poll(true); await loadUnits(); drawOverview() } catch (e) { store.toast(e.message) }
   }
 
   // ---- Wörterbuch (9): Begriff → Text je Sprache; Glossar für KI/DeepL und Gedächtnis (📖 in der Tabelle)
@@ -164,13 +176,14 @@ async function mount(root, ctx) {
       const r = await fetch(`${store.server}/api/translate/xliff?to=${st.to}&force=${forceCb.checked}`, { method: 'POST', headers: { 'X-Actor': store.actor, 'Content-Type': 'application/xml' }, body: xml })
       const o = await r.json(); if (!r.ok) throw new Error(o.error || r.status)
       planBox.append(el('div', { class: o.skipped ? 'warn' : 'pos', style: 'margin-top:6px' }, `${o.written} geschrieben · ${o.unchanged} unverändert · ${o.skipped} übergangen · ${o.missing} unbekannt`), ...(o.errors ?? []).slice(0, 20).map(e => el('div', { class: 'muted', style: 'font-size:12px' }, e)))
+      lastNodes = o.nodes ?? []; if (wfDef && lastNodes.length) { advBtn.style.display = ''; advBtn.textContent = `⚑ ${lastNodes.length} Knoten → übersetzt`; planBox.append(advBtn) }
       await store.poll(true); drawOverview(); if (st.units.length) loadUnits()
     } catch (e) { store.toast(e.message) }
   }
 
   body.append(band('1 · Sprachen und Umfang'), settings, overview,
     band('2 · Teilbaum'), chosen, treeBox,
-    band('3 · Einheiten'), el('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px' }, loadBtn, xliffBtn, memBtn, aiBtn, writeBtn, count), unitsBox,
+    band('3 · Einheiten'), el('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px' }, loadBtn, xliffBtn, memBtn, aiBtn, writeBtn, advBtn, count), unitsBox,
     band('Wörterbuch'), el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, 'Begriff → Text je Sprache, an einer Stelle gepflegt: Glossar für KI und DeepL, Gedächtnis in der Tabelle (📖). Zeile ausfüllen = speichern.'), termsBox,
     band('4 · XLIFF zurück'), el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, 'Übersetzte Datei der Agentur (XLIFF 2.0 oder 1.2). Geschrieben wird nur, wo die Quelle seit dem Export unverändert ist — der Hash steht in der Datei.'), fileIn, planBox)
   drawSettings(); drawUnits()

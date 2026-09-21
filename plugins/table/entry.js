@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-62c1687f] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-62c1687f] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-62c1687f] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-62c1687f], .tstep input[type=text][data-v-62c1687f] { font-size: 12px;\n}\n.x.on[data-v-62c1687f] { color: var(--accent); font-weight: 600;\n}\n.section[data-v-62c1687f] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-62c1687f] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-62c1687f] { font-weight: 400;\n}\n.drop.over[data-v-62c1687f] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-62c1687f] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-62c1687f] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-62c1687f] { opacity: .5;\n}\n.samples[data-v-62c1687f] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-62c1687f] { font-size: 13px;\n}\n.out[data-v-62c1687f] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-62c1687f] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-62c1687f] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-62c1687f]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-52b3b39e] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-52b3b39e] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-52b3b39e] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-52b3b39e], .tstep input[type=text][data-v-52b3b39e] { font-size: 12px;\n}\n.x.on[data-v-52b3b39e] { color: var(--accent); font-weight: 600;\n}\n.section[data-v-52b3b39e] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-52b3b39e] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-52b3b39e] { font-weight: 400;\n}\n.drop.over[data-v-52b3b39e] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n.btn[data-v-52b3b39e] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-52b3b39e] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-52b3b39e] { opacity: .5;\n}\n.samples[data-v-52b3b39e] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-52b3b39e] { font-size: 13px;\n}\n.out[data-v-52b3b39e] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-52b3b39e] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-52b3b39e] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-52b3b39e]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -205,35 +205,38 @@ const _hoisted_80 = {
 const _hoisted_81 = { class: "muted" };
 const _hoisted_82 = {
   class: "grid",
-  style: { "width": "100%" }
+  style: { "width": "100%", "table-layout": "fixed" }
 };
 const _hoisted_83 = { class: "mono muted" };
-const _hoisted_84 = { class: "mono" };
-const _hoisted_85 = ["value", "onChange"];
-const _hoisted_86 = {
-  key: 1,
-  class: "muted"
-};
-const _hoisted_87 = { style: { "margin-top": "8px" } };
-const _hoisted_88 = { class: "out" };
+const _hoisted_84 = ["title"];
+const _hoisted_85 = ["title"];
+const _hoisted_86 = { class: "muted" };
+const _hoisted_87 = ["title"];
+const _hoisted_88 = ["value", "onChange"];
 const _hoisted_89 = {
   key: 1,
   class: "muted"
 };
-const _hoisted_90 = {
+const _hoisted_90 = { style: { "margin-top": "8px" } };
+const _hoisted_91 = { class: "out" };
+const _hoisted_92 = {
+  key: 1,
+  class: "muted"
+};
+const _hoisted_93 = {
   key: 2,
   class: "empty"
 };
-const _hoisted_91 = {
+const _hoisted_94 = {
   key: 3,
   class: "pos",
   style: { "margin-top": "8px" }
 };
-const _hoisted_92 = {
+const _hoisted_95 = {
   key: 4,
   class: "section"
 };
-const _hoisted_93 = {
+const _hoisted_96 = {
   class: "mono",
   style: { "font-size": "12px", "white-space": "pre-wrap" }
 };
@@ -454,6 +457,11 @@ const _sfc_main$1 = {
     function fixCell(inv, v) {
       source.value.rows[inv.row][inv.column] = v;
       planned.value = { ...planned.value, stale: true };
+    }
+    const TYPE_DE = { text: "Text", html: "HTML", integer: "ganze Zahl", decimal: "Zahl", boolean: "ja/nein", date: "Datum", enum: "Listenwert" };
+    function typeHint(inv) {
+      const a = attrs.value.find((x) => x.key === inv.key) ?? store.model?.attributes?.find((x) => x.key === inv.key);
+      return a ? `Attribut ${a.key} ist ${TYPE_DE[a.type] ?? a.type}${a.multiple ? ", mehrfach" : ""}${a.list ? " (Liste " + a.list + ")" : ""} — im Modell änderbar` : `Attribut ${inv.key}`;
     }
     async function analyse() {
       if (!source.value) return;
@@ -1571,10 +1579,14 @@ const _sfc_main$1 = {
                       null,
                       [
                         createElementVNode("tr", null, [
-                          createElementVNode("th", { style: { "width": "60px" } }, "Zeile"),
-                          createElementVNode("th", { style: { "width": "160px" } }, "Spalte"),
-                          createElementVNode("th", null, "Grund"),
-                          createElementVNode("th", { style: { "width": "220px" } }, "Korrektur")
+                          createElementVNode("th", { style: { "width": "50px" } }, "Zeile"),
+                          createElementVNode("th", { style: { "width": "150px" } }, "Spalte"),
+                          createElementVNode("th", {
+                            style: { "width": "260px" },
+                            title: "warum der Wert abgelehnt wird — und was das Attribut erwartet"
+                          }, "Grund"),
+                          createElementVNode("th", null, "Wert"),
+                          createElementVNode("th", { style: { "width": "260px" } }, "Korrektur")
                         ])
                       ],
                       -1
@@ -1595,30 +1607,45 @@ const _sfc_main$1 = {
                               1
                               /* TEXT */
                             ),
-                            createElementVNode(
-                              "td",
-                              _hoisted_84,
-                              toDisplayString(source.value.columns[inv.column]),
-                              1
-                              /* TEXT */
-                            ),
-                            createElementVNode(
-                              "td",
-                              null,
-                              toDisplayString(inv.message),
-                              1
-                              /* TEXT */
-                            ),
+                            createElementVNode("td", {
+                              class: "mono",
+                              style: { "overflow": "hidden", "text-overflow": "ellipsis" },
+                              title: source.value.columns[inv.column]
+                            }, toDisplayString(source.value.columns[inv.column]), 9, _hoisted_84),
+                            createElementVNode("td", {
+                              class: "neg",
+                              style: { "white-space": "normal" },
+                              title: typeHint(inv)
+                            }, [
+                              createTextVNode(
+                                toDisplayString(inv.message),
+                                1
+                                /* TEXT */
+                              ),
+                              createElementVNode(
+                                "span",
+                                _hoisted_86,
+                                " · " + toDisplayString(typeHint(inv)),
+                                1
+                                /* TEXT */
+                              )
+                            ], 8, _hoisted_85),
+                            createElementVNode("td", {
+                              class: "muted",
+                              style: { "overflow": "hidden", "text-overflow": "ellipsis", "white-space": "nowrap" },
+                              title: String(inv.value ?? "")
+                            }, toDisplayString(inv.value), 9, _hoisted_87),
                             createElementVNode("td", null, [
                               !fixed.value ? (openBlock(), createElementBlock("input", {
                                 key: 0,
                                 type: "text",
                                 value: inv.value,
                                 style: { "width": "100%" },
+                                title: "korrigierter Wert — Enter, dann erneut analysieren",
                                 onChange: ($event) => fixCell(inv, $event.target.value)
-                              }, null, 40, _hoisted_85)) : (openBlock(), createElementBlock(
+                              }, null, 40, _hoisted_88)) : (openBlock(), createElementBlock(
                                 "span",
-                                _hoisted_86,
+                                _hoisted_89,
                                 toDisplayString(inv.value),
                                 1
                                 /* TEXT */
@@ -1632,7 +1659,7 @@ const _sfc_main$1 = {
                     ])
                   ])
                 ])) : createCommentVNode("v-if", true),
-                createElementVNode("details", _hoisted_87, [
+                createElementVNode("details", _hoisted_90, [
                   _cache[51] || (_cache[51] = createElementVNode(
                     "summary",
                     { class: "muted" },
@@ -1642,13 +1669,13 @@ const _sfc_main$1 = {
                   )),
                   createElementVNode(
                     "pre",
-                    _hoisted_88,
+                    _hoisted_91,
                     toDisplayString(planned.value.commands.slice(0, 200).map((c) => `${c.op} ${JSON.stringify(c.args)}`).join("\n")),
                     1
                     /* TEXT */
                   )
                 ])
-              ])) : source.value ? (openBlock(), createElementBlock("div", _hoisted_89, "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")) : (openBlock(), createElementBlock("div", _hoisted_90, [..._cache[54] || (_cache[54] = [
+              ])) : source.value ? (openBlock(), createElementBlock("div", _hoisted_92, "Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.")) : (openBlock(), createElementBlock("div", _hoisted_93, [..._cache[54] || (_cache[54] = [
                 createTextVNode(
                   "Datei ablegen oder aus Excel einfügen.",
                   -1
@@ -1672,7 +1699,7 @@ const _sfc_main$1 = {
                   /* CACHED */
                 )
               ])])),
-              result.value ? (openBlock(), createElementBlock("div", _hoisted_91, [
+              result.value ? (openBlock(), createElementBlock("div", _hoisted_94, [
                 createTextVNode(
                   "✓ " + toDisplayString(result.value.written) + " Einträge geschrieben · Stapel " + toDisplayString(result.value.batch) + " — ",
                   1
@@ -1692,7 +1719,7 @@ const _sfc_main$1 = {
                   /* STABLE */
                 }, 8, ["to"])
               ])) : createCommentVNode("v-if", true),
-              log.value.length ? (openBlock(), createElementBlock("div", _hoisted_92, [
+              log.value.length ? (openBlock(), createElementBlock("div", _hoisted_95, [
                 _cache[56] || (_cache[56] = createElementVNode(
                   "h2",
                   null,
@@ -1702,7 +1729,7 @@ const _sfc_main$1 = {
                 )),
                 createElementVNode(
                   "div",
-                  _hoisted_93,
+                  _hoisted_96,
                   toDisplayString(log.value.join("\n")),
                   1
                   /* TEXT */
@@ -1717,7 +1744,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-62c1687f"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-52b3b39e"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();

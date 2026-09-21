@@ -30,6 +30,7 @@ const nav = [
   { to: '/model', icon: '⊞', label: 'Modell', key: '3' },
   ...TOPICS.map(t => ({ to: t.to, icon: t.icon, label: t.label, key: t.hotkey, topic: t.key, always: !!t.always })),
   { to: '/media', icon: '▨', label: 'Medien', key: '5' },
+  { to: '/tasks', icon: '⚑', label: 'Aufgaben', key: '9' },   // Workflow-Schritte, die meiner Rolle gehören (27)
 ]
 // unten in der Leiste (Taloan, 17.09.): Journal und Einstellungen
 const navBottom = [

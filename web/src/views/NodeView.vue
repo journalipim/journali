@@ -288,6 +288,7 @@ async function load() {
   try {
     node.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}`)
     rels.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/relations`)
+    api.get(`/api/nodes/${encodeURIComponent(props.id)}/workflow`).then(w => { workflows.value = w }).catch(() => { workflows.value = [] })
     entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}`)).reverse()
   } catch (e) {
     if (e.message.startsWith('404')) router.push(router.currentRoute.value.path.startsWith('/pub') ? '/pub' : '/tree')   // Knoten weg: in derselben Ansicht bleiben (Taloan, 21.09.: „springt ganz raus“)
@@ -466,6 +467,24 @@ async function linkMedia(picked) {
   } finally { busy.value = false }
 }
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`
+
+// Workflows (27, Taloan 21.09.): je geltendem Workflow der Zustand und die Übergänge, die meine Rolle gehen darf; Notiz-Pflicht → Dialog
+const workflows = ref([])
+const wfColor = c => ({ pos: 'var(--pos)', neg: 'var(--neg)', warn: 'var(--warn)', accent: 'var(--accent)', muted: 'var(--muted)' })[c] ?? (c && /^#/.test(c) ? c : 'var(--muted)')
+async function wfStep(w, t) {
+  let note = null
+  if (t.noteRequired || t.effects?.length) {
+    note = await dialog.prompt({ title: `${t.label?.de || t.key} → ${t.toLabel?.de || t.to}`, text: (t.effects?.length ? 'Wirkung: ' + t.effects.join(', ') + '. ' : '') + (t.noteRequired ? 'Notiz ist Pflicht — was ist zu tun?' : 'Notiz (optional)'), placeholder: 'Notiz' })
+    if (note === null) return
+    if (t.noteRequired && !note.trim()) { store.toast('Notiz ist Pflicht bei diesem Schritt'); return }
+  }
+  await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/${t.key}`, { note: note || null }))
+}
+async function wfAssign(w) {
+  const user = await dialog.prompt({ title: `Zuständig für „${w.label?.de || w.workflow}“`, text: 'Benutzer-Key (leer = die Rolle des nächsten Schritts)', value: w.assigned ?? '' })
+  if (user === null) return
+  await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/assign`, { user: user.trim() || null }, 'PUT'))
+}
 
 // Variantenachsen am Produkt — änderbar, solange es keine Varianten hat (ProductAxesSet).
 const addAxis = ref('')
@@ -759,6 +778,25 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
+      <div class="section" v-if="workflows.length">
+        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>⚑ Workflow <span class="muted">· <span v-for="w in workflows" :key="w.workflow" class="chip" :style="`border-color:${wfColor(w.color)}`" :title="w.label?.de || w.workflow">{{ w.stateLabel?.de || w.state }}</span></span></h2>
+        <template v-if="open('workflow')">
+        <table class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
+          <tr v-for="w in workflows" :key="w.workflow">
+            <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
+            <td class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+              <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt'">{{ w.stateLabel?.de || w.state }}</span>
+              <span v-if="w.note" class="muted" :title="w.note" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">„{{ w.note }}“</span>
+              <button v-for="t in w.transitions" :key="t.key" @click="wfStep(w, t)" :title="`→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.label?.de || t.key }} →</button>
+              <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
+              <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
+              <span class="grow" />
+              <button class="x" @click="wfAssign(w)" :title="w.assigned ? `zuständig: ${w.assigned} — ändern` : 'jemandem zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
+            </td>
+          </tr>
+        </tbody></table>
+        </template>
+      </div>
       <div class="section" v-if="node.role !== 'group' && node.role !== 'rubric'">
         <h2 @click="toggle('releases')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>✓ Freigaben <span class="muted">· Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig = keine Freigabe</span></h2>
         <template v-if="open('releases')">

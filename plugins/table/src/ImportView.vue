@@ -134,6 +134,9 @@ const blockers = computed(() => {
 })
 // Korrektur einer Zelle direkt in der Quelle; danach neu analysieren
 function fixCell(inv, v) { source.value.rows[inv.row][inv.column] = v; planned.value = { ...planned.value, stale: true } }
+// Was das Attribut erwartet (Taloan, 21.09.: „warum ganze Zahl?“ — weil das Attribut so definiert ist; das steht jetzt dabei)
+const TYPE_DE = { text: 'Text', html: 'HTML', integer: 'ganze Zahl', decimal: 'Zahl', boolean: 'ja/nein', date: 'Datum', enum: 'Listenwert' }
+function typeHint(inv) { const a = attrs.value.find(x => x.key === inv.key) ?? store.model?.attributes?.find(x => x.key === inv.key); return a ? `Attribut ${a.key} ist ${TYPE_DE[a.type] ?? a.type}${a.multiple ? ', mehrfach' : ''}${a.list ? ' (Liste ' + a.list + ')' : ''} — im Modell änderbar` : `Attribut ${inv.key}` }
 
 // ---- Plan
 async function analyse() {
@@ -301,10 +304,12 @@ onMounted(async () => {
         <div v-if="planned.stale" class="warn" style="margin-top:6px">✎ Zellen korrigiert — <button class="primary" @click="analyse">erneut analysieren</button></div>
         <div v-if="planned.stats.invalid.length" class="section" style="margin-top:8px;padding:0">
           <h2 class="step-band" style="margin:0 0 4px">Werte prüfen <span class="muted">· {{ planned.stats.invalid.length }} Zellen{{ fixed ? ' — im Knotenmodus in Excel korrigieren und neu laden' : ' — hier korrigieren, dann erneut analysieren' }}</span></h2>
-          <table class="grid" style="width:100%"><thead><tr><th style="width:60px">Zeile</th><th style="width:160px">Spalte</th><th>Grund</th><th style="width:220px">Korrektur</th></tr></thead><tbody>
+          <table class="grid" style="width:100%;table-layout:fixed"><thead><tr><th style="width:50px">Zeile</th><th style="width:150px">Spalte</th><th style="width:260px" title="warum der Wert abgelehnt wird — und was das Attribut erwartet">Grund</th><th>Wert</th><th style="width:260px">Korrektur</th></tr></thead><tbody>
             <tr v-for="inv in planned.stats.invalid.slice(0, 200)" :key="inv.row + '|' + inv.column">
-              <td class="mono muted">{{ inv.row + 2 }}</td><td class="mono">{{ source.columns[inv.column] }}</td><td>{{ inv.message }}</td>
-              <td><input v-if="!fixed" type="text" :value="inv.value" style="width:100%" @change="fixCell(inv, $event.target.value)" /><span v-else class="muted">{{ inv.value }}</span></td>
+              <td class="mono muted">{{ inv.row + 2 }}</td><td class="mono" style="overflow:hidden;text-overflow:ellipsis" :title="source.columns[inv.column]">{{ source.columns[inv.column] }}</td>
+              <td class="neg" style="white-space:normal" :title="typeHint(inv)">{{ inv.message }}<span class="muted"> · {{ typeHint(inv) }}</span></td>
+              <td class="muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="String(inv.value ?? '')">{{ inv.value }}</td>
+              <td><input v-if="!fixed" type="text" :value="inv.value" style="width:100%" :title="'korrigierter Wert — Enter, dann erneut analysieren'" @change="fixCell(inv, $event.target.value)" /><span v-else class="muted">{{ inv.value }}</span></td>
             </tr>
           </tbody></table>
         </div>
