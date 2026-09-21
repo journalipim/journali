@@ -528,17 +528,19 @@ async function wfEffect(eff) {
   api.get(`${nodeUrl()}/workflow`).then(w => { workflows.value = w }).catch(() => {})
 }
 // Verlauf eines Workflows am Knoten (Taloan, 21.09.): jeder Schritt mit Zeit, Wer, Schritt, Zustand, Notiz — aus dem Journalstrom des Knotens
-function wfHistory(w) {
+async function wfHistory(w) {
   const label = k => w.states?.find(s => s.key === k)?.label?.de || k
+  let src = entries.value; let title = `Verlauf „${w.label?.de || w.workflow}“ · ${shownLabel.value}`
+  if (w.inheritedFrom) { try { src = (await api.get(`/api/streams/${encodeURIComponent(w.inheritedFrom.id)}`)).reverse(); title = `Verlauf „${w.label?.de || w.workflow}“ · geerbt von „${w.inheritedFrom.label}“` } catch { src = [] } }
   // nach Datum gruppiert (Taloan, 21.09.: „in Firmen dauert es manchmal 4 Wochen“): Datumszeile, darunter die Schritte mit Uhrzeit
-  const list = entries.value.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
+  const list = src.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
   const rows = []; let day = null
   for (const e of list) {
     const d = new Date(e.at); const key = d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
     if (key !== day) { rows.push([key, '']); day = key }
     rows.push([d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }), e.type === 'WorkflowAssigned' ? `${e.actor} · zuständig: ${e.payload.user || '— (Rolle)'}` : `${e.actor} · ${e.payload.transition ? e.payload.transition + ' → ' : ''}${label(e.payload.state)}${e.payload.note ? ' · ✎ ' + e.payload.note : ''}`])
   }
-  dialog.help({ title: `Verlauf „${w.label?.de || w.workflow}“ · ${shownLabel.value}`, rows: rows.length ? rows : [['—', 'noch kein Schritt']] })
+  dialog.help({ title, rows: rows.length ? rows : [['—', 'noch kein Schritt']] })
 }
 async function wfAssign(w) {
   // Vorschlagsliste (Taloan, 21.09.: „oder soll ich alles auswendig wissen?“): Personen mit einer Rolle des nächsten Schritts zuerst, dann die anderen
@@ -858,7 +860,7 @@ function cellMenu(e, def, col, block) {
           <tr v-for="w in workflows" :key="w.workflow">
             <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
-              <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `vom ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Vater'} „${w.inheritedFrom.label}“ — hier noch kein eigener Schritt · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
+              <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
               <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
