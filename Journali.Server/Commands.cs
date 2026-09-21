@@ -409,9 +409,9 @@ public static class Commands
         locale = Blank(locale);
         if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
         // Am Produkt (Workflow „freigeben“, Taloan 21.09.): jede vollständige Variante wird freigegeben; keine vollständige = nichts, mit dem, was fehlt
-        if (n.Role == Roles.Product)
+        if (n.Role is Roles.Product or Roles.Group)
         {
-            var variants = c.Tree.Children(n.Id).Where(v => v.Role == Roles.Variant).ToList();
+            var variants = c.Tree.DescendantsDeepestFirst(n.Id).Where(v => v.Role == Roles.Variant).ToList();   // Gruppe: alles Verkaufbare darunter (Taloan, 21.09.)
             if (variants.Count == 0) return Outcome.Bad("Keine Variante — Freigabe gibt es nur am Verkaufbaren.");
             Entry? last = null; var failed = new List<string>();
             foreach (var v in variants)
@@ -632,7 +632,7 @@ public static class Commands
         {
             if (!eff.StartsWith("release:")) continue;
             var ch = eff[8..];
-            var sellables = n.Role == Roles.Product ? c.Tree.Children(n.Id).Where(v => v.Role == Roles.Variant).ToList() : n.Role == Roles.Variant ? [n] : [];
+            var sellables = n.Role == Roles.Variant ? [n] : c.Tree.DescendantsDeepestFirst(n.Id).Where(v => v.Role == Roles.Variant).ToList();
             if (sellables.Count == 0) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ gibt für {ch} frei — hier gibt es aber nichts Verkaufbares (Freigabe nur an Varianten).");
             var problems = new List<string>();
             foreach (var v in sellables)
