@@ -108,9 +108,6 @@ function stateUp(j, e) {
   if (d.snapJ != null) portUp(d.snapJ, d.snapPort); else portUp(j, nearestPort(posOf(cur.value.states[j], j), svgPoint(e)))
 }
 function canvasUp() { const d = drag.value; if (d && (d.kind === 'link' || d.kind === 'reattach') && d.snapJ != null) { portUp(d.snapJ, d.snapPort); return } drag.value = null }
-// Automatisch anordnen (Taloan, 21.09.: „da gibt's doch Algorithmen“): dagre — Sugiyama-Verfahren wie Graphviz dot. Ebenen von links nach rechts
-// (Start links, Rückwege werden intern umgedreht), Reihenfolge in der Ebene mit minimierten Kreuzungen, Abstand der Ebenen nach der längsten
-// Beschriftung. Andockpunkte und Beschriftungslagen gehen zurück auf Automatik.
 // Kräfte-Layout (Taloan, 21.09.: „sowas kann der Algo nicht?“ — die symmetrische Form kommt aus einem Federmodell, nicht aus Ebenen):
 // Kanten sind Federn mit Wunschlänge, Kacheln stossen sich ab, der Start zieht nach links, die Enden nach rechts; 400 Schritte, dann Raster.
 function forceLayout() {
