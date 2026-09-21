@@ -27,9 +27,10 @@ public static class TreeApi
         // sonst alle Attribute, die an der Rolle der Zeilen gelten. locale/channel = die Achse; ohne = Grundwert.
         // self: der Knoten selbst als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt (Taloan, 21.09.: Geltung am Vater gesetzt,
         // Prüfung am Kind sah „gilt hier nicht“, weil das Kind nur seine eigenen Werte las)
-        api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false, bool self = false) =>
-            c.With((model, tree, _) =>
+        api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false, bool self = false, long? at = null) =>
+            c.With((liveModel, liveTree, _) =>
             {
+                var (model, tree) = at is { } n ? c.AsOf(n) : (liveModel, liveTree);   // at: der Stand von damals (Taloan, 21.09., Publikation eingefroren)
                 if (!tree.Nodes.TryGetValue(id, out var root)) return Results.NotFound();
                 var nodes = (deep ? tree.DescendantsDeepestFirst(id).Reverse() : tree.Children(id)).Where(n => role is null || n.Role == role).ToList();
                 if (self) nodes.Insert(0, root);
@@ -76,17 +77,19 @@ public static class TreeApi
         api.MapGet("/pub/{id}/export", (string id, Catalog c, string? locale = null) => c.With((model, tree, _) =>
         {
             if (!tree.Nodes.TryGetValue(id, out var root) || root.Role != Roles.Rubric || root.Parent is not null) return Results.NotFound();
-            var rows = Publication.Export(tree, model, root, locale).Select(r => new
+            var rows = Publication.Export(tree, model, root, locale, c.AsOf).Select(r => new
             {
                 path = r.Rubrics.Select(x => new { x.Id, x.Role, label = NodeRow.LabelOf(tree, model, x) }).ToList(),
                 product = new { r.Product.Id, label = NodeRow.LabelOf(tree, model, r.Product), keys = tree.KeysOf(model, r.Product) },
-                r.In, r.Why,
+                r.In, r.Why, r.Stand,
                 variants = r.Variants.Select(v => new { v.Variant.Id, label = NodeRow.LabelOf(tree, model, v.Variant), keys = tree.KeysOf(model, v.Variant), v.Verdict.In, v.Verdict.Why }).ToList(),
             }).ToList();
-            return Results.Ok(new { tree = new { root.Id, root.Channel, root.Market, label = NodeRow.LabelOf(tree, model, root) }, locale, @in = rows.Count(r => r.In), @out = rows.Count(r => !r.In), rows });
+            return Results.Ok(new { tree = new { root.Id, root.Channel, root.Market, root.Stand, label = NodeRow.LabelOf(tree, model, root) }, locale, @in = rows.Count(r => r.In), @out = rows.Count(r => !r.In), rows });
         }));
         api.MapPost("/rubrics", (RubricCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateRubric(x, b.Parent, b.Label, b.Name, b.Channel, b.Market)));
         api.MapPut("/rubrics/{id}/tree", (string id, PubTreeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetPubTree(x, id, b.Channel, b.Market)));
+        // Stand (Taloan, 21.09.): {journalNumber: n} einfrieren bei n, {now: true} bei jetzt, {} = live
+        api.MapPut("/rubrics/{id}/stand", (string id, StandBody b, HttpRequest req, Catalog c) => { var head = c.Head; return Run(req, c, x => Commands.SetStand(x, id, b.Now == true ? head : b.JournalNumber, head)); });
         api.MapPost("/rubrics/{id}/place", (string id, NodePlaced b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Place(x, id, b.Node, b.Order)));
         api.MapDelete("/rubrics/{id}/place/{node}", (string id, string node, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Unplace(x, id, node)));
         api.MapPut("/rubrics/{id}/place/{node}/name", (string id, string node, NameBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.NamePlace(x, id, node, b.Name)));   // Anzeigename, intern
@@ -194,7 +197,8 @@ public static class TreeApi
     static int CountPlaced(Tree tree, Node n) => n.Placed.Count + tree.Children(n.Id).Sum(ch => CountPlaced(tree, ch));
     public sealed record DeriveBody(string? From, bool Self = false);
     public sealed record OrderBody(string? Parent, string? Before);
-    public sealed record NameBody(string? Name);   // Self: die Gruppe selbst wird Rubrik, darunter ihr Aufbau
+    public sealed record NameBody(string? Name);
+    public sealed record StandBody(long? JournalNumber, bool? Now);   // Self: die Gruppe selbst wird Rubrik, darunter ihr Aufbau
 
     public static IResult Run(HttpRequest req, Catalog c, Func<Ctx, Outcome> command)
     {
@@ -218,12 +222,12 @@ public static class TreeApi
 public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Name, string? Groups, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string>? Keys, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null,
-    string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null)
+    string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null, long? Stand = null)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
         tree.KeysOf(model, n), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
-        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null);
+        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null, n.Stand);
 
     /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle, Taloan): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
     /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>

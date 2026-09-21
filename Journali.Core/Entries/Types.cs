@@ -93,6 +93,7 @@ public static class Types
     /// <summary>Publikationsbaum (Taloan, 20.09.2026): Rubriken und Verweise.</summary>
     public const string RubricCreated = "RubricCreated";
     public const string PubTreeSet = "PubTreeSet";
+    public const string PubStandSet = "PubStandSet";
     public const string NodePlaced = "NodePlaced";
     public const string NodeUnplaced = "NodeUnplaced";
     public const string PlaceNamed = "PlaceNamed";
@@ -521,6 +522,10 @@ public sealed record RubricCreated(string? Parent, Labels Label, string? Name = 
 
 /// <summary>Kanal und Markt der Wurzel ändern.</summary>
 public sealed record PubTreeSet(string? Channel, string? Market);
+
+/// <summary>Stand einer Rubrik (Taloan, 21.09.2026, „A“): eingefroren bei Journalnummer n — alles darunter liest die Pflege wie damals; null = live.
+/// Gilt ab hier nach unten, die nächste Rubrik mit eigenem Stand übersteuert. Kein Kopieren: ein Zeiger, aktualisieren = neuer Zeiger.</summary>
+public sealed record PubStandSet(long? JournalNumber);
 
 /// <summary>Verweis: ein Pflegeknoten (Produktgruppe, Produkt) hängt in dieser Rubrik — derselbe Knoten darf in mehreren hängen. Order: Platz in der Rubrik.</summary>
 public sealed record NodePlaced(string Node, int? Order = null);

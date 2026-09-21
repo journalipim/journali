@@ -120,6 +120,49 @@ public class PublicationTests
     }
 
     [Fact]
+    public void Stand_eingefroren_liest_die_Pflege_wie_damals()
+    {
+        // Taloan, 21.09. („A“): Katalog schliesst → Stand einfrieren; was danach in der Pflege passiert, ist im Katalog nicht drin —
+        // Freigabe zurückgenommen: eingefroren trotzdem drin; neues Produkt: eingefroren „noch nicht vorhanden“; live sieht beides
+        var w = new World(); w.Release(w.V1);
+        var head = w.J.Head;
+        w.J.Append("t", w.Web, Types.PubStandSet, Types.Serialize(new PubStandSet(head)));
+        w.J.Append("t", w.V1, Types.ReleaseRevoked, Types.Serialize(new ReleaseRevoked("web", null)));
+        var p2 = Ids.New(Roles.Product); var v3 = Ids.New(Roles.Variant);
+        w.J.Append("t", p2, Types.ProductCreated, Types.Serialize(new ProductCreated(w.Root)));
+        w.J.Append("t", v3, Types.VariantCreated, Types.Serialize(new VariantCreated(p2, new())));
+        w.J.Append("t", v3, Types.ReleaseGranted, Types.Serialize(new ReleaseGranted("web", null)));
+        w.J.Append("t", w.Rubric, Types.NodePlaced, Types.Serialize(new NodePlaced(p2)));
+        w.Catch();
+        (ModelCatalog, Tree) At(long n) { var m = new ModelCatalog(); var tr = new Tree(); Projector.CatchUpUntil(w.J, m, n); Projector.CatchUpUntil(w.J, tr, n); return (m, tr); }
+        var frozen = Publication.Export(w.Tree, w.Cat, w.Tree.Nodes[w.Web], null, At).ToList();
+        Assert.True(frozen.Single(r => r.Product.Id == w.Product).In);                       // wie am Stichtag freigegeben
+        Assert.Equal(head, frozen.Single(r => r.Product.Id == w.Product).Stand);
+        var late = frozen.Single(r => r.Product.Id == p2);
+        Assert.False(late.In); Assert.Contains("noch nicht vorhanden", late.Why[0]);
+        var live = Publication.Export(w.Tree, w.Cat, w.Tree.Nodes[w.Web]).ToList();          // ohne at: live
+        Assert.False(live.Single(r => r.Product.Id == w.Product).In);
+        Assert.True(live.Single(r => r.Product.Id == p2).In);
+        // Stand aufheben → live
+        w.J.Append("t", w.Web, Types.PubStandSet, Types.Serialize(new PubStandSet(null))); w.Catch();
+        Assert.Null(w.Tree.StandOf(w.Tree.Nodes[w.Rubric]).Stand);
+        Assert.False(Publication.Export(w.Tree, w.Cat, w.Tree.Nodes[w.Web], null, At).Single(r => r.Product.Id == w.Product).In);
+    }
+
+    [Fact]
+    public void Stand_gilt_ab_der_Rubrik_nach_unten_und_die_naechste_uebersteuert()
+    {
+        var w = new World();
+        var sub = Ids.New(Roles.Rubric);
+        w.J.Append("t", sub, Types.RubricCreated, Types.Serialize(new RubricCreated(w.Rubric, new(), "Unten")));
+        w.J.Append("t", w.Web, Types.PubStandSet, Types.Serialize(new PubStandSet(5)));
+        w.J.Append("t", sub, Types.PubStandSet, Types.Serialize(new PubStandSet(9)));
+        w.Catch();
+        Assert.Equal((5L, w.Web), (w.Tree.StandOf(w.Tree.Nodes[w.Rubric]).Stand, w.Tree.StandOf(w.Tree.Nodes[w.Rubric]).From!.Id));
+        Assert.Equal((9L, sub), (w.Tree.StandOf(w.Tree.Nodes[sub]).Stand, w.Tree.StandOf(w.Tree.Nodes[sub]).From!.Id));
+    }
+
+    [Fact]
     public void Produkt_ohne_Variante_ist_nie_drin()
     {
         var w = new World();

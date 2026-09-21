@@ -133,6 +133,11 @@ function contextMenu(e, row) {
   menu.open(e, [
     { label: 'Rubrik darunter …', icon: '+', action: () => newRubric(r) },
     { sep: true },
+    ...(r.stand != null
+      ? [{ label: `Stand #${r.stand} aktualisieren`, icon: '❄', hint: 'auf jetzt setzen', action: () => setStand(r, 'now') }, { label: 'Stand aufheben — live', icon: '○', action: () => setStand(r, 'live') }]
+      : [{ label: 'Stand einfrieren (jetzt)', icon: '❄', hint: standOf(r) ? `erbt Stand #${standOf(r).stand} von „${standOf(r).from.label}“ — eigener Stand übersteuert` : 'ab hier nach unten die Pflege wie jetzt', action: () => setStand(r, 'now') }]),
+    { sep: true },
+    { sep: true },
     { label: 'Umbenennen', icon: '✎', action: () => rename(r) },
     ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben im Pflegebaum`, action: () => retire(r) }]
       : [{ label: 'Kanal / Markt …', icon: '⇶', action: () => editTree(r) }, { sep: true },
@@ -178,7 +183,14 @@ function open(row, e) {
     const ids = rows.value.filter(x => x.kind === 'rubric').map(x => x.r.id); const a = ids.indexOf(props.id), b = ids.indexOf(row.r.id)
     if (a >= 0 && b >= 0) { for (const x of ids.slice(Math.min(a, b), Math.max(a, b) + 1)) sel.value.add(x); sel.value = new Set(sel.value); return }
   }
-  sel.value = new Set(); router.push(`/pub/${row.r.id}`)
+  sel.value = new Set(); router.push(row.kind === 'placed' ? { path: `/pub/${row.r.id}`, query: { in: row.rubric } } : `/pub/${row.r.id}`)
+}
+// Stand (Taloan, 21.09., „A“): Zeiger auf eine Journalnummer an Rubrik oder Wurzel — alles darunter liest die Pflege wie damals; live = kein Zeiger
+function standOf(r) { for (let n = r; n; n = tree.byId.get(n.parent)) if (n.stand != null) return { stand: n.stand, from: n }; return null }
+async function setStand(r, mode) {
+  if (mode === 'live' && !await dialog.confirm({ title: `„${r.label}“ wieder live?`, text: `Stand #${r.stand} aufheben — ab hier nach unten gilt wieder der aktuelle Pflegestand.`, ok: 'live' })) return
+  if (mode === 'now' && !await dialog.confirm({ title: r.stand != null ? `Stand von „${r.label}“ aktualisieren?` : `„${r.label}“ einfrieren?`, text: 'Ab hier nach unten liest die Publikation die Pflege wie jetzt — spätere Änderungen in der Pflege kommen nicht mehr durch, bis der Stand aktualisiert oder aufgehoben wird. Nichts wird kopiert: ein Zeiger ins Journal.', ok: r.stand != null ? '❄ aktualisieren' : '❄ einfrieren' })) return
+  await run(() => post(`/api/rubrics/${encodeURIComponent(r.id)}/stand`, mode === 'now' ? { now: true } : {}, 'PUT'))
 }
 // mehrere Rubriken auf einmal entfernen (nur aus diesem Publikationsbaum); Wurzeln bleiben, verschachtelte nur einmal
 async function retireMany(ids) {
@@ -275,6 +287,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-else class="twisty muted">↗</span>
         <span class="icon">{{ row.kind === 'rubric' ? '▥' : icon(row.r.role) }}</span>
         <span class="label" :class="{ work: row.work }" :title="row.work ? `Anzeigename (nur hier) — Pflegename: ${row.r.label}` : ''">{{ row.shown ?? row.r.label }}</span>
+        <span v-if="row.kind === 'rubric' && row.r.stand != null" class="count" style="margin-left:4px" :title="`eingefroren bei Stand #${row.r.stand} — ab hier nach unten die Pflege wie damals`">❄</span>
         <span v-if="row.kind === 'rubric' && row.n" class="muted count" :title="`${row.n} Verweise`">{{ row.n }}</span>
         <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="`Produktgruppe mit ${tree.below(row.r.id).total} darunter`">{{ tree.below(row.r.id).total }}</span>
       </div>
@@ -284,7 +297,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis · von links ziehen = übernehmen · hier ziehen = umhängen, an den Rand einer Zeile = Reihenfolge · Strg-Klick = mehrere · Rechtsklick</div>
   </div>
   <Splitter v-model="pubW" :min="220" :max="800" />
-  <NodeView v-if="id" :id="id" :key="id" :pub="current?.id ?? null" />
+  <NodeView v-if="id" :id="id" :key="id" :pub="current?.id ?? null" :pub-rubric="$route.query.in ?? null" />
   <div v-else class="pane" style="flex:1"><div class="empty">Rubrik wählen — ihre Texte und Bilder stehen hier wie an jedem Knoten.</div></div>
   </div>
 </template>

@@ -31,10 +31,28 @@ import MatrixPicker from '../components/MatrixPicker.vue'
 import { paneWidth } from '../panes.js'
 const journalW = paneWidth('journal', 420)
 
-const props = defineProps({ id: String, pub: { type: String, default: null } })   // pub: Id des Publikationsbaums — Ansicht als Verweis (Taloan, 21.09.)
+const props = defineProps({ id: String, pub: { type: String, default: null }, pubRubric: { type: String, default: null } })   // pubRubric: Rubrik, in der der Verweis hängt (für den Stand)   // pub: Id des Publikationsbaums — Ansicht als Verweis (Taloan, 21.09.)
 // Im Publikationsbaum ist der Verweis ein Fenster auf den Pflegeknoten: Pflegewerte nur lesen (auch als admin — geändert wird an der Quelle),
 // pflegbar nur, was eine Gruppe an einer Rubrik dieses Baums mitbringt (z. B. SEO fürs Web)
 const pubTree = computed(() => props.pub ? tree.byId.get(props.pub) : null)
+// Stand (Taloan, 21.09., „A“): Rubrik oder der Verweis erbt den Stand der nächsten Rubrik darüber — Pflegewerte dann wie bei #n
+const pubStand = computed(() => { if (!props.pub) return null; const start = node.value?.role === 'rubric' ? tree.byId.get(props.id) : tree.byId.get(props.pubRubric); for (let n = start; n; n = tree.byId.get(n.parent)) if (n.stand != null) return { stand: n.stand, from: n }; return null })
+const standAt = ref(null)   // Datum des Journaleintrags #n
+watch(pubStand, async s => { standAt.value = null; if (!s) return; try { standAt.value = (await api.get(`/api/journal/${s.stand}`)).at } catch {} }, { immediate: true })
+// Pflegewerte des Verweises bei #n (Verweis unter eingefrorener Rubrik): Tabelle von damals, je Spalte
+const frozen = ref(null)   // Map key attr|locale|channel → Wert
+async function loadFrozen() {
+  frozen.value = null
+  const s = pubStand.value; if (!s || !props.pub || node.value?.role === 'rubric') return
+  try {
+    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(props.id)}/table?self=true&at=${s.stand}&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === props.id)).catch(() => null)))
+    const m = new Map()
+    columns.value.forEach((c, i) => { for (const [k, v] of Object.entries(per[i]?.values ?? {})) m.set(`${k}|${c.locale ?? ''}|${c.channel ?? ''}`, v.value ?? '') })
+    frozen.value = m
+  } catch { frozen.value = null }
+}
+watch(() => [pubStand.value?.stand, columns.value.length, props.id], loadFrozen, { immediate: true })
+const roValue = (def, c) => frozen.value ? (frozen.value.get(`${def.key}|${c.locale ?? ''}|${c.channel ?? ''}`) ?? '') : (ownOrAxis(def, c) ?? inherited(def, c).value ?? '')
 // Kopierte Rubrik (Taloan, 21.09.: „im Pflegebaum Überschriften gepflegt — die Rubrik zeigt nichts davon“): die Pflegewerte der Quellgruppe,
 // aufgelöst wie in der Tabelle (geerbt zählt), je Spalte der Ansicht — nur zu lesen, geändert wird an der Quelle
 const sourceRows = ref([])
@@ -42,7 +60,7 @@ async function loadSource() {
   sourceRows.value = []
   const src = node.value?.source; if (!props.pub || !src) return
   try {
-    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(src)}/table?self=true&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === src)).catch(() => null)))
+    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(src)}/table?self=true${pubStand.value ? '&at=' + pubStand.value.stand : ''}&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === src)).catch(() => null)))
     const cols = per.find(Boolean)?.values ? Object.keys(per.find(Boolean).values) : []
     const defs = cols.map(k => model.value.attributes.find(a => a.key === k)).filter(a => a && !['rows', 'formula', 'template'].includes(a.type))
     sourceRows.value = defs.map(def => ({ def, cells: columns.value.map((c, i) => { const v = per[i]?.values?.[def.key]; return v && (!c.locale || def.perLocale) && (!c.channel || def.perChannel) ? v.value ?? '' : null }) }))
@@ -76,7 +94,7 @@ const columns = computed(() => {
 })
 function setCells(cells) { store.viewCells = cells; store.save() }
 // erst hier — der Getter läuft sofort und braucht node und columns (TDZ: „Cannot access before initialization“, jede Knotenansicht tot; Taloan, 21.09.)
-watch(() => [node.value?.source, columns.value.length], loadSource)
+watch(() => [node.value?.source, columns.value.length, pubStand.value?.stand], loadSource)
 // Kopfzeile Kanal: je Kanal (erst ohne) ein Block über 1 + Sprachen Spalten
 const headGroups = computed(() => { const out = []; for (const c of columns.value) { const g = out.find(x => x.channel === c.channel); g ? g.n++ : out.push({ channel: c.channel, n: 1 }) } return out })
 
@@ -649,7 +667,7 @@ function cellMenu(e, def, col, block) {
           <tr v-if="def.type === 'formula' || def.type === 'template'">
             <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
-              <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? 'Pflegewert — im Pflegebaum ändern' : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? (ownOrAxis(def, c) ?? inherited(def, c).value ?? '') : '' }}</div></td>
+              <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? 'Pflegewert — im Pflegebaum ändern' : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>
               <td v-else class="cell">
                 <div class="cell-box formula" :class="{ inherited: ownValue(def.key, c) == null && inherited(def, c).value != null }" tabindex="0"
                   @click="scriptCell = { def, col: c }" @keydown.enter.prevent="scriptCell = { def, col: c }"
@@ -697,6 +715,7 @@ function cellMenu(e, def, col, block) {
           </template>
         </tbody>
       </table>
+      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="`Stand #${pubStand.stand}, gesetzt an „${pubStand.from.label}“ — Pflegewerte hier wie damals; Änderungen in der Pflege seitdem kommen nicht durch, bis der Stand aktualisiert oder aufgehoben wird (Rechtsklick auf die Rubrik)`">❄ Stand #{{ pubStand.stand }}{{ standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '' }} · von „{{ pubStand.from.label }}“</span></div>
       <table v-if="sourceRows.length" class="grid values" :style="`width:${180 + columns.length * 220}px;margin-top:8px`">
         <tbody>
           <tr class="group-row locked"><td :colspan="1 + columns.length"><span class="muted">▣ Pflegewerte von „{{ node.sourceLabel }}“ · nur lesen</span> <router-link :to="`/tree/${node.source}`" class="x edit" title="im Pflegebaum öffnen — dort ändern">▣</router-link></td></tr>

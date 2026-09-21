@@ -43,6 +43,7 @@ public sealed class Node
     public string? Channel { get; set; }
     public string? Market { get; set; }
     public string? Source { get; set; }   // Rubrik: die Pflegegruppe, aus der sie kopiert wurde — ihre Werte sind dort, hier nur zu lesen
+    public long? Stand { get; set; }      // Rubrik: eingefroren bei Journalnummer (PubStandSet); null = live
     /// <summary>Rubrik: die hier per Verweis hängenden Pflegeknoten, in Reihenfolge.</summary>
     public List<string> Placed { get; } = new();
     public Dictionary<string, string> PlacedNames { get; } = new();   // Anzeigename je Verweis (PlaceNamed) — intern, nie Ausgabe
@@ -133,6 +134,8 @@ public sealed class Tree : IProjection
     public IEnumerable<Node> PlacedIn(string nodeId) => _placedIn.TryGetValue(nodeId, out var s) ? s.Select(id => _nodes.GetValueOrDefault(id)).OfType<Node>() : [];
     /// <summary>Die Wurzel des Publikationsbaums einer Rubrik.</summary>
     public Node PubTreeOf(Node rubric) { var n = rubric; while (n.Parent is { } p && _nodes.TryGetValue(p, out var up)) n = up; return n; }
+    /// <summary>Wirksamer Stand einer Rubrik: der eigene, sonst der der nächsten Rubrik darüber; null = live. Liefert auch, welche Rubrik ihn setzt.</summary>
+    public (long? Stand, Node? From) StandOf(Node rubric) { for (var n = rubric; n is not null; n = n.Parent is { } p && _nodes.TryGetValue(p, out var up) ? up : null) if (n.Stand is { } s) return (s, n); return (null, null); }
 
     /// <summary>Der Pfad von den Eltern bis zur Wurzel.</summary>
     public IEnumerable<Node> Ancestors(Node node)
@@ -427,6 +430,9 @@ public sealed class Tree : IProjection
             case Types.PubTreeSet:
                 var ps = Types.Deserialize<PubTreeSet>(entry.Payload);
                 n.Channel = ps.Channel; n.Market = ps.Market;
+                break;
+            case Types.PubStandSet:
+                n.Stand = Types.Deserialize<PubStandSet>(entry.Payload).JournalNumber;
                 break;
             case Types.NodePlaced:
                 var np = Types.Deserialize<NodePlaced>(entry.Payload);

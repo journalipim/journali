@@ -3054,13 +3054,13 @@ const _sfc_main$1 = {
   }
 };
 const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-4c5e237e"]]);
-async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], say }) {
+async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], at = null, say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
   let cols = [], nodes = [];
   for (const l of locales) {
     say?.(`lese ${l} …`);
-    const t = await api2.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${channel ? "&channel=" + encodeURIComponent(channel) : ""}${role ? "&role=" + role : ""}`);
+    const t = await api2.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${channel ? "&channel=" + encodeURIComponent(channel) : ""}${role ? "&role=" + role : ""}${at ? "&at=" + at : ""}`);
     cols = t.columns;
     nodes = only ? t.rows.filter((r) => only.has(r.row.id)) : t.rows;
     byLocale.set(l, new Map(t.rows.map((r) => [r.row.id, r.values])));

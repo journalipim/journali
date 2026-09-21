@@ -29,6 +29,7 @@ Eintrag übergeht das Abbild.
 | `VariantCreated` | `product`, `axisValues{}` | Variante — das Verkaufbare; je Produktachse ein Wert, Kombination je Produkt eindeutig |
 | `RubricCreated` | `parent?`, `label{}`, `name?`, `channel?`, `market?` | Rubrik eines Publikationsbaums (Taloan, 20.09.2026; Strom `k-…`, Rolle `rubric`). Ohne `parent` die Wurzel = der Baum eines Kanals, optional für einen Markt (Maximalstruktur; Ausleitungen filtern über das Attribut `markets`). Rubriken tragen Werte wie jeder Knoten (Texte, Bilder, SEO); NodeNamed/NodeMoved/NodeRetired/AttributeSet gelten |
 | `PubTreeSet` | `channel`, `market?` | Kanal und Markt der Wurzel ändern |
+| `PubStandSet` | `journalNumber?` | Stand einer Rubrik oder Wurzel (Taloan, 21.09.2026, „A“): eingefroren bei #n — alles darunter liest die Pflege wie damals (Ausleitung, Knotenansicht, Export-Job); die nächste Rubrik mit eigenem Stand übersteuert; null = live. Kein Kopieren, ein Zeiger; aktualisieren = neuer Zeiger. `PUT /api/rubrics/{id}/stand` `{now:true}` / `{journalNumber}` / `{}` |
 | `PlaceNamed` | `node`, `name?` | Anzeigename eines Verweises in dieser Rubrik (Taloan, 21.09.2026: 20 Verweise „Ersatzteile“ intern „Rasenmäher“ nennen) — nur für den Überblick, nie für die Ausgabe (die nimmt Attribute); leer = Pflegename |
 | `NodePlaced` | `node`, `order?` | Verweis: Produktgruppe oder Produkt hängt in dieser Rubrik (Strom = Rubrik); derselbe Knoten darf in mehreren Rubriken hängen; keine Vererbung darüber. `order` = Platz in der Rubrik |
 | `NodeUnplaced` | `node` | Verweis weg |

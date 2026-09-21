@@ -33,7 +33,7 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   let X = null
   if (format === 'xlsx') X = await import(new URL('../xlsx/xlsx.mjs', import.meta.url).href)
   // Ausleitung eines Publikationsbaums: die Zeilen sind die Produkte drin (und ihre Varianten drin), je Rubrik einmal; die Pflegebaum-Wurzeln liefern die Tabelle
-  let roots, only = null, pathOf = null, channel = ''
+  let roots, only = null, pathOf = null, channel = '', at = null
   if (pub) {
     const x = await api.get(`/api/pub/${encodeURIComponent(pub)}/export${locs[0] ? '?locale=' + encodeURIComponent(locs[0]) : ''}`)
     channel = x.tree.channel ?? ''
@@ -45,13 +45,17 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
       for (const v of r.variants) if (v.in) { only.add(v.id); pathOf.set(v.id, [...(pathOf.get(v.id) ?? []), p]) }
     }
     console.log(`Ausleitung ${x.tree.label} · ${channel}${x.tree.market ? ' · ' + x.tree.market : ''}: ${x.in} Produkte drin, ${x.out} draussen`)
+    // Stand (Taloan, 21.09.): ein Stand für alles, was drin ist → die Werte von damals; gemischte Stände je Rubrik → Werte live, mit Hinweis
+    const stands = [...new Set(x.rows.filter(r => r.in).map(r => r.stand ?? 0))]
+    if (stands.length === 1 && stands[0]) { at = stands[0]; console.log(`Stand #${at}: Werte wie damals`) }
+    else if (stands.length > 1) console.log(`⚠ gemischte Stände je Rubrik (${stands.map(s => s ? '#' + s : 'live').join(', ')}) — Zugehörigkeit je Stand, Werte live`)
     roots = rows.filter(r => !r.parent && r.role !== 'rubric').map(r => ({ ...r, file: `${x.tree.label}-${x.tree.id}` }))
   } else {
     roots = root ? rows.filter(r => r.id === root) : rows.filter(r => !r.parent && r.role !== 'rubric')
     if (!roots.length) throw new Error(`kein Knoten ${root || '(Wurzel)'}`)
   }
   for (const r of roots) {
-    const t = await build({ api, model }, { root: r.id, role, locales: locs, ownOnly, viewKey, channel, only, extra: pathOf ? [{ key: 'rubric', of: id => (pathOf.get(id) ?? []).join(' | ') }] : [], say: m => console.log(m) })
+    const t = await build({ api, model }, { root: r.id, role, locales: locs, ownOnly, viewKey, channel, only, at, extra: pathOf ? [{ key: 'rubric', of: id => (pathOf.get(id) ?? []).join(' | ') }] : [], say: m => console.log(m) })
     if (only && !t.count) { console.log(`${r.label}: nichts in der Ausleitung`); continue }
     const safe = String(r.file ?? r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
     const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.${format === 'csv' ? 'csv' : 'xlsx'}`)   // Job-Key davor: Stände je Job (Taloan)

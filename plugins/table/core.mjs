@@ -4,12 +4,13 @@
 // wieder liest. Kein DOM: env = { api: { get }, model }. Browser (browser.js) und Job (plugins/export/job.mjs) benutzen ihn.
 
 // channel: Werte auf der Kanalachse dieses Kanals (Ausleitung); only: nur diese Knoten-Ids (Set), extra: zusätzliche Spalten je Zeile ({ key, of: rowId → Wert })
-export async function build(env, { root, role = '', locales, ownOnly = false, viewKey = '', channel = '', only = null, extra = [], say }) {
+// at: Journalnummer — die Tabelle von damals (eingefrorener Publikationsstand)
+export async function build(env, { root, role = '', locales, ownOnly = false, viewKey = '', channel = '', only = null, extra = [], at = null, say }) {
   const { api, model } = env
   const byLocale = new Map(); let cols = [], nodes = []
   for (const l of locales) {
     say?.(`lese ${l} …`)
-    const t = await api.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${channel ? '&channel=' + encodeURIComponent(channel) : ''}${role ? '&role=' + role : ''}`)
+    const t = await api.get(`/api/nodes/${encodeURIComponent(root)}/table?deep=true&locale=${l}${channel ? '&channel=' + encodeURIComponent(channel) : ''}${role ? '&role=' + role : ''}${at ? '&at=' + at : ''}`)
     cols = t.columns; nodes = only ? t.rows.filter(r => only.has(r.row.id)) : t.rows; byLocale.set(l, new Map(t.rows.map(r => [r.row.id, r.values])))
   }
   // Spalten der Sicht, sonst alle; Formeln, Vorlagen und Zeilenattribute bleiben draussen (kein Rückweg)

@@ -155,6 +155,15 @@ public static class Commands
         return Outcome.Ok(c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(parent, label ?? new(), Blank(name), channel, market)));
     }
 
+    /// <summary>Stand einer Rubrik: eingefrieren bei #n (n = Journalkopf für „jetzt“), null = live. Gilt ab hier nach unten.</summary>
+    public static Outcome SetStand(Ctx c, string id, long? number, long head)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (n.Role != Roles.Rubric) return Outcome.Bad("Ein Stand steht an einer Rubrik oder der Wurzel des Publikationsbaums.");
+        if (number is { } k && (k < 1 || k > head)) return Outcome.Bad($"Stand: Journalnummer 1 … {head}.");
+        return Outcome.Ok(c.Write(id, Types.PubStandSet, new PubStandSet(number)));
+    }
+
     public static Outcome SetPubTree(Ctx c, string id, string? channel, string? market)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
