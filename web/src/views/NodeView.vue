@@ -759,7 +759,7 @@ function cellMenu(e, def, col, block) {
               <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
               <span v-if="def.multiple" class="muted" title="vermehrbar: mehrere Werte, Liste in der Zelle">≣</span>
               <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" title="Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig">⌖</span>
-              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'Vererbung wiederherstellen (eigener Wert wird durch den geerbten ersetzt)' : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
+              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'Klick stellt die Vererbung wieder her (eigener Wert wird durch den geerbten ersetzt)' : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
               <span v-if="def.required" class="warn" title="Pflicht">●</span>
               <span v-if="def.hereLocked" class="warn" :title="`nicht an ${roleLabel[node.role]} — verwendbar an: ${(def.levels ?? []).map(r => roleLabel[r]).join(', ')}`">⌀</span>
               <span v-else-if="def.whenLocked" class="warn" :title="`gilt nur bei ${store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute })} = ${def.when.values.slice(0, 6).join(', ')}${def.when.values.length > 6 ? ' …' : ''}`">⌀</span>
@@ -870,7 +870,7 @@ function cellMenu(e, def, col, block) {
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
               <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
-              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="Vererbung wiederherstellen (eigener Zustand wird aufgehoben)">↑ erben</button>
+              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="Klick stellt die Vererbung wieder her (eigener Zustand wird aufgehoben)">↑ erben</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
@@ -880,8 +880,8 @@ function cellMenu(e, def, col, block) {
                 <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben${pe.why ? ' · ' + pe.why : ''}`">⚠ nicht ausgeleitet</span>
               </template>
               <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="flex:0 0 300px;width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto;text-align:right">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
-              <button class="x" @click="wfAssign(w)" :title="w.assigned ? `Zuständigen ändern (jetzt ${w.assigned})` : 'Zuständigen zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
-              <button class="x" @click="wfHistory(w)" title="Verlauf anzeigen">≡</button>
+              <button class="x" @click="wfAssign(w)" :title="w.assigned ? `Klick ändert den Zuständigen (jetzt ${w.assigned})` : 'Klick weist einen Zuständigen zu'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
+              <button class="x" @click="wfHistory(w)" title="Klick zeigt den Verlauf">≡</button>
             </td>
           </tr>
         </tbody></table>
