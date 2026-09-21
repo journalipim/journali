@@ -839,7 +839,7 @@ function cellMenu(e, def, col, block) {
         <table class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
           <tr v-for="w in workflows" :key="w.workflow">
             <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
-            <td class="row" style="gap:6px;flex-wrap:wrap;align-items:center">
+            <td style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;width:100%;box-sizing:border-box">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand — noch kein Schritt'">{{ w.stateLabel?.de || w.state }}</span>
               <button v-for="t in w.transitions" :key="t.key" @click="wfStep(w, t)" :title="`→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.label?.de || t.key }} →</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px" :title="`${t.label?.de || t.key}: nach ${t.escalateAfterDays} Tagen im Zustand dürfen auch ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen mit Schreibrecht'}`">⏰ {{ t.escalated ? 'eskaliert' : 'Eskalation ' + (t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '') }}{{ t.escalateRoles?.length ? ' → ' + t.escalateRoles.join('/') : '' }}</span>
@@ -850,7 +850,7 @@ function cellMenu(e, def, col, block) {
                 <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Der Schritt „${w.transition}“ sollte das bewirken, es ist aber nicht passiert — Klick tut es jetzt`">⚠ {{ effLabel(pe.effect) }}</button>
                 <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben — die Ausleitung lässt dieses Produkt weg, bis eine Variante freigegeben ist${pe.why ? ' · ' + pe.why : ''}`">⚠ nicht ausgeleitet</span>
               </template>
-              <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
+              <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
               <button class="x" @click="wfAssign(w)" :title="w.assigned ? `zuständig: ${w.assigned} — ändern` : 'jemandem zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
             </td>
           </tr>
