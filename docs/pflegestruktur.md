@@ -600,6 +600,36 @@ hat (16.09.2026):
 | Datendichtes ExtJS-Backend für Power-User, komplexe Gitter | genau das Ziel der Oberfläche: Gitter, Zelle, Tastatur, kein Formular; Massenpflege (12) |
 | Suche über Millionen Datensätze, Elasticsearch/OpenSearch asynchron | der Suchindex ist ein Abbild, das dasselbe Journal liest (`architektur.md`). Erst Postgres-Volltext im Abbild, OpenSearch als Plugin/Abbild, wenn die Menge es verlangt |
 
+### Funktionsvergleich, Stand 21.09.2026 (Taloan: „lohnt mal einen Blick“)
+
+Quellen: `docs.opendxp.io` (Overview, Objects, Assets, Tools and Features, Bundles) und `opendxp.io/en/platform/components/pim`,
+gelesen am 21.09.2026. Die Tabelle von oben (16.09.) bleibt als Geschichte; hier der Stand nach fünf Tagen Bauen.
+Was OpenDXP als Bundle hat, ist bei uns ein Plugin — beides ausserhalb des Kerns.
+
+| Bereich | OpenDXP | journali heute | Urteil |
+|---|---|---|---|
+| Datenmodell | Klassen-Editor im Browser, Vererbung, Classification Store, Object Bricks, Localized Fields | Modell im Journal (Sprachen, Kanäle, Einheiten, Gruppen, Attribute, Listen, Sichten), Familien, Gruppen ab Ebene, Vererbung entlang des Baums, Achsen Sprache × Kanal je Attribut, vermehrbare Attribute, Formeln und Skripte, ETIM-Klassen | gleichauf; Modelländerungen sind bei uns Einträge mit Historie |
+| Varianten | Variants als Objekte mit Vererbung vom Parent | Produkt → Varianten mit Achsen (eindeutige Kombination), geerbte Werte, Achsenassistent | gleichauf |
+| Historie/Versionen | Versionen je Objekt (Tabelle), Auto-Save | das Journal selbst (jeder Wert, jede Struktur), Versionen als Zeiger ins Journal, Abbild zu #n | journali vorn — vollständig, ohne Versionstabelle |
+| Rechte | Benutzer, Rollen, Rechte je Klasse/Feld/Layout, Permission Analyzer, 2FA | Benutzer, Rollen mit 9 Rechten (Lesen, Schreiben, Zurückziehen, Freigabe, Modell, Plugins, Jobs, Storage, Benutzer), Sitzungen, Dienst-Token je Job | OpenDXP vorn: Rechte je Feld/Teilbaum, 2FA, SSO fehlen |
+| Workflow | Workflow Management (Zustände, Übergänge, Rollen) | Status + Freigabe je Kanal (mit Sortiment über den Vater); keine freien Zustände, keine Zuständigkeiten | OpenDXP vorn |
+| Publikation | Multichannel über Output-Channels, Dokumente (CMS) | Publikationsbäume je Kanal × Markt (Rubriken, Verweise, Arbeitsname, kopierte Rubrik), Ausleitungsregel Freigabe × Markt; kein CMS | anders: wir leiten aus, OpenDXP rendert Seiten |
+| DAM | Ordner, Metadaten, 200+ Vorschauen, Thumbnail-Pipelines, Bildbearbeitung, Fokuspunkt, WebDAV, Versionen | Medien nach Hash mit Werten (Alt-Text, Rechte), Ordnerbaum, Sortieren/Gruppieren, Vererbung an Subitems mit „unterbunden“, Store Postgres/Verzeichnis/S3, eine Vorschau (Browser rechnet) | OpenDXP vorn: Presets, Bildbearbeitung, Metadaten aus der Datei (EXIF/IPTC), Videovorschau |
+| Massenpflege | Grid mit Spaltenkonfiguration, Batch-Edit, CSV/XLSX-Export und -Import im Grid | Tabellenansicht je Knoten (Inline, Tastatur), Excel/CSV/JSON-Import mit Datenmapper und strengem 1:1-Rundlauf, Office-Aufgabenbereiche (Excel, OnlyOffice) | gleichauf; Office-Seitenleiste haben sie nicht |
+| Datenqualität | Validierung je Feld (Pflicht, Muster), Bundles | Regeln je Kanal × Sprache (Vollständigkeit), Datenanalyse-Plugins: DPP, PPWR, Empowering Consumers, GEO-Texte, Anreicherung mit KI | journali vorn — Regelwerke, nicht nur Feldprüfung |
+| KI | Bundles (Übersetzung, Verschlagwortung, Anreicherung) | KI mehrere Anbieter, Schlüssel nur im Browser; Vorschläge nie ohne Bestätigung; Herkunft je Wert | gleichauf, anderer Grundsatz (Herkunft sichtbar) |
+| Import/Export | Data Hub (GraphQL, REST), Import-Bundle, Grid-Export | `/api` mit Delta ab Nummer, Plugins: CSV, XLSX, JSON, IXP, Solr, Vorlagen-Export (BMEcat 2005/ETIM 5, Google Merchant, JSON), RAG-Export, Backup; Jobs mit Profil | GraphQL fehlt; Vorlagen-Export haben sie nicht im Kern |
+| Suche | Advanced Object Search, Elasticsearch/OpenSearch-Bundle | Suche im Abbild mit Begriffen (`media:`, `rel:`, Status, Attribute); kein Volltextindex | OpenDXP vorn bei Millionen Datensätzen |
+| Jobs/Automatisierung | Scheduling (Veröffentlichung), Maintenance, Symfony Messenger | Jobs als Kindprozesse (cron, von Hand), Profile, Geheimnisse beim Server; Fächer in/done (Entwurf) | gleichauf; terminierte Freigabe fehlt |
+| Betrieb | Symfony/PHP, MySQL/MariaDB, Redis, Elasticsearch optional; Docker | .NET 8, Postgres, ein Prozess, Plugins als Bind-Mount, lokaler Journal-Spiegel; Docker | journali leichter; Schnappschüsse der Abbilder fehlen noch |
+| API-Erweiterung | PHP-Bundles im Prozess, Events | Plugins nie im Serverprozess (Browser-Modul oder Kindprozess), nur über `/api` | Grundsatzentscheid: Stabilität vor Tiefe |
+| Werkzeuge | Notes & Events, Tags, Perspectives, Custom Reports, Glossary, Notifications, PDF-Rendering, Cloning | Journal lebendig daneben (statt Notes/Events), Sichten je Rolle (statt Perspectives), Wörterbuch (statt Glossary), Datenblatt HTML + Designer (PDF-Stapel offen), Duplizieren; keine Tags, keine Reports, keine Benachrichtigungen | OpenDXP breiter; das meiste davon bei uns nicht Gegenstand oder Plugin-Stoff |
+| CMS, E-Commerce, CDP | Documents, E-Commerce-Framework, Kundenobjekte | nicht Gegenstand | bewusst nicht |
+
+Kurz: **vorn** sind wir bei Historie, Regelwerken (DQ/Compliance), Ausleitung je Kanal × Markt, Office-Anbindung und
+Betriebsgewicht; **hinten** bei Rechten (Feld/Teilbaum, SSO, 2FA), freien Workflows, DAM-Tiefe (Presets, Metadaten aus
+der Datei), Volltextsuche, GraphQL und terminierten Freigaben. Nicht Gegenstand: CMS, Shop, CDP.
+
 ## Das Beispiel auf dem Modell
 
 | Im JSON | Wird zu |
