@@ -42,7 +42,7 @@ public class PublicationTests
         var rows = w.Export();
         var row = Assert.Single(rows);
         Assert.False(row.In);
-        Assert.Contains("nicht freigegeben für web", row.Why);
+        Assert.Contains(row.Why, w => w.StartsWith("nicht freigegeben für web"));
         Assert.Equal(2, row.Variants.Count);
         Assert.All(row.Variants, v => Assert.False(v.Verdict.In));
     }

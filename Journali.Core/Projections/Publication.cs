@@ -38,7 +38,7 @@ public static class Publication
     public static Verdict DecideVariant(Tree tree, ModelCatalog model, Node variant, string channel, string? market, string? locale)
     {
         var why = new List<string>();
-        if (tree.ReleasedVia(variant, channel, locale) is null) why.Add($"nicht freigegeben für {channel}{(locale is null ? "" : "/" + locale)}");
+        if (tree.ReleasedVia(variant, channel, locale) is null) why.Add($"nicht freigegeben für {channel}{(locale is null ? "" : "/" + locale)} — Freigabe an der Variante, Pflegebaum ✓ Freigaben");
         if (market is not null)
         {
             var raw = tree.Resolve(model, variant, MarketsAttribute, null, null).Value;

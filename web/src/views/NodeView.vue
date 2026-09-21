@@ -762,7 +762,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section" v-if="node.role !== 'rubric'">
+      <div class="section" v-if="node.role !== 'rubric' && !props.pub">
         <h2 @click="toggle('relations')"><span class="caret">{{ open('relations') ? '▾' : '▸' }}</span>⇄ Relationen <span class="muted">· {{ relCount }}</span></h2>
         <template v-if="open('relations')">
         <div v-for="b in relBlocks" :key="b.type" class="relblock">
@@ -843,7 +843,7 @@ function cellMenu(e, def, col, block) {
         <div class="muted">Eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen): <span class="mono">{{ node.orphans.join(', ') }}</span> — Gruppe anhängen, dann sind sie wieder da.</div>
       </div>
 
-      <div class="section" v-if="node.role === 'product'">
+      <div class="section" v-if="node.role === 'product' && !props.pub">
         <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted">· sichern Eindeutigkeit in den gewählten Attributen über alle Varianten</span></h2>
         <template v-if="open('axes')">
         <table v-if="node.axes.length" class="grid" style="width:auto">
@@ -889,7 +889,7 @@ function cellMenu(e, def, col, block) {
         </template>
       </div>
 
-      <div class="section" v-if="node.role !== 'rubric'">
+      <div class="section" v-if="node.role !== 'rubric' && !props.pub">
         <h2 @click="toggle('versions')"><span class="caret">{{ open('versions') ? '▾' : '▸' }}</span>⎘ Versionen <span class="muted">· Stand einfrieren, Belege der Erzeuger, Stand ansehen, zurückrollen</span></h2>
         <VersionsPanel v-if="open('versions')" :id="id" :role="node.role" @changed="load(); store.poll(true)" />
       </div>
