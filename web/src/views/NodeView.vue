@@ -525,8 +525,14 @@ async function wfEffect(eff) {
 // Verlauf eines Workflows am Knoten (Taloan, 21.09.): jeder Schritt mit Zeit, Wer, Schritt, Zustand, Notiz — aus dem Journalstrom des Knotens
 function wfHistory(w) {
   const label = k => w.states?.find(s => s.key === k)?.label?.de || k
-  const rows = entries.value.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
-    .map(e => [when(e.at), e.type === 'WorkflowAssigned' ? `${e.actor} · zuständig: ${e.payload.user || '— (Rolle)'}` : `${e.actor} · ${e.payload.transition ? e.payload.transition + ' → ' : ''}${label(e.payload.state)}${e.payload.note ? ' · ✎ ' + e.payload.note : ''}`])
+  // nach Datum gruppiert (Taloan, 21.09.: „in Firmen dauert es manchmal 4 Wochen“): Datumszeile, darunter die Schritte mit Uhrzeit
+  const list = entries.value.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
+  const rows = []; let day = null
+  for (const e of list) {
+    const d = new Date(e.at); const key = d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+    if (key !== day) { rows.push([key, '']); day = key }
+    rows.push([d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }), e.type === 'WorkflowAssigned' ? `${e.actor} · zuständig: ${e.payload.user || '— (Rolle)'}` : `${e.actor} · ${e.payload.transition ? e.payload.transition + ' → ' : ''}${label(e.payload.state)}${e.payload.note ? ' · ✎ ' + e.payload.note : ''}`])
+  }
   dialog.help({ title: `Verlauf „${w.label?.de || w.workflow}“ · ${shownLabel.value}`, rows: rows.length ? rows : [['—', 'noch kein Schritt']] })
 }
 async function wfAssign(w) {
