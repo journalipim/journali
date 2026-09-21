@@ -17,7 +17,7 @@ export const OPS = [
   ['date', 'Datum', 'format dd.MM.yyyy | MM/dd/yyyy | yyyyMMdd → ISO yyyy-MM-dd'],
   ['htmldecode', 'HTML-Entities auflösen', '&amp; → &'],
   ['striphtml', 'HTML entfernen', 'Tags weg, Text bleibt'],
-  ['map', 'Werte übersetzen', 'pairs: a=b; c=d — nicht Genanntes bleibt (oder other)'],
+  ['map', 'Werte ersetzen nach Tabelle', 'alt=neu; alt2=neu2 — nichts mit Sprache: „Ja=true; Nein=false“, „rot=RAL3000“; nicht Genanntes bleibt (oder „sonst“)'],
   ['when', 'Bedingung', 'test: empty | equals | contains | matches (regex) mit value; then/else: Text ({} = Quelle)'],
 ]
 
@@ -103,7 +103,7 @@ export function describe(steps) {
       case 'split': return `teile „${s.sep ?? ','}“ [${s.index ?? 'alle'}]`
       case 'number': return `Zahl${s.decimal ? ' (' + s.decimal + ')' : ''}`
       case 'when': return `wenn ${s.test} „${s.value ?? ''}“`
-      case 'map': return 'übersetze Werte'
+      case 'map': return `Tabelle ${String(s.pairs ?? '').slice(0, 30)}`
       default: return OPS.find(o => o[0] === s.op)?.[1] ?? s.op
     }
   }).join(' → ')
