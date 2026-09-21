@@ -72,6 +72,19 @@ public static class TreeApi
         api.MapPut("/nodes/{id}/name", (string id, NodeNamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Rename(x, id, b.Name)));
         // Publikationsbäume (Taloan, 20.09.2026): Wurzel = Baum eines Kanals (× Markt), Rubriken darunter, Pflegeknoten per Verweis
         api.MapGet("/pub", (Catalog c) => c.With((model, tree, _) => tree.PubTrees.Select(n => new { n.Id, n.Channel, n.Market, label = NodeRow.LabelOf(tree, model, n), rubrics = CountRubrics(tree, n), placed = CountPlaced(tree, n) }).ToList()));
+        // Ausleitung (Taloan, 21.09.): je Produkt im Baum drin/draussen mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Publication.cs)
+        api.MapGet("/pub/{id}/export", (string id, Catalog c, string? locale = null) => c.With((model, tree, _) =>
+        {
+            if (!tree.Nodes.TryGetValue(id, out var root) || root.Role != Roles.Rubric || root.Parent is not null) return Results.NotFound();
+            var rows = Publication.Export(tree, model, root, locale).Select(r => new
+            {
+                path = r.Rubrics.Select(x => new { x.Id, x.Role, label = NodeRow.LabelOf(tree, model, x) }).ToList(),
+                product = new { r.Product.Id, label = NodeRow.LabelOf(tree, model, r.Product), sku = r.Product.Own(Model.SkuAttribute, null, null) },
+                r.In, r.Why,
+                variants = r.Variants.Select(v => new { v.Variant.Id, label = NodeRow.LabelOf(tree, model, v.Variant), sku = v.Variant.Own(Model.SkuAttribute, null, null), v.Verdict.In, v.Verdict.Why }).ToList(),
+            }).ToList();
+            return Results.Ok(new { tree = new { root.Id, root.Channel, root.Market, label = NodeRow.LabelOf(tree, model, root) }, locale, @in = rows.Count(r => r.In), @out = rows.Count(r => !r.In), rows });
+        }));
         api.MapPost("/rubrics", (RubricCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateRubric(x, b.Parent, b.Label, b.Name, b.Channel, b.Market)));
         api.MapPut("/rubrics/{id}/tree", (string id, PubTreeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetPubTree(x, id, b.Channel, b.Market)));
         api.MapPost("/rubrics/{id}/place", (string id, NodePlaced b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Place(x, id, b.Node, b.Order)));

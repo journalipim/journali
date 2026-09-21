@@ -70,6 +70,9 @@ public static class Model
         foreach (var g in groups)
             yield return new(GroupStream + g.Key, Types.AttributeGroupDefined, Types.Serialize(g));
 
+        // Märkte (Taloan, 21.09.2026, Ausleitung): Liste ohne Saatwerte — der Anwender trägt seine Länder ein; Spalte fallback = ein Markt bekommt
+        // das Sortiment seines Fallback-Markts, solange er nichts Eigenes sagt. Attribut markets (mehrfach, vererbbar) am Verkaufbaren; leer = überall.
+        yield return new(ListStream + Projections.Publication.MarketList, Types.ListDefined, Types.Serialize(new ListDefinition(Projections.Publication.MarketList, Labels.Of("Märkte", "Markets"), [Projections.Publication.FallbackColumn])));
         // Werteliste Farben: Eintrag = Farbe mit Namen je Sprache und RAL-Nummer (RAL Classic).
         yield return new(ListStream + "color", Types.ListDefined, Types.Serialize(new ListDefinition("color", Labels.Of("Farben", "Colours"), ["ral"])));
         (string Key, string De, string En, string Ral)[] colors =
@@ -94,6 +97,7 @@ public static class Model
             new(SkuAttribute, Labels.Of("SKU", "SKU"), AttributeTypes.Text, Group: "logistics", Required: new() { ["web"] = ["*"], ["print"] = ["*"] }),
             new("ean", Labels.Of("EAN", "EAN"), AttributeTypes.Text, Group: "logistics"),
             new("weight", Labels.Of("Gewicht", "Weight"), AttributeTypes.Decimal, Unit: "kg", Group: "physical"),
+            new(Projections.Publication.MarketsAttribute, Labels.Of("Verkaufsländer", "Markets"), AttributeTypes.Enum, Group: "mastergroup", List: Projections.Publication.MarketList, Multiple: true, Inheritable: true),
         ];
         foreach (var a in attributes)
             yield return new(AttributeStream + a.Key, Types.AttributeDefined, Types.Serialize(a));

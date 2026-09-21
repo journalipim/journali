@@ -48,6 +48,11 @@ const unplaced = computed(() => {
   return tree.rows.filter(r => r.role === 'product' && !inTree(r.id))
 })
 const showUnplaced = ref(false)
+// Ausleitung (Taloan, 21.09.): je Produkt im Baum drin oder draussen, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
+const exp = ref(null); const showExport = ref(false); const expOnly = ref('out')
+async function loadExport() { if (!current.value) { exp.value = null; return } try { exp.value = await api.get(`/api/pub/${encodeURIComponent(current.value.id)}/export`) } catch (e) { exp.value = null } }
+watch([current, () => tree.rows], loadExport, { immediate: true })
+const expRows = computed(() => !exp.value ? [] : exp.value.rows.filter(r => expOnly.value === 'all' || (expOnly.value === 'in') === r.in))
 // Links der Pflegebaum (Taloan, 21.09.: „links mein Pflegebaum, rechts der Publikationsbaum, und ich ziehe die Äste rüber, wie ich sie brauche“):
 // Gruppen und Produkte, aufklappbar, ziehbar; ✓ = in diesem Publikationsbaum schon drin (selbst oder über einen Vorfahren als Verweis)
 const srcExpanded = ref(new Set(JSON.parse(localStorage.getItem('journali.pubsrc.expanded') || '[]')))
@@ -77,7 +82,7 @@ async function newTree() {
   if (!name) return
   const channel = channels.length === 1 ? channels[0].key : await dialog.prompt({ title: 'Kanal', text: channels.map(c => c.key).join(' · '), value: store.model?.masterChannel ?? channels[0]?.key ?? '', ok: 'OK' })
   if (!channel) return
-  const market = await dialog.prompt({ title: 'Markt (leer = alle)', value: '', placeholder: 'z. B. ch', ok: 'OK' })
+  const market = await dialog.prompt({ title: 'Markt (leer = alle Märkte)', text: 'Schlüssel aus der Werteliste „Märkte“ (Modell) — der Baum leitet dann nur aus, was in diesem Markt verkauft wird (Verkaufsländer am Produkt).', value: '', placeholder: 'z. B. ch', ok: 'OK' })
   if (market == null) return
   await run(async () => { const e = await post('/api/rubrics', { parent: null, label: {}, name, channel, market: market || null }); treeKey.value = e.stream })
 }
@@ -219,7 +224,23 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </select>
       <button class="x" @click="newTree" title="neuer Publikationsbaum">+</button>
       <span class="grow" />
-      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced" :title="`${unplaced.length} Produkte sind in „${current.label}“ noch nicht einsortiert — Klick zeigt sie`">⚠ {{ unplaced.length }}</button>
+      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Ausleitung ${exp.tree.channel}${exp.tree.market ? ' · ' + exp.tree.market : ''}: ${exp.in} Produkte drin, ${exp.out} draussen (Freigabe, Markt) — Klick zeigt die Liste`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
+      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} Produkte sind in „${current.label}“ noch nicht einsortiert — Klick zeigt sie`">⚠ {{ unplaced.length }}</button>
+    </div>
+    <div v-if="showExport && exp" class="unplaced">
+      <div class="toolbar"><span class="muted">Ausleitung {{ exp.tree.channel }}{{ exp.tree.market ? ' · ' + exp.tree.market : '' }} · <span class="pos">{{ exp.in }} drin</span> · <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }} draussen</span></span><span class="grow" />
+        <span class="view-chip" :class="{ on: expOnly === 'out' }" @click="expOnly = 'out'" title="was nicht ausgeleitet wird, und warum">draussen</span>
+        <span class="view-chip" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'">drin</span>
+        <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">alle</span></div>
+      <div class="muted" style="font-size:12px;padding:0 8px 4px">Drin ist ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).</div>
+      <div class="scroll" style="max-height:240px">
+        <div v-for="r in expRows" :key="r.path.map(x => x.id).join('/') + r.product.id" class="node" :title="r.path.map(x => x.label).join(' › ') + (r.why.length ? '\n' + r.why.join('\n') : '')" @click="router.push(`/pub/${r.product.id}`)">
+          <span :class="r.in ? 'pos' : 'neg'" style="width:14px;text-align:center">{{ r.in ? '✓' : '✗' }}</span>
+          <span class="icon">▦</span><span class="label">{{ r.product.label }}</span>
+          <span class="muted" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:6px">{{ r.in ? r.path.slice(1).map(x => x.label).join(' › ') : r.why.join(' · ') }}</span>
+        </div>
+        <div v-if="!expRows.length" class="empty" style="padding:10px">{{ expOnly === 'out' ? 'nichts draussen — alles im Baum wird ausgeleitet' : 'nichts' }}</div>
+      </div>
     </div>
     <div v-if="showUnplaced" class="unplaced">
       <div class="toolbar"><span class="muted">{{ unplaced.length }} Produkte noch nicht einsortiert</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `alle ${unplaced.length} in die Rubrik „${selRubric.label}“ einsortieren` : 'erst links eine Rubrik anklicken, dann hier alle einsortieren'">alle in {{ selRubric ? '„' + selRubric.label + '“' : 'Rubrik …' }}</button></div>

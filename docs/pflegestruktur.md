@@ -77,9 +77,16 @@ Sprachen bzw. Kanäle beziehen ihren Wert aus dem Master. Kette je Achse:
 eigener Wert → Fallback → Master → `*`, der Kanal fällt vor der Sprache
 (`de/print` → `de/web` → `de` → … → `*`). **Fallback** (Taloan, 20.09.2026):
 eine Sprache oder ein Kanal kann eine andere Ausprägung nennen, die vor dem
-Master gilt — `fr-ch` → `fr-fr`, `shop_cn` → `shop_tr`. Beim Kanal gilt der
+Master gilt — `fr-ch` → `fr-fr`, `shop_ch` → `shop_de`. Beim Kanal gilt der
 Fallback auch für die Freigaben: das Sortiment von fr-ch ist das von fr-fr,
 solange fr-ch nichts Eigenes sagt. Die Vollständigkeit zählt ohne Master.
+
+**Ausleitung (Taloan, 21.09.2026, entschieden):** ein Publikationsbaum nennt
+Kanal und optional Markt. Drin ist ein Produkt, wenn eine Variante für den
+Kanal freigegeben ist (Kanal-Fallback zählt) und der Markt des Baums in den
+Verkaufsländern (`markets`, vererbbar, leer = überall) steht — oder in der
+Fallback-Kette des Markts (Liste `market`, Spalte `fallback`). Regel und
+Gründe: `docs/eintraege.md` → Ausleitung, `Publication.cs`.
 
 ### 2. Werteliste (`list:<key>`) — Einträge mit eigenen Spalten
 
