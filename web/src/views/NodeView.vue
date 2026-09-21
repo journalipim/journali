@@ -35,24 +35,6 @@ const props = defineProps({ id: String, pub: { type: String, default: null }, pu
 // Im Publikationsbaum ist der Verweis ein Fenster auf den Pflegeknoten: Pflegewerte nur lesen (auch als admin — geändert wird an der Quelle),
 // pflegbar nur, was eine Gruppe an einer Rubrik dieses Baums mitbringt (z. B. SEO fürs Web)
 const pubTree = computed(() => props.pub ? tree.byId.get(props.pub) : null)
-// Stand (Taloan, 21.09., „A“): Rubrik oder der Verweis erbt den Stand der nächsten Rubrik darüber — Pflegewerte dann wie bei #n
-const pubStand = computed(() => { if (!props.pub) return null; const start = node.value?.role === 'rubric' ? tree.byId.get(props.id) : tree.byId.get(props.pubRubric); for (let n = start; n; n = tree.byId.get(n.parent)) if (n.stand != null) return { stand: n.stand, from: n }; return null })
-const standAt = ref(null)   // Datum des Journaleintrags #n
-watch(pubStand, async s => { standAt.value = null; if (!s) return; try { standAt.value = (await api.get(`/api/journal/${s.stand}`)).at } catch {} }, { immediate: true })
-// Pflegewerte des Verweises bei #n (Verweis unter eingefrorener Rubrik): Tabelle von damals, je Spalte
-const frozen = ref(null)   // Map key attr|locale|channel → Wert
-async function loadFrozen() {
-  frozen.value = null
-  const s = pubStand.value; if (!s || !props.pub || node.value?.role === 'rubric') return
-  try {
-    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(props.id)}/table?self=true&at=${s.stand}&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === props.id)).catch(() => null)))
-    const m = new Map()
-    columns.value.forEach((c, i) => { for (const [k, v] of Object.entries(per[i]?.values ?? {})) m.set(`${k}|${c.locale ?? ''}|${c.channel ?? ''}`, v.value ?? '') })
-    frozen.value = m
-  } catch { frozen.value = null }
-}
-watch(() => [pubStand.value?.stand, columns.value.length, props.id], loadFrozen, { immediate: true })
-const roValue = (def, c) => frozen.value ? (frozen.value.get(`${def.key}|${c.locale ?? ''}|${c.channel ?? ''}`) ?? '') : (ownOrAxis(def, c) ?? inherited(def, c).value ?? '')
 // Kopierte Rubrik (Taloan, 21.09.: „im Pflegebaum Überschriften gepflegt — die Rubrik zeigt nichts davon“): die Pflegewerte der Quellgruppe,
 // aufgelöst wie in der Tabelle (geerbt zählt), je Spalte der Ansicht — nur zu lesen, geändert wird an der Quelle
 const sourceRows = ref([])
@@ -94,6 +76,24 @@ const columns = computed(() => {
 })
 function setCells(cells) { store.viewCells = cells; store.save() }
 // erst hier — der Getter läuft sofort und braucht node und columns (TDZ: „Cannot access before initialization“, jede Knotenansicht tot; Taloan, 21.09.)
+// Stand (Taloan, 21.09., „A“): Rubrik oder der Verweis erbt den Stand der nächsten Rubrik darüber — Pflegewerte dann wie bei #n
+const pubStand = computed(() => { if (!props.pub) return null; const start = node.value?.role === 'rubric' ? tree.byId.get(props.id) : tree.byId.get(props.pubRubric); for (let n = start; n; n = tree.byId.get(n.parent)) if (n.stand != null) return { stand: n.stand, from: n }; return null })
+const standAt = ref(null)   // Datum des Journaleintrags #n
+watch(pubStand, async s => { standAt.value = null; if (!s) return; try { standAt.value = (await api.get(`/api/journal/${s.stand}`)).at } catch {} }, { immediate: true })
+// Pflegewerte des Verweises bei #n (Verweis unter eingefrorener Rubrik): Tabelle von damals, je Spalte
+const frozen = ref(null)   // Map key attr|locale|channel → Wert
+async function loadFrozen() {
+  frozen.value = null
+  const s = pubStand.value; if (!s || !props.pub || node.value?.role === 'rubric') return
+  try {
+    const per = await Promise.all(columns.value.map(c => api.get(`/api/nodes/${encodeURIComponent(props.id)}/table?self=true&at=${s.stand}&locale=${c.locale ?? ''}&channel=${c.channel ?? ''}`).then(t => t.rows.find(r => r.row.id === props.id)).catch(() => null)))
+    const m = new Map()
+    columns.value.forEach((c, i) => { for (const [k, v] of Object.entries(per[i]?.values ?? {})) m.set(`${k}|${c.locale ?? ''}|${c.channel ?? ''}`, v.value ?? '') })
+    frozen.value = m
+  } catch { frozen.value = null }
+}
+watch(() => [pubStand.value?.stand, columns.value.length, props.id], loadFrozen, { immediate: true })
+const roValue = (def, c) => frozen.value ? (frozen.value.get(`${def.key}|${c.locale ?? ''}|${c.channel ?? ''}`) ?? '') : (ownOrAxis(def, c) ?? inherited(def, c).value ?? '')
 watch(() => [node.value?.source, columns.value.length, pubStand.value?.stand], loadSource)
 // Kopfzeile Kanal: je Kanal (erst ohne) ein Block über 1 + Sprachen Spalten
 const headGroups = computed(() => { const out = []; for (const c of columns.value) { const g = out.find(x => x.channel === c.channel); g ? g.n++ : out.push({ channel: c.channel, n: 1 }) } return out })

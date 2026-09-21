@@ -96,6 +96,8 @@ public static class Types
     public const string PubStandSet = "PubStandSet";
     public const string NodePlaced = "NodePlaced";
     public const string NodeUnplaced = "NodeUnplaced";
+    public const string RulePlaced = "RulePlaced";
+    public const string RuleRemoved = "RuleRemoved";
     public const string PlaceNamed = "PlaceNamed";
     public const string RelationTypeDefined = "RelationTypeDefined";
     public const string RelationTypeRetired = "RelationTypeRetired";
@@ -531,6 +533,12 @@ public sealed record PubStandSet(long? JournalNumber);
 public sealed record NodePlaced(string Node, int? Order = null);
 
 public sealed record NodeUnplaced(string Node);
+
+/// <summary>Regel-Verweis (Taloan, 21.09.2026): „alles, worauf das zutrifft“ — kind name (Gruppen/Produkte namens name unter under) oder
+/// attribute (Produkte mit attribute = value, geerbt zählt); role group|product; groupBy none | parent | attr:&lt;key&gt;. Rules.cs.</summary>
+public sealed record PubRule(string Id, string Kind, string? Under, string? Role = null, string? Name = null, string? Attribute = null, string? Value = null, string? GroupBy = null, string? Label = null);
+public sealed record RulePlaced(PubRule Rule);
+public sealed record RuleRemoved(string Id);
 
 /// <summary>Anzeigename eines Verweises in dieser Rubrik (Taloan, 21.09.2026): nur für den Überblick im Publikationsbaum, nie für die Ausgabe. Leer = Pflegename.</summary>
 public sealed record PlaceNamed(string Node, string? Name);

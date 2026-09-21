@@ -50,10 +50,15 @@ public static class Publication
     }
 
     public sealed record VariantRow(Node Variant, Verdict Verdict);
-    public sealed record ProductRow(IReadOnlyList<Node> Rubrics, Node Product, IReadOnlyList<VariantRow> Variants, bool In, IReadOnlyList<string> Why, long? Stand = null);
+    /// <summary>Ein Glied des Pfads: Rubrik, verwiesener Pflegeknoten, oder eine von einer Regel erzeugte Gliederung (Id leer bei Attributwert).</summary>
+    public sealed record PathItem(string Id, string Role, string Label, string? Rule = null)
+    {
+        public static PathItem Of(Tree tree, ModelCatalog model, Node n, string? rule = null) => new(n.Id, n.Role, Rules.LabelOf(tree, model, n), rule);
+    }
+    public sealed record ProductRow(IReadOnlyList<PathItem> Rubrics, Node Product, IReadOnlyList<VariantRow> Variants, bool In, IReadOnlyList<string> Why, long? Stand = null, string? Rule = null);
 
     /// <summary>Entscheidung für ein Produkt: drin, wenn eine Variante drin ist. Ohne Varianten: nie (Freigabe nur an der Variante).</summary>
-    public static ProductRow DecideProduct(Tree tree, ModelCatalog model, IReadOnlyList<Node> rubrics, Node product, string channel, string? market, string? locale)
+    public static ProductRow DecideProduct(Tree tree, ModelCatalog model, IReadOnlyList<PathItem> rubrics, Node product, string channel, string? market, string? locale)
     {
         var variants = tree.Children(product.Id).Where(v => v.Role == Roles.Variant).Select(v => new VariantRow(v, DecideVariant(tree, model, v, channel, market, locale))).ToList();
         if (variants.Count == 0) return new(rubrics, product, variants, false, ["keine Variante — Freigabe gibt es nur an der Variante"]);
@@ -74,38 +79,51 @@ public static class Publication
     {
         var channel = root.Channel ?? "";
         var market = string.IsNullOrWhiteSpace(root.Market) ? null : root.Market;
-        IEnumerable<ProductRow> Walk(Node rubric, List<Node> path, long? stand)
+        // Modell und Baum für einen Stand: eingefroren → von damals, sonst live
+        (ModelCatalog M, Tree T) Src(long? stand) => stand is { } s && at is not null ? at(s) : (model, tree);
+        IEnumerable<ProductRow> Walk(Node rubric, List<PathItem> path, long? stand)
         {
-            var here = new List<Node>(path) { rubric };
+            var here = new List<PathItem>(path) { PathItem.Of(tree, model, rubric) };
             if (rubric.Stand is { } own) stand = own;
             foreach (var id in rubric.Placed)
             {
                 if (!tree.Nodes.TryGetValue(id, out var n)) continue;   // toter Verweis
-                foreach (var row in Placed(n, here, stand)) yield return row;
+                foreach (var row in Placed(n, here, stand, null)) yield return row;
+            }
+            // Regel-Verweise (Taloan, 21.09.): Treffer im Baum des Stands, gegliedert; die Gliederung wird Pfadglied
+            foreach (var rule in rubric.Rules)
+            {
+                var (m, tr) = Src(stand);
+                foreach (var g in Rules.Expand(tr, m, rule))
+                {
+                    var gp = new List<PathItem>(here);
+                    if (g.Key.Length > 0) gp.Add(g.Node is { } gn ? PathItem.Of(tr, m, gn, rule.Id) : new PathItem("", "value", g.Label, rule.Id));
+                    foreach (var hit in g.Matches)
+                        foreach (var row in Placed(tree.Nodes.GetValueOrDefault(hit.Id) ?? hit, gp, stand, rule.Id)) yield return row;
+                }
             }
             foreach (var child in tree.Children(rubric.Id).Where(c => c.Role == Roles.Rubric).OrderBy(c => c.Order ?? int.MaxValue).ThenBy(c => c.Name ?? c.Id, StringComparer.OrdinalIgnoreCase))
                 foreach (var row in Walk(child, here, stand)) yield return row;
         }
-        IEnumerable<ProductRow> Placed(Node n, List<Node> path, long? stand)
+        IEnumerable<ProductRow> Placed(Node n, List<PathItem> path, long? stand, string? rule)
         {
+            var (m, tr) = Src(stand);
             if (n.Role == Roles.Product)
             {
                 if (stand is { } s && at is not null)
                 {
                     // eingefroren: das Produkt, wie es bei #s war — gab es das Produkt damals nicht, ist es draussen
-                    var (thenModel, thenTree) = at(s);
-                    if (!thenTree.Nodes.TryGetValue(n.Id, out var then)) { yield return new ProductRow(path, n, [], false, [$"bei Stand #{s} noch nicht vorhanden"], s); yield break; }
-                    var r = DecideProduct(thenTree, thenModel, path, then, channel, market, locale);
-                    yield return r with { Product = n, Stand = s }; yield break;
+                    if (!tr.Nodes.TryGetValue(n.Id, out var then)) { yield return new ProductRow(path, n, [], false, [$"bei Stand #{s} noch nicht vorhanden"], s, rule); yield break; }
+                    yield return DecideProduct(tr, m, path, then, channel, market, locale) with { Product = n, Stand = s, Rule = rule }; yield break;
                 }
-                yield return DecideProduct(tree, model, path, n, channel, market, locale); yield break;
+                yield return DecideProduct(tree, model, path, n, channel, market, locale) with { Rule = rule }; yield break;
             }
             if (n.Role != Roles.Group) yield break;
             // verwiesene Gruppe: ihr Aufbau als Pfad, Produkte darunter — eingefroren: der Aufbau von damals
-            var src = stand is { } s2 && at is not null && at(s2).Tree.Nodes.TryGetValue(n.Id, out var thenGroup) ? (at(s2).Tree, thenGroup) : (tree, n);
-            var here = new List<Node>(path) { n };
-            foreach (var child in src.Item1.Children(src.Item2.Id).OrderBy(c => c.Name ?? c.Id, StringComparer.OrdinalIgnoreCase))
-                foreach (var row in Placed(tree.Nodes.GetValueOrDefault(child.Id) ?? child, here, stand)) yield return row;
+            if (!tr.Nodes.TryGetValue(n.Id, out var g)) yield break;
+            var here = new List<PathItem>(path) { PathItem.Of(tr, m, g, rule) };
+            foreach (var child in tr.Children(g.Id).OrderBy(c => Rules.LabelOf(tr, m, c), StringComparer.OrdinalIgnoreCase))
+                foreach (var row in Placed(tree.Nodes.GetValueOrDefault(child.Id) ?? child, here, stand, rule)) yield return row;
         }
         return Walk(root, [], null);
     }

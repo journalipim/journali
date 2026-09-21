@@ -47,6 +47,7 @@ public sealed class Node
     /// <summary>Rubrik: die hier per Verweis hängenden Pflegeknoten, in Reihenfolge.</summary>
     public List<string> Placed { get; } = new();
     public Dictionary<string, string> PlacedNames { get; } = new();   // Anzeigename je Verweis (PlaceNamed) — intern, nie Ausgabe
+    public List<PubRule> Rules { get; } = new();                        // Regel-Verweise (RulePlaced) — beim Lesen aufgelöst, Rules.cs
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";
@@ -440,6 +441,13 @@ public sealed class Tree : IProjection
                 if (np.Order is { } o && o >= 0 && o < n.Placed.Count) n.Placed.Insert(o, np.Node); else n.Placed.Add(np.Node);
                 if (!_placedIn.TryGetValue(np.Node, out var set)) _placedIn[np.Node] = set = new();
                 set.Add(n.Id);
+                break;
+            case Types.RulePlaced:
+                var rp = Types.Deserialize<RulePlaced>(entry.Payload).Rule;
+                n.Rules.RemoveAll(r => r.Id == rp.Id); n.Rules.Add(rp);
+                break;
+            case Types.RuleRemoved:
+                n.Rules.RemoveAll(r => r.Id == Types.Deserialize<RuleRemoved>(entry.Payload).Id);
                 break;
             case Types.PlaceNamed:
                 var pn = Types.Deserialize<PlaceNamed>(entry.Payload);

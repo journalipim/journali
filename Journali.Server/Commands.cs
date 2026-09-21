@@ -174,6 +174,30 @@ public static class Commands
     }
 
     /// <summary>Pflegeknoten in eine Rubrik hängen (Produktgruppe oder Produkt; Varianten kommen mit dem Produkt).</summary>
+    /// <summary>Regel-Verweis setzen (Id leer = neue Regel) — unter einem Knoten, der es gibt; Art name braucht einen Namen, Art attribute ein Attribut des Modells und einen Wert.</summary>
+    public static Outcome SetRule(Ctx c, string rubric, PubRule rule)
+    {
+        if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;
+        if (r.Role != Roles.Rubric) return Outcome.Bad("Regeln hängen an Rubriken.");
+        if (rule.Kind is not ("name" or "attribute")) return Outcome.Bad("kind: name oder attribute.");
+        if (Blank(rule.Under) is { } u && !c.Tree.Nodes.ContainsKey(u)) return Outcome.Bad("under: Knoten gibt es nicht.");
+        if (rule.Kind == "name" && Blank(rule.Name) is null) return Outcome.Bad("name fehlt.");
+        if (rule.Kind == "attribute" && (Blank(rule.Attribute) is not { } a || !c.Model.Attributes.ContainsKey(a))) return Outcome.Bad("attribute fehlt oder unbekannt.");
+        if (rule.Kind == "attribute" && Blank(rule.Value) is null) return Outcome.Bad("value fehlt.");
+        if (Blank(rule.Role) is { } ro && ro is not (Roles.Group or Roles.Product)) return Outcome.Bad("role: group oder product.");
+        var gb = Blank(rule.GroupBy);
+        if (gb is not null && gb != "none" && gb != "parent" && !(gb.StartsWith("attr:") && c.Model.Attributes.ContainsKey(gb[5..]))) return Outcome.Bad("groupBy: none, parent oder attr:<attribut>.");
+        var id = Blank(rule.Id) ?? Guid.NewGuid().ToString("N")[..8];
+        return Outcome.Ok(c.Write(rubric, Types.RulePlaced, new RulePlaced(rule with { Id = id, Under = Blank(rule.Under), Role = Blank(rule.Role), Name = Blank(rule.Name), Attribute = Blank(rule.Attribute), Value = Blank(rule.Value), GroupBy = gb, Label = Blank(rule.Label) })));
+    }
+
+    public static Outcome RemoveRule(Ctx c, string rubric, string id)
+    {
+        if (!c.Tree.Nodes.TryGetValue(rubric, out var r)) return Outcome.Missing;
+        if (!r.Rules.Any(x => x.Id == id)) return Outcome.Bad("Die Regel gibt es hier nicht.");
+        return Outcome.Ok(c.Write(rubric, Types.RuleRemoved, new RuleRemoved(id)));
+    }
+
     /// <summary>Anzeigename eines Verweises (nur hier, nur intern); leer nimmt ihn weg.</summary>
     public static Outcome NamePlace(Ctx c, string rubric, string node, string? name)
     {

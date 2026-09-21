@@ -12,6 +12,7 @@ import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
 import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
+import TreePicker from '../components/TreePicker.vue'
 import { paneWidth } from '../panes.js'
 const pubW = paneWidth('pub', 340)
 const srcW = paneWidth('pubsrc', 300)
@@ -40,19 +41,70 @@ const rows = computed(() => {
     for (const k of tree.kids(r.id)) walk(k, depth + 1)
     // Anzeige (Taloan, 21.09.: 20 Verweise „Ersatzteile“): Anzeigename, sonst Pflegename — und wo Geschwister gleich heissen, der Vater dazu
     const dup = new Set(placed.map(p => p.label).filter((l, i, a) => a.indexOf(l) !== i))
+    // Regel-Verweise (Taloan, 21.09.): je Regel eine ⚙-Zeile; aufgeklappt die Gliederungen und Treffer, wie der Server sie auflöst (Rules.cs)
+    for (const rule of r.rules ?? []) {
+      const ex = expanded.value.has(r.id + '/' + rule.id); const res = ruleResults.value[r.id]?.find(x => x.rule.id === rule.id)?.result
+      out.push({ r: { id: r.id + '/' + rule.id, label: ruleLabel(rule) }, depth: depth + 1, kind: 'rule', rubric: r.id, rule, isOpen: ex, has: true, n: res ? res.products : null })
+      if (!ex || !res) continue
+      for (const g of res.items) {
+        const d = g.key ? depth + 2 : depth + 1
+        if (g.key) out.push({ r: { id: r.id + '/' + rule.id + '/' + g.key, label: g.label, role: g.node ? 'group' : 'value' }, depth: depth + 2, kind: 'vgroup', rubric: r.id, node: g.node })
+        for (const m of g.matches) out.push({ r: { ...tree.byId.get(m.id), id: m.id, label: m.label, role: m.role }, depth: d + 1, kind: 'ruled', rubric: r.id, products: m.products })
+      }
+    }
     for (const p of placed) out.push({ r: p, depth: depth + 1, kind: 'placed', rubric: r.id, shown: r.placedNames?.[p.id] ?? (dup.has(p.label) && p.parent ? `${p.label} · ${tree.byId.get(p.parent)?.label ?? ''}` : p.label), work: r.placedNames?.[p.id] ?? null })
   }
   if (current.value) walk(current.value, 0)
   return out
 })
 // nicht einsortiert: Produkte, die weder selbst noch über einen Vorfahren in diesem Baum hängen
-const placedSet = computed(() => { const s = new Set(); const walk = r => { for (const p of r.placed ?? []) s.add(p); for (const k of tree.kids(r.id)) walk(k) }; if (current.value) walk(current.value); return s })
+const placedSet = computed(() => { const s = new Set(); const walk = r => { for (const p of r.placed ?? []) s.add(p); for (const k of tree.kids(r.id)) walk(k) }; if (current.value) walk(current.value); for (const list of Object.values(ruleResults.value)) for (const x of list) for (const g of x.result.items) for (const m of g.matches) s.add(m.id); return s })
 const unplaced = computed(() => {
   if (!current.value) return []
   const inTree = id => { for (let x = tree.byId.get(id); x; x = tree.byId.get(x.parent)) if (placedSet.value.has(x.id)) return true; return false }
   return tree.rows.filter(r => r.role === 'product' && !inTree(r.id))
 })
 const showUnplaced = ref(false)
+// Auflösung der Regeln je Rubrik (Server, im Baum des Stands); neu nach jedem Laden des Baums
+const ruleResults = ref({})
+async function loadRules() {
+  const out = {}
+  const walk = async r => { if (r.rules?.length) { try { out[r.id] = await api.get(`/api/rubrics/${encodeURIComponent(r.id)}/rules/expand`) } catch { } } for (const k of tree.kids(r.id)) await walk(k) }
+  if (current.value) await walk(current.value)
+  ruleResults.value = out
+}
+watch([current, () => tree.rows], loadRules, { immediate: true })
+const attrLabel = k => store.model?.attributes?.find(a => a.key === k)?.label?.de || k
+function ruleLabel(rule) {
+  const under = rule.under ? tree.byId.get(rule.under)?.label ?? rule.under : 'überall'
+  const what = rule.kind === 'name' ? `${rule.role === 'product' ? 'Produkte' : 'Gruppen'} „${rule.name}“` : `Produkte mit ${attrLabel(rule.attribute)} = ${rule.value}`
+  const by = rule.groupBy === 'parent' ? ' · nach Produktgruppe darüber' : rule.groupBy?.startsWith('attr:') ? ` · nach ${attrLabel(rule.groupBy.slice(5))}` : ''
+  return rule.label || `${what} unter ${under}${by}`
+}
+// Regel anlegen oder ändern: Formular mit Vorschau (trifft n Gruppen, m Produkte), gespeichert erst mit „speichern“
+const ruleBox = ref(null)   // { rubric, rule: { id, kind, under, role, name, attribute, value, groupBy }, preview }
+function editRule(rubric, rule = null) {
+  ruleBox.value = { rubric, rule: rule ? { ...rule } : { id: '', kind: 'name', under: tree.rows.find(r => !r.parent && r.role === 'group')?.id ?? '', role: 'group', name: '', attribute: '', value: '', groupBy: 'parent' }, preview: null }
+}
+let previewTimer = null
+watch(() => JSON.stringify(ruleBox.value?.rule), () => {
+  clearTimeout(previewTimer); const b = ruleBox.value; if (!b) return
+  previewTimer = setTimeout(async () => {
+    const r = b.rule; const ok = r.kind === 'name' ? r.name.trim() : (r.attribute && r.value.trim())
+    if (!ok) { b.preview = null; return }
+    const q = new URLSearchParams({ kind: r.kind, under: r.under ?? '', role: r.role ?? '', name: r.name ?? '', attribute: r.attribute ?? '', value: r.value ?? '', groupBy: r.groupBy ?? 'none' })
+    try { b.preview = await api.get(`/api/rubrics/${encodeURIComponent(b.rubric.id)}/rules/preview?${q}`) } catch (e) { b.preview = { error: e.message } }
+  }, 250)
+})
+async function saveRule() {
+  const b = ruleBox.value; if (!b) return
+  await run(() => post(`/api/rubrics/${encodeURIComponent(b.rubric.id)}/rules`, b.rule, 'PUT'))
+  expanded.value.add(b.rubric.id); ruleBox.value = null
+}
+async function removeRule(rubricId, rule) {
+  if (!await dialog.confirm({ title: 'Regel entfernen?', text: ruleLabel(rule) + ' — die Treffer verschwinden aus dieser Rubrik; im Pflegebaum ändert sich nichts.', ok: '✕ Entfernen', danger: true })) return
+  await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/rules/${encodeURIComponent(rule.id)}`))
+}
 // Ausleitung (Taloan, 21.09.): je Produkt im Baum drin oder draussen, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
 const exp = ref(null); const showExport = ref(false); const expOnly = ref('out')
 async function loadExport() { if (!current.value) { exp.value = null; return } try { exp.value = await api.get(`/api/pub/${encodeURIComponent(current.value.id)}/export`) } catch (e) { exp.value = null } }
@@ -120,6 +172,9 @@ async function placeUnplaced(ids) {
 
 function contextMenu(e, row) {
   const r = row.r
+  if (row.kind === 'rule') { menu.open(e, [{ label: 'Regel bearbeiten …', icon: '⚙', action: () => editRule(tree.byId.get(row.rubric), row.rule) }, { label: 'Regel entfernen', icon: '✕', danger: true, action: () => removeRule(row.rubric, row.rule) }]); return }
+  if (row.kind === 'vgroup') return
+  if (row.kind === 'ruled') { menu.open(e, [{ label: 'im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) }]); return }
   if (row.kind === 'placed') {
     menu.open(e, [
       { label: 'im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) },
@@ -132,6 +187,7 @@ function contextMenu(e, row) {
   router.push(`/pub/${r.id}`)
   menu.open(e, [
     { label: 'Rubrik darunter …', icon: '+', action: () => newRubric(r) },
+    { label: 'Regel …', icon: '⚙', hint: 'alles, worauf das zutrifft — Gruppen namens X oder Produkte mit Attribut = Wert, live', action: () => editRule(r) },
     { sep: true },
     ...(r.stand != null
       ? [{ label: `Stand #${r.stand} aktualisieren`, icon: '❄', hint: 'auf jetzt setzen', action: () => setStand(r, 'now') }, { label: 'Stand aufheben — live', icon: '○', action: () => setStand(r, 'live') }]
@@ -152,7 +208,7 @@ async function editTree(r) {
 }
 // Ziehen: Rubrik auf Rubrik = umhängen; Verweis auf Rubrik = Verweis umhängen
 const drag = ref(null); const dropId = ref(null); const dropPos = ref('into')   // into · before · after — Einfügelinie zwischen den Zeilen (Taloan, 21.09.)
-function onDragStart(e, row) { drag.value = row; e.dataTransfer.effectAllowed = 'move' }
+function onDragStart(e, row) { if (row.kind === 'rule' || row.kind === 'vgroup' || row.kind === 'ruled') { e.preventDefault(); return } drag.value = row; e.dataTransfer.effectAllowed = 'move' }
 function onSrcDragStart(e, row) { drag.value = { kind: 'src', r: row.r }; e.dataTransfer.effectAllowed = 'copy' }
 function onDragOver(e, row) {
   if (row.kind !== 'rubric' || !drag.value || drag.value.r.id === row.r.id) return
@@ -178,6 +234,9 @@ async function onDrop(row) {
 }
 const sel = ref(new Set())   // Mehrfachauswahl von Rubriken: Strg-Klick toggelt, Umschalt-Klick nimmt den Bereich bis zur zuletzt geöffneten
 function open(row, e) {
+  if (row.kind === 'rule') { toggle(row.r.id); return }
+  if (row.kind === 'vgroup') return
+  if (row.kind === 'ruled') { router.push({ path: `/pub/${row.r.id}`, query: { in: row.rubric } }); return }
   if (row.kind === 'rubric' && e && (e.ctrlKey || e.metaKey)) { sel.value.has(row.r.id) ? sel.value.delete(row.r.id) : sel.value.add(row.r.id); sel.value = new Set(sel.value); return }
   if (row.kind === 'rubric' && e && e.shiftKey && props.id) {
     const ids = rows.value.filter(x => x.kind === 'rubric').map(x => x.r.id); const a = ids.indexOf(props.id), b = ids.indexOf(row.r.id)
@@ -270,6 +329,33 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <div v-if="!expRows.length" class="empty" style="padding:10px">{{ expOnly === 'out' ? 'nichts draussen — alles im Baum wird ausgeleitet' : 'nichts' }}</div>
       </div>
     </div>
+    <div v-if="ruleBox" class="picker-box" style="padding:8px">
+      <div class="toolbar" style="padding:0 0 6px"><b>⚙ Regel in „{{ ruleBox.rubric.label }}“</b><span class="grow" /><button class="x" @click="ruleBox = null">✕</button></div>
+      <div class="chips" style="margin-bottom:6px">
+        <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'name' }" @click="ruleBox.rule.kind = 'name'" title="Knoten mit diesem Namen — eine getroffene Gruppe kommt mit allem darunter">nach Name</span>
+        <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'attribute' }" @click="ruleBox.rule.kind = 'attribute'; ruleBox.rule.role = 'product'" title="Produkte, deren Wert (geerbt zählt) passt">nach Wert</span>
+      </div>
+      <div v-if="ruleBox.rule.kind === 'name'" class="chips" style="margin-bottom:6px">
+        <select v-model="ruleBox.rule.role"><option value="group">Gruppen</option><option value="product">Produkte</option></select>
+        <input v-model="ruleBox.rule.name" placeholder="Name, z. B. Ersatzteile" style="flex:1" />
+      </div>
+      <div v-else class="chips" style="margin-bottom:6px">
+        <select v-model="ruleBox.rule.attribute" style="max-width:200px"><option value="">Attribut …</option><option v-for="a in (store.model?.attributes ?? []).filter(a => !['rows', 'formula', 'template'].includes(a.type))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }}</option></select>
+        <span class="muted">=</span><input v-model="ruleBox.rule.value" placeholder="Wert" style="flex:1" />
+      </div>
+      <div class="muted" style="font-size:12px;margin-bottom:2px">unter</div>
+      <TreePicker v-model="ruleBox.rule.under" :roles="['group']" :height="160" />
+      <div class="chips" style="margin-top:6px">
+        <span class="muted" style="font-size:12px">gliedern</span>
+        <select v-model="ruleBox.rule.groupBy"><option value="none">flach</option><option value="parent">nach Produktgruppe darüber</option><option v-for="a in (store.model?.attributes ?? []).filter(a => ['text', 'enum'].includes(a.type))" :key="a.key" :value="'attr:' + a.key">nach {{ a.label?.de || a.key }}</option></select>
+      </div>
+      <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0;margin-top:8px;padding:6px 0 0">
+        <span v-if="ruleBox.preview?.error" class="neg" style="font-size:12px">{{ ruleBox.preview.error }}</span>
+        <span v-else-if="ruleBox.preview" :class="ruleBox.preview.hits ? 'pos' : 'warn'" style="font-size:12px">trifft {{ ruleBox.preview.hits }} {{ ruleBox.rule.kind === 'name' && ruleBox.rule.role === 'group' ? 'Gruppen' : 'Produkte' }}{{ ruleBox.preview.groups ? ` in ${ruleBox.preview.groups} Gliederungen` : '' }} · {{ ruleBox.preview.products }} Produkte</span>
+        <span v-else class="muted" style="font-size:12px">…</span>
+        <span class="grow" /><button class="primary" :disabled="!ruleBox.preview || ruleBox.preview.error" @click="saveRule">⚙ speichern</button>
+      </div>
+    </div>
     <div v-if="showUnplaced" class="unplaced">
       <div class="toolbar"><span class="muted">{{ unplaced.length }} Produkte noch nicht einsortiert</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `alle ${unplaced.length} in die Rubrik „${selRubric.label}“ einsortieren` : 'erst links eine Rubrik anklicken, dann hier alle einsortieren'">alle in {{ selRubric ? '„' + selRubric.label + '“' : 'Rubrik …' }}</button></div>
       <div class="scroll" style="max-height:200px">
@@ -283,12 +369,15 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <div v-for="row in rows" :key="row.kind + row.r.id + (row.rubric ?? '')" class="node" :class="[row.kind, { selected: row.r.id === id || sel.has(row.r.id), drop: dropId === row.r.id && dropPos === 'into', 'drop-before': dropId === row.r.id && dropPos === 'before', 'drop-after': dropId === row.r.id && dropPos === 'after' }]"
         :style="`padding-left:${8 + row.depth * 16}px`" @click="open(row, $event)" @contextmenu.prevent="contextMenu($event, row)" :title="row.r.id"
         draggable="true" @dragstart="onDragStart($event, row)" @dragover="onDragOver($event, row)" @dragleave="dropId === row.r.id && (dropId = null)" @drop.prevent="onDrop(row)" @dragend="drag = null; dropId = null">
-        <span v-if="row.kind === 'rubric'" class="twisty" :class="{ leaf: !row.has }" @click.stop="toggle(row.r.id)">{{ row.has ? (row.isOpen ? '▾' : '▸') : '' }}</span>
+        <span v-if="row.kind === 'rubric' || row.kind === 'rule'" class="twisty" :class="{ leaf: !row.has }" @click.stop="toggle(row.r.id)">{{ row.has ? (row.isOpen ? '▾' : '▸') : '' }}</span>
+        <span v-else-if="row.kind === 'vgroup'" class="twisty muted"></span>
         <span v-else class="twisty muted">↗</span>
-        <span class="icon">{{ row.kind === 'rubric' ? '▥' : icon(row.r.role) }}</span>
+        <span class="icon">{{ row.kind === 'rubric' ? '▥' : row.kind === 'rule' ? '⚙' : row.kind === 'vgroup' ? (row.r.role === 'value' ? '≡' : '▣') : icon(row.r.role) }}</span>
         <span class="label" :class="{ work: row.work }" :title="row.work ? `Anzeigename (nur hier) — Pflegename: ${row.r.label}` : ''">{{ row.shown ?? row.r.label }}</span>
         <span v-if="row.kind === 'rubric' && row.r.stand != null" class="count" style="margin-left:4px" :title="`eingefroren bei Stand #${row.r.stand} — ab hier nach unten die Pflege wie damals`">❄</span>
         <span v-if="row.kind === 'rubric' && row.n" class="muted count" :title="`${row.n} Verweise`">{{ row.n }}</span>
+        <span v-if="row.kind === 'rule' && row.n != null" class="muted count" :title="`${row.n} Produkte über diese Regel`">{{ row.n }}</span>
+        <span v-if="row.kind === 'ruled' && row.r.role === 'group'" class="muted count">{{ row.products }}</span>
         <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="`Produktgruppe mit ${tree.below(row.r.id).total} darunter`">{{ tree.below(row.r.id).total }}</span>
       </div>
       <div v-if="!trees.length" class="empty">Kein Publikationsbaum.<div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="newTree">+ Publikationsbaum</button></div><div class="muted" style="margin-top:6px;font-size:12px">Name, Kanal, optional Markt — danach Äste aus dem Pflegebaum links rüberziehen.</div></div>
@@ -310,6 +399,9 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 .node.drop-before { box-shadow: inset 0 2px 0 var(--accent); }
 .node.drop-after { box-shadow: inset 0 -2px 0 var(--accent); }
 .node.placed .label { color: var(--muted); }
+.node.rule .label { color: var(--accent); }
+.node.vgroup .label { color: var(--muted); font-style: italic; }
+.node.ruled .label { color: var(--muted); }
 .node.placed .label.work { color: var(--text); font-style: italic; }   /* Anzeigename: eigener, interner Name */
 .twisty { width: 14px; color: var(--muted); font-size: 11px; text-align: center; cursor: pointer; }
 .count { font-size: 11px; margin-left: auto; }

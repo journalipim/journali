@@ -79,9 +79,9 @@ public static class TreeApi
             if (!tree.Nodes.TryGetValue(id, out var root) || root.Role != Roles.Rubric || root.Parent is not null) return Results.NotFound();
             var rows = Publication.Export(tree, model, root, locale, c.AsOf).Select(r => new
             {
-                path = r.Rubrics.Select(x => new { x.Id, x.Role, label = NodeRow.LabelOf(tree, model, x) }).ToList(),
+                path = r.Rubrics.Select(x => new { x.Id, x.Role, label = x.Label, x.Rule }).ToList(),
                 product = new { r.Product.Id, label = NodeRow.LabelOf(tree, model, r.Product), keys = tree.KeysOf(model, r.Product) },
-                r.In, r.Why, r.Stand,
+                r.In, r.Why, r.Stand, r.Rule,
                 variants = r.Variants.Select(v => new { v.Variant.Id, label = NodeRow.LabelOf(tree, model, v.Variant), keys = tree.KeysOf(model, v.Variant), v.Verdict.In, v.Verdict.Why }).ToList(),
             }).ToList();
             return Results.Ok(new { tree = new { root.Id, root.Channel, root.Market, root.Stand, label = NodeRow.LabelOf(tree, model, root) }, locale, @in = rows.Count(r => r.In), @out = rows.Count(r => !r.In), rows });
@@ -92,6 +92,18 @@ public static class TreeApi
         api.MapPut("/rubrics/{id}/stand", (string id, StandBody b, HttpRequest req, Catalog c) => { var head = c.Head; return Run(req, c, x => Commands.SetStand(x, id, b.Now == true ? head : b.JournalNumber, head)); });
         api.MapPost("/rubrics/{id}/place", (string id, NodePlaced b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Place(x, id, b.Node, b.Order)));
         api.MapDelete("/rubrics/{id}/place/{node}", (string id, string node, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Unplace(x, id, node)));
+        // Regel-Verweise (Taloan, 21.09.): setzen (Id leer = neu), entfernen, Vorschau (ungespeichert) und Auflösung der gespeicherten
+        api.MapPut("/rubrics/{id}/rules", (string id, PubRule b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetRule(x, id, b)));
+        api.MapDelete("/rubrics/{id}/rules/{rule}", (string id, string rule, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RemoveRule(x, id, rule)));
+        api.MapGet("/rubrics/{id}/rules/preview", (string id, Catalog c, string kind, string? under = null, string? role = null, string? name = null, string? attribute = null, string? value = null, string? groupBy = null) =>
+            c.With((model, tree, _) => Results.Ok(RuleView(tree, model, new PubRule("", kind, under, role, name, attribute, value, groupBy)))));
+        api.MapGet("/rubrics/{id}/rules/expand", (string id, Catalog c) => c.With((model, tree, _) =>
+        {
+            if (!tree.Nodes.TryGetValue(id, out var r) || r.Role != Roles.Rubric) return Results.NotFound();
+            var (stand, _) = tree.StandOf(r);
+            var (m, tr) = stand is { } s ? c.AsOf(s) : (model, tree);
+            return Results.Ok(r.Rules.Select(rule => new { rule, result = RuleView(tr, m, rule) }).ToList());
+        }));
         api.MapPut("/rubrics/{id}/place/{node}/name", (string id, string node, NameBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.NamePlace(x, id, node, b.Name)));   // Anzeigename, intern
         api.MapPost("/rubrics/{id}/derive", (string id, DeriveBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Derive(x, id, b.From, b.Self, out _)));
         // die Verweise einer Rubrik als Zeilen (tote Verweise auf zurückgezogene Knoten fallen weg) und wo ein Pflegeknoten überall hängt
@@ -198,7 +210,15 @@ public static class TreeApi
     public sealed record DeriveBody(string? From, bool Self = false);
     public sealed record OrderBody(string? Parent, string? Before);
     public sealed record NameBody(string? Name);
-    public sealed record StandBody(long? JournalNumber, bool? Now);   // Self: die Gruppe selbst wird Rubrik, darunter ihr Aufbau
+    public sealed record StandBody(long? JournalNumber, bool? Now);
+    /// <summary>Treffer einer Regel als Ansicht: Gliederungen mit Knoten (Id, Rolle, Name, Anzahl darunter).</summary>
+    public static object RuleView(Tree tree, ModelCatalog model, PubRule rule)
+    {
+        var groups = Rules.Expand(tree, model, rule);
+        int below(Node n) => tree.DescendantsDeepestFirst(n.Id).Count(d => d.Role == Roles.Product);
+        var items = groups.Select(g => new { g.Key, g.Label, node = g.Node?.Id, matches = g.Matches.Select(n => new { n.Id, n.Role, label = NodeRow.LabelOf(tree, model, n), products = n.Role == Roles.Product ? 1 : below(n) }).ToList() }).ToList();
+        return new { groups = items.Count(g => g.Key.Length > 0), hits = items.Sum(g => g.matches.Count), products = items.Sum(g => g.matches.Sum(x => x.products)), items };
+    }   // Self: die Gruppe selbst wird Rubrik, darunter ihr Aufbau
 
     public static IResult Run(HttpRequest req, Catalog c, Func<Ctx, Outcome> command)
     {
@@ -222,12 +242,12 @@ public static class TreeApi
 public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Name, string? Groups, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string>? Keys, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null,
-    string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null, long? Stand = null)
+    string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null, long? Stand = null, List<PubRule>? Rules = null)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
         tree.KeysOf(model, n), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
-        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null, n.Stand);
+        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null, n.Stand, n.Role == Roles.Rubric && n.Rules.Count > 0 ? n.Rules : null);
 
     /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle, Taloan): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
     /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>
