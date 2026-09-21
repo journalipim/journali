@@ -23,6 +23,7 @@ import HtmlCell from '../components/HtmlCell.vue'
 import RowsBlock from '../components/RowsBlock.vue'
 import VersionsPanel from '../components/VersionsPanel.vue'
 import MediaThumb from '../components/MediaThumb.vue'
+import MediaPicker from '../components/MediaPicker.vue'
 import EntryList from '../components/EntryList.vue'
 import ScriptEditor from '../components/ScriptEditor.vue'
 import Splitter from '../components/Splitter.vue'
@@ -436,7 +437,7 @@ const relValueRaw = (r, key) => r.values.find(v => v.attribute === key && !v.loc
 const mediaTypes = computed(() => relTypes.value.filter(t => isMediaType(t.key) && (!t.from || t.from.includes(node.value?.role))))
 const mediaDrag = ref(false)
 const mediaFile = ref(null)
-const mediaPick = ref({ open: false, q: '', items: [] })
+const mediaPick = ref({ open: false })   // ▨ aus der Bibliothek … (MediaPicker)
 const typeFor = file => (file.type || '').startsWith('image/') && mediaTypes.value.some(t => t.key === 'image') ? 'image' : (mediaTypes.value.find(t => t.key === 'document') ?? mediaTypes.value[0])?.key
 async function uploadMedia(files) {
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
@@ -451,8 +452,19 @@ async function uploadMedia(files) {
   } catch (e) { store.toast(e.message) }
   finally { busy.value = false; mediaDrag.value = false }
 }
-async function pickSearch() { try { mediaPick.value.items = await api.get(`/api/media?q=${encodeURIComponent(mediaPick.value.q.trim())}&limit=60`) } catch (e) { store.toast(e.message) } }
-const linkMedium = m => { const type = m.isImage ? 'image' : 'document'; mediaPick.value.open = false; command(() => api.post('/api/relations', { type: mediaTypes.value.some(t => t.key === type) ? type : mediaTypes.value[0]?.key, from: props.id, to: m.id })) }
+// Aus der Bibliothek zuordnen (Taloan, 21.09.: Ordner, Suche, Mehrfachauswahl wie in ▨ Medien) — eine Relation je Medium; „gibt es schon“ wird übergangen
+async function linkMedia(picked) {
+  mediaPick.value.open = false
+  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  busy.value = true; let n = 0
+  try {
+    for (const { medium, type } of picked) {
+      try { await api.post('/api/relations', { type, from: props.id, to: medium.id }); n++ } catch (e) { if (!e.message.includes('schon')) store.toast(`${medium.name}: ${e.message}`) }
+    }
+    await load(); store.poll(true); tree.load()
+    if (n) store.toast(`${n} ${n === 1 ? 'Medium' : 'Medien'} zugeordnet`, 'ok')
+  } finally { busy.value = false }
+}
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`
 
 // Variantenachsen am Produkt — änderbar, solange es keine Varianten hat (ProductAxesSet).
@@ -706,16 +718,9 @@ function cellMenu(e, def, col, block) {
           <button class="primary" @click="mediaFile.click()">⇧ hochladen</button>
           <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" title="Aufräumen: die Medien hier auf „vererben“ setzen und gleiche feste Zuordnungen an den Subitems lösen — sie erben dann">{{ inheriting || '↓ feste Bilder der Subitems durch Vererbung ersetzen' }}</button>
           <input ref="mediaFile" type="file" multiple style="display:none" @change="uploadMedia([...$event.target.files]); $event.target.value = ''" />
-          <button @click="mediaPick.open = !mediaPick.open; mediaPick.open && pickSearch()">🖼 aus Medien wählen</button>
-          <input v-if="mediaPick.open" v-model="mediaPick.q" type="search" placeholder="🔍 Name" style="width:200px" @input="pickSearch" />
+          <button @click="mediaPick.open = true" title="Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl">▨ aus der Bibliothek …</button>
         </div>
-        <div v-if="mediaPick.open" class="tiles" style="margin-top:6px;max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px">
-          <div v-for="m in mediaPick.items.filter(x => !mediaRels.some(r => r.other.id === x.id))" :key="m.id" class="tile pickable" @click="linkMedium(m)" :title="`${m.name} · ${kb(m.bytes)}`">
-            <MediaThumb v-if="m.isImage" :id="m.id" /><div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '📄' }}</div>
-            <div class="name">{{ m.name }}</div>
-          </div>
-          <div v-if="!mediaPick.items.length" class="muted" style="padding:8px;font-size:12px">nichts</div>
-        </div>
+        <MediaPicker v-if="mediaPick.open" :types="mediaTypes" :exclude="[...mediaRels, ...stopped].map(r => r.other.id)" @pick="linkMedia" @close="mediaPick.open = false" />
         </template>
       </div>
 
@@ -886,10 +891,7 @@ th.master { color: var(--accent); font-weight: 700; }
 .tiles { display: flex; flex-wrap: wrap; gap: 8px; }
 .tile.inherited { opacity: .7; border-style: dashed; }
 .tile { width: 150px; border: 1px solid var(--line); border-radius: 6px; padding: 4px; background: var(--pane); }
-.tile.pickable { width: 110px; cursor: pointer; }
-.tile.pickable:hover { background: var(--hover); }
 .tile img, .tile .doc { width: 100%; height: 100px; object-fit: contain; display: grid; place-items: center; background: var(--bg); border-radius: 4px; color: var(--muted); font-size: 12px; }
-.tile.pickable img, .tile.pickable .doc { height: 70px; }
 .tile .name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 4px 0; }
 .tile .name a { text-decoration: none; }
 .tile .meta { font-size: 11px; margin-top: 2px; }

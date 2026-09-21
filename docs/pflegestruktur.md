@@ -936,8 +936,9 @@ Regeln: gleicher Name je Ebene nur einmal, nicht in sich selbst verschieben, lö
 jede Ablage ist ein Eintrag). ▨ Medien: links die Ordner (＋ ✎ 🗑 an der Zeile, Ordner ziehen = verschieben, „mit
 Unterordnern“), Mitte Kacheln mit Sortierung (zuletzt geändert, Name, Datum, Größe, Verwendung, ↑↓) und Gruppierung
 (Art, Dateityp, Monat, verwendet, Ordner), Mehrfachauswahl (Strg/Umschalt-Klick, Strg+A, Esc), Kacheln auf einen Ordner
-oder „⌂ ohne Ordner“ ziehen, „📁 verschieben …“ für die Auswahl, Hochladen landet im gezeigten Ordner. Offen: Medien
-aus der Bibliothek am Knoten zuordnen (heute nur über Import/Relationen), Ordner in der Suche (`folder:`).
+oder „⌂ ohne Ordner“ ziehen, „📁 verschieben …“ für die Auswahl, Hochladen landet im gezeigten Ordner. Am Knoten: „▨ aus der
+Bibliothek …“ (Abschnitt Medien) öffnet dasselbe Bild als Fenster — Ordner, Suche, Mehrfachauswahl, Relationstyp
+(automatisch: Bild → `image`, sonst `document`), was schon hängt ist ausgegraut. Offen: Ordner in der Suche (`folder:`).
 
 Taloan: Binärdaten nicht in die Datenbank — später skalieren, woanders
 speichern. Einverstanden; das Journal bleibt schlank.
