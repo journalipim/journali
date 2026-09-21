@@ -650,7 +650,8 @@ function cellMenu(e, def, col, block) {
           </template>
         </tbody>
       </table>
-      <div v-if="!blocks.length" class="empty">Keine Attributgruppe gilt hier — unten eine anhängen, oder oben am Pfad.</div>
+      <div v-if="!blocks.length && props.pub && node.role === 'rubric'" class="empty">An diesem Publikationsbaum hängt noch keine Attributgruppe. Unten eine anhängen — an der Wurzel „{{ pubTree?.label }}“ gilt sie für alle Rubriken und alle Verweise darunter (z. B. Rubriktexte, SEO); hier nur ab dieser Rubrik.</div>
+      <div v-else-if="!blocks.length" class="empty">Keine Attributgruppe gilt hier — unten eine anhängen, oder oben am Pfad.</div>
     </template>
 
       <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files])">
