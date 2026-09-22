@@ -54,9 +54,12 @@ const router = useRouter()
 const route = useRoute()
 // ?group=<key> (Taloan, 22.09.: aus dem Baummenü direkt in die ETIM-Gruppe): bei Reitern der Reiter, bei der Liste hinscrollen
 async function focusGroup() {
-  const g = route.query.group; if (!g) return
+  const g = route.query.group; if (!g || !node.value) return
   await nextTick()
-  if (store.layout === 'tabs') { if (blocks.value.some(b => b.key === g)) tab.value = g }
+  // die Gruppe gilt am Knoten, aber die gewählte Sicht zeigt sie nicht (Taloan, 22.09.: „Sprungziel zu einer Gruppe, die es hier gar nicht gibt“): Sicht auf „alle“
+  if (!blocks.value.some(b => b.key === g) && (node.value.groups ?? []).some(x => x.key === g) && store.viewKey[node.value.role]) { setView(''); await nextTick() }
+  if (!blocks.value.some(b => b.key === g)) { store.toast(`Gruppe ${g} gilt an diesem Knoten nicht`); return }
+  if (store.layout === 'tabs') tab.value = g
   else document.querySelector(`tbody[data-group="${g}"]`)?.scrollIntoView({ block: 'start' })
 }
 
