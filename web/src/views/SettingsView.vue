@@ -1,14 +1,25 @@
 <script setup>
 // Einstellungen: wer schreibt (X-Actor), welcher Server, und was er sagt.
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { store } from '../store.js'
 import MatrixPicker from '../components/MatrixPicker.vue'
 import { ai } from '../ai.js'
 import StorageSettings from '../components/StorageSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
 import WorkflowSettings from '../components/WorkflowSettings.vue'
+import UsageBars from '../components/UsageBars.vue'
+import { api } from '../api.js'
 // Reiter (Taloan, 19.09.): Allgemein | Storage
 const tab = ref(location.hash === '#storage' ? 'storage' : location.hash === '#users' ? 'users' : 'general')
+// Nutzung (Taloan, 22.09.): drei Balken und der Verlauf — gezählt wird, was ins Journal geht
+const usage = ref(null), usageHist = ref([]), usagePeriod = ref('day'), usageBusy = ref(false)
+async function loadUsage(period = usagePeriod.value) {
+  usagePeriod.value = period; usageBusy.value = true
+  try { const u = await api.get(`/api/usage?history=${period}&limit=${period === 'day' ? 30 : period === 'week' ? 26 : 24}`); usage.value = u; usageHist.value = u.history ?? [] }
+  catch (e) { store.toast(e.message) }
+  finally { usageBusy.value = false }
+}
+onMounted(() => { loadUsage() })
 // KI-Schlüssel (Taloan, 18.09.): bleiben im Browser (localStorage), nie im Journal — Plugins fragen die KI nur, wenn ein Schlüssel da ist.
 // Je Anbieter ein Schlüssel und ein Modell (Taloan, 20.09.: kein Anbieter fest im Code); die Plugins fragen den gewählten.
 const aiAcc = ref(Object.fromEntries(ai.providers.map(p => [p.key, { ...ai.accounts[p.key] }]))), aiProvider = ref(ai.provider), aiState = ref({})
@@ -91,6 +102,11 @@ async function save() {
           </tr>
         </tbody>
       </table>
+
+      <div class="section">
+        <h2>◷ Nutzung <span class="muted">· Einträge im Journal — Ansehen und Exportieren zählen nicht mit</span></h2>
+        <UsageBars :usage="usage" :history="usageHist" :period="usagePeriod" :busy="usageBusy" @period="loadUsage" />
+      </div>
 
       <div class="section">
         <h2>✦ KI <span class="muted">· eigene Schlüssel — journali bietet keine KI an</span></h2>

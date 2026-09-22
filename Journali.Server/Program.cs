@@ -124,6 +124,27 @@ api.MapGet("/health", (Catalog c) => new
     built = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location),   // Bau-Stand des laufenden Servers (Taloan, 21.09.: „Speichern setzt meine Änderungen zurück“ — alter Server kannte die Felder nicht)
 });
 
+// Nutzung (Taloan, 22.09.2026): was pro Tag, Woche, Monat ins Journal ging — die Grenzen sind vorerst Annahmen zum Messen,
+// keine Lizenz. Lesen und Exportieren zählen nicht mit, weil sie nichts schreiben.
+api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.ReadUsage(u =>
+{
+    var today = DateOnly.FromDateTime(DateTime.Now);
+    object Part(string key, int used, int max, DateOnly start, DateOnly next) => new
+    {
+        key, used, max, start = start.ToString("yyyy-MM-dd"), resetAt = next.ToString("yyyy-MM-dd"),
+    };
+    return new
+    {
+        today = today.ToString("yyyy-MM-dd"),
+        head = c.Head,
+        day = Part("day", u.Day(today), Limits.Day, today, today.AddDays(1)),
+        week = Part("week", u.Week(today), Limits.Week, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
+        month = Part("month", u.Month(today), Limits.Month, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
+        history = history is null ? null : u.History(history, today, Math.Clamp(limit, 1, 400))
+            .Select(h => new { start = h.Start.ToString("yyyy-MM-dd"), count = h.Count }).ToList(),
+    };
+}));
+
 ModelApi.Map(api);
 
 // ---- Baum: Knoten, Werte, Kategorien, Freigaben — einzeln und im Stapel ---------
