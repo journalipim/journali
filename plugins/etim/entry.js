@@ -328,7 +328,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
     const noteOf = (l, i) => l.other ? `⚠ ${l.other} Produkte darunter haben schon eine andere Klasse — ab hier wäre die Klasse zu grob; granularer setzen (weiter rechts).` : l.groups ? `⚠ ${l.groups} Untergruppen mit ${l.products} Produkten darunter — eine Klasse für alle? Meist zu grob: an den Produktgruppen setzen${i < out.length - 1 ? ' (weiter rechts)' : ' — dort Rechtsklick → ETIM prüfen'}.` : l.products > 1 ? `gilt für ${l.products} Produkte darunter (vererbbar)${i === rec ? ' — Empfehlung: die höchste Ebene ohne Untergruppen und ohne Widerspruch' : ''}` : l.products === 1 ? 'gilt für dieses eine Produkt' : 'keine Produkte darunter — die Klasse gilt, sobald welche kommen'
     const lvNote = el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 8px' }, noteOf(out[rec], rec))
     body.append(el('div', { style: 'font-size:14px;margin:6px 0' }, el('b', {}, `${code} ${nameOf(c.name, locale)}`), ` → ${ICON[row.role] ?? ''} ${row.label}`),
-      el('div', { class: 'muted', style: 'margin-bottom:8px' }, `${c.features.length} ETIM-Attribute der Klasse gelten dann ${row.role === 'group' ? 'an allen Produkten darunter (die Klasse steht an der Gruppe und erbt)' : 'an diesem Knoten'}${missing.length ? ` — ${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()}, nur an Produkt und Variante)` : ''}.`),
+      el('div', { class: 'muted', style: 'margin-bottom:8px' }, `${c.features.length} ETIM-Attribute der Klasse gelten dann ${row.role === 'group' ? 'an allen Produkten darunter, weil die Klasse an der Gruppe steht und nach unten erbt' : 'an diesem Knoten'}. ${missing.length ? `${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()}, nur an Produkt und Variante).` : 'Alle haben schon ein Attribut im Modell.'}`),
       el('div', { class: 'scroll', style: 'max-height:40vh;border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:12px' }, ...c.features.map(f => el('div', {}, el('span', { class: 'mono muted' }, f.code), ' ', featureText(f, locale), el('span', { class: 'muted' }, ` · ${TYPE[f.type] ?? f.type}${ops.hasAttr(attrKeyOf(f.code)) ? '' : ' · neu'}`)))),
       el('div', { style: 'margin-top:10px' }, el('div', { class: 'muted', style: 'font-size:12px' }, 'Gilt ab (Pfad von der Wurzel bis hier — Zahl: Produkte darunter · ▣ Untergruppen · ≠ mit anderer Klasse):'), el('div', { class: 'chips', style: 'margin:4px 0' }, ...lvBtns), lvNote),
       el('div', { class: 'chips', style: 'margin-top:6px' }, el('button', { class: 'primary', onclick: () => doAssign(code, target.id) }, '✓ zuweisen'), el('button', { onclick: () => draw() }, 'zurück')))
@@ -407,7 +407,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
             el('button', { class: 'primary', title: 'zum Knoten — das Band ⌗ ETIM zeigt Klasse, Attribute, Daten, Ausleitung', onclick: () => checkStep(current) }, '→ zum Knoten'), el('button', { style: 'display:none', onclick: () => run('bereite vor …', async () => { const c = cache.classes.get(current); for (const f of c.features) await ops.createFeature(f); await store.poll(true); await checkStep(current) }) }, '✓ ETIM-Attribute prüfen und füllen'),
             el('button', { onclick: () => { close(); ctx.go?.(`/tree/${nodeId}`) } }, `${ICON[row.role] ?? ''} Werte am Knoten`),
             el('span', { class: 'muted', style: 'font-size:12px' }, 'andere Klasse: unten wählen')))
-      : el('div', { style: 'margin-bottom:8px;padding:8px 10px;border:1px solid var(--warn);border-radius:6px' }, el('span', { class: 'warn', style: 'font-weight:600' }, 'Noch keine Klasse'), el('span', { class: 'muted' }, ' — unten wählen: Vorschlag, Umfeld, Suche oder Gruppen')))
+      : el('div', { style: 'margin-bottom:8px;padding:8px 10px;border:1px solid var(--warn);border-radius:6px' }, el('span', { class: 'warn', style: 'font-weight:600' }, 'Diesem Knoten ist noch keine ETIM-Klasse zugewiesen.'), el('span', { class: 'muted' }, ' Wählen Sie unten eine aus — über den Vorschlag, das Umfeld, die Suche oder die Gruppen.')))
     if (current) body.append(el('div', { class: 'step-band', style: 'margin:4px 0' }, 'Andere Klasse wählen'))
     if (row.parent && tree.byId.get(row.parent)?.role === 'group' && tree.kids(row.parent).length > 1)
       body.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, `Tipp: die Klasse an ${ICON.group} ${tree.byId.get(row.parent).label} gilt für alle ${tree.kids(row.parent).length} darunter (vererbbar) — `, el('a', { href: '#', onclick: e => { e.preventDefault(); close(); classDialog(row.parent, ctx) } }, 'dort wählen')))
@@ -439,7 +439,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
         if (row.parent) { const t = await api.get(`/api/nodes/${encodeURIComponent(row.parent)}/table?attributes=${key}`); for (const r of t.rows) if (r.row.id !== row.id) add(r.values[key]?.value, 'Geschwister') }
         const below = await api.get(`/api/nodes/${encodeURIComponent(row.id)}/table?deep=true&attributes=${key}`); for (const r of below.rows) add(r.values[key]?.value, 'darunter')
         env.innerHTML = ''
-        if (!counts.size) { env.textContent = 'Umfeld: keine Klasse an Geschwistern oder darunter'; return }
+        if (!counts.size) { env.textContent = 'Im Umfeld ist keine Klasse gesetzt: weder an Geschwistern noch darunter.'; return }
         env.append(el('div', {}, 'Umfeld'))
         for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => `${w} × ${n}`).join(', ')))
       } catch (e) { env.textContent = 'Umfeld: ' + e.message }
@@ -643,7 +643,7 @@ async function mount(root, ctx) {
         const below = await api.get(`/api/nodes/${encodeURIComponent(row.id)}/table?deep=true&attributes=${key}`); for (const r of below.rows) add(r.values[key]?.value, 'darunter')
         for (const a of tree.ancestors(row.id)) { const v = (a.values ?? {})[key]; if (v) add(v, 'am Pfad: ' + a.label) }
         env.innerHTML = ''
-        if (!counts.size) { env.append('Umfeld: keine Klasse an Geschwistern, darunter oder am Pfad'); return }
+        if (!counts.size) { env.append('Im Umfeld ist keine Klasse gesetzt: weder an Geschwistern noch darunter oder am Pfad.'); return }
         env.append(el('div', { class: 'muted' }, 'Umfeld'))
         for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => `${w} × ${n}`).join(', ')))
       } catch (e) { env.textContent = 'Umfeld: ' + e.message }
