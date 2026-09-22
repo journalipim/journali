@@ -165,7 +165,8 @@ export async function gate(pctx, cfg) {
 }
 
 /// Prüfung eines Knotens (Datenqualität): values = { key: { value } } wie /table; classes = Map EC → Datensatz
-export function checkNode({ values, columns, classes, cfg }) {
+/// inactive: Attribute, die es im Modell gibt, die an diesem Knoten aber nicht gelten (aus /table je Zeile) — dann sagt der Fund das
+export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
   const out = []
   const col = columns.find(c => c.key === cfg.classAttr); if (!col) return out
   const code = String(values[cfg.classAttr]?.value ?? '').trim().toUpperCase()
@@ -186,7 +187,9 @@ export function checkNode({ values, columns, classes, cfg }) {
   const mapped = cls.features.length - noCol.length
   const names = l => l.slice(0, 4).map(f => `${f.code} ${nameOf(f.name, cfg.locale)} (${mapEntry(cfg.map, f.code).key})`).join(', ') + (l.length > 4 ? ` … +${l.length - 4}` : '')
   // kurz in der Zeile, die Erklärung einmal im Tooltip (title) — nicht je Zeile (Taloan, 22.09.: „ist nicht dein Ernst“)
-  if (noCol.length) out.push({ attribute: cfg.classAttr, message: `${noCol.length} Merkmal${noCol.length === 1 ? '' : 'e'} ohne Attribut hier: ${names(noCol)}`, title: 'kein Attribut im Modell, oder das Attribut gilt an diesem Knoten nicht (Gruppe nicht am Pfad, Rolle)', severity: 'info' })
+  const notHere = noCol.filter(f => inactive.includes(mapEntry(cfg.map, f.code).key)), noAttr = noCol.filter(f => !inactive.includes(mapEntry(cfg.map, f.code).key))
+  if (notHere.length) out.push({ attribute: cfg.classAttr, message: `${notHere.length} Merkmal${notHere.length === 1 ? '' : 'e'} — Attribut gilt hier nicht: ${names(notHere)}`, title: 'das zugeordnete Attribut gibt es, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
+  if (noAttr.length) out.push({ attribute: cfg.classAttr, message: `${noAttr.length} Merkmal${noAttr.length === 1 ? '' : 'e'} ohne Attribut: ${names(noAttr)}`, title: 'zu diesem Merkmal gibt es kein Attribut im Modell — ⇄ zuordnen oder ＋ anlegen', severity: 'info' })
   if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} leer · ${filled} gefüllt`, title: 'gefüllt = ein Wert, den das Merkmal lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat', severity: 'info' })
   return out
 }
