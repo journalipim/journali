@@ -23,11 +23,12 @@ public sealed class Catalog
     private Versions _versions = new();
     private Users _users = new();
     private Workflows _workflows = new();
+    private Translations _translations = new();
     private readonly object _gate = new();
 
     public Catalog(IJournal journal) => _journal = journal;
 
-    private IReadOnlyList<(string Name, IProjection Projection)> Parts => [("Model", _model), ("Tree", _tree), ("Relations", _relations), ("Media", _media), ("Plugins", _plugins), ("Jobs", _jobs), ("Versions", _versions), ("Users", _users), ("Workflows", _workflows)];
+    private IReadOnlyList<(string Name, IProjection Projection)> Parts => [("Model", _model), ("Tree", _tree), ("Relations", _relations), ("Media", _media), ("Plugins", _plugins), ("Jobs", _jobs), ("Versions", _versions), ("Users", _users), ("Workflows", _workflows), ("Translations", _translations)];
 
     /// <summary>
     /// Schnappschuss der Abbilder (Taloan, 21.09.2026): vor dem Rebuild laden — dann liest der Start nur den Rest ab #n.
@@ -40,7 +41,7 @@ public sealed class Catalog
             var n = Snapshot.Load(path, _journal, Parts.Select(p => (p.Name, p.Projection.GetType())).ToList(), out var loaded);
             if (n == 0) return 0;
             _model = (ModelCatalog)loaded["Model"]; _tree = (Tree)loaded["Tree"]; _relations = (Relations)loaded["Relations"]; _media = (Media)loaded["Media"];
-            _plugins = (Plugins)loaded["Plugins"]; _jobs = (Jobs)loaded["Jobs"]; _versions = (Versions)loaded["Versions"]; _users = (Users)loaded["Users"]; _workflows = (Workflows)loaded["Workflows"];
+            _plugins = (Plugins)loaded["Plugins"]; _jobs = (Jobs)loaded["Jobs"]; _versions = (Versions)loaded["Versions"]; _users = (Users)loaded["Users"]; _workflows = (Workflows)loaded["Workflows"]; _translations = (Translations)loaded["Translations"];
             return n;
         }
     }
@@ -56,7 +57,7 @@ public sealed class Catalog
         lock (_gate)
         {
             // ein Durchlauf für alle Abbilder — nicht acht (Taloan, 20.09.: Start hing mit 55 000 Einträgen, davon 17 000 ETIM-Klassen)
-            return Projector.CatchUpAll(_journal, out timing, progress, _model, _relations, _media, _plugins, _jobs, _versions, _users, _workflows, _tree);
+            return Projector.CatchUpAll(_journal, out timing, progress, _model, _relations, _media, _plugins, _jobs, _versions, _users, _workflows, _translations, _tree);
         }
     }
 
@@ -141,6 +142,7 @@ public sealed class Catalog
         _versions.Apply(entry);
         _users.Apply(entry);
         _workflows.Apply(entry);
+        _translations.Apply(entry);
         return entry;
     }
 
@@ -154,6 +156,8 @@ public sealed class Catalog
     public Users Users => _users;
     /// <summary>Das Abbild der Workflows (27) — nur innerhalb von <see cref="With"/> anfassen.</summary>
     public Workflows Workflows => _workflows;
+    /// <summary>Das Abbild der Übersetzung (30): Marken und Aufträge — nur innerhalb von <see cref="With"/> anfassen.</summary>
+    public Translations Translations => _translations;
 
     // Stand bei #n (Versionen, Taloan: „eine Version ist ein Zeiger ins Journal“): Modell und Baum von damals, frisch aus dem
     // Journal gebaut — ohne die Sperre, das Journal ist nur lesend. Die letzten Stände bleiben im Speicher (teuer bei grossem Journal).

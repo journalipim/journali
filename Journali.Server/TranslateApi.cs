@@ -12,8 +12,18 @@ namespace Journali.Server;
 /// die Einheiten einer Sprachrichtung — je Knoten × sprachabhängiges Textattribut × Kanal × Zeile der eigene Quelltext, der
 /// eigene Zieltext und der Zustand: <c>missing</c> (kein Ziel), <c>stale</c> (Ziel da, aber die Quelle ist seither neuer — ⟳ wie in
 /// der Zelle), <c>done</c>. Vererbte Werte gehören dem Vorfahren und tauchen dort auf. Das Plugin <c>xliff</c> macht daraus XLIFF 2.0
-/// für Agenturen und CAT-Werkzeuge, liest es zurück und lässt die KI vorübersetzen; der Rückweg prüft den Hash der Quelle — hat
-/// sich der Quelltext seit dem Export geändert, wird die Einheit übergangen, nicht überschrieben.
+/// für Agenturen und CAT-Werkzeuge, liest es zurück und lässt die KI vorübersetzen.
+///
+/// Der Rückweg (Taloan, 22.09.2026: „irgendwann kommt der Auftrag zurück und es gibt schon wieder etliche Änderungen am Original“)
+/// entscheidet je Einheit am Fingerabdruck — und verwirft nie einen Auftrag:
+/// <list type="bullet">
+/// <item>Quelle seit dem Auftrag unverändert → schreiben, Marke auf jetzt: fertig.</item>
+/// <item>Quelle ist weitergezogen → <b>trotzdem schreiben</b> (sie ist besser als die vorige), Marke auf die Auftragsfassung:
+/// die Einheit bleibt im Rückstand und geht als Differenz ins nächste Paket — nie wieder der ganze Text.</item>
+/// <item>Das Ziel wurde hier von Hand geändert, seit der Auftrag hinausging → nicht überschreiben, ein Mensch sieht es an.</item>
+/// </list>
+/// Der Zustand kommt darum aus der <b>Marke</b> (<see cref="Translations"/>), nicht aus „wer wurde zuletzt geschrieben“: ein frisch
+/// eingespielter, aber überholter Zieltext ist <c>stale</c>, nicht <c>done</c>. Ohne Marke (Bestand) gilt weiter der Zeitvergleich.
 /// </summary>
 public static class TranslateApi
 {
@@ -41,13 +51,13 @@ public static class TranslateApi
         return mem;
     }
     public sealed record ImportUnit(string Id, string? Target, string? SourceHash);
-    public sealed record ImportBody(string From, string To, List<ImportUnit> Units, bool? Force);
+    public sealed record ImportBody(string From, string To, List<ImportUnit> Units, bool? Force, string? Order = null);
 
     private static readonly XNamespace X2 = "urn:oasis:names:tc:xliff:document:2.0";
     private static readonly XNamespace X1 = "urn:oasis:names:tc:xliff:document:1.2";
 
     /// <summary>Einheiten rechnen (gemeinsam für /units und /xliff).</summary>
-    public static (IResult? Error, string From, string To, List<Unit> Units) Collect(ModelCatalog model, Tree tree, string? root, string? from, string? to, string? channel, string? attributes, string scope, int limit, Workflows? workflows = null, string? wf = null, string? wfState = null)
+    public static (IResult? Error, string From, string To, List<Unit> Units) Collect(ModelCatalog model, Tree tree, string? root, string? from, string? to, string? channel, string? attributes, string scope, int limit, Workflows? workflows = null, string? wf = null, string? wfState = null, Translations? marks = null)
     {
         from = Blank(from) ?? model.MasterLocale; to = Blank(to);
         if (from is null || to is null) return (Bad("from und to (Sprachen) fehlen."), "", "", new());
@@ -70,7 +80,11 @@ public static class TranslateApi
                     var tAxis = new Axis(d.Key, to, axis.Channel, axis.Row);
                     n.Values.TryGetValue(tAxis, out var target);
                     var sAt = n.SetAt.GetValueOrDefault(axis); var tAt = n.SetAt.GetValueOrDefault(tAxis);
-                    var state = string.IsNullOrWhiteSpace(target) ? "missing" : sAt > tAt ? "stale" : "done";
+                    // Zustand aus der Marke: gegen welche Quellfassung ist übersetzt? Ohne Marke wie bisher über die Zeit.
+                    var mark = marks?.Of(n.Id, tAxis);
+                    var state = string.IsNullOrWhiteSpace(target) ? "missing"
+                        : mark is { } mk ? (mk.SourceHash == Hash(source) ? "done" : "stale")
+                        : sAt > tAt ? "stale" : "done";
                     if (scope == "missing" && state != "missing" || scope == "stale" && state != "stale" || scope == "open" && state == "done") continue;
                     units.Add(new Unit(UnitId(n.Id, d.Key, axis.Channel, axis.Row), n.Id, NodeRow.LabelOf(tree, model, n), n.Role, d.Key, d.Label?.GetValueOrDefault(from) ?? d.Label?.GetValueOrDefault("de") ?? d.Key, d.Type, axis.Channel, axis.Row, source, Hash(source), target, state, sAt, tAt));
                     if (units.Count >= Math.Clamp(limit, 1, 50000)) return (null, from, to, units);
@@ -105,6 +119,22 @@ public static class TranslateApi
         }
         var doc = new XDocument(new XDeclaration("1.0", "utf-8", null), new XElement(X2 + "xliff", new XAttribute("version", "2.0"), new XAttribute("srcLang", from), new XAttribute("trgLang", to), file));
         return doc.Declaration + Environment.NewLine + doc.ToString();
+    }
+
+    /// <summary>Den Auftrag in die Datei schreiben (Attribut am file-Element) — der Rücklauf findet ihn wieder.</summary>
+    public static string WithOrder(string xml, string order)
+    {
+        if (string.IsNullOrEmpty(order)) return xml;
+        var doc = XDocument.Parse(xml);
+        foreach (var f in doc.Descendants(X2 + "file")) f.SetAttributeValue("journali-order", order);
+        return doc.Declaration + Environment.NewLine + doc.ToString();
+    }
+
+    /// <summary>Der Auftrag aus einer XLIFF-Datei (Attribut am file-Element), null = frei importiert.</summary>
+    public static string? OrderOf(string xml)
+    {
+        try { return XDocument.Parse(xml).Descendants().Select(e => e.Attribute("journali-order")?.Value).FirstOrDefault(v => !string.IsNullOrEmpty(v)); }
+        catch { return null; }
     }
 
     /// <summary>XLIFF lesen — 2.0 (unit/segment/target) und 1.2 (trans-unit/target); Id der Einheit aus dem id-Attribut, Hash der Quelle aus der Notiz.</summary>
@@ -147,29 +177,30 @@ public static class TranslateApi
         {
             var (err, f, t, units, xml) = c.With((model, tree, _) =>
             {
-                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState);
+                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState, c.Translations);
                 return (r.Error, r.From, r.To, r.Units.Count, r.Error is null ? ToXliff(r.From, r.To, r.Units, "journali:" + (Blank(root) ?? "*")) : "");
             });
             if (err is not null) return err;
             return Results.File(Encoding.UTF8.GetBytes(xml), "application/xliff+xml", $"journali-{f}-{t}-{DateTime.Now:yyyyMMdd-HHmm}.xlf");
         });
         // XLIFF zurück: Body = XML; Sprachen aus der Datei (to darf die URL übersteuern); dieselben Regeln wie /translate/import
-        api.MapPost("/translate/xliff", async (HttpRequest req, Catalog c, string? to = null, bool force = false) =>
+        api.MapPost("/translate/xliff", async (HttpRequest req, Catalog c, string? to = null, bool force = false, string? order = null) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             string xml; using (var sr = new StreamReader(req.Body, Encoding.UTF8)) xml = await sr.ReadToEndAsync();
             var (from, fileTo, units, error) = FromXliff(xml);
             if (error is not null) return Bad(error);
+            var fileOrder = OrderOf(xml);
             var target = Blank(to) ?? fileTo;
             if (from is null || target is null) return Bad("Sprachen fehlen (srcLang/trgLang bzw. to).");
-            return Import(c, actor, from, target, units, force);
+            return Import(c, actor, from, target, units, force, Blank(order) ?? fileOrder);
         });
 
         // Einheiten: root (leer = alle Wurzeln), from/to (Sprachen), channel (leer = alle Kanäle des Attributs), attributes (Keys mit Komma, leer = alle Textattribute mit Sprachachse), scope = missing | stale | open (beide) | all
         api.MapGet("/translate/units", (Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 5000, string? wf = null, string? wfState = null) =>
             c.With((model, tree, _) =>
             {
-                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState);
+                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState, c.Translations);
                 if (r.Error is not null) return r.Error;
                 var units = r.Units;
                 return Results.Ok(new { from = r.From, to = r.To, count = units.Count, missing = units.Count(u => u.State == "missing"), stale = units.Count(u => u.State == "stale"), done = units.Count(u => u.State == "done"), units });
@@ -189,10 +220,12 @@ public static class TranslateApi
                 {
                     var t = new Axis(ax.Attribute, l, ax.Channel, ax.Row);
                     if (!n.Values.TryGetValue(t, out var tv) || string.IsNullOrWhiteSpace(tv)) missing++;
+                    else if (c.Translations.Of(n.Id, t) is { } mk) { if (mk.SourceHash == Hash(n.Values.GetValueOrDefault(ax) ?? "")) done++; else stale++; }   // dieselbe Rechnung wie die Liste: die Marke
                     else if (n.SetAt.GetValueOrDefault(ax) > n.SetAt.GetValueOrDefault(t)) stale++;
                     else done++;
                 }
-                return new { locale = l, label = model.Locales[l].Label, missing, stale, done, total = sources.Count };
+                var out_ = c.Translations.Open.Where(o => o.To == l).ToList();   // was in dieser Sprache gerade draussen ist
+                return new { locale = l, label = model.Locales[l].Label, missing, stale, done, total = sources.Count, behind = missing + stale, orders = out_.Count, outUnits = out_.Sum(o => o.Units.Count), oldest = out_.Count == 0 ? (DateTimeOffset?)null : out_.Min(o => o.Created) };
             }).ToList();
             return Results.Ok(new { from, total = sources.Count, locales });
         }));
@@ -202,32 +235,81 @@ public static class TranslateApi
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (Blank(b.From) is not { } from || Blank(b.To) is not { } to) return Bad("from und to fehlen.");
-            return Import(c, actor, from, to, b.Units ?? new(), b.Force == true);
+            return Import(c, actor, from, to, b.Units ?? new(), b.Force == true, b.Order);
         });
+
+        // Das Paket schnüren (30): aus dem Rückstand wird ein Auftrag — ein Zeiger ins Journal mit den Fingerabdrücken, die hinausgehen.
+        // Zwei Auslöser, ein Weg: der Job nach Zeitplan (wöchentlich, nachts) und der Übergang „Version der Mastersprache“ rufen dasselbe.
+        api.MapPost("/translate/order", (HttpRequest req, Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 50000, string? wf = null, string? wfState = null, string? note = null, string? format = null) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            var (err, key, count, f, t, xml) = c.With((model, tree, write) =>
+            {
+                var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState, c.Translations);
+                if (r.Error is not null) return (r.Error, "", 0, "", "", "");
+                if (r.Units.Count == 0) return (Bad("Nichts im Rückstand — kein Auftrag."), "", 0, r.From, r.To, "");
+                var k = Ids.TranslationOrder();
+                var units = r.Units.Select(u => new OrderUnit(u.Id, u.SourceHash, string.IsNullOrEmpty(u.Target) ? null : Hash(u.Target))).ToList();
+                var attrs = Blank(attributes)?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToArray();
+                write(actor, Translations.Stream + k, Types.TranslationOrdered, new TranslationOrdered(r.From, r.To, units, Blank(root), Blank(channel), attrs, scope, 0, Blank(note)), null);
+                return (null, k, r.Units.Count, r.From, r.To, ToXliff(r.From, r.To, r.Units, "journali:" + k));
+            });
+            if (err is not null) return err;
+            if (Blank(format) == "xliff") return Results.File(Encoding.UTF8.GetBytes(WithOrder(xml, key)), "application/xliff+xml", $"journali-{f}-{t}-{key}.xlf");
+            return Results.Ok(new { order = key, from = f, to = t, count });
+        });
+
+        // Was draussen ist und was zurückkam
+        api.MapGet("/translate/orders", (Catalog c, string? state = null, int limit = 100) => c.With((_, _, _) =>
+            Results.Ok(c.Translations.Orders.Values
+                .Where(o => Blank(state) is not { } s || (s == "open" ? !o.Returned : o.Returned))
+                .OrderByDescending(o => o.Number).Take(Math.Clamp(limit, 1, 1000))
+                .Select(o => new { order = o.Key, o.From, o.To, o.Root, o.Channel, o.Scope, o.Note, at = o.Created, o.Actor, units = o.Units.Count, o.Returned, o.ReturnedAt, o.Written, o.Behind, o.Conflicts, o.Skipped }).ToList())));
     }
 
-    public static IResult Import(Catalog c, string actor, string from, string to, List<ImportUnit> units, bool force)
+    public static IResult Import(Catalog c, string actor, string from, string to, List<ImportUnit> units, bool force, string? order = null)
     {
+        return c.With((model, tree, write) =>
         {
-            return c.With((model, tree, write) =>
+            if (!model.Locales.ContainsKey(to)) return Bad($"Unbekannte Zielsprache {to}.");
+            var ord = Blank(order) is { } ok ? c.Translations.Order(ok) : null;
+            if (Blank(order) is { } want && ord is null) return Bad($"Unbekannter Auftrag {want}.");
+            int written = 0, behind = 0, conflicts = 0, unchanged = 0, skipped = 0, missing = 0; var errors = new List<string>(); var nodes = new HashSet<string>();
+            foreach (var u in units)
             {
-                if (!model.Locales.ContainsKey(to)) return Bad($"Unbekannte Zielsprache {to}.");
-                int written = 0, unchanged = 0, skipped = 0, missing = 0; var errors = new List<string>(); var nodes = new HashSet<string>();
-                foreach (var u in units)
+                if (!TryParse(u.Id, out var nodeId, out var attr, out var ch, out var row) || !tree.Nodes.TryGetValue(nodeId, out var n) || !model.Attributes.TryGetValue(attr, out var d)) { missing++; continue; }
+                var target = (u.Target ?? "").Trim();
+                if (target.Length == 0) { skipped++; continue; }
+                if (!d.PerLocale) { errors.Add($"{u.Id}: {attr} ist nicht sprachabhängig"); continue; }
+                var srcAxis = new Axis(attr, from, ch, row); var tgtAxis = new Axis(attr, to, ch, row);
+                var source = n.Values.GetValueOrDefault(srcAxis) ?? "";
+                var current = n.Values.GetValueOrDefault(tgtAxis) ?? "";
+                var sent = ord?.Units.GetValueOrDefault(u.Id);
+                var mark = c.Translations.Of(n.Id, tgtAxis);
+                // Fall 3: hier wurde von Hand nachgebessert, seit der Auftrag hinausging — das überschreibt niemand ungefragt
+                var byHand = sent?.TargetHash is { Length: > 0 } th ? Hash(current) != th
+                    : mark is { } mk && n.SetAt.GetValueOrDefault(tgtAxis) > mk.At;
+                if (!force && byHand && current != target && current.Length > 0)
                 {
-                    if (!TryParse(u.Id, out var nodeId, out var attr, out var ch, out var row) || !tree.Nodes.TryGetValue(nodeId, out var n) || !model.Attributes.TryGetValue(attr, out var d)) { missing++; continue; }
-                    var target = (u.Target ?? "").Trim();
-                    if (target.Length == 0) { skipped++; continue; }
-                    var source = n.Values.GetValueOrDefault(new Axis(attr, from, ch, row)) ?? "";
-                    if (!force && u.SourceHash is { Length: > 0 } && u.SourceHash != Hash(source)) { skipped++; errors.Add($"{u.Id}: Quelle hat sich seit dem Export geändert — übergangen"); continue; }
-                    if ((n.Values.GetValueOrDefault(new Axis(attr, to, ch, row)) ?? "") == target) { unchanged++; continue; }
-                    if (!d.PerLocale) { errors.Add($"{u.Id}: {attr} ist nicht sprachabhängig"); continue; }
+                    conflicts++; errors.Add($"{u.Id}: das Ziel wurde hier geändert, seit der Auftrag hinausging — nicht überschrieben");
+                    continue;
+                }
+                var sourceHash = Hash(source);
+                var sentHash = Blank(u.SourceHash) ?? sent?.SourceHash;
+                var late = sentHash is { Length: > 0 } sh && sh != sourceHash;   // Fall 2: die Quelle ist weitergezogen
+                if (current == target) unchanged++;
+                else
+                {
                     write(actor, n.Id, Types.AttributeSet, new AttributeSet(attr, to, ch, target, null, row), null);
                     written++; nodes.Add(n.Id);
                 }
-                return Results.Ok(new { written, unchanged, skipped, missing, nodes = nodes.ToList(), errors = errors.Take(200).ToList() });
-            });
-        }
+                if (late) behind++;   // bleibt im Rückstand, ob geschrieben oder nicht — die Differenz geht ins nächste Paket
+                // die Marke sagt, gegen welche Quellfassung dieser Zieltext übersetzt ist — bei Fall 2 die des Auftrags, nicht die von jetzt
+                write(actor, n.Id, Types.TranslationMarked, new TranslationMarked(attr, to, ch, row, late ? sentHash! : sourceHash, late ? (ord?.At ?? 0) : n.SetAt.GetValueOrDefault(srcAxis), ord?.Key), null);
+            }
+            if (ord is not null && !ord.Returned) write(actor, Translations.Stream + ord.Key, Types.TranslationReturned, new TranslationReturned(written, behind, conflicts, skipped), null);
+            return Results.Ok(new { written, behind, conflicts, unchanged, skipped, missing, order = ord?.Key, nodes = nodes.ToList(), errors = errors.Take(200).ToList() });
+        });
     }
 
     /// <summary>Einheit: node|attribut|kanal|zeile — kanal/zeile leer erlaubt.</summary>

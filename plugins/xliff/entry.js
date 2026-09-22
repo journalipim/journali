@@ -1,7 +1,9 @@
 // Plugin xliff (Taloan, 21.09.2026, Blick in OpenDXP: „Übersetzungsmanagement ist etwas, was wir noch gar nicht haben“):
 // ⇄ Übersetzung — je Sprachrichtung die Einheiten (Knoten × Textattribut × Kanal): fehlend, veraltet (⟳ Quelle neuer), fertig.
 // 1 Sprachen und Umfang · 2 Teilbaum · 3 Einheiten (Tabelle, Ziel direkt eintragen, ✦ KI vorübersetzen, 💾 schreiben,
-// ⇪ XLIFF 2.0 für Agentur/CAT) · 4 XLIFF zurück (Datei, Plan, schreiben — nur wo die Quelle unverändert ist).
+// ⇪ XLIFF 2.0 für Agentur/CAT, 📦 Paket schnüren) · Aufträge (was draussen ist) · 4 XLIFF zurück.
+// Das Paket (30, Taloan 22.09.2026) ist ein Auftrag im Journal — ein Zeiger mit den Fingerabdrücken, die hinausgingen; kommt er
+// überholt zurück, wird er trotzdem eingespielt und die Differenz bleibt im Rückstand (⟳), statt alles neu zu bestellen.
 // Der Server rechnet die Einheiten (TranslateApi.cs) und schreibt XLIFF; hier nur Bedienung. Als Job: Export in out/, Import aus in/.
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const ICON = { group: '▣', product: '▦', variant: '◆' }
@@ -72,8 +74,9 @@ async function mount(root, ctx) {
     try {
       const s = await api.get(`/api/translate/status?root=${encodeURIComponent(st.root ?? '')}`)
       overview.innerHTML = ''
-      const tbl = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, 'Ziel'), el('th', { title: 'kein Zieltext' }, '○ fehlt'), el('th', { title: 'Zieltext da, Quelle seither geändert' }, '⟳ veraltet'), el('th', {}, '✓ fertig'), el('th', {}, 'von'))))
-      for (const l of s.locales) tbl.append(el('tr', { class: 'row' + (l.locale === st.to ? ' selected' : ''), style: 'cursor:pointer', onclick: () => { st.to = l.locale; drawSettings() } }, el('td', {}, `${l.locale} · ${l.label ?? ''}`), el('td', { class: l.missing ? 'neg' : 'muted' }, l.missing), el('td', { class: l.stale ? 'warn' : 'muted' }, l.stale), el('td', { class: 'pos' }, l.done), el('td', { class: 'muted' }, l.total)))
+      const tbl = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, 'Ziel'), el('th', { title: 'kein Zieltext' }, '○ fehlt'), el('th', { title: 'Zieltext da, aber gegen eine ältere Quellfassung übersetzt' }, '⟳ veraltet'), el('th', {}, '✓ fertig'), el('th', {}, 'von'), el('th', { title: 'Einheiten in Aufträgen, die noch nicht zurück sind' }, '📦 draussen'))))
+      for (const l of s.locales) tbl.append(el('tr', { class: 'row' + (l.locale === st.to ? ' selected' : ''), style: 'cursor:pointer', onclick: () => { st.to = l.locale; drawSettings() } }, el('td', {}, `${l.locale} · ${l.label ?? ''}`), el('td', { class: l.missing ? 'neg' : 'muted' }, l.missing), el('td', { class: l.stale ? 'warn' : 'muted' }, l.stale), el('td', { class: 'pos' }, l.done), el('td', { class: 'muted' }, l.total),
+        el('td', { class: l.orders ? 'accent' : 'muted', title: l.orders ? `${l.orders} Auftrag/Aufträge draussen, ältester seit ${new Date(l.oldest).toLocaleDateString()}` : 'nichts draussen' }, l.orders ? `${l.outUnits} (${l.orders})` : '–')))
       overview.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, `Übersetzungsstand gegen ${s.from} (Master) — ${s.total} Quelltexte${st.root ? ' im Teilbaum' : ''}`), tbl)
     } catch (e) { overview.textContent = e.message }
   }
@@ -91,6 +94,16 @@ async function mount(root, ctx) {
   const aiBtn = el('button', { title: 'leere Ziele mit der KI vorübersetzen (Einstellungen → KI; das Wörterbuch geht als Glossar mit) — nur Vorschläge in der Tabelle, geschrieben wird erst mit 💾', onclick: preTranslate }, '✦ KI vorübersetzen')
   const memBtn = el('button', { title: 'alle Vorschläge aus Gedächtnis (◌ gleicher Quelltext anderswo fertig) und Wörterbuch (📖) in die Ziele übernehmen — geschrieben wird erst mit 💾', onclick: () => { let n = 0; for (const u of st.units) if (u.memory && !(st.edited.get(u.id) ?? u.target)) { st.edited.set(u.id, u.memory); if (u._ta) u._ta.value = u.memory; n++ } count.textContent = `${st.units.length} Einheiten · ${st.edited.size} geändert`; say(`◌ ${n} übernommen`) } }, '◌ Gedächtnis übernehmen')
   const writeBtn = el('button', { class: 'primary', title: 'die eingetragenen Ziele schreiben (AttributeSet je Einheit) — nur, wo die Quelle seit dem Laden unverändert ist', onclick: writeEdited }, '💾 Ziele schreiben')
+  // Paket schnüren (30): ein Auftrag im Journal + die XLIFF-Datei dazu — der Rücklauf findet den Auftrag in der Datei wieder
+  const orderBtn = el('button', { title: 'aus dem Rückstand einen Auftrag machen: er steht im Journal (wer, wann, welche Fassung), die Datei geht an die Agentur. Der Rücklauf rechnet dagegen — überholte Einheiten werden eingespielt und bleiben offen', onclick: async () => {
+    try {
+      const r = await fetch(`${store.server}/api/translate/order?${q()}&format=xliff`, { method: 'POST', headers: { 'X-Actor': store.actor } })
+      if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || await r.text())
+      const name = (r.headers.get('content-disposition') || '').match(/filename=([^;]+)/)?.[1] ?? `journali-${st.from}-${st.to}.xlf`
+      download(await r.blob(), name.trim())
+      store.toast(`📦 Auftrag geschnürt: ${name.trim()}`, 'ok'); loadOrders(); drawOverview()
+    } catch (e) { store.toast(e.message) }
+  } }, '📦 Paket schnüren')
   async function loadUnits() {
     say('lade …')
     try { const r = await api.get(`/api/translate/units?${q()}&limit=5000`); st.units = r.units; st.edited = new Map(); drawUnits(); say(`${r.count} Einheiten · ○ ${r.missing} · ⟳ ${r.stale} · ✓ ${r.done}`) } catch (e) { say(''); store.toast(e.message) }
@@ -130,7 +143,7 @@ async function mount(root, ctx) {
   async function writeEdited() {
     if (!st.edited.size) { store.toast('nichts geändert'); return }
     const units = [...st.edited].map(([id, target]) => ({ id, target, sourceHash: st.units.find(u => u.id === id)?.sourceHash }))
-    try { const r = await api.post('/api/translate/import', { from: st.from, to: st.to, units }); store.toast(`${r.written} geschrieben${r.skipped ? `, ${r.skipped} übergangen (Quelle geändert)` : ''}${r.unchanged ? `, ${r.unchanged} unverändert` : ''}`, r.skipped ? 'warn' : 'ok'); lastNodes = r.nodes ?? []; advBtn.style.display = wfDef && lastNodes.length ? '' : 'none'; advBtn.textContent = `⚑ ${lastNodes.length} Knoten → übersetzt`; await store.poll(true); await loadUnits(); drawOverview() } catch (e) { store.toast(e.message) }
+    try { const r = await api.post('/api/translate/import', { from: st.from, to: st.to, units }); store.toast(`${r.written} geschrieben${r.behind ? `, ${r.behind} bleiben offen (Quelle weitergezogen)` : ''}${r.conflicts ? `, ${r.conflicts} Konflikt(e)` : ''}${r.unchanged ? `, ${r.unchanged} unverändert` : ''}`, r.conflicts ? 'warn' : 'ok'); lastNodes = r.nodes ?? []; advBtn.style.display = wfDef && lastNodes.length ? '' : 'none'; advBtn.textContent = `⚑ ${lastNodes.length} Knoten → übersetzt`; await store.poll(true); await loadUnits(); drawOverview() } catch (e) { store.toast(e.message) }
   }
 
   // ---- Wörterbuch (9): Begriff → Text je Sprache; Glossar für KI/DeepL und Gedächtnis (📖 in der Tabelle)
@@ -157,6 +170,26 @@ async function mount(root, ctx) {
   }
   loadTerms()
 
+  // ---- Aufträge: was draussen ist, was zurückkam
+  const ordersBox = el('div')
+  async function loadOrders() {
+    try {
+      const list = await api.get('/api/translate/orders?limit=50')
+      ordersBox.innerHTML = ''
+      if (!list.length) { ordersBox.append(el('div', { class: 'muted', style: 'padding:4px 0' }, 'noch kein Paket geschnürt')); return }
+      const tbl = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, ''), el('th', {}, 'Auftrag'), el('th', {}, 'Richtung'), el('th', {}, 'Einheiten'), el('th', {}, 'geschrieben'), el('th', { title: 'kam überholt zurück und bleibt im Rückstand' }, '⟳ offen'), el('th', { title: 'das Ziel wurde hier geändert — nicht überschrieben' }, '⚠'), el('th', {}, 'wann'))))
+      for (const o of list) tbl.append(el('tr', { class: 'row' },
+        el('td', { class: o.returned ? 'pos' : 'accent', title: o.returned ? 'zurück' : 'draussen' }, o.returned ? '✓' : '📦'),
+        el('td', { class: 'mono', title: o.actor }, o.order), el('td', {}, `${o.from} → ${o.to}`), el('td', { class: 'muted' }, o.units),
+        el('td', { class: o.written ? 'pos' : 'muted' }, o.returned ? o.written : '–'),
+        el('td', { class: o.behind ? 'warn' : 'muted' }, o.returned ? o.behind : '–'),
+        el('td', { class: o.conflicts ? 'neg' : 'muted' }, o.returned ? o.conflicts : '–'),
+        el('td', { class: 'muted' }, new Date(o.at).toLocaleString())))
+      ordersBox.append(tbl)
+    } catch (e) { ordersBox.textContent = e.message }
+  }
+  loadOrders()
+
   // ---- 4 XLIFF zurück
   const fileIn = el('input', { type: 'file', accept: '.xlf,.xliff,.xml' })
   const planBox = el('div', { style: 'margin-top:6px' })
@@ -175,17 +208,18 @@ async function mount(root, ctx) {
     try {
       const r = await fetch(`${store.server}/api/translate/xliff?to=${st.to}&force=${forceCb.checked}`, { method: 'POST', headers: { 'X-Actor': store.actor, 'Content-Type': 'application/xml' }, body: xml })
       const o = await r.json(); if (!r.ok) throw new Error(o.error || r.status)
-      planBox.append(el('div', { class: o.skipped ? 'warn' : 'pos', style: 'margin-top:6px' }, `${o.written} geschrieben · ${o.unchanged} unverändert · ${o.skipped} übergangen · ${o.missing} unbekannt`), ...(o.errors ?? []).slice(0, 20).map(e => el('div', { class: 'muted', style: 'font-size:12px' }, e)))
+      planBox.append(el('div', { class: o.conflicts ? 'neg' : o.behind ? 'warn' : 'pos', style: 'margin-top:6px' }, `${o.written} geschrieben · ${o.unchanged} unverändert · ⟳ ${o.behind} bleiben offen (Quelle weitergezogen) · ⚠ ${o.conflicts} Konflikte · ${o.missing} unbekannt${o.order ? ` · Auftrag ${o.order}` : ''}`), ...(o.errors ?? []).slice(0, 20).map(e => el('div', { class: 'muted', style: 'font-size:12px' }, e)))
       lastNodes = o.nodes ?? []; if (wfDef && lastNodes.length) { advBtn.style.display = ''; advBtn.textContent = `⚑ ${lastNodes.length} Knoten → übersetzt`; planBox.append(advBtn) }
-      await store.poll(true); drawOverview(); if (st.units.length) loadUnits()
+      await store.poll(true); drawOverview(); loadOrders(); if (st.units.length) loadUnits()
     } catch (e) { store.toast(e.message) }
   }
 
   body.append(band('1 · Sprachen und Umfang'), settings, overview,
     band('2 · Teilbaum'), chosen, treeBox,
-    band('3 · Einheiten'), el('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px' }, loadBtn, xliffBtn, memBtn, aiBtn, writeBtn, advBtn, count), unitsBox,
+    band('3 · Einheiten'), el('div', { class: 'row', style: 'gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px' }, loadBtn, xliffBtn, orderBtn, memBtn, aiBtn, writeBtn, advBtn, count), unitsBox,
+    band('Aufträge'), el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, 'Ein Paket ist ein Zeiger ins Journal: Sprachrichtung, Umfang, Stand und je Einheit die Fingerabdrücke, die hinausgingen. Kommt es zurück, während die Quelle weitergezogen ist, wird die Übersetzung trotzdem eingespielt — die Differenz bleibt offen und geht ins nächste Paket.'), ordersBox,
     band('Wörterbuch'), el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, 'Begriff → Text je Sprache, an einer Stelle gepflegt: Glossar für KI und DeepL, Gedächtnis in der Tabelle (📖). Zeile ausfüllen = speichern.'), termsBox,
-    band('4 · XLIFF zurück'), el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, 'Übersetzte Datei der Agentur (XLIFF 2.0 oder 1.2). Geschrieben wird nur, wo die Quelle seit dem Export unverändert ist — der Hash steht in der Datei.'), fileIn, planBox)
+    band('4 · XLIFF zurück'), el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:4px' }, 'Übersetzte Datei der Agentur (XLIFF 2.0 oder 1.2). Der Hash je Einheit steht in der Datei: unveränderte Quelle → fertig, weitergezogene Quelle → eingespielt und bleibt offen, von Hand geändertes Ziel → Konflikt, nicht überschrieben.'), fileIn, planBox)
   drawSettings(); drawUnits()
 }
 

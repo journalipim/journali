@@ -647,12 +647,15 @@ je Sprachrichtung — Knoten × sprachabhängiges Textattribut × Kanal × Zeile
 `missing` / `stale` (Quelle seit dem Ziel geändert, nach `SetAt`) / `done`; vererbte Werte gehören dem Vorfahren.
 `TranslateApi.cs`: `GET /api/translate/units` (root, from, to, channel, attributes, scope), `GET /api/translate/status`
 (je Zielsprache fehlend/veraltet/fertig), `POST /api/translate/import` (Zieltexte; **nur, wenn der Hash der Quelle noch
-stimmt** — sonst übergangen, `force` schreibt trotzdem), `GET/POST /api/translate/xliff` (XLIFF 2.0 schreiben; 2.0 und 1.2
+stimmt** — seit 22.09.2026 gilt hier 30: eine überholte Übersetzung wird eingespielt und bleibt im Rückstand, `force`
+überschreibt nur noch Konflikte), `GET/POST /api/translate/xliff` (XLIFF 2.0 schreiben; 2.0 und 1.2
 lesen — der Hash steht als Notiz in der Datei). Plugin `xliff` (Thema ⇄ Übersetzung): 1 Sprachen/Kanal/Umfang/Attribute
 · 2 Teilbaum · 3 Einheiten als Tabelle, Ziel direkt eintragen, ✦ KI vorübersetzen (nur Vorschlag, geschrieben mit 💾),
 ⇪ XLIFF für Agentur/CAT · 4 XLIFF zurück mit Plan. Als Job über die Fächer: Export nach out/ (latest für die Agentur),
 Import aus in/ (Duplikat nach Hash). Tests `TranslateTests`. Offen: Übersetzungsgedächtnis (Wörterbuch 9),
 Übersetzungs-Workflow (27: „zur Übersetzung“ als Zustand), DeepL als Anbieter neben der KI.
+Dazu seit 22.09.2026 (30): `POST /api/translate/order` (Paket schnüren, mit `format=xliff` gleich die Datei) und
+`GET /api/translate/orders` (was draussen ist, was zurückkam).
 
 ## Messlatte: OpenDXP
 
@@ -954,9 +957,33 @@ Rückstand da („FR: 12 Werte“) — dieselbe Zahl, aus der das nächste Paket
 Übersetzung über die KI, schrumpft die Runde auf Minuten und der ganze Fall „Quelle ist
 weitergezogen“ bleibt nur für die Agenturstrecke übrig.
 
-**Zu bauen wäre dafür:** ein Eintrag für die Marke (Knoten, Attribut, Sprache, Journalnummer,
-Quell-Hash), ein Abbild „Rückstand je Sprache“, der Job „Paket schnüren“ mit Zeitplan und der
-Rückimport als Importer mit Profil — dazu die Workflow-Achse von oben. **Taloans Wort fehlt.**
+**Gebaut** (22.09.2026): der Eintrag für die Marke, das Abbild, der Auftrag, der Rücklauf mit den
+drei Fällen, die Workflow-Achse — siehe die Tabelle unten.
+
+### Gebaut am 22.09.2026 (Taloan: „ja, bau das“)
+
+Vorweg eine Berichtigung: „gebaut ist nichts“ stimmte nicht — Einheiten, XLIFF hin und zurück, Gedächtnis, Wörterbuch und
+die Jobs gab es seit dem 21.09. Gebaut wurde das, was gefehlt hat:
+
+| Was | Wo |
+|---|---|
+| **Die Marke** je Knoten × Attribut × Zielsprache × Kanal × Zeile: gegen welche Quellfassung ist übersetzt (Fingerabdruck + Journalnummer) | `TranslationMarked`, Abbild `Translations` (`Journali.Core/Projections/Translations.cs`) |
+| **Der Zustand kommt aus der Marke**, nicht aus „wer wurde zuletzt geschrieben“ — ein frisch eingespielter, aber überholter Zieltext ist ⟳, nicht ✓. Ohne Marke (Bestand) gilt weiter der Zeitvergleich | `TranslateApi.Collect` |
+| **Das Paket** als Auftrag im Journal: Sprachrichtung, Umfang, Stand, je Einheit die Fingerabdrücke von Quelle **und** Ziel | `TranslationOrdered` / `TranslationReturned`, `POST /api/translate/order`, `GET /api/translate/orders` |
+| **Zwei Auslöser, ein Weg**: der Job nach Zeitplan (`Schedule`, cron) und die Wirkung `translate:<sprache>` an einem Übergang („Version der Mastersprache“) rufen dasselbe | `plugins/xliff/job.mjs`, `Commands.OrderTranslation` |
+| **Der Rücklauf** entscheidet je Einheit am Fingerabdruck: unverändert → fertig · weitergezogen → **eingespielt und bleibt offen** (`behind`), die Differenz geht ins nächste Paket · Ziel von Hand geändert → Konflikt, nicht überschrieben (`conflicts`, `force` überschreibt) | `TranslateApi.Import` |
+| **Der Auftrag steht in der XLIFF-Datei** (`journali-order` am file-Element) und kommt mit ihr zurück | `WithOrder` / `OrderOf` |
+| **Workflow je Sprache**: `perLocale` am Workflow, Sprache am `WorkflowStateSet` (leer = wie bisher, jeder alte Eintrag gilt weiter); die Wirkung eines Schritts trifft nur diese Sprache — Freigabe gibt es längst je Kanal **und** Sprache | `Workflows`, `Commands.WorkflowStep(… locale)`, `WorkflowLocales.vue`, Saatgut „Übersetzung“ steht auf `perLocale` |
+| **Oberfläche**: Zeile „🗣 je Sprache“ am Knoten, Schalter in den Workflow-Einstellungen, 📦 Paket schnüren und der Abschnitt „Aufträge“ in ⇄ Übersetzung, Spalte „📦 draussen“ in der Übersicht | `NodeView.vue`, `WorkflowSettings.vue`, `plugins/xliff/entry.js` |
+
+Geprüft: `TranslationOrderTests` (Zeiger und Rücklauf, überholt bleibt offen, Konflikt, zehnmal geändert = ein Posten,
+Wirkung am Übergang, Auftrag in der Datei), `WorkflowLocaleTests` (je Sprache, ohne `perLocale` unverändert, Wirkung trifft
+nur die Sprache), `web/test/ui-workflow.test.mjs` (eine Zeile je Sprache, Klick schickt die Sprache mit, gesperrte Schritte).
+
+**Noch nicht gebaut** (Taloans Wort fehlt): die Bagatellgrenze (Normalisieren vor dem Vergleich, Abstand statt „ungleich“),
+das Häkchen „unwesentliche Änderung“ am Wert, die Fallback-Regel je Kanal („letzte freigegebene Fassung der Zielsprache
+ausliefern“) und die KI-Strecke als Abnahme-Workflow (die Übersetzung gibt es schon, der Zustand „maschinell übersetzt“
+noch nicht).
 
 ## Eintragstypen, die dazukommen
 

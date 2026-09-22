@@ -126,7 +126,7 @@ public static class Model
             [new("none", Labels.Of("nicht angefordert", "Not requested"), "muted"), new("to_translate", Labels.Of("zur Übersetzung", "To translate"), "warn"), new("translated", Labels.Of("übersetzt", "Translated"), "accent"), new("checked", Labels.Of("geprüft", "Checked"), "pos", true)],
             [new("request", "none", "to_translate", Labels.Of("zur Übersetzung geben", "Request translation")), new("done", "to_translate", "translated", Labels.Of("übersetzt", "Translated")),
              new("check", "translated", "checked", Labels.Of("geprüft", "Checked")), new("back", "translated", "to_translate", Labels.Of("zurück zur Übersetzung", "Back to translation"), null, true),
-             new("again", "checked", "to_translate", Labels.Of("erneut zur Übersetzung", "Translate again"))], "none")));
+             new("again", "checked", "to_translate", Labels.Of("erneut zur Übersetzung", "Translate again"))], "none", null, null, PerLocale: true)));   // je Sprache ein Zustand (Taloan, 22.09.2026): „Französisch in Korrektur, Deutsch freigegeben“
 
         // Vorschau-Presets (Taloan, 21.09.2026): was beim Import je Bild vorausberechnet wird — Saatgut, in den Einstellungen änderbar
         yield return new(Projections.Media.PresetStream + "thumb", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Kachel", "Tile"), 256, 256, "webp", 80)));

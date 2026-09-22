@@ -33,16 +33,21 @@ public static class WorkflowApi
             {
                 foreach (var n in tree.Nodes.Values.Where(wf.AppliesTo))
                 {
-                    var (st, _) = c.Workflows.StateOf(n.Id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent);
-                    if (state is not null && st != state) continue;
-                    if (wf.State(st)?.Final == true && state is null) continue;
-                    var nw = c.Workflows.Of(n.Id).GetValueOrDefault(wf.Key);
-                    if (state is null && nw is null) continue;   // nie angefasst: keine Aufgabe (sonst wäre jeder Knoten eine)
-                    var allowed = Commands.Allowed(c.Workflows, wf, n.Id, role, null, tree).ToList();
-                    if (allowed.Count == 0) continue;
-                    if (nw?.Assigned is { } a && user is not null && a != user && state is null) continue;   // jemand anderem zugewiesen
-                    out_.Add((nw?.At, new { node = n.Id, label = NodeRow.LabelOf(tree, model, n), n.Role, workflow = wf.Key, workflowLabel = wf.Label, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, since = nw?.At, actor = nw?.Actor, note = nw?.Note, assigned = nw?.Assigned, roles = wf.Transitions.Where(t => t.From == st).SelectMany(t => t.Roles ?? []).Distinct().ToList(), transitions = allowed.Select(t => new { t.Key, t.Label, t.NoteRequired, t.Effects }).ToList() }));
-                    if (out_.Count >= limit) break;
+                    // je Sprache eine Aufgabe, wo es einen eigenen Sprachzustand gibt (Taloan, 22.09.2026); sonst wie bisher eine je Knoten
+                    var slots = wf.PerLocale ? c.Workflows.LocalesAt(n.Id, wf).OrderBy(l => l).Select(l => (string?)l).DefaultIfEmpty(null).ToList() : [null];
+                    foreach (var loc in slots)
+                    {
+                        var (st, _) = c.Workflows.StateOf(n.Id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent, loc);
+                        if (state is not null && st != state) continue;
+                        if (wf.State(st)?.Final == true && state is null) continue;
+                        var nw = c.Workflows.Of(n.Id).GetValueOrDefault(Workflows.Slot(wf.Key, loc));
+                        if (state is null && nw is null) continue;   // nie angefasst: keine Aufgabe (sonst wäre jeder Knoten eine)
+                        var allowed = Commands.Allowed(c.Workflows, wf, n.Id, role, null, tree, loc).ToList();
+                        if (allowed.Count == 0) continue;
+                        if (nw?.Assigned is { } a && user is not null && a != user && state is null) continue;   // jemand anderem zugewiesen
+                        out_.Add((nw?.At, new { node = n.Id, label = NodeRow.LabelOf(tree, model, n), n.Role, workflow = wf.Key, workflowLabel = wf.Label, locale = loc, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, since = nw?.At, actor = nw?.Actor, note = nw?.Note, assigned = nw?.Assigned, roles = wf.Transitions.Where(t => t.From == st).SelectMany(t => t.Roles ?? []).Distinct().ToList(), transitions = allowed.Select(t => new { t.Key, t.Label, t.NoteRequired, t.Effects }).ToList() }));
+                        if (out_.Count >= limit) break;
+                    }
                 }
             }
             return Results.Ok(out_.OrderBy(o => o.Since ?? DateTimeOffset.MaxValue).Select(o => o.Row).ToList());
@@ -59,6 +64,19 @@ public static class WorkflowApi
                 var (st, inheritedFrom) = c.Workflows.StateOf(id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent); var nw = c.Workflows.Of(inheritedFrom ?? id).GetValueOrDefault(wf.Key);
                 return new
                 {
+                    perLocale = wf.PerLocale,
+                    // je Sprache ein eigener Zustand (Taloan, 22.09.2026: „Französisch in Korrektur, Deutsch freigegeben“) — ohne eigenen gilt der des Knotens
+                    locales = !wf.PerLocale ? null : model.Locales.Keys.OrderBy(l => l == model.MasterLocale ? 0 : 1).ThenBy(l => l).Select(l =>
+                    {
+                        var (ls, lfrom) = c.Workflows.StateOf(id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent, l);
+                        var lnw = c.Workflows.Of(lfrom ?? id).GetValueOrDefault(Workflows.Slot(wf.Key, l)) ?? c.Workflows.Of(lfrom ?? id).GetValueOrDefault(wf.Key);
+                        return (object)new
+                        {
+                            locale = l, master = l == model.MasterLocale, state = ls, stateLabel = wf.State(ls)?.Label, color = wf.State(ls)?.Color, final = wf.State(ls)?.Final ?? false,
+                            own = c.Workflows.Own(id, wf, l) is not null, since = lnw?.At, actor = lnw?.Actor, note = lnw?.Note, assigned = lnw?.Assigned,
+                            transitions = Commands.Allowed(c.Workflows, wf, id, role, null, tree, l).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label, blocked = Commands.Blocker(ctxRead, n, t) }).ToList(),
+                        };
+                    }).ToList(),
                     workflow = wf.Key, label = wf.Label, state = st, stateLabel = wf.State(st)?.Label, color = wf.State(st)?.Color, final = wf.State(st)?.Final ?? false,
                     since = nw?.At, actor = nw?.Actor, note = nw?.Note, transition = nw?.Transition, assigned = nw?.Assigned,
                     inheritedFrom = inheritedFrom is null ? null : new { id = inheritedFrom, label = NodeRow.LabelOf(tree, model, tree.Nodes[inheritedFrom]), role = tree.Nodes[inheritedFrom].Role },   // Zustand vom Vater (Variante folgt dem Produkt)
@@ -117,9 +135,9 @@ public static class WorkflowApi
                 }
             return Results.Ok(out_);
         }));
-        api.MapPost("/nodes/{id}/workflow/{wf}/{transition}", (string id, string wf, string transition, StepBody? body, HttpRequest req, Catalog c) =>
-            TreeApi.Run(req, c, x => Commands.WorkflowStep(x, id, wf, transition, body?.Note)));
-        api.MapDelete("/nodes/{id}/workflow/{wf}", (string id, string wf, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.ClearWorkflowState(x, id, wf)));   // eigenen Zustand aufheben → erben
+        api.MapPost("/nodes/{id}/workflow/{wf}/{transition}", (string id, string wf, string transition, StepBody? body, HttpRequest req, Catalog c, string? locale = null) =>
+            TreeApi.Run(req, c, x => Commands.WorkflowStep(x, id, wf, transition, body?.Note, locale)));
+        api.MapDelete("/nodes/{id}/workflow/{wf}", (string id, string wf, HttpRequest req, Catalog c, string? locale = null) => TreeApi.Run(req, c, x => Commands.ClearWorkflowState(x, id, wf, locale)));   // eigenen Zustand aufheben → erben
         api.MapPut("/nodes/{id}/workflow/{wf}/assign", (string id, string wf, AssignBody body, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.AssignWorkflow(x, id, wf, body.User)));
     }
@@ -128,6 +146,6 @@ public static class WorkflowApi
     {
         var counts = new Dictionary<string, int>();
         foreach (var n in tree.Nodes.Values.Where(w.AppliesTo)) { var s = c.Workflows.StateOf(n.Id, w, x => tree.Nodes.GetValueOrDefault(x)?.Parent).State; counts[s] = counts.GetValueOrDefault(s) + 1; }
-        return new { w.Key, w.Label, w.Start, w.Roles, w.Families, states = w.States.Select(s => new { s.Key, s.Label, s.Color, s.Final, s.X, s.Y, count = counts.GetValueOrDefault(s.Key) }).ToList(), transitions = w.Transitions, w.LastNumber };
+        return new { w.Key, w.Label, w.Start, w.Roles, w.Families, w.PerLocale, states = w.States.Select(s => new { s.Key, s.Label, s.Color, s.Final, s.X, s.Y, count = counts.GetValueOrDefault(s.Key) }).ToList(), transitions = w.Transitions, w.LastNumber };
     }
 }

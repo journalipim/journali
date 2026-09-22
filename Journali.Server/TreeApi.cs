@@ -225,7 +225,7 @@ public static class TreeApi
         if (Actor(req) is not { } actor) return ActorMissing();
         var outcome = c.With((model, tree, write) => command(new Ctx
         {
-            Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows,
+            Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Translations = c.Translations,
             Role = req.HttpContext.Items["role"] as string,   // für Übergänge mit Rollen (null = offen)
             Write = (stream, type, payload) => write(actor, stream, type, payload, null),
         }));

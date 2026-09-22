@@ -7,8 +7,9 @@ using Microsoft.AspNetCore.Http;
 
 namespace Journali.Tests;
 
-// Übersetzungsmanagement (Taloan, 21.09.2026): Einheiten je Sprachrichtung (fehlend, veraltet, fertig), XLIFF 2.0 hin und zurück,
-// Rückweg nur bei unveränderter Quelle.
+// Übersetzungsmanagement (Taloan, 21.09.2026): Einheiten je Sprachrichtung (fehlend, veraltet, fertig), XLIFF 2.0 hin und zurück.
+// Der Rückweg verwirft seit 22.09.2026 nichts mehr (Taloan: „und irgendwann kommt der Auftrag zurück …“) — eine überholte
+// Übersetzung wird eingespielt und bleibt im Rückstand; die drei Fälle stehen in TranslationOrderTests.
 public class TranslateTests
 {
     private static (Catalog C, string Product, string Group) World()
@@ -56,10 +57,12 @@ public class TranslateTests
         Assert.Equal("Device X1", c.With((_, tree, _) => tree.Nodes[p].Values[new Axis("name", "en", null, null)]));
         Assert.Empty(c.With((model, tree, _) => TranslateApi.Collect(model, tree, null, "de", "en", null, null, "open", 1000)).Units);
 
-        // Quelle ändert sich nach dem Export → Rückweg übergeht die Einheit (Hash), force schreibt trotzdem
+        // Quelle ändert sich nach dem Export → die Einheit kommt überholt zurück: sie zählt als Rückstand (behind), nicht als verworfen
         c.With((_, _, write) => write("t", p, Types.AttributeSet, new AttributeSet("name", "de", null, "Gerät X1 Pro", null), null).Number);
         var late = Body(TranslateApi.Import(c, "agency", "de", "en", filled.Where(u => u.Id.Contains("|name|")).ToList(), false));
-        Assert.Equal(1, JsonDocument.Parse(late).RootElement.GetProperty("skipped").GetInt32());
+        Assert.Equal(1, JsonDocument.Parse(late).RootElement.GetProperty("behind").GetInt32());
+        Assert.Equal(0, JsonDocument.Parse(late).RootElement.GetProperty("skipped").GetInt32());
+        Assert.Single(c.With((model, tree, _) => TranslateApi.Collect(model, tree, null, "de", "en", null, null, "open", 1000, null, null, null, c.Translations)).Units);   // offen bleibt offen
         var forced = Body(TranslateApi.Import(c, "agency", "de", "en", filled.Where(u => u.Id.Contains("|name|")).Select(u => u with { Target = "Device X1 Pro" }).ToList(), true));
         Assert.Equal(1, JsonDocument.Parse(forced).RootElement.GetProperty("written").GetInt32());
         // XLIFF 1.2 wird auch gelesen

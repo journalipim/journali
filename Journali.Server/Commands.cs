@@ -21,6 +21,8 @@ public sealed class Ctx
     public required Relations Relations { get; init; }
     public required Media Media { get; init; }
     public Workflows? Workflows { get; init; }
+    /// <summary>Marken und Aufträge der Übersetzung (30) — für die Wirkung <c>translate:&lt;sprache&gt;</c>.</summary>
+    public Translations? Translations { get; init; }
     /// <summary>Rolle des Anfragenden (null = offen, ohne Benutzer) — für Übergänge mit Rollen.</summary>
     public string? Role { get; init; }
     public required Func<string, string, object, Entry> Write { get; init; }   // stream, type, payload
@@ -406,9 +408,9 @@ public static class Commands
     private static string? InWork(Ctx c, Node v)
     {
         if (c.Workflows is null) return null;
-        foreach (var (wfKey, nw) in c.Workflows.Of(v.Id))
-            if (c.Workflows.All.TryGetValue(wfKey, out var wf) && wf.AppliesTo(v) && wf.State(nw.State) is { Final: false } s)
-                return $"steht in „{s.Label.GetValueOrDefault("de") ?? s.Key}“ ({wf.Label.GetValueOrDefault("de") ?? wfKey})";
+        foreach (var (_, nw) in c.Workflows.Of(v.Id))
+            if (c.Workflows.All.TryGetValue(nw.Workflow, out var wf) && wf.AppliesTo(v) && wf.State(nw.State) is { Final: false } s)
+                return $"steht in „{s.Label.GetValueOrDefault("de") ?? s.Key}“ ({wf.Label.GetValueOrDefault("de") ?? nw.Workflow}{(nw.Locale is null ? "" : " · " + nw.Locale)})";
         return null;
     }
 
@@ -606,7 +608,10 @@ public static class Commands
             if (string.IsNullOrWhiteSpace(t.Key)) return Outcome.Bad("Übergang ohne Key.");
             if (!keys.Contains(t.From) || !keys.Contains(t.To)) return Outcome.Bad($"Übergang {t.Key}: von/nach muss ein Zustand sein.");
             if (t.EscalateAfterDays is { } ed && ed < 0) return Outcome.Bad($"Übergang {t.Key}: Eskalation nach n Tagen, n ≥ 0.");
-            foreach (var e in t.Effects ?? []) if (!((e.StartsWith("release:") || e.StartsWith("revoke:")) && (e[(e.IndexOf(':') + 1)..] == "*" || c.Model.Channels.ContainsKey(e[(e.IndexOf(':') + 1)..])) || (e.StartsWith("status:") && c.Model.Statuses.ContainsKey(e[7..])))) return Outcome.Bad($"Übergang {t.Key}: Wirkung „{e}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<{string.Join('|', c.Model.StatusesOrdered.Select(s => s.Key))}>).");
+            foreach (var e in t.Effects ?? []) if (!((e.StartsWith("release:") || e.StartsWith("revoke:")) && (e[(e.IndexOf(':') + 1)..] == "*" || c.Model.Channels.ContainsKey(e[(e.IndexOf(':') + 1)..])) || (e.StartsWith("status:") && c.Model.Statuses.ContainsKey(e[7..]))
+                // translate:<sprache> (30, Taloan 22.09.2026): schnürt das Übersetzungspaket — derselbe Auftrag wie beim Job nach Zeitplan
+                || (e.StartsWith("translate:") && (e[10..] == "*" || (c.Model.Locales.ContainsKey(e[10..]) && e[10..] != c.Model.MasterLocale)))))
+                return Outcome.Bad($"Übergang {t.Key}: Wirkung „{e}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<{string.Join('|', c.Model.StatusesOrdered.Select(s => s.Key))}>, translate:<sprache>).");
         }
         if ((d.Transitions ?? new()).Select(t => t.Key).Distinct().Count() != (d.Transitions ?? new()).Count) return Outcome.Bad("Übergangs-Keys doppelt.");
         return Outcome.Ok(c.Write(Workflows.Stream + key, Types.WorkflowDefined, d with { Start = start }));
@@ -616,10 +621,10 @@ public static class Commands
         c.Workflows?.All.ContainsKey(key) == true ? Outcome.Ok(c.Write(Workflows.Stream + key, Types.WorkflowRetired, new WorkflowRetired())) : Outcome.Missing;
 
     /// <summary>Welche Übergänge darf diese Rolle am Knoten jetzt gehen? (null-Rolle = offen, alles)</summary>
-    public static IEnumerable<WfTransition> Allowed(Workflows w, WorkflowDef wf, string nodeId, string? role, DateTimeOffset? now = null, Tree? tree = null)
+    public static IEnumerable<WfTransition> Allowed(Workflows w, WorkflowDef wf, string nodeId, string? role, DateTimeOffset? now = null, Tree? tree = null, string? locale = null)
     {
-        var (state, from) = tree is null ? (w.StateOf(nodeId, wf), null) : w.StateOf(nodeId, wf, id => tree.Nodes.GetValueOrDefault(id)?.Parent);
-        var since = w.Of(from ?? nodeId).GetValueOrDefault(wf.Key)?.At;
+        var (state, from) = tree is null ? (w.StateOf(nodeId, wf, locale), null) : w.StateOf(nodeId, wf, id => tree.Nodes.GetValueOrDefault(id)?.Parent, locale);
+        var since = w.Of(from ?? nodeId).GetValueOrDefault(Workflows.Slot(wf.Key, wf.PerLocale ? locale : null))?.At;
         return wf.Transitions.Where(t => t.From == state && (role is null || role == "admin" || t.Roles is not { Length: > 0 } || t.Roles.Contains(role) || Escalated(t, role, since, now ?? DateTimeOffset.UtcNow)));
     }
 
@@ -684,42 +689,71 @@ public static class Commands
         return null;
     }
 
-    public static Outcome WorkflowStep(Ctx c, string id, string workflow, string transition, string? note)
+    public static Outcome WorkflowStep(Ctx c, string id, string workflow, string transition, string? note, string? locale = null)
     {
         if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (!wf.AppliesTo(n)) return Outcome.Bad($"Workflow „{wf.Label.GetValueOrDefault("de") ?? wf.Key}“ gilt nicht für {n.Role}.");
+        locale = Blank(locale);
+        if (locale is not null && !wf.PerLocale) return Outcome.Bad($"Workflow „{wf.Label.GetValueOrDefault("de") ?? wf.Key}“ läuft nicht je Sprache.");
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
         var t = wf.Transitions.FirstOrDefault(x => x.Key == transition);
         if (t is null) return Outcome.Bad($"Unbekannter Übergang {transition}.");
-        var (state, inheritedFrom) = c.Workflows.StateOf(id, wf, x => c.Tree.Nodes.GetValueOrDefault(x)?.Parent);
-        if (t.From != state) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht von {t.From} aus, der Knoten ist in {state}.");
-        var since = c.Workflows.Of(inheritedFrom ?? id).GetValueOrDefault(wf.Key)?.At;
+        var (state, inheritedFrom) = c.Workflows.StateOf(id, wf, x => c.Tree.Nodes.GetValueOrDefault(x)?.Parent, locale);
+        if (t.From != state) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht von {t.From} aus, der Knoten ist in {state}{(locale is null ? "" : " (" + locale + ")")}.");
+        var since = c.Workflows.Of(inheritedFrom ?? id).GetValueOrDefault(Workflows.Slot(wf.Key, wf.PerLocale ? locale : null))?.At;
         if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role) && !Escalated(t, role, since, DateTimeOffset.UtcNow)) return Outcome.Bad($"Rolle {role} darf „{t.Label.GetValueOrDefault("de") ?? t.Key}“ nicht (erlaubt: {string.Join(", ", t.Roles)}).");
         note = Blank(note);
         if (t.NoteRequired && note is null) return Outcome.Bad("Notiz ist Pflicht bei diesem Schritt (was ist zu tun?).");
         if (Blocker(c, n, t) is { } blocked) return Outcome.Bad(blocked);
-        var e = c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, t.To, t.Key, note));
+        var e = c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, t.To, t.Key, note, locale));
         foreach (var eff in t.Effects ?? [])
         {
             var i = eff.IndexOf(':'); var kind = eff[..i]; var arg = eff[(i + 1)..];
+            if (kind == "translate") { if (OrderTranslation(c, id, arg) is { Error: { } te }) return Outcome.Bad($"Der Schritt wurde ausgeführt, die Wirkung {eff} nicht: {te}"); continue; }
             foreach (var ch in kind is "release" or "revoke" && arg == "*" ? c.Model.Channels.Keys.ToList() : [arg])   // * = alle Kanäle (Taloan, 21.09.)
             {
-                var r = kind switch { "release" => GrantRelease(c, id, ch, null), "revoke" => RevokeRelease(c, id, ch, null), "status" => SetStatus(c, id, ch), _ => Outcome.Bad(eff) };
+                var r = kind switch { "release" => GrantRelease(c, id, ch, locale), "revoke" => RevokeRelease(c, id, ch, locale), "status" => SetStatus(c, id, ch), _ => Outcome.Bad(eff) };
                 if (r.Error is { } err && !err.Contains("schon")) return Outcome.Bad($"Der Schritt wurde ausgeführt, die Wirkung {eff} nicht: {err}");
             }
         }
         return Outcome.Ok(e);
     }
 
+    /// <summary>
+    /// Wirkung <c>translate:&lt;sprache&gt;</c> (30; Taloan, 22.09.2026: „spätestens wenn der Redakteur der Mastersprache eine Version
+    /// macht“): aus dem Rückstand unter diesem Knoten ein Paket schnüren — derselbe Auftrag wie beim Job nach Zeitplan, nur ein
+    /// anderer Auslöser. <c>*</c> = jede Zielsprache. Ist nichts offen, geschieht nichts (kein leerer Auftrag).
+    /// </summary>
+    public static Outcome OrderTranslation(Ctx c, string id, string locales)
+    {
+        if (c.Translations is null) return Outcome.Bad("Übersetzung steht hier nicht zur Verfügung.");
+        if (c.Model.MasterLocale is not { } master) return Outcome.Bad("Keine Mastersprache.");
+        var targets = locales == "*" ? c.Model.Locales.Keys.Where(l => l != master).ToList() : [locales];
+        Entry? last = null;
+        foreach (var to in targets)
+        {
+            if (!c.Model.Locales.ContainsKey(to) || to == master) return Outcome.Bad($"Unbekannte Zielsprache {to}.");
+            var r = TranslateApi.Collect(c.Model, c.Tree, id, master, to, null, null, "open", 50000, null, null, null, c.Translations);
+            if (r.Error is not null) return Outcome.Bad($"{to}: Rückstand nicht zu rechnen.");
+            if (r.Units.Count == 0) continue;   // nichts offen — kein Paket
+            var units = r.Units.Select(u => new OrderUnit(u.Id, u.SourceHash, string.IsNullOrEmpty(u.Target) ? null : TranslateApi.Hash(u.Target))).ToList();
+            last = c.Write(Translations.Stream + Ids.TranslationOrder(), Types.TranslationOrdered, new TranslationOrdered(master, to, units, id, null, null, "open", 0, "aus dem Workflow"));
+        }
+        return last is null ? new Outcome(null) : Outcome.Ok(last);   // nichts offen ist kein Fehler
+    }
+
     /// <summary>Eigenen Zustand aufheben — es gilt wieder der geerbte (Variante → Produkt). Nur, wo es einen eigenen gibt.</summary>
-    public static Outcome ClearWorkflowState(Ctx c, string id, string workflow)
+    public static Outcome ClearWorkflowState(Ctx c, string id, string workflow, string? locale = null)
     {
         if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
-        if (c.Workflows.Own(id, wf) is null) return Outcome.Bad("Hier gibt es keinen eigenen Zustand.");
+        locale = Blank(locale);
+        if (locale is not null && !wf.PerLocale) return Outcome.Bad($"Workflow „{wf.Label.GetValueOrDefault("de") ?? wf.Key}“ läuft nicht je Sprache.");
+        if (c.Workflows.Own(id, wf, locale) is null) return Outcome.Bad("Hier gibt es keinen eigenen Zustand.");
         if (n.Parent is null) return Outcome.Bad("An der Wurzel gibt es nichts zu erben.");
-        var (state, from) = c.Workflows.StateOf(n.Parent, wf, x => c.Tree.Nodes.GetValueOrDefault(x)?.Parent);
-        return Outcome.Ok(c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, null, null, $"↑ erbt „{wf.State(state)?.Label.GetValueOrDefault("de") ?? state}“")));
+        var (state, from) = c.Workflows.StateOf(n.Parent, wf, x => c.Tree.Nodes.GetValueOrDefault(x)?.Parent, locale);
+        return Outcome.Ok(c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, null, null, $"↑ erbt „{wf.State(state)?.Label.GetValueOrDefault("de") ?? state}“", locale)));
     }
 
     public static Outcome AssignWorkflow(Ctx c, string id, string workflow, string? user)

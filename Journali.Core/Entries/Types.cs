@@ -89,6 +89,10 @@ public static class Types
     public const string WorkflowRetired = "WorkflowRetired";
     public const string WorkflowStateSet = "WorkflowStateSet";
     public const string WorkflowAssigned = "WorkflowAssigned";
+    // Übersetzung (docs/pflegestruktur.md 30, Taloan 22.09.2026): die Marke am Knoten, der Auftrag im Strom translation:<key>
+    public const string TranslationMarked = "TranslationMarked";
+    public const string TranslationOrdered = "TranslationOrdered";
+    public const string TranslationReturned = "TranslationReturned";
     public const string MasterLocaleDefined = "MasterLocaleDefined";
     public const string MasterChannelDefined = "MasterChannelDefined";
     public const string SkuAttributeDefined = "SkuAttributeDefined";
@@ -503,10 +507,31 @@ public sealed record WfState(string Key, Labels Label, string? Color = null, boo
 /// Wirkungen: <c>release:&lt;kanal&gt;</c>, <c>revoke:&lt;kanal&gt;</c>, <c>status:&lt;wert&gt;</c>.</summary>
 public sealed record WfTransition(string Key, string From, string To, Labels Label, string[]? Roles = null, bool NoteRequired = false, string[]? Effects = null, int? EscalateAfterDays = null, string[]? EscalateRoles = null, string? FromPort = null, string? ToPort = null, int? LabelX = null, int? LabelY = null, int[]? Route = null);   // Route: Stützpunkte x,y,x,y … des Pfeilwegs aus dem Layout (dagre), null = Bogen. LabelX/Y: Lage der Beschriftung im Designer (null = auf dem Bogen). FromPort/ToPort: Andockpunkt „seite:anteil“ (top:0.25), null = automatisch. Eskalation (Taloan, 21.09.2026): nach n Tagen im Zustand dürfen auch EscalateRoles (leer = jede Rolle mit Schreibrecht)
 /// <summary>Ein Workflow: Zustände, Übergänge, Start; gilt für Knotentypen (Roles) und Familien (leer = alle).</summary>
-public sealed record WorkflowDefined(Labels Label, List<WfState> States, List<WfTransition> Transitions, string? Start = null, string[]? Roles = null, string[]? Families = null);
+public sealed record WorkflowDefined(Labels Label, List<WfState> States, List<WfTransition> Transitions, string? Start = null, string[]? Roles = null, string[]? Families = null, bool PerLocale = false);   // PerLocale (Taloan, 22.09.2026): je Sprache ein eigener Zustand — „Französisch in Korrektur, Deutsch freigegeben“
 public sealed record WorkflowRetired();
 /// <summary>Am Knoten: ein Schritt gegangen — der Zustand danach, der Übergang, die Notiz.</summary>
-public sealed record WorkflowStateSet(string Workflow, string? State, string? Transition = null, string? Note = null);   // State leer = eigenen Zustand aufheben, es gilt wieder der geerbte (Taloan, 22.09.2026)
+public sealed record WorkflowStateSet(string Workflow, string? State, string? Transition = null, string? Note = null, string? Locale = null);   // State leer = eigenen Zustand aufheben, es gilt wieder der geerbte (Taloan, 22.09.2026). Locale nur bei PerLocale-Workflows; leer = der Zustand des Knotens (jeder Eintrag von früher bleibt gültig)
+
+/// <summary>
+/// Übersetzung, die Marke (docs/pflegestruktur.md 30; Taloan, 22.09.2026: „irgendwann kommt der Auftrag zurück und es gibt schon
+/// wieder etliche Änderungen am Original“): der Zielwert in <see cref="Locale"/> ist gegen <em>diese</em> Quellfassung übersetzt
+/// (<see cref="SourceHash"/>, gesetzt bei Journalnummer <see cref="SourceAt"/>). Nicht „wann zuletzt geschrieben“, sondern
+/// „gegen was übersetzt“ — daran hängt der Rückstand: ist die Quelle seither weitergezogen, bleibt die Einheit offen,
+/// obwohl der Zieltext frisch geschrieben wurde. Der Strom ist der Knoten.
+/// </summary>
+public sealed record TranslationMarked(string Attribute, string Locale, string? Channel, string? Row, string SourceHash, long SourceAt, string? Order = null);
+
+/// <summary>Eine Einheit im Auftrag: die Id (<c>node|attribut|kanal|zeile</c>) und die Fingerabdrücke, die hinausgingen.</summary>
+public sealed record OrderUnit(string Id, string SourceHash, string? TargetHash = null);
+
+/// <summary>
+/// Übersetzung, das Paket (30): ein Auftrag ist ein Zeiger ins Journal — Sprachrichtung, Umfang, Stand und die Einheiten mit
+/// ihren Fingerabdrücken. Die Datei (XLIFF, CSV) ist nur die Kopie für unterwegs. Strom <c>translation:&lt;key&gt;</c>.
+/// </summary>
+public sealed record TranslationOrdered(string From, string To, List<OrderUnit> Units, string? Root = null, string? Channel = null, string[]? Attributes = null, string? Scope = null, long At = 0, string? Note = null);
+
+/// <summary>Der Auftrag ist zurück: was geschrieben wurde, was im Rückstand bleibt (Quelle weitergezogen), was ein Mensch ansehen muss.</summary>
+public sealed record TranslationReturned(int Written, int Behind, int Conflicts, int Skipped, string? Note = null);
 /// <summary>Am Knoten: Zuständigkeit für den nächsten Schritt — eine Person (Benutzer-Key) oder null (die Rolle des Übergangs).</summary>
 public sealed record WorkflowAssigned(string Workflow, string? User);
 

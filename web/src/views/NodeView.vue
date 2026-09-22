@@ -18,6 +18,7 @@ import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
 import ListCell from '../components/ListCell.vue'
 import PluginBands from '../components/PluginBands.vue'
+import WorkflowLocales from '../components/WorkflowLocales.vue'
 import { validate, convert } from '../mapper.js'
 import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
@@ -526,14 +527,14 @@ function wfBlocked(t) {
   if (rel && node.value?.role === 'variant') { const ch = rel.slice(8) === '*' ? (model.value?.channels?.[0]?.key ?? 'web') : rel.slice(8); showMissing(ch); if (!open('attributes')) toggle('attributes') }
   store.toast(t.blocked)
 }
-async function wfStep(w, t) {
+async function wfStep(w, t, locale = null) {
   let note = null
   if (t.noteRequired || t.effects?.length) {
     note = await dialog.prompt({ title: `${t.label?.de || t.key} → ${t.toLabel?.de || t.to}`, text: (t.noteRequired ? 'Notiz (Pflicht)' : 'Notiz (optional)') + (t.effects?.length ? ` · Wirkung: ${t.effects.join(', ')}` : ''), placeholder: 'Notiz', ok: `⚑ ${t.label?.de || t.key}` })
     if (note === null) return
     if (t.noteRequired && !note.trim()) { store.toast('Notiz ist Pflicht bei diesem Schritt'); return }
   }
-  try { await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/${t.key}`, { note: note || null }), true) }
+  try { await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/${t.key}${locale ? '?locale=' + encodeURIComponent(locale) : ''}`, { note: note || null }), true) }
   catch (e) {
     store.toast(e.message)
     // Freigabe gescheitert: zeigen, woran es hängt (nur an der Variante selbst — am Produkt nennt die Meldung die Variante)
@@ -562,9 +563,9 @@ async function wfHistory(w) {
   }
   dialog.help({ title, rows: rows.length ? rows : [['—', 'noch kein Schritt']] })
 }
-async function wfClear(w) {
-  if (!await dialog.confirm({ title: `Vererbung wiederherstellen · ${w.label?.de || w.workflow}?`, text: 'Eigener Zustand fällt weg; es gilt wieder der geerbte.', ok: '↑ Erben' })) return
-  await command(() => api.del(`${nodeUrl()}/workflow/${w.workflow}`))
+async function wfClear(w, locale = null) {
+  if (!await dialog.confirm({ title: `Vererbung wiederherstellen · ${w.label?.de || w.workflow}${locale ? ' · ' + locale : ''}?`, text: 'Eigener Zustand fällt weg; es gilt wieder der geerbte.', ok: '↑ Erben' })) return
+  await command(() => api.del(`${nodeUrl()}/workflow/${w.workflow}${locale ? '?locale=' + encodeURIComponent(locale) : ''}`))
   api.get(`${nodeUrl()}/workflow`).then(x => { workflows.value = x }).catch(() => {})
 }
 async function wfAssign(w) {
@@ -901,6 +902,11 @@ function cellMenu(e, def, col, block) {
               <button class="x" @click="wfAssign(w)" :title="w.assigned ? `Zuständigen ändern (jetzt ${w.assigned})` : 'Zuständigen zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
               <button class="x" @click="wfHistory(w)" title="Verlauf anzeigen">≡</button>
             </td>
+          </tr>
+          <!-- Workflow je Sprache (Taloan, 22.09.): eine Zeile je Sprache — Französisch in Korrektur, Deutsch freigegeben -->
+          <tr v-if="w.perLocale" :key="w.workflow + ':locales'">
+            <td class="attr muted" title="Dieser Workflow läuft je Sprache: jede Sprache geht ihren eigenen Weg, und die Wirkung eines Schritts (Freigabe) trifft nur sie.">🗣 je Sprache</td>
+            <td><WorkflowLocales :wf="w" @step="(loc, t) => wfStep(w, t, loc)" @clear="loc => wfClear(w, loc)" /></td>
           </tr>
         </tbody></table>
         </template>

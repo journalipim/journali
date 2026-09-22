@@ -26,5 +26,8 @@ public static class Ids
     /// <summary>Strom einer Relation: r-…</summary>
     public static string Relation() => "r-" + Random();
 
+    /// <summary>Schlüssel eines Übersetzungsauftrags (30): Tag und Uhrzeit, damit man ihn im Gespräch nennen kann.</summary>
+    public static string TranslationOrder() => DateTime.UtcNow.ToString("yyyyMMdd-HHmm") + "-" + Random()[..4];
+
     private static string Random() => Convert.ToHexString(RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
 }
