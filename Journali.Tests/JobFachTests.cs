@@ -33,7 +33,7 @@ public class JobFachTests
         }
         public JobFach.Plan? Prepare(string run, Dictionary<string, string> values, out string? skip) => Fach.Prepare(Job, Proc, run, values, Record, out skip);
         public Task Finish(JobFach.Plan plan, string run, bool ok) { var log = Path.Combine(Root, run + ".log"); File.WriteAllText(log, "log"); return Fach.Finish(Job, plan, run, ok, log, Record, (_, _) => Task.FromResult<string?>(null), Log.Add); }
-        public string[] Names(string fach) => Directory.Exists(Fach.Fach(Job, fach)) ? Directory.GetFileSystemEntries(Fach.Fach(Job, fach)).Select(Path.GetFileName).Order().ToArray()! : [];
+        public string[] Names(string fach) => Directory.Exists(Fach.Fach(Job, fach)) ? Directory.GetFileSystemEntries(Fach.Fach(Job, fach)).Select(x => Path.GetFileName(x)!).Order().ToArray() : [];
         public void Dispose() { try { Directory.Delete(Root, true); } catch { } }
     }
 

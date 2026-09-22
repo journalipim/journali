@@ -243,7 +243,7 @@ public static class TranslateApi
         api.MapPost("/translate/order", (HttpRequest req, Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 50000, string? wf = null, string? wfState = null, string? note = null, string? format = null) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            var (err, key, count, f, t, xml) = c.With((model, tree, write) =>
+            var (err, key, count, f, t, xml) = c.With<(IResult? Error, string Key, int Count, string From, string To, string Xliff)>((model, tree, write) =>
             {
                 var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState, c.Translations);
                 if (r.Error is not null) return (r.Error, "", 0, "", "", "");
