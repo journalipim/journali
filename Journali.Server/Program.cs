@@ -121,6 +121,16 @@ api.MapGet("/health", (Catalog c) => new
 {
     head = c.Head,
     nodes = c.Read(t => t.Nodes.Count),
+    // Nutzung für die Statusleiste (Taloan, 22.09.2026): Woche und Monat, mehr steht in den Einstellungen
+    usage = c.ReadUsage(u =>
+    {
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        return new
+        {
+            week = new { used = u.Week(today), max = Limits.Week, resetAt = Usage.WeekStart(today).AddDays(7).ToString("yyyy-MM-dd") },
+            month = new { used = u.Month(today), max = Limits.Month, resetAt = Usage.MonthStart(today).AddMonths(1).ToString("yyyy-MM-dd") },
+        };
+    }),
     built = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location),   // Bau-Stand des laufenden Servers (Taloan, 21.09.: „Speichern setzt meine Änderungen zurück“ — alter Server kannte die Felder nicht)
 });
 

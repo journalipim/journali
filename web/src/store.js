@@ -39,6 +39,7 @@ export const store = reactive({
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,
   nodes: 0,
+  usage: null,
   model: null,           // { locales, channels, attributes } vom Server
   toasts: [],
   error: '',
@@ -85,6 +86,7 @@ export const store = reactive({
       const changed = h.head !== this.head
       this.head = h.head
       this.nodes = h.nodes
+      this.usage = h.usage ?? null   // Nutzung für die Statusleiste (Taloan, 22.09.)
       this.error = ''
       // Modell-Änderungen kommen durch dasselbe Journal — bei neuem Stand nachladen.
       if (!this.model || changed || force) this.model = await api.get('/api/model')
