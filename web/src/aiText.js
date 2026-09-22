@@ -33,7 +33,13 @@ export async function facts(nodeId, locale) {
     let v = d.type === 'formula' ? n.computed.find(c => c.attribute === d.key)?.value ?? null : look(own, d.key, loc)
     if (v == null && d.inheritable) for (const m of anc) { v = look(m, d.key, loc); if (v != null) break }
     if (v == null || v === '') continue
-    if (d.type === 'enum') { const list = model.lists.find(x => x.key === d.list); v = String(v).split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[locale] ?? x.trim()).join(', ') }
+    // Listenwerte als Wort, nicht als Code (Taloan, 22.09.: „Betriebssystem EV007944 — ist das neu?“): Bezeichnung in der Sprache,
+    // sonst in irgendeiner; nur wenn es gar keine gibt, bleibt der Code stehen. Ein Wert ohne Bezeichnung taugt nicht für einen Text.
+    if (d.type === 'enum') {
+      const list = model.lists.find(x => x.key === d.list)
+      v = String(v).split(',').map(x => { const val = list?.values.find(y => y.value === x.trim()); const l = val?.label; return l?.[locale] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || x.trim() }).join(', ')
+    }
+    if (d.type === 'boolean') v = String(v) === 'true' ? 'ja' : String(v) === 'false' ? 'nein' : v
     rows.push(`- ${d.label?.[locale] || d.label?.de || d.key}: ${v}${d.unit ? ' ' + d.unit : ''}`)
   }
   const row = tree.byId.get(nodeId)
