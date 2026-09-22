@@ -328,6 +328,8 @@ const freeGroups = computed(() => (model.value?.groups ?? []).filter(g => !(node
 const groupLabel = k => model.value?.groups.find(x => x.key === k)?.label?.de || k
 const groupLocked = k => { const g = model.value?.groups.find(x => x.key === k); return g?.activeFrom && node.value && !(node.value.groups ?? []).find(x => x.key === k)?.active }
 // Angehängte Gruppen zum Lesen sortiert (Taloan, 18.09.): alphabetisch nach Label, gesperrte ⌀ ans Ende — die Reihenfolge im Journal ist die des Anhängens und bedeutet nichts
+// Gruppe hängt schon weiter oben (Taloan, 22.09.: „jetzt habe ich sie in beiden drin“) — die hier ist überflüssig
+const fromAbove = g => path.value.find(a => (a.groups ?? '').split(',').includes(g)) ?? null
 const attachedSorted = computed(() => [...(node.value?.attachedGroups ?? [])].sort((a, b) => (groupLocked(a) ? 1 : 0) - (groupLocked(b) ? 1 : 0) || groupLabel(a).localeCompare(groupLabel(b), 'de', { sensitivity: 'base' })))
 
 // ---- Laden
@@ -965,8 +967,8 @@ function cellMenu(e, def, col, block) {
           <tbody>
             <tr v-for="g in attachedSorted" :key="g" :title="g">
               <td><router-link :to="{ path: '/model', query: { section: 'groups', key: g } }">▤ {{ groupLabel(g) }}</router-link></td>
-              <td class="muted">{{ groupLocked(g) ? '⌖ hier gesperrt — aktiv ab ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : 'ab hier nach unten' }}</td>
-              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" title="Gruppe hier abnehmen">×</button></td>
+              <td class="muted" :title="fromAbove(g) ? `${groupLabel(g)} hängt schon an ${fromAbove(g).label} und gilt von dort nach unten — hier überflüssig, × nimmt sie ab` : ''">{{ groupLocked(g) ? '⌖ hier gesperrt — aktiv ab ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : fromAbove(g) ? `⚠ schon von ${fromAbove(g).label} — überflüssig` : 'ab hier nach unten' }}</td>
+              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" :title="fromAbove(g) ? `hier abnehmen — sie gilt weiter von ${fromAbove(g).label}` : 'Gruppe hier abnehmen'">×</button></td>
             </tr>
           </tbody>
         </table>

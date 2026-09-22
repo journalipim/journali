@@ -504,9 +504,11 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     const attachBtnEl = !S.groupOn ? el('button', { class: 'primary', title: S.groupExists ? `die Attributgruppe ${groupKey()} an diesem Knoten anhängen — erst dann gelten die ETIM-Attribute hier und darunter` : `die Attributgruppe ${groupKey()} gibt es im Modell nicht mehr — sie wird neu angelegt und hier angehängt; die ETIM-Attribute gehören ihr weiterhin an`, onclick: async () => {
       try {
         if (!S.groupExists) { await ops.ensureGroup(); await store.poll(true) }   // ganz gelöscht (Taloan, 22.09.: „ich habe überhaupt keine Attributgruppe zur Verfügung“) — neu anlegen
-        const have = (S.row.groups ?? '').split(',').filter(Boolean)
-        await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups: [...new Set([...have, groupKey()])] }, 'PUT')
-        await store.poll(true); await tree.load?.(); store.toast(`✓ Gruppe ${groupKey()} ${S.groupExists ? 'hängt jetzt hier' : 'angelegt und angehängt'}`, 'ok'); again()
+        // an die Wurzel des Baums, nicht an diesen Knoten (Taloan, 22.09.: sonst hängt sie am Ende an Kind UND Vater)
+        let top = S.row; while (top.parent && tree.byId.get(top.parent)) top = tree.byId.get(top.parent)
+        const have = (top.groups ?? '').split(',').filter(Boolean)
+        await api.post(`/api/nodes/${encodeURIComponent(top.id)}/groups`, { groups: [...new Set([...have, groupKey()])] }, 'PUT')
+        await store.poll(true); await tree.load?.(); store.toast(`✓ Gruppe ${groupKey()} hängt an ${top.label} — gilt ab dort nach unten`, 'ok'); again()
       } catch (e) { store.toast(e.message) }
     } }, S.groupExists ? `⌗ Gruppe ${groupKey()} anhängen` : `⌗ Gruppe ${groupKey()} anlegen und anhängen`) : null
     if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(...[el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), assignBtn, clearBtn, attachBtnEl].filter(Boolean)); return }
