@@ -256,11 +256,11 @@ export async function mount(root, ctx, catalog) {
     const openMissing = catalog.groups.flatMap(g => g.items).filter(it => !st.mapping[it.key]?.to && st.levels.has(it.level)).length
     st.mapOpen ??= false   // zu — zuordnen und anlegen geht im Ergebnis, Zeile für Zeile; hier nur die ganze Liste zum Nachsehen
     const b1 = band(`${st.mapOpen ? '▾' : '▸'} 3 · Modell: Datenpunkte → Attribute · ${mapped} von ${n} zugeordnet${!st.mapOpen && openMissing ? ` · ${openMissing} ohne Attribut` : ''}`)
-    b1.style.cursor = 'pointer'; b1.title = st.mapOpen ? 'zuklappen' : 'aufklappen — welches Attribut im Modell den Datenpunkt trägt: ändern, fehlende anlegen; danach erneut prüfen'
+    b1.style.cursor = 'pointer'; b1.title = st.mapOpen ? 'zuklappen' : 'aufklappen — welches Attribut im Modell den Datenpunkt hat: ändern, fehlende anlegen; danach erneut prüfen'
     b1.addEventListener('click', () => { st.mapOpen = !st.mapOpen; drawMapping() })
     s1.append(b1)
     if (!st.mapOpen) return
-    s1.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Modellpflege, unabhängig vom Knoten: welches Attribut im Modell den Datenpunkt trägt. Fehlt eines, hier anlegen — ob es am Knoten gilt (Gruppe am Pfad), sagt das Ergebnis oben mit ⊘. ' + (catalog.description ?? '')))
+    s1.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Modellpflege, unabhängig vom Knoten: welches Attribut im Modell den Datenpunkt hat. Fehlt eines, hier anlegen — ob es am Knoten gilt (Gruppe am Pfad), sagt das Ergebnis oben mit ⊘. ' + (catalog.description ?? '')))
     // Filter (Taloan, 18.09.): Pflichtgrad an/aus, dazu nur zugeordnete / nur offene
     const all = catalog.groups.flatMap(g => g.items)
     const cnt = lv => all.filter(it => it.level === lv).length

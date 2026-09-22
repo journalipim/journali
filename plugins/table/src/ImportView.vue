@@ -210,7 +210,7 @@ function typeHint(inv) { const a = attrs.value.find(x => x.key === inv.key) ?? s
 // ---- Plan
 async function analyse() {
   if (!source.value) return
-  if (!target.value && !mapping.value.some(m => m.target === 'parent') && !(idLocked.value && unknownIds.value === 0)) { store.toast(idLocked.value ? `Ziel wählen — ${unknownIds.value} Zeilen tragen Ids, die der Baum nicht kennt (neu)` : 'Ziel wählen (Gruppe oder Produkt) — oder eine Spalte „Elternteil“'); return }
+  if (!target.value && !mapping.value.some(m => m.target === 'parent') && !(idLocked.value && unknownIds.value === 0)) { store.toast(idLocked.value ? `Ziel wählen — ${unknownIds.value} Zeilen haben Ids, die der Baum nicht kennt (neu)` : 'Ziel wählen (Gruppe oder Produkt) — oder eine Spalte „Elternteil“'); return }
   busy.value = 'vergleiche mit dem Bestand …'
   try {
     await tree.load(true)
@@ -322,8 +322,8 @@ onMounted(async () => {
         <span class="muted">→ {{ roleLabel[fixed.childRole] }} · {{ fixed.allowed.size }} mögliche Spalten</span>
         <span class="grow" /><button class="x" @click="router.replace('/p/table/import')" title="Knotenmodus verlassen — frei zuordnen">×</button>
       </td></tr>
-      <tr v-if="!fixed && idLocked && !unknownIds"><td class="attr">Ziel</td><td class="muted">🔒 aus der Datei — die Zeilen tragen journali-Ids{{ mapping.some(m => m.target === 'root') ? ' samt Wurzel' : '' }}, jede wird an ihrem Platz aktualisiert{{ mapping.some(m => m.target === 'parent') ? '; Elternteil steht in der Datei' : '' }}</td></tr>
-      <tr v-if="!fixed && foreignRoot"><td class="attr"></td><td class="warn" style="font-size:12px">⚠ {{ foreignRoot }} Zeilen tragen Ids, die es hier gibt — aber unter einer anderen Wurzel: fremde Datenbank, Zufallstreffer. Sie gelten als neu und kommen unter das Ziel.</td></tr>
+      <tr v-if="!fixed && idLocked && !unknownIds"><td class="attr">Ziel</td><td class="muted">🔒 aus der Datei — die Zeilen haben journali-Ids{{ mapping.some(m => m.target === 'root') ? ' samt Wurzel' : '' }}, jede wird an ihrem Platz aktualisiert{{ mapping.some(m => m.target === 'parent') ? '; Elternteil steht in der Datei' : '' }}</td></tr>
+      <tr v-if="!fixed && foreignRoot"><td class="attr"></td><td class="warn" style="font-size:12px">⚠ {{ foreignRoot }} Zeilen haben Ids, die es hier gibt — aber unter einer anderen Wurzel: fremde Datenbank, Zufallstreffer. Sie gelten als neu und kommen unter das Ziel.</td></tr>
       <tr v-if="!fixed && !(idLocked && !unknownIds)"><td class="attr">Ziel</td><td>
         <div class="row" style="margin-bottom:4px"><span v-if="target" class="chip" :title="target.id + ' — Klick: im Baum ändern'" style="cursor:pointer" @click="targetPick = !targetPick">{{ icon(target.role) }} {{ target.label }} <button @click.stop="target = null; planned = null" title="Ziel weg">×</button></span><span v-else class="muted">Gruppe oder Produkt — wohin neue Zeilen kommen</span></div>
         <TreePicker v-if="!target || targetPick" :model-value="target?.id ?? ''" :height="200" @pick="pickTarget" />
