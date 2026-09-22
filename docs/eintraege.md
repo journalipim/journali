@@ -209,9 +209,9 @@ Monat werden daraus gerechnet. Es schreibt selbst nichts und braucht keinen
 Eintragstyp — der Verlauf steht damit auch rückwirkend für alles da, was schon
 im Journal liegt. `GET /api/usage?history=day|week|month&limit=n` liefert je
 Periode `used`, `max`, `start`, `resetAt` und den Verlauf; die Grenzen stehen
-vorerst als Annahme in `Limits` (5 000 am Tag, 50 000 in der Woche, 300 000 im
-Monat — Taloan, 22.09.2026: zum Messen, was eine Einzelperson braucht; keine
-Lizenz, keine Sperre). **Lesen und Exportieren zählen nicht mit**, weil die
+vorerst als Annahme in `Limits` (20 000 in der Woche, 100 000 im Monat; **kein
+Tageslimit** — Taloan, 22.09.2026: „macht man 3 Testimporte und muss aufhören“).
+Zum Messen, was eine Einzelperson braucht; keine Lizenz, keine Sperre. **Lesen und Exportieren zählen nicht mit**, weil die
 Endpunkte nichts schreiben (`/api/pub/{id}/export` und `/api/nodes/{id}/table`
 sind `MapGet` und verwerfen den Writer). Ein Export als Job kostet zwei bis
 drei Einträge je Lauf (`JobRunStarted`, `JobRunFinished`, je Datei ein

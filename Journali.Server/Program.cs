@@ -131,13 +131,13 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
     var today = DateOnly.FromDateTime(DateTime.Now);
     object Part(string key, int used, int max, DateOnly start, DateOnly next) => new
     {
-        key, used, max, start = start.ToString("yyyy-MM-dd"), resetAt = next.ToString("yyyy-MM-dd"),
+        key, used, max = max > 0 ? max : (int?)null, start = start.ToString("yyyy-MM-dd"), resetAt = next.ToString("yyyy-MM-dd"),
     };
     return new
     {
         today = today.ToString("yyyy-MM-dd"),
         head = c.Head,
-        day = Part("day", u.Day(today), Limits.Day, today, today.AddDays(1)),
+        day = Part("day", u.Day(today), 0, today, today.AddDays(1)),   // ohne Grenze: nur die Zahl (Taloan, 22.09.2026)
         week = Part("week", u.Week(today), Limits.Week, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
         month = Part("month", u.Month(today), Limits.Month, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
         history = history is null ? null : u.History(history, today, Math.Clamp(limit, 1, 400))

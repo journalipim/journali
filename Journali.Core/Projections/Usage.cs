@@ -55,12 +55,12 @@ public sealed class Usage : IProjection
 }
 
 /// <summary>
-/// Die Grenzen der Fortschrittsbalken (Taloan, 22.09.2026: „nehmen wir mal 5000 pro Tag, 50000 pro Woche, 300000 pro Monat“).
-/// Vorerst Annahmen zum Messen, was eine Einzelperson wirklich braucht — keine Lizenz, keine Sperre.
+/// Die Grenzen: Woche und Monat (Taloan, 22.09.2026). <b>Kein Tageslimit</b> — „macht man 3 Testimporte und muss
+/// aufhören“; der Tag wird gezählt und im Verlauf gezeigt, begrenzt wird er nicht. Vorerst Annahmen zum Messen,
+/// was eine Einzelperson wirklich braucht — keine Lizenz, keine Sperre.
 /// </summary>
 public static class Limits
 {
-    public const int Day = 5_000;
-    public const int Week = 50_000;
-    public const int Month = 300_000;
+    public const int Week = 20_000;
+    public const int Month = 100_000;
 }

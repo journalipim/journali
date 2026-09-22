@@ -1,14 +1,15 @@
 <script setup>
-// Nutzung: drei Fortschrittsbalken (Tag, Woche, Monat) und darunter der Verlauf (Taloan, 22.09.2026: „der eine wird
-// täglich zurückgesetzt, der andere wöchentlich, der dritte monatlich … und dann schreiben wir die Werte mal eine
-// Zeit lang fort wie in einem Log“). Gezählt wird, was ins Journal geht; Lesen und Exportieren kosten nichts.
+// Nutzung: zwei Fortschrittsbalken — Woche und Monat — und darunter der Verlauf (Taloan, 22.09.2026: „ein Tageslimit
+// ist Unsinn, macht man 3 Testimporte und muss aufhören“; „wir machen Woche und Monat“). Der Tag wird trotzdem
+// gezählt: er steht als Zahl in der Leiste und ist im Verlauf die feinste Auflösung. Gezählt wird, was ins Journal geht; Lesen und Exportieren kosten nichts.
 // Die Zahlen kommen aus /api/usage — das Abbild zählt je Tag mit, auch rückwirkend für alles, was schon im Journal steht.
 import { computed } from 'vue'
 
 const props = defineProps({ usage: Object, history: Array, period: { type: String, default: 'day' }, busy: Boolean })
 const emit = defineEmits(['period'])
 
-const PARTS = [['day', '◷ Tag'], ['week', '▤ Woche'], ['month', '▦ Monat']]
+const PARTS = [['week', '▤ Woche'], ['month', '▦ Monat']]   // kein Tageslimit (Taloan, 22.09.2026)
+const HIST = [['day', '◷ Tag'], ['week', '▤ Woche'], ['month', '▦ Monat']]
 const n = v => (v ?? 0).toLocaleString('de-DE')
 const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 1000) / 10) : 0
 // Farbe sagt, wie eng es wird: unter 60 % grün, bis 85 % gelb, darüber rot
@@ -33,10 +34,11 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
     </div>
 
     <div class="chips">
-      <span v-for="[key, label] in PARTS" :key="key" class="view-chip" :class="{ on: period === key }"
+      <span v-for="[key, label] in HIST" :key="key" class="view-chip" :class="{ on: period === key }"
         @click="emit('period', key)" :title="`Verlauf je ${label.slice(2)} anzeigen`">{{ label }}</span>
       <span class="grow" />
-      <span class="muted" style="font-size:12px">Journal #{{ n(usage?.head) }}</span>
+      <span class="muted" style="font-size:12px" title="Einträge heute — ohne Grenze">heute {{ n(usage?.day?.used) }}</span>
+      <span class="muted" style="font-size:12px">· Journal #{{ n(usage?.head) }}</span>
     </div>
 
     <div class="hist">

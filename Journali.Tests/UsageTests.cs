@@ -78,10 +78,10 @@ public class UsageTests
     }
 
     [Fact]
-    public void Grenzen_sind_die_vereinbarten_Annahmen()
+    public void Grenzen_sind_Woche_und_Monat_kein_Tag()
     {
-        Assert.Equal(5_000, Limits.Day);
-        Assert.Equal(50_000, Limits.Week);
-        Assert.Equal(300_000, Limits.Month);
+        Assert.Equal(20_000, Limits.Week);
+        Assert.Equal(100_000, Limits.Month);
+        // Kein Tageslimit (Taloan, 22.09.2026) — sonst steht man nach drei Testimporten still
     }
 }
