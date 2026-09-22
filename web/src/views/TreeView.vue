@@ -554,7 +554,7 @@ function onDialogKey(e) {
       </div>
     </div>
     <div v-if="terms.length" class="chips terms">
-      <span v-for="t in terms" :key="t" class="chip mono" :class="{ not: t.startsWith('-') }" :title="t.startsWith('-') ? 'verneint — Klick dreht um' : 'Klick verneint (Gegenteil)'" @click="q = q.split(/\s+/).map(w => w === t ? (t.startsWith('-') ? t.slice(1) : '-' + t) : w).join(' ')">{{ t }}<button @click.stop="dropTerm(t)" @click="dropTerm(t)" title="Bedingung entfernen">×</button></span>
+      <span v-for="t in terms" :key="t" class="chip mono" :class="{ not: t.startsWith('-') }" :title="t.startsWith('-') ? 'Verneinung aufheben' : 'Verneinen (Gegenteil)'" @click="q = q.split(/\s+/).map(w => w === t ? (t.startsWith('-') ? t.slice(1) : '-' + t) : w).join(' ')">{{ t }}<button @click.stop="dropTerm(t)" @click="dropTerm(t)" title="Bedingung entfernen">×</button></span>
     </div>
     <div class="toolbar create">
       <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label}` : 'Gruppe an der Wurzel'">+ ▣</button>

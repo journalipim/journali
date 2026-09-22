@@ -57,7 +57,7 @@ function onEditKey(e) {
   <td class="cell">
     <div class="cell-box html" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
       :tabindex="disabled ? undefined : 0" @click="clickEdit && edit()" @dblclick="clickEdit || edit()" @keydown="onKey"
-      :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' — Enter überschreibt' : (plain ? plain.slice(0, 400) + '\n\n' : '') + 'Klick oder Enter öffnet den Editor')">
+      :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' (Enter überschreibt)' : (plain ? plain.slice(0, 400) + '\n\n' : '') + 'Editor öffnen (auch Enter)')">
       <template v-if="!disabled"><span v-if="plain" class="muted tag">‹›</span>{{ brief }}</template>
     </div>
     <Teleport to="body">

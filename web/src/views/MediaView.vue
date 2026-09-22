@@ -213,7 +213,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
         <div v-if="group" class="ghead"><span>{{ g.key }}</span><span class="muted">{{ g.items.length }}</span></div>
         <div class="tiles">
           <div v-for="m in g.items" :key="m.id" class="tile" :class="{ current: cur === m.id, sel: sel.has(m.id) }" draggable="true" @dragstart="dragTiles(m, $event)" @dragend="dragEnd"
-            @click="clickTile(m, $event)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nKlick wählt, Strg-Klick dazu, Umschalt-Klick Bereich — ziehen in einen Ordner`">
+            @click="clickTile(m, $event)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nStrg-Klick nimmt dazu, Umschalt-Klick den Bereich — ziehen in einen Ordner`">
             <MediaThumb v-if="m.isImage" :id="m.id" />
             <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
             <div class="name">{{ m.name }}</div>

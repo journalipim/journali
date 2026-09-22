@@ -62,7 +62,7 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
     </thead>
     <tbody>
       <template v-for="r in rows" :key="r.kind === 'head' ? 'b' + r.batch : r.e.number">
-        <tr v-if="r.kind === 'head'" class="row head" @click="open[r.batch] = !open[r.batch]" :title="`Stapel ${r.batch} — Klick klappt die ${r.group.length} Einträge auf`">
+        <tr v-if="r.kind === 'head'" class="row head" @click="open[r.batch] = !open[r.batch]" :title="`Stapel ${r.batch}: ${r.group.length} Einträge aufklappen`">
           <td class="num mono muted">{{ r.first.number }}–{{ r.last.number }}</td>
           <td class="mono muted">{{ when(r.last.at) }}</td>
           <td>{{ r.last.actor }}</td>

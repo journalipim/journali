@@ -735,7 +735,7 @@ function cellMenu(e, def, col, block) {
               <td v-else class="cell">
                 <div class="cell-box formula" :class="{ inherited: ownValue(def.key, c) == null && inherited(def, c).value != null }" tabindex="0"
                   @click="scriptCell = { def, col: c }" @keydown.enter.prevent="scriptCell = { def, col: c }"
-                  :title="(ownValue(def.key, c) ?? inherited(def, c).value ?? 'kein Skript — Klick öffnet den Editor') + (inherited(def, c).from && ownValue(def.key, c) == null ? '\n\ngeerbt von ' + inherited(def, c).from.label : '')">
+                  :title="(ownValue(def.key, c) ?? inherited(def, c).value ?? 'Skript anlegen (Editor öffnen)') + (inherited(def, c).from && ownValue(def.key, c) == null ? '\n\ngeerbt von ' + inherited(def, c).from.label : '')">
                   <span class="res">{{ computedValue(def.key, c.locale) ?? '—' }}</span>
                   <span class="src muted">{{ (ownValue(def.key, c) ?? inherited(def, c).value ?? '').split('\n')[0].slice(0, 40) }}</span>
                 </div>
@@ -896,10 +896,10 @@ function cellMenu(e, def, col, block) {
             <tr v-for="ch in channels" :key="ch">
               <td class="mono muted">{{ ch }}</td>
               <td v-if="node.role === 'variant'">
-                <button class="toggle" :class="{ on: released(ch, null), via: !released(ch, null) && releasedVia(ch, null) }" :disabled="!released(ch, null) && !!incomplete(ch, null)" :title="releasedVia(ch, null) && !released(ch, null) ? `Sortiment von ${releasedVia(ch, null)} — Klick gibt eigens frei` : incomplete(ch, null) ? 'fehlt: ' + incomplete(ch, null).missing.join(', ') : 'alle Sprachen'" @click="toggleRelease(ch, null)">{{ released(ch, null) ? '✓' : releasedVia(ch, null) ? '◌' : '·' }}</button>
+                <button class="toggle" :class="{ on: released(ch, null), via: !released(ch, null) && releasedVia(ch, null) }" :disabled="!released(ch, null) && !!incomplete(ch, null)" :title="releasedVia(ch, null) && !released(ch, null) ? `Eigens freigeben (bisher über das Sortiment von ${releasedVia(ch, null)})` : incomplete(ch, null) ? 'fehlt: ' + incomplete(ch, null).missing.join(', ') : 'alle Sprachen'" @click="toggleRelease(ch, null)">{{ released(ch, null) ? '✓' : releasedVia(ch, null) ? '◌' : '·' }}</button>
               </td>
               <td v-for="l in locales" :key="l" class="rel">
-                <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l), via: !released(ch, l) && releasedVia(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="releasedVia(ch, l) && !released(ch, l) ? `Sortiment von ${releasedVia(ch, l)} — Klick gibt eigens frei` : incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : releasedVia(ch, l) ? '◌' : '·' }}</button>
+                <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l), via: !released(ch, l) && releasedVia(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="releasedVia(ch, l) && !released(ch, l) ? `Eigens freigeben (bisher über das Sortiment von ${releasedVia(ch, l)})` : incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : releasedVia(ch, l) ? '◌' : '·' }}</button>
                 <span v-if="completeness(ch, l)" class="mono" :class="completeness(ch, l).missing.length ? 'neg' : 'pos'" :title="completeness(ch, l).missing.length ? 'fehlt: ' + completeness(ch, l).missing.join(', ') : 'vollständig'">{{ completeness(ch, l).filled }}/{{ completeness(ch, l).required }}</span>
                 <span v-else class="muted" title="hier ist nichts Pflicht">–</span>
               </td>

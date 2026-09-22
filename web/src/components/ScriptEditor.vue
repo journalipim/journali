@@ -219,9 +219,9 @@ const HELP_TEMPLATE = [
           </div>
           <div v-if="help" class="help">
             <div v-for="[h, items] in (isTemplate ? HELP_TEMPLATE : HELP)" :key="h" class="hrow"><b>{{ h }}</b>
-              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" title="Klick fügt es ein"><code class="hs" v-html="isTemplate ? highlightTemplate(code) : highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
+              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" title="Einfügen"><code class="hs" v-html="isTemplate ? highlightTemplate(code) : highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
             </div>
-            <div class="hrow"><b>Beispiel</b><pre class="hs ex" @click="insert(EXAMPLE)" title="Klick fügt es ein" v-html="isTemplate ? highlightTemplate(EXAMPLE) : highlight(EXAMPLE)"></pre></div>
+            <div class="hrow"><b>Beispiel</b><pre class="hs ex" @click="insert(EXAMPLE)" title="Beispiel einfügen" v-html="isTemplate ? highlightTemplate(EXAMPLE) : highlight(EXAMPLE)"></pre></div>
           </div>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
