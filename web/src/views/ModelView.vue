@@ -13,6 +13,7 @@ import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { menu } from '../menu.js'
 import { recentRetired, restoreModel } from '../modelRestore.js'
+import AttrBulk from '../components/AttrBulk.vue'
 import { when } from '../api.js'
 import { icon } from '../tree.js'
 import EditGrid from '../components/EditGrid.vue'
@@ -45,7 +46,6 @@ const resetFlt = () => { flt.value = { group: '', type: '', locale: false, chann
 const newKey = ref('')
 const newValue = ref('')
 const addViewGroup = ref('')
-const bulkGroup = ref('')
 const roleLabel = { group: '▣ Produktgruppe', product: '▦ Produkt', variant: '◆ Variante' }
 const roles = ['group', 'product', 'variant']
 // Muster-Vorlagen (Taloan, 17.09.: Telefon, E-Mail „bis zu dem, was üblich ist“) — ganzer Wert muss passen
@@ -271,10 +271,24 @@ function attrWith(a0, col, v) {
   return a
 }
 const attrSet = (col, v) => put(`/api/model/attributes/${curAttr.value.key}`, attrWith(curAttr.value, col, v))
-async function bulkAssignGroup() {
-  const g = bulkGroup.value; if (!g) return
-  for (const a of model.value.attributes.filter(x => sel.value.has(x.key))) await put(`/api/model/attributes/${a.key}`, attrWith(a, 'group', g))
-  bulkGroup.value = ''
+// Massenbearbeitung (Taloan, 22.09.2026): eine Eigenschaft, alle Gewählten. Geschrieben wird je Attribut die ganze
+// Definition (so will es die API) — aber verändert wird nur das eine Feld, den Rest nimmt attrWith unverändert mit.
+const bulkBusy = ref('')
+const bulkAttrs = computed(() => (model.value?.attributes ?? []).filter(x => sel.value.has(x.key)))
+const bulkNumeric = computed(() => bulkAttrs.value.length > 0 && bulkAttrs.value.every(a => a.type === 'decimal' || a.type === 'integer'))
+async function bulkApply({ kind, value }) {
+  const list = bulkAttrs.value
+  if (!list.length || bulkBusy.value) return
+  const errs = []; let ok = 0
+  for (const [i, a] of list.entries()) {
+    bulkBusy.value = `${i + 1} von ${list.length} …`
+    // Ebenen: alle drei = keine Einschränkung (null); sonst die gewählten
+    const body = kind === 'levels' ? { ...a, levels: value.length === roles.length ? null : [...value] } : attrWith(a, kind, value)
+    try { await put(`/api/model/attributes/${a.key}`, body); ok++ } catch (e) { errs.push(`${a.key}: ${e.message}`) }
+  }
+  bulkBusy.value = ''
+  if (errs.length) store.toast(`${ok} geändert, ${errs.length} nicht:\n` + errs.join('\n'), 'error')   // lange Listen landen von selbst im Fenster
+  else store.toast(`✓ ${ok} geändert`, 'ok')
 }
 const removePath = {
   groups: k => `/api/model/groups/${k}`, attributes: k => `/api/model/attributes/${k}`, lists: k => `/api/model/lists/${k}`,
@@ -505,10 +519,8 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <div class="toolbar"><h1>{{ count }} {{ sec.label }} gewählt</h1><span class="grow" /><button @click="sel = new Set()">Keine</button></div>
       <div class="scroll">
         <div class="section">
-          <div class="chips" v-if="section === 'attributes'">
-            <select v-model="bulkGroup" style="width:220px"><option value="">▤ Gruppe zuweisen …</option><option v-for="g in model.groups" :key="g.key" :value="g.key">{{ g.label?.de || g.key }} · {{ g.key }}</option></select>
-            <button class="primary" :disabled="!bulkGroup" @click="bulkAssignGroup">→ {{ count }}</button>
-          </div>
+          <AttrBulk v-if="section === 'attributes'" :count="count" :groups="model.groups" :units="model.units" :roles="roles"
+            :role-label="roleLabel" :numeric-only="bulkNumeric" :busy="bulkBusy" @apply="bulkApply" />
           <div class="chips" style="margin-top:8px"><span v-for="k in sel" :key="k" class="chip mono">{{ k }}</span></div>
         </div>
       </div>
