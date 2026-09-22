@@ -164,3 +164,20 @@ test('Attributsicht je Klasse (Taloan, 22.09.): je Rolle eine Sicht mit genau de
   const all = body2.items.flatMap(i => i.order)
   assert.ok(all.includes('etim_class') && all.includes('ef008851') && all.includes('tastatur_name'), JSON.stringify(body2.items))
 })
+
+test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt (Taloan, 22.09.: „api is not defined“)', async () => {
+  const mod = await import('../../plugins/etim/entry.js')
+  const calls = []; const errors = []
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, m ?? 'POST']); return {} } }, store: { ...ctx.store, toast: (t, k) => { if (k !== 'ok') errors.push(t) }, poll: async () => {}, save() {}, viewKey: {} }, dialog: { confirm: async () => true } }
+  NODE_GROUPS.length = 0   // Gruppe hängt nicht → „anhängen“ ist da
+  const head = mkEl('h2'), body = mkEl('div')
+  await mod.default.nodeBands[0].mount({ head, body }, 'p-1', ctx2)
+  await new Promise(r => setTimeout(r, 30))
+  const buttons = []; const walk = e => { if (typeof e === 'string') return; if (e.tag === 'button' && e.onclick) buttons.push(e); for (const k of e.kids ?? []) walk(k) }
+  walk(body)
+  assert.ok(buttons.length >= 4, `${buttons.length} Knöpfe`)
+  for (const b of buttons) { try { await b.onclick({ preventDefault() {}, stopPropagation() {} }) } catch (e) { errors.push(`${(b.kids ?? []).join('')}: ${e.message}`) } }
+  assert.deepEqual(errors, [], 'kein Knopf darf scheitern')
+  assert.ok(calls.some(([p, m]) => /\/groups$/.test(p) && m === 'PUT'), 'Gruppe anhängen schreibt')
+  NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
+})

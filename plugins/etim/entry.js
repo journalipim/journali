@@ -479,7 +479,7 @@ async function stageData(ctx, nodeId, locale = 'de') {
 async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
   // head: kurzer Text in der Überschrift (wie „Redaktion: Freigegeben“); line: die Zeile mit Chips und Knöpfen im Körper; darunter die Befunde
   const line = el('div', { class: 'row' }); const table = el('div'); const found = el('div'); bodyEl.append(line, table, found)
-  const { store, tree } = ctx
+  const { api, store, tree } = ctx
   await cache.loaded; if (!tree.loaded) await tree.load()
   const locale = store.model?.masterLocale ?? 'de'; const ops = modelOps(ctx)
   let gone = false
