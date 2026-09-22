@@ -76,3 +76,29 @@ test('Bedingung „leer → 0, sonst 1“ auf ein Ja/Nein-Merkmal: ohne Wert fal
   assert.equal(none.features[0].value, 'false'); assert.equal(empty.features[0].value, 'false'); assert.equal(some.features[0].value, 'true')
   assert.equal(none.filled, 1, 'die Kette macht aus leer einen Wert — gefüllt')
 })
+
+test('audit: eine Rechnung für Zahlen und Befunde — die Tabelle je Klasse und die Liste sagen dasselbe (Taloan, 22.09.)', async () => {
+  const { audit } = await import('../../plugins/etim/core.mjs')
+  const classes = new Map([[cls.code, cls]])
+  const rows = [
+    // Produkt: wlan gefüllt, breite leer, farbe unpassend, ean-Spalte (EF000167 → ef000167) gilt hier nicht
+    { row: { id: 'p-1', label: 'P', role: 'product' }, values: { etim_class: { value: 'EC004718' }, wlan: { value: 'x' }, farbe: { value: 'Lila' } }, inactive: ['ef000167'] },
+    { row: { id: 'v-1', label: 'V', role: 'variant' }, values: { etim_class: { value: 'EC004718' }, wlan: { value: 'ja' }, breite: { value: '30 cm' }, farbe: { value: 'Rot' }, ef000167: { value: '1200' } }, inactive: [] },
+  ]
+  const a = audit({ rows, classAttr: 'etim_class', classes, map, locale: 'de', hasAttr: k => k !== 'ef999' })
+  assert.equal(a.byClass.length, 1)
+  const c = a.byClass[0]
+  assert.equal(c.nodes, 2); assert.equal(c.code, 'EC004718')
+  assert.equal(c.cells, 7)                    // Produkt 3 (ef000167 gilt dort nicht) + Variante 4
+  assert.equal(c.filled, 5); assert.equal(c.bad, 1)   // wlan, wlan, breite, farbe, gewicht — farbe „Lila“ passt nicht
+  assert.equal(c.pct, Math.round(5 * 1000 / 7) / 10)
+  // die Befunde belegen genau diese Zahlen
+  const bad = a.findings.filter(f => f.severity === 'warn')
+  assert.equal(bad.length, 1); assert.equal(bad[0].attribute, 'EF000007'); assert.match(bad[0].message, /„Lila“ passt nicht \(Liste/)
+  const notHere = a.findings.filter(f => /nicht verfügbar/.test(f.message ?? ''))
+  assert.deepEqual(notHere.map(f => [f.node.id, f.attribute]), [['p-1', 'EF000167']])
+  // Fortschritt nur, wo etwas fehlt: das Produkt (1 von 3); die Variante ist voll (4 von 4) und bekommt keinen Befund
+  const prog = a.findings.filter(f => f.progress)
+  assert.deepEqual(prog.map(f => [f.node.id, f.progress.filled, f.progress.total]), [['p-1', 1, 3]])
+  assert.equal(a.sum.nodes, 2); assert.equal(a.sum.filled, 5); assert.equal(a.sum.cells, 7)
+})

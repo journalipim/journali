@@ -164,6 +164,41 @@ export async function gate(pctx, cfg) {
   return why || null
 }
 
+export const TYPE_LABEL = { Alphanumeric: 'Liste', Numeric: 'Zahl', Range: 'Bereich', Logical: 'Ja/Nein' }
+
+/// Eine Rechnung für Zahlen und Befunde (Taloan, 22.09.2026: die Klassentabelle sagte „9 von 175“, die Prüfung „keine Befunde“ —
+/// das waren zwei Wege). rows: Zeilen aus /table ({ row, values, inactive }); jede Zeile zählt in IHRER Klasse.
+/// Liefert { byClass: [{ code, nodes, filled, cells, bad, pct }], sum, findings } — dieselben Zahlen, die die Befunde belegen.
+export function audit({ rows, classAttr, classes, map, locale = 'de', hasAttr = () => true }) {
+  const featsOf = cls => cls.features.map(f => { const m = mapEntry(map, f.code); return { f, key: m.key, steps: m.steps, has: hasAttr(m.key) } })
+  const byCode = new Map(); const acc = new Map(); const findings = []
+  for (const r of rows) {
+    const code = String(r.values?.[classAttr]?.value ?? '').trim().toUpperCase()
+    const cls = classes.get(code); if (!cls) continue
+    if (!byCode.has(code)) byCode.set(code, featsOf(cls))
+    if (!acc.has(code)) acc.set(code, { code, nodes: 0, filled: 0, cells: 0, bad: 0 })
+    const a = acc.get(code); a.nodes++
+    const inactive = r.inactive ?? []
+    let filled = 0, mapped = 0
+    for (const x of byCode.get(code)) {
+      const label = nameOf(x.f.name, locale)
+      if (!x.has) { findings.push({ node: r.row, attribute: x.f.code, label, message: 'nicht zugeordnet — kein Attribut im Modell', title: '⇄ zuordnen oder ＋ anlegen', go: 'map', severity: 'info' }); continue }
+      if (inactive.includes(x.key)) { findings.push({ node: r.row, attribute: x.f.code, label, message: `zugeordnetes Attribut ${x.key} ist an diesem Knoten nicht verfügbar`, title: 'das zugeordnete Attribut gibt es im Modell, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', go: 'map', severity: 'info' }); continue }
+      mapped++; a.cells++
+      const raw = r.values?.[x.key]?.value; const v = resolveValue(x.f, throughSteps(x.steps, raw))
+      if (v === null) { a.bad++; findings.push({ node: r.row, attribute: x.f.code, label, message: `„${raw}“ passt nicht (${TYPE_LABEL[x.f.type] ?? x.f.type}${x.f.type === 'Alphanumeric' ? ': ' + x.f.values.slice(0, 6).map(y => nameOf(y.name, locale)).join(', ') + (x.f.values.length > 6 ? ' …' : '') : ''})`, go: 'node', severity: 'warn' }) }
+      else if (!v.unknown) { a.filled++; filled++ }
+    }
+    if (filled < mapped) findings.push({ node: r.row, attribute: null, message: null, progress: { filled, total: mapped, pct: pct(filled, mapped) }, title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert) — gelesen wird das zugeordnete Attribut; leer geht als „-“/UN in den BMEcat', go: 'node', severity: 'info' })
+  }
+  for (const a of acc.values()) a.pct = pct(a.filled, a.cells)
+  const byClass = [...acc.values()].sort((x, y) => y.nodes - x.nodes || x.code.localeCompare(y.code))
+  const sum = byClass.reduce((s, c) => ({ nodes: s.nodes + c.nodes, filled: s.filled + c.filled, cells: s.cells + c.cells, bad: s.bad + c.bad }), { nodes: 0, filled: 0, cells: 0, bad: 0 })
+  sum.pct = pct(sum.filled, sum.cells)
+  return { byClass, sum, findings }
+}
+const pct = (a, b) => b ? Math.round(a * 1000 / b) / 10 : 0
+
 /// Prüfung eines Knotens (Datenqualität): values = { key: { value } } wie /table; classes = Map EC → Datensatz
 /// inactive: Attribute, die es im Modell gibt, die an diesem Knoten aber nicht gelten (aus /table je Zeile) — dann sagt der Fund das
 export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
