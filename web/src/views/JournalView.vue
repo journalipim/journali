@@ -40,13 +40,20 @@ async function older() {
 }
 watch(() => store.head, pull)
 
+// Art der Arbeit als Filter (Taloan, 22.09.2026): eine Kachel je Art, mehrere gleichzeitig; leer = alles
+const KINDS = [['data', '✎ Pflege'], ['publish', '⇶ Ausleitung'], ['model', '◫ Modell'], ['structure', '▤ Struktur'], ['reference', '⇩ Referenz'], ['setup', '⚙ Einrichtung'], ['ops', '⏱ Betrieb']]
+const kinds = ref(new Set())
+const toggleKind = k => { const s = new Set(kinds.value); s.has(k) ? s.delete(k) : s.add(k); kinds.value = s }
+
 const shown = computed(() => {
   const f = filter.value.trim().toLowerCase()
-  if (!f) return entries.value
+  const ks = kinds.value
   return entries.value.filter(e =>
-    e.stream.toLowerCase().includes(f) || e.type.toLowerCase().includes(f)
-    || e.actor.toLowerCase().includes(f) || describe(e).toLowerCase().includes(f))
+    (!ks.size || ks.has(e.kind))
+    && (!f || e.stream.toLowerCase().includes(f) || e.type.toLowerCase().includes(f)
+      || e.actor.toLowerCase().includes(f) || describe(e).toLowerCase().includes(f)))
 })
+const kindCount = k => entries.value.filter(e => e.kind === k).length
 </script>
 
 <template>
@@ -55,6 +62,7 @@ const shown = computed(() => {
       <h1>≡ Journal</h1>
       <span class="muted" :title="oldest ? `geladen ab #${oldest}` : ''">{{ shown.length }}{{ shown.length !== entries.length ? ' / ' + entries.length : '' }}{{ oldest && oldest > 1 ? ` · ab #${oldest}` : '' }}</span>
       <input v-model="filter" type="search" placeholder="Filter: Strom, Typ, Name, Inhalt" style="width:300px" />
+      <span v-for="[k, label] in KINDS" :key="k" class="view-chip" :class="{ on: kinds.has(k) }" @click="toggleKind(k)" :title="`${kindCount(k)} Einträge dieser Art anzeigen`">{{ label }}</span>
       <span class="grow" />
       <span class="muted mono">#{{ store.head }}</span>
     </div>

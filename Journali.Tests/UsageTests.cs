@@ -119,9 +119,52 @@ public class UsageTests
     {
         var u = new Usage();
         var tag = new DateOnly(2026, 9, 22);
+        // ohne Art im Eintrag (alles von vor der Spalte kind) entscheidet der Typ
         u.Apply(new Entry(1, Local(2026, 9, 22), "t", stream, type, "{}"));
         Assert.Equal(zaehlt ? 1 : 0, u.Day(tag));
         Assert.Equal(1, u.Day(tag, all: true));   // gezählt wird alles, nur berechnet nicht
+    }
+
+    [Fact]
+    public void Die_Art_im_Eintrag_schlaegt_die_Ableitung_aus_dem_Typ()
+    {
+        var u = new Usage();
+        var tag = new DateOnly(2026, 9, 22);
+        // ein Plugin schreibt Pflegedaten und sagt das auch — sonst wäre PluginDataSet Referenzmaterial
+        u.Apply(new Entry(1, Local(2026, 9, 22), "t", "plugin:enrich", Types.PluginDataSet, "{}", null, Kinds.Data));
+        Assert.Equal(1, u.Day(tag));
+        // und umgekehrt: ein Katalogimport, der Werte schreibt, kann sich als Referenz ausweisen
+        u.Apply(new Entry(2, Local(2026, 9, 22), "t", "v-1", Types.AttributeSet, "{}", null, Kinds.Reference));
+        Assert.Equal(1, u.Day(tag));
+        Assert.Equal(2, u.Day(tag, all: true));
+    }
+
+    [Theory]
+    [InlineData(Types.AttributeSet, Kinds.Data)]
+    [InlineData(Types.ReleaseGranted, Kinds.Publish)]
+    [InlineData(Types.AttributeDefined, Kinds.Model)]
+    [InlineData(Types.WorkflowDefined, Kinds.Model)]
+    [InlineData(Types.GroupCreated, Kinds.Structure)]
+    [InlineData(Types.NodePlaced, Kinds.Structure)]
+    [InlineData(Types.CategoryAssigned, Kinds.Structure)]
+    [InlineData(Types.PluginDataSet, Kinds.Reference)]
+    [InlineData(Types.ListValueDefined, Kinds.Reference)]
+    [InlineData(Types.PluginInstalled, Kinds.Setup)]
+    [InlineData(Types.JobRunStarted, Kinds.Ops)]
+    [InlineData(Types.MediaDerived, Kinds.Ops)]
+    [InlineData("EinTypDenEsNochNichtGibt", Kinds.Model)]   // neue Typen zählen nie ungefragt
+    public void Art_aus_dem_Typ(string type, string kind) => Assert.Equal(kind, Kinds.Of(type));
+
+    [Fact]
+    public void Das_Journal_schreibt_die_Art_mit()
+    {
+        var j = new MemoryJournal();
+        var e = j.Append("t", "v-1", Types.AttributeSet, "{}");
+        Assert.Equal(Kinds.Data, e.Kind);
+        var own = j.Append("t", "plugin:enrich", Types.PluginDataSet, "{}", null, Kinds.Data);
+        Assert.Equal(Kinds.Data, own.Kind);   // wer schreibt, darf die Art mitgeben
+        var many = j.AppendMany("t", [("g-1", Types.GroupCreated, "{}"), ("v-1", Types.AttributeSet, "{}")]);
+        Assert.Equal([Kinds.Structure, Kinds.Data], many.Select(x => x.Kind).ToArray());
     }
 
     [Fact]

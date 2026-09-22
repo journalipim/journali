@@ -15,11 +15,11 @@ public sealed class MemoryJournal : IJournal
         get { lock (_gate) return _entries.Count; }
     }
 
-    public Entry Append(string actor, string stream, string type, string payload, string? batch = null)
+    public Entry Append(string actor, string stream, string type, string payload, string? batch = null, string? kind = null)
     {
         lock (_gate)
         {
-            var entry = new Entry(_entries.Count + 1, DateTimeOffset.UtcNow, actor, stream, type, payload, batch);
+            var entry = new Entry(_entries.Count + 1, DateTimeOffset.UtcNow, actor, stream, type, payload, batch, kind ?? Entries.Kinds.Of(type));
             _entries.Add(entry);
             return entry;
         }
@@ -30,7 +30,7 @@ public sealed class MemoryJournal : IJournal
         lock (_gate)
         {
             var list = new List<Entry>(items.Count); var at = DateTimeOffset.UtcNow;
-            foreach (var (s, t, p) in items) { var e = new Entry(_entries.Count + 1, at, actor, s, t, p, batch); _entries.Add(e); list.Add(e); }
+            foreach (var (s, t, p) in items) { var e = new Entry(_entries.Count + 1, at, actor, s, t, p, batch, Entries.Kinds.Of(t)); _entries.Add(e); list.Add(e); }
             return list;
         }
     }

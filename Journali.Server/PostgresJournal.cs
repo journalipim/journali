@@ -1,3 +1,4 @@
+using Journali.Core.Entries;
 using Journali.Core.Journal;
 using Npgsql;
 using NpgsqlTypes;
@@ -12,7 +13,7 @@ namespace Journali.Server;
 /// </summary>
 public sealed class PostgresJournal : IJournal
 {
-    private const string Columns = "number, at, actor, stream, type, payload::text, batch";
+    private const string Columns = "number, at, actor, stream, type, payload::text, batch, kind";
 
     private readonly NpgsqlDataSource _db;
 
@@ -54,6 +55,10 @@ public sealed class PostgresJournal : IJournal
             );
             CREATE INDEX IF NOT EXISTS journal_stream ON journal (stream, number);
             ALTER TABLE journal ADD COLUMN IF NOT EXISTS batch TEXT;
+            -- Art der Arbeit (Taloan, 22.09.2026): model, structure, data, publish, reference, setup, ops.
+            -- Alte Einträge bleiben leer; wer sie liest, leitet die Art aus dem Typ ab (Kinds.Of).
+            ALTER TABLE journal ADD COLUMN IF NOT EXISTS kind TEXT;
+            CREATE INDEX IF NOT EXISTS journal_kind_at ON journal (kind, at);
             """, conn);
         cmd.ExecuteNonQuery();
     }
@@ -68,7 +73,7 @@ public sealed class PostgresJournal : IJournal
         }
     }
 
-    public Entry Append(string actor, string stream, string type, string payload, string? batch = null)
+    public Entry Append(string actor, string stream, string type, string payload, string? batch = null, string? kind = null)
     {
         using var conn = _db.OpenConnection();
         using var tx = conn.BeginTransaction();
@@ -80,8 +85,8 @@ public sealed class PostgresJournal : IJournal
         // JSONB normalisiert (Reihenfolge, Leerraum); zurück kommt die gespeicherte Form,
         // damit Append und ReadAfter denselben Text liefern.
         using var cmd = new NpgsqlCommand($"""
-            INSERT INTO journal (number, at, actor, stream, type, payload, batch)
-            SELECT COALESCE(MAX(number), 0) + 1, now(), @actor, @stream, @type, @payload, @batch
+            INSERT INTO journal (number, at, actor, stream, type, payload, batch, kind)
+            SELECT COALESCE(MAX(number), 0) + 1, now(), @actor, @stream, @type, @payload, @batch, @kind
             FROM journal
             RETURNING {Columns}
             """, conn, tx);
@@ -90,6 +95,7 @@ public sealed class PostgresJournal : IJournal
         cmd.Parameters.AddWithValue("type", type);
         cmd.Parameters.Add("payload", NpgsqlDbType.Jsonb).Value = payload;
         cmd.Parameters.Add("batch", NpgsqlDbType.Text).Value = (object?)batch ?? DBNull.Value;
+        cmd.Parameters.Add("kind", NpgsqlDbType.Text).Value = kind ?? Kinds.Of(type);
 
         Entry entry;
         using (var reader = cmd.ExecuteReader())
@@ -111,14 +117,15 @@ public sealed class PostgresJournal : IJournal
         using (var gate = new NpgsqlCommand("LOCK TABLE journal IN SHARE ROW EXCLUSIVE MODE", conn, tx)) gate.ExecuteNonQuery();
         long next;
         using (var max = new NpgsqlCommand("SELECT COALESCE(MAX(number), 0) FROM journal", conn, tx)) next = (long)max.ExecuteScalar()!;
-        using var cmd = new NpgsqlCommand($"INSERT INTO journal (number, at, actor, stream, type, payload, batch) VALUES (@n, now(), @actor, @stream, @type, @payload, @batch) RETURNING {Columns}", conn, tx);
+        using var cmd = new NpgsqlCommand($"INSERT INTO journal (number, at, actor, stream, type, payload, batch, kind) VALUES (@n, now(), @actor, @stream, @type, @payload, @batch, @kind) RETURNING {Columns}", conn, tx);
         var pn = cmd.Parameters.Add("n", NpgsqlDbType.Bigint); cmd.Parameters.AddWithValue("actor", actor);
         var ps = cmd.Parameters.Add("stream", NpgsqlDbType.Text); var pt = cmd.Parameters.Add("type", NpgsqlDbType.Text); var pp = cmd.Parameters.Add("payload", NpgsqlDbType.Jsonb);
+        var pk = cmd.Parameters.Add("kind", NpgsqlDbType.Text);
         cmd.Parameters.Add("batch", NpgsqlDbType.Text).Value = (object?)batch ?? DBNull.Value;
         cmd.Prepare();
         foreach (var (s, t, p) in items)
         {
-            pn.Value = ++next; ps.Value = s; pt.Value = t; pp.Value = p;
+            pn.Value = ++next; ps.Value = s; pt.Value = t; pp.Value = p; pk.Value = Kinds.Of(t);
             using var reader = cmd.ExecuteReader(); reader.Read(); list.Add(Read(reader));
         }
         tx.Commit();
@@ -158,5 +165,6 @@ public sealed class PostgresJournal : IJournal
         r.GetString(3),
         r.GetString(4),
         r.GetString(5),
-        r.IsDBNull(6) ? null : r.GetString(6));
+        r.IsDBNull(6) ? null : r.GetString(6),
+        r.IsDBNull(7) ? null : r.GetString(7));
 }

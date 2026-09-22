@@ -262,8 +262,8 @@ sealed record AppendRequest(string Actor, string Stream, string Type, JsonElemen
 /// Ein Eintrag in der Antwort: wie <see cref="Entry"/>, nur ist der Payload
 /// eingebettetes JSON statt eines Strings mit JSON darin — der Client parst einmal.
 /// </summary>
-sealed record EntryView(long Number, DateTimeOffset At, string Actor, string Stream, string Type, JsonElement Payload, string? Batch)
+sealed record EntryView(long Number, DateTimeOffset At, string Actor, string Stream, string Type, JsonElement Payload, string? Batch, string Kind)
 {
     public static EntryView Of(Entry e) =>
-        new(e.Number, e.At, e.Actor, e.Stream, e.Type, JsonDocument.Parse(e.Payload).RootElement.Clone(), e.Batch);
+        new(e.Number, e.At, e.Actor, e.Stream, e.Type, JsonDocument.Parse(e.Payload).RootElement.Clone(), e.Batch, e.Kind ?? Kinds.Of(e.Type));   // alte Einträge ohne Spalte: aus dem Typ
 }

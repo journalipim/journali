@@ -203,13 +203,26 @@ erlaubte Kanäle, Werteliste), im Journal steht immer ein String.
 
 ## Nutzung — kein eigener Eintrag
 
+Jeder Eintrag trägt seit dem 22.09.2026 eine **Art** (Spalte `kind`, Taloan:
+„eine neue Spalte, die die Art des Eintrags kategorisiert“): `model`,
+`structure`, `data`, `publish`, `reference`, `setup`, `ops` (`Kinds` im Kern).
+Die Art ist ein Fakt und steht für immer im Eintrag — ob sie **zählt**, sagt
+der Tarif und darf sich ändern, ohne die Vergangenheit anzufassen. Wer
+schreibt, darf sie mitgeben (`IJournal.Append(..., kind)`; ein Plugin weiss
+besser als der Kern, was es tut); fehlt sie — so bei allen Einträgen von vor
+der Spalte —, leitet `Kinds.Of(type)` sie aus dem Typ ab. Die Spalte wurde
+nachgerüstet wie seinerzeit `batch` (`ADD COLUMN IF NOT EXISTS`), dazu ein
+Index `(kind, at)`; ausgewertet wird sie auch direkt: `select kind, count(*)
+from journal group by kind`. In der Journalansicht steht je Zeile ein Symbol,
+und die Arten sind Filterkacheln.
+
 Das Abbild `Usage` (Kern) zählt beim Durchlauf des Journals mit, wie viele
 Einträge an welchem Tag (Ortszeit) geschrieben wurden — zweimal: **alle**
-(`AllPerDay`) und das **Tagesgeschäft** (`PerDay`), das allein zählt. Was dazu
-gehört, steht als Positivliste in `Usage.Work`: Werte und Zeilen pflegen,
+(`AllPerDay`) und das **Tagesgeschäft** (`PerDay`), das allein zählt: die Arten
+`data` und `publish` (`Kinds.Counts`). Dazu gehören: Werte und Zeilen pflegen,
 Artikel und Varianten anlegen oder zurückziehen, Status, externe Kennungen,
 Medien am Artikel, Relationen, Freigaben, Versionen, Workflow-Zustände und
-Übersetzungsschritte. Alles andere zählt nicht: **Datenmodellierung**
+Übersetzungsschritte. Nicht gezählt wird: **Datenmodellierung**
 (Attribute, Gruppen, Sichten, Listen, Sprachen, Kanäle, Status,
 Relationstypen, Workflow-Designer, Einheiten, Wörterbuch), **Struktur** (Baum
 anlegen, umhängen, ordnen, Achsen, Gruppen anhängen), der **Aufbau des

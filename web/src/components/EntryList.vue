@@ -8,6 +8,11 @@ import { store } from '../store.js'
 import { tree } from '../tree.js'
 import { restoreModel, canRestoreModel, mayRestore } from '../modelRestore.js'
 const props = defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
+// Art des Eintrags (Taloan, 22.09.2026): ein Symbol je Art, Tooltip nennt sie ausgeschrieben; „zählt“ ist Datenpflege und Ausleitung
+const KINDS = { model: ['◫', 'Datenmodellierung'], structure: ['▤', 'Struktur'], data: ['✎', 'Datenpflege · zählt'], publish: ['⇶', 'Ausleitung · zählt'], reference: ['⇩', 'Referenzdaten'], setup: ['⚙', 'Einrichtung'], ops: ['⏱', 'Betrieb'] }
+const kindIcon = k => KINDS[k]?.[0] ?? '·'
+const kindText = k => KINDS[k]?.[1] ?? (k ?? 'unbekannt')
+const counts = k => k === 'data' || k === 'publish'
 
 const open = reactive({})   // batch → aufgeklappt
 const rows = computed(() => {
@@ -55,6 +60,7 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
         <th>Zeit</th>
         <th>👤</th>
         <th v-if="showStream">▦</th>
+        <th title="Art der Arbeit">◧</th>
         <th>Typ</th>
         <th>Inhalt</th>
         <th title="Stapel">⧉</th>
@@ -67,6 +73,7 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
           <td class="mono muted">{{ when(r.last.at) }}</td>
           <td>{{ r.last.actor }}</td>
           <td v-if="showStream" class="muted">{{ new Set(r.group.map(g => g.stream)).size }} Ströme</td>
+          <td class="muted" :title="[...new Set(r.group.map(g => kindText(g.kind)))].join(' · ')">{{ [...new Set(r.group.map(g => kindIcon(g.kind)))].join('') }}</td>
           <td class="muted">{{ open[r.batch] ? '▾' : '▸' }} ⧉ Stapel</td>
           <td><b>{{ r.group.length }} Einträge</b> <span class="muted">· {{ typeText(r.types) }}</span>
             <button class="x" style="margin-left:8px" @click.stop="undo(r.batch)" @mouseenter="preview(r.batch)" :title="previews[r.batch] ?? 'lade Vorschau …'">↶ Rückgängig</button>
@@ -78,6 +85,7 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
           <td class="mono muted">{{ when(r.e.at) }}</td>
           <td>{{ r.e.actor }}</td>
           <td v-if="showStream"><router-link v-if="!r.e.stream.includes(':')" :to="`/tree/${r.e.stream}`" class="mono link">{{ r.e.stream }}</router-link><router-link v-else to="/model" class="mono link muted">{{ r.e.stream }}</router-link></td>
+          <td class="kind" :class="{ counts: counts(r.e.kind) }" :title="kindText(r.e.kind)">{{ kindIcon(r.e.kind) }}</td>
           <td class="muted">{{ r.e.type }}</td>
           <td :class="{ pos: r.e.type.endsWith('Granted') || r.e.type.endsWith('Assigned') || r.e.type.endsWith('Created'), neg: r.e.type.endsWith('Revoked') || r.e.type.endsWith('Removed') || r.e.type.endsWith('Retired') }">
             {{ describe(r.e) }}
@@ -93,6 +101,8 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
 </template>
 
 <style scoped>
+.kind { text-align: center; opacity: .5; }
+.kind.counts { opacity: 1; color: var(--accent); }
 .link:hover { color: var(--accent); text-decoration: underline; }
 .row.head { background: var(--accent-soft); cursor: pointer; }
 .row.sub td:first-child { padding-left: 18px; }

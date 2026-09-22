@@ -9,42 +9,12 @@ namespace Journali.Core.Projections;
 /// Exportieren kosten nichts (die Endpunkte schreiben nicht). Woche und Monat werden aus den Tagen gerechnet, die
 /// Historie steht damit von selbst da — auch rückwirkend für ein bestehendes Journal, ohne einen einzigen eigenen
 /// Eintrag. Der Tag ist die Ortszeit des Servers, die Woche beginnt am Montag.
+/// <para>Was zählt, entscheidet die <b>Art</b> des Eintrags (<see cref="Kinds"/>, Spalte <c>kind</c>): Datenpflege und
+/// Ausleitung zählen, Modellierung, Struktur, Referenzdaten, Einrichtung und Betrieb nicht. Einträge ohne Art —
+/// alles von vor der Spalte — werden über ihren Typ eingeordnet.</para>
 /// </summary>
 public sealed class Usage : IProjection
 {
-    /// <summary>
-    /// Das Tagesgeschäft: Import, Datenpflege, Ausleitung — was ein PIM täglich leistet und was regelmässig und
-    /// berechenbar anfällt (Taloan, 22.09.2026). Eine Positivliste: was hier nicht steht, zählt nicht. Damit kostet
-    /// weder ein neuer Eintragstyp ungefragt etwas noch eine Arbeit, die keine Leistung am Datenbestand ist.
-    /// <para>Draussen bleiben bewusst: <b>Datenmodellierung</b> (Attribute, Gruppen, Sichten, Listen, Sprachen,
-    /// Kanäle, Status, Relationstypen, Workflows samt Designer, Einheiten, Wörterbuch), <b>Struktur</b> (Baum anlegen,
-    /// umhängen, umbenennen, ordnen, Gruppen und Achsen festlegen), der <b>Aufbau des Publikationsbaums</b> (Rubriken anlegen,
-    /// Produkte einsortieren, umhängen, Regeln, Stand) — Werte pflegen zählt dort aber sehr wohl, auch an einer Rubrik
-    /// (Taloan, 22.09.2026: „jemand aktualisiert die Werte der Produkte im Pub-Baum → zählt“) —, die <b>Klassenzuweisung</b>
-    /// (<c>CategoryAssigned</c>, z. B. eine ETIM-Klasse), <b>Referenzdaten von aussen</b> (<c>PluginDataSet</c> eines
-    /// Katalogs, dessen Wertelisten) und <b>Einrichtung und Betrieb</b> (Plugins, Jobs mit ihrem Protokoll, gerechnete
-    /// Vorschauen, Benutzer, Rollen). Taloans Fälle vom 22.09.2026: ETIM-Klasse zuweisen und die Attribute dafür anlegen
-    /// zählen nicht, ein SAP-Import mit 50 000 Zeilen × 200 Spalten zählt, Publikationsbaum bauen zählt nicht, den
-    /// Workflow-Designer bearbeiten zählt nicht, einen Workflow-Zustand setzen zählt.</para>
-    /// </summary>
-    public static readonly IReadOnlySet<string> Work = new HashSet<string>
-    {
-        // Datenpflege: Werte, Belege, Zeilen
-        Types.AttributeSet, Types.ValueSourced, Types.RowAdded, Types.RowRemoved, Types.RowOrdered,
-        // Bestand: Artikel und Varianten kommen und gehen
-        Types.ProductCreated, Types.VariantCreated, Types.NodeRetired, Types.NodeRestored, Types.StatusSet,
-        Types.ExternalLinked, Types.ExternalUnlinked,
-        // Medien am Artikel (die gerechneten Vorschauen nicht — die macht der Job)
-        Types.MediaCreated, Types.MediaRetired, Types.MediaFiled,
-        // Beziehungen zwischen Artikeln
-        Types.RelationCreated, Types.RelationRetired,
-        // Ausleitung: Freigabe und Versionen (der Publikationsbaum selbst ist Struktur und zählt nicht)
-        Types.ReleaseGranted, Types.ReleaseRevoked,
-        Types.VersionCreated, Types.VersionDocumentAdded, Types.VersionWithdrawn,
-        // Redaktion: Workflow und Übersetzung
-        Types.WorkflowStateSet, Types.WorkflowAssigned, Types.TranslationMarked, Types.TranslationOrdered, Types.TranslationReturned,
-    };
-
     public long LastApplied { get; private set; }
 
     /// <summary>Tagesgeschäft je Tag (Ortszeit) — das, was zählt.</summary>
@@ -57,7 +27,7 @@ public sealed class Usage : IProjection
         LastApplied = entry.Number;
         var day = DateOnly.FromDateTime(entry.At.ToLocalTime().DateTime);
         AllPerDay[day] = AllPerDay.GetValueOrDefault(day) + 1;
-        if (!Work.Contains(entry.Type)) return;
+        if (!Kinds.Billable(entry.Kind, entry.Type)) return;
         PerDay[day] = PerDay.GetValueOrDefault(day) + 1;
     }
 

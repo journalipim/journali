@@ -74,9 +74,9 @@ public sealed class CachedJournal : IJournal
         }
     }
 
-    public Entry Append(string actor, string stream, string type, string payload, string? batch = null)
+    public Entry Append(string actor, string stream, string type, string payload, string? batch = null, string? kind = null)
     {
-        var e = _inner.Append(actor, stream, type, payload, batch);
+        var e = _inner.Append(actor, stream, type, payload, batch, kind);
         AppendFile(e);
         return e;
     }
