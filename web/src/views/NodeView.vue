@@ -200,15 +200,30 @@ const blocks = computed(() => {
   }).filter(b => b.defs.length && (store.scope === 'all' || b.active))
     // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
-  // Ein Plugin darf eine Gruppe durch eigene Abschnitte ersetzen — an derselben Stelle (Taloan, 22.09.2026: ETIM nach Klassen)
-  const out = []
-  for (const b of built) {
+  // Ein Plugin darf eine Gruppe gliedern: die Gruppe bleibt ein Reiter, seine Teile werden Zwischenüberschriften darin
+  // (Taloan, 22.09.2026: „nicht jede Kombination als eigener Tab“).
+  return built.map(b => {
     const rep = pluginViews.value.find(v => v.replaces === b.key && v.custom?.length)
-    if (rep) out.push(...customBlocks(rep.custom, eff))
-    else out.push(b)
-  }
-  return out
+    return rep ? withSections(b, rep.custom) : b
+  })
 })
+
+/// Die Attribute eines Blocks in der Reihenfolge des Plugins, mit Zwischenüberschriften; was das Plugin nicht nennt,
+/// steht unverändert hinten. Nur eine Überschrift? Dann keine — sie stünde allein über allem.
+function withSections(b, sections) {
+  const byKey = new Map(b.defs.map(d => [d.key, d]))
+  const teile = sections.map(s => ({ title: s.title, defs: (s.keys ?? []).map(k => byKey.get(k)).filter(Boolean) })).filter(s => s.defs.length)
+  if (!teile.length) return b
+  const genannt = new Set(teile.flatMap(s => s.defs.map(d => d.key)))
+  const rest = b.defs.filter(d => !genannt.has(d.key))
+  const defs = []
+  for (const s of teile) {
+    if (teile.length > 1) defs.push({ key: `~sub:${s.title}`, divider: s.title })
+    defs.push(...s.defs)
+  }
+  if (rest.length) { if (teile.length > 1) defs.push({ key: '~sub:rest', divider: 'ohne Klasse' }); defs.push(...rest) }
+  return { ...b, defs }
+}
 /// Abschnitte, die ein Plugin vorgibt: eigene Überschrift, Attribute aus beliebigen Gruppen — sonst dieselben Regeln
 /// (gesperrt am Knotentyp, Bedingung when, Pflicht, Filter der Sicht „Editierbare“).
 function customBlocks(list, eff) {
@@ -796,7 +811,9 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <template v-for="def in b.defs" :key="def.key">
-          <tr v-if="def.type === 'formula' || def.type === 'template'">
+          <!-- Zwischenüberschrift innerhalb einer Gruppe (Taloan, 22.09.2026: ETIM nach Klassen) -->
+          <tr v-if="def.divider" class="sub-row"><td class="sub" :colspan="columns.length + 1">{{ def.divider }}</td></tr>
+          <tr v-else-if="def.type === 'formula' || def.type === 'template'">
             <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
               <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? 'Pflegewert · ändern im Pflegebaum' : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>

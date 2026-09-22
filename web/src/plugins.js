@@ -16,8 +16,9 @@
 //                Klassenattribut, an MasterTree gehängt). Läuft nicht bei jedem Seitenaufruf; der Lauf wird je Plugin gemerkt.
 //   nodeViews:   [{ key, label(row, ctx) | label, roles?, items(row, ctx) → [{ group, order: [attrKey] }] | null,
 //                blocks?(row, ctx) → [{ key, title, keys: [attrKey] }] | null, replaces?: 'gruppe' }]
-//                Abschnitte am Knoten (Taloan, 22.09.2026), nie im Journal. Mit `label` steht es als eigene Sicht zur Wahl; mit
-//                `replaces` tritt es an die Stelle dieser Attributgruppe — in jeder Sicht, ohne Zutun (ETIM: je Klassenmenge ein Abschnitt)
+//                Am Knoten berechnet (Taloan, 22.09.2026), nie im Journal. Mit `label` steht es als eigene Sicht zur Wahl; mit
+//                `replaces` gliedert es diese Attributgruppe: die Gruppe bleibt ein Reiter, die Teile werden zu
+//                Zwischenüberschriften darin (ETIM: je Klassenmenge eine — „gilt für alle drei Klassen“ zuerst)
 //   nodeBands:   [{ key, label, icon?, roles?, mount({ head, body }, nodeId, ctx) → unmount? }]   Band in der Knotenansicht (Taloan, 22.09.:
 //                „die Bedienung erfolgt beim Gegenstand“ — ETIM-Stand am Knoten; head = Zeile mit Zahlen und Knöpfen, body = Details)
 //   Manifest process {…} oder processes: [{ key, label, command, args, params, description }] — mehrere Dienste je Plugin (Taloan); ein Job nennt plugin + service
