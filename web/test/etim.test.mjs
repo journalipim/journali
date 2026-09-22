@@ -64,3 +64,15 @@ test('resolveValue bleibt: Range, Zahl mit Komma, EV-Name in irgendeiner Sprache
   assert.deepEqual(resolveValue(cls.features[2], 'red'), { values: ['EV000123'] })
   assert.equal(resolveValue(cls.features[2], 'lila'), null)
 })
+
+test('Bedingung „leer → 0, sonst 1“ auf ein Ja/Nein-Merkmal: ohne Wert false, mit irgendetwas true (Taloan, 22.09.)', async () => {
+  const steps = [{ op: 'when', test: 'empty', then: '0', else: '1' }]
+  const m = { EF003105: { to: 'tastatur_name', steps } }
+  const c = { code: 'EC1', name: {}, features: [{ code: 'EF003105', type: 'Logical', name: { de: 'Numerische Tastatur' }, values: [] }] }
+  const cfg = { classAttr: 'etim_class', map: m, unknownAs: 'UN', getClass: async () => c }
+  const none = await featuresOf({ attr: { etim_class: { value: 'EC004718' } } }, cfg)          // Attribut fehlt ganz
+  const empty = await featuresOf({ attr: { etim_class: { value: 'EC004718' }, tastatur_name: null } }, cfg)
+  const some = await featuresOf({ attr: { etim_class: { value: 'EC004718' }, tastatur_name: { value: '212', raw: '212' } } }, cfg)
+  assert.equal(none.features[0].value, 'false'); assert.equal(empty.features[0].value, 'false'); assert.equal(some.features[0].value, 'true')
+  assert.equal(none.filled, 1, 'die Kette macht aus leer einen Wert — gefüllt')
+})

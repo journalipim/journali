@@ -634,7 +634,8 @@ async function mount(root, ctx) {
     const list = el('div', { style: 'display:flex;flex-direction:column;gap:6px' })
     const probe = el('input', { placeholder: 'Probe: ein Wert, wie er im Attribut steht', style: 'width:100%' })
     const out = el('div', { class: 'muted', style: 'font-size:12px;min-height:18px' })
-    const show = () => { const v = probe.value; if (!v) { out.textContent = ''; return } const t = throughSteps(steps.length ? steps : null, v); const r = resolveValue(f, t); out.innerHTML = ''; out.append(`„${v}“ → „${t ?? ''}“ → `, el('span', { class: r === null ? 'neg' : r?.unknown ? 'muted' : 'pos' }, r === null ? `✗ passt nicht zu ${TYPE[f.type] ?? f.type}` : r.unknown ? 'leer (unbekannt)' : r.values.join(' - '))) }
+    // auch die leere Probe zeigt, was die Kette macht (Taloan, 22.09.: „leer → 0“ mit Bedingung) — nur ohne Kette gibt es nichts zu zeigen
+    const show = () => { const v = probe.value; if (!v && !steps.length) { out.textContent = ''; return } const t = throughSteps(steps.length ? steps : null, v); const r = resolveValue(f, t); out.innerHTML = ''; out.append(`${v ? `„${v}“` : '(leer)'} → ${t ? `„${t}“` : '(leer)'} → `, el('span', { class: r === null ? 'neg' : r?.unknown ? 'muted' : 'pos' }, r === null ? `✗ passt nicht zu ${TYPE[f.type] ?? f.type}` : r.unknown ? 'leer (unbekannt)' : r.values.join(' - '))) }
     probe.addEventListener('input', show)
     const field = (s, k) => {
       const lab = el('span', { class: 'muted', style: 'font-size:11px' }, FIELD_LABEL[k] ?? k)
@@ -655,6 +656,7 @@ async function mount(root, ctx) {
       })
       const add = el('select', {}, el('option', { value: '' }, '+ Schritt …'), ...OPS.map(o => el('option', { value: o[0] }, o[1]))); add.addEventListener('change', () => { if (!add.value) return; const s = { op: add.value }; if (s.op === 'boolean') s.yes = YES_DEFAULT; steps.push(s); render(); show() })
       list.append(el('div', {}, add))
+      show()
     }
     render()
     const close = () => overlay.remove()
