@@ -30,13 +30,24 @@ const CLASS = {
     { code: 'EF003105', type: 'Logical', name: { de: 'With numeric keyboard' }, values: [] },   // auf tastatur_name zugeordnet, gilt nur an Varianten
   ],
 }
+
+// zweite Klasse unter derselben Gruppe (Taloan, 22.09.): Wi-Fi und Farbe teilen sich beide, „Klebekraft“ hat nur sie
+const CLASS2 = {
+  code: 'EC000529', name: { de: 'Adhesive' }, group: { code: 'G2', name: { de: 'Klebstoffe' } }, synonyms: {},
+  features: [
+    { code: 'EF008851', type: 'Logical', name: { de: 'Wi-Fi' }, values: [] },
+    { code: 'EF000007', type: 'Alphanumeric', name: { de: 'Farbe' }, values: [{ code: 'EV1', name: { de: 'rot' } }] },
+  ],
+}
 const TREE = [
   { id: 'g-1', role: 'group', label: 'Mobile Geräte', parent: null },
   { id: 'p-1', role: 'product', label: 'HP Notebook 255 G10', parent: 'g-1' },
   { id: 'v-1', role: 'variant', label: 'a', parent: 'p-1' }, { id: 'v-2', role: 'variant', label: 'b', parent: 'p-1' }, { id: 'v-3', role: 'variant', label: 'c', parent: 'p-1' },
+  { id: 'p-2', role: 'product', label: 'Klebstoff', parent: 'g-1' },   // eigene Klasse — unter der Gruppe gelten damit zwei (Taloan, 22.09.)
 ]
 const VALUES = {   // eigene Werte je Knoten
   'p-1': { etim_class: 'EC004718', ef008851: 'true' },
+  'p-2': { etim_class: 'EC000529' },
   'v-1': { ef008851: 'true', ef000008: '350', ef000007: 'rot', tastatur_name: 'ja' },     // vollständig
   'v-2': { ef008851: 'true', ef000007: 'Lila' },                                            // einer passt nicht
   'v-3': {},                                                                                // leer
@@ -53,8 +64,9 @@ const PLUGIN_DATA = {
   settings: { classAttr: 'etim_class', unknownAs: 'UN', group: 'etim' },
   map: { EF003105: 'tastatur_name' },
   mapping: {},
-  release: { version: '9', number: 9, name: 'ETIM 9.0', classes: 1 },
+  release: { version: '9', number: 9, name: 'ETIM 9.0', classes: 2 },
   'class:9:EC004718': CLASS,
+  'class:9:EC000529': CLASS2,
 }
 globalThis.fetch = async url => {
   const u = String(url)
@@ -86,7 +98,7 @@ const MODEL = { masterLocale: 'de', locales: [{ code: 'de' }], groups: [{ key: '
 const ctx = {
   api: { get: async p => /^\/api\/nodes\/[^/?]+$/.test(p) ? apiNode(decodeURIComponent(p.slice('/api/nodes/'.length))) : apiTable(p), post: async () => ({}), del: async () => ({}) },
   store: { model: MODEL, toast() {}, poll: async () => {}, actor: 'test' },
-  tree: { loaded: true, rows: TREE, byId: new Map(TREE.map(r => [r.id, r])), kids: kidsOf, ancestors: id => { const out = []; for (let p = TREE.find(r => r.id === id)?.parent; p; p = TREE.find(r => r.id === p)?.parent) out.unshift(TREE.find(r => r.id === p)); return out }, load: async () => {} },
+  tree: { loaded: true, rows: TREE, byId: new Map(TREE.map(r => [r.id, r])), kids: kidsOf, below: id => { const out = []; const walk = x => { for (const k of kidsOf(x)) { out.push(k); walk(k.id) } }; walk(id); return out }, ancestors: id => { const out = []; for (let p = TREE.find(r => r.id === id)?.parent; p; p = TREE.find(r => r.id === p)?.parent) out.unshift(TREE.find(r => r.id === p)); return out }, load: async () => {} },
   go() {}, data: { get: async n => PLUGIN_DATA[n] ?? null, set: async () => {}, list: async () => Object.keys(PLUGIN_DATA) }, dialog: {}, mapper: {}, ai: { available: () => false },
 }
 
@@ -143,28 +155,39 @@ test('Gruppe ganz gelöscht: der Knopf legt sie neu an (Taloan, 22.09.: „ich h
   MODEL.groups = groups; NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
 })
 
-test('Attributsicht je Klasse ist flüchtig (Taloan, 22.09.): entsteht beim Aufrufen, steht nie im Modell', async () => {
+test('Klassengliederung statt fester Sicht (Taloan, 22.09.): Abschnitte nach Klassenzugehörigkeit, nichts im Modell', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const put = []
   const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { put.push([p, b, m]); return {} } } }
-  const band = mod.default.nodeBands[0]
   const head = mkEl('h2'), body = mkEl('div')
-  await band.mount({ head, body }, 'p-1', ctx2)
+  await mod.default.nodeBands[0].mount({ head, body }, 'p-1', ctx2)
   await new Promise(r => setTimeout(r, 30))
-  // nichts davon geht ins Journal — im Modell stehen nur Sichten, die der Anwender anlegt
-  assert.deepEqual(put.filter(([p]) => p.startsWith('/api/model/views/')), [], 'keine Sicht geschrieben')
+  assert.deepEqual(put.filter(([p]) => p.startsWith('/api/model/views/')), [], 'keine Sicht im Journal')
 
-  // der Beitragspunkt liefert sie stattdessen je Knoten
   const nv = mod.default.nodeViews?.[0]
-  assert.ok(nv, 'nodeViews fehlt')
-  const row = { id: 'p-1', role: 'product' }
-  const model = ctx.store.model
-  assert.match(nv.label(row, { model }), /⌗ EC004718 Laptop/)
-  const items = nv.items(row, { model })
-  const all = items.flatMap(i => i.order)
-  assert.ok(all.includes('etim_class') && all.includes('ef008851') && all.includes('tastatur_name'), JSON.stringify(items))
-  // ohne Klasse keine Sicht
-  assert.equal(nv.items({ id: 'gibtsnicht', role: 'product' }, { model }), null)
+  assert.ok(nv?.blocks, 'nodeViews mit blocks fehlt')
+  const pctx = { model: ctx.store.model, tree: ctx.tree }
+
+  // eine Klasse am Knoten: ein Abschnitt mit ihrem Namen, davor das Klassenattribut
+  assert.match(nv.label({ id: 'p-1', role: 'product' }, pctx), /⌗ EC004718 Laptop/)
+  const one = nv.blocks({ id: 'p-1', role: 'product' }, pctx)
+  assert.equal(one[0].title, '⌗ ETIM-Klasse')
+  assert.deepEqual(one[0].keys, ['etim_class'])
+  assert.match(one[1].title, /⌗ EC004718 Laptop/)
+  assert.ok(one[1].keys.includes('ef008851') && one[1].keys.includes('tastatur_name'))
+
+  // zwei Klassen unterhalb: gemeinsame Merkmale zuerst, dann die der einzelnen (Taloans Skizze)
+  const zwei = nv.blocks({ id: 'g-1', role: 'group' }, pctx)
+  const titel = zwei.map(b => b.title)
+  assert.equal(titel[0], '⌗ ETIM-Klasse')
+  assert.match(titel[1], /EC000529.*EC004718|EC004718.*EC000529/, 'oben, was für beide gilt: ' + JSON.stringify(titel))
+  assert.ok(zwei[1].keys.includes('ef008851'), 'Wi-Fi haben beide Klassen')
+  assert.ok(zwei.slice(2).some(b => b.keys.includes('tastatur_name')), 'nur eine Klasse führt es')
+  assert.ok(zwei.slice(2).every(b => b.title.split('·').length === 1 || b.title.split(' · ').length < titel[1].split(' · ').length))
+  assert.match(nv.label({ id: 'g-1', role: 'group' }, pctx), /⌗ ETIM · 2 Klassen/)
+
+  // ohne Klasse keine Abschnitte
+  assert.equal(nv.blocks({ id: 'gibtsnicht', role: 'product' }, pctx), null)
 })
 
 test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt (Taloan, 22.09.: „api is not defined“)', async () => {

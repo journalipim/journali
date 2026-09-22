@@ -1051,6 +1051,49 @@ async function install(ctx) {
 
 /// Die Klasse, die an einer Zeile gilt (eigen oder geerbt) — aus dem Cache, den das Plugin ohnehin führt
 function classOfRow(row) { const v = cache.classOf?.get(row?.id); return v ? cache.classes.get(v.code) ?? null : null }
+/// Alle Nachfahren — falls der Baum kein below() mitbringt
+function kidsDeep(id, tree) {
+  const out = []; const walk = x => { for (const k of tree?.kids?.(x) ?? []) { out.push(k); walk(k.id) } }; walk(id); return out
+}
+/// Die Klassen, die an diesem Knoten und darunter gelten — eigene und geerbte, jede einmal, in Codereihenfolge
+function classesBelow(row, tree) {
+  const out = new Map()
+  const add = id => { const v = cache.classOf?.get(id); const c = v ? cache.classes.get(v.code) : null; if (c) out.set(c.code, c) }
+  add(row.id)
+  const below = tree?.below?.(row.id) ?? kidsDeep(row.id, tree)
+  for (const r of below) add(r.id)
+  return [...out.values()].sort((a, b) => a.code.localeCompare(b.code))
+}
+/// Abschnitte nach Klassenzugehörigkeit (Taloan, 22.09.2026): je Merkmal die Menge der Klassen, in denen es vorkommt —
+/// gleiche Menge, ein Abschnitt. Oben steht, was für alle gilt (dort lohnt das Pflegen am meisten), unten das Einzelne.
+/// Bei genau einer Klasse ist es ein Abschnitt mit ihrem Namen — die frühere Klassensicht.
+function classBlocks(row, ctx) {
+  const classes = classesBelow(row, ctx?.tree)
+  if (!classes.length) return null
+  const defs = new Map((ctx?.model?.attributes ?? []).map(a => [a.key, a]))
+  const locale = ctx?.model?.masterLocale ?? 'de'
+  const byKeyClasses = new Map()   // Attributschlüssel → Klassencodes
+  for (const c of classes) for (const f of c.features) {
+    const key = mapEntry(cache.map, f.code).key
+    if (!defs.has(key)) continue
+    if (!byKeyClasses.has(key)) byKeyClasses.set(key, new Set())
+    byKeyClasses.get(key).add(c.code)
+  }
+  const groups = new Map()   // Klassenmenge (als Text) → Attributschlüssel
+  for (const [key, set] of byKeyClasses) {
+    const id = [...set].sort().join(',')
+    if (!groups.has(id)) groups.set(id, [])
+    groups.get(id).push(key)
+  }
+  const name = code => { const c = classes.find(x => x.code === code); return `${code} ${nameOf(c?.name, locale) || ''}`.trim() }
+  const out = [...groups].map(([id, keys]) => ({ id, codes: id.split(','), keys }))
+    .sort((a, b) => b.codes.length - a.codes.length || a.id.localeCompare(b.id))
+    .map(g => ({ key: `~etim:${g.id}`, title: `⌗ ${g.codes.map(name).join(' · ')}`, keys: g.keys }))
+  // das Klassenattribut selbst nach oben — dort steht, worum es überhaupt geht
+  const classAttr = cache.settings.classAttr
+  if (defs.has(classAttr)) out.unshift({ key: '~etim:class-attr', title: '⌗ ETIM-Klasse', keys: [classAttr] })
+  return out
+}
 /// Gruppen und Attribute einer Klasse in Klassenreihenfolge — die Form einer Attributsicht, nur im Arbeitsspeicher
 function classViewItems(cls, model) {
   const defs = new Map((model?.attributes ?? []).map(a => [a.key, a]))
@@ -1074,8 +1117,14 @@ export default {
   nodeViews: [
     {
       key: 'class', roles: ['group', 'product', 'variant'],
-      label: (row, ctx) => { const c = classOfRow(row); return c ? `⌗ ${c.code} ${nameOf(c.name, ctx?.model?.masterLocale ?? 'de') || ''}`.trim() : null },
-      items: (row, ctx) => { const c = classOfRow(row); return c ? classViewItems(c, ctx?.model) : null },
+      // Name der Sicht: eine Klasse → ihr Name; mehrere darunter → wie viele
+      label: (row, ctx) => {
+        const cs = classesBelow(row, ctx?.tree)
+        if (!cs.length) return null
+        const locale = ctx?.model?.masterLocale ?? 'de'
+        return cs.length === 1 ? `⌗ ${cs[0].code} ${nameOf(cs[0].name, locale) || ''}`.trim() : `⌗ ETIM · ${cs.length} Klassen`
+      },
+      blocks: classBlocks,
     },
   ],
   nodeActions: [

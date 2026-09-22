@@ -120,11 +120,13 @@ const pluginViews = computed(() => {
   const out = []
   for (const v of plugins.nodeViews ?? []) {
     if (v.roles && !v.roles.includes(node.value.role)) continue
-    let items = null
-    try { items = v.items?.(row, { node: node.value, model: model.value, tree }) } catch { items = null }
-    if (!items?.length) continue
-    const label = typeof v.label === 'function' ? v.label(row, { node: node.value, model: model.value }) : v.label
-    out.push({ key: `~${v.key}:${v.view}`, level: node.value.role, label: { de: label }, items, plugin: v.key })
+    const pctx = { node: node.value, model: model.value, tree }
+    let items = null, custom = null
+    try { custom = v.blocks?.(row, pctx) } catch { custom = null }
+    try { items = v.items?.(row, pctx) } catch { items = null }
+    if (!custom?.length && !items?.length) continue
+    const label = typeof v.label === 'function' ? v.label(row, pctx) : v.label
+    out.push({ key: `~${v.key}:${v.view}`, level: node.value.role, label: { de: label }, items: items ?? [], custom, plugin: v.key })
   }
   return out
 })
@@ -169,6 +171,9 @@ const NAMES_TITLE = { label: 'Technische Keys zeigen', key: 'Bezeichnung und Key
 const blocks = computed(() => {
   if (!model.value || !node.value) return []
   const eff = node.value.groups ?? []               // [{ key, from, fromLabel, active, attributes }]
+  // Eine flüchtige Sicht darf ihre Abschnitte selbst bestimmen (Taloan, 22.09.2026: ETIM gruppiert nach Klassenmenge —
+  // „gilt für alle drei Klassen darunter“ oben, dann die Merkmale der einzelnen). Attribute quer über die Gruppen.
+  if (view.value?.custom?.length) return customBlocks(view.value.custom, eff)
   const byKey = new Map(eff.map(g => [g.key, g]))
   const ov = orderView.value
   const order = ov ? ov.items.map(it => it.group).filter(k => byKey.has(k)) : eff.map(g => g.key)
@@ -194,6 +199,22 @@ const blocks = computed(() => {
     // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
 })
+/// Abschnitte, die ein Plugin vorgibt: eigene Überschrift, Attribute aus beliebigen Gruppen — sonst dieselben Regeln
+/// (gesperrt am Knotentyp, Bedingung when, Pflicht, Filter der Sicht „Editierbare“).
+function customBlocks(list, eff) {
+  const role = node.value.role
+  const byGroup = new Map(eff.map(g => [g.key, g]))
+  const req = k => model.value.attributes.find(a => a.key === k)?.required
+  const whenOk = a => { if (!a.when) return true; const v = effectiveValue(a.when.attribute); return v != null && a.when.values.some(x => x.toLowerCase() === String(v).toLowerCase()) }
+  return list.map(b => {
+    let defs = (b.keys ?? []).map(k => model.value.attributes.find(x => x.key === k)).filter(Boolean)
+      .map(a => ({ ...a, required: req(a.key), hereLocked: !(!a.levels || a.levels.includes(role)), whenLocked: !whenOk(a) }))
+    const activeOf = a => byGroup.get(a.group)?.active !== false
+    if (store.scope !== 'all') defs = defs.filter(a => !a.hereLocked && !a.whenLocked && activeOf(a))
+    if (store.scope === 'only') defs = defs.filter(a => !ROLES.some(r => r !== role && canAt(a, model.value.groups.find(g => g.key === a.group), r)))
+    return { key: b.key, label: b.title, custom: true, active: true, defs }
+  }).filter(b => b.defs.length)
+}
 watch(blocks, b => { if (!b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
 watch([() => route.query.group, () => blocks.value.length], focusGroup)
 // Suche über das Sichtbare: Attributname/Key und die Werte in den gezeigten Spalten (eigen oder geerbt, Auswahl als Label)
@@ -759,8 +780,8 @@ function cellMenu(e, def, col, block) {
           <tr class="group-row" :class="{ locked: !b.active }">
             <td :colspan="columns.length + 1">
               {{ b.label }}
-              <router-link :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
-              <span class="muted from" :title="b.fromRole === 'rubric' ? `Gruppe an Rubrik ${b.fromLabel}` : (props.pub ? `Gruppe an ${b.fromLabel} · nur lesen` : `Gruppe hängt an ${b.fromLabel}`)">· von {{ b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel }}{{ props.pub && b.fromRole !== 'rubric' ? ' · nur lesen' : '' }}</span>
+              <router-link v-if="!b.custom" :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
+              <span v-if="!b.custom" class="muted from" :title="b.fromRole === 'rubric' ? `Gruppe an Rubrik ${b.fromLabel}` : (props.pub ? `Gruppe an ${b.fromLabel} · nur lesen` : `Gruppe hängt an ${b.fromLabel}`)">· von {{ b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel }}{{ props.pub && b.fromRole !== 'rubric' ? ' · nur lesen' : '' }}</span>
               <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">· ⌀ ab {{ roleLabel[b.activeFrom] }}</span>
             </td>
           </tr>

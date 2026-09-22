@@ -14,8 +14,10 @@
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
 //   install(ctx): einmal beim Einschalten des Plugins (Taloan, 22.09.) — legt an, was das Plugin braucht (ETIM: Gruppe und
 //                Klassenattribut, an MasterTree gehängt). Läuft nicht bei jedem Seitenaufruf; der Lauf wird je Plugin gemerkt.
-//   nodeViews:   [{ key, label(row, ctx) | label, roles?, items(row, ctx) → [{ group, order: [attrKey] }] | null }]   flüchtige
-//                Attributsicht: erscheint in der Sichtauswahl des Knotens, steht aber nicht im Modell (Taloan, 22.09.2026)
+//   nodeViews:   [{ key, label(row, ctx) | label, roles?, items(row, ctx) → [{ group, order: [attrKey] }] | null,
+//                blocks?(row, ctx) → [{ key, title, keys: [attrKey] }] | null }]   flüchtige Attributsicht: erscheint in der
+//                Sichtauswahl des Knotens, steht aber nicht im Modell (Taloan, 22.09.2026). Mit `blocks` bestimmt das Plugin die
+//                Abschnitte selbst — eigene Überschrift, Attribute quer über die Gruppen (ETIM: je Klassenmenge ein Abschnitt)
 //   nodeBands:   [{ key, label, icon?, roles?, mount({ head, body }, nodeId, ctx) → unmount? }]   Band in der Knotenansicht (Taloan, 22.09.:
 //                „die Bedienung erfolgt beim Gegenstand“ — ETIM-Stand am Knoten; head = Zeile mit Zahlen und Knöpfen, body = Details)
 //   Manifest process {…} oder processes: [{ key, label, command, args, params, description }] — mehrere Dienste je Plugin (Taloan); ein Job nennt plugin + service
