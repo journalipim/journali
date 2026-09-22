@@ -410,7 +410,10 @@ async function classDialog(nodeId, ctx, onDone = null) {
       : el('div', { style: 'margin-bottom:8px;padding:8px 10px;border:1px solid var(--warn);border-radius:6px' }, el('span', { class: 'warn', style: 'font-weight:600' }, 'Diesem Knoten ist noch keine ETIM-Klasse zugewiesen.'), el('span', { class: 'muted' }, ' Wählen Sie unten eine aus — über den Vorschlag, das Umfeld, die Suche oder die Gruppen.')))
     if (current) body.append(el('div', { class: 'step-band', style: 'margin:4px 0' }, 'Andere Klasse wählen'))
     if (row.parent && tree.byId.get(row.parent)?.role === 'group' && tree.kids(row.parent).length > 1)
-      body.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, `Tipp: die Klasse an ${ICON.group} ${tree.byId.get(row.parent).label} gilt für alle ${tree.kids(row.parent).length} darunter (vererbbar) — `, el('a', { href: '#', onclick: e => { e.preventDefault(); close(); classDialog(row.parent, ctx) } }, 'dort wählen')))
+      body.append(el('div', { style: 'font-size:12px;margin-bottom:8px;padding:6px 8px;border:1px solid var(--accent);border-radius:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap' },
+        el('span', {}, `Die Klasse an ${ICON.group} ${tree.byId.get(row.parent).label} gilt für alle ${tree.kids(row.parent).length} Knoten darunter, weil sie vererbt wird.`),
+        el('span', { class: 'grow' }),
+        el('button', { class: 'x', title: `den Dialog für ${tree.byId.get(row.parent).label} öffnen und die Klasse dort setzen`, onclick: () => { close(); classDialog(row.parent, ctx) } }, `↑ an ${tree.byId.get(row.parent).label} wählen`)))
     // ✦ Vorschlag (KI, wenn da)
     const ai = ctx.ai; const suggest = el('div', { style: 'margin:4px 0' })
     if (ai?.available()) {
@@ -432,7 +435,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
     } else suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, '✦ Vorschläge aus Name und Pfad brauchen einen KI-Schlüssel (⚙ Einstellungen)'))
     body.append(suggest)
     // Umfeld: Klassen an Geschwistern und darunter
-    const env = el('div', { class: 'muted', style: 'font-size:12px;margin:4px 0' }, 'Umfeld …'); body.append(env)
+    const env = el('div', { style: 'font-size:12px;margin:4px 0' }, el('span', { class: 'muted' }, 'Umfeld …')); body.append(env)
     ;(async () => {
       try {
         const counts = new Map(); const add = (c, why) => { if (!c) return; const k = String(c).toUpperCase(); if (!counts.has(k)) counts.set(k, new Map()); counts.get(k).set(why, (counts.get(k).get(why) ?? 0) + 1) }
@@ -440,7 +443,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
         const below = await api.get(`/api/nodes/${encodeURIComponent(row.id)}/table?deep=true&attributes=${key}`); for (const r of below.rows) add(r.values[key]?.value, 'darunter')
         env.innerHTML = ''
         if (!counts.size) { env.textContent = 'Im Umfeld ist keine Klasse gesetzt: weder an Geschwistern noch darunter.'; return }
-        env.append(el('div', {}, 'Umfeld'))
+        env.append(el('div', { class: 'step-band', style: 'margin:2px 0' }, 'Umfeld', el('span', { class: 'muted' }, ' · Klassen an Geschwistern und darunter — anklicken übernimmt sie')))
         for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => `${w} × ${n}`).join(', ')))
       } catch (e) { env.textContent = 'Umfeld: ' + e.message }
     })()
