@@ -70,7 +70,8 @@ stehen dort als solche markiert.
   build` in `web/` baut Oberfläche und Plugins, `node build-plugins.mjs <key>` eines) —
   sie importieren `vue`, `vue-router`, `journali` und teilen die Instanzen der Oberfläche
   (`web/src/host.js`). Im Container liegt `plugins/` als Bind-Mount: austauschen ohne Image
-  Beitragspunkte: views, nodeActions, importers, checks, nodeBands (Band in der Knotenansicht); Plugin-Daten im
+  Beitragspunkte: views, nodeActions, importers, checks, nodeBands (Band in der Knotenansicht),
+  install(ctx) (einmal beim Einschalten: legt an, was das Plugin braucht); Plugin-Daten im
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`). **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,
   Ansichten oder READMEs — die gehören in ein Profil

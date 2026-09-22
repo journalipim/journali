@@ -12,6 +12,8 @@
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
+//   install(ctx): einmal beim Einschalten des Plugins (Taloan, 22.09.) — legt an, was das Plugin braucht (ETIM: Gruppe und
+//                Klassenattribut, an MasterTree gehängt). Läuft nicht bei jedem Seitenaufruf; der Lauf wird je Plugin gemerkt.
 //   nodeBands:   [{ key, label, icon?, roles?, mount({ head, body }, nodeId, ctx) → unmount? }]   Band in der Knotenansicht (Taloan, 22.09.:
 //                „die Bedienung erfolgt beim Gegenstand“ — ETIM-Stand am Knoten; head = Zeile mit Zahlen und Knöpfen, body = Details)
 //   Manifest process {…} oder processes: [{ key, label, command, args, params, description }] — mehrere Dienste je Plugin (Taloan); ein Job nennt plugin + service
@@ -70,6 +72,8 @@ export const plugins = reactive({
       for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })
       for (const b of mod.nodeBands ?? []) this.nodeBands.push({ key: p.key, band: b.key, ...b })
     }
+    // install() der frisch eingeschalteten Plugins (Taloan, 22.09.: „beim Aktivieren prüfen, ob die Attributgruppe existiert“)
+    await this.installNew()
     this.loaded = true   // erst jetzt: vorher sähe die Übersicht eines Themas nur den ersten Eintrag und leitete dorthin
   },
   enabled(key) { return this.active(key) },
@@ -86,6 +90,24 @@ export const plugins = reactive({
   active(key, seen = new Set()) { const p = this.list.find(x => x.key === key); if (!p?.enabled || seen.has(key)) return false; seen.add(key); return (p.manifest?.requires ?? []).every(r => this.active(r, seen)) },
   requires(key) { return this.list.find(x => x.key === key)?.manifest?.requires ?? [] },
   dependents(key) { return this.list.filter(p => (p.manifest?.requires ?? []).includes(key)).map(p => p.key) },
+  /// Welche Plugins schon eingerichtet sind (je Journal gemerkt — der Schlüssel nennt den Server, damit zwei Journale sich nicht stören)
+  installedKey: () => `journali.installed.${store.server || 'local'}`,
+  installedSet() { try { return new Set(JSON.parse(localStorage.getItem(this.installedKey()) || '[]')) } catch { return new Set() } },
+  /// install(ctx) je Plugin genau einmal — beim ersten Einschalten; Fehler melden, aber nichts blockieren
+  async installNew() {
+    const done = this.installedSet()
+    for (const p of this.list) {
+      if (!this.active(p.key) || done.has(p.key)) continue
+      const mod = this.modules.get(p.key)
+      if (!mod?.install) { done.add(p.key); continue }
+      try { await mod.install(this.ctx(p.key)); done.add(p.key); store.toast(`✓ ${p.manifest?.label?.de || p.key} eingerichtet`, 'ok') }
+      catch (e) { store.toast(`${p.key}: ${e.message}`) }
+    }
+    try { localStorage.setItem(this.installedKey(), JSON.stringify([...done])) } catch {}
+  },
+  /// beim Ausschalten vergessen — ein erneutes Einschalten richtet wieder ein
+  forgetInstalled(key) { const d = this.installedSet(); d.delete(key); try { localStorage.setItem(this.installedKey(), JSON.stringify([...d])) } catch {} },
+
   ctx(key) {
     const p = this.list.find(x => x.key === key)
     const base = `/api/plugins/${key}/data/`

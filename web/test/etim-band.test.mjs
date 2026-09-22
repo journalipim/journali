@@ -181,3 +181,18 @@ test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt (Taloan, 2
   assert.ok(calls.some(([p, m]) => /\/groups$/.test(p) && m === 'PUT'), 'Gruppe anhängen schreibt')
   NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
 })
+
+test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen (Taloan, 22.09.)', async () => {
+  const mod = await import('../../plugins/etim/entry.js')
+  const calls = []
+  const groups = MODEL.groups; MODEL.groups = groups.filter(g => g.key !== 'etim')   // Gruppe fehlt im Modell
+  const rootRow = { id: 'g-root', role: 'group', label: 'Mastertree', parent: null, groups: '' }
+  TREE.push(rootRow); const g1 = TREE.find(r => r.id === 'g-1'); g1.parent = 'g-root'
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return {} } },
+    tree: { ...ctx.tree, rows: TREE, byId: new Map(TREE.map(r => [r.id, r])), load: async () => {} }, store: { ...ctx.store, poll: async () => {} } }
+  await mod.default.install(ctx2)
+  assert.ok(calls.some(([p, b, m]) => p === '/api/model/groups/etim' && m === 'PUT'), 'Gruppe angelegt: ' + JSON.stringify(calls.map(c => c[0])))
+  const attach = calls.find(([p, , m]) => p === '/api/nodes/g-root/groups' && m === 'PUT')
+  assert.ok(attach, 'an die Wurzel gehängt'); assert.deepEqual(attach[1].groups, ['etim'])
+  MODEL.groups = groups; g1.parent = null; TREE.splice(TREE.indexOf(rootRow), 1)
+})

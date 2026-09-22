@@ -958,7 +958,24 @@ async function mount(root, ctx) {
   return () => {}
 }
 
+// Einmal beim Einschalten (Taloan, 22.09.: „beim Aktivieren wird geprüft, ob die Attributgruppe etim existiert — sonst anlegen und an
+// den MasterTree hängen; dann braucht kein Knoten mehr einen Gruppe-anlegen-Knopf“). Die Attribute selbst entstehen erst mit der
+// ersten Klasse — die Gruppe allein kostet nichts: die ETIM-Attribute tragen Bedingungen und gelten nur, wo ihre Klasse gilt.
+async function install(ctx) {
+  const { api, store, tree } = ctx; const ops = modelOps(ctx)
+  await cache.loaded; if (!tree.loaded) await tree.load()
+  await ops.ensureGroup(); await store.poll(true)
+  const roots = tree.rows.filter(r => !r.parent && r.role !== 'rubric')
+  for (const root of roots) {
+    const have = (root.groups ?? '').split(',').filter(Boolean)
+    if (have.includes(groupKey())) continue
+    await api.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, groupKey()] }, 'PUT')
+  }
+  await store.poll(true); await tree.load?.()
+}
+
 export default {
+  install,
   views: [
     { path: 'etim', label: 'ETIM', icon: '⌗', topic: 'classification', hint: 'ETIM: Quelle und Versionen, Klassen in Gebrauch, Attribute, Zuordnung ETIM-Attribut ← Attribut mit ƒ — bedient wird am Knoten (Band ⌗ ETIM)', mount },
     { path: 'coverage', label: 'ETIM-Attribute', icon: '⌗', topic: 'analysis', hint: 'Datenanalyse wie DPP/PPWR: welche ETIM-Attribute der ETIM-Klassen fehlen — Attribute anlegen, Vorschläge aus Regeln, KI oder Recherche im Internet, übernehmen', mount: async (root, ctx) => { await cache.loaded; return ctx.compliance.mount(root, ctx, buildCatalog(ctx)) } },

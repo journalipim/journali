@@ -48,6 +48,7 @@ async function toggle(p) {
   if (!p.enabled) { const m = missing(p.key); if (m.length) { store.toast(`braucht ${m.join(', ')} — zuerst einschalten`); return } await act(`/api/plugins/${p.key}/enable`); return }
   const dep = plugins.dependents(p.key).filter(k => plugins.list.find(x => x.key === k)?.enabled)
   if (dep.length && !await dialog.confirm({ title: `${label(p.manifest) || p.key} deaktivieren?`, warn: `Damit aus: ${dep.join(', ')}`, ok: 'Deaktivieren' })) return
+  plugins.forgetInstalled(p.key)   // beim nächsten Einschalten wieder einrichten (install)
   await act(`/api/plugins/${p.key}/disable`)
 }
 
