@@ -14,6 +14,8 @@
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
 //   install(ctx): einmal beim Einschalten des Plugins (Taloan, 22.09.) — legt an, was das Plugin braucht (ETIM: Gruppe und
 //                Klassenattribut, an MasterTree gehängt). Läuft nicht bei jedem Seitenaufruf; der Lauf wird je Plugin gemerkt.
+//   nodeViews:   [{ key, label(row, ctx) | label, roles?, items(row, ctx) → [{ group, order: [attrKey] }] | null }]   flüchtige
+//                Attributsicht: erscheint in der Sichtauswahl des Knotens, steht aber nicht im Modell (Taloan, 22.09.2026)
 //   nodeBands:   [{ key, label, icon?, roles?, mount({ head, body }, nodeId, ctx) → unmount? }]   Band in der Knotenansicht (Taloan, 22.09.:
 //                „die Bedienung erfolgt beim Gegenstand“ — ETIM-Stand am Knoten; head = Zeile mit Zahlen und Knöpfen, body = Details)
 //   Manifest process {…} oder processes: [{ key, label, command, args, params, description }] — mehrere Dienste je Plugin (Taloan); ein Job nennt plugin + service
@@ -46,6 +48,7 @@ export const plugins = reactive({
   importers: [],          // { key (Plugin), source (importer.key), label, accept, parse }
   checks: [],             // { key (Plugin), check, label, run }
   nodeBands: [],          // { key (Plugin), band (band.key), label, icon, roles, mount }
+  nodeViews: [],          // { key (Plugin), view (view.key), label, roles, items(row, ctx) } — flüchtig, nie im Journal
 
   loading: null,          // laufender load() — wer gleichzeitig ruft, wartet darauf (sonst doppelte Einträge in der Leiste)
   load() { return this.loading ??= this._load().finally(() => { this.loading = null }) },
@@ -62,7 +65,7 @@ export const plugins = reactive({
     }
     // dann die Beiträge NEU sammeln (Taloan, 22.09.: Plugin aus und wieder an — der Abschnitt kam nicht zurück, weil die
     // Beiträge einmal herausgefiltert waren und das schon geladene Modul übersprungen wurde)
-    this.views = []; this.nodeActions = []; this.importers = []; this.checks = []; this.nodeBands = []
+    this.views = []; this.nodeActions = []; this.importers = []; this.checks = []; this.nodeBands = []; this.nodeViews = []
     for (const p of order) {
       if (!this.active(p.key)) continue
       const mod = this.modules.get(p.key); if (!mod) continue
@@ -71,6 +74,7 @@ export const plugins = reactive({
       for (const i of mod.importers ?? []) this.importers.push({ key: p.key, source: i.key, ...i })
       for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })
       for (const b of mod.nodeBands ?? []) this.nodeBands.push({ key: p.key, band: b.key, ...b })
+      for (const v of mod.nodeViews ?? []) this.nodeViews.push({ key: p.key, view: v.key, ...v })
     }
     // install() der frisch eingeschalteten Plugins (Taloan, 22.09.: „beim Aktivieren prüfen, ob die Attributgruppe existiert“)
     await this.installNew()

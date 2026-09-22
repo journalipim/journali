@@ -13,6 +13,7 @@ import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
+import { plugins } from '../plugins.js'
 import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
@@ -112,7 +113,22 @@ watch(() => [node.value?.source, columns.value.length, pubStand.value?.stand], l
 const headGroups = computed(() => { const out = []; for (const c of columns.value) { const g = out.find(x => x.channel === c.channel); g ? g.n++ : out.push({ channel: c.channel, n: 1 }) } return out })
 
 // ---- Attributsicht je Knotentyp
-const views = computed(() => (model.value?.views ?? []).filter(v => v.level === node.value?.role))
+// Sichten: die aus dem Modell und die flüchtigen der Plugins (Taloan, 22.09.2026: ad hoc, nicht im Journal —
+// ein Plugin sagt je Knoten, welche Gruppen und Attribute in welcher Reihenfolge zu sehen sind)
+const pluginViews = computed(() => {
+  const row = tree.byId.get(props.id); if (!row || !node.value) return []
+  const out = []
+  for (const v of plugins.nodeViews ?? []) {
+    if (v.roles && !v.roles.includes(node.value.role)) continue
+    let items = null
+    try { items = v.items?.(row, { node: node.value, model: model.value, tree }) } catch { items = null }
+    if (!items?.length) continue
+    const label = typeof v.label === 'function' ? v.label(row, { node: node.value, model: model.value }) : v.label
+    out.push({ key: `~${v.key}:${v.view}`, level: node.value.role, label: { de: label }, items, plugin: v.key })
+  }
+  return out
+})
+const views = computed(() => [...(model.value?.views ?? []).filter(v => v.level === node.value?.role), ...pluginViews.value])
 const view = computed(() => views.value.find(v => v.key === store.viewKey[node.value?.role]) ?? null)
 // „komplett“ ordnet nach der Standardsicht des Knotentyps (defaultview_<rolle>), wenn es sie gibt — sonst alphabetisch.
 const orderView = computed(() => view.value ?? views.value.find(v => v.key === 'defaultview_' + node.value?.role) ?? null)

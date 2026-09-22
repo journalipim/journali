@@ -22,3 +22,29 @@ test('jede .vue-Datei importiert, was sie aus Vue benutzt', () => {
   }
   assert.deepEqual(misses, [], 'benutzt, aber nicht importiert')
 })
+
+// Dasselbe für die eigenen Module (Taloan, 22.09.2026: „plugins is not defined“ — die Ansicht stürzte ab, weil ein
+// Modul benutzt, aber nicht importiert war; der Bau merkt das nicht). Geprüft wird auf `name.` im Script.
+const MODULES = ['store', 'api', 'tree', 'dialog', 'menu', 'plugins', 'ai', 'lists', 'transform', 'mapper']
+
+test('jede .vue-Datei importiert die eigenen Module, die sie benutzt', () => {
+  const misses = []
+  for (const f of walk(new URL('../src', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'))) {
+    const s = fs.readFileSync(f, 'utf8')
+    const a = s.indexOf('<script'), b = s.indexOf('</script>')
+    if (a < 0) continue
+    const script = s.slice(a, b < 0 ? undefined : b)
+    // Import-Zeilen und Kommentare weg — sonst trifft „lists.“ die Datei ../lists.js in ihrem eigenen Import
+    const code = script.replace(/^\s*import[^\n]*$/gm, '').replace(/\/\/[^\n]*/g, '')
+    for (const name of MODULES) {
+      // importiert? (als Name oder umbenannt: `dialog as ask`)
+      if (new RegExp('import\\s*\\{[^}]*\\b' + name + '\\b[^}]*\\}').test(script)) continue
+      // eigene Deklaration im Modul selbst (store.js benutzt store nicht als Import)
+      if (new RegExp('(const|let|function)\\s+' + name + '\\b').test(script)) continue
+      // benutzt? `name.etwas`, aber nicht als Eigenschaft (`x.store.`) oder in einer Zeichenkette
+      const used = new RegExp('(^|[^.\\w\'"`])' + name + '\\.[a-zA-Z_$]', 'm').test(code)
+      if (used) misses.push(`${path.basename(f)}: ${name}`)
+    }
+  }
+  assert.deepEqual(misses, [], 'eigenes Modul benutzt, aber nicht importiert')
+})

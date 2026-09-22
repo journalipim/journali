@@ -143,7 +143,7 @@ test('Gruppe ganz gelöscht: der Knopf legt sie neu an (Taloan, 22.09.: „ich h
   MODEL.groups = groups; NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
 })
 
-test('Attributsicht je Klasse (Taloan, 22.09.): je Rolle eine Sicht mit genau den Attributen der Klasse', async () => {
+test('Attributsicht je Klasse ist flüchtig (Taloan, 22.09.): entsteht beim Aufrufen, steht nie im Modell', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const put = []
   const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { put.push([p, b, m]); return {} } } }
@@ -151,21 +151,20 @@ test('Attributsicht je Klasse (Taloan, 22.09.): je Rolle eine Sicht mit genau de
   const head = mkEl('h2'), body = mkEl('div')
   await band.mount({ head, body }, 'p-1', ctx2)
   await new Promise(r => setTimeout(r, 30))
-  // fehlt die Sicht, zieht das Band sie beim Öffnen nach (Taloan, 22.09.: „noch immer keine View für die Klasse“)
-  const auto = put.filter(([p]) => p.startsWith('/api/model/views/'))
-  assert.equal(auto.length, 3, 'beim Öffnen je Rolle eine Sicht — ohne Klick')
-  // der Knopf „◫ Sicht“ tut dasselbe noch einmal und wählt sie am Knoten
-  const find = e => typeof e === 'string' ? null : (e.tag === 'button' && (e.kids ?? []).includes('◫ Sicht') ? e : (e.kids ?? []).map(find).find(Boolean))
-  const btn = find(body); assert.ok(btn, 'Knopf ◫ Sicht fehlt')
-  await btn.onclick?.({ preventDefault() {}, stopPropagation() {} })
-  const views = put.filter(([p]) => p.startsWith('/api/model/views/'))
-  assert.equal(views.length, 6, 'nach dem Knopf noch einmal je Rolle (group, product, variant)')
-  const [path, body2] = views[0]
-  assert.match(path, /etim_ec004718_(group|product|variant)/)
-  assert.equal(body2.level, 'group')
-  assert.match(body2.label.de, /⌗ EC004718 Laptop/)
-  const all = body2.items.flatMap(i => i.order)
-  assert.ok(all.includes('etim_class') && all.includes('ef008851') && all.includes('tastatur_name'), JSON.stringify(body2.items))
+  // nichts davon geht ins Journal — im Modell stehen nur Sichten, die der Anwender anlegt
+  assert.deepEqual(put.filter(([p]) => p.startsWith('/api/model/views/')), [], 'keine Sicht geschrieben')
+
+  // der Beitragspunkt liefert sie stattdessen je Knoten
+  const nv = mod.default.nodeViews?.[0]
+  assert.ok(nv, 'nodeViews fehlt')
+  const row = { id: 'p-1', role: 'product' }
+  const model = ctx.store.model
+  assert.match(nv.label(row, { model }), /⌗ EC004718 Laptop/)
+  const items = nv.items(row, { model })
+  const all = items.flatMap(i => i.order)
+  assert.ok(all.includes('etim_class') && all.includes('ef008851') && all.includes('tastatur_name'), JSON.stringify(items))
+  // ohne Klasse keine Sicht
+  assert.equal(nv.items({ id: 'gibtsnicht', role: 'product' }, { model }), null)
 })
 
 test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt (Taloan, 22.09.: „api is not defined“)', async () => {

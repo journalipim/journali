@@ -201,26 +201,22 @@ function modelOps(ctx) {
   // Attributen dieser Klasse, in der Reihenfolge der Klasse — je Rolle eine Sicht (eine Sicht gilt für einen Knotentyp).
   // Die Sicht wird bei jeder Zuweisung neu geschrieben; zugeordnete Attribute stehen in ihrer eigenen Gruppe.
   const viewKeyOf = (code, role) => `etim_${code.toLowerCase()}_${role}`
-  async function ensureViews(cls) {
+  /// Die Gruppen und Attribute einer Klasse in Klassenreihenfolge — die Form einer Attributsicht, aber nur im Arbeitsspeicher.
+  function viewItems(cls) {
     if (!cls) return []
     const defs = new Map((model().attributes ?? []).map(a => [a.key, a]))
     const keys = cls.features.map(f => mapEntry(cache.map, f.code).key).filter(k => defs.has(k))
     const byGroup = new Map()
     for (const k of [cache.settings.classAttr, ...keys]) { const g = defs.get(k)?.group; if (!g) continue; if (!byGroup.has(g)) byGroup.set(g, []); if (!byGroup.get(g).includes(k)) byGroup.get(g).push(k) }
-    const items = [...byGroup].map(([group, order]) => ({ group, order }))
-    if (!items.length) return []
-    const label = { de: `⌗ ${cls.code} ${nameOf(cls.name, 'de') || ''}`.trim(), en: `⌗ ${cls.code} ${nameOf(cls.name, 'en') || ''}`.trim() }
-    const out = []
-    for (const role of FEATURE_LEVELS) {
-      const key = viewKeyOf(cls.code, role)
-      const have = (model().views ?? []).find(v => v.key === key)
-      // eine Sicht dieses Schlüssels, die nicht von uns stammt (anderer Name), bleibt unangetastet
-      if (have && !String(have.label?.de ?? '').startsWith('⌗ ')) { store.toast(`⚠ Sicht ${key} gehört schon jemand anderem — übersprungen`); continue }
-      await put(`/views/${key}`, { key, label, items, level: role }); out.push(key)
-    }
-    return out
+    return [...byGroup].map(([group, order]) => ({ group, order }))
   }
-  return { ensureGroup, ensureClassAttr, createFeature, hasAttr, ensureViews, viewKeyOf }
+  /// Alte, fest angelegte Klassensichten wegräumen — im Modell stehen nur Sichten, die der Anwender anlegt (Taloan, 22.09.2026).
+  async function dropOldViews() {
+    const mine = (model().views ?? []).filter(v => /^etim_ec\d{6}_(group|product|variant)$/.test(v.key) && String(v.label?.de ?? '').startsWith('⌗ '))
+    for (const v of mine) await api.del(`/api/model/views/${encodeURIComponent(v.key)}`).catch(() => {})
+    return mine.length
+  }
+  return { ensureGroup, ensureClassAttr, createFeature, hasAttr, viewItems, dropOldViews, viewKeyOf }
 }
 /// Alle ETIM-Attribute der übernommenen Klassen, je Code einmal (Werte vereinigt), mit den Klassen, in denen es vorkommt
 function allFeatures() {
@@ -371,7 +367,6 @@ async function classDialog(nodeId, ctx, onDone = null) {
       let n = 0
       for (const f of c.features) { if (!ops.hasAttr(attrKeyOf(f.code))) { say(`lege an ${++n}: ${featureText(f, locale)} …`); await ops.createFeature(f); await store.poll(true) } else await ops.createFeature(f) }
       await store.poll(true); await tree.load()
-      await ops.ensureViews(c); await store.poll(true)   // Attributsicht je Klasse (ein Reiter am Knoten mit genau diesen Attributen)
       // Prüfung nach dem Zuweisen: ist alles da? Sonst sagt die Meldung, was fehlt (und das Band bietet den Knopf dazu)
       const node = await api.get(`/api/nodes/${encodeURIComponent(atId)}`).catch(() => null)
       const r = readiness({ cls: c, map: mergedMap(), hasAttr: ops.hasAttr, groupExists: (model().groups ?? []).some(g => g.key === groupKey()), groupOn: (node?.groups ?? []).some(g => g.key === groupKey() && g.active !== false) })
@@ -559,14 +554,11 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     head.textContent = '· …'
     let S; try { S = await stageData(ctx, nodeId, locale) } catch (e) { head.textContent = '· ✗ ' + e.message; return }
     if (gone || !S) return
-    // Sicht zur Klasse: fehlt sie für diesen Knotentyp, einmal nachziehen — sonst steht die Klasse da, aber kein Reiter dazu
-    if (S.cls && store.can?.('model') !== false && !viewsDone.has(S.cls.code)) {
-      const want = ops.viewKeyOf(S.cls.code, S.row.role)
-      if (!(store.model?.views ?? []).some(v => v.key === want)) {
-        viewsDone.add(S.cls.code)
-        try { await ops.ensureViews(S.cls); await store.poll(true) } catch { /* ohne Modellrecht bleibt es beim Knopf ◫ Sicht */ }
-        if (gone) return
-      } else viewsDone.add(S.cls.code)
+    // Klassensichten früherer Fassungen einmal wegräumen: die Sicht ist jetzt flüchtig (nodeViews), im Modell hat sie nichts verloren
+    if (!viewsDone.has('cleanup') && store.can?.('model') !== false && (store.model?.views ?? []).some(v => /^etim_ec\d{6}_/.test(v.key))) {
+      viewsDone.add('cleanup')
+      try { const n = await ops.dropOldViews(); if (n) { await store.poll(true); store.toast(`${n} feste ETIM-Sichten aufgeräumt — die Klassensicht entsteht jetzt beim Öffnen`, 'ok') } } catch { /* ohne Modellrecht bleiben sie stehen */ }
+      if (gone) return
     }
     head.textContent = ''
     const again = () => render()
@@ -603,8 +595,8 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     if (!S.groupOn) line.append(chip(S.groupExists ? `⚠ Gruppe ${groupKey()} gilt hier nicht` : `⚠ Gruppe ${groupKey()} fehlt im Modell`, 'warn', `die Attributgruppe ${groupKey()} hängt an keinem Knoten des Pfads — deshalb gilt kein ETIM-Attribut an diesem Knoten; „Gruppe anhängen“ behebt es`))
     line.append(...[el('span', { class: 'muted' }, '·'), assignBtn, clearBtn, attachBtnEl,
       el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der ETIM-Attribute dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
-      el('button', { class: 'x', title: `Attributsicht „⌗ ${code}“ aufbauen und an diesem Knoten wählen — ein Reiter mit genau den Attributen dieser Klasse`, onclick: async () => {
-        try { await ops.ensureViews(S.cls); await store.poll(true); const k = ops.viewKeyOf(code, S.row.role); store.viewKey = { ...store.viewKey, [S.row.role]: k }; store.save?.(); store.toast(`◫ ⌗ ${code}`, 'ok'); ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) } catch (e) { store.toast(e.message) }
+      el('button', { class: 'x', title: `Attributsicht „⌗ ${code}“ an diesem Knoten wählen — ein Reiter mit genau den Attributen dieser Klasse (entsteht beim Öffnen, steht nicht im Modell)`, onclick: async () => {
+        try { const k = '~etim:class'; store.viewKey = { ...store.viewKey, [S.row.role]: k }; store.save?.(); store.toast(`◫ ⌗ ${code}`, 'ok'); ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) } catch (e) { store.toast(e.message) }
       } }, '◫ Sicht'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
@@ -1057,6 +1049,17 @@ async function install(ctx) {
   await store.poll(true); await tree.load?.()
 }
 
+/// Die Klasse, die an einer Zeile gilt (eigen oder geerbt) — aus dem Cache, den das Plugin ohnehin führt
+function classOfRow(row) { const v = cache.classOf?.get(row?.id); return v ? cache.classes.get(v.code) ?? null : null }
+/// Gruppen und Attribute einer Klasse in Klassenreihenfolge — die Form einer Attributsicht, nur im Arbeitsspeicher
+function classViewItems(cls, model) {
+  const defs = new Map((model?.attributes ?? []).map(a => [a.key, a]))
+  const keys = cls.features.map(f => mapEntry(cache.map, f.code).key).filter(k => defs.has(k))
+  const byGroup = new Map()
+  for (const k of [cache.settings.classAttr, ...keys]) { const g = defs.get(k)?.group; if (!g) continue; if (!byGroup.has(g)) byGroup.set(g, []); if (!byGroup.get(g).includes(k)) byGroup.get(g).push(k) }
+  return [...byGroup].map(([group, order]) => ({ group, order }))
+}
+
 export default {
   install,
   views: [
@@ -1065,6 +1068,15 @@ export default {
   ],
   nodeBands: [
     { key: 'etim', label: 'ETIM', icon: '⌗', roles: ['group', 'product', 'variant'], mount: bandMount },   // Klasse · Attribute · Daten am Knoten (Taloan, 22.09.)
+  ],
+  // Flüchtige Attributsicht (Taloan, 22.09.2026): am Knoten steht „⌗ EC003205 Universal contact adhesive“ in der Auswahl —
+  // gebaut aus der Klasse, die dort gilt, in Klassenreihenfolge. Nichts davon geht ins Journal.
+  nodeViews: [
+    {
+      key: 'class', roles: ['group', 'product', 'variant'],
+      label: (row, ctx) => { const c = classOfRow(row); return c ? `⌗ ${c.code} ${nameOf(c.name, ctx?.model?.masterLocale ?? 'de') || ''}`.trim() : null },
+      items: (row, ctx) => { const c = classOfRow(row); return c ? classViewItems(c, ctx?.model) : null },
+    },
   ],
   nodeActions: [
     // die zugewiesene Klasse (auch geerbt) als eigener Punkt (Taloan, 22.09.): Klick → Knotenansicht, direkt in der Attributgruppe (Reiter oder Liste)
