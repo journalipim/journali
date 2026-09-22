@@ -2,8 +2,8 @@
   "key": "etim",
   "version": "2.0.0",
   "label": {
-    "de": "ETIM",
-    "en": "ETIM"
+    "de": "Klassifikation: ETIM",
+    "en": "Classification: ETIM"
   },
   "description": {
     "de": "ETIM-Klassifikation (Klasse → ETIM-Attribute → Werte, vom Knoten aus): Freigaben von etim-international.com holen (Vorschlagsliste oder URL, öffentlich) oder eine IXF-3.1-Datei lesen — alle Klassen kommen ins Journal (Sprachen des Modells), Versionen werden gemerkt. Die Klasse steht als Attribut am Produkt (Werteliste), je ETIM-Attribut Zuordnung auf ein vorhandenes Attribut mit ƒ (Einheit, Ja/Nein, Werteliste) oder ein eigenes Attribut in der Gruppe ETIM. Werte in der Subitems-Tabelle. Prüfregel in ✓ Datenqualität. Liefert die ETIM-Attribute nach ETIM-BMEcat-Guideline 5.0 an ‹› Vorlagen-Export (BMEcat-Profil auf einem Publikationsbaum).",

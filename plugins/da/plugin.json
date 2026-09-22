@@ -2,8 +2,8 @@
   "key": "da",
   "version": "1.1.0",
   "label": {
-    "de": "Datenanalyse",
-    "en": "Data analysis"
+    "de": "Qualität: Datenanalyse",
+    "en": "Quality: Data analysis"
   },
   "description": {
     "de": "Basis-Plugin der Gruppe Datenanalyse. Grundfunktion: Datenqualität — prüft einen Teilbaum gegen Regeln (Pflicht, Muster, Zahlen, Listenwerte, Leerzeichen, leeres HTML, SKU doppelt, Übersetzung fehlt/gleich, Formel ohne Ergebnis) und listet die Funde mit Sprung zum Knoten. Weitere Prüfungen liefern Plugins über checks (dpp, ppwr; requires: da).",

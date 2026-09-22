@@ -2,8 +2,8 @@
   "key": "derive",
   "version": "1.0.0",
   "label": {
-    "de": "Vorschauen rechnen",
-    "en": "Render previews"
+    "de": "Werkzeug: Vorschauen rechnen",
+    "en": "Tool: Derive previews"
   },
   "description": {
     "de": "Rechnet für jedes Bild die Ableitungen nach den Vorschau-Presets (Einstellungen → Medien: Kachel, Web, Druck …) voraus und legt sie im Medienspeicher ab — nie live beim Anzeigen (Taloan: 200-MB-TIFFs aus der Konstruktion). Läuft als Prozess (Node + sharp/libvips: TIFF, PNG, JPEG, WebP, AVIF, auch riesige Bilder); der Server stößt ihn nach jedem Hochladen an, sonst von Hand oder nach Zeitplan. Einmalig im Plugin-Verzeichnis: npm install.",

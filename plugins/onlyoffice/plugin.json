@@ -2,8 +2,8 @@
   "key": "onlyoffice",
   "version": "0.1.0",
   "label": {
-    "de": "OnlyOffice-Plugin",
-    "en": "OnlyOffice plugin"
+    "de": "Pflege: OnlyOffice",
+    "en": "Editing: OnlyOffice"
   },
   "description": {
     "de": "Seitenleiste in OnlyOffice Tabellen: Knoten suchen, Subitems oder alle Varianten darunter als Tabelle ins Blatt laden (Sicht, Sprache), in OnlyOffice pflegen, dann Speichern schreibt nur die geänderten Zellen als einen Stapel. Installieren: Plugins → Plugin-Manager → Plugin hinzufügen → journali.plugin (unter /plugins/onlyoffice/package.plugin).",

@@ -2,8 +2,8 @@
   "key": "ppwr",
   "version": "1.0.0",
   "label": {
-    "de": "PPWR — Verpackung",
-    "en": "PPWR — Verpackung"
+    "de": "Qualität: Verpackung (PPWR)",
+    "en": "Quality: Packaging (PPWR)"
   },
   "description": {
     "de": "Prüft Verpackungsdaten gegen die Verpackungsverordnung (EU) 2025/40: Material und Bestandteile, Rezyklat, Recyclingfähigkeitsklasse, Mehrweg, Leerraum, Stoffgrenzen (Pb+Cd+Hg+Cr(VI) ≤ 100 mg/kg), Kennzeichnung, Register. Zuordnung, fehlende Attribute anlegen, Teilbaum prüfen, Vorschläge regelbasiert oder mit die KI.",

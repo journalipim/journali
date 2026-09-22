@@ -2,8 +2,8 @@
   "key": "excel",
   "version": "0.1.0",
   "label": {
-    "de": "Excel-Add-in",
-    "en": "Excel add-in"
+    "de": "Pflege: Excel-Add-in",
+    "en": "Editing: Excel add-in"
   },
   "description": {
     "de": "Aufgabenbereich in Excel (Office.js): Knoten suchen, Subitems oder alle Varianten darunter als Tabelle ins Blatt laden (Sicht, Sprache), in Excel pflegen — ausfüllen, Reihen, Formeln, Suchen & Ersetzen —, dann Speichern schreibt nur die geänderten Zellen als einen Stapel ins Journal. Spricht direkt mit /api; Manifest unter /plugins/excel/manifest.xml.",

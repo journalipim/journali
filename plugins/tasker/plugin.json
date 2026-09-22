@@ -2,8 +2,8 @@
   "key": "tasker",
   "version": "1.3.0",
   "label": {
-    "de": "Jobs",
-    "en": "Jobs"
+    "de": "Werkzeug: Jobs",
+    "en": "Tool: Jobs"
   },
   "description": {
     "de": "Basis-Plugin der Gruppe Jobs. Grundfunktion: Jobs im Server als Kindprozesse, unabhängig vom Browser — regelmäßig (cron) oder von Hand; anlegen, überwachen, Logs lesen; Geheimnisse bleiben beim Server. Prozess-Plugins (backup, export, json, ixp, datasheet) hängen daran (requires: tasker).",

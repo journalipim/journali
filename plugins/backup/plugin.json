@@ -2,14 +2,14 @@
   "key": "backup",
   "version": "1.0.0",
   "label": {
-    "de": "Sicherung (JSON-Rohdaten)",
-    "en": "Backup (raw JSON)"
+    "de": "Werkzeug: Sicherung",
+    "en": "Tool: Backup"
   },
   "description": {
     "de": "Sichert einen Teilbaum (oder alle Wurzeln) als Rohdaten-JSON in ein Verzeichnis — dasselbe Format wie „JSON: Rohdaten sichern“, mit dem JSON-Import wiederherstellbar. Läuft als Prozess: von Hand über ⌁ Plugins oder als Job (Basis-Plugin tasker), z. B. jede Nacht; behält die letzten n Dateien, gzip-komprimiert (.json.gz).",
     "en": "Saves a subtree (or all roots) as raw JSON into a directory — restorable with the JSON import. Runs as a process, manually or as a scheduled job; keeps the last n files."
   },
-  "kind": "output",
+  "kind": "tool",
   "runs": "process",
   "requires": [
     "tasker"

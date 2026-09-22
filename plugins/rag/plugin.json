@@ -2,8 +2,8 @@
   "key": "rag",
   "version": "1.0.0",
   "label": {
-    "de": "RAG-Export",
-    "en": "RAG export"
+    "de": "Export: RAG",
+    "en": "Export: RAG"
   },
   "description": {
     "de": "Exportiert je Knoten ein sauberes, zitierfähiges Dokument für Vektor-Stores und RAG-Dienste: Markdown je Knoten und nodes.jsonl mit Id, Pfad, SKU, Sprache, Werten, freigegebener Version und Belegen — als Job, regelmäßig, in ein Verzeichnis. Kein Datenbankzugriff von aussen nötig.",
