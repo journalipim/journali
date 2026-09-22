@@ -308,35 +308,44 @@ async function classDialog(nodeId, ctx, onDone = null) {
 
   // wirksame Klasse am Knoten (eigen oder geerbt)
   const { ownCode, inherited, current } = await classAt(api, key, nodeId)
+  // Zone „Ziel“ (Taloan, 22.09.): hier oder an der Gruppe darüber — eine Entscheidung, die im Dialog bleibt (kein Sprung in einen anderen Dialog)
+  const parentRow = row.parent ? tree.byId.get(row.parent) : null
+  const canUp = !!parentRow && parentRow.role === 'group'
+  let target = nodeId
+  // Die Kette vom obersten Knoten bis hierher (Taloan, 22.09.: „warum genau einer darüber?“) — je Ebene: Produkte darunter,
+  // Untergruppen, wie viele schon eine eigene Klasse haben; empfohlen ist die höchste Ebene ohne Untergruppen und ohne Widerspruch.
+  const chain = [...tree.ancestors(nodeId), row]
+  const belowOf = id => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(id); return out }
+  const levelInfo = chain.map(n => {
+    const below = n.id === nodeId && row.role !== 'group' ? [row, ...belowOf(n.id)] : belowOf(n.id)
+    const own = below.filter(x => cache.classOf.get(x.id)?.own).length
+    return { node: n, products: below.length, groups: tree.kids(n.id).filter(k => k.role === 'group').length, own }
+  })
+  let rec = levelInfo.length - 1
+  for (let k = 0; k < levelInfo.length; k++) if (levelInfo[k].products > 0 && levelInfo[k].groups === 0 && levelInfo[k].own === 0) { rec = k; break }
+  target = levelInfo[rec].node.id
 
-  // Schritt 2 (Taloan, 20.09.: „lade die Attribute der Klasse → zuweisen ja/nein → fertig“): zeigen, was passiert, dann tun, dann fertig
-  async function levels(code) {
-    const chain = [...tree.ancestors(nodeId), row]   // Wurzel … hier
-    const top = chain[0]
-    let vals = new Map()
-    try { const t = await api.get(`/api/nodes/${encodeURIComponent(top.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`); for (const r of t.rows ?? []) vals.set(r.row.id, String(r.values?.[key]?.value ?? '').toUpperCase()) } catch { }
-    const under = id => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(id); return out }   // Produkte und Varianten — Klassen können an beiden stehen
-    const subgroups = id => tree.kids(id).filter(k => k.role === 'group').length
-    const out = chain.map(n => { const ns = n.role === 'group' ? under(n.id) : [n, ...under(n.id)]; const other = ns.filter(p => { const v = vals.get(p.id); return v && v !== code }).length; const same = ns.filter(p => vals.get(p.id) === code).length; return { node: n, products: ns.filter(x => x.role === 'product').length || ns.length, other, same, groups: n.role === 'group' ? subgroups(n.id) : 0 } })
-    // Empfehlung (Taloan, 20.09.): eine Klasse gilt für eine Sorte Produkt — also die höchste Ebene, die nur Produkte enthält (keine Untergruppen)
-    // und keinen Widerspruch hat; eine Gruppe mit Untergruppen (Wurzel, „Hardware“) ist fast immer zu grob
-    let rec = out.length - 1; for (let i = 0; i < out.length; i++) if (out[i].other === 0 && out[i].products > 0 && out[i].groups === 0) { rec = i; break }
-    return { out, rec }
-  }
+  // Schritt 2 (Taloan, 22.09.): nur noch zeigen, was passiert, und zuweisen — das Ziel wurde oben gewählt
   async function assign(code) {
     const c = cache.classes.get(code); if (!c) return
+    const at = tree.byId.get(target) ?? row
     const missing = c.features.filter(f => !ops.hasAttr(attrKeyOf(f.code)))
-    body.innerHTML = ''; say('rechne Ebenen …')
-    const { out, rec } = await levels(code); say('')
-    let target = out[rec].node
-    const lvBtns = out.map((l, i) => el('button', { class: l.node.id === target.id ? 'primary' : '', title: `${l.products} Produkt${l.products === 1 ? '' : 'e'} darunter${l.other ? ` · ${l.other} mit anderer Klasse` : ''}${l.same ? ` · ${l.same} schon ${code}` : ''}${i === rec ? ' · Empfehlung' : ''}`, onclick: () => { target = l.node; lvBtns.forEach((b, k) => b.className = k === i ? 'primary' : ''); lvNote.textContent = noteOf(l, i) } }, `${ICON[l.node.role] ?? ''} ${l.node.id === nodeId ? 'hier' : l.node.label} `, el('span', { class: l.other ? 'neg' : l.groups ? 'warn' : 'muted', style: 'font-size:11px' }, `${l.products}${l.groups ? ` · ${l.groups} ▣` : ''}${l.other ? ` · ${l.other} ≠` : ''}`)))
-    const noteOf = (l, i) => l.other ? `⚠ ${l.other} Produkte darunter haben schon eine andere Klasse — ab hier wäre die Klasse zu grob; granularer setzen (weiter rechts).` : l.groups ? `⚠ ${l.groups} Untergruppen mit ${l.products} Produkten darunter — eine Klasse für alle? Meist zu grob: an den Produktgruppen setzen${i < out.length - 1 ? ' (weiter rechts)' : ' — dort Rechtsklick → ETIM prüfen'}.` : l.products > 1 ? `gilt für ${l.products} Produkte darunter (vererbbar)${i === rec ? ' — Empfehlung: die höchste Ebene ohne Untergruppen und ohne Widerspruch' : ''}` : l.products === 1 ? 'gilt für dieses eine Produkt' : 'keine Produkte darunter — die Klasse gilt, sobald welche kommen'
-    const lvNote = el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 8px' }, noteOf(out[rec], rec))
-    body.append(el('div', { style: 'font-size:14px;margin:6px 0' }, el('b', {}, `${code} ${nameOf(c.name, locale)}`), ` → ${ICON[row.role] ?? ''} ${row.label}`),
-      el('div', { class: 'muted', style: 'margin-bottom:8px' }, `${row.role === 'group' ? `Die Klasse wird an dieser Gruppe gesetzt und vererbt sich nach unten: die ${c.features.length} ETIM-Attribute gelten dann an allen Produkten und Varianten darunter.` : `Die Klasse wird an diesem Knoten gesetzt: die ${c.features.length} ETIM-Attribute gelten dann hier.`} ${missing.length ? `${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()}, nur an Produkt und Variante).` : 'Alle haben schon ein Attribut im Modell.'}`),
-      el('div', { class: 'scroll', style: 'max-height:40vh;border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:12px' }, ...c.features.map(f => el('div', {}, el('span', { class: 'mono muted' }, f.code), ' ', featureText(f, locale), el('span', { class: 'muted' }, ` · ${TYPE[f.type] ?? f.type}${ops.hasAttr(attrKeyOf(f.code)) ? '' : ' · neu'}`)))),
-      el('div', { style: 'margin-top:10px' }, el('div', { class: 'muted', style: 'font-size:12px' }, 'Gilt ab (Pfad von der Wurzel bis hier — Zahl: Produkte darunter · ▣ Untergruppen · ≠ mit anderer Klasse):'), el('div', { class: 'chips', style: 'margin:4px 0' }, ...lvBtns), lvNote),
-      el('div', { class: 'chips', style: 'margin-top:6px' }, el('button', { class: 'primary', onclick: () => doAssign(code, target.id) }, '✓ zuweisen'), el('button', { onclick: () => draw() }, 'zurück')))
+    const under = (() => { const out = []; const walk = x => { for (const k of tree.kids(x)) { if (k.role !== 'group') out.push(k); walk(k.id) } }; walk(at.id); return out })()
+    const others = under.filter(n => { const v = cache.classOf.get(n.id); return v && v.code !== code && v.own }).length
+    body.innerHTML = ''
+    body.append(
+      el('div', { style: 'font-size:14px;margin:6px 0' }, el('b', {}, `${code} ${nameOf(c.name, locale)}`), ` → ${ICON[at.role] ?? ''} ${at.label}`),
+      el('div', { class: 'muted', style: 'margin-bottom:8px' },
+        at.role === 'group'
+          ? `Die Klasse wird an dieser Gruppe gesetzt und vererbt sich nach unten: die ${c.features.length} ETIM-Attribute gelten dann an ${under.length} Produkten und Varianten darunter.`
+          : `Die Klasse wird an diesem Knoten gesetzt: die ${c.features.length} ETIM-Attribute gelten dann hier${under.length ? ` und an ${under.length} Varianten darunter` : ''}.`,
+        missing.length ? ` ${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()}).` : ' Alle haben schon ein Attribut im Modell.'),
+      others ? el('div', { class: 'warn', style: 'font-size:12px;margin-bottom:8px' }, `${others} Knoten darunter haben eine eigene Klasse — die behalten sie.`) : null,
+      el('div', { class: 'scroll', style: 'max-height:40vh;border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:12px' },
+        ...c.features.map(f => el('div', {}, el('span', { class: 'mono muted' }, f.code), ' ', featureText(f, locale), el('span', { class: 'muted' }, ` · ${TYPE[f.type] ?? f.type}${ops.hasAttr(attrKeyOf(f.code)) ? '' : ' · neu'}`)))),
+      el('div', { class: 'chips', style: 'margin-top:10px' },
+        el('button', { class: 'primary', onclick: () => doAssign(code, at.id) }, '✓ zuweisen'),
+        el('button', { onclick: () => draw() }, 'abbrechen')))
   }
   async function doAssign(code, atId = nodeId) {
     const c = cache.classes.get(code); const at = tree.byId.get(atId) ?? row
@@ -405,20 +414,28 @@ async function classDialog(nodeId, ctx, onDone = null) {
     }
     body.append(el('div', { class: 'chips', style: 'margin-bottom:8px' }, versionBar()))
     // Stand
+    // Zustand in einer Zeile, dann die Zielwahl — keine Kästen (Taloan, 22.09.)
     body.append(current
-      ? el('div', { style: 'margin-bottom:10px;padding:8px 10px;border:1px solid var(--pos);border-radius:6px;background:var(--accent-soft)' },
-          el('div', { style: 'display:flex;gap:10px;align-items:baseline;flex-wrap:wrap' }, el('span', { class: 'pos', style: 'font-weight:600' }, '✓ Klasse'), el('span', { class: 'mono', style: 'font-size:16px;font-weight:600' }, current), el('span', { style: 'font-size:16px' }, nameOf(cache.classes.get(current)?.name, locale) || ''), el('span', { class: 'muted' }, ownCode ? '· an diesem Knoten' : `· geerbt von ${inherited.from}`), el('span', { class: 'muted' }, `· ${cache.classes.get(current)?.features.length ?? '?'} ETIM-Attribute`)),
-          el('div', { class: 'chips', style: 'margin-top:6px' },
-            el('button', { class: 'primary', title: 'zum Knoten — das Band ⌗ ETIM zeigt Klasse, Attribute, Daten, Ausleitung', onclick: () => checkStep(current) }, '→ zum Knoten'), el('button', { style: 'display:none', onclick: () => run('bereite vor …', async () => { const c = cache.classes.get(current); for (const f of c.features) await ops.createFeature(f); await store.poll(true); await checkStep(current) }) }, '✓ ETIM-Attribute prüfen und füllen'),
-            el('button', { onclick: () => { close(); ctx.go?.(`/tree/${nodeId}`) } }, `${ICON[row.role] ?? ''} Werte am Knoten`),
-            el('span', { class: 'muted', style: 'font-size:12px' }, 'andere Klasse: unten wählen')))
-      : el('div', { style: 'margin-bottom:8px;padding:8px 10px;border:1px solid var(--warn);border-radius:6px' }, el('span', { class: 'warn', style: 'font-weight:600' }, 'Diesem Knoten ist noch keine ETIM-Klasse zugewiesen.'), el('span', { class: 'muted' }, ' Wählen Sie unten eine aus — über den Vorschlag, das Umfeld, die Suche oder die Gruppen.')))
-    if (current) body.append(el('div', { class: 'step-band', style: 'margin:4px 0' }, 'Andere Klasse wählen'))
-    if (row.parent && tree.byId.get(row.parent)?.role === 'group' && tree.kids(row.parent).length > 1)
-      body.append(el('div', { style: 'font-size:12px;margin-bottom:8px;padding:6px 8px;border:1px solid var(--accent);border-radius:6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap' },
-        el('span', {}, `Die Klasse an ${ICON.group} ${tree.byId.get(row.parent).label} gilt für alle ${tree.kids(row.parent).length} Knoten darunter, weil sie vererbt wird.`),
-        el('span', { class: 'grow' }),
-        el('button', { class: 'x', title: `den Dialog für ${tree.byId.get(row.parent).label} öffnen und die Klasse dort setzen`, onclick: () => { close(); classDialog(row.parent, ctx) } }, `↑ an ${tree.byId.get(row.parent).label} wählen`)))
+      ? el('div', { style: 'display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px' },
+          el('span', { class: 'pos', style: 'font-weight:600' }, '✓'), el('span', { class: 'mono', style: 'font-weight:600' }, current),
+          el('span', {}, nameOf(cache.classes.get(current)?.name, locale) || ''),
+          el('span', { class: 'muted', style: 'font-size:12px' }, ownCode ? 'an diesem Knoten' : `geerbt von ${inherited.from}`),
+          el('span', { class: 'muted', style: 'font-size:12px' }, `· ${cache.classes.get(current)?.features.length ?? '?'} ETIM-Attribute`),
+          el('span', { class: 'grow' }),
+          ownCode ? el('button', { class: 'x', title: 'die Klasse an diesem Knoten entfernen', onclick: async () => { try { await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: key, locale: null, channel: null, value: '', row: null }); await store.poll(true); loadUsed(); store.toast('✓ Klasse entfernt', 'ok'); close(); onDone?.(null) } catch (e) { store.toast(e.message) } } }, '✕ entfernen') : null)
+      : el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Noch keine ETIM-Klasse an diesem Knoten.'))
+    // 1 · Ziel: irgendein Knoten des Pfads — je Chip die Zahlen, ✦ ist die Empfehlung
+    {
+      const chips = levelInfo.map((l, k) => el('button', {
+        class: target === l.node.id ? 'primary' : '',
+        title: `${l.products} Produkt${l.products === 1 ? '' : 'e'}/Varianten darunter${l.groups ? ` · ${l.groups} Untergruppen` : ''}${l.own ? ` · ${l.own} mit eigener Klasse` : ''}${k === rec ? ' · Empfehlung: die höchste Ebene ohne Untergruppen und ohne Widerspruch' : ''}`,
+        onclick: () => { target = l.node.id; draw() },
+      }, `${ICON[l.node.role] ?? ''} ${l.node.label}`, el('span', { class: 'muted', style: 'font-size:11px' }, ` ${l.products}`), l.own ? el('span', { class: 'warn', style: 'font-size:11px' }, ` ≠${l.own}`) : null, k === rec ? el('span', { style: 'font-size:11px' }, ' ✦') : null))
+      const cur = levelInfo.find(l => l.node.id === target)
+      body.append(el('div', { class: 'chips', style: 'margin-bottom:4px' }, el('span', { class: 'muted', style: 'font-size:12px' }, 'Klasse setzen an'), ...chips),
+        el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, cur ? `Die Klasse gilt dann für ${cur.products} Produkte und Varianten unter ${cur.node.label}${cur.own ? ` — ${cur.own} davon haben eine eigene Klasse und behalten sie` : ''}.` : ''))
+    }
+
     // ✦ Vorschlag (KI, wenn da)
     const ai = ctx.ai; const suggest = el('div', { style: 'margin:4px 0' })
     if (ai?.available()) {
