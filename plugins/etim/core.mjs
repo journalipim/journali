@@ -187,8 +187,8 @@ export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
   const mapped = cls.features.length - noCol.length
   // je ETIM-Attribut ein Fund, Feld = das ETIM-Attribut (EF-Code) — beanstandet ist aus ETIM-Sicht das EF, das sich nicht füllen lässt (Taloan, 22.09.)
   const notHere = noCol.filter(f => inactive.includes(mapEntry(cfg.map, f.code).key)), noAttr = noCol.filter(f => !inactive.includes(mapEntry(cfg.map, f.code).key))
-  for (const f of notHere) out.push({ attribute: f.code, message: `${nameOf(f.name, cfg.locale)}: zugeordnetes Attribut ${mapEntry(cfg.map, f.code).key} ist an diesem Knoten nicht verfügbar`, title: 'das zugeordnete Attribut gibt es im Modell, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
-  for (const f of noAttr) out.push({ attribute: f.code, message: `${nameOf(f.name, cfg.locale)}: nicht zugeordnet — kein Attribut im Modell`, title: '⇄ zuordnen oder ＋ anlegen (Band ⌗ ETIM am Knoten)', severity: 'info' })
+  for (const f of notHere) out.push({ attribute: f.code, message: `zugeordnetes Attribut ${mapEntry(cfg.map, f.code).key} ist an diesem Knoten nicht verfügbar`, label: nameOf(f.name, cfg.locale), title: 'das zugeordnete Attribut gibt es im Modell, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
+  for (const f of noAttr) out.push({ attribute: f.code, message: 'nicht zugeordnet — kein Attribut im Modell', label: nameOf(f.name, cfg.locale), title: '⇄ zuordnen oder ＋ anlegen (Band ⌗ ETIM am Knoten)', severity: 'info' })
   if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} leer · ${filled} gefüllt`, title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat', severity: 'info' })
   return out
 }
