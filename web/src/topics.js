@@ -12,12 +12,13 @@ export const TOPICS = [
   { key: 'datasheet', to: '/datasheet', icon: '▤', label: 'Datenblatt' },
   { key: 'analysis', to: '/analysis', icon: '✓', label: 'Datenanalyse' },
   { key: 'translate', to: '/translate', icon: '⇄', label: 'Übersetzung' },   // Übersetzungsmanagement (Taloan, 21.09.: „haben wir noch gar nicht“)
+  { key: 'classification', to: '/classification', icon: '⌗', label: 'Klassifikation' },   // ETIM heute, ECLASS/UNSPSC morgen — Klasse → Merkmale → Werte (Taloan, 22.09.: kein Export)
   { key: 'tools', to: '/tools', icon: '⌁', label: 'Werkzeuge' },
   { key: 'jobs', to: '/jobs', icon: '⏱', label: 'Jobs' },
 ]
 // Gruppen, die ein eingeschaltetes Basis-Plugin besitzt (table: import, export; da: analysis; tasker: jobs) — immer in der Leiste
 export const baseTopics = computed(() => new Set(plugins.list.filter(p => p.enabled && Array.isArray(p.manifest?.base)).flatMap(p => p.manifest.base)))
-export const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', edit: 'tools', tool: 'tools' }
+export const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', edit: 'tools', tool: 'tools', classification: 'classification' }
 
 export function topicOf(key, explicit = null) {
   if (explicit) return explicit

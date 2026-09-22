@@ -1,15 +1,15 @@
 {
   "key": "etim",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "label": {
     "de": "ETIM",
     "en": "ETIM"
   },
   "description": {
-    "de": "ETIM-Klassifikation: Freigaben von etim-international.com holen (Vorschlagsliste oder URL, öffentlich) oder eine IXF-3.1-Datei lesen — alle Klassen kommen ins Journal (Sprachen des Modells), Versionen werden gemerkt. Die Klasse steht als Attribut am Produkt (Werteliste), je Merkmal ein Attribut in der Gruppe ETIM (Zahl mit Einheit, Ja/Nein, Werteliste mit EV-Codes, Bereich) oder Zuordnung auf vorhandene Attribute. Prüfregel in ✓ Datenqualität (Klasse unbekannt, Wert passt nicht, Belegung). Liefert die Merkmale nach ETIM-BMEcat-Guideline 5.0 an ‹› Vorlagen-Export (BMEcat 2005).",
+    "de": "ETIM-Klassifikation (Klasse → Merkmale → Werte, vom Knoten aus): Freigaben von etim-international.com holen (Vorschlagsliste oder URL, öffentlich) oder eine IXF-3.1-Datei lesen — alle Klassen kommen ins Journal (Sprachen des Modells), Versionen werden gemerkt. Die Klasse steht als Attribut am Produkt (Werteliste), je Merkmal Zuordnung auf ein vorhandenes Attribut mit ƒ (Einheit, Ja/Nein, Werteliste) oder ein eigenes Attribut in der Gruppe ETIM. Werte in der Subitems-Tabelle. Prüfregel in ✓ Datenqualität. Liefert die Merkmale nach ETIM-BMEcat-Guideline 5.0 an ‹› Vorlagen-Export (BMEcat-Profil auf einem Publikationsbaum).",
     "en": "ETIM classification: fetch releases from etim-international.com (list or URL) or read an IXF 3.1 file — all classes into the journal, versions remembered; one attribute per feature or a mapping, checks in data quality, features for the BMEcat template export."
   },
-  "kind": "export",
+  "kind": "classification",
   "runs": "browser",
   "entry": "entry.js",
   "requires": [

@@ -4,6 +4,9 @@
 // aufgelöst: Namen, Typ, Einheit, Werte — damit Job und Prüfung nichts nachschlagen müssen) und löst je Produkt die Merkmale
 // aus den zugeordneten Attributen auf, wie die ETIM-BMEcat-Guideline 5.0 sie will: Logical true/false, Numeric mit Punkt,
 // Range zwei FVALUE, Alphanumeric der EV-Code, unbekannt „-“ mit FVALUE_DETAILS UN. Kein FUNIT — die Einheit steckt im Merkmal.
+// Zuordnung mit ƒ (Taloan, 22.09.: „viele Werte existieren schon, nur nicht in der Form, wie das ETIM-Merkmal sie braucht“): ein Eintrag
+// der Zuordnung ist ein Schlüssel oder { to, steps } — die Kette aus plugins/table/transform.mjs läuft vor der Auflösung.
+import { apply as applySteps } from '../table/transform.mjs'
 
 const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" }
 const unesc = s => s.replace(/&(amp|lt|gt|quot|apos|#(\d+)|#x([0-9a-fA-F]+));/g, (m, e, d, h) => d ? String.fromCodePoint(+d) : h ? String.fromCodePoint(parseInt(h, 16)) : ENT[e])
@@ -62,6 +65,16 @@ export function classRecord(rel, cls, langs = null) {
   }
 }
 
+/// Zuordnung eines Merkmals: { key, steps } — Zeiger (Text) oder { to, steps }; ohne Zuordnung das eigene Attribut ef… (Code klein)
+export function mapEntry(map, code) {
+  const m = map?.[code] ?? map?.[code.toUpperCase()]
+  if (!m) return { key: code.toLowerCase(), steps: null }
+  if (typeof m === 'string') return { key: m, steps: null }
+  return { key: m.to || code.toLowerCase(), steps: Array.isArray(m.steps) && m.steps.length ? m.steps : null }
+}
+/// Rohwert durch die Kette der Zuordnung (leer bleibt leer, ausser die Kette sagt etwas)
+export const throughSteps = (steps, raw) => steps ? applySteps(steps, raw == null ? '' : Array.isArray(raw) ? raw.join(', ') : String(raw)) : raw
+
 /// Ein Name in der Sprache, sonst de, en, irgendeine
 export const nameOf = (names, locale) => names?.[locale] ?? names?.de ?? names?.en ?? Object.values(names ?? {})[0] ?? ''
 export const classText = (cls, locale) => `${cls.code} ${nameOf(cls.name, locale)}`
@@ -98,17 +111,19 @@ export function resolveValue(feature, raw) {
 }
 
 /// Merkmale eines Produkts für den Export. pctx: { attr: { key: { value, raw } } } (xport-Kontext); cfg: { classAttr, map, unknownAs, getClass }
-/// map: EF-Code → Attributschlüssel; ohne Zuordnung gilt das Attribut mit dem Schlüssel des Codes in Kleinbuchstaben (ef000040).
+/// map: EF-Code → Attributschlüssel oder { to, steps }; ohne Zuordnung gilt das Attribut mit dem Schlüssel des Codes in Kleinbuchstaben (ef000040).
+/// Liefert auch die Vollständigkeit: filled / total (nur Merkmale mit Attribut zählen als füllbar) und completeness in Prozent aller Merkmale.
 export async function featuresOf(pctx, cfg) {
   const code = String(pctx.attr?.[cfg.classAttr]?.raw ?? pctx.attr?.[cfg.classAttr]?.value ?? '').trim().toUpperCase()
-  if (!/^EC\d{6}$/.test(code)) return { classCode: code || null, features: [], known: false }
+  if (!/^EC\d{6}$/.test(code)) return { classCode: code || null, features: [], known: false, filled: 0, total: 0, completeness: 0 }
   const cls = await cfg.getClass(code)
-  if (!cls) return { classCode: code, features: [], known: false }
-  const features = []
+  if (!cls) return { classCode: code, features: [], known: false, filled: 0, total: cls?.features?.length ?? 0, completeness: 0 }
+  const features = []; let filled = 0
   for (const f of cls.features) {
-    const key = cfg.map?.[f.code] ?? f.code.toLowerCase()
+    const { key, steps } = mapEntry(cfg.map, f.code)
     const a = pctx.attr?.[key]
-    const r = resolveValue(f, a ? (a.raw ?? a.value) : null)
+    const r = resolveValue(f, throughSteps(steps, a ? (a.raw ?? a.value) : null))
+    if (r && !r.unknown) filled++
     const label = nameOf(f.name, pctx.locale)
     if (r === null) { features.push({ code: f.code, value: null, values: [], unit: null, details: 'UN', label, bad: String(a?.value ?? '') }); continue }
     if (r.unknown) { if (cfg.unknownAs === 'skip') continue; features.push({ code: f.code, value: '-', values: ['-'], unit: null, details: cfg.unknownAs || 'UN', label }); continue }
@@ -116,27 +131,37 @@ export async function featuresOf(pctx, cfg) {
   }
   // nicht auflösbare Werte nach der Guideline als unbekannt ausgeben — die Prüfregel meldet sie
   for (const f of features) if (f.value === null) { f.value = '-'; f.values = ['-'] }
-  return { classCode: code, features, known: true, version: cls.release?.name ?? null }
+  const total = cls.features.length
+  return { classCode: code, features, known: true, version: cls.release?.name ?? null, filled, total, completeness: total ? Math.round(filled * 100 / total) : 0 }
 }
 
 /// Sperre für den Export (Taloan, 20.09.: „der Export führt stillschweigend die Analyse aus, bevor er tätig wird“ — und: „ob die Attribute
 /// gefüllt sind, verantwortet der Anwender über Pflichtfelder; aber die Struktur muss da und zugeordnet sein“): null = bestanden, sonst der
 /// Grund. Geprüft wird die Struktur: Klasse am Knoten, Klasse übernommen, je Merkmal ein Attribut, das am Knoten gilt (Gruppe am Pfad).
 /// Leere oder unpassende Werte sperren nicht — sie gehen als „-“/UN hinaus und werden gezählt (Kopf: stats).
+/// Regeln der Ausleitung (BMEcat-Profil, Taloan 22.09.): requireClass = ohne Klasse sperren (sonst geht das Produkt ohne Merkmale hinaus);
+/// minCompleteness = Prozent der Merkmale, die gefüllt sein müssen (0 = keine Schwelle) — die Empfänger rechnen genau das;
+/// strict = ein Wert, der nicht zum Merkmal passt, sperrt (sonst geht er als „-“/UN hinaus und wird gezählt).
 export async function gate(pctx, cfg) {
   const code = String(pctx.attr?.[cfg.classAttr]?.raw ?? pctx.attr?.[cfg.classAttr]?.value ?? '').trim().toUpperCase()
-  if (!code) return 'keine ETIM-Klasse'
+  if (!code) return cfg.requireClass ? 'keine ETIM-Klasse' : null
   const cls = await cfg.getClass(code)
-  if (!cls) return `Klasse ${code} nicht übernommen`
-  const noAttr = [], notHere = []
+  if (!cls) return `Klasse ${code} nicht in ETIM ${cfg.version ?? '?'}`
+  const noAttr = [], notHere = [], bad = []; let filled = 0
   for (const f of cls.features) {
-    const key = cfg.map?.[f.code] ?? f.code.toLowerCase()
-    if (!(key in (pctx.attr ?? {}))) noAttr.push(f.code)                       // kein Attribut im Modell
-    else if (pctx.active && !pctx.active.has(key)) notHere.push(f.code)          // Attribut da, gilt aber nicht an diesem Knoten
+    const { key, steps } = mapEntry(cfg.map, f.code)
+    if (!(key in (pctx.attr ?? {}))) { noAttr.push(f.code); continue }          // kein Attribut im Modell
+    if (pctx.active && !pctx.active.has(key)) { notHere.push(f.code); continue } // Attribut da, gilt aber nicht an diesem Knoten
+    const a = pctx.attr[key]; const r = resolveValue(f, throughSteps(steps, a ? (a.raw ?? a.value) : null))
+    if (r === null) bad.push(f.code); else if (!r.unknown) filled++
   }
-  if (!noAttr.length && !notHere.length) return null
   const say = (l, w) => l.length ? `${l.length} ${w}: ${l.slice(0, 4).join(', ')}${l.length > 4 ? ' …' : ''}` : ''
-  return [say(noAttr, `von ${cls.features.length} Merkmalen ohne Attribut im Modell`), say(notHere, 'gelten hier nicht (Gruppe nicht am Pfad)')].filter(Boolean).join('; ')
+  const out = [say(noAttr, `von ${cls.features.length} Merkmalen ohne Attribut im Modell`), say(notHere, 'gelten hier nicht (Gruppe nicht am Pfad)')]
+  if (cfg.strict && bad.length) out.push(say(bad, 'Werte passen nicht zum Merkmal'))
+  const pct = cls.features.length ? Math.round(filled * 100 / cls.features.length) : 100
+  if (cfg.minCompleteness > 0 && pct < cfg.minCompleteness) out.push(`Vollständigkeit ${pct} % unter ${cfg.minCompleteness} % (${filled} von ${cls.features.length} Merkmalen)`)
+  const why = out.filter(Boolean).join('; ')
+  return why || null
 }
 
 /// Prüfung eines Knotens (Datenqualität): values = { key: { value } } wie /table; classes = Map EC → Datensatz
@@ -149,13 +174,13 @@ export function checkNode({ values, columns, classes, cfg }) {
   if (!cls) return [{ attribute: cfg.classAttr, message: `ETIM-Klasse ${code} nicht übernommen (⌗ ETIM → Klassen)`, severity: 'warn' }]
   let filled = 0
   for (const f of cls.features) {
-    const key = cfg.map?.[f.code] ?? f.code.toLowerCase()
+    const { key, steps } = mapEntry(cfg.map, f.code)
     if (!columns.some(c => c.key === key)) continue
-    const r = resolveValue(f, values[key]?.value)
+    const r = resolveValue(f, throughSteps(steps, values[key]?.value))
     if (r === null) out.push({ attribute: key, message: `${f.code} ${nameOf(f.name, cfg.locale)}: „${values[key]?.value}“ passt nicht (${f.type}${f.type === 'Alphanumeric' ? ': ' + f.values.slice(0, 6).map(v => nameOf(v.name, cfg.locale)).join(', ') + (f.values.length > 6 ? ' …' : '') : ''})`, severity: 'warn' })
     else if (!r.unknown) filled++
   }
-  const mapped = cls.features.filter(f => columns.some(c => c.key === (cfg.map?.[f.code] ?? f.code.toLowerCase()))).length
+  const mapped = cls.features.filter(f => columns.some(c => c.key === mapEntry(cfg.map, f.code).key)).length
   if (mapped < cls.features.length) out.push({ attribute: cfg.classAttr, message: `${code}: ${cls.features.length - mapped} von ${cls.features.length} Merkmalen ohne Attribut (⌗ ETIM → Zuordnung)`, severity: 'info' })
   if (filled < mapped) out.push({ attribute: cfg.classAttr, message: `${code}: ${filled} von ${mapped} zugeordneten Merkmalen belegt`, severity: 'info' })
   return out

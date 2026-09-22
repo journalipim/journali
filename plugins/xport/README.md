@@ -43,6 +43,20 @@ Je Produkt: `id`, `role`, `sku`, `name`, `status`, `parentId`, `path` (Liste id/
 aus dem Profil und, wenn das Plugin etim wirksam ist, aus der ETIM-Klasse am Knoten;
 dazu `etim.classCode`), `children` (eine Ebene, ohne Kinder), `axes`.
 
+## Quelle: Publikationsbaum oder Teilbaum (Taloan, 22.09.2026)
+
+Ein BMEcat ist eine Publikationsstrecke: das Profil nennt einen **Publikationsbaum** (`pub`) —
+es gehen nur ausgeleitete Produkte hinaus (Freigabe für den Kanal, Markt, Stand;
+`GET /api/pub/{id}/export`), die Rubriken werden die Kataloggruppen (`groups`), `parentId` und
+`path` je Produkt zeigen auf die Rubrik. Wertgruppen aus Regel-Verweisen (ohne Knoten) heissen
+`v-<bezeichnung>`. Zurückgehaltenes steht in `stats.held`. Ohne `pub` wie bisher: Teilbaum des
+Pflegebaums (`root`).
+
+**Regeln der Ausleitung** (`rules` im Profil, für die ETIM-Merkmale): `unknownAs` UN | NA | skip,
+`requireClass` (ohne Klasse sperren), `strict` (unpassender Wert sperrt), `minCompleteness`
+(Prozent gefüllter Merkmale je Produkt; die Empfänger rechnen das). Verstösse sperren den Export
+mit Liste (`gate`); `stats.completeness` = Ø über die klassifizierten Produkte, `stats.classified`.
+
 ## Startvorlagen (`templates/`)
 
 - `bmecat-etim5.xml` — ETIM BMEcat Guideline 5.0 (Namensraum etim-international.com/bmecat/50):

@@ -765,6 +765,60 @@ Was das JSON nicht hat und ein PIM braucht: Familie (welche Attribute
 überhaupt), Pflichtfelder je Kanal, Variantenebenen, Werte-Herkunft
 (Import vs. Hand), Freigabe je Sprache.
 
+## 29. Klassifikation und BMEcat — gebaut (Taloan, 22.09.2026: „ETIM ist eine Klassifikation, kein Exporttyp“)
+
+**Trennschnitt (Taloans Entscheidung):** ETIM hilft nur, Produktgruppen und Produkte Klassen
+zuzuordnen und die Merkmale als Attribute bereitzustellen. Der **BMEcat-Export setzt auf einen
+Publikationsbaum auf** — welche Produkte, welche Rubriken, welche Reihenfolge, ist der Baum;
+Freigabe, Markt und Stand gelten wie bei jeder Publikation. Damit entfällt jede
+Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher Stufe“).
+
+**Klassifikation (Gruppe ⌗ in der Leiste; ETIM heute, ECLASS/UNSPSC mit demselben Aufbau):**
+- Je System eine Attributgruppe, ein Klassenattribut, Merkmalsattribute. Innerhalb eines Systems
+  **keine Gruppe je Klasse**: Merkmale sind global (`EF000008 Breite` in hunderten Klassen), ein
+  Merkmal ist ein Attribut, die Klasse ist seine Bedingung (`when`). Genau eine Klasse je Produkt
+  (ETIM-Grundsatz); mehrere Klassifikationen zugleich sind mehrere Systeme.
+- **Klasse an der Produktgruppe, erbt** (Regelfall), Ausnahme am Produkt; an der Variante nicht.
+  Die Gruppe des Systems gilt überall (die Klasse muss an der Gruppe stehen dürfen), die
+  Merkmale nur an Produkt und Variante (`levels`) — normale Vererbung reicht (Taloan: Punkt 5).
+- **Zuordnung statt Anlegen:** Standard ist ein vorhandenes Attribut des Kunden (`breite`,
+  `farbe`) mit **ƒ** — dieselbe Umwandlungskette wie im Datenmapper (`plugins/table/transform.mjs`,
+  Taloan: „die Werte existieren schon, nur nicht in der Form“): Einheit umrechnen, ja/x → Ja/Nein,
+  Text → EV-Code nach Tabelle, von/bis verbinden. Ein eigenes `ef…`-Attribut ist der Ausweg; ab
+  dann ist es das Attribut des Kunden, das die nächste Klassifikation wiederverwendet. Die
+  Zuordnung (`map`: Schlüssel oder `{ to, steps }`) ist Modellwahrheit, einmal je Journal —
+  **kein Profil im Klassifikations-Plugin**; eine aktive Release, Wechsel = Abgleich.
+- **Die Ansicht geht vom Knoten aus** (Taloan: „suche ich mir nicht zuerst mal einen Knoten aus?“):
+  vier Stufen mit Zahlen — 1 Klasse (eigen/geerbt, ≠ abweichende darunter) · 2 Attribute
+  (n von m, zugeordnet, mit ƒ, fehlend) · 3 Daten (Produkte × Merkmale: % gefüllt, leer, passen
+  nicht) · 4 Ausleitung (BMEcat-Profile). Jede Stufe springt ins vorhandene Werkzeug:
+  Zuweisen-Dialog, Zuordnung (gefiltert auf die Klasse), **Subitems-Tabelle mit genau den
+  Spalten der Klasse** (`/table/<id>?attrs=…`, Taloan: „wir haben im Baum die Tabellenansicht,
+  Excel — der Dialog ist grenzwertig“), Vorlagen-Export. Die eigene Tabelle des Dialogs ist weg.
+  Grundlagen (Releases, Klassen in Gebrauch, Attribute, Zuordnung) darunter, zugeklappt.
+
+**BMEcat = xport-Profil auf einem Publikationsbaum:** Quelle „Publikation“ statt Teilbaum —
+`GET /api/pub/{id}/export` liefert nur Ausgeleitetes mit Rubrikenpfad; die Rubriken werden die
+Kataloggruppen (`groups`), `parentId`/`path` je Produkt zeigen auf die Rubrik; Wertgruppen aus
+Regel-Verweisen (ohne Knoten) bekommen `v-<bezeichnung>` als Schlüssel. Zurückgehaltenes zählt
+(`stats.held`). Die **Regeln der Ausleitung stehen im Profil** (`rules`), nicht im
+Klassifikations-Plugin: leer = „-“+UN / NA / weglassen; Klasse ist Pflicht (sonst geht das
+Produkt ohne Merkmale hinaus); Werte müssen passen (streng); **Vollständigkeit ≥ n %** je Produkt
+(das rechnen die Empfänger — Datenpools, Grosshandel). Verstösse sperren den Export mit Liste
+(`gate`); Ø Vollständigkeit über die klassifizierten Produkte steht im Status und im Job-Log.
+
+**Was die Praxis prüft (aus Wissen, nicht gegen die Guideline belegt — nachlesen: ETIM-BMEcat-
+Guideline 5.0, ETIM xChange):** genau eine Klasse je Produkt, Klasse in der Release
+(`FEATURE_SYSTEM_NAME`), Merkmal gehört zur Klasse, EV-Wert zum Merkmal, Zahl mit Einheit des
+Merkmals, Logical true/false, Range zwei Werte, jedes Merkmal einmal; keine Pflichtmerkmale in der
+Klassifikation selbst — der Vollständigkeitsgrad ist die eigentliche Hürde. BMEcat-Basis
+unabhängig von ETIM (Lieferantennummer eindeutig, GTIN, Bestelleinheit, Kurztext ≤ 80, Bilder)
+ist noch nicht als Prüfung gebaut; ETIM xChange wäre eine zweite Vorlage auf demselben Baum.
+
+**Prozess-Plugins und geteilter Code:** `plugins/table/transform.mjs` ist die eine
+Umwandlungskette; `web/src/transform.js` reicht sie durch, Jobs importieren sie relativ
+(`../table/transform.mjs`) — `plugins/` ist im Container ein Bind-Mount, `web/src` nicht.
+
 ## Eintragstypen, die dazukommen
 
 | Strom | Typ | Nutzdaten |

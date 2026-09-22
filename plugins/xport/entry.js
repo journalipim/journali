@@ -30,18 +30,22 @@ async function mount(root, ctx) {
   const model = store.model
   const attrs = model.attributes.filter(a => a.type !== 'rows')
   const lbl = a => a.label?.[model.masterLocale] || a.label?.de || a.key
-  const st = { name: '', template: '', mode: 'xml', fileName: 'export-{date}.xml', etim: true, root: localStorage.getItem('journali.xport.root') || tree.rows.find(r => !r.parent)?.id, role: 'product', locale: model.masterLocale ?? 'de', mapping: {}, vars: {}, features: [], starter: '' }
+  // pub: Publikationsbaum als Quelle (Taloan, 22.09.: „der BMEcat-Export setzt auf einen Publikationsbaum auf“) — dann zählt root nicht;
+  // rules: Regeln der Ausleitung für ETIM (unbekannt, Klasse Pflicht, Vollständigkeit, streng) — im Profil, nicht im ETIM-Plugin
+  const RULES = { unknownAs: 'UN', requireClass: false, minCompleteness: 0, strict: false }
+  const st = { name: '', template: '', mode: 'xml', fileName: 'export-{date}.xml', etim: true, root: localStorage.getItem('journali.xport.root') || tree.rows.find(r => !r.parent)?.id, pub: localStorage.getItem('journali.xport.pub') || '', role: 'product', locale: model.masterLocale ?? 'de', mapping: {}, vars: {}, features: [], starter: '', rules: { ...RULES } }
+  let pubTrees = []; try { pubTrees = await api.get('/api/pub') } catch { }
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
 
   // Profile (Taloan: als Job einrichten → Profil speichern, der Job nimmt den Namen)
   const profSel = el('select', { title: 'gespeichertes Profil laden' }); const profIn = el('input', { placeholder: 'Profil', style: 'width:130px', title: 'Name des Profils — der Job (⏱ Jobs → Export: Vorlage) nimmt ihn' })
   async function loadProfiles(keep) { const names = (await ctx.data.list().catch(() => [])).filter(n => n.startsWith('profile:')).map(n => n.slice(8)); profSel.innerHTML = ''; profSel.append(el('option', { value: '' }, names.length ? '— Profil —' : '— kein Profil —')); for (const n of names) profSel.append(el('option', { value: n }, n)); if (keep) profSel.value = keep }
-  profSel.addEventListener('change', async () => { const n = profSel.value; if (!n) return; const p = await ctx.data.get('profile:' + n); if (!p) return; Object.assign(st, { name: n, template: p.template ?? '', mode: p.mode ?? 'xml', fileName: p.fileName ?? st.fileName, root: p.root || st.root, role: p.role ?? 'product', locale: p.locale ?? st.locale, mapping: p.mapping ?? {}, vars: p.vars ?? {}, features: p.features ?? [], starter: p.starter ?? '', etim: p.etim !== false }); profIn.value = n; tplBox.value = st.template; picker.set(st.root); drawSettings(); say(`Profil „${n}“ geladen`) })
+  profSel.addEventListener('change', async () => { const n = profSel.value; if (!n) return; const p = await ctx.data.get('profile:' + n); if (!p) return; Object.assign(st, { name: n, template: p.template ?? '', mode: p.mode ?? 'xml', fileName: p.fileName ?? st.fileName, root: p.root || st.root, pub: p.pub ?? '', role: p.role ?? 'product', locale: p.locale ?? st.locale, mapping: p.mapping ?? {}, vars: p.vars ?? {}, features: p.features ?? [], starter: p.starter ?? '', etim: p.etim !== false, rules: { ...RULES, ...(p.rules ?? {}) } }); profIn.value = n; tplBox.value = st.template; picker.set(st.root); drawSettings(); say(`Profil „${n}“ geladen`) })
   async function saveProfile() {
     const n = (profIn.value || profSel.value).trim(); if (!n) { store.toast('Profil benennen'); return null }
     st.name = n; st.template = tplBox.value
-    await ctx.data.set('profile:' + n, { template: st.template, mode: st.mode, fileName: st.fileName, root: st.root, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, starter: st.starter, etim: st.etim })
+    await ctx.data.set('profile:' + n, { template: st.template, mode: st.mode, fileName: st.fileName, root: st.root, pub: st.pub || null, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, starter: st.starter, etim: st.etim, rules: st.rules })
     await loadProfiles(n); say(`Profil „${n}“ gespeichert`); return n
   }
   const saveBtn = el('button', { class: 'x', title: 'Vorlage, Zuordnung, Kopfwerte, Teilbaum und Sprache als Profil speichern', onclick: saveProfile }, '⎘ speichern')
@@ -89,6 +93,17 @@ async function mount(root, ctx) {
     for (const f of fields) needsBody.append(row('f.' + f, attrSel(st.mapping[f], v => { st.mapping[f] = v })))
     if (/\{#features\}/.test(st.template)) {
       needsBody.append(step('Merkmale', 'Code → Attribut (ETIM & Co.)'))
+      if (ctx.plugins.active('etim')) {
+        // Regeln der Ausleitung (Taloan, 22.09.): hier im Profil, nicht im ETIM-Plugin — die Klassifikation weiss nichts von Empfängern
+        const unk = el('select', { style: 'width:100%', onchange: e => { st.rules.unknownAs = e.target.value } }, el('option', { value: 'UN' }, '„-“ + UN unbekannt (Guideline)'), el('option', { value: 'NA' }, '„-“ + NA nicht anwendbar'), el('option', { value: 'skip' }, 'weglassen')); unk.value = st.rules.unknownAs ?? 'UN'
+        const req = el('input', { type: 'checkbox' }); req.checked = !!st.rules.requireClass; req.addEventListener('change', () => { st.rules.requireClass = req.checked })
+        const strict = el('input', { type: 'checkbox' }); strict.checked = !!st.rules.strict; strict.addEventListener('change', () => { st.rules.strict = strict.checked })
+        const min = el('input', { type: 'number', min: '0', max: '100', step: '5', value: String(st.rules.minCompleteness ?? 0), style: 'width:70px', oninput: e => { st.rules.minCompleteness = Math.max(0, Math.min(100, Number(e.target.value) || 0)) } })
+        needsBody.append(row('leer', unk), row('Sperren', el('div', { class: 'chips', style: 'flex-direction:column;align-items:flex-start;gap:2px' },
+          el('label', { title: 'ohne ETIM-Klasse wird das Produkt nicht ausgeleitet (sonst geht es ohne Merkmale hinaus)' }, req, ' Klasse ist Pflicht'),
+          el('label', { title: 'ein Wert, der nicht zum Merkmal passt, sperrt das Produkt (sonst geht er als „-“/UN hinaus und wird gezählt)' }, strict, ' Werte müssen passen'),
+          el('label', { title: 'Mindestanteil gefüllter Merkmale je Produkt — die Empfänger (Datenpools, Grosshandel) rechnen genau das; 0 = keine Schwelle' }, 'Vollständigkeit ≥ ', min, ' %'))))
+      }
       if (ctx.plugins.active('etim')) { const cb = el('input', { type: 'checkbox' }); cb.checked = st.etim !== false; cb.addEventListener('change', () => { st.etim = cb.checked }); needsBody.append(row('ETIM', el('label', { title: 'Merkmale aus der ETIM-Klasse am Knoten (Plugin etim) — dazu die Liste unten' }, cb, ' aus der Klasse am Knoten'))) }
       const featBody = el('tbody'); const featTbl = el('table', { style: 'width:100%;border-collapse:collapse' }, featBody)
       const drawFeat = () => { featBody.innerHTML = ''; for (const [i, fe] of st.features.entries()) featBody.append(el('tr', {}, el('td', { style: 'width:80px;padding:1px' }, el('input', { value: fe.code ?? '', placeholder: 'EF000001', class: 'mono', style: 'width:100%', oninput: e => { fe.code = e.target.value } })), el('td', { style: 'padding:1px' }, attrSel(fe.attr, v => { fe.attr = v })), el('td', { style: 'width:44px;padding:1px' }, el('input', { value: fe.unit ?? '', placeholder: 'EU…', style: 'width:100%', title: 'Einheit (leer = die des Attributs)', oninput: e => { fe.unit = e.target.value } })), el('td', { style: 'width:22px' }, el('button', { class: 'x', title: 'Merkmal entfernen', onclick: () => { st.features.splice(i, 1); drawFeat() } }, '✕')))) }
@@ -104,8 +119,13 @@ async function mount(root, ctx) {
     const roleSel = el('select', { style: 'width:100%', onchange: e => { st.role = e.target.value } }, el('option', { value: 'product' }, '▦ Produkte'), el('option', { value: 'variant' }, '◆ Varianten'), el('option', { value: 'group' }, '▣ Gruppen'), el('option', { value: 'all' }, 'alle Knoten')); roleSel.value = st.role
     const locBox = el('div', { class: 'chips' }); for (const l of model.locales) { const chip = el('span', { class: 'view-chip' + (st.locale === l.code ? ' on' : ''), onclick: () => { st.locale = l.code; for (const c of locBox.children) c.classList.toggle('on', c.textContent === l.code) } }, l.code); locBox.append(chip) }
     settingsBody.innerHTML = ''
+    // Quelle (Taloan, 22.09.): ein Publikationsbaum — nur Ausgeleitetes, Rubriken als Kataloggruppen — oder ein Teilbaum des Pflegebaums
+    const pubSel = el('select', { style: 'width:100%', title: 'Publikationsbaum: es gehen nur ausgeleitete Produkte hinaus (Freigabe, Markt, Stand), die Rubriken werden die Kataloggruppen', onchange: e => { st.pub = e.target.value; localStorage.setItem('journali.xport.pub', st.pub); treeBox.style.display = st.pub ? 'none' : ''; chosen.style.display = st.pub ? 'none' : '' } },
+      el('option', { value: '' }, pubTrees.length ? '— Teilbaum des Pflegebaums —' : '— keine Publikationsbäume —'), ...pubTrees.map(t => el('option', { value: t.id }, `${t.label}${t.channel ? ' · ' + t.channel : ''}${t.market ? ' · ' + t.market : ''} · ${t.placed ?? 0}`)))
+    pubSel.value = pubTrees.some(t => t.id === st.pub) ? st.pub : ''; if (!pubSel.value) st.pub = ''
+    treeBox.style.display = st.pub ? 'none' : ''; chosen.style.display = st.pub ? 'none' : ''
     settingsBody.append(step('Vorlage'), row('Start', starterSel), row('Ausgabe', modeSel, el('span', { class: 'muted', style: 'font-size:11px' }, ' entkommt Werte je Art')), row('Datei', el('input', { value: st.fileName, style: 'width:100%', title: '{date} und {locale} werden ersetzt', oninput: e => { st.fileName = e.target.value } })),
-      step('Knoten'), row('Teilbaum', chosen, treeBox), row('Rolle', roleSel), row('Sprache', locBox))
+      step('Quelle', 'Publikationsbaum (Ausleitung) oder Teilbaum'), row('Publikation', pubSel), row('Teilbaum', chosen, treeBox), row('Rolle', roleSel), row('Sprache', locBox))
     drawNeeds()
   }
   side.append(el('table', { style: 'width:100%;border-collapse:collapse' }, settingsBody, needsBody))
@@ -113,19 +133,19 @@ async function mount(root, ctx) {
   // Vorschau (erste 3 Produkte) und Herunterladen (alle) — beide über denselben Kern wie der Job
   let busy = false
   async function run(all) {
-    if (busy) return; if (!st.root) { store.toast('Teilbaum wählen'); return }
+    if (busy) return; if (!st.root && !st.pub) { store.toast('Publikationsbaum oder Teilbaum wählen'); return }
     st.template = tplBox.value; if (!st.template.trim()) { store.toast('Vorlage fehlt'); return }
     busy = true
     try {
       const env = { api, model, tree: { rows: tree.rows, byId: tree.byId, kids: id => tree.rows.filter(r => (r.parent ?? '') === (id ?? '')) }, server: location.origin }
       const etim = st.etim !== false && ctx.plugins.active('etim') ? ctx.use('etim') : null   // Merkmale aus der ETIM-Klasse am Knoten
-      if (etim?.featuresOf) env.featuresOf = etim.featuresOf
-      if (etim?.gate && /\{#features\}/.test(st.template)) env.gate = etim.gate   // Vorlage braucht Merkmale → Analyse muss bestehen
+      if (etim?.featuresOf) env.featuresOf = pctx => etim.featuresOf(pctx, st.rules)   // Regeln der Ausleitung aus dem Profil (Taloan, 22.09.)
+      if (etim?.gate && /\{#features\}/.test(st.template)) env.gate = pctx => etim.gate(pctx, st.rules)   // Vorlage braucht Merkmale → Analyse muss bestehen
       const t0 = performance.now()
-      const cx = await build(env, { root: st.root, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, limit: all ? 0 : 3, say: m => say(m) })
+      const cx = await build(env, { root: st.root, pub: st.pub || null, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, limit: all ? 0 : 3, say: m => say(m) })
       const out = render(st.template, cx, st.mode, st.locale)
       const ms = Math.round(performance.now() - t0)
-      const gaps = cx.stats ? `${cx.stats.unknown ? ` · ${cx.stats.unknown} Merkmale leer (UN)` : ''}${cx.stats.bad ? ` · ⚠ ${cx.stats.bad} Werte passen nicht (als UN)` : ''}` : ''
+      const gaps = cx.stats ? `${cx.stats.classified ? ` · ETIM Ø ${cx.stats.completeness} % (${cx.stats.classified} klassifiziert)` : ''}${cx.stats.held ? ` · ${cx.stats.held} zurückgehalten` : ''}${cx.stats.unknown ? ` · ${cx.stats.unknown} Merkmale leer (UN)` : ''}${cx.stats.bad ? ` · ⚠ ${cx.stats.bad} Werte passen nicht (als UN)` : ''}` : ''
       if (all) { const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19); download(out, st.fileName.replace('{date}', stamp).replace('{locale}', st.locale), MIME[st.mode] ?? 'text/plain'); say(`⇓ ${cx.count} Produkte, ${(out.length / 1024).toFixed(0)} KB, ${ms} ms${gaps}`) }
       else { preview.textContent = out.length > 200000 ? out.slice(0, 200000) + '\n…' : out; say(`Vorschau: ${cx.count} von ${env.tree.rows.filter(r => r.role === st.role || st.role === 'all').length} Knoten, ${ms} ms${gaps}`) }
     } catch (e) { say('✗ ' + e.message.split('\n')[0]); preview.textContent = e.message; store.toast(e.message.split('\n')[0]) } finally { busy = false }

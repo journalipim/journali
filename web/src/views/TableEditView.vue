@@ -17,7 +17,7 @@ import SelectCell from '../components/SelectCell.vue'
 import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
 
-const props = defineProps({ id: String, role: String, deep: String })
+const props = defineProps({ id: String, role: String, deep: String, attrs: String })   // attrs: Spalten fest vorgegeben (Taloan, 22.09.: ETIM-Merkmale einer Klasse)
 const router = useRouter()
 // Eigenes Fenster (Taloan, 17.09.): Schliessen übernimmt die Änderungen — ohne Nachfrage, ohne Speichern-Knopf drücken
 const popup = !!useRoute().query.popup
@@ -39,6 +39,7 @@ async function load() {
     const q = new URLSearchParams({ locale: locale.value })
     if (props.role) q.set('role', props.role)
     if (props.deep === '1') q.set('deep', 'true')
+    if (props.attrs) q.set('attributes', props.attrs)
     data.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/table?${q}`)
     dirty.value = new Map()
     if (popup) document.title = `⊞ ${data.value.node.label} · journali`

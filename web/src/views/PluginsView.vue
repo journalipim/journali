@@ -23,7 +23,7 @@ const jobCount = key => jobs.value.filter(j => j.plugin === key).length
 // Gruppen mit Basis oder mehreren Plugins sind sowieso da; datasheet ist seine Gruppe)
 const railToggle = key => plugins.views.some(v => v.key === key && !baseTopics.value.has(topicOf(key, v.topic)) && (entries.value[topicOf(key, v.topic)] ?? []).every(e => e.plugin === key))
 function toggleRail(key) { const s = new Set(store.railOff); s.has(key) ? s.delete(key) : s.add(key); store.railOff = [...s]; store.save() }
-const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '⌁ Werkzeug', output: '▤ Ausgabe', edit: '✎ Pflege' }
+const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '⌁ Werkzeug', output: '▤ Ausgabe', edit: '✎ Pflege', classification: '⌗ Klassifikation' }
 const TOPIC_LABEL = { import: '⇩ Import', export: '⇪ Export', analysis: '✓ Datenanalyse', jobs: '⏱ Jobs', datasheet: '▤ Datenblatt', tools: '⌁ Werkzeuge' }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
 const manifest = computed(() => current.value?.manifest ?? {})

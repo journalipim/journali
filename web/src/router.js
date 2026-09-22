@@ -22,7 +22,7 @@ export const router = createRouter({
     { path: '/tree/:id', component: TreeView, props: true },
     { path: '/pub', component: PubView },
     { path: '/pub/:id', component: PubView, props: true },
-    { path: '/table/:id', component: TableEditView, props: r => ({ id: r.params.id, role: r.query.role, deep: r.query.deep }) },
+    { path: '/table/:id', component: TableEditView, props: r => ({ id: r.params.id, role: r.query.role, deep: r.query.deep, attrs: r.query.attrs }) },   // attrs: nur diese Spalten (ETIM: die Merkmale einer Klasse)
     { path: '/journal', component: JournalView },
     { path: '/model', component: ModelView },
     // Themen (Taloan, 18.09.): erst das Thema, dann das Plugin — /import ist die Übersicht, die Quellen liegen darunter
@@ -31,6 +31,7 @@ export const router = createRouter({
     { path: '/datasheet', component: HubView, props: { topic: 'datasheet' } },
     { path: '/analysis', component: HubView, props: { topic: 'analysis' } },
     { path: '/translate', component: HubView, props: { topic: 'translate' } },
+    { path: '/classification', component: HubView, props: { topic: 'classification' } },
     { path: '/tools', component: HubView, props: { topic: 'tools' } },
     { path: '/jobs', component: HubView, props: { topic: 'jobs' } },
     // alte Pfade (bis 19.09.: fest eingebaut) → Basis-Plugins, Abfrage bleibt (?node=, ?new=, ?plugin=)

@@ -427,8 +427,8 @@ async function contextMenu(e, r) {
   // Plugin-Einträge je Plugin in einem Untermenü
   // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
   // Datenanalyse — darin alles dazu, quer über die Plugins. Das Thema nennt die Aktion (topic), sonst die Art des Plugins (kind).
-  const TOPICS = [['import', '⇩ Import'], ['export', '⇪ Export'], ['datasheet', '▤ Datenblatt'], ['analysis', '✓ Datenanalyse'], ['jobs', '⏱ Jobs'], ['tools', '⌁ Werkzeuge']]
-  const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis' }
+  const TOPICS = [['import', '⇩ Import'], ['export', '⇪ Export'], ['datasheet', '▤ Datenblatt'], ['analysis', '✓ Datenanalyse'], ['classification', '⌗ Klassifikation'], ['jobs', '⏱ Jobs'], ['tools', '⌁ Werkzeuge']]
+  const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', classification: 'classification' }
   const byTopic = new Map()
   const add = (topic, item) => { if (!byTopic.has(topic)) byTopic.set(topic, []); byTopic.get(topic).push(item) }
   for (const a of plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role)).map(a => ({ ...a, _label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label }))) {

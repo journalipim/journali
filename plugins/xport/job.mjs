@@ -34,17 +34,18 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
       const classes = new Map()
       const cur = await api.get('/api/plugins/etim/data/release').catch(() => null); const ver = cur?.version ?? (cur?.number != null ? String(cur.number) : null)   // aktuelle ETIM-Version (Taloan, 20.09.: mehrere gespeichert)
       const getClass = async code => { if (!classes.has(code)) classes.set(code, (ver != null ? await api.get('/api/plugins/etim/data/' + encodeURIComponent(`class:${ver}:${code}`)).catch(() => null) : null) ?? await api.get('/api/plugins/etim/data/' + encodeURIComponent('class:' + code)).catch(() => null)); return classes.get(code) }
-      featuresOf = pctx => etim.featuresOf(pctx, { ...settings, map, getClass })
-      if (/\{#features\}/.test(profile.template)) gate = pctx => etim.gate(pctx, { ...settings, map, getClass })   // Vorlage braucht Merkmale → Analyse muss bestehen
+      const rules = { ...settings, ...(profile.rules ?? {}), version: ver, map, getClass }   // Regeln der Ausleitung aus dem Profil (Taloan, 22.09.)
+      featuresOf = pctx => etim.featuresOf(pctx, rules)
+      if (/\{#features\}/.test(profile.template)) gate = pctx => etim.gate(pctx, rules)   // Vorlage braucht Merkmale → Analyse muss bestehen
     } catch { }
   }
-  const ctx = await build({ api, model, tree, server, featuresOf, gate }, { root, role: profile.role || 'product', locale, mapping: profile.mapping ?? {}, vars: profile.vars ?? {}, features: profile.features ?? [], say: m => { if (/^\d+\/\d+/.test(m) && Number(m.split('/')[0]) % 50 === 0) console.log(m) } })
+  const ctx = await build({ api, model, tree, server, featuresOf, gate }, { root, pub: profile.pub ?? null, role: profile.role || 'product', locale, mapping: profile.mapping ?? {}, vars: profile.vars ?? {}, features: profile.features ?? [], say: m => { if (/^\d+\/\d+/.test(m) && Number(m.split('/')[0]) % 50 === 0) console.log(m) } })
   const out = render(profile.template, ctx, profile.mode || 'xml', locale)
   fs.mkdirSync(dir, { recursive: true })
   const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
   const name = (profile.fileName || `${profileName}-{date}.xml`).replace('{date}', stamp).replace('{locale}', locale)
   const file = path.join(dir, name)
   fs.writeFileSync(file, out, 'utf8')
-  const gaps = ctx.stats ? `${ctx.stats.unknown ? `, ${ctx.stats.unknown} Merkmale leer (UN)` : ''}${ctx.stats.bad ? `, ${ctx.stats.bad} Werte passen nicht (als UN)` : ''}` : ''
+  const gaps = ctx.stats ? `${ctx.stats.classified ? `, ETIM Ø ${ctx.stats.completeness} % über ${ctx.stats.classified} Produkte` : ''}${ctx.stats.held ? `, ${ctx.stats.held} zurückgehalten` : ''}${ctx.stats.unknown ? `, ${ctx.stats.unknown} Merkmale leer (UN)` : ''}${ctx.stats.bad ? `, ${ctx.stats.bad} Werte passen nicht (als UN)` : ''}` : ''
   console.log(`✓ ${file}: ${ctx.count} Produkte, ${(out.length / 1024).toFixed(0)} KB (Profil ${profileName}, ${locale})${gaps}`)
 })().catch(e => { console.error('✗ ' + (e.message ?? e)); process.exit(1) })
