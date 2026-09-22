@@ -413,7 +413,7 @@ async function stageData(ctx, nodeId) {
   stage.other = rows.filter(r => { const v = String(r.values?.[key]?.value ?? '').toUpperCase(); return v && v !== at.current }).length
   stage.products = rows.filter(r => String(r.values?.[key]?.value ?? '').toUpperCase() === at.current)
   // Zahlen und Befunde aus einer Rechnung (core: audit) — die Tabelle je Klasse und die Liste der Befunde belegen dieselben Zahlen
-  const a = audit({ rows, classAttr: key, classes: cache.classes, map: mergedMap(), locale, hasAttr })
+  const a = audit({ rows, classAttr: key, classes: cache.classes, map: mergedMap(), locale, hasAttr, complete: true })   // jeder Knoten eine Zeile, auch die vollständigen (Taloan, 22.09.)
   stage.byClass = a.byClass; stage.sum = a.sum; stage.findings = a.findings
   const mine = a.byClass.find(c => c.code === at.current)
   if (mine) { stage.filled = mine.filled; stage.cells = mine.cells; stage.bad = mine.bad; stage.empty = mine.cells - mine.filled - mine.bad }
@@ -460,7 +460,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     const barOf = p => el('span', { style: 'display:inline-flex;align-items:center;gap:8px' }, `${p.filled} von ${p.total} gefüllt`, el('span', { style: 'display:inline-block;width:120px;height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--bg)' }, el('span', { style: `display:block;height:100%;width:${p.pct}%;background:${p.pct >= 80 ? 'var(--pos)' : 'var(--accent)'}` })), `${String(p.pct).replace('.', ',')} %`)
     found.append(S.findings.length
       ? el('table', { class: 'grid', style: 'width:100%;margin-top:6px' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:260px' }, 'Knoten'), el('th', { style: 'width:110px' }, 'Feld'), el('th', {}, 'Befund'), el('th', { style: 'width:36px' }, ''))),
-          el('tbody', {}, ...S.findings.slice(0, 500).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, SEV[x.severity] ?? ''),
+          el('tbody', {}, ...S.findings.slice(0, 500).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : x.severity === 'ok' ? 'pos' : 'muted' }, SEV[x.severity] ?? ''),
             el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) } }, `${ICON[x.node.role] ?? ''} ${x.node.label}`)),
             el('td', { class: 'mono muted', title: x.label ?? '' }, x.attribute ?? ''), el('td', { title: x.title ?? '' }, x.progress ? barOf(x.progress) : x.message), el('td', {}, jump(x))))))
       : el('div', { class: 'muted', style: 'padding:4px 0' }, `✓ keine Befunde in ${S.sum.nodes} Knoten`))

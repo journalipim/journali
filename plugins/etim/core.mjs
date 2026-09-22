@@ -169,7 +169,8 @@ export const TYPE_LABEL = { Alphanumeric: 'Liste', Numeric: 'Zahl', Range: 'Bere
 /// Eine Rechnung für Zahlen und Befunde (Taloan, 22.09.2026: die Klassentabelle sagte „9 von 175“, die Prüfung „keine Befunde“ —
 /// das waren zwei Wege). rows: Zeilen aus /table ({ row, values, inactive }); jede Zeile zählt in IHRER Klasse.
 /// Liefert { byClass: [{ code, nodes, filled, cells, bad, pct }], sum, findings } — dieselben Zahlen, die die Befunde belegen.
-export function audit({ rows, classAttr, classes, map, locale = 'de', hasAttr = () => true }) {
+/// complete: auch vollständige Knoten in die Liste (Band — Taloan, 22.09.: „die Unterknoten wurden aufgeschlüsselt“); false = nur, wo etwas fehlt
+export function audit({ rows, classAttr, classes, map, locale = 'de', hasAttr = () => true, complete = false }) {
   const featsOf = cls => cls.features.map(f => { const m = mapEntry(map, f.code); return { f, key: m.key, steps: m.steps, has: hasAttr(m.key) } })
   const byCode = new Map(); const acc = new Map(); const findings = []
   for (const r of rows) {
@@ -189,7 +190,7 @@ export function audit({ rows, classAttr, classes, map, locale = 'de', hasAttr = 
       if (v === null) { a.bad++; findings.push({ node: r.row, attribute: x.f.code, label, message: `„${raw}“ passt nicht (${TYPE_LABEL[x.f.type] ?? x.f.type}${x.f.type === 'Alphanumeric' ? ': ' + x.f.values.slice(0, 6).map(y => nameOf(y.name, locale)).join(', ') + (x.f.values.length > 6 ? ' …' : '') : ''})`, go: 'node', severity: 'warn' }) }
       else if (!v.unknown) { a.filled++; filled++ }
     }
-    if (filled < mapped) findings.push({ node: r.row, attribute: null, message: null, progress: { filled, total: mapped, pct: pct(filled, mapped) }, title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert) — gelesen wird das zugeordnete Attribut; leer geht als „-“/UN in den BMEcat', go: 'node', severity: 'info' })
+    if (mapped && (complete || filled < mapped)) findings.push({ node: r.row, attribute: null, message: null, progress: { filled, total: mapped, pct: pct(filled, mapped) }, severity: filled === mapped ? 'ok' : 'info', title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert) — gelesen wird das zugeordnete Attribut; leer geht als „-“/UN in den BMEcat', go: 'node' })
   }
   for (const a of acc.values()) a.pct = pct(a.filled, a.cells)
   const byClass = [...acc.values()].sort((x, y) => y.nodes - x.nodes || x.code.localeCompare(y.code))

@@ -100,5 +100,8 @@ test('audit: eine Rechnung für Zahlen und Befunde — die Tabelle je Klasse und
   // Fortschritt nur, wo etwas fehlt: das Produkt (1 von 3); die Variante ist voll (4 von 4) und bekommt keinen Befund
   const prog = a.findings.filter(f => f.progress)
   assert.deepEqual(prog.map(f => [f.node.id, f.progress.filled, f.progress.total]), [['p-1', 1, 3]])
+  // mit complete: jeder Knoten eine Zeile, die vollständige mit ✓ (severity ok) — das Band zeigt sie so
+  const all = audit({ rows, classAttr: 'etim_class', classes, map, locale: 'de', hasAttr: k => k !== 'ef999', complete: true }).findings.filter(f => f.progress)
+  assert.deepEqual(all.map(f => [f.node.id, f.progress.filled, f.progress.total, f.severity]), [['p-1', 1, 3, 'info'], ['v-1', 4, 4, 'ok']])
   assert.equal(a.sum.nodes, 2); assert.equal(a.sum.filled, 5); assert.equal(a.sum.cells, 7)
 })
