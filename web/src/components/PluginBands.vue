@@ -44,5 +44,6 @@ onUnmounted(() => { for (const c of cleanups) { try { c() } catch {} } })
 .plugin-band h2 .caret { display: inline-block; width: 14px; color: var(--muted); }
 .plugin-band .head { font-weight: 400; }
 .plugin-band .body { padding: 0 0 4px; }
-.plugin-band .body :deep(.row) { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 2px 0 6px; }
+/* die Zeile bleibt im sichtbaren Bereich, auch wenn die Attributtabelle den Rollbereich breiter macht */
+.plugin-band .body :deep(.row) { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 2px 0 6px; position: sticky; left: 0; max-width: calc(100vw - 420px); }
 </style>

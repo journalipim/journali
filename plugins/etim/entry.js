@@ -427,7 +427,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     head.textContent = ''
     const again = () => render()
     const assignBtn = el('button', { class: S.cls ? 'x' : 'primary', title: S.cls ? 'andere Klasse wählen (Vorschlag, Umfeld, Suche, Ebene)' : 'ETIM-Klasse wählen (Vorschlag, Umfeld, Suche, Ebene mit Empfehlung)', onclick: () => classDialog(nodeId, ctx, again) }, S.cls ? '⌗ Klasse ändern …' : '⌗ Klasse zuweisen …')
-    if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), el('span', { class: 'grow' }), assignBtn); return }
+    if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), assignBtn); return }
     const code = S.current
     line.append(chip(`${code} ${nameOf(S.cls.name, locale)}`, '', S.ownCode ? 'Klasse am Knoten selbst' : `Klasse geerbt von ${S.inherited.from}`), el('span', { class: 'muted' }, S.ownCode ? 'hier' : `von ${S.inherited.from}`))
     if (S.other) line.append(chip(`≠ ${S.other}`, 'warn', `${S.other} darunter mit anderer Klasse`))
@@ -436,7 +436,8 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     const pct = S.cells ? Math.round(S.filled * 100 / S.cells) : 0
     head.textContent = `· ${code} ${nameOf(S.cls.name, locale)}${S.ownCode ? '' : ' (geerbt)'} · Attribute ${has.length}/${S.feats.length} · Daten ${S.products.length ? pct + ' %' : '—'}${S.other ? ` · ≠ ${S.other}` : ''}`
     line.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? `Daten ${pct} %` : 'Daten —', S.bad ? 'neg' : pct >= 80 ? 'pos' : '', `${S.products.length} Produkte/Varianten × ${has.length} Merkmale: ${S.filled} gefüllt · ${S.empty} leer${S.bad ? ` · ${S.bad} passen nicht` : ''}`))
-    line.append(...[el('span', { class: 'grow' }), assignBtn,
+    // Knöpfe direkt hinter den Chips, nicht rechtsbündig (Taloan, 22.09.: der Bereich ist so breit wie die Attributtabelle — „prüfen“ stand hinter dem Rollbalken)
+    line.append(...[el('span', { class: 'muted' }, '·'), assignBtn,
       el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der Merkmale dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende Merkmale als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
