@@ -311,8 +311,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </select>
       <button class="x" @click="newTree" title="neuer Publikationsbaum">+</button>
       <span class="grow" />
-      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Klick zeigt die Ausleitung (${exp.in} ausgeleitet, ${exp.out} zurückgehalten)`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
-      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`Klick zeigt ${unplaced.length} noch nicht einsortierte Produkte`">⚠ {{ unplaced.length }}</button>
+      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Ausleitung anzeigen (${exp.in} ausgeleitet, ${exp.out} zurückgehalten)`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
+      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} noch nicht einsortierte Produkte anzeigen`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
       <div class="toolbar" style="white-space:nowrap" title="Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).">
