@@ -156,10 +156,10 @@ test('Attributsicht je Klasse (Taloan, 22.09.): je Rolle eine Sicht mit genau de
   const btn = find(body); assert.ok(btn, 'Knopf ◫ Sicht fehlt')
   await btn.onclick?.({ preventDefault() {}, stopPropagation() {} })
   const views = put.filter(([p]) => p.startsWith('/api/model/views/'))
-  assert.equal(views.length, 2, 'je Rolle eine Sicht (product, variant)')
+  assert.equal(views.length, 3, 'je Rolle eine Sicht (group, product, variant) — ETIM-Attribute gelten überall (Taloan, 22.09.)')
   const [path, body2] = views[0]
-  assert.match(path, /etim_ec004718_(product|variant)/)
-  assert.equal(body2.level, 'product')
+  assert.match(path, /etim_ec004718_(group|product|variant)/)
+  assert.equal(body2.level, 'group')
   assert.match(body2.label.de, /⌗ EC004718 Laptop/)
   const all = body2.items.flatMap(i => i.order)
   assert.ok(all.includes('etim_class') && all.includes('ef008851') && all.includes('tastatur_name'), JSON.stringify(body2.items))

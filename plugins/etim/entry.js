@@ -104,8 +104,10 @@ function modelOps(ctx) {
   const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!out[locale]) out[locale] = nameOf(names, locale); return out }
   const put = (path, body) => api.post('/api/model' + path, body, 'PUT')
   // Die Gruppe gilt überall — die Klasse steht an der Gruppe („Mobile Geräte“) und erbt nach unten (Taloan, 22.09.: „verstehe ich nicht“ —
-  // die Gruppe war erst ab product aktiv, damit liess sich die Klasse an keiner Gruppe setzen); die ETIM-Attribute selbst gibt es nur an
-  // Produkt und Variante (levels), nicht an der Gruppe. Eine alte Gruppe mit activeFrom wird einmal repariert.
+  // die Gruppe war erst ab product aktiv, damit liess sich die Klasse an keiner Gruppe setzen). Die ETIM-Attribute gelten seit dem
+  // 22.09.2026 ebenfalls überall (Taloan: „warum sollte ich nicht auf jeder Knotenebene Attribute pflegen können?“): sie sind vererbbar,
+  // ein Wert an der Gruppe gilt also für alles darunter, und die Ausleitung nimmt am Artikel den aufgelösten Wert.
+  // Eine alte Gruppe mit activeFrom wird einmal repariert, ebenso Attribute, die noch nur an Produkt und Variante galten.
   // Namenskollision (Taloan, 22.09.: „wollen wir die Gruppe wirklich ETIM nennen?“): der Name bleibt sprechend, dafür wird geprüft,
   // ob eine vorhandene Gruppe wirklich unsere ist — sie ist es, wenn sie leer ist oder nur ETIM-Attribute (ef…) und das
   // Klassenattribut enthält. Sonst weicht die Einrichtung auf etim_std aus und sagt es; in den Einstellungen ist die Gruppe wählbar.
@@ -126,7 +128,8 @@ function modelOps(ctx) {
     if (!have) await put(`/groups/${g}`, { key: g, label: { de: g === 'etim' ? 'ETIM' : `ETIM (${g})`, en: g === 'etim' ? 'ETIM' : `ETIM (${g})` } })
     else if (have.activeFrom) await put(`/groups/${g}`, { ...have, activeFrom: null })
   }
-  const FEATURE_LEVELS = ['product', 'variant']
+  const FEATURE_LEVELS = ['group', 'product', 'variant']   // überall pflegbar, vererbt nach unten (Taloan, 22.09.2026)
+  const OLD_LEVELS = ['product', 'variant']   // was frühere Fassungen anlegten — wird beim nächsten Durchlauf gehoben
   async function ensureClassAttr() {
     await ensureGroup()   // Gruppe überall aktiv (repariert eine alte mit activeFrom) — sonst „etim_class gilt hier nicht“ an der Gruppe
     // Kollision beim Klassenattribut: ein vorhandenes Attribut dieses Schlüssels, das nicht zu uns gehört (andere Gruppe,
@@ -180,7 +183,8 @@ function modelOps(ctx) {
   async function createFeature(f) {
     await ensureGroup()
     const key = f.code.toLowerCase()
-    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code, a.when); if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable || !a.levels)) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true, levels: a.levels ?? FEATURE_LEVELS }); return key }
+    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code, a.when); const lv = !a.levels || JSON.stringify([...a.levels].sort()) === JSON.stringify([...OLD_LEVELS].sort()) ? FEATURE_LEVELS : a.levels;
+      if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable || JSON.stringify(a.levels ?? []) !== JSON.stringify(lv))) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true, levels: lv }); return key }
     const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // neu: nur die Klassen der aktiven Fassung; vorhandene ergänzen (Vereinigung)   // ETIM-Attribute nur an Produkt und Variante
     if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
@@ -590,7 +594,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     line.append(...[el('span', { class: 'muted' }, '·'), assignBtn, clearBtn, attachBtnEl,
       el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der ETIM-Attribute dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
       el('button', { class: 'x', title: `Attributsicht „⌗ ${code}“ aufbauen und an diesem Knoten wählen — ein Reiter mit genau den Attributen dieser Klasse`, onclick: async () => {
-        try { await ops.ensureViews(S.cls); await store.poll(true); const k = ops.viewKeyOf(code, S.row.role === 'group' ? 'product' : S.row.role); store.viewKey = { ...store.viewKey, [S.row.role]: k }; store.save?.(); store.toast(`◫ ⌗ ${code}`, 'ok'); ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) } catch (e) { store.toast(e.message) }
+        try { await ops.ensureViews(S.cls); await store.poll(true); const k = ops.viewKeyOf(code, S.row.role); store.viewKey = { ...store.viewKey, [S.row.role]: k }; store.save?.(); store.toast(`◫ ⌗ ${code}`, 'ok'); ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) } catch (e) { store.toast(e.message) }
       } }, '◫ Sicht'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
