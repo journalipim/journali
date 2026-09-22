@@ -1140,6 +1140,67 @@ Hitze aus?"). Für „hol mir Produkt X" ist MCP genauer, weil es exakt
 antwortet statt ähnlich. Beim Nachziehen hilft das Journal: der Index merkt
 sich die Journalnummer und bettet nur ein, was seitdem geschrieben wurde.
 
+## 32. Dokumente durchsuchbar machen — Entwurf (Taloan, 22.09.2026: „ich kann zwar eventuell per OCR nach konkreten Worten suchen, aber eine semantische Suche ist nicht möglich“)
+
+Am Knoten hängen Datenblätter, Sicherheitsdatenblätter, Zertifikate,
+Verarbeitungshinweise. Für uns sind sie heute eine Blackbox: `MediaCreated`
+kennt Hash, Grösse, Mime und Name — nicht den Inhalt. Wer wissen will, in
+welchem Datenblatt „Zugfestigkeit 12 N/mm²“ steht oder welches Produkt
+„temperaturbeständig bis 120 °C“ ist, muss die PDFs von Hand öffnen. Das ist
+die Lücke, die weder die Attributsuche noch MCP schliesst: **die Information
+steht in Prosa, nicht in einem Attribut.**
+
+### Die vier Schritte
+
+1. **Text herausholen.** Ein Job wie `derive` (Prozess-Plugin, Kindprozess
+   des Servers) zieht Text aus PDF, Word und HTML. Hash-adressiert: dasselbe
+   Dokument wird nie zweimal gelesen. Für gescannte PDFs braucht es OCR —
+   optional, teuer, und erst wenn es wirklich gebraucht wird.
+2. **In Abschnitte teilen.** Ein 40-seitiges Datenblatt ist als Ganzes für die
+   Suche wertlos. Absatzweise schneiden, Seitenzahl und Überschrift
+   mitführen — damit die Antwort „Datenblatt INTERCOLL D 3442, Seite 4"
+   lautet und nicht „irgendwo in dem PDF".
+3. **Zwei Indizes, nicht einer.**
+   - **Wortsuche** (Postgres-Volltext, `tsvector`): findet „12 N/mm²",
+     „DIN EN 204", eine Chargennummer. Kostet nichts, ist exakt, braucht kein
+     Modell.
+   - **Vektorsuche** (`pgvector`): findet „hält Hitze aus", wenn im Text
+     „temperaturbeständig bis 120 °C" steht. Kostet Embeddings je Abschnitt
+     und bindet an ein Modell.
+
+   Beides zusammen ist das, was in der Praxis trägt: reine Vektorsuche
+   verfehlt Normbezeichnungen und Zahlen erstaunlich zuverlässig, reine
+   Wortsuche findet Umschreibungen nicht.
+4. **Der Treffer zeigt aufs Produkt.** Das ist der Vorteil gegenüber jedem
+   allgemeinen Dokumentensystem: Das Dokument hängt am Knoten, also liefert
+   ein Treffer Dokument **und** Produkt — und ist es Beleg einer Version,
+   auch den Zeitraum, in dem es galt.
+
+### Wo die Daten liegen
+
+**Nicht im Journal.** Text, Abschnitte und Vektoren sind abgeleitet: aus einem
+Dokument, das hash-adressiert im Medienspeicher liegt, und jederzeit neu
+herstellbar. Sie gehören in eigene Tabellen neben dem Journal (wie die
+gerechneten Vorschauen), und ihr Wasserstand ist die Journalnummer: neu
+eingelesen wird, was seither dazukam. Ein Modellwechsel bei den Embeddings
+bedeutet: Index verwerfen, neu rechnen — das Journal bleibt unberührt.
+
+### Was es kostet
+
+Die Extraktion ist billig (Rechenzeit). Teuer sind die Embeddings: je
+Abschnitt ein Aufruf beim Anbieter, den der Kunde mitbringt. Bei 5 000
+Dokumenten à 20 Abschnitten sind das 100 000 Aufrufe — einmalig, danach nur
+noch für Neues. Dafür braucht es eine ehrliche Anzeige vor dem Lauf („so viele
+Abschnitte, so viele Aufrufe") und die Möglichkeit, erst einmal nur einen
+Teilbaum zu indizieren.
+
+### Reihenfolge
+
+Extraktion und **Wortsuche** zuerst: Sie decken die meisten „in welchem
+Datenblatt steht …"-Fragen ab, kosten keine KI und sind dauerhaft stabil. Die
+**Vektorsuche** kommt oben drauf, sobald unscharfe Fragen häufig sind — und
+ist dann zugleich das Werkzeug `aehnlich` für den MCP-Dienst (§31).
+
 ## Reihenfolge
 
 1. ~~Attribute, Wertelisten, Familien im Journal + Modell-Ansicht~~ 16.09.2026:
