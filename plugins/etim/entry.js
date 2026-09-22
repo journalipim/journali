@@ -46,9 +46,15 @@ async function classAt(api, key, nodeId) {
   return { node, ownCode, inherited, current: ownCode || inherited?.code || null }
 }
 /// Subitems-Tabelle im eigenen Fenster mit genau den Spalten der Klasse (Taloan, 22.09.: „wir haben im Baum die Tabellenansicht, Excel“)
-function openTable(nodeId, keys, role) {
+// Gruppe: alles darunter (tief); Produkt/Variante: die Geschwister unter dem Elternteil, die eigene Zeile ist dabei (Taloan, 22.09.:
+// „Keine Varianten unter a“ — die Tabelle zeigt Kinder, also am Elternteil öffnen)
+function openTable(tree, nodeId, keys, role) {
   const w = Math.min(1400, screen.availWidth - 80), h = Math.min(800, screen.availHeight - 80)
-  const path = `/table/${nodeId}?popup=1${role ? '&role=' + role : ''}&deep=1&attrs=${encodeURIComponent(keys.join(','))}`
+  const row = tree.byId.get(nodeId)
+  const at = row && row.role !== 'group' && row.parent ? row.parent : nodeId
+  const deep = !row || row.role === 'group'
+  const r = deep ? role : row.role
+  const path = `/table/${at}?popup=1${r ? '&role=' + r : ''}${deep ? '&deep=1' : ''}&attrs=${encodeURIComponent(keys.join(','))}`
   const win = window.open(path, 'journali-table', `popup=yes,width=${w},height=${h},left=${(screen.availWidth - w) / 2},top=${(screen.availHeight - h) / 2}`)
   if (win) win.focus(); else window.open(path.replace(/[?&]popup=1/, ''), '_blank')
 }
@@ -430,7 +436,7 @@ async function bandMount({ head, body }, nodeId, ctx) {
     head.append(...[el('span', { class: 'grow' }), assignBtn,
       el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der Merkmale dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende Merkmale als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
-      S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
+      S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
       S.products.length ? el('button', { class: 'x', title: 'dieselbe Regel wie in ✓ Datenqualität — Funde je Knoten und Merkmal, hier darunter', onclick: () => {
         const findings = []
         for (const r of S.products) for (const f of checkNode({ values: r.values, columns: S.tbl.columns.filter(x => !(r.inactive ?? []).includes(x.key)), classes: cache.classes, cfg: cfg(locale) })) findings.push({ ...f, node: r.row })
