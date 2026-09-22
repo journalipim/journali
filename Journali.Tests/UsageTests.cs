@@ -78,6 +78,23 @@ public class UsageTests
     }
 
     [Fact]
+    public void Betriebsspur_der_Jobs_zaehlt_nicht_mit()
+    {
+        var u = new Usage();
+        long n = 0;
+        var at = Local(2026, 9, 22);
+        u.Apply(new Entry(++n, at, "job", "job:backup", Types.JobRunStarted, "{}"));
+        u.Apply(new Entry(++n, at, "job", "job:backup", Types.JobFileWritten, "{}"));
+        u.Apply(new Entry(++n, at, "job", "job:backup", Types.JobRunFinished, "{}"));
+        Assert.Equal(0, u.Day(new DateOnly(2026, 9, 22)));   // Sicherung kostet nichts (Taloan, 22.09.2026)
+        Assert.Equal(3, u.LastApplied);                       // gelesen hat das Abbild sie trotzdem
+
+        // was der Job an Daten schreibt, zählt: ein Import setzt Werte
+        u.Apply(new Entry(++n, at, "job", "v-1", Types.AttributeSet, "{}"));
+        Assert.Equal(1, u.Day(new DateOnly(2026, 9, 22)));
+    }
+
+    [Fact]
     public void Grenzen_sind_Woche_und_Monat_kein_Tag()
     {
         Assert.Equal(20_000, Limits.Week);

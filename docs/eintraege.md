@@ -213,10 +213,11 @@ vorerst als Annahme in `Limits` (20 000 in der Woche, 100 000 im Monat; **kein
 Tageslimit** — Taloan, 22.09.2026: „macht man 3 Testimporte und muss aufhören“).
 Zum Messen, was eine Einzelperson braucht; keine Lizenz, keine Sperre. **Lesen und Exportieren zählen nicht mit**, weil die
 Endpunkte nichts schreiben (`/api/pub/{id}/export` und `/api/nodes/{id}/table`
-sind `MapGet` und verwerfen den Writer). Ein Export als Job kostet zwei bis
-drei Einträge je Lauf (`JobRunStarted`, `JobRunFinished`, je Datei ein
-`JobFileWritten`), ein Import einen je geänderten Wert — ein Wiederholungs-
-import ohne Änderung gar keinen. Angezeigt wird das in den Einstellungen als
+sind `MapGet` und verwerfen den Writer). **Die Betriebsspur der Jobläufe zählt ebenfalls nicht** (`JobRunStarted`,
+`JobRunFinished`, `JobFileConsumed`, `JobFileWritten` stehen in `Usage.Free`;
+Taloan, 22.09.2026: „Sicherung kostet nix“) — was ein Job an Daten schreibt,
+zählt weiterhin: ein Import einen Eintrag je geändertem Wert, ein
+Wiederholungsimport ohne Änderung gar keinen. Angezeigt wird das in den Einstellungen als
 drei Fortschrittsbalken mit Verlauf (`UsageBars.vue`).
 
 ## Befehle (Server)

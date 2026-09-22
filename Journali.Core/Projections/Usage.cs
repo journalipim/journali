@@ -1,3 +1,4 @@
+using Journali.Core.Entries;
 using Journali.Core.Journal;
 
 namespace Journali.Core.Projections;
@@ -11,6 +12,13 @@ namespace Journali.Core.Projections;
 /// </summary>
 public sealed class Usage : IProjection
 {
+    /// <summary>Protokoll der Jobläufe — Betrieb, keine Pflege: zählt nicht mit (Taloan, 22.09.2026: „Sicherung kostet nix“).
+    /// Was ein Job an Daten schreibt (ein Import seine <c>AttributeSet</c>), zählt weiterhin.</summary>
+    public static readonly IReadOnlySet<string> Free = new HashSet<string>
+    {
+        Types.JobRunStarted, Types.JobRunFinished, Types.JobFileConsumed, Types.JobFileWritten,
+    };
+
     public long LastApplied { get; private set; }
 
     /// <summary>Einträge je Tag (Ortszeit), aufsteigend abrufbar über <see cref="Days"/>.</summary>
@@ -19,6 +27,7 @@ public sealed class Usage : IProjection
     public void Apply(Entry entry)
     {
         LastApplied = entry.Number;
+        if (Free.Contains(entry.Type)) return;
         var day = DateOnly.FromDateTime(entry.At.ToLocalTime().DateTime);
         PerDay[day] = PerDay.GetValueOrDefault(day) + 1;
     }
