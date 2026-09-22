@@ -27,6 +27,12 @@ test('KI-Leiste: öffnet, bleibt nach einem Lauf offen und steht im Fluss (verde
   const bar = document.querySelector('.aibar')
   assert.ok(bar, 'nach dem Klick ist die Leiste da')
   assert.ok(!floats(bar), 'die Leiste steht im Fluss — sie schiebt den Text, statt ihn zu verdecken')
+  // wo sie hängt, nicht nur wie sie liegt (Taloan, 22.09.: „und das hast du getestet?“) — im Werkzeugbalken quetscht sie die Knöpfe
+  assert.ok(!bar.closest('.toolbar'), 'die Leiste hängt NICHT im Werkzeugbalken')
+  const tb = document.querySelector('.editor .toolbar.fmt')
+  assert.ok(tb && (tb.compareDocumentPosition(bar) & 4) !== 0, 'sie steht hinter dem Werkzeugbalken, also darunter')
+  const rich = document.querySelector('.rich')
+  assert.ok((bar.compareDocumentPosition(rich) & 4) !== 0, 'und vor dem Textbereich')
   // Reihenfolge der Gruppen und die Beschriftungen als Überschrift
   const t = bar.textContent.replace(/\s+/g, ' ')
   for (const s of ['überarbeiten', 'Verbessern', 'Kürzen', 'Ausführlicher', 'erzeugen', '@ Liste aus Produktdaten', '@ Marketingtext sachlich', '@ Marketingtext emotional', '@ Marketingtext vergleichend', 'Ergebnis', 'Text ersetzen', 'Am Cursor ergänzen'])

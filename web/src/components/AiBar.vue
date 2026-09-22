@@ -26,8 +26,9 @@ async function run(instruction) {
 
 <template>
   <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? 'Text mit der KI (' + ai.label() + ') bearbeiten — mit den Produktdaten dieses Knotens; jede Anfrage kostet Token' : 'KI-Schlüssel fehlt — ⚙ Einstellungen → KI'" :disabled="!ai.available()">✦ KI</button>
-  <component :is="panel ? 'Teleport' : 'div'" :to="panel" :class="panel ? undefined : 'wrap'">
-  <div v-if="open" class="aibar" :class="{ flow: !!panel }" @mousedown.stop>
+  <!-- echtes Teleport (Taloan, 22.09.): die Leiste gehört in den Behälter des Editors, nicht in den Werkzeugbalken -->
+  <Teleport v-if="panel" :to="panel" defer>   <!-- defer: der Behälter entsteht erst nach dem Werkzeugbalken -->
+    <div v-if="open" class="aibar flow" @mousedown.stop>
     <!-- Beschriftungen als Überschrift über der Reihe, nicht daneben (Taloan, 22.09.: unterschiedlich lang = unordentlich) -->
     <div class="col">
       <span class="muted lbl">überarbeiten</span>
@@ -48,9 +49,12 @@ async function run(instruction) {
         <button class="x" :class="{ primary: mode === 'insert' }" @click="setMode('insert')" title="das Ergebnis wird an der Schreibmarke eingefügt — der übrige Text bleibt">Am Cursor ergänzen</button>
       </div>
     </div>
-    <span v-if="busy" class="ai" style="font-size:12px">{{ busy }}</span>
+      <span v-if="busy" class="ai" style="font-size:12px">{{ busy }}</span>
+    </div>
+  </Teleport>
+  <div v-else-if="open" class="aibar" @mousedown.stop>
+    <span class="muted lbl">KI-Leiste ohne Behälter — bitte panel setzen</span>
   </div>
-  </component>
 </template>
 
 <style scoped>
