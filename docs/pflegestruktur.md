@@ -889,6 +889,28 @@ Smartling, Phrase):
 Der Übersetzer bekommt zum Auftrag immer drei Dinge: alte Quelle, neue Quelle, bisherige
 Übersetzung. Entschieden ist davon nichts — Taloans Wort fehlt.
 
+### Die vier Blockaden aus der Praxis (Taloan, 22.09.2026)
+
+Taloan: „Er speichert und speichert und speichert und irgendwann sagt er final … dann kann er
+keine Version freigeben, bis die französische Übersetzung da ist … Fallbacksprachen sind auch
+nicht die Lösung, man will nicht mitten in der französischen Webseite deutsche Texte …
+viele Übersetzungen laufen heute mit KI und müssen nur noch von einem lokal Verantwortlichen
+abgenommen werden.“ Was der Bestand dazu schon trägt — und wo die eine Lücke ist:
+
+| Blockade | Antwort | Beleg |
+|---|---|---|
+| Der Redakteur speichert zehnmal, bis es „final“ ist | **Der Auslöser ist nie das Speichern, sondern ein Übergang.** Der Redakteur geht „final — zur Übersetzung“ oder „final — ohne Übersetzung“; das ist seine Entscheidung über die Relevanz, und sie ist modellierbar, ohne eine Zeile Code: zwei Übergänge aus demselben Zustand, Wirkung `translate:<sprache>` neben `release:` / `revoke:` | `WfTransition(… Effects …)`, `Types.cs:504`; Wirkungen heute `release:web`, `revoke:`, `status:` (`Workflows.cs:10`) |
+| Version blockiert, weil Französisch zwei Wochen braucht | **Freigabe und Version gibt es schon je Sprache** — Deutsch geht hinaus, Französisch wartet. Blockiert wird nur, wer eine Version über alle Sprachen zieht | `Release(string Channel, string? Locale)` (`Tree.cs:9`, gesetzt in `:567`, gelesen in `ReleasedVia` `:168`); `VersionState.Channel` / `.Locale` (`Versions.cs`) |
+| Fallback auf die Mastersprache will niemand | **Der Rückfall geht nicht auf Deutsch, sondern auf die letzte freigegebene französische Fassung.** Das kostet keinen zweiten Speicher: die Version ist ein Zeiger auf die Journalnummer, der alte französische Wert steht im Journal. Erst wenn es noch nie eine französische Fassung gab, muss der Kanal wählen: Mastersprache zeigen oder das Produkt in Französisch nicht zeigen | `VersionState.JournalNumber` (`Versions.cs`) |
+| KI übersetzt sofort, lokal wird nur abgenommen | **Die KI ist ein Akteur mit eigener Rolle**, kein Sonderweg: sie schreibt den Wert, der Zustand heisst „maschinell übersetzt“, der lokal Verantwortliche geht den Übergang „abgenommen“. Die Rollenregel greift dann von allein — die KI-Rolle kann den Weg bis zur Freigabe nicht allein gehen, also bleibt das Vier-Augen-Prinzip stehen, ohne zweite Regel. Der „Auftrag“ ist dann ein Job im `tasker` statt ein Paket an die Agentur; die Warteschlange ist dieselbe | Benutzer und Rollen im Journal (`user:<key>`, `role:<key>`), Jobs mit eigenem Token (CLAUDE.md, `Auth.cs`) |
+
+**Die Lücke:** der Workflow-Zustand hängt je Knoten und Workflow — ohne Achse (`NodeWorkflow`
+in `Workflows.cs`, Schlüssel `_nodes[knoten][workflow]`). „Redaktion Französisch in Korrektur,
+Deutsch freigegeben“ gibt es damit heute nicht. Zu bauen wäre: ein Workflow darf als *je
+Sprache* gekennzeichnet sein, dann trägt `WorkflowStateSet` eine Sprache (leer = gilt für alle,
+also bleibt jeder heutige Eintrag gültig). Das ist der eine Eingriff — Freigabe, Version und
+Rollen können es schon. **Taloans Wort fehlt.**
+
 ## Eintragstypen, die dazukommen
 
 | Strom | Typ | Nutzdaten |
