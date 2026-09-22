@@ -221,7 +221,7 @@ const sources = computed(() => { const m = new Map(); for (const v of node.value
 function sourceOf(def, col) { return sources.value.get(key(def.key, col.locale, col.channel)) ?? null }
 async function setSource(def, col) {
   const cur = sourceOf(def, col)
-  const v = await dialog.prompt({ title: `Quelle für ${store.label(def)}`, text: 'URL oder Text (Datenblatt, Katalogseite …); leer = Beleg weg', value: cur?.source ?? '', placeholder: 'https://…' })
+  const v = await dialog.prompt({ title: `Quelle für ${store.label(def)} angeben`, text: 'URL oder Text: Datenblatt, Katalogseite … (leer = Beleg weg)', ok: '↗ Übernehmen', value: cur?.source ?? '', placeholder: 'https://…' })
   if (v === null) return
   await command(() => api.post(`${nodeUrl()}/sources`, { attribute: def.key, locale: col.locale ?? null, channel: col.channel ?? null, source: v.trim(), method: 'manual', checkedAt: new Date().toISOString().slice(0, 10) }))
 }
@@ -443,7 +443,7 @@ async function inheritToSubitems() {
       title: `Medien an ${below.length} Subitems vererben?`,
       // zwei Dinge, getrennt gesagt (Taloan, 20.09.: „wenn nicht ersetzt wird, brauch ich vererben auch nicht?“ — doch: Vererben bringt die
       // Medien an die Subitems; Ersetzen räumt nur auf, wenn ein Subitem dasselbe Medium schon fest hat). Rot nur, wo etwas gelöst wird.
-      warn: nothing ? 'nichts zu tun' : retire.length ? `${retire.length} feste ${retire.length === 1 ? 'Zuordnung' : 'Zuordnungen'} an Subitems werden gelöst — sie erben dann` : '',
+      warn: nothing ? 'nichts zu tun' : retire.length ? `${retire.length} feste ${retire.length === 1 ? 'Zuordnung' : 'Zuordnungen'} an Subitems werden gelöst (sie erben dann)` : '',
       list, text: nothing ? '' : `${toInherit.length} ${toInherit.length === 1 ? 'Medium' : 'Medien'} von hier ${toInherit.length === 1 ? 'wird' : 'werden'} auf „vererben“ gesetzt — ${below.length} Subitems zeigen ${toInherit.length === 1 ? 'es' : 'sie'} danach als geerbt (gestrichelt).${retire.length ? '' : ' Keine feste Zuordnung an Subitems ist betroffen.'}`, ok: nothing ? 'OK' : '↓ Vererben' })
     if (!ok || nothing) return
     const commands = [...toInherit.map(r => ({ op: 'relation.attribute.set', args: { relation: r.id, attribute: 'inherit', value: 'true' } })), ...retire.map(x => ({ op: 'relation.retire', args: { relation: x.rel.id } }))]
@@ -513,7 +513,7 @@ function wfBlocked(t) {
 async function wfStep(w, t) {
   let note = null
   if (t.noteRequired || t.effects?.length) {
-    note = await dialog.prompt({ title: `${t.label?.de || t.key} → ${t.toLabel?.de || t.to}`, text: (t.effects?.length ? 'Wirkung: ' + t.effects.join(', ') + '. ' : '') + (t.noteRequired ? 'Notiz ist Pflicht — was ist zu tun?' : 'Notiz (optional)'), placeholder: 'Notiz' })
+    note = await dialog.prompt({ title: `${t.label?.de || t.key} → ${t.toLabel?.de || t.to}`, text: (t.noteRequired ? 'Notiz (Pflicht)' : 'Notiz (optional)') + (t.effects?.length ? ` · Wirkung: ${t.effects.join(', ')}` : ''), placeholder: 'Notiz', ok: `⚑ ${t.label?.de || t.key}` })
     if (note === null) return
     if (t.noteRequired && !note.trim()) { store.toast('Notiz ist Pflicht bei diesem Schritt'); return }
   }
@@ -547,7 +547,7 @@ async function wfHistory(w) {
   dialog.help({ title, rows: rows.length ? rows : [['—', 'noch kein Schritt']] })
 }
 async function wfClear(w) {
-  if (!await dialog.confirm({ title: `„${w.label?.de || w.workflow}“ hier aufheben?`, text: 'Der eigene Zustand fällt weg; es gilt wieder der geerbte.', ok: '↑ erben' })) return
+  if (!await dialog.confirm({ title: `Vererbung wiederherstellen · ${w.label?.de || w.workflow}?`, text: 'Eigener Zustand fällt weg; es gilt wieder der geerbte.', ok: '↑ Erben' })) return
   await command(() => api.del(`${nodeUrl()}/workflow/${w.workflow}`))
   api.get(`${nodeUrl()}/workflow`).then(x => { workflows.value = x }).catch(() => {})
 }
@@ -560,8 +560,8 @@ async function wfAssign(w) {
     ...people.filter(fits).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role}` })),
     ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role} (nicht die Rolle des Schritts)` }))]
   const user = people.length
-    ? await dialog.prompt({ title: `Zuständig für „${w.label?.de || w.workflow}“`, value: w.assigned ?? '', choices })
-    : await dialog.prompt({ title: `Zuständig für „${w.label?.de || w.workflow}“`, text: 'Benutzer-Key (leer = die Rolle des nächsten Schritts)', value: w.assigned ?? '' })
+    ? await dialog.prompt({ title: `Zuständigen wählen · ${w.label?.de || w.workflow}`, value: w.assigned ?? '', choices, ok: '👤 Zuweisen' })
+    : await dialog.prompt({ title: `Zuständigen wählen · ${w.label?.de || w.workflow}`, text: 'Benutzer-Key (leer = Rolle des nächsten Schritts)', value: w.assigned ?? '', ok: '👤 Zuweisen' })
   if (user === null) return
   await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/assign`, { user: user.trim() || null }, 'PUT'))
 }
@@ -575,7 +575,7 @@ async function setAxes(axes) {
   catch (e) {
     if (!/^Nicht eindeutig/.test(e.message)) { store.toast(e.message); return }
     const what = e.message.replace(/^Nicht eindeutig: /, '').replace(/ — mit force.*$/, '')
-    if (!await dialog.confirm({ title: 'Varianten nicht mehr eindeutig', warn: what, text: 'Diese Varianten verlieren ihre Achsenzuordnung (sie zählen nicht, bis sie unterscheidbar sind); ihre Werte bleiben. Alternativ: abbrechen und eine weitere Achse wählen.', ok: 'Trotzdem', danger: true })) return
+    if (!await dialog.confirm({ title: 'Achsen trotzdem ändern?', warn: what, text: 'Diese Varianten verlieren ihre Achsenzuordnung (zählen nicht, bis sie unterscheidbar sind); ihre Werte bleiben. Oder abbrechen und eine weitere Achse wählen.', ok: 'Trotzdem ändern', danger: true })) return
     await command(() => api.post(`${nodeUrl()}/axes`, { axes, force: true }, 'PUT'))
   }
 }

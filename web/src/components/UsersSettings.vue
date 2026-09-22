@@ -29,7 +29,7 @@ async function save() {
 }
 async function toggle(u) { try { await api.post(`/api/auth/users/${u.key}`, { enabled: !u.enabled }, 'PUT'); await load() } catch (e) { store.toast(e.message) } }
 async function remove(u) {
-  if (!await dialog.confirm({ title: `${u.name || u.key} entfernen`, warn: 'Anmeldung, Token und Sitzungen weg — die Einträge im Journal bleiben', ok: 'Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: `${u.name || u.key} entfernen?`, warn: 'Anmeldung, Token und Sitzungen weg; Journaleinträge bleiben', ok: 'Entfernen', danger: true })) return
   try { await api.del(`/api/auth/users/${u.key}`); await load() } catch (e) { store.toast(e.message) }
 }
 async function changePw() {

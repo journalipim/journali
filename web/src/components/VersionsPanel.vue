@@ -39,7 +39,7 @@ async function render(v) {
   catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 async function withdraw(v) {
-  const reason = await dialog.prompt({ title: `Version ${v.nr} zurückziehen`, warn: 'gilt danach nicht mehr — bleibt sichtbar', placeholder: 'Grund', ok: 'Zurückziehen', danger: true })
+  const reason = await dialog.prompt({ title: `Version ${v.nr} zurückziehen?`, warn: 'Gilt danach nicht mehr, bleibt sichtbar', placeholder: 'Grund', ok: 'Zurückziehen', danger: true })
   if (reason === null) return
   try { await api.post(`/api/nodes/${encodeURIComponent(props.id)}/versions/${v.nr}/withdraw`, { reason }); await load(); emit('changed') } catch (e) { store.toast(e.message) }
 }
@@ -54,7 +54,7 @@ async function planRollback(v) {
 }
 async function rollback() {
   const p = plan.value; if (!p) return
-  if (!await dialog.confirm({ title: `Auf Version ${p.nr} zurückrollen`, warn: `${p.plan.length} Werte werden gesetzt`, text: p.skipped.length ? `${p.skipped.length} bleiben aussen vor (unbekannt, gilt hier nicht, Zeilen)` : 'als Stapel — rückgängig machbar', ok: 'Zurückrollen', danger: true })) return
+  if (!await dialog.confirm({ title: `Auf Version ${p.nr} zurückrollen?`, warn: `${p.plan.length} Werte werden gesetzt`, text: p.skipped.length ? `${p.skipped.length} bleiben aussen vor (unbekannt, gilt hier nicht, Zeilen)` : 'Als Stapel (rückgängig machbar)', ok: 'Zurückrollen', danger: true })) return
   busy.value = 'schreibe …'
   try { const r = await api.post(`/api/nodes/${encodeURIComponent(props.id)}/versions/${p.nr}/rollback`, { dryRun: false }); plan.value = null; diffOf.value = null; store.toast(`↶ ${r.done} gesetzt${r.errors.length ? ` · ${r.errors.length} Fehler` : ''}`, r.errors.length ? 'error' : 'ok'); emit('changed') }
   catch (e) { store.toast(e.message) } finally { busy.value = '' }

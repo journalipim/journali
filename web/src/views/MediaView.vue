@@ -46,12 +46,12 @@ watch(deep, v => { localStorage.setItem('journali.media.deep', v ? 'on' : 'off')
 async function loadFolders() { try { folders.value = await api.get('/api/media/folders') } catch (e) { store.toast(e.message) } }
 
 async function newFolder(parent = null) {
-  const name = await dialog.prompt({ title: parent ? `Neuer Ordner in „${byId.value.get(parent)?.name}“` : 'Neuer Ordner (oberste Ebene)', placeholder: 'Name' })
+  const name = await dialog.prompt({ title: 'Ordner anlegen', text: parent ? `in „${byId.value.get(parent)?.name}“` : 'oberste Ebene', placeholder: 'Name', ok: '+ Anlegen' })
   if (!name) return
   try { const e = await api.post('/api/media/folders', { name, parent }); if (parent) { open.value.add(parent); toggle(parent); toggle(parent) } await loadFolders(); pickFolder(e.stream) } catch (e) { store.toast(e.message) }
 }
 async function renameFolder(f) {
-  const name = await dialog.prompt({ title: 'Ordner umbenennen', value: f.name })
+  const name = await dialog.prompt({ title: 'Ordner umbenennen', ok: '✎ Umbenennen', value: f.name })
   if (!name || name === f.name) return
   try { await api.post(`/api/media/folders/${f.id}/name`, { name }, 'PUT'); await loadFolders() } catch (e) { store.toast(e.message) }
 }
@@ -170,7 +170,7 @@ async function setValue(m, def, v) {
 async function retire(m) {
   const ids = sel.value.size > 1 && sel.value.has(m.id) ? [...sel.value] : [m.id]
   const used = ids.reduce((n, id) => n + (items.value.find(x => x.id === id)?.used ?? 0), 0)
-  if (!await dialog.confirm({ title: ids.length > 1 ? `${ids.length} Medien zurückziehen?` : `${m.name} zurückziehen?`, text: used ? `hängen an ${used} Knoten` : '', ok: '🗑 Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: ids.length > 1 ? `${ids.length} Medien zurückziehen?` : `${m.name} zurückziehen?`, text: used ? `Hängen an ${used} Knoten` : '', ok: '🗑 Zurückziehen', danger: true })) return
   for (const id of ids) { try { await api.del(`/api/media/${id}`) } catch (e) { store.toast(e.message) } }
   cur.value = null; sel.value = new Set(); await store.poll(true); await loadFolders(); await load()
 }

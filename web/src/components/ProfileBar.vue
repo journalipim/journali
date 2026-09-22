@@ -26,7 +26,7 @@ const snapshot = () => { try { return JSON.stringify(props.get() ?? {}) } catch 
 function tick() { const now = snapshot(); const d = now !== saved.value && now !== '{}'; if (d !== dirty.value) dirty.value = d; if (!d) dismissed.value = '' }
 const showBar = () => dirty.value && snapshot() !== dismissed.value
 async function saveAs() {
-  const n = await dialog.prompt({ title: 'Als neues Profil speichern', text: 'Name', value: current.value ? current.value + '-2' : '', placeholder: 'Name' })
+  const n = await dialog.prompt({ title: 'Als neues Profil speichern', value: current.value ? current.value + '-2' : '', placeholder: 'Name', ok: '💾 Speichern' })
   if (!n?.trim()) return
   name.value = n.trim(); await save()
 }

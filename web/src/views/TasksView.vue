@@ -23,13 +23,13 @@ async function assign(t) {
   const choices = [{ value: '', label: roles.size ? `— Rolle ${[...roles].join('/')} (jede Person damit)` : '— jede Rolle mit Schreibrecht' },
     ...people.filter(fits).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role}` })),
     ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role} (nicht die Rolle des Schritts)` }))]
-  const user = people.length ? await dialog.prompt({ title: `Zuständig · ${t.label}`, value: t.assigned ?? '', choices }) : await dialog.prompt({ title: `Zuständig · ${t.label}`, text: 'Benutzer-Key (leer = Rolle)', value: t.assigned ?? '' })
+  const user = people.length ? await dialog.prompt({ title: `Zuständigen wählen · ${t.label}`, value: t.assigned ?? '', choices, ok: '👤 Zuweisen' }) : await dialog.prompt({ title: `Zuständigen wählen · ${t.label}`, text: 'Benutzer-Key (leer = Rolle)', value: t.assigned ?? '', ok: '👤 Zuweisen' })
   if (user === null) return
   try { await api.post(`/api/nodes/${encodeURIComponent(t.node)}/workflow/${t.workflow}/assign`, { user: user.trim() || null }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
 async function step(t, tr) {
   let note = null
-  if (tr.noteRequired) { note = await dialog.prompt({ title: `${tr.label?.de || tr.key} · ${t.label}`, text: 'Notiz ist Pflicht — was ist zu tun?', placeholder: 'Notiz' }); if (!note?.trim()) return }
+  if (tr.noteRequired) { note = await dialog.prompt({ title: `${tr.label?.de || tr.key} · ${t.label}`, text: 'Notiz (Pflicht)', placeholder: 'Notiz', ok: `⚑ ${tr.label?.de || tr.key}` }); if (!note?.trim()) return }
   try { await api.post(`/api/nodes/${encodeURIComponent(t.node)}/workflow/${t.workflow}/${tr.key}`, { note }); await store.poll(true); await load() } catch (e) { store.toast(e.message) }
 }
 const age = iso => { if (!iso) return ''; const d = (Date.now() - new Date(iso)) / 864e5; return d < 1 ? 'heute' : d < 2 ? 'gestern' : `${Math.floor(d)} Tage` }

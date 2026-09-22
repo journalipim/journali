@@ -74,7 +74,7 @@ const put = (path, body) => send(async () => {
   try { await api.post(path, body, 'PUT') }
   catch (e) {
     if (!/force=true/.test(e.message)) throw e
-    const ok = await dialog.confirm({ title: 'Vorhandene Werte passen nicht mehr', text: e.message.replace(/, oder mit force=true trotzdem ändern\.?$/, '.'), warn: 'Trotzdem ändern? Die Werte bleiben im Journal, lesen sich dann aber ohne Typprüfung als Text — die Datenanalyse findet sie.', ok: 'Trotzdem ändern', danger: true })
+    const ok = await dialog.confirm({ title: 'Vorhandene Werte passen nicht mehr', text: e.message.replace(/, oder mit force=true trotzdem ändern\.?$/, '.'), warn: 'Werte bleiben im Journal, lesen sich dann ohne Typprüfung als Text (die Datenanalyse findet sie)', ok: 'Trotzdem ändern', danger: true })
     if (!ok) return
     await api.post(path + (path.includes('?') ? '&' : '?') + 'force=true', body, 'PUT')
   }

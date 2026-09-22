@@ -29,13 +29,13 @@ async function save() {
   } catch (e) { store.toast(e.message) }
 }
 async function add() {
-  const key = await dialog.prompt({ title: 'Neuer Workflow', text: 'Key (a-z, 0-9, _)', placeholder: 'z. B. shop' }); if (!key) return
+  const key = await dialog.prompt({ title: 'Workflow anlegen', text: 'Key (a-z, 0-9, _)', placeholder: 'z. B. shop', ok: '+ Anlegen' }); if (!key) return
   cur.value = { key: key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'), label: { de: key, en: key }, start: 'draft', roles: [], families: [], states: [{ key: 'draft', label: { de: 'Entwurf', en: 'Draft' }, color: 'muted', final: false }, { key: 'done', label: { de: 'Fertig', en: 'Done' }, color: 'pos', final: true }], transitions: [{ key: 'finish', label: { de: 'fertig', en: 'finish' }, from: 'draft', to: 'done', roles: [], noteRequired: false, effects: [] }] }
   dirty.value = true
 }
 async function remove() {
   const w = cur.value; if (!w) return
-  if (!await dialog.confirm({ title: `Workflow „${w.label?.de || w.key}“ entfernen?`, text: 'Die Zustände der Knoten darin verfallen (der Verlauf bleibt im Journal).', ok: '🗑 Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: `Workflow „${w.label?.de || w.key}“ entfernen?`, text: 'Zustände der Knoten darin verfallen (Verlauf bleibt im Journal).', ok: '🗑 Entfernen', danger: true })) return
   try { await api.del(`/api/workflows/${encodeURIComponent(w.key)}`); cur.value = null; await load() } catch (e) { store.toast(e.message) }
 }
 function addState() { const w = cur.value; const k = 'state' + (w.states.length + 1); w.states.push({ key: k, label: { de: k, en: k }, color: 'muted', final: false }); touch() }
@@ -160,8 +160,8 @@ function forceLayout() {
   touch()
 }
 function labelDown(n, e) { selTrans.value = n; selState.value = null; const a = sketch.value.arrows[n]; const p = svgPoint(e); drag.value = { kind: 'label', n, dx: p.x - a.lx, dy: p.y - a.ly } }
-async function editLabel(n) { const t = cur.value.transitions[n]; const v = await dialog.prompt({ title: 'Beschriftung des Übergangs', value: t.label?.de ?? '', ok: '✎ OK' }); if (v == null) return; t.label = { ...(t.label ?? {}), de: v.trim() }; touch() }
-async function editState(i) { const s = cur.value.states[i]; const v = await dialog.prompt({ title: 'Bezeichnung des Zustands', value: s.label?.de ?? '', ok: '✎ OK' }); if (v == null) return; s.label = { ...(s.label ?? {}), de: v.trim() }; touch() }
+async function editLabel(n) { const t = cur.value.transitions[n]; const v = await dialog.prompt({ title: 'Beschriftung ändern', value: t.label?.de ?? '', ok: '✎ Übernehmen' }); if (v == null) return; t.label = { ...(t.label ?? {}), de: v.trim() }; touch() }
+async function editState(i) { const s = cur.value.states[i]; const v = await dialog.prompt({ title: 'Zustand umbenennen', value: s.label?.de ?? '', ok: '✎ Übernehmen' }); if (v == null) return; s.label = { ...(s.label ?? {}), de: v.trim() }; touch() }
 function addStateAt() { const w = cur.value; const k = 'state' + (w.states.length + 1); const last = w.states.length ? posOf(w.states[w.states.length - 1], w.states.length - 1) : { x: -W - 40, y: 70 }; w.states.push({ key: k, label: { de: k, en: k }, color: 'muted', final: false, x: last.x + W + 40, y: last.y, count: 0 }); selState.value = w.states.length - 1; touch() }
 function delSelected() {
   if (selTrans.value != null) { cur.value.transitions.splice(selTrans.value, 1); selTrans.value = null; touch(); return }

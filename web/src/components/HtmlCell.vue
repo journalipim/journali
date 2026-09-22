@@ -40,7 +40,7 @@ async function toggleSource() {
 }
 // Schreibbefehle des Browsers — reichen für Absatz, fett, kursiv, Listen, Überschrift, Link; kein Fremdcode.
 function cmd(name, arg = null) { rich.value?.focus(); document.execCommand(name, false, arg) }
-async function link() { const url = await dialog.prompt({ title: 'Link', text: 'Adresse — leer entfernt den Link', value: 'https://', ok: '🔗 Link' }); if (url == null) return; url ? cmd('createLink', url) : cmd('unlink') }
+async function link() { const url = await dialog.prompt({ title: 'Link setzen', text: 'Adresse (leer entfernt den Link)', value: 'https://', ok: '🔗 Setzen' }); if (url == null) return; url ? cmd('createLink', url) : cmd('unlink') }
 function onKey(e) {
   if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); edit() }
   else if (e.key === 'Delete' && props.value != null) emit('save', '')

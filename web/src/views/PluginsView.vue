@@ -47,7 +47,7 @@ const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   /
 async function toggle(p) {
   if (!p.enabled) { const m = missing(p.key); if (m.length) { store.toast(`braucht ${m.join(', ')} — zuerst einschalten`); return } await act(`/api/plugins/${p.key}/enable`); return }
   const dep = plugins.dependents(p.key).filter(k => plugins.list.find(x => x.key === k)?.enabled)
-  if (dep.length && !await dialog.confirm({ title: `${label(p.manifest) || p.key} deaktivieren`, warn: `Damit aus: ${dep.join(', ')}`, ok: 'Deaktivieren' })) return
+  if (dep.length && !await dialog.confirm({ title: `${label(p.manifest) || p.key} deaktivieren?`, warn: `Damit aus: ${dep.join(', ')}`, ok: 'Deaktivieren' })) return
   await act(`/api/plugins/${p.key}/disable`)
 }
 

@@ -384,8 +384,8 @@ export async function mount(root, ctx, catalog) {
     if (v == null) return
     try {
       if (v.trim()) { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: null, channel: null, value: v.trim(), row: null }); await run(); return }
-      const who = await dialog.prompt({ title: 'Angefragt bei …', text: 'Lieferant, Abteilung, Person — wer liefert den Wert?', value: pend?.source ?? '', ok: 'Weiter' }); if (who == null) return
-      const due = await dialog.prompt({ title: 'Wiedervorlage', text: 'Datum JJJJ-MM-TT — danach gilt es als überfällig', value: pend?.checkedAt ?? new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), ok: '⏳ angefragt' }); if (due == null) return
+      const who = await dialog.prompt({ title: 'Anfragen bei …', text: 'Lieferant, Abteilung, Person', value: pend?.source ?? '', ok: 'Weiter' }); if (who == null) return
+      const due = await dialog.prompt({ title: 'Wiedervorlage setzen', text: 'Datum JJJJ-MM-TT (danach überfällig)', value: pend?.checkedAt ?? new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10), ok: '⏳ Anfragen' }); if (due == null) return
       await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/sources`, { attribute: to, locale: null, channel: null, row: null, source: who.trim() || null, title: null, note: null, method: 'pending', checkedAt: due.trim() || null })
       await run()
     } catch (e) { store.toast(e.message) }
@@ -419,7 +419,7 @@ export async function mount(root, ctx, catalog) {
     // Gruppe fürs Anlegen: wählbar (vorhandene oder neuer Schlüssel), je Katalog gemerkt — steht am Knopf und in jeder Zeile
     const grpSel = el('select', { title: 'Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu' }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${(model.groups ?? []).find(g => g.key === k)?.label?.de || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, '+ neue Gruppe …'))
     grpSel.value = catalog.groupKey
-    grpSel.addEventListener('change', async () => { let k = grpSel.value; if (k === '__new__') { k = await dialog.prompt({ title: 'Neue Attributgruppe', value: '', placeholder: 'Schlüssel — a-z, 0-9, _', ok: '+ Gruppe' }); k = (k ?? '').trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_'); if (!k) { grpSel.value = catalog.groupKey; return } } catalog.groupKey = k; await ctx.data.set('group', k).catch(() => {}); drawResult(); drawMapping() })
+    grpSel.addEventListener('change', async () => { let k = grpSel.value; if (k === '__new__') { k = await dialog.prompt({ title: 'Attributgruppe anlegen', value: '', placeholder: 'Schlüssel (a-z, 0-9, _)', ok: '+ Anlegen' }); k = (k ?? '').trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_'); if (!k) { grpSel.value = catalog.groupKey; return } } catalog.groupKey = k; await ctx.data.set('group', k).catch(() => {}); drawResult(); drawMapping() })
     const scopes = catalog.groups.filter(g => g.scope).map(g => g.scope)
     if (scopes.length) {
       const scopeAttr = `${catalog.key}_scope`; const rootRow = tree.byId.get(st.root)
@@ -438,7 +438,7 @@ export async function mount(root, ctx, catalog) {
           // wegnehmen: an dem Knoten, an dem es steht (geerbt: der Vater) — keine Ebenenfrage; setzen: Ebene wählen
           const fromId = r.nodes.find(n => n.row.id === st.root)?.from?.[scopeAttr]
           const target = have.includes(s.key)
-            ? ((await dialog.confirm({ title: `${s.label} wegnehmen?`, text: `gesetzt an „${(fromId ? tree.byId.get(fromId)?.label : null) ?? rootRow?.label ?? ''}“ — gilt danach dort und darunter nicht mehr`, ok: 'Wegnehmen' })) ? (fromId ? tree.byId.get(fromId) : null) ?? rootRow : null)
+            ? ((await dialog.confirm({ title: `${s.label} wegnehmen?`, text: `Gesetzt an „${(fromId ? tree.byId.get(fromId)?.label : null) ?? rootRow?.label ?? ''}“; gilt danach dort und darunter nicht mehr`, ok: 'Wegnehmen' })) ? (fromId ? tree.byId.get(fromId) : null) ?? rootRow : null)
             : await pickLevel(rootRow, `${s.label}: gilt ab welchem Knoten? (vererbbar)`, { attr: scopeAttr, wanted: s.key })
           if (!target) return
           const th = (target.groups ?? '').split(',').filter(Boolean); if (!th.includes(catalog.groupKey) && !tree.ancestors(target.id).some(a => (a.groups ?? '').split(',').includes(catalog.groupKey))) await api.post(`/api/nodes/${encodeURIComponent(target.id)}/groups`, { groups: [...th, catalog.groupKey] }, 'PUT')
@@ -482,7 +482,7 @@ export async function mount(root, ctx, catalog) {
     const pendN = r.nodes.reduce((k, x) => k + (x.pending ?? 0), 0), overN = r.nodes.reduce((k, x) => k + (x.overdue ?? 0), 0)
     const next = unm.length ? `Schritt: ${unm.length} Datenpunkte ohne Attribut — unten zuordnen oder anlegen` : inactiveN ? 'Schritt: die Gruppe im Baum anhängen — dann erneut prüfen' : (emptyN || badN) ? `Zuordnung vollständig — ${emptyN} leere${badN ? `, ${badN} falsche` : ''} Werte füllen (Klick auf die Zahl „leer“ oder in die Zelle der Knoten-Tabelle)${pendN ? ` · ⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''}` : ''}` : pendN ? `⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''} — sonst alles da` : '✓ alles zugeordnet und gefüllt'
     s3.append(el('div', { class: 'chips', style: 'margin:4px 0;font-weight:600' }, el('span', { class: unm.length || inactiveN ? 'warn' : (emptyN || badN) ? '' : 'pos' }, next)))
-    if (unm.length) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`), el('span', { class: 'muted' }, 'in Gruppe'), grpSel))
+    if (unm.length) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: `${unm.length} Attribute anlegen?`, warn: `Gruppe „${catalog.groupKey}“`, list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: '+ Anlegen' }))) return; say('lege an …'); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, `+ ${unm.length} fehlende Attribute anlegen`), el('span', { class: 'muted' }, 'in Gruppe'), grpSel))
     if (catalog.summary) { const s = catalog.summary(r, st.mapping, ctx); if (s) s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, s)) }
     if (r.inactiveGroups?.size) {
       // Schritt: die Gruppe hängt an keinem Knoten des Pfads — WO im Baum sie hängen soll, sagt der Anwender (Taloan, 20.09.); Vorgabe: der geprüfte Knoten
@@ -531,14 +531,14 @@ export async function mount(root, ctx, catalog) {
       el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? `KI (${ai.label()}) schlägt Werte für die angehakten Knoten vor` : 'kein KI-Schlüssel — Einstellungen → KI', onclick: async () => {
         const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 10).map(n => n.row.id)
         if (!ids.length) { store.toast('keine Knoten mit Lücken'); return }
-        if (ids.length > 25 && !(await dialog.confirm({ title: `${ids.length} Knoten an die KI?`, warn: `${ids.length} Anfragen an ${ai.label()}`, ok: 'Ja' }))) return
+        if (ids.length > 25 && !(await dialog.confirm({ title: `${ids.length} Knoten an die KI schicken?`, warn: `${ids.length} Anfragen an ${ai.label()}`, ok: '✦ Schicken' }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say); st.sugg = [...st.sugg.filter(x => x.source !== 'ai'), ...s]; say(`${s.filter(x => !x.error).length} KI-Vorschläge`); drawSugg()
       } }, `✦ Vorschläge mit KI${ai.available() ? '' : ' (kein Schlüssel)'}`),
       // Fremde Produkte (Handelsware): die Daten stehen beim Hersteller — die KI sucht im Internet, jeder Wert mit Quelle
       el('button', { class: ai.available() ? 'primary' : '', disabled: ai.available() ? null : 'disabled', title: ai.available() ? `KI (${ai.label()}) sucht im Internet nach Hersteller, Typ, EAN — Datenblätter, Kataloge; je Wert die Quelle. Kostet je Suche extra beim Anbieter` : 'kein KI-Schlüssel — Einstellungen → KI', onclick: async () => {
         const ids = st.picked.size ? [...st.picked] : r.nodes.filter(n => n.leaf && n.score != null && n.score < 100).slice(0, 5).map(n => n.row.id)
         if (!ids.length) { store.toast('keine Knoten mit Lücken'); return }
-        if (ids.length > 10 && !(await dialog.confirm({ title: `${ids.length} Knoten recherchieren?`, warn: `${ids.length} Anfragen mit bis zu 6 Suchen an ${ai.label()}`, ok: 'Ja' }))) return
+        if (ids.length > 10 && !(await dialog.confirm({ title: `${ids.length} Knoten recherchieren?`, warn: `${ids.length} Anfragen mit bis zu 6 Suchen an ${ai.label()}`, ok: '✦ Recherchieren' }))) return
         const s = await aiSuggestions(catalog, st.mapping, r, ids, say, { web: true }); st.sugg = [...st.sugg.filter(x => x.source !== 'web'), ...s]; say(`${s.filter(x => !x.error).length} Vorschläge aus der Recherche`); drawSugg()
       } }, `⌕ Recherche im Internet${ai.available() ? '' : ' (kein Schlüssel)'}`),
       el('span', { class: 'muted', style: 'font-size:12px' }, st.picked.size ? `${st.picked.size} Knoten angehakt` : 'ohne Haken: die ersten 10 mit Lücken'))

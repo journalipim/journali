@@ -25,12 +25,12 @@ async function savePreset(p) {
   catch (e) { store.toast(e.message) }
 }
 async function newPreset() {
-  const key = await dialog.prompt({ title: 'Neues Vorschau-Preset', text: 'Key (a-z, 0-9, _) — z. B. shop, katalog, print_hires', placeholder: 'key' })
+  const key = await dialog.prompt({ title: 'Vorschau-Preset anlegen', text: 'Key (a-z, 0-9, _)', placeholder: 'z. B. shop, katalog, print_hires', ok: '+ Anlegen' })
   if (!key) return
   try { await api.post(`/api/media/presets/${encodeURIComponent(key.trim().toLowerCase())}`, { label: { de: key, en: key }, width: 1200, height: 1200, format: 'webp', quality: 82, auto: true }, 'PUT'); await loadPresets() } catch (e) { store.toast(e.message) }
 }
 async function deletePreset(p) {
-  if (!await dialog.confirm({ title: `Preset „${p.key}“ entfernen?`, text: 'Die gerechneten Ableitungen bleiben im Store, werden aber nicht mehr ausgeliefert.', ok: '🗑 Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: `Preset „${p.key}“ entfernen?`, text: 'Gerechnete Ableitungen bleiben im Store, werden aber nicht mehr ausgeliefert.', ok: '🗑 Entfernen', danger: true })) return
   try { await api.del(`/api/media/presets/${encodeURIComponent(p.key)}`); await loadPresets() } catch (e) { store.toast(e.message) }
 }
 async function derive() { presetBusy.value = 'stoße an …'; try { const r = await api.post('/api/media/derive', {}); store.toast(`Job „${r.job}“ läuft — ⏱ Jobs zeigt den Fortschritt`, 'ok'); setTimeout(loadPresets, 3000) } catch (e) { store.toast(e.message) } finally { presetBusy.value = '' } }
@@ -62,7 +62,7 @@ async function findMissing() {
 }
 async function copy() {
   if (!store.actor) { store.toast('👤 Name fehlt'); return }
-  if (!await dialog.confirm({ title: 'Blobs herüberkopieren', warn: `${copyFrom.value.driver === 'file' ? copyFrom.value.path : copyFrom.value.driver === 's3' ? 's3://' + copyFrom.value.bucket : 'postgres'} → ${state.value.kind}`, text: 'kopiert alles, was hier fehlt — Hash-geprüft, nichts wird gelöscht', ok: 'Kopieren' })) return
+  if (!await dialog.confirm({ title: 'Blobs herüberkopieren?', warn: `${copyFrom.value.driver === 'file' ? copyFrom.value.path : copyFrom.value.driver === 's3' ? 's3://' + copyFrom.value.bucket : 'postgres'} → ${state.value.kind}`, text: 'Alles, was hier fehlt (Hash-geprüft, nichts wird gelöscht)', ok: 'Kopieren' })) return
   busy.value = 'kopiere …'; copyResult.value = null
   try { copyResult.value = await api.post('/api/media/copy', { from: clean(copyFrom.value) }); missing.value = null }
   catch (e) { store.toast(e.message) }

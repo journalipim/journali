@@ -102,7 +102,7 @@ async function saveRule() {
   expanded.value.add(b.rubric.id); ruleBox.value = null
 }
 async function removeRule(rubricId, rule) {
-  if (!await dialog.confirm({ title: 'Regel entfernen?', text: ruleLabel(rule) + ' — die Treffer verschwinden aus dieser Rubrik; im Pflegebaum ändert sich nichts.', ok: '✕ Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: 'Regel entfernen?', text: ruleLabel(rule) + ' — Treffer verschwinden aus dieser Rubrik; im Pflegebaum ändert sich nichts.', ok: '✕ Entfernen', danger: true })) return
   await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/rules/${encodeURIComponent(rule.id)}`))
 }
 // Ausleitung (Taloan, 21.09.): je Produkt im Baum ausgeleitet oder zurückgehalten, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
@@ -135,16 +135,16 @@ const post = (url, body, m) => api.post(url, body, m)
 
 async function newTree() {
   const channels = store.model?.channels ?? []
-  const name = await dialog.prompt({ title: 'Neuer Publikationsbaum', value: '', placeholder: 'Name — z. B. Web Schweiz', ok: '+ Baum' })
+  const name = await dialog.prompt({ title: 'Publikationsbaum anlegen', value: '', placeholder: 'Name, z. B. Web Schweiz', ok: '+ Anlegen' })
   if (!name) return
-  const channel = channels.length === 1 ? channels[0].key : await dialog.prompt({ title: 'Kanal', text: channels.map(c => c.key).join(' · '), value: store.model?.masterChannel ?? channels[0]?.key ?? '', ok: 'OK' })
+  const channel = channels.length === 1 ? channels[0].key : await dialog.prompt({ title: 'Kanal wählen', text: channels.map(c => c.key).join(' · '), value: store.model?.masterChannel ?? channels[0]?.key ?? '', ok: 'Übernehmen' })
   if (!channel) return
-  const market = await dialog.prompt({ title: 'Markt (leer = alle Märkte)', text: 'Schlüssel aus der Werteliste „Märkte“ (Modell) — der Baum leitet dann nur aus, was in diesem Markt verkauft wird (Verkaufsländer am Produkt).', value: '', placeholder: 'z. B. ch', ok: 'OK' })
+  const market = await dialog.prompt({ title: 'Markt wählen (leer = alle)', text: 'Schlüssel aus der Werteliste „Märkte“; der Baum leitet nur aus, was in diesem Markt verkauft wird', value: '', placeholder: 'z. B. ch', ok: 'Übernehmen' })
   if (market == null) return
   await run(async () => { const e = await post('/api/rubrics', { parent: null, label: {}, name, channel, market: market || null }); treeKey.value = e.stream })
 }
 async function newRubric(parent) {
-  const name = await dialog.prompt({ title: 'Neue Rubrik', text: `unter ${parent.label}`, value: '', ok: '+ Rubrik' })
+  const name = await dialog.prompt({ title: 'Rubrik anlegen', text: `unter ${parent.label}`, value: '', ok: '+ Anlegen' })
   if (!name) return
   await run(async () => { await post('/api/rubrics', { parent: parent.id, label: {}, name }); expanded.value.add(parent.id); toggle(parent.id); toggle(parent.id) })
 }
@@ -160,7 +160,7 @@ async function retire(r) {
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
 }
 async function namePlace(row) {
-  const name = await dialog.prompt({ title: 'Anzeigename des Verweises', text: `Pflegename: ${row.r.label} — leer = Pflegename`, value: row.work ?? '', ok: '✎ OK' })
+  const name = await dialog.prompt({ title: 'Anzeigename ändern', text: `Pflegename: ${row.r.label} (leer = Pflegename)`, value: row.work ?? '', ok: '✎ Übernehmen' })
   if (name == null) return
   await run(() => post(`/api/rubrics/${encodeURIComponent(row.rubric)}/place/${encodeURIComponent(row.r.id)}/name`, { name }, 'PUT'))
 }
@@ -201,8 +201,8 @@ function contextMenu(e, row) {
   ])
 }
 async function editTree(r) {
-  const channel = await dialog.prompt({ title: 'Kanal', text: (store.model?.channels ?? []).map(c => c.key).join(' · '), value: r.channel ?? '', ok: 'OK' }); if (!channel) return
-  const market = await dialog.prompt({ title: 'Markt (leer = alle)', value: r.market ?? '', ok: 'OK' }); if (market == null) return
+  const channel = await dialog.prompt({ title: 'Kanal wählen', text: (store.model?.channels ?? []).map(c => c.key).join(' · '), value: r.channel ?? '', ok: 'Übernehmen' }); if (!channel) return
+  const market = await dialog.prompt({ title: 'Markt wählen (leer = alle)', value: r.market ?? '', ok: 'Übernehmen' }); if (market == null) return
   await run(() => post(`/api/rubrics/${encodeURIComponent(r.id)}/tree`, { channel, market: market || null }, 'PUT'))
 }
 // Ziehen: Rubrik auf Rubrik = umhängen; Verweis auf Rubrik = Verweis umhängen
@@ -246,15 +246,15 @@ function open(row, e) {
 // Stand (Taloan, 21.09., „A“): Zeiger auf eine Journalnummer an Rubrik oder Wurzel — alles darunter liest die Pflege wie damals; live = kein Zeiger
 function standOf(r) { for (let n = r; n; n = tree.byId.get(n.parent)) if (n.stand != null) return { stand: n.stand, from: n }; return null }
 async function setStand(r, mode) {
-  if (mode === 'live' && !await dialog.confirm({ title: `„${r.label}“ wieder live?`, text: `Stand #${r.stand} aufheben — ab hier nach unten gilt wieder der aktuelle Pflegestand.`, ok: 'live' })) return
-  if (mode === 'now' && !await dialog.confirm({ title: r.stand != null ? `Stand von „${r.label}“ aktualisieren?` : `„${r.label}“ einfrieren?`, text: 'Ab hier nach unten liest die Publikation die Pflege wie jetzt — spätere Änderungen in der Pflege kommen nicht mehr durch, bis der Stand aktualisiert oder aufgehoben wird. Nichts wird kopiert: ein Zeiger ins Journal.', ok: r.stand != null ? '❄ aktualisieren' : '❄ einfrieren' })) return
+  if (mode === 'live' && !await dialog.confirm({ title: `Stand #${r.stand} von „${r.label}“ aufheben?`, text: 'Ab hier nach unten gilt wieder der aktuelle Pflegestand.', ok: '○ Aufheben' })) return
+  if (mode === 'now' && !await dialog.confirm({ title: r.stand != null ? `Stand von „${r.label}“ aktualisieren?` : `„${r.label}“ einfrieren?`, text: 'Ab hier nach unten liest die Publikation die Pflege wie jetzt; spätere Änderungen kommen erst nach Aktualisieren oder Aufheben durch. Nichts wird kopiert (Zeiger ins Journal).', ok: r.stand != null ? '❄ Aktualisieren' : '❄ Einfrieren' })) return
   await run(() => post(`/api/rubrics/${encodeURIComponent(r.id)}/stand`, mode === 'now' ? { now: true } : {}, 'PUT'))
 }
 // mehrere Rubriken auf einmal entfernen (nur aus diesem Publikationsbaum); Wurzeln bleiben, verschachtelte nur einmal
 async function retireMany(ids) {
   const list = ids.map(x => tree.byId.get(x)).filter(r => r && r.parent && !tree.ancestors(r.id).some(a => ids.includes(a.id)))
   if (!list.length) return
-  if (!await dialog.confirm({ title: `${list.length} Rubriken aus „${current.value?.label ?? ''}“ entfernen?`, list: list.map(r => r.label), text: 'Mit allem darunter (Unterrubriken, Verweise). Die Produkte bleiben im Pflegebaum und gelten hier danach als „noch nicht einsortiert“.', ok: '✕ Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: `${list.length} Rubriken aus „${current.value?.label ?? ''}“ entfernen?`, list: list.map(r => r.label), text: 'Mit allem darunter. Die Produkte bleiben im Pflegebaum und gelten hier als „noch nicht einsortiert“.', ok: '✕ Entfernen', danger: true })) return
   if (list.some(r => r.id === props.id || tree.ancestors(props.id ?? '').some(a => a.id === r.id))) router.push(`/pub/${current.value.id}`)
   await run(async () => { for (const r of list) await api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`) })
   sel.value = new Set()
@@ -263,12 +263,12 @@ async function retireMany(ids) {
 async function clearTree(r) {
   const kids = tree.kids(r.id); const refs = (r.placed ?? []).length
   if (!kids.length && !refs) { store.toast('schon leer'); return }
-  if (!await dialog.confirm({ title: `„${r.label}“ leeren?`, text: `${kids.length} Rubriken und ${refs} Verweise an der Wurzel verschwinden. Die Produkte bleiben im Pflegebaum. Der Baum selbst (Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}) bleibt.`, ok: '✕ Leeren', danger: true })) return
+  if (!await dialog.confirm({ title: `„${r.label}“ leeren?`, text: `${kids.length} Rubriken und ${refs} Verweise verschwinden; die Produkte bleiben im Pflegebaum, der Baum (Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}) bleibt.`, ok: '✕ Leeren', danger: true })) return
   if (props.id && props.id !== r.id) router.push(`/pub/${r.id}`)
   await run(async () => { for (const k of kids) await api.del(`/api/nodes/${encodeURIComponent(k.id)}?recursive=true`); for (const p of r.placed ?? []) await api.del(`/api/rubrics/${encodeURIComponent(r.id)}/place/${encodeURIComponent(p)}`) })
 }
 async function deleteTree(r) {
-  if (!await dialog.confirm({ title: `Publikationsbaum „${r.label}“ löschen?`, warn: `Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}`, text: 'Mit allen Rubriken und Verweisen. Die Produkte bleiben im Pflegebaum. Wie alles im Journal: zurückholbar über den Papierkorb.', ok: '✕ Löschen', danger: true })) return
+  if (!await dialog.confirm({ title: `Publikationsbaum „${r.label}“ löschen?`, warn: `Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}`, text: 'Mit allen Rubriken und Verweisen. Die Produkte bleiben im Pflegebaum; zurückholbar über den Papierkorb.', ok: '✕ Löschen', danger: true })) return
   router.push('/pub')
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
   treeKey.value = trees.value[0]?.id ?? ''

@@ -43,9 +43,9 @@ export async function confirmMove({ title, warn, text = '', missing, rootLabel, 
   const n = missingCount(missing)
   const res = await dialog.confirm({
     title, ok, text,
-    warn: missing.length ? `${warn ? warn + ' · ' : ''}${missing.length} Attributgruppen gelten am Ziel nicht — ${n} Attribute mit Werten wären verwaist` : warn,
+    warn: missing.length ? `${warn ? warn + ' · ' : ''}${missing.length} Attributgruppen gelten am Ziel nicht (${n} Attribute mit Werten wären verwaist)` : warn,
     list: missing.length ? missingLines(missing) : [],
-    option: missing.length ? { label: `fehlende Gruppen an ${rootLabel} anhängen — gelten dann ab dort nach unten`, checked: true } : null,
+    option: missing.length ? { label: `Fehlende Gruppen an ${rootLabel} anhängen (gelten dann ab dort nach unten)`, checked: true } : null,
   })
   return res ? { attach: !!(missing.length && dialog.option?.checked) } : null
 }
