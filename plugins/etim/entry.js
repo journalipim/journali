@@ -543,6 +543,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
   const line = el('div', { class: 'row' }); const table = el('div'); const found = el('div'); bodyEl.append(line, table, found)
   const { api, store, tree } = ctx
   await cache.loaded; if (!tree.loaded) await tree.load()
+  ctx.touch?.()   // die Klassen stehen — die Abschnitte der Knotenansicht neu rechnen (Taloan, 22.09.2026)
   const locale = store.model?.masterLocale ?? 'de'; const ops = modelOps(ctx)
   let gone = false
   const chip = (text, cls = '', title = '') => el('span', { class: 'chip ' + cls, title }, text)
@@ -1060,8 +1061,7 @@ function classesBelow(row, tree) {
   const out = new Map()
   const add = id => { const v = cache.classOf?.get(id); const c = v ? cache.classes.get(v.code) : null; if (c) out.set(c.code, c) }
   add(row.id)
-  const below = tree?.below?.(row.id) ?? kidsDeep(row.id, tree)
-  for (const r of below) add(r.id)
+  for (const r of kidsDeep(row.id, tree)) add(r.id)   // tree.below() ist eine Zusammenfassung, keine Liste
   return [...out.values()].sort((a, b) => a.code.localeCompare(b.code))
 }
 /// Abschnitte nach Klassenzugehörigkeit (Taloan, 22.09.2026): je Merkmal die Menge der Klassen, in denen es vorkommt —
@@ -1117,13 +1117,8 @@ export default {
   nodeViews: [
     {
       key: 'class', roles: ['group', 'product', 'variant'],
-      // Name der Sicht: eine Klasse → ihr Name; mehrere darunter → wie viele
-      label: (row, ctx) => {
-        const cs = classesBelow(row, ctx?.tree)
-        if (!cs.length) return null
-        const locale = ctx?.model?.masterLocale ?? 'de'
-        return cs.length === 1 ? `⌗ ${cs[0].code} ${nameOf(cs[0].name, locale) || ''}`.trim() : `⌗ ETIM · ${cs.length} Klassen`
-      },
+      // ersetzt die Attributgruppe: der ETIM-Abschnitt ist nach Klassen gegliedert, ohne dass jemand eine Sicht wählt
+      replaces: cache.settings.group ?? 'etim',
       blocks: classBlocks,
     },
   ],

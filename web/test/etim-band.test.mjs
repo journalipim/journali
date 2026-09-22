@@ -168,8 +168,9 @@ test('Klassengliederung statt fester Sicht (Taloan, 22.09.): Abschnitte nach Kla
   assert.ok(nv?.blocks, 'nodeViews mit blocks fehlt')
   const pctx = { model: ctx.store.model, tree: ctx.tree }
 
-  // eine Klasse am Knoten: ein Abschnitt mit ihrem Namen, davor das Klassenattribut
-  assert.match(nv.label({ id: 'p-1', role: 'product' }, pctx), /⌗ EC004718 Laptop/)
+  // der Abschnitt tritt an die Stelle der Attributgruppe — keine Sicht zum Wählen (Taloan, 22.09.)
+  assert.equal(nv.replaces, 'etim')
+  assert.equal(nv.label, undefined, 'keine eigene Sicht in der Auswahl')
   const one = nv.blocks({ id: 'p-1', role: 'product' }, pctx)
   assert.equal(one[0].title, '⌗ ETIM-Klasse')
   assert.deepEqual(one[0].keys, ['etim_class'])
@@ -184,7 +185,6 @@ test('Klassengliederung statt fester Sicht (Taloan, 22.09.): Abschnitte nach Kla
   assert.ok(zwei[1].keys.includes('ef008851'), 'Wi-Fi haben beide Klassen')
   assert.ok(zwei.slice(2).some(b => b.keys.includes('tastatur_name')), 'nur eine Klasse führt es')
   assert.ok(zwei.slice(2).every(b => b.title.split('·').length === 1 || b.title.split(' · ').length < titel[1].split(' · ').length))
-  assert.match(nv.label({ id: 'g-1', role: 'group' }, pctx), /⌗ ETIM · 2 Klassen/)
 
   // ohne Klasse keine Abschnitte
   assert.equal(nv.blocks({ id: 'gibtsnicht', role: 'product' }, pctx), null)

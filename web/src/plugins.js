@@ -15,9 +15,9 @@
 //   install(ctx): einmal beim Einschalten des Plugins (Taloan, 22.09.) — legt an, was das Plugin braucht (ETIM: Gruppe und
 //                Klassenattribut, an MasterTree gehängt). Läuft nicht bei jedem Seitenaufruf; der Lauf wird je Plugin gemerkt.
 //   nodeViews:   [{ key, label(row, ctx) | label, roles?, items(row, ctx) → [{ group, order: [attrKey] }] | null,
-//                blocks?(row, ctx) → [{ key, title, keys: [attrKey] }] | null }]   flüchtige Attributsicht: erscheint in der
-//                Sichtauswahl des Knotens, steht aber nicht im Modell (Taloan, 22.09.2026). Mit `blocks` bestimmt das Plugin die
-//                Abschnitte selbst — eigene Überschrift, Attribute quer über die Gruppen (ETIM: je Klassenmenge ein Abschnitt)
+//                blocks?(row, ctx) → [{ key, title, keys: [attrKey] }] | null, replaces?: 'gruppe' }]
+//                Abschnitte am Knoten (Taloan, 22.09.2026), nie im Journal. Mit `label` steht es als eigene Sicht zur Wahl; mit
+//                `replaces` tritt es an die Stelle dieser Attributgruppe — in jeder Sicht, ohne Zutun (ETIM: je Klassenmenge ein Abschnitt)
 //   nodeBands:   [{ key, label, icon?, roles?, mount({ head, body }, nodeId, ctx) → unmount? }]   Band in der Knotenansicht (Taloan, 22.09.:
 //                „die Bedienung erfolgt beim Gegenstand“ — ETIM-Stand am Knoten; head = Zeile mit Zahlen und Knöpfen, body = Details)
 //   Manifest process {…} oder processes: [{ key, label, command, args, params, description }] — mehrere Dienste je Plugin (Taloan); ein Job nennt plugin + service
@@ -51,6 +51,7 @@ export const plugins = reactive({
   checks: [],             // { key (Plugin), check, label, run }
   nodeBands: [],          // { key (Plugin), band (band.key), label, icon, roles, mount }
   nodeViews: [],          // { key (Plugin), view (view.key), label, roles, items(row, ctx) } — flüchtig, nie im Journal
+  rev: 0,                 // Zähler: ein Plugin meldet mit ctx.touch(), dass seine Daten stehen — Ansichten rechnen dann neu
 
   loading: null,          // laufender load() — wer gleichzeitig ruft, wartet darauf (sonst doppelte Einträge in der Leiste)
   load() { return this.loading ??= this._load().finally(() => { this.loading = null }) },
@@ -119,6 +120,7 @@ export const plugins = reactive({
     const base = `/api/plugins/${key}/data/`
     return {
       api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, treePicker, filePicker,
+      touch: () => { this.rev++ },                                             // „meine Daten stehen“ — Ansichten neu rechnen
       use: k => this.modules.get(k) ?? null,                                    // Modul eines anderen Plugins (Basis-Plugin)
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },
       data: {

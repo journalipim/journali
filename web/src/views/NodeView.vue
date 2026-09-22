@@ -116,6 +116,7 @@ const headGroups = computed(() => { const out = []; for (const c of columns.valu
 // Sichten: die aus dem Modell und die flüchtigen der Plugins (Taloan, 22.09.2026: ad hoc, nicht im Journal —
 // ein Plugin sagt je Knoten, welche Gruppen und Attribute in welcher Reihenfolge zu sehen sind)
 const pluginViews = computed(() => {
+  plugins.rev   // hängt am Zähler: lädt ein Plugin seine Daten nach, rechnet die Ansicht neu
   const row = tree.byId.get(props.id); if (!row || !node.value) return []
   const out = []
   for (const v of plugins.nodeViews ?? []) {
@@ -126,11 +127,12 @@ const pluginViews = computed(() => {
     try { items = v.items?.(row, pctx) } catch { items = null }
     if (!custom?.length && !items?.length) continue
     const label = typeof v.label === 'function' ? v.label(row, pctx) : v.label
-    out.push({ key: `~${v.key}:${v.view}`, level: node.value.role, label: { de: label }, items: items ?? [], custom, plugin: v.key })
+    out.push({ key: `~${v.key}:${v.view}`, level: node.value.role, label: { de: label }, items: items ?? [], custom, replaces: v.replaces, plugin: v.key })
   }
   return out
 })
-const views = computed(() => [...(model.value?.views ?? []).filter(v => v.level === node.value?.role), ...pluginViews.value])
+// zur Wahl stehen nur die mit Namen; die anderen ersetzen still eine Gruppe (siehe blocks)
+const views = computed(() => [...(model.value?.views ?? []).filter(v => v.level === node.value?.role), ...pluginViews.value.filter(v => v.label?.de)])
 const view = computed(() => views.value.find(v => v.key === store.viewKey[node.value?.role]) ?? null)
 // „komplett“ ordnet nach der Standardsicht des Knotentyps (defaultview_<rolle>), wenn es sie gibt — sonst alphabetisch.
 const orderView = computed(() => view.value ?? views.value.find(v => v.key === 'defaultview_' + node.value?.role) ?? null)
@@ -180,7 +182,7 @@ const blocks = computed(() => {
   // „komplett“: Gruppen, die die Standardsicht nicht nennt, unten dran. Eine gewählte Sicht zeigt nur ihre Gruppen (Taloan, 17.09.).
   if (ov && !view.value) for (const g of eff) if (!order.includes(g.key)) order.push(g.key)
   const req = k => model.value.attributes.find(a => a.key === k)?.required
-  return order.map(k => {
+  const built = order.map(k => {
     const g = byKey.get(k)
     const it = ov?.items.find(x => x.group === k)
     const ord = (it?.order ?? []).filter(a => g.attributes.includes(a))
@@ -198,6 +200,14 @@ const blocks = computed(() => {
   }).filter(b => b.defs.length && (store.scope === 'all' || b.active))
     // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
+  // Ein Plugin darf eine Gruppe durch eigene Abschnitte ersetzen — an derselben Stelle (Taloan, 22.09.2026: ETIM nach Klassen)
+  const out = []
+  for (const b of built) {
+    const rep = pluginViews.value.find(v => v.replaces === b.key && v.custom?.length)
+    if (rep) out.push(...customBlocks(rep.custom, eff))
+    else out.push(b)
+  }
+  return out
 })
 /// Abschnitte, die ein Plugin vorgibt: eigene Überschrift, Attribute aus beliebigen Gruppen — sonst dieselben Regeln
 /// (gesperrt am Knotentyp, Bedingung when, Pflicht, Filter der Sicht „Editierbare“).
