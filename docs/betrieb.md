@@ -123,11 +123,19 @@ ersten Stufe). Für den Server gibt es zwei Wege:
    Kommando; nur Plugin-Änderungen brauchen kein neues Image. Prozess-Plugins
    auf Python-Basis (solr_import.py) laufen im Image nicht — es enthält nur node.
 2. **Publish-Ordner** — ohne Image: vom PC erst `tools\server build`, dann
-   `dotnet publish Journali.Server -c Release -o <Freigabe>\journali`
+   `dotnet publish Journali.Server -c Release -o <Freigabe>\journali -p:DebugType=none -p:DebugSymbols=false`
    (nimmt `wwwroot` mit),
    Container aus `mcr.microsoft.com/dotnet/aspnet:8.0` mit dem Ordner
    als `/app`, Befehl `dotnet Journali.Server.dll`, Port 8080, dieselben
    Umgebungsvariablen. Änderung = neu publishen, Container neu starten.
+
+**Keine Debugsymbole in der Auslieferung** (Taloan, 22.09.2026): Image und
+Publish-Ordner werden mit `-p:DebugType=none -p:DebugSymbols=false` gebaut,
+also ohne `.pdb`. Das nimmt einem Leser die Dateipfade und Zeilennummern; die
+DLLs sind IL und bleiben mit einem Dekompilierer lesbar (Namen und Logik, ohne
+Kommentare) — technisch dagegen hülfe nur NativeAOT. Den Rest regeln Lizenz
+und Vertrag. Die Oberfläche geht ohnehin minifiziert und ohne Source Maps
+heraus; die Plugins liegen als Quelltext im Image, das ist so gewollt.
 
 ## Verteilen
 

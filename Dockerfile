@@ -22,7 +22,8 @@ RUN dotnet restore Journali.Server/Journali.Server.csproj
 COPY Journali.Core/ Journali.Core/
 COPY Journali.Server/ Journali.Server/
 COPY --from=web /Journali.Server/wwwroot Journali.Server/wwwroot
-RUN dotnet publish Journali.Server/Journali.Server.csproj -c Release -o /app --no-restore
+# ohne Debugsymbole: keine .pdb im Image — keine Dateipfade und Zeilennummern aus Taloans Rechner (Taloan, 22.09.2026)
+RUN dotnet publish Journali.Server/Journali.Server.csproj -c Release -o /app --no-restore -p:DebugType=none -p:DebugSymbols=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
