@@ -382,7 +382,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
   // Schritt 3 (Taloan, 22.09.: „grenzwertig — wir haben im Baum die Tabellenansicht, Excel“): keine eigene Tabelle mehr — nach dem Zuweisen
   // geht es in die ETIM-Übersicht des Knotens (Klasse → Attribute → Daten → Ausleitung); bearbeitet wird in der Subitems-Tabelle
   function checkStep(code) { close(); onDone ? onDone(code) : ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) }
-  const line = (code, why) => { const c = cache.classes.get(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, 'nicht in der Bibliothek'), c ? el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} ETIM-Attribute`) : null, why ? el('span', { class: 'muted', style: 'font-size:11px' }, `  (${why})`) : null), c && code !== current ? el('button', { class: 'primary', onclick: () => assign(code) }, '⇢ zuweisen') : null) }
+  const line = (code, why) => { const c = cache.classes.get(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center', title: c && code !== current ? `${code} ${nameOf(c.name, locale)} wählen` : '', onclick: () => { if (c && code !== current) assign(code) } }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, 'nicht in der Bibliothek'), c ? el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} ETIM-Attribute`) : null, why ? el('span', { class: 'muted', style: 'font-size:11px' }, `  (${why})`) : null), c && code !== current ? el('button', { class: 'primary', onclick: () => assign(code) }, '⇢ zuweisen') : null) }
 
   // Version im Dialog wechseln (Taloan, 22.09.: „wer sagt, dass ich nicht schnell die ETIM-Version wechseln will“): die Auswahl gilt
   // ab sofort für Zuweisen, Prüfen und Export (release im Journal) — die Liste der Klassen darunter wird neu gelesen
@@ -449,13 +449,13 @@ async function classDialog(nodeId, ctx, onDone = null) {
           const list = cands.map(c => `${c.code} ${nameOf(c.name, locale)}${Object.values(c.synonyms ?? {}).flat().length ? ' (' + Object.values(c.synonyms ?? {}).flat().slice(0, 4).join(', ') + ')' : ''}`).join('\n')
           const j = await ai.ask({ system: 'Du ordnest ein Produkt genau einer ETIM-Klasse zu. Antworte nur als JSON {"suggestions":[{"code":"EC…","why":"…"}]} mit 1 bis 3 Vorschlägen, Codes exakt aus der Liste, bester zuerst, why in einem kurzen Satz auf Deutsch.', user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}\nKlassen:\n${list}`, json: true, maxTokens: 400 })
           suggest.innerHTML = ''; suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, `✦ Vorschlag (KI, ${ai.label()}) — ${picked.join(', ')}`))
-          const out = (j.suggestions ?? []).filter(s => cands.some(c => c.code === String(s.code).toUpperCase()))
+          const out = (j.suggestions ?? []).filter(s => cands.some(c => c.code === String(s.code).toUpperCase())).filter(s => String(s.code).toUpperCase() !== current)
           if (!out.length) suggest.append(el('div', { class: 'muted' }, 'kein Vorschlag'))
           for (const s of out) suggest.append(line(String(s.code).toUpperCase(), s.why ?? ''))
         } catch (e) { suggest.innerHTML = ''; suggest.append(el('span', { class: 'neg' }, '✗ ' + e.message)) }
       })()
-    } else suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, '✦ Vorschläge aus Name und Pfad brauchen einen KI-Schlüssel (⚙ Einstellungen)'))
-    body.append(el('div', { class: 'step-band', style: 'margin:6px 0 2px' }, 'Empfehlung', el('span', { class: 'muted' }, ' · aus dem Bestand und, wenn ein Schlüssel da ist, von der KI — anklicken übernimmt die Klasse')), suggest)
+    }
+    body.append(el('div', { class: 'step-band', style: 'margin:6px 0 2px', title: ai?.available() ? 'aus dem Bestand und von der KI — eine Zeile anklicken übernimmt die Klasse' : 'aus dem Bestand — eine Zeile anklicken übernimmt die Klasse; KI-Vorschläge brauchen einen Schlüssel (⚙ Einstellungen)' }, 'Empfehlung'), suggest)
     // Umfeld: Klassen an Geschwistern und darunter
     const env = el('div', { style: 'font-size:12px;margin:0 0 4px' }, el('span', { class: 'muted' }, 'lese den Bestand …')); body.append(env)
     ;(async () => {
@@ -465,7 +465,10 @@ async function classDialog(nodeId, ctx, onDone = null) {
         const below = await api.get(`/api/nodes/${encodeURIComponent(row.id)}/table?deep=true&attributes=${key}`); for (const r of below.rows) add(r.values[key]?.value, 'darunter')
         env.innerHTML = ''
         if (!counts.size) { env.innerHTML = ''; env.append(el('span', { class: 'muted' }, 'Im Umfeld ist noch keine Klasse gesetzt: weder an Geschwistern noch im Teilbaum.')); return }
-        for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => whyText(w, n)).join(' · ')))
+        // was hier schon gilt, ist kein Vorschlag (Taloan, 22.09.)
+        const rows = [...counts].filter(([c]) => c !== current).sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))
+        if (!rows.length) { env.append(el('span', { class: 'muted' }, 'Im Umfeld steht keine andere Klasse — unten suchen oder blättern.')); return }
+        for (const [c, whys] of rows) env.append(line(c, [...whys].map(([w, n]) => whyText(w, n)).join(' · ')))
       } catch (e) { env.textContent = 'Umfeld: ' + e.message }
     })()
     // Suche und Gruppen
