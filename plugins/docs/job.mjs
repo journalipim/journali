@@ -26,7 +26,7 @@ async function pdfPages(bytes) {
   let pdfjs
   try { pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs') }
   catch (e) { throw new Error('pdfjs-dist fehlt — im Plugin-Verzeichnis einmal „npm install“ ausführen (' + e.message + ')') }
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: true, isEvalSupported: false }).promise
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), useSystemFonts: true, isEvalSupported: false, verbosity: 0 }).promise
   const pages = []
   for (let n = 1; n <= doc.numPages; n++) {
     const page = await doc.getPage(n)

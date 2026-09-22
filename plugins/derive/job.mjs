@@ -27,7 +27,7 @@ try { sharp = (await import('sharp')).default } catch (e) { console.error('✗ s
 /// ist auf Papier gedacht, durchsichtig sähe in der Kachel aus wie ein Fehler.
 async function pdfFirstPage(file, edge) {
   const [{ createCanvas }, pdfjs] = await Promise.all([import('@napi-rs/canvas'), import('pdfjs-dist/legacy/build/pdf.mjs')])
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(fs.readFileSync(file)), useSystemFonts: true, isEvalSupported: false }).promise
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(fs.readFileSync(file)), useSystemFonts: true, isEvalSupported: false, verbosity: 0 }).promise
   try {
     const page = await doc.getPage(1)
     const base = page.getViewport({ scale: 1 })
