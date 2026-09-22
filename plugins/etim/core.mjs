@@ -180,8 +180,12 @@ export function checkNode({ values, columns, classes, cfg }) {
     if (r === null) out.push({ attribute: key, message: `${f.code} ${nameOf(f.name, cfg.locale)}: „${values[key]?.value}“ passt nicht (${f.type}${f.type === 'Alphanumeric' ? ': ' + f.values.slice(0, 6).map(v => nameOf(v.name, cfg.locale)).join(', ') + (f.values.length > 6 ? ' …' : '') : ''})`, severity: 'warn' })
     else if (!r.unknown) filled++
   }
-  const mapped = cls.features.filter(f => columns.some(c => c.key === mapEntry(cfg.map, f.code).key)).length
-  if (mapped < cls.features.length) out.push({ attribute: cfg.classAttr, message: `${code}: ${cls.features.length - mapped} von ${cls.features.length} Merkmalen ohne Attribut (⌗ ETIM → Zuordnung)`, severity: 'info' })
-  if (filled < mapped) out.push({ attribute: cfg.classAttr, message: `${code}: ${filled} von ${mapped} zugeordneten Merkmalen belegt`, severity: 'info' })
+  // Zusammenfassung je Knoten (Taloan, 22.09.: „was heisst belegt?“): gefüllt = ein Wert, den das Merkmal lesen kann; ohne Spalte = kein
+  // Attribut im Modell oder es gilt an diesem Knoten nicht (Gruppe nicht am Pfad, Rolle) — mit Namen, damit man weiss, welche
+  const noCol = cls.features.filter(f => !columns.some(c => c.key === mapEntry(cfg.map, f.code).key))
+  const mapped = cls.features.length - noCol.length
+  const names = l => l.slice(0, 4).map(f => `${f.code} ${nameOf(f.name, cfg.locale)} (${mapEntry(cfg.map, f.code).key})`).join(', ') + (l.length > 4 ? ` … +${l.length - 4}` : '')
+  if (noCol.length) out.push({ attribute: cfg.classAttr, message: `${noCol.length} von ${cls.features.length} Merkmalen ohne Spalte hier — kein Attribut im Modell oder gilt an diesem Knoten nicht: ${names(noCol)}`, severity: 'info' })
+  if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} Merkmalen leer (${filled} gefüllt) — gefüllt heisst: ein Wert, den das Merkmal lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat`, severity: 'info' })
   return out
 }
