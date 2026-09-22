@@ -298,6 +298,19 @@ async function classDialog(nodeId, ctx, onDone = null) {
   function checkStep(code) { close(); onDone ? onDone(code) : ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) }
   const line = (code, why) => { const c = cache.classes.get(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, 'nicht in der Bibliothek'), el('span', { class: 'muted', style: 'font-size:11px' }, why ? ' · ' + why : ''), c ? el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} ETIM-Attribute`) : null), c && code !== current ? el('button', { class: 'primary', onclick: () => assign(code) }, '⇢ zuweisen') : null) }
 
+  // Version im Dialog wechseln (Taloan, 22.09.: „wer sagt, dass ich nicht schnell die ETIM-Version wechseln will“): die Auswahl gilt
+  // ab sofort für Zuweisen, Prüfen und Export (release im Journal) — die Liste der Klassen darunter wird neu gelesen
+  function versionBar() {
+    if (cache.versions.length < 2 && cache.version) return el('span', { class: 'muted', style: 'font-size:12px' }, `ETIM ${cache.version} · ${cache.classes.size} Klassen`)
+    const sel = el('select', { title: 'ETIM-Version — gilt für Zuweisen, Prüfen und Export', onchange: async e => {
+      const v = cache.versions.find(x => x.version === e.target.value); if (!v) return
+      say(`wechsle auf ETIM ${v.version} …`)
+      try { await ctx.data.set('release', v); await loadCache(); await ops.ensureClassAttr(); await store.poll(true); say(''); draw() } catch (err) { say('✗ ' + err.message) }
+    } }, ...cache.versions.map(v => el('option', { value: v.version }, `ETIM ${v.version}${v.name ? ' · ' + v.name : ''} · ${v.classes ?? '?'} Klassen`)))
+    sel.value = cache.version ?? ''
+    return el('span', { style: 'display:inline-flex;gap:6px;align-items:center' }, el('span', { class: 'muted', style: 'font-size:12px' }, 'Version'), sel,
+      el('button', { class: 'x', title: 'Versionen verwalten: holen, Datei lesen, wechseln (⌗ ETIM)', onclick: () => { close(); ctx.go?.('/p/etim/etim') } }, '⌗ ETIM …'))
+  }
   function draw() {
     body.innerHTML = ''
     const P = [...cache.classes.values()]
@@ -313,6 +326,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
         }) }, '⇩ ETIM (neueste, alle Sektoren) holen'), el('span', { class: 'muted' }, 'von etim-international.com — öffentlich, englische Namen; oder ⇪ Export → ⌗ ETIM: Datei')))
       return
     }
+    body.append(el('div', { class: 'chips', style: 'margin-bottom:8px' }, versionBar()))
     // Stand
     body.append(current
       ? el('div', { style: 'margin-bottom:10px;padding:8px 10px;border:1px solid var(--pos);border-radius:6px;background:var(--accent-soft)' },
