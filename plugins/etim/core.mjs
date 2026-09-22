@@ -188,8 +188,9 @@ export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
   const names = l => l.slice(0, 4).map(f => `${f.code} ${nameOf(f.name, cfg.locale)} (${mapEntry(cfg.map, f.code).key})`).join(', ') + (l.length > 4 ? ` … +${l.length - 4}` : '')
   // kurz in der Zeile, die Erklärung einmal im Tooltip (title) — nicht je Zeile (Taloan, 22.09.: „ist nicht dein Ernst“)
   const notHere = noCol.filter(f => inactive.includes(mapEntry(cfg.map, f.code).key)), noAttr = noCol.filter(f => !inactive.includes(mapEntry(cfg.map, f.code).key))
-  if (notHere.length) out.push({ attribute: cfg.classAttr, message: `${notHere.length} ETIM-Attribut${notHere.length === 1 ? '' : 'e'} — zugeordnetes Attribut gilt hier nicht: ${names(notHere)}`, title: 'das zugeordnete Attribut gibt es, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
-  if (noAttr.length) out.push({ attribute: cfg.classAttr, message: `${noAttr.length} ETIM-Attribut${noAttr.length === 1 ? '' : 'e'} nicht zugeordnet: ${names(noAttr)}`, title: 'zu diesem ETIM-Attribut gibt es kein Attribut im Modell — ⇄ zuordnen oder ＋ anlegen', severity: 'info' })
+  // Feld: das zugeordnete Attribut, um das es geht (bei mehreren keins) — nicht das Klassenattribut (Taloan, 22.09.)
+  if (notHere.length) out.push({ attribute: notHere.length === 1 ? mapEntry(cfg.map, notHere[0].code).key : null, message: `zugeordnetes Attribut ist an diesem Knoten nicht verfügbar: ${names(notHere)}`, title: 'das zugeordnete Attribut gibt es im Modell, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
+  if (noAttr.length) out.push({ attribute: null, message: `${noAttr.length} ETIM-Attribut${noAttr.length === 1 ? '' : 'e'} nicht zugeordnet: ${names(noAttr)}`, title: 'zu diesem ETIM-Attribut gibt es kein Attribut im Modell — ⇄ zuordnen oder ＋ anlegen', severity: 'info' })
   if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} leer · ${filled} gefüllt`, title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat', severity: 'info' })
   return out
 }
