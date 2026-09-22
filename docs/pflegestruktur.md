@@ -1093,9 +1093,30 @@ Obergrenze im Dienst), der Missbrauch gedeckelt (ein Assistent in einer
 Schleife kostet dann den Kunden nichts ausser einer Fehlermeldung), und der
 Administrator sieht, wer wie viel zieht.
 
-**Offen bleibt** nur, ob der Dienst im selben Container läuft oder als
-eigener — und ob es später eine bequemere Anmeldung als „Token kopieren"
-geben soll (OAuth).
+**Eigener Container — entschieden (Taloan, 22.09.2026: „MCP muss in einem
+eigenen Container laufen, da eventuell mit DMZ und nach aussen hin offen“).**
+Der Dienst ist das einzige Stück, das von aussen erreichbar sein soll; der
+Server mit dem Journal bleibt innen. Daraus folgt die Bauform:
+
+- **Eigenes Image, eigener Port.** Der MCP-Container spricht ausgehend mit
+  journali (`JOURNALI=http://server:8080`) — nie umgekehrt. Die Firewall
+  braucht nur eine Richtung; der Server muss von aussen gar nicht erreichbar
+  sein.
+- **Kein Zugang ausser HTTP.** Keine Datenbank, kein Medienspeicher, kein
+  Datenverzeichnis — was der Dienst nicht hat, kann ihm niemand abnehmen.
+- **Keine eigenen Rechte.** Der Container hat **kein** Dienstkonto. Der
+  Assistent schickt das Token des Benutzers, der Dienst reicht es unverändert
+  an `/api` weiter. Damit sieht ein Angreifer, der den Container übernimmt,
+  genau das, was das jeweils mitgebrachte Token ohnehin sehen dürfte — und
+  nach dem Sperren des Tokens nichts mehr.
+- **Nichts liegen lassen.** Keine Token auf Platte, kein Datencache über die
+  Anfrage hinaus, Protokoll ohne Werte (nur Werkzeug, Dauer, Ergebnisgrösse).
+- **Transport HTTP/SSE**, TLS am Reverse Proxy davor. Die Mengenbegrenzung
+  macht der Server am Token (siehe oben); der Dienst zählt nur gleichzeitige
+  Verbindungen, damit ein Assistent ihn nicht allein belegt.
+
+**Offen bleibt** nur, ob später eine bequemere Anmeldung als „Token kopieren"
+kommt (OAuth).
 
 **Der Vektorindex** (semantische Suche über `pgvector`) ist der zweite Schritt
 und nur dort nötig, wo jemand unscharf sucht („welche Klebstoffe halten
