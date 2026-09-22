@@ -438,9 +438,13 @@ async function classDialog(nodeId, ctx, onDone = null) {
 
     // ✦ Vorschlag (KI, wenn da)
     const ai = ctx.ai; const suggest = el('div', { style: 'margin:4px 0' })
-    if (ai?.available()) {
-      suggest.append(el('span', { class: 'muted' }, '✦ …'))
-      ;(async () => {
+    // KI nur auf Knopfdruck (Taloan, 22.09.: „ich hätte lieber einen Knopf“) — jede Anfrage kostet Token; Ergebnisse stehen in Magenta
+    const aiBtn = ai?.available()
+      ? el('button', { class: 'x ai', title: `die KI nach passenden Klassen fragen (${ai.label()}) — kostet Token`, onclick: () => askAiNow() }, '✦ KI fragen')
+      : el('span', { class: 'muted', style: 'font-size:12px' }, '✦ KI-Vorschläge brauchen einen Schlüssel (⚙ Einstellungen)')
+    async function askAiNow() {
+      suggest.innerHTML = ''; suggest.append(el('span', { class: 'ai' }, '✦ …'))
+      try {
         try {
           const groupsAll = [...new Set(P.map(gname))].sort()
           const g = await ai.ask({ system: 'Du ordnest Produkte ETIM-Klassengruppen zu. Antworte nur als JSON {"groups":["…","…"]} mit 1 bis 3 Namen exakt aus der Liste.', user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}\nGruppen:\n${groupsAll.join('\n')}`, json: true, maxTokens: 200 })
@@ -448,14 +452,14 @@ async function classDialog(nodeId, ctx, onDone = null) {
           const cands = P.filter(c => picked.includes(gname(c)))
           const list = cands.map(c => `${c.code} ${nameOf(c.name, locale)}${Object.values(c.synonyms ?? {}).flat().length ? ' (' + Object.values(c.synonyms ?? {}).flat().slice(0, 4).join(', ') + ')' : ''}`).join('\n')
           const j = await ai.ask({ system: 'Du ordnest ein Produkt genau einer ETIM-Klasse zu. Antworte nur als JSON {"suggestions":[{"code":"EC…","why":"…"}]} mit 1 bis 3 Vorschlägen, Codes exakt aus der Liste, bester zuerst, why in einem kurzen Satz auf Deutsch.', user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}\nKlassen:\n${list}`, json: true, maxTokens: 400 })
-          suggest.innerHTML = ''; suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, `✦ Vorschlag (KI, ${ai.label()}) — ${picked.join(', ')}`))
+          suggest.innerHTML = ''; suggest.append(el('div', { class: 'ai', style: 'font-size:12px' }, `✦ KI (${ai.label()}) — ${picked.join(', ')}`))
           const out = (j.suggestions ?? []).filter(s => cands.some(c => c.code === String(s.code).toUpperCase())).filter(s => String(s.code).toUpperCase() !== current)
           if (!out.length) suggest.append(el('div', { class: 'muted' }, 'kein Vorschlag'))
-          for (const s of out) suggest.append(line(String(s.code).toUpperCase(), s.why ?? ''))
+          for (const s of out) { const r = line(String(s.code).toUpperCase(), s.why ?? ''); r.className = 'pick ai'; suggest.append(r) }
         } catch (e) { suggest.innerHTML = ''; suggest.append(el('span', { class: 'neg' }, '✗ ' + e.message)) }
-      })()
+      } catch (e) { suggest.innerHTML = ''; suggest.append(el('span', { class: 'neg' }, '✗ ' + e.message)) }
     }
-    body.append(el('div', { class: 'step-band', style: 'margin:6px 0 2px', title: ai?.available() ? 'aus dem Bestand und von der KI — eine Zeile anklicken übernimmt die Klasse' : 'aus dem Bestand — eine Zeile anklicken übernimmt die Klasse; KI-Vorschläge brauchen einen Schlüssel (⚙ Einstellungen)' }, 'Empfehlung'), suggest)
+    body.append(el('div', { class: 'step-band', style: 'margin:6px 0 2px;display:flex;gap:8px;align-items:center', title: 'aus dem Bestand — eine Zeile anklicken übernimmt die Klasse' }, 'Empfehlung', el('span', { class: 'grow' }), aiBtn), suggest)
     // Umfeld: Klassen an Geschwistern und darunter
     const env = el('div', { style: 'font-size:12px;margin:0 0 4px' }, el('span', { class: 'muted' }, 'lese den Bestand …')); body.append(env)
     ;(async () => {
@@ -691,13 +695,13 @@ async function mount(root, ctx) {
         const cands = P.filter(c => picked.includes(gname(c)))
         const list = cands.map(c => `${c.code} ${nameOf(c.name, locale)}${Object.values(c.synonyms ?? {}).flat().length ? ' (' + Object.values(c.synonyms ?? {}).flat().slice(0, 4).join(', ') + ')' : ''}`).join('\n')
         const j = await ai.ask({ system: 'Du ordnest ein Produkt genau einer ETIM-Klasse zu. Antworte nur als JSON {"suggestions":[{"code":"EC…","why":"…"}]} mit 1 bis 3 Vorschlägen, Codes exakt aus der Liste, bester zuerst, why in einem kurzen Satz auf Deutsch.', user: `Produkt: ${row.label}\nPfad: ${path.join(' › ')}\nKlassen:\n${list}`, json: true, maxTokens: 400 })
-        suggest.innerHTML = ''; suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, `✦ Vorschlag (KI, ${ai.label()}) — Gruppe${picked.length > 1 ? 'n' : ''} ${picked.join(', ')}`))
+        suggest.innerHTML = ''; suggest.append(el('div', { class: 'ai', style: 'font-size:12px' }, `✦ KI (${ai.label()}) — Gruppe${picked.length > 1 ? 'n' : ''} ${picked.join(', ')}`))
         const out = (j.suggestions ?? []).filter(s => cands.some(c => c.code === String(s.code).toUpperCase()))
         if (!out.length) suggest.append(el('div', { class: 'muted' }, 'kein Vorschlag — unten blättern'))
         for (const s of out) suggest.append(line(String(s.code).toUpperCase(), s.why ?? ''))
       } catch (e) { suggest.innerHTML = ''; suggest.append(el('span', { class: 'neg' }, '✗ ' + e.message)) }
     }
-    if (ai?.available()) { if (P.length) askAi(); else suggest.append(el('span', { class: 'muted' }, 'erst eine ETIM-Version holen')) }
+    if (ai?.available()) suggest.append(el('button', { class: 'x ai', title: `die KI nach passenden Klassen fragen (${ai.label()}) — kostet Token`, onclick: () => P.length ? askAi() : store.toast('erst eine ETIM-Version holen') }, '✦ KI fragen'))
     else suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, '✦ Vorschläge aus Name und Pfad brauchen einen KI-Schlüssel (⚙ Einstellungen) — ohne: unten blättern oder suchen'))
     const names = el('div', {}, el('div', { class: 'muted', style: 'font-size:12px' }, nameHits.length ? `Namenstreffer für ${words.map(w => '„' + w + '“').join(', ')}` : P.length ? `keine Klasse heisst wie ${words.map(w => '„' + w + '“').join(', ')} — unten suchen (ETIM International: englische Namen)` : 'erst eine ETIM-Version holen'), ...nameHits.map(x => line(x.c.code, `${x.score} Wort${x.score > 1 ? 'e' : ''}`)))
     return el('div', { style: 'padding:6px 0;border:1px solid var(--accent);border-radius:6px;padding:8px;margin:6px 0' },

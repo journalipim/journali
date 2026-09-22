@@ -33,7 +33,8 @@ export const PROVIDERS = [
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error?.message || `${res.status} ${res.statusText}`)
       const blocks = data?.content ?? []
-      return { text: blocks.filter(c => c.type === 'text').map(c => c.text).join(''), sources: blocks.flatMap(c => c.citations ?? []).filter(c => c.url).map(c => ({ url: c.url, title: c.title ?? c.url })) }
+      return { text: blocks.filter(c => c.type === 'text').map(c => c.text).join(''), sources: blocks.flatMap(c => c.citations ?? []).filter(c => c.url).map(c => ({ url: c.url, title: c.title ?? c.url })),
+        usage: { in: data?.usage?.input_tokens ?? 0, out: data?.usage?.output_tokens ?? 0 } }
     },
   },
   {
@@ -49,7 +50,7 @@ export const PROVIDERS = [
       const data = await res.json().catch(() => null)
       if (!res.ok) throw new Error(data?.error?.message || `${res.status} ${res.statusText}`)
       const parts = (data?.output ?? []).filter(o => o.type === 'message').flatMap(o => o.content ?? []).filter(c => c.type === 'output_text')
-      return { text: parts.map(c => c.text).join(''), sources: parts.flatMap(c => c.annotations ?? []).filter(a => a.type === 'url_citation' && a.url).map(a => ({ url: a.url, title: a.title ?? a.url })) }
+      return { usage: { in: data?.usage?.input_tokens ?? 0, out: data?.usage?.output_tokens ?? 0 }, text: parts.map(c => c.text).join(''), sources: parts.flatMap(c => c.annotations ?? []).filter(a => a.type === 'url_citation' && a.url).map(a => ({ url: a.url, title: a.title ?? a.url })) }
     },
   },
 ]
@@ -62,6 +63,8 @@ export const ai = reactive({
   busy: 0,
   lastError: '',
   lastSources: [],      // Quellen (url, title) der letzten Antwort mit web: true
+  // Verbrauch, seit wann (Taloan, 22.09.): Token kosten Geld — die Statuszeile zeigt sie; „zurücksetzen“ im Tooltip der Einstellungen
+  used: saved.used ?? { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10) },
 
   providers: PROVIDERS,
   /// eingerichtete Anbieter (mit Schlüssel) — zum Aufzählen in Hilfen und Einstellungen
@@ -72,7 +75,9 @@ export const ai = reactive({
   get model() { const p = this.current(); return p ? this.accounts[p.key].model : '' },
   /// „Anthropic · claude-sonnet-5“ — für Tooltips und Meldungen, wo es auf den Anbieter ankommt
   label() { const p = this.current(); return p ? `${p.label} · ${this.accounts[p.key].model}` : 'KI' },
-  save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider })) } catch {} },
+  save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider, used: this.used })) } catch {} },
+  /// Verbrauch zurücksetzen (Einstellungen → KI)
+  resetUsed() { this.used = { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10) }; this.save() },
 
   // Eine Frage, eine Antwort. json: true → die Antwort wird als JSON gelesen (Code-Zäune werden entfernt).
   // web: true → die KI darf im Internet suchen (Herstellerseiten, Datenblätter — Taloan, 20.09.: Daten fremder Produkte ergänzen);
@@ -82,7 +87,8 @@ export const ai = reactive({
     if (!p) throw new Error('Kein KI-Schlüssel — Einstellungen → KI')
     this.busy++
     try {
-      const { text, sources } = await p.call({ key: this.accounts[p.key].key, model: this.accounts[p.key].model, system, user, maxTokens, temperature, web, maxSearches })
+      const { text, sources, usage } = await p.call({ key: this.accounts[p.key].key, model: this.accounts[p.key].model, system, user, maxTokens, temperature, web, maxSearches })
+      this.used = { ...this.used, calls: this.used.calls + 1, in: this.used.in + (usage?.in ?? 0), out: this.used.out + (usage?.out ?? 0) }; this.save()
       const seen = new Set(); this.lastSources = sources.filter(s => !seen.has(s.url) && seen.add(s.url))
       this.lastError = ''
       if (!json) return text

@@ -9,6 +9,7 @@
   --pos: #15803d;
   --neg: #b91c1c;
   --warn: #b45309;
+  --ai: #a21caf;            /* KI-Ergebnisse (Taloan, 22.09.): kosten Token, also sichtbar */
   --rail: #1f2937;
   --rail-hover: #374151;
   --rail-text: #9ca3af;
@@ -41,6 +42,7 @@
     --pos: #4ade80;
     --neg: #f87171;
     --warn: #fbbf24;
+    --ai: #e879f9;
     --rail: #0c0f13;
     --rail-hover: #22272e;
     --rail-text: #8b93a0;
@@ -65,6 +67,7 @@
   --pos: #4ade80;
   --neg: #f87171;
   --warn: #fbbf24;
+  --ai: #e879f9;
   --rail: #0c0f13;
   --rail-hover: #22272e;
   --rail-text: #8b93a0;
@@ -95,6 +98,8 @@ body {
 .pos { color: var(--pos); }
 .neg { color: var(--neg); }
 .warn { color: var(--warn); }
+.ai { color: var(--ai); }   /* von der KI erzeugt — kostet Token (Taloan, 22.09.) */
+.pick.ai:hover { background: color-mix(in srgb, var(--ai) 12%, transparent); }
 .grow { flex: 1; }
 .sep { color: var(--line); }
 
