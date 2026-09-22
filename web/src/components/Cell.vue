@@ -3,7 +3,7 @@
 // am Ende, Enter/F2 mit dem bisherigen Wert vorselektiert, Tippen hängt an den
 // bisherigen Wert an (überschreibt nie, Taloan 17.09.). Enter speichert, Esc
 // verwirft, Tab speichert und springt weiter.
-import { ref, nextTick } from 'vue'
+import { ref, nextTick, watch, onUnmounted } from 'vue'
 import AiBar from './AiBar.vue'
 
 const isUrl = s => /^https?:\/\//i.test(String(s ?? ''))

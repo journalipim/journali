@@ -2,7 +2,7 @@
 // Zelle für html: in der Zelle nur der Anfang des Textes (‹› = HTML), Enter oder Doppelklick
 // öffnet den Editor — einfacher Schreibmodus (fett, kursiv, Listen, Überschrift, Link) mit
 // Umschalter auf den Quelltext (Taloan, 17.09.). Ctrl+Enter speichert, Esc verwirft.
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch, onUnmounted } from 'vue'
 import { dialog } from '../dialog.js'
 import AiBar from './AiBar.vue'
 
