@@ -160,7 +160,7 @@ public static class MediaApi
                 var m = c.Media.All[entry.Stream];
                 return (View: MediaView.Of(m, 0), Existed: false);
             });
-            if (!result.Existed && result.View.IsImage) DeriveApi.Kick(c, runner, actor);   // Vorschauen rechnen lassen (Taloan: „muss alles bereitliegen“)
+            if (!result.Existed && result.View.Renderable) DeriveApi.Kick(c, runner, actor);   // Vorschauen rechnen lassen (Taloan: „muss alles bereitliegen“)
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         }).DisableAntiforgery();
 
@@ -184,7 +184,7 @@ public static class MediaApi
                 var entry = write(actor, Ids.Media(), Types.MediaCreated, new MediaCreated(sha, bytes, mime, name), null);
                 return (View: MediaView.Of(c.Media.All[entry.Stream], 0), Existed: false);
             });
-            if (!result.Existed && result.View.IsImage) DeriveApi.Kick(c, runner, actor);
+            if (!result.Existed && result.View.Renderable) DeriveApi.Kick(c, runner, actor);
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         });
 
@@ -223,8 +223,12 @@ public sealed record FolderBody(string? Name, string? Parent, string? Folder);
 public sealed record CopyRequest(MediaConfig? From);
 
 public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime, string Name, bool IsImage, List<ValueView> Values,
-    Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Folder)
+    Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Folder,
+    bool Renderable = false, bool HasThumb = false)
 {
+    /// <summary>Kachel: Bilder haben immer eine, ein PDF erst, wenn der derive-Job seine erste Seite gerechnet hat
+    /// (Taloan, 23.09.2026). Die Oberfläche fragt danach, statt aus dem Mime zu raten.</summary>
     public static MediaView Of(Medium m, int used) => new(m.Id, m.Sha256, m.Bytes, m.Mime, m.Name, m.IsImage, ValueView.Of(m).ToList(),
-        m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor, m.Folder);
+        m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor, m.Folder,
+        m.IsRenderable, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset));
 }

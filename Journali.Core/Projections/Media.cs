@@ -25,6 +25,10 @@ public sealed class Medium
     public string LastActor { get; set; } = "";
     public int Entries { get; set; }
     public bool IsImage => Mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
+    /// <summary>Woraus sich ein Vorschaubild rechnen lässt (Taloan, 23.09.2026: „bau die pdf thumbs“). Bilder schon immer;
+    /// ein PDF bekommt seine erste Seite als Kachel. Bleibt trotzdem ein Dokument — <see cref="IsImage"/> sagt weiterhin,
+    /// was ein Bild ist (Gruppierung in der Bibliothek, Anzeige des Originals).</summary>
+    public bool IsRenderable => IsImage || Mime.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
     /// <summary>Ordner der Bibliothek (MediaFiled); null = kein Ordner.</summary>
     public string? Folder { get; set; }
     /// <summary>Ableitungen nach Preset (MediaDerived): Preset → Mass, Grösse, Fingerabdruck des Presets zur Zeit des Rechnens.</summary>
@@ -68,13 +72,15 @@ public sealed class Media : IProjection
     private readonly Dictionary<string, MediaPreset> _presets = new();
     private readonly HashSet<string> _presetsEver = new();   // je definiert, auch zurückgezogene — fürs Saatgut
     public const string PresetStream = "media-preset:";
+    /// <summary>Das Preset der Kacheln — die Bibliothek braucht es, darum lässt es sich nicht löschen (DeriveApi).</summary>
+    public const string ThumbPreset = "thumb";
     public bool PresetEver(string key) => _presetsEver.Contains(key);
 
     public long LastApplied { get; private set; }
     public IReadOnlyDictionary<string, MediaPreset> Presets => _presets;
 
-    /// <summary>Bilder, denen eine aktuelle Ableitung nach diesem Preset fehlt (nie gerechnet oder Preset seither geändert).</summary>
-    public IEnumerable<Medium> Pending(MediaPreset preset) => _all.Values.Where(m => m.IsImage && (!m.Derived.TryGetValue(preset.Key, out var d) || d.Fingerprint != preset.Fingerprint));
+    /// <summary>Medien, denen eine aktuelle Ableitung nach diesem Preset fehlt (nie gerechnet oder Preset seither geändert).</summary>
+    public IEnumerable<Medium> Pending(MediaPreset preset) => _all.Values.Where(m => m.IsRenderable && (!m.Derived.TryGetValue(preset.Key, out var d) || d.Fingerprint != preset.Fingerprint));
     /// <summary>Liegt die Ableitung aktuell vor?</summary>
     public bool HasDerived(Medium m, MediaPreset preset) => m.Derived.TryGetValue(preset.Key, out var d) && d.Fingerprint == preset.Fingerprint;
 

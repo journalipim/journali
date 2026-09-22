@@ -881,7 +881,7 @@ function cellMenu(e, def, col, block) {
         <template v-if="open('media')">
         <div class="tiles">
           <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${relType(r.type)?.label?.de || r.type}`">
-            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage" :id="r.other.id" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
               <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? 'gilt dann an allen Subitems — bis eines die Vererbung stoppt' : d.key">{{ d.label?.de || d.key }}</td>
@@ -891,7 +891,7 @@ function cellMenu(e, def, col, block) {
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
           <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — nicht löschbar; ⛔ unterbindet Verwendung und Vererbung hier und an allen Subitems`">
-            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage" :id="r.other.id" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
             <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" title="zum Knoten, an dem das Medium hängt">↑ {{ r.from.label }}</router-link>
               <button class="x" style="float:right" @click="stopInherited(r)" title="Verwendung und Vererbung hier unterbinden — das Medium steht dann hier und an allen Subitems nicht zur Verfügung (lässt sich wieder zulassen)">⛔</button></div>

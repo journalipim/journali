@@ -73,9 +73,11 @@ public class MediaFolderTests
         Assert.Contains("thumb", w.Media.Presets.Keys); Assert.Contains("web", w.Media.Presets.Keys);
         var m = w.Medium("foto.png");
         var doc = w.J.Append("t", Ids.Media(), Types.MediaCreated, Types.Serialize(new MediaCreated("d1", 5, "application/pdf", "blatt.pdf"))).Stream; w.Catch();
+        var liste = w.J.Append("t", Ids.Media(), Types.MediaCreated, Types.Serialize(new MediaCreated("d2", 5, "text/csv", "preise.csv"))).Stream; w.Catch();
         var web = w.Media.Presets["web"];
         Assert.Contains(w.Media.Pending(web), x => x.Id == m);
-        Assert.DoesNotContain(w.Media.Pending(web), x => x.Id == doc);   // kein Bild
+        Assert.Contains(w.Media.Pending(web), x => x.Id == doc);        // PDF: die erste Seite wird gerechnet (23.09.2026)
+        Assert.DoesNotContain(w.Media.Pending(web), x => x.Id == liste);   // daraus lässt sich kein Bild rechnen
         w.J.Append("t", m, Types.MediaDerived, Types.Serialize(new MediaDerived("web", 1200, 800, 40000, web.Fingerprint))); w.Catch();
         Assert.True(w.Media.HasDerived(w.Media.All[m], web));
         Assert.DoesNotContain(w.Media.Pending(web), x => x.Id == m);

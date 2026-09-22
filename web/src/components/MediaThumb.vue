@@ -7,11 +7,13 @@ const pending = new Map()
 // Vorschaubild eines Mediums (Taloan, 19.09.2026: die Kacheln luden 189 Originale): GET /api/media/{id}/thumb — gibt es
 // noch keine Vorschau, rechnet dieser Browser sie aus dem Original (Canvas, längste Seite 256 px, WebP) und legt sie
 // per PUT im Store ab; ab dann kommt sie fertig. Kein Bildpaket im Server nötig — die Arbeit macht der erste Betrachter.
+// Nur bei Bildern: ein PDF kann der Browser nicht in ein <img> laden (Taloan, 23.09.2026 — die erste Seite rechnet der
+// Job „Werkzeug: Vorschauen rechnen“). Fehlt sie dort noch, bleibt es beim Symbol, statt in jeder Kachel zu scheitern.
 import { ref, watch } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 
-const props = defineProps({ id: String, size: { type: Number, default: 256 } })
+const props = defineProps({ id: String, size: { type: Number, default: 256 }, self: { type: Boolean, default: true } })
 const src = ref('')
 const failed = ref(false)
 
@@ -39,7 +41,7 @@ async function make() {
 }
 function onError() {
   // 404 = noch keine Vorschau → rechnen; schlägt auch das Original fehl (Bytes fehlen im Store) → ✗
-  if (src.value.includes('?v=1') || failed.value) { failed.value = true; return }
+  if (src.value.includes('?v=1') || failed.value || !props.self) { failed.value = true; return }
   make()
 }
 watch(() => props.id, load, { immediate: true })
@@ -47,5 +49,6 @@ watch(() => props.id, load, { immediate: true })
 
 <template>
   <img v-if="!failed" :src="src" loading="lazy" alt="" @error="onError" />
-  <div v-else class="doc neg" title="Datei fehlt im Medienspeicher — Ursprung oder Kopierlauf (docs/betrieb.md)">✗</div>
+  <div v-else-if="self" class="doc neg" title="Datei fehlt im Medienspeicher — Ursprung oder Kopierlauf (docs/betrieb.md)">✗</div>
+  <div v-else class="doc" title="Noch keine Vorschau — der Job „Werkzeug: Vorschauen rechnen“ rechnet die erste Seite">▤</div>
 </template>

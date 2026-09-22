@@ -68,7 +68,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
           </div>
           <div class="scroll tiles">
             <div v-for="m in items" :key="m.id" class="tile" :class="{ sel: sel.has(m.id), dim: excluded.has(m.id) }" @click="click(m)" :title="excluded.has(m.id) ? `${m.name} — hängt schon hier` : `${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}`">
-              <MediaThumb v-if="m.isImage" :id="m.id" /><div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
+              <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" /><div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
               <div class="name">{{ m.name }}</div>
             </div>
             <div v-if="!items.length" class="empty">nichts</div>

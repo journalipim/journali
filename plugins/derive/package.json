@@ -2,8 +2,10 @@
   "name": "journali-plugin-derive",
   "private": true,
   "type": "module",
-  "description": "journali: Vorschauen rechnen — sharp (libvips) für TIFF/PNG/JPEG/WebP/AVIF. Einmalig: npm install (im Container: Linux-Binärdateien, siehe Dockerfile).",
+  "description": "journali: Vorschauen rechnen — sharp (libvips) für TIFF/PNG/JPEG/WebP/AVIF, pdfjs + canvas für die erste Seite eines PDF. Einmalig: npm install (im Container: Linux-Binärdateien, siehe Dockerfile).",
   "dependencies": {
+    "@napi-rs/canvas": "^0.1.60",
+    "pdfjs-dist": "^4.10.38",
     "sharp": "^0.34.0"
   }
 }

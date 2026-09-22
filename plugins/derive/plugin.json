@@ -6,8 +6,8 @@
     "en": "Tool: Derive previews"
   },
   "description": {
-    "de": "Rechnet für jedes Bild die Ableitungen nach den Vorschau-Presets (Einstellungen → Medien: Kachel, Web, Druck …) voraus und legt sie im Medienspeicher ab — nie live beim Anzeigen (Taloan: 200-MB-TIFFs aus der Konstruktion). Läuft als Prozess (Node + sharp/libvips: TIFF, PNG, JPEG, WebP, AVIF, auch riesige Bilder); der Server stößt ihn nach jedem Hochladen an, sonst von Hand oder nach Zeitplan. Einmalig im Plugin-Verzeichnis: npm install.",
-    "en": "Pre-renders every image's derivatives per preview preset (Settings → Media) into the media store — never live. Runs as a process (Node + sharp); the server triggers it after uploads. Once: npm install in the plugin folder."
+    "de": "Rechnet für jedes Bild die Ableitungen nach den Vorschau-Presets (Einstellungen → Medien: Kachel, Web, Druck …) voraus und legt sie im Medienspeicher ab — nie live beim Anzeigen (Taloan: 200-MB-TIFFs aus der Konstruktion). Ein PDF bekommt seine erste Seite als Kachel. Läuft als Prozess (Node + sharp/libvips: TIFF, PNG, JPEG, WebP, AVIF, auch riesige Bilder; pdfjs + canvas für PDF); der Server stößt ihn nach jedem Hochladen an, sonst von Hand oder nach Zeitplan. Einmalig im Plugin-Verzeichnis: npm install.",
+    "en": "Pre-renders every image's derivatives per preview preset (Settings → Media) into the media store — never live; a PDF gets its first page as a tile. Runs as a process (Node + sharp, pdfjs + canvas for PDF); the server triggers it after uploads. Once: npm install in the plugin folder."
   },
   "kind": "tool",
   "runs": "process",

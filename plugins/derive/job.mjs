@@ -1,4 +1,6 @@
-// Plugin derive (Taloan, 21.09.2026: „das muss alles bereitliegen“): fehlende Ableitungen der Bilder nach den Vorschau-Presets rechnen.
+// Plugin derive (Taloan, 21.09.2026: „das muss alles bereitliegen“): fehlende Ableitungen nach den Vorschau-Presets rechnen.
+// Bilder mit sharp; ein PDF bekommt seine erste Seite als Kachel (Taloan, 23.09.2026: „bau die pdf thumbs“) — gerendert mit
+// pdfjs auf eine Leinwand, dann derselbe Weg wie bei einem Bild.
 // Aufruf: node job.mjs <journali> <actor> [limit] [preset] — der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
 // Holt /api/media/pending (Preset-Spezifikation je Bild), lädt das Original in eine Temp-Datei (grosse TIFFs nicht in den Speicher),
 // rechnet mit sharp (libvips), legt das Ergebnis per PUT /api/media/{id}/derived/{preset} ab. Läuft in Runden, bis nichts mehr fehlt.
@@ -20,6 +22,24 @@ const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bea
 let sharp
 try { sharp = (await import('sharp')).default } catch (e) { console.error('✗ sharp fehlt — im Plugin-Verzeichnis einmal „npm install“ ausführen (' + e.message + ')'); process.exit(1) }
 
+/// Erste Seite eines PDF als PNG (Taloan, 23.09.2026). Einmal je Datei in der grössten gebrauchten Kante gerendert —
+/// die Presets rechnen dann aus diesem Bild weiter, statt das PDF mehrfach zu öffnen. Weisser Grund: ein Datenblatt
+/// ist auf Papier gedacht, durchsichtig sähe in der Kachel aus wie ein Fehler.
+async function pdfFirstPage(file, edge) {
+  const [{ createCanvas }, pdfjs] = await Promise.all([import('@napi-rs/canvas'), import('pdfjs-dist/legacy/build/pdf.mjs')])
+  const doc = await pdfjs.getDocument({ data: new Uint8Array(fs.readFileSync(file)), useSystemFonts: true, isEvalSupported: false }).promise
+  try {
+    const page = await doc.getPage(1)
+    const base = page.getViewport({ scale: 1 })
+    const viewport = page.getViewport({ scale: Math.min(4, Math.max(0.2, edge / Math.max(base.width, base.height))) })
+    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+    await page.render({ canvasContext: ctx, viewport }).promise
+    return canvas.toBuffer('image/png')
+  } finally { await doc.destroy() }
+}
+
 async function get(p) { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() }
 
 async function download(id, file) {
@@ -29,6 +49,7 @@ async function download(id, file) {
 }
 
 async function render(item, src) {
+  // src ist ein Pfad (Bild) oder ein Puffer (gerenderte PDF-Seite) — sharp nimmt beides
   const format = item.format === 'jpg' ? 'jpeg' : item.format
   // eingepasst in Breite × Höhe, nie vergrössert; EXIF-Drehung anwenden; CMYK/TIFF → sRGB; Transparenz bleibt bei webp/png/avif
   let img = sharp(src, { limitInputPixels: false, failOn: 'none' }).rotate().resize({ width: item.width, height: item.height, fit: 'inside', withoutEnlargement: true }).toColourspace('srgb')
@@ -63,8 +84,14 @@ try {
       const src = path.join(tmp, id)
       try {
         await download(id, src)
+        // PDF: einmal rendern, in der grössten Kante, die eines der Presets braucht
+        let quelle = src
+        if ((its[0].mime ?? '') === 'application/pdf') {
+          const edge = Math.max(...its.map(it => Math.max(it.width, it.height)), 256)
+          quelle = await pdfFirstPage(src, edge)
+        }
         for (const it of its) {
-          try { const out = await render(it, src); await put(it, out); done++; console.log(`✓ ${it.name} → ${it.preset} ${out.width}×${out.height} ${(out.data.length / 1024).toFixed(0)} KB`) }
+          try { const out = await render(it, quelle); await put(it, out); done++; console.log(`✓ ${it.name} → ${it.preset} ${out.width}×${out.height} ${(out.data.length / 1024).toFixed(0)} KB`) }
           catch (e) { failed++; failedIds.add(it.id + '/' + it.preset); console.error(`✗ ${it.name} → ${it.preset}: ${e.message}`) }
         }
       } catch (e) { failed += its.length; for (const it of its) failedIds.add(it.id + '/' + it.preset); console.error(`✗ ${its[0].name}: ${e.message}`) }

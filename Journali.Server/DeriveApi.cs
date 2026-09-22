@@ -103,8 +103,8 @@ public static class DeriveApi
 
     private static object View(Catalog c, MediaPreset p)
     {
-        var images = c.Media.All.Values.Count(m => m.IsImage);
-        var have = c.Media.All.Values.Count(m => m.IsImage && c.Media.HasDerived(m, p));
+        var images = c.Media.All.Values.Count(m => m.IsRenderable);
+        var have = c.Media.All.Values.Count(m => m.IsRenderable && c.Media.HasDerived(m, p));
         return new { p.Key, p.Label, p.Width, p.Height, p.Format, p.Quality, p.Auto, fingerprint = p.Fingerprint, images, have, pending = images - have };
     }
 

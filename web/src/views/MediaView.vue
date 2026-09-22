@@ -214,7 +214,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
         <div class="tiles">
           <div v-for="m in g.items" :key="m.id" class="tile" :class="{ current: cur === m.id, sel: sel.has(m.id) }" draggable="true" @dragstart="dragTiles(m, $event)" @dragend="dragEnd"
             @click="clickTile(m, $event)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nStrg-Klick nimmt dazu, Umschalt-Klick den Bereich — ziehen in einen Ordner`">
-            <MediaThumb v-if="m.isImage" :id="m.id" />
+            <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" />
             <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
             <div class="name">{{ m.name }}</div>
             <div class="muted meta">{{ kb(m.bytes) }}<span v-if="m.used"> · ⇄ {{ m.used }}</span><span v-if="folder === 'all' && m.folder && group !== 'folder'" :title="pathOf(m.folder).map(f => f.name).join(' › ')"> · 📁</span></div>
@@ -235,6 +235,8 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
       <span class="grow" /><span>≡ {{ current.entries }} · #{{ current.lastNumber }} · {{ when(current.lastAt) }} · {{ current.lastActor }}</span></div>
     <div class="scroll">
       <div class="preview" v-if="current.isImage"><img :src="`/api/media/${current.id}/file`" alt="" /></div>
+      <!-- kein Bild, aber eine gerechnete Vorschau (PDF): die erste Seite zeigen, das Original hängt am Namen -->
+      <div class="preview" v-else-if="current.hasThumb"><img :src="`/api/media/${current.id}/thumb`" alt="" /></div>
       <table class="grid form"><colgroup><col style="width:150px" /><col style="width:320px" /></colgroup><tbody>
         <tr v-for="d in mediaAttrs" :key="d.key"><td class="attr" :title="d.key">{{ d.label?.de || d.key }}<span v-if="d.perLocale" class="muted"> {{ master }}</span></td><Cell :value="value(current, d)" @save="v => setValue(current, d, v)" /></tr>
         <tr><td class="attr muted">SHA-256</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
