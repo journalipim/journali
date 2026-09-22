@@ -911,6 +911,53 @@ Sprache* gekennzeichnet sein, dann trägt `WorkflowStateSet` eine Sprache (leer 
 also bleibt jeder heutige Eintrag gültig). Das ist der eine Eingriff — Freigabe, Version und
 Rollen können es schon. **Taloans Wort fehlt.**
 
+### Der Übersetzungsspeicher, das Paket und die Rückkehr (Taloan, 22.09.2026)
+
+Taloan: „Wenn der Redakteur jeden Tag eine neue Version raushaut, überschreibt die neue Version
+die alte, und so sammelt sich ein Kontingent im Übersetzungsspeicher an … spätestens wenn der
+Redakteur der Mastersprache eine Version macht oder nach einer vorgegebenen Zeit — bei den
+meisten wöchentlich, bei anderen einmal nachts — wird daraus ein Übersetzungsauftrag …
+und irgendwann kommt er zurück und man stellt fest, dass es schon wieder etliche Änderungen am
+Original gibt.“
+
+**1. Der Speicher ist keine zweite Datenhaltung, sondern eine Marke.** Je Knoten, Attribut und
+Sprache steht im Journal, bis zu welcher Journalnummer übersetzt wurde. Offen ist alles, was
+sich seither geändert hat — eine Abfrage, kein Behälter. Damit ist Taloans „die neue Version
+überschreibt die alte“ geschenkt: verglichen wird immer *Marke gegen jetzt*, nie ein Stapel von
+Änderungen. Zehnmal geändert ist ein Posten, nicht zehn. Kein Schreibpfad am Journal vorbei.
+
+**2. Das Paket schnürt ein Job.** Zeitplan gibt es schon (`Schedule`, cron „m h dom mon dow“,
+`Jobs.cs:42`) — wöchentlich, oder einmal nachts, je Projekt. Der zweite Auslöser ist der
+Übergang „Version der Mastersprache“; derselbe Job, zwei Auslöser, nie zwei Mechanismen. Ein- und
+Ausgang sind die Fächer des Jobs (`JobFiles`: in/, out/, done/, failed/), und der doppelte
+Rücklauf fällt schon am Fingerabdruck auf (`JobFileConsumed` mit `Hash`, Status `duplicate`).
+
+**3. Der Auftrag ist ein Zeiger plus Fingerabdrücke.** Im Journal: Sprache, Umfang,
+Journalnummer — und je Wert der Hash des Quelltextes, der hinausging. Die Datei (XLIFF, CSV über
+`table`) ist nur die Kopie für unterwegs, nicht die Wahrheit.
+
+**4. Die Rückkehr — der Teil, an dem es in der Praxis scheitert.** Beim Rückimport wird je Wert
+am Hash entschieden, nicht am Gefühl:
+
+| Befund | Was geschieht |
+|---|---|
+| Quelle seit dem Auftrag unverändert | einspielen, Marke auf jetzt, fertig |
+| Quelle ist weitergezogen | **die Übersetzung ist kein Abfall** — sie ist besser als die vorige. Einspielen, Marke auf die *Auftragsnummer* (nicht auf jetzt). Der Rückstand bleibt offen und geht als Differenz ins nächste Paket: die zweite Runde ist klein, meist ein Satz |
+| Zielwert wurde inzwischen von Hand geändert | **nur hier** ein Mensch: Konflikt zeigen, beide Fassungen nebeneinander |
+
+Nie: den Auftrag verwerfen, weil er „nicht mehr aktuell“ ist. Genau daraus entsteht das
+Hamsterrad, das Taloan beschreibt — wer immer den ganzen Text neu übersetzen lässt, holt den
+Rückstand nie ein; wer nur die Differenz nachbestellt, schon.
+
+**Nebenbei fällt eine Zahl ab:** weil jeder Wert seinen Quell-Hash kennt, steht je Sprache der
+Rückstand da („FR: 12 Werte“) — dieselbe Zahl, aus der das nächste Paket entsteht. Läuft die
+Übersetzung über die KI, schrumpft die Runde auf Minuten und der ganze Fall „Quelle ist
+weitergezogen“ bleibt nur für die Agenturstrecke übrig.
+
+**Zu bauen wäre dafür:** ein Eintrag für die Marke (Knoten, Attribut, Sprache, Journalnummer,
+Quell-Hash), ein Abbild „Rückstand je Sprache“, der Job „Paket schnüren“ mit Zeitplan und der
+Rückimport als Importer mit Profil — dazu die Workflow-Achse von oben. **Taloans Wort fehlt.**
+
 ## Eintragstypen, die dazukommen
 
 | Strom | Typ | Nutzdaten |
