@@ -1,5 +1,5 @@
 // Basis-Plugin da (Taloan, 19.09.2026): ✓ Datenqualität — Grundfunktion der Gruppe Datenanalyse und zugleich ihr Container:
-// dpp, ppwr hängen daran (requires: ["da"]) und liefern Regeln über checks. Prüft einen Teilbaum gegen Regeln und zeigt die Funde als Liste (Schwere, Knoten,
+// dpp, ppwr hängen daran (requires: ["da"]) und liefern Regeln über checks. Prüft einen Teilbaum gegen Regeln und zeigt die Befunde als Liste (Schwere, Knoten,
 // Attribut, Meldung) mit Sprung zum Knoten. Eingebaute Regeln unten; weitere Regeln liefern Plugins über `checks`
 // (ctx.checks). Welche Regeln laufen, steht im Journal (ctx.data „settings“ unter plugin:dq).
 // Quelle: GET /api/nodes/{id}/table?deep=true — alle Nachfahren mit aufgelösten Werten, je Sprache ein Aufruf.
@@ -86,7 +86,7 @@ async function mount(root, ctx) {
     for (const s of ['all', 'error', 'warn', 'info']) summary.append(el('span', { class: 'view-chip' + (state.filter === s ? ' on' : ''), onclick: () => { state.filter = s; draw() } }, s === 'all' ? 'alle' : sev(s)))
     const byRule = new Map(); for (const x of f) byRule.set(x.rule, (byRule.get(x.rule) ?? 0) + 1)
     summary.append(el('span', { class: 'muted' }, [...byRule].map(([k, n]) => `${k} ${n}`).join(' · ')))
-    summary.append(el('span', { class: 'grow' }), el('button', { class: 'x', onclick: exportCsv, title: 'Funde als CSV' }, '⇪ CSV'))
+    summary.append(el('span', { class: 'grow' }), el('button', { class: 'x', onclick: exportCsv, title: 'Befunde als CSV' }, '⇪ CSV'))
     const q = state.q.toLowerCase()
     const rows = f.filter(x => (state.filter === 'all' || x.severity === state.filter) && (!q || x.node.label.toLowerCase().includes(q) || (x.attribute ?? '').includes(q) || x.message.toLowerCase().includes(q)))
     const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:300px' }, 'Knoten'), el('th', { style: 'width:60px' }, 'SKU'), el('th', { style: 'width:40px' }, '🗣'), el('th', { style: 'width:160px' }, 'Attribut'), el('th', {}, 'Meldung'), el('th', { style: 'width:160px' }, 'Regel'))))
@@ -96,14 +96,14 @@ async function mount(root, ctx) {
       el('td', { class: 'mono muted' }, Object.values(x.node.keys ?? {}).join(' · ')), el('td', { class: 'muted' }, x.locale), el('td', { class: 'mono' }, x.attribute ?? ''), el('td', { title: x.title ?? '' }, x.message), el('td', { class: 'muted' }, x.label)))   // title: Erklärung eines Funds im Tooltip, nicht in der Zeile
     if (rows.length > 2000) tb.append(el('tr', {}, el('td', { colspan: '7', class: 'muted' }, `… ${rows.length - 2000} weitere — filtern`)))
     list.append(tbl)
-    if (!rows.length) list.append(el('div', { class: 'empty' }, f.length ? 'nichts in diesem Filter' : '✓ keine Funde'))
+    if (!rows.length) list.append(el('div', { class: 'empty' }, f.length ? 'nichts in diesem Filter' : '✓ keine Befunde'))
   }
   function exportCsv() {
     const esc = v => { const s = v == null ? '' : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s }
     const lines = ['schwere;knoten;id;sku;sprache;attribut;meldung;regel', ...state.result.findings.map(x => [x.severity, x.node.label, x.node.id, x.node.sku ?? '', x.locale, x.attribute ?? '', x.message, x.rule].map(esc).join(';'))]
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })); a.download = 'datenqualitaet.csv'; a.click()
   }
-  async function run() { if (!state.root) return; say('prüfe …'); try { state.result = await check(ctx, state.root, rules, say); say(`${state.result.findings.length} Funde`); draw() } catch (e) { say('✗ ' + e.message); store.toast(e.message) } }
+  async function run() { if (!state.root) return; say('prüfe …'); try { state.result = await check(ctx, state.root, rules, say); say(`${state.result.findings.length} Befunde`); draw() } catch (e) { say('✗ ' + e.message); store.toast(e.message) } }
   const qIn = el('input', { type: 'search', placeholder: 'filtern', style: 'width:160px', oninput: e => { state.q = e.target.value; draw() } })
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, '✓ Datenqualität'), el('span', { style: 'position:relative' }, rootIn, pick), el('button', { class: 'primary', onclick: run }, '▶ prüfen'), qIn, el('span', { class: 'grow' }), status), ruleBox, summary, list)
   return () => {}

@@ -1090,7 +1090,7 @@ je Import-Plugin mehrere Konfigurationen"):**
   nur Änderungen; Plan vor dem Schreiben.
 - **Mitgelieferte Plugins**: `csv`, `json`, `xlsx` (SheetJS, Apache-2.0)
   als Importer; `datasheet` (Vorlagen mit Platzhaltern, Designer, Blatt
-  im Kontextmenü); `dq` (Regeln, Funde je Teilbaum, Sprung zum Knoten; seit 19.09. Basis-Plugin `da`).
+  im Kontextmenü); `dq` (Regeln, Befunde je Teilbaum, Sprung zum Knoten; seit 19.09. Basis-Plugin `da`).
 - **Im Kern statt Plugin**, weil es der Pflegeweg selbst ist:
   Massenbearbeitung `/table/{id}` (Excel-artig, Einfügen aus Excel, ein
   Stapel) über `GET /api/nodes/{id}/table` — den nutzen auch dq und Export.

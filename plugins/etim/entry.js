@@ -390,28 +390,45 @@ const checks = [
 // ── Das Band ⌗ ETIM in der Knotenansicht (Taloan, 22.09.: „die Bedienung erfolgt beim Gegenstand“): eine Zeile — Klasse (eigen/geerbt,
 // ≠ abweichende darunter) · Attribute n von m (zugeordnet, ƒ, fehlend) · Daten % gefüllt (leer, passen nicht) — und die Knöpfe, die
 // ins vorhandene Werkzeug springen: Zuweisen-Dialog, Zuordnung (auf die Klasse gefiltert), Subitems-Tabelle mit den Spalten der Klasse,
-// Prüfung (Funde im Körper). Gilt an Gruppe, Produkt, Variante; die Zahlen zählen den Knoten und alles darunter mit dieser Klasse.
+// Prüfung (Befunde im Körper). Gilt an Gruppe, Produkt, Variante; die Zahlen zählen den Knoten und alles darunter mit dieser Klasse.
 async function stageData(ctx, nodeId) {
   const { api, tree } = ctx; const ops = modelOps(ctx); const hasAttr = ops.hasAttr
   const key = cache.settings.classAttr; const row = tree.byId.get(nodeId); if (!row) return null
   const at = hasAttr(key) ? await classAt(api, key, nodeId) : { ownCode: '', inherited: null, current: null }
   const cls = at.current ? cache.classes.get(at.current) ?? null : null
-  const stage = { row, ...at, cls, feats: [], products: [], other: 0, filled: 0, cells: 0, bad: 0, empty: 0, keys: [], tbl: null }
+  const stage = { row, ...at, cls, feats: [], products: [], other: 0, filled: 0, cells: 0, bad: 0, empty: 0, keys: [], tbl: null, byClass: [] }
   if (!cls) return stage
-  stage.feats = cls.features.map(f => { const k = attrKeyOf(f.code); return { f, key: k, has: hasAttr(k), own: k === f.code.toLowerCase(), steps: stepsOf(f.code) } })
-  const keys = [...new Set([key, ...stage.feats.filter(x => x.has).map(x => x.key)])]
+  // Merkmale der Klasse am Knoten und aller Klassen im Teilbaum (Taloan, 22.09.: Prozent je Klasse am obersten Knoten mit ETIM)
+  const featsOf = c => c.features.map(f => { const k = attrKeyOf(f.code); return { f, key: k, has: hasAttr(k), own: k === f.code.toLowerCase(), steps: stepsOf(f.code) } })
+  stage.feats = featsOf(cls)
+  // 1. welche Klassen kommen darunter vor? 2. dann eine Tabelle mit den Attributen aller dieser Klassen
+  const seen = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?deep=true&attributes=${encodeURIComponent(key)}`)
+  const codes = new Set([at.current, ...(seen.rows ?? []).map(r => String(r.values?.[key]?.value ?? '').toUpperCase()).filter(c => /^EC\d{6}$/.test(c))])
+  const featsByCode = new Map(); for (const c of codes) { const cc = cache.classes.get(c); if (cc) featsByCode.set(c, featsOf(cc)) }
+  const keys = [...new Set([key, ...[...featsByCode.values()].flat().filter(x => x.has).map(x => x.key)])]
   const q = `attributes=${encodeURIComponent(keys.join(','))}`
   const tbl = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?deep=true&${q}`)
   let rows = (tbl.rows ?? []).filter(r => r.row.role !== 'group')
   if (row.role !== 'group') { const me = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}/table?self=true&${q}`).catch(() => null); const mine = me?.rows?.find(r => r.row.id === nodeId); if (mine) rows = [mine, ...rows.filter(r => r.row.id !== nodeId)] }
   stage.other = rows.filter(r => { const v = String(r.values?.[key]?.value ?? '').toUpperCase(); return v && v !== at.current }).length
   stage.products = rows.filter(r => String(r.values?.[key]?.value ?? '').toUpperCase() === at.current)
-  for (const r of stage.products) for (const x of stage.feats) { if (!x.has) continue; stage.cells++; const v = resolveValue(x.f, throughSteps(x.steps, r.values?.[x.key]?.value)); if (v === null) stage.bad++; else if (v.unknown) stage.empty++; else stage.filled++ }
-  stage.keys = keys; stage.tbl = tbl
+  // Zählen je Zeile in ihrer eigenen Klasse — daraus die Kennzahl je Klasse und die des Teilbaums
+  const acc = new Map()
+  for (const r of rows) {
+    const code = String(r.values?.[key]?.value ?? '').toUpperCase(); const fs = featsByCode.get(code); if (!fs) continue
+    if (!acc.has(code)) acc.set(code, { code, nodes: 0, filled: 0, cells: 0, bad: 0 })
+    const a = acc.get(code); a.nodes++
+    for (const x of fs) { if (!x.has) continue; a.cells++; const v = resolveValue(x.f, throughSteps(x.steps, r.values?.[x.key]?.value)); if (v === null) a.bad++; else if (!v.unknown) a.filled++ }
+  }
+  for (const a of acc.values()) a.pct = a.cells ? Math.round(a.filled * 1000 / a.cells) / 10 : 0
+  stage.byClass = [...acc.values()].sort((x, y) => y.nodes - x.nodes || x.code.localeCompare(y.code))
+  const mine = acc.get(at.current)
+  if (mine) { stage.filled = mine.filled; stage.cells = mine.cells; stage.bad = mine.bad; stage.empty = mine.cells - mine.filled - mine.bad }
+  stage.keys = keys; stage.tbl = tbl; stage.featsByCode = featsByCode
   return stage
 }
 async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
-  // head: kurzer Text in der Überschrift (wie „Redaktion: Freigegeben“); line: die Zeile mit Chips und Knöpfen im Körper; darunter die Funde
+  // head: kurzer Text in der Überschrift (wie „Redaktion: Freigegeben“); line: die Zeile mit Chips und Knöpfen im Körper; darunter die Befunde
   const line = el('div', { class: 'row' }); const found = el('div'); bodyEl.append(line, found); const body = found
   const { store, tree } = ctx
   await cache.loaded; if (!tree.loaded) await tree.load()
@@ -435,25 +452,37 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     const has = S.feats.filter(x => x.has), miss = S.feats.filter(x => !x.has), mapped = has.filter(x => !x.own), fx = S.feats.filter(x => x.steps)
     line.append(el('span', { class: 'muted' }, '·'), chip(`zugeordnet ${has.length}/${S.feats.length}`, miss.length ? 'warn' : 'pos', `${has.length - mapped.length} eigene ef… · ${mapped.length} zugeordnet${fx.length ? ` · ${fx.length} mit ƒ` : ''}${miss.length ? ` · ${miss.length} nicht zugeordnet` : ''}`))
     const pct = S.cells ? Math.round(S.filled * 100 / S.cells) : 0
-    head.textContent = `· ${code} ${nameOf(S.cls.name, locale)}${S.ownCode ? '' : ' (geerbt)'} · zugeordnet ${has.length}/${S.feats.length} · Daten ${S.products.length ? pct + ' %' : '—'}${S.other ? ` · ≠ ${S.other}` : ''}`
+    const sum = S.byClass.reduce((a, c) => ({ filled: a.filled + c.filled, cells: a.cells + c.cells, nodes: a.nodes + c.nodes }), { filled: 0, cells: 0, nodes: 0 })
+    const sumPct = sum.cells ? Math.round(sum.filled * 1000 / sum.cells) / 10 : 0
+    head.textContent = `· ${code} ${nameOf(S.cls.name, locale)}${S.ownCode ? '' : ' (geerbt)'} · zugeordnet ${has.length}/${S.feats.length} · Daten ${S.products.length ? pct + ' %' : '—'}${S.ownCode && S.byClass.length > 1 ? ` · Teilbaum ${String(sumPct).replace('.', ',')} %` : ''}${S.other ? ` · ≠ ${S.other}` : ''}`
     line.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? `Daten ${pct} %` : 'Daten —', S.bad ? 'neg' : pct >= 80 ? 'pos' : '', `${S.products.length} Produkte/Varianten × ${has.length} ETIM-Attribute: ${S.filled} gefüllt · ${S.empty} leer${S.bad ? ` · ${S.bad} passen nicht` : ''}`))
     // Knöpfe direkt hinter den Chips, nicht rechtsbündig (Taloan, 22.09.: der Bereich ist so breit wie die Attributtabelle — „prüfen“ stand hinter dem Rollbalken)
     line.append(...[el('span', { class: 'muted' }, '·'), assignBtn,
       el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der ETIM-Attribute dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
-      S.products.length ? el('button', { class: 'x', title: 'dieselbe Regel wie in ✓ Datenqualität — Funde je Knoten und ETIM-Attribut, hier darunter', onclick: () => {
+      S.products.length ? el('button', { class: 'x', title: 'dieselbe Regel wie in ✓ Datenqualität — Befunde je Knoten und ETIM-Attribut, hier darunter', onclick: () => {
         const findings = []
         for (const r of S.products) for (const f of checkNode({ values: r.values, columns: S.tbl.columns.filter(x => !(r.inactive ?? []).includes(x.key)), inactive: r.inactive ?? [], classes: cache.classes, cfg: cfg(locale) })) findings.push({ ...f, node: r.row })
         body.innerHTML = ''
-        // letzte Spalte: das Sprungziel, an dem man den Fund kontrolliert oder behebt (Taloan, 22.09.) — Zuordnung mit dem EF markiert, oder der Knoten in der Gruppe ETIM
+        // letzte Spalte: das Sprungziel, an dem man den Befund kontrolliert oder behebt (Taloan, 22.09.) — Zuordnung mit dem EF markiert, oder der Knoten in der Gruppe ETIM
         const jump = x => x.go === 'map'
           ? el('button', { class: 'x', title: `zur Zuordnung — ${x.attribute} markiert`, onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}&ef=${x.attribute}`) }, '⇄')
           : x.go === 'node' ? el('button', { class: 'x', title: `zum Knoten ${x.node.label}, Gruppe ${groupKey()}`, onclick: () => ctx.go?.(`/tree/${x.node.id}?group=${encodeURIComponent(groupKey())}`) }, '↗') : null
-        body.append(findings.length ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:260px' }, 'Knoten'), el('th', { style: 'width:140px' }, 'Feld'), el('th', {}, 'Fund'), el('th', { style: 'width:36px' }, ''))),
+        body.append(findings.length ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:260px' }, 'Knoten'), el('th', { style: 'width:140px' }, 'Feld'), el('th', {}, 'Befund'), el('th', { style: 'width:36px' }, ''))),
           el('tbody', {}, ...findings.slice(0, 500).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, SEV[x.severity] ?? ''), el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) } }, `${ICON[x.node.role] ?? ''} ${x.node.label}`)), el('td', { class: 'mono muted', title: x.label ?? '' }, x.attribute ?? ''), el('td', { title: x.title ?? '' }, x.progress ? el('span', { style: 'display:inline-flex;align-items:center;gap:8px' }, `${x.progress.filled} von ${x.progress.total} gefüllt`, el('span', { style: 'display:inline-block;width:140px;height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--bg)' }, el('span', { style: `display:block;height:100%;width:${x.progress.pct}%;background:${x.progress.pct >= 80 ? 'var(--pos)' : 'var(--accent)'}` })), `${String(x.progress.pct).replace('.', ',')} %`) : x.message), el('td', {}, jump(x))))))
-          : el('div', { class: 'muted', style: 'padding:4px 0' }, `✓ keine Funde in ${S.products.length} Knoten`))
+          : el('div', { class: 'muted', style: 'padding:4px 0' }, `✓ keine Befunde in ${S.products.length} Knoten`))
       } }, '✓ prüfen') : null].filter(Boolean))
+    // Kennzahl je Klasse im Teilbaum — nur am Knoten, an dem die Klasse gesetzt ist (Taloan, 22.09.: nicht bis ganz nach oben reichen)
+    if (S.ownCode && S.byClass.length) {
+      const bar = p => el('span', { style: 'display:inline-block;width:120px;height:8px;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--bg);vertical-align:middle' }, el('span', { style: `display:block;height:100%;width:${p}%;background:${p >= 80 ? 'var(--pos)' : 'var(--accent)'}` }))
+      const tb = el('tbody')
+      for (const c of S.byClass) tb.append(el('tr', {}, el('td', { class: 'mono' }, c.code), el('td', { title: `${c.nodes} Knoten mit dieser Klasse darunter` }, nameOf(cache.classes.get(c.code)?.name, locale) || ''), el('td', { class: 'num muted' }, String(c.nodes)),
+        el('td', { class: 'num' }, `${c.filled} von ${c.cells}`), el('td', {}, bar(c.pct)), el('td', { class: 'num' }, `${String(c.pct).replace('.', ',')} %`), el('td', { class: c.bad ? 'neg' : 'muted' }, c.bad ? `✗ ${c.bad}` : '')))
+      if (S.byClass.length > 1) tb.append(el('tr', {}, el('td', {}), el('td', { class: 'muted' }, 'Teilbaum'), el('td', { class: 'num muted' }, String(sum.nodes)), el('td', { class: 'num muted' }, `${sum.filled} von ${sum.cells}`), el('td', {}, bar(sumPct)), el('td', { class: 'num' }, `${String(sumPct).replace('.', ',')} %`), el('td', {})))
+      body.append(el('table', { class: 'grid', style: 'width:auto;min-width:520px;margin-top:4px' },
+        el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:50px' }, 'Knoten'), el('th', { style: 'width:110px' }, 'gefüllt'), el('th', { style: 'width:130px' }, ''), el('th', { style: 'width:60px' }, '%'), el('th', { style: 'width:50px' }, ''))), tb))
+    }
   }
   render()
   return () => { gone = true }
@@ -627,7 +656,7 @@ async function mount(root, ctx) {
       const t = await api.get(`/api/nodes/${encodeURIComponent(st.root)}/table?deep=true&locale=${locale}`)
       const findings = []
       for (const r of t.rows) for (const f of checkNode({ values: r.values, columns: t.columns.filter(x => !(r.inactive ?? []).includes(x.key)), classes: cache.classes, cfg: cfg(locale) })) findings.push({ ...f, node: r.row })
-      st.result = { findings, nodes: t.rows.length }; say(`${findings.length} Funde in ${t.rows.length} Knoten`); draw()
+      st.result = { findings, nodes: t.rows.length }; say(`${findings.length} Befunde in ${t.rows.length} Knoten`); draw()
     })
   }
 
