@@ -205,7 +205,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
       <select v-model="sort" title="Sortierung — nur die Anzeige"><option v-for="[k, l] in SORTS" :key="k" :value="k">{{ l }}</option></select>
       <button class="x" @click="desc = !desc" :title="desc ? 'Aufsteigend sortieren' : 'Absteigend sortieren'">{{ desc ? '↓' : '↑' }}</button>
       <select v-model="group" title="Gruppierung — nur die Anzeige; der Ordnerfilter ist die Liste links"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
-      <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? 'Dateien hochladen — oder hierher ziehen' : `hochladen in „${folderTitle}“ — oder hierher ziehen`">⇧ hochladen</button>
+      <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? 'Dateien hochladen — oder hierher ziehen' : `hochladen in „${folderTitle}“ — oder hierher ziehen`">⇧ Hochladen</button>
       <input ref="fileInput" type="file" multiple style="display:none" @change="upload([...$event.target.files]); $event.target.value = ''" />
     </div>
     <div class="scroll">

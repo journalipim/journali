@@ -64,7 +64,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
           <div class="toolbar" style="gap:4px">
             <input v-model="q" type="search" placeholder="🔍 Name, Id, Werte" style="flex:1;min-width:0" @input="search" autofocus />
             <select v-model="sort" @change="load" title="Sortierung"><option value="recent">zuletzt geändert</option><option value="name">Name</option><option value="date">Datum</option><option value="size">Größe</option><option value="used">Verwendung</option></select>
-            <button class="x" @click="all" title="alle sichtbaren wählen">alle</button><button class="x" @click="sel = new Set()" title="Auswahl leeren">keine</button>
+            <button class="x" @click="all" title="Alle sichtbaren wählen">Alle</button><button class="x" @click="sel = new Set()" title="Auswahl leeren">Keine</button>
           </div>
           <div class="scroll tiles">
             <div v-for="m in items" :key="m.id" class="tile" :class="{ sel: sel.has(m.id), dim: excluded.has(m.id) }" @click="click(m)" :title="excluded.has(m.id) ? `${m.name} — hängt schon hier` : `${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}`">

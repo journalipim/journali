@@ -299,12 +299,13 @@ const shownLabel = computed(() => tree.byId.get(props.id)?.label ?? props.id)
 // Alle ★ am Pfad, das nächste zuerst; es zählt das erste, dessen Attribut hier gilt und einen Wert hat.
 const star = key => (node.value?.stars ?? []).find(s => s.attribute === key) ?? null
 const starOwn = key => star(key)?.from === props.id
+const nextStar = key => (node.value?.stars ?? []).find(x => x.attribute === key && x.from !== props.id) ?? null   // das ★, das nach dem Wegnehmen gilt
 // Tooltip „Objekt Verb (Erläuterung)“; der Vorfahr wird beim Namen genannt, nie „von oben“ (Taloan, 22.09.)
 function starTitle(def) {
   const s = star(def.key), name = store.name(def)
   if (!s) return `Ab hier mit „${name}“ benennen`
   if (s.from === props.id) {
-    const next = (node.value?.stars ?? []).find(x => x.attribute === def.key && x.from !== props.id)   // das nächste ★ am Pfad, das danach wieder gilt
+    const next = nextStar(def.key)
     return `Benennung wegnehmen (${next ? `danach gilt wieder das ★ von ${next.fromLabel}` : 'danach keine Benennung'})`
   }
   return `Ab hier mit „${name}“ benennen (${s.applies ? `bisher geerbt von ${s.fromLabel}` : `wirkt erst, wo ein Wert steht — bis dahin zählt das ★ von ${s.fromLabel}`})`
@@ -620,7 +621,7 @@ async function retire() {
     const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
     const gone = props.id
     const ps = stacksOf(node.value.parent ?? ''); ps.history.push({ kind: 'retire', id: gone, parent: node.value.parent, label, count: r?.retired ?? 1, batch: r?.batch ?? null }); ps.redo.length = 0
-    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok', { label: '↶ wiederherstellen', run: async () => { try { const x = r.batch ? await api.post(`/api/batches/${encodeURIComponent(r.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(gone)}/restore`); store.toast(`${x.undone ?? 1} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${gone}`) } catch (e) { store.toast(e.message) } }, title: `stellt ${r.retired} Knoten wieder her: ${shownLabel.value}${r.retired > 1 ? ` mit ${r.retired - 1} darunter` : ''}` })
+    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok', { label: '↶ Wiederherstellen', run: async () => { try { const x = r.batch ? await api.post(`/api/batches/${encodeURIComponent(r.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(gone)}/restore`); store.toast(`${x.undone ?? 1} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${gone}`) } catch (e) { store.toast(e.message) } }, title: `stellt ${r.retired} Knoten wieder her: ${shownLabel.value}${r.retired > 1 ? ` mit ${r.retired - 1} darunter` : ''}` })
     const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }
@@ -632,12 +633,12 @@ function cellMenu(e, def, col, block) {
   menu.open(e, [
     { label: `${store.name(def)} · ${col.label}`, disabled: true },
     { sep: true },
-    { label: 'Eigenen Wert löschen', icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? 'kein eigener' : (inh.value != null ? 'dann geerbt' : ''), action: () => setValue(def, col, '') },
-    inh.from ? { label: `Zur Herkunft ${icon(inh.from.role)} ${inh.from.label}`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
+    { label: 'Eigenen Wert löschen', icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? 'kein eigener' : (inh.value != null ? 'geerbter gilt wieder' : ''), action: () => setValue(def, col, '') },
+    inh.from ? { label: `Herkunft ${icon(inh.from.role)} ${inh.from.label} öffnen`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
     { label: 'Wert kopieren', icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
-    { label: sourceOf(def, col) ? 'Quelle ändern …' : 'Quelle …', icon: '↗', key: 'q', hint: sourceOf(def, col) ? `${sourceOf(def, col).method} · ${sourceOf(def, col).checkedAt}` : 'Beleg am Wert', disabled: ownV == null, action: () => setSource(def, col) },
-    def.type !== 'html' && def.type !== 'rows' ? { label: starOwn(def.key) ? '★ weg — es gilt das von oben' : '★ Name im Baum ab hier', icon: '★', key: 's', action: () => setStar(def) } : null,
-    { label: 'Attribut im Modell', icon: '⊞', key: 'm', hint: '→ Modell → Attribute', action: () => router.push({ path: '/model', query: { section: 'attributes', key: def.key } }) },
+    { label: sourceOf(def, col) ? 'Quelle ändern …' : 'Quelle angeben …', icon: '↗', key: 'q', hint: sourceOf(def, col) ? `${sourceOf(def, col).method} · ${sourceOf(def, col).checkedAt}` : 'Beleg am Wert', disabled: ownV == null, action: () => setSource(def, col) },
+    def.type !== 'html' && def.type !== 'rows' ? { label: starOwn(def.key) ? 'Benennung wegnehmen' : 'Ab hier damit benennen', icon: '★', key: 's', hint: starOwn(def.key) ? (nextStar(def.key) ? `danach ★ von ${nextStar(def.key).fromLabel}` : 'danach keine') : 'Name im Baum', action: () => setStar(def) } : null,
+    { label: 'Attribut im Modell öffnen', icon: '⊞', key: 'm', hint: '→ Modell → Attribute', action: () => router.push({ path: '/model', query: { section: 'attributes', key: def.key } }) },
   ])
 }
 </script>
@@ -817,10 +818,10 @@ function cellMenu(e, def, col, block) {
           <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt`">{{ r.other.label }} <button @click="retireRel(r)" title="wieder zulassen — das Medium ist dann wieder geerbt da">×</button></span>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
-          <button class="primary" @click="mediaFile.click()">⇧ hochladen</button>
+          <button class="primary" @click="mediaFile.click()">⇧ Hochladen</button>
           <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" title="Aufräumen: die Medien hier auf „vererben“ setzen und gleiche feste Zuordnungen an den Subitems lösen — sie erben dann">{{ inheriting || '↓ feste Bilder der Subitems durch Vererbung ersetzen' }}</button>
           <input ref="mediaFile" type="file" multiple style="display:none" @change="uploadMedia([...$event.target.files]); $event.target.value = ''" />
-          <button @click="mediaPick.open = true" title="Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl">▨ aus der Bibliothek …</button>
+          <button @click="mediaPick.open = true" title="Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl">▨ Aus der Bibliothek wählen …</button>
         </div>
         <MediaPicker v-if="mediaPick.open" :types="mediaTypes" :exclude="[...mediaRels, ...stopped].map(r => r.other.id)" @pick="linkMedia" @close="mediaPick.open = false" />
         </template>
@@ -852,7 +853,7 @@ function cellMenu(e, def, col, block) {
           <select v-model="newRel.type" style="width:170px" title="Relationstyp — ⊞ Modell → Relationen"><option value="">⇄ Typ …</option><option v-for="t in relTypesFromHere" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
           <input v-model="newRel.q" type="search" placeholder="🔍 Ziel: Name, SKU, Id" style="width:240px" :disabled="!newRel.type" @input="newRel.to = null" />
           <span v-if="newRel.to" class="chip">→ {{ tree.byId.get(newRel.to)?.label }} <button @click="newRel.to = null; newRel.q = ''">×</button></span>
-          <button class="primary" :disabled="!newRel.type || !newRel.to" @click="addRel">verbinden</button>
+          <button class="primary" :disabled="!newRel.type || !newRel.to" @click="addRel">Verbinden</button>
         </div>
         <div v-if="newRel.q && !newRel.to" class="picker" style="max-width:520px">
           <div v-for="m in relMatches" :key="m.id" class="pick" @click="newRel.to = m.id; newRel.q = m.label">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ tree.keyText(m) || m.id }}</span></div>
@@ -870,7 +871,7 @@ function cellMenu(e, def, col, block) {
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
               <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
-              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="Vererbung wiederherstellen (eigener Zustand wird aufgehoben)">↑ erben</button>
+              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="Vererbung wiederherstellen (eigener Zustand wird aufgehoben)">↑ Erben</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
               <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
@@ -935,7 +936,7 @@ function cellMenu(e, def, col, block) {
           <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">· {{ wiz.total }} Varianten{{ wiz.empty ? `, ${wiz.empty} ohne Wert (zählen nicht)` : '' }}</span></div>
           <div v-if="wiz.dupes.length" class="warn" style="margin-top:6px">⚠ nicht eindeutig — <span v-for="d in wiz.dupes.slice(0, 6)" :key="d.combo" class="chip" style="margin-right:4px">{{ d.combo }} × {{ d.n }}</span>{{ wiz.dupes.length > 6 ? ` … ${wiz.dupes.length}` : '' }} → oben eine weitere Achse wählen und prüfen</div>
           <div v-else class="pos" style="margin-top:6px">✓ eindeutig</div>
-          <div class="chips" style="margin-top:6px"><button class="primary" :disabled="wiz.dupes.length > 0" @click="axisCommit">Achsen zufügen</button><button @click="wiz = null">Abbrechen</button></div>
+          <div class="chips" style="margin-top:6px"><button class="primary" :disabled="wiz.dupes.length > 0" @click="axisCommit">Achsen hinzufügen</button><button @click="wiz = null">Abbrechen</button></div>
         </div>
         </template>
       </div>
@@ -955,7 +956,7 @@ function cellMenu(e, def, col, block) {
         </table>
         <div class="chips" style="margin-top:6px">
           <select v-model="addGroup" style="width:200px"><option value="">+ Gruppe …</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ g.label?.de || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
-          <button class="primary" :disabled="!addGroup" @click="attachAdd">anhängen</button>
+          <button class="primary" :disabled="!addGroup" @click="attachAdd">Anhängen</button>
         </div>
         </template>
       </div>

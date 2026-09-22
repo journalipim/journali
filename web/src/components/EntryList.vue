@@ -69,7 +69,7 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
           <td v-if="showStream" class="muted">{{ new Set(r.group.map(g => g.stream)).size }} Ströme</td>
           <td class="muted">{{ open[r.batch] ? '▾' : '▸' }} ⧉ Stapel</td>
           <td><b>{{ r.group.length }} Einträge</b> <span class="muted">· {{ typeText(r.types) }}</span>
-            <button class="x" style="margin-left:8px" @click.stop="undo(r.batch)" @mouseenter="preview(r.batch)" :title="previews[r.batch] ?? 'lade Vorschau …'">↶ rückgängig</button>
+            <button class="x" style="margin-left:8px" @click.stop="undo(r.batch)" @mouseenter="preview(r.batch)" :title="previews[r.batch] ?? 'lade Vorschau …'">↶ Rückgängig</button>
           </td>
           <td class="mono muted" :title="'Stapel ' + r.batch">{{ r.batch.slice(2, 6) }}</td>
         </tr>
@@ -81,8 +81,8 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
           <td class="muted">{{ r.e.type }}</td>
           <td :class="{ pos: r.e.type.endsWith('Granted') || r.e.type.endsWith('Assigned') || r.e.type.endsWith('Created'), neg: r.e.type.endsWith('Revoked') || r.e.type.endsWith('Removed') || r.e.type.endsWith('Retired') }">
             {{ describe(r.e) }}
-            <button v-if="r.e.type === 'NodeRetired' && !r.inGroup && !tree.byId.has(r.e.stream)" class="x" style="margin-left:8px" @click="undo(r.e.batch, r.e.stream)" @mouseenter="preview(r.e.batch, r.e.stream)" :title="previews[r.e.batch ?? r.e.stream] ?? 'lade Vorschau …'">↶ wiederherstellen</button>
-            <button v-else-if="!r.inGroup && canRestoreModel(r.e) && mayRestore(r.e)" class="x" style="margin-left:8px" @click="restoreEntry(r.e)" title="die letzte Definition vor dem Zurückziehen noch einmal schreiben">↶ wiederherstellen</button>
+            <button v-if="r.e.type === 'NodeRetired' && !r.inGroup && !tree.byId.has(r.e.stream)" class="x" style="margin-left:8px" @click="undo(r.e.batch, r.e.stream)" @mouseenter="preview(r.e.batch, r.e.stream)" :title="previews[r.e.batch ?? r.e.stream] ?? 'lade Vorschau …'">↶ Wiederherstellen</button>
+            <button v-else-if="!r.inGroup && canRestoreModel(r.e) && mayRestore(r.e)" class="x" style="margin-left:8px" @click="restoreEntry(r.e)" title="die letzte Definition vor dem Zurückziehen noch einmal schreiben">↶ Wiederherstellen</button>
           </td>
           <td class="mono muted" :title="r.e.batch ? 'Stapel ' + r.e.batch : ''">{{ r.e.batch ? r.e.batch.slice(2, 6) : '' }}</td>
         </tr>

@@ -360,16 +360,16 @@ function onRowMenu(e, ri) {
   // hint steht rechts in der Menüzeile (kurz), key ist die Taste im Menü; Sätze gehören in die Hilfe (?)
   menu.open(e, [
     { label: `${n} Zeile${n > 1 ? 'n' : ''} kopieren`, icon: '⧉', key: 'k', hint: 'Strg+C', action: copyRows },
-    { label: 'darunter einfügen', icon: '⤵', key: 'e', hint: 'Zwischenablage → neue Zeilen', action: () => pasteRows(lastAt), disabled: deep },
+    { label: 'Darunter einfügen', icon: '⤵', key: 'e', hint: 'Zwischenablage → neue Zeilen', action: () => pasteRows(lastAt), disabled: deep },
     { label: `${n > 1 ? n + ' Zeilen' : label} duplizieren`, icon: '⧉', key: 'd', hint: 'Kopie darunter', action: duplicateRows, disabled: deep },
-    { label: `neue ${label} darüber`, icon: '＋', key: 'n', action: () => addRow(rows.value.indexOf(picked[0])), disabled: deep },
+    { label: `Neue ${label} darüber anlegen`, icon: '＋', key: 'n', action: () => addRow(rows.value.indexOf(picked[0])), disabled: deep },
     { sep: true },
-    { label: 'nach oben', icon: '↑', key: 'o', action: () => moveSel('up'), disabled: deep },
-    { label: 'nach unten', icon: '↓', key: 'u', action: () => moveSel('down'), disabled: deep },
-    { label: 'an den Anfang', icon: '⤒', key: 'a', action: () => moveSel('top'), disabled: deep },
-    { label: 'ans Ende', icon: '⤓', key: 'z', action: () => moveSel('bottom'), disabled: deep },
+    { label: 'Nach oben verschieben', icon: '↑', key: 'o', action: () => moveSel('up'), disabled: deep },
+    { label: 'Nach unten verschieben', icon: '↓', key: 'u', action: () => moveSel('down'), disabled: deep },
+    { label: 'An den Anfang verschieben', icon: '⤒', key: 'a', action: () => moveSel('top'), disabled: deep },
+    { label: 'Ans Ende verschieben', icon: '⤓', key: 'z', action: () => moveSel('bottom'), disabled: deep },
     { sep: true },
-    one && !one.isNew ? { label: 'im Baum öffnen', icon: '↗', key: 'b', hint: '↗ Fenster', action: () => popup ? window.open(`/tree/${one.row.id}`, '_blank') : router.push(`/tree/${one.row.id}`) } : null,
+    one && !one.isNew ? { label: 'Im Baum öffnen', icon: '↗', key: 'b', hint: '↗ Fenster', action: () => popup ? window.open(`/tree/${one.row.id}`, '_blank') : router.push(`/tree/${one.row.id}`) } : null,
     undel.length ? { label: `Löschen zurücknehmen (${undel.length})`, icon: '↶', key: 'r', action: undeleteRows } : null,
     { label: `${del.length} Zeile${del.length > 1 ? 'n' : ''} löschen`, icon: '✕', key: 'l', hint: del.some(kidsOf) ? `${del.filter(kidsOf).length} mit Kindern bleiben` : 'Strg+− · beim Speichern', action: deleteRows, danger: true, disabled: !del.length },
   ])
@@ -598,12 +598,12 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
       <span v-if="moved" class="chip" :title="`${moved} Zeilen verschoben — speichern schreibt die Reihenfolge`">↕ {{ moved }}</span>
       <span v-if="rowSel.size" class="chip" :title="`${rowSel.size} Zeilen markiert — Rechtsklick für kopieren, einfügen, verschieben, löschen`">▤ {{ rowSel.size }}</span>
       <template v-if="popup">
-        <button class="primary" :disabled="!!busy" @click="applyAndClose" title="Änderungen als ein Stapel ins Journal und Fenster schliessen — Schliessen über X tut dasselbe">✓ übernehmen &amp; schliessen</button>
-        <button :disabled="!!busy" @click="discardAndClose" title="Änderungen verwerfen und Fenster schliessen">✗ verwerfen</button>
+        <button class="primary" :disabled="!!busy" @click="applyAndClose" title="Änderungen als ein Stapel ins Journal und Fenster schliessen — Schliessen über X tut dasselbe">✓ Übernehmen &amp; schliessen</button>
+        <button :disabled="!!busy" @click="discardAndClose" title="Änderungen verwerfen und Fenster schliessen">✗ Verwerfen</button>
       </template>
       <template v-else>
-        <button class="primary" :disabled="!hasChanges || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 speichern</button>
-        <button :disabled="!hasChanges" @click="discard" title="Änderungen verwerfen — auch gelöschte und verschobene Zeilen">verwerfen</button>
+        <button class="primary" :disabled="!hasChanges || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 Speichern</button>
+        <button :disabled="!hasChanges" @click="discard" title="Änderungen verwerfen — auch gelöschte und verschobene Zeilen">Verwerfen</button>
       </template>
     </div>
     <div class="toolbar view">
@@ -615,8 +615,8 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
       <span v-if="filter" class="muted">{{ attrColumns.length }} von {{ data.columns.length }}</span>
       <span class="grow" />
       <button v-if="props.deep !== '1'" @click="addRow" :title="`neue ${roleLabel[childRole]?.replace(/n$/, '') ?? 'Zeile'} unter ${data?.node?.label ?? ''} — Werte eintragen, speichern legt den Knoten an`">+ Zeile</button>
-      <button @click="fillDown" :disabled="!sel" title="runterziehen: oberste Zelle des Bereichs in alle darunter (Strg+D)">⇩ füllen</button>
-      <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe</button>
+      <button @click="fillDown" :disabled="!sel" title="Oberste Zelle des Bereichs in alle darunter füllen (Strg+D)">⇩ Füllen</button>
+      <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe fortsetzen</button>
       <button class="x" title="Bedienung" @click="dialog.help({ title: 'Tabelle bedienen', rows: HELP })">?</button>
     </div>
     <div class="toolbar replace">
@@ -627,7 +627,7 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
       <label><input type="checkbox" v-model="rep.caseSensitive" /> Gross/Klein</label>
       <label><input type="checkbox" v-model="rep.whole" /> ganze Zelle</label>
       <span class="muted">{{ rep.find ? replaceHits + ' Treffer' + (rep.all || !sel ? '' : ' im Bereich') : '' }}</span>
-      <button class="primary" :disabled="!replaceHits" @click="replaceAll">alle ersetzen</button>
+      <button class="primary" :disabled="!replaceHits" @click="replaceAll">Alle ersetzen</button>
     </div>
     <div class="scroll" ref="scrollBox" style="position:relative">
       <div v-if="handle" class="fill-handle" :style="`top:${handle.top}px;left:${handle.left}px`" title="Ausfüllkästchen: nach unten ziehen füllt — ein Wert wiederholt sich, zwei Zahlen setzen die Reihe fort" />

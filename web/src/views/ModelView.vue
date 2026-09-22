@@ -175,7 +175,7 @@ async function restoreMenu(e) {
     { sep: true },
     ...list.map(x => ({ label: `↶ ${label(x)}`, hint: `${x.actor} · ${when(x.at)}`, action: async () => { try { const k = await restoreModel(x); store.toast(`↶ ${k} wiederhergestellt`, 'ok'); cur.value = k; sel.value = new Set([k]) } catch (err) { store.toast(err.message) } } })),
     { sep: true },
-    { label: 'weiter zurück: Journal', icon: '≡', action: () => router.push({ path: '/journal', query: { q: sec.value.label === 'Relationen' ? 'RelationTypeRetired' : section.value === 'groups' ? 'AttributeGroupRetired' : section.value === 'attributes' ? 'AttributeRetired' : section.value === 'lists' ? 'ListRetired' : section.value === 'views' ? 'ViewRetired' : section.value === 'units' ? 'UnitRetired' : section.value === 'locales' ? 'LocaleRetired' : 'ChannelRetired' } }) },
+    { label: 'Ältere im Journal zeigen', icon: '≡', action: () => router.push({ path: '/journal', query: { q: sec.value.label === 'Relationen' ? 'RelationTypeRetired' : section.value === 'groups' ? 'AttributeGroupRetired' : section.value === 'attributes' ? 'AttributeRetired' : section.value === 'lists' ? 'ListRetired' : section.value === 'views' ? 'ViewRetired' : section.value === 'units' ? 'UnitRetired' : section.value === 'locales' ? 'LocaleRetired' : 'ChannelRetired' } }) },
   ])
 }
 // Kontextmenü der Liste — wie im Baum: Rechtsklick, „zurückziehen“ für die Zeile oder die Auswahl (Taloan, 20.09.)
@@ -472,7 +472,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
   <div class="pane" style="flex:1" v-if="model">
     <!-- Stapel -->
     <template v-if="many">
-      <div class="toolbar"><h1>{{ count }} {{ sec.label }} gewählt</h1><span class="grow" /><button @click="sel = new Set()">keine</button></div>
+      <div class="toolbar"><h1>{{ count }} {{ sec.label }} gewählt</h1><span class="grow" /><button @click="sel = new Set()">Keine</button></div>
       <div class="scroll">
         <div class="section">
           <div class="chips" v-if="section === 'attributes'">
@@ -511,7 +511,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
               <option v-for="[g, n] in pickSources" :key="g" :value="g">{{ g === '-' ? '— ohne Gruppe' : '▤ ' + groupLabel(g) + ' · ' + g }} ({{ n }})</option>
             </select>
             <button @click="picked = new Set(pickRows.map(a => a.key))" :disabled="!pickRows.length">alle {{ pickRows.length }}</button>
-            <button @click="picked = new Set()" :disabled="!picked.size">keine</button>
+            <button @click="picked = new Set()" :disabled="!picked.size">Keine</button>
             <button class="primary" :disabled="!picked.size" @click="assignPicked">→ {{ picked.size }} zuordnen</button>
           </div>
           <div class="picker">
@@ -586,9 +586,9 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
     <!-- Attributsicht -->
     <template v-else-if="section === 'views' && curView">
       <div class="toolbar"><h1>◫ {{ curView.label?.de || curView.key }}</h1><span class="mono muted">{{ curView.key }}</span><span class="grow" />
-        <button @click="viewFillAll" title="alle am Knotentyp aktiven Gruppen">⇊ alle Gruppen</button>
+        <button @click="viewFillAll" title="Alle am Knotentyp aktiven Gruppen übernehmen">⇊ Alle Gruppen</button>
         <select v-model="addViewGroup" style="width:190px"><option value="">▤ Gruppe …</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
-        <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">+ dazu</button>
+        <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">+ Dazu</button>
         </div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
@@ -646,7 +646,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
     <!-- Sprache -->
     <template v-else-if="section === 'locales' && curLocale">
       <div class="toolbar"><h1>🗣 {{ curLocale.code }}</h1><span v-if="model.masterLocale === curLocale.code" class="warn">★ Mastersprache</span><span class="grow" />
-        <button v-if="model.masterLocale !== curLocale.code" class="primary" @click="setMaster" title="Pflichtfelder beim Anlegen werden in der Mastersprache erfasst; ändert sich dort ein sprachabhängiger Wert, gelten die anderen Sprachen als zu überarbeiten (⟳)">★ als Mastersprache</button></div>
+        <button v-if="model.masterLocale !== curLocale.code" class="primary" @click="setMaster" title="Pflichtfelder beim Anlegen werden in der Mastersprache erfasst; ändert sich dort ein sprachabhängiger Wert, gelten die anderen Sprachen als zu überarbeiten (⟳)">★ Zur Mastersprache machen</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>
@@ -659,7 +659,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
     <!-- Kanal -->
     <template v-else-if="section === 'channels' && curChannel">
       <div class="toolbar"><h1>⇶ {{ curChannel.key }}</h1><span v-if="model.masterChannel === curChannel.key" class="warn">★ Masterkanal</span><span class="grow" />
-        <button v-if="model.masterChannel !== curChannel.key" class="primary" @click="setMasterChannel" title="Der Masterkanal bekommt die Werte des Sterns (ohne Kanal) und kann sie überschreiben; die anderen Kanäle beziehen ihren Wert aus ihm">★ zum Masterkanal machen</button>
+        <button v-if="model.masterChannel !== curChannel.key" class="primary" @click="setMasterChannel" title="Der Masterkanal bekommt die Werte des Sterns (ohne Kanal) und kann sie überschreiben; die anderen Kanäle beziehen ihren Wert aus ihm">★ Zum Masterkanal machen</button>
       </div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>

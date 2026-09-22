@@ -275,7 +275,7 @@ async function retire(r) {
   try {
     const res = await api.del(`/api/nodes/${encodeURIComponent(r.id)}${below ? '?recursive=true' : ''}`)
     const ps = (store.undo[r.parent ?? ''] ??= { history: [], redo: [] }); ps.history.push({ kind: 'retire', id: r.id, parent: r.parent, label: r.label, count: res?.retired ?? 1, batch: res?.batch ?? null }); ps.redo.length = 0
-    if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok', { label: '↶ wiederherstellen', run: () => restore(r.id, res.batch), title: `stellt ${res.retired} Knoten wieder her: ${icon(r.role)} ${r.label}${res.retired > 1 ? ` mit ${res.retired - 1} darunter` : ''}` })
+    if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok', { label: '↶ Wiederherstellen', run: () => restore(r.id, res.batch), title: `stellt ${res.retired} Knoten wieder her: ${icon(r.role)} ${r.label}${res.retired > 1 ? ` mit ${res.retired - 1} darunter` : ''}` })
     await tree.load(); if (props.id === r.id || !tree.byId.has(props.id)) router.push(r.parent ? `/tree/${r.parent}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }
@@ -436,7 +436,7 @@ async function contextMenu(e, r) {
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { key: a.key, order: a.order, label: a._label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
   // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und da (Taloan, 19.09.)
-  if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: 'JSON: Rohdaten hierher …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
+  if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: 'JSON-Rohdaten hierher importieren …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
   const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: plugins.sorted(byTopic.get(k), k, x => x.label), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: 'nur einzeln' } : {}) }))
   menu.open(e, [
     { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r), ...only1 },
@@ -446,11 +446,11 @@ async function contextMenu(e, r) {
     // Massenbearbeitung wie in Excel (Taloan, 17.09.): die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
     // Taloan (17.09.): eigenes Fenster, Excel-ähnlich pflegen, Schliessen übernimmt — Popup blockiert? dann im Hauptfenster
     r.role !== 'variant' && kids ? { label: `Subitems tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?popup=1`), ...only1 } : null,
-    r.role === 'group' && kids ? { label: 'Alle Varianten darunter tabellarisch', icon: '⊞', key: 'w', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?role=variant&deep=1&popup=1`) } : null,
+    r.role === 'group' && kids ? { label: 'Alle Varianten darunter tabellarisch bearbeiten', icon: '⊞', key: 'w', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?role=variant&deep=1&popup=1`) } : null,
     (r.role !== 'variant' && kids) ? { sep: true } : null,
     sel ? { label: `Duplizieren (${sel.length})`, icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: sel.some(x => x.role === 'variant' && Object.keys(x.axisValues).length > 0), action: async () => { for (const x of sel) await duplicate(x, false) } }
         : { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
-    !sel && r.role !== 'variant' && kids ? { label: `Duplizieren mit ${countBelow(r.id)} darunter`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
+    !sel && r.role !== 'variant' && kids ? { label: `Mit ${countBelow(r.id)} darunter duplizieren`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
     ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
     ...(wfItems.length ? [{ label: 'Workflow' + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
@@ -459,8 +459,8 @@ async function contextMenu(e, r) {
     { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },
     ...(topicMenus.length ? [{ sep: true }, ...topicMenus] : []),
     { sep: true },
-    sel ? { label: `${sel.length} ausgewählte zurückziehen${sel.reduce((k, x) => k + countBelow(x.id), 0) ? ` (mit ${sel.reduce((k, x) => k + countBelow(x.id), 0)} darunter)` : ''}`, icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
-        : { label: kids ? `Zurückziehen mit ${countBelow(r.id)} darunter` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
+    sel ? { label: `${sel.length} Ausgewählte zurückziehen${sel.reduce((k, x) => k + countBelow(x.id), 0) ? ` (mit ${sel.reduce((k, x) => k + countBelow(x.id), 0)} darunter)` : ''}`, icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
+        : { label: kids ? `Mit ${countBelow(r.id)} darunter zurückziehen` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])
 }
 function onGlobalKey(e) {
@@ -562,7 +562,7 @@ function onDialogKey(e) {
       <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? `Variante unter ${productTarget.label}` : 'erst ein Produkt wählen'">+ ◆</button>
       <span class="grow" />
       <button v-if="rootUndo" class="x" @click="undoRoot" :title="`↶ ${rootUndo.label}${rootUndo.count > 1 ? ` mit ${rootUndo.count - 1} darunter` : ''} wiederherstellen (Wurzel)`">↶ Wurzel</button>
-      <button v-if="q" @click="pickVisible" title="alle sichtbaren Treffer auswählen">☑ Treffer</button>
+      <button v-if="q" @click="pickVisible" title="Alle sichtbaren Treffer auswählen">☑ Treffer wählen</button>
       <template v-if="picked.size">
         <span class="chip" title="die Auswahl — Strg+Klick sammelt, Shift+Klick nimmt den Bereich; × oder Esc hebt sie auf">☑ {{ picked.size }} <button @click="picked = new Set()" title="Auswahl aufheben (Esc)">×</button></span>
         <button class="primary" @click="openLink(null)" title="die Auswahl mit einem Ziel verknüpfen (oder mit Shift auf ein Ziel ziehen)">⇄</button>

@@ -53,7 +53,7 @@ async function roleAdd() {
 function roleMenu(e, r) {
   menu.open(e, [
     { label: `Rolle ${r.label || r.key}`, disabled: true }, { sep: true },
-    { label: 'Zurückziehen', icon: '✕', key: 'Delete', disabled: r.key === 'admin' || r.users > 0, hint: r.key === 'admin' ? 'admin bleibt' : r.users ? `${r.users} Benutzer` : '', action: async () => { if (!await dialog.confirm({ title: `Rolle ${r.label || r.key} zurückziehen?`, ok: 'Zurückziehen', danger: true })) return; try { await api.del(`/api/auth/roles/${r.key}`); await load() } catch (err) { store.toast(err.message) } } },
+    { label: 'Rolle zurückziehen', icon: '✕', key: 'Delete', disabled: r.key === 'admin' || r.users > 0, hint: r.key === 'admin' ? 'admin bleibt' : r.users ? `${r.users} Benutzer` : '', action: async () => { if (!await dialog.confirm({ title: `Rolle ${r.label || r.key} zurückziehen?`, ok: 'Zurückziehen', danger: true })) return; try { await api.del(`/api/auth/roles/${r.key}`); await load() } catch (err) { store.toast(err.message) } } },
   ])
 }
 onMounted(load)

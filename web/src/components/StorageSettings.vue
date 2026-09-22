@@ -87,7 +87,7 @@ onMounted(load)
         <tr><td class="muted">Secret</td><td><input v-model="cfg.secret" type="password" style="width:100%" autocomplete="new-password" /></td><td class="muted" style="font-size:12px">liegt nur in media.json beim Server — nie im Journal</td></tr>
         <tr><td class="muted">Region</td><td class="row" style="gap:10px"><input v-model="cfg.region" type="text" style="width:160px" placeholder="garage" /><label><input type="checkbox" v-model="cfg.pathStyle" /> Pfad-Stil (endpoint/bucket/…)</label></td><td></td></tr>
       </template>
-      <tr><td></td><td class="row"><button @click="check">prüfen</button><button class="primary" @click="save">Speichern</button><span class="muted" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
+      <tr><td></td><td class="row"><button @click="check">Prüfen</button><button class="primary" @click="save">Speichern</button><span class="muted" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
     </tbody></table>
   </div>
 
@@ -105,7 +105,7 @@ onMounted(load)
         <td><button class="x" @click="deletePreset(p)" :disabled="p.key === 'thumb'" :title="p.key === 'thumb' ? 'Kachel der Bibliothek — bleibt' : 'Preset entfernen'">🗑</button></td>
       </tr>
     </tbody></table>
-    <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">+ Preset</button><button class="primary" @click="derive" :disabled="!!presetBusy" title="fehlende Ableitungen jetzt rechnen (Job derive)">▶ jetzt rechnen</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
+    <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">+ Preset</button><button class="primary" @click="derive" :disabled="!!presetBusy" title="fehlende Ableitungen jetzt rechnen (Job derive)">▶ Jetzt rechnen</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
   </div>
 
   <div class="section">
@@ -131,7 +131,7 @@ onMounted(load)
         <tr><td class="muted">Secret</td><td><input v-model="copyFrom.secret" type="password" style="width:100%" autocomplete="new-password" /></td></tr>
         <tr><td class="muted">Region</td><td><input v-model="copyFrom.region" type="text" style="width:160px" /></td></tr>
       </template>
-      <tr><td></td><td class="row"><button class="primary" @click="copy">⇥ kopieren</button>
+      <tr><td></td><td class="row"><button class="primary" @click="copy">⇥ Kopieren</button>
         <span v-if="copyResult" class="muted" style="font-size:12px">{{ copyResult.copied }} kopiert · {{ copyResult.skipped }} schon da<span v-if="copyResult.failed" class="neg"> · {{ copyResult.failed }} fehlgeschlagen</span></span></td></tr>
     </tbody></table>
   </div>

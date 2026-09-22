@@ -112,20 +112,20 @@ function arrowMenu(e, n) {
   selTrans.value = n; selState.value = null; const t = cur.value.transitions[n]
   menu.open(e, [
     { label: 'Beschriftung ändern …', icon: '✎', action: () => editLabel(n) },
-    { label: 'Beschriftung zurück auf die Linie', icon: '↺', disabled: t.labelX == null, action: () => { t.labelX = null; t.labelY = null; touch() } },
-    { label: 'Andockpunkte automatisch', icon: '↺', disabled: !t.fromPort && !t.toPort, action: () => { t.fromPort = null; t.toPort = null; touch() } },
+    { label: 'Beschriftung auf die Linie setzen', icon: '↺', disabled: t.labelX == null, action: () => { t.labelX = null; t.labelY = null; touch() } },
+    { label: 'Andockpunkte automatisch wählen', icon: '↺', disabled: !t.fromPort && !t.toPort, action: () => { t.fromPort = null; t.toPort = null; touch() } },
     { sep: true },
-    { label: 'Entfernen', icon: '✕', danger: true, action: () => { cur.value.transitions.splice(n, 1); selTrans.value = null; touch() } },
+    { label: 'Übergang entfernen', icon: '✕', danger: true, action: () => { cur.value.transitions.splice(n, 1); selTrans.value = null; touch() } },
   ])
 }
 function stateMenu(e, i) {
   selState.value = i; selTrans.value = null; const s = cur.value.states[i]
   menu.open(e, [
     { label: 'Umbenennen …', icon: '✎', action: () => editState(i) },
-    { label: 'Start', icon: '●', disabled: cur.value.start === s.key, action: () => { cur.value.start = s.key; touch() } },
-    { label: s.final ? 'kein Ende mehr' : 'Ende', icon: '◎', action: () => { s.final = !s.final; touch() } },
+    { label: 'Als Start setzen', icon: '●', disabled: cur.value.start === s.key, action: () => { cur.value.start = s.key; touch() } },
+    { label: s.final ? 'Ende aufheben' : 'Als Ende setzen', icon: '◎', action: () => { s.final = !s.final; touch() } },
     { sep: true },
-    { label: 'Entfernen', icon: '✕', danger: true, hint: 'nur ohne Übergänge davon/dahin', action: () => delState(i) },
+    { label: 'Zustand entfernen', icon: '✕', danger: true, hint: 'nur ohne Übergänge davon/dahin', action: () => delState(i) },
   ])
 }
 function canvasUp() { const d = drag.value; if (d && (d.kind === 'link' || d.kind === 'reattach') && d.snapJ != null) { portUp(d.snapJ, d.snapPort); return } drag.value = null }
@@ -235,7 +235,7 @@ onMounted(load)
       </div>
       <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">
         <button @click="addStateAt" title="Zustand anlegen">+ Zustand</button>
-        <button @click="forceLayout" title="Zustände automatisch anordnen (Andockpunkte bleiben)">⟲ anordnen</button>
+        <button @click="forceLayout" title="Zustände automatisch anordnen (Andockpunkte bleiben)">⟲ Anordnen</button>
         <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" title="Markiertes löschen (auch Entf)">✕</button>
         <span class="grow" />
         <span class="x" style="cursor:help" title="Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht">?</span>

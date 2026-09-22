@@ -96,7 +96,7 @@ function railDrop(target) {
     </nav>
 
     <main class="content">
-      <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">✗ Diese Ansicht ist abgestürzt</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">▣ zum Baum</button> <button @click="reload">↻ neu laden</button></div></div>
+      <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">✗ Diese Ansicht ist abgestürzt</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">▣ Zum Baum</button> <button @click="reload">↻ Neu laden</button></div></div>
       <router-view v-else />
     </main>
 
@@ -106,7 +106,7 @@ function railDrop(target) {
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>
       <span class="grow" />
-      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" title="Es liegt eine neue Fassung der Oberfläche — neu laden">↻ neue Fassung</button>
+      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" title="Neue Fassung der Oberfläche laden">↻ Neue Fassung</button>
       <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="'Rolle ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" title="abmelden">⏻</button></template>
       <span v-else-if="store.actor" class="actor">👤 {{ store.actor }}</span>
       <router-link v-else to="/settings" class="warn">👤 Name fehlt → Einstellungen</router-link>

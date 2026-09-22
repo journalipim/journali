@@ -174,31 +174,30 @@ function contextMenu(e, row) {
   const r = row.r
   if (row.kind === 'rule') { menu.open(e, [{ label: 'Regel bearbeiten …', icon: '⚙', action: () => editRule(tree.byId.get(row.rubric), row.rule) }, { label: 'Regel entfernen', icon: '✕', danger: true, action: () => removeRule(row.rubric, row.rule) }]); return }
   if (row.kind === 'vgroup') return
-  if (row.kind === 'ruled') { menu.open(e, [{ label: 'im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) }]); return }
+  if (row.kind === 'ruled') { menu.open(e, [{ label: 'Im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) }]); return }
   if (row.kind === 'placed') {
     menu.open(e, [
-      { label: 'im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) },
-      { label: 'Anzeigename …', icon: '✎', hint: 'nur für den Überblick hier — die Ausgabe nimmt Attribute', action: () => namePlace(row) },
+      { label: 'Im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) },
+      { label: 'Anzeigename ändern …', icon: '✎', hint: 'nur hier, nicht in der Ausgabe', action: () => namePlace(row) },
       { sep: true },
-      { label: 'Verweis entfernen', icon: '✕', danger: true, hint: 'nur hier — das Produkt bleibt im Pflegebaum', action: () => unplace(row.rubric, r.id) },
+      { label: 'Verweis entfernen', icon: '✕', danger: true, hint: 'Produkt bleibt im Pflegebaum', action: () => unplace(row.rubric, r.id) },
     ]); return
   }
-  if (sel.value.size > 1 && sel.value.has(r.id)) { menu.open(e, [{ label: `${sel.value.size} Rubriken entfernen`, icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben`, action: () => retireMany([...sel.value]) }]); return }
+  if (sel.value.size > 1 && sel.value.has(r.id)) { menu.open(e, [{ label: `${sel.value.size} Rubriken entfernen`, icon: '✕', danger: true, hint: 'Produkte bleiben im Pflegebaum', action: () => retireMany([...sel.value]) }]); return }
   router.push(`/pub/${r.id}`)
   menu.open(e, [
-    { label: 'Rubrik darunter …', icon: '+', action: () => newRubric(r) },
-    { label: 'Regel …', icon: '⚙', hint: 'alles, worauf das zutrifft — Gruppen namens X oder Produkte mit Attribut = Wert, live', action: () => editRule(r) },
+    { label: 'Rubrik darunter anlegen …', icon: '+', action: () => newRubric(r) },
+    { label: 'Regel anlegen …', icon: '⚙', hint: 'nach Name oder Attributwert, live', action: () => editRule(r) },
     { sep: true },
     ...(r.stand != null
-      ? [{ label: `Stand #${r.stand} aktualisieren`, icon: '❄', hint: 'auf jetzt setzen', action: () => setStand(r, 'now') }, { label: 'Stand aufheben — live', icon: '○', action: () => setStand(r, 'live') }]
-      : [{ label: 'Stand einfrieren (jetzt)', icon: '❄', hint: standOf(r) ? `erbt Stand #${standOf(r).stand} von „${standOf(r).from.label}“ — eigener Stand übersteuert` : 'ab hier nach unten die Pflege wie jetzt', action: () => setStand(r, 'now') }]),
-    { sep: true },
+      ? [{ label: `Stand #${r.stand} aktualisieren`, icon: '❄', hint: 'auf jetzt setzen', action: () => setStand(r, 'now') }, { label: 'Stand aufheben', icon: '○', hint: 'wieder live', action: () => setStand(r, 'live') }]
+      : [{ label: 'Stand einfrieren', icon: '❄', hint: standOf(r) ? `jetzt; übersteuert Stand #${standOf(r).stand} von „${standOf(r).from.label}“` : 'jetzt, ab hier nach unten', action: () => setStand(r, 'now') }]),
     { sep: true },
     { label: 'Umbenennen', icon: '✎', action: () => rename(r) },
-    ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: `nur aus „${current.value?.label ?? ''}“ — die Produkte bleiben im Pflegebaum`, action: () => retire(r) }]
-      : [{ label: 'Kanal / Markt …', icon: '⇶', action: () => editTree(r) }, { sep: true },
-         { label: 'Leeren', icon: '✕', danger: true, hint: 'alle Rubriken und Verweise raus, der Baum bleibt', action: () => clearTree(r) },
-         { label: 'Publikationsbaum löschen', icon: '✕', danger: true, hint: 'der ganze Baum — die Produkte bleiben im Pflegebaum', action: () => deleteTree(r) }]),
+    ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: 'Produkte bleiben im Pflegebaum', action: () => retire(r) }]
+      : [{ label: 'Kanal / Markt ändern …', icon: '⇶', action: () => editTree(r) }, { sep: true },
+         { label: 'Publikationsbaum leeren', icon: '✕', danger: true, hint: 'Rubriken und Verweise weg, Baum bleibt', action: () => clearTree(r) },
+         { label: 'Publikationsbaum löschen', icon: '✕', danger: true, hint: 'Produkte bleiben im Pflegebaum', action: () => deleteTree(r) }]),
   ])
 }
 async function editTree(r) {
@@ -353,7 +352,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-if="ruleBox.preview?.error" class="neg" style="font-size:12px">{{ ruleBox.preview.error }}</span>
         <span v-else-if="ruleBox.preview" :class="ruleBox.preview.hits ? 'pos' : 'warn'" style="font-size:12px">trifft {{ ruleBox.preview.hits }} {{ ruleBox.rule.kind === 'name' && ruleBox.rule.role === 'group' ? 'Gruppen' : 'Produkte' }}{{ ruleBox.preview.groups ? ` in ${ruleBox.preview.groups} Gliederungen` : '' }} · {{ ruleBox.preview.products }} Produkte</span>
         <span v-else class="muted" style="font-size:12px">…</span>
-        <span class="grow" /><button class="primary" :disabled="!ruleBox.preview || ruleBox.preview.error" @click="saveRule">⚙ speichern</button>
+        <span class="grow" /><button class="primary" :disabled="!ruleBox.preview || ruleBox.preview.error" @click="saveRule">⚙ Speichern</button>
       </div>
     </div>
     <div v-if="showUnplaced" class="unplaced">

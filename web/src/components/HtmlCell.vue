@@ -77,7 +77,7 @@ function onEditKey(e) {
             <button @mousedown.prevent="cmd('insertOrderedList')" title="nummerierte Liste">1≡</button>
             <button @mousedown.prevent="link()" title="Link">🔗</button>
             <span class="sep">·</span>
-            <button @mousedown.prevent="cmd('removeFormat')" title="Formatierung entfernen">✗ Format</button>
+            <button @mousedown.prevent="cmd('removeFormat')" title="Formatierung entfernen">✗ Format entfernen</button>
             <span class="grow" />
             <AiBar :current="draft" html :label="label || title" :locale="locale" :node="node" @result="fromAi" />
             <button @click="toggleSource" title="HTML-Quelltext zeigen">‹› Quelltext</button>

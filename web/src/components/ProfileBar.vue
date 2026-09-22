@@ -90,9 +90,9 @@ defineExpose({ load })
   <Teleport to="body">
     <div v-if="showBar()" class="savebar">
       <span>{{ current ? `Profil „${current}“ geändert` : 'Einstellungen geändert — noch kein Profil' }}</span>
-      <button v-if="current" class="primary" @click="save()" :disabled="busy" title="das gewählte Profil überschreiben">💾 speichern</button>
-      <button @click="saveAs" :disabled="busy" title="unter neuem Namen speichern — das gewählte Profil bleibt, wie es war">als neues Profil …</button>
-      <button v-if="current" @click="discard" :disabled="busy" title="zurück zum gespeicherten Stand">↶ verwerfen</button>
+      <button v-if="current" class="primary" @click="save()" :disabled="busy" title="das gewählte Profil überschreiben">💾 Speichern</button>
+      <button @click="saveAs" :disabled="busy" title="unter neuem Namen speichern — das gewählte Profil bleibt, wie es war">Als neues Profil speichern …</button>
+      <button v-if="current" @click="discard" :disabled="busy" title="zurück zum gespeicherten Stand">↶ Verwerfen</button>
       <button class="x" @click="dismissed = snapshot()" title="Leiste weg — die Änderungen bleiben hier, gespeichert wird nichts; bei der nächsten Änderung kommt sie wieder">✕</button>
     </div>
   </Teleport>
