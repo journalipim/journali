@@ -1,4 +1,4 @@
-# journali
+# journali PIM
 
 Produktdaten aus einem Journal. Jede Änderung ein Eintrag, jedes Abbild
 eine Ableitung.

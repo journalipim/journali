@@ -81,7 +81,7 @@ function railDrop(target) {
     </div>
     <nav class="rail" v-if="!route.query.popup">
       <!-- Logo: web/public/logo.png (Taloan, 17.09.2026) — Vite legt public/ neben die Seite -->
-      <router-link to="/tree" class="rail-logo" title="journali"><img :src="'/logo-128.png'" alt="journali" onerror="this.style.display='none'" /></router-link>
+      <router-link to="/tree" class="rail-logo" title="journali PIM"><img :src="'/logo-128.png'" alt="journali PIM" onerror="this.style.display='none'" /></router-link>
       <template v-for="n in railItems" :key="n.to">
         <div v-if="n.to === 'spacer'" class="rail-spacer" :class="{ over: dragKey }" @dragover.prevent @drop="railDrop('spacer')" />
         <router-link v-else :to="n.href ?? n.to" class="rail-item" :class="{ active: n.topic ? topicOfPath(route.path) === n.topic : route.path.startsWith(n.to), dragging: dragKey === n.to }"
