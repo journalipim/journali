@@ -36,7 +36,8 @@ const classKeyOf = code => `class:${cache.version ?? '0'}:${code}`
 /// Attribut eines ETIM-Attributs: Zuordnung (map: Schlüssel oder { to, steps }), sonst die der Datenanalyse (mapping), sonst das eigene ef…
 const attrKeyOf = code => { if (cache.map[code]) return mapEntry(cache.map, code).key; const m = cache.mapping?.[code.toLowerCase()]; return m?.to && !/ähnlich|vielleicht/.test(m.why ?? '') ? m.to : code.toLowerCase() }
 const stepsOf = code => mapEntry(cache.map, code).steps
-const mergedMap = () => { const m = {}; for (const [k, v] of Object.entries(cache.mapping ?? {})) if (v?.to) m[k.toUpperCase()] = v.to; return { ...m, ...cache.map } }
+// dieselbe Auflösung wie attrKeyOf: Vermutungen der Datenanalyse („ähnlich“, „vielleicht“) zählen nicht — sonst prüft die Regel ein anderes Attribut, als die Zuordnung zeigt
+const mergedMap = () => { const m = {}; for (const [k, v] of Object.entries(cache.mapping ?? {})) if (v?.to && !/ähnlich|vielleicht/.test(v.why ?? '')) m[k.toUpperCase()] = v.to; return { ...m, ...cache.map } }
 /// wirksame Klasse an einem Knoten: eigen oder geerbt (vom nächsten Vorfahren mit Wert)
 async function classAt(api, key, nodeId) {
   const node = await api.get(`/api/nodes/${encodeURIComponent(nodeId)}`)
