@@ -427,8 +427,8 @@ async function bandMount({ head, body }, nodeId, ctx) {
     head.append(el('span', { class: 'muted' }, '·'), chip(`Attribute ${has.length}/${S.feats.length}`, miss.length ? 'warn' : 'pos', `${has.length - mapped.length} eigene ef… · ${mapped.length} zugeordnet${fx.length ? ` · ${fx.length} mit ƒ` : ''}${miss.length ? ` · ${miss.length} ohne Attribut` : ''}`))
     const pct = S.cells ? Math.round(S.filled * 100 / S.cells) : 0
     head.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? `Daten ${pct} %` : 'Daten —', S.bad ? 'neg' : pct >= 80 ? 'pos' : '', `${S.products.length} Produkte/Varianten × ${has.length} Merkmale: ${S.filled} gefüllt · ${S.empty} leer${S.bad ? ` · ${S.bad} passen nicht` : ''}`))
-    head.append(el('span', { class: 'grow' }), assignBtn,
-      el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der Merkmale dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}`) }, '⇄ zuordnen …'),
+    head.append(...[el('span', { class: 'grow' }), assignBtn,
+      el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der Merkmale dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende Merkmale als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
       S.products.length ? el('button', { class: 'x', title: 'dieselbe Regel wie in ✓ Datenqualität — Funde je Knoten und Merkmal, hier darunter', onclick: () => {
@@ -438,7 +438,7 @@ async function bandMount({ head, body }, nodeId, ctx) {
         body.append(findings.length ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:260px' }, 'Knoten'), el('th', { style: 'width:140px' }, 'Feld'), el('th', {}, 'Fund'))),
           el('tbody', {}, ...findings.slice(0, 500).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, SEV[x.severity] ?? ''), el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) } }, `${ICON[x.node.role] ?? ''} ${x.node.label}`)), el('td', { class: 'mono muted' }, x.attribute ?? ''), el('td', {}, x.message)))))
           : el('div', { class: 'muted', style: 'padding:4px 0' }, `✓ keine Funde in ${S.products.length} Knoten`))
-      } }, '✓ prüfen') : null)
+      } }, '✓ prüfen') : null].filter(Boolean))
   }
   render()
   return () => { gone = true }
@@ -450,8 +450,8 @@ async function mount(root, ctx) {
   await cache.loaded
   const model = () => store.model
   const locale = model().masterLocale ?? 'de'
-  const params = new URLSearchParams(location.search); const assignParam = params.get('assign'); const classParam = params.get('class'); if (assignParam || classParam) history.replaceState(null, '', location.pathname)
-  const st = { assign: null, rel: null, q: '', hits: [], root: localStorage.getItem('journali.etim.root') || tree.rows.find(r => !r.parent)?.id, result: null, busy: false, mapFilter: classParam && cache.classes.has(classParam.toUpperCase()) ? classParam.toUpperCase() : null }
+  const params = new URLSearchParams(location.search); const assignParam = params.get('assign'); const classParam = params.get('class'); const backNode = params.get('node'); if (assignParam || classParam) history.replaceState(null, '', location.pathname)
+  const st = { assign: null, rel: null, q: '', hits: [], root: localStorage.getItem('journali.etim.root') || tree.rows.find(r => !r.parent)?.id, result: null, busy: false, mapFilter: classParam && cache.classes.has(classParam.toUpperCase()) ? classParam.toUpperCase() : null, backNode: backNode && tree.byId.has(backNode) ? backNode : null }
   if (assignParam && tree.byId.has(assignParam)) setTimeout(() => classDialog(assignParam, ctx), 0)
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
@@ -460,7 +460,7 @@ async function mount(root, ctx) {
   const lbl = a => a.label?.[locale] || a.label?.de || a.key
   const ops = modelOps(ctx); const hasAttr = ops.hasAttr
   const saveSettings = () => ctx.data.set('settings', cache.settings)
-  const saveMap = () => ctx.data.set('map', cache.map)
+  const saveMap = async () => { await ctx.data.set('map', cache.map); store.toast('✓ Zuordnung gespeichert — gilt sofort für Prüfung und Export', 'ok') }   // jede Änderung sofort (Taloan, 22.09.: „muss ich speichern?“)
   const section = (title, hint, ...kids) => el('div', { class: 'section', style: 'margin-top:10px' }, el('div', { class: 'step-band' }, title, hint ? el('span', { class: 'muted' }, ' · ' + hint) : null), ...kids)
   const busy = async (label, fn) => { if (st.busy) return; st.busy = true; say(label); try { await fn() } catch (e) { say('✗ ' + e.message); store.toast(e.message) } finally { st.busy = false } }
 
@@ -774,8 +774,12 @@ async function mount(root, ctx) {
       const fx = el('button', { class: steps ? 'primary' : 'x', title: steps ? `ƒ ${describeSteps(steps)} — ändern` : 'ƒ Umwandlung: Einheit umrechnen, ja/x → Ja/Nein, Text → EV-Code nach Tabelle, von/bis verbinden', onclick: () => stepsDialog(f) }, 'ƒ')
       mapBody.append(el('tr', {}, el('td', { class: 'mono' }, f.code), el('td', {}, featureText(f, locale)), el('td', { class: 'muted' }, TYPE[f.type] ?? f.type, f.type === 'Alphanumeric' ? ` (${f.values.length})` : ''), el('td', { class: 'num muted' }, f.n), el('td', { class: hasAttr(cur) ? '' : 'warn' }, sel), el('td', {}, fx)))
     }
-    const mapSec = section('4 · Zuordnung', `Merkmal ← Attribut, ƒ = Umwandlung; leer = eigenes Attribut ef… (wird angelegt)${filterCls ? ` · nur ${filterCls.code}` : ''}`,
-      filterCls ? el('div', { class: 'chips', style: 'padding:4px 0' }, el('span', { class: 'chip' }, `${filterCls.code} ${nameOf(filterCls.name, locale)} · ${featList.length} Merkmale`), el('button', { class: 'x', title: 'alle Merkmale aller Klassen in Gebrauch', onclick: () => { st.mapFilter = null; draw() } }, '✕ Filter')) : null,
+    const backRow = st.backNode ? tree.byId.get(st.backNode) : null
+    const mapSec = section('4 · Zuordnung', `Merkmal ← Attribut, ƒ = Umwandlung; leer = eigenes Attribut ef… (wird angelegt) · jede Änderung wird sofort gespeichert${filterCls ? ` · nur ${filterCls.code}` : ''}`,
+      filterCls ? el('div', { class: 'chips', style: 'padding:4px 0' },
+        backRow ? el('button', { class: 'primary', title: `zurück zum Knoten ${backRow.label} — in die Gruppe ${groupKey()}`, onclick: () => ctx.go?.(`/tree/${encodeURIComponent(backRow.id)}?group=${encodeURIComponent(groupKey())}`) }, `← ${ICON[backRow.role] ?? ''} ${backRow.label}`) : null,
+        el('span', { class: 'chip' }, `${filterCls.code} ${nameOf(filterCls.name, locale)} · ${featList.length} Merkmale`), el('button', { class: 'x', title: 'alle Merkmale aller Klassen in Gebrauch', onclick: () => { st.mapFilter = null; st.backNode = null; draw() } }, '✕ Filter'),
+        el('span', { class: 'muted', style: 'font-size:12px' }, 'Auswahl im Feld = gespeichert; ƒ öffnet die Umwandlung')) : null,
       allFeats.size ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Merkmal'), el('th', {}, 'Name [Einheit]'), el('th', { style: 'width:100px' }, 'Typ'), el('th', { style: 'width:50px' }, 'Kl.'), el('th', { style: 'width:280px' }, 'Attribut'), el('th', { style: 'width:36px' }, 'ƒ'))), mapBody) : el('div', { class: 'empty' }, 'keine Klassen übernommen'))
     mapSec.id = 'etim-map'
     body.append(mapSec)
