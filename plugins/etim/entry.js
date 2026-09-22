@@ -327,8 +327,8 @@ async function classDialog(nodeId, ctx, onDone = null) {
       const r = readiness({ cls: c, map: mergedMap(), hasAttr: ops.hasAttr, groupExists: (model().groups ?? []).some(g => g.key === groupKey()), groupOn: (node?.groups ?? []).some(g => g.key === groupKey() && g.active !== false) })
       say('')
       store.toast(r.ready
-        ? `✓ ${code} an ${at.label} · ${c.features.length} ETIM-Attribute bereit${n ? ` (${n} neu angelegt)` : ''} · Sicht „⌗ ${code}“ steht am Knoten`
-        : `⚠ ${code} zugewiesen, aber ${!r.groupExists ? `die Gruppe ${groupKey()} fehlt im Modell` : !r.groupOn ? `die Gruppe ${groupKey()} gilt an ${at.label} nicht` : `${r.missing.length} ETIM-Attribute haben kein Attribut im Modell`} — das Band am Knoten hat den Knopf dafür`, r.ready ? 'ok' : 'error')
+        ? `✓ ${code} an ${at.label} · ${c.features.length} Attribute${n ? ` · ${n} neu` : ''}`
+        : `⚠ ${code} an ${at.label} · ${!r.groupExists ? `Gruppe ${groupKey()} fehlt` : !r.groupOn ? `Gruppe ${groupKey()} gilt hier nicht` : `${r.missing.length} ohne Attribut`}`, r.ready ? 'ok' : 'error')
       checkStep(code)
     })
   }
@@ -510,7 +510,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
         const below = []; const walk = id => { for (const k of tree.kids(id)) { if ((k.groups ?? '').split(',').includes(groupKey())) below.push(k); walk(k.id) } }; walk(nodeId)
         for (const k of below) await api.post(`/api/nodes/${encodeURIComponent(k.id)}/groups`, { groups: (k.groups ?? '').split(',').filter(x => x && x !== groupKey()) }, 'PUT')
         await store.poll(true); await tree.load?.()
-        store.toast(`✓ Gruppe ${groupKey()} hängt an ${S.row.label} — gilt ab hier nach unten${below.length ? `; ${below.length}× darunter abgenommen (dort überflüssig)` : ''}`, 'ok'); again()
+        store.toast(`✓ ${groupKey()} ab ${S.row.label}${below.length ? ` · ${below.length} darunter abgenommen` : ''}`, 'ok'); again()
       } catch (e) { store.toast(e.message) }
     } }, S.groupExists ? `⌗ Gruppe ${groupKey()} anhängen` : `⌗ Gruppe ${groupKey()} anlegen und anhängen`) : null
     if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(...[el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), assignBtn, clearBtn, attachBtnEl].filter(Boolean)); return }
@@ -527,7 +527,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     line.append(...[el('span', { class: 'muted' }, '·'), assignBtn, clearBtn, attachBtnEl,
       el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der ETIM-Attribute dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
       el('button', { class: 'x', title: `Attributsicht „⌗ ${code}“ aufbauen und an diesem Knoten wählen — ein Reiter mit genau den Attributen dieser Klasse`, onclick: async () => {
-        try { await ops.ensureViews(S.cls); await store.poll(true); const k = ops.viewKeyOf(code, S.row.role === 'group' ? 'product' : S.row.role); store.viewKey = { ...store.viewKey, [S.row.role]: k }; store.save?.(); store.toast(`◫ Sicht ⌗ ${code} gewählt`, 'ok'); ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) } catch (e) { store.toast(e.message) }
+        try { await ops.ensureViews(S.cls); await store.poll(true); const k = ops.viewKeyOf(code, S.row.role === 'group' ? 'product' : S.row.role); store.viewKey = { ...store.viewKey, [S.row.role]: k }; store.save?.(); store.toast(`◫ ⌗ ${code}`, 'ok'); ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) } catch (e) { store.toast(e.message) }
       } }, '◫ Sicht'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
@@ -575,7 +575,7 @@ async function mount(root, ctx) {
   const lbl = a => a.label?.[locale] || a.label?.de || a.key
   const ops = modelOps(ctx); const hasAttr = ops.hasAttr
   const saveSettings = () => ctx.data.set('settings', cache.settings)
-  const saveMap = async () => { await ctx.data.set('map', cache.map); store.toast('✓ Zuordnung gespeichert — gilt sofort für Prüfung und Export', 'ok') }   // jede Änderung sofort (Taloan, 22.09.: „muss ich speichern?“)
+  const saveMap = async () => { await ctx.data.set('map', cache.map); store.toast('✓ Zuordnung gespeichert', 'ok') }   // jede Änderung sofort (Taloan, 22.09.: „muss ich speichern?“)
   const section = (title, hint, ...kids) => el('div', { class: 'section', style: 'margin-top:10px' }, el('div', { class: 'step-band' }, title, hint ? el('span', { class: 'muted' }, ' · ' + hint) : null), ...kids)
   const busy = async (label, fn) => { if (st.busy) return; st.busy = true; say(label); try { await fn() } catch (e) { say('✗ ' + e.message); store.toast(e.message) } finally { st.busy = false } }
 
