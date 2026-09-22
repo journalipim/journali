@@ -139,12 +139,18 @@ function modelOps(ctx) {
   }
   // ein ETIM-Attribut → Attribut ef… (Numeric: decimal + Einheit, Logical: boolean, Alphanumeric: enum mit Werteliste EV-Code → Name, Range: text mit Muster)
   // Bedingung: das ETIM-Attribut gilt nur an Knoten, deren Klasse es hat — alle Klassen der Version, die das ETIM-Attribut führen
-  const whenOf = code => ({ attribute: cache.settings.classAttr, values: [...cache.classes.values()].filter(c => c.features.some(x => x.code === code)).map(c => c.code) })
+  // Bedingung am ETIM-Attribut: alle Klassen, die es führen — über Fassungen hinweg VEREINIGT (Taloan, 22.09.: eine Gruppe für alle
+  // Klassen und alle Fassungen). Sonst nähme ein Wechsel auf ETIM 9 den Klassen aus ETIM 10 ihre Attribute weg.
+  const whenOf = (code, have = null) => {
+    const now = [...cache.classes.values()].filter(c => c.features.some(x => x.code === code)).map(c => c.code)
+    const old = have?.attribute === cache.settings.classAttr ? (have.values ?? []) : []
+    return { attribute: cache.settings.classAttr, values: [...new Set([...old, ...now])].sort() }
+  }
   async function createFeature(f) {
     await ensureGroup()
     const key = f.code.toLowerCase()
-    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code); if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable || !a.levels)) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true, levels: a.levels ?? FEATURE_LEVELS }); return key }
-    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // ETIM-Attribute nur an Produkt und Variante
+    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code, a.when); if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable || !a.levels)) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true, levels: a.levels ?? FEATURE_LEVELS }); return key }
+    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // neu: nur die Klassen der aktiven Fassung; vorhandene ergänzen (Vereinigung)   // ETIM-Attribute nur an Produkt und Variante
     if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
     else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
