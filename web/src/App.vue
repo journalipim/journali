@@ -104,6 +104,7 @@ function railDrop(target) {
     </main>
 
     <header class="status" v-if="!route.query.popup">
+      <span class="brand" title="journali PIM">journali PIM</span>
       <span class="dot" :class="{ online: store.online, offline: store.online === false }">●</span>
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>
