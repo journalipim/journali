@@ -545,7 +545,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
         store.toast(`✓ ${groupKey()} ab ${S.row.label}${below.length ? ` · ${below.length} Subitems bereinigt` : ''}`, 'ok'); again()
       } catch (e) { store.toast(e.message) }
     } }, S.groupExists ? `⌗ Gruppe ${groupKey()} anhängen` : `⌗ Gruppe ${groupKey()} anlegen und anhängen`) : null
-    if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(...[el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), assignBtn, clearBtn, attachBtnEl].filter(Boolean)); return }
+    if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(...[S.current ? el('span', { class: 'muted' }, `${S.current} nicht in ETIM ${cache.version ?? '?'}`) : null, assignBtn, clearBtn, attachBtnEl].filter(Boolean)); return }   // der Text steht schon in der Überschrift (Taloan, 22.09.)
     const code = S.current
     line.append(chip(`${code} ${nameOf(S.cls.name, locale)}`, '', S.ownCode ? 'Klasse am Knoten selbst' : `Klasse geerbt von ${S.inherited.from}`), el('span', { class: 'muted' }, S.ownCode ? 'hier' : `von ${S.inherited.from}`))
     if (S.other) line.append(chip(`≠ ${S.other}`, 'warn', `${S.other} darunter mit anderer Klasse`))
