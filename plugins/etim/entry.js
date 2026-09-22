@@ -7,7 +7,7 @@
 // Umbau (Taloan, 22.09.2026, pflegestruktur.md 29): ETIM ist Klassifikation, kein Export — die Ansicht geht vom Knoten aus
 // (Klasse → Attribute → Daten → Ausleitung), bearbeitet wird in der Subitems-Tabelle, nicht hier; die Zuordnung ETIM-Attribut → Attribut
 // hat ƒ (Umwandlungskette); die Regeln der Ausleitung (unbekannt, Klasse Pflicht, Vollständigkeit) stehen im BMEcat-Profil (xport).
-import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit, variantOf, releaseKey, readiness } from './core.mjs'
+import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit, variantOf, releaseKey, readiness, isZip, ixfInZip, inflateInBrowser } from './core.mjs'
 import { OPS, FIELDS, FIELD_LABEL, FIELD_HINT, DATE_FORMATS, YES_DEFAULT, describe as describeSteps, opHint } from '../table/transform.mjs'
 
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else if (k === 'disabled') { if (v) e.setAttribute(k, '') } else if (v != null && v !== false) e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
@@ -643,11 +643,17 @@ async function mount(root, ctx) {
   const busy = async (label, fn) => { if (st.busy) return; st.busy = true; say(label); try { await fn() } catch (e) { say('✗ ' + e.message); store.toast(e.message) } finally { st.busy = false } }
 
   // ── Freigabe: IXF-Datei lesen (bleibt im Speicher — nur übernommene Klassen gehen ins Journal)
-  const file = el('input', { type: 'file', accept: '.xml,.ixf', style: 'display:none' })
+  const file = el('input', { type: 'file', accept: '.xml,.ixf,.zip', style: 'display:none' })
   file.addEventListener('change', async () => {
     const f = file.files?.[0]; if (!f) return
     await busy(`lese ${f.name} (${(f.size / 1048576).toFixed(1)} MB) …`, async () => {
-      const t0 = performance.now(); const text = await f.text(); st.rel = parseIxf(text)
+      const t0 = performance.now()
+      // Zip direkt lesen (Taloan, 22.09.): die Freigaben kommen als Zip — die grösste .xml/.ixf darin zählt
+      const raw = new Uint8Array(await f.arrayBuffer())
+      let text
+      if (isZip(raw)) { const e = ixfInZip(raw); say(`entpacke ${e.name} (${(e.size / 1048576).toFixed(1)} MB) …`); text = new TextDecoder().decode(await inflateInBrowser(e)) }
+      else text = new TextDecoder().decode(raw)
+      st.rel = parseIxf(text)
       const h = st.rel.header
       say(`${h.name ?? 'ETIM'} Nr. ${h.number ?? '?'} · ${st.rel.classes.length} Klassen · ${st.rel.features.size} ETIM-Attribute · ${st.rel.values.size} Werte · ${Math.round(performance.now() - t0)} ms`)
       st.relInfo = { name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: st.rel.classes.length, features: st.rel.features.size, languages: [...new Set(st.rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))], file: f.name, at: new Date().toISOString() }

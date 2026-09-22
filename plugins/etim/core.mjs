@@ -22,6 +22,46 @@ function translations(xml, field = 'Description') {
 }
 
 /// Eine IXF-3.1-Datei (Text) → { header, units, features, values, groups, classes } — Maps nach Code; Klassen als Liste
+/// Einträge eines Zip: Name, Grösse, Methode (0 = ungepackt, 8 = deflate) und die rohen Bytes. Ohne Entpacken —
+/// das macht die Umgebung (node: inflateRawSync, Browser: DecompressionStream('deflate-raw')).
+export function zipEntries(buf) {
+  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+  let eocd = -1
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 70000); i--) if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break }
+  if (eocd < 0) throw new Error('kein Zip (Zentralverzeichnis fehlt)')
+  const count = view.getUint16(eocd + 10, true); const cdOff = view.getUint32(eocd + 16, true)
+  const out = []; let p = cdOff
+  for (let i = 0; i < count; i++) {
+    if (view.getUint32(p, true) !== 0x02014b50) throw new Error('Zip: Eintrag beschädigt')
+    const method = view.getUint16(p + 10, true), csize = view.getUint32(p + 20, true), usize = view.getUint32(p + 24, true)
+    const nLen = view.getUint16(p + 28, true), eLen = view.getUint16(p + 30, true), cLen = view.getUint16(p + 32, true), lOff = view.getUint32(p + 42, true)
+    const name = new TextDecoder().decode(buf.subarray(p + 46, p + 46 + nLen))
+    const ln = view.getUint16(lOff + 26, true), le = view.getUint16(lOff + 28, true), start = lOff + 30 + ln + le
+    out.push({ name, size: usize, method, data: buf.subarray(start, start + csize) })
+    p += 46 + nLen + eLen + cLen
+  }
+  return out
+}
+
+/// Ist das ein Zip? (Ortsmarke am Anfang)
+export const isZip = buf => buf.length > 4 && new DataView(buf.buffer, buf.byteOffset, 4).getUint32(0, true) === 0x04034b50
+
+/// Die IXF-Datei aus einem Zip: die grösste .xml/.ixf. Liefert { name, data, method } — entpackt wird draussen.
+export function ixfInZip(buf) {
+  const e = zipEntries(buf).filter(x => /\.(xml|ixf)$/i.test(x.name)).sort((a, b) => b.size - a.size)[0]
+  if (!e) throw new Error('Zip ohne .xml/.ixf')
+  return e
+}
+
+/// Im Browser entpacken (deflate-raw); ungepackte Einträge kommen unverändert zurück.
+export async function inflateInBrowser(entry) {
+  if (entry.method === 0) return entry.data
+  if (entry.method !== 8) throw new Error(`Zip-Methode ${entry.method} nicht unterstützt`)
+  const ds = new DecompressionStream('deflate-raw')
+  const buf = await new Response(new Blob([entry.data]).stream().pipeThrough(ds)).arrayBuffer()
+  return new Uint8Array(buf)
+}
+
 export function parseIxf(text) {
   if (!/<IXF[\s>]/.test(text)) throw new Error('keine IXF-Datei (Wurzel <IXF> fehlt)')
   const headerXml = each(text, 'Header')[0]?.body ?? ''

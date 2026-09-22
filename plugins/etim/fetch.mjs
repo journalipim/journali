@@ -5,7 +5,7 @@
 //                                                            als class:<EC> ins Journal (Sammel-PUT), Freigabe merken
 // JOURNALI_TOKEN (Bearer) kommt vom Server je Lauf.
 import { inflateRawSync } from 'node:zlib'
-import { parseIxf, classRecord, variantOf } from './core.mjs'
+import { parseIxf, classRecord, variantOf, isZip, ixfInZip } from './core.mjs'
 
 const [,, server, actor, mode, url, langsArg] = process.argv
 if (!server || !mode) { console.error('Aufruf: fetch.mjs <journali> <actor> list | load <url> <langs>'); process.exit(2) }
@@ -29,27 +29,6 @@ async function list() {
 }
 
 // Minimaler Zip-Leser: Zentralverzeichnis → Einträge → inflateRaw (Methode 8) oder roh (0)
-function unzip(buf) {
-  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
-  let eocd = -1
-  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 70000); i--) if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break }
-  if (eocd < 0) throw new Error('kein Zip (Zentralverzeichnis fehlt)')
-  const count = view.getUint16(eocd + 10, true); const cdOff = view.getUint32(eocd + 16, true)
-  const files = []; let p = cdOff
-  for (let i = 0; i < count; i++) {
-    if (view.getUint32(p, true) !== 0x02014b50) throw new Error('Zip: Eintrag beschädigt')
-    const method = view.getUint16(p + 10, true); const csize = view.getUint32(p + 20, true); const usize = view.getUint32(p + 24, true)
-    const nLen = view.getUint16(p + 28, true); const eLen = view.getUint16(p + 30, true); const cLen = view.getUint16(p + 32, true); const lOff = view.getUint32(p + 42, true)
-    const name = buf.subarray(p + 46, p + 46 + nLen).toString('utf8')
-    files.push({ name, method, csize, usize, lOff }); p += 46 + nLen + eLen + cLen
-  }
-  return files.map(f => ({ name: f.name, size: f.usize, read() {
-    const ln = view.getUint16(f.lOff + 26, true); const le = view.getUint16(f.lOff + 28, true); const start = f.lOff + 30 + ln + le
-    const data = buf.subarray(start, start + f.csize)
-    return f.method === 8 ? inflateRawSync(data) : f.method === 0 ? data : (() => { throw new Error(`Zip-Methode ${f.method} nicht unterstützt`) })()
-  } }))
-}
-
 async function load(probe = false) {
   if (!url) throw new Error('URL fehlt')
   const langs = (langsArg ?? 'de,en').split(',').map(s => s.trim()).filter(Boolean)
@@ -58,10 +37,9 @@ async function load(probe = false) {
   if (!res.ok) throw new Error(`${url}: ${res.status}`)
   const buf = Buffer.from(await res.arrayBuffer())
   let text, file = url.split('/').pop()
-  if (buf.length > 4 && buf.readUInt32LE(0) === 0x04034b50) {
-    const entries = unzip(buf).filter(e => /\.(xml|ixf)$/i.test(e.name)).sort((a, b) => b.size - a.size)
-    if (!entries.length) throw new Error('Zip ohne .xml/.ixf')
-    file = entries[0].name; text = entries[0].read().toString('utf8')
+  if (isZip(buf)) {
+    const e = ixfInZip(buf)
+    file = e.name; text = (e.method === 8 ? inflateRawSync(e.data) : e.data).toString('utf8')
   } else text = buf.toString('utf8')
   const rel = parseIxf(text); const h = rel.header
   console.error(`${h.name ?? 'ETIM'} Nr. ${h.number ?? '?'} · ${rel.classes.length} Klassen · ${rel.features.size} Merkmale · ${(buf.length / 1048576).toFixed(1)} MB · ${Date.now() - t0} ms gelesen`)
