@@ -178,7 +178,7 @@ export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
     const { key, steps } = mapEntry(cfg.map, f.code)
     if (!columns.some(c => c.key === key)) continue
     const r = resolveValue(f, throughSteps(steps, values[key]?.value))
-    if (r === null) out.push({ attribute: key, message: `${f.code} ${nameOf(f.name, cfg.locale)}: „${values[key]?.value}“ passt nicht (${f.type}${f.type === 'Alphanumeric' ? ': ' + f.values.slice(0, 6).map(v => nameOf(v.name, cfg.locale)).join(', ') + (f.values.length > 6 ? ' …' : '') : ''})`, severity: 'warn' })
+    if (r === null) out.push({ attribute: key, go: 'node', message: `${f.code} ${nameOf(f.name, cfg.locale)}: „${values[key]?.value}“ passt nicht (${f.type}${f.type === 'Alphanumeric' ? ': ' + f.values.slice(0, 6).map(v => nameOf(v.name, cfg.locale)).join(', ') + (f.values.length > 6 ? ' …' : '') : ''})`, severity: 'warn' })
     else if (!r.unknown) filled++
   }
   // Zusammenfassung je Knoten (Taloan, 22.09.: „was heisst belegt?“): gefüllt = ein Wert, den das ETIM-Attribut lesen kann; ohne Spalte = kein
@@ -187,8 +187,8 @@ export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
   const mapped = cls.features.length - noCol.length
   // je ETIM-Attribut ein Fund, Feld = das ETIM-Attribut (EF-Code) — beanstandet ist aus ETIM-Sicht das EF, das sich nicht füllen lässt (Taloan, 22.09.)
   const notHere = noCol.filter(f => inactive.includes(mapEntry(cfg.map, f.code).key)), noAttr = noCol.filter(f => !inactive.includes(mapEntry(cfg.map, f.code).key))
-  for (const f of notHere) out.push({ attribute: f.code, message: `zugeordnetes Attribut ${mapEntry(cfg.map, f.code).key} ist an diesem Knoten nicht verfügbar`, label: nameOf(f.name, cfg.locale), title: 'das zugeordnete Attribut gibt es im Modell, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
-  for (const f of noAttr) out.push({ attribute: f.code, message: 'nicht zugeordnet — kein Attribut im Modell', label: nameOf(f.name, cfg.locale), title: '⇄ zuordnen oder ＋ anlegen (Band ⌗ ETIM am Knoten)', severity: 'info' })
-  if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} leer · ${filled} gefüllt`, title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat', severity: 'info' })
+  for (const f of notHere) out.push({ attribute: f.code, message: `zugeordnetes Attribut ${mapEntry(cfg.map, f.code).key} ist an diesem Knoten nicht verfügbar`, label: nameOf(f.name, cfg.locale), go: 'map', code: f.code, title: 'das zugeordnete Attribut gibt es im Modell, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
+  for (const f of noAttr) out.push({ attribute: f.code, message: 'nicht zugeordnet — kein Attribut im Modell', label: nameOf(f.name, cfg.locale), go: 'map', code: f.code, title: '⇄ zuordnen oder ＋ anlegen (Band ⌗ ETIM am Knoten)', severity: 'info' })
+  if (filled < mapped) out.push({ attribute: null, go: 'node', message: `${mapped - filled} von ${mapped} leer · ${filled} gefüllt`, title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat', severity: 'info' })
   return out
 }

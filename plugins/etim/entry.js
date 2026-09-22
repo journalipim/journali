@@ -445,8 +445,12 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
         const findings = []
         for (const r of S.products) for (const f of checkNode({ values: r.values, columns: S.tbl.columns.filter(x => !(r.inactive ?? []).includes(x.key)), inactive: r.inactive ?? [], classes: cache.classes, cfg: cfg(locale) })) findings.push({ ...f, node: r.row })
         body.innerHTML = ''
-        body.append(findings.length ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:260px' }, 'Knoten'), el('th', { style: 'width:140px' }, 'Feld'), el('th', {}, 'Fund'))),
-          el('tbody', {}, ...findings.slice(0, 500).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, SEV[x.severity] ?? ''), el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) } }, `${ICON[x.node.role] ?? ''} ${x.node.label}`)), el('td', { class: 'mono muted', title: x.label ?? '' }, x.attribute ?? ''), el('td', { title: x.title ?? '' }, x.message)))))
+        // letzte Spalte: das Sprungziel, an dem man den Fund kontrolliert oder behebt (Taloan, 22.09.) — Zuordnung mit dem EF markiert, oder der Knoten in der Gruppe ETIM
+        const jump = x => x.go === 'map'
+          ? el('button', { class: 'x', title: `zur Zuordnung — ${x.attribute} markiert`, onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}&ef=${x.attribute}`) }, '⇄')
+          : x.go === 'node' ? el('button', { class: 'x', title: `zum Knoten ${x.node.label}, Gruppe ${groupKey()}`, onclick: () => ctx.go?.(`/tree/${x.node.id}?group=${encodeURIComponent(groupKey())}`) }, '↗') : null
+        body.append(findings.length ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:30px' }, ''), el('th', { style: 'width:260px' }, 'Knoten'), el('th', { style: 'width:140px' }, 'Feld'), el('th', {}, 'Fund'), el('th', { style: 'width:36px' }, ''))),
+          el('tbody', {}, ...findings.slice(0, 500).map(x => el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, SEV[x.severity] ?? ''), el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) } }, `${ICON[x.node.role] ?? ''} ${x.node.label}`)), el('td', { class: 'mono muted', title: x.label ?? '' }, x.attribute ?? ''), el('td', { title: x.title ?? '' }, x.message), el('td', {}, jump(x))))))
           : el('div', { class: 'muted', style: 'padding:4px 0' }, `✓ keine Funde in ${S.products.length} Knoten`))
       } }, '✓ prüfen') : null].filter(Boolean))
   }
@@ -460,7 +464,7 @@ async function mount(root, ctx) {
   await cache.loaded
   const model = () => store.model
   const locale = model().masterLocale ?? 'de'
-  const params = new URLSearchParams(location.search); const assignParam = params.get('assign'); const classParam = params.get('class'); const backNode = params.get('node'); if (assignParam || classParam) history.replaceState(null, '', location.pathname)
+  const params = new URLSearchParams(location.search); const assignParam = params.get('assign'); const classParam = params.get('class'); const backNode = params.get('node'); const efParam = (params.get('ef') ?? '').toUpperCase(); if (assignParam || classParam) history.replaceState(null, '', location.pathname)
   const st = { assign: null, rel: null, q: '', hits: [], root: localStorage.getItem('journali.etim.root') || tree.rows.find(r => !r.parent)?.id, result: null, busy: false, mapFilter: classParam && cache.classes.has(classParam.toUpperCase()) ? classParam.toUpperCase() : null, backNode: backNode && tree.byId.has(backNode) ? backNode : null }
   if (assignParam && tree.byId.has(assignParam)) setTimeout(() => classDialog(assignParam, ctx), 0)
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
@@ -784,7 +788,7 @@ async function mount(root, ctx) {
       const sel = el('select', { style: 'width:100%', onchange: e => { const v = e.target.value; const keep = steps ? { steps } : null; if ((v === f.code.toLowerCase() || !v) && !keep) delete cache.map[f.code]; else cache.map[f.code] = keep ? { to: v || f.code.toLowerCase(), ...keep } : v; saveMap(); draw() } }, el('option', { value: '' }, hasAttr(f.code.toLowerCase()) ? `${f.code.toLowerCase()} (eigenes)` : '— eigenes ef… anlegen —'), ...attrs().map(a => el('option', { value: a.key }, `${lbl(a)} (${a.key})`)))
       sel.value = typeof cache.map[f.code] === 'string' ? cache.map[f.code] : cache.map[f.code]?.to ?? ''
       const fx = el('button', { class: steps ? 'primary' : 'x', title: steps ? `ƒ ${describeSteps(steps)} — ändern` : 'ƒ Umwandlung: Einheit umrechnen, ja/x → Ja/Nein, Text → EV-Code nach Tabelle, von/bis verbinden', onclick: () => stepsDialog(f) }, 'ƒ')
-      mapBody.append(el('tr', {}, el('td', { class: 'mono' }, f.code), el('td', {}, featureText(f, locale)), el('td', { class: 'muted' }, TYPE[f.type] ?? f.type, f.type === 'Alphanumeric' ? ` (${f.values.length})` : ''), el('td', { class: 'num muted' }, f.n), el('td', { class: hasAttr(cur) ? '' : 'warn' }, sel), el('td', {}, fx)))
+      mapBody.append(el('tr', { 'data-ef': f.code, style: f.code === efParam ? 'outline:2px solid var(--warn);outline-offset:-2px' : '' }, el('td', { class: 'mono' }, f.code), el('td', {}, featureText(f, locale)), el('td', { class: 'muted' }, TYPE[f.type] ?? f.type, f.type === 'Alphanumeric' ? ` (${f.values.length})` : ''), el('td', { class: 'num muted' }, f.n), el('td', { class: hasAttr(cur) ? '' : 'warn' }, sel), el('td', {}, fx)))
     }
     const backRow = st.backNode ? tree.byId.get(st.backNode) : null
     const mapSec = section('4 · Zuordnung', `ETIM-Attribut ← Attribut, ƒ = Umwandlung; leer = eigenes Attribut ef… (wird angelegt) · jede Änderung wird sofort gespeichert${filterCls ? ` · nur ${filterCls.code}` : ''}`,
@@ -799,7 +803,7 @@ async function mount(root, ctx) {
   }
   st.relInfo = await ctx.data.get('release')
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⌗ ETIM'), el('span', { class: 'muted', style: 'font-size:12px' }, 'Quelle, Klassen, Attribute, Zuordnung — bedient wird am Knoten (Band ⌗ ETIM)'), el('span', { class: 'grow' }), status), body)
-  if (st.mapFilter) setTimeout(() => document.getElementById('etim-map')?.scrollIntoView({ block: 'start' }), 0)
+  if (st.mapFilter) setTimeout(() => (document.querySelector(`tr[data-ef="${efParam}"]`) ?? document.getElementById('etim-map'))?.scrollIntoView({ block: 'center' }), 0)
   draw()
   return () => {}
 }
