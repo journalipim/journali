@@ -101,16 +101,42 @@ function modelOps(ctx) {
   // Die Gruppe gilt überall — die Klasse steht an der Gruppe („Mobile Geräte“) und erbt nach unten (Taloan, 22.09.: „verstehe ich nicht“ —
   // die Gruppe war erst ab product aktiv, damit liess sich die Klasse an keiner Gruppe setzen); die ETIM-Attribute selbst gibt es nur an
   // Produkt und Variante (levels), nicht an der Gruppe. Eine alte Gruppe mit activeFrom wird einmal repariert.
+  // Namenskollision (Taloan, 22.09.: „wollen wir die Gruppe wirklich ETIM nennen?“): der Name bleibt sprechend, dafür wird geprüft,
+  // ob eine vorhandene Gruppe wirklich unsere ist — sie ist es, wenn sie leer ist oder nur ETIM-Attribute (ef…) und das
+  // Klassenattribut enthält. Sonst weicht die Einrichtung auf etim_std aus und sagt es; in den Einstellungen ist die Gruppe wählbar.
+  const isOurs = key => {
+    const attrs = (model().attributes ?? []).filter(a => a.group === key)
+    return attrs.every(a => /^ef\d+$/.test(a.key) || a.key === cache.settings.classAttr)
+  }
+  /// freier Gruppenschlüssel: der gewünschte, wenn er frei oder unserer ist — sonst etim_std, etim_std2 …
+  function freeGroupKey(wanted = groupKey()) {
+    if (!(model().groups ?? []).some(g => g.key === wanted) || isOurs(wanted)) return wanted
+    for (let i = 0; i < 20; i++) { const k = i ? `etim_std${i + 1}` : 'etim_std'; if (!(model().groups ?? []).some(g => g.key === k) || isOurs(k)) return k }
+    return wanted
+  }
   async function ensureGroup() {
-    const g = groupKey(); const have = (model().groups ?? []).find(x => x.key === g)
-    if (!have) await put(`/groups/${g}`, { key: g, label: { de: g === 'etim' ? 'ETIM' : g, en: g === 'etim' ? 'ETIM' : g } })
+    let g = freeGroupKey()
+    if (g !== groupKey()) { cache.settings.group = g; await ctx.data.set('settings', cache.settings); store.toast(`⚠ Gruppe etim gehört schon anderen Attributen — ETIM benutzt ${g}`) }
+    const have = (model().groups ?? []).find(x => x.key === g)
+    if (!have) await put(`/groups/${g}`, { key: g, label: { de: g === 'etim' ? 'ETIM' : `ETIM (${g})`, en: g === 'etim' ? 'ETIM' : `ETIM (${g})` } })
     else if (have.activeFrom) await put(`/groups/${g}`, { ...have, activeFrom: null })
   }
   const FEATURE_LEVELS = ['product', 'variant']
   async function ensureClassAttr() {
-    const key = cache.settings.classAttr
     await ensureGroup()   // Gruppe überall aktiv (repariert eine alte mit activeFrom) — sonst „etim_class gilt hier nicht“ an der Gruppe
-    await ensureGroup()
+    // Kollision beim Klassenattribut: ein vorhandenes Attribut dieses Schlüssels, das nicht zu uns gehört (andere Gruppe,
+    // keine Liste der Klassen), wird nicht übernommen — dann heißt unseres etim_klasse (Taloan, 22.09.)
+    {
+      const k0 = cache.settings.classAttr
+      const a0 = model().attributes.find(a => a.key === k0)
+      const ours = !a0 || a0.group === groupKey() || (a0.type === 'enum' && a0.list === k0)
+      if (!ours) {
+        const alt = ['etim_klasse', 'etim_class_std'].find(k => !model().attributes.some(a => a.key === k)) ?? 'etim_klasse'
+        cache.settings.classAttr = alt; await ctx.data.set('settings', cache.settings)
+        store.toast(`⚠ ${k0} gehört schon einem anderen Attribut — ETIM benutzt ${alt}`)
+      }
+    }
+    const key = cache.settings.classAttr
     const existing = model().attributes.find(a => a.key === key)
     if (existing && !(existing.type === 'enum' && existing.list === key)) return key   // ein vorhandenes Text-/Listenattribut bleibt, wie es ist
     if (!(model().lists ?? []).some(l => l.key === key)) await put(`/lists/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, columns: ['group'], closed: true })
@@ -176,7 +202,13 @@ function modelOps(ctx) {
     if (!items.length) return []
     const label = { de: `⌗ ${cls.code} ${nameOf(cls.name, 'de') || ''}`.trim(), en: `⌗ ${cls.code} ${nameOf(cls.name, 'en') || ''}`.trim() }
     const out = []
-    for (const role of FEATURE_LEVELS) { const key = viewKeyOf(cls.code, role); await put(`/views/${key}`, { key, label, items, level: role }); out.push(key) }
+    for (const role of FEATURE_LEVELS) {
+      const key = viewKeyOf(cls.code, role)
+      const have = (model().views ?? []).find(v => v.key === key)
+      // eine Sicht dieses Schlüssels, die nicht von uns stammt (anderer Name), bleibt unangetastet
+      if (have && !String(have.label?.de ?? '').startsWith('⌗ ')) { store.toast(`⚠ Sicht ${key} gehört schon jemand anderem — übersprungen`); continue }
+      await put(`/views/${key}`, { key, label, items, level: role }); out.push(key)
+    }
     return out
   }
   return { ensureGroup, ensureClassAttr, createFeature, hasAttr, ensureViews, viewKeyOf }

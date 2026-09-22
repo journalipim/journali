@@ -196,3 +196,19 @@ test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen (T
   assert.ok(attach, 'an die Wurzel gehängt'); assert.deepEqual(attach[1].groups, ['etim'])
   MODEL.groups = groups; g1.parent = null; TREE.splice(TREE.indexOf(rootRow), 1)
 })
+
+test('Namenskollision (Taloan, 22.09.): fremde Gruppe etim wird nicht übernommen — ETIM weicht aus', async () => {
+  const mod = await import('../../plugins/etim/entry.js')
+  const calls = []
+  const groups = MODEL.groups, attrs = MODEL.attributes
+  MODEL.groups = [...groups, { key: 'etim', label: { de: 'ETIM (fremd)' }, attributes: ['kundenfeld'] }]
+  MODEL.attributes = [...attrs, { key: 'kundenfeld', type: 'text', group: 'etim', label: { de: 'Kundenfeld' } }]   // fremdes Attribut in der Gruppe
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, b, m ?? 'POST']); return {} } },
+    data: { ...ctx.data, set: async () => {} }, store: { ...ctx.store, poll: async () => {}, toast: () => {} } }
+  await mod.default.install(ctx2)
+  const made = calls.filter(([p, , m]) => p.startsWith('/api/model/groups/') && m === 'PUT').map(([p]) => p)
+  assert.deepEqual(made, ['/api/model/groups/etim_std'], 'nicht in die fremde Gruppe, sondern etim_std: ' + JSON.stringify(made))
+  const attach = calls.find(([p, , m]) => /\/groups$/.test(p) && m === 'PUT' && p.startsWith('/api/nodes/'))
+  assert.ok(attach[1].groups.includes('etim_std'))
+  MODEL.groups = groups; MODEL.attributes = attrs
+})

@@ -58,6 +58,10 @@ ETIM ist Klassifikation, kein Export (Leiste: ⌗ Klassifikation). Bedient wird 
 ins vorhandene Werkzeug; die Ansicht des Plugins ist nur Quelle, Versionen, Klassen, Attribute,
 Zuordnung:
 
+Beim Einschalten des Plugins (`install`) entsteht die Gruppe `etim` und hängt an jeder Wurzel des Pflegebaums.
+Namenskollision: gibt es `etim` schon mit fremden Attributen, weicht ETIM auf `etim_std` aus (Meldung; in den
+Einstellungen wählbar); dasselbe gilt für das Klassenattribut (`etim_klasse`) und für Sichten, die jemand anderem gehören.
+
 Jede Zuweisung stellt sicher, dass die Klasse danach pflegbar ist: Gruppe `etim` anlegen (falls gelöscht) und an den
 Pfad des Knotens hängen, Klassenattribut anlegen, je ETIM-Attribut ein Attribut im Modell — danach wird geprüft und
 gemeldet, was noch fehlt (`readiness` im Kern). Fehlt etwas später wieder, hat das Band den Knopf dafür.
