@@ -40,10 +40,11 @@ onUnmounted(() => { for (const c of cleanups) { try { c() } catch {} } })
 </template>
 
 <style scoped>
+.plugin-band { padding: 0 8px 10px; }   /* wie .section in der Knotenansicht — die scoped-Regel dort greift hier nicht (mehrere Wurzeln) */
 .plugin-band h2 { font-size: 12px; margin: 0 -8px 8px; padding: 0 8px; min-height: 26px; line-height: 24px; box-sizing: border-box; color: var(--text); font-weight: 600; letter-spacing: .02em; background: var(--accent-soft); border-top: 2px solid var(--accent); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .plugin-band h2 .caret { display: inline-block; width: 14px; color: var(--muted); }
 .plugin-band .head { font-weight: 400; }
 .plugin-band .body { padding: 0 0 4px; }
 /* die Zeile bleibt im sichtbaren Bereich, auch wenn die Attributtabelle den Rollbereich breiter macht */
-.plugin-band .body :deep(.row) { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 2px 0 6px; position: sticky; left: 0; max-width: calc(100vw - 420px); }
+.plugin-band .body :deep(.row) { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 2px 0 6px; position: sticky; left: 8px; max-width: calc(100vw - 420px); }
 </style>
