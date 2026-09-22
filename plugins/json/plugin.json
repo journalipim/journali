@@ -2,8 +2,8 @@
   "key": "json",
   "version": "2.2.0",
   "label": {
-    "de": "Import: JSON (und Export)",
-    "en": "Import: JSON (and export)"
+    "de": "Import / Export: JSON",
+    "en": "Import / Export: JSON"
   },
   "description": {
     "de": "Strukturierte Daten als JSON: Export eines Teilbaums als Rohdaten (wiederherstellbar, mit Modellteil) oder ausgewertet (Baum, Liste); Import-Manager mit Analyse, Zuordnung (best guess, Präfix), Zielbaum; als Job (Prozess) einspielbar. Dazu JSON-Listen als Tabelle für ⇩ Import → Tabelle. Als Job: Import (Rohdaten einspielen) und Export (Rohdaten, Baum oder Liste in ein Verzeichnis).",
