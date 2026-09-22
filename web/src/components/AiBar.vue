@@ -25,21 +25,25 @@ async function run(instruction) {
 <template>
   <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? 'Text mit der KI (' + ai.label() + ') bearbeiten — mit den Produktdaten dieses Knotens; jede Anfrage kostet Token' : 'KI-Schlüssel fehlt — ⚙ Einstellungen → KI'" :disabled="!ai.available()">✦ KI</button>
   <div v-if="open" class="aibar" @mousedown.stop>
-    <div class="grp">
+    <!-- Beschriftungen als Überschrift über der Reihe, nicht daneben (Taloan, 22.09.: unterschiedlich lang = unordentlich) -->
+    <div class="col">
       <span class="muted lbl">überarbeiten</span>
-      <button v-for="[k, l, hint] in edits" :key="k" class="x" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button>
+      <div class="grp"><button v-for="[k, l, hint] in edits" :key="k" class="x" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button></div>
     </div>
-    <div class="grp">
+    <div class="col">
       <span class="muted lbl">erzeugen</span>
-      <button v-for="[k, l, hint] in gens" :key="k" class="x ai" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button>
+      <div class="grp"><button v-for="[k, l, hint] in gens" :key="k" class="x ai" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button></div>
     </div>
-    <div class="grp grow">
-      <input v-model="own" type="text" placeholder="eigene Anweisung … (Enter)" @keydown.enter.stop="run(own)" @keydown.esc.stop="open = false" :disabled="!!busy" />
+    <div class="col grow">
+      <span class="muted lbl">eigene Anweisung</span>
+      <input v-model="own" type="text" placeholder="… und Enter" @keydown.enter.stop="run(own)" @keydown.esc.stop="open = false" :disabled="!!busy" />
     </div>
-    <div class="grp">
+    <div class="col">
       <span class="muted lbl">Ergebnis</span>
-      <button class="x" :class="{ primary: mode === 'replace' }" @click="setMode('replace')" title="das Ergebnis ersetzt den ganzen Entwurf">Text ersetzen</button>
-      <button class="x" :class="{ primary: mode === 'insert' }" @click="setMode('insert')" title="das Ergebnis wird an der Schreibmarke eingefügt — der übrige Text bleibt">Am Cursor ergänzen</button>
+      <div class="grp">
+        <button class="x" :class="{ primary: mode === 'replace' }" @click="setMode('replace')" title="das Ergebnis ersetzt den ganzen Entwurf">Text ersetzen</button>
+        <button class="x" :class="{ primary: mode === 'insert' }" @click="setMode('insert')" title="das Ergebnis wird an der Schreibmarke eingefügt — der übrige Text bleibt">Am Cursor ergänzen</button>
+      </div>
     </div>
     <span v-if="busy" class="ai" style="font-size:12px">{{ busy }}</span>
   </div>
@@ -48,11 +52,12 @@ async function run(instruction) {
 <style scoped>
 .ai.on { background: var(--accent-soft); }
 /* eigene Zeile unter der Werkzeugleiste (die umbricht nicht) — links ausgerichtet, Knöpfe einzeilig */
-.aibar { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+.aibar { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;
   padding: 5px 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--pane); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+.col { display: flex; flex-direction: column; gap: 2px; }
+.col.grow { flex: 1; min-width: 160px; }
+.col input { width: 100%; }
 .grp { display: flex; gap: 4px; align-items: center; }
-.grp.grow { flex: 1; min-width: 160px; }
-.grp input { width: 100%; }
 .aibar button { white-space: nowrap; min-width: 0; }
 .up .aibar, :global(.up) .aibar { top: auto; bottom: 100%; }   /* in der Fusszeile: nach oben aufklappen */
 .lbl { font-size: 11px; white-space: nowrap; }
