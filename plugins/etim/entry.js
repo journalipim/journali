@@ -409,7 +409,9 @@ async function stageData(ctx, nodeId) {
   stage.keys = keys; stage.tbl = tbl
   return stage
 }
-async function bandMount({ head, body }, nodeId, ctx) {
+async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
+  // head: kurzer Text in der Überschrift (wie „Redaktion: Freigegeben“); line: die Zeile mit Chips und Knöpfen im Körper; darunter die Funde
+  const line = el('div', { class: 'row' }); const found = el('div'); bodyEl.append(line, found); const body = found
   const { store, tree } = ctx
   await cache.loaded; if (!tree.loaded) await tree.load()
   const locale = store.model?.masterLocale ?? 'de'; const ops = modelOps(ctx)
@@ -417,23 +419,24 @@ async function bandMount({ head, body }, nodeId, ctx) {
   const chip = (text, cls = '', title = '') => el('span', { class: 'chip ' + cls, title }, text)
   async function render() {
     if (gone) return
-    head.innerHTML = ''; body.innerHTML = ''
-    if (!cache.classes.size) { head.append(el('span', { class: 'muted' }, 'keine ETIM-Version im Journal'), el('button', { class: 'x', onclick: () => ctx.go?.('/p/etim/etim') }, '⇩ holen …')); return }
-    head.append(el('span', { class: 'muted' }, '…'))
-    let S; try { S = await stageData(ctx, nodeId) } catch (e) { head.innerHTML = ''; head.append(el('span', { class: 'neg' }, '✗ ' + e.message)); return }
+    head.textContent = ''; line.innerHTML = ''; body.innerHTML = ''
+    if (!cache.classes.size) { head.textContent = '· keine ETIM-Version im Journal'; line.append(el('button', { class: 'x', onclick: () => ctx.go?.('/p/etim/etim') }, '⇩ ETIM holen …')); return }
+    head.textContent = '· …'
+    let S; try { S = await stageData(ctx, nodeId) } catch (e) { head.textContent = '· ✗ ' + e.message; return }
     if (gone || !S) return
-    head.innerHTML = ''
+    head.textContent = ''
     const again = () => render()
     const assignBtn = el('button', { class: S.cls ? 'x' : 'primary', title: S.cls ? 'andere Klasse wählen (Vorschlag, Umfeld, Suche, Ebene)' : 'ETIM-Klasse wählen (Vorschlag, Umfeld, Suche, Ebene mit Empfehlung)', onclick: () => classDialog(nodeId, ctx, again) }, S.cls ? '⌗ Klasse ändern …' : '⌗ Klasse zuweisen …')
-    if (!S.cls) { head.append(el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), assignBtn); return }
+    if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), el('span', { class: 'grow' }), assignBtn); return }
     const code = S.current
-    head.append(chip(`${code} ${nameOf(S.cls.name, locale)}`, '', S.ownCode ? 'Klasse am Knoten selbst' : `Klasse geerbt von ${S.inherited.from}`), el('span', { class: 'muted' }, S.ownCode ? 'hier' : `von ${S.inherited.from}`))
-    if (S.other) head.append(chip(`≠ ${S.other}`, 'warn', `${S.other} darunter mit anderer Klasse`))
+    line.append(chip(`${code} ${nameOf(S.cls.name, locale)}`, '', S.ownCode ? 'Klasse am Knoten selbst' : `Klasse geerbt von ${S.inherited.from}`), el('span', { class: 'muted' }, S.ownCode ? 'hier' : `von ${S.inherited.from}`))
+    if (S.other) line.append(chip(`≠ ${S.other}`, 'warn', `${S.other} darunter mit anderer Klasse`))
     const has = S.feats.filter(x => x.has), miss = S.feats.filter(x => !x.has), mapped = has.filter(x => !x.own), fx = S.feats.filter(x => x.steps)
-    head.append(el('span', { class: 'muted' }, '·'), chip(`Attribute ${has.length}/${S.feats.length}`, miss.length ? 'warn' : 'pos', `${has.length - mapped.length} eigene ef… · ${mapped.length} zugeordnet${fx.length ? ` · ${fx.length} mit ƒ` : ''}${miss.length ? ` · ${miss.length} ohne Attribut` : ''}`))
+    line.append(el('span', { class: 'muted' }, '·'), chip(`Attribute ${has.length}/${S.feats.length}`, miss.length ? 'warn' : 'pos', `${has.length - mapped.length} eigene ef… · ${mapped.length} zugeordnet${fx.length ? ` · ${fx.length} mit ƒ` : ''}${miss.length ? ` · ${miss.length} ohne Attribut` : ''}`))
     const pct = S.cells ? Math.round(S.filled * 100 / S.cells) : 0
-    head.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? `Daten ${pct} %` : 'Daten —', S.bad ? 'neg' : pct >= 80 ? 'pos' : '', `${S.products.length} Produkte/Varianten × ${has.length} Merkmale: ${S.filled} gefüllt · ${S.empty} leer${S.bad ? ` · ${S.bad} passen nicht` : ''}`))
-    head.append(...[el('span', { class: 'grow' }), assignBtn,
+    head.textContent = `· ${code} ${nameOf(S.cls.name, locale)}${S.ownCode ? '' : ' (geerbt)'} · Attribute ${has.length}/${S.feats.length} · Daten ${S.products.length ? pct + ' %' : '—'}${S.other ? ` · ≠ ${S.other}` : ''}`
+    line.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? `Daten ${pct} %` : 'Daten —', S.bad ? 'neg' : pct >= 80 ? 'pos' : '', `${S.products.length} Produkte/Varianten × ${has.length} Merkmale: ${S.filled} gefüllt · ${S.empty} leer${S.bad ? ` · ${S.bad} passen nicht` : ''}`))
+    line.append(...[el('span', { class: 'grow' }), assignBtn,
       el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der Merkmale dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende Merkmale als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
