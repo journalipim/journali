@@ -391,7 +391,7 @@ const checks = [
 // ≠ abweichende darunter) · Attribute n von m (zugeordnet, ƒ, fehlend) · Daten % gefüllt (leer, passen nicht) — und die Knöpfe, die
 // ins vorhandene Werkzeug springen: Zuweisen-Dialog, Zuordnung (auf die Klasse gefiltert), Subitems-Tabelle mit den Spalten der Klasse,
 // Prüfung (Befunde im Körper). Gilt an Gruppe, Produkt, Variante; die Zahlen zählen den Knoten und alles darunter mit dieser Klasse.
-async function stageData(ctx, nodeId) {
+async function stageData(ctx, nodeId, locale = 'de') {
   const { api, tree } = ctx; const ops = modelOps(ctx); const hasAttr = ops.hasAttr
   const key = cache.settings.classAttr; const row = tree.byId.get(nodeId); if (!row) return null
   const at = hasAttr(key) ? await classAt(api, key, nodeId) : { ownCode: '', inherited: null, current: null }
@@ -433,7 +433,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     head.textContent = ''; line.innerHTML = ''; table.innerHTML = ''; found.innerHTML = ''
     if (!cache.classes.size) { head.textContent = '· keine ETIM-Version im Journal'; line.append(el('button', { class: 'x', onclick: () => ctx.go?.('/p/etim/etim') }, '⇩ ETIM holen …')); return }
     head.textContent = '· …'
-    let S; try { S = await stageData(ctx, nodeId) } catch (e) { head.textContent = '· ✗ ' + e.message; return }
+    let S; try { S = await stageData(ctx, nodeId, locale) } catch (e) { head.textContent = '· ✗ ' + e.message; return }
     if (gone || !S) return
     head.textContent = ''
     const again = () => render()

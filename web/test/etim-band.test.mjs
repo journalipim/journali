@@ -1,0 +1,110 @@
+// Das ETIM-Band wirklich zeichnen (Taloan, 22.09.2026: „schau dir selbst an, was du gebaut hast“): ein Minimal-DOM und eine
+// gefälschte /api — der Test liest den Text, der im Band steht, statt zu vermuten. Ohne Browser, ohne Server.
+import test from 'node:test'
+import assert from 'node:assert/strict'
+
+function mkEl(tag = 'div') {
+  const e = {
+    tag, nodeType: 1, kids: [], style: { cssText: '' }, attrs: {}, className: '', _text: '',
+    append(...k) { for (const x of k.flat()) if (x != null) e.kids.push(x?.nodeType ? x : String(x)) },
+    addEventListener() {}, removeEventListener() {}, setAttribute(k, v) { e.attrs[k] = v }, remove() {}, focus() {}, scrollIntoView() {},
+    querySelector() { return null }, querySelectorAll() { return [] }, classList: { contains: () => false, add() {}, remove() {} },
+    get textContent() { return e._text }, set textContent(v) { e._text = String(v); e.kids = [] },
+    get innerHTML() { return '' }, set innerHTML(v) { e.kids = []; e._text = '' },
+  }
+  return e
+}
+globalThis.document = { createElement: mkEl, createTextNode: t => ({ nodeType: 3, _text: String(t), kids: [] }), body: mkEl('body'), addEventListener() {}, removeEventListener() {}, querySelector: () => null }
+globalThis.window = { open: () => null, addEventListener() {}, removeEventListener() {}, location: { search: '', pathname: '/' }, history: { replaceState() {} }, screen: { availWidth: 1600, availHeight: 900 } }
+globalThis.screen = globalThis.window.screen
+globalThis.localStorage = { getItem: () => null, setItem() {}, removeItem() {} }
+const textOf = e => typeof e === 'string' ? e : [e._text ?? '', ...(e.kids ?? []).map(textOf)].filter(Boolean).join(' ')
+
+// ---- die Welt: eine Klasse mit vier ETIM-Attributen, ein Produkt mit drei Varianten
+const CLASS = {
+  code: 'EC004718', name: { de: 'Laptop' }, group: { code: 'G1', name: { de: 'Mobile Geräte' } }, synonyms: {},
+  features: [
+    { code: 'EF008851', type: 'Logical', name: { de: 'Wi-Fi' }, values: [] },
+    { code: 'EF000008', type: 'Numeric', name: { de: 'Breite' }, unit: { code: 'MM', abbr: { de: 'mm' } }, values: [] },
+    { code: 'EF000007', type: 'Alphanumeric', name: { de: 'Farbe' }, values: [{ code: 'EV1', name: { de: 'rot' } }] },
+    { code: 'EF003105', type: 'Logical', name: { de: 'With numeric keyboard' }, values: [] },   // auf tastatur_name zugeordnet, gilt nur an Varianten
+  ],
+}
+const TREE = [
+  { id: 'g-1', role: 'group', label: 'Mobile Geräte', parent: null },
+  { id: 'p-1', role: 'product', label: 'HP Notebook 255 G10', parent: 'g-1' },
+  { id: 'v-1', role: 'variant', label: 'a', parent: 'p-1' }, { id: 'v-2', role: 'variant', label: 'b', parent: 'p-1' }, { id: 'v-3', role: 'variant', label: 'c', parent: 'p-1' },
+]
+const VALUES = {   // eigene Werte je Knoten
+  'p-1': { etim_class: 'EC004718', ef008851: 'true' },
+  'v-1': { ef008851: 'true', ef000008: '350', ef000007: 'rot', tastatur_name: 'ja' },     // vollständig
+  'v-2': { ef008851: 'true', ef000007: 'Lila' },                                            // einer passt nicht
+  'v-3': {},                                                                                // leer
+}
+const INACTIVE = { 'p-1': ['tastatur_name'] }   // am Produkt gilt das zugeordnete Attribut nicht
+const own = (id, key) => VALUES[id]?.[key]
+const resolved = (id, key) => own(id, key) ?? (key === 'etim_class' ? (TREE.find(r => r.id === id)?.parent ? resolved(TREE.find(r => r.id === id).parent, key) : undefined) : undefined)
+const rowOf = id => { const r = TREE.find(x => x.id === id); const values = {}; for (const k of ['etim_class', 'ef008851', 'ef000008', 'ef000007', 'tastatur_name']) { const v = resolved(id, k); if (v != null) values[k] = { value: v, own: own(id, k) != null } } return { row: { id, label: r.label, role: r.role, parent: r.parent }, values, inactive: INACTIVE[id] ?? [] } }
+const kidsOf = id => TREE.filter(r => r.parent === id)
+const deep = id => kidsOf(id).flatMap(k => [k, ...deep(k.id)])
+
+const PLUGIN_DATA = {
+  settings: { classAttr: 'etim_class', unknownAs: 'UN', group: 'etim' },
+  map: { EF003105: 'tastatur_name' },
+  mapping: {},
+  release: { version: '9', number: 9, name: 'ETIM 9.0', classes: 1 },
+  'class:9:EC004718': CLASS,
+}
+globalThis.fetch = async url => {
+  const u = String(url)
+  const json = d => ({ ok: true, json: async () => d })
+  if (u === '/api/plugins/etim/data') return json(Object.keys(PLUGIN_DATA))
+  if (u.startsWith('/api/plugins/etim/data?values=true&prefix=')) { const pre = decodeURIComponent(u.split('prefix=')[1]); return json(Object.fromEntries(Object.entries(PLUGIN_DATA).filter(([k]) => k.startsWith(pre)))) }
+  if (u.startsWith('/api/plugins/etim/data/')) { const n = decodeURIComponent(u.slice('/api/plugins/etim/data/'.length)); return n in PLUGIN_DATA ? json(PLUGIN_DATA[n]) : { ok: false, json: async () => null } }
+  if (u === '/api/tree') return json(TREE)
+  if (/^\/api\/nodes\/[^/?]+$/.test(u)) return json(apiNode(decodeURIComponent(u.slice('/api/nodes/'.length))))
+  if (u.startsWith('/api/nodes/')) return json(apiTable(u))
+  return { ok: false, json: async () => null }
+}
+// GET /api/nodes/<id> (Knoten mit eigenen Werten und Vorfahren) — daraus liest das Plugin die wirksame Klasse
+function apiNode(id) {
+  const r = TREE.find(x => x.id === id)
+  const vals = o => Object.entries(VALUES[o] ?? {}).map(([attribute, value]) => ({ attribute, value, locale: null, channel: null, row: null }))
+  const anc = []; for (let p = r?.parent; p; p = TREE.find(x => x.id === p)?.parent) anc.push({ id: p, label: TREE.find(x => x.id === p).label, values: vals(p) })
+  return { id, role: r?.role, name: null, values: vals(id), ancestors: anc, groups: [{ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] }], rows: {}, computed: [] }
+}
+function apiTable(u) {
+  const id = decodeURIComponent(u.slice('/api/nodes/'.length).split('/')[0])
+  const q = new URLSearchParams(u.split('?')[1] ?? '')
+  const keys = (q.get('attributes') ?? '').split(',').filter(Boolean)
+  const ids = q.get('self') === 'true' ? [id] : deep(id).map(r => r.id)
+  return { node: { id }, columns: keys.map(k => ({ key: k, type: k === 'etim_class' ? 'enum' : 'text' })), rows: ids.map(rowOf) }
+}
+const MODEL = { masterLocale: 'de', locales: [{ code: 'de' }], groups: [{ key: 'etim', label: { de: 'ETIM' }, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] }, { key: 'tech', label: { de: 'Technik' }, attributes: ['tastatur_name'] }],
+  attributes: [{ key: 'etim_class', type: 'enum', group: 'etim', label: { de: 'ETIM-Klasse' } }, { key: 'ef008851', type: 'boolean', group: 'etim', label: { de: 'Wi-Fi' } }, { key: 'ef000008', type: 'decimal', group: 'etim', label: { de: 'Breite' } }, { key: 'ef000007', type: 'enum', group: 'etim', list: 'ef000007', label: { de: 'Farbe' } }, { key: 'tastatur_name', type: 'text', group: 'tech', label: { de: 'Tastatur' } }], lists: [] }
+const ctx = {
+  api: { get: async p => /^\/api\/nodes\/[^/?]+$/.test(p) ? apiNode(decodeURIComponent(p.slice('/api/nodes/'.length))) : apiTable(p), post: async () => ({}), del: async () => ({}) },
+  store: { model: MODEL, toast() {}, poll: async () => {}, actor: 'test' },
+  tree: { loaded: true, rows: TREE, byId: new Map(TREE.map(r => [r.id, r])), kids: kidsOf, ancestors: id => { const out = []; for (let p = TREE.find(r => r.id === id)?.parent; p; p = TREE.find(r => r.id === p)?.parent) out.unshift(TREE.find(r => r.id === p)); return out }, load: async () => {} },
+  go() {}, data: { get: async n => PLUGIN_DATA[n] ?? null, set: async () => {}, list: async () => Object.keys(PLUGIN_DATA) }, dialog: {}, mapper: {}, ai: { available: () => false },
+}
+
+test('Band am Produkt: Kopfzeile, Klassentabelle und je Unterknoten eine Zeile', async () => {
+  const mod = await import('../../plugins/etim/entry.js')
+  const band = mod.default.nodeBands[0]
+  const head = mkEl('h2'), body = mkEl('div')
+  await band.mount({ head, body }, 'p-1', ctx)
+  await new Promise(r => setTimeout(r, 30))
+  const h = textOf(head), b = textOf(body)
+  assert.match(h, /EC004718 Laptop/), assert.match(h, /zugeordnet 4\/4/)
+  assert.match(b, /EC004718/)                                    // Klassentabelle
+  assert.match(b, /4 Knoten|4\b/)
+  for (const label of ['HP Notebook 255 G10', 'a', 'b', 'c']) assert.ok(b.includes(label), `Zeile für ${label} fehlt in:\n${b}`)
+  assert.match(b, /EF003105/)                                    // „nicht verfügbar“ am Produkt
+  assert.match(b, /nicht verfügbar/)
+  assert.match(b, /„Lila“ passt nicht \(Liste: rot\)/)           // b
+  assert.match(b, /✓ ◆ a 4 von 4 gefüllt 100 %/)                 // vollständiger Knoten steht mit ✓ in der Liste
+  assert.match(b, /◆ c 0 von 4 gefüllt 0 %/)                     // leerer Knoten ebenfalls
+  assert.match(b, /6 von 15/)                                     // Zahl der Klassentabelle = Summe der Knotenzeilen (1+4+1+0)
+  console.log('\n--- Kopf ---\n' + h + '\n--- Körper ---\n' + b + '\n')
+})
