@@ -151,12 +151,15 @@ test('Attributsicht je Klasse (Taloan, 22.09.): je Rolle eine Sicht mit genau de
   const head = mkEl('h2'), body = mkEl('div')
   await band.mount({ head, body }, 'p-1', ctx2)
   await new Promise(r => setTimeout(r, 30))
-  // den Knopf „◫ Sicht“ finden und auslösen
+  // fehlt die Sicht, zieht das Band sie beim Öffnen nach (Taloan, 22.09.: „noch immer keine View für die Klasse“)
+  const auto = put.filter(([p]) => p.startsWith('/api/model/views/'))
+  assert.equal(auto.length, 3, 'beim Öffnen je Rolle eine Sicht — ohne Klick')
+  // der Knopf „◫ Sicht“ tut dasselbe noch einmal und wählt sie am Knoten
   const find = e => typeof e === 'string' ? null : (e.tag === 'button' && (e.kids ?? []).includes('◫ Sicht') ? e : (e.kids ?? []).map(find).find(Boolean))
   const btn = find(body); assert.ok(btn, 'Knopf ◫ Sicht fehlt')
   await btn.onclick?.({ preventDefault() {}, stopPropagation() {} })
   const views = put.filter(([p]) => p.startsWith('/api/model/views/'))
-  assert.equal(views.length, 3, 'je Rolle eine Sicht (group, product, variant) — ETIM-Attribute gelten überall (Taloan, 22.09.)')
+  assert.equal(views.length, 6, 'nach dem Knopf noch einmal je Rolle (group, product, variant)')
   const [path, body2] = views[0]
   assert.match(path, /etim_ec004718_(group|product|variant)/)
   assert.equal(body2.level, 'group')

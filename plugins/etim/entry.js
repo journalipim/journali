@@ -551,6 +551,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
   const locale = store.model?.masterLocale ?? 'de'; const ops = modelOps(ctx)
   let gone = false
   const chip = (text, cls = '', title = '') => el('span', { class: 'chip ' + cls, title }, text)
+  const viewsDone = new Set()   // je Klasse einmal prüfen, nicht bei jedem Zeichnen
   async function render() {
     if (gone) return
     head.textContent = ''; line.innerHTML = ''; table.innerHTML = ''; found.innerHTML = ''
@@ -558,6 +559,15 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     head.textContent = '· …'
     let S; try { S = await stageData(ctx, nodeId, locale) } catch (e) { head.textContent = '· ✗ ' + e.message; return }
     if (gone || !S) return
+    // Sicht zur Klasse: fehlt sie für diesen Knotentyp, einmal nachziehen — sonst steht die Klasse da, aber kein Reiter dazu
+    if (S.cls && store.can?.('model') !== false && !viewsDone.has(S.cls.code)) {
+      const want = ops.viewKeyOf(S.cls.code, S.row.role)
+      if (!(store.model?.views ?? []).some(v => v.key === want)) {
+        viewsDone.add(S.cls.code)
+        try { await ops.ensureViews(S.cls); await store.poll(true) } catch { /* ohne Modellrecht bleibt es beim Knopf ◫ Sicht */ }
+        if (gone) return
+      } else viewsDone.add(S.cls.code)
+    }
     head.textContent = ''
     const again = () => render()
     const assignBtn = el('button', { class: S.cls ? 'x' : 'primary', title: S.cls ? 'andere Klasse wählen (Vorschlag, Umfeld, Suche, Ebene)' : 'ETIM-Klasse wählen (Vorschlag, Umfeld, Suche, Ebene mit Empfehlung)', onclick: () => classDialog(nodeId, ctx, again) }, S.cls ? '⌗ Klasse ändern …' : '⌗ Klasse zuweisen …')
