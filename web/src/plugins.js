@@ -51,22 +51,25 @@ export const plugins = reactive({
     try { this.list = await api.get('/api/plugins') } catch (e) { this.list = []; this.loaded = true; return }
     // Basis-Plugins zuerst (ihre Einträge stehen dann vorn in der Gruppe), dann der Rest in Reihenfolge
     const order = [...this.list].sort((a, b) => (Array.isArray(b.manifest?.base) ? 1 : 0) - (Array.isArray(a.manifest?.base) ? 1 : 0))
+    // erst laden, was neu dazugekommen ist (ein Modul bleibt geladen — ein ES-Modul lässt sich nicht entladen)
     for (const p of order) {
       const m = p.manifest ?? {}
       if (!this.active(p.key) || m.runs !== 'browser' || !m.entry || this.modules.has(p.key)) continue
-      try {
-        const mod = (await import(/* @vite-ignore */ `/plugins/${p.key}/${m.entry}`)).default ?? {}
-        this.modules.set(p.key, mod)
-        for (const v of mod.views ?? []) this.views.push({ key: p.key, ...v })
-        for (const a of mod.nodeActions ?? []) this.nodeActions.push({ key: p.key, ...a })
-        for (const i of mod.importers ?? []) this.importers.push({ key: p.key, source: i.key, ...i })
-        for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })
-        for (const b of mod.nodeBands ?? []) this.nodeBands.push({ key: p.key, band: b.key, ...b })
-      } catch (e) { store.toast(`Plugin ${p.key}: ${e.message}`) }
+      try { this.modules.set(p.key, (await import(/* @vite-ignore */ `/plugins/${p.key}/${m.entry}`)).default ?? {}) }
+      catch (e) { store.toast(`Plugin ${p.key}: ${e.message}`) }
     }
-    // ausgeschaltete Plugins (auch: Basis aus): ihre Beiträge weg (Modul bleibt geladen — ein ES-Modul lässt sich nicht entladen)
-    const on = new Set(this.list.filter(p => this.active(p.key)).map(p => p.key))
-    for (const k of ['views', 'nodeActions', 'importers', 'checks', 'nodeBands']) this[k] = this[k].filter(x => on.has(x.key))
+    // dann die Beiträge NEU sammeln (Taloan, 22.09.: Plugin aus und wieder an — der Abschnitt kam nicht zurück, weil die
+    // Beiträge einmal herausgefiltert waren und das schon geladene Modul übersprungen wurde)
+    this.views = []; this.nodeActions = []; this.importers = []; this.checks = []; this.nodeBands = []
+    for (const p of order) {
+      if (!this.active(p.key)) continue
+      const mod = this.modules.get(p.key); if (!mod) continue
+      for (const v of mod.views ?? []) this.views.push({ key: p.key, ...v })
+      for (const a of mod.nodeActions ?? []) this.nodeActions.push({ key: p.key, ...a })
+      for (const i of mod.importers ?? []) this.importers.push({ key: p.key, source: i.key, ...i })
+      for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })
+      for (const b of mod.nodeBands ?? []) this.nodeBands.push({ key: p.key, band: b.key, ...b })
+    }
     this.loaded = true   // erst jetzt: vorher sähe die Übersicht eines Themas nur den ersten Eintrag und leitete dorthin
   },
   enabled(key) { return this.active(key) },
