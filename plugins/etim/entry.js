@@ -22,12 +22,12 @@ const groupKey = () => cache.settings.group || 'etim'
 // release = die aktuelle Version (Zuweisen, Prüfen, Export). Alte Datensätze class:<EC> ohne Version zählen zur Version der damaligen Freigabe.
 // Mit der ganzen Freigabe im Journal (5 640 Klassen, 17 000 Merkmale) heisst „übernommen“ nicht mehr „in Gebrauch“: Attribute, Zuordnung und
 // Datenanalyse richten sich nach den Klassen, die im Baum zugewiesen sind (used); die Freigabe ist der Suchpool.
-const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [], used: new Set(), usedBy: new Map() }
+const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [], used: new Set(), usedBy: new Map(), classOf: new Map() }   // classOf: Knoten → { code, own } (auch geerbt) — fürs Baummenü
 async function loadUsed() {
   try {
-    const key = cache.settings.classAttr; const rows = await (await fetch('/api/tree')).json(); const used = new Set(); const by = new Map()
-    for (const r of rows.filter(r => !r.parent && r.role !== 'rubric')) { const t = await (await fetch(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`)).json(); for (const row of t.rows ?? []) { const v = row.values?.[key]; const c = String(v?.value ?? '').trim().toUpperCase(); if (!c) continue; used.add(c); if (v.own) { if (!by.has(c)) by.set(c, []); by.get(c).push({ id: row.row.id, label: row.row.label, role: row.row.role }) } } }
-    cache.used = used; cache.usedBy = by
+    const key = cache.settings.classAttr; const rows = await (await fetch('/api/tree')).json(); const used = new Set(); const by = new Map(); const classOf = new Map()
+    for (const r of rows.filter(r => !r.parent && r.role !== 'rubric')) { const t = await (await fetch(`/api/nodes/${encodeURIComponent(r.id)}/table?deep=true&attributes=${encodeURIComponent(key)}`)).json(); for (const row of t.rows ?? []) { const v = row.values?.[key]; const c = String(v?.value ?? '').trim().toUpperCase(); if (!c) continue; used.add(c); classOf.set(row.row.id, { code: c, own: !!v.own }); if (v.own) { if (!by.has(c)) by.set(c, []); by.get(c).push({ id: row.row.id, label: row.row.label, role: row.row.role }) } } }
+    cache.used = used; cache.usedBy = by; cache.classOf = classOf
   } catch { }
 }
 /// Klassen in Gebrauch: die im Baum zugewiesenen; ohne Zuweisung und bei kleinem Bestand (von Hand übernommen) alle
@@ -277,6 +277,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
       if (!have.includes(groupKey())) await api.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, groupKey()] }, 'PUT')
       await api.post(`/api/nodes/${encodeURIComponent(atId)}/attributes`, { attribute: k, locale: null, channel: null, value: code, row: null })
       cache.used.add(code); if (atId !== nodeId) store.toast(`✓ ${code} ab ${at.label}`, 'ok')
+      loadUsed()   // Klassen je Knoten für Baummenü und Band
       let n = 0
       for (const f of c.features) { if (!ops.hasAttr(attrKeyOf(f.code))) { say(`lege an ${++n}: ${featureText(f, locale)} …`); await ops.createFeature(f); await store.poll(true) } else await ops.createFeature(f) }
       await store.poll(true); await tree.load()
@@ -307,12 +308,14 @@ async function classDialog(nodeId, ctx, onDone = null) {
     }
     // Stand
     body.append(current
-      ? el('div', { style: 'margin-bottom:8px' }, el('div', { class: 'muted', style: 'font-size:12px' }, ownCode ? 'Klasse an diesem Knoten' : `Klasse geerbt von ${inherited.from}`), line(current, ownCode ? '' : 'geerbt'),
+      ? el('div', { style: 'margin-bottom:10px;padding:8px 10px;border:1px solid var(--pos);border-radius:6px;background:var(--accent-soft)' },
+          el('div', { style: 'display:flex;gap:10px;align-items:baseline;flex-wrap:wrap' }, el('span', { class: 'pos', style: 'font-weight:600' }, '✓ Klasse'), el('span', { class: 'mono', style: 'font-size:16px;font-weight:600' }, current), el('span', { style: 'font-size:16px' }, nameOf(cache.classes.get(current)?.name, locale) || ''), el('span', { class: 'muted' }, ownCode ? '· an diesem Knoten' : `· geerbt von ${inherited.from}`), el('span', { class: 'muted' }, `· ${cache.classes.get(current)?.features.length ?? '?'} Merkmale`)),
           el('div', { class: 'chips', style: 'margin-top:6px' },
             el('button', { class: 'primary', title: 'zum Knoten — das Band ⌗ ETIM zeigt Klasse, Attribute, Daten, Ausleitung', onclick: () => checkStep(current) }, '→ zum Knoten'), el('button', { style: 'display:none', onclick: () => run('bereite vor …', async () => { const c = cache.classes.get(current); for (const f of c.features) await ops.createFeature(f); await store.poll(true); await checkStep(current) }) }, '✓ Merkmale prüfen und füllen'),
             el('button', { onclick: () => { close(); ctx.go?.(`/tree/${nodeId}`) } }, `${ICON[row.role] ?? ''} Werte am Knoten`),
             el('span', { class: 'muted', style: 'font-size:12px' }, 'andere Klasse: unten wählen')))
-      : el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Noch keine Klasse — wählen:'))
+      : el('div', { style: 'margin-bottom:8px;padding:8px 10px;border:1px solid var(--warn);border-radius:6px' }, el('span', { class: 'warn', style: 'font-weight:600' }, 'Noch keine Klasse'), el('span', { class: 'muted' }, ' — unten wählen: Vorschlag, Umfeld, Suche oder Gruppen')))
+    if (current) body.append(el('div', { class: 'step-band', style: 'margin:4px 0' }, 'Andere Klasse wählen'))
     if (row.parent && tree.byId.get(row.parent)?.role === 'group' && tree.kids(row.parent).length > 1)
       body.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, `Tipp: die Klasse an ${ICON.group} ${tree.byId.get(row.parent).label} gilt für alle ${tree.kids(row.parent).length} darunter (vererbbar) — `, el('a', { href: '#', onclick: e => { e.preventDefault(); close(); classDialog(row.parent, ctx) } }, 'dort wählen')))
     // ✦ Vorschlag (KI, wenn da)
@@ -794,7 +797,9 @@ export default {
     { key: 'etim', label: 'ETIM', icon: '⌗', roles: ['group', 'product', 'variant'], mount: bandMount },   // Klasse · Attribute · Daten am Knoten (Taloan, 22.09.)
   ],
   nodeActions: [
-    { label: 'ETIM-Klasse', icon: '⌗', topic: 'classification', roles: ['group', 'product'], run(id, ctx) { return classDialog(id, ctx) } },   // Klasse wählen/ändern; danach zum Knoten (Band)
+    // die zugewiesene Klasse (auch geerbt) als eigener Punkt (Taloan, 22.09.): Klick → Knotenansicht, direkt in der Attributgruppe (Reiter oder Liste)
+    { label: row => { const c = cache.classOf.get(row.id); return c ? `${c.code} ${nameOf(cache.classes.get(c.code)?.name, 'de') || ''}`.trim() : null }, hint: row => { const c = cache.classOf.get(row.id); return c ? (c.own ? 'Klasse hier · Merkmale pflegen' : 'Klasse geerbt · Merkmale pflegen') : '' }, icon: '⌗', topic: 'classification', roles: ['group', 'product', 'variant'], run(id, ctx) { return ctx.go?.(`/tree/${encodeURIComponent(id)}?group=${encodeURIComponent(groupKey())}`) } },
+    { label: row => cache.classOf.get(row.id) ? 'ETIM-Klasse ändern (+)' : 'ETIM-Klasse (+)', hint: 'Klasse wählen — Vorschlag, Umfeld, Suche', icon: '⌗', topic: 'classification', roles: ['group', 'product'], run(id, ctx) { return classDialog(id, ctx) } },   // (+): auch zum Zufügen (Taloan, 22.09.)
   ],
   checks,
   featuresOf: etimFeatures,

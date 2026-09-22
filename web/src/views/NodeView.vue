@@ -7,7 +7,7 @@
 // Gruppen und Attribute; flach untereinander oder als Reiter. Jede Änderung ist
 // ein Befehl an den Server = ein Eintrag.
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
@@ -51,6 +51,14 @@ async function loadSource() {
   } catch { sourceRows.value = [] }
 }
 const router = useRouter()
+const route = useRoute()
+// ?group=<key> (Taloan, 22.09.: aus dem Baummenü direkt in die ETIM-Gruppe): bei Reitern der Reiter, bei der Liste hinscrollen
+async function focusGroup() {
+  const g = route.query.group; if (!g) return
+  await nextTick()
+  if (store.layout === 'tabs') { if (blocks.value.some(b => b.key === g)) tab.value = g }
+  else document.querySelector(`tbody[data-group="${g}"]`)?.scrollIntoView({ block: 'start' })
+}
 
 const node = ref(null)
 const rels = ref({ out: [], in: [] })   // Relationen dieses Knotens: ausgehend, eingehend
@@ -167,6 +175,7 @@ const blocks = computed(() => {
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
 })
 watch(blocks, b => { if (!b.some(x => x.key === tab.value)) tab.value = b[0]?.key ?? '' }, { immediate: true })
+watch([() => route.query.group, () => blocks.value.length], focusGroup)
 // Suche über das Sichtbare: Attributname/Key und die Werte in den gezeigten Spalten (eigen oder geerbt, Auswahl als Label)
 const attrFilter = computed({ get: () => store.attrFilter, set: v => { store.attrFilter = v } })
 const findBox = ref(null)
@@ -721,7 +730,7 @@ function cellMenu(e, def, col, block) {
             <th v-for="c in columns" :key="c.label" :class="{ master: c.locale === master }" :title="(c.locale ? (c.locale === master ? 'Mastersprache — Basis für alle anderen Sprachen' : 'Sprache ' + c.locale) : 'ohne Sprache — gilt für alle Sprachen') + (c.channel ? ' · Kanal ' + c.channel : ' · alle Kanäle')">{{ c.locale ?? '*' }}</th>
           </tr>
         </thead>
-        <tbody v-for="b in shownBlocks" :key="b.key">
+        <tbody v-for="b in shownBlocks" :key="b.key" :data-group="b.key">
           <tr class="group-row" :class="{ locked: !b.active }">
             <td :colspan="columns.length + 1">
               {{ b.label }}

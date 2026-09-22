@@ -431,9 +431,10 @@ async function contextMenu(e, r) {
   const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', classification: 'classification' }
   const byTopic = new Map()
   const add = (topic, item) => { if (!byTopic.has(topic)) byTopic.set(topic, []); byTopic.get(topic).push(item) }
-  for (const a of plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role)).map(a => ({ ...a, _label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label }))) {
+  // label(row) darf null liefern — der Eintrag gilt dann hier nicht (ETIM: „EC004718 Laptop“ nur mit Klasse); hint darf eine Funktion sein
+  for (const a of plugins.nodeActions.filter(a => !a.roles || a.roles.includes(r.role)).map(a => ({ ...a, _label: typeof a.label === 'function' ? a.label(r, below(r)) : a.label })).filter(a => a._label)) {
     const kind = plugins.list.find(p => p.key === a.key)?.manifest?.kind
-    add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { key: a.key, order: a.order, label: a._label, icon: a.icon || '⌁', hint: a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
+    add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { key: a.key, order: a.order, label: a._label, icon: a.icon || '⌁', hint: typeof a.hint === 'function' ? a.hint(r) : a.hint ?? a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
   // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und da (Taloan, 19.09.)
   if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: 'JSON-Rohdaten hierher importieren …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })

@@ -7,7 +7,7 @@
 // Vertrag eines Browser-Plugins (default export), alles optional:
 //   views:       [{ path: 'meine-ansicht', label, icon, hint?, topic?, mount(el, ctx) → unmount? | component }]   Ansicht — in der Übersicht ihres Themas
 //                (topic: import | export | datasheet | analysis | jobs | tools; sonst aus kind des Manifests); component = Vue-Komponente (gebaut)
-//   nodeActions: [{ label | label(row, below), icon, roles?: ['group','product'], topic?: 'import'|'export'|'datasheet'|'analysis'|'tools', run(nodeId, ctx) }]
+//   nodeActions: [{ label | label(row, below) (null = hier nicht), icon, hint? | hint(row), roles?: ['group','product'], topic?: 'import'|'export'|'datasheet'|'analysis'|'tools', run(nodeId, ctx) }]
 //                Kontextmenü des Baums, ein Untermenü je Thema (roles: nur an diesen; topic sonst aus kind des Manifests; below = „Subitems“)
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
