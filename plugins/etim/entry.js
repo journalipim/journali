@@ -510,7 +510,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
         const below = []; const walk = id => { for (const k of tree.kids(id)) { if ((k.groups ?? '').split(',').includes(groupKey())) below.push(k); walk(k.id) } }; walk(nodeId)
         for (const k of below) await api.post(`/api/nodes/${encodeURIComponent(k.id)}/groups`, { groups: (k.groups ?? '').split(',').filter(x => x && x !== groupKey()) }, 'PUT')
         await store.poll(true); await tree.load?.()
-        store.toast(`✓ ${groupKey()} ab ${S.row.label}${below.length ? ` · ${below.length} darunter abgenommen` : ''}`, 'ok'); again()
+        store.toast(`✓ ${groupKey()} ab ${S.row.label}${below.length ? ` · ${below.length} Subitems bereinigt` : ''}`, 'ok'); again()
       } catch (e) { store.toast(e.message) }
     } }, S.groupExists ? `⌗ Gruppe ${groupKey()} anhängen` : `⌗ Gruppe ${groupKey()} anlegen und anhängen`) : null
     if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(...[el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), assignBtn, clearBtn, attachBtnEl].filter(Boolean)); return }
