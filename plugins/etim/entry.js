@@ -34,7 +34,10 @@ async function loadUsed() {
 const usedClasses = () => { const out = [...cache.used].map(c => cache.classes.get(c)).filter(Boolean); return out.length || cache.classes.size > 50 ? out : [...cache.classes.values()] }
 // Schlüssel je Freigabe: Nummer und Ausführung (Taloan, 22.09.: ETIM 9 gibt es sechsmal — ALL-SECTORS, HVACPLUMBING, metrisch, imperial …)
 // Herkunft eines Umfeld-Vorschlags in Worten (Taloan, 22.09.: „was hat denn ‚darunter‘ da zu suchen?“)
-const whyText = (why, n) => why === 'Geschwister' ? `an ${n} Geschwister${n === 1 ? '' : 'n'}` : why === 'darunter' ? `an ${n} Knoten im Teilbaum` : why.startsWith('am Pfad: ') ? `am Pfad, an ${why.slice(9)}` : `${why}: ${n}`
+const whyText = (why, n) => why === 'Geschwister' ? `${n} Geschwister${n === 1 ? '' : 'n'} ${n === 1 ? 'ist' : 'sind'} diese Klasse zugewiesen`
+  : why === 'darunter' ? `${n} Knoten im Teilbaum ${n === 1 ? 'ist' : 'sind'} diese Klasse zugewiesen`
+  : why.startsWith('am Pfad: ') ? `${why.slice(9)} am Pfad ist diese Klasse zugewiesen — sie erbt schon hierher`
+  : `${why}: ${n}`
 const classKeyOf = code => `class:${cache.releaseKey ?? cache.version ?? '0'}:${code}`
 /// Attribut eines ETIM-Attributs: Zuordnung (map: Schlüssel oder { to, steps }), sonst die der Datenanalyse (mapping), sonst das eigene ef…
 const attrKeyOf = code => { if (cache.map[code]) return mapEntry(cache.map, code).key; const m = cache.mapping?.[code.toLowerCase()]; return m?.to && !/ähnlich|vielleicht/.test(m.why ?? '') ? m.to : code.toLowerCase() }
@@ -435,17 +438,16 @@ async function classDialog(nodeId, ctx, onDone = null) {
         } catch (e) { suggest.innerHTML = ''; suggest.append(el('span', { class: 'neg' }, '✗ ' + e.message)) }
       })()
     } else suggest.append(el('div', { class: 'muted', style: 'font-size:12px' }, '✦ Vorschläge aus Name und Pfad brauchen einen KI-Schlüssel (⚙ Einstellungen)'))
-    body.append(suggest)
+    body.append(el('div', { class: 'step-band', style: 'margin:6px 0 2px' }, 'Empfehlung', el('span', { class: 'muted' }, ' · aus dem Bestand und, wenn ein Schlüssel da ist, von der KI — anklicken übernimmt die Klasse')), suggest)
     // Umfeld: Klassen an Geschwistern und darunter
-    const env = el('div', { style: 'font-size:12px;margin:4px 0' }, el('span', { class: 'muted' }, 'Umfeld …')); body.append(env)
+    const env = el('div', { style: 'font-size:12px;margin:0 0 4px' }, el('span', { class: 'muted' }, 'lese den Bestand …')); body.append(env)
     ;(async () => {
       try {
         const counts = new Map(); const add = (c, why) => { if (!c) return; const k = String(c).toUpperCase(); if (!counts.has(k)) counts.set(k, new Map()); counts.get(k).set(why, (counts.get(k).get(why) ?? 0) + 1) }
         if (row.parent) { const t = await api.get(`/api/nodes/${encodeURIComponent(row.parent)}/table?attributes=${key}`); for (const r of t.rows) if (r.row.id !== row.id) add(r.values[key]?.value, 'Geschwister') }
         const below = await api.get(`/api/nodes/${encodeURIComponent(row.id)}/table?deep=true&attributes=${key}`); for (const r of below.rows) add(r.values[key]?.value, 'darunter')
         env.innerHTML = ''
-        if (!counts.size) { env.textContent = 'Im Umfeld ist keine Klasse gesetzt: weder an Geschwistern noch darunter.'; return }
-        env.append(el('div', { class: 'step-band', style: 'margin:2px 0' }, 'Umfeld', el('span', { class: 'muted' }, ' · Klassen an Geschwistern und darunter — anklicken übernimmt sie')))
+        if (!counts.size) { env.innerHTML = ''; env.append(el('span', { class: 'muted' }, 'Im Umfeld ist noch keine Klasse gesetzt: weder an Geschwistern noch im Teilbaum.')); return }
         for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => whyText(w, n)).join(' · ')))
       } catch (e) { env.textContent = 'Umfeld: ' + e.message }
     })()
