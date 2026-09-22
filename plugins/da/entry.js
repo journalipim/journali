@@ -93,7 +93,7 @@ async function mount(root, ctx) {
     const tb = el('tbody'); tbl.append(tb)
     for (const x of rows.slice(0, 2000)) tb.append(el('tr', {}, el('td', { class: x.severity === 'error' ? 'neg' : x.severity === 'warn' ? 'warn' : 'muted' }, sev(x.severity)),
       el('td', {}, el('a', { href: `/tree/${x.node.id}`, onclick: e => { e.preventDefault(); ctx.go?.(`/tree/${x.node.id}`) ?? (location.href = `/tree/${x.node.id}`) }, title: x.node.id }, `${x.node.role === 'variant' ? '◆' : x.node.role === 'product' ? '▦' : '▣'} ${x.node.label}`)),
-      el('td', { class: 'mono muted' }, x.node.sku ?? ''), el('td', { class: 'muted' }, x.locale), el('td', { class: 'mono' }, x.attribute ?? ''), el('td', {}, x.message), el('td', { class: 'muted' }, x.label)))
+      el('td', { class: 'mono muted' }, Object.values(x.node.keys ?? {}).join(' · ')), el('td', { class: 'muted' }, x.locale), el('td', { class: 'mono' }, x.attribute ?? ''), el('td', { title: x.title ?? '' }, x.message), el('td', { class: 'muted' }, x.label)))   // title: Erklärung eines Funds im Tooltip, nicht in der Zeile
     if (rows.length > 2000) tb.append(el('tr', {}, el('td', { colspan: '7', class: 'muted' }, `… ${rows.length - 2000} weitere — filtern`)))
     list.append(tbl)
     if (!rows.length) list.append(el('div', { class: 'empty' }, f.length ? 'nichts in diesem Filter' : '✓ keine Funde'))

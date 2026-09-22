@@ -185,7 +185,8 @@ export function checkNode({ values, columns, classes, cfg }) {
   const noCol = cls.features.filter(f => !columns.some(c => c.key === mapEntry(cfg.map, f.code).key))
   const mapped = cls.features.length - noCol.length
   const names = l => l.slice(0, 4).map(f => `${f.code} ${nameOf(f.name, cfg.locale)} (${mapEntry(cfg.map, f.code).key})`).join(', ') + (l.length > 4 ? ` … +${l.length - 4}` : '')
-  if (noCol.length) out.push({ attribute: cfg.classAttr, message: `${noCol.length} von ${cls.features.length} Merkmalen ohne Spalte hier — kein Attribut im Modell oder gilt an diesem Knoten nicht: ${names(noCol)}`, severity: 'info' })
-  if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} Merkmalen leer (${filled} gefüllt) — gefüllt heisst: ein Wert, den das Merkmal lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat`, severity: 'info' })
+  // kurz in der Zeile, die Erklärung einmal im Tooltip (title) — nicht je Zeile (Taloan, 22.09.: „ist nicht dein Ernst“)
+  if (noCol.length) out.push({ attribute: cfg.classAttr, message: `${noCol.length} Merkmal${noCol.length === 1 ? '' : 'e'} ohne Attribut hier: ${names(noCol)}`, title: 'kein Attribut im Modell, oder das Attribut gilt an diesem Knoten nicht (Gruppe nicht am Pfad, Rolle)', severity: 'info' })
+  if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} leer · ${filled} gefüllt`, title: 'gefüllt = ein Wert, den das Merkmal lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat', severity: 'info' })
   return out
 }
