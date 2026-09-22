@@ -1061,11 +1061,13 @@ den Tasker oder direkt vom Assistenten (stdio). Zwei Betriebsarten:
 | `modell` | Attribute, Gruppen, Sprachen, Kanäle, Status — damit der Assistent die Begriffe kennt | `GET /api/model` |
 | `ausleitung` | was ein Publikationsbaum gerade ausleitet (Kanal, Markt, Freigabe) | `GET /api/pub/{id}/export` |
 
-Schreiben bleibt zunächst draussen. Ein Assistent, der Werte ändert, braucht
-eine eigene Entscheidung (welche Rolle, welcher Umfang, wie sichtbar im
-Journal) — und die Nutzung zählt dann als Tagesgeschäft. Wenn Schreiben kommt,
-dann als eigene Werkzeuge (`wert_setzen`, `klasse_zuweisen`) mit eigener
-Rolle, damit man im Journal sieht, dass es die KI war.
+**Nur lesen — entschieden (Taloan, 22.09.2026: „MCP als readonly, sonst ist das
+doch zu krass“).** Der Dienst schreibt nicht. Ein Assistent, der selbst Werte
+setzt, erzeugt Einträge, die niemand angefordert hat; Vertrauen entsteht
+zuerst am Lesen. Nachrüstbar bleibt es jederzeit, weil jeder Eintrag ohnehin
+seinen Akteur trägt: Schreiben käme dann als eigene Werkzeuge
+(`wert_setzen`, `klasse_zuweisen`) mit eigener Rolle, damit im Journal steht,
+dass es die KI war — und es zählte als Tagesgeschäft.
 
 **Was noch zu klären ist.** Wie sich der Benutzer im Assistenten anmeldet
 (Token aus den Einstellungen kopieren ist der einfache Weg, OAuth der schöne);
