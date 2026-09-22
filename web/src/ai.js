@@ -12,13 +12,22 @@ const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'
 export const PROVIDERS = [
   {
     key: 'anthropic', label: 'Anthropic', placeholder: 'sk-ant-…', endpoint: 'api.anthropic.com',
-    models: ['claude-sonnet-5', 'claude-opus-5', 'claude-haiku-4-5-20251001'],
-    hint: 'sonnet: schnell und günstig für Vorschläge; opus: gründlicher',
+    // Stand 22.09.2026: Claude 5 (Fable 5.1, Opus 5, Sonnet 5) und Haiku 4.5 — Kurzbezeichnungen ohne Datum
+    models: ['claude-sonnet-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-haiku-4-5', 'claude-haiku-4-5-20251001'],
+    modelLabels: {
+      'claude-sonnet-5': 'Sonnet 5 — schnell, günstig (Vorschläge, Zuordnung)',
+      'claude-opus-5': 'Opus 5 — gründlich (schwierige Fälle, Recherche)',
+      'claude-fable-5-1': 'Fable 5.1 — stärkstes Modell, teuer',
+      'claude-haiku-4-5': 'Haiku 4.5 — am günstigsten, kurze Aufgaben',
+      'claude-haiku-4-5-20251001': 'Haiku 4.5 (alte Kennung)',
+    },
+    hint: 'Sonnet 5 für Vorschläge, Opus 5 für schwierige Fälle, Haiku 4.5 für Masse, Fable 5.1 für das Schwerste',
     async call({ key, model, system, user, maxTokens, temperature, web, maxSearches }) {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model, max_tokens: maxTokens, temperature, system: system || undefined, messages: [{ role: 'user', content: user }],
+        // temperature gibt es bei Claude 5 und Opus 4.7/4.8 nicht mehr (die API lehnt es ab bzw. warnt) — nur an ältere Modelle schicken
+        body: JSON.stringify({ model, max_tokens: maxTokens, ...(/^claude-(opus-5|sonnet-5|fable-5|mythos-5|opus-4-[78])/.test(model) ? {} : { temperature }), system: system || undefined, messages: [{ role: 'user', content: user }],
           ...(web ? { tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: maxSearches }] } : {}) }),
       })
       const data = await res.json().catch(() => null)
