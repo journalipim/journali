@@ -1025,6 +1025,60 @@ Definitionen ins Journal.
   SKU unter Produkt. Geerbte Werte stehen kursiv mit Herkunft im Tooltip
   („von X-Series").
 
+## 31. MCP — der Assistent spricht mit dem PIM (Entwurf; Taloan, 22.09.2026: „warum können wir keinen RAG-Service anbieten? oder einen MCP-Serverdienst?“)
+
+Der Export einer Wissensbasis (Plugin `rag`) liefert Dateien für fremde
+Systeme. Das Gegenstück fehlt: ein Assistent, der **live** fragt statt eine
+Kopie zu lesen. Genau das ist MCP (Model Context Protocol): der Assistent
+bekommt keine Dateien, sondern **Werkzeuge**, und ruft sie auf, während er
+antwortet.
+
+**Warum das besser ist als der Export.** Immer aktuell — kein Lauf, kein
+veralteter Bestand. Die Rechte gelten, weil jeder Aufruf mit dem Token eines
+Benutzers kommt (`Auth.Needed` prüft wie bei jeder Anfrage). Und jede Antwort
+kann mitliefern, woher sie stammt: Journalnummer, freigegebene Version,
+Beleg am Wert — das ist der Unterschied zwischen „die KI behauptet" und „die
+KI zitiert".
+
+**Bauform.** Ein Prozess-Plugin `mcp` (`runs: process`), wie die Jobs: eigener
+Prozess, spricht nur über `/api`, nie in den Serverprozess hinein. Start über
+den Tasker oder direkt vom Assistenten (stdio). Zwei Betriebsarten:
+
+- **stdio** — der Assistent startet den Prozess selbst (Claude Desktop, IDE).
+  Zugang über `JOURNALI_TOKEN` (API-Token des Benutzers) und `JOURNALI`-URL.
+- **HTTP/SSE** — ein laufender Dienst im Container für Assistenten, die nicht
+  selbst starten können; dieselbe Tokenprüfung, ein Port mehr.
+
+**Die Werkzeuge** (jedes eine dünne Schicht über einem vorhandenen Endpunkt):
+
+| Werkzeug | was es tut | dahinter |
+|---|---|---|
+| `suche` | Knoten nach Text und Bedingungen (`status:`, `attr:`, `empty:`, `under:`) | `GET /api/tree` + Query-Sprache der Suche |
+| `knoten` | ein Knoten mit Attributen je Sprache und Kanal, Herkunft geerbter Werte | `GET /api/nodes/{id}` |
+| `tabelle` | ein Teilbaum als Tabelle (Spalten wählbar) — für „vergleiche die Varianten" | `GET /api/nodes/{id}/table` |
+| `version` | freigegebene Version eines Produkts mit ihren Belegen | `GET /api/nodes/{id}/versions` |
+| `verlauf` | wer hat wann welchen Wert gesetzt (mit Notiz und Stapel) | `GET /api/streams/{id}` |
+| `modell` | Attribute, Gruppen, Sprachen, Kanäle, Status — damit der Assistent die Begriffe kennt | `GET /api/model` |
+| `ausleitung` | was ein Publikationsbaum gerade ausleitet (Kanal, Markt, Freigabe) | `GET /api/pub/{id}/export` |
+
+Schreiben bleibt zunächst draussen. Ein Assistent, der Werte ändert, braucht
+eine eigene Entscheidung (welche Rolle, welcher Umfang, wie sichtbar im
+Journal) — und die Nutzung zählt dann als Tagesgeschäft. Wenn Schreiben kommt,
+dann als eigene Werkzeuge (`wert_setzen`, `klasse_zuweisen`) mit eigener
+Rolle, damit man im Journal sieht, dass es die KI war.
+
+**Was noch zu klären ist.** Wie sich der Benutzer im Assistenten anmeldet
+(Token aus den Einstellungen kopieren ist der einfache Weg, OAuth der schöne);
+wie gross eine Antwort werden darf (ein Teilbaum mit 5 000 Varianten sprengt
+jedes Kontextfenster — also Seitenweise und harte Obergrenzen); und ob der
+Dienst im selben Container läuft oder als eigener.
+
+**Der Vektorindex** (semantische Suche über `pgvector`) ist der zweite Schritt
+und nur dort nötig, wo jemand unscharf sucht („welche Klebstoffe halten
+Hitze aus?"). Für „hol mir Produkt X" ist MCP genauer, weil es exakt
+antwortet statt ähnlich. Beim Nachziehen hilft das Journal: der Index merkt
+sich die Journalnummer und bettet nur ein, was seitdem geschrieben wurde.
+
 ## Reihenfolge
 
 1. ~~Attribute, Wertelisten, Familien im Journal + Modell-Ansicht~~ 16.09.2026:
