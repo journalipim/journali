@@ -275,7 +275,6 @@ const attrSet = (col, v) => put(`/api/model/attributes/${curAttr.value.key}`, at
 // Definition (so will es die API) — aber verändert wird nur das eine Feld, den Rest nimmt attrWith unverändert mit.
 const bulkBusy = ref('')
 const bulkAttrs = computed(() => (model.value?.attributes ?? []).filter(x => sel.value.has(x.key)))
-const bulkNumeric = computed(() => bulkAttrs.value.length > 0 && bulkAttrs.value.every(a => a.type === 'decimal' || a.type === 'integer'))
 async function bulkApply({ kind, value }) {
   const list = bulkAttrs.value
   if (!list.length || bulkBusy.value) return
@@ -283,7 +282,7 @@ async function bulkApply({ kind, value }) {
   for (const [i, a] of list.entries()) {
     bulkBusy.value = `${i + 1} von ${list.length} …`
     // Ebenen: alle drei = keine Einschränkung (null); sonst die gewählten
-    const body = kind === 'levels' ? { ...a, levels: value.length === roles.length ? null : [...value] } : attrWith(a, kind, value)
+    const body = attrWith(a, kind, value)   // kind ist die Spalte: group, lv_<rolle>, inheritable, locale, channel, multiple, unit
     try { await put(`/api/model/attributes/${a.key}`, body); ok++ } catch (e) { errs.push(`${a.key}: ${e.message}`) }
   }
   bulkBusy.value = ''
@@ -519,8 +518,8 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <div class="toolbar"><h1>{{ count }} {{ sec.label }} gewählt</h1><span class="grow" /><button @click="sel = new Set()">Keine</button></div>
       <div class="scroll">
         <div class="section">
-          <AttrBulk v-if="section === 'attributes'" :count="count" :groups="model.groups" :units="model.units" :roles="roles"
-            :role-label="roleLabel" :numeric-only="bulkNumeric" :busy="bulkBusy" @apply="bulkApply" />
+          <AttrBulk v-if="section === 'attributes'" :attrs="bulkAttrs" :groups="model.groups" :units="model.units" :roles="roles"
+            :role-label="roleLabel" :busy="bulkBusy" @apply="bulkApply" />
           <div class="chips" style="margin-top:8px"><span v-for="k in sel" :key="k" class="chip mono">{{ k }}</span></div>
         </div>
       </div>

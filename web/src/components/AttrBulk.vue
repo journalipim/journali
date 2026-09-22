@@ -1,24 +1,40 @@
 <script setup>
 // Massenbearbeitung von Attributen (Taloan, 22.09.2026: „jetzt wäre natürlich schön, wenn ich Massenbearbeitung von
-// Attributen machen könnte“): je Zeile eine Eigenschaft, ein Zielwert, ein Knopf „→ n“. Was nicht angefasst wird,
-// bleibt wie es ist — die Leiste setzt nie ganze Definitionen, sondern immer nur die eine Eigenschaft.
-// Die Komponente entscheidet nichts selbst: sie meldet { kind, value }, geschrieben wird draussen (attrWith).
+// Attributen machen könnte“): je Zeile eine Eigenschaft. Jede Zeile zeigt zuerst den **Stand der Auswahl** — alle an,
+// alle aus oder gemischt mit Zahl (Taloan: „wo Werte gemischt sind, sollte das angezeigt werden“) — und schaltet beim
+// Klick durch: gemischt → alle an → alle aus → alle an. Geschrieben wird draussen; die Leiste meldet nur { kind, value }.
 import { ref, computed } from 'vue'
 
 const props = defineProps({
-  count: Number,            // wie viele Attribute gewählt sind
+  attrs: { type: Array, default: () => [] },   // die gewählten Definitionen — daraus kommt der Stand
   groups: { type: Array, default: () => [] },
   units: { type: Array, default: () => [] },
   roles: { type: Array, default: () => ['group', 'product', 'variant'] },
   roleLabel: { type: Object, default: () => ({}) },
-  numericOnly: Boolean,     // alle Gewählten sind Zahlen — nur dann ist die Einheit sinnvoll
   busy: String,
 })
 const emit = defineEmits(['apply'])
 
-const group = ref(''), unit = ref(''), levels = ref(new Set(props.roles))
-const toggleLevel = r => { const s = new Set(levels.value); s.has(r) ? s.delete(r) : s.add(r); levels.value = s }
-const levelsText = computed(() => [...props.roles].filter(r => levels.value.has(r)).map(r => props.roleLabel[r] ?? r).join(' · ') || 'keine')
+const count = computed(() => props.attrs.length)
+const group = ref(''), unit = ref('')
+const numericOnly = computed(() => count.value > 0 && props.attrs.every(a => a.type === 'decimal' || a.type === 'integer'))
+
+const FLAGS = [
+  ['inheritable', '↓ vererbbar', 'Wert gilt an den Knoten darunter weiter', a => !!a.inheritable],
+  ['locale', '🗣 sprachabhängig', 'je Sprache ein eigener Wert', a => !!(a.perLocale ?? (a.axes ?? []).includes('locale'))],
+  ['channel', '⇶ kanalabhängig', 'je Kanal ein eigener Wert', a => !!(a.perChannel ?? (a.axes ?? []).includes('channel'))],
+  ['multiple', '≣ mehrwertig', 'mehrere Werte je Zelle', a => !!a.multiple],
+]
+/// Stand einer Eigenschaft über die Auswahl: alle an, alle aus oder gemischt (mit Zahl)
+function stateOf(has) {
+  const on = props.attrs.filter(has).length
+  return { on, total: count.value, all: count.value > 0 && on === count.value, none: on === 0, mixed: on > 0 && on < count.value }
+}
+const flagState = computed(() => Object.fromEntries(FLAGS.map(([key,,, has]) => [key, stateOf(has)])))
+const levelState = computed(() => Object.fromEntries(props.roles.map(r => [r, stateOf(a => (a.levels ?? props.roles).includes(r))])))
+const stateText = s => s.all ? 'alle an' : s.none ? 'alle aus' : `gemischt · ${s.on} von ${s.total} an`
+/// Klick schaltet durch: gemischt oder aus → alle an; alle an → alle aus
+const nextOf = s => !s.all
 const go = (kind, value) => emit('apply', { kind, value })
 </script>
 
@@ -26,36 +42,45 @@ const go = (kind, value) => emit('apply', { kind, value })
   <div class="bulk">
     <div class="row">
       <span class="lbl">▤ Gruppe</span>
-      <select v-model="group" style="width:260px" title="Attributgruppe der Gewählten setzen">
-        <option value="">wählen …</option>
-        <option v-for="g in groups" :key="g.key" :value="g.key">{{ g.label?.de || g.key }} · {{ g.key }}</option>
-      </select>
+      <span class="picks">
+        <select v-model="group" style="width:260px" title="Attributgruppe der Gewählten setzen">
+          <option value="">wählen …</option>
+          <option v-for="g in groups" :key="g.key" :value="g.key">{{ g.label?.de || g.key }} · {{ g.key }}</option>
+        </select>
+        <span class="muted state">{{ [...new Set(attrs.map(a => a.group || '—'))].slice(0, 3).join(' · ') }}{{ new Set(attrs.map(a => a.group || '—')).size > 3 ? ' …' : '' }}</span>
+      </span>
       <button class="primary" :disabled="!group || !!busy" @click="go('group', group)" :title="`Gruppe an ${count} Attributen setzen`">→ {{ count }}</button>
     </div>
 
     <div class="row">
       <span class="lbl" title="an welchen Knotentypen das Attribut gepflegt werden darf">▣▦◆ Ebenen</span>
       <span class="picks">
-        <span v-for="r in roles" :key="r" class="view-chip" :class="{ on: levels.has(r) }" @click="toggleLevel(r)"
-          :title="`${roleLabel[r] ?? r} ${levels.has(r) ? 'herausnehmen' : 'dazunehmen'}`">{{ roleLabel[r] ?? r }}</span>
+        <span v-for="r in roles" :key="r" class="view-chip" :class="{ on: levelState[r].all, mixed: levelState[r].mixed }"
+          @click="!busy && go('lv_' + r, nextOf(levelState[r]))"
+          :title="`${roleLabel[r] ?? r}: ${stateText(levelState[r])} · Klick setzt alle ${nextOf(levelState[r]) ? 'an' : 'aus'}`">
+          {{ roleLabel[r] ?? r }}<span v-if="levelState[r].mixed" class="mono"> {{ levelState[r].on }}/{{ levelState[r].total }}</span>
+        </span>
       </span>
-      <button class="primary" :disabled="!levels.size || !!busy" @click="go('levels', [...roles].filter(r => levels.has(r)))" :title="`Ebenen an ${count} Attributen setzen: ${levelsText}`">→ {{ count }}</button>
     </div>
 
-    <div class="row" v-for="f in [['inheritable', '↓ vererbbar', 'Wert gilt an den Knoten darunter weiter'], ['locale', '🗣 sprachabhängig', 'je Sprache ein eigener Wert'], ['channel', '⇶ kanalabhängig', 'je Kanal ein eigener Wert'], ['multiple', '≣ mehrwertig', 'mehrere Werte je Zelle']]" :key="f[0]">
-      <span class="lbl" :title="f[2]">{{ f[1] }}</span>
+    <div class="row" v-for="[key, label, hint] in FLAGS" :key="key">
+      <span class="lbl" :title="hint">{{ label }}</span>
       <span class="picks">
-        <button class="x" :disabled="!!busy" @click="go(f[0], true)" :title="`${f[2]} — an ${count} Attributen einschalten`">✓ an</button>
-        <button class="x" :disabled="!!busy" @click="go(f[0], false)" :title="`${f[2]} — an ${count} Attributen ausschalten`">✗ aus</button>
+        <button class="x" :class="{ on: flagState[key].all }" :disabled="!!busy" @click="go(key, true)" :title="`${hint} — an allen ${count} einschalten`">✓ an</button>
+        <button class="x" :class="{ on: flagState[key].none }" :disabled="!!busy" @click="go(key, false)" :title="`${hint} — an allen ${count} ausschalten`">✗ aus</button>
+        <span class="muted state" :class="{ warn: flagState[key].mixed }">{{ stateText(flagState[key]) }}</span>
       </span>
     </div>
 
     <div class="row" v-if="numericOnly">
       <span class="lbl">⚖ Einheit</span>
-      <select v-model="unit" style="width:260px" title="Einheit der Gewählten setzen (nur Zahlen)">
-        <option value="">wählen …</option>
-        <option v-for="u in units" :key="u.key" :value="u.key">{{ u.label?.de || u.key }} · {{ u.quantity }}</option>
-      </select>
+      <span class="picks">
+        <select v-model="unit" style="width:260px" title="Einheit der Gewählten setzen (nur Zahlen)">
+          <option value="">wählen …</option>
+          <option v-for="u in units" :key="u.key" :value="u.key">{{ u.label?.de || u.key }} · {{ u.quantity }}</option>
+        </select>
+        <span class="muted state">{{ [...new Set(attrs.map(a => a.unit || '—'))].slice(0, 3).join(' · ') }}</span>
+      </span>
       <button class="primary" :disabled="!unit || !!busy" @click="go('unit', unit)" :title="`Einheit an ${count} Attributen setzen`">→ {{ count }}</button>
     </div>
 
@@ -65,9 +90,14 @@ const go = (kind, value) => emit('apply', { kind, value })
 
 <style scoped>
 /* feste Spalten: die Zeilen stehen untereinander, nichts springt (Taloan, 22.09.) */
-.bulk { max-width: 640px; }
+.bulk { max-width: 720px; }
 .row { display: flex; align-items: center; gap: 8px; padding: 3px 0; min-width: 0; }
 .lbl { width: 150px; flex: none; font-size: 12px; }
-.picks { display: flex; gap: 4px; flex: 1; min-width: 0; }
+.picks { display: flex; gap: 6px; align-items: center; flex: 1; min-width: 0; }
 .row > button { flex: 0 0 auto; }
+.state { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.state.warn { color: var(--warn); }
+/* gemischt: halb gefüllt — man sieht sofort, dass nicht alle gleich stehen */
+.view-chip.mixed { border-style: dashed; background: linear-gradient(90deg, var(--accent-soft) 50%, transparent 50%); }
+button.x.on { color: var(--accent); font-weight: 600; }
 </style>
