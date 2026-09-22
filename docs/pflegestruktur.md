@@ -829,6 +829,66 @@ ist noch nicht als Prüfung gebaut; ETIM xChange wäre eine zweite Vorlage auf d
 Umwandlungskette; `web/src/transform.js` reicht sie durch, Jobs importieren sie relativ
 (`../table/transform.mjs`) — `plugins/` ist im Container ein Bind-Mount, `web/src` nicht.
 
+## 30. Freigabesteuerung — Modellteil gebaut (Taloan, 22.09.2026: „ich möchte dass das Freigabe Monitoring heisst — oder besser noch Freigabesteuerung“)
+
+Die Frage dahinter (Taloan): „wenn ich die Beschreibung ändere und die Redaktion hatte vorher
+schon eine Freigabe — darf das überhaupt dann noch auf freigegeben stehen?“ Drei Hebel, die
+man nicht verwechseln darf:
+
+- **Stand** — was geht hinaus (der Wert selbst).
+- **Freigabe** — darf es hinaus (Zustand am Knoten je Kanal).
+- **Workflow** — wer muss noch hinsehen (Stufen und Übergänge).
+
+Die Freigabesteuerung sagt nur das eine: **zählt diese Wertänderung als Eingriff, der Prüfung
+und Freigabe berührt?** Was dann geschieht, sagt der Workflow — die beiden bleiben getrennt.
+
+**Gestellt wird sie je Attributgruppe, überschrieben je Attribut** (Taloan: „Man sollte bei jeder
+Attributgruppe einstellen können … und je Attribut überschreiben“):
+
+| Stufe | Werte | Bedeutung |
+|---|---|---|
+| Gruppe | `auto` (leer) · `always` · `never` | automatisch = zählt, wenn die Gruppe mindestens ein Pflichtfeld hat |
+| Attribut | leer · `always` · `never` | leer = wie die Gruppe; `auto` gibt es nur an der Gruppe |
+
+Gebaut: `ReleaseWatch` (Konstanten) in `Types.cs`, Feld `releaseWatch` an
+`AttributeGroupDefinition` und `AttributeDefinition`, `ModelCatalog.Watched(attribut)` als die
+eine Auskunft (Attribut schlägt Gruppe, sonst Gruppe, sonst Pflichtfeld-Automatik), Prüfung der
+Werte in `ModelApi`, Zeile „⚑ Freigabesteuerung“ in der Modellpflege an Gruppe und Attribut,
+Kennzeichen ⚑/⚐ in den Listen, `ReleaseWatchTests`.
+
+**Die Wirkung ist noch nicht gebaut.** Entschieden ist (Taloan, 22.09.): zählt die Änderung, wird
+die Freigabe zurückgenommen und der Zustand fällt auf die Stufe vor der Freigabe zurück. Offen
+bleiben die Quelle der Änderung (Importprofil gegen Mensch — je Profil einstellbar) und die
+**Rollenregel** (Taloan): kein Zurückstufen, wenn die ändernde Rolle den Weg von der
+Rückfallstufe bis zur Freigabe ohnehin allein gehen könnte — das Vier-Augen-Prinzip fällt dann
+aus dem Graphen heraus, statt als zweite Regel danebenzustehen.
+
+### Übersetzung — offene Frage, Praxis als Vorschlag
+
+Taloan, 22.09.: „Wann gibt man eine Übersetzung in den Workflow und nach welcher Menge der
+Änderungen? … Will ein französischer Übersetzer 3000 Übersetzungsaufträge kriegen mit jeweils
+einem Wort?“ **Aus Erfahrung, nicht aus diesem Code belegt** (TMS-Welt: Trados, memoQ,
+Smartling, Phrase):
+
+1. **Die Quelle stuft die Zielsprache nie zurück.** Ändert sich der Mastertext, bekommt die
+   Übersetzung einen eigenen Stand: *aktuell · veraltet · in Arbeit*. Die Freigabe der
+   Zielsprache bleibt, was sie ist — die Veröffentlichung entscheidet je Kanal, ob eine
+   veraltete Übersetzung mit hinausgeht, auf die Mastersprache zurückfällt oder sperrt.
+2. **Gemessen wird am Text, nicht am Ereignis.** Vor dem Vergleich normalisieren (Leerraum,
+   Anführungszeichen, Interpunktion); der Abstand entscheidet: unter der Bagatellgrenze nur
+   „veraltet“ markieren ohne Auftrag, darüber Auftrag. Im TMS ist das der Fuzzy-Match: 100 %
+   kein Auftrag, 75–99 % Anpassung, darunter Neuübersetzung.
+3. **Der Redakteur hat ein Häkchen „unwesentliche Änderung“.** Jede Automatik liegt in beide
+   Richtungen falsch; das Häkchen ist der wirksamste Hebel und kostet nichts.
+4. **Gesammelt statt sofort.** Bedarf geht in eine Warteschlange je Sprache; ein Paket entsteht
+   nach Zeit (täglich/wöchentlich), Menge (ab n Wörtern) oder Ereignis (Katalogschluss) — das
+   ist genau ein Job im `tasker`, kein eigener Mechanismus.
+5. **Nur übersetzungsrelevante Attribute** zählen (`perLocale`), und auch dort gilt die
+   Freigabesteuerung — `never` an einem Attribut heisst auch: kein Übersetzungsbedarf.
+
+Der Übersetzer bekommt zum Auftrag immer drei Dinge: alte Quelle, neue Quelle, bisherige
+Übersetzung. Entschieden ist davon nichts — Taloans Wort fehlt.
+
 ## Eintragstypen, die dazukommen
 
 | Strom | Typ | Nutzdaten |

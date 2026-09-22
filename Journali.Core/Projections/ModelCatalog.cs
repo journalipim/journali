@@ -39,6 +39,20 @@ public sealed class ModelCatalog : IProjection
     public string? MasterLocale { get; private set; }
     /// <summary>Der Masterkanal (settings:master_channel); null, bis gesät.</summary>
     public string? MasterChannel { get; private set; }
+    /// <summary>Freigabesteuerung (Taloan, 22.09.2026): zählt eine Änderung dieses Attributs als Eingriff in Prüfung und Freigabe?
+    /// Attribut schlägt Gruppe; „auto“ an der Gruppe heisst: ja, wenn die Gruppe ein Pflichtfeld hat.</summary>
+    public bool Watched(string attribute)
+    {
+        if (!Attributes.TryGetValue(attribute, out var a)) return false;
+        if (a.ReleaseWatch == Entries.ReleaseWatch.Always) return true;
+        if (a.ReleaseWatch == Entries.ReleaseWatch.Never) return false;
+        var g = a.Group is { } gk ? Groups.GetValueOrDefault(gk) : null;
+        if (g is null) return false;                                   // ohne Gruppe gilt das Attribut nirgends
+        if (g.ReleaseWatch == Entries.ReleaseWatch.Always) return true;
+        if (g.ReleaseWatch == Entries.ReleaseWatch.Never) return false;
+        return AttributesOf(g.Key).Any(x => x.Required is { Count: > 0 });   // auto: die Gruppe trägt Pflichtwerte
+    }
+
     /// <summary>Die Schlüsselattribute (unique), nach Schlüssel geordnet — Taloan, 21.09.2026: beliebig viele, jedes für sich eindeutig.</summary>
     public IEnumerable<AttributeDefinition> UniqueAttributes => Attributes.Values.Where(a => a.Unique).OrderBy(a => a.Key, StringComparer.Ordinal);
     public Dictionary<string, ChannelDefinition> Channels { get; } = new();

@@ -149,6 +149,9 @@ public static partial class ModelApi
                                       Unit = Blank(body.Unit), Group = Blank(body.Group), List = Blank(body.List), Columns = Clean(body.Columns),
                                       Required = body.Required is { Count: > 0 } r ? r.Where(kv => kv.Value is { Length: > 0 }).ToDictionary(kv => kv.Key, kv => kv.Value) : null };
                 if (def.When is { } w && (string.IsNullOrWhiteSpace(w.Attribute) || w.Values is null || w.Values.Length == 0)) return Bad("when: Attribut und mindestens ein Wert.");
+                // Freigabesteuerung am Attribut: leer = wie die Gruppe, sonst immer/nie (auto gibt es nur an der Gruppe)
+                def = def with { ReleaseWatch = Blank(def.ReleaseWatch) };
+                if (def.ReleaseWatch is not null && def.ReleaseWatch is not (ReleaseWatch.Always or ReleaseWatch.Never)) return Bad($"Freigabesteuerung am Attribut: {ReleaseWatch.Always}, {ReleaseWatch.Never} oder leer (wie die Gruppe).");
                 foreach (var (channel, locales) in def.Required ?? new())
                 {
                     if (!model.Channels.ContainsKey(channel)) return Bad($"Pflicht für unbekannten Kanal: {channel}");
@@ -257,7 +260,9 @@ public static partial class ModelApi
             {
                 var from = Blank(body.ActiveFrom);
                 if (from is not null && !Roles.All.Contains(from)) return Bad($"activeFrom: {string.Join(", ", Roles.All)} oder leer.");
-                return write(Model.GroupStream + key, Types.AttributeGroupDefined, body with { Key = key, Label = body.Label ?? new(), ActiveFrom = from, Order = null });
+                var watch = Blank(body.ReleaseWatch);
+                if (watch is not null && !ReleaseWatch.All.Contains(watch)) return Bad($"Freigabesteuerung: {string.Join(", ", ReleaseWatch.All)} oder leer.");
+                return write(Model.GroupStream + key, Types.AttributeGroupDefined, body with { Key = key, Label = body.Label ?? new(), ActiveFrom = from, Order = null, ReleaseWatch = watch });
             }));
 
         m.MapDelete("/groups/{key}", (string key, HttpRequest req, Catalog c) =>
@@ -324,7 +329,7 @@ public static partial class ModelApi
         relationTypes = model.RelationTypes.Values.OrderBy(r => r.Key).ToList(),
         // Gruppen: definierte plus die, die nur an Attributen vorkommen (z. B. „import“ aus dem Werkzeug) — mit Attributen in Reihenfolge
         groups = model.Groups.Keys.Union(model.Attributes.Values.Select(a => a.Group ?? "")).Where(g => g.Length > 0).Distinct().Order()
-            .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), activeFrom = model.Groups.GetValueOrDefault(g)?.ActiveFrom, attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g) }).ToList(),
+            .Select(g => new { key = g, label = model.Groups.GetValueOrDefault(g)?.Label ?? new Labels(), activeFrom = model.Groups.GetValueOrDefault(g)?.ActiveFrom, releaseWatch = model.Groups.GetValueOrDefault(g)?.ReleaseWatch, attributes = model.AttributesOf(g).Select(a => a.Key).ToList(), defined = model.Groups.ContainsKey(g), watched = model.AttributesOf(g).Any(a => model.Watched(a.Key)) }).ToList(),
         types = AttributeTypes.All,
     };
 

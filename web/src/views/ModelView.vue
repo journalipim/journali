@@ -99,8 +99,8 @@ const byKey = (a, b) => a.key.localeCompare(b.key)
 const rows = computed(() => {
   const m = model.value; if (!m) return []
   switch (section.value) {
-    case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: anyLabel(g.label), right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : ''], _: g })).sort(byKey)
-    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.unique ? '①' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan); ① eindeutig
+    case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: anyLabel(g.label), right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : '', g.releaseWatch === 'always' ? '⚑' : g.releaseWatch === 'never' ? '⚐' : g.watched ? '⚑ auto' : ''], _: g })).sort(byKey)
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.unique ? '①' : '', a.releaseWatch === 'always' ? '⚑' : a.releaseWatch === 'never' ? '⚐' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan); ① eindeutig
     case 'lists': return m.lists.map(l => ({ key: l.key, label: anyLabel(l.label), right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: anyLabel(v.label), right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
@@ -224,8 +224,8 @@ const b = v => v ? 'true' : 'false'
 // ---- Attributgruppen
 const groupSet = (col, v) => {
   const g = curGroup.value
-  const d = { key: g.key, label: { ...(g.label || {}) }, activeFrom: g.activeFrom ?? null }
-  if (col.startsWith('label_')) d.label[col.slice(6)] = v; else if (col === 'activeFrom') d.activeFrom = v || null
+  const d = { key: g.key, label: { ...(g.label || {}) }, activeFrom: g.activeFrom ?? null, releaseWatch: g.releaseWatch ?? null }
+  if (col.startsWith('label_')) d.label[col.slice(6)] = v; else if (col === 'activeFrom') d.activeFrom = v || null; else if (col === 'releaseWatch') d.releaseWatch = v || null
   put(`/api/model/groups/${g.key}`, d)
 }
 const groupAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group === curGroup.value?.key))
@@ -435,6 +435,8 @@ const channelFallback = v => put(`/api/model/channels/${curChannel.value.key}`, 
 const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.code })
 const setMasterChannel = () => put('/api/model/master-channel', { key: curChannel.value.key })
 // eindeutig (Taloan, 21.09.: „SKU ist ein Attribut wie jedes andere — alles über eindeutig“): Text/Zahl, einwertig; beliebig viele je Modell
+// Freigabesteuerung (Taloan, 22.09.): Bezeichnungen der Werte — leer am Attribut heisst „wie die Gruppe“
+const watchLabel = v => ({ '': 'wie die Gruppe', auto: 'automatisch (wenn Pflichtfeld in der Gruppe)', always: 'immer', never: 'nie' })[v ?? ''] ?? v
 const canBeUnique = a => a && ['text', 'integer', 'decimal'].includes(a.type) && !a.multiple
 // Status (Taloan, 22.09.): Name je eingerichteter Sprache, Symbol, Farbe, Reihenfolge — die ganze Definition je Eintrag
 const STATUS_COLORS = [['muted', 'grau'], ['pos', 'grün'], ['neg', 'rot'], ['warn', 'gelb'], ['accent', 'blau']]
@@ -519,6 +521,8 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curGroup.label?.en ?? null" @save="v => groupSet('label_en', v)" /></tr>
+          <!-- Freigabesteuerung (Taloan, 22.09.): zählt eine Wertänderung in dieser Gruppe als Eingriff in Prüfung und Freigabe? -->
+          <tr><td class="attr" title="Zählt eine Wertänderung in dieser Gruppe als Eingriff, der Prüfung und Freigabe berührt? automatisch = ja, wenn die Gruppe ein Pflichtfeld hat. Was dann geschieht, sagt der Workflow.">⚑ Freigabesteuerung</td><SelectCell :value="curGroup.releaseWatch ?? 'auto'" :options="['auto', 'always', 'never']" :label-of="watchLabel" required @save="v => groupSet('releaseWatch', v === 'auto' ? null : v)" /></tr>
           <tr><td class="attr" title="ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.">🔒 aktiv ab</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
         </tbody></table>
         <div class="section">
@@ -572,6 +576,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="curAttr.type === 'text' && curAttr.pattern"><td class="attr" title="steht in der Fehlermeldung statt des Musters">⌗ Hinweis</td><Cell :value="curAttr.patternHint ?? null" @save="v => attrSet('patternHint', v || null)" /></tr>
           <tr v-if="curAttr.type !== 'rows'"><td class="attr" title="der Wert ist je Sprache verschieden">🗣 sprachabhängig</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
           <tr class="sub"><td colspan="3">↓ Wert</td></tr>
+          <tr><td class="attr" title="Zählt eine Änderung dieses Attributs als Eingriff in Prüfung und Freigabe? Leer = wie die Gruppe.">⚑ Freigabesteuerung</td><SelectCell :value="curAttr.releaseWatch ?? ''" :options="['', 'always', 'never']" :label-of="watchLabel" @save="v => attrSet('releaseWatch', v || null)" /></tr>
           <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
           <!-- eindeutig (Taloan, 21.09.): kein zweiter Knoten mit demselben Wert — SKU, EAN, MATNR, auch eine Achse; beliebig viele, jedes für sich -->
           <tr v-if="canBeUnique(curAttr) || curAttr.unique"><td class="attr" title="kein zweiter Knoten mit demselben Wert (SKU, EAN, Artikelnummer, auch als Achse) — einschalten geht nur, wenn der Bestand keine Doppelten hat; eindeutige Werte sind die Schlüssel des Knotens: Suche, Name der Variante ohne ★, Tabellen-Import findet damit, Kopie nimmt sie nicht mit">① eindeutig</td>

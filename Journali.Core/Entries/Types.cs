@@ -391,7 +391,8 @@ public sealed record AttributeDefinition(
     string? Pattern = null,
     string? PatternHint = null,
     AttributeCondition? When = null,
-    bool Unique = false)
+    bool Unique = false,
+    string? ReleaseWatch = null)
 {
     /// <summary>Eindeutig (Taloan, 21.09.2026): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) —
     /// SKU, EAN, MATNR, Artikelnummer, beliebig viele je Modell, jedes für sich. Eindeutige Werte sind die Schlüssel eines Knotens:
@@ -445,10 +446,24 @@ public sealed record FamilyRetired(string Key);
 /// erfasst werden (<paramref name="ActiveFrom"/>, null = überall). Das Attribut
 /// verweist mit <c>group</c> darauf; Gruppen hängen an Knoten (<see cref="GroupsAttached"/>).
 /// </summary>
-public sealed record AttributeGroupDefinition(string Key, Labels Label, string? ActiveFrom = null, string[]? Order = null)
+public sealed record AttributeGroupDefinition(string Key, Labels Label, string? ActiveFrom = null, string[]? Order = null, string? ReleaseWatch = null)
 {
     /// <summary>Aktiv an dieser Rolle: ab <see cref="ActiveFrom"/> abwärts (group → product → variant).</summary>
     public bool ActiveAt(string role) => ActiveFrom is null || Roles.Depth(role) >= Roles.Depth(ActiveFrom);
+}
+
+/// <summary>
+/// Freigabesteuerung (Taloan, 22.09.2026): zählt eine Wertänderung in dieser Gruppe als Eingriff, der Prüfung und Freigabe berührt?
+/// <c>auto</c> (leer): ja, wenn die Gruppe mindestens ein Pflichtfeld hat · <c>always</c>: immer · <c>never</c>: nie.
+/// Am Attribut zusätzlich <c>null</c> = wie die Gruppe. WAS dann geschieht (Zustand zurück, Freigabe zurücknehmen, nur anzeigen),
+/// sagt der Workflow — der Schalter sagt nur, ob die Änderung zählt.
+/// </summary>
+public static class ReleaseWatch
+{
+    public const string Auto = "auto";
+    public const string Always = "always";
+    public const string Never = "never";
+    public static readonly string[] All = [Auto, Always, Never];
 }
 
 /// <summary>Altlast (17.09.2026): Name im Baum je Knotentyp. Ersetzt durch das Sternchen am Knoten (<see cref="LabelAttributeSet"/>). Bleibt lesbar, wird nicht mehr geschrieben.</summary>
