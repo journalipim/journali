@@ -185,7 +185,7 @@ function modelOps(ctx) {
     const key = f.code.toLowerCase()
     if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code, a.when); const lv = !a.levels || JSON.stringify([...a.levels].sort()) === JSON.stringify([...OLD_LEVELS].sort()) ? FEATURE_LEVELS : a.levels;
       if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable || JSON.stringify(a.levels ?? []) !== JSON.stringify(lv))) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true, levels: lv }); return key }
-    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // neu: nur die Klassen der aktiven Fassung; vorhandene ergänzen (Vereinigung)   // ETIM-Attribute nur an Produkt und Variante
+    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // neu: nur die Klassen der aktiven Fassung; vorhandene ergänzen (Vereinigung)   // gilt auf jeder Ebene und erbt nach unten; die Bedingung when hält es dort zurück, wo die Klasse das Merkmal nicht kennt
     if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
     else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
