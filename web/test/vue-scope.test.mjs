@@ -39,3 +39,31 @@ test('keine Schleifenvariable ausserhalb ihrer Schleife', () => {
   }
   assert.deepEqual(misses, [], 'Schleifenvariable ausserhalb der Schleife benutzt')
 })
+
+// Browser-Globale im Template (Taloan, 22.09.2026: „Absturz wenn ich auf den copy knopf klicke" — im Token-Dialog stand
+// @click="navigator.clipboard.writeText(…)"). Vue löst im Template jeden Namen gegen die Komponente auf; nur eine kurze
+// Liste (Math, JSON, Date …) geht ans echte Global. „navigator" wird still zu _ctx.navigator — undefined, Absturz beim
+// Klick. Solche Aufrufe gehören ins Setup.
+const BROWSER_GLOBALS = ['navigator', 'window', 'document', 'location', 'localStorage', 'sessionStorage', 'fetch', 'alert', 'confirm', 'history', 'screen']
+
+/// Kennt die Komponente den Namen selbst? const/let/var/function im Setup oder ein Prop in defineProps.
+/// (In UsageBars ist „history" ein Prop, in NodeView ein computed — beides eigene Namen.)
+function declared(script, name) {
+  if (new RegExp('\\b(?:const|let|var|function|class)\\s+' + name + '\\b').test(script)) return true
+  const props = script.match(/defineProps\(([\s\S]*?)\)/)
+  return !!props && new RegExp('\\b' + name + '\\s*[:,}]').test(props[1])
+}
+
+test('kein Browser-Global im Template', () => {
+  const misses = []
+  for (const f of walk(root)) {
+    const { descriptor } = parse(fs.readFileSync(f, 'utf8'), { filename: f })
+    if (!descriptor.template) continue
+    const script = (descriptor.scriptSetup?.content ?? '') + (descriptor.script?.content ?? '')
+    const { code } = compileTemplate({ source: descriptor.template.content, filename: f, id: path.basename(f) })
+    for (const name of BROWSER_GLOBALS)
+      if (new RegExp('_ctx\\.' + name + '\\b').test(code) && !declared(script, name))
+        misses.push(`${path.basename(f)}: „${name}“ im Template — im Setup aufrufen`)
+  }
+  assert.deepEqual(misses, [], 'Browser-Global im Template benutzt')
+})

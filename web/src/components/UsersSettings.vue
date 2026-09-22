@@ -39,6 +39,12 @@ async function changePw() {
 async function makeToken() {
   try { newToken.value = await api.post('/api/auth/tokens', { label: tokenLabel.value || 'Token' }); tokenLabel.value = ''; await load() } catch (e) { store.toast(e.message) }
 }
+/// Token in die Zwischenablage. Ohne sicheren Kontext (http auf einem fremden Rechner) gibt es keine
+/// Zwischenablage — dann bleibt der Text markierbar stehen und wir sagen es.
+async function copyToken() {
+  try { await navigator.clipboard.writeText(newToken.value.token); store.toast('kopiert', 'ok') }
+  catch { store.toast('Zwischenablage nicht verfügbar — Text markieren und mit Strg+C kopieren') }
+}
 async function dropToken(t) { try { await api.del(`/api/auth/tokens/${t.id}`); await load() } catch (e) { store.toast(e.message) } }
 // Rollen: Recht an/aus, umbenennen, anlegen, zurückziehen (Kontextmenü — wie überall)
 async function roleToggle(r, right) {
@@ -72,7 +78,7 @@ onMounted(load)
   <div class="section">
     <h2>🔑 API-Token <span class="muted">· für Excel-Add-in, OnlyOffice, Skripte — Authorization: Bearer; nur beim Anlegen sichtbar</span></h2>
     <div class="row" style="gap:6px;margin-bottom:6px"><input v-model="tokenLabel" type="text" placeholder="Bezeichnung (z. B. Excel Laptop)" style="width:260px" /><button class="primary" @click="makeToken">＋ Token</button></div>
-    <div v-if="newToken" class="picker" style="padding:8px;margin-bottom:6px"><b>{{ newToken.label }}</b> · <span class="mono" style="user-select:all">{{ newToken.token }}</span> <button class="x" @click="navigator.clipboard.writeText(newToken.token).then(() => store.toast('kopiert', 'ok'))">⧉</button><div class="muted" style="font-size:12px">{{ newToken.hint }}</div></div>
+    <div v-if="newToken" class="picker" style="padding:8px;margin-bottom:6px"><b>{{ newToken.label }}</b> · <span class="mono" style="user-select:all">{{ newToken.token }}</span> <button class="x" @click="copyToken()">⧉</button><div class="muted" style="font-size:12px">{{ newToken.hint }}</div></div>
     <div class="chips"><span v-for="t in me?.tokens ?? []" :key="t.id" class="chip" :title="when(t.at)">{{ t.label }} <button @click="dropToken(t)" title="Token widerrufen">×</button></span><span v-if="!me?.tokens?.length" class="muted" style="font-size:12px">keine</span></div>
   </div>
 
