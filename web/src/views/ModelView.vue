@@ -285,6 +285,23 @@ async function bulkRemove() {
   for (const k of [...sel.value]) await del(p(k))
   sel.value = new Set(); cur.value = null
 }
+const busy = ref(false)
+// Gruppe mit allem, was darin hängt (Taloan, 22.09.: „zuerst alle Attribute rauslösen, dann die Gruppe, dann jedes Attribut einzeln —
+// Wahnsinn“): erst die Attribute zurückziehen, dann die Gruppe. Was gesperrt ist (★-Attribut, Kennung), bleibt stehen und wird genannt.
+async function removeGroupDeep() {
+  const g = curGroup.value; if (!g) return
+  const attrs = groupAttrs.value
+  if (!await dialog.confirm({ title: `Gruppe ${g.label?.de || g.key} mit ${attrs.length} Attributen zurückziehen?`, text: attrs.length ? `Zurückgezogen werden: ${attrs.slice(0, 8).map(a => a.label?.de || a.key).join(', ')}${attrs.length > 8 ? ` … +${attrs.length - 8}` : ''}.` : '', warn: 'Werte bleiben im Journal — die Attribute sind danach nicht mehr im Modell.', ok: '✕ Zurückziehen', danger: true })) return
+  const kept = []
+  busy.value = true
+  try {
+    for (const a of attrs) { try { await api.del(`/api/model/attributes/${encodeURIComponent(a.key)}`) } catch (e) { kept.push(`${a.key}: ${e.message}`) } }
+    try { await api.del(`/api/model/groups/${encodeURIComponent(g.key)}`) } catch (e) { kept.push(`${g.key}: ${e.message}`) }
+    await store.poll(true)
+    store.toast(kept.length ? `⚠ ${attrs.length - kept.length} von ${attrs.length} zurückgezogen · ${kept.length} blieben: ${kept.slice(0, 3).join(' · ')}` : `✓ ${g.label?.de || g.key} und ${attrs.length} Attribute zurückgezogen`, kept.length ? 'error' : 'ok')
+    if (!kept.some(k => k.startsWith(g.key + ':'))) { cur.value = null; sel.value = new Set() }
+  } finally { busy.value = false }
+}
 async function removeCur() {
   const p = removePath[section.value]; if (!p || !cur.value) return
   if (!await dialog.confirm({ title: `${sec.value.one} ${cur.value} zurückziehen?`, ok: '✕ Zurückziehen', danger: true })) return
@@ -503,7 +520,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr><td class="attr" title="ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.">🔒 aktiv ab</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
         </tbody></table>
         <div class="section">
-          <h2>⊞ Attribute: {{ groupAttrs.length }}</h2>
+          <h2>⊞ Attribute: {{ groupAttrs.length }} <span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="`die Gruppe und ihre ${groupAttrs.length} Attribute in einem Zug zurückziehen — Werte bleiben im Journal; ★-Attribute und das Kennungsattribut bleiben stehen`">✕ Gruppe mit {{ groupAttrs.length }} Attributen</button></h2>
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
               <a href="#" @click.prevent="goto('attributes', a.key)">{{ a.label?.de || a.key }}</a>
