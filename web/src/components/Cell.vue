@@ -27,6 +27,7 @@ const openMode = ref('edit')
 // Langer Text (Taloan): Enter/F2/Doppelklick öffnet einen grossen Editor statt der einzeiligen Eingabe
 const big = ref(false)
 const area = ref(null)
+const panelId = 'aip-' + Math.random().toString(36).slice(2, 8)   // Behälter für die KI-Leiste in diesem Editor
 const isLong = v => (v ?? '').length > 80 || (v ?? '').includes('\n')
 async function openBig() {
   draft.value = props.value ?? props.inherited ?? ''
@@ -121,7 +122,8 @@ function onEditKey(e) {
       <div v-if="big" class="overlay" @mousedown.self="cancelBig">
         <div class="big">
           <textarea ref="area" v-model="draft" @keydown="onBigKey" spellcheck="false"></textarea>
-          <div class="toolbar" style="position:relative"><span class="muted" style="font-size:12px">{{ draft.length }} Zeichen · Strg+Enter speichert · Esc verwirft</span><span class="grow" /><AiBar class="up" :current="draft" :html="false" :label="label" :locale="locale" :node="node" @result="fromAi" /><button @click="cancelBig">Verwerfen</button><button class="primary" @click="saveBig">Speichern</button></div>
+          <div :id="panelId"></div>
+          <div class="toolbar"><span class="muted" style="font-size:12px">{{ draft.length }} Zeichen · Strg+Enter speichert · Esc verwirft</span><span class="grow" /><AiBar :panel="'#' + panelId" :current="draft" :html="false" :label="label" :locale="locale" :node="node" @result="fromAi" /><button @click="cancelBig">Verwerfen</button><button class="primary" @click="saveBig">Speichern</button></div>
         </div>
       </div>
     </Teleport>

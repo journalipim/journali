@@ -7,7 +7,8 @@ import { ai } from '../ai.js'
 import { store } from '../store.js'
 import { PRESETS, rewrite } from '../aiText.js'
 
-const props = defineProps({ current: String, html: Boolean, label: String, locale: String, node: String })
+// panel: Auswahl eines Behälters im Editor — dort steht die Leiste im Fluss und schiebt den Text nach unten (Taloan, 22.09.)
+const props = defineProps({ current: String, html: Boolean, label: String, locale: String, node: String, panel: String })
 const emit = defineEmits(['result'])
 const open = ref(false); const busy = ref(''); const own = ref('')
 const mode = ref(localStorage.getItem('journali.ai.mode') || 'replace')   // replace | insert
@@ -17,14 +18,16 @@ const gens = PRESETS.filter(p => p[3] === 'gen')
 async function run(instruction) {
   if (!instruction) return
   busy.value = `fragt ${ai.label()} …`
-  try { emit('result', { text: await rewrite({ instruction, current: props.current, html: props.html, label: props.label, locale: props.locale, node: props.node }), mode: mode.value }); open.value = false; own.value = '' }
+  // die Leiste bleibt offen (Taloan, 22.09.: „lass das offen“) — man arbeitet meist mehrere Schritte hintereinander
+  try { emit('result', { text: await rewrite({ instruction, current: props.current, html: props.html, label: props.label, locale: props.locale, node: props.node }), mode: mode.value }); own.value = '' }
   catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 </script>
 
 <template>
   <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? 'Text mit der KI (' + ai.label() + ') bearbeiten — mit den Produktdaten dieses Knotens; jede Anfrage kostet Token' : 'KI-Schlüssel fehlt — ⚙ Einstellungen → KI'" :disabled="!ai.available()">✦ KI</button>
-  <div v-if="open" class="aibar" @mousedown.stop>
+  <component :is="panel ? 'Teleport' : 'div'" :to="panel" :class="panel ? undefined : 'wrap'">
+  <div v-if="open" class="aibar" :class="{ flow: !!panel }" @mousedown.stop>
     <!-- Beschriftungen als Überschrift über der Reihe, nicht daneben (Taloan, 22.09.: unterschiedlich lang = unordentlich) -->
     <div class="col">
       <span class="muted lbl">überarbeiten</span>
@@ -47,11 +50,13 @@ async function run(instruction) {
     </div>
     <span v-if="busy" class="ai" style="font-size:12px">{{ busy }}</span>
   </div>
+  </component>
 </template>
 
 <style scoped>
 .ai.on { background: var(--accent-soft); }
 /* eigene Zeile unter der Werkzeugleiste (die umbricht nicht) — links ausgerichtet, Knöpfe einzeilig */
+.aibar.flow { position: static; box-shadow: none; border-top: 0; }   /* im Fluss: der Text darunter schrumpft, nichts wird verdeckt */
 .aibar { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;
   padding: 5px 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--pane); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
 .col { display: flex; flex-direction: column; gap: 2px; }

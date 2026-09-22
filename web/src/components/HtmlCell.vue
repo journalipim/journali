@@ -13,6 +13,7 @@ const open = ref(false)
 const draft = ref('')
 const source = ref(false)      // Quelltext statt Schreibmodus
 const area = ref(null)
+const panelId = 'aip-' + Math.random().toString(36).slice(2, 8)   // Behälter für die KI-Leiste in diesem Editor
 const rich = ref(null)
 
 const shown = computed(() => props.value ?? props.inherited ?? '')
@@ -92,10 +93,11 @@ function onEditKey(e) {
             <span class="sep">·</span>
             <button @mousedown.prevent="cmd('removeFormat')" title="Formatierung entfernen">✗ Format entfernen</button>
             <span class="grow" />
-            <AiBar :current="draft" html :label="label || title" :locale="locale" :node="node" @result="fromAi" />
+            <AiBar :current="draft" html :label="label || title" :locale="locale" :node="node" :panel="'#' + panelId" @result="fromAi" />
             <button @click="toggleSource" title="HTML-Quelltext zeigen">‹› Quelltext</button>
           </div>
           <div class="toolbar fmt" v-else><span class="muted">HTML-Quelltext</span><span class="grow" /><button class="primary" @click="toggleSource" title="zurück zum Schreibmodus">✎ Schreiben</button></div>
+          <div :id="panelId"></div>
           <div ref="rich" v-if="!source" class="rich" contenteditable="true" spellcheck="true" @input="syncFromRich"></div>
           <textarea v-else ref="area" v-model="draft" spellcheck="false"></textarea>
           <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0"><span class="muted" style="font-size:12px">{{ plainLen(draft) }} Zeichen</span><span class="grow" /><button @click="cancel">Verwerfen</button><button class="primary" @click="save">Speichern</button></div>

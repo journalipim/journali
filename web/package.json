@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node build-plugins.mjs",
-    "test": "node --test \"test/**/*.test.mjs\"",
+    "test": "node --import ./test/vue-loader.mjs --test \"test/**/*.test.mjs\"",
     "build:web": "vite build",
     "build:plugins": "node build-plugins.mjs",
     "preview": "vite preview"
@@ -17,6 +17,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.5.1",
+    "happy-dom": "^20.14.5",
     "vite": "^6.1.0"
   }
 }

@@ -36,7 +36,9 @@ stehen dort als solche markiert.
   Bash-Heredocs. Anker eindeutig (`assert count == 1`), BOM und CRLF je
   Datei erhalten.
 - **Vor dem Commit:** `dotnet build -c Release` mit 0 Fehlern, `dotnet test Journali.Tests` (Kern) und
-  `npm test` in `web/` (Prüfkern `compliance-core.js`) grün. **Use Cases testen, nicht Taloan klicken lassen:**
+  `npm test` in `web/` grün. **Oberfläche wird geprüft, nicht vorgeführt** (Taloan, 22.09.): jeder Dialog und jedes
+  Fenster, das wir anfassen, bekommt einen Test in `web/test/ui-*.test.mjs` — echtes DOM (happy-dom), echte Komponente
+  (@vue/test-utils, `test/vue-loader.mjs` übersetzt .vue), Klicks und Tasten wie beim Anwender; Hilfen in `test/ui.mjs`. **Use Cases testen, nicht Taloan klicken lassen:**
   jeder Fall, der in der Bedienung schiefging, wird ein Test (Taloan, 21.09.).
 - **Benutzer & Rollen:** Identität/Rolle im Journal (`user:<key>`), Rollen mit Rechten im Journal (`role:<key>`,
   Vokabular `Rights` im Kern, `Auth.Needed` sagt je Anfrage das Recht), Passwörter/Token/Sitzungen
