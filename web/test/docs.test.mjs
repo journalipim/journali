@@ -2,7 +2,7 @@
 // „Datenblatt, Seite 4“ sagen kann. Ohne Node-Abhängigkeiten, wie im Job.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { chunk, numbered, isHeading, fromHtml } from '../../plugins/docs/core.mjs'
+import { chunk, numbered, isHeading, fromHtml, dropRunningLines, joinHyphens, pack } from '../../plugins/docs/core.mjs'
 
 test('Überschriften erkennen — kurz, ohne Satzzeichen am Ende, kein Fliesstext', () => {
   assert.ok(isHeading('Technische Daten'))
@@ -56,4 +56,44 @@ test('HTML: Tags weg, Blockenden werden Absätze, Entities aufgelöst', () => {
 test('leerer Text ergibt keine Abschnitte', () => {
   assert.deepEqual(chunk(''), [])
   assert.deepEqual(chunk('   \n\n  '), [])
+})
+
+// Am echten Datenblatt gelernt (Tridonic TALEXXdriver, Taloan 22.09.2026) — die drei Fälle, die dort schiefgingen
+test('Tabellenzeilen sind keine Überschriften', () => {
+  assert.ok(!isHeading('Netzspannungsbereich 220 – 240 V'))
+  assert.ok(!isHeading('Leistungsaufnahme im Stand-by 0,16 W'))
+  assert.ok(!isHeading('Nominale Lebensdauer 100.000 h'))
+  assert.ok(isHeading('Technische Daten'), 'echte Überschriften bleiben')
+  assert.ok(isHeading('Produktbeschreibung'))
+})
+
+test('Silbentrennung am Zeilenende wird zusammengezogen', () => {
+  assert.equal(joinHyphens('Stoßstrom-\nverstärkung'), 'Stoßstromverstärkung')
+  assert.equal(joinHyphens('LED-\nTreiber'), 'LED-\nTreiber', 'Bindestrich vor Grossbuchstabe bleibt')
+  assert.ok(!isHeading('Leerlauf, Eingangsspannungsbereich, reduzierte Stoßstrom-'), 'umbrochene Zeile ist keine Überschrift')
+})
+
+test('Kopf- und Fusszeilen, die auf jeder Seite stehen, fallen weg', () => {
+  const seiten = [
+    'www.tridonic.com 1\nDatenblatt 01/20\nProduktbeschreibung\nDimmbarer Treiber',
+    'www.tridonic.com 2\nDatenblatt 01/20\nTechnische Daten\nNetzspannung 220 V',
+    'www.tridonic.com 3\nDatenblatt 01/20\nMasse\nLänge 150 mm',
+  ]
+  const sauber = dropRunningLines(seiten)
+  assert.ok(sauber.every(p => !p.includes('tridonic')), 'die Kopfzeile ist weg — auch mit wechselnder Seitenzahl')
+  assert.ok(sauber.every(p => !p.includes('Datenblatt 01/20')))
+  assert.ok(sauber[1].includes('Netzspannung 220 V'), 'der Inhalt bleibt')
+})
+
+test('Zwerge werden zusammengelegt, die Überschrift bleibt im Text', () => {
+  const klein = [
+    { page: 1, heading: 'Gehäuse', body: 'Kunststoff, IP20' },
+    { page: 1, heading: 'Schnittstellen', body: 'DALI, DSI' },
+    { page: 2, heading: 'Masse', body: 'Länge 150 mm' },
+  ]
+  const p = pack(klein, { min: 200, max: 900 })
+  assert.equal(p.length, 2, 'Seite 1 zusammen, Seite 2 eigen — über Seitengrenzen wird nicht gemischt')
+  assert.match(p[0].body, /Kunststoff, IP20/)
+  assert.match(p[0].body, /Schnittstellen: DALI, DSI/, 'die Überschrift des Zwergs steht im Text')
+  assert.equal(p[1].page, 2)
 })

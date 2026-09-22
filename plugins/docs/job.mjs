@@ -5,7 +5,7 @@
 // Holt /api/docs/status?pending=1 (was noch keinen Text hat), lädt die Datei, liest sie je nach Art, schneidet sie in
 // Abschnitte und legt sie per PUT /api/docs/{id} ab. Läuft in Runden, bis nichts mehr fehlt.
 // Rückgabe 0 = alles gelesen, 3 = einzelne Dokumente scheiterten (Log), 1 = Abbruch.
-import { chunk, numbered, fromHtml } from './core.mjs'
+import { chunk, numbered, fromHtml, dropRunningLines, joinHyphens, pack } from './core.mjs'
 
 const [,, serverArg, actorArg, limitArg] = process.argv
 const E = process.env
@@ -53,9 +53,10 @@ async function pdfPages(bytes) {
 async function read(medium, bytes) {
   const mime = medium.mime ?? ''
   if (mime === 'application/pdf') {
-    const pages = await pdfPages(bytes)
-    const chunks = numbered(pages.flatMap((text, i) => chunk(text, { page: i + 1 })))
-    const zeichen = pages.join('').replace(/\s/g, '').length
+    const roh = await pdfPages(bytes)
+    const pages = dropRunningLines(roh).map(joinHyphens)   // Kopf- und Fusszeilen raus, Silbentrennung zusammen
+    const chunks = numbered(pack(pages.flatMap((text, i) => chunk(text, { page: i + 1 }))))
+    const zeichen = roh.join('').replace(/\s/g, '').length
     // Faustregel: ein PDF mit Textebene bringt je Seite mehr als ein paar Zeichen. Darunter ist es ein Scan
     // (oder eine reine Bildseite) — wir merken es uns, statt es als gelesen abzuhaken.
     if (zeichen < pages.length * 20) return { chunks: [], state: 'scan', pages: pages.length, note: `nur ${zeichen} Zeichen Textebene auf ${pages.length} Seiten — vermutlich ein Scan, braucht OCR` }
@@ -63,8 +64,8 @@ async function read(medium, bytes) {
   }
   const text = Buffer.from(bytes).toString('utf8')
   const chunks = mime === 'text/html' || mime === 'application/xml' || mime === 'text/xml'
-    ? numbered(chunk(fromHtml(text)))
-    : numbered(chunk(text))
+    ? numbered(pack(chunk(fromHtml(text))))
+    : numbered(pack(chunk(text)))
   return { chunks, state: chunks.length ? 'text' : 'scan', pages: null, note: chunks.length ? null : 'kein Text gefunden' }
 }
 
