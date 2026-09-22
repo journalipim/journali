@@ -41,7 +41,8 @@ const VALUES = {   // eigene Werte je Knoten
   'v-2': { ef008851: 'true', ef000007: 'Lila' },                                            // einer passt nicht
   'v-3': {},                                                                                // leer
 }
-const INACTIVE = { 'p-1': ['tastatur_name'] }   // am Produkt gilt das zugeordnete Attribut nicht
+const INACTIVE = { 'p-1': ['tastatur_name'] }
+const NODE_GROUPS = [{ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] }]   // was am Knoten gilt   // am Produkt gilt das zugeordnete Attribut nicht
 const own = (id, key) => VALUES[id]?.[key]
 const resolved = (id, key) => own(id, key) ?? (key === 'etim_class' ? (TREE.find(r => r.id === id)?.parent ? resolved(TREE.find(r => r.id === id).parent, key) : undefined) : undefined)
 const rowOf = id => { const r = TREE.find(x => x.id === id); const values = {}; for (const k of ['etim_class', 'ef008851', 'ef000008', 'ef000007', 'tastatur_name']) { const v = resolved(id, k); if (v != null) values[k] = { value: v, own: own(id, k) != null } } return { row: { id, label: r.label, role: r.role, parent: r.parent }, values, inactive: INACTIVE[id] ?? [] } }
@@ -71,7 +72,7 @@ function apiNode(id) {
   const r = TREE.find(x => x.id === id)
   const vals = o => Object.entries(VALUES[o] ?? {}).map(([attribute, value]) => ({ attribute, value, locale: null, channel: null, row: null }))
   const anc = []; for (let p = r?.parent; p; p = TREE.find(x => x.id === p)?.parent) anc.push({ id: p, label: TREE.find(x => x.id === p).label, values: vals(p) })
-  return { id, role: r?.role, name: null, values: vals(id), ancestors: anc, groups: [{ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] }], rows: {}, computed: [] }
+  return { id, role: r?.role, name: null, values: vals(id), ancestors: anc, groups: NODE_GROUPS, rows: {}, computed: [] }
 }
 function apiTable(u) {
   const id = decodeURIComponent(u.slice('/api/nodes/'.length).split('/')[0])
@@ -107,4 +108,23 @@ test('Band am Produkt: Kopfzeile, Klassentabelle und je Unterknoten eine Zeile',
   assert.match(b, /◆ c 0 von 4 gefüllt 0 %/)                     // leerer Knoten ebenfalls
   assert.match(b, /6 von 15/)                                     // Zahl der Klassentabelle = Summe der Knotenzeilen (1+4+1+0)
   console.log('\n--- Kopf ---\n' + h + '\n--- Körper ---\n' + b + '\n')
+})
+
+test('Gruppe entfernt (Sackgasse, Taloan 22.09.): eine Zeile statt 35, Warnung und der Weg zurück im Band', async () => {
+  const mod = await import('../../plugins/etim/entry.js')
+  const band = mod.default.nodeBands[0]
+  // die Gruppe etim hängt nirgends mehr: kein ETIM-Attribut gilt an den Knoten
+  const before = JSON.stringify(INACTIVE)
+  for (const id of ['p-1', 'v-1', 'v-2', 'v-3']) INACTIVE[id] = ['ef008851', 'ef000008', 'ef000007', 'tastatur_name']
+  NODE_GROUPS.length = 0
+  const head = mkEl('h2'), body = mkEl('div')
+  await band.mount({ head, body }, 'p-1', ctx)
+  await new Promise(r => setTimeout(r, 30))
+  const b = textOf(body), l = textOf(body).length
+  assert.match(b, /4 von 4 ETIM-Attributen sind hier nicht verfügbar/)
+  assert.ok((b.match(/nicht verfügbar/g) ?? []).length <= 4, 'je Knoten eine Zeile, nicht je Attribut')
+  assert.match(textOf(head) + b, /Gruppe etim gilt hier nicht/)
+  assert.match(b, /Gruppe etim anhängen/)
+  assert.match(b, /✕ Klasse/)                                   // Klasse lässt sich entfernen
+  Object.assign(INACTIVE, JSON.parse(before)); NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
 })

@@ -180,16 +180,28 @@ export function audit({ rows, classAttr, classes, map, locale = 'de', hasAttr = 
     if (!acc.has(code)) acc.set(code, { code, nodes: 0, filled: 0, cells: 0, bad: 0 })
     const a = acc.get(code); a.nodes++
     const inactive = r.inactive ?? []
-    let filled = 0, mapped = 0
+    let filled = 0, mapped = 0; const notHere = [], noAttr = []
     for (const x of byCode.get(code)) {
-      const label = nameOf(x.f.name, locale)
-      if (!x.has) { findings.push({ node: r.row, attribute: x.f.code, label, message: 'nicht zugeordnet — kein Attribut im Modell', title: '⇄ zuordnen oder ＋ anlegen', go: 'map', severity: 'info' }); continue }
-      if (inactive.includes(x.key)) { findings.push({ node: r.row, attribute: x.f.code, label, message: `zugeordnetes Attribut ${x.key} ist an diesem Knoten nicht verfügbar`, title: 'das zugeordnete Attribut gibt es im Modell, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', go: 'map', severity: 'info' }); continue }
+      if (!x.has) { noAttr.push(x); continue }
+      if (inactive.includes(x.key)) { notHere.push(x); continue }
       mapped++; a.cells++
       const raw = r.values?.[x.key]?.value; const v = resolveValue(x.f, throughSteps(x.steps, raw))
-      if (v === null) { a.bad++; findings.push({ node: r.row, attribute: x.f.code, label, message: `„${raw}“ passt nicht (${TYPE_LABEL[x.f.type] ?? x.f.type}${x.f.type === 'Alphanumeric' ? ': ' + x.f.values.slice(0, 6).map(y => nameOf(y.name, locale)).join(', ') + (x.f.values.length > 6 ? ' …' : '') : ''})`, go: 'node', severity: 'warn' }) }
+      if (v === null) { a.bad++; findings.push({ node: r.row, attribute: x.f.code, label: nameOf(x.f.name, locale), message: `„${raw}“ passt nicht (${TYPE_LABEL[x.f.type] ?? x.f.type}${x.f.type === 'Alphanumeric' ? ': ' + x.f.values.slice(0, 6).map(y => nameOf(y.name, locale)).join(', ') + (x.f.values.length > 6 ? ' …' : '') : ''})`, go: 'node', severity: 'warn' }) }
       else if (!v.unknown) { a.filled++; filled++ }
     }
+    // gleiche Lage bündeln (Taloan, 22.09.: 35 Zeilen „nicht verfügbar“ nach dem Entfernen der Gruppe): bis drei einzeln, darüber eine Zeile
+    const many = (list, one, all, title) => {
+      if (!list.length) return
+      if (list.length <= 3) for (const x of list) findings.push({ node: r.row, attribute: x.f.code, label: nameOf(x.f.name, locale), message: one(x), title, go: 'map', severity: 'info' })
+      else findings.push({ node: r.row, attribute: null, label: null, message: all(list), title, go: 'map', severity: 'info' })
+    }
+    const codes = l => l.slice(0, 4).map(x => x.f.code).join(', ') + (l.length > 4 ? ` … +${l.length - 4}` : '')
+    many(notHere, x => `zugeordnetes Attribut ${x.key} ist an diesem Knoten nicht verfügbar`,
+      l => `${l.length} von ${byCode.get(code).length} ETIM-Attributen sind hier nicht verfügbar — die zugeordneten Attribute gelten an diesem Knoten nicht (${codes(l)})`,
+      'die zugeordneten Attribute gibt es im Modell, aber nicht an diesem Knoten: ihre Gruppe hängt nicht am Pfad, oder sie sind auf andere Rollen beschränkt')
+    many(noAttr, () => 'nicht zugeordnet — kein Attribut im Modell',
+      l => `${l.length} von ${byCode.get(code).length} ETIM-Attributen nicht zugeordnet — kein Attribut im Modell (${codes(l)})`,
+      '⇄ zuordnen oder ＋ anlegen')
     if (mapped && (complete || filled < mapped)) findings.push({ node: r.row, attribute: null, message: null, progress: { filled, total: mapped, pct: pct(filled, mapped) }, severity: filled === mapped ? 'ok' : 'info', title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert) — gelesen wird das zugeordnete Attribut; leer geht als „-“/UN in den BMEcat', go: 'node' })
   }
   for (const a of acc.values()) a.pct = pct(a.filled, a.cells)
