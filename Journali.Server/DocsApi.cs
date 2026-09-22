@@ -55,6 +55,14 @@ public static class DocsApi
         api.MapDelete("/docs/{id}", async (string id, DocText docs, CancellationToken ct) =>
             Results.Ok(new { removed = await docs.RemoveAsync(id, ct) }));
 
+        // Gescheiterte wieder freigeben: der Job liest sie in der nächsten Runde erneut (Taloan, 23.09.2026 — ein Nullbyte
+        // im PDF liess das Dokument scheitern; nach der Reparatur muss es einen Weg zurück geben)
+        api.MapPost("/docs/retry", async (DocText docs, CancellationToken ct) =>
+        {
+            if (!docs.Ready) return ModelApi.Bad("Ohne Postgres gibt es keinen Dokumentindex.");
+            return Results.Ok(new { freed = await docs.RetryFailedAsync(ct) });
+        });
+
         // Suche: Wörter, Zahlen, Normen. under=<knoten> schränkt auf die Dokumente eines Teilbaums ein.
         api.MapGet("/docs/search", async (string q, Catalog c, DocText docs, int limit = 50, string? under = null, CancellationToken ct = default) =>
         {

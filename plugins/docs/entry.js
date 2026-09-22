@@ -38,6 +38,15 @@ async function mount(root, ctx) {
   async function loadStatus() {
     try { st.status = await api.get('/api/docs/status') } catch (e) { st.status = { ready: false, error: e.message } }
   }
+  /// Gescheiterte wieder in den Stapel: nach einer Reparatur am Server soll der Job sie erneut versuchen
+  async function freigeben() {
+    try {
+      const r = await api.post('/api/docs/retry', {})
+      await loadStatus()
+      say(r.freed ? `${r.freed} wieder freigegeben — beim nächsten Lauf des Jobs „Werkzeug: Dokumente lesen“` : 'nichts freizugeben')
+    } catch (e) { say('✗ ' + e.message) }
+  }
+
   async function search() {
     const q = st.q.trim()
     localStorage.setItem('journali.docs.q', q)
@@ -72,7 +81,11 @@ async function mount(root, ctx) {
         el('span', { class: 'muted', style: 'font-size:12px' }, st.status?.ready === false ? '✗ kein Index' : `${(st.status?.media ?? 0).toLocaleString('de-DE')} Dokumente · ${(st.status?.chunks ?? 0).toLocaleString('de-DE')} Abschnitte`),
         // Scans haben keine Textebene — der Text steckt in Bildern und bräuchte OCR (Taloan, 22.09.2026)
         st.status?.scans ? el('span', { class: 'warn', style: 'font-size:12px', title: 'PDFs ohne Textebene: der Text steckt in Bildern und ist erst nach OCR durchsuchbar' }, `◌ ${st.status.scans} brauchen OCR`) : null,
-        st.status?.errors ? el('span', { class: 'neg', style: 'font-size:12px', title: 'nicht lesbar — der Grund steht im Protokoll des Jobs' }, `✗ ${st.status.errors}`) : null,
+        st.status?.errors ? el('button', {
+          class: 'x neg', style: 'font-size:12px',
+          title: 'Gescheiterte Dokumente freigeben (der Job liest sie beim nächsten Lauf erneut) — der Grund steht im Protokoll des Jobs',
+          onclick: freigeben,
+        }, `✗ ${st.status.errors}`) : null,
         el('button', { class: 'x', title: 'Stand neu lesen', onclick: async () => { await loadStatus(); draw() } }, '⟳'),
       ),
       el('div', { class: 'scroll' }, body()),

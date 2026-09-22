@@ -85,8 +85,8 @@ public sealed class DocText
         {
             pm.Value = media; ps.Value = sha256; pq.Value = chunk.Seq;
             pp.Value = (object?)chunk.Page ?? DBNull.Value;
-            ph.Value = (object?)chunk.Heading ?? DBNull.Value;
-            pb.Value = chunk.Body;
+            ph.Value = (object?)Clean(chunk.Heading) ?? DBNull.Value;
+            pb.Value = Clean(chunk.Body) ?? "";
             await ins.ExecuteNonQueryAsync(ct);
         }
         await using (var doc = new NpgsqlCommand("""
@@ -99,10 +99,37 @@ public sealed class DocText
             doc.Parameters.AddWithValue("st", state);
             doc.Parameters.AddWithValue("p", (object?)pages ?? DBNull.Value);
             doc.Parameters.AddWithValue("c", chunks.Count);
-            doc.Parameters.AddWithValue("n", (object?)note ?? DBNull.Value);
+            doc.Parameters.AddWithValue("n", (object?)Clean(note) ?? DBNull.Value);
             await doc.ExecuteNonQueryAsync(ct);
         }
         await tx.CommitAsync(ct);
+    }
+
+    /// <summary>
+    /// Text, wie Postgres ihn annimmt (Taloan, 23.09.2026, am Tridonic-Archiv: „invalid byte sequence for encoding UTF8:
+    /// 0x00“). Ein PDF mit kaputter Zeichentabelle liefert Nullbytes mitten im Text; <c>text</c> in Postgres verträgt
+    /// kein 0x00, und ein einziges davon lässt das ganze Dokument scheitern. Weg damit — und gleich auch die übrigen
+    /// Steuerzeichen ausser Tabulator und Zeilenumbruch: sie sind nie Text, stehen aber im Ausschnitt eines Treffers.
+    /// Leer bleibt leer (null), damit die Spalte NULL bekommt und nicht einen leeren String.
+    /// </summary>
+    public static string? Clean(string? s)
+    {
+        if (string.IsNullOrEmpty(s)) return s;
+        if (!s.Any(ch => ch < ' ' && ch is not ('\t' or '\n' or '\r'))) return s;
+        var sb = new System.Text.StringBuilder(s.Length);
+        foreach (var ch in s) if (ch >= ' ' || ch is '\t' or '\n' or '\r') sb.Append(ch);
+        return sb.ToString();
+    }
+
+    /// <summary>Alle Dokumente, die beim Lesen scheiterten, wieder freigeben — der Job nimmt sie in der nächsten Runde
+    /// erneut. Ohne das bliebe ein Fehler für immer stehen, auch wenn die Ursache längst behoben ist (Taloan, 23.09.2026:
+    /// Nullbyte). Ein erkannter Scan bleibt draussen, der wartet auf OCR und nicht auf eine neue Serverfassung.</summary>
+    public async Task<int> RetryFailedAsync(CancellationToken ct = default)
+    {
+        if (_db is null) return 0;
+        await using var conn = await _db.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand($"DELETE FROM media_text_doc WHERE state = '{States.Error}'", conn);
+        return await cmd.ExecuteNonQueryAsync(ct);
     }
 
     /// <summary>Welcher Stand je Medium schon gelesen wurde (Hash und Zustand) — damit holt der Job nur Neues und
