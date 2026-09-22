@@ -105,3 +105,13 @@ test('audit: eine Rechnung für Zahlen und Befunde — die Tabelle je Klasse und
   assert.deepEqual(all.map(f => [f.node.id, f.progress.filled, f.progress.total, f.severity]), [['p-1', 1, 3, 'info'], ['v-1', 4, 4, 'ok']])
   assert.equal(a.sum.nodes, 2); assert.equal(a.sum.filled, 5); assert.equal(a.sum.cells, 7)
 })
+
+test('Freigabe-Schlüssel: Nummer und Ausführung (Taloan, 22.09.: ETIM 9 gibt es sechsmal)', async () => {
+  const { variantOf, releaseKey } = await import('../../plugins/etim/core.mjs')
+  assert.equal(variantOf('ETIM-9.0-ALL-SECTORS-IXF-NO-CHANGE-CODES-METRIC-EI-2022-12-05.xml'), 'all-sectors-no-change-codes-metric-ei')
+  assert.equal(variantOf('ETIM-9.0-HVACPLUMBING-IXF-NO-CHANGE-CODES-METRIC-ITALIAN-2023-01-16.xml'), 'hvacplumbing-no-change-codes-metric-italian')
+  assert.notEqual(releaseKey({ version: '9', file: 'ETIM-9.0-ALL-SECTORS-IXF-NO-CHANGE-CODES-METRIC-EI-2022-12-05.xml' }),
+                  releaseKey({ version: '9', file: 'ETIM-9.0-HVACPLUMBING-IXF-NO-CHANGE-CODES-METRIC-ITALIAN-2023-01-16.xml' }), 'zwei Ausführungen derselben Nummer dürfen sich nicht überschreiben')
+  assert.equal(releaseKey({ version: '10' }), '10')                       // Altbestand ohne Datei
+  assert.equal(releaseKey({ key: 'schon-gesetzt', version: '9' }), 'schon-gesetzt')
+})

@@ -7,7 +7,7 @@
 // Umbau (Taloan, 22.09.2026, pflegestruktur.md 29): ETIM ist Klassifikation, kein Export — die Ansicht geht vom Knoten aus
 // (Klasse → Attribute → Daten → Ausleitung), bearbeitet wird in der Subitems-Tabelle, nicht hier; die Zuordnung ETIM-Attribut → Attribut
 // hat ƒ (Umwandlungskette); die Regeln der Ausleitung (unbekannt, Klasse Pflicht, Vollständigkeit) stehen im BMEcat-Profil (xport).
-import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit } from './core.mjs'
+import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit, variantOf, releaseKey } from './core.mjs'
 import { OPS, FIELDS, FIELD_LABEL, FIELD_HINT, DATE_FORMATS, YES_DEFAULT, describe as describeSteps, opHint } from '../table/transform.mjs'
 
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else if (k === 'disabled') { if (v) e.setAttribute(k, '') } else if (v != null && v !== false) e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
@@ -22,7 +22,7 @@ const groupKey = () => cache.settings.group || 'etim'
 // release = die aktuelle Version (Zuweisen, Prüfen, Export). Alte Datensätze class:<EC> ohne Version zählen zur Version der damaligen Freigabe.
 // Mit der ganzen Freigabe im Journal (5 640 Klassen, 17 000 ETIM-Attribute) heisst „übernommen“ nicht mehr „in Gebrauch“: Attribute, Zuordnung und
 // Datenanalyse richten sich nach den Klassen, die im Baum zugewiesen sind (used); die Freigabe ist der Suchpool.
-const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [], used: new Set(), usedBy: new Map(), classOf: new Map() }   // classOf: Knoten → { code, own } (auch geerbt) — fürs Baummenü
+const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, releaseKey: null, release: null, versions: [], used: new Set(), usedBy: new Map(), classOf: new Map() }   // classOf: Knoten → { code, own } (auch geerbt) — fürs Baummenü
 async function loadUsed() {
   try {
     const key = cache.settings.classAttr; const rows = await (await fetch('/api/tree')).json(); const used = new Set(); const by = new Map(); const classOf = new Map()
@@ -32,7 +32,8 @@ async function loadUsed() {
 }
 /// Klassen in Gebrauch: die im Baum zugewiesenen; ohne Zuweisung und bei kleinem Bestand (von Hand übernommen) alle
 const usedClasses = () => { const out = [...cache.used].map(c => cache.classes.get(c)).filter(Boolean); return out.length || cache.classes.size > 50 ? out : [...cache.classes.values()] }
-const classKeyOf = code => `class:${cache.version ?? '0'}:${code}`
+// Schlüssel je Freigabe: Nummer und Ausführung (Taloan, 22.09.: ETIM 9 gibt es sechsmal — ALL-SECTORS, HVACPLUMBING, metrisch, imperial …)
+const classKeyOf = code => `class:${cache.releaseKey ?? cache.version ?? '0'}:${code}`
 /// Attribut eines ETIM-Attributs: Zuordnung (map: Schlüssel oder { to, steps }), sonst die der Datenanalyse (mapping), sonst das eigene ef…
 const attrKeyOf = code => { if (cache.map[code]) return mapEntry(cache.map, code).key; const m = cache.mapping?.[code.toLowerCase()]; return m?.to && !/ähnlich|vielleicht/.test(m.why ?? '') ? m.to : code.toLowerCase() }
 const stepsOf = code => mapEntry(cache.map, code).steps
@@ -67,17 +68,20 @@ async function loadCache() {
     cache.settings = { ...DEFAULTS, ...((await get('settings')) ?? {}) }; cache.map = (await get('map')) ?? {}; cache.mapping = (await get('mapping')) ?? {}
     const current = await get('release')
     cache.versions = []
-    for (const n of names.filter(n => n.startsWith('release:'))) { const r = await get(n); if (r) cache.versions.push({ ...r, version: r.version ?? n.slice(8) }) }
+    for (const n of names.filter(n => n.startsWith('release:'))) { const r = await get(n); if (r) { const k = n.slice(8); cache.versions.push({ ...r, key: k, version: r.version ?? k.split('-')[0], variant: r.variant ?? variantOf(r.file ?? r.url ?? '') }) } }
     // Altbestand ohne Version: zählt zur Version der Freigabe, die damals gelesen wurde
     const legacy = names.filter(n => /^class:[^:]+$/.test(n))
-    if (legacy.length && current && !cache.versions.some(v => v.version === String(current.number ?? '0'))) cache.versions.push({ ...current, version: String(current.number ?? '0'), legacy: true })
-    cache.versions.sort((a, b) => parseFloat(b.version) - parseFloat(a.version))
-    cache.version = current?.version ?? (current?.number != null ? String(current.number) : null) ?? cache.versions[0]?.version ?? null
+    if (current && !cache.versions.length) cache.versions.push({ ...current, key: releaseKey(current), version: String(current.version ?? current.number ?? '0') })
+    if (legacy.length && current && !cache.versions.some(v => v.version === String(current.number ?? '0'))) cache.versions.push({ ...current, key: String(current.number ?? '0'), version: String(current.number ?? '0'), legacy: true })
+    cache.versions.sort((a, b) => parseFloat(b.version) - parseFloat(a.version) || String(a.variant ?? '').localeCompare(String(b.variant ?? '')))
+    const cur = current ? cache.versions.find(v => v.key === releaseKey(current)) ?? cache.versions.find(v => v.version === String(current.version ?? current.number ?? '')) : null
+    const use = cur ?? cache.versions[0] ?? null
+    cache.releaseKey = use?.key ?? null; cache.version = use?.version ?? null; cache.release = use
     cache.classes = new Map()
-    if (cache.version != null) {
-      const all = await (await fetch(`/api/plugins/etim/data?values=true&prefix=${encodeURIComponent('class:' + cache.version + ':')}`)).json()
+    if (cache.releaseKey != null) {
+      const all = await (await fetch(`/api/plugins/etim/data?values=true&prefix=${encodeURIComponent('class:' + cache.releaseKey + ':')}`)).json()
       for (const c of Object.values(all)) cache.classes.set(c.code, c)
-      if (cache.versions.find(v => v.version === cache.version)?.legacy) { const old = await (await fetch('/api/plugins/etim/data?values=true&prefix=class%3A')).json(); for (const [n, c] of Object.entries(old)) if (/^class:[^:]+$/.test(n) && !cache.classes.has(c.code)) cache.classes.set(c.code, c) }
+      if (use?.legacy) { const old = await (await fetch('/api/plugins/etim/data?values=true&prefix=class%3A')).json(); for (const [n, c] of Object.entries(old)) if (/^class:[^:]+$/.test(n) && !cache.classes.has(c.code)) cache.classes.set(c.code, c) }
     }
     await loadUsed()
   } catch { }
@@ -622,8 +626,8 @@ async function mount(root, ctx) {
   // nur in den Sprachen des Modells, in Stapeln zu 400 — danach geht Suche, Zuweisen und Prüfen ohne die Datei
   // Version der gelesenen Datei als Freigabe eintragen und zur aktuellen machen, wenn keine da ist; Namen anderer Sprachen derselben Version bleiben (Datei von etim.de ergänzt die englische)
   async function ensureVersion() {
-    const h = st.rel.header; const ver = String(h.number ?? '0')
-    if (!cache.versions.some(v => v.version === ver)) { const info = { version: ver, name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: st.rel.classes.length, features: st.rel.features.size, file: st.relInfo?.file, at: new Date().toISOString() }; await ctx.data.set('release:' + ver, info); cache.versions.unshift(info) }
+    const h = st.rel.header; const ver = String(h.number ?? '0'); const variant = variantOf(st.relFile ?? ''); const key = [ver, variant].filter(Boolean).join('-')
+    if (!cache.versions.some(v => v.key === key)) { const info = { key, version: ver, variant, name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: st.rel.classes.length, features: st.rel.features.size, file: st.relInfo?.file, at: new Date().toISOString() }; await ctx.data.set('release:' + ver, info); cache.versions.unshift(info) }
     if (cache.version == null) { cache.version = ver; await ctx.data.set('release', { ...cache.versions.find(v => v.version === ver) }) }
     if (cache.version !== ver) { cache.version = ver; await ctx.data.set('release', { ...cache.versions.find(v => v.version === ver) }); await loadCache() }
   }
@@ -731,8 +735,8 @@ async function mount(root, ctx) {
     // Quelle, Klassen, Sprachen, geladen am, ● aktuell. Darunter EINE Zeile zum Holen (Liste → Auswahl → laden, oder URL, oder Datei).
     const langs = m.locales.map(l => l.code)
     const verRows = cache.versions.map(v => el('tr', {},
-      el('td', {}, el('button', { class: 'toggle', style: 'width:28px', title: v.version === cache.version ? 'aktuelle Version — gilt für Zuweisen, Prüfen, Export' : 'zur aktuellen Version machen', onclick: async () => { await ctx.data.set('release', v); await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); draw() } }, v.version === cache.version ? '●' : '○')),
-      el('td', { class: 'mono' }, `ETIM ${v.version}`),
+      el('td', {}, el('button', { class: 'toggle', style: 'width:28px', title: v.key === cache.releaseKey ? 'aktuelle Freigabe — gilt für Zuweisen, Prüfen, Export' : 'zur aktuellen Freigabe machen', onclick: async () => { await ctx.data.set('release', v); await loadCache(); await store.poll(true); await ops.ensureClassAttr(); await store.poll(true); draw() } }, v.key === cache.releaseKey ? '●' : '○')),
+      el('td', { class: 'mono', title: v.key }, `ETIM ${v.version}`, v.variant ? el('div', { class: 'muted', style: 'font-size:11px' }, v.variant) : null),
       el('td', {}, v.url ? el('a', { href: v.url, target: '_blank', rel: 'noopener', title: v.url }, v.file ?? v.name ?? v.url.split('/').pop()) : (v.file ?? v.name ?? '')),
       el('td', { class: 'num' }, String(v.classes ?? '')),
       el('td', {}, (v.languages ?? []).join('/')),

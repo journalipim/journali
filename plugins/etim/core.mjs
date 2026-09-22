@@ -75,6 +75,17 @@ export function mapEntry(map, code) {
 /// Rohwert durch die Kette der Zuordnung (leer bleibt leer, ausser die Kette sagt etwas)
 export const throughSteps = (steps, raw) => steps ? applySteps(steps, raw == null ? '' : Array.isArray(raw) ? raw.join(', ') : String(raw)) : raw
 
+/// Ausführung einer Freigabe aus dem Dateinamen (Taloan, 22.09.2026: „davon gibt es allein bei ETIM 9 sechs Stück“):
+/// ETIM-9.0-ALL-SECTORS-IXF-NO-CHANGE-CODES-METRIC-EI-2022-12-05.xml → all-sectors-no-change-codes-metric-ei.
+/// Ohne Dateinamen leer — dann ist der Schlüssel nur die Nummer (Altbestand).
+export function variantOf(file) {
+  let v = String(file ?? '').replace(/\.(xml|ixf|zip)$/i, '')
+  v = v.replace(/^etim[-_ ]?\d+(\.\d+)?[-_ ]?/i, '').replace(/[-_ ]?\d{4}-\d{2}-\d{2}$/, '').replace(/[-_ ]?ixf[-_ ]?/i, '-')
+  return v.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+/// Schlüssel einer Freigabe im Journal: release:<key>, class:<key>:<EC>
+export const releaseKey = info => info?.key ?? [String(info?.version ?? info?.number ?? '0'), variantOf(info?.file ?? info?.url ?? '')].filter(Boolean).join('-')
+
 /// Ein Name in der Sprache, sonst de, en, irgendeine
 export const nameOf = (names, locale) => names?.[locale] ?? names?.de ?? names?.en ?? Object.values(names ?? {})[0] ?? ''
 export const classText = (cls, locale) => `${cls.code} ${nameOf(cls.name, locale)}`
