@@ -35,6 +35,8 @@ stehen dort als solche markiert.
 - **Änderungen mit Python-Patchskripten** über das Write-Werkzeug, nicht mit
   Bash-Heredocs. Anker eindeutig (`assert count == 1`), BOM und CRLF je
   Datei erhalten.
+- **Nach jedem `git pull`:** `npm install` in `web/` (die andere Sitzung bringt neue Pakete mit — sonst
+  brechen Tests mit `ERR_MODULE_NOT_FOUND`), dann `dotnet build -c Release` und beide Testläufe.
 - **Vor dem Commit:** `dotnet build -c Release` mit 0 Fehlern, `dotnet test Journali.Tests` (Kern) und
   `npm test` in `web/` grün. **Oberfläche wird geprüft, nicht vorgeführt** (Taloan, 22.09.): jeder Dialog und jedes
   Fenster, das wir anfassen, bekommt einen Test in `web/test/ui-*.test.mjs` — echtes DOM (happy-dom), echte Komponente
