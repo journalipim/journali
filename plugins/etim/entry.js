@@ -7,7 +7,7 @@
 // Umbau (Taloan, 22.09.2026, pflegestruktur.md 29): ETIM ist Klassifikation, kein Export — die Ansicht geht vom Knoten aus
 // (Klasse → Attribute → Daten → Ausleitung), bearbeitet wird in der Subitems-Tabelle, nicht hier; die Zuordnung ETIM-Attribut → Attribut
 // hat ƒ (Umwandlungskette); die Regeln der Ausleitung (unbekannt, Klasse Pflicht, Vollständigkeit) stehen im BMEcat-Profil (xport).
-import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit, variantOf, releaseKey } from './core.mjs'
+import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit, variantOf, releaseKey, readiness } from './core.mjs'
 import { OPS, FIELDS, FIELD_LABEL, FIELD_HINT, DATE_FORMATS, YES_DEFAULT, describe as describeSteps, opHint } from '../table/transform.mjs'
 
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else if (k === 'disabled') { if (v) e.setAttribute(k, '') } else if (v != null && v !== false) e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
@@ -281,18 +281,30 @@ async function classDialog(nodeId, ctx, onDone = null) {
   async function doAssign(code, atId = nodeId) {
     const c = cache.classes.get(code); const at = tree.byId.get(atId) ?? row
     await run(`weise ${code} zu …`, async () => {
-      const k = await ops.ensureClassAttr(); await store.poll(true)
-      // Gruppe an die Wurzel des Pflegebaums — mit Bedingungen an den ETIM-Attributen stört sie nirgends
-      const root = (() => { let x = row; while (x.parent && tree.byId.get(x.parent)) x = tree.byId.get(x.parent); return x })()
-      const have = (root.groups ?? '').split(',').filter(Boolean)
-      if (!have.includes(groupKey())) await api.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, groupKey()] }, 'PUT')
+      // Jede Zuweisung stellt sicher, dass die Klasse danach pflegbar ist (Taloan, 22.09.): Gruppe da und am Pfad, Klassenattribut,
+      // je ETIM-Attribut ein Attribut im Modell. Am Ende wird geprüft und berichtet, was noch fehlt.
+      await ops.ensureGroup(); const k = await ops.ensureClassAttr(); await store.poll(true)
+      // Gruppe am Pfad des Knotens, an den zugewiesen wird — hängt sie nirgends darüber, kommt sie an die Wurzel dieses Baums
+      const onPath = id => { for (let p = id; p; p = tree.byId.get(p)?.parent) if ((tree.byId.get(p)?.groups ?? '').split(',').includes(groupKey())) return true; return false }
+      if (!onPath(atId)) {
+        let top = tree.byId.get(atId) ?? at; while (top.parent && tree.byId.get(top.parent)) top = tree.byId.get(top.parent)
+        const have = (top.groups ?? '').split(',').filter(Boolean)
+        await api.post(`/api/nodes/${encodeURIComponent(top.id)}/groups`, { groups: [...new Set([...have, groupKey()])] }, 'PUT')
+        say(`Gruppe ${groupKey()} an ${top.label} gehängt …`)
+      }
       await api.post(`/api/nodes/${encodeURIComponent(atId)}/attributes`, { attribute: k, locale: null, channel: null, value: code, row: null })
       cache.used.add(code); if (atId !== nodeId) store.toast(`✓ ${code} ab ${at.label}`, 'ok')
       loadUsed()   // Klassen je Knoten für Baummenü und Band
       let n = 0
       for (const f of c.features) { if (!ops.hasAttr(attrKeyOf(f.code))) { say(`lege an ${++n}: ${featureText(f, locale)} …`); await ops.createFeature(f); await store.poll(true) } else await ops.createFeature(f) }
       await store.poll(true); await tree.load()
+      // Prüfung nach dem Zuweisen: ist alles da? Sonst sagt die Meldung, was fehlt (und das Band bietet den Knopf dazu)
+      const node = await api.get(`/api/nodes/${encodeURIComponent(atId)}`).catch(() => null)
+      const r = readiness({ cls: c, map: mergedMap(), hasAttr: ops.hasAttr, groupExists: (model().groups ?? []).some(g => g.key === groupKey()), groupOn: (node?.groups ?? []).some(g => g.key === groupKey() && g.active !== false) })
       say('')
+      store.toast(r.ready
+        ? `✓ ${code} an ${at.label} · ${c.features.length} ETIM-Attribute bereit${n ? ` (${n} neu angelegt)` : ''}`
+        : `⚠ ${code} zugewiesen, aber ${!r.groupExists ? `die Gruppe ${groupKey()} fehlt im Modell` : !r.groupOn ? `die Gruppe ${groupKey()} gilt an ${at.label} nicht` : `${r.missing.length} ETIM-Attribute haben kein Attribut im Modell`} — das Band am Knoten hat den Knopf dafür`, r.ready ? 'ok' : 'error')
       checkStep(code)
     })
   }

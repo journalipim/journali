@@ -175,6 +175,13 @@ export async function gate(pctx, cfg) {
   return why || null
 }
 
+/// Bereit? (Taloan, 22.09.2026: „hänge ich eine Klasse an einen Knoten, muss sichergestellt sein, dass die Attribute existieren“)
+/// Prüft, was zum Pflegen dieser Klasse an diesem Knoten fehlt: Attribute im Modell und die Gruppe am Pfad.
+export function readiness({ cls, map, hasAttr, groupOn = true, groupExists = true }) {
+  const missing = (cls?.features ?? []).filter(f => !hasAttr(mapEntry(map, f.code).key))
+  return { missing, groupOn, groupExists, ready: !!cls && groupOn && groupExists && missing.length === 0 }
+}
+
 export const TYPE_LABEL = { Alphanumeric: 'Liste', Numeric: 'Zahl', Range: 'Bereich', Logical: 'Ja/Nein' }
 
 /// Eine Rechnung für Zahlen und Befunde (Taloan, 22.09.2026: die Klassentabelle sagte „9 von 175“, die Prüfung „keine Befunde“ —

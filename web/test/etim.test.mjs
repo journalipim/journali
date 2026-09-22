@@ -115,3 +115,14 @@ test('Freigabe-Schlüssel: Nummer und Ausführung (Taloan, 22.09.: ETIM 9 gibt e
   assert.equal(releaseKey({ version: '10' }), '10')                       // Altbestand ohne Datei
   assert.equal(releaseKey({ key: 'schon-gesetzt', version: '9' }), 'schon-gesetzt')
 })
+
+test('readiness: was zum Pflegen einer Klasse an einem Knoten fehlt (Taloan, 22.09.)', async () => {
+  const { readiness } = await import('../../plugins/etim/core.mjs')
+  const all = k => true, none = k => false
+  assert.deepEqual(readiness({ cls, map, hasAttr: all }).ready, true)
+  assert.equal(readiness({ cls, map, hasAttr: all, groupOn: false }).ready, false)
+  assert.equal(readiness({ cls, map, hasAttr: all, groupExists: false }).ready, false)
+  const r = readiness({ cls, map, hasAttr: k => k !== 'farbe' })
+  assert.equal(r.ready, false); assert.deepEqual(r.missing.map(f => f.code), ['EF000007'])
+  assert.equal(readiness({ cls, map, hasAttr: none }).missing.length, cls.features.length)
+})

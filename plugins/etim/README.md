@@ -58,6 +58,10 @@ ETIM ist Klassifikation, kein Export (Leiste: ⌗ Klassifikation). Bedient wird 
 ins vorhandene Werkzeug; die Ansicht des Plugins ist nur Quelle, Versionen, Klassen, Attribute,
 Zuordnung:
 
+Jede Zuweisung stellt sicher, dass die Klasse danach pflegbar ist: Gruppe `etim` anlegen (falls gelöscht) und an den
+Pfad des Knotens hängen, Klassenattribut anlegen, je ETIM-Attribut ein Attribut im Modell — danach wird geprüft und
+gemeldet, was noch fehlt (`readiness` im Kern). Fehlt etwas später wieder, hat das Band den Knopf dafür.
+
 1. **Klasse** — eigen oder geerbt (Regelfall: an der Produktgruppe, erbt auf alles darunter;
    Ausnahme am Produkt), ≠ abweichende Klassen darunter. „Klasse zuweisen …“ öffnet den Dialog
    (Vorschlag, Umfeld, Suche, Ebene mit Empfehlung).
