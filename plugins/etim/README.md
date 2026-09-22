@@ -69,6 +69,10 @@ gemeldet, was noch fehlt (`readiness` im Kern). Fehlt etwas später wieder, hat 
    „zuordnen …“ filtert die Zuordnung auf die Klasse; Standard ist ein **vorhandenes Attribut**
    mit **ƒ** (Einheit, ja/x → Ja/Nein, Text → EV-Code nach Tabelle, von/bis) — ein eigenes
    `ef…` ist der Ausweg („＋ n anlegen“, Gruppe `etim`, nur an Produkt und Variante).
+2a. **Sicht** — „◫ Sicht“ baut je Rolle eine Attributsicht `etim_<klasse>_<rolle>` („⌗ EC004718 Laptop“) mit genau
+   den Attributen dieser Klasse (das Klassenattribut vorn, zugeordnete Attribute in ihrer eigenen Gruppe) und wählt sie
+   am Knoten — der Reiter zeigt dann nur diese Attribute. Jede Zuweisung schreibt die Sicht neu.
+
 3. **Daten** — Produkte darunter × ETIM-Attribute: % gefüllt, leer, passen nicht. „⊞ Tabelle“ öffnet
    die Subitems-Tabelle mit genau den Spalten der Klasse (Excel-Bedienung); „✓ prüfen“ dieselbe
    Regel wie in ✓ Datenqualität.

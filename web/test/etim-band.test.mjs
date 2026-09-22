@@ -7,7 +7,7 @@ function mkEl(tag = 'div') {
   const e = {
     tag, nodeType: 1, kids: [], style: { cssText: '' }, attrs: {}, className: '', _text: '',
     append(...k) { for (const x of k.flat()) if (x != null) e.kids.push(x?.nodeType ? x : String(x)) },
-    addEventListener() {}, removeEventListener() {}, setAttribute(k, v) { e.attrs[k] = v }, remove() {}, focus() {}, scrollIntoView() {},
+    addEventListener(type, fn) { if (type === 'click') e.onclick = fn }, removeEventListener() {}, setAttribute(k, v) { e.attrs[k] = v }, remove() {}, focus() {}, scrollIntoView() {},
     querySelector() { return null }, querySelectorAll() { return [] }, classList: { contains: () => false, add() {}, remove() {} },
     get textContent() { return e._text }, set textContent(v) { e._text = String(v); e.kids = [] },
     get innerHTML() { return '' }, set innerHTML(v) { e.kids = []; e._text = '' },
@@ -141,4 +141,26 @@ test('Gruppe ganz gelöscht: der Knopf legt sie neu an (Taloan, 22.09.: „ich h
   assert.match(b, /Gruppe etim fehlt im Modell/)
   assert.match(b, /Gruppe etim anlegen und anhängen/)
   MODEL.groups = groups; NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
+})
+
+test('Attributsicht je Klasse (Taloan, 22.09.): je Rolle eine Sicht mit genau den Attributen der Klasse', async () => {
+  const mod = await import('../../plugins/etim/entry.js')
+  const put = []
+  const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { put.push([p, b, m]); return {} } } }
+  const band = mod.default.nodeBands[0]
+  const head = mkEl('h2'), body = mkEl('div')
+  await band.mount({ head, body }, 'p-1', ctx2)
+  await new Promise(r => setTimeout(r, 30))
+  // den Knopf „◫ Sicht“ finden und auslösen
+  const find = e => typeof e === 'string' ? null : (e.tag === 'button' && (e.kids ?? []).includes('◫ Sicht') ? e : (e.kids ?? []).map(find).find(Boolean))
+  const btn = find(body); assert.ok(btn, 'Knopf ◫ Sicht fehlt')
+  await btn.onclick?.({ preventDefault() {}, stopPropagation() {} })
+  const views = put.filter(([p]) => p.startsWith('/api/model/views/'))
+  assert.equal(views.length, 2, 'je Rolle eine Sicht (product, variant)')
+  const [path, body2] = views[0]
+  assert.match(path, /etim_ec004718_(product|variant)/)
+  assert.equal(body2.level, 'product')
+  assert.match(body2.label.de, /⌗ EC004718 Laptop/)
+  const all = body2.items.flatMap(i => i.order)
+  assert.ok(all.includes('etim_class') && all.includes('ef008851') && all.includes('tastatur_name'), JSON.stringify(body2.items))
 })
