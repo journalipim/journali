@@ -67,9 +67,18 @@ function modelOps(ctx) {
   // Bezeichnung je Sprache des Modells; fehlt die Mastersprache (ETIM International: nur Englisch), steht dort der englische Name — sonst zeigt die Oberfläche den Schlüssel
   const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!out[locale]) out[locale] = nameOf(names, locale); return out }
   const put = (path, body) => api.post('/api/model' + path, body, 'PUT')
-  async function ensureGroup() { const g = groupKey(); if (!(model().groups ?? []).some(x => x.key === g)) await put(`/groups/${g}`, { key: g, label: { de: g === 'etim' ? 'ETIM' : g, en: g === 'etim' ? 'ETIM' : g }, activeFrom: 'product' }) }
+  // Die Gruppe gilt überall — die Klasse steht an der Gruppe („Mobile Geräte“) und erbt nach unten (Taloan, 22.09.: „verstehe ich nicht“ —
+  // die Gruppe war erst ab product aktiv, damit liess sich die Klasse an keiner Gruppe setzen); die Merkmale selbst gibt es nur an
+  // Produkt und Variante (levels), nicht an der Gruppe. Eine alte Gruppe mit activeFrom wird einmal repariert.
+  async function ensureGroup() {
+    const g = groupKey(); const have = (model().groups ?? []).find(x => x.key === g)
+    if (!have) await put(`/groups/${g}`, { key: g, label: { de: g === 'etim' ? 'ETIM' : g, en: g === 'etim' ? 'ETIM' : g } })
+    else if (have.activeFrom) await put(`/groups/${g}`, { ...have, activeFrom: null })
+  }
+  const FEATURE_LEVELS = ['product', 'variant']
   async function ensureClassAttr() {
     const key = cache.settings.classAttr
+    await ensureGroup()   // Gruppe überall aktiv (repariert eine alte mit activeFrom) — sonst „etim_class gilt hier nicht“ an der Gruppe
     await ensureGroup()
     const existing = model().attributes.find(a => a.key === key)
     if (existing && !(existing.type === 'enum' && existing.list === key)) return key   // ein vorhandenes Text-/Listenattribut bleibt, wie es ist
@@ -82,6 +91,7 @@ function modelOps(ctx) {
     for (let k = 0; k < missing.length; k += 1000) await put(`/lists/${key}/values`, missing.slice(k, k + 1000))
     let i = 0
     if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: groupKey(), inheritable: true })
+    else { const a = model().attributes.find(x => x.key === key); if (a.levels) await put(`/attributes/${key}`, { ...a, levels: null }) }   // die Klasse darf an jeder Ebene stehen
     for (const l of (model().lists ?? []).filter(l => (l.key === key || /^ef\d+$/.test(l.key)) && !l.closed)) await put(`/lists/${l.key}`, { ...l, closed: true })
     // Merkmal-Attribute ohne Bedingung (aus früheren Läufen) bekommen sie nachgetragen — sonst gälten sie an jedem Knoten
     for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && !a.label?.[locale] && Object.keys(a.label ?? {}).length)) await put(`/attributes/${a.key}`, { ...a, label: { ...a.label, [locale]: nameOf(a.label, locale) } })
@@ -102,8 +112,8 @@ function modelOps(ctx) {
   async function createFeature(f) {
     await ensureGroup()
     const key = f.code.toLowerCase()
-    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code); if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable)) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true }); return key }
-    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true }
+    if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code); if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable || !a.levels)) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true, levels: a.levels ?? FEATURE_LEVELS }); return key }
+    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // Merkmale nur an Produkt und Variante
     if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
     else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
@@ -235,7 +245,7 @@ async function classDialog(nodeId, ctx) {
     const noteOf = (l, i) => l.other ? `⚠ ${l.other} Produkte darunter tragen schon eine andere Klasse — ab hier wäre die Klasse zu grob; granularer setzen (weiter rechts).` : l.groups ? `⚠ ${l.groups} Untergruppen mit ${l.products} Produkten darunter — eine Klasse für alle? Meist zu grob: an den Produktgruppen setzen${i < out.length - 1 ? ' (weiter rechts)' : ' — dort Rechtsklick → ETIM prüfen'}.` : l.products > 1 ? `gilt für ${l.products} Produkte darunter (vererbbar)${i === rec ? ' — Empfehlung: die höchste Ebene ohne Untergruppen und ohne Widerspruch' : ''}` : l.products === 1 ? 'gilt für dieses eine Produkt' : 'keine Produkte darunter — die Klasse gilt, sobald welche kommen'
     const lvNote = el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 8px' }, noteOf(out[rec], rec))
     body.append(el('div', { style: 'font-size:14px;margin:6px 0' }, el('b', {}, `${code} ${nameOf(c.name, locale)}`), ` → ${ICON[row.role] ?? ''} ${row.label}`),
-      el('div', { class: 'muted', style: 'margin-bottom:8px' }, `${c.features.length} Merkmale der Klasse gelten dann an diesem Knoten${row.role === 'group' ? ' und allem darunter' : ''}${missing.length ? ` — ${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()})` : ''}.`),
+      el('div', { class: 'muted', style: 'margin-bottom:8px' }, `${c.features.length} Merkmale der Klasse gelten dann ${row.role === 'group' ? 'an allen Produkten darunter (die Klasse steht an der Gruppe und erbt)' : 'an diesem Knoten'}${missing.length ? ` — ${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()}, nur an Produkt und Variante)` : ''}.`),
       el('div', { class: 'scroll', style: 'max-height:40vh;border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:12px' }, ...c.features.map(f => el('div', {}, el('span', { class: 'mono muted' }, f.code), ' ', featureText(f, locale), el('span', { class: 'muted' }, ` · ${TYPE[f.type] ?? f.type}${ops.hasAttr(attrKeyOf(f.code)) ? '' : ' · neu'}`)))),
       el('div', { style: 'margin-top:10px' }, el('div', { class: 'muted', style: 'font-size:12px' }, 'Gilt ab (Pfad von der Wurzel bis hier — Zahl: Produkte darunter · ▣ Untergruppen · ≠ mit anderer Klasse):'), el('div', { class: 'chips', style: 'margin:4px 0' }, ...lvBtns), lvNote),
       el('div', { class: 'chips', style: 'margin-top:6px' }, el('button', { class: 'primary', onclick: () => doAssign(code, target.id) }, '✓ zuweisen'), el('button', { onclick: () => draw() }, 'zurück')))
