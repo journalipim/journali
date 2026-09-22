@@ -53,8 +53,10 @@ Einheit steckt im Merkmal. Der Kontext bekommt `features` (`code`, `values`, `de
 
 ## Der Weg (Taloan, 22.09.2026 — pflegestruktur.md 29)
 
-ETIM ist Klassifikation, kein Export (Leiste: ⌗ Klassifikation). Die Ansicht geht vom Knoten aus,
-vier Stufen mit Zahlen, jede springt ins vorhandene Werkzeug:
+ETIM ist Klassifikation, kein Export (Leiste: ⌗ Klassifikation). Bedient wird am Knoten: das Band
+⌗ ETIM in der Knotenansicht (Beitragspunkt `nodeBands`) zeigt die Stufen mit Zahlen, jede springt
+ins vorhandene Werkzeug; die Ansicht des Plugins ist nur Quelle, Versionen, Klassen, Attribute,
+Zuordnung:
 
 1. **Klasse** — eigen oder geerbt (Regelfall: an der Produktgruppe, erbt auf alles darunter;
    Ausnahme am Produkt), ≠ abweichende Klassen darunter. „Klasse zuweisen …“ öffnet den Dialog

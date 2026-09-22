@@ -788,14 +788,17 @@ Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher St
   dann ist es das Attribut des Kunden, das die nächste Klassifikation wiederverwendet. Die
   Zuordnung (`map`: Schlüssel oder `{ to, steps }`) ist Modellwahrheit, einmal je Journal —
   **kein Profil im Klassifikations-Plugin**; eine aktive Release, Wechsel = Abgleich.
-- **Die Ansicht geht vom Knoten aus** (Taloan: „suche ich mir nicht zuerst mal einen Knoten aus?“):
-  vier Stufen mit Zahlen — 1 Klasse (eigen/geerbt, ≠ abweichende darunter) · 2 Attribute
-  (n von m, zugeordnet, mit ƒ, fehlend) · 3 Daten (Produkte × Merkmale: % gefüllt, leer, passen
-  nicht) · 4 Ausleitung (BMEcat-Profile). Jede Stufe springt ins vorhandene Werkzeug:
-  Zuweisen-Dialog, Zuordnung (gefiltert auf die Klasse), **Subitems-Tabelle mit genau den
-  Spalten der Klasse** (`/table/<id>?attrs=…`, Taloan: „wir haben im Baum die Tabellenansicht,
-  Excel — der Dialog ist grenzwertig“), Vorlagen-Export. Die eigene Tabelle des Dialogs ist weg.
-  Grundlagen (Releases, Klassen in Gebrauch, Attribute, Zuordnung) darunter, zugeklappt.
+- **Bedient wird beim Gegenstand, nicht im Plugin** (Taloan, 22.09.: „nicht jedes Plugin muss beim
+  Klick etwas ausführen — manche sind Wissens-/Funktions-Plugins, die Bedienung erfolgt an
+  anderer Stelle“). Neuer Beitragspunkt **`nodeBands`**: ein Plugin zeichnet je Knoten ein Band in
+  der Knotenansicht (`mount({ head, body }, nodeId, ctx)`, wie das Workflow-Band). Das Band
+  ⌗ ETIM zeigt in einer Zeile Klasse (eigen/geerbt, ≠ abweichende darunter) · Attribute n/m
+  (zugeordnet, ƒ, fehlend) · Daten % gefüllt (leer, passen nicht) und springt ins vorhandene
+  Werkzeug: Zuweisen-Dialog, Zuordnung (auf die Klasse gefiltert), **Subitems-Tabelle mit genau
+  den Spalten der Klasse** (`/table/<id>?attrs=…`, Taloan: „wir haben im Baum die Tabellenansicht,
+  Excel — der Dialog ist grenzwertig“), Prüfung mit Funden im Körper. Die Ansicht des Plugins
+  ist nur, was das Plugin selbst ist: Quelle und Versionen, Klassen in Gebrauch, Attribute,
+  Zuordnung mit ƒ. Die eigene Tabelle des Dialogs ist weg.
 
 **BMEcat = xport-Profil auf einem Publikationsbaum:** Quelle „Publikation“ statt Teilbaum —
 `GET /api/pub/{id}/export` liefert nur Ausgeleitetes mit Rubrikenpfad; die Rubriken werden die

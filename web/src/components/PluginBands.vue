@@ -1,0 +1,46 @@
+<script setup>
+// Bänder der Plugins in der Knotenansicht (Taloan, 22.09.2026: „die Bedienung erfolgt an anderer Stelle — beim Gegenstand“):
+// Beitragspunkt nodeBands — ein Plugin zeichnet je Knoten eine Zeile (head: Zusammenfassung und Knöpfe) und, wenn es will,
+// einen Körper darunter (body). Wie das Workflow-Band: Überschrift klappt den Körper auf und zu. Das Plugin bekommt denselben
+// ctx wie seine Ansichten; bei Knotenwechsel wird abgebaut und neu gezeichnet.
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
+import { plugins } from '../plugins.js'
+import { tree } from '../tree.js'
+
+const props = defineProps({ id: String, role: String })
+const bands = computed(() => plugins.loaded ? plugins.nodeBands.filter(b => !b.roles || b.roles.includes(props.role)) : [])
+const heads = ref({}), bodies = ref({})
+const openState = ref(Object.fromEntries(bands.value.map(b => [b.key + ':' + b.band, localStorage.getItem(`journali.band.${b.key}.${b.band}`) !== '0'])))
+const isOpen = b => openState.value[b.key + ':' + b.band] !== false
+function toggle(b) { const k = b.key + ':' + b.band; openState.value[k] = !isOpen(b); localStorage.setItem(`journali.band.${b.key}.${b.band}`, isOpen(b) ? '1' : '0') }
+let cleanups = []
+async function show() {
+  for (const c of cleanups) { try { c() } catch {} } cleanups = []
+  if (!plugins.loaded) await plugins.load()
+  await nextTick()
+  for (const b of bands.value) {
+    const k = b.key + ':' + b.band; const head = heads.value[k], body = bodies.value[k]
+    if (!head) continue
+    head.innerHTML = ''; if (body) body.innerHTML = ''
+    try { const r = await b.mount({ head, body }, props.id, { ...plugins.ctx(b.key), tree }); if (typeof r === 'function') cleanups.push(r) }
+    catch (e) { head.textContent = '✗ ' + e.message }
+  }
+}
+onMounted(show)
+watch(() => [props.id, bands.value.length], show)
+onUnmounted(() => { for (const c of cleanups) { try { c() } catch {} } })
+</script>
+
+<template>
+  <div v-for="b in bands" :key="b.key + ':' + b.band" class="section plugin-band">
+    <h2><span class="caret" @click="toggle(b)" :title="isOpen(b) ? 'zuklappen' : 'aufklappen'">{{ isOpen(b) ? '▾' : '▸' }}</span><span class="lbl" @click="toggle(b)">{{ b.icon || '⌁' }} {{ b.label }}</span> <span class="head" :ref="el => { if (el) heads[b.key + ':' + b.band] = el }" /></h2>
+    <div v-show="isOpen(b)" class="body" :ref="el => { if (el) bodies[b.key + ':' + b.band] = el }" />
+  </div>
+</template>
+
+<style scoped>
+.plugin-band h2 { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.plugin-band .lbl { cursor: pointer; }
+.plugin-band .head { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; font-weight: normal; font-size: 12px; }
+.plugin-band .body:empty { display: none; }
+</style>

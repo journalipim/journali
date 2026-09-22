@@ -12,6 +12,8 @@
 //   importers:   [{ key, label, accept: ['.csv'], parse(file, ctx) → { columns, rows, sheets? } }]
 //                Quellen für den Tabellenimport (⇩ Import → Tabelle); rows als Arrays in Spaltenreihenfolge
 //   checks:      [{ key, label, run({ row, values, columns, model }) → [{ severity: 'error'|'warn'|'info', attribute?, message }] }]
+//   nodeBands:   [{ key, label, icon?, roles?, mount({ head, body }, nodeId, ctx) → unmount? }]   Band in der Knotenansicht (Taloan, 22.09.:
+//                „die Bedienung erfolgt beim Gegenstand“ — ETIM-Stand am Knoten; head = Zeile mit Zahlen und Knöpfen, body = Details)
 //   Manifest process {…} oder processes: [{ key, label, command, args, params, description }] — mehrere Dienste je Plugin (Taloan); ein Job nennt plugin + service
 //                Prüfregeln für die Datenqualität (Basis-Plugin da zeigt sie)
 // ctx = { api, store, tree, dialog, plugin: { key, version, base }, data: { list, get, set, del }, mapper, batch, checks, go, use(key) }
@@ -41,6 +43,7 @@ export const plugins = reactive({
   nodeActions: [],        // { key, label, icon, run }
   importers: [],          // { key (Plugin), source (importer.key), label, accept, parse }
   checks: [],             // { key (Plugin), check, label, run }
+  nodeBands: [],          // { key (Plugin), band (band.key), label, icon, roles, mount }
 
   loading: null,          // laufender load() — wer gleichzeitig ruft, wartet darauf (sonst doppelte Einträge in der Leiste)
   load() { return this.loading ??= this._load().finally(() => { this.loading = null }) },
@@ -58,11 +61,12 @@ export const plugins = reactive({
         for (const a of mod.nodeActions ?? []) this.nodeActions.push({ key: p.key, ...a })
         for (const i of mod.importers ?? []) this.importers.push({ key: p.key, source: i.key, ...i })
         for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })
+        for (const b of mod.nodeBands ?? []) this.nodeBands.push({ key: p.key, band: b.key, ...b })
       } catch (e) { store.toast(`Plugin ${p.key}: ${e.message}`) }
     }
     // ausgeschaltete Plugins (auch: Basis aus): ihre Beiträge weg (Modul bleibt geladen — ein ES-Modul lässt sich nicht entladen)
     const on = new Set(this.list.filter(p => this.active(p.key)).map(p => p.key))
-    for (const k of ['views', 'nodeActions', 'importers', 'checks']) this[k] = this[k].filter(x => on.has(x.key))
+    for (const k of ['views', 'nodeActions', 'importers', 'checks', 'nodeBands']) this[k] = this[k].filter(x => on.has(x.key))
     this.loaded = true   // erst jetzt: vorher sähe die Übersicht eines Themas nur den ersten Eintrag und leitete dorthin
   },
   enabled(key) { return this.active(key) },

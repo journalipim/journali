@@ -17,6 +17,7 @@ import Cell from '../components/Cell.vue'
 import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
 import ListCell from '../components/ListCell.vue'
+import PluginBands from '../components/PluginBands.vue'
 import { validate, convert } from '../mapper.js'
 import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
@@ -889,6 +890,8 @@ function cellMenu(e, def, col, block) {
         </tbody></table>
         </template>
       </div>
+      <!-- Bänder der Plugins (nodeBands, Taloan 22.09.): ETIM-Stand u. a. — beim Gegenstand, nicht im Plugin -->
+      <PluginBands v-if="node.role !== 'rubric'" :id="id" :role="node.role" />
       <div class="section" v-if="node.role !== 'group' && node.role !== 'rubric'">
         <h2 @click="toggle('releases')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>✓ Freigaben <span class="muted">· Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig = keine Freigabe</span></h2>
         <template v-if="open('releases')">
