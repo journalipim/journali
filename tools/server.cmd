@@ -22,7 +22,17 @@ exit /b 2
 
 :start
 start "journali" /D "%ROOT%" dotnet run --project Journali.Server
-exit /b 0
+goto warten
+
+rem Warten, bis der Server antwortet (der erste Start uebersetzt noch) — und es sagen
+:warten
+echo Server startet ...
+for /l %%i in (1,1,90) do (
+  curl -s -m 2 -o nul localhost:5000/api/health && (echo laeuft - http://localhost:5000 & exit /b 0)
+  ping -n 2 127.0.0.1 >nul
+)
+echo kam nicht hoch - siehe Fenster "journali"
+exit /b 1
 
 :stop
 taskkill /im Journali.Server.exe /f >nul 2>&1 && echo gestoppt || echo lief nicht

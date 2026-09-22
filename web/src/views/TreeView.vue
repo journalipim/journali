@@ -493,8 +493,12 @@ const DEPTH = { group: 0, product: 1, variant: 2 }
 const required = ref([])      // [{ def, locale }]
 const vals = ref({})          // key → Wert
 const master = computed(() => store.model?.masterLocale ?? store.model?.locales[0]?.code ?? null)
+const atRoot = ref(false)     // Gruppe an der Wurzel statt unter dem offenen Knoten (ein neuer Baum)
+/// Wohin die neue Gruppe kommt: der offene Knoten — oder die Wurzel, wenn keiner offen ist oder man es umschaltet
+const newParent = computed(() => atRoot.value ? null : groupTarget.value)
 async function start(kind) {
-  const parent = kind === 'variant' ? productTarget.value : groupTarget.value
+  atRoot.value = kind === 'group' && !groupTarget.value
+  const parent = kind === 'variant' ? productTarget.value : newParent.value
   creating.value = kind
   form.value = kind === 'variant' ? Object.fromEntries((productTarget.value?.axes ?? []).map(a => [a, ''])) : {}
   vals.value = {}; required.value = []
@@ -516,7 +520,7 @@ async function create() {
   if (!complete.value) return
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   const kind = creating.value
-  const parent = kind === 'variant' ? productTarget.value : groupTarget.value
+  const parent = kind === 'variant' ? productTarget.value : kind === 'group' ? newParent.value : groupTarget.value
   const cmds = [kind === 'group' ? { op: 'group.create', ref: 'n', args: { parent: parent?.id ?? null } }
     : kind === 'product' ? { op: 'product.create', ref: 'n', args: { group: parent.id } }
     : { op: 'variant.create', ref: 'n', args: { product: parent.id, axisValues: form.value } }]
@@ -558,7 +562,7 @@ function onDialogKey(e) {
       <span v-for="t in terms" :key="t" class="chip mono" :class="{ not: t.startsWith('-') }" :title="t.startsWith('-') ? 'Verneinung aufheben' : 'Verneinen (Gegenteil)'" @click="q = q.split(/\s+/).map(w => w === t ? (t.startsWith('-') ? t.slice(1) : '-' + t) : w).join(' ')">{{ t }}<button @click.stop="dropTerm(t)" @click="dropTerm(t)" title="Bedingung entfernen">×</button></span>
     </div>
     <div class="toolbar create">
-      <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label}` : 'Gruppe an der Wurzel'">+ ▣</button>
+      <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label} anlegen (im Dialog auf die Wurzel umschaltbar — ein neuer Baum)` : 'Gruppe an der Wurzel anlegen (ein neuer Baum)'">+ ▣</button>
       <button @click="start('product')" :disabled="!groupTarget" :title="groupTarget ? `Produkt unter ${groupTarget.label}` : 'erst eine Gruppe wählen'">+ ▦</button>
       <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? `Variante unter ${productTarget.label}` : 'erst ein Produkt wählen'">+ ◆</button>
       <span class="grow" />
@@ -621,7 +625,10 @@ function onDialogKey(e) {
     <div v-if="creating" class="overlay" @click.self="creating = null" @keydown="onDialogKey">
       <div class="dialog" ref="dialog">
         <div class="toolbar"><h1>{{ icon(creating) }} {{ creating === 'group' ? 'Neue Gruppe' : creating === 'product' ? 'Neues Produkt' : 'Neue Variante' }}</h1>
-          <span class="muted">{{ creating === 'variant' ? 'unter ' + productTarget.label : groupTarget ? 'unter ' + groupTarget.label : 'an der Wurzel' }}</span></div>
+          <span v-if="creating === 'group' && groupTarget" class="view-chip" :class="{ on: atRoot }" role="button" tabindex="0"
+            :title="atRoot ? `an der Wurzel — ein neuer Baum neben ${groupTarget.label}` : `unter ${groupTarget.label} — Klick legt sie stattdessen an der Wurzel an`"
+            @click="atRoot = !atRoot" @keydown.enter.prevent="atRoot = !atRoot" @keydown.space.prevent="atRoot = !atRoot">{{ atRoot ? '⌂ an der Wurzel' : '↳ unter ' + groupTarget.label }}</span>
+          <span v-else class="muted">{{ creating === 'variant' ? 'unter ' + productTarget.label : 'an der Wurzel' }}</span></div>
         <table class="grid form"><colgroup><col style="width:170px" /><col style="width:300px" /></colgroup><tbody>
           <tr v-for="a in (creating === 'variant' ? productTarget.axes : [])" :key="'ax-' + a">
             <td class="attr" :title="a + ' — Variantenachse'">◆ {{ attrDef(a)?.label?.de || a }}</td>
