@@ -767,6 +767,10 @@ Was das JSON nicht hat und ein PIM braucht: Familie (welche Attribute
 
 ## 29. Klassifikation und BMEcat — gebaut (Taloan, 22.09.2026: „ETIM ist eine Klassifikation, kein Exporttyp“)
 
+**Wording (Taloan, 22.09.2026):** Merkmal = Attribut, Wert = Ausprägung. Ein ETIM-Merkmal heisst in der
+Oberfläche **ETIM-Attribut** (EF-Code); es wird einem Attribut des Modells **zugeordnet** — „nicht
+zugeordnet“ statt „Merkmal ohne Attribut“ („ein Attribut ohne Attribut“).
+
 **Trennschnitt (Taloans Entscheidung):** ETIM hilft nur, Produktgruppen und Produkte Klassen
 zuzuordnen und die Merkmale als Attribute bereitzustellen. Der **BMEcat-Export setzt auf einen
 Publikationsbaum auf** — welche Produkte, welche Rubriken, welche Reihenfolge, ist der Baum;

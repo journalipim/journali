@@ -113,7 +113,7 @@ export async function contextOf(env, id, { locale, mapping = {}, depth = 0, with
   const f = {}; for (const [field, ak] of Object.entries(mapping)) f[field] = ak && attr[ak] ? attr[ak].value : (ak === '$sku' ? Object.values(row?.keys ?? {})[0] ?? null : ak === '$name' ? row?.label : ak === '$id' ? id : null)
   let media = []
   if (withMedia) { try { const rels = await api.get(`/api/nodes/${encodeURIComponent(id)}/relations`); media = [...(rels.out ?? []), ...(rels.inherited ?? [])].filter(r => r.other?.role == null && r.other?.mime && !(r.values ?? []).some(v => v.attribute === 'stop' && v.value === 'true')).map(r => ({ id: r.other.id, name: r.other.name, mime: r.other.mime, url: `${env.server ?? ''}/api/media/${r.other.id}/file`, type: r.type, isImage: !!r.other.isImage })) } catch { } }
-  // ETIM & Co.: features = [{ code, attr, unit? }] aus dem Profil → Merkmale mit Wert aus dem Attribut
+  // ETIM & Co.: features = [{ code, attr, unit? }] aus dem Profil → ETIM-Attribute mit Wert aus dem Attribut
   let features = (env.features ?? []).map(fe => { const a = attr[fe.attr]; return a ? { code: fe.code, value: a.value, values: [a.value], unit: fe.unit ?? a.unit ?? null, details: null, label: a.label } : null }).filter(Boolean)
   const active = new Set((n.groups ?? []).filter(g => g.active).flatMap(g => g.attributes ?? []))   // welche Attribute hier gelten (Gruppe am Pfad, an dieser Rolle aktiv)
   // sku = der erste Schlüssel (eindeutiger Wert) — für Vorlagen, die {{sku}} sagen; keys = alle (Taloan, 21.09.)
@@ -165,7 +165,7 @@ export async function build(env, { root, pub = null, role = 'product', locale, m
     if (env.gate) { const why = await env.gate(p); if (why) failed.push(`${r.label}${r.keys ? ' (' + Object.values(r.keys).join(' · ') + ')' : ''}: ${why}`) }
     products.push(p)
   }
-  if (failed.length) throw new Error(`Export verweigert — ${failed.length} von ${targets.length} Knoten ohne Struktur (✓ Datenanalyse → ⌗ ETIM-Merkmale):\n` + failed.slice(0, 8).join('\n') + (failed.length > 8 ? `\n… und ${failed.length - 8} weitere` : ''))
+  if (failed.length) throw new Error(`Export verweigert — ${failed.length} von ${targets.length} Knoten ohne Struktur (✓ Datenanalyse → ⌗ ETIM-Attribute):\n` + failed.slice(0, 8).join('\n') + (failed.length > 8 ? `\n… und ${failed.length - 8} weitere` : ''))
   // Werte sind Sache des Anwenders (Taloan, 20.09.: Pflichtfelder) — nur zählen und melden, nicht sperren
   const stats = { unknown: 0, bad: 0, classified: 0, completeness: 0, held: pubInfo?.out ?? 0 }
   for (const p of products) for (const f of p.features ?? []) { if (f.bad != null) stats.bad++; else if (f.details) stats.unknown++ }

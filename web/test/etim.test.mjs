@@ -44,9 +44,9 @@ test('gate: Regeln des BMEcat-Profils — Klasse Pflicht, Vollständigkeit, stre
   assert.equal(await gate({ attr }, { ...cfg, minCompleteness: 75 }), null)
   const badAttr = { ...attr, farbe: { value: 'Lila', raw: 'Lila' } }
   assert.equal(await gate({ attr: badAttr }, cfg), null, 'unpassender Wert sperrt nicht — geht als UN hinaus')
-  assert.match(await gate({ attr: badAttr }, { ...cfg, strict: true }), /Werte passen nicht zum Merkmal: EF000007/)
+  assert.match(await gate({ attr: badAttr }, { ...cfg, strict: true }), /Werte passen nicht zum ETIM-Attribut: EF000007/)
   assert.match(await gate({ attr: { etim_class: { value: 'EC000001' } } }, cfg), /nicht in ETIM 9.0/)
-  assert.match(await gate({ attr: { etim_class: attr.etim_class, breite: attr.breite } }, cfg), /3 von 4 Merkmalen ohne Attribut/)
+  assert.match(await gate({ attr: { etim_class: attr.etim_class, breite: attr.breite } }, cfg), /3 von 4 ETIM-Attributen nicht zugeordnet/)
 })
 
 test('checkNode (Datenqualität) nimmt die Kette mit: „35 cm“ passt nach number, „Lila“ nicht in der Tabelle', () => {

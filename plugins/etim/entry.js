@@ -1,11 +1,11 @@
 // Plugin etim (Taloan, 19.09.2026: „wie sieht es mit Plugins aus wie ETIM Export beziehungsweise BMEcat“ — die Freigaben liegen frei
 // unter etim.de/daten/downloads): ETIM-Klassifikation in journali. Eine Freigabe (IXF 3.1) wird im Browser gelesen, die Klassen,
 // die man braucht, kommen als Datensätze ins Journal (class:<EC>, aufgelöst), die Klasse steht als Attribut am Produkt
-// (Werteliste der übernommenen Klassen), je Merkmal ein Attribut (ef000040: Zahl mit Einheit, Ja/Nein, Werteliste mit
+// (Werteliste der übernommenen Klassen), je ETIM-Attribut ein Attribut (ef000040: Zahl mit Einheit, Ja/Nein, Werteliste mit
 // EV-Codes, Bereich als Text) in der Attributgruppe ETIM — oder eine Zuordnung auf vorhandene Attribute. Prüfregeln in
-// ✓ Datenqualität (Klasse unbekannt, Wert passt nicht zum Merkmal, Belegung), Merkmale für ‹› Vorlagen-Export (BMEcat).
+// ✓ Datenqualität (Klasse unbekannt, Wert passt nicht zum ETIM-Attribut, Belegung), ETIM-Attribute für ‹› Vorlagen-Export (BMEcat).
 // Umbau (Taloan, 22.09.2026, pflegestruktur.md 29): ETIM ist Klassifikation, kein Export — die Ansicht geht vom Knoten aus
-// (Klasse → Attribute → Daten → Ausleitung), bearbeitet wird in der Subitems-Tabelle, nicht hier; die Zuordnung Merkmal → Attribut
+// (Klasse → Attribute → Daten → Ausleitung), bearbeitet wird in der Subitems-Tabelle, nicht hier; die Zuordnung ETIM-Attribut → Attribut
 // hat ƒ (Umwandlungskette); die Regeln der Ausleitung (unbekannt, Klasse Pflicht, Vollständigkeit) stehen im BMEcat-Profil (xport).
 import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps } from './core.mjs'
 import { OPS, FIELDS, FIELD_LABEL, FIELD_HINT, DATE_FORMATS, YES_DEFAULT, describe as describeSteps, opHint } from '../table/transform.mjs'
@@ -20,7 +20,7 @@ const groupKey = () => cache.settings.group || 'etim'
 // Klassen und Einstellungen im Speicher — die Prüfregeln laufen synchron (Datenqualität) und brauchen sie ohne Nachschlagen
 // Klassen je Version (Taloan, 20.09.: mehrere Versionen nebeneinander): class:<version>:<EC>; release:<version> die Freigabe dazu;
 // release = die aktuelle Version (Zuweisen, Prüfen, Export). Alte Datensätze class:<EC> ohne Version zählen zur Version der damaligen Freigabe.
-// Mit der ganzen Freigabe im Journal (5 640 Klassen, 17 000 Merkmale) heisst „übernommen“ nicht mehr „in Gebrauch“: Attribute, Zuordnung und
+// Mit der ganzen Freigabe im Journal (5 640 Klassen, 17 000 ETIM-Attribute) heisst „übernommen“ nicht mehr „in Gebrauch“: Attribute, Zuordnung und
 // Datenanalyse richten sich nach den Klassen, die im Baum zugewiesen sind (used); die Freigabe ist der Suchpool.
 const cache = { classes: new Map(), settings: { ...DEFAULTS }, map: {}, mapping: {}, loaded: null, version: null, versions: [], used: new Set(), usedBy: new Map(), classOf: new Map() }   // classOf: Knoten → { code, own } (auch geerbt) — fürs Baummenü
 async function loadUsed() {
@@ -33,7 +33,7 @@ async function loadUsed() {
 /// Klassen in Gebrauch: die im Baum zugewiesenen; ohne Zuweisung und bei kleinem Bestand (von Hand übernommen) alle
 const usedClasses = () => { const out = [...cache.used].map(c => cache.classes.get(c)).filter(Boolean); return out.length || cache.classes.size > 50 ? out : [...cache.classes.values()] }
 const classKeyOf = code => `class:${cache.version ?? '0'}:${code}`
-/// Attribut eines Merkmals: Zuordnung (map: Schlüssel oder { to, steps }), sonst die der Datenanalyse (mapping), sonst das eigene ef…
+/// Attribut eines ETIM-Attributs: Zuordnung (map: Schlüssel oder { to, steps }), sonst die der Datenanalyse (mapping), sonst das eigene ef…
 const attrKeyOf = code => { if (cache.map[code]) return mapEntry(cache.map, code).key; const m = cache.mapping?.[code.toLowerCase()]; return m?.to && !/ähnlich|vielleicht/.test(m.why ?? '') ? m.to : code.toLowerCase() }
 const stepsOf = code => mapEntry(cache.map, code).steps
 const mergedMap = () => { const m = {}; for (const [k, v] of Object.entries(cache.mapping ?? {})) if (v?.to) m[k.toUpperCase()] = v.to; return { ...m, ...cache.map } }
@@ -84,7 +84,7 @@ async function loadCache() {
 cache.loaded = loadCache()
 const cfg = locale => ({ ...cache.settings, map: mergedMap(), locale })
 
-/// Modell anlegen: Gruppe ETIM, Klassenattribut (Werteliste der übernommenen Klassen), je Merkmal ein Attribut ef…
+/// Modell anlegen: Gruppe ETIM, Klassenattribut (Werteliste der übernommenen Klassen), je ETIM-Attribut ein Attribut ef…
 function modelOps(ctx) {
   const { api, store } = ctx
   const model = () => store.model
@@ -94,7 +94,7 @@ function modelOps(ctx) {
   const labelsOf = names => { const out = {}; for (const l of model().locales.map(x => x.code)) if (names?.[l]) out[l] = names[l]; if (!out[locale]) out[locale] = nameOf(names, locale); return out }
   const put = (path, body) => api.post('/api/model' + path, body, 'PUT')
   // Die Gruppe gilt überall — die Klasse steht an der Gruppe („Mobile Geräte“) und erbt nach unten (Taloan, 22.09.: „verstehe ich nicht“ —
-  // die Gruppe war erst ab product aktiv, damit liess sich die Klasse an keiner Gruppe setzen); die Merkmale selbst gibt es nur an
+  // die Gruppe war erst ab product aktiv, damit liess sich die Klasse an keiner Gruppe setzen); die ETIM-Attribute selbst gibt es nur an
   // Produkt und Variante (levels), nicht an der Gruppe. Eine alte Gruppe mit activeFrom wird einmal repariert.
   async function ensureGroup() {
     const g = groupKey(); const have = (model().groups ?? []).find(x => x.key === g)
@@ -119,7 +119,7 @@ function modelOps(ctx) {
     if (!hasAttr(key)) await put(`/attributes/${key}`, { key, label: { de: 'ETIM-Klasse', en: 'ETIM class' }, type: 'enum', list: key, group: groupKey(), inheritable: true })
     else { const a = model().attributes.find(x => x.key === key); if (a.levels) await put(`/attributes/${key}`, { ...a, levels: null }) }   // die Klasse darf an jeder Ebene stehen
     for (const l of (model().lists ?? []).filter(l => (l.key === key || /^ef\d+$/.test(l.key)) && !l.closed)) await put(`/lists/${l.key}`, { ...l, closed: true })
-    // Merkmal-Attribute ohne Bedingung (aus früheren Läufen) bekommen sie nachgetragen — sonst gälten sie an jedem Knoten
+    // ETIM-Attribute ohne Bedingung (aus früheren Läufen) bekommen sie nachgetragen — sonst gälten sie an jedem Knoten
     for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && !a.label?.[locale] && Object.keys(a.label ?? {}).length)) await put(`/attributes/${a.key}`, { ...a, label: { ...a.label, [locale]: nameOf(a.label, locale) } })
     for (const a of model().attributes.filter(a => a.group === groupKey() && /^ef\d+$/.test(a.key) && (!a.when || !a.inheritable))) { const w = a.when ?? { attribute: key, values: [...cache.classes.values()].filter(c => c.features.some(x => x.code === a.key.toUpperCase())).map(c => c.code) }; if (w.values.length) await put(`/attributes/${a.key}`, { ...a, when: w, inheritable: true }) }
     return key
@@ -132,14 +132,14 @@ function modelOps(ctx) {
     if (!units.some(x => x.key === key)) await put(`/units/${key}`, { key, label: { de: abbr, en: abbr }, quantity: nameOf(u.name, locale) || abbr, factor: 1 })
     return key
   }
-  // ein Merkmal → Attribut ef… (Numeric: decimal + Einheit, Logical: boolean, Alphanumeric: enum mit Werteliste EV-Code → Name, Range: text mit Muster)
-  // Bedingung: das Merkmal gilt nur an Knoten, deren Klasse es hat — alle Klassen der Version, die das Merkmal führen
+  // ein ETIM-Attribut → Attribut ef… (Numeric: decimal + Einheit, Logical: boolean, Alphanumeric: enum mit Werteliste EV-Code → Name, Range: text mit Muster)
+  // Bedingung: das ETIM-Attribut gilt nur an Knoten, deren Klasse es hat — alle Klassen der Version, die das ETIM-Attribut führen
   const whenOf = code => ({ attribute: cache.settings.classAttr, values: [...cache.classes.values()].filter(c => c.features.some(x => x.code === code)).map(c => c.code) })
   async function createFeature(f) {
     await ensureGroup()
     const key = f.code.toLowerCase()
     if (hasAttr(key)) { const a = model().attributes.find(x => x.key === key); const w = whenOf(f.code); if (a.group === groupKey() && (JSON.stringify(a.when?.values ?? []) !== JSON.stringify(w.values) || !a.inheritable || !a.levels)) await put(`/attributes/${key}`, { ...a, when: w, inheritable: true, levels: a.levels ?? FEATURE_LEVELS }); return key }
-    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // Merkmale nur an Produkt und Variante
+    const base = { key, label: labelsOf(f.name), group: groupKey(), when: whenOf(f.code), inheritable: true, levels: FEATURE_LEVELS }   // ETIM-Attribute nur an Produkt und Variante
     if (f.type === 'Numeric') await put(`/attributes/${key}`, { ...base, type: 'decimal', unit: await unitKeyFor(f.unit) })
     else if (f.type === 'Logical') await put(`/attributes/${key}`, { ...base, type: 'boolean' })
     else if (f.type === 'Range') await put(`/attributes/${key}`, { ...base, type: 'text', pattern: '^\\s*-?[\\d.,]+(\\s*(-|\\.\\.|…)\\s*-?[\\d.,]+)?\\s*$', patternHint: `von - bis${f.unit ? ' in ' + (nameOf(f.unit.abbr, locale) || f.unit.code) : ''}` })
@@ -153,7 +153,7 @@ function modelOps(ctx) {
   }
   return { ensureGroup, ensureClassAttr, createFeature, hasAttr }
 }
-/// Alle Merkmale der übernommenen Klassen, je Code einmal (Werte vereinigt), mit den Klassen, in denen es vorkommt
+/// Alle ETIM-Attribute der übernommenen Klassen, je Code einmal (Werte vereinigt), mit den Klassen, in denen es vorkommt
 function allFeatures() {
   const feats = new Map()
   for (const c of usedClasses()) for (const f of c.features) { if (!feats.has(f.code)) feats.set(f.code, { ...f, values: [...f.values], classes: [c] }); else { const have = feats.get(f.code); have.classes.push(c); for (const v of f.values) if (!have.values.some(x => x.code === v.code)) have.values.push(v) } }
@@ -161,7 +161,7 @@ function allFeatures() {
 }
 
 /// Katalog für die Datenanalyse (ctx.compliance, wie DPP/PPWR — Taloan, 20.09.: „was ich beim Export brauche, vorher analysieren und
-/// vervollständigen“): Datenpunkte = Klasse + alle Merkmale der übernommenen Klassen; ein Merkmal gilt an einem Knoten nur, wenn
+/// vervollständigen“): Datenpunkte = Klasse + alle ETIM-Attribute der übernommenen Klassen; ein ETIM-Attribut gilt an einem Knoten nur, wenn
 /// seine Klasse es hat. Attribute legt der Katalog selbst an (Listen, Einheiten). Vorschläge: Regeln, KI, Recherche im Internet.
 function buildCatalog(ctx) {
   const locale = ctx.store.model.masterLocale ?? 'de'
@@ -174,7 +174,7 @@ function buildCatalog(ctx) {
     key: f.code.toLowerCase(), label: nameOf(f.name, locale) || f.code, labelEn: f.name.en, level: 'must', type: TYPE[f.type] ?? 'text', unit: f.unit ? (nameOf(f.unit.abbr, locale) || f.unit.code) : null,
     values: f.type === 'Alphanumeric' ? f.values.map(v => nameOf(v.name, locale)) : null,
     synonyms: [f.code, ...Object.values(f.name)],
-    to: ops.hasAttr(attrKeyOf(f.code)) ? attrKeyOf(f.code) : '',   // fest: das Merkmal-Attribut (oder die Zuordnung aus 4) — nie nach Namen raten
+    to: ops.hasAttr(attrKeyOf(f.code)) ? attrKeyOf(f.code) : '',   // fest: das ETIM-Attribut (oder die Zuordnung aus 4) — nie nach Namen raten
     hint: `${f.code} · ${f.type}${f.type === 'Range' ? ' (von - bis)' : ''} · in ${f.classes.length} Klasse${f.classes.length === 1 ? '' : 'n'}: ${f.classes.slice(0, 3).map(c => c.code).join(', ')}${f.classes.length > 3 ? ' …' : ''}`,
     appliesIf: (r, mapping) => { const c = classOf(r, mapping); return !!c && c.features.some(x => x.code === f.code) },
     rule: v => resolveValue(f, v) === null ? `passt nicht zu ${f.type}${f.type === 'Alphanumeric' ? ' — erlaubt: ' + f.values.slice(0, 5).map(x => nameOf(x.name, locale)).join(', ') + (f.values.length > 5 ? ' …' : '') : ''}` : null,
@@ -182,29 +182,29 @@ function buildCatalog(ctx) {
   }))
   const n = cache.classes.size
   return {
-    key: 'etim', label: 'ETIM-Merkmale', icon: '⌗', source: 'https://etim.de/daten/downloads/', sourceLabel: 'etim.de ↗',
-    autoCreate: true,   // Attribute der Merkmale und die Gruppe entstehen beim Prüfen von selbst — der Anwender wählt die Klasse und füllt (Taloan, 20.09.)
-    description: n ? `${n} Klasse${n === 1 ? '' : 'n'} übernommen (⇪ Export → ⌗ ETIM) mit ${feats.length} Merkmalen. Ein Merkmal zählt an einem Knoten nur, wenn seine Klasse es hat; Knoten ohne Klasse bleiben aussen vor. Fehlende Attribute legt der Katalog als ef… mit Werteliste und Einheit an.` : 'Noch keine Klasse übernommen — erst unter ⇪ Export → ⌗ ETIM eine Freigabe lesen und Klassen übernehmen.',
+    key: 'etim', label: 'ETIM-Attribute', icon: '⌗', source: 'https://etim.de/daten/downloads/', sourceLabel: 'etim.de ↗',
+    autoCreate: true,   // Attribute der ETIM-Attribute und die Gruppe entstehen beim Prüfen von selbst — der Anwender wählt die Klasse und füllt (Taloan, 20.09.)
+    description: n ? `${n} Klasse${n === 1 ? '' : 'n'} übernommen (⇪ Export → ⌗ ETIM) mit ${feats.length} ETIM-Attributen. Ein ETIM-Attribut zählt an einem Knoten nur, wenn seine Klasse es hat; Knoten ohne Klasse bleiben aussen vor. Fehlende Attribute legt der Katalog als ef… mit Werteliste und Einheit an.` : 'Noch keine Klasse übernommen — erst unter ⇪ Export → ⌗ ETIM eine Freigabe lesen und Klassen übernehmen.',
     groupKey: groupKey(), groupLabel: groupKey() === 'etim' ? 'ETIM' : groupKey(), prefix: '',
     groups: [
-      { key: 'class', label: 'Klasse', items: [{ key: classKey, label: 'ETIM-Klasse', level: 'must', type: 'enum', to: ops.hasAttr(classKey) ? classKey : '', synonyms: ['etim', 'etim_class', 'etim klasse', 'etim class'], values: [...cache.classes.values()].map(c => `${c.code} ${nameOf(c.name, locale)}`), hint: 'EC-Code der Klasse — ohne Klasse gilt kein Merkmal; die KI schlägt eine der übernommenen Klassen vor', rule: v => cache.classes.has(String(v).trim().toUpperCase()) ? null : `Klasse ${v} nicht übernommen` }] },
-      { key: 'features', label: 'Merkmale', items },
+      { key: 'class', label: 'Klasse', items: [{ key: classKey, label: 'ETIM-Klasse', level: 'must', type: 'enum', to: ops.hasAttr(classKey) ? classKey : '', synonyms: ['etim', 'etim_class', 'etim klasse', 'etim class'], values: [...cache.classes.values()].map(c => `${c.code} ${nameOf(c.name, locale)}`), hint: 'EC-Code der Klasse — ohne Klasse gilt kein ETIM-Attribut; die KI schlägt eine der übernommenen Klassen vor', rule: v => cache.classes.has(String(v).trim().toUpperCase()) ? null : `Klasse ${v} nicht übernommen` }] },
+      { key: 'features', label: 'ETIM-Attribute', items },
     ],
     createAttribute: async it => it.key === classKey ? ops.ensureClassAttr() : it.feature ? ops.createFeature(it.feature) : null,
-    // Erster Schritt je Knoten (Taloan, 20.09.): die Klasse sagt, welche Merkmale erforderlich sind — ohne Klasse steht hier „zuweisen“
+    // Erster Schritt je Knoten (Taloan, 20.09.): die Klasse sagt, welche ETIM-Attribute erforderlich sind — ohne Klasse steht hier „zuweisen“
     rowNote: (n, mapping, c) => {
       const key = mapping?.[classKey]?.to || classKey; const code = String(n.raw?.[key] ?? '').trim().toUpperCase(); const cls = cache.classes.get(code)
-      if (cls) return `${code} · ${cls.features.length} Merkmale`
+      if (cls) return `${code} · ${cls.features.length} ETIM-Attribute`
       if (n.states[classKey] === 'inactive') return ''   // Gruppe fehlt — der ⊘-Knopf oben löst es
-      if (n.leaf || n.row.role !== 'group') { const b = document.createElement('button'); b.className = 'x'; b.textContent = '⌗ Klasse zuweisen …'; b.title = 'ETIM-Klasse für diesen Knoten wählen — sie bestimmt die erforderlichen Merkmale'; b.addEventListener('click', () => classDialog(n.row.id, c)); return b }
+      if (n.leaf || n.row.role !== 'group') { const b = document.createElement('button'); b.className = 'x'; b.textContent = '⌗ Klasse zuweisen …'; b.title = 'ETIM-Klasse für diesen Knoten wählen — sie bestimmt die erforderlichen ETIM-Attribute'; b.addEventListener('click', () => classDialog(n.row.id, c)); return b }
       return ''
     },
     // ohne Klasse: das Wesentliche zuerst — der Knopf zum Dialog, bei einem Knoten direkt dafür
-    summary: (r, mapping, c) => { const noClass = r.nodes.filter(n => n.leaf && n.states[classKey] === 'empty'); if (!noClass.length) return null; const b = document.createElement('button'); b.className = 'primary'; b.textContent = '⌗ Klasse zuweisen …'; b.addEventListener('click', () => classDialog(noClass.length === 1 ? noClass[0].row.id : r.nodes[0].row.id, c)); const w = document.createElement('span'); w.append(`⌗ ${noClass.length} Knoten ohne ETIM-Klasse — sie bestimmt die Merkmale `, b); return w },
+    summary: (r, mapping, c) => { const noClass = r.nodes.filter(n => n.leaf && n.states[classKey] === 'empty'); if (!noClass.length) return null; const b = document.createElement('button'); b.className = 'primary'; b.textContent = '⌗ Klasse zuweisen …'; b.addEventListener('click', () => classDialog(noClass.length === 1 ? noClass[0].row.id : r.nodes[0].row.id, c)); const w = document.createElement('span'); w.append(`⌗ ${noClass.length} Knoten ohne ETIM-Klasse — sie bestimmt die ETIM-Attribute `, b); return w },
   }
 }
 
-/// Merkmale eines Knotens für xport (env.featuresOf) — pctx ist der Produktkontext von xport
+/// ETIM-Attribute eines Knotens für xport (env.featuresOf) — pctx ist der Produktkontext von xport
 /// rules (BMEcat-Profil, Taloan 22.09.): { unknownAs, requireClass, minCompleteness, strict } — überschreiben die Voreinstellung
 export async function etimFeatures(pctx, rules = null) { await cache.loaded; return featuresOf(pctx, { ...cfg(pctx.locale), ...(rules ?? {}), version: cache.version, getClass: async code => cache.classes.get(code) ?? null }) }
 
@@ -215,7 +215,7 @@ export async function etimGate(pctx, rules = null) { await cache.loaded; return 
 
 // ── Der Assistent am Knoten (Taloan, 20.09.: „Knoten → ETIM-Klasse vorhanden? ja/nein → Dialog mit Auswahl aus den ETIM-Katalogen,
 // sonst Download“). Ein Fenster, drei Fälle: keine Bibliothek → holen; Klasse da → zeigen, ändern; keine → wählen (✦ Vorschlag,
-// Umfeld, Suche, Gruppen). ⇢ schreibt die Klasse (Gruppe kommt automatisch), danach die Prüfung mit den Merkmalen der Klasse.
+// Umfeld, Suche, Gruppen). ⇢ schreibt die Klasse (Gruppe kommt automatisch), danach die Prüfung mit den ETIM-Attributen der Klasse.
 async function classDialog(nodeId, ctx, onDone = null) {
   const { api, store, tree } = ctx
   await cache.loaded; if (!tree.loaded) await tree.load()
@@ -268,7 +268,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
     const noteOf = (l, i) => l.other ? `⚠ ${l.other} Produkte darunter haben schon eine andere Klasse — ab hier wäre die Klasse zu grob; granularer setzen (weiter rechts).` : l.groups ? `⚠ ${l.groups} Untergruppen mit ${l.products} Produkten darunter — eine Klasse für alle? Meist zu grob: an den Produktgruppen setzen${i < out.length - 1 ? ' (weiter rechts)' : ' — dort Rechtsklick → ETIM prüfen'}.` : l.products > 1 ? `gilt für ${l.products} Produkte darunter (vererbbar)${i === rec ? ' — Empfehlung: die höchste Ebene ohne Untergruppen und ohne Widerspruch' : ''}` : l.products === 1 ? 'gilt für dieses eine Produkt' : 'keine Produkte darunter — die Klasse gilt, sobald welche kommen'
     const lvNote = el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 8px' }, noteOf(out[rec], rec))
     body.append(el('div', { style: 'font-size:14px;margin:6px 0' }, el('b', {}, `${code} ${nameOf(c.name, locale)}`), ` → ${ICON[row.role] ?? ''} ${row.label}`),
-      el('div', { class: 'muted', style: 'margin-bottom:8px' }, `${c.features.length} Merkmale der Klasse gelten dann ${row.role === 'group' ? 'an allen Produkten darunter (die Klasse steht an der Gruppe und erbt)' : 'an diesem Knoten'}${missing.length ? ` — ${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()}, nur an Produkt und Variante)` : ''}.`),
+      el('div', { class: 'muted', style: 'margin-bottom:8px' }, `${c.features.length} ETIM-Attribute der Klasse gelten dann ${row.role === 'group' ? 'an allen Produkten darunter (die Klasse steht an der Gruppe und erbt)' : 'an diesem Knoten'}${missing.length ? ` — ${missing.length} davon werden als Attribute angelegt (Gruppe ${groupKey()}, nur an Produkt und Variante)` : ''}.`),
       el('div', { class: 'scroll', style: 'max-height:40vh;border:1px solid var(--line);border-radius:4px;padding:4px 8px;font-size:12px' }, ...c.features.map(f => el('div', {}, el('span', { class: 'mono muted' }, f.code), ' ', featureText(f, locale), el('span', { class: 'muted' }, ` · ${TYPE[f.type] ?? f.type}${ops.hasAttr(attrKeyOf(f.code)) ? '' : ' · neu'}`)))),
       el('div', { style: 'margin-top:10px' }, el('div', { class: 'muted', style: 'font-size:12px' }, 'Gilt ab (Pfad von der Wurzel bis hier — Zahl: Produkte darunter · ▣ Untergruppen · ≠ mit anderer Klasse):'), el('div', { class: 'chips', style: 'margin:4px 0' }, ...lvBtns), lvNote),
       el('div', { class: 'chips', style: 'margin-top:6px' }, el('button', { class: 'primary', onclick: () => doAssign(code, target.id) }, '✓ zuweisen'), el('button', { onclick: () => draw() }, 'zurück')))
@@ -277,7 +277,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
     const c = cache.classes.get(code); const at = tree.byId.get(atId) ?? row
     await run(`weise ${code} zu …`, async () => {
       const k = await ops.ensureClassAttr(); await store.poll(true)
-      // Gruppe an die Wurzel des Pflegebaums — mit Bedingungen an den Merkmalen stört sie nirgends
+      // Gruppe an die Wurzel des Pflegebaums — mit Bedingungen an den ETIM-Attributen stört sie nirgends
       const root = (() => { let x = row; while (x.parent && tree.byId.get(x.parent)) x = tree.byId.get(x.parent); return x })()
       const have = (root.groups ?? '').split(',').filter(Boolean)
       if (!have.includes(groupKey())) await api.post(`/api/nodes/${encodeURIComponent(root.id)}/groups`, { groups: [...have, groupKey()] }, 'PUT')
@@ -295,7 +295,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
   // Schritt 3 (Taloan, 22.09.: „grenzwertig — wir haben im Baum die Tabellenansicht, Excel“): keine eigene Tabelle mehr — nach dem Zuweisen
   // geht es in die ETIM-Übersicht des Knotens (Klasse → Attribute → Daten → Ausleitung); bearbeitet wird in der Subitems-Tabelle
   function checkStep(code) { close(); onDone ? onDone(code) : ctx.go?.(`/tree/${encodeURIComponent(nodeId)}`) }
-  const line = (code, why) => { const c = cache.classes.get(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, 'nicht in der Bibliothek'), el('span', { class: 'muted', style: 'font-size:11px' }, why ? ' · ' + why : ''), c ? el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale`) : null), c && code !== current ? el('button', { class: 'primary', onclick: () => assign(code) }, '⇢ zuweisen') : null) }
+  const line = (code, why) => { const c = cache.classes.get(code); return el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, code), el('span', { class: 'grow' }, c ? nameOf(c.name, locale) : el('i', { class: 'muted' }, 'nicht in der Bibliothek'), el('span', { class: 'muted', style: 'font-size:11px' }, why ? ' · ' + why : ''), c ? el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} ETIM-Attribute`) : null), c && code !== current ? el('button', { class: 'primary', onclick: () => assign(code) }, '⇢ zuweisen') : null) }
 
   function draw() {
     body.innerHTML = ''
@@ -315,9 +315,9 @@ async function classDialog(nodeId, ctx, onDone = null) {
     // Stand
     body.append(current
       ? el('div', { style: 'margin-bottom:10px;padding:8px 10px;border:1px solid var(--pos);border-radius:6px;background:var(--accent-soft)' },
-          el('div', { style: 'display:flex;gap:10px;align-items:baseline;flex-wrap:wrap' }, el('span', { class: 'pos', style: 'font-weight:600' }, '✓ Klasse'), el('span', { class: 'mono', style: 'font-size:16px;font-weight:600' }, current), el('span', { style: 'font-size:16px' }, nameOf(cache.classes.get(current)?.name, locale) || ''), el('span', { class: 'muted' }, ownCode ? '· an diesem Knoten' : `· geerbt von ${inherited.from}`), el('span', { class: 'muted' }, `· ${cache.classes.get(current)?.features.length ?? '?'} Merkmale`)),
+          el('div', { style: 'display:flex;gap:10px;align-items:baseline;flex-wrap:wrap' }, el('span', { class: 'pos', style: 'font-weight:600' }, '✓ Klasse'), el('span', { class: 'mono', style: 'font-size:16px;font-weight:600' }, current), el('span', { style: 'font-size:16px' }, nameOf(cache.classes.get(current)?.name, locale) || ''), el('span', { class: 'muted' }, ownCode ? '· an diesem Knoten' : `· geerbt von ${inherited.from}`), el('span', { class: 'muted' }, `· ${cache.classes.get(current)?.features.length ?? '?'} ETIM-Attribute`)),
           el('div', { class: 'chips', style: 'margin-top:6px' },
-            el('button', { class: 'primary', title: 'zum Knoten — das Band ⌗ ETIM zeigt Klasse, Attribute, Daten, Ausleitung', onclick: () => checkStep(current) }, '→ zum Knoten'), el('button', { style: 'display:none', onclick: () => run('bereite vor …', async () => { const c = cache.classes.get(current); for (const f of c.features) await ops.createFeature(f); await store.poll(true); await checkStep(current) }) }, '✓ Merkmale prüfen und füllen'),
+            el('button', { class: 'primary', title: 'zum Knoten — das Band ⌗ ETIM zeigt Klasse, Attribute, Daten, Ausleitung', onclick: () => checkStep(current) }, '→ zum Knoten'), el('button', { style: 'display:none', onclick: () => run('bereite vor …', async () => { const c = cache.classes.get(current); for (const f of c.features) await ops.createFeature(f); await store.poll(true); await checkStep(current) }) }, '✓ ETIM-Attribute prüfen und füllen'),
             el('button', { onclick: () => { close(); ctx.go?.(`/tree/${nodeId}`) } }, `${ICON[row.role] ?? ''} Werte am Knoten`),
             el('span', { class: 'muted', style: 'font-size:12px' }, 'andere Klasse: unten wählen')))
       : el('div', { style: 'margin-bottom:8px;padding:8px 10px;border:1px solid var(--warn);border-radius:6px' }, el('span', { class: 'warn', style: 'font-weight:600' }, 'Noch keine Klasse'), el('span', { class: 'muted' }, ' — unten wählen: Vorschlag, Umfeld, Suche oder Gruppen')))
@@ -383,7 +383,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
 const jsonOfOut = out => { for (const line of String(out ?? '').split('\n')) { const s = line.trim(); if (s.startsWith('{')) { try { return JSON.parse(s) } catch { } } } return null }
 
 const checks = [
-  { key: 'etim', label: '⌗ ETIM: Klasse und Merkmale', severity: 'warn', run({ values, columns, locale }) { return checkNode({ values, columns, classes: cache.classes, cfg: cfg(locale) }) } },
+  { key: 'etim', label: '⌗ ETIM: Klasse und ETIM-Attribute', severity: 'warn', run({ values, columns, locale }) { return checkNode({ values, columns, classes: cache.classes, cfg: cfg(locale) }) } },
 ]
 
 // ── Das Band ⌗ ETIM in der Knotenansicht (Taloan, 22.09.: „die Bedienung erfolgt beim Gegenstand“): eine Zeile — Klasse (eigen/geerbt,
@@ -432,16 +432,16 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     line.append(chip(`${code} ${nameOf(S.cls.name, locale)}`, '', S.ownCode ? 'Klasse am Knoten selbst' : `Klasse geerbt von ${S.inherited.from}`), el('span', { class: 'muted' }, S.ownCode ? 'hier' : `von ${S.inherited.from}`))
     if (S.other) line.append(chip(`≠ ${S.other}`, 'warn', `${S.other} darunter mit anderer Klasse`))
     const has = S.feats.filter(x => x.has), miss = S.feats.filter(x => !x.has), mapped = has.filter(x => !x.own), fx = S.feats.filter(x => x.steps)
-    line.append(el('span', { class: 'muted' }, '·'), chip(`Attribute ${has.length}/${S.feats.length}`, miss.length ? 'warn' : 'pos', `${has.length - mapped.length} eigene ef… · ${mapped.length} zugeordnet${fx.length ? ` · ${fx.length} mit ƒ` : ''}${miss.length ? ` · ${miss.length} ohne Attribut` : ''}`))
+    line.append(el('span', { class: 'muted' }, '·'), chip(`zugeordnet ${has.length}/${S.feats.length}`, miss.length ? 'warn' : 'pos', `${has.length - mapped.length} eigene ef… · ${mapped.length} zugeordnet${fx.length ? ` · ${fx.length} mit ƒ` : ''}${miss.length ? ` · ${miss.length} nicht zugeordnet` : ''}`))
     const pct = S.cells ? Math.round(S.filled * 100 / S.cells) : 0
-    head.textContent = `· ${code} ${nameOf(S.cls.name, locale)}${S.ownCode ? '' : ' (geerbt)'} · Attribute ${has.length}/${S.feats.length} · Daten ${S.products.length ? pct + ' %' : '—'}${S.other ? ` · ≠ ${S.other}` : ''}`
-    line.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? `Daten ${pct} %` : 'Daten —', S.bad ? 'neg' : pct >= 80 ? 'pos' : '', `${S.products.length} Produkte/Varianten × ${has.length} Merkmale: ${S.filled} gefüllt · ${S.empty} leer${S.bad ? ` · ${S.bad} passen nicht` : ''}`))
+    head.textContent = `· ${code} ${nameOf(S.cls.name, locale)}${S.ownCode ? '' : ' (geerbt)'} · zugeordnet ${has.length}/${S.feats.length} · Daten ${S.products.length ? pct + ' %' : '—'}${S.other ? ` · ≠ ${S.other}` : ''}`
+    line.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? `Daten ${pct} %` : 'Daten —', S.bad ? 'neg' : pct >= 80 ? 'pos' : '', `${S.products.length} Produkte/Varianten × ${has.length} ETIM-Attribute: ${S.filled} gefüllt · ${S.empty} leer${S.bad ? ` · ${S.bad} passen nicht` : ''}`))
     // Knöpfe direkt hinter den Chips, nicht rechtsbündig (Taloan, 22.09.: der Bereich ist so breit wie die Attributtabelle — „prüfen“ stand hinter dem Rollbalken)
     line.append(...[el('span', { class: 'muted' }, '·'), assignBtn,
-      el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der Merkmale dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
-      miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende Merkmale als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
+      el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der ETIM-Attribute dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
+      miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,
       S.products.length ? el('button', { class: 'x', title: 'Subitems-Tabelle im eigenen Fenster — nur die Spalten dieser Klasse; Bedienung wie Excel', onclick: () => openTable(tree, nodeId, S.keys, S.products.some(r => r.row.role === 'product') ? 'product' : 'variant') }, '⊞ Tabelle') : null,
-      S.products.length ? el('button', { class: 'x', title: 'dieselbe Regel wie in ✓ Datenqualität — Funde je Knoten und Merkmal, hier darunter', onclick: () => {
+      S.products.length ? el('button', { class: 'x', title: 'dieselbe Regel wie in ✓ Datenqualität — Funde je Knoten und ETIM-Attribut, hier darunter', onclick: () => {
         const findings = []
         for (const r of S.products) for (const f of checkNode({ values: r.values, columns: S.tbl.columns.filter(x => !(r.inactive ?? []).includes(x.key)), inactive: r.inactive ?? [], classes: cache.classes, cfg: cfg(locale) })) findings.push({ ...f, node: r.row })
         body.innerHTML = ''
@@ -481,7 +481,7 @@ async function mount(root, ctx) {
     await busy(`lese ${f.name} (${(f.size / 1048576).toFixed(1)} MB) …`, async () => {
       const t0 = performance.now(); const text = await f.text(); st.rel = parseIxf(text)
       const h = st.rel.header
-      say(`${h.name ?? 'ETIM'} Nr. ${h.number ?? '?'} · ${st.rel.classes.length} Klassen · ${st.rel.features.size} Merkmale · ${st.rel.values.size} Werte · ${Math.round(performance.now() - t0)} ms`)
+      say(`${h.name ?? 'ETIM'} Nr. ${h.number ?? '?'} · ${st.rel.classes.length} Klassen · ${st.rel.features.size} ETIM-Attribute · ${st.rel.values.size} Werte · ${Math.round(performance.now() - t0)} ms`)
       st.relInfo = { name: h.name, number: h.number, date: h.date, exportDate: h.exportDate, classes: st.rel.classes.length, features: st.rel.features.size, languages: [...new Set(st.rel.classes.slice(0, 50).flatMap(c => Object.keys(c.name)))], file: f.name, at: new Date().toISOString() }
       draw()
     })
@@ -564,7 +564,7 @@ async function mount(root, ctx) {
     : el('button', { class: 'x', title: `${code} einem Knoten zuweisen — Auswahlbaum`, onclick: e => { assignCode = code; const host = e.currentTarget.parentElement; host.style.position = 'relative'; host.append(assignPick); assignPick.style.display = assignPick.style.display === 'none' ? 'block' : 'none' } }, '⇢')
   async function takeClass(cls, silent) {
     const rec = classRecord(st.rel, cls, model().locales.map(l => l.code)); await ensureVersion(); await ctx.data.set(classKeyOf(rec.code), rec); cache.classes.set(rec.code, rec)
-    if (!silent) say(`${classText(rec, locale)} übernommen · ${rec.features.length} Merkmale`)
+    if (!silent) say(`${classText(rec, locale)} übernommen · ${rec.features.length} ETIM-Attribute`)
   }
   // Die ganze Freigabe ins Journal (Taloan, 20.09.: „warum nicht gegrabbt und lokal gespeichert?“): je Klasse ein Datensatz class:<EC>,
   // nur in den Sprachen des Modells, in Stapeln zu 400 — danach geht Suche, Zuweisen und Prüfen ohne die Datei
@@ -605,7 +605,7 @@ async function mount(root, ctx) {
     })
   }
 
-  // ── Attribute anlegen (modelOps): Klassenattribut, je Merkmal ein Attribut in der Gruppe ETIM
+  // ── Attribute anlegen (modelOps): Klassenattribut, je ETIM-Attribut ein Attribut in der Gruppe ETIM
   async function createAttributes() {
     await busy('lege Attribute an …', async () => {
       await store.poll(true); await ops.ensureClassAttr()
@@ -626,7 +626,7 @@ async function mount(root, ctx) {
     })
   }
 
-  // ── ƒ an der Zuordnung (Taloan, 22.09.): Kette wie im Datenmapper — Probe zeigt, was am Merkmal ankommt
+  // ── ƒ an der Zuordnung (Taloan, 22.09.): Kette wie im Datenmapper — Probe zeigt, was am ETIM-Attribut ankommt
   function stepsDialog(f) {
     const cur = cache.map[f.code]; const to = typeof cur === 'string' ? cur : cur?.to ?? ''
     const steps = JSON.parse(JSON.stringify(stepsOf(f.code) ?? []))
@@ -663,7 +663,7 @@ async function mount(root, ctx) {
     const close = () => overlay.remove()
     const save = async () => { const clean = steps.filter(x => x.op); if (!clean.length && (!to || to === f.code.toLowerCase())) delete cache.map[f.code]; else cache.map[f.code] = clean.length ? { to: to || f.code.toLowerCase(), steps: clean } : to; await saveMap(); close(); draw() }
     box.append(el('div', { class: 'toolbar', style: 'padding:8px 12px' }, el('b', {}, `ƒ ${f.code} ${featureText(f, locale)}`), el('span', { class: 'muted', style: 'font-size:12px' }, `← ${to || f.code.toLowerCase()} · ${TYPE[f.type] ?? f.type}`), el('span', { class: 'grow' }), el('button', { class: 'x', onclick: close }, '✕')),
-      el('div', { class: 'scroll', style: 'padding:8px 12px;flex:1' }, el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Der Wert des Attributs läuft durch die Kette, dann wird er als Merkmal gelesen — Zahl, Ja/Nein, Werteliste (EV-Code oder Name), Bereich.'), evHint, list, el('div', { style: 'margin-top:10px' }, probe, out)),
+      el('div', { class: 'scroll', style: 'padding:8px 12px;flex:1' }, el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Der Wert des Attributs läuft durch die Kette, dann wird er als ETIM-Attribut gelesen — Zahl, Ja/Nein, Werteliste (EV-Code oder Name), Bereich.'), evHint, list, el('div', { style: 'margin-top:10px' }, probe, out)),
       el('div', { class: 'toolbar', style: 'padding:6px 12px;border-top:1px solid var(--line)' }, el('span', { class: 'grow' }), el('button', { onclick: close }, 'abbrechen'), el('button', { class: 'primary', onclick: save }, 'Kette speichern')))
     overlay.append(box); document.body.append(overlay); overlay.addEventListener('mousedown', e => { if (e.target === overlay) close() })
   }
@@ -716,7 +716,7 @@ async function mount(root, ctx) {
     const hits = el('div')
     // Blättern nach Klassengruppen (Taloan, 20.09.: „wenn ich keine Ahnung habe, wie die Klasse heisst“): ohne Suchbegriff die Gruppen, Klick zeigt die Klassen der Gruppe
     const groupsOf = () => { const m = new Map(); for (const c of P) { const g = c.group ? (nameOf(c.group.name, locale) || c.group.code) : '—'; if (!m.has(g)) m.set(g, []); m.get(g).push(c) } return [...m].sort((a, b) => a[0].localeCompare(b[0], 'de')) }
-    const row = c => el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale · ${c.status}`)), cache.classes.has(c.code) ? assignBtn(c.code) : el('button', { class: 'x', title: 'Klasse übernehmen', onclick: async () => { await takeClass(c); draw() } }, '+'))
+    const row = c => el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} ETIM-Attribute · ${c.status}`)), cache.classes.has(c.code) ? assignBtn(c.code) : el('button', { class: 'x', title: 'Klasse übernehmen', onclick: async () => { await takeClass(c); draw() } }, '+'))
     const browse = () => {
       hits.innerHTML = ''
       if (st.grp) { hits.append(el('div', { class: 'pick', style: 'font-weight:600', onclick: () => { st.grp = null; browse() } }, `‹ ${st.grp}`)); for (const c of (groupsOf().find(([g]) => g === st.grp)?.[1] ?? []).sort((a, b) => nameOf(a.name, locale).localeCompare(nameOf(b.name, locale)))) hits.append(row(c)); return }
@@ -728,12 +728,12 @@ async function mount(root, ctx) {
       hits.innerHTML = ''; if (!P.length || st.q.trim().length < 2) { if (P.length) browse(); return }
       const s = st.q.trim().toLowerCase()
       const found = P.filter(c => c.code.toLowerCase().includes(s) || Object.values(c.name).some(n => n.toLowerCase().includes(s)) || Object.values(c.synonyms).some(l => l.some(n => n.toLowerCase().includes(s)))).slice(0, 40)
-      for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} Merkmale · ${c.status}`)), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: 'Klasse übernehmen (ins Journal)', onclick: async () => { await takeClass(c); draw() } }, '+'), st.assign ? el('button', { class: 'primary', title: `übernehmen und ${tree.byId.get(st.assign)?.label} zuweisen`, onclick: async () => { await assignClass(st.assign, c.code); draw() } }, '⇢ zuweisen') : null))
+      for (const c of found) hits.append(el('div', { class: 'pick', style: 'display:flex;gap:8px;align-items:center' }, el('span', { class: 'mono muted' }, c.code), el('span', { class: 'grow' }, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, ` · ${c.features.length} ETIM-Attribute · ${c.status}`)), cache.classes.has(c.code) ? el('span', { class: 'muted' }, '✓') : el('button', { class: 'x', title: 'Klasse übernehmen (ins Journal)', onclick: async () => { await takeClass(c); draw() } }, '+'), st.assign ? el('button', { class: 'primary', title: `übernehmen und ${tree.byId.get(st.assign)?.label} zuweisen`, onclick: async () => { await assignClass(st.assign, c.code); draw() } }, '⇢ zuweisen') : null))
       if (!found.length) hits.append(el('div', { class: 'muted', style: 'padding:4px' }, 'nichts gefunden'))
     }
     if (P.length) search()
     const taken = usedClasses().sort((a, b) => a.code.localeCompare(b.code))
-    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'Merkmale'), el('th', { style: 'width:90px' }, 'ohne Attribut'), el('th', { style: 'width:110px' }, 'Version'), el('th', { style: 'width:200px' }, 'Knoten'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
+    const tbl = el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Klasse'), el('th', {}, 'Name'), el('th', { style: 'width:70px' }, 'ETIM-Attribute'), el('th', { style: 'width:90px' }, 'nicht zugeordnet'), el('th', { style: 'width:110px' }, 'Version'), el('th', { style: 'width:200px' }, 'Knoten'), el('th', { style: 'width:100px' }, ''), el('th', { style: 'width:60px' }, ''))),
       el('tbody', {}, ...taken.map(c => { const missing = c.features.filter(f => !hasAttr(attrKeyOf(f.code))).length; return el('tr', {}, el('td', { class: 'mono' }, c.code), el('td', {}, nameOf(c.name, locale), el('span', { class: 'muted', style: 'font-size:11px' }, c.group ? ` · ${nameOf(c.group.name, locale)}` : '')), el('td', { class: 'num' }, c.features.length), el('td', { class: missing ? 'warn num' : 'muted num' }, missing || '—'), el('td', { class: 'muted', style: 'font-size:11px' }, `${c.release?.name ?? ''} v${c.version}`),
         el('td', { style: 'position:relative' }, assignBtn(c.code)),
         el('td', {}, rel && rel.classes.some(x => x.code === c.code && x.version !== c.version) ? el('button', { class: 'x', title: 'aus der gelesenen Freigabe aktualisieren', onclick: async () => { await takeClass(rel.classes.find(x => x.code === c.code)); draw() } }, '↻') : null, el('button', { class: 'x', title: `Zuweisung an ${(cache.usedBy.get(c.code) ?? []).length} Knoten entfernen — die Klasse bleibt in Version ${cache.version}`, onclick: async () => { const nodes = cache.usedBy.get(c.code) ?? []; if (!(await ctx.dialog.confirm({ title: `${c.code} an ${nodes.length} Knoten entfernen?`, list: nodes.map(n => `${ICON[n.role] ?? ''} ${n.label}`), text: 'Das Klassenattribut wird dort geleert; die Klasse bleibt in der Version.', ok: '✕ Zuweisungen entfernen', danger: true }))) return; await busy(`entferne ${c.code} …`, async () => { await ctx.batch(nodes.map(n => ({ op: 'attribute.set', args: { node: n.id, attribute: cache.settings.classAttr, locale: null, value: '' } }))); await store.poll(true); await loadUsed(); draw() }) } }, '✕')), el('td', { class: 'muted', style: 'font-size:11px' }, (cache.usedBy.get(c.code) ?? []).slice(0, 3).map(n => n.label).join(', ') + ((cache.usedBy.get(c.code) ?? []).length > 3 ? ` … (${cache.usedBy.get(c.code).length})` : ''))) })))
@@ -749,7 +749,7 @@ async function mount(root, ctx) {
       ...(model().groups ?? []).filter(g => g.key !== 'etim').map(g => el('option', { value: g.key }, `${g.label?.[locale] || g.label?.de || g.key} (${g.key})`)))
     groupSel.value = groupKey()
     const inGroup = () => attrs().filter(a => a.group === groupKey())
-    const guessInGroup = () => {   // Merkmal → Attribut der gewählten Gruppe nach Namen (alle Sprachen, Code)
+    const guessInGroup = () => {   // ETIM-Attribut → Attribut der gewählten Gruppe nach Namen (alle Sprachen, Code)
       const { norm, similarity } = ctx.mapper; let n = 0
       for (const f of allFeatures().values()) {
         if (cache.map[f.code] || hasAttr(f.code.toLowerCase())) continue
@@ -757,7 +757,7 @@ async function mount(root, ctx) {
         for (const a of inGroup()) for (const w of wanted) for (const nme of [a.key, ...Object.values(a.label ?? {})].map(norm)) { const s = nme === w ? 1 : similarity(nme, w); if (s > score) { score = s; best = a } }
         if (best && score >= 0.8) { cache.map[f.code] = best.key; n++ }
       }
-      saveMap(); say(`${n} Merkmale in Gruppe ${groupKey()} zugeordnet`); draw()
+      saveMap(); say(`${n} ETIM-Attribute in Gruppe ${groupKey()} zugeordnet`); draw()
     }
     const classSel = el('select', { onchange: e => { cache.settings.classAttr = e.target.value; saveSettings(); draw() } }, el('option', { value: DEFAULTS.classAttr }, `${DEFAULTS.classAttr}${hasAttr(DEFAULTS.classAttr) ? '' : ' (anlegen)'}`), ...attrs().filter(a => a.key !== DEFAULTS.classAttr && (a.type === 'text' || a.type === 'enum')).map(a => el('option', { value: a.key }, `${lbl(a)} (${a.key})`)))
     classSel.value = cache.settings.classAttr
@@ -770,9 +770,9 @@ async function mount(root, ctx) {
     attachBtn.addEventListener('click', () => { attachPick.style.display = attachPick.style.display === 'none' ? 'block' : 'none' })
     const allFeats = allFeatures(); for (const f of allFeats.values()) f.n = f.classes.length
     const missing = [...allFeats.values()].filter(f => !hasAttr(attrKeyOf(f.code)))
-    body.append(section('3 · Attribute', `${allFeats.size} Merkmale · ${missing.length} ohne Attribut`,
-      el('div', { style: 'display:flex;gap:12px;align-items:center;padding:6px 0;flex-wrap:wrap' }, el('label', { class: 'muted' }, 'Gruppe ', groupSel), groupKey() !== 'etim' ? el('button', { class: 'x', title: `Merkmale den vorhandenen Attributen der Gruppe ${groupKey()} nach Namen zuordnen (ab 80 % Ähnlichkeit); der Rest wird angelegt`, onclick: guessInGroup }, `↻ in ${groupKey()} zuordnen`) : null, el('label', { class: 'muted' }, 'Klasse in ', classSel),
-        el('button', { class: 'primary', title: `Klassenattribut ${cache.settings.classAttr} als Werteliste der übernommenen Klassen und je fehlendem Merkmal ein Attribut (ef…) in der Gruppe ${groupKey()} anlegen`, onclick: createAttributes }, `＋ Attribute anlegen (${missing.length + (hasAttr(cache.settings.classAttr) ? 0 : 1)})`),
+    body.append(section('3 · Attribute', `${allFeats.size} ETIM-Attribute · ${missing.length} nicht zugeordnet`,
+      el('div', { style: 'display:flex;gap:12px;align-items:center;padding:6px 0;flex-wrap:wrap' }, el('label', { class: 'muted' }, 'Gruppe ', groupSel), groupKey() !== 'etim' ? el('button', { class: 'x', title: `ETIM-Attribute den vorhandenen Attributen der Gruppe ${groupKey()} nach Namen zuordnen (ab 80 % Ähnlichkeit); der Rest wird angelegt`, onclick: guessInGroup }, `↻ in ${groupKey()} zuordnen`) : null, el('label', { class: 'muted' }, 'Klasse in ', classSel),
+        el('button', { class: 'primary', title: `Klassenattribut ${cache.settings.classAttr} als Werteliste der übernommenen Klassen und je fehlendem ETIM-Attribut ein Attribut (ef…) in der Gruppe ${groupKey()} anlegen`, onclick: createAttributes }, `＋ Attribute anlegen (${missing.length + (hasAttr(cache.settings.classAttr) ? 0 : 1)})`),
         el('span', { style: 'position:relative' }, attachBtn, attachPick))))
     // Zuordnung
     // Zuordnung: Standard ist ein vorhandenes Attribut (Taloan, 22.09.: „die Werte existieren schon, nur nicht in der Form“) mit ƒ; das eigene ef… ist der Ausweg
@@ -787,12 +787,12 @@ async function mount(root, ctx) {
       mapBody.append(el('tr', {}, el('td', { class: 'mono' }, f.code), el('td', {}, featureText(f, locale)), el('td', { class: 'muted' }, TYPE[f.type] ?? f.type, f.type === 'Alphanumeric' ? ` (${f.values.length})` : ''), el('td', { class: 'num muted' }, f.n), el('td', { class: hasAttr(cur) ? '' : 'warn' }, sel), el('td', {}, fx)))
     }
     const backRow = st.backNode ? tree.byId.get(st.backNode) : null
-    const mapSec = section('4 · Zuordnung', `Merkmal ← Attribut, ƒ = Umwandlung; leer = eigenes Attribut ef… (wird angelegt) · jede Änderung wird sofort gespeichert${filterCls ? ` · nur ${filterCls.code}` : ''}`,
+    const mapSec = section('4 · Zuordnung', `ETIM-Attribut ← Attribut, ƒ = Umwandlung; leer = eigenes Attribut ef… (wird angelegt) · jede Änderung wird sofort gespeichert${filterCls ? ` · nur ${filterCls.code}` : ''}`,
       filterCls ? el('div', { class: 'chips', style: 'padding:4px 0' },
         backRow ? el('button', { class: 'primary', title: `zurück zum Knoten ${backRow.label} — in die Gruppe ${groupKey()}`, onclick: () => ctx.go?.(`/tree/${encodeURIComponent(backRow.id)}?group=${encodeURIComponent(groupKey())}`) }, `← ${ICON[backRow.role] ?? ''} ${backRow.label}`) : null,
-        el('span', { class: 'chip' }, `${filterCls.code} ${nameOf(filterCls.name, locale)} · ${featList.length} Merkmale`), el('button', { class: 'x', title: 'alle Merkmale aller Klassen in Gebrauch', onclick: () => { st.mapFilter = null; st.backNode = null; draw() } }, '✕ Filter'),
+        el('span', { class: 'chip' }, `${filterCls.code} ${nameOf(filterCls.name, locale)} · ${featList.length} ETIM-Attribute`), el('button', { class: 'x', title: 'alle ETIM-Attribute aller Klassen in Gebrauch', onclick: () => { st.mapFilter = null; st.backNode = null; draw() } }, '✕ Filter'),
         el('span', { class: 'muted', style: 'font-size:12px' }, 'Auswahl im Feld = gespeichert; ƒ öffnet die Umwandlung')) : null,
-      allFeats.size ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'Merkmal'), el('th', {}, 'Name [Einheit]'), el('th', { style: 'width:100px' }, 'Typ'), el('th', { style: 'width:50px' }, 'Kl.'), el('th', { style: 'width:280px' }, 'Attribut'), el('th', { style: 'width:36px' }, 'ƒ'))), mapBody) : el('div', { class: 'empty' }, 'keine Klassen übernommen'))
+      allFeats.size ? el('table', { class: 'grid', style: 'width:100%' }, el('thead', {}, el('tr', {}, el('th', { style: 'width:90px' }, 'ETIM-Attribut'), el('th', {}, 'Name [Einheit]'), el('th', { style: 'width:100px' }, 'Typ'), el('th', { style: 'width:50px' }, 'Kl.'), el('th', { style: 'width:280px' }, 'Attribut'), el('th', { style: 'width:36px' }, 'ƒ'))), mapBody) : el('div', { class: 'empty' }, 'keine Klassen übernommen'))
     mapSec.id = 'etim-map'
     body.append(mapSec)
     // (5 · Prüfung war hier — seit 22.09. die Stufe „Daten“ der Übersicht; check() prüft den gewählten Knoten)
@@ -806,15 +806,15 @@ async function mount(root, ctx) {
 
 export default {
   views: [
-    { path: 'etim', label: 'ETIM', icon: '⌗', topic: 'classification', hint: 'ETIM: Quelle und Versionen, Klassen in Gebrauch, Attribute, Zuordnung Merkmal ← Attribut mit ƒ — bedient wird am Knoten (Band ⌗ ETIM)', mount },
-    { path: 'coverage', label: 'ETIM-Merkmale', icon: '⌗', topic: 'analysis', hint: 'Datenanalyse wie DPP/PPWR: welche Merkmale der ETIM-Klassen fehlen — Attribute anlegen, Vorschläge aus Regeln, KI oder Recherche im Internet, übernehmen', mount: async (root, ctx) => { await cache.loaded; return ctx.compliance.mount(root, ctx, buildCatalog(ctx)) } },
+    { path: 'etim', label: 'ETIM', icon: '⌗', topic: 'classification', hint: 'ETIM: Quelle und Versionen, Klassen in Gebrauch, Attribute, Zuordnung ETIM-Attribut ← Attribut mit ƒ — bedient wird am Knoten (Band ⌗ ETIM)', mount },
+    { path: 'coverage', label: 'ETIM-Attribute', icon: '⌗', topic: 'analysis', hint: 'Datenanalyse wie DPP/PPWR: welche ETIM-Attribute der ETIM-Klassen fehlen — Attribute anlegen, Vorschläge aus Regeln, KI oder Recherche im Internet, übernehmen', mount: async (root, ctx) => { await cache.loaded; return ctx.compliance.mount(root, ctx, buildCatalog(ctx)) } },
   ],
   nodeBands: [
     { key: 'etim', label: 'ETIM', icon: '⌗', roles: ['group', 'product', 'variant'], mount: bandMount },   // Klasse · Attribute · Daten am Knoten (Taloan, 22.09.)
   ],
   nodeActions: [
     // die zugewiesene Klasse (auch geerbt) als eigener Punkt (Taloan, 22.09.): Klick → Knotenansicht, direkt in der Attributgruppe (Reiter oder Liste)
-    { label: row => { const c = cache.classOf.get(row.id); return c ? `${c.code} ${nameOf(cache.classes.get(c.code)?.name, 'de') || ''}`.trim() : null }, hint: row => { const c = cache.classOf.get(row.id); return c ? (c.own ? 'Klasse hier · Merkmale pflegen' : 'Klasse geerbt · Merkmale pflegen') : '' }, icon: '⌗', topic: 'classification', roles: ['group', 'product', 'variant'], run(id, ctx) { return ctx.go?.(`/tree/${encodeURIComponent(id)}?group=${encodeURIComponent(groupKey())}`) } },
+    { label: row => { const c = cache.classOf.get(row.id); return c ? `${c.code} ${nameOf(cache.classes.get(c.code)?.name, 'de') || ''}`.trim() : null }, hint: row => { const c = cache.classOf.get(row.id); return c ? (c.own ? 'Klasse hier · ETIM-Attribute pflegen' : 'Klasse geerbt · ETIM-Attribute pflegen') : '' }, icon: '⌗', topic: 'classification', roles: ['group', 'product', 'variant'], run(id, ctx) { return ctx.go?.(`/tree/${encodeURIComponent(id)}?group=${encodeURIComponent(groupKey())}`) } },
     { label: row => cache.classOf.get(row.id) ? 'ETIM-Klasse ändern (+)' : 'ETIM-Klasse (+)', hint: 'Klasse wählen — Vorschlag, Umfeld, Suche', icon: '⌗', topic: 'classification', roles: ['group', 'product'], run(id, ctx) { return classDialog(id, ctx) } },   // (+): auch zum Zufügen (Taloan, 22.09.)
   ],
   checks,

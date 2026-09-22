@@ -7,7 +7,7 @@ Stand 20.09.2026. Braucht `da` (Prüfregel) und `xport` (BMEcat-Export). Ansicht
 Die ETIM-Freigaben sind frei (Open Data Commons Attribution): https://etim.de/daten/downloads/
 (Formate, Guideline, Beispiele) und das ETIM CMT (Classification Management Tool) für die
 eigentliche Freigabe als **IXF 3.1** (XML; XSD `etim-international.com/etimixf/31`). Die Datei
-enthält Units, Features, Values, Groups und Classes — je Klasse die Merkmale mit Einheit und
+enthält Units, Features, Values, Groups und Classes — je Klasse die ETIM-Attribute mit Einheit und
 erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
 
 ## Was das Plugin macht
@@ -16,25 +16,25 @@ erlaubten Werten, alles mit Übersetzungen (`de-DE`, `EN`, …).
    Regex über den Text; auch grosse Dateien) und bleibt dort. Ins Journal geht nur `release`
    (Name, Nummer, Datum, Zählung).
 2. **Klassen übernehmen** — Suche nach Code, Name, Synonym; `+` legt `class:<EC>` als
-   Datensatz an: Name, Gruppe, Version, alle Merkmale mit Typ, Einheit (Code, Abkürzung,
+   Datensatz an: Name, Gruppe, Version, alle ETIM-Attribute mit Typ, Einheit (Code, Abkürzung,
    Name) und Werten (EV-Code, Namen). Alles aufgelöst — Job, Prüfung und Export brauchen die
    Freigabe nicht mehr. „aus dem Baum“ übernimmt alle Klassen, die im Klassenattribut stehen.
 3. **Attribute anlegen** — Klassenattribut `etim_class` (Werteliste der übernommenen Klassen,
-   vererbbar, Gruppe ETIM) und je Merkmal ein Attribut `ef…` in der Gruppe ETIM:
+   vererbbar, Gruppe ETIM) und je ETIM-Attribut ein Attribut `ef…` in der Gruppe ETIM:
    Numeric → `decimal` mit Einheit (vorhandene Einheit nach Abkürzung, sonst `u_<abk>`),
    Logical → `boolean`, Alphanumeric → `enum` mit Werteliste `ef…` (Wert = EV-Code, Bezeichnung
    = Name), Range → `text` mit Muster „von - bis“. Die Gruppe ETIM gilt erst, wenn sie an
    einem Knoten des Pfads hängt: „⌗ Gruppe an Teilbaum“.
-4. **Zuordnung** — Merkmal → vorhandenes Attribut statt eigenem `ef…` (`map` im Journal).
-5. **Prüfung** — Klasse unbekannt/nicht übernommen (⚠), Wert passt nicht zum Merkmal (⚠:
-   Zahl, Ja/Nein, Bereich, Wert nicht in der Liste), Merkmale ohne Attribut und Belegung (ℹ).
+4. **Zuordnung** — ETIM-Attribut → vorhandenes Attribut statt eigenem `ef…` (`map` im Journal).
+5. **Prüfung** — Klasse unbekannt/nicht übernommen (⚠), Wert passt nicht zum ETIM-Attribut (⚠:
+   Zahl, Ja/Nein, Bereich, Wert nicht in der Liste), ETIM-Attribute ohne Attribut und Belegung (ℹ).
    Dieselbe Regel läuft in ✓ Datenqualität (`checks`).
 
-## Datenanalyse (✓ Datenanalyse → ⌗ ETIM-Merkmale)
+## Datenanalyse (✓ Datenanalyse → ⌗ ETIM-Attribute)
 
 Dieselbe Prüfmaschine wie DPP/PPWR (`ctx.compliance`), der Katalog ist dynamisch: Datenpunkte =
-Klasse + alle Merkmale der übernommenen Klassen; ein Merkmal gilt an einem Knoten nur, wenn seine
-Klasse es hat (`appliesIf`). Zuordnung Merkmal → Attribut (Best Guess, gemerkt als `mapping`;
+Klasse + alle ETIM-Attribute der übernommenen Klassen; ein ETIM-Attribut gilt an einem Knoten nur, wenn seine
+Klasse es hat (`appliesIf`). Zuordnung ETIM-Attribut → Attribut (Best Guess, gemerkt als `mapping`;
 der Export nimmt sie mit), fehlende Attribute legt der Katalog selbst an (`createAttribute`:
 Listen, Einheiten), je Knoten die Matrix erfüllt/leer/fraglich, Vorschläge aus Regeln, von der
 KI aus den vorhandenen Werten oder mit **Recherche im Internet** (Handelsware — s. Plugin
@@ -43,11 +43,11 @@ KI aus den vorhandenen Werten oder mit **Recherche im Internet** (Handelsware �
 ## Export (xport)
 
 `entry.js` exportiert `featuresOf(pctx)`; xport setzt es als `env.featuresOf` (Ansicht:
-`ctx.use('etim')`; Job: `../etim/core.mjs` mit den Daten über `/api`). Je Merkmal der Klasse
+`ctx.use('etim')`; Job: `../etim/core.mjs` mit den Daten über `/api`). Je ETIM-Attribut der Klasse
 nach ETIM-BMEcat-Guideline 5.0: Logical `true`/`false`, Numeric mit Punkt, Range zwei
 `FVALUE`, Alphanumeric der EV-Code (aus dem Code oder dem Namen in irgendeiner Sprache),
 leer → `-` mit `FVALUE_DETAILS` `UN` (einstellbar: NA oder weglassen). Kein `FUNIT` — die
-Einheit steckt im Merkmal. Der Kontext bekommt `features` (`code`, `values`, `details`,
+Einheit steckt im ETIM-Attribut. Der Kontext bekommt `features` (`code`, `values`, `details`,
 `label`) und `etim.classCode`. Startvorlage „ETIM BMEcat 5.0“ in xport — geprüft gegen
 `bmecat_etim_501.xsd`: gültig.
 
@@ -61,11 +61,11 @@ Zuordnung:
 1. **Klasse** — eigen oder geerbt (Regelfall: an der Produktgruppe, erbt auf alles darunter;
    Ausnahme am Produkt), ≠ abweichende Klassen darunter. „Klasse zuweisen …“ öffnet den Dialog
    (Vorschlag, Umfeld, Suche, Ebene mit Empfehlung).
-2. **Attribute** — die Merkmale der Klasse: n von m als Attribut, zugeordnet, mit ƒ, fehlend.
+2. **Attribute** — die ETIM-Attribute der Klasse: n von m als Attribut, zugeordnet, mit ƒ, fehlend.
    „zuordnen …“ filtert die Zuordnung auf die Klasse; Standard ist ein **vorhandenes Attribut**
    mit **ƒ** (Einheit, ja/x → Ja/Nein, Text → EV-Code nach Tabelle, von/bis) — ein eigenes
    `ef…` ist der Ausweg („＋ n anlegen“, Gruppe `etim`, nur an Produkt und Variante).
-3. **Daten** — Produkte darunter × Merkmale: % gefüllt, leer, passen nicht. „⊞ Tabelle“ öffnet
+3. **Daten** — Produkte darunter × ETIM-Attribute: % gefüllt, leer, passen nicht. „⊞ Tabelle“ öffnet
    die Subitems-Tabelle mit genau den Spalten der Klasse (Excel-Bedienung); „✓ prüfen“ dieselbe
    Regel wie in ✓ Datenqualität.
 4. **Ausleitung** — BMEcat-Profile des Vorlagen-Exports (xport): **Publikationsbaum** + Kanal +
@@ -85,4 +85,4 @@ Zuordnung) stehen unter der Übersicht, zugeklappt.
 | `settings` | `group` (Attributgruppe der ETIM-Daten, Vorgabe `etim` — gibt es sie nicht, wird sie angelegt; eine vorhandene heißt: dort zuordnen, „↻ in … zuordnen“ rät nach Namen), `classAttr` (Vorgabe `etim_class`), `unknownAs` (UN / NA / skip), `requireClass` |
 | `map` | EF-Code → Attributschlüssel, wo nicht das eigene `ef…` gilt |
 
-`sample.xml` ist eine kleine IXF-Datei zum Ausprobieren (2 Klassen, 4 Merkmale — erfunden).
+`sample.xml` ist eine kleine IXF-Datei zum Ausprobieren (2 Klassen, 4 ETIM-Attribute — erfunden).

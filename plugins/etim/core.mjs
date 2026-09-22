@@ -1,10 +1,10 @@
 // Plugin etim — Kern ohne DOM (Taloan, 19.09.2026: ETIM/BMEcat-Export; die Freigaben liegen frei unter etim.de/daten/downloads).
 // Liest eine ETIM-Freigabe im IXF 3.1 (XSD: etim-international.com/etimixf/31 — Units, Features, Values, Groups, Classes,
 // je Klasse Features mit UnitCode und erlaubten Values), legt je übernommener Klasse einen Datensatz an (class:<EC>, alles
-// aufgelöst: Namen, Typ, Einheit, Werte — damit Job und Prüfung nichts nachschlagen müssen) und löst je Produkt die Merkmale
+// aufgelöst: Namen, Typ, Einheit, Werte — damit Job und Prüfung nichts nachschlagen müssen) und löst je Produkt die ETIM-Attribute
 // aus den zugeordneten Attributen auf, wie die ETIM-BMEcat-Guideline 5.0 sie will: Logical true/false, Numeric mit Punkt,
-// Range zwei FVALUE, Alphanumeric der EV-Code, unbekannt „-“ mit FVALUE_DETAILS UN. Kein FUNIT — die Einheit steckt im Merkmal.
-// Zuordnung mit ƒ (Taloan, 22.09.: „viele Werte existieren schon, nur nicht in der Form, wie das ETIM-Merkmal sie braucht“): ein Eintrag
+// Range zwei FVALUE, Alphanumeric der EV-Code, unbekannt „-“ mit FVALUE_DETAILS UN. Kein FUNIT — die Einheit steckt im ETIM-Attribut.
+// Zuordnung mit ƒ (Taloan, 22.09.: „viele Werte existieren schon, nur nicht in der Form, wie das ETIM-Attribut sie braucht“): ein Eintrag
 // der Zuordnung ist ein Schlüssel oder { to, steps } — die Kette aus plugins/table/transform.mjs läuft vor der Auflösung.
 import { apply as applySteps } from '../table/transform.mjs'
 
@@ -65,7 +65,7 @@ export function classRecord(rel, cls, langs = null) {
   }
 }
 
-/// Zuordnung eines Merkmals: { key, steps } — Zeiger (Text) oder { to, steps }; ohne Zuordnung das eigene Attribut ef… (Code klein)
+/// Zuordnung eines ETIM-Attributs: { key, steps } — Zeiger (Text) oder { to, steps }; ohne Zuordnung das eigene Attribut ef… (Code klein)
 export function mapEntry(map, code) {
   const m = map?.[code] ?? map?.[code.toUpperCase()]
   if (!m) return { key: code.toLowerCase(), steps: null }
@@ -85,7 +85,7 @@ const FALSE = new Set(['false', 'nein', 'no', '0', 'n', 'falsch', '-'])
 const num = s => { const n = Number(String(s).trim().replace(/\s/g, '').replace(',', '.')); return isNaN(n) ? null : n }
 const fmt = n => String(Math.round(n * 1e6) / 1e6)
 
-/// Rohwert eines Attributs → FVALUE(s) nach Merkmalstyp; null = nicht auflösbar (Prüfregel), { unknown } = leer
+/// Rohwert eines Attributs → FVALUE(s) nach Typ des ETIM-Attributs; null = nicht auflösbar (Prüfregel), { unknown } = leer
 export function resolveValue(feature, raw) {
   const s = raw == null ? '' : Array.isArray(raw) ? raw.join(', ') : String(raw).trim()
   if (!s) return { unknown: true }
@@ -110,9 +110,9 @@ export function resolveValue(feature, raw) {
   }
 }
 
-/// Merkmale eines Produkts für den Export. pctx: { attr: { key: { value, raw } } } (xport-Kontext); cfg: { classAttr, map, unknownAs, getClass }
+/// ETIM-Attribute eines Produkts für den Export. pctx: { attr: { key: { value, raw } } } (xport-Kontext); cfg: { classAttr, map, unknownAs, getClass }
 /// map: EF-Code → Attributschlüssel oder { to, steps }; ohne Zuordnung gilt das Attribut mit dem Schlüssel des Codes in Kleinbuchstaben (ef000040).
-/// Liefert auch die Vollständigkeit: filled / total (nur Merkmale mit Attribut zählen als füllbar) und completeness in Prozent aller Merkmale.
+/// Liefert auch die Vollständigkeit: filled / total (nur ETIM-Attribute mit Attribut zählen als füllbar) und completeness in Prozent aller ETIM-Attribute.
 export async function featuresOf(pctx, cfg) {
   const code = String(pctx.attr?.[cfg.classAttr]?.raw ?? pctx.attr?.[cfg.classAttr]?.value ?? '').trim().toUpperCase()
   if (!/^EC\d{6}$/.test(code)) return { classCode: code || null, features: [], known: false, filled: 0, total: 0, completeness: 0 }
@@ -137,11 +137,11 @@ export async function featuresOf(pctx, cfg) {
 
 /// Sperre für den Export (Taloan, 20.09.: „der Export führt stillschweigend die Analyse aus, bevor er tätig wird“ — und: „ob die Attribute
 /// gefüllt sind, verantwortet der Anwender über Pflichtfelder; aber die Struktur muss da und zugeordnet sein“): null = bestanden, sonst der
-/// Grund. Geprüft wird die Struktur: Klasse am Knoten, Klasse übernommen, je Merkmal ein Attribut, das am Knoten gilt (Gruppe am Pfad).
+/// Grund. Geprüft wird die Struktur: Klasse am Knoten, Klasse übernommen, je ETIM-Attribut ein Attribut, das am Knoten gilt (Gruppe am Pfad).
 /// Leere oder unpassende Werte sperren nicht — sie gehen als „-“/UN hinaus und werden gezählt (Kopf: stats).
-/// Regeln der Ausleitung (BMEcat-Profil, Taloan 22.09.): requireClass = ohne Klasse sperren (sonst geht das Produkt ohne Merkmale hinaus);
-/// minCompleteness = Prozent der Merkmale, die gefüllt sein müssen (0 = keine Schwelle) — die Empfänger rechnen genau das;
-/// strict = ein Wert, der nicht zum Merkmal passt, sperrt (sonst geht er als „-“/UN hinaus und wird gezählt).
+/// Regeln der Ausleitung (BMEcat-Profil, Taloan 22.09.): requireClass = ohne Klasse sperren (sonst geht das Produkt ohne ETIM-Attribute hinaus);
+/// minCompleteness = Prozent der ETIM-Attribute, die gefüllt sein müssen (0 = keine Schwelle) — die Empfänger rechnen genau das;
+/// strict = ein Wert, der nicht zum ETIM-Attribut passt, sperrt (sonst geht er als „-“/UN hinaus und wird gezählt).
 export async function gate(pctx, cfg) {
   const code = String(pctx.attr?.[cfg.classAttr]?.raw ?? pctx.attr?.[cfg.classAttr]?.value ?? '').trim().toUpperCase()
   if (!code) return cfg.requireClass ? 'keine ETIM-Klasse' : null
@@ -156,10 +156,10 @@ export async function gate(pctx, cfg) {
     if (r === null) bad.push(f.code); else if (!r.unknown) filled++
   }
   const say = (l, w) => l.length ? `${l.length} ${w}: ${l.slice(0, 4).join(', ')}${l.length > 4 ? ' …' : ''}` : ''
-  const out = [say(noAttr, `von ${cls.features.length} Merkmalen ohne Attribut im Modell`), say(notHere, 'gelten hier nicht (Gruppe nicht am Pfad)')]
-  if (cfg.strict && bad.length) out.push(say(bad, 'Werte passen nicht zum Merkmal'))
+  const out = [say(noAttr, `von ${cls.features.length} ETIM-Attributen nicht zugeordnet (kein Attribut im Modell)`), say(notHere, 'gelten hier nicht (Gruppe nicht am Pfad)')]
+  if (cfg.strict && bad.length) out.push(say(bad, 'Werte passen nicht zum ETIM-Attribut'))
   const pct = cls.features.length ? Math.round(filled * 100 / cls.features.length) : 100
-  if (cfg.minCompleteness > 0 && pct < cfg.minCompleteness) out.push(`Vollständigkeit ${pct} % unter ${cfg.minCompleteness} % (${filled} von ${cls.features.length} Merkmalen)`)
+  if (cfg.minCompleteness > 0 && pct < cfg.minCompleteness) out.push(`Vollständigkeit ${pct} % unter ${cfg.minCompleteness} % (${filled} von ${cls.features.length} ETIM-Attributen)`)
   const why = out.filter(Boolean).join('; ')
   return why || null
 }
@@ -181,15 +181,15 @@ export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
     if (r === null) out.push({ attribute: key, message: `${f.code} ${nameOf(f.name, cfg.locale)}: „${values[key]?.value}“ passt nicht (${f.type}${f.type === 'Alphanumeric' ? ': ' + f.values.slice(0, 6).map(v => nameOf(v.name, cfg.locale)).join(', ') + (f.values.length > 6 ? ' …' : '') : ''})`, severity: 'warn' })
     else if (!r.unknown) filled++
   }
-  // Zusammenfassung je Knoten (Taloan, 22.09.: „was heisst belegt?“): gefüllt = ein Wert, den das Merkmal lesen kann; ohne Spalte = kein
+  // Zusammenfassung je Knoten (Taloan, 22.09.: „was heisst belegt?“): gefüllt = ein Wert, den das ETIM-Attribut lesen kann; ohne Spalte = kein
   // Attribut im Modell oder es gilt an diesem Knoten nicht (Gruppe nicht am Pfad, Rolle) — mit Namen, damit man weiss, welche
   const noCol = cls.features.filter(f => !columns.some(c => c.key === mapEntry(cfg.map, f.code).key))
   const mapped = cls.features.length - noCol.length
   const names = l => l.slice(0, 4).map(f => `${f.code} ${nameOf(f.name, cfg.locale)} (${mapEntry(cfg.map, f.code).key})`).join(', ') + (l.length > 4 ? ` … +${l.length - 4}` : '')
   // kurz in der Zeile, die Erklärung einmal im Tooltip (title) — nicht je Zeile (Taloan, 22.09.: „ist nicht dein Ernst“)
   const notHere = noCol.filter(f => inactive.includes(mapEntry(cfg.map, f.code).key)), noAttr = noCol.filter(f => !inactive.includes(mapEntry(cfg.map, f.code).key))
-  if (notHere.length) out.push({ attribute: cfg.classAttr, message: `${notHere.length} Merkmal${notHere.length === 1 ? '' : 'e'} — Attribut gilt hier nicht: ${names(notHere)}`, title: 'das zugeordnete Attribut gibt es, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
-  if (noAttr.length) out.push({ attribute: cfg.classAttr, message: `${noAttr.length} Merkmal${noAttr.length === 1 ? '' : 'e'} ohne Attribut: ${names(noAttr)}`, title: 'zu diesem Merkmal gibt es kein Attribut im Modell — ⇄ zuordnen oder ＋ anlegen', severity: 'info' })
-  if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} leer · ${filled} gefüllt`, title: 'gefüllt = ein Wert, den das Merkmal lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat', severity: 'info' })
+  if (notHere.length) out.push({ attribute: cfg.classAttr, message: `${notHere.length} ETIM-Attribut${notHere.length === 1 ? '' : 'e'} — zugeordnetes Attribut gilt hier nicht: ${names(notHere)}`, title: 'das zugeordnete Attribut gibt es, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
+  if (noAttr.length) out.push({ attribute: cfg.classAttr, message: `${noAttr.length} ETIM-Attribut${noAttr.length === 1 ? '' : 'e'} nicht zugeordnet: ${names(noAttr)}`, title: 'zu diesem ETIM-Attribut gibt es kein Attribut im Modell — ⇄ zuordnen oder ＋ anlegen', severity: 'info' })
+  if (filled < mapped) out.push({ attribute: null, message: `${mapped - filled} von ${mapped} leer · ${filled} gefüllt`, title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert); leer geht als „-“/UN in den BMEcat', severity: 'info' })
   return out
 }

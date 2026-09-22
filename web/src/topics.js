@@ -12,7 +12,7 @@ export const TOPICS = [
   { key: 'datasheet', to: '/datasheet', icon: '▤', label: 'Datenblatt' },
   { key: 'analysis', to: '/analysis', icon: '✓', label: 'Datenanalyse' },
   { key: 'translate', to: '/translate', icon: '⇄', label: 'Übersetzung' },   // Übersetzungsmanagement (Taloan, 21.09.: „haben wir noch gar nicht“)
-  { key: 'classification', to: '/classification', icon: '⌗', label: 'Klassifikation' },   // ETIM heute, ECLASS/UNSPSC morgen — Klasse → Merkmale → Werte (Taloan, 22.09.: kein Export)
+  { key: 'classification', to: '/classification', icon: '⌗', label: 'Klassifikation' },   // ETIM heute, ECLASS/UNSPSC morgen — Klasse → ETIM-Attribute → Werte (Taloan, 22.09.: kein Export)
   { key: 'tools', to: '/tools', icon: '⌁', label: 'Werkzeuge' },
   { key: 'jobs', to: '/jobs', icon: '⏱', label: 'Jobs' },
 ]
