@@ -64,7 +64,7 @@ export const ai = reactive({
   lastError: '',
   lastSources: [],      // Quellen (url, title) der letzten Antwort mit web: true
   // Verbrauch, seit wann (Taloan, 22.09.): Token kosten Geld — die Statuszeile zeigt sie; „zurücksetzen“ im Tooltip der Einstellungen
-  used: saved.used ?? { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10) },
+  used: { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10), per: {}, ...(saved.used ?? {}) },
 
   providers: PROVIDERS,
   /// eingerichtete Anbieter (mit Schlüssel) — zum Aufzählen in Hilfen und Einstellungen
@@ -76,8 +76,15 @@ export const ai = reactive({
   /// „Anthropic · claude-sonnet-5“ — für Tooltips und Meldungen, wo es auf den Anbieter ankommt
   label() { const p = this.current(); return p ? `${p.label} · ${this.accounts[p.key].model}` : 'KI' },
   save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider, used: this.used })) } catch {} },
-  /// Verbrauch zurücksetzen (Einstellungen → KI)
-  resetUsed() { this.used = { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10) }; this.save() },
+  /// Verbrauch eines Anbieters (oder ohne Angabe: alles) zurücksetzen — Einstellungen → KI
+  resetUsed(key = null) {
+    if (!key) { this.used = { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10), per: {} }; this.save(); return }
+    const g = this.usedOf(key); const per = { ...(this.used.per ?? {}) }; delete per[key]
+    this.used = { ...this.used, calls: Math.max(0, this.used.calls - g.calls), in: Math.max(0, this.used.in - g.in), out: Math.max(0, this.used.out - g.out), per }
+    this.save()
+  },
+  /// Verbrauch eines Anbieters
+  usedOf(key) { return this.used.per?.[key] ?? { calls: 0, in: 0, out: 0 } },
 
   // Eine Frage, eine Antwort. json: true → die Antwort wird als JSON gelesen (Code-Zäune werden entfernt).
   // web: true → die KI darf im Internet suchen (Herstellerseiten, Datenblätter — Taloan, 20.09.: Daten fremder Produkte ergänzen);
@@ -88,7 +95,11 @@ export const ai = reactive({
     this.busy++
     try {
       const { text, sources, usage } = await p.call({ key: this.accounts[p.key].key, model: this.accounts[p.key].model, system, user, maxTokens, temperature, web, maxSearches })
-      this.used = { ...this.used, calls: this.used.calls + 1, in: this.used.in + (usage?.in ?? 0), out: this.used.out + (usage?.out ?? 0) }; this.save()
+      // Verbrauch gesamt und je Anbieter (Taloan, 22.09.: „Zählung funktioniert noch nicht separat“)
+      const add = (a, u) => ({ calls: (a?.calls ?? 0) + 1, in: (a?.in ?? 0) + (u?.in ?? 0), out: (a?.out ?? 0) + (u?.out ?? 0) })
+      const t = add(this.used, usage)
+      this.used = { ...this.used, ...t, per: { ...(this.used.per ?? {}), [p.key]: add(this.used.per?.[p.key], usage) } }
+      this.save()
       const seen = new Set(); this.lastSources = sources.filter(s => !seen.has(s.url) && seen.add(s.url))
       this.lastError = ''
       if (!json) return text
