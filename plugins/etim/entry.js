@@ -33,6 +33,8 @@ async function loadUsed() {
 /// Klassen in Gebrauch: die im Baum zugewiesenen; ohne Zuweisung und bei kleinem Bestand (von Hand übernommen) alle
 const usedClasses = () => { const out = [...cache.used].map(c => cache.classes.get(c)).filter(Boolean); return out.length || cache.classes.size > 50 ? out : [...cache.classes.values()] }
 // Schlüssel je Freigabe: Nummer und Ausführung (Taloan, 22.09.: ETIM 9 gibt es sechsmal — ALL-SECTORS, HVACPLUMBING, metrisch, imperial …)
+// Herkunft eines Umfeld-Vorschlags in Worten (Taloan, 22.09.: „was hat denn ‚darunter‘ da zu suchen?“)
+const whyText = (why, n) => why === 'Geschwister' ? `an ${n} Geschwister${n === 1 ? '' : 'n'}` : why === 'darunter' ? `an ${n} Knoten im Teilbaum` : why.startsWith('am Pfad: ') ? `am Pfad, an ${why.slice(9)}` : `${why}: ${n}`
 const classKeyOf = code => `class:${cache.releaseKey ?? cache.version ?? '0'}:${code}`
 /// Attribut eines ETIM-Attributs: Zuordnung (map: Schlüssel oder { to, steps }), sonst die der Datenanalyse (mapping), sonst das eigene ef…
 const attrKeyOf = code => { if (cache.map[code]) return mapEntry(cache.map, code).key; const m = cache.mapping?.[code.toLowerCase()]; return m?.to && !/ähnlich|vielleicht/.test(m.why ?? '') ? m.to : code.toLowerCase() }
@@ -444,7 +446,7 @@ async function classDialog(nodeId, ctx, onDone = null) {
         env.innerHTML = ''
         if (!counts.size) { env.textContent = 'Im Umfeld ist keine Klasse gesetzt: weder an Geschwistern noch darunter.'; return }
         env.append(el('div', { class: 'step-band', style: 'margin:2px 0' }, 'Umfeld', el('span', { class: 'muted' }, ' · Klassen an Geschwistern und darunter — anklicken übernimmt sie')))
-        for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => `${w} × ${n}`).join(', ')))
+        for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => whyText(w, n)).join(' · ')))
       } catch (e) { env.textContent = 'Umfeld: ' + e.message }
     })()
     // Suche und Gruppen
@@ -648,7 +650,7 @@ async function mount(root, ctx) {
         env.innerHTML = ''
         if (!counts.size) { env.append('Im Umfeld ist keine Klasse gesetzt: weder an Geschwistern noch darunter oder am Pfad.'); return }
         env.append(el('div', { class: 'muted' }, 'Umfeld'))
-        for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => `${w} × ${n}`).join(', ')))
+        for (const [c, whys] of [...counts].sort((a, b) => [...b[1].values()].reduce((x, y) => x + y, 0) - [...a[1].values()].reduce((x, y) => x + y, 0))) env.append(line(c, [...whys].map(([w, n]) => whyText(w, n)).join(' · ')))
       } catch (e) { env.textContent = 'Umfeld: ' + e.message }
     })()
     // Namen: Wörter aus dem Namen und dem Pfad gegen Klassennamen und Synonyme
