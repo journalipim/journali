@@ -306,7 +306,7 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (n.Role == Roles.Group) return Outcome.Bad("Eine Gruppe hat keinen Status.");
-        if (!Statuses.All.Contains(status ?? "")) return Outcome.Bad($"Status: {string.Join(", ", Statuses.All)}");
+        if (!c.Model.Statuses.ContainsKey(status ?? "")) return Outcome.Bad($"Status: {string.Join(", ", c.Model.StatusesOrdered.Select(s => s.Key))}");
         return Outcome.Ok(c.Write(id, Types.StatusSet, new StatusSet(status!)));
     }
 
@@ -606,7 +606,7 @@ public static class Commands
             if (string.IsNullOrWhiteSpace(t.Key)) return Outcome.Bad("Übergang ohne Key.");
             if (!keys.Contains(t.From) || !keys.Contains(t.To)) return Outcome.Bad($"Übergang {t.Key}: von/nach muss ein Zustand sein.");
             if (t.EscalateAfterDays is { } ed && ed < 0) return Outcome.Bad($"Übergang {t.Key}: Eskalation nach n Tagen, n ≥ 0.");
-            foreach (var e in t.Effects ?? []) if (!((e.StartsWith("release:") || e.StartsWith("revoke:")) && (e[(e.IndexOf(':') + 1)..] == "*" || c.Model.Channels.ContainsKey(e[(e.IndexOf(':') + 1)..])) || e.StartsWith("status:"))) return Outcome.Bad($"Übergang {t.Key}: Wirkung „{e}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<wert>).");
+            foreach (var e in t.Effects ?? []) if (!((e.StartsWith("release:") || e.StartsWith("revoke:")) && (e[(e.IndexOf(':') + 1)..] == "*" || c.Model.Channels.ContainsKey(e[(e.IndexOf(':') + 1)..])) || (e.StartsWith("status:") && c.Model.Statuses.ContainsKey(e[7..])))) return Outcome.Bad($"Übergang {t.Key}: Wirkung „{e}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<{string.Join('|', c.Model.StatusesOrdered.Select(s => s.Key))}>).");
         }
         if ((d.Transitions ?? new()).Select(t => t.Key).Distinct().Count() != (d.Transitions ?? new()).Count) return Outcome.Bad("Übergangs-Keys doppelt.");
         return Outcome.Ok(c.Write(Workflows.Stream + key, Types.WorkflowDefined, d with { Start = start }));

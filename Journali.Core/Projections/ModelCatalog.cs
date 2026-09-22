@@ -42,6 +42,10 @@ public sealed class ModelCatalog : IProjection
     /// <summary>Die Schlüsselattribute (unique), nach Schlüssel geordnet — Taloan, 21.09.2026: beliebig viele, jedes für sich eindeutig.</summary>
     public IEnumerable<AttributeDefinition> UniqueAttributes => Attributes.Values.Where(a => a.Unique).OrderBy(a => a.Key, StringComparer.Ordinal);
     public Dictionary<string, ChannelDefinition> Channels { get; } = new();
+    /// <summary>Status-Vokabular (Taloan, 22.09.2026); <see cref="StatusEver"/>: auch zurückgezogene — die Saat sät sie nicht wieder.</summary>
+    public Dictionary<string, StatusDefinition> Statuses { get; } = new();
+    public HashSet<string> StatusEver { get; } = new();
+    public IEnumerable<StatusDefinition> StatusesOrdered => Statuses.Values.OrderBy(s => s.Order).ThenBy(s => s.Key, StringComparer.Ordinal);
     public Dictionary<string, AttributeDefinition> Attributes { get; } = new();
     public Dictionary<string, ValueList> Lists { get; } = new();
     public Dictionary<string, FamilyDefinition> Families { get; } = new();
@@ -109,6 +113,13 @@ public sealed class ModelCatalog : IProjection
                 break;
             case Types.ChannelRetired:
                 Channels.Remove(Types.Deserialize<ChannelRetired>(entry.Payload).Key);
+                break;
+            case Types.StatusDefined:
+                var sd = Types.Deserialize<StatusDefinition>(entry.Payload);
+                Statuses[sd.Key] = sd; StatusEver.Add(sd.Key);
+                break;
+            case Types.StatusRetired:
+                Statuses.Remove(Types.Deserialize<StatusRetired>(entry.Payload).Key);
                 break;
             case Types.ListValueRetired:
                 List(ListKey(entry.Stream)).Values.Remove(Types.Deserialize<ListValueRetired>(entry.Payload).Value);

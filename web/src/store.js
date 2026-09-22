@@ -52,6 +52,11 @@ export const store = reactive({
     if (this.attrNames === 'key') return ''   // im Key-Modus steht nur der Key (die Ansicht zeigt ihn abgegraut daneben)
     return def.label?.[this.viewLocales?.[0]] || def.label?.de || Object.values(def.label ?? {}).find(Boolean) || def.key
   },
+  // Status-Vokabular aus dem Modell (Taloan, 22.09.2026): Definition, Text in der Sicht-Sprache, Symbol; Farbe als Token (pos, neg, muted, warn, accent)
+  status(key) { return (this.model?.statuses ?? []).find(s => s.key === key) ?? null },
+  statusLabel(key) { const s = this.status(key); return s ? (s.label?.[this.viewLocales?.[0]] || s.label?.de || Object.values(s.label ?? {}).find(Boolean) || s.key) : (key ?? '') },
+  statusText(key) { const s = this.status(key); return s ? `${s.icon ? s.icon + ' ' : ''}${this.statusLabel(key)}` : (key ?? '') },
+  statusStyle(key) { const s = this.status(key); return s?.color ? `color:var(--${s.color})` : '' },
   name(def) {
     if (!def) return ''
     const label = def.label?.[this.viewLocales?.[0]] || def.label?.de || Object.values(def.label ?? {}).find(Boolean) || def.key

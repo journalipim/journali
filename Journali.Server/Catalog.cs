@@ -76,6 +76,7 @@ public sealed class Catalog
                 {
                     Types.LocaleDefined => _model.Locales.ContainsKey(key),
                     Types.ChannelDefined => _model.Channels.ContainsKey(key),
+                    Types.StatusDefined => _model.StatusEver.Contains(key),   // zurückgezogen bleibt zurückgezogen
                     Types.AttributeDefined => _model.Attributes.ContainsKey(key),
                     Types.ListDefined => _model.Lists.ContainsKey(key),
                     Types.ListValueDefined => _model.Lists.TryGetValue(key, out var l) && l.Values.ContainsKey(Types.Deserialize<ListValueDefinition>(s.Payload).Value),   // je Wert, nicht „Liste hat schon Werte“ (sonst kam nur der erste)

@@ -12,6 +12,7 @@ public static class Model
 {
     public const string LocaleStream = "locale:";
     public const string ChannelStream = "channel:";
+    public const string StatusStream = "status:";
     public const string AttributeStream = "attribute:";
     public const string ListStream = "list:";
     public const string FamilyStream = "family:";
@@ -43,6 +44,10 @@ public static class Model
         yield return new(MasterChannelStream, Types.MasterChannelDefined, Types.Serialize(new MasterChannelDefined("web")));
         yield return new(ChannelStream + "web", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("web", Labels.Of("Web", "Web"))));
         yield return new(ChannelStream + "print", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("print", Labels.Of("Print", "Print"))));
+        // Status-Saat (Taloan, 22.09.2026): die drei bisherigen — danach frei erweiterbar (z. B. Überprüfung, Freigabe, Verkauf DE, Verkauf weltweit)
+        yield return new(StatusStream + "draft", Types.StatusDefined, Types.Serialize(new StatusDefinition("draft", Labels.Of("Entwurf", "Draft"), "muted", "○", 10)));
+        yield return new(StatusStream + "active", Types.StatusDefined, Types.Serialize(new StatusDefinition("active", Labels.Of("aktiv", "active"), "pos", "●", 20)));
+        yield return new(StatusStream + "discontinued", Types.StatusDefined, Types.Serialize(new StatusDefinition("discontinued", Labels.Of("ausgelaufen", "discontinued"), "neg", "✗", 30)));
 
         UnitDefinition[] units =
         [

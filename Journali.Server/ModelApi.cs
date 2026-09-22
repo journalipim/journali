@@ -35,15 +35,15 @@ public static partial class ModelApi
             var type = kind switch
             {
                 "attributes" => Types.AttributeRetired, "groups" => Types.AttributeGroupRetired, "lists" => Types.ListRetired, "views" => Types.ViewRetired,
-                "units" => Types.UnitRetired, "relationTypes" => Types.RelationTypeRetired, "locales" => Types.LocaleRetired, "channels" => Types.ChannelRetired, _ => null,
+                "units" => Types.UnitRetired, "relationTypes" => Types.RelationTypeRetired, "locales" => Types.LocaleRetired, "channels" => Types.ChannelRetired, "statuses" => Types.StatusRetired, _ => null,
             };
-            if (type is null) return Bad("kind: attributes, groups, lists, views, units, relationTypes, locales oder channels.");
+            if (type is null) return Bad("kind: attributes, groups, lists, views, units, relationTypes, locales, channels oder statuses.");
             return c.With((model, _, _) =>
             {
                 bool Missing(string stream) { var key = stream[(stream.IndexOf(':') + 1)..]; return kind switch
                 {
                     "attributes" => !model.Attributes.ContainsKey(key), "groups" => !model.Groups.ContainsKey(key), "lists" => !model.Lists.ContainsKey(key), "views" => !model.Views.ContainsKey(key),
-                    "units" => !model.Units.ContainsKey(key), "relationTypes" => !model.RelationTypes.ContainsKey(key), "locales" => !model.Locales.ContainsKey(key), _ => !model.Channels.ContainsKey(key),
+                    "units" => !model.Units.ContainsKey(key), "relationTypes" => !model.RelationTypes.ContainsKey(key), "locales" => !model.Locales.ContainsKey(key), "statuses" => !model.Statuses.ContainsKey(key), _ => !model.Channels.ContainsKey(key),
                 }; }
                 var seen = new HashSet<string>();
                 return Results.Ok(j.ReadRecent(type, Math.Clamp(limit, 1, 100) * 4).Where(e => seen.Add(e.Stream) && Missing(e.Stream)).Take(Math.Clamp(limit, 1, 100)).Select(EntryView.Of).ToList());
@@ -123,6 +123,23 @@ public static partial class ModelApi
                 var users = model.Attributes.Values.Where(a => (a.Channels?.Contains(key) ?? false) || (a.Required?.ContainsKey(key) ?? false)).Select(a => a.Key).ToList();
                 return users.Count > 0 ? Bad($"{key} wird benutzt von: {string.Join(", ", users)}") : write(Model.ChannelStream + key, Types.ChannelRetired, new ChannelRetired(key));
             }));
+
+        // Status-Vokabular (Taloan, 22.09.2026): frei benennbar, je Sprache; draft bleibt (Startstatus neuer Knoten)
+        m.MapPut("/statuses/{key}", (string key, StatusDefinition body, HttpRequest req, Catalog c) =>
+            Command(req, c, key, ValidCode, (model, write) => write(Model.StatusStream + key, Types.StatusDefined, body with { Key = key, Label = body.Label ?? new() })));
+        m.MapDelete("/statuses/{key}", (string key, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is null) return ActorMissing();
+            return c.With((model, tree, write) =>
+            {
+                if (!model.Statuses.ContainsKey(key)) return Results.NotFound();
+                if (key == Statuses.Draft) return Bad("draft ist der Startstatus neuer Knoten und bleibt.");
+                var n = tree.Nodes.Values.Count(x => x.Status == key);
+                if (n > 0) return Bad($"{key} steht an {n} Knoten — erst umsetzen (Tabelle, Workflow-Wirkung).");
+                var wf = c.Workflows.All.Values.Where(x => x.Transitions.Any(t => (t.Effects ?? []).Contains("status:" + key))).Select(x => x.Key).ToList();
+                return wf.Count > 0 ? Bad($"{key} ist Wirkung in Workflow {string.Join(", ", wf)}.") : Results.Ok(EntryView.Of(write(Actor(req)!, Model.StatusStream + key, Types.StatusRetired, new StatusRetired(key), null)));
+            });
+        });
 
         m.MapPut("/attributes/{key}", (string key, AttributeDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
@@ -299,6 +316,7 @@ public static partial class ModelApi
         masterLocale = model.MasterLocale,
         masterChannel = model.MasterChannel,
         channels = model.Channels.Values.OrderBy(c => c.Key).ToList(),
+        statuses = model.StatusesOrdered.ToList(),
         attributes = model.Attributes.Values.OrderBy(a => a.Group).ThenBy(a => a.Key).ToList(),
         lists = model.Lists.Values.OrderBy(l => l.Key).Select(l => new { l.Key, l.Label, columns = l.Columns ?? [], closed = l.Closed, values = l.Ordered.ToList() }).ToList(),
         units = model.Units.Values.OrderBy(u => u.Quantity).ThenByDescending(u => u.Factor).ToList(),

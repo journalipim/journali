@@ -64,6 +64,8 @@ public static class Types
     public const string LocaleRetired = "LocaleRetired";
     public const string ChannelDefined = "ChannelDefined";
     public const string ChannelRetired = "ChannelRetired";
+    public const string StatusDefined = "StatusDefined";   // Status-Vokabular (Taloan, 22.09.2026)
+    public const string StatusRetired = "StatusRetired";
     public const string AttributeDefined = "AttributeDefined";
     public const string AttributeRetired = "AttributeRetired";
     public const string ListDefined = "ListDefined";
@@ -167,14 +169,17 @@ public static class Roles
     public static int Depth(string role) => role switch { Group => 0, Product => 1, Variant => 2, _ => 0 };
 }
 
-/// <summary>Status eines Produkts oder einer Variante; discontinued am Produkt überstimmt alles darunter.</summary>
+/// <summary>Status eines Produkts oder einer Variante: Lebenszyklus am Markt (nicht Redaktion — das ist der Workflow). Das Vokabular
+/// steht im Modell (<see cref="StatusDefinition"/>, Strom <c>status:&lt;key&gt;</c>; Taloan, 22.09.2026: frei benennbar, je Sprache übersetzt,
+/// beim Import aus einem Fremdstatus abgebildet). <see cref="Draft"/> ist der Startstatus neuer Knoten und bleibt immer im Modell.</summary>
 public static class Statuses
 {
     public const string Draft = "draft";
-    public const string Active = "active";
-    public const string Discontinued = "discontinued";
-    public static readonly IReadOnlyList<string> All = [Draft, Active, Discontinued];
 }
+
+/// <summary>Ein Status im Modell: Schlüssel, Text je Sprache, Farbe (Token: muted, warn, neg, accent, pos), Symbol, Reihenfolge.</summary>
+public sealed record StatusDefinition(string Key, Labels Label, string? Color = null, string? Icon = null, int Order = 0);
+public sealed record StatusRetired(string Key);
 
 /// <summary>
 /// Erster Eintrag einer Produktgruppe. <paramref name="Parent"/> null = Wurzel.

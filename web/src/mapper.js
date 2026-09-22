@@ -166,7 +166,8 @@ export function suggest(columns, rows, model, { locales = null, external = null 
       else out.why = 'Exportspalte, nur Anzeige'
       return out
     }
-    if (n === 'role' || n === 'status' || n === 'journali_label') { out.internal = true; out.why = 'Exportspalte, nur Anzeige'; return out }
+    if (n === 'status') { out.target = 'status'; out.why = 'Status — Schlüssel oder Tabelle → Status'; return out }   // Fremdstatus (SAP 300/400 …) über die Umwandlung „Tabelle“ abbilden (Taloan, 22.09.)
+    if (n === 'role' || n === 'journali_label') { out.internal = true; out.why = 'Exportspalte, nur Anzeige'; return out }
     if (n === 'journali_root') { out.target = 'root'; out.internal = true; out.why = 'Wurzel — macht die Id eineindeutig'; return out }
     if (n.startsWith('axis_') && attrs.some(a => norm(a.key) === n.slice(5))) pick('attr', attrs.find(a => norm(a.key) === n.slice(5)).key, 1, 'Variantenachse')
     // 1. Schlüsselspalten
@@ -198,7 +199,7 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     if (out.target === 'attr') { const a = attrs.find(x => x.key === out.attribute); if (a && !a.perLocale) out.locale = null; if (a?.perLocale && !out.locale) out.locale = model?.masterLocale ?? locs[0] ?? null }
     // Doppelte Ziele (zwei Spalten → dasselbe Attribut, dieselbe Sprache) — die zweite wird übersprungen
     const sig = out.target === 'attr' ? `${out.attribute}|${out.locale ?? ''}` : out.target === 'new' ? `new:${out.newKey}|${out.locale ?? ''}` : out.target
-    if (['attr', 'new', 'id', 'parent', 'external'].includes(out.target)) { if (seen.has(sig)) { out.target = 'skip'; out.why = 'doppelt' } else seen.add(sig) }
+    if (['attr', 'new', 'id', 'parent', 'external', 'status'].includes(out.target)) { if (seen.has(sig)) { out.target = 'skip'; out.why = 'doppelt' } else seen.add(sig) }
     return out
   })
 }
@@ -298,13 +299,13 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     const viaKey = !foreign && !byId && !(ext && byExt.get(ext)) ? findKey(row) : null
     let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || viaKey?.node || null
     if (dropId.has(ri)) stats.notes.push(dropId.get(ri) + (node ? ` — über ${ext && byExt.get(ext) ? 'Kennung ' + ext : `${viaKey?.k ?? 'Schlüssel'} ${viaKey?.v ?? sku}`} gefunden: „${node.label}“ wird aktualisiert` : ' — wird als neuer Knoten angelegt'))
-    let ref = null
+    let ref = null, newRole = null
     if (!node) {
       // anlegen — wo? Elternteil aus der Spalte (Id oder ein Schlüsselwert), sonst das Ziel
       const p = String(cell(row, iParent) ?? '').trim()
       const parent = p ? (tree.byId.get(p) ?? [...uniq].map(k => byKey.get(k + '' + p)).find(Boolean) ?? null) : target
       if (!parent) { stats.problems.push(`Zeile ${ri + 2}: Elternteil „${p || '?'}“ nicht gefunden`); stats.skipped++; return }
-      const r = role ?? (parent.role === 'product' ? 'variant' : 'product')
+      const r = role ?? (parent.role === 'product' ? 'variant' : 'product'); newRole = r
       if (r === 'variant' && parent.role !== 'product') { stats.problems.push(`Zeile ${ri + 2}: Variante braucht ein Produkt als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
       if (r !== 'variant' && parent.role !== 'group') { stats.problems.push(`Zeile ${ri + 2}: ${r} braucht eine Gruppe als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
       // Pflicht beim Anlegen: was die Rolle verlangt, muss die Zeile mitbringen (Achsen prüft der Variantenzweig)
@@ -351,6 +352,16 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       diffs.push({ attribute: def.key, locale: loc, from: cur ? cur[k] ?? null : null, to: v ?? null })
       changed++
     })
+    // Status (Taloan, 22.09.): Spalte → Status-Schlüssel des Modells, meist über die Umwandlung „Werte ersetzen nach Tabelle“ (SAP 300 → review …);
+    // ein Wert, der kein Status ist, wird gemeldet und nicht geschrieben
+    const iSt = mapping.findIndex(m => m.target === 'status')
+    if (iSt >= 0 && (node ? node.role : newRole) !== 'group') {
+      const sv = String(cell(row, iSt) ?? '').trim()
+      if (sv) {
+        if (!(model?.statuses ?? []).some(s => s.key === sv)) stats.invalid.push({ row: ri, column: iSt, key: 'status', value: raw(row, iSt), message: `kein Status im Modell: „${sv}“` })
+        else if (!node || node.status !== sv) { commands.push({ op: 'status.set', args: { node: nodeRef, status: sv } }); diffs.push({ attribute: 'status', locale: null, from: node?.status ?? null, to: sv }); changed++ }
+      }
+    }
     stats.values += changed
     if (node) { if (changed) stats.update++; else stats.unchanged++ }
     stats.changes.push({ row: ri, kind: node ? (changed ? 'update' : 'unchanged') : 'create', node: node?.id ?? null, label: node ? node.label : (sku || ext || id || `Zeile ${ri + 2}`), role: node?.role ?? null, values: diffs })

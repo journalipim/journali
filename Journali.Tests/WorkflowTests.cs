@@ -56,7 +56,7 @@ public class WorkflowTests
         Assert.Null(w.Run(c => Commands.DefineWorkflow(c, "shop", def)).Error);
         Assert.NotNull(w.Run(c => Commands.WorkflowStep(c, w.Product, "shop", "go", null)).Error);   // gilt nur für Varianten
         Assert.Null(w.Run(c => Commands.WorkflowStep(c, w.Variant, "shop", "go", null)).Error);
-        w.C.With((_, tree, _) => { var n = tree.Nodes[w.Variant]; Assert.Equal(Statuses.Active, n.Status); Assert.Contains(n.Releases, r => r.Channel == "web"); return 0; });
+        w.C.With((_, tree, _) => { var n = tree.Nodes[w.Variant]; Assert.Equal("active", n.Status); Assert.Contains(n.Releases, r => r.Channel == "web"); return 0; });
         // Suche wf:
         var hits = w.C.With((model, tree, _) => tree.Query(model, "wf:shop=live", w.C.Relations, w.C.Media, w.C.Workflows).Select(h => h.Node.Id).ToList());
         Assert.Equal([w.Variant], hits);

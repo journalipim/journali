@@ -81,6 +81,17 @@ Master gilt — `fr-ch` → `fr-fr`, `shop_ch` → `shop_de`. Beim Kanal gilt de
 Fallback auch für die Freigaben: das Sortiment von fr-ch ist das von fr-fr,
 solange fr-ch nichts Eigenes sagt. Die Vollständigkeit zählt ohne Master.
 
+**Status ist Vokabular** (Taloan, 22.09.2026): der Status eines Produkts oder
+einer Variante ist der Lebenszyklus am Markt (Entwurf, aktiv, ausgelaufen —
+oder Überprüfung, Freigabe, Verkauf DE, Verkauf weltweit), nicht die
+Redaktion (das ist der Workflow). Die Status stehen im Modell unter Basics:
+frei benennbar, Name je eingerichteter Sprache, Symbol, Farbe, Reihenfolge.
+`draft` ist der Startstatus neuer Knoten und bleibt. Ein Workflow kann einen
+Status als Wirkung setzen (`status:<key>`); der Import bildet einen
+Fremdstatus (SAP-Materialstatus 300 → Überprüfung, 501 → Verkauf weltweit)
+im Ziel „Status“ über eine Wertetabelle auf einen Schlüssel ab — die
+Tabelle ist eine Umwandlung der Spalte und damit Teil des Profils.
+
 **Ausleitung (Taloan, 21.09.2026, entschieden):** ein Publikationsbaum nennt
 Kanal und optional Markt. Drin ist ein Produkt, wenn eine Variante für den
 Kanal freigegeben ist (Kanal-Fallback zählt) und der Markt des Baums in den

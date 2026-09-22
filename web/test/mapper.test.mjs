@@ -100,3 +100,22 @@ test('Vorschau prüft Eindeutigkeit: Wert eines anderen Knotens und doppelt in d
   assert.match(inv.find(x => x[0] === 3)[1], /steht schon in Zeile 4/)
   assert.ok(!p.commands.some(c => c.op === 'attribute.set' && c.args.node === 'v-2' && c.args.attribute === 'sku'), 'der fremde Wert wird nicht geschrieben')
 })
+
+test('Status aus dem Modell: SAP-Materialstatus über die Tabelle abgebildet (Taloan, 22.09.: 300→Überprüfung, 400→Freigabe, 500/501→Verkauf)', async () => {
+  const { plan } = await import('../src/mapper.js')
+  const m2 = { ...model, statuses: [{ key: 'draft', label: { de: 'Entwurf' } }, { key: 'review', label: { de: 'Überprüfung' } }, { key: 'released', label: { de: 'Freigabe' } }, { key: 'sale_de', label: { de: 'Verkauf DE' } }, { key: 'sale_world', label: { de: 'Verkauf weltweit' } }] }
+  const columns = ['sku', 'status', 'name_de']
+  const rows = [['S-1', '300', 'A'], ['S-2', '501', 'B'], ['S-3', '999', 'C'], ['S-4', '400', 'D']]
+  const treeRows = [{ id: 'g-1', role: 'group', label: 'G' }, { id: 'p-1', role: 'product', parent: 'g-1', label: 'P', axes: [] },
+    { id: 'v-4', role: 'variant', parent: 'p-1', label: 'S-4', keys: { sku: 'S-4' }, axisValues: {}, status: 'released' }]
+  const byId = new Map(treeRows.map(r => [r.id, r]))
+  const tree = { rows: treeRows, byId, ancestors: () => [] }
+  const m = suggest(columns, rows, m2)
+  assert.equal(m[1].target, 'status')   // Spalte „status“ zielt auf den Status, ist keine reine Anzeigespalte mehr
+  m[1].steps = [{ op: 'map', pairs: '300=review; 400=released; 500=sale_de; 501=sale_world', other: '' }]
+  const p = plan({ columns, rows, mapping: m, model: m2, tree, target: byId.get('p-1'), role: 'variant', existing: new Map([['v-4', { 'sku|': 'S-4', 'sku|#own': true, 'name|de': 'D', 'name|de#own': true }]]) })
+  const st = p.commands.filter(c => c.op === 'status.set')
+  assert.deepEqual(st.map(c => c.args.status), ['review', 'sale_world'])   // 300 und 501 abgebildet; 999 kein Status; 400 = released steht schon
+  assert.equal(p.stats.invalid.length, 1); assert.match(p.stats.invalid[0].message, /kein Status im Modell: „999“/)
+  assert.equal(p.stats.unchanged, 1)   // S-4: Status gleich, Name gleich — nichts zu tun
+})

@@ -653,8 +653,9 @@ function cellMenu(e, def, col, block) {
       <button v-if="props.pub && node.role !== 'rubric'" class="x" title="Knoten im Pflegebaum öffnen (⇶ führt zurück)" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
       <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="const b = store.pubBack; store.pubBack = null; router.push(b.path)">⇶ {{ store.pubBack.label }}</button>
       <span class="grow" />
-      <select v-if="node.role !== 'group' && node.role !== 'rubric'" :value="node.status" @change="setStatus($event.target.value)" class="status" :class="node.status" title="Status">
-        <option value="draft">○ Entwurf</option><option value="active">● aktiv</option><option value="discontinued">✗ ausgelaufen</option>
+      <select v-if="node.role !== 'group' && node.role !== 'rubric'" :value="node.status" @change="setStatus($event.target.value)" class="status" :style="store.statusStyle(node.status)" :title="`Status: ${store.statusLabel(node.status)}`">
+        <option v-for="s in (store.model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option>
+        <option v-if="node.status && !store.status(node.status)" :value="node.status">{{ node.status }} (nicht im Modell)</option>
       </select>
       <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
       <button class="x" @click="undo" :disabled="!history.length" :title="stepTitle(history[history.length - 1], '↶ Rückgängig', history.length, 'Strg+Z')">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
@@ -1078,8 +1079,6 @@ table.releases td.rel .toggle { margin-right: 6px; }
 .toggle.via { color: var(--pos); }
 .toggle:disabled { opacity: .35; cursor: not-allowed; }
 .status { border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; background: var(--pane); }
-.status.active { color: var(--pos); }
-.status.discontinued { color: var(--neg); }
 .x { border: 0; background: none; }
 .rail-pane { width: 26px; flex: none; cursor: pointer; align-items: center; padding-top: 8px; }
 .rail-pane:hover { background: var(--hover); }

@@ -27,7 +27,7 @@ const hasTerms = computed(() => /(^|\s)-?[a-z]+:/.test(q.value))
 const KEYS = [
   ['attr:', 'Attribut hat eigenen Wert · =Muster · = leer'], ['empty:', 'fehlt, auch geerbt nicht (Attribut/Sprache)'],
   ['incomplete:', 'Vollständigkeit nicht erreicht (Kanal)'], ['role:', 'Gruppe / Produkt / Variante'],
-  ['status:', 'Entwurf / aktiv / ausgelaufen'], ['group:', 'Attributgruppe gilt hier'],
+  ['status:', 'Status (Modell → Status)'], ['group:', 'Attributgruppe gilt hier'],
   ['under:', 'nur im Teilbaum eines Knotens'], ['by:', 'Urheber der letzten Änderung'], ['since:', 'geändert seit (Datum)'],
   ['media:', 'hat Medien: any · image / document · Name (*.pdf)'], ['folder:', 'Medium im Medienordner: Name, Pfad (a/b) oder none'], ['rel:', 'hat Relation: any · Typ · Typ=Partner (Name, SKU, Id)'],
 ]
@@ -66,7 +66,7 @@ function suggest() {
       else for (const a of attrs.slice(0, 12)) out.push({ value: `empty:${a.key}` + (a.perLocale ? '/' : ''), label: de(a), hint: a.perLocale ? a.key + ' — dann Sprache' : a.key })
     } else if (key === 'incomplete:') for (const c of (m?.channels ?? []).filter(c => c.key.startsWith(low))) out.push({ value: `incomplete:${c.key}`, label: de(c), hint: c.key })
     else if (key === 'role:') for (const [v, l] of [['group', '▣ Gruppe'], ['product', '▦ Produkt'], ['variant', '◆ Variante']]) if (v.startsWith(low)) out.push({ value: `role:${v}`, label: l, hint: v })
-    else if (key === 'status:') for (const [v, l] of [['draft', '○ Entwurf'], ['active', '● aktiv'], ['discontinued', '✗ ausgelaufen']]) if (v.startsWith(low)) out.push({ value: `status:${v}`, label: l, hint: v })
+    else if (key === 'status:') for (const s of store.model?.statuses ?? []) if (s.key.startsWith(low) || store.statusLabel(s.key).toLowerCase().startsWith(low)) out.push({ value: `status:${s.key}`, label: store.statusText(s.key), hint: s.key })
     else if (key === 'group:') for (const g of (m?.groups ?? []).filter(g => !low || g.key.toLowerCase().includes(low) || (g.label?.de ?? '').toLowerCase().includes(low))) out.push({ value: `group:${g.key}`, label: de(g), hint: g.key })
     else if (key === 'under:') { for (const a of [...(props.id ? tree.ancestors(props.id) : []), selected.value].filter(Boolean).reverse()) if (!low || a.label.toLowerCase().includes(low) || a.id.includes(low)) out.push({ value: `under:${a.id}`, label: `${icon(a.role)} ${a.label}`, hint: a.id === props.id ? 'hier' : a.id }) }
     else if (key === 'media:') { out.push({ value: 'media:any', label: 'irgendein Medium', hint: 'hat mindestens eines' }); for (const t of (m?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `media:${t.key}`, label: t.label?.de || t.key, hint: 'Relationstyp' }); if (low) out.push({ value: `media:${low}`, label: `Name enthält „${low}“`, hint: '* = beliebig' }) }
@@ -422,7 +422,7 @@ async function contextMenu(e, r) {
     } catch { wfItems = [] }
   }
   const st = s => (sel ? sel.some(x => x.role !== 'group' && x.status !== s) : (r.role !== 'group' && r.status !== s))
-    ? { label: (s === 'draft' ? '○ Entwurf' : s === 'active' ? '● aktiv' : '✗ ausgelaufen') + (sel ? ` (${sel.filter(x => x.role !== 'group' && x.status !== s).length})` : ''), action: () => sel ? setStatusAll(sel.filter(x => x.role !== 'group' && x.status !== s), s) : setStatus(r, s) } : null
+    ? { label: store.statusText(s) + (sel ? ` (${sel.filter(x => x.role !== 'group' && x.status !== s).length})` : ''), action: () => sel ? setStatusAll(sel.filter(x => x.role !== 'group' && x.status !== s), s) : setStatus(r, s) } : null
   // Aufgeräumt (Taloan): kein Neu-anlegen (die Knöpfe oben), kein Auf-/Zuklappen, kein Id kopieren (Id steht im Tooltip und im Kopf);
   // Plugin-Einträge je Plugin in einem Untermenü
   // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
@@ -452,7 +452,7 @@ async function contextMenu(e, r) {
         : { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     !sel && r.role !== 'variant' && kids ? { label: `Mit ${countBelow(r.id)} darunter duplizieren`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
-    ...(r.role !== 'group' ? [st('draft'), st('active'), st('discontinued'), { sep: true }] : []),
+    ...(r.role !== 'group' ? [...(store.model?.statuses ?? []).map(s => st(s.key)), { sep: true }] : []),   // Status aus dem Modell (Taloan, 22.09.)
     ...(wfItems.length ? [{ label: 'Workflow' + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
     { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
@@ -657,8 +657,7 @@ function onDialogKey(e) {
         <span class="label" :class="{ pinned: r.name }" :title="r.name ? 'Name angeheftet (kursiv) — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen' : ''">{{ r.label }}</span>
         <span v-if="hits.get(r.id) && !r.label.toLowerCase().includes(q.trim().toLowerCase())" class="muted hit" :title="hits.get(r.id)">{{ hits.get(r.id) }}</span>
         <span v-if="r.role === 'variant' && r.keys && Object.keys(r.axisValues).length" class="muted axis">{{ Object.values(r.axisValues).join(' · ') }}</span>
-        <span v-if="r.status === 'discontinued'" class="neg" title="ausgelaufen">✗</span>
-        <span v-else-if="r.status === 'active'" class="pos" title="aktiv">●</span>
+        <span v-if="r.status && r.status !== 'draft' && store.status(r.status)" :style="store.statusStyle(r.status)" :title="store.statusLabel(r.status)">{{ store.status(r.status).icon }}</span>
         <span v-if="tree.kids(r.id).length" class="muted count">{{ tree.kids(r.id).length }}</span>
       </div>
       <div v-if="tree.loaded && !tree.rows.length" class="empty">Leer — oben <b>+ ▣</b> legt die erste Gruppe an.</div>

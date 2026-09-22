@@ -13,6 +13,7 @@ export const MODEL_RETIRE = {
   RelationTypeRetired: { kind: 'relationTypes', defined: 'RelationTypeDefined', path: k => `/api/model/relations/${k}`, has: (m, k) => m.relationTypes.some(r => r.key === k) },
   LocaleRetired: { kind: 'locales', defined: 'LocaleDefined', path: k => `/api/model/locales/${k}`, has: (m, k) => m.locales.some(l => l.code === k) },
   ChannelRetired: { kind: 'channels', defined: 'ChannelDefined', path: k => `/api/model/channels/${k}`, has: (m, k) => m.channels.some(c => c.key === k) },
+  StatusRetired: { kind: 'statuses', defined: 'StatusDefined', path: k => `/api/model/statuses/${k}`, has: (m, k) => (m.statuses ?? []).some(s => s.key === k) },
 }
 export const modelKey = stream => stream.slice(stream.indexOf(':') + 1)
 export const canRestoreModel = e => { const r = MODEL_RETIRE[e.type]; return !!r && !!store.model && !r.has(store.model, modelKey(e.stream)) }

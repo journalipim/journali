@@ -25,7 +25,7 @@ public class SnapshotTests
             write("t", root, Types.AttributeSet, new AttributeSet("name", "de", null, "Notebooks", null), null);
             write("t", product, Types.AttributeSet, new AttributeSet("name", "de", null, "X1", null), null);
             write("t", v1, Types.AttributeSet, new AttributeSet("sku", null, null, "X1-R", null), null);
-            write("t", v1, Types.StatusSet, new StatusSet(Statuses.Active), null);
+            write("t", v1, Types.StatusSet, new StatusSet("active"), null);
             write("t", v1, Types.ReleaseGranted, new ReleaseGranted("web", null), null);
             var rel = write("t", Ids.Relation(), Types.RelationCreated, new RelationCreated("accessory", product, v1), null).Stream;
             write("t", rel, Types.AttributeSet, new AttributeSet("quantity", null, null, "3", null), null);

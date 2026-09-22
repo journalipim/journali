@@ -32,6 +32,7 @@ const sections = [
   { key: 'units', icon: '⚖', label: 'Einheiten', part: 'Basics', one: 'Einheit', hint: 'Je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um.' },
   { key: 'locales', icon: '🗣', label: 'Sprachen', part: 'Basics', one: 'Sprache', hint: 'Die Achse locale der Attribute.' },
   { key: 'channels', icon: '⇶', label: 'Kanäle', part: 'Basics', one: 'Kanal', hint: 'Die Achse channel: kanalabhängige Werte; Pflichtfelder und Freigaben gelten je Kanal.' },
+  { key: 'statuses', icon: '●', label: 'Status', part: 'Basics', one: 'Status', hint: 'Lebenszyklus eines Produkts oder einer Variante (am Markt, ausgelaufen …) — frei benennbar, je Sprache. Der Import bildet Fremdstatus darauf ab, ein Workflow kann ihn als Wirkung setzen. draft ist der Startstatus neuer Knoten.' },
 ]
 const section = ref('attributes')
 const model = computed(() => store.model)
@@ -111,6 +112,7 @@ const rows = computed(() => {
     }).sort(byKey)
     case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : l.fallback ? '↩ ' + l.fallback : ''] }))
     case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [m.masterChannel === c.key ? '★ Master' : c.fallback ? '↩ ' + c.fallback : ''] }))
+    case 'statuses': return (m.statuses ?? []).map(s => ({ key: s.key, label: `${s.icon ?? ''} ${s.label?.de ?? ''}`.trim(), right: [s.key === 'draft' ? 'Start' : '', String(s.order ?? 0)], _: s }))
   }
   return []
 })
@@ -160,6 +162,7 @@ function blockFor(k) {
     case 'units': { const u = used(a => a.unit === k); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
     case 'channels': { if (m.masterChannel === k) return 'Masterkanal'; const u = used(a => (a.channels ?? []).includes(k) || (a.required && k in a.required)); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
     case 'locales': return m.masterLocale === k ? 'Mastersprache' : m.locales.length <= 1 ? 'die letzte Sprache bleibt' : ''
+    case 'statuses': return k === 'draft' ? 'Startstatus neuer Knoten' : ''
     default: return ''
   }
 }
@@ -213,6 +216,7 @@ function relSet(col, v) {
 }
 const curLocale = computed(() => model.value?.locales.find(l => l.code === cur.value) ?? null)
 const curChannel = computed(() => model.value?.channels.find(c => c.key === cur.value) ?? null)
+const curStatus = computed(() => (model.value?.statuses ?? []).find(s => s.key === cur.value) ?? null)
 const b = v => v ? 'true' : 'false'
 
 // ---- Attributgruppen
@@ -273,7 +277,7 @@ async function bulkAssignGroup() {
 const removePath = {
   groups: k => `/api/model/groups/${k}`, attributes: k => `/api/model/attributes/${k}`, lists: k => `/api/model/lists/${k}`,
   views: k => `/api/model/views/${k}`, units: k => `/api/model/units/${encodeURIComponent(k)}`, locales: k => `/api/model/locales/${k}`, channels: k => `/api/model/channels/${k}`,
-  relationTypes: k => `/api/model/relations/${k}`,
+  relationTypes: k => `/api/model/relations/${k}`, statuses: k => `/api/model/statuses/${k}`,
 }
 async function bulkRemove() {
   const p = removePath[section.value]; if (!p) return
@@ -300,9 +304,10 @@ function add() {
   else if (s === 'relationTypes') put(`/api/model/relations/${k}`, { key: k, label: {}, reverse: {} })
   else if (s === 'locales') put(`/api/model/locales/${k}`, { code: k, label: '' })
   else if (s === 'channels') put(`/api/model/channels/${k}`, { key: k, label: {} })
+  else if (s === 'statuses') put(`/api/model/statuses/${k}`, { key: k, label: {}, color: 'muted', icon: '●', order: ((model.value.statuses ?? []).reduce((m, s) => Math.max(m, s.order ?? 0), 0) + 10) })
   cur.value = k; sel.value = new Set([k])
 }
-const addPlaceholder = { relationTypes: 'neuer Relationstyp (key)', groups: 'neue Gruppe (key)', attributes: 'neuer key (a-z, 0-9, _)', lists: 'neue Werteliste (key)', views: 'neue Sicht (key)', units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app' }
+const addPlaceholder = { relationTypes: 'neuer Relationstyp (key)', groups: 'neue Gruppe (key)', attributes: 'neuer key (a-z, 0-9, _)', lists: 'neue Werteliste (key)', views: 'neue Sicht (key)', units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app', statuses: 'key, z. B. review' }
 
 // Pflicht je Kanal × Sprache: required[channel] = ['*'] oder Sprachcodes; * schliesst die Einzelnen ein
 const reqHas = (ch, l) => { const r = curAttr.value?.required?.[ch] ?? []; return l === '*' ? r.includes('*') : r.includes('*') || r.includes(l) }
@@ -412,6 +417,10 @@ const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.
 const setMasterChannel = () => put('/api/model/master-channel', { key: curChannel.value.key })
 // eindeutig (Taloan, 21.09.: „SKU ist ein Attribut wie jedes andere — alles über eindeutig“): Text/Zahl, einwertig; beliebig viele je Modell
 const canBeUnique = a => a && ['text', 'integer', 'decimal'].includes(a.type) && !a.multiple
+// Status (Taloan, 22.09.): Name je eingerichteter Sprache, Symbol, Farbe, Reihenfolge — die ganze Definition je Eintrag
+const STATUS_COLORS = [['muted', 'grau'], ['pos', 'grün'], ['neg', 'rot'], ['warn', 'gelb'], ['accent', 'blau']]
+const statusPut = patch => put(`/api/model/statuses/${curStatus.value.key}`, { key: curStatus.value.key, label: curStatus.value.label ?? {}, color: curStatus.value.color ?? null, icon: curStatus.value.icon ?? null, order: curStatus.value.order ?? 0, ...patch })
+const statusName = (l, v) => statusPut({ label: { ...(curStatus.value.label || {}), [l]: v } })
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v }, fallback: curChannel.value.fallback ?? null })
 // Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
 const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
@@ -666,6 +675,19 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr><td class="attr">Name de</td><Cell :value="curChannel.label?.de ?? null" @save="v => channelSet('de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curChannel.label?.en ?? null" @save="v => channelSet('en', v)" /></tr>
           <tr><td class="attr" title="Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Masterkanal">↩ Fallback</td><SelectCell :value="curChannel.fallback ?? ''" :options="model.channels.map(c => c.key).filter(k => k !== curChannel.key)" @save="channelFallback" /></tr>
+        </tbody></table>
+      </div>
+    </template>
+
+    <!-- Status (Taloan, 22.09.) -->
+    <template v-else-if="section === 'statuses' && curStatus">
+      <div class="toolbar"><h1 :style="curStatus.color ? `color:var(--${curStatus.color})` : ''">{{ curStatus.icon }} {{ curStatus.key }}</h1><span v-if="curStatus.key === 'draft'" class="muted">Startstatus neuer Knoten</span><span class="grow" /></div>
+      <div class="scroll">
+        <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
+          <tr v-for="l in model.locales" :key="l.code"><td class="attr">Name {{ l.code }}</td><Cell :value="curStatus.label?.[l.code] ?? null" @save="v => statusName(l.code, v)" /></tr>
+          <tr><td class="attr" title="ein Zeichen: steht im Baum und in Listen">Symbol</td><Cell :value="curStatus.icon ?? null" @save="v => statusPut({ icon: v || null })" /></tr>
+          <tr><td class="attr">Farbe</td><SelectCell :value="curStatus.color ?? ''" :options="STATUS_COLORS.map(c => c[0])" :label-of="v => Object.fromEntries(STATUS_COLORS)[v] ?? v" @save="v => statusPut({ color: v || null })" /></tr>
+          <tr><td class="attr" title="Sortierung in Auswahl und Menü (aufsteigend)">Reihenfolge</td><Cell :value="String(curStatus.order ?? 0)" @save="v => statusPut({ order: Number(v) || 0 })" /></tr>
         </tbody></table>
       </div>
     </template>

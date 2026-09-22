@@ -144,7 +144,7 @@ const roleLabel = { group: 'Gruppen', product: 'Produkte', variant: 'Varianten' 
 const unknown = computed(() => mapping.value.filter(m => m.unknown).length)
 
 // ---- Zuordnung: Zeile je Spalte
-const TARGETS = [['attr', 'Attribut'], ['new', 'neues Attribut'], ['id', 'journali-Id'], ['external', 'externe Kennung'], ['parent', 'Elternteil'], ['skip', 'übergehen']]
+const TARGETS = [['attr', 'Attribut'], ['new', 'neues Attribut'], ['status', 'Status'], ['id', 'journali-Id'], ['external', 'externe Kennung'], ['parent', 'Elternteil'], ['skip', 'übergehen']]
 const sample = (i) => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => String(v ?? '').trim() !== '').slice(0, 3).map(v => String(v).slice(0, 30)).join(' · ')
 // Umwandlung je Spalte (Taloan, 21.09., OpenDXP-Importer: „Werte umwandeln, in die Daten eingreifen“): Kette in m.steps, Editor je Zeile, Vorschau der Beispiele
 const stepsOpen = ref(null)   // Spalte, deren Kette gerade offen ist
@@ -166,7 +166,13 @@ function delStep(m, i) { m.steps.splice(i, 1); if (!m.steps.length) delete m.ste
 function moveStep(m, i, d) { const j = i + d; if (j < 0 || j >= m.steps.length) return; [m.steps[i], m.steps[j]] = [m.steps[j], m.steps[i]]; planned.value = null }
 const preview = (m, i) => { const rows = source.value.rows.slice(0, 200).filter(r => String(r[i] ?? '').trim() !== '').slice(0, 3); const cols = source.value.columns; return rows.map(r => String(transform.apply(m.steps, r[i], { get: c => { const j = cols.indexOf(c); return j < 0 ? '' : r[j] } })).slice(0, 30)).join(' · ') }
 const stepsText = m => m.steps?.length ? transform.describe(m.steps) : ''
-function onTarget(m) { planned.value = null; if (m.target === 'attr' && !m.attribute) m.attribute = attrs.value[0]?.key ?? null; if (m.target === 'new' && !m.newKey) m.newKey = m.column.toLowerCase().replace(/[^a-z0-9]+/g, '_'); syncLocale(m) }
+// Ziel Status (Taloan, 22.09.): Quellwert → Status aus dem Modell als Tabelle; gespeichert als Schritt „map“ (alt=neu; …) und damit im Profil
+const distinctValues = m => { const i = source.value?.columns.indexOf(m.column) ?? -1; const set = new Set(); if (i < 0) return []; for (const r of source.value.rows) { const v = String(r[i] ?? '').trim(); if (v) set.add(v); if (set.size >= 60) break } return [...set] }
+const mapStep = m => { let s = (m.steps ?? []).find(x => x.op === 'map'); if (!s) (m.steps ??= []).push(s = { op: 'map', pairs: '', other: '' }); return s }
+const pairsOf = s => Object.fromEntries(String(s.pairs ?? '').split(';').map(p => p.split('=')).filter(p => p.length === 2).map(([a, b]) => [a.trim().toLowerCase(), b.trim()]))
+const statusFor = (m, v) => pairsOf(mapStep(m))[v.toLowerCase()] ?? (store.status(v) ? v : '')
+function setStatusFor(m, v, key) { const s = mapStep(m); const p = Object.fromEntries(String(s.pairs ?? '').split(';').map(x => x.split('=')).filter(x => x.length === 2).map(([a, b]) => [a.trim(), b.trim()])); for (const k of Object.keys(p)) if (k.toLowerCase() === v.toLowerCase()) delete p[k]; if (key) p[v] = key; s.pairs = Object.entries(p).map(([a, b]) => `${a}=${b}`).join('; '); planned.value = null }
+function onTarget(m) { planned.value = null; if (m.target === 'status') { mapStep(m); stepsOpen.value = m.column }; if (m.target === 'attr' && !m.attribute) m.attribute = attrs.value[0]?.key ?? null; if (m.target === 'new' && !m.newKey) m.newKey = m.column.toLowerCase().replace(/[^a-z0-9]+/g, '_'); syncLocale(m) }
 function syncLocale(m) { const a = attrs.value.find(x => x.key === m.attribute); if (m.target === 'attr' && a && !a.perLocale) m.locale = null; if (m.target === 'attr' && a?.perLocale && !m.locale) m.locale = model.value?.masterLocale ?? locales.value[0] }
 const uniqueKeys = computed(() => new Set((model.value?.attributes ?? []).filter(a => a.unique).map(a => a.key)))
 const keyColumn = computed(() => mapping.value.find(m => ['id', 'external'].includes(m.target) || (m.target === 'attr' && uniqueKeys.value.has(m.attribute))))   // eindeutige Attribute finden (Taloan, 21.09.)
@@ -357,6 +363,8 @@ onMounted(async () => {
         <div v-if="layout === 'cols' && stepsOpen && mapping.find(m => m.column === stepsOpen)" class="tsteps" style="margin-top:6px;padding:6px 8px;background:var(--bg);border-radius:6px">
           <div class="muted" style="font-size:12px">ƒ Umwandlung für <b>{{ stepsOpen }}</b> <button class="x" @click="stepsOpen = null">×</button></div>
           <template v-for="m in [mapping.find(m => m.column === stepsOpen)]" :key="m.column">
+            <div v-if="m.target === 'status'" class="tstep" style="flex-wrap:wrap;gap:4px 14px"><span class="muted" style="font-size:12px;width:100%">Quellwert → Status</span>
+              <span v-for="v in distinctValues(m)" :key="v" class="fld"><code>{{ v }}</code> → <select :value="statusFor(m, v)" @change="setStatusFor(m, v, $event.target.value)"><option value="">–</option><option v-for="s in (model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option></select></span></div>
             <div v-for="(s, si) in (m.steps ?? [])" :key="si" class="tstep">
               <span class="muted mono" style="width:18px">{{ si + 1 }}</span>
               <select v-model="s.op" @change="planned = null" :title="opHint(s.op)"><option v-for="o in OPS" :key="o[0]" :value="o[0]">{{ o[1] }}</option></select>
@@ -394,6 +402,8 @@ onMounted(async () => {
             </tr>
             <tr v-if="stepsOpen === m.column" class="steps-row"><td colspan="7">
               <div class="tsteps">
+                <div v-if="m.target === 'status'" class="tstep" style="flex-wrap:wrap;gap:4px 14px"><span class="muted" style="font-size:12px;width:100%">Quellwert → Status</span>
+                  <span v-for="v in distinctValues(m)" :key="v" class="fld"><code>{{ v }}</code> → <select :value="statusFor(m, v)" @change="setStatusFor(m, v, $event.target.value)"><option value="">–</option><option v-for="s in (model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option></select></span></div>
                 <div v-for="(s, si) in (m.steps ?? [])" :key="si" class="tstep">
                   <span class="muted mono" style="width:18px">{{ si + 1 }}</span>
                   <select v-model="s.op" @change="planned = null" :title="opHint(s.op)"><option v-for="o in OPS" :key="o[0]" :value="o[0]">{{ o[1] }}</option></select>
