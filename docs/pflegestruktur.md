@@ -1109,8 +1109,24 @@ Server mit dem Journal bleibt innen. Daraus folgt die Bauform:
   an `/api` weiter. Damit sieht ein Angreifer, der den Container übernimmt,
   genau das, was das jeweils mitgebrachte Token ohnehin sehen dürfte — und
   nach dem Sperren des Tokens nichts mehr.
-- **Nichts liegen lassen.** Keine Token auf Platte, kein Datencache über die
-  Anfrage hinaus, Protokoll ohne Werte (nur Werkzeug, Dauer, Ergebnisgrösse).
+- **Nichts liegen lassen.** Keine Token auf Platte, Protokoll ohne Werte (nur
+  Werkzeug, Dauer, Ergebnisgrösse).
+- **Cache: nur was weder Rechte noch Aktualität berührt** (Taloan, 22.09.2026:
+  „kein Cache?“). Gegen einen Datencache sprechen drei Dinge: zwei Anwender
+  mit verschiedenen Rollen sehen verschiedene Daten — ein gemeinsamer Cache
+  leckt; „immer aktuell" ist das Hauptargument gegenüber dem Export und wäre
+  damit dahin; und in der DMZ lägen Produktdaten auf einem Rechner, der von
+  aussen erreichbar ist. Dafür spricht wenig: ein Assistent stellt je Antwort
+  eine Handvoll Anfragen, und die Strecke nach innen kostet Millisekunden.
+  Erlaubt ist deshalb nur:
+  - **das Modell** (Attribute, Gruppen, Sprachen, Kanäle, Status) — für alle
+    gleich, keine Kundendaten; Schlüssel ist die Journalnummer: solange
+    `head` gleich bleibt, darf es stehen;
+  - **innerhalb einer Anfrage** — braucht ein Werkzeug denselben Knoten
+    zweimal, ist das kein Cache, sondern Sparsamkeit.
+
+  Nie zwischengespeichert werden Knotenwerte, Tabellen, Versionen und
+  Suchergebnisse.
 - **Transport HTTP/SSE**, TLS am Reverse Proxy davor. Die Mengenbegrenzung
   macht der Server am Token (siehe oben); der Dienst zählt nur gleichzeitige
   Verbindungen, damit ein Assistent ihn nicht allein belegt.
