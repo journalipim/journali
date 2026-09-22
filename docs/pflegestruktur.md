@@ -1069,11 +1069,33 @@ seinen Akteur trägt: Schreiben käme dann als eigene Werkzeuge
 (`wert_setzen`, `klasse_zuweisen`) mit eigener Rolle, damit im Journal steht,
 dass es die KI war — und es zählte als Tagesgeschäft.
 
-**Was noch zu klären ist.** Wie sich der Benutzer im Assistenten anmeldet
-(Token aus den Einstellungen kopieren ist der einfache Weg, OAuth der schöne);
-wie gross eine Antwort werden darf (ein Teilbaum mit 5 000 Varianten sprengt
-jedes Kontextfenster — also Seitenweise und harte Obergrenzen); und ob der
-Dienst im selben Container läuft oder als eigener.
+**Zugang und Menge — entschieden (Taloan, 22.09.2026: „Admin kann Tokens
+erzeugen und Rate Limits festlegen je Token“).** Der Assistent meldet sich mit
+einem API-Token an, und dieses Token gehört nicht dem Anwender, sondern wird
+vom Administrator ausgegeben — mit einer Grenze daran. Damit beantwortet sich
+auch die Frage nach der Antwortgrösse: nicht der Dienst rät, wie viel gut
+ist, sondern das Token sagt es.
+
+Das ist mehr als MCP: Es gilt für **jedes** API-Token (Excel-Add-in,
+OnlyOffice, Skripte). Heute legt jeder Benutzer seine Token selbst an
+(`POST /api/auth/tokens`), und ein Token trägt nur `{ user, label, at }`
+(`Auth.TokenRec`). Zu bauen wäre:
+
+| Teil | was dazukommt |
+|---|---|
+| `TokenRec` | `+ maxPerMinute`, `+ maxPerDay`, `+ maxRows` (grösste Antwort), `+ scope` (nur lesen / auch schreiben), `+ expires` |
+| Vergabe | ein Administrator legt Token für einen Benutzer an und setzt die Grenzen; der Anwender kann seine eigenen weiter anlegen, aber nur innerhalb der Grenzen seiner Rolle |
+| Zählung | je Token ein Fenster im Arbeitsspeicher (Minute, Tag), Überschreitung → `429` mit der Zeit bis zur Freigabe; nichts davon ins Journal, es ist Betrieb |
+| Anzeige | in den Einstellungen je Token: Grenze, Verbrauch heute, letzter Zugriff — und ein Knopf, der es sofort sperrt |
+
+Damit ist die Antwortgrösse geregelt (`maxRows` je Token statt fester
+Obergrenze im Dienst), der Missbrauch gedeckelt (ein Assistent in einer
+Schleife kostet dann den Kunden nichts ausser einer Fehlermeldung), und der
+Administrator sieht, wer wie viel zieht.
+
+**Offen bleibt** nur, ob der Dienst im selben Container läuft oder als
+eigener — und ob es später eine bequemere Anmeldung als „Token kopieren"
+geben soll (OAuth).
 
 **Der Vektorindex** (semantische Suche über `pgvector`) ist der zweite Schritt
 und nur dort nötig, wo jemand unscharf sucht („welche Klebstoffe halten
