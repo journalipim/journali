@@ -298,7 +298,11 @@ table.values, table.rows { table-layout: fixed; }
 .tp .pick.dim { opacity: .45; cursor: default; }
 .tp .caret { display: inline-block; width: 14px; text-align: center; cursor: pointer; }
 .picker { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); }
-.pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; }
+.pick { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer; min-width: 0; }
+/* Der Text schrumpft, der Knopf bleibt (Taloan, 22.09.2026: „ein Knopf verschwindet aus dem Sichtbereich — man muss scrollen“):
+   ohne min-width:0 wächst ein Flex-Kind über den Kasten hinaus und schiebt alles rechts davon hinaus. */
+.pick > .grow { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pick > button, .pick > .chip { flex: 0 0 auto; }
 .pick:hover { background: var(--hover); }
 .pick.on { background: var(--accent-soft); }
 .pick.off, .pick.off:hover { background: none; cursor: default; }   /* nur Anzeige, nichts zu wählen */
