@@ -1,6 +1,7 @@
 <script setup>
-// ✦ KI-Leiste im Editor: Vorgaben (Verbessern, Kürzen, Ausführlicher, Aus Produktdaten) und eigene Anweisung —
-// liefert den neuen Text als Ereignis; der Editor setzt ihn in den Entwurf, gespeichert wird erst mit Speichern.
+// ✦ KI-Leiste im Editor: ÜBERARBEITEN (Verbessern, Kürzen, Ausführlicher) und ERZEUGEN (@ Liste aus Produktdaten,
+// @ Marketingtext sachlich/emotional/vergleichend) — dazu eine eigene Anweisung. Das Ergebnis geht in den Entwurf:
+// entweder ersetzt es ihn oder es wird an der Schreibmarke ergänzt (Taloan, 22.09.2026); gespeichert wird erst mit Speichern.
 import { ref } from 'vue'
 import { ai } from '../ai.js'
 import { store } from '../store.js'
@@ -9,25 +10,50 @@ import { PRESETS, rewrite } from '../aiText.js'
 const props = defineProps({ current: String, html: Boolean, label: String, locale: String, node: String })
 const emit = defineEmits(['result'])
 const open = ref(false); const busy = ref(''); const own = ref('')
+const mode = ref(localStorage.getItem('journali.ai.mode') || 'replace')   // replace | insert
+function setMode(m) { mode.value = m; localStorage.setItem('journali.ai.mode', m) }
+const edits = PRESETS.filter(p => p[3] === 'edit')
+const gens = PRESETS.filter(p => p[3] === 'gen')
 async function run(instruction) {
   if (!instruction) return
   busy.value = `fragt ${ai.label()} …`
-  try { emit('result', await rewrite({ instruction, current: props.current, html: props.html, label: props.label, locale: props.locale, node: props.node })); open.value = false; own.value = '' }
+  try { emit('result', { text: await rewrite({ instruction, current: props.current, html: props.html, label: props.label, locale: props.locale, node: props.node }), mode: mode.value }); open.value = false; own.value = '' }
   catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 </script>
 
 <template>
-  <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? 'Text mit der KI (' + ai.label() + ') bearbeiten — mit den Produktdaten dieses Knotens' : 'Kein KI-Schlüssel — Einstellungen → KI'" :disabled="!ai.available()">✦ KI</button>
+  <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? 'Text mit der KI (' + ai.label() + ') bearbeiten — mit den Produktdaten dieses Knotens; jede Anfrage kostet Token' : 'KI-Schlüssel fehlt — ⚙ Einstellungen → KI'" :disabled="!ai.available()">✦ KI</button>
   <div v-if="open" class="aibar" @mousedown.stop>
-    <button v-for="[k, l, hint] in PRESETS" :key="k" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button>
-    <input v-model="own" type="text" placeholder="eigene Anweisung … (Enter)" @keydown.enter.stop="run(own)" @keydown.esc.stop="open = false" :disabled="!!busy" />
-    <span class="muted" style="font-size:12px">{{ busy || 'ersetzt den Entwurf — Speichern entscheidet' }}</span>
+    <div class="grp">
+      <span class="muted lbl">überarbeiten</span>
+      <button v-for="[k, l, hint] in edits" :key="k" class="x" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button>
+    </div>
+    <div class="grp">
+      <span class="muted lbl">erzeugen</span>
+      <button v-for="[k, l, hint] in gens" :key="k" class="x ai" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button>
+    </div>
+    <div class="grp grow">
+      <input v-model="own" type="text" placeholder="eigene Anweisung … (Enter)" @keydown.enter.stop="run(own)" @keydown.esc.stop="open = false" :disabled="!!busy" />
+    </div>
+    <div class="grp">
+      <span class="muted lbl">Ergebnis</span>
+      <button class="x" :class="{ primary: mode === 'replace' }" @click="setMode('replace')" title="das Ergebnis ersetzt den ganzen Entwurf">Text ersetzen</button>
+      <button class="x" :class="{ primary: mode === 'insert' }" @click="setMode('insert')" title="das Ergebnis wird an der Schreibmarke eingefügt — der übrige Text bleibt">Am Cursor ergänzen</button>
+    </div>
+    <span v-if="busy" class="ai" style="font-size:12px">{{ busy }}</span>
   </div>
 </template>
 
 <style scoped>
 .ai.on { background: var(--accent-soft); }
-.aibar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 4px 8px; border-bottom: 1px solid var(--line); background: var(--pane); }
-.aibar input { flex: 1; min-width: 200px; }
+/* eigene Zeile unter der Werkzeugleiste (die umbricht nicht) — links ausgerichtet, Knöpfe einzeilig */
+.aibar { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  padding: 5px 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--pane); box-shadow: 0 6px 16px rgba(0,0,0,.25); }
+.grp { display: flex; gap: 4px; align-items: center; }
+.grp.grow { flex: 1; min-width: 160px; }
+.grp input { width: 100%; }
+.aibar button { white-space: nowrap; min-width: 0; }
+.up .aibar, :global(.up) .aibar { top: auto; bottom: 100%; }   /* in der Fusszeile: nach oben aufklappen */
+.lbl { font-size: 11px; white-space: nowrap; }
 </style>

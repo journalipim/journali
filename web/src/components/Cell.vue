@@ -33,6 +33,20 @@ async function openBig() {
   big.value = true; await nextTick(); area.value?.focus()
 }
 function saveBig() { big.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value); nextTick(() => box.value?.focus()) }
+// Ergebnis der KI: ersetzen oder an der Schreibmarke ergänzen (Taloan, 22.09.)
+function fromAi({ text, mode }) {
+  const t = area.value
+  if (mode === 'insert' && t) { const i = t.selectionStart ?? draft.value.length, j = t.selectionEnd ?? i; draft.value = draft.value.slice(0, i) + text + draft.value.slice(j); return }
+  draft.value = text
+}
+// Esc und Strg+Enter gelten im offenen grossen Editor, egal wo der Fokus steht (Taloan, 22.09.)
+function onWinKey(e) {
+  if (!big.value) return
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelBig() }
+  else if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); e.stopPropagation(); saveBig() }
+}
+watch(big, v => v ? window.addEventListener('keydown', onWinKey, true) : window.removeEventListener('keydown', onWinKey, true))
+onUnmounted(() => window.removeEventListener('keydown', onWinKey, true))
 function cancelBig() { big.value = false; nextTick(() => box.value?.focus()) }
 function onBigKey(e) {
   if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); saveBig() }
@@ -107,7 +121,7 @@ function onEditKey(e) {
       <div v-if="big" class="overlay" @mousedown.self="cancelBig">
         <div class="big">
           <textarea ref="area" v-model="draft" @keydown="onBigKey" spellcheck="false"></textarea>
-          <div class="toolbar"><span class="muted" style="font-size:12px">{{ draft.length }} Zeichen · Strg+Enter speichert · Esc verwirft</span><span class="grow" /><AiBar :current="draft" :html="false" :label="label" :locale="locale" :node="node" @result="t => { draft = t }" /><button @click="cancelBig">Verwerfen</button><button class="primary" @click="saveBig">Speichern</button></div>
+          <div class="toolbar" style="position:relative"><span class="muted" style="font-size:12px">{{ draft.length }} Zeichen · Strg+Enter speichert · Esc verwirft</span><span class="grow" /><AiBar class="up" :current="draft" :html="false" :label="label" :locale="locale" :node="node" @result="fromAi" /><button @click="cancelBig">Verwerfen</button><button class="primary" @click="saveBig">Speichern</button></div>
         </div>
       </div>
     </Teleport>

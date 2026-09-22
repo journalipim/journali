@@ -6,11 +6,16 @@ import { store } from './store.js'
 import { tree } from './tree.js'
 import { ai } from './ai.js'
 
+// Zwei Sorten (Taloan, 22.09.2026): den vorhandenen Text ÜBERARBEITEN — oder etwas Neues ERZEUGEN (mit @ gekennzeichnet).
+// [key, Bezeichnung, Anweisung, Gruppe: 'edit' | 'gen']
 export const PRESETS = [
-  ['improve', 'Verbessern', 'Verbessere Stil, Klarheit und Rechtschreibung. Inhalt und Fakten bleiben, Länge etwa gleich.'],
-  ['shorter', 'Kürzen', 'Kürze auf etwa die Hälfte; die wichtigsten Fakten bleiben.'],
-  ['longer', 'Ausführlicher', 'Schreibe ausführlicher und ergänze nur, was die Produktdaten hergeben.'],
-  ['fromdata', 'Aus Produktdaten', 'Schreibe den Text neu allein aus den Produktdaten; nichts erfinden, keine Superlative.'],
+  ['improve', 'Verbessern', 'Verbessere Stil, Klarheit und Rechtschreibung. Inhalt und Fakten bleiben, Länge etwa gleich.', 'edit'],
+  ['shorter', 'Kürzen', 'Kürze auf etwa die Hälfte; die wichtigsten Fakten bleiben.', 'edit'],
+  ['longer', 'Ausführlicher', 'Schreibe ausführlicher und ergänze nur, was die Produktdaten hergeben.', 'edit'],
+  ['fromdata', '@ Liste aus Produktdaten', 'Stelle die Produktdaten als übersichtliche Liste dar: je Zeile Bezeichnung und Wert, keine Sätze, keine Wertung, nichts erfinden.', 'gen'],
+  ['mk_plain', '@ Marketingtext sachlich', 'Schreibe einen sachlichen Produkttext (3 bis 5 Sätze): was das Produkt ist, für wen, welche Eigenschaften es hat. Nur Fakten aus den Produktdaten, keine Superlative, keine Werbefloskeln.', 'gen'],
+  ['mk_emotion', '@ Marketingtext emotional', 'Schreibe einen werblichen Produkttext (3 bis 5 Sätze), der den Nutzen im Alltag beschreibt und Lust auf das Produkt macht. Jede Aussage muss aus den Produktdaten belegbar sein; keine erfundenen Eigenschaften, keine Superlative ohne Beleg.', 'gen'],
+  ['mk_compare', '@ Marketingtext vergleichend', 'Schreibe einen Produkttext (3 bis 5 Sätze), der dieses Produkt gegen üblich ausgestattete Geräte derselben Art abgrenzt: worin es sich unterscheidet, was das dem Käufer bringt. Nur Unterschiede, die aus den Produktdaten hervorgehen; keine Namen fremder Hersteller, keine erfundenen Vergleichswerte.', 'gen'],
 ]
 
 /// Fakten des Knotens in einer Sprache: Name, Pfad, SKU, Attribute mit Label und Wert (eigen oder geerbt)

@@ -31,8 +31,21 @@ async function edit() {
 }
 function save() { syncFromRich(); open.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value) }
 function cancel() { open.value = false }
+// Esc und Strg+Enter gelten im offenen Editor, egal wo der Fokus steht (Taloan, 22.09.)
+function onWinKey(e) {
+  if (!open.value) return
+  if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel() }
+  else if (e.key === 'Enter' && e.ctrlKey) { e.preventDefault(); e.stopPropagation(); save() }
+}
+watch(open, v => v ? window.addEventListener('keydown', onWinKey, true) : window.removeEventListener('keydown', onWinKey, true))
+onUnmounted(() => window.removeEventListener('keydown', onWinKey, true))
 // ✦ KI: neuer Text in den Entwurf — Schreibmodus zeigt ihn sofort, Quelltext ebenso
-function fromAi(text) { draft.value = text; if (rich.value && !source.value) rich.value.innerHTML = text }
+// Ergebnis der KI: ersetzen oder an der Schreibmarke ergänzen (Taloan, 22.09.)
+function fromAi({ text, mode }) {
+  if (mode === 'insert' && !source.value && rich.value) { rich.value.focus(); document.execCommand('insertHTML', false, text); syncFromRich(); return }
+  if (mode === 'insert' && source.value && area.value) { const t = area.value, i = t.selectionStart ?? draft.value.length; draft.value = draft.value.slice(0, i) + text + draft.value.slice(t.selectionEnd ?? i); return }
+  draft.value = text; if (rich.value && !source.value) rich.value.innerHTML = text
+}
 function syncFromRich() { if (!source.value && rich.value) draft.value = rich.value.innerHTML.replace(/<div><br><\/div>/g, '<p></p>') }
 async function toggleSource() {
   if (source.value) { source.value = false; await nextTick(); if (rich.value) { rich.value.innerHTML = draft.value; rich.value.focus() } }
@@ -96,7 +109,7 @@ function onEditKey(e) {
 .tag { font-size: 10px; margin-right: 4px; }
 .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: grid; place-items: center; z-index: 20; }
 .editor { width: min(900px, 92vw); height: min(640px, 85vh); background: var(--pane); border: 1px solid var(--line); border-radius: 6px; display: flex; flex-direction: column; box-shadow: 0 12px 40px rgba(0,0,0,.4); }
-.fmt { gap: 4px; }
+.fmt { gap: 4px; position: relative; }   /* Bezug für die KI-Leiste, die darunter aufklappt */
 .fmt button { min-width: 30px; padding: 2px 6px; }
 .rich { flex: 1; overflow: auto; padding: 10px 14px; outline: none; background: var(--cell); color: var(--text); line-height: 1.45; }
 .rich :deep(p) { margin: 0 0 8px; }
