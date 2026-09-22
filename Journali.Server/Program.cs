@@ -140,8 +140,10 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
         day = Part("day", u.Day(today), 0, today, today.AddDays(1)),   // ohne Grenze: nur die Zahl (Taloan, 22.09.2026)
         week = Part("week", u.Week(today), Limits.Week, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
         month = Part("month", u.Month(today), Limits.Month, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
+        // daneben, was gar nicht zählt (Modell, Struktur, Kataloge, Betrieb) — zum Vergleich beim Messen
+        all = new { day = u.Day(today, true), week = u.Week(today, true), month = u.Month(today, true) },
         history = history is null ? null : u.History(history, today, Math.Clamp(limit, 1, 400))
-            .Select(h => new { start = h.Start.ToString("yyyy-MM-dd"), count = h.Count }).ToList(),
+            .Select(h => new { start = h.Start.ToString("yyyy-MM-dd"), count = h.Count, all = h.All }).ToList(),
     };
 }));
 

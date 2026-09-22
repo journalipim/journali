@@ -1,4 +1,4 @@
-using Journali.Core.Entries;
+﻿using Journali.Core.Entries;
 using Journali.Core.Journal;
 using Journali.Core.Projections;
 
@@ -69,12 +69,13 @@ public class UsageTests
         var u = new Usage();
         Projector.CatchUp(j, u);
         var heute = DateOnly.FromDateTime(DateTime.Now);
-        Assert.Equal(Model.Seeds().Count(), u.Day(heute));
-        Assert.Equal(u.LastApplied, u.PerDay.Values.Sum());
+        Assert.Equal(Model.Seeds().Count(), u.Day(heute, all: true));
+        Assert.Equal(u.LastApplied, u.AllPerDay.Values.Sum());
+        Assert.Equal(0, u.Day(heute));   // die Saat ist Modell — kein Tagesgeschäft
 
         // zweimal nachlaufen zählt nicht doppelt
         Projector.CatchUp(j, u);
-        Assert.Equal(Model.Seeds().Count(), u.Day(heute));
+        Assert.Equal(Model.Seeds().Count(), u.Day(heute, all: true));
     }
 
     [Fact]
@@ -92,6 +93,35 @@ public class UsageTests
         // was der Job an Daten schreibt, zählt: ein Import setzt Werte
         u.Apply(new Entry(++n, at, "job", "v-1", Types.AttributeSet, "{}"));
         Assert.Equal(1, u.Day(new DateOnly(2026, 9, 22)));
+    }
+
+    // Taloans Fälle vom 22.09.2026, einer nach dem anderen — so steht die Rechnung, bevor ein Preis daran hängt
+    [Theory]
+    [InlineData(Types.CategoryAssigned, "p-1", false)]      // ETIM-Klasse zuweisen
+    [InlineData(Types.AttributeDefined, "attribute:ef1", false)]  // die Attribute dafür anlegen
+    [InlineData(Types.AttributeSet, "v-1", true)]           // SAP-Import: 50 000 Zeilen × 200 Spalten — jeder Wert
+    [InlineData(Types.VariantCreated, "v-1", true)]         // … und die Artikel, die dabei entstehen
+    [InlineData(Types.AttributeSet, "p-1", true)]           // einen Wert ändern
+    [InlineData(Types.RubricCreated, "k-1", false)]         // Publikationsbaum anlegen
+    [InlineData(Types.NodePlaced, "k-1", false)]            // Produkte einsortieren und umhängen
+    [InlineData(Types.AttributeSet, "k-1", true)]           // Werte im Publikationsbaum pflegen zählt — auch an der Rubrik
+    [InlineData(Types.WorkflowDefined, "workflow:review", false)]  // den Designer bearbeiten
+    [InlineData(Types.WorkflowStateSet, "v-1", true)]       // einen Workflow-Zustand setzen
+    [InlineData(Types.PluginDataSet, "plugin:etim", false)] // Referenzdaten von aussen
+    [InlineData(Types.ListValueDefined, "list:etim_class", false)]
+    [InlineData(Types.GroupCreated, "g-1", false)]          // Baum anlegen und strukturieren
+    [InlineData(Types.NodeMoved, "p-1", false)]
+    [InlineData(Types.JobRunStarted, "job:backup", false)]  // Sicherung
+    [InlineData(Types.ReleaseGranted, "v-1", true)]         // Ausleitung: Freigabe für einen Kanal
+    [InlineData(Types.MediaCreated, "m-1", true)]           // ein Bild kommt herein
+    [InlineData(Types.MediaDerived, "m-1", false)]          // die gerechnete Vorschau macht der Job
+    public void Zaehlt_nur_das_Tagesgeschaeft(string type, string stream, bool zaehlt)
+    {
+        var u = new Usage();
+        var tag = new DateOnly(2026, 9, 22);
+        u.Apply(new Entry(1, Local(2026, 9, 22), "t", stream, type, "{}"));
+        Assert.Equal(zaehlt ? 1 : 0, u.Day(tag));
+        Assert.Equal(1, u.Day(tag, all: true));   // gezählt wird alles, nur berechnet nicht
     }
 
     [Fact]

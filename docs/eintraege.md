@@ -204,8 +204,24 @@ erlaubte Kanäle, Werteliste), im Journal steht immer ein String.
 ## Nutzung — kein eigener Eintrag
 
 Das Abbild `Usage` (Kern) zählt beim Durchlauf des Journals mit, wie viele
-Einträge an welchem Tag (Ortszeit) geschrieben wurden; Woche (ab Montag) und
-Monat werden daraus gerechnet. Es schreibt selbst nichts und braucht keinen
+Einträge an welchem Tag (Ortszeit) geschrieben wurden — zweimal: **alle**
+(`AllPerDay`) und das **Tagesgeschäft** (`PerDay`), das allein zählt. Was dazu
+gehört, steht als Positivliste in `Usage.Work`: Werte und Zeilen pflegen,
+Artikel und Varianten anlegen oder zurückziehen, Status, externe Kennungen,
+Medien am Artikel, Relationen, Freigaben, Versionen, Workflow-Zustände und
+Übersetzungsschritte. Alles andere zählt nicht: **Datenmodellierung**
+(Attribute, Gruppen, Sichten, Listen, Sprachen, Kanäle, Status,
+Relationstypen, Workflow-Designer, Einheiten, Wörterbuch), **Struktur** (Baum
+anlegen, umhängen, ordnen, Achsen, Gruppen anhängen), der **Aufbau des
+Publikationsbaums** (Rubriken, einsortieren, Regeln, Stand — die Werte dort zu
+pflegen zählt aber sehr wohl, auch an einer Rubrik: das ist keine
+Datenmodellierung), die **Klassenzuweisung** (ETIM), **Referenzdaten von
+aussen** (`PluginDataSet` eines Katalogs samt seinen Wertelisten) und
+**Einrichtung und Betrieb** (Plugins, Jobs mit Protokoll, gerechnete
+Vorschauen, Benutzer, Rollen). Gemessen an Taloans Journal (17.–22.09.2026):
+32 597 von 68 351 Einträgen zählen — der ETIM-Katalog am 20.09. schlug mit
+29 183 nicht zählenden zu Buche. Woche (ab Montag) und Monat werden aus den
+Tagen gerechnet. Es schreibt selbst nichts und braucht keinen
 Eintragstyp — der Verlauf steht damit auch rückwirkend für alles da, was schon
 im Journal liegt. `GET /api/usage?history=day|week|month&limit=n` liefert je
 Periode `used`, `max`, `start`, `resetAt` und den Verlauf; die Grenzen stehen
