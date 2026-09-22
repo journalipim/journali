@@ -427,6 +427,8 @@ const relBlocks = computed(() => {
   return [...out.values()].sort((a, b) => a.type.localeCompare(b.type))
 })
 const relCount = computed(() => (rels.value.out?.length ?? 0) + (rels.value.in?.length ?? 0))
+// zurück in den Publikationsbaum, aus dem wir gekommen sind (Taloan, 21.09.): der Weg steht im Store
+function backToPub() { const b = store.pubBack; store.pubBack = null; if (b) router.push(b.path) }
 const relValue = (r, def) => { const loc = def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null; return r.values.find(v => v.attribute === def.key && (v.locale ?? null) === loc && !v.channel)?.value ?? null }
 const setRelValue = (r, def, v) => command(() => api.post(`/api/relations/${r.id}/attributes`, { attribute: def.key, locale: def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null, value: v }))
 const retireRel = r => command(() => api.del(`/api/relations/${r.id}`))
@@ -668,7 +670,7 @@ function cellMenu(e, def, col, block) {
       </template>
       <h1>{{ icon(node.role) }} {{ shownLabel }}</h1>
       <button v-if="props.pub && node.role !== 'rubric'" class="x" title="Knoten im Pflegebaum öffnen (⇶ führt zurück)" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
-      <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="const b = store.pubBack; store.pubBack = null; router.push(b.path)">⇶ {{ store.pubBack.label }}</button>
+      <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="backToPub">⇶ {{ store.pubBack.label }}</button>
       <span class="grow" />
       <select v-if="node.role !== 'group' && node.role !== 'rubric'" :value="node.status" @change="setStatus($event.target.value)" class="status" :style="store.statusStyle(node.status)" :title="`Status: ${store.statusLabel(node.status)}`">
         <option v-for="s in (store.model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option>
@@ -884,7 +886,8 @@ function cellMenu(e, def, col, block) {
         <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>⚑ Workflow <span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ w.label?.de || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : 'nicht ausgeleitet').join(' · ')"> ⚠</span></span></span></h2>
         <template v-if="open('workflow')">
         <table class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
-          <tr v-for="w in workflows" :key="w.workflow">
+          <template v-for="w in workflows" :key="w.workflow">
+          <tr>
             <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
@@ -904,10 +907,11 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <!-- Workflow je Sprache (Taloan, 22.09.): eine Zeile je Sprache — Französisch in Korrektur, Deutsch freigegeben -->
-          <tr v-if="w.perLocale" :key="w.workflow + ':locales'">
+          <tr v-if="w.perLocale">
             <td class="attr muted" title="Dieser Workflow läuft je Sprache: jede Sprache geht ihren eigenen Weg, und die Wirkung eines Schritts (Freigabe) trifft nur sie.">🗣 je Sprache</td>
             <td><WorkflowLocales :wf="w" @step="(loc, t) => wfStep(w, t, loc)" @clear="loc => wfClear(w, loc)" /></td>
           </tr>
+          </template>
         </tbody></table>
         </template>
       </div>
