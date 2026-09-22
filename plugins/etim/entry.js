@@ -773,6 +773,55 @@ async function mount(root, ctx) {
     overlay.append(box); document.body.append(overlay); overlay.addEventListener('mousedown', e => { if (e.target === overlay) close() })
   }
 
+
+  // ---- Anfangszustand (Taloan, 22.09.2026: „ich möchte fürs Testen einen Anfangszustand, als würde ich ETIM das erste Mal anwenden“)
+  // Nimmt in dieser Reihenfolge zurück: Klassen an den Knoten, Sichten, Attribute der Gruppe, Werteliste der Klassen, die Gruppe,
+  // Zuordnung und Einstellungen — und auf Wunsch die geladenen Freigaben. Werte bleiben im Journal (append-only), nur das Modell wird leer.
+  async function resetDialog() {
+    const key = cache.settings.classAttr
+    const attrs = () => (model().attributes ?? []).filter(a => a.group === groupKey() || a.key === key)
+    const views = () => (model().views ?? []).filter(v => v.key.startsWith('etim_'))
+    const names = await ctx.data.list().catch(() => [])
+    const lib = names.filter(n => n.startsWith('class:') || n === 'release' || n.startsWith('release:'))
+    const nodes = [...cache.usedBy.values()].flat()
+    const overlay = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:41' })
+    const box = el('div', { style: 'width:min(620px,94vw);background:var(--pane);border:1px solid var(--line);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.4);font-size:13px' })
+    const log = el('div', { class: 'muted', style: 'font-size:12px;min-height:18px;padding:4px 0' })
+    const opt = (checked, label, hint) => { const cb = el('input', { type: 'checkbox' }); cb.checked = checked; return { cb, row: el('label', { style: 'display:flex;gap:6px;align-items:baseline;padding:3px 0' }, cb, el('span', {}, label, el('span', { class: 'muted' }, ' · ' + hint))) } }
+    const oNodes = opt(true, `Klassen an ${nodes.length} Knoten entfernen`, 'die Zuweisungen im Baum')
+    const oModel = opt(true, `Modell: Gruppe ${groupKey()}, ${attrs().length} Attribute, ${views().length} Sichten`, 'Werte bleiben im Journal')
+    const oMap = opt(true, 'Zuordnung und Einstellungen', 'map, mapping, settings')
+    const oLib = opt(false, `Bibliothek: ${lib.length} Einträge`, 'geladene Freigaben — danach neu laden (dauert)')
+    const close = () => overlay.remove()
+    const go = async () => {
+      const say2 = t => { log.textContent = t }
+      try {
+        if (oNodes.cb.checked && nodes.length) {
+          say2(`nehme die Klasse an ${nodes.length} Knoten zurück …`)
+          const cmds = nodes.map(n => ({ op: 'attribute.set', args: { node: n.id, attribute: key, locale: null, channel: null, value: '' } }))
+          await api.post('/api/batch?skipErrors=true', { commands: cmds })
+        }
+        if (oModel.cb.checked) {
+          for (const v of views()) { say2(`Sicht ${v.key} …`); await api.del(`/api/model/views/${encodeURIComponent(v.key)}`).catch(() => {}) }
+          for (const a of attrs()) { say2(`Attribut ${a.key} …`); await api.del(`/api/model/attributes/${encodeURIComponent(a.key)}`).catch(() => {}) }
+          say2('Werteliste …'); await api.del(`/api/model/lists/${encodeURIComponent(key)}`).catch(() => {})
+          say2('Gruppe …'); await api.del(`/api/model/groups/${encodeURIComponent(groupKey())}`).catch(() => {})
+        }
+        if (oMap.cb.checked) for (const n of ['map', 'mapping', 'settings']) await ctx.data.del(n).catch(() => {})
+        if (oLib.cb.checked) { let i = 0; for (const n of lib) { if (++i % 200 === 0) say2(`Bibliothek ${i}/${lib.length} …`); await ctx.data.del(n).catch(() => {}) } }
+        await store.poll(true); await tree.load?.()
+        cache.settings = { ...DEFAULTS }; cache.map = {}; cache.mapping = {}
+        await loadCache()
+        close(); store.toast('✓ ETIM zurückgesetzt', 'ok'); draw()
+      } catch (e) { say2('✗ ' + e.message) }
+    }
+    box.append(el('div', { class: 'toolbar', style: 'padding:8px 12px' }, el('b', {}, '⟲ ETIM zurücksetzen'), el('span', { class: 'grow' }), el('button', { class: 'x', onclick: close }, '✕')),
+      el('div', { style: 'padding:8px 12px' }, el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, 'Anfangszustand zum Testen — was weg soll:'),
+        oNodes.row, oModel.row, oMap.row, oLib.row, log),
+      el('div', { class: 'toolbar', style: 'padding:6px 12px;border-top:1px solid var(--line)' }, el('span', { class: 'grow' }), el('button', { onclick: close }, 'abbrechen'), el('button', { class: 'primary', onclick: go }, '⟲ zurücksetzen')))
+    overlay.append(box); document.body.append(overlay); overlay.addEventListener('mousedown', e => { if (e.target === overlay) close() })
+  }
+
   // Ergebnis eines Prozesslaufs: die JSON-Zeile in der Ausgabe (stdout), der Rest ist Fortschritt (stderr)
   const jsonOf = out => { for (const line of String(out ?? '').split('\n')) { const s = line.trim(); if (s.startsWith('{')) { try { return JSON.parse(s) } catch { } } } return null }
   // Die Ansicht des Plugins ist nur, was das Plugin selbst ist (Taloan, 22.09.: „beim Plugin lege ich nur die Quelle fest“):
@@ -903,7 +952,7 @@ async function mount(root, ctx) {
     // (5 · Prüfung war hier — seit 22.09. die Stufe „Daten“ der Übersicht; check() prüft den gewählten Knoten)
   }
   st.relInfo = await ctx.data.get('release')
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⌗ ETIM'), el('span', { class: 'muted', style: 'font-size:12px' }, 'Quelle, Klassen, Attribute, Zuordnung — bedient wird am Knoten (Band ⌗ ETIM)'), el('span', { class: 'grow' }), status), body)
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⌗ ETIM'), el('span', { class: 'muted', style: 'font-size:12px' }, 'Quelle, Klassen, Attribute, Zuordnung — bedient wird am Knoten (Band ⌗ ETIM)'), el('span', { class: 'grow' }), status, el('button', { class: 'x', title: 'Anfangszustand zum Testen: Zuweisungen, Modell (Gruppe, Attribute, Sichten), Zuordnung — auf Wunsch auch die geladenen Freigaben', onclick: resetDialog }, '⟲ zurücksetzen …')), body)
   if (st.mapFilter) setTimeout(() => (document.querySelector(`tr[data-ef="${efParam}"]`) ?? document.getElementById('etim-map'))?.scrollIntoView({ block: 'center' }), 0)
   draw()
   return () => {}

@@ -191,6 +191,8 @@ function rowMenu(e, r) {
     { label: keys.length > 1 ? `${keys.length} ${sec.value.label} gewählt` : `${sec.value.one} ${label}`, disabled: true },
     { sep: true },
     { label: 'Schlüssel kopieren', icon: '⧉', key: 'c', action: () => navigator.clipboard?.writeText(keys.join(', ')) },
+    // Gruppe mit ihren Attributen (Taloan, 22.09.: sonst blockt „Zurückziehen“ mit „hat noch Attribute“ und man löscht einzeln)
+    section.value === 'groups' && keys.length === 1 && blockFor(keys[0]) ? { label: `Gruppe mit ${(model.value?.attributes ?? []).filter(a => a.group === keys[0]).length} Attributen zurückziehen`, icon: '✕', hint: 'Werte bleiben im Journal', danger: true, action: () => removeGroupDeep(keys[0]) } : null,
     p ? { label: keys.length > 1 ? `${keys.length} zurückziehen` : 'Zurückziehen', icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : '', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
       : null,
   ])
@@ -288,9 +290,9 @@ async function bulkRemove() {
 const busy = ref(false)
 // Gruppe mit allem, was darin hängt (Taloan, 22.09.: „zuerst alle Attribute rauslösen, dann die Gruppe, dann jedes Attribut einzeln —
 // Wahnsinn“): erst die Attribute zurückziehen, dann die Gruppe. Was gesperrt ist (★-Attribut, Kennung), bleibt stehen und wird genannt.
-async function removeGroupDeep() {
-  const g = curGroup.value; if (!g) return
-  const attrs = groupAttrs.value
+async function removeGroupDeep(key = null) {
+  const g = key ? (model.value?.groups ?? []).find(x => x.key === key) : curGroup.value; if (!g) return
+  const attrs = (model.value?.attributes ?? []).filter(a => a.group === g.key)
   if (!await dialog.confirm({ title: `Gruppe ${g.label?.de || g.key} mit ${attrs.length} Attributen zurückziehen?`, text: attrs.length ? `Zurückgezogen werden: ${attrs.slice(0, 8).map(a => a.label?.de || a.key).join(', ')}${attrs.length > 8 ? ` … +${attrs.length - 8}` : ''}.` : '', warn: 'Werte bleiben im Journal — die Attribute sind danach nicht mehr im Modell.', ok: '✕ Zurückziehen', danger: true })) return
   const kept = []
   busy.value = true
@@ -299,7 +301,7 @@ async function removeGroupDeep() {
     try { await api.del(`/api/model/groups/${encodeURIComponent(g.key)}`) } catch (e) { kept.push(`${g.key}: ${e.message}`) }
     await store.poll(true)
     store.toast(kept.length ? `⚠ ${attrs.length - kept.length} von ${attrs.length} zurückgezogen · ${kept.length} blieben: ${kept.slice(0, 3).join(' · ')}` : `✓ ${g.label?.de || g.key} und ${attrs.length} Attribute zurückgezogen`, kept.length ? 'error' : 'ok')
-    if (!kept.some(k => k.startsWith(g.key + ':'))) { cur.value = null; sel.value = new Set() }
+    if (!kept.some(k => k.startsWith(g.key + ':'))) { if (cur.value === g.key) cur.value = null; sel.value = new Set() }
   } finally { busy.value = false }
 }
 async function removeCur() {
