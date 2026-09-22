@@ -1,0 +1,9 @@
+{
+  "name": "journali-plugin-docs",
+  "private": true,
+  "type": "module",
+  "description": "journali: Text aus Dokumenten lesen — pdfjs-dist für PDF (je Seite, damit ein Treffer die Seite nennen kann). Einmalig: npm install (im Container: eigene Stufe im Dockerfile).",
+  "dependencies": {
+    "pdfjs-dist": "^4.10.38"
+  }
+}

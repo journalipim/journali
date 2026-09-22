@@ -74,6 +74,7 @@ builder.Services.AddSingleton(catalog);
 var mediaStore = new SwitchableMediaStore(MediaConfigFile.Load(dataDir) ?? MediaConfig.FromEnv(builder.Configuration), db, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("media"), builder.Environment.ContentRootPath);
 builder.Services.AddSingleton(db);
 builder.Services.AddSingleton(mediaStore);
+builder.Services.AddSingleton(new DocText(db));   // Text der Dokumente: abgeleitet, eigene Tabelle neben dem Journal (pflegestruktur 32)
 builder.Services.AddSingleton<IMediaStore>(mediaStore);
 builder.Services.AddHttpClient("media", h => { h.Timeout = TimeSpan.FromMinutes(2); h.DefaultRequestHeaders.UserAgent.ParseAdd("journali/1.0"); });   // Medien von URL holen (Import)
 
@@ -158,6 +159,7 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
 }));
 
 ModelApi.Map(api);
+DocsApi.Map(api);
 
 // ---- Baum: Knoten, Werte, Kategorien, Freigaben — einzeln und im Stapel ---------
 

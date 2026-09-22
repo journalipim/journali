@@ -14,6 +14,12 @@ WORKDIR /derive
 COPY plugins/derive/package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 
+# Plugin docs (Text aus Dokumenten lesen): pdfjs-dist als Linux-Installation — wie bei derive
+FROM node:22-bookworm-slim AS docs
+WORKDIR /docs
+COPY plugins/docs/package.json ./
+RUN npm install --omit=dev --no-audit --no-fund
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY Journali.Core/Journali.Core.csproj Journali.Core/
@@ -34,6 +40,7 @@ COPY --from=build /app .
 # so lassen sie sich austauschen und aktualisieren, ohne das Image neu zu bauen (Taloan, 19.09.)
 COPY plugins/ ./plugins/
 COPY --from=derive /derive/node_modules ./plugins/derive/node_modules
+COPY --from=docs /docs/node_modules ./plugins/docs/node_modules
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Journali.Server.dll"]
