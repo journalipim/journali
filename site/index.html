@@ -92,7 +92,7 @@ footer a { color:var(--muted); margin:0 8px; }
 </head>
 <body>
 <header><div class="in"><img src="logo-128.png" alt="journali PIM"><b>journali PIM</b>
-  <nav><a href="#problem">Idee</a><a href="#anders">Einblicke</a><a href="#faq">Fragen</a><a class="navcta" href="#kontakt">Dranbleiben</a></nav></div></header>
+  <nav><a href="#problem">Idee</a><a href="#heute">Heute</a><a href="#anders">Einblicke</a><a href="#faq">Fragen</a><a class="navcta" href="#kontakt">Dranbleiben</a></nav></div></header>
 
 <main>
 <div class="hero">
@@ -146,6 +146,21 @@ footer a { color:var(--muted); margin:0 8px; }
     <div class="card"><h3>✓ Datenqualität, die mitläuft</h3><p>Regeln für Pflichtfelder, Muster, Zahlen, Listenwerte, Übersetzungen, Formeln. Prüfungen für den Digitalen Produktpass (ESPR) und Verpackung (PPWR) als Plugins. Freigabe setzt Vollständigkeit voraus.</p></div>
     <div class="card"><h3>⏱ Jobs im Server, nicht im Browser</h3><p>Importe, Sicherungen, Exporte, Datenblätter laufen als geplante Jobs — Zeitplan wie im Terminplaner oder als cron — mit Logs, unabhängig von einem offenen Browserfenster.</p></div>
     <div class="card"><h3>▨ Ein Paket, das läuft</h3><p>Docker Compose mit PostgreSQL — fertig. Medien wahlweise in Postgres, im Dateisystem oder in S3-kompatiblem Object Storage; der Wechsel ist ein Kopierlauf. Plugins liegen als Verzeichnis daneben und werden ohne neues Image ausgetauscht.</p></div>
+  </div>
+</section>
+
+<section id="heute">
+  <p class="kicker">Wofür es gebaut wurde</p>
+  <h2>Für die Aufgaben, die <span class="grad">jetzt auf dem Tisch liegen.</span></h2>
+  <p>Produktdaten sind in den letzten Jahren von einer Fleissarbeit zu einer Pflicht geworden: Verpackungsverordnung, Digitaler Produktpass, Branchenstandards, immer mehr Sprachen, immer mehr Kanäle — und dazu die Frage, wie KI dabei hilft, ohne zu erfinden. journali PIM ist um diese Aufgaben herum entstanden, nicht davor.</p>
+  <div class="grid">
+    <div class="card"><h3>◈ PPWR — Verpackungsdaten</h3><p>Material, Gewicht, Recyclinganteil, Wiederverwendbarkeit je Verpackungseinheit: als Prüfregeln im Plugin, mit Zuordnung auf vorhandene Attribute, Anlegen der fehlenden und Prüfung ganzer Teilbäume — bevor die Nachweise verlangt werden.</p></div>
+    <div class="card"><h3>◈ Digitaler Produktpass (ESPR)</h3><p>Dieselbe Mechanik für den Produktpass: Datenpunkte zuordnen, Lücken sehen, Nachweise am Wert hinterlegen. Jeder Wert trägt seine Quelle und sein Prüfdatum — der Pass ist nur so gut wie die Belege dahinter.</p></div>
+    <div class="card"><h3>◈ EmpCo — Werbeaussagen, die halten</h3><p>Die Richtlinie (EU) 2024/825 verbietet ab dem 27. September 2026 pauschale Umweltaussagen und verlangt Belege. Das Plugin liest alle Texte je Sprache und zeigt, was unzulässig oder belegpflichtig ist — „klimaneutral“ durch Kompensation, Versprechen für die Zukunft, Siegel ohne Nachweis.</p></div>
+    <div class="card"><h3>⌗ ETIM — Branchenstandard</h3><p>ETIM-Freigaben einlesen, Klassen zuweisen, Merkmale auf eigene Attribute abbilden — mit Umwandlung, wo die Werte in anderer Form vorliegen. Vollständigkeit je Klasse sichtbar, Ausleitung als ETIM-BMEcat.</p></div>
+    <div class="card"><h3>🗣 Übersetzungen, die nachziehen</h3><p>Jede Sprache geht ihren eigenen Weg: Französisch in Korrektur, während Deutsch schon freigegeben ist. Ändert sich der Grundtext, sieht man sofort, was nachzuziehen ist; Aufträge gehen als XLIFF hinaus und kommen zurück — auch wenn die Quelle inzwischen weitergelaufen ist.</p></div>
+    <div class="card"><h3>✦ KI-gestützte Inhalte</h3><p>Beschreibungen, Vorteile, Suchbegriffe — die KI arbeitet mit den echten Attributen des Produkts, nicht mit Vermutungen. Jeder Vorschlag ist ein Vorschlag: übernehmen, ändern oder verwerfen, und was übernommen wird, steht mit Urheber im Journal.</p></div>
+    <div class="card"><h3>✦ KI-gestützte Assistenten</h3><p>Zuordnungen vorschlagen, Klassen erkennen, Lücken recherchieren, Werte prüfen: die KI sitzt dort, wo sonst stumpfe Arbeit wartet. Anbieter und Schlüssel bringen Sie mit — die Daten bleiben bei Ihnen.</p></div>
   </div>
 </section>
 
