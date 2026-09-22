@@ -414,8 +414,9 @@ async function stageData(ctx, nodeId, locale = 'de') {
   const key = cache.settings.classAttr; const row = tree.byId.get(nodeId); if (!row) return null
   const at = hasAttr(key) ? await classAt(api, key, nodeId) : { ownCode: '', inherited: null, current: null, node: null }
   const groupOn = (at.node?.groups ?? []).some(g => g.key === groupKey() && g.active !== false)   // gilt die Gruppe hier? (Taloan, 22.09.: Gruppe entfernt → Sackgasse)
+  const groupExists = (ctx.store.model?.groups ?? []).some(g => g.key === groupKey())   // gibt es die Gruppe überhaupt noch im Modell?
   const cls = at.current ? cache.classes.get(at.current) ?? null : null
-  const stage = { row, ...at, groupOn, cls, feats: [], products: [], other: 0, filled: 0, cells: 0, bad: 0, empty: 0, keys: [], tbl: null, byClass: [] }
+  const stage = { row, ...at, groupOn, groupExists, cls, feats: [], products: [], other: 0, filled: 0, cells: 0, bad: 0, empty: 0, keys: [], tbl: null, byClass: [] }
   if (!cls) return stage
   // Merkmale der Klasse am Knoten und aller Klassen im Teilbaum (Taloan, 22.09.: Prozent je Klasse am obersten Knoten mit ETIM)
   const featsOf = c => c.features.map(f => { const k = attrKeyOf(f.code); return { f, key: k, has: hasAttr(k), own: k === f.code.toLowerCase(), steps: stepsOf(f.code) } })
@@ -464,9 +465,14 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
       try { await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/attributes`, { attribute: cache.settings.classAttr, locale: null, channel: null, value: '', row: null }); await store.poll(true); loadUsed(); store.toast('✓ Klasse entfernt', 'ok'); again() } catch (e) { store.toast(e.message) }
     } }, '✕ Klasse') : null
     // Gruppe anhängen, wenn sie hier nicht gilt — sonst ist kein ETIM-Attribut verfügbar und man kommt nicht weiter
-    const attachBtnEl = !S.groupOn ? el('button', { class: 'primary', title: `die Attributgruppe ${groupKey()} an diesem Knoten anhängen — erst dann gelten die ETIM-Attribute hier und darunter`, onclick: async () => {
-      try { const have = (S.row.groups ?? '').split(',').filter(Boolean); await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups: [...new Set([...have, groupKey()])] }, 'PUT'); await store.poll(true); await tree.load?.(); store.toast(`✓ Gruppe ${groupKey()} hängt jetzt hier`, 'ok'); again() } catch (e) { store.toast(e.message) }
-    } }, `⌗ Gruppe ${groupKey()} anhängen`) : null
+    const attachBtnEl = !S.groupOn ? el('button', { class: 'primary', title: S.groupExists ? `die Attributgruppe ${groupKey()} an diesem Knoten anhängen — erst dann gelten die ETIM-Attribute hier und darunter` : `die Attributgruppe ${groupKey()} gibt es im Modell nicht mehr — sie wird neu angelegt und hier angehängt; die ETIM-Attribute gehören ihr weiterhin an`, onclick: async () => {
+      try {
+        if (!S.groupExists) { await ops.ensureGroup(); await store.poll(true) }   // ganz gelöscht (Taloan, 22.09.: „ich habe überhaupt keine Attributgruppe zur Verfügung“) — neu anlegen
+        const have = (S.row.groups ?? '').split(',').filter(Boolean)
+        await api.post(`/api/nodes/${encodeURIComponent(nodeId)}/groups`, { groups: [...new Set([...have, groupKey()])] }, 'PUT')
+        await store.poll(true); await tree.load?.(); store.toast(`✓ Gruppe ${groupKey()} ${S.groupExists ? 'hängt jetzt hier' : 'angelegt und angehängt'}`, 'ok'); again()
+      } catch (e) { store.toast(e.message) }
+    } }, S.groupExists ? `⌗ Gruppe ${groupKey()} anhängen` : `⌗ Gruppe ${groupKey()} anlegen und anhängen`) : null
     if (!S.cls) { head.textContent = '· ' + (S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse'); line.append(...[el('span', { class: 'muted' }, S.current ? `${S.current} nicht in ETIM ${cache.version ?? '?'}` : 'keine Klasse — weder hier noch darüber'), assignBtn, clearBtn, attachBtnEl].filter(Boolean)); return }
     const code = S.current
     line.append(chip(`${code} ${nameOf(S.cls.name, locale)}`, '', S.ownCode ? 'Klasse am Knoten selbst' : `Klasse geerbt von ${S.inherited.from}`), el('span', { class: 'muted' }, S.ownCode ? 'hier' : `von ${S.inherited.from}`))
@@ -477,7 +483,7 @@ async function bandMount({ head, body: bodyEl }, nodeId, ctx) {
     head.textContent = `· ${code} ${nameOf(S.cls.name, locale)}${S.ownCode ? '' : ' (geerbt)'} · zugeordnet ${has.length}/${S.feats.length} · Daten ${S.products.length ? pct + ' %' : '—'}${S.ownCode && S.byClass.length > 1 ? ` · Teilbaum ${String(S.sum.pct).replace('.', ',')} %` : ''}${S.other ? ` · ≠ ${S.other}` : ''}`
     line.append(el('span', { class: 'muted' }, '·'), chip(S.products.length ? `Daten ${pct} %` : 'Daten —', S.bad ? 'neg' : pct >= 80 ? 'pos' : '', `${S.products.length} Produkte/Varianten × ${has.length} ETIM-Attribute: ${S.filled} gefüllt · ${S.empty} leer${S.bad ? ` · ${S.bad} passen nicht` : ''}`))
     // Knöpfe direkt hinter den Chips, nicht rechtsbündig (Taloan, 22.09.: der Bereich ist so breit wie die Attributtabelle — „prüfen“ stand hinter dem Rollbalken)
-    if (!S.groupOn) line.append(chip(`⚠ Gruppe ${groupKey()} gilt hier nicht`, 'warn', `die Attributgruppe ${groupKey()} hängt an keinem Knoten des Pfads — deshalb gilt kein ETIM-Attribut an diesem Knoten; „Gruppe anhängen“ behebt es`))
+    if (!S.groupOn) line.append(chip(S.groupExists ? `⚠ Gruppe ${groupKey()} gilt hier nicht` : `⚠ Gruppe ${groupKey()} fehlt im Modell`, 'warn', `die Attributgruppe ${groupKey()} hängt an keinem Knoten des Pfads — deshalb gilt kein ETIM-Attribut an diesem Knoten; „Gruppe anhängen“ behebt es`))
     line.append(...[el('span', { class: 'muted' }, '·'), assignBtn, clearBtn, attachBtnEl,
       el('button', { class: miss.length ? 'primary' : 'x', title: 'Zuordnung der ETIM-Attribute dieser Klasse: vorhandenes Attribut, ƒ Umwandlung, oder eigenes anlegen (⌗ ETIM)', onclick: () => ctx.go?.(`/p/etim/etim?class=${code}&node=${encodeURIComponent(nodeId)}`) }, '⇄ zuordnen …'),
       miss.length ? el('button', { class: 'x', title: `${miss.length} fehlende ETIM-Attribute als eigene Attribute ef… anlegen (Gruppe ${groupKey()}, nur an Produkt und Variante)`, onclick: async () => { try { await ops.ensureClassAttr(); for (const x of miss) await ops.createFeature(x.f); await store.poll(true); store.toast(`✓ ${miss.length} Attribute angelegt`, 'ok'); again() } catch (e) { store.toast(e.message) } } }, `＋ ${miss.length} anlegen`) : null,

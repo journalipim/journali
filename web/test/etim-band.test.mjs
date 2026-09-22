@@ -128,3 +128,17 @@ test('Gruppe entfernt (Sackgasse, Taloan 22.09.): eine Zeile statt 35, Warnung u
   assert.match(b, /✕ Klasse/)                                   // Klasse lässt sich entfernen
   Object.assign(INACTIVE, JSON.parse(before)); NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
 })
+
+test('Gruppe ganz gelöscht: der Knopf legt sie neu an (Taloan, 22.09.: „ich habe überhaupt keine Attributgruppe zur Verfügung“)', async () => {
+  const mod = await import('../../plugins/etim/entry.js')
+  const band = mod.default.nodeBands[0]
+  const groups = MODEL.groups; MODEL.groups = groups.filter(g => g.key !== 'etim')   // Gruppe aus dem Modell entfernt
+  NODE_GROUPS.length = 0
+  const head = mkEl('h2'), body = mkEl('div')
+  await band.mount({ head, body }, 'p-1', ctx)
+  await new Promise(r => setTimeout(r, 30))
+  const b = textOf(body)
+  assert.match(b, /Gruppe etim fehlt im Modell/)
+  assert.match(b, /Gruppe etim anlegen und anhängen/)
+  MODEL.groups = groups; NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
+})
