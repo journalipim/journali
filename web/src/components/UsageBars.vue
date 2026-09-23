@@ -1,6 +1,6 @@
 <script setup>
-// Verfügbare Limits: zwei Balken — Woche und Monat — und darunter der Verlauf. Gezeigt wird, was noch da ist
-// (Taloan, 23.09.2026: „man stellt Begrenzungen als positive Eigenschaften dar“) — der Balken leert sich (Taloan, 22.09.2026: „ein Tageslimit
+// Zwei Balken — Woche und Monat — und darunter der Verlauf. Ein Balken ist ein Füllstand und füllt sich mit dem,
+// was genutzt wurde (Taloan, 23.09.2026); was noch verfügbar ist, steht als Zeile darüber und im Tooltip (Taloan, 22.09.2026: „ein Tageslimit
 // ist Unsinn, macht man 3 Testimporte und muss aufhören“; „wir machen Woche und Monat“). Der Tag wird trotzdem
 // gezählt: er steht als Zahl in der Leiste und ist im Verlauf die feinste Auflösung.
 // Gezählt wird nur das Tagesgeschäft — Import, Pflege, Ausleitung. Modellieren, Strukturieren, Kataloge und Betrieb
@@ -15,9 +15,9 @@ const PARTS = [['week', '▤ Woche'], ['month', '▦ Monat']]   // kein Tageslim
 const HIST = [['day', '◷ Tag'], ['week', '▤ Woche'], ['month', '▦ Monat']]
 const n = v => (v ?? 0).toLocaleString('de-DE')
 const frei = p => Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
-const pct = p => p?.max ? Math.max(0, Math.round((frei(p) / p.max) * 1000) / 10) : 0
-// Farbe sagt, wie viel noch da ist: über 30 % grün, bis 10 % gelb, darunter rot
-const tone = p => !p?.max ? '' : pct(p) <= 10 ? 'neg' : pct(p) <= 30 ? 'warn' : 'pos'
+const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 1000) / 10) : 0
+// Farbe sagt, wie viel Luft noch ist: bis 70 % grün, bis 90 % gelb, darüber rot
+const tone = p => !p?.max ? '' : pct(p) >= 90 ? 'neg' : pct(p) >= 70 ? 'warn' : 'pos'
 const parts = computed(() => PARTS.map(([key, label]) => ({ key, label, p: props.usage?.[key] ?? null })))
 const maxHist = computed(() => Math.max(1, ...(props.history ?? []).map(h => h.all ?? h.count)))
 const dayName = s => new Date(s + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
@@ -29,10 +29,10 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
   <div class="usage">
     <div v-for="{ key, label, p } in parts" :key="key" class="bar-row">
       <span class="lbl">{{ label }}</span>
-      <span class="track" :title="p ? `noch ${n(frei(p))} von ${n(p.max)} verfügbar, wieder voll am ${p.resetAt}` : 'wird geladen'">
+      <span class="track" :title="p ? `${n(p.used)} von ${n(p.max)} genutzt · noch ${n(frei(p))} verfügbar, wieder voll am ${p.resetAt}` : 'wird geladen'">
         <span class="fill" :class="tone(p)" :style="`width:${pct(p)}%`" />
       </span>
-      <span class="num mono" :class="tone(p)">{{ n(frei(p)) }}</span>
+      <span class="num mono" :class="tone(p)">{{ n(p?.used) }}</span>
       <span class="num mono muted grenze">/ {{ n(p?.max) }} ⊞</span>
       <span class="num mono muted">{{ pct(p) }} %</span>
       <span v-if="usage?.all" class="num mono muted" :title="`${n(usage.all[key])} Einträge gesamt — Modell, Struktur, Kataloge und Betrieb zählen nicht mit`">+{{ n(Math.max(0, (usage.all[key] ?? 0) - (p?.used ?? 0))) }}</span>

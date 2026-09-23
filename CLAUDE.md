@@ -103,9 +103,10 @@ stehen dort als solche markiert.
   Prüfstand: `ui-section-stil.test.mjs`.
   **Grenzen stehen positiv da** (Taloan, 23.09.): „Verfügbare Limits“, nicht „Nutzung
   gegen die Limits“; „verfügbarer Speicherplatz“, nicht „gemessen gegen die
-  Speicherplatzgrenze“. Balken zeigen, was noch da ist, und leeren sich; die grosse
-  Zahl ist der Rest, das Genutzte steht klein daneben. Angst macht eine Oberfläche
-  nirgends.
+  Speicherplatzgrenze“. **Ein Balken ist trotzdem ein Füllstand und füllt sich** mit
+  dem, was genutzt wurde (Taloan, 23.09.) — Zahl, Balken und Prozent zeigen dasselbe.
+  Was verfügbar ist, steht als eigene Zeile darüber und im Tooltip. Angst macht eine
+  Oberfläche nirgends.
   **Einstellungen: ein Reiter je Sache** (Taloan, 23.09.): ◐ Ich (Darstellung, Sicht,
   dieser Rechner, mein Konto mit Passwort und **meinen API-Token** — die gehören zur
   Person, nicht zum Team) · ◍ Team (Mitglieder, KI-Schlüssel, journali-Token gegen die

@@ -119,7 +119,7 @@ function railDrop(target) {
       <!-- KI-Austauschvolumen (Taloan, 23.09.2026): was journali hingeschickt und zurückbekommen hat — gemessen, nicht geschätzt -->
       <template v-if="ai.server?.ready"><span class="sep">·</span><router-link to="/settings" class="ai"
         title="KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt."
-        >KI {{ kb(ai.server.volume?.month) }}</router-link></template>
+        >✧ KI {{ kb(ai.server.volume?.month) }}</router-link></template>
       <span class="grow" />
       <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" title="Neue Fassung der Oberfläche laden">↻ Neue Fassung</button>
       <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="'Rolle ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" title="abmelden">⏻</button></template>

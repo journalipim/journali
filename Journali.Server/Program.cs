@@ -124,22 +124,44 @@ if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWOR
 
 // ---- Stand und Modell ----------------------------------------------------
 
-api.MapGet("/health", (Catalog c) => new
+api.MapGet("/health", (HttpRequest req, Catalog c) => new
 {
     head = c.Head,
     nodes = c.Read(t => t.Nodes.Count),
-    // Nutzung für die Statusleiste (Taloan, 22.09.2026): Woche und Monat, mehr steht in den Einstellungen
-    usage = c.ReadUsage(u =>
-    {
-        var today = DateOnly.FromDateTime(DateTime.Now);
-        return new
-        {
-            week = new { used = u.Week(today), max = licences.Lic.EntriesWeek, resetAt = Usage.WeekStart(today).AddDays(7).ToString("yyyy-MM-dd") },
-            month = new { used = u.Month(today), max = licences.Lic.EntriesMonth, resetAt = Usage.MonthStart(today).AddMonths(1).ToString("yyyy-MM-dd") },
-        };
-    }),
+    // Nutzung für die Statusleiste (Taloan, 22.09.2026): Woche und Monat, mehr steht in den Einstellungen.
+    // Wessen Nutzung (Taloan, 23.09.2026): wer die Anlage verwaltet, sieht die Anlage gegen die Lizenz; wer in einem
+    // Team arbeitet, sein Team gegen dessen Kontingent — jeder sieht die Rechnung, die ihn betrifft.
+    usage = Nutzung(req, c),
     built = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location),   // Bau-Stand des laufenden Servers (Taloan, 21.09.: „Speichern setzt meine Änderungen zurück“ — alter Server kannte die Felder nicht)
 });
+
+/// <summary>Die Zahlen der Statusleiste — für die Anlage oder für das eigene Team, je nachdem, wer fragt.</summary>
+object Nutzung(HttpRequest req, Catalog c)
+{
+    var today = DateOnly.FromDateTime(DateTime.Now);
+    object Teil(int used, int max, DateOnly next, string wofuer) => new
+    {
+        used, max, resetAt = next.ToString("yyyy-MM-dd"), scope = wofuer,
+    };
+    var woche = Usage.WeekStart(today).AddDays(7);
+    var monat = Usage.MonthStart(today).AddMonths(1);
+    // Der Administrator verantwortet die Anlage — er sieht sie auch
+    if (Auth.Has(req, c, Rights.Users))
+        return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Anlage"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Anlage") });
+    return c.With((_, _, _) =>
+    {
+        if (TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string) is not { } mein || c.Teams.Get(mein) is null)
+            return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Anlage"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Anlage") });
+        var zahler = c.Teams.Payer(mein);
+        var zt = c.Teams.Get(zahler)!;
+        var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
+        return c.ReadUsage(u => new
+        {
+            week = Teil(u.Sum(leute, Usage.WeekStart(today), today), zt.EntriesWeek, woche, zt.Label),
+            month = Teil(u.Sum(leute, Usage.MonthStart(today), today), zt.EntriesMonth, monat, zt.Label),
+        });
+    });
+}
 
 // Nutzung (Taloan, 22.09.2026): was pro Tag, Woche, Monat ins Journal ging — die Grenzen sind vorerst Annahmen zum Messen,
 // keine Lizenz. Lesen und Exportieren zählen nicht mit, weil sie nichts schreiben.

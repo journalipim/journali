@@ -1,6 +1,6 @@
-// Verfügbare Limits in den Einstellungen (Taloan, 22.09.2026): zwei Balken — Woche und Monat — mit dem Rest, dem
-// Kontingent und dem Anteil, darunter der Verlauf. Gezeigt wird, was noch da ist (Taloan, 23.09.2026: „was verfügbar
-// ist, ist gut“). Kein Tageslimit („macht man 3 Testimporte und muss aufhören“), der Tag steht nur als Zahl.
+// Zwei Balken in den Einstellungen (Taloan, 22.09.2026): Woche und Monat, mit dem Genutzten, dem Kontingent und dem
+// Anteil, darunter der Verlauf. Ein Balken füllt sich mit dem Verbrauch (Taloan, 23.09.2026); was verfügbar ist, steht
+// als Zeile darüber. Kein Tageslimit („macht man 3 Testimporte und muss aufhören“), der Tag steht nur als Zahl.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, textOf } from './ui.mjs'
@@ -17,13 +17,13 @@ const usage = {
 // echte Tage aus Taloans Journal: am 20.09. kam der ETIM-Katalog (29.371 Einträge, davon 724 Tagesgeschäft)
 const history = [{ start: '2026-09-22', count: 47, all: 5788 }, { start: '2026-09-21', count: 1306, all: 1323 }, { start: '2026-09-20', count: 724, all: 29371 }]
 
-test('zwei Balken — Woche und Monat — mit Rest, Kontingent und Anteil', () => {
+test('zwei Balken — Woche und Monat — mit Genutztem, Kontingent und Anteil', () => {
   const w = mount(UsageBars, { props: { usage, history, period: 'day' } })
   const rows = w.findAll('.bar-row')
   assert.equal(rows.length, 2, 'kein Tagesbalken')
   assert.match(rows[0].text(), /▤ Woche/)
-  assert.match(rows[0].text(), /3\.200/, 'die grosse Zahl ist, was noch da ist')
-  assert.match(rows[0].text(), /20\.000/); assert.match(rows[0].text(), /16 %/)
+  assert.match(rows[0].text(), /16\.800/, 'Zahl, Balken und Prozent zeigen dasselbe')
+  assert.match(rows[0].text(), /20\.000/); assert.match(rows[0].text(), /84 %/)
   assert.match(rows[1].text(), /▦ Monat/)
 })
 
@@ -42,13 +42,13 @@ test('Farbe sagt, wie eng es wird', () => {
   assert.ok(ruhig.findAll('.fill')[0].classes('pos'), '10 %: grün')
 })
 
-test('ist das Kontingent aufgebraucht, bleibt der Balken leer statt negativ zu werden', () => {
+test('der Balken läuft nie über die Spur hinaus', () => {
   const voll = { ...usage, week: { ...usage.week, used: 33333 } }
   const w = mount(UsageBars, { props: { usage: voll, history } })
-  assert.match(w.findAll('.fill')[0].attributes('style') ?? '', /width:\s*0%/)
+  assert.match(w.findAll('.fill')[0].attributes('style') ?? '', /width:\s*100%/)
   const zeile = w.findAll('.bar-row')[0].text()
-  assert.match(zeile, /Woche0/, 'verfügbar ist nichts mehr')
-  assert.ok(!zeile.includes('-'), 'nie eine Zahl unter 0')
+  assert.match(zeile, /33\.333/, 'die echte Zahl steht trotzdem da')
+  assert.ok(!zeile.includes('-'), 'und nichts wird negativ')
 })
 
 test('Verlauf: eine Zeile je Periode, Umschalten meldet die neue Periode', async () => {
@@ -71,7 +71,7 @@ test('ohne Daten stürzt nichts ab und der Verlauf sagt, woran es liegt', () => 
 test('was nicht zählt, steht als Zuschlag daneben', () => {
   const w = mount(UsageBars, { props: { usage, history } })
   assert.match(w.findAll('.bar-row')[0].text(), /\+28\.200/, 'Woche: 45.000 gesamt minus 16.800 Tagesgeschäft')
-  assert.match(w.findAll('.bar-row')[0].text(), /3\.200/, 'der Balken selbst bleibt das Tagesgeschäft')
+  assert.match(w.findAll('.bar-row')[0].text(), /16\.800/, 'der Balken selbst bleibt das Tagesgeschäft')
 })
 
 test('Verlauf: der helle Teil ist, was nicht zählt', () => {

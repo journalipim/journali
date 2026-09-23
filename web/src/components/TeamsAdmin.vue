@@ -2,7 +2,7 @@
 // Teams verwalten (Recht users): anlegen, entfernen, Limits eintragen, wer für wen zahlt. Das gehört zu den Personen —
 // wer im Team ist, was es verbraucht und welche Schlüssel es hat, steht auf der Teamseite (Taloan, 23.09.2026:
 // „Teams anlegen kann man hier aber nicht“).
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
@@ -11,10 +11,19 @@ const teams = ref([])
 const neu = ref('')
 const neuManager = ref('')
 const leute = ref([])
+const lizenz = ref(null)
+const n = x => (x ?? 0).toLocaleString('de-DE')
+/// Was aus der Lizenz schon an Teams vergeben ist — sonst merkt niemand, dass die Summe darüber hinausgeht
+const verteilt = computed(() => ({
+  week: teams.value.reduce((a, t) => a + (t.entriesWeek ?? 0), 0),
+  month: teams.value.reduce((a, t) => a + (t.entriesMonth ?? 0), 0),
+}))
+const zuviel = computed(() => (lizenz.value?.entriesWeek ?? 0) > 0 && (verteilt.value.week > lizenz.value.entriesWeek || verteilt.value.month > lizenz.value.entriesMonth))
 
 async function load() {
   try { teams.value = await api.get('/api/teams') } catch (e) { store.toast(e.message) }
   try { leute.value = await api.get('/api/auth/people') } catch { leute.value = [] }
+  try { lizenz.value = await api.get('/api/licence') } catch { lizenz.value = null }
 }
 onMounted(load)
 
@@ -95,5 +104,10 @@ async function entfernen(t) {
         </tr>
       </tbody>
     </table>
+    <div v-if="lizenz" class="row mono" style="gap:14px;margin-top:6px;font-size:12px">
+      <span class="muted">aus der Lizenz vergeben</span>
+      <span :class="zuviel ? 'neg' : ''" title="Summe der Kontingente aller Teams gegen die Lizenz">▤ {{ n(verteilt.week) }} / {{ n(lizenz.entriesWeek) }}</span>
+      <span :class="zuviel ? 'neg' : ''">▦ {{ n(verteilt.month) }} / {{ n(lizenz.entriesMonth) }}</span>
+    </div>
   </div>
 </template>

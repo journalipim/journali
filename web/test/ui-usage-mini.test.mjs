@@ -1,6 +1,6 @@
-// Verfügbare Limits in der Statusleiste (Taloan, 22.09.2026: „mach mir oben in die Leiste neben die KI-Nutzung 2 Balken
-// für Woche und Monat“). Gezeigt wird, was noch da ist (Taloan, 23.09.2026: „man stellt Begrenzungen als positive
-// Eigenschaften dar, denn was verfügbar ist, ist gut“): der Balken leert sich, die Zahl ist der Rest.
+// Zwei schmale Balken in der Statusleiste (Taloan, 22.09.2026: „mach mir oben in die Leiste neben die KI-Nutzung 2
+// Balken für Woche und Monat“). Ein Balken füllt sich mit dem, was genutzt wurde (Taloan, 23.09.2026); was verfügbar
+// ist, sagt der Tooltip. Die Prozentzahl steht links an ihrem eigenen Balken — nicht am nächsten (Taloan, 23.09.2026).
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, textOf } from './ui.mjs'
@@ -11,27 +11,34 @@ const usage = {
   month: { used: 45000, max: 100000, resetAt: '2026-10-01' },
 }
 
-test('zwei Balken mit Symbol und dem, was noch verfügbar ist', () => {
+test('zwei Balken mit Symbol und dem, was genutzt wurde', () => {
   const w = mount(UsageMini, { props: { usage } })
   const us = w.findAll('.u')
   assert.equal(us.length, 2)
-  assert.match(us[0].text(), /▤/); assert.match(us[0].text(), /16%/, '3.200 von 20.000 sind noch da')
-  assert.match(us[1].text(), /▦/); assert.match(us[1].text(), /55%/)
+  assert.match(us[0].text(), /▤/); assert.match(us[0].text(), /84%/, '16.800 von 20.000 sind genutzt')
+  assert.match(us[1].text(), /▦/); assert.match(us[1].text(), /45%/)
 })
 
-test('Farbe und Breite folgen dem, was übrig ist', () => {
+test('der Balken füllt sich mit dem Verbrauch', () => {
   const w = mount(UsageMini, { props: { usage } })
   const fills = w.findAll('.fill')
-  assert.match(fills[0].attributes('style') ?? '', /width:\s*16%/, 'der Balken zeigt den Rest')
-  assert.ok(fills[0].classes('warn'), '16 % übrig: gelb')
-  assert.ok(fills[1].classes('pos'), '55 % übrig: grün')
+  assert.match(fills[0].attributes('style') ?? '', /width:\s*84%/, 'der Balken zeigt das Genutzte')
+  assert.ok(fills[0].classes('warn'), '84 % genutzt: gelb')
+  assert.ok(fills[1].classes('pos'), '45 % genutzt: grün')
   const eng = mount(UsageMini, { props: { usage: { ...usage, week: { used: 19500, max: 20000 } } } })
-  assert.ok(eng.findAll('.fill')[0].classes('neg'), '3 % übrig: rot')
+  assert.ok(eng.findAll('.fill')[0].classes('neg'), '98 % genutzt: rot')
 })
 
-test('der Tooltip sagt, was verfügbar ist und wann es wieder voll ist', () => {
+test('der Tooltip sagt beides: genutzt und noch verfügbar', () => {
   const w = mount(UsageMini, { props: { usage } })
-  assert.match(w.findAll('.u')[0].attributes('title') ?? '', /Woche: noch 3\.200 von 20\.000 verfügbar \(16 %\), wieder voll am 2026-09-28/)
+  assert.match(w.findAll('.u')[0].attributes('title') ?? '', /Woche: 16\.800 von 20\.000 genutzt · noch 3\.200 verfügbar, wieder voll am 2026-09-28/)
+})
+
+test('die Prozentzahl steht an ihrem eigenen Balken, nicht am nächsten', () => {
+  const w = mount(UsageMini, { props: { usage } })
+  const zahl = w.findAll('.u')[0].find('.pc')
+  assert.ok(zahl.exists(), 'die Zahl gehört in die Gruppe ihres Balkens')
+  assert.equal(w.findAll('.u')[0].findAll('.track').length, 1, 'eine Gruppe, ein Balken, eine Zahl')
 })
 
 test('ohne Zahlen bleibt die Leiste leer, statt zu wackeln', () => {
