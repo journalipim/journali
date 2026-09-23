@@ -31,7 +31,7 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
         <span class="fill" :class="tone(p)" :style="`width:${pct(p)}%`" />
       </span>
       <span class="num mono" :class="tone(p)">{{ n(p?.used) }}</span>
-      <span class="num mono muted">/ {{ n(p?.max) }} <span title="Einträge im Journal">⊞</span></span>
+      <span class="num mono muted grenze">/ {{ n(p?.max) }} ⊞</span>
       <span class="num mono muted">{{ pct(p) }} %</span>
       <span class="num mono muted" :title="`${n(usage?.all?.[key])} Einträge gesamt — Modell, Struktur, Kataloge und Betrieb zählen nicht mit`">+{{ n((usage?.all?.[key] ?? 0) - (p?.used ?? 0)) }}</span>
     </div>
@@ -67,7 +67,8 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
 .track { flex: 1; height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
 .fill { display: block; height: 100%; transition: width .2s; }
 .fill.pos { background: var(--pos); } .fill.warn { background: var(--warn); } .fill.neg { background: var(--neg); }
-.num { width: 64px; flex: none; text-align: right; font-size: 12px; }
+.num { width: 64px; flex: none; text-align: right; font-size: 12px; white-space: nowrap; }
+.num.grenze { width: 84px; }   /* Platz für die Einheit — sonst bricht sie in die nächste Zeile */
 .num.pos { color: var(--pos); } .num.warn { color: var(--warn); } .num.neg { color: var(--neg); }
 .chips { display: flex; align-items: center; gap: 4px; margin: 10px 0 4px; }
 .grow { flex: 1; }

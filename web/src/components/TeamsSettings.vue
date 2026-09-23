@@ -185,14 +185,13 @@ async function widerrufen(tok) {
         <tr>
           <td class="muted" title="Wie der Verbrauch angerechnet wird">Abrechnung</td>
           <td>
-            <span v-if="team.keys.length" class="pos">eigenes Kontingent</span>
+            <span v-if="team.keys.length" class="pos" title="Eigener Schlüssel: der Anbieter rechnet direkt mit diesem Team ab.">eigenes Kontingent</span>
             <span v-else-if="team.keysFrom" class="muted">über Team {{ team.keysFrom }}</span>
             <span v-else-if="lizenz?.aiTokensMonth" class="muted">Grundrauschen der Lizenz</span>
             <span v-else class="neg">kein Kontingent</span>
           </td>
           <td class="muted" style="font-size:12px">
             <span v-if="!team.keys.length && lizenz?.aiTokensMonth">{{ zahl(lizenz.aiTokensMonth) }} / Monat für die ganze Anlage</span>
-            <span v-else-if="team.keys.length">Rechnung beim Anbieter</span>
           </td>
         </tr>
       </tbody></table>
