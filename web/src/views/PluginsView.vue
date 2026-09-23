@@ -37,10 +37,30 @@ const stateFilter = ref('')
 const kinds = computed(() => [...new Set(plugins.list.map(p => p.manifest?.kind).filter(Boolean))].sort())
 const shown = computed(() => {
   const s = q.value.trim().toLowerCase()
-  return plugins.list.filter(p => (!kindFilter.value || p.manifest?.kind === kindFilter.value)
+  const list = plugins.list.filter(p => (!kindFilter.value || p.manifest?.kind === kindFilter.value)
     && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : !p.installed))
     && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (p.manifest?.description?.de ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
+  return [...list].sort((a, b) => cmp(a, b) || a.key.localeCompare(b.key, 'de'))
 })
+
+// Sortierung über die Spaltenköpfe (Taloan, 23.09.2026: „Spaltenköpfe, damit ich die Plugins sortieren kann").
+// Key ist die Vorgabe und zugleich der zweite Schlüssel — gleiche Fassung oder gleicher Zustand bleiben so vorhersehbar.
+const sortBy = ref('key')
+const sortDesc = ref(false)
+const caret = c => sortBy.value !== c ? '' : sortDesc.value ? ' ▾' : ' ▴'
+/// Zustand als Rang: an, an mit fehlender Basis, aus, nicht installiert — so, wie man es sucht
+const rank = p => !p.installed ? 3 : !p.enabled ? 2 : plugins.active(p.key) ? 0 : 1
+/// Fassungen vergleichen sich nach Zahlen, nicht nach Zeichen: 1.10.0 steht über 1.9.0
+const ver = v => String(v ?? '').split('.').map(x => parseInt(x, 10) || 0)
+function verCmp(a, b) { const x = ver(a), y = ver(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] ?? 0) - (y[i] ?? 0); if (d) return d } return 0 }
+function cmp(a, b) {
+  const d = sortBy.value === 'label' ? label(a.manifest).localeCompare(label(b.manifest), 'de')
+    : sortBy.value === 'version' ? verCmp(a.version, b.version)
+    : sortBy.value === 'state' ? rank(a) - rank(b)
+    : a.key.localeCompare(b.key, 'de')
+  return sortDesc.value ? -d : d
+}
+function sortByCol(col) { if (sortBy.value === col) sortDesc.value = !sortDesc.value; else { sortBy.value = col; sortDesc.value = false } }
 const stateOf = p => !p.installed ? '— nicht installiert' : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : '◐ an, Basis aus'
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
 // Ein/Aus (Taloan: Basis-Plugins sind der Container): Einschalten braucht die Basis; Ausschalten einer Basis nimmt die Ergänzungen mit
@@ -71,6 +91,14 @@ function pick(k) { cur.value = k }
       <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
       <span class="sep">·</span>
       <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', '↑ Update'], ['new', '⇩ nicht installiert']]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
+    </div>
+    <div class="li head">
+      <span class="k" :title="`nach Key sortieren${sortBy === 'key' ? ' — Klick dreht die Richtung' : ''}`" @click="sortByCol('key')">Key{{ caret('key') }}</span>
+      <span class="l" :title="`nach Bezeichnung sortieren${sortBy === 'label' ? ' — Klick dreht die Richtung' : ''}`" @click="sortByCol('label')">Bezeichnung{{ caret('label') }}</span>
+      <span class="r">
+        <span :title="`nach Fassung sortieren${sortBy === 'version' ? ' — Klick dreht die Richtung' : ''}`" @click="sortByCol('version')">Fassung{{ caret('version') }}</span>
+        <span :title="`nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert)${sortBy === 'state' ? ' — Klick dreht die Richtung' : ''}`" @click="sortByCol('state')">Zustand{{ caret('state') }}</span>
+      </span>
     </div>
     <div class="scroll">
       <div v-for="p in shown" :key="p.key" class="li" :class="{ current: cur === p.key, off: !p.enabled }" @click="pick(p.key)" :title="p.key">
@@ -157,6 +185,10 @@ function pick(k) { cur.value = k }
 /* Manifest umbrechen — sonst schiebt eine lange Zeile die Seite breiter als das Fenster und die Knöpfe oben rechts aus dem Bild (Taloan) */
 .out { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
 .li { display: flex; align-items: center; gap: 8px; height: 26px; padding: 0 8px; white-space: nowrap; cursor: default; }
+/* Spaltenköpfe (Taloan, 23.09.2026): sortieren per Klick, sonst still — gedämpft, abgesetzt, nicht auswählbar */
+.li.head { color: var(--muted); font-size: 11px; border-bottom: 1px solid var(--line); height: 22px; user-select: none; }
+.li.head span { cursor: pointer; }
+.li.head span:hover { color: var(--fg); }
 .li:hover { background: var(--hover); }
 .li.current { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
 .li.off .l { color: var(--muted); }
