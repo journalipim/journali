@@ -69,15 +69,17 @@ test('Reset braucht kein Paket', async () => {
   w.unmount()
 })
 
-test('Anforderungen zeigen, was offen und was eingelöst ist', async () => {
+test('Eine Tabelle: je Anforderung eine Zeile, eingelöst steht in derselben Zeile', async () => {
+  // „jedes Mal raten, welche Tabelle denn nun was für eine Tabelle ist“
   server(); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(w.findAll('table').length, 2, 'neben Lizenz und Anforderungen steht noch eine Tabelle')
   const zeilen = w.findAll('table.anforderungen tbody tr')
   assert.equal(zeilen.length, 2)
   assert.match(zeilen[0].text(), /offen/)
   assert.ok(zeilen[0].find('button').exists(), 'offene Anforderung ohne Kopierknopf')
-  assert.match(zeilen[1].text(), /Deutschland/)
-  assert.equal(w.findAll('table.einloesungen tbody tr').length, 1)
+  assert.match(zeilen[1].text(), /Reset.*✓ 2026-09-22.*Deutschland/)
+  assert.equal(zeilen[1].find('button').exists(), false, 'eine eingelöste Anforderung lässt sich noch kopieren')
   w.unmount()
 })
 
@@ -121,7 +123,7 @@ test('Text vor und nach dem Schlüssel geht nicht mit', async () => {
   // aus dem Konsolenfenster kopiert: Marker davor und danach
   const gesendet = server(); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  await w.find('.eingabe').setValue(`-----BEGIN JOURNALI SCHLUESSEL-----\n${SCHLUESSEL}\n-----END JOURNALI SCHLUESSEL-----\n`)
+  await w.find('.eingabe').setValue(`-----BEGIN JOURNALI KEY-----\n${SCHLUESSEL}\n-----END JOURNALI KEY-----\n`)
   await knopf(w).trigger('click'); await flushPromises()
   assert.equal(gesendet.find(g => g.path === '/api/licence/keys').body.key, SCHLUESSEL)
   w.unmount()

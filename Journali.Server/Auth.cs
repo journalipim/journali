@@ -173,10 +173,11 @@ public static class Auth
         var monat = fuerJob ? Limits.FuerJob(km) : km;
         if (woche <= 0 && monat <= 0) return false;
         var ab = c.Teams.CountFrom(zahler.Key, c.ZaehltAb);
+        var cut = c.Teams.ResetCut(zahler.Key, c.ZaehltAb);
         var leute = c.Teams.Dependents(c.Teams.Payer(u.Team!)).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
         return c.ReadUsage(usage =>
-            (woche <= 0 || usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute) < woche)
-            && (monat <= 0 || usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute) < monat));
+            (woche <= 0 || usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute, cut) < woche)
+            && (monat <= 0 || usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute, cut) < monat));
     });
 
     /// <summary>Die Sperre: vor allem unter /api. Ohne Benutzer offen (X-Actor wie bisher); sonst Sitzung/Token nötig, X-Actor wird gesetzt.</summary>

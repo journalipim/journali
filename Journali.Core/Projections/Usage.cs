@@ -24,12 +24,20 @@ public sealed class Usage : IProjection
     /// <summary>Tagesgeschäft je Tag und Urheber (Taloan, 23.09.2026): daraus wird, was ein Team verbraucht hat. Das Team
     /// steht nicht im Eintrag — es kann wechseln; wer heute zu wem gehört, sagt das Abbild der Benutzer.</summary>
     public Dictionary<DateOnly, Dictionary<string, int>> PerDayActor { get; } = new();
+    /// <summary>
+    /// Stand beim Einlösen eines Schlüssels (Taloan, 23.09.2026), je Eintragsnummer: der Tag und was an ihm bis dahin je
+    /// Urheber gezählt war. Ein Reset gilt ab seinem Eintrag, nicht ab seinem Tag — was am selben Tag vorher geschah,
+    /// wird damit abgezogen (<see cref="Sum(IReadOnlySet{string}, DateOnly, DateOnly, long?)"/>).
+    /// </summary>
+    public Dictionary<long, UsageCut> Cuts { get; } = new();
 
     public void Apply(Entry entry)
     {
         LastApplied = entry.Number;
         var day = DateOnly.FromDateTime(entry.At.ToLocalTime().DateTime);
         AllPerDay[day] = AllPerDay.GetValueOrDefault(day) + 1;
+        if (entry.Type == Types.KeyRedeemed)
+            Cuts[entry.Number] = new UsageCut(day, PerDayActor.TryGetValue(day, out var bisher) ? new(bisher) : new());
         if (!Kinds.Billable(entry.Kind, entry.Type)) return;
         PerDay[day] = PerDay.GetValueOrDefault(day) + 1;
         if (entry.Actor is { Length: > 0 } wer)
@@ -40,6 +48,18 @@ public sealed class Usage : IProjection
     }
 
     public IEnumerable<KeyValuePair<DateOnly, int>> Days => PerDay.OrderBy(p => p.Key);
+
+    /// <summary>
+    /// Wie <see cref="Sum(IReadOnlySet{string}, DateOnly, DateOnly)"/>, aber erst ab dem Eintrag <paramref name="cut"/>
+    /// (einem Reset): liegt sein Tag im Zeitraum, zählt von diesem Tag nur, was nach ihm kam.
+    /// </summary>
+    public int Sum(IReadOnlySet<string> actors, DateOnly from, DateOnly to, long? cut)
+    {
+        var n = Sum(actors, from, to);
+        if (cut is { } c && Cuts.TryGetValue(c, out var s) && s.Day >= from && s.Day <= to)
+            foreach (var (actor, count) in s.Counts) if (actors.Contains(actor)) n -= count;
+        return Math.Max(0, n);
+    }
 
     /// <summary>Was diese Urheber von <paramref name="from"/> bis <paramref name="to"/> verbraucht haben.</summary>
     public int Sum(IReadOnlySet<string> actors, DateOnly from, DateOnly to)
@@ -97,6 +117,9 @@ public sealed class Usage : IProjection
         return all.OrderByDescending(g => g.Key).Take(limit).Select(g => (g.Key, work.GetValueOrDefault(g.Key), g.Value));
     }
 }
+
+/// <summary>Stand beim Einlösen eines Schlüssels: der Tag und was an ihm bis dahin je Urheber gezählt war.</summary>
+public sealed record UsageCut(DateOnly Day, Dictionary<string, int> Counts);
 
 /// <summary>
 /// Die Grenzen des Testbetriebs: Woche und Monat (Taloan, 22.09.2026). <b>Kein Tageslimit</b> — „macht man 3 Testimporte

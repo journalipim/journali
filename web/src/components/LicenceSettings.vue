@@ -33,6 +33,7 @@ const pakete = ref([])
 const neu = ref({ wahl: 'reset', count: 1 })   // wahl: 'reset' oder der Schlüssel eines Pakets
 const paketTitel = p => `${zahl(p.week)} / Woche · ${zahl(p.month)} / Monat · ${p.days} Tage`
 const paketName = k => pakete.value.find(p => p.key === k)?.label ?? k
+const einloesung = id => einloesungen.value.find(e => e.id === id)
 const angefordert = ref('')
 const saidAnf = ref('')
 
@@ -146,26 +147,25 @@ async function kopiere(text) {
       </div>
 
       <table v-if="anforderungen.length" class="grid anforderungen" style="width:auto;margin-top:8px"><thead><tr>
-        <th>Id</th><th title="Art">⚷</th><th title="Token je Woche">▤</th><th title="Token je Monat">▦</th><th title="Tage">◷</th><th>erstellt</th><th>Stand</th><th></th>
+        <th>Id</th><th>Art</th><th>angefordert</th><th>eingelöst</th><th>Team</th><th>gilt bis</th><th></th>
       </tr></thead><tbody>
         <tr v-for="a in anforderungen" :key="a.id">
-          <td class="mono">{{ a.id }}</td><td :title="a.kind">{{ art(a.kind) }}<template v-if="a.plan"> {{ paketName(a.plan) }}</template></td>
-          <td class="mono">{{ a.kind === 'limit' ? zahl(a.week) : '' }}</td><td class="mono">{{ a.kind === 'limit' ? zahl(a.month) : '' }}</td>
-          <td class="mono">{{ a.kind === 'limit' ? a.days : '' }}</td>
+          <td class="mono">{{ a.id }}</td>
+          <td :title="a.kind === 'limit' ? paketTitel(a) : 'Das Team zählt ab dem Einlösen neu.'">{{ art(a.kind) }} {{ a.plan ? paketName(a.plan) : a.kind === 'reset' ? 'Reset' : 'Limit' }}</td>
           <td class="mono">{{ String(a.created).slice(0, 10) }}</td>
-          <td><span v-if="a.team" class="pos" :title="'eingelöst für ' + a.teamLabel">✓ {{ a.teamLabel }}</span><span v-else class="muted" title="angefordert, noch nicht eingelöst">● offen</span></td>
-          <td><button v-if="!a.team" class="x" title="Anforderung kopieren" @click="kopiere(a.text)">⧉</button></td>
+          <template v-if="a.team">
+            <td class="mono pos">✓ {{ einloesung(a.id)?.from ?? '' }}</td>
+            <td>{{ a.teamLabel }}</td>
+            <td class="mono" :title="einloesung(a.id)?.carried ? `+${einloesung(a.id).carried} Tage aus dem laufenden Limit` : ''">{{ einloesung(a.id)?.until ?? '' }}<template v-if="einloesung(a.id)?.carried"> (+{{ einloesung(a.id).carried }})</template></td>
+            <td></td>
+          </template>
+          <template v-else>
+            <td class="muted">● offen</td><td></td><td></td>
+            <td><button class="x" title="Anforderung kopieren" @click="kopiere(a.text)">⧉</button></td>
+          </template>
         </tr>
       </tbody></table>
 
-      <table v-if="einloesungen.length" class="grid einloesungen" style="width:auto;margin-top:8px"><thead><tr>
-        <th>Id</th><th title="Art">⚷</th><th>Team</th><th>ab</th><th>bis</th><th title="Tage aus einem laufenden Limit übernommen">+◷</th>
-      </tr></thead><tbody>
-        <tr v-for="e in einloesungen" :key="e.id">
-          <td class="mono">{{ e.id }}</td><td :title="e.kind">{{ art(e.kind) }}</td><td>{{ e.teamLabel }}</td>
-          <td class="mono">{{ e.from }}</td><td class="mono">{{ e.until ?? '' }}</td><td class="mono">{{ e.carried || '' }}</td>
-        </tr>
-      </tbody></table>
     </div>
   </div>
 </template>

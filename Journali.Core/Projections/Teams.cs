@@ -31,6 +31,8 @@ public sealed class TeamState
     public int EntriesMonth { get; set; }
     /// <summary>Ab wann dieses Team zählt — gesetzt von einem Reset-Schlüssel (null = wie die Instanz).</summary>
     public DateOnly? ResetAt { get; set; }
+    /// <summary>Eintrag des Resets — ab ihm wird gezählt, nicht erst ab dem nächsten Tag.</summary>
+    public long? ResetNumber { get; set; }
     /// <summary>Die eingelösten Limit-Schlüssel dieses Teams, in der Reihenfolge des Einlösens.</summary>
     public List<LimitWindow> Windows { get; } = new();
     /// <summary>Nummer des Eintrags, der das Team zuerst angelegt hat — daran hängt, wer „Team 1“ ist.</summary>
@@ -140,6 +142,13 @@ public sealed class Teams : IProjection
         _all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault();
 
     /// <summary>Ab wann dieses Team zählt: der spätere von Instanz-Zählbeginn und eigenem Reset.</summary>
+    /// <summary>
+    /// Der Eintrag, ab dem dieses Team zählt — sein letzter Reset, sofern der nicht vor dem Zählbeginn der Instanz liegt.
+    /// Zusammen mit <see cref="CountFrom"/> an <c>Usage.Sum</c>: der Tag grenzt ab, der Eintrag schneidet den Tag.
+    /// </summary>
+    public long? ResetCut(string team, DateOnly? instanz) =>
+        _all.GetValueOrDefault(team) is { ResetAt: { } a, ResetNumber: { } n } && (instanz is not { } b || a >= b) ? n : null;
+
     public DateOnly? CountFrom(string team, DateOnly? instanz)
     {
         var r = _all.GetValueOrDefault(team)?.ResetAt;
@@ -196,7 +205,7 @@ public sealed class Teams : IProjection
                 // eingelöst ist eingelöst — auch wenn das Team später verschwindet
                 _eingeloest[k.Id] = new Redemption(k.Id, k.Kind, key, k.From, k.Until, k.EntriesWeek, k.EntriesMonth, k.Days, k.Carried, entry.Actor, entry.At);
                 if (_all.GetValueOrDefault(key) is not { } t) break;
-                if (k.Kind == Schluessel.Reset) t.ResetAt = t.ResetAt is { } vorher && vorher > k.From ? vorher : k.From;
+                if (k.Kind == Schluessel.Reset && (t.ResetAt is not { } vorher || k.From >= vorher)) { t.ResetAt = k.From; t.ResetNumber = entry.Number; }
                 else if (k.Kind == Schluessel.Limit && k.Until is { } bis) t.Windows.Add(new LimitWindow(k.Id, k.From, bis, k.EntriesWeek, k.EntriesMonth, entry.Number));
                 t.LastNumber = entry.Number; t.LastAt = entry.At; t.LastActor = entry.Actor;
                 break;

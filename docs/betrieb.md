@@ -411,7 +411,7 @@ die zentrale IT legt sie auf Vorrat und wählt das Team beim Einlösen:
 
 | Art | Wirkung |
 |---|---|
-| `reset` | das Team zählt ab dem Einlösen neu (verschiebt nur seinen Zählbeginn, nie den der Instanz) |
+| `reset` | das Team zählt ab dem Einlösen neu — ab dem Eintrag, nicht ab dem Tag: was am selben Tag vorher gezählt war, zieht `Usage.Cuts` ab (verschiebt nur den Zählbeginn des Teams, nie den der Instanz) |
 | `limit` | `entriesWeek`/`entriesMonth` für `days` Tage ab dem Einlösen; hebt an, senkt nie. Läuft schon eines, wird dessen **Restvolumen** in Tage des neuen umgerechnet und angehängt (`Schluessel.Bis`) |
 
 Ein Limit wird als **Paket** angefordert, nie mit freien Zahlen (Taloan, 23.09.2026): `pro`, `ultimate`, `enterprise`

@@ -192,10 +192,11 @@ object? Nutzung(HttpRequest req, Catalog c)
         var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
         var (kw, km) = c.Teams.LimitAt(zahler, today);
         var ab = c.Teams.CountFrom(zahler, catalog.ZaehltAb);
+        var cut = c.Teams.ResetCut(zahler, catalog.ZaehltAb);
         return c.ReadUsage(u => new
         {
-            week = Teil(u.Sum(leute, Usage.Ab(Usage.WeekStart(today), ab), today), kw, woche, zt.Label),
-            month = Teil(u.Sum(leute, Usage.Ab(Usage.MonthStart(today), ab), today), km, monat, zt.Label),
+            week = Teil(u.Sum(leute, Usage.Ab(Usage.WeekStart(today), ab), today, cut), kw, woche, zt.Label),
+            month = Teil(u.Sum(leute, Usage.Ab(Usage.MonthStart(today), ab), today, cut), km, monat, zt.Label),
         });
     });
 }

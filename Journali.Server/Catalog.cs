@@ -342,8 +342,9 @@ public sealed class Catalog
         if (!_stand.TryGetValue(zahlerKey, out var stand) || stand.Tag != heute)
         {
             var ab = _teams.CountFrom(zahlerKey, ZaehltAb);                // ein Reset-Schlüssel verschiebt den Zählbeginn
+            var cut = _teams.ResetCut(zahlerKey, ZaehltAb);               // … auf den Eintrag genau
             var leute = _teams.Dependents(zahlerKey).SelectMany(x => _users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
-            stand = (heute, _usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute), _usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute));
+            stand = (heute, _usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute, cut), _usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute, cut));
         }
         var woche = vomJob ? Limits.FuerJob(kw) : kw;
         var monat = vomJob ? Limits.FuerJob(km) : km;

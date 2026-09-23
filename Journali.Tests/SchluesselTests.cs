@@ -153,6 +153,32 @@ public class SchluesselTests
     }
 
     [Fact]
+    public void Ein_Reset_am_selben_Tag_zaehlt_ab_dem_Einloesen()
+    {
+        // die Lizenz zählt ab heute, heute wurde schon gepflegt — dann der Reset: gezählt wird ab ihm, nicht ab heute
+        var jetzt = DateTimeOffset.Now; var tag = DateOnly.FromDateTime(jetzt.LocalDateTime);
+        var u = new Usage(); var leute = new HashSet<string> { "ines" };
+        for (var n = 1; n <= 3; n++) u.Apply(new Entry(n, jetzt, "ines", "v-1", Types.AttributeSet, "{}"));
+        u.Apply(new Entry(4, jetzt, "it-admin", Teams.Stream + "de", Types.KeyRedeemed, "{}"));
+        Assert.Equal(3, u.Sum(leute, tag, tag, null));
+        Assert.Equal(0, u.Sum(leute, tag, tag, 4));
+        u.Apply(new Entry(5, jetzt, "ines", "v-1", Types.AttributeSet, "{}"));
+        Assert.Equal(1, u.Sum(leute, tag, tag, 4));
+        Assert.Equal(1, u.Sum(leute, tag.AddDays(-7), tag, 4));                // liegt der Reset im Zeitraum, schneidet er
+        Assert.Equal(1, u.Sum(leute, tag, tag.AddDays(7), 4));
+        // der Stand fährt im Schnappschuss mit — sonst wäre der Reset nach dem Neustart weg
+        var zurueck = System.Text.Json.JsonSerializer.Deserialize<Usage>(System.Text.Json.JsonSerializer.Serialize(u, Snapshot.Options), Snapshot.Options)!;
+        Assert.Equal(1, zurueck.Sum(leute, tag, tag, 4));
+
+        // und das Team kennt seinen Reset-Eintrag — auch wenn die Lizenz schon ab demselben Tag zählt
+        var c = Welt(); var i = new Instanz(null); var a = new KeyRequests(null, i);
+        Assert.Null(c.Teams.ResetCut("de", Heute));
+        Assert.Null(Einloesen(c, i, a, Ausgestellt(a.Neu(Schluessel.Reset, 0, 0, 0, "it-admin")), "de"));
+        Assert.NotNull(c.With((_, _, _) => c.Teams.ResetCut("de", Heute)));
+        Assert.Null(c.With((_, _, _) => c.Teams.ResetCut("de", Heute.AddDays(1))));   // eine spätere Lizenz zählt ohnehin ab ihrem Tag
+    }
+
+    [Fact]
     public void Das_zweite_Limit_uebernimmt_den_Rest_des_ersten()
     {
         var c = Welt(); var i = new Instanz(null); var a = new KeyRequests(null, i);
