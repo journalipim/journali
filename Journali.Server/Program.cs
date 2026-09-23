@@ -63,6 +63,7 @@ void WriteSnapshot(string why)
     catch (Exception e) { Console.WriteLine($"journali: Schnappschuss nicht geschrieben — {e.Message}"); }
 }
 Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht (Taloan, 21.09.)
+catalog.LicenceDir = dataDir;   // muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits
 var seeded = catalog.SeedMissing();
 
 var mailer = new Mailer(dataDir);   // Mailversand (Einstellungen → Mail)
@@ -92,7 +93,6 @@ var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 var jobDir = dataDir;
 // Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“): licence.json im Datenverzeichnis, ohne sie der Testbetrieb
 var licences = new Licences(dataDir);
-catalog.LicenceDir = dataDir;   // das Saatgut gibt dem Init Team die Limits der Lizenz
 builder.Services.AddSingleton(licences);
 var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);

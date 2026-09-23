@@ -27,7 +27,9 @@ public static class LicenceApi
             if (Actor(req) is null) return ActorMissing();
             if (body.EntriesWeek < 0 || body.EntriesMonth < 0 || body.AiTokensMonth < 0 || body.AiTokensDay < 0) return Bad("Grenzen: 0 oder mehr.");
             licences.Neu(body);
-            return Results.Ok(new { licences.Lic.Plan, licences.Lic.ValidUntil, geprueft = licences.Geprueft, grund = licences.Grund });
+            // Das Init Team trägt die Limits der Lizenz — es soll sie sofort haben und nicht erst nach einem Neustart
+            var uebernommen = c.With((_, _, _) => c.LimitsAusLizenz()) > 0;
+            return Results.Ok(new { licences.Lic.Plan, licences.Lic.ValidUntil, geprueft = licences.Geprueft, grund = licences.Grund, uebernommen });
         });
     }
 }
