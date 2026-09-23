@@ -1,5 +1,7 @@
-// Einstellungen → Teams → Lizenz → Schlüssel (Taloan, 23.09.2026): anfordern (die Instanz signiert), kopieren, den
-// ausgestellten Schlüssel für ein Team einlösen. Geprüft wird, was die Oberfläche schickt und was sie danach zeigt.
+// Einstellungen → Team → Lizenz (Taloan, 23.09.2026): anfordern (die Instanz signiert), kopieren, den ausgestellten
+// Schlüssel für das oben gewählte Team einlösen. Lizenz und Schlüssel kommen in dasselbe Feld mit einem Knopf
+// („ich habe zwei Eingabefelder mit jeweils einem Knopf — ich brauche eins“) — der Knopf sagt, was damit geschieht.
+// Geprüft wird, was die Oberfläche schickt und was sie danach zeigt.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises, button } from './ui.mjs'
@@ -7,7 +9,7 @@ import { store } from '../src/store.js'
 
 const LicenceSettings = (await import('../src/components/LicenceSettings.vue')).default
 
-/// Server mit einer offenen und einer eingelösten Anforderung; zwei Teams, Italien rechnet über Deutschland ab
+/// Server mit einer offenen und einer eingelösten Anforderung
 function server({ fehler = null } = {}) {
   const gesendet = []
   const anforderungen = [
@@ -19,7 +21,8 @@ function server({ fehler = null } = {}) {
     const method = opt.method ?? 'GET'
     if (method !== 'GET') gesendet.push({ method, path, body: JSON.parse(opt.body) })
     let status = 200, body
-    if (path === '/api/licence') body = { plan: 'Klein', instanz: 'abc', entriesWeek: 20000, entriesMonth: 100000 }
+    if (path === '/api/licence' && method === 'GET') body = { plan: 'Klein', instanz: 'abc', entriesWeek: 20000, entriesMonth: 100000 }
+    else if (path === '/api/licence') body = { plan: 'Gross', geprueft: true }
     else if (path === '/api/licence/requests' && method === 'GET') body = anforderungen
     else if (path === '/api/licence/requests') body = [{ id: 'k-2', hash: 'h', text: '{"anforderung":"neu","sig":"z"}' }]
     else if (path === '/api/licence/keys' && method === 'GET') body = [{ id: 'k-0', kind: 'reset', team: 'de', teamLabel: 'Deutschland', from: '2026-09-22', until: null, carried: 0 }]
@@ -36,9 +39,14 @@ function admin(rechte = ['users']) {
   store.poll = async () => {}
 }
 
+const DE = { key: 'de', label: 'Deutschland', payer: 'de' }
+const IT = { key: 'it', label: 'Italien', payer: 'de' }
+const SCHLUESSEL = '{"id":"k-1","kind":"limit","request":"ab12","sig":"a=="}'
+const knopf = w => w.find('.uebernahme button')
+
 test('Anfordern schickt Art und Grenzen und zeigt die signierte Anforderung zum Kopieren', async () => {
   const gesendet = server(); admin()
-  const w = mount(LicenceSettings); await flushPromises()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   await w.find('.anfordern select').setValue('limit')
   const [woche, monat, tage] = w.findAll('.anfordern input[type=number]')
   await woche.setValue('30000'); await monat.setValue('150000'); await tage.setValue('30')
@@ -52,7 +60,7 @@ test('Anfordern schickt Art und Grenzen und zeigt die signierte Anforderung zum 
 
 test('Anforderungen zeigen, was offen und was eingelöst ist', async () => {
   server(); admin()
-  const w = mount(LicenceSettings); await flushPromises()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   const zeilen = w.findAll('table.anforderungen tbody tr')
   assert.equal(zeilen.length, 2)
   assert.match(zeilen[0].text(), /offen/)
@@ -62,54 +70,83 @@ test('Anforderungen zeigen, was offen und was eingelöst ist', async () => {
   w.unmount()
 })
 
-const DE = { key: 'de', label: 'Deutschland', payer: 'de' }
-const IT = { key: 'it', label: 'Italien', payer: 'de' }
+test('Ein Eingabefeld, ein Knopf — für Lizenz und Schlüssel', async () => {
+  server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(w.findAll('textarea:not(.angefordert)').length, 1, 'es stehen mehrere Eingabefelder da')
+  assert.equal(w.findAll('button.primary').length, 1, 'es stehen mehrere Übernahmeknöpfe da')
+  assert.equal(w.findAll('select').length, 1, 'eine Teamauswahl steht da — das Team ist oben gewählt')
+  assert.ok(knopf(w).attributes('disabled') !== undefined, 'ohne Eingabe darf nichts zu übernehmen sein')
+  w.unmount()
+})
 
-test('Eingelöst wird für das Team, das oben gewählt ist — keine eigene Auswahl', async () => {
+test('Ein Schlüssel wird für das oben gewählte Team eingelöst — das Team steht im Knopf', async () => {
   const gesendet = server(); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  assert.equal(w.find('.einloesen select').exists(), false, 'eine zweite Teamauswahl steht da')
-  assert.match(button(w, 'Einlösen').text(), /Einlösen · Deutschland/, 'das Team steht nicht im Knopf')
-  assert.ok(button(w, 'Einlösen').attributes('disabled') !== undefined, 'ohne Schlüssel darf nichts einzulösen sein')
-  await w.find('.einloesen textarea').setValue('{"id":"k-1"}')
-  await button(w, 'Einlösen').trigger('click'); await flushPromises()
-  const post = gesendet.find(g => g.path === '/api/licence/keys')
-  assert.deepEqual({ ...post.body }, { key: '{"id":"k-1"}', team: 'de' })
-  assert.match(w.find('.said-key').text(), /✓ k-1 bis 2026-10-22/)
-  assert.equal(w.find('.einloesen textarea').element.value, '', 'der eingelöste Schlüssel bleibt stehen')
+  await w.find('.eingabe').setValue(SCHLUESSEL)
+  assert.match(knopf(w).text(), /Einlösen · Deutschland/)
+  await knopf(w).trigger('click'); await flushPromises()
+  assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/keys').body }, { key: SCHLUESSEL, team: 'de' })
+  assert.equal(gesendet.some(g => g.path === '/api/licence'), false, 'der Schlüssel ging als Lizenz hinaus')
+  assert.match(w.find('.said').text(), /✓ k-1 bis 2026-10-22/)
+  assert.equal(w.find('.eingabe').element.value, '', 'der eingelöste Schlüssel bleibt stehen')
+  w.unmount()
+})
+
+test('Eine Lizenz wird eingespielt, nicht eingelöst', async () => {
+  const gesendet = server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  await w.find('.eingabe').setValue('{"plan":"Gross","entriesWeek":50000,"sig":"x"}')
+  assert.match(knopf(w).text(), /Lizenz einspielen/)
+  await knopf(w).trigger('click'); await flushPromises()
+  const put = gesendet.find(g => g.path === '/api/licence')
+  assert.equal(put?.method, 'PUT')
+  assert.equal(put.body.plan, 'Gross')
+  assert.equal(gesendet.some(g => g.path === '/api/licence/keys'), false)
   w.unmount()
 })
 
 test('Text vor und nach dem Schlüssel geht nicht mit', async () => {
-  // aus dem Konsolenfenster kopiert: Schlüssel und die Zeile darunter
+  // aus dem Konsolenfenster kopiert: Marker davor und danach
   const gesendet = server(); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  await w.find('.einloesen textarea').setValue('C:\\> aussteller\n{"id":"k-1","sig":"a=="}\nJOURNALI_LICENCE_KEY=MFkw==\n')
-  await button(w, 'Einlösen').trigger('click'); await flushPromises()
-  assert.equal(gesendet.find(g => g.path === '/api/licence/keys').body.key, '{"id":"k-1","sig":"a=="}')
+  await w.find('.eingabe').setValue(`-----BEGIN JOURNALI SCHLUESSEL-----\n${SCHLUESSEL}\n-----END JOURNALI SCHLUESSEL-----\n`)
+  await knopf(w).trigger('click'); await flushPromises()
+  assert.equal(gesendet.find(g => g.path === '/api/licence/keys').body.key, SCHLUESSEL)
   w.unmount()
 })
 
-test('Wer über ein anderes Team abrechnet, hat kein Einlösen', async () => {
+test('Eine zurückkopierte Anforderung wird nicht übernommen', async () => {
+  server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  await w.find('.eingabe').setValue('{"anforderung":"{}","sig":"z"}')
+  assert.ok(knopf(w).attributes('disabled') !== undefined)
+  w.unmount()
+})
+
+test('Wer über ein anderes Team abrechnet, kann keinen Schlüssel einlösen', async () => {
   server(); admin()
   const w = mount(LicenceSettings, { props: { team: IT } }); await flushPromises()
-  assert.equal(w.find('.einloesen').exists(), false)
+  await w.find('.eingabe').setValue(SCHLUESSEL)
+  assert.ok(knopf(w).attributes('disabled') !== undefined)
+  assert.match(knopf(w).attributes('title'), /rechnet über ein anderes Team ab/)
   w.unmount()
 })
 
-test('Ein abgelehnter Schlüssel sagt, warum', async () => {
+test('Ein abgelehnter Schlüssel sagt, warum — rot und fett', async () => {
   server({ fehler: 'Zu Schlüssel k-9 gibt es hier keine Anforderung.' }); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  await w.find('.einloesen textarea').setValue('{"id":"k-9"}')
-  await button(w, 'Einlösen').trigger('click'); await flushPromises()
-  assert.match(w.find('.said-key').text(), /✗ Zu Schlüssel k-9 gibt es hier keine Anforderung/)
-  assert.ok(w.find('.said-key').classes().includes('fehler'), 'die Fehlermeldung ist nicht rot und fett')
+  await w.find('.eingabe').setValue(SCHLUESSEL)
+  await knopf(w).trigger('click'); await flushPromises()
+  assert.match(w.find('.said').text(), /✗ Zu Schlüssel k-9 gibt es hier keine Anforderung/)
+  assert.ok(w.find('.said').classes().includes('fehler'), 'die Fehlermeldung ist nicht rot und fett')
   w.unmount()
 })
 
-test('Ohne Recht zur Benutzerverwaltung keine Schlüssel', async () => {
+test('Ohne Recht zur Anwenderverwaltung weder Feld noch Schlüssel', async () => {
   server(); admin(['read'])
-  const w = mount(LicenceSettings); await flushPromises()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   assert.equal(w.find('.schluessel').exists(), false)
+  assert.equal(w.find('.eingabe').exists(), false)
   w.unmount()
 })

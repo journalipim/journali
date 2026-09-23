@@ -155,7 +155,7 @@ test('nach dem Einspielen einer Lizenz laden die Limits nach', async () => {
   const vorher = calls.filter(c => c.path.endsWith('/tokens/journali')).length
   const feld = w.find('textarea')
   await feld.setValue('{"entriesWeek":200000,"entriesMonth":500000}')
-  await w.findAll('button').find(b => /Einspielen/.test(b.text())).trigger('click'); await ruhe()
+  await w.findAll('button').find(b => /Lizenz einspielen/.test(b.text())).trigger('click'); await ruhe()   // ein Feld für Lizenz und Schlüssel
   assert.ok(calls.some(c => c.path === '/api/licence' && c.method === 'PUT'), 'die Lizenz ging hinaus')
   const nachher = calls.filter(c => c.path.endsWith('/tokens/journali')).length
   assert.ok(nachher > vorher, 'die Limits wurden danach neu geholt')

@@ -12,7 +12,6 @@ const props = defineProps({ team: { type: Object, default: null } })
 // Einlösen nur beim Team, das sein Kontingent selbst trägt; wer über ein anderes abrechnet, bekommt keinen Schlüssel
 const eigenes = computed(() => !!props.team && (props.team.payer ?? props.team.key) === props.team.key)
 const lic = ref(null)
-const roh = ref('')
 const said = ref('')
 const darf = () => store.can('users')
 
@@ -32,40 +31,54 @@ const anforderungen = ref([])
 const einloesungen = ref([])
 const neu = ref({ kind: 'reset', entriesWeek: 0, entriesMonth: 0, days: 30, count: 1 })
 const angefordert = ref('')
-const schluessel = ref('')
-const saidKey = ref('')
+const saidAnf = ref('')
+
+// Eingefügt wird, was im Fenster steht — auch Zeilen davor und danach (Konsole, BEGIN/END-Marker). Gemeint ist das
+// JSON von der ersten { bis zur letzten }. Ein Schlüssel trägt Art und Fingerabdruck der Anforderung; eine Anforderung
+// selbst (die eigene, zurückkopiert) wird nicht übernommen; alles andere ist eine Lizenz.
+const eingabe = ref('')
+const inhalt = computed(() => {
+  const t = eingabe.value, a = t.indexOf('{'), b = t.lastIndexOf('}')
+  if (a < 0 || b <= a) return null
+  try { const o = JSON.parse(t.slice(a, b + 1)); return o && typeof o === 'object' && !Array.isArray(o) ? { text: t.slice(a, b + 1), o } : null } catch { return null }
+})
+const was = computed(() => !inhalt.value ? null : inhalt.value.o.kind && inhalt.value.o.request ? 'schluessel' : inhalt.value.o.anforderung ? null : 'lizenz')
+const knopf = computed(() =>
+  was.value === 'schluessel' ? { text: `⚿ Einlösen · ${props.team?.label ?? ''}`, aus: !eigenes.value,
+      title: eigenes.value ? `Schlüssel für ${props.team.label} einlösen` : `${props.team?.label ?? 'Dieses Team'} rechnet über ein anderes Team ab` }
+  : was.value === 'lizenz' ? { text: '⚿ Lizenz einspielen', aus: false, title: 'Lizenz dieser Instanz ersetzen' }
+  : { text: '⚿ Übernehmen', aus: true, title: eingabe.value.trim() ? 'weder Lizenz noch Schlüssel' : 'Lizenz oder Schlüssel einfügen' })
+const uebernehmen = () => was.value === 'schluessel' ? einloesen() : was.value === 'lizenz' ? einspielen() : null
 
 async function anfordern() {
   try {
     const r = await api.post('/api/licence/requests', neu.value)
     angefordert.value = r.length === 1 ? r[0].text : '[' + r.map(x => x.text).join(',\n') + ']'
-    saidKey.value = `✓ ${r.length} angefordert`
+    saidAnf.value = `✓ ${r.length} angefordert`
     await load()
   }
-  catch (e) { saidKey.value = '✗ ' + e.message }
+  catch (e) { saidAnf.value = '✗ ' + e.message }
 }
 
 async function einloesen() {
-  if (!schluessel.value.trim() || !eigenes.value) return
+  if (!inhalt.value || !eigenes.value) return
   try {
-    const t = schluessel.value, a = t.indexOf('{'), b = t.lastIndexOf('}')
-    const r = await api.post('/api/licence/keys', { key: a >= 0 && b > a ? t.slice(a, b + 1) : t.trim(), team: props.team.key })
-    schluessel.value = ''
-    saidKey.value = (r.until ? `✓ ${r.id} bis ${r.until}` : `✓ ${r.id} ab ${r.from}`) + (r.carried ? ` · +${r.carried} Tage` : '') + (r.geprueft ? '' : ` · ${r.grund ?? ''}`)
+    const r = await api.post('/api/licence/keys', { key: inhalt.value.text, team: props.team.key })
+    eingabe.value = ''
+    said.value = (r.until ? `✓ ${r.id} bis ${r.until}` : `✓ ${r.id} ab ${r.from}`) + (r.carried ? ` · +${r.carried} Tage` : '') + (r.geprueft ? '' : ` · ${r.grund ?? ''}`)
     await load(); await store.poll(true)
     emit('eingespielt')
   }
-  catch (e) { saidKey.value = '✗ ' + e.message }
+  catch (e) { said.value = '✗ ' + e.message }
 }
 const art = k => k === 'reset' ? '↺' : '⇡'
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
 
 async function einspielen() {
-  let daten
-  try { daten = JSON.parse(roh.value) } catch { said.value = '✗ kein gültiger Schlüssel'; return }
+  if (!inhalt.value) return
   try {
-    const r = await api.post('/api/licence', daten, 'PUT')
-    roh.value = ''
+    const r = await api.post('/api/licence', inhalt.value.o, 'PUT')
+    eingabe.value = ''
     said.value = r.geprueft ? '✓ eingespielt und geprüft' : `✓ eingespielt · ${r.grund ?? ''}`
     await load(); await store.poll(true)
     emit('eingespielt')   // die Limits daneben hängen an der Lizenz — sie sollen es sofort zeigen
@@ -102,11 +115,11 @@ async function kopiere(text) {
         <td><button class="x" title="Kennung kopieren" @click="kopiere(lic.instanz)">⧉</button></td></tr>
     </tbody></table>
 
-    <div v-if="darf()" style="margin-top:8px">
-      <textarea v-model="roh" rows="4" style="width:100%;max-width:640px" placeholder='{"plan":"…","entriesWeek":20000,…}'></textarea>
+    <div v-if="darf()" class="uebernahme" style="margin-top:8px">
+      <textarea v-model="eingabe" class="eingabe" rows="4" style="width:100%;max-width:640px" placeholder="Lizenz oder Schlüssel"></textarea>
       <div class="row" style="gap:8px;margin-top:4px">
-        <button class="primary" @click="einspielen">⚿ Einspielen</button>
-        <span :class="said.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ said }}</span>
+        <button class="primary" :disabled="knopf.aus" :title="knopf.title" @click="uebernehmen">{{ knopf.text }}</button>
+        <span class="said" :class="said.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ said }}</span>
       </div>
     </div>
 
@@ -124,6 +137,7 @@ async function kopiere(text) {
         </template>
         <label title="Anzahl Anforderungen">× <input v-model.number="neu.count" type="number" min="1" max="20" style="width:50px" /></label>
         <button @click="anfordern" title="Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren">⚷ Anfordern</button>
+        <span class="said-anf" :class="saidAnf.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ saidAnf }}</span>
       </div>
       <div v-if="angefordert" class="row" style="gap:6px;margin-top:4px;align-items:flex-start">
         <textarea class="angefordert mono" readonly rows="3" style="width:100%;max-width:640px" :value="angefordert"></textarea>
@@ -142,12 +156,6 @@ async function kopiere(text) {
           <td><button v-if="!a.team" class="x" title="Anforderung kopieren" @click="kopiere(a.text)">⧉</button></td>
         </tr>
       </tbody></table>
-
-      <div v-if="eigenes" class="row einloesen" style="gap:6px;margin-top:8px;align-items:flex-start">
-        <textarea v-model="schluessel" rows="3" style="width:100%;max-width:520px" placeholder='{"id":"k-…","kind":"…","request":"…",…}'></textarea>
-        <button class="primary" :disabled="!schluessel.trim()" :title="'Schlüssel für ' + team.label + ' einlösen'" @click="einloesen">⚿ Einlösen · {{ team.label }}</button>
-      </div>
-      <div class="said-key" :class="saidKey.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px;margin-top:4px">{{ saidKey }}</div>
 
       <table v-if="einloesungen.length" class="grid einloesungen" style="width:auto;margin-top:8px"><thead><tr>
         <th>Id</th><th title="Art">⚷</th><th>Team</th><th>ab</th><th>bis</th><th title="Tage aus einem laufenden Limit übernommen">+◷</th>
