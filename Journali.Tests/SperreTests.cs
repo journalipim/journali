@@ -31,7 +31,7 @@ public class SperreTests
     }
 
     [Fact]
-    public void Wer_liest_wartet_nicht_auf_die_Datenbank()
+    public async Task Wer_liest_wartet_nicht_auf_die_Datenbank()
     {
         var c = new Catalog(new ZaehesJournal(TimeSpan.FromMilliseconds(600)));
         c.Rebuild();
@@ -46,7 +46,7 @@ public class SperreTests
         var knoten = c.Read(t => t.Nodes.Count);
         uhr.Stop();
 
-        schreibt.Wait();
+        await schreibt;
         Assert.True(uhr.ElapsedMilliseconds < 200, $"Lesen dauerte {uhr.ElapsedMilliseconds} ms — es hat auf den Schreiber gewartet");
         Assert.True(kopf >= 0 && knoten >= 0);
     }
@@ -68,14 +68,15 @@ public class SperreTests
     }
 
     [Fact]
-    public void Der_Stand_stimmt_nach_parallelem_Betrieb()
+    public async Task Der_Stand_stimmt_nach_parallelem_Betrieb()
     {
         var c = new Catalog(new MemoryJournal());
         c.Rebuild();
         var lesen = new CancellationTokenSource();
         var leser = Task.Run(() => { while (!lesen.IsCancellationRequested) { _ = c.Head; _ = c.Read(t => t.Nodes.Count); } });
         for (var i = 0; i < 200; i++) c.With((_, _, write) => write("t", "n-" + i, Types.NodeNamed, new NodeNamed("x"), null));
-        lesen.Cancel(); leser.Wait();
+        lesen.Cancel();
+        await leser;
         Assert.Equal(200, c.Head);
     }
 }
