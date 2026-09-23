@@ -15,9 +15,10 @@ const PARTS = [['week', '▤ Woche'], ['month', '▦ Monat']]   // kein Tageslim
 const HIST = [['day', '◷ Tag'], ['week', '▤ Woche'], ['month', '▦ Monat']]
 const n = v => (v ?? 0).toLocaleString('de-DE')
 const frei = p => Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
-const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 1000) / 10) : 0
+// Ohne Kontingent (max 0) ist alles aufgebraucht; ohne Grenze (max null) gibt es nichts zu füllen
+const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 1000) / 10) : (p?.max === 0 ? 100 : 0)
 // Farbe sagt, wie viel Luft noch ist: bis 70 % grün, bis 90 % gelb, darüber rot
-const tone = p => !p?.max ? '' : pct(p) >= 90 ? 'neg' : pct(p) >= 70 ? 'warn' : 'pos'
+const tone = p => p?.max == null ? '' : pct(p) >= 90 ? 'neg' : pct(p) >= 70 ? 'warn' : 'pos'
 const parts = computed(() => PARTS.map(([key, label]) => ({ key, label, p: props.usage?.[key] ?? null })))
 const maxHist = computed(() => Math.max(1, ...(props.history ?? []).map(h => h.all ?? h.count)))
 const dayName = s => new Date(s + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })

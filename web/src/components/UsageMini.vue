@@ -8,9 +8,10 @@ const props = defineProps({ usage: Object })   // { week: {used,max}, month: {us
 const PARTS = [['week', '▤'], ['month', '▦']]
 const n = v => (v ?? 0).toLocaleString('de-DE')
 const frei = p => Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
-const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 100)) : 0
+/// Ohne Kontingent (max 0) ist alles aufgebraucht — 0 ist sofort erreicht (Taloan, 23.09.2026)
+const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 100)) : 100
 /// Viel Luft ist grün; wird es eng, gelb; ist das Kontingent voll, rot
-const tone = p => !p?.max ? '' : pct(p) >= 90 ? 'neg' : pct(p) >= 70 ? 'warn' : 'pos'
+const tone = p => pct(p) >= 90 ? 'neg' : pct(p) >= 70 ? 'warn' : 'pos'
 const parts = computed(() => PARTS.map(([key, icon]) => ({ key, icon, p: props.usage?.[key] ?? null })))
 const label = key => key === 'week' ? 'Woche' : 'Monat'
 </script>

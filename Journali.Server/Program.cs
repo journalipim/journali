@@ -164,11 +164,15 @@ object? Nutzung(HttpRequest req, Catalog c)
         // Ohne Anmeldung (offene Anlage) gilt die Lizenz
         if (string.IsNullOrEmpty(ich))
             return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Anlage"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Anlage") });
-        // Kein Team oder ein Team ohne Kontingent: keine Balken (Taloan, 23.09.2026: „limits > 0“)
-        if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null) return null;
+        // Kein Team: Kontingent 0 — die Balken stehen voll und rot, denn 0 ist sofort erreicht (Taloan, 23.09.2026)
+        if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null)
+            return c.ReadUsage(u => new
+            {
+                week = Teil(u.Sum(new HashSet<string> { ich! }, Usage.WeekStart(today), today), 0, woche, "kein Team"),
+                month = Teil(u.Sum(new HashSet<string> { ich! }, Usage.MonthStart(today), today), 0, monat, "kein Team"),
+            });
         var zahler = c.Teams.Payer(mein);
         var zt = c.Teams.Get(zahler)!;
-        if (zt.EntriesWeek <= 0 && zt.EntriesMonth <= 0) return null;   // ohne Kontingent gibt es nichts anzuzeigen
         var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
         return c.ReadUsage(u => new
         {

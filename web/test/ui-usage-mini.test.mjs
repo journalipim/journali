@@ -45,3 +45,15 @@ test('ohne Zahlen bleibt die Leiste leer, statt zu wackeln', () => {
   const w = mount(UsageMini, { props: { usage: null } })
   assert.equal(textOf(w), '')
 })
+
+// Kein Kontingent ist nicht „unbegrenzt“, sondern „voll“ (Taloan, 23.09.2026: „die Balken bei hundert Prozent und rot,
+// weil die Limits 0 sind und 0 ist sofort erreicht“).
+test('ohne Kontingent stehen die Balken voll und rot', () => {
+  const w = mount(UsageMini, { props: { usage: { week: { used: 12, max: 0, scope: 'kein Team' }, month: { used: 40, max: 0, scope: 'kein Team' } } } })
+  const fills = w.findAll('.fill')
+  assert.match(fills[0].attributes('style') ?? '', /width:\s*100%/)
+  assert.ok(fills[0].classes('neg'), 'rot')
+  assert.ok(fills[1].classes('neg'))
+  assert.match(w.findAll('.u')[0].text(), /100%/)
+  assert.match(w.findAll('.u')[0].attributes('title') ?? '', /kein Team/)
+})
