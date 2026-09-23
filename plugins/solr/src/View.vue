@@ -5,9 +5,11 @@
 // Solr lesen geht per JSONP im Browser; geschrieben wird nur über /api/model und /api/batch.
 import { ref, computed, onMounted } from 'vue'
 import { api, store, tree, icon, plugins, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
+import { useRouter } from 'vue-router'
 import { solr, SYSTEM, roleOf, ownValues, DEFAULT_SKIP, TYPES, REL_GROUP } from '../solr.js'
 import { plane, schreibe, planeRelationen, schreibeRelationen } from '../lauf.mjs'
 const srcW = paneWidth('import.src', 340)
+const router = useRouter()
 
 const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
 const base = ref(saved.base || '')   // keine Vorgabe — das Plugin ist allgemein, Kundendaten gehören nicht ins Repo (Taloan, 17.09.)
@@ -194,19 +196,32 @@ async function runRelations() {
 }
 
 // ---- Schreiben: Modell, dann Wurzel + Gruppen, dann je Produkt ein Stapel (unter der Obergrenze)
+/// Der Lauf geht an den Tasker: dort läuft er weiter, auch wenn dieses Fenster zugeht (Taloan, 23.09.2026).
+const JOB = 'solr_import'
 async function run() {
   if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
   if (!plan.value) return
-  busy.value = 'schreibe …'; result.value = null
-  let written = 0, batches = 0
+  busy.value = 'übergebe …'; result.value = null
   try {
-    const r = await schreibe({ plan: plan.value, umgebung, ziel: target.value || null, skip: skip.value })
-    written = r.geschrieben; batches = r.stapel
-    result.value = { written, batches, error: null }
-    await store.poll(true); await tree.load()
+    const { wurzeln } = gewaehlt()
+    const r = await api.post(`/api/jobs/${JOB}/uebergabe`, {
+      label: `Import (Solr) · ${wurzeln.length} Wurzel${wurzeln.length === 1 ? '' : 'n'}`,
+      service: 'solr',
+      params: {
+        base: base.value,
+        roots: wurzeln.join(','),
+        target: target.value || '',
+        skip: skipText.value || '',
+        relations: 'false',
+        dry_run: 'false',
+      },
+    })
+    result.value = { job: r.job, run: r.run, error: null }
+    say(`an den Tasker übergeben · Lauf ${r.run}`)
+    store.toast('▶ An den Tasker übergeben', 'ok', { label: '⏱ Jobs', title: 'Fortschritt, Abbrechen und das Protokoll', run: () => router.push('/p/tasker/jobs') })
     plan.value = null
   } catch (e) {
-    result.value = { written, batches, error: e.message }
+    result.value = { error: e.message }
     store.toast(e.message); say('Fehler: ' + e.message)
   } finally { busy.value = '' }
 }
@@ -334,8 +349,8 @@ async function run() {
       </div>
       <div v-if="result" class="section">
         <h2>Ergebnis</h2>
-        <div v-if="result.error" class="neg">{{ result.error }} — {{ result.written }} Einträge in {{ result.batches }} Stapeln davor geschrieben.</div>
-        <div v-else-if="result.written" class="pos">{{ result.written }} Einträge in {{ result.batches }} Stapeln → <router-link to="/journal">Journal</router-link></div>
+        <div v-if="result.error" class="neg">{{ result.error }}</div>
+        <div v-else-if="result.job" class="pos">an den Tasker übergeben · Lauf <span class="mono">{{ result.run }}</span> → <router-link to="/p/tasker/jobs">⏱ Jobs</router-link></div>
         <div v-else class="muted">Nichts zu schreiben.</div>
       </div>
       <div class="section">

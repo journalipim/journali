@@ -318,6 +318,8 @@ public sealed class Catalog
     private bool KeinKontingent(string actor, string type)
     {
         if (!Kinds.Billable(null, type)) return false;
+        // Ein Joblauf schreibt als job:<key> — gezählt wird beim Anwender, dem der Job gehört (Taloan, 23.09.2026)
+        if (actor.StartsWith("job:", StringComparison.Ordinal) && _jobs.All.GetValueOrDefault(actor[4..])?.Owner is { Length: > 0 } eigner) actor = eigner;
         if (_users.All.GetValueOrDefault(actor) is not { } u) return false;
         if (string.IsNullOrEmpty(u.Team)) return true;                      // kein Team, kein Kontingent
         var zahlerKey = _teams.Payer(u.Team!);

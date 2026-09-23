@@ -14,6 +14,9 @@ public static class JobApi
     public sealed record ProfileSecrets(Dictionary<string, string?>? Values);
     public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets, JobFiles? Files, string? Role);
 
+    /// <summary>Ein Lauf, den die Oberfläche abgibt: Plugin, Parameter, Bezeichnung — der Job entsteht dabei.</summary>
+    public sealed record UebergabeBody(string? Label, string? Service, Dictionary<string, string>? Params);
+
     public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
         // Welche Plugins können Jobs? Die mit process im Manifest — mit ihren Parametern (process.params: key, label, type, secret, default)
@@ -76,7 +79,7 @@ public static class JobApi
                     rolle = Blank(body.Role);
                     if (rolle is not null && !c.Users.Roles.ContainsKey(rolle)) return Bad($"Unbekannte Rolle {rolle}.");
                 }
-                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files, rolle);
+                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files, rolle, cur?.Owner ?? actor);
                 write(actor, Jobs.Stream + key, Types.JobDefined, def, null);
                 return Results.Ok(View(c.Jobs.All[key], runner));
             });
@@ -97,6 +100,31 @@ public static class JobApi
             var run = runner.Start(key, "manual", out var error);
             return run is null ? Bad(error ?? "nicht gestartet") : Results.Ok(new { run });
         });
+        // Einen Lauf an den Tasker abgeben (Taloan, 23.09.2026: „dass der Job an den Tasker übergeben wurde, wo ich ihn
+        // abbrechen kann“). Der Job entsteht oder wird aktualisiert, gehört dem Anfragenden — auf sein Kontingent geht,
+        // was der Lauf schreibt — und läuft sofort los. Wer pflegen darf, darf das; es ist dieselbe Arbeit, nur nebenan.
+        api.MapPost("/jobs/{key}/uebergabe", (string key, UebergabeBody body, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (!ValidKey(key)) return Bad("key: a-z, 0-9, _");
+            var plugin = Blank(body.Service) is { } s && s.Contains('|') ? s.Split('|')[0] : Blank(body.Service) ?? "";
+            var fehler = c.With((_, _, write) =>
+            {
+                var cur = c.Jobs.All.GetValueOrDefault(key);
+                var p = Blank(plugin) ?? cur?.Plugin;
+                if (p is null) return Bad("plugin fehlt.");
+                if (!c.Plugins.All.TryGetValue(p, out var st) || !st.Enabled) return Bad($"Plugin {p} ist nicht installiert oder aus.");
+                var prms = body.Params ?? cur?.Params ?? new();
+                write(actor, Jobs.Stream + key, Types.JobDefined,
+                    new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, p, prms, null, true, cur?.TimeoutMinutes ?? 180, cur?.Service, cur?.Files, cur?.Role, actor), null);
+                return (IResult?)null;
+            });
+            if (fehler is not null) return fehler;
+            runner.Origin = $"{req.Scheme}://{req.Host}";
+            var run = runner.Start(key, "uebergabe", out var error);
+            return run is null ? Bad(error ?? "nicht gestartet") : Results.Ok(new { job = key, run });
+        });
+
         api.MapPost("/jobs/{key}/cancel", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing() : runner.Cancel(key) ? Results.Ok(new { cancelled = true }) : Bad("Der Job läuft nicht."));
 
         // Log eines Laufs: ganz oder die letzten n Zeilen — auch während er läuft
@@ -150,7 +178,7 @@ public static class JobApi
         var secrets = Secrets.Get(runner.Dir, j.Key).Keys.ToList();
         return new
         {
-            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes, files = j.Files, role = j.Role,
+            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes, files = j.Files, role = j.Role, owner = j.Owner,
             waiting = runner.Fach.Waiting(j, null).Count, consumed = j.Consumed.Count, written = j.Written.Count,
             secrets, nextDue = j.Enabled ? JobRunner.NextDue(j.Schedule) : null,
             running = runner.RunningId(j.Key),

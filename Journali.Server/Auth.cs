@@ -131,6 +131,7 @@ public static class Auth
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
         if (path.StartsWith("/api/media/presets") && !read) return Rights.Model;   // Vorschau-Presets sind Modell
         if (path.StartsWith("/api/files")) return Rights.Jobs;   // Dateibrowser des Servers: Jobs — oder Storage (Allowed)
+        if (path.StartsWith("/api/jobs") && path.EndsWith("/uebergabe")) return Rights.Write;   // einen Import abgeben ist Pflege, kein Jobbau
         if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)

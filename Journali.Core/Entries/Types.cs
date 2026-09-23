@@ -625,8 +625,10 @@ public sealed record PluginDataSet(string Name, string? Value);
 /// Ein Job. <paramref name="Role"/> sagt, mit welcher Rolle der Lauf arbeitet (Taloan, 23.09.2026: der Sicherungsjob
 /// scheiterte an „Rolle editor darf das nicht“) — null heisst wie bisher editor. Setzen darf sie nur, wer Anwender
 /// und Rollen verwaltet; sonst könnte sich jeder über einen Job Rechte verschaffen.
+/// <para><paramref name="Owner"/> ist der Anwender, auf dessen Kontingent der Lauf geht (Taloan, 23.09.2026) — sonst
+/// liefe ein Import als Job daran vorbei: der Urheber <c>job:&lt;key&gt;</c> ist kein Anwender.</para>
 /// </summary>
-public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null, string? Role = null);
+public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null, string? Role = null, string? Owner = null);
 
 /// <summary>
 /// Fächer eines Jobs (docs/tasker-dateien.md): <c>Base</c> = Verzeichnis mit in/, done/, failed/, out/ (leer = jobs/&lt;key&gt;;

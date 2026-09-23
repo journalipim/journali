@@ -1,28 +1,28 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-c4a406c2] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-c4a406c2]:hover { color: var(--neg);\n}\n.sources[data-v-c4a406c2] { gap: 4px;\n}\n.form[data-v-c4a406c2] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-c4a406c2] { display: flex; gap: 4px;\n}\n.src .node[data-v-c4a406c2] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-c4a406c2] { background: var(--accent-soft);\n}\n.src .node.current[data-v-c4a406c2], .src .node[data-v-c4a406c2]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-c4a406c2] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-c4a406c2] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-c4a406c2] { color: var(--muted);\n}\n.node.product .icon[data-v-c4a406c2] { color: var(--accent);\n}\n.node.variant .icon[data-v-c4a406c2] { color: var(--warn);\n}\n.label[data-v-c4a406c2] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-c4a406c2] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-c4a406c2] { width: 100%;\n}\n.form-grid td[data-v-c4a406c2] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-c4a406c2]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-c4a406c2] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-c4a406c2] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-c4a406c2] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-c4a406c2] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\r\n";document.head.append(s)})();
-const m = window.journali.vue;
-const Fragment = m.Fragment;
-const computed = m.computed;
-const createBlock = m.createBlock;
-const createCommentVNode = m.createCommentVNode;
-const createElementBlock = m.createElementBlock;
-const createElementVNode = m.createElementVNode;
-const createTextVNode = m.createTextVNode;
-const createVNode = m.createVNode;
-const isRef = m.isRef;
-const normalizeClass = m.normalizeClass;
-const normalizeStyle = m.normalizeStyle;
-const onMounted = m.onMounted;
-const openBlock = m.openBlock;
-const ref = m.ref;
-const renderList = m.renderList;
-const resolveComponent = m.resolveComponent;
-const toDisplayString = m.toDisplayString;
-const unref = m.unref;
-const vModelText = m.vModelText;
-const withCtx = m.withCtx;
-const withDirectives = m.withDirectives;
-const withKeys = m.withKeys;
-const withModifiers = m.withModifiers;
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-8b43d93f] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-8b43d93f]:hover { color: var(--neg);\n}\n.sources[data-v-8b43d93f] { gap: 4px;\n}\n.form[data-v-8b43d93f] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-8b43d93f] { display: flex; gap: 4px;\n}\n.src .node[data-v-8b43d93f] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-8b43d93f] { background: var(--accent-soft);\n}\n.src .node.current[data-v-8b43d93f], .src .node[data-v-8b43d93f]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-8b43d93f] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-8b43d93f] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-8b43d93f] { color: var(--muted);\n}\n.node.product .icon[data-v-8b43d93f] { color: var(--accent);\n}\n.node.variant .icon[data-v-8b43d93f] { color: var(--warn);\n}\n.label[data-v-8b43d93f] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-8b43d93f] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-8b43d93f] { width: 100%;\n}\n.form-grid td[data-v-8b43d93f] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-8b43d93f]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-8b43d93f] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-8b43d93f] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-8b43d93f] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-8b43d93f] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\r\n";document.head.append(s)})();
+const m$1 = window.journali.vue;
+const Fragment = m$1.Fragment;
+const computed = m$1.computed;
+const createBlock = m$1.createBlock;
+const createCommentVNode = m$1.createCommentVNode;
+const createElementBlock = m$1.createElementBlock;
+const createElementVNode = m$1.createElementVNode;
+const createTextVNode = m$1.createTextVNode;
+const createVNode = m$1.createVNode;
+const isRef = m$1.isRef;
+const normalizeClass = m$1.normalizeClass;
+const normalizeStyle = m$1.normalizeStyle;
+const onMounted = m$1.onMounted;
+const openBlock = m$1.openBlock;
+const ref = m$1.ref;
+const renderList = m$1.renderList;
+const resolveComponent = m$1.resolveComponent;
+const toDisplayString = m$1.toDisplayString;
+const unref = m$1.unref;
+const vModelText = m$1.vModelText;
+const withCtx = m$1.withCtx;
+const withDirectives = m$1.withDirectives;
+const withKeys = m$1.withKeys;
+const withModifiers = m$1.withModifiers;
 const h = window.journali;
 const api = h.api;
 const store = h.store;
@@ -32,6 +32,8 @@ const paneWidth = h.paneWidth;
 const Splitter = h.Splitter;
 const ImportHead = h.ImportHead;
 const TreePicker = h.TreePicker;
+const m = window.journali.vueRouter;
+const useRouter = m.useRouter;
 const SYSTEM = "solr";
 const ROLE = { group: "group", product: "product", productvariant: "variant" };
 const roleOf = (d) => ROLE[(d.type || "").toLowerCase()];
@@ -154,29 +156,6 @@ function ownValues(doc, skip = DEFAULT_SKIP) {
 function asStrings(suffix, v) {
   const one = (x) => typeof x === "boolean" ? x ? "true" : "false" : suffix === "date" || suffix === "dateTime" ? String(x).slice(0, 10) : String(x);
   return Array.isArray(v) ? v.map(one) : one(v);
-}
-function valueCommands(doc, node, attrs, seen, skip) {
-  const lang = doc.lang || "de";
-  const cmds = [];
-  const put = (attr, value, multiple = false) => {
-    const d = attrs.get(attr);
-    if (!d) return;
-    const locale = d.perLocale ? lang : null;
-    const args = { node, attribute: attr, locale };
-    if (multiple || d.multiple) {
-      args.values = Array.isArray(value) ? value : [value];
-      if (JSON.stringify(seen.get(`${attr}|${locale ?? ""}`)) === JSON.stringify(args.values)) return;
-    } else {
-      args.value = Array.isArray(value) ? value.join(", ") : value;
-      if (seen.get(`${attr}|${locale ?? ""}`) === args.value) return;
-    }
-    cmds.push({ op: "attribute.set", args });
-  };
-  if (doc.name) put("name", doc.name);
-  if (doc.description) put("description", doc.description);
-  if (roleOf(doc) === "variant" && doc.product_number) put("sku", doc.product_number);
-  for (const { key, suffix, value } of ownValues(doc, skip)) put(key, asStrings(suffix, value), Array.isArray(value));
-  return cmds;
 }
 const DEPTH = { group: 0, product: 1, variant: 2 };
 const ROLES = ["group", "product", "variant"];
@@ -371,92 +350,6 @@ async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new M
   const needs = modelNeeds(items.map((i) => i.doc), attrs, gruppen, pdefs, skip);
   sag?.(`analysiert: ${items.length} Knoten (${items.filter((i) => i.existing).length} vorhanden), ${needs.newAttrs.size} neue Attribute in ${needs.newGroups.size} neuen Gruppen`);
   return { items, needs, wurzeln: wurzeln.length };
-}
-async function schreibe({ plan, umgebung, ziel = null, skip = DEFAULT_SKIP }) {
-  const { api: api2, sag } = umgebung;
-  const { items, needs } = plan;
-  let geschrieben = 0, stapel = 0;
-  for (const [k, g] of needs.newGroups) {
-    await api2.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.label }, activeFrom: g.activeFrom }, "PUT");
-    sag?.(`Attributgruppe ${k} (${g.label})${g.activeFrom ? " ab " + g.activeFrom : ""} angelegt`);
-  }
-  for (const [k, from] of needs.raise) {
-    const g = new Map((umgebung.modell?.groups ?? []).map((x) => [x.key, x])).get(k);
-    await api2.post(`/api/model/groups/${k}`, { key: k, label: g?.label ?? {}, activeFrom: from }, "PUT");
-    sag?.(`Attributgruppe ${k}: aktiv ab ${from ?? "überall"} (Werte kommen weiter oben vor)`);
-  }
-  for (const [k, d] of needs.newAttrs) await api2.post(`/api/model/attributes/${k}`, d, "PUT");
-  if (needs.newAttrs.size) sag?.(`${needs.newAttrs.size} Attribute angelegt`);
-  await umgebung.frisch?.();
-  const attrMap = new Map((umgebung.modell?.attributes ?? []).map((a) => [a.key, a]));
-  const refOf = /* @__PURE__ */ new Map();
-  const eigene = async (id) => {
-    const n2 = await api2.get(`/api/nodes/${encodeURIComponent(id)}`);
-    return new Map(n2.values.filter((v) => !v.row).map((v) => [`${v.attribute}|${v.locale ?? ""}`, v.values ?? v.value]));
-  };
-  let refNr = 0;
-  const baue = async (it, cmds2) => {
-    let node;
-    if (it.existing) {
-      node = it.existing.id;
-      cmds2.push(...valueCommands(it.doc, node, attrMap, await eigene(node), skip));
-    } else {
-      const ref2 = "n" + ++refNr;
-      const parent = it.parentId != null && refOf.has(it.parentId) ? refOf.get(it.parentId) : ziel || null;
-      if (it.role === "group") cmds2.push({ op: "group.create", ref: ref2, args: { parent, name: it.doc.name || it.doc.remote_id || it.doc.master_id } });
-      else if (it.role === "product") {
-        if (!parent) throw new Error(`Produkt ${it.doc.name}: keine Zielgruppe`);
-        cmds2.push({ op: "product.create", ref: ref2, args: { group: parent } });
-      } else {
-        if (!parent) throw new Error(`Variante ${it.doc.name}: kein Produkt darüber`);
-        cmds2.push({ op: "variant.create", ref: ref2, args: { product: parent, axisValues: {} } });
-      }
-      node = "@" + ref2;
-      cmds2.push({ op: "external.link", args: { node, system: SYSTEM, id: it.doc.master_id } });
-      if (it.top) {
-        cmds2.push({ op: "groups.attach", args: { node, groups: needs.used } });
-        if (it.role !== "variant") cmds2.push({ op: "label.set", args: { node, attribute: "name" } });
-      }
-      cmds2.push(...valueCommands(it.doc, node, attrMap, /* @__PURE__ */ new Map(), skip));
-    }
-    if (it.top && it.existing) {
-      const haben = (it.existing.groups ?? "").split(",").filter(Boolean);
-      const zusammen = [.../* @__PURE__ */ new Set([...haben, ...needs.used])].sort();
-      if (zusammen.length !== haben.length) cmds2.push({ op: "groups.attach", args: { node, groups: zusammen } });
-    }
-    refOf.set(it.doc.id, node);
-  };
-  const sende = async (cmds2, marke) => {
-    if (!cmds2.length) return;
-    const res = await api2.batchChunked(cmds2, { size: 2e3, continueOnError: true, maxErrorPercent: 20, label: marke });
-    geschrieben += res.results.length;
-    stapel++;
-    for (const e of res.errors.slice(0, 20)) sag?.(`✗ übersprungen: ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)} — ${e.message}`);
-    if (res.errors.length > 20) sag?.(`… und ${res.errors.length - 20} weitere übersprungen`);
-    if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`);
-    for (const r of res.results) if (r.ref) {
-      for (const [k, v] of refOf) if (v === "@" + r.ref) refOf.set(k, r.node);
-    }
-  };
-  const cmds = [];
-  for (const it of items) if (it.role === "group") await baue(it, cmds);
-  await sende(cmds, "Import (Solr): Gruppen");
-  const produkte = items.filter((i) => i.role === "product");
-  let n = 0;
-  for (const p of produkte) {
-    sag?.(`schreibe … ${++n}/${produkte.length}`);
-    const pc = [];
-    await baue(p, pc);
-    for (const v of items) if (v.role === "variant" && v.parentId === p.doc.id) await baue(v, pc);
-    await sende(pc, `Import (Solr): ${n}/${produkte.length}`);
-  }
-  for (const v of items) if (v.role === "variant" && !produkte.some((p) => p.doc.id === v.parentId)) {
-    const vc = [];
-    await baue(v, vc);
-    await sende(vc, "Import (Solr): Varianten");
-  }
-  sag?.(geschrieben ? `fertig: ${geschrieben} Einträge in ${stapel} Stapeln` : "nichts zu schreiben — alles schon so");
-  return { geschrieben, stapel };
 }
 async function planeRelationen({ client, umgebung, wurzeln }) {
   const { api: api2, modell, baum, sag } = umgebung;
@@ -672,15 +565,18 @@ const _hoisted_77 = {
   key: 1,
   class: "pos"
 };
-const _hoisted_78 = {
+const _hoisted_78 = { class: "mono" };
+const _hoisted_79 = {
   key: 2,
   class: "muted"
 };
-const _hoisted_79 = { class: "section" };
+const _hoisted_80 = { class: "section" };
+const JOB = "solr_import";
 const _sfc_main = {
   __name: "View",
   setup(__props) {
     const srcW = paneWidth("import.src", 340);
+    const router = useRouter();
     const saved = JSON.parse(localStorage.getItem("journali.import.solr") || "{}");
     const base = ref(saved.base || "");
     const target = ref(saved.target || "");
@@ -961,19 +857,28 @@ const _sfc_main = {
         return;
       }
       if (!plan.value) return;
-      busy.value = "schreibe …";
+      busy.value = "übergebe …";
       result.value = null;
-      let written = 0, batches = 0;
       try {
-        const r = await schreibe({ plan: plan.value, umgebung, ziel: target.value || null, skip: skip.value });
-        written = r.geschrieben;
-        batches = r.stapel;
-        result.value = { written, batches, error: null };
-        await store.poll(true);
-        await tree.load();
+        const { wurzeln } = gewaehlt();
+        const r = await api.post(`/api/jobs/${JOB}/uebergabe`, {
+          label: `Import (Solr) · ${wurzeln.length} Wurzel${wurzeln.length === 1 ? "" : "n"}`,
+          service: "solr",
+          params: {
+            base: base.value,
+            roots: wurzeln.join(","),
+            target: target.value || "",
+            skip: skipText.value || "",
+            relations: "false",
+            dry_run: "false"
+          }
+        });
+        result.value = { job: r.job, run: r.run, error: null };
+        say(`an den Tasker übergeben · Lauf ${r.run}`);
+        store.toast("▶ An den Tasker übergeben", "ok", { label: "⏱ Jobs", title: "Fortschritt, Abbrechen und das Protokoll", run: () => router.push("/p/tasker/jobs") });
         plan.value = null;
       } catch (e) {
-        result.value = { written, batches, error: e.message };
+        result.value = { error: e.message };
         store.toast(e.message);
         say("Fehler: " + e.message);
       } finally {
@@ -1763,7 +1668,7 @@ const _sfc_main = {
                 ])) : createCommentVNode("v-if", true)
               ]),
               result.value ? (openBlock(), createElementBlock("div", _hoisted_75, [
-                _cache[33] || (_cache[33] = createElementVNode(
+                _cache[35] || (_cache[35] = createElementVNode(
                   "h2",
                   null,
                   "Ergebnis",
@@ -1773,19 +1678,31 @@ const _sfc_main = {
                 result.value.error ? (openBlock(), createElementBlock(
                   "div",
                   _hoisted_76,
-                  toDisplayString(result.value.error) + " — " + toDisplayString(result.value.written) + " Einträge in " + toDisplayString(result.value.batches) + " Stapeln davor geschrieben.",
+                  toDisplayString(result.value.error),
                   1
                   /* TEXT */
-                )) : result.value.written ? (openBlock(), createElementBlock("div", _hoisted_77, [
-                  createTextVNode(
-                    toDisplayString(result.value.written) + " Einträge in " + toDisplayString(result.value.batches) + " Stapeln → ",
+                )) : result.value.job ? (openBlock(), createElementBlock("div", _hoisted_77, [
+                  _cache[33] || (_cache[33] = createTextVNode(
+                    "an den Tasker übergeben · Lauf ",
+                    -1
+                    /* CACHED */
+                  )),
+                  createElementVNode(
+                    "span",
+                    _hoisted_78,
+                    toDisplayString(result.value.run),
                     1
                     /* TEXT */
                   ),
-                  createVNode(_component_router_link, { to: "/journal" }, {
+                  _cache[34] || (_cache[34] = createTextVNode(
+                    " → ",
+                    -1
+                    /* CACHED */
+                  )),
+                  createVNode(_component_router_link, { to: "/p/tasker/jobs" }, {
                     default: withCtx(() => [..._cache[32] || (_cache[32] = [
                       createTextVNode(
-                        "Journal",
+                        "⏱ Jobs",
                         -1
                         /* CACHED */
                       )
@@ -1793,10 +1710,10 @@ const _sfc_main = {
                     _: 1
                     /* STABLE */
                   })
-                ])) : (openBlock(), createElementBlock("div", _hoisted_78, "Nichts zu schreiben."))
+                ])) : (openBlock(), createElementBlock("div", _hoisted_79, "Nichts zu schreiben."))
               ])) : createCommentVNode("v-if", true),
-              createElementVNode("div", _hoisted_79, [
-                _cache[34] || (_cache[34] = createElementVNode(
+              createElementVNode("div", _hoisted_80, [
+                _cache[36] || (_cache[36] = createElementVNode(
                   "h2",
                   null,
                   "Protokoll",
@@ -1832,7 +1749,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-c4a406c2"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-8b43d93f"]]);
 const entry = {
   views: [{ path: "import", topic: "import", label: "Solr", icon: "⇩", component: View }]
 };
