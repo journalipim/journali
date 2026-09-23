@@ -130,4 +130,11 @@ stehen dort als solche markiert.
   **Init Team** mit (`team:init`, `Model.InitTeam`): nicht löschbar, umbenennbar,
   trägt das Grundkontingent; der erste Administrator gehört hinein, und wer kein
   eigenes Team trägt, arbeitet dort.
+  **Führen und dazugehören sind zweierlei** (Taloan, 23.09.): man kann Manager
+  mehrerer Teams sein, aber **Mitglied nur eines** — der IT-Administrator von
+  Südeuropa führt Spanien, Frankreich und Portugal und sitzt in Team Deutschland.
+  Die Balken in der Statusleiste zeigen immer das Team der **Mitgliedschaft**, am
+  Ende der Zahlerkette. Ein Team kann über ein anderes abrechnen, das selbst über
+  ein drittes abrechnet; **Kreise sind verboten** (a→b→a, a→b→c→a) und werden beim
+  Setzen abgelehnt (`Teams.WaereKreis`).
 - `docs/architektur.md` — das Prinzip, die Schichten, die Achsen, was offen ist

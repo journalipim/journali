@@ -129,8 +129,9 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
     head = c.Head,
     nodes = c.Read(t => t.Nodes.Count),
     // Nutzung für die Statusleiste (Taloan, 22.09.2026): Woche und Monat, mehr steht in den Einstellungen.
-    // Wessen Nutzung (Taloan, 23.09.2026): wer die Anlage verwaltet, sieht die Anlage gegen die Lizenz; wer in einem
-    // Team arbeitet, sein Team gegen dessen Kontingent — jeder sieht die Rechnung, die ihn betrifft.
+    // Wessen Nutzung (Taloan, 23.09.2026): „die beiden kleinen Balken oben sollen dem Anwender anzeigen, was für ein
+    // Verbrauchsstand in seinem Team ist“ — das Team der Mitgliedschaft, am Ende der Zahlerkette. Auch beim
+    // Administrator: er führt vielleicht viele Teams, gehört aber genau einem an.
     usage = Nutzung(req, c),
     built = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location),   // Bau-Stand des laufenden Servers (Taloan, 21.09.: „Speichern setzt meine Änderungen zurück“ — alter Server kannte die Felder nicht)
 });
@@ -145,13 +146,13 @@ object Nutzung(HttpRequest req, Catalog c)
     };
     var woche = Usage.WeekStart(today).AddDays(7);
     var monat = Usage.MonthStart(today).AddMonths(1);
-    // Der Administrator verantwortet die Anlage — er sieht sie auch
-    if (Auth.Has(req, c, Rights.Users))
-        return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Anlage"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Anlage") });
     return c.With((_, _, _) =>
     {
-        if (TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string) is not { } mein || c.Teams.Get(mein) is null)
+        // Ohne Anmeldung (offene Anlage) gilt die Lizenz; wer angemeldet, aber in keinem Team ist, hat 0
+        if (req.HttpContext.Items["user"] is not string wer || wer.Length == 0)
             return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Anlage"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Anlage") });
+        if (TeamApi.TeamOf(c, wer) is not { } mein || c.Teams.Get(mein) is null)
+            return c.ReadUsage(u => new { week = Teil(u.Sum(new HashSet<string> { wer }, Usage.WeekStart(today), today), 0, woche, "kein Team"), month = Teil(u.Sum(new HashSet<string> { wer }, Usage.MonthStart(today), today), 0, monat, "kein Team") });
         var zahler = c.Teams.Payer(mein);
         var zt = c.Teams.Get(zahler)!;
         var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();

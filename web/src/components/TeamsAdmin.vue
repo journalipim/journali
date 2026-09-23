@@ -84,7 +84,7 @@ async function entfernen(t) {
             <select :value="t.keysFrom ?? ''" :disabled="t.keys.length > 0" :title="t.keys.length ? 'eigene Schlüssel hinterlegt' : 'woher die Token kommen'"
                     @change="speichern(t, 'keysFrom', $event.target.value)">
               <option value="">eigenes Kontingent</option>
-              <option v-for="z in teams.filter(x => x.key !== t.key && !x.keysFrom)" :key="z.key" :value="z.key">über Team {{ z.label }}</option>
+              <option v-for="z in teams.filter(x => x.key !== t.key)" :key="z.key" :value="z.key">über Team {{ z.label }}</option>
             </select>
           </td>
           <td><input type="number" min="0" :value="t.entriesWeek" style="width:80px" @change="speichern(t, 'entriesWeek', Number($event.target.value))" /></td>

@@ -74,18 +74,18 @@ public static class TeamApi
                 // Ein Team ohne Manager gibt es nicht (Taloan, 23.09.2026): beim Anlegen benennt der Administrator mindestens einen
                 var managers = body.Managers?.Select(Blank).OfType<string>().Distinct().ToArray() ?? cur?.Managers ?? [];
                 // Wer ein Team führt, gehört hinein (Taloan, 23.09.2026) — sonst steht die Führung neben dem Team statt darin
+                // Führen und dazugehören sind zweierlei (Taloan, 23.09.2026: „man kann zwar Manager von mehreren Teams
+                // sein, aber nur Mitglied von einem Team“) — wer schon ein Team hat, bleibt dort und führt trotzdem.
                 foreach (var m in managers)
-                {
-                    if (c.Users.All.GetValueOrDefault(m) is not { } mu) return Bad($"Unbekannter Anwender {m}.");
-                    if (mu.Team is { Length: > 0 } andere && andere != key) return Bad($"{mu.Name ?? mu.Key} steht im Team {c.Teams.Get(andere)?.Label ?? andere} — dort erst austragen.");
-                }
+                    if (c.Users.All.GetValueOrDefault(m) is null) return Bad($"Unbekannter Anwender {m}.");
                 if (managers.Length == 0 && cur is null && c.Users.All.Count > 0) return Bad("Mindestens ein Teammanager — notfalls du selbst.");
                 var keysFrom = body.KeysFrom is null ? cur?.KeysFrom : Blank(body.KeysFrom);
                 if (keysFrom == key) return Bad("Ein Team kann nicht seine eigenen Schlüssel mitbenutzen.");
                 if (keysFrom is { } f)
                 {
                     if (c.Teams.Get(f) is not { } zahler) return Bad($"Unbekanntes Team {f}.");
-                    if (zahler.KeysFrom is { Length: > 0 }) return Bad($"„{zahler.Label}“ benutzt selbst fremde Schlüssel — eine Stufe, keine Kette.");
+                    // Ein Kreis hätte kein Ende (Taloan, 23.09.2026: „wir müssen zirkuläre Bezüge beim Verbrauch verhindern“)
+                    if (c.Teams.WaereKreis(key, f)) return Bad($"„{zahler.Label}“ rechnet am Ende wieder über dieses Team ab — das ist ein Kreis.");
                 }
                 var included = body.IncludedTokens ?? cur?.IncludedTokens ?? 0;
                 // Das Inklusivkontingent gibt es einmal, am ersten Team (Taloan, 23.09.2026): sonst wäre jedes neue Team ein neuer Freibetrag

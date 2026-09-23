@@ -71,9 +71,31 @@ public sealed class Teams : IProjection
     /// <summary>Team 1: das zuerst angelegte. Nur dort gibt es das Grundrauschen, und dorthin fällt, wer kein Team hat.</summary>
     public TeamState? Primary => _all.Values.OrderBy(t => t.CreatedNumber).FirstOrDefault();
 
-    /// <summary>Wer zahlt: das Team selbst, oder das, dessen Schlüssel es mitbenutzt (eine Stufe, kein Kettenschluss).
-    /// Darum bringt ein zweites Team ohne eigenen Schlüssel kein zweites Kontingent — beide hängen am selben Zahler.</summary>
-    public string Payer(string team) => _all.GetValueOrDefault(team)?.KeysFrom is { Length: > 0 } f && _all.ContainsKey(f) ? f : team;
+    /// <summary>
+    /// Wer zahlt: das Team selbst, oder am Ende der Kette das, dessen Kontingent gilt (Taloan, 23.09.2026: „das Team
+    /// kann wiederum auf ein anderes Team verweisen; auf jeden Fall kommt man irgendwann an Limits“). Ein Kreis
+    /// (a→b→a) endet hier beim zuletzt gesehenen Team, statt die Anwendung stehenzulassen — verhindert wird er
+    /// beim Setzen. Darum bringt ein Team ohne eigenes Kontingent keins dazu: alle hängen am selben Zahler.
+    /// </summary>
+    public string Payer(string team)
+    {
+        var gesehen = new HashSet<string>();
+        var cur = team;
+        while (gesehen.Add(cur) && _all.GetValueOrDefault(cur)?.KeysFrom is { Length: > 0 } f && _all.ContainsKey(f)) cur = f;
+        return cur;
+    }
+
+    /// <summary>Würde <paramref name="team"/> mit diesem Zahler im Kreis laufen? (a→b→a, a→b→c→a)</summary>
+    public bool WaereKreis(string team, string zahler)
+    {
+        var gesehen = new HashSet<string> { team };
+        var cur = zahler;
+        while (true)
+        {
+            if (!gesehen.Add(cur)) return true;
+            if (_all.GetValueOrDefault(cur)?.KeysFrom is { Length: > 0 } f && _all.ContainsKey(f)) cur = f; else return false;
+        }
+    }
     /// <summary>Die Teams, die an diesem Zahler hängen (er selbst eingeschlossen).</summary>
     public IEnumerable<string> Dependents(string payer) => _all.Keys.Where(k => Payer(k) == payer);
 
