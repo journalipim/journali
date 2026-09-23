@@ -24,10 +24,10 @@ public static class BackupApi
     /// Was neben dem Journal liegt und ohne das ein wiederhergestelltes System nicht läuft (Taloan, 23.09.2026:
     /// „wo liegen denn Rollen und Rechte, Workflows usw.?“ — die stehen im Journal; diese drei Dateien nicht):
     /// <c>auth.json</c> (Passwort-Hashes, API-Token, Sitzungen), <c>media.json</c> (Speicher-Einstellung, bei S3 mit
-    /// Zugangsdaten), <c>jobs/secrets.json</c> (Token der Jobs). Wer sie mitsichert, hat Geheimnisse in der Sicherung
+    /// Zugangsdaten), <c>mail.json</c> (Mailserver mit Passwort), <c>jobs/secrets.json</c> (Token der Jobs). Wer sie mitsichert, hat Geheimnisse in der Sicherung
     /// — wie im Datenverzeichnis selbst. Wer sie weglässt, kommt in ein wiederhergestelltes System nicht hinein.
     /// </summary>
-    private static readonly string[] Dateien = ["auth.json", "media.json", Path.Combine("jobs", "secrets.json")];
+    private static readonly string[] Dateien = ["auth.json", "media.json", "mail.json", Path.Combine("jobs", "secrets.json")];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public static void Map(RouteGroupBuilder api, IJournal journal, string dataDir, string pluginDir)

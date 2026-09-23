@@ -211,6 +211,20 @@ des Betreibers, sondern Vertragspartner des Kunden). Übertragen werden die Date
 gewählten Knotens, nur auf Klick. Die Recherche im Internet (Anreicherung, Plugin `enrich`) nutzt
 das Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
 
+## Mail
+
+Einstellungen → ✉ Mail: Server, Port, STARTTLS, Benutzer, Passwort, Absender.
+Liegt als `mail.json` im Datenverzeichnis, neben `media.json` und `auth.json` —
+nie im Journal. Das Passwort kommt maskiert zurück; wer das Feld nicht anfasst,
+lässt es stehen. Ein Knopf sendet eine Probe.
+
+Gesendet wird mit dem, was .NET mitbringt (`SmtpClient`): Klartext auf 25,
+STARTTLS auf 587. **Implizites TLS auf 465 geht nicht** — dafür bräuchte es ein
+Paket, und der Server hat nur Npgsql.
+
+Der Versand steht als Dienst bereit (`Mailer.SendAsync`); ohne Einstellung sendet
+er nichts und sagt es, statt still zu scheitern.
+
 ## Sicherung und Wiederherstellung
 
 Zwei Wege, die sich nicht ersetzen.

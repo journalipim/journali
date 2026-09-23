@@ -115,7 +115,7 @@ public static class Auth
         if (path.StartsWith("/api/plugins") && !path.Contains("/data/") && !path.EndsWith("/data") && !path.EndsWith("/run")) return Rights.Plugins;   // Plugin-Daten (auch der Sammel-PUT …/data) sind Pflege
         // Wiederherstellen aus einer Sicherung ist Systemsache (Taloan, 23.09.2026: „ein Restore muss nicht regelmässig
         // ausgeführt werden und ist eine Systemsache“) — nicht zu verwechseln mit dem Zurückholen eines Knotens
-        if (path.StartsWith("/api/restore") || path.StartsWith("/api/backup")) return Rights.Users;
+        if (path.StartsWith("/api/restore") || path.StartsWith("/api/backup") || path.StartsWith("/api/mail")) return Rights.Users;
         if (path.Contains("/retire") || path.Contains("/restore") || path.Contains("/undo") || (method == "DELETE" && path.StartsWith("/api/nodes/") && path.Count(ch => ch == '/') == 3)) return Rights.Retire;
         if (path.Contains("/release") || path.StartsWith("/api/versions") || path.Contains("/versions")) return Rights.Release;
         return Rights.Write;
