@@ -204,3 +204,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     verlassen.
   - Rate Limit laut Kopfzeile `x-ratelimit-limit: 300` (die Dokumentation nennt 60 je Minute).
   - Im Kundenportal besser „Update subscription quantity“ aus: die Grenzen hängen am Tarif, nicht an einer Anzahl.
+  - Tarifwechsel: **„Apply changes with proration and invoice immediately“** — journali gibt die neuen Grenzen
+    sofort frei (`validate` meldet die neue Variante sofort), also wird auch sofort abgerechnet; beim Wechsel nach
+    unten schreibt die Verrechnung den Rest gut. „Mit Verrechnung am Periodenende“ hiesse einen Monat auf Kredit,
+    „ohne Verrechnung“ den Rest des Monats im höheren Tarif umsonst.
