@@ -178,8 +178,11 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   Instanz-Kennung und Team), mit `activation_limit` 1 — derselbe Schlüssel nicht für ein zweites Team. Eingelöst
   wird wie heute beim Team, das sein Kontingent selbst trägt.
 
-  *Zu entscheiden:* wie lange der letzte Stand ohne Verbindung gilt (Kulanz) · ob Anforderung und Schlüssel zum
-  Kopieren als Weg für Instanzen ohne Internet bleiben.
+  *Entschieden (Taloan, 23.09.2026):* ohne Verbindung zum Lizenzserver gilt der letzte signierte Stand noch
+  **7 Tage**, danach der Testbetrieb.
+
+  *Zu entscheiden:* ob Anforderung und Schlüssel zum Kopieren als zweiter Weg für Instanzen ohne Internet bleiben
+  (Schlüssel mit fester Laufzeit, im Voraus bezahlt) — oder journali eine Verbindung voraussetzt.
 
   *Vorbereitet (23.09.2026):* der Strato-vServer — Ubuntu 26.04 LTS, aktuell, automatische Sicherheitsupdates,
   Firewall des Kundenmenüs lässt nur 22, 80, 443 durch, SSH nur mit Schlüssel, NPMplus als Reverse Proxy (Verwaltung
