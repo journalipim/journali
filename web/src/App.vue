@@ -111,7 +111,9 @@ function railDrop(target) {
 
     <header class="status" v-if="!route.query.popup">
       <span class="brand" title="journali PIM">journali PIM</span>
-      <span class="dot" :class="{ online: store.online, offline: store.online === false }">●</span>
+      <!-- Version und Bau statt eines zweiten Lämpchens (Taloan, 23.09.2026) — das in der Leiste links sagt dasselbe -->
+      <span v-if="store.online" class="mono muted" :title="`journali ${store.version ?? ''} · gebaut ${store.builtAt}`">{{ store.version }}<span v-if="store.build"> ·{{ store.build }}</span></span>
+      <span v-else class="dot" :class="{ offline: store.online === false }">●</span>
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>

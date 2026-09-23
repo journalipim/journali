@@ -48,6 +48,9 @@ export const store = reactive({
   head: 0,
   nodes: 0,
   usage: null,
+  version: '',      // Fassung des Servers — steht oben in der Leiste
+  build: '',        // Bau kurz: TTMM.hhmm
+  builtAt: '',      // dasselbe lang, für den Tooltip
   model: null,           // { locales, channels, attributes } vom Server
   toasts: [],
   error: '',
@@ -125,6 +128,14 @@ export const store = reactive({
       this.head = h.head
       this.nodes = h.nodes
       this.usage = h.usage ?? null   // Nutzung für die Statusleiste (Taloan, 22.09.)
+      // Fassung und Bau (Taloan, 23.09.): kurz oben, lang im Tooltip
+      this.version = h.version ?? ''
+      if (h.built) {
+        const d = new Date(h.built)
+        const zz = n => String(n).padStart(2, '0')
+        this.build = `${zz(d.getDate())}${zz(d.getMonth() + 1)}.${zz(d.getHours())}${zz(d.getMinutes())}`
+        this.builtAt = d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      }
       // der Stand des Teams — einmal je Minute, nicht bei jedem Puls: andere im Team verbrauchen auch (Taloan, 23.09.)
       if (this.auth.enabled && this.auth.user && Date.now() - (this._aiAt ?? 0) > 60000) {
         this._aiAt = Date.now()

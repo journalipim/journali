@@ -128,6 +128,11 @@ app.Use(async (ctx, next) =>
     }
 });
 
+// Was hier wirklich läuft (Taloan, 23.09.2026): beides einmal beim Start lesen. Der Zeitstempel der Datei ändert sich
+// beim nächsten Bau — wer ihn bei jedem Aufruf liest, meldet einen Stand, den er gar nicht geladen hat.
+var gebautAm = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location);
+var fassung = typeof(Program).Assembly.GetName().Version?.ToString(3);
+
 var api = app.MapGroup("/api");
 Auth.Map(api, dataDir);
 if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWORD"], builder.Configuration["JOURNALI_ADMIN_USER"]) is { } recovered) Console.WriteLine("journali: " + recovered);
@@ -143,7 +148,8 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
     // Verbrauchsstand in seinem Team ist“ — das Team der Mitgliedschaft, am Ende der Zahlerkette. Auch beim
     // Administrator: er führt vielleicht viele Teams, gehört aber genau einem an.
     usage = Nutzung(req, c),
-    built = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location),   // Bau-Stand des laufenden Servers (Taloan, 21.09.: „Speichern setzt meine Änderungen zurück“ — alter Server kannte die Felder nicht)
+    built = gebautAm,      // Stand der LAUFENDEN Fassung — einmal beim Start gelesen (Taloan, 21.09.)
+    version = fassung,     // die Fassung, die läuft — steht oben in der Leiste
 });
 
 /// <summary>Die Zahlen der Statusleiste — für die Anlage oder für das eigene Team, je nachdem, wer fragt.</summary>
