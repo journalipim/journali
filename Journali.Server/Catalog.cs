@@ -129,6 +129,16 @@ public sealed class Catalog
                 {
                     Apply(_journal.Append("system", Users.Stream + u.Key, Types.UserDefined, Types.Serialize(new UserDefined(u.Name, u.Email, u.Role, u.Enabled, erstesTeam.Key)))); n++;
                 }
+            // Das erste Team trägt die Limits der Lizenz (Taloan, 23.09.2026) — eine Anlage von vorher hat noch keine
+            if (LicenceDir is { } ld && _teams.Primary is { EntriesWeek: 0, EntriesMonth: 0 } leer)
+            {
+                var lic2 = LicenceFile.Load(ld).Lic;
+                if (lic2.EntriesWeek > 0 || lic2.EntriesMonth > 0)
+                {
+                    Apply(_journal.Append("system", Teams.Stream + leer.Key, Types.TeamDefined, Types.Serialize(
+                        new TeamDefined(leer.Label, leer.Note, leer.MonthlyTokens, leer.DailyTokens, leer.Enabled, leer.KeysFrom, leer.IncludedTokens, leer.Managers, leer.Models, lic2.EntriesWeek, lic2.EntriesMonth)))); n++;
+                }
+            }
             // Ein Team ohne Führung ist unbedienbar (Taloan, 23.09.2026: „lässt sich immer noch nicht einstellen“) — die
             // Anlage repariert das selbst: der erste Benutzer mit dem Recht „Benutzer und Rollen“ führt es.
             if (_teams.Primary is { Managers.Length: 0 } ohne && _users.All.Count > 0)

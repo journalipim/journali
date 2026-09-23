@@ -22,7 +22,6 @@ const MODELLE = {
   anthropic: ['claude-sonnet-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
   openai: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'],
 }
-const usage = ref(null), usageHist = ref([]), usagePeriod = ref('day'), usageBusy = ref(false)
 const jt = ref(null)   // journali-Token dieses Teams: Limits und Verbrauch
 const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
 
@@ -33,6 +32,12 @@ const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.
 const lizenz = ref(null)
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
 /// Anteil am Limit — 0 heisst: nichts zugeteilt, dann gibt es auch keinen Anteil
+/// Was UsageBars zeigt: die Zahlen dieses Teams gegen seine Limits — nicht die der ganzen Anlage
+const teamUsage = computed(() => jt.value && {
+  week: { used: jt.value.used?.week ?? 0, max: jt.value.limits?.week ?? 0 },
+  month: { used: jt.value.used?.month ?? 0, max: jt.value.limits?.month ?? 0 },
+  day: { used: jt.value.used?.day ?? 0 },
+})
 const anteilJt = zeitraum => {
   const grenze = jt.value?.limits?.[zeitraum] ?? 0
   return grenze ? Math.round(((jt.value?.used?.[zeitraum] ?? 0) / grenze) * 100) : 0
@@ -55,13 +60,7 @@ async function details() {
   try { lizenz.value = await api.get('/api/licence') } catch { lizenz.value = null }
   try { jt.value = await api.get(`/api/teams/${p}/tokens/journali`) } catch { jt.value = null }
 }
-async function ladeNutzung(period = usagePeriod.value) {
-  usagePeriod.value = period; usageBusy.value = true
-  try { const u = await api.get(`/api/usage?history=${period}&limit=${period === 'day' ? 30 : period === 'week' ? 26 : 24}`); usage.value = u; usageHist.value = u.history ?? [] }
-  catch (e) { store.toast(e.message) }
-  finally { usageBusy.value = false }
-}
-onMounted(async () => { await load(); await ladeNutzung() })
+onMounted(load)
 
 async function schluessel() {
   if (!keyIn.value.wert) { store.toast('Schlüssel fehlt'); return }
@@ -256,7 +255,7 @@ async function widerrufen(tok) {
           </td>
         </tr>
       </tbody></table>
-      <UsageBars :usage="usage" :history="usageHist" :period="usagePeriod" :busy="usageBusy" @period="ladeNutzung" />
+      <UsageBars v-if="jt" :usage="teamUsage" />
     </div>
   </template>
 </template>

@@ -37,8 +37,8 @@ async function einspielen() {
         <td class="muted">{{ lic?.grund ?? '' }}</td>
       </tr>
       <tr v-if="lic?.validUntil"><td class="muted">gültig bis</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
-      <tr><td class="muted" title="Einträge im Journal je Woche">▤ Einträge / Woche</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
-      <tr><td class="muted" title="Einträge im Journal je Monat">▦ Einträge / Monat</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
+      <tr><td class="muted" title="journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.">▤ Token / Woche</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
+      <tr><td class="muted" title="journali-Token je Monat: jede Pflege schreibt einen Eintrag ins Journal.">▦ Token / Monat</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
     </tbody></table>
 
     <div v-if="darf()" style="margin-top:8px">
