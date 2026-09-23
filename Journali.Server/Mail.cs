@@ -1,5 +1,6 @@
-using System.Net;
-using System.Net.Mail;
+using MailKit.Net.Smtp;
+using MailKit.Security;
+using MimeKit;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static Journali.Server.ModelApi;
@@ -10,23 +11,37 @@ namespace Journali.Server;
 /// Mailserver (Taloan, 23.09.2026: „was wir in den Settings noch brauchen, ist eine Mailserver-Konfiguration zum
 /// Versenden von Mails“). Liegt als <c>mail.json</c> im Datenverzeichnis, neben <c>media.json</c> und
 /// <c>auth.json</c> — nie im Journal, denn da steht ein Passwort drin.
-/// <para>Gesendet wird mit dem, was .NET mitbringt (<see cref="SmtpClient"/>): Klartext auf 25, STARTTLS auf 587.
-/// Implizites TLS auf 465 kann diese Klasse nicht — dafür bräuchte es ein Paket, und der Server hat nur Npgsql.</para>
+/// <para>Gesendet wird mit MailKit — das zweite Paket im Server neben Npgsql (Taloan, 23.09.2026, auf den Hinweis, dass
+/// implizites TLS auf 465 fehlte: „ich weiss zwar, was ich kann, aber nicht, was die anderen für Möglichkeiten
+/// haben“). Damit gehen alle drei Wege: ohne Verschlüsselung (25), STARTTLS (587) und implizites TLS (465).</para>
 /// </summary>
 public sealed record MailConfig(
     string? Host = null,
     int Port = 587,
-    bool StartTls = true,
+    /// <summary>Verschlüsselung: <c>starttls</c> (587), <c>ssl</c> (465, implizit), <c>none</c> (25).</summary>
+    string Security = MailConfig.StartTlsMode,
     string? User = null,
     string? Password = null,
     string? From = null,          // Absenderadresse
     string? FromName = null,      // Anzeigename
     string? ReplyTo = null)
 {
+    public const string StartTlsMode = "starttls";
+    public const string SslMode = "ssl";
+    public const string NoneMode = "none";
+    public static readonly string[] Modes = [StartTlsMode, SslMode, NoneMode];
+
     public bool Ready => !string.IsNullOrWhiteSpace(Host) && !string.IsNullOrWhiteSpace(From);
     public MailConfig Masked() => this with { Password = string.IsNullOrEmpty(Password) ? null : "••••••••" };
     /// <summary>Kurzform für Meldungen — ohne Geheimnis.</summary>
-    public string Spec => Ready ? $"{Host}:{Port}{(StartTls ? " (STARTTLS)" : "")} als {From}" : "nicht eingerichtet";
+    public string Spec => Ready ? $"{Host}:{Port} ({Security}) als {From}" : "nicht eingerichtet";
+    /// <summary>Was MailKit daraus macht. Unbekanntes wird STARTTLS — der übliche Fall.</summary>
+    public SecureSocketOptions Socket => Security switch
+    {
+        SslMode => SecureSocketOptions.SslOnConnect,
+        NoneMode => SecureSocketOptions.None,
+        _ => SecureSocketOptions.StartTls,
+    };
 }
 
 public static class MailConfigFile
@@ -52,22 +67,22 @@ public sealed class Mailer(string dataDir)
     public async Task<string?> SendAsync(string to, string subject, string body, bool html = false, CancellationToken ct = default)
     {
         var c = _config;
-        if (!c.Ready) return "Kein Mailserver eingerichtet (Einstellungen → Mail).";
+        if (c is not { Host: { Length: > 0 } host, From: { Length: > 0 } from }) return "Kein Mailserver eingerichtet (Einstellungen → Mail).";
         if (string.IsNullOrWhiteSpace(to)) return "Empfänger fehlt.";
         try
         {
-            using var client = new SmtpClient(c.Host, c.Port) { EnableSsl = c.StartTls, Timeout = 20_000 };
-            if (!string.IsNullOrWhiteSpace(c.User)) client.Credentials = new NetworkCredential(c.User, c.Password);
-            using var mail = new MailMessage
-            {
-                From = new MailAddress(c.From!, string.IsNullOrWhiteSpace(c.FromName) ? c.From! : c.FromName),
-                Subject = subject,
-                Body = body,
-                IsBodyHtml = html,
-            };
-            mail.To.Add(to);
-            if (!string.IsNullOrWhiteSpace(c.ReplyTo)) mail.ReplyToList.Add(c.ReplyTo);
-            await client.SendMailAsync(mail, ct);
+            var mail = new MimeMessage();
+            mail.From.Add(new MailboxAddress(string.IsNullOrWhiteSpace(c.FromName) ? from : c.FromName, from));
+            mail.To.Add(MailboxAddress.Parse(to));
+            if (!string.IsNullOrWhiteSpace(c.ReplyTo)) mail.ReplyTo.Add(MailboxAddress.Parse(c.ReplyTo));
+            mail.Subject = subject;
+            mail.Body = new TextPart(html ? "html" : "plain") { Text = body };
+
+            using var client = new SmtpClient { Timeout = 20_000 };
+            await client.ConnectAsync(host, c.Port, c.Socket, ct);
+            if (!string.IsNullOrWhiteSpace(c.User)) await client.AuthenticateAsync(c.User, c.Password ?? "", ct);
+            await client.SendAsync(mail, ct);
+            await client.DisconnectAsync(true, ct);
             return null;
         }
         catch (Exception e) { return e.InnerException?.Message ?? e.Message; }
@@ -89,6 +104,7 @@ public static class MailApi
             // Ein maskiertes Passwort heisst „unverändert“ — sonst überschriebe das Speichern es mit Punkten
             var c = body with { Password = body.Password is null or "••••••••" ? mailer.Config.Password : body.Password };
             if (!string.IsNullOrWhiteSpace(c.Host) && c.Port is < 1 or > 65535) return Bad("Port: 1 bis 65535.");
+            if (!MailConfig.Modes.Contains(c.Security)) return Bad($"Verschlüsselung: {string.Join(", ", MailConfig.Modes)}.");
             if (!string.IsNullOrWhiteSpace(c.From) && !c.From.Contains('@')) return Bad("Absender: eine Adresse erwartet.");
             mailer.Set(c);
             return Results.Ok(new { config = mailer.Config.Masked(), ready = mailer.Config.Ready });

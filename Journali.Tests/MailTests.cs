@@ -14,11 +14,11 @@ public class MailTests : IDisposable
     public void Dispose() { try { Directory.Delete(_dir, true); } catch { } }
 
     [Fact]
-    public void Ohne_Server_wird_nichts_gesendet_und_es_wird_gesagt()
+    public async Task Ohne_Server_wird_nichts_gesendet_und_es_wird_gesagt()
     {
         var m = new Mailer(_dir);
         Assert.False(m.Config.Ready);
-        var fehler = m.SendAsync("wer@beispiel.de", "Betreff", "Text").Result;
+        var fehler = await m.SendAsync("wer@beispiel.de", "Betreff", "Text");
         Assert.NotNull(fehler);
         Assert.Contains("Einstellungen", fehler);
     }
@@ -26,7 +26,7 @@ public class MailTests : IDisposable
     [Fact]
     public void Das_Passwort_geht_nie_hinaus()
     {
-        var c = new MailConfig("smtp.beispiel.de", 587, true, "pim", "geheim", "pim@beispiel.de");
+        var c = new MailConfig("smtp.beispiel.de", 587, MailConfig.StartTlsMode, "pim", "geheim", "pim@beispiel.de");
         var maskiert = c.Masked();
         Assert.NotEqual("geheim", maskiert.Password);
         Assert.Equal("smtp.beispiel.de", maskiert.Host);   // alles andere bleibt lesbar
@@ -37,14 +37,15 @@ public class MailTests : IDisposable
     public void Gespeichert_wird_beim_Server_und_kommt_zurueck()
     {
         var m = new Mailer(_dir);
-        m.Set(new MailConfig("smtp.beispiel.de", 25, false, "pim", "geheim", "pim@beispiel.de", "journali PIM"));
+        m.Set(new MailConfig("smtp.beispiel.de", 465, MailConfig.SslMode, "pim", "geheim", "pim@beispiel.de", "journali PIM"));
         Assert.True(m.Config.Ready);
 
         var neu = new Mailer(_dir);   // wie nach einem Neustart
         Assert.Equal("smtp.beispiel.de", neu.Config.Host);
         Assert.Equal("geheim", neu.Config.Password);
-        Assert.Equal(25, neu.Config.Port);
-        Assert.False(neu.Config.StartTls);
+        Assert.Equal(465, neu.Config.Port);
+        Assert.Equal(MailConfig.SslMode, neu.Config.Security);
+        Assert.Equal(MailKit.Security.SecureSocketOptions.SslOnConnect, neu.Config.Socket);
         Assert.Contains("mail.json", MailConfigFile.PathOf(_dir));
     }
 
@@ -53,7 +54,7 @@ public class MailTests : IDisposable
     {
         // die Oberfläche bekommt Punkte statt des Passworts — kämen die zurück, stünden sie danach in der Datei
         var m = new Mailer(_dir);
-        m.Set(new MailConfig("smtp.beispiel.de", 587, true, "pim", "geheim", "pim@beispiel.de"));
+        m.Set(new MailConfig("smtp.beispiel.de", 587, MailConfig.StartTlsMode, "pim", "geheim", "pim@beispiel.de"));
         var vonDerOberflaeche = m.Config.Masked() with { FromName = "journali PIM" };
         var behalten = vonDerOberflaeche with { Password = vonDerOberflaeche.Password is null or "••••••••" ? m.Config.Password : vonDerOberflaeche.Password };
         m.Set(behalten);

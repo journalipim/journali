@@ -6,7 +6,14 @@ import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 
-const c = ref({ host: '', port: 587, startTls: true, user: '', password: '', from: '', fromName: '', replyTo: '' })
+const c = ref({ host: '', port: 587, security: 'starttls', user: '', password: '', from: '', fromName: '', replyTo: '' })
+// Welcher Port zu welcher Verschlüsselung gehört — beim Umschalten mitgesetzt, solange der übliche eingetragen ist
+const PORTS = { starttls: 587, ssl: 465, none: 25 }
+function security(v) {
+  const vorher = PORTS[c.value.security]
+  c.value.security = v
+  if (c.value.port === vorher) c.value.port = PORTS[v]
+}
 const ready = ref(false)
 const busy = ref('')
 const said = ref('')
@@ -47,13 +54,18 @@ onMounted(lies)
 
 <template>
   <div class="section">
-    <h2>✉ Mailserver <span class="muted">· SMTP · liegt beim Server (mail.json), nie im Journal</span></h2>
+    <h2>✉ Mailserver <span class="muted">· SMTP</span></h2>
 
     <table class="grid form"><colgroup><col style="width:170px" /><col style="width:340px" /></colgroup><tbody>
       <tr><td class="attr">Server</td><td><input v-model="c.host" type="text" placeholder="smtp.beispiel.de" style="width:100%" /></td></tr>
-      <tr><td class="attr">Port</td><td>
-        <input v-model.number="c.port" type="number" min="1" max="65535" style="width:90px" />
-        <label style="margin-left:10px" title="STARTTLS auf 587 oder 25; implizites TLS auf 465 wird nicht unterstützt"><input type="checkbox" v-model="c.startTls" /> STARTTLS</label>
+      <tr><td class="attr">Verschlüsselung</td><td>
+        <select :value="c.security" style="width:150px" @change="security($event.target.value)">
+          <option value="starttls">STARTTLS</option>
+          <option value="ssl">TLS (implizit)</option>
+          <option value="none">keine</option>
+        </select>
+        <span class="muted" style="margin-left:10px;font-size:12px">Port</span>
+        <input v-model.number="c.port" type="number" min="1" max="65535" style="width:80px;margin-left:6px" />
       </td></tr>
       <tr><td class="attr">Benutzer</td><td><input v-model="c.user" type="text" autocomplete="off" style="width:100%" /></td></tr>
       <tr><td class="attr">Passwort</td><td><input v-model="c.password" type="password" autocomplete="new-password" placeholder="unverändert" style="width:100%" /></td></tr>

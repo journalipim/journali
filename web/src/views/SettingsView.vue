@@ -57,7 +57,7 @@ async function save() {
       <span v-if="store.can('storage')" class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'">▨ Storage</span>
       <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'">👤 {{ store.can('users') ? 'Benutzer & Rollen' : 'Konto' }}</span>
       <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'">⚑ Workflows</span>
-      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'">↺ Sicherung</span>
+      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'">▣ Sicherung</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'">✉ Mail</span>
     </div>
     <div class="scroll" v-if="tab === 'storage'"><StorageSettings /></div>

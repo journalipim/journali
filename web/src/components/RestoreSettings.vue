@@ -105,7 +105,7 @@ onMounted(lies)
 
 <template>
   <div class="section">
-    <h2>▣ Vollsicherung <span class="muted">· Journal, Medien, Dateien neben dem Journal, Plugins</span></h2>
+    <h2>▣ Sichern <span class="muted">· Journal, Medien, Zugänge, Plugins</span></h2>
 
     <div class="row" style="gap:6px;margin-bottom:6px">
       <input v-model="dir" type="text" placeholder="Verzeichnis der Sicherung" style="flex:1" @keydown.enter="lies" />
@@ -122,23 +122,29 @@ onMounted(lies)
     </div>
 
     <table v-if="stand" class="grid"><tbody>
-      <tr><td class="muted" style="width:130px">hier</td>
+      <tr><td class="muted" style="width:130px">dieses System</td>
         <td>{{ n(stand.hier.entries) }} Einträge · {{ n(stand.hier.media) }} Medien · Speicher {{ stand.hier.storage }}</td></tr>
       <tr><td class="muted">im Verzeichnis</td>
         <td v-if="stand.dort">{{ n(stand.dort.entries) }} Einträge · {{ n(stand.dort.media) }} Medien ({{ kb(stand.dort.bytes) }}) · {{ stand.dort.config }} Dateien · {{ stand.dort.plugins }} Plugins · {{ when(stand.dort.at) }}</td>
         <td v-else class="muted">keine Sicherung</td></tr>
     </tbody></table>
 
-    <div v-if="stand?.dort" class="row" style="gap:8px;margin-top:8px;align-items:center">
-      <button :disabled="!!busy || stand.hier.entries > 0" :title="stand.hier.entries > 0 ? `hier stehen ${n(stand.hier.entries)} Einträge — eine Sicherung geht nur in ein leeres System` : 'Sicherung einspielen'" @click="zurueck">↺ Einspielen</button>
-      <span v-if="stand.hier.entries > 0" class="muted" style="font-size:12px">nur in ein leeres System</span>
-    </div>
-
     <div v-if="said" :class="said.startsWith('✗') ? 'neg' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
   </div>
 
   <div class="section">
-    <h2>↺ Teilbaum aus einer Datei <span class="muted">· Rohdaten-JSON, auch .json.gz</span></h2>
+    <h2>↺ Wiederherstellen <span class="muted">· aus dem Verzeichnis oben, nur in ein leeres System</span></h2>
+    <div class="row" style="gap:8px;align-items:center">
+      <button :disabled="!!busy || !stand?.dort || stand.hier.entries > 0"
+        :title="!stand?.dort ? 'keine Sicherung im Verzeichnis oben' : stand.hier.entries > 0 ? `hier stehen ${n(stand.hier.entries)} Einträge` : 'Sicherung einspielen'"
+        @click="zurueck">↺ Einspielen</button>
+      <span v-if="stand && stand.hier.entries > 0" class="muted" style="font-size:12px">dieses System ist nicht leer</span>
+      <span v-else-if="stand && !stand.dort" class="muted" style="font-size:12px">keine Sicherung im Verzeichnis</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>↺ Teilbaum einspielen <span class="muted">· einzelne Datei, Rohdaten-JSON</span></h2>
 
     <div class="row" style="gap:6px;margin-bottom:6px">
       <input v-model="tdir" type="text" placeholder="Verzeichnis" style="flex:1" @keydown.enter="ladeTeilbaum" />
