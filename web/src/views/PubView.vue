@@ -379,14 +379,14 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-if="row.kind === 'ruled' && row.r.role === 'group'" class="muted count">{{ row.products }}</span>
         <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="`Produktgruppe mit ${tree.below(row.r.id).total} darunter`">{{ tree.below(row.r.id).total }}</span>
       </div>
-      <div v-if="!trees.length" class="empty">Kein Publikationsbaum.<div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="newTree">+ Publikationsbaum</button></div><div class="muted" style="margin-top:6px;font-size:12px">Name, Kanal, optional Markt — danach Äste aus dem Pflegebaum links rüberziehen.</div></div>
+      <div v-if="!trees.length" class="empty">Kein Publikationsbaum.<div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="newTree">+ Publikationsbaum</button></div><div class="muted" style="margin-top:6px;font-size:12px"><span title="Danach Äste aus dem Pflegebaum links herüberziehen.">Name, Kanal, optional Markt</span></div></div>
       <div v-else-if="rows.length === 1" class="empty">Noch leer — einen Ast aus dem Pflegebaum links auf „{{ current.label }}“ ziehen.<div class="chips" style="justify-content:center;margin-top:8px"><button class="x" @click="newRubric(current)" title="eine leere Rubrik anlegen, z. B. für eigene Gliederung">+ Rubrik</button></div></div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">▥ Rubrik · ↗ Verweis · von links ziehen = übernehmen · hier ziehen = umhängen, an den Rand einer Zeile = Reihenfolge · Strg-Klick = mehrere · Rechtsklick</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><span title="Ziehen von links übernimmt, hier ziehen hängt um; Strg-Klick wählt mehrere.">▥ Rubrik · ↗ Verweis · ziehen, Strg-Klick, Rechtsklick</span></div>
   </div>
   <Splitter v-model="pubW" :min="220" :max="800" />
   <NodeView v-if="id" :id="id" :key="id" :pub="current?.id ?? null" :pub-rubric="$route.query.in ?? null" />
-  <div v-else class="pane" style="flex:1"><div class="empty">Rubrik wählen — ihre Texte und Bilder stehen hier wie an jedem Knoten.</div></div>
+  <div v-else class="pane" style="flex:1"><div class="empty"><span title="Texte und Bilder stehen hier wie an jedem Knoten.">Rubrik wählen</span></div></div>
   </div>
 </template>
 

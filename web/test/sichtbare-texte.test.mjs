@@ -118,3 +118,20 @@ function satz(roh) {
     .map(s => s.trim())
     .sort((a, b) => b.length - a.length)[0] ?? ''
 }
+
+// Fester sichtbarer Text ist kurz (Taloan, 23.09.2026: „merkste was?“ — nach dem dritten Screenshot mit demselben
+// Muster). Was erklärt, gehört in title=; in der Zeile steht, was die Sache ist. Gerechnete Meldungen ({{ … }})
+// sind Daten, keine Erklärung — sie zählen hier nicht mit.
+const SICHTBAR = 60
+test('fester sichtbarer Text bleibt kurz — Erklärungen stehen im Tooltip', () => {
+  const lang = []
+  for (const f of walk(root, '.vue')) {
+    const { descriptor } = parse(fs.readFileSync(f, 'utf8'), { filename: f })
+    const tpl = (descriptor.template?.content ?? '').replace(/<!--[\s\S]*?-->/g, '')
+    for (const m of tpl.matchAll(/>([^<>{}]{30,})</g)) {
+      const t = m[1].replace(/\s+/g, ' ').trim()
+      if (t.length > SICHTBAR) lang.push(`${path.basename(f)}: ${t.length} Zeichen — „${t.slice(0, 60)}…“`)
+    }
+  }
+  assert.deepEqual(lang, [], `sichtbarer Text über ${SICHTBAR} Zeichen`)
+})

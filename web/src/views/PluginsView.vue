@@ -111,9 +111,9 @@ function pick(k) { cur.value = k }
           <span :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'">{{ stateOf(p) }}</span>
         </span>
       </div>
-      <div v-if="plugins.loaded && !plugins.list.length" class="empty">Kein Plugin — ein Verzeichnis mit plugin.json unter plugins/ anlegen.</div>
+      <div v-if="plugins.loaded && !plugins.list.length" class="empty"><span title="Ein Verzeichnis mit plugin.json unter plugins/ anlegen.">Kein Plugin</span></div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">plugins/&lt;key&gt;/plugin.json · Stand im Journal (plugin:&lt;key&gt;)</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><span title="Stand im Journal unter plugin:&lt;key&gt;">plugins/&lt;key&gt;/plugin.json</span></div>
   </div>
   <Splitter v-model="listW" :min="260" :max="800" />
 
@@ -147,15 +147,15 @@ function pick(k) { cur.value = k }
       <div class="section" v-if="manifest.runs === 'office' && current.key === 'onlyoffice'">
         <h2>▤ In OnlyOffice einrichten</h2>
         <div class="muted" style="font-size:12px;line-height:1.6">
-          Paket: <a :href="`/plugins/${current.key}/package.plugin`" download="journali.plugin">journali.plugin herunterladen</a> — in OnlyOffice Tabellen über Plugins → Plugin-Manager → „Plugin hinzufügen“ einbinden;
+          Paket: <a :href="`/plugins/${current.key}/package.plugin`" download="journali.plugin">journali.plugin herunterladen</a> <span title="In OnlyOffice: Tabellen → Plugins → Plugin-Manager → Plugin hinzufügen.">— einbinden</span> ·
           Anleitung: <a :href="`/plugins/${current.key}/README.md`" target="_blank">README</a>. Leiste: <a :href="`/plugins/${current.key}/index.html`" target="_blank">index.html</a> (ausserhalb von OnlyOffice nur zur Ansicht).
         </div>
       </div>
       <div class="section" v-if="manifest.runs === 'office' && current.key !== 'onlyoffice'">
         <h2>▤ In Excel einrichten</h2>
         <div class="muted" style="font-size:12px;line-height:1.6">
-          Manifest: <a :href="`/plugins/${current.key}/manifest.xml`" download="manifest.xml">manifest.xml herunterladen</a> — in Excel über einen vertrauenswürdigen Add-In-Katalog (freigegebener Ordner) oder „Mein Add-In hochladen“ einbinden;
-          Anleitung: <a :href="`/plugins/${current.key}/README.md`" target="_blank">README</a>. Aufgabenbereich: <a :href="`/plugins/${current.key}/taskpane.html`" target="_blank">taskpane.html</a> (ausserhalb von Excel nur zur Ansicht).
+          Manifest: <a :href="`/plugins/${current.key}/manifest.xml`" download="manifest.xml">manifest.xml herunterladen</a> <span title="In Excel über einen vertrauenswürdigen Add-In-Katalog (freigegebener Ordner) oder „Mein Add-In hochladen“.">— einbinden</span> ·
+          Anleitung: <a :href="`/plugins/${current.key}/README.md`" target="_blank">README</a>. Aufgabenbereich: <a :href="`/plugins/${current.key}/taskpane.html`" target="_blank">taskpane.html</a> <span title="Ausserhalb von Excel nur zur Ansicht.">· Ansicht</span>
           · HTTPS ausser für localhost
         </div>
       </div>
@@ -170,7 +170,7 @@ function pick(k) { cur.value = k }
         <h2>⚙ {{ svc.label || 'Prozess' }} <span class="muted">· {{ svc.command }} {{ (svc.args ?? []).join(' ') }}</span></h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ svc.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
           <span v-if="svc.params?.length">Parameter: {{ svc.params.map(p => p.label || p.key).join(' · ') }}.</span></div>
-        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}${svc.key ? '&service=' + svc.key : ''}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" title="neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button title="die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px">Zeitplan oder „nur von Hand“ — Parameter, Geheimnisse und Logs beim Job</span></div>
+        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}${svc.key ? '&service=' + svc.key : ''}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" title="neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs" @click="navigate">⏱ Als Job einrichten</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button title="die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs" @click="navigate">⏱ Jobs verwalten<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px"><span title="Zeitplan oder nur von Hand; Parameter, Geheimnisse und Logs stehen beim Job.">Zeitplan · Parameter beim Job</span></span></div>
       </div>
       <div class="section">
         <h2>Manifest <span class="mono muted">plugins/{{ current.key }}/plugin.json</span></h2>

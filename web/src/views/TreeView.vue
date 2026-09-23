@@ -649,7 +649,7 @@ function onDialogKey(e) {
             </td>
           </tr>
         </tbody></table>
-        <div v-if="!required.length && !(creating === 'variant' && productTarget.axes.length)" class="muted" style="padding:6px 8px;font-size:12px">Keine Pflichtfelder an diesem Knotentyp — Anlegen, dann rechts pflegen.</div>
+        <div v-if="!required.length && !(creating === 'variant' && productTarget.axes.length)" class="muted" style="padding:6px 8px;font-size:12px"><span title="Anlegen, dann rechts pflegen.">Keine Pflichtfelder an diesem Knotentyp</span></div>
         <div class="chips" style="padding:8px">
           <button class="primary" :disabled="!complete" @click="create">Anlegen</button>
           <button @click="creating = null">Abbrechen</button>

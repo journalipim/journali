@@ -97,7 +97,7 @@ public static class AiApi
         return (text.ToString(), sources, tin, tout);
     }
 
-    /// <summary>Schlüssel der Anlage — das Grundrauschen der Lizenz läuft darüber (Secrets <c>licence</c> oder JOURNALI_AI_KEY).
+    /// <summary>Schlüssel der Anlage — die KI auf Rechnung der Lizenz läuft darüber (Secrets <c>licence</c> oder JOURNALI_AI_KEY).
     /// Ein Team mit eigenem Schlüssel nimmt seinen; wer keinen hat, arbeitet auf Rechnung der Lizenz, und dann gilt ihr Kontingent.</summary>
     private static Dictionary<string, string> Anlage(string jobsDir)
     {
@@ -131,7 +131,7 @@ public static class AiApi
                 used = new
                 {
                     today = c.Teams.Day(zahler, heute).Tokens, month = c.Teams.Month(zahler, heute.ToString("yyyy-MM")),
-                    anlage = Monatsverbrauch(c, heute),   // gegen das Grundrauschen zählt die ganze Anlage
+                    anlage = Monatsverbrauch(c, heute),   // gegen das KI-Limit zählt die ganze Anlage
                 },
             });
         }));
@@ -157,11 +157,11 @@ public static class AiApi
                 // Die Reissleine schützt vor dem Amoklauf (Schleife im Job), nicht vor der Arbeit: sie gilt für die Anlage.
                 var lic = licences.Lic;
                 if (lic.AiTokensDay > 0 && Tagesverbrauch(c, heute) >= lic.AiTokensDay)
-                    return (Bad($"Tagesgrenze der Lizenz erreicht ({lic.AiTokensDay} Token)."), "", "", "", "");
-                // Grundrauschen: Token auf Rechnung von journali. Wer einen eigenen Schlüssel hat, zahlt beim Anbieter —
+                    return (Bad($"Tageslimit der Lizenz erreicht ({lic.AiTokensDay})."), "", "", "", "");
+                // Das KI-Limit der Lizenz: Nutzung auf Rechnung von journali. Wer einen eigenen Schlüssel hat, zahlt beim Anbieter —
                 // dann begrenzt hier nichts (Taloan: „wer den Komfort der Kontrolle will, muss Teams mit eigenem Kontingent bilden“).
                 if (eigene.Count == 0 && lic.AiTokensMonth > 0 && Monatsverbrauch(c, heute) >= lic.AiTokensMonth)
-                    return (Bad($"Das Grundkontingent der Lizenz ist für diesen Monat aufgebraucht ({lic.AiTokensMonth} Token)."), "", "", "", "");
+                    return (Bad($"Das KI-Limit der Lizenz ist für diesen Monat erreicht ({lic.AiTokensMonth})."), "", "", "", "");
                 return ((IResult?)null, mein, zahlerKey, p, keys[p]);
             });
             if (fehler is not null) return fehler;
@@ -178,7 +178,7 @@ public static class AiApi
                     var lic2 = licences.Lic;
                     if (lic2.AiTokensMonth <= 0) return null;
                     var monat = Monatsverbrauch(c, heute);
-                    return monat >= lic2.AiTokensMonth * 8 / 10 ? $"Grundkontingent: {monat} von {lic2.AiTokensMonth} Token in diesem Monat." : null;
+                    return monat >= lic2.AiTokensMonth * 8 / 10 ? $"KI-Limit: {monat} von {lic2.AiTokensMonth} in diesem Monat." : null;
                 });
                 return Results.Ok(new { text, sources, usage = new { @in = tin, @out = tout }, team, payer = zahler, provider, model, warn });
             }

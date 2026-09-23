@@ -29,21 +29,21 @@ async function sicht(rights, enabled = true) {
 
 test('ein Leser sieht sich und sein Team — sonst nichts', async () => {
   const w = await sicht(['read'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team', '🔑 Lizenz'])
+  assert.deepEqual(reiter(w), ['◐ Ich', '◍ Team', '⚿ Lizenz'])
   await ruhe(); w.unmount()
 })
 
 test('der Administrator sieht die Bestandteile einzeln, nicht als Sammelseite', async () => {
   const w = await sicht(['read', 'users', 'storage', 'model', 'team'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team', '◈ Rollen & Rechte', '▨ Storage', '🖼 Assets', '✉ Mail', '▣ Backup & Recovery', '⚑ Workflows', '🔑 Lizenz'])
+  assert.deepEqual(reiter(w), ['◐ Ich', '◍ Team', '◈ Rollen & Rechte', '▨ Storage', '▩ Assets', '✉ Mail', '▣ Backup & Recovery', '⚑ Workflows', '⚿ Lizenz'])
   assert.ok(!reiter(w).some(r => /Anlage/.test(r)), 'die Sammelseite gibt es nicht mehr')
   await ruhe(); w.unmount()
 })
 
 test('Assets ohne Storage: die Ableitungsgrössen ja, der Speicher nicht', async () => {
   const w = await sicht(['read', 'model'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team', '🖼 Assets', '⚑ Workflows', '🔑 Lizenz'])
-  await w.findAll('.tab').find(t => t.text() === '🖼 Assets').trigger('click'); await ruhe()
+  assert.deepEqual(reiter(w), ['◐ Ich', '◍ Team', '▩ Assets', '⚑ Workflows', '⚿ Lizenz'])
+  await w.findAll('.tab').find(t => t.text() === '▩ Assets').trigger('click'); await ruhe()
   const t = w.text()
   assert.match(t, /Vorschau-Presets/, 'die Grössen stehen hier')
   assert.ok(!t.includes('Medienspeicher'), 'der Speicher selbst nicht')
@@ -65,7 +65,7 @@ test('mein Konto steht bei mir, Rollen und Teams in der Verwaltung', async () =>
 
 test('ohne Anmeldung gibt es kein Team — und der Urheber steht bei mir', async () => {
   const w = await sicht(null, false)
-  assert.ok(!reiter(w).includes('👥 Team'), 'ohne Benutzer gibt es keine Gruppe')
+  assert.ok(!reiter(w).includes('◍ Team'), 'ohne Benutzer gibt es keine Gruppe')
   const t = w.text()
   assert.ok(!t.includes('aktuelles Passwort'), 'und kein Konto')
   assert.match(t, /Name/, 'dafür den Urheber')

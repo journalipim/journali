@@ -1,7 +1,7 @@
 <script setup>
 // Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“). Sie wird nicht gepflegt, sondern eingespielt —
 // darum eine Datei, kein Stammdatum. Was sie sagt, gilt für die ganze Anlage: Einträge je Woche und Monat, das
-// Grundrauschen an KI-Token und die Tagesreissleine. Ein Team mit eigenem Schlüssel zahlt beim Anbieter selbst.
+// KI-Limits und die Tagesreissleine. Ein Team mit eigenem Schlüssel zahlt beim Anbieter selbst.
 import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
@@ -25,7 +25,7 @@ async function einspielen() {
 
 <template>
   <div class="section">
-    <h2>🔑 Lizenz <span class="muted">· {{ lic?.plan || 'Testbetrieb' }}<span v-if="lic?.holder"> · {{ lic.holder }}</span></span></h2>
+    <h2>⚿ Lizenz <span class="muted">· {{ lic?.plan || 'Testbetrieb' }}<span v-if="lic?.holder"> · {{ lic.holder }}</span> · Limits dieser Anlage</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:200px" /><col /></colgroup><tbody>
       <tr>
         <td class="muted">Stand</td>
@@ -37,15 +37,15 @@ async function einspielen() {
         <td class="muted">{{ lic?.grund ?? '' }}</td>
       </tr>
       <tr v-if="lic?.validUntil"><td class="muted">gültig bis</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
-      <tr><td class="muted" title="Einträge im Journal je Woche">▤ Woche</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
-      <tr><td class="muted" title="Einträge im Journal je Monat">▦ Monat</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
+      <tr><td class="muted" title="Einträge im Journal je Woche">▤ Einträge / Woche</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
+      <tr><td class="muted" title="Einträge im Journal je Monat">▦ Einträge / Monat</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
       <tr>
-        <td class="muted" title="KI-Token auf Rechnung der Lizenz, für Teams ohne eigenen Schlüssel">✦ Grundrauschen</td>
+        <td class="muted" title="KI auf Rechnung der Lizenz — für Teams ohne eigenen Schlüssel; mit eigenem Schlüssel rechnet das Team beim Anbieter ab.">✦ KI / Monat</td>
         <td class="mono">{{ lic?.aiTokensMonth ? zahl(lic.aiTokensMonth) + ' / Monat' : '—' }}</td>
-        <td class="muted" style="font-size:12px">eigener Schlüssel am Team: eigene Rechnung</td>
+        <td></td>
       </tr>
       <tr>
-        <td class="muted" title="Reissleine für die ganze Anlage: stoppt den Amoklauf, nicht die Arbeit">⛔ Tag</td>
+        <td class="muted" title="Reissleine für die ganze Anlage: stoppt den Amoklauf, nicht die Arbeit">⛔ KI / Tag</td>
         <td class="mono">{{ lic?.aiTokensDay ? zahl(lic.aiTokensDay) : '—' }}</td><td></td>
       </tr>
     </tbody></table>
@@ -53,7 +53,7 @@ async function einspielen() {
     <div v-if="darf()" style="margin-top:8px">
       <textarea v-model="roh" rows="4" style="width:100%;max-width:640px" placeholder='{"plan":"…","entriesWeek":20000,…}'></textarea>
       <div class="row" style="gap:8px;margin-top:4px">
-        <button class="primary" @click="einspielen">🔑 Einspielen</button>
+        <button class="primary" @click="einspielen">⚿ Einspielen</button>
         <span class="muted" style="font-size:12px">{{ said }}</span>
       </div>
     </div>

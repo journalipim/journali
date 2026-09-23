@@ -26,6 +26,9 @@ public sealed class TeamState
     public string[] Managers { get; set; } = [];
     /// <summary>Welches Modell je Anbieter gefragt wird — das bestimmt Kosten und Güte, also gehört es zum Team.</summary>
     public Dictionary<string, string> Models { get; } = new();
+    /// <summary>Limits, die der Administrator aus der Lizenz verteilt: Einträge je Woche und Monat (0 = keine Zuteilung).</summary>
+    public int EntriesWeek { get; set; }
+    public int EntriesMonth { get; set; }
     /// <summary>Nummer des Eintrags, der das Team zuerst angelegt hat — daran hängt, wer „Team 1“ ist.</summary>
     public long CreatedNumber { get; set; }
     public long LastNumber { get; set; }
@@ -106,7 +109,7 @@ public sealed class Teams : IProjection
             {
                 var d = Types.Deserialize<TeamDefined>(entry.Payload);
                 if (!_all.TryGetValue(key, out var t)) _all[key] = t = new TeamState { Key = key, CreatedNumber = entry.Number };
-                t.Label = d.Label; t.Note = d.Note; t.MonthlyTokens = d.MonthlyTokens; t.DailyTokens = d.DailyTokens; t.Enabled = d.Enabled; t.KeysFrom = d.KeysFrom; t.IncludedTokens = d.IncludedTokens; t.Managers = d.Managers ?? [];
+                t.Label = d.Label; t.Note = d.Note; t.MonthlyTokens = d.MonthlyTokens; t.DailyTokens = d.DailyTokens; t.Enabled = d.Enabled; t.KeysFrom = d.KeysFrom; t.IncludedTokens = d.IncludedTokens; t.Managers = d.Managers ?? []; t.EntriesWeek = d.EntriesWeek; t.EntriesMonth = d.EntriesMonth;
                 t.Models.Clear(); foreach (var (a, m) in d.Models ?? new()) t.Models[a] = m;
                 t.LastNumber = entry.Number; t.LastAt = entry.At; t.LastActor = entry.Actor;
                 break;

@@ -80,16 +80,16 @@ onMounted(load)
   <div class="section" v-if="teil === 'speicher'">
     <h2>▨ Medienspeicher <span class="muted">· aktiv: <span class="mono">{{ state.kind }}</span> · {{ state.total }} Medien<span v-if="state.error" class="neg"> · ✗ {{ state.error }}</span></span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /><col /></colgroup><tbody>
-      <tr><td class="muted">Treiber</td><td><select v-model="cfg.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td>
-        <td class="muted" style="font-size:12px">Bytes nach SHA-256; das Journal kennt nur den Hash — der Treiber ist jederzeit wechselbar</td></tr>
-      <tr v-if="cfg.driver === 'file'"><td class="muted">Verzeichnis</td><td>
+      <tr><td class="muted" title="Bytes werden nach SHA-256 abgelegt; das Journal kennt nur den Hash, der Treiber ist wechselbar.">Treiber</td><td><select v-model="cfg.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td>
+        <td></td></tr>
+      <tr v-if="cfg.driver === 'file'"><td class="muted" title="Vom Server aus gesehen — im Container z. B. /data/media.">Verzeichnis</td><td>
         <div class="row"><input v-model="cfg.path" type="text" style="flex:1" placeholder="media (relativ zum Server) oder /data/media" /><button class="x" @click="filePicker({ value: cfg.path, dirOnly: true, title: '📁 Verzeichnis des Medienspeichers (auf dem Server)', onPick: p => { cfg.path = p } })" title="Verzeichnis auswählen">…</button></div>
-      </td><td class="muted" style="font-size:12px">vom Server aus gesehen — im Container z. B. /data/media</td></tr>
+      </td><td></td></tr>
       <template v-if="cfg.driver === 's3'">
-        <tr><td class="muted">Endpoint</td><td><input v-model="cfg.endpoint" type="text" style="width:100%" placeholder="http://garage:3900" /></td><td class="muted" style="font-size:12px">Garage: 3900 ist die S3-API</td></tr>
+        <tr><td class="muted" title="Garage: 3900 ist die S3-API.">Endpoint</td><td><input v-model="cfg.endpoint" type="text" style="width:100%" placeholder="http://garage:3900" /></td><td></td></tr>
         <tr><td class="muted">Bucket</td><td><input v-model="cfg.bucket" type="text" style="width:100%" placeholder="journali" /></td><td></td></tr>
         <tr><td class="muted">Key</td><td><input v-model="cfg.key" type="text" style="width:100%" placeholder="GK…" autocomplete="off" /></td><td></td></tr>
-        <tr><td class="muted">Secret</td><td><input v-model="cfg.secret" type="password" style="width:100%" autocomplete="new-password" /></td><td class="muted" style="font-size:12px">liegt nur in media.json beim Server — nie im Journal</td></tr>
+        <tr><td class="muted" title="Liegt nur in media.json beim Server, nie im Journal.">Secret</td><td><input v-model="cfg.secret" type="password" style="width:100%" autocomplete="new-password" /></td><td></td></tr>
         <tr><td class="muted">Region</td><td class="row" style="gap:10px"><input v-model="cfg.region" type="text" style="width:160px" placeholder="garage" /><label><input type="checkbox" v-model="cfg.pathStyle" /> Pfad-Stil (endpoint/bucket/…)</label></td><td></td></tr>
       </template>
       <tr><td></td><td class="row"><button @click="check">Prüfen</button><button class="primary" @click="save">Speichern</button><span class="muted" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
@@ -97,7 +97,7 @@ onMounted(load)
   </div>
 
   <div class="section" v-if="teil === 'assets'">
-    <h2>▨ Vorschau-Presets <span class="muted">· Ableitungen, die für jedes Bild vorausgerechnet werden — nie live (Konstruktions-TIFFs); rechnet das Plugin derive (Prozess), angestoßen nach jedem Hochladen</span></h2>
+    <h2 title="Für jedes Bild vorausgerechnet, nie live; rechnet das Plugin derive nach jedem Hochladen.">▨ Vorschau-Presets <span class="muted">· Ableitungen</span></h2>
     <table class="grid form" style="width:auto"><thead><tr><th>Key</th><th>Bezeichnung</th><th title="längste Seite wird eingepasst, nie vergrößert">max B × H</th><th>Format</th><th>Qualität</th><th title="beim Import automatisch rechnen">auto</th><th title="gerechnet / Bilder">Stand</th><th></th></tr></thead><tbody>
       <tr v-for="p in presets" :key="p.key">
         <td class="mono">{{ p.key }}</td>
@@ -124,7 +124,7 @@ onMounted(load)
   </div>
 
   <div class="section" v-if="teil === 'speicher'">
-    <h2>Herüberkopieren <span class="muted">· alle Blobs eines anderen Speichers, die hier fehlen — nach einem Treiberwechsel oder von einem alten Verzeichnis</span></h2>
+    <h2 title="Holt die Assets eines anderen Speichers, die hier fehlen — nach einem Treiberwechsel oder aus einem alten Verzeichnis.">▨ Herüberkopieren <span class="muted">· fehlende Assets</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /></colgroup><tbody>
       <tr><td class="muted">Quelle</td><td><select v-model="copyFrom.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td></tr>
       <tr v-if="copyFrom.driver === 'file'"><td class="muted">Verzeichnis</td><td>
@@ -134,7 +134,7 @@ onMounted(load)
         <tr><td class="muted">Endpoint</td><td><input v-model="copyFrom.endpoint" type="text" style="width:100%" /></td></tr>
         <tr><td class="muted">Bucket</td><td><input v-model="copyFrom.bucket" type="text" style="width:100%" /></td></tr>
         <tr><td class="muted">Key</td><td><input v-model="copyFrom.key" type="text" style="width:100%" autocomplete="off" /></td></tr>
-        <tr><td class="muted">Secret</td><td><input v-model="copyFrom.secret" type="password" style="width:100%" autocomplete="new-password" /></td></tr>
+        <tr><td class="muted" title="Liegt nur in media.json beim Server, nie im Journal.">Secret</td><td><input v-model="copyFrom.secret" type="password" style="width:100%" autocomplete="new-password" /></td></tr>
         <tr><td class="muted">Region</td><td><input v-model="copyFrom.region" type="text" style="width:160px" /></td></tr>
       </template>
       <tr><td></td><td class="row"><button class="primary" :disabled="!!kopierBusy" @click="copy">⇥ Kopieren</button>

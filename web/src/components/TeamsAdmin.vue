@@ -1,5 +1,5 @@
 <script setup>
-// Teams verwalten (Recht users): anlegen, entfernen, Grundkontingent, wer für wen zahlt. Das gehört zu den Personen —
+// Teams verwalten (Recht users): anlegen, entfernen, Limits verteilen, wer für wen zahlt. Das gehört zu den Personen —
 // wer im Team ist, was es verbraucht und welche Schlüssel es hat, steht auf der Teamseite (Taloan, 23.09.2026:
 // „Teams anlegen kann man hier aber nicht“).
 import { ref, onMounted } from 'vue'
@@ -44,14 +44,18 @@ async function entfernen(t) {
 
 <template>
   <div class="section">
-    <h2>👥 Teams <span class="muted" title="Die Grenzen stehen in der Lizenz; ein Team mit eigenem Schlüssel rechnet beim Anbieter ab.">· {{ teams.length }}</span></h2>
+    <h2>◍ Teams <span class="muted" title="Die Limits kommen aus der Lizenz: das Init Team trägt sie, jedes weitere startet bei 0.">· {{ teams.length }} · Limits verteilen</span></h2>
     <table class="grid" style="width:auto">
       <thead>
         <tr>
           <th>Team</th>
           <th title="Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus">★ Führung</th>
           <th title="Wie der Verbrauch angerechnet wird: über ein eigenes Kontingent oder über das eines anderen Teams">Token</th>
-          <th title="verbraucht diesen Monat">✦ Monat</th>
+          <th title="Einträge je Woche — aus der Lizenz verteilt">▤ Woche</th>
+          <th title="Einträge je Monat — aus der Lizenz verteilt">▦ Monat</th>
+          <th title="KI je Monat — aus der Lizenz verteilt">✦ Monat</th>
+          <th title="KI je Tag — die Reissleine dieses Teams">⛔ Tag</th>
+          <th title="KI verbraucht diesen Monat">verbraucht</th>
           <th>👤</th><th></th>
         </tr>
       </thead>
@@ -60,7 +64,7 @@ async function entfernen(t) {
           <td>
             <input type="text" :value="t.label" style="width:140px" @change="speichern(t, 'label', $event.target.value)" />
             <span class="mono muted" style="font-size:12px"> {{ t.key }}</span>
-            <span v-if="t.primary" class="accent" title="Init Team: bleibt, trägt das Grundkontingent"> ①</span>
+            <span v-if="t.primary" class="accent" title="Init Team: bleibt, trägt die Limits der Lizenz"> ①</span>
           </td>
           <td>
             <span v-for="m in (t.managers ?? [])" :key="m" class="chip" style="margin-right:4px">{{ leute.find(p => p.key === m)?.name || m }}
@@ -78,6 +82,10 @@ async function entfernen(t) {
               <option v-for="z in teams.filter(x => x.key !== t.key && !x.keysFrom)" :key="z.key" :value="z.key">über Team {{ z.label }}</option>
             </select>
           </td>
+          <td><input type="number" min="0" :value="t.entriesWeek" style="width:80px" @change="speichern(t, 'entriesWeek', Number($event.target.value))" /></td>
+          <td><input type="number" min="0" :value="t.entriesMonth" style="width:80px" @change="speichern(t, 'entriesMonth', Number($event.target.value))" /></td>
+          <td><input type="number" min="0" :value="t.monthlyTokens" style="width:80px" @change="speichern(t, 'monthlyTokens', Number($event.target.value))" /></td>
+          <td><input type="number" min="0" :value="t.dailyTokens" style="width:80px" @change="speichern(t, 'dailyTokens', Number($event.target.value))" /></td>
           <td class="mono muted">{{ zahl(t.month) }}</td>
           <td class="muted" :title="`${t.members} im Team`">{{ t.members }}</td>
           <td><button v-if="!t.primary" class="x" title="Team entfernen" @click="entfernen(t)">✕</button></td>
@@ -90,7 +98,7 @@ async function entfernen(t) {
               <option v-for="p in leute" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
             </select>
           </td>
-          <td colspan="4"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
+          <td colspan="8"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
         </tr>
       </tbody>
     </table>

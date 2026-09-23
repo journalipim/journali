@@ -120,7 +120,7 @@ function railDrop(target) {
         :title="`KI · Team ${team.label} · ${team.month.toLocaleString('de-DE')} Token diesen Monat${team.limit ? ` von ${team.limit.toLocaleString('de-DE')}` : ''} · heute ${team.today.toLocaleString('de-DE')}`">
         ✦ {{ tok(team.month) }}<span v-if="team.limit" class="mono" :class="teamTon"> · {{ teamPct }}%</span></router-link></template>
       <template v-else-if="ai.used.calls"><span class="sep">·</span><router-link to="/settings" class="ai" :title="`KI seit ${ai.used.since}: ${ai.used.calls} Anfragen · ${ai.used.in.toLocaleString('de-DE')} Token hinein · ${ai.used.out.toLocaleString('de-DE')} hinaus — eigener Schlüssel, nur dieser Browser`">✦ {{ tok(ai.used.in + ai.used.out) }}</router-link></template>
-      <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings" class="ai" title="Nutzung anzeigen"><UsageMini :usage="store.usage" /></router-link></template>
+      <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings" class="muted" title="Nutzung anzeigen"><UsageMini :usage="store.usage" /></router-link></template>
       <span class="grow" />
       <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" title="Neue Fassung der Oberfläche laden">↻ Neue Fassung</button>
       <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="'Rolle ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" title="abmelden">⏻</button></template>

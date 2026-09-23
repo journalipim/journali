@@ -2,7 +2,7 @@
 // Einstellungen: ein Reiter je Sache, sichtbar nach Recht (Taloan, 23.09.2026: „im Moment ist alles durcheinander wie es
 // gewachsen ist“ · „die Seite Anlage heisst völlig bescheuert und wirft alles Kraut und Rüben durcheinander — im Grunde
 // ist das der Tab für den Administrator, den wir jetzt in seine Bestandteile zerlegen“):
-// ◐ Ich · 👥 Team · ◈ Rollen & Rechte (mit den Teams) · ▨ Storage · 🖼 Assets · ✉ Mail · ▣ Backup & Recovery · ⚑ Workflows.
+// ◐ Ich · ◍ Team · ◈ Rollen & Rechte (mit den Teams) · ▨ Storage · ▩ Assets · ✉ Mail · ▣ Backup & Recovery · ⚑ Workflows · ⚿ Lizenz.
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
 // Speicher selbst nicht heranmuss (Taloan, 23.09.2026).
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
@@ -42,14 +42,14 @@ async function save() {
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>⚙ Einstellungen</h1>
       <span class="tab" :class="{ on: tab === 'ich' }" @click="tab = 'ich'" title="gilt nur für mich">◐ Ich</span>
-      <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'team' }" @click="tab = 'team'" title="die Gruppe, in der ich arbeite">👥 Team</span>
+      <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'team' }" @click="tab = 'team'" title="die Gruppe, in der ich arbeite">◍ Team</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'" title="wer im System arbeitet, mit welcher Rolle und in welchem Team">◈ Rollen &amp; Rechte</span>
       <span v-if="store.can('storage')" class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'" title="wo die Bytes liegen">▨ Storage</span>
-      <span v-if="store.can('model') || store.can('storage')" class="tab" :class="{ on: tab === 'assets' }" @click="tab = 'assets'" title="Vorschau-Ableitungen und ihr Bestand">🖼 Assets</span>
+      <span v-if="store.can('model') || store.can('storage')" class="tab" :class="{ on: tab === 'assets' }" @click="tab = 'assets'" title="Vorschau-Ableitungen und ihr Bestand">▩ Assets</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'" title="ausgehender Mailserver">✉ Mail</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'" title="Sichern und Wiederherstellen">▣ Backup &amp; Recovery</span>
       <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'" title="Zustände und Übergänge über den Daten">⚑ Workflows</span>
-      <span class="tab" :class="{ on: tab === 'licence' }" @click="tab = 'licence'" title="was diese Anlage darf">🔑 Lizenz</span>
+      <span class="tab" :class="{ on: tab === 'licence' }" @click="tab = 'licence'" title="was diese Anlage darf">⚿ Lizenz</span>
     </div>
     <div class="scroll" v-if="tab === 'team'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>
@@ -67,7 +67,7 @@ async function save() {
           <tr v-if="!store.auth.enabled">
             <td class="muted">👤 Name</td>
             <td><input v-model="actor" type="text" style="width:240px" placeholder="steht als Urheber in jedem Eintrag" @keydown.enter="save" /></td>
-            <td class="muted">Urheber jedes Eintrags, den du schreibst — bis es eine Anmeldung gibt.</td>
+            <td class="muted" title="Bis es eine Anmeldung gibt, steht dieser Name als Urheber in jedem Eintrag.">Urheber jedes Eintrags</td>
           </tr>
           <tr>
             <td class="muted" title="gilt nur auf diesem Rechner">🖧 Server</td>

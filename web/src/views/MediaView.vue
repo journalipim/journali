@@ -192,7 +192,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
         <span class="fname">📁 {{ r.f.name }}</span><span class="muted cnt">{{ deep ? below(r.f.id) : r.f.media }}</span>
         <span class="acts"><button class="x" @click.stop="newFolder(r.f.id)" title="Unterordner anlegen">+</button><button class="x" @click.stop="renameFolder(r.f)" title="umbenennen">✎</button><button class="x" @click.stop="deleteFolder(r.f)" title="löschen (nur leer)">🗑</button></span>
       </div>
-      <div v-if="!rows.length" class="empty" style="padding:12px 8px">Noch kein Ordner — + legt einen an; Kacheln lassen sich hineinziehen.</div>
+      <div v-if="!rows.length" class="empty" style="padding:12px 8px"><span title="+ legt einen an; Kacheln lassen sich hineinziehen.">Noch kein Ordner</span></div>
     </div>
     <div class="toolbar" style="font-size:12px"><label title="Ordner zeigt auch, was in seinen Unterordnern liegt"><input type="checkbox" v-model="deep" /> mit Unterordnern</label></div>
   </div>

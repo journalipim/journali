@@ -28,7 +28,7 @@ const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
 /// Das Team führen: Schlüssel, Modell, Mitglieder ein und aus. Der Administrator darf es überall.
 const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.value?.managers ?? []).includes(store.auth.user)))
-/// Woher die Token kommen: eigener Schlüssel = eigene Rechnung; sonst das Grundrauschen der Lizenz
+/// Woher die Token kommen: eigener Schlüssel = eigene Rechnung; sonst das KI-Limit der Lizenz
 const lizenz = ref(null)
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
 
@@ -73,8 +73,9 @@ async function schluesselWeg(anbieter) {
 /// POST /api/ai/ask — Ein- und Ausgabe-Token, wie der Anbieter sie meldet.
 function hilfeTokens() {
   dialog.help({
-    title: '✦ Token-Verbrauch',
+    title: '✧ KI-Token',
     rows: [
+      ['Nicht zu verwechseln', 'journali-Token zählen die Nutzung von journali gegen die Limits'],
       ['Gezählt wird', ''],
       ['Editor', 'überarbeiten, erzeugen, eigene Anweisung'],
       ['Übersetzung', 'KI-Vorübersetzung je Einheit'],
@@ -114,8 +115,8 @@ async function widerrufen(tok) {
   <div v-if="!team" class="section muted">kein Team</div>
   <template v-else>
     <div class="section">
-      <h2>👥 {{ team.label }}
-        <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" title="Init Team: bleibt, trägt das Grundkontingent"> ①</span></span>
+      <h2>◍ {{ team.label }}
+        <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" title="Init Team: bleibt, trägt die Limits der Lizenz"> ①</span></span>
         <select v-if="teams.length > 1" v-model="gewaehlt" style="margin-left:8px" @change="details">
           <option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option>
         </select>
@@ -147,7 +148,9 @@ async function widerrufen(tok) {
     </div>
 
     <div class="section">
-      <h2>✦ KI-Zugang <span class="muted">· womit dieses Team arbeitet</span></h2>
+      <h2>✧ KI <span class="muted">· {{ zahl(team.month) }} Token diesen Monat · heute {{ zahl(team.today) }}</span>
+        <button class="x" title="Was in die Rechnung eingeht" @click="hilfeTokens">?</button>
+      </h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
           <td class="muted">Schlüssel</td>
@@ -174,25 +177,22 @@ async function widerrufen(tok) {
           </td><td></td>
         </tr>
       </tbody></table>
-    </div>
-
-    <div class="section">
-      <h2>✦ journali PIM Token
-        <span class="muted">· {{ zahl(team.month) }} diesen Monat · heute {{ zahl(team.today) }}</span>
-        <button class="x" title="Was in die Rechnung eingeht" @click="hilfeTokens">?</button>
-      </h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
-          <td class="muted" title="Wie der Verbrauch angerechnet wird">Abrechnung</td>
+          <td class="muted" title="Wie die KI dieses Teams abgerechnet wird">Abrechnung</td>
           <td>
             <span v-if="team.keys.length" class="pos" title="Eigener Schlüssel: der Anbieter rechnet direkt mit diesem Team ab.">eigenes Kontingent</span>
             <span v-else-if="team.keysFrom" class="muted">über Team {{ team.keysFrom }}</span>
-            <span v-else-if="lizenz?.aiTokensMonth" class="muted">Grundrauschen der Lizenz</span>
+            <span v-else-if="lizenz?.aiTokensMonth" class="muted">Limit der Lizenz</span>
             <span v-else class="neg">kein Kontingent</span>
           </td>
           <td class="muted" style="font-size:12px">
-            <span v-if="!team.keys.length && lizenz?.aiTokensMonth">{{ zahl(lizenz.aiTokensMonth) }} / Monat für die ganze Anlage</span>
+            <span v-if="!team.keys.length && lizenz?.aiTokensMonth">{{ zahl(lizenz.aiTokensMonth) }} / Monat, Anlage</span>
           </td>
+        </tr>
+        <tr v-if="team.monthlyTokens">
+          <td class="muted" title="KI-Limit dieses Teams — der Administrator verteilt es aus der Lizenz">Limit</td>
+          <td class="mono">{{ zahl(team.monthlyTokens) }} / Monat<span v-if="team.dailyTokens"> · {{ zahl(team.dailyTokens) }} / Tag</span></td><td></td>
         </tr>
       </tbody></table>
       <table v-if="tage.length" class="grid" style="width:auto;margin-top:6px">
@@ -209,7 +209,7 @@ async function widerrufen(tok) {
     </div>
 
     <div class="section">
-      <h2>🔑 API-Token <span class="muted" title="Ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung dieses Teams.">· {{ tokens.length }}</span></h2>
+      <h2>⚿ API-Token <span class="muted" title="Ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung dieses Teams.">· {{ tokens.length }}</span></h2>
       <table class="grid" style="width:auto">
         <thead><tr><th>Token</th><th>Person</th><th>angelegt</th><th></th></tr></thead>
         <tbody>
@@ -225,7 +225,19 @@ async function widerrufen(tok) {
     </div>
 
     <div class="section">
-      <h2>◷ Nutzung <span class="muted">· Einträge im Journal</span></h2>
+      <h2>✦ journali PIM Token
+        <span class="muted" title="Jede Pflege schreibt einen Eintrag ins Journal; Ansehen und Exportieren zählen nicht mit.">· Nutzung gegen die Limits</span>
+      </h2>
+      <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
+        <tr>
+          <td class="muted" title="Limits dieses Teams — der Administrator verteilt sie aus der Lizenz">Limit</td>
+          <td class="mono">
+            <span :class="team.entriesWeek ? '' : 'muted'">▤ {{ zahl(team.entriesWeek) }} / Woche</span> ·
+            <span :class="team.entriesMonth ? '' : 'muted'">▦ {{ zahl(team.entriesMonth) }} / Monat</span>
+          </td>
+          <td class="muted" style="font-size:12px"><span v-if="!team.entriesWeek && !team.entriesMonth">nichts zugeteilt</span></td>
+        </tr>
+      </tbody></table>
       <UsageBars :usage="usage" :history="usageHist" :period="usagePeriod" :busy="usageBusy" @period="ladeNutzung" />
     </div>
   </template>

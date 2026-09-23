@@ -59,7 +59,7 @@ onMounted(load)
           </tr>
         </tbody>
       </table>
-      <div v-if="!tasks.length && !busy" class="empty">Nichts zu tun — kein Knoten wartet auf einen Schritt deiner Rolle.</div>
+      <div v-if="!tasks.length && !busy" class="empty"><span title="Kein Knoten wartet auf einen Schritt deiner Rolle.">Nichts zu tun</span></div>
     </div>
   </div>
 </template>

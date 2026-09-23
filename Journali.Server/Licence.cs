@@ -10,7 +10,7 @@ namespace Journali.Server;
 /// nichts limitieren“). Sie sagt, was diese Anlage darf — nicht der Administrator und schon gar nicht ein anderes Team:
 /// <list type="bullet">
 /// <item><c>EntriesWeek</c>, <c>EntriesMonth</c>: wie viele Einträge ins Journal gehen dürfen.</item>
-/// <item><c>AiTokensMonth</c>: das Grundrauschen — Token auf Rechnung von journali, für Teams ohne eigenen Schlüssel.
+/// <item><c>AiTokensMonth</c>: das KI-Limit — Nutzung auf Rechnung von journali, für Teams ohne eigenen Schlüssel.
 /// Hat ein Team einen eigenen Schlüssel, zahlt es beim Anbieter und journali begrenzt nichts.</item>
 /// <item><c>AiTokensDay</c>: die Reissleine gegen den Amoklauf (Schleife im Job) — hoch angesetzt, greift nie im Alltag.</item>
 /// </list>
@@ -31,7 +31,7 @@ public sealed record Licence(
     long AiTokensDay = 0,
     string? Sig = null)
 {
-    /// <summary>Testbetrieb: was bis zur ersten Lizenz galt (Journali.Core Limits) — kein Grundrauschen, kein Tageslimit.</summary>
+    /// <summary>Testbetrieb: was bis zur ersten Lizenz galt (Journali.Core Limits) — Einträge ja, KI nein.</summary>
     public static readonly Licence Frei = new("Testbetrieb", null, null, Core.Projections.Limits.Week, Core.Projections.Limits.Month);
 
     [JsonIgnore] public bool Abgelaufen => ValidUntil is { } d && d < DateOnly.FromDateTime(DateTime.Today);

@@ -218,7 +218,7 @@ onMounted(load)
 
 <template>
   <div class="section">
-    <h2>⚑ Workflows <span class="muted">· Bearbeitungszustand über dem Status — Zustände, Übergänge mit Rolle, Notiz-Pflicht und Wirkung (Freigabe, Status)</span></h2>
+    <h2 title="Der Bearbeitungszustand über dem Status: Zustände, Übergänge mit Rolle, Notiz-Pflicht und Wirkung.">⚑ Workflows <span class="muted">· Zustände und Übergänge</span></h2>
     <div class="row" style="gap:6px;align-items:center;margin-bottom:8px">
       <span v-for="w in list" :key="w.key" class="view-chip" :class="{ on: cur?.key === w.key }" @click="pick(w)" :title="w.key">{{ w.label?.de || w.key }}</span>
       <button class="x" @click="add" title="neuer Workflow">+</button>

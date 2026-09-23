@@ -30,6 +30,9 @@ public sealed class Catalog
 
     public Catalog(IJournal journal) => _journal = journal;
 
+    /// <summary>Wo die Lizenz liegt — das Saatgut holt die Limits des Init Teams von dort (null = Testbetrieb).</summary>
+    public string? LicenceDir { get; set; }
+
     private IReadOnlyList<(string Name, IProjection Projection)> Parts => [("Model", _model), ("Tree", _tree), ("Relations", _relations), ("Media", _media), ("Plugins", _plugins), ("Jobs", _jobs), ("Versions", _versions), ("Users", _users), ("Workflows", _workflows), ("Translations", _translations), ("Usage", _usage), ("Teams", _teams)];
 
     /// <summary>
@@ -114,8 +117,18 @@ public sealed class Catalog
             // initialen Default-Set einer Neuinstallation drin sein“). Wer kein eigenes Team trägt, arbeitet hier.
             if (_teams.All.Count == 0)
             {
-                Apply(_journal.Append("system", Teams.Stream + Model.InitTeam, Types.TeamDefined, Types.Serialize(new TeamDefined("Init Team")))); n++;
+                // Die Limits der Lizenz liegen hier; jedes weitere Team startet bei 0 (Taloan, 23.09.2026)
+                var lic = LicenceFile.Load(LicenceDir ?? "").Lic;
+                Apply(_journal.Append("system", Teams.Stream + Model.InitTeam, Types.TeamDefined, Types.Serialize(
+                    new TeamDefined("Init Team", EntriesWeek: lic.EntriesWeek, EntriesMonth: lic.EntriesMonth, MonthlyTokens: lic.AiTokensMonth, DailyTokens: lic.AiTokensDay)))); n++;
             }
+            // Bestandsbenutzer ins Init Team (Taloan, 23.09.2026: „standardmässig sind Benutzer im Init Team“). Einmalig und
+            // nur, solange überhaupt noch niemand ein Team trägt — teamlos ist sonst ein gewollter Zustand (ausgetragen).
+            if (_teams.Primary is { } erstesTeam && _users.All.Count > 0 && _users.All.Values.All(u => u.Team is null))
+                foreach (var u in _users.All.Values.OrderBy(u => u.Key).ToList())
+                {
+                    Apply(_journal.Append("system", Users.Stream + u.Key, Types.UserDefined, Types.Serialize(new UserDefined(u.Name, u.Email, u.Role, u.Enabled, erstesTeam.Key)))); n++;
+                }
             // Ein Team ohne Führung ist unbedienbar (Taloan, 23.09.2026: „lässt sich immer noch nicht einstellen“) — die
             // Anlage repariert das selbst: der erste Benutzer mit dem Recht „Benutzer und Rollen“ führt es.
             if (_teams.Primary is { Managers.Length: 0 } ohne && _users.All.Count > 0)

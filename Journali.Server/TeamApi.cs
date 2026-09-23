@@ -9,13 +9,13 @@ namespace Journali.Server;
 /// gehören einem Team an“). Ein Team ist die Kostenstelle der KI: an ihm hängen die Schlüssel (im Datenverzeichnis, nie im
 /// Journal), die Grenzen und der Verbrauch.
 /// <list type="bullet">
-/// <item><b>Grundrauschen nur am ersten Team</b> (Taloan: „dann lege ich mir 20 Teams an und habe 20× Grundrauschen“):
+/// <item><b>Das Inklusivkontingent gibt es einmal</b> (Taloan: „dann lege ich mir 20 Teams an und habe 20× Grundrauschen“):
 /// <c>includedTokens</c> lässt sich nur dort setzen. Jedes weitere Team bringt entweder eigene Schlüssel mit — dann zahlt es
 /// selbst — oder es hängt an einem Zahler (<c>keysFrom</c>), und dessen Grenzen gelten für die Summe.</item>
 /// <item><b>Wer was darf</b> (Taloan, 23.09.2026): <em>Nur der Administrator legt ein Team an</em>, und dabei benennt er
 /// mindestens einen <b>Teammanager</b> — notfalls sich selbst. Der Manager führt sein Team: Bezeichnung, Grenzen,
 /// Schlüssel, und er trägt Mitglieder ein und aus. <b>Eintragen kann er nur, wer in keinem Team ist</b>; wer wechseln
-/// will, wird erst ausgetragen und ist so lange teamlos. Das Grundkontingent und <c>keysFrom</c> bleiben beim
+/// will, wird erst ausgetragen und ist so lange teamlos. Die Limits und <c>keysFrom</c> bleiben beim
 /// Administrator.</item>
 /// <item><b>Teamlos heisst 0</b>: ohne Team gibt es keinen Schlüssel, keine Grenze und keine KI. Neue Benutzer stehen
 /// darum standardmässig im Init Team.</item>
@@ -23,7 +23,7 @@ namespace Journali.Server;
 /// </summary>
 public static class TeamApi
 {
-    public sealed record TeamBody(string? Label, string? Note, long? MonthlyTokens, long? DailyTokens, bool? Enabled, string? KeysFrom, long? IncludedTokens, string[]? Managers, Dictionary<string, string?>? Models);
+    public sealed record TeamBody(string? Label, string? Note, long? MonthlyTokens, long? DailyTokens, bool? Enabled, string? KeysFrom, long? IncludedTokens, string[]? Managers, Dictionary<string, string?>? Models, int? EntriesWeek, int? EntriesMonth);
     public sealed record KeysBody(Dictionary<string, string?>? Keys);
 
     /// <summary>Schlüssel der Geheimnisse eines Teams — neben den Job-Token in derselben Datei.</summary>
@@ -64,8 +64,10 @@ public static class TeamApi
                     // Die Grenzen setzt der Administrator (Taloan, 23.09.2026: „das wäre schön, wenn jeder seine Werte selbst
                     // festlegen könnte, oder?“) — ein Manager, der sein eigenes Budget schreibt, ist keine Grenze.
                     if (body.IncludedTokens is not null && body.IncludedTokens != cur.IncludedTokens) return Bad("Das Grundkontingent setzt der Administrator.");
-                    if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Monatsschwelle setzt der Administrator.");
-                    if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Tagesgrenze setzt der Administrator.");
+                    if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Limits verteilt der Administrator.");
+                    if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Limits verteilt der Administrator.");
+                    if (body.EntriesWeek is not null && body.EntriesWeek != cur.EntriesWeek) return Bad("Die Limits verteilt der Administrator.");
+                    if (body.EntriesMonth is not null && body.EntriesMonth != cur.EntriesMonth) return Bad("Die Limits verteilt der Administrator.");
                     if (body.KeysFrom is not null && Blank(body.KeysFrom) != cur.KeysFrom) return Bad("Woher die Schlüssel kommen, entscheidet der Administrator.");
                     if (body.Managers is not null) return Bad("Wer das Team führt, bestimmt der Administrator.");
                 }
@@ -81,7 +83,7 @@ public static class TeamApi
                     if (zahler.KeysFrom is { Length: > 0 }) return Bad($"„{zahler.Label}“ benutzt selbst fremde Schlüssel — eine Stufe, keine Kette.");
                 }
                 var included = body.IncludedTokens ?? cur?.IncludedTokens ?? 0;
-                // Das Grundrauschen gibt es einmal, am ersten Team (Taloan, 23.09.2026): sonst wäre jedes neue Team ein neuer Freibetrag
+                // Das Inklusivkontingent gibt es einmal, am ersten Team (Taloan, 23.09.2026): sonst wäre jedes neue Team ein neuer Freibetrag
                 var ersteres = c.Teams.Primary;
                 if (included > 0 && ersteres is not null && ersteres.Key != key) return Bad($"Das Grundkontingent hat „{ersteres.Label}“ — das erste Team. Ein weiteres Team bringt eigene Schlüssel mit oder hängt an einem Zahler.");
                 if (Blank(body.Label) is null && cur is null) return Bad("Bezeichnung fehlt.");
@@ -91,7 +93,8 @@ public static class TeamApi
                 foreach (var (a, m) in body.Models ?? new()) { if (string.IsNullOrWhiteSpace(m)) modelle.Remove(a); else modelle[a] = m!; }
                 var def = new TeamDefined(Blank(body.Label) ?? cur!.Label, body.Note is null ? cur?.Note : Blank(body.Note),
                     body.MonthlyTokens ?? cur?.MonthlyTokens ?? 0, body.DailyTokens ?? cur?.DailyTokens ?? 0,
-                    body.Enabled ?? cur?.Enabled ?? true, keysFrom, included, managers, modelle);
+                    body.Enabled ?? cur?.Enabled ?? true, keysFrom, included, managers, modelle,
+                    body.EntriesWeek ?? cur?.EntriesWeek ?? 0, body.EntriesMonth ?? cur?.EntriesMonth ?? 0);
                 write(actor, Teams.Stream + key, Types.TeamDefined, def, null);
                 var heute = DateOnly.FromDateTime(DateTime.Today);
                 return Results.Ok(View(c, jobsDir, c.Teams.Get(key)!, heute, heute.ToString("yyyy-MM")));
@@ -222,7 +225,7 @@ public static class TeamApi
         var tag = c.Teams.Day(t.Key, heute);
         return new
         {
-            t.Key, t.Label, t.Note, t.Enabled, t.MonthlyTokens, t.DailyTokens, t.IncludedTokens, t.KeysFrom,
+            t.Key, t.Label, t.Note, t.Enabled, t.MonthlyTokens, t.DailyTokens, t.IncludedTokens, t.KeysFrom, t.EntriesWeek, t.EntriesMonth,
             primary = c.Teams.Primary?.Key == t.Key,
             keys,                                                    // welche Anbieter eingerichtet sind — nie der Schlüssel selbst
             payer = zahler,

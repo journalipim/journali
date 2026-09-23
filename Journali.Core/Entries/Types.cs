@@ -660,7 +660,10 @@ public sealed record UserDefined(string Name, string? Email, string Role, bool E
 /// <para><see cref="MonthlyTokens"/> warnt nur; <see cref="DailyTokens"/> weist ab. Die Reissleine soll den Amoklauf stoppen
 /// (Schleife im Job), nicht die Arbeit: hoch ansetzen. Ein Budget, das sperrt, erzeugt Streit statt Steuerung.</para>
 /// </summary>
-public sealed record TeamDefined(string Label, string? Note = null, long MonthlyTokens = 0, long DailyTokens = 0, bool Enabled = true, string? KeysFrom = null, long IncludedTokens = 0, string[]? Managers = null, Dictionary<string, string>? Models = null);
+public sealed record TeamDefined(string Label, string? Note = null, long MonthlyTokens = 0, long DailyTokens = 0, bool Enabled = true, string? KeysFrom = null, long IncludedTokens = 0, string[]? Managers = null, Dictionary<string, string>? Models = null, int EntriesWeek = 0, int EntriesMonth = 0);
+// EntriesWeek/EntriesMonth und MonthlyTokens/DailyTokens sind die Limits, die der Administrator aus der Lizenz verteilt
+// (Taloan, 23.09.2026: „Kunden kaufen keine Tokens, sondern Limits“). Das Init Team trägt die der Lizenz, jedes weitere
+// startet bei 0. IncludedTokens ist die Altlast des ersten Entwurfs — die Lizenz sagt, was inklusive ist.
 // IncludedTokens: das Grundrauschen — nur am ersten Team. Managers (Taloan, 23.09.2026): „nur der Administrator kann ein neues
 // Team erstellen, und dazu muss er mindestens einen zum Teammanager machen, notfalls sich selbst. Der Teammanager kann
 // Benutzer seinem Team zufügen — aber nur Benutzer, die in keinem Team sind — und sie wieder entfernen.“

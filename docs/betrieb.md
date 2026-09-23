@@ -364,12 +364,15 @@ Browser (Taloan, 21.09.2026).
 
 Die Grenzen dieser Anlage stehen in der Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“), nicht in der Hand
 des Administrators und schon gar nicht bei einem anderen Team: `entriesWeek`, `entriesMonth` (Einträge im Journal),
-`aiTokensMonth` (das Grundrauschen — KI-Token auf Rechnung der Lizenz) und `aiTokensDay` (Reissleine für die ganze
-Anlage). Ohne Datei gilt der Testbetrieb: 20 000 Einträge je Woche, 100 000 je Monat, kein Grundrauschen.
+`aiTokensMonth` und `aiTokensDay` (KI auf Rechnung der Lizenz — ein eigenes Thema, das mit den Eintragslimits nichts
+zu tun hat). Ohne Datei gilt der Testbetrieb: 20 000 Einträge je Woche, 100 000 je Monat, keine KI aus der Lizenz.
+
+Die Eintragslimits sind das, was Taloan „Grundrauschen“ nennt: die Kombination 20 000 / 100 000. Sie liegen am **Init
+Team**; jedes weitere Team startet bei 0, und der Administrator verteilt aus dem, was die Lizenz hergibt.
 
 Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts (Taloan: „wer den
 Komfort der Kontrolle will, muss Teams mit eigenem Kontingent bilden“). Teams ohne eigenen Schlüssel arbeiten über den
-Schlüssel der Anlage (`secrets.json` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das Grundrauschen.
+Schlüssel der Anlage (`secrets.json` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das KI-Limit.
 
 Echtheit: `sig` ist eine ECDSA-P-256-Signatur (SHA-256, Base64) über die Felder ohne `sig`. Geprüft wird sie, sobald
 `JOURNALI_LICENCE_KEY` den öffentlichen Schlüssel trägt (Base64, SubjectPublicKeyInfo); fehlt er, wird die Lizenz

@@ -92,6 +92,7 @@ var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 var jobDir = dataDir;
 // Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“): licence.json im Datenverzeichnis, ohne sie der Testbetrieb
 var licences = new Licences(dataDir);
+catalog.LicenceDir = dataDir;   // das Saatgut gibt dem Init Team die Limits der Lizenz
 builder.Services.AddSingleton(licences);
 var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);

@@ -24,8 +24,8 @@ const label = key => key === 'week' ? 'Woche' : 'Monat'
 
 <style scoped>
 /* feste Breiten: die Leiste wackelt nicht, wenn die Zahlen wachsen (Taloan, 22.09.) */
-.usage-mini { display: inline-flex; align-items: center; gap: 8px; }
-.u { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.usage-mini { display: inline-flex; align-items: center; gap: 16px; }   /* Abstand zwischen den Gruppen: sonst weiss niemand, welche Zahl zu welchem Balken gehört (Taloan, 23.09.) */
+.u { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
 .ico { font-size: 11px; opacity: .7; }
 .track { width: 44px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .fill { display: block; height: 100%; }
