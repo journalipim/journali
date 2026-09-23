@@ -55,3 +55,20 @@ test('Speichern rührt den Urheber nicht an, solange es eine Anmeldung gibt', as
   assert.equal(store.actor, 'admin', 'der Urheber der Sitzung wurde überschrieben')
   w.unmount()
 })
+
+// Die Serveradresse ist keine Anwendersache (Taloan, 23.09.2026: „stell dir mal vor, die Anwender geben hier einfach eine
+// andere URL ein und arbeiten auf anderen Servern“). Die Oberfläche fragt den Server, der sie ausgeliefert hat.
+test('auf der Ich-Seite steht keine Serveradresse', async () => {
+  stiller_server()
+  store.auth = { known: true, enabled: true, setup: false, user: 'taloan', role: 'admin', rights: ['read'] }
+  const w = mount(SettingsView); await flushPromises(); await flushPromises()
+  assert.ok(!w.text().includes('Server, der diese Seite liefert'), 'kein Feld für eine andere Adresse')
+  assert.ok(!w.findAll('tr').some(r => /🖧 Server/.test(r.text())), 'und keine Zeile dafür')
+  w.unmount()
+})
+
+test('eine alte Adresse aus dem Browser wirkt nicht weiter', async () => {
+  try { localStorage.setItem('journali.settings', JSON.stringify({ server: 'http://fremder:8080', actor: 'taloan' })) } catch {}
+  const frisch = (await import('../src/store.js?neu=' + Date.now())).store
+  assert.equal(frisch.server, '', 'was früher gespeichert wurde, wird verworfen')
+})

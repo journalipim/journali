@@ -17,7 +17,9 @@ function cellsFrom(locales, channels) { const out = ['|']; for (const c of ['', 
 export const store = reactive({
   pubBack: null,   // { path, label } — woher man aus der Publikation in den Pflegebaum kam (Schnellweg zurück, Taloan 21.09.)
   actor: saved.actor || '',
-  server: saved.server || '',
+  // Die Oberfläche fragt immer den Server, der sie ausgeliefert hat (Taloan, 23.09.2026) — kein Feld, keine
+  // gespeicherte Adresse. Was früher hier stand, wird beim Laden verworfen.
+  server: '',
   theme: saved.theme || 'system',   // system | light | dark
   viewLocales: saved.viewLocales || ['de', 'en'],   // erste Sprache: Bezeichnungen (store.name); die Spalten kommen aus viewCells
   // Spalten der Knotenansicht als Matrix Sprache × Kanal (Taloan, 20.09.): Liste „sprache|kanal“, '' = Stern; '|' (der eine Wert) ist immer dabei.
@@ -70,7 +72,7 @@ export const store = reactive({
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, theme: this.theme, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
     this.applyTheme()
     this.savePrefs()
   },

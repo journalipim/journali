@@ -21,14 +21,12 @@ import { api } from '../api.js'
 // Sprungmarken von aussen (#storage, #users, #mail, #backup, #teams) treffen weiter ihren Reiter
 const tab = ref({ '#storage': 'storage', '#users': 'users', '#mail': 'mail', '#backup': 'backup', '#teams': 'team' }[location.hash] ?? 'ich')
 const actor = ref(store.actor)
-const server = ref(store.server)
 const theme = ref(store.theme)
 function setTheme(t) { theme.value = t; store.theme = t; store.save() }
 const checking = ref(false)
 
 async function save() {
   if (!store.auth.enabled) store.actor = actor.value.trim()   // mit Anmeldung gehört der Urheber der Sitzung
-  store.server = server.value.trim().replace(/\/+$/, '')
   store.save()
   checking.value = true
   await store.poll()
@@ -66,11 +64,6 @@ async function save() {
             <td class="muted">👤 Name</td>
             <td><input v-model="actor" type="text" style="width:240px" placeholder="steht als Urheber in jedem Eintrag" @keydown.enter="save" /></td>
             <td class="muted" title="Bis es eine Anmeldung gibt, steht dieser Name als Urheber in jedem Eintrag.">Urheber jedes Eintrags</td>
-          </tr>
-          <tr>
-            <td class="muted" title="gilt nur auf diesem Rechner">🖧 Server</td>
-            <td><input v-model="server" type="text" style="width:240px" placeholder="leer = dieser Server" @keydown.enter="save" /></td>
-            <td class="muted">z. B. <span class="mono">http://localhost:8080</span>; leer heisst: der Server, der diese Seite liefert.</td>
           </tr>
           <tr>
             <td class="muted">◐ Darstellung</td>
