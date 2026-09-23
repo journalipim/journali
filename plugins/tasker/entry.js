@@ -3,6 +3,14 @@
 // regelmässig (cron) oder von Hand;
 // hier verwalten, überwachen, Logs lesen. Ein Job = ein Prozess-Plugin (process im Manifest) mit Parametern.
 // API: /api/jobs (JobApi.cs), Läufe und Ausgang im Journal (job:<key>), Log als Datei beim Server.
+/// Nächste Seite des Assistenten in dieser Richtung, die etwas zeigt — oder null, wenn keine mehr kommt.
+/// `voll` sagt je Seite, ob sie Inhalt hat: ohne Fächer gibt es keine Ablage, ohne Parameter kein „Womit“
+/// (Taloan, 23.09.2026: „erst nach Aussuchen von Plugin/Profil steht ja fest, was ich als Nächstes anzeige“).
+export function naechsteSeite(voll, schritt, richtung) {
+  for (let i = schritt + richtung; i >= 0 && i < voll.length; i += richtung) if (voll[i]) return i
+  return null
+}
+
 /// Steht ein Parameter oben im Dialog oder unter „Überschreiben“? Oben bleibt, was man je Job einstellt: das Profil
 /// selbst, Pfade und Schalter. Alles Inhaltliche kommt aus dem Profil und ist nur die Ausnahme wert — aber nur, wenn
 /// überhaupt ein Profil gewählt ist: ohne Profil gibt es nichts zu überschreiben, dann sind diese Felder die Quelle.
@@ -354,7 +362,7 @@ async function mount(root, ctx) {
             for (const n of names) if (n !== cur) inp.append(el('option', { value: n }, n))
             if (!names.length && !cur) inp.title = 'noch kein Profil gespeichert — in der Ansicht des Plugins anlegen'
           }).catch(() => {})
-          inp.addEventListener('change', () => { profilWert = inp.value; noteSecret(inp.value); drawParams(); check() })
+          inp.addEventListener('change', () => { profilWert = inp.value; noteSecret(inp.value); drawParams(); check(); zeige(schritt) })
           secretNote = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px' })
           // Prozess ohne eigene Ansicht (export, backup, rag, Datenblatt-Job, JSON-Export): Profile hier anlegen — ein Formular aus den Parametern des Manifests
           const editBtn = p?.profile === 'generic' ? el('button', { type: 'button', class: 'x', title: 'Profile dieses Prozesses anlegen und ändern', onclick: () => profileEditor(p, defs, inp.value, n => { drawParams(); const sel = paramInputs.profile; if (sel && n) { if (![...sel.options].some(o => o.value === n)) sel.append(el('option', { value: n }, n)); sel.value = n; noteSecret(n) } }) }, '✎') : ''
@@ -398,7 +406,7 @@ async function mount(root, ctx) {
       why.textContent = reasons.length ? '✗ ' + reasons[0] : ''
       return reasons.length === 0
     }
-    pluginSel.addEventListener('change', () => { drawParams(); check() }); drawParams(); check()
+    pluginSel.addEventListener('change', () => { drawParams(); check(); zeige(schritt) }); drawParams(); check()
     dlg.addEventListener('input', check); dlg.addEventListener('change', check)
     const save = async () => {
       if (!check()) return
@@ -413,13 +421,42 @@ async function mount(root, ctx) {
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
       } catch (e) { store.toast(e.message) }
     }
+    // ---- Assistent: vier Schritte statt einer Seite, die über den Bildschirm hinauswächst ----
+    const lab = text => el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, text)
+    const seiten = [
+      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab('Bezeichnung'), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint) },
+      { name: '② Womit', box: el('div', {}, paramsBox), leer: () => !paramsBox.childElementCount },
+      { name: '③ Ablage', box: el('div', {}, fachBox), leer: () => fachBox.style.display === 'none' },
+      { name: '④ Wann', box: el('div', {}, lab('Zeitplan'), sched.el, lab('Zeitgrenze (min)'), timeoutIn) },
+    ]
+    let schritt = 0
+    const chips = seiten.map((s, i) => el('span', { class: 'view-chip', style: 'cursor:pointer', title: s.name.slice(2), onclick: () => zeige(i) }, s.name))
+    const bühne = el('div', { style: 'min-height:240px;max-height:min(56vh,520px);overflow:auto;padding-right:4px' })
+    const zurück = el('button', { type: 'button', title: 'zurück', onclick: () => blättern(-1) }, '←')
+    const vor = el('button', { type: 'button', title: 'weiter', onclick: () => blättern(1) }, '→')
+    /// hat diese Seite etwas zu zeigen? (ohne Fächer keine Ablage, ohne Parameter kein Womit)
+    const voll = i => !seiten[i].leer?.()
+    function zeige(i) {
+      if (!voll(i)) return
+      schritt = i
+      bühne.innerHTML = ''
+      bühne.append(seiten[i].box)
+      seiten.forEach((s, n) => { chips[n].style.display = voll(n) ? '' : 'none'; chips[n].classList.toggle('on', n === i) })
+      const sichtbar = seiten.map((_, n) => voll(n))
+      zurück.disabled = naechsteSeite(sichtbar, i, -1) === null
+      vor.disabled = naechsteSeite(sichtbar, i, 1) === null
+    }
+    /// zur nächsten Seite, die etwas zeigt
+    function blättern(richtung) {
+      const i = naechsteSeite(seiten.map((_, n) => voll(n)), schritt, richtung)
+      if (i !== null) zeige(i)
+    }
     dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, isNew ? '+ Job' : `✎ ${j.label}`),
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Key'), keyIn,
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Bezeichnung'), labelIn,
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Plugin (Prozess)'), pluginSel, pluginHint, paramsBox, fachBox,
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitplan'), sched.el,
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Zeitgrenze (min)'), timeoutIn,
-      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px' }, why, el('button', { onclick: () => box.remove() }, 'Abbrechen'), saveBtn))
+      el('div', { style: 'display:flex;gap:4px;margin:8px 0;flex-wrap:wrap' }, ...chips),
+      bühne,
+      el('div', { style: 'display:flex;align-items:center;gap:8px;margin-top:14px' },
+        zurück, vor, el('span', { style: 'flex:1' }), why, el('button', { onclick: () => box.remove() }, 'Abbrechen'), saveBtn))
+    zeige(0)
     box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) box.remove() })
     document.body.append(box); (isNew ? keyIn : labelIn).focus()
   }
