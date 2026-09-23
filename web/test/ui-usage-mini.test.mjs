@@ -31,7 +31,7 @@ test('der Balken füllt sich mit dem Verbrauch', () => {
 
 test('der Tooltip sagt beides: genutzt und noch verfügbar', () => {
   const w = mount(UsageMini, { props: { usage } })
-  assert.match(w.findAll('.u')[0].attributes('title') ?? '', /Woche: 16\.800 von 20\.000 genutzt · noch 3\.200 verfügbar, wieder voll am 2026-09-28/)
+  assert.match(w.findAll('.u')[0].attributes('title') ?? '', /Woche: 16\.800 von 20\.000 genutzt · noch 3\.200 verfügbar · wird zurückgesetzt am 2026-09-28/)
 })
 
 test('die Prozentzahl steht an ihrem eigenen Balken, nicht am nächsten', () => {

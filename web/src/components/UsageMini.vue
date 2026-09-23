@@ -17,7 +17,7 @@ const label = key => key === 'week' ? 'Woche' : 'Monat'
 
 <template>
   <span v-if="usage" class="usage-mini">
-    <span v-for="{ key, icon, p } in parts" :key="key" class="u" :title="`${p?.scope ?? ''} · ${label(key)}: ${n(p?.used)} von ${n(p?.max)} genutzt · noch ${n(frei(p))} verfügbar, wieder voll am ${p?.resetAt ?? '—'}`">
+    <span v-for="{ key, icon, p } in parts" :key="key" class="u" :title="`${p?.scope ?? ''} · ${label(key)}: ${n(p?.used)} von ${n(p?.max)} genutzt · noch ${n(frei(p))} verfügbar · wird zurückgesetzt am ${p?.resetAt ?? '—'}`">
       <span class="ico">{{ icon }}</span>
       <span class="track"><span class="fill" :class="tone(p)" :style="`width:${pct(p)}%`" /></span>
       <span class="mono pc" :class="tone(p)">{{ pct(p) }}%</span>

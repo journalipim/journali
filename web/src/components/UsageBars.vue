@@ -29,7 +29,7 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
   <div class="usage">
     <div v-for="{ key, label, p } in parts" :key="key" class="bar-row">
       <span class="lbl">{{ label }}</span>
-      <span class="track" :title="p ? `${n(p.used)} von ${n(p.max)} genutzt · noch ${n(frei(p))} verfügbar, wieder voll am ${p.resetAt}` : 'wird geladen'">
+      <span class="track" :title="p ? `${n(p.used)} von ${n(p.max)} genutzt · noch ${n(frei(p))} verfügbar · wird zurückgesetzt am ${p.resetAt}` : 'wird geladen'">
         <span class="fill" :class="tone(p)" :style="`width:${pct(p)}%`" />
       </span>
       <span class="num mono" :class="tone(p)">{{ n(p?.used) }}</span>
