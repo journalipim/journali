@@ -3,6 +3,15 @@
 // regelmässig (cron) oder von Hand;
 // hier verwalten, überwachen, Logs lesen. Ein Job = ein Prozess-Plugin (process im Manifest) mit Parametern.
 // API: /api/jobs (JobApi.cs), Läufe und Ausgang im Journal (job:<key>), Log als Datei beim Server.
+/// Welche Fächer ein Job benutzt: liest er Dateien, gibt es in/, done/ und failed/; schreibt er, gibt es out/.
+/// (Taloan, 23.09.2026: ein Sicherungsjob legt nur ab — dann von in/ und failed/ zu sprechen, führt in die Irre.)
+export function fachNames(files) {
+  const out = []
+  if (files?.in) out.push('in/', 'done/', 'failed/')
+  if (files?.out) out.push('out/')
+  return out
+}
+
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const when = iso => iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
 const STATUS = { ok: ['✓', 'pos'], warn: ['⚠', 'warn'], failed: ['✗', 'neg'], timeout: ['⏱✗', 'neg'], cancelled: ['⊘', 'muted'] }
@@ -272,12 +281,13 @@ async function mount(root, ctx) {
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
     // Fächer (docs/tasker-dateien.md, Taloan: der Tasker besitzt die Ablage): Basis, Aufbewahrung, latest, Archiv — nur bei Prozessen mit files im Manifest
     const fBase = el('input', { type: 'text', value: j?.files?.base ?? '', placeholder: 'leer = jobs/<key> beim Server — oder ein Share, auf dem SAP ablegt', style: 'flex:1' })
+    const fachLabelEl = el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Fächer · Basis')
     const fBaseBtn = el('button', { type: 'button', title: 'Basis der Fächer auf dem Server wählen', onclick: () => ctx.filePicker({ value: fBase.value, dirOnly: true, title: '📁 Basis der Fächer (in/, done/, failed/, out/)', onPick: v => { fBase.value = v } }) }, '📁')
     const fKeep = el('input', { type: 'text', value: j?.files?.keep ?? '', placeholder: 'alle', style: 'width:90px', title: 'Aufbewahrung der Ausgaben: 10 = die letzten 10 Läufe, 30d = 30 Tage, leer = alle; gelöscht wird nur, was der Tasker benannt hat, nie latest' })
     const fLatest = el('input', { type: 'checkbox' }); fLatest.checked = j?.files?.latest ?? true
     const fArchive = el('input', { type: 'checkbox' }); fArchive.checked = j?.files?.archive ?? false
     const fachBox = el('div', { style: 'display:none' },
-      el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Fächer · Basis (in/, done/, failed/, out/)'), el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn),
+      fachLabelEl, el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn),
       el('div', { style: 'display:flex;gap:14px;align-items:center;margin-top:6px;flex-wrap:wrap' },
         el('label', { style: 'display:flex;gap:6px;align-items:center' }, el('span', { class: 'muted' }, 'Aufbewahrung'), fKeep),
         el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'nach jedem erfolgreichen Lauf eine Kopie unter stabilem Namen (<key>-latest) — für den, der abholt' }, fLatest, 'latest'),
@@ -347,6 +357,8 @@ async function mount(root, ctx) {
       }
       if (hasProfile && more.childElementCount) paramsBox.append(moreBtn, more)
       fachBox.style.display = p?.files ? '' : 'none'
+      // nur die Fächer nennen, die dieses Plugin wirklich benutzt: wer nur schreibt, hat kein in/ und kein failed/
+      if (p?.files) { fachLabelEl.textContent = `Fächer · Basis (${fachNames(p.files).join(', ')})`; fBaseBtn.title = `Basis der Fächer auf dem Server wählen (${fachNames(p.files).join(', ')})` }
       if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, 'Dieses Plugin hat keine Parameter.'))
     }
     // Speichern nur, wenn der Job laufen kann (Taloan, 21.09.: „speichern deaktiviert, solange ein Profil nicht ausführbar ist“):
