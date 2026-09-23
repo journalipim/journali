@@ -1,10 +1,12 @@
 <script setup>
-// Einstellungen in drei Ebenen (Taloan, 23.09.2026: „im Moment ist alles durcheinander wie es gewachsen ist“):
-// ◐ Ich — was nur mich betrifft (Darstellung, Sicht, dieser Rechner, mein Konto, mein KI-Schlüssel)
-// 👥 Team — die Gruppe, in der ich arbeite: Schlüssel, Grenzen, Verbrauch
-// ⚙ Anlage — was für alle gilt: Speicher, Mail, Benutzer und Rollen, Sicherung, Nutzung
-// Ein Abschnitt, den man nicht darf, verschwindet (Taloan: „doch, er verschwindet“); ein Reiter ohne Abschnitt ebenso.
-import { ref, computed, onMounted } from 'vue'
+// Einstellungen: ein Reiter je Sache, sichtbar nach Recht (Taloan, 23.09.2026: „im Moment ist alles durcheinander wie es
+// gewachsen ist“ · „die Seite Anlage heisst völlig bescheuert und wirft alles Kraut und Rüben durcheinander — im Grunde
+// ist das der Tab für den Administrator, den wir jetzt in seine Bestandteile zerlegen“):
+// ◐ Ich · 👥 Team · ◈ Rollen & Rechte (mit den Teams) · ▨ Storage · 🖼 Assets · ✉ Mail · ▣ Backup & Recovery · ⚑ Workflows.
+// Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
+// Speicher selbst nicht heranmuss (Taloan, 23.09.2026).
+// Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
+import { ref } from 'vue'
 import { store } from '../store.js'
 import MatrixPicker from '../components/MatrixPicker.vue'
 import { ai } from '../ai.js'
@@ -14,20 +16,11 @@ import MailSettings from '../components/MailSettings.vue'
 import TeamsSettings from '../components/TeamsSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
 import AccountSettings from '../components/AccountSettings.vue'
+import TeamsAdmin from '../components/TeamsAdmin.vue'
 import WorkflowSettings from '../components/WorkflowSettings.vue'
-import UsageBars from '../components/UsageBars.vue'
 import { api } from '../api.js'
-// Reiter: Ich | Team | Anlage | Workflows; alte Sprungmarken (#storage, #users) landen in der Anlage
-const tab = ref(['#storage', '#users', '#mail', '#backup'].includes(location.hash) ? 'anlage' : location.hash === '#teams' ? 'team' : 'ich')
-// Nutzung (Taloan, 22.09.): drei Balken und der Verlauf — gezählt wird, was ins Journal geht
-const usage = ref(null), usageHist = ref([]), usagePeriod = ref('day'), usageBusy = ref(false)
-async function loadUsage(period = usagePeriod.value) {
-  usagePeriod.value = period; usageBusy.value = true
-  try { const u = await api.get(`/api/usage?history=${period}&limit=${period === 'day' ? 30 : period === 'week' ? 26 : 24}`); usage.value = u; usageHist.value = u.history ?? [] }
-  catch (e) { store.toast(e.message) }
-  finally { usageBusy.value = false }
-}
-onMounted(() => { loadUsage() })
+// Sprungmarken von aussen (#storage, #users, #mail, #backup, #teams) treffen weiter ihren Reiter
+const tab = ref({ '#storage': 'storage', '#users': 'users', '#mail': 'mail', '#backup': 'backup', '#teams': 'team' }[location.hash] ?? 'ich')
 // KI-Schlüssel (Taloan, 18.09.): bleiben im Browser (localStorage), nie im Journal — Plugins fragen die KI nur, wenn ein Schlüssel da ist.
 // Je Anbieter ein Schlüssel und ein Modell (Taloan, 20.09.: kein Anbieter fest im Code); die Plugins fragen den gewählten.
 const aiAcc = ref(Object.fromEntries(ai.providers.map(p => [p.key, { ...ai.accounts[p.key] }]))), aiProvider = ref(ai.provider), aiState = ref({})
@@ -38,8 +31,6 @@ async function saveAi(pk) {
   try { aiState.value = { ...aiState.value, [pk]: (await ai.test(pk)) ? `✓ ${ai.accounts[pk].model} antwortet` : '✗ unerwartete Antwort' } } catch (e) { aiState.value = { ...aiState.value, [pk]: '✗ ' + e.message } }
 }
 function setAiProvider() { ai.provider = aiProvider.value; ai.save() }
-
-const anlage = computed(() => store.can('storage') || store.can('users') || store.can('read'))
 
 const actor = ref(store.actor)
 const server = ref(store.server)
@@ -62,22 +53,21 @@ async function save() {
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>⚙ Einstellungen</h1>
       <span class="tab" :class="{ on: tab === 'ich' }" @click="tab = 'ich'" title="gilt nur für mich">◐ Ich</span>
-      <span v-if="store.auth.enabled && (store.can('team') || store.can('users'))" class="tab" :class="{ on: tab === 'team' }" @click="tab = 'team'" title="die Gruppe, in der ich arbeite">👥 Team</span>
-      <span v-if="anlage" class="tab" :class="{ on: tab === 'anlage' }" @click="tab = 'anlage'" title="gilt für alle">⚙ Anlage</span>
+      <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'team' }" @click="tab = 'team'" title="die Gruppe, in der ich arbeite">👥 Team</span>
+      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'" title="wer im System arbeitet, mit welcher Rolle und in welchem Team">◈ Rollen &amp; Rechte</span>
+      <span v-if="store.can('storage')" class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'" title="wo die Bytes liegen">▨ Storage</span>
+      <span v-if="store.can('model') || store.can('storage')" class="tab" :class="{ on: tab === 'assets' }" @click="tab = 'assets'" title="Vorschau-Ableitungen und ihr Bestand">🖼 Assets</span>
+      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'" title="ausgehender Mailserver">✉ Mail</span>
+      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'" title="Sichern und Wiederherstellen">▣ Backup &amp; Recovery</span>
       <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'" title="Zustände und Übergänge über den Daten">⚑ Workflows</span>
     </div>
     <div class="scroll" v-if="tab === 'team'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>
-    <div class="scroll" v-else-if="tab === 'anlage'">
-      <StorageSettings v-if="store.can('storage')" />
-      <MailSettings v-if="store.can('users')" />
-      <UsersSettings v-if="store.can('users')" />
-      <RestoreSettings v-if="store.can('users')" />
-      <div class="section">
-        <h2>◷ Nutzung <span class="muted">· Einträge im Journal</span></h2>
-        <UsageBars :usage="usage" :history="usageHist" :period="usagePeriod" :busy="usageBusy" @period="loadUsage" />
-      </div>
-    </div>
+    <div class="scroll" v-else-if="tab === 'storage'"><StorageSettings teil="speicher" /></div>
+    <div class="scroll" v-else-if="tab === 'assets'"><StorageSettings teil="assets" /></div>
+    <div class="scroll" v-else-if="tab === 'mail'"><MailSettings /></div>
+    <div class="scroll" v-else-if="tab === 'backup'"><RestoreSettings /></div>
+    <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /><TeamsAdmin /></div>
     <div class="scroll" v-else>
       <table class="grid form">
         <tbody>

@@ -85,6 +85,7 @@ public static class TeamApi
             return c.With((_, _, write) =>
             {
                 if (c.Teams.Get(key) is null) return Results.NotFound();
+                if (c.Teams.Primary?.Key == key) return Bad("Das erste Team bleibt — umbenennen geht, entfernen nicht.");
                 var drin = c.Users.All.Values.Where(u => u.Team == key).Select(u => u.Name ?? u.Key).ToList();
                 if (drin.Count > 0) return Bad($"Noch {drin.Count} im Team: {string.Join(", ", drin.Take(5))}{(drin.Count > 5 ? " …" : "")}.");
                 if (c.Teams.All.Values.Any(t => t.KeysFrom == key)) return Bad("Andere Teams benutzen die Schlüssel dieses Teams.");
@@ -104,6 +105,18 @@ public static class TeamApi
             Secrets.Set(jobsDir, SecretKey(key), body.Keys ?? new());
             return Results.Ok(new { keys = Secrets.Get(jobsDir, SecretKey(key)).Keys.Order().ToList() });
         });
+
+        // Wer zum Team gehört (Taloan, 23.09.2026: „auf der Teamseite sehe ich, wer alles zu meinem Team gehört“)
+        api.MapGet("/teams/{key}/members", (string key, HttpRequest req, Catalog c) => c.With((_, _, _) =>
+        {
+            if (!Auth.Has(req, c, Rights.Users) && key != TeamOf(c, req.HttpContext.Items["user"] as string)) return Bad("Das ist nicht dein Team.");
+            if (c.Teams.Get(key) is null) return Results.NotFound();
+            var erstes = c.Teams.Primary?.Key == key;
+            return Results.Ok(c.Users.All.Values
+                .Where(u => u.Team == key || (erstes && u.Team is null))
+                .OrderBy(u => u.Name ?? u.Key)
+                .Select(u => new { u.Key, u.Name, u.Role, u.Enabled, own = u.Team == key, u.LastAt }).ToList());
+        }));
 
         // Die Token der Mitglieder (Taloan, 23.09.2026): ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung
         // ihres Teams — darum sieht das Team, welche es gibt, und kann sie widerrufen. Der Token selbst steht nirgends.

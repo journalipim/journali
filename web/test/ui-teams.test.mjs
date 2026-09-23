@@ -1,97 +1,89 @@
-// Einstellungen → 👥 Teams (Taloan, 23.09.2026: „je Team gibt es Limits und API-Keys, Benutzer gehören einem Team an“).
-// Geprüft wird, was den Unterschied macht: das Grundkontingent steht nur am ersten Team, Schlüssel gehen zum Server und
-// kommen nie zurück, und ein Team-Admin sieht nur sein eigenes.
+// Die Teamseite (Taloan, 23.09.2026: „auf der Teamseite sehe ich alles, was zu meinem Team gehört, wer alles zu meinem Team
+// gehört; wenn ich der Teamadministrator bin, kann ich da auch die API-Schlüssel eingeben. Teams anlegen kann man hier
+// aber nicht“). Geprüft wird genau das: Mitglieder, Schlüssel, Token, Verbrauch, Nutzung — und kein Anlegen.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises } from './ui.mjs'
 import { store } from '../src/store.js'
 
 const TeamsSettings = (await import('../src/components/TeamsSettings.vue')).default
+const TeamsAdmin = (await import('../src/components/TeamsAdmin.vue')).default
 
 const TEAMS = [
-  { key: 'zentral', label: 'Zentrale', primary: true, keys: ['anthropic'], keysFrom: null, includedTokens: 200000, monthlyTokens: 100000, dailyTokens: 50000, month: 80000, today: 1200, calls: 7, members: 3, payer: 'zentral' },
-  { key: 'es', label: 'Spanien', primary: false, keys: [], keysFrom: 'zentral', includedTokens: 0, monthlyTokens: 0, dailyTokens: 0, month: 0, today: 0, calls: 0, members: 2, payer: 'zentral' },
+  { key: 'init', label: 'Init Team', primary: true, keys: ['anthropic'], keysFrom: null, includedTokens: 200000, monthlyTokens: 100000, dailyTokens: 50000, month: 80000, today: 1200, calls: 7, members: 3, payer: 'init' },
+  { key: 'es', label: 'Spanien', primary: false, keys: [], keysFrom: 'init', includedTokens: 0, monthlyTokens: 0, dailyTokens: 0, month: 0, today: 0, calls: 0, members: 2, payer: 'init' },
+]
+const MITGLIEDER = [
+  { key: 'taloan', name: 'Taloan', role: 'admin', enabled: true, own: true, lastAt: '2026-09-23T07:00:00Z' },
+  { key: 'gast', name: 'Gast', role: 'reader', enabled: true, own: false, lastAt: null },
 ]
 
 function server(teams = TEAMS) {
   const calls = []
   globalThis.fetch = async (url, opts = {}) => {
-    const path = String(url).replace(/^https?:\/\/[^/]+/, '')
+    const path = String(url).replace(/^https?:\/\/[^/]+/, '').split('?')[0]
     calls.push({ path, method: opts.method ?? 'GET', body: opts.body ? JSON.parse(opts.body) : null })
-    const body = path.startsWith('/api/teams') && path.includes('/tokens') ? [{ id: 'abc123def456', user: 'pablo', label: 'Excel Laptop', at: '2026-09-20T08:00:00Z' }]
-      : path.startsWith('/api/teams') && path.includes('/usage') ? { team: 'zentral', days: [{ day: '2026-09-23', calls: 7, in: 800, out: 400, tokens: 1200, byProvider: { anthropic: 1200 }, byUser: { pablo: 900, taloan: 300 } }], dependents: ['es'] }
-      : path.startsWith('/api/teams') && opts.method === 'PUT' ? teams[0]
-      : teams
+    const body = path.endsWith('/members') ? MITGLIEDER
+      : path.endsWith('/tokens') ? [{ id: 'abc123def456', user: 'gast', label: 'Excel Laptop', at: '2026-09-20T08:00:00Z' }]
+      : path.endsWith('/usage') ? { team: 'init', days: [{ day: '2026-09-23', calls: 7, in: 800, out: 400, tokens: 1200, byProvider: { anthropic: 1200 }, byUser: { gast: 900, taloan: 300 } }], dependents: ['es'] }
+      : path === '/api/usage' ? { week: { used: 1, max: 10 }, month: { used: 2, max: 20 }, history: [] }
+      : path === '/api/teams' ? teams
+      : opts.method === 'PUT' ? teams[0] : {}
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }
   }
   return calls
 }
-const zeilen = w => w.findAll('tbody tr')
-/// warten, bis auch die Nachläufer durch sind (die Tabelle lädt nach jeder Änderung neu)
 const ruhe = async () => { for (let i = 0; i < 5; i++) { await flushPromises(); await new Promise(r => setTimeout(r, 0)) } }
 
-test('jedes Team mit Schlüsseln, Grenzen und Verbrauch — das Grundkontingent nur bei Team 1', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['users', 'team', 'read'] }
-  const w = mount(TeamsSettings); await flushPromises()
-  await ruhe()
-  const namen = zeilen(w).map(r => r.find('input[type=text]').exists() ? r.find('input[type=text]').element.value : r.text())
-  assert.ok(namen[0].includes('Zentrale'), `Team 1 fehlt: ${namen.join(' | ')}`)
-  assert.ok(namen[1].includes('Spanien'), `zweites Team fehlt: ${namen.join(' | ')}`)
+test('die Teamseite zeigt, wer dazugehört, womit gearbeitet wird und was es kostet', async () => {
+  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  const w = mount(TeamsSettings); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
-  assert.match(t, /anthropic/, 'die eingerichteten Anbieter stehen da')
-  assert.match(t, /↑ zentral/, 'Spanien hängt sichtbar am Zahler')
-  // Grundkontingent: Eingabefeld nur in der Zeile von Team 1
-  const felder = zeilen(w).map(r => r.findAll('input[type=number]').length)
-  assert.equal(felder[0], 3, 'Team 1: Grundkontingent, Monat, Tag')
-  assert.equal(felder[1], 2, 'jedes weitere Team hat kein eigenes Grundkontingent')
-  assert.match(zeilen(w)[0].text(), /①/, 'Team 1 ist als solches zu erkennen')
+  assert.match(t, /Init Team/)
+  assert.match(t, /Taloan/, 'die Mitglieder stehen da')
+  assert.match(t, /Gast/, 'auch wer kein eigenes Team trägt')
+  assert.match(t, /anthropic/, 'die eingerichteten Anbieter')
+  assert.match(t, /Excel Laptop/, 'die Token der Mitglieder')
+  assert.match(t, /80\.000 Token/, 'der Verbrauch des Teams')
+  assert.match(t, /Nutzung/, 'und die Nutzung des Journals')
+  assert.ok(!t.includes('neues Team'), 'Teams anlegen gehört nicht auf die Teamseite')
   await ruhe(); w.unmount()
 })
 
-test('ein Schlüssel geht zum Server und kommt nie zurück', async () => {
-  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['users', 'read'] }
-  const w = mount(TeamsSettings); await flushPromises()
-  await ruhe()
-  const zeile = zeilen(w)[1]
-  await zeile.find('input[type=password]').setValue('sk-ant-geheim')
-  await zeile.findAll('button').find(b => b.text() === '🔒').trigger('click'); await ruhe()
+test('der Team-Admin hinterlegt den Schlüssel; er kommt nie zurück', async () => {
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  const w = mount(TeamsSettings); await ruhe()
+  await w.find('input[type=password]').setValue('sk-ant-geheim')
+  await w.findAll('button').find(b => b.text() === '🔒').trigger('click'); await ruhe()
   const put = calls.find(c => c.path.includes('/keys') && c.method === 'PUT')
   assert.ok(put, 'der Schlüssel ging nicht hinaus')
   assert.equal(put.body.keys.anthropic, 'sk-ant-geheim')
-  const nachher = zeilen(w)
-  assert.ok(nachher.length >= 2, `nach dem Speichern stehen nur ${nachher.length} Zeilen da — die Tabelle hat sich verabschiedet: ${w.html().slice(0, 300)}`)
-  assert.equal(nachher[1].find('input[type=password]').element.value, '', 'das Feld ist danach leer — der Schlüssel liegt beim Server')
+  assert.equal(w.find('input[type=password]').element.value, '', 'das Feld ist danach leer — der Schlüssel liegt beim Server')
   await ruhe(); w.unmount()
 })
 
-test('Verbrauch je Tag, Anbieter und Person — daraus wird die Rechnung, nicht die Sperre', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['users', 'read'] }
-  const w = mount(TeamsSettings); await flushPromises()
-  await ruhe()
-  await zeilen(w)[0].findAll('button').find(b => b.text() === '≡').trigger('click'); await ruhe()
-  const t = w.text().replace(/\s+/g, ' ')
-  assert.match(t, /pablo 900/, 'die Person steht in der Aufstellung')
-  assert.match(t, /anthropic 1\.200/, 'und der Anbieter')
-  assert.match(t, /Auf diese Rechnung gehen auch: es/, 'wer sonst noch auf diese Rechnung geht')
-  await ruhe(); w.unmount()
-})
-
-test('ein Team-Admin bearbeitet keine Bezeichnungen fremder Teams und legt keine an', async () => {
-  server([TEAMS[1]]); store.auth = { known: true, enabled: true, user: 'pablo', role: 'teamadmin', rights: ['read', 'write', 'team'] }
+test('ein Leser sieht sein Team, ändert aber nichts', async () => {
+  server(); store.auth = { known: true, enabled: true, user: 'gast', role: 'reader', rights: ['read'] }
   const w = mount(TeamsSettings); await ruhe()
-  assert.equal(w.findAll('input[placeholder="neues Team"]').length, 0, 'Teams anlegen bleibt bei „Benutzer und Rollen“')
-  assert.equal(zeilen(w)[0].findAll('input[type=text]').length, 0, 'die Bezeichnung ändert nur, wer alle Teams verwaltet')
-  assert.ok(zeilen(w)[0].find('input[type=password]').exists(), 'den eigenen Schlüssel darf er hinterlegen')
+  assert.match(w.text(), /Init Team/)
+  assert.equal(w.findAll('input[type=password]').length, 0, 'kein Feld für einen Schlüssel')
+  assert.ok(w.findAll('input[type=number]').every(i => i.attributes('disabled') !== undefined), 'die Grenzen stehen fest')
   await ruhe(); w.unmount()
 })
 
-test('die Token der Mitglieder stehen beim Team und lassen sich widerrufen', async () => {
-  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['users', 'read'] }
-  const w = mount(TeamsSettings); await ruhe()
-  await zeilen(w)[0].findAll('button').find(b => b.text() === '🔑').trigger('click'); await ruhe()
-  const t = w.text().replace(/\s+/g, ' ')
-  assert.match(t, /Excel Laptop/, 'der Token der Person steht beim Team')
-  assert.match(t, /pablo/, 'und wem er gehört')
-  assert.ok(!t.includes('jt_'), 'der Token selbst steht nirgends — nur seine Kennung')
+test('Teams anlegen steht bei den Personen — das erste Team lässt sich nicht entfernen', async () => {
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'users'] }
+  const w = mount(TeamsAdmin); await ruhe()
+  const zeilen = w.findAll('tbody tr')
+  assert.match(zeilen[0].text(), /①/, 'das erste Team ist zu erkennen')
+  assert.equal(zeilen[0].findAll('button').filter(b => b.text() === '✕').length, 0, 'es bleibt')
+  assert.equal(zeilen[1].findAll('button').filter(b => b.text() === '✕').length, 1, 'jedes andere nicht')
+  assert.equal(zeilen[0].findAll('input[type=number]').length, 3, 'Team 1: Grundkontingent, Monat, Tag')
+  assert.equal(zeilen[1].findAll('input[type=number]').length, 2, 'jedes weitere hat kein eigenes Grundkontingent')
+  await w.find('input[placeholder="neues Team"]').setValue('Frankreich')
+  await w.findAll('button').find(b => b.text() === '+').trigger('click'); await ruhe()
+  const put = calls.find(c => c.path === '/api/teams/frankreich' && c.method === 'PUT')
+  assert.ok(put, 'das Team wurde nicht angelegt')
+  assert.equal(put.body.label, 'Frankreich')
   await ruhe(); w.unmount()
 })

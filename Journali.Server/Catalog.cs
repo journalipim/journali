@@ -109,6 +109,13 @@ public sealed class Catalog
                 if (key != "admin" && hadRoles) continue;
                 Apply(_journal.Append("system", Users.RoleStream + key, Types.RoleDefined, Types.Serialize(role))); n++;
             }
+            // Das Init Team (Taloan, 23.09.2026: „es gibt immer ein Standardteam, das ist das allererste, das auch das
+            // Grundrauschen bekommt und Init Team heisst; das kann man nicht löschen, nur umbenennen, und es muss im
+            // initialen Default-Set einer Neuinstallation drin sein“). Wer kein eigenes Team trägt, arbeitet hier.
+            if (_teams.All.Count == 0)
+            {
+                Apply(_journal.Append("system", Teams.Stream + Model.InitTeam, Types.TeamDefined, Types.Serialize(new TeamDefined("Init Team")))); n++;
+            }
             // Der Wurzelknoten „MasterTree“: nur, wenn es ihn nie gab (auch nicht zurückgezogen).
             if (!_tree.EverCreated(Model.RootNode))
                 foreach (var s in Model.TreeSeeds()) { Apply(_journal.Append("system", s.Stream, s.Type, s.Payload)); n++; }

@@ -95,13 +95,19 @@ stehen dort als solche markiert.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
   Tooltip — **ein sichtbarer Text ist höchstens ein Satz**, alles Weitere steht in
   `title=` (Prüfstand `sichtbare-texte.test.mjs`). Positiv grün, negativ rot.
-  **Einstellungen in drei Ebenen** (Taloan, 23.09.): ◐ Ich (Darstellung, Sicht, dieser
-  Rechner, mein Konto mit Passwort und API-Token, mein KI-Schlüssel) · 👥 Team ·
-  ⚙ Anlage (Speicher, Mail, Benutzer und Rollen, Sicherung, Nutzung) · ⚑ Workflows.
+  **Einstellungen: ein Reiter je Sache** (Taloan, 23.09.): ◐ Ich (Darstellung, Sicht,
+  dieser Rechner, mein Konto mit Passwort und API-Token, mein KI-Schlüssel) ·
+  👥 Team (Mitglieder, Schlüssel, Grenzen, Verbrauch, Token, Nutzung) · ◈ Rollen &
+  Rechte (Benutzer, Rollen, Teams anlegen) · ▨ Storage (wo die Bytes liegen) ·
+  🖼 Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
+  pflegen darf) · ✉ Mail · ▣ Backup & Recovery · ⚑ Workflows.
   Grundsatz: **wer mit seinen Rechten, Rollen und seinem Team hierher kommt, sieht,
   was er sehen oder ändern darf — alles andere sieht er nicht.** Kein gesperrter
   Abschnitt, kein Hinweis auf Verborgenes; ein Reiter ohne Abschnitt fällt weg.
   **Team** = eine Gruppe von Personen, die am Gesamtsystem mitarbeitet (keine Insel —
   wer Abschottung braucht, braucht ein eigenes System). Daran hängen KI-Schlüssel,
-  Grenzen und Verbrauch, weil sie irgendwo hängen müssen.
+  Grenzen und Verbrauch, weil sie irgendwo hängen müssen. Jede Anlage bringt das
+  **Init Team** mit (`team:init`, `Model.InitTeam`): nicht löschbar, umbenennbar,
+  trägt das Grundkontingent; der erste Administrator gehört hinein, und wer kein
+  eigenes Team trägt, arbeitet dort.
 - `docs/architektur.md` — das Prinzip, die Schichten, die Achsen, was offen ist

@@ -1,4 +1,7 @@
 <script setup>
+// Zwei Dinge, die verschiedenen Leuten gehören (Taloan, 23.09.2026): der <b>Speicher</b> (Treiber, Zugang, Umzug) und die
+// <b>Assets</b> (Vorschau-Ableitungen, Bestand). Der Schalter sagt, welcher Teil gezeigt wird — die Logik bleibt eine.
+defineProps({ teil: { type: String, default: 'speicher' } })
 // Einstellungen → Storage (Taloan, 19.09.2026: „wo ich das alles einstellen kann“): Treiber des Medienspeichers — Postgres,
 // Verzeichnis, S3 (Garage, MinIO, AWS, R2 …); prüfen, speichern (media.json beim
 // Server, nie im Journal), Fehlbestand sehen, Blobs von einem anderen Speicher herüberkopieren.
@@ -74,7 +77,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="section">
+  <div class="section" v-if="teil === 'speicher'">
     <h2>▨ Medienspeicher <span class="muted">· aktiv: <span class="mono">{{ state.kind }}</span> · {{ state.total }} Medien<span v-if="state.error" class="neg"> · ✗ {{ state.error }}</span></span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /><col /></colgroup><tbody>
       <tr><td class="muted">Treiber</td><td><select v-model="cfg.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td>
@@ -93,7 +96,7 @@ onMounted(load)
     </tbody></table>
   </div>
 
-  <div class="section">
+  <div class="section" v-if="teil === 'assets'">
     <h2>▨ Vorschau-Presets <span class="muted">· Ableitungen, die für jedes Bild vorausgerechnet werden — nie live (Konstruktions-TIFFs); rechnet das Plugin derive (Prozess), angestoßen nach jedem Hochladen</span></h2>
     <table class="grid form" style="width:auto"><thead><tr><th>Key</th><th>Bezeichnung</th><th title="längste Seite wird eingepasst, nie vergrößert">max B × H</th><th>Format</th><th>Qualität</th><th title="beim Import automatisch rechnen">auto</th><th title="gerechnet / Bilder">Stand</th><th></th></tr></thead><tbody>
       <tr v-for="p in presets" :key="p.key">
@@ -110,7 +113,7 @@ onMounted(load)
     <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">+ Preset</button><button class="primary" @click="derive" :disabled="!!presetBusy" title="fehlende Ableitungen jetzt rechnen (Job derive)">▶ Jetzt rechnen</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
   </div>
 
-  <div class="section">
+  <div class="section" v-if="teil === 'assets'">
     <h2>Bestand</h2>
     <div class="row" style="gap:8px;align-items:center">
       <button :disabled="!!zaehlBusy" @click="findMissing">Fehlbestand zählen</button>
@@ -120,7 +123,7 @@ onMounted(load)
     <div v-if="missing?.missing.length" class="muted" style="font-size:12px;margin-top:4px;max-height:120px;overflow:auto">{{ missing.missing.slice(0, 50).map(m => m.name).join(' · ') }}{{ missing.missing.length > 50 ? ' …' : '' }}</div>
   </div>
 
-  <div class="section">
+  <div class="section" v-if="teil === 'speicher'">
     <h2>Herüberkopieren <span class="muted">· alle Blobs eines anderen Speichers, die hier fehlen — nach einem Treiberwechsel oder von einem alten Verzeichnis</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /></colgroup><tbody>
       <tr><td class="muted">Quelle</td><td><select v-model="copyFrom.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td></tr>

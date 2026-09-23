@@ -15,9 +15,9 @@ public class TeamTests
         var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
         c.With((_, _, write) =>
         {
-            write("t", Teams.Stream + "zentral", Types.TeamDefined, new TeamDefined("Zentrale", null, MonthlyTokens: 100_000, DailyTokens: 50_000, IncludedTokens: 200_000), null);
-            write("t", Teams.Stream + "es", Types.TeamDefined, new TeamDefined("Spanien", null, KeysFrom: "zentral"), null);
-            write("t", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true, "zentral"), null);
+            write("t", Teams.Stream + Model.InitTeam, Types.TeamDefined, new TeamDefined("Init Team", null, MonthlyTokens: 100_000, DailyTokens: 50_000, IncludedTokens: 200_000), null);
+            write("t", Teams.Stream + "es", Types.TeamDefined, new TeamDefined("Spanien", null, KeysFrom: Model.InitTeam), null);
+            write("t", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true, Model.InitTeam), null);
             write("t", Users.Stream + "pablo", Types.UserDefined, new UserDefined("Pablo", null, "editor", true, "es"), null);
             return 0;
         });
@@ -30,8 +30,8 @@ public class TeamTests
     public void Team_1_ist_das_zuerst_angelegte_und_traegt_das_Grundrauschen()
     {
         var c = World();
-        Assert.Equal("zentral", c.With((_, _, _) => c.Teams.Primary!.Key));
-        Assert.Equal(200_000, c.With((_, _, _) => c.Teams.Get("zentral")!.IncludedTokens));
+        Assert.Equal(Model.InitTeam, c.With((_, _, _) => c.Teams.Primary!.Key));
+        Assert.Equal(200_000, c.With((_, _, _) => c.Teams.Get(Model.InitTeam)!.IncludedTokens));
         Assert.Equal(0, c.With((_, _, _) => c.Teams.Get("es")!.IncludedTokens));
     }
 
@@ -39,14 +39,14 @@ public class TeamTests
     public void Wer_keine_eigenen_Schluessel_hat_haengt_am_Zahler()
     {
         var c = World();
-        Assert.Equal("zentral", c.With((_, _, _) => c.Teams.Payer("es")));     // Spanien zahlt nicht selbst
-        Assert.Equal("zentral", c.With((_, _, _) => c.Teams.Payer("zentral")));
-        Assert.Equal(["es", "zentral"], c.With((_, _, _) => c.Teams.Dependents("zentral").Order().ToArray()));
+        Assert.Equal(Model.InitTeam, c.With((_, _, _) => c.Teams.Payer("es")));     // Spanien zahlt nicht selbst
+        Assert.Equal(Model.InitTeam, c.With((_, _, _) => c.Teams.Payer(Model.InitTeam)));
+        Assert.Equal(["es", "init"], c.With((_, _, _) => c.Teams.Dependents(Model.InitTeam).Order().ToArray()));
         // ein weiteres Team am selben Zahler bringt keinen weiteren Freibetrag — der Topf ist derselbe
-        c.With((_, _, write) => write("t", Teams.Stream + "fr", Types.TeamDefined, new TeamDefined("Frankreich", null, KeysFrom: "zentral"), null));
-        Verbrauch(c, "zentral", 1000, "pablo", fuer: "es");
-        Verbrauch(c, "zentral", 500, "taloan");
-        Assert.Equal(1500, c.With((_, _, _) => c.Teams.Day("zentral", DateOnly.FromDateTime(DateTime.Today)).Tokens));
+        c.With((_, _, write) => write("t", Teams.Stream + "fr", Types.TeamDefined, new TeamDefined("Frankreich", null, KeysFrom: Model.InitTeam), null));
+        Verbrauch(c, Model.InitTeam, 1000, "pablo", fuer: "es");
+        Verbrauch(c, Model.InitTeam, 500, "taloan");
+        Assert.Equal(1500, c.With((_, _, _) => c.Teams.Day(Model.InitTeam, DateOnly.FromDateTime(DateTime.Today)).Tokens));
         Assert.Equal(0, c.With((_, _, _) => c.Teams.Day("es", DateOnly.FromDateTime(DateTime.Today)).Tokens));   // gezählt wird beim Zahler
     }
 
@@ -54,25 +54,25 @@ public class TeamTests
     public void Der_Verbrauch_sagt_wer_und_womit()
     {
         var c = World();
-        Verbrauch(c, "zentral", 1000, "pablo", fuer: "es");
-        Verbrauch(c, "zentral", 400, "taloan");
-        var tag = c.With((_, _, _) => c.Teams.Day("zentral", DateOnly.FromDateTime(DateTime.Today)));
+        Verbrauch(c, Model.InitTeam, 1000, "pablo", fuer: "es");
+        Verbrauch(c, Model.InitTeam, 400, "taloan");
+        var tag = c.With((_, _, _) => c.Teams.Day(Model.InitTeam, DateOnly.FromDateTime(DateTime.Today)));
         Assert.Equal(2, tag.Calls);
         Assert.Equal(1400, tag.Tokens);
         Assert.Equal(1000, tag.ByUser["pablo"]);          // die Rechnung ist nachvollziehbar, ohne dass jemand gesperrt wird
         Assert.Equal(400, tag.ByUser["taloan"]);
         Assert.Equal(1400, tag.ByProvider["anthropic"]);
-        Assert.Equal(1400, c.With((_, _, _) => c.Teams.Month("zentral", DateTime.Today.ToString("yyyy-MM"))));
+        Assert.Equal(1400, c.With((_, _, _) => c.Teams.Month(Model.InitTeam, DateTime.Today.ToString("yyyy-MM"))));
     }
 
     [Fact]
     public void Ein_Team_zurueckziehen_nimmt_die_Stammdaten_nicht_den_Verbrauch()
     {
         var c = World();
-        Verbrauch(c, "zentral", 300);
-        c.With((_, _, write) => write("t", Teams.Stream + "zentral", Types.TeamRetired, new TeamRetired(), null));
-        Assert.Null(c.With((_, _, _) => c.Teams.Get("zentral")));
-        Assert.Equal(300, c.With((_, _, _) => c.Teams.Month("zentral", DateTime.Today.ToString("yyyy-MM"))));   // was verbraucht wurde, wurde verbraucht
+        Verbrauch(c, Model.InitTeam, 300);
+        c.With((_, _, write) => write("t", Teams.Stream + Model.InitTeam, Types.TeamRetired, new TeamRetired(), null));
+        Assert.Null(c.With((_, _, _) => c.Teams.Get(Model.InitTeam)));
+        Assert.Equal(300, c.With((_, _, _) => c.Teams.Month(Model.InitTeam, DateTime.Today.ToString("yyyy-MM"))));   // was verbraucht wurde, wurde verbraucht
         Assert.Equal("es", c.With((_, _, _) => c.Teams.Payer("es")));   // der Zahler ist weg: Spanien steht wieder für sich
     }
 
@@ -84,8 +84,8 @@ public class TeamTests
         Assert.Equal("es", TeamApi.TeamOf(c, "pablo"));
         c.With((_, _, write) => write("t", Users.Stream + "gast", Types.UserDefined, new UserDefined("Gast", null, "reader"), null));
         Assert.Null(c.With((_, _, _) => c.Users.All["gast"].Team));
-        Assert.Equal("zentral", TeamApi.TeamOf(c, "gast"));   // ohne eigenes Team gilt Team 1
-        Assert.Equal("zentral", TeamApi.TeamOf(c, null));
+        Assert.Equal(Model.InitTeam, TeamApi.TeamOf(c, "gast"));   // ohne eigenes Team gilt Team 1
+        Assert.Equal(Model.InitTeam, TeamApi.TeamOf(c, null));
     }
 
     [Fact]
@@ -94,10 +94,29 @@ public class TeamTests
         var c = World();
         c.With((_, _, write) => write("t", Users.Stream + "gast", Types.UserDefined, new UserDefined("Gast", null, "reader"), null));
         // die Mitgliederzahl von Team 1 nimmt die ohne eigenes Team mit — sonst hätte niemand Zugriff auf ihre Token
-        var mitglieder = c.With((_, _, _) => c.Users.All.Values.Where(u => u.Team == "zentral" || u.Team is null).Select(u => u.Key).ToHashSet());
+        var mitglieder = c.With((_, _, _) => c.Users.All.Values.Where(u => u.Team == Model.InitTeam || u.Team is null).Select(u => u.Key).ToHashSet());
         Assert.Contains("gast", mitglieder);
         Assert.Contains("taloan", mitglieder);
         Assert.DoesNotContain("pablo", mitglieder);   // Pablo hat ein eigenes Team
+    }
+
+    [Fact]
+    public void Jede_Anlage_bringt_das_Init_Team_mit_und_es_bleibt()
+    {
+        var j = new MemoryJournal(); var c = new Catalog(j); c.Rebuild(); c.SeedMissing();
+        var erstes = c.With((_, _, _) => c.Teams.Primary);
+        Assert.NotNull(erstes);
+        Assert.Equal(Model.InitTeam, erstes!.Key);
+        Assert.Equal("Init Team", erstes.Label);
+        Assert.Equal("init", c.With((_, _, _) => c.Teams.All.Keys.Single()));
+        // ein zweiter Lauf legt nichts Zweites an
+        c.SeedMissing();
+        Assert.Single(c.With((_, _, _) => c.Teams.All));
+        // umbenennen geht, das Grundrauschen sitzt hier
+        c.With((_, _, write) => write("t", Teams.Stream + Model.InitTeam, Types.TeamDefined, new TeamDefined("Haus", null, IncludedTokens: 50_000), null));
+        Assert.Equal("Haus", c.With((_, _, _) => c.Teams.Primary!.Label));
+        Assert.Equal(50_000, c.With((_, _, _) => c.Teams.Primary!.IncludedTokens));
+        Assert.Equal(Model.InitTeam, c.With((_, _, _) => c.Teams.Primary!.Key));   // Team 1 bleibt Team 1
     }
 
     [Fact]
