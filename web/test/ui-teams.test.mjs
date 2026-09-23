@@ -18,7 +18,8 @@ function server(teams = TEAMS) {
   globalThis.fetch = async (url, opts = {}) => {
     const path = String(url).replace(/^https?:\/\/[^/]+/, '')
     calls.push({ path, method: opts.method ?? 'GET', body: opts.body ? JSON.parse(opts.body) : null })
-    const body = path.startsWith('/api/teams') && path.includes('/usage') ? { team: 'zentral', days: [{ day: '2026-09-23', calls: 7, in: 800, out: 400, tokens: 1200, byProvider: { anthropic: 1200 }, byUser: { pablo: 900, taloan: 300 } }], dependents: ['es'] }
+    const body = path.startsWith('/api/teams') && path.includes('/tokens') ? [{ id: 'abc123def456', user: 'pablo', label: 'Excel Laptop', at: '2026-09-20T08:00:00Z' }]
+      : path.startsWith('/api/teams') && path.includes('/usage') ? { team: 'zentral', days: [{ day: '2026-09-23', calls: 7, in: 800, out: 400, tokens: 1200, byProvider: { anthropic: 1200 }, byUser: { pablo: 900, taloan: 300 } }], dependents: ['es'] }
       : path.startsWith('/api/teams') && opts.method === 'PUT' ? teams[0]
       : teams
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }
@@ -81,5 +82,16 @@ test('ein Team-Admin bearbeitet keine Bezeichnungen fremder Teams und legt keine
   assert.equal(w.findAll('input[placeholder="neues Team"]').length, 0, 'Teams anlegen bleibt bei „Benutzer und Rollen“')
   assert.equal(zeilen(w)[0].findAll('input[type=text]').length, 0, 'die Bezeichnung ändert nur, wer alle Teams verwaltet')
   assert.ok(zeilen(w)[0].find('input[type=password]').exists(), 'den eigenen Schlüssel darf er hinterlegen')
+  await ruhe(); w.unmount()
+})
+
+test('die Token der Mitglieder stehen beim Team und lassen sich widerrufen', async () => {
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['users', 'read'] }
+  const w = mount(TeamsSettings); await ruhe()
+  await zeilen(w)[0].findAll('button').find(b => b.text() === '🔑').trigger('click'); await ruhe()
+  const t = w.text().replace(/\s+/g, ' ')
+  assert.match(t, /Excel Laptop/, 'der Token der Person steht beim Team')
+  assert.match(t, /pablo/, 'und wem er gehört')
+  assert.ok(!t.includes('jt_'), 'der Token selbst steht nirgends — nur seine Kennung')
   await ruhe(); w.unmount()
 })

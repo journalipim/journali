@@ -89,6 +89,18 @@ public class TeamTests
     }
 
     [Fact]
+    public void Wer_kein_eigenes_Team_hat_zaehlt_zum_ersten()
+    {
+        var c = World();
+        c.With((_, _, write) => write("t", Users.Stream + "gast", Types.UserDefined, new UserDefined("Gast", null, "reader"), null));
+        // die Mitgliederzahl von Team 1 nimmt die ohne eigenes Team mit — sonst hätte niemand Zugriff auf ihre Token
+        var mitglieder = c.With((_, _, _) => c.Users.All.Values.Where(u => u.Team == "zentral" || u.Team is null).Select(u => u.Key).ToHashSet());
+        Assert.Contains("gast", mitglieder);
+        Assert.Contains("taloan", mitglieder);
+        Assert.DoesNotContain("pablo", mitglieder);   // Pablo hat ein eigenes Team
+    }
+
+    [Fact]
     public void Das_Recht_Team_gibt_es_im_Vokabular_und_der_Team_Admin_im_Saatgut()
     {
         Assert.Contains("team", Rights.All);

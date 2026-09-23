@@ -10,6 +10,8 @@ import { dialog } from '../dialog.js'
 const teams = ref([])
 const usage = ref(null)        // { team, days[] } des aufgeklappten Teams
 const offen = ref(null)        // Key des Teams, dessen Verbrauch gezeigt wird
+const tokens = ref(null)       // die Token der Mitglieder des aufgeklappten Teams
+const tokenTeam = ref(null)
 const neu = ref('')
 const keyIn = ref({})          // je Team { anbieter, wert }
 const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
@@ -54,6 +56,16 @@ async function schluesselWeg(t, anbieter) {
   if (!await dialog.confirm({ title: `Schlüssel ${anbieter} entfernen?`, text: `„${t.label}“ kann dann keine KI mehr über diesen Anbieter.`, ok: '✕ Entfernen' })) return
   try { await api.post(`/api/teams/${encodeURIComponent(t.key)}/keys`, { keys: { [anbieter]: '' } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
+// Die Token der Mitglieder: sie arbeiten mit den Rechten ihrer Person und auf die Rechnung dieses Teams
+async function zeigeTokens(t) {
+  if (tokenTeam.value === t.key) { tokenTeam.value = null; tokens.value = null; return }
+  try { tokens.value = await api.get(`/api/teams/${encodeURIComponent(t.key)}/tokens`); tokenTeam.value = t.key } catch (e) { store.toast(e.message) }
+}
+async function widerrufen(t, tok) {
+  if (!await dialog.confirm({ title: `Token „${tok.label}“ von ${tok.user} widerrufen?`, text: 'Wer damit arbeitet, kommt sofort nicht mehr herein.', ok: '✕ Widerrufen' })) return
+  try { await api.del(`/api/teams/${encodeURIComponent(t.key)}/tokens/${encodeURIComponent(tok.id)}`); tokens.value = await api.get(`/api/teams/${encodeURIComponent(t.key)}/tokens`) } catch (e) { store.toast(e.message) }
+}
+
 async function verbrauch(t) {
   if (offen.value === t.key) { offen.value = null; usage.value = null; return }
   try { usage.value = await api.get(`/api/teams/${encodeURIComponent(t.key)}/usage?days=14`); offen.value = t.key } catch (e) { store.toast(e.message) }
@@ -104,6 +116,7 @@ async function verbrauch(t) {
         <td class="muted" :title="`${t.members} Person(en) in diesem Team`">{{ t.members }}</td>
         <td>
           <button class="x" title="Verbrauch der letzten 14 Tage" @click="verbrauch(t)">≡</button>
+          <button class="x" title="API-Token der Mitglieder" @click="zeigeTokens(t)">🔑</button>
           <button v-if="darfAlles && !t.primary" class="x" title="Team entfernen" @click="entfernen(t)">✕</button>
         </td>
       </tr>
@@ -115,6 +128,21 @@ async function verbrauch(t) {
       </tr>
     </tbody>
   </table>
+
+  <div v-if="tokens" style="margin-top:8px">
+    <table class="grid" style="width:auto">
+      <thead><tr><th>🔑 Token</th><th>Person</th><th>angelegt</th><th></th></tr></thead>
+      <tbody>
+        <tr v-for="tok in tokens" :key="tok.id" class="row">
+          <td>{{ tok.label }} <span class="mono muted" style="font-size:12px">{{ tok.id }}</span></td>
+          <td class="mono">{{ tok.user }}</td>
+          <td class="muted">{{ new Date(tok.at).toLocaleString() }}</td>
+          <td><button class="x" title="Token widerrufen" @click="widerrufen(teams.find(x => x.key === tokenTeam), tok)">×</button></td>
+        </tr>
+        <tr v-if="!tokens.length"><td colspan="4" class="muted">keine</td></tr>
+      </tbody>
+    </table>
+  </div>
 
   <div v-if="usage" style="margin-top:8px">
     <table class="grid" style="width:auto">

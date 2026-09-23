@@ -105,6 +105,26 @@ public static class TeamApi
             return Results.Ok(new { keys = Secrets.Get(jobsDir, SecretKey(key)).Keys.Order().ToList() });
         });
 
+        // Die Token der Mitglieder (Taloan, 23.09.2026): ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung
+        // ihres Teams — darum sieht das Team, welche es gibt, und kann sie widerrufen. Der Token selbst steht nirgends.
+        api.MapGet("/teams/{key}/tokens", (string key, HttpRequest req, Catalog c) =>
+        {
+            if (!Auth.Has(req, c, Rights.Users) && key != TeamOf(c, req.HttpContext.Items["user"] as string)) return Bad("Das ist nicht dein Team.");
+            var mitglieder = Mitglieder(c, key);
+            if (mitglieder is null) return Results.NotFound();
+            return Results.Ok(Auth.TokensOf(jobsDir, mitglieder).Select(t => new { t.Id, t.User, t.Label, t.At }).ToList());
+        });
+
+        api.MapDelete("/teams/{key}/tokens/{id}", (string key, string id, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is null) return ActorMissing();
+            if (!Auth.Has(req, c, Rights.Users) && key != TeamOf(c, req.HttpContext.Items["user"] as string)) return Bad("Das ist nicht dein Team.");
+            var mitglieder = Mitglieder(c, key);
+            if (mitglieder is null) return Results.NotFound();
+            var n = Auth.RevokeToken(jobsDir, id, mitglieder);
+            return n > 0 ? Results.Ok(new { removed = n }) : Results.NotFound();
+        });
+
         // Verbrauch der letzten Tage — je Anbieter und je Person, damit die Rechnung nachvollziehbar ist
         api.MapGet("/teams/{key}/usage", (string key, HttpRequest req, Catalog c, int days = 30) => c.With((_, _, _) =>
         {
@@ -119,6 +139,14 @@ public static class TeamApi
         }));
     }
 
+    /// <summary>Wer zu diesem Team gehört; beim ersten Team auch alle ohne eigenes (dort fallen sie hin). Null = kein solches Team.</summary>
+    private static HashSet<string>? Mitglieder(Catalog c, string key) => c.With((_, _, _) =>
+    {
+        if (c.Teams.Get(key) is null) return null;
+        var erstes = c.Teams.Primary?.Key == key;
+        return c.Users.All.Values.Where(u => u.Team == key || (erstes && u.Team is null)).Select(u => u.Key).ToHashSet();
+    });
+
     private static object View(Catalog c, string jobsDir, TeamState t, DateOnly heute, string monat)
     {
         var zahler = c.Teams.Payer(t.Key);
@@ -130,7 +158,7 @@ public static class TeamApi
             primary = c.Teams.Primary?.Key == t.Key,
             keys,                                                    // welche Anbieter eingerichtet sind — nie der Schlüssel selbst
             payer = zahler,
-            members = c.Users.All.Values.Count(u => u.Team == t.Key),
+            members = c.Users.All.Values.Count(u => u.Team == t.Key || (c.Teams.Primary?.Key == t.Key && u.Team is null)),
             today = tag.Tokens, month = c.Teams.Month(t.Key, monat), calls = tag.Calls,
             t.LastAt, t.LastActor,
         };

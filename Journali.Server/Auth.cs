@@ -43,6 +43,21 @@ public static class Auth
         public Dictionary<string, SessionRec> Sessions { get; set; } = new();        // sha256(cookie) → { user, until }
     }
     public sealed record TokenRec(string User, string Label, DateTimeOffset At);
+
+    /// <summary>Die Token dieser Personen — Kennung (Anfang des Hashes), Bezeichnung, wann, wem. Der Token selbst steht nirgends,
+    /// auch nicht hier: in der Datei liegt nur sein Hash (Taloan, 23.09.2026, Teams: die Token der Mitglieder gehören zum Team).</summary>
+    public static List<(string Id, string User, string Label, DateTimeOffset At)> TokensOf(string dir, IReadOnlySet<string> users) =>
+        With(dir, s => s.Tokens.Where(t => users.Contains(t.Value.User)).OrderByDescending(t => t.Value.At)
+            .Select(t => (t.Key[..12], t.Value.User, t.Value.Label, t.Value.At)).ToList());
+
+    /// <summary>Einen Token widerrufen — nur, wenn er einer dieser Personen gehört. Liefert, wie viele weg sind.</summary>
+    public static int RevokeToken(string dir, string id, IReadOnlySet<string> users) =>
+        With(dir, s =>
+        {
+            var keys = s.Tokens.Where(t => t.Key.StartsWith(id, StringComparison.Ordinal) && users.Contains(t.Value.User)).Select(t => t.Key).ToList();
+            foreach (var k in keys) s.Tokens.Remove(k);
+            return keys.Count;
+        }, save: true);
     public sealed record SessionRec(string User, DateTimeOffset Until);
 
     private static readonly object Gate = new();

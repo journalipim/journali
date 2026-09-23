@@ -352,6 +352,11 @@ Datenverzeichnis (`secrets.json` unter `team:<key>`), wie Mailpasswort und Job-T
 |---|---|---|
 | `AiUsed` | `provider`, `model`, `user?`, `in`, `out`, `calls`, `day?`, `onBehalfOf?` | ein Aufruf, wie er stattgefunden hat — gezählt beim **zahlenden** Team (`onBehalfOf` nennt das Team, für das gearbeitet wurde). Damit ist „wer zahlt“ eine Frage der Buchung, nicht der Sperre: am Monatsende steht da, was jede Kostenstelle verbraucht hat |
 
+**API-Token am Team** (Taloan, 23.09.2026): ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung ihres
+Teams — darum sieht das Team, welche es gibt, und kann sie widerrufen (`GET`/`DELETE /api/teams/<key>/tokens[/<id>]`,
+Recht `team` fürs eigene, `users` für alle). Der Token selbst steht nirgends: in `auth.json` liegt nur sein Hash, gezeigt
+wird die Kennung. Wer kein eigenes Team hat, zählt zum ersten — dort fällt er auch bei der KI hin.
+
 Geschrieben wird er nur auf dem Serverweg (`POST /api/ai/ask`, `AiApi.cs`): liegt am Team ein Schlüssel, fragt der Server
 den Anbieter — der Schlüssel bleibt dort, der Verbrauch ist zählbar, Grenzen greifen, und auch Jobs können KI. Wer seinen
 eigenen Vertrag benutzt (Schlüssel im Browser, Einstellungen → KI), fragt weiter direkt; dann zählt niemand mit.
