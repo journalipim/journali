@@ -18,16 +18,14 @@ export function naechsteSeite(voll, schritt, richtung) {
   return null
 }
 
-/// Gehört dieser Parameter in den Dialog? Das Profil selbst immer, ebenso Pfade und Schalter — das stellt man je Job
-/// ein. Alles Inhaltliche (Teilbaum, Format, Sprachen, Aufbewahrung) kommt aus dem Profil und wird dort gepflegt;
-/// ohne gewähltes Profil sind diese Felder die einzige Quelle und stehen im Dialog (Taloan, 23.09.2026).
-/// Ausnahme: `"perJob": true` am Parameter im Manifest — dann steht er immer da. Für das, was wirklich am Job hängt
-/// und nicht am Profil, etwa das Ziel eines Exports in eine fremde Datenbank (Taloan, 23.09.2026).
+/// Gehört dieser Parameter in den Job-Dialog? Das sagt das Plugin selbst, im Manifest, mit `"perJob"` am Parameter:
+/// `true` = am Job einzustellen (steht immer da), `false` = gehört ins Profil (steht nur da, solange kein Profil
+/// gewählt ist — dann gibt es keine andere Quelle). Der Tasker fragt, er rät nicht (Taloan, 23.09.2026: „das Plugin
+/// muss das wissen und einfordern“).
+/// Sagt ein Manifest nichts, steht der Parameter da: der Tasker versteckt nichts, was er nicht versteht — ein
+/// verborgenes Pflichtfeld, das niemand setzen kann, wäre der schlimmere Fehler.
 export function stelle(def, profilGewaehlt) {
-  if (def.perJob) return 'oben'
-  if (!profilGewaehlt) return 'oben'
-  if (def.type === 'profile' || def.key === 'profile') return 'oben'
-  return def.type === 'boolean' || def.type === 'path' || def.type === 'dir' ? 'oben' : 'aus'
+  return def.perJob === false && profilGewaehlt ? 'aus' : 'oben'
 }
 
 /// Welche Fächer ein Job benutzt: liest er Dateien, gibt es in/, done/ und failed/; schreibt er, gibt es out/.

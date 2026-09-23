@@ -28,7 +28,8 @@
         "key": "limit",
         "label": "Dokumente je Runde (der Job holt so lange nach, bis nichts mehr fehlt)",
         "type": "number",
-        "default": "50"
+        "default": "50",
+        "perJob": true
       }
     ]
   }

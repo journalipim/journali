@@ -43,25 +43,29 @@
           "key": "profile",
           "label": "Profil (‹› Vorlagen-Export → ⎘ speichern: Vorlage, Zuordnung, Kopfwerte)",
           "type": "profile",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "dir",
           "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
           "type": "dir",
-          "default": "export"
+          "default": "export",
+          "perJob": true
         },
         {
           "key": "root",
           "label": "Teilbaum (leer = wie im Profil)",
           "type": "node",
-          "default": ""
+          "default": "",
+          "perJob": false
         },
         {
           "key": "locale",
           "label": "Sprache (leer = wie im Profil)",
           "type": "text",
-          "default": ""
+          "default": "",
+          "perJob": false
         }
       ]
     }

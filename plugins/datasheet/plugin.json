@@ -44,37 +44,43 @@
           "key": "profile",
           "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
           "type": "profile",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "root",
           "label": "Teilbaum (leer = alle)",
           "type": "node",
-          "default": ""
+          "default": "",
+          "perJob": false
         },
         {
           "key": "dir",
           "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
           "type": "dir",
-          "default": "datenblaetter"
+          "default": "datenblaetter",
+          "perJob": true
         },
         {
           "key": "role",
           "label": "Knoten: product, variant, group oder all",
           "type": "text",
-          "default": "product"
+          "default": "product",
+          "perJob": false
         },
         {
           "key": "layout",
           "label": "Layout (Name, leer = das der Rolle)",
           "type": "text",
-          "default": ""
+          "default": "",
+          "perJob": false
         },
         {
           "key": "locale",
           "label": "Sprache (leer = wie eingestellt)",
           "type": "text",
-          "default": ""
+          "default": "",
+          "perJob": false
         }
       ]
     },
@@ -97,25 +103,29 @@
           "key": "node",
           "label": "Knoten",
           "type": "node",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "version",
           "label": "Version (Nummer am Knoten; leer = nur hochladen)",
           "type": "number",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "layout",
           "label": "Layout (Name, leer = das der Rolle)",
           "type": "text",
-          "default": ""
+          "default": "",
+          "perJob": false
         },
         {
           "key": "locale",
           "label": "Sprache (leer = aus der Version bzw. wie eingestellt)",
           "type": "text",
-          "default": ""
+          "default": "",
+          "perJob": false
         }
       ]
     }

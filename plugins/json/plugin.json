@@ -44,25 +44,29 @@
           "key": "source",
           "label": "Quelle: Datei, Verzeichnis (neueste Datei) oder URL — leer = Eingang in/ des Jobs (Fächer)",
           "type": "path",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "profile",
           "label": "Profil (⇩ Import → JSON → Profil speichern: Zuordnung, Präfix, Ziel; leer = gleiche Keys, kein Präfix)",
           "type": "profile",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "parent",
           "label": "Ziel (leer = wie im Profil oder in der Datei)",
           "type": "node",
-          "default": ""
+          "default": "",
+          "perJob": false
         },
         {
           "key": "dryRun",
           "label": "Trockenlauf (nur zählen, nichts schreiben)",
           "type": "boolean",
-          "default": "false"
+          "default": "false",
+          "perJob": true
         }
       ]
     },
@@ -95,49 +99,57 @@
           "key": "profile",
           "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
           "type": "profile",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "root",
           "label": "Teilbaum (leer = alle Wurzeln)",
           "type": "node",
-          "default": ""
+          "default": "",
+          "perJob": false
         },
         {
           "key": "dir",
           "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
           "type": "dir",
-          "default": "json"
+          "default": "json",
+          "perJob": true
         },
         {
           "key": "format",
           "label": "Form: raw (Rohdaten, wiederherstellbar), tree (ausgewertet, Baum), flat (ausgewertet, Liste)",
           "type": "text",
-          "default": "raw"
+          "default": "raw",
+          "perJob": false
         },
         {
           "key": "locales",
           "label": "Sprachen (Codes, mit Komma; leer = Leitsprache) — nur tree/flat",
           "type": "text",
-          "default": ""
+          "default": "",
+          "perJob": false
         },
         {
           "key": "ownOnly",
           "label": "nur eigene Werte (geerbte leer lassen) — nur tree/flat",
           "type": "boolean",
-          "default": "false"
+          "default": "false",
+          "perJob": true
         },
         {
           "key": "gzip",
           "label": "komprimieren (gzip, .json.gz)",
           "type": "boolean",
-          "default": "true"
+          "default": "true",
+          "perJob": true
         },
         {
           "key": "keep",
           "label": "so viele Stände behalten (je Wurzel, dieser Job)",
           "type": "number",
-          "default": "14"
+          "default": "14",
+          "perJob": false
         }
       ]
     }

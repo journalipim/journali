@@ -39,37 +39,43 @@
         "key": "profile",
         "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
         "type": "profile",
-        "default": ""
+        "default": "",
+        "perJob": true
       },
       {
         "key": "root",
         "label": "Teilbaum (leer = alles)",
         "type": "node",
-        "default": ""
+        "default": "",
+        "perJob": false
       },
       {
         "key": "dir",
         "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
         "type": "dir",
-        "default": "rag"
+        "default": "rag",
+        "perJob": true
       },
       {
         "key": "role",
         "label": "Knoten: product, variant, group oder all",
         "type": "text",
-        "default": "product"
+        "default": "product",
+        "perJob": false
       },
       {
         "key": "locales",
         "label": "Sprachen (Codes, mit Komma; leer = Leitsprache)",
         "type": "text",
-        "default": ""
+        "default": "",
+        "perJob": false
       },
       {
         "key": "withVersions",
         "label": "freigegebene Version und Belege mitgeben",
         "type": "boolean",
-        "default": "true"
+        "default": "true",
+        "perJob": true
       }
     ]
   },

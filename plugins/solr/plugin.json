@@ -39,37 +39,43 @@
         "key": "profile",
         "label": "Profil (⇩ Import → Solr → Profil speichern: Kern, Ziel, Wurzeln, übergangene Schlüssel)",
         "type": "profile",
-        "default": ""
+        "default": "",
+        "perJob": true
       },
       {
         "key": "base",
         "label": "Solr-Kern (URL; leer = wie im Profil)",
         "type": "text",
-        "default": ""
+        "default": "",
+        "perJob": false
       },
       {
         "key": "root",
         "label": "master_id der Wurzel(n), mit Komma (leer = die im Profil angehakten)",
         "type": "text",
-        "default": ""
+        "default": "",
+        "perJob": false
       },
       {
         "key": "target",
         "label": "Ziel (leer = wie im Profil)",
         "type": "node",
-        "default": ""
+        "default": "",
+        "perJob": false
       },
       {
         "key": "skip",
         "label": "Property-Schlüssel übergehen (Muster mit *, mit Komma; leer = wie im Profil)",
         "type": "text",
-        "default": ""
+        "default": "",
+        "perJob": false
       },
       {
         "key": "dry_run",
         "label": "Trockenlauf (nur zählen, nichts schreiben)",
         "type": "boolean",
-        "default": "false"
+        "default": "false",
+        "perJob": true
       }
     ]
   }

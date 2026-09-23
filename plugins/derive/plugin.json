@@ -30,13 +30,15 @@
         "key": "limit",
         "label": "Bilder je Runde (der Job holt so lange nach, bis nichts mehr fehlt)",
         "type": "number",
-        "default": "200"
+        "default": "200",
+        "perJob": true
       },
       {
         "key": "preset",
         "label": "nur dieses Preset (leer = alle mit „automatisch“)",
         "type": "text",
-        "default": ""
+        "default": "",
+        "perJob": true
       }
     ]
   }

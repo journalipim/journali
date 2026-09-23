@@ -41,13 +41,15 @@
           "key": "profile",
           "label": "Profil (⇄ Übersetzung → 💾: Sprachen, Kanal, Umfang, Attribute, Teilbaum)",
           "type": "profile",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "dir",
           "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
           "type": "dir",
-          "default": ""
+          "default": "",
+          "perJob": true
         }
       ]
     },
@@ -78,19 +80,22 @@
           "key": "profile",
           "label": "Profil (Zielsprache aus dem Profil, sonst aus der Datei)",
           "type": "profile",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "source",
           "label": "Quelle: XLIFF-Datei oder Verzeichnis — leer = Eingang in/ des Jobs (Fächer)",
           "type": "path",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "force",
           "label": "auch schreiben, wenn sich die Quelle seit dem Export geändert hat",
           "type": "boolean",
-          "default": "false"
+          "default": "false",
+          "perJob": true
         }
       ]
     },
@@ -112,20 +117,23 @@
           "key": "profile",
           "label": "Profil (⇄ Übersetzung → 💾: Sprachen, Kanal, Attribute, Teilbaum)",
           "type": "profile",
-          "default": ""
+          "default": "",
+          "perJob": true
         },
         {
           "key": "key",
           "label": "DeepL-Schlüssel — leer = am Profil hinterlegt (🔒); bleibt beim Server, nie im Journal",
           "type": "text",
           "secret": true,
-          "default": ""
+          "default": "",
+          "perJob": false
         },
         {
           "key": "scope",
           "label": "Umfang: missing (nur fehlende) oder open (auch veraltete)",
           "type": "text",
-          "default": "missing"
+          "default": "missing",
+          "perJob": false
         }
       ]
     }
