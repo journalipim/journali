@@ -147,9 +147,7 @@ async function widerrufen(tok) {
     </div>
 
     <div class="section">
-      <h2>✦ KI <span class="muted">· {{ zahl(team.month) }} Token · heute {{ zahl(team.today) }}</span>
-        <button class="x" title="Was in die Rechnung eingeht" @click="hilfeTokens">?</button>
-      </h2>
+      <h2>✦ KI-Zugang <span class="muted">· womit dieses Team arbeitet</span></h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
           <td class="muted">Schlüssel</td>
@@ -175,8 +173,17 @@ async function widerrufen(tok) {
             </select>
           </td><td></td>
         </tr>
+      </tbody></table>
+    </div>
+
+    <div class="section">
+      <h2>✦ journali PIM Token
+        <span class="muted">· {{ zahl(team.month) }} diesen Monat · heute {{ zahl(team.today) }}</span>
+        <button class="x" title="Was in die Rechnung eingeht" @click="hilfeTokens">?</button>
+      </h2>
+      <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
-          <td class="muted" title="Wie der Verbrauch angerechnet wird">Token</td>
+          <td class="muted" title="Wie der Verbrauch angerechnet wird">Abrechnung</td>
           <td>
             <span v-if="team.keys.length" class="pos">eigenes Kontingent</span>
             <span v-else-if="team.keysFrom" class="muted">über Team {{ team.keysFrom }}</span>
@@ -185,6 +192,7 @@ async function widerrufen(tok) {
           </td>
           <td class="muted" style="font-size:12px">
             <span v-if="!team.keys.length && lizenz?.aiTokensMonth">{{ zahl(lizenz.aiTokensMonth) }} / Monat für die ganze Anlage</span>
+            <span v-else-if="team.keys.length">Rechnung beim Anbieter</span>
           </td>
         </tr>
       </tbody></table>
