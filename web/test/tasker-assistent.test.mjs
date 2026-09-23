@@ -5,7 +5,7 @@
 // ohne Fächer hat keine Ablage, einer ohne Parameter kein „Womit“. Leere Seiten werden übersprungen, nicht gezeigt.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { naechsteSeite } from '../../plugins/tasker/entry.js'
+import { naechsteSeite, profilPflicht } from '../../plugins/tasker/entry.js'
 
 const ALLE = [true, true, true, true]
 
@@ -30,4 +30,22 @@ test('ein Prozess ganz ohne Parameter: von „Was" direkt zu „Wann"', () => {
   const nurRahmen = [true, false, false, true]
   assert.equal(naechsteSeite(nurRahmen, 0, 1), 3)
   assert.equal(naechsteSeite(nurRahmen, 3, -1), 0)
+})
+
+// Eine Meldung gehoert auf den Schritt, auf dem man sie beheben kann (Taloan, 23.09.2026: „eine Meldung, die ich in
+// diesem Schritt gar nicht beheben kann?“). Dahinter steckte ein zweiter Fehler: die Sicherung liess sich ohne
+// Profil nicht speichern, obwohl ihr Feld ausdruecklich „(leer = Werte unten)“ anbietet.
+test('ein Profil, das leer sein darf, ist keine Pflicht', () => {
+  assert.equal(profilPflicht({ label: 'Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)' }), false)
+  assert.equal(profilPflicht({ label: 'Profil (⇩ Import → JSON → Profil speichern: Zuordnung, Praefix, Ziel; leer = gleiche Keys, kein Praefix)' }), false)
+})
+
+test('ohne diesen Hinweis bleibt es Pflicht', () => {
+  assert.equal(profilPflicht({ label: 'Profil (⇩ Import → IXP → Profil speichern: Quelle, Sprachen, Ziel)' }), true)
+  assert.equal(profilPflicht({ label: 'Profil (Zielsprache aus dem Profil, sonst aus der Datei)' }), true)
+})
+
+test('kein Profil-Feld, keine Pflicht', () => {
+  assert.equal(profilPflicht(undefined), false)
+  assert.equal(profilPflicht(null), false)
 })

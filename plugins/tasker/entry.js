@@ -3,6 +3,13 @@
 // regelmässig (cron) oder von Hand;
 // hier verwalten, überwachen, Logs lesen. Ein Job = ein Prozess-Plugin (process im Manifest) mit Parametern.
 // API: /api/jobs (JobApi.cs), Läufe und Ausgang im Journal (job:<key>), Log als Datei beim Server.
+/// Braucht dieser Prozess zwingend ein Profil? Steht „leer“ im Namen des Feldes („Profil — … (leer = Werte unten)“),
+/// geht es auch ohne: dann stehen die Werte im Job selbst. Sonst kann der Job ohne Profil nicht laufen
+/// (Taloan, 23.09.2026: die Sicherung liess sich ohne Profil nicht speichern, obwohl das Feld „(leer)“ anbietet).
+export function profilPflicht(profileDef) {
+  return !!profileDef && !/leer/.test(profileDef.label ?? '')
+}
+
 /// Nächste Seite des Assistenten in dieser Richtung, die etwas zeigt — oder null, wenn keine mehr kommt.
 /// `voll` sagt je Seite, ob sie Inhalt hat: ohne Fächer gibt es keine Ablage, ohne Parameter kein „Womit“
 /// (Taloan, 23.09.2026: „erst nach Aussuchen von Plugin/Profil steht ja fest, was ich als Nächstes anzeige“).
@@ -387,23 +394,30 @@ async function mount(root, ctx) {
     // Speichern nur, wenn der Job laufen kann (Taloan, 21.09.: „speichern deaktiviert, solange ein Profil nicht ausführbar ist“):
     // key, Profil (wenn der Prozess eines hat), Dateien/Verzeichnisse, Geheimnis (am Job oder am Profil hinterlegt)
     let profileSecrets = []
+    let markieren = null   // wird gesetzt, sobald die Schrittleiste steht (weiter unten)
+    let schritt = 0        // welche Seite gerade sichtbar ist — check() zeigt nur deren Meldungen
     const saveBtn = el('button', { class: 'primary', onclick: () => save() }, '💾 Speichern')
     const why = el('span', { class: 'neg', style: 'font-size:12px;align-self:center;flex:1' })
     function check() {
       const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
-      const reasons = []
-      if (isNew && !keyIn.value.trim()) reasons.push('Key fehlt')
-      const hasProfile = defs.some(d => d.type === 'profile' || d.key === 'profile')
+      const reasons = []   // { text, seite } — die Seite, auf der es zu beheben ist
+      const fehlt = (text, seite) => reasons.push({ text, seite })
+      if (isNew && !keyIn.value.trim()) fehlt('Key fehlt', 0)
+      const profileDef = defs.find(d => d.type === 'profile' || d.key === 'profile')
       const profile = paramInputs.profile?.value ?? ''
-      if (hasProfile && !profile) reasons.push('Profil fehlt — in der Ansicht des Plugins speichern' + (p?.profile === 'generic' ? ' oder ✎' : ''))
+      // „(leer = Werte unten)“ im Feldnamen heisst: ohne Profil geht es auch, dann stehen die Werte im Job
+      if (!profile && profilPflicht(profileDef)) fehlt('Profil fehlt — in der Ansicht des Plugins speichern' + (p?.profile === 'generic' ? ' oder ✎' : ''), 1)
       for (const d of defs) {
         const v = paramInputs[d.key]?.value ?? ''
         // mit Fächern kommt die Datei aus in/ bzw. geht nach out/ — dann ist der Parameter nicht Pflicht
-        if ((d.type === 'path' || d.type === 'dir') && !v && !(d.type === 'dir' ? p?.files?.out : p?.files?.in)) reasons.push(`${d.type === 'dir' ? 'Verzeichnis' : 'Quelle'} fehlt`)
-        if (d.secret && !v && !j?.secrets?.includes(d.key) && !profileSecrets.includes(d.key)) reasons.push(`${d.label.split(' —')[0]} fehlt — am Profil hinterlegen (🔒) oder unter „Überschreiben“ setzen`)
+        if ((d.type === 'path' || d.type === 'dir') && !v && !(d.type === 'dir' ? p?.files?.out : p?.files?.in)) fehlt(`${d.type === 'dir' ? 'Verzeichnis' : 'Quelle'} fehlt`, 1)
+        if (d.secret && !v && !j?.secrets?.includes(d.key) && !profileSecrets.includes(d.key)) fehlt(`${d.label.split(' —')[0]} fehlt — am Profil hinterlegen (🔒) oder unter „Überschreiben“ setzen`, 1)
       }
-      saveBtn.disabled = reasons.length > 0; saveBtn.title = reasons.join(' · ')
-      why.textContent = reasons.length ? '✗ ' + reasons[0] : ''
+      saveBtn.disabled = reasons.length > 0; saveBtn.title = reasons.map(r => r.text).join(' · ')
+      // unten steht nur, was auf dieser Seite zu beheben ist; die anderen Seiten bekommen ein ✗ in der Leiste
+      const hier = reasons.find(r => r.seite === schritt)
+      why.textContent = hier ? '✗ ' + hier.text : ''
+      markieren?.(reasons)
       return reasons.length === 0
     }
     pluginSel.addEventListener('change', () => { drawParams(); check(); zeige(schritt) }); drawParams(); check()
@@ -429,8 +443,14 @@ async function mount(root, ctx) {
       { name: '③ Ablage', box: el('div', {}, fachBox), leer: () => fachBox.style.display === 'none' },
       { name: '④ Wann', box: el('div', {}, lab('Zeitplan'), sched.el, lab('Zeitgrenze (min)'), timeoutIn) },
     ]
-    let schritt = 0
     const chips = seiten.map((s, i) => el('span', { class: 'view-chip', style: 'cursor:pointer', title: s.name.slice(2), onclick: () => zeige(i) }, s.name))
+    /// Seiten mit offenen Punkten tragen ein ✗ und sagen im Tooltip, was fehlt — anklickbar, dort steht es dann unten
+    markieren = reasons => chips.forEach((c, i) => {
+      const offen = reasons.filter(r => r.seite === i)
+      c.classList.toggle('neg', offen.length > 0)
+      c.textContent = seiten[i].name + (offen.length ? ' ✗' : '')
+      c.title = offen.length ? offen.map(r => r.text).join(' · ') : seiten[i].name.slice(2)
+    })
     const bühne = el('div', { style: 'min-height:240px;max-height:min(56vh,520px);overflow:auto;padding-right:4px' })
     const zurück = el('button', { type: 'button', title: 'zurück', onclick: () => blättern(-1) }, '←')
     const vor = el('button', { type: 'button', title: 'weiter', onclick: () => blättern(1) }, '→')
@@ -442,6 +462,7 @@ async function mount(root, ctx) {
       bühne.innerHTML = ''
       bühne.append(seiten[i].box)
       seiten.forEach((s, n) => { chips[n].style.display = voll(n) ? '' : 'none'; chips[n].classList.toggle('on', n === i) })
+      check()   // die Meldung unten gilt der Seite, die man gerade sieht
       const sichtbar = seiten.map((_, n) => voll(n))
       zurück.disabled = naechsteSeite(sichtbar, i, -1) === null
       vor.disabled = naechsteSeite(sichtbar, i, 1) === null
