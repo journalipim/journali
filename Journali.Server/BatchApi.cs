@@ -33,7 +33,7 @@ public static class BatchApi
             if (r.Commands.Count > 10_000) return Bad("Höchstens 10 000 Befehle je Stapel.");
             var batch = Blank(r.Batch) ?? "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
 
-            var response = c.With((model, tree, write) =>
+            var response = c.WithBatch(actor, batch, (model, tree, write) =>
             {
                 var refs = new Dictionary<string, string>();
                 var results = new List<Result>(); var skipped = new List<Failure>();

@@ -342,6 +342,58 @@ public sealed class Catalog
 
     public delegate Entry Writer(string actor, string stream, string type, object payload, string? batch);
 
+    /// <summary>
+    /// Ein Stapel als <b>eine</b> Transaktion (Taloan, 23.09.2026: „der Import belegt so fett Zeit“). Einzeln kostet
+    /// jeder Eintrag in Postgres eine eigene Transaktion mit Tabellensperre und <c>MAX(number)</c>; ein Import mit
+    /// Zehntausenden Einträgen bezahlt das Zehntausende Male. Hier bekommen die Einträge fortlaufende Nummern am
+    /// aktuellen Kopf und werden sofort angewendet — der nächste Befehl muss den vorigen sehen —, geschrieben wird
+    /// am Ende in einem Zug. Dass niemand dazwischenschreibt, hält die Schreibsperre; stimmt die Nummernfolge beim
+    /// Schreiben trotzdem nicht, werden die Abbilder neu gebaut.
+    /// </summary>
+    public TResult WithBatch<TResult>(string actor, string? batch, Func<ModelCatalog, Tree, Writer, TResult> action)
+    {
+        lock (_write)
+        {
+            var offen = new List<(string Stream, string Type, string Payload)>();
+            var basis = _journal.Head;
+            TResult ergebnis;
+            try
+            {
+                ergebnis = action(_model, _tree, (wer, stream, type, payload, _) =>
+                {
+                    if (KeinKontingent(wer, type)) throw new KeinKontingentException();
+                    var roh = Types.Serialize(payload);
+                    offen.Add((stream, type, roh));
+                    var entry = new Entry(basis + offen.Count, DateTimeOffset.Now, actor, stream, type, roh, batch, Kinds.Of(type));
+                    return Aendernd(() => Apply(entry));
+                });
+            }
+            catch
+            {
+                if (offen.Count > 0) NeuAufbauen();   // angewendet, aber nichts geschrieben: der Stand muss zurück
+                throw;
+            }
+            if (offen.Count == 0) return ergebnis;
+            IReadOnlyList<Entry> echte;
+            try { echte = _journal.AppendMany(actor, offen, batch); }
+            catch { NeuAufbauen(); throw; }
+            if (echte.Count != offen.Count || echte[0].Number != basis + 1) NeuAufbauen();
+            return ergebnis;
+        }
+    }
+
+    /// <summary>Die Abbilder aus dem Journal neu bauen — die Notbremse, wenn ein Stapel nicht so geschrieben wurde, wie er angewendet wurde.</summary>
+    private void NeuAufbauen()
+    {
+        Aendernd(() =>
+        {
+            _model = new(); _tree = new(); _relations = new(); _media = new(); _plugins = new(); _jobs = new();
+            _versions = new(); _users = new(); _workflows = new(); _translations = new(); _usage = new(); _teams = new();
+            _stand.Clear();
+            return Projector.CatchUpAll(_journal, out _, (Action<int, long>?)null, _model, _relations, _media, _plugins, _jobs, _versions, _users, _workflows, _translations, _usage, _teams, _tree);
+        });
+    }
+
     /// <summary>Viele Einträge als eine Transaktion unter der Sperre, danach die Abbilder — für Stapel, die nicht prüfen müssen (Plugin-Daten).</summary>
     public IReadOnlyList<Entry> WriteMany(string actor, IReadOnlyList<(string Stream, string Type, object Payload)> items, string? batch = null)
     {
