@@ -6,6 +6,7 @@ import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 
+const emit = defineEmits(['eingespielt'])
 const lic = ref(null)
 const roh = ref('')
 const said = ref('')
@@ -18,7 +19,13 @@ const zahl = n => (n ?? 0).toLocaleString('de-DE')
 async function einspielen() {
   let daten
   try { daten = JSON.parse(roh.value) } catch { said.value = '✗ kein gültiger Schlüssel'; return }
-  try { const r = await api.post('/api/licence', daten, 'PUT'); roh.value = ''; said.value = r.geprueft ? '✓ eingespielt und geprüft' : `✓ eingespielt · ${r.grund ?? ''}`; await load(); await store.poll(true) }
+  try {
+    const r = await api.post('/api/licence', daten, 'PUT')
+    roh.value = ''
+    said.value = r.geprueft ? '✓ eingespielt und geprüft' : `✓ eingespielt · ${r.grund ?? ''}`
+    await load(); await store.poll(true)
+    emit('eingespielt')   // die Limits daneben hängen an der Lizenz — sie sollen es sofort zeigen
+  }
   catch (e) { said.value = '✗ ' + e.message }
 }
 </script>

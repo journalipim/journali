@@ -146,3 +146,18 @@ test('die Balken des Teams kennen ihren Verlauf und ihren Journalstand', async (
   assert.equal((t.match(/heute 1\.526/g) ?? []).length, 1, 'heute steht genau einmal da')
   await ruhe(); w.unmount()
 })
+
+// Eine eingespielte Lizenz ändert die Limits des Teams (Taloan, 23.09.2026: „der obere ist aktualisiert, der untere
+// nicht … das sollte auch ohne Neuladen gehen“) — der Abschnitt daneben holt sie sich sofort.
+test('nach dem Einspielen einer Lizenz laden die Limits nach', async () => {
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'team', 'users'] }
+  const w = mount(TeamsSettings); await ruhe()
+  const vorher = calls.filter(c => c.path.endsWith('/tokens/journali')).length
+  const feld = w.find('textarea')
+  await feld.setValue('{"entriesWeek":200000,"entriesMonth":500000}')
+  await w.findAll('button').find(b => /Einspielen/.test(b.text())).trigger('click'); await ruhe()
+  assert.ok(calls.some(c => c.path === '/api/licence' && c.method === 'PUT'), 'die Lizenz ging hinaus')
+  const nachher = calls.filter(c => c.path.endsWith('/tokens/journali')).length
+  assert.ok(nachher > vorher, 'die Limits wurden danach neu geholt')
+  await ruhe(); w.unmount()
+})
