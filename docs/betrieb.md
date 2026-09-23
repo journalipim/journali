@@ -414,6 +414,10 @@ die zentrale IT legt sie auf Vorrat und wählt das Team beim Einlösen:
 | `reset` | das Team zählt ab dem Einlösen neu (verschiebt nur seinen Zählbeginn, nie den der Instanz) |
 | `limit` | `entriesWeek`/`entriesMonth` für `days` Tage ab dem Einlösen; hebt an, senkt nie. Läuft schon eines, wird dessen **Restvolumen** in Tage des neuen umgerechnet und angehängt (`Schluessel.Bis`) |
 
+Ein Limit wird als **Paket** angefordert, nie mit freien Zahlen (Taloan, 23.09.2026): `pro`, `ultimate`, `enterprise`
+(`Schluessel.Pakete`, `GET /api/licence/packages`); die Anforderung trägt `plan` und die Zahlen des Pakets. Die Zahlen
+der Pakete sind vorläufig.
+
 Beide sind kombinierbar; ein Limit überschreibt keinen Reset. Eingelöst wird beim Team, das sein Kontingent selbst
 trägt — wer über ein anderes abrechnet, bekommt den Schlüssel dort.
 

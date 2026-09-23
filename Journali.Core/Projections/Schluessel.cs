@@ -18,6 +18,21 @@ public static class Schluessel
     public const string Limit = "limit";
     public static readonly string[] Arten = [Reset, Limit];
 
+    /// <summary>Ein Limit-Paket: angefordert wird das Paket, nicht die Zahlen.</summary>
+    public sealed record Paket(string Key, string Label, int Week, int Month, int Days);
+
+    /// <summary>
+    /// Die Pakete, die angefordert werden können (Taloan, 23.09.2026: „wir geben verschiedene Kombinationen vor, aber
+    /// keine freien Eingabefelder“). Die Zahlen sind vorläufig — Taloan hat die Pakete benannt, nicht beziffert.
+    /// </summary>
+    public static readonly Paket[] Pakete =
+    [
+        new("pro", "Pro", 50_000, 200_000, 30),
+        new("ultimate", "Ultimate", 100_000, 500_000, 30),
+        new("enterprise", "Enterprise", 250_000, 1_000_000, 30),
+    ];
+    public static Paket? PaketVon(string? key) => Pakete.FirstOrDefault(p => p.Key == key);
+
     /// <summary>
     /// Bis wann ein Limit-Schlüssel gilt, der heute eingelöst wird. <paramref name="laufend"/> ist der Schlüssel, der
     /// heute schon gilt (oder null). Beispiel: es laufen 30 000/Woche noch 20 Tage (heute eingeschlossen), neu kommen

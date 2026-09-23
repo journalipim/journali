@@ -75,7 +75,8 @@ public static class LicenceKeys
 
     public sealed record Body(JsonElement Key, string Team);
 
-    public sealed record RequestBody(string? Kind, int EntriesWeek, int EntriesMonth, int Days, int Count = 1);
+    /// <summary>Angefordert wird Reset oder ein Paket — die Zahlen kommen aus dem Paket, nie aus der Anfrage.</summary>
+    public sealed record RequestBody(string? Kind, string? Plan, int Count = 1);
 
     public static void Map(RouteGroupBuilder api, Licences licences, KeyRequests anforderungen, Instanz instanz)
     {
@@ -89,7 +90,7 @@ public static class LicenceKeys
                 var e = c.Teams.Einloesungen.FirstOrDefault(x => x.Id == r?.Id);
                 return new
                 {
-                    r?.Id, r?.Kind, week = r?.EntriesWeek ?? 0, month = r?.EntriesMonth ?? 0, days = r?.Days ?? 0, created = z.At, who = z.Who,
+                    r?.Id, r?.Kind, r?.Plan, week = r?.EntriesWeek ?? 0, month = r?.EntriesMonth ?? 0, days = r?.Days ?? 0, created = z.At, who = z.Who,
                     hash = z.Signiert.Hash, text = z.Signiert.Text,
                     team = e?.Team, teamLabel = e is null ? null : c.Teams.Get(e.Team)?.Label ?? e.Team,
                 };
@@ -101,12 +102,14 @@ public static class LicenceKeys
             if (Actor(req) is not { } actor) return ActorMissing();
             if (body.Kind is not { } art || !Schluessel.Arten.Contains(art)) return Bad($"Art: {string.Join(", ", Schluessel.Arten)}.");
             if (body.Count is < 1 or > 20) return Bad("Anzahl: 1 bis 20.");
-            if (art == Schluessel.Limit && (body.Days <= 0 || body.EntriesWeek < 0 || body.EntriesMonth < 0 || (body.EntriesWeek == 0 && body.EntriesMonth == 0)))
-                return Bad("Limit: Tage und eine Grenze je Woche oder Monat.");
-            var (w, m, d) = art == Schluessel.Limit ? (body.EntriesWeek, body.EntriesMonth, body.Days) : (0, 0, 0);
-            var neu = Enumerable.Range(0, body.Count).Select(_ => anforderungen.Neu(art, w, m, d, actor)).ToList();
+            var paket = art == Schluessel.Limit ? Schluessel.PaketVon(body.Plan) : null;
+            if (art == Schluessel.Limit && paket is null) return Bad($"Paket: {string.Join(", ", Schluessel.Pakete.Select(p => p.Key))}.");
+            var neu = Enumerable.Range(0, body.Count)
+                .Select(_ => paket is { } p ? anforderungen.Neu(art, p.Week, p.Month, p.Days, actor, p.Key) : anforderungen.Neu(art, 0, 0, 0, actor)).ToList();
             return Results.Ok(neu.Select(s => new { s.Inhalt!.Id, hash = s.Hash, text = s.Text }).ToList());
         });
+
+        api.MapGet("/licence/packages", () => Results.Ok(Schluessel.Pakete.Select(p => new { p.Key, p.Label, week = p.Week, month = p.Month, days = p.Days })));
 
         api.MapGet("/licence/keys", (Catalog c) => c.With((_, _, _) => Results.Ok(c.Teams.Einloesungen.Select(r => new
         {

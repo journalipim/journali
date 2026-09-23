@@ -19,8 +19,8 @@ async function load() {
   try { lic.value = await api.get('/api/licence') } catch (e) { store.toast(e.message) }
   if (!darf()) return
   try {
-    const [a, e] = await Promise.all([api.get('/api/licence/requests'), api.get('/api/licence/keys')])
-    anforderungen.value = a; einloesungen.value = e
+    const [a, e, p] = await Promise.all([api.get('/api/licence/requests'), api.get('/api/licence/keys'), api.get('/api/licence/packages')])
+    anforderungen.value = a; einloesungen.value = e; pakete.value = p
   } catch (e) { store.toast(e.message) }
 }
 onMounted(load)
@@ -29,7 +29,10 @@ onMounted(load)
 // eingelöst wird nur, was hier angefordert wurde. Auf Vorrat und ohne Team; das Team wählt die IT beim Einlösen.
 const anforderungen = ref([])
 const einloesungen = ref([])
-const neu = ref({ kind: 'reset', entriesWeek: 0, entriesMonth: 0, days: 30, count: 1 })
+const pakete = ref([])
+const neu = ref({ wahl: 'reset', count: 1 })   // wahl: 'reset' oder der Schlüssel eines Pakets
+const paketTitel = p => `${zahl(p.week)} / Woche · ${zahl(p.month)} / Monat · ${p.days} Tage`
+const paketName = k => pakete.value.find(p => p.key === k)?.label ?? k
 const angefordert = ref('')
 const saidAnf = ref('')
 
@@ -52,7 +55,8 @@ const uebernehmen = () => was.value === 'schluessel' ? einloesen() : was.value =
 
 async function anfordern() {
   try {
-    const r = await api.post('/api/licence/requests', neu.value)
+    const { wahl, count } = neu.value
+    const r = await api.post('/api/licence/requests', wahl === 'reset' ? { kind: 'reset', count } : { kind: 'limit', plan: wahl, count })
     angefordert.value = r.length === 1 ? r[0].text : '[' + r.map(x => x.text).join(',\n') + ']'
     saidAnf.value = `✓ ${r.length} angefordert`
     await load()
@@ -126,16 +130,13 @@ async function kopiere(text) {
     <div v-if="darf()" class="schluessel" style="margin-top:16px">
       <h3>⚷ Schlüssel</h3>
       <div class="row anfordern" style="gap:6px;flex-wrap:wrap;align-items:center">
-        <select v-model="neu.kind" title="Reset: das Team zählt ab dem Einlösen neu. Limit: höheres Kontingent für eine Dauer ab dem Einlösen.">
-          <option value="reset">↺ Reset</option>
-          <option value="limit">⇡ Limit</option>
+        <select v-model="neu.wahl" class="wahl">
+          <option value="reset" title="Das Team zählt ab dem Einlösen neu.">↺ Reset</option>
+          <option v-for="p in pakete" :key="p.key" :value="p.key" :title="paketTitel(p)">⇡ {{ p.label }}</option>
         </select>
-        <template v-if="neu.kind === 'limit'">
-          <label title="Token je Woche">▤ <input v-model.number="neu.entriesWeek" type="number" min="0" style="width:90px" /></label>
-          <label title="Token je Monat">▦ <input v-model.number="neu.entriesMonth" type="number" min="0" style="width:90px" /></label>
-          <label title="Laufzeit in Tagen ab dem Einlösen">◷ <input v-model.number="neu.days" type="number" min="1" style="width:60px" /></label>
-        </template>
-        <label title="Anzahl Anforderungen">× <input v-model.number="neu.count" type="number" min="1" max="20" style="width:50px" /></label>
+        <select v-model.number="neu.count" class="anzahl" title="Anzahl Anforderungen">
+          <option v-for="n in [1, 2, 5, 10]" :key="n" :value="n">× {{ n }}</option>
+        </select>
         <button @click="anfordern" title="Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren">⚷ Anfordern</button>
         <span class="said-anf" :class="saidAnf.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ saidAnf }}</span>
       </div>
@@ -148,7 +149,7 @@ async function kopiere(text) {
         <th>Id</th><th title="Art">⚷</th><th title="Token je Woche">▤</th><th title="Token je Monat">▦</th><th title="Tage">◷</th><th>erstellt</th><th>Stand</th><th></th>
       </tr></thead><tbody>
         <tr v-for="a in anforderungen" :key="a.id">
-          <td class="mono">{{ a.id }}</td><td :title="a.kind">{{ art(a.kind) }}</td>
+          <td class="mono">{{ a.id }}</td><td :title="a.kind">{{ art(a.kind) }}<template v-if="a.plan"> {{ paketName(a.plan) }}</template></td>
           <td class="mono">{{ a.kind === 'limit' ? zahl(a.week) : '' }}</td><td class="mono">{{ a.kind === 'limit' ? zahl(a.month) : '' }}</td>
           <td class="mono">{{ a.kind === 'limit' ? a.days : '' }}</td>
           <td class="mono">{{ String(a.created).slice(0, 10) }}</td>

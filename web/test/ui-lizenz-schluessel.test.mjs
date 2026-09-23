@@ -25,6 +25,7 @@ function server({ fehler = null } = {}) {
     else if (path === '/api/licence') body = { plan: 'Gross', geprueft: true }
     else if (path === '/api/licence/requests' && method === 'GET') body = anforderungen
     else if (path === '/api/licence/requests') body = [{ id: 'k-2', hash: 'h', text: '{"anforderung":"neu","sig":"z"}' }]
+    else if (path === '/api/licence/packages') body = [{ key: 'pro', label: 'Pro', week: 50000, month: 200000, days: 30 }, { key: 'ultimate', label: 'Ultimate', week: 100000, month: 500000, days: 30 }, { key: 'enterprise', label: 'Enterprise', week: 250000, month: 1000000, days: 30 }]
     else if (path === '/api/licence/keys' && method === 'GET') body = [{ id: 'k-0', kind: 'reset', team: 'de', teamLabel: 'Deutschland', from: '2026-09-22', until: null, carried: 0 }]
     else if (path === '/api/licence/keys') body = fehler ? (status = 400, { error: fehler }) : { id: 'k-1', kind: 'limit', team: 'de', from: '2026-09-23', until: '2026-10-22', carried: 0, geprueft: true }
     else body = {}
@@ -44,17 +45,27 @@ const IT = { key: 'it', label: 'Italien', payer: 'de' }
 const SCHLUESSEL = '{"id":"k-1","kind":"limit","request":"ab12","sig":"a=="}'
 const knopf = w => w.find('.uebernahme button')
 
-test('Anfordern schickt Art und Grenzen und zeigt die signierte Anforderung zum Kopieren', async () => {
+test('Angefordert wird ein Paket — keine freien Zahlen', async () => {
   const gesendet = server(); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  await w.find('.anfordern select').setValue('limit')
-  const [woche, monat, tage] = w.findAll('.anfordern input[type=number]')
-  await woche.setValue('30000'); await monat.setValue('150000'); await tage.setValue('30')
+  assert.equal(w.findAll('.anfordern input').length, 0, 'beim Anfordern stehen freie Eingabefelder')
+  const wahl = w.find('.anfordern select.wahl')
+  assert.deepEqual(wahl.findAll('option').map(o => o.text()), ['↺ Reset', '⇡ Pro', '⇡ Ultimate', '⇡ Enterprise'])
+  await wahl.setValue('ultimate')
+  await w.find('.anfordern select.anzahl').setValue('5')
   await button(w, 'Anfordern').trigger('click'); await flushPromises()
   const post = gesendet.find(g => g.path === '/api/licence/requests')
   assert.ok(post, 'keine Anforderung gesendet')
-  assert.deepEqual({ ...post.body }, { kind: 'limit', entriesWeek: 30000, entriesMonth: 150000, days: 30, count: 1 })
+  assert.deepEqual({ ...post.body }, { kind: 'limit', plan: 'ultimate', count: 5 })
   assert.equal(w.find('textarea.angefordert').element.value, '{"anforderung":"neu","sig":"z"}')
+  w.unmount()
+})
+
+test('Reset braucht kein Paket', async () => {
+  const gesendet = server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  await button(w, 'Anfordern').trigger('click'); await flushPromises()
+  assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/requests').body }, { kind: 'reset', count: 1 })
   w.unmount()
 })
 
@@ -75,7 +86,7 @@ test('Ein Eingabefeld, ein Knopf — für Lizenz und Schlüssel', async () => {
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   assert.equal(w.findAll('textarea:not(.angefordert)').length, 1, 'es stehen mehrere Eingabefelder da')
   assert.equal(w.findAll('button.primary').length, 1, 'es stehen mehrere Übernahmeknöpfe da')
-  assert.equal(w.findAll('select').length, 1, 'eine Teamauswahl steht da — das Team ist oben gewählt')
+  assert.equal(w.findAll('select:not(.wahl):not(.anzahl)').length, 0, 'eine Teamauswahl steht da — das Team ist oben gewählt')
   assert.ok(knopf(w).attributes('disabled') !== undefined, 'ohne Eingabe darf nichts zu übernehmen sein')
   w.unmount()
 })

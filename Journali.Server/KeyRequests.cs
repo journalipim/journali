@@ -29,6 +29,7 @@ public sealed record KeyRequest(
     string? Kind = null,
     string? Instance = null,
     string? Pub = null,
+    string? Plan = null,
     int EntriesWeek = 0,
     int EntriesMonth = 0,
     int Days = 0,
@@ -86,10 +87,10 @@ public sealed class KeyRequests(NpgsqlDataSource? db, Instanz instanz)
     }
 
     /// <summary>Eine Anforderung schreiben, signieren, ablegen.</summary>
-    public SignedRequest Neu(string kind, int week, int month, int days, string actor)
+    public SignedRequest Neu(string kind, int week, int month, int days, string actor, string? plan = null)
     {
         var id = "k-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(12)).ToLowerInvariant();
-        var r = new KeyRequest(id, kind, instanz.Id, instanz.PublicKey, week, month, days, DateTimeOffset.UtcNow);
+        var r = new KeyRequest(id, kind, instanz.Id, instanz.PublicKey, plan, week, month, days, DateTimeOffset.UtcNow);
         var rumpf = JsonSerializer.Serialize(r, KeyRequest.Json);
         var s = new SignedRequest(rumpf, Convert.ToBase64String(instanz.Signiere(rumpf)));
         if (db is null) { lock (_ohneDb) _ohneDb.Add(new Zeile(s, DateTimeOffset.UtcNow, actor)); return s; }
