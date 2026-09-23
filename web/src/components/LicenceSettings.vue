@@ -133,7 +133,7 @@ async function kopiere(text) {
       <div class="row anfordern" style="gap:6px;flex-wrap:wrap;align-items:center">
         <select v-model="neu.wahl" class="wahl">
           <option value="reset" title="Das Team zählt ab dem Einlösen neu.">↺ Reset</option>
-          <option v-for="p in pakete" :key="p.key" :value="p.key" :title="paketTitel(p)">⇡ {{ p.label }}</option>
+          <option v-for="p in pakete" :key="p.key" :value="p.key">⇡ {{ p.label }} · {{ paketTitel(p) }}</option>
         </select>
         <select v-model.number="neu.count" class="anzahl" title="Anzahl Anforderungen">
           <option v-for="n in [1, 2, 5, 10]" :key="n" :value="n">× {{ n }}</option>

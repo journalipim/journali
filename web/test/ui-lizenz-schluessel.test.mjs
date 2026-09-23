@@ -50,7 +50,12 @@ test('Angefordert wird ein Paket — keine freien Zahlen', async () => {
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   assert.equal(w.findAll('.anfordern input').length, 0, 'beim Anfordern stehen freie Eingabefelder')
   const wahl = w.find('.anfordern select.wahl')
-  assert.deepEqual(wahl.findAll('option').map(o => o.text()), ['↺ Reset', '⇡ Pro', '⇡ Ultimate', '⇡ Enterprise'])
+  assert.deepEqual(wahl.findAll('option').map(o => o.text().replace(/\s+/g, ' ')), [
+    '↺ Reset',
+    '⇡ Pro · 50.000 / Woche · 200.000 / Monat · 30 Tage',
+    '⇡ Ultimate · 100.000 / Woche · 500.000 / Monat · 30 Tage',
+    '⇡ Enterprise · 250.000 / Woche · 1.000.000 / Monat · 30 Tage',
+  ], 'die Pakete stehen ohne ihre Werte da')
   await wahl.setValue('ultimate')
   await w.find('.anfordern select.anzahl').setValue('5')
   await button(w, 'Anfordern').trigger('click'); await flushPromises()
