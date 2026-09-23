@@ -1,6 +1,10 @@
 <script setup>
-// Einstellungen: wer schreibt (X-Actor), welcher Server, und was er sagt.
-import { ref, onMounted } from 'vue'
+// Einstellungen in drei Ebenen (Taloan, 23.09.2026: „im Moment ist alles durcheinander wie es gewachsen ist“):
+// ◐ Ich — was nur mich betrifft (Darstellung, Sicht, dieser Rechner, mein Konto, mein KI-Schlüssel)
+// 👥 Team — die Gruppe, in der ich arbeite: Schlüssel, Grenzen, Verbrauch
+// ⚙ Anlage — was für alle gilt: Speicher, Mail, Benutzer und Rollen, Sicherung, Nutzung
+// Ein Abschnitt, den man nicht darf, verschwindet (Taloan: „doch, er verschwindet“); ein Reiter ohne Abschnitt ebenso.
+import { ref, computed, onMounted } from 'vue'
 import { store } from '../store.js'
 import MatrixPicker from '../components/MatrixPicker.vue'
 import { ai } from '../ai.js'
@@ -9,11 +13,12 @@ import RestoreSettings from '../components/RestoreSettings.vue'
 import MailSettings from '../components/MailSettings.vue'
 import TeamsSettings from '../components/TeamsSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
+import AccountSettings from '../components/AccountSettings.vue'
 import WorkflowSettings from '../components/WorkflowSettings.vue'
 import UsageBars from '../components/UsageBars.vue'
 import { api } from '../api.js'
-// Reiter (Taloan, 19.09.): Allgemein | Storage
-const tab = ref(location.hash === '#storage' ? 'storage' : location.hash === '#users' ? 'users' : 'general')
+// Reiter: Ich | Team | Anlage | Workflows; alte Sprungmarken (#storage, #users) landen in der Anlage
+const tab = ref(['#storage', '#users', '#mail', '#backup'].includes(location.hash) ? 'anlage' : location.hash === '#teams' ? 'team' : 'ich')
 // Nutzung (Taloan, 22.09.): drei Balken und der Verlauf — gezählt wird, was ins Journal geht
 const usage = ref(null), usageHist = ref([]), usagePeriod = ref('day'), usageBusy = ref(false)
 async function loadUsage(period = usagePeriod.value) {
@@ -33,6 +38,8 @@ async function saveAi(pk) {
   try { aiState.value = { ...aiState.value, [pk]: (await ai.test(pk)) ? `✓ ${ai.accounts[pk].model} antwortet` : '✗ unerwartete Antwort' } } catch (e) { aiState.value = { ...aiState.value, [pk]: '✗ ' + e.message } }
 }
 function setAiProvider() { ai.provider = aiProvider.value; ai.save() }
+
+const anlage = computed(() => store.can('storage') || store.can('users') || store.can('read'))
 
 const actor = ref(store.actor)
 const server = ref(store.server)
@@ -54,20 +61,23 @@ async function save() {
 <template>
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>⚙ Einstellungen</h1>
-      <span class="tab" :class="{ on: tab === 'general' }" @click="tab = 'general'">Allgemein</span>
-      <span v-if="store.can('storage')" class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'">▨ Storage</span>
-      <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'">👤 {{ store.can('users') ? 'Benutzer & Rollen' : 'Konto' }}</span>
-      <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'">⚑ Workflows</span>
-      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'">▣ Sicherung</span>
-      <span v-if="store.auth.enabled && (store.can('team') || store.can('users'))" class="tab" :class="{ on: tab === 'teams' }" @click="tab = 'teams'">👥 Teams</span>
-      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'">✉ Mail</span>
+      <span class="tab" :class="{ on: tab === 'ich' }" @click="tab = 'ich'" title="gilt nur für mich">◐ Ich</span>
+      <span v-if="store.auth.enabled && (store.can('team') || store.can('users'))" class="tab" :class="{ on: tab === 'team' }" @click="tab = 'team'" title="die Gruppe, in der ich arbeite">👥 Team</span>
+      <span v-if="anlage" class="tab" :class="{ on: tab === 'anlage' }" @click="tab = 'anlage'" title="gilt für alle">⚙ Anlage</span>
+      <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'" title="Zustände und Übergänge über den Daten">⚑ Workflows</span>
     </div>
-    <div class="scroll" v-if="tab === 'storage'"><StorageSettings /></div>
-    <div class="scroll" v-else-if="tab === 'backup'"><RestoreSettings /></div>
-    <div class="scroll" v-else-if="tab === 'mail'"><MailSettings /></div>
-    <div class="scroll" v-else-if="tab === 'teams'"><TeamsSettings /></div>
-    <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /></div>
+    <div class="scroll" v-if="tab === 'team'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>
+    <div class="scroll" v-else-if="tab === 'anlage'">
+      <StorageSettings v-if="store.can('storage')" />
+      <MailSettings v-if="store.can('users')" />
+      <UsersSettings v-if="store.can('users')" />
+      <RestoreSettings v-if="store.can('users')" />
+      <div class="section">
+        <h2>◷ Nutzung <span class="muted">· Einträge im Journal</span></h2>
+        <UsageBars :usage="usage" :history="usageHist" :period="usagePeriod" :busy="usageBusy" @period="loadUsage" />
+      </div>
+    </div>
     <div class="scroll" v-else>
       <table class="grid form">
         <tbody>
@@ -79,7 +89,7 @@ async function save() {
             <td class="muted">Urheber jedes Eintrags, den du schreibst — bis es eine Anmeldung gibt.</td>
           </tr>
           <tr>
-            <td class="muted">🖧 Server</td>
+            <td class="muted" title="gilt nur auf diesem Rechner">🖧 Server</td>
             <td><input v-model="server" type="text" style="width:240px" placeholder="leer = dieser Server" @keydown.enter="save" /></td>
             <td class="muted">z. B. <span class="mono">http://localhost:8080</span>; leer heisst: der Server, der diese Seite liefert.</td>
           </tr>
@@ -95,7 +105,7 @@ async function save() {
             <td>
               <MatrixPicker :model-value="store.viewCells" @update:model-value="v => { store.viewCells = v; store.save() }" :locales="store.model.locales.map(l => l.code)" :channels="store.model.channels.map(c => c.key)" :master-locale="store.model.masterLocale" :master-channel="store.model.masterChannel" />
             </td>
-            <td class="muted">Welche Zellen der Matrix Sprache × Kanal als Spalten stehen — 27 Sprachen × 6 Kanäle passen auf keinen Schirm. Im Knoten jederzeit umschaltbar.</td>
+            <td class="muted" title="Welche Zellen der Matrix Sprache × Kanal als Spalten stehen. Im Knoten jederzeit umschaltbar.">Spalten der Matrix Sprache × Kanal</td>
           </tr>
           <tr>
             <td class="muted">Stand</td>
@@ -114,21 +124,18 @@ async function save() {
         </tbody>
       </table>
 
-      <div class="section">
-        <h2>◷ Nutzung <span class="muted">· Einträge im Journal — Ansehen und Exportieren zählen nicht mit</span></h2>
-        <UsageBars :usage="usage" :history="usageHist" :period="usagePeriod" :busy="usageBusy" @period="loadUsage" />
-      </div>
+      <AccountSettings v-if="store.auth.enabled" />
 
       <div class="section">
         <h2>✦ KI <span class="muted">· <span v-if="ai.server?.ready">über Team „{{ ai.server.label }}“</span><span v-else>eigene Schlüssel — journali bietet keine KI an</span></span></h2>
         <!-- Teams (Taloan, 23.09.2026): liegt am Team ein Schlüssel, fragt der Server und zählt mit; ein eigener Schlüssel hier geht vor und zahlt selbst -->
-        <p v-if="ai.server?.team" class="muted" style="font-size:12px;margin:0 0 6px">
-          <span v-if="ai.server.ready">✓ Team „{{ ai.server.label }}“ stellt {{ ai.server.providers.join(', ') }}<span v-if="ai.server.payer !== ai.server.team"> über „{{ ai.server.payerLabel }}“</span> —
-            verbraucht: {{ (ai.server.used?.month ?? 0).toLocaleString('de-DE') }} Token diesen Monat<span v-if="ai.server.limits?.included"> von {{ ai.server.limits.included.toLocaleString('de-DE') }}</span>.
-            Ein eigener Schlüssel unten geht vor: dann fragt dieser Browser direkt, und es zählt niemand mit.</span>
-          <span v-else class="warn">Für Team „{{ ai.server.label ?? ai.server.team }}“ ist kein Schlüssel hinterlegt (👥 Teams) — bis dahin gilt nur ein eigener Schlüssel.</span>
+        <p v-if="ai.server?.team" class="muted" style="font-size:12px;margin:0 0 6px"
+           title="Mit Teamschlüssel fragt der Server und zählt mit; ein eigener Schlüssel unten fragt direkt.">
+          <span v-if="ai.server.ready">👥 {{ ai.server.label }} · {{ ai.server.providers.join(', ') }}<span v-if="ai.server.payer !== ai.server.team"> ↑ {{ ai.server.payerLabel }}</span>
+            · ✦ {{ (ai.server.used?.month ?? 0).toLocaleString('de-DE') }}<span v-if="ai.server.limits?.included"> / {{ ai.server.limits.included.toLocaleString('de-DE') }}</span></span>
+          <span v-else class="warn">👥 {{ ai.server.label ?? ai.server.team }} · kein Schlüssel</span>
         </p>
-        <p class="muted" style="font-size:12px;margin:0 0 6px">Was die KI sieht: die Daten des jeweils gewählten Knotens (Attribute, Werte) gehen direkt aus diesem Browser an den Anbieter — mit Ihrem Schlüssel, unter Ihrem Vertrag mit dem Anbieter, ohne Umweg über den journali-Server. Nichts geschieht ohne Klick; ohne Schlüssel arbeiten alle Plugins regelbasiert. Recherche im Internet (Anreicherung) kostet je Suche extra.</p>
+        <p class="muted" style="font-size:12px;margin:0 0 6px" title="Werte des Knotens gehen an den Anbieter — über den Server mit Teamschlüssel, sonst direkt aus dem Browser.">Schlüssel des Teams oder eigener · nichts ohne Klick · ohne Schlüssel regelbasiert</p>
         <table class="grid" style="width:auto"><colgroup><col style="width:120px" /><col style="width:360px" /><col style="width:220px" /><col /></colgroup>
           <thead><tr><th>Anbieter</th><th>API-Schlüssel</th><th>Modell</th><th></th></tr></thead><tbody>
           <tr v-for="p in ai.providers" :key="p.key">

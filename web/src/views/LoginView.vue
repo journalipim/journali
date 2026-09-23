@@ -26,7 +26,7 @@ async function go() {
       <div class="row" style="gap:10px;align-items:center;margin-bottom:14px"><img src="/logo-128.png" width="36" height="36" alt="" style="border-radius:8px" /><b style="font-size:18px">journali</b></div>
       <template v-if="store.auth.setup">
         <h2>Ersten Administrator anlegen</h2>
-        <p class="muted" style="font-size:12px;margin:0 0 10px">Danach braucht jeder Zugriff eine Anmeldung; Bearbeiter, Rollen und API-Token verwalten Sie unter ⚙ Einstellungen. Das Passwort liegt nur beim Server (auth.json), nie im Journal.</p>
+        <p class="muted" style="font-size:12px;margin:0 0 10px" title="Bearbeiter, Rollen und API-Token stehen danach unter ⚙ Einstellungen. Das Passwort liegt nur beim Server (auth.json), nie im Journal.">Danach braucht jeder Zugriff eine Anmeldung</p>
       </template>
       <h2 v-else>Anmelden</h2>
       <label>Benutzername<input v-model="user" type="text" autocomplete="username" autofocus placeholder="a-z, 0-9, ., _, -" /></label>

@@ -121,7 +121,7 @@ onMounted(lies)
       <button class="primary" :disabled="!!busy" @click="sichern">{{ busy || '▣ Sichern' }}</button>
     </div>
 
-    <table v-if="stand" class="grid"><tbody>
+    <table v-if="stand?.hier" class="grid"><tbody>
       <tr><td class="muted" style="width:130px">dieses System</td>
         <td>{{ n(stand.hier.entries) }} Einträge · {{ n(stand.hier.media) }} Medien · Speicher {{ stand.hier.storage }}</td></tr>
       <tr><td class="muted">im Verzeichnis</td>
@@ -135,10 +135,10 @@ onMounted(lies)
   <div class="section">
     <h2>↺ Wiederherstellen <span class="muted">· aus dem Verzeichnis oben, nur in ein leeres System</span></h2>
     <div class="row" style="gap:8px;align-items:center">
-      <button :disabled="!!busy || !stand?.dort || stand.hier.entries > 0"
+      <button :disabled="!!busy || !stand?.dort || (stand.hier?.entries ?? 0) > 0"
         :title="!stand?.dort ? 'keine Sicherung im Verzeichnis oben' : stand.hier.entries > 0 ? `hier stehen ${n(stand.hier.entries)} Einträge` : 'Sicherung einspielen'"
         @click="zurueck">↺ Einspielen</button>
-      <span v-if="stand && stand.hier.entries > 0" class="muted" style="font-size:12px">dieses System ist nicht leer</span>
+      <span v-if="(stand?.hier?.entries ?? 0) > 0" class="muted" style="font-size:12px">dieses System ist nicht leer</span>
       <span v-else-if="stand && !stand.dort" class="muted" style="font-size:12px">keine Sicherung im Verzeichnis</span>
     </div>
   </div>

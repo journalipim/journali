@@ -93,5 +93,15 @@ stehen dort als solche markiert.
 - `web` — Vue 3 + Vite, Fat-Client-Gefühl: keine Seitenwechsel, Inline-
   Bearbeitung in der Zelle, Tastatur durch Listen, Journal lebendig daneben.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
-  Tooltip. Positiv grün, negativ rot.
+  Tooltip — **ein sichtbarer Text ist höchstens ein Satz**, alles Weitere steht in
+  `title=` (Prüfstand `sichtbare-texte.test.mjs`). Positiv grün, negativ rot.
+  **Einstellungen in drei Ebenen** (Taloan, 23.09.): ◐ Ich (Darstellung, Sicht, dieser
+  Rechner, mein Konto mit Passwort und API-Token, mein KI-Schlüssel) · 👥 Team ·
+  ⚙ Anlage (Speicher, Mail, Benutzer und Rollen, Sicherung, Nutzung) · ⚑ Workflows.
+  Grundsatz: **wer mit seinen Rechten, Rollen und seinem Team hierher kommt, sieht,
+  was er sehen oder ändern darf — alles andere sieht er nicht.** Kein gesperrter
+  Abschnitt, kein Hinweis auf Verborgenes; ein Reiter ohne Abschnitt fällt weg.
+  **Team** = eine Gruppe von Personen, die am Gesamtsystem mitarbeitet (keine Insel —
+  wer Abschottung braucht, braucht ein eigenes System). Daran hängen KI-Schlüssel,
+  Grenzen und Verbrauch, weil sie irgendwo hängen müssen.
 - `docs/architektur.md` — das Prinzip, die Schichten, die Achsen, was offen ist

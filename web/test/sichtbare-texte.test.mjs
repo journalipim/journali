@@ -71,6 +71,27 @@ test('kein sichtbarer Text laenger als die Grenze', () => {
   assert.deepEqual(misses, [], `sichtbarer Text laenger als ${GRENZE} Zeichen`)
 })
 
+// Sichtbarer Text ist höchstens ein Satz (Taloan, 23.09.2026: „und hier habe ich schon wieder KI-blabla“; CLAUDE.md:
+// „Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im Tooltip“). Wer erklären will, schreibt es
+// in title= — dort gilt die Grenze oben. Abkürzungen (z. B., u. a.) sind kein Satzende.
+const ABK = /\b(z|u|d|o|i|s|g|ca|bzw|Nr|evtl|ggf|usw|etc|vgl|Abs|Art)\.\s*$/
+test('sichtbarer Text ist hoechstens ein Satz — Erklaerungen gehoeren in den Tooltip', () => {
+  const misses = []
+  for (const f of walk(root, '.vue')) {
+    const { descriptor } = parse(fs.readFileSync(f, 'utf8'), { filename: f })
+    const tpl = (descriptor.template?.content ?? '').replace(/<!--[\s\S]*?-->/g, '')
+    for (const m of tpl.matchAll(/>([^<>]{40,})</g)) {
+      const t = m[1].replace(/\{\{[^}]*\}\}/g, 'x').replace(/\s+/g, ' ').trim()
+      for (const punkt of [...t.matchAll(/[.!?]["“»)]?\s+(?=[A-ZÄÖÜ])/g)]) {
+        if (ABK.test(t.slice(0, punkt.index + punkt[0].length))) continue
+        misses.push(`${path.basename(f)}: „${t.slice(0, 70)}…“`)
+        break
+      }
+    }
+  }
+  assert.deepEqual(misses, [], 'zwei Sätze im sichtbaren Text — der zweite gehört in title=')
+})
+
 /// Alle Plugin-Dateien mit Oberfläche (entry.js und die .vue darunter)
 function pluginDateien() {
   const dir = new URL('../../plugins', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')

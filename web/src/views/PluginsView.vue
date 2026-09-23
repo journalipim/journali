@@ -156,7 +156,7 @@ function pick(k) { cur.value = k }
         <div class="muted" style="font-size:12px;line-height:1.6">
           Manifest: <a :href="`/plugins/${current.key}/manifest.xml`" download="manifest.xml">manifest.xml herunterladen</a> — in Excel über einen vertrauenswürdigen Add-In-Katalog (freigegebener Ordner) oder „Mein Add-In hochladen“ einbinden;
           Anleitung: <a :href="`/plugins/${current.key}/README.md`" target="_blank">README</a>. Aufgabenbereich: <a :href="`/plugins/${current.key}/taskpane.html`" target="_blank">taskpane.html</a> (ausserhalb von Excel nur zur Ansicht).
-          Office verlangt HTTPS — ausser für localhost.
+          · HTTPS ausser für localhost
         </div>
       </div>
       <div class="section" v-if="manifest.runs === 'browser'">

@@ -7,7 +7,8 @@ import assert from 'node:assert/strict'
 import { mount, flushPromises, button } from './ui.mjs'
 import { store } from '../src/store.js'
 
-const UsersSettings = (await import('../src/components/UsersSettings.vue')).default
+// Das Konto steht seit dem 23.09.2026 für sich (Taloan: „hier habe ich alles quer gemischt“) — der Token-Knopf ist dort
+const AccountSettings = (await import('../src/components/AccountSettings.vue')).default
 const TOKEN = 'jt_probe_1234567890'
 
 /// Server, der nur auf das Anlegen eines Tokens antwortet — alles andere bleibt leer
@@ -33,7 +34,7 @@ function clipboard({ fails = false } = {}) {
 async function offen() {
   fakeServer()
   store.toasts.length = 0
-  const w = mount(UsersSettings)
+  const w = mount(AccountSettings)
   await flushPromises()
   await button(w, '＋ Token').trigger('click')
   await flushPromises()

@@ -696,7 +696,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr><td class="attr">Name</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>
           <tr><td class="attr" title="Sprache, deren Wert gilt, wenn diese keinen hat — vor der Mastersprache (fr-ch → fr-fr → Master → *)">↩ Fallback</td><SelectCell :value="curLocale.fallback ?? ''" :options="model.locales.map(l => l.code).filter(c => c !== curLocale.code)" @save="localeFallback" /></tr>
         </tbody></table>
-        <div class="section muted" style="font-size:12px">★ Mastersprache: {{ model.masterLocale ?? '—' }} · In ihr werden Pflichtfelder beim Anlegen erfasst. Wird dort ein sprachabhängiger Wert geändert, zeigen die anderen Sprachen ⟳ „zu überarbeiten“, bis sie nachgezogen sind; Änderungen in einer anderen Sprache lösen nichts aus.</div>
+        <div class="section muted" style="font-size:12px" title="Pflichtfelder werden in der Mastersprache erfasst; ändert sich dort ein sprachabhängiger Wert, steht in den anderen ⟳.">★ Mastersprache: {{ model.masterLocale ?? '—' }} · Pflichtfelder beim Anlegen · ändert sie sich: ⟳ in den anderen Sprachen</div>
       </div>
     </template>
 

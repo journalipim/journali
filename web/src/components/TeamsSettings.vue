@@ -108,11 +108,10 @@ async function verbrauch(t) {
         </td>
       </tr>
       <tr v-if="darfAlles">
-        <td><input v-model="neu" type="text" placeholder="neues Team" style="width:140px" @keydown.enter="anlegen" /></td>
-        <td colspan="7" class="muted" style="font-size:12px">
-          Ein neues Team bringt eigene Schlüssel mit — dann zahlt es selbst — oder es hängt an einem Zahler. Das Grundkontingent bleibt beim ersten Team.
-          <button class="x" @click="anlegen">+</button>
-        </td>
+        <td><input v-model="neu" type="text" placeholder="neues Team" style="width:140px"
+                   title="Eigene Schlüssel = eigene Rechnung. Ohne eigene hängt es an einem Zahler; das Grundkontingent bleibt bei Team 1."
+                   @keydown.enter="anlegen" /></td>
+        <td colspan="7"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
       </tr>
     </tbody>
   </table>
@@ -121,17 +120,17 @@ async function verbrauch(t) {
     <table class="grid" style="width:auto">
       <thead><tr><th>Tag</th><th>✦ Token</th><th>Aufrufe</th><th>je Anbieter</th><th>je Person</th></tr></thead>
       <tbody>
-        <tr v-for="d in usage.days" :key="d.day" class="row">
+        <tr v-for="d in (usage.days ?? [])" :key="d.day" class="row">
           <td class="mono">{{ d.day }}</td>
           <td class="mono">{{ zahl(d.tokens) }}</td>
           <td class="muted">{{ d.calls }}</td>
-          <td class="muted">{{ Object.entries(d.byProvider).map(([k, v]) => `${k} ${zahl(v)}`).join(' · ') }}</td>
-          <td class="muted">{{ Object.entries(d.byUser).map(([k, v]) => `${k} ${zahl(v)}`).join(' · ') }}</td>
+          <td class="muted">{{ Object.entries(d.byProvider ?? {}).map(([k, v]) => `${k} ${zahl(v)}`).join(' · ') }}</td>
+          <td class="muted">{{ Object.entries(d.byUser ?? {}).map(([k, v]) => `${k} ${zahl(v)}`).join(' · ') }}</td>
         </tr>
-        <tr v-if="!usage.days.length"><td colspan="5" class="muted">noch nichts verbraucht</td></tr>
+        <tr v-if="!(usage.days ?? []).length"><td colspan="5" class="muted">noch nichts verbraucht</td></tr>
       </tbody>
     </table>
-    <div v-if="usage.dependents?.length" class="muted" style="font-size:12px;margin-top:4px">
+    <div v-if="usage?.dependents?.length" class="muted" style="font-size:12px;margin-top:4px">
       Auf diese Rechnung gehen auch: {{ usage.dependents.join(', ') }}
     </div>
   </div>
