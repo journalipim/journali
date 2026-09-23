@@ -2,7 +2,7 @@
 // Zwei Dinge, die verschiedenen Leuten gehören (Taloan, 23.09.2026): der <b>Speicher</b> (Treiber, Zugang, Umzug) und die
 // <b>Assets</b> (Vorschau-Ableitungen, Bestand). Der Schalter sagt, welcher Teil gezeigt wird — die Logik bleibt eine.
 defineProps({ teil: { type: String, default: 'speicher' } })
-// Einstellungen → Storage (Taloan, 19.09.2026: „wo ich das alles einstellen kann“): Treiber des Medienspeichers — Postgres,
+// Einstellungen → Storage (Taloan, 19.09.2026: „wo ich das alles einstellen kann“): Treiber des Assetspeichers — Postgres,
 // Verzeichnis, S3 (Garage, MinIO, AWS, R2 …); prüfen, speichern (media.json beim
 // Server, nie im Journal), Fehlbestand sehen, Blobs von einem anderen Speicher herüberkopieren.
 import { ref, onMounted } from 'vue'
@@ -18,6 +18,9 @@ const probe = ref(''); const busy = ref('')
 const zaehlBusy = ref('')   // Fehlbestand zählen
 const kopierBusy = ref('')  // Herüberkopieren
 const missing = ref(null)
+const stats = ref(null)      // was im Speicher liegt: Zahl, Grösse, Arten
+const n = x => (x ?? 0).toLocaleString('de-DE')
+const kb = b => !b ? '0' : b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' GB' : b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'
 const copyFrom = ref({ driver: 'file', path: 'media', bucket: '', endpoint: '', key: '', secret: '', region: 'garage', pathStyle: true })
 const copyResult = ref(null)
 
@@ -61,6 +64,10 @@ async function save() {
   catch (e) { store.toast(e.message) }
   finally { busy.value = '' }
 }
+async function loadStats() {
+  // ein älterer Server kennt den Weg noch nicht — dann bleibt der Block weg statt halb gefüllt
+  try { const x = await api.get('/api/media/stats'); stats.value = Array.isArray(x?.kinds) ? x : null } catch { stats.value = null }
+}
 async function findMissing() {
   zaehlBusy.value = 'zähle …'
   try { missing.value = await api.get('/api/media/missing') } catch (e) { store.toast(e.message) } finally { zaehlBusy.value = '' }
@@ -73,17 +80,17 @@ async function copy() {
   catch (e) { store.toast(e.message) }
   finally { kopierBusy.value = '' }
 }
-onMounted(load)
+onMounted(() => { load(); loadStats() })
 </script>
 
 <template>
   <div class="section" v-if="teil === 'speicher'">
-    <h2>▨ Medienspeicher <span class="muted">· aktiv: <span class="mono">{{ state.kind }}</span> · {{ state.total }} Medien<span v-if="state.error" class="neg"> · ✗ {{ state.error }}</span></span></h2>
+    <h2>▨ Assetspeicher <span class="muted">· aktiv: <span class="mono">{{ state.kind }}</span> · {{ state.total }} Assets<span v-if="state.error" class="neg"> · ✗ {{ state.error }}</span></span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /><col /></colgroup><tbody>
       <tr><td class="muted" title="Bytes werden nach SHA-256 abgelegt; das Journal kennt nur den Hash, der Treiber ist wechselbar.">Treiber</td><td><select v-model="cfg.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td>
         <td></td></tr>
       <tr v-if="cfg.driver === 'file'"><td class="muted" title="Vom Server aus gesehen — im Container z. B. /data/media.">Verzeichnis</td><td>
-        <div class="row"><input v-model="cfg.path" type="text" style="flex:1" placeholder="media (relativ zum Server) oder /data/media" /><button class="x" @click="filePicker({ value: cfg.path, dirOnly: true, title: '📁 Verzeichnis des Medienspeichers (auf dem Server)', onPick: p => { cfg.path = p } })" title="Verzeichnis auswählen">…</button></div>
+        <div class="row"><input v-model="cfg.path" type="text" style="flex:1" placeholder="media (relativ zum Server) oder /data/media" /><button class="x" @click="filePicker({ value: cfg.path, dirOnly: true, title: '📁 Verzeichnis des Assetspeichers (auf dem Server)', onPick: p => { cfg.path = p } })" title="Verzeichnis auswählen">…</button></div>
       </td><td></td></tr>
       <template v-if="cfg.driver === 's3'">
         <tr><td class="muted" title="Garage: 3900 ist die S3-API.">Endpoint</td><td><input v-model="cfg.endpoint" type="text" style="width:100%" placeholder="http://garage:3900" /></td><td></td></tr>
@@ -97,8 +104,8 @@ onMounted(load)
   </div>
 
   <div class="section" v-if="teil === 'assets'">
-    <h2 title="Für jedes Bild vorausgerechnet, nie live; rechnet das Plugin derive nach jedem Hochladen.">▨ Vorschau-Presets <span class="muted">· Ableitungen</span></h2>
-    <table class="grid form" style="width:auto"><thead><tr><th>Key</th><th>Bezeichnung</th><th title="längste Seite wird eingepasst, nie vergrößert">max B × H</th><th>Format</th><th>Qualität</th><th title="beim Import automatisch rechnen">auto</th><th title="gerechnet / Bilder">Stand</th><th></th></tr></thead><tbody>
+    <h2 title="Für jedes ableitbare Asset vorausgerechnet, nie live; rechnet das Plugin derive nach jedem Hochladen.">▨ Vorschau-Presets <span class="muted">· Ableitungen</span></h2>
+    <table class="grid form" style="width:auto"><thead><tr><th>Key</th><th>Bezeichnung</th><th title="längste Seite wird eingepasst, nie vergrößert">max B × H</th><th>Format</th><th>Qualität</th><th title="beim Import automatisch rechnen">auto</th><th title="gerechnet / ableitbare Assets (Bild, PDF)">Stand</th><th></th></tr></thead><tbody>
       <tr v-for="p in presets" :key="p.key">
         <td class="mono">{{ p.key }}</td>
         <td><input v-model="p.labelDe" type="text" style="width:140px" @change="savePreset(p)" /></td>
@@ -106,7 +113,7 @@ onMounted(load)
         <td><select v-model="p.format" @change="savePreset(p)"><option v-for="f in FORMATS" :key="f" :value="f">{{ f }}</option></select></td>
         <td><input v-model="p.quality" type="number" min="1" max="100" style="width:60px" @change="savePreset(p)" /></td>
         <td><input v-model="p.auto" type="checkbox" @change="savePreset(p)" /></td>
-        <td :class="p.pending ? 'warn' : 'pos'" :title="`${p.have} von ${p.images} Bildern gerechnet${p.pending ? ' — ' + p.pending + ' fehlen' : ''}`">{{ p.have }} / {{ p.images }}</td>
+        <td :class="p.pending ? 'warn' : 'pos'" :title="`${p.have} von ${p.images} ableitbaren Assets gerechnet${p.pending ? ' — ' + p.pending + ' fehlen' : ''}`">{{ p.have }} / {{ p.images }}</td>
         <td><button class="x" @click="deletePreset(p)" :disabled="p.key === 'thumb'" :title="p.key === 'thumb' ? 'Kachel der Bibliothek — bleibt' : 'Preset entfernen'">🗑</button></td>
       </tr>
     </tbody></table>
@@ -114,11 +121,28 @@ onMounted(load)
   </div>
 
   <div class="section" v-if="teil === 'assets'">
-    <h2>Bestand</h2>
+    <h2>▨ Bestand <span v-if="stats" class="muted">· {{ n(stats.total) }} Assets · {{ kb(stats.bytes) }}</span></h2>
+    <table v-if="stats" class="grid form" style="width:auto;margin-bottom:8px"><colgroup><col style="width:150px" /><col style="width:260px" /><col /></colgroup><tbody>
+      <tr><td class="muted" title="Alle Assets im Journal, nach Art des Inhalts">Arten</td>
+        <td class="mono">{{ stats.kinds.map(k => `${k.art} ${n(k.count)}`).join(' · ') }}</td>
+        <td class="muted" style="font-size:12px">{{ stats.kinds.map(k => `${k.art} ${kb(k.bytes)}`).join(' · ') }}</td></tr>
+      <tr><td class="muted" title="Bild oder PDF — nur daraus rechnet sich eine Vorschau; der Stand oben misst sich daran">ableitbar</td>
+        <td class="mono">{{ n(stats.renderable) }} von {{ n(stats.total) }}</td>
+        <td class="muted" style="font-size:12px">davon Bilder {{ n(stats.images) }}</td></tr>
+      <tr><td class="muted" title="Gerechnete Vorschauen über alle Presets — sie liegen zusätzlich im Speicher">Ableitungen</td>
+        <td class="mono">{{ n(stats.derived?.count) }}</td>
+        <td class="muted" style="font-size:12px">{{ kb(stats.derived?.bytes) }}</td></tr>
+      <tr><td class="muted" title="An keinem Knoten und in keiner Relation — sie liegen nur in der Bibliothek">ohne Verwendung</td>
+        <td :class="stats.unused ? 'warn mono' : 'mono'">{{ n(stats.unused) }}</td>
+        <td class="muted" style="font-size:12px"><span v-if="stats.unfiled">{{ n(stats.unfiled) }} in keinem Ordner</span></td></tr>
+      <tr><td class="muted" title="Gleiche Bytes unter mehreren Assets — im Speicher liegen sie nur einmal">gleicher Inhalt</td>
+        <td class="mono">{{ n(stats.shared) }}</td>
+        <td class="muted" style="font-size:12px">{{ (stats.largest ?? []).map(g => `${g.name} ${kb(g.bytes)}`).join(' · ') }}</td></tr>
+    </tbody></table>
     <div class="row" style="gap:8px;align-items:center">
       <button :disabled="!!zaehlBusy" @click="findMissing">Fehlbestand zählen</button>
       <span v-if="zaehlBusy" class="muted" style="font-size:12px">{{ zaehlBusy }}</span>
-      <span v-else-if="missing" :class="missing.missing.length ? 'neg' : 'pos'">{{ missing.missing.length ? `✗ ${missing.missing.length} von ${missing.total} fehlen im Speicher` : `✓ alle ${missing.total} vorhanden` }}</span>
+      <span v-else-if="missing" :class="missing.missing.length ? 'neg' : 'pos'">{{ missing.missing.length ? `✗ ${missing.missing.length} von ${missing.total} Assets fehlen im Speicher` : `✓ alle ${missing.total} Assets vorhanden` }}</span>
     </div>
     <div v-if="missing?.missing.length" class="muted" style="font-size:12px;margin-top:4px;max-height:120px;overflow:auto">{{ missing.missing.slice(0, 50).map(m => m.name).join(' · ') }}{{ missing.missing.length > 50 ? ' …' : '' }}</div>
   </div>

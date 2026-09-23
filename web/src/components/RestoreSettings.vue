@@ -1,9 +1,8 @@
 <script setup>
-// Einstellungen → Sicherung (Taloan, 23.09.2026). Zwei Dinge, die nichts miteinander zu tun haben:
-// oben die Vollsicherung — Journal, Medien, die Dateien neben dem Journal und die Plugins; sie geht in ein leeres
-// System zurück („neuer Docker irgendwo, Sicherung einspielen, muss das System wiederherstellen"). Ein pg_dump kann
-// das nicht: Plugins und auth.json liegen im Dateisystem, nicht in der Datenbank.
-// Unten der einzelne Teilbaum aus einer Rohdaten-Datei — zum Zurückholen, nicht zum Wiederaufbauen.
+// Einstellungen → Wiederherstellen (Taloan, 23.09.2026: „ich wollte in den Einstellungen lediglich das Restore haben“).
+// Das Sichern selbst ist ein Job des Plugins backup — es ruft POST /api/backup, und der Zeitplan gehört zum Tasker.
+// Hier steht nur der Weg zurück: oben die Vollsicherung in ein leeres System („neuer Docker irgendwo, Sicherung
+// einspielen"), unten der einzelne Teilbaum aus einer Rohdaten-Datei — zum Zurückholen, nicht zum Wiederaufbauen.
 import { ref, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
@@ -11,7 +10,6 @@ import { dialog } from '../dialog.js'
 import { filePicker } from '../filePicker.js'
 
 const dir = ref(localStorage.getItem('journali.backup.dir') ?? '')
-const mit = ref({ media: true, config: true, plugins: true })
 const stand = ref(null)        // { hier: {entries, media, storage}, dort: Meta|null }
 const busy = ref('')
 const said = ref('')
@@ -31,17 +29,6 @@ async function lies() {
   try {
     stand.value = await api.get(`/api/backup/status${dir.value.trim() ? `?dir=${encodeURIComponent(dir.value.trim())}` : ''}`)
     if (dir.value.trim()) localStorage.setItem('journali.backup.dir', dir.value.trim())
-  } catch (e) { said.value = '✗ ' + e.message }
-  finally { busy.value = '' }
-}
-
-async function sichern() {
-  if (!dir.value.trim()) { said.value = '✗ Verzeichnis fehlt'; return }
-  busy.value = '…'; said.value = ''
-  try {
-    const r = await api.post('/api/backup', { dir: dir.value.trim(), ...mit.value })
-    said.value = `✓ ${n(r.entries)} Einträge, ${n(r.media)} Medien (${kb(r.bytes)}), ${r.config} Dateien, ${r.plugins} Plugins`
-    await lies()
   } catch (e) { said.value = '✗ ' + e.message }
   finally { busy.value = '' }
 }
@@ -105,7 +92,7 @@ onMounted(lies)
 
 <template>
   <div class="section">
-    <h2>▣ Sichern <span class="muted">· Journal, Medien, Zugänge, Plugins</span></h2>
+    <h2>↺ Wiederherstellen <span class="muted">· Journal, Assets, Zugänge, Plugins</span></h2>
 
     <div class="row" style="gap:6px;margin-bottom:6px">
       <input v-model="dir" type="text" placeholder="Verzeichnis der Sicherung" style="flex:1" @keydown.enter="lies" />
@@ -113,34 +100,22 @@ onMounted(lies)
       <button :disabled="!!busy" @click="lies">Lesen</button>
     </div>
 
-    <div class="row" style="gap:14px;font-size:12px;margin-bottom:8px">
-      <label title="die Dateien des Medienspeichers — bei postgres liegen sie in der Datenbank"><input type="checkbox" v-model="mit.media" /> Medien</label>
-      <label title="auth.json, media.json, jobs/secrets.json — enthalten Passwort-Hashes und Token"><input type="checkbox" v-model="mit.config" /> Zugänge</label>
-      <label title="die Plugin-Verzeichnisse ohne node_modules"><input type="checkbox" v-model="mit.plugins" /> Plugins</label>
-      <span class="grow" />
-      <button class="primary" :disabled="!!busy" @click="sichern">{{ busy || '▣ Sichern' }}</button>
-    </div>
-
     <table v-if="stand?.hier" class="grid"><tbody>
       <tr><td class="muted" style="width:130px">dieses System</td>
-        <td>{{ n(stand.hier.entries) }} Einträge · {{ n(stand.hier.media) }} Medien · Speicher {{ stand.hier.storage }}</td></tr>
+        <td>{{ n(stand.hier.entries) }} Einträge · {{ n(stand.hier.media) }} Assets · Speicher {{ stand.hier.storage }}</td></tr>
       <tr><td class="muted">im Verzeichnis</td>
-        <td v-if="stand.dort">{{ n(stand.dort.entries) }} Einträge · {{ n(stand.dort.media) }} Medien ({{ kb(stand.dort.bytes) }}) · {{ stand.dort.config }} Dateien · {{ stand.dort.plugins }} Plugins · {{ when(stand.dort.at) }}</td>
+        <td v-if="stand.dort">{{ n(stand.dort.entries) }} Einträge · {{ n(stand.dort.media) }} Assets ({{ kb(stand.dort.bytes) }}) · {{ stand.dort.config }} Dateien · {{ stand.dort.plugins }} Plugins · {{ when(stand.dort.at) }}</td>
         <td v-else class="muted">keine Sicherung</td></tr>
     </tbody></table>
 
-    <div v-if="said" :class="said.startsWith('✗') ? 'neg' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
-  </div>
-
-  <div class="section">
-    <h2>↺ Wiederherstellen <span class="muted">· aus dem Verzeichnis oben, nur in ein leeres System</span></h2>
-    <div class="row" style="gap:8px;align-items:center">
+    <div class="row" style="gap:8px;align-items:center;margin-top:8px">
       <button :disabled="!!busy || !stand?.dort || (stand.hier?.entries ?? 0) > 0"
-        :title="!stand?.dort ? 'keine Sicherung im Verzeichnis oben' : stand.hier.entries > 0 ? `hier stehen ${n(stand.hier.entries)} Einträge` : 'Sicherung einspielen'"
+        :title="!stand?.dort ? 'keine Sicherung im Verzeichnis' : stand.hier.entries > 0 ? `hier stehen ${n(stand.hier.entries)} Einträge` : 'Sicherung einspielen'"
         @click="zurueck">↺ Einspielen</button>
       <span v-if="(stand?.hier?.entries ?? 0) > 0" class="muted" style="font-size:12px">dieses System ist nicht leer</span>
       <span v-else-if="stand && !stand.dort" class="muted" style="font-size:12px">keine Sicherung im Verzeichnis</span>
     </div>
+    <div v-if="said" :class="said.startsWith('✗') ? 'neg' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
   </div>
 
   <div class="section">

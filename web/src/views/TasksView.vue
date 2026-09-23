@@ -23,7 +23,7 @@ async function assign(t) {
   const choices = [{ value: '', label: roles.size ? `— Rolle ${[...roles].join('/')} (jede Person damit)` : '— jede Rolle mit Schreibrecht' },
     ...people.filter(fits).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role}` })),
     ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role} (nicht die Rolle des Schritts)` }))]
-  const user = people.length ? await dialog.prompt({ title: `Zuständigen wählen · ${t.label}`, value: t.assigned ?? '', choices, ok: '👤 Zuweisen' }) : await dialog.prompt({ title: `Zuständigen wählen · ${t.label}`, text: 'Benutzer-Key (leer = Rolle)', value: t.assigned ?? '', ok: '👤 Zuweisen' })
+  const user = people.length ? await dialog.prompt({ title: `Zuständigen wählen · ${t.label}`, value: t.assigned ?? '', choices, ok: '👤 Zuweisen' }) : await dialog.prompt({ title: `Zuständigen wählen · ${t.label}`, text: 'Anwender-Key (leer = Rolle)', value: t.assigned ?? '', ok: '👤 Zuweisen' })
   if (user === null) return
   try { await api.post(`/api/nodes/${encodeURIComponent(t.node)}/workflow/${t.workflow}/assign`, { user: user.trim() || null }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }

@@ -2,7 +2,7 @@
 // Einstellungen: ein Reiter je Sache, sichtbar nach Recht (Taloan, 23.09.2026: „im Moment ist alles durcheinander wie es
 // gewachsen ist“ · „die Seite Anlage heisst völlig bescheuert und wirft alles Kraut und Rüben durcheinander — im Grunde
 // ist das der Tab für den Administrator, den wir jetzt in seine Bestandteile zerlegen“):
-// ◐ Ich · ◍ Team · ◈ Rollen & Rechte (mit den Teams) · ▨ Storage · ▩ Assets · ✉ Mail · ▣ Backup & Recovery · ⚑ Workflows · ⚿ Lizenz.
+// ◐ Ich · ◍ Team (mit der Lizenz) · ◈ Rollen & Rechte (mit den Teams) · ▨ Storage · ▩ Assets · ✉ Mail · ▣ Backup & Recovery · ⚑ Workflows.
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
 // Speicher selbst nicht heranmuss (Taloan, 23.09.2026).
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
@@ -16,7 +16,6 @@ import TeamsSettings from '../components/TeamsSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
 import AccountSettings from '../components/AccountSettings.vue'
 import TeamsAdmin from '../components/TeamsAdmin.vue'
-import LicenceSettings from '../components/LicenceSettings.vue'
 import WorkflowSettings from '../components/WorkflowSettings.vue'
 import { api } from '../api.js'
 // Sprungmarken von aussen (#storage, #users, #mail, #backup, #teams) treffen weiter ihren Reiter
@@ -49,7 +48,6 @@ async function save() {
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'" title="ausgehender Mailserver">✉ Mail</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'" title="Sichern und Wiederherstellen">▣ Backup &amp; Recovery</span>
       <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'" title="Zustände und Übergänge über den Daten">⚑ Workflows</span>
-      <span class="tab" :class="{ on: tab === 'licence' }" @click="tab = 'licence'" title="was diese Anlage darf">⚿ Lizenz</span>
     </div>
     <div class="scroll" v-if="tab === 'team'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>
@@ -58,7 +56,7 @@ async function save() {
     <div class="scroll" v-else-if="tab === 'mail'"><MailSettings /></div>
     <div class="scroll" v-else-if="tab === 'backup'"><RestoreSettings /></div>
     <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /><TeamsAdmin /></div>
-    <div class="scroll" v-else-if="tab === 'licence'"><LicenceSettings /></div>
+
     <div class="scroll" v-else>
       <table class="grid form">
         <tbody>

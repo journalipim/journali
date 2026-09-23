@@ -148,7 +148,7 @@ public class TeamTests
     public void Das_Recht_Team_gibt_es_im_Vokabular_und_der_Team_Admin_im_Saatgut()
     {
         Assert.Contains("team", Rights.All);
-        Assert.Equal("Eigenes Team (KI-Schlüssel, Grenzen)", Rights.Label["team"]);
+        Assert.Equal("Eigenes Team (Schlüssel, Mitglieder)", Rights.Label["team"]);
         var saat = Rights.Seeds().ToDictionary(x => x.Key, x => x.Role);
         Assert.Contains("team", saat["teamadmin"].Rights);
         Assert.DoesNotContain("users", saat["teamadmin"].Rights);   // der Team-Admin holt sich keine Mitglieder in die eigene Kasse

@@ -29,7 +29,7 @@ async function go() {
         <p class="muted" style="font-size:12px;margin:0 0 10px" title="Bearbeiter, Rollen und API-Token stehen danach unter ⚙ Einstellungen. Das Passwort liegt nur beim Server (auth.json), nie im Journal.">Danach braucht jeder Zugriff eine Anmeldung</p>
       </template>
       <h2 v-else>Anmelden</h2>
-      <label>Benutzername<input v-model="user" type="text" autocomplete="username" autofocus placeholder="a-z, 0-9, ., _, -" /></label>
+      <label>Anmeldename<input v-model="user" type="text" autocomplete="username" autofocus placeholder="a-z, 0-9, ., _, -" /></label>
       <label v-if="store.auth.setup">Anzeigename<input v-model="name" type="text" autocomplete="name" placeholder="steht als Urheber im Journal" /></label>
       <label>Passwort<input v-model="password" type="password" :autocomplete="store.auth.setup ? 'new-password' : 'current-password'" placeholder="mindestens 8 Zeichen" /></label>
       <div v-if="error" class="neg" style="font-size:13px;margin:6px 0">✗ {{ error }}</div>

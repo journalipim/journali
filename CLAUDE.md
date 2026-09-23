@@ -42,9 +42,10 @@ stehen dort als solche markiert.
   Fenster, das wir anfassen, bekommt einen Test in `web/test/ui-*.test.mjs` — echtes DOM (happy-dom), echte Komponente
   (@vue/test-utils, `test/vue-loader.mjs` übersetzt .vue), Klicks und Tasten wie beim Anwender; Hilfen in `test/ui.mjs`. **Use Cases testen, nicht Taloan klicken lassen:**
   jeder Fall, der in der Bedienung schiefging, wird ein Test (Taloan, 21.09.).
-- **Benutzer & Rollen:** Identität/Rolle im Journal (`user:<key>`), Rollen mit Rechten im Journal (`role:<key>`,
+- **Anwender & Rollen:** In der Oberfläche heisst eine Person **Anwender** (Taloan, 23.09.), nie Benutzer.
+  Identität/Rolle im Journal (`user:<key>`), Rollen mit Rechten im Journal (`role:<key>`,
   Vokabular `Rights` im Kern, `Auth.Needed` sagt je Anfrage das Recht), Passwörter/Token/Sitzungen
-  in `auth.json` im Datenverzeichnis (`Auth.cs`). Ohne Benutzer offen; mit Benutzern kommt
+  in `auth.json` im Datenverzeichnis (`Auth.cs`). Ohne Anwender offen; mit Anwendern kommt
   `X-Actor` aus der Sitzung. Jobs bekommen `JOURNALI_TOKEN` (Bearer) je Lauf.
 - **Kein Passwort im Repo.** Das Datenbankpasswort kommt aus user-secrets
   (`JOURNALI_DB_PASSWORD`) oder der Umgebung; `.env` ist ignoriert.
@@ -96,11 +97,13 @@ stehen dort als solche markiert.
   Tooltip — **ein sichtbarer Text ist höchstens ein Satz**, alles Weitere steht in
   `title=` (Prüfstand `sichtbare-texte.test.mjs`). Positiv grün, negativ rot.
   **Einstellungen: ein Reiter je Sache** (Taloan, 23.09.): ◐ Ich (Darstellung, Sicht,
-  dieser Rechner, mein Konto mit Passwort und API-Token, mein KI-Schlüssel) ·
-  👥 Team (Mitglieder, Schlüssel, Grenzen, Verbrauch, Token, Nutzung) · ◈ Rollen &
-  Rechte (Benutzer, Rollen, Teams anlegen) · ▨ Storage (wo die Bytes liegen) ·
-  🖼 Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
-  pflegen darf) · ✉ Mail · ▣ Backup & Recovery · ⚑ Workflows.
+  dieser Rechner, mein Konto mit Passwort und **meinen API-Token** — die gehören zur
+  Person, nicht zum Team) · ◍ Team (Mitglieder, KI-Schlüssel, journali-Token gegen die
+  Limits **und die Lizenz** — Limits und Gekauftes hängen am Team) · ◈ Rollen &
+  Rechte (Anwender, Rollen, Teams anlegen) · ▨ Storage (wo die Bytes liegen) ·
+  ▩ Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
+  pflegen darf) · ✉ Mail · ▣ Backup & Recovery (nur der Weg **zurück**; gesichert wird
+  als Job des Plugins `backup`) · ⚑ Workflows.
   Grundsatz: **wer mit seinen Rechten, Rollen und seinem Team hierher kommt, sieht,
   was er sehen oder ändern darf — alles andere sieht er nicht.** Kein gesperrter
   Abschnitt, kein Hinweis auf Verborgenes; ein Reiter ohne Abschnitt fällt weg.

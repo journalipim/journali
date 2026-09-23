@@ -172,7 +172,7 @@ public static class Auth
         var exists = c.With((_, _, _) => c.Users.All.ContainsKey(key));
         if (!exists) c.With((_, _, write) => write("system", Stream + key, Types.UserDefined, new UserDefined(key, null, "admin", true), null));
         With(dir, s => { s.Passwords[key] = Hash(password.Trim()); return 0; }, save: true);
-        return $"Passwort von {key} aus JOURNALI_ADMIN_PASSWORD gesetzt{(exists ? "" : " (Benutzer angelegt, Rolle admin)")} — Variable jetzt wieder entfernen.";
+        return $"Passwort von {key} aus JOURNALI_ADMIN_PASSWORD gesetzt{(exists ? "" : " (Anwender angelegt, Rolle admin)")} — Variable jetzt wieder entfernen.";
     }
 
     public static void Map(RouteGroupBuilder api, string dir)
@@ -206,7 +206,7 @@ public static class Auth
                 if ((v?.Length ?? 0) > 4000) return Bad($"Wert zu „{k}“ ist zu lang (höchstens 4000 Zeichen).");
             }
             var u = c.With((_, _, _) => c.Users.All.GetValueOrDefault(who.Value.User));
-            if (u is null) return Bad("Unbekannter Benutzer.");
+            if (u is null) return Bad("Unbekannter Anwender.");
             c.With((_, _, write) => write(who.Value.User, Users.Stream + who.Value.User, Types.UserPrefsSet, new UserPrefsSet(prefs.ToDictionary(p => p.Key, p => p.Value ?? "")), null));
             return Results.Ok(new { prefs = c.With((_, _, _) => c.Users.All.GetValueOrDefault(who.Value.User)?.Prefs) });
         });
@@ -214,8 +214,8 @@ public static class Auth
         // Ersten Administrator anlegen — nur solange es keinen Benutzer gibt
         api.MapPost("/auth/setup", (SetupBody body, HttpContext ctx, Catalog c) =>
         {
-            if (Enabled(c)) return Bad("Es gibt schon Benutzer — bitte anmelden.");
-            var key = Key(body.User); if (key is null) return Bad("Benutzername: a-z, 0-9, ., _, - (2–40 Zeichen).");
+            if (Enabled(c)) return Bad("Es gibt schon Anwender — bitte anmelden.");
+            var key = Key(body.User); if (key is null) return Bad("Anmeldename: a-z, 0-9, ., _, - (2–40 Zeichen).");
             if (Blank(body.Password) is not { Length: >= 8 } pw) return Bad("Passwort: mindestens 8 Zeichen.");
             // der erste Administrator gehört ins Init Team und führt es; ändern darf er das jederzeit (Taloan, 23.09.2026)
             var initTeam = c.With((_, _, _) => c.Teams.Primary);
@@ -237,7 +237,7 @@ public static class Auth
             var key = Key(body.User); var pw = body.Password ?? "";
             var u = key is null ? null : c.With((_, _, _) => c.Users.All.GetValueOrDefault(key));
             var stored = key is null ? null : With(dir, s => s.Passwords.GetValueOrDefault(key));
-            if (u is null || !u.Enabled || stored is null || !Verify(pw, stored)) { Thread.Sleep(300); return Results.Json(new { error = "Benutzer oder Passwort falsch." }, statusCode: 401); }
+            if (u is null || !u.Enabled || stored is null || !Verify(pw, stored)) { Thread.Sleep(300); return Results.Json(new { error = "Anwender oder Passwort falsch." }, statusCode: 401); }
             StartSession(ctx, dir, key!);
             return Results.Ok(new { user = key, role = u.Role, name = u.Name });
         });
@@ -278,12 +278,12 @@ public static class Auth
         api.MapPut("/auth/users/{key}", (string key, UserBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            var k = Key(key); if (k is null) return Bad("Benutzername: a-z, 0-9, ., _, - (2–40 Zeichen).");
+            var k = Key(key); if (k is null) return Bad("Anmeldename: a-z, 0-9, ., _, - (2–40 Zeichen).");
             var cur = c.With((_, _, _) => c.Users.All.GetValueOrDefault(k));
             var roles = c.With((_, _, _) => c.Users.Roles.Keys.Order().ToList());
             var role = Blank(body.Role) ?? cur?.Role ?? (roles.Contains("editor") ? "editor" : roles.FirstOrDefault(r => r != "admin") ?? "admin"); if (!roles.Contains(role)) return Bad($"Rolle: {string.Join(", ", roles)}");
             var enabled = body.Enabled ?? cur?.Enabled ?? true;
-            if (cur is not null && cur.Enabled && IsAdmin(c, cur.Role) && (!IsAdmin(c, role) || !enabled) && AdminsLeft(c) <= 1) return Bad("Der letzte Administrator (Recht „Benutzer und Rollen“) bleibt.");
+            if (cur is not null && cur.Enabled && IsAdmin(c, cur.Role) && (!IsAdmin(c, role) || !enabled) && AdminsLeft(c) <= 1) return Bad("Der letzte Administrator (Recht „Anwender und Rollen“) bleibt.");
             // Team (Taloan, 23.09.2026): wessen Schlüssel gelten und auf wessen Rechnung die KI läuft — leerer Wert nimmt die Zuordnung weg
             var team = body.Team is null ? cur?.Team : Blank(body.Team);
             if (team is { } t && c.With((_, _, _) => c.Teams.Get(t)) is null) return Bad($"Unbekanntes Team {t}.");
@@ -302,7 +302,7 @@ public static class Auth
             var rights = (body.Rights ?? cur?.Rights.ToArray() ?? []).Where(Rights.All.Contains).Distinct().ToArray();
             if (rights.Length > 0 && !rights.Contains(Rights.Read)) rights = [Rights.Read, .. rights];   // ohne Lesen geht nichts
             // das Recht users darf nicht aus der letzten Rolle verschwinden, die ein aktiver Benutzer hat
-            if (cur is not null && cur.Rights.Contains(Rights.Users) && !rights.Contains(Rights.Users) && c.With((_, _, _) => c.Users.All.Values.Count(u => u.Enabled && u.Role != k && c.Users.RightsOf(u.Role).Contains(Rights.Users))) == 0) return Bad("Damit hätte kein aktiver Benutzer mehr das Recht „Benutzer und Rollen“.");
+            if (cur is not null && cur.Rights.Contains(Rights.Users) && !rights.Contains(Rights.Users) && c.With((_, _, _) => c.Users.All.Values.Count(u => u.Enabled && u.Role != k && c.Users.RightsOf(u.Role).Contains(Rights.Users))) == 0) return Bad("Damit hätte kein aktiver Anwender mehr das Recht „Anwender und Rollen“.");
             c.With((_, _, write) => write(actor, Users.RoleStream + k, Types.RoleDefined, new RoleDefined(Blank(body.Label) ?? cur?.Label ?? k, rights), null));
             return Results.Ok(c.With((_, _, _) => c.Users.Roles[k]));
         });
@@ -310,7 +310,7 @@ public static class Auth
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             var cur = c.With((_, _, _) => c.Users.Roles.GetValueOrDefault(key)); if (cur is null) return Results.NotFound();
-            var used = c.With((_, _, _) => c.Users.All.Values.Count(u => u.Role == key)); if (used > 0) return Bad($"{key} hat noch {used} Benutzer.");
+            var used = c.With((_, _, _) => c.Users.All.Values.Count(u => u.Role == key)); if (used > 0) return Bad($"{key} hat noch {used} Anwender.");
             if (key == "admin") return Bad("admin bleibt.");
             c.With((_, _, write) => write(actor, Users.RoleStream + key, Types.RoleRetired, new RoleRetired(), null));
             return Results.Ok(new { ok = true });
@@ -319,7 +319,7 @@ public static class Auth
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             var cur = c.With((_, _, _) => c.Users.All.GetValueOrDefault(key)); if (cur is null) return Results.NotFound();
-            if (cur.Enabled && IsAdmin(c, cur.Role) && AdminsLeft(c) <= 1) return Bad("Der letzte Administrator (Recht „Benutzer und Rollen“) bleibt.");
+            if (cur.Enabled && IsAdmin(c, cur.Role) && AdminsLeft(c) <= 1) return Bad("Der letzte Administrator (Recht „Anwender und Rollen“) bleibt.");
             c.With((_, _, write) => write(actor, Stream + key, Types.UserRetired, new UserRetired(), null));
             With(dir, s => { s.Passwords.Remove(key); foreach (var t in s.Tokens.Where(t => t.Value.User == key).Select(t => t.Key).ToList()) s.Tokens.Remove(t); foreach (var t in s.Sessions.Where(t => t.Value.User == key).Select(t => t.Key).ToList()) s.Sessions.Remove(t); return 0; }, save: true);
             return Results.Ok(new { ok = true });

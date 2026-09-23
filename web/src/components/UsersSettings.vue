@@ -1,5 +1,5 @@
 <script setup>
-// Einstellungen → ⚙ Anlage → Benutzer und Rollen (Recht users): wer im System arbeitet, welche Rolle und welches Team.
+// Einstellungen → ⚙ Anlage → Anwender und Rollen (Recht users): wer im System arbeitet, welche Rolle und welches Team.
 // Rollen (Taloan, 20.09.): Namen und Rechte bestimmt der Anwender — Tabelle Rollen × Rechte, Saatgut admin/manager/editor/reader.
 // Das eigene Konto (Passwort, API-Token) steht unter ◐ Ich — Verwaltung und eigenes Konto sind zweierlei (Taloan, 23.09.2026).
 import { ref, onMounted } from 'vue'
@@ -21,7 +21,7 @@ async function load() {
 function edit(u) { form.value = u ? { key: u.key, name: u.name, email: u.email ?? '', role: u.role, team: u.team ?? '', password: '', isNew: false } : { key: '', name: '', email: '', role: 'editor', team: '', password: '', isNew: true } }
 async function save() {
   const f = form.value
-  if (f.isNew && !f.password) { store.toast('Passwort für den neuen Benutzer'); return }
+  if (f.isNew && !f.password) { store.toast('Passwort für den neuen Anwender'); return }
   try { await api.post(`/api/auth/users/${encodeURIComponent(f.key.trim().toLowerCase())}`, { name: f.name, email: f.email || null, role: f.role, team: f.team || '', password: f.password || null }, 'PUT'); form.value = null; await load(); store.toast('✓ gespeichert', 'ok') }
   catch (e) { store.toast(e.message) }
 }
@@ -43,7 +43,7 @@ async function roleAdd() {
 function roleMenu(e, r) {
   menu.open(e, [
     { label: `Rolle ${r.label || r.key}`, disabled: true }, { sep: true },
-    { label: 'Rolle zurückziehen', icon: '✕', key: 'Delete', disabled: r.key === 'admin' || r.users > 0, hint: r.key === 'admin' ? 'admin bleibt' : r.users ? `${r.users} Benutzer` : '', action: async () => { if (!await dialog.confirm({ title: `Rolle ${r.label || r.key} zurückziehen?`, ok: 'Zurückziehen', danger: true })) return; try { await api.del(`/api/auth/roles/${r.key}`); await load() } catch (err) { store.toast(err.message) } } },
+    { label: 'Rolle zurückziehen', icon: '✕', key: 'Delete', disabled: r.key === 'admin' || r.users > 0, hint: r.key === 'admin' ? 'admin bleibt' : r.users ? `${r.users} Anwender` : '', action: async () => { if (!await dialog.confirm({ title: `Rolle ${r.label || r.key} zurückziehen?`, ok: 'Zurückziehen', danger: true })) return; try { await api.del(`/api/auth/roles/${r.key}`); await load() } catch (err) { store.toast(err.message) } } },
   ])
 }
 onMounted(load)
@@ -51,9 +51,9 @@ onMounted(load)
 
 <template>
   <div class="section" v-if="isAdmin()">
-    <h2>👥 Benutzer <span class="muted" title="Passwörter liegen beim Server (auth.json), nie im Journal.">· {{ users.length }}</span></h2>
+    <h2>👥 Anwender <span class="muted" title="Passwörter liegen beim Server (auth.json), nie im Journal.">· {{ users.length }}</span></h2>
     <table class="grid" style="width:100%">
-      <thead><tr><th style="width:120px">Benutzer</th><th>Name</th><th>E-Mail</th><th style="width:80px">Rolle</th><th style="width:90px" title="Kostenstelle der KI: wessen Schlüssel gelten und auf wessen Rechnung es läuft">Team</th><th style="width:60px"></th><th style="width:150px">zuletzt</th><th style="width:130px"></th></tr></thead>
+      <thead><tr><th style="width:120px">Anwender</th><th>Name</th><th>E-Mail</th><th style="width:80px">Rolle</th><th style="width:90px" title="Kostenstelle der KI: wessen Schlüssel gelten und auf wessen Rechnung es läuft">Team</th><th style="width:60px"></th><th style="width:150px">zuletzt</th><th style="width:130px"></th></tr></thead>
       <tbody>
         <tr v-for="u in users" :key="u.key" :class="{ off: !u.enabled }">
           <td class="mono">{{ u.key }}</td><td>{{ u.name }}</td><td class="muted">{{ u.email ?? '' }}</td><td :title="u.role">{{ roles.find(r => r.key === u.role)?.label || u.role }}</td>
@@ -64,7 +64,7 @@ onMounted(load)
         </tr>
       </tbody>
     </table>
-    <div class="row" style="gap:6px;margin-top:6px"><button class="primary" @click="edit(null)">＋ Benutzer</button></div>
+    <div class="row" style="gap:6px;margin-top:6px"><button class="primary" @click="edit(null)">＋ Anwender</button></div>
     <div v-if="form" class="picker" style="padding:8px;margin-top:6px">
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
         <input v-model="form.key" type="text" placeholder="benutzername" style="width:140px" :disabled="!form.isNew" />
@@ -81,7 +81,7 @@ onMounted(load)
   <div class="section" v-if="isAdmin()">
     <h2>◈ Rollen <span class="muted" title="Welche Rechte eine Rolle hat, bestimmen Sie; Rechtsklick zieht eine Rolle zurück.">· {{ roles.length }}</span></h2>
     <table class="grid" style="width:auto">
-      <thead><tr><th style="width:110px">Rolle</th><th style="width:160px">Bezeichnung</th><th v-for="rt in rights" :key="rt.key" style="text-align:center;min-width:64px" :title="rt.key">{{ rt.label }}</th><th style="width:70px" class="num">Benutzer</th></tr></thead>
+      <thead><tr><th style="width:110px">Rolle</th><th style="width:160px">Bezeichnung</th><th v-for="rt in rights" :key="rt.key" style="text-align:center;min-width:64px" :title="rt.key">{{ rt.label }}</th><th style="width:70px" class="num">Anwender</th></tr></thead>
       <tbody>
         <tr v-for="r in roles" :key="r.key" @contextmenu="roleMenu($event, r)">
           <td class="mono">{{ r.key }}</td>

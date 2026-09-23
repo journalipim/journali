@@ -2,17 +2,17 @@
 // Die Teamseite (Taloan, 23.09.2026: „auf der Teamseite sehe ich alles, was zu meinem Team gehört, wer alles zu meinem Team
 // gehört; wenn ich der Teamadministrator bin, kann ich da auch die API-Schlüssel eingeben“). Ein Team ist eine Gruppe von
 // Personen, die am Gesamtsystem mitarbeitet — hier steht, wer dazugehört, womit die Gruppe arbeitet und was sie verbraucht.
-// Teams anlegen und entfernen gehört nicht hierher, sondern zu den Personen (👤 Benutzer & Rollen).
+// Teams anlegen und entfernen gehört nicht hierher, sondern zu den Personen (👤 Anwender & Rollen).
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import UsageBars from './UsageBars.vue'
+import LicenceSettings from './LicenceSettings.vue'
 
 const teams = ref([])
 const gewaehlt = ref(null)     // gezeigtes Team; mit „users“ lässt sich wechseln
 const mitglieder = ref([])
-const tokens = ref([])
 const keyIn = ref({ anbieter: 'anthropic', wert: '' })
 const frei = ref([])           // wer in keinem Team ist — nur die lassen sich eintragen
 const dazu = ref('')
@@ -52,7 +52,6 @@ async function details() {
   const k = gewaehlt.value; if (!k) return
   const p = encodeURIComponent(k)
   try { mitglieder.value = await api.get(`/api/teams/${p}/members`) } catch { mitglieder.value = [] }
-  try { tokens.value = await api.get(`/api/teams/${p}/tokens`) } catch { tokens.value = [] }
   try { frei.value = await api.get('/api/teams/free') } catch { frei.value = [] }
   try { lizenz.value = await api.get('/api/licence') } catch { lizenz.value = null }
   try { jt.value = await api.get(`/api/teams/${p}/tokens/journali`) } catch { jt.value = null }
@@ -75,6 +74,25 @@ async function schluesselWeg(anbieter) {
 async function modell(anbieter, wert) {
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { models: { [anbieter]: wert } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
+/// Was auf die Limits geht und was nicht — die Liste ist Kinds.Counts im Kern (data, publish)
+function hilfeToken() {
+  dialog.help({
+    title: '✦ journali PIM Token',
+    rows: [
+      ['Gezählt', ''],
+      ['Datenpflege', 'Werte, Zeilen, Artikel und Varianten, Status, Kennungen, Medien, Relationen'],
+      ['Ausleitung', 'Freigaben, Versionen, Workflow-Zustände, Übersetzungsschritte'],
+      ['Nicht gezählt', ''],
+      ['Modell', 'Attribute, Gruppen, Sichten, Listen, Sprachen, Kanäle, Einheiten, Wörterbuch'],
+      ['Struktur', 'Baum anlegen, umhängen, ordnen, benennen, Achsen und Gruppen'],
+      ['Referenzdaten', 'Kataloge wie ETIM und ihre Wertelisten'],
+      ['Einrichtung', 'Plugins, Anwender, Rollen, Jobdefinitionen'],
+      ['Betrieb', 'Jobläufe mit Protokoll, gerechnete Vorschauen'],
+      ['Ohne Eintrag', 'Ansehen, Suchen, Exportieren'],
+    ],
+  })
+}
+
 async function eintragen() {
   if (!dazu.value) return
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/members/${encodeURIComponent(dazu.value)}`, {}); dazu.value = ''; await details() }
@@ -83,10 +101,6 @@ async function eintragen() {
 async function austragen(m) {
   if (!await dialog.confirm({ title: `${m.name || m.key} austragen?`, text: 'Danach ist die Person in keinem Team — ohne Schlüssel, ohne Kontingent.', ok: '✕ Austragen' })) return
   try { await api.del(`/api/teams/${encodeURIComponent(gewaehlt.value)}/members/${encodeURIComponent(m.key)}`); await details() } catch (e) { store.toast(e.message) }
-}
-async function widerrufen(tok) {
-  if (!await dialog.confirm({ title: `Token „${tok.label}“ von ${tok.user} widerrufen?`, text: 'Wer damit arbeitet, kommt sofort nicht mehr herein.', ok: '✕ Widerrufen' })) return
-  try { await api.del(`/api/teams/${encodeURIComponent(gewaehlt.value)}/tokens/${encodeURIComponent(tok.id)}`); await details() } catch (e) { store.toast(e.message) }
 }
 </script>
 
@@ -166,25 +180,11 @@ async function widerrufen(tok) {
       </tbody></table>
     </div>
 
-    <div class="section">
-      <h2>⚿ API-Token <span class="muted" title="Ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung dieses Teams.">· {{ tokens.length }}</span></h2>
-      <table class="grid" style="width:auto">
-        <thead><tr><th>Token</th><th>Person</th><th>angelegt</th><th></th></tr></thead>
-        <tbody>
-          <tr v-for="t in tokens" :key="t.id" class="row">
-            <td>{{ t.label }} <span class="mono muted" style="font-size:12px">{{ t.id }}</span></td>
-            <td class="mono">{{ t.user }}</td>
-            <td class="muted">{{ new Date(t.at).toLocaleDateString() }}</td>
-            <td><button v-if="fuehrt" class="x" title="Token widerrufen" @click="widerrufen(t)">×</button></td>
-          </tr>
-          <tr v-if="!tokens.length"><td colspan="4" class="muted">keine</td></tr>
-        </tbody>
-      </table>
-    </div>
 
     <div class="section">
       <h2>✦ journali PIM Token
         <span class="muted" title="Jede Pflege schreibt einen Eintrag ins Journal; Ansehen und Exportieren zählen nicht mit.">· Nutzung gegen die Limits</span>
+        <button class="x" title="Was auf die Limits geht" @click="hilfeToken">?</button>
       </h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
@@ -209,5 +209,7 @@ async function widerrufen(tok) {
       </tbody></table>
       <UsageBars v-if="jt" :usage="teamUsage" />
     </div>
+
+    <LicenceSettings />
   </template>
 </template>

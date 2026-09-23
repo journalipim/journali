@@ -64,10 +64,10 @@ public static class TeamApi
                     // Die Grenzen setzt der Administrator (Taloan, 23.09.2026: „das wäre schön, wenn jeder seine Werte selbst
                     // festlegen könnte, oder?“) — ein Manager, der sein eigenes Budget schreibt, ist keine Grenze.
                     if (body.IncludedTokens is not null && body.IncludedTokens != cur.IncludedTokens) return Bad("Das Grundkontingent setzt der Administrator.");
-                    if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Limits verteilt der Administrator.");
-                    if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Limits verteilt der Administrator.");
-                    if (body.EntriesWeek is not null && body.EntriesWeek != cur.EntriesWeek) return Bad("Die Limits verteilt der Administrator.");
-                    if (body.EntriesMonth is not null && body.EntriesMonth != cur.EntriesMonth) return Bad("Die Limits verteilt der Administrator.");
+                    if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Limits trägt der Administrator ein.");
+                    if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Limits trägt der Administrator ein.");
+                    if (body.EntriesWeek is not null && body.EntriesWeek != cur.EntriesWeek) return Bad("Die Limits trägt der Administrator ein.");
+                    if (body.EntriesMonth is not null && body.EntriesMonth != cur.EntriesMonth) return Bad("Die Limits trägt der Administrator ein.");
                     if (body.KeysFrom is not null && Blank(body.KeysFrom) != cur.KeysFrom) return Bad("Woher die Schlüssel kommen, entscheidet der Administrator.");
                     if (body.Managers is not null) return Bad("Wer das Team führt, bestimmt der Administrator.");
                 }
@@ -76,7 +76,7 @@ public static class TeamApi
                 // Wer ein Team führt, gehört hinein (Taloan, 23.09.2026) — sonst steht die Führung neben dem Team statt darin
                 foreach (var m in managers)
                 {
-                    if (c.Users.All.GetValueOrDefault(m) is not { } mu) return Bad($"Unbekannter Benutzer {m}.");
+                    if (c.Users.All.GetValueOrDefault(m) is not { } mu) return Bad($"Unbekannter Anwender {m}.");
                     if (mu.Team is { Length: > 0 } andere && andere != key) return Bad($"{mu.Name ?? mu.Key} steht im Team {c.Teams.Get(andere)?.Label ?? andere} — dort erst austragen.");
                 }
                 if (managers.Length == 0 && cur is null && c.Users.All.Count > 0) return Bad("Mindestens ein Teammanager — notfalls du selbst.");
@@ -112,7 +112,7 @@ public static class TeamApi
         api.MapDelete("/teams/{key}", (string key, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            if (!Auth.Has(req, c, Rights.Users)) return Bad("Teams entfernt, wer Benutzer und Rollen verwaltet.");
+            if (!Auth.Has(req, c, Rights.Users)) return Bad("Teams entfernt, wer Anwender und Rollen verwaltet.");
             return c.With((_, _, write) =>
             {
                 if (c.Teams.Get(key) is null) return Results.NotFound();
@@ -156,7 +156,7 @@ public static class TeamApi
             return c.With((_, _, write) =>
             {
                 if (c.Teams.Get(key) is null) return Results.NotFound();
-                if (c.Users.All.GetValueOrDefault(user) is not { } u) return Bad($"Unbekannter Benutzer {user}.");
+                if (c.Users.All.GetValueOrDefault(user) is not { } u) return Bad($"Unbekannter Anwender {user}.");
                 if (u.Team == key) return Bad($"{u.Name ?? u.Key} ist schon hier.");
                 if (u.Team is { Length: > 0 } andere) return Bad($"{u.Name ?? u.Key} steht im Team {c.Teams.Get(andere)?.Label ?? andere} — dort erst austragen.");
                 write(actor, Users.Stream + user, Types.UserDefined, new UserDefined(u.Name, u.Email, u.Role, u.Enabled, key), null);

@@ -707,7 +707,7 @@ public static class Rights
     public static readonly Dictionary<string, string> Label = new()
     {
         [Read] = "Lesen", [Write] = "Pflegen", [Retire] = "Zurückziehen", [Release] = "Freigeben, Versionen", [Model] = "Modell ändern",
-        [Plugins] = "Plugins verwalten", [Jobs] = "Jobs", [Storage] = "Storage", [Team] = "Eigenes Team (KI-Schlüssel, Grenzen)", [Users] = "Benutzer und Rollen",
+        [Plugins] = "Plugins verwalten", [Jobs] = "Jobs", [Storage] = "Storage", [Team] = "Eigenes Team (Schlüssel, Mitglieder)", [Users] = "Anwender und Rollen",
     };
     /// <summary>Vorbelegte Rollen — Saatgut für ein leeres Journal; der Anwender ändert, ergänzt, entfernt sie (nur „admin“ bleibt als Schlüssel bekannt).</summary>
     public static IEnumerable<(string Key, RoleDefined Role)> Seeds()

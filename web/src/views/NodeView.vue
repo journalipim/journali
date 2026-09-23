@@ -645,7 +645,7 @@ async function wfAssign(w) {
     ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role} (nicht die Rolle des Schritts)` }))]
   const user = people.length
     ? await dialog.prompt({ title: `Zuständigen wählen · ${w.label?.de || w.workflow}`, value: w.assigned ?? '', choices, ok: '👤 Zuweisen' })
-    : await dialog.prompt({ title: `Zuständigen wählen · ${w.label?.de || w.workflow}`, text: 'Benutzer-Key (leer = Rolle des nächsten Schritts)', value: w.assigned ?? '', ok: '👤 Zuweisen' })
+    : await dialog.prompt({ title: `Zuständigen wählen · ${w.label?.de || w.workflow}`, text: 'Anwender-Key (leer = Rolle des nächsten Schritts)', value: w.assigned ?? '', ok: '👤 Zuweisen' })
   if (user === null) return
   await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/assign`, { user: user.trim() || null }, 'PUT'))
 }

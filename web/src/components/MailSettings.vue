@@ -67,7 +67,7 @@ onMounted(lies)
         <span class="muted" style="margin-left:10px;font-size:12px">Port</span>
         <input v-model.number="c.port" type="number" min="1" max="65535" style="width:80px;margin-left:6px" />
       </td></tr>
-      <tr><td class="attr">Benutzer</td><td><input v-model="c.user" type="text" autocomplete="off" style="width:100%" /></td></tr>
+      <tr><td class="attr">Kennung</td><td><input v-model="c.user" type="text" autocomplete="off" style="width:100%" /></td></tr>
       <tr><td class="attr">Passwort</td><td><input v-model="c.password" type="password" autocomplete="new-password" placeholder="unverändert" style="width:100%" /></td></tr>
       <tr><td class="attr">Absender</td><td><input v-model="c.from" type="text" placeholder="pim@beispiel.de" style="width:100%" /></td></tr>
       <tr><td class="attr">Anzeigename</td><td><input v-model="c.fromName" type="text" placeholder="journali PIM" style="width:100%" /></td></tr>

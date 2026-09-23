@@ -121,7 +121,35 @@ public static class MediaApi
             return Results.Ok(new { ok = true });
         });
 
-        // Fehlbestand: Medien, deren Bytes im Store fehlen (z. B. zweite Instanz ohne Ursprung, oder Treiber gewechselt ohne Kopierlauf)
+        // Was im Speicher liegt (Taloan, 23.09.2026: „kann man hier nicht noch mehr Statistiken abfragen“). Zwei Zahlen
+        // sehen ähnlich aus und sind es nicht: total sind alle Assets, renderable nur die, aus denen sich eine Vorschau
+        // rechnen lässt (Bild oder PDF) — daran misst sich der Stand der Ableitungen.
+        api.MapGet("/media/stats", (Catalog c) => c.With((_, _, _) =>
+        {
+            var alle = c.Media.All.Values.ToList();
+            static string Art(string mime) =>
+                mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase) ? "Bild"
+                : mime.Equals("application/pdf", StringComparison.OrdinalIgnoreCase) ? "PDF"
+                : mime.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ? "Video"
+                : mime.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) ? "Audio"
+                : mime.StartsWith("text/", StringComparison.OrdinalIgnoreCase) ? "Text" : "Datei";
+            var ableitungen = alle.SelectMany(m => m.Derived.Values).ToList();
+            return new
+            {
+                total = alle.Count,
+                bytes = alle.Sum(m => m.Bytes),
+                renderable = alle.Count(m => m.IsRenderable),
+                images = alle.Count(m => m.IsImage),
+                unfiled = alle.Count(m => m.Folder is null),
+                unused = alle.Count(m => !c.Relations.To(m.Id).Any()),
+                shared = alle.GroupBy(m => m.Sha256).Count(g => g.Count() > 1),
+                derived = new { count = ableitungen.Count, bytes = ableitungen.Sum(d => d.Bytes) },
+                kinds = alle.GroupBy(m => Art(m.Mime)).Select(g => new { art = g.Key, count = g.Count(), bytes = g.Sum(m => m.Bytes) }).OrderByDescending(x => x.bytes).ToList(),
+                largest = alle.OrderByDescending(m => m.Bytes).Take(5).Select(m => new { m.Id, m.Name, m.Bytes }).ToList(),
+            };
+        }));
+
+        // Fehlbestand: Assets, deren Bytes im Store fehlen (z. B. zweite Instanz ohne Ursprung, oder Treiber gewechselt ohne Kopierlauf)
         api.MapGet("/media/missing", async (Catalog c, IMediaStore store, CancellationToken ct) =>
         {
             var all = c.With((_, _, _) => c.Media.All.Values.Select(m => (m.Id, m.Sha256, m.Name)).ToList());

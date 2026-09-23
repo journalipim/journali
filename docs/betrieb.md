@@ -256,7 +256,7 @@ die Datenbank: die Plugin-Verzeichnisse und die Dateien im Datenverzeichnis
 (`auth.json`, `media.json`, `jobs/secrets.json`) liegen im Dateisystem und fehlen.
 Wer so sichert, muss das Volume mitnehmen.
 
-**Die Vollsicherung** (Plugin `backup`, Einstellungen → Sicherung) schreibt einen
+**Die Vollsicherung** (Plugin `backup`, als Job im Tasker) schreibt einen
 Satz, der an nichts hängt — nicht an der Postgres-Fassung, nicht am Schema:
 
 | im Verzeichnis | was |

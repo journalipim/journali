@@ -5,6 +5,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises } from './ui.mjs'
 import { store } from '../src/store.js'
+import { dialog } from '../src/dialog.js'
 
 const TeamsSettings = (await import('../src/components/TeamsSettings.vue')).default
 const TeamsAdmin = (await import('../src/components/TeamsAdmin.vue')).default
@@ -46,13 +47,26 @@ test('die Teamseite zeigt, wer dazugehört und womit gearbeitet wird — über K
   assert.match(t, /Taloan/, 'die Mitglieder stehen da')
   assert.match(t, /Gast/, 'auch wer kein eigenes Team trägt')
   assert.match(t, /anthropic/, 'die eingerichteten Anbieter')
-  assert.match(t, /Excel Laptop/, 'die Token der Mitglieder')
+  assert.ok(!/Excel Laptop/.test(t), 'API-Token gehören zur Person, nicht zum Team')
   assert.match(t, /journali PIM Token/, 'die Nutzung gegen die Limits hat ihren eigenen Abschnitt')
   assert.ok(!/Token diesen Monat/.test(t), 'journali sagt nichts über verbrauchte KI-Token')
   assert.ok(!/kostet/i.test(t), 'und nichts über Kosten')
   assert.match(t, /Nutzung/, 'und die Nutzung des Journals')
+  assert.match(t, /Lizenz/, 'die Limits kommen aus der Lizenz — sie steht hier')
   assert.ok(!t.includes('neues Team'), 'Teams anlegen gehört nicht auf die Teamseite')
   await ruhe(); w.unmount()
+})
+
+test('der Fragezeichen-Knopf sagt, was auf die Limits geht und was nicht', async () => {
+  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  const w = mount(TeamsSettings); await ruhe()
+  await w.findAll('button').find(b => b.text() === '?').trigger('click'); await ruhe()
+  assert.match(dialog.title, /journali PIM Token/, 'die Hilfe gehört zu den journali-Token, nicht zur KI')
+  const zeilen = dialog.list.flat().join(' ')
+  assert.match(zeilen, /Gezählt/); assert.match(zeilen, /Datenpflege/); assert.match(zeilen, /Ausleitung/)
+  assert.match(zeilen, /Nicht gezählt/); assert.match(zeilen, /Modell/); assert.match(zeilen, /Struktur/)
+  assert.ok(!/KI|Token verbraucht/.test(zeilen), 'und sagt nichts über fremde Token')
+  dialog.done(true); await ruhe(); w.unmount()
 })
 
 test('der Team-Admin hinterlegt den Schlüssel; er kommt nie zurück', async () => {
@@ -83,7 +97,7 @@ test('Teams anlegen steht bei den Personen — das erste Team lässt sich nicht 
   assert.match(zeilen[0].text(), /①/, 'das erste Team ist zu erkennen')
   assert.equal(zeilen[0].findAll('button').filter(b => b.text() === '✕').length, 0, 'es bleibt')
   assert.equal(zeilen[1].findAll('button').filter(b => b.text() === '✕').length, 1, 'jedes andere nicht')
-  assert.equal(zeilen[0].findAll('input[type=number]').length, 4, 'der Administrator verteilt vier Limits je Team')
+  assert.equal(zeilen[0].findAll('input[type=number]').length, 2, 'je Team eine Woche und ein Monat — KI-Grenzen gibt es nicht')
   await w.find('input[placeholder="neues Team"]').setValue('Frankreich')
   await w.findAll('select').at(-1).setValue('taloan')   // ohne Führung legt der Server kein Team an
   await w.findAll('button').find(b => b.text() === '+').trigger('click'); await ruhe()

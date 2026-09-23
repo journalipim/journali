@@ -1,5 +1,5 @@
 <script setup>
-// Teams verwalten (Recht users): anlegen, entfernen, Limits verteilen, wer für wen zahlt. Das gehört zu den Personen —
+// Teams verwalten (Recht users): anlegen, entfernen, Limits eintragen, wer für wen zahlt. Das gehört zu den Personen —
 // wer im Team ist, was es verbraucht und welche Schlüssel es hat, steht auf der Teamseite (Taloan, 23.09.2026:
 // „Teams anlegen kann man hier aber nicht“).
 import { ref, onMounted } from 'vue'
@@ -17,7 +17,6 @@ async function load() {
   try { leute.value = await api.get('/api/auth/people') } catch { leute.value = [] }
 }
 onMounted(load)
-const zahl = n => (n ?? 0).toLocaleString('de-DE')
 
 async function speichern(t, feld, wert) {
   try { await api.post(`/api/teams/${encodeURIComponent(t.key)}`, { [feld]: wert }, 'PUT'); await load() }
@@ -44,18 +43,15 @@ async function entfernen(t) {
 
 <template>
   <div class="section">
-    <h2>◍ Teams <span class="muted" title="Die Limits kommen aus der Lizenz: das Init Team trägt sie, jedes weitere startet bei 0.">· {{ teams.length }} · Limits verteilen</span></h2>
+    <h2>◍ Teams <span class="muted" title="Die Limits kommen aus der Lizenz: das Init Team trägt sie, jedes weitere startet bei 0.">· {{ teams.length }}</span></h2>
     <table class="grid" style="width:auto">
       <thead>
         <tr>
           <th>Team</th>
           <th title="Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus">★ Führung</th>
-          <th title="Wie der Verbrauch angerechnet wird: über ein eigenes Kontingent oder über das eines anderen Teams">Token</th>
-          <th title="Einträge je Woche — aus der Lizenz verteilt">▤ Woche</th>
-          <th title="Einträge je Monat — aus der Lizenz verteilt">▦ Monat</th>
-          <th title="KI je Monat — aus der Lizenz verteilt">✦ Monat</th>
-          <th title="KI je Tag — die Reissleine dieses Teams">⛔ Tag</th>
-          <th title="KI verbraucht diesen Monat">verbraucht</th>
+          <th title="Woher die Token kommen: eigenes Kontingent oder das eines anderen Teams">Token</th>
+          <th title="journali-Token je Woche — aus der Lizenz">▤ Woche</th>
+          <th title="journali-Token je Monat — aus der Lizenz">▦ Monat</th>
           <th>👤</th><th></th>
         </tr>
       </thead>
@@ -84,9 +80,6 @@ async function entfernen(t) {
           </td>
           <td><input type="number" min="0" :value="t.entriesWeek" style="width:80px" @change="speichern(t, 'entriesWeek', Number($event.target.value))" /></td>
           <td><input type="number" min="0" :value="t.entriesMonth" style="width:80px" @change="speichern(t, 'entriesMonth', Number($event.target.value))" /></td>
-          <td><input type="number" min="0" :value="t.monthlyTokens" style="width:80px" @change="speichern(t, 'monthlyTokens', Number($event.target.value))" /></td>
-          <td><input type="number" min="0" :value="t.dailyTokens" style="width:80px" @change="speichern(t, 'dailyTokens', Number($event.target.value))" /></td>
-          <td class="mono muted">{{ zahl(t.month) }}</td>
           <td class="muted" :title="`${t.members} im Team`">{{ t.members }}</td>
           <td><button v-if="!t.primary" class="x" title="Team entfernen" @click="entfernen(t)">✕</button></td>
         </tr>
@@ -98,7 +91,7 @@ async function entfernen(t) {
               <option v-for="p in leute" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
             </select>
           </td>
-          <td colspan="8"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
+          <td colspan="5"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
         </tr>
       </tbody>
     </table>
