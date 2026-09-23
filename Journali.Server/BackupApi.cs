@@ -27,7 +27,7 @@ public static class BackupApi
     /// Zugangsdaten), <c>mail.json</c> (Mailserver mit Passwort), <c>jobs/secrets.json</c> (Token der Jobs). Wer sie mitsichert, hat Geheimnisse in der Sicherung
     /// — wie im Datenverzeichnis selbst. Wer sie weglässt, kommt in ein wiederhergestelltes System nicht hinein.
     /// </summary>
-    private static readonly string[] Dateien = ["auth.json", "media.json", "mail.json", Path.Combine("jobs", "secrets.json")];
+    private static readonly string[] Dateien = ["auth.json", "media.json", "mail.json", "licence.json", Path.Combine("jobs", "secrets.json")];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public static void Map(RouteGroupBuilder api, IJournal journal, string dataDir, string pluginDir)

@@ -1,5 +1,6 @@
 ﻿using Journali.Core.Entries;
 using Journali.Core.Journal;
+using Journali.Server;
 using Journali.Core.Projections;
 
 namespace Journali.Tests;
@@ -170,8 +171,12 @@ public class UsageTests
     [Fact]
     public void Grenzen_sind_Woche_und_Monat_kein_Tag()
     {
+        // ohne Lizenz gelten diese Werte (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“)
         Assert.Equal(20_000, Limits.Week);
         Assert.Equal(100_000, Limits.Month);
+        Assert.Equal(Limits.Week, Licence.Frei.EntriesWeek);
+        Assert.Equal(Limits.Month, Licence.Frei.EntriesMonth);
+        Assert.Equal(0, Licence.Frei.AiTokensMonth);   // kein Grundrauschen ohne Lizenz
         // Kein Tageslimit (Taloan, 22.09.2026) — sonst steht man nach drei Testimporten still
     }
 }

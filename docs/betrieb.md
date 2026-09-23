@@ -360,3 +360,18 @@ unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht 
 Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im
 Browser (Taloan, 21.09.2026).
 
+## Lizenz — `licence.json` im Datenverzeichnis
+
+Die Grenzen dieser Anlage stehen in der Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“), nicht in der Hand
+des Administrators und schon gar nicht bei einem anderen Team: `entriesWeek`, `entriesMonth` (Einträge im Journal),
+`aiTokensMonth` (das Grundrauschen — KI-Token auf Rechnung der Lizenz) und `aiTokensDay` (Reissleine für die ganze
+Anlage). Ohne Datei gilt der Testbetrieb: 20 000 Einträge je Woche, 100 000 je Monat, kein Grundrauschen.
+
+Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts (Taloan: „wer den
+Komfort der Kontrolle will, muss Teams mit eigenem Kontingent bilden“). Teams ohne eigenen Schlüssel arbeiten über den
+Schlüssel der Anlage (`secrets.json` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das Grundrauschen.
+
+Echtheit: `sig` ist eine ECDSA-P-256-Signatur (SHA-256, Base64) über die Felder ohne `sig`. Geprüft wird sie, sobald
+`JOURNALI_LICENCE_KEY` den öffentlichen Schlüssel trägt (Base64, SubjectPublicKeyInfo); fehlt er, wird die Lizenz
+gelesen und als **ungeprüft** ausgewiesen — es wird nichts vorgetäuscht. Einspielen: ⚙ Einstellungen → 🔑 Lizenz
+(Recht `users`) oder die Datei hinlegen. Sie fährt in der Vollsicherung mit.

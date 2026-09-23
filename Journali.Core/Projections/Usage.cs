@@ -62,9 +62,9 @@ public sealed class Usage : IProjection
 }
 
 /// <summary>
-/// Die Grenzen: Woche und Monat (Taloan, 22.09.2026). <b>Kein Tageslimit</b> — „macht man 3 Testimporte und muss
-/// aufhören“; der Tag wird gezählt und im Verlauf gezeigt, begrenzt wird er nicht. Vorerst Annahmen zum Messen,
-/// was eine Einzelperson wirklich braucht — keine Lizenz, keine Sperre.
+/// Die Grenzen des Testbetriebs: Woche und Monat (Taloan, 22.09.2026). <b>Kein Tageslimit</b> — „macht man 3 Testimporte
+/// und muss aufhören“; der Tag wird gezählt und im Verlauf gezeigt, begrenzt wird er nicht. Im Betrieb kommen die
+/// Grenzen aus der Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“); ohne Lizenz gelten diese hier.
 /// </summary>
 public static class Limits
 {

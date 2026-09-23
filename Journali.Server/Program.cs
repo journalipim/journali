@@ -90,6 +90,9 @@ var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 // Jobs (Plugin tasker, Taloan 19.09.): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
 // unter JOURNALI_JOBS (Vorgabe jobs/ neben dem Programm, im Repo ignoriert)
 var jobDir = dataDir;
+// Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“): licence.json im Datenverzeichnis, ohne sie der Testbetrieb
+var licences = new Licences(dataDir);
+builder.Services.AddSingleton(licences);
 var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
@@ -130,8 +133,8 @@ api.MapGet("/health", (Catalog c) => new
         var today = DateOnly.FromDateTime(DateTime.Now);
         return new
         {
-            week = new { used = u.Week(today), max = Limits.Week, resetAt = Usage.WeekStart(today).AddDays(7).ToString("yyyy-MM-dd") },
-            month = new { used = u.Month(today), max = Limits.Month, resetAt = Usage.MonthStart(today).AddMonths(1).ToString("yyyy-MM-dd") },
+            week = new { used = u.Week(today), max = licences.Lic.EntriesWeek, resetAt = Usage.WeekStart(today).AddDays(7).ToString("yyyy-MM-dd") },
+            month = new { used = u.Month(today), max = licences.Lic.EntriesMonth, resetAt = Usage.MonthStart(today).AddMonths(1).ToString("yyyy-MM-dd") },
         };
     }),
     built = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location),   // Bau-Stand des laufenden Servers (Taloan, 21.09.: „Speichern setzt meine Änderungen zurück“ — alter Server kannte die Felder nicht)
@@ -151,8 +154,8 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
         today = today.ToString("yyyy-MM-dd"),
         head = c.Head,
         day = Part("day", u.Day(today), 0, today, today.AddDays(1)),   // ohne Grenze: nur die Zahl (Taloan, 22.09.2026)
-        week = Part("week", u.Week(today), Limits.Week, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
-        month = Part("month", u.Month(today), Limits.Month, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
+        week = Part("week", u.Week(today), licences.Lic.EntriesWeek, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
+        month = Part("month", u.Month(today), licences.Lic.EntriesMonth, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
         // daneben, was gar nicht zählt (Modell, Struktur, Kataloge, Betrieb) — zum Vergleich beim Messen
         all = new { day = u.Day(today, true), week = u.Week(today, true), month = u.Month(today, true) },
         history = history is null ? null : u.History(history, today, Math.Clamp(limit, 1, 400))
@@ -179,8 +182,9 @@ RestoreApi.Map(api);   // Teilbaum aus einer Rohdaten-Datei zurueck (Einstellung
 BackupApi.Map(api, journal, dataDir, pluginDir);   // Vollsicherung: Journal, Medien, Zugänge, Plugins — zurück in ein leeres System (Taloan, 23.09.)
 MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail, Taloan 23.09.)
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
-TeamApi.Map(api, jobDir);   // Teams (Taloan, 23.09.): Kostenstelle der KI — Schlüssel, Grenzen, Verbrauch
-AiApi.Map(api, jobDir);     // KI über den Server: mit dem Schlüssel des zahlenden Teams, gezählt bei ihm
+TeamApi.Map(api, jobDir);   // Teams (Taloan, 23.09.): Kostenstelle der KI — Schlüssel, Verbuchung, Führung
+AiApi.Map(api, jobDir, licences);   // KI über den Server: Schlüssel des zahlenden Teams, Grenzen aus der Lizenz
+LicenceApi.Map(api, licences);      // Lizenz einspielen und ansehen
 FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/

@@ -44,16 +44,14 @@ async function entfernen(t) {
 
 <template>
   <div class="section">
-    <h2>👥 Teams <span class="muted">· {{ teams.length }}</span></h2>
+    <h2>👥 Teams <span class="muted" title="Die Grenzen stehen in der Lizenz; ein Team mit eigenem Schlüssel rechnet beim Anbieter ab.">· {{ teams.length }}</span></h2>
     <table class="grid" style="width:auto">
       <thead>
         <tr>
           <th>Team</th>
           <th title="Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus">★ Führung</th>
           <th title="Wie der Verbrauch angerechnet wird: über ein eigenes Kontingent oder über das eines anderen Teams">Token</th>
-          <th title="Grundkontingent je Monat — nur am ersten Team">◷ inklusive</th>
-          <th title="Warnschwelle je Monat: zeigt und warnt, sperrt nicht">⚠ Monat</th>
-          <th title="Reissleine je Tag: hier wird abgewiesen">⛔ Tag</th>
+          <th title="verbraucht diesen Monat">✦ Monat</th>
           <th>👤</th><th></th>
         </tr>
       </thead>
@@ -80,13 +78,8 @@ async function entfernen(t) {
               <option v-for="z in teams.filter(x => x.key !== t.key && !x.keysFrom)" :key="z.key" :value="z.key">über Team {{ z.label }}</option>
             </select>
           </td>
-          <td>
-            <input v-if="t.primary" type="number" min="0" :value="t.includedTokens" style="width:90px" @change="speichern(t, 'includedTokens', Number($event.target.value))" />
-            <span v-else class="muted" title="Das Grundkontingent gibt es einmal, am ersten Team">–</span>
-          </td>
-          <td><input type="number" min="0" :value="t.monthlyTokens" style="width:90px" @change="speichern(t, 'monthlyTokens', Number($event.target.value))" /></td>
-          <td><input type="number" min="0" :value="t.dailyTokens" style="width:90px" @change="speichern(t, 'dailyTokens', Number($event.target.value))" /></td>
-          <td class="muted" :title="`${t.members} im Team · ${zahl(t.month)} Token diesen Monat`">{{ t.members }}</td>
+          <td class="mono muted">{{ zahl(t.month) }}</td>
+          <td class="muted" :title="`${t.members} im Team`">{{ t.members }}</td>
           <td><button v-if="!t.primary" class="x" title="Team entfernen" @click="entfernen(t)">✕</button></td>
         </tr>
         <tr>
@@ -97,7 +90,7 @@ async function entfernen(t) {
               <option v-for="p in leute" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
             </select>
           </td>
-          <td colspan="6"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
+          <td colspan="4"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
         </tr>
       </tbody>
     </table>

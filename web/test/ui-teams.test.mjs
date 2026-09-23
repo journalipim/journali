@@ -29,6 +29,7 @@ function server(teams = TEAMS) {
       : path === '/api/usage' ? { week: { used: 1, max: 10 }, month: { used: 2, max: 20 }, history: [] }
       : path === '/api/teams/free' ? [{ key: 'neu', name: 'Neu Person', role: 'editor' }]
       : path === '/api/auth/people' ? [{ key: 'taloan', name: 'Taloan', role: 'admin' }, { key: 'pablo', name: 'Pablo', role: 'editor' }]
+      : path === '/api/licence' ? { plan: 'Testbetrieb', entriesWeek: 20000, entriesMonth: 100000, aiTokensMonth: 0, aiTokensDay: 0, geprueft: false }
       : path === '/api/teams' ? teams
       : opts.method === 'PUT' ? teams[0] : {}
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }
@@ -69,7 +70,7 @@ test('ein Leser sieht sein Team, ändert aber nichts', async () => {
   const w = mount(TeamsSettings); await ruhe()
   assert.match(w.text(), /Init Team/)
   assert.equal(w.findAll('input[type=password]').length, 0, 'kein Feld für einen Schlüssel')
-  assert.ok(w.findAll('input[type=number]').every(i => i.attributes('disabled') !== undefined), 'die Grenzen stehen fest')
+  assert.equal(w.findAll('input[type=number]').length, 0, 'Grenzen gibt es hier nicht — sie stehen in der Lizenz')
   await ruhe(); w.unmount()
 })
 
@@ -80,8 +81,7 @@ test('Teams anlegen steht bei den Personen — das erste Team lässt sich nicht 
   assert.match(zeilen[0].text(), /①/, 'das erste Team ist zu erkennen')
   assert.equal(zeilen[0].findAll('button').filter(b => b.text() === '✕').length, 0, 'es bleibt')
   assert.equal(zeilen[1].findAll('button').filter(b => b.text() === '✕').length, 1, 'jedes andere nicht')
-  assert.equal(zeilen[0].findAll('input[type=number]').length, 3, 'Team 1: Grundkontingent, Monat, Tag')
-  assert.equal(zeilen[1].findAll('input[type=number]').length, 2, 'jedes weitere hat kein eigenes Grundkontingent')
+  assert.equal(w.findAll('input[type=number]').length, 0, 'Grenzen stehen in der Lizenz, nicht am Team')
   await w.find('input[placeholder="neues Team"]').setValue('Frankreich')
   await w.findAll('select').at(-1).setValue('taloan')   // ohne Führung legt der Server kein Team an
   await w.findAll('button').find(b => b.text() === '+').trigger('click'); await ruhe()

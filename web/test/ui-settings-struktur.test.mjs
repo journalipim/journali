@@ -29,20 +29,20 @@ async function sicht(rights, enabled = true) {
 
 test('ein Leser sieht sich und sein Team — sonst nichts', async () => {
   const w = await sicht(['read'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team'])
+  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team', '🔑 Lizenz'])
   await ruhe(); w.unmount()
 })
 
 test('der Administrator sieht die Bestandteile einzeln, nicht als Sammelseite', async () => {
   const w = await sicht(['read', 'users', 'storage', 'model', 'team'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team', '◈ Rollen & Rechte', '▨ Storage', '🖼 Assets', '✉ Mail', '▣ Backup & Recovery', '⚑ Workflows'])
+  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team', '◈ Rollen & Rechte', '▨ Storage', '🖼 Assets', '✉ Mail', '▣ Backup & Recovery', '⚑ Workflows', '🔑 Lizenz'])
   assert.ok(!reiter(w).some(r => /Anlage/.test(r)), 'die Sammelseite gibt es nicht mehr')
   await ruhe(); w.unmount()
 })
 
 test('Assets ohne Storage: die Ableitungsgrössen ja, der Speicher nicht', async () => {
   const w = await sicht(['read', 'model'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team', '🖼 Assets', '⚑ Workflows'])
+  assert.deepEqual(reiter(w), ['◐ Ich', '👥 Team', '🖼 Assets', '⚑ Workflows', '🔑 Lizenz'])
   await w.findAll('.tab').find(t => t.text() === '🖼 Assets').trigger('click'); await ruhe()
   const t = w.text()
   assert.match(t, /Vorschau-Presets/, 'die Grössen stehen hier')

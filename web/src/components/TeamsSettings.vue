@@ -28,10 +28,9 @@ const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
 /// Das Team führen: Schlüssel, Modell, Mitglieder ein und aus. Der Administrator darf es überall.
 const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.value?.managers ?? []).includes(store.auth.user)))
-/// Die Grenzen setzt der Administrator — ein Manager, der sein eigenes Budget schreibt, ist keine Grenze
-const darfGrenzen = computed(() => store.can('users'))
+/// Woher die Token kommen: eigener Schlüssel = eigene Rechnung; sonst das Grundrauschen der Lizenz
+const lizenz = ref(null)
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
-const anteil = computed(() => { const t = team.value; const g = t?.includedTokens || t?.monthlyTokens; return g ? Math.min(100, Math.round((t.month / g) * 100)) : null })
 
 async function load() {
   try {
@@ -47,6 +46,7 @@ async function details() {
   try { tokens.value = await api.get(`/api/teams/${p}/tokens`) } catch { tokens.value = [] }
   try { const u = await api.get(`/api/teams/${p}/usage?days=14`); tage.value = u.days ?? []; anhaengsel.value = u.dependents ?? [] } catch { tage.value = []; anhaengsel.value = [] }
   try { frei.value = await api.get('/api/teams/free') } catch { frei.value = [] }
+  try { lizenz.value = await api.get('/api/licence') } catch { lizenz.value = null }
 }
 async function ladeNutzung(period = usagePeriod.value) {
   usagePeriod.value = period; usageBusy.value = true
@@ -56,10 +56,6 @@ async function ladeNutzung(period = usagePeriod.value) {
 }
 onMounted(async () => { await load(); await ladeNutzung() })
 
-async function grenze(feld, wert) {
-  try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { [feld]: Number(wert) }, 'PUT'); await load() }
-  catch (e) { store.toast(e.message); await load() }
-}
 async function schluessel() {
   if (!keyIn.value.wert) { store.toast('Schlüssel fehlt'); return }
   const anbieter = keyIn.value.anbieter
@@ -73,6 +69,29 @@ async function schluesselWeg(anbieter) {
   if (!await dialog.confirm({ title: `Schlüssel ${anbieter} entfernen?`, text: `Ohne ihn arbeitet „${team.value.label}“ nicht mehr über diesen Anbieter.`, ok: '✕ Entfernen' })) return
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: '' } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
+/// Was zählt und was nicht (Taloan, 23.09.2026). Die Liste kommt aus dem Code: gezählt wird jeder Aufruf über
+/// POST /api/ai/ask — Ein- und Ausgabe-Token, wie der Anbieter sie meldet.
+function hilfeTokens() {
+  dialog.help({
+    title: '✦ Token-Verbrauch',
+    rows: [
+      ['Gezählt wird', ''],
+      ['Editor', 'überarbeiten, erzeugen, eigene Anweisung'],
+      ['Übersetzung', 'KI-Vorübersetzung je Einheit'],
+      ['Klassifikation', 'ETIM-Klasse vorschlagen, Merkmale zuordnen'],
+      ['Prüfung', 'Sonderregelungen und Vorschriften recherchieren'],
+      ['Geodaten', 'Herkunft und Zolltarif vorschlagen'],
+      ['Recherche', 'Suche im Internet — je Suche berechnet der Anbieter zusätzlich'],
+      ['Nicht gezählt', ''],
+      ['Ansehen', 'Baum, Knoten, Journal, Verlauf'],
+      ['Pflege', 'Werte setzen, Knoten anlegen, Freigaben, Workflows'],
+      ['Regeln', 'Prüfungen und Ableitungen ohne KI'],
+      ['Import, Export', 'Tabellen, XLIFF, Datenblätter, Sicherungen'],
+      ['Fehlschlag', 'eine abgewiesene Anfrage kostet nichts'],
+    ],
+  })
+}
+
 async function modell(anbieter, wert) {
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { models: { [anbieter]: wert } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
@@ -116,7 +135,7 @@ async function widerrufen(tok) {
           <tr v-if="fuehrt">
             <td colspan="4" class="row" style="gap:6px">
               <select v-model="dazu" style="width:200px" title="Eintragen lässt sich nur, wer in keinem Team ist">
-                <option value="">— wer dazu soll —</option>
+                <option value="">—</option>
                 <option v-for="f in frei" :key="f.key" :value="f.key">{{ f.name || f.key }} · {{ f.role }}</option>
               </select>
               <button class="x" title="in das Team eintragen" :disabled="!dazu" @click="eintragen">+</button>
@@ -128,7 +147,9 @@ async function widerrufen(tok) {
     </div>
 
     <div class="section">
-      <h2>✦ KI <span class="muted">· {{ zahl(team.month) }} Token<span v-if="anteil !== null"> · {{ anteil }} %</span> · heute {{ zahl(team.today) }}</span></h2>
+      <h2>✦ KI <span class="muted">· {{ zahl(team.month) }} Token · heute {{ zahl(team.today) }}</span>
+        <button class="x" title="Was in die Rechnung eingeht" @click="hilfeTokens">?</button>
+      </h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
           <td class="muted">Schlüssel</td>
@@ -154,17 +175,17 @@ async function widerrufen(tok) {
             </select>
           </td><td></td>
         </tr>
-        <tr v-if="team.includedTokens">
-          <td class="muted" title="Grundkontingent je Monat — aufgebraucht heisst Schluss">◷ inklusive</td>
-          <td class="mono">{{ zahl(team.includedTokens) }}</td><td class="muted">{{ zahl(team.month) }} verbraucht</td>
-        </tr>
         <tr>
-          <td class="muted" title="Warnschwelle je Monat: zeigt und warnt, sperrt nicht">⚠ Monat</td>
-          <td><input type="number" min="0" :value="team.monthlyTokens" :disabled="!darfGrenzen" style="width:110px" @change="grenze('monthlyTokens', $event.target.value)" /></td><td></td>
-        </tr>
-        <tr>
-          <td class="muted" title="Reissleine je Tag: hier wird abgewiesen">⛔ Tag</td>
-          <td><input type="number" min="0" :value="team.dailyTokens" :disabled="!darfGrenzen" style="width:110px" @change="grenze('dailyTokens', $event.target.value)" /></td><td></td>
+          <td class="muted" title="Wie der Verbrauch angerechnet wird">Token</td>
+          <td>
+            <span v-if="team.keys.length" class="pos">eigenes Kontingent</span>
+            <span v-else-if="team.keysFrom" class="muted">über Team {{ team.keysFrom }}</span>
+            <span v-else-if="lizenz?.aiTokensMonth" class="muted">Grundrauschen der Lizenz</span>
+            <span v-else class="neg">kein Kontingent</span>
+          </td>
+          <td class="muted" style="font-size:12px">
+            <span v-if="!team.keys.length && lizenz?.aiTokensMonth">{{ zahl(lizenz.aiTokensMonth) }} / Monat für die ganze Anlage</span>
+          </td>
         </tr>
       </tbody></table>
       <table v-if="tage.length" class="grid" style="width:auto;margin-top:6px">

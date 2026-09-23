@@ -31,7 +31,7 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
         <span class="fill" :class="tone(p)" :style="`width:${pct(p)}%`" />
       </span>
       <span class="num mono" :class="tone(p)">{{ n(p?.used) }}</span>
-      <span class="num mono muted">/ {{ n(p?.max) }}</span>
+      <span class="num mono muted">/ {{ n(p?.max) }} <span title="Einträge im Journal">⊞</span></span>
       <span class="num mono muted">{{ pct(p) }} %</span>
       <span class="num mono muted" :title="`${n(usage?.all?.[key])} Einträge gesamt — Modell, Struktur, Kataloge und Betrieb zählen nicht mit`">+{{ n((usage?.all?.[key] ?? 0) - (p?.used ?? 0)) }}</span>
     </div>
