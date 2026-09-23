@@ -50,3 +50,50 @@ test('kein Name und kein Ratschlag in den Ansichten', () => {
   }
   assert.deepEqual(misses, [], 'Name oder Ratschlag in einem sichtbaren Text')
 })
+
+// Länge als Grenze (Taloan, 23.09.2026: „das Wesentliche ist, dass ich überall solche Labersätze finde, die im
+// Zweifelsfall den Anwender falsch leiten → zu Datenverlust führen können; das ist viel kritischer“). Ein Tooltip
+// sagt, was geschieht — Bedingung und Folge, sonst nichts. Wer mehr braucht, schreibt es in die Dokumentation.
+// Ausgenommen sind Referenzen, die wirklich eine Liste sind: Suchbedingungen, Vorlagen-Platzhalter, Gesten im
+// Designer. Sie stehen hier namentlich, damit die Ausnahme eine Entscheidung bleibt und nicht einreisst.
+const GRENZE = 140
+const REFERENZEN = [
+  /attr:function/,        // TreeView: die Suchbedingungen
+  /\{#products\}/,        // xport: die Platzhalter einer Vorlage
+  /Kachel von innen ziehen/,   // WorkflowSettings: die Gesten im Designer
+  /m h tag monat/,        // Zeitplan: die Felder eines cron-Ausdrucks
+]
+
+test('kein sichtbarer Text laenger als die Grenze', () => {
+  const misses = []
+  for (const f of walk(root, '.vue')) pruefe(f, fs.readFileSync(f, 'utf8'), misses)
+  for (const f of pluginDateien()) pruefe(f, fs.readFileSync(f, 'utf8'), misses)
+  assert.deepEqual(misses, [], `sichtbarer Text laenger als ${GRENZE} Zeichen`)
+})
+
+/// Alle Plugin-Dateien mit Oberfläche (entry.js und die .vue darunter)
+function pluginDateien() {
+  const dir = new URL('../../plugins', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
+  return walk(dir, '.js').filter(f => f.endsWith('entry.js')).concat(walk(dir, '.vue'))
+}
+
+/// title= und placeholder= in Vorlagen wie in Skripten; Kommentarzeilen zählen nicht
+function pruefe(f, txt, misses) {
+  for (const zeile of txt.split('\n')) {
+    if (/^\s*\/\//.test(zeile)) continue
+    for (const m of zeile.matchAll(/(?:title|placeholder)\s*[=:]\s*['"]([^'"]{100,})['"]/g)) {
+      const s = satz(m[1])
+      if (s.length <= GRENZE || REFERENZEN.some(r => r.test(s))) continue
+      misses.push(`${path.basename(f)}: ${s.length} Zeichen — „${s.slice(0, 70)}…“`)
+    }
+  }
+}
+
+/// Der längste Satz in einem gebundenen Ausdruck: `${…}` wird zu einem Wort, an Verzweigungen wird getrennt.
+/// Sonst misst der Prüfer den Code (`a ? `x` : `y``) statt dessen, was der Anwender liest.
+function satz(roh) {
+  return roh.replace(/\$\{[^}]*\}/g, 'x')
+    .split(/[`?:]|&&|\|\|/)
+    .map(s => s.trim())
+    .sort((a, b) => b.length - a.length)[0] ?? ''
+}

@@ -896,15 +896,15 @@ function cellMenu(e, def, col, block) {
             <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" title="wird an die Subitems vererbt"> · ↓ vererbt</span><button class="x" style="float:right" @click="retireRel(r)" title="Zuordnung lösen (das Medium bleibt in der Bibliothek)">×</button></div>
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
-          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — nicht löschbar; ⛔ unterbindet Verwendung und Vererbung hier und an allen Subitems`">
+          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems`">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
             <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" title="zum Knoten, an dem das Medium hängt">↑ {{ r.from.label }}</router-link>
-              <button class="x" style="float:right" @click="stopInherited(r)" title="Verwendung und Vererbung hier unterbinden — das Medium steht dann hier und an allen Subitems nicht zur Verfügung (lässt sich wieder zulassen)">⛔</button></div>
+              <button class="x" style="float:right" @click="stopInherited(r)" title="Medium hier und an allen Subitems sperren (rücknehmbar)">⛔</button></div>
           </div>
         </div>
         <div v-if="stopped.length" class="chips" style="margin-top:6px">
-          <span class="muted" style="font-size:12px" title="von oben vererbt — hier und an allem darunter weder verwendet (Ansicht, Datenblatt, Export, Suche) noch weitervererbt">⛔ Verwendung und Vererbung unterbunden:</span>
+          <span class="muted" style="font-size:12px" title="von oben vererbt — hier und an allem darunter gesperrt">⛔ Verwendung und Vererbung unterbunden:</span>
           <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt`">{{ r.other.label }} <button @click="retireRel(r)" title="wieder zulassen — das Medium ist dann wieder geerbt da">×</button></span>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">

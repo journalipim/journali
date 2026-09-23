@@ -629,7 +629,7 @@ function onDialogKey(e) {
       <div class="dialog" ref="dialog">
         <div class="toolbar"><h1>{{ icon(creating) }} {{ creating === 'group' ? 'Neue Gruppe' : creating === 'product' ? 'Neues Produkt' : 'Neue Variante' }}</h1>
           <span v-if="creating === 'group' && groupTarget" class="view-chip" :class="{ on: atRoot }" role="button" tabindex="0"
-            :title="atRoot ? `an der Wurzel — ein neuer Baum neben ${groupTarget.label}` : `unter ${groupTarget.label} — Klick legt sie stattdessen an der Wurzel an`"
+            :title="atRoot ? 'an der Wurzel — ein neuer Baum' : `unter ${groupTarget.label} — Klick legt sie an der Wurzel an`"
             @click="atRoot = !atRoot" @keydown.enter.prevent="atRoot = !atRoot" @keydown.space.prevent="atRoot = !atRoot">{{ atRoot ? '⌂ an der Wurzel' : '↳ unter ' + groupTarget.label }}</span>
           <span v-else class="muted">{{ creating === 'variant' ? 'unter ' + productTarget.label : 'an der Wurzel' }}</span></div>
         <table class="grid form"><colgroup><col style="width:170px" /><col style="width:300px" /></colgroup><tbody>

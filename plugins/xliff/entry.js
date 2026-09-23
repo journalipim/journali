@@ -89,13 +89,13 @@ async function mount(root, ctx) {
   // ---- 3 Einheiten
   const unitsBox = el('div'); const count = el('span', { class: 'muted' })
   const loadBtn = el('button', { class: 'primary', onclick: loadUnits }, '⟳ Einheiten laden')
-  const xliffBtn = el('button', { title: 'XLIFF 2.0 herunterladen — für Agentur oder CAT-Werkzeug (Trados, memoQ, Phrase); zurück über Schritt 4', onclick: async () => {
+  const xliffBtn = el('button', { title: 'XLIFF 2.0 herunterladen — Rücklauf über Schritt 4', onclick: async () => {
     try { const r = await fetch(`${store.server}/api/translate/xliff?${q()}`, { headers: { 'X-Actor': store.actor } }); if (!r.ok) throw new Error(await r.text()); download(await r.blob(), `journali-${st.from}-${st.to}.xlf`) } catch (e) { store.toast(e.message) } } }, '⇪ XLIFF exportieren')
-  const aiBtn = el('button', { title: 'leere Ziele mit der KI vorübersetzen (Einstellungen → KI; das Wörterbuch geht als Glossar mit) — nur Vorschläge in der Tabelle, geschrieben wird erst mit 💾', onclick: preTranslate }, '✦ KI vorübersetzen')
-  const memBtn = el('button', { title: 'alle Vorschläge aus Gedächtnis (◌ gleicher Quelltext anderswo fertig) und Wörterbuch (📖) in die Ziele übernehmen — geschrieben wird erst mit 💾', onclick: () => { let n = 0; for (const u of st.units) if (u.memory && !(st.edited.get(u.id) ?? u.target)) { st.edited.set(u.id, u.memory); if (u._ta) u._ta.value = u.memory; n++ } count.textContent = `${st.units.length} Einheiten · ${st.edited.size} geändert`; say(`◌ ${n} übernommen`) } }, '◌ Gedächtnis übernehmen')
+  const aiBtn = el('button', { title: 'leere Ziele mit der KI vorübersetzen — Vorschläge in der Tabelle, geschrieben wird mit 💾', onclick: preTranslate }, '✦ KI vorübersetzen')
+  const memBtn = el('button', { title: 'Vorschläge aus Gedächtnis (◌) und Wörterbuch (📖) in die Ziele übernehmen — geschrieben wird mit 💾', onclick: () => { let n = 0; for (const u of st.units) if (u.memory && !(st.edited.get(u.id) ?? u.target)) { st.edited.set(u.id, u.memory); if (u._ta) u._ta.value = u.memory; n++ } count.textContent = `${st.units.length} Einheiten · ${st.edited.size} geändert`; say(`◌ ${n} übernommen`) } }, '◌ Gedächtnis übernehmen')
   const writeBtn = el('button', { class: 'primary', title: 'die eingetragenen Ziele schreiben (AttributeSet je Einheit) — nur, wo die Quelle seit dem Laden unverändert ist', onclick: writeEdited }, '💾 Ziele schreiben')
   // Paket schnüren (30): ein Auftrag im Journal + die XLIFF-Datei dazu — der Rücklauf findet den Auftrag in der Datei wieder
-  const orderBtn = el('button', { title: 'aus dem Rückstand einen Auftrag machen: er steht im Journal (wer, wann, welche Fassung), die Datei geht an die Agentur. Der Rücklauf rechnet dagegen — überholte Einheiten werden eingespielt und bleiben offen', onclick: async () => {
+  const orderBtn = el('button', { title: 'Auftrag aus dem Rückstand — steht im Journal, die Datei geht hinaus; der Rücklauf rechnet dagegen', onclick: async () => {
     try {
       const r = await fetch(`${store.server}/api/translate/order?${q()}&format=xliff`, { method: 'POST', headers: { 'X-Actor': store.actor } })
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || await r.text())

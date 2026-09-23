@@ -314,7 +314,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} noch nicht einsortierte Produkte anzeigen`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
-      <div class="toolbar" style="white-space:nowrap" title="Ausgeleitet wird ein Produkt, wenn eine Variante für den Kanal freigegeben ist und der Markt des Baums in ihren Verkaufsländern steht (leer = überall; Markt-Fallback zählt).">
+      <div class="toolbar" style="white-space:nowrap" title="Ausgeleitet wird, was für den Kanal freigegeben ist und den Markt des Baums in seinen Verkaufsländern hat (leer = überall)">
         <span class="view-chip pos" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'" title="wird ausgeleitet">ausgeleitet <b class="pos">{{ exp.in }}</b></span>
         <span class="view-chip" :class="{ on: expOnly === 'out', neg: exp.out > 0 }" @click="expOnly = 'out'" title="wird nicht ausgeleitet — mit Grund">zurückgehalten <b :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</b></span>
         <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">alle <b class="muted">{{ exp.in + exp.out }}</b></span></div>

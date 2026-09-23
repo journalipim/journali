@@ -231,7 +231,7 @@ onMounted(load)
         <label>Bezeichnung <input v-model="cur.label.de" type="text" style="width:160px" @input="touch" /></label>
         <label>Start <select v-model="cur.start" @change="touch"><option v-for="s in cur.states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }}</option></select></label>
         <span class="muted">gilt für</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
-        <label title="Je Sprache ein eigener Zustand: Französisch kann in Korrektur stehen, während Deutsch freigegeben ist. Die Wirkung eines Schritts (Freigabe, Rücknahme) trifft dann nur diese Sprache."><input type="checkbox" v-model="cur.perLocale" @change="touch" /> 🗣 je Sprache</label>
+        <label title="Je Sprache ein eigener Zustand — ein Schritt wirkt dann nur auf diese Sprache"><input type="checkbox" v-model="cur.perLocale" @change="touch" /> 🗣 je Sprache</label>
         <span class="muted" style="font-size:11px">(nichts angehakt = alle)</span>
       </div>
       <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">

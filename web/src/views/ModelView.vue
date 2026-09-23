@@ -533,11 +533,11 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr><td class="attr">Name de</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curGroup.label?.en ?? null" @save="v => groupSet('label_en', v)" /></tr>
           <!-- Freigabesteuerung (Taloan, 22.09.): zählt eine Wertänderung in dieser Gruppe als Eingriff in Prüfung und Freigabe? -->
-          <tr><td class="attr" title="Zählt eine Wertänderung in dieser Gruppe als Eingriff, der Prüfung und Freigabe berührt? automatisch = ja, wenn die Gruppe ein Pflichtfeld hat. Was dann geschieht, sagt der Workflow.">⚑ Freigabesteuerung</td><SelectCell :value="curGroup.releaseWatch ?? 'auto'" :options="['auto', 'always', 'never']" :label-of="watchLabel" required @save="v => groupSet('releaseWatch', v === 'auto' ? null : v)" /></tr>
+          <tr><td class="attr" title="Zählt eine Wertänderung hier als Eingriff in Prüfung und Freigabe? automatisch = ja, wenn die Gruppe ein Pflichtfeld hat">⚑ Freigabesteuerung</td><SelectCell :value="curGroup.releaseWatch ?? 'auto'" :options="['auto', 'always', 'never']" :label-of="watchLabel" required @save="v => groupSet('releaseWatch', v === 'auto' ? null : v)" /></tr>
           <tr><td class="attr" title="ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.">🔒 aktiv ab</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
         </tbody></table>
         <div class="section">
-          <h2>⊞ Attribute: {{ groupAttrs.length }} <span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="`die Gruppe und ihre ${groupAttrs.length} Attribute in einem Zug zurückziehen — Werte bleiben im Journal; ★-Attribute und das Kennungsattribut bleiben stehen`">✕ Gruppe mit {{ groupAttrs.length }} Attributen</button></h2>
+          <h2>⊞ Attribute: {{ groupAttrs.length }} <span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="`Gruppe und ihre ${groupAttrs.length} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben`">✕ Gruppe mit {{ groupAttrs.length }} Attributen</button></h2>
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
               <a href="#" @click.prevent="goto('attributes', a.key)">{{ a.label?.de || a.key }}</a>
@@ -571,7 +571,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attribut -->
     <template v-else-if="section === 'attributes' && curAttr">
-      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span v-if="curAttr.unique" class="chip" title="eindeutig: kein zweiter Knoten mit demselben Wert — der Wert ist ein Schlüssel des Knotens (Suche, Name der Variante ohne ★, Tabellen-Import findet damit)">① eindeutig</span><span class="grow" /></div>
+      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span v-if="curAttr.unique" class="chip" title="eindeutig: kein zweiter Knoten mit demselben Wert — der Wert ist ein Schlüssel des Knotens">① eindeutig</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
@@ -590,10 +590,10 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr><td class="attr" title="Zählt eine Änderung dieses Attributs als Eingriff in Prüfung und Freigabe? Leer = wie die Gruppe.">⚑ Freigabesteuerung</td><SelectCell :value="curAttr.releaseWatch ?? ''" :options="['', 'always', 'never']" :label-of="watchLabel" @save="v => attrSet('releaseWatch', v || null)" /></tr>
           <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
           <!-- eindeutig (Taloan, 21.09.): kein zweiter Knoten mit demselben Wert — SKU, EAN, MATNR, auch eine Achse; beliebig viele, jedes für sich -->
-          <tr v-if="canBeUnique(curAttr) || curAttr.unique"><td class="attr" title="kein zweiter Knoten mit demselben Wert (SKU, EAN, Artikelnummer, auch als Achse) — einschalten geht nur, wenn der Bestand keine Doppelten hat; eindeutige Werte sind die Schlüssel des Knotens: Suche, Name der Variante ohne ★, Tabellen-Import findet damit, Kopie nimmt sie nicht mit">① eindeutig</td>
+          <tr v-if="canBeUnique(curAttr) || curAttr.unique"><td class="attr" title="kein zweiter Knoten mit demselben Wert (SKU, EAN) — einschalten geht nur ohne Doppelte im Bestand; eine Kopie übernimmt ihn nicht">① eindeutig</td>
             <ToggleCell :value="b(curAttr.unique)" @save="v => attrSet('unique', v === 'true')" /></tr>
           <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" title="vermehrbar: mehrere Werte — in der Zelle als Liste mit + − und Umsortieren">≣ vermehrbar</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
-          <tr class="sub"><td colspan="3" title="Pflicht heisst: ohne Wert keine Freigabe in diesem Kanal — unabhängig davon, ob der Wert kanalabhängig ist. Ein Wert für alle Kanäle kann für web Pflicht sein und für print nicht.">⇶ Kanal · Pflicht für die Freigabe</td></tr>
+          <tr class="sub"><td colspan="3" title="Pflicht: ohne Wert keine Freigabe in diesem Kanal">⇶ Kanal · Pflicht für die Freigabe</td></tr>
           <tr v-if="!['rows', 'formula', 'template'].includes(curAttr.type)"><td class="attr" title="der Wert ist je Kanal verschieden">⇶ kanalabhängig</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
           <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für die Freigabe im Kanal ${c.key} — je Sprache, oder * für alle Sprachen; nichts = keine Pflicht`">● Pflicht {{ c.key }}</td>
             <td colspan="2"><div class="chips" style="padding:2px 4px">
@@ -614,9 +614,9 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curList.label?.de ?? null" @save="v => listSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curList.label?.en ?? null" @save="v => listSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="geschlossen: die Werte kommen aus einer Quelle (ETIM, Norm) — in der Zelle gibt es kein „+ neuer Wert“, ein fremder Wert wäre im Export ungültig">⌀ geschlossen</td><ToggleCell :value="curList.closed ? 'true' : 'false'" @save="v => listSet('closed', v)" /></tr>
+          <tr><td class="attr" title="geschlossen: nur Werte aus der Quelle (ETIM, Norm) — in der Zelle kein „+ neuer Wert“">⌀ geschlossen</td><ToggleCell :value="curList.closed ? 'true' : 'false'" @save="v => listSet('closed', v)" /></tr>
           <!-- Spalten als Chips (Taloan): × nimmt eine weg (Werte bleiben im Journal), + Spalte fragt nach dem Key -->
-          <tr><td class="attr" title="eigene Felder je Eintrag (z. B. ral, hex) — die Werte einer entfernten Spalte bleiben im Journal und erscheinen wieder, wenn die Spalte zurückkommt">Spalten</td>
+          <tr><td class="attr" title="eigene Felder je Eintrag (z. B. ral, hex) — Werte einer entfernten Spalte bleiben im Journal">Spalten</td>
             <td class="cell"><div class="chips" style="min-height:24px">
               <span v-for="c in curList.columns ?? []" :key="c" class="chip mono">{{ c }}<button @click="listColumns((curList.columns ?? []).filter(x => x !== c))" :title="`Spalte ${c} entfernen — die Werte bleiben im Journal`">×</button></span>
               <input v-if="newCol !== null" v-model="newCol" class="cell-input" style="width:120px;height:22px" placeholder="key, z. B. hex" autofocus @keydown.enter.prevent="addColumn" @keydown.esc="newCol = null" @blur="addColumn" />
@@ -663,7 +663,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name de</td><Cell :value="curRel.label?.de ?? null" @save="v => relSet('label_de', v)" /></tr>
           <tr><td class="attr">Name en</td><Cell :value="curRel.label?.en ?? null" @save="v => relSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="beidseitig: liest sich von beiden Enden gleich (verwandt), je Paar nur einmal. Einseitig: Lesart hin und zurück (hat Zubehör / ist Zubehör von).">⇄ beidseitig</td><ToggleCell :value="b(!!curRel.symmetric)" @save="v => relSet('symmetric', v === 'true')" /></tr>
+          <tr><td class="attr" title="beidseitig: gleiche Lesart von beiden Enden, je Paar einmal · einseitig: eigene Rücklesart (hat Zubehör / ist Zubehör von)">⇄ beidseitig</td><ToggleCell :value="b(!!curRel.symmetric)" @save="v => relSet('symmetric', v === 'true')" /></tr>
           <tr v-if="!curRel.symmetric"><td class="attr" title="Bezeichnung vom Ziel aus gesehen („Zubehör von“)">← umgekehrt de</td><Cell :value="curRel.reverse?.de ?? null" @save="v => relSet('reverse_de', v)" /></tr>
           <tr v-if="!curRel.symmetric"><td class="attr">← umgekehrt en</td><Cell :value="curRel.reverse?.en ?? null" @save="v => relSet('reverse_en', v)" /></tr>
           <tr v-for="r in roles" :key="'f' + r"><td class="attr" :title="`darf von ${roleLabel[r]} ausgehen`">von {{ roleLabel[r] }}</td><ToggleCell :value="b(!curRel.from || curRel.from.includes(r))" @save="v => relSet('from_' + r, v === 'true')" /></tr>
@@ -690,7 +690,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
     <!-- Sprache -->
     <template v-else-if="section === 'locales' && curLocale">
       <div class="toolbar"><h1>🗣 {{ curLocale.code }}</h1><span v-if="model.masterLocale === curLocale.code" class="warn">★ Mastersprache</span><span class="grow" />
-        <button v-if="model.masterLocale !== curLocale.code" class="primary" @click="setMaster" title="Pflichtfelder beim Anlegen werden in der Mastersprache erfasst; ändert sich dort ein sprachabhängiger Wert, gelten die anderen Sprachen als zu überarbeiten (⟳)">★ Zur Mastersprache machen</button></div>
+        <button v-if="model.masterLocale !== curLocale.code" class="primary" @click="setMaster" title="Pflichtfelder werden in der Mastersprache erfasst — ändert sich dort ein Wert, gelten die anderen Sprachen als zu überarbeiten (⟳)">★ Zur Mastersprache machen</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">Name</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>

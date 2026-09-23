@@ -378,7 +378,7 @@ onMounted(async () => {
           </template>
         </div>
         <table v-if="layout === 'rows'" class="grid map">
-          <thead><tr><th style="width:170px">Spalte</th><th>Beispiele</th><th style="width:130px">Ziel</th><th style="width:220px">Attribut</th><th style="width:60px">Sprache</th><th style="width:150px">Warum</th><th style="width:34px" title="Umwandlung: Kette von Schritten zwischen Quelle und Ziel (Zahl aus „22 mm“, Ja/Nein, Datum, Ersetzen, Aufteilen, Spalten verbinden, Bedingung …)">ƒ</th></tr></thead>
+          <thead><tr><th style="width:170px">Spalte</th><th>Beispiele</th><th style="width:130px">Ziel</th><th style="width:220px">Attribut</th><th style="width:60px">Sprache</th><th style="width:150px">Warum</th><th style="width:34px" title="Umwandlung: Schritte zwischen Quelle und Ziel (Zahl, Ja/Nein, Datum, Ersetzen, Aufteilen, Verbinden, Bedingung …)">ƒ</th></tr></thead>
           <tbody>
             <template v-for="m in visibleMapping" :key="m.column">
             <tr :class="{ off: m.target === 'skip' }">
