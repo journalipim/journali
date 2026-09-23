@@ -15,7 +15,7 @@ namespace Journali.Server;
 public static class TransferApi
 {
     public sealed record RawValue(string Attribute, string? Locale = null, string? Channel = null, string? Row = null, string? Value = null, string[]? Values = null);
-    public sealed record RawNode(string Id, string Role, string? Parent, string? Name, string Status, string[]? Axes, Dictionary<string, string>? AxisValues,
+    public sealed record RawNode(string Id, string Role, string? Parent, string? Name, string? Status, string[]? Axes, Dictionary<string, string>? AxisValues,
         string[]? Groups, string? LabelAttribute, Dictionary<string, string>? External, List<RawValue> Values, Dictionary<string, List<string>>? Rows,
         Labels? Label, List<RawNode>? Children)
     {
@@ -97,7 +97,7 @@ public static class TransferApi
         var values = n.Values.Select(kv => new RawValue(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Key.Row, kv.Value))
             .Concat(n.Lists.Select(kv => new RawValue(kv.Key.Attribute, kv.Key.Locale, kv.Key.Channel, kv.Key.Row, null, kv.Value)))
             .OrderBy(v => v.Attribute).ThenBy(v => v.Row).ThenBy(v => v.Locale).ThenBy(v => v.Channel).ToList();
-        return new RawNode(n.Id, n.Role, n.Parent, n.Name, n.Status, n.Axes.Length > 0 ? n.Axes : null, n.AxisValues.Count > 0 ? n.AxisValues : null,
+        return new RawNode(n.Id, n.Role, n.Parent, n.Name, n.HasStatus ? n.Status : null, n.Axes.Length > 0 ? n.Axes : null, n.AxisValues.Count > 0 ? n.AxisValues : null,
             n.Groups.Length > 0 ? n.Groups : null, n.LabelAttribute, n.External.Count > 0 ? n.External : null, values,
             n.Rows.Count > 0 ? n.Rows.ToDictionary(kv => kv.Key, kv => kv.Value.ToList()) : null,
             n.Role == Roles.Group && n.Label.Count > 0 ? n.Label : null,
@@ -184,7 +184,11 @@ public static class TransferApi
         // Eigenschaften — nur, was abweicht
         if (r.Role != Roles.Group && (r.Name ?? "") != (n.Name ?? "")) Count(s, Commands.Rename(c, id, r.Name), r.Id);
         if (r.Role == Roles.Group && r.Name is not null && r.Name != n.Name) Count(s, Commands.Rename(c, id, r.Name), r.Id);
-        if (r.Role != Roles.Group && r.Status != n.Status) Count(s, Commands.SetStatus(c, id, r.Status), r.Id);
+        // Status: an Produkt und Variante immer, an einer Gruppe seit dem 23.09.2026 — dort aber nur, wenn die Datei
+        // wirklich einen mitbringt. Ein Export von früher trug an jeder Gruppe „draft“, das ist kein gesetzter Status
+        // und soll keine Einträge erzeugen.
+        if (r.Status is { Length: > 0 } st && st != n.Status && (r.Role != Roles.Group || n.HasStatus || st != Statuses.Draft))
+            Count(s, Commands.SetStatus(c, id, st), r.Id);
         if (r.Role == Roles.Product && r.Axes is not null && !r.Axes.SequenceEqual(n.Axes) && !tree.Children(id).Any()) Count(s, Commands.SetAxes(c, id, r.Axes), r.Id);
         var groups = r.Groups ?? [];
         if (!groups.SequenceEqual(n.Groups)) Count(s, Commands.AttachGroups(c, id, groups), r.Id);

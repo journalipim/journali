@@ -304,10 +304,14 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.NodeRestored, new NodeRestored()));
     }
 
+    /// <summary>
+    /// Status eines Knotens setzen — seit dem 23.09.2026 auch an einer Gruppe (Taloan: „neue Produktgruppe,
+    /// Markteinführung: redaktionell kann alles freigegeben sein, vorbereitet, trotzdem noch kein Verkaufsstart").
+    /// Er gilt für den Knoten selbst und vererbt sich nicht: die Gruppe sagt etwas über sich, jedes Produkt über sich.
+    /// </summary>
     public static Outcome SetStatus(Ctx c, string id, string? status)
     {
-        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
-        if (n.Role == Roles.Group) return Outcome.Bad("Eine Gruppe hat keinen Status.");
+        if (!c.Tree.Nodes.ContainsKey(id)) return Outcome.Missing;
         if (!c.Model.Statuses.ContainsKey(status ?? "")) return Outcome.Bad($"Status: {string.Join(", ", c.Model.StatusesOrdered.Select(s => s.Key))}");
         return Outcome.Ok(c.Write(id, Types.StatusSet, new StatusSet(status!)));
     }

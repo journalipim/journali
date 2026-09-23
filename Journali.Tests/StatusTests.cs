@@ -45,7 +45,7 @@ public class StatusTests
         Assert.Equal(["draft", "review", "active", "sale_world", "discontinued"], w.Model.StatusesOrdered.Select(s => s.Key).ToArray());
         Assert.Null(Commands.SetStatus(w.Ctx, w.P, "review").Error);
         Assert.Equal("review", w.Tree.Nodes[w.P].Status);
-        Assert.NotNull(Commands.SetStatus(w.Ctx, w.G, "review").Error);   // Gruppen haben keinen Status
+        Assert.Null(Commands.SetStatus(w.Ctx, w.G, "review").Error);   // auch eine Gruppe darf einen tragen (23.09.2026)
     }
 
     [Fact]
@@ -57,5 +57,33 @@ public class StatusTests
         Assert.False(w.Model.Statuses.ContainsKey("discontinued"));
         Assert.Contains("discontinued", w.Model.StatusEver);   // SeedMissing sät ihn nicht wieder
         Assert.NotNull(Commands.SetStatus(w.Ctx, w.P, "discontinued").Error);
+    }
+
+    // Status an der Gruppe (Taloan, 23.09.2026: „neue Produktgruppe, Markteinführung: redaktionell kann alles freigegeben
+    // sein, vorbereitet, trotzdem noch kein Verkaufsstart“). Er gilt für die Gruppe selbst und vererbt sich nicht —
+    // „der Status ist kein Workflow-Kriterium, sondern lediglich ein Attribut, das wir weitergeben“ (Taloan).
+    [Fact]
+    public void Eine_Gruppe_hat_erst_einen_Status_wenn_jemand_ihn_setzt()
+    {
+        var w = new World();
+        var g = w.Tree.Nodes[w.G];
+        Assert.False(g.HasStatus);
+        Assert.Equal(Statuses.Draft, g.Status);   // vorbelegt, nicht gesetzt: die Oberfläche zeigt „–“
+        Assert.True(w.Tree.Nodes[w.P].HasStatus, "ein Produkt hat immer einen");
+
+        Assert.Null(Commands.SetStatus(w.Ctx, w.G, "active").Error);
+        Assert.True(w.Tree.Nodes[w.G].HasStatus);
+        Assert.Equal("active", w.Tree.Nodes[w.G].Status);
+    }
+
+    [Fact]
+    public void Der_Status_der_Gruppe_faerbt_nicht_auf_die_Produkte_ab()
+    {
+        var w = new World();
+        Assert.Null(Commands.SetStatus(w.Ctx, w.G, "discontinued").Error);
+        Assert.Equal(Statuses.Draft, w.Tree.Nodes[w.P].Status);          // das Produkt bleibt, wo es war
+        Assert.Null(Commands.SetStatus(w.Ctx, w.P, "active").Error);     // und darf woanders stehen als seine Gruppe
+        Assert.Equal("discontinued", w.Tree.Nodes[w.G].Status);
+        Assert.Equal("active", w.Tree.Nodes[w.P].Status);
     }
 }

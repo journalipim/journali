@@ -134,7 +134,7 @@ public static partial class ModelApi
             {
                 if (!model.Statuses.ContainsKey(key)) return Results.NotFound();
                 if (key == Statuses.Draft) return Bad("draft ist der Startstatus neuer Knoten und bleibt.");
-                var n = tree.Nodes.Values.Count(x => x.Status == key);
+                var n = tree.Nodes.Values.Count(x => x.HasStatus && x.Status == key);
                 if (n > 0) return Bad($"{key} steht an {n} Knoten — erst umsetzen (Tabelle, Workflow-Wirkung).");
                 var wf = c.Workflows.All.Values.Where(x => x.Transitions.Any(t => (t.Effects ?? []).Contains("status:" + key))).Select(x => x.Key).ToList();
                 return wf.Count > 0 ? Bad($"{key} ist Wirkung in Workflow {string.Join(", ", wf)}.") : Results.Ok(EntryView.Of(write(Actor(req)!, Model.StatusStream + key, Types.StatusRetired, new StatusRetired(key), null)));

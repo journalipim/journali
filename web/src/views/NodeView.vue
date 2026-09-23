@@ -10,6 +10,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
+import { setStatus as setStatusScoped } from '../status.js'
 import { dialog } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
@@ -476,6 +477,8 @@ const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def
 // ★ am eigenen Sternchen nimmt es weg; sonst setzt es dieses Attribut ab hier.
 const setStar = def => command(() => api.post(`${nodeUrl()}/label-attribute`, { attribute: starOwn(def.key) ? null : def.key }, 'PUT'))
 const setStatus = s => command(() => api.post(`${nodeUrl()}/status`, { status: s }))
+/// Aus dem Wähler oben: bei Subitems erst fragen, dann hier und ggf. darunter setzen (status.js)
+const pickStatus = async s => { if (!s || !node.value) return; try { await setStatusScoped(node.value, s); await load() } catch (e) { store.toast(e.message) } }
 const attach = groups => command(() => api.post(`${nodeUrl()}/groups`, { groups }, 'PUT'))
 // ---- Relationen (18): je Typ ausgehend (→) und eingehend (←, mit umgekehrter Bezeichnung); Werte an der Relation aus der Gruppe des Typs
 const relTypes = computed(() => model.value?.relationTypes ?? [])
@@ -734,9 +737,12 @@ function cellMenu(e, def, col, block) {
       <button v-if="props.pub && node.role !== 'rubric'" class="x" title="Knoten im Pflegebaum öffnen (⇶ führt zurück)" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
       <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="backToPub">⇶ {{ store.pubBack.label }}</button>
       <span class="grow" />
-      <select v-if="node.role !== 'group' && node.role !== 'rubric'" :value="node.status" @change="setStatus($event.target.value)" class="status" :style="store.statusStyle(node.status)" :title="`Status: ${store.statusLabel(node.status)}`">
+      <select v-if="node.role !== 'rubric'" :value="node.hasStatus === false ? '' : node.status" @change="pickStatus($event.target.value)" class="status"
+        :style="node.hasStatus === false ? null : store.statusStyle(node.status)"
+        :title="node.hasStatus === false ? 'Kein Status — eine Gruppe bekommt einen, sobald jemand ihn setzt' : `Status: ${store.statusLabel(node.status)}`">
+        <option v-if="node.hasStatus === false" value="" disabled>–</option>
         <option v-for="s in (store.model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option>
-        <option v-if="node.status && !store.status(node.status)" :value="node.status">{{ node.status }} (nicht im Modell)</option>
+        <option v-if="node.status && node.hasStatus !== false && !store.status(node.status)" :value="node.status">{{ node.status }} (nicht im Modell)</option>
       </select>
       <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
       <button class="x" @click="undo" :disabled="!history.length" :title="stepTitle(history[history.length - 1], '↶ Rückgängig', history.length, 'Strg+Z')">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>

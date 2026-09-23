@@ -6,6 +6,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { setStatus as setStatusScoped } from '../status.js'
 import { dialog as ask } from '../dialog.js'
 import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
@@ -381,7 +382,8 @@ async function retireAll(rows) {
   await tree.load(); if (!tree.byId.has(props.id)) router.push('/tree')
 }
 async function setStatus(r, status) {
-  try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/status`, { status }); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
+  // fragt bei Subitems „auch für die n Subitems?" (status.js, Taloan 23.09.2026)
+  try { await setStatusScoped(r, status) } catch (e) { store.toast(e.message) }
 }
 // Eigener Name im Baum (jede Rolle) = angeheftet (📌); leer = Automatik (★ Attribut, bei Varianten SKU/Achsen, sonst Id).
 async function setName(r, name) {
@@ -421,8 +423,9 @@ async function contextMenu(e, r) {
         action: () => wfStepAll(sel ?? [r], { key: a.workflow }, a) }))
     } catch { wfItems = [] }
   }
-  const st = s => (sel ? sel.some(x => x.role !== 'group' && x.status !== s) : (r.role !== 'group' && r.status !== s))
-    ? { label: store.statusText(s) + (sel ? ` (${sel.filter(x => x.role !== 'group' && x.status !== s).length})` : ''), action: () => sel ? setStatusAll(sel.filter(x => x.role !== 'group' && x.status !== s), s) : setStatus(r, s) } : null
+  const offen = (x, s) => x.role !== 'rubric' && (x.hasStatus === false || x.status !== s)
+  const st = s => (sel ? sel.some(x => offen(x, s)) : offen(r, s))
+    ? { label: store.statusText(s) + (sel ? ` (${sel.filter(x => offen(x, s)).length})` : ''), action: () => sel ? setStatusAll(sel.filter(x => offen(x, s)), s) : setStatus(r, s) } : null
   // Aufgeräumt (Taloan): kein Neu-anlegen (die Knöpfe oben), kein Auf-/Zuklappen, kein Id kopieren (Id steht im Tooltip und im Kopf);
   // Plugin-Einträge je Plugin in einem Untermenü
   // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
@@ -453,7 +456,7 @@ async function contextMenu(e, r) {
         : { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     !sel && r.role !== 'variant' && kids ? { label: `Mit ${countBelow(r.id)} darunter duplizieren`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
-    ...(r.role !== 'group' ? [...(store.model?.statuses ?? []).map(s => st(s.key)), { sep: true }] : []),   // Status aus dem Modell (Taloan, 22.09.)
+    ...(r.role !== 'rubric' ? [...(store.model?.statuses ?? []).map(s => st(s.key)), { sep: true }] : []),   // Status aus dem Modell (Taloan, 22.09.; seit 23.09. auch an Gruppen)
     ...(wfItems.length ? [{ label: 'Workflow' + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
     { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,

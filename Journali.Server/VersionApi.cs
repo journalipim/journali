@@ -147,7 +147,7 @@ public static class VersionApi
             var thenLabel = NodeRow.LabelOf(thenTree, thenModel, then); var nowLabel = NodeRow.LabelOf(tree, model, now);
             rows.Add(new DiffRow("label", null, null, null, null, thenLabel, nowLabel, thenLabel == nowLabel, true, true, "Anzeigename (aus Sternchen oder eigenem Namen)"));
             rows.Add(new DiffRow("name", null, null, null, null, then.Name, now.Name, then.Name == now.Name, true, true, null));
-            if (now.Role != Roles.Group) rows.Add(new DiffRow("status", null, null, null, null, then.Status, now.Status, then.Status == now.Status, true, true, null));
+            if (now.HasStatus) rows.Add(new DiffRow("status", null, null, null, null, then.Status, now.Status, then.Status == now.Status, true, true, null));
             var active = CompletenessRules.ActiveAttributes(tree, model, now).Select(a => a.Key).ToHashSet();
             var axes = then.Values.Keys.Concat(then.Lists.Keys).Concat(now.Values.Keys).Concat(now.Lists.Keys).Distinct().OrderBy(a => a.Attribute).ThenBy(a => a.Locale).ThenBy(a => a.Channel);
             foreach (var a in axes)

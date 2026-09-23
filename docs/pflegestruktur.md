@@ -1514,3 +1514,46 @@ Vorher offen: Vorschau-Presets (heute liefert der Server das Original, der Brows
 skaliert), Medienimport aus der Quelle (Solr: `images` als
 `multi_image_rel`, Pfade unter `suppliers/…` — braucht einen Basis-URL),
 Medien im Baum (eigener Ast) oder nur am Knoten.
+
+## 33. Status auch an Gruppen — entschieden und gebaut (Taloan, 23.09.2026)
+
+**Die Entscheidung (Taloan):** „Ich finde es wohl richtig, wenn Gruppen auch Status
+haben können. Beispiel: neue PG, Markteinführung: redaktionell kann alles
+freigegeben sein, vorbereitet, trotzdem noch kein Verkaufsstart."
+
+Und, auf die Frage, was gilt, wenn die Gruppe auf Entwurf steht und ein Artikel
+darunter auf aktiv: „Völlig egal. Der Status ist kein Workflow-Kriterium, sondern
+lediglich ein Attribut, das wir weitergeben."
+
+Damit ist die Semantik knapp: Der Status gehört dem Knoten, an dem er steht. Er
+vererbt sich nicht, er überschreibt nichts, und keine Kombination ist ein
+Widerspruch — die Gruppe sagt etwas über sich, jedes Produkt über sich. Wer
+Freigaben steuern will, nimmt den Workflow (30), nicht den Status.
+
+**Was das kostet, und wie es gelöst ist.** `Node.Status` ist seit jeher mit
+`draft` vorbelegt. Hätten wir den Wähler einfach für Gruppen eingeblendet, würde
+jede der 1466 bestehenden Gruppen behaupten, sie sei ein Entwurf — eine Aussage,
+die nie jemand getroffen hat. Darum merkt sich der Knoten die Nummer des
+Eintrags, der den Status setzte (`Node.StatusAt`, 0 = nie): `HasStatus` ist bei
+Produkt und Variante immer wahr (sie beginnen als Entwurf), bei einer Gruppe erst
+nach dem ersten `StatusSet`. Die Oberfläche zeigt bis dahin „–".
+
+Daran hängen drei Stellen, die vorher „eine Gruppe hat keinen Status"
+voraussetzten und jetzt `HasStatus` fragen: der Versionsvergleich (die
+Statuszeile), die Zählung „wie oft benutzt" im Modell (sie zählte bisher jede
+Gruppe als Entwurf mit) und der Teilbaum-Export. Der Export schreibt den Status
+einer Gruppe nur, wenn sie einen hat; ein Import setzt ihn an einer Gruppe nur,
+wenn die Datei wirklich einen mitbringt — ein Export von früher trug an jeder
+Gruppe `draft`, und daraus sollen keine Einträge entstehen.
+
+**Weitergeben beim Setzen (Taloan):** „Das Setzen eines Status in einem übergeordneten
+Knoten muss ähnlich funktionieren wie bei Windows: auch für Subitems? ja nein.“
+Also kein Vererben, sondern ein Weiterreichen im Moment des Setzens: hat der Knoten
+Subitems, fragt der Dialog „‹Status› setzen?“ mit dem Schalter „auch für die n
+Subitems“ (Vorgabe: aus). Gezählt und geschrieben wird nur, wer den Status noch
+nicht hat — eine Gruppe ohne gesetzten ist auch für `draft` offen. Einer wird
+einzeln geschrieben, mehrere als Stapel (`web/src/status.js`, Prüfstand
+`status-scope.test.mjs`). Ein Knoten ohne Kinder fragt nicht.
+
+**Offen:** Rubriken bleiben aussen vor (Publikationsknoten, kein Lebenszyklus am
+Markt) — weder im Wähler noch als Subitem.

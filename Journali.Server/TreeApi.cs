@@ -242,12 +242,14 @@ public static class TreeApi
 public sealed record NodeRow(string Id, string Role, string? Parent, string Label, string? Name, string? Groups, string[] Axes,
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string>? Keys, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null,
-    string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null, long? Stand = null, List<PubRule>? Rules = null)
+    string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null, long? Stand = null, List<PubRule>? Rules = null,
+    bool HasStatus = true)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
         tree.KeysOf(model, n), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
-        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null, n.Stand, n.Role == Roles.Rubric && n.Rules.Count > 0 ? n.Rules : null);
+        n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null, n.Stand, n.Role == Roles.Rubric && n.Rules.Count > 0 ? n.Rules : null,
+        n.HasStatus);
 
     /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle, Taloan): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
     /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>
@@ -346,7 +348,8 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string> External, List<ValueView> Values, Dictionary<string, List<string>> Rows,
     List<AncestorView> Ancestors, string[] AttachedGroups, List<GroupView> Groups, List<string> Orphans, List<ComputedView> Computed,
     List<string> Categories, List<Release> Releases, List<ReleasedVia> ReleasedVia, List<Completeness> Completeness,
-    int Children, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Source = null, string? SourceLabel = null)
+    int Children, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Source = null, string? SourceLabel = null,
+    bool HasStatus = true)
 {
     public static NodeView Of(Tree tree, ModelCatalog model, Node n)
     {
@@ -371,6 +374,7 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
         CompletenessRules.Of(tree, model, n),
         tree.Children(n.Id).Count(),
         n.Entries, n.LastNumber, n.LastAt, n.LastActor,
-        n.Source, n.Source is { } src && tree.Nodes.TryGetValue(src, out var sn) ? NodeRow.LabelOf(tree, model, sn) : null);
+        n.Source, n.Source is { } src && tree.Nodes.TryGetValue(src, out var sn) ? NodeRow.LabelOf(tree, model, sn) : null,
+        n.HasStatus);
     }
 }

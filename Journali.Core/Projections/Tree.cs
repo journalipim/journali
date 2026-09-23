@@ -27,6 +27,13 @@ public sealed class Node
     public string[] Axes { get; set; } = [];                   // Produkt: wonach es variiert
     public Dictionary<string, string> AxisValues { get; } = new(); // Variante
     public string Status { get; set; } = Statuses.Draft;
+    /// <summary>Nummer des Eintrags, der den Status setzte — 0 heisst: nie gesetzt. Nötig, seit auch Gruppen einen
+    /// Status haben dürfen (Taloan, 23.09.2026): <see cref="Status"/> ist mit „draft“ vorbelegt, und eine Gruppe, die nie
+    /// jemand angefasst hat, ist kein Entwurf — sie hat schlicht keinen.</summary>
+    public long StatusAt { get; set; }
+    /// <summary>Hat dieser Knoten einen eigenen Status? Produkte und Varianten immer (sie beginnen als Entwurf),
+    /// Gruppen erst, wenn jemand einen setzt.</summary>
+    public bool HasStatus => Role != Roles.Group || StatusAt > 0;
     public Dictionary<string, string> External { get; } = new();   // Quellsystem → Kennung dort
     /// <summary>Attributgruppen, die hier angehängt sind; die Definition vererbt sich nach unten.</summary>
     public string[] Groups { get; set; } = [];
@@ -506,6 +513,7 @@ public sealed class Tree : IProjection
                 break;
             case Types.StatusSet:
                 n.Status = Types.Deserialize<StatusSet>(entry.Payload).Status;
+                n.StatusAt = entry.Number;
                 break;
             case Types.GroupsAttached:
                 n.Groups = Types.Deserialize<GroupsAttached>(entry.Payload).Groups.Distinct().ToArray();
