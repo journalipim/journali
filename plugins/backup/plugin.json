@@ -39,31 +39,36 @@
         "key": "profile",
         "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
         "type": "profile",
-        "default": ""
+        "default": "",
+        "perJob": true
       },
       {
         "key": "root",
         "label": "Teilbaum (Knoten-Id, leer = alle Wurzeln)",
         "type": "node",
-        "default": ""
+        "default": "",
+        "perJob": false
       },
       {
         "key": "dir",
         "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
         "type": "dir",
-        "default": "backup"
+        "default": "backup",
+        "perJob": true
       },
       {
         "key": "keep",
         "label": "so viele Sicherungen behalten (je Wurzel, dieser Job)",
         "type": "number",
-        "default": "14"
+        "default": "14",
+        "perJob": false
       },
       {
         "key": "gzip",
         "label": "komprimieren (gzip, .json.gz — der JSON-Import liest es direkt)",
         "type": "boolean",
-        "default": "true"
+        "default": "true",
+        "perJob": true
       }
     ]
   }

@@ -12,6 +12,7 @@ async function get(p) { const r = await fetch(server + p, { headers }); if (!r.o
 ;(async () => {
   fs.mkdirSync(dir, { recursive: true })
   const tree = await get('/api/tree')
+  const { knoten, zuLoeschen } = await import('./core.mjs')
   const rows = Array.isArray(tree) ? tree : tree.rows ?? []
   const roots = rootArg ? rows.filter(r => r.id === rootArg) : rows.filter(r => !r.parent)
   if (!roots.length) { console.error(`kein Knoten ${rootArg ?? '(Wurzel)'}`); process.exit(1) }
@@ -19,7 +20,7 @@ async function get(p) { const r = await fetch(server + p, { headers }); if (!r.o
   let total = 0
   for (const r of roots) {
     const raw = await get(`/api/nodes/${encodeURIComponent(r.id)}/export?deep=true`)
-    const count = (n => { let c = 1; for (const k of n.children ?? []) c += count(k); return c })(raw.node)
+    const count = knoten(raw.node)
     const safe = String(r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
     // Dateiname mit Job-Key (Taloan): zwei Jobs im selben Verzeichnis zählen ihre Stände getrennt
     const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.json${gz ? '.gz' : ''}`)
@@ -29,7 +30,7 @@ async function get(p) { const r = await fetch(server + p, { headers }); if (!r.o
     console.log(`${file}: ${count} Knoten, ${raw.model.attributes.length} Attribute, ${(fs.statSync(file).size / 1024).toFixed(0)} KB${gz ? ` (roh ${(text.length / 1024).toFixed(0)} KB)` : ''}`)
     // alte Stände dieser Wurzel wegräumen
     const old = fs.readdirSync(dir).filter(f => f.startsWith(jobKey) && f.includes(`-${r.id}-`) && (f.endsWith('.json') || f.endsWith('.json.gz'))).sort()
-    for (const f of old.slice(0, Math.max(0, old.length - keep))) { fs.unlinkSync(path.join(dir, f)); console.log(`alt entfernt: ${f}`) }
+    for (const f of zuLoeschen(old, keep)) { fs.unlinkSync(path.join(dir, f)); console.log(`alt entfernt: ${f}`) }
   }
   console.log(`✓ ${roots.length} Wurzel${roots.length > 1 ? 'n' : ''}, ${total} Knoten gesichert nach ${dir}`)
 })().catch(e => { console.error('✗ ' + e.message); process.exit(1) })
