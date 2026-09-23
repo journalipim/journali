@@ -18,13 +18,13 @@ export function naechsteSeite(voll, schritt, richtung) {
   return null
 }
 
-/// Steht ein Parameter oben im Dialog oder unter „Überschreiben“? Oben bleibt, was man je Job einstellt: das Profil
-/// selbst, Pfade und Schalter. Alles Inhaltliche kommt aus dem Profil und ist nur die Ausnahme wert — aber nur, wenn
-/// überhaupt ein Profil gewählt ist: ohne Profil gibt es nichts zu überschreiben, dann sind diese Felder die Quelle.
+/// Gehört dieser Parameter in den Dialog? Das Profil selbst immer, ebenso Pfade und Schalter — das stellt man je Job
+/// ein. Alles Inhaltliche (Teilbaum, Format, Sprachen, Aufbewahrung) kommt aus dem Profil und wird dort gepflegt;
+/// ohne gewähltes Profil sind diese Felder die einzige Quelle und stehen im Dialog (Taloan, 23.09.2026).
 export function stelle(def, profilGewaehlt) {
   if (!profilGewaehlt) return 'oben'
   if (def.type === 'profile' || def.key === 'profile') return 'oben'
-  return def.type === 'boolean' || def.type === 'path' || def.type === 'dir' ? 'oben' : 'unten'
+  return def.type === 'boolean' || def.type === 'path' || def.type === 'dir' ? 'oben' : 'aus'
 }
 
 /// Welche Fächer ein Job benutzt: liest er Dateien, gibt es in/, done/ und failed/; schreibt er, gibt es out/.
@@ -321,26 +321,25 @@ async function mount(root, ctx) {
         el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'verarbeitete Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher — der Beleg bleibt, auch wenn das Share aufgeräumt wird' }, fArchive, 'Archiv im Medienspeicher')))
     const paramsBox = el('div')
     const paramInputs = {}
-    let profilWert = j?.params?.profile ?? ''   // welches Profil gewählt ist; steuert, was oben steht und was unter „Überschreiben“
+    let profilWert = j?.params?.profile ?? ''   // welches Profil gewählt ist; ohne Profil stehen seine Werte im Dialog
     const drawParams = () => {
       paramsBox.innerHTML = ''
       const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
       pluginHint.textContent = p?.description ?? ''; pluginHint.title = pluginHint.textContent
       // Mit Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen — Ziel im Baum beim Import, Quelle vom Baum beim Export“):
-      // sichtbar nur Profil, Dateien/Verzeichnisse und Schalter; der Rest klappt unter „Überschreiben“ — leer = wie im Profil.
-      // Ohne gewähltes Profil gibt es nichts zu überschreiben: dann stehen alle Werte oben (Taloan, 23.09.)
+      // im Dialog stehen dann nur Profil, Dateien/Verzeichnisse und Schalter. Ohne gewähltes Profil sind seine Felder
+      // die einzige Quelle und stehen hier (Taloan, 23.09.)
       const profileDef = defs.find(d => d.type === 'profile' || d.key === 'profile')
       const hasProfile = !!profileDef && !!profilWert
-      const more = el('div', { style: 'display:none;border-left:2px solid var(--line);padding-left:8px;margin-top:6px' })
-      const moreBtn = el('button', { type: 'button', class: 'x', style: 'margin-top:8px', title: 'Ziel/Quelle im Baum, Texte, Geheimnisse einzeln setzen — leer = wie im Profil', onclick: () => { const on = more.style.display === 'none'; more.style.display = on ? '' : 'none'; moreBtn.textContent = (on ? '▾' : '▸') + ' Überschreiben (leer = wie im Profil)' } }, '▸ Überschreiben (leer = wie im Profil)')
       let secretNote = null
       profileSecrets = []
       const noteSecret = (profileName) => { if (!secretNote || !p) return; if (!profileName) { secretNote.textContent = ''; profileSecrets = []; check(); return } api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(profileName)}`).then(r => { profileSecrets = r.keys; secretNote.textContent = r.keys.length ? `🔒 am Profil hinterlegt: ${r.keys.join(', ')}` : '🔒 am Profil nichts hinterlegt — in der Ansicht des Plugins (🔒) oder unten setzen'; check() }).catch(() => { secretNote.textContent = ''; profileSecrets = []; check() }) }
       for (const d of defs) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
         // sichtbar bleiben: Profil, Dateien/Verzeichnisse (Taloan: „das Einzige, was der Tasker können muss“), Schalter; Baum-Ziel/-Quelle, Texte, Geheimnisse: aus dem Profil
-        const into = stelle(d, hasProfile) === 'unten' ? more : paramsBox
-        const append = (...nodes) => into.append(...nodes)
+        // was im Profil steht, wird im Profil gepflegt — hier erscheint es gar nicht
+        if (stelle(d, hasProfile) === 'aus') continue
+        const append = (...nodes) => paramsBox.append(...nodes)
         let inp
         if (d.type === 'node') {
           // Auswahlbaum (Taloan): Wert ist die Knoten-Id, sichtbar der Name; „leer“ wählbar (⌂)
@@ -385,7 +384,7 @@ async function mount(root, ctx) {
         }
         paramInputs[d.key] = inp
       }
-      if (hasProfile && more.childElementCount) paramsBox.append(moreBtn, more)
+
       fachBox.style.display = p?.files ? '' : 'none'
       // nur die Fächer nennen, die dieses Plugin wirklich benutzt: wer nur schreibt, hat kein in/ und kein failed/
       if (p?.files) { fachLabelEl.textContent = `Fächer · Basis (${fachNames(p.files).join(', ')})`; fBaseBtn.title = `Basis der Fächer auf dem Server wählen (${fachNames(p.files).join(', ')})` }
@@ -411,7 +410,7 @@ async function mount(root, ctx) {
         const v = paramInputs[d.key]?.value ?? ''
         // mit Fächern kommt die Datei aus in/ bzw. geht nach out/ — dann ist der Parameter nicht Pflicht
         if ((d.type === 'path' || d.type === 'dir') && !v && !(d.type === 'dir' ? p?.files?.out : p?.files?.in)) fehlt(`${d.type === 'dir' ? 'Verzeichnis' : 'Quelle'} fehlt`, 1)
-        if (d.secret && !v && !j?.secrets?.includes(d.key) && !profileSecrets.includes(d.key)) fehlt(`${d.label.split(' —')[0]} fehlt — am Profil hinterlegen (🔒) oder unter „Überschreiben“ setzen`, 1)
+        if (d.secret && !v && !j?.secrets?.includes(d.key) && !profileSecrets.includes(d.key)) fehlt(`${d.label.split(' —')[0]} fehlt — am Profil hinterlegen (🔒)`, 1)
       }
       saveBtn.disabled = reasons.length > 0; saveBtn.title = reasons.map(r => r.text).join(' · ')
       // unten steht nur, was auf dieser Seite zu beheben ist; die anderen Seiten bekommen ein ✗ in der Leiste
