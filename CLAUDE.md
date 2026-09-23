@@ -112,7 +112,7 @@ stehen dort als solche markiert.
   Limits **und die Lizenz** — Limits und Gekauftes hängen am Team) · ◈ Rollen &
   Rechte (Anwender, Rollen, Teams anlegen) · ▨ Storage (wo die Bytes liegen) ·
   ▩ Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
-  pflegen darf) · ✉ Mail · ▣ Backup & Recovery (nur der Weg **zurück**; gesichert wird
+  pflegen darf) · ✉ Mail · ↺ Recovery (nur der Weg **zurück**; gesichert wird
   als Job des Plugins `backup`) · ⚑ Workflows.
   Die Abschnitte des Team-Tabs stehen fest (Taloan, 23.09.): ◍ {Teamname} · ⚿ journali
   Lizenz · ✦ journali Limits · ✧ KI API Keys · ✧ KI Austauschvolumen — erst, was

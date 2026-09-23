@@ -35,7 +35,7 @@ test('ein Leser sieht sich und sein Team — sonst nichts', async () => {
 
 test('der Administrator sieht die Bestandteile einzeln, nicht als Sammelseite', async () => {
   const w = await sicht(['read', 'users', 'storage', 'model', 'team'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '◍ Team', '◈ Rollen & Rechte', '▨ Storage', '▩ Assets', '✉ Mail', '▣ Backup & Recovery', '⚑ Workflows'])
+  assert.deepEqual(reiter(w), ['◐ Ich', '◍ Team', '◈ Rollen & Rechte', '▨ Storage', '▩ Assets', '✉ Mail', '↺ Recovery', '⚑ Workflows'])
   assert.ok(!reiter(w).some(r => /Anlage/.test(r)), 'die Sammelseite gibt es nicht mehr')
   await ruhe(); w.unmount()
 })
