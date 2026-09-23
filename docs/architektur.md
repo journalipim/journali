@@ -167,12 +167,22 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   oder endet (wie `KeyRedeemed`). Reset bleibt Einzelkauf. Die Umrechnung nach Restvolumen entfällt beim Abo —
   den Geldausgleich beim Wechsel macht Lemon Squeezy.
 
-  *Lizenzserver:* Strato-vServer mit einer kleinen ASP.NET-Anwendung — dieselben Prüfungen (`Signatur.Pruefe`,
+  *Lizenzserver:* Strato-vServer mit einer kleinen ASP.NET-Anwendung als Container (Portainer-Stack) hinter NPMplus — dieselben Prüfungen (`Signatur.Pruefe`,
   `SignedRequest.Pruefe`, Signatur r‖s) wie in journali, keine zweite Umsetzung. Möglich wäre auch der Managed
   Server mit PHP/MySQL; PHP signiert ECDSA im DER-Format, journali erwartet r‖s — umwandeln oder die .NET-Seite
   umstellen.
 
-  *Zu entscheiden:* Abo je Instanz oder je Team (die Limits hängen am Team) · wie lange der letzte Stand ohne
-  Verbindung gilt (Kulanz) · ob Anforderung und Schlüssel zum Kopieren als Weg für Instanzen ohne Internet bleiben.
+  *Entschieden (Taloan, 23.09.2026):* **Abo je Team** — wegen der Kostenstellen. Wer zentral abrechnen will, legt
+  das Abo aufs Init Team; die anderen Teams rechnen über es ab (`keysFrom`, Zahlerkette). Damit gehört ein
+  Lizenzschlüssel von Lemon Squeezy zu einem Team: aktiviert wird er für Instanz *und* Team (`instance_name` =
+  Instanz-Kennung und Team), mit `activation_limit` 1 — derselbe Schlüssel nicht für ein zweites Team. Eingelöst
+  wird wie heute beim Team, das sein Kontingent selbst trägt.
+
+  *Zu entscheiden:* wie lange der letzte Stand ohne Verbindung gilt (Kulanz) · ob Anforderung und Schlüssel zum
+  Kopieren als Weg für Instanzen ohne Internet bleiben.
+
+  *Vorbereitet (23.09.2026):* der Strato-vServer — Ubuntu 26.04 LTS, aktuell, automatische Sicherheitsupdates,
+  Firewall des Kundenmenüs lässt nur 22, 80, 443 durch, SSH nur mit Schlüssel, NPMplus als Reverse Proxy (Verwaltung
+  nur über SSH-Tunnel). Der Lizenzserver bekommt dort einen eigenen Proxy-Eintrag mit Certbot.
   *Zu prüfen im Testmodus* (`test_mode`): ob der Lizenzschlüssel beim Tarifwechsel derselbe bleibt; die genaue
   Antwort von `activate`.
