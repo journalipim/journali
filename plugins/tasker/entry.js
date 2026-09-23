@@ -282,7 +282,10 @@ async function mount(root, ctx) {
     const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: 'Bezeichnung', style: 'width:100%' })
     // ein Eintrag je Dienst (Taloan: mehrere Dienste je Plugin); Wert = plugin|service
     const svcId = p => `${p.key}|${p.service ?? ''}`
-    const pluginSel = el('select', { style: 'width:100%' }, ...st.plugins.map(p => el('option', { value: svcId(p), title: p.description ?? '' }, (typeof p.label === 'string' ? p.label : p.label?.de) || p.key)))   // nur der Name (Taloan: zu viel Text)
+    const svcLabel = p => (typeof p.label === 'string' ? p.label : p.label?.de) || p.key
+    const pluginSel = el('select', { style: 'width:100%' },
+      ...[...st.plugins].sort((a, b) => svcLabel(a).localeCompare(svcLabel(b), 'de'))
+        .map(p => el('option', { value: svcId(p), title: p.description ?? '' }, svcLabel(p))))   // nur der Name (Taloan: zu viel Text)
     const pluginHint = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
     if (j) pluginSel.value = `${j.plugin}|${j.service ?? ''}`
     else if (preset) { pluginSel.value = preset; if (pluginSel.value !== preset) pluginSel.value = st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|')) ? svcId(st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|'))) : pluginSel.value }
