@@ -181,8 +181,10 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   *Entschieden (Taloan, 23.09.2026):* ohne Verbindung zum Lizenzserver gilt der letzte signierte Stand noch
   **7 Tage**, danach der Testbetrieb.
 
-  *Zu entscheiden:* ob Anforderung und Schlüssel zum Kopieren als zweiter Weg für Instanzen ohne Internet bleiben
-  (Schlüssel mit fester Laufzeit, im Voraus bezahlt) — oder journali eine Verbindung voraussetzt.
+  *Entschieden (Taloan, 23.09.2026):* **der Weg zum Kopieren bleibt** — für Instanzen ohne Internet, neben dem Abo.
+  Die IT erzeugt die signierte Anforderung, trägt sie hinaus, reicht sie im Shop ein und bekommt einen signierten
+  Schlüssel mit fester Laufzeit zurück (im Voraus bezahlt, z. B. ein Jahr); eingefügt wird er ins selbe Feld.
+  Gebaut ist dieser Weg (`KeyRequests.cs`, `LicenceKeys.cs`); beim Abo-Umbau bleibt er erhalten.
 
   *Vorbereitet (23.09.2026):* der Strato-vServer — Ubuntu 26.04 LTS, aktuell, automatische Sicherheitsupdates,
   Firewall des Kundenmenüs lässt nur 22, 80, 443 durch, SSH nur mit Schlüssel, NPMplus als Reverse Proxy (Verwaltung
