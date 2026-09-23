@@ -12,7 +12,7 @@ namespace Journali.Server;
 public static class JobApi
 {
     public sealed record ProfileSecrets(Dictionary<string, string?>? Values);
-    public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets, JobFiles? Files);
+    public sealed record JobBody(string? Label, string? Plugin, string? Service, Dictionary<string, string>? Params, string? Schedule, bool? Enabled, int? TimeoutMinutes, Dictionary<string, string?>? Secrets, JobFiles? Files, string? Role);
 
     public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
@@ -68,7 +68,15 @@ public static class JobApi
                 if (secrets.Count > 0) Secrets.Set(runner.Dir, key, secrets);
                 var files = body.Files is { } fb ? new JobFiles(Blank(fb.Base), Blank(fb.Keep), fb.Latest, fb.Archive) : cur?.Files;
                 if (files?.Base is { } fbase && (fbase.Contains("..") || !Path.IsPathRooted(fbase))) return Bad("Fächer: Basis muss ein absoluter Pfad sein (auf dem Server).");
-                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files);
+                // Die Rolle des Laufs ändert nur, wer Anwender und Rollen verwaltet — sonst wäre ein Job ein Weg zu fremden Rechten
+                var rolle = cur?.Role;
+                if (body.Role is not null && body.Role != (cur?.Role ?? ""))
+                {
+                    if (!Auth.Has(req, c, Rights.Users)) return Bad("Die Rolle eines Jobs setzt, wer Anwender und Rollen verwaltet.");
+                    rolle = Blank(body.Role);
+                    if (rolle is not null && !c.Users.Roles.ContainsKey(rolle)) return Bad($"Unbekannte Rolle {rolle}.");
+                }
+                var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files, rolle);
                 write(actor, Jobs.Stream + key, Types.JobDefined, def, null);
                 return Results.Ok(View(c.Jobs.All[key], runner));
             });
@@ -142,7 +150,7 @@ public static class JobApi
         var secrets = Secrets.Get(runner.Dir, j.Key).Keys.ToList();
         return new
         {
-            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes, files = j.Files,
+            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes, files = j.Files, role = j.Role,
             waiting = runner.Fach.Waiting(j, null).Count, consumed = j.Consumed.Count, written = j.Written.Count,
             secrets, nextDue = j.Enabled ? JobRunner.NextDue(j.Schedule) : null,
             running = runner.RunningId(j.Key),

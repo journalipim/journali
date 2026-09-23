@@ -188,7 +188,7 @@ async function mount(root, ctx) {
   function drawDetail() {
     detail.innerHTML = ''
     const d = st.detail; if (!d) return
-    const head = el('div', { class: 'toolbar', style: 'gap:10px' }, el('b', {}, d.label), el('span', { class: 'muted' }, `${d.plugin} · ${d.scheduleText} · Zeitgrenze ${d.timeoutMinutes} min`),
+    const head = el('div', { class: 'toolbar', style: 'gap:10px' }, el('b', {}, d.label), el('span', { class: 'muted' }, `${d.plugin} · ${d.scheduleText} · Zeitgrenze ${d.timeoutMinutes} min${d.role ? ' · Rolle ' + d.role : ''}`),
       el('span', { class: 'muted mono', style: 'font-size:11px' }, Object.entries(d.params).map(([k, v]) => `${k}=${v}`).join(' ')), d.secrets.length ? el('span', { class: 'chip', title: 'Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal' }, `🔒 ${d.secrets.join(', ')}`) : '')
     const runs = el('div', { style: 'width:340px;border-right:1px solid var(--line);overflow:auto' })
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
@@ -314,6 +314,14 @@ async function mount(root, ctx) {
     else if (preset) { pluginSel.value = preset; if (pluginSel.value !== preset) pluginSel.value = st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|')) ? svcId(st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|'))) : pluginSel.value }
     const sched = scheduleAssistant(j?.schedule ?? '', () => {})   // Zeitplan-Assistent (Taloan) statt Vorgaben-Liste
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
+    // Mit welcher Rolle der Lauf arbeitet: davon hängen seine Rechte ab (eine Sicherung braucht „Anwender und Rollen“).
+    // Sichtbar nur für die Rollenverwaltung — sonst wäre ein Job ein Weg zu fremden Rechten.
+    const darfRolle = store.can('users')
+    const rolleSel = el('select', { style: 'width:180px', title: 'Rechte des Laufs; leer = editor' }, el('option', { value: '' }, '— editor —'))
+    if (darfRolle) api.get('/api/auth/roles').then(rs => {
+      for (const r of rs) rolleSel.append(el('option', { value: r.key }, r.label || r.key))
+      rolleSel.value = j?.role ?? ''
+    }).catch(() => {})
     // Fächer (docs/tasker-dateien.md, Taloan: der Tasker besitzt die Ablage): Basis, Aufbewahrung, latest, Archiv — nur bei Prozessen mit files im Manifest
     const fBase = el('input', { type: 'text', value: j?.files?.base ?? '', placeholder: 'leer = jobs/<key> beim Server', style: 'flex:1' })
     const fachLabelEl = el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Fächer · Basis')
@@ -450,7 +458,7 @@ async function mount(root, ctx) {
       const schedule = sched.value()
       try {
         const files = fachBox.style.display === 'none' ? null : { base: fBase.value.trim() || null, keep: fKeep.value.trim() || null, latest: fLatest.checked, archive: fArchive.checked }
-        await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60, files }, 'PUT')
+        await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60, files, ...(darfRolle ? { role: rolleSel.value } : {}) }, 'PUT')
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
       } catch (e) { store.toast(e.message) }
     }
@@ -460,7 +468,7 @@ async function mount(root, ctx) {
       { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab('Bezeichnung'), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint) },
       { name: '② Womit', box: el('div', {}, paramsBox), leer: () => !paramsBox.childElementCount },
       { name: '③ Ablage', box: el('div', {}, fachBox), leer: () => fachBox.style.display === 'none' },
-      { name: '④ Wann', box: el('div', {}, lab('Zeitplan'), sched.el, lab('Zeitgrenze (min)'), timeoutIn) },
+      { name: '④ Wann', box: el('div', {}, lab('Zeitplan'), sched.el, lab('Zeitgrenze (min)'), timeoutIn, ...(darfRolle ? [lab('Rolle des Laufs'), rolleSel] : [])) },
     ]
     const chips = seiten.map((s, i) => el('span', { class: 'view-chip', style: 'cursor:pointer', title: s.name.slice(2), onclick: () => zeige(i) }, s.name))
     /// Seiten mit offenen Punkten tragen ein ✗ und sagen im Tooltip, was fehlt — anklickbar, dort steht es dann unten

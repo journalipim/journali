@@ -109,8 +109,8 @@ stehen dort als solche markiert.
   **Einstellungen: ein Reiter je Sache** (Taloan, 23.09.): ◐ Ich (Darstellung, Sicht,
   dieser Rechner, mein Konto mit Passwort und **meinen API-Token** — die gehören zur
   Person, nicht zum Team) · ◍ Team (Mitglieder, KI-Schlüssel, journali-Token gegen die
-  Limits **und die Lizenz** — Limits und Gekauftes hängen am Team) · ◈ Rollen &
-  Rechte (Anwender, Rollen, Teams anlegen) · ▨ Storage (wo die Bytes liegen) ·
+  Limits **und die Lizenz** — Limits und Gekauftes hängen am Team) · ◈ IAM
+  (Anwenderkonten, Rollen, Rechte, Teams anlegen) · ⚑ Workflows · ▨ Storage ·
   ▩ Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
   pflegen darf) · ✉ Mail · ↺ Recovery (nur der Weg **zurück**; gesichert wird
   als Job des Plugins `backup`) · ⚑ Workflows.

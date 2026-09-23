@@ -621,7 +621,12 @@ public sealed record PluginDataSet(string Name, string? Value);
 /// <summary>Ein Job: Plugin mit Prozess, Parameter (ohne Geheimnisse — die liegen in jobs/secrets.json), Zeitplan als cron
 /// „m h dom mon dow“ (leer = nur von Hand), an/aus, Zeitgrenze. Der letzte Eintrag gilt ganz.
 /// Service (Taloan, 19.09.: mehrere Dienste je Plugin): Schlüssel aus processes[] im Manifest; leer = der eine process.</summary>
-public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null);
+/// <summary>
+/// Ein Job. <paramref name="Role"/> sagt, mit welcher Rolle der Lauf arbeitet (Taloan, 23.09.2026: der Sicherungsjob
+/// scheiterte an „Rolle editor darf das nicht“) — null heisst wie bisher editor. Setzen darf sie nur, wer Anwender
+/// und Rollen verwaltet; sonst könnte sich jeder über einen Job Rechte verschaffen.
+/// </summary>
+public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null, string? Role = null);
 
 /// <summary>
 /// Fächer eines Jobs (docs/tasker-dateien.md): <c>Base</c> = Verzeichnis mit in/, done/, failed/, out/ (leer = jobs/&lt;key&gt;;

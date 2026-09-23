@@ -390,7 +390,7 @@ Wer `users` hat, darf ohnehin alles, was `team` verlangt.
 
 | Typ | Nutzlast | Bedeutung |
 |---|---|---|
-| `JobDefined` | `label`, `plugin`, `service` (Dienst aus `processes[]`, leer = `process`), `params{}`, `schedule` (cron „m h tag monat wochentag“, dazu `dN:Datum`/`wN:Datum` = alle N Tage/Wochen; leer = nur von Hand), `enabled`, `timeoutMinutes` | der Job — Plugin mit Prozess und Parametern; Geheimnisse (`secret: true` im Manifest) stehen nicht hier, sondern in `jobs/secrets.json` beim Server |
+| `JobDefined` | `label`, `plugin`, `service` (Dienst aus `processes[]`, leer = `process`), `params{}`, `schedule` (cron „m h tag monat wochentag“, dazu `dN:Datum`/`wN:Datum` = alle N Tage/Wochen; leer = nur von Hand), `enabled`, `timeoutMinutes`, `role?` | der Job — Plugin mit Prozess und Parametern; Geheimnisse (`secret: true` im Manifest) stehen nicht hier, sondern in `jobs/secrets.json` beim Server. `role` sagt, mit welcher Rolle der Lauf arbeitet (null = `editor` wie bisher) — setzen darf sie nur, wer Anwender und Rollen verwaltet |
 | `JobRetired` | — | Job weg; seine Läufe bleiben im Journal |
 | `JobRunStarted` | `run`, `trigger` (schedule, manual) | Lauf begonnen — Urheber `job:<key>` |
 | `JobRunFinished` | `run`, `status` (ok, failed, timeout, cancelled), `exit`, `seconds`, `summary`, `logBytes` | Lauf zu Ende; das Log liegt als Datei `jobs/<key>/<run>.log` |

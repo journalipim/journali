@@ -84,8 +84,9 @@ public static class Auth
     private static string NewSecret() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
 
     // ---- Dienst-Token für Jobs und Belegerzeuger: nur im Speicher, gültig bis zum Ende des Laufs ----
-    private static readonly ConcurrentDictionary<string, string> Service = new();   // token → actor
-    public static string IssueServiceToken(string actor) { var t = "svc_" + NewSecret(); Service[t] = actor; return t; }
+    private static readonly ConcurrentDictionary<string, (string Actor, string? Role)> Service = new();   // token → wer und mit welcher Rolle
+    /// <summary>Token für einen Joblauf. <paramref name="role"/> kommt vom Job (null = editor wie bisher).</summary>
+    public static string IssueServiceToken(string actor, string? role = null) { var t = "svc_" + NewSecret(); Service[t] = (actor, role); return t; }
     public static void RevokeServiceToken(string token) => Service.TryRemove(token, out _);
 
     /// <summary>Gibt es Benutzer? Dann ist der Server gesperrt und X-Actor kommt aus der Sitzung.</summary>
@@ -98,7 +99,13 @@ public static class Auth
         if (auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
         {
             var token = auth[7..].Trim();
-            if (token.StartsWith("svc_") && Service.TryGetValue(token, out var actor)) return (actor, c.With((_, _, _) => c.Users.Roles.ContainsKey("editor")) ? "editor" : "$service");
+            if (token.StartsWith("svc_") && Service.TryGetValue(token, out var svc))
+            {
+                // Die Rolle des Jobs, wenn es sie gibt — sonst wie bisher editor (und ohne Rollen im Journal: $service)
+                var rolle = svc.Role is { Length: > 0 } r && c.With((_, _, _) => c.Users.Roles.ContainsKey(r)) ? r
+                    : c.With((_, _, _) => c.Users.Roles.ContainsKey("editor")) ? "editor" : "$service";
+                return (svc.Actor, rolle);
+            }
             var rec = With(dir, s => s.Tokens.GetValueOrDefault(Sha(token)));
             if (rec is not null && c.With((_, _, _) => c.Users.All.GetValueOrDefault(rec.User)) is { Enabled: true } tu) return (tu.Key, tu.Role);
             return null;

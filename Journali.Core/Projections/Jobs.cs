@@ -42,6 +42,8 @@ public sealed class JobState
     public string? Schedule { get; set; }                    // cron „m h dom mon dow“; null = nur von Hand
     public bool Enabled { get; set; } = true;
     public int TimeoutMinutes { get; set; } = 60;
+    /// <summary>Rolle des Laufs (null = editor wie bisher) — daran hängen die Rechte des Dienst-Tokens.</summary>
+    public string? Role { get; set; }
     public List<JobRun> Runs { get; } = new();               // jüngste zuerst, höchstens 200
     public JobFiles? Files { get; set; }                     // Fächer (docs/tasker-dateien.md); null = wie bisher, jobs/<key>
     public List<JobFile> Consumed { get; } = new();          // verarbeitete Eingänge, jüngste zuerst, höchstens 500
@@ -78,6 +80,7 @@ public sealed class Jobs : IProjection
                 if (!_all.TryGetValue(key, out var j)) _all[key] = j = new JobState { Key = key };
                 j.Label = d.Label; j.Plugin = d.Plugin; j.Service = d.Service ?? ""; j.Params = d.Params ?? new(); j.Schedule = string.IsNullOrWhiteSpace(d.Schedule) ? null : d.Schedule.Trim();
                 j.Enabled = d.Enabled; j.TimeoutMinutes = d.TimeoutMinutes is > 0 ? d.TimeoutMinutes.Value : 60;
+                j.Role = string.IsNullOrWhiteSpace(d.Role) ? null : d.Role.Trim();
                 j.Files = d.Files;
                 Touch(j, entry);
                 break;

@@ -2,7 +2,7 @@
 // Einstellungen: ein Reiter je Sache, sichtbar nach Recht (Taloan, 23.09.2026: „im Moment ist alles durcheinander wie es
 // gewachsen ist“ · „die Seite Anlage heisst völlig bescheuert und wirft alles Kraut und Rüben durcheinander — im Grunde
 // ist das der Tab für den Administrator, den wir jetzt in seine Bestandteile zerlegen“):
-// ◐ Ich · ◍ Team (mit der Lizenz) · ◈ Rollen & Rechte (mit den Teams) · ▨ Storage · ▩ Assets · ✉ Mail · ↺ Recovery · ⚑ Workflows.
+// ◐ Ich · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ↺ Recovery.
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
 // Speicher selbst nicht heranmuss (Taloan, 23.09.2026).
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
@@ -40,12 +40,12 @@ async function save() {
     <div class="toolbar"><h1>⚙ Einstellungen</h1>
       <span class="tab" :class="{ on: tab === 'ich' }" @click="tab = 'ich'" title="gilt nur für mich">◐ Ich</span>
       <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'team' }" @click="tab = 'team'" title="die Gruppe, in der ich arbeite">◍ Team</span>
-      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'" title="wer im System arbeitet, mit welcher Rolle und in welchem Team">◈ Rollen &amp; Rechte</span>
+      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'" title="Anwenderkonten, Rollen, Rechte und Teams">◈ IAM</span>
+      <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'" title="Zustände und Übergänge über den Daten">⚑ Workflows</span>
       <span v-if="store.can('storage')" class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'" title="wo die Bytes liegen">▨ Storage</span>
       <span v-if="store.can('model') || store.can('storage')" class="tab" :class="{ on: tab === 'assets' }" @click="tab = 'assets'" title="Vorschau-Ableitungen und ihr Bestand">▩ Assets</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'" title="ausgehender Mailserver">✉ Mail</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'" title="Eine Sicherung einspielen; gesichert wird als Job.">↺ Recovery</span>
-      <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'" title="Zustände und Übergänge über den Daten">⚑ Workflows</span>
     </div>
     <div class="scroll" v-if="tab === 'team'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>

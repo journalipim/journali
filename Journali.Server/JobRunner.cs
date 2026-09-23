@@ -88,7 +88,7 @@ public sealed class JobRunner : BackgroundService
         if (!PluginApi.Scan(_pluginDir).TryGetValue(job.Plugin, out var m) || PluginApi.ProcessOf(m.Raw, job.Service) is not { } proc) { error = $"Plugin {job.Plugin} hat keinen Prozess {job.Service}"; return null; }
         var run = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss") + "-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(2)).ToLowerInvariant();
         var actor = "job:" + key;
-        var token = Auth.IssueServiceToken(actor);   // gilt fuer diesen Lauf (JOURNALI_TOKEN); der Prozess schickt ihn als Bearer
+        var token = Auth.IssueServiceToken(actor, job.Role);   // gilt fuer diesen Lauf (JOURNALI_TOKEN); der Prozess schickt ihn als Bearer
         var values = new Dictionary<string, string>(job.Params) { ["journali"] = Origin, ["actor"] = actor, ["job"] = key, ["run"] = run, ["token"] = token };
         foreach (var (k, v) in Secrets.Get(Dir, key)) values[k] = v;
         // Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen“): profile:<name> (sonst config:<name>) aus den Plugin-Daten im Journal
