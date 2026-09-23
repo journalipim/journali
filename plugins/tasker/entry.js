@@ -32,11 +32,19 @@ export function stelle(def, profilGewaehlt) {
 
 /// Welche Fächer ein Job benutzt: liest er Dateien, gibt es in/, done/ und failed/; schreibt er, gibt es out/.
 /// (Taloan, 23.09.2026: ein Sicherungsjob legt nur ab — dann von in/ und failed/ zu sprechen, führt in die Irre.)
-export function fachNames(files) {
+export function fachNames(files, params = {}) {
   const out = []
-  if (files?.in) out.push('in/', 'done/', 'failed/')
-  if (files?.out) out.push('out/')
+  if (nutztFach(files?.in, params)) out.push('in/', 'done/', 'failed/')
+  if (nutztFach(files?.out, params)) out.push('out/')
   return out
+}
+
+/// Benutzt der Job dieses Fach? Nur, wenn er den Parameter leer lässt — sonst liest oder schreibt er selbst, und der
+/// Tasker sieht die Dateien nie (JobFach.cs: er füllt den Parameter nur, wenn der Job ihn leer lässt).
+export function nutztFach(spec, params = {}) {
+  if (!spec) return false
+  const p = spec.param
+  return !p || !String(params[p] ?? '').trim()
 }
 
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
@@ -387,15 +395,26 @@ async function mount(root, ctx) {
         paramInputs[d.key] = inp
       }
 
-      fachBox.style.display = p?.files ? '' : 'none'
+
       // nur die Fächer nennen, die dieses Plugin wirklich benutzt: wer nur schreibt, hat kein in/ und kein failed/
-      if (p?.files) { fachLabelEl.textContent = `Fächer · Basis (${fachNames(p.files).join(', ')})`; fBaseBtn.title = `Basis der Fächer auf dem Server wählen (${fachNames(p.files).join(', ')})` }
+      aktualisiereFaecher()
       if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, 'Dieses Plugin hat keine Parameter.'))
     }
     // Speichern nur, wenn der Job laufen kann (Taloan, 21.09.: „speichern deaktiviert, solange ein Profil nicht ausführbar ist“):
     // key, Profil (wenn der Prozess eines hat), Dateien/Verzeichnisse, Geheimnis (am Job oder am Profil hinterlegt)
     let profileSecrets = []
     let markieren = null   // wird gesetzt, sobald die Schrittleiste steht (weiter unten)
+    /// Welche Fächer der Job wirklich benutzt — hängt davon ab, ob seine Pfad-Parameter leer sind
+    function aktualisiereFaecher() {
+      const p = st.plugins.find(x => svcId(x) === pluginSel.value)
+      const werte = Object.fromEntries(Object.entries(paramInputs).map(([k, i]) => [k, i?.value ?? '']))
+      const namen = p?.files ? fachNames(p.files, werte) : []
+      fachBox.style.display = namen.length ? '' : 'none'
+      if (namen.length) {
+        fachLabelEl.textContent = `Fächer · Basis (${namen.join(', ')})`
+        fBaseBtn.title = `Basis der Fächer auf dem Server wählen (${namen.join(', ')})`
+      }
+    }
     let schritt = 0        // welche Seite gerade sichtbar ist — check() zeigt nur deren Meldungen
     const saveBtn = el('button', { class: 'primary', onclick: () => save() }, '💾 Speichern')
     const why = el('span', { class: 'neg', style: 'font-size:12px;align-self:center;flex:1' })
@@ -422,7 +441,8 @@ async function mount(root, ctx) {
       return reasons.length === 0
     }
     pluginSel.addEventListener('change', () => { drawParams(); check(); zeige(schritt); kopfSetzen() }); drawParams(); check()
-    dlg.addEventListener('input', check); dlg.addEventListener('change', check)
+    const auffrischen = () => { aktualisiereFaecher(); zeige(schritt) }   // zeige() ruft check()
+    dlg.addEventListener('input', auffrischen); dlg.addEventListener('change', auffrischen)
     const save = async () => {
       if (!check()) return
       const key = (isNew ? keyIn.value : j.key).trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
@@ -458,7 +478,7 @@ async function mount(root, ctx) {
     /// hat diese Seite etwas zu zeigen? (ohne Fächer keine Ablage, ohne Parameter kein Womit)
     const voll = i => !seiten[i].leer?.()
     function zeige(i) {
-      if (!voll(i)) return
+      if (!voll(i)) { const ersatz = naechsteSeite(seiten.map((_, n) => voll(n)), i, -1) ?? naechsteSeite(seiten.map((_, n) => voll(n)), i, 1); if (ersatz === null) return; i = ersatz }
       schritt = i
       bühne.innerHTML = ''
       bühne.append(seiten[i].box)
