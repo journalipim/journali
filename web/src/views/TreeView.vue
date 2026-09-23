@@ -554,7 +554,7 @@ function onDialogKey(e) {
       <span class="muted">{{ tree.rows.length }}</span>
       <input ref="search" v-model="q" type="search" placeholder="Suche in allem  /" style="flex:1;min-width:0" autocomplete="off"
         @input="suggest" @focus="suggest" @click="suggest" @blur="hideSugg" @keydown="onSearchKey"
-        title="Text — oder Bedingungen (Vorschläge beim Tippen): attr:function · attr:function=*sku* · attr:x= (leer) · empty:name/en · incomplete:web · role:variant · status:active · group:logistics · under:<id> · by:Taloan · since:2026-09-10" />
+        title="Text — oder Bedingungen (Vorschläge beim Tippen): attr:function · attr:function=*sku* · attr:x= (leer) · empty:name/en · incomplete:web · role:variant · status:active · group:logistics · under:<id> · by:<name> · since:2026-09-10" />
     </div>
     <div v-if="sugg.length" class="sugg">
       <div v-for="(s, i) in sugg" :key="s.value" class="sugg-row" :class="{ on: i === suggIdx }" @mousedown.prevent="accept(s)" @mousemove="suggIdx = i">

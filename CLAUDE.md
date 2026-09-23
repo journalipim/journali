@@ -78,7 +78,10 @@ stehen dort als solche markiert.
   install(ctx) (einmal beim Einschalten: legt an, was das Plugin braucht); Plugin-Daten im
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`). **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,
-  Ansichten oder READMEs — die gehören in ein Profil
+  Ansichten oder READMEs — die gehören in ein Profil. **Kein Name, kein Zitat**
+  in dem, was der Anwender liest (Taloan, 23.09.): Beschreibungen, Tooltips,
+  Beispiele erklären die Sache, nicht ihre Entstehung — der Grund gehört in den
+  Text, der Urheber nicht. Im Quelltext bleibt beides (Prüfstand `kein-name.test.mjs`)
 - `web` — Vue 3 + Vite, Fat-Client-Gefühl: keine Seitenwechsel, Inline-
   Bearbeitung in der Zelle, Tastatur durch Listen, Journal lebendig daneben.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
