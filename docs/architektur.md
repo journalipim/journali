@@ -189,5 +189,18 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   *Vorbereitet (23.09.2026):* der Strato-vServer — Ubuntu 26.04 LTS, aktuell, automatische Sicherheitsupdates,
   Firewall des Kundenmenüs lässt nur 22, 80, 443 durch, SSH nur mit Schlüssel, NPMplus als Reverse Proxy (Verwaltung
   nur über SSH-Tunnel). Der Lizenzserver bekommt dort einen eigenen Proxy-Eintrag mit Certbot.
-  *Zu prüfen im Testmodus* (`test_mode`): ob der Lizenzschlüssel beim Tarifwechsel derselbe bleibt; die genaue
-  Antwort von `activate`.
+  *Geprüft im Testmodus (23.09.2026, ein Abo-Produkt mit drei Varianten, zwei Testkäufe, Aufrufe per curl):*
+  - `activate` und `validate` gehen **ohne API-Schlüssel**; die Antwort trägt **keine Signatur** (weder im Rumpf
+    noch in den Kopfzeilen) — der Lizenzserver signiert selbst.
+  - Die Antwort nennt `meta.variant_id` und `variant_name` (daraus die Grenzen), `license_key.status`,
+    `activation_limit`/`activation_usage`, `instance.id` und `instance.name`; `expires_at` ist bei Abo-Schlüsseln
+    `null`. Sie enthält auch `customer_email` — die geht nicht an die Instanz weiter.
+  - Die Grenze greift: ein zweites `activate` mit demselben Schlüssel („test-instanz/italien“ nach
+    „test-instanz/init“) → `"activated": false`, „This license key has reached the activation limit.“
+  - **Tarifwechsel** im Kundenportal (PRO → ENTERPRISE): **derselbe Schlüssel**, `validate` meldet sofort die neue
+    Variante. Der Wechsel muss im Kundenportal freigeschaltet sein (Design → Customer Portal, Produkte wählen).
+  - **Achtung:** `activation_limit` sprang beim Wechsel von 1 auf 5 — die Grenze hängt an der Variante. Also bei
+    allen Varianten 1 einstellen, und der Lizenzserver prüft „ein Schlüssel, ein Team“ selbst, statt sich darauf zu
+    verlassen.
+  - Rate Limit laut Kopfzeile `x-ratelimit-limit: 300` (die Dokumentation nennt 60 je Minute).
+  - Im Kundenportal besser „Update subscription quantity“ aus: die Grenzen hängen am Tarif, nicht an einer Anzahl.
