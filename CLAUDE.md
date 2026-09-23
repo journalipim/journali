@@ -96,6 +96,12 @@ stehen dort als solche markiert.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
   Tooltip — **ein sichtbarer Text ist höchstens ein Satz**, alles Weitere steht in
   `title=` (Prüfstand `sichtbare-texte.test.mjs`). Positiv grün, negativ rot.
+  **Eine Meldung sagt, was ist — nicht, was der Anwender zu tun hat** (Taloan,
+  23.09.: „wer sind die Menschen, mit denen wir hier reden? Wenn du den Teller
+  nicht leer gegessen hast, darfst du abends nicht fernsehen?“). Kein „bitte“,
+  kein „erst …“, kein Ratschlag; ein Satz. Gilt auch für die Meldungen des
+  Servers — Prüfstand `servermeldungen.test.mjs` liest `Bad("…")` und `error = "…"`
+  aus `Journali.Server`.
   **Eine Überschrift ist ein Name und eine Zahl** (Taloan, 23.09.): der Beisatz nach
   dem `·` zählt auf oder zählt ab — er erklärt nichts, begründet nichts, bewertet
   nichts („· gemessen, nicht geschätzt“ ist die Antwort auf einen Einwand, den

@@ -11,7 +11,7 @@ namespace Journali.Server;
 /// Beim Start werden die Abbilder aus dem Journal neu gebaut; sie sind nie das Original.
 /// </summary>
 /// <summary>Der Urheber hat kein Kontingent — der Eintrag würde journali-Token kosten (Taloan, 23.09.2026).</summary>
-public sealed class KeinKontingentException() : InvalidOperationException("Kein Kontingent — dieses Team braucht eigene Limits aus der Lizenz oder ein Team, über das es abrechnet.");
+public sealed class KeinKontingentException() : InvalidOperationException("Kein Kontingent — nichts gespeichert.");
 
 public sealed class Catalog
 {

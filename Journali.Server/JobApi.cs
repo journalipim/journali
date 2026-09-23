@@ -85,7 +85,7 @@ public static class JobApi
         api.MapDelete("/jobs/{key}", (string key, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            if (runner.IsRunning(key)) return Bad("Der Job läuft gerade — erst abbrechen.");
+            if (runner.IsRunning(key)) return Bad("Der Job läuft.");
             Secrets.Remove(runner.Dir, key);
             return c.With((_, _, write) => c.Jobs.All.ContainsKey(key) ? Results.Ok(EntryView.Of(write(actor, Jobs.Stream + key, Types.JobRetired, new JobRetired(), null))) : Results.NotFound());
         });

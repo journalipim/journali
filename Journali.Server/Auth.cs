@@ -236,7 +236,7 @@ public static class Auth
         // Ersten Administrator anlegen — nur solange es keinen Benutzer gibt
         api.MapPost("/auth/setup", (SetupBody body, HttpContext ctx, Catalog c) =>
         {
-            if (Enabled(c)) return Bad("Es gibt schon Anwender — bitte anmelden.");
+            if (Enabled(c)) return Bad("Es gibt schon Anwender.");
             var key = Key(body.User); if (key is null) return Bad("Anmeldename: a-z, 0-9, ., _, - (2–40 Zeichen).");
             if (Blank(body.Password) is not { Length: >= 8 } pw) return Bad("Passwort: mindestens 8 Zeichen.");
             // der erste Administrator gehört ins Init Team und führt es; ändern darf er das jederzeit (Taloan, 23.09.2026)

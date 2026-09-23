@@ -64,8 +64,8 @@ public static class TeamApi
                     // Die Grenzen setzt der Administrator (Taloan, 23.09.2026: „das wäre schön, wenn jeder seine Werte selbst
                     // festlegen könnte, oder?“) — ein Manager, der sein eigenes Budget schreibt, ist keine Grenze.
                     if (body.IncludedTokens is not null && body.IncludedTokens != cur.IncludedTokens) return Bad("Das Grundkontingent setzt der Administrator.");
-                    if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Limits trägt der Administrator ein.");
-                    if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Limits trägt der Administrator ein.");
+                    if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Limits ergeben sich aus der Lizenz.");
+                    if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Limits ergeben sich aus der Lizenz.");
                     if (body.KeysFrom is not null && Blank(body.KeysFrom) != cur.KeysFrom) return Bad("Woher die Schlüssel kommen, entscheidet der Administrator.");
                     if (body.Managers is not null) return Bad("Wer das Team führt, bestimmt der Administrator.");
                 }
@@ -88,7 +88,7 @@ public static class TeamApi
                 var included = body.IncludedTokens ?? cur?.IncludedTokens ?? 0;
                 // Das Inklusivkontingent gibt es einmal, am ersten Team (Taloan, 23.09.2026): sonst wäre jedes neue Team ein neuer Freibetrag
                 var ersteres = c.Teams.Primary;
-                if (included > 0 && ersteres is not null && ersteres.Key != key) return Bad($"Das Grundkontingent hat „{ersteres.Label}“ — das erste Team. Ein weiteres Team bringt eigene Schlüssel mit oder hängt an einem Zahler.");
+                if (included > 0 && ersteres is not null && ersteres.Key != key) return Bad($"Das Grundkontingent hat „{ersteres.Label}“ — das erste Team.");
                 if (Blank(body.Label) is null && cur is null) return Bad("Bezeichnung fehlt.");
                 foreach (var (n, v) in new[] { ("monatlich", body.MonthlyTokens), ("täglich", body.DailyTokens), ("Grundkontingent", body.IncludedTokens) })
                     if (v is < 0) return Bad($"Grenze {n}: 0 oder mehr (0 = keine).");
@@ -159,7 +159,7 @@ public static class TeamApi
                 if (c.Teams.Get(key) is null) return Results.NotFound();
                 if (c.Users.All.GetValueOrDefault(user) is not { } u) return Bad($"Unbekannter Anwender {user}.");
                 if (u.Team == key) return Bad($"{u.Name ?? u.Key} ist schon hier.");
-                if (u.Team is { Length: > 0 } andere) return Bad($"{u.Name ?? u.Key} steht im Team {c.Teams.Get(andere)?.Label ?? andere} — dort erst austragen.");
+                if (u.Team is { Length: > 0 } andere) return Bad($"{u.Name ?? u.Key} steht im Team {c.Teams.Get(andere)?.Label ?? andere}.");
                 write(actor, Users.Stream + user, Types.UserDefined, new UserDefined(u.Name, u.Email, u.Role, u.Enabled, key), null);
                 return Results.Ok(new { user, team = key });
             });
@@ -173,7 +173,7 @@ public static class TeamApi
             {
                 if (c.Users.All.GetValueOrDefault(user) is not { } u) return Results.NotFound();
                 if (u.Team != key) return Bad($"{u.Name ?? u.Key} steht nicht in diesem Team.");
-                if (c.Teams.Leads(key, user)) return Bad($"{u.Name ?? u.Key} führt dieses Team — erst die Führung ändern.");
+                if (c.Teams.Leads(key, user)) return Bad($"{u.Name ?? u.Key} führt dieses Team.");
                 write(actor, Users.Stream + user, Types.UserDefined, new UserDefined(u.Name, u.Email, u.Role, u.Enabled, null), null);
                 return Results.Ok(new { user, team = (string?)null });   // teamlos: keine Schlüssel, keine Grenzen, keine KI
             });

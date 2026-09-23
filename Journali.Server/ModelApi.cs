@@ -105,7 +105,7 @@ public static partial class ModelApi
         m.MapDelete("/locales/{code}", (string code, HttpRequest req, Catalog c) =>
             Command(req, c, code, ValidCode, (model, write) =>
                 !model.Locales.ContainsKey(code) ? Results.NotFound()
-                : model.MasterLocale == code ? Bad($"{code} ist die Mastersprache — erst eine andere zur Mastersprache machen.")
+                : model.MasterLocale == code ? Bad($"{code} ist die Mastersprache.")
                 : model.Locales.Count <= 1 ? Bad("Die letzte Sprache bleibt.")
                 : write(Model.LocaleStream + code, Types.LocaleRetired, new LocaleRetired(code))));
 
@@ -119,7 +119,7 @@ public static partial class ModelApi
             Command(req, c, key, ValidCode, (model, write) =>
             {
                 if (!model.Channels.ContainsKey(key)) return Results.NotFound();
-                if (model.MasterChannel == key) return Bad($"{key} ist der Masterkanal — erst einen anderen zum Masterkanal machen.");
+                if (model.MasterChannel == key) return Bad($"{key} ist der Masterkanal.");
                 var users = model.Attributes.Values.Where(a => (a.Channels?.Contains(key) ?? false) || (a.Required?.ContainsKey(key) ?? false)).Select(a => a.Key).ToList();
                 return users.Count > 0 ? Bad($"{key} wird benutzt von: {string.Join(", ", users)}") : write(Model.ChannelStream + key, Types.ChannelRetired, new ChannelRetired(key));
             }));
@@ -135,7 +135,7 @@ public static partial class ModelApi
                 if (!model.Statuses.ContainsKey(key)) return Results.NotFound();
                 if (key == Statuses.Draft) return Bad("draft ist der Startstatus neuer Knoten und bleibt.");
                 var n = tree.Nodes.Values.Count(x => x.HasStatus && x.Status == key);
-                if (n > 0) return Bad($"{key} steht an {n} Knoten — erst umsetzen (Tabelle, Workflow-Wirkung).");
+                if (n > 0) return Bad($"{key} steht an {n} Knoten.");
                 var wf = c.Workflows.All.Values.Where(x => x.Transitions.Any(t => (t.Effects ?? []).Contains("status:" + key))).Select(x => x.Key).ToList();
                 return wf.Count > 0 ? Bad($"{key} ist Wirkung in Workflow {string.Join(", ", wf)}.") : Results.Ok(EntryView.Of(write(Actor(req)!, Model.StatusStream + key, Types.StatusRetired, new StatusRetired(key), null)));
             });
@@ -211,7 +211,7 @@ public static partial class ModelApi
                 !model.Attributes.ContainsKey(key) ? Results.NotFound()
                 // Sperre: solange das Attribut irgendwo das Sternchen trägt, verlöre der Baum dort seine Namen.
                 : tree.WithLabelAttribute(key).FirstOrDefault() is { } n
-                    ? Bad($"{key} ist ★ Name im Baum ab {NodeRow.LabelOf(tree, model, n)} ({n.Id}) — erst dort das Sternchen umsetzen.")
+                    ? Bad($"{key} ist ★ Name im Baum ab {NodeRow.LabelOf(tree, model, n)} ({n.Id}).")
                     : Results.Ok(EntryView.Of(write(actor, Model.AttributeStream + key, Types.AttributeRetired, new AttributeRetired(key), null))));
         });
 

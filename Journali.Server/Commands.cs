@@ -292,7 +292,7 @@ public static class Commands
     public static Outcome Retire(Ctx c, string id)
     {
         if (!c.Tree.Nodes.ContainsKey(id)) return Outcome.Missing;
-        if (c.Tree.Children(id).Any()) return Outcome.Bad("Erst die Kinder entfernen.");
+        if (c.Tree.Children(id).Any()) return Outcome.Bad("Der Knoten hat noch Kinder.");
         return Outcome.Ok(c.Write(id, Types.NodeRetired, new NodeRetired()));
     }
 
@@ -300,7 +300,7 @@ public static class Commands
     public static Outcome Restore(Ctx c, string id)
     {
         if (!c.Tree.Retired.TryGetValue(id, out var n)) return c.Tree.Nodes.ContainsKey(id) ? Outcome.Bad("Der Knoten ist nicht zurückgezogen.") : Outcome.Missing;
-        if (n.Parent is not null && !c.Tree.Nodes.ContainsKey(n.Parent)) return Outcome.Bad("Erst den Knoten darüber zurückholen.");
+        if (n.Parent is not null && !c.Tree.Nodes.ContainsKey(n.Parent)) return Outcome.Bad("Der Knoten darüber ist zurückgezogen.");
         return Outcome.Ok(c.Write(id, Types.NodeRestored, new NodeRestored()));
     }
 
@@ -801,7 +801,7 @@ public static class Commands
     {
         if (!c.Media.Folders.ContainsKey(id)) return Outcome.Missing;
         var subs = c.Media.SubFolders(id).Count(); var media = c.Media.InFolder(id).Count();
-        if (subs + media > 0) return Outcome.Bad($"Nicht leer: {subs} Unterordner, {media} Medien — erst verschieben.");
+        if (subs + media > 0) return Outcome.Bad($"Nicht leer: {subs} Unterordner, {media} Assets.");
         return Outcome.Ok(c.Write(id, Types.MediaFolderRetired, new MediaFolderRetired()));
     }
 
