@@ -59,7 +59,11 @@ const api = {
     while (i < commands.length) {
       const ende = Math.min(i + size, commands.length)
       const stueck = commands.slice(i, ende).map(ersetze)
-      const res = await ruf('POST', '/api/batch' + (continueOnError ? '?skipErrors=true' : ''), { commands: stueck, batch: batchId })
+      let res
+      for (;;) {
+        try { res = await ruf('POST', '/api/batch' + (continueOnError ? '?skipErrors=true' : ''), { commands: stueck, batch: batchId }); break }
+        catch (e) { if (!istKontingent(e)) throw e; await halt(); }
+      }
       batchId = res.batch
       for (const r of res.results) { results.push({ ...r, index: r.index + i }); if (r.ref) refs.set(r.ref, r.node) }
       for (const s of res.skipped ?? []) errors.push({ ...s, index: s.index + i, command: commands[s.index + i] })
@@ -82,7 +86,26 @@ const api = {
 }
 
 /// Modell und Baum, wie die Ansicht sie aus dem Store nimmt — hier frisch von der API
-const umgebung = { api, sag, modell: null, baum: [], frisch: async () => {
+/// Anhalten zwischen zwei Stapeln (Taloan, 23.09.2026): weil jemand pausiert hat — oder weil das Kontingent voll ist.
+/// Ein voller Zähler beendet den Lauf nicht; er wartet auf den Wochen- oder Monatswechsel oder auf eine neue Lizenz.
+const jobKey = (E.JOURNALI_JOB || '').trim()
+let grundVorher = ''
+async function halt() {
+  if (!jobKey) return
+  for (;;) {
+    let signal
+    try { signal = await api.get(`/api/jobs/${encodeURIComponent(jobKey)}/signal`) } catch { return }   // kein Signal: weiterlaufen
+    if (!signal?.paused) { if (grundVorher) { grundVorher = ''; sag('▶ weiter') } return }
+    const grund = signal.reason ?? 'von Hand'
+    if (grund !== grundVorher) { grundVorher = grund; sag(`⏸ angehalten (${grund}) — wartet auf „weiter“`) }
+    await new Promise(r => setTimeout(r, 2000))
+  }
+}
+
+/// Ein Stapel, der am Kontingent scheitert, ist nichts geschrieben (eine Transaktion) — also warten und ihn wiederholen.
+const istKontingent = e => /Kontingent/i.test(e?.message ?? '')
+
+const umgebung = { api, sag, halt, modell: null, baum: [], frisch: async () => {
   umgebung.modell = await api.get('/api/model')
   umgebung.baum = (await api.get('/api/tree')).rows ?? []
 } }

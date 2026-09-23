@@ -131,7 +131,8 @@ public static class Auth
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
         if (path.StartsWith("/api/media/presets") && !read) return Rights.Model;   // Vorschau-Presets sind Modell
         if (path.StartsWith("/api/files")) return Rights.Jobs;   // Dateibrowser des Servers: Jobs — oder Storage (Allowed)
-        if (path.StartsWith("/api/jobs") && path.EndsWith("/uebergabe")) return Rights.Write;   // einen Import abgeben ist Pflege, kein Jobbau
+        if (path.StartsWith("/api/jobs") && (path.EndsWith("/uebergabe") || path.EndsWith("/pause") || path.EndsWith("/resume"))) return Rights.Write;   // einen Import abgeben und anhalten ist Pflege, kein Jobbau
+        if (path.StartsWith("/api/jobs") && path.EndsWith("/signal")) return Rights.Read;   // der Lauf fragt selbst, ob er warten soll
         if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)
@@ -159,12 +160,19 @@ public static class Auth
     /// Schreibpfad (<c>Catalog</c>), weil erst dort feststeht, ob ein Eintrag journali-Token kostet (Taloan, 23.09.2026:
     /// „jede Anfrage, die journali-Token kostet“). Hier steht sie nur für die Anzeige.
     /// </summary>
-    public static bool HatKontingent(Catalog c, string? wer) => c.With((_, _, _) =>
+    public static bool HatKontingent(Catalog c, string? wer, bool fuerJob = false) => c.With((_, _, _) =>
     {
         if (wer is not { Length: > 0 } w || c.Users.All.GetValueOrDefault(w) is not { } u) return true;
         if (string.IsNullOrEmpty(u.Team)) return false;
-        var zahler = c.Teams.Get(c.Teams.Payer(u.Team!));
-        return zahler is not null && (zahler.EntriesWeek > 0 || zahler.EntriesMonth > 0);
+        if (c.Teams.Get(c.Teams.Payer(u.Team!)) is not { } zahler) return false;
+        var woche = fuerJob ? Limits.FuerJob(zahler.EntriesWeek) : zahler.EntriesWeek;
+        var monat = fuerJob ? Limits.FuerJob(zahler.EntriesMonth) : zahler.EntriesMonth;
+        if (woche <= 0 && monat <= 0) return false;
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        var leute = c.Teams.Dependents(c.Teams.Payer(u.Team!)).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
+        return c.ReadUsage(usage =>
+            (woche <= 0 || usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), c.ZaehltAb), heute) < woche)
+            && (monat <= 0 || usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), c.ZaehltAb), heute) < monat));
     });
 
     /// <summary>Die Sperre: vor allem unter /api. Ohne Benutzer offen (X-Actor wie bisher); sonst Sitzung/Token nötig, X-Actor wird gesetzt.</summary>

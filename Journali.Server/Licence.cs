@@ -10,6 +10,8 @@ namespace Journali.Server;
 /// nichts limitieren“). Sie sagt, was diese Anlage darf — nicht der Administrator und schon gar nicht ein anderes Team:
 /// <list type="bullet">
 /// <item><c>EntriesWeek</c>, <c>EntriesMonth</c>: wie viele Einträge ins Journal gehen dürfen.</item>
+/// <item><c>CountFrom</c>: ab wann gezählt wird (Taloan, 23.09.2026). Was davor im Journal steht, bleibt stehen und
+/// zählt nicht mehr mit — zurücksetzen lässt sich ein Journal nicht, aber eine Lizenz darf einen Anfang setzen.</item>
 /// Mehr steht nicht darin: was ein Team an KI verbraucht, geht an seinen Anbieter und nicht an journali — dort gibt
 /// es nichts zu lizenzieren (Taloan, 23.09.2026). Die Felder <c>AiTokensMonth</c> und <c>AiTokensDay</c> bleiben als
 /// Altlast stehen und werden nicht mehr ausgewertet.
@@ -27,6 +29,7 @@ public sealed record Licence(
     DateOnly? ValidUntil = null,
     int EntriesWeek = 0,
     int EntriesMonth = 0,
+    DateOnly? CountFrom = null,
     long AiTokensMonth = 0,
     long AiTokensDay = 0,
     Dictionary<string, TeamLimit>? Teams = null,

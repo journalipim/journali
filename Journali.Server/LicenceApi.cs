@@ -16,7 +16,7 @@ public static class LicenceApi
             var l = licences.Lic;
             return Results.Ok(new
             {
-                l.Plan, l.Holder, l.ValidUntil, l.EntriesWeek, l.EntriesMonth, l.AiTokensMonth, l.AiTokensDay,
+                l.Plan, l.Holder, l.ValidUntil, l.EntriesWeek, l.EntriesMonth, l.CountFrom, l.AiTokensMonth, l.AiTokensDay,
                 geprueft = licences.Geprueft, grund = licences.Grund, abgelaufen = l.Abgelaufen,
             });
         });
@@ -27,7 +27,8 @@ public static class LicenceApi
             if (Actor(req) is null) return ActorMissing();
             if (body.EntriesWeek < 0 || body.EntriesMonth < 0 || body.AiTokensMonth < 0 || body.AiTokensDay < 0) return Bad("Grenzen: 0 oder mehr.");
             licences.Neu(body);
-            // Das Init Team trägt die Limits der Lizenz — es soll sie sofort haben und nicht erst nach einem Neustart
+            // Das Init Team trägt die Limits der Lizenz — es soll sie sofort haben und nicht erst nach einem Neustart.
+            // LimitsAusLizenz setzt dabei auch den Zählbeginn und wirft den mitgeführten Stand weg.
             var uebernommen = c.With((_, _, _) => c.LimitsAusLizenz()) > 0;
             return Results.Ok(new { licences.Lic.Plan, licences.Lic.ValidUntil, geprueft = licences.Geprueft, grund = licences.Grund, uebernommen });
         });

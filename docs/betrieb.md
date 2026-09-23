@@ -369,12 +369,29 @@ Browser (Taloan, 21.09.2026).
 ## Lizenz — `licence.json` im Datenverzeichnis
 
 Die Grenzen dieser Anlage stehen in der Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“), nicht in der Hand
-des Administrators und schon gar nicht bei einem anderen Team: `entriesWeek`, `entriesMonth` (Einträge im Journal),
-`aiTokensMonth` und `aiTokensDay` (KI auf Rechnung der Lizenz — ein eigenes Thema, das mit den Eintragslimits nichts
-zu tun hat). Ohne Datei gilt der Testbetrieb: 20 000 Einträge je Woche, 100 000 je Monat, keine KI aus der Lizenz.
+des Administrators und schon gar nicht bei einem anderen Team:
 
-Die Eintragslimits sind das, was Taloan „Grundrauschen“ nennt: die Kombination 20 000 / 100 000. Sie liegen am **Init
-Team**; jedes weitere Team startet bei 0, und der Administrator verteilt aus dem, was die Lizenz hergibt.
+| Feld | Bedeutung |
+|---|---|
+| `entriesWeek`, `entriesMonth` | journali-Token je Woche und Monat (gezählt werden Datenpflege und Ausleitung) |
+| `countFrom` | ab wann gezählt wird — was davor im Journal steht, zählt nicht mehr mit |
+| `teams` | Kontingente einzelner Teams: `{"es": {"entriesWeek": 5000, "entriesMonth": 20000}}` |
+| `plan`, `holder`, `validUntil` | Bezeichnung, Inhaber, Ablauf |
+| `aiTokensMonth`, `aiTokensDay` | Altlast, wird nicht mehr ausgewertet |
+
+Ohne Datei gilt der Testbetrieb: 20 000 je Woche, 100 000 je Monat.
+
+**Der Verbrauch lässt sich nicht zurücksetzen** — er sind die Einträge im Journal, und das Journal ist die Wahrheit.
+Was eine Lizenz darf, ist einen **Anfang setzen**: `countFrom` verschiebt den Zählbeginn, alles davor bleibt stehen und
+zählt nicht mehr mit. Das ist auch der Weg nach einer Migration, deren Altdaten keine Pflege waren.
+
+Die Limits liegen am **Init Team**; jedes weitere Team hat, was die Lizenz ihm unter `teams` zuschreibt, sonst nichts —
+dann rechnet es über ein anderes Team ab. Eingestellt wird hier nichts (Taloan: „es gibt hier nichts einzustellen“).
+
+**Ohne Kontingent keine Pflege**: Einträge, die zählen, weist der Server ab (403), sobald der Zähler voll ist.
+Ein **Joblauf** hört schon bei 90 % auf (`Limits.JobReserve`) — die letzten 10 % gehören der Handarbeit — und er
+**pausiert**, statt zu sterben. Fortgesetzt wird er nur von Hand: sonst nähmen wartende Jobs das neue Kontingent im
+selben Moment wieder weg.
 
 Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts (Taloan: „wer den
 Komfort der Kontrolle will, muss Teams mit eigenem Kontingent bilden“). Teams ohne eigenen Schlüssel arbeiten über den

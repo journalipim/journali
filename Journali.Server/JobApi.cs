@@ -125,6 +125,21 @@ public static class JobApi
             return run is null ? Bad(error ?? "nicht gestartet") : Results.Ok(new { job = key, run });
         });
 
+        // Anhalten und weiter (Taloan, 23.09.2026): der Lauf wartet beim nächsten Stapel, statt zu sterben.
+        api.MapPost("/jobs/{key}/pause", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing()
+            : runner.Pause(key) ? Results.Ok(new { paused = true }) : Bad("Der Job läuft nicht."));
+        api.MapPost("/jobs/{key}/resume", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing()
+            : runner.Resume(key) ? Results.Ok(new { paused = false }) : Bad("Der Job wartet nicht."));
+        // Was der Lauf selbst zwischen zwei Stapeln fragt — er kennt nur seinen Jobschlüssel
+        api.MapGet("/jobs/{key}/signal", (string key, Catalog c) =>
+        {
+            // Ein volles Kontingent hält den Lauf an, statt ihn sterben zu lassen (Taloan, 23.09.2026). Fortgesetzt wird
+            // er nur von Hand — sonst nähmen wartende Jobs das neue Kontingent im selben Moment wieder weg.
+            var eigner = c.With((_, _, _) => c.Jobs.All.GetValueOrDefault(key)?.Owner);
+            if (eigner is not null && !Auth.HatKontingent(c, eigner, fuerJob: true)) runner.Pause(key, "Kontingent");
+            return Results.Ok(new { paused = runner.IsPaused(key), running = runner.IsRunning(key), reason = runner.PauseReason(key) });
+        });
+
         api.MapPost("/jobs/{key}/cancel", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing() : runner.Cancel(key) ? Results.Ok(new { cancelled = true }) : Bad("Der Job läuft nicht."));
 
         // Log eines Laufs: ganz oder die letzten n Zeilen — auch während er läuft
@@ -178,7 +193,7 @@ public static class JobApi
         var secrets = Secrets.Get(runner.Dir, j.Key).Keys.ToList();
         return new
         {
-            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes, files = j.Files, role = j.Role, owner = j.Owner,
+            j.Key, j.Label, j.Plugin, j.Service, j.Params, j.Schedule, scheduleText = Cron.Describe(j.Schedule), j.Enabled, j.TimeoutMinutes, files = j.Files, role = j.Role, owner = j.Owner, paused = runner.IsPaused(j.Key), pauseReason = runner.PauseReason(j.Key),
             waiting = runner.Fach.Waiting(j, null).Count, consumed = j.Consumed.Count, written = j.Written.Count,
             secrets, nextDue = j.Enabled ? JobRunner.NextDue(j.Schedule) : null,
             running = runner.RunningId(j.Key),

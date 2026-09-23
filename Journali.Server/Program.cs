@@ -64,6 +64,7 @@ void WriteSnapshot(string why)
 }
 Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht (Taloan, 21.09.)
 catalog.LicenceDir = dataDir;   // muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits
+catalog.ZaehltAb = LicenceFile.Load(dataDir).Lic.CountFrom;   // ab wann gezählt wird (Taloan, 23.09.2026)
 var seeded = catalog.SeedMissing();
 
 var mailer = new Mailer(dataDir);   // Mailversand (Einstellungen → Mail)
@@ -182,8 +183,8 @@ object? Nutzung(HttpRequest req, Catalog c)
         var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
         return c.ReadUsage(u => new
         {
-            week = Teil(u.Sum(leute, Usage.WeekStart(today), today), zt.EntriesWeek, woche, zt.Label),
-            month = Teil(u.Sum(leute, Usage.MonthStart(today), today), zt.EntriesMonth, monat, zt.Label),
+            week = Teil(u.Sum(leute, Usage.Ab(Usage.WeekStart(today), catalog.ZaehltAb), today), zt.EntriesWeek, woche, zt.Label),
+            month = Teil(u.Sum(leute, Usage.Ab(Usage.MonthStart(today), catalog.ZaehltAb), today), zt.EntriesMonth, monat, zt.Label),
         });
     });
 }

@@ -65,6 +65,9 @@ public sealed class Usage : IProjection
         return n;
     }
 
+    /// <summary>Der Anfang eines Zeitraums — nie vor dem Zählbeginn der Lizenz (Taloan, 23.09.2026).</summary>
+    public static DateOnly Ab(DateOnly anfang, DateOnly? zaehltAb) => zaehltAb is { } z && z > anfang ? z : anfang;
+
     public int Day(DateOnly d, bool all = false) => (all ? AllPerDay : PerDay).GetValueOrDefault(d);
     public int Week(DateOnly d, bool all = false) => Between(WeekStart(d), d, all);
     public int Month(DateOnly d, bool all = false) => Between(MonthStart(d), d, all);
@@ -102,6 +105,16 @@ public sealed class Usage : IProjection
 /// </summary>
 public static class Limits
 {
+    /// <summary>
+    /// Was ein Joblauf dem Menschen übriglässt (Taloan, 23.09.2026: „der Job sollte das Kontingent nicht bis zum letzten
+    /// Limit ausreizen, sondern ein Stück für die Anwender freilassen, sagen wir 10 %“). Ein Import im Hintergrund darf
+    /// also bis 90 % gehen; die letzten 10 % gehören der Handarbeit.
+    /// </summary>
+    public const double JobReserve = 0.10;
+
+    /// <summary>Die Grenze für einen Joblauf: das Kontingent ohne die Reserve.</summary>
+    public static int FuerJob(int grenze) => grenze <= 0 ? grenze : (int)Math.Floor(grenze * (1 - JobReserve));
+
     public const int Week = 20_000;
     public const int Month = 100_000;
 }

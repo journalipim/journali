@@ -8,6 +8,7 @@
 //     baum:   [ { id, role, external, groups }, ... ]     — die Knoten, wie /api/tree sie liefert
 //     frisch: async () => void                            — Modell und Baum neu holen (nach Modelländerungen)
 //     sag:    text => void                                — eine Zeile Fortschritt
+//     halt?:  async () => void                            — wartet, solange der Lauf pausiert ist
 //   }
 //
 // Die Abbildung selbst (welcher Solr-Wert wird welches Attribut) steht in solr.js und wird hier nur benutzt.
@@ -122,6 +123,7 @@ export async function schreibe({ plan, umgebung, ziel = null, skip = DEFAULT_SKI
   }
   const sende = async (cmds, marke) => {
     if (!cmds.length) return
+    await umgebung.halt?.()   // anhalten, falls jemand pausiert hat — zwischen zwei Stapeln tut es nicht weh
     const res = await api.batchChunked(cmds, { size: 2000, continueOnError: true, maxErrorPercent: 20, label: marke })
     geschrieben += res.results.length; stapel++
     for (const e of res.errors.slice(0, 20)) sag?.(`✗ übersprungen: ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)} — ${e.message}`)
@@ -182,6 +184,7 @@ export async function schreibeRelationen({ plan, umgebung }) {
   if (needs.newAttrs.size) sag?.(`${needs.newAttrs.size} Attribute in ${REL_GROUP} angelegt`)
   let n = 0
   for (const [, cmds] of needs.perNode) {
+    await umgebung.halt?.()
     sag?.(`schreibe … ${++n}/${needs.perNode.size}`)
     const res = await api.batchChunked(cmds, { size: 2000, label: `Import (Solr): Relationen ${n}/${needs.perNode.size}` })
     geschrieben += res.results.length; stapel++

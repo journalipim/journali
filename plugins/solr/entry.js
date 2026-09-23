@@ -386,6 +386,7 @@ async function schreibeRelationen({ plan, umgebung }) {
   if (needs.newAttrs.size) sag?.(`${needs.newAttrs.size} Attribute in ${REL_GROUP} angelegt`);
   let n = 0;
   for (const [, cmds] of needs.perNode) {
+    await umgebung.halt?.();
     sag?.(`schreibe … ${++n}/${needs.perNode.size}`);
     const res = await api2.batchChunked(cmds, { size: 2e3, label: `Import (Solr): Relationen ${n}/${needs.perNode.size}` });
     geschrieben += res.results.length;

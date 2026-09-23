@@ -224,14 +224,14 @@ public static class TeamApi
                     limits = new { week = zt.EntriesWeek, month = zt.EntriesMonth },
                     used = new
                     {
-                        week = u.Sum(leute, Usage.WeekStart(heute), heute),
-                        month = u.Sum(leute, Usage.MonthStart(heute), heute),
+                        week = u.Sum(leute, Usage.Ab(Usage.WeekStart(heute), c.ZaehltAb), heute),
+                        month = u.Sum(leute, Usage.Ab(Usage.MonthStart(heute), c.ZaehltAb), heute),
                         day = u.Sum(leute, heute, heute),
                     },
                     mine = new   // was dieses Team beisteuert, wenn es über ein anderes abrechnet
                     {
-                        week = u.Sum(eigene, Usage.WeekStart(heute), heute),
-                        month = u.Sum(eigene, Usage.MonthStart(heute), heute),
+                        week = u.Sum(eigene, Usage.Ab(Usage.WeekStart(heute), c.ZaehltAb), heute),
+                        month = u.Sum(eigene, Usage.Ab(Usage.MonthStart(heute), c.ZaehltAb), heute),
                     },
                     head = c.Head,
                     today = heute.ToString("yyyy-MM-dd"),

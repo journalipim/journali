@@ -58,6 +58,9 @@ public sealed class Catalog
     /// <summary>Wo die Lizenz liegt — das Saatgut holt die Limits des Init Teams von dort (null = Testbetrieb).</summary>
     public string? LicenceDir { get; set; }
 
+    /// <summary>Ab wann gezählt wird (aus der Lizenz, null = seit jeher) — Program setzt es beim Start und beim Einspielen.</summary>
+    public DateOnly? ZaehltAb { get; set; }
+
     private IReadOnlyList<(string Name, IProjection Projection)> Parts => [("Model", _model), ("Tree", _tree), ("Relations", _relations), ("Media", _media), ("Plugins", _plugins), ("Jobs", _jobs), ("Versions", _versions), ("Users", _users), ("Workflows", _workflows), ("Translations", _translations), ("Usage", _usage), ("Teams", _teams)];
 
     /// <summary>
@@ -236,6 +239,8 @@ public sealed class Catalog
     public int LimitsAusLizenz()
     {
         var lic = LicenceFile.Load(LicenceDir ?? "").Lic;
+        ZaehltAb = lic.CountFrom;
+        _stand.Clear();   // der Zählbeginn kann sich verschoben haben
         var n = 0;
         // Das erste Team trägt die Limits der Anlage
         if (_teams.Primary is { } erstes && (lic.EntriesWeek > 0 || lic.EntriesMonth > 0)
@@ -318,8 +323,10 @@ public sealed class Catalog
     private bool KeinKontingent(string actor, string type)
     {
         if (!Kinds.Billable(null, type)) return false;
-        // Ein Joblauf schreibt als job:<key> — gezählt wird beim Anwender, dem der Job gehört (Taloan, 23.09.2026)
-        if (actor.StartsWith("job:", StringComparison.Ordinal) && _jobs.All.GetValueOrDefault(actor[4..])?.Owner is { Length: > 0 } eigner) actor = eigner;
+        // Ein Joblauf schreibt als job:<key> — gezählt wird beim Anwender, dem der Job gehört (Taloan, 23.09.2026),
+        // und er lässt der Handarbeit eine Reserve: bis 90 %, nicht bis zum letzten Eintrag.
+        var vomJob = actor.StartsWith("job:", StringComparison.Ordinal);
+        if (vomJob && _jobs.All.GetValueOrDefault(actor[4..])?.Owner is { Length: > 0 } eigner) actor = eigner;
         if (_users.All.GetValueOrDefault(actor) is not { } u) return false;
         if (string.IsNullOrEmpty(u.Team)) return true;                      // kein Team, kein Kontingent
         var zahlerKey = _teams.Payer(u.Team!);
@@ -331,10 +338,12 @@ public sealed class Catalog
         if (!_stand.TryGetValue(zahlerKey, out var stand) || stand.Tag != heute)
         {
             var leute = _teams.Dependents(zahlerKey).SelectMany(x => _users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
-            stand = (heute, _usage.Sum(leute, Usage.WeekStart(heute), heute), _usage.Sum(leute, Usage.MonthStart(heute), heute));
+            stand = (heute, _usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ZaehltAb), heute), _usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ZaehltAb), heute));
         }
-        if (zahler.EntriesWeek > 0 && stand.Woche >= zahler.EntriesWeek) { _stand[zahlerKey] = stand; return true; }
-        if (zahler.EntriesMonth > 0 && stand.Monat >= zahler.EntriesMonth) { _stand[zahlerKey] = stand; return true; }
+        var woche = vomJob ? Limits.FuerJob(zahler.EntriesWeek) : zahler.EntriesWeek;
+        var monat = vomJob ? Limits.FuerJob(zahler.EntriesMonth) : zahler.EntriesMonth;
+        if (woche > 0 && stand.Woche >= woche) { _stand[zahlerKey] = stand; return true; }
+        if (monat > 0 && stand.Monat >= monat) { _stand[zahlerKey] = stand; return true; }
         _stand[zahlerKey] = (heute, stand.Woche + 1, stand.Monat + 1);      // dieser Eintrag zählt gleich mit
         return false;
     }

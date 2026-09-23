@@ -31,7 +31,7 @@ public class LicenceTests
     {
         var dir = Frisch();
         var l = new Licences(dir);
-        l.Neu(new Licence("Klein", "Beispiel GmbH", null, 5_000, 25_000, 250_000, 40_000));
+        l.Neu(new Licence("Klein", "Beispiel GmbH", null, 5_000, 25_000, null, 250_000, 40_000));
         Assert.Equal("Klein", l.Lic.Plan);
         Assert.Equal(250_000, l.Lic.AiTokensMonth);
         Assert.False(l.Geprueft);
@@ -46,7 +46,7 @@ public class LicenceTests
     {
         var dir = Frisch();
         var l = new Licences(dir);
-        l.Neu(new Licence("Alt", null, DateOnly.FromDateTime(DateTime.Today.AddDays(-1)), 1, 2, 3, 4));
+        l.Neu(new Licence("Alt", null, DateOnly.FromDateTime(DateTime.Today.AddDays(-1)), 1, 2, null, 3, 4));
         Assert.True(l.Lic.Abgelaufen);
         Assert.False(l.Geprueft);
         Assert.Contains("abgelaufen", l.Grund);
@@ -56,7 +56,7 @@ public class LicenceTests
     [Fact]
     public void Der_Rumpf_traegt_keine_Signatur_und_ist_stabil()
     {
-        var a = new Licence("X", "Y", new DateOnly(2027, 1, 1), 1, 2, 3, 4);
+        var a = new Licence("X", "Y", new DateOnly(2027, 1, 1), 1, 2, null, 3, 4);
         var b = a with { Sig = "irgendwas" };
         Assert.Equal(a.Rumpf, b.Rumpf);         // signiert wird, was drinsteht — nicht die Signatur selbst
         Assert.DoesNotContain("irgendwas", b.Rumpf);

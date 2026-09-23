@@ -147,7 +147,7 @@ public sealed class JobRunner : BackgroundService
         }
         finally
         {
-            lock (_gate) _running.Remove(key);
+            lock (_gate) { _running.Remove(key); _paused.Remove(key); }
             Auth.RevokeServiceToken(token);
             var exit = 0; try { exit = p.ExitCode; } catch { }
             var bytes = 0L; try { log.Flush(); bytes = new FileInfo(logPath).Length; } catch { }
@@ -181,11 +181,42 @@ public sealed class JobRunner : BackgroundService
     }
 
     private readonly HashSet<string> _cancelled = new();
+    /// <summary>Wer gerade warten soll und warum (Taloan, 23.09.2026). Im Speicher: nach einem Neustart läuft ohnehin nichts mehr.</summary>
+    private readonly Dictionary<string, string> _paused = new();
+
+    /// <summary>
+    /// Anhalten — der Lauf stirbt nicht, er wartet beim nächsten Stapel. <paramref name="grund"/> steht in der
+    /// Jobliste; „Kontingent“ setzt der Server selbst, wenn der Zähler voll ist. Fortgesetzt wird nur von Hand:
+    /// sonst nähmen wartende Jobs das neue Kontingent im selben Moment wieder weg.
+    /// </summary>
+    public bool Pause(string key, string grund = "von Hand")
+    {
+        lock (_gate)
+        {
+            if (!_running.ContainsKey(key)) return false;
+            if (!_paused.ContainsKey(key)) _paused[key] = grund;
+            return true;
+        }
+    }
+
+    /// <summary>Weiter — das macht ein Mensch, nie der Server.</summary>
+    public bool Resume(string key)
+    {
+        lock (_gate) return _paused.Remove(key);
+    }
+
+    /// <summary>Soll dieser Lauf warten?</summary>
+    public bool IsPaused(string key) { lock (_gate) return _paused.ContainsKey(key); }
+
+    /// <summary>Warum er wartet (null = er wartet nicht).</summary>
+    public string? PauseReason(string key) { lock (_gate) return _paused.GetValueOrDefault(key); }
+
     public bool Cancel(string key)
     {
         lock (_gate)
         {
             if (!_running.TryGetValue(key, out var r)) return false;
+            _paused.Remove(key);   // wer abbricht, wartet nicht mehr
             _cancelled.Add(key); r.Cancel.Cancel(); return true;
         }
     }

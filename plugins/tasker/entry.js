@@ -147,7 +147,7 @@ async function mount(root, ctx) {
     tbl.append(el('thead', {}, el('tr', {}, el('th', {}, ''), el('th', {}, 'Job'), el('th', {}, 'Plugin'), el('th', {}, 'Zeitplan'), el('th', {}, 'nächster Lauf'), el('th', {}, 'letzter Lauf'), el('th', {}, ''))))
     const tb = el('tbody')
     for (const j of jobs) {
-      const [sym, cls] = j.running ? ['▶', 'warn'] : STATUS[j.last?.status] ?? ['·', 'muted']
+      const [sym, cls] = j.running && j.paused ? ['⏸', 'warn'] : j.running ? ['▶', 'warn'] : STATUS[j.last?.status] ?? ['·', 'muted']
       const tr = el('tr', { class: 'row' + (st.cur === j.key ? ' selected' : ''), style: 'cursor:default', onclick: () => { st.cur = j.key; drawList(); loadDetail(j.key) } },
         el('td', { class: cls, title: j.running ? 'läuft' : j.last?.status ?? 'noch nie gelaufen' }, sym),
         el('td', {}, el('b', {}, j.label), el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, j.key)),
@@ -156,7 +156,10 @@ async function mount(root, ctx) {
         el('td', { class: 'muted' }, j.nextDue ? when(j.nextDue) : ''),
         el('td', { class: 'muted', title: j.last?.summary ?? '' }, j.last ? `${when(j.last.startedAt)} · ${j.last.seconds}s` : ''),
         el('td', { style: 'white-space:nowrap' },
-          j.running ? el('button', { class: 'x', title: 'abbrechen', onclick: ev => { ev.stopPropagation(); cancel(j) } }, '⊘') : el('button', { class: 'x', title: 'jetzt starten', onclick: ev => { ev.stopPropagation(); run(j) } }, '▶'),
+          j.running && j.paused ? el('button', { class: 'x', title: `wartet (${j.pauseReason ?? 'von Hand'}) — weiter`, onclick: ev => { ev.stopPropagation(); resume(j) } }, '▶')
+            : j.running ? el('button', { class: 'x', title: 'anhalten (wartet beim nächsten Stapel)', onclick: ev => { ev.stopPropagation(); pause(j) } }, '⏸')
+            : el('button', { class: 'x', title: 'jetzt starten', onclick: ev => { ev.stopPropagation(); run(j) } }, '▶'),
+          j.running ? el('button', { class: 'x', title: 'abbrechen', onclick: ev => { ev.stopPropagation(); cancel(j) } }, '⊘') : el('span', { style: 'display:inline-block;width:22px' }),
           el('button', { class: 'x', title: j.enabled ? 'ausschalten (Zeitplan ruht)' : 'einschalten', onclick: ev => { ev.stopPropagation(); toggle(j) } }, j.enabled ? '●' : '○'),
           el('button', { class: 'x', title: 'bearbeiten', onclick: ev => { ev.stopPropagation(); openEdit(j) } }, '✎'),
           el('button', { class: 'x', title: 'Job entfernen (Läufe bleiben im Journal)', onclick: ev => { ev.stopPropagation(); remove(j) } }, '🗑')))
@@ -166,6 +169,9 @@ async function mount(root, ctx) {
   }
   async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
   async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(`⊘ ${j.label} abgebrochen`); await load() } catch (e) { store.toast(e.message) } }
+  // Anhalten und weiter (Taloan, 23.09.2026): der Lauf wartet beim nächsten Stapel, statt zu sterben
+  async function pause(j) { try { await api.post(`/api/jobs/${j.key}/pause`); store.toast(`⏸ ${j.label} hält beim nächsten Stapel an`); await load() } catch (e) { store.toast(e.message) } }
+  async function resume(j) { try { await api.post(`/api/jobs/${j.key}/resume`); store.toast(`▶ ${j.label} läuft weiter`, 'ok'); await load() } catch (e) { store.toast(e.message) } }
   async function toggle(j) { try { await api.post(`/api/jobs/${j.key}`, { enabled: !j.enabled }, 'PUT'); await load() } catch (e) { store.toast(e.message) } }
   async function remove(j) { if (!await dialog.confirm({ title: `Job „${j.label}“ entfernen?`, ok: '🗑 Entfernen', danger: true })) return; try { await api.del(`/api/jobs/${j.key}`); if (st.cur === j.key) { st.cur = null; detail.innerHTML = '' } await load() } catch (e) { store.toast(e.message) } }
 
