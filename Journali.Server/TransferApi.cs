@@ -35,8 +35,17 @@ public static class TransferApi
             c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var n) ? Results.Ok(new RawExport(UsedModel(model, tree, n, deep), Raw(tree, n, deep))) : Results.NotFound()));
 
         api.MapPost("/nodes/import", (ImportBody body, HttpRequest req, Catalog c) =>
+            Actor(req) is not { } actor ? ActorMissing() : Einspielen(c, actor, body));
+    }
+
+    /// <summary>
+    /// Einen Teilbaum einspielen — angleichen, zurückholen oder anlegen, alles in einem Stapel. Nimmt den Modellteil
+    /// mit, wenn einer dabei ist. <c>DryRun</c> zählt nur, was geschähe.
+    /// Gemeinsamer Weg von <c>POST /nodes/import</c> und der Wiederherstellung aus einer Sicherung (RestoreApi).
+    /// </summary>
+    public static IResult Einspielen(Catalog c, string actor, ImportBody body)
+    {
         {
-            if (Actor(req) is not { } actor) return ActorMissing();
             if (body.Node is null) return Bad("node fehlt.");
             var batch = "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
             var result = c.With((model, tree, write) =>
@@ -61,7 +70,7 @@ public static class TransferApi
             var st = result.s;
             return result.Error is not null ? Bad(result.Error)
                 : Results.Ok(new { created = st.Created, restored = st.Restored, updated = st.Updated, entries = st.Entries, model = st.ModelAdded, errors = st.Errors.Take(20), batch = body.DryRun ? null : batch, dryRun = body.DryRun, idMap = st.IdMap });
-        });
+        }
     }
 
     private static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();

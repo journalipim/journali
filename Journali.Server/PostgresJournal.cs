@@ -132,6 +132,39 @@ public sealed class PostgresJournal : IJournal
         return list;
     }
 
+    /// <summary>
+    /// Eine Sicherung zurückschreiben (Taloan, 23.09.2026: „neuer Docker irgendwo, Sicherung einspielen, muss das System
+    /// wiederherstellen“). Die Einträge behalten Nummer, Zeit und Urheber — sonst wäre es ein neuer Stand.
+    /// Nur in ein leeres Journal: sonst kollidierten die Nummern.
+    /// </summary>
+    public int RestoreAll(IEnumerable<Entry> entries)
+    {
+        using var conn = _db.OpenConnection();
+        using var tx = conn.BeginTransaction();
+        using (var gate = new NpgsqlCommand("LOCK TABLE journal IN SHARE ROW EXCLUSIVE MODE", conn, tx)) gate.ExecuteNonQuery();
+        using (var da = new NpgsqlCommand("SELECT COUNT(*) FROM journal", conn, tx))
+            if ((long)da.ExecuteScalar()! > 0) throw new InvalidOperationException("Das Journal ist nicht leer — wiederhergestellt wird nur in ein leeres.");
+        using var cmd = new NpgsqlCommand("INSERT INTO journal (number, at, actor, stream, type, payload, batch, kind) VALUES (@n, @at, @actor, @stream, @type, @payload, @batch, @kind)", conn, tx);
+        var pn = cmd.Parameters.Add("n", NpgsqlDbType.Bigint);
+        var pat = cmd.Parameters.Add("at", NpgsqlDbType.TimestampTz);
+        var pa = cmd.Parameters.Add("actor", NpgsqlDbType.Text);
+        var ps = cmd.Parameters.Add("stream", NpgsqlDbType.Text);
+        var pt = cmd.Parameters.Add("type", NpgsqlDbType.Text);
+        var pp = cmd.Parameters.Add("payload", NpgsqlDbType.Jsonb);
+        var pb = cmd.Parameters.Add("batch", NpgsqlDbType.Text);
+        var pk = cmd.Parameters.Add("kind", NpgsqlDbType.Text);
+        cmd.Prepare();
+        var n = 0;
+        foreach (var e in entries)
+        {
+            pn.Value = e.Number; pat.Value = e.At; pa.Value = e.Actor; ps.Value = e.Stream; pt.Value = e.Type; pp.Value = e.Payload;
+            pb.Value = (object?)e.Batch ?? DBNull.Value; pk.Value = (object?)e.Kind ?? Kinds.Of(e.Type);
+            cmd.ExecuteNonQuery(); n++;
+        }
+        tx.Commit();
+        return n;
+    }
+
     public IEnumerable<Entry> ReadAfter(long afterNumber) =>
         Query($"SELECT {Columns} FROM journal WHERE number > @n ORDER BY number",
               new NpgsqlParameter("n", afterNumber));

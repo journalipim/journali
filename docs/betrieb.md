@@ -211,6 +211,45 @@ des Betreibers, sondern Vertragspartner des Kunden). Übertragen werden die Date
 gewählten Knotens, nur auf Klick. Die Recherche im Internet (Anreicherung, Plugin `enrich`) nutzt
 das Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
 
+## Sicherung und Wiederherstellung
+
+Zwei Wege, die sich nicht ersetzen.
+
+**`pg_dump`** sichert die Datenbank: Journal, abgeleitete Tabellen und — beim
+Speicher `postgres` — die Medien. Schnell, konsistent, erprobt. Er kennt aber nur
+die Datenbank: die Plugin-Verzeichnisse und die Dateien im Datenverzeichnis
+(`auth.json`, `media.json`, `jobs/secrets.json`) liegen im Dateisystem und fehlen.
+Wer so sichert, muss das Volume mitnehmen.
+
+**Die Vollsicherung** (Plugin `backup`, Einstellungen → Sicherung) schreibt einen
+Satz, der an nichts hängt — nicht an der Postgres-Fassung, nicht am Schema:
+
+| im Verzeichnis | was |
+|---|---|
+| `journal.ndjson.gz` | alle Einträge, je Zeile einer, mit Nummer, Zeit, Urheber |
+| `media/` | die Blobs — **nur beim Speicher `postgres`** |
+| `config/` | `auth.json`, `media.json`, `jobs/secrets.json` |
+| `plugins/` | die Plugin-Verzeichnisse ohne `node_modules` |
+| `backup.json` | Zeitpunkt, Anzahl, Art des Speichers |
+
+Alles Fachliche steht im Journal und kommt damit zurück: Modell, Baum, Werte,
+Relationen, **Rollen und Rechte** (`role:…`), Benutzer (`user:…`), Workflows,
+Jobs (`job:…`), der Stand der Plugins (`plugin:…`) und die Medien-Metadaten.
+
+Liegen die Medien in `file` oder `s3`, bleiben sie draussen — dafür sorgt der
+Betrieb (Volume-Snapshot, Lifecycle beim Anbieter). Die Verweise stimmen nach der
+Wiederherstellung trotzdem, solange dieser Speicher derselbe bleibt: im Journal
+steht der Hash, und der Hash ist der Schlüssel im Speicher.
+
+**Zurück** geht es nur in ein **leeres** System (Einstellungen → Sicherung →
+Einspielen): sonst kollidierten die Eintragsnummern. Danach einmal neu starten —
+der Server baut seine Abbilder beim Start aus dem Journal. Plugins mit eigenen
+Paketen brauchen einmal `npm install`; `node_modules` sind nicht in der Sicherung,
+weil sie für ein Betriebssystem gebaut sind (sharp, pdfjs bringen Binärdateien mit).
+
+Die Sicherung enthält Passwort-Hashes und Token. Sie gehört dorthin, wo auch das
+Datenverzeichnis hingehört.
+
 ## Tabelle `journal`
 
 | Spalte | Typ | |

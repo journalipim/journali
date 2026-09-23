@@ -173,6 +173,8 @@ VersionApi.Map(api, pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateL
 PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);
 TransferApi.Map(api);   // Rohdaten eines Teilbaums hin und zurück (JSON, wiederherstellbar — Taloan)
+RestoreApi.Map(api);   // Teilbaum aus einer Rohdaten-Datei zurueck (Einstellungen, kein Plugin — Taloan, 23.09.)
+BackupApi.Map(api, journal, dataDir, pluginDir);   // Vollsicherung: Journal und Medien in ein Verzeichnis, zurueck in ein leeres System (Taloan, 23.09.)
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
 FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
 

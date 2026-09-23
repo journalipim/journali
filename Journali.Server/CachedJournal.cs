@@ -81,6 +81,19 @@ public sealed class CachedJournal : IJournal
         return e;
     }
 
+    /// <summary>Eine Sicherung zurückschreiben und den Spiegel neu aufbauen — er zeigte sonst den Stand von vorher.</summary>
+    public int RestoreAll(IEnumerable<Entry> entries)
+    {
+        lock (_gate)
+        {
+            var n = _inner.RestoreAll(entries);
+            try { File.Delete(_path); } catch { }
+            _head = 0;
+            foreach (var e in _inner.ReadAfter(0)) AppendFile(e);
+            return n;
+        }
+    }
+
     public IReadOnlyList<Entry> AppendMany(string actor, IReadOnlyList<(string Stream, string Type, string Payload)> items, string? batch = null)
     {
         var list = _inner.AppendMany(actor, items, batch);

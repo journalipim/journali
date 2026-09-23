@@ -1,13 +1,13 @@
 {
   "key": "backup",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "label": {
     "de": "Werkzeug: Sicherung",
     "en": "Tool: Backup"
   },
   "description": {
-    "de": "Sichert einen Teilbaum (oder alle Wurzeln) als Rohdaten-JSON in ein Verzeichnis — dasselbe Format wie „JSON: Rohdaten sichern“, mit dem JSON-Import wiederherstellbar. Läuft als Prozess: von Hand über ⌁ Plugins oder als Job (Basis-Plugin tasker), z. B. jede Nacht; behält die letzten n Dateien, gzip-komprimiert (.json.gz).",
-    "en": "Saves a subtree (or all roots) as raw JSON into a directory — restorable with the JSON import. Runs as a process, manually or as a scheduled job; keeps the last n files."
+    "de": "Sichert das ganze System in ein Verzeichnis: Journal (alle Einträge), Medien, die Dateien neben dem Journal (auth.json, media.json, jobs/secrets.json) und die Plugin-Verzeichnisse ohne node_modules. Zurück geht die Sicherung in ein leeres System — Einstellungen → Sicherung. Je Lauf ein Ordner mit Zeitstempel, ältere werden nach keep weggeräumt.",
+    "en": "Backs up the whole system into a directory: journal, media, the files next to the journal (auth.json, media.json, jobs/secrets.json) and the plugin folders without node_modules. Restores into an empty system (Settings → Backup). One timestamped folder per run, older ones removed per keep."
   },
   "kind": "tool",
   "runs": "process",
@@ -21,13 +21,13 @@
       "backup.js",
       "{journali}",
       "{actor}",
-      "{root}",
       "{dir}",
       "{keep}",
-      "{gzip}"
+      "{media}",
+      "{config}",
+      "{plugins}"
     ],
-    "description": "Rohdaten-JSON eines Teilbaums in ein Verzeichnis schreiben",
-    "profile": "generic",
+    "description": "Journal, Medien, Zugänge und Plugins in ein Verzeichnis sichern",
     "files": {
       "out": {
         "many": true,
@@ -36,36 +36,36 @@
     },
     "params": [
       {
-        "key": "profile",
-        "label": "Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)",
-        "type": "profile",
-        "default": "",
-        "perJob": true
-      },
-      {
-        "key": "root",
-        "label": "Teilbaum (Knoten-Id, leer = alle Wurzeln)",
-        "type": "node",
-        "default": "",
-        "perJob": false
-      },
-      {
         "key": "dir",
         "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
         "type": "dir",
-        "default": "backup",
+        "default": "",
         "perJob": true
       },
       {
         "key": "keep",
-        "label": "so viele Sicherungen behalten (je Wurzel, dieser Job)",
+        "label": "so viele Stände behalten",
         "type": "number",
         "default": "14",
-        "perJob": false
+        "perJob": true
       },
       {
-        "key": "gzip",
-        "label": "komprimieren (gzip, .json.gz — der JSON-Import liest es direkt)",
+        "key": "media",
+        "label": "Medien mitsichern",
+        "type": "boolean",
+        "default": "true",
+        "perJob": true
+      },
+      {
+        "key": "config",
+        "label": "Zugänge mitsichern (auth.json, media.json, jobs/secrets.json)",
+        "type": "boolean",
+        "default": "true",
+        "perJob": true
+      },
+      {
+        "key": "plugins",
+        "label": "Plugin-Verzeichnisse mitsichern",
         "type": "boolean",
         "default": "true",
         "perJob": true

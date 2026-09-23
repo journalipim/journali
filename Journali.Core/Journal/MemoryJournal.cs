@@ -25,6 +25,16 @@ public sealed class MemoryJournal : IJournal
         }
     }
 
+    public int RestoreAll(IEnumerable<Entry> entries)
+    {
+        lock (_gate)
+        {
+            if (_entries.Count > 0) throw new InvalidOperationException("Das Journal ist nicht leer — wiederhergestellt wird nur in ein leeres.");
+            foreach (var e in entries.OrderBy(e => e.Number)) _entries.Add(e);
+            return _entries.Count;
+        }
+    }
+
     public IReadOnlyList<Entry> AppendMany(string actor, IReadOnlyList<(string Stream, string Type, string Payload)> items, string? batch = null)
     {
         lock (_gate)

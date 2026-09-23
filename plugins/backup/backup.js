@@ -1,36 +1,39 @@
-// Sicherung als Prozess (Plugin backup): holt GET /api/nodes/{id}/export (Rohdaten, mit Modellteil) und schreibt
-// <dir>/<label>-<id>-<zeitstempel>.json; ohne root alle Wurzeln. Behält je Wurzel die letzten <keep> Dateien.
-// Aufruf: node backup.js <journali> <actor> [root] [dir] [keep] [gzip] — der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
-const fs = require('fs'); const path = require('path'); const zlib = require('zlib')
-const [,, server, actor, rootArg, dirArg, keepArg, gzArg] = process.argv
-const gz = (gzArg ?? 'true') !== 'false' && gzArg !== '0' && gzArg !== 'off'   // gzip (Taloan: mit Kompression) — .json.gz, der JSON-Import liest es direkt
+// Sicherung als Prozess (Plugin backup): ruft POST /api/backup — der Server schreibt Journal, Medien, die Dateien
+// neben dem Journal (auth.json, media.json, jobs/secrets.json) und die Plugin-Verzeichnisse in ein Verzeichnis.
+// Das geht in ein leeres System zurück (Einstellungen → Sicherung): neuer Container, Sicherung rein, System steht.
+// Ein pg_dump kann das nicht — Plugins und Zugänge liegen im Dateisystem, nicht in der Datenbank.
+// Aufruf: node backup.js <journali> <actor> [dir] [keep] [media] [config] [plugins]
+//   dir     Zielverzeichnis; darunter entsteht je Lauf ein Ordner <zeitstempel>
+//   keep    so viele Stände behalten (Vorgabe 14)
+// Der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
+const fs = require('fs'); const path = require('path')
+const [,, server, actor, dirArg, keepArg, mediaArg, configArg, pluginsArg] = process.argv
+const ja = (v, vorgabe = true) => v === undefined || v === '' ? vorgabe : !['false', '0', 'off', 'nein'].includes(String(v).toLowerCase())
 if (!server) { console.error('journali-Adresse fehlt'); process.exit(2) }
-const dir = path.resolve(dirArg || 'backup'); const keep = Math.max(1, parseInt(keepArg || '14', 10) || 14)
-const headers = { 'X-Actor': actor || 'job:backup', ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }   // mit Benutzern: Dienst-Token des Laufs
-const jobKey = process.env.JOURNALI_JOB ? process.env.JOURNALI_JOB + '-' : ''   // vom JobRunner; von Hand: ohne
-async function get(p) { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() }
+const basis = path.resolve(dirArg || process.env.JOURNALI_DIR || 'backup')
+const keep = Math.max(1, parseInt(keepArg || '14', 10) || 14)
+const headers = { 'X-Actor': actor || 'job:backup', 'Content-Type': 'application/json', ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }
+
 ;(async () => {
-  fs.mkdirSync(dir, { recursive: true })
-  const tree = await get('/api/tree')
-  const { knoten, zuLoeschen } = await import('./core.mjs')
-  const rows = Array.isArray(tree) ? tree : tree.rows ?? []
-  const roots = rootArg ? rows.filter(r => r.id === rootArg) : rows.filter(r => !r.parent)
-  if (!roots.length) { console.error(`kein Knoten ${rootArg ?? '(Wurzel)'}`); process.exit(1) }
+  const { zuLoeschen } = await import('./core.mjs')
   const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
-  let total = 0
-  for (const r of roots) {
-    const raw = await get(`/api/nodes/${encodeURIComponent(r.id)}/export?deep=true`)
-    const count = knoten(raw.node)
-    const safe = String(r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
-    // Dateiname mit Job-Key (Taloan): zwei Jobs im selben Verzeichnis zählen ihre Stände getrennt
-    const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.json${gz ? '.gz' : ''}`)
-    const text = JSON.stringify(raw, null, 1)
-    fs.writeFileSync(file, gz ? zlib.gzipSync(text, { level: 9 }) : text)
-    total += count
-    console.log(`${file}: ${count} Knoten, ${raw.model.attributes.length} Attribute, ${(fs.statSync(file).size / 1024).toFixed(0)} KB${gz ? ` (roh ${(text.length / 1024).toFixed(0)} KB)` : ''}`)
-    // alte Stände dieser Wurzel wegräumen
-    const old = fs.readdirSync(dir).filter(f => f.startsWith(jobKey) && f.includes(`-${r.id}-`) && (f.endsWith('.json') || f.endsWith('.json.gz'))).sort()
-    for (const f of zuLoeschen(old, keep)) { fs.unlinkSync(path.join(dir, f)); console.log(`alt entfernt: ${f}`) }
+  const ziel = path.join(basis, stamp)
+
+  const res = await fetch(server + '/api/backup', {
+    method: 'POST', headers,
+    body: JSON.stringify({ dir: ziel, media: ja(mediaArg), config: ja(configArg), plugins: ja(pluginsArg) }),
+  })
+  const text = await res.text()
+  if (!res.ok) { console.error(`✗ ${res.status} ${text.slice(0, 300)}`); process.exit(1) }
+  const m = JSON.parse(text)
+  const mb = (m.bytes / 1048576).toFixed(1)
+  console.log(`${ziel}: ${m.entries} Einträge, ${m.media} Medien (${mb} MB), ${m.config} Dateien, ${m.plugins} Plugins`)
+
+  // alte Stände wegräumen — die Verzeichnisse tragen den Zeitstempel im Namen
+  const alle = fs.readdirSync(basis, { withFileTypes: true }).filter(d => d.isDirectory() && /^\d{4}-\d{2}-\d{2}/.test(d.name)).map(d => d.name)
+  for (const name of zuLoeschen(alle, keep)) {
+    fs.rmSync(path.join(basis, name), { recursive: true, force: true })
+    console.log(`alt entfernt: ${name}`)
   }
-  console.log(`✓ ${roots.length} Wurzel${roots.length > 1 ? 'n' : ''}, ${total} Knoten gesichert nach ${dir}`)
+  console.log(JSON.stringify({ entries: m.entries, media: m.media, config: m.config, plugins: m.plugins, dir: ziel }))
 })().catch(e => { console.error('✗ ' + e.message); process.exit(1) })

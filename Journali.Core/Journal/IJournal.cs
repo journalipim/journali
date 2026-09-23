@@ -27,4 +27,14 @@ public interface IJournal
 
     /// <summary>Nummer des letzten Eintrags; 0 bei leerem Journal.</summary>
     long Head { get; }
+
+    /// <summary>
+    /// Einträge einer Sicherung zurückschreiben — unverändert, mit ihren Nummern, Zeiten und Urhebern
+    /// (Taloan, 23.09.2026: „neue DB oder purge ⇒ wiederherstellen“). Kein fachlicher Schreibweg: hier entsteht nichts
+    /// Neues, hier kommt zurück, was schon einmal geschrieben wurde. Darum nur in ein leeres Journal — sonst
+    /// kollidierten die Nummern, und aus zwei Wahrheiten würde keine.
+    /// </summary>
+    /// <returns>Wie viele Einträge zurückkamen.</returns>
+    /// <exception cref="InvalidOperationException">Das Journal ist nicht leer.</exception>
+    int RestoreAll(IEnumerable<Entry> entries);
 }
