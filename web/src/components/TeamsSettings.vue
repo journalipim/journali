@@ -193,7 +193,7 @@ async function austragen(m) {
 
 
     <div class="section">
-      <h2>✧ KI-Austauschvolumen <span class="muted" title="Was journali an den Anbieter geschickt und von ihm zurückbekommen hat; über Tokens und Kosten sagt journali nichts.">· gemessen, nicht geschätzt</span></h2>
+      <h2 title="Was journali an den Anbieter geschickt und von ihm zurückbekommen hat; über Tokens und Kosten sagt journali nichts.">✧ KI-Austauschvolumen</h2>
       <table v-if="tage.length" class="grid" style="width:auto"><thead><tr><th style="width:110px">Tag</th><th class="num" style="width:70px">Aufrufe</th><th class="num" style="width:90px" title="hingeschickt">↑ hin</th><th class="num" style="width:90px" title="zurückbekommen">↓ zurück</th><th class="num" style="width:90px">Σ</th><th>Anlass</th></tr></thead><tbody>
         <tr v-for="t in tage" :key="t.day" class="row">
           <td class="mono">{{ t.day }}</td>
@@ -206,6 +206,8 @@ async function austragen(m) {
       </tbody></table>
       <div v-else class="muted" style="font-size:12px">noch nichts gemessen</div>
     </div>
+
+    <LicenceSettings />
 
     <div class="section">
       <h2>✦ journali PIM Token <span class="muted">· Verfügbare Limits</span>
@@ -239,7 +241,5 @@ async function austragen(m) {
       </tbody></table>
       <UsageBars v-if="jt" :usage="teamUsage" />
     </div>
-
-    <LicenceSettings />
   </template>
 </template>

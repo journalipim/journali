@@ -83,6 +83,17 @@ test('das Austauschvolumen steht hin und zurück getrennt da — in Bytes, nie i
   await ruhe(); w.unmount()
 })
 
+test('die Lizenz steht vor den Token — sie erklärt das Kontingent', async () => {
+  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  const w = mount(TeamsSettings); await ruhe()
+  const h = w.findAll('h2').map(x => x.text().replace(/\s+/g, ' '))
+  const lizenz = h.findIndex(x => /Lizenz/.test(x))
+  const token = h.findIndex(x => /journali PIM Token/.test(x))
+  assert.ok(lizenz >= 0 && token > lizenz, 'erst die Lizenz, dann das, was daraus folgt')
+  assert.ok(!h.some(x => /Limits dieser Anlage|gemessen, nicht geschätzt/.test(x)), 'keine Beisätze, die anderswo schon stehen')
+  await ruhe(); w.unmount()
+})
+
 test('der Team-Admin hinterlegt den Schlüssel; er kommt nie zurück', async () => {
   const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()

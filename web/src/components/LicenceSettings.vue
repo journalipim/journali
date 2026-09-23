@@ -25,7 +25,7 @@ async function einspielen() {
 
 <template>
   <div class="section">
-    <h2>⚿ Lizenz <span class="muted">· {{ lic?.plan || 'Testbetrieb' }}<span v-if="lic?.holder"> · {{ lic.holder }}</span> · Limits dieser Anlage</span></h2>
+    <h2>⚿ Lizenz <span v-if="lic?.holder" class="muted">· {{ lic.holder }}</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:200px" /><col /></colgroup><tbody>
       <tr>
         <td class="muted">Stand</td>

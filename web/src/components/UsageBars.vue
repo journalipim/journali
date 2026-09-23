@@ -35,7 +35,7 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
       <span class="num mono" :class="tone(p)">{{ n(frei(p)) }}</span>
       <span class="num mono muted grenze">/ {{ n(p?.max) }} ⊞</span>
       <span class="num mono muted">{{ pct(p) }} %</span>
-      <span class="num mono muted" :title="`${n(usage?.all?.[key])} Einträge gesamt — Modell, Struktur, Kataloge und Betrieb zählen nicht mit`">+{{ n((usage?.all?.[key] ?? 0) - (p?.used ?? 0)) }}</span>
+      <span v-if="usage?.all" class="num mono muted" :title="`${n(usage.all[key])} Einträge gesamt — Modell, Struktur, Kataloge und Betrieb zählen nicht mit`">+{{ n(Math.max(0, (usage.all[key] ?? 0) - (p?.used ?? 0))) }}</span>
     </div>
 
     <div class="chips">
