@@ -37,6 +37,8 @@ public class OhneTeamTests
         Assert.False(Schreibt(c, "frei", Types.AttributeSet, new AttributeSet("name", "de", null, "x")));
         Assert.False(Schreibt(c, "frei", Types.StatusSet, new StatusSet("released")));
         Assert.False(Schreibt(c, "frei", Types.ReleaseGranted, new ReleaseGranted("web", null)));
+        // einen Knoten benennen ist Pflege (Taloan, 23.09.2026: „Namen vergeben ist auch Werte verändern“)
+        Assert.False(Schreibt(c, "frei", Types.NodeNamed, new NodeNamed("neu")));
     }
 
     [Fact]
@@ -44,8 +46,8 @@ public class OhneTeamTests
     {
         // Modell, Struktur, Einrichtung: sie schreiben ins Journal, zählen aber nicht (Kinds.Counts)
         var c = Welt();
-        Assert.True(Schreibt(c, "frei", Types.NodeNamed, new NodeNamed("neu")));
         Assert.True(Schreibt(c, "frei", Types.GroupCreated, new GroupCreated(null, new Labels(), null), "n-gruppe"));
+        Assert.True(Schreibt(c, "frei", Types.NodeMoved, new NodeMoved("g-1")));
         Assert.True(Schreibt(c, "frei", Types.JobDefined, new JobDefined("X", "docs", null, null), Jobs.Stream + "x"));
     }
 

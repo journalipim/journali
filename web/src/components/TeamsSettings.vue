@@ -103,6 +103,7 @@ function hilfeToken() {
     title: '✦ journali Limits · gezählt wird',
     rows: [
       ['Anlegen', 'Artikel, Varianten, Zeilen einer Mehrfachangabe, Assets, Relationen'],
+      ['Benennen', 'einem Knoten einen Namen geben oder ihn ändern'],
       ['Ändern', 'jeder Wert, Status, Kennung, die Reihenfolge von Zeilen'],
       ['Zurückziehen', 'Artikel, Zeilen, Assets, Relationen — und das Zurückholen'],
       ['Einordnen', 'ein Asset in einen Ordner, eine Kennung an ein Fremdsystem'],

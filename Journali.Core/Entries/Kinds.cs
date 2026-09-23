@@ -38,6 +38,7 @@ public static class Kinds
     {
         // Datenpflege
         Types.AttributeSet or Types.ValueSourced or Types.RowAdded or Types.RowRemoved or Types.RowOrdered
+            or Types.NodeNamed          // einen Knoten benennen ist Pflege (Taloan, 23.09.2026), nicht Gerüst
             or Types.ProductCreated or Types.VariantCreated or Types.NodeRetired or Types.NodeRestored
             or Types.StatusSet or Types.ExternalLinked or Types.ExternalUnlinked
             or Types.MediaCreated or Types.MediaRetired or Types.MediaFiled
@@ -50,7 +51,7 @@ public static class Kinds
             or Types.TranslationMarked or Types.TranslationOrdered or Types.TranslationReturned => Publish,
 
         // Struktur: Baum und Publikationsbaum
-        Types.GroupCreated or Types.GroupRenamed or Types.NodeMoved or Types.NodeOrdered or Types.NodeNamed
+        Types.GroupCreated or Types.GroupRenamed or Types.NodeMoved or Types.NodeOrdered
             or Types.GroupsAttached or Types.ProductAxesSet or Types.LabelAttributeSet
             or Types.CategoryAssigned or Types.CategoryRemoved
             or Types.RubricCreated or Types.PubTreeSet or Types.PubStandSet
