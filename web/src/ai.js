@@ -1,6 +1,7 @@
-// KI-Unterstützung (Taloan, 18.09.2026): wenn in den Einstellungen ein API-Schlüssel eines KI-Anbieters hinterlegt ist, dürfen
-// Plugins (Datenqualität, DPP, PPWR, ETIM, Anreicherung, GEO, Editor) Vorschläge von der KI holen. Schlüssel bleiben im Browser
-// (localStorage), nie im Journal, nie im Repo; journali bietet keine KI an. Ohne Schlüssel arbeiten die Plugins autark — regelbasiert.
+// KI-Unterstützung (Taloan, 18.09.2026): Plugins (Datenqualität, DPP, PPWR, ETIM, Anreicherung, GEO, Editor) holen Vorschläge
+// von der KI, wenn ein Schlüssel hinterlegt ist. Der hängt seit dem 23.09.2026 am **Team** und liegt beim Server (Taloan:
+// „wieso sind die KI-Schlüssel immer noch auf der Ich-Seite?“) — nie im Journal, nie im Browser. Ohne Team und ohne
+// Schlüssel arbeiten die Plugins autark, regelbasiert; journali selbst bietet keine KI an.
 // Kein Anbieter ist im Code bevorzugt (Taloan, 20.09.): Texte sagen „KI“; wo es auf den Anbieter ankommt, zählt ai.active() auf,
 // welche eingerichtet sind, und ai.label() nennt den gewählten mit Modell.
 //
@@ -82,20 +83,20 @@ export const ai = reactive({
     if (!s?.team) return null
     return { label: s.label ?? s.team, month: s.used?.month ?? 0, today: s.used?.today ?? 0, limit: s.limits?.included || s.limits?.monthly || 0, hard: !!s.limits?.included, ready: !!s.ready }
   },
-  /// Fragt der Server für uns? Nur, wenn ein Team einen Schlüssel hat — ein eigener Schlüssel im Browser geht vor.
-  viaServer() { return !!this.server?.ready && !this.accounts[this.provider]?.key },
+  /// Der Server fragt für uns, sobald das Team einen Schlüssel hat — einen anderen Weg gibt es nicht mehr.
+  viaServer() { return !!this.server?.ready },
   /// eingerichtete Anbieter (mit Schlüssel) — zum Aufzählen in Hilfen und Einstellungen
   active() { return PROVIDERS.filter(p => this.accounts[p.key]?.key) },
-  available() { return this.active().length > 0 || !!this.server?.ready },
+  available() { return !!this.server?.ready },
   /// der Anbieter, der gefragt wird: der gewählte, wenn er einen Schlüssel hat, sonst der erste eingerichtete
   current() { const p = byKey(this.provider); return p && this.accounts[p.key]?.key ? p : this.active()[0] ?? null },
   get model() { const p = this.current(); return p ? this.accounts[p.key].model : '' },
   /// „Anthropic · claude-sonnet-5“ — für Tooltips und Meldungen, wo es auf den Anbieter ankommt
   label() {
-    const p = this.current()
-    if (p) return `${p.label} · ${this.accounts[p.key].model}`
-    if (this.server?.ready) return `KI · ${this.server.label ?? this.server.team}`
-    return 'KI'
+    const s = this.server
+    if (!s?.ready) return 'KI'
+    const a = s.providers?.[0] ?? ''
+    return `${a} · ${s.models?.[a] ?? ''} · ${s.label ?? s.team}`.replace(/ · $/, '')
   },
   save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider, used: this.used })) } catch {} },
   /// Verbrauch eines Anbieters (oder ohne Angabe: alles) zurücksetzen — Einstellungen → KI
@@ -112,14 +113,12 @@ export const ai = reactive({
   // web: true → die KI darf im Internet suchen (Herstellerseiten, Datenblätter — Taloan, 20.09.: Daten fremder Produkte ergänzen);
   // die Quellen der Antwort stehen danach in lastSources. Kostet je Suche extra beim Anbieter.
   async ask({ system = '', user, json = false, maxTokens = 2000, temperature = 0, web = false, maxSearches = 5 }) {
-    const p = this.current()
-    const ueberServer = !p && this.server?.ready
-    if (!p && !ueberServer) throw new Error(this.server?.team ? `Für Team „${this.server.label ?? this.server.team}“ ist kein KI-Schlüssel hinterlegt` : 'Kein KI-Schlüssel — Einstellungen → KI')
+    if (!this.server?.ready) throw new Error(this.server?.team ? `Für Team „${this.server.label ?? this.server.team}“ ist kein KI-Schlüssel hinterlegt` : 'Kein Team — ohne Team keine KI')
     this.busy++
     try {
-      const anbieter = ueberServer ? (this.server.providers.includes(this.provider) ? this.provider : this.server.providers[0]) : p.key
-      const modell = this.accounts[anbieter]?.model ?? PROVIDERS.find(x => x.key === anbieter)?.models[0]
-      const { text, sources, usage } = ueberServer
+      const anbieter = this.server.providers.includes(this.provider) ? this.provider : this.server.providers[0]
+      const modell = this.server.models?.[anbieter]
+      const { text, sources, usage } = true
         ? await api.post('/api/ai/ask', { provider: anbieter, model: modell, system, user, maxTokens, web, maxSearches })
             .then(r => {
               if (r.warn) this.warn = r.warn
@@ -128,11 +127,11 @@ export const ai = reactive({
               if (this.server?.used) this.server = { ...this.server, used: { today: (this.server.used.today ?? 0) + t, month: (this.server.used.month ?? 0) + t } }
               return { text: r.text, sources: r.sources ?? [], usage: { in: r.usage?.in ?? 0, out: r.usage?.out ?? 0 } }
             })
-        : await p.call({ key: this.accounts[p.key].key, model: this.accounts[p.key].model, system, user, maxTokens, temperature, web, maxSearches })
+        : null
       // Verbrauch gesamt und je Anbieter (Taloan, 22.09.: „Zählung funktioniert noch nicht separat“)
       const add = (a, u) => ({ calls: (a?.calls ?? 0) + 1, in: (a?.in ?? 0) + (u?.in ?? 0), out: (a?.out ?? 0) + (u?.out ?? 0) })
       const t = add(this.used, usage)
-      const pk = p ? p.key : (this.server?.providers?.[0] ?? 'team')
+      const pk = anbieter
       this.used = { ...this.used, ...t, per: { ...(this.used.per ?? {}), [pk]: add(this.used.per?.[pk], usage) } }
       this.save()
       const seen = new Set(); this.lastSources = sources.filter(s => !seen.has(s.url) && seen.add(s.url))
@@ -146,7 +145,7 @@ export const ai = reactive({
 
   warn: '',   // Hinweis des Servers, z. B. „über der Monatsschwelle“ — die Arbeit läuft weiter
 
-  // Verbindung eines Anbieters prüfen: eine winzige Anfrage
+  // Der Schlüssel des Teams antwortet? Eine winzige Anfrage über den Server — sie zählt wie jede andere.
   async test(providerKey = null) {
     const keep = this.provider; if (providerKey) this.provider = providerKey
     try { const t = await this.ask({ user: 'Antworte nur mit dem Wort: ok', maxTokens: 16 }); return String(t).trim().toLowerCase().startsWith('ok') }

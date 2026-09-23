@@ -339,11 +339,20 @@ Sitzungen liegen in `auth.json` im Datenverzeichnis — nie im Journal (Regel wi
 
 Taloan, 23.09.2026: „dann richten wir die neue Ebene Teams ein → je Team gibt es Limits und API-Keys, Benutzer gehören einem
 Team an.“ Ein Team ist die **Kostenstelle der KI**. Die Schlüssel selbst stehen nie im Journal — sie liegen im
-Datenverzeichnis (`secrets.json` unter `team:<key>`), wie Mailpasswort und Job-Token.
+Datenverzeichnis (`secrets.json` unter `team:<key>`), wie Mailpasswort und Job-Token. Ein Team ist die Kostenstelle:
+hier steht, wie der Verbrauch angerechnet wird — über ein eigenes Kontingent oder über das eines anderen Teams
+(`keysFrom`). Auch das **Modell** je Anbieter steht am Team (`models`), denn es bestimmt Kosten und Güte.
+
+**Wer was darf** (Taloan, 23.09.2026): Ein Team legt **nur der Administrator** an, und dabei benennt er mindestens einen
+**Teammanager** (`managers`) — notfalls sich selbst. Der Manager führt sein Team: Bezeichnung, Schlüssel, Modell, und er
+trägt Mitglieder ein und aus (`POST`/`DELETE /api/teams/<key>/members/<user>`). **Eintragen kann er nur, wer in keinem
+Team ist** (`GET /api/teams/free`); wer wechseln will, wird erst ausgetragen und ist so lange teamlos. Die **Grenzen**
+setzt der Administrator — ein Manager, der sein eigenes Budget schreibt, wäre keine Grenze. **Teamlos heisst 0**: kein
+Schlüssel, keine Grenze, keine KI; neue Benutzer stehen darum im Init Team.
 
 | Typ | Payload | Bedeutung |
 |---|---|---|
-| `TeamDefined` | `label`, `note?`, `monthlyTokens`, `dailyTokens`, `includedTokens`, `keysFrom?`, `enabled` | das Team. `monthlyTokens` **warnt** nur; `dailyTokens` ist die **Reissleine** (weist ab — sie soll den Amoklauf stoppen, nicht die Arbeit); `includedTokens` ist das **Grundrauschen** und gibt es nur am **ersten** Team (Taloan: „sonst lege ich mir 20 Teams an und habe 20× Grundrauschen“); `keysFrom` heisst: dieses Team benutzt die Schlüssel eines anderen mit — eine Stufe, keine Kette, und dann gelten dessen Grenzen für die Summe |
+| `TeamDefined` | `label`, `note?`, `monthlyTokens`, `dailyTokens`, `includedTokens`, `keysFrom?`, `enabled`, `managers[]`, `models{}` | das Team. `monthlyTokens` **warnt** nur; `dailyTokens` ist die **Reissleine** (weist ab — sie soll den Amoklauf stoppen, nicht die Arbeit); `includedTokens` ist das **Grundrauschen** und gibt es nur am **ersten** Team (Taloan: „sonst lege ich mir 20 Teams an und habe 20× Grundrauschen“); `keysFrom` heisst: dieses Team benutzt die Schlüssel eines anderen mit — eine Stufe, keine Kette, und dann gelten dessen Grenzen für die Summe |
 | `TeamRetired` | — | entfernt; der Verbrauch bleibt stehen, er ist eine Tatsache |
 
 ## KI-Verbrauch — Strom `ai-usage:<team>`

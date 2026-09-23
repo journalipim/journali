@@ -8,7 +8,9 @@ import { mount, flushPromises, textOf, button, floats, press, domButton } from '
 const answers = []
 const aiText = await import('../src/aiText.js')
 const { ai } = await import('../src/ai.js')
-ai.accounts.anthropic.key = 'test'; ai.provider = 'anthropic'
+// seit dem 23.09.2026 kommt der Schlüssel vom Team (ai.server), nicht mehr aus dem Browser
+ai.server = { team: 'init', label: 'Init Team', ready: true, providers: ['anthropic'], models: { anthropic: 'claude-sonnet-5' }, limits: {}, used: { today: 0, month: 0 } }
+ai.provider = 'anthropic'
 const origAsk = ai.ask
 ai.ask = async () => { answers.push('ask'); return 'NEUER TEXT' }
 

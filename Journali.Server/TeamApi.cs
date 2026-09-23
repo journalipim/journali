@@ -12,21 +12,29 @@ namespace Journali.Server;
 /// <item><b>Grundrauschen nur am ersten Team</b> (Taloan: „dann lege ich mir 20 Teams an und habe 20× Grundrauschen“):
 /// <c>includedTokens</c> lässt sich nur dort setzen. Jedes weitere Team bringt entweder eigene Schlüssel mit — dann zahlt es
 /// selbst — oder es hängt an einem Zahler (<c>keysFrom</c>), und dessen Grenzen gelten für die Summe.</item>
-/// <item><b>Team-Admin</b> (Recht <c>team</c>): pflegt sein eigenes Team — Bezeichnung, Grenzen, Schlüssel. Anlegen, Löschen,
-/// das Grundrauschen und <c>keysFrom</c> bleiben bei „Benutzer und Rollen“ (<c>users</c>): sonst hängt sich jeder an eine
-/// fremde Kasse oder holt sich Mitglieder in die eigene.</item>
+/// <item><b>Wer was darf</b> (Taloan, 23.09.2026): <em>Nur der Administrator legt ein Team an</em>, und dabei benennt er
+/// mindestens einen <b>Teammanager</b> — notfalls sich selbst. Der Manager führt sein Team: Bezeichnung, Grenzen,
+/// Schlüssel, und er trägt Mitglieder ein und aus. <b>Eintragen kann er nur, wer in keinem Team ist</b>; wer wechseln
+/// will, wird erst ausgetragen und ist so lange teamlos. Das Grundkontingent und <c>keysFrom</c> bleiben beim
+/// Administrator.</item>
+/// <item><b>Teamlos heisst 0</b>: ohne Team gibt es keinen Schlüssel, keine Grenze und keine KI. Neue Benutzer stehen
+/// darum standardmässig im Init Team.</item>
 /// </list>
 /// </summary>
 public static class TeamApi
 {
-    public sealed record TeamBody(string? Label, string? Note, long? MonthlyTokens, long? DailyTokens, bool? Enabled, string? KeysFrom, long? IncludedTokens);
+    public sealed record TeamBody(string? Label, string? Note, long? MonthlyTokens, long? DailyTokens, bool? Enabled, string? KeysFrom, long? IncludedTokens, string[]? Managers, Dictionary<string, string?>? Models);
     public sealed record KeysBody(Dictionary<string, string?>? Keys);
 
     /// <summary>Schlüssel der Geheimnisse eines Teams — neben den Job-Token in derselben Datei.</summary>
     public static string SecretKey(string team) => "team:" + team;
-    /// <summary>Das Team, auf dessen Rechnung dieser Benutzer arbeitet: sein eigenes, sonst das erste Team (Team 1).</summary>
+    /// <summary>Das Team, auf dessen Rechnung dieser Benutzer arbeitet — null, wenn er in keinem ist (dann gilt 0).</summary>
     public static string? TeamOf(Catalog c, string? user) =>
-        c.With((_, _, _) => (user is { Length: > 0 } u ? c.Users.All.GetValueOrDefault(u)?.Team : null) ?? c.Teams.Primary?.Key);
+        c.With((_, _, _) => user is { Length: > 0 } u ? c.Users.All.GetValueOrDefault(u)?.Team : null);
+
+    /// <summary>Darf der Anfragende dieses Team führen? Der Administrator immer; sonst nur sein Manager (Recht <c>team</c>).</summary>
+    private static bool Fuehrt(HttpRequest req, Catalog c, string team) =>
+        Auth.Has(req, c, Rights.Users) || (Auth.Has(req, c, Rights.Team) && c.With((_, _, _) => c.Teams.Leads(team, req.HttpContext.Items["user"] as string)));
 
     public static void Map(RouteGroupBuilder api, string jobsDir)
     {
@@ -34,9 +42,10 @@ public static class TeamApi
         api.MapGet("/teams", (HttpRequest req, Catalog c) => c.With((_, _, _) =>
         {
             var heute = DateOnly.FromDateTime(DateTime.Today); var monat = heute.ToString("yyyy-MM");
-            var meins = TeamOf(c, req.HttpContext.Items["user"] as string);
+            var wer = req.HttpContext.Items["user"] as string;
+            var meins = TeamOf(c, wer);
             var alle = Auth.Has(req, c, Rights.Users);
-            return Results.Ok(c.Teams.All.Values.Where(t => alle || t.Key == meins).OrderBy(t => t.CreatedNumber).Select(t => View(c, jobsDir, t, heute, monat)).ToList());
+            return Results.Ok(c.Teams.All.Values.Where(t => alle || t.Key == meins || c.Teams.Leads(t.Key, wer)).OrderBy(t => t.CreatedNumber).Select(t => View(c, jobsDir, t, heute, monat)).ToList());
         }));
 
         api.MapPut("/teams/{key}", (string key, TeamBody body, HttpRequest req, Catalog c) =>
@@ -44,17 +53,26 @@ public static class TeamApi
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!ValidKey(key)) return Bad("Key: a-z, 0-9, _.");
             var darfAlles = Auth.Has(req, c, Rights.Users);
-            var meins = TeamOf(c, req.HttpContext.Items["user"] as string);
+            var fuehrt = Fuehrt(req, c, key);
             return c.With((_, _, write) =>
             {
                 var cur = c.Teams.Get(key);
                 if (!darfAlles)
                 {
-                    if (cur is null) return Bad("Neue Teams legt an, wer Benutzer und Rollen verwaltet.");
-                    if (key != meins) return Bad("Das ist nicht dein Team.");
-                    if (body.IncludedTokens is not null && body.IncludedTokens != cur.IncludedTokens) return Bad("Das Grundkontingent gehört zur Anlage, nicht zum Team.");
-                    if (body.KeysFrom is not null && Blank(body.KeysFrom) != cur.KeysFrom) return Bad("Woher die Schlüssel kommen, entscheidet die Anlage — nicht das Team.");
+                    if (cur is null) return Bad("Ein neues Team legt der Administrator an.");
+                    if (!fuehrt) return Bad("Dieses Team führst du nicht.");
+                    // Die Grenzen setzt der Administrator (Taloan, 23.09.2026: „das wäre schön, wenn jeder seine Werte selbst
+                    // festlegen könnte, oder?“) — ein Manager, der sein eigenes Budget schreibt, ist keine Grenze.
+                    if (body.IncludedTokens is not null && body.IncludedTokens != cur.IncludedTokens) return Bad("Das Grundkontingent setzt der Administrator.");
+                    if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Monatsschwelle setzt der Administrator.");
+                    if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Tagesgrenze setzt der Administrator.");
+                    if (body.KeysFrom is not null && Blank(body.KeysFrom) != cur.KeysFrom) return Bad("Woher die Schlüssel kommen, entscheidet der Administrator.");
+                    if (body.Managers is not null) return Bad("Wer das Team führt, bestimmt der Administrator.");
                 }
+                // Ein Team ohne Manager gibt es nicht (Taloan, 23.09.2026): beim Anlegen benennt der Administrator mindestens einen
+                var managers = body.Managers?.Select(Blank).OfType<string>().Distinct().ToArray() ?? cur?.Managers ?? [];
+                foreach (var m in managers) if (!c.Users.All.ContainsKey(m)) return Bad($"Unbekannter Benutzer {m}.");
+                if (managers.Length == 0 && c.Users.All.Count > 0) return Bad("Mindestens ein Teammanager — notfalls du selbst.");
                 var keysFrom = body.KeysFrom is null ? cur?.KeysFrom : Blank(body.KeysFrom);
                 if (keysFrom == key) return Bad("Ein Team kann nicht seine eigenen Schlüssel mitbenutzen.");
                 if (keysFrom is { } f)
@@ -69,9 +87,11 @@ public static class TeamApi
                 if (Blank(body.Label) is null && cur is null) return Bad("Bezeichnung fehlt.");
                 foreach (var (n, v) in new[] { ("monatlich", body.MonthlyTokens), ("täglich", body.DailyTokens), ("Grundkontingent", body.IncludedTokens) })
                     if (v is < 0) return Bad($"Grenze {n}: 0 oder mehr (0 = keine).");
+                var modelle = cur?.Models is { Count: > 0 } mm ? new Dictionary<string, string>(mm) : new Dictionary<string, string>();
+                foreach (var (a, m) in body.Models ?? new()) { if (string.IsNullOrWhiteSpace(m)) modelle.Remove(a); else modelle[a] = m!; }
                 var def = new TeamDefined(Blank(body.Label) ?? cur!.Label, body.Note is null ? cur?.Note : Blank(body.Note),
                     body.MonthlyTokens ?? cur?.MonthlyTokens ?? 0, body.DailyTokens ?? cur?.DailyTokens ?? 0,
-                    body.Enabled ?? cur?.Enabled ?? true, keysFrom, included);
+                    body.Enabled ?? cur?.Enabled ?? true, keysFrom, included, managers, modelle);
                 write(actor, Teams.Stream + key, Types.TeamDefined, def, null);
                 var heute = DateOnly.FromDateTime(DateTime.Today);
                 return Results.Ok(View(c, jobsDir, c.Teams.Get(key)!, heute, heute.ToString("yyyy-MM")));
@@ -99,8 +119,7 @@ public static class TeamApi
         api.MapPut("/teams/{key}/keys", (string key, KeysBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is null) return ActorMissing();
-            var darfAlles = Auth.Has(req, c, Rights.Users);
-            if (!darfAlles && key != TeamOf(c, req.HttpContext.Items["user"] as string)) return Bad("Das ist nicht dein Team.");
+            if (!Fuehrt(req, c, key)) return Bad("Dieses Team führst du nicht.");
             if (c.With((_, _, _) => c.Teams.Get(key)) is null) return Results.NotFound();
             Secrets.Set(jobsDir, SecretKey(key), body.Keys ?? new());
             return Results.Ok(new { keys = Secrets.Get(jobsDir, SecretKey(key)).Keys.Order().ToList() });
@@ -109,20 +128,55 @@ public static class TeamApi
         // Wer zum Team gehört (Taloan, 23.09.2026: „auf der Teamseite sehe ich, wer alles zu meinem Team gehört“)
         api.MapGet("/teams/{key}/members", (string key, HttpRequest req, Catalog c) => c.With((_, _, _) =>
         {
-            if (!Auth.Has(req, c, Rights.Users) && key != TeamOf(c, req.HttpContext.Items["user"] as string)) return Bad("Das ist nicht dein Team.");
+            if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
             if (c.Teams.Get(key) is null) return Results.NotFound();
-            var erstes = c.Teams.Primary?.Key == key;
             return Results.Ok(c.Users.All.Values
-                .Where(u => u.Team == key || (erstes && u.Team is null))
+                .Where(u => u.Team == key)
                 .OrderBy(u => u.Name ?? u.Key)
                 .Select(u => new { u.Key, u.Name, u.Role, u.Enabled, own = u.Team == key, u.LastAt }).ToList());
         }));
+
+        // Mitglieder eintragen und austragen (Taloan, 23.09.2026): eintragen nur, wer in keinem Team ist — wer wechseln will,
+        // wird erst ausgetragen und ist so lange teamlos. Das verhindert, dass zwei Manager sich Leute wegnehmen.
+        api.MapPost("/teams/{key}/members/{user}", (string key, string user, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (!Fuehrt(req, c, key)) return Bad("Dieses Team führst du nicht.");
+            return c.With((_, _, write) =>
+            {
+                if (c.Teams.Get(key) is null) return Results.NotFound();
+                if (c.Users.All.GetValueOrDefault(user) is not { } u) return Bad($"Unbekannter Benutzer {user}.");
+                if (u.Team == key) return Bad($"{u.Name ?? u.Key} ist schon hier.");
+                if (u.Team is { Length: > 0 } andere) return Bad($"{u.Name ?? u.Key} steht im Team {c.Teams.Get(andere)?.Label ?? andere} — dort erst austragen.");
+                write(actor, Users.Stream + user, Types.UserDefined, new UserDefined(u.Name, u.Email, u.Role, u.Enabled, key), null);
+                return Results.Ok(new { user, team = key });
+            });
+        });
+
+        api.MapDelete("/teams/{key}/members/{user}", (string key, string user, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (!Fuehrt(req, c, key)) return Bad("Dieses Team führst du nicht.");
+            return c.With((_, _, write) =>
+            {
+                if (c.Users.All.GetValueOrDefault(user) is not { } u) return Results.NotFound();
+                if (u.Team != key) return Bad($"{u.Name ?? u.Key} steht nicht in diesem Team.");
+                if (c.Teams.Leads(key, user)) return Bad($"{u.Name ?? u.Key} führt dieses Team — erst die Führung ändern.");
+                write(actor, Users.Stream + user, Types.UserDefined, new UserDefined(u.Name, u.Email, u.Role, u.Enabled, null), null);
+                return Results.Ok(new { user, team = (string?)null });   // teamlos: keine Schlüssel, keine Grenzen, keine KI
+            });
+        });
+
+        // Wer noch in keinem Team ist — nur diese lassen sich eintragen
+        api.MapGet("/teams/free", (HttpRequest req, Catalog c) => c.With((_, _, _) =>
+            Results.Ok(c.Users.All.Values.Where(u => u.Enabled && u.Team is null).OrderBy(u => u.Name ?? u.Key)
+                .Select(u => new { u.Key, u.Name, u.Role }).ToList())));
 
         // Die Token der Mitglieder (Taloan, 23.09.2026): ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung
         // ihres Teams — darum sieht das Team, welche es gibt, und kann sie widerrufen. Der Token selbst steht nirgends.
         api.MapGet("/teams/{key}/tokens", (string key, HttpRequest req, Catalog c) =>
         {
-            if (!Auth.Has(req, c, Rights.Users) && key != TeamOf(c, req.HttpContext.Items["user"] as string)) return Bad("Das ist nicht dein Team.");
+            if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
             var mitglieder = Mitglieder(c, key);
             if (mitglieder is null) return Results.NotFound();
             return Results.Ok(Auth.TokensOf(jobsDir, mitglieder).Select(t => new { t.Id, t.User, t.Label, t.At }).ToList());
@@ -131,7 +185,7 @@ public static class TeamApi
         api.MapDelete("/teams/{key}/tokens/{id}", (string key, string id, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is null) return ActorMissing();
-            if (!Auth.Has(req, c, Rights.Users) && key != TeamOf(c, req.HttpContext.Items["user"] as string)) return Bad("Das ist nicht dein Team.");
+            if (!Fuehrt(req, c, key)) return Bad("Dieses Team führst du nicht.");
             var mitglieder = Mitglieder(c, key);
             if (mitglieder is null) return Results.NotFound();
             var n = Auth.RevokeToken(jobsDir, id, mitglieder);
@@ -141,7 +195,7 @@ public static class TeamApi
         // Verbrauch der letzten Tage — je Anbieter und je Person, damit die Rechnung nachvollziehbar ist
         api.MapGet("/teams/{key}/usage", (string key, HttpRequest req, Catalog c, int days = 30) => c.With((_, _, _) =>
         {
-            if (!Auth.Has(req, c, Rights.Users) && key != TeamOf(c, req.HttpContext.Items["user"] as string)) return Bad("Das ist nicht dein Team.");
+            if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
             if (c.Teams.Get(key) is null) return Results.NotFound();
             return Results.Ok(new
             {
@@ -152,13 +206,14 @@ public static class TeamApi
         }));
     }
 
-    /// <summary>Wer zu diesem Team gehört; beim ersten Team auch alle ohne eigenes (dort fallen sie hin). Null = kein solches Team.</summary>
+    /// <summary>Wer zu diesem Team gehört. Null = kein solches Team. Teamlose gehören nirgends dazu — sie haben 0.</summary>
     private static HashSet<string>? Mitglieder(Catalog c, string key) => c.With((_, _, _) =>
-    {
-        if (c.Teams.Get(key) is null) return null;
-        var erstes = c.Teams.Primary?.Key == key;
-        return c.Users.All.Values.Where(u => u.Team == key || (erstes && u.Team is null)).Select(u => u.Key).ToHashSet();
-    });
+        c.Teams.Get(key) is null ? null : c.Users.All.Values.Where(u => u.Team == key).Select(u => u.Key).ToHashSet());
+
+    /// <summary>Darf der Anfragende dieses Team sehen? Sein eigenes, eines, das er führt — oder alles als Administrator.</summary>
+    private static bool Darf(HttpRequest req, Catalog c, string team) =>
+        Auth.Has(req, c, Rights.Users) || team == TeamOf(c, req.HttpContext.Items["user"] as string)
+        || c.With((_, _, _) => c.Teams.Leads(team, req.HttpContext.Items["user"] as string));
 
     private static object View(Catalog c, string jobsDir, TeamState t, DateOnly heute, string monat)
     {
@@ -171,7 +226,8 @@ public static class TeamApi
             primary = c.Teams.Primary?.Key == t.Key,
             keys,                                                    // welche Anbieter eingerichtet sind — nie der Schlüssel selbst
             payer = zahler,
-            members = c.Users.All.Values.Count(u => u.Team == t.Key || (c.Teams.Primary?.Key == t.Key && u.Team is null)),
+            members = c.Users.All.Values.Count(u => u.Team == t.Key),
+            t.Managers, models = t.Models,
             today = tag.Tokens, month = c.Teams.Month(t.Key, monat), calls = tag.Calls,
             t.LastAt, t.LastActor,
         };

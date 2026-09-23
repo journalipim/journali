@@ -16,11 +16,20 @@ const tokens = ref([])
 const tage = ref([])
 const anhaengsel = ref([])     // Teams, die auf diese Rechnung gehen
 const keyIn = ref({ anbieter: 'anthropic', wert: '' })
+const frei = ref([])           // wer in keinem Team ist — nur die lassen sich eintragen
+const dazu = ref('')
+const MODELLE = {
+  anthropic: ['claude-sonnet-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-haiku-4-5'],
+  openai: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'],
+}
 const usage = ref(null), usageHist = ref([]), usagePeriod = ref('day'), usageBusy = ref(false)
 const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
 
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
-const darfAendern = computed(() => store.can('team') || store.can('users'))
+/// Das Team führen: Schlüssel, Modell, Mitglieder ein und aus. Der Administrator darf es überall.
+const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.value?.managers ?? []).includes(store.auth.user)))
+/// Die Grenzen setzt der Administrator — ein Manager, der sein eigenes Budget schreibt, ist keine Grenze
+const darfGrenzen = computed(() => store.can('users'))
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
 const anteil = computed(() => { const t = team.value; const g = t?.includedTokens || t?.monthlyTokens; return g ? Math.min(100, Math.round((t.month / g) * 100)) : null })
 
@@ -37,6 +46,7 @@ async function details() {
   try { mitglieder.value = await api.get(`/api/teams/${p}/members`) } catch { mitglieder.value = [] }
   try { tokens.value = await api.get(`/api/teams/${p}/tokens`) } catch { tokens.value = [] }
   try { const u = await api.get(`/api/teams/${p}/usage?days=14`); tage.value = u.days ?? []; anhaengsel.value = u.dependents ?? [] } catch { tage.value = []; anhaengsel.value = [] }
+  try { frei.value = await api.get('/api/teams/free') } catch { frei.value = [] }
 }
 async function ladeNutzung(period = usagePeriod.value) {
   usagePeriod.value = period; usageBusy.value = true
@@ -63,6 +73,18 @@ async function schluesselWeg(anbieter) {
   if (!await dialog.confirm({ title: `Schlüssel ${anbieter} entfernen?`, text: `Ohne ihn arbeitet „${team.value.label}“ nicht mehr über diesen Anbieter.`, ok: '✕ Entfernen' })) return
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: '' } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
+async function modell(anbieter, wert) {
+  try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { models: { [anbieter]: wert } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
+}
+async function eintragen() {
+  if (!dazu.value) return
+  try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/members/${encodeURIComponent(dazu.value)}`, {}); dazu.value = ''; await details() }
+  catch (e) { store.toast(e.message) }
+}
+async function austragen(m) {
+  if (!await dialog.confirm({ title: `${m.name || m.key} austragen?`, text: 'Danach ist die Person in keinem Team — ohne Schlüssel, ohne Kontingent.', ok: '✕ Austragen' })) return
+  try { await api.del(`/api/teams/${encodeURIComponent(gewaehlt.value)}/members/${encodeURIComponent(m.key)}`); await details() } catch (e) { store.toast(e.message) }
+}
 async function widerrufen(tok) {
   if (!await dialog.confirm({ title: `Token „${tok.label}“ von ${tok.user} widerrufen?`, text: 'Wer damit arbeitet, kommt sofort nicht mehr herein.', ok: '✕ Widerrufen' })) return
   try { await api.del(`/api/teams/${encodeURIComponent(gewaehlt.value)}/tokens/${encodeURIComponent(tok.id)}`); await details() } catch (e) { store.toast(e.message) }
@@ -74,22 +96,33 @@ async function widerrufen(tok) {
   <template v-else>
     <div class="section">
       <h2>👥 {{ team.label }}
-        <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" title="Team 1: hierher fällt, wer kein eigenes Team hat"> ①</span></span>
+        <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" title="Init Team: bleibt, trägt das Grundkontingent"> ①</span></span>
         <select v-if="teams.length > 1" v-model="gewaehlt" style="margin-left:8px" @change="details">
           <option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option>
         </select>
       </h2>
       <table class="grid" style="width:auto">
-        <thead><tr><th>Person</th><th>Rolle</th><th>zuletzt</th></tr></thead>
+        <thead><tr><th>Person</th><th>Rolle</th><th>zuletzt</th><th></th></tr></thead>
         <tbody>
           <tr v-for="m in mitglieder" :key="m.key" class="row">
             <td>{{ m.name || m.key }} <span class="mono muted" style="font-size:12px">{{ m.key }}</span>
-              <span v-if="!m.own" class="muted" title="kein eigenes Team — zählt hierher">①</span>
+              <span v-if="(team.managers ?? []).includes(m.key)" class="accent" title="führt dieses Team">★</span>
               <span v-if="!m.enabled" class="neg" title="gesperrt">⊘</span></td>
             <td class="muted">{{ m.role }}</td>
             <td class="muted">{{ m.lastAt ? new Date(m.lastAt).toLocaleDateString() : '' }}</td>
+            <td><button v-if="fuehrt && !(team.managers ?? []).includes(m.key)" class="x" title="aus dem Team austragen" @click="austragen(m)">✕</button></td>
           </tr>
-          <tr v-if="!mitglieder.length"><td colspan="3" class="muted">niemand</td></tr>
+          <tr v-if="!mitglieder.length"><td colspan="4" class="muted">niemand</td></tr>
+          <tr v-if="fuehrt">
+            <td colspan="4" class="row" style="gap:6px">
+              <select v-model="dazu" style="width:200px" title="Eintragen lässt sich nur, wer in keinem Team ist">
+                <option value="">— wer dazu soll —</option>
+                <option v-for="f in frei" :key="f.key" :value="f.key">{{ f.name || f.key }} · {{ f.role }}</option>
+              </select>
+              <button class="x" title="in das Team eintragen" :disabled="!dazu" @click="eintragen">+</button>
+              <span v-if="!frei.length" class="muted" style="font-size:12px" title="Wer wechseln soll, wird erst in seinem Team ausgetragen">niemand teamlos</span>
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -101,16 +134,25 @@ async function widerrufen(tok) {
           <td class="muted">Schlüssel</td>
           <td>
             <span v-for="k in team.keys" :key="k" class="chip" style="margin-right:4px">{{ k }}
-              <button v-if="darfAendern" class="x" title="Schlüssel entfernen" @click="schluesselWeg(k)">×</button>
+              <button v-if="fuehrt" class="x" title="Schlüssel entfernen" @click="schluesselWeg(k)">×</button>
             </span>
             <span v-if="!team.keys.length && team.keysFrom" class="muted" :title="`zahlt über ${team.keysFrom}`">↑ {{ team.keysFrom }}</span>
             <span v-else-if="!team.keys.length" class="neg" title="ohne Schlüssel keine KI über den Server">—</span>
           </td>
-          <td v-if="darfAendern" class="row" style="gap:4px">
+          <td v-if="fuehrt" class="row" style="gap:4px">
             <select v-model="keyIn.anbieter" style="width:110px"><option v-for="[k, l] in ANBIETER" :key="k" :value="k">{{ l }}</option></select>
             <input v-model="keyIn.wert" type="password" placeholder="Schlüssel" style="width:150px" @keydown.enter="schluessel" />
             <button class="x" title="Schlüssel hinterlegen — er bleibt beim Server, nie im Journal, nie im Browser" @click="schluessel">🔒</button>
           </td><td v-else></td>
+        </tr>
+        <tr v-for="k in team.keys" :key="'m' + k">
+          <td class="muted" :title="`welches Modell ${k} fragt — es bestimmt Kosten und Güte`">Modell {{ k }}</td>
+          <td>
+            <select :value="team.models?.[k] ?? ''" :disabled="!fuehrt" style="width:220px" @change="modell(k, $event.target.value)">
+              <option value="">— Vorgabe —</option>
+              <option v-for="m in (MODELLE[k] ?? [])" :key="m" :value="m">{{ m }}</option>
+            </select>
+          </td><td></td>
         </tr>
         <tr v-if="team.includedTokens">
           <td class="muted" title="Grundkontingent je Monat — aufgebraucht heisst Schluss">◷ inklusive</td>
@@ -118,11 +160,11 @@ async function widerrufen(tok) {
         </tr>
         <tr>
           <td class="muted" title="Warnschwelle je Monat: zeigt und warnt, sperrt nicht">⚠ Monat</td>
-          <td><input type="number" min="0" :value="team.monthlyTokens" :disabled="!darfAendern" style="width:110px" @change="grenze('monthlyTokens', $event.target.value)" /></td><td></td>
+          <td><input type="number" min="0" :value="team.monthlyTokens" :disabled="!darfGrenzen" style="width:110px" @change="grenze('monthlyTokens', $event.target.value)" /></td><td></td>
         </tr>
         <tr>
           <td class="muted" title="Reissleine je Tag: hier wird abgewiesen">⛔ Tag</td>
-          <td><input type="number" min="0" :value="team.dailyTokens" :disabled="!darfAendern" style="width:110px" @change="grenze('dailyTokens', $event.target.value)" /></td><td></td>
+          <td><input type="number" min="0" :value="team.dailyTokens" :disabled="!darfGrenzen" style="width:110px" @change="grenze('dailyTokens', $event.target.value)" /></td><td></td>
         </tr>
       </tbody></table>
       <table v-if="tage.length" class="grid" style="width:auto;margin-top:6px">
@@ -147,7 +189,7 @@ async function widerrufen(tok) {
             <td>{{ t.label }} <span class="mono muted" style="font-size:12px">{{ t.id }}</span></td>
             <td class="mono">{{ t.user }}</td>
             <td class="muted">{{ new Date(t.at).toLocaleDateString() }}</td>
-            <td><button v-if="darfAendern" class="x" title="Token widerrufen" @click="widerrufen(t)">×</button></td>
+            <td><button v-if="fuehrt" class="x" title="Token widerrufen" @click="widerrufen(t)">×</button></td>
           </tr>
           <tr v-if="!tokens.length"><td colspan="4" class="muted">keine</td></tr>
         </tbody>

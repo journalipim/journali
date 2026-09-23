@@ -17,8 +17,8 @@ namespace Journali.Server;
 /// <item>Die Reissleine je Tag weist ab; die Monatsschwelle warnt nur. Ein Budget, das sperrt, erzeugt Streit statt Steuerung.</item>
 /// <item>Jobs können KI, weil sie ein Token haben und damit einen Benutzer — also ein Team.</item>
 /// </list>
-/// Wer seinen eigenen Vertrag benutzen will, behält den Weg über den Browser (Einstellungen → KI): dann geht nichts über den
-/// Server, es wird nichts gezählt, und es zahlt der eigene Schlüssel.
+/// Einen anderen Weg gibt es seit dem 23.09.2026 nicht mehr (Taloan: „wieso sind die KI-Schlüssel immer noch auf der
+/// Ich-Seite?“) — auch das Modell steht am Team, denn es bestimmt Kosten und Güte. Ohne Team: keine KI.
 /// </summary>
 public static class AiApi
 {
@@ -110,6 +110,7 @@ public static class AiApi
             return Results.Ok(new
             {
                 team, label = t.Label, payer = zahler, payerLabel = zt.Label, providers = keys, ready = t.Enabled && zt.Enabled && keys.Count > 0,
+                models = zt.Models,   // welches Modell je Anbieter gefragt wird — Kosten und Güte gehören zum Team
                 limits = new { included = zt.IncludedTokens, monthly = zt.MonthlyTokens, daily = zt.DailyTokens },
                 used = new { today = c.Teams.Day(zahler, heute).Tokens, month = c.Teams.Month(zahler, heute.ToString("yyyy-MM")) },
             });
@@ -140,7 +141,8 @@ public static class AiApi
             });
             if (fehler is not null) return fehler;
 
-            var model = Blank(body.Model) ?? (provider == "anthropic" ? "claude-sonnet-5" : "gpt-5");
+            var amTeam = c.With((_, _, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
+            var model = Blank(amTeam) ?? Blank(body.Model) ?? (provider == "anthropic" ? "claude-sonnet-5" : "gpt-5");
             try
             {
                 var (text, sources, tin, tout) = await Call(provider, key, model, Blank(body.System), frage, Math.Clamp(body.MaxTokens ?? 2000, 1, 64000), body.Web == true, Math.Clamp(body.MaxSearches ?? 5, 1, 20), ct);

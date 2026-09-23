@@ -10,8 +10,8 @@ const TeamsSettings = (await import('../src/components/TeamsSettings.vue')).defa
 const TeamsAdmin = (await import('../src/components/TeamsAdmin.vue')).default
 
 const TEAMS = [
-  { key: 'init', label: 'Init Team', primary: true, keys: ['anthropic'], keysFrom: null, includedTokens: 200000, monthlyTokens: 100000, dailyTokens: 50000, month: 80000, today: 1200, calls: 7, members: 3, payer: 'init' },
-  { key: 'es', label: 'Spanien', primary: false, keys: [], keysFrom: 'init', includedTokens: 0, monthlyTokens: 0, dailyTokens: 0, month: 0, today: 0, calls: 0, members: 2, payer: 'init' },
+  { key: 'init', label: 'Init Team', primary: true, keys: ['anthropic'], keysFrom: null, includedTokens: 200000, monthlyTokens: 100000, dailyTokens: 50000, month: 80000, today: 1200, calls: 7, members: 3, payer: 'init', managers: ['taloan'], models: { anthropic: 'claude-sonnet-5' } },
+  { key: 'es', label: 'Spanien', primary: false, keys: [], keysFrom: 'init', includedTokens: 0, monthlyTokens: 0, dailyTokens: 0, month: 0, today: 0, calls: 0, members: 2, payer: 'init', managers: ['pablo'], models: {} },
 ]
 const MITGLIEDER = [
   { key: 'taloan', name: 'Taloan', role: 'admin', enabled: true, own: true, lastAt: '2026-09-23T07:00:00Z' },
@@ -27,6 +27,8 @@ function server(teams = TEAMS) {
       : path.endsWith('/tokens') ? [{ id: 'abc123def456', user: 'gast', label: 'Excel Laptop', at: '2026-09-20T08:00:00Z' }]
       : path.endsWith('/usage') ? { team: 'init', days: [{ day: '2026-09-23', calls: 7, in: 800, out: 400, tokens: 1200, byProvider: { anthropic: 1200 }, byUser: { gast: 900, taloan: 300 } }], dependents: ['es'] }
       : path === '/api/usage' ? { week: { used: 1, max: 10 }, month: { used: 2, max: 20 }, history: [] }
+      : path === '/api/teams/free' ? [{ key: 'neu', name: 'Neu Person', role: 'editor' }]
+      : path === '/api/auth/people' ? [{ key: 'taloan', name: 'Taloan', role: 'admin' }, { key: 'pablo', name: 'Pablo', role: 'editor' }]
       : path === '/api/teams' ? teams
       : opts.method === 'PUT' ? teams[0] : {}
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }
@@ -81,6 +83,7 @@ test('Teams anlegen steht bei den Personen — das erste Team lässt sich nicht 
   assert.equal(zeilen[0].findAll('input[type=number]').length, 3, 'Team 1: Grundkontingent, Monat, Tag')
   assert.equal(zeilen[1].findAll('input[type=number]').length, 2, 'jedes weitere hat kein eigenes Grundkontingent')
   await w.find('input[placeholder="neues Team"]').setValue('Frankreich')
+  await w.findAll('select').at(-1).setValue('taloan')   // ohne Führung legt der Server kein Team an
   await w.findAll('button').find(b => b.text() === '+').trigger('click'); await ruhe()
   const put = calls.find(c => c.path === '/api/teams/frankreich' && c.method === 'PUT')
   assert.ok(put, 'das Team wurde nicht angelegt')

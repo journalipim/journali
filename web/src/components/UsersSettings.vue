@@ -51,7 +51,7 @@ onMounted(load)
 
 <template>
   <div class="section" v-if="isAdmin()">
-    <h2>👥 Benutzer <span class="muted">· {{ users.length }} · Passwörter liegen beim Server (auth.json), nie im Journal</span></h2>
+    <h2>👥 Benutzer <span class="muted" title="Passwörter liegen beim Server (auth.json), nie im Journal.">· {{ users.length }}</span></h2>
     <table class="grid" style="width:100%">
       <thead><tr><th style="width:120px">Benutzer</th><th>Name</th><th>E-Mail</th><th style="width:80px">Rolle</th><th style="width:90px" title="Kostenstelle der KI: wessen Schlüssel gelten und auf wessen Rechnung es läuft">Team</th><th style="width:60px"></th><th style="width:150px">zuletzt</th><th style="width:130px"></th></tr></thead>
       <tbody>
@@ -79,7 +79,7 @@ onMounted(load)
   </div>
 
   <div class="section" v-if="isAdmin()">
-    <h2>◈ Rollen <span class="muted">· {{ roles.length }} · welche Rechte eine Rolle hat, bestimmen Sie — Rechtsklick zieht eine Rolle zurück</span></h2>
+    <h2>◈ Rollen <span class="muted" title="Welche Rechte eine Rolle hat, bestimmen Sie; Rechtsklick zieht eine Rolle zurück.">· {{ roles.length }}</span></h2>
     <table class="grid" style="width:auto">
       <thead><tr><th style="width:110px">Rolle</th><th style="width:160px">Bezeichnung</th><th v-for="rt in rights" :key="rt.key" style="text-align:center;min-width:64px" :title="rt.key">{{ rt.label }}</th><th style="width:70px" class="num">Benutzer</th></tr></thead>
       <tbody>

@@ -77,15 +77,16 @@ public class TeamTests
     }
 
     [Fact]
-    public void Der_Benutzer_traegt_sein_Team_und_faellt_sonst_auf_Team_1()
+    public void Der_Benutzer_traegt_sein_Team_und_ohne_Team_gibt_es_keines()
     {
         var c = World();
         Assert.Equal("es", c.With((_, _, _) => c.Users.All["pablo"].Team));
         Assert.Equal("es", TeamApi.TeamOf(c, "pablo"));
+        // wer ausgetragen wurde, ist teamlos — und teamlos heisst 0 (Taloan, 23.09.2026), kein stilles Zurückfallen auf Team 1
         c.With((_, _, write) => write("t", Users.Stream + "gast", Types.UserDefined, new UserDefined("Gast", null, "reader"), null));
         Assert.Null(c.With((_, _, _) => c.Users.All["gast"].Team));
-        Assert.Equal(Model.InitTeam, TeamApi.TeamOf(c, "gast"));   // ohne eigenes Team gilt Team 1
-        Assert.Equal(Model.InitTeam, TeamApi.TeamOf(c, null));
+        Assert.Null(TeamApi.TeamOf(c, "gast"));
+        Assert.Null(TeamApi.TeamOf(c, null));
     }
 
     [Fact]
@@ -117,6 +118,30 @@ public class TeamTests
         Assert.Equal("Haus", c.With((_, _, _) => c.Teams.Primary!.Label));
         Assert.Equal(50_000, c.With((_, _, _) => c.Teams.Primary!.IncludedTokens));
         Assert.Equal(Model.InitTeam, c.With((_, _, _) => c.Teams.Primary!.Key));   // Team 1 bleibt Team 1
+    }
+
+    [Fact]
+    public void Die_Fuehrung_steht_am_Team_und_teamlos_heisst_null()
+    {
+        var c = World();
+        c.With((_, _, write) => write("t", Teams.Stream + "es", Types.TeamDefined, new TeamDefined("Spanien", null, KeysFrom: Model.InitTeam, Managers: ["pablo"]), null));
+        Assert.True(c.With((_, _, _) => c.Teams.Leads("es", "pablo")));
+        Assert.False(c.With((_, _, _) => c.Teams.Leads("es", "taloan")));
+        Assert.Equal(["es"], c.With((_, _, _) => c.Teams.Led("pablo").Select(t => t.Key).ToArray()));
+        // ausgetragen heisst teamlos: kein Team, also kein Schlüssel, keine Grenze, keine KI
+        c.With((_, _, write) => write("t", Users.Stream + "pablo", Types.UserDefined, new UserDefined("Pablo", null, "editor", true, null), null));
+        Assert.Null(c.With((_, _, _) => c.Users.All["pablo"].Team));
+        Assert.Null(TeamApi.TeamOf(c, "pablo"));
+        Assert.Null(TeamApi.TeamOf(c, "gibtsnicht"));
+    }
+
+    [Fact]
+    public void Das_Modell_steht_am_Team()
+    {
+        var c = World();
+        c.With((_, _, write) => write("t", Teams.Stream + Model.InitTeam, Types.TeamDefined,
+            new TeamDefined("Init Team", Managers: ["taloan"], Models: new() { ["anthropic"] = "claude-opus-5" }), null));
+        Assert.Equal("claude-opus-5", c.With((_, _, _) => c.Teams.Get(Model.InitTeam)!.Models["anthropic"]));
     }
 
     [Fact]

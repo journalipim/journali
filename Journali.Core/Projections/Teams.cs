@@ -21,6 +21,11 @@ public sealed class TeamState
     public bool Enabled { get; set; } = true;
     /// <summary>Benutzt die Schlüssel dieses Teams mit (null = eigene). Wer keine eigenen hat, hat auch kein eigenes Kontingent.</summary>
     public string? KeysFrom { get; set; }
+    /// <summary>Wer dieses Team führt (Taloan, 23.09.2026): trägt Mitglieder ein und aus, pflegt Schlüssel und Grenzen.
+    /// Ein Team ohne Manager gibt es nicht — der Administrator benennt beim Anlegen mindestens einen.</summary>
+    public string[] Managers { get; set; } = [];
+    /// <summary>Welches Modell je Anbieter gefragt wird — das bestimmt Kosten und Güte, also gehört es zum Team.</summary>
+    public Dictionary<string, string> Models { get; } = new();
     /// <summary>Nummer des Eintrags, der das Team zuerst angelegt hat — daran hängt, wer „Team 1“ ist.</summary>
     public long CreatedNumber { get; set; }
     public long LastNumber { get; set; }
@@ -62,6 +67,11 @@ public sealed class Teams : IProjection
     /// <summary>Die Teams, die an diesem Zahler hängen (er selbst eingeschlossen).</summary>
     public IEnumerable<string> Dependents(string payer) => _all.Keys.Where(k => Payer(k) == payer);
 
+    /// <summary>Führt diese Person das Team? (Der Administrator darf ohnehin alles — das prüft der Server.)</summary>
+    public bool Leads(string team, string? user) => user is { Length: > 0 } u && _all.GetValueOrDefault(team)?.Managers.Contains(u) == true;
+    /// <summary>Die Teams, die diese Person führt.</summary>
+    public IEnumerable<TeamState> Led(string? user) => user is { Length: > 0 } u ? _all.Values.Where(t => t.Managers.Contains(u)) : [];
+
     /// <summary>Verbrauch eines Tages (leer = nichts verbraucht).</summary>
     public UsageDay Day(string team, DateOnly day) => _usage.TryGetValue(team, out var d) && d.TryGetValue(day.ToString("yyyy-MM-dd"), out var u) ? u : new UsageDay();
     /// <summary>Alle Tage eines Teams, neueste zuerst.</summary>
@@ -96,7 +106,8 @@ public sealed class Teams : IProjection
             {
                 var d = Types.Deserialize<TeamDefined>(entry.Payload);
                 if (!_all.TryGetValue(key, out var t)) _all[key] = t = new TeamState { Key = key, CreatedNumber = entry.Number };
-                t.Label = d.Label; t.Note = d.Note; t.MonthlyTokens = d.MonthlyTokens; t.DailyTokens = d.DailyTokens; t.Enabled = d.Enabled; t.KeysFrom = d.KeysFrom; t.IncludedTokens = d.IncludedTokens;
+                t.Label = d.Label; t.Note = d.Note; t.MonthlyTokens = d.MonthlyTokens; t.DailyTokens = d.DailyTokens; t.Enabled = d.Enabled; t.KeysFrom = d.KeysFrom; t.IncludedTokens = d.IncludedTokens; t.Managers = d.Managers ?? [];
+                t.Models.Clear(); foreach (var (a, m) in d.Models ?? new()) t.Models[a] = m;
                 t.LastNumber = entry.Number; t.LastAt = entry.At; t.LastActor = entry.Actor;
                 break;
             }

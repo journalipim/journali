@@ -9,8 +9,13 @@ import { dialog } from '../dialog.js'
 
 const teams = ref([])
 const neu = ref('')
+const neuManager = ref('')
+const leute = ref([])
 
-async function load() { try { teams.value = await api.get('/api/teams') } catch (e) { store.toast(e.message) } }
+async function load() {
+  try { teams.value = await api.get('/api/teams') } catch (e) { store.toast(e.message) }
+  try { leute.value = await api.get('/api/auth/people') } catch { leute.value = [] }
+}
 onMounted(load)
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
 
@@ -21,8 +26,15 @@ async function speichern(t, feld, wert) {
 async function anlegen() {
   const k = (neu.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
   if (!k) { store.toast('Kurzname fehlt'); return }
-  try { await api.post(`/api/teams/${encodeURIComponent(k)}`, { label: neu.value.trim() }, 'PUT'); neu.value = ''; await load() }
+  if (!neuManager.value) { store.toast('Wer führt das Team?'); return }
+  try { await api.post(`/api/teams/${encodeURIComponent(k)}`, { label: neu.value.trim(), managers: [neuManager.value] }, 'PUT'); neu.value = ''; neuManager.value = ''; await load() }
   catch (e) { store.toast(e.message) }
+}
+/// Die Führung ändern — mehrere sind erlaubt, keiner nicht
+function fuehrung(t, key, an) {
+  const set = new Set(t.managers ?? []); an ? set.add(key) : set.delete(key)
+  if (!set.size) { store.toast('Mindestens einer führt das Team'); return }
+  speichern(t, 'managers', [...set])
 }
 async function entfernen(t) {
   if (!await dialog.confirm({ title: `Team „${t.label}“ entfernen?`, text: 'Der Verbrauch bleibt als Beleg stehen; die hinterlegten Schlüssel gehen weg.', ok: '✕ Entfernen' })) return
@@ -37,7 +49,8 @@ async function entfernen(t) {
       <thead>
         <tr>
           <th>Team</th>
-          <th title="Eigene Schlüssel = eigene Rechnung; ohne eigene zahlt ein anderes Team">zahlt</th>
+          <th title="Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus">★ Führung</th>
+          <th title="Wie der Verbrauch angerechnet wird: über ein eigenes Kontingent oder über das eines anderen Teams">Token</th>
           <th title="Grundkontingent je Monat — nur am ersten Team">◷ inklusive</th>
           <th title="Warnschwelle je Monat: zeigt und warnt, sperrt nicht">⚠ Monat</th>
           <th title="Reissleine je Tag: hier wird abgewiesen">⛔ Tag</th>
@@ -49,13 +62,22 @@ async function entfernen(t) {
           <td>
             <input type="text" :value="t.label" style="width:140px" @change="speichern(t, 'label', $event.target.value)" />
             <span class="mono muted" style="font-size:12px"> {{ t.key }}</span>
-            <span v-if="t.primary" class="accent" title="Team 1: hier hängt das Grundkontingent, und hierher fällt, wer kein eigenes Team hat"> ①</span>
+            <span v-if="t.primary" class="accent" title="Init Team: bleibt, trägt das Grundkontingent"> ①</span>
           </td>
           <td>
-            <select :value="t.keysFrom ?? ''" :disabled="t.keys.length > 0" :title="t.keys.length ? 'eigene Schlüssel — es zahlt selbst' : 'welches Team die Schlüssel stellt'"
+            <span v-for="m in (t.managers ?? [])" :key="m" class="chip" style="margin-right:4px">{{ leute.find(p => p.key === m)?.name || m }}
+              <button class="x" title="Führung abgeben" @click="fuehrung(t, m, false)">×</button>
+            </span>
+            <select value="" style="width:130px" title="jemanden zur Führung dazunehmen" @change="fuehrung(t, $event.target.value, true); $event.target.value = ''">
+              <option value="">+</option>
+              <option v-for="p in leute.filter(p => !(t.managers ?? []).includes(p.key))" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
+            </select>
+          </td>
+          <td>
+            <select :value="t.keysFrom ?? ''" :disabled="t.keys.length > 0" :title="t.keys.length ? 'eigene Schlüssel hinterlegt' : 'woher die Token kommen'"
                     @change="speichern(t, 'keysFrom', $event.target.value)">
-              <option value="">selbst</option>
-              <option v-for="z in teams.filter(x => x.key !== t.key && !x.keysFrom)" :key="z.key" :value="z.key">↑ {{ z.label }}</option>
+              <option value="">eigenes Kontingent</option>
+              <option v-for="z in teams.filter(x => x.key !== t.key && !x.keysFrom)" :key="z.key" :value="z.key">über Team {{ z.label }}</option>
             </select>
           </td>
           <td>
@@ -68,9 +90,13 @@ async function entfernen(t) {
           <td><button v-if="!t.primary" class="x" title="Team entfernen" @click="entfernen(t)">✕</button></td>
         </tr>
         <tr>
-          <td><input v-model="neu" type="text" placeholder="neues Team" style="width:140px"
-                     title="Eigene Schlüssel = eigene Rechnung. Ohne eigene zahlt ein anderes Team; das Grundkontingent bleibt bei Team 1."
-                     @keydown.enter="anlegen" /></td>
+          <td><input v-model="neu" type="text" placeholder="neues Team" style="width:140px" @keydown.enter="anlegen" /></td>
+          <td>
+            <select v-model="neuManager" style="width:130px" title="Wer führt es? Notfalls du selbst.">
+              <option value="">— Führung —</option>
+              <option v-for="p in leute" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
+            </select>
+          </td>
           <td colspan="6"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
         </tr>
       </tbody>
