@@ -2,8 +2,13 @@
 // Plugins (Datenqualität, DPP, PPWR, ETIM, Anreicherung, GEO, Editor) Vorschläge von der KI holen. Schlüssel bleiben im Browser
 // (localStorage), nie im Journal, nie im Repo; journali bietet keine KI an. Ohne Schlüssel arbeiten die Plugins autark — regelbasiert.
 // Kein Anbieter ist im Code bevorzugt (Taloan, 20.09.): Texte sagen „KI“; wo es auf den Anbieter ankommt, zählt ai.active() auf,
-// welche eingerichtet sind, und ai.label() nennt den gewählten mit Modell. Aufruf direkt aus dem Browser, je Anbieter sein Protokoll.
+// welche eingerichtet sind, und ai.label() nennt den gewählten mit Modell.
+//
+// Zwei Wege (Taloan, 23.09.2026, Teams): liegt am Team ein Schlüssel, fragt der Server (POST /api/ai/ask) — der Schlüssel bleibt
+// dort, jeder Aufruf wird beim zahlenden Team gezählt, Grenzen greifen, und auch Jobs können KI. Wer seinen eigenen Vertrag
+// benutzen will, trägt hier einen Schlüssel ein: dann fragt der Browser wieder direkt, es zählt niemand mit, und er zahlt selbst.
 import { reactive } from 'vue'
+import { api } from './api.js'
 
 const KEY = 'journali.ai'
 const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') } catch { return {} } })()
@@ -67,14 +72,24 @@ export const ai = reactive({
   used: { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10), per: {}, ...(saved.used ?? {}) },
 
   providers: PROVIDERS,
+  // Was das Team stellt (GET /api/ai/state): { team, label, payer, providers[], ready, limits, used }
+  server: null,
+  async loadState() { try { this.server = await api.get('/api/ai/state') } catch { this.server = null } return this.server },
+  /// Fragt der Server für uns? Nur, wenn ein Team einen Schlüssel hat — ein eigener Schlüssel im Browser geht vor.
+  viaServer() { return !!this.server?.ready && !this.accounts[this.provider]?.key },
   /// eingerichtete Anbieter (mit Schlüssel) — zum Aufzählen in Hilfen und Einstellungen
   active() { return PROVIDERS.filter(p => this.accounts[p.key]?.key) },
-  available() { return this.active().length > 0 },
+  available() { return this.active().length > 0 || !!this.server?.ready },
   /// der Anbieter, der gefragt wird: der gewählte, wenn er einen Schlüssel hat, sonst der erste eingerichtete
   current() { const p = byKey(this.provider); return p && this.accounts[p.key]?.key ? p : this.active()[0] ?? null },
   get model() { const p = this.current(); return p ? this.accounts[p.key].model : '' },
   /// „Anthropic · claude-sonnet-5“ — für Tooltips und Meldungen, wo es auf den Anbieter ankommt
-  label() { const p = this.current(); return p ? `${p.label} · ${this.accounts[p.key].model}` : 'KI' },
+  label() {
+    const p = this.current()
+    if (p) return `${p.label} · ${this.accounts[p.key].model}`
+    if (this.server?.ready) return `KI · ${this.server.label ?? this.server.team}`
+    return 'KI'
+  },
   save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider, used: this.used })) } catch {} },
   /// Verbrauch eines Anbieters (oder ohne Angabe: alles) zurücksetzen — Einstellungen → KI
   resetUsed(key = null) {
@@ -91,14 +106,21 @@ export const ai = reactive({
   // die Quellen der Antwort stehen danach in lastSources. Kostet je Suche extra beim Anbieter.
   async ask({ system = '', user, json = false, maxTokens = 2000, temperature = 0, web = false, maxSearches = 5 }) {
     const p = this.current()
-    if (!p) throw new Error('Kein KI-Schlüssel — Einstellungen → KI')
+    const ueberServer = !p && this.server?.ready
+    if (!p && !ueberServer) throw new Error(this.server?.team ? `Für Team „${this.server.label ?? this.server.team}“ ist kein KI-Schlüssel hinterlegt` : 'Kein KI-Schlüssel — Einstellungen → KI')
     this.busy++
     try {
-      const { text, sources, usage } = await p.call({ key: this.accounts[p.key].key, model: this.accounts[p.key].model, system, user, maxTokens, temperature, web, maxSearches })
+      const anbieter = ueberServer ? (this.server.providers.includes(this.provider) ? this.provider : this.server.providers[0]) : p.key
+      const modell = this.accounts[anbieter]?.model ?? PROVIDERS.find(x => x.key === anbieter)?.models[0]
+      const { text, sources, usage } = ueberServer
+        ? await api.post('/api/ai/ask', { provider: anbieter, model: modell, system, user, maxTokens, web, maxSearches })
+            .then(r => { if (r.warn) this.warn = r.warn; return { text: r.text, sources: r.sources ?? [], usage: { in: r.usage?.in ?? 0, out: r.usage?.out ?? 0 } } })
+        : await p.call({ key: this.accounts[p.key].key, model: this.accounts[p.key].model, system, user, maxTokens, temperature, web, maxSearches })
       // Verbrauch gesamt und je Anbieter (Taloan, 22.09.: „Zählung funktioniert noch nicht separat“)
       const add = (a, u) => ({ calls: (a?.calls ?? 0) + 1, in: (a?.in ?? 0) + (u?.in ?? 0), out: (a?.out ?? 0) + (u?.out ?? 0) })
       const t = add(this.used, usage)
-      this.used = { ...this.used, ...t, per: { ...(this.used.per ?? {}), [p.key]: add(this.used.per?.[p.key], usage) } }
+      const pk = p ? p.key : (this.server?.providers?.[0] ?? 'team')
+      this.used = { ...this.used, ...t, per: { ...(this.used.per ?? {}), [pk]: add(this.used.per?.[pk], usage) } }
       this.save()
       const seen = new Set(); this.lastSources = sources.filter(s => !seen.has(s.url) && seen.add(s.url))
       this.lastError = ''
@@ -108,6 +130,8 @@ export const ai = reactive({
     } catch (e) { this.lastError = e.message; throw e }
     finally { this.busy-- }
   },
+
+  warn: '',   // Hinweis des Servers, z. B. „über der Monatsschwelle“ — die Arbeit läuft weiter
 
   // Verbindung eines Anbieters prüfen: eine winzige Anfrage
   async test(providerKey = null) {

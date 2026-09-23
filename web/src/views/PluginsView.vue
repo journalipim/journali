@@ -195,8 +195,6 @@ function pick(k) { cur.value = k }
 .li .k { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 70px; overflow: hidden; text-overflow: ellipsis; }
 .li .l { overflow: hidden; text-overflow: ellipsis; }
 .li .r { margin-left: auto; font-size: 11px; display: flex; gap: 8px; }
-.section { padding: 10px 8px; border-top: 1px solid var(--line); }
-.section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .form { width: auto; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }

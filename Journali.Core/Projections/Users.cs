@@ -11,6 +11,8 @@ public sealed class UserState
     public string? Email { get; set; }
     public string Role { get; set; } = "editor";
     public bool Enabled { get; set; } = true;
+    /// <summary>Team (Taloan, 23.09.2026): wessen KI-Schlüssel gelten und auf wessen Rechnung es läuft. Null = kein Team, keine KI über den Server.</summary>
+    public string? Team { get; set; }
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";
@@ -65,7 +67,7 @@ public sealed class Users : IProjection
             {
                 var d = Types.Deserialize<UserDefined>(entry.Payload);
                 if (!_all.TryGetValue(key, out var u)) _all[key] = u = new UserState { Key = key };
-                u.Name = d.Name; u.Email = d.Email; u.Role = d.Role; u.Enabled = d.Enabled;
+                u.Name = d.Name; u.Email = d.Email; u.Role = d.Role; u.Enabled = d.Enabled; u.Team = string.IsNullOrWhiteSpace(d.Team) ? null : d.Team;
                 u.LastNumber = entry.Number; u.LastAt = entry.At; u.LastActor = entry.Actor;
                 break;
             }

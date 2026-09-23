@@ -245,6 +245,12 @@ table.grid tr.row:hover { background: var(--hover); }
 table.grid tr.row.selected { background: var(--accent-soft); }
 table.grid tr.row:focus { outline: none; }
 
+/* Abschnitt in den Einstellungen und im Modell: Überschrift klein und ruhig, ein Strich als Trenner.
+   Steht hier und nicht scoped in jeder Ansicht — sonst sieht jeder neue Reiter anders aus (Taloan, 23.09.2026).
+   Die Knotenansicht hat ihre eigene Bandoptik; ihre scoped Regel ist spezifischer und gilt dort weiter. */
+.section { padding: 10px 8px; border-top: 1px solid var(--line); }
+.section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
+
 .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .chip {
   display: inline-flex; align-items: center; gap: 4px;

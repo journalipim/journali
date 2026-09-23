@@ -179,6 +179,8 @@ RestoreApi.Map(api);   // Teilbaum aus einer Rohdaten-Datei zurueck (Einstellung
 BackupApi.Map(api, journal, dataDir, pluginDir);   // Vollsicherung: Journal, Medien, Zugänge, Plugins — zurück in ein leeres System (Taloan, 23.09.)
 MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail, Taloan 23.09.)
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
+TeamApi.Map(api, jobDir);   // Teams (Taloan, 23.09.): Kostenstelle der KI — Schlüssel, Grenzen, Verbrauch
+AiApi.Map(api, jobDir);     // KI über den Server: mit dem Schlüssel des zahlenden Teams, gezählt bei ihm
 FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/

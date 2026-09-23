@@ -29,7 +29,7 @@ public static class Auth
 
     public sealed record LoginBody(string? User, string? Password);
     public sealed record SetupBody(string? User, string? Name, string? Password);
-    public sealed record UserBody(string? Name, string? Email, string? Role, string? Password, bool? Enabled);
+    public sealed record UserBody(string? Name, string? Email, string? Role, string? Password, bool? Enabled, string? Team);
     public sealed record RoleBody(string? Label, string[]? Rights);
     public sealed record PasswordBody(string? Current, string? Password);
     public sealed record TokenBody(string? Label);
@@ -104,6 +104,8 @@ public static class Auth
         if (path.StartsWith("/api/auth/me") || path.StartsWith("/api/auth/logout") || path.StartsWith("/api/auth/password") || path.StartsWith("/api/auth/tokens")) return null;   // eigenes Konto
         if (path.StartsWith("/api/auth/rights") || path.StartsWith("/api/auth/people")) return path.StartsWith("/api/auth/people") ? Rights.Read : null;   // Personen (Key, Name, Rolle) für Zuweisungen darf jeder Leser sehen                                                                         // das Vokabular darf jeder lesen
         if (path.StartsWith("/api/auth/users") || path.StartsWith("/api/auth/roles")) return read && path.StartsWith("/api/auth/roles") ? Rights.Read : Rights.Users;
+        if (path.StartsWith("/api/ai")) return read ? Rights.Read : Rights.Write;   // KI fragen darf, wer pflegen darf — der Schlüssel gehört dem Team, nicht der Person
+        if (path.StartsWith("/api/teams")) return read ? Rights.Read : Rights.Team;   // das eigene Team; Anlegen, Löschen und Grundkontingent prüft TeamApi gegen „users“
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
         if (path.StartsWith("/api/media/presets") && !read) return Rights.Model;   // Vorschau-Presets sind Modell
         if (path.StartsWith("/api/files")) return Rights.Jobs;   // Dateibrowser des Servers: Jobs — oder Storage (Allowed)
@@ -122,9 +124,10 @@ public static class Auth
         return Rights.Write;
     }
     public static bool Allowed(Catalog c, string role, HttpRequest req) => Needed(req) is not { } need || RightsOf(c, role).Contains(need)
+        || (need == Rights.Team && RightsOf(c, role).Contains(Rights.Users))   // wer Benutzer und Rollen verwaltet, verwaltet auch Teams (Taloan, 23.09.)
         || (req.Path.StartsWithSegments("/api/files") && RightsOf(c, role).Contains(Rights.Storage));   // der Dateibrowser dient auch dem Medienspeicher
     /// <summary>Hat der Anfragende dieses Recht? Ohne Benutzer (offen) ja; sonst die Rolle aus der Sitzung (Middleware legt sie in Items).</summary>
-    public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && RightsOf(c, role).Contains(right));
+    public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && (RightsOf(c, role).Contains(right) || (right == Rights.Team && RightsOf(c, role).Contains(Rights.Users))));
 
     /// <summary>Die Sperre: vor allem unter /api. Ohne Benutzer offen (X-Actor wie bisher); sonst Sitzung/Token nötig, X-Actor wird gesetzt.</summary>
     public static Func<HttpContext, Func<Task>, Task> Middleware(Catalog c, string dir) => async (ctx, next) =>
@@ -164,14 +167,14 @@ public static class Auth
         {
             var enabled = Enabled(c); var who = enabled ? Resolve(ctx, c, dir) : null;
             var me = who is { } x ? c.With((_, _, _) => c.Users.All.GetValueOrDefault(x.User)) : null;
-            return Results.Ok(new { enabled, setup = !enabled, user = who?.User, role = who?.Role, rights = who is { } r ? RightsOf(c, r.Role).ToArray() : null, name = me?.Name, prefs = me?.Prefs });
+            return Results.Ok(new { enabled, setup = !enabled, user = who?.User, role = who?.Role, rights = who is { } r ? RightsOf(c, r.Role).ToArray() : null, name = me?.Name, team = me?.Team, prefs = me?.Prefs });
         });
         api.MapGet("/auth/me", (HttpContext ctx, Catalog c) =>
         {
             var who = Resolve(ctx, c, dir); if (who is null) return Results.Unauthorized();
             var u = c.With((_, _, _) => c.Users.All.GetValueOrDefault(who.Value.User));
             var tokens = With(dir, s => s.Tokens.Where(t => t.Value.User == who.Value.User).Select(t => new { id = t.Key[..12], t.Value.Label, t.Value.At }).ToList());
-            return Results.Ok(new { user = who.Value.User, role = who.Value.Role, rights = RightsOf(c, who.Value.Role).ToArray(), name = u?.Name, email = u?.Email, prefs = u?.Prefs, tokens });
+            return Results.Ok(new { user = who.Value.User, role = who.Value.Role, rights = RightsOf(c, who.Value.Role).ToArray(), name = u?.Name, email = u?.Email, team = u?.Team, prefs = u?.Prefs, tokens });
         });
 
         // Eigene Einstellungen (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“): jeder für sich, kein Recht nötig.
@@ -247,7 +250,7 @@ public static class Auth
 
         // Verwaltung (admin): Liste, anlegen/ändern, Passwort setzen, sperren, entfernen
         api.MapGet("/auth/people", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.All.Values.Where(u => u.Enabled).OrderBy(u => u.Name ?? u.Key).Select(u => new { u.Key, u.Name, u.Role }).ToList())));   // Zuweisung (Taloan, 21.09.: Vorschlagsliste statt auswendig)
-        api.MapGet("/auth/users", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.All.Values.OrderBy(u => u.Key).Select(u => new { u.Key, u.Name, u.Email, u.Role, u.Enabled, u.LastAt, u.LastActor, hasPassword = With(dir, s => s.Passwords.ContainsKey(u.Key)) }).ToList())));
+        api.MapGet("/auth/users", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.All.Values.OrderBy(u => u.Key).Select(u => new { u.Key, u.Name, u.Email, u.Role, u.Enabled, u.Team, u.LastAt, u.LastActor, hasPassword = With(dir, s => s.Passwords.ContainsKey(u.Key)) }).ToList())));
         api.MapPut("/auth/users/{key}", (string key, UserBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
@@ -257,7 +260,10 @@ public static class Auth
             var role = Blank(body.Role) ?? cur?.Role ?? (roles.Contains("editor") ? "editor" : roles.FirstOrDefault(r => r != "admin") ?? "admin"); if (!roles.Contains(role)) return Bad($"Rolle: {string.Join(", ", roles)}");
             var enabled = body.Enabled ?? cur?.Enabled ?? true;
             if (cur is not null && cur.Enabled && IsAdmin(c, cur.Role) && (!IsAdmin(c, role) || !enabled) && AdminsLeft(c) <= 1) return Bad("Der letzte Administrator (Recht „Benutzer und Rollen“) bleibt.");
-            c.With((_, _, write) => write(actor, Stream + k, Types.UserDefined, new UserDefined(Blank(body.Name) ?? cur?.Name ?? k, Blank(body.Email) ?? cur?.Email, role, enabled), null));
+            // Team (Taloan, 23.09.2026): wessen Schlüssel gelten und auf wessen Rechnung die KI läuft — leerer Wert nimmt die Zuordnung weg
+            var team = body.Team is null ? cur?.Team : Blank(body.Team);
+            if (team is { } t && c.With((_, _, _) => c.Teams.Get(t)) is null) return Bad($"Unbekanntes Team {t}.");
+            c.With((_, _, write) => write(actor, Stream + k, Types.UserDefined, new UserDefined(Blank(body.Name) ?? cur?.Name ?? k, Blank(body.Email) ?? cur?.Email, role, enabled, team), null));
             if (Blank(body.Password) is { } pw) { if (pw.Length < 8) return Bad("Passwort: mindestens 8 Zeichen."); With(dir, s => { s.Passwords[k] = Hash(pw); return 0; }, save: true); }
             return Results.Ok(c.With((_, _, _) => c.Users.All[k]));
         });

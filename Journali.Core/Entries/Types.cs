@@ -134,6 +134,10 @@ public static class Types
     public const string UserDefined = "UserDefined";
     public const string UserRetired = "UserRetired";
     public const string UserPrefsSet = "UserPrefsSet";
+    // Teams (Taloan, 23.09.2026): Strom team:<key>; der KI-Verbrauch je Team unter ai-usage:<team>
+    public const string TeamDefined = "TeamDefined";
+    public const string TeamRetired = "TeamRetired";
+    public const string AiUsed = "AiUsed";
     public const string RoleDefined = "RoleDefined";
     public const string RoleRetired = "RoleRetired";
 
@@ -645,7 +649,23 @@ public sealed record VersionDocumentAdded(int Nr, string Kind, string MediaId, s
 public sealed record VersionWithdrawn(int Nr, string? Reason);
 
 /// <summary>Benutzer: Anzeigename, E-Mail, Rolle (admin | editor | reader), an/aus. Der letzte Eintrag gilt ganz. Kein Geheimnis hier (auth.json).</summary>
-public sealed record UserDefined(string Name, string? Email, string Role, bool Enabled = true);
+public sealed record UserDefined(string Name, string? Email, string Role, bool Enabled = true, string? Team = null);   // Team (Taloan, 23.09.2026): wessen Schlüssel und wessen Rechnung
+
+/// <summary>
+/// Ein Team (Taloan, 23.09.2026: „je Team gibt es Limits und API-Keys, Benutzer gehören einem Team an“). Die Schlüssel selbst
+/// stehen nie im Journal — sie liegen im Datenverzeichnis unter <c>team:&lt;key&gt;</c>, wie Mailpasswort und Job-Token.
+/// <para><b>Ein Team ist kein Guthaben.</b> Wer keinen eigenen Schlüssel hinterlegt, zahlt nichts selbst, sondern benutzt den
+/// eines anderen Teams (<see cref="KeysFrom"/>) — und dann gilt dessen Reissleine für die Summe aller, die daran hängen.
+/// Sonst wäre ein neues Team ein neuer Freibetrag (Taloan: „dann lege ich mir 20 Teams an und habe 20× Grundrauschen“).</para>
+/// <para><see cref="MonthlyTokens"/> warnt nur; <see cref="DailyTokens"/> weist ab. Die Reissleine soll den Amoklauf stoppen
+/// (Schleife im Job), nicht die Arbeit: hoch ansetzen. Ein Budget, das sperrt, erzeugt Streit statt Steuerung.</para>
+/// </summary>
+public sealed record TeamDefined(string Label, string? Note = null, long MonthlyTokens = 0, long DailyTokens = 0, bool Enabled = true, string? KeysFrom = null, long IncludedTokens = 0);   // IncludedTokens: das Grundrauschen — nur am ersten Team (Taloan, 23.09.2026)
+public sealed record TeamRetired();
+
+/// <summary>Ein KI-Aufruf, wie er wirklich stattgefunden hat: Anbieter, Modell, Person, Token hin und zurück. Strom
+/// <c>ai-usage:&lt;team&gt;</c> — gezählt wird beim Team, das zahlt (also beim schlüsselführenden), damit die Rechnung stimmt.</summary>
+public sealed record AiUsed(string Provider, string Model, string? User, int In, int Out, int Calls = 1, string? Day = null, string? OnBehalfOf = null);
 
 /// <summary>
 /// Was ein Benutzer für sich eingestellt hat (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“) — Darstellung,
@@ -676,17 +696,21 @@ public static class Rights
     public const string Jobs = "jobs";         // Jobs anlegen, starten, Logs
     public const string Storage = "storage";   // Medien-Speicher einstellen und kopieren
     public const string Users = "users";       // Benutzer und Rollen verwalten
-    public static readonly string[] All = [Read, Write, Retire, Release, Model, Plugins, Jobs, Storage, Users];
+    public const string Team = "team";         // das eigene Team: KI-Schlüssel hinterlegen, Grenzen setzen, Verbrauch sehen (Taloan, 23.09.2026: „dann brauchen wir Team-Admins — als Rolle“)
+    public static readonly string[] All = [Read, Write, Retire, Release, Model, Plugins, Jobs, Storage, Team, Users];
     public static readonly Dictionary<string, string> Label = new()
     {
         [Read] = "Lesen", [Write] = "Pflegen", [Retire] = "Zurückziehen", [Release] = "Freigeben, Versionen", [Model] = "Modell ändern",
-        [Plugins] = "Plugins verwalten", [Jobs] = "Jobs", [Storage] = "Storage", [Users] = "Benutzer und Rollen",
+        [Plugins] = "Plugins verwalten", [Jobs] = "Jobs", [Storage] = "Storage", [Team] = "Eigenes Team (KI-Schlüssel, Grenzen)", [Users] = "Benutzer und Rollen",
     };
     /// <summary>Vorbelegte Rollen — Saatgut für ein leeres Journal; der Anwender ändert, ergänzt, entfernt sie (nur „admin“ bleibt als Schlüssel bekannt).</summary>
     public static IEnumerable<(string Key, RoleDefined Role)> Seeds()
     {
         yield return ("admin", new RoleDefined("Administrator", All));
         yield return ("manager", new RoleDefined("PIM-Manager", [Read, Write, Retire, Release, Model, Jobs]));
+        // Team-Admin (Taloan, 23.09.2026): pflegt sein eigenes Team — Schlüssel, Grenzen, Verbrauch. Neue Teams und die Zuordnung
+        // von Personen bleiben bei „Benutzer und Rollen“; sonst könnte sich jeder Mitglieder in seine Kasse holen.
+        yield return ("teamadmin", new RoleDefined("Team-Admin", [Read, Write, Team]));
         yield return ("editor", new RoleDefined("PIM-Editor", [Read, Write, Retire, Release]));
         yield return ("reader", new RoleDefined("Leser", [Read]));
     }

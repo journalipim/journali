@@ -143,7 +143,5 @@ onMounted(load)
 
 <style scoped>
 table.form td { white-space: normal; vertical-align: middle; height: 34px; }
-.section { padding: 10px 8px; border-top: 1px solid var(--line); }
-.section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .row { display: flex; gap: 6px; align-items: center; }
 </style>

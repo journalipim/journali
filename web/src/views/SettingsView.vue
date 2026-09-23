@@ -7,6 +7,7 @@ import { ai } from '../ai.js'
 import StorageSettings from '../components/StorageSettings.vue'
 import RestoreSettings from '../components/RestoreSettings.vue'
 import MailSettings from '../components/MailSettings.vue'
+import TeamsSettings from '../components/TeamsSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
 import WorkflowSettings from '../components/WorkflowSettings.vue'
 import UsageBars from '../components/UsageBars.vue'
@@ -58,11 +59,13 @@ async function save() {
       <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'">👤 {{ store.can('users') ? 'Benutzer & Rollen' : 'Konto' }}</span>
       <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'">⚑ Workflows</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'">▣ Sicherung</span>
+      <span v-if="store.auth.enabled && (store.can('team') || store.can('users'))" class="tab" :class="{ on: tab === 'teams' }" @click="tab = 'teams'">👥 Teams</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'">✉ Mail</span>
     </div>
     <div class="scroll" v-if="tab === 'storage'"><StorageSettings /></div>
     <div class="scroll" v-else-if="tab === 'backup'"><RestoreSettings /></div>
     <div class="scroll" v-else-if="tab === 'mail'"><MailSettings /></div>
+    <div class="scroll" v-else-if="tab === 'teams'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>
     <div class="scroll" v-else>
@@ -117,7 +120,14 @@ async function save() {
       </div>
 
       <div class="section">
-        <h2>✦ KI <span class="muted">· eigene Schlüssel — journali bietet keine KI an</span></h2>
+        <h2>✦ KI <span class="muted">· <span v-if="ai.server?.ready">über Team „{{ ai.server.label }}“</span><span v-else>eigene Schlüssel — journali bietet keine KI an</span></span></h2>
+        <!-- Teams (Taloan, 23.09.2026): liegt am Team ein Schlüssel, fragt der Server und zählt mit; ein eigener Schlüssel hier geht vor und zahlt selbst -->
+        <p v-if="ai.server?.team" class="muted" style="font-size:12px;margin:0 0 6px">
+          <span v-if="ai.server.ready">✓ Team „{{ ai.server.label }}“ stellt {{ ai.server.providers.join(', ') }}<span v-if="ai.server.payer !== ai.server.team"> über „{{ ai.server.payerLabel }}“</span> —
+            verbraucht: {{ (ai.server.used?.month ?? 0).toLocaleString('de-DE') }} Token diesen Monat<span v-if="ai.server.limits?.included"> von {{ ai.server.limits.included.toLocaleString('de-DE') }}</span>.
+            Ein eigener Schlüssel unten geht vor: dann fragt dieser Browser direkt, und es zählt niemand mit.</span>
+          <span v-else class="warn">Für Team „{{ ai.server.label ?? ai.server.team }}“ ist kein Schlüssel hinterlegt (👥 Teams) — bis dahin gilt nur ein eigener Schlüssel.</span>
+        </p>
         <p class="muted" style="font-size:12px;margin:0 0 6px">Was die KI sieht: die Daten des jeweils gewählten Knotens (Attribute, Werte) gehen direkt aus diesem Browser an den Anbieter — mit Ihrem Schlüssel, unter Ihrem Vertrag mit dem Anbieter, ohne Umweg über den journali-Server. Nichts geschieht ohne Klick; ohne Schlüssel arbeiten alle Plugins regelbasiert. Recherche im Internet (Anreicherung) kostet je Suche extra.</p>
         <table class="grid" style="width:auto"><colgroup><col style="width:120px" /><col style="width:360px" /><col style="width:220px" /><col /></colgroup>
           <thead><tr><th>Anbieter</th><th>API-Schlüssel</th><th>Modell</th><th></th></tr></thead><tbody>
@@ -152,8 +162,6 @@ async function save() {
 
 <style scoped>
 table.form td { white-space: normal; vertical-align: middle; height: 34px; }
-.section { padding: 10px 8px; border-top: 1px solid var(--line); }
-.section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .tab { padding: 2px 10px; border-radius: 4px; color: var(--muted); cursor: pointer; font-size: 13px; }
 .tab.on { background: var(--accent-soft); color: var(--text); }
 </style>

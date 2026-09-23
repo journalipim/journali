@@ -332,13 +332,40 @@ Sitzungen liegen in `auth.json` im Datenverzeichnis — nie im Journal (Regel wi
 |---|---|---|
 | `UserDefined` | `name`, `email`, `role` (Schlüssel einer Rolle), `enabled` | der Benutzer — der letzte Eintrag gilt ganz |
 | `UserRetired` | — | entfernt; Einträge, die er geschrieben hat, bleiben (X-Actor) |
+| `UserDefined` … `team?` | Team (Taloan, 23.09.2026): wessen KI-Schlüssel gelten und auf wessen Rechnung es läuft. Leer = es gilt das erste Team |
 | `UserPrefsSet` | `prefs{}` — Werte als JSON-Text | was die Person für sich eingestellt hat (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“): Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Nur Genanntes wird gesetzt, leerer Wert nimmt einen Schlüssel weg — ein Wechsel der Darstellung ist ein kleiner Eintrag. Der **Fensterzustand** bleibt im Browser (Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste): er ändert sich ständig und gehört zum Gerät. Geschrieben über `PUT /api/auth/me/prefs`, jeder für sich, ohne besonderes Recht |
+
+## Teams — Strom `team:<key>`
+
+Taloan, 23.09.2026: „dann richten wir die neue Ebene Teams ein → je Team gibt es Limits und API-Keys, Benutzer gehören einem
+Team an.“ Ein Team ist die **Kostenstelle der KI**. Die Schlüssel selbst stehen nie im Journal — sie liegen im
+Datenverzeichnis (`secrets.json` unter `team:<key>`), wie Mailpasswort und Job-Token.
+
+| Typ | Payload | Bedeutung |
+|---|---|---|
+| `TeamDefined` | `label`, `note?`, `monthlyTokens`, `dailyTokens`, `includedTokens`, `keysFrom?`, `enabled` | das Team. `monthlyTokens` **warnt** nur; `dailyTokens` ist die **Reissleine** (weist ab — sie soll den Amoklauf stoppen, nicht die Arbeit); `includedTokens` ist das **Grundrauschen** und gibt es nur am **ersten** Team (Taloan: „sonst lege ich mir 20 Teams an und habe 20× Grundrauschen“); `keysFrom` heisst: dieses Team benutzt die Schlüssel eines anderen mit — eine Stufe, keine Kette, und dann gelten dessen Grenzen für die Summe |
+| `TeamRetired` | — | entfernt; der Verbrauch bleibt stehen, er ist eine Tatsache |
+
+## KI-Verbrauch — Strom `ai-usage:<team>`
+
+| Typ | Payload | Bedeutung |
+|---|---|---|
+| `AiUsed` | `provider`, `model`, `user?`, `in`, `out`, `calls`, `day?`, `onBehalfOf?` | ein Aufruf, wie er stattgefunden hat — gezählt beim **zahlenden** Team (`onBehalfOf` nennt das Team, für das gearbeitet wurde). Damit ist „wer zahlt“ eine Frage der Buchung, nicht der Sperre: am Monatsende steht da, was jede Kostenstelle verbraucht hat |
+
+Geschrieben wird er nur auf dem Serverweg (`POST /api/ai/ask`, `AiApi.cs`): liegt am Team ein Schlüssel, fragt der Server
+den Anbieter — der Schlüssel bleibt dort, der Verbrauch ist zählbar, Grenzen greifen, und auch Jobs können KI. Wer seinen
+eigenen Vertrag benutzt (Schlüssel im Browser, Einstellungen → KI), fragt weiter direkt; dann zählt niemand mit.
 
 ## Rollen — Strom `role:<key>`
 
 Taloan, 20.09.2026: Rollen sind Daten, Rechte sind Code. Das Vokabular der Rechte (`Rights`: read, write, retire,
-release, model, plugins, jobs, storage, users) ist fest; welche Rolle welche hat, steht hier. Saatgut: admin,
-manager, editor, reader (docs/betrieb.md).
+release, model, plugins, jobs, storage, **team**, users) ist fest; welche Rolle welche hat, steht hier. Saatgut: admin,
+manager, editor, reader, **teamadmin** (docs/betrieb.md).
+
+`team` (Taloan, 23.09.2026: „dann brauchen wir Team-Admins — als Rolle“) heisst: **das eigene** Team pflegen — Bezeichnung,
+Grenzen, KI-Schlüssel, Verbrauch. Neue Teams anlegen, Teams löschen, das Grundkontingent und die Zuordnung von Personen
+bleiben bei `users`; sonst könnte sich ein Team-Admin Mitglieder in die eigene Kasse holen oder sich an eine fremde hängen.
+Wer `users` hat, darf ohnehin alles, was `team` verlangt.
 
 | Typ | Payload | Bedeutung |
 |---|---|---|

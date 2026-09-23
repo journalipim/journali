@@ -756,8 +756,6 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 /* Das Formular rechts: Bezeichnung links, Wert rechts, dieselben Zellen wie im Knoten */
 .form { width: auto; margin-bottom: 4px; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
-.section { padding: 10px 8px; border-top: 1px solid var(--line); }
-.section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .chip a { color: inherit; text-decoration: none; }
 /* Auswahlliste zum Zuordnen: gefiltert, mit Haken, viele auf einmal */
 .picker { max-height: 360px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); }

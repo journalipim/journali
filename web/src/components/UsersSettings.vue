@@ -8,7 +8,7 @@ import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { menu } from '../menu.js'
 
-const roles = ref([]); const rights = ref([]); const newRole = ref('')
+const roles = ref([]); const rights = ref([]); const newRole = ref(''); const teams = ref([])
 const isAdmin = () => store.can('users')
 const users = ref([]); const me = ref(null)
 const form = ref(null)   // { key, name, email, role, password, isNew }
@@ -18,13 +18,14 @@ const tokenLabel = ref(''); const newToken = ref(null)
 async function load() {
   try { me.value = await api.get('/api/auth/me') } catch { me.value = null }
   try { rights.value = await api.get('/api/auth/rights'); roles.value = await api.get('/api/auth/roles') } catch (e) { store.toast(e.message) }
+  try { teams.value = await api.get('/api/teams') } catch { teams.value = [] }   // Team = Kostenstelle der KI (Taloan, 23.09.)
   if (isAdmin()) { try { users.value = await api.get('/api/auth/users') } catch (e) { store.toast(e.message) } }
 }
-function edit(u) { form.value = u ? { key: u.key, name: u.name, email: u.email ?? '', role: u.role, password: '', isNew: false } : { key: '', name: '', email: '', role: 'editor', password: '', isNew: true } }
+function edit(u) { form.value = u ? { key: u.key, name: u.name, email: u.email ?? '', role: u.role, team: u.team ?? '', password: '', isNew: false } : { key: '', name: '', email: '', role: 'editor', team: '', password: '', isNew: true } }
 async function save() {
   const f = form.value
   if (f.isNew && !f.password) { store.toast('Passwort für den neuen Benutzer'); return }
-  try { await api.post(`/api/auth/users/${encodeURIComponent(f.key.trim().toLowerCase())}`, { name: f.name, email: f.email || null, role: f.role, password: f.password || null }, 'PUT'); form.value = null; await load(); store.toast('✓ gespeichert', 'ok') }
+  try { await api.post(`/api/auth/users/${encodeURIComponent(f.key.trim().toLowerCase())}`, { name: f.name, email: f.email || null, role: f.role, team: f.team || '', password: f.password || null }, 'PUT'); form.value = null; await load(); store.toast('✓ gespeichert', 'ok') }
   catch (e) { store.toast(e.message) }
 }
 async function toggle(u) { try { await api.post(`/api/auth/users/${u.key}`, { enabled: !u.enabled }, 'PUT'); await load() } catch (e) { store.toast(e.message) } }
@@ -85,10 +86,11 @@ onMounted(load)
   <div class="section" v-if="isAdmin()">
     <h2>👥 Benutzer <span class="muted">· {{ users.length }} · Passwörter liegen beim Server (auth.json), nie im Journal</span></h2>
     <table class="grid" style="width:100%">
-      <thead><tr><th style="width:120px">Benutzer</th><th>Name</th><th>E-Mail</th><th style="width:80px">Rolle</th><th style="width:60px"></th><th style="width:150px">zuletzt</th><th style="width:130px"></th></tr></thead>
+      <thead><tr><th style="width:120px">Benutzer</th><th>Name</th><th>E-Mail</th><th style="width:80px">Rolle</th><th style="width:90px" title="Kostenstelle der KI: wessen Schlüssel gelten und auf wessen Rechnung es läuft">Team</th><th style="width:60px"></th><th style="width:150px">zuletzt</th><th style="width:130px"></th></tr></thead>
       <tbody>
         <tr v-for="u in users" :key="u.key" :class="{ off: !u.enabled }">
           <td class="mono">{{ u.key }}</td><td>{{ u.name }}</td><td class="muted">{{ u.email ?? '' }}</td><td :title="u.role">{{ roles.find(r => r.key === u.role)?.label || u.role }}</td>
+          <td :class="u.team ? '' : 'muted'" :title="u.team ? `Team ${u.team}` : 'kein eigenes Team — es gilt Team 1'">{{ teams.find(t => t.key === u.team)?.label || u.team || '①' }}</td>
           <td><button class="toggle" :class="{ on: u.enabled, off: !u.enabled }" @click="toggle(u)" :title="u.enabled ? 'Sperren (jetzt aktiv)' : 'Freischalten (jetzt gesperrt)'">{{ u.enabled ? '✓' : '✗' }}</button></td>
           <td class="muted" style="font-size:12px">{{ when(u.lastAt) }} 👤 {{ u.lastActor }}</td>
           <td class="row" style="gap:4px"><button class="x" @click="edit(u)">✎</button><button class="x" @click="remove(u)" :disabled="u.key === store.auth.user" title="entfernen">🗑</button></td>
@@ -102,6 +104,7 @@ onMounted(load)
         <input v-model="form.name" type="text" placeholder="Anzeigename" style="width:180px" />
         <input v-model="form.email" type="email" placeholder="E-Mail" style="width:200px" />
         <select v-model="form.role"><option v-for="r in roles" :key="r.key" :value="r.key">{{ r.label || r.key }} · {{ r.key }}</option></select>
+        <select v-model="form.team" title="Kostenstelle der KI — leer: es gilt das erste Team"><option value="">— Team 1 —</option><option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option></select>
         <input v-model="form.password" type="password" autocomplete="new-password" :placeholder="form.isNew ? 'Passwort (Pflicht)' : 'neues Passwort (leer = bleibt)'" style="width:200px" />
         <button class="primary" @click="save">Speichern</button><button @click="form = null">Abbrechen</button>
       </div>
@@ -131,8 +134,6 @@ onMounted(load)
 .toggle.off { color: var(--neg); }
 .toggle:disabled { opacity: .8; }
 table.form td { white-space: normal; vertical-align: middle; height: 34px; }
-.section { padding: 10px 8px; border-top: 1px solid var(--line); }
-.section h2 { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600; }
 .row { display: flex; align-items: center; }
 tr.off td { opacity: .55; }
 </style>

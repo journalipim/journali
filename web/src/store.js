@@ -109,6 +109,8 @@ export const store = reactive({
       const s = await api.get('/api/auth/state'); this.auth = { known: true, ...s }
       if (s.enabled && s.user) { this.actor = s.user; this.applyPrefs(s.prefs) }   // die Einstellungen der Person schlagen die des Browsers
     } catch { this.auth = { ...this.auth, known: true } }
+    // Was das Team an KI stellt (Taloan, 23.09.): Schlüssel am Team → der Server fragt für uns
+    try { const { ai } = await import('./ai.js'); await ai.loadState() } catch {}
     return this.auth
   },
   async logout() { try { await api.post('/api/auth/logout', {}) } catch {} this._prefsSent = null; this.auth = { known: true, enabled: true, setup: false, user: null, role: null, name: null } },
