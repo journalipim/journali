@@ -76,6 +76,26 @@ public class OhneTeamTests
     }
 
     [Fact]
+    public void Ein_aufgebrauchtes_Kontingent_ist_wie_keins()
+    {
+        // Taloan, 23.09.2026: „die Balken sind bei hundert Prozent, der Solr-Import schreibt noch“
+        var c = Welt();
+        // dem Init Team ein winziges Kontingent geben: drei Einträge die Woche
+        c.With((_, _, write) =>
+        {
+            var t = c.Teams.Get(Model.InitTeam)!;
+            write("system", Teams.Stream + Model.InitTeam, Types.TeamDefined,
+                new TeamDefined(t.Label, t.Note, t.MonthlyTokens, t.DailyTokens, t.Enabled, t.KeysFrom, t.IncludedTokens, t.Managers, t.Models, 3, 999), null);
+            return 0;
+        });
+        for (var i = 0; i < 3; i++)
+            Assert.True(Schreibt(c, "taloan", Types.AttributeSet, new AttributeSet("name", "de", null, "w" + i)), $"Eintrag {i} musste noch durchgehen");
+        Assert.False(Schreibt(c, "taloan", Types.AttributeSet, new AttributeSet("name", "de", null, "zuviel")), "der vierte hätte nicht mehr gedurft");
+        // was nichts kostet, geht weiter — das Modell steht nicht still, nur weil die Woche voll ist
+        Assert.True(Schreibt(c, "taloan", Types.NodeMoved, new NodeMoved("g-1")));
+    }
+
+    [Fact]
     public void Jobs_und_das_System_haengen_an_keiner_Mitgliedschaft()
     {
         var c = Welt();

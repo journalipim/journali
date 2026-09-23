@@ -11,7 +11,7 @@ namespace Journali.Server;
 /// Beim Start werden die Abbilder aus dem Journal neu gebaut; sie sind nie das Original.
 /// </summary>
 /// <summary>Der Urheber hat kein Kontingent — der Eintrag würde journali-Token kosten (Taloan, 23.09.2026).</summary>
-public sealed class KeinKontingentException() : InvalidOperationException("Kein Kontingent — nichts gespeichert.");
+public sealed class KeinKontingentException() : InvalidOperationException("Kontingent aufgebraucht — nichts gespeichert.");
 
 public sealed class Catalog
 {
@@ -29,7 +29,29 @@ public sealed class Catalog
     private Translations _translations = new();
     private Teams _teams = new();
     private Usage _usage = new();
-    private readonly object _gate = new();
+    /// <summary>
+    /// Zwei Sperren statt einer (Taloan, 23.09.2026: „alles ist super langsam“ während eines Imports).
+    /// <c>_write</c> lässt nur einen Schreiber zur Zeit prüfen, anhängen und anwenden — das bleibt eine Einheit.
+    /// <c>_state</c> schützt die Abbilder: Leser kommen parallel hinein, exklusiv wird es nur für das Anwenden eines
+    /// Eintrags. Der Weg zur Datenbank liegt ausserhalb von <c>_state</c>; dort wurde vorher gewartet, während alles
+    /// andere stand. Rekursion ist erlaubt, weil ein Befehl unter <c>_write</c> Abbilder liest und danach schreibt.
+    /// </summary>
+    private readonly object _write = new();
+    private readonly System.Threading.ReaderWriterLockSlim _state = new(System.Threading.LockRecursionPolicy.SupportsRecursion);
+
+    /// <summary>Lesen: parallel zu anderen Lesern, wartet nur, solange gerade ein Eintrag angewendet wird.</summary>
+    private T Lesend<T>(Func<T> f)
+    {
+        _state.EnterReadLock();
+        try { return f(); } finally { _state.ExitReadLock(); }
+    }
+
+    /// <summary>Die Abbilder ändern — kurz und exklusiv.</summary>
+    private T Aendernd<T>(Func<T> f)
+    {
+        _state.EnterWriteLock();
+        try { return f(); } finally { _state.ExitWriteLock(); }
+    }
 
     public Catalog(IJournal journal) => _journal = journal;
 
@@ -44,29 +66,38 @@ public sealed class Catalog
     /// </summary>
     public long LoadSnapshot(string path)
     {
-        lock (_gate)
+        lock (_write)
+        return Aendernd(() =>
         {
             var n = Snapshot.Load(path, _journal, Parts.Select(p => (p.Name, p.Projection.GetType())).ToList(), out var loaded);
             if (n == 0) return 0;
+            _stand.Clear();
             _model = (ModelCatalog)loaded["Model"]; _tree = (Tree)loaded["Tree"]; _relations = (Relations)loaded["Relations"]; _media = (Media)loaded["Media"];
             _plugins = (Plugins)loaded["Plugins"]; _jobs = (Jobs)loaded["Jobs"]; _versions = (Versions)loaded["Versions"]; _users = (Users)loaded["Users"]; _workflows = (Workflows)loaded["Workflows"]; _translations = (Translations)loaded["Translations"]; _usage = (Usage)loaded["Usage"]; _teams = (Teams)loaded["Teams"];
             return n;
-        }
+        });
     }
 
-    /// <summary>Schnappschuss schreiben — unter der Sperre (kein halber Stand). Liefert #n oder 0.</summary>
-    public long SaveSnapshot(string path) { lock (_gate) return Snapshot.Save(path, _journal, Parts); }
+    /// <summary>Schnappschuss schreiben — lesend: er braucht einen ganzen Stand, hält aber keinen Leser auf.</summary>
+    public long SaveSnapshot(string path) => Lesend(() => Snapshot.Save(path, _journal, Parts));
 
     /// <summary>Abbilder aus dem Journal bauen. Liefert, wie viele Einträge es waren.</summary>
     public int Rebuild() => Rebuild(out _);
     public int Rebuild(out Projector.Timing timing) => Rebuild(out timing, null);
     public int Rebuild(out Projector.Timing timing, Action<int, long>? progress)
     {
-        lock (_gate)
+        Projector.Timing? gemessen = null;
+        // ein Durchlauf für alle Abbilder — nicht acht (Taloan, 20.09.: Start hing mit 55 000 Einträgen, davon 17 000 ETIM-Klassen)
+        int n;
+        lock (_write) n = Aendernd(() =>
         {
-            // ein Durchlauf für alle Abbilder — nicht acht (Taloan, 20.09.: Start hing mit 55 000 Einträgen, davon 17 000 ETIM-Klassen)
-            return Projector.CatchUpAll(_journal, out timing, progress, _model, _relations, _media, _plugins, _jobs, _versions, _users, _workflows, _translations, _usage, _teams, _tree);
-        }
+            _stand.Clear();
+            var gebaut = Projector.CatchUpAll(_journal, out var t, progress, _model, _relations, _media, _plugins, _jobs, _versions, _users, _workflows, _translations, _usage, _teams, _tree);
+            gemessen = t;
+            return gebaut;
+        });
+        timing = gemessen!;
+        return n;
     }
 
     /// <summary>
@@ -75,7 +106,8 @@ public sealed class Catalog
     /// </summary>
     public int SeedMissing()
     {
-        lock (_gate)
+        lock (_write)
+        return Aendernd(() =>
         {
             var n = 0;
             foreach (var s in Model.Seeds())
@@ -154,28 +186,27 @@ public sealed class Catalog
             if (!_tree.EverCreated(Model.RootNode))
                 foreach (var s in Model.TreeSeeds()) { Apply(_journal.Append("system", s.Stream, s.Type, s.Payload)); n++; }
             return n;
-        }
+        });
     }
 
-    public long Head
-    {
-        get { lock (_gate) return _tree.LastApplied; }
-    }
+    public long Head => Lesend(() => _tree.LastApplied);
 
     /// <summary>Anhängen und Abbilder nachziehen — der einzige Weg, etwas zu ändern.</summary>
     public Entry Execute<T>(string actor, string stream, string type, T payload)
     {
-        lock (_gate) return Apply(_journal.Append(actor, stream, type, Types.Serialize(payload)));
+        lock (_write) { var e = _journal.Append(actor, stream, type, Types.Serialize(payload)); return Aendernd(() => Apply(e)); }
     }
 
     /// <summary>Roher Eintrag (Import, Werkzeuge) — Abbilder ziehen ebenfalls nach.</summary>
     public Entry AppendRaw(string actor, string stream, string type, string payload)
     {
-        lock (_gate) return Apply(_journal.Append(actor, stream, type, payload));
+        lock (_write) { var e = _journal.Append(actor, stream, type, payload); return Aendernd(() => Apply(e)); }
     }
 
     private Entry Apply(Entry entry)
     {
+        // Teams und Mitgliedschaften verschieben, wer auf wessen Rechnung geht — der mitgeführte Stand gilt dann nicht mehr
+        if (entry.Type is Types.TeamDefined or Types.TeamRetired or Types.UserDefined or Types.UserRetired) _stand.Clear();
         _model.Apply(entry);
         _tree.Apply(entry);
         _relations.Apply(entry);
@@ -237,7 +268,7 @@ public sealed class Catalog
     public Teams Teams => _teams;
 
     /// <summary>Nutzung je Tag (Taloan, 22.09.2026) — Fortschritt in den Einstellungen.</summary>
-    public TResult ReadUsage<TResult>(Func<Usage, TResult> read) { lock (_gate) return read(_usage); }
+    public TResult ReadUsage<TResult>(Func<Usage, TResult> read) => Lesend(() => read(_usage));
 
     // Stand bei #n (Versionen, Taloan: „eine Version ist ein Zeiger ins Journal“): Modell und Baum von damals, frisch aus dem
     // Journal gebaut — ohne die Sperre, das Journal ist nur lesend. Die letzten Stände bleiben im Speicher (teuer bei grossem Journal).
@@ -258,15 +289,9 @@ public sealed class Catalog
     public Relations Relations => _relations;
 
     /// <summary>Liest unter der Sperre und gibt eine Kopie heraus, die der Aufrufer behalten darf.</summary>
-    public TResult Read<TResult>(Func<Tree, TResult> read)
-    {
-        lock (_gate) return read(_tree);
-    }
+    public TResult Read<TResult>(Func<Tree, TResult> read) => Lesend(() => read(_tree));
 
-    public TResult ReadModel<TResult>(Func<ModelCatalog, TResult> read)
-    {
-        lock (_gate) return read(_model);
-    }
+    public TResult ReadModel<TResult>(Func<ModelCatalog, TResult> read) => Lesend(() => read(_model));
 
     /// <summary>
     /// Prüfen und Schreiben in einem Schritt unter der Sperre — für Befehle, die
@@ -274,11 +299,13 @@ public sealed class Catalog
     /// </summary>
     public TResult With<TResult>(Func<ModelCatalog, Tree, Writer, TResult> action)
     {
-        lock (_gate)
+        lock (_write)
             return action(_model, _tree, (actor, stream, type, payload, batch) =>
             {
                 if (KeinKontingent(actor, type)) throw new KeinKontingentException();
-                return Apply(_journal.Append(actor, stream, type, Types.Serialize(payload), batch));
+                // Anhängen geht an die Datenbank — hier darf kein Leser warten; erst das Anwenden ist exklusiv
+                var entry = _journal.Append(actor, stream, type, Types.Serialize(payload), batch);
+                return Aendernd(() => Apply(entry));
             });
     }
 
@@ -292,21 +319,36 @@ public sealed class Catalog
     {
         if (!Kinds.Billable(null, type)) return false;
         if (_users.All.GetValueOrDefault(actor) is not { } u) return false;
-        if (string.IsNullOrEmpty(u.Team)) return true;
-        var zahler = _teams.Get(_teams.Payer(u.Team!));
-        return zahler is null || (zahler.EntriesWeek <= 0 && zahler.EntriesMonth <= 0);
+        if (string.IsNullOrEmpty(u.Team)) return true;                      // kein Team, kein Kontingent
+        var zahlerKey = _teams.Payer(u.Team!);
+        if (_teams.Get(zahlerKey) is not { } zahler) return true;           // das Team gibt es nicht mehr
+        if (zahler.EntriesWeek <= 0 && zahler.EntriesMonth <= 0) return true;
+
+        // Aufgebraucht ist dasselbe wie keins (Taloan, 23.09.2026) — Woche und Monat, jede Grenze für sich
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        if (!_stand.TryGetValue(zahlerKey, out var stand) || stand.Tag != heute)
+        {
+            var leute = _teams.Dependents(zahlerKey).SelectMany(x => _users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
+            stand = (heute, _usage.Sum(leute, Usage.WeekStart(heute), heute), _usage.Sum(leute, Usage.MonthStart(heute), heute));
+        }
+        if (zahler.EntriesWeek > 0 && stand.Woche >= zahler.EntriesWeek) { _stand[zahlerKey] = stand; return true; }
+        if (zahler.EntriesMonth > 0 && stand.Monat >= zahler.EntriesMonth) { _stand[zahlerKey] = stand; return true; }
+        _stand[zahlerKey] = (heute, stand.Woche + 1, stand.Monat + 1);      // dieser Eintrag zählt gleich mit
+        return false;
     }
+
+    /// <summary>Verbrauch je Zahler, mitgeführt statt bei jedem Eintrag neu summiert — ein Import schreibt Zehntausende.</summary>
+    private readonly Dictionary<string, (DateOnly Tag, int Woche, int Monat)> _stand = new();
 
     public delegate Entry Writer(string actor, string stream, string type, object payload, string? batch);
 
     /// <summary>Viele Einträge als eine Transaktion unter der Sperre, danach die Abbilder — für Stapel, die nicht prüfen müssen (Plugin-Daten).</summary>
     public IReadOnlyList<Entry> WriteMany(string actor, IReadOnlyList<(string Stream, string Type, object Payload)> items, string? batch = null)
     {
-        lock (_gate)
+        lock (_write)
         {
             var entries = _journal.AppendMany(actor, items.Select(i => (i.Stream, i.Type, Types.Serialize(i.Payload))).ToList(), batch);
-            foreach (var e in entries) Apply(e);
-            return entries;
+            return Aendernd(() => { foreach (var e in entries) Apply(e); return entries; });
         }
     }
 }
