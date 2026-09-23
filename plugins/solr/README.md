@@ -7,15 +7,15 @@ Stand 17.09.2026. Untersucht an einer Kundeninstanz (Adresse nicht im Repo)
 `/solr/products/select` und `/solr/products/schema`. **Kein CORS-Kopf** —
 aber Solr antwortet auf `json.wrf=<callback>` mit JSONP (Content-Type
 text/plain, kein `nosniff`), und das darf ein `<script>`-Tag laden. Darum
-gibt es zwei Werkzeuge mit derselben Abbildung:
+gibt es zwei Wege mit **einem** Ablauf (`lauf.mjs`) und **einer** Abbildung
+(`solr.js`) — seit dem 23.09.2026 beide auf node:
 
-- **⇩ Import → Solr** in der Oberfläche (`web/src/views/SolrView.vue`,
-  Client `web/src/solr.js`): Quellbaum aufklappen, Knoten anschauen (alles,
-  was er hat, und was davon wohin geht), Haken = Teilbaum, Analysieren,
-  Schreiben. Belegt 17.09.2026 im eingebauten Browser bis „Analysieren"
-  (PoE Switche: 3 Knoten, 41 neue Attribute in 10 Gruppen).
-- **`solr_import.py`** (nur Standardbibliothek) für die Kommandozeile und
-  grosse Läufe (`--since`, `--limit`).
+- **⇩ Import → Solr** in der Oberfläche (`src/View.vue`): Quellbaum aufklappen,
+  Knoten anschauen (alles, was er hat, und was davon wohin geht), Haken =
+  Teilbaum, Analysieren, Schreiben. Solr liest der Browser per JSONP.
+- **Der Job** (`job.mjs`, Prozess-Plugin): derselbe Ablauf auf dem Server, Solr
+  per fetch, journali mit dem Dienst-Token des Laufs. Für grosse Läufe — er
+  hängt an keinem offenen Browserfenster.
 
 ## Was drin ist
 
@@ -73,26 +73,32 @@ sonst `<quelle>><typ>><ziel>`; zweiter Lauf schreibt nur Unterschiede.
 Beide Enden müssen importiert sein — „Ziel fehlt" zählt, was übersprungen
 wurde; Kanten auf sich selbst (kommt vor) überspringt journali.
 
-```bash
-python plugins/solr/solr_import.py --solr https://…/solr/products --actor Taloan relations --root <KUNDE>_SHOP_Mobile_Geraete --dry-run
-```
-
 In der Oberfläche: Plan → „⇄ Relationen" → analysieren / schreiben für die
-angehakten Teilbäume.
+angehakten Teilbäume. Im Job: Schalter `relations`.
 
-## Aufruf
+## Aufruf als Job
+
+Im Tasker einen Job auf `solr` anlegen; die Werte kommen aus dem Profil oder
+stehen am Job:
+
+| Parameter | Bedeutung |
+|---|---|
+| `profile` | Profil aus ⇩ Import → Solr (Kern, Ziel, Wurzeln, übergangene Schlüssel) |
+| `base` | URL des Solr-Kerns |
+| `roots` | Solr-Ids der Wurzeln, mit Komma |
+| `target` | Zielknoten in journali (leer = oberste Ebene) |
+| `skip` | zusätzlich zu übergehende Felder |
+| `relations` | nach den Knoten auch die Kanten |
+| `dry_run` | nur analysieren, nichts schreiben |
+
+Von Hand geht es auch:
 
 ```bash
-python plugins/solr/solr_import.py --solr https://…/solr/products list --root <KUNDE>_SHOP_Netzwerk --depth 2
+node plugins/solr/job.mjs http://localhost:5000 taloan
 ```
 
-```bash
-python plugins/solr/solr_import.py --solr https://…/solr/products --actor Taloan import --root <KUNDE>_SHOP_Switche --target g-mastertree --dry-run
-```
-
-`--dry-run` zählt nur; `--limit N` nimmt die ersten N Produkte; `--since
-2026-09-01T00:00:00Z` nur Geändertes; `--verbose` zeigt jeden Stapel.
-Journali läuft auf `localhost:5000` (`--journali` für einen anderen).
+Der Rest kommt dann aus der Umgebung (`JOURNALI_BASE`, `JOURNALI_ROOTS`,
+`JOURNALI_TARGET`, `JOURNALI_SKIP`, `JOURNALI_RELATIONS`, `JOURNALI_DRY_RUN`).
 
 Ablauf: Modell zuerst (`PUT /api/model/groups`, `PUT /api/model/attributes`,
 nur was fehlt), dann ein Stapel für Wurzel und Gruppen, dann je Produkt ein

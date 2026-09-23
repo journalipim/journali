@@ -1,7 +1,7 @@
 // Client für einen Solr-Kern (infolox/prodexa-Export) — plugins/solr/README.md.
 // Solr schickt keinen CORS-Kopf, antwortet aber auf json.wrf mit JSONP: ein <script>-Tag
-// je Anfrage, nur Lesen. Der journali-Server bleibt unbeteiligt; die Abbildung ist
-// dieselbe wie im Skript solr_import.py.
+// je Anfrage, nur Lesen. Im Job auf dem Server geht es ohne das: dort fragt fetch (holenMitFetch).
+// Die Abbildung steht hier einmal und gilt für beide Wege.
 export const SYSTEM = 'solr'
 export const ROLE = { group: 'group', product: 'product', productvariant: 'variant' }
 export const roleOf = d => ROLE[(d.type || '').toLowerCase()]
@@ -36,14 +36,22 @@ function jsonp(url) {
   })
 }
 
-export function solr(core) {
+/// Ohne Browser (Job auf dem Server): Solr antwortet auf wt=json ganz normal — CORS spielt dort keine Rolle.
+export const holenMitFetch = async url => {
+  const res = await fetch(url + (url.includes('?') ? '&' : '?') + 'wt=json')
+  if (!res.ok) throw new Error(`Solr: ${res.status} ${res.statusText}`)
+  return res.json()
+}
+
+/// Ein Solr-Kern. `holen` ist der Weg zur Quelle: im Browser JSONP, im Job fetch (Taloan, 23.09.2026: node, kein Python).
+export function solr(core, holen = jsonp) {
   const base = core.replace(/\/+$/, '')
   const NODES = '(type:group OR type:product OR type:productVariant)'
   async function select(q, { fq = [], fl = '*', rows = 500, sort = 'sort_nr asc,id asc', cursor = null } = {}) {
     const p = new URLSearchParams({ q, fl, rows, sort })
     for (const f of fq) p.append('fq', f)
     if (cursor) p.set('cursorMark', cursor)
-    const d = await jsonp(`${base}/select?${p}`)
+    const d = await holen(`${base}/select?${p}`)
     if (d.error) throw new Error(`Solr: ${d.error.msg}`)
     return d
   }
@@ -61,7 +69,7 @@ export function solr(core) {
     }
   }
   return {
-    status: () => jsonp(`${base}/admin/ping`).catch(() => null),
+    status: () => holen(`${base}/admin/ping`).catch(() => null),
     count: async () => (await select('*:*', { rows: 0 })).response.numFound,
     /// Wurzeln des Baums: Baumknoten ohne Eltern.
     roots: async () => (await select(NODES, { fq: ['main_parent_id:""'], rows: 200 })).response.docs.filter(isNode),

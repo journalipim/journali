@@ -5,7 +5,8 @@
 // Solr lesen geht per JSONP im Browser; geschrieben wird nur über /api/model und /api/batch.
 import { ref, computed, onMounted } from 'vue'
 import { api, store, tree, icon, plugins, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
-import { solr, SYSTEM, roleOf, ownValues, valueCommands, modelNeeds, DEFAULT_SKIP, TYPES, relFields, complexIds, relationNeeds, REL_GROUP } from '../solr.js'
+import { solr, SYSTEM, roleOf, ownValues, DEFAULT_SKIP, TYPES, REL_GROUP } from '../solr.js'
+import { plane, schreibe, planeRelationen, schreibeRelationen } from '../lauf.mjs'
 const srcW = paneWidth('import.src', 340)
 
 const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
@@ -38,6 +39,15 @@ const known = computed(() => new Map(tree.rows.filter(r => r.external?.[SYSTEM])
 
 onMounted(() => { if (!tree.loaded) tree.load(); if (saved.base && saved.auto) connect() })
 function say(text) { log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${text}`); if (log.value.length > 200) log.value.pop() }
+
+// Was der Ablauf (lauf.mjs) von der Umgebung braucht — im Job kommt dasselbe aus der API
+const umgebung = {
+  api,
+  sag: t => { busy.value = t; say(t) },
+  get modell() { return store.model },
+  get baum() { return tree.rows },
+  frisch: async () => { await store.poll(true); await tree.load() },
+}
 
 // Profile (ProfileBar): Quelle, Ziel, Auslassungen und die angehakten Wurzeln — im Journal unter plugin:solr
 // root: die angehakten Wurzeln mit Komma — so heisst der Parameter des Jobs; der JobRunner füllt ihn aus dem Profil (Taloan, 21.09.: alles im Profil)
@@ -137,42 +147,19 @@ const currentSkipped = computed(() => {
 })
 
 // ---- Analysieren: angehakte Teilbäume vollständig laden, Modellbedarf und Stapel berechnen
+/// Die angehakten Teilbäume — ohne die, die schon unter einem anderen Haken liegen
+function gewaehlt() {
+  const picked = rows.value.filter(r => checked.value.has(r.doc.id) && !checkedAbove(r))
+  return { wurzeln: picked.map(r => r.doc.id), eltern: new Map(picked.map(r => [r.doc.id, r.parent?.doc.id ?? null])), anzahl: picked.length }
+}
+
 async function analyse() {
   if (!checked.value.size) { store.toast('Nichts angehakt'); return }
   busy.value = 'lade …'; plan.value = null; result.value = null
   try {
-    const picked = rows.value.filter(r => checked.value.has(r.doc.id) && !checkedAbove(r))
-    const items = []   // { doc, parentRef (Solr-Id des Elternknotens oder null), role }
-    const docsById = new Map()
-    for (const r of picked) {
-      const docs = await client.subtree(r.doc.id, (n, of) => { busy.value = `lade … ${n}/${of}` })
-      for (const d of docs) docsById.set(d.id, d)
-      const kids = new Map()
-      for (const d of docs) { const k = d.main_parent_id || ''; if (!kids.has(k)) kids.set(k, []); kids.get(k).push(d) }
-      for (const l of kids.values()) byRole(l)
-      const rootParent = r.parent?.doc.id ?? null
-      const walk = (d, parentId, top) => {
-        const role = roleOf(d)
-        items.push({ doc: d, parentId, role, top })
-        const below = kids.get(d.id) ?? []
-        const direct = []
-        for (const k of below) {
-          if (roleOf(k) === 'variant' && role === 'group') direct.push(k)
-          else walk(k, d.id, false)
-        }
-        if (direct.length) {
-          // Varianten direkt unter einer Gruppe: Sammelprodukt mit dem Namen der Gruppe, Kennung <gruppe>#variants.
-          const pseudo = { id: d.id + '#variants', master_id: d.master_id + '#variants', type: 'product', name: d.name || d.master_id, lang: d.lang, main_parent_id: d.id, pseudo: true }
-          items.push({ doc: pseudo, parentId: d.id, role: 'product', top: false })
-          for (const k of direct) items.push({ doc: k, parentId: pseudo.id, role: 'variant', top: false })
-        }
-      }
-      walk(r.doc, rootParent, true)
-    }
-    for (const it of items) it.existing = known.value.get(it.doc.master_id) ?? null
-    const needs = modelNeeds(items.map(i => i.doc), attrs.value, modelGroups.value, pdefs.value, skip.value)
-    plan.value = { items, needs, picked: picked.length }
-    say(`analysiert: ${items.length} Knoten (${items.filter(i => i.existing).length} vorhanden), ${needs.newAttrs.size} neue Attribute in ${needs.newGroups.size} neuen Gruppen`)
+    const { wurzeln, eltern, anzahl } = gewaehlt()
+    const p = await plane({ client, umgebung, wurzeln, eltern, skip: skip.value, pdefs: pdefs.value })
+    plan.value = { ...p, picked: anzahl }
   } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
   finally { busy.value = '' }
 }
@@ -187,26 +174,7 @@ async function analyseRelations() {
   if (!checked.value.size) { store.toast('Nichts angehakt'); return }
   busy.value = 'lade …'; relPlan.value = null; relResult.value = null
   try {
-    const picked = rows.value.filter(r => checked.value.has(r.doc.id) && !checkedAbove(r))
-    const docs = []
-    for (const r of picked) docs.push(...await client.subtree(r.doc.id, (n, of) => { busy.value = `lade … ${n}/${of}` }))
-    const withRel = docs.filter(d => relFields(d).length)
-    // Kennungen: Knoten (beide Enden) und schon vorhandene Relationen der Quellknoten
-    const byExt = new Map(tree.rows.filter(r => r.external?.[SYSTEM]).map(r => [r.external[SYSTEM], r.id]))
-    const existing = new Map()
-    let n = 0
-    for (const d of withRel) {
-      const from = byExt.get(d.master_id); if (!from) continue
-      busy.value = `vorhandene Relationen … ${++n}/${withRel.length}`
-      const rs = await api.get(`/api/nodes/${encodeURIComponent(from)}/relations`)
-      for (const r of rs.out) if (r.external?.[SYSTEM]) existing.set(r.external[SYSTEM], { id: r.id, values: new Map(r.values.map(v => [`${v.attribute}|${v.locale ?? ''}`, v.values ?? v.value])) })
-    }
-    const cids = [...new Set(withRel.flatMap(complexIds))]
-    const complexById = new Map((await client.byIds(cids, (k, of) => { busy.value = `Kanten mit Werten … ${k}/${of}` })).map(c => [c.id, c]))
-    const needs = relationNeeds(withRel, byExt, complexById, existing, store.model)
-    const total = [...needs.stats.values()].reduce((a, s) => a + s.neu + s.gleich + s.geaendert + s.zielFehlt, 0)
-    relPlan.value = { needs, docs: withRel.length, cmds: [...needs.perNode.values()].reduce((a, c) => a + c.length, 0), total }
-    say(`Relationen analysiert: ${withRel.length} Knoten mit Kanten, ${total} Kanten, ${needs.newTypes.size} neue Typen, ${needs.newAttrs.size} neue Attribute, ${needs.missingFrom} Quellen nicht importiert`)
+    relPlan.value = await planeRelationen({ client, umgebung, wurzeln: gewaehlt().wurzeln })
   } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
   finally { busy.value = '' }
 }
@@ -216,20 +184,9 @@ async function runRelations() {
   busy.value = 'schreibe …'; relResult.value = null
   let written = 0, batches = 0
   try {
-    const { needs } = relPlan.value
-    if (needs.needGroup) await api.post(`/api/model/groups/${REL_GROUP}`, { key: REL_GROUP, label: { de: 'Bestandteil', en: 'Component' } }, 'PUT')
-    for (const [k, d] of needs.newAttrs) await api.post(`/api/model/attributes/${k}`, d, 'PUT')
-    for (const [k, t] of needs.newTypes) { await api.post(`/api/model/relations/${k}`, t, 'PUT'); say(`Relationstyp ${k} angelegt`) }
-    if (needs.newAttrs.size) say(`${needs.newAttrs.size} Attribute in ${REL_GROUP} angelegt`)
-    let n = 0
-    for (const [, cmds] of needs.perNode) {
-      busy.value = `schreibe … ${++n}/${needs.perNode.size}`
-      const res = await api.batchChunked(cmds, { size: 2000, label: `Import (Solr): Relationen ${n}/${needs.perNode.size}` })
-      written += res.results.length; batches++
-      if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`)
-    }
+    const r = await schreibeRelationen({ plan: relPlan.value, umgebung })
+    written = r.geschrieben; batches = r.stapel
     relResult.value = { written, batches, error: null }
-    say(written ? `Relationen fertig: ${written} Einträge in ${batches} Stapeln` : 'Relationen: nichts zu schreiben')
     await store.poll(true)
     relPlan.value = null
   } catch (e) { relResult.value = { written, batches, error: e.message }; store.toast(e.message); say('Fehler: ' + e.message) }
@@ -243,71 +200,9 @@ async function run() {
   busy.value = 'schreibe …'; result.value = null
   let written = 0, batches = 0
   try {
-    const { items, needs } = plan.value
-    for (const [k, g] of needs.newGroups) { await api.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.label }, activeFrom: g.activeFrom }, 'PUT'); say(`Attributgruppe ${k} (${g.label})${g.activeFrom ? ' ab ' + g.activeFrom : ''} angelegt`) }
-    for (const [k, from] of needs.raise) { const g = modelGroups.value.get(k); await api.post(`/api/model/groups/${k}`, { key: k, label: g.label ?? {}, activeFrom: from }, 'PUT'); say(`Attributgruppe ${k}: aktiv ab ${from ?? 'überall'} (Werte kommen weiter oben vor)`) }
-    for (const [k, d] of needs.newAttrs) { await api.post(`/api/model/attributes/${k}`, d, 'PUT'); }
-    if (needs.newAttrs.size) say(`${needs.newAttrs.size} Attribute angelegt`)
-    await store.poll(true)
-    const attrMap = new Map((store.model?.attributes ?? []).map(a => [a.key, a]))
-
-    const refOf = new Map()   // Solr-Id → '@ref' oder journali-Id
-    const own = async id => { const n = await api.get(`/api/nodes/${id}`); return new Map(n.values.filter(v => !v.row).map(v => [`${v.attribute}|${v.locale ?? ''}`, v.values ?? v.value])) }
-    let refNo = 0
-    const emit = async (it, cmds) => {
-      let node
-      if (it.existing) {
-        node = it.existing.id
-        cmds.push(...valueCommands(it.doc, node, attrMap, await own(node), skip.value))
-      } else {
-        const ref = 'n' + (++refNo)
-        const parent = it.parentId != null && refOf.has(it.parentId) ? refOf.get(it.parentId) : (target.value || null)
-        if (it.role === 'group') cmds.push({ op: 'group.create', ref, args: { parent, name: it.doc.name || it.doc.remote_id || it.doc.master_id } })
-        else if (it.role === 'product') { if (!parent) throw new Error(`Produkt ${it.doc.name}: keine Zielgruppe`); cmds.push({ op: 'product.create', ref, args: { group: parent } }) }
-        else { if (!parent) throw new Error(`Variante ${it.doc.name}: kein Produkt darüber`); cmds.push({ op: 'variant.create', ref, args: { product: parent, axisValues: {} } }) }
-        node = '@' + ref
-        cmds.push({ op: 'external.link', args: { node, system: SYSTEM, id: it.doc.master_id } })
-        if (it.top) {
-          // Die importierte Wurzel trägt die Gruppen, die der Teilbaum braucht, und das ★ auf name.
-          cmds.push({ op: 'groups.attach', args: { node, groups: needs.used } })
-          if (it.role !== 'variant') cmds.push({ op: 'label.set', args: { node, attribute: 'name' } })
-        }
-        cmds.push(...valueCommands(it.doc, node, attrMap, new Map(), skip.value))
-      }
-      if (it.top && it.existing) {
-        const have = (it.existing.groups ?? '').split(',').filter(Boolean)
-        const merged = [...new Set([...have, ...needs.used])].sort()
-        if (merged.length !== have.length) cmds.push({ op: 'groups.attach', args: { node, groups: merged } })
-      }
-      refOf.set(it.doc.id, node)
-    }
-    const send = async cmds => {
-      if (!cmds.length) return
-      // fehlgeschlagene Befehle überspringt der Server (Taloan, 21.09.: doppelte eindeutige Werte — SKU, EAN) und meldet sie; der Rest wird geschrieben
-      const res = await api.batchChunked(cmds, { size: 2000, continueOnError: true, maxErrorPercent: 20, label: 'Import (Solr): schreiben' })
-      written += res.results.length; batches++
-      for (const e of res.errors.slice(0, 20)) say(`✗ übersprungen: ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)} — ${e.message}`)
-      if (res.errors.length > 20) say(`… und ${res.errors.length - 20} weitere übersprungen`)
-      if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`)
-      // Nach dem Stapel sind die Verweise echte Knoten — für die nächsten Stapel auflösen.
-      for (const r of res.results) if (r.ref) for (const [k, v] of refOf) if (v === '@' + r.ref) refOf.set(k, r.node)
-    }
-    // Erst alle Gruppen (ein Stapel), dann je Produkt mit seinen Varianten ein Stapel.
-    const cmds = []
-    for (const it of items) if (it.role === 'group') await emit(it, cmds)
-    await send(cmds)
-    const products = items.filter(i => i.role === 'product')
-    let n = 0
-    for (const p of products) {
-      busy.value = `schreibe … ${++n}/${products.length}`
-      const pc = []
-      await emit(p, pc)
-      for (const v of items) if (v.role === 'variant' && v.parentId === p.doc.id) await emit(v, pc)
-      await send(pc)
-    }
-    for (const v of items) if (v.role === 'variant' && !products.some(p => p.doc.id === v.parentId)) { const vc = []; await emit(v, vc); await send(vc) }
+    const r = await schreibe({ plan: plan.value, umgebung, ziel: target.value || null, skip: skip.value })
+    written = r.geschrieben; batches = r.stapel
     result.value = { written, batches, error: null }
-    say(written ? `fertig: ${written} Einträge in ${batches} Stapeln` : 'nichts zu schreiben — alles schon so')
     await store.poll(true); await tree.load()
     plan.value = null
   } catch (e) {

@@ -1375,7 +1375,8 @@ ein/aus, aktualisieren, entfernen, Prozess starten mit Parametern und
 Ausgabe. Browser-Plugins: `default export { views: [{path, label, icon,
 mount(el, ctx)}], nodeActions: [{label, icon, run(nodeId, ctx)}] }` —
 Ansichten erscheinen in der Leiste, Aktionen im Kontextmenü des Baums.
-Der Solr-Import ist zugleich Prozess-Plugin (`solr_import.py`).
+Der Solr-Import ist zugleich Prozess-Plugin (`job.mjs`); Ansicht und Job teilen
+sich Ablauf (`lauf.mjs`) und Abbildung (`solr.js`).
 
 **Basis-Plugins (Taloan, 19.09.2026: „einerseits mit einer eigenen Basisfunktion
 ausgestattet und gleichzeitig der Container für Ergänzungs-Plugins“).** Der

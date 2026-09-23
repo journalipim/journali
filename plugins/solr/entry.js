@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-22253038] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-22253038]:hover { color: var(--neg);\n}\n.sources[data-v-22253038] { gap: 4px;\n}\n.form[data-v-22253038] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-22253038] { display: flex; gap: 4px;\n}\n.src .node[data-v-22253038] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-22253038] { background: var(--accent-soft);\n}\n.src .node.current[data-v-22253038], .src .node[data-v-22253038]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-22253038] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-22253038] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-22253038] { color: var(--muted);\n}\n.node.product .icon[data-v-22253038] { color: var(--accent);\n}\n.node.variant .icon[data-v-22253038] { color: var(--warn);\n}\n.label[data-v-22253038] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-22253038] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-22253038] { width: 100%;\n}\n.form-grid td[data-v-22253038] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-22253038]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-22253038] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-22253038] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-22253038] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-22253038] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-c4a406c2] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-c4a406c2]:hover { color: var(--neg);\n}\n.sources[data-v-c4a406c2] { gap: 4px;\n}\n.form[data-v-c4a406c2] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-c4a406c2] { display: flex; gap: 4px;\n}\n.src .node[data-v-c4a406c2] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-c4a406c2] { background: var(--accent-soft);\n}\n.src .node.current[data-v-c4a406c2], .src .node[data-v-c4a406c2]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-c4a406c2] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-c4a406c2] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-c4a406c2] { color: var(--muted);\n}\n.node.product .icon[data-v-c4a406c2] { color: var(--accent);\n}\n.node.variant .icon[data-v-c4a406c2] { color: var(--warn);\n}\n.label[data-v-c4a406c2] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-c4a406c2] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-c4a406c2] { width: 100%;\n}\n.form-grid td[data-v-c4a406c2] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-c4a406c2]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-c4a406c2] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-c4a406c2] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-c4a406c2] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-c4a406c2] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\r\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -88,14 +88,14 @@ function jsonp(url) {
     document.head.appendChild(tag);
   });
 }
-function solr(core) {
+function solr(core, holen = jsonp) {
   const base = core.replace(/\/+$/, "");
   const NODES = "(type:group OR type:product OR type:productVariant)";
   async function select(q, { fq = [], fl = "*", rows = 500, sort = "sort_nr asc,id asc", cursor = null } = {}) {
     const p = new URLSearchParams({ q, fl, rows, sort });
     for (const f of fq) p.append("fq", f);
     if (cursor) p.set("cursorMark", cursor);
-    const d = await jsonp(`${base}/select?${p}`);
+    const d = await holen(`${base}/select?${p}`);
     if (d.error) throw new Error(`Solr: ${d.error.msg}`);
     return d;
   }
@@ -112,7 +112,7 @@ function solr(core) {
     }
   }
   return {
-    status: () => jsonp(`${base}/admin/ping`).catch(() => null),
+    status: () => holen(`${base}/admin/ping`).catch(() => null),
     count: async () => (await select("*:*", { rows: 0 })).response.numFound,
     /// Wurzeln des Baums: Baumknoten ohne Eltern.
     roots: async () => (await select(NODES, { fq: ['main_parent_id:""'], rows: 200 })).response.docs.filter(isNode),
@@ -328,6 +328,180 @@ function relationNeeds(docs, byExt, complexById, existing, model) {
   }
   return { newTypes, newAttrs, needGroup, perNode, stats, missingFrom };
 }
+const RANG = { group: 0, product: 1, variant: 2 };
+const byRole = (liste) => liste.sort((a, b) => (RANG[roleOf(a)] ?? 9) - (RANG[roleOf(b)] ?? 9));
+async function plane({ client, umgebung, wurzeln, eltern = /* @__PURE__ */ new Map(), skip = DEFAULT_SKIP, pdefs = {} }) {
+  const { modell, baum, sag } = umgebung;
+  const bekannt = new Map(baum.filter((r) => r.external?.[SYSTEM]).map((r) => [r.external[SYSTEM], r]));
+  const attrs = new Map((modell?.attributes ?? []).map((a) => [a.key, a]));
+  const gruppen = new Map((modell?.groups ?? []).map((g) => [g.key, g]));
+  const items = [];
+  for (const wurzel of wurzeln) {
+    const docs = await client.subtree(wurzel, (n, of) => sag?.(`lade … ${n}/${of}`));
+    const kinder = /* @__PURE__ */ new Map();
+    for (const d of docs) {
+      const k = d.main_parent_id || "";
+      if (!kinder.has(k)) kinder.set(k, []);
+      kinder.get(k).push(d);
+    }
+    for (const l of kinder.values()) byRole(l);
+    const wurzelDoc = docs.find((d) => d.id === wurzel);
+    if (!wurzelDoc) {
+      sag?.(`✗ ${wurzel}: in der Quelle nicht gefunden`);
+      continue;
+    }
+    const gehe = (d, parentId, top) => {
+      const role = roleOf(d);
+      items.push({ doc: d, parentId, role, top });
+      const darunter = kinder.get(d.id) ?? [];
+      const direkt = [];
+      for (const k of darunter) {
+        if (roleOf(k) === "variant" && role === "group") direkt.push(k);
+        else gehe(k, d.id, false);
+      }
+      if (direkt.length) {
+        const pseudo = { id: d.id + "#variants", master_id: d.master_id + "#variants", type: "product", name: d.name || d.master_id, lang: d.lang, main_parent_id: d.id, pseudo: true };
+        items.push({ doc: pseudo, parentId: d.id, role: "product", top: false });
+        for (const k of direkt) items.push({ doc: k, parentId: pseudo.id, role: "variant", top: false });
+      }
+    };
+    gehe(wurzelDoc, eltern.get(wurzel) ?? null, true);
+  }
+  for (const it of items) it.existing = bekannt.get(it.doc.master_id) ?? null;
+  const needs = modelNeeds(items.map((i) => i.doc), attrs, gruppen, pdefs, skip);
+  sag?.(`analysiert: ${items.length} Knoten (${items.filter((i) => i.existing).length} vorhanden), ${needs.newAttrs.size} neue Attribute in ${needs.newGroups.size} neuen Gruppen`);
+  return { items, needs, wurzeln: wurzeln.length };
+}
+async function schreibe({ plan, umgebung, ziel = null, skip = DEFAULT_SKIP }) {
+  const { api: api2, sag } = umgebung;
+  const { items, needs } = plan;
+  let geschrieben = 0, stapel = 0;
+  for (const [k, g] of needs.newGroups) {
+    await api2.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.label }, activeFrom: g.activeFrom }, "PUT");
+    sag?.(`Attributgruppe ${k} (${g.label})${g.activeFrom ? " ab " + g.activeFrom : ""} angelegt`);
+  }
+  for (const [k, from] of needs.raise) {
+    const g = new Map((umgebung.modell?.groups ?? []).map((x) => [x.key, x])).get(k);
+    await api2.post(`/api/model/groups/${k}`, { key: k, label: g?.label ?? {}, activeFrom: from }, "PUT");
+    sag?.(`Attributgruppe ${k}: aktiv ab ${from ?? "überall"} (Werte kommen weiter oben vor)`);
+  }
+  for (const [k, d] of needs.newAttrs) await api2.post(`/api/model/attributes/${k}`, d, "PUT");
+  if (needs.newAttrs.size) sag?.(`${needs.newAttrs.size} Attribute angelegt`);
+  await umgebung.frisch?.();
+  const attrMap = new Map((umgebung.modell?.attributes ?? []).map((a) => [a.key, a]));
+  const refOf = /* @__PURE__ */ new Map();
+  const eigene = async (id) => {
+    const n2 = await api2.get(`/api/nodes/${encodeURIComponent(id)}`);
+    return new Map(n2.values.filter((v) => !v.row).map((v) => [`${v.attribute}|${v.locale ?? ""}`, v.values ?? v.value]));
+  };
+  let refNr = 0;
+  const baue = async (it, cmds2) => {
+    let node;
+    if (it.existing) {
+      node = it.existing.id;
+      cmds2.push(...valueCommands(it.doc, node, attrMap, await eigene(node), skip));
+    } else {
+      const ref2 = "n" + ++refNr;
+      const parent = it.parentId != null && refOf.has(it.parentId) ? refOf.get(it.parentId) : ziel || null;
+      if (it.role === "group") cmds2.push({ op: "group.create", ref: ref2, args: { parent, name: it.doc.name || it.doc.remote_id || it.doc.master_id } });
+      else if (it.role === "product") {
+        if (!parent) throw new Error(`Produkt ${it.doc.name}: keine Zielgruppe`);
+        cmds2.push({ op: "product.create", ref: ref2, args: { group: parent } });
+      } else {
+        if (!parent) throw new Error(`Variante ${it.doc.name}: kein Produkt darüber`);
+        cmds2.push({ op: "variant.create", ref: ref2, args: { product: parent, axisValues: {} } });
+      }
+      node = "@" + ref2;
+      cmds2.push({ op: "external.link", args: { node, system: SYSTEM, id: it.doc.master_id } });
+      if (it.top) {
+        cmds2.push({ op: "groups.attach", args: { node, groups: needs.used } });
+        if (it.role !== "variant") cmds2.push({ op: "label.set", args: { node, attribute: "name" } });
+      }
+      cmds2.push(...valueCommands(it.doc, node, attrMap, /* @__PURE__ */ new Map(), skip));
+    }
+    if (it.top && it.existing) {
+      const haben = (it.existing.groups ?? "").split(",").filter(Boolean);
+      const zusammen = [.../* @__PURE__ */ new Set([...haben, ...needs.used])].sort();
+      if (zusammen.length !== haben.length) cmds2.push({ op: "groups.attach", args: { node, groups: zusammen } });
+    }
+    refOf.set(it.doc.id, node);
+  };
+  const sende = async (cmds2, marke) => {
+    if (!cmds2.length) return;
+    const res = await api2.batchChunked(cmds2, { size: 2e3, continueOnError: true, maxErrorPercent: 20, label: marke });
+    geschrieben += res.results.length;
+    stapel++;
+    for (const e of res.errors.slice(0, 20)) sag?.(`✗ übersprungen: ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)} — ${e.message}`);
+    if (res.errors.length > 20) sag?.(`… und ${res.errors.length - 20} weitere übersprungen`);
+    if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`);
+    for (const r of res.results) if (r.ref) {
+      for (const [k, v] of refOf) if (v === "@" + r.ref) refOf.set(k, r.node);
+    }
+  };
+  const cmds = [];
+  for (const it of items) if (it.role === "group") await baue(it, cmds);
+  await sende(cmds, "Import (Solr): Gruppen");
+  const produkte = items.filter((i) => i.role === "product");
+  let n = 0;
+  for (const p of produkte) {
+    sag?.(`schreibe … ${++n}/${produkte.length}`);
+    const pc = [];
+    await baue(p, pc);
+    for (const v of items) if (v.role === "variant" && v.parentId === p.doc.id) await baue(v, pc);
+    await sende(pc, `Import (Solr): ${n}/${produkte.length}`);
+  }
+  for (const v of items) if (v.role === "variant" && !produkte.some((p) => p.doc.id === v.parentId)) {
+    const vc = [];
+    await baue(v, vc);
+    await sende(vc, "Import (Solr): Varianten");
+  }
+  sag?.(geschrieben ? `fertig: ${geschrieben} Einträge in ${stapel} Stapeln` : "nichts zu schreiben — alles schon so");
+  return { geschrieben, stapel };
+}
+async function planeRelationen({ client, umgebung, wurzeln }) {
+  const { api: api2, modell, baum, sag } = umgebung;
+  const docs = [];
+  for (const wurzel of wurzeln) docs.push(...await client.subtree(wurzel, (n2, of) => sag?.(`lade … ${n2}/${of}`)));
+  const mitKanten = docs.filter((d) => relFields(d).length);
+  const byExt = new Map(baum.filter((r) => r.external?.[SYSTEM]).map((r) => [r.external[SYSTEM], r.id]));
+  const vorhanden = /* @__PURE__ */ new Map();
+  let n = 0;
+  for (const d of mitKanten) {
+    const from = byExt.get(d.master_id);
+    if (!from) continue;
+    sag?.(`vorhandene Relationen … ${++n}/${mitKanten.length}`);
+    const rs = await api2.get(`/api/nodes/${encodeURIComponent(from)}/relations`);
+    for (const r of rs.out) if (r.external?.[SYSTEM]) vorhanden.set(r.external[SYSTEM], { id: r.id, values: new Map(r.values.map((v) => [`${v.attribute}|${v.locale ?? ""}`, v.values ?? v.value])) });
+  }
+  const cids = [...new Set(mitKanten.flatMap(complexIds))];
+  const complexById = new Map((await client.byIds(cids, (k, of) => sag?.(`Kanten mit Werten … ${k}/${of}`))).map((c) => [c.id, c]));
+  const needs = relationNeeds(mitKanten, byExt, complexById, vorhanden, modell);
+  const kanten = [...needs.stats.values()].reduce((a, s) => a + s.neu + s.gleich + s.geaendert + s.zielFehlt, 0);
+  sag?.(`Relationen analysiert: ${mitKanten.length} Knoten mit Kanten, ${kanten} Kanten, ${needs.newTypes.size} neue Typen, ${needs.newAttrs.size} neue Attribute, ${needs.missingFrom} Quellen nicht importiert`);
+  return { needs, docs: mitKanten.length, cmds: [...needs.perNode.values()].reduce((a, c) => a + c.length, 0), total: kanten };
+}
+async function schreibeRelationen({ plan, umgebung }) {
+  const { api: api2, sag } = umgebung;
+  const { needs } = plan;
+  let geschrieben = 0, stapel = 0;
+  if (needs.needGroup) await api2.post(`/api/model/groups/${REL_GROUP}`, { key: REL_GROUP, label: { de: "Bestandteil", en: "Component" } }, "PUT");
+  for (const [k, d] of needs.newAttrs) await api2.post(`/api/model/attributes/${k}`, d, "PUT");
+  for (const [k, t] of needs.newTypes) {
+    await api2.post(`/api/model/relations/${k}`, t, "PUT");
+    sag?.(`Relationstyp ${k} angelegt`);
+  }
+  if (needs.newAttrs.size) sag?.(`${needs.newAttrs.size} Attribute in ${REL_GROUP} angelegt`);
+  let n = 0;
+  for (const [, cmds] of needs.perNode) {
+    sag?.(`schreibe … ${++n}/${needs.perNode.size}`);
+    const res = await api2.batchChunked(cmds, { size: 2e3, label: `Import (Solr): Relationen ${n}/${needs.perNode.size}` });
+    geschrieben += res.results.length;
+    stapel++;
+    if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`);
+  }
+  sag?.(geschrieben ? `Relationen fertig: ${geschrieben} Einträge in ${stapel} Stapeln` : "Relationen: nichts zu schreiben");
+  return { geschrieben, stapel };
+}
 const _export_sfc = (sfc, props) => {
   const target = sfc.__vccOpts || sfc;
   for (const [key, val] of props) {
@@ -529,7 +703,7 @@ const _sfc_main = {
     const model = computed(() => store.model);
     computed(() => tree.rows.filter((r) => r.role === "group"));
     const attrs = computed(() => new Map((model.value?.attributes ?? []).map((a) => [a.key, a])));
-    const modelGroups = computed(() => new Map((model.value?.groups ?? []).map((g) => [g.key, g])));
+    computed(() => new Map((model.value?.groups ?? []).map((g) => [g.key, g])));
     const skip = computed(() => [...DEFAULT_SKIP, ...skipText.value.split(/[,\s]+/).filter(Boolean)]);
     const known = computed(() => new Map(tree.rows.filter((r) => r.external?.[SYSTEM]).map((r) => [r.external[SYSTEM], r])));
     onMounted(() => {
@@ -540,6 +714,23 @@ const _sfc_main = {
       log.value.unshift(`${(/* @__PURE__ */ new Date()).toLocaleTimeString("de-DE")} ${text}`);
       if (log.value.length > 200) log.value.pop();
     }
+    const umgebung = {
+      api,
+      sag: (t) => {
+        busy.value = t;
+        say(t);
+      },
+      get modell() {
+        return store.model;
+      },
+      get baum() {
+        return tree.rows;
+      },
+      frisch: async () => {
+        await store.poll(true);
+        await tree.load();
+      }
+    };
     const profileGet = () => ({ base: base.value, target: target.value, skip: skipText.value, checked: [...checked.value], root: [...checked.value].join(",") });
     async function profileSet(p) {
       if (!p) {
@@ -602,13 +793,13 @@ const _sfc_main = {
       }
     }
     const ORDER = { group: 0, product: 1, variant: 2 };
-    const byRole = (list) => list.sort((a, b) => ORDER[roleOf(a)] - ORDER[roleOf(b)] || (a.sort_nr ?? 0) - (b.sort_nr ?? 0) || (a.name ?? "").localeCompare(b.name ?? "", "de"));
+    const byRole2 = (list) => list.sort((a, b) => ORDER[roleOf(a)] - ORDER[roleOf(b)] || (a.sort_nr ?? 0) - (b.sort_nr ?? 0) || (a.name ?? "").localeCompare(b.name ?? "", "de"));
     async function expand(row) {
       if (!row.loaded) {
         row.loaded = true;
         busy.value = "lade …";
         try {
-          const kids = byRole(await client.children(row.doc.id));
+          const kids = byRole2(await client.children(row.doc.id));
           row.kids = kids.length;
           const i = rows.value.indexOf(row);
           rows.value.splice(i + 1, 0, ...kids.map((d) => ({ doc: d, depth: row.depth + 1, parent: row, loaded: false, kids: d.hasChilds ? null : 0 })));
@@ -695,6 +886,10 @@ const _sfc_main = {
       const taken = new Set(ownValues(current.value, skip.value).map((v) => v.raw));
       return Object.keys(current.value).filter((k) => k.startsWith("property__")).map((k) => k.slice(10).replace(/__\w+$/, "")).filter((k) => !taken.has(k));
     });
+    function gewaehlt() {
+      const picked = rows.value.filter((r) => checked.value.has(r.doc.id) && !checkedAbove(r));
+      return { wurzeln: picked.map((r) => r.doc.id), eltern: new Map(picked.map((r) => [r.doc.id, r.parent?.doc.id ?? null])), anzahl: picked.length };
+    }
     async function analyse() {
       if (!checked.value.size) {
         store.toast("Nichts angehakt");
@@ -704,43 +899,9 @@ const _sfc_main = {
       plan.value = null;
       result.value = null;
       try {
-        const picked = rows.value.filter((r) => checked.value.has(r.doc.id) && !checkedAbove(r));
-        const items = [];
-        const docsById = /* @__PURE__ */ new Map();
-        for (const r of picked) {
-          const docs = await client.subtree(r.doc.id, (n, of) => {
-            busy.value = `lade … ${n}/${of}`;
-          });
-          for (const d of docs) docsById.set(d.id, d);
-          const kids = /* @__PURE__ */ new Map();
-          for (const d of docs) {
-            const k = d.main_parent_id || "";
-            if (!kids.has(k)) kids.set(k, []);
-            kids.get(k).push(d);
-          }
-          for (const l of kids.values()) byRole(l);
-          const rootParent = r.parent?.doc.id ?? null;
-          const walk = (d, parentId, top) => {
-            const role = roleOf(d);
-            items.push({ doc: d, parentId, role, top });
-            const below = kids.get(d.id) ?? [];
-            const direct = [];
-            for (const k of below) {
-              if (roleOf(k) === "variant" && role === "group") direct.push(k);
-              else walk(k, d.id, false);
-            }
-            if (direct.length) {
-              const pseudo = { id: d.id + "#variants", master_id: d.master_id + "#variants", type: "product", name: d.name || d.master_id, lang: d.lang, main_parent_id: d.id, pseudo: true };
-              items.push({ doc: pseudo, parentId: d.id, role: "product", top: false });
-              for (const k of direct) items.push({ doc: k, parentId: pseudo.id, role: "variant", top: false });
-            }
-          };
-          walk(r.doc, rootParent, true);
-        }
-        for (const it of items) it.existing = known.value.get(it.doc.master_id) ?? null;
-        const needs = modelNeeds(items.map((i) => i.doc), attrs.value, modelGroups.value, pdefs.value, skip.value);
-        plan.value = { items, needs, picked: picked.length };
-        say(`analysiert: ${items.length} Knoten (${items.filter((i) => i.existing).length} vorhanden), ${needs.newAttrs.size} neue Attribute in ${needs.newGroups.size} neuen Gruppen`);
+        const { wurzeln, eltern, anzahl } = gewaehlt();
+        const p = await plane({ client, umgebung, wurzeln, eltern, skip: skip.value, pdefs: pdefs.value });
+        plan.value = { ...p, picked: anzahl };
       } catch (e) {
         store.toast(e.message);
         say("Fehler: " + e.message);
@@ -762,30 +923,7 @@ const _sfc_main = {
       relPlan.value = null;
       relResult.value = null;
       try {
-        const picked = rows.value.filter((r) => checked.value.has(r.doc.id) && !checkedAbove(r));
-        const docs = [];
-        for (const r of picked) docs.push(...await client.subtree(r.doc.id, (n2, of) => {
-          busy.value = `lade … ${n2}/${of}`;
-        }));
-        const withRel = docs.filter((d) => relFields(d).length);
-        const byExt = new Map(tree.rows.filter((r) => r.external?.[SYSTEM]).map((r) => [r.external[SYSTEM], r.id]));
-        const existing = /* @__PURE__ */ new Map();
-        let n = 0;
-        for (const d of withRel) {
-          const from = byExt.get(d.master_id);
-          if (!from) continue;
-          busy.value = `vorhandene Relationen … ${++n}/${withRel.length}`;
-          const rs = await api.get(`/api/nodes/${encodeURIComponent(from)}/relations`);
-          for (const r of rs.out) if (r.external?.[SYSTEM]) existing.set(r.external[SYSTEM], { id: r.id, values: new Map(r.values.map((v) => [`${v.attribute}|${v.locale ?? ""}`, v.values ?? v.value])) });
-        }
-        const cids = [...new Set(withRel.flatMap(complexIds))];
-        const complexById = new Map((await client.byIds(cids, (k, of) => {
-          busy.value = `Kanten mit Werten … ${k}/${of}`;
-        })).map((c) => [c.id, c]));
-        const needs = relationNeeds(withRel, byExt, complexById, existing, store.model);
-        const total2 = [...needs.stats.values()].reduce((a, s) => a + s.neu + s.gleich + s.geaendert + s.zielFehlt, 0);
-        relPlan.value = { needs, docs: withRel.length, cmds: [...needs.perNode.values()].reduce((a, c) => a + c.length, 0), total: total2 };
-        say(`Relationen analysiert: ${withRel.length} Knoten mit Kanten, ${total2} Kanten, ${needs.newTypes.size} neue Typen, ${needs.newAttrs.size} neue Attribute, ${needs.missingFrom} Quellen nicht importiert`);
+        relPlan.value = await planeRelationen({ client, umgebung, wurzeln: gewaehlt().wurzeln });
       } catch (e) {
         store.toast(e.message);
         say("Fehler: " + e.message);
@@ -803,24 +941,10 @@ const _sfc_main = {
       relResult.value = null;
       let written = 0, batches = 0;
       try {
-        const { needs } = relPlan.value;
-        if (needs.needGroup) await api.post(`/api/model/groups/${REL_GROUP}`, { key: REL_GROUP, label: { de: "Bestandteil", en: "Component" } }, "PUT");
-        for (const [k, d] of needs.newAttrs) await api.post(`/api/model/attributes/${k}`, d, "PUT");
-        for (const [k, t] of needs.newTypes) {
-          await api.post(`/api/model/relations/${k}`, t, "PUT");
-          say(`Relationstyp ${k} angelegt`);
-        }
-        if (needs.newAttrs.size) say(`${needs.newAttrs.size} Attribute in ${REL_GROUP} angelegt`);
-        let n = 0;
-        for (const [, cmds] of needs.perNode) {
-          busy.value = `schreibe … ${++n}/${needs.perNode.size}`;
-          const res = await api.batchChunked(cmds, { size: 2e3, label: `Import (Solr): Relationen ${n}/${needs.perNode.size}` });
-          written += res.results.length;
-          batches++;
-          if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`);
-        }
+        const r = await schreibeRelationen({ plan: relPlan.value, umgebung });
+        written = r.geschrieben;
+        batches = r.stapel;
         relResult.value = { written, batches, error: null };
-        say(written ? `Relationen fertig: ${written} Einträge in ${batches} Stapeln` : "Relationen: nichts zu schreiben");
         await store.poll(true);
         relPlan.value = null;
       } catch (e) {
@@ -841,90 +965,10 @@ const _sfc_main = {
       result.value = null;
       let written = 0, batches = 0;
       try {
-        const { items, needs } = plan.value;
-        for (const [k, g] of needs.newGroups) {
-          await api.post(`/api/model/groups/${k}`, { key: k, label: { de: g.label, en: g.label }, activeFrom: g.activeFrom }, "PUT");
-          say(`Attributgruppe ${k} (${g.label})${g.activeFrom ? " ab " + g.activeFrom : ""} angelegt`);
-        }
-        for (const [k, from] of needs.raise) {
-          const g = modelGroups.value.get(k);
-          await api.post(`/api/model/groups/${k}`, { key: k, label: g.label ?? {}, activeFrom: from }, "PUT");
-          say(`Attributgruppe ${k}: aktiv ab ${from ?? "überall"} (Werte kommen weiter oben vor)`);
-        }
-        for (const [k, d] of needs.newAttrs) {
-          await api.post(`/api/model/attributes/${k}`, d, "PUT");
-        }
-        if (needs.newAttrs.size) say(`${needs.newAttrs.size} Attribute angelegt`);
-        await store.poll(true);
-        const attrMap = new Map((store.model?.attributes ?? []).map((a) => [a.key, a]));
-        const refOf = /* @__PURE__ */ new Map();
-        const own = async (id) => {
-          const n2 = await api.get(`/api/nodes/${id}`);
-          return new Map(n2.values.filter((v) => !v.row).map((v) => [`${v.attribute}|${v.locale ?? ""}`, v.values ?? v.value]));
-        };
-        let refNo = 0;
-        const emit = async (it, cmds2) => {
-          let node;
-          if (it.existing) {
-            node = it.existing.id;
-            cmds2.push(...valueCommands(it.doc, node, attrMap, await own(node), skip.value));
-          } else {
-            const ref2 = "n" + ++refNo;
-            const parent = it.parentId != null && refOf.has(it.parentId) ? refOf.get(it.parentId) : target.value || null;
-            if (it.role === "group") cmds2.push({ op: "group.create", ref: ref2, args: { parent, name: it.doc.name || it.doc.remote_id || it.doc.master_id } });
-            else if (it.role === "product") {
-              if (!parent) throw new Error(`Produkt ${it.doc.name}: keine Zielgruppe`);
-              cmds2.push({ op: "product.create", ref: ref2, args: { group: parent } });
-            } else {
-              if (!parent) throw new Error(`Variante ${it.doc.name}: kein Produkt darüber`);
-              cmds2.push({ op: "variant.create", ref: ref2, args: { product: parent, axisValues: {} } });
-            }
-            node = "@" + ref2;
-            cmds2.push({ op: "external.link", args: { node, system: SYSTEM, id: it.doc.master_id } });
-            if (it.top) {
-              cmds2.push({ op: "groups.attach", args: { node, groups: needs.used } });
-              if (it.role !== "variant") cmds2.push({ op: "label.set", args: { node, attribute: "name" } });
-            }
-            cmds2.push(...valueCommands(it.doc, node, attrMap, /* @__PURE__ */ new Map(), skip.value));
-          }
-          if (it.top && it.existing) {
-            const have = (it.existing.groups ?? "").split(",").filter(Boolean);
-            const merged = [.../* @__PURE__ */ new Set([...have, ...needs.used])].sort();
-            if (merged.length !== have.length) cmds2.push({ op: "groups.attach", args: { node, groups: merged } });
-          }
-          refOf.set(it.doc.id, node);
-        };
-        const send = async (cmds2) => {
-          if (!cmds2.length) return;
-          const res = await api.batchChunked(cmds2, { size: 2e3, continueOnError: true, maxErrorPercent: 20, label: "Import (Solr): schreiben" });
-          written += res.results.length;
-          batches++;
-          for (const e of res.errors.slice(0, 20)) say(`✗ übersprungen: ${e.op} ${JSON.stringify(e.command?.args ?? {}).slice(0, 80)} — ${e.message}`);
-          if (res.errors.length > 20) say(`… und ${res.errors.length - 20} weitere übersprungen`);
-          if (res.error) throw new Error(`Stapel ${res.batch} hielt an bei #${res.error.index} ${res.error.op}: ${res.error.message}`);
-          for (const r of res.results) if (r.ref) {
-            for (const [k, v] of refOf) if (v === "@" + r.ref) refOf.set(k, r.node);
-          }
-        };
-        const cmds = [];
-        for (const it of items) if (it.role === "group") await emit(it, cmds);
-        await send(cmds);
-        const products = items.filter((i) => i.role === "product");
-        let n = 0;
-        for (const p of products) {
-          busy.value = `schreibe … ${++n}/${products.length}`;
-          const pc = [];
-          await emit(p, pc);
-          for (const v of items) if (v.role === "variant" && v.parentId === p.doc.id) await emit(v, pc);
-          await send(pc);
-        }
-        for (const v of items) if (v.role === "variant" && !products.some((p) => p.doc.id === v.parentId)) {
-          const vc = [];
-          await emit(v, vc);
-          await send(vc);
-        }
+        const r = await schreibe({ plan: plan.value, umgebung, ziel: target.value || null, skip: skip.value });
+        written = r.geschrieben;
+        batches = r.stapel;
         result.value = { written, batches, error: null };
-        say(written ? `fertig: ${written} Einträge in ${batches} Stapeln` : "nichts zu schreiben — alles schon so");
         await store.poll(true);
         await tree.load();
         plan.value = null;
@@ -1788,7 +1832,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-22253038"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-c4a406c2"]]);
 const entry = {
   views: [{ path: "import", topic: "import", label: "Solr", icon: "⇩", component: View }]
 };

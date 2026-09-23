@@ -17,23 +17,13 @@
   ],
   "autoInstall": true,
   "process": {
-    "command": "python",
+    "command": "node",
     "args": [
-      "solr_import.py",
-      "--solr",
-      "{base}",
-      "--journali",
+      "job.mjs",
       "{journali}",
-      "--actor",
-      "{actor}",
-      "import",
-      "--root",
-      "{root}",
-      "--target",
-      "{target}",
-      "{dry_run?--dry-run}"
+      "{actor}"
     ],
-    "description": "Solr-Import mit gespeichertem Profil (⇩ Import → Solr → Profil: Kern, Ziel, angehakte Wurzeln, übergangene Schlüssel)",
+    "description": "Solr-Import als Job: Kern, Wurzeln und Ziel aus dem Profil; schreibt in Stapeln über /api/batch",
     "params": [
       {
         "key": "profile",
@@ -50,8 +40,8 @@
         "perJob": false
       },
       {
-        "key": "root",
-        "label": "master_id der Wurzel(n), mit Komma (leer = die im Profil angehakten)",
+        "key": "roots",
+        "label": "Wurzel(n) in der Quelle: Solr-Ids mit Komma (leer = die im Profil angehakten)",
         "type": "text",
         "default": "",
         "perJob": false
@@ -76,6 +66,13 @@
         "type": "boolean",
         "default": "false",
         "perJob": true
+      },
+      {
+        "key": "relations",
+        "label": "Auch die Kanten (Relationen) nach den Knoten",
+        "type": "boolean",
+        "default": "false",
+        "perJob": false
       }
     ]
   }

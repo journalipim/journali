@@ -120,8 +120,9 @@ ersten Stufe). Für den Server gibt es zwei Wege:
    → `http://rossibox:8080`. Das Image baut die Oberfläche selbst (Node-Stufe),
    die Plugins kommen per Bind-Mount aus dem Checkout, Jobs/Storage-Einstellung
    liegen im Volume `journali-jobs`. Neuer Stand = `git pull` und dasselbe
-   Kommando; nur Plugin-Änderungen brauchen kein neues Image. Prozess-Plugins
-   auf Python-Basis (solr_import.py) laufen im Image nicht — es enthält nur node.
+   Kommando; nur Plugin-Änderungen brauchen kein neues Image. Alle Prozess-Plugins
+   laufen auf node (seit 23.09.2026 auch der Solr-Import) — das Image braucht nichts
+   weiter.
 2. **Publish-Ordner** — ohne Image: vom PC erst `tools\server build`, dann
    `dotnet publish Journali.Server -c Release -o <Freigabe>\journali -p:DebugType=none -p:DebugSymbols=false`
    (nimmt `wwwroot` mit),
