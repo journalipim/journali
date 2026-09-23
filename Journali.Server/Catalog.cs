@@ -10,6 +10,9 @@ namespace Journali.Server;
 /// Schritt nach — unter einer Sperre, damit kein Leser einen halben Stand sieht.
 /// Beim Start werden die Abbilder aus dem Journal neu gebaut; sie sind nie das Original.
 /// </summary>
+/// <summary>Der Urheber hat kein Kontingent — der Eintrag würde journali-Token kosten (Taloan, 23.09.2026).</summary>
+public sealed class KeinKontingentException() : InvalidOperationException("Kein Kontingent — dieses Team braucht eigene Limits aus der Lizenz oder ein Team, über das es abrechnet.");
+
 public sealed class Catalog
 {
     private readonly IJournal _journal;
@@ -273,7 +276,25 @@ public sealed class Catalog
     {
         lock (_gate)
             return action(_model, _tree, (actor, stream, type, payload, batch) =>
-                Apply(_journal.Append(actor, stream, type, Types.Serialize(payload), batch)));
+            {
+                if (KeinKontingent(actor, type)) throw new KeinKontingentException();
+                return Apply(_journal.Append(actor, stream, type, Types.Serialize(payload), batch));
+            });
+    }
+
+    /// <summary>
+    /// Kostet dieser Eintrag journali-Token, und hat sein Urheber keine (Taloan, 23.09.2026: „jede Anfrage, die
+    /// journali-Token kostet“)? Gezählt wird, was <see cref="Kinds.Counts"/> nennt — Datenpflege und Ausleitung.
+    /// Modellieren, Strukturieren, Kataloge, Einrichtung und Betrieb kosten nichts und gehen auch ohne Kontingent.
+    /// Das Kontingent steht am Ende der Zahlerkette; wer kein Anwender ist (Jobs, Saatgut, „system“), ist nicht gemeint.
+    /// </summary>
+    private bool KeinKontingent(string actor, string type)
+    {
+        if (!Kinds.Billable(null, type)) return false;
+        if (_users.All.GetValueOrDefault(actor) is not { } u) return false;
+        if (string.IsNullOrEmpty(u.Team)) return true;
+        var zahler = _teams.Get(_teams.Payer(u.Team!));
+        return zahler is null || (zahler.EntriesWeek <= 0 && zahler.EntriesMonth <= 0);
     }
 
     public delegate Entry Writer(string actor, string stream, string type, object payload, string? batch);

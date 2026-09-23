@@ -117,6 +117,16 @@ app.Use(async (ctx, next) => { if (ctx.Request.Path.StartsWithSegments("/api")) 
 
 // Benutzer & Rollen (Taloan, 19.09.): ohne Benutzer offen wie bisher; mit Benutzern Sitzung oder Token noetig, X-Actor kommt aus der Sitzung
 app.Use(Auth.Middleware(catalog, dataDir));
+// Kein Kontingent: der Schreibpfad wirft, die Antwort sagt es sachlich (Taloan, 23.09.2026) — nicht als Serverfehler
+app.Use(async (ctx, next) =>
+{
+    try { await next(); }
+    catch (KeinKontingentException e) when (!ctx.Response.HasStarted)
+    {
+        ctx.Response.StatusCode = 403;
+        await ctx.Response.WriteAsJsonAsync(new { error = e.Message });
+    }
+});
 
 var api = app.MapGroup("/api");
 Auth.Map(api, dataDir);
@@ -137,7 +147,7 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
 });
 
 /// <summary>Die Zahlen der Statusleiste — für die Anlage oder für das eigene Team, je nachdem, wer fragt.</summary>
-object Nutzung(HttpRequest req, Catalog c)
+object? Nutzung(HttpRequest req, Catalog c)
 {
     var today = DateOnly.FromDateTime(DateTime.Now);
     object Teil(int used, int max, DateOnly next, string wofuer) => new
@@ -146,14 +156,19 @@ object Nutzung(HttpRequest req, Catalog c)
     };
     var woche = Usage.WeekStart(today).AddDays(7);
     var monat = Usage.MonthStart(today).AddMonths(1);
+    // /health ist von der Sperre ausgenommen (es antwortet auch ohne Sitzung) — wer fragt, lösen wir hier selbst auf
+    var ich = req.HttpContext.Items["user"] as string;
+    if (string.IsNullOrEmpty(ich) && Auth.Enabled(c)) ich = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
     return c.With((_, _, _) =>
     {
-        // Ohne Anmeldung (offene Anlage) gilt die Lizenz; wer angemeldet, aber in keinem Team ist, hat 0
-        if (req.HttpContext.Items["user"] is not string wer || wer.Length == 0)
+        // Ohne Anmeldung (offene Anlage) gilt die Lizenz
+        if (string.IsNullOrEmpty(ich))
             return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Anlage"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Anlage") });
-        if (TeamApi.TeamOf(c, wer) is not { } mein || c.Teams.Get(mein) is null) return null;   // kein Team, kein Kontingent, keine Balken
+        // Kein Team oder ein Team ohne Kontingent: keine Balken (Taloan, 23.09.2026: „limits > 0“)
+        if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null) return null;
         var zahler = c.Teams.Payer(mein);
         var zt = c.Teams.Get(zahler)!;
+        if (zt.EntriesWeek <= 0 && zt.EntriesMonth <= 0) return null;   // ohne Kontingent gibt es nichts anzuzeigen
         var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
         return c.ReadUsage(u => new
         {

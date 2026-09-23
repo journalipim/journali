@@ -154,21 +154,17 @@ public static class Auth
     public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && (RightsOf(c, role).Contains(right) || (right == Rights.Team && RightsOf(c, role).Contains(Rights.Users))));
 
     /// <summary>
-    /// Ohne Team kein Kontingent, ohne Kontingent keine Änderung (Taloan, 23.09.2026: „wenn ich keinem Team angehöre und
-    /// keine Limits habe gleich 0, kann ich auch keine Änderungen vornehmen“). Gilt für Anwender, nicht für Jobs: die
-    /// arbeiten mit einem Dienst-Token und auf die Rechnung des Teams, das sie beauftragt hat. Ausgenommen ist, was man
-    /// ohne Team können muss — das eigene Konto und die Teamverwaltung; sonst spielte sich ein teamloser Administrator
-    /// selbst aus dem System.
+    /// Hat dieser Anwender ein Kontingent? Ohne eines kostet nichts mehr etwas dürfen: die Sperre selbst sitzt am
+    /// Schreibpfad (<c>Catalog</c>), weil erst dort feststeht, ob ein Eintrag journali-Token kostet (Taloan, 23.09.2026:
+    /// „jede Anfrage, die journali-Token kostet“). Hier steht sie nur für die Anzeige.
     /// </summary>
-    public static bool OhneKontingent(HttpContext ctx, Catalog c)
+    public static bool HatKontingent(Catalog c, string? wer) => c.With((_, _, _) =>
     {
-        var req = ctx.Request;
-        if (req.Method is "GET" or "HEAD" or "OPTIONS") return false;
-        var path = req.Path.Value ?? "";
-        if (path.StartsWith("/api/auth") || path.StartsWith("/api/teams")) return false;
-        if (ctx.Items["user"] is not string wer || wer.Length == 0) return false;
-        return c.With((_, _, _) => c.Users.All.GetValueOrDefault(wer) is { } u && string.IsNullOrEmpty(u.Team));
-    }
+        if (wer is not { Length: > 0 } w || c.Users.All.GetValueOrDefault(w) is not { } u) return true;
+        if (string.IsNullOrEmpty(u.Team)) return false;
+        var zahler = c.Teams.Get(c.Teams.Payer(u.Team!));
+        return zahler is not null && (zahler.EntriesWeek > 0 || zahler.EntriesMonth > 0);
+    });
 
     /// <summary>Die Sperre: vor allem unter /api. Ohne Benutzer offen (X-Actor wie bisher); sonst Sitzung/Token nötig, X-Actor wird gesetzt.</summary>
     public static Func<HttpContext, Func<Task>, Task> Middleware(Catalog c, string dir) => async (ctx, next) =>
@@ -181,12 +177,6 @@ public static class Auth
         if (!Allowed(c, who.Value.Role, ctx.Request)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(new { error = $"Rolle {who.Value.Role} darf das nicht ({Rights.Label.GetValueOrDefault(Needed(ctx.Request) ?? "") ?? Needed(ctx.Request)})." }); return; }
         ctx.Request.Headers["X-Actor"] = who.Value.User;   // der Urheber kommt aus der Sitzung, nicht vom Client
         ctx.Items["user"] = who.Value.User; ctx.Items["role"] = who.Value.Role;
-        if (OhneKontingent(ctx, c))
-        {
-            ctx.Response.StatusCode = 403;
-            await ctx.Response.WriteAsJsonAsync(new { error = "Ohne Team gibt es kein Kontingent — bitte einem Team zuordnen lassen." });
-            return;
-        }
         await next();
     };
 
