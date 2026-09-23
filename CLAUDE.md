@@ -114,6 +114,12 @@ stehen dort als solche markiert.
   ▩ Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
   pflegen darf) · ✉ Mail · ▣ Backup & Recovery (nur der Weg **zurück**; gesichert wird
   als Job des Plugins `backup`) · ⚑ Workflows.
+  Die Abschnitte des Team-Tabs stehen fest (Taloan, 23.09.): ◍ {Teamname} · ⚿ journali
+  Lizenz · ✦ journali Limits · ✧ KI API Keys · ✧ KI Austauschvolumen — erst, was
+  journali betrifft, dann die fremde KI.
+  **Was der Rechner selbst tun kann, tut er** (Taloan, 23.09.): kein Knopf, zu dem
+  jemand regelmässig hingehen muss. Ableitungen rechnet der Job nach jedem Hochladen
+  **und** nach jeder Preset-Änderung; der Knopf ist der Nachzieher, nicht der Weg.
   Grundsatz: **wer mit seinen Rechten, Rollen und seinem Team hierher kommt, sieht,
   was er sehen oder ändern darf — alles andere sieht er nicht.** Kein gesperrter
   Abschnitt, kein Hinweis auf Verborgenes; ein Reiter ohne Abschnitt fällt weg.

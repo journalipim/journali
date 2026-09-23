@@ -22,7 +22,7 @@ public static class DeriveApi
     public static void Map(RouteGroupBuilder api)
     {
         api.MapGet("/media/presets", (Catalog c) => c.With((_, _, _) => c.Media.Presets.Values.OrderBy(p => p.Key).Select(p => View(c, p)).ToList()));
-        api.MapPut("/media/presets/{key}", (string key, PresetBody b, HttpRequest req, Catalog c) =>
+        api.MapPut("/media/presets/{key}", (string key, PresetBody b, HttpRequest req, Catalog c, JobRunner runner) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             key = key.Trim().ToLowerInvariant();
@@ -39,7 +39,9 @@ public static class DeriveApi
                 if (q is < 1 or > 100) return Bad("Qualität: 1 bis 100.");
                 var label = b.Label is { Count: > 0 } ? b.Label : cur?.Label ?? Labels.Of(key, key);
                 write(actor, Media.PresetStream + key, Types.MediaPresetDefined, new MediaPresetDefined(label, w, h, format, q, b.Auto ?? cur?.Auto ?? true), null);
-                return Results.Ok(View(c, c.Media.Presets[key]));
+                // Was jetzt fehlt, rechnet der Job — niemand soll dafür eine Seite aufsuchen (Taloan, 23.09.2026)
+                var (job, _) = Kick(c, runner, actor);
+                return Results.Ok(new { preset = View(c, c.Media.Presets[key]), job });
             });
         });
         api.MapDelete("/media/presets/{key}", (string key, HttpRequest req, Catalog c) =>

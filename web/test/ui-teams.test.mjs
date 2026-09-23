@@ -48,7 +48,7 @@ test('die Teamseite zeigt, wer dazugehört und womit gearbeitet wird — über K
   assert.match(t, /Gast/, 'auch wer kein eigenes Team trägt')
   assert.match(t, /anthropic/, 'die eingerichteten Anbieter')
   assert.ok(!/Excel Laptop/.test(t), 'API-Token gehören zur Person, nicht zum Team')
-  assert.match(t, /journali PIM Token/, 'die Nutzung gegen die Limits hat ihren eigenen Abschnitt')
+  assert.match(t, /journali Limits/, 'die Limits haben ihren eigenen Abschnitt')
   assert.ok(!/Token diesen Monat/.test(t), 'journali sagt nichts über verbrauchte KI-Token')
   assert.ok(!/kostet/i.test(t), 'und nichts über Kosten')
   assert.match(t, /Verfügbar/, 'was dem Team noch zur Verfügung steht — Grenzen stehen positiv da')
@@ -62,7 +62,7 @@ test('der Fragezeichen-Knopf sagt, was auf die Limits geht und was nicht', async
   server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
   await w.findAll('button').find(b => b.text() === '?').trigger('click'); await ruhe()
-  assert.match(dialog.title, /journali PIM Token/, 'die Hilfe gehört zu den journali-Token, nicht zur KI')
+  assert.match(dialog.title, /journali Limits/, 'die Hilfe gehört zu den journali-Token, nicht zur KI')
   const zeilen = dialog.list.flat().join(' ')
   assert.match(zeilen, /Anlegen/); assert.match(zeilen, /Ändern/); assert.match(zeilen, /Zurückziehen/)
   assert.match(zeilen, /Freigeben/); assert.match(zeilen, /Übersetzen/)
@@ -83,14 +83,14 @@ test('das Austauschvolumen steht hin und zurück getrennt da — in Bytes, nie i
   await ruhe(); w.unmount()
 })
 
-test('die Lizenz steht vor den Token — sie erklärt das Kontingent', async () => {
+// Namen und Reihenfolge der Abschnitte stehen fest (Taloan, 23.09.2026) — erst, was journali betrifft, dann die KI
+test('die Abschnitte stehen in der vereinbarten Folge', async () => {
   server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
-  const h = w.findAll('h2').map(x => x.text().replace(/\s+/g, ' '))
-  const lizenz = h.findIndex(x => /Lizenz/.test(x))
-  const token = h.findIndex(x => /journali PIM Token/.test(x))
-  assert.ok(lizenz >= 0 && token > lizenz, 'erst die Lizenz, dann das, was daraus folgt')
-  assert.ok(!h.some(x => /Limits dieser Anlage|gemessen, nicht geschätzt/.test(x)), 'keine Beisätze, die anderswo schon stehen')
+  const h = w.findAll('h2').map(x => x.text().replace(/\s+/g, ' ').replace(' ?', ''))
+  assert.equal(h.length, 5)
+  assert.match(h[0], /^◍ Init Team/)
+  assert.deepEqual(h.slice(1), ['⚿ journali Lizenz', '✦ journali Limits', '✧ KI API Keys', '✧ KI Austauschvolumen'])
   await ruhe(); w.unmount()
 })
 

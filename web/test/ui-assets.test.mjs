@@ -26,6 +26,7 @@ function server({ missing = { total: 937, missing: [] }, stats = STATS } = {}) {
     const body = path === '/api/media/stats' ? stats
       : path === '/api/media/missing' ? missing
       : path === '/api/media/presets' ? PRESETS
+      : path.startsWith('/api/media/presets/') ? { preset: PRESETS[0], job: 'derive' }
       : path === '/api/media/store' ? { kind: 's3', total: 937, config: { driver: 's3' }, error: null }
       : path === '/api/backup/status' ? { hier: { entries: 74930, media: 937, storage: 's3://journali' }, dort: null }
       : {}
@@ -77,5 +78,18 @@ test('in den Einstellungen steht nur der Weg zurück — gesichert wird als Job'
   assert.match(t, /Teilbaum einspielen/, 'und die einzelne Datei')
   assert.match(t, /937 Assets/, 'der Stand spricht von Assets')
   assert.ok(!calls.some(c => c.path === '/api/backup' && c.method === 'POST'), 'nichts wurde gesichert')
+  await ruhe(); w.unmount()
+})
+
+// Ableitungen rechnet der Job, nicht der Mensch (Taloan, 23.09.2026: „ob jedes Mal ein Manager an diese Stelle gehen und
+// auf den Knopf jetzt rechnen drücken muss“). Beim Speichern eines Presets stösst der Server ihn selbst an.
+test('ein geändertes Preset stösst den Job an — der Knopf ist nur der Nachzieher', async () => {
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'model', 'storage'] }
+  const w = mount(StorageSettings, { props: { teil: 'assets' } }); await ruhe()
+  const feld = w.findAll('input[type=number]')[0]
+  await feld.setValue(512); await feld.trigger('change'); await ruhe()
+  const put = calls.find(c => c.path.startsWith('/api/media/presets/') && c.method === 'PUT')
+  assert.ok(put, 'das Preset ging nicht hinaus')
+  assert.ok(store.toasts.some(t => /rechnet nach/.test(t.text)), 'und die Meldung sagt, dass gerechnet wird')
   await ruhe(); w.unmount()
 })

@@ -53,7 +53,7 @@ test('Assets ohne Storage: die Ableitungsgrössen ja, der Speicher nicht', async
 test('mein Konto steht bei mir, Rollen und Teams in der Verwaltung', async () => {
   const w = await sicht(['read', 'users'])
   const ich = w.text()
-  assert.match(ich, /Konto/); assert.match(ich, /API-Token/)
+  assert.match(ich, /Zugangsdaten/); assert.match(ich, /API-Token/)
   assert.ok(!ich.includes('Rollen ·'), 'die Rollentabelle hat hier nichts zu suchen')
   await w.findAll('.tab').find(t => t.text() === '◈ Rollen & Rechte').trigger('click'); await ruhe()
   const verwaltung = w.text()

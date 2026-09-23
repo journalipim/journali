@@ -31,7 +31,7 @@ async function dropToken(t) { try { await api.del(`/api/auth/tokens/${t.id}`); a
 
 <template>
   <div class="section">
-    <h2>👤 Konto <span class="muted">· {{ me?.name || store.auth.user }} · {{ store.auth.role }}<span v-if="me?.team"> · 👥 {{ me.team }}</span></span></h2>
+    <h2>👤 Zugangsdaten <span class="muted">· {{ me?.name || store.auth.user }} · {{ store.auth.role }}<span v-if="me?.team"> · ◍ {{ me.team }}</span></span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:140px" /><col style="width:300px" /><col /></colgroup><tbody>
       <tr><td class="muted">aktuelles Passwort</td><td><input v-model="pw.current" type="password" autocomplete="current-password" style="width:100%" /></td><td></td></tr>
       <tr><td class="muted">neues Passwort</td><td><input v-model="pw.password" type="password" autocomplete="new-password" style="width:100%" placeholder="mindestens 8 Zeichen" /></td><td></td></tr>

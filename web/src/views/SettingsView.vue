@@ -56,6 +56,8 @@ async function save() {
     <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /><TeamsAdmin /></div>
 
     <div class="scroll" v-else>
+      <div class="section">
+      <h2 title="Gilt auf diesem Rechner; Darstellung und Sicht folgen der Anmeldung an jeden Rechner.">◐ Dieser Rechner</h2>
       <table class="grid form">
         <tbody>
           <!-- Der Name steht nur ohne Anmeldung hier (Taloan, 23.09.2026: „kann jetzt weg, wir haben ein Benutzersystem“) —
@@ -95,6 +97,7 @@ async function save() {
           </tr>
         </tbody>
       </table>
+      </div>
 
       <AccountSettings v-if="store.auth.enabled" />
 

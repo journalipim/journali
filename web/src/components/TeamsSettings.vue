@@ -89,7 +89,7 @@ async function modell(anbieter, wert) {
 /// Was gezählt wird — die Vorgänge hinter Kinds.Counts im Kern (data, publish). Über Nichtgezähltes steht hier nichts.
 function hilfeToken() {
   dialog.help({
-    title: '✦ journali PIM Token · gezählt wird',
+    title: '✦ journali Limits · gezählt wird',
     rows: [
       ['Anlegen', 'Artikel, Varianten, Zeilen einer Mehrfachangabe, Assets, Relationen'],
       ['Ändern', 'jeder Wert, Status, Kennung, die Reihenfolge von Zeilen'],
@@ -151,8 +151,44 @@ async function austragen(m) {
       </table>
     </div>
 
+
+    <LicenceSettings />
+
     <div class="section">
-      <h2 title="Schlüssel und Modell dieses Teams; der Schlüssel bleibt beim Server.">✧ KI</h2>
+      <h2>✦ journali Limits
+        <button class="x" title="Was gezählt wird" @click="hilfeToken">?</button>
+      </h2>
+      <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
+        <tr>
+          <td class="muted" title="Was diesem Team in diesem Zeitraum noch zur Verfügung steht">Verfügbar</td>
+          <td class="mono">
+            <span :class="freiTon('week')">▤ {{ zahl(rest('week')) }} / Woche</span> ·
+            <span :class="freiTon('month')">▦ {{ zahl(rest('month')) }} / Monat</span>
+          </td>
+          <td class="muted" style="font-size:12px"><span v-if="!jt?.limits?.week && !jt?.limits?.month">kein eigenes Kontingent</span></td>
+        </tr>
+        <tr>
+          <td class="muted" title="Das Kontingent dieses Teams — der Administrator trägt es aus der Lizenz ein">Kontingent</td>
+          <td class="mono muted">
+            ▤ {{ zahl(jt?.limits?.week) }} / Woche · ▦ {{ zahl(jt?.limits?.month) }} / Monat
+          </td>
+          <td class="muted" style="font-size:12px">
+            <span v-if="jt && jt.payer !== jt.team">gemeinsam mit {{ jt.payerLabel }} · eigener Anteil ▦ {{ zahl(jt.mine?.month) }}</span>
+          </td>
+        </tr>
+        <tr>
+          <td class="muted" title="Was die Mitglieder in diesem Zeitraum geschrieben haben">Genutzt</td>
+          <td class="mono muted">
+            ▤ {{ zahl(jt?.used?.week) }} · ▦ {{ zahl(jt?.used?.month) }} · heute {{ zahl(jt?.used?.day) }}
+          </td>
+          <td></td>
+        </tr>
+      </tbody></table>
+      <UsageBars v-if="jt" :usage="teamUsage" />
+    </div>
+
+    <div class="section">
+      <h2 title="Schlüssel und Modell dieses Teams; der Schlüssel bleibt beim Server.">✧ KI API Keys</h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
           <td class="muted">Schlüssel</td>
@@ -191,9 +227,8 @@ async function austragen(m) {
       </tbody></table>
     </div>
 
-
     <div class="section">
-      <h2 title="Was journali an den Anbieter geschickt und von ihm zurückbekommen hat; über Tokens und Kosten sagt journali nichts.">✧ KI-Austauschvolumen</h2>
+      <h2 title="Was journali an den Anbieter geschickt und von ihm zurückbekommen hat; über Tokens und Kosten sagt journali nichts.">✧ KI Austauschvolumen</h2>
       <table v-if="tage.length" class="grid" style="width:auto"><thead><tr><th style="width:110px">Tag</th><th class="num" style="width:70px">Aufrufe</th><th class="num" style="width:90px" title="hingeschickt">↑ hin</th><th class="num" style="width:90px" title="zurückbekommen">↓ zurück</th><th class="num" style="width:90px">Σ</th><th>Anlass</th></tr></thead><tbody>
         <tr v-for="t in tage" :key="t.day" class="row">
           <td class="mono">{{ t.day }}</td>
@@ -205,41 +240,6 @@ async function austragen(m) {
         </tr>
       </tbody></table>
       <div v-else class="muted" style="font-size:12px">noch nichts gemessen</div>
-    </div>
-
-    <LicenceSettings />
-
-    <div class="section">
-      <h2>✦ journali PIM Token <span class="muted">· Verfügbare Limits</span>
-        <button class="x" title="Was gezählt wird" @click="hilfeToken">?</button>
-      </h2>
-      <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
-        <tr>
-          <td class="muted" title="Was diesem Team in diesem Zeitraum noch zur Verfügung steht">Verfügbar</td>
-          <td class="mono">
-            <span :class="freiTon('week')">▤ {{ zahl(rest('week')) }} / Woche</span> ·
-            <span :class="freiTon('month')">▦ {{ zahl(rest('month')) }} / Monat</span>
-          </td>
-          <td class="muted" style="font-size:12px"><span v-if="!jt?.limits?.week && !jt?.limits?.month">kein eigenes Kontingent</span></td>
-        </tr>
-        <tr>
-          <td class="muted" title="Das Kontingent dieses Teams — der Administrator trägt es aus der Lizenz ein">Kontingent</td>
-          <td class="mono muted">
-            ▤ {{ zahl(jt?.limits?.week) }} / Woche · ▦ {{ zahl(jt?.limits?.month) }} / Monat
-          </td>
-          <td class="muted" style="font-size:12px">
-            <span v-if="jt && jt.payer !== jt.team">gemeinsam mit {{ jt.payerLabel }} · eigener Anteil ▦ {{ zahl(jt.mine?.month) }}</span>
-          </td>
-        </tr>
-        <tr>
-          <td class="muted" title="Was die Mitglieder in diesem Zeitraum geschrieben haben">Genutzt</td>
-          <td class="mono muted">
-            ▤ {{ zahl(jt?.used?.week) }} · ▦ {{ zahl(jt?.used?.month) }} · heute {{ zahl(jt?.used?.day) }}
-          </td>
-          <td></td>
-        </tr>
-      </tbody></table>
-      <UsageBars v-if="jt" :usage="teamUsage" />
     </div>
   </template>
 </template>

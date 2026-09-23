@@ -16,7 +16,7 @@ const cfg = ref({ driver: 'postgres', path: '', bucket: '', endpoint: '', key: '
 const state = ref({ kind: '', total: 0, error: null })
 const probe = ref(''); const busy = ref('')
 const zaehlBusy = ref('')   // Fehlbestand zählen
-const kopierBusy = ref('')  // Herüberkopieren
+const kopierBusy = ref('')  // Assetmigration
 const missing = ref(null)
 const stats = ref(null)      // was im Speicher liegt: Zahl, Grösse, Arten
 const n = x => (x ?? 0).toLocaleString('de-DE')
@@ -29,8 +29,12 @@ const presets = ref([]); const presetBusy = ref('')
 const FORMATS = ['webp', 'jpeg', 'png', 'avif']
 async function loadPresets() { try { presets.value = (await api.get('/api/media/presets')).map(p => ({ ...p, labelDe: p.label?.de ?? p.key })) } catch (e) { store.toast(e.message) } }
 async function savePreset(p) {
-  try { await api.post(`/api/media/presets/${encodeURIComponent(p.key)}`, { label: { de: p.labelDe, en: p.label?.en ?? p.labelDe }, width: Number(p.width), height: Number(p.height), format: p.format, quality: Number(p.quality), auto: p.auto }, 'PUT'); await loadPresets(); store.toast(`Preset „${p.key}“ gespeichert — fehlende Ableitungen rechnet der Job derive`, 'ok') }
-  catch (e) { store.toast(e.message) }
+  try {
+    const r = await api.post(`/api/media/presets/${encodeURIComponent(p.key)}`, { label: { de: p.labelDe, en: p.label?.en ?? p.labelDe }, width: Number(p.width), height: Number(p.height), format: p.format, quality: Number(p.quality), auto: p.auto }, 'PUT')
+    await loadPresets()
+    store.toast(r?.job ? `Preset „${p.key}“ gespeichert · Job „${r.job}“ rechnet nach` : `Preset „${p.key}“ gespeichert`, 'ok')
+    if (r?.job) setTimeout(loadPresets, 3000)
+  } catch (e) { store.toast(e.message) }
 }
 async function newPreset() {
   const key = await dialog.prompt({ title: 'Vorschau-Preset anlegen', text: 'Key (a-z, 0-9, _)', placeholder: 'z. B. shop, katalog, print_hires', ok: '+ Anlegen' })
@@ -74,7 +78,7 @@ async function findMissing() {
 }
 async function copy() {
   if (!store.actor) { store.toast('👤 Name fehlt'); return }
-  if (!await dialog.confirm({ title: 'Blobs herüberkopieren?', warn: `${copyFrom.value.driver === 'file' ? copyFrom.value.path : copyFrom.value.driver === 's3' ? 's3://' + copyFrom.value.bucket : 'postgres'} → ${state.value.kind}`, text: 'Alles, was hier fehlt (Hash-geprüft, nichts wird gelöscht)', ok: 'Kopieren' })) return
+  if (!await dialog.confirm({ title: 'Assets aus dem anderen Speicher holen?', warn: `${copyFrom.value.driver === 'file' ? copyFrom.value.path : copyFrom.value.driver === 's3' ? 's3://' + copyFrom.value.bucket : 'postgres'} → ${state.value.kind}`, text: 'Alles, was hier fehlt (Hash-geprüft, nichts wird gelöscht)', ok: 'Kopieren' })) return
   kopierBusy.value = 'kopiere …'; copyResult.value = null
   try { copyResult.value = await api.post('/api/media/copy', { from: clean(copyFrom.value) }); missing.value = null }
   catch (e) { store.toast(e.message) }
@@ -117,7 +121,7 @@ onMounted(() => { load(); loadStats() })
         <td><button class="x" @click="deletePreset(p)" :disabled="p.key === 'thumb'" :title="p.key === 'thumb' ? 'Kachel der Bibliothek — bleibt' : 'Preset entfernen'">🗑</button></td>
       </tr>
     </tbody></table>
-    <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">+ Preset</button><button class="primary" @click="derive" :disabled="!!presetBusy" title="fehlende Ableitungen jetzt rechnen (Job derive)">▶ Jetzt rechnen</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
+    <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">+ Preset</button><button @click="derive" :disabled="!!presetBusy" title="Der Job läuft nach jedem Hochladen und nach jeder Änderung an einem Preset von selbst; hier von Hand.">▶ Jetzt rechnen</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
   </div>
 
   <div class="section" v-if="teil === 'assets'">
@@ -148,7 +152,7 @@ onMounted(() => { load(); loadStats() })
   </div>
 
   <div class="section" v-if="teil === 'speicher'">
-    <h2 title="Holt die Assets eines anderen Speichers, die hier fehlen — nach einem Treiberwechsel oder aus einem alten Verzeichnis.">▨ Herüberkopieren <span class="muted">· fehlende Assets</span></h2>
+    <h2 title="Holt die Assets eines anderen Speichers, die hier fehlen — nach einem Treiberwechsel oder aus einem alten Verzeichnis.">▨ Assetmigration <span class="muted">· fehlende Assets</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /></colgroup><tbody>
       <tr><td class="muted">Quelle</td><td><select v-model="copyFrom.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td></tr>
       <tr v-if="copyFrom.driver === 'file'"><td class="muted">Verzeichnis</td><td>
