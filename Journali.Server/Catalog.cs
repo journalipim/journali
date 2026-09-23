@@ -116,6 +116,17 @@ public sealed class Catalog
             {
                 Apply(_journal.Append("system", Teams.Stream + Model.InitTeam, Types.TeamDefined, Types.Serialize(new TeamDefined("Init Team")))); n++;
             }
+            // Ein Team ohne Führung ist unbedienbar (Taloan, 23.09.2026: „lässt sich immer noch nicht einstellen“) — die
+            // Anlage repariert das selbst: der erste Benutzer mit dem Recht „Benutzer und Rollen“ führt es.
+            if (_teams.Primary is { Managers.Length: 0 } ohne && _users.All.Count > 0)
+            {
+                var admin = _users.All.Values.Where(u => u.Enabled && _users.RightsOf(u.Role).Contains(Rights.Users)).OrderBy(u => u.Key).FirstOrDefault();
+                if (admin is not null)
+                {
+                    Apply(_journal.Append("system", Teams.Stream + ohne.Key, Types.TeamDefined, Types.Serialize(
+                        new TeamDefined(ohne.Label, ohne.Note, ohne.MonthlyTokens, ohne.DailyTokens, ohne.Enabled, ohne.KeysFrom, ohne.IncludedTokens, [admin.Key], ohne.Models)))); n++;
+                }
+            }
             // Der Wurzelknoten „MasterTree“: nur, wenn es ihn nie gab (auch nicht zurückgezogen).
             if (!_tree.EverCreated(Model.RootNode))
                 foreach (var s in Model.TreeSeeds()) { Apply(_journal.Append("system", s.Stream, s.Type, s.Payload)); n++; }

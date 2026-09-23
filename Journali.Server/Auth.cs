@@ -217,9 +217,16 @@ public static class Auth
             if (Enabled(c)) return Bad("Es gibt schon Benutzer — bitte anmelden.");
             var key = Key(body.User); if (key is null) return Bad("Benutzername: a-z, 0-9, ., _, - (2–40 Zeichen).");
             if (Blank(body.Password) is not { Length: >= 8 } pw) return Bad("Passwort: mindestens 8 Zeichen.");
-            // der erste Administrator gehört ins Init Team; ändern darf er das jederzeit (Taloan, 23.09.2026)
-            var initTeam = c.With((_, _, _) => c.Teams.Primary?.Key);
-            c.With((_, _, write) => write(key, Stream + key, Types.UserDefined, new UserDefined(Blank(body.Name) ?? key, null, "admin", true, initTeam), null));
+            // der erste Administrator gehört ins Init Team und führt es; ändern darf er das jederzeit (Taloan, 23.09.2026)
+            var initTeam = c.With((_, _, _) => c.Teams.Primary);
+            c.With((_, _, write) =>
+            {
+                write(key, Stream + key, Types.UserDefined, new UserDefined(Blank(body.Name) ?? key, null, "admin", true, initTeam?.Key), null);
+                if (initTeam is { Managers.Length: 0 })
+                    write(key, Teams.Stream + initTeam.Key, Types.TeamDefined,
+                        new TeamDefined(initTeam.Label, initTeam.Note, initTeam.MonthlyTokens, initTeam.DailyTokens, initTeam.Enabled, initTeam.KeysFrom, initTeam.IncludedTokens, [key], initTeam.Models), null);
+                return 0;
+            });
             With(dir, s => { s.Passwords[key] = Hash(pw); return 0; }, save: true);
             StartSession(ctx, dir, key);
             return Results.Ok(new { user = key, role = "admin" });

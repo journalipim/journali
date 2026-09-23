@@ -72,7 +72,7 @@ public static class TeamApi
                 // Ein Team ohne Manager gibt es nicht (Taloan, 23.09.2026): beim Anlegen benennt der Administrator mindestens einen
                 var managers = body.Managers?.Select(Blank).OfType<string>().Distinct().ToArray() ?? cur?.Managers ?? [];
                 foreach (var m in managers) if (!c.Users.All.ContainsKey(m)) return Bad($"Unbekannter Benutzer {m}.");
-                if (managers.Length == 0 && c.Users.All.Count > 0) return Bad("Mindestens ein Teammanager — notfalls du selbst.");
+                if (managers.Length == 0 && cur is null && c.Users.All.Count > 0) return Bad("Mindestens ein Teammanager — notfalls du selbst.");
                 var keysFrom = body.KeysFrom is null ? cur?.KeysFrom : Blank(body.KeysFrom);
                 if (keysFrom == key) return Bad("Ein Team kann nicht seine eigenen Schlüssel mitbenutzen.");
                 if (keysFrom is { } f)
