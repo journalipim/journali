@@ -57,6 +57,9 @@ public sealed class Catalog
 
     /// <summary>Wo die Lizenz liegt — das Saatgut holt die Limits des Init Teams von dort (null = Testbetrieb).</summary>
     public string? LicenceDir { get; set; }
+    /// <summary>Woher die Lizenz kommt (Datenbank oder Datei) — gesetzt beim Start, vor dem Saatgut.</summary>
+    public Licences? Licences { get; set; }
+    private Licence Lizenz => Licences?.Lic ?? LicenceFile.Load(LicenceDir ?? "").Lic;
 
     /// <summary>Ab wann gezählt wird (aus der Lizenz, null = seit jeher) — Program setzt es beim Start und beim Einspielen.</summary>
     public DateOnly? ZaehltAb { get; set; }
@@ -156,7 +159,7 @@ public sealed class Catalog
             if (_teams.All.Count == 0)
             {
                 // Die Limits der Lizenz liegen hier; jedes weitere Team startet bei 0 (Taloan, 23.09.2026)
-                var lic = LicenceFile.Load(LicenceDir ?? "").Lic;
+                var lic = Lizenz;
                 Apply(_journal.Append("system", Teams.Stream + Model.InitTeam, Types.TeamDefined, Types.Serialize(
                     new TeamDefined("Init Team", EntriesWeek: lic.EntriesWeek, EntriesMonth: lic.EntriesMonth, MonthlyTokens: lic.AiTokensMonth, DailyTokens: lic.AiTokensDay)))); n++;
             }
@@ -238,7 +241,7 @@ public sealed class Catalog
     /// </summary>
     public int LimitsAusLizenz()
     {
-        var lic = LicenceFile.Load(LicenceDir ?? "").Lic;
+        var lic = Lizenz;
         ZaehltAb = lic.CountFrom;
         _stand.Clear();   // der Zählbeginn kann sich verschoben haben
         var n = 0;

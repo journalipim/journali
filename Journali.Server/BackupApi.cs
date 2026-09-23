@@ -27,7 +27,13 @@ public static class BackupApi
     /// Zugangsdaten), <c>mail.json</c> (Mailserver mit Passwort), <c>jobs/secrets.json</c> (Token der Jobs). Wer sie mitsichert, hat Geheimnisse in der Sicherung
     /// — wie im Datenverzeichnis selbst. Wer sie weglässt, kommt in ein wiederhergestelltes System nicht hinein.
     /// </summary>
-    private static readonly string[] Dateien = ["auth.json", "media.json", "mail.json", "licence.json", Path.Combine("jobs", "secrets.json")];
+    /// <remarks>
+    /// Die Lizenz ist <b>nicht</b> dabei (Taloan, 23.09.2026: „ich mache eine Sicherung, mache drei neue isolierte
+    /// Instanzen und restore dreimal — dann habe ich aus einer Lizenz vier gemacht“). Sie steht in der Datenbank, auf
+    /// die Kennung dieser Instanz ausgestellt; eine wiederhergestellte Instanz bekommt eine neue Kennung und läuft im
+    /// Testbetrieb, bis eine Lizenz für sie ausgestellt wird.
+    /// </remarks>
+    private static readonly string[] Dateien = ["auth.json", "media.json", "mail.json", Path.Combine("jobs", "secrets.json")];
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public static void Map(RouteGroupBuilder api, IJournal journal, string dataDir, string pluginDir)

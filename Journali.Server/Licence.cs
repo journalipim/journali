@@ -33,6 +33,8 @@ public sealed record Licence(
     long AiTokensMonth = 0,
     long AiTokensDay = 0,
     Dictionary<string, TeamLimit>? Teams = null,
+    /// <summary>Für welche Instanz sie gilt (Kennung) — leer heisst: für jede (Lizenzen von vor dem 23.09.2026).</summary>
+    string? Instance = null,
     string? Sig = null)
 {
     /// <summary>Testbetrieb: was bis zur ersten Lizenz galt (Journali.Core Limits) — Einträge ja, KI nein.</summary>
@@ -52,15 +54,22 @@ public static class LicenceFile
 {
     public static string PathOf(string dir) => Path.Combine(dir, "licence.json");
 
-    /// <summary>Die Lizenz dieser Anlage — ohne Datei der Testbetrieb. Liefert dazu, ob sie geprüft ist und was dagegen spricht.</summary>
+    /// <summary>Die Lizenz dieser Instanz — ohne Datei der Testbetrieb. Liefert dazu, ob sie geprüft ist und was dagegen spricht.</summary>
     public static (Licence Lic, bool Geprueft, string? Grund) Load(string dir)
+        => File.Exists(PathOf(dir)) ? Aus(File.ReadAllText(PathOf(dir))) : (Licence.Frei, false, "keine Lizenz — Testbetrieb");
+
+    /// <summary>Aus dem JSON einer Lizenz — gleich, ob sie aus einer Datei kommt oder aus der Datenbank (LicenceStore).</summary>
+    public static (Licence Lic, bool Geprueft, string? Grund) Aus(string json, string? instanz = null)
     {
-        if (!File.Exists(PathOf(dir))) return (Licence.Frei, false, "keine Lizenz — Testbetrieb");
         Licence? lic;
-        try { lic = JsonSerializer.Deserialize<Licence>(File.ReadAllText(PathOf(dir)), Licence.Json); }
+        try { lic = JsonSerializer.Deserialize<Licence>(json, Licence.Json); }
         catch (Exception e) { return (Licence.Frei, false, "Lizenz nicht lesbar: " + e.Message); }
         if (lic is null) return (Licence.Frei, false, "Lizenz leer");
         if (lic.Abgelaufen) return (lic, false, $"abgelaufen am {lic.ValidUntil:dd.MM.yyyy}");
+        // Auf eine andere Instanz ausgestellt: es gilt der Testbetrieb (Taloan, 23.09.2026 — sonst würde aus einer
+        // Sicherung und drei Wiederherstellungen aus einer Lizenz vier)
+        if (lic.Instance is { Length: > 0 } fuer && instanz is { Length: > 0 } hier && !string.Equals(fuer, hier, StringComparison.OrdinalIgnoreCase))
+            return (Licence.Frei, false, $"ausgestellt für eine andere Instanz ({fuer})");
         var (ok, grund) = Pruefe(lic);
         return (lic, ok, grund);
     }
@@ -84,14 +93,48 @@ public static class LicenceFile
     }
 }
 
-/// <summary>Hält die Lizenz zur Laufzeit — einmal gelesen, beim Einspielen ausgetauscht.</summary>
-public sealed class Licences(string dir)
+/// <summary>
+/// Hält die Lizenz zur Laufzeit. Sie steht in der Datenbank (Taloan, 23.09.2026: „jegliche eingespielte Lizenz kommt
+/// signiert und verschlüsselt in einen Container — die DB"), damit sie in jeder Sicherung mitfährt und nicht
+/// verschwindet; eine Datei aus der Zeit davor wird beim ersten Lesen übernommen.
+/// </summary>
+public sealed class Licences(string dir, LicenceStore? store = null, Instanz? instanz = null)
 {
-    private (Licence Lic, bool Geprueft, string? Grund) _stand = LicenceFile.Load(dir);
-    public Licence Lic => _stand.Lic;
-    public bool Geprueft => _stand.Geprueft;
-    public string? Grund => _stand.Grund;
+    private (Licence Lic, bool Geprueft, string? Grund) _stand;
+    public Licences(string dir) : this(dir, null, null) { }
+    /// <summary>Die Kennung dieser Instanz — sie steht in jeder Lizenz, die für sie ausgestellt wird.</summary>
+    public string? InstanzId => instanz?.Id;
+
+    public Licence Lic { get { Einmal(); return _stand.Lic; } }
+    public bool Geprueft { get { Einmal(); return _stand.Geprueft; } }
+    public string? Grund { get { Einmal(); return _stand.Grund; } }
     public string Dir => dir;
-    public void Neu(Licence lic) { LicenceFile.Save(dir, lic); _stand = LicenceFile.Load(dir); }
-    public void Lies() => _stand = LicenceFile.Load(dir);
+    /// <summary>Wo sie liegt — für die Anzeige und die Betriebsdoku.</summary>
+    public string Ort => store?.Ready == true ? "Datenbank" : "Datei";
+
+    private bool _gelesen;
+    private void Einmal() { if (!_gelesen) { _gelesen = true; Lies(); } }
+
+    public void Neu(Licence lic, string actor = "system")
+    {
+        var json = JsonSerializer.Serialize(lic, Licence.Json);
+        if (store?.Ready == true) store.Schreib(json, actor);
+        else LicenceFile.Save(dir, lic);
+        _stand = LicenceFile.Aus(json, instanz?.Id);
+        _gelesen = true;
+    }
+
+    public void Lies()
+    {
+        _gelesen = true;
+        if (store?.Ready == true && store.Lies() is { Length: > 0 } json) { _stand = LicenceFile.Aus(json, instanz?.Id); return; }
+        // noch nichts in der Datenbank: eine Datei von früher übernehmen, dann steht sie dort
+        var ausDatei = LicenceFile.Load(dir);
+        if (store?.Ready == true && ausDatei.Lic != Licence.Frei)
+        {
+            store.Schreib(JsonSerializer.Serialize(ausDatei.Lic, Licence.Json), "system");
+            try { File.Delete(LicenceFile.PathOf(dir)); } catch { }
+        }
+        _stand = ausDatei;
+    }
 }

@@ -28,6 +28,12 @@ async function einspielen() {
   }
   catch (e) { said.value = '✗ ' + e.message }
 }
+
+/// Die Kennung dieser Instanz kopieren — ohne Zwischenablage bleibt sie markierbar stehen
+async function kopiere(text) {
+  try { await navigator.clipboard.writeText(text); store.toast('kopiert', 'ok') }
+  catch { store.toast('Zwischenablage nicht verfügbar — Text markieren und mit Strg+C kopieren') }
+}
 </script>
 
 <template>
@@ -47,6 +53,9 @@ async function einspielen() {
       <tr><td class="muted" title="journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.">▤ Token / Woche</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
       <tr><td class="muted" title="journali-Token je Monat: jede Pflege schreibt einen Eintrag ins Journal.">▦ Token / Monat</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
       <tr v-if="lic?.countFrom"><td class="muted" title="Was vor diesem Tag im Journal steht, zählt nicht mehr mit.">◷ gezählt ab</td><td class="mono">{{ lic.countFrom }}</td><td></td></tr>
+      <tr v-if="lic?.instanz"><td class="muted" title="Diese Instanz. Eine Lizenz wird auf diese Kennung ausgestellt und gilt nur hier.">⌗ Instanz</td>
+        <td class="mono" style="user-select:all">{{ lic.instanz }}</td>
+        <td><button class="x" title="Kennung kopieren" @click="kopiere(lic.instanz)">⧉</button></td></tr>
     </tbody></table>
 
     <div v-if="darf()" style="margin-top:8px">

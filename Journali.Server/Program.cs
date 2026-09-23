@@ -63,8 +63,15 @@ void WriteSnapshot(string why)
     catch (Exception e) { Console.WriteLine($"journali: Schnappschuss nicht geschrieben — {e.Message}"); }
 }
 Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht (Taloan, 21.09.)
-catalog.LicenceDir = dataDir;   // muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits
-catalog.ZaehltAb = LicenceFile.Load(dataDir).Lic.CountFrom;   // ab wann gezählt wird (Taloan, 23.09.2026)
+// Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“) liegt signiert und verschlüsselt in der Datenbank
+// („jegliche eingespielte Lizenz kommt signiert und verschlüsselt in einen Container — die DB“); eine Datei von früher
+// wird beim ersten Lesen übernommen. Muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits.
+var instanz = new Instanz(db);   // Kennung dieser Instanz — steht in der Lizenz, geht nicht in die Sicherung
+builder.Services.AddSingleton(instanz);
+var licences = new Licences(dataDir, new LicenceStore(db), instanz);
+catalog.LicenceDir = dataDir;
+catalog.Licences = licences;
+catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
 var seeded = catalog.SeedMissing();
 
 var mailer = new Mailer(dataDir);   // Mailversand (Einstellungen → Mail)
@@ -92,8 +99,6 @@ var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 // Jobs (Plugin tasker, Taloan 19.09.): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
 // unter JOURNALI_JOBS (Vorgabe jobs/ neben dem Programm, im Repo ignoriert)
 var jobDir = dataDir;
-// Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“): licence.json im Datenverzeichnis, ohne sie der Testbetrieb
-var licences = new Licences(dataDir);
 builder.Services.AddSingleton(licences);
 var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);
@@ -170,7 +175,7 @@ object? Nutzung(HttpRequest req, Catalog c)
     {
         // Ohne Anmeldung (offene Anlage) gilt die Lizenz
         if (string.IsNullOrEmpty(ich))
-            return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Anlage"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Anlage") });
+            return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Instanz"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Instanz") });
         // Kein Team: Kontingent 0 — die Balken stehen voll und rot, denn 0 ist sofort erreicht (Taloan, 23.09.2026)
         if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null)
             return c.ReadUsage(u => new

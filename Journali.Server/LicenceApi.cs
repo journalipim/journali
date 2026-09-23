@@ -17,16 +17,17 @@ public static class LicenceApi
             return Results.Ok(new
             {
                 l.Plan, l.Holder, l.ValidUntil, l.EntriesWeek, l.EntriesMonth, l.CountFrom, l.AiTokensMonth, l.AiTokensDay,
-                geprueft = licences.Geprueft, grund = licences.Grund, abgelaufen = l.Abgelaufen,
+                geprueft = licences.Geprueft, grund = licences.Grund, abgelaufen = l.Abgelaufen, ort = licences.Ort,
+                instanz = licences.InstanzId,
             });
         });
 
         // Einspielen: die Datei kommt so, wie sie ausgestellt wurde — Signatur inbegriffen
         api.MapPut("/licence", (Licence body, HttpRequest req, Catalog c) =>
         {
-            if (Actor(req) is null) return ActorMissing();
+            if (Actor(req) is not { } actor) return ActorMissing();
             if (body.EntriesWeek < 0 || body.EntriesMonth < 0 || body.AiTokensMonth < 0 || body.AiTokensDay < 0) return Bad("Grenzen: 0 oder mehr.");
-            licences.Neu(body);
+            licences.Neu(body, actor);
             // Das Init Team trägt die Limits der Lizenz — es soll sie sofort haben und nicht erst nach einem Neustart.
             // LimitsAusLizenz setzt dabei auch den Zählbeginn und wirft den mitgeführten Stand weg.
             var uebernommen = c.With((_, _, _) => c.LimitsAusLizenz()) > 0;
