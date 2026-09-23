@@ -9,11 +9,6 @@ import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 import { ai } from './ai.js'
 import UsageMini from './components/UsageMini.vue'
 const tok = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',') + 'M' : n >= 1000 ? Math.round(n / 1000) + 'k' : String(n)
-// KI-Verbrauch des eigenen Teams (Taloan, 23.09.2026): die Zahl, an der die Grenzen hängen — anders als der Zähler im
-// Browser überlebt sie den Rechnerwechsel und zählt auch, was die anderen im Team verbrauchen.
-const team = computed(() => ai.teamUsed())
-const teamPct = computed(() => { const t = team.value; return t?.limit ? Math.min(100, Math.round((t.month / t.limit) * 100)) : 0 })
-const teamTon = computed(() => { const p = teamPct.value; const t = team.value; return p >= 85 ? (t?.hard ? 'neg' : 'warn') : p >= 60 ? 'warn' : 'muted' })
 const route = useRoute()
 const router = useRouter()
 // Auffangrahmen (Taloan, 17.09.: leerer Bildschirm ist im Betrieb ein Desaster): ein Fehler beim Zeichnen einer
@@ -114,12 +109,6 @@ function railDrop(target) {
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>
-      <!-- KI-Verbrauch (Taloan, 22.09.): Token kosten Geld — hier mitlaufen lassen. Seit 23.09. zählt das Team (Taloan: „die
-           vom eigenen Team hoffentlich“): der Zähler im Browser kennt nur diesen Rechner, das Team kennt alle. -->
-      <template v-if="team"><span class="sep">·</span><router-link to="/settings#teams" class="ai"
-        :title="`KI · Team ${team.label} · ${team.month.toLocaleString('de-DE')} Token diesen Monat${team.limit ? ` von ${team.limit.toLocaleString('de-DE')}` : ''} · heute ${team.today.toLocaleString('de-DE')}`">
-        ✦ {{ tok(team.month) }}<span v-if="team.limit" class="mono" :class="teamTon"> · {{ teamPct }}%</span></router-link></template>
-      <template v-else-if="ai.used.calls"><span class="sep">·</span><router-link to="/settings" class="ai" :title="`KI seit ${ai.used.since}: ${ai.used.calls} Anfragen · ${ai.used.in.toLocaleString('de-DE')} Token hinein · ${ai.used.out.toLocaleString('de-DE')} hinaus — eigener Schlüssel, nur dieser Browser`">✦ {{ tok(ai.used.in + ai.used.out) }}</router-link></template>
       <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings" class="muted" title="Nutzung anzeigen"><UsageMini :usage="store.usage" /></router-link></template>
       <span class="grow" />
       <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" title="Neue Fassung der Oberfläche laden">↻ Neue Fassung</button>

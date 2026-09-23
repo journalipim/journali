@@ -70,19 +70,11 @@ export const ai = reactive({
   lastError: '',
   lastSources: [],      // Quellen (url, title) der letzten Antwort mit web: true
   // Verbrauch, seit wann (Taloan, 22.09.): Token kosten Geld — die Statuszeile zeigt sie; „zurücksetzen“ im Tooltip der Einstellungen
-  used: { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10), per: {}, ...(saved.used ?? {}) },
 
   providers: PROVIDERS,
-  // Was das Team stellt (GET /api/ai/state): { team, label, payer, providers[], ready, limits, used }
+  // Was das Team stellt (GET /api/ai/state): { team, label, payer, providers[], models, ready }
   server: null,
   async loadState() { try { this.server = await api.get('/api/ai/state') } catch { this.server = null } return this.server },
-  /// Was das eigene Team diesen Monat verbraucht hat, und woran es gemessen wird (0 = keine Grenze).
-  /// Das ist die Zahl, die zählt — der Zähler im Browser kennt nur diesen einen Rechner.
-  teamUsed() {
-    const s = this.server
-    if (!s?.team) return null
-    return { label: s.label ?? s.team, month: s.used?.month ?? 0, today: s.used?.today ?? 0, limit: s.limits?.included || s.limits?.monthly || 0, hard: !!s.limits?.included, ready: !!s.ready }
-  },
   /// Der Server fragt für uns, sobald das Team einen Schlüssel hat — einen anderen Weg gibt es nicht mehr.
   viaServer() { return !!this.server?.ready },
   /// eingerichtete Anbieter (mit Schlüssel) — zum Aufzählen in Hilfen und Einstellungen
@@ -98,16 +90,7 @@ export const ai = reactive({
     const a = s.providers?.[0] ?? ''
     return `${a} · ${s.models?.[a] ?? ''} · ${s.label ?? s.team}`.replace(/ · $/, '')
   },
-  save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider, used: this.used })) } catch {} },
-  /// Verbrauch eines Anbieters (oder ohne Angabe: alles) zurücksetzen — Einstellungen → KI
-  resetUsed(key = null) {
-    if (!key) { this.used = { calls: 0, in: 0, out: 0, since: new Date().toISOString().slice(0, 10), per: {} }; this.save(); return }
-    const g = this.usedOf(key); const per = { ...(this.used.per ?? {}) }; delete per[key]
-    this.used = { ...this.used, calls: Math.max(0, this.used.calls - g.calls), in: Math.max(0, this.used.in - g.in), out: Math.max(0, this.used.out - g.out), per }
-    this.save()
-  },
-  /// Verbrauch eines Anbieters
-  usedOf(key) { return this.used.per?.[key] ?? { calls: 0, in: 0, out: 0 } },
+  save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider })) } catch {} },
 
   // Eine Frage, eine Antwort. json: true → die Antwort wird als JSON gelesen (Code-Zäune werden entfernt).
   // web: true → die KI darf im Internet suchen (Herstellerseiten, Datenblätter — Taloan, 20.09.: Daten fremder Produkte ergänzen);
@@ -118,22 +101,8 @@ export const ai = reactive({
     try {
       const anbieter = this.server.providers.includes(this.provider) ? this.provider : this.server.providers[0]
       const modell = this.server.models?.[anbieter]
-      const { text, sources, usage } = true
-        ? await api.post('/api/ai/ask', { provider: anbieter, model: modell, system, user, maxTokens, web, maxSearches })
-            .then(r => {
-              if (r.warn) this.warn = r.warn
-              // der Stand des Teams wächst mit — sonst stünde in der Leiste bis zum nächsten Laden eine alte Zahl
-              const t = (r.usage?.in ?? 0) + (r.usage?.out ?? 0)
-              if (this.server?.used) this.server = { ...this.server, used: { today: (this.server.used.today ?? 0) + t, month: (this.server.used.month ?? 0) + t } }
-              return { text: r.text, sources: r.sources ?? [], usage: { in: r.usage?.in ?? 0, out: r.usage?.out ?? 0 } }
-            })
-        : null
-      // Verbrauch gesamt und je Anbieter (Taloan, 22.09.: „Zählung funktioniert noch nicht separat“)
-      const add = (a, u) => ({ calls: (a?.calls ?? 0) + 1, in: (a?.in ?? 0) + (u?.in ?? 0), out: (a?.out ?? 0) + (u?.out ?? 0) })
-      const t = add(this.used, usage)
-      const pk = anbieter
-      this.used = { ...this.used, ...t, per: { ...(this.used.per ?? {}), [pk]: add(this.used.per?.[pk], usage) } }
-      this.save()
+      const { text, sources } = await api.post('/api/ai/ask', { provider: anbieter, model: modell, system, user, maxTokens, web, maxSearches })
+        .then(r => ({ text: r.text, sources: r.sources ?? [] }))
       const seen = new Set(); this.lastSources = sources.filter(s => !seen.has(s.url) && seen.add(s.url))
       this.lastError = ''
       if (!json) return text
@@ -143,9 +112,7 @@ export const ai = reactive({
     finally { this.busy-- }
   },
 
-  warn: '',   // Hinweis des Servers, z. B. „über der Monatsschwelle“ — die Arbeit läuft weiter
-
-  // Der Schlüssel des Teams antwortet? Eine winzige Anfrage über den Server — sie zählt wie jede andere.
+  // Der Schlüssel des Teams antwortet? Eine winzige Anfrage über den Server.
   async test(providerKey = null) {
     const keep = this.provider; if (providerKey) this.provider = providerKey
     try { const t = await this.ask({ user: 'Antworte nur mit dem Wort: ok', maxTokens: 16 }); return String(t).trim().toLowerCase().startsWith('ok') }

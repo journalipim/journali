@@ -13,8 +13,6 @@ const teams = ref([])
 const gewaehlt = ref(null)     // gezeigtes Team; mit „users“ lässt sich wechseln
 const mitglieder = ref([])
 const tokens = ref([])
-const tage = ref([])
-const anhaengsel = ref([])     // Teams, die auf diese Rechnung gehen
 const keyIn = ref({ anbieter: 'anthropic', wert: '' })
 const frei = ref([])           // wer in keinem Team ist — nur die lassen sich eintragen
 const dazu = ref('')
@@ -28,7 +26,7 @@ const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
 /// Das Team führen: Schlüssel, Modell, Mitglieder ein und aus. Der Administrator darf es überall.
 const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.value?.managers ?? []).includes(store.auth.user)))
-/// Woher die Token kommen: eigener Schlüssel = eigene Rechnung; sonst das KI-Limit der Lizenz
+/// Wessen Schlüssel das Team benutzt — eigener oder der eines anderen Teams
 const lizenz = ref(null)
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
 /// Anteil am Limit — 0 heisst: nichts zugeteilt, dann gibt es auch keinen Anteil
@@ -55,7 +53,6 @@ async function details() {
   const p = encodeURIComponent(k)
   try { mitglieder.value = await api.get(`/api/teams/${p}/members`) } catch { mitglieder.value = [] }
   try { tokens.value = await api.get(`/api/teams/${p}/tokens`) } catch { tokens.value = [] }
-  try { const u = await api.get(`/api/teams/${p}/usage?days=14`); tage.value = u.days ?? []; anhaengsel.value = u.dependents ?? [] } catch { tage.value = []; anhaengsel.value = [] }
   try { frei.value = await api.get('/api/teams/free') } catch { frei.value = [] }
   try { lizenz.value = await api.get('/api/licence') } catch { lizenz.value = null }
   try { jt.value = await api.get(`/api/teams/${p}/tokens/journali`) } catch { jt.value = null }
@@ -75,30 +72,6 @@ async function schluesselWeg(anbieter) {
   if (!await dialog.confirm({ title: `Schlüssel ${anbieter} entfernen?`, text: `Ohne ihn arbeitet „${team.value.label}“ nicht mehr über diesen Anbieter.`, ok: '✕ Entfernen' })) return
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: '' } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
-/// Was zählt und was nicht (Taloan, 23.09.2026). Die Liste kommt aus dem Code: gezählt wird jeder Aufruf über
-/// POST /api/ai/ask — Ein- und Ausgabe-Token, wie der Anbieter sie meldet.
-function hilfeTokens() {
-  dialog.help({
-    title: '✧ KI-Token',
-    rows: [
-      ['Nicht zu verwechseln', 'journali-Token zählen die Nutzung von journali gegen die Limits'],
-      ['Gezählt wird', ''],
-      ['Editor', 'überarbeiten, erzeugen, eigene Anweisung'],
-      ['Übersetzung', 'KI-Vorübersetzung je Einheit'],
-      ['Klassifikation', 'ETIM-Klasse vorschlagen, Merkmale zuordnen'],
-      ['Prüfung', 'Sonderregelungen und Vorschriften recherchieren'],
-      ['Geodaten', 'Herkunft und Zolltarif vorschlagen'],
-      ['Recherche', 'Suche im Internet — je Suche berechnet der Anbieter zusätzlich'],
-      ['Nicht gezählt', ''],
-      ['Ansehen', 'Baum, Knoten, Journal, Verlauf'],
-      ['Pflege', 'Werte setzen, Knoten anlegen, Freigaben, Workflows'],
-      ['Regeln', 'Prüfungen und Ableitungen ohne KI'],
-      ['Import, Export', 'Tabellen, XLIFF, Datenblätter, Sicherungen'],
-      ['Fehlschlag', 'eine abgewiesene Anfrage kostet nichts'],
-    ],
-  })
-}
-
 async function modell(anbieter, wert) {
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { models: { [anbieter]: wert } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
@@ -154,9 +127,7 @@ async function widerrufen(tok) {
     </div>
 
     <div class="section">
-      <h2>✧ KI <span class="muted">· {{ zahl(team.month) }} Token diesen Monat · heute {{ zahl(team.today) }}</span>
-        <button class="x" title="Was in die Rechnung eingeht" @click="hilfeTokens">?</button>
-      </h2>
+      <h2>✧ KI <span class="muted">· Zugang dieses Teams</span></h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
           <td class="muted">Schlüssel</td>
@@ -185,33 +156,14 @@ async function widerrufen(tok) {
       </tbody></table>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
-          <td class="muted" title="Wie die KI dieses Teams abgerechnet wird">Abrechnung</td>
+          <td class="muted" title="Wessen Schlüssel dieses Team benutzt">Schlüssel von</td>
           <td>
-            <span v-if="team.keys.length" class="pos" title="Eigener Schlüssel: der Anbieter rechnet direkt mit diesem Team ab.">eigenes Kontingent</span>
-            <span v-else-if="team.keysFrom" class="muted">über Team {{ team.keysFrom }}</span>
-            <span v-else-if="lizenz?.aiTokensMonth" class="muted">Limit der Lizenz</span>
-            <span v-else class="neg">kein Kontingent</span>
-          </td>
-          <td class="muted" style="font-size:12px">
-            <span v-if="!team.keys.length && lizenz?.aiTokensMonth">{{ zahl(lizenz.aiTokensMonth) }} / Monat, Anlage</span>
-          </td>
-        </tr>
-        <tr v-if="team.monthlyTokens">
-          <td class="muted" title="KI-Limit dieses Teams — der Administrator verteilt es aus der Lizenz">Limit</td>
-          <td class="mono">{{ zahl(team.monthlyTokens) }} / Monat<span v-if="team.dailyTokens"> · {{ zahl(team.dailyTokens) }} / Tag</span></td><td></td>
+            <span v-if="team.keys.length" class="pos">diesem Team</span>
+            <span v-else-if="team.keysFrom" class="muted">Team {{ team.keysFrom }}</span>
+            <span v-else class="neg">keiner hinterlegt</span>
+          </td><td></td>
         </tr>
       </tbody></table>
-      <table v-if="tage.length" class="grid" style="width:auto;margin-top:6px">
-        <thead><tr><th>Tag</th><th>✦ Token</th><th>Aufrufe</th><th>je Anbieter</th><th>je Person</th></tr></thead>
-        <tbody>
-          <tr v-for="d in tage" :key="d.day" class="row">
-            <td class="mono">{{ d.day }}</td><td class="mono">{{ zahl(d.tokens) }}</td><td class="muted">{{ d.calls }}</td>
-            <td class="muted">{{ Object.entries(d.byProvider ?? {}).map(([k, v]) => `${k} ${zahl(v)}`).join(' · ') }}</td>
-            <td class="muted">{{ Object.entries(d.byUser ?? {}).map(([k, v]) => `${k} ${zahl(v)}`).join(' · ') }}</td>
-          </tr>
-        </tbody>
-      </table>
-      <div v-if="anhaengsel.length" class="muted" style="font-size:12px;margin-top:4px">auf diese Rechnung: {{ anhaengsel.join(', ') }}</div>
     </div>
 
     <div class="section">

@@ -38,7 +38,7 @@ function server(teams = TEAMS) {
 }
 const ruhe = async () => { for (let i = 0; i < 5; i++) { await flushPromises(); await new Promise(r => setTimeout(r, 0)) } }
 
-test('die Teamseite zeigt, wer dazugehört, womit gearbeitet wird und was es kostet', async () => {
+test('die Teamseite zeigt, wer dazugehört und womit gearbeitet wird — über KI-Kosten sagt sie nichts', async () => {
   server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
@@ -48,8 +48,8 @@ test('die Teamseite zeigt, wer dazugehört, womit gearbeitet wird und was es kos
   assert.match(t, /anthropic/, 'die eingerichteten Anbieter')
   assert.match(t, /Excel Laptop/, 'die Token der Mitglieder')
   assert.match(t, /journali PIM Token/, 'die Nutzung gegen die Limits hat ihren eigenen Abschnitt')
-  assert.match(t, /80\.000 Token diesen Monat/, 'der KI-Verbrauch steht bei der KI')
-  assert.match(t, /eigenes Kontingent/, 'und wie abgerechnet wird')
+  assert.ok(!/Token diesen Monat/.test(t), 'journali sagt nichts über verbrauchte KI-Token')
+  assert.ok(!/kostet/i.test(t), 'und nichts über Kosten')
   assert.match(t, /Nutzung/, 'und die Nutzung des Journals')
   assert.ok(!t.includes('neues Team'), 'Teams anlegen gehört nicht auf die Teamseite')
   await ruhe(); w.unmount()

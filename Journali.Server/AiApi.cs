@@ -107,12 +107,10 @@ public static class AiApi
             if (team is null || c.Teams.Get(team) is not { } t) return Results.Ok(new { team = (string?)null, ready = false, reason = "kein Team" });
             var zahler = c.Teams.Payer(team); var zt = c.Teams.Get(zahler)!;
             var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahler)).Keys.Order().ToList();
-            var heute = DateOnly.FromDateTime(DateTime.Today);
             return Results.Ok(new
             {
                 team, label = t.Label, payer = zahler, payerLabel = zt.Label, providers = keys, ready = t.Enabled && zt.Enabled && keys.Count > 0,
-                models = zt.Models,   // welches Modell je Anbieter gefragt wird — Kosten und Güte gehören zum Team
-                used = new { today = c.Teams.Day(zahler, heute).Tokens, month = c.Teams.Month(zahler, heute.ToString("yyyy-MM")) },
+                models = zt.Models,   // welches Modell je Anbieter gefragt wird
             });
         }));
 
