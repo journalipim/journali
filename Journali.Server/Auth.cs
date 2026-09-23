@@ -33,6 +33,7 @@ public static class Auth
     public sealed record RoleBody(string? Label, string[]? Rights);
     public sealed record PasswordBody(string? Current, string? Password);
     public sealed record TokenBody(string? Label);
+    public sealed record PrefsBody(Dictionary<string, string?>? Prefs);   // eigene Einstellungen (Darstellung, Sicht) — Werte JSON als Text
 
     // ---- Geheimnisse: auth.json ----
     private sealed class Store
@@ -162,14 +163,34 @@ public static class Auth
         api.MapGet("/auth/state", (HttpContext ctx, Catalog c) =>
         {
             var enabled = Enabled(c); var who = enabled ? Resolve(ctx, c, dir) : null;
-            return Results.Ok(new { enabled, setup = !enabled, user = who?.User, role = who?.Role, rights = who is { } r ? RightsOf(c, r.Role).ToArray() : null, name = who is { } w ? c.With((_, _, _) => c.Users.All.GetValueOrDefault(w.User)?.Name) : null });
+            var me = who is { } x ? c.With((_, _, _) => c.Users.All.GetValueOrDefault(x.User)) : null;
+            return Results.Ok(new { enabled, setup = !enabled, user = who?.User, role = who?.Role, rights = who is { } r ? RightsOf(c, r.Role).ToArray() : null, name = me?.Name, prefs = me?.Prefs });
         });
         api.MapGet("/auth/me", (HttpContext ctx, Catalog c) =>
         {
             var who = Resolve(ctx, c, dir); if (who is null) return Results.Unauthorized();
             var u = c.With((_, _, _) => c.Users.All.GetValueOrDefault(who.Value.User));
             var tokens = With(dir, s => s.Tokens.Where(t => t.Value.User == who.Value.User).Select(t => new { id = t.Key[..12], t.Value.Label, t.Value.At }).ToList());
-            return Results.Ok(new { user = who.Value.User, role = who.Value.Role, rights = RightsOf(c, who.Value.Role).ToArray(), name = u?.Name, email = u?.Email, tokens });
+            return Results.Ok(new { user = who.Value.User, role = who.Value.Role, rights = RightsOf(c, who.Value.Role).ToArray(), name = u?.Name, email = u?.Email, prefs = u?.Prefs, tokens });
+        });
+
+        // Eigene Einstellungen (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“): jeder für sich, kein Recht nötig.
+        // Geschickt wird nur, was sich ändert; leerer Wert nimmt einen Schlüssel weg.
+        api.MapPut("/auth/me/prefs", (PrefsBody body, HttpContext ctx, Catalog c) =>
+        {
+            var who = Resolve(ctx, c, dir); if (who is null) return Results.Unauthorized();
+            var prefs = body.Prefs ?? new();
+            if (prefs.Count == 0) return Bad("Nichts zu setzen.");
+            if (prefs.Count > 40) return Bad("Zu viele Einstellungen auf einmal (höchstens 40).");
+            foreach (var (k, v) in prefs)
+            {
+                if (k.Length is 0 or > 40 || !k.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '_' or '.')) return Bad($"Schlüssel „{k}“: a-z, 0-9, _, . (bis 40 Zeichen).");
+                if ((v?.Length ?? 0) > 4000) return Bad($"Wert zu „{k}“ ist zu lang (höchstens 4000 Zeichen).");
+            }
+            var u = c.With((_, _, _) => c.Users.All.GetValueOrDefault(who.Value.User));
+            if (u is null) return Bad("Unbekannter Benutzer.");
+            c.With((_, _, write) => write(who.Value.User, Users.Stream + who.Value.User, Types.UserPrefsSet, new UserPrefsSet(prefs.ToDictionary(p => p.Key, p => p.Value ?? "")), null));
+            return Results.Ok(new { prefs = c.With((_, _, _) => c.Users.All.GetValueOrDefault(who.Value.User)?.Prefs) });
         });
 
         // Ersten Administrator anlegen — nur solange es keinen Benutzer gibt

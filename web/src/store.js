@@ -5,6 +5,12 @@ import { api } from './api.js'
 // der Serverstand (head) wird alle 3 s abgefragt — darauf hängen Live-Listen.
 const saved = JSON.parse(localStorage.getItem('journali.settings') || '{}')
 
+// Was der Person folgt und nicht dem Gerät (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“):
+// Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Sie stehen am Benutzer im
+// Journal (UserPrefsSet) und kommen mit der Anmeldung an jedem Rechner mit. Alles andere ist Fensterzustand und bleibt
+// im Browser: Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste, zuletzt gewählter Knoten.
+const USER_PREFS = ['theme', 'viewLocales', 'viewCells', 'viewKey', 'layout', 'scope', 'attrNames']
+
 // Sprachen × Kanäle als Zellenliste (Stern je Achse dazu)
 function cellsFrom(locales, channels) { const out = ['|']; for (const c of ['', ...channels]) for (const l of ['', ...locales]) out.push(`${l}|${c}`); return [...new Set(out)] }
 
@@ -66,6 +72,31 @@ export const store = reactive({
   save() {
     localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, server: this.server, theme: this.theme, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
     this.applyTheme()
+    this.savePrefs()
+  },
+
+  // Eigene Einstellungen zum Benutzer schreiben — gesammelt, nicht bei jedem Tastendruck; nur was sich geändert hat.
+  // Ohne Anmeldung gibt es keinen Benutzer: dann bleibt es beim Browser.
+  _prefsSent: null,
+  _prefsTimer: null,
+  savePrefs() {
+    if (!this.auth.enabled || !this.auth.user) return
+    const now = Object.fromEntries(USER_PREFS.map(k => [k, JSON.stringify(this[k] ?? null)]))
+    const changed = Object.fromEntries(Object.entries(now).filter(([k, v]) => v !== this._prefsSent?.[k]))
+    if (!Object.keys(changed).length) return
+    this._prefsSent = now
+    clearTimeout(this._prefsTimer)
+    this._prefsTimer = setTimeout(() => { api.post('/api/auth/me/prefs', { prefs: changed }, 'PUT').catch(() => { this._prefsSent = null }) }, 400)
+  },
+  // Was am Benutzer steht, gilt — er hat es zuletzt irgendwo gesetzt (Werte sind JSON als Text)
+  applyPrefs(prefs) {
+    if (!prefs) return
+    for (const k of USER_PREFS) {
+      if (!(k in prefs)) continue
+      try { const v = JSON.parse(prefs[k]); if (v !== null) this[k] = v } catch {}
+    }
+    this._prefsSent = Object.fromEntries(USER_PREFS.map(k => [k, JSON.stringify(this[k] ?? null)]))
+    this.applyTheme()
   },
 
   applyTheme() {
@@ -74,10 +105,13 @@ export const store = reactive({
   },
 
   async loadAuth() {
-    try { const s = await api.get('/api/auth/state'); this.auth = { known: true, ...s }; if (s.enabled && s.user) this.actor = s.user } catch { this.auth = { ...this.auth, known: true } }
+    try {
+      const s = await api.get('/api/auth/state'); this.auth = { known: true, ...s }
+      if (s.enabled && s.user) { this.actor = s.user; this.applyPrefs(s.prefs) }   // die Einstellungen der Person schlagen die des Browsers
+    } catch { this.auth = { ...this.auth, known: true } }
     return this.auth
   },
-  async logout() { try { await api.post('/api/auth/logout', {}) } catch {} this.auth = { known: true, enabled: true, setup: false, user: null, role: null, name: null } },
+  async logout() { try { await api.post('/api/auth/logout', {}) } catch {} this._prefsSent = null; this.auth = { known: true, enabled: true, setup: false, user: null, role: null, name: null } },
 
   async poll(force = false) {
     try {

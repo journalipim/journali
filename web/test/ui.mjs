@@ -4,7 +4,7 @@
 import { Window } from 'happy-dom'
 
 const win = new Window({ url: 'http://localhost:5000/' })
-for (const k of ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node', 'SVGElement', 'CustomEvent', 'Event', 'KeyboardEvent', 'MouseEvent', 'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame', 'DOMParser'])
+for (const k of ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node', 'SVGElement', 'CustomEvent', 'Event', 'KeyboardEvent', 'MouseEvent', 'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame', 'DOMParser', 'location'])
   if (globalThis[k] === undefined) globalThis[k] = win[k]
 const store = () => ({ _d: new Map(), getItem(k) { return this._d.get(k) ?? null }, setItem(k, v) { this._d.set(k, String(v)) }, removeItem(k) { this._d.delete(k) }, clear() { this._d.clear() } })
 globalThis.localStorage ??= store()

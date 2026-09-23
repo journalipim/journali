@@ -133,6 +133,7 @@ public static class Types
     // Benutzer (Taloan, 19.09.2026: Benutzer und Rollen): Strom user:<key> — wer es gibt und welche Rolle; Passwoerter nie im Journal
     public const string UserDefined = "UserDefined";
     public const string UserRetired = "UserRetired";
+    public const string UserPrefsSet = "UserPrefsSet";
     public const string RoleDefined = "RoleDefined";
     public const string RoleRetired = "RoleRetired";
 
@@ -645,6 +646,16 @@ public sealed record VersionWithdrawn(int Nr, string? Reason);
 
 /// <summary>Benutzer: Anzeigename, E-Mail, Rolle (admin | editor | reader), an/aus. Der letzte Eintrag gilt ganz. Kein Geheimnis hier (auth.json).</summary>
 public sealed record UserDefined(string Name, string? Email, string Role, bool Enabled = true);
+
+/// <summary>
+/// Was ein Benutzer für sich eingestellt hat (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“) — Darstellung,
+/// Sichtsprachen, Zellen, Sicht je Knotentyp, Umfang, Attributnamen. Sie folgen der Person an jeden Rechner, darum stehen sie
+/// im Journal und nicht im Browser. Nur Genanntes wird gesetzt, leerer Wert nimmt einen Schlüssel wieder weg; die Werte sind
+/// JSON als Text, damit ein neuer Schalter keinen neuen Eintragstyp braucht.
+/// <para>Der Fensterzustand bleibt im Browser (Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste, Serveradresse):
+/// er ändert sich ständig und gehört zum Gerät, nicht zur Person.</para>
+/// </summary>
+public sealed record UserPrefsSet(Dictionary<string, string> Prefs);
 
 /// <summary>
 /// Eine Rolle (Taloan, 20.09.2026: „wie die Rollen heißen und was sie können, überlassen wir dem Anwender — wir legen sinnvolle vor“):

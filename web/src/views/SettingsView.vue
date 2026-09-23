@@ -40,7 +40,7 @@ function setTheme(t) { theme.value = t; store.theme = t; store.save() }
 const checking = ref(false)
 
 async function save() {
-  store.actor = actor.value.trim()
+  if (!store.auth.enabled) store.actor = actor.value.trim()   // mit Anmeldung gehört der Urheber der Sitzung
   store.server = server.value.trim().replace(/\/+$/, '')
   store.save()
   checking.value = true
@@ -68,7 +68,9 @@ async function save() {
     <div class="scroll" v-else>
       <table class="grid form">
         <tbody>
-          <tr>
+          <!-- Der Name steht nur ohne Anmeldung hier (Taloan, 23.09.2026: „kann jetzt weg, wir haben ein Benutzersystem“) —
+               mit Benutzern kommt der Urheber aus der Sitzung und das Feld hätte nichts zu sagen. -->
+          <tr v-if="!store.auth.enabled">
             <td class="muted">👤 Name</td>
             <td><input v-model="actor" type="text" style="width:240px" placeholder="steht als Urheber in jedem Eintrag" @keydown.enter="save" /></td>
             <td class="muted">Urheber jedes Eintrags, den du schreibst — bis es eine Anmeldung gibt.</td>

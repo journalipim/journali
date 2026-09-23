@@ -332,6 +332,7 @@ Sitzungen liegen in `auth.json` im Datenverzeichnis — nie im Journal (Regel wi
 |---|---|---|
 | `UserDefined` | `name`, `email`, `role` (Schlüssel einer Rolle), `enabled` | der Benutzer — der letzte Eintrag gilt ganz |
 | `UserRetired` | — | entfernt; Einträge, die er geschrieben hat, bleiben (X-Actor) |
+| `UserPrefsSet` | `prefs{}` — Werte als JSON-Text | was die Person für sich eingestellt hat (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“): Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Nur Genanntes wird gesetzt, leerer Wert nimmt einen Schlüssel weg — ein Wechsel der Darstellung ist ein kleiner Eintrag. Der **Fensterzustand** bleibt im Browser (Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste): er ändert sich ständig und gehört zum Gerät. Geschrieben über `PUT /api/auth/me/prefs`, jeder für sich, ohne besonderes Recht |
 
 ## Rollen — Strom `role:<key>`
 

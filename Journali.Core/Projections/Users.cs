@@ -14,6 +14,8 @@ public sealed class UserState
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";
+    /// <summary>Eigene Einstellungen der Person (Darstellung, Sicht) — Werte als JSON-Text; siehe <see cref="UserPrefsSet"/>.</summary>
+    public Dictionary<string, string> Prefs { get; } = new();
 }
 
 /// <summary>Eine Rolle: Bezeichnung und Rechte (Vokabular <see cref="Rights"/>).</summary>
@@ -65,6 +67,15 @@ public sealed class Users : IProjection
                 if (!_all.TryGetValue(key, out var u)) _all[key] = u = new UserState { Key = key };
                 u.Name = d.Name; u.Email = d.Email; u.Role = d.Role; u.Enabled = d.Enabled;
                 u.LastNumber = entry.Number; u.LastAt = entry.At; u.LastActor = entry.Actor;
+                break;
+            }
+            case Types.UserPrefsSet:
+            {
+                // nur Genanntes setzen, leerer Wert nimmt weg — so bleibt ein Eintrag klein, auch wenn nur die Darstellung wechselt
+                var d = Types.Deserialize<UserPrefsSet>(entry.Payload);
+                if (!_all.TryGetValue(key, out var u)) break;   // ohne Benutzer keine Einstellung
+                foreach (var (k, v) in d.Prefs ?? new())
+                    if (string.IsNullOrEmpty(v)) u.Prefs.Remove(k); else u.Prefs[k] = v;
                 break;
             }
             case Types.UserRetired:
