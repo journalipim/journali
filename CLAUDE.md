@@ -79,9 +79,11 @@ stehen dort als solche markiert.
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`). **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,
   Ansichten oder READMEs — die gehören in ein Profil. **Kein Name, kein Zitat**
-  in dem, was der Anwender liest (Taloan, 23.09.): Beschreibungen, Tooltips,
-  Beispiele erklären die Sache, nicht ihre Entstehung — der Grund gehört in den
-  Text, der Urheber nicht. Im Quelltext bleibt beides (Prüfstand `kein-name.test.mjs`)
+  in dem, was der Anwender liest (Taloan, 23.09.), und **keine Belehrung**: eine
+  Beschreibung sagt sachlich, was das Plugin tut und was es braucht — keine
+  Begründung, kein Beispiel aus dem Alltag, keine Rechtfertigung („ein 200-MB-TIFF
+  rechnet man nicht um, während jemand wartet“ gehört in den Quelltext, nicht ins
+  Manifest). Im Quelltext bleibt beides (Prüfstand `kein-name.test.mjs`)
 - `web` — Vue 3 + Vite, Fat-Client-Gefühl: keine Seitenwechsel, Inline-
   Bearbeitung in der Zelle, Tastatur durch Listen, Journal lebendig daneben.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im

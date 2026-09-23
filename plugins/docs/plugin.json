@@ -6,7 +6,7 @@
     "en": "Tool: Read documents"
   },
   "description": {
-    "de": "Liest den Text aus den Dokumenten am Knoten (PDF je Seite, Text, HTML, Markdown, XML), schneidet ihn in Abschnitte und legt ihn in den Dokumentindex — damit „in welchem Datenblatt steht …“ beantwortbar wird. Läuft als Job im Hintergrund und holt nach, was noch fehlt; abgeleitete Daten, nichts davon geht ins Journal.",
+    "de": "Liest den Text aus den Dokumenten am Knoten (PDF je Seite, Text, HTML, Markdown, XML), schneidet ihn in Abschnitte und legt ihn in den Dokumentindex für die Volltextsuche (⌕ Dokumente). Läuft als Job im Hintergrund und holt nach, was noch fehlt; abgeleitete Daten, nichts davon geht ins Journal.",
     "en": "Extracts text from documents attached to nodes (PDF per page, text, HTML, Markdown, XML), splits it into sections and fills the document index — so that \"which data sheet says …\" becomes answerable. Runs as a background job; derived data, never written to the journal."
   },
   "kind": "tool",
