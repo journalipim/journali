@@ -75,6 +75,13 @@ export const ai = reactive({
   // Was das Team stellt (GET /api/ai/state): { team, label, payer, providers[], ready, limits, used }
   server: null,
   async loadState() { try { this.server = await api.get('/api/ai/state') } catch { this.server = null } return this.server },
+  /// Was das eigene Team diesen Monat verbraucht hat, und woran es gemessen wird (0 = keine Grenze).
+  /// Das ist die Zahl, die zählt — der Zähler im Browser kennt nur diesen einen Rechner.
+  teamUsed() {
+    const s = this.server
+    if (!s?.team) return null
+    return { label: s.label ?? s.team, month: s.used?.month ?? 0, today: s.used?.today ?? 0, limit: s.limits?.included || s.limits?.monthly || 0, hard: !!s.limits?.included, ready: !!s.ready }
+  },
   /// Fragt der Server für uns? Nur, wenn ein Team einen Schlüssel hat — ein eigener Schlüssel im Browser geht vor.
   viaServer() { return !!this.server?.ready && !this.accounts[this.provider]?.key },
   /// eingerichtete Anbieter (mit Schlüssel) — zum Aufzählen in Hilfen und Einstellungen
@@ -114,7 +121,13 @@ export const ai = reactive({
       const modell = this.accounts[anbieter]?.model ?? PROVIDERS.find(x => x.key === anbieter)?.models[0]
       const { text, sources, usage } = ueberServer
         ? await api.post('/api/ai/ask', { provider: anbieter, model: modell, system, user, maxTokens, web, maxSearches })
-            .then(r => { if (r.warn) this.warn = r.warn; return { text: r.text, sources: r.sources ?? [], usage: { in: r.usage?.in ?? 0, out: r.usage?.out ?? 0 } } })
+            .then(r => {
+              if (r.warn) this.warn = r.warn
+              // der Stand des Teams wächst mit — sonst stünde in der Leiste bis zum nächsten Laden eine alte Zahl
+              const t = (r.usage?.in ?? 0) + (r.usage?.out ?? 0)
+              if (this.server?.used) this.server = { ...this.server, used: { today: (this.server.used.today ?? 0) + t, month: (this.server.used.month ?? 0) + t } }
+              return { text: r.text, sources: r.sources ?? [], usage: { in: r.usage?.in ?? 0, out: r.usage?.out ?? 0 } }
+            })
         : await p.call({ key: this.accounts[p.key].key, model: this.accounts[p.key].model, system, user, maxTokens, temperature, web, maxSearches })
       // Verbrauch gesamt und je Anbieter (Taloan, 22.09.: „Zählung funktioniert noch nicht separat“)
       const add = (a, u) => ({ calls: (a?.calls ?? 0) + 1, in: (a?.in ?? 0) + (u?.in ?? 0), out: (a?.out ?? 0) + (u?.out ?? 0) })

@@ -123,6 +123,11 @@ export const store = reactive({
       this.head = h.head
       this.nodes = h.nodes
       this.usage = h.usage ?? null   // Nutzung für die Statusleiste (Taloan, 22.09.)
+      // der Stand des Teams — einmal je Minute, nicht bei jedem Puls: andere im Team verbrauchen auch (Taloan, 23.09.)
+      if (this.auth.enabled && this.auth.user && Date.now() - (this._aiAt ?? 0) > 60000) {
+        this._aiAt = Date.now()
+        import('./ai.js').then(({ ai }) => ai.loadState()).catch(() => {})
+      }
       this.error = ''
       // Modell-Änderungen kommen durch dasselbe Journal — bei neuem Stand nachladen.
       if (!this.model || changed || force) this.model = await api.get('/api/model')
