@@ -21,7 +21,10 @@ export function naechsteSeite(voll, schritt, richtung) {
 /// Gehört dieser Parameter in den Dialog? Das Profil selbst immer, ebenso Pfade und Schalter — das stellt man je Job
 /// ein. Alles Inhaltliche (Teilbaum, Format, Sprachen, Aufbewahrung) kommt aus dem Profil und wird dort gepflegt;
 /// ohne gewähltes Profil sind diese Felder die einzige Quelle und stehen im Dialog (Taloan, 23.09.2026).
+/// Ausnahme: `"perJob": true` am Parameter im Manifest — dann steht er immer da. Für das, was wirklich am Job hängt
+/// und nicht am Profil, etwa das Ziel eines Exports in eine fremde Datenbank (Taloan, 23.09.2026).
 export function stelle(def, profilGewaehlt) {
+  if (def.perJob) return 'oben'
   if (!profilGewaehlt) return 'oben'
   if (def.type === 'profile' || def.key === 'profile') return 'oben'
   return def.type === 'boolean' || def.type === 'path' || def.type === 'dir' ? 'oben' : 'aus'

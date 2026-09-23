@@ -29,3 +29,10 @@ test('mit Profil verschwindet, was im Profil gepflegt wird', () => {
   assert.equal(stelle({ key: 'format', type: 'text' }, 'p'), 'aus')
   assert.equal(stelle({ key: 'pub', type: 'pub' }, 'p'), 'aus')
 })
+
+test('was am Job haengt statt am Profil, bleibt sichtbar: perJob', () => {
+  // fuer den Fall, den es noch nicht gibt: ein Export, der in eine fremde Datenbank schreibt — das Ziel gehoert
+  // an den Job, nicht ins Profil (Taloan, 23.09.2026)
+  assert.equal(stelle({ key: 'target_db', type: 'text', perJob: true }, 'produktion'), 'oben')
+  assert.equal(stelle({ key: 'target_db', type: 'text' }, 'produktion'), 'aus')
+})

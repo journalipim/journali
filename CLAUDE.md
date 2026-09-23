@@ -77,7 +77,9 @@ stehen dort als solche markiert.
   Beitragspunkte: views, nodeActions, importers, checks, nodeBands (Band in der Knotenansicht),
   install(ctx) (einmal beim Einschalten: legt an, was das Plugin braucht); Plugin-Daten im
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
-  (`ProfileBar`). **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,
+  (`ProfileBar`); im Job-Dialog steht bei gewähltem Profil nur, was am Job hängt
+  (Profil, Pfade, Schalter) — ein Parameter mit `perJob: true` bleibt immer sichtbar.
+  **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,
   Ansichten oder READMEs — die gehören in ein Profil. **Kein Name, kein Zitat**
   in dem, was der Anwender liest (Taloan, 23.09.), und **keine Belehrung**: eine
   Beschreibung sagt sachlich, was das Plugin tut und was es braucht — keine
