@@ -3,6 +3,15 @@
 // regelmässig (cron) oder von Hand;
 // hier verwalten, überwachen, Logs lesen. Ein Job = ein Prozess-Plugin (process im Manifest) mit Parametern.
 // API: /api/jobs (JobApi.cs), Läufe und Ausgang im Journal (job:<key>), Log als Datei beim Server.
+/// Steht ein Parameter oben im Dialog oder unter „Überschreiben“? Oben bleibt, was man je Job einstellt: das Profil
+/// selbst, Pfade und Schalter. Alles Inhaltliche kommt aus dem Profil und ist nur die Ausnahme wert — aber nur, wenn
+/// überhaupt ein Profil gewählt ist: ohne Profil gibt es nichts zu überschreiben, dann sind diese Felder die Quelle.
+export function stelle(def, profilGewaehlt) {
+  if (!profilGewaehlt) return 'oben'
+  if (def.type === 'profile' || def.key === 'profile') return 'oben'
+  return def.type === 'boolean' || def.type === 'path' || def.type === 'dir' ? 'oben' : 'unten'
+}
+
 /// Welche Fächer ein Job benutzt: liest er Dateien, gibt es in/, done/ und failed/; schreibt er, gibt es out/.
 /// (Taloan, 23.09.2026: ein Sicherungsjob legt nur ab — dann von in/ und failed/ zu sprechen, führt in die Irre.)
 export function fachNames(files) {
@@ -294,13 +303,16 @@ async function mount(root, ctx) {
         el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'verarbeitete Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher — der Beleg bleibt, auch wenn das Share aufgeräumt wird' }, fArchive, 'Archiv im Medienspeicher')))
     const paramsBox = el('div')
     const paramInputs = {}
+    let profilWert = j?.params?.profile ?? ''   // welches Profil gewählt ist; steuert, was oben steht und was unter „Überschreiben“
     const drawParams = () => {
       paramsBox.innerHTML = ''
       const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
       pluginHint.textContent = p?.description ?? ''; pluginHint.title = pluginHint.textContent
       // Mit Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen — Ziel im Baum beim Import, Quelle vom Baum beim Export“):
-      // sichtbar nur Profil, Dateien/Verzeichnisse und Schalter; der Rest klappt unter „Überschreiben“ — leer = wie im Profil
-      const hasProfile = defs.some(d => d.type === 'profile' || d.key === 'profile')
+      // sichtbar nur Profil, Dateien/Verzeichnisse und Schalter; der Rest klappt unter „Überschreiben“ — leer = wie im Profil.
+      // Ohne gewähltes Profil gibt es nichts zu überschreiben: dann stehen alle Werte oben (Taloan, 23.09.)
+      const profileDef = defs.find(d => d.type === 'profile' || d.key === 'profile')
+      const hasProfile = !!profileDef && !!profilWert
       const more = el('div', { style: 'display:none;border-left:2px solid var(--line);padding-left:8px;margin-top:6px' })
       const moreBtn = el('button', { type: 'button', class: 'x', style: 'margin-top:8px', title: 'Ziel/Quelle im Baum, Texte, Geheimnisse einzeln setzen — leer = wie im Profil', onclick: () => { const on = more.style.display === 'none'; more.style.display = on ? '' : 'none'; moreBtn.textContent = (on ? '▾' : '▸') + ' Überschreiben (leer = wie im Profil)' } }, '▸ Überschreiben (leer = wie im Profil)')
       let secretNote = null
@@ -309,7 +321,7 @@ async function mount(root, ctx) {
       for (const d of defs) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
         // sichtbar bleiben: Profil, Dateien/Verzeichnisse (Taloan: „das Einzige, was der Tasker können muss“), Schalter; Baum-Ziel/-Quelle, Texte, Geheimnisse: aus dem Profil
-        const into = hasProfile && !(d.type === 'profile' || d.key === 'profile' || d.type === 'boolean' || d.type === 'path' || d.type === 'dir') ? more : paramsBox
+        const into = stelle(d, hasProfile) === 'unten' ? more : paramsBox
         const append = (...nodes) => into.append(...nodes)
         let inp
         if (d.type === 'node') {
@@ -333,13 +345,13 @@ async function mount(root, ctx) {
           // Profil des Plugins (Taloan, 21.09.: „was muss man hier eingeben?“ / „muss ich jedes einzeln aufzählen?“): jeder Parameter profile
           // wird ein Dropdown der gespeicherten Profile — profile:<name> (json, xport) und config:<name> (ProfileBar: ixp, solr) im Plugin-Strom
           inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, /leer/.test(d.label) ? '(leer)' : '— Profil —'))
-          if (cur) inp.append(el('option', { value: cur }, cur)); inp.value = cur
+          if (profilWert) inp.append(el('option', { value: profilWert }, profilWert)); inp.value = profilWert
           api.get(`/api/plugins/${p.key}/data`).then(all => {
             const names = [...new Set(all.filter(x => /^(profile|config):/.test(x)).map(x => x.replace(/^(profile|config):/, '')))].sort((a, b) => a.localeCompare(b, 'de'))
             for (const n of names) if (n !== cur) inp.append(el('option', { value: n }, n))
             if (!names.length && !cur) inp.title = 'noch kein Profil gespeichert — in der Ansicht des Plugins anlegen'
           }).catch(() => {})
-          inp.addEventListener('change', () => noteSecret(inp.value))
+          inp.addEventListener('change', () => { profilWert = inp.value; noteSecret(inp.value); drawParams(); check() })
           secretNote = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px' })
           // Prozess ohne eigene Ansicht (export, backup, rag, Datenblatt-Job, JSON-Export): Profile hier anlegen — ein Formular aus den Parametern des Manifests
           const editBtn = p?.profile === 'generic' ? el('button', { type: 'button', class: 'x', title: 'Profile dieses Prozesses anlegen und ändern', onclick: () => profileEditor(p, defs, inp.value, n => { drawParams(); const sel = paramInputs.profile; if (sel && n) { if (![...sel.options].some(o => o.value === n)) sel.append(el('option', { value: n }, n)); sel.value = n; noteSecret(n) } }) }, '✎') : ''
