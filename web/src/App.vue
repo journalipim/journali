@@ -12,7 +12,7 @@ import UsageMini from './components/UsageMini.vue'
 /// Volumen in KB, MB, GB — journali misst Bytes, nichts anderes
 const kb = b => {
   const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
-  return !b ? '0KB' : b >= 1073741824 ? z(b, 1073741824) + 'GB' : b >= 1048576 ? z(b, 1048576) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB'
+  return !b ? '0kb' : b >= 1073741824 ? z(b, 1073741824) + 'gb' : b >= 1048576 ? z(b, 1048576) + 'mb' : Math.max(1, Math.round(b / 1024)) + 'kb'
 }
 const tok = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',') + 'M' : n >= 1000 ? Math.round(n / 1000) + 'k' : String(n)
 const route = useRoute()

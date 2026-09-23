@@ -7,7 +7,7 @@ import { api } from './api.js'
 
 const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const when = iso => iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
-const size = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : (n / 1048576).toFixed(1) + ' MB'
+const size = n => n < 1024 ? n + 'b' : n < 1048576 ? (n / 1024).toFixed(0) + 'kb' : (n / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + 'mb'
 
 /// filePicker({ value, dirOnly, title, onPick(path) }) — öffnet das Fenster; onPick bekommt den gewählten Pfad
 export function filePicker({ value = '', dirOnly = false, title = null, onPick = () => {} } = {}) {

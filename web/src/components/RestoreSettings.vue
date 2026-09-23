@@ -21,7 +21,10 @@ const gewaehlt = ref(null)
 const probe = ref(null)
 const tsaid = ref('')
 
-const kb = n => !n ? '0' : n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'
+const kb = b => {
+  const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
+  return !b ? '0kb' : b >= 1073741824 ? z(b, 1073741824) + 'gb' : b >= 1048576 ? z(b, 1048576) + 'mb' : Math.max(1, Math.round(b / 1024)) + 'kb'
+}
 const n = x => (x ?? 0).toLocaleString('de-DE')
 
 async function lies() {

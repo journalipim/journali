@@ -24,7 +24,7 @@ const jt = ref(null)   // journali-Token dieses Teams: Limits und Verbrauch
 const tage = ref([])   // KI-Austauschvolumen je Tag — was journali hingeschickt und zurückbekommen hat
 const kb = b => {
   const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
-  return !b ? '0KB' : b >= 1073741824 ? z(b, 1073741824) + 'GB' : b >= 1048576 ? z(b, 1048576) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB'
+  return !b ? '0kb' : b >= 1073741824 ? z(b, 1073741824) + 'gb' : b >= 1048576 ? z(b, 1048576) + 'mb' : Math.max(1, Math.round(b / 1024)) + 'kb'
 }
 const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
 

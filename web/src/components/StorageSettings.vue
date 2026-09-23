@@ -20,7 +20,10 @@ const kopierBusy = ref('')  // Assetmigration
 const missing = ref(null)
 const stats = ref(null)      // was im Speicher liegt: Zahl, Grösse, Arten
 const n = x => (x ?? 0).toLocaleString('de-DE')
-const kb = b => !b ? '0' : b >= 1073741824 ? (b / 1073741824).toFixed(1) + ' GB' : b >= 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB'
+const kb = b => {
+  const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
+  return !b ? '0kb' : b >= 1073741824 ? z(b, 1073741824) + 'gb' : b >= 1048576 ? z(b, 1048576) + 'mb' : Math.max(1, Math.round(b / 1024)) + 'kb'
+}
 const copyFrom = ref({ driver: 'file', path: 'media', bucket: '', endpoint: '', key: '', secret: '', region: 'garage', pathStyle: true })
 const copyResult = ref(null)
 
