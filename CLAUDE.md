@@ -96,6 +96,11 @@ stehen dort als solche markiert.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
   Tooltip — **ein sichtbarer Text ist höchstens ein Satz**, alles Weitere steht in
   `title=` (Prüfstand `sichtbare-texte.test.mjs`). Positiv grün, negativ rot.
+  **Eine Überschrift ist ein Name und eine Zahl** (Taloan, 23.09.): der Beisatz nach
+  dem `·` zählt auf oder zählt ab — er erklärt nichts, begründet nichts, bewertet
+  nichts („· gemessen, nicht geschätzt“ ist die Antwort auf einen Einwand, den
+  niemand erhoben hat). Wer erklären will, schreibt es in `title=` der Überschrift.
+  Prüfstand: `ui-section-stil.test.mjs`.
   **Grenzen stehen positiv da** (Taloan, 23.09.): „Verfügbare Limits“, nicht „Nutzung
   gegen die Limits“; „verfügbarer Speicherplatz“, nicht „gemessen gegen die
   Speicherplatzgrenze“. Balken zeigen, was noch da ist, und leeren sich; die grosse

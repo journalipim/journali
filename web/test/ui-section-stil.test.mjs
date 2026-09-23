@@ -17,6 +17,31 @@ test('die Abschnittsüberschrift ist einmal beschrieben — in style.css', () =>
   assert.match(css, /\.section \{[^}]*border-top/, '.section fehlt in style.css')
 })
 
+test('sie ist ein farbiges Band — nicht nur graue Schrift', () => {
+  const regel = css.match(/\.section h2 \{[^}]*\}/)?.[0] ?? ''
+  assert.match(regel, /background: var\(--accent-soft\)/, 'der Streifen fehlt')
+  assert.match(regel, /border-top: 2px solid var\(--accent\)/, 'die Kante fehlt')
+})
+
+// Eine Überschrift ist ein Name und eine Zahl (Taloan, 23.09.2026: „konntest du dich nicht beherrschen, bei einem neuen
+// Dialogelement irgendeinen Rotz dazuzulabern … gemessen, nicht geschätzt“). Der Beisatz nach dem · zählt auf oder
+// zählt ab. Wer erklären will, schreibt es in title= — dort gilt die Längengrenze aus sichtbare-texte.test.mjs.
+// Erkannt wird ein Satzfragment an seinen Funktionswörtern und an Verben: beide haben in einem Namen nichts zu suchen.
+const FRAGMENT = /(^|\s)(der|die|das|des|dem|den|dieser|diese|dieses|diesem|über|gegen|statt|nicht|sondern|bei|für|nach|ohne|hier|oben|unten|wie|als|gelten|ziehen|zählen|zählt|misst|gemessen|geschätzt|läuft|steht|gehört)(\s|$)/i
+test('der Beisatz einer Überschrift zählt auf — er erklärt nicht', () => {
+  const misses = []
+  for (const f of walk(src)) {
+    const roh = fs.readFileSync(f, 'utf8')
+    const tpl = roh.slice(0, roh.indexOf('<style') < 0 ? roh.length : roh.indexOf('<style')).replace(/<!--[\s\S]*?-->/g, '')
+    for (const kopf of tpl.match(/<h2[\s\S]*?<\/h2>/g) ?? []) {
+      const sichtbar = kopf.replace(/\stitle="[^"]*"/g, '').replace(/\{\{[^}]*\}\}/g, '#').replace(/<[^>]*>/g, ' ')
+      const bei = sichtbar.split('·').slice(1).join(' ').replace(/[#⊞▤▦◷✧✦⚿▨▩◍◈⚑↺⎘◆✓⇄👥👤⚠✉]/g, ' ').trim()
+      if (bei && FRAGMENT.test(bei)) misses.push(`${path.basename(f)}: „· ${bei.slice(0, 60)}“`)
+    }
+  }
+  assert.deepEqual(misses, [], 'Erklärung in einer Überschrift — sie gehört in title=')
+})
+
 test('keine Ansicht beschreibt sie noch einmal — ausser der Knotenansicht, die eine eigene Bandoptik hat', () => {
   const doppelt = walk(src).filter(f => /\.section h2/.test(stil(f))).map(f => path.basename(f))
   assert.deepEqual(doppelt, ['NodeView.vue'], 'hier steht die Regel ein zweites Mal — dann läuft die Optik wieder auseinander')

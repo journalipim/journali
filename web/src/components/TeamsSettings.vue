@@ -152,7 +152,7 @@ async function austragen(m) {
     </div>
 
     <div class="section">
-      <h2>✧ KI <span class="muted">· Zugang dieses Teams</span></h2>
+      <h2 title="Schlüssel und Modell dieses Teams; der Schlüssel bleibt beim Server.">✧ KI</h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
           <td class="muted">Schlüssel</td>

@@ -883,7 +883,7 @@ function cellMenu(e, def, col, block) {
     </template>
 
       <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files])">
-        <h2 @click="toggle('media')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>🖼 Medien <span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length"> · {{ inheritedMedia.length }} geerbt</template> · Dateien hierher ziehen</span></h2>
+        <h2 @click="toggle('media')" title="Dateien hierher ziehen legt sie an diesem Knoten ab."><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>▩ Assets <span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length"> · {{ inheritedMedia.length }} geerbt</template></span></h2>
         <template v-if="open('media')">
         <div class="tiles">
           <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${relType(r.type)?.label?.de || r.type}`">
@@ -988,7 +988,7 @@ function cellMenu(e, def, col, block) {
       <!-- Bänder der Plugins (nodeBands, Taloan 22.09.): ETIM-Stand u. a. — beim Gegenstand, nicht im Plugin -->
       <PluginBands v-if="node.role !== 'rubric'" :id="id" :role="node.role" />
       <div class="section" v-if="node.role !== 'group' && node.role !== 'rubric'">
-        <h2 @click="toggle('releases')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>✓ Freigaben <span class="muted"><span title="Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig heisst keine Freigabe.">· Pflicht der aktiven Attribute</span></span></h2>
+        <h2 @click="toggle('releases')" title="Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig heisst keine Freigabe."><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>✓ Freigaben</h2>
         <template v-if="open('releases')">
         <table class="grid releases">
           <thead><tr><th>Kanal</th><th v-if="node.role === 'variant'">*</th><th v-for="l in locales" :key="l">{{ l }}</th></tr></thead>
@@ -1015,7 +1015,7 @@ function cellMenu(e, def, col, block) {
       </div>
 
       <div class="section" v-if="node.role === 'product' && !props.pub">
-        <h2 @click="toggle('axes')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen <span class="muted"><span title="Sichern Eindeutigkeit in den gewählten Attributen über alle Varianten.">· Eindeutigkeit über alle Varianten</span></span></h2>
+        <h2 @click="toggle('axes')" title="Sichern Eindeutigkeit in den gewählten Attributen über alle Varianten."><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen</h2>
         <template v-if="open('axes')">
         <table v-if="node.axes.length" class="grid" style="width:auto">
           <thead><tr><th style="width:180px">Achse</th><th style="width:260px">Attribut</th><th style="width:30px"></th></tr></thead>
@@ -1041,7 +1041,7 @@ function cellMenu(e, def, col, block) {
       </div>
 
       <div class="section" v-if="!props.pub || node.role === 'rubric'">
-        <h2 @click="toggle('groups')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen NEU ab diesem Knoten <span class="muted"><span title="Hier angehängt, gelten ab hier nach unten; geerbte stehen oben mit ihrer Herkunft.">· gelten ab hier nach unten</span></span></h2>
+        <h2 @click="toggle('groups')" title="Hier angehängt, gelten sie ab hier nach unten; geerbte stehen oben mit ihrer Herkunft."><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen ab diesem Knoten</h2>
         <template v-if="open('groups')">
         <table v-if="attachedSorted.length" class="grid" style="width:auto">
           <thead><tr><th style="width:180px">Gruppe</th><th style="width:260px">gilt</th><th style="width:30px"></th></tr></thead>
