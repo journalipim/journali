@@ -137,3 +137,42 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
 - ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Rollen je Teilbaum, Workflow-Rollen
 - Import/Export — in der Praxis die Hälfte des Systems
+- **Tarife als Abo über Lemon Squeezy** (Taloan, 23.09.2026: „später wird kein Text mehr zum Kopieren sein … wer das
+  System nutzen will, will eine automatische Verlängerung — man stellt einen Modus ein wie bei Claude, und wenn man
+  nicht mehr will, muss man aktiv werden“). Heute: Anforderung und Schlüssel werden kopiert (`KeyRequests.cs`,
+  `LicenceKeys.cs`, `docs/betrieb.md` → Schlüssel).
+
+  *Was Lemon Squeezy übernimmt* (Dokumentation gelesen am 23.09.2026): Abo-Ablauf mit `status`
+  (`on_trial`, `active`, `paused`, `past_due`, `unpaid`, `cancelled`, `expired`; gekündigt gilt bis Periodenende),
+  Tarifwechsel mit oder ohne anteilige Verrechnung (`variant_id`), Kundenportal zum Kündigen
+  (`urls.customer_portal`), Webhooks je Schritt (`subscription_created`, `_updated`, `_cancelled`, `_expired`,
+  `subscription_payment_success`/`_failed` …, signiert HMAC-SHA256 im Header `X-Signature`), Lizenzschlüssel am Abo
+  („aktiv, solange das Abo aktiv ist, läuft ab, wenn das Abo abläuft“) mit `activation_limit` und `instance_name`,
+  Zusatzdaten im Checkout (`checkout[custom][…]` → `meta.custom_data`).
+
+  *Was es nicht übernimmt — darum bleibt ein eigener Lizenzserver:*
+  1. die Antwort von `validate` ist laut Dokumentation nicht signiert, das Beispiel kommt ohne API-Schlüssel aus —
+     eine Instanz, die selbst fragt, lässt sich vom Betreiber mit einer nachgebauten Antwort täuschen. Die Instanz
+     glaubt nur, was der Lizenzserver mit dem Lizenzschlüssel signiert (`Signatur`);
+  2. Lemon Squeezy kennt nur die Variante, nicht die Grenzen (Pro = so viele Token je Woche und Monat);
+  3. Instanzen ohne Internet;
+  4. Rate Limit der Lizenz-API: 60 Anfragen je Minute.
+
+  *Vorgeschlagener Ablauf:* der Einkauf kauft im Shop und bekommt einen Lizenzschlüssel per Mail → die IT fügt ihn
+  in journali ins eine Feld ein → die Instanz schickt ihn mit ihrer signierten Anforderung an den Lizenzserver →
+  der prüft die Signatur der Instanz, ruft `activate` mit `instance_name` = Instanz-Kennung (`activation_limit` 1:
+  derselbe Schlüssel nicht auf zwei Instanzen) → antwortet signiert „Tarif X, bezahlt bis …“ → danach fragt die
+  Instanz täglich nach; Verlängerung, Wechsel und Kündigung kommen per Webhook zum Lizenzserver. Kauf und Instanz
+  verbindet der Schlüssel; Checkout-Zusatzdaten braucht es nicht. Ein Journal-Eintrag je Tarif, der in Kraft tritt
+  oder endet (wie `KeyRedeemed`). Reset bleibt Einzelkauf. Die Umrechnung nach Restvolumen entfällt beim Abo —
+  den Geldausgleich beim Wechsel macht Lemon Squeezy.
+
+  *Lizenzserver:* Strato-vServer mit einer kleinen ASP.NET-Anwendung — dieselben Prüfungen (`Signatur.Pruefe`,
+  `SignedRequest.Pruefe`, Signatur r‖s) wie in journali, keine zweite Umsetzung. Möglich wäre auch der Managed
+  Server mit PHP/MySQL; PHP signiert ECDSA im DER-Format, journali erwartet r‖s — umwandeln oder die .NET-Seite
+  umstellen.
+
+  *Zu entscheiden:* Abo je Instanz oder je Team (die Limits hängen am Team) · wie lange der letzte Stand ohne
+  Verbindung gilt (Kulanz) · ob Anforderung und Schlüssel zum Kopieren als Weg für Instanzen ohne Internet bleiben.
+  *Zu prüfen im Testmodus* (`test_mode`): ob der Lizenzschlüssel beim Tarifwechsel derselbe bleibt; die genaue
+  Antwort von `activate`.
