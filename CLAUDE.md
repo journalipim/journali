@@ -130,6 +130,10 @@ stehen dort als solche markiert.
   **Init Team** mit (`team:init`, `Model.InitTeam`): nicht löschbar, umbenennbar,
   trägt das Grundkontingent; der erste Administrator gehört hinein, und wer kein
   eigenes Team trägt, arbeitet dort.
+  **Ohne Team kein Kontingent, ohne Kontingent keine Änderung** (Taloan, 23.09.):
+  wer in keinem Team steht, darf lesen — jede schreibende Anfrage weist der Server
+  ab (`Auth.OhneKontingent`). Ausgenommen: das eigene Konto und die Teamverwaltung
+  (sonst sperrt sich ein teamloser Administrator aus) sowie Jobs mit Dienst-Token.
   **Die Limits ergeben sich aus der Lizenz** (Taloan, 23.09.: „es gibt hier nichts
   einzustellen“) — nirgends ein Eingabefeld: das Init Team trägt die Limits der
   Anlage, jedes weitere hat, was die Lizenz ihm namentlich zuschreibt (`teams` in
