@@ -1,7 +1,7 @@
 <script setup>
 // Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“). Sie wird nicht gepflegt, sondern eingespielt —
 // darum eine Datei, kein Stammdatum. Was sie sagt, gilt für die ganze Anlage: Einträge je Woche und Monat, das
-// KI-Limits und die Tagesreissleine. Ein Team mit eigenem Schlüssel zahlt beim Anbieter selbst.
+// Was ein Team an KI verbraucht, geht an seinen Anbieter — journali lizenziert das nicht (Taloan, 23.09.2026).
 import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
@@ -39,15 +39,6 @@ async function einspielen() {
       <tr v-if="lic?.validUntil"><td class="muted">gültig bis</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
       <tr><td class="muted" title="Einträge im Journal je Woche">▤ Einträge / Woche</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
       <tr><td class="muted" title="Einträge im Journal je Monat">▦ Einträge / Monat</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
-      <tr>
-        <td class="muted" title="KI auf Rechnung der Lizenz — für Teams ohne eigenen Schlüssel; mit eigenem Schlüssel rechnet das Team beim Anbieter ab.">✦ KI / Monat</td>
-        <td class="mono">{{ lic?.aiTokensMonth ? zahl(lic.aiTokensMonth) + ' / Monat' : '—' }}</td>
-        <td></td>
-      </tr>
-      <tr>
-        <td class="muted" title="Reissleine für die ganze Anlage: stoppt den Amoklauf, nicht die Arbeit">⛔ KI / Tag</td>
-        <td class="mono">{{ lic?.aiTokensDay ? zahl(lic.aiTokensDay) : '—' }}</td><td></td>
-      </tr>
     </tbody></table>
 
     <div v-if="darf()" style="margin-top:8px">

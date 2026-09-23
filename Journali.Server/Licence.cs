@@ -10,9 +10,9 @@ namespace Journali.Server;
 /// nichts limitieren“). Sie sagt, was diese Anlage darf — nicht der Administrator und schon gar nicht ein anderes Team:
 /// <list type="bullet">
 /// <item><c>EntriesWeek</c>, <c>EntriesMonth</c>: wie viele Einträge ins Journal gehen dürfen.</item>
-/// <item><c>AiTokensMonth</c>: das KI-Limit — Nutzung auf Rechnung von journali, für Teams ohne eigenen Schlüssel.
-/// Hat ein Team einen eigenen Schlüssel, zahlt es beim Anbieter und journali begrenzt nichts.</item>
-/// <item><c>AiTokensDay</c>: die Reissleine gegen den Amoklauf (Schleife im Job) — hoch angesetzt, greift nie im Alltag.</item>
+/// Mehr steht nicht darin: was ein Team an KI verbraucht, geht an seinen Anbieter und nicht an journali — dort gibt
+/// es nichts zu lizenzieren (Taloan, 23.09.2026). Die Felder <c>AiTokensMonth</c> und <c>AiTokensDay</c> bleiben als
+/// Altlast stehen und werden nicht mehr ausgewertet.
 /// </list>
 /// Sie liegt als <c>licence.json</c> im Datenverzeichnis, neben <c>auth.json</c> und <c>mail.json</c> — nie im Journal:
 /// sie kommt von aussen und wird nicht gepflegt, sondern eingespielt. Ohne Datei gilt der Testbetrieb mit den Werten,

@@ -195,6 +195,39 @@ public static class TeamApi
             return n > 0 ? Results.Ok(new { removed = n }) : Results.NotFound();
         });
 
+        // Die journali-Token eines Teams: was seine Mitglieder geschrieben haben, gegen seine Limits. Rechnet es über
+        // ein anderes Team ab, zählt alles dort zusammen (Taloan, 23.09.2026).
+        api.MapGet("/teams/{key}/tokens/journali", (string key, HttpRequest req, Catalog c) =>
+        {
+            if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
+            return c.With((_, _, _) =>
+            {
+                if (c.Teams.Get(key) is not { } t) return Results.NotFound();
+                var zahler = c.Teams.Payer(key);
+                var zt = c.Teams.Get(zahler)!;
+                // wer auf diese Rechnung geht: die Mitglieder des Zahlers und aller, die an ihm hängen
+                var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(u => u.Team == x)).Select(u => u.Key).ToHashSet();
+                var eigene = c.Users.All.Values.Where(u => u.Team == key).Select(u => u.Key).ToHashSet();
+                var heute = DateOnly.FromDateTime(DateTime.Now);
+                return c.ReadUsage(u => Results.Ok(new
+                {
+                    team = key, payer = zahler, payerLabel = zt.Label,
+                    limits = new { week = zt.EntriesWeek, month = zt.EntriesMonth },
+                    used = new
+                    {
+                        week = u.Sum(leute, Usage.WeekStart(heute), heute),
+                        month = u.Sum(leute, Usage.MonthStart(heute), heute),
+                        day = u.Sum(leute, heute, heute),
+                    },
+                    mine = new   // was dieses Team beisteuert, wenn es über ein anderes abrechnet
+                    {
+                        week = u.Sum(eigene, Usage.WeekStart(heute), heute),
+                        month = u.Sum(eigene, Usage.MonthStart(heute), heute),
+                    },
+                }));
+            });
+        });
+
         // Verbrauch der letzten Tage — je Anbieter und je Person, damit die Rechnung nachvollziehbar ist
         api.MapGet("/teams/{key}/usage", (string key, HttpRequest req, Catalog c, int days = 30) => c.With((_, _, _) =>
         {

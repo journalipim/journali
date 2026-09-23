@@ -23,6 +23,7 @@ const MODELLE = {
   openai: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'],
 }
 const usage = ref(null), usageHist = ref([]), usagePeriod = ref('day'), usageBusy = ref(false)
+const jt = ref(null)   // journali-Token dieses Teams: Limits und Verbrauch
 const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
 
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
@@ -31,6 +32,11 @@ const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.
 /// Woher die Token kommen: eigener Schlüssel = eigene Rechnung; sonst das KI-Limit der Lizenz
 const lizenz = ref(null)
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
+/// Anteil am Limit — 0 heisst: nichts zugeteilt, dann gibt es auch keinen Anteil
+const anteilJt = zeitraum => {
+  const grenze = jt.value?.limits?.[zeitraum] ?? 0
+  return grenze ? Math.round(((jt.value?.used?.[zeitraum] ?? 0) / grenze) * 100) : 0
+}
 
 async function load() {
   try {
@@ -47,6 +53,7 @@ async function details() {
   try { const u = await api.get(`/api/teams/${p}/usage?days=14`); tage.value = u.days ?? []; anhaengsel.value = u.dependents ?? [] } catch { tage.value = []; anhaengsel.value = [] }
   try { frei.value = await api.get('/api/teams/free') } catch { frei.value = [] }
   try { lizenz.value = await api.get('/api/licence') } catch { lizenz.value = null }
+  try { jt.value = await api.get(`/api/teams/${p}/tokens/journali`) } catch { jt.value = null }
 }
 async function ladeNutzung(period = usagePeriod.value) {
   usagePeriod.value = period; usageBusy.value = true
@@ -232,10 +239,21 @@ async function widerrufen(tok) {
         <tr>
           <td class="muted" title="Limits dieses Teams — der Administrator verteilt sie aus der Lizenz">Limit</td>
           <td class="mono">
-            <span :class="team.entriesWeek ? '' : 'muted'">▤ {{ zahl(team.entriesWeek) }} / Woche</span> ·
-            <span :class="team.entriesMonth ? '' : 'muted'">▦ {{ zahl(team.entriesMonth) }} / Monat</span>
+            <span :class="jt?.limits?.week ? '' : 'muted'">▤ {{ zahl(jt?.limits?.week) }} / Woche</span> ·
+            <span :class="jt?.limits?.month ? '' : 'muted'">▦ {{ zahl(jt?.limits?.month) }} / Monat</span>
           </td>
-          <td class="muted" style="font-size:12px"><span v-if="!team.entriesWeek && !team.entriesMonth">nichts zugeteilt</span></td>
+          <td class="muted" style="font-size:12px"><span v-if="!jt?.limits?.week && !jt?.limits?.month">nichts zugeteilt</span></td>
+        </tr>
+        <tr>
+          <td class="muted" title="Was die Mitglieder verbraucht haben; rechnet das Team über ein anderes ab, zählt alles dort zusammen">Verbraucht</td>
+          <td class="mono">
+            <span :class="anteilJt('week') >= 100 ? 'neg' : anteilJt('week') >= 80 ? 'warn' : ''">▤ {{ zahl(jt?.used?.week) }}</span> ·
+            <span :class="anteilJt('month') >= 100 ? 'neg' : anteilJt('month') >= 80 ? 'warn' : ''">▦ {{ zahl(jt?.used?.month) }}</span> ·
+            heute {{ zahl(jt?.used?.day) }}
+          </td>
+          <td class="muted" style="font-size:12px">
+            <span v-if="jt && jt.payer !== jt.team">über {{ jt.payerLabel }} · eigener Anteil ▦ {{ zahl(jt.mine?.month) }}</span>
+          </td>
         </tr>
       </tbody></table>
       <UsageBars :usage="usage" :history="usageHist" :period="usagePeriod" :busy="usageBusy" @period="ladeNutzung" />

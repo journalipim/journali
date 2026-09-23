@@ -184,7 +184,7 @@ BackupApi.Map(api, journal, dataDir, pluginDir);   // Vollsicherung: Journal, Me
 MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail, Taloan 23.09.)
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
 TeamApi.Map(api, jobDir);   // Teams (Taloan, 23.09.): Kostenstelle der KI — Schlüssel, Verbuchung, Führung
-AiApi.Map(api, jobDir, licences);   // KI über den Server: Schlüssel des zahlenden Teams, Grenzen aus der Lizenz
+AiApi.Map(api, jobDir);     // KI über den Server: Schlüssel des zahlenden Teams; begrenzt wird hier nichts
 LicenceApi.Map(api, licences);      // Lizenz einspielen und ansehen
 FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
 

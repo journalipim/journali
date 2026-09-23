@@ -21,6 +21,9 @@ public sealed class Usage : IProjection
     public Dictionary<DateOnly, int> PerDay { get; } = new();
     /// <summary>Alle Einträge je Tag, auch Modell, Struktur, Kataloge und Betrieb — zum Vergleich in der Anzeige.</summary>
     public Dictionary<DateOnly, int> AllPerDay { get; } = new();
+    /// <summary>Tagesgeschäft je Tag und Urheber (Taloan, 23.09.2026): daraus wird, was ein Team verbraucht hat. Das Team
+    /// steht nicht im Eintrag — es kann wechseln; wer heute zu wem gehört, sagt das Abbild der Benutzer.</summary>
+    public Dictionary<DateOnly, Dictionary<string, int>> PerDayActor { get; } = new();
 
     public void Apply(Entry entry)
     {
@@ -29,9 +32,26 @@ public sealed class Usage : IProjection
         AllPerDay[day] = AllPerDay.GetValueOrDefault(day) + 1;
         if (!Kinds.Billable(entry.Kind, entry.Type)) return;
         PerDay[day] = PerDay.GetValueOrDefault(day) + 1;
+        if (entry.Actor is { Length: > 0 } wer)
+        {
+            if (!PerDayActor.TryGetValue(day, out var je)) PerDayActor[day] = je = new();
+            je[wer] = je.GetValueOrDefault(wer) + 1;
+        }
     }
 
     public IEnumerable<KeyValuePair<DateOnly, int>> Days => PerDay.OrderBy(p => p.Key);
+
+    /// <summary>Was diese Urheber von <paramref name="from"/> bis <paramref name="to"/> verbraucht haben.</summary>
+    public int Sum(IReadOnlySet<string> actors, DateOnly from, DateOnly to)
+    {
+        var n = 0;
+        foreach (var (day, je) in PerDayActor)
+        {
+            if (day < from || day > to) continue;
+            foreach (var (actor, count) in je) if (actors.Contains(actor)) n += count;
+        }
+        return n;
+    }
 
     /// <summary>Montag der Woche, in der <paramref name="d"/> liegt.</summary>
     public static DateOnly WeekStart(DateOnly d) => d.AddDays(-(((int)d.DayOfWeek + 6) % 7));

@@ -14,7 +14,8 @@ namespace Journali.Server;
 /// <list type="bullet">
 /// <item>Der Schlüssel bleibt beim Server (Datenverzeichnis, nie im Journal, nie im Browser).</item>
 /// <item>Jeder Aufruf wird gezählt — beim <b>zahlenden</b> Team, mit Anbieter, Modell und Person (<c>AiUsed</c>).</item>
-/// <item>Die Reissleine je Tag weist ab; die Monatsschwelle warnt nur. Ein Budget, das sperrt, erzeugt Streit statt Steuerung.</item>
+/// <item>Begrenzt wird hier nichts: was ein Team verbraucht, zahlt es beim Anbieter (Taloan, 23.09.2026: „was jedes Team
+/// an KI-Tokens auf den Putz haut, ist journali völlig egal“). Gezählt wird trotzdem — sonst weiss niemand, wofür.</item>
 /// <item>Jobs können KI, weil sie ein Token haben und damit einen Benutzer — also ein Team.</item>
 /// </list>
 /// Einen anderen Weg gibt es seit dem 23.09.2026 nicht mehr (Taloan: „wieso sind die KI-Schlüssel immer noch auf der
@@ -97,20 +98,7 @@ public static class AiApi
         return (text.ToString(), sources, tin, tout);
     }
 
-    /// <summary>Schlüssel der Anlage — die KI auf Rechnung der Lizenz läuft darüber (Secrets <c>licence</c> oder JOURNALI_AI_KEY).
-    /// Ein Team mit eigenem Schlüssel nimmt seinen; wer keinen hat, arbeitet auf Rechnung der Lizenz, und dann gilt ihr Kontingent.</summary>
-    private static Dictionary<string, string> Anlage(string jobsDir)
-    {
-        var s = new Dictionary<string, string>(Secrets.Get(jobsDir, "licence"));
-        if (Environment.GetEnvironmentVariable("JOURNALI_AI_KEY") is { Length: > 0 } k) s.TryAdd(Environment.GetEnvironmentVariable("JOURNALI_AI_PROVIDER") ?? "anthropic", k);
-        return s;
-    }
-
-    /// <summary>Was die ganze Anlage heute verbraucht hat — die Lizenz gilt für sie, nicht für ein einzelnes Team.</summary>
-    private static long Tagesverbrauch(Catalog c, DateOnly tag) => c.Teams.All.Keys.Sum(t => c.Teams.Day(t, tag).Tokens);
-    private static long Monatsverbrauch(Catalog c, DateOnly tag) => c.Teams.All.Keys.Sum(t => c.Teams.Month(t, tag.ToString("yyyy-MM")));
-
-    public static void Map(RouteGroupBuilder api, string jobsDir, Licences licences)
+    public static void Map(RouteGroupBuilder api, string jobsDir)
     {
         // Was die Oberfläche wissen muss: welches Team zahlt, welche Anbieter eingerichtet sind, wie viel schon verbraucht ist
         api.MapGet("/ai/state", (HttpRequest req, Catalog c) => c.With((_, _, _) =>
@@ -118,21 +106,13 @@ public static class AiApi
             var team = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
             if (team is null || c.Teams.Get(team) is not { } t) return Results.Ok(new { team = (string?)null, ready = false, reason = "kein Team" });
             var zahler = c.Teams.Payer(team); var zt = c.Teams.Get(zahler)!;
-            var eigene = Secrets.Get(jobsDir, TeamApi.SecretKey(zahler)).Keys.Order().ToList();
-            var ausLizenz = eigene.Count == 0 && licences.Lic.AiTokensMonth > 0 ? Anlage(jobsDir).Keys.Order().ToList() : [];
-            var keys = eigene.Count > 0 ? eigene : ausLizenz;
+            var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahler)).Keys.Order().ToList();
             var heute = DateOnly.FromDateTime(DateTime.Today);
             return Results.Ok(new
             {
                 team, label = t.Label, payer = zahler, payerLabel = zt.Label, providers = keys, ready = t.Enabled && zt.Enabled && keys.Count > 0,
                 models = zt.Models,   // welches Modell je Anbieter gefragt wird — Kosten und Güte gehören zum Team
-                eigene = eigene.Count > 0,   // eigener Schlüssel: eigene Rechnung beim Anbieter, journali begrenzt nichts
-                limits = new { included = eigene.Count > 0 ? 0 : licences.Lic.AiTokensMonth, daily = licences.Lic.AiTokensDay, licence = licences.Lic.Plan },
-                used = new
-                {
-                    today = c.Teams.Day(zahler, heute).Tokens, month = c.Teams.Month(zahler, heute.ToString("yyyy-MM")),
-                    anlage = Monatsverbrauch(c, heute),   // gegen das KI-Limit zählt die ganze Anlage
-                },
+                used = new { today = c.Teams.Day(zahler, heute).Tokens, month = c.Teams.Month(zahler, heute.ToString("yyyy-MM")) },
             });
         }));
 
@@ -147,21 +127,9 @@ public static class AiApi
                 if (mein is null || c.Teams.Get(mein) is not { Enabled: true } t) return (Bad("Kein Team — ohne Team gibt es keine KI über den Server."), "", "", "", "");
                 var zahlerKey = c.Teams.Payer(mein); var zt = c.Teams.Get(zahlerKey)!;
                 if (!zt.Enabled) return (Bad($"Das zahlende Team „{zt.Label}“ ist abgeschaltet."), "", "", "", "");
-                var eigene = Secrets.Get(jobsDir, TeamApi.SecretKey(zahlerKey));
-                var lizenzSchluessel = eigene.Count == 0 && licences.Lic.AiTokensMonth > 0 ? Anlage(jobsDir) : new Dictionary<string, string>();
-                var keys = eigene.Count > 0 ? eigene : lizenzSchluessel;
+                var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahlerKey));
                 var p = Blank(body.Provider) is { } want && keys.ContainsKey(want) ? want : keys.Keys.OrderBy(x => x).FirstOrDefault();
                 if (p is null) return (Bad($"Für „{zt.Label}“ ist kein KI-Schlüssel hinterlegt."), "", "", "", "");
-                var heute = DateOnly.FromDateTime(DateTime.Today);
-                // Grenzen kommen aus der Lizenz (Taloan, 23.09.2026) — ein Team begrenzt kein anderes, auch nicht der Zahler.
-                // Die Reissleine schützt vor dem Amoklauf (Schleife im Job), nicht vor der Arbeit: sie gilt für die Anlage.
-                var lic = licences.Lic;
-                if (lic.AiTokensDay > 0 && Tagesverbrauch(c, heute) >= lic.AiTokensDay)
-                    return (Bad($"Tageslimit der Lizenz erreicht ({lic.AiTokensDay})."), "", "", "", "");
-                // Das KI-Limit der Lizenz: Nutzung auf Rechnung von journali. Wer einen eigenen Schlüssel hat, zahlt beim Anbieter —
-                // dann begrenzt hier nichts (Taloan: „wer den Komfort der Kontrolle will, muss Teams mit eigenem Kontingent bilden“).
-                if (eigene.Count == 0 && lic.AiTokensMonth > 0 && Monatsverbrauch(c, heute) >= lic.AiTokensMonth)
-                    return (Bad($"Das KI-Limit der Lizenz ist für diesen Monat erreicht ({lic.AiTokensMonth})."), "", "", "", "");
                 return ((IResult?)null, mein, zahlerKey, p, keys[p]);
             });
             if (fehler is not null) return fehler;
@@ -172,15 +140,9 @@ public static class AiApi
             {
                 var (text, sources, tin, tout) = await Call(provider, key, model, Blank(body.System), frage, Math.Clamp(body.MaxTokens ?? 2000, 1, 64000), body.Web == true, Math.Clamp(body.MaxSearches ?? 5, 1, 20), ct);
                 var heute = DateOnly.FromDateTime(DateTime.Today);
-                var warn = c.With((_, _, write) =>
-                {
-                    write(actor, Teams.UsageStream + zahler, Types.AiUsed, new AiUsed(provider, model, actor, tin, tout, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team), null);
-                    var lic2 = licences.Lic;
-                    if (lic2.AiTokensMonth <= 0) return null;
-                    var monat = Monatsverbrauch(c, heute);
-                    return monat >= lic2.AiTokensMonth * 8 / 10 ? $"KI-Limit: {monat} von {lic2.AiTokensMonth} in diesem Monat." : null;
-                });
-                return Results.Ok(new { text, sources, usage = new { @in = tin, @out = tout }, team, payer = zahler, provider, model, warn });
+                c.With((_, _, write) => write(actor, Teams.UsageStream + zahler, Types.AiUsed,
+                    new AiUsed(provider, model, actor, tin, tout, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team), null));
+                return Results.Ok(new { text, sources, usage = new { @in = tin, @out = tout }, team, payer = zahler, provider, model });
             }
             catch (Exception e) { return Bad(e.Message); }
         });
