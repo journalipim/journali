@@ -137,7 +137,12 @@ public sealed class Catalog
                 if (admin is not null)
                 {
                     Apply(_journal.Append("system", Teams.Stream + ohne.Key, Types.TeamDefined, Types.Serialize(
-                        new TeamDefined(ohne.Label, ohne.Note, ohne.MonthlyTokens, ohne.DailyTokens, ohne.Enabled, ohne.KeysFrom, ohne.IncludedTokens, [admin.Key], ohne.Models)))); n++;
+                        new TeamDefined(ohne.Label, ohne.Note, ohne.MonthlyTokens, ohne.DailyTokens, ohne.Enabled, ohne.KeysFrom, ohne.IncludedTokens, [admin.Key], ohne.Models, ohne.EntriesWeek, ohne.EntriesMonth)))); n++;
+                    // Wer führt, gehört hinein (Taloan, 23.09.2026)
+                    if (admin.Team is null)
+                    {
+                        Apply(_journal.Append("system", Users.Stream + admin.Key, Types.UserDefined, Types.Serialize(new UserDefined(admin.Name, admin.Email, admin.Role, admin.Enabled, ohne.Key)))); n++;
+                    }
                 }
             }
             // Der Wurzelknoten „MasterTree“: nur, wenn es ihn nie gab (auch nicht zurückgezogen).

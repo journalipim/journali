@@ -73,7 +73,12 @@ public static class TeamApi
                 }
                 // Ein Team ohne Manager gibt es nicht (Taloan, 23.09.2026): beim Anlegen benennt der Administrator mindestens einen
                 var managers = body.Managers?.Select(Blank).OfType<string>().Distinct().ToArray() ?? cur?.Managers ?? [];
-                foreach (var m in managers) if (!c.Users.All.ContainsKey(m)) return Bad($"Unbekannter Benutzer {m}.");
+                // Wer ein Team führt, gehört hinein (Taloan, 23.09.2026) — sonst steht die Führung neben dem Team statt darin
+                foreach (var m in managers)
+                {
+                    if (c.Users.All.GetValueOrDefault(m) is not { } mu) return Bad($"Unbekannter Benutzer {m}.");
+                    if (mu.Team is { Length: > 0 } andere && andere != key) return Bad($"{mu.Name ?? mu.Key} steht im Team {c.Teams.Get(andere)?.Label ?? andere} — dort erst austragen.");
+                }
                 if (managers.Length == 0 && cur is null && c.Users.All.Count > 0) return Bad("Mindestens ein Teammanager — notfalls du selbst.");
                 var keysFrom = body.KeysFrom is null ? cur?.KeysFrom : Blank(body.KeysFrom);
                 if (keysFrom == key) return Bad("Ein Team kann nicht seine eigenen Schlüssel mitbenutzen.");
@@ -96,6 +101,9 @@ public static class TeamApi
                     body.Enabled ?? cur?.Enabled ?? true, keysFrom, included, managers, modelle,
                     body.EntriesWeek ?? cur?.EntriesWeek ?? 0, body.EntriesMonth ?? cur?.EntriesMonth ?? 0);
                 write(actor, Teams.Stream + key, Types.TeamDefined, def, null);
+                foreach (var m in managers)
+                    if (c.Users.All.GetValueOrDefault(m) is { Team: null } mu)
+                        write(actor, Users.Stream + m, Types.UserDefined, new UserDefined(mu.Name, mu.Email, mu.Role, mu.Enabled, key), null);
                 var heute = DateOnly.FromDateTime(DateTime.Today);
                 return Results.Ok(View(c, jobsDir, c.Teams.Get(key)!, heute, heute.ToString("yyyy-MM")));
             });

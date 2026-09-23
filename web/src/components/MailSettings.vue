@@ -56,7 +56,7 @@ onMounted(lies)
   <div class="section">
     <h2>✉ Mailserver <span class="muted">· SMTP</span></h2>
 
-    <table class="grid form"><colgroup><col style="width:170px" /><col style="width:340px" /></colgroup><tbody>
+    <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:340px" /></colgroup><tbody>
       <tr><td class="attr">Server</td><td><input v-model="c.host" type="text" placeholder="smtp.beispiel.de" style="width:100%" /></td></tr>
       <tr><td class="attr">Verschlüsselung</td><td>
         <select :value="c.security" style="width:150px" @change="security($event.target.value)">

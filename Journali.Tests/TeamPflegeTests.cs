@@ -26,6 +26,19 @@ public class TeamPflegeTests
     }
 
     [Fact]
+    public void Wer_fuehrt_steht_auch_im_Team()
+    {
+        var j = new MemoryJournal(); var c = new Catalog(j); c.Rebuild(); c.SeedMissing();
+        c.With((_, _, write) => write("t", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin"), null));
+        Assert.Null(c.With((_, _, _) => c.Users.All["taloan"].Team));   // vorher teamlos
+        var wieder = new Catalog(j); wieder.Rebuild(); wieder.SeedMissing();
+        // die Reparatur macht ihn zum Manager — und trägt ihn ein (Taloan, 23.09.2026: „Init Team · 0 · niemand“)
+        Assert.Equal(["taloan"], wieder.With((_, _, _) => wieder.Teams.Primary!.Managers));
+        Assert.Equal(Model.InitTeam, wieder.With((_, _, _) => wieder.Users.All["taloan"].Team));
+        Assert.Single(wieder.With((_, _, _) => wieder.Users.All.Values.Where(u => u.Team == Model.InitTeam)));
+    }
+
+    [Fact]
     public void Ein_Leser_wird_nicht_zum_Teamleiter_gemacht()
     {
         var j = new MemoryJournal(); var c = new Catalog(j); c.Rebuild(); c.SeedMissing();

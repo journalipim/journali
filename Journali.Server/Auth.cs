@@ -224,7 +224,7 @@ public static class Auth
                 write(key, Stream + key, Types.UserDefined, new UserDefined(Blank(body.Name) ?? key, null, "admin", true, initTeam?.Key), null);
                 if (initTeam is { Managers.Length: 0 })
                     write(key, Teams.Stream + initTeam.Key, Types.TeamDefined,
-                        new TeamDefined(initTeam.Label, initTeam.Note, initTeam.MonthlyTokens, initTeam.DailyTokens, initTeam.Enabled, initTeam.KeysFrom, initTeam.IncludedTokens, [key], initTeam.Models), null);
+                        new TeamDefined(initTeam.Label, initTeam.Note, initTeam.MonthlyTokens, initTeam.DailyTokens, initTeam.Enabled, initTeam.KeysFrom, initTeam.IncludedTokens, [key], initTeam.Models, initTeam.EntriesWeek, initTeam.EntriesMonth), null);
                 return 0;
             });
             With(dir, s => { s.Passwords[key] = Hash(pw); return 0; }, save: true);
