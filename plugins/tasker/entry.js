@@ -136,7 +136,7 @@ async function mount(root, ctx) {
   function drawList() {
     list.innerHTML = ''
     const jobs = st.plugin ? st.jobs.filter(j => j.plugin === st.plugin) : st.jobs
-    if (!jobs.length) { list.append(el('div', { class: 'empty' }, st.plugin ? `Noch kein Job mit Plugin ${st.plugin} — „+ Job“ legt einen an.` : st.plugins.length ? 'Noch kein Job — „+ Job“ legt einen an (z. B. Sicherung jede Nacht).' : 'Kein Plugin mit Prozess installiert — Jobs brauchen eins (z. B. backup).')); return }
+    if (!jobs.length) { list.append(el('div', { class: 'empty' }, st.plugin ? `Noch kein Job mit Plugin ${st.plugin} — „+ Job“ legt einen an.` : st.plugins.length ? 'Noch kein Job — „+ Job“ legt einen an.' : 'Kein Plugin mit Prozess installiert — Jobs brauchen eins.')); return }
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
     tbl.append(el('thead', {}, el('tr', {}, el('th', {}, ''), el('th', {}, 'Job'), el('th', {}, 'Plugin'), el('th', {}, 'Zeitplan'), el('th', {}, 'nächster Lauf'), el('th', {}, 'letzter Lauf'), el('th', {}, ''))))
     const tb = el('tbody')
@@ -280,7 +280,6 @@ async function mount(root, ctx) {
       try { await api.del(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`); await api.del(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => {}); await loadNames(''); await loadOne(''); onDone?.('') } catch (e) { store.toast(e.message) }
     }
     dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, `✎ Profile · ${(typeof p.label === 'string' ? p.label : p.label?.de) || p.key}`),
-      el('div', { class: 'muted', style: 'font-size:12px;margin:2px 0 8px' }, 'Was der Job braucht, steht im Profil — Dateien und Verzeichnisse setzt der Job selbst.'),
       el('div', { style: 'display:flex;gap:6px' }, sel, nameIn, el('button', { type: 'button', class: 'x', title: 'Profil löschen', onclick: del }, '🗑')),
       form,
       el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;align-items:center' }, status, el('span', { class: 'grow' }), el('button', { type: 'button', onclick: close }, 'Abbrechen'), el('button', { type: 'button', class: 'primary', onclick: save }, '💾 Speichern')))
@@ -310,18 +309,18 @@ async function mount(root, ctx) {
     const sched = scheduleAssistant(j?.schedule ?? '', () => {})   // Zeitplan-Assistent (Taloan) statt Vorgaben-Liste
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
     // Fächer (docs/tasker-dateien.md, Taloan: der Tasker besitzt die Ablage): Basis, Aufbewahrung, latest, Archiv — nur bei Prozessen mit files im Manifest
-    const fBase = el('input', { type: 'text', value: j?.files?.base ?? '', placeholder: 'leer = jobs/<key> beim Server — oder ein Share, auf dem SAP ablegt', style: 'flex:1' })
+    const fBase = el('input', { type: 'text', value: j?.files?.base ?? '', placeholder: 'leer = jobs/<key> beim Server', style: 'flex:1' })
     const fachLabelEl = el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Fächer · Basis')
     const fBaseBtn = el('button', { type: 'button', title: 'Basis der Fächer auf dem Server wählen', onclick: () => ctx.filePicker({ value: fBase.value, dirOnly: true, title: '📁 Basis der Fächer (in/, done/, failed/, out/)', onPick: v => { fBase.value = v } }) }, '📁')
-    const fKeep = el('input', { type: 'text', value: j?.files?.keep ?? '', placeholder: 'alle', style: 'width:90px', title: 'Aufbewahrung der Ausgaben: 10 = die letzten 10 Läufe, 30d = 30 Tage, leer = alle; gelöscht wird nur, was der Tasker benannt hat, nie latest' })
+    const fKeep = el('input', { type: 'text', value: j?.files?.keep ?? '', placeholder: 'alle', style: 'width:90px', title: 'Aufbewahrung: 10 = die letzten 10 Läufe, 30d = 30 Tage, leer = alle' })
     const fLatest = el('input', { type: 'checkbox' }); fLatest.checked = j?.files?.latest ?? true
     const fArchive = el('input', { type: 'checkbox' }); fArchive.checked = j?.files?.archive ?? false
     const fachBox = el('div', { style: 'display:none' },
       fachLabelEl, el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn),
       el('div', { style: 'display:flex;gap:14px;align-items:center;margin-top:6px;flex-wrap:wrap' },
         el('label', { style: 'display:flex;gap:6px;align-items:center' }, el('span', { class: 'muted' }, 'Aufbewahrung'), fKeep),
-        el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'nach jedem erfolgreichen Lauf eine Kopie unter stabilem Namen (<key>-latest) — für den, der abholt' }, fLatest, 'latest'),
-        el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'verarbeitete Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher — der Beleg bleibt, auch wenn das Share aufgeräumt wird' }, fArchive, 'Archiv im Medienspeicher')))
+        el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'nach jedem Lauf eine Kopie unter festem Namen: <key>-latest' }, fLatest, 'latest'),
+        el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher ablegen' }, fArchive, 'Archiv im Medienspeicher')))
     const paramsBox = el('div')
     const paramInputs = {}
     let profilWert = j?.params?.profile ?? ''   // welches Profil gewählt ist; ohne Profil stehen seine Werte im Dialog
@@ -422,7 +421,7 @@ async function mount(root, ctx) {
       markieren?.(reasons)
       return reasons.length === 0
     }
-    pluginSel.addEventListener('change', () => { drawParams(); check(); zeige(schritt) }); drawParams(); check()
+    pluginSel.addEventListener('change', () => { drawParams(); check(); zeige(schritt); kopfSetzen() }); drawParams(); check()
     dlg.addEventListener('input', check); dlg.addEventListener('change', check)
     const save = async () => {
       if (!check()) return
@@ -474,12 +473,18 @@ async function mount(root, ctx) {
       const i = naechsteSeite(seiten.map((_, n) => voll(n)), schritt, richtung)
       if (i !== null) zeige(i)
     }
-    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, isNew ? '+ Job' : `✎ ${j.label}`),
+    const kopf = el('div', { style: 'font-weight:600;font-size:14px' })
+    const kopfSetzen = () => {
+      const p = st.plugins.find(x => svcId(x) === pluginSel.value)
+      kopf.innerHTML = ''
+      kopf.append(isNew ? '+ Job' : `✎ ${j.label}`, el('span', { class: 'muted', style: 'font-weight:400;margin-left:6px' }, p ? '· ' + svcLabel(p) : ''))
+    }
+    dlg.append(kopf,
       el('div', { style: 'display:flex;gap:4px;margin:8px 0;flex-wrap:wrap' }, ...chips),
       bühne,
       el('div', { style: 'display:flex;align-items:center;gap:8px;margin-top:14px' },
         zurück, vor, el('span', { style: 'flex:1' }), why, el('button', { onclick: () => box.remove() }, 'Abbrechen'), saveBtn))
-    zeige(0)
+    kopfSetzen(); zeige(0)
     box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) box.remove() })
     document.body.append(box); (isNew ? keyIn : labelIn).focus()
   }
