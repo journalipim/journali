@@ -47,7 +47,7 @@ async function run(downloadIt) {
     <div class="toolbar"><h1>⇪ Export</h1>
       <router-link to="/p/table/export" class="tab on">⊞ Tabelle</router-link>
       <router-link v-if="plugins.enabled('json')" to="/p/json/export" class="tab">{} JSON</router-link>
-      <span class="grow" /><span class="muted">{{ busy }}</span></div>
+      <span class="grow" /><span :class="String(busy ?? '').startsWith('✗') ? 'fehler' : 'muted'">{{ busy }}</span></div>
     <table class="grid form"><colgroup><col style="width:84px" /><col /></colgroup><tbody>
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">1 · Was</td></tr>
       <tr><td class="attr">Teilbaum</td><td>

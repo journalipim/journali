@@ -97,6 +97,7 @@ body {
 .muted { color: var(--muted); }
 .pos { color: var(--pos); }
 .neg { color: var(--neg); }
+.fehler { color: var(--neg); font-weight: 600; }   /* Fehlermeldung: rot und fett (Taloan, 23.09.2026) */
 .warn { color: var(--warn); }
 .ai { color: var(--ai); }   /* von der KI erzeugt — kostet Token (Taloan, 22.09.) */
 .pick.ai:hover { background: color-mix(in srgb, var(--ai) 12%, transparent); }

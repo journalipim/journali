@@ -81,7 +81,7 @@ onMounted(lies)
       <button :disabled="!!busy || !ready" :title="ready ? 'eine Probe senden' : 'erst Server und Absender eintragen'" @click="testen">✉ Probe</button>
     </div>
 
-    <div v-if="said" :class="said.startsWith('✗') ? 'neg' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
+    <div v-if="said" :class="said.startsWith('✗') ? 'fehler' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
     <div v-if="!ready" class="muted" style="font-size:12px;margin-top:6px">Ohne Server und Absender sendet journali nichts.</div>
   </div>
 </template>

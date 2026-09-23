@@ -231,7 +231,7 @@ export async function mount(root, ctx, catalog) {
   if (saved) for (const [k, v] of Object.entries(saved)) if (v?.to && model.attributes.some(a => a.key === v.to) && !st.mapping[k]?.fixed) st.mapping[k] = { ...v, why: 'gemerkt', sure: true }
   const remember = () => ctx.data.set('mapping', st.mapping).catch(() => {})
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
-  const status = el('span', { class: 'muted' }); const say = m => { status.textContent = m }
+  const status = el('span', { class: 'muted' }); const say = m => { status.textContent = m; status.className = String(m).startsWith('✗') ? 'fehler' : 'muted' }
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 12px' })
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)
   // Teilbaum per Auswahlbaum (Taloan: statt Namenssuche); Knopf zeigt den gewählten, Klick klappt den Baum auf
@@ -360,13 +360,13 @@ export async function mount(root, ctx, catalog) {
       if (listVals) inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), ...listVals.map(v => el('option', { value: v.value }, v.label?.de || v.label?.en || v.value)))
       else if (def?.type === 'boolean') inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), el('option', { value: 'true' }, 'ja'), el('option', { value: 'false' }, 'nein'))
       else inp = el('input', { style: 'width:220px', placeholder: it.unit ? `Wert in ${it.unit}` : 'Wert' })
-      const write = async () => { const v = inp.value.trim(); if (!v) return; try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: null, channel: null, value: v, row: null }); written = true; state.textContent = '✓'; state.className = 'pos'; state.title = '' } catch (e) { state.textContent = '✗ ' + e.message; state.className = 'neg'; state.title = e.message } }
+      const write = async () => { const v = inp.value.trim(); if (!v) return; try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: null, channel: null, value: v, row: null }); written = true; state.textContent = '✓'; state.className = 'pos'; state.title = '' } catch (e) { state.textContent = '✗ ' + e.message; state.className = 'fehler'; state.title = e.message } }
       inp.addEventListener('change', write); inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); write() } })
       const state = el('span', { class: pend ? 'warn' : 'muted', style: 'width:120px;font-size:12px' }, pend ? `⏳ ${pend.source ?? 'angefragt'} · ${pend.checkedAt ?? ''}` : '')
       const who = el('input', { style: 'width:170px;display:none', placeholder: 'bei wem? (Lieferant, Abteilung, Person)', value: pend?.source ?? '' })
       const due = el('input', { type: 'date', style: 'width:140px;display:none', title: 'Wiedervorlage — danach gilt es als überfällig', value: pend?.checkedAt ?? new Date(Date.now() + 14 * 864e5).toISOString().slice(0, 10) })
       const ok = el('button', { class: 'primary', style: 'display:none', title: 'als angefragt merken', onclick: async () => {
-        try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/sources`, { attribute: to, locale: null, channel: null, row: null, source: who.value.trim() || null, title: null, note: null, method: 'pending', checkedAt: due.value || null }); written = true; state.textContent = `⏳ ${who.value.trim() || 'angefragt'} · ${due.value}`; state.className = 'warn'; for (const x of [who, due, ok]) x.style.display = 'none'; inp.style.display = '' } catch (e) { state.textContent = '✗ ' + e.message; state.className = 'neg'; state.title = e.message }
+        try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/sources`, { attribute: to, locale: null, channel: null, row: null, source: who.value.trim() || null, title: null, note: null, method: 'pending', checkedAt: due.value || null }); written = true; state.textContent = `⏳ ${who.value.trim() || 'angefragt'} · ${due.value}`; state.className = 'warn'; for (const x of [who, due, ok]) x.style.display = 'none'; inp.style.display = '' } catch (e) { state.textContent = '✗ ' + e.message; state.className = 'fehler'; state.title = e.message }
       } }, '✓')
       const pendBtn = el('button', { class: 'x', title: 'weiss ich noch nicht — bei wem angefragt, bis wann (Wiedervorlage)', onclick: () => { const open = who.style.display === 'none'; for (const x of [who, due, ok]) x.style.display = open ? '' : 'none'; inp.style.display = open ? 'none' : ''; if (open) who.focus() } }, '⏳')
       who.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ok.click() } })

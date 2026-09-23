@@ -480,7 +480,7 @@ onMounted(async () => {
       <div v-else-if="source" class="muted">Zuordnung prüfen, Ziel wählen, dann analysieren. Nichts wird geschrieben, bevor Du „schreiben“ drückst.</div>
       <div v-else class="empty">Datei ablegen oder aus Excel einfügen.<br /><span class="muted" style="font-size:12px">Der Mapper erkennt Spalten an Schlüssel, Label, Synonymen (Artikelnummer → sku …), Sprache im Namen (name_en) und rät den Typ neuer Attribute aus den Werten.</span></div>
       <div v-if="result" class="pos" style="margin-top:8px">✓ {{ result.written }} Einträge geschrieben · Stapel {{ result.batch }} — <router-link :to="{ path: '/journal', query: { q: result.batch } }">im Journal</router-link></div>
-      <div class="section" v-if="log.length"><h2>Protokoll</h2><div class="mono" style="font-size:12px;white-space:pre-wrap">{{ log.join('\n') }}</div></div>
+      <div class="section" v-if="log.length"><h2>Protokoll</h2><div class="mono" style="font-size:12px;white-space:pre-wrap"><div v-for="(l, i) in log" :key="i" :class="/^\S+ ✗/.test(l) ? 'fehler' : ''">{{ l }}</div></div></div>
     </div>
   </div>
 </template>

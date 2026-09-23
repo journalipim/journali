@@ -106,7 +106,7 @@ onMounted(() => { load(); loadStats() })
         <tr><td class="muted" title="Liegt nur in media.json beim Server, nie im Journal.">Secret</td><td><input v-model="cfg.secret" type="password" style="width:100%" autocomplete="new-password" /></td><td></td></tr>
         <tr><td class="muted">Region</td><td class="row" style="gap:10px"><input v-model="cfg.region" type="text" style="width:160px" placeholder="garage" /><label><input type="checkbox" v-model="cfg.pathStyle" /> Pfad-Stil (endpoint/bucket/…)</label></td><td></td></tr>
       </template>
-      <tr><td></td><td class="row"><button @click="check">Prüfen</button><button class="primary" @click="save">Speichern</button><span class="muted" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
+      <tr><td></td><td class="row"><button @click="check">Prüfen</button><button class="primary" @click="save">Speichern</button><span :class="String(probe || busy || '').startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
     </tbody></table>
   </div>
 

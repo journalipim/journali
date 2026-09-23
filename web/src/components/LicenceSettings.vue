@@ -2,11 +2,15 @@
 // Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“). Sie wird nicht gepflegt, sondern eingespielt —
 // darum eine Datei, kein Stammdatum. Was sie sagt, gilt für die ganze Anlage: Einträge je Woche und Monat, das
 // Was ein Team an KI verbraucht, geht an seinen Anbieter — journali lizenziert das nicht (Taloan, 23.09.2026).
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 
 const emit = defineEmits(['eingespielt'])
+// Das Team, das oben im Team-Reiter gewählt ist — für es wird ein Schlüssel eingelöst
+const props = defineProps({ team: { type: Object, default: null } })
+// Einlösen nur beim Team, das sein Kontingent selbst trägt; wer über ein anderes abrechnet, bekommt keinen Schlüssel
+const eigenes = computed(() => !!props.team && (props.team.payer ?? props.team.key) === props.team.key)
 const lic = ref(null)
 const roh = ref('')
 const said = ref('')
@@ -16,10 +20,8 @@ async function load() {
   try { lic.value = await api.get('/api/licence') } catch (e) { store.toast(e.message) }
   if (!darf()) return
   try {
-    const [a, e, t] = await Promise.all([api.get('/api/licence/requests'), api.get('/api/licence/keys'), api.get('/api/teams')])
+    const [a, e] = await Promise.all([api.get('/api/licence/requests'), api.get('/api/licence/keys')])
     anforderungen.value = a; einloesungen.value = e
-    teams.value = t.filter(x => (x.payer ?? x.key) === x.key)   // eingelöst wird beim Team, das sein Kontingent selbst trägt
-    if (!teams.value.some(x => x.key === team.value)) team.value = teams.value[0]?.key ?? ''
   } catch (e) { store.toast(e.message) }
 }
 onMounted(load)
@@ -28,11 +30,9 @@ onMounted(load)
 // eingelöst wird nur, was hier angefordert wurde. Auf Vorrat und ohne Team; das Team wählt die IT beim Einlösen.
 const anforderungen = ref([])
 const einloesungen = ref([])
-const teams = ref([])
 const neu = ref({ kind: 'reset', entriesWeek: 0, entriesMonth: 0, days: 30, count: 1 })
 const angefordert = ref('')
 const schluessel = ref('')
-const team = ref('')
 const saidKey = ref('')
 
 async function anfordern() {
@@ -46,9 +46,9 @@ async function anfordern() {
 }
 
 async function einloesen() {
-  if (!schluessel.value.trim() || !team.value) return
+  if (!schluessel.value.trim() || !eigenes.value) return
   try {
-    const r = await api.post('/api/licence/keys', { key: schluessel.value.trim(), team: team.value })
+    const r = await api.post('/api/licence/keys', { key: schluessel.value.trim(), team: props.team.key })
     schluessel.value = ''
     saidKey.value = (r.until ? `✓ ${r.id} bis ${r.until}` : `✓ ${r.id} ab ${r.from}`) + (r.carried ? ` · +${r.carried} Tage` : '') + (r.geprueft ? '' : ` · ${r.grund ?? ''}`)
     await load(); await store.poll(true)
@@ -105,7 +105,7 @@ async function kopiere(text) {
       <textarea v-model="roh" rows="4" style="width:100%;max-width:640px" placeholder='{"plan":"…","entriesWeek":20000,…}'></textarea>
       <div class="row" style="gap:8px;margin-top:4px">
         <button class="primary" @click="einspielen">⚿ Einspielen</button>
-        <span class="muted" style="font-size:12px">{{ said }}</span>
+        <span :class="said.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ said }}</span>
       </div>
     </div>
 
@@ -142,14 +142,11 @@ async function kopiere(text) {
         </tr>
       </tbody></table>
 
-      <div class="row einloesen" style="gap:6px;margin-top:8px;align-items:flex-start">
+      <div v-if="eigenes" class="row einloesen" style="gap:6px;margin-top:8px;align-items:flex-start">
         <textarea v-model="schluessel" rows="3" style="width:100%;max-width:520px" placeholder='{"id":"k-…","kind":"…","request":"…",…}'></textarea>
-        <select v-model="team" title="Team, das den Schlüssel bekommt">
-          <option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option>
-        </select>
-        <button class="primary" :disabled="!schluessel.trim() || !team" @click="einloesen">⚿ Einlösen</button>
+        <button class="primary" :disabled="!schluessel.trim()" :title="'Schlüssel für ' + team.label + ' einlösen'" @click="einloesen">⚿ Einlösen · {{ team.label }}</button>
       </div>
-      <div class="muted said-key" style="font-size:12px;margin-top:4px">{{ saidKey }}</div>
+      <div class="said-key" :class="saidKey.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px;margin-top:4px">{{ saidKey }}</div>
 
       <table v-if="einloesungen.length" class="grid einloesungen" style="width:auto;margin-top:8px"><thead><tr>
         <th>Id</th><th title="Art">⚷</th><th>Team</th><th>ab</th><th>bis</th><th title="Tage aus einem laufenden Limit übernommen">+◷</th>

@@ -118,7 +118,7 @@ onMounted(lies)
       <span v-if="(stand?.hier?.entries ?? 0) > 0" class="muted" style="font-size:12px">dieses System ist nicht leer</span>
       <span v-else-if="stand && !stand.dort" class="muted" style="font-size:12px">keine Sicherung im Verzeichnis</span>
     </div>
-    <div v-if="said" :class="said.startsWith('✗') ? 'neg' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
+    <div v-if="said" :class="said.startsWith('✗') ? 'fehler' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
   </div>
 
   <div class="section">
@@ -144,6 +144,6 @@ onMounted(lies)
       <span v-if="probe" class="muted" style="font-size:12px">{{ probe.created }} neu · {{ probe.updated }} angeglichen · {{ probe.restored }} zurückgeholt<template v-if="probe.model"> · {{ probe.model }} Modellteile</template></span>
     </div>
 
-    <div v-if="tsaid" :class="tsaid.startsWith('✗') ? 'neg' : 'pos'" style="font-size:12px;margin-top:6px">{{ tsaid }}</div>
+    <div v-if="tsaid" :class="tsaid.startsWith('✗') ? 'fehler' : 'pos'" style="font-size:12px;margin-top:6px">{{ tsaid }}</div>
   </div>
 </template>

@@ -24,7 +24,6 @@ function server({ fehler = null } = {}) {
     else if (path === '/api/licence/requests') body = [{ id: 'k-2', hash: 'h', text: '{"anforderung":"neu","sig":"z"}' }]
     else if (path === '/api/licence/keys' && method === 'GET') body = [{ id: 'k-0', kind: 'reset', team: 'de', teamLabel: 'Deutschland', from: '2026-09-22', until: null, carried: 0 }]
     else if (path === '/api/licence/keys') body = fehler ? (status = 400, { error: fehler }) : { id: 'k-1', kind: 'limit', team: 'de', from: '2026-09-23', until: '2026-10-22', carried: 0, geprueft: true }
-    else if (path === '/api/teams') body = [{ key: 'de', label: 'Deutschland', payer: 'de' }, { key: 'it', label: 'Italien', payer: 'de' }]
     else body = {}
     return { ok: status < 400, status, text: async () => JSON.stringify(body) }
   }
@@ -63,11 +62,14 @@ test('Anforderungen zeigen, was offen und was eingelöst ist', async () => {
   w.unmount()
 })
 
-test('Einlösen nur bei Teams mit eigenem Kontingent — Schlüssel und Team gehen an den Server', async () => {
+const DE = { key: 'de', label: 'Deutschland', payer: 'de' }
+const IT = { key: 'it', label: 'Italien', payer: 'de' }
+
+test('Eingelöst wird für das Team, das oben gewählt ist — keine eigene Auswahl', async () => {
   const gesendet = server(); admin()
-  const w = mount(LicenceSettings); await flushPromises()
-  const optionen = w.findAll('.einloesen select option').map(o => o.attributes('value'))
-  assert.deepEqual(optionen, ['de'], 'Italien rechnet über Deutschland ab und gehört nicht in die Auswahl')
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(w.find('.einloesen select').exists(), false, 'eine zweite Teamauswahl steht da')
+  assert.match(button(w, 'Einlösen').text(), /Einlösen · Deutschland/, 'das Team steht nicht im Knopf')
   assert.ok(button(w, 'Einlösen').attributes('disabled') !== undefined, 'ohne Schlüssel darf nichts einzulösen sein')
   await w.find('.einloesen textarea').setValue('{"id":"k-1"}')
   await button(w, 'Einlösen').trigger('click'); await flushPromises()
@@ -78,12 +80,20 @@ test('Einlösen nur bei Teams mit eigenem Kontingent — Schlüssel und Team geh
   w.unmount()
 })
 
+test('Wer über ein anderes Team abrechnet, hat kein Einlösen', async () => {
+  server(); admin()
+  const w = mount(LicenceSettings, { props: { team: IT } }); await flushPromises()
+  assert.equal(w.find('.einloesen').exists(), false)
+  w.unmount()
+})
+
 test('Ein abgelehnter Schlüssel sagt, warum', async () => {
   server({ fehler: 'Zu Schlüssel k-9 gibt es hier keine Anforderung.' }); admin()
-  const w = mount(LicenceSettings); await flushPromises()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   await w.find('.einloesen textarea').setValue('{"id":"k-9"}')
   await button(w, 'Einlösen').trigger('click'); await flushPromises()
   assert.match(w.find('.said-key').text(), /✗ Zu Schlüssel k-9 gibt es hier keine Anforderung/)
+  assert.ok(w.find('.said-key').classes().includes('fehler'), 'die Fehlermeldung ist nicht rot und fett')
   w.unmount()
 })
 

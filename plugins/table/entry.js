@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-ae3917b8] { overflow-x: auto;\n}\ntable.map[data-v-ae3917b8] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-ae3917b8] { overflow-x: auto;\n}\ntable.cols[data-v-ae3917b8] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-ae3917b8] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-ae3917b8] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-ae3917b8] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-ae3917b8] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-ae3917b8] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-ae3917b8] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-ae3917b8] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-ae3917b8] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-ae3917b8] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-ae3917b8], .tstep input[type=text][data-v-ae3917b8] { font-size: 12px;\n}\n.fld[data-v-ae3917b8] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\r\n/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */\n.tabs[data-v-ae3917b8] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-ae3917b8] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-ae3917b8]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-ae3917b8]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-ae3917b8]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-ae3917b8] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-ae3917b8] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-ae3917b8] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-ae3917b8] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-ae3917b8] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-ae3917b8] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-ae3917b8] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-ae3917b8] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-ae3917b8] { font-weight: 400;\n}\n.drop.over[data-v-ae3917b8] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-ae3917b8] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-ae3917b8] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-ae3917b8] { cursor: pointer;\n}\n.recent .chip.dim[data-v-ae3917b8] { opacity: .55; cursor: default;\n}\n.btn[data-v-ae3917b8] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-ae3917b8] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-ae3917b8] { opacity: .5;\n}\n.samples[data-v-ae3917b8] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-ae3917b8] { font-size: 13px;\n}\n.out[data-v-ae3917b8] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-ae3917b8] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-ae3917b8] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-ae3917b8]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d83b81d4] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d83b81d4] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d83b81d4] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d83b81d4] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d83b81d4] { flex: 1; min-width: 0;\n}\n.tab[data-v-d83b81d4] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d83b81d4], .tab.router-link-active[data-v-d83b81d4] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-5a2fc4e3] { overflow-x: auto;\n}\ntable.map[data-v-5a2fc4e3] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-5a2fc4e3] { overflow-x: auto;\n}\ntable.cols[data-v-5a2fc4e3] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-5a2fc4e3] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-5a2fc4e3] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-5a2fc4e3] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-5a2fc4e3] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-5a2fc4e3] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-5a2fc4e3] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-5a2fc4e3] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-5a2fc4e3] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-5a2fc4e3] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-5a2fc4e3], .tstep input[type=text][data-v-5a2fc4e3] { font-size: 12px;\n}\n.fld[data-v-5a2fc4e3] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\r\n/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */\n.tabs[data-v-5a2fc4e3] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-5a2fc4e3] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-5a2fc4e3]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-5a2fc4e3]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-5a2fc4e3]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-5a2fc4e3] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-5a2fc4e3] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-5a2fc4e3] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-5a2fc4e3] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-5a2fc4e3] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-5a2fc4e3] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-5a2fc4e3] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-5a2fc4e3] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-5a2fc4e3] { font-weight: 400;\n}\n.drop.over[data-v-5a2fc4e3] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-5a2fc4e3] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-5a2fc4e3] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-5a2fc4e3] { cursor: pointer;\n}\n.recent .chip.dim[data-v-5a2fc4e3] { opacity: .55; cursor: default;\n}\n.btn[data-v-5a2fc4e3] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-5a2fc4e3] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-5a2fc4e3] { opacity: .5;\n}\n.samples[data-v-5a2fc4e3] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-5a2fc4e3] { font-size: 13px;\n}\n.out[data-v-5a2fc4e3] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-5a2fc4e3] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-5a2fc4e3] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-5a2fc4e3]:hover { background: var(--hover);\n}\r\n\n.form[data-v-e2e9c4e0] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-e2e9c4e0] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-e2e9c4e0] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-e2e9c4e0] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-e2e9c4e0] { flex: 1; min-width: 0;\n}\n.tab[data-v-e2e9c4e0] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-e2e9c4e0], .tab.router-link-active[data-v-e2e9c4e0] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -75,7 +75,7 @@ const _hoisted_15$1 = {
   style: { "font-weight": "400" }
 };
 const _hoisted_16$1 = { key: 1 };
-const _hoisted_17$1 = { class: "row" };
+const _hoisted_17 = { class: "row" };
 const _hoisted_18 = { class: "muted" };
 const _hoisted_19 = { key: 2 };
 const _hoisted_20 = { class: "muted" };
@@ -1129,7 +1129,7 @@ const _sfc_main$1 = {
                       -1
                       /* CACHED */
                     )),
-                    createElementVNode("td", _hoisted_17$1, [
+                    createElementVNode("td", _hoisted_17, [
                       createVNode(_component_router_link, {
                         to: `/tree/${fixed.value.row.id}`,
                         class: "chip",
@@ -3205,13 +3205,26 @@ const _sfc_main$1 = {
                   -1
                   /* CACHED */
                 )),
-                createElementVNode(
-                  "div",
-                  _hoisted_195,
-                  toDisplayString(log.value.join("\n")),
-                  1
-                  /* TEXT */
-                )
+                createElementVNode("div", _hoisted_195, [
+                  (openBlock(true), createElementBlock(
+                    Fragment,
+                    null,
+                    renderList(log.value, (l, i) => {
+                      return openBlock(), createElementBlock(
+                        "div",
+                        {
+                          key: i,
+                          class: normalizeClass(/^\S+ ✗/.test(l) ? "fehler" : "")
+                        },
+                        toDisplayString(l),
+                        3
+                        /* TEXT, CLASS */
+                      );
+                    }),
+                    128
+                    /* KEYED_FRAGMENT */
+                  ))
+                ])
               ])) : createCommentVNode("v-if", true)
             ])
           ])
@@ -3222,7 +3235,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-ae3917b8"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-5a2fc4e3"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], at = null, say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
@@ -3431,35 +3444,34 @@ const _hoisted_1 = {
   style: { "flex": "1" }
 };
 const _hoisted_2 = { class: "toolbar" };
-const _hoisted_3 = { class: "muted" };
-const _hoisted_4 = { class: "grid form" };
-const _hoisted_5 = {
+const _hoisted_3 = { class: "grid form" };
+const _hoisted_4 = {
   class: "chips",
   style: { "margin": "2px 0 4px" }
 };
-const _hoisted_6 = {
+const _hoisted_5 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_7 = { class: "chips" };
-const _hoisted_8 = ["onClick"];
-const _hoisted_9 = ["value"];
-const _hoisted_10 = { class: "row" };
+const _hoisted_6 = { class: "chips" };
+const _hoisted_7 = ["onClick"];
+const _hoisted_8 = ["value"];
+const _hoisted_9 = { class: "row" };
+const _hoisted_10 = ["onClick"];
 const _hoisted_11 = ["onClick"];
-const _hoisted_12 = ["onClick"];
-const _hoisted_13 = { class: "scroll" };
-const _hoisted_14 = {
+const _hoisted_12 = { class: "scroll" };
+const _hoisted_13 = {
   key: 0,
   class: "grid",
   style: { "width": "auto" }
 };
-const _hoisted_15 = ["title"];
-const _hoisted_16 = {
+const _hoisted_14 = ["title"];
+const _hoisted_15 = {
   key: 1,
   class: "muted",
   style: { "padding": "8px" }
 };
-const _hoisted_17 = {
+const _hoisted_16 = {
   key: 2,
   class: "empty"
 };
@@ -3581,13 +3593,15 @@ const _sfc_main = {
           )),
           createElementVNode(
             "span",
-            _hoisted_3,
+            {
+              class: normalizeClass(String(busy.value ?? "").startsWith("✗") ? "fehler" : "muted")
+            },
             toDisplayString(busy.value),
-            1
-            /* TEXT */
+            3
+            /* TEXT, CLASS */
           )
         ]),
-        createElementVNode("table", _hoisted_4, [
+        createElementVNode("table", _hoisted_3, [
           _cache[24] || (_cache[24] = createElementVNode(
             "colgroup",
             null,
@@ -3621,7 +3635,7 @@ const _sfc_main = {
                 /* CACHED */
               )),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_5, [
+                createElementVNode("div", _hoisted_4, [
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
@@ -3640,7 +3654,7 @@ const _sfc_main = {
                     128
                     /* KEYED_FRAGMENT */
                   )),
-                  !rootRows.value.length ? (openBlock(), createElementBlock("span", _hoisted_6, "Teilbäume anhaken — ein Haken gilt für alles darunter")) : createCommentVNode("v-if", true)
+                  !rootRows.value.length ? (openBlock(), createElementBlock("span", _hoisted_5, "Teilbäume anhaken — ein Haken gilt für alles darunter")) : createCommentVNode("v-if", true)
                 ]),
                 createVNode(unref(TreePicker), {
                   modelValue: roots.value,
@@ -3712,7 +3726,7 @@ const _sfc_main = {
                 /* CACHED */
               )),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_7, [
+                createElementVNode("div", _hoisted_6, [
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
@@ -3721,7 +3735,7 @@ const _sfc_main = {
                         key: l.code,
                         class: normalizeClass(["view-chip", { on: locales.value.includes(l.code) }]),
                         onClick: ($event) => toggleLocale(l.code)
-                      }, toDisplayString(l.code), 11, _hoisted_8);
+                      }, toDisplayString(l.code), 11, _hoisted_7);
                     }),
                     128
                     /* KEYED_FRAGMENT */
@@ -3760,7 +3774,7 @@ const _sfc_main = {
                         return openBlock(), createElementBlock("option", {
                           key: v.key,
                           value: v.key
-                        }, "◫ " + toDisplayString(v.label?.de || v.key) + " (" + toDisplayString(v.level) + ")", 9, _hoisted_9);
+                        }, "◫ " + toDisplayString(v.label?.de || v.key) + " (" + toDisplayString(v.level) + ")", 9, _hoisted_8);
                       }),
                       128
                       /* KEYED_FRAGMENT */
@@ -3865,7 +3879,7 @@ const _sfc_main = {
                 /* CACHED */
               )),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_10, [
+                createElementVNode("div", _hoisted_9, [
                   createElementVNode("button", {
                     onClick: _cache[5] || (_cache[5] = ($event) => run(false))
                   }, "Vorschau"),
@@ -3882,7 +3896,7 @@ const _sfc_main = {
                       createElementVNode("button", {
                         onClick: navigate,
                         title: "denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)"
-                      }, "⏱ als Job", 8, _hoisted_11)
+                      }, "⏱ als Job", 8, _hoisted_10)
                     ]),
                     _: 1
                     /* STABLE */
@@ -3896,7 +3910,7 @@ const _sfc_main = {
                       createElementVNode("button", {
                         onClick: navigate,
                         title: "die Export-Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs"
-                      }, "⏱ Jobs verwalten", 8, _hoisted_12)
+                      }, "⏱ Jobs verwalten", 8, _hoisted_11)
                     ]),
                     _: 1
                     /* STABLE */
@@ -3916,8 +3930,8 @@ const _sfc_main = {
           -1
           /* CACHED */
         )),
-        createElementVNode("div", _hoisted_13, [
-          table.value ? (openBlock(), createElementBlock("table", _hoisted_14, [
+        createElementVNode("div", _hoisted_12, [
+          table.value ? (openBlock(), createElementBlock("table", _hoisted_13, [
             createElementVNode("thead", null, [
               createElementVNode("tr", null, [
                 (openBlock(true), createElementBlock(
@@ -3927,7 +3941,7 @@ const _sfc_main = {
                     return openBlock(), createElementBlock("th", {
                       key: c.key,
                       title: c.attr ? `${c.attr} · ${c.locale}` : c.key
-                    }, toDisplayString(c.key), 9, _hoisted_15);
+                    }, toDisplayString(c.key), 9, _hoisted_14);
                   }),
                   128
                   /* KEYED_FRAGMENT */
@@ -3968,18 +3982,18 @@ const _sfc_main = {
           ])) : createCommentVNode("v-if", true),
           table.value && table.value.rows.length > 200 ? (openBlock(), createElementBlock(
             "div",
-            _hoisted_16,
+            _hoisted_15,
             "… " + toDisplayString(table.value.rows.length - 200) + " weitere Zeilen in der Datei",
             1
             /* TEXT */
           )) : createCommentVNode("v-if", true),
-          !table.value ? (openBlock(), createElementBlock("div", _hoisted_17, "Teilbaum wählen, dann Vorschau oder herunterladen.")) : createCommentVNode("v-if", true)
+          !table.value ? (openBlock(), createElementBlock("div", _hoisted_16, "Teilbaum wählen, dann Vorschau oder herunterladen.")) : createCommentVNode("v-if", true)
         ])
       ]);
     };
   }
 };
-const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-d83b81d4"]]);
+const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-e2e9c4e0"]]);
 const roles = ["group", "product"];
 const entry = {
   views: [

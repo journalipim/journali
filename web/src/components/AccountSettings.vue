@@ -36,7 +36,7 @@ async function dropToken(t) { try { await api.del(`/api/auth/tokens/${t.id}`); a
       <tr><td class="muted">aktuelles Passwort</td><td><input v-model="pw.current" type="password" autocomplete="current-password" style="width:100%" /></td><td></td></tr>
       <tr><td class="muted">neues Passwort</td><td><input v-model="pw.password" type="password" autocomplete="new-password" style="width:100%" placeholder="mindestens 8 Zeichen" /></td><td></td></tr>
       <tr><td class="muted">wiederholen</td><td><input v-model="pw.again" type="password" autocomplete="new-password" style="width:100%" /></td>
-        <td class="row" style="gap:8px"><button class="primary" @click="changePw">Passwort ändern</button><span class="muted" style="font-size:12px">{{ pwState }}</span></td></tr>
+        <td class="row" style="gap:8px"><button class="primary" @click="changePw">Passwort ändern</button><span :class="String(pwState ?? '').startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ pwState }}</span></td></tr>
     </tbody></table>
   </div>
 

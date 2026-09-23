@@ -164,7 +164,7 @@ async function austragen(m) {
     </div>
 
 
-    <LicenceSettings @eingespielt="details" />
+    <LicenceSettings :team="team" @eingespielt="details" />
 
     <div class="section">
       <h2>✦ journali Limits
