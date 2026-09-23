@@ -12,6 +12,8 @@ const DRIVERS = [['postgres', 'Postgres — Tabelle media_blob in der Journal-Da
 const cfg = ref({ driver: 'postgres', path: '', bucket: '', endpoint: '', key: '', secret: '', region: 'garage', pathStyle: true })
 const state = ref({ kind: '', total: 0, error: null })
 const probe = ref(''); const busy = ref('')
+const zaehlBusy = ref('')   // Fehlbestand zählen
+const kopierBusy = ref('')  // Herüberkopieren
 const missing = ref(null)
 const copyFrom = ref({ driver: 'file', path: 'media', bucket: '', endpoint: '', key: '', secret: '', region: 'garage', pathStyle: true })
 const copyResult = ref(null)
@@ -57,16 +59,16 @@ async function save() {
   finally { busy.value = '' }
 }
 async function findMissing() {
-  busy.value = 'zähle …'
-  try { missing.value = await api.get('/api/media/missing') } catch (e) { store.toast(e.message) } finally { busy.value = '' }
+  zaehlBusy.value = 'zähle …'
+  try { missing.value = await api.get('/api/media/missing') } catch (e) { store.toast(e.message) } finally { zaehlBusy.value = '' }
 }
 async function copy() {
   if (!store.actor) { store.toast('👤 Name fehlt'); return }
   if (!await dialog.confirm({ title: 'Blobs herüberkopieren?', warn: `${copyFrom.value.driver === 'file' ? copyFrom.value.path : copyFrom.value.driver === 's3' ? 's3://' + copyFrom.value.bucket : 'postgres'} → ${state.value.kind}`, text: 'Alles, was hier fehlt (Hash-geprüft, nichts wird gelöscht)', ok: 'Kopieren' })) return
-  busy.value = 'kopiere …'; copyResult.value = null
+  kopierBusy.value = 'kopiere …'; copyResult.value = null
   try { copyResult.value = await api.post('/api/media/copy', { from: clean(copyFrom.value) }); missing.value = null }
   catch (e) { store.toast(e.message) }
-  finally { busy.value = '' }
+  finally { kopierBusy.value = '' }
 }
 onMounted(load)
 </script>
@@ -111,8 +113,9 @@ onMounted(load)
   <div class="section">
     <h2>Bestand</h2>
     <div class="row" style="gap:8px;align-items:center">
-      <button @click="findMissing">Fehlbestand zählen</button>
-      <span v-if="missing" :class="missing.missing.length ? 'neg' : 'pos'">{{ missing.missing.length ? `✗ ${missing.missing.length} von ${missing.total} ohne Bytes` : `✓ alle ${missing.total} da` }}</span>
+      <button :disabled="!!zaehlBusy" @click="findMissing">Fehlbestand zählen</button>
+      <span v-if="zaehlBusy" class="muted" style="font-size:12px">{{ zaehlBusy }}</span>
+      <span v-else-if="missing" :class="missing.missing.length ? 'neg' : 'pos'">{{ missing.missing.length ? `✗ ${missing.missing.length} von ${missing.total} fehlen im Speicher` : `✓ alle ${missing.total} vorhanden` }}</span>
     </div>
     <div v-if="missing?.missing.length" class="muted" style="font-size:12px;margin-top:4px;max-height:120px;overflow:auto">{{ missing.missing.slice(0, 50).map(m => m.name).join(' · ') }}{{ missing.missing.length > 50 ? ' …' : '' }}</div>
   </div>
@@ -131,8 +134,9 @@ onMounted(load)
         <tr><td class="muted">Secret</td><td><input v-model="copyFrom.secret" type="password" style="width:100%" autocomplete="new-password" /></td></tr>
         <tr><td class="muted">Region</td><td><input v-model="copyFrom.region" type="text" style="width:160px" /></td></tr>
       </template>
-      <tr><td></td><td class="row"><button class="primary" @click="copy">⇥ Kopieren</button>
-        <span v-if="copyResult" class="muted" style="font-size:12px">{{ copyResult.copied }} kopiert · {{ copyResult.skipped }} schon da<span v-if="copyResult.failed" class="neg"> · {{ copyResult.failed }} fehlgeschlagen</span></span></td></tr>
+      <tr><td></td><td class="row"><button class="primary" :disabled="!!kopierBusy" @click="copy">⇥ Kopieren</button>
+        <span v-if="kopierBusy" class="muted" style="font-size:12px">{{ kopierBusy }}</span>
+        <span v-else-if="copyResult" class="muted" style="font-size:12px">{{ copyResult.copied }} kopiert · {{ copyResult.skipped }} bereits vorhanden<span v-if="copyResult.failed" class="neg"> · {{ copyResult.failed }} fehlgeschlagen</span></span></td></tr>
     </tbody></table>
   </div>
 </template>

@@ -53,7 +53,7 @@ onMounted(lies)
       <tr><td class="attr">Server</td><td><input v-model="c.host" type="text" placeholder="smtp.beispiel.de" style="width:100%" /></td></tr>
       <tr><td class="attr">Port</td><td>
         <input v-model.number="c.port" type="number" min="1" max="65535" style="width:90px" />
-        <label style="margin-left:10px" title="STARTTLS auf 587 oder 25; implizites TLS auf 465 geht nicht"><input type="checkbox" v-model="c.startTls" /> STARTTLS</label>
+        <label style="margin-left:10px" title="STARTTLS auf 587 oder 25; implizites TLS auf 465 wird nicht unterstützt"><input type="checkbox" v-model="c.startTls" /> STARTTLS</label>
       </td></tr>
       <tr><td class="attr">Benutzer</td><td><input v-model="c.user" type="text" autocomplete="off" style="width:100%" /></td></tr>
       <tr><td class="attr">Passwort</td><td><input v-model="c.password" type="password" autocomplete="new-password" placeholder="unverändert" style="width:100%" /></td></tr>

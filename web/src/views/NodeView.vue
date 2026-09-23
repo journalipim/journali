@@ -905,7 +905,7 @@ function cellMenu(e, def, col, block) {
         </div>
         <div v-if="stopped.length" class="chips" style="margin-top:6px">
           <span class="muted" style="font-size:12px" title="von oben vererbt — hier und an allem darunter gesperrt">⛔ Verwendung und Vererbung unterbunden:</span>
-          <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt`">{{ r.other.label }} <button @click="retireRel(r)" title="wieder zulassen — das Medium ist dann wieder geerbt da">×</button></span>
+          <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt`">{{ r.other.label }} <button @click="retireRel(r)" title="wieder zulassen — das Medium gilt dann wieder als geerbt">×</button></span>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
           <button class="primary" @click="mediaFile.click()">⇧ Hochladen</button>
@@ -1011,7 +1011,7 @@ function cellMenu(e, def, col, block) {
 
       <div class="section" v-if="node.orphans?.length">
         <h2 class="warn">⚠ Verwaiste Werte</h2>
-        <div class="muted">Eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen): <span class="mono">{{ node.orphans.join(', ') }}</span> — Gruppe anhängen, dann sind sie wieder da.</div>
+        <div class="muted">Eigene Werte für Attribute, die hier über keine Gruppe gelten (z. B. nach dem Umhängen): <span class="mono">{{ node.orphans.join(', ') }}</span> — Gruppe anhängen, dann gelten sie wieder.</div>
       </div>
 
       <div class="section" v-if="node.role === 'product' && !props.pub">
@@ -1023,7 +1023,7 @@ function cellMenu(e, def, col, block) {
             <tr v-for="(k, i) in node.axes" :key="k" :title="k">
               <td class="muted">{{ i + 1 }}. {{ axisLabel(k) }}</td>
               <td><router-link :to="{ path: '/model', query: { section: 'attributes', key: k } }" class="mono">{{ k }}</router-link></td>
-              <td class="num"><button class="x" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse weg — ihr Wert bleibt als Attributwert an den Varianten">×</button></td>
+              <td class="num"><button class="x" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse entfernen — ihr Wert bleibt als Attributwert an den Varianten">×</button></td>
             </tr>
           </tbody>
         </table>

@@ -320,7 +320,7 @@ onMounted(async () => {
       <tr v-if="!fixed && idLocked && !unknownIds"><td class="attr">Ziel</td><td class="muted">🔒 aus der Datei — die Zeilen haben journali-Ids{{ mapping.some(m => m.target === 'root') ? ' samt Wurzel' : '' }}, jede wird an ihrem Platz aktualisiert{{ mapping.some(m => m.target === 'parent') ? '; Elternteil steht in der Datei' : '' }}</td></tr>
       <tr v-if="!fixed && foreignRoot"><td class="attr"></td><td class="warn" style="font-size:12px">⚠ {{ foreignRoot }} Zeilen haben Ids, die es hier gibt — aber unter einer anderen Wurzel: fremde Datenbank, Zufallstreffer. Sie gelten als neu und kommen unter das Ziel.</td></tr>
       <tr v-if="!fixed && !(idLocked && !unknownIds)"><td class="attr">Ziel</td><td>
-        <div class="row" style="margin-bottom:4px"><span v-if="target" class="chip" :title="target.id + ' — Klick: im Baum ändern'" style="cursor:pointer" @click="targetPick = !targetPick">{{ icon(target.role) }} {{ target.label }} <button @click.stop="target = null; planned = null" title="Ziel weg">×</button></span><span v-else class="muted">Gruppe oder Produkt — wohin neue Zeilen kommen</span></div>
+        <div class="row" style="margin-bottom:4px"><span v-if="target" class="chip" :title="target.id + ' — Klick: im Baum ändern'" style="cursor:pointer" @click="targetPick = !targetPick">{{ icon(target.role) }} {{ target.label }} <button @click.stop="target = null; planned = null" title="Ziel entfernen">×</button></span><span v-else class="muted">Gruppe oder Produkt — wohin neue Zeilen kommen</span></div>
         <TreePicker v-if="!target || targetPick" :model-value="target?.id ?? ''" :height="200" @pick="pickTarget" />
       </td></tr>
       <tr v-if="!fixed && !(idLocked && !unknownIds)"><td class="attr">Neue als</td><td><select v-model="role" title="Rolle neuer Zeilen" @change="planned = null" style="width:100%">
@@ -358,7 +358,7 @@ onMounted(async () => {
         <div v-if="layout === 'cols' && stepsOpen && mapping.find(m => m.column === stepsOpen)" class="tsteps" style="margin-top:6px;padding:6px 8px;background:var(--bg);border-radius:6px">
           <div class="muted" style="font-size:12px">ƒ Umwandlung für <b>{{ stepsOpen }}</b> <button class="x" @click="stepsOpen = null">×</button></div>
           <template v-for="m in [mapping.find(m => m.column === stepsOpen)]" :key="m.column">
-            <div v-if="m.target === 'status'" class="tstep" style="flex-wrap:wrap;gap:4px 14px"><span class="muted" style="font-size:12px;width:100%">Quellwert → Status<span v-if="!distinctValues(m).length"> · diese Spalte hat keine Werte — die Zuordnung erscheint, sobald welche da sind</span></span>
+            <div v-if="m.target === 'status'" class="tstep" style="flex-wrap:wrap;gap:4px 14px"><span class="muted" style="font-size:12px;width:100%">Quellwert → Status<span v-if="!distinctValues(m).length"> · diese Spalte hat keine Werte — die Zuordnung erscheint, sobald welche vorhanden sind</span></span>
               <span v-for="v in distinctValues(m)" :key="v" class="fld"><code>{{ v }}</code> → <select :value="statusFor(m, v)" @change="setStatusFor(m, v, $event.target.value)"><option value="">–</option><option v-for="s in (model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option></select></span></div>
             <div v-for="(s, si) in (m.steps ?? [])" :key="si" class="tstep">
               <span class="muted mono" style="width:18px">{{ si + 1 }}</span>
@@ -397,7 +397,7 @@ onMounted(async () => {
             </tr>
             <tr v-if="stepsOpen === m.column" class="steps-row"><td colspan="7">
               <div class="tsteps">
-                <div v-if="m.target === 'status'" class="tstep" style="flex-wrap:wrap;gap:4px 14px"><span class="muted" style="font-size:12px;width:100%">Quellwert → Status<span v-if="!distinctValues(m).length"> · diese Spalte hat keine Werte — die Zuordnung erscheint, sobald welche da sind</span></span>
+                <div v-if="m.target === 'status'" class="tstep" style="flex-wrap:wrap;gap:4px 14px"><span class="muted" style="font-size:12px;width:100%">Quellwert → Status<span v-if="!distinctValues(m).length"> · diese Spalte hat keine Werte — die Zuordnung erscheint, sobald welche vorhanden sind</span></span>
                   <span v-for="v in distinctValues(m)" :key="v" class="fld"><code>{{ v }}</code> → <select :value="statusFor(m, v)" @change="setStatusFor(m, v, $event.target.value)"><option value="">–</option><option v-for="s in (model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option></select></span></div>
                 <div v-for="(s, si) in (m.steps ?? [])" :key="si" class="tstep">
                   <span class="muted mono" style="width:18px">{{ si + 1 }}</span>
