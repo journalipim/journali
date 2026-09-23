@@ -115,9 +115,9 @@ function railDrop(target) {
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>
-      <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings" class="muted" title="Nutzung anzeigen"><UsageMini :usage="store.usage" /></router-link></template>
+      <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings#teams" class="muted" title="Nutzung anzeigen"><UsageMini :usage="store.usage" /></router-link></template>
       <!-- KI-Austauschvolumen (Taloan, 23.09.2026): was journali hingeschickt und zurückbekommen hat — gemessen, nicht geschätzt -->
-      <template v-if="ai.server?.ready"><span class="sep">·</span><router-link to="/settings" class="ai"
+      <template v-if="ai.server?.ready"><span class="sep">·</span><router-link to="/settings#teams" class="ai"
         title="KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt."
         >✧ KI {{ kb(ai.server.volume?.month) }}</router-link></template>
       <span class="grow" />

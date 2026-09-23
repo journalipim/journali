@@ -71,3 +71,16 @@ test('ohne Anmeldung gibt es kein Team — und der Urheber steht bei mir', async
   assert.match(t, /Name/, 'dafür den Urheber')
   await ruhe(); w.unmount()
 })
+
+// Ein Klick auf die Zahlen in der Leiste führt dorthin, wo sie ausführlich stehen (Taloan, 23.09.2026) — auch wenn die
+// Einstellungen schon offen sind: der Reiter folgt der Sprungmarke.
+test('die Sprungmarke trifft ihren Reiter, auch bei offener Seite', async () => {
+  const w = await sicht(['read', 'users', 'model', 'team'])
+  assert.equal(w.findAll('.tab.on')[0].text(), '◐ Ich', 'ohne Marke beginnt es bei mir')
+  location.hash = '#teams'
+  window.dispatchEvent(new window.HashChangeEvent('hashchange'))
+  await ruhe()
+  assert.equal(w.findAll('.tab.on')[0].text(), '◍ Team')
+  location.hash = ''
+  await ruhe(); w.unmount()
+})

@@ -6,7 +6,7 @@
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
 // Speicher selbst nicht heranmuss (Taloan, 23.09.2026).
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { store } from '../store.js'
 import MatrixPicker from '../components/MatrixPicker.vue'
 import StorageSettings from '../components/StorageSettings.vue'
@@ -19,7 +19,12 @@ import TeamsAdmin from '../components/TeamsAdmin.vue'
 import WorkflowSettings from '../components/WorkflowSettings.vue'
 import { api } from '../api.js'
 // Sprungmarken von aussen (#storage, #users, #mail, #backup, #teams) treffen weiter ihren Reiter
-const tab = ref({ '#storage': 'storage', '#users': 'users', '#mail': 'mail', '#backup': 'backup', '#teams': 'team' }[location.hash] ?? 'ich')
+const MARKEN = { '#storage': 'storage', '#users': 'users', '#mail': 'mail', '#backup': 'backup', '#teams': 'team', '#workflows': 'workflows', '#assets': 'assets' }
+const tab = ref(MARKEN[location.hash] ?? 'ich')
+// Wer aus der Leiste hierher springt, landet auf dem gemeinten Reiter — auch wenn die Seite schon offen ist
+const folgeMarke = () => { const t = MARKEN[location.hash]; if (t) tab.value = t }
+onMounted(() => window.addEventListener('hashchange', folgeMarke))
+onUnmounted(() => window.removeEventListener('hashchange', folgeMarke))
 const actor = ref(store.actor)
 const theme = ref(store.theme)
 function setTheme(t) { theme.value = t; store.theme = t; store.save() }
