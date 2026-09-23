@@ -218,20 +218,23 @@ public static class TeamApi
                 var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(u => u.Team == x)).Select(u => u.Key).ToHashSet();
                 var eigene = c.Users.All.Values.Where(u => u.Team == key).Select(u => u.Key).ToHashSet();
                 var heute = DateOnly.FromDateTime(DateTime.Now);
+                var (kw, km) = c.Teams.LimitAt(zahler, heute);
+                var ab = c.Teams.CountFrom(zahler, c.ZaehltAb);
+                var fenster = c.Teams.WindowAt(zahler, heute);
                 return c.ReadUsage(u => Results.Ok(new
                 {
                     team = key, payer = zahler, payerLabel = zt.Label,
-                    limits = new { week = zt.EntriesWeek, month = zt.EntriesMonth },
+                    limits = new { week = kw, month = km, until = fenster?.Until, key = fenster?.Key, countFrom = ab },
                     used = new
                     {
-                        week = u.Sum(leute, Usage.Ab(Usage.WeekStart(heute), c.ZaehltAb), heute),
-                        month = u.Sum(leute, Usage.Ab(Usage.MonthStart(heute), c.ZaehltAb), heute),
+                        week = u.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute),
+                        month = u.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute),
                         day = u.Sum(leute, heute, heute),
                     },
                     mine = new   // was dieses Team beisteuert, wenn es über ein anderes abrechnet
                     {
-                        week = u.Sum(eigene, Usage.Ab(Usage.WeekStart(heute), c.ZaehltAb), heute),
-                        month = u.Sum(eigene, Usage.Ab(Usage.MonthStart(heute), c.ZaehltAb), heute),
+                        week = u.Sum(eigene, Usage.Ab(Usage.WeekStart(heute), ab), heute),
+                        month = u.Sum(eigene, Usage.Ab(Usage.MonthStart(heute), ab), heute),
                     },
                     head = c.Head,
                     today = heute.ToString("yyyy-MM-dd"),

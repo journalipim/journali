@@ -67,7 +67,7 @@ public sealed class LicenceStore(NpgsqlDataSource? db)
     }
 
     /// <summary>AES-GCM: Zufallszahl vorn, dann Geheimtext und Prüfsumme — eine Änderung am Datensatz fällt beim Lesen auf.</summary>
-    private static byte[] Verschluesseln(string klar)
+    internal static byte[] Verschluesseln(string klar)
     {
         var nonce = RandomNumberGenerator.GetBytes(AesGcm.NonceByteSizes.MaxSize);
         var daten = Encoding.UTF8.GetBytes(klar);
@@ -78,7 +78,7 @@ public sealed class LicenceStore(NpgsqlDataSource? db)
         return [.. nonce, .. tag, .. geheim];
     }
 
-    private static string? Entschluesseln(byte[] roh)
+    internal static string? Entschluesseln(byte[] roh)
     {
         var nl = AesGcm.NonceByteSizes.MaxSize;
         var tl = AesGcm.TagByteSizes.MaxSize;

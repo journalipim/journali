@@ -212,7 +212,7 @@ public sealed class Catalog
     private Entry Apply(Entry entry)
     {
         // Teams und Mitgliedschaften verschieben, wer auf wessen Rechnung geht — der mitgeführte Stand gilt dann nicht mehr
-        if (entry.Type is Types.TeamDefined or Types.TeamRetired or Types.UserDefined or Types.UserRetired) _stand.Clear();
+        if (entry.Type is Types.TeamDefined or Types.TeamRetired or Types.UserDefined or Types.UserRetired or Types.KeyRedeemed) _stand.Clear();
         _model.Apply(entry);
         _tree.Apply(entry);
         _relations.Apply(entry);
@@ -333,18 +333,20 @@ public sealed class Catalog
         if (_users.All.GetValueOrDefault(actor) is not { } u) return false;
         if (string.IsNullOrEmpty(u.Team)) return true;                      // kein Team, kein Kontingent
         var zahlerKey = _teams.Payer(u.Team!);
-        if (_teams.Get(zahlerKey) is not { } zahler) return true;           // das Team gibt es nicht mehr
-        if (zahler.EntriesWeek <= 0 && zahler.EntriesMonth <= 0) return true;
+        if (_teams.Get(zahlerKey) is null) return true;                    // das Team gibt es nicht mehr
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        var (kw, km) = _teams.LimitAt(zahlerKey, heute);                   // zugeteilt, angehoben durch einen Limit-Schlüssel
+        if (kw <= 0 && km <= 0) return true;
 
         // Aufgebraucht ist dasselbe wie keins (Taloan, 23.09.2026) — Woche und Monat, jede Grenze für sich
-        var heute = DateOnly.FromDateTime(DateTime.Now);
         if (!_stand.TryGetValue(zahlerKey, out var stand) || stand.Tag != heute)
         {
+            var ab = _teams.CountFrom(zahlerKey, ZaehltAb);                // ein Reset-Schlüssel verschiebt den Zählbeginn
             var leute = _teams.Dependents(zahlerKey).SelectMany(x => _users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
-            stand = (heute, _usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ZaehltAb), heute), _usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ZaehltAb), heute));
+            stand = (heute, _usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute), _usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute));
         }
-        var woche = vomJob ? Limits.FuerJob(zahler.EntriesWeek) : zahler.EntriesWeek;
-        var monat = vomJob ? Limits.FuerJob(zahler.EntriesMonth) : zahler.EntriesMonth;
+        var woche = vomJob ? Limits.FuerJob(kw) : kw;
+        var monat = vomJob ? Limits.FuerJob(km) : km;
         if (woche > 0 && stand.Woche >= woche) { _stand[zahlerKey] = stand; return true; }
         if (monat > 0 && stand.Monat >= monat) { _stand[zahlerKey] = stand; return true; }
         _stand[zahlerKey] = (heute, stand.Woche + 1, stand.Monat + 1);      // dieser Eintrag zählt gleich mit

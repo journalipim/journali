@@ -134,6 +134,9 @@ public static class Auth
         if (path.StartsWith("/api/jobs") && (path.EndsWith("/uebergabe") || path.EndsWith("/pause") || path.EndsWith("/resume"))) return Rights.Write;   // einen Import abgeben und anhalten ist Pflege, kein Jobbau
         if (path.StartsWith("/api/jobs") && path.EndsWith("/signal")) return Rights.Read;   // der Lauf fragt selbst, ob er warten soll
         if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
+        if (path.StartsWith("/api/restore") || path.StartsWith("/api/backup") || path.StartsWith("/api/mail")) return Rights.Users;   // Systemsache, auch lesend
+        if (path.StartsWith("/api/licence") && !read) return Rights.Users;   // einspielen, Schlüssel einlösen
+        if (path.StartsWith("/api/licence/requests")) return Rights.Users;     // Anforderungen, auch lesend
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)
         if (path.StartsWith("/api/model")) return Rights.Model;
@@ -142,7 +145,6 @@ public static class Auth
         if (path.StartsWith("/api/plugins") && !path.Contains("/data/") && !path.EndsWith("/data") && !path.EndsWith("/run")) return Rights.Plugins;   // Plugin-Daten (auch der Sammel-PUT …/data) sind Pflege
         // Wiederherstellen aus einer Sicherung ist Systemsache (Taloan, 23.09.2026: „ein Restore muss nicht regelmässig
         // ausgeführt werden und ist eine Systemsache“) — nicht zu verwechseln mit dem Zurückholen eines Knotens
-        if (path.StartsWith("/api/restore") || path.StartsWith("/api/backup") || path.StartsWith("/api/mail")) return Rights.Users;
         // Rückgängig am Knoten schreibt einen Wert zurück — das darf, wer pflegen darf (der Stapel-Undo bleibt Rückzug)
         if (path.StartsWith("/api/nodes/") && path.EndsWith("/undo")) return Rights.Write;
         if (path.Contains("/retire") || path.Contains("/restore") || path.Contains("/undo") || (method == "DELETE" && path.StartsWith("/api/nodes/") && path.Count(ch => ch == '/') == 3)) return Rights.Retire;
@@ -165,14 +167,16 @@ public static class Auth
         if (wer is not { Length: > 0 } w || c.Users.All.GetValueOrDefault(w) is not { } u) return true;
         if (string.IsNullOrEmpty(u.Team)) return false;
         if (c.Teams.Get(c.Teams.Payer(u.Team!)) is not { } zahler) return false;
-        var woche = fuerJob ? Limits.FuerJob(zahler.EntriesWeek) : zahler.EntriesWeek;
-        var monat = fuerJob ? Limits.FuerJob(zahler.EntriesMonth) : zahler.EntriesMonth;
-        if (woche <= 0 && monat <= 0) return false;
         var heute = DateOnly.FromDateTime(DateTime.Now);
+        var (kw, km) = c.Teams.LimitAt(zahler.Key, heute);
+        var woche = fuerJob ? Limits.FuerJob(kw) : kw;
+        var monat = fuerJob ? Limits.FuerJob(km) : km;
+        if (woche <= 0 && monat <= 0) return false;
+        var ab = c.Teams.CountFrom(zahler.Key, c.ZaehltAb);
         var leute = c.Teams.Dependents(c.Teams.Payer(u.Team!)).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
         return c.ReadUsage(usage =>
-            (woche <= 0 || usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), c.ZaehltAb), heute) < woche)
-            && (monat <= 0 || usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), c.ZaehltAb), heute) < monat));
+            (woche <= 0 || usage.Sum(leute, Usage.Ab(Usage.WeekStart(heute), ab), heute) < woche)
+            && (monat <= 0 || usage.Sum(leute, Usage.Ab(Usage.MonthStart(heute), ab), heute) < monat));
     });
 
     /// <summary>Die Sperre: vor allem unter /api. Ohne Benutzer offen (X-Actor wie bisher); sonst Sitzung/Token nötig, X-Actor wird gesetzt.</summary>

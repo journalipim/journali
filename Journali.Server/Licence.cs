@@ -77,16 +77,25 @@ public static class LicenceFile
     public static void Save(string dir, Licence lic) { Directory.CreateDirectory(dir); File.WriteAllText(PathOf(dir), JsonSerializer.Serialize(lic, Licence.Json)); }
 
     /// <summary>Signatur prüfen — nur, wenn ein öffentlicher Schlüssel hinterlegt ist. Ohne ihn: gelesen, aber ungeprüft.</summary>
-    private static (bool Ok, string? Grund) Pruefe(Licence lic)
+    private static (bool Ok, string? Grund) Pruefe(Licence lic) => Signatur.Pruefe(lic.Rumpf, lic.Sig);
+}
+
+/// <summary>
+/// Eine Prüfung für alles, was der Lizenzgeber ausstellt — Lizenz und Schlüssel (Taloan, 23.09.2026). Nur, wenn ein
+/// öffentlicher Schlüssel hinterlegt ist (<c>JOURNALI_LICENCE_KEY</c>); ohne ihn: gelesen, aber ungeprüft.
+/// </summary>
+public static class Signatur
+{
+    public static (bool Ok, string? Grund) Pruefe(string rumpf, string? sig)
     {
         var pub = Environment.GetEnvironmentVariable("JOURNALI_LICENCE_KEY");
         if (string.IsNullOrWhiteSpace(pub)) return (false, "ungeprüft — kein öffentlicher Schlüssel hinterlegt");
-        if (string.IsNullOrWhiteSpace(lic.Sig)) return (false, "keine Signatur in der Lizenz");
+        if (string.IsNullOrWhiteSpace(sig)) return (false, "keine Signatur");
         try
         {
             using var ecdsa = ECDsa.Create();
             ecdsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(pub), out _);
-            return ecdsa.VerifyData(Encoding.UTF8.GetBytes(lic.Rumpf), Convert.FromBase64String(lic.Sig), HashAlgorithmName.SHA256)
+            return ecdsa.VerifyData(Encoding.UTF8.GetBytes(rumpf), Convert.FromBase64String(sig), HashAlgorithmName.SHA256)
                 ? (true, null) : (false, "Signatur passt nicht");
         }
         catch (Exception e) { return (false, "Signatur nicht prüfbar: " + e.Message); }

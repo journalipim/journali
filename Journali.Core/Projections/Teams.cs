@@ -29,12 +29,25 @@ public sealed class TeamState
     /// <summary>Limits, die der Administrator aus der Lizenz verteilt: Einträge je Woche und Monat (0 = keine Zuteilung).</summary>
     public int EntriesWeek { get; set; }
     public int EntriesMonth { get; set; }
+    /// <summary>Ab wann dieses Team zählt — gesetzt von einem Reset-Schlüssel (null = wie die Instanz).</summary>
+    public DateOnly? ResetAt { get; set; }
+    /// <summary>Die eingelösten Limit-Schlüssel dieses Teams, in der Reihenfolge des Einlösens.</summary>
+    public List<LimitWindow> Windows { get; } = new();
     /// <summary>Nummer des Eintrags, der das Team zuerst angelegt hat — daran hängt, wer „Team 1“ ist.</summary>
     public long CreatedNumber { get; set; }
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
     public string LastActor { get; set; } = "";
 }
+
+/// <summary>Ein eingelöster Limit-Schlüssel: von–bis (eingeschlossen), was er zusichert, und welcher Schlüssel es war.</summary>
+public sealed record LimitWindow(string Key, DateOnly From, DateOnly Until, int Week, int Month, long Number)
+{
+    public bool Gilt(DateOnly d) => From <= d && d <= Until;
+}
+
+/// <summary>Ein eingelöster Schlüssel, wie ihn die Übersicht zeigt.</summary>
+public sealed record Redemption(string Id, string Kind, string Team, DateOnly From, DateOnly? Until, int Week, int Month, int Days, int Carried, string Actor, DateTimeOffset At);
 
 /// <summary>Ein Tag KI: Aufrufe und das gemessene Volumen, aufgeschlüsselt nach Anbieter, Person und Anlass.
 /// <see cref="In"/> und <see cref="Out"/> sind die Tokenzahlen alter Einträge — sie wachsen nicht mehr und werden
@@ -65,6 +78,7 @@ public sealed class Teams : IProjection
     public const string UsageStream = "ai-usage:";
     private readonly Dictionary<string, TeamState> _all = new();
     private readonly Dictionary<string, Dictionary<string, UsageDay>> _usage = new();   // Team → Tag (yyyy-MM-dd) → Verbrauch
+    private readonly Dictionary<string, Redemption> _eingeloest = new();              // Schlüssel-Id → Einlösung (einmal je Schlüssel)
     public long LastApplied { get; private set; }
     public IReadOnlyDictionary<string, TeamState> All => _all;
     public TeamState? Get(string key) => _all.GetValueOrDefault(key);
@@ -103,6 +117,34 @@ public sealed class Teams : IProjection
     public bool Leads(string team, string? user) => user is { Length: > 0 } u && _all.GetValueOrDefault(team)?.Managers.Contains(u) == true;
     /// <summary>Die Teams, die diese Person führt.</summary>
     public IEnumerable<TeamState> Led(string? user) => user is { Length: > 0 } u ? _all.Values.Where(t => t.Managers.Contains(u)) : [];
+
+    /// <summary>Ist dieser Schlüssel schon eingelöst? Ein Schlüssel gilt einmal, egal für welches Team.</summary>
+    public bool Eingeloest(string id) => _eingeloest.ContainsKey(id);
+    /// <summary>Alle Einlösungen, neueste zuerst.</summary>
+    public IEnumerable<Redemption> Einloesungen => _eingeloest.Values.OrderByDescending(r => r.At);
+
+    /// <summary>
+    /// Das Kontingent eines Teams an einem Tag: das zugeteilte, angehoben durch einen Limit-Schlüssel, der an dem Tag
+    /// gilt. Gelten mehrere, zählt der zuletzt eingelöste — sein Zeitraum enthält schon das Restvolumen des vorigen.
+    /// Ein Schlüssel hebt an, er senkt nie: gilt je Woche und Monat der höhere Wert.
+    /// </summary>
+    public (int Week, int Month) LimitAt(string team, DateOnly d)
+    {
+        if (_all.GetValueOrDefault(team) is not { } t) return (0, 0);
+        var w = t.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault();
+        return w is null ? (t.EntriesWeek, t.EntriesMonth) : (Math.Max(t.EntriesWeek, w.Week), Math.Max(t.EntriesMonth, w.Month));
+    }
+
+    /// <summary>Der Limit-Schlüssel, der an diesem Tag gilt — für die Umrechnung beim nächsten Einlösen.</summary>
+    public LimitWindow? WindowAt(string team, DateOnly d) =>
+        _all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault();
+
+    /// <summary>Ab wann dieses Team zählt: der spätere von Instanz-Zählbeginn und eigenem Reset.</summary>
+    public DateOnly? CountFrom(string team, DateOnly? instanz)
+    {
+        var r = _all.GetValueOrDefault(team)?.ResetAt;
+        return r is { } a && (instanz is not { } b || a > b) ? a : instanz;
+    }
 
     /// <summary>Verbrauch eines Tages (leer = nichts verbraucht).</summary>
     public UsageDay Day(string team, DateOnly day) => _usage.TryGetValue(team, out var d) && d.TryGetValue(day.ToString("yyyy-MM-dd"), out var u) ? u : new UsageDay();
@@ -148,6 +190,17 @@ public sealed class Teams : IProjection
             case Types.TeamRetired:
                 _all.Remove(key);   // der Verbrauch bleibt stehen — er ist eine Tatsache, kein Stammdatum
                 break;
+            case Types.KeyRedeemed:
+            {
+                var k = Types.Deserialize<KeyRedeemed>(entry.Payload);
+                // eingelöst ist eingelöst — auch wenn das Team später verschwindet
+                _eingeloest[k.Id] = new Redemption(k.Id, k.Kind, key, k.From, k.Until, k.EntriesWeek, k.EntriesMonth, k.Days, k.Carried, entry.Actor, entry.At);
+                if (_all.GetValueOrDefault(key) is not { } t) break;
+                if (k.Kind == Schluessel.Reset) t.ResetAt = t.ResetAt is { } vorher && vorher > k.From ? vorher : k.From;
+                else if (k.Kind == Schluessel.Limit && k.Until is { } bis) t.Windows.Add(new LimitWindow(k.Id, k.From, bis, k.EntriesWeek, k.EntriesMonth, entry.Number));
+                t.LastNumber = entry.Number; t.LastAt = entry.At; t.LastActor = entry.Actor;
+                break;
+            }
         }
     }
 }

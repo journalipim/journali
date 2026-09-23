@@ -12,8 +12,51 @@ const roh = ref('')
 const said = ref('')
 const darf = () => store.can('users')
 
-async function load() { try { lic.value = await api.get('/api/licence') } catch (e) { store.toast(e.message) } }
+async function load() {
+  try { lic.value = await api.get('/api/licence') } catch (e) { store.toast(e.message) }
+  if (!darf()) return
+  try {
+    const [a, e, t] = await Promise.all([api.get('/api/licence/requests'), api.get('/api/licence/keys'), api.get('/api/teams')])
+    anforderungen.value = a; einloesungen.value = e
+    teams.value = t.filter(x => (x.payer ?? x.key) === x.key)   // eingelöst wird beim Team, das sein Kontingent selbst trägt
+    if (!teams.value.some(x => x.key === team.value)) team.value = teams.value[0]?.key ?? ''
+  } catch (e) { store.toast(e.message) }
+}
 onMounted(load)
+
+// Schlüssel (Taloan, 23.09.2026): die Instanz fordert an und signiert, der Shop gibt frei, der Aussteller stellt aus —
+// eingelöst wird nur, was hier angefordert wurde. Auf Vorrat und ohne Team; das Team wählt die IT beim Einlösen.
+const anforderungen = ref([])
+const einloesungen = ref([])
+const teams = ref([])
+const neu = ref({ kind: 'reset', entriesWeek: 0, entriesMonth: 0, days: 30, count: 1 })
+const angefordert = ref('')
+const schluessel = ref('')
+const team = ref('')
+const saidKey = ref('')
+
+async function anfordern() {
+  try {
+    const r = await api.post('/api/licence/requests', neu.value)
+    angefordert.value = r.length === 1 ? r[0].text : '[' + r.map(x => x.text).join(',\n') + ']'
+    saidKey.value = `✓ ${r.length} angefordert`
+    await load()
+  }
+  catch (e) { saidKey.value = '✗ ' + e.message }
+}
+
+async function einloesen() {
+  if (!schluessel.value.trim() || !team.value) return
+  try {
+    const r = await api.post('/api/licence/keys', { key: schluessel.value.trim(), team: team.value })
+    schluessel.value = ''
+    saidKey.value = (r.until ? `✓ ${r.id} bis ${r.until}` : `✓ ${r.id} ab ${r.from}`) + (r.carried ? ` · +${r.carried} Tage` : '') + (r.geprueft ? '' : ` · ${r.grund ?? ''}`)
+    await load(); await store.poll(true)
+    emit('eingespielt')
+  }
+  catch (e) { saidKey.value = '✗ ' + e.message }
+}
+const art = k => k === 'reset' ? '↺' : '⇡'
 const zahl = n => (n ?? 0).toLocaleString('de-DE')
 
 async function einspielen() {
@@ -64,6 +107,58 @@ async function kopiere(text) {
         <button class="primary" @click="einspielen">⚿ Einspielen</button>
         <span class="muted" style="font-size:12px">{{ said }}</span>
       </div>
+    </div>
+
+    <div v-if="darf()" class="schluessel" style="margin-top:16px">
+      <h3>⚷ Schlüssel</h3>
+      <div class="row anfordern" style="gap:6px;flex-wrap:wrap;align-items:center">
+        <select v-model="neu.kind" title="Reset: das Team zählt ab dem Einlösen neu. Limit: höheres Kontingent für eine Dauer ab dem Einlösen.">
+          <option value="reset">↺ Reset</option>
+          <option value="limit">⇡ Limit</option>
+        </select>
+        <template v-if="neu.kind === 'limit'">
+          <label title="Token je Woche">▤ <input v-model.number="neu.entriesWeek" type="number" min="0" style="width:90px" /></label>
+          <label title="Token je Monat">▦ <input v-model.number="neu.entriesMonth" type="number" min="0" style="width:90px" /></label>
+          <label title="Laufzeit in Tagen ab dem Einlösen">◷ <input v-model.number="neu.days" type="number" min="1" style="width:60px" /></label>
+        </template>
+        <label title="Anzahl Anforderungen">× <input v-model.number="neu.count" type="number" min="1" max="20" style="width:50px" /></label>
+        <button @click="anfordern" title="Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren">⚷ Anfordern</button>
+      </div>
+      <div v-if="angefordert" class="row" style="gap:6px;margin-top:4px;align-items:flex-start">
+        <textarea class="angefordert mono" readonly rows="3" style="width:100%;max-width:640px" :value="angefordert"></textarea>
+        <button class="x" title="Anforderung kopieren" @click="kopiere(angefordert)">⧉</button>
+      </div>
+
+      <table v-if="anforderungen.length" class="grid anforderungen" style="width:auto;margin-top:8px"><thead><tr>
+        <th>Id</th><th title="Art">⚷</th><th title="Token je Woche">▤</th><th title="Token je Monat">▦</th><th title="Tage">◷</th><th>erstellt</th><th>Stand</th><th></th>
+      </tr></thead><tbody>
+        <tr v-for="a in anforderungen" :key="a.id">
+          <td class="mono">{{ a.id }}</td><td :title="a.kind">{{ art(a.kind) }}</td>
+          <td class="mono">{{ a.kind === 'limit' ? zahl(a.week) : '' }}</td><td class="mono">{{ a.kind === 'limit' ? zahl(a.month) : '' }}</td>
+          <td class="mono">{{ a.kind === 'limit' ? a.days : '' }}</td>
+          <td class="mono">{{ String(a.created).slice(0, 10) }}</td>
+          <td><span v-if="a.team" class="pos" :title="'eingelöst für ' + a.teamLabel">✓ {{ a.teamLabel }}</span><span v-else class="muted" title="angefordert, noch nicht eingelöst">● offen</span></td>
+          <td><button v-if="!a.team" class="x" title="Anforderung kopieren" @click="kopiere(a.text)">⧉</button></td>
+        </tr>
+      </tbody></table>
+
+      <div class="row einloesen" style="gap:6px;margin-top:8px;align-items:flex-start">
+        <textarea v-model="schluessel" rows="3" style="width:100%;max-width:520px" placeholder='{"id":"k-…","kind":"…","request":"…",…}'></textarea>
+        <select v-model="team" title="Team, das den Schlüssel bekommt">
+          <option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option>
+        </select>
+        <button class="primary" :disabled="!schluessel.trim() || !team" @click="einloesen">⚿ Einlösen</button>
+      </div>
+      <div class="muted said-key" style="font-size:12px;margin-top:4px">{{ saidKey }}</div>
+
+      <table v-if="einloesungen.length" class="grid einloesungen" style="width:auto;margin-top:8px"><thead><tr>
+        <th>Id</th><th title="Art">⚷</th><th>Team</th><th>ab</th><th>bis</th><th title="Tage aus einem laufenden Limit übernommen">+◷</th>
+      </tr></thead><tbody>
+        <tr v-for="e in einloesungen" :key="e.id">
+          <td class="mono">{{ e.id }}</td><td :title="e.kind">{{ art(e.kind) }}</td><td>{{ e.teamLabel }}</td>
+          <td class="mono">{{ e.from }}</td><td class="mono">{{ e.until ?? '' }}</td><td class="mono">{{ e.carried || '' }}</td>
+        </tr>
+      </tbody></table>
     </div>
   </div>
 </template>

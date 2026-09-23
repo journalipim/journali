@@ -175,7 +175,11 @@ object? Nutzung(HttpRequest req, Catalog c)
     {
         // Ohne Anmeldung (offene Anlage) gilt die Lizenz
         if (string.IsNullOrEmpty(ich))
-            return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Instanz"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Instanz") });
+            return c.ReadUsage(u => new
+            {
+                week = Teil(u.Between(Usage.Ab(Usage.WeekStart(today), catalog.ZaehltAb), today), licences.Lic.EntriesWeek, woche, "Instanz"),
+                month = Teil(u.Between(Usage.Ab(Usage.MonthStart(today), catalog.ZaehltAb), today), licences.Lic.EntriesMonth, monat, "Instanz"),
+            });
         // Kein Team: Kontingent 0 — die Balken stehen voll und rot, denn 0 ist sofort erreicht (Taloan, 23.09.2026)
         if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null)
             return c.ReadUsage(u => new
@@ -186,10 +190,12 @@ object? Nutzung(HttpRequest req, Catalog c)
         var zahler = c.Teams.Payer(mein);
         var zt = c.Teams.Get(zahler)!;
         var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();
+        var (kw, km) = c.Teams.LimitAt(zahler, today);
+        var ab = c.Teams.CountFrom(zahler, catalog.ZaehltAb);
         return c.ReadUsage(u => new
         {
-            week = Teil(u.Sum(leute, Usage.Ab(Usage.WeekStart(today), catalog.ZaehltAb), today), zt.EntriesWeek, woche, zt.Label),
-            month = Teil(u.Sum(leute, Usage.Ab(Usage.MonthStart(today), catalog.ZaehltAb), today), zt.EntriesMonth, monat, zt.Label),
+            week = Teil(u.Sum(leute, Usage.Ab(Usage.WeekStart(today), ab), today), kw, woche, zt.Label),
+            month = Teil(u.Sum(leute, Usage.Ab(Usage.MonthStart(today), ab), today), km, monat, zt.Label),
         });
     });
 }
@@ -208,8 +214,8 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
         today = today.ToString("yyyy-MM-dd"),
         head = c.Head,
         day = Part("day", u.Day(today), 0, today, today.AddDays(1)),   // ohne Grenze: nur die Zahl (Taloan, 22.09.2026)
-        week = Part("week", u.Week(today), licences.Lic.EntriesWeek, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
-        month = Part("month", u.Month(today), licences.Lic.EntriesMonth, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
+        week = Part("week", u.Between(Usage.Ab(Usage.WeekStart(today), c.ZaehltAb), today), licences.Lic.EntriesWeek, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
+        month = Part("month", u.Between(Usage.Ab(Usage.MonthStart(today), c.ZaehltAb), today), licences.Lic.EntriesMonth, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
         // daneben, was gar nicht zählt (Modell, Struktur, Kataloge, Betrieb) — zum Vergleich beim Messen
         all = new { day = u.Day(today, true), week = u.Week(today, true), month = u.Month(today, true) },
         history = history is null ? null : u.History(history, today, Math.Clamp(limit, 1, 400))
@@ -235,6 +241,7 @@ TransferApi.Map(api);   // Rohdaten eines Teilbaums hin und zurück (JSON, wiede
 RestoreApi.Map(api);   // Teilbaum aus einer Rohdaten-Datei zurueck (Einstellungen, kein Plugin — Taloan, 23.09.)
 BackupApi.Map(api, journal, dataDir, pluginDir);   // Vollsicherung: Journal, Medien, Zugänge, Plugins — zurück in ein leeres System (Taloan, 23.09.)
 MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail, Taloan 23.09.)
+LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz);   // Schlüssel: signiert anfordern, einlösen — Reset oder Limit, an die Instanz gebunden, einmal (Taloan, 23.09.)
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
 TeamApi.Map(api, jobDir);   // Teams (Taloan, 23.09.): Kostenstelle der KI — Schlüssel, Verbuchung, Führung
 AiApi.Map(api, jobDir);     // KI über den Server: Schlüssel des zahlenden Teams; begrenzt wird hier nichts

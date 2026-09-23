@@ -366,7 +366,7 @@ unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht 
 Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im
 Browser (Taloan, 21.09.2026).
 
-## Lizenz — `licence.json` im Datenverzeichnis
+## Lizenz — Tabelle `licence` in der Datenbank
 
 Die Grenzen dieser Anlage stehen in der Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“), nicht in der Hand
 des Administrators und schon gar nicht bei einem anderen Team:
@@ -399,5 +399,38 @@ Schlüssel der Anlage (`secrets.json` unter `licence`, ersatzweise `JOURNALI_AI_
 
 Echtheit: `sig` ist eine ECDSA-P-256-Signatur (SHA-256, Base64) über die Felder ohne `sig`. Geprüft wird sie, sobald
 `JOURNALI_LICENCE_KEY` den öffentlichen Schlüssel trägt (Base64, SubjectPublicKeyInfo); fehlt er, wird die Lizenz
-gelesen und als **ungeprüft** ausgewiesen — es wird nichts vorgetäuscht. Einspielen: ⚙ Einstellungen → 🔑 Lizenz
-(Recht `users`) oder die Datei hinlegen. Sie fährt in der Vollsicherung mit.
+gelesen und als **ungeprüft** ausgewiesen — es wird nichts vorgetäuscht. Einspielen: ⚙ Einstellungen → Teams →
+⚿ Lizenz (Recht `users`). Sie liegt verschlüsselt in der Tabelle `licence` und gilt nur für die Instanz, deren Kennung
+(`instance`, Tabelle `instanz`) sie nennt; eine `licence.json` von früher wird beim ersten Start übernommen und entfernt.
+Lizenz, Kennung und Anforderungen gehen **nicht** in die Vollsicherung — eine wiederhergestellte Instanz ist eine neue.
+
+### Schlüssel — Reset und Limit, signiert angefordert
+
+Zusätzlich zur Lizenz gibt es Schlüssel (Taloan, 23.09.2026), einmal einlösbar, an die Instanz gebunden, **ohne Team** —
+die zentrale IT legt sie auf Vorrat und wählt das Team beim Einlösen:
+
+| Art | Wirkung |
+|---|---|
+| `reset` | das Team zählt ab dem Einlösen neu (verschiebt nur seinen Zählbeginn, nie den der Instanz) |
+| `limit` | `entriesWeek`/`entriesMonth` für `days` Tage ab dem Einlösen; hebt an, senkt nie. Läuft schon eines, wird dessen **Restvolumen** in Tage des neuen umgerechnet und angehängt (`Schluessel.Bis`) |
+
+Beide sind kombinierbar; ein Limit überschreibt keinen Reset. Eingelöst wird beim Team, das sein Kontingent selbst
+trägt — wer über ein anderes abrechnet, bekommt den Schlüssel dort.
+
+Der Weg eines Schlüssels (Taloan: „PGP quasi“):
+
+1. **Anfordern** (⚷ Anfordern, Recht `users`): die Instanz schreibt die Anforderung — `id`, `kind`, Grenzen, `days`,
+   `instance`, `pub` — und signiert sie mit ihrem eigenen Schlüsselpaar (ECDSA P-256, entsteht mit der Kennung, liegt
+   verschlüsselt in `instanz.paar`). Heraus geht `{"anforderung": "<Rumpf als Text>", "sig": "<r‖s, Base64>"}`.
+   Der Rumpf reist als Text wie bei einer PGP-Klartextsignatur; geprüft wird er so, wie er dasteht.
+2. **Freigabe** durch den Shop: er signiert den Fingerabdruck (SHA-256 über den Rumpf, hex).
+3. **Ausstellen**: der Aussteller prüft die Signatur der Instanz (öffentlicher Schlüssel steht im Rumpf; beim ersten Mal
+   merkt er sich Kennung → Schlüssel) und die Freigabe, und stellt aus: `id` der Anforderung, `kind`, `instance`,
+   Grenzen, `days`, `issued`, `request` = Fingerabdruck, `sig` mit dem Lizenzschlüssel.
+4. **Einlösen** (⚿ Einlösen): die Instanz nimmt nur Schlüssel an, zu denen sie selbst eine Anforderung mit passendem
+   Fingerabdruck, eigener Kennung, eigenem öffentlichem Schlüssel und gleicher Art hat — und die noch nicht eingelöst
+   sind. Geschrieben wird `KeyRedeemed` im Strom des Teams; das Journal sagt, was eingelöst ist.
+
+Die Anforderungen liegen in der Tabelle `anforderung` (nicht im Journal: sie sind Sache dieser Instanz, nicht der Daten).
+Was die Signaturen nicht leisten: wer Datenbank und Programm besitzt, kann beides kopieren oder die Prüfung entfernen —
+sie machen Vervielfältigung zu einer bewussten Handlung statt zu einem Nebeneffekt.

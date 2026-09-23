@@ -138,6 +138,8 @@ public static class Types
     public const string TeamDefined = "TeamDefined";
     public const string TeamRetired = "TeamRetired";
     public const string AiUsed = "AiUsed";
+    /// <summary>Ein Lizenzschlüssel wurde für ein Team eingelöst (Strom <c>team:&lt;key&gt;</c>) — einmal je Schlüssel.</summary>
+    public const string KeyRedeemed = "KeyRedeemed";
     public const string RoleDefined = "RoleDefined";
     public const string RoleRetired = "RoleRetired";
 
@@ -675,6 +677,20 @@ public sealed record TeamDefined(string Label, string? Note = null, long Monthly
 // Team erstellen, und dazu muss er mindestens einen zum Teammanager machen, notfalls sich selbst. Der Teammanager kann
 // Benutzer seinem Team zufügen — aber nur Benutzer, die in keinem Team sind — und sie wieder entfernen.“
 public sealed record TeamRetired();
+
+/// <summary>
+/// Ein Schlüssel wurde eingelöst (Taloan, 23.09.2026: „ein Schlüssel erhält eine einmalig verwendbare Id — wenn die
+/// zentrale IT sich zehn Schlüssel auf Vorrat legt und bei Bedarf verteilt, darf da keine Teambindung eingeprägt
+/// sein, sondern nur eine Systembindung“). Das Team entscheidet sich erst hier, beim Einlösen.
+/// <para><paramref name="Kind"/>: <c>reset</c> — das Team zählt ab <paramref name="From"/> neu; <c>limit</c> — das
+/// Team hat von <paramref name="From"/> bis <paramref name="Until"/> (beide eingeschlossen) mindestens
+/// <paramref name="EntriesWeek"/>/<paramref name="EntriesMonth"/>. Beide Arten sind kombinierbar, und keine
+/// überschreibt die andere: ein Reset setzt nur den Zählbeginn, ein Limit nur das Kontingent (Taloan).</para>
+/// <para><paramref name="Until"/> ist schon umgerechnet: lief beim Einlösen ein anderer Limit-Schlüssel, ist sein
+/// Restvolumen in Tage dieses Schlüssels umgerechnet und angehängt (<paramref name="Carried"/>). So steht die Rechnung
+/// im Journal und nicht in einer Formel, die sich später ändern könnte.</para>
+/// </summary>
+public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly? Until = null, int EntriesWeek = 0, int EntriesMonth = 0, int Days = 0, int Carried = 0);
 
 /// <summary>Ein KI-Aufruf, wie er wirklich stattgefunden hat: Anbieter, Modell, Person, Token hin und zurück. Strom
 /// <c>ai-usage:&lt;team&gt;</c> — gezählt wird beim Team, das zahlt (also beim schlüsselführenden), damit die Rechnung stimmt.</summary>
