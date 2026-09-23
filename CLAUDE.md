@@ -55,8 +55,12 @@ stehen dort als solche markiert.
 - `Journali.Core` — net8.0, **keine NuGet-Pakete**, engine-frei: Journal,
   Einträge, Abbilder
 - `Journali.Sandbox` — Konsole zum Nachrechnen
-- `Journali.Server` — ASP.NET Core Minimal API, net8.0, einziges Paket
-  Npgsql: `PostgresJournal` hinter `IJournal`, `Catalog` als einziger
+- `Journali.Server` — ASP.NET Core Minimal API, net8.0; zwei Pakete, beide für
+  Protokolle, die man nicht selbst schreibt: **Npgsql** (Datenbank) und
+  **MailKit** (SMTP, seit 23.09. — `SmtpClient` aus .NET kann kein implizites TLS
+  auf 465, und bei vielen Hostern ist das der einzige Weg). Weitere Pakete sind
+  eine Entscheidung von Taloan, nicht eine Bequemlichkeit.
+  `PostgresJournal` hinter `IJournal`, `Catalog` als einziger
   Schreibpfad (Eintrag + Abbilder `ModelCatalog` und `Tree` unter einer
   Sperre), `ModelApi` und `TreeApi` unter `/api`, Oberfläche aus `wwwroot`;
   `docs/betrieb.md`, `docs/eintraege.md`

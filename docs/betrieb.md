@@ -211,6 +211,27 @@ des Betreibers, sondern Vertragspartner des Kunden). Übertragen werden die Date
 gewählten Knotens, nur auf Klick. Die Recherche im Internet (Anreicherung, Plugin `enrich`) nutzt
 das Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
 
+## Plugins im Container
+
+Das Image ist autark: es bringt alle Plugins mit, dazu die Pakete der beiden, die
+welche brauchen (`derive` mit sharp, `docs` mit pdfjs) und die Node-Binärdatei.
+Ein `docker run` allein genügt, nichts wird nachgeladen.
+
+`compose.yaml` legt zusätzlich `./plugins` vom Host darüber, damit ein Plugin ohne
+neues Image ausgetauscht werden kann. Ein Bind-Mount **überdeckt** aber alles
+darunter — auch die `node_modules` aus dem Image. Darum holen zwei benannte
+Volumes genau diese zwei Ordner zurück:
+
+```yaml
+- ./plugins:/app/plugins
+- journali-derive-modules:/app/plugins/derive/node_modules
+- journali-docs-modules:/app/plugins/docs/node_modules
+```
+
+Sie werden beim ersten Start aus dem Image gefüllt. Wer die Pakete eines Plugins
+erneuert, entfernt das zugehörige Volume (`docker volume rm journali-docs-modules`)
+und startet neu — dann kommen sie wieder aus dem Image.
+
 ## Mail
 
 Einstellungen → ✉ Mail: Server, Port, STARTTLS, Benutzer, Passwort, Absender.

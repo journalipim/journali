@@ -16,7 +16,12 @@ services:
     volumes:
       - journali-jobs:/data/jobs
       - ./plugins:/app/plugins
+      # ein Bind-Mount ueberdeckt auch die node_modules aus dem Image — diese zwei Plugins brauchen Pakete
+      - journali-derive-modules:/app/plugins/derive/node_modules
+      - journali-docs-modules:/app/plugins/docs/node_modules
     restart: unless-stopped
 
 volumes:
   journali-jobs:
+  journali-derive-modules:
+  journali-docs-modules:
