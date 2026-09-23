@@ -201,11 +201,26 @@ public sealed class Catalog
     /// </summary>
     public int LimitsAusLizenz()
     {
-        if (_teams.Primary is not { EntriesWeek: 0, EntriesMonth: 0 } leer) return 0;
         var lic = LicenceFile.Load(LicenceDir ?? "").Lic;
-        if (lic.EntriesWeek <= 0 && lic.EntriesMonth <= 0) return 0;
-        Apply(_journal.Append("system", Teams.Stream + leer.Key, Types.TeamDefined, Types.Serialize(
-            new TeamDefined(leer.Label, leer.Note, leer.MonthlyTokens, leer.DailyTokens, leer.Enabled, leer.KeysFrom, leer.IncludedTokens, leer.Managers, leer.Models, lic.EntriesWeek, lic.EntriesMonth))));
+        var n = 0;
+        // Das erste Team trägt die Limits der Anlage
+        if (_teams.Primary is { } erstes && (lic.EntriesWeek > 0 || lic.EntriesMonth > 0)
+            && (erstes.EntriesWeek != lic.EntriesWeek || erstes.EntriesMonth != lic.EntriesMonth))
+            n += Setze(erstes, lic.EntriesWeek, lic.EntriesMonth);
+        // Jedes weitere hat, was die Lizenz ihm zuschreibt — sonst nichts (es rechnet dann über ein anderes ab)
+        foreach (var t in _teams.All.Values)
+        {
+            if (_teams.Primary?.Key == t.Key) continue;
+            var soll = lic.Teams?.GetValueOrDefault(t.Key) ?? new TeamLimit();
+            if (t.EntriesWeek != soll.EntriesWeek || t.EntriesMonth != soll.EntriesMonth) n += Setze(t, soll.EntriesWeek, soll.EntriesMonth);
+        }
+        return n;
+    }
+
+    private int Setze(TeamState t, int woche, int monat)
+    {
+        Apply(_journal.Append("system", Teams.Stream + t.Key, Types.TeamDefined, Types.Serialize(
+            new TeamDefined(t.Label, t.Note, t.MonthlyTokens, t.DailyTokens, t.Enabled, t.KeysFrom, t.IncludedTokens, t.Managers, t.Models, woche, monat))));
         return 1;
     }
 

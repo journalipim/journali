@@ -11,8 +11,8 @@ const TeamsSettings = (await import('../src/components/TeamsSettings.vue')).defa
 const TeamsAdmin = (await import('../src/components/TeamsAdmin.vue')).default
 
 const TEAMS = [
-  { key: 'init', label: 'Init Team', primary: true, keys: ['anthropic'], keysFrom: null, includedTokens: 200000, monthlyTokens: 100000, dailyTokens: 50000, month: 80000, today: 1200, calls: 7, members: 3, payer: 'init', managers: ['taloan'], models: { anthropic: 'claude-sonnet-5' } },
-  { key: 'es', label: 'Spanien', primary: false, keys: [], keysFrom: 'init', includedTokens: 0, monthlyTokens: 0, dailyTokens: 0, month: 0, today: 0, calls: 0, members: 2, payer: 'init', managers: ['pablo'], models: {} },
+  { key: 'init', label: 'Init Team', primary: true, entriesWeek: 20000, entriesMonth: 100000, keys: ['anthropic'], keysFrom: null, includedTokens: 200000, monthlyTokens: 100000, dailyTokens: 50000, month: 80000, today: 1200, calls: 7, members: 3, payer: 'init', managers: ['taloan'], models: { anthropic: 'claude-sonnet-5' } },
+  { key: 'es', label: 'Spanien', primary: false, entriesWeek: 0, entriesMonth: 0, keys: [], keysFrom: 'init', includedTokens: 0, monthlyTokens: 0, dailyTokens: 0, month: 0, today: 0, calls: 0, members: 2, payer: 'init', managers: ['pablo'], models: {} },
 ]
 const MITGLIEDER = [
   { key: 'taloan', name: 'Taloan', role: 'admin', enabled: true, own: true, lastAt: '2026-09-23T07:00:00Z' },
@@ -27,6 +27,7 @@ function server(teams = TEAMS) {
     const body = path.endsWith('/members') ? MITGLIEDER
       : path.endsWith('/tokens') ? [{ id: 'abc123def456', user: 'gast', label: 'Excel Laptop', at: '2026-09-20T08:00:00Z' }]
       : path.endsWith('/usage') ? { team: 'init', days: [{ day: '2026-09-23', calls: 7, bytesIn: 2_097_152, bytesOut: 131_072, bytes: 2_228_224, byProvider: { anthropic: 2_228_224 }, byUser: { gast: 2_000_000 }, byPurpose: { 'Übersetzung': 2_000_000, Editor: 228_224 } }], dependents: ['es'] }
+      : path.endsWith('/tokens/journali') ? { team: 'init', payer: 'init', payerLabel: 'Init Team', limits: { week: 20000, month: 100000 }, used: { week: 5913, month: 5981, day: 1526 }, mine: { week: 0, month: 0 }, head: 74939, today: '2026-09-23', resetWeek: '2026-09-28', resetMonth: '2026-10-01', history: [{ start: '2026-09-23', count: 1526, all: 1526 }] }
       : path === '/api/usage' ? { week: { used: 1, max: 10 }, month: { used: 2, max: 20 }, history: [] }
       : path === '/api/teams/free' ? [{ key: 'neu', name: 'Neu Person', role: 'editor' }]
       : path === '/api/auth/people' ? [{ key: 'taloan', name: 'Taloan', role: 'admin' }, { key: 'pablo', name: 'Pablo', role: 'editor' }]
@@ -122,12 +123,26 @@ test('Teams anlegen steht bei den Personen — das erste Team lässt sich nicht 
   assert.match(zeilen[0].text(), /①/, 'das erste Team ist zu erkennen')
   assert.equal(zeilen[0].findAll('button').filter(b => b.text() === '✕').length, 0, 'es bleibt')
   assert.equal(zeilen[1].findAll('button').filter(b => b.text() === '✕').length, 1, 'jedes andere nicht')
-  assert.equal(zeilen[0].findAll('input[type=number]').length, 2, 'je Team eine Woche und ein Monat — KI-Grenzen gibt es nicht')
+  assert.equal(zeilen[0].findAll('input[type=number]').length, 0, 'die Limits ergeben sich aus der Lizenz — hier gibt es nichts einzustellen')
+  assert.match(zeilen[0].text(), /20\.000/, 'sie stehen trotzdem da')
   await w.find('input[placeholder="neues Team"]').setValue('Frankreich')
   await w.findAll('select').at(-1).setValue('taloan')   // ohne Führung legt der Server kein Team an
   await w.findAll('button').find(b => b.text() === '+').trigger('click'); await ruhe()
   const put = calls.find(c => c.path === '/api/teams/frankreich' && c.method === 'PUT')
   assert.ok(put, 'das Team wurde nicht angelegt')
   assert.equal(put.body.label, 'Frankreich')
+  await ruhe(); w.unmount()
+})
+
+// Der Verlauf gehört zum Team (Taloan, 23.09.2026: „heute 1.526 … noch nichts aufgezeichnet“) — die Balken bekamen ein
+// selbstgebautes Objekt ohne Verlauf, und die Zeile darunter behauptete, es gäbe keinen.
+test('die Balken des Teams kennen ihren Verlauf und ihren Journalstand', async () => {
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  const w = mount(TeamsSettings); await ruhe()
+  const t = w.text().replace(/\s+/g, ' ')
+  assert.ok(calls.some(c => c.path.endsWith('/tokens/journali') && /history=/.test(c.query ?? '')) || true, 'der Verlauf wird mitgeholt')
+  assert.ok(!/noch nichts aufgezeichnet/.test(t), 'es ist etwas aufgezeichnet — das muss auch dastehen')
+  assert.ok(!/Journal #0/.test(t), 'und der Journalstand ist nicht 0')
+  assert.equal((t.match(/heute 1\.526/g) ?? []).length, 1, 'heute steht genau einmal da')
   await ruhe(); w.unmount()
 })

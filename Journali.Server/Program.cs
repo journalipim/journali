@@ -151,8 +151,7 @@ object Nutzung(HttpRequest req, Catalog c)
         // Ohne Anmeldung (offene Anlage) gilt die Lizenz; wer angemeldet, aber in keinem Team ist, hat 0
         if (req.HttpContext.Items["user"] is not string wer || wer.Length == 0)
             return c.ReadUsage(u => new { week = Teil(u.Week(today), licences.Lic.EntriesWeek, woche, "Anlage"), month = Teil(u.Month(today), licences.Lic.EntriesMonth, monat, "Anlage") });
-        if (TeamApi.TeamOf(c, wer) is not { } mein || c.Teams.Get(mein) is null)
-            return c.ReadUsage(u => new { week = Teil(u.Sum(new HashSet<string> { wer }, Usage.WeekStart(today), today), 0, woche, "kein Team"), month = Teil(u.Sum(new HashSet<string> { wer }, Usage.MonthStart(today), today), 0, monat, "kein Team") });
+        if (TeamApi.TeamOf(c, wer) is not { } mein || c.Teams.Get(mein) is null) return null;   // kein Team, kein Kontingent, keine Balken
         var zahler = c.Teams.Payer(mein);
         var zt = c.Teams.Get(zahler)!;
         var leute = c.Teams.Dependents(zahler).SelectMany(x => c.Users.All.Values.Where(v => v.Team == x)).Select(v => v.Key).ToHashSet();

@@ -57,10 +57,10 @@ async function entfernen(t) {
       <thead>
         <tr>
           <th>Team</th>
-          <th title="Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus">★ Führung</th>
+          <th title="Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus">★ Teammanager</th>
           <th title="Woher die Token kommen: eigenes Kontingent oder das eines anderen Teams">Token</th>
-          <th title="journali-Token je Woche — aus der Lizenz">▤ Woche</th>
-          <th title="journali-Token je Monat — aus der Lizenz">▦ Monat</th>
+          <th class="num" title="journali-Token je Woche — aus der Lizenz, hier nicht einstellbar">▤ Woche ⊞</th>
+          <th class="num" title="journali-Token je Monat — aus der Lizenz, hier nicht einstellbar">▦ Monat ⊞</th>
           <th>👤</th><th></th>
         </tr>
       </thead>
@@ -87,8 +87,8 @@ async function entfernen(t) {
               <option v-for="z in teams.filter(x => x.key !== t.key)" :key="z.key" :value="z.key">über Team {{ z.label }}</option>
             </select>
           </td>
-          <td><input type="number" min="0" :value="t.entriesWeek" style="width:80px" @change="speichern(t, 'entriesWeek', Number($event.target.value))" /></td>
-          <td><input type="number" min="0" :value="t.entriesMonth" style="width:80px" @change="speichern(t, 'entriesMonth', Number($event.target.value))" /></td>
+          <td class="num mono" :class="t.entriesWeek ? '' : 'muted'">{{ n(t.entriesWeek) }}</td>
+          <td class="num mono" :class="t.entriesMonth ? '' : 'muted'">{{ n(t.entriesMonth) }}</td>
           <td class="muted" :title="`${t.members} im Team`">{{ t.members }}</td>
           <td><button v-if="!t.primary" class="x" title="Team entfernen" @click="entfernen(t)">✕</button></td>
         </tr>
@@ -96,7 +96,7 @@ async function entfernen(t) {
           <td><input v-model="neu" type="text" placeholder="neues Team" style="width:140px" @keydown.enter="anlegen" /></td>
           <td>
             <select v-model="neuManager" style="width:130px" title="Wer führt es? Notfalls du selbst.">
-              <option value="">— Führung —</option>
+              <option value="">— Teammanager —</option>
               <option v-for="p in leute" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
             </select>
           </td>
@@ -104,10 +104,10 @@ async function entfernen(t) {
         </tr>
       </tbody>
     </table>
-    <div v-if="lizenz" class="row mono" style="gap:14px;margin-top:6px;font-size:12px">
+    <div v-if="lizenz" style="display:flex;gap:16px;align-items:baseline;margin-top:6px;font-size:12px">
       <span class="muted">aus der Lizenz vergeben</span>
-      <span :class="zuviel ? 'neg' : ''" title="Summe der Kontingente aller Teams gegen die Lizenz">▤ {{ n(verteilt.week) }} / {{ n(lizenz.entriesWeek) }}</span>
-      <span :class="zuviel ? 'neg' : ''">▦ {{ n(verteilt.month) }} / {{ n(lizenz.entriesMonth) }}</span>
+      <span class="mono" :class="zuviel ? 'neg' : ''" title="Summe der Kontingente aller Teams gegen die Lizenz">▤ {{ n(verteilt.week) }} / {{ n(lizenz.entriesWeek) }} ⊞</span>
+      <span class="mono" :class="zuviel ? 'neg' : ''">▦ {{ n(verteilt.month) }} / {{ n(lizenz.entriesMonth) }} ⊞</span>
     </div>
   </div>
 </template>

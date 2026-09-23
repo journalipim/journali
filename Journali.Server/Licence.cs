@@ -29,6 +29,7 @@ public sealed record Licence(
     int EntriesMonth = 0,
     long AiTokensMonth = 0,
     long AiTokensDay = 0,
+    Dictionary<string, TeamLimit>? Teams = null,
     string? Sig = null)
 {
     /// <summary>Testbetrieb: was bis zur ersten Lizenz galt (Journali.Core Limits) — Einträge ja, KI nein.</summary>
@@ -39,6 +40,10 @@ public sealed record Licence(
     [JsonIgnore] public string Rumpf => JsonSerializer.Serialize(this with { Sig = null }, Json);
     internal static readonly JsonSerializerOptions Json = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 }
+
+/// <summary>Was ein einzelnes Team laut Lizenz darf (Taloan, 23.09.2026: „es kann entweder eigene Limits kaufen oder
+/// über ein anderes Team deren Limits mitnutzen“) — gekauft heisst: in der Lizenz genannt.</summary>
+public sealed record TeamLimit(int EntriesWeek = 0, int EntriesMonth = 0);
 
 public static class LicenceFile
 {

@@ -141,6 +141,8 @@ public static class Auth
         // Wiederherstellen aus einer Sicherung ist Systemsache (Taloan, 23.09.2026: „ein Restore muss nicht regelmässig
         // ausgeführt werden und ist eine Systemsache“) — nicht zu verwechseln mit dem Zurückholen eines Knotens
         if (path.StartsWith("/api/restore") || path.StartsWith("/api/backup") || path.StartsWith("/api/mail")) return Rights.Users;
+        // Rückgängig am Knoten schreibt einen Wert zurück — das darf, wer pflegen darf (der Stapel-Undo bleibt Rückzug)
+        if (path.StartsWith("/api/nodes/") && path.EndsWith("/undo")) return Rights.Write;
         if (path.Contains("/retire") || path.Contains("/restore") || path.Contains("/undo") || (method == "DELETE" && path.StartsWith("/api/nodes/") && path.Count(ch => ch == '/') == 3)) return Rights.Retire;
         if (path.Contains("/release") || path.StartsWith("/api/versions") || path.Contains("/versions")) return Rights.Release;
         return Rights.Write;

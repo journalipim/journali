@@ -24,7 +24,30 @@ public static class Undo
         var steps = new List<Step>();
         var skipped = new List<string>();
         var seen = new HashSet<string>();   // Strom|Typ|Achse — der erste Eintrag zählt
-        foreach (var e in entries)
+        foreach (var e in entries) Fuer(journal, model, tree, e, seen, steps, skipped);
+        return new Plan(steps, skipped, entries.FirstOrDefault()?.Actor, entries.FirstOrDefault()?.At, entries.Count);
+    }
+
+    /// <summary>
+    /// Der letzte rücknehmbare Schritt an einem Knoten (Taloan, 23.09.2026: „ich habe Name rausgelöscht, wollte das
+    /// rückgängig machen, geht aber nicht“) — aus dem Journal, nicht aus dem Browser. Der Strom wird rückwärts
+    /// gelesen, bis ein Eintrag dabei ist, den wir tragen; alles andere (Anlegen, Gruppen, Relationen) wird
+    /// übersprungen. Ein Rückgängig ist selbst ein Eintrag und damit wieder rücknehmbar.
+    /// </summary>
+    public static Plan LetzterAmKnoten(IJournal journal, ModelCatalog model, Tree tree, string stream)
+    {
+        foreach (var e in journal.ReadStream(stream).OrderByDescending(x => x.Number))
+        {
+            var steps = new List<Step>(); var skipped = new List<string>();
+            Fuer(journal, model, tree, e, new HashSet<string>(), steps, skipped);
+            if (steps.Count > 0) return new Plan(steps, [], e.Actor, e.At, 1);
+        }
+        return new Plan([], [], null, null, 0);
+    }
+
+    /// <summary>Was ein einzelner Eintrag rückgängig bedeutet — hängt den Schritt an oder vermerkt ihn als übersprungen.</summary>
+    private static void Fuer(IJournal journal, ModelCatalog model, Tree tree, Entry e, HashSet<string> seen, List<Step> steps, List<string> skipped)
+    {
         {
             switch (e.Type)
             {
@@ -81,7 +104,6 @@ public static class Undo
                     break;
             }
         }
-        return new Plan(steps, skipped, entries.FirstOrDefault()?.Actor, entries.FirstOrDefault()?.At, entries.Count);
     }
 
     /// <summary>Den Plan ausführen: neue Einträge im Stapel <paramref name="undo"/>. Liefert die Anzahl der geschriebenen Schritte.</summary>

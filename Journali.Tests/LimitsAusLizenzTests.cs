@@ -42,14 +42,15 @@ public class LimitsAusLizenzTests
     }
 
     [Fact]
-    public void Was_der_Administrator_selbst_gesetzt_hat_bleibt_stehen()
+    public void Die_Lizenz_gewinnt_auch_gegen_eingetippte_Werte()
     {
+        // „Es gibt hier nichts einzustellen! Die Limits ergeben sich aus der Lizenz“ (Taloan, 23.09.2026)
         var j = Altanlage();
         var c = new Catalog(j); c.Rebuild();
         c.With((_, _, write) => write("taloan", Teams.Stream + Model.InitTeam, Types.TeamDefined, new TeamDefined("Init Team", EntriesWeek: 500, EntriesMonth: 900), null));
         c.SeedMissing();
-        Assert.Equal(500, c.With((_, _, _) => c.Teams.Primary!.EntriesWeek));
-        Assert.Equal(900, c.With((_, _, _) => c.Teams.Primary!.EntriesMonth));
+        Assert.Equal(Limits.Week, c.With((_, _, _) => c.Teams.Primary!.EntriesWeek));
+        Assert.Equal(Limits.Month, c.With((_, _, _) => c.Teams.Primary!.EntriesMonth));
     }
 
     [Fact]

@@ -403,6 +403,7 @@ async function load() {
     rels.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/relations`)
     api.get(`/api/nodes/${encodeURIComponent(props.id)}/workflow`).then(w => { workflows.value = w }).catch(() => { workflows.value = [] })
     entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}`)).reverse()
+    ladeAusJournal()
   } catch (e) {
     if (e.message.startsWith('404')) router.push(router.currentRoute.value.path.startsWith('/pub') ? '/pub' : '/tree')   // Knoten weg: in derselben Ansicht bleiben (Taloan, 21.09.: „springt ganz raus“)
     else store.toast(e.message)
@@ -436,6 +437,11 @@ const nodeUrl = () => `/api/nodes/${encodeURIComponent(props.id)}`
 // woanders war; nie die drei Schritte eines anderen Knotens. Der Stapel liegt im Store, weil NodeView je Knoten neu gebaut
 // wird (:key=id). Ein Rückzug landet im Stapel des Vaters — dort steht man danach, dort holt ↶ ihn zurück.
 const stacksOf = id => (store.undo[id] ??= { history: [], redo: [] })
+// Was der Server am Knoten zurücknehmen würde — der Weg für alles, was vor dieser Sitzung geschah
+const ausJournal = ref(null)
+async function ladeAusJournal() {
+  try { ausJournal.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/undo`) } catch { ausJournal.value = null }
+}
 const history = computed(() => stacksOf(props.id).history)
 const redoStack = computed(() => stacksOf(props.id).redo)
 const setValue = (def, col, value, row = null) => {
@@ -465,7 +471,17 @@ async function redoRetire(h) {
     h.batch = r?.batch ?? null; store.toast(`${r?.retired ?? 1} Knoten zurückgezogen`, 'ok'); await tree.load(); router.push(h.parent ? `/tree/${h.parent}` : '/tree')
   } catch (e) { store.toast(e.message); stacksOf(h.parent ?? '').redo.push(h); stacksOf(h.parent ?? '').history.pop() }
 }
-function undo() { const h = history.value.pop(); if (!h) return; redoStack.value.push(h); h.kind === 'retire' ? undoRetire(h) : writeValue(h.def, h.col, h.before, h.row, h.node) }
+async function undoAusJournal() {
+  try {
+    const x = await api.post(`/api/nodes/${encodeURIComponent(props.id)}/undo`, {})
+    store.toast(x.what ?? 'zurückgenommen', 'ok'); await load(); await ladeAusJournal(); await store.poll(true)
+  } catch (e) { store.toast(e.message) }
+}
+function undo() {
+  const h = history.value.pop()
+  if (!h) { if (ausJournal.value?.possible) undoAusJournal(); return }
+  redoStack.value.push(h); h.kind === 'retire' ? undoRetire(h) : writeValue(h.def, h.col, h.before, h.row, h.node)
+}
 function redo() { const h = redoStack.value.pop(); if (!h) return; history.value.push(h); h.kind === 'retire' ? redoRetire(h) : writeValue(h.def, h.col, h.after, h.row, h.node) }
 const writeValue = (def, col, value, row = null, node = props.id) => command(() =>
   api.post(`/api/nodes/${encodeURIComponent(node)}/attributes`, def.multiple
@@ -745,7 +761,8 @@ function cellMenu(e, def, col, block) {
         <option v-if="node.status && node.hasStatus !== false && !store.status(node.status)" :value="node.status">{{ node.status }} (nicht im Modell)</option>
       </select>
       <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
-      <button class="x" @click="undo" :disabled="!history.length" :title="stepTitle(history[history.length - 1], '↶ Rückgängig', history.length, 'Strg+Z')">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
+      <button class="x" @click="undo" :disabled="!history.length && !ausJournal?.possible"
+        :title="history.length ? stepTitle(history[history.length - 1], '↶ Rückgängig', history.length, 'Strg+Z') : (ausJournal?.possible ? `${ausJournal.what}  (Strg+Z)` : 'nichts rückgängig zu machen')">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
       <button class="x" @click="redo" :disabled="!redoStack.length" :title="stepTitle(redoStack[redoStack.length - 1], '↷ Wiederholen', redoStack.length, 'Strg+Y', true)">↷<span v-if="redoStack.length" class="muted"> {{ redoStack.length }}</span></button>
       <button class="x" @click="retire" :title="node.children ? `mit ${countBelow(id)} Knoten darunter zurückziehen  (Entf im Baum)` : 'Knoten zurückziehen  (Entf im Baum)'">🗑</button>
     </div>

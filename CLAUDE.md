@@ -130,6 +130,10 @@ stehen dort als solche markiert.
   **Init Team** mit (`team:init`, `Model.InitTeam`): nicht löschbar, umbenennbar,
   trägt das Grundkontingent; der erste Administrator gehört hinein, und wer kein
   eigenes Team trägt, arbeitet dort.
+  **Die Limits ergeben sich aus der Lizenz** (Taloan, 23.09.: „es gibt hier nichts
+  einzustellen“) — nirgends ein Eingabefeld: das Init Team trägt die Limits der
+  Anlage, jedes weitere hat, was die Lizenz ihm namentlich zuschreibt (`teams` in
+  `licence.json`), sonst nichts; dann rechnet es über ein anderes Team ab.
   **Führen und dazugehören sind zweierlei** (Taloan, 23.09.): man kann Manager
   mehrerer Teams sein, aber **Mitglied nur eines** — der IT-Administrator von
   Südeuropa führt Spanien, Frankreich und Portugal und sitzt in Team Deutschland.

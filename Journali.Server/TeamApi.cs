@@ -66,8 +66,6 @@ public static class TeamApi
                     if (body.IncludedTokens is not null && body.IncludedTokens != cur.IncludedTokens) return Bad("Das Grundkontingent setzt der Administrator.");
                     if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Limits trägt der Administrator ein.");
                     if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Limits trägt der Administrator ein.");
-                    if (body.EntriesWeek is not null && body.EntriesWeek != cur.EntriesWeek) return Bad("Die Limits trägt der Administrator ein.");
-                    if (body.EntriesMonth is not null && body.EntriesMonth != cur.EntriesMonth) return Bad("Die Limits trägt der Administrator ein.");
                     if (body.KeysFrom is not null && Blank(body.KeysFrom) != cur.KeysFrom) return Bad("Woher die Schlüssel kommen, entscheidet der Administrator.");
                     if (body.Managers is not null) return Bad("Wer das Team führt, bestimmt der Administrator.");
                 }
@@ -96,10 +94,13 @@ public static class TeamApi
                     if (v is < 0) return Bad($"Grenze {n}: 0 oder mehr (0 = keine).");
                 var modelle = cur?.Models is { Count: > 0 } mm ? new Dictionary<string, string>(mm) : new Dictionary<string, string>();
                 foreach (var (a, m) in body.Models ?? new()) { if (string.IsNullOrWhiteSpace(m)) modelle.Remove(a); else modelle[a] = m!; }
+                // Die Limits ergeben sich aus der Lizenz (Taloan, 23.09.2026) — hier gibt es nichts einzustellen
+                if ((body.EntriesWeek is { } bw && bw != (cur?.EntriesWeek ?? 0)) || (body.EntriesMonth is { } bm && bm != (cur?.EntriesMonth ?? 0)))
+                    return Bad("Die Limits ergeben sich aus der Lizenz.");
                 var def = new TeamDefined(Blank(body.Label) ?? cur!.Label, body.Note is null ? cur?.Note : Blank(body.Note),
                     body.MonthlyTokens ?? cur?.MonthlyTokens ?? 0, body.DailyTokens ?? cur?.DailyTokens ?? 0,
                     body.Enabled ?? cur?.Enabled ?? true, keysFrom, included, managers, modelle,
-                    body.EntriesWeek ?? cur?.EntriesWeek ?? 0, body.EntriesMonth ?? cur?.EntriesMonth ?? 0);
+                    cur?.EntriesWeek ?? 0, cur?.EntriesMonth ?? 0);
                 write(actor, Teams.Stream + key, Types.TeamDefined, def, null);
                 foreach (var m in managers)
                     if (c.Users.All.GetValueOrDefault(m) is { Team: null } mu)
@@ -205,7 +206,7 @@ public static class TeamApi
 
         // Die journali-Token eines Teams: was seine Mitglieder geschrieben haben, gegen seine Limits. Rechnet es über
         // ein anderes Team ab, zählt alles dort zusammen (Taloan, 23.09.2026).
-        api.MapGet("/teams/{key}/tokens/journali", (string key, HttpRequest req, Catalog c) =>
+        api.MapGet("/teams/{key}/tokens/journali", (string key, HttpRequest req, Catalog c, string? history = null, int limit = 90) =>
         {
             if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
             return c.With((_, _, _) =>
@@ -232,6 +233,13 @@ public static class TeamApi
                         week = u.Sum(eigene, Usage.WeekStart(heute), heute),
                         month = u.Sum(eigene, Usage.MonthStart(heute), heute),
                     },
+                    head = c.Head,
+                    today = heute.ToString("yyyy-MM-dd"),
+                    resetWeek = Usage.WeekStart(heute).AddDays(7).ToString("yyyy-MM-dd"),
+                    resetMonth = Usage.MonthStart(heute).AddMonths(1).ToString("yyyy-MM-dd"),
+                    // Der Verlauf dieses Teams — ohne Angabe keiner, damit nichts umsonst gerechnet wird
+                    history = history is null ? null : u.History(leute, history, heute, Math.Clamp(limit, 1, 400))
+                        .Select(h => new { start = h.Start.ToString("yyyy-MM-dd"), count = h.Count, all = h.All }).ToList(),
                 }));
             });
         });

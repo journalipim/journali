@@ -37,10 +37,21 @@ const zahl = n => (n ?? 0).toLocaleString('de-DE')
 /// Anteil am Limit — 0 heisst: nichts zugeteilt, dann gibt es auch keinen Anteil
 /// Was UsageBars zeigt: die Zahlen dieses Teams gegen seine Limits — nicht die der ganzen Anlage
 const teamUsage = computed(() => jt.value && {
-  week: { used: jt.value.used?.week ?? 0, max: jt.value.limits?.week ?? 0 },
-  month: { used: jt.value.used?.month ?? 0, max: jt.value.limits?.month ?? 0 },
+  week: { used: jt.value.used?.week ?? 0, max: jt.value.limits?.week ?? 0, resetAt: jt.value.resetWeek },
+  month: { used: jt.value.used?.month ?? 0, max: jt.value.limits?.month ?? 0, resetAt: jt.value.resetMonth },
   day: { used: jt.value.used?.day ?? 0 },
+  today: jt.value.today,
+  head: jt.value.head,
 })
+const zeitraum = ref('day')      // Verlauf des Teams: Tag, Woche oder Monat
+const verlaufBusy = ref(false)
+async function ladeVerlauf(p = zeitraum.value) {
+  zeitraum.value = p
+  const k = gewaehlt.value; if (!k) return
+  verlaufBusy.value = true
+  try { jt.value = await api.get(`/api/teams/${encodeURIComponent(k)}/tokens/journali?history=${p}&limit=30`) } catch {}
+  finally { verlaufBusy.value = false }
+}
 
 /// Was noch zur Verfügung steht — nie unter 0
 const rest = zeitraum => Math.max(0, (jt.value?.limits?.[zeitraum] ?? 0) - (jt.value?.used?.[zeitraum] ?? 0))
@@ -65,7 +76,7 @@ async function details() {
   try { mitglieder.value = await api.get(`/api/teams/${p}/members`) } catch { mitglieder.value = [] }
   try { frei.value = await api.get('/api/teams/free') } catch { frei.value = [] }
   try { lizenz.value = await api.get('/api/licence') } catch { lizenz.value = null }
-  try { jt.value = await api.get(`/api/teams/${p}/tokens/journali`) } catch { jt.value = null }
+  try { jt.value = await api.get(`/api/teams/${p}/tokens/journali?history=${zeitraum.value}&limit=30`) } catch { jt.value = null }
   try { tage.value = (await api.get(`/api/teams/${p}/usage?days=14`)).days ?? [] } catch { tage.value = [] }
 }
 onMounted(load)
@@ -179,12 +190,12 @@ async function austragen(m) {
         <tr>
           <td class="muted" title="Was die Mitglieder in diesem Zeitraum geschrieben haben">Genutzt</td>
           <td class="mono muted">
-            ▤ {{ zahl(jt?.used?.week) }} · ▦ {{ zahl(jt?.used?.month) }} · heute {{ zahl(jt?.used?.day) }}
+            ▤ {{ zahl(jt?.used?.week) }} · ▦ {{ zahl(jt?.used?.month) }}
           </td>
           <td></td>
         </tr>
       </tbody></table>
-      <UsageBars v-if="jt" :usage="teamUsage" />
+      <UsageBars v-if="jt" :usage="teamUsage" :history="jt.history ?? []" :period="zeitraum" :busy="verlaufBusy" @period="ladeVerlauf" />
     </div>
 
     <div class="section">

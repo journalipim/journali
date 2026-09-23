@@ -158,6 +158,31 @@ public static class TreeApi
         });
         // Rückgängig je Aktion (Taloan): ein Stapel = eine Aktion (Rückzug, Tabellen-Sitzung, Import). Undo.cs plant die
         // Schritte (alter Wert je Achse, Status, Name, Platz, Wiederherstellen) und schreibt sie als neuen Stapel.
+        // Rückgängig am Knoten (Taloan, 23.09.2026): was zuletzt hier geändert wurde, aus dem Journal zurückholen.
+        // Der Stapel in der Oberfläche lebt nur in der Sitzung; das Journal weiss es auch danach noch.
+        api.MapGet("/nodes/{id}/undo", (string id, IJournal j, Catalog c) => c.With((model, tree, _) =>
+        {
+            if (!tree.Nodes.ContainsKey(id) && !tree.Retired.ContainsKey(id)) return Results.NotFound();
+            var plan = Undo.LetzterAmKnoten(j, model, tree, id);
+            return Results.Ok(new { possible = plan.Steps.Count > 0, what = plan.Steps.FirstOrDefault()?.What, plan.Actor, plan.At });
+        }));
+        api.MapPost("/nodes/{id}/undo", (string id, HttpRequest req, IJournal j, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            var undo = "b-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(4)).ToLowerInvariant();
+            return c.With((model, tree, write) =>
+            {
+                if (!tree.Nodes.ContainsKey(id) && !tree.Retired.ContainsKey(id)) return Results.NotFound();
+                var plan = Undo.LetzterAmKnoten(j, model, tree, id);
+                if (plan.Steps.Count == 0) return Bad("Hier gibt es nichts rückgängig zu machen.");
+                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, undo) };
+                var result = Undo.Run(plan, ctx, tree);
+                return result.Failed.Count > 0 && result.Done == 0
+                    ? Bad(string.Join(" · ", result.Failed))
+                    : Results.Ok(new { undone = result.Done, what = plan.Steps[0].What, batch = undo });
+            });
+        });
+
         api.MapPost("/batches/{batch}/undo", (string batch, HttpRequest req, IJournal j, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
