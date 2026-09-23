@@ -13,21 +13,23 @@ namespace Journali.Server;
 /// ein Job kann gar keine KI. Liegt der Schlüssel am Team, muss der Server fragen:
 /// <list type="bullet">
 /// <item>Der Schlüssel bleibt beim Server (Datenverzeichnis, nie im Journal, nie im Browser).</item>
-/// <item>Jeder Aufruf wird gezählt — beim <b>zahlenden</b> Team, mit Anbieter, Modell und Person (<c>AiUsed</c>).</item>
-/// <item>Begrenzt wird hier nichts: was ein Team verbraucht, zahlt es beim Anbieter (Taloan, 23.09.2026: „was jedes Team
-/// an KI-Tokens auf den Putz haut, ist journali völlig egal“). Gezählt wird trotzdem — sonst weiss niemand, wofür.</item>
-/// <item>Jobs können KI, weil sie ein Token haben und damit einen Benutzer — also ein Team.</item>
+/// <item>Jeder Aufruf wird festgehalten — beim <b>zahlenden</b> Team, mit Anbieter, Modell, Person und Anlass
+/// (<c>AiUsed</c>), dazu das <b>gemessene Volumen</b>: Bytes hin, Bytes zurück (Taloan, 23.09.2026).</item>
+/// <item>Keine Tokenzahl, keine Kosten, keine Umrechnung (Taloan, 23.09.2026: „was jedes Team an KI-Tokens auf den Putz
+/// haut, ist journali völlig egal“). Was journali sagt, hat journali selbst gemessen.</item>
+/// <item>Begrenzt wird hier nichts.</item>
+/// <item>Jobs können KI, weil sie ein Token haben und damit einen Anwender — also ein Team.</item>
 /// </list>
 /// Einen anderen Weg gibt es seit dem 23.09.2026 nicht mehr (Taloan: „wieso sind die KI-Schlüssel immer noch auf der
 /// Ich-Seite?“) — auch das Modell steht am Team, denn es bestimmt Kosten und Güte. Ohne Team: keine KI.
 /// </summary>
 public static class AiApi
 {
-    public sealed record AskBody(string? Provider, string? Model, string? System, string? User, int? MaxTokens, bool? Web, int? MaxSearches);
+    public sealed record AskBody(string? Provider, string? Model, string? System, string? User, int? MaxTokens, bool? Web, int? MaxSearches, string? Purpose);
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromMinutes(5) };
 
     /// <summary>Was die Anbieter sprechen — dieselben zwei wie im Browser (web/src/ai.js), hier serverseitig.</summary>
-    private static async Task<(string Text, List<object> Sources, int In, int Out)> Call(string provider, string key, string model, string? system, string user, int maxTokens, bool web, int maxSearches, CancellationToken ct)
+    private static async Task<(string Text, List<object> Sources, long BytesIn, long BytesOut)> Call(string provider, string key, string model, string? system, string user, int maxTokens, bool web, int maxSearches, CancellationToken ct)
     {
         using var req = new HttpRequestMessage();
         object body;
@@ -50,9 +52,13 @@ public static class AiApi
                 : (object)new { model, max_output_tokens = maxTokens, instructions = system, input = user };
         }
         req.Method = HttpMethod.Post;
-        req.Content = new StringContent(JsonSerializer.Serialize(body, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull }), Encoding.UTF8, "application/json");
+        // Gemessen wird, was wirklich über die Leitung geht: die Bytes des Anfrage-JSON und die der Antwort
+        var gesendet = JsonSerializer.Serialize(body, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+        var bytesIn = Encoding.UTF8.GetByteCount(gesendet);
+        req.Content = new StringContent(gesendet, Encoding.UTF8, "application/json");
         using var res = await Http.SendAsync(req, ct);
         var raw = await res.Content.ReadAsStringAsync(ct);
+        var bytesOut = Encoding.UTF8.GetByteCount(raw);
         using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(raw) ? "{}" : raw);
         var root = doc.RootElement;
         if (!res.IsSuccessStatusCode)
@@ -107,10 +113,14 @@ public static class AiApi
             if (team is null || c.Teams.Get(team) is not { } t) return Results.Ok(new { team = (string?)null, ready = false, reason = "kein Team" });
             var zahler = c.Teams.Payer(team); var zt = c.Teams.Get(zahler)!;
             var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahler)).Keys.Order().ToList();
+            var heute = DateOnly.FromDateTime(DateTime.Today);
+            var tag = c.Teams.Day(zahler, heute);
             return Results.Ok(new
             {
                 team, label = t.Label, payer = zahler, payerLabel = zt.Label, providers = keys, ready = t.Enabled && zt.Enabled && keys.Count > 0,
                 models = zt.Models,   // welches Modell je Anbieter gefragt wird
+                // Was journali selbst gemessen hat: Bytes hin und zurück. Keine Tokenzahl, keine Kosten.
+                volume = new { today = tag.Bytes, todayIn = tag.BytesIn, todayOut = tag.BytesOut, month = c.Teams.Month(zahler, heute.ToString("yyyy-MM")) },
             });
         }));
 
@@ -136,11 +146,12 @@ public static class AiApi
             var model = Blank(amTeam) ?? Blank(body.Model) ?? (provider == "anthropic" ? "claude-sonnet-5" : "gpt-5");
             try
             {
-                var (text, sources, tin, tout) = await Call(provider, key, model, Blank(body.System), frage, Math.Clamp(body.MaxTokens ?? 2000, 1, 64000), body.Web == true, Math.Clamp(body.MaxSearches ?? 5, 1, 20), ct);
+                var (text, sources, hin, zurueck) = await Call(provider, key, model, Blank(body.System), frage, Math.Clamp(body.MaxTokens ?? 2000, 1, 64000), body.Web == true, Math.Clamp(body.MaxSearches ?? 5, 1, 20), ct);
                 var heute = DateOnly.FromDateTime(DateTime.Today);
+                var anlass = Blank(body.Purpose);
                 c.With((_, _, write) => write(actor, Teams.UsageStream + zahler, Types.AiUsed,
-                    new AiUsed(provider, model, actor, tin, tout, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team), null));
-                return Results.Ok(new { text, sources, usage = new { @in = tin, @out = tout }, team, payer = zahler, provider, model });
+                    new AiUsed(provider, model, actor, 0, 0, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team, hin, zurueck, anlass), null));
+                return Results.Ok(new { text, sources, team, payer = zahler, provider, model });
             }
             catch (Exception e) { return Bad(e.Message); }
         });

@@ -134,7 +134,7 @@ async function mount(root, ctx) {
       const batch = todo.slice(i, i + 20); say(`✦ übersetze ${i + batch.length}/${todo.length} …`)
       try {
         const glossary = st.terms.filter(t => t.text?.[st.from] && t.text?.[st.to]).map(t => `${t.text[st.from]} = ${t.text[st.to]}`).slice(0, 200)
-        const out = await ai.ask({ system: `Du übersetzt Produktdaten von ${st.from} nach ${st.to}. Antworte nur mit JSON: ein Objekt {id: übersetzung}. HTML-Struktur beibehalten, Zahlen, Einheiten, Marken- und Produktnamen unverändert, keine Erklärungen.${glossary.length ? ' Glossar (verbindlich): ' + glossary.join('; ') : ''}`, user: JSON.stringify(Object.fromEntries(batch.map(u => [u.id, u.source]))), json: true, maxTokens: 4000 })
+        const out = await ai.ask({ system: `Du übersetzt Produktdaten von ${st.from} nach ${st.to}. Antworte nur mit JSON: ein Objekt {id: übersetzung}. HTML-Struktur beibehalten, Zahlen, Einheiten, Marken- und Produktnamen unverändert, keine Erklärungen.${glossary.length ? ' Glossar (verbindlich): ' + glossary.join('; ') : ''}`, user: JSON.stringify(Object.fromEntries(batch.map(u => [u.id, u.source]))), json: true, maxTokens: 4000, purpose: 'Übersetzung' })
         for (const u of batch) { const t = out?.[u.id]; if (typeof t === 'string' && t.trim()) { st.edited.set(u.id, t.trim()); if (u._ta) u._ta.value = t.trim(); n++ } }
       } catch (e) { store.toast(e.message); break }
     }

@@ -56,6 +56,6 @@ export async function rewrite({ instruction, current, html, label, locale, node 
     + (html ? 'Antworte nur mit HTML (erlaubt: p, ul, ol, li, b, i, h3, br), ohne Erklärung, ohne Code-Zäune.' : 'Antworte nur mit dem reinen Text, ohne Erklärung, ohne Anführungszeichen.')
   const user = `Feld: ${label || 'Text'}\n` + (f ? `Produkt: ${f.name}\nPfad: ${f.path}\nSchlüssel: ${f.keys}\nProduktdaten:\n${f.rows.join('\n')}\n\n` : '')
     + (current ? `Bisheriger Text:\n${current}\n\n` : '') + `Aufgabe: ${task}`
-  const out = await ai.ask({ system, user, maxTokens: 1500, temperature: 0.2 })
+  const out = await ai.ask({ system, user, maxTokens: 1500, temperature: 0.2, purpose: 'Editor' })
   return String(out).replace(/^```[a-z]*\n?|```$/g, '').trim()
 }

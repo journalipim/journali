@@ -95,16 +95,17 @@ export const ai = reactive({
   // Eine Frage, eine Antwort. json: true → die Antwort wird als JSON gelesen (Code-Zäune werden entfernt).
   // web: true → die KI darf im Internet suchen (Herstellerseiten, Datenblätter — Taloan, 20.09.: Daten fremder Produkte ergänzen);
   // die Quellen der Antwort stehen danach in lastSources. Kostet je Suche extra beim Anbieter.
-  async ask({ system = '', user, json = false, maxTokens = 2000, temperature = 0, web = false, maxSearches = 5 }) {
+  async ask({ system = '', user, json = false, maxTokens = 2000, temperature = 0, web = false, maxSearches = 5, purpose = '' }) {
     if (!this.server?.ready) throw new Error(this.server?.team ? `Für Team „${this.server.label ?? this.server.team}“ ist kein KI-Schlüssel hinterlegt` : 'Kein Team — ohne Team keine KI')
     this.busy++
     try {
       const anbieter = this.server.providers.includes(this.provider) ? this.provider : this.server.providers[0]
       const modell = this.server.models?.[anbieter]
-      const { text, sources } = await api.post('/api/ai/ask', { provider: anbieter, model: modell, system, user, maxTokens, web, maxSearches })
+      const { text, sources } = await api.post('/api/ai/ask', { provider: anbieter, model: modell, system, user, maxTokens, web, maxSearches, purpose })
         .then(r => ({ text: r.text, sources: r.sources ?? [] }))
       const seen = new Set(); this.lastSources = sources.filter(s => !seen.has(s.url) && seen.add(s.url))
       this.lastError = ''
+      this.loadState()   // das gemessene Volumen wächst — die Kennzahl oben zieht nach
       if (!json) return text
       const m = text.match(/```(?:json)?\s*([\s\S]*?)```/); const raw = (m ? m[1] : text).trim()
       try { return JSON.parse(raw) } catch { const o = raw.indexOf('{'), c = raw.lastIndexOf('}'); if (o >= 0 && c > o) { try { return JSON.parse(raw.slice(o, c + 1)) } catch {} } throw new Error('KI-Antwort war kein JSON: ' + raw.slice(0, 120)) }
@@ -115,7 +116,7 @@ export const ai = reactive({
   // Der Schlüssel des Teams antwortet? Eine winzige Anfrage über den Server.
   async test(providerKey = null) {
     const keep = this.provider; if (providerKey) this.provider = providerKey
-    try { const t = await this.ask({ user: 'Antworte nur mit dem Wort: ok', maxTokens: 16 }); return String(t).trim().toLowerCase().startsWith('ok') }
+    try { const t = await this.ask({ user: 'Antworte nur mit dem Wort: ok', maxTokens: 16, purpose: 'Probe' }); return String(t).trim().toLowerCase().startsWith('ok') }
     finally { this.provider = keep }
   },
 })

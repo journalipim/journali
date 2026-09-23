@@ -23,8 +23,9 @@ public class TeamTests
         });
         return c;
     }
-    private static void Verbrauch(Catalog c, string team, int tokens, string user = "taloan", string? fuer = null) =>
-        c.With((_, _, write) => write(user, Teams.UsageStream + team, Types.AiUsed, new AiUsed("anthropic", "claude-sonnet-5", user, tokens / 2, tokens - tokens / 2, 1, DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), fuer), null));
+    /// <summary>Ein KI-Aufruf mit gemessenem Volumen — hin die Hälfte, zurück der Rest (Taloan, 23.09.2026).</summary>
+    private static void Verbrauch(Catalog c, string team, int bytes, string user = "taloan", string? fuer = null, string? anlass = null) =>
+        c.With((_, _, write) => write(user, Teams.UsageStream + team, Types.AiUsed, new AiUsed("anthropic", "claude-sonnet-5", user, 0, 0, 1, DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), fuer, bytes / 2, bytes - bytes / 2, anlass), null));
 
     [Fact]
     public void Team_1_ist_das_zuerst_angelegte_und_traegt_das_Grundrauschen()
@@ -46,22 +47,26 @@ public class TeamTests
         c.With((_, _, write) => write("t", Teams.Stream + "fr", Types.TeamDefined, new TeamDefined("Frankreich", null, KeysFrom: Model.InitTeam), null));
         Verbrauch(c, Model.InitTeam, 1000, "pablo", fuer: "es");
         Verbrauch(c, Model.InitTeam, 500, "taloan");
-        Assert.Equal(1500, c.With((_, _, _) => c.Teams.Day(Model.InitTeam, DateOnly.FromDateTime(DateTime.Today)).Tokens));
-        Assert.Equal(0, c.With((_, _, _) => c.Teams.Day("es", DateOnly.FromDateTime(DateTime.Today)).Tokens));   // gezählt wird beim Zahler
+        Assert.Equal(1500, c.With((_, _, _) => c.Teams.Day(Model.InitTeam, DateOnly.FromDateTime(DateTime.Today)).Bytes));
+        Assert.Equal(0, c.With((_, _, _) => c.Teams.Day("es", DateOnly.FromDateTime(DateTime.Today)).Bytes));   // gemessen wird beim Zahler
     }
 
     [Fact]
-    public void Der_Verbrauch_sagt_wer_und_womit()
+    public void Das_Volumen_sagt_wer_womit_und_wofuer()
     {
         var c = World();
-        Verbrauch(c, Model.InitTeam, 1000, "pablo", fuer: "es");
-        Verbrauch(c, Model.InitTeam, 400, "taloan");
+        Verbrauch(c, Model.InitTeam, 1000, "pablo", fuer: "es", anlass: "uebersetzung");
+        Verbrauch(c, Model.InitTeam, 400, "taloan", anlass: "editor");
         var tag = c.With((_, _, _) => c.Teams.Day(Model.InitTeam, DateOnly.FromDateTime(DateTime.Today)));
         Assert.Equal(2, tag.Calls);
-        Assert.Equal(1400, tag.Tokens);
-        Assert.Equal(1000, tag.ByUser["pablo"]);          // die Rechnung ist nachvollziehbar, ohne dass jemand gesperrt wird
+        Assert.Equal(1400, tag.Bytes);
+        Assert.Equal(700, tag.BytesIn);                   // hin und zurück getrennt — journali misst beides selbst
+        Assert.Equal(700, tag.BytesOut);
+        Assert.Equal(0, tag.In);                          // Tokenzahlen des Anbieters schreibt journali nicht mehr
+        Assert.Equal(1000, tag.ByUser["pablo"]);
         Assert.Equal(400, tag.ByUser["taloan"]);
         Assert.Equal(1400, tag.ByProvider["anthropic"]);
+        Assert.Equal(1000, tag.ByPurpose["uebersetzung"]);
         Assert.Equal(1400, c.With((_, _, _) => c.Teams.Month(Model.InitTeam, DateTime.Today.ToString("yyyy-MM"))));
     }
 

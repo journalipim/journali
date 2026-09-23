@@ -8,6 +8,12 @@ import { plugins } from './plugins.js'
 import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 import { ai } from './ai.js'
 import UsageMini from './components/UsageMini.vue'
+
+/// Volumen in KB, MB, GB — journali misst Bytes, nichts anderes
+const kb = b => {
+  const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
+  return !b ? '0KB' : b >= 1073741824 ? z(b, 1073741824) + 'GB' : b >= 1048576 ? z(b, 1048576) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB'
+}
 const tok = n => n >= 1e6 ? (n / 1e6).toFixed(1).replace('.', ',') + 'M' : n >= 1000 ? Math.round(n / 1000) + 'k' : String(n)
 const route = useRoute()
 const router = useRouter()
@@ -110,6 +116,10 @@ function railDrop(target) {
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>
       <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings" class="muted" title="Nutzung anzeigen"><UsageMini :usage="store.usage" /></router-link></template>
+      <!-- KI-Austauschvolumen (Taloan, 23.09.2026): was journali hingeschickt und zurückbekommen hat — gemessen, nicht geschätzt -->
+      <template v-if="ai.server?.ready"><span class="sep">·</span><router-link to="/settings" class="muted"
+        title="KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt."
+        >KI {{ kb(ai.server.volume?.month) }}</router-link></template>
       <span class="grow" />
       <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" title="Neue Fassung der Oberfläche laden">↻ Neue Fassung</button>
       <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="'Rolle ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" title="abmelden">⏻</button></template>

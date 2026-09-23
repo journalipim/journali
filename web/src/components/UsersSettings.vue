@@ -53,7 +53,7 @@ onMounted(load)
   <div class="section" v-if="isAdmin()">
     <h2>👥 Anwender <span class="muted" title="Passwörter liegen beim Server (auth.json), nie im Journal.">· {{ users.length }}</span></h2>
     <table class="grid" style="width:100%">
-      <thead><tr><th style="width:120px">Anwender</th><th>Name</th><th>E-Mail</th><th style="width:80px">Rolle</th><th style="width:90px" title="Kostenstelle der KI: wessen Schlüssel gelten und auf wessen Rechnung es läuft">Team</th><th style="width:60px"></th><th style="width:150px">zuletzt</th><th style="width:130px"></th></tr></thead>
+      <thead><tr><th style="width:120px">Anwender</th><th>Name</th><th>E-Mail</th><th style="width:80px">Rolle</th><th style="width:90px" title="Wessen Schlüssel gelten und welchem Team die Nutzung zugeordnet wird">Team</th><th style="width:60px"></th><th style="width:150px">zuletzt</th><th style="width:130px"></th></tr></thead>
       <tbody>
         <tr v-for="u in users" :key="u.key" :class="{ off: !u.enabled }">
           <td class="mono">{{ u.key }}</td><td>{{ u.name }}</td><td class="muted">{{ u.email ?? '' }}</td><td :title="u.role">{{ roles.find(r => r.key === u.role)?.label || u.role }}</td>

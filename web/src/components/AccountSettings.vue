@@ -41,7 +41,7 @@ async function dropToken(t) { try { await api.del(`/api/auth/tokens/${t.id}`); a
   </div>
 
   <div class="section">
-    <h2>⚿ API-Token <span class="muted" title="Authorization: Bearer — nur beim Anlegen sichtbar. Ein Token arbeitet mit meinen Rechten und auf die Rechnung meines Teams.">· Excel-Add-in, OnlyOffice, Skripte</span></h2>
+    <h2>⚿ API-Token <span class="muted" title="Authorization: Bearer — nur beim Anlegen sichtbar. Ein Token arbeitet mit meinen Rechten; was damit geschrieben wird, ist meinem Team zugeordnet.">· Excel-Add-in, OnlyOffice, Skripte</span></h2>
     <div class="row" style="gap:6px;margin-bottom:6px">
       <input v-model="tokenLabel" type="text" placeholder="Bezeichnung (z. B. Excel Laptop)" style="width:260px" />
       <button class="primary" @click="makeToken">＋ Token</button>

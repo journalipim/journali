@@ -36,15 +36,22 @@ public sealed class TeamState
     public string LastActor { get; set; } = "";
 }
 
-/// <summary>Verbrauch eines Tages: Aufrufe und Token, aufgeschlüsselt nach Anbieter und Person.</summary>
+/// <summary>Ein Tag KI: Aufrufe und das gemessene Volumen, aufgeschlüsselt nach Anbieter, Person und Anlass.
+/// <see cref="In"/> und <see cref="Out"/> sind die Tokenzahlen alter Einträge — sie wachsen nicht mehr und werden
+/// nirgends ausgewertet (Taloan, 23.09.2026: journali äussert sich nicht zu fremden Tokens).</summary>
 public sealed class UsageDay
 {
     public long Calls { get; set; }
     public long In { get; set; }
     public long Out { get; set; }
+    /// <summary>Was journali hingeschickt hat, in Bytes.</summary>
+    public long BytesIn { get; set; }
+    /// <summary>Was zurückkam, in Bytes.</summary>
+    public long BytesOut { get; set; }
+    public long Bytes => BytesIn + BytesOut;
     public Dictionary<string, long> ByProvider { get; } = new();
     public Dictionary<string, long> ByUser { get; } = new();
-    public long Tokens => In + Out;
+    public Dictionary<string, long> ByPurpose { get; } = new();
 }
 
 /// <summary>
@@ -80,8 +87,8 @@ public sealed class Teams : IProjection
     /// <summary>Alle Tage eines Teams, neueste zuerst.</summary>
     public IEnumerable<(string Day, UsageDay Usage)> Days(string team) =>
         _usage.TryGetValue(team, out var d) ? d.OrderByDescending(kv => kv.Key).Select(kv => (kv.Key, kv.Value)) : [];
-    /// <summary>Summe eines Monats („2026-09“) in Token.</summary>
-    public long Month(string team, string yyyyMM) => Days(team).Where(x => x.Day.StartsWith(yyyyMM, StringComparison.Ordinal)).Sum(x => x.Usage.Tokens);
+    /// <summary>Volumen eines Monats („2026-09“) in Bytes — hin und zurück zusammen.</summary>
+    public long Month(string team, string yyyyMM) => Days(team).Where(x => x.Day.StartsWith(yyyyMM, StringComparison.Ordinal)).Sum(x => x.Usage.Bytes);
 
     public void Apply(Entry entry)
     {
@@ -95,10 +102,12 @@ public sealed class Teams : IProjection
             if (!_usage.TryGetValue(team, out var byDay)) _usage[team] = byDay = new();
             if (!byDay.TryGetValue(day, out var u)) byDay[day] = u = new UsageDay();
             u.Calls += Math.Max(1, d.Calls); u.In += d.In; u.Out += d.Out;
-            var t = d.In + d.Out;
+            u.BytesIn += d.BytesIn; u.BytesOut += d.BytesOut;
+            var t = d.BytesIn + d.BytesOut;   // aufgeschlüsselt wird das Volumen; alte Einträge tragen hier 0
             if (!string.IsNullOrEmpty(d.Provider)) u.ByProvider[d.Provider] = u.ByProvider.GetValueOrDefault(d.Provider) + t;
             var who = string.IsNullOrEmpty(d.User) ? entry.Actor : d.User;
             if (!string.IsNullOrEmpty(who)) u.ByUser[who] = u.ByUser.GetValueOrDefault(who) + t;
+            if (!string.IsNullOrEmpty(d.Purpose)) u.ByPurpose[d.Purpose] = u.ByPurpose.GetValueOrDefault(d.Purpose) + t;
             return;
         }
         if (!entry.Stream.StartsWith(Stream, StringComparison.Ordinal)) return;

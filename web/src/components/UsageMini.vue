@@ -1,20 +1,23 @@
 <script setup>
-// Nutzung in der Statusleiste (Taloan, 22.09.2026): zwei schmale Balken — Woche und Monat — neben dem KI-Verbrauch.
-// Zahlen aus /api/health (läuft ohnehin alle 3 s); Klick führt in die Einstellungen, wo Verlauf und Details stehen.
+// Verfügbare Limits in der Statusleiste (Taloan, 22.09.2026): zwei schmale Balken — Woche und Monat.
+// Gezeigt wird, was noch da ist (Taloan, 23.09.2026: „was verfügbar ist, ist gut“) — der Balken leert sich, statt zu
+// wachsen. Zahlen aus /api/health (läuft ohnehin alle 3 s); Klick führt in die Einstellungen.
 import { computed } from 'vue'
 
 const props = defineProps({ usage: Object })   // { week: {used,max}, month: {used,max} }
 const PARTS = [['week', '▤'], ['month', '▦']]
 const n = v => (v ?? 0).toLocaleString('de-DE')
-const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 100)) : 0
-const tone = p => pct(p) >= 85 ? 'neg' : pct(p) >= 60 ? 'warn' : 'pos'
+const frei = p => Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
+const pct = p => p?.max ? Math.max(0, Math.round((frei(p) / p.max) * 100)) : 0
+/// Viel verfügbar ist grün; wird es knapp, gelb; ist nichts mehr da, rot
+const tone = p => !p?.max ? '' : pct(p) <= 10 ? 'neg' : pct(p) <= 30 ? 'warn' : 'pos'
 const parts = computed(() => PARTS.map(([key, icon]) => ({ key, icon, p: props.usage?.[key] ?? null })))
 const label = key => key === 'week' ? 'Woche' : 'Monat'
 </script>
 
 <template>
   <span v-if="usage" class="usage-mini">
-    <span v-for="{ key, icon, p } in parts" :key="key" class="u" :title="`${label(key)}: ${n(p?.used)} von ${n(p?.max)} Einträgen (${pct(p)} %), zurück auf 0 am ${p?.resetAt ?? '—'}`">
+    <span v-for="{ key, icon, p } in parts" :key="key" class="u" :title="`${label(key)}: noch ${n(frei(p))} von ${n(p?.max)} verfügbar (${pct(p)} %), wieder voll am ${p?.resetAt ?? '—'}`">
       <span class="ico">{{ icon }}</span>
       <span class="track"><span class="fill" :class="tone(p)" :style="`width:${pct(p)}%`" /></span>
       <span class="mono pc" :class="tone(p)">{{ pct(p) }}%</span>

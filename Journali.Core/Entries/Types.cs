@@ -671,7 +671,14 @@ public sealed record TeamRetired();
 
 /// <summary>Ein KI-Aufruf, wie er wirklich stattgefunden hat: Anbieter, Modell, Person, Token hin und zurück. Strom
 /// <c>ai-usage:&lt;team&gt;</c> — gezählt wird beim Team, das zahlt (also beim schlüsselführenden), damit die Rechnung stimmt.</summary>
-public sealed record AiUsed(string Provider, string Model, string? User, int In, int Out, int Calls = 1, string? Day = null, string? OnBehalfOf = null);
+/// <summary>
+/// Ein KI-Aufruf, wie er stattgefunden hat. <paramref name="BytesIn"/> und <paramref name="BytesOut"/> sind das, was
+/// journali gemessen hat: die Bytes der Anfrage und der Antwort auf der eigenen Leitung (Taloan, 23.09.2026). Über
+/// Tokens und Kosten sagt journali nichts — <paramref name="In"/> und <paramref name="Out"/> trugen bis dahin die
+/// Tokenzahlen des Anbieters und bleiben nur deshalb stehen, weil ein Eintragstyp für immer ist; gefüllt werden sie
+/// nicht mehr. <paramref name="Purpose"/> sagt, welche Funktion gefragt hat.
+/// </summary>
+public sealed record AiUsed(string Provider, string Model, string? User, int In, int Out, int Calls = 1, string? Day = null, string? OnBehalfOf = null, long BytesIn = 0, long BytesOut = 0, string? Purpose = null);
 
 /// <summary>
 /// Was ein Benutzer für sich eingestellt hat (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“) — Darstellung,

@@ -96,6 +96,11 @@ stehen dort als solche markiert.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
   Tooltip — **ein sichtbarer Text ist höchstens ein Satz**, alles Weitere steht in
   `title=` (Prüfstand `sichtbare-texte.test.mjs`). Positiv grün, negativ rot.
+  **Grenzen stehen positiv da** (Taloan, 23.09.): „Verfügbare Limits“, nicht „Nutzung
+  gegen die Limits“; „verfügbarer Speicherplatz“, nicht „gemessen gegen die
+  Speicherplatzgrenze“. Balken zeigen, was noch da ist, und leeren sich; die grosse
+  Zahl ist der Rest, das Genutzte steht klein daneben. Angst macht eine Oberfläche
+  nirgends.
   **Einstellungen: ein Reiter je Sache** (Taloan, 23.09.): ◐ Ich (Darstellung, Sicht,
   dieser Rechner, mein Konto mit Passwort und **meinen API-Token** — die gehören zur
   Person, nicht zum Team) · ◍ Team (Mitglieder, KI-Schlüssel, journali-Token gegen die

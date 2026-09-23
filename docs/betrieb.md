@@ -200,16 +200,21 @@ und sagt es in der Konsole. Danach die Variable wieder entfernen.
 ## KI
 
 journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt
-(Taloan, 20.09.2026). Wer die KI-Funktionen nutzt (Datenqualität, DPP/PPWR/ETIM-Zuordnungen,
-Anreicherung, GEO-Texte, Editor), trägt unter ⚙ Einstellungen → KI je Anbieter seinen Schlüssel
-und das Modell ein und wählt, wen die Plugins fragen. Eingerichtet werden können (`web/src/ai.js`,
-`PROVIDERS`): **Anthropic** (`api.anthropic.com`) und **OpenAI** (`api.openai.com`); weitere sind
-ein Eintrag in dieser Liste. Schlüssel bleiben im Browser (localStorage), nie im Journal, nie auf
-dem Server. Die Anfragen gehen direkt aus dem Browser an den Anbieter — der Betreiber von journali
-ist an diesem Datenfluss nicht beteiligt (für Hosting: der Anbieter ist damit kein Unterauftragnehmer
-des Betreibers, sondern Vertragspartner des Kunden). Übertragen werden die Daten des jeweils
-gewählten Knotens, nur auf Klick. Die Recherche im Internet (Anreicherung, Plugin `enrich`) nutzt
-das Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
+(Taloan, 20.09.2026). Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis
+des Servers (`jobs/secrets.json` unter `team:<key>`), nie im Journal und nie im Browser. Gefragt wird
+über `POST /api/ai/ask`: der Server nimmt den Schlüssel des **zahlenden** Teams (`keysFrom`) und das
+dort eingetragene Modell. Ohne Team keine KI; dasselbe gilt für Jobs, die über ihr `JOURNALI_TOKEN`
+einen Anwender und damit ein Team haben. Eingerichtet werden können **Anthropic**
+(`api.anthropic.com`) und **OpenAI** (`api.openai.com`); weitere sind ein Eintrag in `AiApi.Call`.
+Der Anbieter bleibt Vertragspartner des Kunden — abgerechnet wird dort.
+
+**Über Tokens und Kosten sagt journali nichts** (Taloan, 23.09.2026: „wir machen keine Aussagen über
+fremd entstandene und verbrauchte Tokens + Kosten“). Was der Anbieter meldet, wird weder gespeichert
+noch angezeigt. Was journali sagt, hat journali selbst gemessen: das **KI-Austauschvolumen** in
+Bytes — was hingeschickt und was zurückgekommen ist. Es steht als Kennzahl in der Statuszeile
+(Monat, KB/MB/GB) und auf der Teamseite je Tag, aufgeschlüsselt nach Anlass (Editor, Übersetzung,
+Klassifikation, Prüfung, Geodaten). Begrenzt wird nichts. Die Recherche im Internet nutzt das
+Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
 
 ## Plugins im Container
 

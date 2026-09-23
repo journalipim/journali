@@ -359,7 +359,7 @@ Schlüssel, keine Grenze, keine KI; neue Benutzer stehen darum im Init Team.
 
 | Typ | Payload | Bedeutung |
 |---|---|---|
-| `AiUsed` | `provider`, `model`, `user?`, `in`, `out`, `calls`, `day?`, `onBehalfOf?` | ein Aufruf, wie er stattgefunden hat — gezählt beim **zahlenden** Team (`onBehalfOf` nennt das Team, für das gearbeitet wurde). Damit ist „wer zahlt“ eine Frage der Buchung, nicht der Sperre: am Monatsende steht da, was jede Kostenstelle verbraucht hat |
+| `AiUsed` | `provider`, `model`, `user?`, `in`, `out`, `calls`, `day?`, `onBehalfOf?`, `bytesIn`, `bytesOut`, `purpose?` | ein Aufruf, wie er stattgefunden hat — festgehalten beim **zahlenden** Team (`onBehalfOf` nennt das Team, für das gearbeitet wurde). `bytesIn`/`bytesOut` sind das **Austauschvolumen**: was journali an den Anbieter geschickt und von ihm zurückbekommen hat, selbst gemessen (Taloan, 23.09.2026). `in`/`out` trugen bis dahin die Tokenzahlen des Anbieters und bleiben nur stehen, weil ein Eintragstyp für immer ist — gefüllt werden sie nicht mehr |
 
 **API-Token am Team** (Taloan, 23.09.2026): ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung ihres
 Teams — darum sieht das Team, welche es gibt, und kann sie widerrufen (`GET`/`DELETE /api/teams/<key>/tokens[/<id>]`,

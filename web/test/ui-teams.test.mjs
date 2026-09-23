@@ -26,7 +26,7 @@ function server(teams = TEAMS) {
     calls.push({ path, method: opts.method ?? 'GET', body: opts.body ? JSON.parse(opts.body) : null })
     const body = path.endsWith('/members') ? MITGLIEDER
       : path.endsWith('/tokens') ? [{ id: 'abc123def456', user: 'gast', label: 'Excel Laptop', at: '2026-09-20T08:00:00Z' }]
-      : path.endsWith('/usage') ? { team: 'init', days: [{ day: '2026-09-23', calls: 7, in: 800, out: 400, tokens: 1200, byProvider: { anthropic: 1200 }, byUser: { gast: 900, taloan: 300 } }], dependents: ['es'] }
+      : path.endsWith('/usage') ? { team: 'init', days: [{ day: '2026-09-23', calls: 7, bytesIn: 2_097_152, bytesOut: 131_072, bytes: 2_228_224, byProvider: { anthropic: 2_228_224 }, byUser: { gast: 2_000_000 }, byPurpose: { 'Übersetzung': 2_000_000, Editor: 228_224 } }], dependents: ['es'] }
       : path === '/api/usage' ? { week: { used: 1, max: 10 }, month: { used: 2, max: 20 }, history: [] }
       : path === '/api/teams/free' ? [{ key: 'neu', name: 'Neu Person', role: 'editor' }]
       : path === '/api/auth/people' ? [{ key: 'taloan', name: 'Taloan', role: 'admin' }, { key: 'pablo', name: 'Pablo', role: 'editor' }]
@@ -51,7 +51,8 @@ test('die Teamseite zeigt, wer dazugehört und womit gearbeitet wird — über K
   assert.match(t, /journali PIM Token/, 'die Nutzung gegen die Limits hat ihren eigenen Abschnitt')
   assert.ok(!/Token diesen Monat/.test(t), 'journali sagt nichts über verbrauchte KI-Token')
   assert.ok(!/kostet/i.test(t), 'und nichts über Kosten')
-  assert.match(t, /Nutzung/, 'und die Nutzung des Journals')
+  assert.match(t, /Verfügbar/, 'was dem Team noch zur Verfügung steht — Grenzen stehen positiv da')
+  assert.match(t, /Genutzt/, 'und klein daneben, was schon geschrieben wurde')
   assert.match(t, /Lizenz/, 'die Limits kommen aus der Lizenz — sie steht hier')
   assert.ok(!t.includes('neues Team'), 'Teams anlegen gehört nicht auf die Teamseite')
   await ruhe(); w.unmount()
@@ -63,10 +64,23 @@ test('der Fragezeichen-Knopf sagt, was auf die Limits geht und was nicht', async
   await w.findAll('button').find(b => b.text() === '?').trigger('click'); await ruhe()
   assert.match(dialog.title, /journali PIM Token/, 'die Hilfe gehört zu den journali-Token, nicht zur KI')
   const zeilen = dialog.list.flat().join(' ')
-  assert.match(zeilen, /Gezählt/); assert.match(zeilen, /Datenpflege/); assert.match(zeilen, /Ausleitung/)
-  assert.match(zeilen, /Nicht gezählt/); assert.match(zeilen, /Modell/); assert.match(zeilen, /Struktur/)
-  assert.ok(!/KI|Token verbraucht/.test(zeilen), 'und sagt nichts über fremde Token')
+  assert.match(zeilen, /Anlegen/); assert.match(zeilen, /Ändern/); assert.match(zeilen, /Zurückziehen/)
+  assert.match(zeilen, /Freigeben/); assert.match(zeilen, /Übersetzen/)
+  assert.ok(!/[Nn]icht gezählt/.test(zeilen), 'über Nichtgezähltes sagt der Dialog nichts')
+  assert.ok(!/KI|Token verbraucht/.test(zeilen), 'und nichts über fremde Token')
   dialog.done(true); await ruhe(); w.unmount()
+})
+
+test('das Austauschvolumen steht hin und zurück getrennt da — in Bytes, nie in Tokens', async () => {
+  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  const w = mount(TeamsSettings); await ruhe()
+  const t = w.text().replace(/\s+/g, ' ')
+  assert.match(t, /Austauschvolumen/, 'der Abschnitt heißt so')
+  assert.match(t, /2MB/, 'was hingeschickt wurde')
+  assert.match(t, /128KB/, 'und was zurückkam')
+  assert.match(t, /Übersetzung/, 'der Anlass steht dabei')
+  assert.ok(!/KI-Token|Token verbraucht|Token diesen Monat/.test(t), 'eine Tokenzahl des Anbieters steht nirgends')
+  await ruhe(); w.unmount()
 })
 
 test('der Team-Admin hinterlegt den Schlüssel; er kommt nie zurück', async () => {

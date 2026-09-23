@@ -93,7 +93,7 @@ export async function aiSuggestions(catalog, mapping, res, nodeIds, say = () => 
     const research = web ? `\n\nRecherchiere im Internet: Suche das Produkt über Hersteller, Typ-/Artikelnummer, EAN/GTIN und SKU (Herstellerseite, Datenblatt, Katalog, Händler). Nimm nur Werte, die du dort findest; nenne je Datenpunkt die Quelle (url) in "source". Was du nicht findest, lässt du weg. Antworte nur mit dem JSON-Objekt, ohne Text davor oder danach.` : ''
     const ids = web ? Object.entries(view.external ?? {}).map(([k, v]) => `${k}: ${v}`).join(', ') : ''
     try {
-      const j = await ai.ask({ system: system + research, user: user + (ids ? `\nKennungen: ${ids}` : ''), json: true, maxTokens: web ? 3000 : 1500, web, maxSearches: 6 })
+      const j = await ai.ask({ system: system + research, user: user + (ids ? `\nKennungen: ${ids}` : ''), json: true, maxTokens: web ? 3000 : 1500, web, maxSearches: 6, purpose: 'Prüfung' })
       const src = ai.lastSources
       for (const it of missing) { const s = j?.[it.key]; if (s && s.value != null && s.value !== '') out.push({ node: n.row, item: it, value: String(s.value), why: s.why ?? '', confidence: s.confidence ?? null, source: web ? 'web' : 'ai', url: s.source ?? src[0]?.url ?? null, sources: src }) }
     } catch (e) { out.push({ node: n.row, item: null, value: '', why: '✗ ' + e.message, source: 'ai', error: true }) }
@@ -168,7 +168,7 @@ async function suggestScopes(catalog, rootRow, scopes, have) {
   let usedAi = false
   if (ai.available()) {
     try {
-      const j = await ai.ask({ system: 'Du prüfst, welche Sonderregelungen für ein Produkt gelten. Antworte nur als JSON {"items":[{"key":"…","applies":true,"why":"…"}]} für jede Geltung aus der Liste, why in einem kurzen Satz auf Deutsch, vorsichtig: im Zweifel nein mit Begründung.', user: `Produkt: ${rootRow.label}\nPfad: ${tree.ancestors(rootRow.id).map(a => a.label).join(' › ')}\nETIM-Klasse: ${clsText || 'unbekannt'}\nGeltungen:\n${scopes.map(s => `${s.key}: ${s.label}${s.hint ? ' — ' + s.hint : ''}`).join('\n')}`, json: true, maxTokens: 600 })
+      const j = await ai.ask({ system: 'Du prüfst, welche Sonderregelungen für ein Produkt gelten. Antworte nur als JSON {"items":[{"key":"…","applies":true,"why":"…"}]} für jede Geltung aus der Liste, why in einem kurzen Satz auf Deutsch, vorsichtig: im Zweifel nein mit Begründung.', user: `Produkt: ${rootRow.label}\nPfad: ${tree.ancestors(rootRow.id).map(a => a.label).join(' › ')}\nETIM-Klasse: ${clsText || 'unbekannt'}\nGeltungen:\n${scopes.map(s => `${s.key}: ${s.label}${s.hint ? ' — ' + s.hint : ''}`).join('\n')}`, json: true, maxTokens: 600, purpose: 'Prüfung' })
       for (const it of j.items ?? []) { const s = scopes.find(x => x.key === it.key); if (!s) continue; const cur = items.find(x => x.key === it.key); if (cur) { if (cur.applies !== !!it.applies) cur.why += ` · KI: ${it.applies ? 'ja' : 'nein'} — ${it.why ?? ''}`; else cur.why = it.why ?? cur.why } else items.push({ key: it.key, applies: !!it.applies, why: it.why ?? '' }) }
       usedAi = true
     } catch (e) { if (!items.length) throw e }

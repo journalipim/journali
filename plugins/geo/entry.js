@@ -63,7 +63,7 @@ async function mount(root, ctx) {
       say(`frage ${ai.label()} …`)
       const system = `Du schreibst Produkttexte für Suchmaschinen und KI-Antworten (GEO). Sprache: ${st.locale}. Nur Fakten aus den Daten, keine Erfindungen, keine Superlative. Antworte als JSON: { "definition": string, "description": string, "faq": [{ "q": string, "a": string }] (genau 3), "keywords": string[] (5–8) }.`
       const user = `Produkt: ${f.name}\nPfad: ${f.path}\nSKU: ${f.sku}\nEigenschaften:\n` + f.rows.map(r => `- ${r.label}: ${r.value}${r.unit ? ' ' + r.unit : ''}`).join('\n')
-      const j = await ai.ask({ system, user, json: true, maxTokens: 1500 })
+      const j = await ai.ask({ system, user, json: true, maxTokens: 1500, purpose: 'Geodaten' })
       st.result = { facts: f, definition: j.definition ?? '', description: j.description ?? '', faq: Array.isArray(j.faq) ? j.faq : [], keywords: Array.isArray(j.keywords) ? j.keywords.join(', ') : String(j.keywords ?? '') }
       say(`${f.rows.length} Eigenschaften · Vorschlag von ${ai.label()}`); draw()
     } catch (e) { say('✗ ' + e.message); store.toast(e.message) }

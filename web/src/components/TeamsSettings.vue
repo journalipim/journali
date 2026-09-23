@@ -21,6 +21,11 @@ const MODELLE = {
   openai: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'],
 }
 const jt = ref(null)   // journali-Token dieses Teams: Limits und Verbrauch
+const tage = ref([])   // KI-Austauschvolumen je Tag — was journali hingeschickt und zurückbekommen hat
+const kb = b => {
+  const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
+  return !b ? '0KB' : b >= 1073741824 ? z(b, 1073741824) + 'GB' : b >= 1048576 ? z(b, 1048576) + 'MB' : Math.max(1, Math.round(b / 1024)) + 'KB'
+}
 const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
 
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
@@ -36,9 +41,15 @@ const teamUsage = computed(() => jt.value && {
   month: { used: jt.value.used?.month ?? 0, max: jt.value.limits?.month ?? 0 },
   day: { used: jt.value.used?.day ?? 0 },
 })
-const anteilJt = zeitraum => {
+
+/// Was noch zur Verfügung steht — nie unter 0
+const rest = zeitraum => Math.max(0, (jt.value?.limits?.[zeitraum] ?? 0) - (jt.value?.used?.[zeitraum] ?? 0))
+/// Viel verfügbar ist grün; wird es knapp, gelb; ist nichts mehr da, rot
+const freiTon = zeitraum => {
   const grenze = jt.value?.limits?.[zeitraum] ?? 0
-  return grenze ? Math.round(((jt.value?.used?.[zeitraum] ?? 0) / grenze) * 100) : 0
+  if (!grenze) return 'muted'
+  const anteil = Math.round((rest(zeitraum) / grenze) * 100)
+  return anteil <= 10 ? 'neg' : anteil <= 30 ? 'warn' : 'pos'
 }
 
 async function load() {
@@ -55,6 +66,7 @@ async function details() {
   try { frei.value = await api.get('/api/teams/free') } catch { frei.value = [] }
   try { lizenz.value = await api.get('/api/licence') } catch { lizenz.value = null }
   try { jt.value = await api.get(`/api/teams/${p}/tokens/journali`) } catch { jt.value = null }
+  try { tage.value = (await api.get(`/api/teams/${p}/usage?days=14`)).days ?? [] } catch { tage.value = [] }
 }
 onMounted(load)
 
@@ -74,21 +86,20 @@ async function schluesselWeg(anbieter) {
 async function modell(anbieter, wert) {
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}`, { models: { [anbieter]: wert } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
-/// Was auf die Limits geht und was nicht — die Liste ist Kinds.Counts im Kern (data, publish)
+/// Was gezählt wird — die Vorgänge hinter Kinds.Counts im Kern (data, publish). Über Nichtgezähltes steht hier nichts.
 function hilfeToken() {
   dialog.help({
-    title: '✦ journali PIM Token',
+    title: '✦ journali PIM Token · gezählt wird',
     rows: [
-      ['Gezählt', ''],
-      ['Datenpflege', 'Werte, Zeilen, Artikel und Varianten, Status, Kennungen, Medien, Relationen'],
-      ['Ausleitung', 'Freigaben, Versionen, Workflow-Zustände, Übersetzungsschritte'],
-      ['Nicht gezählt', ''],
-      ['Modell', 'Attribute, Gruppen, Sichten, Listen, Sprachen, Kanäle, Einheiten, Wörterbuch'],
-      ['Struktur', 'Baum anlegen, umhängen, ordnen, benennen, Achsen und Gruppen'],
-      ['Referenzdaten', 'Kataloge wie ETIM und ihre Wertelisten'],
-      ['Einrichtung', 'Plugins, Anwender, Rollen, Jobdefinitionen'],
-      ['Betrieb', 'Jobläufe mit Protokoll, gerechnete Vorschauen'],
-      ['Ohne Eintrag', 'Ansehen, Suchen, Exportieren'],
+      ['Anlegen', 'Artikel, Varianten, Zeilen einer Mehrfachangabe, Assets, Relationen'],
+      ['Ändern', 'jeder Wert, Status, Kennung, die Reihenfolge von Zeilen'],
+      ['Zurückziehen', 'Artikel, Zeilen, Assets, Relationen — und das Zurückholen'],
+      ['Einordnen', 'ein Asset in einen Ordner, eine Kennung an ein Fremdsystem'],
+      ['Übernehmen', 'Import und Kopieren schreiben dieselben Einträge wie Handarbeit'],
+      ['Freigeben', 'eine Freigabe erteilen, eine Freigabe zurücknehmen'],
+      ['Versionieren', 'Version anlegen, Dokument anhängen, Version zurückziehen'],
+      ['Workflow', 'einen Schritt setzen, eine Zuständigkeit vergeben'],
+      ['Übersetzen', 'Auftrag hinaus, Rückläufer herein, Stand am Knoten markieren'],
     ],
   })
 }
@@ -182,29 +193,48 @@ async function austragen(m) {
 
 
     <div class="section">
-      <h2>✦ journali PIM Token
-        <span class="muted" title="Jede Pflege schreibt einen Eintrag ins Journal; Ansehen und Exportieren zählen nicht mit.">· Nutzung gegen die Limits</span>
-        <button class="x" title="Was auf die Limits geht" @click="hilfeToken">?</button>
+      <h2>✧ KI-Austauschvolumen <span class="muted" title="Was journali an den Anbieter geschickt und von ihm zurückbekommen hat; über Tokens und Kosten sagt journali nichts.">· gemessen, nicht geschätzt</span></h2>
+      <table v-if="tage.length" class="grid" style="width:auto"><thead><tr><th style="width:110px">Tag</th><th class="num" style="width:70px">Aufrufe</th><th class="num" style="width:90px" title="hingeschickt">↑ hin</th><th class="num" style="width:90px" title="zurückbekommen">↓ zurück</th><th class="num" style="width:90px">Σ</th><th>Anlass</th></tr></thead><tbody>
+        <tr v-for="t in tage" :key="t.day" class="row">
+          <td class="mono">{{ t.day }}</td>
+          <td class="num mono">{{ t.calls }}</td>
+          <td class="num mono">{{ kb(t.bytesIn) }}</td>
+          <td class="num mono">{{ kb(t.bytesOut) }}</td>
+          <td class="num mono">{{ kb(t.bytes) }}</td>
+          <td class="muted" style="font-size:12px">{{ Object.entries(t.byPurpose ?? {}).map(([a, v]) => `${a} ${kb(v)}`).join(' · ') }}</td>
+        </tr>
+      </tbody></table>
+      <div v-else class="muted" style="font-size:12px">noch nichts gemessen</div>
+    </div>
+
+    <div class="section">
+      <h2>✦ journali PIM Token <span class="muted">· Verfügbare Limits</span>
+        <button class="x" title="Was gezählt wird" @click="hilfeToken">?</button>
       </h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
-          <td class="muted" title="Limits dieses Teams — der Administrator verteilt sie aus der Lizenz">Limit</td>
+          <td class="muted" title="Was diesem Team in diesem Zeitraum noch zur Verfügung steht">Verfügbar</td>
           <td class="mono">
-            <span :class="jt?.limits?.week ? '' : 'muted'">▤ {{ zahl(jt?.limits?.week) }} / Woche</span> ·
-            <span :class="jt?.limits?.month ? '' : 'muted'">▦ {{ zahl(jt?.limits?.month) }} / Monat</span>
+            <span :class="freiTon('week')">▤ {{ zahl(rest('week')) }} / Woche</span> ·
+            <span :class="freiTon('month')">▦ {{ zahl(rest('month')) }} / Monat</span>
           </td>
-          <td class="muted" style="font-size:12px"><span v-if="!jt?.limits?.week && !jt?.limits?.month">nichts zugeteilt</span></td>
+          <td class="muted" style="font-size:12px"><span v-if="!jt?.limits?.week && !jt?.limits?.month">kein eigenes Kontingent</span></td>
         </tr>
         <tr>
-          <td class="muted" title="Was die Mitglieder verbraucht haben; rechnet das Team über ein anderes ab, zählt alles dort zusammen">Verbraucht</td>
-          <td class="mono">
-            <span :class="anteilJt('week') >= 100 ? 'neg' : anteilJt('week') >= 80 ? 'warn' : ''">▤ {{ zahl(jt?.used?.week) }}</span> ·
-            <span :class="anteilJt('month') >= 100 ? 'neg' : anteilJt('month') >= 80 ? 'warn' : ''">▦ {{ zahl(jt?.used?.month) }}</span> ·
-            heute {{ zahl(jt?.used?.day) }}
+          <td class="muted" title="Das Kontingent dieses Teams — der Administrator trägt es aus der Lizenz ein">Kontingent</td>
+          <td class="mono muted">
+            ▤ {{ zahl(jt?.limits?.week) }} / Woche · ▦ {{ zahl(jt?.limits?.month) }} / Monat
           </td>
           <td class="muted" style="font-size:12px">
-            <span v-if="jt && jt.payer !== jt.team">über {{ jt.payerLabel }} · eigener Anteil ▦ {{ zahl(jt.mine?.month) }}</span>
+            <span v-if="jt && jt.payer !== jt.team">gemeinsam mit {{ jt.payerLabel }} · eigener Anteil ▦ {{ zahl(jt.mine?.month) }}</span>
           </td>
+        </tr>
+        <tr>
+          <td class="muted" title="Was die Mitglieder in diesem Zeitraum geschrieben haben">Genutzt</td>
+          <td class="mono muted">
+            ▤ {{ zahl(jt?.used?.week) }} · ▦ {{ zahl(jt?.used?.month) }} · heute {{ zahl(jt?.used?.day) }}
+          </td>
+          <td></td>
         </tr>
       </tbody></table>
       <UsageBars v-if="jt" :usage="teamUsage" />

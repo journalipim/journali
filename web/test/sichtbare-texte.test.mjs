@@ -62,6 +62,7 @@ const REFERENZEN = [
   /\{#products\}/,        // xport: die Platzhalter einer Vorlage
   /Kachel von innen ziehen/,   // WorkflowSettings: die Gesten im Designer
   /m h tag monat/,        // Zeitplan: die Felder eines cron-Ausdrucks
+  /Austauschvolumen \(mengenbasiert\)/,   // die Kennzahl oben: Wortlaut von Taloan (23.09.2026)
 ]
 
 test('kein sichtbarer Text laenger als die Grenze', () => {
