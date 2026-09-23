@@ -80,6 +80,16 @@ test('Eingelöst wird für das Team, das oben gewählt ist — keine eigene Ausw
   w.unmount()
 })
 
+test('Text vor und nach dem Schlüssel geht nicht mit', async () => {
+  // aus dem Konsolenfenster kopiert: Schlüssel und die Zeile darunter
+  const gesendet = server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  await w.find('.einloesen textarea').setValue('C:\\> aussteller\n{"id":"k-1","sig":"a=="}\nJOURNALI_LICENCE_KEY=MFkw==\n')
+  await button(w, 'Einlösen').trigger('click'); await flushPromises()
+  assert.equal(gesendet.find(g => g.path === '/api/licence/keys').body.key, '{"id":"k-1","sig":"a=="}')
+  w.unmount()
+})
+
 test('Wer über ein anderes Team abrechnet, hat kein Einlösen', async () => {
   server(); admin()
   const w = mount(LicenceSettings, { props: { team: IT } }); await flushPromises()

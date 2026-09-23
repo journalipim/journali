@@ -48,7 +48,8 @@ async function anfordern() {
 async function einloesen() {
   if (!schluessel.value.trim() || !eigenes.value) return
   try {
-    const r = await api.post('/api/licence/keys', { key: schluessel.value.trim(), team: props.team.key })
+    const t = schluessel.value, a = t.indexOf('{'), b = t.lastIndexOf('}')
+    const r = await api.post('/api/licence/keys', { key: a >= 0 && b > a ? t.slice(a, b + 1) : t.trim(), team: props.team.key })
     schluessel.value = ''
     saidKey.value = (r.until ? `✓ ${r.id} bis ${r.until}` : `✓ ${r.id} ab ${r.from}`) + (r.carried ? ` · +${r.carried} Tage` : '') + (r.geprueft ? '' : ` · ${r.grund ?? ''}`)
     await load(); await store.poll(true)
