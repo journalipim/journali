@@ -88,6 +88,7 @@ public static class PluginApi
         api.MapGet("/plugins", (Catalog c) =>
         {
             var disk = Scan(dir);
+            var tarif = c.InstanzTarif;
             return c.With((_, _, _) =>
             {
                 var state = c.Plugins.All;
@@ -102,6 +103,8 @@ public static class PluginApi
                         installed = s is not null, version = s?.Version, enabled = s?.Enabled ?? false,
                         update = m is not null && s is not null && m.Version != s.Version,
                         lastAt = s?.LastAt, lastActor = s?.LastActor,
+                        // der Tarif der Instanz erlaubt es (Taloan, 24.09.2026) — sonst nicht ladbar, nicht einschaltbar
+                        allowed = tarif.Erlaubt(k), tarif = Tarife.Alle.FirstOrDefault(t => t.Erlaubt(k))?.Key,
                     };
                 }).ToList();
             });
@@ -111,6 +114,7 @@ public static class PluginApi
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!Scan(dir).TryGetValue(key, out var m)) return Results.NotFound(new { error = $"plugins/{key}/plugin.json fehlt." });
+            if (NichtImTarif(c, key) is { } nein) return nein;
             return c.With((_, _, write) =>
             {
                 var fresh = !c.Plugins.All.ContainsKey(key);
@@ -183,6 +187,7 @@ public static class PluginApi
             if (Actor(req) is not { } actor) return ActorMissing();
             var state = c.With((_, _, _) => c.Plugins.All.GetValueOrDefault(key));
             if (state is null || !state.Enabled) return Bad($"Plugin {key} ist nicht installiert oder aus.");
+            if (NichtImTarif(c, key) is { } nein) return nein;
             if (!Scan(dir).TryGetValue(key, out var m) || !m.Raw.TryGetProperty("process", out var proc)) return Bad($"Plugin {key} hat keinen Prozess.");
             var values = new Dictionary<string, string> { ["journali"] = $"{req.Scheme}://{req.Host}", ["actor"] = actor, ["token"] = Auth.IssueServiceToken(actor) };
             foreach (var (k, v) in body.Params ?? new()) values[k] = v;
@@ -213,9 +218,19 @@ public static class PluginApi
         return (p.ExitCode, text);
     }
 
+    /// <summary>Gehört das Plugin nicht zum Tarif der Instanz: 403 mit dem Tarif, der es hat (Taloan, 24.09.2026).</summary>
+    public static IResult? NichtImTarif(Catalog c, string key)
+    {
+        var t = c.InstanzTarif;
+        if (t.Erlaubt(key)) return null;
+        var ab = Tarife.Alle.FirstOrDefault(x => x.Erlaubt(key));
+        return Results.Json(new { error = $"{key} gehört zum Tarif {ab?.Label ?? "?"} — diese Instanz hat {t.Label}." }, statusCode: 403);
+    }
+
     private static IResult Toggle(HttpRequest req, Catalog c, string key, bool on)
     {
         if (Actor(req) is not { } actor) return ActorMissing();
+        if (on && NichtImTarif(c, key) is { } nein) return nein;
         return c.With((_, _, write) => c.Plugins.All.TryGetValue(key, out var s)
             ? on && Requires(JsonDocument.Parse(s.Manifest).RootElement).Where(r => !(c.Plugins.All.TryGetValue(r, out var b) && b.Enabled)).ToList() is { Count: > 0 } missing
                 ? Bad($"{key} braucht {string.Join(", ", missing)} — zuerst einschalten.")   // Ergänzung ohne Basis (Taloan)

@@ -35,10 +35,15 @@ public sealed record Licence(
     Dictionary<string, TeamLimit>? Teams = null,
     /// <summary>Für welche Instanz sie gilt (Kennung) — leer heisst: für jede (Lizenzen von vor dem 23.09.2026).</summary>
     string? Instance = null,
+    /// <summary>Die Testlizenz einer neuen Instanz (Taloan, 24.09.2026) — von ihr selbst angelegt, nicht ausgestellt.</summary>
+    bool? Trial = null,
     string? Sig = null)
 {
-    /// <summary>Testbetrieb: was bis zur ersten Lizenz galt (Journali.Core Limits) — Einträge ja, KI nein.</summary>
-    public static readonly Licence Frei = new("Testbetrieb", null, null, Core.Projections.Limits.Week, Core.Projections.Limits.Month);
+    /// <summary>Tarif Kostenlos (Taloan, 24.09.2026): ohne Lizenz, nach dem Test und wenn eine Lizenz abgelaufen ist.</summary>
+    public static readonly Licence Frei = new(Core.Projections.Tarife.Free.Key, null, null, Core.Projections.Limits.Week, Core.Projections.Limits.Month);
+
+    /// <summary>Der Tarif dieser Lizenz — <c>plan</c> nennt ihn; Lizenzen von vor den Tarifen gelten als Kostenlos.</summary>
+    [JsonIgnore] public Core.Projections.Tarif Tarif => Core.Projections.Tarife.Von(Plan) ?? Core.Projections.Tarife.Free;
 
     [JsonIgnore] public bool Abgelaufen => ValidUntil is { } d && d < DateOnly.FromDateTime(DateTime.Today);
     /// <summary>Die Werte ohne Signatur — genau das wird signiert und geprüft. Nicht mitserialisieren: sonst ruft es sich selbst auf.</summary>
@@ -54,9 +59,9 @@ public static class LicenceFile
 {
     public static string PathOf(string dir) => Path.Combine(dir, "licence.json");
 
-    /// <summary>Die Lizenz dieser Instanz — ohne Datei der Testbetrieb. Liefert dazu, ob sie geprüft ist und was dagegen spricht.</summary>
+    /// <summary>Die Lizenz dieser Instanz — ohne Datei Tarif Kostenlos. Liefert dazu, ob sie geprüft ist und was dagegen spricht.</summary>
     public static (Licence Lic, bool Geprueft, string? Grund) Load(string dir)
-        => File.Exists(PathOf(dir)) ? Aus(File.ReadAllText(PathOf(dir))) : (Licence.Frei, false, "keine Lizenz — Testbetrieb");
+        => File.Exists(PathOf(dir)) ? Aus(File.ReadAllText(PathOf(dir))) : (Licence.Frei, false, "keine Lizenz — Tarif Kostenlos");
 
     /// <summary>Aus dem JSON einer Lizenz — gleich, ob sie aus einer Datei kommt oder aus der Datenbank (LicenceStore).</summary>
     public static (Licence Lic, bool Geprueft, string? Grund) Aus(string json, string? instanz = null)
@@ -66,7 +71,7 @@ public static class LicenceFile
         catch (Exception e) { return (Licence.Frei, false, "Lizenz nicht lesbar: " + e.Message); }
         if (lic is null) return (Licence.Frei, false, "Lizenz leer");
         if (lic.Abgelaufen) return (lic, false, $"abgelaufen am {lic.ValidUntil:dd.MM.yyyy}");
-        // Auf eine andere Instanz ausgestellt: es gilt der Testbetrieb (Taloan, 23.09.2026 — sonst würde aus einer
+        // Auf eine andere Instanz ausgestellt: es gilt Kostenlos (Taloan, 23.09.2026 — sonst würde aus einer
         // Sicherung und drei Wiederherstellungen aus einer Lizenz vier)
         if (lic.Instance is { Length: > 0 } fuer && instanz is { Length: > 0 } hier && !string.Equals(fuer, hier, StringComparison.OrdinalIgnoreCase))
             return (Licence.Frei, false, $"ausgestellt für eine andere Instanz ({fuer})");
@@ -114,9 +119,21 @@ public sealed class Licences(string dir, LicenceStore? store = null, Instanz? in
     /// <summary>Die Kennung dieser Instanz — sie steht in jeder Lizenz, die für sie ausgestellt wird.</summary>
     public string? InstanzId => instanz?.Id;
 
-    public Licence Lic { get { Einmal(); return _stand.Lic; } }
-    public bool Geprueft { get { Einmal(); return _stand.Geprueft; } }
-    public string? Grund { get { Einmal(); return _stand.Grund; } }
+    /// <summary>
+    /// Der Tag des ersten Eintrags im Journal (Taloan, 24.09.2026: „im Log ist ja der Tag des ersten Starts festgehalten —
+    /// wird in den automatisch erstellten Lizenzkey gebrannt und gesichert“). Gesetzt, legt eine Instanz ohne Lizenz
+    /// ihre Testlizenz selbst an: Enterprise für <see cref="Core.Projections.Tarife.TestMonate"/> Monate ab diesem Tag.
+    /// Er kommt aus dem Journal und fährt mit jeder Sicherung mit — eine wiederhergestellte Instanz fängt den Test
+    /// nicht von vorn an.
+    /// </summary>
+    public Func<DateOnly?>? ErsterTag { get; set; }
+
+    /// <summary>Was gilt: die Lizenz — abgelaufen gilt Kostenlos (auch, wenn sie im laufenden Betrieb abläuft).</summary>
+    public Licence Lic { get { Einmal(); return _stand.Lic.Abgelaufen ? Licence.Frei : _stand.Lic; } }
+    /// <summary>Was eingespielt oder angelegt ist — auch abgelaufen, zum Anzeigen.</summary>
+    public Licence Roh { get { Einmal(); return _stand.Lic; } }
+    public bool Geprueft { get { Einmal(); return _stand.Geprueft && !_stand.Lic.Abgelaufen; } }
+    public string? Grund { get { Einmal(); return _stand.Lic.Abgelaufen ? $"abgelaufen am {_stand.Lic.ValidUntil:dd.MM.yyyy}" : _stand.Grund; } }
     public string Dir => dir;
     /// <summary>Wo sie liegt — für die Anzeige und die Betriebsdoku.</summary>
     public string Ort => store?.Ready == true ? "Datenbank" : "Datei";
@@ -143,6 +160,15 @@ public sealed class Licences(string dir, LicenceStore? store = null, Instanz? in
         {
             store.Schreib(JsonSerializer.Serialize(ausDatei.Lic, Licence.Json), "system");
             try { File.Delete(LicenceFile.PathOf(dir)); } catch { }
+        }
+        // Gar keine Lizenz: die Instanz legt ihre Testlizenz an und hält sie fest wie jede andere (Taloan, 24.09.2026)
+        if (ausDatei.Lic == Licence.Frei && ErsterTag is { } ersterTag)
+        {
+            var ab = ersterTag() ?? DateOnly.FromDateTime(DateTime.Today);
+            var e = Core.Projections.Tarife.Enterprise;
+            var test = new Licence(e.Key, null, ab.AddMonths(Core.Projections.Tarife.TestMonate).AddDays(-1), e.Week, e.Month, Instance: instanz?.Id, Trial: true);
+            Neu(test);
+            return;
         }
         _stand = ausDatei;
     }

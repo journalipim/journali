@@ -75,10 +75,10 @@ public class SchluesselTests
     public void Ein_Paket_traegt_seine_Zahlen_in_die_Anforderung()
     {
         var i = new Instanz(null); var a = new KeyRequests(null, i);
-        Assert.Equal(["pro", "ultimate", "enterprise"], Schluessel.Pakete.Select(p => p.Key));
-        var p = Schluessel.PaketVon("ultimate")!;
+        Assert.Equal(["pro", "proplus", "enterprise", "unlimited"], Schluessel.Pakete.Select(p => p.Key));
+        var p = Schluessel.PaketVon("enterprise")!;
         var s = a.Neu(Schluessel.Limit, p.Week, p.Month, p.Days, "it-admin", p.Key);
-        Assert.Equal(("ultimate", p.Week, p.Month, p.Days), (s.Inhalt!.Plan, s.Inhalt.EntriesWeek, s.Inhalt.EntriesMonth, s.Inhalt.Days));
+        Assert.Equal(("enterprise", p.Week, p.Month, p.Days), (s.Inhalt!.Plan, s.Inhalt.EntriesWeek, s.Inhalt.EntriesMonth, s.Inhalt.Days));
         Assert.True(s.Pruefe().Ok);
         Assert.Null(Schluessel.PaketVon("frei"));
     }

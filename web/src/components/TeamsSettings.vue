@@ -33,7 +33,7 @@ const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? n
 const fuehrt = computed(() => store.can('users') || (store.can('team') && (team.value?.managers ?? []).includes(store.auth.user)))
 /// Wessen Schlüssel das Team benutzt — eigener oder der eines anderen Teams
 const lizenz = ref(null)
-const zahl = n => (n ?? 0).toLocaleString('de-DE')
+const zahl = n => n >= 2147483647 ? '∞' : (n ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
 /// Anteil am Limit — 0 heisst: nichts zugeteilt, dann gibt es auch keinen Anteil
 /// Was UsageBars zeigt: die Zahlen dieses Teams gegen seine Limits — nicht die der ganzen Anlage
 const teamUsage = computed(() => jt.value && {
@@ -54,7 +54,7 @@ async function ladeVerlauf(p = zeitraum.value) {
 }
 
 /// Was noch zur Verfügung steht — nie unter 0
-const rest = zeitraum => Math.max(0, (jt.value?.limits?.[zeitraum] ?? 0) - (jt.value?.used?.[zeitraum] ?? 0))
+const rest = zeitraum => (jt.value?.limits?.[zeitraum] ?? 0) >= 2147483647 ? 2147483647 : Math.max(0, (jt.value?.limits?.[zeitraum] ?? 0) - (jt.value?.used?.[zeitraum] ?? 0))
 /// Viel verfügbar ist grün; wird es knapp, gelb; ist nichts mehr da, rot
 const freiTon = zeitraum => {
   const grenze = jt.value?.limits?.[zeitraum] ?? 0

@@ -68,11 +68,21 @@ Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} m
 // wird beim ersten Lesen übernommen. Muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits.
 var instanz = new Instanz(db);   // Kennung dieser Instanz — steht in der Lizenz, geht nicht in die Sicherung
 builder.Services.AddSingleton(instanz);
-var licences = new Licences(dataDir, new LicenceStore(db), instanz);
+var licences = new Licences(dataDir, new LicenceStore(db), instanz) { ErsterTag = () => catalog.ErsterTag };   // ohne Lizenz: Test ab dem ersten Eintrag
 catalog.LicenceDir = dataDir;
 catalog.Licences = licences;
 catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
 var seeded = catalog.SeedMissing();
+// Läuft eine Lizenz (oder der Test) im Betrieb ab, gilt Kostenlos — das Init Team trägt dann dessen Limits. Stündlich
+// nachsehen; LimitsAusLizenz schreibt nur, wenn sich etwas ändert (Taloan, 24.09.2026)
+_ = Task.Run(async () =>
+{
+    while (true)
+    {
+        await Task.Delay(TimeSpan.FromHours(1));
+        try { catalog.With((_, _, _) => catalog.LimitsAusLizenz()); } catch { }
+    }
+});
 
 var mailer = new Mailer(dataDir);   // Mailversand (Einstellungen → Mail)
 builder.Services.AddSingleton(mailer);
@@ -127,7 +137,7 @@ app.Use(Auth.Middleware(catalog, dataDir));
 app.Use(async (ctx, next) =>
 {
     try { await next(); }
-    catch (KeinKontingentException e) when (!ctx.Response.HasStarted)
+    catch (InvalidOperationException e) when (e is KeinKontingentException or TarifException && !ctx.Response.HasStarted)
     {
         ctx.Response.StatusCode = 403;
         await ctx.Response.WriteAsJsonAsync(new { error = e.Message });

@@ -262,7 +262,8 @@ die Datenbank: die Plugin-Verzeichnisse und die Dateien im Datenverzeichnis
 (`auth.json`, `media.json`, `jobs/secrets.json`) liegen im Dateisystem und fehlen.
 Wer so sichert, muss das Volume mitnehmen.
 
-**Die Vollsicherung** (Plugin `backup`, als Job im Tasker) schreibt einen
+**Die Vollsicherung** — von Hand unter ⚙ Einstellungen → ⇅ B&R (jeder Tarif, Taloan 24.09.2026) oder als Zeitplan
+mit dem Plugin `backup` im Tasker (ab Pro); beide rufen `POST /api/backup` — schreibt einen
 Satz, der an nichts hängt — nicht an der Postgres-Fassung, nicht am Schema:
 
 | im Verzeichnis | was |
@@ -379,7 +380,31 @@ des Administrators und schon gar nicht bei einem anderen Team:
 | `plan`, `holder`, `validUntil` | Bezeichnung, Inhaber, Ablauf |
 | `aiTokensMonth`, `aiTokensDay` | Altlast, wird nicht mehr ausgewertet |
 
-Ohne Datei gilt der Testbetrieb: 20 000 je Woche, 100 000 je Monat.
+### Tarife (Taloan, 24.09.2026)
+
+`Journali.Core/Projections/Tarife.cs` ist die eine Tabelle; `plan` in Lizenz, Anforderung und Schlüssel nennt den Tarif.
+
+| Tarif | je Woche / Monat | Publikationsbäume | Plugins |
+|---|---|---|---|
+| Kostenlos (`free`) | 10 000 / 50 000 | 1 | Tabelle: `table`, `csv`, `xlsx`, `json`; `excel` (Add-in) |
+| Pro (`pro`) | 50 000 / 250 000 | 5 | dazu `datasheet`, `xliff`, `xport` (BMEcat), `etim`, `tasker` — und was sie brauchen: `da`, `backup` |
+| Pro+ (`proplus`) | 50 000 / 250 000 | 5 | alle („All-Plugin“ zu Pro, gilt systemweit) |
+| Enterprise (`enterprise`) | 200 000 / 1 000 000 | ohne Grenze | alle |
+| Unlimited (`unlimited`) | ohne Grenze | ohne Grenze | alle |
+
+- **Grenzen** hängen am Team (am Ende der Zahlerkette). **Plugins und Publikationsbäume** gelten für die ganze
+  Instanz nach ihrem **höchsten** Tarif — Lizenz oder ein eingelöster Schlüssel irgendeines Teams
+  (`Catalog.InstanzTarif`). Ein Plugin ausserhalb des Tarifs lädt nicht, lässt sich nicht installieren, einschalten
+  oder als Job starten (403); ein Publikationsbaum zu viel wird am Schreibpfad abgewiesen (`TarifException`, 403).
+- **Test:** eine Instanz ohne Lizenz legt ihre Testlizenz selbst an — Enterprise für drei Monate ab dem ersten
+  Eintrag im Journal (`trial: true`), festgehalten wie jede Lizenz. Der erste Tag kommt aus dem Journal und fährt mit
+  jeder Sicherung mit: eine wiederhergestellte Instanz fängt den Test nicht von vorn an.
+- **Abgelaufen** (Test oder Lizenz) gilt **Kostenlos** — auch im laufenden Betrieb; stündlich zieht der Server die
+  Limits des Init Teams nach (`LimitsAusLizenz`).
+- Lizenzen von vor den Tarifen (ohne bekannten `plan`) gelten als Kostenlos, ihre Grenzen bleiben.
+- **Reset-Schlüssel** gibt es getrennt für Pro (gilt für Pro und Pro+) und Enterprise; kostenlos gibt es keinen,
+  Unlimited braucht keinen.
+- Unlimited steht in den Zahlen als `int.MaxValue` (`Tarife.Ohne`); die Oberfläche zeigt ∞.
 
 **Der Verbrauch lässt sich nicht zurücksetzen** — er sind die Einträge im Journal, und das Journal ist die Wahrheit.
 Was eine Lizenz darf, ist einen **Anfang setzen**: `countFrom` verschiebt den Zählbeginn, alles davor bleibt stehen und

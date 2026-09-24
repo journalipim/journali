@@ -138,6 +138,6 @@ public static class Limits
     /// <summary>Die Grenze für einen Joblauf: das Kontingent ohne die Reserve.</summary>
     public static int FuerJob(int grenze) => grenze <= 0 ? grenze : (int)Math.Floor(grenze * (1 - JobReserve));
 
-    public const int Week = 20_000;
-    public const int Month = 100_000;
+    public const int Week = 10_000;    // Tarif Kostenlos (Taloan, 24.09.2026) — bis dahin 20 000 / 100 000
+    public const int Month = 50_000;
 }

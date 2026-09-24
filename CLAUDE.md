@@ -119,8 +119,11 @@ stehen dort als solche markiert.
   Limits **und die Lizenz** — Limits und Gekauftes hängen am Team) · ◈ IAM
   (Anwenderkonten, Rollen, Rechte, Teams anlegen) · ⚑ Workflows · ▨ Storage ·
   ▩ Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
-  pflegen darf) · ✉ Mail · ↺ Recovery (nur der Weg **zurück**; gesichert wird
-  als Job des Plugins `backup`) · ⚑ Workflows.
+  pflegen darf) · ✉ Mail · ⇅ B&R (Sichern von Hand und zurück — jeder Tarif; als
+  Zeitplan ist es ein Job des Plugins `backup`, ab Pro; Taloan 24.09.) · ⚑ Workflows.
+  **Tarife** (Taloan, 24.09.): `Tarife.cs` im Kern — Kostenlos, Pro, Pro+, Enterprise,
+  Unlimited. Grenzen je Team, Plugins und Publikationsbäume nach dem höchsten Tarif der
+  Instanz; drei Monate Enterprise ab dem ersten Journaleintrag.
   Die Abschnitte des Team-Tabs stehen fest (Taloan, 23.09.): ◍ {Teamname} · ⚿ journali
   Lizenz · ✦ journali Limits · ✧ KI API Keys · ✧ KI Austauschvolumen — erst, was
   journali betrifft, dann die fremde KI.

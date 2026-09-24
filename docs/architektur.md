@@ -137,6 +137,10 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
 - ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Rollen je Teilbaum, Workflow-Rollen
 - Import/Export — in der Praxis die Hälfte des Systems
+- ~~Tarifmodell~~ entschieden und gebaut 24.09.2026 (`Tarife.cs`, `docs/betrieb.md` → Tarife): Kostenlos,
+  Pro (+ Pro+), Enterprise, Unlimited; drei Monate Enterprise ab dem ersten Journaleintrag; Plugins und
+  Publikationsbäume nach dem höchsten Tarif der Instanz; Reset getrennt für Pro und Enterprise; Sichern von Hand
+  unter ⇅ B&R. Im Shop: Varianten Pro, Pro+, Enterprise, Unlimited (die Testvariante „Ultimate“ entfällt).
 - **Tarife als Abo über Lemon Squeezy** (Taloan, 23.09.2026: „später wird kein Text mehr zum Kopieren sein … wer das
   System nutzen will, will eine automatische Verlängerung — man stellt einen Modus ein wie bei Claude, und wenn man
   nicht mehr will, muss man aktiv werden“). Heute: Anforderung und Schlüssel werden kopiert (`KeyRequests.cs`,

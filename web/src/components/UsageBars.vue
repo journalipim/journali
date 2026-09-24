@@ -13,8 +13,8 @@ const emit = defineEmits(['period'])
 
 const PARTS = [['week', '▤ Woche'], ['month', '▦ Monat']]   // kein Tageslimit (Taloan, 22.09.2026)
 const HIST = [['day', '◷ Tag'], ['week', '▤ Woche'], ['month', '▦ Monat']]
-const n = v => (v ?? 0).toLocaleString('de-DE')
-const frei = p => Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
+const n = v => v >= 2147483647 ? '∞' : (v ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
+const frei = p => p?.max >= 2147483647 ? p.max : Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
 // Ohne Kontingent (max 0) ist alles aufgebraucht; ohne Grenze (max null) gibt es nichts zu füllen
 const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 1000) / 10) : (p?.max === 0 ? 100 : 0)
 // Farbe sagt, wie viel Luft noch ist: bis 70 % grün, bis 90 % gelb, darüber rot

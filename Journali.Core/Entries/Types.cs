@@ -690,7 +690,7 @@ public sealed record TeamRetired();
 /// Restvolumen in Tage dieses Schlüssels umgerechnet und angehängt (<paramref name="Carried"/>). So steht die Rechnung
 /// im Journal und nicht in einer Formel, die sich später ändern könnte.</para>
 /// </summary>
-public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly? Until = null, int EntriesWeek = 0, int EntriesMonth = 0, int Days = 0, int Carried = 0);
+public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly? Until = null, int EntriesWeek = 0, int EntriesMonth = 0, int Days = 0, int Carried = 0, string? Plan = null);
 
 /// <summary>Ein KI-Aufruf, wie er wirklich stattgefunden hat: Anbieter, Modell, Person, Token hin und zurück. Strom
 /// <c>ai-usage:&lt;team&gt;</c> — gezählt wird beim Team, das zahlt (also beim schlüsselführenden), damit die Rechnung stimmt.</summary>

@@ -1,8 +1,8 @@
 <script setup>
-// Einstellungen → Wiederherstellen (Taloan, 23.09.2026: „ich wollte in den Einstellungen lediglich das Restore haben“).
-// Das Sichern selbst ist ein Job des Plugins backup — es ruft POST /api/backup, und der Zeitplan gehört zum Tasker.
-// Hier steht nur der Weg zurück: oben die Vollsicherung in ein leeres System („neuer Docker irgendwo, Sicherung
-// einspielen"), unten der einzelne Teilbaum aus einer Rohdaten-Datei — zum Zurückholen, nicht zum Wiederaufbauen.
+// Einstellungen → B&R, Sichern und Wiederherstellen (Taloan, 24.09.2026: „dann doch wieder eine manuelle Backup-Funktion
+// in die Einstellungen, und den Restore-Tab umbenennen in B&R“). Sichern von Hand gehört zu jedem Tarif; als Zeitplan
+// ist es ein Job des Plugins backup (Tasker, ab Pro) — beide rufen POST /api/backup. Oben die Vollsicherung hin und
+// zurück (zurück nur in ein leeres System), unten der einzelne Teilbaum aus einer Rohdaten-Datei.
 import { ref, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
@@ -13,6 +13,8 @@ const dir = ref(localStorage.getItem('journali.backup.dir') ?? '')
 const stand = ref(null)        // { hier: {entries, media, storage}, dort: Meta|null }
 const busy = ref('')
 const said = ref('')
+// Was mitgeht — beim Sichern wie beim Einspielen (fehlte bis 24.09.2026: Einspielen brach mit „mit is not defined“ ab)
+const mit = ref({ media: true, config: true, plugins: true })
 
 // Teilbaum aus einer Datei
 const tdir = ref(localStorage.getItem('journali.restore.dir') ?? '')
@@ -36,6 +38,18 @@ async function lies() {
   finally { busy.value = '' }
 }
 
+async function sichern() {
+  if (!dir.value.trim()) return
+  busy.value = '…'; said.value = ''
+  try {
+    const r = await api.post('/api/backup', { dir: dir.value.trim(), ...mit.value })
+    said.value = `✓ ${n(r.entries)} Einträge, ${n(r.media)} Assets, ${r.config} Dateien, ${r.plugins} Plugins${r.hinweis ? ' · ' + r.hinweis : ''}`
+    localStorage.setItem('journali.backup.dir', dir.value.trim())
+    stand.value = await api.get(`/api/backup/status?dir=${encodeURIComponent(dir.value.trim())}`)
+  } catch (e) { said.value = '✗ ' + e.message }
+  finally { busy.value = '' }
+}
+
 async function zurueck() {
   const dort = stand.value?.dort
   if (!dort) { said.value = '✗ keine Sicherung in diesem Verzeichnis'; return }
@@ -50,7 +64,7 @@ async function zurueck() {
   busy.value = '…'
   try {
     const r = await api.post('/api/backup/restore', { dir: dir.value.trim(), ...mit.value })
-    said.value = `✓ ${n(r.entries)} Einträge, ${n(r.media)} Medien, ${r.config} Dateien, ${r.plugins} Plugins · ${r.hinweis}`
+    said.value = `✓ ${n(r.entries)} Einträge, ${n(r.media)} Medien, ${r.config} Dateien, ${r.plugins} Plugins${r.hinweis ? ' · ' + r.hinweis : ''}`
   } catch (e) { said.value = '✗ ' + e.message }
   finally { busy.value = '' }
 }
@@ -95,7 +109,7 @@ onMounted(lies)
 
 <template>
   <div class="section">
-    <h2>↺ Wiederherstellen <span class="muted">· Journal, Assets, Zugänge, Plugins</span></h2>
+    <h2 title="Vollsicherung in ein Verzeichnis auf dem Server; zurück nur in ein leeres System.">⇅ Sichern und wiederherstellen <span class="muted">· Journal, Assets, Zugänge, Plugins</span></h2>
 
     <div class="row" style="gap:6px;margin-bottom:6px">
       <input v-model="dir" type="text" placeholder="Verzeichnis der Sicherung" style="flex:1" @keydown.enter="lies" />
@@ -111,7 +125,14 @@ onMounted(lies)
         <td v-else class="muted">keine Sicherung</td></tr>
     </tbody></table>
 
+    <div class="row mit" style="gap:12px;align-items:center;margin-top:6px">
+      <label title="Assets aus der Datenbank; S3 und Verzeichnisse sichert der Betrieb"><input v-model="mit.media" type="checkbox" /> ▨ Assets</label>
+      <label title="Anmeldungen, Token, Speicher- und Mail-Einstellungen"><input v-model="mit.config" type="checkbox" /> ⚿ Zugänge</label>
+      <label title="Plugin-Verzeichnisse ohne node_modules"><input v-model="mit.plugins" type="checkbox" /> ⌁ Plugins</label>
+    </div>
+
     <div class="row" style="gap:8px;align-items:center;margin-top:8px">
+      <button class="primary sichern" :disabled="!!busy || !dir.trim()" title="Vollsicherung in dieses Verzeichnis schreiben" @click="sichern">⇩ Sichern</button>
       <button :disabled="!!busy || !stand?.dort || (stand.hier?.entries ?? 0) > 0"
         :title="!stand?.dort ? 'keine Sicherung im Verzeichnis' : stand.hier.entries > 0 ? `hier stehen ${n(stand.hier.entries)} Einträge` : 'Sicherung einspielen'"
         @click="zurueck">↺ Einspielen</button>

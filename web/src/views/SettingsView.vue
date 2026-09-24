@@ -2,7 +2,7 @@
 // Einstellungen: ein Reiter je Sache, sichtbar nach Recht (Taloan, 23.09.2026: „im Moment ist alles durcheinander wie es
 // gewachsen ist“ · „die Seite Anlage heisst völlig bescheuert und wirft alles Kraut und Rüben durcheinander — im Grunde
 // ist das der Tab für den Administrator, den wir jetzt in seine Bestandteile zerlegen“):
-// ◐ Ich · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ↺ Recovery.
+// ◐ Ich · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ⇅ B&R (Sichern und Wiederherstellen, Taloan 24.09.2026).
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
 // Speicher selbst nicht heranmuss (Taloan, 23.09.2026).
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
@@ -50,7 +50,7 @@ async function save() {
       <span v-if="store.can('storage')" class="tab" :class="{ on: tab === 'storage' }" @click="tab = 'storage'" title="wo die Bytes liegen">▨ Storage</span>
       <span v-if="store.can('model') || store.can('storage')" class="tab" :class="{ on: tab === 'assets' }" @click="tab = 'assets'" title="Vorschau-Ableitungen und ihr Bestand">▩ Assets</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'mail' }" @click="tab = 'mail'" title="ausgehender Mailserver">✉ Mail</span>
-      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'" title="Eine Sicherung einspielen; gesichert wird als Job.">↺ Recovery</span>
+      <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'backup' }" @click="tab = 'backup'" title="Sichern und wiederherstellen">⇅ B&amp;R</span>
     </div>
     <div class="scroll" v-if="tab === 'team'"><TeamsSettings /></div>
     <div class="scroll" v-else-if="tab === 'workflows'"><WorkflowSettings /></div>

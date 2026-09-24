@@ -21,11 +21,11 @@ function server({ fehler = null } = {}) {
     const method = opt.method ?? 'GET'
     if (method !== 'GET') gesendet.push({ method, path, body: JSON.parse(opt.body) })
     let status = 200, body
-    if (path === '/api/licence' && method === 'GET') body = { plan: 'Klein', instanz: 'abc', entriesWeek: 20000, entriesMonth: 100000 }
+    if (path === '/api/licence' && method === 'GET') body = { plan: 'enterprise', instanz: 'abc', entriesWeek: 200000, entriesMonth: 1000000, validUntil: '2026-12-23', trial: true, tarif: { key: 'enterprise', label: 'Enterprise' }, instanzTarif: { key: 'enterprise', label: 'Enterprise', pubTrees: null }, pubTrees: 3 }
     else if (path === '/api/licence') body = { plan: 'Gross', geprueft: true }
     else if (path === '/api/licence/requests' && method === 'GET') body = anforderungen
     else if (path === '/api/licence/requests') body = [{ id: 'k-2', hash: 'h', text: '{"anforderung":"neu","sig":"z"}' }]
-    else if (path === '/api/licence/packages') body = [{ key: 'pro', label: 'Pro', week: 50000, month: 200000, days: 30 }, { key: 'ultimate', label: 'Ultimate', week: 100000, month: 500000, days: 30 }, { key: 'enterprise', label: 'Enterprise', week: 250000, month: 1000000, days: 30 }]
+    else if (path === '/api/licence/packages') body = [{ key: 'pro', label: 'Pro', week: 50000, month: 250000, days: 30 }, { key: 'proplus', label: 'Pro+', week: 50000, month: 250000, days: 30 }, { key: 'enterprise', label: 'Enterprise', week: 200000, month: 1000000, days: 30 }, { key: 'unlimited', label: 'Unlimited', week: 2147483647, month: 2147483647, days: 30 }]
     else if (path === '/api/licence/keys' && method === 'GET') body = [{ id: 'k-0', kind: 'reset', team: 'de', teamLabel: 'Deutschland', from: '2026-09-22', until: null, carried: 0 }]
     else if (path === '/api/licence/keys') body = fehler ? (status = 400, { error: fehler }) : { id: 'k-1', kind: 'limit', team: 'de', from: '2026-09-23', until: '2026-10-22', carried: 0, geprueft: true }
     else body = {}
@@ -51,26 +51,39 @@ test('Angefordert wird ein Paket — keine freien Zahlen', async () => {
   assert.equal(w.findAll('.anfordern input').length, 0, 'beim Anfordern stehen freie Eingabefelder')
   const wahl = w.find('.anfordern select.wahl')
   assert.deepEqual(wahl.findAll('option').map(o => o.text().replace(/\s+/g, ' ')), [
-    '↺ Reset',
-    '⇡ Pro · 50.000 / Woche · 200.000 / Monat · 30 Tage',
-    '⇡ Ultimate · 100.000 / Woche · 500.000 / Monat · 30 Tage',
-    '⇡ Enterprise · 250.000 / Woche · 1.000.000 / Monat · 30 Tage',
+    '↺ Reset Pro',
+    '↺ Reset Enterprise',
+    '⇡ Pro · 50.000 / Woche · 250.000 / Monat · 30 Tage',
+    '⇡ Pro+ · 50.000 / Woche · 250.000 / Monat · 30 Tage',
+    '⇡ Enterprise · 200.000 / Woche · 1.000.000 / Monat · 30 Tage',
+    '⇡ Unlimited · ∞ / Woche · ∞ / Monat · 30 Tage',
   ], 'die Pakete stehen ohne ihre Werte da')
-  await wahl.setValue('ultimate')
+  await wahl.setValue('enterprise')
   await w.find('.anfordern select.anzahl').setValue('5')
   await button(w, 'Anfordern').trigger('click'); await flushPromises()
   const post = gesendet.find(g => g.path === '/api/licence/requests')
   assert.ok(post, 'keine Anforderung gesendet')
-  assert.deepEqual({ ...post.body }, { kind: 'limit', plan: 'ultimate', count: 5 })
+  assert.deepEqual({ ...post.body }, { kind: 'limit', plan: 'enterprise', count: 5 })
   assert.equal(w.find('textarea.angefordert').element.value, '{"anforderung":"neu","sig":"z"}')
   w.unmount()
 })
 
-test('Reset braucht kein Paket', async () => {
+test('Reset getrennt für Pro und Enterprise', async () => {
   const gesendet = server(); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   await button(w, 'Anfordern').trigger('click'); await flushPromises()
-  assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/requests').body }, { kind: 'reset', count: 1 })
+  assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/requests').body }, { kind: 'reset', plan: 'pro', count: 1 })
+  await w.find('.anfordern select.wahl').setValue('reset:enterprise')
+  await button(w, 'Anfordern').trigger('click'); await flushPromises()
+  assert.deepEqual({ ...gesendet.filter(g => g.path === '/api/licence/requests')[1].body }, { kind: 'reset', plan: 'enterprise', count: 1 })
+  w.unmount()
+})
+
+test('Tarif, Test und Publikationsbäume stehen bei der Lizenz', async () => {
+  server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(w.findAll('tr.tarif td')[1].text().replace(/\s+/g, ' '), 'Enterprise · Test')
+  assert.match(w.find('tr.baeume').text().replace(/\s+/g, ' '), /3 \/ ∞/)
   w.unmount()
 })
 

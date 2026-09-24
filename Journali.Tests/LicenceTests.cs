@@ -13,16 +13,16 @@ public class LicenceTests
     }
 
     [Fact]
-    public void Ohne_Datei_gilt_der_Testbetrieb()
+    public void Ohne_Datei_gilt_Kostenlos()
     {
         var dir = Frisch();
         var (lic, geprueft, grund) = LicenceFile.Load(dir);
-        Assert.Equal("Testbetrieb", lic.Plan);
-        Assert.Equal(20_000, lic.EntriesWeek);
-        Assert.Equal(100_000, lic.EntriesMonth);
+        Assert.Equal("free", lic.Plan);          // Tarif Kostenlos (Taloan, 24.09.2026)
+        Assert.Equal(10_000, lic.EntriesWeek);
+        Assert.Equal(50_000, lic.EntriesMonth);
         Assert.Equal(0, lic.AiTokensMonth);   // kein Grundrauschen, solange keine Lizenz da ist
         Assert.False(geprueft);
-        Assert.Contains("Testbetrieb", grund);
+        Assert.Contains("Kostenlos", grund);
         Directory.Delete(dir, true);
     }
 
@@ -47,7 +47,8 @@ public class LicenceTests
         var dir = Frisch();
         var l = new Licences(dir);
         l.Neu(new Licence("Alt", null, DateOnly.FromDateTime(DateTime.Today.AddDays(-1)), 1, 2, null, 3, 4));
-        Assert.True(l.Lic.Abgelaufen);
+        Assert.True(l.Roh.Abgelaufen);            // eingespielt ist sie noch — zum Anzeigen
+        Assert.Equal(Licence.Frei, l.Lic);        // es gilt Kostenlos (Taloan, 24.09.2026)
         Assert.False(l.Geprueft);
         Assert.Contains("abgelaufen", l.Grund);
         Directory.Delete(dir, true);

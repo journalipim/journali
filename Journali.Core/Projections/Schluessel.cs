@@ -23,14 +23,9 @@ public static class Schluessel
 
     /// <summary>
     /// Die Pakete, die angefordert werden können (Taloan, 23.09.2026: „wir geben verschiedene Kombinationen vor, aber
-    /// keine freien Eingabefelder“). Die Zahlen sind vorläufig — Taloan hat die Pakete benannt, nicht beziffert.
+    /// keine freien Eingabefelder“) — die Tarife ausser Kostenlos (<see cref="Tarife"/>, Taloan 24.09.2026), je 30 Tage.
     /// </summary>
-    public static readonly Paket[] Pakete =
-    [
-        new("pro", "Pro", 50_000, 200_000, 30),
-        new("ultimate", "Ultimate", 100_000, 500_000, 30),
-        new("enterprise", "Enterprise", 250_000, 1_000_000, 30),
-    ];
+    public static readonly Paket[] Pakete = [.. Tarife.Alle.Where(t => t.Rang > 0).Select(t => new Paket(t.Key, t.Label, t.Week, t.Month, 30))];
     public static Paket? PaketVon(string? key) => Pakete.FirstOrDefault(p => p.Key == key);
 
     /// <summary>

@@ -1,3 +1,4 @@
+using Journali.Core.Projections;
 using static Journali.Server.ModelApi;
 
 namespace Journali.Server;
@@ -13,12 +14,18 @@ public static class LicenceApi
     {
         api.MapGet("/licence", (Catalog c) =>
         {
-            var l = licences.Lic;
+            var l = licences.Lic; var roh = licences.Roh;
+            var t = c.InstanzTarif;
+            var baeume = c.Read(tree => tree.PubTrees.Count());
             return Results.Ok(new
             {
-                l.Plan, l.Holder, l.ValidUntil, l.EntriesWeek, l.EntriesMonth, l.CountFrom, l.AiTokensMonth, l.AiTokensDay,
-                geprueft = licences.Geprueft, grund = licences.Grund, abgelaufen = l.Abgelaufen, ort = licences.Ort,
+                l.Plan, l.Holder, validUntil = roh.ValidUntil, l.EntriesWeek, l.EntriesMonth, l.CountFrom, l.AiTokensMonth, l.AiTokensDay,
+                geprueft = licences.Geprueft, grund = licences.Grund, abgelaufen = roh.Abgelaufen, ort = licences.Ort,
                 instanz = licences.InstanzId,
+                // der Tarif (Taloan, 24.09.2026): aus der Lizenz, der Test, und was für die ganze Instanz gilt
+                tarif = new { key = l.Tarif.Key, label = l.Tarif.Label }, trial = roh.Trial == true, trialPlan = roh.Tarif.Label,
+                instanzTarif = new { key = t.Key, label = t.Label, pubTrees = t.PubTrees == Tarife.Ohne ? (int?)null : t.PubTrees },
+                pubTrees = baeume,
             });
         });
 

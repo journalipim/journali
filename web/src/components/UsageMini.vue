@@ -6,8 +6,8 @@ import { computed } from 'vue'
 
 const props = defineProps({ usage: Object })   // { week: {used,max}, month: {used,max} }
 const PARTS = [['week', '▤'], ['month', '▦']]
-const n = v => (v ?? 0).toLocaleString('de-DE')
-const frei = p => Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
+const n = v => v >= 2147483647 ? '∞' : (v ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
+const frei = p => p?.max >= 2147483647 ? p.max : Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
 /// Ohne Kontingent (max 0) ist alles aufgebraucht — 0 ist sofort erreicht (Taloan, 23.09.2026)
 const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 100)) : 100
 /// Viel Luft ist grün; wird es eng, gelb; ist das Kontingent voll, rot

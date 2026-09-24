@@ -61,7 +61,10 @@ function cmp(a, b) {
   return sortDesc.value ? -d : d
 }
 function sortByCol(col) { if (sortBy.value === col) sortDesc.value = !sortDesc.value; else { sortBy.value = col; sortDesc.value = false } }
-const stateOf = p => !p.installed ? '— nicht installiert' : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : '◐ an, Basis aus'
+// Tarife (Taloan, 24.09.2026): was nicht zum Tarif der Instanz gehört, steht mit dem Tarif da, der es hat
+const TARIF = { free: 'Kostenlos', pro: 'Pro', proplus: 'Pro+', enterprise: 'Enterprise', unlimited: 'Unlimited' }
+const tarifOf = p => TARIF[p.tarif] ?? p.tarif ?? ''
+const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? '— nicht installiert' : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : '◐ an, Basis aus'
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
 // Ein/Aus (Taloan: Basis-Plugins sind der Container): Einschalten braucht die Basis; Ausschalten einer Basis nimmt die Ergänzungen mit
 async function toggle(p) {
@@ -122,12 +125,12 @@ function pick(k) { cur.value = k }
       <h1>⌁ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
       <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : manifest.runs === 'office' ? (current.key === 'onlyoffice' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : '▭ Browser' }}{{ services.length ? ' + ⚙ ' + (services.length > 1 ? services.length + ' Dienste' : 'Prozess') : '' }}</span>
       <span class="grow" />
-      <template v-if="current.onDisk && !current.installed"><button class="primary" @click="act(`/api/plugins/${current.key}/install`)">⇩ installieren {{ current.diskVersion }}</button></template>
+      <template v-if="current.onDisk && !current.installed"><button class="primary" :disabled="current.allowed === false" :title="current.allowed === false ? `Tarif ${tarifOf(current)}` : ''" @click="act(`/api/plugins/${current.key}/install`)">⇩ installieren {{ current.diskVersion }}</button></template>
       <template v-else-if="current.installed">
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">↑ aktualisieren auf {{ current.diskVersion }}</button>
         <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? 'In die Leiste links aufnehmen (unter sein Thema)' : 'Aus der Leiste links nehmen (nur für dich, in den Einstellungen)'">{{ store.railOff.includes(current.key) ? '▯ nicht in der Leiste' : '▮ in der Leiste' }}</button>
         <!-- Zustandsschalter wie „in der Leiste“ (Taloan): leuchtet, wenn an; Klick kippt -->
-        <button :class="{ primary: current.enabled }" @click="toggle(current)" :title="current.enabled ? (plugins.active(current.key) ? 'Deaktivieren (jetzt aktiviert)' : 'aktiviert, aber ohne Wirkung: ' + missing(current.key).join(', ') + ' ist aus') : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : 'Aktivieren (jetzt deaktiviert)'">{{ current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
+        <button :class="{ primary: current.enabled }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? `Tarif ${tarifOf(current)}` : current.enabled ? (plugins.active(current.key) ? 'Deaktivieren (jetzt aktiviert)' : 'aktiviert, aber ohne Wirkung: ' + missing(current.key).join(', ') + ' ist aus') : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : 'Aktivieren (jetzt deaktiviert)'">{{ current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" title="aus dem Journal entfernen — die Dateien bleiben">🗑</button>
       </template>
     </div>

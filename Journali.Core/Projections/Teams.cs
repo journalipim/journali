@@ -43,13 +43,13 @@ public sealed class TeamState
 }
 
 /// <summary>Ein eingelöster Limit-Schlüssel: von–bis (eingeschlossen), was er zusichert, und welcher Schlüssel es war.</summary>
-public sealed record LimitWindow(string Key, DateOnly From, DateOnly Until, int Week, int Month, long Number)
+public sealed record LimitWindow(string Key, DateOnly From, DateOnly Until, int Week, int Month, long Number, string? Plan = null)
 {
     public bool Gilt(DateOnly d) => From <= d && d <= Until;
 }
 
 /// <summary>Ein eingelöster Schlüssel, wie ihn die Übersicht zeigt.</summary>
-public sealed record Redemption(string Id, string Kind, string Team, DateOnly From, DateOnly? Until, int Week, int Month, int Days, int Carried, string Actor, DateTimeOffset At);
+public sealed record Redemption(string Id, string Kind, string Team, DateOnly From, DateOnly? Until, int Week, int Month, int Days, int Carried, string Actor, DateTimeOffset At, string? Plan = null);
 
 /// <summary>Ein Tag KI: Aufrufe und das gemessene Volumen, aufgeschlüsselt nach Anbieter, Person und Anlass.
 /// <see cref="In"/> und <see cref="Out"/> sind die Tokenzahlen alter Einträge — sie wachsen nicht mehr und werden
@@ -137,6 +137,15 @@ public sealed class Teams : IProjection
         return w is null ? (t.EntriesWeek, t.EntriesMonth) : (Math.Max(t.EntriesWeek, w.Week), Math.Max(t.EntriesMonth, w.Month));
     }
 
+    /// <summary>Der Tarif, den ein eingelöster Limit-Schlüssel diesem Team an dem Tag gibt — null ohne (Taloan, 24.09.2026).</summary>
+    public Tarif? TarifAt(string team, DateOnly d) =>
+        _all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).Select(x => Tarife.Von(x.Plan)).Where(x => x is not null)
+            .Aggregate((Tarif?)null, (a, b) => a is null ? b : Tarife.Hoeher(a, b!));
+
+    /// <summary>Der höchste Tarif, den an dem Tag irgendein Team per Schlüssel hat — er gilt für die ganze Instanz.</summary>
+    public Tarif? HoechsterTarif(DateOnly d) =>
+        _all.Keys.Select(k => TarifAt(k, d)).Where(x => x is not null).Aggregate((Tarif?)null, (a, b) => a is null ? b : Tarife.Hoeher(a, b!));
+
     /// <summary>Der Limit-Schlüssel, der an diesem Tag gilt — für die Umrechnung beim nächsten Einlösen.</summary>
     public LimitWindow? WindowAt(string team, DateOnly d) =>
         _all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault();
@@ -203,10 +212,10 @@ public sealed class Teams : IProjection
             {
                 var k = Types.Deserialize<KeyRedeemed>(entry.Payload);
                 // eingelöst ist eingelöst — auch wenn das Team später verschwindet
-                _eingeloest[k.Id] = new Redemption(k.Id, k.Kind, key, k.From, k.Until, k.EntriesWeek, k.EntriesMonth, k.Days, k.Carried, entry.Actor, entry.At);
+                _eingeloest[k.Id] = new Redemption(k.Id, k.Kind, key, k.From, k.Until, k.EntriesWeek, k.EntriesMonth, k.Days, k.Carried, entry.Actor, entry.At, k.Plan);
                 if (_all.GetValueOrDefault(key) is not { } t) break;
                 if (k.Kind == Schluessel.Reset && (t.ResetAt is not { } vorher || k.From >= vorher)) { t.ResetAt = k.From; t.ResetNumber = entry.Number; }
-                else if (k.Kind == Schluessel.Limit && k.Until is { } bis) t.Windows.Add(new LimitWindow(k.Id, k.From, bis, k.EntriesWeek, k.EntriesMonth, entry.Number));
+                else if (k.Kind == Schluessel.Limit && k.Until is { } bis) t.Windows.Add(new LimitWindow(k.Id, k.From, bis, k.EntriesWeek, k.EntriesMonth, entry.Number, k.Plan));
                 t.LastNumber = entry.Number; t.LastAt = entry.At; t.LastActor = entry.Actor;
                 break;
             }

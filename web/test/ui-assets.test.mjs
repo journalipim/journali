@@ -68,13 +68,14 @@ test('der Fehlbestand spricht von Assets', async () => {
   await ruhe(); w.unmount()
 })
 
-test('in den Einstellungen steht nur der Weg zurück — gesichert wird als Job', async () => {
+test('B&R: sichern und wiederherstellen — gesichert wird erst auf Knopfdruck', async () => {
+  // bis 23.09.2026 stand hier nur der Weg zurück; seit 24.09.2026 wird wieder von Hand gesichert (Tarif Kostenlos hat keinen Tasker)
   const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'users', 'storage'] }
   const w = mount(RestoreSettings); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
-  assert.ok(!w.findAll('button').some(b => /Sichern/.test(b.text())), 'kein Knopf, der sichert')
-  assert.equal(w.findAll('input[type=checkbox]').length, 0, 'und keine Schalter, was mitgesichert wird')
-  assert.match(t, /Wiederherstellen/, 'das Einspielen bleibt')
+  assert.ok(w.findAll('button').some(b => /Sichern/.test(b.text())), 'der Knopf, der sichert, fehlt')
+  assert.equal(w.findAll('input[type=checkbox]').length, 3, 'Assets, Zugänge, Plugins')
+  assert.match(t, /wiederherstellen/, 'das Einspielen bleibt')
   assert.match(t, /Teilbaum einspielen/, 'und die einzelne Datei')
   assert.match(t, /937 Assets/, 'der Stand spricht von Assets')
   assert.ok(!calls.some(c => c.path === '/api/backup' && c.method === 'POST'), 'nichts wurde gesichert')

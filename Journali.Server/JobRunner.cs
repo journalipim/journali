@@ -85,6 +85,7 @@ public sealed class JobRunner : BackgroundService
         if (job is null) { error = "unbekannter Job"; return null; }
         var state = _catalog.With((_, _, _) => _catalog.Plugins.All.GetValueOrDefault(job.Plugin));
         if (state is null || !state.Enabled) { error = $"Plugin {job.Plugin} ist nicht installiert oder aus"; return null; }
+        if (!_catalog.InstanzTarif.Erlaubt(job.Plugin)) { error = $"Plugin {job.Plugin} gehört nicht zum Tarif {_catalog.InstanzTarif.Label}"; return null; }
         if (!PluginApi.Scan(_pluginDir).TryGetValue(job.Plugin, out var m) || PluginApi.ProcessOf(m.Raw, job.Service) is not { } proc) { error = $"Plugin {job.Plugin} hat keinen Prozess {job.Service}"; return null; }
         var run = DateTimeOffset.Now.ToString("yyyyMMdd-HHmmss") + "-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(2)).ToLowerInvariant();
         var actor = "job:" + key;

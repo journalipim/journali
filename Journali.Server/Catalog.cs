@@ -12,6 +12,8 @@ namespace Journali.Server;
 /// </summary>
 /// <summary>Der Urheber hat kein Kontingent — der Eintrag würde journali-Token kosten (Taloan, 23.09.2026).</summary>
 public sealed class KeinKontingentException() : InvalidOperationException("Kontingent aufgebraucht — nichts gespeichert.");
+/// <summary>Der Tarif erlaubt es nicht (Taloan, 24.09.2026) — z. B. ein weiterer Publikationsbaum. Wird zu 403 wie das Kontingent.</summary>
+public sealed class TarifException(string message) : InvalidOperationException(message);
 
 public sealed class Catalog
 {
@@ -60,6 +62,37 @@ public sealed class Catalog
     /// <summary>Woher die Lizenz kommt (Datenbank oder Datei) — gesetzt beim Start, vor dem Saatgut.</summary>
     public Licences? Licences { get; set; }
     private Licence Lizenz => Licences?.Lic ?? LicenceFile.Load(LicenceDir ?? "").Lic;
+
+    /// <summary>
+    /// Der Tarif der Instanz (Taloan, 24.09.2026: „der höchste Tarif gilt für alle“): der höhere von Lizenz und dem
+    /// höchsten Tarif, den ein Team heute per Schlüssel hat. Nach ihm richten sich Plugins und Publikationsbäume.
+    /// </summary>
+    public Tarif InstanzTarif => Lesend(TarifOhneSperre);
+    private Tarif TarifOhneSperre()
+    {
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        return _teams.HoechsterTarif(heute) is { } t ? Tarife.Hoeher(Lizenz.Tarif, t) : Lizenz.Tarif;
+    }
+
+    /// <summary>Der Tarif eines Teams: sein Schlüssel — und beim ersten Team die Lizenz, deren Limits es trägt. Nur unter der Sperre.</summary>
+    public Tarif TeamTarif(string team)
+    {
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        var basis = _teams.Primary?.Key == team ? Lizenz.Tarif : Tarife.Free;
+        return _teams.TarifAt(team, heute) is { } t ? Tarife.Hoeher(basis, t) : basis;
+    }
+
+    /// <summary>Der Tag des ersten Eintrags — der Test einer neuen Instanz zählt ab ihm (Taloan, 24.09.2026).</summary>
+    public DateOnly? ErsterTag => Lesend(() => _usage.AllPerDay.Count == 0 ? (DateOnly?)null : _usage.AllPerDay.Keys.Min());
+
+    /// <summary>Was der Tarif verbietet, wirft (Taloan, 24.09.2026): ein Publikationsbaum mehr, als er erlaubt.</summary>
+    private void PruefeTarif(string type, object? payload)
+    {
+        if (type != Types.RubricCreated || payload is not RubricCreated { Parent: null }) return;
+        var t = TarifOhneSperre();
+        if (t.PubTrees != Tarife.Ohne && _tree.PubTrees.Count() >= t.PubTrees)
+            throw new TarifException($"Tarif {t.Label}: höchstens {t.PubTrees} Publikationsbäume.");
+    }
 
     /// <summary>Ab wann gezählt wird (aus der Lizenz, null = seit jeher) — Program setzt es beim Start und beim Einspielen.</summary>
     public DateOnly? ZaehltAb { get; set; }
@@ -311,6 +344,7 @@ public sealed class Catalog
             return action(_model, _tree, (actor, stream, type, payload, batch) =>
             {
                 if (KeinKontingent(actor, type)) throw new KeinKontingentException();
+                PruefeTarif(type, payload);
                 // Anhängen geht an die Datenbank — hier darf kein Leser warten; erst das Anwenden ist exklusiv
                 var entry = _journal.Append(actor, stream, type, Types.Serialize(payload), batch);
                 return Aendernd(() => Apply(entry));
@@ -379,6 +413,7 @@ public sealed class Catalog
                 ergebnis = action(_model, _tree, (wer, stream, type, payload, _) =>
                 {
                     if (KeinKontingent(wer, type)) throw new KeinKontingentException();
+                    PruefeTarif(type, payload);
                     var roh = Types.Serialize(payload);
                     offen.Add((stream, type, roh));
                     var entry = new Entry(basis + offen.Count, DateTimeOffset.Now, actor, stream, type, roh, batch, Kinds.Of(type));

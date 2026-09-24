@@ -36,7 +36,7 @@ public class LicenceInstanzTests
     {
         // dieselbe Lizenz, aber die Anlage hat eine neue Kennung — genau Taloans Fall mit den drei Instanzen
         var (lic, geprueft, grund) = LicenceFile.Aus(Json(Fuer(A)), B);
-        Assert.Equal("Testbetrieb", lic.Plan);
+        Assert.Equal(Journali.Core.Projections.Tarife.Free.Key, lic.Plan);
         Assert.False(geprueft);
         Assert.Contains("andere Instanz", grund);
         Assert.Equal(Journali.Core.Projections.Limits.Week, lic.EntriesWeek);

@@ -12,7 +12,7 @@ const neu = ref('')
 const neuManager = ref('')
 const leute = ref([])
 const lizenz = ref(null)
-const n = x => (x ?? 0).toLocaleString('de-DE')
+const n = x => x >= 2147483647 ? '∞' : (x ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
 /// Was aus der Lizenz schon an Teams vergeben ist — sonst merkt niemand, dass die Summe darüber hinausgeht
 const verteilt = computed(() => ({
   week: teams.value.reduce((a, t) => a + (t.entriesWeek ?? 0), 0),
