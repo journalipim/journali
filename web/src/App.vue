@@ -28,6 +28,7 @@ const crashed = ref(null)
 onErrorCaptured(e => { crashed.value = e?.message ?? String(e); console.error(e); return false })
 watch(() => route.fullPath, () => { crashed.value = null })
 onMounted(() => { plugins.load() })
+plugins.beobachte(store)   // nach der Anmeldung und nach einem neuen Serverstand neu laden — sonst fehlen Gruppen in der Leiste
 onMounted(() => window.addEventListener('keydown', e => {
   if (e.altKey && !e.ctrlKey && [...nav, ...navBottom].some(n => n.key === e.key)) {
     e.preventDefault()

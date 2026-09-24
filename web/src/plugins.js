@@ -31,7 +31,7 @@
 //   ai     — die KI, wenn in den Einstellungen ein Anbieter-Schlüssel steht (ai.js): available(), active(), label(), ask({ system, user, json, web })
 //   mapper — der Datenmapper (mapper.js): suggest, plan, convert, parseDelimited, fromObjects
 //   batch(commands, batchId?) — POST /api/batch
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 import { api } from './api.js'
 import { store } from './store.js'
 import { tree } from './tree.js'
@@ -60,6 +60,15 @@ export const plugins = reactive({
 
   loading: null,          // laufender load() — wer gleichzeitig ruft, wartet darauf (sonst doppelte Einträge in der Leiste)
   load() { return this.loading ??= this._load().finally(() => { this.loading = null }) },
+  /// Die Liste neu holen, sobald sich ändert, wer angemeldet ist, oder der Server einen neuen Stand meldet (Taloan, 24.09.2026:
+  /// „die Plugin-Leiste wird manchmal erst vollständig angezeigt, wenn man unten auf Plugins klickt“). Geholt wurde sie nur
+  /// einmal beim Einhängen der Oberfläche — kam dieser Abruf vor der Anmeldung (401), blieb die Liste leer, und mit ihr
+  /// fehlten in der Leiste Import, Export und Jobs. App.vue ruft das einmal auf.
+  beobachte(store) {
+    return watch(() => [store.auth?.user ?? null, store.builtAt ?? ''], (jetzt, vorher) => {
+      if (vorher && (jetzt[0] !== vorher[0] || jetzt[1] !== vorher[1])) this.load()
+    })
+  },
   async _load() {
     try { this.list = await api.get('/api/plugins') } catch (e) { this.list = []; this.loaded = true; return }
     // Basis-Plugins zuerst (ihre Einträge stehen dann vorn in der Gruppe), dann der Rest in Reihenfolge
