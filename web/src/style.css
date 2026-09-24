@@ -164,6 +164,9 @@ a { color: inherit; text-decoration: none; }
 .status .dot.online { color: var(--pos); }
 .status .dot.offline { color: var(--neg); }
 .status .actor { color: var(--text); }
+/* Der ?-Knopf ganz rechts (Taloan, 24.09.2026): rund, ruhig, erst beim Überfahren betont */
+.status .help { width: 18px; height: 18px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--muted); font-weight: 600; font-size: 12px; line-height: 1; cursor: pointer; }
+.status .help:hover { color: var(--text); border-color: var(--accent); }
 
 .content { grid-area: content; min-height: 0; display: flex; }
 

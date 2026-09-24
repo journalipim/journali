@@ -4,6 +4,8 @@
 // (ctx.checks). Welche Regeln laufen, steht im Journal (ctx.data „settings“ unter plugin:dq).
 // Quelle: GET /api/nodes/{id}/table?deep=true — alle Nachfahren mit aufgelösten Werten, je Sprache ein Aufruf.
 
+const skuOf = row => row.keys?.sku ?? row.sku ?? null
+
 const RULES = [
   { key: 'required', label: 'Pflichtattribut fehlt', severity: 'error',
     run({ row, values, columns, locale, master }) { return columns.filter(c => c.required && (c.perLocale || locale === master) && Object.values(c.required).some(ls => ls.includes('*') || ls.includes(locale)) && (values[c.key]?.value == null || values[c.key].value === '')).map(c => ({ attribute: c.key, message: c.perLocale ? `Pflicht (${locale}), leer` : 'Pflicht, leer' })) } },
@@ -18,7 +20,8 @@ const RULES = [
   { key: 'emptyhtml', label: 'HTML ohne Inhalt', severity: 'warn',
     run({ values, columns }) { return columns.filter(c => c.type === 'html' && values[c.key]?.own && values[c.key].value && !values[c.key].value.replace(/<[^>]+>|&nbsp;|\s/g, '')).map(c => ({ attribute: c.key, message: 'nur Tags, kein Text' })) } },
   { key: 'sku', label: 'SKU fehlt / doppelt', severity: 'error',
-    run({ row, all }) { if (row.role !== 'variant') return []; if (!row.sku) return [{ attribute: 'sku', message: 'Variante ohne SKU' }]; const n = all.filter(r => r.row.sku === row.sku).length; return n > 1 ? [{ attribute: 'sku', message: `SKU ${row.sku} ${n}× vergeben` }] : [] } },
+    // Die SKU steht in row.keys (eindeutige Kennungen je Zeile, Tree.KeysOf), nicht als row.sku — sonst „Variante ohne SKU“ bei jeder Variante (24.09.2026)
+    run({ row, all }) { if (row.role !== 'variant') return []; const sku = skuOf(row); if (!sku) return [{ attribute: 'sku', message: 'Variante ohne SKU' }]; const n = all.filter(r => skuOf(r.row) === sku).length; return n > 1 ? [{ attribute: 'sku', message: `SKU ${sku} ${n}× vergeben` }] : [] } },
   { key: 'untranslated', label: 'Übersetzung fehlt / gleich wie Master', severity: 'warn',
     run({ values, columns, locale, master, byLocale, row }) { if (locale === master) return []; const out = []; for (const c of columns) { if (!c.perLocale || c.type !== 'text' && c.type !== 'html') continue; const m = byLocale.get(master)?.get(row.id)?.[c.key]?.value; const v = values[c.key]?.value; if (m && !v) out.push({ attribute: c.key, message: `${locale}: fehlt (${master} hat „${String(m).slice(0, 40)}“)` }); else if (m && v && m === v && String(m).length > 3) out.push({ attribute: c.key, message: `${locale} gleich wie ${master}` }) } return out } },
   { key: 'formula', label: 'Formel/Vorlage ohne Ergebnis', severity: 'warn',
@@ -100,7 +103,7 @@ async function mount(root, ctx) {
   }
   function exportCsv() {
     const esc = v => { const s = v == null ? '' : String(v); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s }
-    const lines = ['schwere;knoten;id;sku;sprache;attribut;meldung;regel', ...state.result.findings.map(x => [x.severity, x.node.label, x.node.id, x.node.sku ?? '', x.locale, x.attribute ?? '', x.message, x.rule].map(esc).join(';'))]
+    const lines = ['schwere;knoten;id;sku;sprache;attribut;meldung;regel', ...state.result.findings.map(x => [x.severity, x.node.label, x.node.id, skuOf(x.node) ?? '', x.locale, x.attribute ?? '', x.message, x.rule].map(esc).join(';'))]
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })); a.download = 'datenqualitaet.csv'; a.click()
   }
   async function run() { if (!state.root) return; say('prüfe …'); try { state.result = await check(ctx, state.root, rules, say); say(`${state.result.findings.length} Befunde`); draw() } catch (e) { say('✗ ' + e.message); store.toast(e.message) } }

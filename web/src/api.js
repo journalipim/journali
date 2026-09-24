@@ -126,7 +126,7 @@ export function describe(e) {
     case 'SkuAttributeDefined': return `🏷 Kennung ${p.key} (ausser Kraft)`
     case 'NodeNamed': return p.name ? `✎ ${p.name}` : '✎ ∅ → Automatik'
     case 'LabelAttributeSet': return p.attribute ? `★ ${p.attribute}` : '★ ∅ → von oben'
-    case 'ProductCreated': return `▦ ${p.family} unter ${p.group}${p.axes?.length ? ' · ' + p.axes.join(', ') : ''}`
+    case 'ProductCreated': return `▦ ${p.family ?? 'Produkt'} unter ${p.group}${p.axes?.length ? ' · ' + p.axes.join(', ') : ''}`   // family ist Altlast, meist null
     case 'VariantCreated': return `◆ ${Object.entries(p.axisValues || {}).map(([k, v]) => k + '=' + v).join(', ') || 'ohne Achsen'} unter ${p.product}`
     case 'NodeMoved': return `→ ${p.parent}`
     case 'NodeRetired': return '− Knoten'
