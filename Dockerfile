@@ -5,8 +5,9 @@ WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
-# die Hilfe liegt neben web/ — build-help.mjs liest ../help
+# die Hilfe liegt neben web/ — build-help.mjs liest ../help; die Oberfläche importiert aus ../plugins (table/transform.mjs)
 COPY help/ /help/
+COPY plugins/ /plugins/
 # nur die Oberfläche — die gebauten Plugins (plugins/<key>/entry.js) liegen im Repo
 RUN npm run build:web
 
