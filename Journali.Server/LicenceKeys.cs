@@ -125,7 +125,8 @@ public static class LicenceKeys
             return anforderungen.Loesche(id) ? Results.Ok(new { removed = id }) : Results.NotFound();
         });
 
-        api.MapGet("/licence/packages", () => Results.Ok(Schluessel.Pakete.Select(p => new { p.Key, p.Label, week = p.Week, month = p.Month, days = p.Days })));
+        // alle: das Paket enthält alle Plugins (Pro+, Enterprise, Unlimited) — steht in der Auswahl (Taloan, 24.09.2026)
+        api.MapGet("/licence/packages", () => Results.Ok(Schluessel.Pakete.Select(p => new { p.Key, p.Label, week = p.Week, month = p.Month, days = p.Days, alle = Tarife.Von(p.Key)?.Plugins is null })));
 
         api.MapGet("/licence/keys", (Catalog c) => c.With((_, _, _) => Results.Ok(c.Teams.Einloesungen.Select(r => new
         {

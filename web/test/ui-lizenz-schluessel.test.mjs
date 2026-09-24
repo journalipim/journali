@@ -25,7 +25,7 @@ function server({ fehler = null } = {}) {
     else if (path === '/api/licence') body = { plan: 'Gross', geprueft: true }
     else if (path === '/api/licence/requests' && method === 'GET') body = anforderungen
     else if (path === '/api/licence/requests') body = [{ id: 'k-2', hash: 'h', text: '{"anforderung":"neu","sig":"z"}' }]
-    else if (path === '/api/licence/packages') body = [{ key: 'pro', label: 'Pro', week: 50000, month: 250000, days: 30 }, { key: 'proplus', label: 'Pro+', week: 50000, month: 250000, days: 30 }, { key: 'enterprise', label: 'Enterprise', week: 200000, month: 1000000, days: 30 }, { key: 'unlimited', label: 'Unlimited', week: 2147483647, month: 2147483647, days: 30 }]
+    else if (path === '/api/licence/packages') body = [{ key: 'pro', label: 'Pro', week: 50000, month: 250000, days: 30 }, { key: 'proplus', label: 'Pro+', week: 50000, month: 250000, days: 30, alle: true }, { key: 'enterprise', label: 'Enterprise', week: 200000, month: 1000000, days: 30, alle: true }, { key: 'unlimited', label: 'Unlimited', week: 2147483647, month: 2147483647, days: 30, alle: true }]
     else if (path === '/api/licence/keys' && method === 'GET') body = [{ id: 'k-0', kind: 'reset', team: 'de', teamLabel: 'Deutschland', from: '2026-09-22', until: null, carried: 0 }]
     else if (path === '/api/licence/keys') body = fehler ? (status = 400, { error: fehler }) : { id: 'k-1', kind: 'limit', team: 'de', from: '2026-09-23', until: '2026-10-22', carried: 0, geprueft: true }
     else body = {}
@@ -54,9 +54,9 @@ test('Angefordert wird ein Paket — keine freien Zahlen', async () => {
     '↺ Reset Pro',
     '↺ Reset Enterprise',
     '⇡ Pro · 50.000 / Woche · 250.000 / Monat · 30 Tage',
-    '⇡ Pro+ · 50.000 / Woche · 250.000 / Monat · 30 Tage',
-    '⇡ Enterprise · 200.000 / Woche · 1.000.000 / Monat · 30 Tage',
-    '⇡ Unlimited · ∞ / Woche · ∞ / Monat · 30 Tage',
+    '⇡ Pro+ · 50.000 / Woche · 250.000 / Monat · 30 Tage · alle Core-Plugins',
+    '⇡ Enterprise · 200.000 / Woche · 1.000.000 / Monat · 30 Tage · alle Core-Plugins',
+    '⇡ Unlimited · ∞ / Woche · ∞ / Monat · 30 Tage · alle Core-Plugins',
   ], 'die Pakete stehen ohne ihre Werte da')
   await wahl.setValue('enterprise')
   await w.find('.anfordern select.anzahl').setValue('5')

@@ -35,7 +35,7 @@ const pakete = ref([])
 const neu = ref({ wahl: 'reset:pro', count: 1 })   // wahl: 'reset:<tarif>' oder der Schlüssel eines Pakets
 // Reset getrennt für Pro und Enterprise
 const RESETS = [['pro', 'Pro'], ['enterprise', t_('Enterprise')]]
-const paketTitel = p => `${zahl(p.week)} / Woche · ${zahl(p.month)} / Monat · ${p.days} Tage`
+const paketTitel = p => `${zahl(p.week)} / Woche · ${zahl(p.month)} / Monat · ${p.days} Tage${p.alle ? ' · alle Core-Plugins' : ''}`
 const paketName = k => pakete.value.find(p => p.key === k)?.label ?? RESETS.find(r => r[0] === k)?.[1] ?? k
 const artName = a => a.kind === 'reset' ? t_('Reset{0}', [a.plan ? ' ' + paketName(a.plan) : '']) : a.plan ? paketName(a.plan) : t_('Limit')
 const einloesung = id => einloesungen.value.find(e => e.id === id)
