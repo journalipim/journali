@@ -20,6 +20,8 @@ public static class RestoreApi
     public static void Map(RouteGroupBuilder api)
     {
         // Was liegt in diesem Verzeichnis an Sicherungen? Name, Grösse, Zeitpunkt — jüngste zuerst
+        // Altlast bis 25.09.2026: die Oberfläche hatte eine eigene Dateiliste. Jetzt wählt der Dateibrowser
+        // (/api/files) die Datei; der Endpunkt bleibt für Skripte, die ihn schon benutzen.
         api.MapGet("/restore/files", (string? path) =>
         {
             var dir = (path ?? "").Trim();

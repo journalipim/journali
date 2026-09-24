@@ -16,12 +16,11 @@ const said = ref('')
 // Was mitgeht — beim Sichern wie beim Einspielen (fehlte bis 24.09.2026: Einspielen brach mit „mit is not defined“ ab)
 const mit = ref({ media: true, config: true, plugins: true })
 
-// Teilbaum aus einer Datei
-const tdir = ref(localStorage.getItem('journali.restore.dir') ?? '')
-const files = ref([])
-const gewaehlt = ref(null)
+// Teilbaum aus einer Datei: gewählt wird sie im Dateibrowser des Servers
+const gewaehlt = ref(localStorage.getItem('journali.restore.file') ?? '')
 const probe = ref(null)
 const tsaid = ref('')
+const dateiName = () => gewaehlt.value.split(/[\\/]/).filter(Boolean).pop() ?? gewaehlt.value
 
 const kb = b => {
   const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
@@ -69,21 +68,17 @@ async function zurueck() {
   finally { busy.value = '' }
 }
 
-async function ladeTeilbaum() {
-  if (!tdir.value.trim()) { files.value = []; return }
-  tsaid.value = ''
-  try {
-    const r = await api.get(`/api/restore/files?path=${encodeURIComponent(tdir.value.trim())}`)
-    files.value = r.files ?? []; tdir.value = r.path
-    localStorage.setItem('journali.restore.dir', r.path)
-    if (!files.value.length) tsaid.value = t('keine Dateien in diesem Verzeichnis')
-  } catch (e) { files.value = []; tsaid.value = '✗ ' + e.message }
+function waehleDatei() {
+  filePicker({ value: gewaehlt.value, title: t('📁 Rohdaten-JSON auf dem Server'), onPick: v => {
+    gewaehlt.value = v; probe.value = null; tsaid.value = ''
+    try { localStorage.setItem('journali.restore.file', v) } catch {}
+  } })
 }
 
 async function pruefen() {
   if (!gewaehlt.value) return
   probe.value = null; tsaid.value = ''
-  try { probe.value = await api.post('/api/restore', { path: gewaehlt.value.path, dryRun: true }) }
+  try { probe.value = await api.post('/api/restore', { path: gewaehlt.value, dryRun: true }) }
   catch (e) { tsaid.value = '✗ ' + e.message }
 }
 
@@ -93,11 +88,11 @@ async function einspielen() {
   const ok = await dialog.confirm({
     title: t('Teilbaum einspielen?'),
     warn: t('{0} neu · {1} angeglichen · {2} zurückgeholt{3}', [p.created, p.updated, p.restored, p.model ? ' ' + t('· {0} Modellteile', [p.model]) : '']),
-    list: [gewaehlt.value.name], ok: t('Einspielen'), danger: true,
+    list: [dateiName()], ok: t('Einspielen'), danger: true,
   })
   if (!ok) return
   try {
-    const r = await api.post('/api/restore', { path: gewaehlt.value.path, dryRun: false })
+    const r = await api.post('/api/restore', { path: gewaehlt.value, dryRun: false })
     tsaid.value = t('✓ {0} angelegt, {1} angeglichen, {2} zurückgeholt · {3} Einträge', [r.created, r.updated, r.restored, r.entries])
     probe.value = null
     await store.poll(true)
@@ -144,19 +139,11 @@ onMounted(lies)
   <div class="section">
     <h2>{{ $t("↺ Teilbaum einspielen") + ' ' }}<span class="muted">{{ $t("· einzelne Datei, Rohdaten-JSON") }}</span></h2>
 
-    <div class="row" style="gap:6px;margin-bottom:6px">
-      <input v-model="tdir" type="text" :placeholder="$t('Verzeichnis')" style="flex:1" @keydown.enter="ladeTeilbaum" />
-      <button :title="$t('Verzeichnis auf dem Server wählen')" @click="filePicker({ value: tdir, dirOnly: true, onPick: v => { tdir = v; ladeTeilbaum() } })">📁</button>
-      <button @click="ladeTeilbaum">{{ $t("Lesen") }}</button>
+    <div class="row" style="gap:6px;margin-bottom:6px;align-items:center">
+      <button :title="$t('Datei auf dem Server wählen')" @click="waehleDatei">📁</button>
+      <span v-if="gewaehlt" class="mono" :title="gewaehlt">{{ dateiName() }}</span>
+      <span v-else class="muted">{{ $t("keine Datei gewählt") }}</span>
     </div>
-
-    <table v-if="files.length" class="grid"><tbody>
-      <tr v-for="f in files" :key="f.path" :class="{ current: gewaehlt?.path === f.path }" style="cursor:pointer" @click="gewaehlt = f; probe = null">
-        <td>{{ gewaehlt?.path === f.path ? '●' : '○' }} {{ f.name }}</td>
-        <td class="muted" style="width:90px;text-align:right">{{ kb(f.size) }}</td>
-        <td class="muted" style="width:130px">{{ when(f.at) }}</td>
-      </tr>
-    </tbody></table>
 
     <div v-if="gewaehlt" class="row" style="gap:8px;margin-top:8px;align-items:center">
       <button @click="pruefen">{{ $t("Prüfen") }}</button>

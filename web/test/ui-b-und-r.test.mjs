@@ -41,8 +41,9 @@ test('Einspielen schickt mit, was mitgeht — und bricht nicht ab', async () => 
   const gesendet = server(); store.poll = async () => {}
   dialog.confirm = async () => true
   const w = mount(RestoreSettings); await flushPromises()
+  // den Stand liest die Ansicht beim Wählen des Verzeichnisses; hier reicht das Feld plus Enter
   await w.find('input[type=text]').setValue('/data/sicherung')
-  await button(w, 'Lesen').trigger('click'); await flushPromises()
+  await w.find('input[type=text]').trigger('keydown.enter'); await flushPromises()
   await button(w, 'Einspielen').trigger('click'); await flushPromises()
   const post = gesendet.find(g => g.path === '/api/backup/restore')
   assert.ok(post, 'Einspielen ging nicht hinaus')

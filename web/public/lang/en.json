@@ -188,8 +188,6 @@
  "⇅ Sichern und wiederherstellen": "⇅ Backup and restore",
  "· Journal, Assets, Zugänge, Plugins": "· Journal, assets, credentials, plugins",
  "Verzeichnis der Sicherung": "Backup directory",
- "Verzeichnis auf dem Server wählen": "Choose a directory on the server",
- "Lesen": "Read",
  "dieses System": "this system",
  "{0} Einträge · {1} Assets · Speicher {2}": "{0} entries · {1} assets · storage {2}",
  "im Verzeichnis": "in the directory",
@@ -208,7 +206,6 @@
  "keine Sicherung im Verzeichnis": "no backup in the directory",
  "↺ Teilbaum einspielen": "↺ Restore a subtree",
  "· einzelne Datei, Rohdaten-JSON": "· single file, raw JSON",
- "Verzeichnis": "Directory",
  "Prüfen": "Check",
  "{0} neu · {1} angeglichen · {2} zurückgeholt": "{0} new · {1} aligned · {2} brought back",
  "· {0} Modellteile": "· {0} model parts",
@@ -1247,7 +1244,6 @@
  "geht nur in ein leeres System": "only into an empty system",
  "Einspielen": "Restore",
  "✓ {0} Einträge, {1} Medien, {2} Dateien, {3} Plugins{4}": "✓ {0} entries, {1} media, {2} files, {3} plugins{4}",
- "keine Dateien in diesem Verzeichnis": "no files in this directory",
  "Teilbaum einspielen?": "Restore the subtree?",
  "{0} neu · {1} angeglichen · {2} zurückgeholt{3}": "{0} new · {1} aligned · {2} brought back{3}",
  "✓ {0} angelegt, {1} angeglichen, {2} zurückgeholt · {3} Einträge": "✓ {0} created, {1} aligned, {2} brought back · {3} entries",
@@ -2510,5 +2506,9 @@
  "Verzeichnis auf dem Server wählen — der Stand kommt beim Wählen": "choose a directory on the server — the state is read when choosing",
  "Name: ohne \\ / : * ? \" < > | und nicht leer.": "Name: without \\ / : * ? \" < > | and not empty.",
  "„{0}“ ist eine Datei.": "“{0}” is a file.",
- "Ein Laufwerk lässt sich nicht umbenennen.": "A drive cannot be renamed."
+ "Ein Laufwerk lässt sich nicht umbenennen.": "A drive cannot be renamed.",
+ "📁 Rohdaten-JSON auf dem Server": "📁 Raw-data JSON on the server",
+ "Datei auf dem Server wählen": "Choose a file on the server",
+ "keine Datei gewählt": "no file chosen",
+ "Verzeichnis": "Directory"
 }
