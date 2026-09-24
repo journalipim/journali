@@ -314,7 +314,8 @@ Zeit hingeht: `61242 Einträge in 31556 ms — lesen 30326 ms · anwenden Plugin
 Rest aus der Datenbank; jeder gelesene oder geschriebene Eintrag wird angehängt. Der Spiegel ist ein Cache, keine
 Wahrheit: beim Start wird sein letzter Eintrag gegen die Datenbank geprüft (Nummer, Strom, Typ, Zeit, Nutzdaten) und
 die Nummernfolge auf Lücken — bei jeder Abweichung wird die Datei verworfen und alles aus der Datenbank gelesen.
-Datei löschen ist jederzeit erlaubt. `JOURNALI_JOURNAL_CACHE=off` schaltet den Spiegel ab.
+Datei löschen ist jederzeit erlaubt. An und aus steht in ⚙ Einstellungen → ▨ Storage → ▨ Start (dort auch die
+Grösse und der Papierkorb); ohne `betrieb.json` zählt `JOURNALI_JOURNAL_CACHE=off`.
 Was je Eintrag kostet, wächst mit dem Journal (Taloan, 24.09.2026): die Datei ist einmal je Vorgang offen, nicht je
 Eintrag; beim Start wird nur die letzte Zeile entschlüsselt (lückenlos = erste Zeile #1 und so viele Zeilen wie die
 letzte Nummer); Zeilen vor dem gesuchten Stand werden an ihrer Nummer erkannt, ohne sie zu entschlüsseln; eine beim
@@ -326,7 +327,8 @@ im Datenverzeichnis, der Stand aller Abbilder bei #n (`Snapshot.cs` im Kern: Sys
 privater Felder). Beim Start werden die Abbilder daraus geladen und nur der Rest ab #n angewandt; geschrieben wird er im
 Hintergrund nach dem Start und beim Beenden. Auch er ist ein Cache: er trägt den Bau-Stempel des Kerns (neue Fassung =
 alter Schnappschuss fällt) und der Eintrag #n wird gegen das Journal geprüft; bei Abweichung wird die Datei gelöscht.
-`JOURNALI_SNAPSHOT=off` schaltet ihn ab. Startzeile: „Schnappschuss bis #n“.
+An und aus ebenfalls in ⚙ Einstellungen → ▨ Storage → ▨ Start; ohne `betrieb.json` zählt `JOURNALI_SNAPSHOT=off`.
+Startzeile: „Schnappschuss bis #n“.
 
 ## Jobs (fest eingebaut: ⏱ Jobs)
 

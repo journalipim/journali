@@ -19,6 +19,7 @@ const zaehlBusy = ref('')   // Fehlbestand zählen
 const kopierBusy = ref('')  // Assetmigration
 const missing = ref(null)
 const stats = ref(null)      // was im Speicher liegt: Zahl, Grösse, Arten
+const betrieb = ref(null)    // Spiegel und Schnappschuss: Schalter und Dateigrössen
 const n = x => (x ?? 0).toLocaleString('de-DE')
 const kb = b => {
   const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
@@ -71,6 +72,22 @@ async function save() {
   catch (e) { store.toast(e.message) }
   finally { busy.value = '' }
 }
+async function ladeBetrieb() {
+  try { betrieb.value = await api.get('/api/betrieb') } catch { betrieb.value = null }
+}
+async function setzeBetrieb(feld, wert) {
+  try {
+    await api.post('/api/betrieb', { [feld]: wert }, 'PUT')
+    await ladeBetrieb()
+    store.toast('gespeichert — gilt ab dem nächsten Start', 'ok')
+  } catch (e) { store.toast(e.message) }
+}
+async function wirfWeg(was) {
+  const d = was === 'spiegel' ? betrieb.value?.spiegel : betrieb.value?.schnappschuss
+  if (!await dialog.confirm({ title: `${was === 'spiegel' ? 'Spiegel' : 'Schnappschuss'} wegwerfen?`, text: `${kb(d?.bytes)} — beim nächsten Start wird neu gelesen.`, ok: '🗑 Wegwerfen' })) return
+  try { await api.del(`/api/betrieb/${was}`); await ladeBetrieb() } catch (e) { store.toast(e.message) }
+}
+
 async function loadStats() {
   // ein älterer Server kennt den Weg noch nicht — dann bleibt der Block weg statt halb gefüllt
   try { const x = await api.get('/api/media/stats'); stats.value = Array.isArray(x?.kinds) ? x : null } catch { stats.value = null }
@@ -87,7 +104,7 @@ async function copy() {
   catch (e) { store.toast(e.message) }
   finally { kopierBusy.value = '' }
 }
-onMounted(() => { load(); loadStats() })
+onMounted(() => { load(); loadStats(); ladeBetrieb() })
 </script>
 
 <template>
@@ -107,6 +124,33 @@ onMounted(() => { load(); loadStats() })
         <tr><td class="muted">Region</td><td class="row" style="gap:10px"><input v-model="cfg.region" type="text" style="width:160px" placeholder="garage" /><label><input type="checkbox" v-model="cfg.pathStyle" /> Pfad-Stil (endpoint/bucket/…)</label></td><td></td></tr>
       </template>
       <tr><td></td><td class="row"><button @click="check">Prüfen</button><button class="primary" @click="save">Speichern</button><span :class="String(probe || busy || '').startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="section" v-if="teil === 'speicher' && betrieb">
+    <h2 title="Zwei Kopien, die den Start schnell machen: der Spiegel hält die Journaleinträge, der Schnappschuss die fertigen Abbilder.">▨ Start <span class="muted">· Spiegel und Schnappschuss</span></h2>
+    <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:150px" /><col /></colgroup><tbody>
+      <tr>
+        <td class="muted" title="Jeder gelesene Eintrag liegt als Zeile auf der Platte; der Start holt nur den Rest aus der Datenbank.">Spiegel</td>
+        <td><label><input type="checkbox" :checked="betrieb.journalCache" @change="setzeBetrieb('journalCache', $event.target.checked)" /> an</label></td>
+        <td class="muted mono" style="font-size:12px">
+          <span v-if="betrieb.spiegel.da">{{ kb(betrieb.spiegel.bytes) }}
+            <button class="x" title="wegwerfen — beim nächsten Start wird neu gelesen" @click="wirfWeg('spiegel')">🗑</button>
+          </span>
+          <span v-else>keine Datei</span>
+        </td>
+      </tr>
+      <tr>
+        <td class="muted" title="Der Stand aller Abbilder als Datei; ohne ihn liest der Start das Journal von vorn.">Schnappschuss</td>
+        <td><label><input type="checkbox" :checked="betrieb.snapshot" @change="setzeBetrieb('snapshot', $event.target.checked)" /> an</label></td>
+        <td class="muted mono" style="font-size:12px">
+          <span v-if="betrieb.schnappschuss.da">{{ kb(betrieb.schnappschuss.bytes) }}
+            <button class="x" title="wegwerfen — beim nächsten Start wird neu gelesen" @click="wirfWeg('schnappschuss')">🗑</button>
+          </span>
+          <span v-else>keine Datei</span>
+        </td>
+      </tr>
+      <tr><td></td><td colspan="2" class="muted" style="font-size:12px">Eine Änderung gilt ab dem nächsten Start.<span v-if="!betrieb.eingestellt"> Bisher aus der Umgebung.</span></td></tr>
     </tbody></table>
   </div>
 

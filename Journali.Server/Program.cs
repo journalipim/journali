@@ -34,14 +34,16 @@ pg.EnsureSchema();
 // Datenverzeichnis (JOURNALI_JOBS): Jobs, Geheimnisse, Medien-Einstellung — und der lokale Spiegel des Journals
 var dataDir = Path.GetFullPath(builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs"));
 Directory.CreateDirectory(dataDir);
-// Spiegel (Taloan, 21.09.: 30 von 31 s Start waren Lesen über das Netz): JOURNALI_JOURNAL_CACHE=off schaltet ihn ab
-IJournal journal = string.Equals(builder.Configuration["JOURNALI_JOURNAL_CACHE"], "off", StringComparison.OrdinalIgnoreCase)
-    ? pg : new CachedJournal(pg, Path.Combine(dataDir, $"journal-{connection.Host}-{connection.Port}-{connection.Database}.cache.jsonl"));
+// Spiegel und Schnappschuss stellt der Administrator ein (Taloan, 24.09.2026) — betrieb.json im Datenverzeichnis,
+// ohne Datei zählt die Umgebung (JOURNALI_JOURNAL_CACHE=off, JOURNALI_SNAPSHOT=off). Gelesen wird das hier, vor dem
+// Journal: der Spiegel entscheidet, wie das Journal überhaupt gelesen wird.
+var betrieb = BetriebConfigFile.Effektiv(dataDir, builder.Configuration);
+var cachePath = Path.Combine(dataDir, $"journal-{connection.Host}-{connection.Port}-{connection.Database}.cache.jsonl");
+IJournal journal = betrieb.JournalCache ? new CachedJournal(pg, cachePath) : pg;
 var catalog = new Catalog(journal);
 // Schnappschuss der Abbilder (Taloan, 21.09.: bei Millionen Einträgen ist das Anwenden der Start): Stand #n als Datei, der Start liest nur den Rest;
 // JOURNALI_SNAPSHOT=off schaltet ihn ab. Geschrieben nach dem Start (im Hintergrund) und beim Beenden.
-var snapshotPath = string.Equals(builder.Configuration["JOURNALI_SNAPSHOT"], "off", StringComparison.OrdinalIgnoreCase)
-    ? null : Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json");
+var snapshotPath = betrieb.Snapshot ? Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json") : null;
 var snapshotAt = snapshotPath is null ? 0 : catalog.LoadSnapshot(snapshotPath);
 Console.WriteLine($"journali: Journal wird gelesen …{(snapshotAt > 0 ? $" (Schnappschuss bis #{snapshotAt})" : "")}{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (Spiegel bis #{cj.CachedHead}, Rest aus der Datenbank)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist (Taloan, 20.09.)
 var sw0 = System.Diagnostics.Stopwatch.StartNew();
@@ -150,6 +152,7 @@ var gebautAm = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Locat
 var fassung = typeof(Program).Assembly.GetName().Version?.ToString(3);
 
 var api = app.MapGroup("/api");
+BetriebApi.Map(api, dataDir, cachePath, Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json"), builder.Configuration);
 Auth.Map(api, dataDir);
 if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWORD"], builder.Configuration["JOURNALI_ADMIN_USER"]) is { } recovered) Console.WriteLine("journali: " + recovered);
 

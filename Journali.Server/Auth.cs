@@ -129,6 +129,7 @@ public static class Auth
         if (path.StartsWith("/api/ai")) return read ? Rights.Read : Rights.Write;   // KI fragen darf, wer pflegen darf — der Schlüssel gehört dem Team, nicht der Person
         if (path.StartsWith("/api/teams")) return read ? Rights.Read : Rights.Team;   // das eigene Team; Anlegen, Löschen und Grundkontingent prüft TeamApi gegen „users“
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
+        if (path.StartsWith("/api/betrieb")) return Rights.Storage;   // Spiegel und Schnappschuss: Ablage, kein Modell
         if (path.StartsWith("/api/media/presets") && !read) return Rights.Model;   // Vorschau-Presets sind Modell
         if (path.StartsWith("/api/files")) return Rights.Jobs;   // Dateibrowser des Servers: Jobs — oder Storage (Allowed)
         if (path.StartsWith("/api/jobs") && (path.EndsWith("/uebergabe") || path.EndsWith("/pause") || path.EndsWith("/resume"))) return Rights.Write;   // einen Import abgeben und anhalten ist Pflege, kein Jobbau
