@@ -147,3 +147,8 @@ Teil 2 gebaut am 24.09.2026: 18 Kapitel unter `help/de` und `help/en`, `web/buil
 `wwwroot/help/<code>/`, `HelpView.vue` unter `/help/:chapter`, der ?-Knopf öffnet das Kapitel zur Ansicht
 (`help.js: chapterFor`). `LICENSE` in der Wurzel (ELv2 plus Zusatzerlaubnis). Offen: README zur Installation
 auf Git, Lizenzhinweis im Startbanner, `ScriptEditor.vue`, mehrzeilige Texte, Servermeldungen (Stufe 4).
+
+Stufe 4 gebaut am 24.09.2026: Servermeldungen kommen als `{ error, template, args }` — die Vorlage ist der deutsche Text
+und damit der Schlüssel in `en.json`, `api.js` (`serverText`) übersetzt und füllt die Werte; `Bad("…{0}…", x)`,
+`Err(…)`, `Outcome.Bad(…)` im Server, `texte-pruefen.mjs` liest die Schlüssel aus `Journali.Server`. `ScriptEditor.vue`
+ist übersetzt. Deutsch bleiben Meldungen aus Ausnahmen mit Werten (`$"…"` in `throw`) und die Job-Läufe (`JobRunner`).

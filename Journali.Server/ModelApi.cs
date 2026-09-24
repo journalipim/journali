@@ -52,7 +52,7 @@ public static partial class ModelApi
 
         m.MapPut("/locales/{code}", (string code, LocaleDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, code, ValidCode, (model, write) =>
-                body.Fallback is { } fb && (fb == code || !model.Locales.ContainsKey(fb)) ? Bad($"Fallback {fb}: muss eine andere Sprache des Modells sein.")
+                body.Fallback is { } fb && (fb == code || !model.Locales.ContainsKey(fb)) ? Bad("Fallback {0}: muss eine andere Sprache des Modells sein.", fb)
                 : write(Model.LocaleStream + code, Types.LocaleDefined, body with { Code = code })));
 
         m.MapPut("/relations/{key}", (string key, RelationTypeDefinition body, HttpRequest req, Catalog c) =>
@@ -62,7 +62,7 @@ public static partial class ModelApi
                 if (from?.Except(Roles.All).Any() ?? false) return Bad("from: nur group, product, variant.");
                 if (to?.Except(Roles.All).Except([Roles.Media]).Any() ?? false) return Bad("to: nur group, product, variant, media.");
                 var group = Blank(body.Group);
-                if (group is not null && !model.Groups.ContainsKey(group) && !model.Attributes.Values.Any(a => a.Group == group)) return Bad($"Unbekannte Gruppe: {group}");
+                if (group is not null && !model.Groups.ContainsKey(group) && !model.Attributes.Values.Any(a => a.Group == group)) return Bad("Unbekannte Gruppe: {0}", group);
                 return write(Model.RelationStream + key, Types.RelationTypeDefined, body with { Key = key, Label = body.Label ?? new(), From = from, To = to, Group = group });
             }));
 
@@ -71,7 +71,7 @@ public static partial class ModelApi
             if (Actor(req) is not { } actor) return ActorMissing();
             return c.With((model, _, write) =>
                 !model.RelationTypes.ContainsKey(key) ? Results.NotFound()
-                : c.Relations.OfType(key).Any() ? Bad($"{key} hat noch {c.Relations.OfType(key).Count()} Relationen.")
+                : c.Relations.OfType(key).Any() ? Bad("{0} hat noch {1} Relationen.", key, c.Relations.OfType(key).Count())
                 : Results.Ok(EntryView.Of(write(actor, Model.RelationStream + key, Types.RelationTypeRetired, new RelationTypeRetired(key), null))));
         });
 
@@ -93,25 +93,25 @@ public static partial class ModelApi
 
         m.MapPut("/master-locale", (MasterLocaleDefined body, HttpRequest req, Catalog c) =>
             Command(req, c, body.Code ?? "", ValidCode, (model, write) =>
-                !model.Locales.ContainsKey(body.Code ?? "") ? Bad($"Sprache {body.Code} gibt es nicht.")
+                !model.Locales.ContainsKey(body.Code ?? "") ? Bad("Sprache {0} gibt es nicht.", body.Code)
                 : write(Model.MasterLocaleStream, Types.MasterLocaleDefined, new MasterLocaleDefined(body.Code!))));
 
         m.MapPut("/master-channel", (MasterChannelDefined body, HttpRequest req, Catalog c) =>
             Command(req, c, body.Key ?? "", ValidCode, (model, write) =>
-                !model.Channels.ContainsKey(body.Key ?? "") ? Bad($"Kanal {body.Key} gibt es nicht.")
+                !model.Channels.ContainsKey(body.Key ?? "") ? Bad("Kanal {0} gibt es nicht.", body.Key)
                 : write(Model.MasterChannelStream, Types.MasterChannelDefined, new MasterChannelDefined(body.Key!))));
 
         // Sprache zurückziehen: nicht die Mastersprache, nicht die letzte; Werte auf ihr bleiben im Journal
         m.MapDelete("/locales/{code}", (string code, HttpRequest req, Catalog c) =>
             Command(req, c, code, ValidCode, (model, write) =>
                 !model.Locales.ContainsKey(code) ? Results.NotFound()
-                : model.MasterLocale == code ? Bad($"{code} ist die Mastersprache.")
+                : model.MasterLocale == code ? Bad("{0} ist die Mastersprache.", code)
                 : model.Locales.Count <= 1 ? Bad("Die letzte Sprache bleibt.")
                 : write(Model.LocaleStream + code, Types.LocaleRetired, new LocaleRetired(code))));
 
         m.MapPut("/channels/{key}", (string key, ChannelDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidCode, (model, write) =>
-                body.Fallback is { } fb && (fb == key || !model.Channels.ContainsKey(fb)) ? Bad($"Fallback {fb}: muss ein anderer Kanal des Modells sein.")
+                body.Fallback is { } fb && (fb == key || !model.Channels.ContainsKey(fb)) ? Bad("Fallback {0}: muss ein anderer Kanal des Modells sein.", fb)
                 : write(Model.ChannelStream + key, Types.ChannelDefined, body with { Key = key, Label = body.Label ?? new() })));
 
         // Kanal zurückziehen: kein Attribut darf ihn nennen (channels, required)
@@ -119,9 +119,9 @@ public static partial class ModelApi
             Command(req, c, key, ValidCode, (model, write) =>
             {
                 if (!model.Channels.ContainsKey(key)) return Results.NotFound();
-                if (model.MasterChannel == key) return Bad($"{key} ist der Masterkanal.");
+                if (model.MasterChannel == key) return Bad("{0} ist der Masterkanal.", key);
                 var users = model.Attributes.Values.Where(a => (a.Channels?.Contains(key) ?? false) || (a.Required?.ContainsKey(key) ?? false)).Select(a => a.Key).ToList();
-                return users.Count > 0 ? Bad($"{key} wird benutzt von: {string.Join(", ", users)}") : write(Model.ChannelStream + key, Types.ChannelRetired, new ChannelRetired(key));
+                return users.Count > 0 ? Bad("{0} wird benutzt von: {1}", key, string.Join(", ", users)) : write(Model.ChannelStream + key, Types.ChannelRetired, new ChannelRetired(key));
             }));
 
         // Status-Vokabular: frei benennbar, je Sprache; draft bleibt (Startstatus neuer Knoten)
@@ -135,9 +135,9 @@ public static partial class ModelApi
                 if (!model.Statuses.ContainsKey(key)) return Results.NotFound();
                 if (key == Statuses.Draft) return Bad("draft ist der Startstatus neuer Knoten und bleibt.");
                 var n = tree.Nodes.Values.Count(x => x.HasStatus && x.Status == key);
-                if (n > 0) return Bad($"{key} steht an {n} Knoten.");
+                if (n > 0) return Bad("{0} steht an {1} Knoten.", key, n);
                 var wf = c.Workflows.All.Values.Where(x => x.Transitions.Any(t => (t.Effects ?? []).Contains("status:" + key))).Select(x => x.Key).ToList();
-                return wf.Count > 0 ? Bad($"{key} ist Wirkung in Workflow {string.Join(", ", wf)}.") : Results.Ok(EntryView.Of(write(Actor(req)!, Model.StatusStream + key, Types.StatusRetired, new StatusRetired(key), null)));
+                return wf.Count > 0 ? Bad("{0} ist Wirkung in Workflow {1}.", key, string.Join(", ", wf)) : Results.Ok(EntryView.Of(write(Actor(req)!, Model.StatusStream + key, Types.StatusRetired, new StatusRetired(key), null)));
             });
         });
 
@@ -151,14 +151,14 @@ public static partial class ModelApi
                 if (def.When is { } w && (string.IsNullOrWhiteSpace(w.Attribute) || w.Values is null || w.Values.Length == 0)) return Bad("when: Attribut und mindestens ein Wert.");
                 // Freigabesteuerung am Attribut: leer = wie die Gruppe, sonst immer/nie (auto gibt es nur an der Gruppe)
                 def = def with { ReleaseWatch = Blank(def.ReleaseWatch) };
-                if (def.ReleaseWatch is not null && def.ReleaseWatch is not (ReleaseWatch.Always or ReleaseWatch.Never)) return Bad($"Freigabesteuerung am Attribut: {ReleaseWatch.Always}, {ReleaseWatch.Never} oder leer (wie die Gruppe).");
+                if (def.ReleaseWatch is not null && def.ReleaseWatch is not (ReleaseWatch.Always or ReleaseWatch.Never)) return Bad("Freigabesteuerung am Attribut: {0}, {1} oder leer (wie die Gruppe).", ReleaseWatch.Always, ReleaseWatch.Never);
                 foreach (var (channel, locales) in def.Required ?? new())
                 {
-                    if (!model.Channels.ContainsKey(channel)) return Bad($"Pflicht für unbekannten Kanal: {channel}");
-                    if (locales.Except(model.Locales.Keys).Except(["*"]).Any()) return Bad($"Pflicht für unbekannte Sprache bei {channel}");
+                    if (!model.Channels.ContainsKey(channel)) return Bad("Pflicht für unbekannten Kanal: {0}", channel);
+                    if (locales.Except(model.Locales.Keys).Except(["*"]).Any()) return Bad("Pflicht für unbekannte Sprache bei {0}", channel);
                 }
                 if (def.Required is { Count: 0 }) def = def with { Required = null };
-                if (!AttributeTypes.All.Contains(def.Type)) return Bad($"Unbekannter Typ: {def.Type}");
+                if (!AttributeTypes.All.Contains(def.Type)) return Bad("Unbekannter Typ: {0}", def.Type);
                 // Was zum Typ nicht passt, fällt stillschweigend weg —
                 // ein Typwechsel nimmt Muster, Einheit, Werteliste, Spalten, Achsen, mehrfach mit, wo sie nicht gelten.
                 var number = def.Type is AttributeTypes.Integer or AttributeTypes.Decimal;
@@ -177,28 +177,28 @@ public static partial class ModelApi
                 if (def.Pattern is not null)
                 {
                     try { _ = new System.Text.RegularExpressions.Regex(def.Pattern, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromMilliseconds(200)); }
-                    catch (ArgumentException e) { return Bad($"Muster: {e.Message}"); }
+                    catch (ArgumentException e) { return Bad("Muster: {0}", e.Message); }
                 }
                 if (def.Axes?.Except([Axes.Locale, Axes.Channel]).Any() ?? false) return Bad("Achsen: nur locale und channel.");
                 if (def.Channels?.Except(model.Channels.Keys).Any() ?? false) return Bad("Unbekannter Kanal in channels.");
                 // Ein Typwechsel darf unvollständig sein — enum ohne Liste, rows ohne Spalten;
                 // Werte setzen geht dann noch nicht, das Modell zeigt den fehlenden Teil an.
-                if (def.List is not null && !model.Lists.ContainsKey(def.List)) return Bad($"Werteliste {def.List} gibt es nicht.");
-                if (def.Unit is not null && !model.Units.ContainsKey(def.Unit)) return Bad($"Unbekannte Einheit: {def.Unit} — unter Einheiten anlegen.");
+                if (def.List is not null && !model.Lists.ContainsKey(def.List)) return Bad("Werteliste {0} gibt es nicht.", def.List);
+                if (def.Unit is not null && !model.Units.ContainsKey(def.Unit)) return Bad("Unbekannte Einheit: {0} — unter Einheiten anlegen.", def.Unit);
                 // Typwechsel mit Bestand: erst gegen die
                 // vorhandenen Werte prüfen — was zum neuen Typ (oder ohne die Achse) nicht mehr passt, wird gezählt und der Wechsel verweigert;
                 // ?force=true schreibt trotzdem (die Werte bleiben im Journal, lesen sie sich dann als Text ohne Prüfung — die Datenanalyse findet sie)
                 // eindeutig einschalten mit Doppelten im Bestand: kein force — das Merkmal wäre sonst eine Lüge
                 if (model.Attributes.TryGetValue(key, out var b0) && !b0.Unique && def.Unique && Clash(c, model, b0 with { Unique = false }, b0 with { Unique = true }) is { Count: > 0 } dup)
-                    return Bad($"{dup.Count} Werte von {key} sind nicht eindeutig — z. B. {string.Join(" · ", dup.Examples)}. Erst bereinigen (Suche attr:{key}).");
+                    return Bad("{0} Werte von {1} sind nicht eindeutig — z. B. {2} (Suche attr:{3}).", dup.Count, key, string.Join(" · ", dup.Examples), key);
                 if (model.Attributes.TryGetValue(key, out var before) && !force && Clash(c, model, before, def with { Unique = before.Unique }) is { Count: > 0 } clash)
-                    return Results.BadRequest(new { error = $"{clash.Count} vorhandene Werte passen nicht zur neuen Definition — z. B. {string.Join(" · ", clash.Examples)}. Erst die Werte bereinigen (Suche attr:{key}), oder mit force=true trotzdem ändern.", count = clash.Count, examples = clash.Examples, force = true });
+                    return Results.BadRequest(new { error = $"{clash.Count} vorhandene Werte passen nicht zur neuen Definition — z. B. {string.Join(" · ", clash.Examples)} (Suche attr:{key}); force=true ändert trotzdem.", template = "{0} vorhandene Werte passen nicht zur neuen Definition — z. B. {1} (Suche attr:{2}); force=true ändert trotzdem.", args = new[] { clash.Count.ToString(), string.Join(" · ", clash.Examples), key }, count = clash.Count, examples = clash.Examples, force = true });
                 if (def.Type == AttributeTypes.Rows)
                 {
                     foreach (var col in def.Columns ?? [])
                     {
-                        if (!model.Attributes.TryGetValue(col, out var cd)) return Bad($"Spalte {col}: kein Attribut.");
-                        if (cd.Type == AttributeTypes.Rows) return Bad($"Spalte {col}: keine Zeilen in Zeilen.");
+                        if (!model.Attributes.TryGetValue(col, out var cd)) return Bad("Spalte {0}: kein Attribut.", col);
+                        if (cd.Type == AttributeTypes.Rows) return Bad("Spalte {0}: keine Zeilen in Zeilen.", col);
                     }
                 }
                 return write(Model.AttributeStream + key, Types.AttributeDefined, def);
@@ -211,7 +211,7 @@ public static partial class ModelApi
                 !model.Attributes.ContainsKey(key) ? Results.NotFound()
                 // Sperre: solange das Attribut irgendwo das Sternchen trägt, verlöre der Baum dort seine Namen.
                 : tree.WithLabelAttribute(key).FirstOrDefault() is { } n
-                    ? Bad($"{key} ist ★ Name im Baum ab {NodeRow.LabelOf(tree, model, n)} ({n.Id}).")
+                    ? Bad("{0} ist ★ Name im Baum ab {1} ({2}).", key, NodeRow.LabelOf(tree, model, n), n.Id)
                     : Results.Ok(EntryView.Of(write(actor, Model.AttributeStream + key, Types.AttributeRetired, new AttributeRetired(key), null))));
         });
 
@@ -227,23 +227,23 @@ public static partial class ModelApi
         m.MapDelete("/lists/{key}", (string key, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
                 !model.Lists.ContainsKey(key) ? Results.NotFound()
-                : model.Attributes.Values.Any(a => a.List == key) ? Bad($"{key} wird benutzt von: {string.Join(", ", model.Attributes.Values.Where(a => a.List == key).Select(a => a.Key))}")
+                : model.Attributes.Values.Any(a => a.List == key) ? Bad("{0} wird benutzt von: {1}", key, string.Join(", ", model.Attributes.Values.Where(a => a.List == key).Select(a => a.Key)))
                 : write(Model.ListStream + key, Types.ListRetired, new ListRetired(key))));
 
         m.MapPut("/lists/{key}/values/{value}", (string key, string value, ListValueDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
-                model.Lists.ContainsKey(key) && model.Lists[key].Closed && !Auth.Has(req, c, Rights.Model) ? Bad($"Werteliste {key} ist geschlossen — Werte kommen aus der Quelle (Modell-Recht nötig).")
+                model.Lists.ContainsKey(key) && model.Lists[key].Closed && !Auth.Has(req, c, Rights.Model) ? Bad("Werteliste {0} ist geschlossen — Werte kommen aus der Quelle (Modell-Recht nötig).", key)
                 : model.Lists.ContainsKey(key)
                     ? write(Model.ListStream + key, Types.ListValueDefined, body with { Value = value, Label = body.Label ?? new() })
-                    : Bad($"Werteliste {key} gibt es nicht.")));
+                    : Bad("Werteliste {0} gibt es nicht.", key)));
 
         // Sammel-PUT: [ { value, label, extra? }, … ] — ein Stapel (etim: alle Klassen einer Version als Werte der Liste ETIM-Klasse)
         m.MapPut("/lists/{key}/values", (string key, ListValueDefinition[] body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!ValidKey(key)) return Bad("Schlüssel ungültig.");
-            if (!c.ReadModel(m => m.Lists.ContainsKey(key))) return Bad($"Werteliste {key} gibt es nicht.");
-            if (c.ReadModel(m => m.Lists[key].Closed) && !Auth.Has(req, c, Rights.Model)) return Bad($"Werteliste {key} ist geschlossen — Werte kommen aus der Quelle (Modell-Recht nötig).");
+            if (!c.ReadModel(m => m.Lists.ContainsKey(key))) return Bad("Werteliste {0} gibt es nicht.", key);
+            if (c.ReadModel(m => m.Lists[key].Closed) && !Auth.Has(req, c, Rights.Model)) return Bad("Werteliste {0} ist geschlossen — Werte kommen aus der Quelle (Modell-Recht nötig).", key);
             var items = body.Where(v => !string.IsNullOrWhiteSpace(v.Value)).Select(v => (Model.ListStream + key, Types.ListValueDefined, (object)(v with { Label = v.Label ?? new() }))).ToList();
             if (items.Count == 0) return Bad("Leer.");
             var entries = c.WriteMany(actor, items, Guid.NewGuid().ToString("N")[..12]);
@@ -259,28 +259,28 @@ public static partial class ModelApi
             Command(req, c, key, ValidKey, (model, write) =>
             {
                 var from = Blank(body.ActiveFrom);
-                if (from is not null && !Roles.All.Contains(from)) return Bad($"activeFrom: {string.Join(", ", Roles.All)} oder leer.");
+                if (from is not null && !Roles.All.Contains(from)) return Bad("activeFrom: {0} oder leer.", string.Join(", ", Roles.All));
                 var watch = Blank(body.ReleaseWatch);
-                if (watch is not null && !ReleaseWatch.All.Contains(watch)) return Bad($"Freigabesteuerung: {string.Join(", ", ReleaseWatch.All)} oder leer.");
+                if (watch is not null && !ReleaseWatch.All.Contains(watch)) return Bad("Freigabesteuerung: {0} oder leer.", string.Join(", ", ReleaseWatch.All));
                 return write(Model.GroupStream + key, Types.AttributeGroupDefined, body with { Key = key, Label = body.Label ?? new(), ActiveFrom = from, Order = null, ReleaseWatch = watch });
             }));
 
         m.MapDelete("/groups/{key}", (string key, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
                 !model.Groups.ContainsKey(key) ? Results.NotFound()
-                : model.Attributes.Values.Any(a => a.Group == key) ? Bad($"{key} hat noch Attribute.")
+                : model.Attributes.Values.Any(a => a.Group == key) ? Bad("{0} hat noch Attribute.", key)
                 : write(Model.GroupStream + key, Types.AttributeGroupRetired, new AttributeGroupRetired(key))));
 
         m.MapPut("/views/{key}", (string key, ViewDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
             {
                 var def = body with { Key = key, Label = body.Label ?? new(), Items = body.Items ?? new(), Level = Blank(body.Level) ?? "" };
-                if (!Roles.All.Contains(def.Level)) return Bad($"Eine Sicht gilt für einen Knotentyp: {string.Join(", ", Roles.All)}.");
+                if (!Roles.All.Contains(def.Level)) return Bad("Eine Sicht gilt für einen Knotentyp: {0}.", string.Join(", ", Roles.All));
                 foreach (var it in def.Items)
                 {
                     if (string.IsNullOrWhiteSpace(it.Group)) return Bad("Sicht-Eintrag ohne group.");
-                    if (!model.Groups.ContainsKey(it.Group) && !model.Attributes.Values.Any(a => a.Group == it.Group)) return Bad($"Unbekannte Gruppe in der Sicht: {it.Group}");
-                    if (it.Order?.Except(model.Attributes.Keys).Any() ?? false) return Bad($"Reihenfolge in {it.Group} nennt ein unbekanntes Attribut.");
+                    if (!model.Groups.ContainsKey(it.Group) && !model.Attributes.Values.Any(a => a.Group == it.Group)) return Bad("Unbekannte Gruppe in der Sicht: {0}", it.Group);
+                    if (it.Order?.Except(model.Attributes.Keys).Any() ?? false) return Bad("Reihenfolge in {0} nennt ein unbekanntes Attribut.", it.Group);
                 }
                 if (def.Items.Select(i => i.Group).Distinct().Count() != def.Items.Count) return Bad("Eine Gruppe nur einmal je Sicht.");
                 return write(Model.ViewStream + key, Types.ViewDefined, def);
@@ -291,7 +291,7 @@ public static partial class ModelApi
                 model.Views.ContainsKey(key) ? write(Model.ViewStream + key, Types.ViewRetired, new ViewRetired(key)) : Results.NotFound()));
 
         m.MapPut("/units/{key}", (string key, UnitDefinition body, HttpRequest req, Catalog c) =>
-            key.Length is 0 or > 8 || key.Any(char.IsWhiteSpace) ? Bad($"Einheit „{key}“: das Symbol ist der Schlüssel — höchstens 8 Zeichen, kein Leerraum.") :
+            key.Length is 0 or > 8 || key.Any(char.IsWhiteSpace) ? Bad("Einheit „{0}“: das Symbol ist der Schlüssel — höchstens 8 Zeichen, kein Leerraum.", key) :
             Command(req, c, key, _ => true, (model, write) =>
                 string.IsNullOrWhiteSpace(body.Quantity) ? Bad("quantity fehlt (mass, length, volume, data, count, …).")
                 : body.Factor <= 0 ? Bad("factor muss > 0 sein.")
@@ -309,7 +309,7 @@ public static partial class ModelApi
         m.MapDelete("/units/{key}", (string key, HttpRequest req, Catalog c) =>
             Command(req, c, key, k => true, (model, write) =>
                 !model.Units.ContainsKey(key) ? Results.NotFound()
-                : model.Attributes.Values.Any(a => a.Unit == key) ? Bad($"{key} wird benutzt von: {string.Join(", ", model.Attributes.Values.Where(a => a.Unit == key).Select(a => a.Key))}")
+                : model.Attributes.Values.Any(a => a.Unit == key) ? Bad("{0} wird benutzt von: {1}", key, string.Join(", ", model.Attributes.Values.Where(a => a.Unit == key).Select(a => a.Key)))
                 : write(Model.UnitStream + key, Types.UnitRetired, new UnitRetired(key))));
 
     }
@@ -421,7 +421,7 @@ public static partial class ModelApi
         Func<ModelCatalog, Func<string, string, object, IResult>, IResult> body)
     {
         if (Actor(req) is not { } actor) return ActorMissing();
-        if (!keyOk(key)) return Bad($"Schlüssel „{key}“: nur a-z, 0-9 und _, beginnt mit Buchstabe.");
+        if (!keyOk(key)) return Bad("Schlüssel „{0}“: nur a-z, 0-9 und _, beginnt mit Buchstabe.", key);
         return c.With((model, _, write) => body(model, (stream, type, payload) => Results.Ok(EntryView.Of(write(actor, stream, type, payload, null)))));
     }
 
@@ -432,7 +432,15 @@ public static partial class ModelApi
 
     public static IResult ActorMissing() => Bad("Kopf X-Actor fehlt — Name in den Einstellungen setzen.");
 
-    public static IResult Bad(string error) => Results.BadRequest(new { error });
+    public static IResult Bad(string error) => Results.BadRequest(Err(error));
+    /// <summary>Meldung mit Vorlage und Werten: <c>error</c> ist der fertige Text, <c>template</c> die Vorlage mit {0}, {1} … und
+    /// <c>args</c> die Werte — die Oberfläche übersetzt die Vorlage (Schlüssel ist der deutsche Text) und setzt die Werte ein.</summary>
+    public static IResult Bad(string template, params object?[] args) => Results.BadRequest(Err(template, args));
+    public static object Err(string template, params object?[] args)
+    {
+        var a = args.Select(x => x?.ToString() ?? "").ToArray();
+        return new { error = a.Length == 0 ? template : string.Format(template, a), template, args = a };
+    }
 
     public static string? Blank(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 

@@ -21,7 +21,7 @@ public static class BatchApi
     public sealed record Command(string Op, string? Ref, JsonElement Args);
     public sealed record Request(List<Command> Commands, string? Batch);
     public sealed record Result(int Index, string? Ref, string Node, long Number, string Type);
-    public sealed record Failure(int Index, string Op, string Message);
+    public sealed record Failure(int Index, string Op, string Message, string? Template = null, string[]? Args = null);
     public sealed record Response(string Batch, List<Result> Results, Failure? Error, List<Failure>? Skipped = null);
 
     public static void Map(RouteGroupBuilder api)
@@ -78,14 +78,14 @@ public static class BatchApi
                             "media.external.link" => Commands.LinkMediumExternal(ctx, a.Id("media") ?? "", a.Str("system"), a.Str("id")),
                             "media.retire" => Commands.RetireMedium(ctx, a.Id("media") ?? ""),
                             "relation.external.link" => Commands.LinkRelationExternal(ctx, a.Id("relation") ?? "", a.Str("system"), a.Str("id")),
-                            _ => Outcome.Bad($"Unbekannter Befehl: {cmd.Op}"),
+                            _ => Outcome.Bad("Unbekannter Befehl: {0}", cmd.Op),
                         };
                     }
                     catch (ArgumentException ex) { outcome = Outcome.Bad(ex.Message); }
 
                     if (outcome.Entry is not { } e)
                     {
-                        var f = new Failure(i, cmd.Op, outcome.NotFound ? "Knoten gibt es nicht." : outcome.Error!);
+                        var f = outcome.NotFound ? new Failure(i, cmd.Op, "Knoten gibt es nicht.", "Knoten gibt es nicht.") : new Failure(i, cmd.Op, outcome.Error!, outcome.Template, outcome.Args);
                         if (!skipErrors) return new Response(batch, results, f);
                         skipped.Add(f); continue;   // überspringen — ein Befehl, der auf diesen ref zeigt, scheitert dann ebenfalls (und wird übersprungen)
                     }

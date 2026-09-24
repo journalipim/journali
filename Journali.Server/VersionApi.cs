@@ -38,12 +38,12 @@ public static class VersionApi
                 var channel = Blank(body.Channel); var locale = Blank(body.Locale);
                 if (channel is not null)
                 {
-                    if (!model.Channels.ContainsKey(channel)) return (Bad($"Unbekannter Kanal: {channel}"), 0);
-                    if (locale is not null && !model.Locales.ContainsKey(locale)) return (Bad($"Unbekannte Sprache: {locale}"), 0);
+                    if (!model.Channels.ContainsKey(channel)) return (Bad("Unbekannter Kanal: {0}", channel), 0);
+                    if (locale is not null && !model.Locales.ContainsKey(locale)) return (Bad("Unbekannte Sprache: {0}", locale), 0);
                     if (n.Role != Roles.Group)
                     {
                         var (_, missing) = CompletenessRules.Check(tree, model, n, CompletenessRules.ActiveAttributes(tree, model, n).ToList(), channel, locale);
-                        if (missing.Length > 0) return (Results.BadRequest(new { error = $"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}", missing }), 0);
+                        if (missing.Length > 0) return (Results.BadRequest(new { error = $"Unvollständig für {channel}/{locale ?? "*"}: {string.Join(", ", missing)}", template = "Unvollständig für {0}/{1}: {2}", args = new[] { channel, locale ?? "*", string.Join(", ", missing) }, missing }), 0);
                     }
                 }
                 var nr = c.Versions.NextNr(id);
@@ -73,7 +73,7 @@ public static class VersionApi
             return c.With((_, _, write) =>
             {
                 if (c.Versions.Get(id, nr) is null) return Results.NotFound();
-                if (!c.Media.All.TryGetValue(mediaId, out var m)) return Bad($"Medium {mediaId} unbekannt.");
+                if (!c.Media.All.TryGetValue(mediaId, out var m)) return Bad("Medium {0} unbekannt.", mediaId);
                 write(actor, id, Types.VersionDocumentAdded, new VersionDocumentAdded(nr, kind, m.Id, m.Sha256, m.Mime, m.Name, m.Bytes, Blank(body.Renderer)), null);
                 return Results.Ok(View(c.Versions.Get(id, nr)!));
             });

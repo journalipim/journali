@@ -1,7 +1,7 @@
 // Was der Server dem Anwender sagt. Eine Meldung sagt, **was ist** — nicht, was
 // der Anwender zu tun hat: kein „bitte“, kein „erst …“, kein Ratschlag. Und höchstens ein Satz; wer mehr erklären
 // will, schreibt es in die Dokumentation.
-// Geprüft wird, was wirklich in der Oberfläche landet: Bad("…") und error = "…" aus Journali.Server.
+// Geprüft wird, was wirklich in der Oberfläche landet: Bad("…"), Err("…") und error = "…" aus Journali.Server.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -18,8 +18,8 @@ const ABK = /\b(z\. ?B|u\. ?a|d\. ?h|o\. ?ä|ggf|bzw|evtl|usw|etc|vgl|Nr|Abs|Art
 /// Alle Meldungstexte einer Datei — Bad("…"), Bad($"…"), error = "…"
 function meldungen(quelle) {
   const out = []
-  for (const m of quelle.matchAll(/(?:Bad|Outcome\.Bad)\(\$?"((?:[^"\\]|\\.)*)"/g)) out.push(m[1])
-  for (const m of quelle.matchAll(/error = \$?"((?:[^"\\]|\\.)*)"/g)) out.push(m[1])
+  for (const m of quelle.matchAll(/(?:Bad|Err|Outcome\.Bad)\(\$?"((?:[^"\\]|\\.)*)"/g)) out.push(m[1])
+  for (const m of quelle.matchAll(/(?:error|template) = \$?"((?:[^"\\]|\\.)*)"/g)) out.push(m[1])
   return out
 }
 

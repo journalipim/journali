@@ -38,10 +38,10 @@ public static class RestoreApi
             if (Actor(req) is not { } actor) return ActorMissing();
             if (string.IsNullOrWhiteSpace(body.Path)) return Bad("Datei fehlt.");
             var file = body.Path.Trim();
-            if (!File.Exists(file)) return Bad($"Datei nicht gefunden: {file}");
+            if (!File.Exists(file)) return Bad("Datei nicht gefunden: {0}", file);
             TransferApi.RawExport? raw;
             try { raw = JsonSerializer.Deserialize<TransferApi.RawExport>(Lesen(file), Json); }
-            catch (Exception e) { return Bad($"Keine Sicherung lesbar: {e.Message}"); }
+            catch (Exception e) { return Bad("Keine Sicherung lesbar: {0}", e.Message); }
             if (raw?.Node is null) return Bad("Die Datei enthält keinen Teilbaum.");
             return TransferApi.Einspielen(c, actor, new TransferApi.ImportBody(raw.Node, body.Parent, raw.Model, null, body.DryRun));
         });

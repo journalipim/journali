@@ -101,7 +101,7 @@ public static class MailApi
             // Ein maskiertes Passwort heisst „unverändert“ — sonst überschriebe das Speichern es mit Punkten
             var c = body with { Password = body.Password is null or "••••••••" ? mailer.Config.Password : body.Password };
             if (!string.IsNullOrWhiteSpace(c.Host) && c.Port is < 1 or > 65535) return Bad("Port: 1 bis 65535.");
-            if (!MailConfig.Modes.Contains(c.Security)) return Bad($"Verschlüsselung: {string.Join(", ", MailConfig.Modes)}.");
+            if (!MailConfig.Modes.Contains(c.Security)) return Bad("Verschlüsselung: {0}.", string.Join(", ", MailConfig.Modes));
             if (!string.IsNullOrWhiteSpace(c.From) && !c.From.Contains('@')) return Bad("Absender: eine Adresse erwartet.");
             mailer.Set(c);
             return Results.Ok(new { config = mailer.Config.Masked(), ready = mailer.Config.Ready });

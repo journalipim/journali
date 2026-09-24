@@ -105,12 +105,12 @@ public static class LicenceKeys
         api.MapPost("/licence/requests", (RequestBody body, HttpRequest req) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            if (body.Kind is not { } art || !Schluessel.Arten.Contains(art)) return Bad($"Art: {string.Join(", ", Schluessel.Arten)}.");
+            if (body.Kind is not { } art || !Schluessel.Arten.Contains(art)) return Bad("Art: {0}.", string.Join(", ", Schluessel.Arten));
             if (body.Count is < 1 or > 20) return Bad("Anzahl: 1 bis 20.");
             var paket = art == Schluessel.Limit ? Schluessel.PaketVon(body.Plan) : null;
-            if (art == Schluessel.Limit && paket is null) return Bad($"Paket: {string.Join(", ", Schluessel.Pakete.Select(p => p.Key))}.");
+            if (art == Schluessel.Limit && paket is null) return Bad("Paket: {0}.", string.Join(", ", Schluessel.Pakete.Select(p => p.Key)));
             // Reset: getrennt für Pro und Enterprise
-            if (art == Schluessel.Reset && body.Plan is not (Tarife.ProKey or Tarife.EnterpriseKey)) return Bad($"Reset: {Tarife.ProKey} oder {Tarife.EnterpriseKey}.");
+            if (art == Schluessel.Reset && body.Plan is not (Tarife.ProKey or Tarife.EnterpriseKey)) return Bad("Reset: {0} oder {1}.", Tarife.ProKey, Tarife.EnterpriseKey);
             var neu = Enumerable.Range(0, body.Count)
                 .Select(_ => paket is { } p ? anforderungen.Neu(art, p.Week, p.Month, p.Days, actor, p.Key) : anforderungen.Neu(art, 0, 0, 0, actor, body.Plan)).ToList();
             return Results.Ok(neu.Select(s => new { s.Inhalt!.Id, hash = s.Hash, text = s.Text }).ToList());
@@ -129,7 +129,7 @@ public static class LicenceKeys
             if (Actor(req) is not { } actor) return ActorMissing();
             LicenceKey? k;
             try { k = body.Key.ValueKind == JsonValueKind.String ? JsonSerializer.Deserialize<LicenceKey>(body.Key.GetString()!, LicenceKey.Json) : body.Key.Deserialize<LicenceKey>(LicenceKey.Json); }
-            catch (Exception e) { return Bad("Kein gültiger Schlüssel: " + e.Message); }
+            catch (Exception e) { return Bad("Kein gültiger Schlüssel: {0}", e.Message); }
             if (k is null) return Bad("Kein Schlüssel.");
             var team = (body.Team ?? "").Trim();
             var (geprueft, grund) = Signatur.Pruefe(k.Rumpf, k.Sig);

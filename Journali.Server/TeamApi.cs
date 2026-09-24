@@ -72,23 +72,23 @@ public static class TeamApi
                 // Wer ein Team führt, gehört hinein — sonst steht die Führung neben dem Team statt darin
                 // Führen und dazugehören sind zweierlei — wer schon ein Team hat, bleibt dort und führt trotzdem.
                 foreach (var m in managers)
-                    if (c.Users.All.GetValueOrDefault(m) is null) return Bad($"Unbekannter Anwender {m}.");
+                    if (c.Users.All.GetValueOrDefault(m) is null) return Bad("Unbekannter Anwender {0}.", m);
                 if (managers.Length == 0 && cur is null && c.Users.All.Count > 0) return Bad("Mindestens ein Teammanager — notfalls du selbst.");
                 var keysFrom = body.KeysFrom is null ? cur?.KeysFrom : Blank(body.KeysFrom);
                 if (keysFrom == key) return Bad("Ein Team kann nicht seine eigenen Schlüssel mitbenutzen.");
                 if (keysFrom is { } f)
                 {
-                    if (c.Teams.Get(f) is not { } zahler) return Bad($"Unbekanntes Team {f}.");
+                    if (c.Teams.Get(f) is not { } zahler) return Bad("Unbekanntes Team {0}.", f);
                     // Ein Kreis hätte kein Ende
-                    if (c.Teams.WaereKreis(key, f)) return Bad($"„{zahler.Label}“ rechnet am Ende wieder über dieses Team ab — das ist ein Kreis.");
+                    if (c.Teams.WaereKreis(key, f)) return Bad("„{0}“ rechnet am Ende wieder über dieses Team ab — das ist ein Kreis.", zahler.Label);
                 }
                 var included = body.IncludedTokens ?? cur?.IncludedTokens ?? 0;
                 // Das Inklusivkontingent gibt es einmal, am ersten Team: sonst wäre jedes neue Team ein neuer Freibetrag
                 var ersteres = c.Teams.Primary;
-                if (included > 0 && ersteres is not null && ersteres.Key != key) return Bad($"Das Grundkontingent hat „{ersteres.Label}“ — das erste Team.");
+                if (included > 0 && ersteres is not null && ersteres.Key != key) return Bad("Das Grundkontingent hat „{0}“ — das erste Team.", ersteres.Label);
                 if (Blank(body.Label) is null && cur is null) return Bad("Bezeichnung fehlt.");
                 foreach (var (n, v) in new[] { ("monatlich", body.MonthlyTokens), ("täglich", body.DailyTokens), ("Grundkontingent", body.IncludedTokens) })
-                    if (v is < 0) return Bad($"Grenze {n}: 0 oder mehr (0 = keine).");
+                    if (v is < 0) return Bad("Grenze {0}: 0 oder mehr (0 = keine).", n);
                 var modelle = cur?.Models is { Count: > 0 } mm ? new Dictionary<string, string>(mm) : new Dictionary<string, string>();
                 foreach (var (a, m) in body.Models ?? new()) { if (string.IsNullOrWhiteSpace(m)) modelle.Remove(a); else modelle[a] = m!; }
                 // Die Limits ergeben sich aus der Lizenz — hier gibt es nichts einzustellen
@@ -116,7 +116,7 @@ public static class TeamApi
                 if (c.Teams.Get(key) is null) return Results.NotFound();
                 if (c.Teams.Primary?.Key == key) return Bad("Das erste Team bleibt — umbenennen geht, entfernen nicht.");
                 var drin = c.Users.All.Values.Where(u => u.Team == key).Select(u => u.Name ?? u.Key).ToList();
-                if (drin.Count > 0) return Bad($"Noch {drin.Count} im Team: {string.Join(", ", drin.Take(5))}{(drin.Count > 5 ? " …" : "")}.");
+                if (drin.Count > 0) return Bad("Noch {0} im Team: {1}{2}.", drin.Count, string.Join(", ", drin.Take(5)), (drin.Count > 5 ? " …" : ""));
                 if (c.Teams.All.Values.Any(t => t.KeysFrom == key)) return Bad("Andere Teams benutzen die Schlüssel dieses Teams.");
                 write(actor, Teams.Stream + key, Types.TeamRetired, new TeamRetired(), null);
                 Secrets.Remove(jobsDir, SecretKey(key));   // der Schlüssel geht mit; der Verbrauch bleibt als Tatsache stehen
@@ -154,9 +154,9 @@ public static class TeamApi
             return c.With((_, _, write) =>
             {
                 if (c.Teams.Get(key) is null) return Results.NotFound();
-                if (c.Users.All.GetValueOrDefault(user) is not { } u) return Bad($"Unbekannter Anwender {user}.");
-                if (u.Team == key) return Bad($"{u.Name ?? u.Key} ist schon hier.");
-                if (u.Team is { Length: > 0 } andere) return Bad($"{u.Name ?? u.Key} steht im Team {c.Teams.Get(andere)?.Label ?? andere}.");
+                if (c.Users.All.GetValueOrDefault(user) is not { } u) return Bad("Unbekannter Anwender {0}.", user);
+                if (u.Team == key) return Bad("{0} ist schon hier.", u.Name ?? u.Key);
+                if (u.Team is { Length: > 0 } andere) return Bad("{0} steht im Team {1}.", u.Name ?? u.Key, c.Teams.Get(andere)?.Label ?? andere);
                 write(actor, Users.Stream + user, Types.UserDefined, new UserDefined(u.Name, u.Email, u.Role, u.Enabled, key), null);
                 return Results.Ok(new { user, team = key });
             });
@@ -169,8 +169,8 @@ public static class TeamApi
             return c.With((_, _, write) =>
             {
                 if (c.Users.All.GetValueOrDefault(user) is not { } u) return Results.NotFound();
-                if (u.Team != key) return Bad($"{u.Name ?? u.Key} steht nicht in diesem Team.");
-                if (c.Teams.Leads(key, user)) return Bad($"{u.Name ?? u.Key} führt dieses Team.");
+                if (u.Team != key) return Bad("{0} steht nicht in diesem Team.", u.Name ?? u.Key);
+                if (c.Teams.Leads(key, user)) return Bad("{0} führt dieses Team.", u.Name ?? u.Key);
                 write(actor, Users.Stream + user, Types.UserDefined, new UserDefined(u.Name, u.Email, u.Role, u.Enabled, null), null);
                 return Results.Ok(new { user, team = (string?)null });   // teamlos: keine Schlüssel, keine Grenzen, keine KI
             });

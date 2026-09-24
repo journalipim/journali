@@ -5,7 +5,7 @@
 // Wer unterbrochen wird, behält den Entwurf im Browser (localStorage) und macht später weiter.
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { api } from '../api.js'
-import { L } from '../i18n.js'
+import { L, t } from '../i18n.js'
 
 // node/locale: der Knoten, an dem das Skript gerechnet wird — dann zeigt der Fuss das momentane Ergebnis statt einer Erklärung
 const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String, node: String, locale: String })
@@ -72,7 +72,7 @@ function acUpdate() {
     start = el.selectionStart - m[0].length
   } else if (isTemplate.value) {
     const f = /\|([a-z0-9]*)$/.exec(before)
-    if (f) { items = [['unit', 'Einheit anhängen'], ['0', 'ganze Zahl'], ['1', '1 Nachkommastelle'], ['2', '2 Nachkommastellen'], ['upper', 'GROSS'], ['lower', 'klein'], ['capitalize', 'Erster gross'], ['plain', 'ohne HTML']].filter(([k]) => k.startsWith(f[1])).map(([k, n]) => ({ kind: 'fn', insert: k, show: '|' + k, note: n })); start = el.selectionStart - f[1].length }
+    if (f) { items = [['unit', t('Einheit anhängen')], ['0', t('ganze Zahl')], ['1', t('1 Nachkommastelle')], ['2', t('2 Nachkommastellen')], ['upper', t('GROSS')], ['lower', t('klein')], ['capitalize', t('Erster gross')], ['plain', t('ohne HTML')]].filter(([k]) => k.startsWith(f[1])).map(([k, n]) => ({ kind: 'fn', insert: k, show: '|' + k, note: n })); start = el.selectionStart - f[1].length }
   } else {
     const f = /(?:^|[^A-Za-z0-9_$.])([a-z][a-z0-9_]*)$/.exec(before)
     if (f && f[1].length >= 2) {
@@ -170,29 +170,29 @@ function highlightTemplate(src) {
 const highlighted = computed(() => (isTemplate.value ? highlightTemplate(text.value) : highlight(text.value)) + '\n')
 // Hilfe: je Zeile ein Baustein mit Syntaxfarben, Klick fügt ihn ein; kein „·“ mehr
 const HELP = [
-  ['Attribut lesen', [['$key', 'Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte. $ tippen zeigt die Liste']]],
-  ['Werte', [['42', 'Zahl'], ['"Text"', 'Text'], ['`Vorlage ${$key}`', 'Vorlage mit Ausdrücken'], ['true', ''], ['false', ''], ['null', 'kein Wert']]],
-  ['Rechnen', [['a + b', 'auch Text anhängen'], ['a - b', ''], ['a * b', ''], ['a / b', ''], ['a % b', 'Rest'], ['a ** b', 'Potenz']]],
-  ['Vergleichen', [['a == b', ''], ['a != b', ''], ['a < b', 'auch <= > >= — mit null immer false']]],
-  ['Logik', [['a && b', 'und'], ['a || b', 'oder'], ['!a', 'nicht'], ['c ? a : b', 'wenn c, dann a, sonst b'], ['a ?? b', 'b, wenn a leer ist']]],
-  ['Anweisungen', [['x = $key', 'Variable'], ['if (c) {\n  \n} else {\n  \n}', 'Verzweigung'], ['return x', 'Ergebnis — sonst zählt die letzte Anweisung'], ['// Kommentar', '']]],
-  ['Zahlen', [['round(x, 2)', 'runden'], ['trunc(x)', 'abschneiden'], ['floor(x)', ''], ['ceil(x)', ''], ['abs(x)', ''], ['min(a, b)', ''], ['max(a, b)', ''], ['sqrt(x)', ''], ['format(x, 2)', 'Zahl als Text in der Sprache der Spalte (de 1,39)']]],
-  ['Text', [['len(s)', 'Länge'], ['upper(s)', ''], ['lower(s)', ''], ['capitalize(s)', 'erster Buchstabe gross'], ['title(s)', 'Jedes Wort Gross'], ['trim(s)', 'Leerraum an den Enden weg'], ['trimstart(s)', ''], ['trimend(s)', ''], ['squeeze(s)', 'mehrfachen Leerraum zu einem'],
-    ['left(s, 3)', ''], ['right(s, 3)', ''], ['substr(s, 2, 5)', 'ab Position, so lang'], ['indexof(s, "x")', 'Position oder -1'], ['contains(s, "x")', ''], ['startswith(s, "x")', ''], ['endswith(s, "x")', ''], ['count(s, "x")', 'wie oft'],
-    ['replace(s, "a", "b")', ''], ['split(s, "-", 1)', 'Teil i'], ['repeat(s, 3)', ''], ['reverse(s)', ''], ['padleft(s, 5, "0")', 'links auffüllen'], ['padright(s, 5, " ")', 'rechts auffüllen'],
-    ['regextest(s, "^[0-9]+$")', 'passt?'], ['regexmatch(s, "([0-9]+)")', 'erster Treffer bzw. Gruppe 1'], ['regexreplace(s, "\\s+", " ")', ''],
-    ['striphtml(s)', 'Tags weg'], ['escapehtml(s)', '< > & " maskieren'], ['nl2br(s)', 'Zeilenumbruch → <br>'], ['slug(s)', 'url-tauglich: kleinbuchstaben-mit-strichen'],
-    ['str(x)', 'als Text'], ['number(x)', 'als Zahl']]],
-  ['Leer', [['isblank(x)', 'fehlt oder leer'], ['coalesce(a, b)', 'das erste, das nicht leer ist']]],
+  [t('Attribut lesen'), [['$key', t('Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte. $ tippen zeigt die Liste')]]],
+  [t('Werte'), [['42', t('Zahl')], ['"Text"', t('Text')], ['`Vorlage ${$key}`', t('Vorlage mit Ausdrücken')], ['true', ''], ['false', ''], ['null', t('kein Wert')]]],
+  [t('Rechnen'), [['a + b', t('auch Text anhängen')], ['a - b', ''], ['a * b', ''], ['a / b', ''], ['a % b', t('Rest')], ['a ** b', t('Potenz')]]],
+  [t('Vergleichen'), [['a == b', ''], ['a != b', ''], ['a < b', t('auch <= > >= — mit null immer false')]]],
+  [t('Logik'), [['a && b', t('und')], ['a || b', t('oder')], ['!a', t('nicht')], ['c ? a : b', t('wenn c, dann a, sonst b')], ['a ?? b', t('b, wenn a leer ist')]]],
+  [t('Anweisungen'), [['x = $key', t('Variable')], ['if (c) {\n  \n} else {\n  \n}', t('Verzweigung')], ['return x', t('Ergebnis — sonst zählt die letzte Anweisung')], ['// Kommentar', '']]],
+  [t('Zahlen'), [['round(x, 2)', t('runden')], ['trunc(x)', t('abschneiden')], ['floor(x)', ''], ['ceil(x)', ''], ['abs(x)', ''], ['min(a, b)', ''], ['max(a, b)', ''], ['sqrt(x)', ''], ['format(x, 2)', t('Zahl als Text in der Sprache der Spalte (de 1,39)')]]],
+  [t('Text'), [['len(s)', t('Länge')], ['upper(s)', ''], ['lower(s)', ''], ['capitalize(s)', t('erster Buchstabe gross')], ['title(s)', t('Jedes Wort Gross')], ['trim(s)', t('Leerraum an den Enden weg')], ['trimstart(s)', ''], ['trimend(s)', ''], ['squeeze(s)', t('mehrfachen Leerraum zu einem')],
+    ['left(s, 3)', ''], ['right(s, 3)', ''], ['substr(s, 2, 5)', t('ab Position, so lang')], ['indexof(s, "x")', t('Position oder -1')], ['contains(s, "x")', ''], ['startswith(s, "x")', ''], ['endswith(s, "x")', ''], ['count(s, "x")', t('wie oft')],
+    ['replace(s, "a", "b")', ''], ['split(s, "-", 1)', t('Teil i')], ['repeat(s, 3)', ''], ['reverse(s)', ''], ['padleft(s, 5, "0")', t('links auffüllen')], ['padright(s, 5, " ")', t('rechts auffüllen')],
+    ['regextest(s, "^[0-9]+$")', t('passt?')], ['regexmatch(s, "([0-9]+)")', t('erster Treffer bzw. Gruppe 1')], ['regexreplace(s, "\\s+", " ")', ''],
+    ['striphtml(s)', t('Tags weg')], ['escapehtml(s)', t('< > & " maskieren')], ['nl2br(s)', t('Zeilenumbruch → <br>')], ['slug(s)', t('url-tauglich: kleinbuchstaben-mit-strichen')],
+    ['str(x)', t('als Text')], ['number(x)', t('als Zahl')]]],
+  [t('Leer'), [['isblank(x)', t('fehlt oder leer')], ['coalesce(a, b)', t('das erste, das nicht leer ist')]]],
 ]
 const EXAMPLE_FORMULA = 'h = $height\nif (h >= 100) {\n  return `${format(h / 100, 2)} m`\n}\nreturn `${h} cm`'
 const EXAMPLE_TEMPLATE = '{name} mit {cpu}[, {ram} GB RAM][, {ssd|unit} SSD][ · {weight|1|unit}]'
 const EXAMPLE = computed(() => isTemplate.value ? EXAMPLE_TEMPLATE : EXAMPLE_FORMULA)
 const HELP_TEMPLATE = [
-  ['Platzhalter', [['{key}', 'Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte, Werteliste als Label. { tippen zeigt die Liste']]],
-  ['Zusätze', [['{weight|unit}', 'Einheit anhängen: 1,5 kg'], ['{price|2}', 'Nachkommastellen in der Sprache (de 1,50)'], ['{weight|1|unit}', 'verkettet'], ['{name|upper}', 'GROSS'], ['{name|lower}', 'klein'], ['{name|capitalize}', 'Erster gross'], ['{description|plain}', 'HTML-Tags weg']]],
-  ['Optional', [['[, {ram} GB RAM]', 'fällt ganz weg, wenn ein Platzhalter darin leer ist'], ['[ · {a}[ / {b}]]', 'darf ineinander liegen']]],
-  ['Zeichen', [['\\{', '{ selbst'], ['\\[', '[ selbst']]],
+  [t('Platzhalter'), [['{key}', t('Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte, Werteliste als Label. { tippen zeigt die Liste')]]],
+  [t('Zusätze'), [['{weight|unit}', t('Einheit anhängen: 1,5 kg')], ['{price|2}', t('Nachkommastellen in der Sprache (de 1,50)')], ['{weight|1|unit}', t('verkettet')], ['{name|upper}', t('GROSS')], ['{name|lower}', t('klein')], ['{name|capitalize}', t('Erster gross')], ['{description|plain}', t('HTML-Tags weg')]]],
+  [t('Optional'), [['[, {ram} GB RAM]', t('fällt ganz weg, wenn ein Platzhalter darin leer ist')], ['[ · {a}[ / {b}]]', t('darf ineinander liegen')]]],
+  [t('Zeichen'), [['\\{', t('{ selbst')], ['\\[', t('[ selbst')]]],
 ]
 </script>
 
@@ -202,7 +202,7 @@ const HELP_TEMPLATE = [
       <div class="editor">
         <div class="toolbar">
           <h1>{{ isTemplate ? '{}' : 'ƒ' }} {{ title }}</h1>
-          <span v-if="check.ok" class="pos" :title="$t('Syntax stimmt')">✓ {{ check.keys.length ? 'liest ' + check.keys.map(k => isTemplate ? '{' + k + '}' : '$' + k).join(', ') : 'ok' }}</span>
+          <span v-if="check.ok" class="pos" :title="$t('Syntax stimmt')">✓ {{ check.keys.length ? $t('liest') + ' ' + check.keys.map(k => isTemplate ? '{' + k + '}' : '$' + k).join(', ') : 'ok' }}</span>
           <span v-else class="neg" :title="check.error">✗ {{ check.error }}</span>
           <span class="grow" />
           <span v-if="draftAt" class="warn" :title="$t('Entwurf im Browser — noch nicht im Attribut')">{{ $t("✎ Entwurf") }}</span>
@@ -227,12 +227,12 @@ const HELP_TEMPLATE = [
         </div>
         <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
           <span v-if="check.runtime" class="neg" style="font-size:12px" :title="check.runtime">✗ {{ check.runtime }}</span>
-          <span v-else-if="props.node && check.ok && text.trim()" class="result" :class="{ muted: check.value == null }" :title="check.value == null ? 'kein Ergebnis — ein gelesener Wert fehlt hier' : 'momentanes Ergebnis an diesem Knoten'">= {{ check.value ?? '—' }}</span>
+          <span v-else-if="props.node && check.ok && text.trim()" class="result" :class="{ muted: check.value == null }" :title="check.value == null ? $t('kein Ergebnis — ein gelesener Wert fehlt hier') : $t('momentanes Ergebnis an diesem Knoten')">= {{ check.value ?? '—' }}</span>
           <span v-else class="muted" style="font-size:12px"><kbd>{{ $t("Ctrl+Enter") }}</kbd>{{ ' ' + $t("übernehmen ·") + ' ' }}<kbd>{{ $t("Esc") }}</kbd>{{ ' ' + $t("schliessen (Entwurf bleibt)") }}</span>
           <span class="grow" />
           <button v-if="draftAt" @click="discardDraft" :title="$t('zurück zum Stand im Attribut')">{{ $t("Entwurf verwerfen") }}</button>
           <button @click="emit('close')">{{ $t("Schliessen") }}</button>
-          <button class="primary" :disabled="!check.ok" @click="save" :title="check.ok ? 'ins Attribut übernehmen' : 'erst die Syntax richten'">{{ $t("Übernehmen") }}</button>
+          <button class="primary" :disabled="!check.ok" @click="save" :title="check.ok ? $t('ins Attribut übernehmen') : $t('Syntax stimmt nicht')">{{ $t("Übernehmen") }}</button>
         </div>
       </div>
     </div>

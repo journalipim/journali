@@ -62,7 +62,7 @@ public static class JobApi
                 var cur = c.Jobs.All.GetValueOrDefault(key);
                 var plugin = Blank(body.Plugin) ?? cur?.Plugin;
                 var service = body.Service ?? cur?.Service ?? "";
-                if (plugin is null || !manifests.TryGetValue(plugin, out var m) || PluginApi.ProcessOf(m.Raw, service) is not { } proc) return Bad($"Plugin {plugin} hat keinen Prozess{(service.Length > 0 ? " " + service : "")} — nur solche können Jobs.");
+                if (plugin is null || !manifests.TryGetValue(plugin, out var m) || PluginApi.ProcessOf(m.Raw, service) is not { } proc) return Bad("Plugin {0} hat keinen Prozess{1} — nur solche können Jobs.", plugin, (service.Length > 0 ? " " + service : ""));
                 // Parameter: Geheimnisse (secret: true) gehören nicht ins Journal — raus aus params, rein in secrets.json
                 var secretKeys = SecretKeys(proc);
                 var prms = body.Params ?? cur?.Params ?? new();
@@ -77,7 +77,7 @@ public static class JobApi
                 {
                     if (!Auth.Has(req, c, Rights.Users)) return Bad("Die Rolle eines Jobs setzt, wer Anwender und Rollen verwaltet.");
                     rolle = Blank(body.Role);
-                    if (rolle is not null && !c.Users.Roles.ContainsKey(rolle)) return Bad($"Unbekannte Rolle {rolle}.");
+                    if (rolle is not null && !c.Users.Roles.ContainsKey(rolle)) return Bad("Unbekannte Rolle {0}.", rolle);
                 }
                 var def = new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, plugin, prms, Blank(body.Schedule) ?? (body.Schedule is null ? cur?.Schedule : null), body.Enabled ?? cur?.Enabled ?? true, body.TimeoutMinutes ?? cur?.TimeoutMinutes, service.Length > 0 ? service : null, files, rolle, cur?.Owner ?? actor);
                 write(actor, Jobs.Stream + key, Types.JobDefined, def, null);
@@ -112,7 +112,7 @@ public static class JobApi
                 var cur = c.Jobs.All.GetValueOrDefault(key);
                 var p = Blank(plugin) ?? cur?.Plugin;
                 if (p is null) return Bad("plugin fehlt.");
-                if (!c.Plugins.All.TryGetValue(p, out var st) || !st.Enabled) return Bad($"Plugin {p} ist nicht installiert oder aus.");
+                if (!c.Plugins.All.TryGetValue(p, out var st) || !st.Enabled) return Bad("Plugin {0} ist nicht installiert oder aus.", p);
                 var prms = body.Params ?? cur?.Params ?? new();
                 write(actor, Jobs.Stream + key, Types.JobDefined,
                     new JobDefined(Blank(body.Label) ?? cur?.Label ?? key, p, prms, null, true, cur?.TimeoutMinutes ?? 180, cur?.Service, cur?.Files, cur?.Role, actor), null);

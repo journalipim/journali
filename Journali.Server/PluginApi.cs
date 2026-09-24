@@ -117,7 +117,7 @@ public static class PluginApi
         api.MapPost("/plugins/{key}/install", (string key, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            if (!Scan(dir).TryGetValue(key, out var m)) return Results.NotFound(new { error = $"plugins/{key}/plugin.json fehlt." });
+            if (!Scan(dir).TryGetValue(key, out var m)) return Results.NotFound(Err("plugins/{0}/plugin.json fehlt.", key));
             if (NichtImTarif(c, key) is { } nein) return nein;
             return c.With((_, _, write) =>
             {
@@ -159,7 +159,7 @@ public static class PluginApi
             if (!ValidKey(key) || name.Length is 0 or > 120 || name.Any(ch => ch is '/' or '\\')) return Bad("Schlüssel oder Name ungültig.");
             using var reader = new StreamReader(req.Body); var value = await reader.ReadToEndAsync(ct);
             if (value.Length > 4_000_000) return Bad("Höchstens 4 MB je Datensatz.");
-            if (value.Length > 0) { try { JsonDocument.Parse(value).Dispose(); } catch (JsonException e) { return Bad("Kein JSON: " + e.Message); } }
+            if (value.Length > 0) { try { JsonDocument.Parse(value).Dispose(); } catch (JsonException e) { return Bad("Kein JSON: {0}", e.Message); } }
             return c.With((_, _, write) => Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, Types.PluginDataSet, new PluginDataSet(name, value.Length == 0 ? null : value), null))));
         });
         // Sammel-PUT: { name: wert, … } — alle in einem Stapel (etim: eine ganze Freigabe, tausende Klassen)
@@ -170,7 +170,7 @@ public static class PluginApi
             using var reader = new StreamReader(req.Body); var body = await reader.ReadToEndAsync(ct);
             if (body.Length > 48_000_000) return Bad("Höchstens 48 MB je Stapel.");
             Dictionary<string, JsonElement>? items;
-            try { items = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(body); } catch (JsonException e) { return Bad("Kein JSON-Objekt: " + e.Message); }
+            try { items = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(body); } catch (JsonException e) { return Bad("Kein JSON-Objekt: {0}", e.Message); }
             if (items is null || items.Count == 0) return Bad("Leer.");
             if (items.Keys.Any(n => n.Length is 0 or > 120 || n.Any(ch => ch is '/' or '\\'))) return Bad("Name ungültig.");
             var batch = Guid.NewGuid().ToString("N")[..12];
@@ -190,15 +190,15 @@ public static class PluginApi
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             var state = c.With((_, _, _) => c.Plugins.All.GetValueOrDefault(key));
-            if (state is null || !state.Enabled) return Bad($"Plugin {key} ist nicht installiert oder aus.");
+            if (state is null || !state.Enabled) return Bad("Plugin {0} ist nicht installiert oder aus.", key);
             if (NichtImTarif(c, key) is { } nein) return nein;
-            if (!Scan(dir).TryGetValue(key, out var m) || !m.Raw.TryGetProperty("process", out var proc)) return Bad($"Plugin {key} hat keinen Prozess.");
+            if (!Scan(dir).TryGetValue(key, out var m) || !m.Raw.TryGetProperty("process", out var proc)) return Bad("Plugin {0} hat keinen Prozess.", key);
             var values = new Dictionary<string, string> { ["journali"] = $"{req.Scheme}://{req.Host}", ["actor"] = actor, ["token"] = Auth.IssueServiceToken(actor) };
             foreach (var (k, v) in body.Params ?? new()) values[k] = v;
             var sw = Stopwatch.StartNew();
             try { var (exit, output) = await RunProcessAsync(dir, key, proc, values, TimeSpan.FromMinutes(30), ct); return Results.Ok(new { exit, ms = sw.ElapsedMilliseconds, output }); }
             catch (InvalidOperationException e) { return Bad(e.Message); }
-            catch (System.ComponentModel.Win32Exception e) { return Bad($"Prozess startet nicht: {e.Message}"); }
+            catch (System.ComponentModel.Win32Exception e) { return Bad("Prozess startet nicht: {0}", e.Message); }
             catch (OperationCanceledException) { return Bad("Abgebrochen (Zeitgrenze 30 Minuten)."); }
         });
     }
@@ -228,7 +228,7 @@ public static class PluginApi
         var t = c.InstanzTarif;
         if (t.Erlaubt(key)) return null;
         var ab = Tarife.Alle.FirstOrDefault(x => x.Erlaubt(key));
-        return Results.Json(new { error = $"{key} gehört zum Tarif {ab?.Label ?? "?"} — diese Instanz hat {t.Label}." }, statusCode: 403);
+        return Results.Json(Err("{0} gehört zum Tarif {1} — diese Instanz hat {2}.", key, ab?.Label ?? "?", t.Label), statusCode: 403);
     }
 
     private static IResult Toggle(HttpRequest req, Catalog c, string key, bool on)
@@ -237,7 +237,7 @@ public static class PluginApi
         if (on && NichtImTarif(c, key) is { } nein) return nein;
         return c.With((_, _, write) => c.Plugins.All.TryGetValue(key, out var s)
             ? on && Requires(JsonDocument.Parse(s.Manifest).RootElement).Where(r => !(c.Plugins.All.TryGetValue(r, out var b) && b.Enabled)).ToList() is { Count: > 0 } missing
-                ? Bad($"{key} braucht {string.Join(", ", missing)} — zuerst einschalten.")   // Ergänzung ohne Basis
+                ? Bad("{0} braucht {1} — zuerst einschalten.", key, string.Join(", ", missing))   // Ergänzung ohne Basis
             : s.Enabled == on ? Results.Ok(new { unchanged = true })
                 : Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, on ? Types.PluginEnabled : Types.PluginDisabled, on ? new PluginEnabled() : new PluginDisabled(), null)))
             : Results.NotFound());

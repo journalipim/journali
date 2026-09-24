@@ -88,7 +88,7 @@ public static class DeriveApi
             var (m, p) = c.With((_, _, _) => (c.Media.All.GetValueOrDefault(id), c.Media.Presets.GetValueOrDefault(preset)));
             if (m is null || p is null) return Results.NotFound();
             var stream = await store.OpenAsync(m.Sha256 + "." + p.Key, ct);
-            if (stream is null) return Results.NotFound(new { error = $"Ableitung {preset} liegt noch nicht vor." });
+            if (stream is null) return Results.NotFound(Err("Ableitung {0} liegt noch nicht vor.", preset));
             res.Headers.CacheControl = "public, max-age=31536000, immutable";
             return Results.File(stream, p.Mime);
         });

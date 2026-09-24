@@ -132,10 +132,10 @@ public static class AiApi
                 var mein = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
                 if (mein is null || c.Teams.Get(mein) is not { Enabled: true } t) return (Bad("Kein Team — ohne Team gibt es keine KI über den Server."), "", "", "", "");
                 var zahlerKey = c.Teams.Payer(mein); var zt = c.Teams.Get(zahlerKey)!;
-                if (!zt.Enabled) return (Bad($"Das zahlende Team „{zt.Label}“ ist abgeschaltet."), "", "", "", "");
+                if (!zt.Enabled) return (Bad("Das zahlende Team „{0}“ ist abgeschaltet.", zt.Label), "", "", "", "");
                 var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahlerKey));
                 var p = Blank(body.Provider) is { } want && keys.ContainsKey(want) ? want : keys.Keys.OrderBy(x => x).FirstOrDefault();
-                if (p is null) return (Bad($"Für „{zt.Label}“ ist kein KI-Schlüssel hinterlegt."), "", "", "", "");
+                if (p is null) return (Bad("Für „{0}“ ist kein KI-Schlüssel hinterlegt.", zt.Label), "", "", "", "");
                 return ((IResult?)null, mein, zahlerKey, p, keys[p]);
             });
             if (fehler is not null) return fehler;

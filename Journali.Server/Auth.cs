@@ -186,8 +186,8 @@ public static class Auth
         if (!path.StartsWith("/api") || path.StartsWith("/api/health") || path.StartsWith("/api/auth/login") || path.StartsWith("/api/auth/setup") || path.StartsWith("/api/auth/state")) { await next(); return; }
         if (!Enabled(c)) { await next(); return; }   // noch kein Benutzer: offen
         var who = Resolve(ctx, c, dir);
-        if (who is null) { ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Anmeldung nötig.", login = true }); return; }
-        if (!Allowed(c, who.Value.Role, ctx.Request)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(new { error = $"Rolle {who.Value.Role} darf das nicht ({Rights.Label.GetValueOrDefault(Needed(ctx.Request) ?? "") ?? Needed(ctx.Request)})." }); return; }
+        if (who is null) { ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Anmeldung nötig.", template = "Anmeldung nötig.", login = true }); return; }
+        if (!Allowed(c, who.Value.Role, ctx.Request)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("Rolle {0} darf das nicht ({1}).", who.Value.Role, Rights.Label.GetValueOrDefault(Needed(ctx.Request) ?? "") ?? Needed(ctx.Request))); return; }
         ctx.Request.Headers["X-Actor"] = who.Value.User;   // der Urheber kommt aus der Sitzung, nicht vom Client
         ctx.Items["user"] = who.Value.User; ctx.Items["role"] = who.Value.Role;
         await next();
@@ -236,8 +236,8 @@ public static class Auth
             if (prefs.Count > 40) return Bad("Zu viele Einstellungen auf einmal (höchstens 40).");
             foreach (var (k, v) in prefs)
             {
-                if (k.Length is 0 or > 40 || !k.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '_' or '.')) return Bad($"Schlüssel „{k}“: a-z, 0-9, _, . (bis 40 Zeichen).");
-                if ((v?.Length ?? 0) > 4000) return Bad($"Wert zu „{k}“ ist zu lang (höchstens 4000 Zeichen).");
+                if (k.Length is 0 or > 40 || !k.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '_' or '.')) return Bad("Schlüssel „{0}“: a-z, 0-9, _, . (bis 40 Zeichen).", k);
+                if ((v?.Length ?? 0) > 4000) return Bad("Wert zu „{0}“ ist zu lang (höchstens 4000 Zeichen).", k);
             }
             var u = c.With((_, _, _) => c.Users.All.GetValueOrDefault(who.Value.User));
             if (u is null) return Bad("Unbekannter Anwender.");
@@ -315,12 +315,12 @@ public static class Auth
             var k = Key(key); if (k is null) return Bad("Anmeldename: a-z, 0-9, ., _, - (2–40 Zeichen).");
             var cur = c.With((_, _, _) => c.Users.All.GetValueOrDefault(k));
             var roles = c.With((_, _, _) => c.Users.Roles.Keys.Order().ToList());
-            var role = Blank(body.Role) ?? cur?.Role ?? (roles.Contains("editor") ? "editor" : roles.FirstOrDefault(r => r != "admin") ?? "admin"); if (!roles.Contains(role)) return Bad($"Rolle: {string.Join(", ", roles)}");
+            var role = Blank(body.Role) ?? cur?.Role ?? (roles.Contains("editor") ? "editor" : roles.FirstOrDefault(r => r != "admin") ?? "admin"); if (!roles.Contains(role)) return Bad("Rolle: {0}", string.Join(", ", roles));
             var enabled = body.Enabled ?? cur?.Enabled ?? true;
             if (cur is not null && cur.Enabled && IsAdmin(c, cur.Role) && (!IsAdmin(c, role) || !enabled) && AdminsLeft(c) <= 1) return Bad("Der letzte Administrator (Recht „Anwender und Rollen“) bleibt.");
             // Team: wessen Schlüssel gelten und auf wessen Rechnung die KI läuft — leerer Wert nimmt die Zuordnung weg
             var team = body.Team is null ? cur?.Team : Blank(body.Team);
-            if (team is { } t && c.With((_, _, _) => c.Teams.Get(t)) is null) return Bad($"Unbekanntes Team {t}.");
+            if (team is { } t && c.With((_, _, _) => c.Teams.Get(t)) is null) return Bad("Unbekanntes Team {0}.", t);
             c.With((_, _, write) => write(actor, Stream + k, Types.UserDefined, new UserDefined(Blank(body.Name) ?? cur?.Name ?? k, Blank(body.Email) ?? cur?.Email, role, enabled, team), null));
             if (Blank(body.Password) is { } pw) { if (pw.Length < 8) return Bad("Passwort: mindestens 8 Zeichen."); With(dir, s => { s.Passwords[k] = Hash(pw); return 0; }, save: true); }
             return Results.Ok(c.With((_, _, _) => c.Users.All[k]));
@@ -344,7 +344,7 @@ public static class Auth
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             var cur = c.With((_, _, _) => c.Users.Roles.GetValueOrDefault(key)); if (cur is null) return Results.NotFound();
-            var used = c.With((_, _, _) => c.Users.All.Values.Count(u => u.Role == key)); if (used > 0) return Bad($"{key} hat noch {used} Anwender.");
+            var used = c.With((_, _, _) => c.Users.All.Values.Count(u => u.Role == key)); if (used > 0) return Bad("{0} hat noch {1} Anwender.", key, used);
             if (key == "admin") return Bad("admin bleibt.");
             c.With((_, _, write) => write(actor, Users.RoleStream + key, Types.RoleRetired, new RoleRetired(), null));
             return Results.Ok(new { ok = true });

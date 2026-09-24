@@ -183,7 +183,7 @@ public static class TransferApi
                 Roles.Group => Commands.CreateGroup(c, parent, r.Label, r.Name),
                 Roles.Product => Commands.CreateProduct(c, parent, r.Axes),
                 Roles.Variant => Commands.CreateVariant(c, parent, r.AxisValues),
-                _ => Outcome.Bad($"Unbekannte Rolle {r.Role}"),
+                _ => Outcome.Bad("Unbekannte Rolle {0}", r.Role),
             };
             if (!Count(s, o, r.Id)) return;
             id = o.Entry!.Stream; s.Created++; s.IdMap[r.Id] = id;

@@ -47,7 +47,7 @@ public static class BackupApi
                 var m = JsonSerializer.Deserialize<Meta>(await File.ReadAllTextAsync(meta, ct), Json);
                 return Results.Ok(new { hier, dort = m });
             }
-            catch (Exception e) { return Bad($"backup.json nicht lesbar: {e.Message}"); }
+            catch (Exception e) { return Bad("backup.json nicht lesbar: {0}", e.Message); }
         });
 
         // Schreiben: Journal und (auf Wunsch) die Medien in ein Verzeichnis
@@ -124,13 +124,13 @@ public static class BackupApi
             if (string.IsNullOrWhiteSpace(body.Dir)) return Bad("Verzeichnis fehlt.");
             var dir = Path.GetFullPath(body.Dir.Trim());
             var quelle = Path.Combine(dir, "journal.ndjson.gz");
-            if (!File.Exists(quelle)) return Bad($"Keine Sicherung in {dir} (journal.ndjson.gz fehlt).");
-            if (journal.Head > 0) return Bad($"Hier stehen schon {journal.Head} Einträge — wiederhergestellt wird nur in ein leeres System.");
+            if (!File.Exists(quelle)) return Bad("Keine Sicherung in {0} (journal.ndjson.gz fehlt).", dir);
+            if (journal.Head > 0) return Bad("Hier stehen schon {0} Einträge — wiederhergestellt wird nur in ein leeres System.", journal.Head);
 
             int n;
             try { n = journal.RestoreAll(Lesen(quelle)); }
             catch (InvalidOperationException e) { return Bad(e.Message); }
-            catch (Exception e) { return Bad($"Journal nicht lesbar: {e.Message}"); }
+            catch (Exception e) { return Bad("Journal nicht lesbar: {0}", e.Message); }
 
             long medien = 0;
             var mdir = Path.Combine(dir, "media");

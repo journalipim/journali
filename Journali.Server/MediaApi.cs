@@ -77,7 +77,7 @@ public static class MediaApi
             var m = c.With((_, _, _) => c.Media.All.GetValueOrDefault(id));
             if (m is null) return Results.NotFound();
             var stream = await store.OpenAsync(m.Sha256, ct);
-            if (stream is null) return Results.NotFound(new { error = $"Datei {m.Sha256} fehlt im Store." });
+            if (stream is null) return Results.NotFound(Err("Datei {0} fehlt im Store.", m.Sha256));
             res.Headers.CacheControl = "public, max-age=31536000, immutable";
             return Results.File(stream, m.Mime, enableRangeProcessing: true);
         });
@@ -116,7 +116,7 @@ public static class MediaApi
         {
             if (Actor(req) is null) return ActorMissing();
             if (!MediaStores.ValidKey(key)) return Bad("Schlüssel: sha256[.suffix]");
-            if (key.Length == 64) { var (sha, _) = await store.PutAsync(req.Body, ct); if (sha != key) return Bad($"Inhalt hat Hash {sha}, nicht {key}."); }   // der Hash ist der Schlüssel — muss stimmen
+            if (key.Length == 64) { var (sha, _) = await store.PutAsync(req.Body, ct); if (sha != key) return Bad("Inhalt hat Hash {0}, nicht {1}.", sha, key); }   // der Hash ist der Schlüssel — muss stimmen
             else await store.PutAsync(key, req.Body, ct);
             return Results.Ok(new { ok = true });
         });
@@ -164,7 +164,7 @@ public static class MediaApi
             if (body.From is null) return Bad("from: Einstellung des Quell-Speichers (driver, path | bucket, endpoint, key, secret, region)");
             IMediaStore source;
             try { source = store.Build(Unmask(body.From, store.Config)); } catch (Exception e) { return Bad(e.Message); }
-            if (await source.ProbeAsync(ct) is { } perr) return Bad($"Quelle: {perr}");
+            if (await source.ProbeAsync(ct) is { } perr) return Bad("Quelle: {0}", perr);
             var log = new List<string>();
             var (copied, skipped, failed) = await MediaStores.CopyAsync(source, store, ct, k => { if (log.Count < 200) log.Add(k); });
             return Results.Ok(new { from = source.Kind, to = store.Kind, copied, skipped, failed, log });
@@ -199,7 +199,7 @@ public static class MediaApi
             if (!Uri.TryCreate(body.Url, UriKind.Absolute, out var uri) || uri.Scheme is not ("http" or "https")) return Bad("url: http(s)-Adresse erwartet.");
             var client = http.CreateClient("media");
             using var res = await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, ct);
-            if (!res.IsSuccessStatusCode) return Bad($"{uri.Host}: {(int)res.StatusCode} {res.ReasonPhrase}");
+            if (!res.IsSuccessStatusCode) return Bad("{0}: {1} {2}", uri.Host, (int)res.StatusCode, res.ReasonPhrase);
             if (res.Content.Headers.ContentLength > 50_000_000) return Bad("Grösser als 50 MB.");
             var (sha, bytes) = await store.PutAsync(await res.Content.ReadAsStreamAsync(ct), ct);
             if (bytes == 0) return Bad("Leere Antwort.");

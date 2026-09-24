@@ -22,7 +22,7 @@ public static class FileApi
         {
             dir = Path.GetFullPath(dir);
             if (File.Exists(dir)) dir = Path.GetDirectoryName(dir) ?? dir;   // eine Datei angegeben: ihr Verzeichnis zeigen
-            if (!Directory.Exists(dir)) return Bad($"Verzeichnis nicht gefunden: {dir}");
+            if (!Directory.Exists(dir)) return Bad("Verzeichnis nicht gefunden: {0}", dir);
             var info = new DirectoryInfo(dir);
             static bool Hidden(FileSystemInfo f) => f.Name.StartsWith('.') || (f.Attributes & (FileAttributes.Hidden | FileAttributes.System)) != 0;
             var dirs = info.EnumerateDirectories().Where(d => !Hidden(d)).OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase).Select(d => new { d.Name, path = d.FullName }).ToList();
@@ -34,7 +34,7 @@ public static class FileApi
             else roots.Add(new { label = "/", path = "/" });
             return Results.Ok(new { path = dir, parent = info.Parent?.FullName, roots, dirs, files, blobs });
         }
-        catch (UnauthorizedAccessException) { return Bad($"Kein Zugriff: {dir}"); }
+        catch (UnauthorizedAccessException) { return Bad("Kein Zugriff: {0}", dir); }
         catch (Exception e) { return Bad(e.Message); }
     }
 }

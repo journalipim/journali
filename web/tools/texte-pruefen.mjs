@@ -15,9 +15,25 @@ const walk = d => fs.readdirSync(d, { withFileTypes: true })
   .flatMap(e => e.isDirectory() ? (e.name === 'node_modules' ? [] : walk(path.join(d, e.name))) : /\.(vue|js)$/.test(e.name) ? [path.join(d, e.name)] : [])
 const lies = f => fs.readFileSync(f, 'utf8').replace(/^﻿/, '')
 
-/// Alle Schlüssel der Oberfläche (src/) — die Referenz, es gibt keine de.json
-export function quellSchluessel() {
+/// Meldungen des Servers (Journali.Server/*.cs): Bad("…"), Err("…"), Outcome.Bad("…") — mit {0}, {1} … als Vorlage — und
+/// error = "…" / template = "…" in Antwortobjekten; dazu die Ausnahmen mit festem Text, die als Meldung ankommen.
+/// Der Schlüssel ist der deutsche Text; die Oberfläche übersetzt ihn (api.js) und setzt die Werte ein.
+const SERVER = path.join(ROOT, '..', 'Journali.Server')
+const csText = s => JSON.parse('"' + s.replace(/\\(.)/g, (m, c) => c === '"' ? '\\"' : m) + '"')
+export function serverSchluessel() {
   const set = new Set()
+  for (const f of fs.readdirSync(SERVER).filter(f => f.endsWith('.cs') && f !== 'JobRunner.cs')) {
+    const src = lies(path.join(SERVER, f))
+    for (const m of src.matchAll(/(?:\bBad|\bErr|Outcome\.Bad)\("((?:[^"\\]|\\.)*)"/g)) set.add(csText(m[1]))
+    for (const m of src.matchAll(/(?:error|template) = "((?:[^"\\]|\\.)*)"/g)) set.add(csText(m[1]))
+    for (const m of src.matchAll(/Exception\("((?:[^"\\]|\\.)*)"\)/g)) set.add(csText(m[1]))
+  }
+  return set
+}
+
+/// Alle Schlüssel der Oberfläche (src/) und des Servers — die Referenz, es gibt keine de.json
+export function quellSchluessel() {
+  const set = serverSchluessel()
   for (const f of walk(path.join(ROOT, 'src'))) for (const k of schluessel(lies(f))) set.add(k)
   return set
 }

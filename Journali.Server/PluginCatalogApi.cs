@@ -65,7 +65,7 @@ public static class PluginCatalogApi
             JsonElement? entry = null;
             if (d.TryGetProperty("plugins", out var arr))
                 foreach (var p in arr.EnumerateArray()) if (p.TryGetProperty("key", out var k) && k.GetString() == key) entry = p;
-            if (entry is not { } ce || !ce.TryGetProperty("file", out var f) || f.GetString() is not { Length: > 0 } file) return Results.NotFound(new { error = $"{key} steht nicht im Katalog." });
+            if (entry is not { } ce || !ce.TryGetProperty("file", out var f) || f.GetString() is not { Length: > 0 } file) return Results.NotFound(Err("{0} steht nicht im Katalog.", key));
             var zipUrl = new Uri(new Uri(Url), file).ToString();
             var tmp = Path.Combine(Path.GetTempPath(), "journali-plugin-" + Guid.NewGuid().ToString("N"));
             try
@@ -93,14 +93,14 @@ public static class PluginCatalogApi
                 var version = raw.TryGetProperty("version", out var v) ? v.GetString() ?? "0" : "0";
                 if (!(raw.TryGetProperty("key", out var kk) && kk.GetString() == key)) return Bad("Manifest nennt einen anderen Schlüssel.");
                 var seal = PluginSeal.Check(src, key, version);
-                if (!seal.Certified) return Bad("Siegel ungültig: " + (seal.Grund ?? "kein Zertifikat"));
+                if (!seal.Certified) return Bad("Siegel ungültig: {0}", seal.Grund ?? "kein Zertifikat");
                 var dest = Path.Combine(dir, key);
                 if (Directory.Exists(dest)) Directory.Delete(dest, true);
                 CopyDir(src, dest);
                 return Results.Ok(new { key, version, issued = seal.Issued });
             }
-            catch (HttpRequestException e) { return Bad("Zip nicht ladbar: " + e.Message); }
-            catch (InvalidDataException e) { return Bad("Kein Zip: " + e.Message); }
+            catch (HttpRequestException e) { return Bad("Zip nicht ladbar: {0}", e.Message); }
+            catch (InvalidDataException e) { return Bad("Kein Zip: {0}", e.Message); }
             finally { try { Directory.Delete(tmp, true); } catch { } }
         });
     }

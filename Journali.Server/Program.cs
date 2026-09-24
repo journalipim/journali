@@ -142,7 +142,7 @@ app.Use(async (ctx, next) =>
     catch (InvalidOperationException e) when (e is KeinKontingentException or TarifException && !ctx.Response.HasStarted)
     {
         ctx.Response.StatusCode = 403;
-        await ctx.Response.WriteAsJsonAsync(new { error = e.Message });
+        await ctx.Response.WriteAsJsonAsync(ModelApi.Err(e.Message));
     }
 });
 

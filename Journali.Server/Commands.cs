@@ -6,10 +6,16 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>Ergebnis eines Befehls: der Eintrag, oder warum nicht.</summary>
-public sealed record Outcome(Entry? Entry, string? Error = null, bool NotFound = false)
+public sealed record Outcome(Entry? Entry, string? Error = null, bool NotFound = false, string? Template = null, string[]? Args = null)
 {
     public static Outcome Ok(Entry e) => new(e);
-    public static Outcome Bad(string error) => new(null, error);
+    public static Outcome Bad(string error) => new(null, error, false, error);
+    /// <summary>Wie ModelApi.Err: Vorlage mit {0}, {1} … und die Werte — die Oberfläche übersetzt die Vorlage.</summary>
+    public static Outcome Bad(string template, params object?[] args)
+    {
+        var a = args.Select(x => x?.ToString() ?? "").ToArray();
+        return new(null, string.Format(template, a), false, template, a);
+    }
     public static readonly Outcome Missing = new(null, null, true);
 }
 
@@ -60,9 +66,9 @@ public static class Commands
         attribute = Blank(attribute);
         if (attribute is not null)
         {
-            if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
-            if (def.Type is AttributeTypes.Html or AttributeTypes.Rows) return Outcome.Bad($"{def.Key} ({def.Type}) taugt nicht als Name im Baum.");
-            if (!c.Tree.EffectiveGroups(n).Any(g => g.Group == (def.Group ?? ""))) return Outcome.Bad($"{def.Key} gilt hier nicht: Gruppe {def.Group} hängt an keinem Knoten des Pfads.");
+            if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
+            if (def.Type is AttributeTypes.Html or AttributeTypes.Rows) return Outcome.Bad("{0} ({1}) taugt nicht als Name im Baum.", def.Key, def.Type);
+            if (!c.Tree.EffectiveGroups(n).Any(g => g.Group == (def.Group ?? ""))) return Outcome.Bad("{0} gilt hier nicht: Gruppe {1} hängt an keinem Knoten des Pfads.", def.Key, def.Group);
         }
         return Outcome.Ok(c.Write(id, Types.LabelAttributeSet, new LabelAttributeSet(attribute)));
     }
@@ -99,7 +105,7 @@ public static class Commands
             {
                 var dupes = variants.Select(v => clean.Select(a => v.AxisValues.TryGetValue(a, out var have) ? have : v.Values.GetValueOrDefault(new Axis(a, null, null))).ToList())
                     .Where(vals => vals.All(x => !string.IsNullOrEmpty(x))).GroupBy(vals => string.Join(" · ", vals)).Where(g => g.Count() > 1).Select(g => $"{g.Key} × {g.Count()}").ToList();
-                if (dupes.Count > 0) return Outcome.Bad($"Nicht eindeutig: {string.Join(", ", dupes)} — mit force verlieren diese Varianten ihre Achsenzuordnung (Werte bleiben), oder eine weitere Achse dazu.");
+                if (dupes.Count > 0) return Outcome.Bad("Nicht eindeutig: {0} — mit force verlieren diese Varianten ihre Achsenzuordnung (Werte bleiben), oder eine weitere Achse dazu.", string.Join(", ", dupes));
             }
         }
         // Entfällt eine Achse, bleibt ihr Wert als eigener Attributwert an der Variante (sonst wäre er nur noch im Journal) — je Variante ein AttributeSet vor dem Achsenwechsel
@@ -115,7 +121,7 @@ public static class Commands
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         var list = groups?.Select(g => g.Trim()).Where(g => g.Length > 0).Distinct().ToArray() ?? [];
         foreach (var g in list)
-            if (!c.Model.Groups.ContainsKey(g) && !c.Model.Attributes.Values.Any(a => a.Group == g)) return Outcome.Bad($"Unbekannte Gruppe: {g}");
+            if (!c.Model.Groups.ContainsKey(g) && !c.Model.Attributes.Values.Any(a => a.Group == g)) return Outcome.Bad("Unbekannte Gruppe: {0}", g);
         return Outcome.Ok(c.Write(id, Types.GroupsAttached, new GroupsAttached(list)));
     }
 
@@ -123,13 +129,13 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(productId ?? "", out var product) || product.Role != Roles.Product) return Outcome.Bad("Eine Variante hängt unter einem Produkt.");
         var values = axisValues ?? new();
-        if (!values.Keys.ToHashSet().SetEquals(product.Axes)) return Outcome.Bad($"Achsenwerte für genau: {string.Join(", ", product.Axes)}");
+        if (!values.Keys.ToHashSet().SetEquals(product.Axes)) return Outcome.Bad("Achsenwerte für genau: {0}", string.Join(", ", product.Axes));
         foreach (var (axis, value) in values.ToList())
         {
-            if (!c.Model.Attributes.TryGetValue(axis, out var def)) return Outcome.Bad($"Unbekannte Achse: {axis}");
+            if (!c.Model.Attributes.TryGetValue(axis, out var def)) return Outcome.Bad("Unbekannte Achse: {0}", axis);
             string? v = value; string[]? none = null;
             if (CheckValue(c.Model, def, ref v, ref none) is { } error) return Outcome.Bad(error);
-            if (v is null) return Outcome.Bad($"Achse {axis} braucht einen Wert.");
+            if (v is null) return Outcome.Bad("Achse {0} braucht einen Wert.", axis);
             values[axis] = v;
         }
         // Ohne Achsen darf ein Produkt beliebig viele Varianten haben (Import aus Systemen ohne Achsen);
@@ -139,7 +145,7 @@ public static class Commands
         // eine eindeutige Achse (SKU als Achse): der Achsenwert darf es nirgends im Baum schon geben
         foreach (var (axis, v) in values)
             if (c.Model.Attributes.TryGetValue(axis, out var ad) && ad.Unique && c.Tree.WithOwnValue(axis, v).FirstOrDefault() is { } other)
-                return Outcome.Bad($"{ad.Label.GetValueOrDefault("de") ?? axis} {v} gibt es schon: {NodeRow.LabelOf(c.Tree, c.Model, other)} ({other.Id}).");
+                return Outcome.Bad("{0} {1} gibt es schon: {2} ({3}).", ad.Label.GetValueOrDefault("de") ?? axis, v, NodeRow.LabelOf(c.Tree, c.Model, other), other.Id);
         return Outcome.Ok(c.Write(Ids.New(Roles.Variant), Types.VariantCreated, new VariantCreated(product.Id, values)));
     }
 
@@ -153,7 +159,7 @@ public static class Commands
         if (string.IsNullOrWhiteSpace(name) && (label is null || label.Count == 0)) return Outcome.Bad("Name fehlt.");
         // Zwei Bäume mit gleichem Namen für denselben Kanal × Markt sind nicht zu unterscheiden
         if (parent is null && c.Tree.PubTrees.Any(r => r.Channel == channel && r.Market == market && string.Equals(r.Name, Blank(name), StringComparison.OrdinalIgnoreCase)))
-            return Outcome.Bad($"Es gibt schon einen Publikationsbaum „{name}“ für {channel}{(market is null ? "" : " · " + market)} — anderer Name, oder den vorhandenen weiter benutzen.");
+            return Outcome.Bad("Es gibt schon einen Publikationsbaum „{0}“ für {1}{2} — anderer Name, oder den vorhandenen weiter benutzen.", name, channel, (market is null ? "" : " · " + market));
         return Outcome.Ok(c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(parent, label ?? new(), Blank(name), channel, market)));
     }
 
@@ -162,7 +168,7 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (n.Role != Roles.Rubric) return Outcome.Bad("Ein Stand steht an einer Rubrik oder der Wurzel des Publikationsbaums.");
-        if (number is { } k && (k < 1 || k > head)) return Outcome.Bad($"Stand: Journalnummer 1 … {head}.");
+        if (number is { } k && (k < 1 || k > head)) return Outcome.Bad("Stand: Journalnummer 1 … {0}.", head);
         return Outcome.Ok(c.Write(id, Types.PubStandSet, new PubStandSet(number)));
     }
 
@@ -262,7 +268,7 @@ public static class Commands
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (!c.Tree.Nodes.TryGetValue(parent ?? "", out var target)) return Outcome.Bad("Ziel gibt es nicht.");
         var need = n.Role == Roles.Variant ? Roles.Product : n.Role == Roles.Rubric ? Roles.Rubric : Roles.Group;
-        if (target.Role != need) return Outcome.Bad($"{n.Role} hängt unter {need}.");
+        if (target.Role != need) return Outcome.Bad("{0} hängt unter {1}.", n.Role, need);
         if (target.Id == n.Id || c.Tree.Ancestors(target).Any(a => a.Id == n.Id)) return Outcome.Bad("Nicht unter sich selbst.");
         return Outcome.Ok(c.Write(id, Types.NodeMoved, new NodeMoved(target.Id)));
     }
@@ -311,7 +317,7 @@ public static class Commands
     public static Outcome SetStatus(Ctx c, string id, string? status)
     {
         if (!c.Tree.Nodes.ContainsKey(id)) return Outcome.Missing;
-        if (!c.Model.Statuses.ContainsKey(status ?? "")) return Outcome.Bad($"Status: {string.Join(", ", c.Model.StatusesOrdered.Select(s => s.Key))}");
+        if (!c.Model.Statuses.ContainsKey(status ?? "")) return Outcome.Bad("Status: {0}", string.Join(", ", c.Model.StatusesOrdered.Select(s => s.Key)));
         return Outcome.Ok(c.Write(id, Types.StatusSet, new StatusSet(status!)));
     }
 
@@ -320,7 +326,7 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(id, out _)) return Outcome.Missing;
         if (string.IsNullOrWhiteSpace(attribute)) return Outcome.Bad("attribute fehlt.");
-        if (!c.Model.Attributes.ContainsKey(attribute)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
+        if (!c.Model.Attributes.ContainsKey(attribute)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
         method = Blank(method) ?? "manual";
         if (method is not ("web" or "ai" or "rule" or "import" or "manual" or "pending")) return Outcome.Bad("method: web, ai, rule, import, manual oder pending (angefragt — checkedAt = Wiedervorlage).");
         if (Blank(checkedAt) is { } d && !DateOnly.TryParse(d, out _)) return Outcome.Bad("checkedAt: Datum (JJJJ-MM-TT).");
@@ -331,8 +337,8 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (string.IsNullOrWhiteSpace(attribute)) return Outcome.Bad("attribute fehlt.");
-        if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
-        if (def.Type == AttributeTypes.Rows) return Outcome.Bad($"{def.Key} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.");
+        if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
+        if (def.Type == AttributeTypes.Rows) return Outcome.Bad("{0} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.", def.Key);
         row = Blank(row);
         // Gilt das Attribut hier? Über eine Gruppe am Pfad, die an dieser Rolle aktiv ist (oder als Zelle einer Zeile).
         if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key))
@@ -341,26 +347,26 @@ public static class Commands
         {
             // Zelle einer Zeile: die Zeile muss es am Knoten geben, das Attribut muss Spalte dieses vermehrbaren Attributs sein.
             var owner = n.Rows.FirstOrDefault(kv => kv.Value.Contains(row)).Key;
-            if (owner is null) return Outcome.Bad($"Zeile {row} gibt es hier nicht.");
-            if (!(c.Model.Attributes.GetValueOrDefault(owner)?.Columns?.Contains(def.Key) ?? false)) return Outcome.Bad($"{def.Key} ist keine Spalte von {owner}.");
+            if (owner is null) return Outcome.Bad("Zeile {0} gibt es hier nicht.", row);
+            if (!(c.Model.Attributes.GetValueOrDefault(owner)?.Columns?.Contains(def.Key) ?? false)) return Outcome.Bad("{0} ist keine Spalte von {1}.", def.Key, owner);
         }
         locale = Blank(locale);
         channel = Blank(channel);
-        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad($"{def.Key} hat diese Achse nicht.");
-        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
-        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad($"Unbekannter Kanal: {channel}");
-        if (channel is not null && def.Channels is { } only && !only.Contains(channel)) return Outcome.Bad($"{def.Key} gibt es nur für: {string.Join(", ", only)}");
+        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad("{0} hat diese Achse nicht.", def.Key);
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad("Unbekannte Sprache: {0}", locale);
+        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad("Unbekannter Kanal: {0}", channel);
+        if (channel is not null && def.Channels is { } only && !only.Contains(channel)) return Outcome.Bad("{0} gibt es nur für: {1}", def.Key, string.Join(", ", only));
         if (CheckValue(c.Model, def, ref value, ref values) is { } error) return Outcome.Bad(error);
         // Achsenattribut an einer Variante: der Wert wird ihr Achsenwert — die Kombination muss eindeutig bleiben
         if (n.Role == Roles.Variant && n.Parent is { } pid && c.Tree.Nodes.TryGetValue(pid, out var prod) && prod.Axes.Contains(def.Key) && locale is null && channel is null && row is null && value is not null)
         {
             var mine = prod.Axes.Select(a => a == def.Key ? value : n.AxisValues.GetValueOrDefault(a)).ToList();
             if (mine.All(x => !string.IsNullOrEmpty(x)) && c.Tree.Children(pid).Any(s => s.Id != n.Id && prod.Axes.All(a => s.AxisValues.TryGetValue(a, out var x) && x == mine[Array.IndexOf(prod.Axes, a)])))
-                return Outcome.Bad($"Diese Variante gibt es schon ({string.Join(", ", mine)}).");
+                return Outcome.Bad("Diese Variante gibt es schon ({0}).", string.Join(", ", mine));
         }
         // Eindeutig (Merkmal unique): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern
         if (def.Unique && value is not null && locale is null && channel is null && row is null && c.Tree.WithOwnValue(def.Key, value).FirstOrDefault(o => o.Id != n.Id) is { } other)
-            return Outcome.Bad($"{def.Label.GetValueOrDefault("de") ?? def.Key} {value} gibt es schon: {NodeRow.LabelOf(c.Tree, c.Model, other)} ({other.Id}).");
+            return Outcome.Bad("{0} {1} gibt es schon: {2} ({3}).", def.Label.GetValueOrDefault("de") ?? def.Key, value, NodeRow.LabelOf(c.Tree, c.Model, other), other.Id);
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row)));
     }
 
@@ -378,7 +384,7 @@ public static class Commands
     public static Outcome AddRow(Ctx c, string id, string? attribute)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
-        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def) || def.Type != AttributeTypes.Rows) return Outcome.Bad($"{attribute} ist kein vermehrbares Attribut.");
+        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def) || def.Type != AttributeTypes.Rows) return Outcome.Bad("{0} ist kein vermehrbares Attribut.", attribute);
         if (!CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key)) return Outcome.Bad(WhyNotActive(c, n, def));
         var rowId = "r-" + Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(3)).ToLowerInvariant();
         return Outcome.Ok(c.Write(id, Types.RowAdded, new RowAdded(def.Key, rowId)));
@@ -422,7 +428,7 @@ public static class Commands
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (!c.Model.Channels.ContainsKey(channel ?? "")) return Outcome.Bad("channel fehlt oder unbekannt.");
         locale = Blank(locale);
-        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad("Unbekannte Sprache: {0}", locale);
         // Am Produkt (Workflow „freigeben“): jede vollständige Variante wird freigegeben; keine vollständige = nichts, mit dem, was fehlt
         if (n.Role is Roles.Product or Roles.Group)
         {
@@ -437,14 +443,14 @@ public static class Commands
                 if (r.Entry is { } e) last = e; else failed.Add($"{v.Own(Model.SkuAttribute, null, null) ?? v.Id}: {r.Error}");
             }
             if (last is null && variants.Any(v => v.Releases.Contains(new Release(channel!, locale)))) return Outcome.Bad("schon freigegeben");   // eine ist frei, nichts Neues — kein Fehler
-            if (last is null && failed.Count > 0) return Outcome.Bad("Keine Variante konnte freigegeben werden: " + string.Join(" · ", failed));
+            if (last is null && failed.Count > 0) return Outcome.Bad("Keine Variante konnte freigegeben werden: {0}", string.Join(" · ", failed));
             if (last is null) return Outcome.Bad("schon freigegeben");
             return Outcome.Ok(last);
         }
         if (n.Role != Roles.Variant) return Outcome.Bad("Freigabe nur an der Variante — sie ist das Verkaufbare.");
         // Freigabe setzt Vollständigkeit voraus — Sperre (docs/pflegestruktur.md, entschieden).
         var (_, missing) = CompletenessRules.Check(c.Tree, c.Model, n, CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).ToList(), channel!, locale);
-        if (missing.Length > 0) return Outcome.Bad("Freigabe scheitert an:\n" + string.Join("\n", MissingLines(c, n, missing).Select(l => "• " + l)));
+        if (missing.Length > 0) return Outcome.Bad("Freigabe scheitert an:\n{0}", string.Join("\n", MissingLines(c, n, missing).Select(l => "• " + l)));
         return Outcome.Ok(c.Write(id, Types.ReleaseGranted, new ReleaseGranted(channel!, locale)));
     }
 
@@ -466,7 +472,7 @@ public static class Commands
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (string.IsNullOrWhiteSpace(system) || string.IsNullOrWhiteSpace(externalId)) return Outcome.Bad("system und id sind Pflicht.");
-        if (c.Tree.ByExternal(system, externalId) is { } other && other.Id != n.Id) return Outcome.Bad($"{system}:{externalId} hängt schon an {other.Id}.");
+        if (c.Tree.ByExternal(system, externalId) is { } other && other.Id != n.Id) return Outcome.Bad("{0}:{1} hängt schon an {2}.", system, externalId, other.Id);
         return Outcome.Ok(c.Write(id, Types.ExternalLinked, new ExternalLinked(system, externalId)));
     }
 
@@ -547,7 +553,7 @@ public static class Commands
     /// <summary>Relation anlegen: Typ aus dem Modell, Rollen erlaubt, nicht auf sich selbst, je Typ nur einmal zwischen denselben Knoten.</summary>
     public static Outcome CreateRelation(Ctx c, string? type, string? from, string? to)
     {
-        if (!c.Model.RelationTypes.TryGetValue(type ?? "", out var def)) return Outcome.Bad($"Unbekannter Relationstyp: {type}");
+        if (!c.Model.RelationTypes.TryGetValue(type ?? "", out var def)) return Outcome.Bad("Unbekannter Relationstyp: {0}", type);
         if (!c.Tree.Nodes.TryGetValue(from ?? "", out var a)) return Outcome.Bad("from: Knoten gibt es nicht.");
         // Ziel: ein Knoten — oder ein Medium (20), dann Rolle „media“.
         string toId, toRole;
@@ -555,8 +561,8 @@ public static class Commands
         else if (c.Media.All.TryGetValue(to ?? "", out var m)) { toId = m.Id; toRole = Roles.Media; }
         else return Outcome.Bad("to: Knoten oder Medium gibt es nicht.");
         if (a.Id == toId) return Outcome.Bad("Nicht auf sich selbst.");
-        if (!def.FromAllowed(a.Role)) return Outcome.Bad($"{def.Key} geht nicht von {a.Role} aus (erlaubt: {string.Join(", ", def.From ?? [])}).");
-        if (!def.ToAllowed(toRole)) return Outcome.Bad($"{def.Key} geht nicht zu {toRole} (erlaubt: {string.Join(", ", def.To ?? [])}).");
+        if (!def.FromAllowed(a.Role)) return Outcome.Bad("{0} geht nicht von {1} aus (erlaubt: {2}).", def.Key, a.Role, string.Join(", ", def.From ?? []));
+        if (!def.ToAllowed(toRole)) return Outcome.Bad("{0} geht nicht zu {1} (erlaubt: {2}).", def.Key, toRole, string.Join(", ", def.To ?? []));
         if (c.Relations.From(a.Id).Any(r => r.Type == def.Key && r.To == toId)) return Outcome.Bad("Diese Relation gibt es schon.");
         // beidseitig: je Paar nur einmal, egal von welchem Ende aus angelegt
         if (def.Symmetric && c.Relations.From(toId).Any(r => r.Type == def.Key && r.To == a.Id)) return Outcome.Bad("Diese Relation gibt es schon (vom anderen Ende).");
@@ -570,15 +576,15 @@ public static class Commands
     public static Outcome SetRelationAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values)
     {
         if (!c.Relations.All.TryGetValue(id, out var r)) return Outcome.Missing;
-        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
+        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
         var type = c.Model.RelationTypes.GetValueOrDefault(r.Type);
-        if (type?.Group is null) return Outcome.Bad($"Relationstyp {r.Type} hat keine Attributgruppe — im Modell zuordnen.");
-        if (def.Group != type.Group) return Outcome.Bad($"{def.Key} gehört nicht zur Gruppe {type.Group} des Relationstyps.");
+        if (type?.Group is null) return Outcome.Bad("Relationstyp {0} hat keine Attributgruppe — im Modell zuordnen.", r.Type);
+        if (def.Group != type.Group) return Outcome.Bad("{0} gehört nicht zur Gruppe {1} des Relationstyps.", def.Key, type.Group);
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad("Vermehrbare Attribute gibt es an Relationen nicht.");
         locale = Blank(locale); channel = Blank(channel);
-        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad($"{def.Key} hat diese Achse nicht.");
-        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
-        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad($"Unbekannter Kanal: {channel}");
+        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad("{0} hat diese Achse nicht.", def.Key);
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad("Unbekannte Sprache: {0}", locale);
+        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad("Unbekannter Kanal: {0}", channel);
         if (CheckValue(c.Model, def, ref value, ref values) is { } error) return Outcome.Bad(error);
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values)));
     }
@@ -587,7 +593,7 @@ public static class Commands
     {
         if (!c.Relations.All.TryGetValue(id, out var r)) return Outcome.Missing;
         if (string.IsNullOrWhiteSpace(system) || string.IsNullOrWhiteSpace(externalId)) return Outcome.Bad("system und id sind Pflicht.");
-        if (c.Relations.ByExternal(system, externalId) is { } other && other.Id != r.Id) return Outcome.Bad($"{system}:{externalId} hängt schon an {other.Id}.");
+        if (c.Relations.ByExternal(system, externalId) is { } other && other.Id != r.Id) return Outcome.Bad("{0}:{1} hängt schon an {2}.", system, externalId, other.Id);
         return Outcome.Ok(c.Write(id, Types.ExternalLinked, new ExternalLinked(system, externalId)));
     }
 
@@ -605,16 +611,16 @@ public static class Commands
         if (keys.Any(k => string.IsNullOrWhiteSpace(k) || !k.All(ch => char.IsAsciiLetterLower(ch) || char.IsAsciiDigit(ch) || ch == '_'))) return Outcome.Bad("Zustands-Keys: a-z, 0-9, _.");
         if (keys.Distinct().Count() != keys.Count) return Outcome.Bad("Zustands-Keys doppelt.");
         var start = d.Start ?? keys[0];
-        if (!keys.Contains(start)) return Outcome.Bad($"Start „{start}“ ist kein Zustand.");
+        if (!keys.Contains(start)) return Outcome.Bad("Start „{0}“ ist kein Zustand.", start);
         foreach (var t in d.Transitions ?? new())
         {
             if (string.IsNullOrWhiteSpace(t.Key)) return Outcome.Bad("Übergang ohne Key.");
-            if (!keys.Contains(t.From) || !keys.Contains(t.To)) return Outcome.Bad($"Übergang {t.Key}: von/nach muss ein Zustand sein.");
-            if (t.EscalateAfterDays is { } ed && ed < 0) return Outcome.Bad($"Übergang {t.Key}: Eskalation nach n Tagen, n ≥ 0.");
+            if (!keys.Contains(t.From) || !keys.Contains(t.To)) return Outcome.Bad("Übergang {0}: von/nach muss ein Zustand sein.", t.Key);
+            if (t.EscalateAfterDays is { } ed && ed < 0) return Outcome.Bad("Übergang {0}: Eskalation nach n Tagen, n ≥ 0.", t.Key);
             foreach (var e in t.Effects ?? []) if (!((e.StartsWith("release:") || e.StartsWith("revoke:")) && (e[(e.IndexOf(':') + 1)..] == "*" || c.Model.Channels.ContainsKey(e[(e.IndexOf(':') + 1)..])) || (e.StartsWith("status:") && c.Model.Statuses.ContainsKey(e[7..]))
                 // translate:<sprache> (30): schnürt das Übersetzungspaket — derselbe Auftrag wie beim Job nach Zeitplan
                 || (e.StartsWith("translate:") && (e[10..] == "*" || (c.Model.Locales.ContainsKey(e[10..]) && e[10..] != c.Model.MasterLocale)))))
-                return Outcome.Bad($"Übergang {t.Key}: Wirkung „{e}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<{string.Join('|', c.Model.StatusesOrdered.Select(s => s.Key))}>, translate:<sprache>).");
+                return Outcome.Bad("Übergang {0}: Wirkung „{1}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<{2}>, translate:<sprache>).", t.Key, e, string.Join('|', c.Model.StatusesOrdered.Select(s => s.Key)));
         }
         if ((d.Transitions ?? new()).Select(t => t.Key).Distinct().Count() != (d.Transitions ?? new()).Count) return Outcome.Bad("Übergangs-Keys doppelt.");
         return Outcome.Ok(c.Write(Workflows.Stream + key, Types.WorkflowDefined, d with { Start = start }));
@@ -694,18 +700,18 @@ public static class Commands
 
     public static Outcome WorkflowStep(Ctx c, string id, string workflow, string transition, string? note, string? locale = null)
     {
-        if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
+        if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad("Unbekannter Workflow {0}.", workflow);
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
-        if (!wf.AppliesTo(n)) return Outcome.Bad($"Workflow „{wf.Label.GetValueOrDefault("de") ?? wf.Key}“ gilt nicht für {n.Role}.");
+        if (!wf.AppliesTo(n)) return Outcome.Bad("Workflow „{0}“ gilt nicht für {1}.", wf.Label.GetValueOrDefault("de") ?? wf.Key, n.Role);
         locale = Blank(locale);
-        if (locale is not null && !wf.PerLocale) return Outcome.Bad($"Workflow „{wf.Label.GetValueOrDefault("de") ?? wf.Key}“ läuft nicht je Sprache.");
-        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
+        if (locale is not null && !wf.PerLocale) return Outcome.Bad("Workflow „{0}“ läuft nicht je Sprache.", wf.Label.GetValueOrDefault("de") ?? wf.Key);
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad("Unbekannte Sprache: {0}", locale);
         var t = wf.Transitions.FirstOrDefault(x => x.Key == transition);
-        if (t is null) return Outcome.Bad($"Unbekannter Übergang {transition}.");
+        if (t is null) return Outcome.Bad("Unbekannter Übergang {0}.", transition);
         var (state, inheritedFrom) = c.Workflows.StateOf(id, wf, x => c.Tree.Nodes.GetValueOrDefault(x)?.Parent, locale);
-        if (t.From != state) return Outcome.Bad($"„{t.Label.GetValueOrDefault("de") ?? t.Key}“ geht von {t.From} aus, der Knoten ist in {state}{(locale is null ? "" : " (" + locale + ")")}.");
+        if (t.From != state) return Outcome.Bad("„{0}“ geht von {1} aus, der Knoten ist in {2}{3}.", t.Label.GetValueOrDefault("de") ?? t.Key, t.From, state, (locale is null ? "" : " (" + locale + ")"));
         var since = c.Workflows.Of(inheritedFrom ?? id).GetValueOrDefault(Workflows.Slot(wf.Key, wf.PerLocale ? locale : null))?.At;
-        if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role) && !Escalated(t, role, since, DateTimeOffset.UtcNow)) return Outcome.Bad($"Rolle {role} darf „{t.Label.GetValueOrDefault("de") ?? t.Key}“ nicht (erlaubt: {string.Join(", ", t.Roles)}).");
+        if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role) && !Escalated(t, role, since, DateTimeOffset.UtcNow)) return Outcome.Bad("Rolle {0} darf „{1}“ nicht (erlaubt: {2}).", role, t.Label.GetValueOrDefault("de") ?? t.Key, string.Join(", ", t.Roles));
         note = Blank(note);
         if (t.NoteRequired && note is null) return Outcome.Bad("Notiz ist Pflicht bei diesem Schritt (was ist zu tun?).");
         if (Blocker(c, n, t) is { } blocked) return Outcome.Bad(blocked);
@@ -713,11 +719,11 @@ public static class Commands
         foreach (var eff in t.Effects ?? [])
         {
             var i = eff.IndexOf(':'); var kind = eff[..i]; var arg = eff[(i + 1)..];
-            if (kind == "translate") { if (OrderTranslation(c, id, arg) is { Error: { } te }) return Outcome.Bad($"Der Schritt wurde ausgeführt, die Wirkung {eff} nicht: {te}"); continue; }
+            if (kind == "translate") { if (OrderTranslation(c, id, arg) is { Error: { } te }) return Outcome.Bad("Der Schritt wurde ausgeführt, die Wirkung {0} nicht: {1}", eff, te); continue; }
             foreach (var ch in kind is "release" or "revoke" && arg == "*" ? c.Model.Channels.Keys.ToList() : [arg])   // * = alle Kanäle
             {
                 var r = kind switch { "release" => GrantRelease(c, id, ch, locale), "revoke" => RevokeRelease(c, id, ch, locale), "status" => SetStatus(c, id, ch), _ => Outcome.Bad(eff) };
-                if (r.Error is { } err && !err.Contains("schon")) return Outcome.Bad($"Der Schritt wurde ausgeführt, die Wirkung {eff} nicht: {err}");
+                if (r.Error is { } err && !err.Contains("schon")) return Outcome.Bad("Der Schritt wurde ausgeführt, die Wirkung {0} nicht: {1}", eff, err);
             }
         }
         return Outcome.Ok(e);
@@ -735,9 +741,9 @@ public static class Commands
         Entry? last = null;
         foreach (var to in targets)
         {
-            if (!c.Model.Locales.ContainsKey(to) || to == master) return Outcome.Bad($"Unbekannte Zielsprache {to}.");
+            if (!c.Model.Locales.ContainsKey(to) || to == master) return Outcome.Bad("Unbekannte Zielsprache {0}.", to);
             var r = TranslateApi.Collect(c.Model, c.Tree, id, master, to, null, null, "open", 50000, null, null, null, c.Translations);
-            if (r.Error is not null) return Outcome.Bad($"{to}: Rückstand nicht zu rechnen.");
+            if (r.Error is not null) return Outcome.Bad("{0}: Rückstand nicht zu rechnen.", to);
             if (r.Units.Count == 0) continue;   // nichts offen — kein Paket
             var units = r.Units.Select(u => new OrderUnit(u.Id, u.SourceHash, string.IsNullOrEmpty(u.Target) ? null : TranslateApi.Hash(u.Target))).ToList();
             last = c.Write(Translations.Stream + Ids.TranslationOrder(), Types.TranslationOrdered, new TranslationOrdered(master, to, units, id, null, null, "open", 0, "aus dem Workflow"));
@@ -748,10 +754,10 @@ public static class Commands
     /// <summary>Eigenen Zustand aufheben — es gilt wieder der geerbte (Variante → Produkt). Nur, wo es einen eigenen gibt.</summary>
     public static Outcome ClearWorkflowState(Ctx c, string id, string workflow, string? locale = null)
     {
-        if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
+        if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad("Unbekannter Workflow {0}.", workflow);
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         locale = Blank(locale);
-        if (locale is not null && !wf.PerLocale) return Outcome.Bad($"Workflow „{wf.Label.GetValueOrDefault("de") ?? wf.Key}“ läuft nicht je Sprache.");
+        if (locale is not null && !wf.PerLocale) return Outcome.Bad("Workflow „{0}“ läuft nicht je Sprache.", wf.Label.GetValueOrDefault("de") ?? wf.Key);
         if (c.Workflows.Own(id, wf, locale) is null) return Outcome.Bad("Hier gibt es keinen eigenen Zustand.");
         if (n.Parent is null) return Outcome.Bad("An der Wurzel gibt es nichts zu erben.");
         var (state, from) = c.Workflows.StateOf(n.Parent, wf, x => c.Tree.Nodes.GetValueOrDefault(x)?.Parent, locale);
@@ -760,7 +766,7 @@ public static class Commands
 
     public static Outcome AssignWorkflow(Ctx c, string id, string workflow, string? user)
     {
-        if (c.Workflows is null || !c.Workflows.All.ContainsKey(workflow)) return Outcome.Bad($"Unbekannter Workflow {workflow}.");
+        if (c.Workflows is null || !c.Workflows.All.ContainsKey(workflow)) return Outcome.Bad("Unbekannter Workflow {0}.", workflow);
         if (!c.Tree.Nodes.ContainsKey(id)) return Outcome.Missing;
         return Outcome.Ok(c.Write(id, Types.WorkflowAssigned, new WorkflowAssigned(workflow, Blank(user))));
     }
@@ -772,7 +778,7 @@ public static class Commands
         if (Blank(name) is not { } n) return Outcome.Bad("Name fehlt.");
         parent = Blank(parent);
         if (parent is not null && !c.Media.Folders.ContainsKey(parent)) return Outcome.Bad("Vater: Ordner gibt es nicht.");
-        if (c.Media.SubFolders(parent).Any(f => string.Equals(f.Name, n, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad($"„{n}“ gibt es hier schon.");
+        if (c.Media.SubFolders(parent).Any(f => string.Equals(f.Name, n, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad("„{0}“ gibt es hier schon.", n);
         return Outcome.Ok(c.Write(Ids.MediaFolder(), Types.MediaFolderCreated, new MediaFolderCreated(n, parent)));
     }
 
@@ -780,7 +786,7 @@ public static class Commands
     {
         if (!c.Media.Folders.TryGetValue(id, out var f)) return Outcome.Missing;
         if (Blank(name) is not { } n) return Outcome.Bad("Name fehlt.");
-        if (c.Media.SubFolders(f.Parent).Any(x => x.Id != id && string.Equals(x.Name, n, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad($"„{n}“ gibt es hier schon.");
+        if (c.Media.SubFolders(f.Parent).Any(x => x.Id != id && string.Equals(x.Name, n, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad("„{0}“ gibt es hier schon.", n);
         return Outcome.Ok(c.Write(id, Types.MediaFolderRenamed, new MediaFolderRenamed(n)));
     }
 
@@ -790,7 +796,7 @@ public static class Commands
         parent = Blank(parent);
         if (parent is not null && !c.Media.Folders.ContainsKey(parent)) return Outcome.Bad("Ziel: Ordner gibt es nicht.");
         if (parent is not null && c.Media.FolderAndBelow(id).Contains(parent)) return Outcome.Bad("Nicht in sich selbst.");
-        if (c.Media.SubFolders(parent).Any(x => x.Id != id && string.Equals(x.Name, f.Name, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad($"„{f.Name}“ gibt es dort schon.");
+        if (c.Media.SubFolders(parent).Any(x => x.Id != id && string.Equals(x.Name, f.Name, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad("„{0}“ gibt es dort schon.", f.Name);
         return Outcome.Ok(c.Write(id, Types.MediaFolderMoved, new MediaFolderMoved(parent)));
     }
 
@@ -799,7 +805,7 @@ public static class Commands
     {
         if (!c.Media.Folders.ContainsKey(id)) return Outcome.Missing;
         var subs = c.Media.SubFolders(id).Count(); var media = c.Media.InFolder(id).Count();
-        if (subs + media > 0) return Outcome.Bad($"Nicht leer: {subs} Unterordner, {media} Assets.");
+        if (subs + media > 0) return Outcome.Bad("Nicht leer: {0} Unterordner, {1} Assets.", subs, media);
         return Outcome.Ok(c.Write(id, Types.MediaFolderRetired, new MediaFolderRetired()));
     }
 
@@ -817,13 +823,13 @@ public static class Commands
     public static Outcome SetMediumAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? value, string[]? values)
     {
         if (!c.Media.All.ContainsKey(id)) return Outcome.Missing;
-        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def)) return Outcome.Bad($"Unbekanntes Attribut: {attribute}");
-        if (def.Group != Model.MediaGroup) return Outcome.Bad($"{def.Key} gehört nicht zur Gruppe {Model.MediaGroup}.");
+        if (!c.Model.Attributes.TryGetValue(attribute ?? "", out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
+        if (def.Group != Model.MediaGroup) return Outcome.Bad("{0} gehört nicht zur Gruppe {1}.", def.Key, Model.MediaGroup);
         if (def.Type == AttributeTypes.Rows) return Outcome.Bad("Vermehrbare Attribute gibt es an Medien nicht.");
         locale = Blank(locale); channel = Blank(channel);
-        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad($"{def.Key} hat diese Achse nicht.");
-        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
-        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad($"Unbekannter Kanal: {channel}");
+        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad("{0} hat diese Achse nicht.", def.Key);
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad("Unbekannte Sprache: {0}", locale);
+        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad("Unbekannter Kanal: {0}", channel);
         if (CheckValue(c.Model, def, ref value, ref values) is { } error) return Outcome.Bad(error);
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values)));
     }
@@ -832,7 +838,7 @@ public static class Commands
     {
         if (!c.Media.All.TryGetValue(id, out var m)) return Outcome.Missing;
         if (string.IsNullOrWhiteSpace(system) || string.IsNullOrWhiteSpace(externalId)) return Outcome.Bad("system und id sind Pflicht.");
-        if (c.Media.ByExternal(system, externalId) is { } other && other.Id != m.Id) return Outcome.Bad($"{system}:{externalId} hängt schon an {other.Id}.");
+        if (c.Media.ByExternal(system, externalId) is { } other && other.Id != m.Id) return Outcome.Bad("{0}:{1} hängt schon an {2}.", system, externalId, other.Id);
         return Outcome.Ok(c.Write(id, Types.ExternalLinked, new ExternalLinked(system, externalId)));
     }
 

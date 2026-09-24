@@ -111,8 +111,9 @@ gemeint. In Commits keine Zeile „Co-Authored-By“ — es gibt einen Beitragen
   `title=` (Prüfstand `sichtbare-texte.test.mjs`). Positiv grün, negativ rot.
   **Eine Meldung sagt, was ist — nicht, was der Anwender zu tun hat**. Kein „bitte“,
   kein „erst …“, kein Ratschlag; ein Satz. Gilt auch für die Meldungen des
-  Servers — Prüfstand `servermeldungen.test.mjs` liest `Bad("…")` und `error = "…"`
-  aus `Journali.Server`.
+  Servers — Prüfstand `servermeldungen.test.mjs` liest `Bad("…")`, `Err("…")` und `error = "…"`
+  aus `Journali.Server`. **Eine Servermeldung ist eine Vorlage**: `Bad("Plugin {0} fehlt.", key)`, nie `Bad($"…")` —
+  die Oberfläche übersetzt die Vorlage (Schlüssel = deutscher Text in `en.json`) und setzt die Werte ein.
   **Eine Überschrift ist ein Name und eine Zahl**: der Beisatz nach
   dem `·` zählt auf oder zählt ab — er erklärt nichts, begründet nichts, bewertet
   nichts („· gemessen, nicht geschätzt“ ist die Antwort auf einen Einwand, den

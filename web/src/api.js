@@ -3,7 +3,9 @@ import { t } from './i18n.js'
 import { L } from './i18n.js'
 
 // Alle Aufrufe gehen hier durch: Server aus den Einstellungen, X-Actor im Kopf,
-// Fehler als Text aus { error } des Servers.
+// Fehler als Text aus { error } des Servers — mit { template, args } übersetzt in die Oberflächensprache.
+/// Meldung des Servers in der Sprache der Oberfläche: die Vorlage ist der Schlüssel, die Werte füllen {0}, {1} …
+export const serverText = d => d?.template ? t(d.template, d.args ?? []) : d?.error ?? d?.message
 async function request(method, path, body) {
   const headers = { 'X-Actor': store.actor }
   if (body !== undefined) headers['Content-Type'] = 'application/json'
@@ -16,13 +18,13 @@ async function request(method, path, body) {
   if (res.status === 204) return null
   const text = await res.text()
   // HTML statt JSON = der Server kennt diesen Pfad nicht und liefert die Oberfläche aus — fast immer eine alte Serverfassung.
-  if (text.trimStart().startsWith('<')) throw new Error(`Server kennt ${method} ${path.split('?')[0]} nicht — Server neu starten (tools\\server restart)?`)
+  if (text.trimStart().startsWith('<')) throw new Error(t('Server kennt {0} {1} nicht', [method, path.split('?')[0]]))
   // kein JSON (Ausnahme oder 400 als Text vom Server): die erste Zeile als Meldung, nicht „Unexpected token“
   let data = null
   try { data = text ? JSON.parse(text) : null } catch { throw new Error(`${res.status}: ${text.split(/\r?\n/)[0].slice(0, 200)}`) }
   // 401 mit login: Sitzung fehlt oder abgelaufen — zur Anmeldung, der Weg zurück wird gemerkt
   if (res.status === 401 && data?.login && !location.pathname.startsWith('/login')) { sessionStorage.setItem('journali.after', location.pathname + location.search); store.auth = { ...store.auth, known: true, enabled: true, user: null, role: null }; (await import('./router.js')).router.push('/login') }
-  if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
+  if (!res.ok) throw new Error(serverText(data) || `${res.status} ${res.statusText}`)
   return data
 }
 
@@ -52,11 +54,11 @@ export const api = {
         const res = await request('POST', '/api/batch' + (continueOnError ? '?skipErrors=true' : ''), { commands: chunk, batch: batchId })
         batchId = res.batch
         for (const r of res.results) { results.push({ ...r, index: r.index + i }); if (r.ref) refs.set(r.ref, r.node) }
-        for (const s of res.skipped ?? []) errors.push({ ...s, index: s.index + i, command: commands[s.index + i] })
+        for (const s of res.skipped ?? []) errors.push({ ...s, message: serverText(s), index: s.index + i, command: commands[s.index + i] })
         if (!res.error && maxErrorPercent > 0 && errors.length >= 5 && errors.length * 100 / Math.max(1, end) > maxErrorPercent) { const last = errors[errors.length - 1]; error = { ...last, message: t('Fehleranteil über {0} % ({1} von {2}) — abgebrochen: {3}', [maxErrorPercent, errors.length, end, last.message]) }; break }
         if (res.error) {
           const at = i + res.error.index
-          const e = { ...res.error, index: at, command: commands[at] }
+          const e = { ...res.error, message: serverText(res.error), index: at, command: commands[at] }
           if (!continueOnError) { error = e; break }
           errors.push(e); i = at + 1   // den einen überspringen, hinter ihm weiter
           if (maxErrorPercent > 0 && errors.length >= 5 && errors.length * 100 / Math.max(1, i) > maxErrorPercent) { error = { ...e, message: t('Fehleranteil über {0} % ({1} von {2}) — abgebrochen: {3}', [maxErrorPercent, errors.length, i, e.message]) }; break }
@@ -73,7 +75,7 @@ export const api = {
     let res
     try { res = await fetch(store.server + path, { method: 'POST', headers: { 'X-Actor': store.actor }, body: fd }) } catch { throw new Error(t('Server nicht erreichbar')) }
     const data = await res.json().catch(() => null)
-    if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
+    if (!res.ok) throw new Error(serverText(data) || `${res.status} ${res.statusText}`)
     return data
   },
   post: (path, body, method = 'POST') => request(method, path, body),

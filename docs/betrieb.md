@@ -373,6 +373,13 @@ unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht 
 Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im
 Browser.
 
+## Fehlermeldungen
+
+Eine abgelehnte Anfrage antwortet mit `{ error, template, args }`: `error` ist der fertige deutsche Text, `template`
+die Vorlage mit `{0}`, `{1}` … und `args` die Werte. Die Oberfläche übersetzt die Vorlage in ihre Sprache
+(`web/public/lang/<code>.json`, Schlüssel ist der deutsche Text) und setzt die Werte ein; wer die API ohne die
+Oberfläche bedient, nimmt `error`. Stapelfehler (`/api/batch`) tragen dieselben Felder je Befehl.
+
 ## Zertifizierte Plugins
 
 Ein `certificate.json` neben `plugin.json`, signiert vom Herausgeber (ECDSA P-256 über Schlüssel, Fassung und den Hash

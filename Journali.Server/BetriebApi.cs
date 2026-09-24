@@ -49,7 +49,7 @@ public static class BetriebApi
             if (pfad is null) return Bad("spiegel oder schnappschuss.");
             if (!File.Exists(pfad)) return Results.Ok(new { weg = false });
             try { File.Delete(pfad); return Results.Ok(new { weg = true }); }
-            catch (IOException e) { return Bad($"Die Datei ist in Benutzung: {e.Message}"); }
+            catch (IOException e) { return Bad("Die Datei ist in Benutzung: {0}", e.Message); }
         });
     }
 }

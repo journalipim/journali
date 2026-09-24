@@ -271,9 +271,9 @@ public static class TranslateApi
     {
         return c.With((model, tree, write) =>
         {
-            if (!model.Locales.ContainsKey(to)) return Bad($"Unbekannte Zielsprache {to}.");
+            if (!model.Locales.ContainsKey(to)) return Bad("Unbekannte Zielsprache {0}.", to);
             var ord = Blank(order) is { } ok ? c.Translations.Order(ok) : null;
-            if (Blank(order) is { } want && ord is null) return Bad($"Unbekannter Auftrag {want}.");
+            if (Blank(order) is { } want && ord is null) return Bad("Unbekannter Auftrag {0}.", want);
             int written = 0, behind = 0, conflicts = 0, unchanged = 0, skipped = 0, missing = 0; var errors = new List<string>(); var nodes = new HashSet<string>();
             foreach (var u in units)
             {
