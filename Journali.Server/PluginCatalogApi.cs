@@ -39,7 +39,7 @@ public static class PluginCatalogApi
     public static void Map(RouteGroupBuilder api, string dir)
     {
         // Der Katalog mit dem Stand auf der Platte je Eintrag
-        api.MapGet("/plugins/catalog", async (bool fresh, CancellationToken ct) =>
+        api.MapGet("/plugins/catalog", async (CancellationToken ct, bool fresh = false) =>
         {
             var (doc, grund) = await LoadAsync(fresh, ct);
             var disk = PluginApi.Scan(dir);

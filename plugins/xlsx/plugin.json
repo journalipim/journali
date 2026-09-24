@@ -2,8 +2,8 @@
   "key": "xlsx",
   "version": "1.0.0",
   "label": {
-    "de": "Import: Excel",
-    "en": "Import: Excel"
+    "de": "Excel",
+    "en": "Excel"
   },
   "description": {
     "de": "Excel-Arbeitsmappen (.xlsx, .xls, .ods) als Tabelle für ⇩ Import → Tabelle — jedes Blatt wählbar, erste Zeile = Spaltennamen. Liest SheetJS (xlsx.mjs, Apache-2.0) im Browser.",

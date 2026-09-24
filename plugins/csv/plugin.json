@@ -2,8 +2,8 @@
   "key": "csv",
   "version": "1.0.0",
   "label": {
-    "de": "Import: CSV / TSV",
-    "en": "Import: CSV / TSV"
+    "de": "CSV / TSV",
+    "en": "CSV / TSV"
   },
   "description": {
     "de": "Textdateien mit Trennzeichen (; , Tab |) als Tabelle für ⇩ Import → Tabelle; Trennzeichen und Zeichensatz (UTF-8, Windows-1252) werden erkannt.",
