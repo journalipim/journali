@@ -137,6 +137,67 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
 - ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Rollen je Teilbaum, Workflow-Rollen
 - Import/Export — in der Praxis die Hälfte des Systems
+- **Das wachsende Journal** (Taloan, 24.09.2026: „ich will verhindern, dass ein Serverstart nach zwei Jahren Nutzung zu
+  einem halben Tag Betriebsausfall führt, weil man nur darauf wartet, dass der Server vier Stunden lang das Journal
+  von Anfang an aufarbeitet“ — „das wird jeder IT-Leiter fragen“). Nicht die Grösse ist das Problem, sondern die
+  **Zahl** der Einträge: die Startzeit darf nicht von der Länge des Journals abhängen.
+
+  *So startet der Server heute:* mit Schnappschuss (`Catalog.LoadSnapshot`) lädt er den Stand aller Abbilder bis #n
+  und liest nur den Rest; ohne liest er das Journal **einmal** von vorn (`Projector.CatchUpAll`) und gibt jeden
+  Eintrag an alle Abbilder, die den aktuellen Stand jeder Entität im Speicher halten. Der Schnappschuss fällt mit
+  jedem Build — nach jedem Update also der volle Durchlauf. Teuer mit der Länge wird auch `Catalog.AsOf` (Stand bei
+  #n für Versionen: von vorn bis #n).
+
+  *Gemessen (24.09.2026, lokaler Spiegel, 125 096 Einträge vom 17.–23.09.):* 232 MB, gepackt 16,5 MB; Pflege
+  (`AttributeSet`) 300 B je Eintrag, Referenzdaten (`PluginDataSet`, ETIM …) 88 % der Masse bei 7,2 KB je Eintrag.
+  Der 23.09. hatte 50 191 Einträge, aber nur 16 MB — was beim Rechnerwechsel eine halbe Minute dauert, kostet je
+  Eintrag, nicht je Byte:
+
+  | Messung (Kopie des Spiegels) | Zeit |
+  |---|---|
+  | 50 000 anhängen, Datei je Eintrag auf und zu (`CachedJournal.AppendFile` heute) | 7 417 ms |
+  | dieselben in einem offenen Strom | 87 ms |
+  | Spiegel ganz lesen und jede Zeile entschlüsseln (`Validate` bei jedem Start, `ReadAfter` danach noch einmal) | 2 162 ms |
+  | nur Zeilen lesen | 365 ms |
+
+  Hochgerechnet auf zwei Jahre (etwa 25 Mio. Einträge, geschätzt aus 50 000 Pflege-Einträgen an 250 Tagen): Anwenden
+  ~7,5 min (18 µs je Eintrag), Spiegel entschlüsseln ~7 min (heute doppelt) — eine Viertelstunde und mehr Stillstand
+  bei **jedem** Update, und es wächst weiter.
+
+  *Was gebaut wird, in dieser Reihenfolge:*
+  1. **Spiegel korrigieren** — beim Nachholen die Datei einmal öffnen, nicht je Eintrag (gemessen ~85× schneller);
+     beim Start nicht alles entschlüsseln: letzte Zeile vom Dateiende, Lückenprüfung über Zeilenzahl = letzte
+     Nummer, Zeilen vor dem Schnappschuss überspringen, ohne sie zu entschlüsseln. Sofort spürbar bei jedem Start und
+     jedem Rechnerwechsel.
+  2. **Ein Schnappschuss, der Updates überlebt** — stabiles Format mit eigener Formatnummer statt Build-Stempel; er
+     fällt nur, wenn sich ein Abbild wirklich ändert. Geschrieben regelmässig (etwa stündlich) und beim Beenden. Ein
+     Start = Stand laden + Einträge seit dem letzten Schnappschuss; die Dauer hängt am heutigen Datenbestand, nicht an
+     der Geschichte.
+  3. **Das Akkordeon** (Taloan: „die Einträge einer Epoche, sagen wir der letzten 12 Monate, liegen vollständig vor,
+     und alles, was dahinter liegt, wird monatlich verdichtet und zugeklappt“) — die Obergrenze für den schlimmsten
+     Fall:
+     ```
+     │◄──────── zugeklappt: je Monat ein Fach ────────►│◄──── offen: die letzten 12 Monate ────►│
+       [2026-01][2026-02]…[2027-08]                      Einträge vollständig in der Datenbank
+        └─ je Fach: die Einträge des Monats gepackt, mit Prüfsumme, im Archiv + Stand am Monatsende
+     ```
+     Zuklappen monatlich: ein Monat, der älter als 12 Monate ist, wandert gepackt ins Archiv, dazu ein Eintrag „Stand
+     am Monatsende“ in stabilem Format. Der Start beginnt beim Stand des jüngsten zugeklappten Monats und spielt nur
+     die offenen 12 Monate ab — nach zehn Jahren nicht langsamer als nach einem. Aufklappen: wer den Verlauf eines
+     Knotens von vor zwei Jahren sehen will, holt das Fach aus dem Archiv. Verdichten heisst nicht löschen — das ist
+     die Entscheidung vom 19.09.2026 (ein Eintrag ist für immer; verdichtet wird nach beschlossener Frist, mit eigenem
+     Eintrag, nie aus Platzgründen) und das „Verdichten“ aus *Schnappschüsse und Verdichten* oben.
+     *Zu entscheiden:* Versionen zeigen auf #n — liegt #n in einem zugeklappten Monat: jeden Monatsstand behalten
+     (schnell, Platz), nur den jüngsten (langsam, selten), oder nur die Stände, auf die eine Version zeigt.
+     *Zu beachten:* der Schnitt muss hinter allen Lesern liegen; der Monatsstand braucht ein stabiles Format wie (2).
+  4. **Update ohne Stillstand** — die neue Fassung startet neben der alten, baut ihre Abbilder im Hintergrund auf und
+     folgt dem Journal, während die alte weiterläuft; ist sie eingeholt, schaltet der Proxy um (Docker, NPMplus).
+     Ein langer Aufbau heisst dann spätere Umschaltung, kein Ausfall.
+
+  *Weitere Stufen, wenn es so weit ist:* Referenzdaten als Datei im Medienspeicher, im Journal nur ihr Hash (88 % der
+  heutigen Masse); Postgres-Partitionen je Jahr; Sicherung ab einer Nummer statt jedes Mal alles; Personenbezogenes
+  verschlüsselt mit einem Schlüssel je Person ausserhalb des Journals — löschen heisst: den Schlüssel vernichten
+  (DSGVO, „crypto-shredding“).
 - ~~Tarifmodell~~ entschieden und gebaut 24.09.2026 (`Tarife.cs`, `docs/betrieb.md` → Tarife): Kostenlos,
   Pro (+ Pro+), Enterprise, Unlimited; drei Monate Enterprise ab dem ersten Journaleintrag; Plugins und
   Publikationsbäume nach dem höchsten Tarif der Instanz; Reset getrennt für Pro und Enterprise; Sichern von Hand
