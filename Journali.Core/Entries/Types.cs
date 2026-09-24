@@ -141,6 +141,8 @@ public static class Types
     public const string KeyRedeemed = "KeyRedeemed";
     /// <summary>Der Stand eines Abos, vom Lizenzserver signiert bestätigt (Taloan, 24.09.2026) — Strom team:&lt;key&gt;.</summary>
     public const string EntitlementReceived = "EntitlementReceived";
+    /// <summary>Ein Tarifblatt des Lizenzservers, signiert (25.09.2026) — Strom <c>tarife</c>. Die höchste echte Fassung gilt.</summary>
+    public const string TarifeReceived = "TarifeReceived";
     public const string RoleDefined = "RoleDefined";
     public const string RoleRetired = "RoleRetired";
 
@@ -695,6 +697,14 @@ public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly
 /// </summary>
 public sealed record EntitlementReceived(string Instance, string Team, string Plan, int EntriesWeek, int EntriesMonth, string Status,
     DateOnly PaidUntil, DateTimeOffset Issued, DateTimeOffset ValidUntil, string Request, string? Sig = null, bool Geprueft = false);
+
+/// <summary>
+/// Ein Tarifblatt des Lizenzservers (25.09.2026): <paramref name="Blatt"/> ist der Text, so wie er signiert wurde,
+/// <paramref name="Sig"/> die Signatur. Es kommt mit einem Abo-Stand oder einem Schlüssel zum Kopieren und nennt alle
+/// Tarife mit Grenzen, Publikationsbäumen und Plugins, dazu den Test. Es gilt die höchste Fassung, deren Signatur passt —
+/// das Abbild prüft sie selbst, ein Eintrag ohne passende Signatur ändert nichts.
+/// </summary>
+public sealed record TarifeReceived(string Blatt, string Sig);
 
 /// <summary>Ein KI-Aufruf, wie er wirklich stattgefunden hat: Anbieter, Modell, Person, Token hin und zurück. Strom
 /// <c>ai-usage:&lt;team&gt;</c> — gezählt wird beim Team, das zahlt (also beim schlüsselführenden), damit die Rechnung stimmt.</summary>

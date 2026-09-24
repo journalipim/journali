@@ -37,7 +37,7 @@ public static class LicenceKeys
         if (teams.Payer(team) is { } zahler && zahler != team) return $"„{t.Label}“ rechnet über „{teams.Get(zahler)?.Label ?? zahler}“ ab — den Schlüssel dort einlösen.";
         // Reset Pro für Teams mit Pro (und Pro+), Reset Enterprise für Enterprise
         if (art == Schluessel.Reset && k.Plan is { } fuer && teamTarif is { } tt && Tarife.ResetFuer(tt) != fuer)
-            return $"Reset {Tarife.Von(fuer)?.Label ?? fuer} gilt nicht für Tarif {tt.Label} („{t.Label}“).";
+            return $"Reset {teams.Tarife.Von(fuer)?.Label ?? fuer} gilt nicht für Tarif {tt.Label} („{t.Label}“).";
         if (art == Schluessel.Limit)
         {
             if (k.Days <= 0) return "Ein Limit-Schlüssel braucht eine Dauer in Tagen.";
@@ -78,13 +78,14 @@ public static class LicenceKeys
             }).ToList()));
         });
 
-        api.MapPost("/licence/requests", (RequestBody body, HttpRequest req) =>
+        api.MapPost("/licence/requests", (RequestBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (body.Kind is not { } art || !Schluessel.Arten.Contains(art)) return Bad("Art: {0}.", string.Join(", ", Schluessel.Arten));
             if (body.Count is < 1 or > 20) return Bad("Anzahl: 1 bis 20.");
-            var paket = art == Schluessel.Limit ? Schluessel.PaketVon(body.Plan) : null;
-            if (art == Schluessel.Limit && paket is null) return Bad("Paket: {0}.", string.Join(", ", Schluessel.Pakete.Select(p => p.Key)));
+            var liste = c.Tarife;
+            var paket = art == Schluessel.Limit ? liste.PaketVon(body.Plan) : null;
+            if (art == Schluessel.Limit && paket is null) return Bad("Paket: {0}.", string.Join(", ", liste.Pakete.Select(p => p.Key)));
             // Reset: getrennt für Pro und Enterprise
             if (art == Schluessel.Reset && body.Plan is not (Tarife.ProKey or Tarife.EnterpriseKey)) return Bad("Reset: {0} oder {1}.", Tarife.ProKey, Tarife.EnterpriseKey);
             var neu = Enumerable.Range(0, body.Count)
@@ -102,7 +103,7 @@ public static class LicenceKeys
         });
 
         // alle: das Paket enthält alle Plugins (Pro+, Enterprise, Unlimited) — steht in der Auswahl (Taloan, 24.09.2026)
-        api.MapGet("/licence/packages", () => Results.Ok(Schluessel.Pakete.Select(p => new { p.Key, p.Label, week = p.Week, month = p.Month, days = p.Days, alle = Tarife.Von(p.Key)?.Plugins is null })));
+        api.MapGet("/licence/packages", (Catalog c) => { var liste = c.Tarife; return Results.Ok(liste.Pakete.Select(p => new { p.Key, p.Label, week = p.Week, month = p.Month, days = p.Days, alle = liste.Von(p.Key)?.Plugins is null })); });
 
         api.MapGet("/licence/keys", (Catalog c) => c.With((_, _, _) => Results.Ok(c.Teams.Einloesungen.Select(r => new
         {
@@ -118,7 +119,10 @@ public static class LicenceKeys
             catch (Exception e) { return Bad("Kein gültiger Schlüssel: {0}", e.Message); }
             if (k is null) return Bad("Kein Schlüssel.");
             var team = (body.Team ?? "").Trim();
-            var (geprueft, grund) = Signatur.Pruefe(k.Rumpf, k.Sig);
+            // Nur Signiertes zählt (25.09.2026)
+            if (Aussteller.Pruefe(k.Rumpf, k.Sig) is (false, var warum)) return Bad("Schlüssel nicht angenommen: {0}", warum ?? "");
+            // das Tarifblatt im Schlüssel — so kommt es zu Instanzen ohne Internet
+            c.NimmTarifblatt(k.Blatt, actor);
             var heute = DateOnly.FromDateTime(DateTime.Now);
             var anforderung = anforderungen.Get(k.Id);
             var ergebnis = c.With((_, _, write) =>
@@ -131,7 +135,7 @@ public static class LicenceKeys
             });
             if (ergebnis.Fehler is { } fehler) return Bad(fehler);
             var r = ergebnis.Eintrag!;
-            return Results.Ok(new { r.Id, r.Kind, team, r.From, r.Until, r.Carried, geprueft, grund });
+            return Results.Ok(new { r.Id, r.Kind, team, r.From, r.Until, r.Carried, geprueft = true });
         });
     }
 }

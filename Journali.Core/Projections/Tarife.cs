@@ -11,9 +11,60 @@ public sealed record Tarif(string Key, string Label, int Rang, int Week, int Mon
 }
 
 /// <summary>
-/// Die Tarife. Grenzen je Woche und Monat hängen am Team (am Ende der Zahlerkette); Plugins und
-/// Publikationsbäume gelten für die ganze Instanz — nach dem höchsten Tarif, den sie hat („wenn Team 1 Pro hat und
-/// Team 2 Enterprise: der höchste gilt für alle“).
+/// Die Tarife, die in dieser Instanz gelten — aus dem Tarifblatt des Lizenzservers, das als <c>TarifeReceived</c> im Journal
+/// steht (<see cref="Teams.Tarife"/>). Ohne Blatt gilt das Saatgut <see cref="Tarife.Saat"/>. So ändern sich Grenzen,
+/// Plugins, Publikationsbäume und der Test ohne neues Image (25.09.2026).
+/// </summary>
+public sealed class Tarifliste
+{
+    private readonly string _testTarif;
+
+    public Tarifliste(long fassung, IEnumerable<Tarif> tarife, string testTarif, int testMonate)
+    {
+        Fassung = fassung;
+        Alle = [.. tarife.OrderBy(x => x.Rang)];
+        _testTarif = testTarif;
+        TestMonate = testMonate;
+    }
+
+    /// <summary>Fassung des Tarifblatts — 0 für das Saatgut.</summary>
+    public long Fassung { get; }
+    /// <summary>Alle Tarife, nach Rang aufsteigend.</summary>
+    public IReadOnlyList<Tarif> Alle { get; }
+    /// <summary>So lange gilt der Test einer neuen Instanz, gezählt ab dem ersten Eintrag im Journal.</summary>
+    public int TestMonate { get; }
+
+    /// <summary>Der Tarif zu einem Schlüssel — null, wenn es ihn nicht gibt.</summary>
+    public Tarif? Von(string? key) => Alle.FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.OrdinalIgnoreCase));
+    /// <summary>Der niedrigste Tarif (Kostenlos): ohne Lizenz, nach dem Test, wenn eine Lizenz abgelaufen ist.</summary>
+    public Tarif Free => Alle[0];
+    /// <summary>Der Tarif des Tests einer neuen Instanz.</summary>
+    public Tarif Test => Von(_testTarif) ?? Free;
+    /// <summary>Der niedrigste Tarif, der dieses Plugin enthält — null, wenn keiner.</summary>
+    public Tarif? Ab(string plugin) => Alle.FirstOrDefault(t => t.Erlaubt(plugin));
+    /// <summary>Der niedrigste Tarif mit Zeitplan für Jobs.</summary>
+    public Tarif? AbZeitplan => Alle.FirstOrDefault(t => t.Zeitplan);
+
+    /// <summary>Die Pakete, die als Schlüssel angefordert werden können — die Tarife ausser dem niedrigsten, je 30 Tage.</summary>
+    public IReadOnlyList<Schluessel.Paket> Pakete => [.. Alle.Where(t => t.Rang > 0).Select(t => new Schluessel.Paket(t.Key, t.Label, t.Week, t.Month, 30))];
+    public Schluessel.Paket? PaketVon(string? key) => Pakete.FirstOrDefault(p => p.Key == key);
+
+    /// <summary>Aus dem Inhalt eines (geprüften) Tarifblatts.</summary>
+    public static Tarifliste Aus(Licensing.TarifblattInhalt b) =>
+        new(b.Fassung, b.Tarife.Select(z => new Tarif(z.Key, z.Label, z.Rang, z.Week, z.Month, z.PubTrees, z.Plugins is null ? null : new HashSet<string>(z.Plugins))),
+            b.TestTarif, b.TestMonate);
+
+    /// <summary>Als Inhalt eines Tarifblatts — so legt der Lizenzserver seine erste Fassung aus dem Saatgut an.</summary>
+    public Licensing.TarifblattInhalt AlsBlatt(long fassung, DateTimeOffset ausgestellt) =>
+        new(fassung, ausgestellt, Test.Key, TestMonate,
+            [.. Alle.Select(t => new Licensing.TarifZeile(t.Key, t.Label, t.Rang, t.Week, t.Month, t.PubTrees, t.Plugins?.Order().ToArray()))]);
+}
+
+/// <summary>
+/// Das Saatgut der Tarife und was für alle gleich ist. Im Betrieb gilt die <see cref="Tarifliste"/> aus dem Journal —
+/// die Werte hier gelten nur, solange eine Instanz noch nie ein Tarifblatt bekommen hat, und sind die erste Fassung des
+/// Lizenzservers. Grenzen je Woche und Monat hängen am Team (am Ende der Zahlerkette); Plugins und
+/// Publikationsbäume gelten für die ganze Instanz — nach dem höchsten Tarif, den sie hat.
 /// <list type="bullet">
 /// <item><b>Kostenlos</b> — 10 000 / 50 000, Tabelle (CSV, Excel, JSON), das Excel-Add-in, OnlyOffice, Ableitungen
 /// (Vorschaubilder) und Export, ein Publikationsbaum; Jobs nur von Hand, ein Zeitplan gehört zu Pro. Ableitungen und Export
@@ -22,12 +73,11 @@ public sealed record Tarif(string Key, string Label, int Rang, int Week, int Mon
 /// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM,
 /// Tasker; fünf Publikationsbäume. ETIM braucht Datenanalyse und Export nach Vorlage, der Tasker bringt die Sicherung
 /// als Job mit — die kommen mit.</item>
-/// <item><b>Pro+</b> — Pro mit allen Plugins („Pro kann eine All-Plugin-Lizenz dazukaufen — gilt systemweit“).</item>
+/// <item><b>Pro+</b> — Pro mit allen Plugins.</item>
 /// <item><b>Enterprise</b> — 200 000 / 1 000 000, alle Plugins, Publikationsbäume ohne Grenze.</item>
 /// <item><b>Unlimited</b> — keine Grenzen, alle Plugins.</item>
 /// </list>
-/// Jede neue Instanz bekommt die ersten drei Monate Enterprise (<see cref="TestMonate"/>): „das sollte reichen für
-/// Tests und Datenmigration“. Die Preise stehen im Shop, nicht hier.
+/// Jede neue Instanz bekommt die ersten drei Monate Enterprise. Die Preise stehen im Shop, nicht hier.
 /// </summary>
 public static class Tarife
 {
@@ -36,8 +86,6 @@ public static class Tarife
 
     /// <summary>Keine Grenze — für Unlimited (Woche, Monat) und Publikationsbäume ab Enterprise.</summary>
     public const int Ohne = int.MaxValue;
-    /// <summary>So lange gilt der Test einer neuen Instanz, gezählt ab dem ersten Eintrag im Journal.</summary>
-    public const int TestMonate = 3;
 
     private static readonly string[] Basis = ["table", "csv", "xlsx", "json", "excel", "onlyoffice", "derive", "export", "tasker"];
 
@@ -48,10 +96,8 @@ public static class Tarife
     public static readonly Tarif Enterprise = new("enterprise", "Enterprise", 3, 200_000, 1_000_000, Ohne, null);
     public static readonly Tarif Unlimited = new("unlimited", "Unlimited", 4, Ohne, Ohne, Ohne, null);
 
-    public static readonly Tarif[] Alle = [Free, Pro, ProPlus, Enterprise, Unlimited];
-
-    /// <summary>Der Tarif zu einem Schlüssel — null, wenn es ihn nicht gibt (Lizenzen von vor den Tarifen).</summary>
-    public static Tarif? Von(string? key) => Alle.FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.OrdinalIgnoreCase));
+    /// <summary>Das Saatgut: gilt, solange kein Tarifblatt im Journal steht.</summary>
+    public static readonly Tarifliste Saat = new(0, [Free, Pro, ProPlus, Enterprise, Unlimited], EnterpriseKey, 3);
 
     /// <summary>Der höhere von zwei Tarifen.</summary>
     public static Tarif Hoeher(Tarif a, Tarif b) => b.Rang > a.Rang ? b : a;
@@ -59,5 +105,5 @@ public static class Tarife
     /// <summary>
     /// Zu welchem Reset gehört dieser Tarif? Reset-Schlüssel gibt es getrennt für Pro und Enterprise. Pro+ ist Pro mit allen Plugins; kostenlos gibt es keinen Reset, Unlimited braucht keinen.
     /// </summary>
-    public static string? ResetFuer(Tarif t) => t.Key switch { "pro" or "proplus" => Pro.Key, "enterprise" => Enterprise.Key, _ => null };
+    public static string? ResetFuer(Tarif t) => t.Key switch { "pro" or "proplus" => ProKey, "enterprise" => EnterpriseKey, _ => null };
 }

@@ -491,9 +491,13 @@ selben Moment wieder weg.
 Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts. Teams ohne eigenen Schlüssel arbeiten über den
 Schlüssel der Anlage (Tresor `secrets` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das KI-Limit.
 
-Echtheit: `sig` ist eine ECDSA-P-256-Signatur (SHA-256, Base64) über die Felder ohne `sig`. Geprüft wird sie, sobald
-`JOURNALI_LICENCE_KEY` den öffentlichen Schlüssel trägt (Base64, SubjectPublicKeyInfo); fehlt er, wird die Lizenz
-gelesen und als **ungeprüft** ausgewiesen — es wird nichts vorgetäuscht. Einspielen: ⚙ Einstellungen → Teams →
+Echtheit: `sig` ist eine ECDSA-P-256-Signatur (SHA-256, Base64) über die Felder ohne `sig`, geprüft mit dem
+öffentlichen Schlüssel des Lizenzservers, der in journali eingebaut ist (`Core.Licensing.Aussteller`). **Nur
+Signiertes zählt** (seit 25.09.2026): eine Lizenz ohne passende Signatur wird nicht angenommen; eine, die schon
+eingespielt ist, gilt als Kostenlos. Ausgenommen ist die Testlizenz, die die Instanz selbst anlegt — sie gilt nach der
+Regel (Test-Tarif des Tarifblatts, höchstens erster Eintrag + Testmonate), nicht nach dem, was in ihr steht. Im
+Debug-Bau (`dotnet run`) nimmt `JOURNALI_LICENCE_KEY` einen Prüf-Aussteller für die Entwicklung dazu; der Release-Bau
+kennt die Variable nicht. Einspielen: ⚙ Einstellungen → Teams →
 ⚿ Lizenz (Recht `users`). Sie liegt verschlüsselt in der Tabelle `licence` und gilt nur für die Instanz, deren Kennung
 (`instance`, Tabelle `instanz`) sie nennt; eine `licence.json` von früher wird beim ersten Start übernommen und entfernt.
 Lizenz, Kennung und Anforderungen gehen **nicht** in die Vollsicherung — eine wiederhergestellte Instanz ist eine neue.
@@ -511,7 +515,18 @@ das Team ohne Abo hat. Ein Abo hebt die Grenzen an, senkt nie; sein Tarif zählt
 | Umgebung | Bedeutung |
 |---|---|
 | `JOURNALI_LIZENZSERVER` | Adresse des Lizenzservers, z. B. `https://lizenz.<domain>` — ohne sie kein Abo |
-| `JOURNALI_LICENCE_KEY` | öffentlicher Schlüssel des Ausstellers (steht in der Verwaltung des Lizenzservers unter *Einstellungen*) — prüft Lizenz, Schlüssel und Abo-Stand; ohne ihn wird angenommen, aber als ungeprüft vermerkt |
+
+Ein Stand ohne passende Signatur wird nicht übernommen. Mit jedem Stand kommt das **Tarifblatt** des Lizenzservers.
+
+#### Tarifblatt
+
+Welche Tarife es gibt — Grenzen je Woche und Monat, Publikationsbäume, Plugins, dazu Tarif und Dauer des Tests —
+sagt der Lizenzserver, nicht das Image: er signiert ein Tarifblatt mit Fassungsnummer und liefert es mit jedem
+Abo-Stand und jedem Schlüssel zum Kopieren aus. journali legt eine neuere Fassung als `TarifeReceived` ins Journal
+(Strom `tarife`); ab dann gilt sie für Pakete, Plugins, Bäume, die Lizenz des Init Teams und den Test. Eine ältere
+Fassung oder eine ohne passende Signatur ändert nichts — auch nicht beim Neuaufbau, das Abbild prüft selbst. Ohne
+Tarifblatt gilt das Saatgut aus `Tarife.cs`. Die Grenzen eines Abos stehen zusätzlich im signierten Stand selbst: ein
+gesenkter Tarif greift dort erst mit der nächsten Verlängerung.
 
 Der Lizenzschlüssel aus dem Shop liegt beim Server (`jobs/secrets.json`, `abo:<team>`), nie im Journal; er geht mit
 der Vollsicherung (Zugänge) mit. Der Lizenzserver selbst liegt in einem eigenen, privaten Repository.

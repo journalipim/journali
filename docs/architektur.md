@@ -213,6 +213,23 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
 - ~~Lizenzserver~~ gebaut 24.09.2026 — eigenes, privates Repo `besitzer/journali-lizenz` (journali als Submodul, nur
   `Journali.Core`: `Licensing/Vertrag.cs`, `Tarife.cs`). In journali: `Abos.cs`, `EntitlementReceived`, das eine Feld
   erkennt den Shop-Schlüssel; Betrieb in `docs/betrieb.md` → *Abo über den Lizenzserver*.
+- ~~Tarife vom Lizenzserver, nur Signiertes zählt~~ entschieden und gebaut 25.09.2026. Stand vorher: nur die Grenzen
+  eines Abos kamen signiert vom Lizenzserver; Plugins, Publikationsbäume, Lizenzgrenzen, Pakete, Kostenlos und der Test
+  steckten in `Tarife.cs` — eine Änderung, auch eine Senkung zusammen mit dem Preis, hätte jede Instanz erst mit einem
+  neuen Image erreicht. Und eine Lizenz ohne passende Signatur galt trotzdem („ungeprüft“), der Schlüssel zum Prüfen
+  kam aus einer Umgebungsvariable, die man weglassen konnte.
+  *Jetzt:*
+  - Der öffentliche Schlüssel des Lizenzservers ist eingebaut (`Aussteller`). Lizenz, Schlüssel, Abo-Stand und
+    Tarifblatt zählen nur mit seiner Signatur; die Testlizenz gilt nach der Regel. Wer die Prüfung entfernt, ändert
+    den Quelltext — das verbietet die Lizenz von journali; technisch verhindern lässt es sich bei offenem Quelltext nicht.
+  - Das **Tarifblatt** (`Tarifblatt`, `TarifeReceived`): alle Tarife mit Grenzen, Bäumen, Plugins und dem Test,
+    signiert, mit Fassung; kommt mit jedem Abo-Stand und jedem Schlüssel. `Tarife.cs` ist nur noch das Saatgut.
+  - **Senken ab der nächsten Verlängerung**, erhöhen sofort: der Lizenzserver merkt sich je Abo, was er für die
+    laufende Periode zugesagt hat, und liefert bis zu ihrem Ende nicht weniger.
+  - **Eingriffe am Abo** in der Verwaltung des Lizenzservers: entziehen (Betrug), gültig bis von Hand verlängern,
+    Tarif ändern (z. B. Pro bezahlt, Enterprise gewährt). Sie wirken beim nächsten Auffrischen der Instanz; ohne
+    Verbindung gilt ihr letzter Stand höchstens bis zum Ende der Kulanz. Schlüssel zum Kopieren lassen sich nicht
+    entziehen — sie haben eine feste Laufzeit.
 - **Tarife als Abo über Lemon Squeezy**. Heute: Anforderung und Schlüssel werden kopiert (`KeyRequests.cs`,
   `LicenceKeys.cs`, `docs/betrieb.md` → Schlüssel).
 

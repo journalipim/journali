@@ -27,7 +27,7 @@ public class LicenceInstanzTests
     public void Eine_Lizenz_fuer_diese_Anlage_gilt()
     {
         var (lic, _, grund) = LicenceFile.Aus(Json(Fuer(A)), A);
-        Assert.Equal(200_000, lic.Week);
+        Assert.Equal(200_000, lic.TarifIn(Tarife.Saat).Week);
         Assert.DoesNotContain("andere Instanz", grund ?? "");
     }
 
@@ -39,7 +39,7 @@ public class LicenceInstanzTests
         Assert.Equal(Journali.Core.Projections.Tarife.Free.Key, lic.Plan);
         Assert.False(geprueft);
         Assert.Contains("andere Instanz", grund);
-        Assert.Equal(Journali.Core.Projections.Limits.Week, lic.Week);
+        Assert.Equal(Journali.Core.Projections.Limits.Week, lic.TarifIn(Tarife.Saat).Week);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public class LicenceInstanzTests
     {
         // Lizenzen von vor der Bindung sollen nicht über Nacht ungültig werden
         var (lic, _, grund) = LicenceFile.Aus(Json(Fuer(null)), A);
-        Assert.Equal(200_000, lic.Week);
+        Assert.Equal(200_000, lic.TarifIn(Tarife.Saat).Week);
         Assert.DoesNotContain("andere Instanz", grund ?? "");
     }
 
@@ -56,7 +56,7 @@ public class LicenceInstanzTests
     {
         // Sandbox und Tests ohne Datenbank: die Bindung greift nur, wenn beide Seiten eine Kennung haben
         var (lic, _, _) = LicenceFile.Aus(Json(Fuer(A)), null);
-        Assert.Equal(200_000, lic.Week);
+        Assert.Equal(200_000, lic.TarifIn(Tarife.Saat).Week);
     }
 
     [Fact]

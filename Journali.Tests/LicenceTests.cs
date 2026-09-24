@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using Journali.Core.Licensing;
+using Journali.Core.Projections;
 using Journali.Server;
 
 namespace Journali.Tests;
@@ -17,8 +20,8 @@ public class LicenceTests
         var dir = Frisch();
         var (lic, geprueft, grund) = LicenceFile.Load(dir);
         Assert.Equal("free", lic.Plan);          // Tarif Kostenlos
-        Assert.Equal(10_000, lic.Week);
-        Assert.Equal(50_000, lic.Month);
+        Assert.Equal(10_000, lic.TarifIn(Tarife.Saat).Week);
+        Assert.Equal(50_000, lic.TarifIn(Tarife.Saat).Month);
         Assert.Equal(0, lic.AiTokensMonth);   // kein Grundrauschen, solange keine Lizenz da ist
         Assert.False(geprueft);
         Assert.Contains("Kostenlos", grund);
@@ -26,17 +29,41 @@ public class LicenceTests
     }
 
     [Fact]
-    public void Eine_eingespielte_Lizenz_gilt_und_bleibt_ohne_Schluessel_ungeprueft()
+    public void Eine_signierte_Lizenz_gilt()
     {
         var dir = Frisch();
         var l = new Licences(dir);
-        l.Neu(new Licence("Klein", "Beispiel GmbH", null, 5_000, 25_000, null, 250_000, 40_000));
-        Assert.Equal("Klein", l.Lic.Plan);
+        l.Neu(PruefAussteller.Signiert(new Licence("enterprise", "Beispiel GmbH", null, 0, 0, null, 250_000, 40_000)));
+        Assert.Equal("enterprise", l.Lic.Plan);
         Assert.Equal(250_000, l.Lic.AiTokensMonth);
-        Assert.False(l.Geprueft);
-        Assert.Contains("ungeprüft", l.Grund);   // ohne öffentlichen Schlüssel wird nichts vorgetäuscht
+        Assert.True(l.Geprueft);
         // sie überlebt den Neustart: sie ist eine Datei, kein Stammdatum
         Assert.Equal(250_000, new Licences(dir).Lic.AiTokensMonth);
+        Directory.Delete(dir, true);
+    }
+
+    /// <summary>Nur Signiertes zählt (25.09.2026): ohne Signatur, mit fremdem Schlüssel oder nachträglich geändert gilt
+    /// Kostenlos — eingespielt ist sie trotzdem, zum Anzeigen.</summary>
+    [Fact]
+    public void Ohne_passende_Signatur_gilt_Kostenlos()
+    {
+        var dir = Frisch();
+        var l = new Licences(dir);
+        var unlimited = new Licence("unlimited", "Beispiel GmbH");
+
+        l.Neu(unlimited);
+        Assert.Equal(Licence.Frei, l.Lic);
+        Assert.Equal("unlimited", l.Roh.Plan);
+        Assert.False(l.Geprueft);
+        Assert.Equal("keine Signatur", l.Grund);
+
+        using var fremd = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        l.Neu(unlimited with { Sig = Signaturen.Signiere(fremd, unlimited.Rumpf) });
+        Assert.Equal(Licence.Frei, l.Lic);
+        Assert.Equal("Signatur passt nicht", l.Grund);
+
+        l.Neu(PruefAussteller.Signiert(new Licence("pro", "Beispiel GmbH")) with { Plan = "unlimited" });
+        Assert.Equal(Licence.Frei, l.Lic);
         Directory.Delete(dir, true);
     }
 

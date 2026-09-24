@@ -21,11 +21,7 @@ public static class Schluessel
     /// <summary>Ein Limit-Paket: angefordert wird das Paket, nicht die Zahlen.</summary>
     public sealed record Paket(string Key, string Label, int Week, int Month, int Days);
 
-    /// <summary>
-    /// Die Pakete, die angefordert werden können — die Tarife ausser Kostenlos (<see cref="Tarife"/>), je 30 Tage.
-    /// </summary>
-    public static readonly Paket[] Pakete = [.. Tarife.Alle.Where(t => t.Rang > 0).Select(t => new Paket(t.Key, t.Label, t.Week, t.Month, 30))];
-    public static Paket? PaketVon(string? key) => Pakete.FirstOrDefault(p => p.Key == key);
+    // Die Pakete, die angefordert werden können, nennt die Tarifliste (Tarifliste.Pakete) — sie kommen aus dem Tarifblatt.
 
     /// <summary>
     /// Bis wann ein Limit-Schlüssel gilt, der heute eingelöst wird. <paramref name="laufend"/> ist der Schlüssel, der

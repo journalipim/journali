@@ -41,6 +41,90 @@ public static class Signaturen
 }
 
 /// <summary>
+/// Wem journali glaubt: dem Lizenzserver. Sein öffentlicher Schlüssel ist eingebaut, nicht einstellbar — was eine Lizenz,
+/// ein Schlüssel, ein Abo-Stand oder ein Tarifblatt zusagt, gilt nur mit seiner Signatur (25.09.2026: nur Signiertes
+/// zählt). Eine Umgebungsvariable, die man weglassen kann, wäre ein Schalter „Prüfung aus“.
+/// <para><see cref="Vertraue"/> nimmt einen weiteren Schlüssel dazu — für Tests und für einen Prüf-Aussteller in der
+/// Entwicklung (der Server ruft es nur im Debug-Bau auf). Wer das in einem Release-Bau aufruft, hat den Quelltext
+/// geändert; das verbietet die Lizenz von journali (LICENSE: „circumvent the license key functionality“).</para>
+/// </summary>
+public static class Aussteller
+{
+    /// <summary>Der öffentliche Schlüssel des Lizenzservers (SubjectPublicKeyInfo, Base64).</summary>
+    public const string Oeffentlich = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8e7YORKhRzDQN+tBGTKCtu6ClvPuA5hgZMieASqnaZ8DzRX+mQo2rduxrGzGJOah8Xr5/BspH4p7oBvqEfm9uw==";
+
+    private static readonly object Sperre = new();
+    private static string[] _weitere = [];
+
+    /// <summary>Einen weiteren Schlüssel annehmen (Tests, Prüf-Aussteller im Debug-Bau).</summary>
+    public static void Vertraue(string pub)
+    {
+        if (string.IsNullOrWhiteSpace(pub)) return;
+        lock (Sperre) if (!_weitere.Contains(pub.Trim())) _weitere = [.. _weitere, pub.Trim()];
+    }
+
+    /// <summary>Signiert von einem der Schlüssel, denen journali glaubt? Der Grund kommt vom eingebauten.</summary>
+    public static (bool Ok, string? Grund) Pruefe(string rumpf, string? sig)
+    {
+        var eingebaut = Signaturen.Pruefe(rumpf, sig, Oeffentlich);
+        if (eingebaut.Ok) return eingebaut;
+        foreach (var pub in _weitere) if (Signaturen.Pruefe(rumpf, sig, pub).Ok) return (true, null);
+        return eingebaut;
+    }
+}
+
+/// <summary>Ein Tarif, wie ihn das Tarifblatt nennt. <see cref="Plugins"/> null = alle.</summary>
+public sealed record TarifZeile(string Key, string Label, int Rang, int Week, int Month, int PubTrees, string[]? Plugins = null);
+
+/// <summary>
+/// Was im Tarifblatt steht: alle Tarife mit Grenzen, Publikationsbäumen und Plugins, dazu welcher Tarif wie viele Monate
+/// als Test gilt. <see cref="Fassung"/> zählt hoch — eine ältere Fassung ersetzt nie eine neuere.
+/// </summary>
+public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, string TestTarif, int TestMonate, TarifZeile[] Tarife)
+{
+    public static JsonSerializerOptions Json => Signaturen.Json;
+
+    /// <summary>Was an diesem Blatt nicht stimmt — null, wenn nichts. Prüfen beide Seiten: der Lizenzserver vor dem
+    /// Signieren, journali vor dem Übernehmen.</summary>
+    public string? Fehler()
+    {
+        if (Fassung < 1) return "Fassung fehlt.";
+        if (Tarife is not { Length: > 0 }) return "Keine Tarife.";
+        foreach (var z in Tarife)
+        {
+            if (string.IsNullOrWhiteSpace(z.Key) || z.Key != z.Key.Trim().ToLowerInvariant()) return $"Tarif „{z.Key}“: Schlüssel klein, ohne Leerzeichen.";
+            if (string.IsNullOrWhiteSpace(z.Label)) return $"Tarif {z.Key}: Name fehlt.";
+            if (z.Week < 0 || z.Month < 0 || z.PubTrees < 0 || z.Rang < 0) return $"Tarif {z.Key}: Werte ab 0.";
+        }
+        if (Tarife.Select(z => z.Key).Distinct().Count() != Tarife.Length) return "Ein Tarif steht doppelt.";
+        if (Tarife.Select(z => z.Rang).Distinct().Count() != Tarife.Length) return "Zwei Tarife haben denselben Rang.";
+        if (!Tarife.Any(z => z.Rang == 0)) return "Kein Tarif mit Rang 0 (Kostenlos).";
+        if (!Tarife.Any(z => z.Key == TestTarif)) return $"Test-Tarif {TestTarif} fehlt.";
+        if (TestMonate is < 0 or > 24) return "Testmonate: 0 bis 24.";
+        return null;
+    }
+}
+
+/// <summary>
+/// Das Tarifblatt, wie es der Lizenzserver ausliefert: der Text so, wie er signiert wurde, und die Signatur. Es kommt mit
+/// jedem Abo-Stand und jedem Schlüssel zum Kopieren; journali legt eine neuere Fassung als Eintrag ins Journal
+/// (<c>TarifeReceived</c>) — so ändern sich Grenzen, Plugins und Publikationsbäume ohne neues Image.
+/// </summary>
+public sealed record Tarifblatt(string Blatt, string Sig)
+{
+    [JsonIgnore] public TarifblattInhalt? Inhalt { get { try { return JsonSerializer.Deserialize<TarifblattInhalt>(Blatt, TarifblattInhalt.Json); } catch { return null; } } }
+
+    /// <summary>Echt (<see cref="Aussteller"/>) und in sich stimmig? Liefert den Inhalt oder den Grund.</summary>
+    public (TarifblattInhalt? Inhalt, string? Fehler) Pruefe()
+    {
+        var (echt, grund) = Aussteller.Pruefe(Blatt, Sig);
+        if (!echt) return (null, "Tarifblatt: " + grund);
+        if (Inhalt is not { } i) return (null, "Tarifblatt unlesbar.");
+        return i.Fehler() is { } f ? (null, "Tarifblatt: " + f) : (i, null);
+    }
+}
+
+/// <summary>
 /// Eine Anforderung dieser Instanz.
 /// <para>Der Weg eines Schlüssels zum Kopieren (Instanzen ohne Internet):</para>
 /// <list type="number">
@@ -108,7 +192,10 @@ public sealed record LicenceKey(
     string? Request = null,
     /// <summary>Der Tarif: beim Limit das Paket, beim Reset, für welchen Tarif er gilt (pro | enterprise).</summary>
     string? Plan = null,
-    string? Sig = null)
+    string? Sig = null,
+    /// <summary>Das Tarifblatt des Lizenzservers — so kommt es auch zu Instanzen ohne Internet. Hinter <c>Sig</c>, damit
+    /// die Reihenfolge der übrigen Felder im Rumpf bleibt; null bei Schlüsseln von davor.</summary>
+    Tarifblatt? Blatt = null)
 {
     public static JsonSerializerOptions Json => Signaturen.Json;
     /// <summary>Was signiert wird: alles ausser der Signatur.</summary>
@@ -137,7 +224,9 @@ public sealed record Entitlement(
     DateTimeOffset? Issued = null,
     DateTimeOffset? ValidUntil = null,
     string? Request = null,
-    string? Sig = null)
+    string? Sig = null,
+    /// <summary>Das Tarifblatt des Lizenzservers (null bei Ständen von davor).</summary>
+    Tarifblatt? Blatt = null)
 {
     /// <summary>So lange gilt ein Stand ohne Verbindung zum Lizenzserver.</summary>
     public static readonly TimeSpan Kulanz = TimeSpan.FromDays(7);

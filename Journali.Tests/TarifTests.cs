@@ -36,7 +36,7 @@ public class TarifTests
     {
         // ETIM braucht Datenanalyse und Export nach Vorlage — ein Tarif, der ETIM hat, muss beides haben, sonst läuft es nicht
         var dir = Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "plugins");
-        foreach (var t in Tarife.Alle.Where(t => t.Plugins is not null))
+        foreach (var t in Tarife.Saat.Alle.Where(t => t.Plugins is not null))
             foreach (var key in t.Plugins!)
             {
                 var manifest = Path.Combine(dir, key, "plugin.json");
@@ -54,10 +54,28 @@ public class TarifTests
         Assert.Equal("enterprise", l.Lic.Plan);
         Assert.True(l.Roh.Trial);
         Assert.Equal(Heute.AddDays(-10).AddMonths(3).AddDays(-1), l.Lic.ValidUntil);
-        Assert.Equal((200_000, 1_000_000), (l.Lic.Week, l.Lic.Month));
+        Assert.Equal((200_000, 1_000_000), (l.Lic.TarifIn(Tarife.Saat).Week, l.Lic.TarifIn(Tarife.Saat).Month));
         // festgehalten: beim nächsten Start liest sie sich so, wie sie angelegt wurde — auch mit anderem ersten Tag
         var wieder = new Licences(dir) { ErsterTag = () => Heute };
         Assert.Equal(l.Lic.ValidUntil, wieder.Lic.ValidUntil);
+        Directory.Delete(dir, true);
+    }
+
+    /// <summary>Die Testlizenz ist nicht signiert — ein umgeschriebenes Datum verlängert nichts: sie gilt höchstens bis
+    /// erster Tag + Testmonate, und der Tarif ist der Test-Tarif, gleich was in ihr steht.</summary>
+    [Fact]
+    public void Eine_umgeschriebene_Testlizenz_verlaengert_nichts()
+    {
+        var dir = Frisch();
+        var l = new Licences(dir) { ErsterTag = () => Heute.AddDays(-10) };
+        l.Neu(new Licence("unlimited", null, Heute.AddYears(50), Trial: true));
+        Assert.Equal(Heute.AddDays(-10).AddMonths(3).AddDays(-1), l.Lic.ValidUntil);
+        Assert.Equal(Tarife.Enterprise, l.Lic.TarifIn(Tarife.Saat));
+        // der Test aus dem Tarifblatt: ein Monat Pro
+        var liste = Tarifliste.Aus(PruefAussteller.Blatt(2, testMonate: 1).Inhalt! with { TestTarif = "pro" });
+        var mitBlatt = new Licences(dir) { ErsterTag = () => Heute.AddDays(-10), Tarife = () => liste };
+        Assert.Equal(Heute.AddDays(-10).AddMonths(1).AddDays(-1), mitBlatt.Lic.ValidUntil);
+        Assert.Equal("pro", mitBlatt.Lic.TarifIn(liste).Key);   // aus dem Blatt — eine andere Instanz als das Saatgut
         Directory.Delete(dir, true);
     }
 
@@ -69,7 +87,7 @@ public class TarifTests
         var l = new Licences(dir) { ErsterTag = () => Heute.AddMonths(-4) };
         Assert.True(l.Roh.Trial);
         Assert.Equal(Licence.Frei, l.Lic);
-        Assert.Equal(Tarife.Free, l.Lic.Tarif);
+        Assert.Equal(Tarife.Free, l.Lic.TarifIn(Tarife.Saat));
         Assert.Contains("abgelaufen", l.Grund);
         Directory.Delete(dir, true);
     }
@@ -77,8 +95,8 @@ public class TarifTests
     [Fact]
     public void Lizenzen_von_vor_den_Tarifen_gelten_als_Kostenlos()
     {
-        Assert.Equal(Tarife.Free, new Licence("30k Monat").Tarif);
-        Assert.Equal(Tarife.Enterprise, new Licence("enterprise").Tarif);
+        Assert.Equal(Tarife.Free, new Licence("30k Monat").TarifIn(Tarife.Saat));
+        Assert.Equal(Tarife.Enterprise, new Licence("enterprise").TarifIn(Tarife.Saat));
     }
 
     private static Catalog Welt()
@@ -95,7 +113,7 @@ public class TarifTests
 
     private static void Paket(Catalog c, string team, string plan) => c.With((_, _, write) =>
     {
-        var p = Schluessel.PaketVon(plan)!;
+        var p = c.Tarife.PaketVon(plan)!;
         write("t", Teams.Stream + team, Types.KeyRedeemed, new KeyRedeemed("k-" + Guid.NewGuid().ToString("N")[..8], Schluessel.Limit, Heute, Heute.AddDays(29), p.Week, p.Month, 30, 0, plan), null);
         return 0;
     });
@@ -170,14 +188,44 @@ public class TarifTests
     [Fact]
     public void Die_Grenzen_kommen_aus_dem_Tarif_nicht_aus_der_Lizenz()
     {
+        var s = Tarife.Saat;
         var frech = new Licence(Tarife.Free.Key, "Kunde", null, 30_000, 100_000);
-        Assert.Equal((Tarife.Free.Week, Tarife.Free.Month), (frech.Week, frech.Month));
+        Assert.Equal((Tarife.Free.Week, Tarife.Free.Month), (frech.TarifIn(s).Week, frech.TarifIn(s).Month));
         Assert.Equal((30_000, 100_000), (frech.EntriesWeek, frech.EntriesMonth));   // im Rumpf stehen sie noch — die Signatur bleibt gültig
 
         // jeder Tarif nennt seine eigenen Zahlen; ein unbekannter gilt als Kostenlos
-        foreach (var t in Tarife.Alle) Assert.Equal((t.Week, t.Month), (new Licence(t.Key).Week, new Licence(t.Key).Month));
-        Assert.Equal(Tarife.Free.Week, new Licence("gibtsnicht", null, null, 999_999).Week);
-        Assert.Equal((Tarife.Free.Week, Tarife.Free.Month), (Licence.Frei.Week, Licence.Frei.Month));
+        foreach (var t in s.Alle) Assert.Equal((t.Week, t.Month), (new Licence(t.Key).TarifIn(s).Week, new Licence(t.Key).TarifIn(s).Month));
+        Assert.Equal(Tarife.Free.Week, new Licence("gibtsnicht", null, null, 999_999).TarifIn(s).Week);
+        Assert.Equal((Tarife.Free.Week, Tarife.Free.Month), (Licence.Frei.TarifIn(s).Week, Licence.Frei.TarifIn(s).Month));
+    }
+
+    /// <summary>
+    /// Die Tarife kommen aus dem Tarifblatt im Journal (25.09.2026): eine neuere, echte Fassung gilt — für Grenzen,
+    /// Plugins, Publikationsbäume und das Init Team. Ein Eintrag mit fremder Signatur ändert nichts, auch nicht beim
+    /// Neuaufbau aus dem Journal: das Abbild prüft selbst.
+    /// </summary>
+    [Fact]
+    public void Ein_Tarifblatt_gilt_nur_mit_passender_Signatur()
+    {
+        var j = new MemoryJournal();
+        var c = new Catalog(j); c.Rebuild(); c.SeedMissing();
+        Assert.Equal(0, c.Tarife.Fassung);                                      // ohne Blatt: das Saatgut
+        Assert.NotNull(PluginApi.NichtImTarif(c, "etim"));
+
+        Assert.True(c.NimmTarifblatt(PruefAussteller.Blatt(2, z => z.Key == "free" ? z with { Week = 7_000, PubTrees = 2, Plugins = [.. z.Plugins!, "etim"] } : z), "t"));
+        Assert.Equal(7_000, c.Tarife.Free.Week);
+        Assert.Equal(7_000, c.With((_, _, _) => c.Teams.Get(Model.InitTeam)!.EntriesWeek));   // das Init Team trägt die Lizenz (Kostenlos) nach der neuen Liste
+        Assert.Null(PluginApi.NichtImTarif(c, "etim"));
+        Assert.False(c.NimmTarifblatt(PruefAussteller.Blatt(2, z => z with { Week = 1 }), "t"));   // dieselbe Fassung: nichts
+
+        // ein Eintrag mit fremder Signatur — geschrieben an allem vorbei — bleibt wirkungslos
+        using var fremd = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        var falsch = PruefAussteller.Blatt(9, z => z with { Week = Tarife.Ohne }, mit: fremd);
+        c.AppendRaw("t", Catalog.TarifStrom, Types.TarifeReceived, Types.Serialize(new TarifeReceived(falsch.Blatt, falsch.Sig)));
+        Assert.Equal(2, c.Tarife.Fassung);
+        var neu = new Catalog(j); neu.Rebuild();
+        Assert.Equal(2, neu.Tarife.Fassung);
+        Assert.Equal(7_000, neu.Tarife.Free.Week);
     }
 
     /// <summary>Zeitpläne gibt es ab Pro; von Hand läuft ein Job in jedem Tarif.</summary>
@@ -185,6 +233,6 @@ public class TarifTests
     public void Ein_Zeitplan_gehoert_ab_Pro_dazu()
     {
         Assert.False(Tarife.Free.Zeitplan);
-        foreach (var t in Tarife.Alle.Where(x => x.Rang > 0)) Assert.True(t.Zeitplan, t.Key);
+        foreach (var t in Tarife.Saat.Alle.Where(x => x.Rang > 0)) Assert.True(t.Zeitplan, t.Key);
     }
 }

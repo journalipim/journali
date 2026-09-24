@@ -43,6 +43,8 @@ public class SnapshotTests
             write("t", v1, Types.VersionDocumentAdded, new VersionDocumentAdded(1, "datasheet", medium, "abc123", "application/pdf", "blatt.pdf", 10, null), null);
             return 0;
         });
+        // ein Tarifblatt: das Abbild hält es als Text und Signatur — auch im Schnappschuss
+        Assert.True(c.NimmTarifblatt(PruefAussteller.Blatt(2, z => z.Key == "pro" ? z with { Week = 60_000 } : z), "t"));
         return j;
     }
 
@@ -59,7 +61,8 @@ public class SnapshotTests
         return string.Join("\n", nodes.Concat(rels).Concat(media).Concat(folders).Concat(jobs).Concat(users).Concat(plugins).Concat(versions)
             .Append($"model:{model.Attributes.Count}/{model.Groups.Count}/{model.Lists.Count}/{model.RelationTypes.Count}/{model.Locales.Count}/{model.Views.Count}/{model.MasterLocale}")
             .Append($"pub:{string.Join(",", tree.PubTrees.Select(p => p.Id + "/" + p.Channel))}")
-            .Append($"placed:{string.Join(",", tree.Nodes.Values.SelectMany(n => n.Placed).Order())}"));
+            .Append($"placed:{string.Join(",", tree.Nodes.Values.SelectMany(n => n.Placed).Order())}")
+            .Append($"tarife:{c.Tarife.Fassung}/{c.Tarife.Von("pro")!.Week}"));
     });
 
     [Fact]
@@ -71,7 +74,7 @@ public class SnapshotTests
             var j = World();
             var full = new Catalog(j); full.Rebuild();
             var before = Fingerprint(full);
-            Assert.Contains("quantity=3", before); Assert.Contains("logo.png", before); Assert.Contains("nightly:backup", before); Assert.Contains("datasheet=blatt.pdf", before);
+            Assert.Contains("quantity=3", before); Assert.Contains("logo.png", before); Assert.Contains("nightly:backup", before); Assert.Contains("datasheet=blatt.pdf", before); Assert.Contains("tarife:2/60000", before);
             var n = full.SaveSnapshot(path);
             Assert.Equal(j.Head, n);
             Assert.True(File.Exists(path));

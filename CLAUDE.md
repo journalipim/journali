@@ -143,9 +143,12 @@ gewöhnliches Wort reicht, steht das gewöhnliche Wort.
   ▩ Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
   pflegen darf) · ✉ Mail · ⇅ B&R (Sichern von Hand und zurück — jeder Tarif; als
   Zeitplan ist es ein Job des Plugins `backup`, ab Pro) · ⚑ Workflows.
-  **Tarife**: `Tarife.cs` im Kern — Kostenlos, Pro, Pro+, Enterprise,
-  Unlimited. Grenzen je Team, Plugins und Publikationsbäume nach dem höchsten Tarif der
-  Instanz; drei Monate Enterprise ab dem ersten Journaleintrag.
+  **Tarife**: Kostenlos, Pro, Pro+, Enterprise, Unlimited — aus dem signierten **Tarifblatt** des Lizenzservers im
+  Journal (`TarifeReceived`, `Teams.Tarife`, `Catalog.Tarife`); `Tarife.cs` ist nur das Saatgut, im Code nie
+  `Tarife.Free`/`Tarife.Pro` für den Betrieb verwenden. Grenzen je Team, Plugins und Publikationsbäume nach dem
+  höchsten Tarif der Instanz; drei Monate Enterprise ab dem ersten Journaleintrag (Test-Tarif und -Monate im Blatt).
+  **Nur Signiertes zählt**: Lizenz, Schlüssel, Abo-Stand und Tarifblatt gelten nur mit der Signatur des eingebauten
+  Lizenzserver-Schlüssels (`Core.Licensing.Aussteller`); `JOURNALI_LICENCE_KEY` nur im Debug-Bau (Prüf-Aussteller).
   Die Abschnitte des Team-Tabs stehen fest: ◍ {Teamname} · ⚿ journali
   Lizenz · ✦ journali Limits · ✧ KI API Keys · ✧ KI Austauschvolumen — erst, was
   journali betrifft, dann die fremde KI.

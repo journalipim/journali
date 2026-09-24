@@ -26,6 +26,7 @@ public class AboTests
         public string? Fehler;
         public int Anfragen;
         public string Pub => Signaturen.Oeffentlich(Aussteller);
+        public Tarifblatt? Blatt;
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
@@ -35,8 +36,8 @@ public class AboTests
             Assert.True(anfrage.Pruefe().Ok);                                   // die Instanz signiert ihre Anfrage
             if (Fehler is not null) return new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent(JsonSerializer.Serialize(new { error = Fehler })) };
             var r = anfrage.Inhalt!;
-            var t = Tarife.Von(Plan)!;
-            var e = new Entitlement(r.Instance, r.Team, t.Key, t.Week, t.Month, "active", Heute.AddDays(30), Jetzt, Jetzt + Entitlement.Kulanz, anfrage.Hash);
+            var t = Tarife.Saat.Von(Plan)!;
+            var e = new Entitlement(r.Instance, r.Team, t.Key, t.Week, t.Month, "active", Heute.AddDays(30), Jetzt, Jetzt + Entitlement.Kulanz, anfrage.Hash, Blatt: Blatt);
             e = Antwort(anfrage, e with { Sig = Signaturen.Signiere(Aussteller, e.Rumpf) });
             return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(JsonSerializer.Serialize(e, new JsonSerializerOptions(JsonSerializerDefaults.Web))) };
         }
@@ -50,13 +51,13 @@ public class AboTests
         public readonly string Dir = Path.Combine(Path.GetTempPath(), "journali-abo-" + Guid.NewGuid().ToString("N"));
         public readonly FesteUhr Uhr = new(Jetzt);
         public string? Adresse = "https://lizenz.example";
-        public string? Pub;
         public readonly Abos Abos;
-        public Welt(bool mitPub = true)
+        /// <param name="vertraut">Glaubt journali diesem Lizenzserver? (Sonst ist es ein fremder Aussteller.)</param>
+        public Welt(bool vertraut = true)
         {
             Directory.CreateDirectory(Dir);
-            Pub = mitPub ? Server.Pub : null;
-            Abos = new Abos(Instanz, Dir, new HttpClient(Server), () => Adresse, () => Pub, Uhr);
+            if (vertraut) Journali.Core.Licensing.Aussteller.Vertraue(Server.Pub);
+            Abos = new Abos(Instanz, Dir, new HttpClient(Server), () => Adresse, Uhr);
             C.Rebuild(); C.SeedMissing();
             C.With((_, _, w) =>
             {
@@ -109,12 +110,64 @@ public class AboTests
         Assert.Null(w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo));
     }
 
+    /// <summary>Nur Signiertes zählt (25.09.2026): ein Lizenzserver, dessen Schlüssel journali nicht kennt, ändert nichts.</summary>
     [Fact]
-    public async Task Ohne_oeffentlichen_Schluessel_wird_angenommen_aber_als_ungeprueft_vermerkt()
+    public async Task Ein_fremder_Lizenzserver_wird_abgewiesen()
     {
-        var w = new Welt(mitPub: false);
-        var (stand, _) = await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
-        Assert.False(stand!.Geprueft);
+        var w = new Welt(vertraut: false);
+        var (stand, fehler) = await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        Assert.Null(stand);
+        Assert.Contains("Signatur", fehler);
+        Assert.Null(w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo));
+        Assert.Equal(Tarife.Free, w.C.InstanzTarif);
+    }
+
+    /// <summary>Ein Stand im Journal, der nicht als geprüft vermerkt ist (bis 25.09.2026 möglich), zählt nicht.</summary>
+    [Fact]
+    public void Ein_ungepruefter_Stand_zaehlt_nicht()
+    {
+        var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
+        c.With((_, _, w) =>
+        {
+            w("t", Teams.Stream + "de", Types.TeamDefined, new TeamDefined("DE"), null);
+            w("t", Teams.Stream + "de", Types.EntitlementReceived, new EntitlementReceived("i", "de", "unlimited", Tarife.Ohne, Tarife.Ohne, "active",
+                Heute.AddDays(30), Jetzt, Jetzt + Entitlement.Kulanz, "r", "sig", Geprueft: false), null);
+            return 0;
+        });
+        Assert.Null(c.With((_, _, _) => c.Teams.AboAt("de", Heute)));
+        Assert.Equal(Tarife.Free, c.InstanzTarif);
+    }
+
+    /// <summary>
+    /// Das Tarifblatt kommt mit dem Stand (25.09.2026): eine neuere Fassung geht ins Journal und gilt sofort — für die
+    /// Pakete, die Plugins, das Init Team. Eine ältere oder eine mit fremder Signatur ändert nichts.
+    /// </summary>
+    [Fact]
+    public async Task Das_Tarifblatt_kommt_mit_dem_Stand()
+    {
+        var w = new Welt();
+        w.Server.Blatt = Blatt(w.Server.Aussteller, 2, z => z.Key == "free" ? z with { Week = 12_000, Plugins = [.. z.Plugins!, "etim"] } : z);
+        Assert.Null((await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan")).Fehler);
+        Assert.Equal(2, w.C.Tarife.Fassung);
+        Assert.Equal(12_000, w.C.Tarife.Free.Week);
+        Assert.True(w.C.Tarife.Free.Erlaubt("etim"));
+        Assert.Equal(12_000, w.C.With((_, _, _) => w.C.Teams.Get(Model.InitTeam)!.EntriesWeek));   // das Init Team trägt die Lizenz nach der neuen Liste
+
+        // eine ältere Fassung und eine mit fremder Signatur bleiben draussen
+        w.Server.Blatt = Blatt(w.Server.Aussteller, 1, z => z with { Week = 1 });
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        using var fremd = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        w.Server.Blatt = Blatt(fremd, 9, z => z with { Week = 1 });
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        Assert.Equal(2, w.C.Tarife.Fassung);
+        Assert.Equal(12_000, w.C.Tarife.Free.Week);
+    }
+
+    private static Tarifblatt Blatt(ECDsa mit, long fassung, Func<TarifZeile, TarifZeile> aendern)
+    {
+        var b = Tarife.Saat.AlsBlatt(fassung, Jetzt);
+        var text = JsonSerializer.Serialize(b with { Tarife = [.. b.Tarife.Select(aendern)] }, TarifblattInhalt.Json);
+        return new Tarifblatt(text, Signaturen.Signiere(mit, text));
     }
 
     [Fact]

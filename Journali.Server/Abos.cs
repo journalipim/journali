@@ -13,11 +13,12 @@ namespace Journali.Server;
 /// Verbindung gilt der letzte Stand 7 Tage). Der Lizenzschlüssel aus dem Shop kommt ins eine Feld; die Instanz schickt
 /// eine signierte Anfrage an <c>JOURNALI_LIZENZSERVER</c> und bekommt einen signierten Stand zurück, der als
 /// <see cref="Types.EntitlementReceived"/> ins Journal des Teams geht. Täglich wird aufgefrischt.
-/// <para>Geprüft wird die Antwort gegen die Anfrage (Fingerabdruck, Instanz, Team) und — wenn <c>JOURNALI_LICENCE_KEY</c>
-/// gesetzt ist — die Signatur des Lizenzservers. Ohne ihn wird der Stand angenommen, aber als ungeprüft vermerkt, wie
-/// bei der Lizenz. Der Shop-Schlüssel liegt beim Server (<c>jobs/secrets.json</c>, <c>abo:&lt;team&gt;</c>), nie im Journal.</para>
+/// <para>Geprüft wird die Antwort gegen die Anfrage (Fingerabdruck, Instanz, Team) und die Signatur des Lizenzservers
+/// (<see cref="Aussteller"/>, eingebaut) — ohne passende Signatur wird nichts übernommen (25.09.2026). Das Tarifblatt,
+/// das mit dem Stand kommt, geht als eigener Eintrag ins Journal, wenn es neuer ist. Der Shop-Schlüssel liegt beim
+/// Server (<c>jobs/secrets.json</c>, <c>abo:&lt;team&gt;</c>), nie im Journal.</para>
 /// </summary>
-public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<string?> lizenzserver, Func<string?> ausstellerPub, TimeProvider? uhr = null)
+public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<string?> lizenzserver, TimeProvider? uhr = null)
 {
     public static string SecretKey(string team) => "abo:" + team;
     /// <summary>Nach so langer Zeit wird der Stand eines Teams neu geholt.</summary>
@@ -61,12 +62,12 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         if (e.Request != anfrage.Hash) return (null, "Die Antwort gehört nicht zu dieser Anfrage.");
         if (e.Instance != instanz.Id || e.Team != team) return (null, "Die Antwort gilt für eine andere Instanz oder ein anderes Team.");
         if (e.Plan is null || e.PaidUntil is null || e.Issued is null || e.ValidUntil is null) return (null, "Die Antwort ist unvollständig.");
-        var pub = ausstellerPub();
-        var (echt, _) = Signaturen.Pruefe(e.Rumpf, e.Sig, pub);
-        if (!echt && !string.IsNullOrWhiteSpace(pub)) return (null, "Die Signatur des Lizenzservers passt nicht.");
+        if (!Aussteller.Pruefe(e.Rumpf, e.Sig).Ok) return (null, "Die Signatur des Lizenzservers passt nicht.");
 
+        // erst das Tarifblatt: der Stand nennt einen Tarif, den das Blatt vielleicht erst einführt
+        c.NimmTarifblatt(e.Blatt, actor);
         var stand = new EntitlementReceived(e.Instance, e.Team, e.Plan, e.EntriesWeek, e.EntriesMonth, e.Status ?? "", e.PaidUntil.Value,
-            e.Issued.Value, e.ValidUntil.Value, e.Request, e.Sig, echt);
+            e.Issued.Value, e.ValidUntil.Value, e.Request, e.Sig, true);
         c.With((_, _, write) => write(actor, Teams.Stream + team, Types.EntitlementReceived, stand, null));
         Secrets.Set(jobsDir, SecretKey(team), new() { ["key"] = key });
         return (stand, null);

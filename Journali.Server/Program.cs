@@ -38,6 +38,16 @@ var betrieb = BetriebConfigFile.Effektiv(dataDir, builder.Configuration);
 var cachePath = Path.Combine(dataDir, $"journal-{connection.Host}-{connection.Port}-{connection.Database}.cache.jsonl");
 IJournal journal = betrieb.JournalCache ? new CachedJournal(pg, cachePath) : pg;
 var catalog = new Catalog(journal);
+#if DEBUG
+// Nur im Debug-Bau: ein Prüf-Aussteller für die Entwicklung (JOURNALI_LICENCE_KEY = sein öffentlicher Schlüssel). Der
+// Release-Bau glaubt allein dem eingebauten Schlüssel des Lizenzservers (Core.Licensing.Aussteller). Vor dem
+// Neuaufbau: das Abbild prüft Tarifblätter beim Anwenden.
+if (Environment.GetEnvironmentVariable("JOURNALI_LICENCE_KEY") is { Length: > 0 } pruefAussteller)
+{
+    Journali.Core.Licensing.Aussteller.Vertraue(pruefAussteller);
+    Console.WriteLine("journali: Prüf-Aussteller aus JOURNALI_LICENCE_KEY angenommen (Debug-Bau)");
+}
+#endif
 // Schnappschuss der Abbilder: Stand #n als Datei, der Start liest nur den Rest;
 // JOURNALI_SNAPSHOT=off schaltet ihn ab. Geschrieben nach dem Start (im Hintergrund) und beim Beenden.
 var snapshotPath = betrieb.Snapshot ? Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json") : null;
@@ -67,10 +77,11 @@ Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} m
 // wird beim ersten Lesen übernommen. Muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits.
 var instanz = new Instanz(db);   // Kennung dieser Instanz — steht in der Lizenz, geht nicht in die Sicherung
 builder.Services.AddSingleton(instanz);
-var licences = new Licences(dataDir, new LicenceStore(db), instanz) { ErsterTag = () => catalog.ErsterTag };   // ohne Lizenz: Test ab dem ersten Eintrag
-// Abo über den Lizenzserver (Taloan, 24.09.2026): JOURNALI_LIZENZSERVER, geprüft mit JOURNALI_LICENCE_KEY; der Shop-Schlüssel liegt in jobs/secrets.json
+var licences = new Licences(dataDir, new LicenceStore(db), instanz) { ErsterTag = () => catalog.ErsterTag, Tarife = () => catalog.Tarife };   // ohne Lizenz: Test ab dem ersten Eintrag
+// Abo über den Lizenzserver: JOURNALI_LIZENZSERVER; geprüft wird mit dem eingebauten Schlüssel (Aussteller). Der
+// Shop-Schlüssel liegt in jobs/secrets.json
 var abos = new Abos(instanz, dataDir, new HttpClient { Timeout = TimeSpan.FromSeconds(20) },
-    () => Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER"), () => Environment.GetEnvironmentVariable("JOURNALI_LICENCE_KEY"));
+    () => Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER"));
 catalog.LicenceDir = dataDir;
 catalog.Licences = licences;
 catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
@@ -208,8 +219,8 @@ object? Nutzung(HttpRequest req, Catalog c)
         if (string.IsNullOrEmpty(ich))
             return c.ReadUsage(u => new
             {
-                week = Teil(u.Between(Usage.Ab(Usage.WeekStart(today), catalog.ZaehltAb), today), licences.Lic.Week, woche, "Instanz"),
-                month = Teil(u.Between(Usage.Ab(Usage.MonthStart(today), catalog.ZaehltAb), today), licences.Lic.Month, monat, "Instanz"),
+                week = Teil(u.Between(Usage.Ab(Usage.WeekStart(today), catalog.ZaehltAb), today), catalog.LizenzTarif.Week, woche, "Instanz"),
+                month = Teil(u.Between(Usage.Ab(Usage.MonthStart(today), catalog.ZaehltAb), today), catalog.LizenzTarif.Month, monat, "Instanz"),
             });
         // Kein Team: Kontingent 0 — die Balken stehen voll und rot, denn 0 ist sofort erreicht
         if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null)
@@ -246,8 +257,8 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
         today = today.ToString("yyyy-MM-dd"),
         head = c.Head,
         day = Part("day", u.Day(today), 0, today, today.AddDays(1)),   // ohne Grenze: nur die Zahl
-        week = Part("week", u.Between(Usage.Ab(Usage.WeekStart(today), c.ZaehltAb), today), licences.Lic.Week, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
-        month = Part("month", u.Between(Usage.Ab(Usage.MonthStart(today), c.ZaehltAb), today), licences.Lic.Month, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
+        week = Part("week", u.Between(Usage.Ab(Usage.WeekStart(today), c.ZaehltAb), today), c.LizenzTarif.Week, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
+        month = Part("month", u.Between(Usage.Ab(Usage.MonthStart(today), c.ZaehltAb), today), c.LizenzTarif.Month, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
         // daneben, was gar nicht zählt (Modell, Struktur, Kataloge, Betrieb) — zum Vergleich beim Messen
         all = new { day = u.Day(today, true), week = u.Week(today, true), month = u.Month(today, true) },
         history = history is null ? null : u.History(history, today, Math.Clamp(limit, 1, 400))

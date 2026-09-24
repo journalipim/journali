@@ -71,16 +71,42 @@ public sealed class Catalog
     private Tarif TarifOhneSperre()
     {
         var heute = DateOnly.FromDateTime(DateTime.Now);
-        return _teams.HoechsterTarif(heute) is { } t ? Tarife.Hoeher(Lizenz.Tarif, t) : Lizenz.Tarif;
+        var lizenz = Lizenz.TarifIn(_teams.Tarife);
+        return _teams.HoechsterTarif(heute) is { } t ? Core.Projections.Tarife.Hoeher(lizenz, t) : lizenz;
     }
+
+    /// <summary>Die geltenden Tarife: aus dem Tarifblatt im Journal, sonst das Saatgut.</summary>
+    public Tarifliste Tarife => Lesend(() => _teams.Tarife);
+    /// <summary>Der Tarif der Lizenz dieser Instanz (ohne Schlüssel und Abos) — seine Grenzen trägt das Init Team.</summary>
+    public Tarif LizenzTarif => Lesend(() => Lizenz.TarifIn(_teams.Tarife));
 
     /// <summary>Der Tarif eines Teams: sein Schlüssel — und beim ersten Team die Lizenz, deren Limits es trägt. Nur unter der Sperre.</summary>
     public Tarif TeamTarif(string team)
     {
         var heute = DateOnly.FromDateTime(DateTime.Now);
-        var basis = _teams.Primary?.Key == team ? Lizenz.Tarif : Tarife.Free;
-        return _teams.TarifAt(team, heute) is { } t ? Tarife.Hoeher(basis, t) : basis;
+        var liste = _teams.Tarife;
+        var basis = _teams.Primary?.Key == team ? Lizenz.TarifIn(liste) : liste.Free;
+        return _teams.TarifAt(team, heute) is { } t ? Core.Projections.Tarife.Hoeher(basis, t) : basis;
     }
+
+    /// <summary>
+    /// Ein Tarifblatt des Lizenzservers übernehmen: nur, wenn es echt und stimmig ist und eine neuere Fassung hat als das
+    /// geltende. Danach bekommt das Init Team die Grenzen der Lizenz nach der neuen Liste. Liefert, ob übernommen wurde.
+    /// </summary>
+    public bool NimmTarifblatt(Core.Licensing.Tarifblatt? blatt, string actor)
+    {
+        if (blatt?.Pruefe().Inhalt is not { } neu) return false;
+        lock (_write)
+            return Aendernd(() =>
+            {
+                if (neu.Fassung <= _teams.Tarife.Fassung) return false;
+                Apply(_journal.Append(actor, TarifStrom, Types.TarifeReceived, Types.Serialize(new TarifeReceived(blatt.Blatt, blatt.Sig))));
+                LimitsAusLizenz();
+                return true;
+            });
+    }
+    /// <summary>Der Strom der Tarifblätter.</summary>
+    public const string TarifStrom = "tarife";
 
     /// <summary>Der Tag des ersten Eintrags — der Test einer neuen Instanz zählt ab ihm.</summary>
     public DateOnly? ErsterTag => Lesend(() => _usage.AllPerDay.Count == 0 ? (DateOnly?)null : _usage.AllPerDay.Keys.Min());
@@ -90,7 +116,7 @@ public sealed class Catalog
     {
         if (type != Types.RubricCreated || payload is not RubricCreated { Parent: null }) return;
         var t = TarifOhneSperre();
-        if (t.PubTrees != Tarife.Ohne && _tree.PubTrees.Count() >= t.PubTrees)
+        if (t.PubTrees != Core.Projections.Tarife.Ohne && _tree.PubTrees.Count() >= t.PubTrees)
             throw new TarifException($"Tarif {t.Label}: höchstens {t.PubTrees} Publikationsbäume.");
     }
 
@@ -243,7 +269,7 @@ public sealed class Catalog
     private Entry Apply(Entry entry)
     {
         // Teams und Mitgliedschaften verschieben, wer auf wessen Rechnung geht — der mitgeführte Stand gilt dann nicht mehr
-        if (entry.Type is Types.TeamDefined or Types.TeamRetired or Types.UserDefined or Types.UserRetired or Types.KeyRedeemed or Types.EntitlementReceived) _stand.Clear();
+        if (entry.Type is Types.TeamDefined or Types.TeamRetired or Types.UserDefined or Types.UserRetired or Types.KeyRedeemed or Types.EntitlementReceived or Types.TarifeReceived) _stand.Clear();
         _model.Apply(entry);
         _tree.Apply(entry);
         _relations.Apply(entry);
@@ -273,13 +299,14 @@ public sealed class Catalog
     public int LimitsAusLizenz()
     {
         var lic = Lizenz;
+        var tarif = lic.TarifIn(_teams.Tarife);
         ZaehltAb = lic.CountFrom;
         _stand.Clear();   // der Zählbeginn kann sich verschoben haben
         var n = 0;
         // Das erste Team trägt die Limits der Anlage
-        if (_teams.Primary is { } erstes && (lic.Week > 0 || lic.Month > 0)
-            && (erstes.EntriesWeek != lic.Week || erstes.EntriesMonth != lic.Month))
-            n += Setze(erstes, lic.Week, lic.Month);
+        if (_teams.Primary is { } erstes && (tarif.Week > 0 || tarif.Month > 0)
+            && (erstes.EntriesWeek != tarif.Week || erstes.EntriesMonth != tarif.Month))
+            n += Setze(erstes, tarif.Week, tarif.Month);
         // Jedes weitere hat, was die Lizenz ihm zuschreibt — sonst nichts (es rechnet dann über ein anderes ab)
         foreach (var t in _teams.All.Values)
         {

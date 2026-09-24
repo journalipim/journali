@@ -106,7 +106,7 @@ public static class PluginApi
                         update = m is not null && s is not null && m.Version != s.Version,
                         lastAt = s?.LastAt, lastActor = s?.LastActor,
                         // der Tarif der Instanz erlaubt es — sonst nicht ladbar, nicht einschaltbar
-                        allowed = tarif.Erlaubt(k), tarif = Tarife.Alle.FirstOrDefault(t => t.Erlaubt(k))?.Key,
+                        allowed = tarif.Erlaubt(k), tarif = c.Tarife.Ab(k)?.Key,
                         // das Siegel: zertifiziert, oder warum nicht (leer ohne Zertifikat)
                         certified = m?.Seal.Certified ?? false, sealIssued = m?.Seal.Issued, sealIssuer = m?.Seal.Issuer, sealReason = m?.Seal.Grund,
                     };
@@ -227,7 +227,7 @@ public static class PluginApi
     {
         var t = c.InstanzTarif;
         if (t.Erlaubt(key)) return null;
-        var ab = Tarife.Alle.FirstOrDefault(x => x.Erlaubt(key));
+        var ab = c.Tarife.Ab(key);
         return Results.Json(Err("{0} gehört zum Tarif {1} — diese Instanz hat {2}.", key, ab?.Label ?? "?", t.Label), statusCode: 403);
     }
 

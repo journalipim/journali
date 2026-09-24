@@ -81,7 +81,17 @@ public sealed class Teams : IProjection
     private readonly Dictionary<string, TeamState> _all = new();
     private readonly Dictionary<string, Dictionary<string, UsageDay>> _usage = new();   // Team → Tag (yyyy-MM-dd) → Verbrauch
     private readonly Dictionary<string, Redemption> _eingeloest = new();              // Schlüssel-Id → Einlösung (einmal je Schlüssel)
+    // Das geltende Tarifblatt: Text und Signatur, wie sie im Journal stehen (null = Saatgut). Nicht readonly — der
+    // Schnappschuss schreibt private Felder zurück.
+    private string? _blatt;
+    private string? _blattSig;
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Tarifliste> Gelesen = new();
     public long LastApplied { get; private set; }
+
+    /// <summary>Die Tarife dieser Instanz: aus dem höchsten echten Tarifblatt im Journal, sonst das Saatgut.</summary>
+    public Tarifliste Tarife => _blatt is { } b && _blattSig is { } s
+        ? Gelesen.GetOrAdd(b + "\n" + s, _ => new Licensing.Tarifblatt(b, s).Pruefe().Inhalt is { } i ? Tarifliste.Aus(i) : Projections.Tarife.Saat)
+        : Projections.Tarife.Saat;
     public IReadOnlyDictionary<string, TeamState> All => _all;
     public TeamState? Get(string key) => _all.GetValueOrDefault(key);
     /// <summary>Team 1: das zuerst angelegte. Nur dort gibt es das Grundrauschen, und dorthin fällt, wer kein Team hat.</summary>
@@ -143,18 +153,18 @@ public sealed class Teams : IProjection
     /// (gilt ohne neue Abfrage bis). Sonst null — dann gilt, was das Team ohne Abo hat.
     /// </summary>
     public EntitlementReceived? AboAt(string team, DateOnly d) =>
-        _all.GetValueOrDefault(team)?.Abo is { } a && d <= a.PaidUntil && d <= DateOnly.FromDateTime(a.ValidUntil.LocalDateTime) ? a : null;
+        _all.GetValueOrDefault(team)?.Abo is { Geprueft: true } a && d <= a.PaidUntil && d <= DateOnly.FromDateTime(a.ValidUntil.LocalDateTime) ? a : null;
 
     /// <summary>Der Tarif, den ein eingelöster Limit-Schlüssel diesem Team an dem Tag gibt — null ohne.</summary>
     public Tarif? TarifAt(string team, DateOnly d) =>
         (_all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).Select(x => Tarife.Von(x.Plan)) ?? [])
             .Append(AboAt(team, d) is { } a ? Tarife.Von(a.Plan) : null)
             .Where(x => x is not null)
-            .Aggregate((Tarif?)null, (a, b) => a is null ? b : Tarife.Hoeher(a, b!));
+            .Aggregate((Tarif?)null, (a, b) => a is null ? b : Projections.Tarife.Hoeher(a, b!));
 
     /// <summary>Der höchste Tarif, den an dem Tag irgendein Team per Schlüssel hat — er gilt für die ganze Instanz.</summary>
     public Tarif? HoechsterTarif(DateOnly d) =>
-        _all.Keys.Select(k => TarifAt(k, d)).Where(x => x is not null).Aggregate((Tarif?)null, (a, b) => a is null ? b : Tarife.Hoeher(a, b!));
+        _all.Keys.Select(k => TarifAt(k, d)).Where(x => x is not null).Aggregate((Tarif?)null, (a, b) => a is null ? b : Projections.Tarife.Hoeher(a, b!));
 
     /// <summary>Der Limit-Schlüssel, der an diesem Tag gilt — für die Umrechnung beim nächsten Einlösen.</summary>
     public LimitWindow? WindowAt(string team, DateOnly d) =>
@@ -200,6 +210,13 @@ public sealed class Teams : IProjection
             var who = string.IsNullOrEmpty(d.User) ? entry.Actor : d.User;
             if (!string.IsNullOrEmpty(who)) u.ByUser[who] = u.ByUser.GetValueOrDefault(who) + t;
             if (!string.IsNullOrEmpty(d.Purpose)) u.ByPurpose[d.Purpose] = u.ByPurpose.GetValueOrDefault(d.Purpose) + t;
+            return;
+        }
+        if (entry.Type == Types.TarifeReceived)
+        {
+            // nur eine echte, stimmige und neuere Fassung ersetzt die geltende
+            var d = Types.Deserialize<TarifeReceived>(entry.Payload);
+            if (new Licensing.Tarifblatt(d.Blatt, d.Sig).Pruefe().Inhalt is { } neu && neu.Fassung > Tarife.Fassung) { _blatt = d.Blatt; _blattSig = d.Sig; }
             return;
         }
         if (!entry.Stream.StartsWith(Stream, StringComparison.Ordinal)) return;
