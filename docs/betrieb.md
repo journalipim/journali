@@ -386,8 +386,8 @@ des Administrators und schon gar nicht bei einem anderen Team:
 
 | Tarif | je Woche / Monat | Publikationsbäume | Plugins |
 |---|---|---|---|
-| Kostenlos (`free`) | 10 000 / 50 000 | 1 | Tabelle: `table`, `csv`, `xlsx`, `json`; `excel` (Add-in) |
-| Pro (`pro`) | 50 000 / 250 000 | 5 | dazu `datasheet`, `xliff`, `xport` (BMEcat), `etim`, `tasker` — und was sie brauchen: `da`, `backup` |
+| Kostenlos (`free`) | 10 000 / 50 000 | 1 | Tabelle: `table`, `csv`, `xlsx`, `json`; `excel` (Add-in), `onlyoffice`, `derive` (Vorschaubilder), `export` — und der `tasker`, den die beiden letzten brauchen (er startet nur Jobs erlaubter Plugins) |
+| Pro (`pro`) | 50 000 / 250 000 | 5 | dazu `datasheet`, `xliff`, `xport` (BMEcat), `etim` — und was sie brauchen: `da`; `backup` als Job |
 | Pro+ (`proplus`) | 50 000 / 250 000 | 5 | alle („All-Plugin“ zu Pro, gilt systemweit) |
 | Enterprise (`enterprise`) | 200 000 / 1 000 000 | ohne Grenze | alle |
 | Unlimited (`unlimited`) | ohne Grenze | ohne Grenze | alle |

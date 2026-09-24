@@ -23,8 +23,8 @@ public class TarifTests
         Assert.Equal((50_000, 250_000, 5), (Tarife.ProPlus.Week, Tarife.ProPlus.Month, Tarife.ProPlus.PubTrees));
         Assert.Equal((200_000, 1_000_000, Tarife.Ohne), (Tarife.Enterprise.Week, Tarife.Enterprise.Month, Tarife.Enterprise.PubTrees));
         Assert.True(Tarife.Unlimited.Unbegrenzt);
-        foreach (var k in new[] { "csv", "xlsx", "json", "excel" }) Assert.True(Tarife.Free.Erlaubt(k), k);
-        Assert.False(Tarife.Free.Erlaubt("tasker"));
+        foreach (var k in new[] { "csv", "xlsx", "json", "excel", "onlyoffice", "derive", "export", "tasker" }) Assert.True(Tarife.Free.Erlaubt(k), k);
+        Assert.False(Tarife.Free.Erlaubt("backup"));                             // kostenlos sichert man von Hand (B&R)
         foreach (var k in new[] { "datasheet", "xliff", "xport", "etim", "tasker" }) Assert.True(Tarife.Pro.Erlaubt(k), k);
         Assert.False(Tarife.Pro.Erlaubt("dpp"));
         Assert.True(Tarife.ProPlus.Erlaubt("dpp"));                              // Pro+ = Pro mit allen Plugins
@@ -156,10 +156,11 @@ public class TarifTests
     public void Plugins_ausserhalb_des_Tarifs_sind_zu()
     {
         var c = Welt();
-        Assert.NotNull(PluginApi.NichtImTarif(c, "tasker"));
+        Assert.NotNull(PluginApi.NichtImTarif(c, "etim"));
         Assert.Null(PluginApi.NichtImTarif(c, "csv"));
+        Assert.Null(PluginApi.NichtImTarif(c, "derive"));                         // Vorschaubilder schon kostenlos
         Paket(c, "de", "pro");
-        Assert.Null(PluginApi.NichtImTarif(c, "tasker"));
+        Assert.Null(PluginApi.NichtImTarif(c, "etim"));
         Assert.NotNull(PluginApi.NichtImTarif(c, "dpp"));
     }
 }

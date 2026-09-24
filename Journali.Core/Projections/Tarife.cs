@@ -12,8 +12,10 @@ public sealed record Tarif(string Key, string Label, int Rang, int Week, int Mon
 /// Publikationsbäume gelten für die ganze Instanz — nach dem höchsten Tarif, den sie hat („wenn Team 1 Pro hat und
 /// Team 2 Enterprise: der höchste gilt für alle“).
 /// <list type="bullet">
-/// <item><b>Kostenlos</b> — 10 000 / 50 000, Tabelle (CSV, Excel, JSON), das Excel-Add-in, ein Publikationsbaum.
-/// Gesichert wird von Hand (Einstellungen → B&amp;R), der Tasker gehört zu Pro.</item>
+/// <item><b>Kostenlos</b> — 10 000 / 50 000, Tabelle (CSV, Excel, JSON), das Excel-Add-in, OnlyOffice, Ableitungen
+/// (Vorschaubilder) und Export (Taloan, 24.09.2026: „schon in kostenlos“), ein Publikationsbaum. Ableitungen und Export
+/// laufen als Job — der Tasker ist darum dabei, startet aber nur Jobs erlaubter Plugins; gesichert wird von Hand
+/// (Einstellungen → B&amp;R), die Sicherung als Job gehört zu Pro.</item>
 /// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM,
 /// Tasker; fünf Publikationsbäume. ETIM braucht Datenanalyse und Export nach Vorlage, der Tasker bringt die Sicherung
 /// als Job mit — die kommen mit.</item>
@@ -34,11 +36,11 @@ public static class Tarife
     /// <summary>So lange gilt der Test einer neuen Instanz, gezählt ab dem ersten Eintrag im Journal.</summary>
     public const int TestMonate = 3;
 
-    private static readonly string[] Basis = ["table", "csv", "xlsx", "json", "excel"];
+    private static readonly string[] Basis = ["table", "csv", "xlsx", "json", "excel", "onlyoffice", "derive", "export", "tasker"];
 
     public static readonly Tarif Free = new("free", "Kostenlos", 0, 10_000, 50_000, 1, new HashSet<string>(Basis));
     public static readonly Tarif Pro = new("pro", "Pro", 1, 50_000, 250_000, 5,
-        new HashSet<string>([.. Basis, "datasheet", "xliff", "xport", "etim", "da", "tasker", "backup"]));
+        new HashSet<string>([.. Basis, "datasheet", "xliff", "xport", "etim", "da", "backup"]));
     public static readonly Tarif ProPlus = new("proplus", "Pro+", 2, 50_000, 250_000, 5, null);
     public static readonly Tarif Enterprise = new("enterprise", "Enterprise", 3, 200_000, 1_000_000, Ohne, null);
     public static readonly Tarif Unlimited = new("unlimited", "Unlimited", 4, Ohne, Ohne, Ohne, null);
