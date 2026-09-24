@@ -212,3 +212,29 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     sofort frei (`validate` meldet die neue Variante sofort), also wird auch sofort abgerechnet; beim Wechsel nach
     unten schreibt die Verrechnung den Rest gut. „Mit Verrechnung am Periodenende“ hiesse einen Monat auf Kredit,
     „ohne Verrechnung“ den Rest des Monats im höheren Tarif umsonst.
+
+  *Preise und Laufzeiten (Taloan, 24.09.2026 — Überlegung, noch nicht im Shop):*
+  - Zielgruppe sind Firmen, nicht Privatleute; nach drei Monaten Test soll klar sein, ob journali passt. Wer es
+    ernsthaft einsetzt, soll bei **Enterprise oder Unlimited** landen; Pro und Pro+ sind die Stufen für den, der vor
+    dem Preis zurückschreckt. Kostenlos ist das Auffangnetz nach dem Test, kein Privattarif.
+  - Die Grenzen lenken stärker als der Preis: gezählt wird jeder Wert (ein SAP-Import mit 50 000 Zeilen × 200 Spalten
+    wären 10 Millionen Einträge, `UsageTests.cs`). Wer alle Teams über das Init Team abrechnet, teilt **ein**
+    Kontingent — zentral abrechnen führt damit zu Unlimited. Darum später Unlimited höher, etwa **399 €**, die übrigen
+    Preise bleiben (Pro 29 €, Pro+ 29 + 29 €, Enterprise 99 €). Unlimited kostet journali nichts extra — es läuft auf
+    dem Server des Kunden. Die Preise stehen nur im Shop, nie im Code (`Tarife.cs` kennt Grenzen, Plugins, Bäume).
+  - **Monatlich und jährlich:** je Laufzeit eine eigene Variante („Repeat payment every 1 month“ / „1 year“), der
+    Jahrespreis günstiger; im Checkout stehen beide nebeneinander. Die Bindung entsteht durch die Vorauszahlung —
+    gekündigt läuft das Abo bis zum Ende der bezahlten Periode. Der Lizenzserver ordnet jede Variante einem Tarif zu
+    (Pro monatlich und Pro jährlich → Pro).
+  - **Einführungsangebot:** Unlimited 12 Monate für 99 €/Monat — als Jahresvariante zum vollen Preis mit einem
+    wiederholten Rabatt auf die erste Jahreszahlung (Rabatte zählen in Monaten, auch beim Jahresabo: „12“ = die erste
+    Jahreszahlung, „24“ = die ersten zwei); danach verlängert es sich zum vollen Preis. Eher als eigenes Produkt, damit
+    es im Kundenportal nicht als Wechselziel erscheint.
+  - **Wechseln ja, erstatten nein — Gutschrift** (Taloan: „aber nicht mit Erstattung, sondern mit Gutschrift“). Das ist
+    das Verhalten von Lemon Squeezy: „If downgrading a subscription, we'll issue a credit which is then applied on the
+    next invoice“ (API, Update a Subscription). Wer vom Einführungs-Jahr auf Enterprise monatlich wechselt, bekommt den
+    unverbrauchten Rest als Guthaben, mit dem die folgenden Rechnungen verrechnet werden.
+  - *Im Testmodus zu prüfen:* ob die Gutschrift aus dem gezahlten (rabattierten) Preis oder aus dem vollen Preis der
+    Variante gerechnet wird; was mit einem Guthaben geschieht, das nie verbraucht wird (Kündigung nach dem Wechsel);
+    ob sich ein Rabattcode auf eine Variante beschränken lässt; was mit laufenden Abos geschieht, wenn der Preis einer
+    Variante geändert wird. Werkzeug: „Simulate event“ am Testabo.
