@@ -2489,5 +2489,10 @@
  "verlangt das eigene Passwort; nach einer Minute wieder verdeckt": "asks for your own password; hidden again after a minute",
  "◉ anzeigen": "◉ show",
  "Die Anzeige verlangt eine Anmeldung.": "Showing it requires a login.",
- "Passwort falsch.": "Password is wrong."
+ "Passwort falsch.": "Password is wrong.",
+ "{0} ist eingelöst.": "{0} has been redeemed.",
+ "Anforderung {0} wegwerfen?": "Discard request {0}?",
+ "Ein Schlüssel dazu lässt sich dann nicht mehr einlösen.": "A key for it can then no longer be redeemed.",
+ "Wegwerfen": "Discard",
+ "Anforderung wegwerfen — ein Schlüssel dazu lässt sich dann nicht mehr einlösen": "discard the request — a key for it can then no longer be redeemed"
 }

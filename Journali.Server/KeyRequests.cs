@@ -118,4 +118,16 @@ public sealed class KeyRequests(NpgsqlDataSource? db, Instanz instanz)
     }
 
     public SignedRequest? Get(string? id) => id is { Length: > 0 } ? Alle().FirstOrDefault(z => z.Signiert.Inhalt?.Id == id)?.Signiert : null;
+
+    /// <summary>Eine Anforderung wegwerfen — nur eine offene; ob sie eingelöst ist, sagt das Journal und prüft der Aufrufer.
+    /// Liefert, ob es sie gab. Ein Schlüssel zu einer weggeworfenen Anforderung lässt sich nicht mehr einlösen.</summary>
+    public bool Loesche(string id)
+    {
+        if (db is null) { lock (_ohneDb) return _ohneDb.RemoveAll(z => z.Signiert.Inhalt?.Id == id) > 0; }
+        using var conn = db.OpenConnection();
+        Sicherstellen(conn);
+        using var cmd = new NpgsqlCommand("DELETE FROM anforderung WHERE id = @i", conn);
+        cmd.Parameters.Add("i", NpgsqlDbType.Text).Value = id;
+        return cmd.ExecuteNonQuery() > 0;
+    }
 }

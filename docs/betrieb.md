@@ -488,6 +488,8 @@ Lizenz, Kennung und Anforderungen gehen **nicht** in die Vollsicherung — eine 
 ### Schlüssel — Reset und Limit, signiert angefordert
 
 Zusätzlich zur Lizenz gibt es Schlüssel, einmal einlösbar, an die Instanz gebunden, **ohne Team** —
+Eine **offene Anforderung** lässt sich wegwerfen (⚙ Einstellungen → Lizenz, `DELETE /api/licence/requests/{id}`);
+ein Schlüssel dazu ist danach nicht mehr einlösbar. Eine eingelöste bleibt — sie steht im Journal.
 die zentrale IT legt sie auf Vorrat und wählt das Team beim Einlösen:
 
 | Art | Wirkung |

@@ -6,6 +6,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { t as t_ } from '../i18n.js'
+import { dialog } from '../dialog.js'
 
 const emit = defineEmits(['eingespielt'])
 // Das Team, das oben im Team-Reiter gewählt ist — für es wird ein Schlüssel eingelöst
@@ -57,6 +58,13 @@ const knopf = computed(() =>
   : was.value === 'lizenz' ? { text: t_('⚿ Lizenz einspielen'), aus: false, title: t_('Lizenz dieser Instanz ersetzen') }
   : { text: t_('⚿ Übernehmen'), aus: true, title: eingabe.value.trim() ? t_('weder Lizenz noch Schlüssel') : t_('Lizenz oder Schlüssel einfügen') })
 const uebernehmen = () => was.value === 'schluessel' ? einloesen() : was.value === 'lizenz' ? einspielen() : null
+
+/// Offene Anforderung wegwerfen — eine eingelöste weist der Server ab
+async function wirfWeg(a) {
+  if (!await dialog.confirm({ title: t_('Anforderung {0} wegwerfen?', [a.id]), warn: t_('Ein Schlüssel dazu lässt sich dann nicht mehr einlösen.'), ok: t_('Wegwerfen') })) return
+  try { await api.del(`/api/licence/requests/${encodeURIComponent(a.id)}`); await load() }
+  catch (e) { store.toast(e.message) }
+}
 
 async function anfordern() {
   try {
@@ -169,7 +177,7 @@ async function kopiere(text) {
           </template>
           <template v-else>
             <td class="muted">{{ $t("● offen") }}</td><td></td><td></td>
-            <td><button class="x" :title="$t('Anforderung kopieren')" @click="kopiere(a.text)">⧉</button></td>
+            <td style="white-space:nowrap"><button class="x" :title="$t('Anforderung kopieren')" @click="kopiere(a.text)">⧉</button><button class="x neg" :title="$t('Anforderung wegwerfen — ein Schlüssel dazu lässt sich dann nicht mehr einlösen')" @click="wirfWeg(a)">🗑</button></td>
           </template>
         </tr>
       </tbody></table>

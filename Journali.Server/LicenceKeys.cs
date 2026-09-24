@@ -116,6 +116,15 @@ public static class LicenceKeys
             return Results.Ok(neu.Select(s => new { s.Inhalt!.Id, hash = s.Hash, text = s.Text }).ToList());
         });
 
+        // Eine offene Anforderung wegwerfen — eine eingelöste bleibt, sie steht im Journal
+        api.MapDelete("/licence/requests/{id}", (string id, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is null) return ActorMissing();
+            if (anforderungen.Get(id) is null) return Results.NotFound();
+            if (c.With((_, _, _) => c.Teams.Einloesungen.Any(x => x.Id == id))) return Bad("{0} ist eingelöst.", id);
+            return anforderungen.Loesche(id) ? Results.Ok(new { removed = id }) : Results.NotFound();
+        });
+
         api.MapGet("/licence/packages", () => Results.Ok(Schluessel.Pakete.Select(p => new { p.Key, p.Label, week = p.Week, month = p.Month, days = p.Days })));
 
         api.MapGet("/licence/keys", (Catalog c) => c.With((_, _, _) => Results.Ok(c.Teams.Einloesungen.Select(r => new
