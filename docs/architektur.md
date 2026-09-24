@@ -165,7 +165,8 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   bei **jedem** Update, und es wächst weiter.
 
   *Was gebaut wird, in dieser Reihenfolge:*
-  1. **Spiegel korrigieren** — beim Nachholen die Datei einmal öffnen, nicht je Eintrag (gemessen ~85× schneller);
+  1. ~~**Spiegel korrigieren**~~ gebaut 24.09.2026 (`CachedJournal.cs`; Start prüfen 2,2 s → 207 ms, 50 000
+     nachholen 7,4 s → 127 ms, ohne das Lesen aus Postgres) — beim Nachholen die Datei einmal öffnen, nicht je Eintrag;
      beim Start nicht alles entschlüsseln: letzte Zeile vom Dateiende, Lückenprüfung über Zeilenzahl = letzte
      Nummer, Zeilen vor dem Schnappschuss überspringen, ohne sie zu entschlüsseln. Sofort spürbar bei jedem Start und
      jedem Rechnerwechsel.

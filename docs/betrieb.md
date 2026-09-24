@@ -315,6 +315,11 @@ Rest aus der Datenbank; jeder gelesene oder geschriebene Eintrag wird angehängt
 Wahrheit: beim Start wird sein letzter Eintrag gegen die Datenbank geprüft (Nummer, Strom, Typ, Zeit, Nutzdaten) und
 die Nummernfolge auf Lücken — bei jeder Abweichung wird die Datei verworfen und alles aus der Datenbank gelesen.
 Datei löschen ist jederzeit erlaubt. `JOURNALI_JOURNAL_CACHE=off` schaltet den Spiegel ab.
+Was je Eintrag kostet, wächst mit dem Journal (Taloan, 24.09.2026): die Datei ist einmal je Vorgang offen, nicht je
+Eintrag; beim Start wird nur die letzte Zeile entschlüsselt (lückenlos = erste Zeile #1 und so viele Zeilen wie die
+letzte Nummer); Zeilen vor dem gesuchten Stand werden an ihrer Nummer erkannt, ohne sie zu entschlüsseln; eine beim
+Absturz halb geschriebene letzte Zeile wird abgeschnitten statt den Spiegel zu verwerfen. Gemessen an 125 096
+Einträgen: Start prüfen 207 ms (vorher ~2,2 s), 50 000 nachholen 127 ms (vorher 7,4 s allein fürs Schreiben).
 
 **Schnappschuss der Abbilder** (Taloan, 21.09.2026 — gegen das Anwenden, ~18 µs je Eintrag): `snapshot-<host>-<port>-<db>.json`
 im Datenverzeichnis, der Stand aller Abbilder bei #n (`Snapshot.cs` im Kern: System.Text.Json über die Abbild-Klassen samt
