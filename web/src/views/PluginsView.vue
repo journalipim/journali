@@ -67,9 +67,12 @@ const TARIF = { free: t('Kostenlos'), pro: 'Pro', proplus: 'Pro+', enterprise: t
 const tarifOf = p => TARIF[p.tarif] ?? p.tarif ?? ''
 const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? t('— nicht installiert') : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : t('◐ an, Basis aus')
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
-// Siegel: zertifiziert (❖), Siegel gebrochen (⚠ — Zertifikat da, aber Dateien, Fassung oder Signatur passen nicht), sonst nichts
+// Siegel: ❖ für ein Original (Signatur des Herausgebers passt, keine Datei verändert), ⚠ für ein gebrochenes, sonst
+// nichts. Nach aussen heisst ❖ nicht „zertifiziert“ — das klänge nach einer Prüfstelle —, sondern: es ist ein Original.
+const HERAUSGEBER = 'journali'
 const sealOf = p => p.certified ? '❖' : p.sealReason ? '⚠' : ''
-const sealTitle = p => p.certified ? t('zertifiziert · {0}', [p.sealIssued ?? '']) : p.sealReason ? t('Siegel gebrochen: {0}', [p.sealReason]) : ''
+const sealName = p => p.sealIssuer === HERAUSGEBER || !p.sealIssuer ? t('Native journali PIM Plugin') : t('Original von {0}', [p.sealIssuer])
+const sealTitle = p => p.certified ? `${sealName(p)} · ${p.sealIssued ?? ''}` : p.sealReason ? t('Siegel gebrochen: {0}', [p.sealReason]) : ''
 // Katalog des Herausgebers: was es an zertifizierten Plugins gibt — holen legt das Verzeichnis unter plugins/ ab, installiert wird danach wie sonst
 const catalog = ref(null)
 async function loadCatalog(fresh = false) { try { catalog.value = await api.get('/api/plugins/catalog' + (fresh ? '?fresh=true' : '')) } catch (e) { catalog.value = { plugins: [], error: e.message } } }
@@ -108,7 +111,7 @@ function pick(k) { cur.value = k }
       <input v-model="q" type="search" :placeholder="$t('🔍 Key, Name, Beschreibung')" style="flex:1;min-width:120px" @keydown.esc="q = ''" />
       <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
       <span class="sep">·</span>
-      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')], ['cert', $t('❖ zertifiziert')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
+      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')], ['cert', $t('❖ Native')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
     </div>
     <div class="li head">
       <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}</span>
@@ -168,7 +171,7 @@ function pick(k) { cur.value = k }
       <span>{{ $t("Fassung {0}", [current.version ?? '—']) }}</span><span v-if="current.diskVersion && current.diskVersion !== current.version">{{ $t("· auf der Platte {0}", [current.diskVersion]) }}</span>
       <span v-if="!current.onDisk" class="neg">{{ $t("· Verzeichnis plugins/{0} fehlt", [current.key]) }}</span>
       <span v-if="current.allowed === false && current.enabled" class="warn" :title="$t('Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.')">{{ $t("· eingeschaltet, ohne Wirkung") }}</span>
-      <span v-if="current.certified" class="pos seal" :title="$t('Siegel des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert')">{{ $t("· ❖ zertifiziert {0}", [current.sealIssued ?? '']) }}</span>
+      <span v-if="current.certified" class="pos seal" :title="$t('Signatur des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert')">· ❖ {{ sealName(current) }}</span>
       <span v-else-if="current.sealReason" class="neg seal" :title="current.sealReason">{{ $t("· ⚠ Siegel gebrochen") }}</span>
       <span class="grow" /><span v-if="current.lastAt">{{ when(current.lastAt) }} 👤 {{ current.lastActor }}</span>
     </div>
@@ -202,9 +205,9 @@ function pick(k) { cur.value = k }
         <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}${svc.key ? '&service=' + svc.key : ''}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" :title="$t('neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs')" @click="navigate">{{ $t("⏱ Als Job einrichten") }}</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button :title="$t('die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs')" @click="navigate">{{ $t("⏱ Jobs verwalten") }}<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px"><span :title="$t('Zeitplan oder nur von Hand; Parameter, Geheimnisse und Logs stehen beim Job.')">{{ $t("Zeitplan · Parameter beim Job") }}</span></span></div>
       </div>
       <div class="section" v-if="current.certified || current.sealReason">
-        <h2>{{ $t("❖ Zertifikat") }} <span class="mono muted">{{ $t("plugins/{0}/certificate.json", [current.key]) }}</span></h2>
+        <h2>{{ $t("❖ Herkunft") }} <span class="mono muted">{{ $t("plugins/{0}/certificate.json", [current.key]) }}</span></h2>
         <div class="muted" style="font-size:12px;line-height:1.6">
-          <span v-if="current.certified" :title="$t('ausgestellt vom Herausgeber; jede Änderung an den Dateien bricht das Siegel')">{{ $t("❖ {0} · {1}", [current.sealIssuer ?? '', current.sealIssued ?? '']) }}</span>
+          <span v-if="current.certified" :title="$t('signiert vom Herausgeber; jede Änderung an den Dateien bricht das Siegel')">{{ sealName(current) }} · {{ current.sealIssued ?? '' }}</span>
           <span v-else class="neg">{{ current.sealReason }}</span>
         </div>
       </div>

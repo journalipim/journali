@@ -27,13 +27,14 @@ Ein **Basis-Plugin** bringt die Grundfunktion einer Gruppe der Leiste mit und is
 
 Welche Plugins sich installieren und einschalten lassen, hängt am Tarif der Instanz: Kostenlos enthält Tabelle, Excel-Add-in, OnlyOffice, Vorschauen und Export; Pro dazu Datenblatt, Übersetzung, Vorlagen-Export, ETIM, Datenanalyse und Sicherung als Job; ab Pro+ alle. Es zählt der höchste Tarif, den ein Team der Instanz hat.
 
-## Zertifizierte Plugins
+## Native journali PIM Plugins
 
-Ein zertifiziertes Plugin trägt neben dem Manifest ein vom Herausgeber signiertes Zertifikat: Schlüssel, Fassung und
-ein Hash über alle Dateien. ⌁ Plugins zeigt es als ❖ mit dem Ausstellungsdatum; wird eine Datei verändert, steht ⚠ mit
-dem Grund. Ein Plugin ohne Zertifikat läuft genauso und trägt kein Zeichen.
+Ein **Native journali PIM Plugin** stammt von journali und ist unverändert. Es trägt neben dem Manifest eine Signatur
+über Schlüssel, Fassung und alle Dateien. ⌁ Plugins zeigt es als ❖ mit dem Datum; wird eine Datei verändert, steht ⚠ mit
+dem Grund. Ein Plugin ohne Signatur läuft genauso und trägt kein Zeichen — das Zeichen sagt, woher es kommt, nicht, ob
+es gut ist.
 
-Der **Katalog** unter der Liste zeigt, was der Herausgeber an zertifizierten Plugins hat. ⇩ holen lädt das Zip auf den
+Der **Katalog** unter der Liste zeigt, was der Herausgeber an solchen Plugins hat. ⇩ holen lädt das Zip auf den
 Server, der das Siegel prüft und das Verzeichnis unter plugins/ ablegt; ↑ steht, wenn dort eine neuere Fassung liegt.
 Danach wird das Plugin wie jedes andere installiert und eingeschaltet. Ohne Verbindung ist der Katalog leer.
 

@@ -27,13 +27,14 @@ A **base plugin** brings the basic function of a group of the rail and is the co
 
 Which plugins can be installed and enabled depends on the tier of the instance: Free includes Table, Excel add-in, OnlyOffice, previews and export; Pro adds data sheet, translation, template export, ETIM, data analysis and backup as a job; from Pro+ all. The highest tier any team of the instance has counts.
 
-## Certified plugins
+## Native journali PIM plugins
 
-A certified plugin carries a certificate signed by the publisher next to its manifest: key, version and a hash over all
-files. ⌁ Plugins shows it as ❖ with the date of issue; if a file is changed, ⚠ appears with the reason. A plugin without
-a certificate runs just the same and carries no mark.
+A **native journali PIM plugin** comes from journali and is unchanged. Next to its manifest it carries a signature over
+key, version and all files. ⌁ Plugins shows it as ❖ with the date; if a file is changed, ⚠ appears with the reason. A
+plugin without a signature runs just the same and carries no mark — the mark says where it comes from, not whether it
+is good.
 
-The **catalogue** below the list shows which certified plugins the publisher has. ⇩ fetch downloads the zip to the
+The **catalogue** below the list shows which such plugins the publisher has. ⇩ fetch downloads the zip to the
 server, which checks the seal and places the directory under plugins/; ↑ appears when a newer version is there.
 After that the plugin is installed and enabled like any other. Without a connection the catalogue is empty.
 

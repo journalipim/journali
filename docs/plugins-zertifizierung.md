@@ -1,7 +1,10 @@
 # Zertifizierte Plugins
 
 Ein Plugin ist ein Verzeichnis unter `plugins/<key>/` mit `plugin.json`. Ein **zertifiziertes** Plugin trägt daneben
-ein `certificate.json`, das der Herausgeber signiert hat. Die Oberfläche zeigt es unter ⌁ Plugins als Siegel ❖;
+ein `certificate.json`, das der Herausgeber signiert hat. „Zertifiziert“ ist der Name im Quelltext; **in der Oberfläche
+heisst es nie so** — dort steht, was das Siegel wirklich aussagt: **Native journali PIM Plugin**, also ein Original von
+journali. „Zertifiziert“ klänge nach einer Prüfstelle, die es nicht gibt. Ein Siegel eines anderen Herausgebers nennt
+diesen namentlich. Die Oberfläche zeigt es unter ⌁ Plugins als Siegel ❖;
 der Katalog des Herausgebers listet nur zertifizierte Plugins, und der Server holt nur, was ein gültiges Siegel trägt.
 
 ## Was das Siegel aussagt

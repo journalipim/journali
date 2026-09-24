@@ -31,23 +31,24 @@ test('Siegel in der Liste: ❖ mit Datum, ⚠ mit Grund, sonst nichts', async ()
   try {
     const w = mount(PluginsView, opts)
     await flushPromises()
-    const csv = row(w, 'csv').find('.seal'); assert.equal(csv.text(), '❖'); assert.match(csv.attributes('title'), /2026-09-24/)
+    const csv = row(w, 'csv').find('.seal'); assert.equal(csv.text(), '❖')
+    assert.match(csv.attributes('title'), /Native journali PIM Plugin · 2026-09-24/, 'nach aussen heisst ❖ nicht „zertifiziert“')
     const json = row(w, 'json').find('.seal'); assert.equal(json.text(), '⚠'); assert.match(json.attributes('title'), /Dateien verändert/)
     assert.ok(!row(w, 'mine').find('.seal').exists())
-    // Details des gewählten (csv ist das erste): Zertifikat-Abschnitt mit Herausgeber und Datum
-    assert.match(w.text(), /❖ journali · 2026-09-24/)
+    // Details des gewählten (csv ist das erste): Herkunft mit Datum
+    assert.match(w.text(), /Native journali PIM Plugin · 2026-09-24/)
     // Katalog offline: der Abschnitt sagt es, ohne Rat
     assert.match(w.find('.catalog').text(), /nicht erreichbar/)
   } finally { api.get = orig }
 })
 
-test('Filter ❖ zeigt nur Zertifizierte', async () => {
+test('Filter ❖ zeigt nur Originale', async () => {
   welt()
   const orig = api.get; api.get = async () => ({ plugins: [] })
   try {
     const w = mount(PluginsView, opts)
     await flushPromises()
-    await w.findAll('.view-chip').find(c => c.text() === '❖ zertifiziert').trigger('click')
+    await w.findAll('.view-chip').find(c => c.text() === '❖ Native').trigger('click')
     await flushPromises()
     assert.deepEqual(w.findAll('.scroll .li').map(li => li.find('.k').text()), ['csv'])
   } finally { api.get = orig }
@@ -106,5 +107,17 @@ test('was der Tarif nicht trägt, wirkt nicht — auch wenn es im Journal an ist
     assert.ok(!schalter.classes().includes('primary'), 'und leuchtet nicht')
     assert.match(schalter.attributes('title'), /ohne Wirkung/)
     assert.match(w.text(), /eingeschaltet, ohne Wirkung/)
+  } finally { api.get = orig }
+})
+
+test('ein Siegel eines anderen Herausgebers nennt diesen, nicht journali', async () => {
+  welt()
+  plugins.list = [{ key: 'fremd', version: '1.0.0', installed: true, enabled: true, onDisk: true, certified: true, sealIssued: '2026-09-24', sealIssuer: 'acme', manifest: { kind: 'tool', label: { de: 'Fremd' } } }]
+  const orig = api.get; api.get = async () => ({ plugins: [] })
+  try {
+    const w = mount(PluginsView, opts)
+    await flushPromises()
+    assert.match(row(w, 'fremd').find('.seal').attributes('title'), /Original von acme/)
+    assert.ok(!w.text().includes('Native journali PIM Plugin'))
   } finally { api.get = orig }
 })
