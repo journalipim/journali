@@ -9,11 +9,13 @@ import { plugins } from '../plugins.js'
 import { baseTopics, topicOf, entries } from '../topics.js'
 import { dialog } from '../dialog.js'
 import Splitter from '../components/Splitter.vue'
-import { paneWidth } from '../panes.js'
+import { paneWidth, columnWidths } from '../panes.js'
 import { t } from '../i18n.js'
 import { L } from '../i18n.js'
 
 const listW = paneWidth('plugins.list', 380)
+// Spaltenbreiten: am Kopf ziehen, Doppelklick setzt zurück; gemerkt je Browser. Die Bezeichnung nimmt den Rest
+const cols = columnWidths('plugins', { key: 70, ver: 58, state: 104 }, { min: 36, max: 320 })
 const cur = ref(null)
 const busy = ref('')
 // Symbol in der Leiste je Plugin: Einstellung des Nutzers, nicht des Plugins
@@ -35,10 +37,15 @@ const label = m => L(m?.label) || m?.label?.en || ''
 const q = ref('')
 const kindFilter = ref('')
 const stateFilter = ref('')
+// „mein Tarif": nur, was diese Anlage verwenden darf. Der Schalter erscheint nur, wenn überhaupt etwas fehlt —
+// bei Pro+, Enterprise und Unlimited ist alles erlaubt, dann gäbe es nichts zu filtern
+const nurTarif = ref(false)
+const eingeschraenkt = computed(() => plugins.list.some(p => p.allowed === false))
 const kinds = computed(() => [...new Set(plugins.list.map(p => p.manifest?.kind).filter(Boolean))].sort())
 const shown = computed(() => {
   const s = q.value.trim().toLowerCase()
   const list = plugins.list.filter(p => (!kindFilter.value || p.manifest?.kind === kindFilter.value)
+    && (!nurTarif.value || p.allowed !== false)
     && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : stateFilter.value === 'cert' ? p.certified : !p.installed))
     && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (L(p.manifest?.description) ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
   return [...list].sort((a, b) => cmp(a, b) || a.key.localeCompare(b.key, 'de'))
@@ -105,21 +112,22 @@ function pick(k) { cur.value = k }
 </script>
 
 <template>
-  <div class="pane" :style="`width:${listW}px;flex:none`">
+  <div class="pane" :style="{ width: listW + 'px', flex: 'none', ...cols.vars() }">
     <div class="toolbar"><h1>{{ $t("⌁ Plugins") }}</h1><span class="muted">{{ shown.length === plugins.list.length ? plugins.list.length : shown.length + ' von ' + plugins.list.length }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:4px;flex-wrap:wrap;font-size:12px">
       <input v-model="q" type="search" :placeholder="$t('🔍 Key, Name, Beschreibung')" style="flex:1;min-width:120px" @keydown.esc="q = ''" />
       <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
       <span class="sep">·</span>
       <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')], ['cert', $t('❖ Core')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
+      <span v-if="eingeschraenkt" class="view-chip" :class="{ on: nurTarif }" @click="nurTarif = !nurTarif" :title="$t('nur, was diese Anlage verwenden darf — mit den anderen Filtern zusammen')">{{ $t("◆ mein Tarif") }}</span>
     </div>
     <div class="li head">
-      <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}</span>
+      <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}<i class="grip" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('key', $event)" @dblclick.stop="cols.zurueck()" /></span>
       <span class="l" :title="$t('nach Bezeichnung sortieren{0}', [sortBy === 'label' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('label')">{{ $t("Bezeichnung{0}", [caret('label')]) }}</span>
       <span class="r">
-        <span class="c-ver" :title="$t('nach Fassung sortieren{0}', [sortBy === 'version' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('version')">{{ $t("Fassung{0}", [caret('version')]) }}</span>
+        <span class="c-ver" :title="$t('nach Fassung sortieren{0}', [sortBy === 'version' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('version')"><i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('ver', $event)" @dblclick.stop="cols.zurueck()" />{{ $t("Fassung{0}", [caret('version')]) }}</span>
         <span class="c-seal" />
-        <span class="c-state" :title="$t('nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert){0}', [sortBy === 'state' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('state')">{{ $t("Zustand{0}", [caret('state')]) }}</span>
+        <span class="c-state" :title="$t('nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert){0}', [sortBy === 'state' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('state')"><i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('state', $event)" @dblclick.stop="cols.zurueck()" />{{ $t("Zustand{0}", [caret('state')]) }}</span>
       </span>
     </div>
     <div class="scroll">
@@ -163,14 +171,14 @@ function pick(k) { cur.value = k }
         <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? $t('In die Leiste links aufnehmen (unter sein Thema)') : $t('Aus der Leiste links nehmen (nur für dich, in den Einstellungen)')">{{ store.railOff.includes(current.key) ? $t('▯ nicht in der Leiste') : $t('▮ in der Leiste') }}</button>
         <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn es wirkt; Klick kippt. Was der Tarif nicht trägt, wirkt
              nicht — auch wenn es im Journal an ist; dann steht der Tarif da, der es hätte -->
-        <button :class="{ primary: plugins.active(current.key) }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? (current.enabled ? $t('Eingeschaltet, aber ohne Wirkung — {0} gehört zum Tarif {1}', [current.key, tarifOf(current)]) : $t('Tarif {0}', [tarifOf(current)])) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.allowed === false ? `◇ ${tarifOf(current)}` : current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
+        <button :class="{ primary: plugins.active(current.key) }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? (current.enabled ? $t('Aktiviert, aber ohne Wirkung — {0} gehört zum Tarif {1}', [current.key, tarifOf(current)]) : $t('Tarif {0}', [tarifOf(current)])) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.allowed === false ? `◇ ${tarifOf(current)}` : current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" :title="$t('aus dem Journal entfernen — die Dateien bleiben')">🗑</button>
       </template>
     </div>
     <div class="toolbar meta muted">
       <span>{{ $t("Fassung {0}", [current.version ?? '—']) }}</span><span v-if="current.diskVersion && current.diskVersion !== current.version">{{ $t("· auf der Platte {0}", [current.diskVersion]) }}</span>
       <span v-if="!current.onDisk" class="neg">{{ $t("· Verzeichnis plugins/{0} fehlt", [current.key]) }}</span>
-      <span v-if="current.allowed === false && current.enabled" class="warn" :title="$t('Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.')">{{ $t("· eingeschaltet, ohne Wirkung") }}</span>
+      <span v-if="current.allowed === false && current.enabled" class="warn" :title="$t('Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.')">{{ $t("· aktiviert, ohne Wirkung") }}</span>
       <span v-if="current.certified" class="pos seal" :title="$t('Signatur des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert')">· ❖ {{ sealName(current) }}</span>
       <span v-else-if="current.sealReason" class="neg seal" :title="current.sealReason">{{ $t("· ⚠ Siegel gebrochen") }}</span>
       <span class="grow" /><span v-if="current.lastAt">{{ when(current.lastAt) }} 👤 {{ current.lastActor }}</span>
@@ -202,7 +210,7 @@ function pick(k) { cur.value = k }
         <h2>⚙ {{ svc.label || $t('Prozess') }} <span class="muted">· {{ svc.command }} {{ (svc.args ?? []).join(' ') }}</span></h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ svc.description || $t('Läuft als Kindprozess des Servers, unabhängig vom Browser.') }}
           <span v-if="svc.params?.length">{{ $t("Parameter: {0}.", [svc.params.map(p => p.label || p.key).join(' · ')]) }}</span></div>
-        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}${svc.key ? '&service=' + svc.key : ''}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" :title="$t('neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs')" @click="navigate">{{ $t("⏱ Als Job einrichten") }}</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button :title="$t('die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs')" @click="navigate">{{ $t("⏱ Jobs verwalten") }}<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px"><span :title="$t('Zeitplan oder nur von Hand; Parameter, Geheimnisse und Logs stehen beim Job.')">{{ $t("Zeitplan · Parameter beim Job") }}</span></span></div>
+        <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}${svc.key ? '&service=' + svc.key : ''}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!plugins.active(current.key)" :title="plugins.active(current.key) ? $t('neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs') : $t('Wirkt nicht — ohne Wirkung kein Job')" @click="navigate">{{ $t("⏱ Als Job einrichten") }}</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button :title="$t('die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs')" @click="navigate">{{ $t("⏱ Jobs verwalten") }}<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px"><span :title="$t('Zeitplan oder nur von Hand; Parameter, Geheimnisse und Logs stehen beim Job.')">{{ $t("Zeitplan · Parameter beim Job") }}</span></span></div>
       </div>
       <div class="section" v-if="current.certified || current.sealReason">
         <h2>{{ $t("❖ Herkunft") }} <span class="mono muted">{{ $t("plugins/{0}/certificate.json", [current.key]) }}</span></h2>
@@ -231,13 +239,18 @@ function pick(k) { cur.value = k }
 .li:hover { background: var(--hover); }
 .li.current { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
 .li.off .l { color: var(--muted); }
-.li .k { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 70px; flex: none; overflow: hidden; text-overflow: ellipsis; }
+.li .k { font-family: var(--mono); font-size: 12px; color: var(--muted); width: var(--c-key); flex: none; overflow: hidden; text-overflow: ellipsis; }
 .li .l { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .li .r { margin-left: auto; flex: none; font-size: 11px; display: flex; gap: 8px; align-items: center; }
 /* feste Breiten rechts: jede Spalte steht in jeder Zeile an derselben Stelle */
-.c-ver { width: 58px; text-align: right; white-space: nowrap; }
-.c-seal { width: 14px; text-align: center; }
-.c-state { width: 104px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c-ver { width: var(--c-ver); text-align: right; white-space: nowrap; }
+.c-seal { width: 14px; flex: none; text-align: center; }
+.c-state { width: var(--c-state); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.li.head .k, .li.head .c-ver, .li.head .c-state { position: relative; }
+/* Griff am Rand der Kopfzelle: schmal, unsichtbar, bis die Maus darüber steht */
+.grip { position: absolute; top: 0; bottom: 0; right: -4px; width: 9px; cursor: col-resize; }
+.grip.left { right: auto; left: -8px; }
+.grip:hover { background: var(--accent); opacity: .5; }
 .form { width: auto; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }

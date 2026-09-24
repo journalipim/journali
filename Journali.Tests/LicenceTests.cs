@@ -17,8 +17,8 @@ public class LicenceTests
         var dir = Frisch();
         var (lic, geprueft, grund) = LicenceFile.Load(dir);
         Assert.Equal("free", lic.Plan);          // Tarif Kostenlos
-        Assert.Equal(10_000, lic.EntriesWeek);
-        Assert.Equal(50_000, lic.EntriesMonth);
+        Assert.Equal(10_000, lic.Week);
+        Assert.Equal(50_000, lic.Month);
         Assert.Equal(0, lic.AiTokensMonth);   // kein Grundrauschen, solange keine Lizenz da ist
         Assert.False(geprueft);
         Assert.Contains("Kostenlos", grund);

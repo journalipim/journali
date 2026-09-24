@@ -2488,13 +2488,18 @@
  "Ein Schlüssel dazu lässt sich dann nicht mehr einlösen.": "A key for it can then no longer be redeemed.",
  "Wegwerfen": "Discard",
  "Anforderung wegwerfen — ein Schlüssel dazu lässt sich dann nicht mehr einlösen": "discard the request — a key for it can then no longer be redeemed",
- "Eingeschaltet, aber ohne Wirkung — {0} gehört zum Tarif {1}": "Switched on but without effect — {0} belongs to tier {1}",
- "· eingeschaltet, ohne Wirkung": "· switched on, without effect",
  "Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.": "The state in the journal stays: when the tier comes back, it takes effect again.",
  "Original von {0}": "Original from {0}",
  "Signatur des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert": "The publisher's signature: key, version and all files are unchanged",
  "❖ Herkunft": "❖ Origin",
  "signiert vom Herausgeber; jede Änderung an den Dateien bricht das Siegel": "signed by the publisher; any change to the files breaks the seal",
  "journali Core Plugin": "journali Core plugin",
- "❖ Core": "❖ Core"
+ "❖ Core": "❖ Core",
+ "Aktiviert, aber ohne Wirkung — {0} gehört zum Tarif {1}": "Activated but without effect — {0} belongs to tier {1}",
+ "· aktiviert, ohne Wirkung": "· activated, without effect",
+ "Wirkt nicht — ohne Wirkung kein Job": "Without effect — no job without effect",
+ "Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück": "drag the column wider or narrower; double-click resets",
+ "Unbekannter Tarif {0} — bekannt sind: {1}": "Unknown tier {0} — known are: {1}",
+ "◆ mein Tarif": "◆ my tier",
+ "nur, was diese Anlage verwenden darf — mit den anderen Filtern zusammen": "only what this installation may use — together with the other filters"
 }

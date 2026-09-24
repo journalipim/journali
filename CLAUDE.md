@@ -160,7 +160,8 @@ gemeint. In Commits keine Zeile „Co-Authored-By“ — es gibt einen Beitragen
   (`Catalog.With` → `KeinKontingentException` → 403), weil erst dort der Eintragstyp
   feststeht. Kein Kontingent hat, wer in keinem Team ist oder dessen Zahlerkette bei
   0 endet; Jobs (`job:<key>`) und das System sind nicht gemeint.
-  **Die Limits ergeben sich aus der Lizenz** — nirgends ein Eingabefeld: das Init Team trägt die Limits der
+  **Die Limits ergeben sich aus dem Tarif der Lizenz** — nirgends ein Eingabefeld, und die Lizenz trägt keine eigenen
+  Zahlen (`Tarife.cs` sagt sie; `Licence.Week`/`.Month`): das Init Team trägt die Limits der
   Anlage, jedes weitere hat, was die Lizenz ihm namentlich zuschreibt (`teams` in
   `licence.json`), sonst nichts; dann rechnet es über ein anderes Team ab.
   **Führen und dazugehören sind zweierlei**: man kann Manager

@@ -202,8 +202,8 @@ object? Nutzung(HttpRequest req, Catalog c)
         if (string.IsNullOrEmpty(ich))
             return c.ReadUsage(u => new
             {
-                week = Teil(u.Between(Usage.Ab(Usage.WeekStart(today), catalog.ZaehltAb), today), licences.Lic.EntriesWeek, woche, "Instanz"),
-                month = Teil(u.Between(Usage.Ab(Usage.MonthStart(today), catalog.ZaehltAb), today), licences.Lic.EntriesMonth, monat, "Instanz"),
+                week = Teil(u.Between(Usage.Ab(Usage.WeekStart(today), catalog.ZaehltAb), today), licences.Lic.Week, woche, "Instanz"),
+                month = Teil(u.Between(Usage.Ab(Usage.MonthStart(today), catalog.ZaehltAb), today), licences.Lic.Month, monat, "Instanz"),
             });
         // Kein Team: Kontingent 0 — die Balken stehen voll und rot, denn 0 ist sofort erreicht
         if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null)
@@ -240,8 +240,8 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
         today = today.ToString("yyyy-MM-dd"),
         head = c.Head,
         day = Part("day", u.Day(today), 0, today, today.AddDays(1)),   // ohne Grenze: nur die Zahl
-        week = Part("week", u.Between(Usage.Ab(Usage.WeekStart(today), c.ZaehltAb), today), licences.Lic.EntriesWeek, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
-        month = Part("month", u.Between(Usage.Ab(Usage.MonthStart(today), c.ZaehltAb), today), licences.Lic.EntriesMonth, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
+        week = Part("week", u.Between(Usage.Ab(Usage.WeekStart(today), c.ZaehltAb), today), licences.Lic.Week, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
+        month = Part("month", u.Between(Usage.Ab(Usage.MonthStart(today), c.ZaehltAb), today), licences.Lic.Month, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
         // daneben, was gar nicht zählt (Modell, Struktur, Kataloge, Betrieb) — zum Vergleich beim Messen
         all = new { day = u.Day(today, true), week = u.Week(today, true), month = u.Month(today, true) },
         history = history is null ? null : u.History(history, today, Math.Clamp(limit, 1, 400))

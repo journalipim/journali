@@ -63,6 +63,9 @@ public static class JobApi
                 var plugin = Blank(body.Plugin) ?? cur?.Plugin;
                 var service = body.Service ?? cur?.Service ?? "";
                 if (plugin is null || !manifests.TryGetValue(plugin, out var m) || PluginApi.ProcessOf(m.Raw, service) is not { } proc) return Bad("Plugin {0} hat keinen Prozess{1} — nur solche können Jobs.", plugin, (service.Length > 0 ? " " + service : ""));
+                // Was nicht wirkt, bekommt auch keinen Job: sonst stünde er da und scheiterte bei jedem Lauf
+                if (PluginApi.NichtImTarif(c, plugin) is { } nein) return nein;
+                if (c.Plugins.All.GetValueOrDefault(plugin) is not { Enabled: true }) return Bad("Plugin {0} ist nicht installiert oder aus.", plugin);
                 // Parameter: Geheimnisse (secret: true) gehören nicht ins Journal — raus aus params, rein in secrets.json
                 var secretKeys = SecretKeys(proc);
                 var prms = body.Params ?? cur?.Params ?? new();

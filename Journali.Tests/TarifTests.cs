@@ -53,7 +53,7 @@ public class TarifTests
         Assert.Equal("enterprise", l.Lic.Plan);
         Assert.True(l.Roh.Trial);
         Assert.Equal(Heute.AddDays(-10).AddMonths(3).AddDays(-1), l.Lic.ValidUntil);
-        Assert.Equal((200_000, 1_000_000), (l.Lic.EntriesWeek, l.Lic.EntriesMonth));
+        Assert.Equal((200_000, 1_000_000), (l.Lic.Week, l.Lic.Month));
         // festgehalten: beim nächsten Start liest sie sich so, wie sie angelegt wurde — auch mit anderem ersten Tag
         var wieder = new Licences(dir) { ErsterTag = () => Heute };
         Assert.Equal(l.Lic.ValidUntil, wieder.Lic.ValidUntil);
@@ -162,5 +162,20 @@ public class TarifTests
         Paket(c, "de", "pro");
         Assert.Null(PluginApi.NichtImTarif(c, "etim"));
         Assert.NotNull(PluginApi.NichtImTarif(c, "dpp"));
+    }
+
+    /// <summary>Die Grenzen sagt der Tarif, nicht die Lizenz: was „Kostenlos“ heisst, soll überall dasselbe bedeuten.
+    /// Eine Lizenz mit eigenen Zahlen im Rumpf (bis 25.09.2026 möglich) ändert daran nichts.</summary>
+    [Fact]
+    public void Die_Grenzen_kommen_aus_dem_Tarif_nicht_aus_der_Lizenz()
+    {
+        var frech = new Licence(Tarife.Free.Key, "Kunde", null, 30_000, 100_000);
+        Assert.Equal((Tarife.Free.Week, Tarife.Free.Month), (frech.Week, frech.Month));
+        Assert.Equal((30_000, 100_000), (frech.EntriesWeek, frech.EntriesMonth));   // im Rumpf stehen sie noch — die Signatur bleibt gültig
+
+        // jeder Tarif nennt seine eigenen Zahlen; ein unbekannter gilt als Kostenlos
+        foreach (var t in Tarife.Alle) Assert.Equal((t.Week, t.Month), (new Licence(t.Key).Week, new Licence(t.Key).Month));
+        Assert.Equal(Tarife.Free.Week, new Licence("gibtsnicht", null, null, 999_999).Week);
+        Assert.Equal((Tarife.Free.Week, Tarife.Free.Month), (Licence.Frei.Week, Licence.Frei.Month));
     }
 }

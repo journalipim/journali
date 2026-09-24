@@ -174,8 +174,8 @@ public class UsageTests
         // ohne Lizenz gelten diese Werte
         Assert.Equal(10_000, Limits.Week);        // Tarif Kostenlos
         Assert.Equal(50_000, Limits.Month);
-        Assert.Equal(Limits.Week, Licence.Frei.EntriesWeek);
-        Assert.Equal(Limits.Month, Licence.Frei.EntriesMonth);
+        Assert.Equal(Limits.Week, Licence.Frei.Week);
+        Assert.Equal(Limits.Month, Licence.Frei.Month);
         Assert.Equal(0, Licence.Frei.AiTokensMonth);   // kein Grundrauschen ohne Lizenz
         // Kein Tageslimit — sonst steht man nach drei Testimporten still
     }

@@ -277,9 +277,9 @@ public sealed class Catalog
         _stand.Clear();   // der Zählbeginn kann sich verschoben haben
         var n = 0;
         // Das erste Team trägt die Limits der Anlage
-        if (_teams.Primary is { } erstes && (lic.EntriesWeek > 0 || lic.EntriesMonth > 0)
-            && (erstes.EntriesWeek != lic.EntriesWeek || erstes.EntriesMonth != lic.EntriesMonth))
-            n += Setze(erstes, lic.EntriesWeek, lic.EntriesMonth);
+        if (_teams.Primary is { } erstes && (lic.Week > 0 || lic.Month > 0)
+            && (erstes.EntriesWeek != lic.Week || erstes.EntriesMonth != lic.Month))
+            n += Setze(erstes, lic.Week, lic.Month);
         // Jedes weitere hat, was die Lizenz ihm zuschreibt — sonst nichts (es rechnet dann über ein anderes ab)
         foreach (var t in _teams.All.Values)
         {

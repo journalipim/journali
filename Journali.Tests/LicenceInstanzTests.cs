@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Journali.Core.Projections;
 using Journali.Server;
 
 namespace Journali.Tests;
@@ -19,13 +20,14 @@ public class LicenceInstanzTests
     // dieselbe Schreibweise wie der Server (Licence.Json ist intern)
     private static readonly JsonSerializerOptions Opt = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
     private static string Json(Licence l) => JsonSerializer.Serialize(l, Opt);
-    private static Licence Fuer(string? anlage) => new("Klein", "Kunde", null, 200_000, 1_000_000, null, 0, 0, null, anlage);
+    // Enterprise: 200 000 in der Woche — die Zahl kommt aus dem Tarif, nicht aus der Lizenz
+    private static Licence Fuer(string? anlage) => new(Tarife.EnterpriseKey, "Kunde", null, 0, 0, null, 0, 0, null, anlage);
 
     [Fact]
     public void Eine_Lizenz_fuer_diese_Anlage_gilt()
     {
         var (lic, _, grund) = LicenceFile.Aus(Json(Fuer(A)), A);
-        Assert.Equal(200_000, lic.EntriesWeek);
+        Assert.Equal(200_000, lic.Week);
         Assert.DoesNotContain("andere Instanz", grund ?? "");
     }
 
@@ -37,7 +39,7 @@ public class LicenceInstanzTests
         Assert.Equal(Journali.Core.Projections.Tarife.Free.Key, lic.Plan);
         Assert.False(geprueft);
         Assert.Contains("andere Instanz", grund);
-        Assert.Equal(Journali.Core.Projections.Limits.Week, lic.EntriesWeek);
+        Assert.Equal(Journali.Core.Projections.Limits.Week, lic.Week);
     }
 
     [Fact]
@@ -45,7 +47,7 @@ public class LicenceInstanzTests
     {
         // Lizenzen von vor der Bindung sollen nicht über Nacht ungültig werden
         var (lic, _, grund) = LicenceFile.Aus(Json(Fuer(null)), A);
-        Assert.Equal(200_000, lic.EntriesWeek);
+        Assert.Equal(200_000, lic.Week);
         Assert.DoesNotContain("andere Instanz", grund ?? "");
     }
 
@@ -54,7 +56,7 @@ public class LicenceInstanzTests
     {
         // Sandbox und Tests ohne Datenbank: die Bindung greift nur, wenn beide Seiten eine Kennung haben
         var (lic, _, _) = LicenceFile.Aus(Json(Fuer(A)), null);
-        Assert.Equal(200_000, lic.EntriesWeek);
+        Assert.Equal(200_000, lic.Week);
     }
 
     [Fact]

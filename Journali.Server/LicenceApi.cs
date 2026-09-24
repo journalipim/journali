@@ -19,7 +19,7 @@ public static class LicenceApi
             var baeume = c.Read(tree => tree.PubTrees.Count());
             return Results.Ok(new
             {
-                l.Plan, l.Holder, validUntil = roh.ValidUntil, l.EntriesWeek, l.EntriesMonth, l.CountFrom, l.AiTokensMonth, l.AiTokensDay,
+                l.Plan, l.Holder, validUntil = roh.ValidUntil, entriesWeek = l.Week, entriesMonth = l.Month, l.CountFrom, l.AiTokensMonth, l.AiTokensDay,
                 geprueft = licences.Geprueft, grund = licences.Grund, abgelaufen = roh.Abgelaufen, ort = licences.Ort,
                 instanz = licences.InstanzId,
                 // der Tarif: aus der Lizenz, der Test, und was für die ganze Instanz gilt
@@ -33,7 +33,9 @@ public static class LicenceApi
         api.MapPut("/licence", (Licence body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            if (body.EntriesWeek < 0 || body.EntriesMonth < 0 || body.AiTokensMonth < 0 || body.AiTokensDay < 0) return Bad("Grenzen: 0 oder mehr.");
+            if (body.AiTokensMonth < 0 || body.AiTokensDay < 0) return Bad("Grenzen: 0 oder mehr.");
+            // Die Grenzen kommen aus dem Tarif — eine Lizenz mit unbekanntem Tarif wäre Kostenlos, und das sagt sie besser vorher
+            if (body.Plan is { Length: > 0 } p && Tarife.Von(p) is null) return Bad("Unbekannter Tarif {0} — bekannt sind: {1}", p, string.Join(", ", Tarife.Alle.Select(x => x.Key)));
             licences.Neu(body, actor);
             // Das Init Team trägt die Limits der Lizenz — es soll sie sofort haben und nicht erst nach einem Neustart.
             // LimitsAusLizenz setzt dabei auch den Zählbeginn und wirft den mitgeführten Stand weg.

@@ -8,7 +8,9 @@ namespace Journali.Server;
 /// <summary>
 /// Die Lizenz. Sie sagt, was diese Anlage darf — nicht der Administrator und schon gar nicht ein anderes Team:
 /// <list type="bullet">
-/// <item><c>EntriesWeek</c>, <c>EntriesMonth</c>: wie viele Einträge ins Journal gehen dürfen.</item>
+/// <item><c>Plan</c>: der Tarif — und damit, wie viele Einträge ins Journal gehen dürfen. Die Zahlen stehen in
+/// <see cref="Core.Projections.Tarife"/> im Kern, nicht in der Lizenz: was „Kostenlos“ heißt, soll überall dasselbe
+/// bedeuten, und eine Lizenz soll es nicht umschreiben können. Zu lesen sind sie als <see cref="Week"/> und <see cref="Month"/>.</item>
 /// <item><c>CountFrom</c>: ab wann gezählt wird. Was davor im Journal steht, bleibt stehen und
 /// zählt nicht mehr mit — zurücksetzen lässt sich ein Journal nicht, aber eine Lizenz darf einen Anfang setzen.</item>
 /// Mehr steht nicht darin: was ein Team an KI verbraucht, geht an seinen Anbieter und nicht an journali — dort gibt
@@ -26,6 +28,8 @@ public sealed record Licence(
     string? Plan = null,
     string? Holder = null,
     DateOnly? ValidUntil = null,
+    /// <summary>Altlast: bis 25.09.2026 trug die Lizenz ihre Grenzen selbst. Jetzt sagt der Tarif sie — die Felder
+    /// bleiben im signierten Rumpf stehen, damit ältere Lizenzen gültig bleiben, und werden nicht mehr ausgewertet.</summary>
     int EntriesWeek = 0,
     int EntriesMonth = 0,
     DateOnly? CountFrom = null,
@@ -39,10 +43,15 @@ public sealed record Licence(
     string? Sig = null)
 {
     /// <summary>Tarif Kostenlos: ohne Lizenz, nach dem Test und wenn eine Lizenz abgelaufen ist.</summary>
-    public static readonly Licence Frei = new(Core.Projections.Tarife.Free.Key, null, null, Core.Projections.Limits.Week, Core.Projections.Limits.Month);
+    public static readonly Licence Frei = new(Core.Projections.Tarife.Free.Key);
 
     /// <summary>Der Tarif dieser Lizenz — <c>plan</c> nennt ihn; Lizenzen von vor den Tarifen gelten als Kostenlos.</summary>
     [JsonIgnore] public Core.Projections.Tarif Tarif => Core.Projections.Tarife.Von(Plan) ?? Core.Projections.Tarife.Free;
+
+    /// <summary>Die Grenzen der Anlage: aus dem Tarif. Was ein einzelnes Team darüber hinaus hat, steht in
+    /// <see cref="Teams"/>; was zeitlich dazukommt, ist ein Limit-Schlüssel am Team.</summary>
+    [JsonIgnore] public int Week => Tarif.Week;
+    [JsonIgnore] public int Month => Tarif.Month;
 
     [JsonIgnore] public bool Abgelaufen => ValidUntil is { } d && d < DateOnly.FromDateTime(DateTime.Today);
     /// <summary>Die Werte ohne Signatur — genau das wird signiert und geprüft. Nicht mitserialisieren: sonst ruft es sich selbst auf.</summary>

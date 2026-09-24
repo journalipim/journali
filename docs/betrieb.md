@@ -458,7 +458,11 @@ des Administrators und schon gar nicht bei einem anderen Team:
   jeder Sicherung mit: eine wiederhergestellte Instanz fängt den Test nicht von vorn an.
 - **Abgelaufen** (Test oder Lizenz) gilt **Kostenlos** — auch im laufenden Betrieb; stündlich zieht der Server die
   Limits des Init Teams nach (`LimitsAusLizenz`).
-- Lizenzen von vor den Tarifen (ohne bekannten `plan`) gelten als Kostenlos, ihre Grenzen bleiben.
+- Lizenzen von vor den Tarifen (ohne bekannten `plan`) gelten als Kostenlos — mit dessen Grenzen.
+- **Die Grenzen sagt der Tarif** (`Tarife.cs`), nicht die Lizenz (seit 25.09.2026): was „Kostenlos“ heisst, bedeutet in
+  jeder Anlage dasselbe. Die Felder `entriesWeek`/`entriesMonth` bleiben im signierten Rumpf stehen, damit ältere
+  Lizenzen gültig bleiben, werden aber nicht mehr ausgewertet; zu lesen sind sie als `Licence.Week`/`.Month`. Was ein
+  einzelnes Team darüber hinaus hat, steht weiter in `teams`, und ein Limit-Schlüssel gibt zeitlich etwas dazu.
 - **Reset-Schlüssel** gibt es getrennt für Pro (gilt für Pro und Pro+) und Enterprise; kostenlos gibt es keinen,
   Unlimited braucht keinen.
 - Unlimited steht in den Zahlen als `int.MaxValue` (`Tarife.Ohne`); die Oberfläche zeigt ∞.
