@@ -308,7 +308,7 @@ async function run() {
             <thead><tr><th>{{ $t("Attribut") }}</th><th>{{ $t("Typ") }}</th><th>{{ $t("▤ Gruppe") }}</th><th class="num">#</th></tr></thead>
             <tbody>
               <tr v-for="[k, d] in plan.needs.newAttrs" :key="k">
-                <td :title="k">{{ d.label.de }} <span class="mono muted">{{ k }}</span></td>
+                <td :title="k">{{ $L(d.label) }} <span class="mono muted">{{ k }}</span></td>
                 <td class="muted">{{ d.type }}{{ d.multiple ? ' ≣' : '' }}{{ d.axes ? ' 🗣' : '' }}</td>
                 <td :class="{ pos: plan.needs.newGroups.has(d.group) }" :title="plan.needs.newGroups.get(d.group)?.label">{{ d.group }}<span v-if="plan.needs.newGroups.get(d.group)?.activeFrom" class="muted">{{ ' ' + $t("· ab {0}", [icon(plan.needs.newGroups.get(d.group).activeFrom)]) }}</span></td>
                 <td class="num">{{ plan.needs.counts.get(k) }}</td>

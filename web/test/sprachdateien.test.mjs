@@ -47,6 +47,20 @@ test('t(): Schlüssel ist die Nachricht, Platzhalter aus Liste und Objekt, fehle
   assert.equal(await setLang('xx'), 'de', 'unbekannter Code → Vorgabe')
 })
 
+test('L(): Bezeichnungen des Modells folgen der Oberflächensprache, dann Deutsch, dann die erste (Taloan, 24.09.)', async () => {
+  const { i18n, L } = await import('../src/i18n.js')
+  const w = { de: 'Gewicht', en: 'Weight' }
+  i18n.global.locale.value = 'de'
+  assert.equal(L(w), 'Gewicht')
+  i18n.global.locale.value = 'en'
+  assert.equal(L(w), 'Weight')
+  assert.equal(L({ de: 'Nur deutsch' }), 'Nur deutsch', 'ohne en fällt es auf de')
+  assert.equal(L({ fr: 'Seulement' }), 'Seulement', 'ohne de die erste vorhandene')
+  assert.equal(L(null), '', 'nichts bleibt leer')
+  assert.equal(L(undefined) || 'key', 'key', '… und das || key dahinter greift')
+  i18n.global.locale.value = 'de'
+})
+
 test('entfalten() gibt den Prüfständen den Text zurück, den der Anwender liest', () => {
   assert.equal(entfalten(`<td :title="$t('Ein Satz mit \\'Anführung\\' und &quot;Zoll&quot;.')">x</td>`), `<td title="Ein Satz mit 'Anführung' und "Zoll".">x</td>`)
   assert.equal(entfalten(`<span>{{ ' ' + $t("· Test") }}</span><b>{{ $t("{0} von {1}", [a, b]) + ' ' }}</b>`), `<span>· Test</span><b>{0} von {1}</b>`)

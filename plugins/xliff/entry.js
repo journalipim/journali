@@ -5,6 +5,7 @@
 // Das Paket (30, Taloan 22.09.2026) ist ein Auftrag im Journal — ein Zeiger mit den Fingerabdrücken, die hinausgingen; kommt er
 // überholt zurück, wird er trotzdem eingespielt und die Differenz bleibt im Rückstand (⟳), statt alles neu zu bestellen.
 // Der Server rechnet die Einheiten (TranslateApi.cs) und schreibt XLIFF; hier nur Bedienung. Als Job: Export in out/, Import aus in/.
+const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const ICON = { group: '▣', product: '▦', variant: '◆' }
@@ -58,9 +59,9 @@ async function mount(root, ctx) {
   function drawSettings() {
     settings.innerHTML = ''
     const locSel = which => { const s = el('select', { onchange: e => { st[which] = e.target.value; drawOverview() } }, ...model.locales.map(l => el('option', { value: l.code }, `${l.code} · ${l.label ?? ''}`))); s.value = st[which]; return s }
-    const chSel = el('select', { onchange: e => { st.channel = e.target.value } }, el('option', { value: '' }, t_('alle Kanäle')), ...model.channels.map(c => el('option', { value: c.key }, c.label?.de || c.key))); chSel.value = st.channel
+    const chSel = el('select', { onchange: e => { st.channel = e.target.value } }, el('option', { value: '' }, t_('alle Kanäle')), ...model.channels.map(c => el('option', { value: c.key }, L(c.label) || c.key))); chSel.value = st.channel
     const scSel = el('select', { onchange: e => { st.scope = e.target.value } }, el('option', { value: 'open' }, 'offen (fehlend + veraltet)'), el('option', { value: 'missing' }, t_('nur fehlend')), el('option', { value: 'stale' }, t_('nur veraltet')), el('option', { value: 'all' }, t_('alles (auch fertig)'))); scSel.value = st.scope
-    const chips = el('div', { class: 'chips' }, ...textAttrs.map(a => { const c = el('span', { class: 'view-chip' + (st.attrs.has(a.key) ? ' on' : ''), title: a.key, onclick: () => { st.attrs.has(a.key) ? st.attrs.delete(a.key) : st.attrs.add(a.key); c.classList.toggle('on') } }, a.label?.de || a.key); return c }))
+    const chips = el('div', { class: 'chips' }, ...textAttrs.map(a => { const c = el('span', { class: 'view-chip' + (st.attrs.has(a.key) ? ' on' : ''), title: a.key, onclick: () => { st.attrs.has(a.key) ? st.attrs.delete(a.key) : st.attrs.add(a.key); c.classList.toggle('on') } }, L(a.label) || a.key); return c }))
     settings.append(el('table', { class: 'grid form', style: 'width:auto' }, el('tbody', {},
       el('tr', {}, el('td', { class: 'attr' }, 'Quelle → Ziel'), el('td', { class: 'row', style: 'gap:6px' }, locSel('from'), '→', locSel('to'))),
       el('tr', {}, el('td', { class: 'attr' }, t_('Kanal')), el('td', {}, chSel)),

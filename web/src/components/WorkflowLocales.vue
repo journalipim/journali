@@ -18,7 +18,7 @@ const when = t => t ? new Date(t).toLocaleString('de-DE', { day: '2-digit', mont
       </span>
       <button v-for="t in (l.transitions ?? [])" :key="t.key" :class="{ blocked: t.blocked }" :disabled="!!t.blocked"
               :title="t.blocked ? t.blocked : `${l.locale}: → ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`"
-              @click="emit('step', l.locale, t)">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
+              @click="emit('step', l.locale, t)">{{ t.blocked ? '⊘ ' : '' }}{{ $L(t.label) || t.key }} →</button>
       <span v-if="!(l.transitions ?? []).length" class="muted" style="font-size:12px">—</span>
       <span class="grow" />
       <span v-if="l.note" class="muted note" :title="l.note">✎ {{ l.note }}</span>

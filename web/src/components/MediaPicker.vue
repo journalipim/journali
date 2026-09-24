@@ -78,7 +78,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
       </div>
       <div class="toolbar mp-foot">
         <span class="muted">{{ $t("Relation") }}</span>
-        <select v-model="type" :title="$t('Relationstyp der Zuordnung — automatisch: Bild → image, sonst document')"><option value="auto">{{ $t("automatisch") }}</option><option v-for="t in types" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
+        <select v-model="type" :title="$t('Relationstyp der Zuordnung — automatisch: Bild → image, sonst document')"><option value="auto">{{ $t("automatisch") }}</option><option v-for="t in types" :key="t.key" :value="t.key">{{ $L(t.label) || t.key }}</option></select>
         <span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span>
         <button @click="emit('close')">{{ $t("Abbrechen") }}</button>
         <button class="primary" :disabled="!sel.size" @click="done">{{ $t("✓ {0} zuordnen", [sel.size || '']) }}</button>

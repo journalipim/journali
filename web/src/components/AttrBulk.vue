@@ -46,7 +46,7 @@ const go = (kind, value) => emit('apply', { kind, value })
       <span class="picks">
         <select v-model="group" style="width:260px" :title="$t('Attributgruppe der Gewählten setzen')">
           <option value="">{{ $t("wählen …") }}</option>
-          <option v-for="g in groups" :key="g.key" :value="g.key">{{ g.label?.de || g.key }} · {{ g.key }}</option>
+          <option v-for="g in groups" :key="g.key" :value="g.key">{{ $L(g.label) || g.key }} · {{ g.key }}</option>
         </select>
         <span class="muted state">{{ [...new Set(attrs.map(a => a.group || '—'))].slice(0, 3).join(' · ') }}{{ new Set(attrs.map(a => a.group || '—')).size > 3 ? ' …' : '' }}</span>
       </span>
@@ -78,7 +78,7 @@ const go = (kind, value) => emit('apply', { kind, value })
       <span class="picks">
         <select v-model="unit" style="width:260px" :title="$t('Einheit der Gewählten setzen (nur Zahlen)')">
           <option value="">{{ $t("wählen …") }}</option>
-          <option v-for="u in units" :key="u.key" :value="u.key">{{ u.label?.de || u.key }} · {{ u.quantity }}</option>
+          <option v-for="u in units" :key="u.key" :value="u.key">{{ $L(u.label) || u.key }} · {{ u.quantity }}</option>
         </select>
         <span class="muted state">{{ [...new Set(attrs.map(a => a.unit || '—'))].slice(0, 3).join(' · ') }}</span>
       </span>

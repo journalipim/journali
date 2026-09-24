@@ -2,6 +2,7 @@
 // Seite, Drag & Drop, Abschnitte mit Spalten, Attributgruppen ab einem Knoten inkl. Kinder); der HTML-Vorlagen-Editor
 // hier bleibt als zweiter Weg („HTML-Vorlage“) — alte Vorlagen gehen weiter.
 import { mountDesigner as mountWysiwyg, layoutFor, renderSheet, preloadCompare } from './designer.js'
+const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 // Vorlagen sind HTML mit Platzhaltern (unten), liegen im Journal (ctx.data, „template:<name>“), je Rolle eine
 // Zuordnung („settings“). Der Designer: links Vorlage (Text), rechts die Vorschau an einem gewählten Knoten;
@@ -119,15 +120,15 @@ export async function dataOf(ctx, id, locale, depth = 0) {
     const l = d.perLocale ? loc : ''
     let v = lookup(own, key, l)
     if (v == null && d.inheritable) for (const m of anc) { v = lookup(m, key, l); if (v != null) break }
-    if (d.type === 'enum' && v != null) { const list = model.lists.find(x => x.key === d.list); v = v.split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[loc] ?? list?.values.find(y => y.value === x.trim())?.label?.de ?? x).join(', ') }
+    if (d.type === 'enum' && v != null) { const list = model.lists.find(x => x.key === d.list); v = v.split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[loc] ?? L(list?.values.find(y => y.value === x.trim())?.label) ?? x).join(', ') }
     if (d.type === 'boolean') v = v === 'true' ? (loc === 'de' ? 'ja' : 'yes') : v === 'false' ? (loc === 'de' ? 'nein' : 'no') : v
     return v
   }
   const attr = {}, label = {}, unit = {}
-  for (const d of model.attributes) { label[d.key] = d.label?.[locale] || d.label?.de || d.key; unit[d.key] = d.unit ?? ''; attr[d.key] = value(d.key, locale); for (const l of model.locales) if (d.perLocale) attr[`${d.key}@${l.code}`] = value(d.key, l.code) }
+  for (const d of model.attributes) { label[d.key] = d.label?.[locale] || L(d.label) || d.key; unit[d.key] = d.unit ?? ''; attr[d.key] = value(d.key, locale); for (const l of model.locales) if (d.perLocale) attr[`${d.key}@${l.code}`] = value(d.key, l.code) }
   const groups = n.groups.filter(g => g.active).map(g => {
     const gd = model.groups.find(x => x.key === g.key)
-    return { key: g.key, label: gd?.label?.[locale] || gd?.label?.de || g.key, attributes: g.attributes.map(k => ({ key: k, label: label[k], unit: unit[k], value: attr[k], type: defs.get(k)?.type })).filter(a => a.value != null && a.value !== '' && a.type !== 'html' && a.type !== 'rows') }
+    return { key: g.key, label: gd?.label?.[locale] || L(gd?.label) || g.key, attributes: g.attributes.map(k => ({ key: k, label: label[k], unit: unit[k], value: attr[k], type: defs.get(k)?.type })).filter(a => a.value != null && a.value !== '' && a.type !== 'html' && a.type !== 'rows') }
   }).filter(g => g.attributes.length)
   let images = []
   try { const rels = await api.get(`/api/nodes/${encodeURIComponent(id)}/relations`); images = [...(rels.out ?? []).filter(r => !(r.values ?? []).some(v => v.attribute === 'stop' && v.value === 'true')), ...(rels.inherited ?? []).map(x => x.relation)].filter(r => r.type === 'image' || r.other?.isImage).map(r => ({ id: r.to, url: `${store.server}/api/media/${r.to}/file`, label: r.other?.label })) } catch {}
@@ -214,7 +215,7 @@ async function mountDesigner(root, ctx) {
   nameSel.addEventListener('change', () => loadTemplate(nameSel.value)); localeSel.addEventListener('change', preview)
   const help = el('details', { style: 'font-size:12px' }, el('summary', { class: 'muted' }, t_('? Platzhalter')),
     el('pre', { style: 'white-space:pre-wrap;margin:4px 0', html: '{{name}} {{sku}} {{id}} {{today}} · {{attr.key}} {{attr.key@en}} {{label.key}} {{unit.key}} · {{{attr.description}}} (HTML roh)\n{{#if image}}&lt;img src="{{image}}"&gt;{{/if}} · {{#each images}}{{url}}{{/each}}\n{{#each groups}}{{label}} {{#each attributes}}{{label}}: {{value}} {{unit}}{{/each}}{{/each}}\n{{#each variants}}{{sku}} {{name}} {{#each axes}}{{label}}: {{value}}{{/each}}{{/each}} · {{../name}} = Ebene hinauf · {{else}}' }),
-    el('div', { class: 'chips' }, ...(store.model?.attributes ?? []).slice(0, 400).map(a => el('span', { class: 'chip', style: 'cursor:pointer', title: `${a.label?.de ?? ''} · ${a.type}`, onclick: () => { const s = ta.selectionStart; ta.setRangeText(a.type === 'html' ? `{{{attr.${a.key}}}}` : `{{attr.${a.key}}}`, s, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input')) } }, a.key))))
+    el('div', { class: 'chips' }, ...(store.model?.attributes ?? []).slice(0, 400).map(a => el('span', { class: 'chip', style: 'cursor:pointer', title: `${L(a.label) ?? ''} · ${a.type}`, onclick: () => { const s = ta.selectionStart; ta.setRangeText(a.type === 'html' ? `{{{attr.${a.key}}}}` : `{{attr.${a.key}}}`, s, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input')) } }, a.key))))
   root.append(
     el('div', { class: 'toolbar' }, el('h1', {}, '▤ Datenblatt-Designer'), nameSel, nameIn, el('button', { class: 'primary', onclick: save, title: t_('Vorlage speichern (Strg+S) — im Journal, für alle') }, '💾'), el('button', { class: 'x', onclick: remove, title: t_('Vorlage löschen') }, '✕'),
       el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, 'Rolle → Vorlage:'), el('span', { class: 'muted' }, '▣'), roleSel('group'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),

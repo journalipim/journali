@@ -6,6 +6,7 @@ import { store } from './store.js'
 import { tree } from './tree.js'
 import { ai } from './ai.js'
 import { t } from './i18n.js'
+import { L } from './i18n.js'
 
 // Zwei Sorten (Taloan, 22.09.2026): den vorhandenen Text ÜBERARBEITEN — oder etwas Neues ERZEUGEN (mit @ gekennzeichnet).
 // [key, Bezeichnung, Anweisung, Gruppe: 'edit' | 'gen']
@@ -41,7 +42,7 @@ export async function facts(nodeId, locale) {
       v = String(v).split(',').map(x => { const val = list?.values.find(y => y.value === x.trim()); const l = val?.label; return l?.[locale] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || x.trim() }).join(', ')
     }
     if (d.type === 'boolean') v = String(v) === 'true' ? 'ja' : String(v) === 'false' ? 'nein' : v
-    rows.push(`- ${d.label?.[locale] || d.label?.de || d.key}: ${v}${d.unit ? ' ' + d.unit : ''}`)
+    rows.push(`- ${d.label?.[locale] || L(d.label) || d.key}: ${v}${d.unit ? ' ' + d.unit : ''}`)
   }
   const row = tree.byId.get(nodeId)
   return { name: row?.label ?? n.name ?? nodeId, path: tree.ancestors(nodeId).map(a => a.label).reverse().join(' › '), keys: tree.keyText(row), rows }

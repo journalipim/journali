@@ -6,6 +6,7 @@ import { computed, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
 import { plugins } from '../plugins.js'
 import { TOPICS, entries } from '../topics.js'
+import { L } from '../i18n.js'
 const props = defineProps({ topic: String })
 const t = computed(() => TOPICS.find(x => x.key === props.topic))
 const list = computed(() => entries.value[props.topic] ?? [])
@@ -13,7 +14,7 @@ const list = computed(() => entries.value[props.topic] ?? [])
 const router = useRouter()
 watchEffect(() => { if (plugins.loaded && list.value.length === 1) router.replace(list.value[0].to) })
 const meta = key => plugins.list.find(p => p.key === key)
-const text = e => e.plugin ? (meta(e.plugin)?.manifest?.description?.de || meta(e.plugin)?.manifest?.description?.en || e.hint) : e.hint
+const text = e => e.plugin ? (L(meta(e.plugin)?.manifest?.description) || meta(e.plugin)?.manifest?.description?.en || e.hint) : e.hint
 </script>
 
 <template>

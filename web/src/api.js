@@ -1,5 +1,6 @@
 import { store } from './store.js'
 import { t } from './i18n.js'
+import { L } from './i18n.js'
 
 // Alle Aufrufe gehen hier durch: Server aus den Einstellungen, X-Actor im Kopf,
 // Fehler als Text aus { error } des Servers.
@@ -95,8 +96,8 @@ export function describe(e) {
     case 'AttributeSet': return `${p.attribute}${axis ? ' ' + axis : ''}${p.row ? ' [' + p.row + ']' : ''} = ${p.values ? p.values.join(', ') : (p.value == null || p.value === '' ? '∅' : String(p.value).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80))}`
     case 'AttributeDefined': return `${p.key}: ${p.type}${p.unit ? ' ' + p.unit : ''}${p.axes?.length ? ' [' + p.axes.join(',') + ']' : ''}${p.list ? ' ← ' + p.list : ''}${p.multiple ? ' ≣' : ''}`
     case 'AttributeRetired': case 'FamilyRetired': return `− ${p.key}`
-    case 'ListDefined': return `${p.key}: ${p.label?.de ?? ''}`
-    case 'ListValueDefined': return `+ ${p.value}${p.label?.de ? ' = ' + p.label.de : ''}`
+    case 'ListDefined': return `${p.key}: ${L(p.label) ?? ''}`
+    case 'ListValueDefined': return `+ ${p.value}${L(p.label) ? ' = ' + L(p.label) : ''}`
     case 'ListValueRetired': return `− ${p.value}`
     case 'UnitDefined': return `⚖ ${p.key} = ${p.factor} ${p.quantity}`
     case 'ViewDefined': return `◫ ${p.key}${p.level ? ' (' + p.level + ')' : ''}: ${(p.items || []).map(it => it.group ? '▤' + it.group : it.key).join(', ')}`
@@ -109,8 +110,8 @@ export function describe(e) {
     case 'ChannelRetired': return `− ⇶ ${p.key}`
     case 'FamilyDefined': return `${p.key}: ${(p.attributes || []).map(a => a.key).join(', ')}`
     case 'LocaleDefined': return `${p.code} = ${p.label}`
-    case 'GroupCreated': return `▣ ${p.name ?? p.label?.de ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
-    case 'GroupRenamed': return `▣ ${p.label?.de ?? ''}`
+    case 'GroupCreated': return `▣ ${p.name ?? L(p.label) ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
+    case 'GroupRenamed': return `▣ ${L(p.label) ?? ''}`
     case 'ProductAxesSet': return t('◆ variiert nach {0}', [(p.axes || []).join(', ') || 'nichts'])
     case 'PluginInstalled': return `⌁ ${p.version}`
     case 'PluginEnabled': return '⌁ ● an'
@@ -120,7 +121,7 @@ export function describe(e) {
     case 'MediaRetired': return t('− 🖼 Medium')
     case 'RelationCreated': return `⇄ ${p.type}: ${p.from} → ${p.to}`
     case 'RelationRetired': return t('− ⇄ Relation')
-    case 'RelationTypeDefined': return `⇄ ${p.key}: ${p.label?.de ?? ''}${p.reverse?.de ? ' / ' + p.reverse.de : ''}${p.group ? ' ▤' + p.group : ''}`
+    case 'RelationTypeDefined': return `⇄ ${p.key}: ${L(p.label) ?? ''}${L(p.reverse) ? ' / ' + L(p.reverse) : ''}${p.group ? ' ▤' + p.group : ''}`
     case 'RelationTypeRetired': return `− ⇄ ${p.key}`
     case 'MasterLocaleDefined': return t('★ Mastersprache {0}', [p.code])
     case 'MasterChannelDefined': return t('★ Masterkanal {0}', [p.key])
@@ -137,7 +138,7 @@ export function describe(e) {
     case 'RowRemoved': return t('− Zeile {0} {1}', [p.attribute, p.row])
     case 'RowOrdered': return `↕ ${p.attribute}`
     case 'ExternalUnlinked': return `− ${p.system}`
-    case 'ChannelDefined': return `${p.key} = ${p.label?.de ?? ''}`
+    case 'ChannelDefined': return `${p.key} = ${L(p.label) ?? ''}`
     case 'CategoryAssigned': return `+ ${p.category}`
     case 'CategoryRemoved': return `− ${p.category}`
     case 'ReleaseGranted': return `✓ ${p.channel}${p.locale ? '/' + p.locale : ''}`

@@ -2,6 +2,7 @@
 // hier das Browser-Drumherum — Herunterladen, SheetJS laden, Excel am Knoten (Vorlage / Export mit Legende).
 import { api, store, tree, mapper } from 'journali'
 import { build as coreBuild, toCsv, toJson, toJsonTree, workbook } from './core.mjs'
+const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 
 export { toCsv, toJson, toJsonTree }
@@ -39,7 +40,7 @@ function legend(columns) {
     const d = c.def ?? (c.attr ? model.attributes.find(a => a.key === c.attr) : null)
     const list = d?.list ? model.lists.find(l => l.key === d.list) : null
     const req = d?.required && (typeof d.required !== 'object' || Object.keys(d.required).length) || c.key.startsWith('axis:')
-    rows.push([req ? 'ja' : 'nein', c.key, d?.label?.de ?? '', d?.type ?? '', d?.unit ?? '', c.locale ?? '', c.note ?? (list ? list.values.map(v => `${v.value} = ${v.label?.de ?? v.value}`).join(' · ') : '')])
+    rows.push([req ? 'ja' : 'nein', c.key, L(d?.label) ?? '', d?.type ?? '', d?.unit ?? '', c.locale ?? '', c.note ?? (list ? list.values.map(v => `${v.value} = ${L(v.label) ?? v.value}`).join(' · ') : '')])
   }
   return rows
 }

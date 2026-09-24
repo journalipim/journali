@@ -35,6 +35,13 @@ export const i18n = createI18n({
 /// Übersetzen ausserhalb von Vorlagen (Store, Dialoge, Plugins): t('…'), t('… {0} …', [x]), t('… {n} …', { n })
 export const t = (key, params) => i18n.global.t(key, params ?? {})
 
+/// Bezeichnung aus dem Modell ({ de, en, … }) in der Oberflächensprache (Taloan, 24.09.2026: „das erste“ — der Oberfläche
+/// folgen); fehlt sie, Deutsch, dann die erste vorhandene. In Vorlagen als $L, in Plugins über journali.L.
+export const L = labels => {
+  if (!labels || typeof labels !== 'object') return labels ?? ''
+  return labels[i18n.global.locale.value] ?? labels[DEFAULT_LANG] ?? Object.values(labels).find(v => v) ?? ''
+}
+
 const loaded = new Set([DEFAULT_LANG])
 // Plugins bringen ihre Sprachdateien mit: plugins/<key>/lang/<code>.json — der Server liefert sie wie das Modul
 // (GET /plugins/{key}/{path}). Registriert beim Laden des Plugins; beim Sprachwechsel werden alle nachgeladen.

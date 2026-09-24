@@ -15,6 +15,7 @@ import { norm, similarity } from './mapper.js'
 import { analyze } from './compliance-core.js'
 import { treePicker } from './treePicker.js'
 import { t as t_ } from './i18n.js'
+import { L } from './i18n.js'
 
 export function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) if (k != null) e.append(k); return e }
 
@@ -283,7 +284,7 @@ export async function mount(root, ctx, catalog) {
       tb.append(el('tr', { class: 'group-row' }, el('td', { colspan: '5' }, `▤ ${g.label}`, el('span', { class: 'muted', style: 'font-weight:400' }, ` · ${items.length}`))))
       for (const it of items) {
         const m = st.mapping[it.key]
-        const sel = m?.fixed ? el('span', { class: m.to ? '' : 'warn' }, m.to ? `${model.attributes.find(a => a.key === m.to)?.label?.de || m.to} · ${m.to}` : t_('— fehlt, wird angelegt —')) : el('select', { style: 'width:100%' }, el('option', { value: '' }, t_('— kein Attribut —')), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
+        const sel = m?.fixed ? el('span', { class: m.to ? '' : 'warn' }, m.to ? `${L(model.attributes.find(a => a.key === m.to)?.label) || m.to} · ${m.to}` : t_('— fehlt, wird angelegt —')) : el('select', { style: 'width:100%' }, el('option', { value: '' }, t_('— kein Attribut —')), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${L(a.label) || a.key} · ${a.key}`)))
         if (!m?.fixed) sel.value = m?.to ?? ''
         if (!m?.to) sel.style.color = 'var(--warn)'
         sel.addEventListener('change', () => { st.mapping[it.key] = { to: sel.value, why: t_('gewählt'), sure: true }; remember(); st.dirty = !!st.res; drawMapping(); drawResult() })
@@ -338,7 +339,7 @@ export async function mount(root, ctx, catalog) {
     if (it.source) rows.push([t_('Woher'), it.source])
     if (it.type) rows.push([t_('Form'), `${it.type}${it.unit ? ' in ' + it.unit : ''}${it.values ? ' — ' + it.values.slice(0, 8).join(', ') + (it.values.length > 8 ? ' …' : '') : ''}`])
     rows.push([t_('Pflicht'), it.level === 'must' ? t_('● Pflicht') : it.level === 'should' ? '◐ empfohlen' : '○ optional'])
-    const to = st.mapping[it.key]?.to; rows.push([t_('Attribut'), to ? `${store.model.attributes.find(a => a.key === to)?.label?.de || to} · ${to}` : t_('— noch keins —')])
+    const to = st.mapping[it.key]?.to; rows.push([t_('Attribut'), to ? `${L(store.model.attributes.find(a => a.key === to)?.label) || to} · ${to}` : t_('— noch keins —')])
     rows.push([t_('Hinweis'), t_('keine Rechtsberatung — Hinweis nach bestem Wissen, massgeblich ist der Rechtstext')])
     return dialog.help({ title: `${it.label} · ${catalog.label}`, rows })
   }
@@ -358,7 +359,7 @@ export async function mount(root, ctx, catalog) {
     for (const n of nodes) {
       const pend = n.pendingInfo?.[it.key]
       let inp
-      if (listVals) inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), ...listVals.map(v => el('option', { value: v.value }, v.label?.de || v.label?.en || v.value)))
+      if (listVals) inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), ...listVals.map(v => el('option', { value: v.value }, L(v.label) || v.label?.en || v.value)))
       else if (def?.type === 'boolean') inp = el('select', { style: 'width:220px' }, el('option', { value: '' }, '—'), el('option', { value: 'true' }, 'ja'), el('option', { value: 'false' }, 'nein'))
       else inp = el('input', { style: 'width:220px', placeholder: it.unit ? t_('Wert in {0}', [it.unit]) : t_('Wert') })
       const write = async () => { const v = inp.value.trim(); if (!v) return; try { await api.post(`/api/nodes/${encodeURIComponent(n.row.id)}/attributes`, { attribute: to, locale: null, channel: null, value: v, row: null }); written = true; state.textContent = '✓'; state.className = 'pos'; state.title = '' } catch (e) { state.textContent = '✗ ' + e.message; state.className = 'fehler'; state.title = e.message } }
@@ -408,7 +409,7 @@ export async function mount(root, ctx, catalog) {
     const hidden = r.nodes.length ? r.items.filter(it => r.byItem.get(it.key).na === r.nodes.length) : []
     // fehlendes Attribut: in der Zeile zuordnen (Auswahl) oder anlegen — nicht „siehe unter 3“
     const mapCell = it => {
-      const sel = el('select', { style: 'max-width:220px;color:var(--warn)' }, el('option', { value: '' }, 'zuordnen …'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${a.label?.de || a.key} · ${a.key}`)))
+      const sel = el('select', { style: 'max-width:220px;color:var(--warn)' }, el('option', { value: '' }, 'zuordnen …'), ...model.attributes.filter(a => !['rows', 'formula'].includes(a.type)).map(a => el('option', { value: a.key }, `${L(a.label) || a.key} · ${a.key}`)))
       sel.addEventListener('change', async () => { if (!sel.value) return; st.mapping[it.key] = { to: sel.value, why: t_('gewählt'), sure: true }; await remember(); await run() })
       const mk = el('button', { class: 'x', title: t_('Attribut {0} in Gruppe {1} anlegen', [(catalog.prefix ?? '') + it.key, catalog.groupKey]), onclick: async () => { say(t_('lege an …')); try { await createAttributes(catalog, [it], st.mapping); await remember(); say(''); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, '+ anlegen')
       mk.textContent = t_('+ anlegen in {0}', [catalog.groupKey])
@@ -418,7 +419,7 @@ export async function mount(root, ctx, catalog) {
     for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? t_('{0} selbst, {1} über die Varianten darunter', [c.ok, c.below]) : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), style: c.empty || c.pending ? 'cursor:pointer;text-decoration:underline dotted' : '', onclick: c.empty || c.pending ? () => fillList(it) : null, title: c.empty ? t_('{0} leer eintragen (Knoten für Knoten, Wert oder „angefragt bei …“)', [c.empty]) + (c.inactive ? ' ' + t_('· {0} ohne gültiges Attribut', [c.inactive]) : '') : c.inactive ? t_('davon {0} ohne gültiges Attribut (Gruppe nicht am Pfad)', [c.inactive]) : '' }, String(c.empty + c.inactive), c.pending ? el('span', { class: 'warn', title: t_('{0} Anfragen anzeigen (bei wem, bis wann)', [c.pending]) }, ` ⏳${c.pending}`) : null), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (hidden.length) sb.append(el('tr', {}, el('td', { class: 'muted', colspan: '5' }, t_('… {0} weitere Datenpunkte gelten an keinem der {1} Knoten (andere Klasse oder Rolle)', [hidden.length, r.nodes.length]))))
     // Gruppe fürs Anlegen: wählbar (vorhandene oder neuer Schlüssel), je Katalog gemerkt — steht am Knopf und in jeder Zeile
-    const grpSel = el('select', { title: t_('Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu') }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${(model.groups ?? []).find(g => g.key === k)?.label?.de || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, t_('+ neue Gruppe …')))
+    const grpSel = el('select', { title: t_('Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu') }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${L((model.groups ?? []).find(g => g.key === k)?.label) || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, t_('+ neue Gruppe …')))
     grpSel.value = catalog.groupKey
     grpSel.addEventListener('change', async () => { let k = grpSel.value; if (k === '__new__') { k = await dialog.prompt({ title: t_('Attributgruppe anlegen'), value: '', placeholder: t_('Schlüssel (a-z, 0-9, _)'), ok: t_('+ Anlegen') }); k = (k ?? '').trim().toLowerCase().replace(/[^a-z0-9_]+/g, '_'); if (!k) { grpSel.value = catalog.groupKey; return } } catalog.groupKey = k; await ctx.data.set('group', k).catch(() => {}); drawResult(); drawMapping() })
     const scopes = catalog.groups.filter(g => g.scope).map(g => g.scope)
@@ -493,7 +494,7 @@ export async function mount(root, ctx, catalog) {
       const pickBox = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:6;width:380px;display:none;padding:6px;background:var(--pane)' })
       treePicker(pickBox, { value: target?.id ?? null, roles: ['group', 'product'], height: 300, onPick: r2 => { target = r2; tBtn.textContent = `${r2.label} ▾`; pickBox.style.display = 'none' } })
       tBtn.addEventListener('click', () => { pickBox.style.display = pickBox.style.display === 'none' ? 'block' : 'none' })
-      s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, el('span', { class: 'warn' }, t_('⊘ {0} Werte gelten hier nicht — Gruppe {1} hängt an keinem Knoten des Pfads. Anhängen an', [n, groups.map(g => '„' + (store.model.groups.find(x => x.key === g)?.label?.de || g) + '“').join(', ')])),
+      s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, el('span', { class: 'warn' }, t_('⊘ {0} Werte gelten hier nicht — Gruppe {1} hängt an keinem Knoten des Pfads. Anhängen an', [n, groups.map(g => '„' + (L(store.model.groups.find(x => x.key === g)?.label) || g) + '“').join(', ')])),
         el('span', { style: 'position:relative' }, tBtn, pickBox),
         el('button', { class: 'primary', onclick: async () => {
           if (!target) return

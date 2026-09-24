@@ -11,6 +11,7 @@ import { dialog } from '../dialog.js'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 import { t } from '../i18n.js'
+import { L } from '../i18n.js'
 
 const listW = paneWidth('plugins.list', 380)
 const cur = ref(null)
@@ -30,7 +31,7 @@ const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? nu
 const manifest = computed(() => current.value?.manifest ?? {})
 // Dienste: process (Schlüssel '') und processes[] (Taloan, 19.09.: mehrere Dienste je Plugin)
 const services = computed(() => [...(manifest.value.process ? [{ key: '', ...manifest.value.process }] : []), ...(manifest.value.processes ?? [])])
-const label = m => m?.label?.de || m?.label?.en || ''
+const label = m => L(m?.label) || m?.label?.en || ''
 // Suche und Filter in der Liste (Taloan): Text über Key, Name, Beschreibung; Art (kind) und Zustand (an, aus, Update, nicht installiert)
 const q = ref('')
 const kindFilter = ref('')
@@ -40,7 +41,7 @@ const shown = computed(() => {
   const s = q.value.trim().toLowerCase()
   const list = plugins.list.filter(p => (!kindFilter.value || p.manifest?.kind === kindFilter.value)
     && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : !p.installed))
-    && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (p.manifest?.description?.de ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
+    && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (L(p.manifest?.description) ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
   return [...list].sort((a, b) => cmp(a, b) || a.key.localeCompare(b.key, 'de'))
 })
 
@@ -141,7 +142,7 @@ function pick(k) { cur.value = k }
       <span class="grow" /><span v-if="current.lastAt">{{ when(current.lastAt) }} 👤 {{ current.lastActor }}</span>
     </div>
     <div class="scroll">
-      <p style="padding:8px 8px 0">{{ manifest.description?.de || manifest.description?.en || '' }}</p>
+      <p style="padding:8px 8px 0">{{ $L(manifest.description) || manifest.description?.en || '' }}</p>
       <!-- Basis-Plugin und Abhängigkeiten (Taloan, 19.09.): Basis = Grundfunktion einer Gruppe und Container für Ergänzungen -->
       <div class="chips" style="padding:4px 8px" v-if="manifest.base?.length || manifest.requires?.length || plugins.dependents(current.key).length">
         <span v-if="manifest.base?.length" class="chip" :title="$t('Basis-Plugin: Grundfunktion dieser Gruppe(n) der Leiste — solange es an ist, ist die Gruppe da')">{{ $t("◆ Basis · {0}", [manifest.base.map(t => TOPIC_LABEL[t] ?? t).join(', ')]) }}</span>

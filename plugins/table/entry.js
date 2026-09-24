@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-8b4c8ae5] { overflow-x: auto;\n}\ntable.map[data-v-8b4c8ae5] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-8b4c8ae5] { overflow-x: auto;\n}\ntable.cols[data-v-8b4c8ae5] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-8b4c8ae5] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-8b4c8ae5] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-8b4c8ae5] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-8b4c8ae5] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-8b4c8ae5] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-8b4c8ae5] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-8b4c8ae5] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-8b4c8ae5] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-8b4c8ae5] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-8b4c8ae5], .tstep input[type=text][data-v-8b4c8ae5] { font-size: 12px;\n}\n.fld[data-v-8b4c8ae5] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\r\n/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */\n.tabs[data-v-8b4c8ae5] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-8b4c8ae5] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-8b4c8ae5]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-8b4c8ae5]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-8b4c8ae5]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-8b4c8ae5] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-8b4c8ae5] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-8b4c8ae5] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-8b4c8ae5] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-8b4c8ae5] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-8b4c8ae5] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-8b4c8ae5] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-8b4c8ae5] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-8b4c8ae5] { font-weight: 400;\n}\n.drop.over[data-v-8b4c8ae5] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-8b4c8ae5] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-8b4c8ae5] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-8b4c8ae5] { cursor: pointer;\n}\n.recent .chip.dim[data-v-8b4c8ae5] { opacity: .55; cursor: default;\n}\n.btn[data-v-8b4c8ae5] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-8b4c8ae5] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-8b4c8ae5] { opacity: .5;\n}\n.samples[data-v-8b4c8ae5] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-8b4c8ae5] { font-size: 13px;\n}\n.out[data-v-8b4c8ae5] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-8b4c8ae5] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-8b4c8ae5] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-8b4c8ae5]:hover { background: var(--hover);\n}\r\n\n.form[data-v-d8f1467c] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-d8f1467c] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-d8f1467c] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-d8f1467c] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-d8f1467c] { flex: 1; min-width: 0;\n}\n.tab[data-v-d8f1467c] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-d8f1467c], .tab.router-link-active[data-v-d8f1467c] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\r\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */\n.section[data-v-1484f93f] { overflow-x: auto;\n}\ntable.map[data-v-1484f93f] { min-width: 960px;\n}\r\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-1484f93f] { overflow-x: auto;\n}\ntable.cols[data-v-1484f93f] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-1484f93f] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-1484f93f] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-1484f93f] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-1484f93f] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-1484f93f] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-1484f93f] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\r\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-1484f93f] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-1484f93f] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-1484f93f] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-1484f93f], .tstep input[type=text][data-v-1484f93f] { font-size: 12px;\n}\n.fld[data-v-1484f93f] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\r\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\r\n/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */\n.tabs[data-v-1484f93f] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-1484f93f] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-1484f93f]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-1484f93f]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-1484f93f]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-1484f93f] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-1484f93f] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-1484f93f] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-1484f93f] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-1484f93f] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\r\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */\n.x.on[data-v-1484f93f] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-1484f93f] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-1484f93f] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-1484f93f] { font-weight: 400;\n}\n.drop.over[data-v-1484f93f] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\r\n/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */\n.drop.empty[data-v-1484f93f] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-1484f93f] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-1484f93f] { cursor: pointer;\n}\n.recent .chip.dim[data-v-1484f93f] { opacity: .55; cursor: default;\n}\n.btn[data-v-1484f93f] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-1484f93f] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-1484f93f] { opacity: .5;\n}\n.samples[data-v-1484f93f] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-1484f93f] { font-size: 13px;\n}\n.out[data-v-1484f93f] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-1484f93f] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-1484f93f] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-1484f93f]:hover { background: var(--hover);\n}\r\n\n.form[data-v-f52636d0] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-f52636d0] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-f52636d0] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-f52636d0] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-f52636d0] { flex: 1; min-width: 0;\n}\n.tab[data-v-f52636d0] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-f52636d0], .tab.router-link-active[data-v-f52636d0] { background: var(--accent-soft); color: var(--text);\n}\r\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -40,6 +40,7 @@ const recentFiles = h.recentFiles;
 const paneWidth = h.paneWidth;
 const plugins = h.plugins;
 const t = h.t;
+const L$1 = h.L;
 const Splitter = h.Splitter;
 const ImportHead = h.ImportHead;
 const TreePicker = h.TreePicker;
@@ -868,7 +869,7 @@ const _sfc_main$1 = {
     });
     const attrLabel = (key) => {
       const a = attrs.value.find((x) => x.key === key) ?? store.model?.attributes?.find((x) => x.key === key);
-      return a?.label?.de || key;
+      return L$1(a?.label) || key;
     };
     function fixCell(inv, v) {
       source.value.rows[inv.row][inv.column] = v;
@@ -1579,7 +1580,7 @@ const _sfc_main$1 = {
                                       return openBlock(), createElementBlock("option", {
                                         key: a.key,
                                         value: a.key
-                                      }, toDisplayString(a.label?.de || a.key) + " · " + toDisplayString(a.key), 9, _hoisted_66);
+                                      }, toDisplayString(_ctx.$L(a.label) || a.key) + " · " + toDisplayString(a.key), 9, _hoisted_66);
                                     }),
                                     128
                                     /* KEYED_FRAGMENT */
@@ -1634,7 +1635,7 @@ const _sfc_main$1 = {
                                         return openBlock(), createElementBlock("option", {
                                           key: g.key,
                                           value: g.key
-                                        }, "▤ " + toDisplayString(g.label?.de || g.key), 9, _hoisted_73);
+                                        }, "▤ " + toDisplayString(_ctx.$L(g.label) || g.key), 9, _hoisted_73);
                                       }),
                                       128
                                       /* KEYED_FRAGMENT */
@@ -2322,7 +2323,7 @@ const _sfc_main$1 = {
                                           return openBlock(), createElementBlock("option", {
                                             key: a.key,
                                             value: a.key
-                                          }, toDisplayString(a.label?.de || a.key) + " · " + toDisplayString(a.key), 9, _hoisted_141);
+                                          }, toDisplayString(_ctx.$L(a.label) || a.key) + " · " + toDisplayString(a.key), 9, _hoisted_141);
                                         }),
                                         128
                                         /* KEYED_FRAGMENT */
@@ -2380,7 +2381,7 @@ const _sfc_main$1 = {
                                             return openBlock(), createElementBlock("option", {
                                               key: g.key,
                                               value: g.key
-                                            }, "▤ " + toDisplayString(g.label?.de || g.key), 9, _hoisted_148);
+                                            }, "▤ " + toDisplayString(_ctx.$L(g.label) || g.key), 9, _hoisted_148);
                                           }),
                                           128
                                           /* KEYED_FRAGMENT */
@@ -3366,7 +3367,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-8b4c8ae5"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-1484f93f"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], at = null, say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
@@ -3488,6 +3489,7 @@ function workbook(X, { columns, rows }, legendRows = null, sheet = "Daten") {
   }
   return wb;
 }
+const L = (l) => globalThis.journali?.L ? globalThis.journali.L(l) : l?.de ?? Object.values(l ?? {})[0] ?? "";
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m2, i) => p?.[i] ?? m2);
 const download = (blob, name) => {
   const a = document.createElement("a");
@@ -3535,7 +3537,7 @@ function legend(columns) {
     const d = c.def ?? (c.attr ? model.attributes.find((a) => a.key === c.attr) : null);
     const list = d?.list ? model.lists.find((l) => l.key === d.list) : null;
     const req = d?.required && (typeof d.required !== "object" || Object.keys(d.required).length) || c.key.startsWith("axis:");
-    rows.push([req ? "ja" : "nein", c.key, d?.label?.de ?? "", d?.type ?? "", d?.unit ?? "", c.locale ?? "", c.note ?? (list ? list.values.map((v) => `${v.value} = ${v.label?.de ?? v.value}`).join(" · ") : "")]);
+    rows.push([req ? "ja" : "nein", c.key, L(d?.label) ?? "", d?.type ?? "", d?.unit ?? "", c.locale ?? "", c.note ?? (list ? list.values.map((v) => `${v.value} = ${L(v.label) ?? v.value}`).join(" · ") : "")]);
   }
   return rows;
 }
@@ -3935,7 +3937,7 @@ const _sfc_main = {
                         return openBlock(), createElementBlock("option", {
                           key: v.key,
                           value: v.key
-                        }, "◫ " + toDisplayString(v.label?.de || v.key) + " (" + toDisplayString(v.level) + ")", 9, _hoisted_19);
+                        }, "◫ " + toDisplayString(_ctx.$L(v.label) || v.key) + " (" + toDisplayString(v.level) + ")", 9, _hoisted_19);
                       }),
                       128
                       /* KEYED_FRAGMENT */
@@ -4172,7 +4174,7 @@ const _sfc_main = {
     };
   }
 };
-const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-d8f1467c"]]);
+const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-f52636d0"]]);
 const roles = ["group", "product"];
 const entry = {
   views: [

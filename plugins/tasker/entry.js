@@ -6,6 +6,7 @@
 /// Braucht dieser Prozess zwingend ein Profil? Steht „leer“ im Namen des Feldes („Profil — … (leer = Werte unten)“),
 /// geht es auch ohne: dann stehen die Werte im Job selbst. Sonst kann der Job ohne Profil nicht laufen
 /// (Taloan, 23.09.2026: die Sicherung liess sich ohne Profil nicht speichern, obwohl das Feld „(leer)“ anbietet).
+const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 export function profilPflicht(profileDef) {
   return !!profileDef && !/leer/.test(profileDef.label ?? '')
@@ -292,7 +293,7 @@ async function mount(root, ctx) {
       if (!await dialog.confirm({ title: t('Profil „{0}“ löschen?', [n]), text: t('Jobs, die es nennen, laufen dann ohne diese Werte.'), ok: t('🗑 Löschen'), danger: true })) return
       try { await api.del(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`); await api.del(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => {}); await loadNames(''); await loadOne(''); onDone?.('') } catch (e) { store.toast(e.message) }
     }
-    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, t('✎ Profile · {0}', [(typeof p.label === 'string' ? p.label : p.label?.de) || p.key])),
+    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, t('✎ Profile · {0}', [(typeof p.label === 'string' ? p.label : L(p.label)) || p.key])),
       el('div', { style: 'display:flex;gap:6px' }, sel, nameIn, el('button', { type: 'button', class: 'x', title: t('Profil löschen'), onclick: del }, '🗑')),
       form,
       el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;align-items:center' }, status, el('span', { class: 'grow' }), el('button', { type: 'button', onclick: close }, t('Abbrechen')), el('button', { type: 'button', class: 'primary', onclick: save }, t('💾 Speichern'))))
@@ -312,7 +313,7 @@ async function mount(root, ctx) {
     const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: t('Bezeichnung'), style: 'width:100%' })
     // ein Eintrag je Dienst (Taloan: mehrere Dienste je Plugin); Wert = plugin|service
     const svcId = p => `${p.key}|${p.service ?? ''}`
-    const svcLabel = p => (typeof p.label === 'string' ? p.label : p.label?.de) || p.key
+    const svcLabel = p => (typeof p.label === 'string' ? p.label : L(p.label)) || p.key
     const pluginSel = el('select', { style: 'width:100%' },
       ...[...st.plugins].sort((a, b) => svcLabel(a).localeCompare(svcLabel(b), 'de'))
         .map(p => el('option', { value: svcId(p), title: p.description ?? '' }, svcLabel(p))))   // nur der Name (Taloan: zu viel Text)

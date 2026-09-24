@@ -4,20 +4,21 @@
 // wie DPP/PPWR/ETIM) zeigt je Knoten, was leer ist, und holt Vorschläge: aus Regeln, von der KI aus den vorhandenen Werten,
 // oder mit Recherche im Internet (Hersteller, Typ, EAN → Datenblatt) — jeder Wert mit Quelle, nichts wird ohne Haken geschrieben.
 // Der Katalog ist hier kein Gesetz, sondern die Auswahl des Nutzers (ctx.data „attributes“).
+const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
 const TYPE = { integer: 'decimal', decimal: 'decimal', boolean: 'boolean', date: 'date', enum: 'enum', text: 'text', html: 'text' }
 
 /// Katalog aus gewählten Attributen: jedes Attribut ein Pflicht-Datenpunkt, Zuordnung auf sich selbst
 function buildCatalog(model, keys, locale) {
-  const lbl = a => a.label?.[locale] || a.label?.de || a.key
+  const lbl = a => a.label?.[locale] || L(a.label) || a.key
   const byGroup = new Map()
   for (const a of model.attributes.filter(a => keys.includes(a.key))) {
     const g = a.group || ''; if (!byGroup.has(g)) byGroup.set(g, [])
     const list = a.type === 'enum' && a.list ? model.lists.find(l => l.key === a.list) : null
     byGroup.get(g).push({
       key: a.key, label: lbl(a), level: 'must', type: TYPE[a.type] ?? 'text', unit: a.unit ?? null, perLocale: !!a.perLocale,
-      values: list ? list.values.map(v => v.label?.[locale] || v.label?.de || v.value) : null,
+      values: list ? list.values.map(v => v.label?.[locale] || L(v.label) || v.value) : null,
       synonyms: [a.key, ...Object.values(a.label ?? {})],
       hint: a.pattern ? t('Muster: {0}', [a.patternHint || a.pattern]) : a.type === 'html' ? 'HTML-Text' : '',
     })
@@ -35,7 +36,7 @@ async function mount(root, ctx) {
   const { store, tree } = ctx
   if (!tree.loaded) await tree.load()
   const model = store.model; const locale = model.masterLocale ?? 'de'
-  const lbl = a => a.label?.[locale] || a.label?.de || a.key
+  const lbl = a => a.label?.[locale] || L(a.label) || a.key
   const st = { keys: (await ctx.data.get('attributes')) ?? [], q: '', open: false }
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const head = el('div', { style: 'flex:none;border-bottom:1px solid var(--line);padding:6px 8px' })

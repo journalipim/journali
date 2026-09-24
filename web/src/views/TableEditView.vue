@@ -17,6 +17,7 @@ import SelectCell from '../components/SelectCell.vue'
 import DateCell from '../components/DateCell.vue'
 import HtmlCell from '../components/HtmlCell.vue'
 import { t as t_ } from '../i18n.js'
+import { L } from '../i18n.js'
 
 const props = defineProps({ id: String, role: String, deep: String, attrs: String })   // attrs: Spalten fest vorgegeben (Taloan, 22.09.: ETIM-Merkmale einer Klasse)
 const router = useRouter()
@@ -61,10 +62,10 @@ const VIRTUAL = [
 const labelKeyOf = r => r.row.labelAttribute ?? (r.row.name ? null : baseColumns.value[0]?.key ?? null)
 const labelCol = r => { const k = labelKeyOf(r); return k ? data.value?.columns.find(c => c.key === k) ?? null : null }
 const commonDef = computed(() => commonLabel.value ? data.value?.columns.find(x => x.key === commonLabel.value) : null)
-const headText = c => c.virtual === 'label' ? '★ ' + (commonDef.value ? store.name(commonDef.value) : roleLabel[childRole.value]) : c.virtual ? (c.label?.de || c.key) : store.name(c)
+const headText = c => c.virtual === 'label' ? '★ ' + (commonDef.value ? store.name(commonDef.value) : roleLabel[childRole.value]) : c.virtual ? (L(c.label) || c.key) : store.name(c)
 const headLocale = c => c.perLocale || (c.virtual === 'label' && commonDef.value?.perLocale)
 const headTitle = c => c.virtual === 'label'
-  ? (commonDef.value ? t_('★ {0} benennt alle Zeilen — hier bearbeiten', [commonDef.value.label?.de || commonDef.value.key]) : t_('je Zeile ihr ★-Attribut (Tooltip an der Zelle); fixierte Namen sind fest'))
+  ? (commonDef.value ? t_('★ {0} benennt alle Zeilen — hier bearbeiten', [L(commonDef.value.label) || commonDef.value.key]) : t_('je Zeile ihr ★-Attribut (Tooltip an der Zelle); fixierte Namen sind fest'))
   : c.virtual ? 'fest' : `${c.key} · ${c.type}${c.perLocale ? ' · sprachabhängig' : ''}${c.unit ? ' · ' + c.unit : ''}`
 // Die wirkliche Spalte hinter einer Zelle: bei #label das ★-Attribut der Zeile
 const eff = (r, c) => c.virtual === 'label' ? labelCol(r) : c
@@ -77,7 +78,7 @@ const kindOf = c => c.virtual ? '' : c.unique ? 'info' : axisKeys.value.has(c.ke
 // Spaltenfilter (Taloan, 20.09.): das Feld neben der Sicht sucht Spalten (Name oder Schlüssel), nicht Inhalte
 const colMatch = c => { const q = filter.value.trim().toLowerCase(); return !q || store.name(c).toLowerCase().includes(q) || c.key.toLowerCase().includes(q) }
 const tab = ref('')   // '' = alle, sonst Schlüssel der Attributgruppe
-const tabs = computed(() => { const keys = new Set((data.value?.columns ?? []).map(c => c.key)); return (model.value?.groups ?? []).map(g => ({ key: g.key, label: g.label?.de || g.label?.en || g.key, n: (g.attributes ?? []).filter(k => keys.has(k)).length })).filter(g => g.n > 0) })
+const tabs = computed(() => { const keys = new Set((data.value?.columns ?? []).map(c => c.key)); return (model.value?.groups ?? []).map(g => ({ key: g.key, label: L(g.label) || g.label?.en || g.key, n: (g.attributes ?? []).filter(k => keys.has(k)).length })).filter(g => g.n > 0) })
 const inTab = c => !tab.value || (model.value?.groups.find(g => g.key === tab.value)?.attributes ?? []).includes(c.key)
 watch(tabs, ts => { if (tab.value && !ts.some(g => g.key === tab.value)) tab.value = '' })
 const attrColumns = computed(() => { const base = baseColumns.value.filter(c => c.key !== commonLabel.value && colMatch(c) && inTab(c)); if (viewKey.value) return base; const rank = c => c.unique ? -1 : axisKeys.value.has(c.key) ? 0 : isReq(c) ? 1 : 2; return [...base].sort((a, b) => rank(a) - rank(b)) })
@@ -612,7 +613,7 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
       <span class="muted">{{ $t("Sprache") }}</span>
       <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: locale === l }" @click="locale = l">{{ l }}</span>
       <span class="sep">·</span>
-      <select v-model="viewKey" :title="$t('Attributsicht: welche Spalten, in welcher Reihenfolge')"><option value="">{{ $t("◫ alle Attribute ({0})", [data.columns.length]) }}</option><option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option></select>
+      <select v-model="viewKey" :title="$t('Attributsicht: welche Spalten, in welcher Reihenfolge')"><option value="">{{ $t("◫ alle Attribute ({0})", [data.columns.length]) }}</option><option v-for="v in views" :key="v.key" :value="v.key">◫ {{ $L(v.label) || v.key }}</option></select>
       <input v-model="filter" type="search" :placeholder="$t('Spalte …')" style="width:160px" :title="$t('Spalten nach Name oder Schlüssel filtern')" />
       <span v-if="filter" class="muted">{{ $t("{0} von {1}", [attrColumns.length, data.columns.length]) }}</span>
       <span class="grow" />
@@ -646,7 +647,7 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
               <!-- ★-Spalte: die Zelle des Attributs, das diese Zeile benennt; ohne ★ (fixierter Name, SKU/Id) nur lesend -->
               <td v-if="c.virtual === 'label' && !labelCol(r)" class="cell label" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="r.row.name ? $t('fixierter Name (Rechtsklick im Baum → Benennung lösen)') : $t('kein ★-Attribut gilt hier — Name aus SKU/Achsen/Id')">{{ icon(r.row.role) }} {{ r.row.label }}</div></td>
               <SelectCell v-else-if="c.virtual === 'label' && labelCol(r).type === 'enum' && !labelCol(r).multiple" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(labelCol(r))?.values.map(v => v.value) ?? []" :label-of="labelOf(labelCol(r))" :required="!!labelCol(r).required" :list="labelCol(r).list" @save="v => set(r, c, v)" />
-              <Cell v-else-if="c.virtual === 'label'" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :origin="`★ ${labelCol(r).label?.de || labelCol(r).key}`" :suggest="suggestionsOf(c)" @save="v => set(r, c, v)" />
+              <Cell v-else-if="c.virtual === 'label'" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :origin="`★ ${$L(labelCol(r).label) || labelCol(r).key}`" :suggest="suggestionsOf(c)" @save="v => set(r, c, v)" />
               <td v-else-if="c.virtual" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked mono" tabindex="0" :title="$t('Variantenachsen — fest')">{{ inherited(r, c) ?? '' }}</div></td>
               <td v-else-if="inactive(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box disabled" tabindex="0" :title="$t('gilt an diesem Knoten nicht')"></div></td>
               <td v-else-if="!editable(c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="c.type + ' ' + $t('— in der Knotenansicht bearbeiten')" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}</div></td>

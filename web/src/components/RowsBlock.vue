@@ -33,7 +33,7 @@ function move(i, d) {
     <thead>
       <tr>
         <th class="num">#</th>
-        <th v-for="c in columns" :key="c.key" :title="c.key">{{ c.label?.de || c.key }}<span v-if="c.unit" class="muted" style="margin-left:4px">{{ c.unit }}</span><span v-if="c.perLocale" class="muted" style="margin-left:4px">{{ locale }}</span></th>
+        <th v-for="c in columns" :key="c.key" :title="c.key">{{ $L(c.label) || c.key }}<span v-if="c.unit" class="muted" style="margin-left:4px">{{ c.unit }}</span><span v-if="c.perLocale" class="muted" style="margin-left:4px">{{ locale }}</span></th>
         <th style="width:70px"></th>
       </tr>
     </thead>
@@ -41,7 +41,7 @@ function move(i, d) {
       <tr v-for="(row, i) in rows" :key="row">
         <td class="num muted">{{ i + 1 }}</td>
         <component v-for="c in columns" :key="c.key" :is="cellType(c)" :value="val(c, row)" :options="c.type === 'enum' ? listOptions(c) : undefined" :list="c.type === 'enum' ? c.list : undefined"
-          :title="c.label?.de || c.key" @save="v => emit('set', c, row, v)" />
+          :title="$L(c.label) || c.key" @save="v => emit('set', c, row, v)" />
         <td class="num ops">
           <button class="x" @click="move(i, -1)" :disabled="i === 0" :title="$t('nach oben')">↑</button>
           <button class="x" @click="move(i, 1)" :disabled="i === rows.length - 1" :title="$t('nach unten')">↓</button>

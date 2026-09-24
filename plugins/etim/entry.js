@@ -9,6 +9,7 @@
 // hat ƒ (Umwandlungskette); die Regeln der Ausleitung (unbekannt, Klasse Pflicht, Vollständigkeit) stehen im BMEcat-Profil (xport).
 import { parseIxf, classRecord, nameOf, classText, featureText, featuresOf, checkNode, resolveValue, gate, mapEntry, throughSteps, audit, variantOf, releaseKey, readiness, isZip, ixfInZip, inflateInBrowser } from './core.mjs'
 import { OPS, FIELDS, FIELD_LABEL, FIELD_HINT, DATE_FORMATS, YES_DEFAULT, describe as describeSteps, opHint } from '../table/transform.mjs'
+const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else if (k === 'disabled') { if (v) e.setAttribute(k, '') } else if (v != null && v !== false) e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
@@ -213,7 +214,7 @@ function modelOps(ctx) {
   }
   /// Alte, fest angelegte Klassensichten wegräumen — im Modell stehen nur Sichten, die der Anwender anlegt (Taloan, 22.09.2026).
   async function dropOldViews() {
-    const mine = (model().views ?? []).filter(v => /^etim_ec\d{6}_(group|product|variant)$/.test(v.key) && String(v.label?.de ?? '').startsWith('⌗ '))
+    const mine = (model().views ?? []).filter(v => /^etim_ec\d{6}_(group|product|variant)$/.test(v.key) && String(L(v.label) ?? '').startsWith('⌗ '))
     for (const v of mine) await api.del(`/api/model/views/${encodeURIComponent(v.key)}`).catch(() => {})
     return mine.length
   }
@@ -643,7 +644,7 @@ async function mount(root, ctx) {
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 8px' })
   const attrs = () => model().attributes.filter(a => a.type !== 'rows')
-  const lbl = a => a.label?.[locale] || a.label?.de || a.key
+  const lbl = a => a.label?.[locale] || L(a.label) || a.key
   const ops = modelOps(ctx); const hasAttr = ops.hasAttr
   const saveSettings = () => ctx.data.set('settings', cache.settings)
   const saveMap = async () => { await ctx.data.set('map', cache.map); store.toast(t_('✓ Zuordnung gespeichert'), 'ok') }   // jede Änderung sofort (Taloan, 22.09.: „muss ich speichern?“)
@@ -977,7 +978,7 @@ async function mount(root, ctx) {
     // Gruppe der ETIM-Daten: „etim“ legen wir an (Attribute direkt zugewiesen); eine vorhandene Gruppe heißt: hier zuordnen (Best Guess über die Namen)
     const groupSel = el('select', { title: t_('Attributgruppe der ETIM-Daten — gibt es sie nicht, wird sie angelegt'), onchange: e => { cache.settings.group = e.target.value; saveSettings(); draw() } },
       el('option', { value: 'etim' }, `etim${(model().groups ?? []).some(g => g.key === 'etim') ? '' : ' (anlegen)'}`),
-      ...(model().groups ?? []).filter(g => g.key !== 'etim').map(g => el('option', { value: g.key }, `${g.label?.[locale] || g.label?.de || g.key} (${g.key})`)))
+      ...(model().groups ?? []).filter(g => g.key !== 'etim').map(g => el('option', { value: g.key }, `${g.label?.[locale] || L(g.label) || g.key} (${g.key})`)))
     groupSel.value = groupKey()
     const inGroup = () => attrs().filter(a => a.group === groupKey())
     const guessInGroup = () => {   // ETIM-Attribut → Attribut der gewählten Gruppe nach Namen (alle Sprachen, Code)

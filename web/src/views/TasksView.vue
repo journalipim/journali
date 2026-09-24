@@ -7,6 +7,7 @@ import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { icon } from '../tree.js'
 import { t as t_ } from '../i18n.js'
+import { L } from '../i18n.js'
 
 const tasks = ref([]); const defs = ref([]); const wf = ref(''); const state = ref(''); const busy = ref('')
 const color = c => ({ pos: 'var(--pos)', neg: 'var(--neg)', warn: 'var(--warn)', accent: 'var(--accent)' })[c] ?? 'var(--muted)'
@@ -30,7 +31,7 @@ async function assign(t) {
 }
 async function step(t, tr) {
   let note = null
-  if (tr.noteRequired) { note = await dialog.prompt({ title: `${tr.label?.de || tr.key} · ${t.label}`, text: 'Notiz (Pflicht)', placeholder: t_('Notiz'), ok: `⚑ ${tr.label?.de || tr.key}` }); if (!note?.trim()) return }
+  if (tr.noteRequired) { note = await dialog.prompt({ title: `${L(tr.label) || tr.key} · ${t.label}`, text: 'Notiz (Pflicht)', placeholder: t_('Notiz'), ok: `⚑ ${L(tr.label) || tr.key}` }); if (!note?.trim()) return }
   try { await api.post(`/api/nodes/${encodeURIComponent(t.node)}/workflow/${t.workflow}/${tr.key}`, { note }); await store.poll(true); await load() } catch (e) { store.toast(e.message) }
 }
 const age = iso => { if (!iso) return ''; const d = (Date.now() - new Date(iso)) / 864e5; return d < 1 ? 'heute' : d < 2 ? 'gestern' : t_('{0} Tage', [Math.floor(d)]) }
@@ -41,8 +42,8 @@ onMounted(load)
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>{{ $t("⚑ Aufgaben") }}</h1><span class="muted">{{ tasks.length }}</span><span class="grow" /><span class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:6px">
-      <select v-model="wf" @change="state = ''; load()"><option value="">{{ $t("alle Workflows") }}</option><option v-for="d in defs" :key="d.key" :value="d.key">{{ d.label?.de || d.key }}</option></select>
-      <select v-model="state" @change="load" :disabled="!wf" :title="$t('Zustand — leer: alles, wo meine Rolle dran ist')"><option value="">{{ $t("wo ich dran bin") }}</option><option v-for="s in states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }} ({{ s.count }})</option></select>
+      <select v-model="wf" @change="state = ''; load()"><option value="">{{ $t("alle Workflows") }}</option><option v-for="d in defs" :key="d.key" :value="d.key">{{ $L(d.label) || d.key }}</option></select>
+      <select v-model="state" @change="load" :disabled="!wf" :title="$t('Zustand — leer: alles, wo meine Rolle dran ist')"><option value="">{{ $t("wo ich dran bin") }}</option><option v-for="s in states" :key="s.key" :value="s.key">{{ $L(s.label) || s.key }} ({{ s.count }})</option></select>
       <button class="x" @click="load" :title="$t('neu laden')">⟳</button>
     </div>
     <div class="scroll">
@@ -56,7 +57,7 @@ onMounted(load)
             <td class="muted" :title="t.since ? `${when(t.since)} · ${t.actor}` : ''">{{ age(t.since) }}</td>
             <td class="muted" style="width:300px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="t.note ?? ''">{{ t.note }}</td>
             <td><button class="x" @click="assign(t)" :title="t.assigned ? $t('Zuständigen ändern (jetzt {0})', [t.assigned]) : $t('Zuständigen zuweisen')">{{ t.assigned ? '👤 ' + t.assigned : '👤' }}</button></td>
-            <td class="row" style="gap:4px;flex-wrap:wrap"><button v-for="tr in t.transitions" :key="tr.key" @click="step(t, tr)" :title="tr.noteRequired ? $t('Notiz Pflicht') : (tr.effects?.join(', ') ?? '')">{{ tr.label?.de || tr.key }} →</button></td>
+            <td class="row" style="gap:4px;flex-wrap:wrap"><button v-for="tr in t.transitions" :key="tr.key" @click="step(t, tr)" :title="tr.noteRequired ? $t('Notiz Pflicht') : (tr.effects?.join(', ') ?? '')">{{ $L(tr.label) || tr.key }} →</button></td>
           </tr>
         </tbody>
       </table>

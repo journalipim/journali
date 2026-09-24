@@ -23,6 +23,7 @@ import SelectCell from '../components/SelectCell.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 import { t } from '../i18n.js'
+import { L } from '../i18n.js'
 const listW = paneWidth('model.list', 340)
 
 const sections = [
@@ -104,16 +105,16 @@ const rows = computed(() => {
     case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.unique ? '①' : '', a.releaseWatch === 'always' ? '⚑' : a.releaseWatch === 'never' ? '⚐' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan); ① eindeutig
     case 'lists': return m.lists.map(l => ({ key: l.key, label: anyLabel(l.label), right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: anyLabel(v.label), right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
-    case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
+    case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: L(u.label), right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
     // rechts nur, was eingeschränkt ist — keine Symbolketten (Taloan: „komische Zeichen“): „→ Medium“, „Produkt → Variante“, „⇄ beidseitig“, Gruppe mit Label
     case 'relationTypes': return (m.relationTypes ?? []).map(r => {
       const names = xs => xs.map(x => x === 'media' ? t('Medium') : roleLabel[x] ?? x).join('/')
       const ends = (r.from ? names(r.from) + ' ' : '') + (r.symmetric ? '⇄' : '→') + (r.to ? ' ' + names(r.to) : '')
-      return { key: r.key, label: r.label?.de, right: [r.from || r.to || r.symmetric ? ends + (r.symmetric ? ' beidseitig' : '') : '', r.group ? '▤ ' + groupLabel(r.group) : ''], _: r }
+      return { key: r.key, label: L(r.label), right: [r.from || r.to || r.symmetric ? ends + (r.symmetric ? ' beidseitig' : '') : '', r.group ? '▤ ' + groupLabel(r.group) : ''], _: r }
     }).sort(byKey)
     case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? t('★ Master') : l.fallback ? '↩ ' + l.fallback : ''] }))
-    case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [m.masterChannel === c.key ? t('★ Master') : c.fallback ? '↩ ' + c.fallback : ''] }))
-    case 'statuses': return (m.statuses ?? []).map(s => ({ key: s.key, label: `${s.icon ?? ''} ${s.label?.de ?? ''}`.trim(), right: [s.key === 'draft' ? t('Start') : '', String(s.order ?? 0)], _: s }))
+    case 'channels': return m.channels.map(c => ({ key: c.key, label: L(c.label), right: [m.masterChannel === c.key ? t('★ Master') : c.fallback ? '↩ ' + c.fallback : ''] }))
+    case 'statuses': return (m.statuses ?? []).map(s => ({ key: s.key, label: `${s.icon ?? ''} ${L(s.label) ?? ''}`.trim(), right: [s.key === 'draft' ? t('Start') : '', String(s.order ?? 0)], _: s }))
   }
   return []
 })
@@ -187,7 +188,7 @@ function rowMenu(e, r) {
   if (!sel.value.has(r.key)) { sel.value = new Set([r.key]); cur.value = r.key; anchor.value = r.key }
   const keys = [...sel.value]; const p = removePath[section.value]
   const blocked = keys.map(k => [k, blockFor(k)]).filter(([, b]) => b)
-  const label = r.label?.de || r.key
+  const label = L(r.label) || r.key
   menu.open(e, [
     { label: keys.length > 1 ? t('{0} {1} gewählt', [keys.length, sec.value.label]) : `${sec.value.one} ${label}`, disabled: true },
     { sep: true },
@@ -240,7 +241,7 @@ const picked = ref(new Set())
 const pickRows = computed(() => {
   const f = pickText.value.trim().toLowerCase()
   return otherAttrs.value.filter(a => (pickFrom.value === '' || (pickFrom.value === '-' ? !a.group : a.group === pickFrom.value))
-    && (!f || a.key.includes(f) || (a.label?.de ?? '').toLowerCase().includes(f)))
+    && (!f || a.key.includes(f) || (L(a.label) ?? '').toLowerCase().includes(f)))
 })
 const pickSources = computed(() => {
   const n = new Map()
@@ -307,14 +308,14 @@ const busy = ref(false)
 async function removeGroupDeep(key = null) {
   const g = key ? (model.value?.groups ?? []).find(x => x.key === key) : curGroup.value; if (!g) return
   const attrs = (model.value?.attributes ?? []).filter(a => a.group === g.key)
-  if (!await dialog.confirm({ title: t('Gruppe {0} mit {1} Attributen zurückziehen?', [g.label?.de || g.key, attrs.length]), text: attrs.length ? t('Zurückgezogen werden: {0}{1}.', [attrs.slice(0, 8).map(a => a.label?.de || a.key).join(', '), attrs.length > 8 ? ` … +${attrs.length - 8}` : '']) : '', warn: t('Werte bleiben im Journal — die Attribute sind danach nicht mehr im Modell.'), ok: t('✕ Zurückziehen'), danger: true })) return
+  if (!await dialog.confirm({ title: t('Gruppe {0} mit {1} Attributen zurückziehen?', [L(g.label) || g.key, attrs.length]), text: attrs.length ? t('Zurückgezogen werden: {0}{1}.', [attrs.slice(0, 8).map(a => L(a.label) || a.key).join(', '), attrs.length > 8 ? ` … +${attrs.length - 8}` : '']) : '', warn: t('Werte bleiben im Journal — die Attribute sind danach nicht mehr im Modell.'), ok: t('✕ Zurückziehen'), danger: true })) return
   const kept = []
   busy.value = true
   try {
     for (const a of attrs) { try { await api.del(`/api/model/attributes/${encodeURIComponent(a.key)}`) } catch (e) { kept.push(`${a.key}: ${e.message}`) } }
     try { await api.del(`/api/model/groups/${encodeURIComponent(g.key)}`) } catch (e) { kept.push(`${g.key}: ${e.message}`) }
     await store.poll(true)
-    store.toast(kept.length ? t('⚠ {0} von {1} zurückgezogen · {2} blieben: {3}', [attrs.length - kept.length, attrs.length, kept.length, kept.slice(0, 3).join(' · ')]) : t('✓ {0} und {1} Attribute zurückgezogen', [g.label?.de || g.key, attrs.length]), kept.length ? 'error' : 'ok')
+    store.toast(kept.length ? t('⚠ {0} von {1} zurückgezogen · {2} blieben: {3}', [attrs.length - kept.length, attrs.length, kept.length, kept.slice(0, 3).join(' · ')]) : t('✓ {0} und {1} Attribute zurückgezogen', [L(g.label) || g.key, attrs.length]), kept.length ? 'error' : 'ok')
     if (!kept.some(k => k.startsWith(g.key + ':'))) { if (cur.value === g.key) cur.value = null; sel.value = new Set() }
   } finally { busy.value = false }
 }
@@ -458,8 +459,8 @@ const statusPut = patch => put(`/api/model/statuses/${curStatus.value.key}`, { k
 const statusName = (l, v) => statusPut({ label: { ...(curStatus.value.label || {}), [l]: v } })
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v }, fallback: curChannel.value.fallback ?? null })
 // Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
-const groupLabel = k => model.value.groups.find(g => g.key === k)?.label?.de || k
-const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de || k
+const groupLabel = k => L(model.value.groups.find(g => g.key === k)?.label) || k
+const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) || k
 </script>
 
 <template>
@@ -528,7 +529,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attributgruppe -->
     <template v-else-if="section === 'groups' && curGroup">
-      <div class="toolbar"><h1>▤ {{ curGroup.label?.de || curGroup.key }}</h1><span class="mono muted">{{ curGroup.key }}</span><span class="grow" /></div>
+      <div class="toolbar"><h1>▤ {{ $L(curGroup.label) || curGroup.key }}</h1><span class="mono muted">{{ curGroup.key }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
@@ -541,7 +542,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <h2>{{ $t("⊞ Attribute: {0}", [groupAttrs.length]) + ' ' }}<span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="$t('Gruppe und ihre {0} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben', [groupAttrs.length])">{{ $t("✕ Gruppe mit {0} Attributen", [groupAttrs.length]) }}</button></h2>
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
-              <a href="#" @click.prevent="goto('attributes', a.key)">{{ a.label?.de || a.key }}</a>
+              <a href="#" @click.prevent="goto('attributes', a.key)">{{ $L(a.label) || a.key }}</a>
               <button @click="assign(a, null)" :title="$t('aus der Gruppe nehmen — das Attribut bleibt, ohne Gruppe gilt es an keinem Knoten')">×</button>
             </span>
           </div>
@@ -561,7 +562,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <div class="picker">
             <label v-for="a in pickRows" :key="a.key" class="pick" :class="{ on: picked.has(a.key) }">
               <input type="checkbox" :checked="picked.has(a.key)" @change="togglePick(a.key)" />
-              <span class="l">{{ a.label?.de || a.key }}</span><span class="mono muted k">{{ a.key }}</span>
+              <span class="l">{{ $L(a.label) || a.key }}</span><span class="mono muted k">{{ a.key }}</span>
               <span class="muted r">{{ TYPE_SYM[a.type] ?? a.type }} {{ a.group ? '▤ ' + a.group : $t('— ohne Gruppe') }}</span>
             </label>
             <div v-if="!pickRows.length" class="empty">{{ $t("Nichts zu „{0}“", [pickText]) }}</div>
@@ -572,7 +573,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attribut -->
     <template v-else-if="section === 'attributes' && curAttr">
-      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span v-if="curAttr.unique" class="chip" :title="$t('eindeutig: kein zweiter Knoten mit demselben Wert — der Wert ist ein Schlüssel des Knotens')">{{ $t("① eindeutig") }}</span><span class="grow" /></div>
+      <div class="toolbar"><h1>⊞ {{ $L(curAttr.label) || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span v-if="curAttr.unique" class="chip" :title="$t('eindeutig: kein zweiter Knoten mit demselben Wert — der Wert ist ein Schlüssel des Knotens')">{{ $t("① eindeutig") }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
@@ -609,7 +610,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Werteliste -->
     <template v-else-if="section === 'lists' && curList">
-      <div class="toolbar"><h1>☰ {{ curList.label?.de || curList.key }}</h1><span class="mono muted">{{ curList.key }}</span><span class="muted">· {{ valueRows.length }}</span><span class="grow" />
+      <div class="toolbar"><h1>☰ {{ $L(curList.label) || curList.key }}</h1><span class="mono muted">{{ curList.key }}</span><span class="muted">· {{ valueRows.length }}</span><span class="grow" />
         <input v-model="newValue" type="text" :placeholder="$t('neuer Wert')" style="width:140px" @keydown.enter="valueAdd" /><button class="primary" :disabled="!newValue.trim()" @click="valueAdd">{{ $t("+ Wert") }}</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
@@ -630,7 +631,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attributsicht -->
     <template v-else-if="section === 'views' && curView">
-      <div class="toolbar"><h1>◫ {{ curView.label?.de || curView.key }}</h1><span class="mono muted">{{ curView.key }}</span><span class="grow" />
+      <div class="toolbar"><h1>◫ {{ $L(curView.label) || curView.key }}</h1><span class="mono muted">{{ curView.key }}</span><span class="grow" />
         <button @click="viewFillAll" :title="$t('Alle am Knotentyp aktiven Gruppen übernehmen')">{{ $t("⇊ Alle Gruppen") }}</button>
         <select v-model="addViewGroup" style="width:190px"><option value="">{{ $t("▤ Gruppe …") }}</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
         <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">{{ $t("+ Dazu") }}</button>
@@ -659,7 +660,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Relationstyp -->
     <template v-else-if="section === 'relationTypes' && curRel">
-      <div class="toolbar"><h1>⇄ {{ curRel.label?.de || curRel.key }}</h1><span class="mono muted">{{ curRel.key }}</span><span class="grow" /></div>
+      <div class="toolbar"><h1>⇄ {{ $L(curRel.label) || curRel.key }}</h1><span class="mono muted">{{ curRel.key }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curRel.label?.de ?? null" @save="v => relSet('label_de', v)" /></tr>
@@ -671,7 +672,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-for="r in [...roles, 'media']" :key="'t' + r"><td class="attr" :title="$t('darf zu {0} führen', [roleLabel[r] ?? $t('🖼 Medium')])">{{ $t("zu {0}", [roleLabel[r] ?? $t('🖼 Medium')]) }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
           <tr><td class="attr" :title="$t('Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte')">{{ $t("▤ Werte aus Gruppe") }}</td><SelectCell :value="curRel.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => relSet('group', v || null)" /></tr>
         </tbody></table>
-        <div class="section muted" style="font-size:12px" v-if="curRel.group">{{ $t("⊞ an der Relation: {0}", [model.attributes.filter(a => a.group === curRel.group).map(a => a.label?.de || a.key).join(', ') || $t('— die Gruppe hat noch keine Attribute')]) }}</div>
+        <div class="section muted" style="font-size:12px" v-if="curRel.group">{{ $t("⊞ an der Relation: {0}", [model.attributes.filter(a => a.group === curRel.group).map(a => $L(a.label) || a.key).join(', ') || $t('— die Gruppe hat noch keine Attribute')]) }}</div>
       </div>
     </template>
 

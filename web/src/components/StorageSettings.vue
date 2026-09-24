@@ -11,6 +11,7 @@ import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { filePicker } from '../filePicker.js'   // Dateibrowser des Servers — derselbe wie bei den Jobs (Taloan, 21.09.)
 import { t } from '../i18n.js'
+import { L } from '../i18n.js'
 
 const DRIVERS = [['postgres', t('Postgres — Tabelle media_blob in der Journal-Datenbank')], ['file', t('Verzeichnis')], ['s3', 'S3 — Garage, MinIO, AWS, R2, Hetzner …']]
 const cfg = ref({ driver: 'postgres', path: '', bucket: '', endpoint: '', key: '', secret: '', region: 'garage', pathStyle: true })
@@ -32,7 +33,7 @@ const copyResult = ref(null)
 // Vorschau-Presets (Taloan, 21.09.: „in den Einstellungen Basics definieren, welche Ableitungen beim Bilder-Import automatisch berechnet werden“)
 const presets = ref([]); const presetBusy = ref('')
 const FORMATS = ['webp', 'jpeg', 'png', 'avif']
-async function loadPresets() { try { presets.value = (await api.get('/api/media/presets')).map(p => ({ ...p, labelDe: p.label?.de ?? p.key })) } catch (e) { store.toast(e.message) } }
+async function loadPresets() { try { presets.value = (await api.get('/api/media/presets')).map(p => ({ ...p, labelDe: L(p.label) ?? p.key })) } catch (e) { store.toast(e.message) } }
 async function savePreset(p) {
   try {
     const r = await api.post(`/api/media/presets/${encodeURIComponent(p.key)}`, { label: { de: p.labelDe, en: p.label?.en ?? p.labelDe }, width: Number(p.width), height: Number(p.height), format: p.format, quality: Number(p.quality), auto: p.auto }, 'PUT')

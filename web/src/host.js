@@ -18,12 +18,12 @@ import { menu } from './menu.js'
 import * as orphans from './orphans.js'
 import * as compliance from './compliance.js'
 import { ai } from './ai.js'
-import { i18n, t, setLang, LANGS } from './i18n.js'
+import { i18n, t, L, setLang, LANGS } from './i18n.js'
 import Splitter from './components/Splitter.vue'
 import ImportHead from './components/ImportHead.vue'
 import ProfileBar from './components/ProfileBar.vue'
 import TreePicker from './components/TreePicker.vue'
 
 /// Was ein Plugin mit `import { … } from 'journali'` bekommt — die Namen stehen auch in web/build-plugins.mjs (Shim)
-export const host = { vue, vueRouter, api, store, tree, icon, mapper, transform, recentFiles, dialog, treePicker, paneWidth, plugins, menu, orphans, compliance, ai, i18n, t, setLang, LANGS, Splitter, ImportHead, ProfileBar, TreePicker }
+export const host = { vue, vueRouter, api, store, tree, icon, mapper, transform, recentFiles, dialog, treePicker, paneWidth, plugins, menu, orphans, compliance, ai, i18n, t, L, setLang, LANGS, Splitter, ImportHead, ProfileBar, TreePicker }
 window.journali = host

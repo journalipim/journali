@@ -15,6 +15,7 @@ import Splitter from '../components/Splitter.vue'
 import TreePicker from '../components/TreePicker.vue'
 import { paneWidth } from '../panes.js'
 import { t as t_ } from '../i18n.js'
+import { L } from '../i18n.js'
 const pubW = paneWidth('pub', 340)
 const srcW = paneWidth('pubsrc', 300)
 // Pflegebaum links einklappbar (Taloan, 21.09.) — Stand gemerkt
@@ -75,7 +76,7 @@ async function loadRules() {
   ruleResults.value = out
 }
 watch([current, () => tree.rows], loadRules, { immediate: true })
-const attrLabel = k => store.model?.attributes?.find(a => a.key === k)?.label?.de || k
+const attrLabel = k => L(store.model?.attributes?.find(a => a.key === k)?.label) || k
 function ruleLabel(rule) {
   const under = rule.under ? tree.byId.get(rule.under)?.label ?? rule.under : t_('überall')
   const what = rule.kind === 'name' ? `${rule.role === 'product' ? 'Produkte' : 'Gruppen'} „${rule.name}“` : t_('Produkte mit {0} = {1}', [attrLabel(rule.attribute), rule.value])
@@ -340,14 +341,14 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <input v-model="ruleBox.rule.name" :placeholder="$t('Name, z. B. Ersatzteile')" style="flex:1" />
       </div>
       <div v-else class="chips" style="margin-bottom:6px">
-        <select v-model="ruleBox.rule.attribute" style="max-width:200px"><option value="">{{ $t("Attribut …") }}</option><option v-for="a in (store.model?.attributes ?? []).filter(a => !['rows', 'formula', 'template'].includes(a.type))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }}</option></select>
+        <select v-model="ruleBox.rule.attribute" style="max-width:200px"><option value="">{{ $t("Attribut …") }}</option><option v-for="a in (store.model?.attributes ?? []).filter(a => !['rows', 'formula', 'template'].includes(a.type))" :key="a.key" :value="a.key">{{ $L(a.label) || a.key }}</option></select>
         <span class="muted">=</span><input v-model="ruleBox.rule.value" :placeholder="$t('Wert')" style="flex:1" />
       </div>
       <div class="muted" style="font-size:12px;margin-bottom:2px">{{ $t("unter") }}</div>
       <TreePicker v-model="ruleBox.rule.under" :roles="['group']" :height="160" />
       <div class="chips" style="margin-top:6px">
         <span class="muted" style="font-size:12px">{{ $t("gliedern") }}</span>
-        <select v-model="ruleBox.rule.groupBy"><option value="none">{{ $t("flach") }}</option><option value="parent">{{ $t("nach Produktgruppe darüber") }}</option><option v-for="a in (store.model?.attributes ?? []).filter(a => ['text', 'enum'].includes(a.type))" :key="a.key" :value="'attr:' + a.key">{{ $t("nach {0}", [a.label?.de || a.key]) }}</option></select>
+        <select v-model="ruleBox.rule.groupBy"><option value="none">{{ $t("flach") }}</option><option value="parent">{{ $t("nach Produktgruppe darüber") }}</option><option v-for="a in (store.model?.attributes ?? []).filter(a => ['text', 'enum'].includes(a.type))" :key="a.key" :value="'attr:' + a.key">{{ $t("nach {0}", [$L(a.label) || a.key]) }}</option></select>
       </div>
       <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0;margin-top:8px;padding:6px 0 0">
         <span v-if="ruleBox.preview?.error" class="neg" style="font-size:12px">{{ ruleBox.preview.error }}</span>

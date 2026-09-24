@@ -2,6 +2,7 @@
 // Texte vor, die Suchmaschinen und KI-Antworten gern zitieren — ein Definitionssatz, eine Kurzbeschreibung, Fragen & Antworten,
 // Suchbegriffe. Je Feld ein Zielattribut (gemerkt im Journal, Plugin-Daten „targets“); „übernehmen“ schreibt den Wert an den
 // Knoten. Dazu Schema.org-Product-JSON-LD aus den Daten (ohne KI). Braucht einen KI-Schlüssel aus den Einstellungen.
+const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
 const ICON = { group: '▣', product: '▦', variant: '◆' }
@@ -29,7 +30,7 @@ async function facts(ctx, id, locale) {
     if (v == null && d.inheritable) for (const m of anc) { v = look(m, d.key, loc); if (v != null) break }
     if (v == null || v === '') continue
     if (d.type === 'enum') { const list = model.lists.find(x => x.key === d.list); v = String(v).split(',').map(x => list?.values.find(y => y.value === x.trim())?.label?.[locale] ?? x.trim()).join(', ') }
-    rows.push({ key: d.key, label: d.label?.[locale] || d.label?.de || d.key, value: String(v), unit: d.unit ?? '' })
+    rows.push({ key: d.key, label: d.label?.[locale] || L(d.label) || d.key, value: String(v), unit: d.unit ?? '' })
   }
   const row = tree.byId.get(id)
   const path = tree.ancestors(id).map(a => a.label).reverse().join(' › ')
@@ -80,7 +81,7 @@ async function mount(root, ctx) {
     body.innerHTML = ''
     if (!st.result) { body.append(el('div', { class: 'empty' }, t('Knoten wählen, dann „Vorschlagen“ — die KI schreibt aus den echten Daten; nichts wird ohne „übernehmen“ gespeichert.'))); return }
     for (const [k, label, hint] of FIELDS) {
-      const sel = el('select', { title: t('Zielattribut'), onchange: async e => { st.targets[k] = e.target.value; await ctx.data.set('targets', st.targets) } }, el('option', { value: '' }, t('Zielattribut …')), ...textAttrs.map(a => el('option', { value: a.key }, `${a.label?.de || a.key} (${a.key})`)))
+      const sel = el('select', { title: t('Zielattribut'), onchange: async e => { st.targets[k] = e.target.value; await ctx.data.set('targets', st.targets) } }, el('option', { value: '' }, t('Zielattribut …')), ...textAttrs.map(a => el('option', { value: a.key }, `${L(a.label) || a.key} (${a.key})`)))
       sel.value = st.targets[k] ?? ''
       const ta = el('textarea', { style: 'width:100%;min-height:72px;font:inherit', oninput: e => { if (k === 'faq') return; st.result[k] = e.target.value } }, textOf(k))
       if (k === 'faq') ta.addEventListener('input', e => { st.result.faq = e.target.value.split(/\n\s*\n/).map(b => { const [q, ...a] = b.split('\n'); return { q, a: a.join('\n') } }) })

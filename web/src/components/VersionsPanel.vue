@@ -7,6 +7,7 @@ import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { t } from '../i18n.js'
+import { L } from '../i18n.js'
 
 const props = defineProps({ id: String, role: String })
 const emit = defineEmits(['changed'])
@@ -17,7 +18,7 @@ const plan = ref(null)          // { nr, plan, skipped }
 const busy = ref('')
 const channels = computed(() => store.model?.channels.map(c => c.key) ?? [])
 const locales = computed(() => store.model?.locales.map(l => l.code) ?? [])
-const label = a => store.model?.attributes.find(x => x.key === a)?.label?.de || a
+const label = a => L(store.model?.attributes.find(x => x.key === a)?.label) || a
 
 async function load() { try { versions.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/versions`) } catch { versions.value = [] } }
 watch(() => props.id, () => { diffOf.value = null; plan.value = null; form.value = null; load() }, { immediate: true })

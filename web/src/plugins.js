@@ -43,6 +43,7 @@ import * as compliance from './compliance.js'
 import { registerPluginLang } from './i18n.js'
 import { ai } from './ai.js'
 import { t } from './i18n.js'
+import { L } from './i18n.js'
 
 export const plugins = reactive({
   list: [],
@@ -111,7 +112,7 @@ export const plugins = reactive({
       if (!this.active(p.key) || done.has(p.key)) continue
       const mod = this.modules.get(p.key)
       if (!mod?.install) { done.add(p.key); continue }
-      try { await mod.install(this.ctx(p.key)); done.add(p.key); store.toast(`✓ ${p.manifest?.label?.de || p.key} eingerichtet`, 'ok') }
+      try { await mod.install(this.ctx(p.key)); done.add(p.key); store.toast(`✓ ${L(p.manifest?.label) || p.key} eingerichtet`, 'ok') }
       catch (e) { store.toast(`${p.key}: ${e.message}`) }
     }
     try { localStorage.setItem(this.installedKey(), JSON.stringify([...done])) } catch {}

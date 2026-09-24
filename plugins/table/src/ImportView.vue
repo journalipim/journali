@@ -6,6 +6,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { api, store, tree, icon, plugins, mapper, transform, recentFiles, Splitter, ImportHead, TreePicker, paneWidth } from 'journali'
 import { t as t_ } from 'journali'
+import { L } from 'journali'
 const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper
 const leftW = paneWidth('import.table', 720)
 const router = useRouter()
@@ -197,7 +198,7 @@ const blockers = computed(() => {
 const changeTab = ref('update'); const openRow = ref(null)
 // Vorschau öffnet den ersten Reiter, in dem etwas steht (Taloan, 21.09.: „2 neue Zeilen, aber nichts angezeigt“ — der Reiter stand auf „geändert“)
 watch(() => planned.value?.stats, st => { if (!st) return; changeTab.value = st.create ? 'create' : st.update ? 'update' : 'unchanged'; openRow.value = null })
-const attrLabel = key => { const a = attrs.value.find(x => x.key === key) ?? store.model?.attributes?.find(x => x.key === key); return a?.label?.de || key }
+const attrLabel = key => { const a = attrs.value.find(x => x.key === key) ?? store.model?.attributes?.find(x => x.key === key); return L(a?.label) || key }
 function fixCell(inv, v) { source.value.rows[inv.row][inv.column] = v; planned.value = { ...planned.value, stale: true } }
 // Was das Attribut erwartet (Taloan, 21.09.: „warum ganze Zahl?“ — weil das Attribut so definiert ist; das steht jetzt dabei)
 const TYPE_DE = { text: t_('Text'), html: 'HTML', integer: t_('ganze Zahl'), decimal: t_('Zahl'), boolean: 'ja/nein', date: t_('Datum'), enum: t_('Listenwert') }
@@ -346,8 +347,8 @@ onMounted(async () => {
               <tr><th class="stick">{{ $t("Spalte") }}</th><td v-for="m in visibleMapping" :key="m.column" :class="{ off: m.target === 'skip' }" :title="m.column"><b>{{ m.column }}</b><div class="muted" style="font-size:11px">{{ $t("{0} · {1} versch.", [m.sniff?.type, m.sniff?.distinct]) }}</div></td></tr>
               <tr><th class="stick">{{ $t("Ziel") }}</th><td v-for="m in visibleMapping" :key="m.column"><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td></tr>
               <tr><th class="stick">{{ $t("Attribut") }}</th><td v-for="m in visibleMapping" :key="m.column">
-                <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}</option></select>
-                <span v-else-if="m.target === 'new'" style="display:flex;flex-direction:column;gap:3px"><input v-model="m.newKey" type="text" :placeholder="$t('schlüssel')" @change="planned = null" /><select v-model="m.newType" @change="planned = null"><option v-for="t in ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum']" :key="t" :value="t">{{ t }}</option></select><select v-model="m.newGroup" :class="{ neg: !m.newGroup }" :title="$t('Attributgruppe — Pflicht')" @change="planned = null"><option :value="undefined">{{ $t("● Gruppe wählen …") }}</option><option v-for="g in groups" :key="g.key" :value="g.key">▤ {{ g.label?.de || g.key }}</option></select></span>
+                <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ $L(a.label) || a.key }} · {{ a.key }}</option></select>
+                <span v-else-if="m.target === 'new'" style="display:flex;flex-direction:column;gap:3px"><input v-model="m.newKey" type="text" :placeholder="$t('schlüssel')" @change="planned = null" /><select v-model="m.newType" @change="planned = null"><option v-for="t in ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum']" :key="t" :value="t">{{ t }}</option></select><select v-model="m.newGroup" :class="{ neg: !m.newGroup }" :title="$t('Attributgruppe — Pflicht')" @change="planned = null"><option :value="undefined">{{ $t("● Gruppe wählen …") }}</option><option v-for="g in groups" :key="g.key" :value="g.key">▤ {{ $L(g.label) || g.key }}</option></select></span>
                 <span v-else class="muted">—</span></td></tr>
               <tr><th class="stick">{{ $t("Sprache") }}</th><td v-for="m in visibleMapping" :key="m.column"><select v-if="(m.target === 'attr' && attrs.find(a => a.key === m.attribute)?.perLocale) || m.target === 'new'" v-model="m.locale" style="width:100%" @change="planned = null"><option :value="null">*</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select><span v-else class="muted">—</span></td></tr>
               <tr><th class="stick">ƒ</th><td v-for="m in visibleMapping" :key="m.column"><button class="x" :class="{ on: m.steps?.length }" :title="m.steps?.length ? stepsText(m) + ' — Klick: bearbeiten' : $t('Umwandlung hinzufügen')" @click="stepsOpen = stepsOpen === m.column ? null : m.column">ƒ{{ m.steps?.length ? m.steps.length : '' }}</button><span v-if="m.steps?.length" class="muted" style="font-size:11px;margin-left:4px">{{ stepsText(m) }}</span></td></tr>
@@ -387,9 +388,9 @@ onMounted(async () => {
               <td class="muted samples">{{ sample(mapping.indexOf(m)) }}</td>
               <td><select v-model="m.target" @change="onTarget(m)" style="width:100%"><option v-for="[k, l] in TARGETS.filter(([k]) => !fixed || !['new', 'parent', 'external'].includes(k))" :key="k" :value="k">{{ l }}</option></select></td>
               <td>
-                <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+                <select v-if="m.target === 'attr'" v-model="m.attribute" @change="syncLocale(m); planned = null; m.unknown = false" style="width:100%"><option v-for="a in attrs.filter(a => !fixed || fixed.allowed.has(a.key))" :key="a.key" :value="a.key">{{ $L(a.label) || a.key }} · {{ a.key }}</option></select>
                 <span v-else-if="m.target === 'new'" style="display:flex;gap:4px;flex-wrap:wrap"><input v-model="m.newKey" type="text" style="flex:1;min-width:90px" :placeholder="$t('schlüssel')" @change="planned = null" /><select v-model="m.newType" style="width:84px" @change="planned = null"><option v-for="t in ['text', 'html', 'integer', 'decimal', 'boolean', 'date']" :key="t" :value="t">{{ t }}</option></select>
-                  <select v-model="m.newGroup" style="width:100%" :class="{ neg: !m.newGroup }" :title="$t('Attributgruppe — Pflicht: ohne Gruppe gilt das Attribut nirgends')" @change="planned = null"><option :value="undefined">{{ $t("● Gruppe wählen …") }}</option><option v-for="g in groups" :key="g.key" :value="g.key">▤ {{ g.label?.de || g.key }}</option></select></span>
+                  <select v-model="m.newGroup" style="width:100%" :class="{ neg: !m.newGroup }" :title="$t('Attributgruppe — Pflicht: ohne Gruppe gilt das Attribut nirgends')" @change="planned = null"><option :value="undefined">{{ $t("● Gruppe wählen …") }}</option><option v-for="g in groups" :key="g.key" :value="g.key">▤ {{ $L(g.label) || g.key }}</option></select></span>
                 <span v-else class="muted">—</span>
               </td>
               <td><select v-if="(m.target === 'attr' && attrs.find(a => a.key === m.attribute)?.perLocale) || m.target === 'new'" v-model="m.locale" style="width:100%" @change="planned = null"><option :value="null">*</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select></td>

@@ -34,6 +34,7 @@ import Splitter from '../components/Splitter.vue'
 import MatrixPicker from '../components/MatrixPicker.vue'
 import { paneWidth } from '../panes.js'
 import { t as t_ } from '../i18n.js'
+import { L } from '../i18n.js'
 const journalW = paneWidth('journal', 420)
 
 const props = defineProps({ id: String, pub: { type: String, default: null }, pubRubric: { type: String, default: null } })   // pubRubric: Rubrik, in der der Verweis hängt (für den Stand)   // pub: Id des Publikationsbaums — Ansicht als Verweis (Taloan, 21.09.)
@@ -134,7 +135,7 @@ const pluginViews = computed(() => {
   return out
 })
 // zur Wahl stehen nur die mit Namen; die anderen ersetzen still eine Gruppe (siehe blocks)
-const views = computed(() => [...(model.value?.views ?? []).filter(v => v.level === node.value?.role), ...pluginViews.value.filter(v => v.label?.de)])
+const views = computed(() => [...(model.value?.views ?? []).filter(v => v.level === node.value?.role), ...pluginViews.value.filter(v => L(v.label))])
 const view = computed(() => views.value.find(v => v.key === store.viewKey[node.value?.role]) ?? null)
 // „komplett“ ordnet nach der Standardsicht des Knotentyps (defaultview_<rolle>), wenn es sie gibt — sonst alphabetisch.
 const orderView = computed(() => view.value ?? views.value.find(v => v.key === 'defaultview_' + node.value?.role) ?? null)
@@ -198,7 +199,7 @@ const blocks = computed(() => {
     let defs = keys.map(a => model.value.attributes.find(x => x.key === a)).filter(Boolean).map(a => ({ ...a, required: req(a.key), hereLocked: !(!a.levels || a.levels.includes(role)), whenLocked: !whenOk(a) }))   // Gruppe ⌀ steht am Gruppenkopf, hier nur die Ebene des Attributs
     if (store.scope !== 'all') defs = defs.filter(a => !a.hereLocked && !a.whenLocked && g.active)
     if (store.scope === 'only') defs = defs.filter(a => !ROLES.some(r => r !== role && canAt(a, def, r)))
-    return { key: k, label: def?.label?.de || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, fromRole: g.fromRole, active: g.active, defs }
+    return { key: k, label: L(def?.label) || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, fromRole: g.fromRole, active: g.active, defs }
   }).filter(b => b.defs.length && (store.scope === 'all' || b.active))
     // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
@@ -256,7 +257,7 @@ function cellText(def, col) {
 }
 function matches(def, block) {
   const q = attrFilter.value.trim().toLowerCase(); if (!q) return true
-  if (def.key.toLowerCase().includes(q) || (def.label?.de ?? '').toLowerCase().includes(q) || (def.label?.en ?? '').toLowerCase().includes(q)) return true
+  if (def.key.toLowerCase().includes(q) || (L(def.label) ?? '').toLowerCase().includes(q) || (def.label?.en ?? '').toLowerCase().includes(q)) return true
   if (def.type === 'rows') return Object.values(node.value?.rows?.[def.key] ?? {}).length > 0 && [...own.value.entries()].some(([k, v]) => k.startsWith(def.key + '|') && String(v ?? '').toLowerCase().includes(q))
   return columns.value.some(c => enabled(def, c, block) && cellText(def, c).toLowerCase().includes(q))
 }
@@ -364,7 +365,7 @@ function listGroup(def) { const list = model.value.lists.find(l => l.key === def
 function released(channel, locale) { return node.value?.releases.some(r => r.channel === channel && r.locale === locale) ?? false }
 // Freigabe über den Fallback-Kanal (Sortiment geerbt): nicht eigen, gilt aber — ◌ mit Herkunft
 function releasedVia(channel, locale) { return node.value?.releasedVia?.find(r => r.channel === channel && r.locale === locale)?.via ?? null }
-function axisLabel(a) { return model.value?.attributes.find(x => x.key === a)?.label?.de || a }
+function axisLabel(a) { return L(model.value?.attributes.find(x => x.key === a)?.label) || a }
 function axisValue(a, col) { return node.value?.role === 'variant' && !col.locale && !col.channel && a in node.value.axisValues ? node.value.axisValues[a] : null }
 function completeness(channel, locale) { return (node.value?.completeness ?? []).find(c => c.channel === channel && c.locale === locale) ?? null }
 function incomplete(channel, locale) {
@@ -390,7 +391,7 @@ function starTitle(def) {
 }
 const freeGroups = computed(() => (model.value?.groups ?? []).filter(g => !(node.value?.groups ?? []).some(x => x.key === g.key)))
 // Gruppen heissen überall gleich: Label wie im Reiter, Schlüssel nur im Tooltip.
-const groupLabel = k => model.value?.groups.find(x => x.key === k)?.label?.de || k
+const groupLabel = k => L(model.value?.groups.find(x => x.key === k)?.label) || k
 const groupLocked = k => { const g = model.value?.groups.find(x => x.key === k); return g?.activeFrom && node.value && !(node.value.groups ?? []).find(x => x.key === k)?.active }
 // Angehängte Gruppen zum Lesen sortiert (Taloan, 18.09.): alphabetisch nach Label, gesperrte ⌀ ans Ende — die Reihenfolge im Journal ist die des Anhängens und bedeutet nichts
 // Gruppe hängt schon weiter oben (Taloan, 22.09.: „jetzt habe ich sie in beiden drin“) — die hier ist überflüssig
@@ -614,7 +615,7 @@ function wfBlocked(t) {
 async function wfStep(w, t, locale = null) {
   let note = null
   if (t.noteRequired || t.effects?.length) {
-    note = await dialog.prompt({ title: `${t.label?.de || t.key} → ${t.toLabel?.de || t.to}`, text: (t.noteRequired ? 'Notiz (Pflicht)' : 'Notiz (optional)') + (t.effects?.length ? ' ' + t_('· Wirkung: {0}', [t.effects.join(', ')]) : ''), placeholder: t_('Notiz'), ok: `⚑ ${t.label?.de || t.key}` })
+    note = await dialog.prompt({ title: `${L(t.label) || t.key} → ${t.toLabel?.de || t.to}`, text: (t.noteRequired ? 'Notiz (Pflicht)' : 'Notiz (optional)') + (t.effects?.length ? ' ' + t_('· Wirkung: {0}', [t.effects.join(', ')]) : ''), placeholder: t_('Notiz'), ok: `⚑ ${L(t.label) || t.key}` })
     if (note === null) return
     if (t.noteRequired && !note.trim()) { store.toast(t_('Notiz ist Pflicht bei diesem Schritt')); return }
   }
@@ -634,9 +635,9 @@ async function wfEffect(eff) {
 }
 // Verlauf eines Workflows am Knoten (Taloan, 21.09.): jeder Schritt mit Zeit, Wer, Schritt, Zustand, Notiz — aus dem Journalstrom des Knotens
 async function wfHistory(w) {
-  const label = k => w.states?.find(s => s.key === k)?.label?.de || k
-  let src = entries.value; let title = t_('Verlauf „{0}“ · {1}', [w.label?.de || w.workflow, shownLabel.value])
-  if (w.inheritedFrom) { try { src = (await api.get(`/api/streams/${encodeURIComponent(w.inheritedFrom.id)}`)).reverse(); title = t_('Verlauf „{0}“ · geerbt von „{1}“', [w.label?.de || w.workflow, w.inheritedFrom.label]) } catch { src = [] } }
+  const label = k => L(w.states?.find(s => s.key === k)?.label) || k
+  let src = entries.value; let title = t_('Verlauf „{0}“ · {1}', [L(w.label) || w.workflow, shownLabel.value])
+  if (w.inheritedFrom) { try { src = (await api.get(`/api/streams/${encodeURIComponent(w.inheritedFrom.id)}`)).reverse(); title = t_('Verlauf „{0}“ · geerbt von „{1}“', [L(w.label) || w.workflow, w.inheritedFrom.label]) } catch { src = [] } }
   // nach Datum gruppiert (Taloan, 21.09.: „in Firmen dauert es manchmal 4 Wochen“): Datumszeile, darunter die Schritte mit Uhrzeit
   const list = src.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
   const rows = []; let day = null
@@ -648,7 +649,7 @@ async function wfHistory(w) {
   dialog.help({ title, rows: rows.length ? rows : [['—', t_('noch kein Schritt')]] })
 }
 async function wfClear(w, locale = null) {
-  if (!await dialog.confirm({ title: t_('Vererbung wiederherstellen · {0}{1}?', [w.label?.de || w.workflow, locale ? ' · ' + locale : '']), text: t_('Eigener Zustand fällt weg; es gilt wieder der geerbte.'), ok: t_('↑ Erben') })) return
+  if (!await dialog.confirm({ title: t_('Vererbung wiederherstellen · {0}{1}?', [L(w.label) || w.workflow, locale ? ' · ' + locale : '']), text: t_('Eigener Zustand fällt weg; es gilt wieder der geerbte.'), ok: t_('↑ Erben') })) return
   await command(() => api.del(`${nodeUrl()}/workflow/${w.workflow}${locale ? '?locale=' + encodeURIComponent(locale) : ''}`))
   api.get(`${nodeUrl()}/workflow`).then(x => { workflows.value = x }).catch(() => {})
 }
@@ -661,8 +662,8 @@ async function wfAssign(w) {
     ...people.filter(fits).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role}` })),
     ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: t_('{0} · {1} (nicht die Rolle des Schritts)', [p.name || p.key, p.role]) }))]
   const user = people.length
-    ? await dialog.prompt({ title: t_('Zuständigen wählen · {0}', [w.label?.de || w.workflow]), value: w.assigned ?? '', choices, ok: t_('👤 Zuweisen') })
-    : await dialog.prompt({ title: t_('Zuständigen wählen · {0}', [w.label?.de || w.workflow]), text: t_('Anwender-Key (leer = Rolle des nächsten Schritts)'), value: w.assigned ?? '', ok: t_('👤 Zuweisen') })
+    ? await dialog.prompt({ title: t_('Zuständigen wählen · {0}', [L(w.label) || w.workflow]), value: w.assigned ?? '', choices, ok: t_('👤 Zuweisen') })
+    : await dialog.prompt({ title: t_('Zuständigen wählen · {0}', [L(w.label) || w.workflow]), text: t_('Anwender-Key (leer = Rolle des nächsten Schritts)'), value: w.assigned ?? '', ok: t_('👤 Zuweisen') })
   if (user === null) return
   await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/assign`, { user: user.trim() || null }, 'PUT'))
 }
@@ -703,7 +704,7 @@ async function axisCommit() { if (!wiz.value || wiz.value.dupes.length) return; 
 // nur Attribute, die an den Varianten gelten (Taloan, 20.09.): Gruppen am Pfad (node.groups), Attribut an der Variante erlaubt
 const atVariant = computed(() => { const s = new Set(); for (const g of node.value?.groups ?? []) { const def = model.value?.groups.find(x => x.key === g.key); if (def?.activeFrom && def.activeFrom !== 'group' && def.activeFrom !== 'product' && def.activeFrom !== 'variant') continue; for (const k of g.attributes ?? []) s.add(k) } return s })
 const axisChoices = computed(() => (model.value?.attributes ?? []).filter(a => ['enum', 'text', 'integer'].includes(a.type) && !a.multiple && !(node.value?.axes ?? []).includes(a.key) && atVariant.value.has(a.key) && (!a.levels || a.levels.includes('variant')))
-  .sort((a, b) => (a.type === 'enum' ? 0 : 1) - (b.type === 'enum' ? 0 : 1) || (a.label?.de ?? a.key).localeCompare(b.label?.de ?? b.key, 'de')))
+  .sort((a, b) => (a.type === 'enum' ? 0 : 1) - (b.type === 'enum' ? 0 : 1) || (L(a.label) ?? a.key).localeCompare(L(b.label) ?? b.key, 'de')))
 function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
 // Kategorien gibt es in der Oberfläche nicht mehr (Taloan, 17.09.): kein zweiter Baum — ein Knoten in mehreren Ästen wird ein
 // „Symlink“, Kanalbäume (Web, Print) werden eigene, rein logische Bäume. Die Einträge CategoryAssigned/Removed bleiben (Journal).
@@ -790,7 +791,7 @@ function cellMenu(e, def, col, block) {
       <span class="grp" :title="$t('Zeilen: Attributsicht und Filter')">
         <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="$t('Attributsicht für {0} — ⊞ Modell → Attributsichten', [roleLabel[node.role]])">
           <option value="">{{ $t("◫ komplett") }}</option>
-          <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option>
+          <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ $L(v.label) || v.key }}</option>
         </select>
         <router-link :to="{ path: '/model', query: { section: 'views', key: orderView?.key } }" class="x edit" :title="orderView ? `${orderView.key} bearbeiten → Modell → Attributsichten` : '→ Modell → Attributsichten'">✎</router-link>
         <select :value="store.scope" @change="setScope($event.target.value)" :class="{ on: store.scope !== 'all' }" :title="$t('Filter — was von den Attributen gezeigt wird')">
@@ -904,20 +905,20 @@ function cellMenu(e, def, col, block) {
         <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
         <template v-if="open('media')">
         <div class="tiles">
-          <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${relType(r.type)?.label?.de || r.type}`">
+          <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${$L(relType(r.type)?.label) || r.type}`">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
-              <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? $t('gilt dann an allen Subitems — bis eines die Vererbung stoppt') : d.key">{{ d.label?.de || d.key }}</td>
+              <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? $t('gilt dann an allen Subitems — bis eines die Vererbung stoppt') : d.key">{{ $L(d.label) || d.key }}</td>
                 <ToggleCell v-if="d.type === 'boolean'" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /><Cell v-else :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>
             </tbody></table>
-            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" :title="$t('wird an die Subitems vererbt')">{{ ' ' + $t("· ↓ vererbt") }}</span><button class="x" style="float:right" @click="retireRel(r)" :title="$t('Zuordnung lösen (das Medium bleibt in der Bibliothek)')">×</button></div>
+            <div class="muted meta">{{ $L(relType(r.type)?.label) || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" :title="$t('wird an die Subitems vererbt')">{{ ' ' + $t("· ↓ vererbt") }}</span><button class="x" style="float:right" @click="retireRel(r)" :title="$t('Zuordnung lösen (das Medium bleibt in der Bibliothek)')">×</button></div>
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
           <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="$t('geerbt von {0} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems', [r.from.label])">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
-            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" :title="$t('zum Knoten, an dem das Medium hängt')">↑ {{ r.from.label }}</router-link>
+            <div class="muted meta">{{ $L(relType(r.type)?.label) || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" :title="$t('zum Knoten, an dem das Medium hängt')">↑ {{ r.from.label }}</router-link>
               <button class="x" style="float:right" @click="stopInherited(r)" :title="$t('Medium hier und an allen Subitems sperren (rücknehmbar)')">⛔</button></div>
           </div>
         </div>
@@ -940,16 +941,16 @@ function cellMenu(e, def, col, block) {
         <template v-if="open('relations')">
         <div v-for="b in relBlocks" :key="b.type" class="relblock">
           <table class="grid" style="width:auto">
-            <thead><tr><th style="width:180px">{{ relType(b.type)?.label?.de || b.type }}</th><th style="width:260px"></th><th v-for="d in relGroupAttrs(b.type)" :key="d.key" style="width:140px" :title="d.key">{{ d.label?.de || d.key }}<span v-if="d.unit" class="muted"> {{ d.unit }}</span></th><th style="width:28px"></th></tr></thead>
+            <thead><tr><th style="width:180px">{{ $L(relType(b.type)?.label) || b.type }}</th><th style="width:260px"></th><th v-for="d in relGroupAttrs(b.type)" :key="d.key" style="width:140px" :title="d.key">{{ $L(d.label) || d.key }}<span v-if="d.unit" class="muted"> {{ d.unit }}</span></th><th style="width:28px"></th></tr></thead>
             <tbody>
               <tr v-for="r in b.out" :key="r.id" :title="r.id">
-                <td class="muted">→ {{ relType(b.type)?.label?.de || b.type }}</td>
+                <td class="muted">→ {{ $L(relType(b.type)?.label) || b.type }}</td>
                 <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" :title="$t('Knoten zurückgezogen')">✗ {{ r.other.id }}</span></td>
                 <Cell v-for="d in relGroupAttrs(b.type)" :key="d.key" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" />
                 <td class="num"><button class="x" @click="retireRel(r)" :title="$t('Relation zurückziehen')">×</button></td>
               </tr>
               <tr v-for="r in b.in" :key="r.id" :title="r.id">
-                <td class="muted">{{ relType(b.type)?.symmetric ? '⇄' : '←' }} {{ relType(b.type)?.symmetric ? (relType(b.type)?.label?.de || b.type) : (relType(b.type)?.reverse?.de || relType(b.type)?.label?.de || b.type) }}</td>
+                <td class="muted">{{ relType(b.type)?.symmetric ? '⇄' : '←' }} {{ relType(b.type)?.symmetric ? ($L(relType(b.type)?.label) || b.type) : ($L(relType(b.type)?.reverse) || $L(relType(b.type)?.label) || b.type) }}</td>
                 <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" :title="$t('Knoten zurückgezogen')">✗ {{ r.other.id }}</span></td>
                 <td v-for="d in relGroupAttrs(b.type)" :key="d.key" class="muted">{{ relValue(r, d) ?? '' }}</td>
                 <td class="num"><button class="x" @click="retireRel(r)" :title="$t('Relation zurückziehen')">×</button></td>
@@ -958,7 +959,7 @@ function cellMenu(e, def, col, block) {
           </table>
         </div>
         <div class="chips" style="margin-top:6px">
-          <select v-model="newRel.type" style="width:170px" :title="$t('Relationstyp — ⊞ Modell → Relationen')"><option value="">{{ $t("⇄ Typ …") }}</option><option v-for="t in relTypesFromHere" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
+          <select v-model="newRel.type" style="width:170px" :title="$t('Relationstyp — ⊞ Modell → Relationen')"><option value="">{{ $t("⇄ Typ …") }}</option><option v-for="t in relTypesFromHere" :key="t.key" :value="t.key">{{ $L(t.label) || t.key }}</option></select>
           <input v-model="newRel.q" type="search" :placeholder="$t('🔍 Ziel: Name, SKU, Id')" style="width:240px" :disabled="!newRel.type" @input="newRel.to = null" />
           <span v-if="newRel.to" class="chip">→ {{ tree.byId.get(newRel.to)?.label }} <button @click="newRel.to = null; newRel.q = ''">×</button></span>
           <button class="primary" :disabled="!newRel.type || !newRel.to" @click="addRel">{{ $t("Verbinden") }}</button>
@@ -971,18 +972,18 @@ function cellMenu(e, def, col, block) {
       </div>
 
       <div class="section" v-if="workflows.length">
-        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>{{ $t("⚑ Workflow") + ' ' }}<span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ w.label?.de || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : $t('nicht ausgeleitet')).join(' · ')"> ⚠</span></span></span></h2>
+        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>{{ $t("⚑ Workflow") + ' ' }}<span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ $L(w.label) || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : $t('nicht ausgeleitet')).join(' · ')"> ⚠</span></span></span></h2>
         <template v-if="open('workflow')">
         <table class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
           <template v-for="w in workflows" :key="w.workflow">
           <tr>
-            <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
+            <td class="attr" :title="w.workflow">{{ $L(w.label) || w.workflow }}</td>
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? $t('Zustand geerbt von {0} „{1}“ ·', [w.inheritedFrom.role === 'product' ? $t('Produkt') : $t('Gruppe'), w.inheritedFrom.label]) + ' ' : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : $t('Startzustand'))">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
-              <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
+              <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ $L(t.label) || t.key }} →</button>
               <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" :title="$t('Vererbung wiederherstellen (eigener Zustand wird aufgehoben)')">{{ $t("↑ Erben") }}</button>
-              <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
-              <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">{{ $t("nächster Schritt: {0}", [w.all.map(t => (t.roles ?? []).join('/') || $t('Rolle mit Schreibrecht')).join(', ')]) }}</span>
+              <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${$L(t.label) || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
+              <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${$L(t.label) || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">{{ $t("nächster Schritt: {0}", [w.all.map(t => (t.roles ?? []).join('/') || $t('Rolle mit Schreibrecht')).join(', ')]) }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">{{ $t("Ende des Wegs") }}</span>
               <span class="grow" />
               <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
@@ -1046,7 +1047,7 @@ function cellMenu(e, def, col, block) {
           </tbody>
         </table>
         <div class="chips" style="margin-top:6px">
-          <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? $t('+ weitere Achse (Pflicht) …') : $t('+ Achse …') }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+          <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? $t('+ weitere Achse (Pflicht) …') : $t('+ Achse …') }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ $L(a.label) || a.key }} · {{ a.key }}</option></select>
           <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? $t('prüfen') : 'dazu' }}</button>
         </div>
         <div v-if="wiz" class="picker" style="padding:8px;margin-top:6px">
@@ -1072,7 +1073,7 @@ function cellMenu(e, def, col, block) {
           </tbody>
         </table>
         <div class="chips" style="margin-top:6px">
-          <select v-model="addGroup" style="width:200px"><option value="">{{ $t("+ Gruppe …") }}</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ g.label?.de || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
+          <select v-model="addGroup" style="width:200px"><option value="">{{ $t("+ Gruppe …") }}</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ $L(g.label) || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
           <button class="primary" :disabled="!addGroup" @click="attachAdd">{{ $t("Anhängen") }}</button>
         </div>
         </template>
@@ -1090,7 +1091,7 @@ function cellMenu(e, def, col, block) {
   <div v-else class="pane" style="flex:3"><div class="empty">…</div></div>
 
   <Splitter v-if="store.journalOpen" v-model="journalW" side="right" :min="240" :max="1000" />
-  <ScriptEditor v-if="scriptCell" :model-value="ownValue(scriptCell.def.key, scriptCell.col) ?? inherited(scriptCell.def, scriptCell.col).value ?? ''" :title="`${scriptCell.def.label?.de || scriptCell.def.key} · ${scriptCell.col.label} · ${shownLabel}`"
+  <ScriptEditor v-if="scriptCell" :model-value="ownValue(scriptCell.def.key, scriptCell.col) ?? inherited(scriptCell.def, scriptCell.col).value ?? ''" :title="`${$L(scriptCell.def.label) || scriptCell.def.key} · ${scriptCell.col.label} · ${shownLabel}`"
     :draft-key="`${id}.${scriptCell.def.key}.${scriptCell.col.label}`" :type="scriptCell.def.type" :node="id" :locale="scriptCell.col.locale ?? undefined"
     :attributes="(model?.attributes ?? []).filter(a => a.key !== scriptCell.def.key && a.type !== 'rows' && a.type !== 'html')"
     @save="v => { setValue(scriptCell.def, scriptCell.col, v); scriptCell = null }" @close="scriptCell = null" />

@@ -16,6 +16,7 @@ import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
 import { t as t_ } from '../i18n.js'
+import { L } from '../i18n.js'
 const treeW = paneWidth('tree', 300)
 
 const props = defineProps({ id: String })
@@ -35,7 +36,7 @@ const KEYS = [
 ]
 const sugg = ref([])          // [{ value, label, hint }]
 const suggIdx = ref(0)
-const de = x => x?.label?.de || x?.key
+const de = x => L(x?.label) || x?.key
 function tokenAt() {
   const el = search.value; if (!el) return null
   const pos = el.selectionStart ?? q.value.length
@@ -57,7 +58,7 @@ function suggest() {
   } else {
     const [key, rest] = [word.slice(0, word.indexOf(':') + 1), word.slice(word.indexOf(':') + 1)]
     const low = rest.toLowerCase()
-    const attrs = (m?.attributes ?? []).filter(a => !low || a.key.toLowerCase().includes(low) || (a.label?.de ?? '').toLowerCase().includes(low))
+    const attrs = (m?.attributes ?? []).filter(a => !low || a.key.toLowerCase().includes(low) || (L(a.label) ?? '').toLowerCase().includes(low))
     if (key === 'attr:' && !rest.includes('=')) {
       const exact = (m?.attributes ?? []).find(a => a.key === rest)
       if (exact) { out.push({ value: `attr:${rest}`, label: t_('{0} hat Wert', [de(exact)]), hint: t_('eigener Wert, nicht geerbt') }, { value: `attr:${rest}=`, label: `${de(exact)} leer`, hint: t_('kein eigener Wert') }, { value: `attr:${rest}=*`, label: t_('{0} = Muster…', [de(exact)]), hint: t_('* steht für beliebig, z. B. *sku*') }) }
@@ -69,12 +70,12 @@ function suggest() {
     } else if (key === 'incomplete:') for (const c of (m?.channels ?? []).filter(c => c.key.startsWith(low))) out.push({ value: `incomplete:${c.key}`, label: de(c), hint: c.key })
     else if (key === 'role:') for (const [v, l] of [['group', t_('▣ Gruppe')], ['product', t_('▦ Produkt')], ['variant', t_('◆ Variante')]]) if (v.startsWith(low)) out.push({ value: `role:${v}`, label: l, hint: v })
     else if (key === 'status:') for (const s of store.model?.statuses ?? []) if (s.key.startsWith(low) || store.statusLabel(s.key).toLowerCase().startsWith(low)) out.push({ value: `status:${s.key}`, label: store.statusText(s.key), hint: s.key })
-    else if (key === 'group:') for (const g of (m?.groups ?? []).filter(g => !low || g.key.toLowerCase().includes(low) || (g.label?.de ?? '').toLowerCase().includes(low))) out.push({ value: `group:${g.key}`, label: de(g), hint: g.key })
+    else if (key === 'group:') for (const g of (m?.groups ?? []).filter(g => !low || g.key.toLowerCase().includes(low) || (L(g.label) ?? '').toLowerCase().includes(low))) out.push({ value: `group:${g.key}`, label: de(g), hint: g.key })
     else if (key === 'under:') { for (const a of [...(props.id ? tree.ancestors(props.id) : []), selected.value].filter(Boolean).reverse()) if (!low || a.label.toLowerCase().includes(low) || a.id.includes(low)) out.push({ value: `under:${a.id}`, label: `${icon(a.role)} ${a.label}`, hint: a.id === props.id ? 'hier' : a.id }) }
-    else if (key === 'media:') { out.push({ value: 'media:any', label: t_('irgendein Medium'), hint: t_('hat mindestens eines') }); for (const t of (m?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `media:${t.key}`, label: t.label?.de || t.key, hint: t_('Relationstyp') }); if (low) out.push({ value: `media:${low}`, label: t_('Name enthält „{0}“', [low]), hint: '* = beliebig' }) }
+    else if (key === 'media:') { out.push({ value: 'media:any', label: t_('irgendein Medium'), hint: t_('hat mindestens eines') }); for (const t of (m?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `media:${t.key}`, label: L(t.label) || t.key, hint: t_('Relationstyp') }); if (low) out.push({ value: `media:${low}`, label: t_('Name enthält „{0}“', [low]), hint: '* = beliebig' }) }
     else if (key === 'folder:') { out.push({ value: 'folder:none', label: t_('⌂ ohne Ordner'), hint: t_('ein Medium des Knotens liegt in keinem Ordner') }); mediaFolders().then(fs => { for (const f of fs.filter(f => !low || f.name.toLowerCase().includes(low))) out.push({ value: `folder:${f.id}`, label: `📁 ${f.path}`, hint: t_('samt Unterordnern') }); sugg.value = [...out] }) }
     else if (key === 'rel:' && rest.includes('=')) { const [t, p] = rest.split('='); for (const r of tree.rows.filter(r => p && (r.label.toLowerCase().includes(p.toLowerCase()) || tree.keyHit(r, p.toLowerCase()))).slice(0, 8)) out.push({ value: `rel:${t}=${Object.values(r.keys ?? {})[0] || r.id}`, label: `${icon(r.role)} ${r.label}`, hint: t_('Partner der Relation{0}', [r.keys ? ' · ' + tree.keyText(r) : '']) }) }
-    else if (key === 'rel:') { out.push({ value: 'rel:any', label: t_('irgendeine Relation'), hint: t_('zu anderen Knoten') }); for (const t of (m?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `rel:${t.key}`, label: t.label?.de || t.key, hint: (t.symmetric ? 'symmetrisch' : 'gerichtet') + ' ' + t_('— mit = danach der Partner') }) }
+    else if (key === 'rel:') { out.push({ value: 'rel:any', label: t_('irgendeine Relation'), hint: t_('zu anderen Knoten') }); for (const t of (m?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `rel:${t.key}`, label: L(t.label) || t.key, hint: (t.symmetric ? 'symmetrisch' : 'gerichtet') + ' ' + t_('— mit = danach der Partner') }) }
     else if (key === 'since:') for (const [d, l] of [[0, 'heute'], [1, t_('seit gestern')], [7, 'letzte 7 Tage'], [30, 'letzte 30 Tage']]) out.push({ value: `since:${day(d)}`, label: l, hint: day(d) })
     else if (key === 'by:' && store.actor && store.actor.toLowerCase().startsWith(low)) out.push({ value: `by:${store.actor}`, label: `👤 ${store.actor}`, hint: 'ich' })
   }
@@ -236,7 +237,7 @@ async function runLink() {
   try {
     const res = await api.post('/api/batch', { commands: cmds })
     if (res.error) store.toast(t_('{0} — {1} Einträge davor geschrieben', [res.error.message, res.results.length]))
-    else store.toast(t_('{0} Relationen {1} → {2} Einträge (Stapel {3})', [n, t.label?.de || t.key, res.results.length, res.batch]), 'ok')
+    else store.toast(t_('{0} Relationen {1} → {2} Einträge (Stapel {3})', [n, L(t.label) || t.key, res.results.length, res.batch]), 'ok')
     link.value = null
     await store.poll(true)
   } catch (e) { store.toast(e.message) }
@@ -360,10 +361,10 @@ async function loadWorkflows() { try { wfDefs.value = await api.get('/api/workfl
 onMounted(loadWorkflows)
 async function wfStepAll(rows, wf, t) {
   let note = null
-  if (t.noteRequired) { note = await ask.prompt({ title: `${t.label?.de || t.key} (${rows.length})`, text: t_('Notiz ist Pflicht — was ist zu tun?'), placeholder: t_('Notiz') }); if (!note?.trim()) return }
+  if (t.noteRequired) { note = await ask.prompt({ title: `${L(t.label) || t.key} (${rows.length})`, text: t_('Notiz ist Pflicht — was ist zu tun?'), placeholder: t_('Notiz') }); if (!note?.trim()) return }
   let ok = 0; const why = []
   for (const x of rows) { try { await api.post(`/api/nodes/${encodeURIComponent(x.id)}/workflow/${wf.key}/${t.key}`, { note }); ok++ } catch (e) { if (why.length < 3) why.push(`${x.label}: ${e.message}`) } }
-  store.toast(`⚑ ${t.label?.de || t.key}: ${ok} von ${rows.length}${why.length ? ' — ' + why.join(' · ') : ''}`, ok ? 'ok' : 'warn')
+  store.toast(`⚑ ${L(t.label) || t.key}: ${ok} von ${rows.length}${why.length ? ' — ' + why.join(' · ') : ''}`, ok ? 'ok' : 'warn')
   await store.poll(true)
 }
 async function setStatusAll(rows, status) {
@@ -419,7 +420,7 @@ async function contextMenu(e, r) {
   if (r.role !== 'rubric' && wfDefs.value.length) {
     try {
       const app = await api.post('/api/workflows/applicable', { ids: (sel ?? [r]).map(x => x.id) })
-      wfItems = app.map(a => ({ label: `${a.workflowLabel?.de || a.workflow}: ${a.label?.de || a.key} → ${a.toLabel?.de || a.to}${a.of > 1 ? ` (${a.count} von ${a.of})` : ''}`, icon: '⚑', disabled: a.count === 0,
+      wfItems = app.map(a => ({ label: `${a.workflowLabel?.de || a.workflow}: ${L(a.label) || a.key} → ${a.toLabel?.de || a.to}${a.of > 1 ? ` (${a.count} von ${a.of})` : ''}`, icon: '⚑', disabled: a.count === 0,
         hint: [a.blocked ? t_('{0} gesperrt (Freigabe nicht möglich)', [a.blocked]) : '', a.noteRequired ? t_('Notiz Pflicht') : '', a.effects?.length ? a.effects.join(', ') : ''].filter(Boolean).join(' · '),
         action: () => wfStepAll(sel ?? [r], { key: a.workflow }, a) }))
     } catch { wfItems = [] }
@@ -591,22 +592,22 @@ function onDialogKey(e) {
             </div>
           </td></tr>
           <tr><td class="attr">{{ $t("Relation") }}</td><td>
-            <select v-model="link.type" style="width:260px"><option v-for="t in relTypes" :key="t.key" :value="t.key">{{ t.symmetric ? '⇄' : '→' }} {{ t.label?.de || t.key }}{{ t.group ? ' · ▤ ' + t.group : '' }}</option></select>
+            <select v-model="link.type" style="width:260px"><option v-for="t in relTypes" :key="t.key" :value="t.key">{{ t.symmetric ? '⇄' : '→' }} {{ $L(t.label) || t.key }}{{ t.group ? ' · ▤ ' + t.group : '' }}</option></select>
             <span v-if="linkType" class="muted" style="margin-left:8px">{{ linkType.symmetric ? $t('beidseitig — liest sich von beiden Enden gleich') : $t('einseitig — zwei Lesarten') }}</span>
           </td></tr>
           <tr v-if="linkType && link.target"><td class="attr">{{ $t("Richtung") }}</td><td class="dirs">
             <label :class="{ on: link.dir === 'target-first' }"><input type="radio" value="target-first" v-model="link.dir" />
-              <b>{{ link.target.label }}</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ $t("{0} Einträge", [pickedRows.length]) }}</b>
-              <div v-if="!linkType.symmetric" class="muted reading">{{ $t("die Einträge sind „{0}“ {1}", [linkType.reverse?.de || '…', link.target.label]) }}</div></label>
+              <b>{{ link.target.label }}</b> — {{ $L(linkType.label) || linkType.key }} → <b>{{ $t("{0} Einträge", [pickedRows.length]) }}</b>
+              <div v-if="!linkType.symmetric" class="muted reading">{{ $t("die Einträge sind „{0}“ {1}", [$L(linkType.reverse) || '…', link.target.label]) }}</div></label>
             <label v-if="!linkType.symmetric" :class="{ on: link.dir === 'set-first' }"><input type="radio" value="set-first" v-model="link.dir" />
-              <b>{{ $t("{0} Einträge", [pickedRows.length]) }}</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ link.target.label }}</b>
-              <div class="muted reading">{{ $t("{0} ist „{1}“ jedes Eintrags", [link.target.label, linkType.reverse?.de || '…']) }}</div></label>
+              <b>{{ $t("{0} Einträge", [pickedRows.length]) }}</b> — {{ $L(linkType.label) || linkType.key }} → <b>{{ link.target.label }}</b>
+              <div class="muted reading">{{ $t("{0} ist „{1}“ jedes Eintrags", [link.target.label, $L(linkType.reverse) || '…']) }}</div></label>
           </td></tr>
         </tbody></table>
         <div class="scroll" style="max-height:340px">
           <table class="grid" style="width:auto">
-            <thead><tr><th style="width:320px">{{ $t("Eintrag") }}</th><th v-for="a in linkAttrs" :key="a.key" style="width:140px" :title="a.key">{{ a.label?.de || a.key }}<span v-if="a.unit" class="muted"> {{ a.unit }}</span></th><th style="width:120px"></th></tr>
-              <tr v-if="linkAttrs.length" class="muted"><td style="font-size:11px;padding:2px 8px">{{ $t("für alle:") }}</td><td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input type="text" style="width:100%" :placeholder="a.label?.de || a.key" @change="fillAll(a.key, $event.target.value)" /></td><td></td></tr>
+            <thead><tr><th style="width:320px">{{ $t("Eintrag") }}</th><th v-for="a in linkAttrs" :key="a.key" style="width:140px" :title="a.key">{{ $L(a.label) || a.key }}<span v-if="a.unit" class="muted"> {{ a.unit }}</span></th><th style="width:120px"></th></tr>
+              <tr v-if="linkAttrs.length" class="muted"><td style="font-size:11px;padding:2px 8px">{{ $t("für alle:") }}</td><td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input type="text" style="width:100%" :placeholder="$L(a.label) || a.key" @change="fillAll(a.key, $event.target.value)" /></td><td></td></tr>
             </thead>
             <tbody>
               <tr v-for="x in linkRows" :key="x.r.id" :class="{ muted: !x.ok || x.exists }">
@@ -635,16 +636,16 @@ function onDialogKey(e) {
           <span v-else class="muted">{{ creating === 'variant' ? 'unter ' + productTarget.label : $t('an der Wurzel') }}</span></div>
         <table class="grid form"><colgroup><col style="width:170px" /><col style="width:300px" /></colgroup><tbody>
           <tr v-for="a in (creating === 'variant' ? productTarget.axes : [])" :key="'ax-' + a">
-            <td class="attr" :title="a + ' ' + $t('— Variantenachse')">◆ {{ attrDef(a)?.label?.de || a }}</td>
+            <td class="attr" :title="a + ' ' + $t('— Variantenachse')">◆ {{ $L(attrDef(a)?.label) || a }}</td>
             <td>
-              <select v-if="attrDef(a)?.type === 'enum'" v-model="form[a]" style="width:100%"><option value="">…</option><option v-for="v in listValues(a)" :key="v.value" :value="v.value">{{ v.label?.de || v.value }}</option></select>
+              <select v-if="attrDef(a)?.type === 'enum'" v-model="form[a]" style="width:100%"><option value="">…</option><option v-for="v in listValues(a)" :key="v.value" :value="v.value">{{ $L(v.label) || v.value }}</option></select>
               <input v-else v-model="form[a]" type="text" style="width:100%" />
             </td>
           </tr>
           <tr v-for="(r, i) in required" :key="r.def.key">
-            <td class="attr" :title="r.def.key + (r.locale ? ' · ' + r.locale : '')">● {{ r.def.label?.de || r.def.key }}<span v-if="r.locale" class="muted">&nbsp;{{ r.locale }}</span></td>
+            <td class="attr" :title="r.def.key + (r.locale ? ' · ' + r.locale : '')">● {{ $L(r.def.label) || r.def.key }}<span v-if="r.locale" class="muted">&nbsp;{{ r.locale }}</span></td>
             <td>
-              <select v-if="r.def.type === 'enum'" v-model="vals[r.def.key]" style="width:100%"><option value="">…</option><option v-for="v in listValues(r.def.key)" :key="v.value" :value="v.value">{{ v.label?.de || v.value }}</option></select>
+              <select v-if="r.def.type === 'enum'" v-model="vals[r.def.key]" style="width:100%"><option value="">…</option><option v-for="v in listValues(r.def.key)" :key="v.value" :value="v.value">{{ $L(v.label) || v.value }}</option></select>
               <select v-else-if="r.def.type === 'boolean'" v-model="vals[r.def.key]" style="width:100%"><option value="">…</option><option value="true">{{ $t("✓ ja") }}</option><option value="false">{{ $t("✗ nein") }}</option></select>
               <input v-else v-model="vals[r.def.key]" :type="r.def.type === 'date' ? 'date' : 'text'" style="width:100%" :placeholder="r.def.multiple ? 'kommagetrennt' : ''" :autofocus="i === 0" />
             </td>

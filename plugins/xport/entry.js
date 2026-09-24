@@ -4,6 +4,7 @@
 // die Vorschau (erste Produkte) und lädt herunter; der Job (job.mjs) schreibt dasselbe Profil regelmäßig in ein Verzeichnis.
 // Startvorlagen unter templates/: BMEcat 2005 mit ETIM-Attributen, Google Merchant, JSON. Der Kern (core.mjs) ist DOM-frei.
 import { render, build, needs } from './core.mjs'
+const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
@@ -30,7 +31,7 @@ async function mount(root, ctx) {
   if (!tree.loaded) await tree.load()
   const model = store.model
   const attrs = model.attributes.filter(a => a.type !== 'rows')
-  const lbl = a => a.label?.[model.masterLocale] || a.label?.de || a.key
+  const lbl = a => a.label?.[model.masterLocale] || L(a.label) || a.key
   // pub: Publikationsbaum als Quelle (Taloan, 22.09.: „der BMEcat-Export setzt auf einen Publikationsbaum auf“) — dann zählt root nicht;
   // rules: Regeln der Ausleitung für ETIM (unbekannt, Klasse Pflicht, Vollständigkeit, streng) — im Profil, nicht im ETIM-Plugin
   const RULES = { unknownAs: 'UN', requireClass: false, minCompleteness: 0, strict: false }

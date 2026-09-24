@@ -1,6 +1,6 @@
 import { reactive } from 'vue'
 import { api } from './api.js'
-import { setLang, browserLang } from './i18n.js'   // Oberflächensprache (24.09.2026)
+import { setLang, browserLang, L } from './i18n.js'   // Oberflächensprache (24.09.2026); L = Bezeichnung des Modells in ihr
 
 // Ein Zustand für die ganze Oberfläche. Einstellungen liegen im localStorage,
 // der Serverstand (head) wird alle 3 s abgefragt — darauf hängen Live-Listen.
@@ -59,21 +59,21 @@ export const store = reactive({
   etag: null,           // ETag der index.html beim Laden — ändert er sich, liegt eine neue Fassung
   stale: false,
 
-  // Name eines Attributs/einer Gruppe/einer Liste in der Anzeige: Bezeichnung in der ersten Sicht-Sprache (Fallback de, Key),
-  // technischer Key, oder beides — je Einstellung attrNames
+  // Name eines Attributs/einer Gruppe/einer Liste in der Anzeige: Bezeichnung in der Oberflächensprache (Taloan, 24.09.2026:
+  // „das erste“ — nicht mehr die erste Sicht-Sprache; Fallback de, erste vorhandene, Key), technischer Key, oder beides — je attrNames
   label(def) {
     if (!def) return ''
     if (this.attrNames === 'key') return ''   // im Key-Modus steht nur der Key (die Ansicht zeigt ihn abgegraut daneben)
-    return def.label?.[this.viewLocales?.[0]] || def.label?.de || Object.values(def.label ?? {}).find(Boolean) || def.key
+    return L(def.label) || def.key
   },
   // Status-Vokabular aus dem Modell (Taloan, 22.09.2026): Definition, Text in der Sicht-Sprache, Symbol; Farbe als Token (pos, neg, muted, warn, accent)
   status(key) { return (this.model?.statuses ?? []).find(s => s.key === key) ?? null },
-  statusLabel(key) { const s = this.status(key); return s ? (s.label?.[this.viewLocales?.[0]] || s.label?.de || Object.values(s.label ?? {}).find(Boolean) || s.key) : (key ?? '') },
+  statusLabel(key) { const s = this.status(key); return s ? (L(s.label) || s.key) : (key ?? '') },
   statusText(key) { const s = this.status(key); return s ? `${s.icon ? s.icon + ' ' : ''}${this.statusLabel(key)}` : (key ?? '') },
   statusStyle(key) { const s = this.status(key); return s?.color ? `color:var(--${s.color})` : '' },
   name(def) {
     if (!def) return ''
-    const label = def.label?.[this.viewLocales?.[0]] || def.label?.de || Object.values(def.label ?? {}).find(Boolean) || def.key
+    const label = L(def.label) || def.key
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {

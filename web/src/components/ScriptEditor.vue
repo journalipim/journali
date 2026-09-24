@@ -5,6 +5,7 @@
 // Wer unterbrochen wird, behält den Entwurf im Browser (localStorage) und macht später weiter.
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { api } from '../api.js'
+import { L } from '../i18n.js'
 
 // node/locale: der Knoten, an dem das Skript gerechnet wird — dann zeigt der Fuss das momentane Ergebnis statt einer Erklärung (Taloan, 17.09.)
 const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String, node: String, locale: String })
@@ -67,7 +68,7 @@ function acUpdate() {
   if (m && props.attributes?.length) {
     const q = m[1].toLowerCase()
     const wrap = k => isTemplate.value ? (text.value[el.selectionStart] === '}' ? '{' + k : '{' + k + '}') : '$' + k
-    items = props.attributes.filter(a => a.key.includes(q) || (a.label?.de ?? '').toLowerCase().includes(q)).slice(0, 12).map(a => ({ kind: 'attr', insert: wrap(a.key), show: (isTemplate.value ? '{' : '$') + a.key + (isTemplate.value ? '}' : ''), note: `${a.label?.de || ''} · ${a.type}${a.perLocale ? ' 🗣' : ''}${a.unit ? ' · ' + a.unit : ''}` }))
+    items = props.attributes.filter(a => a.key.includes(q) || (L(a.label) ?? '').toLowerCase().includes(q)).slice(0, 12).map(a => ({ kind: 'attr', insert: wrap(a.key), show: (isTemplate.value ? '{' : '$') + a.key + (isTemplate.value ? '}' : ''), note: `${L(a.label) || ''} · ${a.type}${a.perLocale ? ' 🗣' : ''}${a.unit ? ' · ' + a.unit : ''}` }))
     start = el.selectionStart - m[0].length
   } else if (isTemplate.value) {
     const f = /\|([a-z0-9]*)$/.exec(before)

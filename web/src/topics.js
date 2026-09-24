@@ -6,6 +6,7 @@
 import { computed } from 'vue'
 import { plugins } from './plugins.js'
 import { t as t_ } from './i18n.js'
+import { L } from './i18n.js'
 
 export const TOPICS = [
   { key: 'import', to: '/import', icon: '⇩', label: t_('Import'), hotkey: '4' },
@@ -26,7 +27,7 @@ export function topicOf(key, explicit = null) {
   const kind = plugins.list.find(p => p.key === key)?.manifest?.kind
   return KIND_TOPIC[kind] ?? 'tools'
 }
-const label = key => { const m = plugins.list.find(p => p.key === key)?.manifest; return m?.label?.de || m?.label?.en || key }
+const label = key => { const m = plugins.list.find(p => p.key === key)?.manifest; return L(m?.label) || m?.label?.en || key }
 
 // Die Einträge eines Themas: die Ansichten der Plugins, geordnet (plugins.sorted: Basis, order, Prüfungen vor Vorschlägen, Name)
 export const entries = computed(() => {
