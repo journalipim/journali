@@ -107,7 +107,7 @@ onMounted(lies)
     <h2 :title="$t('Vollsicherung in ein Verzeichnis auf dem Server; zurück nur in ein leeres System.')">{{ $t("⇅ Sichern und wiederherstellen") + ' ' }}<span class="muted">{{ $t("· Journal, Assets, Zugänge, Plugins") }}</span></h2>
 
     <div class="row" style="gap:6px;margin-bottom:6px">
-      <input v-model="dir" type="text" :placeholder="$t('Verzeichnis der Sicherung')" style="flex:1" @keydown.enter="lies" />
+      <input v-model="dir" type="text" class="pfad" :placeholder="$t('Verzeichnis der Sicherung')" @keydown.enter="lies" />
       <button :title="$t('Verzeichnis auf dem Server wählen — der Stand kommt beim Wählen')" @click="filePicker({ value: dir, dirOnly: true, onPick: v => { dir = v; lies() } })">📁</button>
     </div>
 

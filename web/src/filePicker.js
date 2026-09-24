@@ -19,8 +19,8 @@ export function ordnerName(s) {
 /// filePicker({ value, dirOnly, title, onPick(path) }) — öffnet das Fenster; onPick bekommt den gewählten Pfad
 export function filePicker({ value = '', dirOnly = false, title = null, onPick = () => {} } = {}) {
   const box = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50' })
-  const dlg = el('div', { style: 'width:min(640px,96vw);height:min(520px,90vh);background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:6px' })
-  const pathIn = el('input', { type: 'text', style: 'flex:1', onkeydown: e => { if (e.key === 'Enter') go(pathIn.value) } })
+  const dlg = el('div', { style: 'width:min(860px,96vw);height:min(560px,90vh);background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:6px' })
+  const pathIn = el('input', { type: 'text', class: 'pfad', onkeydown: e => { if (e.key === 'Enter') go(pathIn.value) } })
   const rootsSel = el('select', { style: 'width:180px', onchange: () => go(rootsSel.value) })
   const list = el('div', { style: 'flex:1;overflow:auto;border:1px solid var(--line);border-radius:4px' })
   const status = el('div', { class: 'muted', style: 'font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })

@@ -116,7 +116,7 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
       <tr><td class="muted" :title="$t('Bytes werden nach SHA-256 abgelegt; das Journal kennt nur den Hash, der Treiber ist wechselbar.')">{{ $t("Treiber") }}</td><td><select v-model="cfg.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td>
         <td></td></tr>
       <tr v-if="cfg.driver === 'file'"><td class="muted" :title="$t('Vom Server aus gesehen — im Container z. B. /data/media.')">{{ $t("Verzeichnis") }}</td><td>
-        <div class="row"><input v-model="cfg.path" type="text" style="flex:1" :placeholder="$t('media (relativ zum Server) oder /data/media')" /><button class="x" @click="filePicker({ value: cfg.path, dirOnly: true, title: $t('📁 Verzeichnis des Assetspeichers (auf dem Server)'), onPick: p => { cfg.path = p } })" :title="$t('Verzeichnis auswählen')">…</button></div>
+        <div class="row"><input v-model="cfg.path" type="text" class="pfad" :placeholder="$t('media (relativ zum Server) oder /data/media')" /><button class="x" @click="filePicker({ value: cfg.path, dirOnly: true, title: $t('📁 Verzeichnis des Assetspeichers (auf dem Server)'), onPick: p => { cfg.path = p } })" :title="$t('Verzeichnis auswählen')">…</button></div>
       </td><td></td></tr>
       <template v-if="cfg.driver === 's3'">
         <tr><td class="muted" :title="$t('Garage: 3900 ist die S3-API.')">{{ $t("Endpoint") }}</td><td><input v-model="cfg.endpoint" type="text" style="width:100%" :placeholder="$t('http://garage:3900')" /></td><td></td></tr>
@@ -205,7 +205,7 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /></colgroup><tbody>
       <tr><td class="muted">{{ $t("Quelle") }}</td><td><select v-model="copyFrom.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td></tr>
       <tr v-if="copyFrom.driver === 'file'"><td class="muted">{{ $t("Verzeichnis") }}</td><td>
-        <div class="row"><input v-model="copyFrom.path" type="text" style="flex:1" /><button class="x" @click="filePicker({ value: copyFrom.path, dirOnly: true, title: $t('📁 Verzeichnis des alten Speichers (auf dem Server)'), onPick: p => { copyFrom.path = p } })" :title="$t('Verzeichnis auswählen')">📁</button></div>
+        <div class="row"><input v-model="copyFrom.path" type="text" class="pfad" /><button class="x" @click="filePicker({ value: copyFrom.path, dirOnly: true, title: $t('📁 Verzeichnis des alten Speichers (auf dem Server)'), onPick: p => { copyFrom.path = p } })" :title="$t('Verzeichnis auswählen')">📁</button></div>
       </td></tr>
       <template v-if="copyFrom.driver === 's3'">
         <tr><td class="muted">{{ $t("Endpoint") }}</td><td><input v-model="copyFrom.endpoint" type="text" style="width:100%" /></td></tr>

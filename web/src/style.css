@@ -246,6 +246,12 @@ table.grid th {
   z-index: 1;
 }
 table.grid td.num, table.grid th.num { text-align: right; font-family: var(--mono); }
+/* Eine Zeile nebeneinander — bis 25.09.2026 definierte das jede Ansicht für sich, und wo es fehlte, blieb ein
+   Feld mit flex:1 schmal. Eine eigene Regel in der Ansicht sticht diese hier (scoped). */
+div.row { display: flex; align-items: center; gap: 6px; }
+/* Ein Pfadfeld nimmt die Breite, die da ist: Serverpfade sind lang, und abgeschnitten nützen sie nichts */
+input.pfad { flex: 1; min-width: 0; font-family: var(--mono); font-size: 12px; }
+
 table.grid tr.row { cursor: default; }
 table.grid tr.row:hover { background: var(--hover); }
 table.grid tr.row.selected { background: var(--accent-soft); }

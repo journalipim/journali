@@ -51,3 +51,12 @@ test('Einspielen schickt mit, was mitgeht — und bricht nicht ab', async () => 
   assert.doesNotMatch(w.text(), /✗/)
   w.unmount()
 })
+
+test('das Pfadfeld nimmt die Breite der Zeile — sonst sieht man lange Serverpfade nicht', async () => {
+  server()
+  const w = mount(RestoreSettings); await flushPromises()
+  const feld = w.find('input[type=text]')
+  assert.ok(feld.classes().includes('pfad'), 'ohne die Klasse pfad bleibt das Feld schmal')
+  assert.ok(feld.element.parentElement.classList.contains('row'), 'die Klasse row macht die Zeile erst flex')
+  w.unmount()
+})
