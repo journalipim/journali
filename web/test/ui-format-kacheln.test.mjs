@@ -38,3 +38,19 @@ test('jede Kachel bringt ihre festen Eigenschaften mit — daraus wird das vorge
   assert.deepEqual(v('Zwischenablage').props, { paste: true })
   assert.deepEqual(v('CSV-Export').props, { festesFormat: 'csv' })
 })
+
+test('die Reihenfolge steht vor der Basis: CSV, Excel, JSON, dann die Zwischenablage', () => {
+  const views = [
+    { key: 'json', label: 'JSON-Import' },                       // kein order → 50
+    { key: 'table', label: 'Zwischenablage', order: 90 },
+    { key: 'table', label: 'CSV-Import', order: 10 },
+    { key: 'ixp', label: 'IXP' },
+    { key: 'table', label: 'Excel-Import', order: 11 },
+  ]
+  plugins.list = [
+    { key: 'table', manifest: { base: ['import'] } },
+    { key: 'json', manifest: {} }, { key: 'ixp', manifest: {} },
+  ]
+  assert.deepEqual(plugins.sorted(views, 'import').map(v => v.label),
+    ['CSV-Import', 'Excel-Import', 'IXP', 'JSON-Import', 'Zwischenablage'])
+})

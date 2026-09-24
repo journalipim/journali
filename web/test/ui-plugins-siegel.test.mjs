@@ -79,7 +79,7 @@ test('Katalog: holen ruft den Server, eine neuere Fassung steht als ↑ da', asy
   } finally { api.get = origGet; api.post = origPost }
 })
 
-test('jede Zeile hat dieselben drei Spalten rechts — mit und ohne Fassung, Siegel, Verzeichnis', async () => {
+test('jede Zeile hat dieselben Spalten rechts — mit und ohne Fassung, Siegel, Verzeichnis', async () => {
   welt()
   plugins.list.push({ key: 'weg', installed: true, enabled: false, onDisk: false, manifest: { kind: 'tool', label: { de: 'Eine sehr lange Bezeichnung, die abgeschnitten wird' } } })
   const orig = api.get; api.get = async () => ({ plugins: [] })
@@ -87,8 +87,8 @@ test('jede Zeile hat dieselben drei Spalten rechts — mit und ohne Fassung, Sie
     const w = mount(PluginsView, opts)
     await flushPromises()
     for (const li of w.findAll('.scroll .li'))
-      assert.deepEqual(li.findAll('.r > span').map(s => s.classes()[0]), ['c-ver', 'c-seal', 'c-state'], li.find('.k').text())
-    assert.deepEqual(w.findAll('.li.head .r > span').map(s => s.classes()[0]), ['c-ver', 'c-seal', 'c-state'], 'der Kopf steht über denselben Spalten')
+      assert.deepEqual(li.findAll('.r > span').map(s => s.classes()[0]), ['c-art', 'c-ver', 'c-seal', 'c-state'], li.find('.k').text())
+    assert.deepEqual(w.findAll('.li.head .r > span').map(s => s.classes()[0]), ['c-art', 'c-ver', 'c-seal', 'c-state'], 'der Kopf steht über denselben Spalten')
     assert.match(row(w, 'weg').find('.c-state').text(), /✗/, 'fehlendes Verzeichnis steht beim Zustand')
   } finally { api.get = orig }
 })

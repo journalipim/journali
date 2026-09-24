@@ -90,13 +90,15 @@ export const plugins = reactive({
     this.loaded = true   // erst jetzt: vorher sähe die Übersicht eines Themas nur den ersten Eintrag und leitete dorthin
   },
   enabled(key) { return this.active(key) },
-  // Reihenfolge innerhalb eines Themas: 1. die Basis des Themas, 2. explizites order (Ansicht/Aktion, sonst Manifest), 3. Art: Prüfungen („… prüfen“) vor
-  // Vorschlägen („… vorschlagen“, „Anreichern“) vor dem Rest, 4. Bezeichnung. Damit stehen die Kataloge (DPP, EmpCo, ETIM, PPWR) beisammen.
+  // Reihenfolge innerhalb eines Themas: 1. explizites order (Ansicht/Aktion, sonst Manifest; Vorgabe 50), 2. die Basis
+  // des Themas, 3. Art: Prüfungen („… prüfen“) vor Vorschlägen („… vorschlagen“, „Anreichern“) vor dem Rest,
+  // 4. Bezeichnung. Damit stehen die Kataloge (DPP, EmpCo, ETIM, PPWR) beisammen, und wer eine Reihenfolge nennt,
+  // steht dort — auch vor der Basis (Import: CSV, Excel, JSON, dann die Zwischenablage).
   sorted(items, topic, labelOf = x => x.label) {
     const rank = x => { const l = String(typeof labelOf(x) === 'function' ? '' : labelOf(x) ?? '').toLowerCase(); return /prüfen$/.test(l) ? 1 : /vorschlagen$|anreichern$/.test(l) ? 2 : 3 }
     const base = x => (this.list.find(p => p.key === x.key)?.manifest?.base ?? []).includes(topic) ? 0 : 1
     const order = x => x.order ?? this.list.find(p => p.key === x.key)?.manifest?.order ?? 50
-    return [...items].sort((a, b) => base(a) - base(b) || order(a) - order(b) || rank(a) - rank(b) || String(labelOf(a) ?? '').localeCompare(String(labelOf(b) ?? ''), 'de'))
+    return [...items].sort((a, b) => order(a) - order(b) || base(a) - base(b) || rank(a) - rank(b) || String(labelOf(a) ?? '').localeCompare(String(labelOf(b) ?? ''), 'de'))
   },
   // wirksam: an, und alles, was es braucht (requires), ist wirksam — eine ausgeschaltete Basis nimmt ihre Ergänzungen mit
   active(key, seen = new Set()) { const p = this.list.find(x => x.key === key); if (!p?.enabled || p.allowed === false || seen.has(key)) return false; seen.add(key); return (p.manifest?.requires ?? []).every(r => this.active(r, seen)) },

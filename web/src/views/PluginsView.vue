@@ -15,7 +15,7 @@ import { L } from '../i18n.js'
 
 const listW = paneWidth('plugins.list', 380)
 // Spaltenbreiten: am Kopf ziehen, Doppelklick setzt zurück; gemerkt je Browser. Die Bezeichnung nimmt den Rest
-const cols = columnWidths('plugins', { key: 70, ver: 58, state: 104 }, { min: 36, max: 320 })
+const cols = columnWidths('plugins', { key: 70, art: 96, ver: 58, state: 104 }, { min: 36, max: 320 })
 const cur = ref(null)
 const busy = ref('')
 // Symbol in der Leiste je Plugin: Einstellung des Nutzers, nicht des Plugins
@@ -61,8 +61,10 @@ const rank = p => !p.installed ? 3 : !p.enabled ? 2 : plugins.active(p.key) ? 0 
 /// Fassungen vergleichen sich nach Zahlen, nicht nach Zeichen: 1.10.0 steht über 1.9.0
 const ver = v => String(v ?? '').split('.').map(x => parseInt(x, 10) || 0)
 function verCmp(a, b) { const x = ver(a), y = ver(b); for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] ?? 0) - (y[i] ?? 0); if (d) return d } return 0 }
+const artOf = p => KIND[p.manifest?.kind] ?? p.manifest?.kind ?? ''
 function cmp(a, b) {
-  const d = sortBy.value === 'label' ? label(a.manifest).localeCompare(label(b.manifest), 'de')
+  const d = sortBy.value === 'art' ? artOf(a).localeCompare(artOf(b), 'de') || label(a.manifest).localeCompare(label(b.manifest), 'de')
+    : sortBy.value === 'label' ? label(a.manifest).localeCompare(label(b.manifest), 'de')
     : sortBy.value === 'version' ? verCmp(a.version, b.version)
     : sortBy.value === 'state' ? rank(a) - rank(b)
     : a.key.localeCompare(b.key, 'de')
@@ -125,6 +127,7 @@ function pick(k) { cur.value = k }
       <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}<i class="grip" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('key', $event)" @dblclick.stop="cols.zurueck()" /></span>
       <span class="l" :title="$t('nach Bezeichnung sortieren{0}', [sortBy === 'label' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('label')">{{ $t("Bezeichnung{0}", [caret('label')]) }}</span>
       <span class="r">
+        <span class="c-art" :title="$t('nach Art sortieren — gleiche Arten stehen dann beisammen{0}', [sortBy === 'art' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('art')">{{ $t("Art{0}", [caret('art')]) }}<i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('art', $event)" @dblclick.stop="cols.zurueck()" /></span>
         <span class="c-ver" :title="$t('nach Fassung sortieren{0}', [sortBy === 'version' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('version')"><i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('ver', $event)" @dblclick.stop="cols.zurueck()" />{{ $t("Fassung{0}", [caret('version')]) }}</span>
         <span class="c-seal" />
         <span class="c-state" :title="$t('nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert){0}', [sortBy === 'state' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('state')"><i class="grip left" :title="$t('Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück')" @mousedown="cols.zieh('state', $event)" @dblclick.stop="cols.zurueck()" />{{ $t("Zustand{0}", [caret('state')]) }}</span>
@@ -135,7 +138,8 @@ function pick(k) { cur.value = k }
         <span class="k">{{ p.key }}</span>
         <span class="l">{{ label(p.manifest) || p.key }}</span>
         <span class="r">
-          <!-- feste Spalten: Fassung, Siegel, Zustand — damit sie untereinander stehen, gleich wie lang die Bezeichnung ist -->
+          <!-- feste Spalten: Art, Fassung, Siegel, Zustand — damit sie untereinander stehen, gleich wie lang die Bezeichnung ist -->
+          <span class="c-art muted" :title="p.manifest?.kind ?? ''">{{ artOf(p) }}</span>
           <span class="c-ver mono">{{ p.version ?? '' }}<span v-if="p.update" class="warn" :title="$t('auf der Platte: {0}', [p.diskVersion])"> ↑</span></span>
           <span class="c-seal"><span v-if="sealOf(p)" class="seal" :class="p.certified ? 'pos' : 'neg'" :title="sealTitle(p)">{{ sealOf(p) }}</span></span>
           <span class="c-state" :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'" :title="stateOf(p)">{{ stateOf(p) }}<span v-if="!p.onDisk" class="neg" :title="$t('Verzeichnis fehlt')"> ✗</span></span>
@@ -243,10 +247,11 @@ function pick(k) { cur.value = k }
 .li .l { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .li .r { margin-left: auto; flex: none; font-size: 11px; display: flex; gap: 8px; align-items: center; }
 /* feste Breiten rechts: jede Spalte steht in jeder Zeile an derselben Stelle */
+.c-art { width: var(--c-art); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .c-ver { width: var(--c-ver); text-align: right; white-space: nowrap; }
 .c-seal { width: 14px; flex: none; text-align: center; }
 .c-state { width: var(--c-state); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.li.head .k, .li.head .c-ver, .li.head .c-state { position: relative; }
+.li.head .k, .li.head .c-art, .li.head .c-ver, .li.head .c-state { position: relative; }
 /* Griff am Rand der Kopfzelle: schmal, unsichtbar, bis die Maus darüber steht */
 .grip { position: absolute; top: 0; bottom: 0; right: -4px; width: 9px; cursor: col-resize; }
 .grip.left { right: auto; left: -8px; }

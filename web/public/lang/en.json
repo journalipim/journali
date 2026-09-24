@@ -2511,5 +2511,7 @@
  "Datei auf dem Server wählen": "Choose a file on the server",
  "keine Datei gewählt": "no file chosen",
  "Verzeichnis": "Directory",
- "Ein Zeitplan gehört zum Tarif {0} — diese Instanz hat {1}.": "A schedule belongs to tier {0} — this instance has {1}."
+ "Ein Zeitplan gehört zum Tarif {0} — diese Instanz hat {1}.": "A schedule belongs to tier {0} — this instance has {1}.",
+ "nach Art sortieren — gleiche Arten stehen dann beisammen{0}": "sort by kind — same kinds stand together{0}",
+ "Art{0}": "Kind{0}"
 }
