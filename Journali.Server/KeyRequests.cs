@@ -5,61 +5,9 @@ using System.Text.Json.Serialization;
 using Npgsql;
 using NpgsqlTypes;
 
+using Journali.Core.Licensing;
+
 namespace Journali.Server;
-
-/// <summary>
-/// Eine Schlüssel-Anforderung dieser Instanz.
-/// <para>Der Weg eines Schlüssels:</para>
-/// <list type="number">
-/// <item>Die Instanz schreibt die Anforderung (Art, Grenzen, Dauer) und signiert sie mit ihrem eigenen Schlüsselpaar.
-/// Der öffentliche Schlüssel steht in der Anforderung — der Aussteller kann sie prüfen, ohne die Instanz zu kennen, und
-/// merkt sich beim ersten Mal, zu welcher Kennung welcher öffentliche Schlüssel gehört.</item>
-/// <item>Der Shop gibt sie frei: er signiert den Fingerabdruck (<see cref="SignedRequest.Hash"/>) mit seinem Schlüssel.</item>
-/// <item>Der Aussteller prüft beide Signaturen und stellt den Schlüssel aus: mit derselben Id und dem Fingerabdruck
-/// der Anforderung (<see cref="LicenceKey.Request"/>), signiert mit dem Lizenzschlüssel.</item>
-/// <item>Die Instanz löst nur Schlüssel ein, zu denen sie selbst eine Anforderung hat.</item>
-/// </list>
-/// <para>Die Anforderung reist wie eine PGP-Klartextsignatur: der Rumpf als Text, daneben die Signatur. Geprüft wird
-/// der Text, so wie er dasteht — keine Seite muss JSON gleich schreiben wie die andere.</para>
-/// <para>Signatur: ECDSA P-256 über SHA-256, im Format r‖s (IEEE P1363, 64 Byte), Base64.</para>
-/// </summary>
-public sealed record KeyRequest(
-    string? Id = null,
-    string? Kind = null,
-    string? Instance = null,
-    string? Pub = null,
-    string? Plan = null,
-    int EntriesWeek = 0,
-    int EntriesMonth = 0,
-    int Days = 0,
-    DateTimeOffset? Created = null)
-{
-    internal static readonly JsonSerializerOptions Json = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-}
-
-/// <summary>Anforderung und Signatur, so wie sie an den Shop geht.</summary>
-public sealed record SignedRequest(string Anforderung, string Sig)
-{
-    /// <summary>Fingerabdruck: SHA-256 über den Rumpf, hex. Den signiert der Shop, den trägt der Schlüssel.</summary>
-    [JsonIgnore] public string Hash => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Anforderung))).ToLowerInvariant();
-    [JsonIgnore] public KeyRequest? Inhalt { get { try { return JsonSerializer.Deserialize<KeyRequest>(Anforderung, KeyRequest.Json); } catch { return null; } } }
-    /// <summary>Anforderung und Signatur als ein Text — das, was kopiert und an den Shop geschickt wird.</summary>
-    [JsonIgnore] public string Text => JsonSerializer.Serialize(this, KeyRequest.Json);
-
-    /// <summary>Passt die Signatur zum öffentlichen Schlüssel, der in der Anforderung steht? Das prüft auch der Aussteller.</summary>
-    public (bool Ok, string? Grund) Pruefe()
-    {
-        if (Inhalt is not { Pub: { Length: > 0 } pub }) return (false, "Anforderung ohne öffentlichen Schlüssel");
-        try
-        {
-            using var ecdsa = ECDsa.Create();
-            ecdsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(pub), out _);
-            return ecdsa.VerifyData(Encoding.UTF8.GetBytes(Anforderung), Convert.FromBase64String(Sig), HashAlgorithmName.SHA256)
-                ? (true, null) : (false, "Signatur der Anforderung passt nicht");
-        }
-        catch (Exception e) { return (false, "Anforderung nicht prüfbar: " + e.Message); }
-    }
-}
 
 /// <summary>
 /// Die Anforderungen dieser Instanz. Sie liegen in der Datenbank (Tabelle <c>anforderung</c>) und gehen wie Lizenz und

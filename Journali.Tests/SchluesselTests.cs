@@ -1,6 +1,7 @@
 using Journali.Core.Entries;
 using Journali.Core.Journal;
 using Journali.Core.Projections;
+using Journali.Core.Licensing;
 using Journali.Server;
 
 namespace Journali.Tests;

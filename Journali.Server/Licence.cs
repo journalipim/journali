@@ -97,20 +97,9 @@ public static class LicenceFile
 /// </summary>
 public static class Signatur
 {
-    public static (bool Ok, string? Grund) Pruefe(string rumpf, string? sig)
-    {
-        var pub = Environment.GetEnvironmentVariable("JOURNALI_LICENCE_KEY");
-        if (string.IsNullOrWhiteSpace(pub)) return (false, "ungeprüft — kein öffentlicher Schlüssel hinterlegt");
-        if (string.IsNullOrWhiteSpace(sig)) return (false, "keine Signatur");
-        try
-        {
-            using var ecdsa = ECDsa.Create();
-            ecdsa.ImportSubjectPublicKeyInfo(Convert.FromBase64String(pub), out _);
-            return ecdsa.VerifyData(Encoding.UTF8.GetBytes(rumpf), Convert.FromBase64String(sig), HashAlgorithmName.SHA256)
-                ? (true, null) : (false, "Signatur passt nicht");
-        }
-        catch (Exception e) { return (false, "Signatur nicht prüfbar: " + e.Message); }
-    }
+    /// <summary>Der öffentliche Schlüssel des Ausstellers aus der Umgebung — geprüft wird im Kern (Core.Licensing, auch vom Lizenzserver genutzt).</summary>
+    public static (bool Ok, string? Grund) Pruefe(string rumpf, string? sig) =>
+        Core.Licensing.Signaturen.Pruefe(rumpf, sig, Environment.GetEnvironmentVariable("JOURNALI_LICENCE_KEY"));
 }
 
 /// <summary>

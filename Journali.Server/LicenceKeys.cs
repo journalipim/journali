@@ -1,35 +1,11 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Journali.Core.Entries;
+using Journali.Core.Licensing;
 using Journali.Core.Projections;
 using static Journali.Server.ModelApi;
 
 namespace Journali.Server;
-
-/// <summary>
-/// Ein Lizenzschlüssel, wie ihn der Lizenzgeber ausstellt.
-/// <para>Er nennt die Instanz, für die er gilt, aber kein Team — das wählt die IT beim Einlösen. Die Art sagt, was
-/// er tut (<see cref="Schluessel.Reset"/> oder <see cref="Schluessel.Limit"/>), bei einem Limit auch wie viel und
-/// wie lange. <c>Request</c> ist der Fingerabdruck der Anforderung, zu der er ausgestellt wurde (<see cref="KeyRequests"/>);
-/// die Id ist die der Anforderung. Die Signatur deckt alles davon ab.</para>
-/// </summary>
-public sealed record LicenceKey(
-    string? Id = null,
-    string? Kind = null,
-    string? Instance = null,
-    int EntriesWeek = 0,
-    int EntriesMonth = 0,
-    int Days = 0,
-    DateOnly? Issued = null,
-    string? Request = null,
-    /// <summary>Der Tarif: beim Limit das Paket, beim Reset, für welchen Tarif er gilt (pro | enterprise).</summary>
-    string? Plan = null,
-    string? Sig = null)
-{
-    internal static readonly JsonSerializerOptions Json = new() { DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    /// <summary>Was signiert wird: alles ausser der Signatur.</summary>
-    [JsonIgnore] public string Rumpf => JsonSerializer.Serialize(this with { Sig = null }, Json);
-}
 
 public static class LicenceKeys
 {
