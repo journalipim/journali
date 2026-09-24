@@ -96,7 +96,7 @@ ist Vorschlag.
 | 12 | Nutzungslimits und Lizenzierung | Token = Journaleinträge, was zählt und was nicht, Woche/Monat, Tarife und Grenzen, Test, Kostenlos, Lizenzschlüssel, Reset, Abo je Team, ohne Internet, 7 Tage Kulanz |
 | 13 | Sicherung und Wiederherstellung | von Hand (⇅ B&R), als Job (backup), was gesichert wird, zurück in ein leeres System, Spiegel und Schnappschuss |
 | 14 | Datenschutz | was journali über Personen speichert, crypto-shredding (geplant), KI-Schlüssel und Volumen |
-| 15 | Lizenz | AGPL-3.0 im Wortlaut und in drei Sätzen: was man darf, was man muss |
+| 15 | Lizenz | Elastic License 2.0 in drei Sätzen, Zusatzerlaubnis Hosting; Wortlaut in `LICENSE` |
 | 16 | Tastatur | die Kürzel der Leiste, des Baums, der Zellen |
 | 17 | Glossar | Anwender, Team, Kanal, Achse, Fassung, Kennung, Abbild, Strom … |
 
@@ -139,3 +139,11 @@ Was noch deutsch ist: `ScriptEditor.vue` (regulärer Ausdruck im Vorlagen-Litera
 und die Servermeldungen (Stufe 3). Für Plugins: `t` steht in `window.journali` (host.js), fehlt aber noch im Shim
 `HOST_NAMES` von `build-plugins.mjs` und als `ctx.t` für Plugins ohne Bau; Sprachdateien je Plugin unter
 `plugins/<key>/lang/<code>.json` muss `setLang` mitladen.
+
+Stufe 3 gebaut am 24.09.2026: Plugins übersetzt (17 Sprachdateien `plugins/<key>/lang/en.json`), `t`/`L`/`setLang`
+im Shim, Bezeichnungen des Modells folgen der Oberflächensprache (`L()`).
+
+Teil 2 gebaut am 24.09.2026: 18 Kapitel unter `help/de` und `help/en`, `web/build-help.mjs` baut sie zu
+`wwwroot/help/<code>/`, `HelpView.vue` unter `/help/:chapter`, der ?-Knopf öffnet das Kapitel zur Ansicht
+(`help.js: chapterFor`). `LICENSE` in der Wurzel (ELv2 plus Zusatzerlaubnis). Offen: README zur Installation
+auf Git, Lizenzhinweis im Startbanner, `ScriptEditor.vue`, mehrzeilige Texte, Servermeldungen (Stufe 4).

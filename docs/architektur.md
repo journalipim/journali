@@ -137,6 +137,12 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
 - ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Rollen je Teilbaum, Workflow-Rollen
 - Import/Export — in der Praxis die Hälfte des Systems
+- **Status mit Geltungsdatum.** Ein Status (aktiv, ausgelaufen) soll ab einem Datum gelten,
+  in der Zukunft wie in der Vergangenheit. Entwurf: `StatusSet` bekommt ein optionales
+  `effectiveFrom`; der aktuelle Status ist beim Lesen der jüngste Eintrag, dessen Datum
+  nicht in der Zukunft liegt — kein neuer Eintragstyp, keine Uhr im Journal, das Abbild
+  rechnet ihn aus Eintrag und Tageszeit. Publikation und Freigabe lesen den abgeleiteten
+  Status; ein Export sieht damit am Stichtag denselben Stand wie die Oberfläche.
 - **Das wachsende Journal**. Nicht die Grösse ist das Problem, sondern die
   **Zahl** der Einträge: die Startzeit darf nicht von der Länge des Journals abhängen.
 
