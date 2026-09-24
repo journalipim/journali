@@ -5,6 +5,7 @@
 import { ref, computed, nextTick, watch, onUnmounted } from 'vue'
 import { dialog } from '../dialog.js'
 import AiBar from './AiBar.vue'
+import { t as t_ } from '../i18n.js'
 
 const props = defineProps({ value: String, inherited: String, disabled: Boolean, origin: String, title: String, clickEdit: { type: Boolean, default: true }, node: String, locale: String, label: String })   // clickEdit=false (Tabelle): Doppelklick/Enter öffnet
 const emit = defineEmits(['save'])
@@ -54,7 +55,7 @@ async function toggleSource() {
 }
 // Schreibbefehle des Browsers — reichen für Absatz, fett, kursiv, Listen, Überschrift, Link; kein Fremdcode.
 function cmd(name, arg = null) { rich.value?.focus(); document.execCommand(name, false, arg) }
-async function link() { const url = await dialog.prompt({ title: 'Link setzen', text: 'Adresse (leer entfernt den Link)', value: 'https://', ok: '🔗 Setzen' }); if (url == null) return; url ? cmd('createLink', url) : cmd('unlink') }
+async function link() { const url = await dialog.prompt({ title: t_('Link setzen'), text: t_('Adresse (leer entfernt den Link)'), value: 'https://', ok: t_('🔗 Setzen') }); if (url == null) return; url ? cmd('createLink', url) : cmd('unlink') }
 function onKey(e) {
   if (e.key === 'Enter' || e.key === 'F2') { e.preventDefault(); edit() }
   else if (e.key === 'Delete' && props.value != null) emit('save', '')
@@ -71,7 +72,7 @@ function onEditKey(e) {
   <td class="cell">
     <div class="cell-box html" :class="{ inherited: !disabled && value == null && inherited != null, disabled }"
       :tabindex="disabled ? undefined : 0" @click="clickEdit && edit()" @dblclick="clickEdit || edit()" @keydown="onKey"
-      :title="disabled ? 'Achse gibt es hier nicht' : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' (Enter überschreibt)' : (plain ? plain.slice(0, 400) + '\n\n' : '') + 'Editor öffnen (auch Enter)')">
+      :title="disabled ? $t('Achse gibt es hier nicht') : (value == null && inherited != null ? 'geerbt' + (origin ? ' von ' + origin : '') + ' ' + $t('(Enter überschreibt)') : (plain ? plain.slice(0, 400) + '\n\n' : '') + $t('Editor öffnen (auch Enter)'))">
       <template v-if="!disabled"><span v-if="plain" class="muted tag">‹›</span>{{ brief }}</template>
     </div>
     <Teleport to="body">

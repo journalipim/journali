@@ -4,6 +4,7 @@
 import { reactive, watch } from 'vue'
 import { api } from './api.js'
 import { store } from './store.js'
+import { t } from './i18n.js'
 
 const ICON = { group: '▣', product: '▦', variant: '◆', rubric: '▥' }
 export const icon = role => ICON[role] ?? '?'
@@ -44,7 +45,7 @@ export const tree = reactive({
     const counts = { group: 0, product: 0, variant: 0 }; let total = 0
     const walk = x => { for (const k of this.kids(x)) { counts[k.role] = (counts[k.role] ?? 0) + 1; total++; walk(k.id) } }
     walk(id)
-    const parts = [['group', 'Produktgruppe', 'Produktgruppen'], ['product', 'Produkt', 'Produkte'], ['variant', 'Variante', 'Varianten']].filter(([r]) => counts[r]).map(([r, one, many]) => `${counts[r]} ${counts[r] === 1 ? one : many}`)
+    const parts = [['group', t('Produktgruppe'), t('Produktgruppen')], ['product', t('Produkt'), t('Produkte')], ['variant', t('Variante'), t('Varianten')]].filter(([r]) => counts[r]).map(([r, one, many]) => `${counts[r]} ${counts[r] === 1 ? one : many}`)
     return { total, summary: parts.join(', '), names: this.kids(id).map(k => `${ICON[k.role] ?? ''} ${k.label}`) }
   },
 

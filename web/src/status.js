@@ -6,6 +6,7 @@ import { tree } from './tree.js'
 import { dialog } from './dialog.js'
 import { api } from './api.js'
 import { store } from './store.js'
+import { t } from './i18n.js'
 
 /// Alle Knoten unter diesem, beliebig tief. Rubriken bleiben draussen: ein Publikationsknoten hat keinen Status.
 export function subItems(id) {
@@ -35,8 +36,8 @@ export async function setStatus(node, status) {
   if (subs.length) {
     const ok = await dialog.confirm({
       title: `${store.statusText(status)} setzen?`,
-      ok: 'Setzen',
-      option: { label: `auch für die ${subs.length} Subitems`, checked: false },
+      ok: t('Setzen'),
+      option: { label: t('auch für die {0} Subitems', [subs.length]), checked: false },
     })
     if (!ok) return 0
     withSubs = !!dialog.option?.checked
@@ -45,7 +46,7 @@ export async function setStatus(node, status) {
   if (!rows.length) return 0
   if (rows.length === 1) await api.post(`/api/nodes/${encodeURIComponent(rows[0].id)}/status`, { status })
   else {
-    const r = await api.batchChunked(rows.map(n => ({ op: 'status.set', args: { node: n.id, status } })), { label: 'Status', continueOnError: true })
+    const r = await api.batchChunked(rows.map(n => ({ op: 'status.set', args: { node: n.id, status } })), { label: t('Status'), continueOnError: true })
     if (r.error) { store.toast(r.error); return 0 }
   }
   await store.poll(true)

@@ -6,6 +6,7 @@ import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { icon } from '../tree.js'
+import { t as t_ } from '../i18n.js'
 
 const tasks = ref([]); const defs = ref([]); const wf = ref(''); const state = ref(''); const busy = ref('')
 const color = c => ({ pos: 'var(--pos)', neg: 'var(--neg)', warn: 'var(--warn)', accent: 'var(--accent)' })[c] ?? 'var(--muted)'
@@ -20,19 +21,19 @@ let people = null
 async function assign(t) {
   if (!people) { try { people = await api.get('/api/auth/people') } catch { people = [] } }
   const roles = new Set(t.roles ?? []); const fits = p => roles.size === 0 || roles.has(p.role) || p.role === 'admin'
-  const choices = [{ value: '', label: roles.size ? `— Rolle ${[...roles].join('/')} (jede Person damit)` : '— jede Rolle mit Schreibrecht' },
+  const choices = [{ value: '', label: roles.size ? t_('— Rolle {0} (jede Person damit)', [[...roles].join('/')]) : t_('— jede Rolle mit Schreibrecht') },
     ...people.filter(fits).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role}` })),
-    ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role} (nicht die Rolle des Schritts)` }))]
-  const user = people.length ? await dialog.prompt({ title: `Zuständigen wählen · ${t.label}`, value: t.assigned ?? '', choices, ok: '👤 Zuweisen' }) : await dialog.prompt({ title: `Zuständigen wählen · ${t.label}`, text: 'Anwender-Key (leer = Rolle)', value: t.assigned ?? '', ok: '👤 Zuweisen' })
+    ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: t_('{0} · {1} (nicht die Rolle des Schritts)', [p.name || p.key, p.role]) }))]
+  const user = people.length ? await dialog.prompt({ title: t_('Zuständigen wählen · {0}', [t.label]), value: t.assigned ?? '', choices, ok: t_('👤 Zuweisen') }) : await dialog.prompt({ title: t_('Zuständigen wählen · {0}', [t.label]), text: 'Anwender-Key (leer = Rolle)', value: t.assigned ?? '', ok: t_('👤 Zuweisen') })
   if (user === null) return
   try { await api.post(`/api/nodes/${encodeURIComponent(t.node)}/workflow/${t.workflow}/assign`, { user: user.trim() || null }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
 async function step(t, tr) {
   let note = null
-  if (tr.noteRequired) { note = await dialog.prompt({ title: `${tr.label?.de || tr.key} · ${t.label}`, text: 'Notiz (Pflicht)', placeholder: 'Notiz', ok: `⚑ ${tr.label?.de || tr.key}` }); if (!note?.trim()) return }
+  if (tr.noteRequired) { note = await dialog.prompt({ title: `${tr.label?.de || tr.key} · ${t.label}`, text: 'Notiz (Pflicht)', placeholder: t_('Notiz'), ok: `⚑ ${tr.label?.de || tr.key}` }); if (!note?.trim()) return }
   try { await api.post(`/api/nodes/${encodeURIComponent(t.node)}/workflow/${t.workflow}/${tr.key}`, { note }); await store.poll(true); await load() } catch (e) { store.toast(e.message) }
 }
-const age = iso => { if (!iso) return ''; const d = (Date.now() - new Date(iso)) / 864e5; return d < 1 ? 'heute' : d < 2 ? 'gestern' : `${Math.floor(d)} Tage` }
+const age = iso => { if (!iso) return ''; const d = (Date.now() - new Date(iso)) / 864e5; return d < 1 ? 'heute' : d < 2 ? 'gestern' : t_('{0} Tage', [Math.floor(d)]) }
 onMounted(load)
 </script>
 
@@ -54,8 +55,8 @@ onMounted(load)
             <td><span class="chip" :style="`border-color:${color(t.color)};color:${color(t.color)}`">{{ t.stateLabel?.de || t.state }}</span></td>
             <td class="muted" :title="t.since ? `${when(t.since)} · ${t.actor}` : ''">{{ age(t.since) }}</td>
             <td class="muted" style="width:300px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="t.note ?? ''">{{ t.note }}</td>
-            <td><button class="x" @click="assign(t)" :title="t.assigned ? `Zuständigen ändern (jetzt ${t.assigned})` : 'Zuständigen zuweisen'">{{ t.assigned ? '👤 ' + t.assigned : '👤' }}</button></td>
-            <td class="row" style="gap:4px;flex-wrap:wrap"><button v-for="tr in t.transitions" :key="tr.key" @click="step(t, tr)" :title="tr.noteRequired ? 'Notiz Pflicht' : (tr.effects?.join(', ') ?? '')">{{ tr.label?.de || tr.key }} →</button></td>
+            <td><button class="x" @click="assign(t)" :title="t.assigned ? $t('Zuständigen ändern (jetzt {0})', [t.assigned]) : $t('Zuständigen zuweisen')">{{ t.assigned ? '👤 ' + t.assigned : '👤' }}</button></td>
+            <td class="row" style="gap:4px;flex-wrap:wrap"><button v-for="tr in t.transitions" :key="tr.key" @click="step(t, tr)" :title="tr.noteRequired ? $t('Notiz Pflicht') : (tr.effects?.join(', ') ?? '')">{{ tr.label?.de || tr.key }} →</button></td>
           </tr>
         </tbody>
       </table>

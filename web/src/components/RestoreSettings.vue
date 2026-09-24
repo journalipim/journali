@@ -8,6 +8,7 @@ import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { filePicker } from '../filePicker.js'
+import { t } from '../i18n.js'
 
 const dir = ref(localStorage.getItem('journali.backup.dir') ?? '')
 const stand = ref(null)        // { hier: {entries, media, storage}, dort: Meta|null }
@@ -43,7 +44,7 @@ async function sichern() {
   busy.value = '…'; said.value = ''
   try {
     const r = await api.post('/api/backup', { dir: dir.value.trim(), ...mit.value })
-    said.value = `✓ ${n(r.entries)} Einträge, ${n(r.media)} Assets, ${r.config} Dateien, ${r.plugins} Plugins${r.hinweis ? ' · ' + r.hinweis : ''}`
+    said.value = t('✓ {0} Einträge, {1} Assets, {2} Dateien, {3} Plugins{4}', [n(r.entries), n(r.media), r.config, r.plugins, r.hinweis ? ' · ' + r.hinweis : ''])
     localStorage.setItem('journali.backup.dir', dir.value.trim())
     stand.value = await api.get(`/api/backup/status?dir=${encodeURIComponent(dir.value.trim())}`)
   } catch (e) { said.value = '✗ ' + e.message }
@@ -52,19 +53,19 @@ async function sichern() {
 
 async function zurueck() {
   const dort = stand.value?.dort
-  if (!dort) { said.value = '✗ keine Sicherung in diesem Verzeichnis'; return }
+  if (!dort) { said.value = t('✗ keine Sicherung in diesem Verzeichnis'); return }
   const ok = await dialog.confirm({
-    title: 'Sicherung einspielen?',
-    warn: `${n(dort.entries)} Einträge · ${n(dort.media)} Medien · ${dort.config} Dateien · ${dort.plugins} Plugins`,
-    list: [`vom ${when(dort.at)}`, 'geht nur in ein leeres System'],
-    ok: 'Einspielen',
+    title: t('Sicherung einspielen?'),
+    warn: t('{0} Einträge · {1} Medien · {2} Dateien · {3} Plugins', [n(dort.entries), n(dort.media), dort.config, dort.plugins]),
+    list: [`vom ${when(dort.at)}`, t('geht nur in ein leeres System')],
+    ok: t('Einspielen'),
     danger: true,
   })
   if (!ok) return
   busy.value = '…'
   try {
     const r = await api.post('/api/backup/restore', { dir: dir.value.trim(), ...mit.value })
-    said.value = `✓ ${n(r.entries)} Einträge, ${n(r.media)} Medien, ${r.config} Dateien, ${r.plugins} Plugins${r.hinweis ? ' · ' + r.hinweis : ''}`
+    said.value = t('✓ {0} Einträge, {1} Medien, {2} Dateien, {3} Plugins{4}', [n(r.entries), n(r.media), r.config, r.plugins, r.hinweis ? ' · ' + r.hinweis : ''])
   } catch (e) { said.value = '✗ ' + e.message }
   finally { busy.value = '' }
 }
@@ -76,7 +77,7 @@ async function ladeTeilbaum() {
     const r = await api.get(`/api/restore/files?path=${encodeURIComponent(tdir.value.trim())}`)
     files.value = r.files ?? []; tdir.value = r.path
     localStorage.setItem('journali.restore.dir', r.path)
-    if (!files.value.length) tsaid.value = 'keine Dateien in diesem Verzeichnis'
+    if (!files.value.length) tsaid.value = t('keine Dateien in diesem Verzeichnis')
   } catch (e) { files.value = []; tsaid.value = '✗ ' + e.message }
 }
 
@@ -91,14 +92,14 @@ async function einspielen() {
   const p = probe.value
   if (!p) return
   const ok = await dialog.confirm({
-    title: 'Teilbaum einspielen?',
-    warn: `${p.created} neu · ${p.updated} angeglichen · ${p.restored} zurückgeholt${p.model ? ` · ${p.model} Modellteile` : ''}`,
-    list: [gewaehlt.value.name], ok: 'Einspielen', danger: true,
+    title: t('Teilbaum einspielen?'),
+    warn: t('{0} neu · {1} angeglichen · {2} zurückgeholt{3}', [p.created, p.updated, p.restored, p.model ? ' ' + t('· {0} Modellteile', [p.model]) : '']),
+    list: [gewaehlt.value.name], ok: t('Einspielen'), danger: true,
   })
   if (!ok) return
   try {
     const r = await api.post('/api/restore', { path: gewaehlt.value.path, dryRun: false })
-    tsaid.value = `✓ ${r.created} angelegt, ${r.updated} angeglichen, ${r.restored} zurückgeholt · ${r.entries} Einträge`
+    tsaid.value = t('✓ {0} angelegt, {1} angeglichen, {2} zurückgeholt · {3} Einträge', [r.created, r.updated, r.restored, r.entries])
     probe.value = null
     await store.poll(true)
   } catch (e) { tsaid.value = '✗ ' + e.message }
@@ -134,7 +135,7 @@ onMounted(lies)
     <div class="row" style="gap:8px;align-items:center;margin-top:8px">
       <button class="primary sichern" :disabled="!!busy || !dir.trim()" :title="$t('Vollsicherung in dieses Verzeichnis schreiben')" @click="sichern">{{ $t("⇩ Sichern") }}</button>
       <button :disabled="!!busy || !stand?.dort || (stand.hier?.entries ?? 0) > 0"
-        :title="!stand?.dort ? 'keine Sicherung im Verzeichnis' : stand.hier.entries > 0 ? `hier stehen ${n(stand.hier.entries)} Einträge` : 'Sicherung einspielen'"
+        :title="!stand?.dort ? $t('keine Sicherung im Verzeichnis') : stand.hier.entries > 0 ? $t('hier stehen {0} Einträge', [n(stand.hier.entries)]) : $t('Sicherung einspielen')"
         @click="zurueck">{{ $t("↺ Einspielen") }}</button>
       <span v-if="(stand?.hier?.entries ?? 0) > 0" class="muted" style="font-size:12px">{{ $t("dieses System ist nicht leer") }}</span>
       <span v-else-if="stand && !stand.dort" class="muted" style="font-size:12px">{{ $t("keine Sicherung im Verzeichnis") }}</span>

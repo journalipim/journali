@@ -5,17 +5,18 @@ import { api } from './api.js'
 import { store } from './store.js'
 import { tree } from './tree.js'
 import { ai } from './ai.js'
+import { t } from './i18n.js'
 
 // Zwei Sorten (Taloan, 22.09.2026): den vorhandenen Text ÜBERARBEITEN — oder etwas Neues ERZEUGEN (mit @ gekennzeichnet).
 // [key, Bezeichnung, Anweisung, Gruppe: 'edit' | 'gen']
 export const PRESETS = [
-  ['improve', 'Verbessern', 'Verbessere Stil, Klarheit und Rechtschreibung. Inhalt und Fakten bleiben, Länge etwa gleich.', 'edit'],
-  ['shorter', 'Kürzen', 'Kürze auf etwa die Hälfte; die wichtigsten Fakten bleiben.', 'edit'],
-  ['longer', 'Ausführlicher', 'Schreibe ausführlicher und ergänze nur, was die Produktdaten hergeben.', 'edit'],
-  ['fromdata', '@ Liste aus Produktdaten', 'Stelle die Produktdaten als übersichtliche Liste dar: je Zeile Bezeichnung und Wert, keine Sätze, keine Wertung, nichts erfinden.', 'gen'],
-  ['mk_plain', '@ Marketingtext sachlich', 'Schreibe einen sachlichen Produkttext (3 bis 5 Sätze): was das Produkt ist, für wen, welche Eigenschaften es hat. Nur Fakten aus den Produktdaten, keine Superlative, keine Werbefloskeln.', 'gen'],
-  ['mk_emotion', '@ Marketingtext emotional', 'Schreibe einen werblichen Produkttext (3 bis 5 Sätze), der den Nutzen im Alltag beschreibt und Lust auf das Produkt macht. Jede Aussage muss aus den Produktdaten belegbar sein; keine erfundenen Eigenschaften, keine Superlative ohne Beleg.', 'gen'],
-  ['mk_compare', '@ Marketingtext vergleichend', 'Schreibe einen Produkttext (3 bis 5 Sätze), der dieses Produkt gegen üblich ausgestattete Geräte derselben Art abgrenzt: worin es sich unterscheidet, was das dem Käufer bringt. Nur Unterschiede, die aus den Produktdaten hervorgehen; keine Namen fremder Hersteller, keine erfundenen Vergleichswerte.', 'gen'],
+  ['improve', t('Verbessern'), t('Verbessere Stil, Klarheit und Rechtschreibung. Inhalt und Fakten bleiben, Länge etwa gleich.'), 'edit'],
+  ['shorter', t('Kürzen'), t('Kürze auf etwa die Hälfte; die wichtigsten Fakten bleiben.'), 'edit'],
+  ['longer', t('Ausführlicher'), t('Schreibe ausführlicher und ergänze nur, was die Produktdaten hergeben.'), 'edit'],
+  ['fromdata', t('@ Liste aus Produktdaten'), t('Stelle die Produktdaten als übersichtliche Liste dar: je Zeile Bezeichnung und Wert, keine Sätze, keine Wertung, nichts erfinden.'), 'gen'],
+  ['mk_plain', t('@ Marketingtext sachlich'), t('Schreibe einen sachlichen Produkttext (3 bis 5 Sätze): was das Produkt ist, für wen, welche Eigenschaften es hat. Nur Fakten aus den Produktdaten, keine Superlative, keine Werbefloskeln.'), 'gen'],
+  ['mk_emotion', t('@ Marketingtext emotional'), t('Schreibe einen werblichen Produkttext (3 bis 5 Sätze), der den Nutzen im Alltag beschreibt und Lust auf das Produkt macht. Jede Aussage muss aus den Produktdaten belegbar sein; keine erfundenen Eigenschaften, keine Superlative ohne Beleg.'), 'gen'],
+  ['mk_compare', t('@ Marketingtext vergleichend'), t('Schreibe einen Produkttext (3 bis 5 Sätze), der dieses Produkt gegen üblich ausgestattete Geräte derselben Art abgrenzt: worin es sich unterscheidet, was das dem Käufer bringt. Nur Unterschiede, die aus den Produktdaten hervorgehen; keine Namen fremder Hersteller, keine erfundenen Vergleichswerte.'), 'gen'],
 ]
 
 /// Fakten des Knotens in einer Sprache: Name, Pfad, SKU, Attribute mit Label und Wert (eigen oder geerbt)
@@ -48,14 +49,14 @@ export async function facts(nodeId, locale) {
 
 /// Text umschreiben. instruction: Schlüssel aus PRESETS oder freier Text. html: Ergebnis als HTML (p, ul/li, b, i), sonst reiner Text.
 export async function rewrite({ instruction, current, html, label, locale, node }) {
-  if (!ai.available()) throw new Error('Kein KI-Schlüssel — Einstellungen → KI')
+  if (!ai.available()) throw new Error(t('Kein KI-Schlüssel — Einstellungen → KI'))
   const preset = PRESETS.find(p => p[0] === instruction)
   const task = preset ? preset[2] : instruction
   const f = await facts(node, locale).catch(() => null)
-  const system = `Du bist Redakteur für Produktdaten. Sprache: ${locale || store.model?.masterLocale || 'de'}. Nur Fakten aus den Produktdaten, keine Erfindungen, keine Superlative. `
-    + (html ? 'Antworte nur mit HTML (erlaubt: p, ul, ol, li, b, i, h3, br), ohne Erklärung, ohne Code-Zäune.' : 'Antworte nur mit dem reinen Text, ohne Erklärung, ohne Anführungszeichen.')
+  const system = t('Du bist Redakteur für Produktdaten. Sprache: {0}. Nur Fakten aus den Produktdaten, keine Erfindungen, keine Superlative.', [locale || store.model?.masterLocale || 'de']) + ' '
+    + (html ? t('Antworte nur mit HTML (erlaubt: p, ul, ol, li, b, i, h3, br), ohne Erklärung, ohne Code-Zäune.') : t('Antworte nur mit dem reinen Text, ohne Erklärung, ohne Anführungszeichen.'))
   const user = `Feld: ${label || 'Text'}\n` + (f ? `Produkt: ${f.name}\nPfad: ${f.path}\nSchlüssel: ${f.keys}\nProduktdaten:\n${f.rows.join('\n')}\n\n` : '')
-    + (current ? `Bisheriger Text:\n${current}\n\n` : '') + `Aufgabe: ${task}`
-  const out = await ai.ask({ system, user, maxTokens: 1500, temperature: 0.2, purpose: 'Editor' })
+    + (current ? `Bisheriger Text:\n${current}\n\n` : '') + t('Aufgabe: {0}', [task])
+  const out = await ai.ask({ system, user, maxTokens: 1500, temperature: 0.2, purpose: t('Editor') })
   return String(out).replace(/^```[a-z]*\n?|```$/g, '').trim()
 }

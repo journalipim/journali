@@ -3,6 +3,7 @@
 // Benutzt vom Journal (Knopf am Eintrag) und vom Modell (↶ im Listenkopf: die letzten bis zu 5 je Bereich).
 import { api } from './api.js'
 import { store } from './store.js'
+import { t } from './i18n.js'
 
 export const MODEL_RETIRE = {
   AttributeRetired: { kind: 'attributes', defined: 'AttributeDefined', path: k => `/api/model/attributes/${k}`, has: (m, k) => m.attributes.some(a => a.key === k) },
@@ -31,7 +32,7 @@ export async function restoreModel(e) {
   const r = MODEL_RETIRE[e.type]; const key = modelKey(e.stream)
   const before = (await api.get(`/api/streams/${encodeURIComponent(e.stream)}`)).filter(x => x.number < e.number)
   const def = [...before].reverse().find(x => x.type === r.defined)
-  if (!def) throw new Error(`${key}: keine Definition im Strom`)
+  if (!def) throw new Error(t('{0}: keine Definition im Strom', [key]))
   await api.post(r.path(key), def.payload, 'PUT')
   if (r.values) {   // Werte der Liste, Stand beim Zurückziehen: Defined/Retired der Reihe nach
     const vals = new Map(); for (const x of before) { if (x.type === 'ListValueDefined') vals.set(x.payload.value, x.payload); else if (x.type === 'ListValueRetired') vals.delete(x.payload.value) }

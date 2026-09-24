@@ -33,6 +33,7 @@ import ScriptEditor from '../components/ScriptEditor.vue'
 import Splitter from '../components/Splitter.vue'
 import MatrixPicker from '../components/MatrixPicker.vue'
 import { paneWidth } from '../panes.js'
+import { t as t_ } from '../i18n.js'
 const journalW = paneWidth('journal', 420)
 
 const props = defineProps({ id: String, pub: { type: String, default: null }, pubRubric: { type: String, default: null } })   // pubRubric: Rubrik, in der der Verweis hängt (für den Stand)   // pub: Id des Publikationsbaums — Ansicht als Verweis (Taloan, 21.09.)
@@ -61,7 +62,7 @@ async function focusGroup() {
   await nextTick()
   // die Gruppe gilt am Knoten, aber die gewählte Sicht zeigt sie nicht (Taloan, 22.09.: „Sprungziel zu einer Gruppe, die es hier gar nicht gibt“): Sicht auf „alle“
   if (!blocks.value.some(b => b.key === g) && (node.value.groups ?? []).some(x => x.key === g) && store.viewKey[node.value.role]) { setView(''); await nextTick() }
-  if (!blocks.value.some(b => b.key === g)) { store.toast(`Gruppe ${g} gilt an diesem Knoten nicht`); return }
+  if (!blocks.value.some(b => b.key === g)) { store.toast(t_('Gruppe {0} gilt an diesem Knoten nicht', [g])); return }
   if (store.layout === 'tabs') tab.value = g
   else document.querySelector(`tbody[data-group="${g}"]`)?.scrollIntoView({ block: 'start' })
 }
@@ -77,7 +78,7 @@ const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
 const channels = computed(() => model.value?.channels.map(c => c.key) ?? [])
 const path = computed(() => tree.ancestors(props.id))
-const roleLabel = { group: 'Produktgruppe', product: 'Produkt', variant: 'Variante', rubric: 'Rubrik' }
+const roleLabel = { group: t_('Produktgruppe'), product: t_('Produkt'), variant: t_('Variante'), rubric: t_('Rubrik') }
 
 // ---- Sicht: Spalten aus der Matrix Sprache × Kanal (store.viewCells); Reihenfolge Kanal (Stern zuerst), darin Sprache (Stern zuerst)
 const columns = computed(() => {
@@ -156,9 +157,9 @@ onMounted(() => { fitPath(); window.addEventListener('resize', fitPath) })
 onUnmounted(() => window.removeEventListener('resize', fitPath))
 // Filter am Knoten (Taloan, 20.09.: ein Dropdown, weitere Filter für Editoren kommen dazu); Namen von Taloan
 const SCOPES = [
-  { key: 'all', label: 'Alle Attribute', title: 'alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar' },
-  { key: 'can', label: 'Editierbare Attribute', title: 'was auf dieser Ebene änderbar ist' },
-  { key: 'only', label: 'Nur hier editierbare Attribute', title: 'was nur auf dieser Ebene änderbar ist — weder darüber noch darunter' },
+  { key: 'all', label: t_('Alle Attribute'), title: t_('alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar') },
+  { key: 'can', label: t_('Editierbare Attribute'), title: t_('was auf dieser Ebene änderbar ist') },
+  { key: 'only', label: t_('Nur hier editierbare Attribute'), title: t_('was nur auf dieser Ebene änderbar ist — weder darüber noch darunter') },
 ]
 function setScope(s) { store.scope = s; store.save() }
 // Änderbar auf einer Ebene: Gruppe dort aktiv (aktiv ab, Untergrenze) und der Haken des Attributs für den Knotentyp gesetzt (levels) —
@@ -168,7 +169,7 @@ const ROLES = ['group', 'product', 'variant']
 const canAt = (a, gdef, role) => (!a.levels || a.levels.includes(role)) && (!gdef?.activeFrom || DEPTH[role] >= DEPTH[gdef.activeFrom])
 // Attributnamen: Bezeichnung → Key → beides (Taloan: Vorlagen nutzen die Keys, da darf man nicht raten)
 function cycleNames() { store.attrNames = { label: 'key', key: 'both', both: 'label' }[store.attrNames] ?? 'label'; store.save() }
-const NAMES_TITLE = { label: 'Technische Keys zeigen', key: 'Bezeichnung und Key zeigen', both: 'Nur Bezeichnung zeigen' }
+const NAMES_TITLE = { label: t_('Technische Keys zeigen'), key: t_('Bezeichnung und Key zeigen'), both: t_('Nur Bezeichnung zeigen') }
 
 // ---- Die Gruppen, die hier gelten, in Sichtreihenfolge; darin die Attribute in Sichtreihenfolge
 const blocks = computed(() => {
@@ -222,7 +223,7 @@ function withSections(b, sections) {
     if (teile.length > 1) defs.push({ key: `~sub:${s.title}`, divider: s.title })
     defs.push(...s.defs)
   }
-  if (rest.length) { if (teile.length > 1) defs.push({ key: '~sub:rest', divider: 'ohne Klasse' }); defs.push(...rest) }
+  if (rest.length) { if (teile.length > 1) defs.push({ key: '~sub:rest', divider: t_('ohne Klasse') }); defs.push(...rest) }
   return { ...b, defs }
 }
 /// Abschnitte, die ein Plugin vorgibt: eigene Überschrift, Attribute aus beliebigen Gruppen — sonst dieselben Regeln
@@ -298,7 +299,7 @@ const sources = computed(() => { const m = new Map(); for (const v of node.value
 function sourceOf(def, col) { return sources.value.get(key(def.key, col.locale, col.channel)) ?? null }
 async function setSource(def, col) {
   const cur = sourceOf(def, col)
-  const v = await dialog.prompt({ title: `Quelle für ${store.label(def)} angeben`, text: 'URL oder Text: Datenblatt, Katalogseite … (leer = Beleg weg)', ok: '↗ Übernehmen', value: cur?.source ?? '', placeholder: 'https://…' })
+  const v = await dialog.prompt({ title: t_('Quelle für {0} angeben', [store.label(def)]), text: t_('URL oder Text: Datenblatt, Katalogseite … (leer = Beleg weg)'), ok: t_('↗ Übernehmen'), value: cur?.source ?? '', placeholder: 'https://…' })
   if (v === null) return
   await command(() => api.post(`${nodeUrl()}/sources`, { attribute: def.key, locale: col.locale ?? null, channel: col.channel ?? null, source: v.trim(), method: 'manual', checkedAt: new Date().toISOString().slice(0, 10) }))
 }
@@ -380,12 +381,12 @@ const nextStar = key => (node.value?.stars ?? []).find(x => x.attribute === key 
 // Tooltip „Objekt Verb (Erläuterung)“; der Vorfahr wird beim Namen genannt, nie „von oben“ (Taloan, 22.09.)
 function starTitle(def) {
   const s = star(def.key), name = store.name(def)
-  if (!s) return `Ab hier mit „${name}“ benennen`
+  if (!s) return t_('Ab hier mit „{0}“ benennen', [name])
   if (s.from === props.id) {
     const next = nextStar(def.key)
-    return `Benennung wegnehmen (${next ? `danach gilt wieder das ★ von ${next.fromLabel}` : 'danach keine Benennung'})`
+    return t_('Benennung wegnehmen ({0})', [next ? t_('danach gilt wieder das ★ von {0}', [next.fromLabel]) : t_('danach keine Benennung')])
   }
-  return `Ab hier mit „${name}“ benennen (${s.applies ? `bisher geerbt von ${s.fromLabel}` : `wirkt erst, wo ein Wert steht — bis dahin zählt das ★ von ${s.fromLabel}`})`
+  return t_('Ab hier mit „{0}“ benennen ({1})', [name, s.applies ? t_('bisher geerbt von {0}', [s.fromLabel]) : t_('wirkt erst, wo ein Wert steht — bis dahin zählt das ★ von {0}', [s.fromLabel])])
 }
 const freeGroups = computed(() => (model.value?.groups ?? []).filter(g => !(node.value?.groups ?? []).some(x => x.key === g.key)))
 // Gruppen heissen überall gleich: Label wie im Reiter, Schlüssel nur im Tooltip.
@@ -425,7 +426,7 @@ watch(() => store.head, h => { if (h > (entries.value[0]?.number ?? 0)) load() }
 
 // ---- Befehle
 async function command(fn, rethrow = false) {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true
   try { const entry = await fn(); entries.value.unshift(entry); await load(); tree.load() }
   catch (e) { if (rethrow) throw e; store.toast(e.message) }
@@ -451,8 +452,8 @@ const setValue = (def, col, value, row = null) => {
 }
 // Mouseover auf ↶/↷ (Taloan): was würde der Schritt tun — Attribut, Spalte, alter → neuer Wert; und wie viele Schritte noch
 function stepTitle(h, verb, n, key, redo = false) {
-  if (!h) return redo ? 'nichts zu wiederholen' : 'nichts rückgängig zu machen'
-  if (h.kind === 'retire') return redo ? `${h.label}${h.count > 1 ? ` mit ${h.count - 1} darunter` : ''} wieder zurückziehen  (${key})` : `${h.label}${h.count > 1 ? ` mit ${h.count - 1} darunter` : ''} wiederherstellen  (${key})`
+  if (!h) return redo ? t_('nichts zu wiederholen') : t_('nichts rückgängig zu machen')
+  if (h.kind === 'retire') return redo ? t_('{0}{1} wieder zurückziehen ({2})', [h.label, h.count > 1 ? ' ' + t_('mit {0} darunter', [h.count - 1]) : '', key]) : `${h.label}${h.count > 1 ? ` mit ${h.count - 1} darunter` : ''} wiederherstellen  (${key})`
   const show = v => v == null || v === '' ? 'leer' : `„${String(v).replace(/<[^>]+>/g, ' ').slice(0, 60)}“`
   const from = redo ? h.before : h.after, to = redo ? h.after : h.before
   return `${store.name(h.def)}${h.col?.label ? ' · ' + h.col.label : ''}${h.row ? ' · Zeile ' + h.row : ''}: ${show(from)} → ${show(to)}  (${key})`
@@ -462,19 +463,19 @@ function stepTitle(h, verb, n, key, redo = false) {
 async function undoRetire(h) {
   try {
     const x = h.batch ? await api.post(`/api/batches/${encodeURIComponent(h.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(h.id)}/restore`)
-    store.toast(`${x.undone ?? 1} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${h.id}`)
+    store.toast(t_('{0} Knoten wiederhergestellt', [x.undone ?? 1]), 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${h.id}`)
   } catch (e) { store.toast(e.message); stacksOf(h.parent ?? '').history.push(h); stacksOf(h.parent ?? '').redo.pop() }
 }
 async function redoRetire(h) {
   try {
     const r = await api.del(`/api/nodes/${encodeURIComponent(h.id)}${h.count > 1 ? '?recursive=true' : ''}`)
-    h.batch = r?.batch ?? null; store.toast(`${r?.retired ?? 1} Knoten zurückgezogen`, 'ok'); await tree.load(); router.push(h.parent ? `/tree/${h.parent}` : '/tree')
+    h.batch = r?.batch ?? null; store.toast(t_('{0} Knoten zurückgezogen', [r?.retired ?? 1]), 'ok'); await tree.load(); router.push(h.parent ? `/tree/${h.parent}` : '/tree')
   } catch (e) { store.toast(e.message); stacksOf(h.parent ?? '').redo.push(h); stacksOf(h.parent ?? '').history.pop() }
 }
 async function undoAusJournal() {
   try {
     const x = await api.post(`/api/nodes/${encodeURIComponent(props.id)}/undo`, {})
-    store.toast(x.what ?? 'zurückgenommen', 'ok'); await load(); await ladeAusJournal(); await store.poll(true)
+    store.toast(x.what ?? t_('zurückgenommen'), 'ok'); await load(); await ladeAusJournal(); await store.poll(true)
   } catch (e) { store.toast(e.message) }
 }
 function undo() {
@@ -519,7 +520,7 @@ const retireRel = r => command(() => api.del(`/api/relations/${r.id}`))
 const inheriting = ref('')
 async function inheritToSubitems() {
   const own = mediaRels.value; if (!own.length) return
-  inheriting.value = 'lese Subitems …'
+  inheriting.value = t_('lese Subitems …')
   try {
     const below = []; const walk = id => { for (const k of tree.kids(id)) { below.push(k); walk(k.id) } }; walk(props.id)
     const mine = new Map(own.map(r => [`${r.type}|${r.other.id}`, r]))
@@ -535,20 +536,20 @@ async function inheritToSubitems() {
     const toInherit = own.filter(r => relValueRaw(r, 'inherit') !== 'true'), alreadyOn = own.length - toInherit.length
     // Der Dialog sagt, was ist — auch wenn nichts zu tun bleibt (Taloan, 18.09.: „0 hier auf vererben?“)
     const list = [
-      ...(alreadyOn ? [`${alreadyOn} ${alreadyOn === 1 ? 'Medium ist' : 'Medien sind'} hier schon auf „vererben“`] : []),
-      ...(already.length ? [`${already.length} Subitems erben bereits`] : []),
-      ...retire.slice(0, 6).map(x => `lösen: ${x.node.label} · ${x.rel.other.label}`), ...(retire.length > 6 ? [`… und ${retire.length - 6} weitere`] : [])]
+      ...(alreadyOn ? [t_('{0} {1} hier schon auf „vererben“', [alreadyOn, alreadyOn === 1 ? t_('Medium ist') : t_('Medien sind')])] : []),
+      ...(already.length ? [t_('{0} Subitems erben bereits', [already.length])] : []),
+      ...retire.slice(0, 6).map(x => t_('lösen: {0} · {1}', [x.node.label, x.rel.other.label])), ...(retire.length > 6 ? [t_('… und {0} weitere', [retire.length - 6])] : [])]
     const nothing = !toInherit.length && !retire.length
     const ok = await dialog.confirm({
-      title: `Medien an ${below.length} Subitems vererben?`,
+      title: t_('Medien an {0} Subitems vererben?', [below.length]),
       // zwei Dinge, getrennt gesagt (Taloan, 20.09.: „wenn nicht ersetzt wird, brauch ich vererben auch nicht?“ — doch: Vererben bringt die
       // Medien an die Subitems; Ersetzen räumt nur auf, wenn ein Subitem dasselbe Medium schon fest hat). Rot nur, wo etwas gelöst wird.
-      warn: nothing ? 'nichts zu tun' : retire.length ? `${retire.length} feste ${retire.length === 1 ? 'Zuordnung' : 'Zuordnungen'} an Subitems werden gelöst (sie erben dann)` : '',
-      list, text: nothing ? '' : `${toInherit.length} ${toInherit.length === 1 ? 'Medium' : 'Medien'} von hier ${toInherit.length === 1 ? 'wird' : 'werden'} auf „vererben“ gesetzt — ${below.length} Subitems zeigen ${toInherit.length === 1 ? 'es' : 'sie'} danach als geerbt (gestrichelt).${retire.length ? '' : ' Keine feste Zuordnung an Subitems ist betroffen.'}`, ok: nothing ? 'OK' : '↓ Vererben' })
+      warn: nothing ? t_('nichts zu tun') : retire.length ? t_('{0} feste {1} an Subitems werden gelöst (sie erben dann)', [retire.length, retire.length === 1 ? t_('Zuordnung') : t_('Zuordnungen')]) : '',
+      list, text: nothing ? '' : t_('{0} {1} von hier {2} auf „vererben“ gesetzt — {3} Subitems zeigen {4} danach als geerbt (gestrichelt).{5}', [toInherit.length, toInherit.length === 1 ? t_('Medium') : t_('Medien'), toInherit.length === 1 ? 'wird' : 'werden', below.length, toInherit.length === 1 ? 'es' : 'sie', retire.length ? '' : ' ' + t_('Keine feste Zuordnung an Subitems ist betroffen.')]), ok: nothing ? 'OK' : t_('↓ Vererben') })
     if (!ok || nothing) return
     const commands = [...toInherit.map(r => ({ op: 'relation.attribute.set', args: { relation: r.id, attribute: 'inherit', value: 'true' } })), ...retire.map(x => ({ op: 'relation.retire', args: { relation: x.rel.id } }))]
-    const res = await api.batchChunked(commands, { label: 'Vererbung', continueOnError: true })
-    store.toast(`✓ ${res.results.length} Einträge${res.errors.length ? ` · ${res.errors.length} Fehler` : ''}`, res.errors.length ? 'error' : 'ok')
+    const res = await api.batchChunked(commands, { label: t_('Vererbung'), continueOnError: true })
+    store.toast(t_('✓ {0} Einträge{1}', [res.results.length, res.errors.length ? ' ' + t_('· {0} Fehler', [res.errors.length]) : '']), res.errors.length ? 'error' : 'ok')
     await store.poll(true); await load()
   } catch (e) { store.toast(e.message) } finally { inheriting.value = '' }
 }
@@ -575,12 +576,12 @@ const mediaFile = ref(null)
 const mediaPick = ref({ open: false })   // ▨ aus der Bibliothek … (MediaPicker)
 const typeFor = file => (file.type || '').startsWith('image/') && mediaTypes.value.some(t => t.key === 'image') ? 'image' : (mediaTypes.value.find(t => t.key === 'document') ?? mediaTypes.value[0])?.key
 async function uploadMedia(files) {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true
   try {
     for (const f of files) {
       const m = await api.upload('/api/media', f)
-      const type = typeFor(f); if (!type) { store.toast('Kein Relationstyp zu Medien für diesen Knotentyp'); break }
+      const type = typeFor(f); if (!type) { store.toast(t_('Kein Relationstyp zu Medien für diesen Knotentyp')); break }
       try { await api.post('/api/relations', { type, from: props.id, to: m.id }) } catch (e) { if (!e.message.includes('schon')) throw e }
     }
     await load(); store.poll(true)
@@ -590,7 +591,7 @@ async function uploadMedia(files) {
 // Aus der Bibliothek zuordnen (Taloan, 21.09.: Ordner, Suche, Mehrfachauswahl wie in ▨ Medien) — eine Relation je Medium; „gibt es schon“ wird übergangen
 async function linkMedia(picked) {
   mediaPick.value.open = false
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true; let n = 0
   try {
     for (const { medium, type } of picked) {
@@ -613,9 +614,9 @@ function wfBlocked(t) {
 async function wfStep(w, t, locale = null) {
   let note = null
   if (t.noteRequired || t.effects?.length) {
-    note = await dialog.prompt({ title: `${t.label?.de || t.key} → ${t.toLabel?.de || t.to}`, text: (t.noteRequired ? 'Notiz (Pflicht)' : 'Notiz (optional)') + (t.effects?.length ? ` · Wirkung: ${t.effects.join(', ')}` : ''), placeholder: 'Notiz', ok: `⚑ ${t.label?.de || t.key}` })
+    note = await dialog.prompt({ title: `${t.label?.de || t.key} → ${t.toLabel?.de || t.to}`, text: (t.noteRequired ? 'Notiz (Pflicht)' : 'Notiz (optional)') + (t.effects?.length ? ' ' + t_('· Wirkung: {0}', [t.effects.join(', ')]) : ''), placeholder: t_('Notiz'), ok: `⚑ ${t.label?.de || t.key}` })
     if (note === null) return
-    if (t.noteRequired && !note.trim()) { store.toast('Notiz ist Pflicht bei diesem Schritt'); return }
+    if (t.noteRequired && !note.trim()) { store.toast(t_('Notiz ist Pflicht bei diesem Schritt')); return }
   }
   try { await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/${t.key}${locale ? '?locale=' + encodeURIComponent(locale) : ''}`, { note: note || null }), true) }
   catch (e) {
@@ -625,7 +626,7 @@ async function wfStep(w, t, locale = null) {
   }
 }
 // Wirkung eines Schritts nachholen (release:web → Freigabe an allen vollständigen Varianten; revoke; status)
-const effLabel = eff => { const [k, a] = eff.split(':'); return k === 'release' ? `für ${a} freigeben` : k === 'revoke' ? `Freigabe ${a} zurücknehmen` : `Status ${a} setzen` }
+const effLabel = eff => { const [k, a] = eff.split(':'); return k === 'release' ? t_('für {0} freigeben', [a]) : k === 'revoke' ? t_('Freigabe {0} zurücknehmen', [a]) : t_('Status {0} setzen', [a]) }
 async function wfEffect(eff) {
   const [k, a] = eff.split(':')
   await command(() => k === 'release' ? api.post(`${nodeUrl()}/releases`, { channel: a, locale: null }) : k === 'revoke' ? api.del(`${nodeUrl()}/releases?channel=${encodeURIComponent(a)}`) : setStatus(a))
@@ -634,20 +635,20 @@ async function wfEffect(eff) {
 // Verlauf eines Workflows am Knoten (Taloan, 21.09.): jeder Schritt mit Zeit, Wer, Schritt, Zustand, Notiz — aus dem Journalstrom des Knotens
 async function wfHistory(w) {
   const label = k => w.states?.find(s => s.key === k)?.label?.de || k
-  let src = entries.value; let title = `Verlauf „${w.label?.de || w.workflow}“ · ${shownLabel.value}`
-  if (w.inheritedFrom) { try { src = (await api.get(`/api/streams/${encodeURIComponent(w.inheritedFrom.id)}`)).reverse(); title = `Verlauf „${w.label?.de || w.workflow}“ · geerbt von „${w.inheritedFrom.label}“` } catch { src = [] } }
+  let src = entries.value; let title = t_('Verlauf „{0}“ · {1}', [w.label?.de || w.workflow, shownLabel.value])
+  if (w.inheritedFrom) { try { src = (await api.get(`/api/streams/${encodeURIComponent(w.inheritedFrom.id)}`)).reverse(); title = t_('Verlauf „{0}“ · geerbt von „{1}“', [w.label?.de || w.workflow, w.inheritedFrom.label]) } catch { src = [] } }
   // nach Datum gruppiert (Taloan, 21.09.: „in Firmen dauert es manchmal 4 Wochen“): Datumszeile, darunter die Schritte mit Uhrzeit
   const list = src.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
   const rows = []; let day = null
   for (const e of list) {
     const d = new Date(e.at); const key = d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
     if (key !== day) { rows.push([key, '']); day = key }
-    rows.push([d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }), e.type === 'WorkflowAssigned' ? `${e.actor} · zuständig: ${e.payload.user || '— (Rolle)'}` : `${e.actor} · ${e.payload.transition ? e.payload.transition + ' → ' : ''}${label(e.payload.state)}${e.payload.note ? ' · ✎ ' + e.payload.note : ''}`])
+    rows.push([d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }), e.type === 'WorkflowAssigned' ? t_('{0} · zuständig: {1}', [e.actor, e.payload.user || t_('— (Rolle)')]) : `${e.actor} · ${e.payload.transition ? e.payload.transition + ' → ' : ''}${label(e.payload.state)}${e.payload.note ? ' · ✎ ' + e.payload.note : ''}`])
   }
-  dialog.help({ title, rows: rows.length ? rows : [['—', 'noch kein Schritt']] })
+  dialog.help({ title, rows: rows.length ? rows : [['—', t_('noch kein Schritt')]] })
 }
 async function wfClear(w, locale = null) {
-  if (!await dialog.confirm({ title: `Vererbung wiederherstellen · ${w.label?.de || w.workflow}${locale ? ' · ' + locale : ''}?`, text: 'Eigener Zustand fällt weg; es gilt wieder der geerbte.', ok: '↑ Erben' })) return
+  if (!await dialog.confirm({ title: t_('Vererbung wiederherstellen · {0}{1}?', [w.label?.de || w.workflow, locale ? ' · ' + locale : '']), text: t_('Eigener Zustand fällt weg; es gilt wieder der geerbte.'), ok: t_('↑ Erben') })) return
   await command(() => api.del(`${nodeUrl()}/workflow/${w.workflow}${locale ? '?locale=' + encodeURIComponent(locale) : ''}`))
   api.get(`${nodeUrl()}/workflow`).then(x => { workflows.value = x }).catch(() => {})
 }
@@ -656,12 +657,12 @@ async function wfAssign(w) {
   let people = []; try { people = await api.get('/api/auth/people') } catch {}
   const roles = new Set(w.all.flatMap(t => t.roles ?? []))
   const fits = p => roles.size === 0 || roles.has(p.role) || p.role === 'admin'
-  const choices = [{ value: '', label: roles.size ? `— Rolle ${[...roles].join('/')} (jede Person damit)` : '— jede Rolle mit Schreibrecht' },
+  const choices = [{ value: '', label: roles.size ? t_('— Rolle {0} (jede Person damit)', [[...roles].join('/')]) : t_('— jede Rolle mit Schreibrecht') },
     ...people.filter(fits).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role}` })),
-    ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: `${p.name || p.key} · ${p.role} (nicht die Rolle des Schritts)` }))]
+    ...people.filter(p => !fits(p)).map(p => ({ value: p.key, label: t_('{0} · {1} (nicht die Rolle des Schritts)', [p.name || p.key, p.role]) }))]
   const user = people.length
-    ? await dialog.prompt({ title: `Zuständigen wählen · ${w.label?.de || w.workflow}`, value: w.assigned ?? '', choices, ok: '👤 Zuweisen' })
-    : await dialog.prompt({ title: `Zuständigen wählen · ${w.label?.de || w.workflow}`, text: 'Anwender-Key (leer = Rolle des nächsten Schritts)', value: w.assigned ?? '', ok: '👤 Zuweisen' })
+    ? await dialog.prompt({ title: t_('Zuständigen wählen · {0}', [w.label?.de || w.workflow]), value: w.assigned ?? '', choices, ok: t_('👤 Zuweisen') })
+    : await dialog.prompt({ title: t_('Zuständigen wählen · {0}', [w.label?.de || w.workflow]), text: t_('Anwender-Key (leer = Rolle des nächsten Schritts)'), value: w.assigned ?? '', ok: t_('👤 Zuweisen') })
   if (user === null) return
   await command(() => api.post(`${nodeUrl()}/workflow/${w.workflow}/assign`, { user: user.trim() || null }, 'PUT'))
 }
@@ -675,7 +676,7 @@ async function setAxes(axes) {
   catch (e) {
     if (!/^Nicht eindeutig/.test(e.message)) { store.toast(e.message); return }
     const what = e.message.replace(/^Nicht eindeutig: /, '').replace(/ — mit force.*$/, '')
-    if (!await dialog.confirm({ title: 'Achsen trotzdem ändern?', warn: what, text: 'Diese Varianten verlieren ihre Achsenzuordnung (zählen nicht, bis sie unterscheidbar sind); ihre Werte bleiben. Oder abbrechen und eine weitere Achse wählen.', ok: 'Trotzdem ändern', danger: true })) return
+    if (!await dialog.confirm({ title: t_('Achsen trotzdem ändern?'), warn: what, text: t_('Diese Varianten verlieren ihre Achsenzuordnung (zählen nicht, bis sie unterscheidbar sind); ihre Werte bleiben. Oder abbrechen und eine weitere Achse wählen.'), ok: t_('Trotzdem ändern'), danger: true })) return
     await command(() => api.post(`${nodeUrl()}/axes`, { axes, force: true }, 'PUT'))
   }
 }
@@ -716,12 +717,12 @@ async function retire() {
   // immer fragen (Taloan: der 🗑 oben fragte gar nicht) — eigener Dialog statt window.confirm
   const label = tree.byId.get(props.id)?.label ?? props.id
   const b = tree.below(props.id)
-  if (!await dialog.confirm({ title: `${icon(node.value.role)} ${label} zurückziehen?`, warn: b.total ? `Mit allen ${b.total} Knoten darunter: ${b.summary}` : '', list: b.names, ok: b.total ? `🗑 ${b.total + 1} Knoten zurückziehen` : '🗑 Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: t_('{0} {1} zurückziehen?', [icon(node.value.role), label]), warn: b.total ? t_('Mit allen {0} Knoten darunter: {1}', [b.total, b.summary]) : '', list: b.names, ok: b.total ? t_('🗑 {0} Knoten zurückziehen', [b.total + 1]) : t_('🗑 Zurückziehen'), danger: true })) return
   try {
     const r = await api.del(nodeUrl() + (kids ? '?recursive=true' : ''))
     const gone = props.id
     const ps = stacksOf(node.value.parent ?? ''); ps.history.push({ kind: 'retire', id: gone, parent: node.value.parent, label, count: r?.retired ?? 1, batch: r?.batch ?? null }); ps.redo.length = 0
-    if (r?.retired) store.toast(`${r.retired} Knoten zurückgezogen (Stapel ${r.batch})`, 'ok', { label: '↶ Wiederherstellen', run: async () => { try { const x = r.batch ? await api.post(`/api/batches/${encodeURIComponent(r.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(gone)}/restore`); store.toast(`${x.undone ?? 1} Knoten wiederhergestellt`, 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${gone}`) } catch (e) { store.toast(e.message) } }, title: `stellt ${r.retired} Knoten wieder her: ${shownLabel.value}${r.retired > 1 ? ` mit ${r.retired - 1} darunter` : ''}` })
+    if (r?.retired) store.toast(t_('{0} Knoten zurückgezogen (Stapel {1})', [r.retired, r.batch]), 'ok', { label: t_('↶ Wiederherstellen'), run: async () => { try { const x = r.batch ? await api.post(`/api/batches/${encodeURIComponent(r.batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(gone)}/restore`); store.toast(t_('{0} Knoten wiederhergestellt', [x.undone ?? 1]), 'ok'); await store.poll(true); await tree.load(); router.push(`/tree/${gone}`) } catch (e) { store.toast(e.message) } }, title: t_('stellt {0} Knoten wieder her: {1}{2}', [r.retired, shownLabel.value, r.retired > 1 ? ' ' + t_('mit {0} darunter', [r.retired - 1]) : '']) })
     const p = node.value.parent; await tree.load(); router.push(p ? `/tree/${p}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }
@@ -733,12 +734,12 @@ function cellMenu(e, def, col, block) {
   menu.open(e, [
     { label: `${store.name(def)} · ${col.label}`, disabled: true },
     { sep: true },
-    { label: 'Eigenen Wert löschen', icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? 'kein eigener' : (inh.value != null ? 'geerbter gilt wieder' : ''), action: () => setValue(def, col, '') },
-    inh.from ? { label: `Herkunft ${icon(inh.from.role)} ${inh.from.label} öffnen`, icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
-    { label: 'Wert kopieren', icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
-    { label: sourceOf(def, col) ? 'Quelle ändern …' : 'Quelle angeben …', icon: '↗', key: 'q', hint: sourceOf(def, col) ? `${sourceOf(def, col).method} · ${sourceOf(def, col).checkedAt}` : 'Beleg am Wert', disabled: ownV == null, action: () => setSource(def, col) },
-    def.type !== 'html' && def.type !== 'rows' ? { label: starOwn(def.key) ? 'Benennung wegnehmen' : 'Ab hier damit benennen', icon: '★', key: 's', hint: starOwn(def.key) ? (nextStar(def.key) ? `danach ★ von ${nextStar(def.key).fromLabel}` : 'danach keine') : 'Name im Baum', action: () => setStar(def) } : null,
-    { label: 'Attribut im Modell öffnen', icon: '⊞', key: 'm', hint: '→ Modell → Attribute', action: () => router.push({ path: '/model', query: { section: 'attributes', key: def.key } }) },
+    { label: t_('Eigenen Wert löschen'), icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? t_('kein eigener') : (inh.value != null ? t_('geerbter gilt wieder') : ''), action: () => setValue(def, col, '') },
+    inh.from ? { label: t_('Herkunft {0} {1} öffnen', [icon(inh.from.role), inh.from.label]), icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
+    { label: t_('Wert kopieren'), icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
+    { label: sourceOf(def, col) ? t_('Quelle ändern …') : t_('Quelle angeben …'), icon: '↗', key: 'q', hint: sourceOf(def, col) ? `${sourceOf(def, col).method} · ${sourceOf(def, col).checkedAt}` : t_('Beleg am Wert'), disabled: ownV == null, action: () => setSource(def, col) },
+    def.type !== 'html' && def.type !== 'rows' ? { label: starOwn(def.key) ? t_('Benennung wegnehmen') : t_('Ab hier damit benennen'), icon: '★', key: 's', hint: starOwn(def.key) ? (nextStar(def.key) ? `danach ★ von ${nextStar(def.key).fromLabel}` : t_('danach keine')) : t_('Name im Baum'), action: () => setStar(def) } : null,
+    { label: t_('Attribut im Modell öffnen'), icon: '⊞', key: 'm', hint: '→ Modell → Attribute', action: () => router.push({ path: '/model', query: { section: 'attributes', key: def.key } }) },
   ])
 }
 </script>
@@ -750,21 +751,21 @@ function cellMenu(e, def, col, block) {
         <router-link :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }}</router-link><span class="sep">›</span>
       </template>
       <h1>{{ icon(node.role) }} {{ shownLabel }}</h1>
-      <button v-if="props.pub && node.role !== 'rubric'" class="x" :title="$t('Knoten im Pflegebaum öffnen (⇶ führt zurück)')" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">{{ $t("▣ Pflegebaum") }}</button>
-      <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="backToPub">⇶ {{ store.pubBack.label }}</button>
+      <button v-if="props.pub && node.role !== 'rubric'" class="x" :title="$t('Knoten im Pflegebaum öffnen (⇶ führt zurück)')" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? $t('Publikation') }; router.push(`/tree/${id}`)">{{ $t("▣ Pflegebaum") }}</button>
+      <button v-else-if="!props.pub && store.pubBack" class="x" :title="$t('zurück zur Publikation „{0}“', [store.pubBack.label])" @click="backToPub">⇶ {{ store.pubBack.label }}</button>
       <span class="grow" />
       <select v-if="node.role !== 'rubric'" :value="node.hasStatus === false ? '' : node.status" @change="pickStatus($event.target.value)" class="status"
         :style="node.hasStatus === false ? null : store.statusStyle(node.status)"
-        :title="node.hasStatus === false ? 'Kein Status — eine Gruppe bekommt einen, sobald jemand ihn setzt' : `Status: ${store.statusLabel(node.status)}`">
+        :title="node.hasStatus === false ? $t('Kein Status — eine Gruppe bekommt einen, sobald jemand ihn setzt') : $t('Status: {0}', [store.statusLabel(node.status)])">
         <option v-if="node.hasStatus === false" value="" disabled>–</option>
         <option v-for="s in (store.model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option>
         <option v-if="node.status && node.hasStatus !== false && !store.status(node.status)" :value="node.status">{{ $t("{0} (nicht im Modell)", [node.status]) }}</option>
       </select>
-      <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
+      <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? $t('Journal zuklappen') : $t('Journal aufklappen')">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
       <button class="x" @click="undo" :disabled="!history.length && !ausJournal?.possible"
-        :title="history.length ? stepTitle(history[history.length - 1], '↶ Rückgängig', history.length, 'Strg+Z') : (ausJournal?.possible ? `${ausJournal.what}  (Strg+Z)` : 'nichts rückgängig zu machen')">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
-      <button class="x" @click="redo" :disabled="!redoStack.length" :title="stepTitle(redoStack[redoStack.length - 1], '↷ Wiederholen', redoStack.length, 'Strg+Y', true)">↷<span v-if="redoStack.length" class="muted"> {{ redoStack.length }}</span></button>
-      <button class="x" @click="retire" :title="node.children ? `mit ${countBelow(id)} Knoten darunter zurückziehen  (Entf im Baum)` : 'Knoten zurückziehen  (Entf im Baum)'">🗑</button>
+        :title="history.length ? stepTitle(history[history.length - 1], $t('↶ Rückgängig'), history.length, $t('Strg+Z')) : (ausJournal?.possible ? $t('{0} (Strg+Z)', [ausJournal.what]) : $t('nichts rückgängig zu machen'))">↶<span v-if="history.length" class="muted"> {{ history.length }}</span></button>
+      <button class="x" @click="redo" :disabled="!redoStack.length" :title="stepTitle(redoStack[redoStack.length - 1], $t('↷ Wiederholen'), redoStack.length, $t('Strg+Y'), true)">↷<span v-if="redoStack.length" class="muted"> {{ redoStack.length }}</span></button>
+      <button class="x" @click="retire" :title="node.children ? $t('mit {0} Knoten darunter zurückziehen (Entf im Baum)', [countBelow(id)]) : $t('Knoten zurückziehen (Entf im Baum)')">🗑</button>
     </div>
     <div class="toolbar meta muted">
       <span class="mono">{{ node.id }}</span>
@@ -787,7 +788,7 @@ function cellMenu(e, def, col, block) {
       <MatrixPicker :model-value="store.viewCells" @update:model-value="setCells" :locales="locales" :channels="channels" :master-locale="master" :master-channel="masterChannel" />
       <span class="sep">·</span>
       <span class="grp" :title="$t('Zeilen: Attributsicht und Filter')">
-        <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="`Attributsicht für ${roleLabel[node.role]} — ⊞ Modell → Attributsichten`">
+        <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="$t('Attributsicht für {0} — ⊞ Modell → Attributsichten', [roleLabel[node.role]])">
           <option value="">{{ $t("◫ komplett") }}</option>
           <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option>
         </select>
@@ -797,7 +798,7 @@ function cellMenu(e, def, col, block) {
         </select>
         <input ref="findBox" v-model="attrFilter" type="search" :placeholder="$t('Attribut oder Wert')" style="width:200px;font-size:12px" :title="$t('Suche im Sichtbaren: Attributname und die Werte der gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert')" @keydown.esc="attrFilter = ''" />
         <span v-if="attrFilter" class="muted">{{ hitCount }}</span>
-        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="`Filter aufheben (zeigt wieder alle Attribute)`" @click="missingOnly = null">{{ $t("✗ fehlt für {0}", [missingOnly.channel]) + ' ' }}<b>{{ missingOnly.cells.size }}</b></span>
+        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="$t('Filter aufheben (zeigt wieder alle Attribute)')" @click="missingOnly = null">{{ $t("✗ fehlt für {0}", [missingOnly.channel]) + ' ' }}<b>{{ missingOnly.cells.size }}</b></span>
       </span>
       <span class="grow" />
       <span class="grp" :title="$t('Anordnung der Gruppen')">
@@ -809,7 +810,7 @@ function cellMenu(e, def, col, block) {
     </div>
 
     <div v-if="store.layout === 'tabs' && blocks.length" class="tabs">
-      <button v-for="b in (attrFilter.trim() || missingOnly ? filteredBlocks : blocks)" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="`${b.key} · ${b.defs.length} Attribute` + (b.active ? '' : ` · gesperrt: aktiv ab ${roleLabel[b.activeFrom]}`)">{{ b.label }}<span v-if="!b.active"> ⌀</span></button>
+      <button v-for="b in (attrFilter.trim() || missingOnly ? filteredBlocks : blocks)" :key="b.key" class="tabbtn" :class="{ on: tab === b.key, locked: !b.active }" @click="tab = b.key" :title="$t('{0} · {1} Attribute', [b.key, b.defs.length]) + (b.active ? '' : ' ' + $t('· gesperrt: aktiv ab {0}', [roleLabel[b.activeFrom]]))">{{ b.label }}<span v-if="!b.active"> ⌀</span></button>
     </div>
 
 
@@ -818,10 +819,10 @@ function cellMenu(e, def, col, block) {
         <thead>
           <tr class="chan">
             <th rowspan="2">{{ $t("Attribut") }}</th>
-            <th v-for="g in headGroups" :key="g.channel ?? '*'" :colspan="g.n" :class="{ master: g.channel && g.channel === masterChannel }" :title="g.channel ? (g.channel === masterChannel ? 'Masterkanal — bekommt die Werte des Sterns, die anderen Kanäle beziehen ihren Wert aus ihm' : `Kanal ${g.channel} — ohne eigenen Wert gilt der Masterkanal`) : 'ohne Kanal — der Stern: gilt, wo kein Kanal etwas anderes sagt'">{{ g.channel ?? '*' }}</th>
+            <th v-for="g in headGroups" :key="g.channel ?? '*'" :colspan="g.n" :class="{ master: g.channel && g.channel === masterChannel }" :title="g.channel ? (g.channel === masterChannel ? $t('Masterkanal — bekommt die Werte des Sterns, die anderen Kanäle beziehen ihren Wert aus ihm') : $t('Kanal {0} — ohne eigenen Wert gilt der Masterkanal', [g.channel])) : $t('ohne Kanal — der Stern: gilt, wo kein Kanal etwas anderes sagt')">{{ g.channel ?? '*' }}</th>
           </tr>
           <tr class="loc">
-            <th v-for="c in columns" :key="c.label" :class="{ master: c.locale === master }" :title="(c.locale ? (c.locale === master ? 'Mastersprache — Basis für alle anderen Sprachen' : 'Sprache ' + c.locale) : 'ohne Sprache — gilt für alle Sprachen') + (c.channel ? ' · Kanal ' + c.channel : ' · alle Kanäle')">{{ c.locale ?? '*' }}</th>
+            <th v-for="c in columns" :key="c.label" :class="{ master: c.locale === master }" :title="(c.locale ? (c.locale === master ? $t('Mastersprache — Basis für alle anderen Sprachen') : $t('Sprache') + ' ' + c.locale) : $t('ohne Sprache — gilt für alle Sprachen')) + (c.channel ? ' ' + $t('· Kanal') + ' ' + c.channel : ' ' + $t('· alle Kanäle'))">{{ c.locale ?? '*' }}</th>
           </tr>
         </thead>
         <tbody v-for="b in shownBlocks" :key="b.key" :data-group="b.key">
@@ -829,21 +830,21 @@ function cellMenu(e, def, col, block) {
             <td :colspan="columns.length + 1">
               {{ b.label }}
               <router-link v-if="!b.custom" :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
-              <span v-if="!b.custom" class="muted from" :title="b.fromRole === 'rubric' ? `Gruppe an Rubrik ${b.fromLabel}` : (props.pub ? `Gruppe an ${b.fromLabel} · nur lesen` : `Gruppe hängt an ${b.fromLabel}`)">{{ $t("· von {0}{1}", [b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel, props.pub && b.fromRole !== 'rubric' ? ' · nur lesen' : '']) }}</span>
-              <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">{{ $t("· ⌀ ab {0}", [roleLabel[b.activeFrom]]) }}</span>
+              <span v-if="!b.custom" class="muted from" :title="b.fromRole === 'rubric' ? $t('Gruppe an Rubrik {0}', [b.fromLabel]) : (props.pub ? $t('Gruppe an {0} · nur lesen', [b.fromLabel]) : $t('Gruppe hängt an {0}', [b.fromLabel]))">{{ $t("· von {0}{1}", [b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel, props.pub && b.fromRole !== 'rubric' ? ' ' + $t('· nur lesen') : '']) }}</span>
+              <span v-if="!b.active" class="warn" :title="$t('Werte erst ab {0} — hier nur sichtbar', [roleLabel[b.activeFrom]])">{{ $t("· ⌀ ab {0}", [roleLabel[b.activeFrom]]) }}</span>
             </td>
           </tr>
           <template v-for="def in b.defs" :key="def.key">
           <!-- Zwischenüberschrift innerhalb einer Gruppe (Taloan, 22.09.2026: ETIM nach Klassen) -->
           <tr v-if="def.divider" class="sub-row"><td class="sub" :colspan="columns.length + 1">{{ def.divider }}</td></tr>
           <tr v-else-if="def.type === 'formula' || def.type === 'template'">
-            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span></div></td>
+            <td class="attr" :title="def.key + (def.type === 'template' ? ' ' + $t('— Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut') : ' ' + $t('— Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet'))"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
-              <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? 'Pflegewert · ändern im Pflegebaum' : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>
+              <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? $t('Pflegewert · ändern im Pflegebaum') : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>
               <td v-else class="cell">
                 <div class="cell-box formula" :class="{ inherited: ownValue(def.key, c) == null && inherited(def, c).value != null }" tabindex="0"
                   @click="scriptCell = { def, col: c }" @keydown.enter.prevent="scriptCell = { def, col: c }"
-                  :title="(ownValue(def.key, c) ?? inherited(def, c).value ?? 'Skript anlegen (Editor öffnen)') + (inherited(def, c).from && ownValue(def.key, c) == null ? '\n\ngeerbt von ' + inherited(def, c).from.label : '')">
+                  :title="(ownValue(def.key, c) ?? inherited(def, c).value ?? $t('Skript anlegen (Editor öffnen)')) + (inherited(def, c).from && ownValue(def.key, c) == null ? '\n\ngeerbt von ' + inherited(def, c).from.label : '')">
                   <span class="res">{{ computedValue(def.key, c.locale) ?? '—' }}</span>
                   <span class="src muted">{{ (ownValue(def.key, c) ?? inherited(def, c).value ?? '').split('\n')[0].slice(0, 40) }}</span>
                 </div>
@@ -860,17 +861,17 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <tr v-else>
-            <td class="attr" :class="{ missing: missingOnly && missingOnly.keys.has(def.key) }" :title="def.key + (def.required ? ' · Pflicht: ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')"><div class="nm">
+            <td class="attr" :class="{ missing: missingOnly && missingOnly.keys.has(def.key) }" :title="def.key + (def.required ? ' ' + $t('· Pflicht:') + ' ' + Object.entries(def.required).map(([c, l]) => c + ':' + l.join(',')).join(' ') : '') + (def.inheritable ? ' · vererbbar' : '')"><div class="nm">
               <button v-if="def.type !== 'html'" class="star" :class="{ on: !!star(def.key), own: starOwn(def.key), idle: star(def.key) && !star(def.key).applies }" :title="starTitle(def)" @click.stop="setStar(def)">{{ star(def.key) ? '★' : '☆' }}</button>
               <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
-              <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
+              <span v-if="def.pattern" class="muted" :title="$t('Muster: {0}', [def.patternHint || def.pattern])">⌗</span>
               <span v-if="def.multiple" class="muted" :title="$t('vermehrbar: mehrere Werte, Liste in der Zelle')">≣</span>
               <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" :title="$t('Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig')">⌖</span>
-              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'Vererbung wiederherstellen (eigener Wert wird durch den geerbten ersetzt)' : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
+              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? $t('Vererbung wiederherstellen (eigener Wert wird durch den geerbten ersetzt)') : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
               <span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span>
-              <span v-if="def.hereLocked" class="warn" :title="`nicht an ${roleLabel[node.role]} — verwendbar an: ${(def.levels ?? []).map(r => roleLabel[r]).join(', ')}`">⌀</span>
-              <span v-else-if="def.whenLocked" class="warn" :title="`gilt nur bei ${store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute })} = ${def.when.values.slice(0, 6).join(', ')}${def.when.values.length > 6 ? ' …' : ''}`">⌀</span>
+              <span v-if="def.hereLocked" class="warn" :title="$t('nicht an {0} — verwendbar an: {1}', [roleLabel[node.role], (def.levels ?? []).map(r => roleLabel[r]).join(', ')])">⌀</span>
+              <span v-else-if="def.whenLocked" class="warn" :title="$t('gilt nur bei {0} = {1}{2}', [store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute }), def.when.values.slice(0, 6).join(', '), def.when.values.length > 6 ? ' …' : ''])">⌀</span>
             </div></td>
             <template v-for="c in columns" :key="c.label">
               <ToggleCell v-if="def.type === 'boolean'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
@@ -880,14 +881,14 @@ function cellMenu(e, def, col, block) {
               <HtmlCell v-else-if="def.type === 'html'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
               <Cell v-else :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
-                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? `zu überarbeiten · ${master} später geändert` : (c.locale ? `${master}-Text als Übersetzung übernehmen` : `${master}-Text als Grundtext übernehmen`)" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
+                :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? $t('zu überarbeiten · {0} später geändert', [master]) : (c.locale ? $t('{0}-Text als Übersetzung übernehmen', [master]) : $t('{0}-Text als Grundtext übernehmen', [master]))" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
           </tr>
           </template>
         </tbody>
       </table>
-      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="`Stand #${pubStand.stand}, gesetzt an „${pubStand.from.label}“ (Rechtsklick auf die Rubrik ändert ihn)`">{{ $t("❄ Stand #{0}{1} · von „{2}“", [pubStand.stand, standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '', pubStand.from.label]) }}</span></div>
+      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="$t('Stand #{0}, gesetzt an „{1}“ (Rechtsklick auf die Rubrik ändert ihn)', [pubStand.stand, pubStand.from.label])">{{ $t("❄ Stand #{0}{1} · von „{2}“", [pubStand.stand, standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '', pubStand.from.label]) }}</span></div>
       <table v-if="sourceRows.length" class="grid values" :style="`width:${180 + columns.length * 220}px;margin-top:8px`">
         <tbody>
           <tr class="group-row locked"><td :colspan="1 + columns.length"><span class="muted">{{ $t("▣ Pflegewerte von „{0}“ · nur lesen", [node.sourceLabel]) }}</span> <router-link :to="`/tree/${node.source}`" class="x edit" :title="$t('im Pflegebaum öffnen — dort ändern')">▣</router-link></td></tr>
@@ -907,13 +908,13 @@ function cellMenu(e, def, col, block) {
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
-              <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? 'gilt dann an allen Subitems — bis eines die Vererbung stoppt' : d.key">{{ d.label?.de || d.key }}</td>
+              <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? $t('gilt dann an allen Subitems — bis eines die Vererbung stoppt') : d.key">{{ d.label?.de || d.key }}</td>
                 <ToggleCell v-if="d.type === 'boolean'" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /><Cell v-else :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>
             </tbody></table>
             <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" :title="$t('wird an die Subitems vererbt')">{{ ' ' + $t("· ↓ vererbt") }}</span><button class="x" style="float:right" @click="retireRel(r)" :title="$t('Zuordnung lösen (das Medium bleibt in der Bibliothek)')">×</button></div>
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
-          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems`">
+          <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="$t('geerbt von {0} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems', [r.from.label])">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
             <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" :title="$t('zum Knoten, an dem das Medium hängt')">↑ {{ r.from.label }}</router-link>
@@ -922,11 +923,11 @@ function cellMenu(e, def, col, block) {
         </div>
         <div v-if="stopped.length" class="chips" style="margin-top:6px">
           <span class="muted" style="font-size:12px" :title="$t('von oben vererbt — hier und an allem darunter gesperrt')">{{ $t("⛔ Verwendung und Vererbung unterbunden:") }}</span>
-          <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt`">{{ r.other.label }} <button @click="retireRel(r)" :title="$t('wieder zulassen — das Medium gilt dann wieder als geerbt')">×</button></span>
+          <span v-for="r in stopped" :key="r.id" class="chip" :title="$t('{0} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt', [r.other.label])">{{ r.other.label }} <button @click="retireRel(r)" :title="$t('wieder zulassen — das Medium gilt dann wieder als geerbt')">×</button></span>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
           <button class="primary" @click="mediaFile.click()">{{ $t("⇧ Hochladen") }}</button>
-          <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" :title="$t('Aufräumen: die Medien hier auf „vererben“ setzen und gleiche feste Zuordnungen an den Subitems lösen — sie erben dann')">{{ inheriting || '↓ feste Bilder der Subitems durch Vererbung ersetzen' }}</button>
+          <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" :title="$t('Aufräumen: die Medien hier auf „vererben“ setzen und gleiche feste Zuordnungen an den Subitems lösen — sie erben dann')">{{ inheriting || $t('↓ feste Bilder der Subitems durch Vererbung ersetzen') }}</button>
           <input ref="mediaFile" type="file" multiple style="display:none" @change="uploadMedia([...$event.target.files]); $event.target.value = ''" />
           <button @click="mediaPick.open = true" :title="$t('Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl')">{{ $t("▨ Aus der Bibliothek wählen …") }}</button>
         </div>
@@ -970,26 +971,26 @@ function cellMenu(e, def, col, block) {
       </div>
 
       <div class="section" v-if="workflows.length">
-        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>{{ $t("⚑ Workflow") + ' ' }}<span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ w.label?.de || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : 'nicht ausgeleitet').join(' · ')"> ⚠</span></span></span></h2>
+        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>{{ $t("⚑ Workflow") + ' ' }}<span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ w.label?.de || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : $t('nicht ausgeleitet')).join(' · ')"> ⚠</span></span></span></h2>
         <template v-if="open('workflow')">
         <table class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
           <template v-for="w in workflows" :key="w.workflow">
           <tr>
             <td class="attr" :title="w.workflow">{{ w.label?.de || w.workflow }}</td>
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
-              <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
+              <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? $t('Zustand geerbt von {0} „{1}“ ·', [w.inheritedFrom.role === 'product' ? $t('Produkt') : $t('Gruppe'), w.inheritedFrom.label]) + ' ' : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : $t('Startzustand'))">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
               <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
               <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" :title="$t('Vererbung wiederherstellen (eigener Zustand wird aufgehoben)')">{{ $t("↑ Erben") }}</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
-              <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">{{ $t("nächster Schritt: {0}", [w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ')]) }}</span>
+              <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">{{ $t("nächster Schritt: {0}", [w.all.map(t => (t.roles ?? []).join('/') || $t('Rolle mit Schreibrecht')).join(', ')]) }}</span>
               <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">{{ $t("Ende des Wegs") }}</span>
               <span class="grow" />
               <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
-                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Wirkung „${effLabel(pe.effect)}“ nachholen (Schritt „${w.transition}“ hat sie nicht ausgeführt)`">⚠ {{ effLabel(pe.effect) }}</button>
-                <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben${pe.why ? ' · ' + pe.why : ''}`">{{ $t("⚠ nicht ausgeleitet") }}</span>
+                <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="$t('Wirkung „{0}“ nachholen (Schritt „{1}“ hat sie nicht ausgeführt)', [effLabel(pe.effect), w.transition])">⚠ {{ effLabel(pe.effect) }}</button>
+                <span v-else class="warn" style="font-size:12px" :title="$t('{0}: keine Variante freigegeben{1}', [pe.effect.split(':')[1], pe.why ? ' · ' + pe.why : ''])">{{ $t("⚠ nicht ausgeleitet") }}</span>
               </template>
-              <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="flex:0 0 300px;width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto;text-align:right">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
-              <button class="x" @click="wfAssign(w)" :title="w.assigned ? `Zuständigen ändern (jetzt ${w.assigned})` : 'Zuständigen zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
+              <span v-if="w.note" class="muted" :title="w.transition ? $t('Notiz zum Schritt „{0}“: {1}', [w.transition, w.note]) : w.note" style="flex:0 0 300px;width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto;text-align:right">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
+              <button class="x" @click="wfAssign(w)" :title="w.assigned ? $t('Zuständigen ändern (jetzt {0})', [w.assigned]) : $t('Zuständigen zuweisen')">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
               <button class="x" @click="wfHistory(w)" :title="$t('Verlauf anzeigen')">≡</button>
             </td>
           </tr>
@@ -1013,11 +1014,11 @@ function cellMenu(e, def, col, block) {
             <tr v-for="ch in channels" :key="ch">
               <td class="mono muted">{{ ch }}</td>
               <td v-if="node.role === 'variant'">
-                <button class="toggle" :class="{ on: released(ch, null), via: !released(ch, null) && releasedVia(ch, null) }" :disabled="!released(ch, null) && !!incomplete(ch, null)" :title="releasedVia(ch, null) && !released(ch, null) ? `Eigens freigeben (bisher über das Sortiment von ${releasedVia(ch, null)})` : incomplete(ch, null) ? 'fehlt: ' + incomplete(ch, null).missing.join(', ') : 'alle Sprachen'" @click="toggleRelease(ch, null)">{{ released(ch, null) ? '✓' : releasedVia(ch, null) ? '◌' : '·' }}</button>
+                <button class="toggle" :class="{ on: released(ch, null), via: !released(ch, null) && releasedVia(ch, null) }" :disabled="!released(ch, null) && !!incomplete(ch, null)" :title="releasedVia(ch, null) && !released(ch, null) ? $t('Eigens freigeben (bisher über das Sortiment von {0})', [releasedVia(ch, null)]) : incomplete(ch, null) ? 'fehlt: ' + incomplete(ch, null).missing.join(', ') : $t('alle Sprachen')" @click="toggleRelease(ch, null)">{{ released(ch, null) ? '✓' : releasedVia(ch, null) ? '◌' : '·' }}</button>
               </td>
               <td v-for="l in locales" :key="l" class="rel">
-                <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l), via: !released(ch, l) && releasedVia(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="releasedVia(ch, l) && !released(ch, l) ? `Eigens freigeben (bisher über das Sortiment von ${releasedVia(ch, l)})` : incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : releasedVia(ch, l) ? '◌' : '·' }}</button>
-                <span v-if="completeness(ch, l)" class="mono" :class="completeness(ch, l).missing.length ? 'neg' : 'pos'" :title="completeness(ch, l).missing.length ? 'fehlt: ' + completeness(ch, l).missing.join(', ') : 'vollständig'">{{ completeness(ch, l).filled }}/{{ completeness(ch, l).required }}</span>
+                <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l), via: !released(ch, l) && releasedVia(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="releasedVia(ch, l) && !released(ch, l) ? $t('Eigens freigeben (bisher über das Sortiment von {0})', [releasedVia(ch, l)]) : incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : releasedVia(ch, l) ? '◌' : '·' }}</button>
+                <span v-if="completeness(ch, l)" class="mono" :class="completeness(ch, l).missing.length ? 'neg' : 'pos'" :title="completeness(ch, l).missing.length ? 'fehlt: ' + completeness(ch, l).missing.join(', ') : $t('vollständig')">{{ completeness(ch, l).filled }}/{{ completeness(ch, l).required }}</span>
                 <span v-else class="muted" :title="$t('hier ist nichts Pflicht')">–</span>
               </td>
             </tr>
@@ -1045,11 +1046,11 @@ function cellMenu(e, def, col, block) {
           </tbody>
         </table>
         <div class="chips" style="margin-top:6px">
-          <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? '+ weitere Achse (Pflicht) …' : '+ Achse …' }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
-          <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? 'prüfen' : 'dazu' }}</button>
+          <select v-model="addAxis" style="width:220px"><option value="">{{ wiz ? $t('+ weitere Achse (Pflicht) …') : $t('+ Achse …') }}</option><option v-for="a in axisChoices.filter(x => !(wiz?.axes ?? []).includes(x.key))" :key="a.key" :value="a.key">{{ a.type === 'enum' ? '☰' : a.type === 'integer' ? '12' : 'Aa' }} {{ a.label?.de || a.key }} · {{ a.key }}</option></select>
+          <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? $t('prüfen') : 'dazu' }}</button>
         </div>
         <div v-if="wiz" class="picker" style="padding:8px;margin-top:6px">
-          <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">{{ $t("· {0} Varianten{1}", [wiz.total, wiz.empty ? `, ${wiz.empty} ohne Wert (zählen nicht)` : '']) }}</span></div>
+          <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">{{ $t("· {0} Varianten{1}", [wiz.total, wiz.empty ? $t(', {0} ohne Wert (zählen nicht)', [wiz.empty]) : '']) }}</span></div>
           <div v-if="wiz.dupes.length" class="warn" style="margin-top:6px">{{ $t("⚠ nicht eindeutig —") + ' ' }}<span v-for="d in wiz.dupes.slice(0, 6)" :key="d.combo" class="chip" style="margin-right:4px">{{ d.combo }} × {{ d.n }}</span>{{ $t("{0} → oben eine weitere Achse wählen und prüfen", [wiz.dupes.length > 6 ? ` … ${wiz.dupes.length}` : '']) }}</div>
           <div v-else class="pos" style="margin-top:6px">{{ $t("✓ eindeutig") }}</div>
           <div class="chips" style="margin-top:6px"><button class="primary" :disabled="wiz.dupes.length > 0" @click="axisCommit">{{ $t("Achsen hinzufügen") }}</button><button @click="wiz = null">{{ $t("Abbrechen") }}</button></div>
@@ -1065,8 +1066,8 @@ function cellMenu(e, def, col, block) {
           <tbody>
             <tr v-for="g in attachedSorted" :key="g" :title="g">
               <td><router-link :to="{ path: '/model', query: { section: 'groups', key: g } }">▤ {{ groupLabel(g) }}</router-link></td>
-              <td class="muted" :title="fromAbove(g) ? `${groupLabel(g)} hängt schon an ${fromAbove(g).label} und gilt von dort nach unten — hier überflüssig, × nimmt sie ab` : ''">{{ groupLocked(g) ? '⌖ hier gesperrt — aktiv ab ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : fromAbove(g) ? `⚠ schon von ${fromAbove(g).label} — überflüssig` : 'ab hier nach unten' }}</td>
-              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" :title="fromAbove(g) ? `hier abnehmen — sie gilt weiter von ${fromAbove(g).label}` : 'Gruppe hier abnehmen'">×</button></td>
+              <td class="muted" :title="fromAbove(g) ? $t('{0} hängt schon an {1} und gilt von dort nach unten — hier überflüssig, × nimmt sie ab', [groupLabel(g), fromAbove(g).label]) : ''">{{ groupLocked(g) ? $t('⌖ hier gesperrt — aktiv ab') + ' ' + roleLabel[model.groups.find(x => x.key === g).activeFrom] : fromAbove(g) ? $t('⚠ schon von {0} — überflüssig', [fromAbove(g).label]) : $t('ab hier nach unten') }}</td>
+              <td class="num"><button class="x" @click="attach(node.attachedGroups.filter(x => x !== g))" :title="fromAbove(g) ? $t('hier abnehmen — sie gilt weiter von {0}', [fromAbove(g).label]) : $t('Gruppe hier abnehmen')">×</button></td>
             </tr>
           </tbody>
         </table>

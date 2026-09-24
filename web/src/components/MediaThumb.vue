@@ -12,6 +12,7 @@ const pending = new Map()
 import { ref, watch } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { t } from '../i18n.js'
 
 const props = defineProps({ id: String, size: { type: Number, default: 256 }, self: { type: Boolean, default: true } })
 const src = ref('')
@@ -30,9 +31,9 @@ async function make() {
     const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k))
     c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
     const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.82))
-    if (!blob) throw new Error('keine Vorschau')
+    if (!blob) throw new Error(t('keine Vorschau'))
     const r = await fetch(`/api/media/${props.id}/thumb`, { method: 'PUT', body: blob, headers: { 'Content-Type': 'image/webp', 'X-Actor': store.actor || 'anonym' } })
-    if (!r.ok) throw new Error(`Vorschau ablegen: ${r.status}`)
+    if (!r.ok) throw new Error(t('Vorschau ablegen: {0}', [r.status]))
   })()
   pending.set(props.id, job)
   try { await job; src.value = `/api/media/${props.id}/thumb?v=1` }

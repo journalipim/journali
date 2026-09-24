@@ -6,6 +6,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
+import { t } from '../i18n.js'
 
 // scope: „config“ (Ansicht des Plugins) oder „run“ (Parameter des Prozesses) — getrennte Namensräume im selben Strom
 const props = defineProps({ plugin: String, get: Function, set: Function, scope: { type: String, default: 'config' } })
@@ -26,7 +27,7 @@ const snapshot = () => { try { return JSON.stringify(props.get() ?? {}) } catch 
 function tick() { const now = snapshot(); const d = now !== saved.value && now !== '{}'; if (d !== dirty.value) dirty.value = d; if (!d) dismissed.value = '' }
 const showBar = () => dirty.value && snapshot() !== dismissed.value
 async function saveAs() {
-  const n = await dialog.prompt({ title: 'Als neues Profil speichern', value: current.value ? current.value + '-2' : '', placeholder: 'Name', ok: '💾 Speichern' })
+  const n = await dialog.prompt({ title: t('Als neues Profil speichern'), value: current.value ? current.value + '-2' : '', placeholder: t('Name'), ok: t('💾 Speichern') })
   if (!n?.trim()) return
   name.value = n.trim(); await save()
 }
@@ -45,12 +46,12 @@ async function apply(n) {
   if (!n) { current.value = ''; name.value = ''; localStorage.removeItem(`journali.profile.${props.plugin}.${props.scope}`); props.set(null); return }
   busy.value = true
   try { const data = await api.get(`/api/plugins/${props.plugin}/data/${encodeURIComponent(PREFIX + n)}`); props.set(data ?? {}); current.value = n; name.value = n; localStorage.setItem(`journali.profile.${props.plugin}.${props.scope}`, n); setTimeout(() => { saved.value = snapshot(); dirty.value = false }, 0) }
-  catch (e) { store.toast(`Profil ${n}: ${e.message}`) }
+  catch (e) { store.toast(t('Profil {0}: {1}', [n, e.message])) }
   finally { busy.value = false }
 }
 async function save() {
   const n = (name.value || current.value).trim()
-  if (!n) { store.toast('Profil: Name fehlt — oben eintragen, dann 💾'); return }
+  if (!n) { store.toast(t('Profil: Name fehlt — oben eintragen, dann 💾')); return }
   busy.value = true
   try {
     const data = props.get()
@@ -64,7 +65,7 @@ async function save() {
 }
 async function remove() {
   const n = current.value; if (!n) return
-  if (!await dialog.confirm({ title: `Profil „${n}“ löschen?`, ok: '🗑 Löschen', danger: true })) return
+  if (!await dialog.confirm({ title: t('Profil „{0}“ löschen?', [n]), ok: t('🗑 Löschen'), danger: true })) return
   try { await api.del(`/api/plugins/${props.plugin}/data/${encodeURIComponent(PREFIX + n)}`); names.value = names.value.filter(x => x !== n); current.value = ''; name.value = ''; localStorage.removeItem(`journali.profile.${props.plugin}.${props.scope}`) }
   catch (e) { store.toast(e.message) }
 }
@@ -75,21 +76,21 @@ defineExpose({ load })
 </script>
 
 <template>
-  <div class="profiles" :title="`Konfigurationen des Plugins ${plugin} — im Journal (plugin:${plugin}), für alle`">
+  <div class="profiles" :title="$t('Konfigurationen des Plugins {0} — im Journal (plugin:{1}), für alle', [plugin, plugin])">
     <span class="muted">⚙</span>
     <select :value="current" @change="apply($event.target.value)" :disabled="busy" :title="$t('gespeichertes Profil laden')">
       <option value="">{{ $t("— Profil —") }}</option>
       <option v-for="n in names" :key="n" :value="n">{{ n }}</option>
     </select>
     <input v-model="name" type="text" :placeholder="$t('Name')" style="width:200px" :title="$t('Name zum Speichern (neu oder vorhanden = überschreiben)')" @keydown.enter="save" />
-    <button class="x" @click="save()" :disabled="busy" :title="name && name !== current ? `als „${name}“ speichern` : 'Profil speichern (überschreiben)'">💾</button>
+    <button class="x" @click="save()" :disabled="busy" :title="name && name !== current ? `als „${name}“ speichern` : $t('Profil speichern (überschreiben)')">💾</button>
     <button class="x" @click="remove" :disabled="!current || busy" :title="$t('Profil löschen')">✕</button>
     <span v-if="dirty" class="unsaved" :title="$t('der Stand hier weicht vom gespeicherten Profil ab')">{{ $t("● geändert") }}</span>
   </div>
   <!-- schwebende Leiste unten (Taloan, 21.09.): geändert — speichern, als neues, verwerfen oder weg damit -->
   <Teleport to="body">
     <div v-if="showBar()" class="savebar">
-      <span>{{ current ? `Profil „${current}“ geändert` : 'Einstellungen geändert — noch kein Profil' }}</span>
+      <span>{{ current ? $t('Profil „{0}“ geändert', [current]) : $t('Einstellungen geändert — noch kein Profil') }}</span>
       <button v-if="current" class="primary" @click="save()" :disabled="busy" :title="$t('das gewählte Profil überschreiben')">{{ $t("💾 Speichern") }}</button>
       <button @click="saveAs" :disabled="busy" :title="$t('unter neuem Namen speichern — das gewählte Profil bleibt, wie es war')">{{ $t("Als neues Profil speichern …") }}</button>
       <button v-if="current" @click="discard" :disabled="busy" :title="$t('zurück zum gespeicherten Stand')">{{ $t("↶ Verwerfen") }}</button>

@@ -15,6 +15,7 @@ import { plugins } from '../plugins.js'
 import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
+import { t as t_ } from '../i18n.js'
 const treeW = paneWidth('tree', 300)
 
 const props = defineProps({ id: String })
@@ -26,11 +27,11 @@ const hits = ref(new Map())   // Server-Suche: id → Fundstelle
 // ohne ':' die Schlüssel, danach die passenden Werte. Kein Formular (Taloan: "gut gemeint, schlecht gemacht").
 const hasTerms = computed(() => /(^|\s)-?[a-z]+:/.test(q.value))
 const KEYS = [
-  ['attr:', 'Attribut hat eigenen Wert · =Muster · = leer'], ['empty:', 'fehlt, auch geerbt nicht (Attribut/Sprache)'],
-  ['incomplete:', 'Vollständigkeit nicht erreicht (Kanal)'], ['role:', 'Gruppe / Produkt / Variante'],
-  ['status:', 'Status (Modell → Status)'], ['group:', 'Attributgruppe gilt hier'],
-  ['under:', 'nur im Teilbaum eines Knotens'], ['by:', 'Urheber der letzten Änderung'], ['since:', 'geändert seit (Datum)'],
-  ['media:', 'hat Medien: any · image / document · Name (*.pdf)'], ['folder:', 'Medium im Medienordner: Name, Pfad (a/b) oder none'], ['rel:', 'hat Relation: any · Typ · Typ=Partner (Name, SKU, Id)'],
+  ['attr:', t_('Attribut hat eigenen Wert · =Muster · = leer')], ['empty:', t_('fehlt, auch geerbt nicht (Attribut/Sprache)')],
+  ['incomplete:', t_('Vollständigkeit nicht erreicht (Kanal)')], ['role:', 'Gruppe / Produkt / Variante'],
+  ['status:', 'Status (Modell → Status)'], ['group:', t_('Attributgruppe gilt hier')],
+  ['under:', t_('nur im Teilbaum eines Knotens')], ['by:', t_('Urheber der letzten Änderung')], ['since:', t_('geändert seit (Datum)')],
+  ['media:', t_('hat Medien: any · image / document · Name (*.pdf)')], ['folder:', t_('Medium im Medienordner: Name, Pfad (a/b) oder none')], ['rel:', t_('hat Relation: any · Typ · Typ=Partner (Name, SKU, Id)')],
 ]
 const sugg = ref([])          // [{ value, label, hint }]
 const suggIdx = ref(0)
@@ -52,29 +53,29 @@ function suggest() {
     // Schlüssel nur, wenn das Feld leer ist oder gerade ein Schlüssel getippt wird — nicht nach jedem Chip
     if (!low && q.value.trim()) { sugg.value = []; return }
     for (const [k, h] of KEYS) if (!low || k.startsWith(low)) out.push({ value: neg + k, label: neg + k, hint: neg ? 'NICHT: ' + h : h })
-    if (!low) out.push({ value: '-', label: '-', hint: 'Minus davor verneint: -empty:x, -role:variant, -Wort' })
+    if (!low) out.push({ value: '-', label: '-', hint: t_('Minus davor verneint: -empty:x, -role:variant, -Wort') })
   } else {
     const [key, rest] = [word.slice(0, word.indexOf(':') + 1), word.slice(word.indexOf(':') + 1)]
     const low = rest.toLowerCase()
     const attrs = (m?.attributes ?? []).filter(a => !low || a.key.toLowerCase().includes(low) || (a.label?.de ?? '').toLowerCase().includes(low))
     if (key === 'attr:' && !rest.includes('=')) {
       const exact = (m?.attributes ?? []).find(a => a.key === rest)
-      if (exact) { out.push({ value: `attr:${rest}`, label: `${de(exact)} hat Wert`, hint: 'eigener Wert, nicht geerbt' }, { value: `attr:${rest}=`, label: `${de(exact)} leer`, hint: 'kein eigener Wert' }, { value: `attr:${rest}=*`, label: `${de(exact)} = Muster…`, hint: '* steht für beliebig, z. B. *sku*' }) }
+      if (exact) { out.push({ value: `attr:${rest}`, label: t_('{0} hat Wert', [de(exact)]), hint: t_('eigener Wert, nicht geerbt') }, { value: `attr:${rest}=`, label: `${de(exact)} leer`, hint: t_('kein eigener Wert') }, { value: `attr:${rest}=*`, label: t_('{0} = Muster…', [de(exact)]), hint: t_('* steht für beliebig, z. B. *sku*') }) }
       for (const a of attrs.slice(0, 12)) if (a.key !== rest) out.push({ value: `attr:${a.key}`, label: de(a), hint: a.key })
     } else if (key === 'empty:') {
       const [ak, loc] = rest.split('/')
-      if (rest.includes('/')) { const a = (m?.attributes ?? []).find(x => x.key === ak); for (const l of (a?.perLocale ? m.locales : [])) if (!loc || l.code.startsWith(loc)) out.push({ value: `empty:${ak}/${l.code}`, label: `${de(a)} / ${l.code}`, hint: 'in dieser Sprache leer' }) }
-      else for (const a of attrs.slice(0, 12)) out.push({ value: `empty:${a.key}` + (a.perLocale ? '/' : ''), label: de(a), hint: a.perLocale ? a.key + ' — dann Sprache' : a.key })
+      if (rest.includes('/')) { const a = (m?.attributes ?? []).find(x => x.key === ak); for (const l of (a?.perLocale ? m.locales : [])) if (!loc || l.code.startsWith(loc)) out.push({ value: `empty:${ak}/${l.code}`, label: `${de(a)} / ${l.code}`, hint: t_('in dieser Sprache leer') }) }
+      else for (const a of attrs.slice(0, 12)) out.push({ value: `empty:${a.key}` + (a.perLocale ? '/' : ''), label: de(a), hint: a.perLocale ? a.key + ' ' + t_('— dann Sprache') : a.key })
     } else if (key === 'incomplete:') for (const c of (m?.channels ?? []).filter(c => c.key.startsWith(low))) out.push({ value: `incomplete:${c.key}`, label: de(c), hint: c.key })
-    else if (key === 'role:') for (const [v, l] of [['group', '▣ Gruppe'], ['product', '▦ Produkt'], ['variant', '◆ Variante']]) if (v.startsWith(low)) out.push({ value: `role:${v}`, label: l, hint: v })
+    else if (key === 'role:') for (const [v, l] of [['group', t_('▣ Gruppe')], ['product', t_('▦ Produkt')], ['variant', t_('◆ Variante')]]) if (v.startsWith(low)) out.push({ value: `role:${v}`, label: l, hint: v })
     else if (key === 'status:') for (const s of store.model?.statuses ?? []) if (s.key.startsWith(low) || store.statusLabel(s.key).toLowerCase().startsWith(low)) out.push({ value: `status:${s.key}`, label: store.statusText(s.key), hint: s.key })
     else if (key === 'group:') for (const g of (m?.groups ?? []).filter(g => !low || g.key.toLowerCase().includes(low) || (g.label?.de ?? '').toLowerCase().includes(low))) out.push({ value: `group:${g.key}`, label: de(g), hint: g.key })
     else if (key === 'under:') { for (const a of [...(props.id ? tree.ancestors(props.id) : []), selected.value].filter(Boolean).reverse()) if (!low || a.label.toLowerCase().includes(low) || a.id.includes(low)) out.push({ value: `under:${a.id}`, label: `${icon(a.role)} ${a.label}`, hint: a.id === props.id ? 'hier' : a.id }) }
-    else if (key === 'media:') { out.push({ value: 'media:any', label: 'irgendein Medium', hint: 'hat mindestens eines' }); for (const t of (m?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `media:${t.key}`, label: t.label?.de || t.key, hint: 'Relationstyp' }); if (low) out.push({ value: `media:${low}`, label: `Name enthält „${low}“`, hint: '* = beliebig' }) }
-    else if (key === 'folder:') { out.push({ value: 'folder:none', label: '⌂ ohne Ordner', hint: 'ein Medium des Knotens liegt in keinem Ordner' }); mediaFolders().then(fs => { for (const f of fs.filter(f => !low || f.name.toLowerCase().includes(low))) out.push({ value: `folder:${f.id}`, label: `📁 ${f.path}`, hint: 'samt Unterordnern' }); sugg.value = [...out] }) }
-    else if (key === 'rel:' && rest.includes('=')) { const [t, p] = rest.split('='); for (const r of tree.rows.filter(r => p && (r.label.toLowerCase().includes(p.toLowerCase()) || tree.keyHit(r, p.toLowerCase()))).slice(0, 8)) out.push({ value: `rel:${t}=${Object.values(r.keys ?? {})[0] || r.id}`, label: `${icon(r.role)} ${r.label}`, hint: `Partner der Relation${r.keys ? ' · ' + tree.keyText(r) : ''}` }) }
-    else if (key === 'rel:') { out.push({ value: 'rel:any', label: 'irgendeine Relation', hint: 'zu anderen Knoten' }); for (const t of (m?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `rel:${t.key}`, label: t.label?.de || t.key, hint: (t.symmetric ? 'symmetrisch' : 'gerichtet') + ' — mit = danach der Partner' }) }
-    else if (key === 'since:') for (const [d, l] of [[0, 'heute'], [1, 'seit gestern'], [7, 'letzte 7 Tage'], [30, 'letzte 30 Tage']]) out.push({ value: `since:${day(d)}`, label: l, hint: day(d) })
+    else if (key === 'media:') { out.push({ value: 'media:any', label: t_('irgendein Medium'), hint: t_('hat mindestens eines') }); for (const t of (m?.relationTypes ?? []).filter(t => (t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `media:${t.key}`, label: t.label?.de || t.key, hint: t_('Relationstyp') }); if (low) out.push({ value: `media:${low}`, label: t_('Name enthält „{0}“', [low]), hint: '* = beliebig' }) }
+    else if (key === 'folder:') { out.push({ value: 'folder:none', label: t_('⌂ ohne Ordner'), hint: t_('ein Medium des Knotens liegt in keinem Ordner') }); mediaFolders().then(fs => { for (const f of fs.filter(f => !low || f.name.toLowerCase().includes(low))) out.push({ value: `folder:${f.id}`, label: `📁 ${f.path}`, hint: t_('samt Unterordnern') }); sugg.value = [...out] }) }
+    else if (key === 'rel:' && rest.includes('=')) { const [t, p] = rest.split('='); for (const r of tree.rows.filter(r => p && (r.label.toLowerCase().includes(p.toLowerCase()) || tree.keyHit(r, p.toLowerCase()))).slice(0, 8)) out.push({ value: `rel:${t}=${Object.values(r.keys ?? {})[0] || r.id}`, label: `${icon(r.role)} ${r.label}`, hint: t_('Partner der Relation{0}', [r.keys ? ' · ' + tree.keyText(r) : '']) }) }
+    else if (key === 'rel:') { out.push({ value: 'rel:any', label: t_('irgendeine Relation'), hint: t_('zu anderen Knoten') }); for (const t of (m?.relationTypes ?? []).filter(t => !(t.to ?? []).includes('media') && t.key.startsWith(low))) out.push({ value: `rel:${t.key}`, label: t.label?.de || t.key, hint: (t.symmetric ? 'symmetrisch' : 'gerichtet') + ' ' + t_('— mit = danach der Partner') }) }
+    else if (key === 'since:') for (const [d, l] of [[0, 'heute'], [1, t_('seit gestern')], [7, 'letzte 7 Tage'], [30, 'letzte 30 Tage']]) out.push({ value: `since:${day(d)}`, label: l, hint: day(d) })
     else if (key === 'by:' && store.actor && store.actor.toLowerCase().startsWith(low)) out.push({ value: `by:${store.actor}`, label: `👤 ${store.actor}`, hint: 'ich' })
   }
   sugg.value = neg ? out.map(s => s.value.startsWith('-') ? s : { ...s, value: '-' + s.value, label: '¬ ' + s.label }) : out; suggIdx.value = 0
@@ -186,7 +187,7 @@ const relTypes = computed(() => (store.model?.relationTypes ?? []).filter(t => !
 const linkType = computed(() => relTypes.value.find(t => t.key === link.value?.type) ?? null)
 const linkAttrs = computed(() => { const g = linkType.value?.group; return g ? (store.model?.attributes ?? []).filter(a => a.group === g && a.type !== 'rows' && a.type !== 'html') : [] })
 async function openLink(target) {
-  if (!pickedRows.value.length) { store.toast('Erst auswählen: Strg+Klick im Baum'); return }
+  if (!pickedRows.value.length) { store.toast(t_('Erst auswählen: Strg+Klick im Baum')); return }
   link.value = { target, type: relTypes.value[0]?.key ?? '', dir: 'target-first', q: '', vals: {}, existing: null, all: {} }
   await loadExisting()
 }
@@ -217,7 +218,7 @@ const linkRows = computed(() => {
 const linkCount = computed(() => linkRows.value.filter(x => x.ok && !x.exists).length)
 function fillAll(attr, v) { for (const x of linkRows.value) { link.value.vals[x.r.id] ??= {}; link.value.vals[x.r.id][attr] = v } }
 async function runLink() {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   const l = link.value, t = linkType.value; if (!l || !t) return
   const cmds = []
   let n = 0
@@ -231,11 +232,11 @@ async function runLink() {
       cmds.push({ op: 'relation.attribute.set', args: { relation: '@' + ref, attribute: a.key, locale: null, ...(a.multiple ? { values: v.split(',').map(s => s.trim()).filter(Boolean) } : { value: v }) } })
     }
   }
-  if (!cmds.length) { store.toast('Nichts zu verknüpfen'); return }
+  if (!cmds.length) { store.toast(t_('Nichts zu verknüpfen')); return }
   try {
     const res = await api.post('/api/batch', { commands: cmds })
-    if (res.error) store.toast(`${res.error.message} — ${res.results.length} Einträge davor geschrieben`)
-    else store.toast(`${n} Relationen ${t.label?.de || t.key} → ${res.results.length} Einträge (Stapel ${res.batch})`, 'ok')
+    if (res.error) store.toast(t_('{0} — {1} Einträge davor geschrieben', [res.error.message, res.results.length]))
+    else store.toast(t_('{0} Relationen {1} → {2} Einträge (Stapel {3})', [n, t.label?.de || t.key, res.results.length, res.batch]), 'ok')
     link.value = null
     await store.poll(true)
   } catch (e) { store.toast(e.message) }
@@ -265,18 +266,18 @@ async function undoRoot() { const s = store.undo['']; const h = s?.history.pop()
 async function restore(id, batch) {
   try {
     const res = batch ? await api.post(`/api/batches/${encodeURIComponent(batch)}/undo`) : await api.post(`/api/nodes/${encodeURIComponent(id)}/restore`)
-    store.toast(`${res.undone ?? 1} Knoten wiederhergestellt (Stapel ${res.batch})${res.failed?.length ? ` — ${res.failed.length} nicht: ${res.failed[0]}` : ''}`, 'ok')
+    store.toast(t_('{0} Knoten wiederhergestellt (Stapel {1}){2}', [res.undone ?? 1, res.batch, res.failed?.length ? ` — ${res.failed.length} nicht: ${res.failed[0]}` : '']), 'ok')
     await store.poll(true); await tree.load(); router.push(`/tree/${id}`)
   } catch (e) { store.toast(e.message) }
 }
 async function retire(r) {
   const below = countBelow(r.id)
   const b = tree.below(r.id)
-  if (!await ask.confirm({ title: `${icon(r.role)} ${r.label} zurückziehen?`, warn: b.total ? `Mit allen ${b.total} Knoten darunter: ${b.summary}` : '', list: b.names, ok: b.total ? `🗑 ${b.total + 1} Knoten zurückziehen` : '🗑 Zurückziehen', danger: true })) return
+  if (!await ask.confirm({ title: t_('{0} {1} zurückziehen?', [icon(r.role), r.label]), warn: b.total ? t_('Mit allen {0} Knoten darunter: {1}', [b.total, b.summary]) : '', list: b.names, ok: b.total ? t_('🗑 {0} Knoten zurückziehen', [b.total + 1]) : t_('🗑 Zurückziehen'), danger: true })) return
   try {
     const res = await api.del(`/api/nodes/${encodeURIComponent(r.id)}${below ? '?recursive=true' : ''}`)
     const ps = (store.undo[r.parent ?? ''] ??= { history: [], redo: [] }); ps.history.push({ kind: 'retire', id: r.id, parent: r.parent, label: r.label, count: res?.retired ?? 1, batch: res?.batch ?? null }); ps.redo.length = 0
-    if (res?.retired) store.toast(`${res.retired} Knoten zurückgezogen (Stapel ${res.batch})`, 'ok', { label: '↶ Wiederherstellen', run: () => restore(r.id, res.batch), title: `stellt ${res.retired} Knoten wieder her: ${icon(r.role)} ${r.label}${res.retired > 1 ? ` mit ${res.retired - 1} darunter` : ''}` })
+    if (res?.retired) store.toast(t_('{0} Knoten zurückgezogen (Stapel {1})', [res.retired, res.batch]), 'ok', { label: t_('↶ Wiederherstellen'), run: () => restore(r.id, res.batch), title: t_('stellt {0} Knoten wieder her: {1} {2}{3}', [res.retired, icon(r.role), r.label, res.retired > 1 ? ' ' + t_('mit {0} darunter', [res.retired - 1]) : '']) })
     await tree.load(); if (props.id === r.id || !tree.byId.has(props.id)) router.push(r.parent ? `/tree/${r.parent}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }
@@ -315,11 +316,11 @@ function onDragOver(e, r) {
 async function onDrop(e, r) {
   if (!dragId.value && e.dataTransfer?.files?.length) {
     dropId.value = null; const f = e.dataTransfer.files[0]
-    if (r.role === 'variant') { store.toast('Ziel muss eine Gruppe oder ein Produkt sein'); return }
+    if (r.role === 'variant') { store.toast(t_('Ziel muss eine Gruppe oder ein Produkt sein')); return }
     if (/\.json(\.gz)?$/i.test(f.name)) { store.pendingImport = { file: f, parent: r.id }; router.push('/p/json/import'); return }
     // Tabelle (Excel, CSV, …): in den Tabellen-Import mit diesem Ziel, Analyse läuft sofort (Taloan, 20.09.)
-    if (plugins.importerFor(f.name) || /\.(csv|txt|tsv)$/i.test(f.name)) { if (!plugins.enabled('table')) { store.toast('Tabellen-Import ist aus (⌁ Plugins → table)'); return } store.pendingImport = { file: f, parent: r.id, analyse: true }; router.push('/p/table/import'); return }
-    store.toast(`Kein Importer für ${f.name} — JSON, Excel, CSV; andere Formate über ⌁ Plugins`); return
+    if (plugins.importerFor(f.name) || /\.(csv|txt|tsv)$/i.test(f.name)) { if (!plugins.enabled('table')) { store.toast(t_('Tabellen-Import ist aus (⌁ Plugins → table)')); return } store.pendingImport = { file: f, parent: r.id, analyse: true }; router.push('/p/table/import'); return }
+    store.toast(t_('Kein Importer für {0} — JSON, Excel, CSV; andere Formate über ⌁ Plugins', [f.name])); return
   }
   const ids = dragIds()
   dragId.value = null; dropId.value = null; hoverStop()
@@ -337,9 +338,9 @@ async function onDrop(e, r) {
     for (const src of todo) { const { need, own } = await neededByNode(src.id, store.model); checks.push({ src, missing: missingGroups(need, have, own) }) }
     const missing = new Map(); for (const c of checks) for (const m of c.missing) { if (!missing.has(m.group)) missing.set(m.group, new Set()); for (const a of m.attrs) missing.get(m.group).add(a) }
     const missingAll = [...missing].map(([group, attrs]) => ({ group, attrs: [...attrs] }))
-    const what = todo.length === 1 ? `${icon(todo[0].role)} ${todo[0].label}${countBelow(todo[0].id) ? ` mit ${countBelow(todo[0].id)} darunter` : ''}` : `${todo.length} Einträge`
+    const what = todo.length === 1 ? `${icon(todo[0].role)} ${todo[0].label}${countBelow(todo[0].id) ? ` mit ${countBelow(todo[0].id)} darunter` : ''}` : t_('{0} Einträge', [todo.length])
     const res = missingAll.length
-      ? await confirmMove({ title: `${what} → ${icon(r.role)} ${r.label}`, warn: '', missing: missingAll, rootLabel: todo.length === 1 ? `${icon(todo[0].role)} ${todo[0].label}` : 'jedem verschobenen Eintrag', ok: 'Umhängen' })
+      ? await confirmMove({ title: `${what} → ${icon(r.role)} ${r.label}`, warn: '', missing: missingAll, rootLabel: todo.length === 1 ? `${icon(todo[0].role)} ${todo[0].label}` : t_('jedem verschobenen Eintrag'), ok: t_('Umhängen') })
       : { attach: false }
     if (!res) return
     for (const c of checks) {
@@ -359,7 +360,7 @@ async function loadWorkflows() { try { wfDefs.value = await api.get('/api/workfl
 onMounted(loadWorkflows)
 async function wfStepAll(rows, wf, t) {
   let note = null
-  if (t.noteRequired) { note = await ask.prompt({ title: `${t.label?.de || t.key} (${rows.length})`, text: 'Notiz ist Pflicht — was ist zu tun?', placeholder: 'Notiz' }); if (!note?.trim()) return }
+  if (t.noteRequired) { note = await ask.prompt({ title: `${t.label?.de || t.key} (${rows.length})`, text: t_('Notiz ist Pflicht — was ist zu tun?'), placeholder: t_('Notiz') }); if (!note?.trim()) return }
   let ok = 0; const why = []
   for (const x of rows) { try { await api.post(`/api/nodes/${encodeURIComponent(x.id)}/workflow/${wf.key}/${t.key}`, { note }); ok++ } catch (e) { if (why.length < 3) why.push(`${x.label}: ${e.message}`) } }
   store.toast(`⚑ ${t.label?.de || t.key}: ${ok} von ${rows.length}${why.length ? ' — ' + why.join(' · ') : ''}`, ok ? 'ok' : 'warn')
@@ -374,11 +375,11 @@ async function retireAll(rows) {
   const ids = new Set(rows.map(x => x.id))
   const tops = rows.filter(x => !tree.ancestors(x.id).some(a => ids.has(a.id)))
   const below = tops.reduce((k, x) => k + countBelow(x.id), 0)
-  if (!await ask.confirm({ title: `${tops.length} Knoten zurückziehen?`, warn: below ? `Mit allen ${below} Knoten darunter — insgesamt ${tops.length + below}` : `${tops.length} Knoten`, list: tops.slice(0, 8).map(x => `${icon(x.role)} ${x.label}`), ok: `🗑 ${tops.length + below} Knoten zurückziehen`, danger: true })) return
+  if (!await ask.confirm({ title: t_('{0} Knoten zurückziehen?', [tops.length]), warn: below ? t_('Mit allen {0} Knoten darunter — insgesamt {1}', [below, tops.length + below]) : t_('{0} Knoten', [tops.length]), list: tops.slice(0, 8).map(x => `${icon(x.role)} ${x.label}`), ok: t_('🗑 {0} Knoten zurückziehen', [tops.length + below]), danger: true })) return
   let n = 0
   for (const x of tops) { try { const res = await api.del(`/api/nodes/${encodeURIComponent(x.id)}${countBelow(x.id) ? '?recursive=true' : ''}`); n += res?.retired ?? 1 } catch (e) { store.toast(`${x.label}: ${e.message}`) } }
   picked.value = new Set()
-  store.toast(`${n} Knoten zurückgezogen`, 'ok')
+  store.toast(t_('{0} Knoten zurückgezogen', [n]), 'ok')
   await tree.load(); if (!tree.byId.has(props.id)) router.push('/tree')
 }
 async function setStatus(r, status) {
@@ -390,7 +391,7 @@ async function setName(r, name) {
   try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/name`, { name }, 'PUT'); await store.poll(true); await tree.load() } catch (e) { store.toast(e.message) }
 }
 async function rename(r) {
-  const name = await ask.prompt({ title: 'Name im Baum', text: `${r.label} — leer = Automatik (★ Attribut)`, value: r.name ?? r.label, placeholder: 'leer = Automatik', ok: '✎ Umbenennen' })
+  const name = await ask.prompt({ title: t_('Name im Baum'), text: `${r.label} — leer = Automatik (★ Attribut)`, value: r.name ?? r.label, placeholder: 'leer = Automatik', ok: t_('✎ Umbenennen') })
   if (name != null) await setName(r, name)
 }
 // Fixieren übernimmt den Namen, den die Automatik gerade zeigt, als eigenen; Freigeben nimmt ihn weg.
@@ -398,13 +399,13 @@ const fix = r => setName(r, r.name ? '' : r.label)
 async function duplicate(r, deep) {
   try {
     const res = await api.post(`/api/nodes/${encodeURIComponent(r.id)}/duplicate?deep=${deep}`)
-    store.toast(`Kopie: ${res.entries} Einträge (Stapel ${res.batch})`, 'ok')
+    store.toast(t_('Kopie: {0} Einträge (Stapel {1})', [res.entries, res.batch]), 'ok')
     await store.poll(true); await tree.load(); router.push(`/tree/${res.id}`)
   } catch (e) { store.toast(e.message) }
 }
 // Rechtsklick: was man mit diesem Knoten tun kann — die Tastenkürzel gelten im Menü.
 // Was unter einem Knoten liegt, heisst „Subitems“ — nicht „Kinder“ (Taloan, 17.09.)
-const below = () => 'Subitems'
+const below = () => t_('Subitems')
 async function contextMenu(e, r) {
   e.preventDefault()   // vor dem await — sonst kommt das Browsermenü
   router.push(`/tree/${r.id}`)
@@ -412,14 +413,14 @@ async function contextMenu(e, r) {
   // Mehrfachauswahl (Taloan, 18.09.): liegt die Zeile in der Auswahl, gilt das Menü für die ganze Auswahl — Zurückziehen, Status,
   // Duplizieren für alle; was nur einzeln geht (Umbenennen, Tabelle, Plugins), ist ausgegraut mit Hinweis
   const sel = picked.value.has(r.id) && picked.value.size > 1 ? pickedRows.value : null
-  const only1 = sel ? { disabled: true, hint: `nur einzeln (${sel.length} ausgewählt)` } : {}
+  const only1 = sel ? { disabled: true, hint: t_('nur einzeln ({0} ausgewählt)', [sel.length]) } : {}
   // Workflow-Schritte, die zur Auswahl passen (Server zählt je Übergang, wer jetzt dort steht und darf) — nichts anbieten, was nicht geht
   let wfItems = []
   if (r.role !== 'rubric' && wfDefs.value.length) {
     try {
       const app = await api.post('/api/workflows/applicable', { ids: (sel ?? [r]).map(x => x.id) })
       wfItems = app.map(a => ({ label: `${a.workflowLabel?.de || a.workflow}: ${a.label?.de || a.key} → ${a.toLabel?.de || a.to}${a.of > 1 ? ` (${a.count} von ${a.of})` : ''}`, icon: '⚑', disabled: a.count === 0,
-        hint: [a.blocked ? `${a.blocked} gesperrt (Freigabe nicht möglich)` : '', a.noteRequired ? 'Notiz Pflicht' : '', a.effects?.length ? a.effects.join(', ') : ''].filter(Boolean).join(' · '),
+        hint: [a.blocked ? t_('{0} gesperrt (Freigabe nicht möglich)', [a.blocked]) : '', a.noteRequired ? t_('Notiz Pflicht') : '', a.effects?.length ? a.effects.join(', ') : ''].filter(Boolean).join(' · '),
         action: () => wfStepAll(sel ?? [r], { key: a.workflow }, a) }))
     } catch { wfItems = [] }
   }
@@ -430,7 +431,7 @@ async function contextMenu(e, r) {
   // Plugin-Einträge je Plugin in einem Untermenü
   // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
   // Datenanalyse — darin alles dazu, quer über die Plugins. Das Thema nennt die Aktion (topic), sonst die Art des Plugins (kind).
-  const TOPICS = [['import', '⇩ Import'], ['export', '⇪ Export'], ['datasheet', '▤ Datenblatt'], ['analysis', '✓ Datenanalyse'], ['classification', '⌗ Klassifikation'], ['jobs', '⏱ Jobs'], ['tools', '⌁ Werkzeuge']]
+  const TOPICS = [['import', t_('⇩ Import')], ['export', t_('⇪ Export')], ['datasheet', t_('▤ Datenblatt')], ['analysis', t_('✓ Datenanalyse')], ['classification', t_('⌗ Klassifikation')], ['jobs', t_('⏱ Jobs')], ['tools', t_('⌁ Werkzeuge')]]
   const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', classification: 'classification' }
   const byTopic = new Map()
   const add = (topic, item) => { if (!byTopic.has(topic)) byTopic.set(topic, []); byTopic.get(topic).push(item) }
@@ -440,31 +441,31 @@ async function contextMenu(e, r) {
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { key: a.key, order: a.order, label: a._label, icon: a.icon || '⌁', hint: typeof a.hint === 'function' ? a.hint(r) : a.hint ?? a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
   // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und da (Taloan, 19.09.)
-  if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: 'JSON-Rohdaten hierher importieren …', icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
-  const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: plugins.sorted(byTopic.get(k), k, x => x.label), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: 'nur einzeln' } : {}) }))
+  if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: t_('JSON-Rohdaten hierher importieren …'), icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
+  const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: plugins.sorted(byTopic.get(k), k, x => x.label), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: t_('nur einzeln') } : {}) }))
   menu.open(e, [
-    { label: 'Umbenennen', icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : '★ Automatik', action: () => rename(r), ...only1 },
+    { label: t_('Umbenennen'), icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : t_('★ Automatik'), action: () => rename(r), ...only1 },
     // Symbol ist der Pin — bei beiden (Taloan: der Pin gehört zu „lösen“); der Hinweis rechts sagt, was danach gilt
-    { label: r.name ? 'Benennung lösen' : 'Benennung fixieren', icon: '📌', key: 'f', hint: r.name ? '★ gilt wieder' : r.label, action: () => fix(r), ...only1 },
+    { label: r.name ? t_('Benennung lösen') : t_('Benennung fixieren'), icon: '📌', key: 'f', hint: r.name ? t_('★ gilt wieder') : r.label, action: () => fix(r), ...only1 },
     { sep: true },
     // Massenbearbeitung wie in Excel (Taloan, 17.09.): die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
     // Taloan (17.09.): eigenes Fenster, Excel-ähnlich pflegen, Schliessen übernimmt — Popup blockiert? dann im Hauptfenster
-    r.role !== 'variant' && kids ? { label: `Subitems tabellarisch bearbeiten (${kids})`, icon: '⊞', key: 'b', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?popup=1`), ...only1 } : null,
-    r.role === 'group' && kids ? { label: 'Alle Varianten darunter tabellarisch bearbeiten', icon: '⊞', key: 'w', hint: '↗ Fenster', action: () => openTable(`/table/${r.id}?role=variant&deep=1&popup=1`) } : null,
+    r.role !== 'variant' && kids ? { label: t_('Subitems tabellarisch bearbeiten ({0})', [kids]), icon: '⊞', key: 'b', hint: t_('↗ Fenster'), action: () => openTable(`/table/${r.id}?popup=1`), ...only1 } : null,
+    r.role === 'group' && kids ? { label: t_('Alle Varianten darunter tabellarisch bearbeiten'), icon: '⊞', key: 'w', hint: t_('↗ Fenster'), action: () => openTable(`/table/${r.id}?role=variant&deep=1&popup=1`) } : null,
     (r.role !== 'variant' && kids) ? { sep: true } : null,
-    sel ? { label: `Duplizieren (${sel.length})`, icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: sel.some(x => x.role === 'variant' && Object.keys(x.axisValues).length > 0), action: async () => { for (const x of sel) await duplicate(x, false) } }
-        : { label: 'Duplizieren', icon: '⧉', key: 'd', hint: 'ohne SKU/Freigaben', disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
-    !sel && r.role !== 'variant' && kids ? { label: `Mit ${countBelow(r.id)} darunter duplizieren`, icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
+    sel ? { label: t_('Duplizieren ({0})', [sel.length]), icon: '⧉', key: 'd', hint: t_('ohne SKU/Freigaben'), disabled: sel.some(x => x.role === 'variant' && Object.keys(x.axisValues).length > 0), action: async () => { for (const x of sel) await duplicate(x, false) } }
+        : { label: t_('Duplizieren'), icon: '⧉', key: 'd', hint: t_('ohne SKU/Freigaben'), disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
+    !sel && r.role !== 'variant' && kids ? { label: t_('Mit {0} darunter duplizieren', [countBelow(r.id)]), icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
     ...(r.role !== 'rubric' ? [...(store.model?.statuses ?? []).map(s => st(s.key)), { sep: true }] : []),   // Status aus dem Modell (Taloan, 22.09.; seit 23.09. auch an Gruppen)
-    ...(wfItems.length ? [{ label: 'Workflow' + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
-    { label: picked.value.has(r.id) ? 'Abwählen' : 'Auswählen', icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
-    picked.value.size ? { label: `Auswahl aufheben (${picked.value.size})`, icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
-    { label: 'Im Journal zeigen', icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },
+    ...(wfItems.length ? [{ label: t_('Workflow') + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
+    { label: picked.value.has(r.id) ? t_('Abwählen') : t_('Auswählen'), icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
+    picked.value.size ? { label: t_('Auswahl aufheben ({0})', [picked.value.size]), icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
+    { label: t_('Im Journal zeigen'), icon: '≡', key: 'j', action: () => router.push({ path: '/journal', query: { q: r.id } }), ...only1 },
     ...(topicMenus.length ? [{ sep: true }, ...topicMenus] : []),
     { sep: true },
-    sel ? { label: `${sel.length} Ausgewählte zurückziehen${sel.reduce((k, x) => k + countBelow(x.id), 0) ? ` (mit ${sel.reduce((k, x) => k + countBelow(x.id), 0)} darunter)` : ''}`, icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
-        : { label: kids ? `Mit ${countBelow(r.id)} darunter zurückziehen` : 'Zurückziehen', icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
+    sel ? { label: t_('{0} Ausgewählte zurückziehen{1}', [sel.length, sel.reduce((k, x) => k + countBelow(x.id), 0) ? ' ' + t_('(mit {0} darunter)', [sel.reduce((k, x) => k + countBelow(x.id), 0)]) : '']), icon: '🗑', key: 'Delete', danger: true, action: () => retireAll(sel) }
+        : { label: kids ? t_('Mit {0} darunter zurückziehen', [countBelow(r.id)]) : t_('Zurückziehen'), icon: '🗑', key: 'Delete', danger: true, action: () => retire(r) },
   ])
 }
 function onGlobalKey(e) {
@@ -521,7 +522,7 @@ const dialog = ref(null)
 const complete = computed(() => required.value.every(r => (vals.value[r.def.key] ?? '').trim() !== '') && Object.values(form.value).every(v => v !== ''))
 async function create() {
   if (!complete.value) return
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   const kind = creating.value
   const parent = kind === 'variant' ? productTarget.value : kind === 'group' ? newParent.value : groupTarget.value
   const cmds = [kind === 'group' ? { op: 'group.create', ref: 'n', args: { parent: parent?.id ?? null } }
@@ -533,7 +534,7 @@ async function create() {
   }
   try {
     const res = await api.post('/api/batch', { commands: cmds })
-    if (res.error) { store.toast(`${res.error.message} — ${res.results.length} Einträge geschrieben`); }
+    if (res.error) { store.toast(t_('{0} — {1} Einträge geschrieben', [res.error.message, res.results.length])); }
     const id = res.results.find(x => x.ref === 'n')?.node
     creating.value = null
     await store.poll(true); await tree.load()
@@ -562,12 +563,12 @@ function onDialogKey(e) {
       </div>
     </div>
     <div v-if="terms.length" class="chips terms">
-      <span v-for="t in terms" :key="t" class="chip mono" :class="{ not: t.startsWith('-') }" :title="t.startsWith('-') ? 'Verneinung aufheben' : 'Verneinen (Gegenteil)'" @click="q = q.split(/\s+/).map(w => w === t ? (t.startsWith('-') ? t.slice(1) : '-' + t) : w).join(' ')">{{ t }}<button @click.stop="dropTerm(t)" @click="dropTerm(t)" :title="$t('Bedingung entfernen')">×</button></span>
+      <span v-for="t in terms" :key="t" class="chip mono" :class="{ not: t.startsWith('-') }" :title="t.startsWith('-') ? $t('Verneinung aufheben') : 'Verneinen (Gegenteil)'" @click="q = q.split(/\s+/).map(w => w === t ? (t.startsWith('-') ? t.slice(1) : '-' + t) : w).join(' ')">{{ t }}<button @click.stop="dropTerm(t)" @click="dropTerm(t)" :title="$t('Bedingung entfernen')">×</button></span>
     </div>
     <div class="toolbar create">
-      <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label} anlegen (im Dialog auf die Wurzel umschaltbar — ein neuer Baum)` : 'Gruppe an der Wurzel anlegen (ein neuer Baum)'">+ ▣</button>
-      <button @click="start('product')" :disabled="!groupTarget" :title="groupTarget ? `Produkt unter ${groupTarget.label}` : 'erst eine Gruppe wählen'">+ ▦</button>
-      <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? `Variante unter ${productTarget.label}` : 'erst ein Produkt wählen'">+ ◆</button>
+      <button @click="start('group')" :title="groupTarget ? $t('Gruppe unter {0} anlegen (im Dialog auf die Wurzel umschaltbar — ein neuer Baum)', [groupTarget.label]) : $t('Gruppe an der Wurzel anlegen (ein neuer Baum)')">+ ▣</button>
+      <button @click="start('product')" :disabled="!groupTarget" :title="groupTarget ? $t('Produkt unter {0}', [groupTarget.label]) : $t('erst eine Gruppe wählen')">+ ▦</button>
+      <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? $t('Variante unter {0}', [productTarget.label]) : $t('erst ein Produkt wählen')">+ ◆</button>
       <span class="grow" />
       <button v-if="rootUndo" class="x" @click="undoRoot" :title="`↶ ${rootUndo.label}${rootUndo.count > 1 ? ` mit ${rootUndo.count - 1} darunter` : ''} wiederherstellen (Wurzel)`">{{ $t("↶ Wurzel") }}</button>
       <button v-if="q" @click="pickVisible" :title="$t('Alle sichtbaren Treffer auswählen')">{{ $t("☑ Treffer wählen") }}</button>
@@ -591,7 +592,7 @@ function onDialogKey(e) {
           </td></tr>
           <tr><td class="attr">{{ $t("Relation") }}</td><td>
             <select v-model="link.type" style="width:260px"><option v-for="t in relTypes" :key="t.key" :value="t.key">{{ t.symmetric ? '⇄' : '→' }} {{ t.label?.de || t.key }}{{ t.group ? ' · ▤ ' + t.group : '' }}</option></select>
-            <span v-if="linkType" class="muted" style="margin-left:8px">{{ linkType.symmetric ? 'beidseitig — liest sich von beiden Enden gleich' : 'einseitig — zwei Lesarten' }}</span>
+            <span v-if="linkType" class="muted" style="margin-left:8px">{{ linkType.symmetric ? $t('beidseitig — liest sich von beiden Enden gleich') : $t('einseitig — zwei Lesarten') }}</span>
           </td></tr>
           <tr v-if="linkType && link.target"><td class="attr">{{ $t("Richtung") }}</td><td class="dirs">
             <label :class="{ on: link.dir === 'target-first' }"><input type="radio" value="target-first" v-model="link.dir" />
@@ -611,7 +612,7 @@ function onDialogKey(e) {
               <tr v-for="x in linkRows" :key="x.r.id" :class="{ muted: !x.ok || x.exists }">
                 <td :title="x.r.id">{{ icon(x.r.role) }} {{ x.r.label }}</td>
                 <td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input v-if="x.ok && !x.exists" type="text" style="width:100%" :value="link.vals[x.r.id]?.[a.key] ?? ''" @input="(link.vals[x.r.id] ??= {})[a.key] = $event.target.value" /></td>
-                <td class="muted" style="font-size:11px">{{ x.exists ? 'gibt es schon' : !x.ok ? 'Typ erlaubt das nicht' : '' }}</td>
+                <td class="muted" style="font-size:11px">{{ x.exists ? $t('gibt es schon') : !x.ok ? $t('Typ erlaubt das nicht') : '' }}</td>
               </tr>
             </tbody>
           </table>
@@ -627,14 +628,14 @@ function onDialogKey(e) {
     <!-- Anlegen: Dialog mit Pflichtfeldern (Mastersprache); erst vollständig, dann ein Stapel -->
     <div v-if="creating" class="overlay" @click.self="creating = null" @keydown="onDialogKey">
       <div class="dialog" ref="dialog">
-        <div class="toolbar"><h1>{{ icon(creating) }} {{ creating === 'group' ? 'Neue Gruppe' : creating === 'product' ? 'Neues Produkt' : 'Neue Variante' }}</h1>
+        <div class="toolbar"><h1>{{ icon(creating) }} {{ creating === 'group' ? $t('Neue Gruppe') : creating === 'product' ? $t('Neues Produkt') : $t('Neue Variante') }}</h1>
           <span v-if="creating === 'group' && groupTarget" class="view-chip" :class="{ on: atRoot }" role="button" tabindex="0"
-            :title="atRoot ? 'an der Wurzel — ein neuer Baum' : `unter ${groupTarget.label} — Klick legt sie an der Wurzel an`"
-            @click="atRoot = !atRoot" @keydown.enter.prevent="atRoot = !atRoot" @keydown.space.prevent="atRoot = !atRoot">{{ atRoot ? '⌂ an der Wurzel' : '↳ unter ' + groupTarget.label }}</span>
-          <span v-else class="muted">{{ creating === 'variant' ? 'unter ' + productTarget.label : 'an der Wurzel' }}</span></div>
+            :title="atRoot ? $t('an der Wurzel — ein neuer Baum') : $t('unter {0} — Klick legt sie an der Wurzel an', [groupTarget.label])"
+            @click="atRoot = !atRoot" @keydown.enter.prevent="atRoot = !atRoot" @keydown.space.prevent="atRoot = !atRoot">{{ atRoot ? $t('⌂ an der Wurzel') : '↳ unter ' + groupTarget.label }}</span>
+          <span v-else class="muted">{{ creating === 'variant' ? 'unter ' + productTarget.label : $t('an der Wurzel') }}</span></div>
         <table class="grid form"><colgroup><col style="width:170px" /><col style="width:300px" /></colgroup><tbody>
           <tr v-for="a in (creating === 'variant' ? productTarget.axes : [])" :key="'ax-' + a">
-            <td class="attr" :title="a + ' — Variantenachse'">◆ {{ attrDef(a)?.label?.de || a }}</td>
+            <td class="attr" :title="a + ' ' + $t('— Variantenachse')">◆ {{ attrDef(a)?.label?.de || a }}</td>
             <td>
               <select v-if="attrDef(a)?.type === 'enum'" v-model="form[a]" style="width:100%"><option value="">…</option><option v-for="v in listValues(a)" :key="v.value" :value="v.value">{{ v.label?.de || v.value }}</option></select>
               <input v-else v-model="form[a]" type="text" style="width:100%" />
@@ -665,7 +666,7 @@ function onDialogKey(e) {
         draggable="true" @dragstart="onDragStart($event, r)" @dragover="onDragOver($event, r)" @dragleave="dropId === r.id && (dropId = null)" @drop.prevent="onDrop($event, r)" @dragend="dragId = null; dropId = null; hoverStop()">
         <span class="twisty" :class="{ leaf: !tree.kids(r.id).length }" @click.stop="tree.toggle(r.id)">{{ tree.kids(r.id).length ? (isOpen ? '▾' : '▸') : '' }}</span>
         <span class="icon">{{ icon(r.role) }}</span>
-        <span class="label" :class="{ pinned: r.name }" :title="r.name ? 'Name angeheftet (kursiv) — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen' : ''">{{ r.label }}</span>
+        <span class="label" :class="{ pinned: r.name }" :title="r.name ? $t('Name angeheftet (kursiv) — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen') : ''">{{ r.label }}</span>
         <span v-if="hits.get(r.id) && !r.label.toLowerCase().includes(q.trim().toLowerCase())" class="muted hit" :title="hits.get(r.id)">{{ hits.get(r.id) }}</span>
         <span v-if="r.role === 'variant' && r.keys && Object.keys(r.axisValues).length" class="muted axis">{{ Object.values(r.axisValues).join(' · ') }}</span>
         <span v-if="r.status && r.status !== 'draft' && store.status(r.status)" :style="store.statusStyle(r.status)" :title="store.statusLabel(r.status)">{{ store.status(r.status).icon }}</span>

@@ -3,9 +3,10 @@
 // dieselbe Ordnung in jeder Quelle — Titel, echte Reiter (IXP · Solr · Tabelle), dann ein Formular mit fester
 // Beschriftungsspalte: Profil zuerst, darunter die Zeilen der Quelle (Slot). Nichts verschiebt sich beim Wechsel.
 import ProfileBar from './ProfileBar.vue'
+import { t } from '../i18n.js'
 defineProps({ source: String, plugin: String, busy: String, get: Function, set: Function })
 // Keine Reiter mehr über die Quellen hinweg (Taloan, 18.09.): das Thema ⇩ Import ist die Übersicht, hier nur der Krümel zurück
-const NAMES = { ixp: 'IXP', solr: 'Solr', table: 'Tabelle' }
+const NAMES = { ixp: 'IXP', solr: t('Solr'), table: t('Tabelle') }
 </script>
 
 <template>

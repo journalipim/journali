@@ -5,6 +5,7 @@
 import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { t } from '../i18n.js'
 
 const c = ref({ host: '', port: 587, security: 'starttls', user: '', password: '', from: '', fromName: '', replyTo: '' })
 // Welcher Port zu welcher Verschlüsselung gehört — beim Umschalten mitgesetzt, solange der übliche eingetragen ist
@@ -33,18 +34,18 @@ async function speichern() {
     const r = await api.post('/api/mail', c.value, 'PUT')
     c.value = { ...c.value, ...r.config }
     ready.value = r.ready
-    said.value = ready.value ? '✓ gespeichert' : '✓ gespeichert — ohne Server und Absender wird nichts gesendet'
+    said.value = ready.value ? '✓ gespeichert' : t('✓ gespeichert — ohne Server und Absender wird nichts gesendet')
   } catch (e) { said.value = '✗ ' + e.message }
   finally { busy.value = '' }
 }
 
 async function testen() {
-  if (!probe.value.trim()) { said.value = '✗ Empfänger fehlt'; return }
+  if (!probe.value.trim()) { said.value = t('✗ Empfänger fehlt'); return }
   localStorage.setItem('journali.mail.test', probe.value.trim())
   busy.value = '…'; said.value = ''
   try {
     await api.post('/api/mail/test', { to: probe.value.trim() })
-    said.value = `✓ Probe an ${probe.value.trim()} gesendet`
+    said.value = t('✓ Probe an {0} gesendet', [probe.value.trim()])
   } catch (e) { said.value = '✗ ' + e.message }
   finally { busy.value = '' }
 }
@@ -75,10 +76,10 @@ onMounted(lies)
     </tbody></table>
 
     <div class="row" style="gap:8px;margin-top:8px;align-items:center">
-      <button class="primary" :disabled="!!busy" @click="speichern">{{ busy || '💾 Speichern' }}</button>
+      <button class="primary" :disabled="!!busy" @click="speichern">{{ busy || $t('💾 Speichern') }}</button>
       <span class="grow" />
       <input v-model="probe" type="text" :placeholder="$t('Probe an …')" style="width:220px" @keydown.enter="testen" />
-      <button :disabled="!!busy || !ready" :title="ready ? 'eine Probe senden' : 'erst Server und Absender eintragen'" @click="testen">{{ $t("✉ Probe") }}</button>
+      <button :disabled="!!busy || !ready" :title="ready ? $t('eine Probe senden') : $t('erst Server und Absender eintragen')" @click="testen">{{ $t("✉ Probe") }}</button>
     </div>
 
     <div v-if="said" :class="said.startsWith('✗') ? 'fehler' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>

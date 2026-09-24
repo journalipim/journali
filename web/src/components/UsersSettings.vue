@@ -7,6 +7,7 @@ import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { menu } from '../menu.js'
+import { t } from '../i18n.js'
 
 const roles = ref([]); const rights = ref([]); const newRole = ref(''); const teams = ref([])
 const isAdmin = () => store.can('users')
@@ -21,13 +22,13 @@ async function load() {
 function edit(u) { form.value = u ? { key: u.key, name: u.name, email: u.email ?? '', role: u.role, team: u.team ?? '', password: '', isNew: false } : { key: '', name: '', email: '', role: 'editor', team: '', password: '', isNew: true } }
 async function save() {
   const f = form.value
-  if (f.isNew && !f.password) { store.toast('Passwort für den neuen Anwender'); return }
+  if (f.isNew && !f.password) { store.toast(t('Passwort für den neuen Anwender')); return }
   try { await api.post(`/api/auth/users/${encodeURIComponent(f.key.trim().toLowerCase())}`, { name: f.name, email: f.email || null, role: f.role, team: f.team || '', password: f.password || null }, 'PUT'); form.value = null; await load(); store.toast('✓ gespeichert', 'ok') }
   catch (e) { store.toast(e.message) }
 }
 async function toggle(u) { try { await api.post(`/api/auth/users/${u.key}`, { enabled: !u.enabled }, 'PUT'); await load() } catch (e) { store.toast(e.message) } }
 async function remove(u) {
-  if (!await dialog.confirm({ title: `${u.name || u.key} entfernen?`, warn: 'Anmeldung, Token und Sitzungen weg; Journaleinträge bleiben', ok: 'Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: `${u.name || u.key} entfernen?`, warn: t('Anmeldung, Token und Sitzungen weg; Journaleinträge bleiben'), ok: t('Entfernen'), danger: true })) return
   try { await api.del(`/api/auth/users/${u.key}`); await load() } catch (e) { store.toast(e.message) }
 }
 // Rollen: Recht an/aus, umbenennen, anlegen, zurückziehen (Kontextmenü — wie überall)
@@ -42,8 +43,8 @@ async function roleAdd() {
 }
 function roleMenu(e, r) {
   menu.open(e, [
-    { label: `Rolle ${r.label || r.key}`, disabled: true }, { sep: true },
-    { label: 'Rolle zurückziehen', icon: '✕', key: 'Delete', disabled: r.key === 'admin' || r.users > 0, hint: r.key === 'admin' ? 'admin bleibt' : r.users ? `${r.users} Anwender` : '', action: async () => { if (!await dialog.confirm({ title: `Rolle ${r.label || r.key} zurückziehen?`, ok: 'Zurückziehen', danger: true })) return; try { await api.del(`/api/auth/roles/${r.key}`); await load() } catch (err) { store.toast(err.message) } } },
+    { label: t('Rolle {0}', [r.label || r.key]), disabled: true }, { sep: true },
+    { label: t('Rolle zurückziehen'), icon: '✕', key: 'Delete', disabled: r.key === 'admin' || r.users > 0, hint: r.key === 'admin' ? t('admin bleibt') : r.users ? t('{0} Anwender', [r.users]) : '', action: async () => { if (!await dialog.confirm({ title: t('Rolle {0} zurückziehen?', [r.label || r.key]), ok: t('Zurückziehen'), danger: true })) return; try { await api.del(`/api/auth/roles/${r.key}`); await load() } catch (err) { store.toast(err.message) } } },
   ])
 }
 onMounted(load)
@@ -57,8 +58,8 @@ onMounted(load)
       <tbody>
         <tr v-for="u in users" :key="u.key" :class="{ off: !u.enabled }">
           <td class="mono">{{ u.key }}</td><td>{{ u.name }}</td><td class="muted">{{ u.email ?? '' }}</td><td :title="u.role">{{ roles.find(r => r.key === u.role)?.label || u.role }}</td>
-          <td :class="u.team ? '' : 'muted'" :title="u.team ? `Team ${u.team}` : 'kein eigenes Team — es gilt Team 1'">{{ teams.find(t => t.key === u.team)?.label || u.team || '①' }}</td>
-          <td><button class="toggle" :class="{ on: u.enabled, off: !u.enabled }" @click="toggle(u)" :title="u.enabled ? 'Sperren (jetzt aktiv)' : 'Freischalten (jetzt gesperrt)'">{{ u.enabled ? '✓' : '✗' }}</button></td>
+          <td :class="u.team ? '' : 'muted'" :title="u.team ? $t('Team {0}', [u.team]) : $t('kein eigenes Team — es gilt Team 1')">{{ teams.find(t => t.key === u.team)?.label || u.team || '①' }}</td>
+          <td><button class="toggle" :class="{ on: u.enabled, off: !u.enabled }" @click="toggle(u)" :title="u.enabled ? $t('Sperren (jetzt aktiv)') : $t('Freischalten (jetzt gesperrt)')">{{ u.enabled ? '✓' : '✗' }}</button></td>
           <td class="muted" style="font-size:12px">{{ when(u.lastAt) }} 👤 {{ u.lastActor }}</td>
           <td class="row" style="gap:4px"><button class="x" @click="edit(u)">✎</button><button class="x" @click="remove(u)" :disabled="u.key === store.auth.user" :title="$t('entfernen')">🗑</button></td>
         </tr>
@@ -72,7 +73,7 @@ onMounted(load)
         <input v-model="form.email" type="email" :placeholder="$t('E-Mail')" style="width:200px" />
         <select v-model="form.role"><option v-for="r in roles" :key="r.key" :value="r.key">{{ r.label || r.key }} · {{ r.key }}</option></select>
         <select v-model="form.team" :title="$t('Kostenstelle der KI — leer: es gilt das erste Team')"><option value="">{{ $t("— Team 1 —") }}</option><option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option></select>
-        <input v-model="form.password" type="password" autocomplete="new-password" :placeholder="form.isNew ? 'Passwort (Pflicht)' : 'neues Passwort (leer = bleibt)'" style="width:200px" />
+        <input v-model="form.password" type="password" autocomplete="new-password" :placeholder="form.isNew ? 'Passwort (Pflicht)' : $t('neues Passwort (leer = bleibt)')" style="width:200px" />
         <button class="primary" @click="save">{{ $t("Speichern") }}</button><button @click="form = null">{{ $t("Abbrechen") }}</button>
       </div>
     </div>

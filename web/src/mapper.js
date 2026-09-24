@@ -9,6 +9,7 @@
 // Reine Funktionen; die Ansicht (TableImportView) und Plugins (ctx.mapper) rufen sie.
 
 import { apply as applySteps } from './transform.js'
+import { t as t_ } from './i18n.js'
 export { apply as transform, describe as describeSteps, OPS as TRANSFORM_OPS } from './transform.js'
 
 export const SYNONYMS = {
@@ -110,17 +111,17 @@ export function validate(v, def, model) {
   if (v == null || v === '') return null
   switch (def?.type) {
     // Grund ohne den ganzen Wert (Taloan, 21.09.: „den Grund sieht man erst einen Kilometer rechts“) — der Wert steht daneben
-    case 'integer': return /^[+-]?\d+$/.test(v) ? null : 'keine ganze Zahl'
-    case 'decimal': return /^[+-]?\d+(\.\d+)?$/.test(v) ? null : 'keine Zahl'
-    case 'boolean': return v === 'true' || v === 'false' ? null : 'nicht ja/nein'
-    case 'date': return /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(Date.parse(v)) ? null : 'kein Datum (TT.MM.JJJJ)'
+    case 'integer': return /^[+-]?\d+$/.test(v) ? null : t_('keine ganze Zahl')
+    case 'decimal': return /^[+-]?\d+(\.\d+)?$/.test(v) ? null : t_('keine Zahl')
+    case 'boolean': return v === 'true' || v === 'false' ? null : t_('nicht ja/nein')
+    case 'date': return /^\d{4}-\d{2}-\d{2}$/.test(v) && !isNaN(Date.parse(v)) ? null : t_('kein Datum (TT.MM.JJJJ)')
     case 'enum': {
       const list = model?.lists?.find(l => l.key === def.list); if (!list) return null
       const bad = String(v).split(',').map(x => x.trim()).filter(x => x && !list.values.some(y => y.value === x))
-      return bad.length ? `„${bad.join(', ')}“ nicht in Liste ${def.list}` : null
+      return bad.length ? t_('„{0}“ nicht in Liste {1}', [bad.join(', '), def.list]) : null
     }
     default: {
-      if (def?.pattern) { try { if (!new RegExp(def.pattern).test(v)) return `„${String(v).slice(0, 40)}“ passt nicht zum Muster${def.patternHint ? ' (' + def.patternHint + ')' : ''}` } catch {} }
+      if (def?.pattern) { try { if (!new RegExp(def.pattern).test(v)) return t_('„{0}“ passt nicht zum Muster{1}', [String(v).slice(0, 40), def.patternHint ? ' (' + def.patternHint + ')' : '']) } catch {} }
       return null
     }
   }
@@ -160,41 +161,41 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     const own = String(col).trim().match(/^journali_(id|parent|role|status|label|root)(?:_(.+))?$/i)
     if (own) {
       const sys = own[1].toLowerCase(); out.internal = true; out.root = own[2]?.toLowerCase() ?? null
-      if (sys === 'id') { out.target = 'id'; out.why = 'journali-Id' + (out.root ? ' · Wurzel ' + out.root : '') }
-      else if (sys === 'parent') { out.target = 'parent'; out.why = 'Elternteil aus der Datei' }
-      else if (sys === 'root') { out.target = 'root'; out.why = 'Wurzel — macht die Id eineindeutig' }
-      else out.why = 'Exportspalte, nur Anzeige'
+      if (sys === 'id') { out.target = 'id'; out.why = 'journali-Id' + (out.root ? ' ' + t_('· Wurzel') + ' ' + out.root : '') }
+      else if (sys === 'parent') { out.target = 'parent'; out.why = t_('Elternteil aus der Datei') }
+      else if (sys === 'root') { out.target = 'root'; out.why = t_('Wurzel — macht die Id eineindeutig') }
+      else out.why = t_('Exportspalte, nur Anzeige')
       return out
     }
-    if (n === 'status') { out.target = 'status'; out.why = 'Status — Schlüssel oder Tabelle → Status'; return out }   // Fremdstatus (SAP 300/400 …) über die Umwandlung „Tabelle“ abbilden (Taloan, 22.09.)
-    if (n === 'role' || n === 'journali_label') { out.internal = true; out.why = 'Exportspalte, nur Anzeige'; return out }
-    if (n === 'journali_root') { out.target = 'root'; out.internal = true; out.why = 'Wurzel — macht die Id eineindeutig'; return out }
-    if (n.startsWith('axis_') && attrs.some(a => norm(a.key) === n.slice(5))) pick('attr', attrs.find(a => norm(a.key) === n.slice(5)).key, 1, 'Variantenachse')
+    if (n === 'status') { out.target = 'status'; out.why = t_('Status — Schlüssel oder Tabelle → Status'); return out }   // Fremdstatus (SAP 300/400 …) über die Umwandlung „Tabelle“ abbilden (Taloan, 22.09.)
+    if (n === 'role' || n === 'journali_label') { out.internal = true; out.why = t_('Exportspalte, nur Anzeige'); return out }
+    if (n === 'journali_root') { out.target = 'root'; out.internal = true; out.why = t_('Wurzel — macht die Id eineindeutig'); return out }
+    if (n.startsWith('axis_') && attrs.some(a => norm(a.key) === n.slice(5))) pick('attr', attrs.find(a => norm(a.key) === n.slice(5)).key, 1, t_('Variantenachse'))
     // 1. Schlüsselspalten
     // Elternteil vor der Id-Erkennung: eine Spalte „parent“ voller p-…-Ids ist der Vater, nicht die Id des Knotens (Taloan, 21.09.: „doppelt — warum?“)
-    if (SYNONYMS.parent.includes(n)) pick('parent', null, n.startsWith('parent') || sniff.type === 'id' ? 1 : 0.85, 'Elternteil (SKU oder Id des Produkts / der Gruppe)')
+    if (SYNONYMS.parent.includes(n)) pick('parent', null, n.startsWith('parent') || sniff.type === 'id' ? 1 : 0.85, t_('Elternteil (SKU oder Id des Produkts / der Gruppe)'))
     if (sniff.type === 'id' || n === 'id' || n === 'journali_id') pick('id', null, 1, 'journali-Id')
-    if (external && (n === norm(external) || n === norm(external) + '_id' || n === 'external' || n === 'externe_kennung' || n === 'remote_id')) pick('external', null, 0.95, `Kennung ${external}`)
+    if (external && (n === norm(external) || n === norm(external) + '_id' || n === 'external' || n === 'externe_kennung' || n === 'remote_id')) pick('external', null, 0.95, t_('Kennung {0}', [external]))
     // 2. Attribute: Schlüssel, Label, Synonyme, Ähnlichkeit
     for (const { a, keys } of index) {
-      if (keys.has(n)) pick('attr', a.key, n === norm(a.key) ? 1 : 0.95, n === norm(a.key) ? 'Schlüssel' : 'Label')
+      if (keys.has(n)) pick('attr', a.key, n === norm(a.key) ? 1 : 0.95, n === norm(a.key) ? t_('Schlüssel') : t_('Label'))
     }
     if (out.score < 0.95) {
       for (const [canon, words] of Object.entries(SYNONYMS)) {
         if (!words.includes(n)) continue
         const a = attrs.find(x => norm(x.key) === canon) ?? attrs.find(x => words.includes(norm(x.key))) ?? index.find(x => [...x.keys].some(k => words.includes(k)))?.a
-        if (a) pick('attr', a.key, 0.9, `Synonym für ${a.key}`)
-        else if (canon === 'sku') { const u = attrs.find(x => x.unique); if (u) pick('attr', u.key, 0.8, `Schlüssel — ${u.key} ist eindeutig`) }
+        if (a) pick('attr', a.key, 0.9, t_('Synonym für {0}', [a.key]))
+        else if (canon === 'sku') { const u = attrs.find(x => x.unique); if (u) pick('attr', u.key, 0.8, t_('Schlüssel — {0} ist eindeutig', [u.key])) }
         else if (canon === 'id') pick('id', null, 0.9, 'journali-Id')
       }
     }
     if (out.score < 0.9) {
       let best = null, bs = 0
       for (const { a, keys } of index) for (const k of keys) { const s = similarity(n, k); if (s > bs) { bs = s; best = a } }
-      if (best && bs >= 0.72) pick('attr', best.key, bs * 0.85, `ähnlich ${best.key} (${Math.round(bs * 100)} %)`)
+      if (best && bs >= 0.72) pick('attr', best.key, bs * 0.85, t_('ähnlich {0} ({1} %)', [best.key, Math.round(bs * 100)]))
     }
     // 3. nichts gefunden: neues Attribut vorschlagen, wenn die Spalte Werte hat
-    if (out.target === 'skip' && values.some(v => String(v ?? '').trim() !== '')) { out.target = 'new'; out.why = `neu als ${out.newType}` }
+    if (out.target === 'skip' && values.some(v => String(v ?? '').trim() !== '')) { out.target = 'new'; out.why = t_('neu als {0}', [out.newType]) }
     // Sprache: nur, wenn das Attribut sie kennt; Attribut ohne Sprachachse → Sprache weg
     if (out.target === 'attr') { const a = attrs.find(x => x.key === out.attribute); if (a && !a.perLocale) out.locale = null; if (a?.perLocale && !out.locale) out.locale = model?.masterLocale ?? locs[0] ?? null }
     // Doppelte Ziele (zwei Spalten → dasselbe Attribut, dieselbe Sprache) — die zweite wird übersprungen
@@ -233,8 +234,8 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const uniqueBad = (def, v, node, ri) => {
     if (!def.unique || v == null || v === '') return null
     const k = def.key + '\u0001' + String(v).trim()
-    const other = byKey.get(k); if (other && other.id !== node?.id) return `${def.key} ${v} gehört schon zu „${other.label}“ (${other.id}) — eindeutig`
-    if (seenUnique.has(k)) return `${def.key} ${v} steht schon in Zeile ${seenUnique.get(k) + 2} — eindeutig`
+    const other = byKey.get(k); if (other && other.id !== node?.id) return t_('{0} {1} gehört schon zu „{2}“ ({3}) — eindeutig', [def.key, v, other.label, other.id])
+    if (seenUnique.has(k)) return t_('{0} {1} steht schon in Zeile {2} — eindeutig', [def.key, v, seenUnique.get(k) + 2])
     seenUnique.set(k, ri); return null
   }
   const attrs = new Map((model.attributes ?? []).map(a => [a.key, a]))
@@ -264,7 +265,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     const known = new Set(list.values.map(x => x.value))
     return (def.multiple ? String(v).split(',') : [String(v)]).map(x => { x = x.trim(); if (!x || known.has(x)) return x; const key = norm(x) || x; (stats.newListValues[def.list] ??= {})[key] = x; return key }).join(',')
   }
-  const check = (v, def) => def.type === 'enum' && def.list && stats.newListValues[def.list] ? (() => { const ok = new Set([...(model.lists?.find(l => l.key === def.list)?.values.map(x => x.value) ?? []), ...Object.keys(stats.newListValues[def.list])]); const bad = String(v ?? '').split(',').map(x => x.trim()).filter(x => x && !ok.has(x)); return bad.length ? `„${bad.join(', ')}“ nicht in Liste ${def.list}` : null })() : validate(v, def, model)
+  const check = (v, def) => def.type === 'enum' && def.list && stats.newListValues[def.list] ? (() => { const ok = new Set([...(model.lists?.find(l => l.key === def.list)?.values.map(x => x.value) ?? []), ...Object.keys(stats.newListValues[def.list])]); const bad = String(v ?? '').split(',').map(x => x.trim()).filter(x => x && !ok.has(x)); return bad.length ? t_('„{0}“ nicht in Liste {1}', [bad.join(', '), def.list]) : null })() : validate(v, def, model)
   const targetGroups = new Set()
   // Pflichtattribute der Kindrolle (irgendein Kanal verlangt sie): beim Anlegen müssen sie da sein
   const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
@@ -286,8 +287,8 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     if (orig === undefined) { let best = -1; for (const ri of ris) { const sc = node ? similarity(rows[ri], id) : 0; if (sc > best) { best = sc; orig = ri } } }
     for (const ri of ris) {
       if (ri === orig) continue
-      if (skuOf(ri) !== '{}' && skuOf(ri) === skuOf(orig)) { dupRow.add(ri); stats.problems.push(`Zeile ${ri + 2}: Duplikat von Zeile ${orig + 2} (gleiche Id, gleiche Schlüssel) — übergangen`) }
-      else dropId.set(ri, `Zeile ${ri + 2}: kopierte Zeile — die Id ${id} gehört zu Zeile ${orig + 2} (${node?.keys ? 'Schlüssel ' + Object.values(node.keys).join(' · ') : 'meiste gleiche Werte'}) und zählt hier nicht`)
+      if (skuOf(ri) !== '{}' && skuOf(ri) === skuOf(orig)) { dupRow.add(ri); stats.problems.push(t_('Zeile {0}: Duplikat von Zeile {1} (gleiche Id, gleiche Schlüssel) — übergangen', [ri + 2, orig + 2])) }
+      else dropId.set(ri, t_('Zeile {0}: kopierte Zeile — die Id {1} gehört zu Zeile {2} ({3}) und zählt hier nicht', [ri + 2, id, orig + 2, node?.keys ? t_('Schlüssel') + ' ' + Object.values(node.keys).join(' · ') : t_('meiste gleiche Werte')]))
     }
   }
   stats.copied = dropId.size
@@ -298,30 +299,30 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     const byId = id && tree.byId.get(id); const foreign = !!(byId && want && rootOf(id) !== want)
     const viaKey = !foreign && !byId && !(ext && byExt.get(ext)) ? findKey(row) : null
     let node = (!foreign && byId) || (!foreign && ext && byExt.get(ext)) || viaKey?.node || null
-    if (dropId.has(ri)) stats.notes.push(dropId.get(ri) + (node ? ` — über ${ext && byExt.get(ext) ? 'Kennung ' + ext : `${viaKey?.k ?? 'Schlüssel'} ${viaKey?.v ?? sku}`} gefunden: „${node.label}“ wird aktualisiert` : ' — wird als neuer Knoten angelegt'))
+    if (dropId.has(ri)) stats.notes.push(dropId.get(ri) + (node ? ' ' + t_('— über {0} gefunden: „{1}“ wird aktualisiert', [ext && byExt.get(ext) ? t_('Kennung') + ' ' + ext : `${viaKey?.k ?? 'Schlüssel'} ${viaKey?.v ?? sku}`, node.label]) : ' ' + t_('— wird als neuer Knoten angelegt')))
     let ref = null, newRole = null
     if (!node) {
       // anlegen — wo? Elternteil aus der Spalte (Id oder ein Schlüsselwert), sonst das Ziel
       const p = String(cell(row, iParent) ?? '').trim()
       const parent = p ? (tree.byId.get(p) ?? [...uniq].map(k => byKey.get(k + '' + p)).find(Boolean) ?? null) : target
-      if (!parent) { stats.problems.push(`Zeile ${ri + 2}: Elternteil „${p || '?'}“ nicht gefunden`); stats.skipped++; return }
+      if (!parent) { stats.problems.push(t_('Zeile {0}: Elternteil „{1}“ nicht gefunden', [ri + 2, p || '?'])); stats.skipped++; return }
       const r = role ?? (parent.role === 'product' ? 'variant' : 'product'); newRole = r
-      if (r === 'variant' && parent.role !== 'product') { stats.problems.push(`Zeile ${ri + 2}: Variante braucht ein Produkt als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
-      if (r !== 'variant' && parent.role !== 'group') { stats.problems.push(`Zeile ${ri + 2}: ${r} braucht eine Gruppe als Elternteil, „${parent.label}“ ist ${parent.role}`); stats.skipped++; return }
+      if (r === 'variant' && parent.role !== 'product') { stats.problems.push(t_('Zeile {0}: Variante braucht ein Produkt als Elternteil, „{1}“ ist {2}', [ri + 2, parent.label, parent.role])); stats.skipped++; return }
+      if (r !== 'variant' && parent.role !== 'group') { stats.problems.push(t_('Zeile {0}: {1} braucht eine Gruppe als Elternteil, „{2}“ ist {3}', [ri + 2, r, parent.label, parent.role])); stats.skipped++; return }
       // Pflicht beim Anlegen: was die Rolle verlangt, muss die Zeile mitbringen (Achsen prüft der Variantenzweig)
       const miss = requiredFor(r).filter(a => !(parent.axes ?? []).includes(a.key) && !mapping.some((m, ci) => (m.target === 'attr' && m.attribute === a.key) && convert(cell(row, ci), a, model) != null)).map(a => a.key)
       // die Meldung nennt die Spalte der Datei, nicht nur das Attribut (Taloan, 20.09.: „ich habe keine Spalte name in der Excel“ — es war name_de)
-      if (miss.length) { const colOf = k => { const cs = mapping.filter(m => m.target === 'attr' && m.attribute === k).map(m => m.column); return cs.length ? `${k} (Spalte ${cs.join(' / ')} leer)` : `${k} (keine Spalte zugeordnet)` }; stats.problems.push(`Zeile ${ri + 2}: Pflicht fehlt — ${miss.map(colOf).join(', ')}`); stats.skipped++; return }
+      if (miss.length) { const colOf = k => { const cs = mapping.filter(m => m.target === 'attr' && m.attribute === k).map(m => m.column); return cs.length ? t_('{0} (Spalte {1} leer)', [k, cs.join(' / ')]) : t_('{0} (keine Spalte zugeordnet)', [k]) }; stats.problems.push(t_('Zeile {0}: Pflicht fehlt — {1}', [ri + 2, miss.map(colOf).join(', ')])); stats.skipped++; return }
       ref = `r${ri}`
       if (r === 'variant') {
         const axisValues = {}
-        for (const a of parent.axes ?? []) { const m = mapping.find(x => x.target === 'attr' && x.attribute === a); const v = m ? conv(cell(row, mapping.indexOf(m)), attrs.get(a)) : null; if (v == null) { stats.problems.push(`Zeile ${ri + 2}: Achse ${a} fehlt`); } else axisValues[a] = v }
+        for (const a of parent.axes ?? []) { const m = mapping.find(x => x.target === 'attr' && x.attribute === a); const v = m ? conv(cell(row, mapping.indexOf(m)), attrs.get(a)) : null; if (v == null) { stats.problems.push(t_('Zeile {0}: Achse {1} fehlt', [ri + 2, a])); } else axisValues[a] = v }
         if (Object.keys(axisValues).length < (parent.axes ?? []).length) { stats.skipped++; return }
         // Kombination aller Achsen je Produkt eindeutig (Taloan, 20.09.): gegen den Bestand und gegen die Datei selbst — der Server prüft es auch, aber erst beim Schreiben
         if ((parent.axes ?? []).length) {
           const combo = parent.axes.map(a => axisValues[a]).join('\u0001')
           if (!combos.has(parent.id)) combos.set(parent.id, new Set((tree?.rows ?? []).filter(x => x.role === 'variant' && x.parent === parent.id).map(x => parent.axes.map(a => x.axisValues?.[a] ?? '').join('\u0001'))))
-          if (combos.get(parent.id).has(combo)) { stats.problems.push(`Zeile ${ri + 2}: Variante ${parent.axes.map(a => `${a}=${axisValues[a]}`).join(', ')} gibt es schon unter „${parent.label}“ (im Bestand oder doppelt in der Datei)`); stats.skipped++; return }
+          if (combos.get(parent.id).has(combo)) { stats.problems.push(t_('Zeile {0}: Variante {1} gibt es schon unter „{2}“ (im Bestand oder doppelt in der Datei)', [ri + 2, parent.axes.map(a => `${a}=${axisValues[a]}`).join(', '), parent.label])); stats.skipped++; return }
           combos.get(parent.id).add(combo)
         }
         commands.push({ op: 'variant.create', ref, args: { product: parent.id, axisValues } })
@@ -358,13 +359,13 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     if (iSt >= 0 && (node ? node.role : newRole) !== 'group') {
       const sv = String(cell(row, iSt) ?? '').trim()
       if (sv) {
-        if (!(model?.statuses ?? []).some(s => s.key === sv)) stats.invalid.push({ row: ri, column: iSt, key: 'status', value: raw(row, iSt), message: `kein Status im Modell: „${sv}“` })
+        if (!(model?.statuses ?? []).some(s => s.key === sv)) stats.invalid.push({ row: ri, column: iSt, key: 'status', value: raw(row, iSt), message: t_('kein Status im Modell: „{0}“', [sv]) })
         else if (!node || node.status !== sv) { commands.push({ op: 'status.set', args: { node: nodeRef, status: sv } }); diffs.push({ attribute: 'status', locale: null, from: node?.status ?? null, to: sv }); changed++ }
       }
     }
     stats.values += changed
     if (node) { if (changed) stats.update++; else stats.unchanged++ }
-    stats.changes.push({ row: ri, kind: node ? (changed ? 'update' : 'unchanged') : 'create', node: node?.id ?? null, label: node ? node.label : (sku || ext || id || `Zeile ${ri + 2}`), role: node?.role ?? null, values: diffs })
+    stats.changes.push({ row: ri, kind: node ? (changed ? 'update' : 'unchanged') : 'create', node: node?.id ?? null, label: node ? node.label : (sku || ext || id || t_('Zeile {0}', [ri + 2])), role: node?.role ?? null, values: diffs })
   })
   // Die Gruppen der neuen Attribute an die Zielknoten hängen, wo sie nicht schon gelten
   const groupsNeeded = [...new Set([...newAttrs.values()].map(a => a.group).filter(Boolean))]
@@ -387,7 +388,7 @@ export function parseDelimited(text, delimiter = null) {
     field += c
   }
   if (field !== '' || row.length) { row.push(field); if (row.some(f => f !== '')) rows.push(row) }
-  const columns = (rows.shift() ?? []).map((c, i) => String(c).trim() || `Spalte ${i + 1}`)
+  const columns = (rows.shift() ?? []).map((c, i) => String(c).trim() || t_('Spalte {0}', [i + 1]))
   return { columns, rows: rows.map(r => { while (r.length < columns.length) r.push(''); return r.slice(0, columns.length) }), delimiter: d }
 }
 
@@ -432,8 +433,8 @@ export function childColumns(model, nodeView, childRole, axes, locales) {
   const isReq = a => !!a.required && (typeof a.required !== 'object' || Object.keys(a.required).length > 0)   // am Knoten ist required schon ein Ja/Nein
   const cols = a => a.perLocale ? locales.map(l => ({ key: `${a.key}_${l}`, attr: a.key, locale: l, def: a })) : [{ key: a.key, attr: a.key, def: a }]
   // Pflicht direkt nach id, sku und Achsen (Taloan, 20.09.) — was fehlen darf, steht hinten
-  return [{ key: 'id', note: 'leer = neu anlegen; gefüllt = diesen Knoten ändern' },
-    ...all.filter(a => a.unique).flatMap(a => cols(a).map(c => ({ ...c, note: 'eindeutig — findet vorhandene Knoten, wenn id leer ist' }))),   // Schlüssel (Taloan, 21.09.); Pflicht, wenn das Attribut Pflicht ist
-    ...(childRole === 'variant' ? (axes ?? []).map(a => ({ key: 'axis:' + a, note: 'Variantenachse — Pflicht beim Anlegen', attr: a })) : []),
+  return [{ key: 'id', note: t_('leer = neu anlegen; gefüllt = diesen Knoten ändern') },
+    ...all.filter(a => a.unique).flatMap(a => cols(a).map(c => ({ ...c, note: t_('eindeutig — findet vorhandene Knoten, wenn id leer ist') }))),   // Schlüssel (Taloan, 21.09.); Pflicht, wenn das Attribut Pflicht ist
+    ...(childRole === 'variant' ? (axes ?? []).map(a => ({ key: 'axis:' + a, note: t_('Variantenachse — Pflicht beim Anlegen'), attr: a })) : []),
     ...attrs.filter(isReq).flatMap(cols), ...attrs.filter(a => !isReq(a)).flatMap(cols)]
 }

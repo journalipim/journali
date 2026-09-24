@@ -5,6 +5,7 @@
 import { ref, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
+import { t as t_ } from '../i18n.js'
 
 const me = ref(null)
 const pw = ref({ current: '', password: '', again: '' }); const pwState = ref('')
@@ -14,17 +15,17 @@ async function load() { try { me.value = await api.get('/api/auth/me') } catch {
 onMounted(load)
 
 async function changePw() {
-  if (pw.value.password !== pw.value.again) { pwState.value = '✗ Wiederholung stimmt nicht'; return }
-  try { await api.post('/api/auth/password', { current: pw.value.current, password: pw.value.password }); pwState.value = '✓ geändert'; pw.value = { current: '', password: '', again: '' } }
+  if (pw.value.password !== pw.value.again) { pwState.value = t_('✗ Wiederholung stimmt nicht'); return }
+  try { await api.post('/api/auth/password', { current: pw.value.current, password: pw.value.password }); pwState.value = t_('✓ geändert'); pw.value = { current: '', password: '', again: '' } }
   catch (e) { pwState.value = '✗ ' + e.message }
 }
 async function makeToken() {
-  try { newToken.value = await api.post('/api/auth/tokens', { label: tokenLabel.value || 'Token' }); tokenLabel.value = ''; await load() } catch (e) { store.toast(e.message) }
+  try { newToken.value = await api.post('/api/auth/tokens', { label: tokenLabel.value || t_('Token') }); tokenLabel.value = ''; await load() } catch (e) { store.toast(e.message) }
 }
 /// Ohne sicheren Kontext (http auf einem fremden Rechner) gibt es keine Zwischenablage — dann bleibt der Text markierbar
 async function copyToken() {
   try { await navigator.clipboard.writeText(newToken.value.token); store.toast('kopiert', 'ok') }
-  catch { store.toast('Zwischenablage nicht verfügbar — Text markieren und mit Strg+C kopieren') }
+  catch { store.toast(t_('Zwischenablage nicht verfügbar — Text markieren und mit Strg+C kopieren')) }
 }
 async function dropToken(t) { try { await api.del(`/api/auth/tokens/${t.id}`); await load() } catch (e) { store.toast(e.message) } }
 </script>

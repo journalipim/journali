@@ -7,6 +7,7 @@ import { useRoute } from 'vue-router'
 import { api, describe } from '../api.js'
 import { store } from '../store.js'
 import EntryList from '../components/EntryList.vue'
+import { t } from '../i18n.js'
 
 const route = useRoute()
 const entries = ref([])
@@ -41,7 +42,7 @@ async function older() {
 watch(() => store.head, pull)
 
 // Art der Arbeit als Filter (Taloan, 22.09.2026): eine Kachel je Art, mehrere gleichzeitig; leer = alles
-const KINDS = [['data', '✎ Pflege'], ['publish', '⇶ Ausleitung'], ['model', '◫ Modell'], ['structure', '▤ Struktur'], ['reference', '⇩ Referenz'], ['setup', '⚙ Einrichtung'], ['ops', '⏱ Betrieb']]
+const KINDS = [['data', t('✎ Pflege')], ['publish', t('⇶ Ausleitung')], ['model', t('◫ Modell')], ['structure', t('▤ Struktur')], ['reference', t('⇩ Referenz')], ['setup', t('⚙ Einrichtung')], ['ops', t('⏱ Betrieb')]]
 const kinds = ref(new Set())
 const toggleKind = k => { const s = new Set(kinds.value); s.has(k) ? s.delete(k) : s.add(k); kinds.value = s }
 
@@ -60,9 +61,9 @@ const kindCount = k => entries.value.filter(e => e.kind === k).length
   <div class="pane" style="flex:1">
     <div class="toolbar">
       <h1>{{ $t("≡ Journal") }}</h1>
-      <span class="muted" :title="oldest ? `geladen ab #${oldest}` : ''">{{ shown.length }}{{ shown.length !== entries.length ? ' / ' + entries.length : '' }}{{ oldest && oldest > 1 ? ` · ab #${oldest}` : '' }}</span>
+      <span class="muted" :title="oldest ? $t('geladen ab #{0}', [oldest]) : ''">{{ shown.length }}{{ shown.length !== entries.length ? ' / ' + entries.length : '' }}{{ oldest && oldest > 1 ? ` · ab #${oldest}` : '' }}</span>
       <input v-model="filter" type="search" :placeholder="$t('Filter: Strom, Typ, Name, Inhalt')" style="width:300px" />
-      <span v-for="[k, label] in KINDS" :key="k" class="view-chip" :class="{ on: kinds.has(k) }" @click="toggleKind(k)" :title="`${kindCount(k)} Einträge dieser Art anzeigen`">{{ label }}</span>
+      <span v-for="[k, label] in KINDS" :key="k" class="view-chip" :class="{ on: kinds.has(k) }" @click="toggleKind(k)" :title="$t('{0} Einträge dieser Art anzeigen', [kindCount(k)])">{{ label }}</span>
       <span class="grow" />
       <span class="muted mono">#{{ store.head }}</span>
     </div>

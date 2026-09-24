@@ -19,6 +19,7 @@ import TeamsAdmin from '../components/TeamsAdmin.vue'
 import WorkflowSettings from '../components/WorkflowSettings.vue'
 import { api } from '../api.js'
 import { LANGS, browserLang } from '../i18n.js'
+import { t as t_ } from '../i18n.js'
 // Sprungmarken von aussen (#storage, #users, #mail, #backup, #teams) treffen weiter ihren Reiter
 const MARKEN = { '#storage': 'storage', '#users': 'users', '#mail': 'mail', '#backup': 'backup', '#teams': 'team', '#workflows': 'workflows', '#assets': 'assets' }
 const tab = ref(MARKEN[location.hash] ?? 'ich')
@@ -37,7 +38,7 @@ async function save() {
   checking.value = true
   await store.poll()
   checking.value = false
-  store.toast(store.online ? `Verbunden · #${store.head}` : `Nicht erreichbar: ${store.error}`, store.online ? 'ok' : 'error')
+  store.toast(store.online ? t_('Verbunden · #{0}', [store.head]) : t_('Nicht erreichbar: {0}', [store.error]), store.online ? 'ok' : 'error')
 }
 </script>
 
@@ -76,7 +77,7 @@ async function save() {
           <tr>
             <td class="muted">{{ $t("◐ Darstellung") }}</td>
             <td>
-              <button v-for="t in [['system', 'System'], ['light', 'Hell'], ['dark', 'Dunkel']]" :key="t[0]" :class="{ primary: theme === t[0] }" @click="setTheme(t[0])" style="margin-right:4px">{{ t[1] }}</button>
+              <button v-for="t in [['system', $t('System')], ['light', $t('Hell')], ['dark', $t('Dunkel')]]" :key="t[0]" :class="{ primary: theme === t[0] }" @click="setTheme(t[0])" style="margin-right:4px">{{ t[1] }}</button>
             </td>
             <td class="muted">{{ $t("System folgt der Windows-Einstellung.") }}</td>
           </tr>

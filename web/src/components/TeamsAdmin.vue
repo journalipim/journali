@@ -6,6 +6,7 @@ import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
+import { t as t_ } from '../i18n.js'
 
 const teams = ref([])
 const neu = ref('')
@@ -33,19 +34,19 @@ async function speichern(t, feld, wert) {
 }
 async function anlegen() {
   const k = (neu.value || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
-  if (!k) { store.toast('Kurzname fehlt'); return }
-  if (!neuManager.value) { store.toast('Wer führt das Team?'); return }
+  if (!k) { store.toast(t_('Kurzname fehlt')); return }
+  if (!neuManager.value) { store.toast(t_('Wer führt das Team?')); return }
   try { await api.post(`/api/teams/${encodeURIComponent(k)}`, { label: neu.value.trim(), managers: [neuManager.value] }, 'PUT'); neu.value = ''; neuManager.value = ''; await load() }
   catch (e) { store.toast(e.message) }
 }
 /// Die Führung ändern — mehrere sind erlaubt, keiner nicht
 function fuehrung(t, key, an) {
   const set = new Set(t.managers ?? []); an ? set.add(key) : set.delete(key)
-  if (!set.size) { store.toast('Mindestens einer führt das Team'); return }
+  if (!set.size) { store.toast(t_('Mindestens einer führt das Team')); return }
   speichern(t, 'managers', [...set])
 }
 async function entfernen(t) {
-  if (!await dialog.confirm({ title: `Team „${t.label}“ entfernen?`, text: 'Der Verbrauch bleibt als Beleg stehen; die hinterlegten Schlüssel gehen weg.', ok: '✕ Entfernen' })) return
+  if (!await dialog.confirm({ title: `Team „${t.label}“ entfernen?`, text: t_('Der Verbrauch bleibt als Beleg stehen; die hinterlegten Schlüssel gehen weg.'), ok: t_('✕ Entfernen') })) return
   try { await api.del(`/api/teams/${encodeURIComponent(t.key)}`); await load() } catch (e) { store.toast(e.message) }
 }
 </script>
@@ -81,7 +82,7 @@ async function entfernen(t) {
             </select>
           </td>
           <td>
-            <select :value="t.keysFrom ?? ''" :disabled="t.keys.length > 0" :title="t.keys.length ? 'eigene Schlüssel hinterlegt' : 'woher die Token kommen'"
+            <select :value="t.keysFrom ?? ''" :disabled="t.keys.length > 0" :title="t.keys.length ? $t('eigene Schlüssel hinterlegt') : $t('woher die Token kommen')"
                     @change="speichern(t, 'keysFrom', $event.target.value)">
               <option value="">{{ $t("eigenes Kontingent") }}</option>
               <option v-for="z in teams.filter(x => x.key !== t.key)" :key="z.key" :value="z.key">{{ $t("über Team {0}", [z.label]) }}</option>
@@ -89,7 +90,7 @@ async function entfernen(t) {
           </td>
           <td class="num mono" :class="t.entriesWeek ? '' : 'muted'">{{ n(t.entriesWeek) }}</td>
           <td class="num mono" :class="t.entriesMonth ? '' : 'muted'">{{ n(t.entriesMonth) }}</td>
-          <td class="muted" :title="`${t.members} im Team`">{{ t.members }}</td>
+          <td class="muted" :title="$t('{0} im Team', [t.members])">{{ t.members }}</td>
           <td><button v-if="!t.primary" class="x" :title="$t('Team entfernen')" @click="entfernen(t)">✕</button></td>
         </tr>
         <tr>

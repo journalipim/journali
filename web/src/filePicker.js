@@ -4,6 +4,7 @@
 // hoch, hinein, Dateien neueste zuerst. Reines DOM wie treePicker, damit Ansichten (Vue) und Plugins (ctx.filePicker) es
 // gleich benutzen. dirOnly: nur Verzeichnisse wählbar (Exportziel, Medienspeicher), sonst Datei oder Verzeichnis.
 import { api } from './api.js'
+import { t as t_ } from './i18n.js'
 
 const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const when = iso => iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
@@ -26,7 +27,7 @@ export function filePicker({ value = '', dirOnly = false, title = null, onPick =
     try {
       const d = await api.get('/api/files' + (p ? '?path=' + encodeURIComponent(p) : ''))
       cur = d; chosen = null; pathIn.value = d.path
-      status.textContent = `${d.dirs.length} Ordner · ${d.files.length} Dateien (neueste zuerst)` + (d.blobs ? ` · sieht nach einem Medienspeicher aus (${d.blobs} Hash-Ordner)` : '')
+      status.textContent = t_('{0} Ordner · {1} Dateien (neueste zuerst)', [d.dirs.length, d.files.length]) + (d.blobs ? ' ' + t_('· sieht nach einem Medienspeicher aus ({0} Hash-Ordner)', [d.blobs]) : '')
       rootsSel.innerHTML = ''; for (const r of d.roots) rootsSel.append(el('option', { value: r.path }, r.label))
       const root = d.roots.find(r => d.path.toLowerCase().startsWith(r.path.toLowerCase())); rootsSel.value = root ? root.path : ''
       list.innerHTML = ''
@@ -39,11 +40,11 @@ export function filePicker({ value = '', dirOnly = false, title = null, onPick =
       list.append(tbl)
     } catch (e) { status.textContent = e.message }
   }
-  dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, title ?? (dirOnly ? '📁 Verzeichnis auf dem Server' : '📁 Datei oder Verzeichnis auf dem Server')),
-    el('div', { style: 'display:flex;gap:6px' }, rootsSel, pathIn, el('button', { type: 'button', title: 'zu diesem Pfad', onclick: () => go(pathIn.value) }, '→')),
+  dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, title ?? (dirOnly ? t_('📁 Verzeichnis auf dem Server') : t_('📁 Datei oder Verzeichnis auf dem Server'))),
+    el('div', { style: 'display:flex;gap:6px' }, rootsSel, pathIn, el('button', { type: 'button', title: t_('zu diesem Pfad'), onclick: () => go(pathIn.value) }, '→')),
     list, status,
-    el('div', { style: 'display:flex;justify-content:flex-end;gap:8px' }, el('button', { type: 'button', onclick: close }, 'Abbrechen'),
-      el('button', { type: 'button', class: 'primary', title: dirOnly ? 'markierten oder den angezeigten Ordner nehmen' : 'markierte Datei bzw. markierten oder angezeigten Ordner nehmen', onclick: () => cur && done(chosen ?? cur.path) }, '✓ Übernehmen')))
+    el('div', { style: 'display:flex;justify-content:flex-end;gap:8px' }, el('button', { type: 'button', onclick: close }, t_('Abbrechen')),
+      el('button', { type: 'button', class: 'primary', title: dirOnly ? t_('markierten oder den angezeigten Ordner nehmen') : t_('markierte Datei bzw. markierten oder angezeigten Ordner nehmen'), onclick: () => cur && done(chosen ?? cur.path) }, t_('✓ Übernehmen'))))
   box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) close() })
   document.body.append(box); window.addEventListener('keydown', onKey)
   const s = (value ?? '').trim(); go(/^https?:\/\//i.test(s) ? '' : s)

@@ -7,12 +7,13 @@
 // stehen als graue Zahl daneben (Taloan, 22.09.: „Datenmodellierung … würde ich nicht zählen“). Gezählt wird, was ins Journal geht; Lesen und Exportieren kosten nichts.
 // Die Zahlen kommen aus /api/usage — das Abbild zählt je Tag mit, auch rückwirkend für alles, was schon im Journal steht.
 import { computed } from 'vue'
+import { t } from '../i18n.js'
 
 const props = defineProps({ usage: Object, history: Array, period: { type: String, default: 'day' }, busy: Boolean })
 const emit = defineEmits(['period'])
 
-const PARTS = [['week', '▤ Woche'], ['month', '▦ Monat']]   // kein Tageslimit (Taloan, 22.09.2026)
-const HIST = [['day', '◷ Tag'], ['week', '▤ Woche'], ['month', '▦ Monat']]
+const PARTS = [['week', t('▤ Woche')], ['month', t('▦ Monat')]]   // kein Tageslimit (Taloan, 22.09.2026)
+const HIST = [['day', '◷ Tag'], ['week', t('▤ Woche')], ['month', t('▦ Monat')]]
 const n = v => v >= 2147483647 ? '∞' : (v ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
 const frei = p => p?.max >= 2147483647 ? p.max : Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
 // Ohne Kontingent (max 0) ist alles aufgebraucht; ohne Grenze (max null) gibt es nichts zu füllen
@@ -23,27 +24,27 @@ const parts = computed(() => PARTS.map(([key, label]) => ({ key, label, p: props
 const maxHist = computed(() => Math.max(1, ...(props.history ?? []).map(h => h.all ?? h.count)))
 const dayName = s => new Date(s + 'T00:00:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' })
 const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLocaleDateString('de-DE', { month: 'long', year: 'numeric' })
-  : props.period === 'week' ? `KW ab ${new Date(s + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })}` : dayName(s)
+  : props.period === 'week' ? t('KW ab {0}', [new Date(s + 'T00:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })]) : dayName(s)
 </script>
 
 <template>
   <div class="usage">
     <div v-for="{ key, label, p } in parts" :key="key" class="bar-row">
       <span class="lbl">{{ label }}</span>
-      <span class="track" :title="p ? `${n(p.used)} von ${n(p.max)} genutzt · noch ${n(frei(p))} verfügbar · wird zurückgesetzt am ${p.resetAt}` : 'wird geladen'">
+      <span class="track" :title="p ? $t('{0} von {1} genutzt · noch {2} verfügbar · wird zurückgesetzt am {3}', [n(p.used), n(p.max), n(frei(p)), p.resetAt]) : $t('wird geladen')">
         <span class="fill" :class="tone(p)" :style="`width:${pct(p)}%`" />
       </span>
       <span class="num mono" :class="tone(p)">{{ n(p?.used) }}</span>
       <span class="num mono muted grenze">/ {{ n(p?.max) }} ⊞</span>
       <span class="num mono muted">{{ pct(p) }} %</span>
-      <span v-if="usage?.all" class="num mono muted" :title="`${n(usage.all[key])} Einträge gesamt — Modell, Struktur, Kataloge und Betrieb zählen nicht mit`">+{{ n(Math.max(0, (usage.all[key] ?? 0) - (p?.used ?? 0))) }}</span>
+      <span v-if="usage?.all" class="num mono muted" :title="$t('{0} Einträge gesamt — Modell, Struktur, Kataloge und Betrieb zählen nicht mit', [n(usage.all[key])])">+{{ n(Math.max(0, (usage.all[key] ?? 0) - (p?.used ?? 0))) }}</span>
     </div>
 
     <div class="chips">
       <span v-for="[key, label] in HIST" :key="key" class="view-chip" :class="{ on: period === key }"
-        @click="emit('period', key)" :title="`Verlauf je ${label.slice(2)} anzeigen`">{{ label }}</span>
+        @click="emit('period', key)" :title="$t('Verlauf je {0} anzeigen', [label.slice(2)])">{{ label }}</span>
       <span class="grow" />
-      <span class="muted" style="font-size:12px" :title="`heute ${n(usage?.day?.used)} Tagesgeschäft von ${n(usage?.all?.day)} Einträgen — ohne Grenze`">{{ $t("heute {0}", [n(usage?.day?.used)]) }}</span>
+      <span class="muted" style="font-size:12px" :title="$t('heute {0} Tagesgeschäft von {1} Einträgen — ohne Grenze', [n(usage?.day?.used), n(usage?.all?.day)])">{{ $t("heute {0}", [n(usage?.day?.used)]) }}</span>
       <span class="muted" style="font-size:12px">{{ $t("· Journal #{0}", [n(usage?.head)]) }}</span>
     </div>
 
@@ -51,13 +52,13 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
       <div v-for="h in (history ?? [])" :key="h.start" class="hrow">
         <span class="hlbl">{{ histLabel(h.start) }}</span>
         <!-- heller Teil: was nicht zählt (Modell, Struktur, Kataloge, Betrieb) -->
-        <span class="htrack" :title="`${n(h.count)} Tagesgeschäft · ${n((h.all ?? h.count) - h.count)} zählt nicht`">
+        <span class="htrack" :title="$t('{0} Tagesgeschäft · {1} zählt nicht', [n(h.count), n((h.all ?? h.count) - h.count)])">
           <span class="hfill rest" :style="`width:${Math.round(((h.all ?? h.count) / maxHist) * 100)}%`" />
           <span class="hfill" :style="`width:${Math.round((h.count / maxHist) * 100)}%`" />
         </span>
         <span class="num mono">{{ n(h.count) }}</span>
       </div>
-      <div v-if="!(history ?? []).length" class="muted" style="font-size:12px;padding:4px 0">{{ busy ? 'wird geladen …' : 'noch nichts aufgezeichnet' }}</div>
+      <div v-if="!(history ?? []).length" class="muted" style="font-size:12px;padding:4px 0">{{ busy ? $t('wird geladen …') : $t('noch nichts aufgezeichnet') }}</div>
     </div>
   </div>
 </template>

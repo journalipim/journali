@@ -5,16 +5,17 @@
 // aus der Art des Plugins (manifest.kind); das Kontextmenü des Baums ordnet die Knoten-Aktionen genauso.
 import { computed } from 'vue'
 import { plugins } from './plugins.js'
+import { t as t_ } from './i18n.js'
 
 export const TOPICS = [
-  { key: 'import', to: '/import', icon: '⇩', label: 'Import', hotkey: '4' },
-  { key: 'export', to: '/export', icon: '⇪', label: 'Export' },
-  { key: 'datasheet', to: '/datasheet', icon: '▤', label: 'Datenblatt' },
-  { key: 'analysis', to: '/analysis', icon: '✓', label: 'Datenanalyse' },
-  { key: 'translate', to: '/translate', icon: '⇄', label: 'Übersetzung' },   // Übersetzungsmanagement (Taloan, 21.09.: „haben wir noch gar nicht“)
-  { key: 'classification', to: '/classification', icon: '⌗', label: 'Klassifikation' },   // ETIM heute, ECLASS/UNSPSC morgen — Klasse → ETIM-Attribute → Werte (Taloan, 22.09.: kein Export)
-  { key: 'tools', to: '/tools', icon: '⌁', label: 'Werkzeuge' },
-  { key: 'jobs', to: '/jobs', icon: '⏱', label: 'Jobs' },
+  { key: 'import', to: '/import', icon: '⇩', label: t_('Import'), hotkey: '4' },
+  { key: 'export', to: '/export', icon: '⇪', label: t_('Export') },
+  { key: 'datasheet', to: '/datasheet', icon: '▤', label: t_('Datenblatt') },
+  { key: 'analysis', to: '/analysis', icon: '✓', label: t_('Datenanalyse') },
+  { key: 'translate', to: '/translate', icon: '⇄', label: t_('Übersetzung') },   // Übersetzungsmanagement (Taloan, 21.09.: „haben wir noch gar nicht“)
+  { key: 'classification', to: '/classification', icon: '⌗', label: t_('Klassifikation') },   // ETIM heute, ECLASS/UNSPSC morgen — Klasse → ETIM-Attribute → Werte (Taloan, 22.09.: kein Export)
+  { key: 'tools', to: '/tools', icon: '⌁', label: t_('Werkzeuge') },
+  { key: 'jobs', to: '/jobs', icon: '⏱', label: t_('Jobs') },
 ]
 // Gruppen, die ein eingeschaltetes Basis-Plugin besitzt (table: import, export; da: analysis; tasker: jobs) — immer in der Leiste
 export const baseTopics = computed(() => new Set(plugins.list.filter(p => p.enabled && Array.isArray(p.manifest?.base)).flatMap(p => p.manifest.base)))

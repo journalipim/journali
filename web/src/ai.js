@@ -10,6 +10,7 @@
 // benutzen will, trägt hier einen Schlüssel ein: dann fragt der Browser wieder direkt, es zählt niemand mit, und er zahlt selbst.
 import { reactive } from 'vue'
 import { api } from './api.js'
+import { t as t_ } from './i18n.js'
 
 const KEY = 'journali.ai'
 const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}') } catch { return {} } })()
@@ -17,17 +18,17 @@ const saved = (() => { try { return JSON.parse(localStorage.getItem(KEY) || '{}'
 /// Die Anbieter: Schlüssel und Modell je Anbieter; call() spricht das Protokoll und liefert { text, sources }
 export const PROVIDERS = [
   {
-    key: 'anthropic', label: 'Anthropic', placeholder: 'sk-ant-…', endpoint: 'api.anthropic.com',
+    key: 'anthropic', label: t_('Anthropic'), placeholder: 'sk-ant-…', endpoint: 'api.anthropic.com',
     // Stand 22.09.2026: Claude 5 (Fable 5.1, Opus 5, Sonnet 5) und Haiku 4.5 — Kurzbezeichnungen ohne Datum
     models: ['claude-sonnet-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-haiku-4-5', 'claude-haiku-4-5-20251001'],
     modelLabels: {
-      'claude-sonnet-5': 'Sonnet 5 — schnell, günstig (Vorschläge, Zuordnung)',
-      'claude-opus-5': 'Opus 5 — gründlich (schwierige Fälle, Recherche)',
-      'claude-fable-5-1': 'Fable 5.1 — stärkstes Modell, teuer',
-      'claude-haiku-4-5': 'Haiku 4.5 — am günstigsten, kurze Aufgaben',
-      'claude-haiku-4-5-20251001': 'Haiku 4.5 (alte Kennung)',
+      'claude-sonnet-5': t_('Sonnet 5 — schnell, günstig (Vorschläge, Zuordnung)'),
+      'claude-opus-5': t_('Opus 5 — gründlich (schwierige Fälle, Recherche)'),
+      'claude-fable-5-1': t_('Fable 5.1 — stärkstes Modell, teuer'),
+      'claude-haiku-4-5': t_('Haiku 4.5 — am günstigsten, kurze Aufgaben'),
+      'claude-haiku-4-5-20251001': t_('Haiku 4.5 (alte Kennung)'),
     },
-    hint: 'Sonnet 5 für Vorschläge, Opus 5 für schwierige Fälle, Haiku 4.5 für Masse, Fable 5.1 für das Schwerste',
+    hint: t_('Sonnet 5 für Vorschläge, Opus 5 für schwierige Fälle, Haiku 4.5 für Masse, Fable 5.1 für das Schwerste'),
     async call({ key, model, system, user, maxTokens, temperature, web, maxSearches }) {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
@@ -44,7 +45,7 @@ export const PROVIDERS = [
     },
   },
   {
-    key: 'openai', label: 'OpenAI', placeholder: 'sk-…', endpoint: 'api.openai.com',
+    key: 'openai', label: t_('OpenAI'), placeholder: 'sk-…', endpoint: 'api.openai.com',
     models: ['gpt-5', 'gpt-5-mini', 'gpt-4.1'],
     hint: 'mini: schnell und günstig; gpt-5: gründlicher',
     async call({ key, model, system, user, maxTokens, temperature, web, maxSearches }) {
@@ -96,7 +97,7 @@ export const ai = reactive({
   // web: true → die KI darf im Internet suchen (Herstellerseiten, Datenblätter — Taloan, 20.09.: Daten fremder Produkte ergänzen);
   // die Quellen der Antwort stehen danach in lastSources. Kostet je Suche extra beim Anbieter.
   async ask({ system = '', user, json = false, maxTokens = 2000, temperature = 0, web = false, maxSearches = 5, purpose = '' }) {
-    if (!this.server?.ready) throw new Error(this.server?.team ? `Für Team „${this.server.label ?? this.server.team}“ ist kein KI-Schlüssel hinterlegt` : 'Kein Team — ohne Team keine KI')
+    if (!this.server?.ready) throw new Error(this.server?.team ? t_('Für Team „{0}“ ist kein KI-Schlüssel hinterlegt', [this.server.label ?? this.server.team]) : t_('Kein Team — ohne Team keine KI'))
     this.busy++
     try {
       const anbieter = this.server.providers.includes(this.provider) ? this.provider : this.server.providers[0]
@@ -108,7 +109,7 @@ export const ai = reactive({
       this.loadState()   // das gemessene Volumen wächst — die Kennzahl oben zieht nach
       if (!json) return text
       const m = text.match(/```(?:json)?\s*([\s\S]*?)```/); const raw = (m ? m[1] : text).trim()
-      try { return JSON.parse(raw) } catch { const o = raw.indexOf('{'), c = raw.lastIndexOf('}'); if (o >= 0 && c > o) { try { return JSON.parse(raw.slice(o, c + 1)) } catch {} } throw new Error('KI-Antwort war kein JSON: ' + raw.slice(0, 120)) }
+      try { return JSON.parse(raw) } catch { const o = raw.indexOf('{'), c = raw.lastIndexOf('}'); if (o >= 0 && c > o) { try { return JSON.parse(raw.slice(o, c + 1)) } catch {} } throw new Error(t_('KI-Antwort war kein JSON:') + ' ' + raw.slice(0, 120)) }
     } catch (e) { this.lastError = e.message; throw e }
     finally { this.busy-- }
   },
@@ -116,7 +117,7 @@ export const ai = reactive({
   // Der Schlüssel des Teams antwortet? Eine winzige Anfrage über den Server.
   async test(providerKey = null) {
     const keep = this.provider; if (providerKey) this.provider = providerKey
-    try { const t = await this.ask({ user: 'Antworte nur mit dem Wort: ok', maxTokens: 16, purpose: 'Probe' }); return String(t).trim().toLowerCase().startsWith('ok') }
+    try { const t = await this.ask({ user: t_('Antworte nur mit dem Wort: ok'), maxTokens: 16, purpose: t_('Probe') }); return String(t).trim().toLowerCase().startsWith('ok') }
     finally { this.provider = keep }
   },
 })

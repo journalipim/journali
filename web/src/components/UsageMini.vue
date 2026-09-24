@@ -3,6 +3,7 @@
 // genutzt wurde (Taloan, 23.09.2026); was noch verfügbar ist, sagt der Tooltip.
 // Zahlen aus /api/health (läuft ohnehin alle 3 s); Klick führt in die Einstellungen.
 import { computed } from 'vue'
+import { t } from '../i18n.js'
 
 const props = defineProps({ usage: Object })   // { week: {used,max}, month: {used,max} }
 const PARTS = [['week', '▤'], ['month', '▦']]
@@ -13,12 +14,12 @@ const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 100)) : 10
 /// Viel Luft ist grün; wird es eng, gelb; ist das Kontingent voll, rot
 const tone = p => pct(p) >= 90 ? 'neg' : pct(p) >= 70 ? 'warn' : 'pos'
 const parts = computed(() => PARTS.map(([key, icon]) => ({ key, icon, p: props.usage?.[key] ?? null })))
-const label = key => key === 'week' ? 'Woche' : 'Monat'
+const label = key => key === 'week' ? t('Woche') : t('Monat')
 </script>
 
 <template>
   <span v-if="usage" class="usage-mini">
-    <span v-for="{ key, icon, p } in parts" :key="key" class="u" :title="`${p?.scope ?? ''} · ${label(key)}: ${n(p?.used)} von ${n(p?.max)} genutzt · noch ${n(frei(p))} verfügbar · wird zurückgesetzt am ${p?.resetAt ?? '—'}`">
+    <span v-for="{ key, icon, p } in parts" :key="key" class="u" :title="$t('{0} · {1}: {2} von {3} genutzt · noch {4} verfügbar · wird zurückgesetzt am {5}', [p?.scope ?? '', label(key), n(p?.used), n(p?.max), n(frei(p)), p?.resetAt ?? '—'])">
       <span class="ico">{{ icon }}</span>
       <span class="track"><span class="fill" :class="tone(p)" :style="`width:${pct(p)}%`" /></span>
       <span class="mono pc" :class="tone(p)">{{ pct(p) }}%</span>

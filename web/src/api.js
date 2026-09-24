@@ -1,4 +1,5 @@
 import { store } from './store.js'
+import { t } from './i18n.js'
 
 // Alle Aufrufe gehen hier durch: Server aus den Einstellungen, X-Actor im Kopf,
 // Fehler als Text aus { error } des Servers.
@@ -9,7 +10,7 @@ async function request(method, path, body) {
   try {
     res = await fetch(store.server + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) })
   } catch {
-    throw new Error('Server nicht erreichbar')
+    throw new Error(t('Server nicht erreichbar'))
   }
   if (res.status === 204) return null
   const text = await res.text()
@@ -51,15 +52,15 @@ export const api = {
         batchId = res.batch
         for (const r of res.results) { results.push({ ...r, index: r.index + i }); if (r.ref) refs.set(r.ref, r.node) }
         for (const s of res.skipped ?? []) errors.push({ ...s, index: s.index + i, command: commands[s.index + i] })
-        if (!res.error && maxErrorPercent > 0 && errors.length >= 5 && errors.length * 100 / Math.max(1, end) > maxErrorPercent) { const last = errors[errors.length - 1]; error = { ...last, message: `Fehleranteil über ${maxErrorPercent} % (${errors.length} von ${end}) — abgebrochen: ${last.message}` }; break }
+        if (!res.error && maxErrorPercent > 0 && errors.length >= 5 && errors.length * 100 / Math.max(1, end) > maxErrorPercent) { const last = errors[errors.length - 1]; error = { ...last, message: t('Fehleranteil über {0} % ({1} von {2}) — abgebrochen: {3}', [maxErrorPercent, errors.length, end, last.message]) }; break }
         if (res.error) {
           const at = i + res.error.index
           const e = { ...res.error, index: at, command: commands[at] }
           if (!continueOnError) { error = e; break }
           errors.push(e); i = at + 1   // den einen überspringen, hinter ihm weiter
-          if (maxErrorPercent > 0 && errors.length >= 5 && errors.length * 100 / Math.max(1, i) > maxErrorPercent) { error = { ...e, message: `Fehleranteil über ${maxErrorPercent} % (${errors.length} von ${i}) — abgebrochen: ${e.message}` }; break }
+          if (maxErrorPercent > 0 && errors.length >= 5 && errors.length * 100 / Math.max(1, i) > maxErrorPercent) { error = { ...e, message: t('Fehleranteil über {0} % ({1} von {2}) — abgebrochen: {3}', [maxErrorPercent, errors.length, i, e.message]) }; break }
         } else i = end
-        store.progress = { done: i, total: commands.length, text: label + (errors.length ? ` · ${errors.length} Fehler` : '') }
+        store.progress = { done: i, total: commands.length, text: label + (errors.length ? ' ' + t('· {0} Fehler', [errors.length]) : '') }
         onProgress?.(store.progress)
       }
     } finally { window.removeEventListener('beforeunload', guard); store.progress = null }
@@ -69,7 +70,7 @@ export const api = {
   upload: async (path, file) => {
     const fd = new FormData(); fd.append('file', file, file.name)
     let res
-    try { res = await fetch(store.server + path, { method: 'POST', headers: { 'X-Actor': store.actor }, body: fd }) } catch { throw new Error('Server nicht erreichbar') }
+    try { res = await fetch(store.server + path, { method: 'POST', headers: { 'X-Actor': store.actor }, body: fd }) } catch { throw new Error(t('Server nicht erreichbar')) }
     const data = await res.json().catch(() => null)
     if (!res.ok) throw new Error(data?.error || `${res.status} ${res.statusText}`)
     return data
@@ -110,30 +111,30 @@ export function describe(e) {
     case 'LocaleDefined': return `${p.code} = ${p.label}`
     case 'GroupCreated': return `▣ ${p.name ?? p.label?.de ?? ''}${p.parent ? ' unter ' + p.parent : ' (Wurzel)'}`
     case 'GroupRenamed': return `▣ ${p.label?.de ?? ''}`
-    case 'ProductAxesSet': return `◆ variiert nach ${(p.axes || []).join(', ') || 'nichts'}`
+    case 'ProductAxesSet': return t('◆ variiert nach {0}', [(p.axes || []).join(', ') || 'nichts'])
     case 'PluginInstalled': return `⌁ ${p.version}`
     case 'PluginEnabled': return '⌁ ● an'
     case 'PluginDisabled': return '⌁ ○ aus'
     case 'PluginRemoved': return '− ⌁'
     case 'MediaCreated': return `🖼 ${p.name} · ${p.mime} · ${p.bytes} B`
-    case 'MediaRetired': return '− 🖼 Medium'
+    case 'MediaRetired': return t('− 🖼 Medium')
     case 'RelationCreated': return `⇄ ${p.type}: ${p.from} → ${p.to}`
-    case 'RelationRetired': return '− ⇄ Relation'
+    case 'RelationRetired': return t('− ⇄ Relation')
     case 'RelationTypeDefined': return `⇄ ${p.key}: ${p.label?.de ?? ''}${p.reverse?.de ? ' / ' + p.reverse.de : ''}${p.group ? ' ▤' + p.group : ''}`
     case 'RelationTypeRetired': return `− ⇄ ${p.key}`
-    case 'MasterLocaleDefined': return `★ Mastersprache ${p.code}`
-    case 'MasterChannelDefined': return `★ Masterkanal ${p.key}`
-    case 'SkuAttributeDefined': return `🏷 Kennung ${p.key} (ausser Kraft)`
-    case 'NodeNamed': return p.name ? `✎ ${p.name}` : '✎ ∅ → Automatik'
-    case 'LabelAttributeSet': return p.attribute ? `★ ${p.attribute}` : '★ ∅ → von oben'
+    case 'MasterLocaleDefined': return t('★ Mastersprache {0}', [p.code])
+    case 'MasterChannelDefined': return t('★ Masterkanal {0}', [p.key])
+    case 'SkuAttributeDefined': return t('🏷 Kennung {0} (ausser Kraft)', [p.key])
+    case 'NodeNamed': return p.name ? `✎ ${p.name}` : t('✎ ∅ → Automatik')
+    case 'LabelAttributeSet': return p.attribute ? `★ ${p.attribute}` : t('★ ∅ → von oben')
     case 'ProductCreated': return `▦ ${p.family ?? 'Produkt'} unter ${p.group}${p.axes?.length ? ' · ' + p.axes.join(', ') : ''}`   // family ist Altlast, meist null
     case 'VariantCreated': return `◆ ${Object.entries(p.axisValues || {}).map(([k, v]) => k + '=' + v).join(', ') || 'ohne Achsen'} unter ${p.product}`
     case 'NodeMoved': return `→ ${p.parent}`
-    case 'NodeRetired': return '− Knoten'
-    case 'StatusSet': return `Status ${p.status}`
+    case 'NodeRetired': return t('− Knoten')
+    case 'StatusSet': return t('Status {0}', [p.status])
     case 'ExternalLinked': return `⇩ ${p.system}: ${p.id}`
-    case 'RowAdded': return `+ Zeile ${p.attribute} ${p.row}`
-    case 'RowRemoved': return `− Zeile ${p.attribute} ${p.row}`
+    case 'RowAdded': return t('+ Zeile {0} {1}', [p.attribute, p.row])
+    case 'RowRemoved': return t('− Zeile {0} {1}', [p.attribute, p.row])
     case 'RowOrdered': return `↕ ${p.attribute}`
     case 'ExternalUnlinked': return `− ${p.system}`
     case 'ChannelDefined': return `${p.key} = ${p.label?.de ?? ''}`

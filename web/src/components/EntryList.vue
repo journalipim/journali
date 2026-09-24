@@ -7,9 +7,10 @@ import { when, describe, api } from '../api.js'
 import { store } from '../store.js'
 import { tree } from '../tree.js'
 import { restoreModel, canRestoreModel, mayRestore } from '../modelRestore.js'
+import { t } from '../i18n.js'
 const props = defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
 // Art des Eintrags (Taloan, 22.09.2026): ein Symbol je Art, Tooltip nennt sie ausgeschrieben; „zählt“ ist Datenpflege und Ausleitung
-const KINDS = { model: ['◫', 'Datenmodellierung'], structure: ['▤', 'Struktur'], data: ['✎', 'Datenpflege · zählt'], publish: ['⇶', 'Ausleitung · zählt'], reference: ['⇩', 'Referenzdaten'], setup: ['⚙', 'Einrichtung'], ops: ['⏱', 'Betrieb'] }
+const KINDS = { model: ['◫', t('Datenmodellierung')], structure: ['▤', t('Struktur')], data: ['✎', t('Datenpflege · zählt')], publish: ['⇶', t('Ausleitung · zählt')], reference: ['⇩', t('Referenzdaten')], setup: ['⚙', t('Einrichtung')], ops: ['⏱', t('Betrieb')] }
 const kindIcon = k => KINDS[k]?.[0] ?? '·'
 const kindText = k => KINDS[k]?.[1] ?? (k ?? 'unbekannt')
 const counts = k => k === 'data' || k === 'publish'
@@ -40,11 +41,11 @@ const typeText = types => Object.entries(types).map(([t, n]) => `${n} ${t}`).joi
 const previews = reactive({})
 async function preview(batch, stream) {
   const k = batch ?? stream; if (previews[k]) return
-  if (!batch) { previews[k] = `stellt 1 Knoten wieder her: ${stream}`; return }
+  if (!batch) { previews[k] = t('stellt 1 Knoten wieder her: {0}', [stream]); return }
   try {
     const p = await api.get(`/api/batches/${encodeURIComponent(batch)}/preview`)
     const lines = p.steps.slice(0, 15).map(s => `${s.kind === 'NodeRestored' ? '↩' : '←'} ${labelOf(s.stream)}: ${s.what}`)
-    previews[k] = `Rückgängig (Stapel ${batch}, ${p.actor}): ${p.steps.length} Schritte` + (p.skipped.length ? `, ${p.skipped.length} nicht rückgängig-fähig` : '') + '\n' + lines.join('\n') + (p.steps.length > 15 ? `\n… und ${p.steps.length - 15} weitere` : '')
+    previews[k] = t('Rückgängig (Stapel {0}, {1}): {2} Schritte', [batch, p.actor, p.steps.length]) + (p.skipped.length ? t(', {0} nicht rückgängig-fähig', [p.skipped.length]) : '') + '\n' + lines.join('\n') + (p.steps.length > 15 ? `\n… und ${p.steps.length - 15} weitere` : '')
   } catch (err) { previews[k] = err.message }
 }
 const labelOf = id => tree.byId.get(id)?.label ?? id
@@ -68,7 +69,7 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
     </thead>
     <tbody>
       <template v-for="r in rows" :key="r.kind === 'head' ? 'b' + r.batch : r.e.number">
-        <tr v-if="r.kind === 'head'" class="row head" @click="open[r.batch] = !open[r.batch]" :title="`Stapel ${r.batch}: ${r.group.length} Einträge aufklappen`">
+        <tr v-if="r.kind === 'head'" class="row head" @click="open[r.batch] = !open[r.batch]" :title="$t('Stapel {0}: {1} Einträge aufklappen', [r.batch, r.group.length])">
           <td class="num mono muted">{{ r.first.number }}–{{ r.last.number }}</td>
           <td class="mono muted">{{ when(r.last.at) }}</td>
           <td>{{ r.last.actor }}</td>
@@ -76,9 +77,9 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
           <td class="muted" :title="[...new Set(r.group.map(g => kindText(g.kind)))].join(' · ')">{{ [...new Set(r.group.map(g => kindIcon(g.kind)))].join('') }}</td>
           <td class="muted">{{ $t("{0} ⧉ Stapel", [open[r.batch] ? '▾' : '▸']) }}</td>
           <td><b>{{ $t("{0} Einträge", [r.group.length]) }}</b> <span class="muted">· {{ typeText(r.types) }}</span>
-            <button class="x" style="margin-left:8px" @click.stop="undo(r.batch)" @mouseenter="preview(r.batch)" :title="previews[r.batch] ?? 'lade Vorschau …'">{{ $t("↶ Rückgängig") }}</button>
+            <button class="x" style="margin-left:8px" @click.stop="undo(r.batch)" @mouseenter="preview(r.batch)" :title="previews[r.batch] ?? $t('lade Vorschau …')">{{ $t("↶ Rückgängig") }}</button>
           </td>
-          <td class="mono muted" :title="'Stapel ' + r.batch">{{ r.batch.slice(2, 6) }}</td>
+          <td class="mono muted" :title="$t('Stapel') + ' ' + r.batch">{{ r.batch.slice(2, 6) }}</td>
         </tr>
         <tr v-else class="row" :class="{ sub: r.inGroup }">
           <td class="num">{{ r.e.number }}</td>
@@ -89,10 +90,10 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
           <td class="muted">{{ r.e.type }}</td>
           <td :class="{ pos: r.e.type.endsWith('Granted') || r.e.type.endsWith('Assigned') || r.e.type.endsWith('Created'), neg: r.e.type.endsWith('Revoked') || r.e.type.endsWith('Removed') || r.e.type.endsWith('Retired') }">
             {{ describe(r.e) }}
-            <button v-if="r.e.type === 'NodeRetired' && !r.inGroup && !tree.byId.has(r.e.stream)" class="x" style="margin-left:8px" @click="undo(r.e.batch, r.e.stream)" @mouseenter="preview(r.e.batch, r.e.stream)" :title="previews[r.e.batch ?? r.e.stream] ?? 'lade Vorschau …'">{{ $t("↶ Wiederherstellen") }}</button>
+            <button v-if="r.e.type === 'NodeRetired' && !r.inGroup && !tree.byId.has(r.e.stream)" class="x" style="margin-left:8px" @click="undo(r.e.batch, r.e.stream)" @mouseenter="preview(r.e.batch, r.e.stream)" :title="previews[r.e.batch ?? r.e.stream] ?? $t('lade Vorschau …')">{{ $t("↶ Wiederherstellen") }}</button>
             <button v-else-if="!r.inGroup && canRestoreModel(r.e) && mayRestore(r.e)" class="x" style="margin-left:8px" @click="restoreEntry(r.e)" :title="$t('die letzte Definition vor dem Zurückziehen noch einmal schreiben')">{{ $t("↶ Wiederherstellen") }}</button>
           </td>
-          <td class="mono muted" :title="r.e.batch ? 'Stapel ' + r.e.batch : ''">{{ r.e.batch ? r.e.batch.slice(2, 6) : '' }}</td>
+          <td class="mono muted" :title="r.e.batch ? $t('Stapel') + ' ' + r.e.batch : ''">{{ r.e.batch ? r.e.batch.slice(2, 6) : '' }}</td>
         </tr>
       </template>
     </tbody>

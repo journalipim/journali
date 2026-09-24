@@ -52,7 +52,7 @@ function dropOn(i) { const from = drag.value; drag.value = null; if (from == nul
   <td class="cell" :style="open ? 'position:relative;overflow:visible;z-index:5' : 'position:relative'">
     <div v-if="disabled" class="cell-box disabled"></div>
     <div v-else ref="box" class="cell-box list" :class="{ inherited: value == null && inherited != null }" tabindex="0"
-      :title="value == null && inherited != null ? 'geerbt — Enter bearbeitet' : 'vermehrbar — Enter oder Doppelklick öffnet die Liste'"
+      :title="value == null && inherited != null ? $t('geerbt — Enter bearbeitet') : $t('vermehrbar — Enter oder Doppelklick öffnet die Liste')"
       @dblclick="show" @click="show" @keydown="onBoxKey">
       <span v-for="(v, i) in shown()" :key="i" class="chip">{{ label(v) }}</span>
       <span class="n muted">{{ shown().length || '' }}</span>
@@ -61,7 +61,7 @@ function dropOn(i) { const from = drag.value; drag.value = null; if (from == nul
       <div v-for="(v, i) in rows" :key="i" class="lrow" :class="{ over: drag != null && drag !== i }" @dragover.prevent @drop="dropOn(i)">
         <span class="grip" draggable="true" :title="$t('ziehen: umsortieren')" @dragstart="drag = i" @dragend="drag = null">⋮⋮</span>
         <select v-if="options && !free.has(i)" v-model="rows[i]" @keydown="onKey($event, i)" @change="onRowChange(i)"><option value="">—</option><option v-for="o in options" :key="o" :value="o">{{ label(o) }}</option><option v-if="mayAddListValue(list)" :value="NEW">{{ $t("+ neuer Wert …") }}</option></select>
-        <input v-else v-model="rows[i]" :class="{ bad: error?.i === i }" :placeholder="free.has(i) ? 'neuer Wert' : ''" @keydown="onKey($event, i)" @input="error = null" />
+        <input v-else v-model="rows[i]" :class="{ bad: error?.i === i }" :placeholder="free.has(i) ? $t('neuer Wert') : ''" @keydown="onKey($event, i)" @input="error = null" />
         <button class="x" :title="$t('Zeile entfernen')" tabindex="-1" @click="remove(i)">−</button>
       </div>
       <div v-if="error" class="neg" style="font-size:12px;padding:2px 4px">✗ {{ error.message }}</div>

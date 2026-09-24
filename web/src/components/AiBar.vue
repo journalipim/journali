@@ -25,7 +25,7 @@ async function run(instruction) {
 </script>
 
 <template>
-  <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? 'Text mit der KI (' + ai.label() + ') bearbeiten — mit den Produktdaten dieses Knotens; jede Anfrage kostet Token' : 'KI-Schlüssel fehlt — ⚙ Einstellungen → KI'" :disabled="!ai.available()">{{ $t("✦ KI") }}</button>
+  <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? $t('Text mit der KI (') + ai.label() + $t(') bearbeiten — mit den Produktdaten dieses Knotens; jede Anfrage kostet Token') : $t('KI-Schlüssel fehlt — ⚙ Einstellungen → KI')" :disabled="!ai.available()">{{ $t("✦ KI") }}</button>
   <!-- echtes Teleport (Taloan, 22.09.): die Leiste gehört in den Behälter des Editors, nicht in den Werkzeugbalken -->
   <Teleport v-if="panel" :to="panel" defer>   <!-- defer: der Behälter entsteht erst nach dem Werkzeugbalken -->
     <div v-if="open" class="aibar flow" @mousedown.stop>

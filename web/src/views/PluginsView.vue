@@ -10,6 +10,7 @@ import { baseTopics, topicOf, entries } from '../topics.js'
 import { dialog } from '../dialog.js'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
+import { t } from '../i18n.js'
 
 const listW = paneWidth('plugins.list', 380)
 const cur = ref(null)
@@ -23,8 +24,8 @@ const jobCount = key => jobs.value.filter(j => j.plugin === key).length
 // Gruppen mit Basis oder mehreren Plugins sind sowieso da; datasheet ist seine Gruppe)
 const railToggle = key => plugins.views.some(v => v.key === key && !baseTopics.value.has(topicOf(key, v.topic)) && (entries.value[topicOf(key, v.topic)] ?? []).every(e => e.plugin === key))
 function toggleRail(key) { const s = new Set(store.railOff); s.has(key) ? s.delete(key) : s.add(key); store.railOff = [...s]; store.save() }
-const KIND = { import: '⇩ Import', export: '⇧ Export', quality: '✓ Qualität', tool: '⌁ Werkzeug', output: '▤ Ausgabe', edit: '✎ Pflege', classification: '⌗ Klassifikation' }
-const TOPIC_LABEL = { import: '⇩ Import', export: '⇪ Export', analysis: '✓ Datenanalyse', jobs: '⏱ Jobs', datasheet: '▤ Datenblatt', tools: '⌁ Werkzeuge' }
+const KIND = { import: t('⇩ Import'), export: t('⇧ Export'), quality: t('✓ Qualität'), tool: t('⌁ Werkzeug'), output: t('▤ Ausgabe'), edit: t('✎ Pflege'), classification: t('⌗ Klassifikation') }
+const TOPIC_LABEL = { import: t('⇩ Import'), export: t('⇪ Export'), analysis: t('✓ Datenanalyse'), jobs: t('⏱ Jobs'), datasheet: t('▤ Datenblatt'), tools: t('⌁ Werkzeuge') }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
 const manifest = computed(() => current.value?.manifest ?? {})
 // Dienste: process (Schlüssel '') und processes[] (Taloan, 19.09.: mehrere Dienste je Plugin)
@@ -62,22 +63,22 @@ function cmp(a, b) {
 }
 function sortByCol(col) { if (sortBy.value === col) sortDesc.value = !sortDesc.value; else { sortBy.value = col; sortDesc.value = false } }
 // Tarife (Taloan, 24.09.2026): was nicht zum Tarif der Instanz gehört, steht mit dem Tarif da, der es hat
-const TARIF = { free: 'Kostenlos', pro: 'Pro', proplus: 'Pro+', enterprise: 'Enterprise', unlimited: 'Unlimited' }
+const TARIF = { free: t('Kostenlos'), pro: 'Pro', proplus: 'Pro+', enterprise: t('Enterprise'), unlimited: t('Unlimited') }
 const tarifOf = p => TARIF[p.tarif] ?? p.tarif ?? ''
-const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? '— nicht installiert' : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : '◐ an, Basis aus'
+const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? t('— nicht installiert') : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : t('◐ an, Basis aus')
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
 // Ein/Aus (Taloan: Basis-Plugins sind der Container): Einschalten braucht die Basis; Ausschalten einer Basis nimmt die Ergänzungen mit
 async function toggle(p) {
-  if (!p.enabled) { const m = missing(p.key); if (m.length) { store.toast(`braucht ${m.join(', ')} — zuerst einschalten`); return } await act(`/api/plugins/${p.key}/enable`); return }
+  if (!p.enabled) { const m = missing(p.key); if (m.length) { store.toast(t('braucht {0} — zuerst einschalten', [m.join(', ')])); return } await act(`/api/plugins/${p.key}/enable`); return }
   const dep = plugins.dependents(p.key).filter(k => plugins.list.find(x => x.key === k)?.enabled)
-  if (dep.length && !await dialog.confirm({ title: `${label(p.manifest) || p.key} deaktivieren?`, warn: `Damit aus: ${dep.join(', ')}`, ok: 'Deaktivieren' })) return
+  if (dep.length && !await dialog.confirm({ title: `${label(p.manifest) || p.key} deaktivieren?`, warn: t('Damit aus: {0}', [dep.join(', ')]), ok: t('Deaktivieren') })) return
   plugins.forgetInstalled(p.key)   // beim nächsten Einschalten wieder einrichten (install)
   await act(`/api/plugins/${p.key}/disable`)
 }
 
 onMounted(async () => { await plugins.load(); if (!cur.value) cur.value = plugins.list[0]?.key ?? null })
 async function act(path, method = 'POST') {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
   busy.value = '…'
   try { method === 'DELETE' ? await api.del(path) : await api.post(path, {}); await store.poll(true); await plugins.load() }
   catch (e) { store.toast(e.message) }
@@ -93,14 +94,14 @@ function pick(k) { cur.value = k }
       <input v-model="q" type="search" :placeholder="$t('🔍 Key, Name, Beschreibung')" style="flex:1;min-width:120px" @keydown.esc="q = ''" />
       <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
       <span class="sep">·</span>
-      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', '↑ Update'], ['new', '⇩ nicht installiert']]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
+      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
     </div>
     <div class="li head">
-      <span class="k" :title="`nach Key sortieren${sortBy === 'key' ? ' — Klick dreht die Richtung' : ''}`" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}</span>
-      <span class="l" :title="`nach Bezeichnung sortieren${sortBy === 'label' ? ' — Klick dreht die Richtung' : ''}`" @click="sortByCol('label')">{{ $t("Bezeichnung{0}", [caret('label')]) }}</span>
+      <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}</span>
+      <span class="l" :title="$t('nach Bezeichnung sortieren{0}', [sortBy === 'label' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('label')">{{ $t("Bezeichnung{0}", [caret('label')]) }}</span>
       <span class="r">
-        <span :title="`nach Fassung sortieren${sortBy === 'version' ? ' — Klick dreht die Richtung' : ''}`" @click="sortByCol('version')">{{ $t("Fassung{0}", [caret('version')]) }}</span>
-        <span :title="`nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert)${sortBy === 'state' ? ' — Klick dreht die Richtung' : ''}`" @click="sortByCol('state')">{{ $t("Zustand{0}", [caret('state')]) }}</span>
+        <span :title="$t('nach Fassung sortieren{0}', [sortBy === 'version' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('version')">{{ $t("Fassung{0}", [caret('version')]) }}</span>
+        <span :title="$t('nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert){0}', [sortBy === 'state' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('state')">{{ $t("Zustand{0}", [caret('state')]) }}</span>
       </span>
     </div>
     <div class="scroll">
@@ -109,7 +110,7 @@ function pick(k) { cur.value = k }
         <span class="l">{{ label(p.manifest) || p.key }}</span>
         <span class="r">
           <span v-if="p.version" class="mono">{{ p.version }}</span>
-          <span v-if="p.update" class="warn" :title="`auf der Platte: ${p.diskVersion}`">↑ {{ p.diskVersion }}</span>
+          <span v-if="p.update" class="warn" :title="$t('auf der Platte: {0}', [p.diskVersion])">↑ {{ p.diskVersion }}</span>
           <span v-if="!p.onDisk" class="neg" :title="$t('Verzeichnis fehlt')">✗</span>
           <span :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'">{{ stateOf(p) }}</span>
         </span>
@@ -123,14 +124,14 @@ function pick(k) { cur.value = k }
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar">
       <h1>⌁ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
-      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? '⚙ Prozess' : manifest.runs === 'office' ? (current.key === 'onlyoffice' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : '▭ Browser' }}{{ services.length ? ' + ⚙ ' + (services.length > 1 ? services.length + ' Dienste' : 'Prozess') : '' }}</span>
+      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? $t('⚙ Prozess') : manifest.runs === 'office' ? (current.key === 'onlyoffice' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : $t('▭ Browser') }}{{ services.length ? ' + ⚙ ' + (services.length > 1 ? services.length + ' ' + $t('Dienste') : $t('Prozess')) : '' }}</span>
       <span class="grow" />
-      <template v-if="current.onDisk && !current.installed"><button class="primary" :disabled="current.allowed === false" :title="current.allowed === false ? `Tarif ${tarifOf(current)}` : ''" @click="act(`/api/plugins/${current.key}/install`)">{{ $t("⇩ installieren {0}", [current.diskVersion]) }}</button></template>
+      <template v-if="current.onDisk && !current.installed"><button class="primary" :disabled="current.allowed === false" :title="current.allowed === false ? $t('Tarif {0}', [tarifOf(current)]) : ''" @click="act(`/api/plugins/${current.key}/install`)">{{ $t("⇩ installieren {0}", [current.diskVersion]) }}</button></template>
       <template v-else-if="current.installed">
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">{{ $t("↑ aktualisieren auf {0}", [current.diskVersion]) }}</button>
-        <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? 'In die Leiste links aufnehmen (unter sein Thema)' : 'Aus der Leiste links nehmen (nur für dich, in den Einstellungen)'">{{ store.railOff.includes(current.key) ? '▯ nicht in der Leiste' : '▮ in der Leiste' }}</button>
+        <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? $t('In die Leiste links aufnehmen (unter sein Thema)') : $t('Aus der Leiste links nehmen (nur für dich, in den Einstellungen)')">{{ store.railOff.includes(current.key) ? $t('▯ nicht in der Leiste') : $t('▮ in der Leiste') }}</button>
         <!-- Zustandsschalter wie „in der Leiste“ (Taloan): leuchtet, wenn an; Klick kippt -->
-        <button :class="{ primary: current.enabled }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? `Tarif ${tarifOf(current)}` : current.enabled ? (plugins.active(current.key) ? 'Deaktivieren (jetzt aktiviert)' : 'aktiviert, aber ohne Wirkung: ' + missing(current.key).join(', ') + ' ist aus') : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : 'Aktivieren (jetzt deaktiviert)'">{{ current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
+        <button :class="{ primary: current.enabled }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? $t('Tarif {0}', [tarifOf(current)]) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" :title="$t('aus dem Journal entfernen — die Dateien bleiben')">🗑</button>
       </template>
     </div>
@@ -144,7 +145,7 @@ function pick(k) { cur.value = k }
       <!-- Basis-Plugin und Abhängigkeiten (Taloan, 19.09.): Basis = Grundfunktion einer Gruppe und Container für Ergänzungen -->
       <div class="chips" style="padding:4px 8px" v-if="manifest.base?.length || manifest.requires?.length || plugins.dependents(current.key).length">
         <span v-if="manifest.base?.length" class="chip" :title="$t('Basis-Plugin: Grundfunktion dieser Gruppe(n) der Leiste — solange es an ist, ist die Gruppe da')">{{ $t("◆ Basis · {0}", [manifest.base.map(t => TOPIC_LABEL[t] ?? t).join(', ')]) }}</span>
-        <span v-for="r in manifest.requires ?? []" :key="r" class="chip" :class="{ neg: !plugins.active(r) }" :title="plugins.active(r) ? 'braucht dieses Plugin — ist an' : 'braucht dieses Plugin — ist aus, daher ohne Wirkung'" style="cursor:pointer" @click="pick(r)">{{ $t("braucht {0}", [r]) }}</span>
+        <span v-for="r in manifest.requires ?? []" :key="r" class="chip" :class="{ neg: !plugins.active(r) }" :title="plugins.active(r) ? $t('braucht dieses Plugin — ist an') : $t('braucht dieses Plugin — ist aus, daher ohne Wirkung')" style="cursor:pointer" @click="pick(r)">{{ $t("braucht {0}", [r]) }}</span>
         <span v-for="d in plugins.dependents(current.key)" :key="d" class="chip muted" :title="$t('hängt an diesem Plugin — geht mit aus')" style="cursor:pointer" @click="pick(d)">↳ {{ d }}</span>
       </div>
       <div class="section" v-if="manifest.runs === 'office' && current.key === 'onlyoffice'">
@@ -158,13 +159,13 @@ function pick(k) { cur.value = k }
       <div class="section" v-if="manifest.runs === 'browser'">
         <h2>{{ $t("Ansichten") }}</h2>
         <div class="chips"><router-link v-for="v in plugins.views.filter(x => x.key === current.key)" :key="v.path" :to="`/p/${current.key}/${v.path}`" class="chip">{{ v.icon }} {{ v.label }}</router-link>
-          <span v-if="!plugins.views.some(x => x.key === current.key)" class="muted">{{ current.enabled ? 'keine (oder Modul nicht geladen — neu laden)' : 'aus' }}</span></div>
+          <span v-if="!plugins.views.some(x => x.key === current.key)" class="muted">{{ current.enabled ? $t('keine (oder Modul nicht geladen — neu laden)') : 'aus' }}</span></div>
       </div>
       <!-- Starten und Konfigurieren gehören nicht in die Verwaltung (Taloan, 19.09.): Prozesse laufen als Job (⏱ Jobs) -->
       <!-- ein Abschnitt je Dienst (Taloan: mehrere Dienste je Plugin) — process oder processes[] -->
       <div class="section" v-for="svc in services" :key="svc.key">
-        <h2>⚙ {{ svc.label || 'Prozess' }} <span class="muted">· {{ svc.command }} {{ (svc.args ?? []).join(' ') }}</span></h2>
-        <div class="muted" style="font-size:12px;line-height:1.6">{{ svc.description || 'Läuft als Kindprozess des Servers, unabhängig vom Browser.' }}
+        <h2>⚙ {{ svc.label || $t('Prozess') }} <span class="muted">· {{ svc.command }} {{ (svc.args ?? []).join(' ') }}</span></h2>
+        <div class="muted" style="font-size:12px;line-height:1.6">{{ svc.description || $t('Läuft als Kindprozess des Servers, unabhängig vom Browser.') }}
           <span v-if="svc.params?.length">{{ $t("Parameter: {0}.", [svc.params.map(p => p.label || p.key).join(' · ')]) }}</span></div>
         <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}${svc.key ? '&service=' + svc.key : ''}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" :title="$t('neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs')" @click="navigate">{{ $t("⏱ Als Job einrichten") }}</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button :title="$t('die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs')" @click="navigate">{{ $t("⏱ Jobs verwalten") }}<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px"><span :title="$t('Zeitplan oder nur von Hand; Parameter, Geheimnisse und Logs stehen beim Job.')">{{ $t("Zeitplan · Parameter beim Job") }}</span></span></div>
       </div>

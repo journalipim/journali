@@ -41,6 +41,7 @@ import { treePicker } from './treePicker.js'
 import * as orphans from './orphans.js'
 import * as compliance from './compliance.js'
 import { ai } from './ai.js'
+import { t } from './i18n.js'
 
 export const plugins = reactive({
   list: [],
@@ -65,7 +66,7 @@ export const plugins = reactive({
       const m = p.manifest ?? {}
       if (!this.active(p.key) || m.runs !== 'browser' || !m.entry || this.modules.has(p.key)) continue
       try { this.modules.set(p.key, (await import(/* @vite-ignore */ `/plugins/${p.key}/${m.entry}`)).default ?? {}) }
-      catch (e) { store.toast(`Plugin ${p.key}: ${e.message}`) }
+      catch (e) { store.toast(t('Plugin {0}: {1}', [p.key, e.message])) }
     }
     // dann die Beiträge NEU sammeln (Taloan, 22.09.: Plugin aus und wieder an — der Abschnitt kam nicht zurück, weil die
     // Beiträge einmal herausgefiltert waren und das schon geladene Modul übersprungen wurde)

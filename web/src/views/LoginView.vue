@@ -33,7 +33,7 @@ async function go() {
       <label v-if="store.auth.setup">{{ $t("Anzeigename") }}<input v-model="name" type="text" autocomplete="name" :placeholder="$t('steht als Urheber im Journal')" /></label>
       <label>{{ $t("Passwort") }}<input v-model="password" type="password" :autocomplete="store.auth.setup ? 'new-password' : 'current-password'" :placeholder="$t('mindestens 8 Zeichen')" /></label>
       <div v-if="error" class="neg" style="font-size:13px;margin:6px 0">✗ {{ error }}</div>
-      <button class="primary" type="submit" :disabled="busy" style="width:100%;margin-top:8px">{{ store.auth.setup ? 'Anlegen und anmelden' : 'Anmelden' }}</button>
+      <button class="primary" type="submit" :disabled="busy" style="width:100%;margin-top:8px">{{ store.auth.setup ? $t('Anlegen und anmelden') : $t('Anmelden') }}</button>
     </form>
   </div>
 </template>

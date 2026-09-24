@@ -9,6 +9,7 @@ import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import UsageBars from './UsageBars.vue'
 import LicenceSettings from './LicenceSettings.vue'
+import { t as t_ } from '../i18n.js'
 
 const teams = ref([])
 const gewaehlt = ref(null)     // gezeigtes Team; mit „users“ lässt sich wechseln
@@ -26,7 +27,7 @@ const kb = b => {
   const z = (x, e) => (x / e).toLocaleString('de-DE', { maximumFractionDigits: 1 })
   return !b ? '0kb' : b >= 1073741824 ? z(b, 1073741824) + 'gb' : b >= 1048576 ? z(b, 1048576) + 'mb' : Math.max(1, Math.round(b / 1024)) + 'kb'
 }
-const ANBIETER = [['anthropic', 'Anthropic'], ['openai', 'OpenAI']]
+const ANBIETER = [['anthropic', t_('Anthropic')], ['openai', t_('OpenAI')]]
 
 const team = computed(() => teams.value.find(t => t.key === gewaehlt.value) ?? null)
 /// Das Team führen: Schlüssel, Modell, Mitglieder ein und aus. Der Administrator darf es überall.
@@ -82,16 +83,16 @@ async function details() {
 onMounted(load)
 
 async function schluessel() {
-  if (!keyIn.value.wert) { store.toast('Schlüssel fehlt'); return }
+  if (!keyIn.value.wert) { store.toast(t_('Schlüssel fehlt')); return }
   const anbieter = keyIn.value.anbieter
   try {
     await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: keyIn.value.wert } }, 'PUT')
     keyIn.value = { anbieter, wert: '' }
-    await load(); store.toast(`Schlüssel für ${anbieter} liegt beim Server`, 'ok')
+    await load(); store.toast(t_('Schlüssel für {0} liegt beim Server', [anbieter]), 'ok')
   } catch (e) { store.toast(e.message) }
 }
 async function schluesselWeg(anbieter) {
-  if (!await dialog.confirm({ title: `Schlüssel ${anbieter} entfernen?`, text: `Ohne ihn arbeitet „${team.value.label}“ nicht mehr über diesen Anbieter.`, ok: '✕ Entfernen' })) return
+  if (!await dialog.confirm({ title: t_('Schlüssel {0} entfernen?', [anbieter]), text: t_('Ohne ihn arbeitet „{0}“ nicht mehr über diesen Anbieter.', [team.value.label]), ok: t_('✕ Entfernen') })) return
   try { await api.post(`/api/teams/${encodeURIComponent(gewaehlt.value)}/keys`, { keys: { [anbieter]: '' } }, 'PUT'); await load() } catch (e) { store.toast(e.message) }
 }
 async function modell(anbieter, wert) {
@@ -100,18 +101,18 @@ async function modell(anbieter, wert) {
 /// Was gezählt wird — die Vorgänge hinter Kinds.Counts im Kern (data, publish). Über Nichtgezähltes steht hier nichts.
 function hilfeToken() {
   dialog.help({
-    title: '✦ journali Limits · gezählt wird',
+    title: t_('✦ journali Limits · gezählt wird'),
     rows: [
-      ['Anlegen', 'Artikel, Varianten, Zeilen einer Mehrfachangabe, Assets, Relationen'],
-      ['Benennen', 'einem Knoten einen Namen geben oder ihn ändern'],
-      ['Ändern', 'jeder Wert, Status, Kennung, die Reihenfolge von Zeilen'],
-      ['Zurückziehen', 'Artikel, Zeilen, Assets, Relationen — und das Zurückholen'],
-      ['Einordnen', 'ein Asset in einen Ordner, eine Kennung an ein Fremdsystem'],
-      ['Übernehmen', 'Import und Kopieren schreiben dieselben Einträge wie Handarbeit'],
-      ['Freigeben', 'eine Freigabe erteilen, eine Freigabe zurücknehmen'],
-      ['Versionieren', 'Version anlegen, Dokument anhängen, Version zurückziehen'],
-      ['Workflow', 'einen Schritt setzen, eine Zuständigkeit vergeben'],
-      ['Übersetzen', 'Auftrag hinaus, Rückläufer herein, Stand am Knoten markieren'],
+      [t_('Anlegen'), t_('Artikel, Varianten, Zeilen einer Mehrfachangabe, Assets, Relationen')],
+      [t_('Benennen'), t_('einem Knoten einen Namen geben oder ihn ändern')],
+      [t_('Ändern'), t_('jeder Wert, Status, Kennung, die Reihenfolge von Zeilen')],
+      [t_('Zurückziehen'), t_('Artikel, Zeilen, Assets, Relationen — und das Zurückholen')],
+      [t_('Einordnen'), t_('ein Asset in einen Ordner, eine Kennung an ein Fremdsystem')],
+      [t_('Übernehmen'), t_('Import und Kopieren schreiben dieselben Einträge wie Handarbeit')],
+      [t_('Freigeben'), t_('eine Freigabe erteilen, eine Freigabe zurücknehmen')],
+      [t_('Versionieren'), t_('Version anlegen, Dokument anhängen, Version zurückziehen')],
+      [t_('Workflow'), t_('einen Schritt setzen, eine Zuständigkeit vergeben')],
+      [t_('Übersetzen'), t_('Auftrag hinaus, Rückläufer herein, Stand am Knoten markieren')],
     ],
   })
 }
@@ -122,7 +123,7 @@ async function eintragen() {
   catch (e) { store.toast(e.message) }
 }
 async function austragen(m) {
-  if (!await dialog.confirm({ title: `${m.name || m.key} austragen?`, text: 'Danach ist die Person in keinem Team — ohne Schlüssel, ohne Kontingent.', ok: '✕ Austragen' })) return
+  if (!await dialog.confirm({ title: `${m.name || m.key} austragen?`, text: t_('Danach ist die Person in keinem Team — ohne Schlüssel, ohne Kontingent.'), ok: t_('✕ Austragen') })) return
   try { await api.del(`/api/teams/${encodeURIComponent(gewaehlt.value)}/members/${encodeURIComponent(m.key)}`); await details() } catch (e) { store.toast(e.message) }
 }
 </script>
@@ -205,7 +206,7 @@ async function austragen(m) {
             <span v-for="k in team.keys" :key="k" class="chip" style="margin-right:4px">{{ k }}
               <button v-if="fuehrt" class="x" :title="$t('Schlüssel entfernen')" @click="schluesselWeg(k)">×</button>
             </span>
-            <span v-if="!team.keys.length && team.keysFrom" class="muted" :title="`zahlt über ${team.keysFrom}`">↑ {{ team.keysFrom }}</span>
+            <span v-if="!team.keys.length && team.keysFrom" class="muted" :title="$t('zahlt über {0}', [team.keysFrom])">↑ {{ team.keysFrom }}</span>
             <span v-else-if="!team.keys.length" class="neg" :title="$t('ohne Schlüssel keine KI über den Server')">—</span>
           </td>
           <td v-if="fuehrt" class="row" style="gap:4px">
@@ -215,7 +216,7 @@ async function austragen(m) {
           </td><td v-else></td>
         </tr>
         <tr v-for="k in team.keys" :key="'m' + k">
-          <td class="muted" :title="`welches Modell ${k} fragt — es bestimmt Kosten und Güte`">{{ $t("Modell {0}", [k]) }}</td>
+          <td class="muted" :title="$t('welches Modell {0} fragt — es bestimmt Kosten und Güte', [k])">{{ $t("Modell {0}", [k]) }}</td>
           <td>
             <select :value="team.models?.[k] ?? ''" :disabled="!fuehrt" style="width:220px" @change="modell(k, $event.target.value)">
               <option value="">{{ $t("— Vorgabe —") }}</option>

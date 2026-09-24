@@ -5,6 +5,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
+import { t as t_ } from '../i18n.js'
 
 const emit = defineEmits(['eingespielt'])
 // Das Team, das oben im Team-Reiter gewählt ist — für es wird ein Schlüssel eingelöst
@@ -32,10 +33,10 @@ const einloesungen = ref([])
 const pakete = ref([])
 const neu = ref({ wahl: 'reset:pro', count: 1 })   // wahl: 'reset:<tarif>' oder der Schlüssel eines Pakets
 // Reset getrennt für Pro und Enterprise (Taloan, 24.09.2026)
-const RESETS = [['pro', 'Pro'], ['enterprise', 'Enterprise']]
+const RESETS = [['pro', 'Pro'], ['enterprise', t_('Enterprise')]]
 const paketTitel = p => `${zahl(p.week)} / Woche · ${zahl(p.month)} / Monat · ${p.days} Tage`
 const paketName = k => pakete.value.find(p => p.key === k)?.label ?? RESETS.find(r => r[0] === k)?.[1] ?? k
-const artName = a => a.kind === 'reset' ? `Reset${a.plan ? ' ' + paketName(a.plan) : ''}` : a.plan ? paketName(a.plan) : 'Limit'
+const artName = a => a.kind === 'reset' ? t_('Reset{0}', [a.plan ? ' ' + paketName(a.plan) : '']) : a.plan ? paketName(a.plan) : t_('Limit')
 const einloesung = id => einloesungen.value.find(e => e.id === id)
 const angefordert = ref('')
 const saidAnf = ref('')
@@ -51,10 +52,10 @@ const inhalt = computed(() => {
 })
 const was = computed(() => !inhalt.value ? null : inhalt.value.o.kind && inhalt.value.o.request ? 'schluessel' : inhalt.value.o.anforderung ? null : 'lizenz')
 const knopf = computed(() =>
-  was.value === 'schluessel' ? { text: `⚿ Einlösen · ${props.team?.label ?? ''}`, aus: !eigenes.value,
-      title: eigenes.value ? `Schlüssel für ${props.team.label} einlösen` : `${props.team?.label ?? 'Dieses Team'} rechnet über ein anderes Team ab` }
-  : was.value === 'lizenz' ? { text: '⚿ Lizenz einspielen', aus: false, title: 'Lizenz dieser Instanz ersetzen' }
-  : { text: '⚿ Übernehmen', aus: true, title: eingabe.value.trim() ? 'weder Lizenz noch Schlüssel' : 'Lizenz oder Schlüssel einfügen' })
+  was.value === 'schluessel' ? { text: t_('⚿ Einlösen · {0}', [props.team?.label ?? '']), aus: !eigenes.value,
+      title: eigenes.value ? t_('Schlüssel für {0} einlösen', [props.team.label]) : t_('{0} rechnet über ein anderes Team ab', [props.team?.label ?? t_('Dieses Team')]) }
+  : was.value === 'lizenz' ? { text: t_('⚿ Lizenz einspielen'), aus: false, title: t_('Lizenz dieser Instanz ersetzen') }
+  : { text: t_('⚿ Übernehmen'), aus: true, title: eingabe.value.trim() ? t_('weder Lizenz noch Schlüssel') : t_('Lizenz oder Schlüssel einfügen') })
 const uebernehmen = () => was.value === 'schluessel' ? einloesen() : was.value === 'lizenz' ? einspielen() : null
 
 async function anfordern() {
@@ -73,7 +74,7 @@ async function einloesen() {
   try {
     const r = await api.post('/api/licence/keys', { key: inhalt.value.text, team: props.team.key })
     eingabe.value = ''
-    said.value = (r.until ? `✓ ${r.id} bis ${r.until}` : `✓ ${r.id} ab ${r.from}`) + (r.carried ? ` · +${r.carried} Tage` : '') + (r.geprueft ? '' : ` · ${r.grund ?? ''}`)
+    said.value = (r.until ? `✓ ${r.id} bis ${r.until}` : `✓ ${r.id} ab ${r.from}`) + (r.carried ? ' ' + t_('· +{0} Tage', [r.carried]) : '') + (r.geprueft ? '' : ` · ${r.grund ?? ''}`)
     await load(); await store.poll(true)
     emit('eingespielt')
   }
@@ -87,7 +88,7 @@ async function einspielen() {
   try {
     const r = await api.post('/api/licence', inhalt.value.o, 'PUT')
     eingabe.value = ''
-    said.value = r.geprueft ? '✓ eingespielt und geprüft' : `✓ eingespielt · ${r.grund ?? ''}`
+    said.value = r.geprueft ? t_('✓ eingespielt und geprüft') : `✓ eingespielt · ${r.grund ?? ''}`
     await load(); await store.poll(true)
     emit('eingespielt')   // die Limits daneben hängen an der Lizenz — sie sollen es sofort zeigen
   }
@@ -97,7 +98,7 @@ async function einspielen() {
 /// Die Kennung dieser Instanz kopieren — ohne Zwischenablage bleibt sie markierbar stehen
 async function kopiere(text) {
   try { await navigator.clipboard.writeText(text); store.toast('kopiert', 'ok') }
-  catch { store.toast('Zwischenablage nicht verfügbar — Text markieren und mit Strg+C kopieren') }
+  catch { store.toast(t_('Zwischenablage nicht verfügbar — Text markieren und mit Strg+C kopieren')) }
 }
 </script>
 
@@ -158,12 +159,12 @@ async function kopiere(text) {
       </tr></thead><tbody>
         <tr v-for="a in anforderungen" :key="a.id">
           <td class="mono">{{ a.id }}</td>
-          <td :title="a.kind === 'limit' ? paketTitel(a) : 'Das Team zählt ab dem Einlösen neu.'">{{ art(a.kind) }} {{ artName(a) }}</td>
+          <td :title="a.kind === 'limit' ? paketTitel(a) : $t('Das Team zählt ab dem Einlösen neu.')">{{ art(a.kind) }} {{ artName(a) }}</td>
           <td class="mono">{{ String(a.created).slice(0, 10) }}</td>
           <template v-if="a.team">
             <td class="mono pos">✓ {{ einloesung(a.id)?.from ?? '' }}</td>
             <td>{{ a.teamLabel }}</td>
-            <td class="mono" :title="einloesung(a.id)?.carried ? `+${einloesung(a.id).carried} Tage aus dem laufenden Limit` : ''">{{ einloesung(a.id)?.until ?? '' }}<template v-if="einloesung(a.id)?.carried"> (+{{ einloesung(a.id).carried }})</template></td>
+            <td class="mono" :title="einloesung(a.id)?.carried ? $t('+{0} Tage aus dem laufenden Limit', [einloesung(a.id).carried]) : ''">{{ einloesung(a.id)?.until ?? '' }}<template v-if="einloesung(a.id)?.carried"> (+{{ einloesung(a.id).carried }})</template></td>
             <td></td>
           </template>
           <template v-else>

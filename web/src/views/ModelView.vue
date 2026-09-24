@@ -22,18 +22,19 @@ import ToggleCell from '../components/ToggleCell.vue'
 import SelectCell from '../components/SelectCell.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
+import { t } from '../i18n.js'
 const listW = paneWidth('model.list', 340)
 
 const sections = [
-  { key: 'groups', icon: '▤', label: 'Attributgruppen', part: 'Struktur', one: 'Gruppe', hint: 'Eine Gruppe bündelt Attribute und hängt an Baumknoten; ihre Definition vererbt sich nach unten. „aktiv ab“ sagt, ab welchem Knotentyp Werte erfasst werden.' },
-  { key: 'attributes', icon: '⊞', label: 'Attribute', part: 'Struktur', one: 'Attribut', hint: 'Ein Attribut hat Typ, Gruppe, Achsen (sprachabhängig, kanalabhängig) und Pflicht je Kanal und Sprache. Der Schlüssel ist für immer.' },
-  { key: 'lists', icon: '☰', label: 'Wertelisten', part: 'Struktur', one: 'Werteliste', hint: 'Ein Attribut vom Typ enum zeigt auf einen Eintrag der Liste, nicht auf ein Wort. Der Eintrag hat Namen je Sprache und eigene Spalten (Farbe: ral).' },
-  { key: 'views', icon: '◫', label: 'Attributsichten', part: 'Struktur', one: 'Sicht', hint: 'Je Knotentyp: welche Gruppen in welcher Reihenfolge, darin die Attribute in welcher Reihenfolge. Der Knoten zeigt in einer Sicht nur deren Gruppen.' },
-  { key: 'relationTypes', icon: '⇄', label: 'Relationen', part: 'Struktur', one: 'Relationstyp', hint: 'Ein Relationstyp verbindet Knoten (Zubehör, Bestandteil …): Bezeichnung hin und zurück, erlaubte Knotentypen, und eine Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot).' },
-  { key: 'units', icon: '⚖', label: 'Einheiten', part: 'Basics', one: 'Einheit', hint: 'Je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um.' },
-  { key: 'locales', icon: '🗣', label: 'Sprachen', part: 'Basics', one: 'Sprache', hint: 'Die Achse locale der Attribute.' },
-  { key: 'channels', icon: '⇶', label: 'Kanäle', part: 'Basics', one: 'Kanal', hint: 'Die Achse channel: kanalabhängige Werte; Pflichtfelder und Freigaben gelten je Kanal.' },
-  { key: 'statuses', icon: '●', label: 'Status', part: 'Basics', one: 'Status', hint: 'Lebenszyklus eines Produkts oder einer Variante (am Markt, ausgelaufen …) — frei benennbar, je Sprache. Der Import bildet Fremdstatus darauf ab, ein Workflow kann ihn als Wirkung setzen. draft ist der Startstatus neuer Knoten.' },
+  { key: 'groups', icon: '▤', label: t('Attributgruppen'), part: t('Struktur'), one: t('Gruppe'), hint: t('Eine Gruppe bündelt Attribute und hängt an Baumknoten; ihre Definition vererbt sich nach unten. „aktiv ab“ sagt, ab welchem Knotentyp Werte erfasst werden.') },
+  { key: 'attributes', icon: '⊞', label: t('Attribute'), part: t('Struktur'), one: t('Attribut'), hint: t('Ein Attribut hat Typ, Gruppe, Achsen (sprachabhängig, kanalabhängig) und Pflicht je Kanal und Sprache. Der Schlüssel ist für immer.') },
+  { key: 'lists', icon: '☰', label: t('Wertelisten'), part: t('Struktur'), one: t('Werteliste'), hint: t('Ein Attribut vom Typ enum zeigt auf einen Eintrag der Liste, nicht auf ein Wort. Der Eintrag hat Namen je Sprache und eigene Spalten (Farbe: ral).') },
+  { key: 'views', icon: '◫', label: t('Attributsichten'), part: t('Struktur'), one: t('Sicht'), hint: t('Je Knotentyp: welche Gruppen in welcher Reihenfolge, darin die Attribute in welcher Reihenfolge. Der Knoten zeigt in einer Sicht nur deren Gruppen.') },
+  { key: 'relationTypes', icon: '⇄', label: t('Relationen'), part: t('Struktur'), one: t('Relationstyp'), hint: t('Ein Relationstyp verbindet Knoten (Zubehör, Bestandteil …): Bezeichnung hin und zurück, erlaubte Knotentypen, und eine Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot).') },
+  { key: 'units', icon: '⚖', label: t('Einheiten'), part: t('Basics'), one: t('Einheit'), hint: t('Je Grösse eine Basis mit Faktor 1; die Anzeige rechnet über den Faktor um.') },
+  { key: 'locales', icon: '🗣', label: t('Sprachen'), part: t('Basics'), one: t('Sprache'), hint: t('Die Achse locale der Attribute.') },
+  { key: 'channels', icon: '⇶', label: t('Kanäle'), part: t('Basics'), one: t('Kanal'), hint: t('Die Achse channel: kanalabhängige Werte; Pflichtfelder und Freigaben gelten je Kanal.') },
+  { key: 'statuses', icon: '●', label: t('Status'), part: t('Basics'), one: t('Status'), hint: t('Lebenszyklus eines Produkts oder einer Variante (am Markt, ausgelaufen …) — frei benennbar, je Sprache. Der Import bildet Fremdstatus darauf ab, ein Workflow kann ihn als Wirkung setzen. draft ist der Startstatus neuer Knoten.') },
 ]
 const section = ref('attributes')
 const model = computed(() => store.model)
@@ -46,28 +47,28 @@ const resetFlt = () => { flt.value = { group: '', type: '', locale: false, chann
 const newKey = ref('')
 const newValue = ref('')
 const addViewGroup = ref('')
-const roleLabel = { group: '▣ Produktgruppe', product: '▦ Produkt', variant: '◆ Variante' }
+const roleLabel = { group: t('▣ Produktgruppe'), product: t('▦ Produkt'), variant: t('◆ Variante') }
 const roles = ['group', 'product', 'variant']
 // Muster-Vorlagen (Taloan, 17.09.: Telefon, E-Mail „bis zu dem, was üblich ist“) — ganzer Wert muss passen
 const PATTERNS = [
-  { key: 'email', label: '@ E-Mail', re: String.raw`[^\s@]+@[^\s@]+\.[A-Za-z]{2,}` },
-  { key: 'phone', label: '☎ Telefon', re: String.raw`\+?[0-9][0-9 \-/().]{5,}[0-9]` },
+  { key: 'email', label: t('@ E-Mail'), re: String.raw`[^\s@]+@[^\s@]+\.[A-Za-z]{2,}` },
+  { key: 'phone', label: t('☎ Telefon'), re: String.raw`\+?[0-9][0-9 \-/().]{5,}[0-9]` },
   { key: 'url', label: '🔗 URL', re: String.raw`https?://[^\s]+` },
   { key: 'ean13', label: 'EAN-13', re: String.raw`[0-9]{13}` },
   { key: 'ean8', label: 'EAN-8', re: String.raw`[0-9]{8}` },
   { key: 'plz', label: 'PLZ (DE)', re: String.raw`[0-9]{5}` },
-  { key: 'iso_date', label: 'Datum JJJJ-MM-TT', re: String.raw`[0-9]{4}-[0-9]{2}-[0-9]{2}` },
+  { key: 'iso_date', label: t('Datum JJJJ-MM-TT'), re: String.raw`[0-9]{4}-[0-9]{2}-[0-9]{2}` },
   { key: 'sku', label: 'SKU (Buchstaben, Ziffern, -_)', re: String.raw`[A-Za-z0-9_\-]+` },
   { key: 'hex', label: '# Hex-Farbe', re: String.raw`#[0-9A-Fa-f]{6}` },
   { key: 'iban', label: 'IBAN', re: String.raw`[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}` },
 ]
 const TYPES = ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum', 'rows', 'formula', 'template']
 const TYPE_SYM = { text: 'Aa', html: '‹›', integer: '12', decimal: '1.5', boolean: '☑', date: '📅', enum: '☰', rows: '⊞', formula: 'ƒ', template: '{}' }
-const TYPE_LABEL = { rows: 'rows · Tabelle (Zeilen aus Spalten)' }   // „vermehrbar“ heißt in der Oberfläche multiple (Taloan, 20.09.); rows ist die Tabelle
+const TYPE_LABEL = { rows: t('rows · Tabelle (Zeilen aus Spalten)') }   // „vermehrbar“ heißt in der Oberfläche multiple (Taloan, 20.09.); rows ist die Tabelle
 const sec = computed(() => sections.find(s => s.key === section.value))
 
 async function send(fn) {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
   try { await fn(); await store.poll(true) } catch (e) { store.toast(e.message) }
 }
 // Typwechsel mit Bestand (Taloan, 21.09.): der Server verweigert, wenn vorhandene Werte nicht mehr passen — nachfragen, dann mit force
@@ -75,7 +76,7 @@ const put = (path, body) => send(async () => {
   try { await api.post(path, body, 'PUT') }
   catch (e) {
     if (!/force=true/.test(e.message)) throw e
-    const ok = await dialog.confirm({ title: 'Vorhandene Werte passen nicht mehr', text: e.message.replace(/, oder mit force=true trotzdem ändern\.?$/, '.'), warn: 'Werte bleiben im Journal, lesen sich dann ohne Typprüfung als Text (die Datenanalyse findet sie)', ok: 'Trotzdem ändern', danger: true })
+    const ok = await dialog.confirm({ title: t('Vorhandene Werte passen nicht mehr'), text: e.message.replace(/, oder mit force=true trotzdem ändern\.?$/, '.'), warn: t('Werte bleiben im Journal, lesen sich dann ohne Typprüfung als Text (die Datenanalyse findet sie)'), ok: t('Trotzdem ändern'), danger: true })
     if (!ok) return
     await api.post(path + (path.includes('?') ? '&' : '?') + 'force=true', body, 'PUT')
   }
@@ -106,13 +107,13 @@ const rows = computed(() => {
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: u.label?.de, right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
     // rechts nur, was eingeschränkt ist — keine Symbolketten (Taloan: „komische Zeichen“): „→ Medium“, „Produkt → Variante“, „⇄ beidseitig“, Gruppe mit Label
     case 'relationTypes': return (m.relationTypes ?? []).map(r => {
-      const names = xs => xs.map(x => x === 'media' ? 'Medium' : roleLabel[x] ?? x).join('/')
+      const names = xs => xs.map(x => x === 'media' ? t('Medium') : roleLabel[x] ?? x).join('/')
       const ends = (r.from ? names(r.from) + ' ' : '') + (r.symmetric ? '⇄' : '→') + (r.to ? ' ' + names(r.to) : '')
       return { key: r.key, label: r.label?.de, right: [r.from || r.to || r.symmetric ? ends + (r.symmetric ? ' beidseitig' : '') : '', r.group ? '▤ ' + groupLabel(r.group) : ''], _: r }
     }).sort(byKey)
-    case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? '★ Master' : l.fallback ? '↩ ' + l.fallback : ''] }))
-    case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [m.masterChannel === c.key ? '★ Master' : c.fallback ? '↩ ' + c.fallback : ''] }))
-    case 'statuses': return (m.statuses ?? []).map(s => ({ key: s.key, label: `${s.icon ?? ''} ${s.label?.de ?? ''}`.trim(), right: [s.key === 'draft' ? 'Start' : '', String(s.order ?? 0)], _: s }))
+    case 'locales': return m.locales.map(l => ({ key: l.code, label: l.label, right: [m.masterLocale === l.code ? t('★ Master') : l.fallback ? '↩ ' + l.fallback : ''] }))
+    case 'channels': return m.channels.map(c => ({ key: c.key, label: c.label?.de, right: [m.masterChannel === c.key ? t('★ Master') : c.fallback ? '↩ ' + c.fallback : ''] }))
+    case 'statuses': return (m.statuses ?? []).map(s => ({ key: s.key, label: `${s.icon ?? ''} ${s.label?.de ?? ''}`.trim(), right: [s.key === 'draft' ? t('Start') : '', String(s.order ?? 0)], _: s }))
   }
   return []
 })
@@ -157,12 +158,12 @@ function blockFor(k) {
   const m = model.value; if (!m || !k) return ''
   const used = (pred) => m.attributes.filter(pred).map(a => a.key)
   switch (section.value) {
-    case 'groups': return used(a => a.group === k).length ? 'hat noch Attribute' : ''
-    case 'lists': { const u = used(a => a.list === k); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
-    case 'units': { const u = used(a => a.unit === k); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
-    case 'channels': { if (m.masterChannel === k) return 'Masterkanal'; const u = used(a => (a.channels ?? []).includes(k) || (a.required && k in a.required)); return u.length ? `benutzt von ${u.slice(0, 3).join(', ')}${u.length > 3 ? ' …' : ''}` : '' }
-    case 'locales': return m.masterLocale === k ? 'Mastersprache' : m.locales.length <= 1 ? 'die letzte Sprache bleibt' : ''
-    case 'statuses': return k === 'draft' ? 'Startstatus neuer Knoten' : ''
+    case 'groups': return used(a => a.group === k).length ? t('hat noch Attribute') : ''
+    case 'lists': { const u = used(a => a.list === k); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
+    case 'units': { const u = used(a => a.unit === k); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
+    case 'channels': { if (m.masterChannel === k) return t('Masterkanal'); const u = used(a => (a.channels ?? []).includes(k) || (a.required && k in a.required)); return u.length ? t('benutzt von {0}{1}', [u.slice(0, 3).join(', '), u.length > 3 ? ' …' : '']) : '' }
+    case 'locales': return m.masterLocale === k ? t('Mastersprache') : m.locales.length <= 1 ? t('die letzte Sprache bleibt') : ''
+    case 'statuses': return k === 'draft' ? t('Startstatus neuer Knoten') : ''
     default: return ''
   }
 }
@@ -174,11 +175,11 @@ async function restoreMenu(e) {
   try { list = await recentRetired(section.value, 5) } catch (err) { store.toast(err.message); return }
   const label = x => { const k = x.stream.slice(x.stream.indexOf(':') + 1); return k }
   menu.open(e, [
-    { label: list.length ? `zuletzt zurückgezogen · ${sec.value.label}` : `nichts zum Wiederherstellen · ${sec.value.label}`, disabled: true },
+    { label: list.length ? t('zuletzt zurückgezogen · {0}', [sec.value.label]) : t('nichts zum Wiederherstellen · {0}', [sec.value.label]), disabled: true },
     { sep: true },
     ...list.map(x => ({ label: `↶ ${label(x)}`, hint: `${x.actor} · ${when(x.at)}`, action: async () => { try { const k = await restoreModel(x); store.toast(`↶ ${k} wiederhergestellt`, 'ok'); cur.value = k; sel.value = new Set([k]) } catch (err) { store.toast(err.message) } } })),
     { sep: true },
-    { label: 'Ältere im Journal zeigen', icon: '≡', action: () => router.push({ path: '/journal', query: { q: sec.value.label === 'Relationen' ? 'RelationTypeRetired' : section.value === 'groups' ? 'AttributeGroupRetired' : section.value === 'attributes' ? 'AttributeRetired' : section.value === 'lists' ? 'ListRetired' : section.value === 'views' ? 'ViewRetired' : section.value === 'units' ? 'UnitRetired' : section.value === 'locales' ? 'LocaleRetired' : 'ChannelRetired' } }) },
+    { label: t('Ältere im Journal zeigen'), icon: '≡', action: () => router.push({ path: '/journal', query: { q: sec.value.label === t('Relationen') ? 'RelationTypeRetired' : section.value === 'groups' ? 'AttributeGroupRetired' : section.value === 'attributes' ? 'AttributeRetired' : section.value === 'lists' ? 'ListRetired' : section.value === 'views' ? 'ViewRetired' : section.value === 'units' ? 'UnitRetired' : section.value === 'locales' ? 'LocaleRetired' : 'ChannelRetired' } }) },
   ])
 }
 // Kontextmenü der Liste — wie im Baum: Rechtsklick, „zurückziehen“ für die Zeile oder die Auswahl (Taloan, 20.09.)
@@ -188,12 +189,12 @@ function rowMenu(e, r) {
   const blocked = keys.map(k => [k, blockFor(k)]).filter(([, b]) => b)
   const label = r.label?.de || r.key
   menu.open(e, [
-    { label: keys.length > 1 ? `${keys.length} ${sec.value.label} gewählt` : `${sec.value.one} ${label}`, disabled: true },
+    { label: keys.length > 1 ? t('{0} {1} gewählt', [keys.length, sec.value.label]) : `${sec.value.one} ${label}`, disabled: true },
     { sep: true },
-    { label: 'Schlüssel kopieren', icon: '⧉', key: 'c', action: () => navigator.clipboard?.writeText(keys.join(', ')) },
+    { label: t('Schlüssel kopieren'), icon: '⧉', key: 'c', action: () => navigator.clipboard?.writeText(keys.join(', ')) },
     // Gruppe mit ihren Attributen (Taloan, 22.09.: sonst blockt „Zurückziehen“ mit „hat noch Attribute“ und man löscht einzeln)
-    section.value === 'groups' && keys.length === 1 && blockFor(keys[0]) ? { label: `Gruppe mit ${(model.value?.attributes ?? []).filter(a => a.group === keys[0]).length} Attributen zurückziehen`, icon: '✕', hint: 'Werte bleiben im Journal', danger: true, action: () => removeGroupDeep(keys[0]) } : null,
-    p ? { label: keys.length > 1 ? `${keys.length} zurückziehen` : 'Zurückziehen', icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : '', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
+    section.value === 'groups' && keys.length === 1 && blockFor(keys[0]) ? { label: t('Gruppe mit {0} Attributen zurückziehen', [(model.value?.attributes ?? []).filter(a => a.group === keys[0]).length]), icon: '✕', hint: t('Werte bleiben im Journal'), danger: true, action: () => removeGroupDeep(keys[0]) } : null,
+    p ? { label: keys.length > 1 ? t('{0} zurückziehen', [keys.length]) : t('Zurückziehen'), icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : '', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
       : null,
   ])
 }
@@ -287,7 +288,7 @@ async function bulkApply({ kind, value }) {
   }
   bulkBusy.value = ''
   if (errs.length) store.toast(`${ok} geändert, ${errs.length} nicht:\n` + errs.join('\n'), 'error')   // lange Listen landen von selbst im Fenster
-  else store.toast(`✓ ${ok} geändert`, 'ok')
+  else store.toast(t('✓ {0} geändert', [ok]), 'ok')
 }
 const removePath = {
   groups: k => `/api/model/groups/${k}`, attributes: k => `/api/model/attributes/${k}`, lists: k => `/api/model/lists/${k}`,
@@ -296,7 +297,7 @@ const removePath = {
 }
 async function bulkRemove() {
   const p = removePath[section.value]; if (!p) return
-  if (!await dialog.confirm({ title: `${sel.value.size} ${sec.value.label} zurückziehen?`, ok: '✕ Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: t('{0} {1} zurückziehen?', [sel.value.size, sec.value.label]), ok: t('✕ Zurückziehen'), danger: true })) return
   for (const k of [...sel.value]) await del(p(k))
   sel.value = new Set(); cur.value = null
 }
@@ -306,20 +307,20 @@ const busy = ref(false)
 async function removeGroupDeep(key = null) {
   const g = key ? (model.value?.groups ?? []).find(x => x.key === key) : curGroup.value; if (!g) return
   const attrs = (model.value?.attributes ?? []).filter(a => a.group === g.key)
-  if (!await dialog.confirm({ title: `Gruppe ${g.label?.de || g.key} mit ${attrs.length} Attributen zurückziehen?`, text: attrs.length ? `Zurückgezogen werden: ${attrs.slice(0, 8).map(a => a.label?.de || a.key).join(', ')}${attrs.length > 8 ? ` … +${attrs.length - 8}` : ''}.` : '', warn: 'Werte bleiben im Journal — die Attribute sind danach nicht mehr im Modell.', ok: '✕ Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: t('Gruppe {0} mit {1} Attributen zurückziehen?', [g.label?.de || g.key, attrs.length]), text: attrs.length ? t('Zurückgezogen werden: {0}{1}.', [attrs.slice(0, 8).map(a => a.label?.de || a.key).join(', '), attrs.length > 8 ? ` … +${attrs.length - 8}` : '']) : '', warn: t('Werte bleiben im Journal — die Attribute sind danach nicht mehr im Modell.'), ok: t('✕ Zurückziehen'), danger: true })) return
   const kept = []
   busy.value = true
   try {
     for (const a of attrs) { try { await api.del(`/api/model/attributes/${encodeURIComponent(a.key)}`) } catch (e) { kept.push(`${a.key}: ${e.message}`) } }
     try { await api.del(`/api/model/groups/${encodeURIComponent(g.key)}`) } catch (e) { kept.push(`${g.key}: ${e.message}`) }
     await store.poll(true)
-    store.toast(kept.length ? `⚠ ${attrs.length - kept.length} von ${attrs.length} zurückgezogen · ${kept.length} blieben: ${kept.slice(0, 3).join(' · ')}` : `✓ ${g.label?.de || g.key} und ${attrs.length} Attribute zurückgezogen`, kept.length ? 'error' : 'ok')
+    store.toast(kept.length ? t('⚠ {0} von {1} zurückgezogen · {2} blieben: {3}', [attrs.length - kept.length, attrs.length, kept.length, kept.slice(0, 3).join(' · ')]) : t('✓ {0} und {1} Attribute zurückgezogen', [g.label?.de || g.key, attrs.length]), kept.length ? 'error' : 'ok')
     if (!kept.some(k => k.startsWith(g.key + ':'))) { if (cur.value === g.key) cur.value = null; sel.value = new Set() }
   } finally { busy.value = false }
 }
 async function removeCur() {
   const p = removePath[section.value]; if (!p || !cur.value) return
-  if (!await dialog.confirm({ title: `${sec.value.one} ${cur.value} zurückziehen?`, ok: '✕ Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: t('{0} {1} zurückziehen?', [sec.value.one, cur.value]), ok: t('✕ Zurückziehen'), danger: true })) return
   await del(p(cur.value)); cur.value = null; sel.value = new Set()
 }
 
@@ -339,7 +340,7 @@ function add() {
   else if (s === 'statuses') put(`/api/model/statuses/${k}`, { key: k, label: {}, color: 'muted', icon: '●', order: ((model.value.statuses ?? []).reduce((m, s) => Math.max(m, s.order ?? 0), 0) + 10) })
   cur.value = k; sel.value = new Set([k])
 }
-const addPlaceholder = { relationTypes: 'neuer Relationstyp (key)', groups: 'neue Gruppe (key)', attributes: 'neuer key (a-z, 0-9, _)', lists: 'neue Werteliste (key)', views: 'neue Sicht (key)', units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app', statuses: 'key, z. B. review' }
+const addPlaceholder = { relationTypes: t('neuer Relationstyp (key)'), groups: t('neue Gruppe (key)'), attributes: t('neuer key (a-z, 0-9, _)'), lists: t('neue Werteliste (key)'), views: t('neue Sicht (key)'), units: 'z. B. oz', locales: 'code, z. B. fr', channels: 'key, z. B. app', statuses: 'key, z. B. review' }
 
 // Pflicht je Kanal × Sprache: required[channel] = ['*'] oder Sprachcodes; * schliesst die Einzelnen ein
 const reqHas = (ch, l) => { const r = curAttr.value?.required?.[ch] ?? []; return l === '*' ? r.includes('*') : r.includes('*') || r.includes(l) }
@@ -364,10 +365,10 @@ function listColumns(cols) { const l = curList.value; put(`/api/model/lists/${l.
 function addColumn() {
   const k = (newCol.value ?? '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'); newCol.value = null
   if (!k) return
-  if ((curList.value.columns ?? []).includes(k)) { store.toast(`Spalte ${k} gibt es schon`); return }
+  if ((curList.value.columns ?? []).includes(k)) { store.toast(t('Spalte {0} gibt es schon', [k])); return }
   listColumns([...(curList.value.columns ?? []), k])
 }
-const valueCols = computed(() => [{ key: 'value', label: 'Wert', type: 'ro', width: '120px' }, { key: 'label_de', label: 'de', width: '180px' }, { key: 'label_en', label: 'en', width: '180px' },
+const valueCols = computed(() => [{ key: 'value', label: t('Wert'), type: 'ro', width: '120px' }, { key: 'label_de', label: 'de', width: '180px' }, { key: 'label_en', label: 'en', width: '180px' },
   ...(curList.value?.columns ?? []).map(c => ({ key: 'x_' + c, label: c, width: '110px' })), { key: 'order', label: '#', width: '50px' }])
 const valueRows = computed(() => (curList.value?.values ?? []).map(v => { const r = { value: v.value, label_de: v.label?.de, label_en: v.label?.en, order: String(v.order ?? 0), _v: v }; for (const c of curList.value.columns ?? []) r['x_' + c] = v.extra?.[c]; return r }))
 function valueChange(r, col, v) {
@@ -449,10 +450,10 @@ const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.
 const setMasterChannel = () => put('/api/model/master-channel', { key: curChannel.value.key })
 // eindeutig (Taloan, 21.09.: „SKU ist ein Attribut wie jedes andere — alles über eindeutig“): Text/Zahl, einwertig; beliebig viele je Modell
 // Freigabesteuerung (Taloan, 22.09.): Bezeichnungen der Werte — leer am Attribut heisst „wie die Gruppe“
-const watchLabel = v => ({ '': 'wie die Gruppe', auto: 'automatisch (wenn Pflichtfeld in der Gruppe)', always: 'immer', never: 'nie' })[v ?? ''] ?? v
+const watchLabel = v => ({ '': t('wie die Gruppe'), auto: t('automatisch (wenn Pflichtfeld in der Gruppe)'), always: 'immer', never: 'nie' })[v ?? ''] ?? v
 const canBeUnique = a => a && ['text', 'integer', 'decimal'].includes(a.type) && !a.multiple
 // Status (Taloan, 22.09.): Name je eingerichteter Sprache, Symbol, Farbe, Reihenfolge — die ganze Definition je Eintrag
-const STATUS_COLORS = [['muted', 'grau'], ['pos', 'grün'], ['neg', 'rot'], ['warn', 'gelb'], ['accent', 'blau']]
+const STATUS_COLORS = [['muted', 'grau'], ['pos', t('grün')], ['neg', 'rot'], ['warn', 'gelb'], ['accent', 'blau']]
 const statusPut = patch => put(`/api/model/statuses/${curStatus.value.key}`, { key: curStatus.value.key, label: curStatus.value.label ?? {}, color: curStatus.value.color ?? null, icon: curStatus.value.icon ?? null, order: curStatus.value.order ?? 0, ...patch })
 const statusName = (l, v) => statusPut({ label: { ...(curStatus.value.label || {}), [l]: v } })
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v }, fallback: curChannel.value.fallback ?? null })
@@ -465,7 +466,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
   <div class="pane" style="width:190px;flex:none">
     <div class="toolbar"><h1>{{ $t("⊞ Modell") }}</h1></div>
     <div class="sections">
-      <template v-for="part in ['Struktur', 'Basics']" :key="part">
+      <template v-for="part in [$t('Struktur'), $t('Basics')]" :key="part">
         <div class="part">{{ part }}</div>
         <button v-for="s in sections.filter(x => x.part === part)" :key="s.key" class="section-btn" :class="{ active: section === s.key }" @click="switchTo(s.key)">
           <span class="icon">{{ s.icon }}</span> {{ s.label }}
@@ -505,7 +506,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
         <span class="l">{{ r.label }}</span>
         <span class="r"><span v-for="(x, i) in r.right.filter(Boolean)" :key="i">{{ x }}</span></span>
       </div>
-      <div v-if="!shown.length" class="empty">{{ filter ? 'Nichts zu „' + filter + '“' : 'Noch nichts — oben anlegen.' }}</div>
+      <div v-if="!shown.length" class="empty">{{ filter ? $t('Nichts zu „') + filter + '“' : $t('Noch nichts — oben anlegen.') }}</div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>{{ $t("Shift") }}</kbd>/<kbd>{{ $t("Strg") }}</kbd>{{ $t("+Klick mehrere · {0} gewählt", [count]) }}</div>
   </div>
@@ -537,7 +538,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr><td class="attr" :title="$t('ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.')">{{ $t("🔒 aktiv ab") }}</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
         </tbody></table>
         <div class="section">
-          <h2>{{ $t("⊞ Attribute: {0}", [groupAttrs.length]) + ' ' }}<span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="`Gruppe und ihre ${groupAttrs.length} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben`">{{ $t("✕ Gruppe mit {0} Attributen", [groupAttrs.length]) }}</button></h2>
+          <h2>{{ $t("⊞ Attribute: {0}", [groupAttrs.length]) + ' ' }}<span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="$t('Gruppe und ihre {0} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben', [groupAttrs.length])">{{ $t("✕ Gruppe mit {0} Attributen", [groupAttrs.length]) }}</button></h2>
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
               <a href="#" @click.prevent="goto('attributes', a.key)">{{ a.label?.de || a.key }}</a>
@@ -551,7 +552,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
             <input v-model="pickText" type="search" :placeholder="$t('Filter')" style="width:180px" />
             <select v-model="pickFrom" style="width:240px" :title="$t('Herkunft: ohne Gruppe oder aus welcher Gruppe')">
               <option value="">{{ $t("alle Herkünfte") }}</option>
-              <option v-for="[g, n] in pickSources" :key="g" :value="g">{{ g === '-' ? '— ohne Gruppe' : '▤ ' + groupLabel(g) + ' · ' + g }} ({{ n }})</option>
+              <option v-for="[g, n] in pickSources" :key="g" :value="g">{{ g === '-' ? $t('— ohne Gruppe') : '▤ ' + groupLabel(g) + ' · ' + g }} ({{ n }})</option>
             </select>
             <button @click="picked = new Set(pickRows.map(a => a.key))" :disabled="!pickRows.length">{{ $t("alle {0}", [pickRows.length]) }}</button>
             <button @click="picked = new Set()" :disabled="!picked.size">{{ $t("Keine") }}</button>
@@ -561,7 +562,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
             <label v-for="a in pickRows" :key="a.key" class="pick" :class="{ on: picked.has(a.key) }">
               <input type="checkbox" :checked="picked.has(a.key)" @change="togglePick(a.key)" />
               <span class="l">{{ a.label?.de || a.key }}</span><span class="mono muted k">{{ a.key }}</span>
-              <span class="muted r">{{ TYPE_SYM[a.type] ?? a.type }} {{ a.group ? '▤ ' + a.group : '— ohne Gruppe' }}</span>
+              <span class="muted r">{{ TYPE_SYM[a.type] ?? a.type }} {{ a.group ? '▤ ' + a.group : $t('— ohne Gruppe') }}</span>
             </label>
             <div v-if="!pickRows.length" class="empty">{{ $t("Nichts zu „{0}“", [pickText]) }}</div>
           </div>
@@ -595,13 +596,13 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" :title="$t('vermehrbar: mehrere Werte — in der Zelle als Liste mit + − und Umsortieren')">{{ $t("≣ vermehrbar") }}</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
           <tr class="sub"><td colspan="3" :title="$t('Pflicht: ohne Wert keine Freigabe in diesem Kanal')">{{ $t("⇶ Kanal · Pflicht für die Freigabe") }}</td></tr>
           <tr v-if="!['rows', 'formula', 'template'].includes(curAttr.type)"><td class="attr" :title="$t('der Wert ist je Kanal verschieden')">{{ $t("⇶ kanalabhängig") }}</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
-          <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für die Freigabe im Kanal ${c.key} — je Sprache, oder * für alle Sprachen; nichts = keine Pflicht`">{{ $t("● Pflicht {0}", [c.key]) }}</td>
+          <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="$t('Pflicht für die Freigabe im Kanal {0} — je Sprache, oder * für alle Sprachen; nichts = keine Pflicht', [c.key])">{{ $t("● Pflicht {0}", [c.key]) }}</td>
             <td colspan="2"><div class="chips" style="padding:2px 4px">
               <span class="view-chip" :class="{ on: reqHas(c.key, '*') }" :title="$t('in allen Sprachen Pflicht')" @click="reqToggle(c.key, '*')">{{ $t("* alle") }}</span>
-              <template v-if="curAttr.perLocale"><span v-for="l in model.locales" :key="l.code" class="view-chip" :class="{ on: reqHas(c.key, l.code) }" :title="`Pflicht in ${l.code}`" @click="reqToggle(c.key, l.code)">{{ l.code }}</span></template>
+              <template v-if="curAttr.perLocale"><span v-for="l in model.locales" :key="l.code" class="view-chip" :class="{ on: reqHas(c.key, l.code) }" :title="$t('Pflicht in {0}', [l.code])" @click="reqToggle(c.key, l.code)">{{ l.code }}</span></template>
             </div></td></tr>
           <tr class="sub"><td colspan="3">{{ $t("▣ Verwendbar in der Hierarchie") }}</td></tr>
-          <tr v-for="r in roles" :key="r"><td class="attr" :title="`Ausnahme: an ${roleLabel[r]} setzbar (sonst gilt die Regel der Gruppe)`">{{ roleLabel[r] }}</td><ToggleCell :value="b(!curAttr.levels || curAttr.levels.includes(r))" @save="v => attrSet('lv_' + r, v === 'true')" /></tr>
+          <tr v-for="r in roles" :key="r"><td class="attr" :title="$t('Ausnahme: an {0} setzbar (sonst gilt die Regel der Gruppe)', [roleLabel[r]])">{{ roleLabel[r] }}</td><ToggleCell :value="b(!curAttr.levels || curAttr.levels.includes(r))" @save="v => attrSet('lv_' + r, v === 'true')" /></tr>
         </tbody></table>
       </div>
     </template>
@@ -618,7 +619,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <!-- Spalten als Chips (Taloan): × nimmt eine weg (Werte bleiben im Journal), + Spalte fragt nach dem Key -->
           <tr><td class="attr" :title="$t('eigene Felder je Eintrag (z. B. ral, hex) — Werte einer entfernten Spalte bleiben im Journal')">{{ $t("Spalten") }}</td>
             <td class="cell"><div class="chips" style="min-height:24px">
-              <span v-for="c in curList.columns ?? []" :key="c" class="chip mono">{{ c }}<button @click="listColumns((curList.columns ?? []).filter(x => x !== c))" :title="`Spalte ${c} entfernen — die Werte bleiben im Journal`">×</button></span>
+              <span v-for="c in curList.columns ?? []" :key="c" class="chip mono">{{ c }}<button @click="listColumns((curList.columns ?? []).filter(x => x !== c))" :title="$t('Spalte {0} entfernen — die Werte bleiben im Journal', [c])">×</button></span>
               <input v-if="newCol !== null" v-model="newCol" class="cell-input" style="width:120px;height:22px" :placeholder="$t('key, z. B. hex')" autofocus @keydown.enter.prevent="addColumn" @keydown.esc="newCol = null" @blur="addColumn" />
               <button v-else class="x" @click="newCol = ''" :title="$t('Spalte hinzufügen')">{{ $t("+ Spalte") }}</button>
             </div></td></tr>
@@ -666,11 +667,11 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
           <tr><td class="attr" :title="$t('beidseitig: gleiche Lesart von beiden Enden, je Paar einmal · einseitig: eigene Rücklesart (hat Zubehör / ist Zubehör von)')">{{ $t("⇄ beidseitig") }}</td><ToggleCell :value="b(!!curRel.symmetric)" @save="v => relSet('symmetric', v === 'true')" /></tr>
           <tr v-if="!curRel.symmetric"><td class="attr" :title="$t('Bezeichnung vom Ziel aus gesehen („Zubehör von“)')">{{ $t("← umgekehrt de") }}</td><Cell :value="curRel.reverse?.de ?? null" @save="v => relSet('reverse_de', v)" /></tr>
           <tr v-if="!curRel.symmetric"><td class="attr">{{ $t("← umgekehrt en") }}</td><Cell :value="curRel.reverse?.en ?? null" @save="v => relSet('reverse_en', v)" /></tr>
-          <tr v-for="r in roles" :key="'f' + r"><td class="attr" :title="`darf von ${roleLabel[r]} ausgehen`">{{ $t("von {0}", [roleLabel[r]]) }}</td><ToggleCell :value="b(!curRel.from || curRel.from.includes(r))" @save="v => relSet('from_' + r, v === 'true')" /></tr>
-          <tr v-for="r in [...roles, 'media']" :key="'t' + r"><td class="attr" :title="`darf zu ${roleLabel[r] ?? '🖼 Medium'} führen`">{{ $t("zu {0}", [roleLabel[r] ?? '🖼 Medium']) }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
+          <tr v-for="r in roles" :key="'f' + r"><td class="attr" :title="$t('darf von {0} ausgehen', [roleLabel[r]])">{{ $t("von {0}", [roleLabel[r]]) }}</td><ToggleCell :value="b(!curRel.from || curRel.from.includes(r))" @save="v => relSet('from_' + r, v === 'true')" /></tr>
+          <tr v-for="r in [...roles, 'media']" :key="'t' + r"><td class="attr" :title="$t('darf zu {0} führen', [roleLabel[r] ?? $t('🖼 Medium')])">{{ $t("zu {0}", [roleLabel[r] ?? $t('🖼 Medium')]) }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
           <tr><td class="attr" :title="$t('Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte')">{{ $t("▤ Werte aus Gruppe") }}</td><SelectCell :value="curRel.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => relSet('group', v || null)" /></tr>
         </tbody></table>
-        <div class="section muted" style="font-size:12px" v-if="curRel.group">{{ $t("⊞ an der Relation: {0}", [model.attributes.filter(a => a.group === curRel.group).map(a => a.label?.de || a.key).join(', ') || '— die Gruppe hat noch keine Attribute']) }}</div>
+        <div class="section muted" style="font-size:12px" v-if="curRel.group">{{ $t("⊞ an der Relation: {0}", [model.attributes.filter(a => a.group === curRel.group).map(a => a.label?.de || a.key).join(', ') || $t('— die Gruppe hat noch keine Attribute')]) }}</div>
       </div>
     </template>
 

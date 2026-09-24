@@ -11,9 +11,9 @@ const when = t => t ? new Date(t).toLocaleString('de-DE', { day: '2-digit', mont
 <template>
   <div class="wf-locales">
     <div v-for="l in (wf.locales ?? [])" :key="l.locale" class="wf-loc row" :data-locale="l.locale">
-      <span class="mono lang" :title="l.master ? 'Mastersprache' : l.locale">{{ l.master ? '★ ' : '' }}{{ l.locale }}</span>
+      <span class="mono lang" :title="l.master ? $t('Mastersprache') : l.locale">{{ l.master ? '★ ' : '' }}{{ l.locale }}</span>
       <span class="chip" :style="`border-color:${color(l.color)};color:${color(l.color)}`"
-            :title="(l.own ? 'eigener Zustand' : 'gilt vom Knoten') + (l.since ? ` · seit ${when(l.since)} · ${l.actor}` : ' · Startzustand') + (l.note ? ` · ✎ ${l.note}` : '')">
+            :title="(l.own ? $t('eigener Zustand') : $t('gilt vom Knoten')) + (l.since ? ` · seit ${when(l.since)} · ${l.actor}` : ' ' + $t('· Startzustand')) + (l.note ? ` · ✎ ${l.note}` : '')">
         {{ l.stateLabel?.de || l.state }}<span v-if="!l.own" class="muted"> ↑</span>
       </span>
       <button v-for="t in (l.transitions ?? [])" :key="t.key" :class="{ blocked: t.blocked }" :disabled="!!t.blocked"
@@ -22,7 +22,7 @@ const when = t => t ? new Date(t).toLocaleString('de-DE', { day: '2-digit', mont
       <span v-if="!(l.transitions ?? []).length" class="muted" style="font-size:12px">—</span>
       <span class="grow" />
       <span v-if="l.note" class="muted note" :title="l.note">✎ {{ l.note }}</span>
-      <button v-if="l.own" class="x" :title="`eigenen Zustand für ${l.locale} aufheben — es gilt wieder der des Knotens`" @click="emit('clear', l.locale)">↑</button>
+      <button v-if="l.own" class="x" :title="$t('eigenen Zustand für {0} aufheben — es gilt wieder der des Knotens', [l.locale])" @click="emit('clear', l.locale)">↑</button>
     </div>
   </div>
 </template>

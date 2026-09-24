@@ -8,11 +8,12 @@ import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
 import { menu } from '../menu.js'
+import { t as t_ } from '../i18n.js'
 
 const list = ref([]); const cur = ref(null); const roles = ref([]); const dirty = ref(false)
-const COLORS = [['muted', 'grau'], ['warn', 'gelb'], ['neg', 'rot'], ['accent', 'blau'], ['pos', 'grün']]
-const ROLES = [['group', '▣ Gruppe'], ['product', '▦ Produkt'], ['variant', '◆ Variante']]
-const EFFECTS = computed(() => { const m = store.model; const out = []; out.push(['release:*', 'Freigabe alle Kanäle'], ['revoke:*', 'Freigabe alle Kanäle zurück']); for (const c of m?.channels ?? []) { out.push([`release:${c.key}`, `Freigabe ${c.key}`], [`revoke:${c.key}`, `Freigabe ${c.key} zurück`]) } for (const s of m?.statuses ?? []) out.push([`status:${s.key}`, `Status ${store.statusLabel(s.key)}`]); out.push(['translate:*', '📦 Übersetzungspaket schnüren (alle Sprachen)']); for (const l of m?.locales ?? []) if (l.code !== m?.masterLocale) out.push([`translate:${l.code}`, `📦 Übersetzungspaket ${l.code}`]); return out })
+const COLORS = [['muted', 'grau'], ['warn', 'gelb'], ['neg', 'rot'], ['accent', 'blau'], ['pos', t_('grün')]]
+const ROLES = [['group', t_('▣ Gruppe')], ['product', t_('▦ Produkt')], ['variant', t_('◆ Variante')]]
+const EFFECTS = computed(() => { const m = store.model; const out = []; out.push(['release:*', t_('Freigabe alle Kanäle')], ['revoke:*', t_('Freigabe alle Kanäle zurück')]); for (const c of m?.channels ?? []) { out.push([`release:${c.key}`, t_('Freigabe {0}', [c.key])], [`revoke:${c.key}`, t_('Freigabe {0} zurück', [c.key])]) } for (const s of m?.statuses ?? []) out.push([`status:${s.key}`, t_('Status {0}', [store.statusLabel(s.key)])]); out.push(['translate:*', t_('📦 Übersetzungspaket schnüren (alle Sprachen)')]); for (const l of m?.locales ?? []) if (l.code !== m?.masterLocale) out.push([`translate:${l.code}`, t_('📦 Übersetzungspaket {0}', [l.code])]); return out })
 async function load() { try { list.value = await api.get('/api/workflows'); if (cur.value) cur.value = clone(list.value.find(w => w.key === cur.value.key) ?? list.value[0] ?? null); else cur.value = clone(list.value[0] ?? null) } catch (e) { store.toast(e.message) } try { roles.value = (await api.get('/api/auth/roles')).map(r => r.key) } catch { roles.value = ['admin', 'editor'] } }
 const clone = w => w ? JSON.parse(JSON.stringify({ key: w.key, label: w.label ?? {}, start: w.start, roles: w.roles ?? [], families: w.families ?? [], perLocale: !!w.perLocale, states: w.states.map(s => ({ key: s.key, label: s.label ?? {}, color: s.color ?? 'muted', final: !!s.final, x: s.x ?? null, y: s.y ?? null, count: s.count ?? 0 })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label ?? {}, from: t.from, to: t.to, roles: t.roles ?? [], noteRequired: !!t.noteRequired, effects: t.effects ?? [], escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles ?? [], fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null, route: null })) })) : null
 function pick(w) { cur.value = clone(w); dirty.value = false }
@@ -24,22 +25,22 @@ async function save() {
     const sent = w; dirty.value = false; await load()
     // Kam alles zurück, was gesendet wurde? Ein Server mit altem Bau-Stand kennt Lage, Andockpunkte, Beschriftungslage, Eskalation nicht
     const got = cur.value; const lost = sent.states.some((s, i) => s.x != null && got?.states[i]?.x == null) || sent.transitions.some((t, i) => (t.fromPort && !got?.transitions[i]?.fromPort) || (t.labelX != null && got?.transitions[i]?.labelX == null) || (t.escalateAfterDays != null && got?.transitions[i]?.escalateAfterDays == null))
-    if (lost) store.toast('Gespeichert — aber der Server läuft mit einem alten Stand und hat Lage/Andockpunkte/Eskalation verworfen. Server neu starten, dann noch einmal speichern.')
+    if (lost) store.toast(t_('Gespeichert — aber der Server läuft mit einem alten Stand und hat Lage/Andockpunkte/Eskalation verworfen. Server neu starten, dann noch einmal speichern.'))
     else store.toast(`Workflow „${w.label?.de || w.key}“ gespeichert`, 'ok')
   } catch (e) { store.toast(e.message) }
 }
 async function add() {
-  const key = await dialog.prompt({ title: 'Workflow anlegen', text: 'Key (a-z, 0-9, _)', placeholder: 'z. B. shop', ok: '+ Anlegen' }); if (!key) return
-  cur.value = { key: key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'), label: { de: key, en: key }, start: 'draft', roles: [], families: [], states: [{ key: 'draft', label: { de: 'Entwurf', en: 'Draft' }, color: 'muted', final: false }, { key: 'done', label: { de: 'Fertig', en: 'Done' }, color: 'pos', final: true }], transitions: [{ key: 'finish', label: { de: 'fertig', en: 'finish' }, from: 'draft', to: 'done', roles: [], noteRequired: false, effects: [] }] }
+  const key = await dialog.prompt({ title: t_('Workflow anlegen'), text: 'Key (a-z, 0-9, _)', placeholder: 'z. B. shop', ok: t_('+ Anlegen') }); if (!key) return
+  cur.value = { key: key.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'), label: { de: key, en: key }, start: 'draft', roles: [], families: [], states: [{ key: 'draft', label: { de: t_('Entwurf'), en: t_('Draft') }, color: 'muted', final: false }, { key: 'done', label: { de: t_('Fertig'), en: t_('Done') }, color: 'pos', final: true }], transitions: [{ key: 'finish', label: { de: 'fertig', en: 'finish' }, from: 'draft', to: 'done', roles: [], noteRequired: false, effects: [] }] }
   dirty.value = true
 }
 async function remove() {
   const w = cur.value; if (!w) return
-  if (!await dialog.confirm({ title: `Workflow „${w.label?.de || w.key}“ entfernen?`, text: 'Zustände der Knoten darin verfallen (Verlauf bleibt im Journal).', ok: '🗑 Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: `Workflow „${w.label?.de || w.key}“ entfernen?`, text: t_('Zustände der Knoten darin verfallen (Verlauf bleibt im Journal).'), ok: t_('🗑 Entfernen'), danger: true })) return
   try { await api.del(`/api/workflows/${encodeURIComponent(w.key)}`); cur.value = null; await load() } catch (e) { store.toast(e.message) }
 }
 function addState() { const w = cur.value; const k = 'state' + (w.states.length + 1); w.states.push({ key: k, label: { de: k, en: k }, color: 'muted', final: false }); touch() }
-function delState(i) { const w = cur.value; const k = w.states[i].key; if (w.transitions.some(t => t.from === k || t.to === k)) { store.toast('erst die Übergänge davon/dahin entfernen'); return } w.states.splice(i, 1); touch() }
+function delState(i) { const w = cur.value; const k = w.states[i].key; if (w.transitions.some(t => t.from === k || t.to === k)) { store.toast(t_('erst die Übergänge davon/dahin entfernen')); return } w.states.splice(i, 1); touch() }
 function addTransition() { const w = cur.value; const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[0]?.key ?? '', to: w.states[1]?.key ?? w.states[0]?.key ?? '', roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); touch() }
 const selState = ref(null), selTrans = ref(null)   // markierte Zeile (Grafik ↔ Tabelle)
 const W = 150, H = 46, GRID = 20
@@ -111,21 +112,21 @@ function stateUp(j, e) {
 function arrowMenu(e, n) {
   selTrans.value = n; selState.value = null; const t = cur.value.transitions[n]
   menu.open(e, [
-    { label: 'Beschriftung ändern …', icon: '✎', action: () => editLabel(n) },
-    { label: 'Beschriftung auf die Linie setzen', icon: '↺', disabled: t.labelX == null, action: () => { t.labelX = null; t.labelY = null; touch() } },
-    { label: 'Andockpunkte automatisch wählen', icon: '↺', disabled: !t.fromPort && !t.toPort, action: () => { t.fromPort = null; t.toPort = null; touch() } },
+    { label: t_('Beschriftung ändern …'), icon: '✎', action: () => editLabel(n) },
+    { label: t_('Beschriftung auf die Linie setzen'), icon: '↺', disabled: t.labelX == null, action: () => { t.labelX = null; t.labelY = null; touch() } },
+    { label: t_('Andockpunkte automatisch wählen'), icon: '↺', disabled: !t.fromPort && !t.toPort, action: () => { t.fromPort = null; t.toPort = null; touch() } },
     { sep: true },
-    { label: 'Übergang entfernen', icon: '✕', danger: true, action: () => { cur.value.transitions.splice(n, 1); selTrans.value = null; touch() } },
+    { label: t_('Übergang entfernen'), icon: '✕', danger: true, action: () => { cur.value.transitions.splice(n, 1); selTrans.value = null; touch() } },
   ])
 }
 function stateMenu(e, i) {
   selState.value = i; selTrans.value = null; const s = cur.value.states[i]
   menu.open(e, [
-    { label: 'Umbenennen …', icon: '✎', action: () => editState(i) },
-    { label: 'Als Start setzen', icon: '●', disabled: cur.value.start === s.key, action: () => { cur.value.start = s.key; touch() } },
-    { label: s.final ? 'Ende aufheben' : 'Als Ende setzen', icon: '◎', action: () => { s.final = !s.final; touch() } },
+    { label: t_('Umbenennen …'), icon: '✎', action: () => editState(i) },
+    { label: t_('Als Start setzen'), icon: '●', disabled: cur.value.start === s.key, action: () => { cur.value.start = s.key; touch() } },
+    { label: s.final ? t_('Ende aufheben') : t_('Als Ende setzen'), icon: '◎', action: () => { s.final = !s.final; touch() } },
     { sep: true },
-    { label: 'Zustand entfernen', icon: '✕', danger: true, hint: 'nur ohne Übergänge davon/dahin', action: () => delState(i) },
+    { label: t_('Zustand entfernen'), icon: '✕', danger: true, hint: t_('nur ohne Übergänge davon/dahin'), action: () => delState(i) },
   ])
 }
 function canvasUp() { const d = drag.value; if (d && (d.kind === 'link' || d.kind === 'reattach') && d.snapJ != null) { portUp(d.snapJ, d.snapPort); return } drag.value = null }
@@ -160,8 +161,8 @@ function forceLayout() {
   touch()
 }
 function labelDown(n, e) { selTrans.value = n; selState.value = null; const a = sketch.value.arrows[n]; const p = svgPoint(e); drag.value = { kind: 'label', n, dx: p.x - a.lx, dy: p.y - a.ly } }
-async function editLabel(n) { const t = cur.value.transitions[n]; const v = await dialog.prompt({ title: 'Beschriftung ändern', value: t.label?.de ?? '', ok: '✎ Übernehmen' }); if (v == null) return; t.label = { ...(t.label ?? {}), de: v.trim() }; touch() }
-async function editState(i) { const s = cur.value.states[i]; const v = await dialog.prompt({ title: 'Zustand umbenennen', value: s.label?.de ?? '', ok: '✎ Übernehmen' }); if (v == null) return; s.label = { ...(s.label ?? {}), de: v.trim() }; touch() }
+async function editLabel(n) { const t = cur.value.transitions[n]; const v = await dialog.prompt({ title: t_('Beschriftung ändern'), value: t.label?.de ?? '', ok: t_('✎ Übernehmen') }); if (v == null) return; t.label = { ...(t.label ?? {}), de: v.trim() }; touch() }
+async function editState(i) { const s = cur.value.states[i]; const v = await dialog.prompt({ title: t_('Zustand umbenennen'), value: s.label?.de ?? '', ok: t_('✎ Übernehmen') }); if (v == null) return; s.label = { ...(s.label ?? {}), de: v.trim() }; touch() }
 function addStateAt() { const w = cur.value; const k = 'state' + (w.states.length + 1); const last = w.states.length ? posOf(w.states[w.states.length - 1], w.states.length - 1) : { x: -W - 40, y: 70 }; w.states.push({ key: k, label: { de: k, en: k }, color: 'muted', final: false, x: last.x + W + 40, y: last.y, count: 0 }); selState.value = w.states.length - 1; touch() }
 function delSelected() {
   if (selTrans.value != null) { cur.value.transitions.splice(selTrans.value, 1); selTrans.value = null; touch(); return }
@@ -250,7 +251,7 @@ onMounted(load)
         <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : hoverEdge === i ? 'cursor:crosshair' : 'cursor:grab'" @mousemove="stateHover(i, $event)" @mouseleave="hoverEdge === i && (hoverEdge = null)" @mousedown.prevent.stop="stateDown(i, $event)" @contextmenu.prevent.stop="stateMenu($event, i)" @mouseup.stop="stateUp(i, $event)" @dblclick="editState(i)">
           <rect :x="sketch.pos[i].x" :y="sketch.pos[i].y" :width="W" :height="H" rx="6" :fill="selState === i ? 'var(--accent-soft)' : 'var(--pane)'" :stroke="hoverEdge === i ? 'var(--accent)' : color(s.color)" :stroke-width="hoverEdge === i ? 2.5 : s.key === cur.start ? 2.5 : 1.5" />
           <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 20" text-anchor="middle" fill="var(--text)" font-weight="600">{{ s.label?.de || s.key }}</text>
-          <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 36" text-anchor="middle" fill="var(--muted)">{{ $t("{0} Knoten{1}{2}", [s.count ?? 0, s.final ? ' · Ende' : '', s.key === cur.start ? ' · Start' : '']) }}</text>
+          <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 36" text-anchor="middle" fill="var(--muted)">{{ $t("{0} Knoten{1}{2}", [s.count ?? 0, s.final ? ' ' + $t('· Ende') : '', s.key === cur.start ? ' ' + $t('· Start') : '']) }}</text>
           <circle v-if="s.key === cur.start" :cx="sketch.pos[i].x - 12" :cy="sketch.pos[i].y + H / 2" r="5" fill="var(--text)"><title>{{ $t("Start") }}</title></circle>
           <g v-if="s.final"><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="6" fill="none" stroke="var(--text)" stroke-width="1.5" /><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="3" fill="var(--text)" /></g>
           <circle v-if="drag?.snapJ === i" :cx="drag.tx" :cy="drag.ty" r="5" fill="none" stroke="var(--accent)" stroke-width="2" />

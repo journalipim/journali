@@ -16,6 +16,6 @@ export function entfalten(tpl) {
 /// Alle Schlüssel einer Quelldatei (.vue oder .js): $t('…'), $t("…"), t('…') — was übersetzt wird
 export function schluessel(src) {
   const out = []
-  for (const m of src.matchAll(/(?:\$t|\bt)\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) out.push(unquote(m[1], m[2]))
+  for (const m of src.matchAll(/(?:\$t|\bt_?)\(\s*(['"])((?:\\.|(?!\1).)*)\1/g)) out.push(unquote(m[1], m[2]))
   return out
 }

@@ -7,6 +7,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import MediaThumb from './MediaThumb.vue'
+import { t as t_ } from '../i18n.js'
 
 const props = defineProps({ types: { type: Array, default: () => [] }, exclude: { type: Array, default: () => [] } })
 const emit = defineEmits(['pick', 'close'])
@@ -21,7 +22,7 @@ const byId = computed(() => new Map(folders.value.folders.map(f => [f.id, f])))
 const kids = id => folders.value.folders.filter(f => (f.parent ?? null) === id).sort((a, b) => a.name.localeCompare(b.name, 'de'))
 const rows = computed(() => { const out = []; const rec = (parent, depth) => { for (const f of kids(parent)) { out.push({ f, depth, kids: kids(f.id).length }); if (open.value.has(f.id)) rec(f.id, depth + 1) } }; rec(null, 0); return out })
 const pathOf = id => { const out = []; for (let f = byId.value.get(id); f; f = f.parent ? byId.value.get(f.parent) : null) { if (out.includes(f)) break; out.unshift(f) } return out }
-const title = computed(() => folder.value === 'all' ? 'Alle Medien' : folder.value === '-' ? 'ohne Ordner' : pathOf(folder.value).map(f => f.name).join(' › '))
+const title = computed(() => folder.value === 'all' ? t_('Alle Medien') : folder.value === '-' ? t_('ohne Ordner') : pathOf(folder.value).map(f => f.name).join(' › '))
 const excluded = computed(() => new Set(props.exclude))
 const typeOf = m => type.value !== 'auto' ? type.value : (m.isImage && props.types.some(t => t.key === 'image') ? 'image' : (props.types.find(t => t.key === 'document') ?? props.types[0])?.key)
 function toggle(id) { open.value.has(id) ? open.value.delete(id) : open.value.add(id); open.value = new Set(open.value) }
@@ -67,7 +68,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
             <button class="x" @click="all" :title="$t('Alle sichtbaren wählen')">{{ $t("Alle") }}</button><button class="x" @click="sel = new Set()" :title="$t('Auswahl leeren')">{{ $t("Keine") }}</button>
           </div>
           <div class="scroll tiles">
-            <div v-for="m in items" :key="m.id" class="tile" :class="{ sel: sel.has(m.id), dim: excluded.has(m.id) }" @click="click(m)" :title="excluded.has(m.id) ? `${m.name} — hängt schon hier` : `${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}`">
+            <div v-for="m in items" :key="m.id" class="tile" :class="{ sel: sel.has(m.id), dim: excluded.has(m.id) }" @click="click(m)" :title="excluded.has(m.id) ? $t('{0} — hängt schon hier', [m.name]) : `${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}`">
               <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" /><div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
               <div class="name">{{ m.name }}</div>
             </div>
@@ -77,7 +78,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
       </div>
       <div class="toolbar mp-foot">
         <span class="muted">{{ $t("Relation") }}</span>
-        <select v-model="type" :title="'Relationstyp der Zuordnung — automatisch: Bild → image, sonst document'"><option value="auto">{{ $t("automatisch") }}</option><option v-for="t in types" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
+        <select v-model="type" :title="$t('Relationstyp der Zuordnung — automatisch: Bild → image, sonst document')"><option value="auto">{{ $t("automatisch") }}</option><option v-for="t in types" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
         <span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span>
         <button @click="emit('close')">{{ $t("Abbrechen") }}</button>
         <button class="primary" :disabled="!sel.size" @click="done">{{ $t("✓ {0} zuordnen", [sel.size || '']) }}</button>

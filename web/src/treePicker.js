@@ -3,6 +3,7 @@
 // Klick wählt, ▸/▾ klappt, Suchfeld filtert und klappt Treffer auf. Reines DOM, damit es Ansichten (Vue) und Plugins
 // gleich benutzen können (ctx.treePicker).
 import { tree, icon } from './tree.js'
+import { t } from './i18n.js'
 
 /// mount(container, { value, roles: ['group','product'], onPick(row), height }) → { set(id), refresh() }
 /// multi: true (Taloan: „mit selektierbaren Knoten“) — Haken je Knoten, ein Haken gilt für den Teilbaum; onChange(ids)
@@ -20,7 +21,7 @@ export function treePicker(container, { value = null, values = [], roles = ['gro
   function reveal() { if (cur) for (const a of tree.ancestors(cur)) open.add(a.id); for (const r of tree.rows) if (!r.parent) open.add(r.id) }
   function draw() {
     box.innerHTML = ''
-    if (allowRoot) { const row = document.createElement('div'); row.className = 'pick' + (cur === null ? ' on' : ''); row.textContent = '⌂ Wurzel (oberste Ebene)'; row.addEventListener('click', () => { cur = null; draw(); onPick(null) }); box.append(row) }
+    if (allowRoot) { const row = document.createElement('div'); row.className = 'pick' + (cur === null ? ' on' : ''); row.textContent = t('⌂ Wurzel (oberste Ebene)'); row.addEventListener('click', () => { cur = null; draw(); onPick(null) }); box.append(row) }
     const rec = (id, depth) => {
       for (const r of tree.kids(id)) {
         if (r.role === 'variant' && !roles.includes('variant')) continue
@@ -28,11 +29,11 @@ export function treePicker(container, { value = null, values = [], roles = ['gro
         const kids = tree.kids(r.id).filter(k => k.role !== 'variant' || roles.includes('variant')).length
         const ok = roles.includes(r.role)
         const row = document.createElement('div'); row.className = 'pick' + ((multi ? picked.has(r.id) : cur === r.id) ? ' on' : '') + (ok ? '' : ' dim')
-        row.style.paddingLeft = (8 + depth * 16) + 'px'; row.title = ok ? r.id : 'kein Ziel'
+        row.style.paddingLeft = (8 + depth * 16) + 'px'; row.title = ok ? r.id : t('kein Ziel')
         const caret = document.createElement('span'); caret.className = 'muted caret'; caret.textContent = kids ? (open.has(r.id) ? '▾' : '▸') : ''
         caret.addEventListener('click', e => { e.stopPropagation(); open.has(r.id) ? open.delete(r.id) : open.add(r.id); draw() })
         if (multi && ok) {
-          const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = picked.has(r.id) || above(r.id); cb.disabled = above(r.id); cb.title = above(r.id) ? 'im gewählten Teilbaum' : 'Teilbaum wählen'
+          const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = picked.has(r.id) || above(r.id); cb.disabled = above(r.id); cb.title = above(r.id) ? t('im gewählten Teilbaum') : t('Teilbaum wählen')
           cb.addEventListener('click', e => { e.stopPropagation(); picked.has(r.id) ? picked.delete(r.id) : picked.add(r.id); draw(); onChange([...picked]) })
           row.append(caret, cb)
         } else row.append(caret)

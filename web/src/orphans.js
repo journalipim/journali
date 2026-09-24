@@ -5,6 +5,7 @@
 // bietet an, die Gruppen am Wurzelknoten des Teilbaums anzuhängen — dann gelten sie ab dort nach unten.
 import { api } from './api.js'
 import { dialog } from './dialog.js'
+import { t as t_ } from './i18n.js'
 
 // Gruppen, die am Ziel gelten (Knoten + Pfad); ohne Ziel (Wurzel) keine
 export async function groupsAt(targetId) {
@@ -43,9 +44,9 @@ export async function confirmMove({ title, warn, text = '', missing, rootLabel, 
   const n = missingCount(missing)
   const res = await dialog.confirm({
     title, ok, text,
-    warn: missing.length ? `${warn ? warn + ' · ' : ''}${missing.length} Attributgruppen gelten am Ziel nicht (${n} Attribute mit Werten wären verwaist)` : warn,
+    warn: missing.length ? t_('{0}{1} Attributgruppen gelten am Ziel nicht ({2} Attribute mit Werten wären verwaist)', [warn ? warn + ' · ' : '', missing.length, n]) : warn,
     list: missing.length ? missingLines(missing) : [],
-    option: missing.length ? { label: `Fehlende Gruppen an ${rootLabel} anhängen (gelten dann ab dort nach unten)`, checked: true } : null,
+    option: missing.length ? { label: t_('Fehlende Gruppen an {0} anhängen (gelten dann ab dort nach unten)', [rootLabel]), checked: true } : null,
   })
   return res ? { attach: !!(missing.length && dialog.option?.checked) } : null
 }

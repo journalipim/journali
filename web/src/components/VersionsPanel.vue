@@ -6,6 +6,7 @@ import { ref, computed, watch } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
+import { t } from '../i18n.js'
 
 const props = defineProps({ id: String, role: String })
 const emit = defineEmits(['changed'])
@@ -23,29 +24,29 @@ watch(() => props.id, () => { diffOf.value = null; plan.value = null; form.value
 
 function openForm() { form.value = { channel: '', locale: '', note: '', retentionYears: 10 } }
 async function create() {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
   busy.value = 'erzeuge …'
   try {
     const v = await api.post(`/api/nodes/${encodeURIComponent(props.id)}/versions`, { channel: form.value.channel || null, locale: form.value.locale || null, note: form.value.note || null, retentionYears: Number(form.value.retentionYears) || 10 })
     form.value = null; await load(); emit('changed')
-    store.toast(`Version ${v.nr} — Belege werden erzeugt`, 'ok')
+    store.toast(t('Version {0} — Belege werden erzeugt', [v.nr]), 'ok')
     // Erzeuger laufen im Server nach; ein paar Mal nachsehen
     for (let i = 0; i < 6; i++) { await new Promise(r => setTimeout(r, 2000)); await load(); if (versions.value.find(x => x.nr === v.nr)?.documents.length) break }
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 async function render(v) {
-  busy.value = 'Belege …'
+  busy.value = t('Belege …')
   try { await api.post(`/api/nodes/${encodeURIComponent(props.id)}/versions/${v.nr}/render`, {}); for (let i = 0; i < 6; i++) { await new Promise(r => setTimeout(r, 2000)); await load() } }
   catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 async function withdraw(v) {
-  const reason = await dialog.prompt({ title: `Version ${v.nr} zurückziehen?`, warn: 'Gilt danach nicht mehr, bleibt sichtbar', placeholder: 'Grund', ok: 'Zurückziehen', danger: true })
+  const reason = await dialog.prompt({ title: t('Version {0} zurückziehen?', [v.nr]), warn: t('Gilt danach nicht mehr, bleibt sichtbar'), placeholder: t('Grund'), ok: t('Zurückziehen'), danger: true })
   if (reason === null) return
   try { await api.post(`/api/nodes/${encodeURIComponent(props.id)}/versions/${v.nr}/withdraw`, { reason }); await load(); emit('changed') } catch (e) { store.toast(e.message) }
 }
 async function showDiff(v) {
   if (diffOf.value?.nr === v.nr) { diffOf.value = null; return }
-  busy.value = 'lese Stand …'
+  busy.value = t('lese Stand …')
   try { const d = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/versions/${v.nr}/diff`); diffOf.value = { nr: v.nr, ...d } } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
 async function planRollback(v) {
@@ -54,20 +55,20 @@ async function planRollback(v) {
 }
 async function rollback() {
   const p = plan.value; if (!p) return
-  if (!await dialog.confirm({ title: `Auf Version ${p.nr} zurückrollen?`, warn: `${p.plan.length} Werte werden gesetzt`, text: p.skipped.length ? `${p.skipped.length} bleiben aussen vor (unbekannt, gilt hier nicht, Zeilen)` : 'Als Stapel (rückgängig machbar)', ok: 'Zurückrollen', danger: true })) return
+  if (!await dialog.confirm({ title: t('Auf Version {0} zurückrollen?', [p.nr]), warn: t('{0} Werte werden gesetzt', [p.plan.length]), text: p.skipped.length ? t('{0} bleiben aussen vor (unbekannt, gilt hier nicht, Zeilen)', [p.skipped.length]) : t('Als Stapel (rückgängig machbar)'), ok: t('Zurückrollen'), danger: true })) return
   busy.value = 'schreibe …'
   try { const r = await api.post(`/api/nodes/${encodeURIComponent(props.id)}/versions/${p.nr}/rollback`, { dryRun: false }); plan.value = null; diffOf.value = null; store.toast(`↶ ${r.done} gesetzt${r.errors.length ? ` · ${r.errors.length} Fehler` : ''}`, r.errors.length ? 'error' : 'ok'); emit('changed') }
   catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
-const axisText = r => [r.locale, r.channel, r.row ? 'Zeile ' + r.row : null].filter(Boolean).join(' · ')
-const KIND = { datasheet: '▤ Datenblatt', sds: '⚠ Sicherheitsdatenblatt' }
+const axisText = r => [r.locale, r.channel, r.row ? t('Zeile') + ' ' + r.row : null].filter(Boolean).join(' · ')
+const KIND = { datasheet: t('▤ Datenblatt'), sds: t('⚠ Sicherheitsdatenblatt') }
 </script>
 
 <template>
   <div class="vers">
     <div class="row" style="gap:6px;align-items:center;margin-bottom:4px">
       <button class="primary" @click="openForm" :disabled="!!form" :title="$t('Stand jetzt einfrieren — Belege erzeugen die Erzeuger-Plugins')">{{ $t("＋ Version") }}</button>
-      <span class="muted" style="font-size:12px">{{ busy || (versions.length ? `${versions.length} · Aufbewahrung ab Erzeugung` : 'noch keine — eine Version ist ein Zeiger auf den Journalstand plus die Belege, die nach draussen gingen') }}</span>
+      <span class="muted" style="font-size:12px">{{ busy || (versions.length ? $t('{0} · Aufbewahrung ab Erzeugung', [versions.length]) : $t('noch keine — eine Version ist ein Zeiger auf den Journalstand plus die Belege, die nach draussen gingen')) }}</span>
     </div>
     <div v-if="form" class="picker" style="padding:8px;margin-bottom:6px">
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
@@ -83,7 +84,7 @@ const KIND = { datasheet: '▤ Datenblatt', sds: '⚠ Sicherheitsdatenblatt' }
       <tbody>
         <template v-for="v in [...versions].reverse()" :key="v.nr">
           <tr :class="{ off: v.withdrawn }">
-            <td class="mono" :title="v.withdrawn ? 'zurückgezogen: ' + (v.withdrawnReason || '') : 'gilt · aufbewahren bis ' + when(v.retainUntil)">{{ v.withdrawn ? '⊘' : '✓' }} {{ v.nr }}</td>
+            <td class="mono" :title="v.withdrawn ? $t('zurückgezogen:') + ' ' + (v.withdrawnReason || '') : $t('gilt · aufbewahren bis') + ' ' + when(v.retainUntil)">{{ v.withdrawn ? '⊘' : '✓' }} {{ v.nr }}</td>
             <td class="muted" style="font-size:12px">{{ when(v.at) }} 👤 {{ v.actor }}</td>
             <td class="mono muted">{{ v.channel || '*' }} · {{ v.locale || '*' }}</td>
             <td>
@@ -91,7 +92,7 @@ const KIND = { datasheet: '▤ Datenblatt', sds: '⚠ Sicherheitsdatenblatt' }
               <span v-if="!v.documents.length" class="muted" style="font-size:12px">{{ $t("noch kein Beleg") + ' ' }}<button class="x" @click="render(v)" :title="$t('Erzeuger nochmal laufen lassen')">↻</button></span>
               <span v-if="v.note" class="muted" style="font-size:12px"> · {{ v.note }}</span>
             </td>
-            <td class="mono muted" :title="'Journal bis #' + v.journalNumber">#{{ v.journalNumber }}</td>
+            <td class="mono muted" :title="$t('Journal bis #') + v.journalNumber">#{{ v.journalNumber }}</td>
             <td class="row" style="gap:4px">
               <button class="x" @click="showDiff(v)" :class="{ primary: diffOf?.nr === v.nr }" :title="$t('eigene Werte damals gegen heute')">{{ $t("≠ Stand") }}</button>
               <button class="x" @click="planRollback(v)" :title="$t('Werte von damals wieder setzen — erst der Plan')">↶</button>
@@ -102,7 +103,7 @@ const KIND = { datasheet: '▤ Datenblatt', sds: '⚠ Sicherheitsdatenblatt' }
             <div class="muted" style="font-size:12px;margin-bottom:4px">{{ $t("Stand bei Version {0} (#{1}) gegen heute · {2} anders · geerbte Werte zählen nicht — nur dieser Knoten", [v.nr, v.journalNumber, diffOf.changed]) }}</div>
             <table class="grid" style="width:100%"><thead><tr><th>{{ $t("Attribut") }}</th><th style="width:110px">{{ $t("Achse") }}</th><th>{{ $t("damals") }}</th><th>{{ $t("heute") }}</th></tr></thead>
               <tbody><tr v-for="r in diffOf.rows.filter(x => !x.same)" :key="r.kind + r.attribute + r.locale + r.channel + r.row" :title="r.note ?? ''">
-                <td>{{ r.kind === 'value' ? label(r.attribute) : r.kind === 'name' ? 'Name' : r.kind === 'status' ? 'Status' : 'Anzeigename' }}<span v-if="r.note" class="neg"> ⚠</span></td>
+                <td>{{ r.kind === 'value' ? label(r.attribute) : r.kind === 'name' ? $t('Name') : r.kind === 'status' ? $t('Status') : $t('Anzeigename') }}<span v-if="r.note" class="neg"> ⚠</span></td>
                 <td class="mono muted">{{ axisText(r) }}</td><td class="pos">{{ r.then ?? '—' }}</td><td class="muted">{{ r.now ?? '—' }}</td></tr>
                 <tr v-if="!diffOf.rows.some(x => !x.same)"><td colspan="4" class="muted">{{ $t("identisch") }}</td></tr></tbody></table>
           </td></tr>

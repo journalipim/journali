@@ -36,11 +36,11 @@ onUnmounted(() => { document.removeEventListener('mousedown', onDoc); document.r
     <button :class="{ primary: open }" @click="openPop" :title="$t('Spalten: Sprache × Kanal — ankreuzen, was als Spalte steht')"><span class="sum">⊞ {{ summary }}</span></button>
     <div v-if="open" class="pop" :style="`top:${at.top}px;left:${at.left}px`">
       <table>
-        <thead><tr><th></th><th v-for="c in cols" :key="c ?? '*'" class="hd" :class="{ master: c && c === masterChannel }" :title="c ? (c === masterChannel ? 'Masterkanal — ganze Spalte an/aus' : `Kanal ${c} — ganze Spalte an/aus`) : 'ohne Kanal — ganze Spalte an/aus'" @click="toggleCol(c)">{{ c ?? '*' }}</th></tr></thead>
+        <thead><tr><th></th><th v-for="c in cols" :key="c ?? '*'" class="hd" :class="{ master: c && c === masterChannel }" :title="c ? (c === masterChannel ? $t('Masterkanal — ganze Spalte an/aus') : $t('Kanal {0} — ganze Spalte an/aus', [c])) : $t('ohne Kanal — ganze Spalte an/aus')" @click="toggleCol(c)">{{ c ?? '*' }}</th></tr></thead>
         <tbody>
           <tr v-for="l in rows" :key="l ?? '*'">
-            <th class="hd" :class="{ master: l && l === masterLocale }" :title="l ? (l === masterLocale ? 'Mastersprache — ganze Zeile an/aus' : `Sprache ${l} — ganze Zeile an/aus`) : 'ohne Sprache — ganze Zeile an/aus'" @click="toggleRow(l)">{{ l ?? '*' }}</th>
-            <td v-for="c in cols" :key="c ?? '*'" class="cell" :class="{ on: has(l, c), fixed: l == null && c == null }" :title="l == null && c == null ? 'der eine Wert — immer da' : `${l ?? '*'}/${c ?? '*'}`" @click="toggle(l, c)">{{ has(l, c) ? '✓' : '' }}</td>
+            <th class="hd" :class="{ master: l && l === masterLocale }" :title="l ? (l === masterLocale ? $t('Mastersprache — ganze Zeile an/aus') : $t('Sprache {0} — ganze Zeile an/aus', [l])) : $t('ohne Sprache — ganze Zeile an/aus')" @click="toggleRow(l)">{{ l ?? '*' }}</th>
+            <td v-for="c in cols" :key="c ?? '*'" class="cell" :class="{ on: has(l, c), fixed: l == null && c == null }" :title="l == null && c == null ? $t('der eine Wert — immer da') : `${l ?? '*'}/${c ?? '*'}`" @click="toggle(l, c)">{{ has(l, c) ? '✓' : '' }}</td>
           </tr>
         </tbody>
       </table>

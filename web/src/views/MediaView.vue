@@ -11,6 +11,7 @@ import Cell from '../components/Cell.vue'
 import Splitter from '../components/Splitter.vue'
 import MediaThumb from '../components/MediaThumb.vue'
 import { paneWidth } from '../panes.js'
+import { t as t_ } from '../i18n.js'
 
 const foldersW = paneWidth('media.folders', 220)
 const listW = paneWidth('media.list', 560)
@@ -37,7 +38,7 @@ const byId = computed(() => new Map(folders.value.folders.map(f => [f.id, f])))
 const kids = id => folders.value.folders.filter(f => (f.parent ?? null) === id).sort((a, b) => a.name.localeCompare(b.name, 'de'))
 const below = id => { let n = byId.value.get(id)?.media ?? 0; for (const k of kids(id)) n += below(k.id); return n }   // Medien im Ordner und darunter
 const pathOf = id => { const out = []; for (let f = byId.value.get(id); f; f = f.parent ? byId.value.get(f.parent) : null) { if (out.includes(f)) break; out.unshift(f) } return out }
-const folderTitle = computed(() => folder.value === 'all' ? 'Alle Medien' : folder.value === '-' ? 'ohne Ordner' : pathOf(folder.value).map(f => f.name).join(' › '))
+const folderTitle = computed(() => folder.value === 'all' ? t_('Alle Medien') : folder.value === '-' ? t_('ohne Ordner') : pathOf(folder.value).map(f => f.name).join(' › '))
 // sichtbare Zeilen des Ordnerbaums (aufgeklappt) mit Tiefe
 const rows = computed(() => { const out = []; const rec = (parent, depth) => { for (const f of kids(parent)) { out.push({ f, depth, kids: kids(f.id).length }); if (open.value.has(f.id)) rec(f.id, depth + 1) } }; rec(null, 0); return out })
 function toggle(id) { open.value.has(id) ? open.value.delete(id) : open.value.add(id); open.value = new Set(open.value); localStorage.setItem('journali.media.open', JSON.stringify([...open.value])) }
@@ -46,19 +47,19 @@ watch(deep, v => { localStorage.setItem('journali.media.deep', v ? 'on' : 'off')
 async function loadFolders() { try { folders.value = await api.get('/api/media/folders') } catch (e) { store.toast(e.message) } }
 
 async function newFolder(parent = null) {
-  const name = await dialog.prompt({ title: 'Ordner anlegen', text: parent ? `in „${byId.value.get(parent)?.name}“` : 'oberste Ebene', placeholder: 'Name', ok: '+ Anlegen' })
+  const name = await dialog.prompt({ title: t_('Ordner anlegen'), text: parent ? `in „${byId.value.get(parent)?.name}“` : t_('oberste Ebene'), placeholder: t_('Name'), ok: t_('+ Anlegen') })
   if (!name) return
   try { const e = await api.post('/api/media/folders', { name, parent }); if (parent) { open.value.add(parent); toggle(parent); toggle(parent) } await loadFolders(); pickFolder(e.stream) } catch (e) { store.toast(e.message) }
 }
 async function renameFolder(f) {
-  const name = await dialog.prompt({ title: 'Ordner umbenennen', ok: '✎ Umbenennen', value: f.name })
+  const name = await dialog.prompt({ title: t_('Ordner umbenennen'), ok: t_('✎ Umbenennen'), value: f.name })
   if (!name || name === f.name) return
   try { await api.post(`/api/media/folders/${f.id}/name`, { name }, 'PUT'); await loadFolders() } catch (e) { store.toast(e.message) }
 }
 async function deleteFolder(f) {
   const n = below(f.id), k = kids(f.id).length
-  if (n || k) { store.toast(`„${f.name}“ ist nicht leer (${k} Unterordner, ${n} Medien) — erst verschieben`); return }
-  if (!await dialog.confirm({ title: `Ordner „${f.name}“ löschen?`, ok: '🗑 Löschen', danger: true })) return
+  if (n || k) { store.toast(t_('„{0}“ ist nicht leer ({1} Unterordner, {2} Medien) — erst verschieben', [f.name, k, n])); return }
+  if (!await dialog.confirm({ title: t_('Ordner „{0}“ löschen?', [f.name]), ok: t_('🗑 Löschen'), danger: true })) return
   try { await api.del(`/api/media/folders/${f.id}`); if (folder.value === f.id) pickFolder(f.parent ?? 'all'); await loadFolders() } catch (e) { store.toast(e.message) }
 }
 async function moveFolder(id, parent) {
@@ -67,16 +68,16 @@ async function moveFolder(id, parent) {
 }
 
 // ---- Sortierung und Gruppierung
-const SORTS = [['recent', 'zuletzt geändert'], ['name', 'Name'], ['date', 'Datum'], ['size', 'Größe'], ['used', 'Verwendung']]
-const GROUPS = [['', 'nicht gruppiert'], ['kind', 'Art (Bild / Dokument)'], ['type', 'Dateityp'], ['month', 'Monat'], ['used', 'verwendet / unverwendet'], ['folder', 'Ordner']]
+const SORTS = [['recent', t_('zuletzt geändert')], ['name', t_('Name')], ['date', t_('Datum')], ['size', t_('Größe')], ['used', t_('Verwendung')]]
+const GROUPS = [['', t_('nicht gruppiert')], ['kind', 'Art (Bild / Dokument)'], ['type', t_('Dateityp')], ['month', t_('Monat')], ['used', 'verwendet / unverwendet'], ['folder', t_('Ordner')]]
 const sort = ref(localStorage.getItem('journali.media.sort') || 'recent')
 const desc = ref(localStorage.getItem('journali.media.desc') !== 'off')
 const group = ref(localStorage.getItem('journali.media.group') || '')
 watch([sort, desc], () => { localStorage.setItem('journali.media.sort', sort.value); localStorage.setItem('journali.media.desc', desc.value ? 'on' : 'off'); load() })
 watch(group, v => localStorage.setItem('journali.media.group', v))
 const month = iso => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}` }
-const groupKey = m => group.value === 'kind' ? (m.isImage ? '🖼 Bilder' : '▤ Dokumente') : group.value === 'type' ? (m.mime.split('/')[1] || m.mime) : group.value === 'month' ? month(m.lastAt)
-  : group.value === 'used' ? (m.used ? '⇄ verwendet' : '· unverwendet') : group.value === 'folder' ? (m.folder ? pathOf(m.folder).map(f => f.name).join(' › ') || '?' : '⌂ ohne Ordner') : ''
+const groupKey = m => group.value === 'kind' ? (m.isImage ? t_('🖼 Bilder') : t_('▤ Dokumente')) : group.value === 'type' ? (m.mime.split('/')[1] || m.mime) : group.value === 'month' ? month(m.lastAt)
+  : group.value === 'used' ? (m.used ? '⇄ verwendet' : '· unverwendet') : group.value === 'folder' ? (m.folder ? pathOf(m.folder).map(f => f.name).join(' › ') || '?' : t_('⌂ ohne Ordner')) : ''
 const grouped = computed(() => {
   if (!group.value) return [{ key: '', items: items.value }]
   const map = new Map(); for (const m of items.value) { const k = groupKey(m); if (!map.has(k)) map.set(k, []); map.get(k).push(m) }
@@ -136,7 +137,7 @@ function dropOn(target, e) {
 }
 async function fileMedia(ids, target) {
   const todo = ids.filter(id => (items.value.find(m => m.id === id)?.folder ?? null) !== target)
-  if (!todo.length) { store.toast('liegt schon dort'); return }
+  if (!todo.length) { store.toast(t_('liegt schon dort')); return }
   let n = 0
   for (const id of todo) { busy.value = `verschiebe … ${++n}/${todo.length}`; try { await api.post(`/api/media/${id}/folder`, { folder: target }, 'PUT') } catch (e) { store.toast(e.message) } }
   busy.value = ''; sel.value = new Set()   // Auswahl danach leer — sonst bleibt „1 gewählt“ stehen
@@ -147,11 +148,11 @@ async function fileMedia(ids, target) {
 
 // ---- Hochladen: in den gerade gezeigten Ordner
 async function upload(files) {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   let n = 0, same = 0
   const target = folder.value === 'all' || folder.value === '-' ? null : folder.value
   for (const f of files) {
-    busy.value = `lade hoch … ${++n}/${files.length} ${f.name}`
+    busy.value = t_('lade hoch … {0}/{1} {2}', [++n, files.length, f.name])
     try {
       const r = await api.upload('/api/media', f); if (r.existed) same++; cur.value = r.id
       if (target && !r.existed) await api.post(`/api/media/${r.id}/folder`, { folder: target }, 'PUT').catch(() => {})
@@ -159,7 +160,7 @@ async function upload(files) {
   }
   busy.value = ''
   await store.poll(true); await loadFolders(); await load()
-  if (same) store.toast(`${same} davon gab es schon (gleiche Datei)`, 'ok')
+  if (same) store.toast(t_('{0} davon gab es schon (gleiche Datei)', [same]), 'ok')
 }
 function onDrop(e) { dragOver.value = false; if (dragKind.value) { dragKind.value = ''; return } upload([...e.dataTransfer.files]) }
 const value = (m, def) => { const loc = def.perLocale ? master.value : null; return m.values.find(v => v.attribute === def.key && (v.locale ?? null) === loc && !v.channel)?.value ?? null }
@@ -170,7 +171,7 @@ async function setValue(m, def, v) {
 async function retire(m) {
   const ids = sel.value.size > 1 && sel.value.has(m.id) ? [...sel.value] : [m.id]
   const used = ids.reduce((n, id) => n + (items.value.find(x => x.id === id)?.used ?? 0), 0)
-  if (!await dialog.confirm({ title: ids.length > 1 ? `${ids.length} Medien zurückziehen?` : `${m.name} zurückziehen?`, text: used ? `Hängen an ${used} Knoten` : '', ok: '🗑 Zurückziehen', danger: true })) return
+  if (!await dialog.confirm({ title: ids.length > 1 ? t_('{0} Medien zurückziehen?', [ids.length]) : t_('{0} zurückziehen?', [m.name]), text: used ? t_('Hängen an {0} Knoten', [used]) : '', ok: t_('🗑 Zurückziehen'), danger: true })) return
   for (const id of ids) { try { await api.del(`/api/media/${id}`) } catch (e) { store.toast(e.message) } }
   cur.value = null; sel.value = new Set(); await store.poll(true); await loadFolders(); await load()
 }
@@ -187,7 +188,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
       <div v-for="r in rows" :key="r.f.id" class="pick" :class="{ on: folder === r.f.id, over: dragTarget === r.f.id }" :style="`padding-left:${8 + r.depth * 14}px`"
         draggable="true" @dragstart="dragFolder(r.f, $event)" @dragend="dragEnd"
         @dragover="canDrop(r.f.id) && ($event.preventDefault(), dragTarget = r.f.id)" @dragleave="dragTarget = null" @drop="dropOn(r.f.id, $event)"
-        @click="pickFolder(r.f.id)" :title="`${r.f.media} hier · ${below(r.f.id)} mit Unterordnern — ziehen: Ordner verschieben`">
+        @click="pickFolder(r.f.id)" :title="$t('{0} hier · {1} mit Unterordnern — ziehen: Ordner verschieben', [r.f.media, below(r.f.id)])">
         <span class="muted caret" @click.stop="toggle(r.f.id)">{{ r.kids ? (open.has(r.f.id) ? '▾' : '▸') : '' }}</span>
         <span class="fname">📁 {{ r.f.name }}</span><span class="muted cnt">{{ deep ? below(r.f.id) : r.f.media }}</span>
         <span class="acts"><button class="x" @click.stop="newFolder(r.f.id)" :title="$t('Unterordner anlegen')">+</button><button class="x" @click.stop="renameFolder(r.f)" :title="$t('umbenennen')">✎</button><button class="x" @click.stop="deleteFolder(r.f)" :title="$t('löschen (nur leer)')">🗑</button></span>
@@ -203,9 +204,9 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
     <div class="toolbar" style="gap:4px">
       <input v-model="q" type="search" :placeholder="$t('🔍 Name, Id, Werte')" style="flex:1;min-width:0" @input="search" />
       <select v-model="sort" :title="$t('Sortierung — nur die Anzeige')"><option v-for="[k, l] in SORTS" :key="k" :value="k">{{ l }}</option></select>
-      <button class="x" @click="desc = !desc" :title="desc ? 'Aufsteigend sortieren' : 'Absteigend sortieren'">{{ desc ? '↓' : '↑' }}</button>
+      <button class="x" @click="desc = !desc" :title="desc ? $t('Aufsteigend sortieren') : $t('Absteigend sortieren')">{{ desc ? '↓' : '↑' }}</button>
       <select v-model="group" :title="$t('Gruppierung — nur die Anzeige; der Ordnerfilter ist die Liste links')"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
-      <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? 'Dateien hochladen — oder hierher ziehen' : `hochladen in „${folderTitle}“ — oder hierher ziehen`">{{ $t("⇧ Hochladen") }}</button>
+      <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? $t('Dateien hochladen — oder hierher ziehen') : $t('hochladen in „{0}“ — oder hierher ziehen', [folderTitle])">{{ $t("⇧ Hochladen") }}</button>
       <input ref="fileInput" type="file" multiple style="display:none" @change="upload([...$event.target.files]); $event.target.value = ''" />
     </div>
     <div class="scroll">
@@ -221,7 +222,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
           </div>
         </div>
       </template>
-      <div v-if="!items.length" class="empty">{{ folder === 'all' ? 'Noch nichts — Dateien hierher ziehen oder ⇧ hochladen.' : 'Hier liegt nichts — Kacheln aus „Alle“ hierher ziehen oder ⇧ hochladen.' }}</div>
+      <div v-if="!items.length" class="empty">{{ folder === 'all' ? $t('Noch nichts — Dateien hierher ziehen oder ⇧ hochladen.') : $t('Hier liegt nichts — Kacheln aus „Alle“ hierher ziehen oder ⇧ hochladen.') }}</div>
     </div>
   </div>
   <Splitter v-model="listW" :min="300" :max="1400" />
@@ -229,9 +230,9 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar"><h1>▨ {{ current.name }}</h1><span class="mono muted">{{ current.id }}</span><span class="grow" />
       <a :href="`/api/media/${current.id}/file`" target="_blank" class="muted" :title="$t('Datei öffnen')">{{ $t("↗ Datei") }}</a>
-      <button class="x" @click="retire(current)" :title="sel.size > 1 ? `${sel.size} gewählte Medien zurückziehen (die Dateien bleiben im Store)` : 'Medium zurückziehen (die Datei bleibt im Store)'">🗑</button></div>
+      <button class="x" @click="retire(current)" :title="sel.size > 1 ? $t('{0} gewählte Medien zurückziehen (die Dateien bleiben im Store)', [sel.size]) : $t('Medium zurückziehen (die Datei bleibt im Store)')">🗑</button></div>
     <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>{{ $t("· ⇄ {0} Knoten", [current.used]) }}</span>
-      <span :title="current.folder ? 'Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen' : 'in keinem Ordner — Kachel auf einen Ordner links ziehen'">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
+      <span :title="current.folder ? $t('Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen') : $t('in keinem Ordner — Kachel auf einen Ordner links ziehen')">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
       <span class="grow" /><span>≡ {{ current.entries }} · #{{ current.lastNumber }} · {{ when(current.lastAt) }} · {{ current.lastActor }}</span></div>
     <div class="scroll">
       <div class="preview" v-if="current.isImage"><img :src="`/api/media/${current.id}/file`" alt="" /></div>

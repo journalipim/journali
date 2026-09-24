@@ -14,6 +14,7 @@ import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
 import TreePicker from '../components/TreePicker.vue'
 import { paneWidth } from '../panes.js'
+import { t as t_ } from '../i18n.js'
 const pubW = paneWidth('pub', 340)
 const srcW = paneWidth('pubsrc', 300)
 // Pflegebaum links einklappbar (Taloan, 21.09.) — Stand gemerkt
@@ -76,9 +77,9 @@ async function loadRules() {
 watch([current, () => tree.rows], loadRules, { immediate: true })
 const attrLabel = k => store.model?.attributes?.find(a => a.key === k)?.label?.de || k
 function ruleLabel(rule) {
-  const under = rule.under ? tree.byId.get(rule.under)?.label ?? rule.under : 'überall'
-  const what = rule.kind === 'name' ? `${rule.role === 'product' ? 'Produkte' : 'Gruppen'} „${rule.name}“` : `Produkte mit ${attrLabel(rule.attribute)} = ${rule.value}`
-  const by = rule.groupBy === 'parent' ? ' · nach Produktgruppe darüber' : rule.groupBy?.startsWith('attr:') ? ` · nach ${attrLabel(rule.groupBy.slice(5))}` : ''
+  const under = rule.under ? tree.byId.get(rule.under)?.label ?? rule.under : t_('überall')
+  const what = rule.kind === 'name' ? `${rule.role === 'product' ? 'Produkte' : 'Gruppen'} „${rule.name}“` : t_('Produkte mit {0} = {1}', [attrLabel(rule.attribute), rule.value])
+  const by = rule.groupBy === 'parent' ? ' ' + t_('· nach Produktgruppe darüber') : rule.groupBy?.startsWith('attr:') ? ` · nach ${attrLabel(rule.groupBy.slice(5))}` : ''
   return rule.label || `${what} unter ${under}${by}`
 }
 // Regel anlegen oder ändern: Formular mit Vorschau (trifft n Gruppen, m Produkte), gespeichert erst mit „speichern“
@@ -102,7 +103,7 @@ async function saveRule() {
   expanded.value.add(b.rubric.id); ruleBox.value = null
 }
 async function removeRule(rubricId, rule) {
-  if (!await dialog.confirm({ title: 'Regel entfernen?', text: ruleLabel(rule) + ' — Treffer verschwinden aus dieser Rubrik; im Pflegebaum ändert sich nichts.', ok: '✕ Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: t_('Regel entfernen?'), text: ruleLabel(rule) + ' ' + t_('— Treffer verschwinden aus dieser Rubrik; im Pflegebaum ändert sich nichts.'), ok: t_('✕ Entfernen'), danger: true })) return
   await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/rules/${encodeURIComponent(rule.id)}`))
 }
 // Ausleitung (Taloan, 21.09.): je Produkt im Baum ausgeleitet oder zurückgehalten, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
@@ -135,74 +136,74 @@ const post = (url, body, m) => api.post(url, body, m)
 
 async function newTree() {
   const channels = store.model?.channels ?? []
-  const name = await dialog.prompt({ title: 'Publikationsbaum anlegen', value: '', placeholder: 'Name, z. B. Web Schweiz', ok: '+ Anlegen' })
+  const name = await dialog.prompt({ title: t_('Publikationsbaum anlegen'), value: '', placeholder: t_('Name, z. B. Web Schweiz'), ok: t_('+ Anlegen') })
   if (!name) return
-  const channel = channels.length === 1 ? channels[0].key : await dialog.prompt({ title: 'Kanal wählen', text: channels.map(c => c.key).join(' · '), value: store.model?.masterChannel ?? channels[0]?.key ?? '', ok: 'Übernehmen' })
+  const channel = channels.length === 1 ? channels[0].key : await dialog.prompt({ title: t_('Kanal wählen'), text: channels.map(c => c.key).join(' · '), value: store.model?.masterChannel ?? channels[0]?.key ?? '', ok: t_('Übernehmen') })
   if (!channel) return
-  const market = await dialog.prompt({ title: 'Markt wählen (leer = alle)', text: 'Schlüssel aus der Werteliste „Märkte“; der Baum leitet nur aus, was in diesem Markt verkauft wird', value: '', placeholder: 'z. B. ch', ok: 'Übernehmen' })
+  const market = await dialog.prompt({ title: t_('Markt wählen (leer = alle)'), text: t_('Schlüssel aus der Werteliste „Märkte“; der Baum leitet nur aus, was in diesem Markt verkauft wird'), value: '', placeholder: 'z. B. ch', ok: t_('Übernehmen') })
   if (market == null) return
   await run(async () => { const e = await post('/api/rubrics', { parent: null, label: {}, name, channel, market: market || null }); treeKey.value = e.stream })
 }
 async function newRubric(parent) {
-  const name = await dialog.prompt({ title: 'Rubrik anlegen', text: `unter ${parent.label}`, value: '', ok: '+ Anlegen' })
+  const name = await dialog.prompt({ title: t_('Rubrik anlegen'), text: `unter ${parent.label}`, value: '', ok: t_('+ Anlegen') })
   if (!name) return
   await run(async () => { await post('/api/rubrics', { parent: parent.id, label: {}, name }); expanded.value.add(parent.id); toggle(parent.id); toggle(parent.id) })
 }
 async function rename(r) {
-  const name = await dialog.prompt({ title: 'Rubrik umbenennen', value: r.name ?? r.label, ok: '✎ Umbenennen' })
+  const name = await dialog.prompt({ title: t_('Rubrik umbenennen'), value: r.name ?? r.label, ok: t_('✎ Umbenennen') })
   if (name) await run(() => post(`/api/nodes/${encodeURIComponent(r.id)}/name`, { name }, 'PUT'))
 }
 async function retire(r) {
   const n = tree.kids(r.id).length; const p = (r.placed ?? []).length
   const below = (() => { let rub = 0, ref = 0; const walk = x => { for (const k of tree.kids(x.id)) { rub++; walk(k) } ref += (x.placed ?? []).length }; walk(r); return { rub, ref } })()
-  if (!await dialog.confirm({ title: `Rubrik „${r.label}“ aus „${current.value?.label ?? ''}“ entfernen?`, text: `${below.rub ? `${below.rub} ${below.rub === 1 ? 'Unterrubrik' : 'Unterrubriken'} und ` : ''}${below.ref} ${below.ref === 1 ? 'Verweis verschwindet' : 'Verweise verschwinden'} aus diesem Publikationsbaum. Die Produkte und Gruppen bleiben im Pflegebaum unverändert; sie gelten hier danach als „noch nicht einsortiert“.`, ok: '✕ Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: `Rubrik „${r.label}“ aus „${current.value?.label ?? ''}“ entfernen?`, text: t_('{0}{1} {2} aus diesem Publikationsbaum. Die Produkte und Gruppen bleiben im Pflegebaum unverändert; sie gelten hier danach als „noch nicht einsortiert“.', [below.rub ? `${below.rub} ${below.rub === 1 ? 'Unterrubrik' : 'Unterrubriken'} und ` : '', below.ref, below.ref === 1 ? t_('Verweis verschwindet') : t_('Verweise verschwinden')]), ok: t_('✕ Entfernen'), danger: true })) return
   if (props.id === r.id || tree.ancestors(props.id ?? '').some(a => a.id === r.id)) router.push(`/pub/${r.parent}`)   // erst weg von der Rubrik, sonst 404 → Sprung
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
 }
 async function namePlace(row) {
-  const name = await dialog.prompt({ title: 'Anzeigename ändern', text: `Pflegename: ${row.r.label} (leer = Pflegename)`, value: row.work ?? '', ok: '✎ Übernehmen' })
+  const name = await dialog.prompt({ title: t_('Anzeigename ändern'), text: `Pflegename: ${row.r.label} (leer = Pflegename)`, value: row.work ?? '', ok: t_('✎ Übernehmen') })
   if (name == null) return
   await run(() => post(`/api/rubrics/${encodeURIComponent(row.rubric)}/place/${encodeURIComponent(row.r.id)}/name`, { name }, 'PUT'))
 }
 async function unplace(rubricId, nodeId) { await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/place/${encodeURIComponent(nodeId)}`)) }
 async function placeUnplaced(ids) {
-  if (!selRubric.value) { store.toast('erst eine Rubrik wählen (links anklicken)'); return }
+  if (!selRubric.value) { store.toast(t_('erst eine Rubrik wählen (links anklicken)')); return }
   await run(async () => { for (const id of ids) await post(`/api/rubrics/${encodeURIComponent(selRubric.value.id)}/place`, { node: id }) })
 }
 
 function contextMenu(e, row) {
   const r = row.r
-  if (row.kind === 'rule') { menu.open(e, [{ label: 'Regel bearbeiten …', icon: '⚙', action: () => editRule(tree.byId.get(row.rubric), row.rule) }, { label: 'Regel entfernen', icon: '✕', danger: true, action: () => removeRule(row.rubric, row.rule) }]); return }
+  if (row.kind === 'rule') { menu.open(e, [{ label: t_('Regel bearbeiten …'), icon: '⚙', action: () => editRule(tree.byId.get(row.rubric), row.rule) }, { label: t_('Regel entfernen'), icon: '✕', danger: true, action: () => removeRule(row.rubric, row.rule) }]); return }
   if (row.kind === 'vgroup') return
-  if (row.kind === 'ruled') { menu.open(e, [{ label: 'Im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) }]); return }
+  if (row.kind === 'ruled') { menu.open(e, [{ label: t_('Im Pflegebaum zeigen'), icon: '▣', action: () => router.push(`/tree/${r.id}`) }]); return }
   if (row.kind === 'placed') {
     menu.open(e, [
-      { label: 'Im Pflegebaum zeigen', icon: '▣', action: () => router.push(`/tree/${r.id}`) },
-      { label: 'Anzeigename ändern …', icon: '✎', hint: 'nur hier, nicht in der Ausgabe', action: () => namePlace(row) },
+      { label: t_('Im Pflegebaum zeigen'), icon: '▣', action: () => router.push(`/tree/${r.id}`) },
+      { label: t_('Anzeigename ändern …'), icon: '✎', hint: t_('nur hier, nicht in der Ausgabe'), action: () => namePlace(row) },
       { sep: true },
-      { label: 'Verweis entfernen', icon: '✕', danger: true, hint: 'Produkt bleibt im Pflegebaum', action: () => unplace(row.rubric, r.id) },
+      { label: t_('Verweis entfernen'), icon: '✕', danger: true, hint: t_('Produkt bleibt im Pflegebaum'), action: () => unplace(row.rubric, r.id) },
     ]); return
   }
-  if (sel.value.size > 1 && sel.value.has(r.id)) { menu.open(e, [{ label: `${sel.value.size} Rubriken entfernen`, icon: '✕', danger: true, hint: 'Produkte bleiben im Pflegebaum', action: () => retireMany([...sel.value]) }]); return }
+  if (sel.value.size > 1 && sel.value.has(r.id)) { menu.open(e, [{ label: t_('{0} Rubriken entfernen', [sel.value.size]), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => retireMany([...sel.value]) }]); return }
   router.push(`/pub/${r.id}`)
   menu.open(e, [
-    { label: 'Rubrik darunter anlegen …', icon: '+', action: () => newRubric(r) },
-    { label: 'Regel anlegen …', icon: '⚙', hint: 'nach Name oder Attributwert, live', action: () => editRule(r) },
+    { label: t_('Rubrik darunter anlegen …'), icon: '+', action: () => newRubric(r) },
+    { label: t_('Regel anlegen …'), icon: '⚙', hint: t_('nach Name oder Attributwert, live'), action: () => editRule(r) },
     { sep: true },
     ...(r.stand != null
-      ? [{ label: `Stand #${r.stand} aktualisieren`, icon: '❄', hint: 'auf jetzt setzen', action: () => setStand(r, 'now') }, { label: 'Stand aufheben', icon: '○', hint: 'wieder live', action: () => setStand(r, 'live') }]
-      : [{ label: 'Stand einfrieren', icon: '❄', hint: standOf(r) ? `jetzt; übersteuert Stand #${standOf(r).stand} von „${standOf(r).from.label}“` : 'jetzt, ab hier nach unten', action: () => setStand(r, 'now') }]),
+      ? [{ label: `Stand #${r.stand} aktualisieren`, icon: '❄', hint: t_('auf jetzt setzen'), action: () => setStand(r, 'now') }, { label: t_('Stand aufheben'), icon: '○', hint: t_('wieder live'), action: () => setStand(r, 'live') }]
+      : [{ label: t_('Stand einfrieren'), icon: '❄', hint: standOf(r) ? t_('jetzt; übersteuert Stand #{0} von „{1}“', [standOf(r).stand, standOf(r).from.label]) : t_('jetzt, ab hier nach unten'), action: () => setStand(r, 'now') }]),
     { sep: true },
-    { label: 'Umbenennen', icon: '✎', action: () => rename(r) },
-    ...(r.parent ? [{ label: 'Rubrik entfernen', icon: '✕', danger: true, hint: 'Produkte bleiben im Pflegebaum', action: () => retire(r) }]
-      : [{ label: 'Kanal / Markt ändern …', icon: '⇶', action: () => editTree(r) }, { sep: true },
-         { label: 'Publikationsbaum leeren', icon: '✕', danger: true, hint: 'Rubriken und Verweise weg, Baum bleibt', action: () => clearTree(r) },
-         { label: 'Publikationsbaum löschen', icon: '✕', danger: true, hint: 'Produkte bleiben im Pflegebaum', action: () => deleteTree(r) }]),
+    { label: t_('Umbenennen'), icon: '✎', action: () => rename(r) },
+    ...(r.parent ? [{ label: t_('Rubrik entfernen'), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => retire(r) }]
+      : [{ label: t_('Kanal / Markt ändern …'), icon: '⇶', action: () => editTree(r) }, { sep: true },
+         { label: t_('Publikationsbaum leeren'), icon: '✕', danger: true, hint: t_('Rubriken und Verweise weg, Baum bleibt'), action: () => clearTree(r) },
+         { label: t_('Publikationsbaum löschen'), icon: '✕', danger: true, hint: t_('Produkte bleiben im Pflegebaum'), action: () => deleteTree(r) }]),
   ])
 }
 async function editTree(r) {
-  const channel = await dialog.prompt({ title: 'Kanal wählen', text: (store.model?.channels ?? []).map(c => c.key).join(' · '), value: r.channel ?? '', ok: 'Übernehmen' }); if (!channel) return
-  const market = await dialog.prompt({ title: 'Markt wählen (leer = alle)', value: r.market ?? '', ok: 'Übernehmen' }); if (market == null) return
+  const channel = await dialog.prompt({ title: t_('Kanal wählen'), text: (store.model?.channels ?? []).map(c => c.key).join(' · '), value: r.channel ?? '', ok: t_('Übernehmen') }); if (!channel) return
+  const market = await dialog.prompt({ title: t_('Markt wählen (leer = alle)'), value: r.market ?? '', ok: t_('Übernehmen') }); if (market == null) return
   await run(() => post(`/api/rubrics/${encodeURIComponent(r.id)}/tree`, { channel, market: market || null }, 'PUT'))
 }
 // Ziehen: Rubrik auf Rubrik = umhängen; Verweis auf Rubrik = Verweis umhängen
@@ -246,15 +247,15 @@ function open(row, e) {
 // Stand (Taloan, 21.09., „A“): Zeiger auf eine Journalnummer an Rubrik oder Wurzel — alles darunter liest die Pflege wie damals; live = kein Zeiger
 function standOf(r) { for (let n = r; n; n = tree.byId.get(n.parent)) if (n.stand != null) return { stand: n.stand, from: n }; return null }
 async function setStand(r, mode) {
-  if (mode === 'live' && !await dialog.confirm({ title: `Stand #${r.stand} von „${r.label}“ aufheben?`, text: 'Ab hier nach unten gilt wieder der aktuelle Pflegestand.', ok: '○ Aufheben' })) return
-  if (mode === 'now' && !await dialog.confirm({ title: r.stand != null ? `Stand von „${r.label}“ aktualisieren?` : `„${r.label}“ einfrieren?`, text: 'Ab hier nach unten liest die Publikation die Pflege wie jetzt; spätere Änderungen kommen erst nach Aktualisieren oder Aufheben durch. Nichts wird kopiert (Zeiger ins Journal).', ok: r.stand != null ? '❄ Aktualisieren' : '❄ Einfrieren' })) return
+  if (mode === 'live' && !await dialog.confirm({ title: `Stand #${r.stand} von „${r.label}“ aufheben?`, text: t_('Ab hier nach unten gilt wieder der aktuelle Pflegestand.'), ok: t_('○ Aufheben') })) return
+  if (mode === 'now' && !await dialog.confirm({ title: r.stand != null ? t_('Stand von „{0}“ aktualisieren?', [r.label]) : `„${r.label}“ einfrieren?`, text: t_('Ab hier nach unten liest die Publikation die Pflege wie jetzt; spätere Änderungen kommen erst nach Aktualisieren oder Aufheben durch. Nichts wird kopiert (Zeiger ins Journal).'), ok: r.stand != null ? t_('❄ Aktualisieren') : t_('❄ Einfrieren') })) return
   await run(() => post(`/api/rubrics/${encodeURIComponent(r.id)}/stand`, mode === 'now' ? { now: true } : {}, 'PUT'))
 }
 // mehrere Rubriken auf einmal entfernen (nur aus diesem Publikationsbaum); Wurzeln bleiben, verschachtelte nur einmal
 async function retireMany(ids) {
   const list = ids.map(x => tree.byId.get(x)).filter(r => r && r.parent && !tree.ancestors(r.id).some(a => ids.includes(a.id)))
   if (!list.length) return
-  if (!await dialog.confirm({ title: `${list.length} Rubriken aus „${current.value?.label ?? ''}“ entfernen?`, list: list.map(r => r.label), text: 'Mit allem darunter. Die Produkte bleiben im Pflegebaum und gelten hier als „noch nicht einsortiert“.', ok: '✕ Entfernen', danger: true })) return
+  if (!await dialog.confirm({ title: t_('{0} Rubriken aus „{1}“ entfernen?', [list.length, current.value?.label ?? '']), list: list.map(r => r.label), text: t_('Mit allem darunter. Die Produkte bleiben im Pflegebaum und gelten hier als „noch nicht einsortiert“.'), ok: t_('✕ Entfernen'), danger: true })) return
   if (list.some(r => r.id === props.id || tree.ancestors(props.id ?? '').some(a => a.id === r.id))) router.push(`/pub/${current.value.id}`)
   await run(async () => { for (const r of list) await api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`) })
   sel.value = new Set()
@@ -262,13 +263,13 @@ async function retireMany(ids) {
 // Baum leeren oder ganz löschen — die Wurzel ist der Publikationsbaum (Kanal × Markt)
 async function clearTree(r) {
   const kids = tree.kids(r.id); const refs = (r.placed ?? []).length
-  if (!kids.length && !refs) { store.toast('schon leer'); return }
-  if (!await dialog.confirm({ title: `„${r.label}“ leeren?`, text: `${kids.length} Rubriken und ${refs} Verweise verschwinden; die Produkte bleiben im Pflegebaum, der Baum (Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}) bleibt.`, ok: '✕ Leeren', danger: true })) return
+  if (!kids.length && !refs) { store.toast(t_('schon leer')); return }
+  if (!await dialog.confirm({ title: `„${r.label}“ leeren?`, text: t_('{0} Rubriken und {1} Verweise verschwinden; die Produkte bleiben im Pflegebaum, der Baum (Kanal {2}{3}) bleibt.', [kids.length, refs, r.channel ?? '', r.market ? ' ' + t_('· Markt') + ' ' + r.market : '']), ok: t_('✕ Leeren'), danger: true })) return
   if (props.id && props.id !== r.id) router.push(`/pub/${r.id}`)
   await run(async () => { for (const k of kids) await api.del(`/api/nodes/${encodeURIComponent(k.id)}?recursive=true`); for (const p of r.placed ?? []) await api.del(`/api/rubrics/${encodeURIComponent(r.id)}/place/${encodeURIComponent(p)}`) })
 }
 async function deleteTree(r) {
-  if (!await dialog.confirm({ title: `Publikationsbaum „${r.label}“ löschen?`, warn: `Kanal ${r.channel ?? ''}${r.market ? ' · Markt ' + r.market : ''}`, text: 'Mit allen Rubriken und Verweisen. Die Produkte bleiben im Pflegebaum; zurückholbar über den Papierkorb.', ok: '✕ Löschen', danger: true })) return
+  if (!await dialog.confirm({ title: t_('Publikationsbaum „{0}“ löschen?', [r.label]), warn: t_('Kanal {0}{1}', [r.channel ?? '', r.market ? ' ' + t_('· Markt') + ' ' + r.market : '']), text: t_('Mit allen Rubriken und Verweisen. Die Produkte bleiben im Pflegebaum; zurückholbar über den Papierkorb.'), ok: t_('✕ Löschen'), danger: true })) return
   router.push('/pub')
   await run(() => api.del(`/api/nodes/${encodeURIComponent(r.id)}?recursive=true`))
   treeKey.value = trees.value[0]?.id ?? ''
@@ -296,7 +297,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span class="icon">{{ icon(row.r.role) }}</span>
         <span class="label">{{ row.r.label }}</span>
         <span v-if="row.r.role === 'group'" class="muted count" :title="`${tree.below(row.r.id).summary} darunter`">{{ tree.below(row.r.id).total }}</span>
-        <span v-if="current && inTree(row.r.id)" class="pos count" :title="`in „${current.label}“ als Verweis enthalten`">✓</span>
+        <span v-if="current && inTree(row.r.id)" class="pos count" :title="$t('in „{0}“ als Verweis enthalten', [current.label])">✓</span>
       </div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">{{ $t("Ast nach rechts auf eine Rubrik ziehen · Doppelklick öffnet") }}</div>
@@ -310,8 +311,8 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </select>
       <button class="x" @click="newTree" :title="$t('neuer Publikationsbaum')">+</button>
       <span class="grow" />
-      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Ausleitung anzeigen (${exp.in} ausgeleitet, ${exp.out} zurückgehalten)`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
-      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} noch nicht einsortierte Produkte anzeigen`">⚠ {{ unplaced.length }}</button>
+      <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="$t('Ausleitung anzeigen ({0} ausgeleitet, {1} zurückgehalten)', [exp.in, exp.out])"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
+      <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="$t('{0} noch nicht einsortierte Produkte anzeigen', [unplaced.length])">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
       <div class="toolbar" style="white-space:nowrap" :title="$t('Ausgeleitet wird, was für den Kanal freigegeben ist und den Markt des Baums in seinen Verkaufsländern hat (leer = überall)')">
@@ -325,7 +326,7 @@ onMounted(() => { if (!tree.loaded) tree.load() })
           <span class="muted" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:6px">{{ r.in ? r.path.slice(1).map(x => x.label).join(' › ') : r.why.join(' · ') }}</span>
           <button class="x" style="margin-left:auto" :title="$t('im Pflegebaum öffnen (freigeben, pflegen); ⇶ bringt dich zurück')" @click.stop="store.pubBack = { path: $route.fullPath, label: current.label }; router.push(`/tree/${r.product.id}`)">▣</button>
         </div>
-        <div v-if="!expRows.length" class="empty" style="padding:10px">{{ expOnly === 'out' ? 'nichts zurückgehalten — alles im Baum wird ausgeleitet' : 'nichts' }}</div>
+        <div v-if="!expRows.length" class="empty" style="padding:10px">{{ expOnly === 'out' ? $t('nichts zurückgehalten — alles im Baum wird ausgeleitet') : 'nichts' }}</div>
       </div>
     </div>
     <div v-if="ruleBox" class="picker-box" style="padding:8px">
@@ -350,17 +351,17 @@ onMounted(() => { if (!tree.loaded) tree.load() })
       </div>
       <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0;margin-top:8px;padding:6px 0 0">
         <span v-if="ruleBox.preview?.error" class="neg" style="font-size:12px">{{ ruleBox.preview.error }}</span>
-        <span v-else-if="ruleBox.preview" :class="ruleBox.preview.hits ? 'pos' : 'warn'" style="font-size:12px">{{ $t("trifft {0} {1}{2} · {3} Produkte", [ruleBox.preview.hits, ruleBox.rule.kind === 'name' && ruleBox.rule.role === 'group' ? 'Gruppen' : 'Produkte', ruleBox.preview.groups ? ` in ${ruleBox.preview.groups} Gliederungen` : '', ruleBox.preview.products]) }}</span>
+        <span v-else-if="ruleBox.preview" :class="ruleBox.preview.hits ? 'pos' : 'warn'" style="font-size:12px">{{ $t("trifft {0} {1}{2} · {3} Produkte", [ruleBox.preview.hits, ruleBox.rule.kind === 'name' && ruleBox.rule.role === 'group' ? $t('Gruppen') : $t('Produkte'), ruleBox.preview.groups ? ' ' + $t('in {0} Gliederungen', [ruleBox.preview.groups]) : '', ruleBox.preview.products]) }}</span>
         <span v-else class="muted" style="font-size:12px">…</span>
         <span class="grow" /><button class="primary" :disabled="!ruleBox.preview || ruleBox.preview.error" @click="saveRule">{{ $t("⚙ Speichern") }}</button>
       </div>
     </div>
     <div v-if="showUnplaced" class="unplaced">
-      <div class="toolbar"><span class="muted">{{ $t("{0} Produkte noch nicht einsortiert", [unplaced.length]) }}</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `Alle ${unplaced.length} in „${selRubric.label}“ einsortieren` : 'erst eine Rubrik anklicken'">{{ $t("alle in {0}", [selRubric ? '„' + selRubric.label + '“' : 'Rubrik …']) }}</button></div>
+      <div class="toolbar"><span class="muted">{{ $t("{0} Produkte noch nicht einsortiert", [unplaced.length]) }}</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? $t('Alle {0} in „{1}“ einsortieren', [unplaced.length, selRubric.label]) : $t('erst eine Rubrik anklicken')">{{ $t("alle in {0}", [selRubric ? '„' + selRubric.label + '“' : $t('Rubrik …')]) }}</button></div>
       <div class="scroll" style="max-height:200px">
         <div v-for="r in unplaced" :key="r.id" class="node" :title="tree.ancestors(r.id).map(a => a.label).join(' › ')">
           <span class="icon">{{ icon(r.role) }}</span><span class="label">{{ r.label }}</span><span class="grow" />
-          <button class="x" :disabled="!selRubric" @click="placeUnplaced([r.id])" :title="selRubric ? `in ${selRubric.label} hängen` : 'links eine Rubrik wählen'">↗</button>
+          <button class="x" :disabled="!selRubric" @click="placeUnplaced([r.id])" :title="selRubric ? $t('in {0} hängen', [selRubric.label]) : $t('links eine Rubrik wählen')">↗</button>
         </div>
       </div>
     </div>
@@ -372,12 +373,12 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-else-if="row.kind === 'vgroup'" class="twisty muted"></span>
         <span v-else class="twisty muted">↗</span>
         <span class="icon">{{ row.kind === 'rubric' ? '▥' : row.kind === 'rule' ? '⚙' : row.kind === 'vgroup' ? (row.r.role === 'value' ? '≡' : '▣') : icon(row.r.role) }}</span>
-        <span class="label" :class="{ work: row.work }" :title="row.work ? `Anzeigename (nur hier) — Pflegename: ${row.r.label}` : ''">{{ row.shown ?? row.r.label }}</span>
-        <span v-if="row.kind === 'rubric' && row.r.stand != null" class="count" style="margin-left:4px" :title="`Stand #${row.r.stand}`">❄</span>
-        <span v-if="row.kind === 'rubric' && row.n" class="muted count" :title="`${row.n} Verweise`">{{ row.n }}</span>
-        <span v-if="row.kind === 'rule' && row.n != null" class="muted count" :title="`${row.n} Produkte über diese Regel`">{{ row.n }}</span>
+        <span class="label" :class="{ work: row.work }" :title="row.work ? $t('Anzeigename (nur hier) — Pflegename: {0}', [row.r.label]) : ''">{{ row.shown ?? row.r.label }}</span>
+        <span v-if="row.kind === 'rubric' && row.r.stand != null" class="count" style="margin-left:4px" :title="$t('Stand #{0}', [row.r.stand])">❄</span>
+        <span v-if="row.kind === 'rubric' && row.n" class="muted count" :title="$t('{0} Verweise', [row.n])">{{ row.n }}</span>
+        <span v-if="row.kind === 'rule' && row.n != null" class="muted count" :title="$t('{0} Produkte über diese Regel', [row.n])">{{ row.n }}</span>
         <span v-if="row.kind === 'ruled' && row.r.role === 'group'" class="muted count">{{ row.products }}</span>
-        <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="`Produktgruppe mit ${tree.below(row.r.id).total} darunter`">{{ tree.below(row.r.id).total }}</span>
+        <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="$t('Produktgruppe mit {0} darunter', [tree.below(row.r.id).total])">{{ tree.below(row.r.id).total }}</span>
       </div>
       <div v-if="!trees.length" class="empty">{{ $t("Kein Publikationsbaum.") }}<div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="newTree">{{ $t("+ Publikationsbaum") }}</button></div><div class="muted" style="margin-top:6px;font-size:12px"><span :title="$t('Danach Äste aus dem Pflegebaum links herüberziehen.')">{{ $t("Name, Kanal, optional Markt") }}</span></div></div>
       <div v-else-if="rows.length === 1" class="empty">{{ $t("Noch leer — einen Ast aus dem Pflegebaum links auf „{0}“ ziehen.", [current.label]) }}<div class="chips" style="justify-content:center;margin-top:8px"><button class="x" @click="newRubric(current)" :title="$t('eine leere Rubrik anlegen, z. B. für eigene Gliederung')">{{ $t("+ Rubrik") }}</button></div></div>
