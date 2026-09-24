@@ -1,17 +1,43 @@
-# Das ganze Paket: Server + PostgreSQL 18. Passwort in .env (JOURNALI_DB_PASSWORD).
+# Das ganze Paket: Server + PostgreSQL 18. Das Datenbankpasswort erzeugt der erste Start (Dienst db-passwort) —
+# oder er nimmt JOURNALI_DB_PASSWORD aus .env, wenn dort eines steht. Ansehen: ⚙ Einstellungen → ⇅ B&R → Datenbank,
+# oder: docker compose exec server cat /run/journali/db-password
 # Das Server-Image kommt fertig von ghcr.io (`docker compose pull`, Workflow .github/workflows/docker.yml);
 # wer aus dem Checkout baut, nimmt `docker compose up --build` — dann entsteht dasselbe Image unter demselben Namen.
 # Auf der rossibox mit vorhandenem postgresql18-Template: nur `server` nehmen
 # und JOURNALI_DB auf localhost:7432 zeigen lassen (docs/betrieb.md).
 services:
+  # Einmal je Start, fertig in einem Augenblick: liegt noch kein Passwort im Volume journali-secrets, entsteht eines —
+  # aus .env, wenn dort JOURNALI_DB_PASSWORD steht (bestehende Anlagen), sonst zufällig. Danach bleibt es, wie es ist:
+  # Postgres übernimmt ein Passwort nur beim allerersten Start.
+  db-passwort:
+    image: postgres:18
+    entrypoint: ["sh", "-c"]
+    command:
+      - |
+        f=/run/journali/db-password
+        if [ ! -s "$$f" ]; then
+          if [ -n "$$JOURNALI_DB_PASSWORD" ]; then printf %s "$$JOURNALI_DB_PASSWORD" > "$$f"
+          else head -c 24 /dev/urandom | base64 | tr -d '/+=\n' > "$$f"; fi
+        fi
+        chmod 444 "$$f"
+    environment:
+      JOURNALI_DB_PASSWORD: ${JOURNALI_DB_PASSWORD:-}
+    volumes:
+      - journali-secrets:/run/journali
+    restart: "no"
+
   db:
     image: postgres:18
     environment:
-      POSTGRES_PASSWORD: ${JOURNALI_DB_PASSWORD}
+      POSTGRES_PASSWORD_FILE: /run/journali/db-password
     volumes:
       # Ab postgres:18 liegt das Datenverzeichnis unter /var/lib/postgresql/<major>/docker;
       # der Mount gehört auf den Elternordner, damit ein Major-Upgrade später Platz hat.
       - journali-db:/var/lib/postgresql
+      - journali-secrets:/run/journali:ro
+    depends_on:
+      db-passwort:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -25,7 +51,7 @@ services:
       - "8080:8080"
     environment:
       JOURNALI_DB: Host=db;Port=5432;Database=journali;Username=postgres
-      JOURNALI_DB_PASSWORD: ${JOURNALI_DB_PASSWORD}
+      JOURNALI_DB_PASSWORD_FILE: /run/journali/db-password
       # Medien: postgres = Tabelle media_blob in derselben Datenbank (ein Paket, lauffaehig). Alternativen:
       #   JOURNALI_MEDIA: /data/media  (Verzeichnis, dann das Volume unten) oder
       #   JOURNALI_MEDIA: s3://journali  + JOURNALI_S3_ENDPOINT/KEY/SECRET (Garage, MinIO, AWS, R2 …; Secret in .env)
@@ -41,6 +67,8 @@ services:
       - journali-media:/data/media
       # Jobs: Logs und Geheimnisse (secrets.json) — muessen Neustarts und neue Images ueberleben
       - journali-jobs:/data/jobs
+      # das Datenbankpasswort (nur lesen) — erzeugt vom Dienst db-passwort
+      - journali-secrets:/run/journali:ro
       # Plugins vom Host: Datei tauschen = Plugin aktualisiert (Server liest sie bei jedem Zugriff, no-cache);
       # neue Fassung unter ⌁ Plugins → ↑ aktualisieren. Kein neues Image noetig
       - ./plugins:/app/plugins
@@ -54,6 +82,7 @@ services:
 
 volumes:
   journali-db:
+  journali-secrets:
   journali-media:
   journali-jobs:
   # Pakete der zwei Plugins, die welche brauchen — beim ersten Start aus dem Image gefuellt

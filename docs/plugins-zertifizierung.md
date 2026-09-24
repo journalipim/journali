@@ -38,7 +38,7 @@ verändert worden — von wem, sagt das Siegel nicht.
 **Hash:** alle Dateien unter dem Verzeichnis ausser `node_modules`, `__pycache__`, `.git`, `certificate.json` und den
 Pfaden unter `ignore`; Pfade relativ mit `/`, ordinal sortiert; je Datei `pfad\0sha256hex\n` in einen SHA-256.
 `Journali.Server/PluginSeal.cs` und `tools/plugin-cert.mjs` rechnen denselben Hash; der Test
-`Eingebaute_Plugins_mit_Zertifikat_sind_gueltig` belegt das für jedes Plugin im Repo.
+`Core_Plugins_mit_Zertifikat_sind_gueltig` belegt das für jedes Core-Plugin (die mit journali ausgelieferten).
 
 ## Schlüssel
 

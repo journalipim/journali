@@ -2476,5 +2476,18 @@
  "Kein Administrator hat ein Passwort": "No administrator has a password",
  "Administrator": "Administrator",
  "Festlegen und anmelden": "Set and log in",
- "Die Anwender stehen im Journal, ihre Passwörter nicht. Weitere Passwörter setzt danach ein Administrator unter ◈ IAM.": "The users are in the journal, their passwords are not. Further passwords are then set by an administrator under ◈ IAM."
+ "Die Anwender stehen im Journal, ihre Passwörter nicht. Weitere Passwörter setzt danach ein Administrator unter ◈ IAM.": "The users are in the journal, their passwords are not. Further passwords are then set by an administrator under ◈ IAM.",
+ "Einrichtungsdialog": "Setup dialog",
+ "Umgebung des Servers": "The server's environment",
+ "Die Verbindung dieses Servers. Das Passwort braucht, wer die Datenbank selbst sichert.": "The connection of this server. The password is needed by whoever backs up the database themselves.",
+ "⛁ Datenbank": "⛁ Database",
+ "✓ kopiert": "✓ copied",
+ "in die Zwischenablage": "to the clipboard",
+ "wieder verdecken": "hide again",
+ "eigenes Passwort": "your own password",
+ "Anzeigen": "Show",
+ "verlangt das eigene Passwort; nach einer Minute wieder verdeckt": "asks for your own password; hidden again after a minute",
+ "◉ anzeigen": "◉ show",
+ "Die Anzeige verlangt eine Anmeldung.": "Showing it requires a login.",
+ "Passwort falsch.": "Password is wrong."
 }

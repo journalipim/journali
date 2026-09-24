@@ -89,8 +89,15 @@ public static class DbZielDatei
 
     public static void Verwerfen(string dir) { if (File.Exists(PathOf(dir))) File.Delete(PathOf(dir)); }
 
-    public static DbZiel? Umgebung(IConfiguration cfg) =>
-        cfg["JOURNALI_DB"] is { Length: > 0 } cs ? new DbZiel(cs, cfg["JOURNALI_DB_PASSWORD"], DbZiel.AusUmgebung) : null;
+    /// <summary>Aus der Umgebung: <c>JOURNALI_DB</c>, das Passwort aus <c>JOURNALI_DB_PASSWORD</c> oder — im Paket — aus der
+    /// Datei <c>JOURNALI_DB_PASSWORD_FILE</c>, die der erste Start erzeugt.</summary>
+    public static DbZiel? Umgebung(IConfiguration cfg)
+    {
+        if (cfg["JOURNALI_DB"] is not { Length: > 0 } cs) return null;
+        var pw = cfg["JOURNALI_DB_PASSWORD"];
+        if (string.IsNullOrEmpty(pw) && cfg["JOURNALI_DB_PASSWORD_FILE"] is { Length: > 0 } f && File.Exists(f)) pw = File.ReadAllText(f).Trim();
+        return new DbZiel(cs, pw, DbZiel.AusUmgebung);
+    }
 
     /// <summary>Was gilt: der Dialog vor der Umgebung — ein korrigiertes Passwort bleibt über den Neustart.</summary>
     public static DbZiel? Effektiv(string dir, IConfiguration cfg) => Lies(dir) ?? Umgebung(cfg);

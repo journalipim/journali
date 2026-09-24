@@ -44,6 +44,20 @@ public class EinrichtungTests
     }
 
     [Fact]
+    public void Im_Paket_kommt_das_Passwort_aus_der_Datei_die_der_erste_Start_erzeugt()
+    {
+        var dir = Dir(); var f = Path.Combine(dir, "db-password");
+        File.WriteAllText(f, "aus-der-datei" + Environment.NewLine);
+        var cfg = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        { ["JOURNALI_DB"] = "Host=db;Database=journali;Username=postgres", ["JOURNALI_DB_PASSWORD"] = "", ["JOURNALI_DB_PASSWORD_FILE"] = f }).Build();
+        Assert.Equal("aus-der-datei", DbZielDatei.Umgebung(cfg)!.Password);
+        // steht es direkt da, gilt das
+        var direkt = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
+        { ["JOURNALI_DB"] = "Host=db;Database=journali;Username=postgres", ["JOURNALI_DB_PASSWORD"] = "direkt", ["JOURNALI_DB_PASSWORD_FILE"] = f }).Build();
+        Assert.Equal("direkt", DbZielDatei.Umgebung(direkt)!.Password);
+    }
+
+    [Fact]
     public void Ein_leeres_Passwort_im_Dialog_behaelt_das_bisherige_nur_bei_gleichem_Host_und_Anwender()
     {
         var bisher = new DbZiel("Host=db;Port=5432;Database=j;Username=postgres", "alt", DbZiel.AusUmgebung);

@@ -6,6 +6,12 @@ A backup is a full backup into a directory on the server: the journal with all e
 
 ⚙ Settings → ⇅ B&R backs up on button press into a chosen directory and shows beforehand what this system has and what is in the directory: entries, assets, files, plugins. Assets from the database go along; if they live in a directory or in S3, the server's operations back that up.
 
+## Backing up the database itself
+
+Whoever backs up the database with their own tools finds its connection under ⚙ Settings → ⇅ B&R → **⛁ Database**:
+host, port, database and login name. The password is hidden; showing it asks for your own password, and after a minute
+it is hidden again. The section is visible to whoever manages users and roles.
+
 ## As a job
 
 The plugin Backup runs as a job with a schedule: one folder with timestamp per run, older ones are removed according to retention. It belongs to the tier Pro.

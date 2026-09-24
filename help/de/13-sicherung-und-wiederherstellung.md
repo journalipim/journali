@@ -6,6 +6,12 @@ Eine Sicherung ist eine Vollsicherung in ein Verzeichnis auf dem Server: das Jou
 
 ⚙ Einstellungen → ⇅ B&R sichert auf Knopfdruck in ein gewähltes Verzeichnis und zeigt vorher, was dieses System hat und was im Verzeichnis liegt: Einträge, Assets, Dateien, Plugins. Assets aus der Datenbank gehen mit; liegen sie in einem Verzeichnis oder in S3, sichert das der Betrieb des Servers.
 
+## Die Datenbank selbst sichern
+
+Wer die Datenbank mit eigenen Mitteln sichert, findet ihre Verbindung unter ⚙ Einstellungen → ⇅ B&R → **⛁ Datenbank**:
+Host, Port, Datenbank und Anmeldename. Das Passwort ist verdeckt; anzeigen verlangt das eigene Passwort, und nach einer
+Minute ist es wieder verdeckt. Den Abschnitt sieht, wer Anwender und Rollen verwaltet.
+
 ## Als Job
 
 Das Plugin Sicherung läuft als Job mit Zeitplan: je Lauf ein Ordner mit Zeitstempel, ältere werden nach der Aufbewahrung weggeräumt. Es gehört zum Tarif Pro.

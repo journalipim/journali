@@ -48,6 +48,24 @@ beim Entwickeln `Journali.Server/jobs/`) — geschrieben vom Einrichtungsdialog,
 | verbunden, normal | Anmeldung | Betrieb |
 | Datenbank bricht im Betrieb weg | Streifen oben „Datenbank nicht erreichbar“ | antwortet 503 mit `db: false`, verbindet neu, sobald sie zurück ist |
 
+**Das Datenbankpasswort im Paket.** Der Dienst `db-passwort` erzeugt beim ersten Start eines (24 zufällige Bytes,
+Base64) und legt es ins Volume `journali-secrets`; steht in `.env` ein `JOURNALI_DB_PASSWORD`, nimmt er dieses. Postgres
+liest es über `POSTGRES_PASSWORD_FILE`, der Server über `JOURNALI_DB_PASSWORD_FILE`. Später ändern wirkt nicht —
+Postgres übernimmt ein Passwort nur beim allerersten Start.
+
+Wer die Datenbank selbst sichert, braucht es. Zwei Wege:
+
+```bash
+docker compose exec server cat /run/journali/db-password
+```
+
+oder ⚙ Einstellungen → ⇅ B&R → **⛁ Datenbank**: Host, Port, Datenbank, Anmeldename — und das Passwort nach erneuter
+Eingabe des eigenen (Recht `users`, `GET /api/backup/db`, `POST /api/backup/db/password`). Nach einer Minute ist es
+wieder verdeckt; jede Anzeige steht im Serverlog.
+
+Ohne die Datenbank aus dem Paket (eigener Cluster) fällt der Dienst `db-passwort` weg: dann setzt man `JOURNALI_DB`
+und `JOURNALI_DB_PASSWORD` in der Umgebung oder trägt die Verbindung im Einrichtungsdialog ein.
+
 **Einrichtungscode.** Solange etwas einzurichten ist — Datenbank, erster Administrator, Passwort eines
 Administrators —, erzeugt der Server einen Code, schreibt ihn in die Konsole und nach `einrichtungscode.txt` im
 Datenverzeichnis. Dialog und Anmeldeseite verlangen ihn; ein falscher kostet eine Sekunde. Wer den Code sieht, hat

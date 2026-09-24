@@ -27,7 +27,6 @@ PostgreSQL 18 aus `compose.yaml`.
 ```
 git clone https://github.com/journalipim/journali.git
 cd journali
-cp .env.example .env        # JOURNALI_DB_PASSWORD eintragen
 docker compose pull
 docker compose up -d
 ```

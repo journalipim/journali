@@ -114,8 +114,9 @@ function pick(k) { cur.value = k }
       <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}</span>
       <span class="l" :title="$t('nach Bezeichnung sortieren{0}', [sortBy === 'label' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('label')">{{ $t("Bezeichnung{0}", [caret('label')]) }}</span>
       <span class="r">
-        <span :title="$t('nach Fassung sortieren{0}', [sortBy === 'version' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('version')">{{ $t("Fassung{0}", [caret('version')]) }}</span>
-        <span :title="$t('nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert){0}', [sortBy === 'state' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('state')">{{ $t("Zustand{0}", [caret('state')]) }}</span>
+        <span class="c-ver" :title="$t('nach Fassung sortieren{0}', [sortBy === 'version' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('version')">{{ $t("Fassung{0}", [caret('version')]) }}</span>
+        <span class="c-seal" />
+        <span class="c-state" :title="$t('nach Zustand sortieren (an, Basis fehlt, aus, nicht installiert){0}', [sortBy === 'state' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('state')">{{ $t("Zustand{0}", [caret('state')]) }}</span>
       </span>
     </div>
     <div class="scroll">
@@ -123,11 +124,10 @@ function pick(k) { cur.value = k }
         <span class="k">{{ p.key }}</span>
         <span class="l">{{ label(p.manifest) || p.key }}</span>
         <span class="r">
-          <span v-if="p.version" class="mono">{{ p.version }}</span>
-          <span v-if="p.update" class="warn" :title="$t('auf der Platte: {0}', [p.diskVersion])">↑ {{ p.diskVersion }}</span>
-          <span v-if="!p.onDisk" class="neg" :title="$t('Verzeichnis fehlt')">✗</span>
-          <span v-if="sealOf(p)" class="seal" :class="p.certified ? 'pos' : 'neg'" :title="sealTitle(p)">{{ sealOf(p) }}</span>
-          <span :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'">{{ stateOf(p) }}</span>
+          <!-- feste Spalten: Fassung, Siegel, Zustand — damit sie untereinander stehen, gleich wie lang die Bezeichnung ist -->
+          <span class="c-ver mono">{{ p.version ?? '' }}<span v-if="p.update" class="warn" :title="$t('auf der Platte: {0}', [p.diskVersion])"> ↑</span></span>
+          <span class="c-seal"><span v-if="sealOf(p)" class="seal" :class="p.certified ? 'pos' : 'neg'" :title="sealTitle(p)">{{ sealOf(p) }}</span></span>
+          <span class="c-state" :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'" :title="stateOf(p)">{{ stateOf(p) }}<span v-if="!p.onDisk" class="neg" :title="$t('Verzeichnis fehlt')"> ✗</span></span>
         </span>
       </div>
       <div v-if="plugins.loaded && !plugins.list.length" class="empty"><span :title="$t('Ein Verzeichnis mit plugin.json unter plugins/ anlegen.')">{{ $t("Kein Plugin") }}</span></div>
@@ -139,7 +139,7 @@ function pick(k) { cur.value = k }
         <span class="k">{{ c.key }}</span>
         <span class="l">{{ $L(c.entry.label) || c.key }}</span>
         <span class="r">
-          <span class="mono">{{ c.entry.version }}</span>
+          <span class="c-ver mono">{{ c.entry.version }}</span>
           <span v-if="c.onDisk && !c.newer" class="pos" :title="$t('liegt unter plugins/')">✓</span>
           <button v-else class="mini" :title="c.newer ? $t('neue Fassung holen: {0} → {1}', [c.diskVersion, c.entry.version]) : $t('Zip laden, Siegel prüfen, nach plugins/ legen')" @click.stop="fetchPlugin(c.key)">{{ c.newer ? '↑ ' + c.entry.version : $t('⇩ holen') }}</button>
         </span>
@@ -226,9 +226,13 @@ function pick(k) { cur.value = k }
 .li:hover { background: var(--hover); }
 .li.current { background: var(--accent-soft); box-shadow: inset 2px 0 0 var(--accent); }
 .li.off .l { color: var(--muted); }
-.li .k { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 70px; overflow: hidden; text-overflow: ellipsis; }
-.li .l { overflow: hidden; text-overflow: ellipsis; }
-.li .r { margin-left: auto; font-size: 11px; display: flex; gap: 8px; }
+.li .k { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 70px; flex: none; overflow: hidden; text-overflow: ellipsis; }
+.li .l { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.li .r { margin-left: auto; flex: none; font-size: 11px; display: flex; gap: 8px; align-items: center; }
+/* feste Breiten rechts: jede Spalte steht in jeder Zeile an derselben Stelle */
+.c-ver { width: 58px; text-align: right; white-space: nowrap; }
+.c-seal { width: 14px; text-align: center; }
+.c-state { width: 104px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .form { width: auto; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }

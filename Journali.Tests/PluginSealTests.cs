@@ -84,10 +84,10 @@ public class PluginSealTests
         Assert.Equal("Signatur passt nicht", PluginSeal.Check(dir, "demo", "1.2.0", Convert.ToBase64String(ECDsa.Create(ECCurve.NamedCurves.nistP256).ExportSubjectPublicKeyInfo())).Grund);
     }
 
-    /// <summary>Die Plugins im Repo tragen ein Zertifikat aus tools/plugin-cert.mjs — der Server muss es mit dem eingebauten
+    /// <summary>Die Core-Plugins (die mit journali ausgelieferten) tragen ein Zertifikat aus tools/plugin-cert.mjs — der Server muss es mit dem eingebauten
     /// Schlüssel bestätigen. Bricht das, wurde ein Plugin geändert und nicht neu signiert (node tools/plugin-cert.mjs sign key).</summary>
     [Fact]
-    public void Eingebaute_Plugins_mit_Zertifikat_sind_gueltig()
+    public void Core_Plugins_mit_Zertifikat_sind_gueltig()
     {
         var root = AppContext.BaseDirectory;
         string? plugins = null;

@@ -9,6 +9,7 @@ import { store } from '../store.js'
 import MatrixPicker from '../components/MatrixPicker.vue'
 import StorageSettings from '../components/StorageSettings.vue'
 import RestoreSettings from '../components/RestoreSettings.vue'
+import DbSettings from '../components/DbSettings.vue'
 import MailSettings from '../components/MailSettings.vue'
 import TeamsSettings from '../components/TeamsSettings.vue'
 import UsersSettings from '../components/UsersSettings.vue'
@@ -57,7 +58,7 @@ async function save() {
     <div class="scroll" v-else-if="tab === 'storage'"><StorageSettings teil="speicher" /></div>
     <div class="scroll" v-else-if="tab === 'assets'"><StorageSettings teil="assets" /></div>
     <div class="scroll" v-else-if="tab === 'mail'"><MailSettings /></div>
-    <div class="scroll" v-else-if="tab === 'backup'"><RestoreSettings /></div>
+    <div class="scroll" v-else-if="tab === 'backup'"><DbSettings /><RestoreSettings /></div>
     <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /><TeamsAdmin /></div>
 
     <div class="scroll" v-else>

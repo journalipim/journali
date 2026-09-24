@@ -96,6 +96,10 @@ public static class Auth
             return f(Load(dir, fresh: true));
         }
     }
+    /// <summary>Stimmt das Passwort dieses Anwenders? Für Bestätigungen (etwa vor dem Anzeigen des Datenbankpassworts).</summary>
+    public static bool PasswortStimmt(string dir, string user, string password) =>
+        Finde(dir, s => s.Passwords.GetValueOrDefault(user)) is { } stored && Verify(password, stored);
+
     /// <summary>Zwischenspeicher leeren — nach einer Wiederherstellung oder einem Wechsel der Datenbank.</summary>
     public static void Vergessen() { lock (Gate) Cache.Clear(); }
 
