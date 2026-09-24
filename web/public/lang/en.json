@@ -2495,7 +2495,6 @@
  "❖ Core": "❖ Core",
  "Aktiviert, aber ohne Wirkung — {0} gehört zum Tarif {1}": "Activated but without effect — {0} belongs to tier {1}",
  "· aktiviert, ohne Wirkung": "· activated, without effect",
- "Wirkt nicht — ohne Wirkung kein Job": "Without effect — no job without effect",
  "Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück": "drag the column wider or narrower; double-click resets",
  "Unbekannter Tarif {0} — bekannt sind: {1}": "Unknown tier {0} — known are: {1}",
  "◆ mein Tarif": "◆ my tier",
@@ -2503,5 +2502,6 @@
  "Datenbankpasswort anzeigen": "Show the database password",
  "Die Anzeige verlangt das Anmeldepasswort von {0}.": "Showing it requires the login password of {0}.",
  "Anmeldepasswort": "Login password",
- "fragt nach dem eigenen Anmeldepasswort; nach einer Minute wieder verdeckt": "asks for your own login password; hidden again after a minute"
+ "fragt nach dem eigenen Anmeldepasswort; nach einer Minute wieder verdeckt": "asks for your own login password; hidden again after a minute",
+ "Dieses Plugin ist in deinem Tarif nicht verfügbar. Ein Job damit liefe nicht.": "This plugin is not included in your tier. A job with it would not run."
 }

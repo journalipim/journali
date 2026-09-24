@@ -23,8 +23,10 @@ public static class JobApi
         api.MapGet("/jobs/plugins", (Catalog c) =>
         {
             var manifests = PluginApi.Scan(runner.PluginDir);
-            // eine Zeile je Dienst: label des Dienstes, sonst des Plugins
-            return c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled && manifests.ContainsKey(p.Key))
+            var tarif = c.InstanzTarif;
+            // eine Zeile je Dienst: label des Dienstes, sonst des Plugins. Nur, was auch laufen dürfte —
+            // mit einem Plugin ausserhalb des Tarifs liesse sich kein Job anlegen, also steht es hier nicht zur Wahl
+            return c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled && tarif.Erlaubt(p.Key) && manifests.ContainsKey(p.Key))
                 .SelectMany(p => PluginApi.Processes(manifests[p.Key].Raw).Select(x => new
                 {
                     key = p.Key, service = x.Key, version = p.Version,

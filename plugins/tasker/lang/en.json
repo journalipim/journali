@@ -93,5 +93,6 @@
  "zurück": "back",
  "Jobs": "Jobs",
  "im Server, Zeitplan, Läufe, Logs": "in the server, schedule, runs, logs",
- "{0} wirkt nicht — nur Entfernen geht": "{0} has no effect — only removing works"
+ "Dieses Plugin ist in deinem Tarif nicht verfügbar. Du kannst den Job löschen, aber nicht ausführen.": "This plugin is not included in your tier. You can delete the job but not run it.",
+ "Dieses Plugin ist nicht aktiviert. Du kannst den Job löschen, aber nicht ausführen.": "This plugin is not activated. You can delete the job but not run it."
 }

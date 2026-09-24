@@ -176,9 +176,11 @@ async function mount(root, ctx) {
     }
     tbl.append(tb); list.append(tbl)
   }
-  /// gesperrt, weil sein Plugin nicht wirkt
+  /// gesperrt, weil sein Plugin nicht wirkt — und warum: der Tarif trägt es nicht, oder es ist nicht aktiviert
   const zu = j => jobGesperrt(j, ctx.plugins?.active?.bind(ctx.plugins))
-  const grund = j => t('{0} wirkt nicht — nur Entfernen geht', [j.plugin])
+  const grund = j => (ctx.plugins?.list ?? []).find(p => p.key === j.plugin)?.allowed === false
+    ? t('Dieses Plugin ist in deinem Tarif nicht verfügbar. Du kannst den Job löschen, aber nicht ausführen.')
+    : t('Dieses Plugin ist nicht aktiviert. Du kannst den Job löschen, aber nicht ausführen.')
   async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
   async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(`⊘ ${j.label} abgebrochen`); await load() } catch (e) { store.toast(e.message) } }
   // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben
