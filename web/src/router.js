@@ -13,7 +13,7 @@ import MediaView from './views/MediaView.vue'
 import PluginsView from './views/PluginsView.vue'
 import PluginHost from './views/PluginHost.vue'
 import SettingsView from './views/SettingsView.vue'
-import HelpView from './views/HelpView.vue'
+import { openHelp } from './help.js'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -44,8 +44,8 @@ export const router = createRouter({
     { path: '/plugins', component: PluginsView },
     { path: '/p/:key/:path', component: PluginHost },
     { path: '/settings', component: SettingsView },
-    { path: '/help', component: HelpView },   // Hilfe in der Instanz (24.09.2026): Kapitel aus help/<code>/
-    { path: '/help/:chapter', component: HelpView, props: true },
+    // Hilfe ist ein Fenster, keine Ansicht (25.09.2026) — diese Adressen von früher öffnen es über dem Baum
+    { path: '/help/:chapter?', redirect: to => { openHelp(String(to.params.chapter ?? '')); return '/tree' } },
     { path: '/login', component: LoginView },
     { path: '/setup', component: DbSetupView },   // Datenbank einrichten — nur, solange der Server keine Verbindung hat
   ],

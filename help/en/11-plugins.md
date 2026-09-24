@@ -27,9 +27,9 @@ A **base plugin** brings the basic function of a group of the rail and is the co
 
 Which plugins can be installed and enabled depends on the tier of the instance: Free includes Table, Excel add-in, OnlyOffice, previews and export; Pro adds data sheet, translation, template export, ETIM, data analysis and backup as a job; from Pro+ all. The highest tier any team of the instance has counts.
 
-## Native journali PIM plugins
+## journali Core plugins
 
-A **native journali PIM plugin** comes from journali and is unchanged. Next to its manifest it carries a signature over
+A **journali Core plugin** comes from journali and is unchanged. Next to its manifest it carries a signature over
 key, version and all files. ⌁ Plugins shows it as ❖ with the date; if a file is changed, ⚠ appears with the reason. A
 plugin without a signature runs just the same and carries no mark — the mark says where it comes from, not whether it
 is good.

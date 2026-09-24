@@ -9,6 +9,7 @@ import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 import { ai } from './ai.js'
 import UsageMini from './components/UsageMini.vue'
 import HelpButton from './components/HelpButton.vue'
+import HelpPanel from './components/HelpPanel.vue'
 import { t as t_ } from './i18n.js'
 
 /// Volumen in KB, MB, GB — journali misst Bytes, nichts anderes
@@ -109,6 +110,8 @@ function railDrop(target) {
 
     <!-- Datenbank im Betrieb weg: der Server sagt es mit 503; weg, sobald wieder eine Anfrage durchgeht -->
     <div v-if="store.dbDown && route.path !== '/setup'" class="dbdown" :title="$t('Der Server verbindet sich neu, sobald die Datenbank zurück ist.')">{{ $t("✗ Datenbank nicht erreichbar") }}</div>
+    <!-- Hilfe: ein Fenster über allem, kein Seitenwechsel -->
+    <HelpPanel />
     <main class="content">
       <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">{{ $t("✗ Diese Ansicht ist abgestürzt") }}</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">{{ $t("▣ Zum Baum") }}</button> <button @click="reload">{{ $t("↻ Neu laden") }}</button></div></div>
       <router-view v-else />

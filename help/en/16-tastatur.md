@@ -67,6 +67,6 @@ The rail can be reordered by dragging; every plugin can be shown or hidden.
 
 | Key | Effect |
 |---|---|
-| Esc | close dialog, menu or editor |
+| Esc | close dialog, menu, help or editor |
 | Enter | the one button of a dialog |
 | ↑ ↓ Enter | choose in the context menu, a letter jumps |

@@ -144,7 +144,7 @@ Stufe 3 gebaut am 24.09.2026: Plugins übersetzt (17 Sprachdateien `plugins/<key
 im Shim, Bezeichnungen des Modells folgen der Oberflächensprache (`L()`).
 
 Teil 2 gebaut am 24.09.2026: 18 Kapitel unter `help/de` und `help/en`, `web/build-help.mjs` baut sie zu
-`wwwroot/help/<code>/`, `HelpView.vue` unter `/help/:chapter`, der ?-Knopf öffnet das Kapitel zur Ansicht
+`wwwroot/help/<code>/`, `HelpPanel.vue` als Fenster über der Ansicht (seit 25.09.2026; davor eine Ansicht unter `/help/:chapter`), der ?-Knopf öffnet das Kapitel zur Ansicht
 (`help.js: chapterFor`). `LICENSE` in der Wurzel (ELv2 plus Zusatzerlaubnis). Offen: README zur Installation
 auf Git, Lizenzhinweis im Startbanner, `ScriptEditor.vue`, mehrzeilige Texte, Servermeldungen (Stufe 4).
 

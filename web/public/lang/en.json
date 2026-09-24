@@ -2491,10 +2491,10 @@
  "Eingeschaltet, aber ohne Wirkung — {0} gehört zum Tarif {1}": "Switched on but without effect — {0} belongs to tier {1}",
  "· eingeschaltet, ohne Wirkung": "· switched on, without effect",
  "Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.": "The state in the journal stays: when the tier comes back, it takes effect again.",
- "Native journali PIM Plugin": "Native journali PIM plugin",
  "Original von {0}": "Original from {0}",
- "❖ Native": "❖ Native",
  "Signatur des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert": "The publisher's signature: key, version and all files are unchanged",
  "❖ Herkunft": "❖ Origin",
- "signiert vom Herausgeber; jede Änderung an den Dateien bricht das Siegel": "signed by the publisher; any change to the files breaks the seal"
+ "signiert vom Herausgeber; jede Änderung an den Dateien bricht das Siegel": "signed by the publisher; any change to the files breaks the seal",
+ "journali Core Plugin": "journali Core plugin",
+ "❖ Core": "❖ Core"
 }

@@ -67,6 +67,6 @@ Die Leiste lässt sich durch Ziehen umsortieren; jedes Plugin kann ein- oder aus
 
 | Taste | Wirkung |
 |---|---|
-| Esc | Dialog, Menü oder Editor schliessen |
+| Esc | Dialog, Menü, Hilfe oder Editor schliessen |
 | Enter | den einen Knopf eines Dialogs |
 | ↑ ↓ Enter | im Kontextmenü wählen, Buchstabe springt |

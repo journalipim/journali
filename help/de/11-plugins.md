@@ -27,9 +27,9 @@ Ein **Basis-Plugin** bringt die Grundfunktion einer Gruppe der Leiste mit und is
 
 Welche Plugins sich installieren und einschalten lassen, hängt am Tarif der Instanz: Kostenlos enthält Tabelle, Excel-Add-in, OnlyOffice, Vorschauen und Export; Pro dazu Datenblatt, Übersetzung, Vorlagen-Export, ETIM, Datenanalyse und Sicherung als Job; ab Pro+ alle. Es zählt der höchste Tarif, den ein Team der Instanz hat.
 
-## Native journali PIM Plugins
+## journali Core Plugins
 
-Ein **Native journali PIM Plugin** stammt von journali und ist unverändert. Es trägt neben dem Manifest eine Signatur
+Ein **journali Core Plugin** stammt von journali und ist unverändert. Es trägt neben dem Manifest eine Signatur
 über Schlüssel, Fassung und alle Dateien. ⌁ Plugins zeigt es als ❖ mit dem Datum; wird eine Datei verändert, steht ⚠ mit
 dem Grund. Ein Plugin ohne Signatur läuft genauso und trägt kein Zeichen — das Zeichen sagt, woher es kommt, nicht, ob
 es gut ist.

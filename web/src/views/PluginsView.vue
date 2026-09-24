@@ -71,7 +71,7 @@ const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   /
 // nichts. Nach aussen heisst ❖ nicht „zertifiziert“ — das klänge nach einer Prüfstelle —, sondern: es ist ein Original.
 const HERAUSGEBER = 'journali'
 const sealOf = p => p.certified ? '❖' : p.sealReason ? '⚠' : ''
-const sealName = p => p.sealIssuer === HERAUSGEBER || !p.sealIssuer ? t('Native journali PIM Plugin') : t('Original von {0}', [p.sealIssuer])
+const sealName = p => p.sealIssuer === HERAUSGEBER || !p.sealIssuer ? t('journali Core Plugin') : t('Original von {0}', [p.sealIssuer])
 const sealTitle = p => p.certified ? `${sealName(p)} · ${p.sealIssued ?? ''}` : p.sealReason ? t('Siegel gebrochen: {0}', [p.sealReason]) : ''
 // Katalog des Herausgebers: was es an zertifizierten Plugins gibt — holen legt das Verzeichnis unter plugins/ ab, installiert wird danach wie sonst
 const catalog = ref(null)
@@ -111,7 +111,7 @@ function pick(k) { cur.value = k }
       <input v-model="q" type="search" :placeholder="$t('🔍 Key, Name, Beschreibung')" style="flex:1;min-width:120px" @keydown.esc="q = ''" />
       <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
       <span class="sep">·</span>
-      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')], ['cert', $t('❖ Native')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
+      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')], ['cert', $t('❖ Core')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
     </div>
     <div class="li head">
       <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}</span>

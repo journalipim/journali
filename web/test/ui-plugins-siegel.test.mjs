@@ -32,11 +32,11 @@ test('Siegel in der Liste: ❖ mit Datum, ⚠ mit Grund, sonst nichts', async ()
     const w = mount(PluginsView, opts)
     await flushPromises()
     const csv = row(w, 'csv').find('.seal'); assert.equal(csv.text(), '❖')
-    assert.match(csv.attributes('title'), /Native journali PIM Plugin · 2026-09-24/, 'nach aussen heisst ❖ nicht „zertifiziert“')
+    assert.match(csv.attributes('title'), /journali Core Plugin · 2026-09-24/, 'nach aussen heisst ❖ nicht „zertifiziert“')
     const json = row(w, 'json').find('.seal'); assert.equal(json.text(), '⚠'); assert.match(json.attributes('title'), /Dateien verändert/)
     assert.ok(!row(w, 'mine').find('.seal').exists())
     // Details des gewählten (csv ist das erste): Herkunft mit Datum
-    assert.match(w.text(), /Native journali PIM Plugin · 2026-09-24/)
+    assert.match(w.text(), /journali Core Plugin · 2026-09-24/)
     // Katalog offline: der Abschnitt sagt es, ohne Rat
     assert.match(w.find('.catalog').text(), /nicht erreichbar/)
   } finally { api.get = orig }
@@ -48,7 +48,7 @@ test('Filter ❖ zeigt nur Originale', async () => {
   try {
     const w = mount(PluginsView, opts)
     await flushPromises()
-    await w.findAll('.view-chip').find(c => c.text() === '❖ Native').trigger('click')
+    await w.findAll('.view-chip').find(c => c.text() === '❖ Core').trigger('click')
     await flushPromises()
     assert.deepEqual(w.findAll('.scroll .li').map(li => li.find('.k').text()), ['csv'])
   } finally { api.get = orig }
@@ -118,6 +118,6 @@ test('ein Siegel eines anderen Herausgebers nennt diesen, nicht journali', async
     const w = mount(PluginsView, opts)
     await flushPromises()
     assert.match(row(w, 'fremd').find('.seal').attributes('title'), /Original von acme/)
-    assert.ok(!w.text().includes('Native journali PIM Plugin'))
+    assert.ok(!w.text().includes('journali Core Plugin'))
   } finally { api.get = orig }
 })

@@ -3,7 +3,13 @@
 // (Organisation journalipim; kein eigenes Forum). journalipim.de und journalipim.com zeigen nur auf die Website.
 // Das Docker-Image kommt, sobald der Bau-Workflow steht (ghcr.io/journalipim/journali).
 // Eintrag: { label, icon, url, hint } — hint steht im Tooltip, label ist ein Name.
+import { reactive } from 'vue'
 import { t } from './i18n.js'
+
+/// Das Hilfefenster: offen und welches Kapitel. Es liegt über der Ansicht — wer nachliest, bleibt, wo er war.
+export const hilfe = reactive({ open: false, chapter: '' })
+export function openHelp(chapter = '') { if (chapter) hilfe.chapter = chapter; hilfe.open = true }
+export function closeHelp() { hilfe.open = false }
 
 export const HELP_LINKS = [
   { label: 'journali.de', icon: '⌂', url: 'https://journali.de', hint: 'Website: Produkt, Preise, Kontakt' },
@@ -26,11 +32,12 @@ export function chapterFor(path) {
   return hit ? hit[1] : 'was-journali-ist'
 }
 
-/// Menüeinträge für menu.open(e, …): Kapitel zur Ansicht, alle Kapitel, dann die Links (neues Fenster, noopener)
-export function helpItems(open = url => window.open(url, '_blank', 'noopener'), path = location.pathname, go = p => import('./router.js').then(m => m.router.push(p))) {
+/// Menüeinträge für menu.open(e, …): Kapitel zur Ansicht, alle Kapitel, dann die Links (neues Fenster, noopener).
+/// Die Hilfe geht als Fenster auf, nicht als Ansicht — `zeig` nimmt den Kapitelnamen, leer heisst: das zuletzt gelesene.
+export function helpItems(open = url => window.open(url, '_blank', 'noopener'), path = location.pathname, zeig = openHelp) {
   return [
-    { label: t('? Hilfe zu dieser Ansicht'), icon: '?', action: () => go(`/help/${chapterFor(path)}`) },
-    { label: t('Alle Kapitel'), icon: '≡', action: () => go('/help') },
+    { label: t('? Hilfe zu dieser Ansicht'), icon: '?', action: () => zeig(chapterFor(path)) },
+    { label: t('Alle Kapitel'), icon: '≡', action: () => zeig('') },
     { sep: true },
     ...HELP_LINKS.map(l => ({ label: l.label, icon: l.icon, title: l.hint, action: () => open(l.url) })),
   ]
