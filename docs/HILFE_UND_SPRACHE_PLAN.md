@@ -132,3 +132,12 @@ Stand: Stufe 1 gebaut am 24.09.2026 — `web/src/i18n.js`, Sprachwahl unter ◐ 
 `tools/texte-heben.mjs` hat 1 059 Stellen in 48 Vorlagen nach `$t('…')` gehoben (925 Schlüssel); 279 Stellen mit Text in
 Ausdrücken und die Strings im `<script>` sind Handarbeit (Liste: `node tools/texte-heben.mjs --dry`). `public/lang/en.json`
 ist die erste Sprachdatei.
+
+Stufe 2/2b gebaut am 24.09.2026: `tools/texte-heben-ausdruecke.mjs` hebt Zeichenketten in Ausdrücken und im Skriptteil
+(1 284 Stellen); `en.json` ist mit allen 2 019 Schlüsseln der Oberfläche übersetzt (`node tools/texte-pruefen.mjs en`).
+Was noch deutsch ist: `ScriptEditor.vue` (regulärer Ausdruck im Vorlagen-Literal, Handarbeit), mehrzeilige Texte
+(KI-Prompts, Meldungen mit Umbruch), das `<script>` von Modulen, deren Konstanten beim Laden gerechnet werden
+(sie zeigen nach dem Sprachwechsel bis zum Neuladen die alte Sprache), die Plugins (`plugins/*/src`, `plugins/*/entry.js`)
+und die Servermeldungen (Stufe 3). Für Plugins: `t` steht in `window.journali` (host.js), fehlt aber noch im Shim
+`HOST_NAMES` von `build-plugins.mjs` und als `ctx.t` für Plugins ohne Bau; Sprachdateien je Plugin unter
+`plugins/<key>/lang/<code>.json` muss `setLang` mitladen.
