@@ -93,7 +93,7 @@ test('jede Zeile hat dieselben drei Spalten rechts — mit und ohne Fassung, Sie
   } finally { api.get = orig }
 })
 
-test('was der Tarif nicht trägt, wirkt nicht — auch wenn es im Journal an ist', async () => {
+test('ein Plugin, das der Tarif nicht enthält, wirkt nicht — auch wenn es im Journal aktiviert ist', async () => {
   welt()
   plugins.list = [{ key: 'da', version: '1.1.0', installed: true, enabled: true, onDisk: true, allowed: false, tarif: 'pro', manifest: { kind: 'quality', label: { de: 'Qualität: Datenanalyse' } } }]
   plugins.active = k => { const p = plugins.list.find(x => x.key === k); return !!p?.enabled && p.allowed !== false }

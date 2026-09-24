@@ -24,8 +24,8 @@ public static class JobApi
         {
             var manifests = PluginApi.Scan(runner.PluginDir);
             var tarif = c.InstanzTarif;
-            // eine Zeile je Dienst: label des Dienstes, sonst des Plugins. Nur, was auch laufen dürfte —
-            // mit einem Plugin ausserhalb des Tarifs liesse sich kein Job anlegen, also steht es hier nicht zur Wahl
+            // eine Zeile je Dienst: label des Dienstes, sonst des Plugins. Nur Plugins, die der Tarif enthält —
+            // mit den anderen lässt sich kein Job anlegen, also stehen sie auch nicht zur Auswahl
             return c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled && tarif.Erlaubt(p.Key) && manifests.ContainsKey(p.Key))
                 .SelectMany(p => PluginApi.Processes(manifests[p.Key].Raw).Select(x => new
                 {

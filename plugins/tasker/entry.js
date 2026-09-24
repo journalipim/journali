@@ -176,7 +176,7 @@ async function mount(root, ctx) {
     }
     tbl.append(tb); list.append(tbl)
   }
-  /// gesperrt, weil sein Plugin nicht wirkt — und warum: der Tarif trägt es nicht, oder es ist nicht aktiviert
+  /// gesperrt, weil sein Plugin nicht wirkt — und warum: der Tarif enthält es nicht, oder es ist nicht aktiviert
   const zu = j => jobGesperrt(j, ctx.plugins?.active?.bind(ctx.plugins))
   const grund = j => (ctx.plugins?.list ?? []).find(p => p.key === j.plugin)?.allowed === false
     ? t('Dieses Plugin ist in deinem Tarif nicht verfügbar. Du kannst den Job löschen, aber nicht ausführen.')

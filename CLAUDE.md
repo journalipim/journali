@@ -36,6 +36,13 @@ angebundener Systeme (Solr, Excel, OnlyOffice, DeepL, ETIM, Postgres, Docker) si
 gemeint. In Commits keine Zeile „Co-Authored-By“ — es gibt einen Beitragenden.
 `web/tools/namen-entfernen.py` räumt Altbestand auf.
 
+## Regel 4: Sachliches Deutsch
+
+Handbuch- und Entwicklerdeutsch, im Chat wie im Quelltext, in Kommentaren, Dokumenten und Oberflächentexten.
+Keine Bilder, keine Metaphern, keine gehobene Sprache: ein Tarif **enthält** ein Plugin (er „trägt“ es nicht),
+eine Grenze **gilt** (sie „steht“ nicht da), ein Wert **wird gelöscht** (er „verschwindet“ nicht). Wo ein
+gewöhnliches Wort reicht, steht das gewöhnliche Wort.
+
 ## Arbeitsweise
 
 - **Keine Pausen bei Mehrfachaufträgen.** Alles durcharbeiten, erst am Ende

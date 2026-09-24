@@ -74,7 +74,7 @@ const TARIF = { free: t('Kostenlos'), pro: 'Pro', proplus: 'Pro+', enterprise: t
 const tarifOf = p => TARIF[p.tarif] ?? p.tarif ?? ''
 const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? t('— nicht installiert') : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : t('◐ an, Basis aus')
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
-// Siegel: ❖ für ein Original (Signatur des Herausgebers passt, keine Datei verändert), ⚠ für ein gebrochenes, sonst
+// Siegel: ❖ für ein Original (Signatur des Herausgebers passt, keine Datei geändert), ⚠ für ein gebrochenes, sonst
 // nichts. Nach aussen heisst ❖ nicht „zertifiziert“ — das klänge nach einer Prüfstelle —, sondern: es ist ein Original.
 const HERAUSGEBER = 'journali'
 const sealOf = p => p.certified ? '❖' : p.sealReason ? '⚠' : ''
@@ -169,8 +169,8 @@ function pick(k) { cur.value = k }
       <template v-else-if="current.installed">
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">{{ $t("↑ aktualisieren auf {0}", [current.diskVersion]) }}</button>
         <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? $t('In die Leiste links aufnehmen (unter sein Thema)') : $t('Aus der Leiste links nehmen (nur für dich, in den Einstellungen)')">{{ store.railOff.includes(current.key) ? $t('▯ nicht in der Leiste') : $t('▮ in der Leiste') }}</button>
-        <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn es wirkt; Klick kippt. Was der Tarif nicht trägt, wirkt
-             nicht — auch wenn es im Journal an ist; dann steht der Tarif da, der es hätte -->
+        <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn es wirkt; Klick kippt. Ein Plugin, das der Tarif nicht
+             enthält, wirkt nicht — auch wenn es im Journal aktiviert ist; dann steht der Tarif da, der es enthält -->
         <button :class="{ primary: plugins.active(current.key) }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? (current.enabled ? $t('Aktiviert, aber ohne Wirkung — {0} gehört zum Tarif {1}', [current.key, tarifOf(current)]) : $t('Tarif {0}', [tarifOf(current)])) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.allowed === false ? `◇ ${tarifOf(current)}` : current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" :title="$t('aus dem Journal entfernen — die Dateien bleiben')">🗑</button>
       </template>
