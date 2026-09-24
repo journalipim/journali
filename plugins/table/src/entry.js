@@ -1,5 +1,7 @@
-// Basis-Plugin table: ⇩ Import → Tabelle und ⇪ Export → Tabelle — die Grundfunktion der Gruppen Import
-// und Export und zugleich ihr Container: Quellen (csv, xlsx, json) und Ziele hängen sich hier an (requires: ["table"]).
+// Basis-Plugin table: die Grundfunktion der Gruppen Import und Export und zugleich ihr Container. Der Anwender wählt
+// das Format, nicht „Tabelle": je Format eine Kachel (CSV, Excel — JSON bringt sein eigenes Plugin mit), dazu die
+// Zwischenablage. Eine Format-Kachel erscheint nur, solange ihr Plugin wirkt (needs); die Ansicht dahinter ist
+// dieselbe, nur mit vorgewähltem Format.
 // Gebaut mit web/build-plugins.mjs → ../entry.js (Vue-Ansichten, Stile eingebettet).
 import ImportView from './ImportView.vue'
 import ExportView from './ExportView.vue'
@@ -10,8 +12,11 @@ import { t } from 'journali'
 const roles = ['group', 'product']
 export default {
   views: [
-    { path: 'import', topic: 'import', label: t('Tabellen-Import'), icon: '⊞', hint: t('CSV, Excel, JSON, Zwischenablage — mit Datenmapper'), component: ImportView },
-    { path: 'export', topic: 'export', label: t('Tabellen-Export'), icon: '⊞', hint: t('Excel, CSV — die Form, die der Tabellenimport liest'), component: ExportView },
+    { path: 'import', topic: 'import', order: 10, needs: 'csv', label: t('CSV-Import'), icon: '⊞', hint: t('CSV und TSV — mit Datenmapper'), component: ImportView, props: { nur: ['.csv', '.tsv', '.txt'] } },
+    { path: 'import-xlsx', topic: 'import', order: 11, needs: 'xlsx', label: t('Excel-Import'), icon: '⊞', hint: t('Arbeitsmappen (.xlsx) — mit Datenmapper'), component: ImportView, props: { nur: ['.xlsx', '.xlsm'] } },
+    { path: 'import-paste', topic: 'import', order: 20, label: t('Zwischenablage'), icon: '⎘', hint: t('aus Excel kopieren und hier einfügen — erste Zeile sind die Spaltennamen'), component: ImportView, props: { paste: true } },
+    { path: 'export', topic: 'export', order: 10, needs: 'csv', label: t('CSV-Export'), icon: '⊞', hint: t('CSV (; UTF-8) — die Form, die der CSV-Import liest'), component: ExportView, props: { festesFormat: 'csv' } },
+    { path: 'export-xlsx', topic: 'export', order: 11, needs: 'xlsx', label: t('Excel-Export'), icon: '⊞', hint: t('Arbeitsmappe (.xlsx) — die Form, die der Excel-Import liest'), component: ExportView, props: { festesFormat: 'xlsx' } },
   ],
   // Excel am Knoten
   nodeActions: [

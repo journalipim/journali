@@ -5,7 +5,9 @@
 // web/build-plugins.mjs) liefern Vue-Ansichten; sie teilen Vue, Router, Store, Baum mit der Oberfläche (host.js).
 //
 // Vertrag eines Browser-Plugins (default export), alles optional:
-//   views:       [{ path: 'meine-ansicht', label, icon, hint?, topic?, mount(el, ctx) → unmount? | component }]   Ansicht — in der Übersicht ihres Themas
+//   views:       [{ path: 'meine-ansicht', label, icon, hint?, topic?, needs?, props?, mount(el, ctx) → unmount? | component }]   Ansicht — in der Übersicht ihres Themas
+//                (needs: Schlüssel eines Plugins, ohne das die Ansicht nicht erscheint — das Basis-Plugin table zeigt je
+//                Format eine Kachel, aber nur solange das Format-Plugin an ist; props: feste Eigenschaften der Komponente)
 //                (topic: import | export | datasheet | analysis | jobs | tools; sonst aus kind des Manifests); component = Vue-Komponente (gebaut)
 //   nodeActions: [{ label | label(row, below) (null = hier nicht), icon, hint? | hint(row), roles?: ['group','product'], topic?: 'import'|'export'|'datasheet'|'analysis'|'tools', run(nodeId, ctx) }]
 //                Kontextmenü des Baums, ein Untermenü je Thema (roles: nur an diesen; topic sonst aus kind des Manifests; below = „Subitems“)
@@ -75,7 +77,8 @@ export const plugins = reactive({
     for (const p of order) {
       if (!this.active(p.key)) continue
       const mod = this.modules.get(p.key); if (!mod) continue
-      for (const v of mod.views ?? []) this.views.push({ key: p.key, ...v })
+      // needs: eine Ansicht, die ein anderes Plugin braucht, erscheint nur, solange das wirkt
+      for (const v of mod.views ?? []) if (!v.needs || this.active(v.needs)) this.views.push({ key: p.key, ...v })
       for (const a of mod.nodeActions ?? []) this.nodeActions.push({ key: p.key, ...a })
       for (const i of mod.importers ?? []) this.importers.push({ key: p.key, source: i.key, ...i })
       for (const c of mod.checks ?? []) this.checks.push({ key: p.key, check: c.key, ...c })

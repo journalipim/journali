@@ -29,7 +29,7 @@ onUnmounted(() => { if (unmount) { try { unmount() } catch {} } })
 </script>
 
 <template>
-  <component v-if="comp" :is="comp" :key="route.params.key + '/' + route.params.path" v-bind="wantsCtx ? { ctx } : {}" />
+  <component v-if="comp" :is="comp" :key="route.params.key + '/' + route.params.path" v-bind="{ ...(view.props ?? {}), ...(wantsCtx ? { ctx } : {}) }" />
   <div v-else class="pane" style="flex:1">
     <div ref="el" class="scroll" style="padding:8px"></div>
   </div>

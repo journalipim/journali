@@ -9,6 +9,9 @@ import { t as t_ } from 'journali'
 import { L } from 'journali'
 const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper
 const leftW = paneWidth('import.table', 720)
+// Die Kachel sagt, womit begonnen wird: `nur` sind die Endungen im Dateidialog (CSV-Import, Excel-Import),
+// `paste` heisst Zwischenablage — dann steht das Einfügefeld offen und die Dateizeile bleibt weg.
+const props = defineProps({ nur: { type: Array, default: () => [] }, paste: { type: Boolean, default: false } })
 const router = useRouter()
 const route = useRoute()
 // Knotenmodus: die Tabelle passt 1:1 zum Knoten —
@@ -66,7 +69,9 @@ async function pickFile(e) {
   if (!canPick) return   // Fallback: das <input type=file> im Label
   e.preventDefault()
   try {
-    const [h] = await window.showOpenFilePicker({ multiple: false })
+    // nur: die Kachel nennt das Format (CSV-Import, Excel-Import) — dann steht im Dateidialog nur dieses
+    const types = props.nur?.length ? [{ description: props.nur.join(' '), accept: { 'application/octet-stream': [...props.nur] } }] : undefined
+    const [h] = await window.showOpenFilePicker({ multiple: false, types })
     fileHandle.value = h
     const f = await h.getFile()
     await takeFile(f); remember(f.name, h)
@@ -299,7 +304,12 @@ onMounted(async () => {
 <template>
   <div class="pane" :style="`width:${leftW}px;flex:none`">
     <ImportHead source="table" plugin="table" :busy="busy" :get="profileGet" :set="profileSet">
-      <tr><td class="attr">{{ $t("Datei") }}</td><td class="row drop" :class="{ over: dragOver, empty: !source }" :title="source ? '' : $t('Datei hierher ziehen — oder aus Excel kopieren und hier Strg+V (erste Zeile = Spaltennamen)')" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
+      <tr v-if="paste"><td class="attr">{{ $t("Einfügen") }}</td><td>
+        <textarea v-model="pasteText" rows="4" style="width:100%" :placeholder="$t('aus Excel kopieren und hier einfügen — erste Zeile sind die Spaltennamen')" @paste.stop />
+        <div class="row" style="margin-top:4px"><button class="primary" :disabled="!pasteText.trim()" @click="takePaste">{{ $t("⎘ Übernehmen") }}</button>
+          <span v-if="source" class="chip">📄 {{ source.name }} <span class="muted">{{ source.rows.length }}</span></span></div>
+      </td></tr>
+      <tr v-if="!paste"><td class="attr">{{ $t("Datei") }}</td><td class="row drop" :class="{ over: dragOver, empty: !source }" :title="source ? '' : $t('Datei hierher ziehen — oder aus Excel kopieren und hier Strg+V (erste Zeile = Spaltennamen)')" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
         <label class="primary btn" :title="'CSV, TSV, JSON' + (plugins.importers.length ? ', ' + plugins.importers.flatMap(i => i.accept ?? []).join(', ') : '') + ' ' + $t('— oder hierher ziehen')" @click="pickFile">{{ $t("📂 wählen") }}<input id="table-file-input" type="file" style="display:none" @change="fileHandle = null; takeFile($event.target.files[0])" /></label>
         <span v-if="source" class="chip" :title="`${source.rows.length} Zeilen · ${source.columns.length} Spalten`">📄 {{ source.name }} <span class="muted">{{ source.rows.length }}</span></span>
         <button v-if="source" class="x" @click="reloadFile" :title="fileHandle ? $t('Datei neu von der Platte lesen (zwischendurch in Excel geändert?)') : $t('Datei neu wählen — dieser Browser kann Dateien nicht erneut lesen')">↻</button>

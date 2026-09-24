@@ -97,7 +97,8 @@ gewöhnliches Wort reicht, steht das gewöhnliche Wort.
   build` in `web/` baut Oberfläche und Plugins, `node build-plugins.mjs <key>` eines) —
   sie importieren `vue`, `vue-router`, `journali` und teilen die Instanzen der Oberfläche
   (`web/src/host.js`). Im Container liegt `plugins/` als Bind-Mount: austauschen ohne Image
-  Beitragspunkte: views, nodeActions, importers, checks, nodeBands (Band in der Knotenansicht),
+  Beitragspunkte: views (mit `needs` — die Kachel erscheint nur, solange das genannte Plugin wirkt — und `props`),
+  nodeActions, importers, checks, nodeBands (Band in der Knotenansicht),
   install(ctx) (einmal beim Einschalten: legt an, was das Plugin braucht); Plugin-Daten im
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`); im Job-Dialog steht bei gewähltem Profil nur, was am Job hängt

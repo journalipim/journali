@@ -1,6 +1,4 @@
 {
- "CSV, Excel, JSON, Zwischenablage — mit Datenmapper": "CSV, Excel, JSON, clipboard — with data mapper",
- "Excel, CSV — die Form, die der Tabellenimport liest": "Excel, CSV — the form the table import reads",
  "Excel: Vorlage für {0}": "Excel: template for {0}",
  "Teilbaum im Baum anhaken": "Tick a subtree in the tree",
  "mindestens eine Sprache": "at least one language",
@@ -202,6 +200,15 @@
  "Einheit": "Unit",
  "⇪ {0}: {1} Spalten{2}": "⇪ {0}: {1} columns{2}",
  ", {0} Zeilen": ", {0} rows",
- "Tabellen-Import": "Table import",
- "Tabellen-Export": "Table export"
+ "CSV-Import": "CSV import",
+ "CSV und TSV — mit Datenmapper": "CSV and TSV — with the data mapper",
+ "Excel-Import": "Excel import",
+ "Arbeitsmappen (.xlsx) — mit Datenmapper": "Workbooks (.xlsx) — with the data mapper",
+ "aus Excel kopieren und hier einfügen — erste Zeile sind die Spaltennamen": "copy from Excel and paste here — the first row holds the column names",
+ "CSV-Export": "CSV export",
+ "CSV (; UTF-8) — die Form, die der CSV-Import liest": "CSV (; UTF-8) — the form the CSV import reads",
+ "Excel-Export": "Excel export",
+ "Arbeitsmappe (.xlsx) — die Form, die der Excel-Import liest": "Workbook (.xlsx) — the form the Excel import reads",
+ "Einfügen": "Paste",
+ "⎘ Übernehmen": "⎘ Take"
 }

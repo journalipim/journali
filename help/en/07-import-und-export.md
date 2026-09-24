@@ -1,10 +1,12 @@
 # Import and export
 
-Import and export are plugins. The base plugin Table brings the basic function; formats such as CSV, Excel, JSON, IXP and Solr attach to it.
+Import and export are plugins. Under ⇩ Import and ⇪ Export there is one tile per format: CSV, Excel, JSON — plus the
+clipboard. Behind them the same base plugin works; the tile only preselects the format. A format appears as long as
+its plugin is switched on. IXP and Solr are separate sources with their own tile.
 
-## Table import
+## Import
 
-⇩ Import → Table takes a file by dragging or choosing, a sheet from Excel or rows from the clipboard; the first row holds the column names. Four steps:
+The tile takes a file by dragging or choosing, a sheet from Excel or rows from the clipboard; the first row holds the column names. Four steps:
 
 1. **Source**: file, sheet, recently used files.
 2. **Target**: where new rows go. Existing nodes are found via the journali identifier, the SKU or an external identifier; a column Parent places rows in the tree.

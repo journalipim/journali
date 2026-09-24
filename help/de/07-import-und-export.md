@@ -1,10 +1,12 @@
 # Import und Export
 
-Import und Export sind Plugins. Das Basis-Plugin Tabelle bringt die Grundfunktion; Formate wie CSV, Excel, JSON, IXP und Solr hängen sich daran.
+Import und Export sind Plugins. Unter ⇩ Import und ⇪ Export steht je Format eine Kachel: CSV, Excel, JSON — dazu die
+Zwischenablage. Dahinter arbeitet dasselbe Basis-Plugin; die Kachel wählt nur das Format vor. Ein Format erscheint,
+solange sein Plugin eingeschaltet ist. IXP und Solr sind eigene Quellen mit eigener Kachel.
 
-## Tabellenimport
+## Import
 
-⇩ Import → Tabelle nimmt eine Datei per Ziehen oder Auswahl, ein Blatt aus Excel oder Zeilen aus der Zwischenablage; die erste Zeile sind die Spaltennamen. Vier Schritte:
+Die Kachel nimmt eine Datei per Ziehen oder Auswahl, ein Blatt aus Excel oder Zeilen aus der Zwischenablage; die erste Zeile sind die Spaltennamen. Vier Schritte:
 
 1. **Quelle**: Datei, Blatt, zuletzt verwendete Dateien.
 2. **Ziel**: wohin neue Zeilen kommen. Vorhandene Knoten werden über die journali-Kennung, die SKU oder eine externe Kennung gefunden; eine Spalte Elternteil ordnet Zeilen im Baum ein.
