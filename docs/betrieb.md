@@ -139,6 +139,12 @@ heraus; die Plugins liegen als Quelltext im Image, das ist so gewollt.
 
 ## Verteilen
 
+**Image:** `ghcr.io/journalipim/journali` — `latest` ist der Stand von `master`, `1.2.3`/`1.2`/`1` ein Tag `v1.2.3`,
+`sha-<kurz>` jeder Commit. Gebaut vom Workflow `.github/workflows/docker.yml` aus dem Dockerfile (linux/amd64);
+das Paket ist so sichtbar wie das Repo, `docker pull` ohne Anmeldung braucht ein öffentliches Paket.
+`compose.yaml` nennt das Image und behält `build: .` — `docker compose pull` holt es, `docker compose up --build`
+baut es aus dem Checkout unter demselben Namen. Neuer Stand: `docker compose pull && docker compose up -d`.
+
 `compose.yaml` ist das ganze Paket: Server + `postgres:18` mit eigenem
 Volume. Plugins kommen per Bind-Mount `./plugins:/app/plugins` vom Host:
 eine Datei dort tauschen aktualisiert das Plugin ohne neues Image (der

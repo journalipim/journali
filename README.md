@@ -19,6 +19,24 @@ Abbild wird neu gebaut statt repariert.
 
 Ausführlich: [docs/architektur.md](docs/architektur.md).
 
+## Installation
+
+Voraussetzung ist Docker mit Compose. Das Image liegt unter `ghcr.io/journalipim/journali`, die Datenbank ist
+PostgreSQL 18 aus `compose.yaml`.
+
+```
+git clone https://github.com/journalipim/journali.git
+cd journali
+cp .env.example .env        # JOURNALI_DB_PASSWORD eintragen
+docker compose pull
+docker compose up -d
+```
+
+Danach `http://localhost:8080`; der erste Aufruf legt den Administrator an. Plugins liegen als Bind-Mount unter
+`plugins/`, Jobs und Medien in Volumes. Neuer Stand: `docker compose pull && docker compose up -d`. Wer das Image
+selbst bauen will: `docker compose up --build -d`. Alles Weitere zu Umgebung, Speicher, Sicherung und Lizenz:
+[docs/betrieb.md](docs/betrieb.md); die Bedienung erklärt die Hilfe in der Instanz (? oben rechts).
+
 ## Quelltext und Beiträge
 
 Der Quelltext ist zum Lesen, Herunterladen und Betreiben da (Lizenz: [LICENSE](LICENSE)). Pull Requests werden

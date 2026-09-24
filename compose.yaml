@@ -1,4 +1,6 @@
 # Das ganze Paket: Server + PostgreSQL 18. Passwort in .env (JOURNALI_DB_PASSWORD).
+# Das Server-Image kommt fertig von ghcr.io (`docker compose pull`, Workflow .github/workflows/docker.yml);
+# wer aus dem Checkout baut, nimmt `docker compose up --build` — dann entsteht dasselbe Image unter demselben Namen.
 # Auf der rossibox mit vorhandenem postgresql18-Template: nur `server` nehmen
 # und JOURNALI_DB auf localhost:7432 zeigen lassen (docs/betrieb.md).
 services:
@@ -17,6 +19,7 @@ services:
       retries: 10
 
   server:
+    image: ghcr.io/journalipim/journali:latest
     build: .
     ports:
       - "8080:8080"
@@ -39,11 +42,10 @@ services:
       # Jobs: Logs und Geheimnisse (secrets.json) — muessen Neustarts und neue Images ueberleben
       - journali-jobs:/data/jobs
       # Plugins vom Host: Datei tauschen = Plugin aktualisiert (Server liest sie bei jedem Zugriff, no-cache);
-      # neue Fassung unter ⌁ Plugins → ↑ aktualisieren. Kein neues Image noetig (Taloan, 19.09.)
+      # neue Fassung unter ⌁ Plugins → ↑ aktualisieren. Kein neues Image noetig
       - ./plugins:/app/plugins
       # ... aber ein Bind-Mount ueberdeckt alles darunter, auch die node_modules aus dem Image. Diese zwei Plugins
       # brauchen Pakete (sharp, pdfjs); ihre Ordner kommen darum aus dem Image zurueck, damit es autark bleibt
-      # (Taloan, 23.09.: „solange wir ein autarkes Image liefern")
       - journali-derive-modules:/app/plugins/derive/node_modules
       - journali-docs-modules:/app/plugins/docs/node_modules
     depends_on:

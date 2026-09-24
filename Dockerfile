@@ -5,6 +5,8 @@ WORKDIR /web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
 COPY web/ ./
+# die Hilfe liegt neben web/ — build-help.mjs liest ../help
+COPY help/ /help/
 # nur die Oberfläche — die gebauten Plugins (plugins/<key>/entry.js) liegen im Repo
 RUN npm run build:web
 
@@ -28,7 +30,7 @@ RUN dotnet restore Journali.Server/Journali.Server.csproj
 COPY Journali.Core/ Journali.Core/
 COPY Journali.Server/ Journali.Server/
 COPY --from=web /Journali.Server/wwwroot Journali.Server/wwwroot
-# ohne Debugsymbole: keine .pdb im Image — keine Dateipfade und Zeilennummern aus Taloans Rechner (Taloan, 22.09.2026)
+# ohne Debugsymbole: keine .pdb im Image — keine Dateipfade und Zeilennummern des Bau-Rechners
 RUN dotnet publish Journali.Server/Journali.Server.csproj -c Release -o /app --no-restore -p:DebugType=none -p:DebugSymbols=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
@@ -37,7 +39,7 @@ WORKDIR /app
 COPY --from=node:22-bookworm-slim /usr/local/bin/node /usr/local/bin/node
 COPY --from=build /app .
 # Plugins liegen im Image als Grundausstattung; compose.yaml legt ./plugins darüber (Bind-Mount) —
-# so lassen sie sich austauschen und aktualisieren, ohne das Image neu zu bauen (Taloan, 19.09.)
+# so lassen sie sich austauschen und aktualisieren, ohne das Image neu zu bauen
 COPY plugins/ ./plugins/
 COPY --from=derive /derive/node_modules ./plugins/derive/node_modules
 COPY --from=docs /docs/node_modules ./plugins/docs/node_modules
