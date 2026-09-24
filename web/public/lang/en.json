@@ -2503,5 +2503,12 @@
  "Die Anzeige verlangt das Anmeldepasswort von {0}.": "Showing it requires the login password of {0}.",
  "Anmeldepasswort": "Login password",
  "fragt nach dem eigenen Anmeldepasswort; nach einer Minute wieder verdeckt": "asks for your own login password; hidden again after a minute",
- "Dieses Plugin ist in deinem Tarif nicht verfügbar. Ein Job damit liefe nicht.": "This plugin is not included in your tier. A job with it would not run."
+ "Dieses Plugin ist in deinem Tarif nicht verfügbar. Ein Job damit liefe nicht.": "This plugin is not included in your tier. A job with it would not run.",
+ "Neuer Ordner": "New folder",
+ "Ordner im angezeigten Verzeichnis anlegen": "create a folder in the directory shown",
+ "markierten Ordner umbenennen — ohne Markierung den angezeigten": "rename the selected folder — without a selection the one shown",
+ "Verzeichnis auf dem Server wählen — der Stand kommt beim Wählen": "choose a directory on the server — the state is read when choosing",
+ "Name: ohne \\ / : * ? \" < > | und nicht leer.": "Name: without \\ / : * ? \" < > | and not empty.",
+ "„{0}“ ist eine Datei.": "“{0}” is a file.",
+ "Ein Laufwerk lässt sich nicht umbenennen.": "A drive cannot be renamed."
 }

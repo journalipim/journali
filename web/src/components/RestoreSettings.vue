@@ -113,8 +113,7 @@ onMounted(lies)
 
     <div class="row" style="gap:6px;margin-bottom:6px">
       <input v-model="dir" type="text" :placeholder="$t('Verzeichnis der Sicherung')" style="flex:1" @keydown.enter="lies" />
-      <button :title="$t('Verzeichnis auf dem Server wählen')" @click="filePicker({ value: dir, dirOnly: true, onPick: v => { dir = v; lies() } })">📁</button>
-      <button :disabled="!!busy" @click="lies">{{ $t("Lesen") }}</button>
+      <button :title="$t('Verzeichnis auf dem Server wählen — der Stand kommt beim Wählen')" @click="filePicker({ value: dir, dirOnly: true, onPick: v => { dir = v; lies() } })">📁</button>
     </div>
 
     <table v-if="stand?.hier" class="grid"><tbody>

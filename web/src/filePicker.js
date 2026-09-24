@@ -9,6 +9,13 @@ const el = (tag, attrs = {}, ...kids) => { const e = document.createElement(tag)
 const when = iso => iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
 const size = n => n < 1024 ? n + 'b' : n < 1048576 ? (n / 1024).toFixed(0) + 'kb' : (n / 1048576).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + 'mb'
 
+/// Ein Verzeichnisname, wie ihn der Server annimmt — sonst null
+export function ordnerName(s) {
+  const n = (s ?? '').trim()
+  if (!n || n.length > 120 || n === '.' || n === '..') return null
+  return /[\\/:*?"<>|]/.test(n) ? null : n
+}
+
 /// filePicker({ value, dirOnly, title, onPick(path) }) — öffnet das Fenster; onPick bekommt den gewählten Pfad
 export function filePicker({ value = '', dirOnly = false, title = null, onPick = () => {} } = {}) {
   const box = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50' })
@@ -22,6 +29,24 @@ export function filePicker({ value = '', dirOnly = false, title = null, onPick =
   const done = v => { onPick(v); close() }
   const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close() } }
   const mark = (tbl, tr, path) => { chosen = path; for (const t of tbl.querySelectorAll('tr.selected')) t.classList.remove('selected'); tr.classList.add('selected') }
+  // Ordner anlegen und umbenennen — mehr fasst der Browser nicht an
+  const neu = async () => {
+    const { dialog } = await import('./dialog.js')
+    const name = ordnerName(await dialog.prompt({ title: t_('Neuer Ordner'), text: cur?.path ?? '', placeholder: t_('Name') }))
+    if (!name) return
+    try { const r = await api.post('/api/files/dir', { path: cur.path, name }); await go(r.path) }
+    catch (e) { status.textContent = e.message }
+  }
+  const umbenennen = async () => {
+    const ziel = chosen && cur.dirs.some(d => d.path === chosen) ? chosen : cur?.path
+    if (!ziel) return
+    const { dialog } = await import('./dialog.js')
+    const alt = ziel.split(/[\\/]/).filter(Boolean).pop() ?? ''
+    const name = ordnerName(await dialog.prompt({ title: t_('Ordner umbenennen'), text: ziel, value: alt, placeholder: t_('Name') }))
+    if (!name || name === alt) return
+    try { const r = await api.post('/api/files/dir', { path: ziel, name }, 'PUT'); await go(chosen ? cur.path : r.path) }
+    catch (e) { status.textContent = e.message }
+  }
   const go = async p => {
     try {
       const d = await api.get('/api/files' + (p ? '?path=' + encodeURIComponent(p) : ''))
@@ -40,7 +65,9 @@ export function filePicker({ value = '', dirOnly = false, title = null, onPick =
     } catch (e) { status.textContent = e.message }
   }
   dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, title ?? (dirOnly ? t_('📁 Verzeichnis auf dem Server') : t_('📁 Datei oder Verzeichnis auf dem Server'))),
-    el('div', { style: 'display:flex;gap:6px' }, rootsSel, pathIn, el('button', { type: 'button', title: t_('zu diesem Pfad'), onclick: () => go(pathIn.value) }, '→')),
+    el('div', { style: 'display:flex;gap:6px' }, rootsSel, pathIn, el('button', { type: 'button', title: t_('zu diesem Pfad'), onclick: () => go(pathIn.value) }, '→'),
+      el('button', { type: 'button', class: 'neu', title: t_('Ordner im angezeigten Verzeichnis anlegen'), onclick: neu }, '＋'),
+      el('button', { type: 'button', class: 'ren', title: t_('markierten Ordner umbenennen — ohne Markierung den angezeigten'), onclick: umbenennen }, '✎')),
     list, status,
     el('div', { style: 'display:flex;justify-content:flex-end;gap:8px' }, el('button', { type: 'button', onclick: close }, t_('Abbrechen')),
       el('button', { type: 'button', class: 'primary', title: dirOnly ? t_('markierten oder den angezeigten Ordner nehmen') : t_('markierte Datei bzw. markierten oder angezeigten Ordner nehmen'), onclick: () => cur && done(chosen ?? cur.path) }, t_('✓ Übernehmen'))))

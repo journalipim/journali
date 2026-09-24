@@ -409,6 +409,12 @@ unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht 
 Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im
 Browser.
 
+## Dateibrowser
+
+`GET /api/files` listet ein Verzeichnis des Servers (Recht Jobs oder Storage). Dazu `POST /api/files/dir`
+(anlegen) und `PUT /api/files/dir` (umbenennen); beide nehmen nur einen Namen, keinen Pfad — sonst liesse sich
+damit an jede Stelle des Dateisystems schreiben. Gelöscht wird über diesen Weg nichts, und Dateien bleiben unberührt.
+
 ## Fehlermeldungen
 
 Eine abgelehnte Anfrage antwortet mit `{ error, template, args }`: `error` ist der fertige deutsche Text, `template`
