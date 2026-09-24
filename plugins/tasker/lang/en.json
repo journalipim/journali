@@ -92,5 +92,6 @@
  "Rolle des Laufs": "Role of the run",
  "zurück": "back",
  "Jobs": "Jobs",
- "im Server, Zeitplan, Läufe, Logs": "in the server, schedule, runs, logs"
+ "im Server, Zeitplan, Läufe, Logs": "in the server, schedule, runs, logs",
+ "{0} wirkt nicht — nur Entfernen geht": "{0} has no effect — only removing works"
 }

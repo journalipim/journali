@@ -8,6 +8,13 @@
 ///.
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
+/// Was mit einem Job noch geht: wirkt sein Plugin nicht (nicht installiert, aus, oder nicht im Tarif), bleibt nur
+/// das Entfernen — starten, anhalten, ein/aus und bearbeiten sind gesperrt. Der Server lehnt sie ohnehin ab; hier
+/// sieht man es, bevor man klickt. `aktiv` ist plugins.active aus der Oberfläche.
+export function jobGesperrt(job, aktiv) {
+  return !(typeof aktiv === 'function' ? aktiv(job?.plugin) : true)
+}
+
 export function profilPflicht(profileDef) {
   return !!profileDef && !/leer/.test(profileDef.label ?? '')
 }
@@ -46,7 +53,7 @@ export function nutztFach(spec, params = {}) {
   return !p || !String(params[p] ?? '').trim()
 }
 
-function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
+function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else if (v === false || v == null) continue; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const when = iso => iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
 const STATUS = { ok: ['✓', 'pos'], warn: ['⚠', 'warn'], failed: ['✗', 'neg'], timeout: ['⏱✗', 'neg'], cancelled: ['⊘', 'muted'] }
 // Zeitplan-Assistent. Intern ist es immer cron: fünf Felder, dazu ein sechstes dN:Datum / wN:Datum für „alle N Tage/Wochen ab“
@@ -151,22 +158,27 @@ async function mount(root, ctx) {
       const tr = el('tr', { class: 'row' + (st.cur === j.key ? ' selected' : ''), style: 'cursor:default', onclick: () => { st.cur = j.key; drawList(); loadDetail(j.key) } },
         el('td', { class: cls, title: j.running ? t('läuft') : j.last?.status ?? t('noch nie gelaufen') }, sym),
         el('td', {}, el('b', {}, j.label), el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, j.key)),
-        el('td', { class: 'muted' }, j.plugin + (j.service ? '/' + j.service : '')),
+        el('td', { class: zu(j) ? 'warn' : 'muted', title: zu(j) ? grund(j) : '' }, j.plugin + (j.service ? '/' + j.service : '') + (zu(j) ? ' ◇' : '')),
         el('td', { title: j.schedule ?? '' }, j.enabled ? j.scheduleText : el('span', { class: 'muted' }, '○ aus')),
         el('td', { class: 'muted' }, j.nextDue ? when(j.nextDue) : ''),
         el('td', { class: 'muted', title: j.last?.summary ?? '' }, j.last ? `${when(j.last.startedAt)} · ${j.last.seconds}s` : ''),
         el('td', { style: 'white-space:nowrap' },
-          j.running && j.paused ? el('button', { class: 'x', title: `wartet (${j.pauseReason ?? 'von Hand'}) — weiter`, onclick: ev => { ev.stopPropagation(); resume(j) } }, '▶')
+          // Wirkt das Plugin nicht, bleibt nur 🗑 — der Server lehnt den Rest ohnehin ab
+          zu(j) ? el('button', { class: 'x', title: grund(j), disabled: true }, '▶')
+            : j.running && j.paused ? el('button', { class: 'x', title: `wartet (${j.pauseReason ?? 'von Hand'}) — weiter`, onclick: ev => { ev.stopPropagation(); resume(j) } }, '▶')
             : j.running ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); pause(j) } }, '⏸')
             : el('button', { class: 'x', title: t('jetzt starten'), onclick: ev => { ev.stopPropagation(); run(j) } }, '▶'),
-          j.running ? el('button', { class: 'x', title: 'abbrechen', onclick: ev => { ev.stopPropagation(); cancel(j) } }, '⊘') : el('span', { style: 'display:inline-block;width:22px' }),
-          el('button', { class: 'x', title: j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', onclick: ev => { ev.stopPropagation(); toggle(j) } }, j.enabled ? '●' : '○'),
-          el('button', { class: 'x', title: 'bearbeiten', onclick: ev => { ev.stopPropagation(); openEdit(j) } }, '✎'),
+          j.running && !zu(j) ? el('button', { class: 'x', title: 'abbrechen', onclick: ev => { ev.stopPropagation(); cancel(j) } }, '⊘') : el('span', { style: 'display:inline-block;width:22px' }),
+          el('button', { class: 'x', title: zu(j) ? grund(j) : j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) toggle(j) } }, j.enabled ? '●' : '○'),
+          el('button', { class: 'x', title: zu(j) ? grund(j) : 'bearbeiten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) openEdit(j) } }, '✎'),
           el('button', { class: 'x', title: t('Job entfernen (Läufe bleiben im Journal)'), onclick: ev => { ev.stopPropagation(); remove(j) } }, '🗑')))
       tb.append(tr)
     }
     tbl.append(tb); list.append(tbl)
   }
+  /// gesperrt, weil sein Plugin nicht wirkt
+  const zu = j => jobGesperrt(j, ctx.plugins?.active?.bind(ctx.plugins))
+  const grund = j => t('{0} wirkt nicht — nur Entfernen geht', [j.plugin])
   async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
   async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(`⊘ ${j.label} abgebrochen`); await load() } catch (e) { store.toast(e.message) } }
   // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben
