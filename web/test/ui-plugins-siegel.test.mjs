@@ -91,3 +91,20 @@ test('jede Zeile hat dieselben drei Spalten rechts — mit und ohne Fassung, Sie
     assert.match(row(w, 'weg').find('.c-state').text(), /✗/, 'fehlendes Verzeichnis steht beim Zustand')
   } finally { api.get = orig }
 })
+
+test('was der Tarif nicht trägt, wirkt nicht — auch wenn es im Journal an ist', async () => {
+  welt()
+  plugins.list = [{ key: 'da', version: '1.1.0', installed: true, enabled: true, onDisk: true, allowed: false, tarif: 'pro', manifest: { kind: 'quality', label: { de: 'Qualität: Datenanalyse' } } }]
+  plugins.active = k => { const p = plugins.list.find(x => x.key === k); return !!p?.enabled && p.allowed !== false }
+  const orig = api.get; api.get = async () => ({ plugins: [] })
+  try {
+    const w = mount(PluginsView, opts)
+    await flushPromises()
+    assert.equal(row(w, 'da').find('.c-state').text(), '◇ Pro', 'in der Liste steht der Tarif, nicht „an“')
+    const schalter = w.findAll('.pane button').find(b => b.text().includes('◇'))
+    assert.equal(schalter.text(), '◇ Pro', 'der Schalter sagt nicht „aktiviert“')
+    assert.ok(!schalter.classes().includes('primary'), 'und leuchtet nicht')
+    assert.match(schalter.attributes('title'), /ohne Wirkung/)
+    assert.match(w.text(), /eingeschaltet, ohne Wirkung/)
+  } finally { api.get = orig }
+})

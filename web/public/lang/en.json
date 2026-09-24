@@ -2494,5 +2494,8 @@
  "Anforderung {0} wegwerfen?": "Discard request {0}?",
  "Ein Schlüssel dazu lässt sich dann nicht mehr einlösen.": "A key for it can then no longer be redeemed.",
  "Wegwerfen": "Discard",
- "Anforderung wegwerfen — ein Schlüssel dazu lässt sich dann nicht mehr einlösen": "discard the request — a key for it can then no longer be redeemed"
+ "Anforderung wegwerfen — ein Schlüssel dazu lässt sich dann nicht mehr einlösen": "discard the request — a key for it can then no longer be redeemed",
+ "Eingeschaltet, aber ohne Wirkung — {0} gehört zum Tarif {1}": "Switched on but without effect — {0} belongs to tier {1}",
+ "· eingeschaltet, ohne Wirkung": "· switched on, without effect",
+ "Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.": "The state in the journal stays: when the tier comes back, it takes effect again."
 }

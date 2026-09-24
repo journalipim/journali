@@ -158,14 +158,16 @@ function pick(k) { cur.value = k }
       <template v-else-if="current.installed">
         <button v-if="current.update" class="primary" @click="act(`/api/plugins/${current.key}/install`)" :title="`${current.version} → ${current.diskVersion}`">{{ $t("↑ aktualisieren auf {0}", [current.diskVersion]) }}</button>
         <button v-if="current.enabled && railToggle(current.key)" :class="{ primary: !store.railOff.includes(current.key) }" @click="toggleRail(current.key)" :title="store.railOff.includes(current.key) ? $t('In die Leiste links aufnehmen (unter sein Thema)') : $t('Aus der Leiste links nehmen (nur für dich, in den Einstellungen)')">{{ store.railOff.includes(current.key) ? $t('▯ nicht in der Leiste') : $t('▮ in der Leiste') }}</button>
-        <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn an; Klick kippt -->
-        <button :class="{ primary: current.enabled }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? $t('Tarif {0}', [tarifOf(current)]) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
+        <!-- Zustandsschalter wie „in der Leiste“: leuchtet, wenn es wirkt; Klick kippt. Was der Tarif nicht trägt, wirkt
+             nicht — auch wenn es im Journal an ist; dann steht der Tarif da, der es hätte -->
+        <button :class="{ primary: plugins.active(current.key) }" :disabled="current.allowed === false && !current.enabled" @click="toggle(current)" :title="current.allowed === false ? (current.enabled ? $t('Eingeschaltet, aber ohne Wirkung — {0} gehört zum Tarif {1}', [current.key, tarifOf(current)]) : $t('Tarif {0}', [tarifOf(current)])) : current.enabled ? (plugins.active(current.key) ? $t('Deaktivieren (jetzt aktiviert)') : $t('aktiviert, aber ohne Wirkung:') + ' ' + missing(current.key).join(', ') + ' ' + $t('ist aus')) : missing(current.key).length ? 'braucht ' + missing(current.key).join(', ') : $t('Aktivieren (jetzt deaktiviert)')">{{ current.allowed === false ? `◇ ${tarifOf(current)}` : current.enabled ? (plugins.active(current.key) ? '● aktiviert' : '◐ aktiviert') : '○ deaktiviert' }}</button>
         <button class="x" @click="act(`/api/plugins/${current.key}`, 'DELETE')" :title="$t('aus dem Journal entfernen — die Dateien bleiben')">🗑</button>
       </template>
     </div>
     <div class="toolbar meta muted">
       <span>{{ $t("Fassung {0}", [current.version ?? '—']) }}</span><span v-if="current.diskVersion && current.diskVersion !== current.version">{{ $t("· auf der Platte {0}", [current.diskVersion]) }}</span>
       <span v-if="!current.onDisk" class="neg">{{ $t("· Verzeichnis plugins/{0} fehlt", [current.key]) }}</span>
+      <span v-if="current.allowed === false && current.enabled" class="warn" :title="$t('Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.')">{{ $t("· eingeschaltet, ohne Wirkung") }}</span>
       <span v-if="current.certified" class="pos seal" :title="$t('Siegel des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert')">{{ $t("· ❖ zertifiziert {0}", [current.sealIssued ?? '']) }}</span>
       <span v-else-if="current.sealReason" class="neg seal" :title="current.sealReason">{{ $t("· ⚠ Siegel gebrochen") }}</span>
       <span class="grow" /><span v-if="current.lastAt">{{ when(current.lastAt) }} 👤 {{ current.lastActor }}</span>
