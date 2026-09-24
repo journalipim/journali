@@ -252,22 +252,22 @@ test('↻ holt den Stand des Abos sofort neu — nach einem Eingriff auf dem Liz
   v.unmount()
 })
 
-/// Nur Signiertes zählt (25.09.2026): eine Lizenz ohne passende Signatur gilt nicht — die Zeile sagt, was gilt, und
-/// ein „gültig bis“ dieser Lizenz steht nicht da. Gemeldet am 25.09.: oben stand weiter „ungeprüft“.
-test('Eine Lizenz ohne passende Signatur: es gilt Kostenlos', async () => {
+/// Eine Instanz hat keine Lizenz — jede gehört einem Team (25.09.2026). Gemeldet: oben stand „ungeprüft“, dann
+/// „Kostenlos“ über „Tarif Pro“, beides für eine Lizenz der Instanz. Übrig bleibt der Test, beim Init Team.
+test('Keine Lizenz der Instanz — der Test steht beim Init Team', async () => {
   server({ lizenz: { geprueft: false, grund: 'keine Signatur', validUntil: '2026-10-23', trial: false } }); admin()
-  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  const stand = w.find('tr.stand').text().replace(/\s+/g, ' ')
-  assert.match(stand, /Kostenlos/)
-  assert.doesNotMatch(stand, /ungeprüft/)
-  assert.match(stand, /keine Signatur/)
-  assert.equal(w.find('tr.gueltig').exists(), false, 'das Datum einer Lizenz, die nicht gilt')
+  const w = mount(LicenceSettings, { props: { team: { ...DE, primary: true } } }); await flushPromises()
+  assert.doesNotMatch(w.text(), /ungeprüft|keine Signatur|Kostenlos|2026-10-23/)
+  assert.equal(w.find('tr.test').exists(), false)
   w.unmount()
+  // der laufende Test: beim Init Team, mit seinem Datum — bei einem anderen Team nicht
   server(); admin()
-  const v = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  assert.match(v.find('tr.stand').text(), /geprüft/)
-  assert.match(v.find('tr.gueltig').text(), /2026-12-23/)
+  const v = mount(LicenceSettings, { props: { team: { ...DE, primary: true } } }); await flushPromises()
+  assert.match(v.find('tr.test').text().replace(/\s+/g, ' '), /Test · Deutschland.*Enterprise · gültig bis 2026-12-23/)
   v.unmount()
+  const x = mount(LicenceSettings, { props: { team: IT } }); await flushPromises()
+  assert.equal(x.find('tr.test').exists(), false)
+  x.unmount()
 })
 
 test('Ein entzogenes oder ungeprüftes Abo steht rot da', async () => {
