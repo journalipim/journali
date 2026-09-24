@@ -55,10 +55,11 @@ gemeint. In Commits keine Zeile „Co-Authored-By“ — es gibt einen Beitragen
 - **Anwender & Rollen:** In der Oberfläche heisst eine Person **Anwender**, nie Benutzer.
   Identität/Rolle im Journal (`user:<key>`), Rollen mit Rechten im Journal (`role:<key>`,
   Vokabular `Rights` im Kern, `Auth.Needed` sagt je Anfrage das Recht), Passwörter/Token/Sitzungen
-  in `auth.json` im Datenverzeichnis (`Auth.cs`). Ohne Anwender offen; mit Anwendern kommt
+  im Tresor (`Tresor.cs`: Tabelle `tresor`, dazu Mailserver und Job-Geheimnisse; ohne Datenbank Dateien). Ohne Anwender offen; mit Anwendern kommt
   `X-Actor` aus der Sitzung. Jobs bekommen `JOURNALI_TOKEN` (Bearer) je Lauf.
-- **Kein Passwort im Repo.** Das Datenbankpasswort kommt aus user-secrets
-  (`JOURNALI_DB_PASSWORD`) oder der Umgebung; `.env` ist ignoriert.
+- **Kein Passwort im Repo.** Die Datenbankverbindung gibt man einmal je Server im Einrichtungsdialog ein (`db.json` im
+  Datenverzeichnis, `Einrichtung.cs`), im Paket kommt sie aus `.env`/`compose.yaml`; `.env` ist ignoriert. Nur als
+  Paket betrieben — `dotnet run` ist Entwicklung.
 - Branch ist `master`. Git-Identität ist pro Repo gesetzt.
 
 ## Aufbau

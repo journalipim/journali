@@ -11,8 +11,8 @@ namespace Journali.Server;
 /// <summary>
 /// Benutzer und Rollen. Wer es gibt und welche Rolle
 /// gilt, steht im Journal (Strom <c>user:&lt;key&gt;</c>, UserDefined/UserRetired — nachvollziehbar wie alles). Was geheim ist —
-/// Passwort-Hashes, API-Token, Sitzungen — liegt in <c>auth.json</c> im Datenverzeichnis, nie im Journal (Regel wie bei
-/// secrets.json). Solange kein Benutzer angelegt ist, bleibt der Server offen wie bisher (X-Actor frei) — der erste
+/// Passwort-Hashes, API-Token, Sitzungen — liegt im Tresor (<see cref="Tresor"/>: mit Datenbank die Tabelle <c>tresor</c>,
+/// sonst <c>auth.json</c> im Datenverzeichnis), nie im Journal. Alle Server auf derselben Datenbank teilen ihn. Solange kein Benutzer angelegt ist, bleibt der Server offen wie bisher (X-Actor frei) — der erste
 /// Administrator wird unter /login angelegt (POST /api/auth/setup), danach ist alles unter /api ausser health und auth gesperrt.
 /// Rollen: admin (alles), editor (Daten pflegen), reader (nur lesen). Jobs und Belegerzeuger bekommen je Lauf ein Dienst-Token.
 /// </summary>
@@ -28,14 +28,15 @@ public static class Auth
     private const string Cookie = "journali.session";
 
     public sealed record LoginBody(string? User, string? Password);
-    public sealed record SetupBody(string? User, string? Name, string? Password);
+    public sealed record SetupBody(string? User, string? Name, string? Password, string? Code = null);
+    public sealed record ClaimBody(string? User, string? Password, string? Code);
     public sealed record UserBody(string? Name, string? Email, string? Role, string? Password, bool? Enabled, string? Team);
     public sealed record RoleBody(string? Label, string[]? Rights);
     public sealed record PasswordBody(string? Current, string? Password);
     public sealed record TokenBody(string? Label);
     public sealed record PrefsBody(Dictionary<string, string?>? Prefs);   // eigene Einstellungen (Darstellung, Sicht) — Werte JSON als Text
 
-    // ---- Geheimnisse: auth.json ----
+    // ---- Geheimnisse: im Tresor, Stück „auth“ ----
     private sealed class Store
     {
         public Dictionary<string, string> Passwords { get; set; } = new();           // user → pbkdf2$iter$salt$hash
@@ -62,10 +63,60 @@ public static class Auth
 
     private static readonly object Gate = new();
     private static readonly JsonSerializerOptions Json = new() { WriteIndented = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    private static string File(string dir) => Path.Combine(dir, "auth.json");
-    private static Store Load(string dir) { try { return System.IO.File.Exists(File(dir)) ? JsonSerializer.Deserialize<Store>(System.IO.File.ReadAllText(File(dir)), Json) ?? new() : new(); } catch { return new(); } }
-    private static void Save(string dir, Store s) { Directory.CreateDirectory(dir); System.IO.File.WriteAllText(File(dir), JsonSerializer.Serialize(s, Json)); }
-    private static T With<T>(string dir, Func<Store, T> f, bool save = false) { lock (Gate) { var s = Load(dir); var r = f(s); if (save) Save(dir, s); return r; } }
+    // Jede Anfrage fragt nach Sitzung oder Token — darum ein Zwischenspeicher: höchstens drei Sekunden alt. Was hier fehlt,
+    // hat vielleicht ein anderer Server auf derselben Datenbank eben angelegt: dann einmal frisch lesen (höchstens je Sekunde).
+    private static readonly Dictionary<string, (Store S, DateTime At)> Cache = new();
+    private static DateTime _frischAm;
+    private static Store Parse(string? json) { try { return json is null ? new() : JsonSerializer.Deserialize<Store>(json, Json) ?? new(); } catch (JsonException) { return new(); } }
+    private static Store Load(string dir, bool fresh = false)
+    {
+        if (!fresh && Cache.TryGetValue(dir, out var c) && DateTime.UtcNow - c.At < TimeSpan.FromSeconds(3)) return c.S;
+        var s = Parse(Tresor.Fuer(dir).Lies(Tresor.Auth));
+        Cache[dir] = (s, DateTime.UtcNow);
+        return s;
+    }
+    private static T With<T>(string dir, Func<Store, T> f, bool save = false)
+    {
+        lock (Gate)
+        {
+            if (!save) return f(Load(dir));
+            T r = default!;
+            Tresor.Fuer(dir).Aendere(Tresor.Auth, json => { var s = Parse(json); r = f(s); Cache[dir] = (s, DateTime.UtcNow); return JsonSerializer.Serialize(s, Json); });
+            return r;
+        }
+    }
+    /// <summary>Wie <see cref="With{T}"/>, aber was fehlt, wird einmal frisch nachgesehen.</summary>
+    private static T? Finde<T>(string dir, Func<Store, T?> f) where T : class
+    {
+        lock (Gate)
+        {
+            if (f(Load(dir)) is { } r) return r;
+            if (DateTime.UtcNow - _frischAm < TimeSpan.FromSeconds(1)) return null;
+            _frischAm = DateTime.UtcNow;
+            return f(Load(dir, fresh: true));
+        }
+    }
+    /// <summary>Zwischenspeicher leeren — nach einer Wiederherstellung oder einem Wechsel der Datenbank.</summary>
+    public static void Vergessen() { lock (Gate) Cache.Clear(); }
+
+    /// <summary>Wie die Anmeldung steht: noch niemand (ersten Administrator anlegen), Administratoren ohne Passwort
+    /// (eines festlegen), oder normal.</summary>
+    public enum Anmeldung { Einrichten, Festlegen, Anmelden }
+    public static Anmeldung Bestimme(bool anwender, IEnumerable<string> admins, Func<string, bool> hatPasswort) =>
+        !anwender ? Anmeldung.Einrichten : admins.Any(hatPasswort) ? Anmeldung.Anmelden : Anmeldung.Festlegen;
+    private static List<string> Admins(Catalog c) => c.With((_, _, _) => c.Users.All.Values.Where(u => u.Enabled && c.Users.RightsOf(u.Role).Contains(Rights.Users)).Select(u => u.Key).Order().ToList());
+    public static Anmeldung Lage(Catalog c, string dir)
+    {
+        if (!Enabled(c)) return Anmeldung.Einrichten;
+        var pw = With(dir, s => s.Passwords.Keys.ToHashSet());
+        return Bestimme(true, Admins(c), pw.Contains);
+    }
+    /// <summary>Administratoren ohne Passwort — nur, wenn keiner eines hat; sonst setzt ein Administrator sie unter ◈ IAM.</summary>
+    public static List<string> OhnePasswort(Catalog c, string dir)
+    {
+        var pw = With(dir, s => s.Passwords.Keys.ToHashSet());
+        return Admins(c).Where(a => !pw.Contains(a)).ToList();
+    }
 
     // ---- Hashing (PBKDF2-SHA256, kein Paket) ----
     private static string Hash(string password)
@@ -106,13 +157,13 @@ public static class Auth
                     : c.With((_, _, _) => c.Users.Roles.ContainsKey("editor")) ? "editor" : "$service";
                 return (svc.Actor, rolle);
             }
-            var rec = With(dir, s => s.Tokens.GetValueOrDefault(Sha(token)));
+            var rec = Finde(dir, s => s.Tokens.GetValueOrDefault(Sha(token)));
             if (rec is not null && c.With((_, _, _) => c.Users.All.GetValueOrDefault(rec.User)) is { Enabled: true } tu) return (tu.Key, tu.Role);
             return null;
         }
         if (ctx.Request.Cookies.TryGetValue(Cookie, out var cookie) && cookie is { Length: > 0 })
         {
-            var sess = With(dir, s => s.Sessions.GetValueOrDefault(Sha(cookie)));
+            var sess = Finde(dir, s => s.Sessions.GetValueOrDefault(Sha(cookie)));
             if (sess is not null && sess.Until > DateTimeOffset.UtcNow && c.With((_, _, _) => c.Users.All.GetValueOrDefault(sess.User)) is { Enabled: true } su) return (su.Key, su.Role);
         }
         return null;
@@ -183,7 +234,7 @@ public static class Auth
     public static Func<HttpContext, Func<Task>, Task> Middleware(Catalog c, string dir) => async (ctx, next) =>
     {
         var path = ctx.Request.Path.Value ?? "";
-        if (!path.StartsWith("/api") || path.StartsWith("/api/health") || path.StartsWith("/api/auth/login") || path.StartsWith("/api/auth/setup") || path.StartsWith("/api/auth/state")) { await next(); return; }
+        if (!path.StartsWith("/api") || path.StartsWith("/api/health") || path.StartsWith("/api/auth/login") || path.StartsWith("/api/auth/setup") || path.StartsWith("/api/auth/claim") || path.StartsWith("/api/auth/state")) { await next(); return; }
         if (!Enabled(c)) { await next(); return; }   // noch kein Benutzer: offen
         var who = Resolve(ctx, c, dir);
         if (who is null) { ctx.Response.StatusCode = 401; await ctx.Response.WriteAsJsonAsync(new { error = "Anmeldung nötig.", template = "Anmeldung nötig.", login = true }); return; }
@@ -196,7 +247,8 @@ public static class Auth
     /// <summary>
     /// Ausgesperrt: mit JOURNALI_ADMIN_PASSWORD in der Umgebung setzt der Start das Passwort von
     /// <paramref name="user"/> (Vorgabe admin) neu und legt den Benutzer an, wenn es ihn nicht gibt. Wer die Umgebung des Servers
-    /// setzen kann, hat ohnehin Zugriff auf auth.json. Danach die Variable wieder entfernen.
+    /// setzen kann, hat ohnehin Zugang zum Server. Danach die Variable wieder entfernen. Ohne Konsole geht dasselbe mit dem
+    /// Einrichtungscode unter /login (<c>/api/auth/claim</c>).
     /// </summary>
     public static string? Recover(Catalog c, string dir, string? password, string? user = null)
     {
@@ -216,7 +268,10 @@ public static class Auth
         {
             var enabled = Enabled(c); var who = enabled ? Resolve(ctx, c, dir) : null;
             var me = who is { } x ? c.With((_, _, _) => c.Users.All.GetValueOrDefault(x.User)) : null;
-            return Results.Ok(new { enabled, setup = !enabled, user = who?.User, role = who?.Role, rights = who is { } r ? RightsOf(c, r.Role).ToArray() : null, name = me?.Name, team = me?.Team, prefs = me?.Prefs });
+            // claim: Administratoren ohne Passwort, wenn keiner eines hat; code: ob der Einrichtungscode verlangt wird
+            var lage = who is null ? Lage(c, dir) : Anmeldung.Anmelden;
+            var claim = lage == Anmeldung.Festlegen ? OhnePasswort(c, dir) : null;
+            return Results.Ok(new { enabled, setup = !enabled, claim, code = lage != Anmeldung.Anmelden, user = who?.User, role = who?.Role, rights = who is { } r ? RightsOf(c, r.Role).ToArray() : null, name = me?.Name, team = me?.Team, prefs = me?.Prefs });
         });
         api.MapGet("/auth/me", (HttpContext ctx, Catalog c) =>
         {
@@ -245,10 +300,11 @@ public static class Auth
             return Results.Ok(new { prefs = c.With((_, _, _) => c.Users.All.GetValueOrDefault(who.Value.User)?.Prefs) });
         });
 
-        // Ersten Administrator anlegen — nur solange es keinen Benutzer gibt
-        api.MapPost("/auth/setup", (SetupBody body, HttpContext ctx, Catalog c) =>
+        // Ersten Administrator anlegen — nur solange es keinen Benutzer gibt, und nur mit dem Einrichtungscode
+        api.MapPost("/auth/setup", async (SetupBody body, HttpContext ctx, Catalog c) =>
         {
             if (Enabled(c)) return Bad("Es gibt schon Anwender.");
+            if (!await Einrichtungscode.PruefeAsync(body.Code)) return Bad("Einrichtungscode falsch.");
             var key = Key(body.User); if (key is null) return Bad("Anmeldename: a-z, 0-9, ., _, - (2–40 Zeichen).");
             if (Blank(body.Password) is not { Length: >= 8 } pw) return Bad("Passwort: mindestens 8 Zeichen.");
             // der erste Administrator gehört ins Init Team und führt es; ändern darf er das jederzeit
@@ -262,15 +318,32 @@ public static class Auth
                 return 0;
             });
             With(dir, s => { s.Passwords[key] = Hash(pw); return 0; }, save: true);
+            Einrichtungscode.Erledigt(dir);
             StartSession(ctx, dir, key);
             return Results.Ok(new { user = key, role = "admin" });
+        });
+
+        // Im Journal stehen Administratoren, aber keiner hat ein Passwort (Datenbank von einem anderen Server, Tresor
+        // verloren): eines festlegen — nur für einen dieser Administratoren und nur mit dem Einrichtungscode
+        api.MapPost("/auth/claim", async (ClaimBody body, HttpContext ctx, Catalog c) =>
+        {
+            if (Lage(c, dir) != Anmeldung.Festlegen) return Bad("Es gibt schon einen Administrator mit Passwort.");
+            if (!await Einrichtungscode.PruefeAsync(body.Code)) return Bad("Einrichtungscode falsch.");
+            var key = Key(body.User);
+            if (key is null || !OhnePasswort(c, dir).Contains(key)) return Bad("{0} ist kein Administrator ohne Passwort.", body.User ?? "");
+            if (Blank(body.Password) is not { Length: >= 8 } pw) return Bad("Passwort: mindestens 8 Zeichen.");
+            With(dir, s => { s.Passwords[key] = Hash(pw); return 0; }, save: true);
+            Einrichtungscode.Erledigt(dir);
+            StartSession(ctx, dir, key);
+            var u = c.With((_, _, _) => c.Users.All[key]);
+            return Results.Ok(new { user = key, role = u.Role, name = u.Name });
         });
 
         api.MapPost("/auth/login", (LoginBody body, HttpContext ctx, Catalog c) =>
         {
             var key = Key(body.User); var pw = body.Password ?? "";
             var u = key is null ? null : c.With((_, _, _) => c.Users.All.GetValueOrDefault(key));
-            var stored = key is null ? null : With(dir, s => s.Passwords.GetValueOrDefault(key));
+            var stored = key is null ? null : Finde(dir, s => s.Passwords.GetValueOrDefault(key));
             if (u is null || !u.Enabled || stored is null || !Verify(pw, stored)) { Thread.Sleep(300); return Results.Json(new { error = "Anwender oder Passwort falsch." }, statusCode: 401); }
             StartSession(ctx, dir, key!);
             return Results.Ok(new { user = key, role = u.Role, name = u.Name });

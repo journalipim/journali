@@ -2,9 +2,14 @@
 
 Die Reihenfolge nach der Installation. Jeder Schritt baut auf dem vorigen auf; alles lässt sich später ändern, weil jede Änderung ein Journaleintrag ist.
 
-## 1. Administrator und Team
+## 1. Datenbank, Administrator und Team
 
-Beim ersten Start legt journali den Administrator an. Danach braucht jeder Zugriff eine Anmeldung. Der Administrator gehört zum **Init Team**, das jede Anlage mitbringt: es trägt die Grenzen der Lizenz und lässt sich umbenennen, aber nicht löschen.
+Im Paket ist die Datenbank dabei, der Server findet sie selbst. Findet er keine, oder weist sie die Anmeldung ab,
+zeigt der Browser den Dialog **Datenbank**: Host, Port, Datenbank, Anmeldename, Passwort. Dazu gehört der
+**Einrichtungscode**, den der Server in seine Konsole schreibt. Ist die Datenbank nur kurz nicht erreichbar, versucht der
+Server es von selbst weiter.
+
+Danach legt man den ersten Administrator an, ebenfalls mit dem Einrichtungscode. Danach braucht jeder Zugriff eine Anmeldung. Der Administrator gehört zum **Init Team**, das jede Anlage mitbringt: es trägt die Grenzen der Lizenz und lässt sich umbenennen, aber nicht löschen.
 
 Unter ⚙ Einstellungen → ◈ IAM kommen weitere Anwender mit Rolle und Team dazu. Rollen bündeln Rechte; die vorbelegten sind Administrator, PIM-Manager, PIM-Editor, Team-Admin und Leser.
 

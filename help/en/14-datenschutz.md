@@ -10,10 +10,10 @@ Per user the journal holds: login name, display name, e-mail, role, team and whe
 
 | What | Where |
 |---|---|
-| passwords | as a hash in a file on the server |
-| API tokens and sessions | as a hash in the same file |
-| AI keys, credentials of jobs | secrets on the server, on the team or on the profile |
-| mail password, storage credentials | settings files on the server |
+| passwords | as a hash in the vault of the database, encrypted |
+| API tokens and sessions | as a hash in the same vault |
+| AI keys, credentials of jobs, mail password | in the same vault, on the team or on the profile |
+| storage credentials, connection to the database | settings files on the server |
 
 These files go along with the backup, not with an export.
 

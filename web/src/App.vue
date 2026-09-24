@@ -88,7 +88,7 @@ function railDrop(target) {
       <div class="bar" :style="`width:${Math.round(store.progress.done / Math.max(1, store.progress.total) * 100)}%`" />
       <span class="txt">{{ $t("{0} … {1} / {2} — Fenster offen lassen", [store.progress.text, store.progress.done, store.progress.total]) }}</span>
     </div>
-    <nav class="rail" v-if="!route.query.popup">
+    <nav class="rail" v-if="!route.query.popup && route.path !== '/setup'">
       <!-- Logo: web/public/logo.png — Vite legt public/ neben die Seite -->
       <router-link to="/tree" class="rail-logo" :title="$t('journali PIM')"><img :src="'/logo-128.png'" :alt="$t('journali PIM')" onerror="this.style.display='none'" /></router-link>
       <template v-for="n in railItems" :key="n.to">
@@ -107,12 +107,14 @@ function railDrop(target) {
       </div>
     </nav>
 
+    <!-- Datenbank im Betrieb weg: der Server sagt es mit 503; weg, sobald wieder eine Anfrage durchgeht -->
+    <div v-if="store.dbDown && route.path !== '/setup'" class="dbdown" :title="$t('Der Server verbindet sich neu, sobald die Datenbank zurück ist.')">{{ $t("✗ Datenbank nicht erreichbar") }}</div>
     <main class="content">
       <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">{{ $t("✗ Diese Ansicht ist abgestürzt") }}</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">{{ $t("▣ Zum Baum") }}</button> <button @click="reload">{{ $t("↻ Neu laden") }}</button></div></div>
       <router-view v-else />
     </main>
 
-    <header class="status" v-if="!route.query.popup">
+    <header class="status" v-if="!route.query.popup && route.path !== '/setup'">
       <span class="brand" :title="$t('journali PIM')">{{ $t("journali PIM") }}</span>
       <!-- Version und Bau statt eines zweiten Lämpchens — das in der Leiste links sagt dasselbe -->
       <span v-if="store.online" class="mono muted" :title="`journali ${store.version ?? ''} · gebaut ${store.builtAt}`">{{ store.version }}<span v-if="store.build"> ·{{ store.build }}</span></span>

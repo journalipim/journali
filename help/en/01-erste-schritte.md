@@ -2,9 +2,14 @@
 
 The order after installation. Each step builds on the previous one; everything can be changed later because every change is a journal entry.
 
-## 1. Administrator and team
+## 1. Database, administrator and team
 
-On first start journali creates the administrator. After that every access requires a login. The administrator belongs to the **Init Team** that every installation brings along: it carries the limits of the licence and can be renamed but not deleted.
+In the package the database comes along and the server finds it by itself. If it finds none, or the database refuses
+the login, the browser shows the **Database** dialog: host, port, database, login name, password. It also asks for the
+**setup code** that the server writes to its console. If the database is only briefly unreachable, the server keeps
+trying by itself.
+
+Then the first administrator is created, also with the setup code. After that every access requires a login. The administrator belongs to the **Init Team** that every installation brings along: it carries the limits of the licence and can be renamed but not deleted.
 
 Further users with role and team are added under ⚙ Settings → ◈ IAM. Roles bundle rights; the preset ones are Administrator, PIM manager, PIM editor, Team admin and Reader.
 

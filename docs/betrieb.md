@@ -5,16 +5,13 @@ das Journal liegt in PostgreSQL 18. Das Passwort steht nie im Repo.
 
 ## Entwickeln auf dem PC
 
-Der Server läuft lokal, die Datenbank auf der rossibox
-(`localhost:7432`, Nutzer `postgres`, Datenbank `journali` — legt
-der Server beim ersten Start selbst an, ebenso die Tabelle).
+Nur zum Entwickeln. Betrieben wird journali als Paket aus `compose.yaml`, Server und Datenbank zusammen (README →
+Installation).
 
-Einmalig das Passwort in die user-secrets (bleibt unter
-`%APPDATA%\Microsoft\UserSecrets\journali-server\`, nie im Repo):
-
-```bash
-dotnet user-secrets set JOURNALI_DB_PASSWORD "…" --project Journali.Server
-```
+Der Server läuft lokal, die Datenbank irgendwo im Netz. Beim ersten Start fragt der Server im Browser nach ihr
+(Abschnitt Einrichtung): Host, Port, Datenbank, Anmeldename, Passwort und der Einrichtungscode aus dem Fenster
+„journali“. Die Verbindung liegt danach in `Journali.Server/jobs/db.json` — einmal je Arbeitsplatz, nie im Repo.
+Datenbank und Tabellen legt der Server selbst an.
 
 Dann F5 in Visual Studio (Profil `Journali.Server`, `http://localhost:5000`,
 öffnet `/health`) oder:
@@ -29,12 +26,33 @@ Im Hintergrund, in einem eigenen Fenster „journali":
 tools\server start
 ```
 
-`tools\server stop` beendet `Journali.Server.exe` (das Fenster schliesst
-mit), `restart` beides, `status` ruft `/health`.
+`tools\server stop` beendet `Journali.Server.exe`, `restart` beides, `status` ruft `/health`. Das Fenster bleibt nach
+dem Ende offen, damit man sieht, warum.
 
-Host, Port, Nutzer und Datenbankname stehen in
-`Journali.Server/appsettings.json` unter `JOURNALI_DB`; die Umgebungsvariable
-gleichen Namens übersteuert sie.
+## Einrichtung
+
+Wohin der Server sich verbindet, steht in `db.json` im Datenverzeichnis (`JOURNALI_JOBS`; im Paket das Volume,
+beim Entwickeln `Journali.Server/jobs/`) — geschrieben vom Einrichtungsdialog, das Passwort verschlüsselt. Ohne
+`db.json` gilt die Umgebung: `JOURNALI_DB` (Verbindungszeichenfolge) und `JOURNALI_DB_PASSWORD`; im Paket setzt
+`compose.yaml` beide. Der Dialog gilt vor der Umgebung, damit ein korrigiertes Passwort den Neustart überlebt;
+„⟲ verwerfen“ löscht `db.json`, dann gilt wieder die Umgebung (`Einrichtung.cs`).
+
+| Lage beim Start | Browser | Server |
+|---|---|---|
+| keine Verbindung eingerichtet | Datenbank-Dialog | Einrichtungsstufe auf derselben Adresse |
+| Datenbank nicht erreichbar | Dialog, vorbefüllt, „Versuch n“ und der Grund (Host unbekannt, Port abgewiesen, Zeitüberschreitung) | versucht es alle 5 s neu und geht selbst weiter — bis im Dialog geprüft oder gespeichert wird |
+| Anmeldung abgewiesen (falsches Passwort) | Dialog, vorbefüllt | wartet auf Eingabe, wiederholt nicht |
+| Datenbank fehlt | — | legt sie an; ohne Recht dazu sagt es der Dialog |
+| verbunden, noch kein Anwender | Anmeldeseite: ersten Administrator anlegen | offen wie bisher |
+| verbunden, Administratoren ohne Passwort | Anmeldeseite: Passwort für einen von ihnen festlegen | — |
+| verbunden, normal | Anmeldung | Betrieb |
+| Datenbank bricht im Betrieb weg | Streifen oben „Datenbank nicht erreichbar“ | antwortet 503 mit `db: false`, verbindet neu, sobald sie zurück ist |
+
+**Einrichtungscode.** Solange etwas einzurichten ist — Datenbank, erster Administrator, Passwort eines
+Administrators —, erzeugt der Server einen Code, schreibt ihn in die Konsole und nach `einrichtungscode.txt` im
+Datenverzeichnis. Dialog und Anmeldeseite verlangen ihn; ein falscher kostet eine Sekunde. Wer den Code sieht, hat
+Zugang zum Server — wer nur den Port erreicht, kann weder die Verbindung umlenken noch sich zum Administrator machen.
+Im Paket: `docker compose logs server`. Ist alles eingerichtet, ist der Code weg.
 
 ## Medien
 
@@ -51,7 +69,7 @@ Regel: **ein Journal, ein Speicher.** Zwei Instanzen am selben Journal (PC und C
 Speicher — dieselbe Postgres-Datenbank oder denselben Bucket; sonst fehlen der einen die Bytes der anderen.
 
 **Einstellen** unter ⚙ Einstellungen → ▨ Storage: Treiber, Zugang — prüfen, speichern; die Einstellung
-liegt als `media.json` im Datenverzeichnis (`JOURNALI_JOBS`, neben `secrets.json`), nie im Journal, und geht der
+liegt als `media.json` im Datenverzeichnis (`JOURNALI_JOBS`, neben `db.json`), nie im Journal, und geht der
 Umgebung vor. Dort auch Fehlbestand zählen und Blobs aus einem anderen Speicher herüberkopieren.
 
 **Treiber wechseln** ohne neue Ids: neue Angabe setzen, starten, dann `POST /api/media/copy {"from": "<alte Angabe>"}`
@@ -153,7 +171,7 @@ Fassung erscheint unter ⌁ Plugins als ↑ Update). Prozess-Plugins brauchen
 `node` im Laufzeit-Image — das Dockerfile kopiert die Binärdatei aus
 `node:22`. Basis-Plugins (table, da, tasker) liegen ebenfalls unter `plugins/`
 — auch ihre Ansichten lassen sich so austauschen; gebaute Plugins (`src/` →
-`entry.js`) kommen fertig gebaut aus dem Repo, das Image baut nur `web/`. Jobs (Logs, `secrets.json`) liegen im Volume `journali-jobs`. `.env.example` nach `.env` kopieren, Passwort eintragen,
+`entry.js`) kommen fertig gebaut aus dem Repo, das Image baut nur `web/`. Jobs (Logs) liegen im Volume `journali-jobs`. `.env.example` nach `.env` kopieren, Passwort eintragen,
 `docker compose up --build`. Der Server wartet, bis Postgres bereit ist
 (Healthcheck), und legt Datenbank und Tabelle selbst an.
 
@@ -191,21 +209,22 @@ Verwaltung unter ⚙ Einstellungen → 👤 Benutzer & Rollen (Recht users) bzw.
 (`jt_…`) sind für Excel-Add-in, OnlyOffice und Skripte — je Nutzer, widerrufbar, nur beim Anlegen sichtbar.
 Jobs und Belegerzeuger bekommen je Lauf ein Dienst-Token (`JOURNALI_TOKEN`, Rolle `editor` — fehlt sie, das
 feste Minimum read/write/retire/release), das mit dem
-Lauf erlischt. Geheimnisse liegen in `auth.json` im Datenverzeichnis (`JOURNALI_JOBS`, im Container das
-Volume `journali-jobs`), Passwörter als PBKDF2-SHA256 — nie im Journal. Der letzte Benutzer mit dem Recht
+Lauf erlischt. Geheimnisse liegen im **Tresor** (`Tresor.cs`): mit Datenbank die Tabelle `tresor`, je Stück eine
+Zeile (`auth`, `mail`, `secrets`), AES-GCM verschlüsselt; Passwörter als PBKDF2-SHA256 — nie im Journal. Alle Server
+auf derselben Datenbank teilen ihn. `auth.json`, `mail.json` und `secrets.json` von früher übernimmt der erste Start
+(was im Tresor fehlt, kommt dazu) und benennt sie in `….uebernommen` um. Der letzte Benutzer mit dem Recht
 `users` lässt sich nicht sperren oder entfernen. Hosting: Anmeldung ist Pflicht, bevor eine Instanz ins Internet geht.
 
-**Ausgesperrt?** Die Benutzer stehen im Journal (Datenbank), die Passwörter in `auth.json` im Datenverzeichnis des
-jeweiligen Rechners. Läuft der Server auf einem anderen Rechner (oder mit anderem `JOURNALI_JOBS`) als dem, auf dem der
-Administrator angelegt wurde, gibt es dort kein `auth.json` — jede Anmeldung scheitert mit „Benutzer oder Passwort
-falsch“. Entweder `auth.json` mitnehmen, oder einmalig mit `JOURNALI_ADMIN_PASSWORD=<neues Passwort>` (optional
+**Ausgesperrt?** Hat kein Administrator ein Passwort (Tresor leer, etwa bei einer Datenbank aus einer Sicherung ohne
+Zugänge), zeigt die Anmeldeseite „Administrator-Passwort festlegen“: einen der Administratoren wählen, Passwort und
+Einrichtungscode eingeben. Ohne Browser: einmalig mit `JOURNALI_ADMIN_PASSWORD=<neues Passwort>` (optional
 `JOURNALI_ADMIN_USER`, Vorgabe `admin`) starten: der Start setzt das Passwort neu, legt den Benutzer an, wenn er fehlt,
 und sagt es in der Konsole. Danach die Variable wieder entfernen.
 
 ## KI
 
 journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt. Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis
-des Servers (`jobs/secrets.json` unter `team:<key>`), nie im Journal und nie im Browser. Gefragt wird
+des Servers (Tresor, Stück `secrets` unter `team:<key>`), nie im Journal und nie im Browser. Gefragt wird
 über `POST /api/ai/ask`: der Server nimmt den Schlüssel des **zahlenden** Teams (`keysFrom`) und das
 dort eingetragene Modell. Ohne Team keine KI; dasselbe gilt für Jobs, die über ihr `JOURNALI_TOKEN`
 einen Anwender und damit ein Team haben. Eingerichtet werden können **Anthropic**
@@ -243,8 +262,7 @@ und startet neu — dann kommen sie wieder aus dem Image.
 ## Mail
 
 Einstellungen → ✉ Mail: Server, Port, STARTTLS, Benutzer, Passwort, Absender.
-Liegt als `mail.json` im Datenverzeichnis, neben `media.json` und `auth.json` —
-nie im Journal. Das Passwort kommt maskiert zurück; wer das Feld nicht anfasst,
+Liegt im Tresor (Stück `mail`) — nie im Journal; alle Server auf derselben Datenbank senden über denselben. Das Passwort kommt maskiert zurück; wer das Feld nicht anfasst,
 lässt es stehen. Ein Knopf sendet eine Probe.
 
 Gesendet wird mit dem, was .NET mitbringt (`SmtpClient`): Klartext auf 25,
@@ -260,8 +278,8 @@ Zwei Wege, die sich nicht ersetzen.
 
 **`pg_dump`** sichert die Datenbank: Journal, abgeleitete Tabellen und — beim
 Speicher `postgres` — die Medien. Schnell, konsistent, erprobt. Er kennt aber nur
-die Datenbank: die Plugin-Verzeichnisse und die Dateien im Datenverzeichnis
-(`auth.json`, `media.json`, `jobs/secrets.json`) liegen im Dateisystem und fehlen.
+die Datenbank: die Plugin-Verzeichnisse und `media.json` im Datenverzeichnis liegen im Dateisystem und fehlen
+(der Tresor mit den Zugängen ist dabei — er ist eine Tabelle).
 Wer so sichert, muss das Volume mitnehmen.
 
 **Die Vollsicherung** — von Hand unter ⚙ Einstellungen → ⇅ B&R (jeder Tarif) oder als Zeitplan
@@ -272,7 +290,7 @@ Satz, der an nichts hängt — nicht an der Postgres-Fassung, nicht am Schema:
 |---|---|
 | `journal.ndjson.gz` | alle Einträge, je Zeile einer, mit Nummer, Zeit, Urheber |
 | `media/` | die Blobs — **nur beim Speicher `postgres`** |
-| `config/` | `auth.json`, `media.json`, `jobs/secrets.json` |
+| `config/` | `auth.json`, `mail.json`, `secrets.json` aus dem Tresor, `media.json` aus dem Datenverzeichnis |
 | `plugins/` | die Plugin-Verzeichnisse ohne `node_modules` |
 | `backup.json` | Zeitpunkt, Anzahl, Art des Speichers |
 
@@ -337,8 +355,8 @@ Jobs laufen im Server als Kindprozesse (`JobRunner`), unabhängig vom
 Browser: nach Zeitplan (cron, geprüft je Minute; nach einem Stillstand werden
 höchstens die letzten 5 Minuten nachgeholt) oder von Hand. Verzeichnis aus
 `JOURNALI_JOBS`, Vorgabe `jobs/` neben dem Programm (im Repo ignoriert):
-`jobs/<key>/<run>.log` je Lauf, `jobs/secrets.json` für Geheimnisse (Token,
-Passwörter — nie im Journal). Der Prozess bekommt `{journali}` (Adresse des
+`jobs/<key>/<run>.log` je Lauf; Geheimnisse (Token,
+Passwörter) im Tresor, Stück `secrets` — nie im Journal. Der Prozess bekommt `{journali}` (Adresse des
 Servers), `{actor}` (`job:<key>`) und die Parameter als Argumente laut
 Manifest und als Umgebung `JOURNALI_<PARAM>`. Nur Plugins mit `process` im
 Manifest können Jobs; mitgeliefert: `backup` (Rohdaten-JSON eines Teilbaums
@@ -366,7 +384,7 @@ im Medienspeicher. `GET /api/jobs/{key}/files` zeigt es; im Job-Detail steht es 
 
 Geheimnisse (Token) gehören nie ins Journal, also nicht ins Profil selbst — sie liegen **am Profil beim Server**:
 `PUT /api/plugins/{key}/secrets/{profil}` `{values:{token:…}}` (Recht Schreiben; `GET` nennt nur die Schlüssel) in
-`jobs/secrets.json` unter `plugin:<key>:<profil>`; der JobRunner füllt damit, was der Job nicht selbst gesetzt hat.
+im Tresor (`secrets`) unter `plugin:<key>:<profil>`; der JobRunner füllt damit, was der Job nicht selbst gesetzt hat.
 ⇩ Import → IXP hat dafür 🔒 neben dem Token. Bei `dir` und `path` öffnet 📁 den Dateibrowser des **Servers** — derselbe wie
 unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht Jobs oder Storage; Oberfläche
 `web/src/filePicker.js`, Plugins über `ctx.filePicker`): Wurzeln sind das Datenverzeichnis, das Programm und die
@@ -440,7 +458,7 @@ Ein **Joblauf** hört schon bei 90 % auf (`Limits.JobReserve`) — die letzten 1
 selben Moment wieder weg.
 
 Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts. Teams ohne eigenen Schlüssel arbeiten über den
-Schlüssel der Anlage (`secrets.json` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das KI-Limit.
+Schlüssel der Anlage (Tresor `secrets` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das KI-Limit.
 
 Echtheit: `sig` ist eine ECDSA-P-256-Signatur (SHA-256, Base64) über die Felder ohne `sig`. Geprüft wird sie, sobald
 `JOURNALI_LICENCE_KEY` den öffentlichen Schlüssel trägt (Base64, SubjectPublicKeyInfo); fehlt er, wird die Lizenz

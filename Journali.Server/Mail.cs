@@ -8,8 +8,8 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Mailserver. Liegt als <c>mail.json</c> im Datenverzeichnis, neben <c>media.json</c> und
-/// <c>auth.json</c> — nie im Journal, denn da steht ein Passwort drin.
+/// Mailserver. Liegt im Tresor (Stück „mail“; ohne Datenbank <c>mail.json</c> im Datenverzeichnis) — nie im Journal,
+/// denn da steht ein Passwort drin. Alle Server auf derselben Datenbank senden über denselben.
 /// <para>Gesendet wird mit MailKit — das zweite Paket im Server neben Npgsql. Damit gehen alle drei Wege: ohne Verschlüsselung (25), STARTTLS (587) und implizites TLS (465).</para>
 /// </summary>
 public sealed record MailConfig(
@@ -47,23 +47,24 @@ public static class MailConfigFile
     public static string PathOf(string dir) => Path.Combine(dir, "mail.json");
     public static MailConfig Load(string dir)
     {
-        try { return (File.Exists(PathOf(dir)) ? JsonSerializer.Deserialize<MailConfig>(File.ReadAllText(PathOf(dir)), Json) : null) ?? new MailConfig(); }
-        catch { return new MailConfig(); }
+        var json = Tresor.Fuer(dir).Lies(Tresor.Mail);
+        try { return (json is null ? null : JsonSerializer.Deserialize<MailConfig>(json, Json)) ?? new MailConfig(); }
+        catch (JsonException) { return new MailConfig(); }
     }
-    public static void Save(string dir, MailConfig c) { Directory.CreateDirectory(dir); File.WriteAllText(PathOf(dir), JsonSerializer.Serialize(c, Json)); }
+    public static void Save(string dir, MailConfig c) => Tresor.Fuer(dir).Aendere(Tresor.Mail, _ => JsonSerializer.Serialize(c, Json));
 }
 
 /// <summary>Der Versand — einer für alle, die Mail brauchen (Jobs, Workflows). Ohne Einstellung tut er nichts und sagt es.</summary>
 public sealed class Mailer(string dataDir)
 {
-    private MailConfig _config = MailConfigFile.Load(dataDir);
-    public MailConfig Config => _config;
-    public void Set(MailConfig c) { _config = c; MailConfigFile.Save(dataDir, c); }
+    /// <summary>Jedes Mal aus dem Tresor — ein anderer Server auf derselben Datenbank kann ihn geändert haben.</summary>
+    public MailConfig Config => MailConfigFile.Load(dataDir);
+    public void Set(MailConfig c) => MailConfigFile.Save(dataDir, c);
 
     /// <summary>Senden. Liefert null, wenn es ging, sonst die Fehlmeldung — nie eine Ausnahme nach aussen.</summary>
     public async Task<string?> SendAsync(string to, string subject, string body, bool html = false, CancellationToken ct = default)
     {
-        var c = _config;
+        var c = Config;
         if (c is not { Host: { Length: > 0 } host, From: { Length: > 0 } from }) return "Kein Mailserver eingerichtet (Einstellungen → Mail).";
         if (string.IsNullOrWhiteSpace(to)) return "Empfänger fehlt.";
         try

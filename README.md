@@ -52,12 +52,6 @@ will, findet den Weg in [docs/plugins-zertifizierung.md](docs/plugins-zertifizie
 | `Journali.Server` | ASP.NET Core: Journal in PostgreSQL 18, Abbild „Produkte", Befehle unter `/api` — [docs/betrieb.md](docs/betrieb.md), [docs/eintraege.md](docs/eintraege.md) |
 | `web` | Oberfläche, Vue 3 + Vite; wird nach `Journali.Server/wwwroot` gebaut |
 
-```bash
-dotnet run --project Journali.Sandbox
-```
-
-```bash
-dotnet run --project Journali.Server
-```
-
-`Dockerfile` und `compose.yaml` bauen Server + Datenbank als Paket.
+journali gibt es nur als Paket: `Dockerfile` und `compose.yaml` bringen Server und Datenbank zusammen, der Weg
+steht oben unter Installation. Das Starten aus dem Quelltext ist Entwicklung und steht in
+[docs/betrieb.md](docs/betrieb.md) unter „Entwickeln auf dem PC“.

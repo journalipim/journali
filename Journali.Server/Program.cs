@@ -13,27 +13,24 @@ using static Journali.Server.ModelApi;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Verbindung: JOURNALI_DB (ohne Passwort, appsettings.json) plus
-// JOURNALI_DB_PASSWORD aus user-secrets oder Umgebung. Nie im Repo (docs/betrieb.md).
-var connection = new NpgsqlConnectionStringBuilder(
-    builder.Configuration["JOURNALI_DB"]
-    ?? throw new InvalidOperationException("JOURNALI_DB fehlt — siehe docs/betrieb.md."));
-if (builder.Configuration["JOURNALI_DB_PASSWORD"] is { Length: > 0 } password)
-    connection.Password = password;
+// Datenverzeichnis (JOURNALI_JOBS): Jobs, Medien-Einstellung, die Verbindung zur Datenbank (db.json) — und der lokale
+// Spiegel des Journals. Im Paket ein Volume, beim Entwickeln jobs/ neben dem Server; jeder Server hat seins.
+var dataDir = Path.GetFullPath(builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs"));
+Directory.CreateDirectory(dataDir);
 
-// Datenbank nicht erreichbar: ein Satz mit Host und Port statt Stacktrace, Ende mit Fehlercode
-try { PostgresJournal.EnsureDatabase(connection.ConnectionString); }
-catch (NpgsqlException e) when (e.InnerException is System.Net.Sockets.SocketException || e.IsTransient)
-{
-    Console.Error.WriteLine($"journali: Datenbank {connection.Host}:{connection.Port} nicht erreichbar — läuft Postgres? ({e.InnerException?.Message ?? e.Message}; docs/betrieb.md)");
-    return 1;
-}
+// Verbindung: aus dem Einrichtungsdialog (db.json im Datenverzeichnis), sonst aus der Umgebung (JOURNALI_DB und
+// JOURNALI_DB_PASSWORD — im Paket setzt compose.yaml beide). Steht sie nicht, läuft erst die Einrichtungsstufe auf
+// derselben Adresse und wartet, bis sie steht (Einrichtung.cs).
+var ziel = await Einrichtung.VerbindenAsync(args, builder, dataDir);
+var connection = new NpgsqlConnectionStringBuilder(ziel.ConnectionString());
 var db = NpgsqlDataSource.Create(connection.ConnectionString);
 var pg = new PostgresJournal(db);
 pg.EnsureSchema();
-// Datenverzeichnis (JOURNALI_JOBS): Jobs, Geheimnisse, Medien-Einstellung — und der lokale Spiegel des Journals
-var dataDir = Path.GetFullPath(builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs"));
-Directory.CreateDirectory(dataDir);
+// Tresor in der Datenbank: Anmeldedaten, Mailserver, Geheimnisse der Jobs und Teams — alle Server auf dieser Datenbank
+// teilen ihn. Dateien von früher (auth.json, mail.json, secrets.json) werden übernommen.
+var tresor = new PostgresTresor(db);
+Tresor.Nutze(tresor);
+foreach (var datei in Tresor.Uebernehmen(dataDir, tresor)) Console.WriteLine($"journali: {datei} in die Datenbank übernommen");
 // Spiegel und Schnappschuss stellt der Administrator ein — betrieb.json im Datenverzeichnis,
 // ohne Datei zählt die Umgebung (JOURNALI_JOURNAL_CACHE=off, JOURNALI_SNAPSHOT=off). Gelesen wird das hier, vor dem
 // Journal: der Spiegel entscheidet, wie das Journal überhaupt gelesen wird.
@@ -133,6 +130,18 @@ app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Edi
 // Die Adresse, unter der Jobs den Server erreichen: die, mit der die Oberfläche kommt (localhost:5000 oder rossibox)
 app.Use(async (ctx, next) => { if (ctx.Request.Path.StartsWithSegments("/api")) jobRunner.Origin = $"{ctx.Request.Scheme}://{ctx.Request.Host}"; await next(); });
 
+// Datenbank im Betrieb weg: eine Meldung statt eines Serverfehlers — die Oberfläche zeigt sie oben, bis wieder eine
+// Anfrage durchgeht. Die Verbindung bleibt, wie sie ist; Npgsql verbindet neu, sobald die Datenbank zurück ist.
+app.Use(async (ctx, next) =>
+{
+    try { await next(); }
+    catch (Exception e) when (!ctx.Response.HasStarted && (e is NpgsqlException or TimeoutException || e.InnerException is NpgsqlException) && Einrichtung.Einordnen(e).Lage == DbLage.Unerreichbar)
+    {
+        ctx.Response.StatusCode = 503;
+        await ctx.Response.WriteAsJsonAsync(new { error = "Datenbank nicht erreichbar.", template = "Datenbank nicht erreichbar.", args = Array.Empty<string>(), db = false });
+    }
+});
+
 // Benutzer & Rollen: ohne Benutzer offen wie bisher; mit Benutzern Sitzung oder Token noetig, X-Actor kommt aus der Sitzung
 app.Use(Auth.Middleware(catalog, dataDir));
 // Kein Kontingent: der Schreibpfad wirft, die Antwort sagt es sachlich — nicht als Serverfehler
@@ -155,6 +164,9 @@ var api = app.MapGroup("/api");
 BetriebApi.Map(api, dataDir, cachePath, Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json"), builder.Configuration);
 Auth.Map(api, dataDir);
 if (Auth.Recover(catalog, dataDir, builder.Configuration["JOURNALI_ADMIN_PASSWORD"], builder.Configuration["JOURNALI_ADMIN_USER"]) is { } recovered) Console.WriteLine("journali: " + recovered);
+// Einrichtungscode, solange ein Administrator fehlt oder keiner ein Passwort hat — sonst gibt es keinen
+if (Auth.Lage(catalog, dataDir) is var anmeldung && anmeldung == Auth.Anmeldung.Anmelden) Einrichtungscode.Erledigt(dataDir);
+else Console.WriteLine($"journali: {(anmeldung == Auth.Anmeldung.Einrichten ? "noch kein Administrator" : "kein Administrator hat ein Passwort")} — Einrichtungscode {Einrichtungscode.Aktiv(dataDir)} (auch in {Einrichtungscode.PathOf(dataDir)})");
 
 // ---- Stand und Modell ----------------------------------------------------
 

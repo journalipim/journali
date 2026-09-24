@@ -24,6 +24,9 @@ async function request(method, path, body) {
   try { data = text ? JSON.parse(text) : null } catch { throw new Error(`${res.status}: ${text.split(/\r?\n/)[0].slice(0, 200)}`) }
   // 401 mit login: Sitzung fehlt oder abgelaufen — zur Anmeldung, der Weg zurück wird gemerkt
   if (res.status === 401 && data?.login && !location.pathname.startsWith('/login')) { sessionStorage.setItem('journali.after', location.pathname + location.search); store.auth = { ...store.auth, known: true, enabled: true, user: null, role: null }; (await import('./router.js')).router.push('/login') }
+  // Datenbank weg: oben anzeigen, bis wieder eine Anfrage durchgeht
+  if (res.status === 503 && data?.db === false) store.dbDown = true
+  else if (res.ok) store.dbDown = false
   if (!res.ok) throw new Error(serverText(data) || `${res.status} ${res.statusText}`)
   return data
 }

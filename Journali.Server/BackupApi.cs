@@ -20,17 +20,20 @@ public static class BackupApi
     public sealed record Body(string Dir, bool Media = true, bool Config = true, bool Plugins = true);
 
     /// <summary>
-    /// Was neben dem Journal liegt und ohne das ein wiederhergestelltes System nicht läuft:
-    /// <c>auth.json</c> (Passwort-Hashes, API-Token, Sitzungen), <c>media.json</c> (Speicher-Einstellung, bei S3 mit
-    /// Zugangsdaten), <c>mail.json</c> (Mailserver mit Passwort), <c>jobs/secrets.json</c> (Token der Jobs). Wer sie mitsichert, hat Geheimnisse in der Sicherung
-    /// — wie im Datenverzeichnis selbst. Wer sie weglässt, kommt in ein wiederhergestelltes System nicht hinein.
+    /// Was neben dem Journal liegt und ohne das ein wiederhergestelltes System nicht läuft: aus dem Tresor
+    /// <c>auth.json</c> (Passwort-Hashes, API-Token, Sitzungen), <c>mail.json</c> (Mailserver mit Passwort) und
+    /// <c>secrets.json</c> (Geheimnisse der Jobs, Profile und Teams); aus dem Datenverzeichnis <c>media.json</c>
+    /// (Speicher-Einstellung, bei S3 mit Zugangsdaten). Wer sie mitsichert, hat Geheimnisse in der Sicherung.
+    /// Wer sie weglässt, kommt in ein wiederhergestelltes System nicht hinein.
     /// </summary>
     /// <remarks>
     /// Die Lizenz ist <b>nicht</b> dabei. Sie steht in der Datenbank, auf
     /// die Kennung dieser Instanz ausgestellt; eine wiederhergestellte Instanz bekommt eine neue Kennung und läuft im
     /// Testbetrieb, bis eine Lizenz für sie ausgestellt wird.
     /// </remarks>
-    private static readonly string[] Dateien = ["auth.json", "media.json", "mail.json", Path.Combine("jobs", "secrets.json")];
+    private static readonly string[] Dateien = ["auth.json", "media.json", "mail.json", "secrets.json"];
+    /// <summary>Ältere Sicherungen legten die Job-Geheimnisse unter diesem Namen ab.</summary>
+    private static readonly string AltSecrets = Path.Combine("jobs", "secrets.json");
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     public static void Map(RouteGroupBuilder api, IJournal journal, string dataDir, string pluginDir)
@@ -93,9 +96,11 @@ public static class BackupApi
                 Directory.CreateDirectory(ziel);
                 foreach (var rel in Dateien)
                 {
-                    var quelle = Path.Combine(dataDir, rel);
-                    if (!File.Exists(quelle)) continue;
-                    File.Copy(quelle, Path.Combine(ziel, Sicher(rel)), overwrite: true);
+                    // Was im Tresor liegt, kommt aus dem Tresor; der Rest aus dem Datenverzeichnis
+                    var inhalt = Tresor.NameVon(rel) is { } name ? Tresor.Fuer(dataDir).Lies(name)
+                        : File.Exists(Path.Combine(dataDir, rel)) ? await File.ReadAllTextAsync(Path.Combine(dataDir, rel), ct) : null;
+                    if (inhalt is null) continue;
+                    await File.WriteAllTextAsync(Path.Combine(ziel, Sicher(rel)), inhalt, ct);
                     dateien++;
                 }
             }
@@ -147,11 +152,20 @@ public static class BackupApi
             var dateien = 0;
             var cdir = Path.Combine(dir, "config");
             if (body.Config && Directory.Exists(cdir))
-                foreach (var rel in Dateien)
+                foreach (var rel in Dateien.Append(AltSecrets))
                 {
                     var gesichert = Path.Combine(cdir, Sicher(rel));
+                    if (!File.Exists(gesichert)) continue;
+                    if (Tresor.NameVon(Path.GetFileName(rel)) is { } name)
+                    {
+                        // nie überschreiben, was hier schon steht
+                        var inhalt = await File.ReadAllTextAsync(gesichert, ct); var neu = false;
+                        Tresor.Fuer(dataDir).Aendere(name, alt => { if (alt is not null) return alt; neu = true; return inhalt; });
+                        if (neu) { dateien++; Auth.Vergessen(); }
+                        continue;
+                    }
                     var ziel = Path.Combine(dataDir, rel);
-                    if (!File.Exists(gesichert) || File.Exists(ziel)) continue;   // nie überschreiben, was hier schon steht
+                    if (File.Exists(ziel)) continue;
                     Directory.CreateDirectory(Path.GetDirectoryName(ziel)!);
                     File.Copy(gesichert, ziel);
                     dateien++;

@@ -45,6 +45,7 @@ export const store = reactive({
   online: null,          // null = noch nicht gefragt, sonst true/false
   // Anmeldung: enabled = es gibt Benutzer (Server gesperrt), setup = noch keiner (ersten Admin anlegen), user/role aus der Sitzung
   auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null, rights: null },
+  dbDown: false,   // Datenbank im Betrieb nicht erreichbar (503 mit db: false)
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,

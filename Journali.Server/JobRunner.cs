@@ -254,31 +254,45 @@ public sealed class JobRunner : BackgroundService
     }
 }
 
-/// <summary>Geheimnisse der Jobs (Token, Passwörter): jobs/secrets.json — nie im Journal, nie im Repo (jobs/ ist ignoriert).</summary>
+/// <summary>Geheimnisse der Jobs, Profile und Teams (Token, Passwörter, KI-Schlüssel): im Tresor, Stück „secrets“ —
+/// nie im Journal. Mit Datenbank teilen alle Server auf ihr dieselben.</summary>
 public static class Secrets
 {
     private static readonly object Gate = new();
-    private static string File(string dir) => Path.Combine(dir, "secrets.json");
     /// <summary>Schlüssel der Geheimnisse eines Profils: plugin:&lt;key&gt;:&lt;profil&gt; — neben den Jobs in derselben Datei.</summary>
     public static string ProfileKey(string plugin, string profile) => $"plugin:{plugin}:{profile}";
     private static Dictionary<string, Dictionary<string, string>> Load(string dir)
     {
-        try { return System.IO.File.Exists(File(dir)) ? JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(System.IO.File.ReadAllText(File(dir))) ?? new() : new(); }
-        catch { return new(); }
+        var json = Tresor.Fuer(dir).Lies(Tresor.Secrets);
+        try { return json is null ? new() : JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json) ?? new(); }
+        catch (JsonException) { return new(); }
+    }
+    private static Dictionary<string, Dictionary<string, string>> Parse(string? json)
+    {
+        try { return json is null ? new() : JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, string>>>(json) ?? new(); }
+        catch (JsonException) { return new(); }
     }
     public static Dictionary<string, string> Get(string dir, string key) { lock (Gate) return Load(dir).GetValueOrDefault(key) ?? new(); }
     public static void Set(string dir, string key, Dictionary<string, string?> values)
     {
         lock (Gate)
-        {
-            var all = Load(dir); var mine = all.GetValueOrDefault(key) ?? new();
-            foreach (var (k, v) in values) { if (string.IsNullOrEmpty(v)) mine.Remove(k); else mine[k] = v; }
-            if (mine.Count == 0) all.Remove(key); else all[key] = mine;
-            Directory.CreateDirectory(dir);
-            System.IO.File.WriteAllText(File(dir), JsonSerializer.Serialize(all, new JsonSerializerOptions { WriteIndented = true }));
-        }
+            Tresor.Fuer(dir).Aendere(Tresor.Secrets, json =>
+            {
+                var all = Parse(json); var mine = all.GetValueOrDefault(key) ?? new();
+                foreach (var (k, v) in values) { if (string.IsNullOrEmpty(v)) mine.Remove(k); else mine[k] = v; }
+                if (mine.Count == 0) all.Remove(key); else all[key] = mine;
+                return all.Count == 0 ? null : JsonSerializer.Serialize(all, new JsonSerializerOptions { WriteIndented = true });
+            });
     }
-    public static void Remove(string dir, string key) { lock (Gate) { var all = Load(dir); if (all.Remove(key)) System.IO.File.WriteAllText(File(dir), JsonSerializer.Serialize(all)); } }
+    public static void Remove(string dir, string key)
+    {
+        lock (Gate)
+            Tresor.Fuer(dir).Aendere(Tresor.Secrets, json =>
+            {
+                var all = Parse(json);
+                return all.Remove(key) && all.Count == 0 ? null : json is null ? null : JsonSerializer.Serialize(all, new JsonSerializerOptions { WriteIndented = true });
+            });
+    }
 }
 
 /// <summary>cron mit fünf Feldern: Minute Stunde Tag Monat Wochentag — *, n, a-b, */n, a,b; Wochentag 0–7 (0 und 7 = Sonntag).

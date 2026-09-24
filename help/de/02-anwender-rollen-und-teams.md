@@ -4,7 +4,7 @@ Drei Begriffe, die zusammenwirken: der **Anwender** ist eine Person mit Anmeldun
 
 ## Anwender
 
-Ein Anwender hat einen Anmeldenamen, einen Anzeigenamen, eine Rolle und ein Team. Der Anmeldename erscheint als Urheber in jedem Journaleintrag, den die Person schreibt. Passwörter liegen als Hash in einer Datei beim Server, nie im Journal. Ein Anwender lässt sich sperren und wieder freischalten; der letzte Anwender mit dem Recht zur Anwenderverwaltung lässt sich weder sperren noch entfernen.
+Ein Anwender hat einen Anmeldenamen, einen Anzeigenamen, eine Rolle und ein Team. Der Anmeldename erscheint als Urheber in jedem Journaleintrag, den die Person schreibt. Passwörter liegen als Hash verschlüsselt in der Datenbank, nie im Journal; jeder Server auf derselben Datenbank kennt sie. Ein Anwender lässt sich sperren und wieder freischalten; der letzte Anwender mit dem Recht zur Anwenderverwaltung lässt sich weder sperren noch entfernen.
 
 Unter ◐ Ich ändert jede Person ihr Passwort und legt **API-Token** an: für das Excel-Add-in, OnlyOffice und Skripte. Ein Token arbeitet mit den Rechten der Person; was damit geschrieben wird, ist ihrem Team zugeordnet. Der Token ist nur beim Anlegen sichtbar.
 

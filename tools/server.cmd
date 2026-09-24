@@ -1,7 +1,8 @@
 @echo off
 rem Entwicklung auf dem PC: tools\server start | stop | restart | status | web | build
-rem start   - Server per dotnet run in eigenem Fenster "journali" (localhost:5000)
-rem stop    - beendet Journali.Server.exe; das dotnet-run-Fenster schliesst mit
+rem start   - Server per dotnet run in eigenem Fenster "journali" (localhost:5000); das Fenster bleibt nach dem
+rem           Ende offen, damit man sieht, warum. Ohne Datenbank zeigt http://localhost:5000 die Einrichtung
+rem stop    - beendet Journali.Server.exe
 rem status  - GET /api/health
 rem web     - Vite-Entwicklungsserver in eigenem Fenster (localhost:5173, Hot Reload,
 rem           /api geht an :5000) - zum Arbeiten an der Oberflaeche
@@ -21,14 +22,15 @@ echo Aufruf: tools\server start ^| stop ^| restart ^| status ^| web ^| build ^| 
 exit /b 2
 
 :start
-start "journali" /D "%ROOT%" dotnet run --project Journali.Server
+start "journali" /D "%ROOT%" cmd /k dotnet run --project Journali.Server
 goto warten
 
 rem Warten, bis der Server antwortet (der erste Start uebersetzt noch) — und es sagen
 :warten
 echo Server startet ...
 for /l %%i in (1,1,90) do (
-  curl -s -m 2 -o nul localhost:5000/api/health && (echo laeuft - http://localhost:5000 & exit /b 0)
+  curl -s -m 2 localhost:5000/api/health 2>nul | findstr /c:"\"setup\"" >nul && (echo wartet auf die Einrichtung der Datenbank - http://localhost:5000, Code im Fenster "journali" & exit /b 0)
+  curl -sf -m 2 -o nul localhost:5000/api/health && (echo laeuft - http://localhost:5000 & exit /b 0)
   ping -n 2 127.0.0.1 >nul
 )
 echo kam nicht hoch - siehe Fenster "journali"

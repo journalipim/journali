@@ -6,6 +6,7 @@ import ModelView from './views/ModelView.vue'
 import HubView from './views/HubView.vue'
 import TasksView from './views/TasksView.vue'
 import LoginView from './views/LoginView.vue'
+import DbSetupView from './views/DbSetupView.vue'
 import { store } from './store.js'
 import TableEditView from './views/TableEditView.vue'
 import MediaView from './views/MediaView.vue'
@@ -46,13 +47,16 @@ export const router = createRouter({
     { path: '/help', component: HelpView },   // Hilfe in der Instanz (24.09.2026): Kapitel aus help/<code>/
     { path: '/help/:chapter', component: HelpView, props: true },
     { path: '/login', component: LoginView },
+    { path: '/setup', component: DbSetupView },   // Datenbank einrichten — nur, solange der Server keine Verbindung hat
   ],
 })
 
-// Wache: mit Benutzern ohne Sitzung → /login; ohne Benutzer bleibt alles offen
+// Wache: ohne Datenbank → /setup; mit Benutzern ohne Sitzung → /login; ohne Benutzer bleibt alles offen
 router.beforeEach(async to => {
-  if (to.path === '/login') return true
   if (!store.auth.known) await store.loadAuth()
+  if (store.auth.dbSetup) return to.path === '/setup' ? true : '/setup'
+  if (to.path === '/setup') return '/login'
+  if (to.path === '/login') return true
   if (store.auth.enabled && !store.auth.user) { sessionStorage.setItem('journali.after', to.fullPath); return '/login' }
   return true
 })

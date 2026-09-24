@@ -10,10 +10,10 @@ Je Anwender stehen im Journal: Anmeldename, Anzeigename, E-Mail, Rolle, Team und
 
 | Was | Wo |
 |---|---|
-| Passwörter | als Hash in einer Datei beim Server |
-| API-Token und Sitzungen | als Hash in derselben Datei |
-| KI-Schlüssel, Zugangsdaten von Jobs | Geheimnisse beim Server, am Team oder am Profil |
-| Mail-Passwort, Speicher-Zugänge | Einstellungsdateien beim Server |
+| Passwörter | als Hash im Tresor der Datenbank, verschlüsselt |
+| API-Token und Sitzungen | als Hash im selben Tresor |
+| KI-Schlüssel, Zugangsdaten von Jobs, Mail-Passwort | im selben Tresor, am Team oder am Profil |
+| Speicher-Zugänge, Verbindung zur Datenbank | Einstellungsdateien beim Server |
 
 Diese Dateien gehen mit der Sicherung, nicht mit einem Export.
 

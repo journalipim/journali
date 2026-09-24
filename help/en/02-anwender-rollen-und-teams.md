@@ -4,7 +4,7 @@ Three terms that work together: the **user** is a person with a login, the **rol
 
 ## Users
 
-A user has a login name, a display name, a role and a team. The login name appears as author in every journal entry the person writes. Passwords are kept as a hash in a file on the server, never in the journal. A user can be locked and unlocked; the last user with the right to manage users can be neither locked nor removed.
+A user has a login name, a display name, a role and a team. The login name appears as author in every journal entry the person writes. Passwords are kept as an encrypted hash in the database, never in the journal; every server on the same database knows them. A user can be locked and unlocked; the last user with the right to manage users can be neither locked nor removed.
 
 Under ◐ Me every person changes their password and creates **API tokens**: for the Excel add-in, OnlyOffice and scripts. A token acts with the rights of the person; what it writes is attributed to their team. The token is visible only when created.
 
