@@ -1,11 +1,8 @@
 {
  "key": "xport",
  "version": "1.0.0",
- "hash": "e1f2b1229433226b9e566e685ef1044d95c9498d33b2c80a81b21354413e14c8",
+ "hash": "bb80f858e3a7285fab0c00e58661079e9cd93d9948fa1a962ba28068e7846914",
  "issued": "2026-09-24",
  "issuer": "journali",
- "ignore": [
-  "export"
- ],
- "sig": "SrMZSbSiAIoi7s7KLQpMoKDy+p17qzrBh4FROTKg9iHWRLwYE/BNxBbkbVoSqJzmniDqNkcKzAhrgAbE7Fmd6A=="
+ "sig": "+1HC0giS/wvH1dXNgpc7RSp5i6J6hX8cRZK6oInkHGi+dPn7rmvPsnRhPiXACpfu7hCL5O8MLuxU7wr9wdTYoA=="
 }
