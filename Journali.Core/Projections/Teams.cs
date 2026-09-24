@@ -34,6 +34,8 @@ public sealed class TeamState
     public long? ResetNumber { get; set; }
     /// <summary>Die eingelösten Limit-Schlüssel dieses Teams, in der Reihenfolge des Einlösens.</summary>
     public List<LimitWindow> Windows { get; } = new();
+    /// <summary>Der letzte Stand seines Abos vom Lizenzserver (Taloan, 24.09.2026) — null ohne Abo.</summary>
+    public EntitlementReceived? Abo { get; set; }
     /// <summary>Nummer des Eintrags, der das Team zuerst angelegt hat — daran hängt, wer „Team 1“ ist.</summary>
     public long CreatedNumber { get; set; }
     public long LastNumber { get; set; }
@@ -131,12 +133,23 @@ public sealed class Teams : IProjection
     {
         if (_all.GetValueOrDefault(team) is not { } t) return (0, 0);
         var w = t.Windows.Where(x => x.Gilt(d)).OrderByDescending(x => x.Number).FirstOrDefault();
-        return w is null ? (t.EntriesWeek, t.EntriesMonth) : (Math.Max(t.EntriesWeek, w.Week), Math.Max(t.EntriesMonth, w.Month));
+        var (woche, monat) = w is null ? (t.EntriesWeek, t.EntriesMonth) : (Math.Max(t.EntriesWeek, w.Week), Math.Max(t.EntriesMonth, w.Month));
+        // ein Abo hebt an, solange es gilt — senkt nie (Taloan, 24.09.2026)
+        return AboAt(team, d) is { } a ? (Math.Max(woche, a.EntriesWeek), Math.Max(monat, a.EntriesMonth)) : (woche, monat);
     }
+
+    /// <summary>
+    /// Der Stand des Abos, wenn er an diesem Tag gilt: bezahlt bis mindestens zu diesem Tag und nicht älter als die Kulanz
+    /// (gilt ohne neue Abfrage bis). Sonst null — dann gilt, was das Team ohne Abo hat.
+    /// </summary>
+    public EntitlementReceived? AboAt(string team, DateOnly d) =>
+        _all.GetValueOrDefault(team)?.Abo is { } a && d <= a.PaidUntil && d <= DateOnly.FromDateTime(a.ValidUntil.LocalDateTime) ? a : null;
 
     /// <summary>Der Tarif, den ein eingelöster Limit-Schlüssel diesem Team an dem Tag gibt — null ohne.</summary>
     public Tarif? TarifAt(string team, DateOnly d) =>
-        _all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).Select(x => Tarife.Von(x.Plan)).Where(x => x is not null)
+        (_all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).Select(x => Tarife.Von(x.Plan)) ?? [])
+            .Append(AboAt(team, d) is { } a ? Tarife.Von(a.Plan) : null)
+            .Where(x => x is not null)
             .Aggregate((Tarif?)null, (a, b) => a is null ? b : Tarife.Hoeher(a, b!));
 
     /// <summary>Der höchste Tarif, den an dem Tag irgendein Team per Schlüssel hat — er gilt für die ganze Instanz.</summary>
@@ -205,6 +218,14 @@ public sealed class Teams : IProjection
             case Types.TeamRetired:
                 _all.Remove(key);   // der Verbrauch bleibt stehen — er ist eine Tatsache, kein Stammdatum
                 break;
+            case Types.EntitlementReceived:
+            {
+                var e = Types.Deserialize<EntitlementReceived>(entry.Payload);
+                if (_all.GetValueOrDefault(key) is not { } t) break;
+                if (t.Abo is null || e.Issued >= t.Abo.Issued) t.Abo = e;   // der jüngste Stand gilt
+                t.LastNumber = entry.Number; t.LastAt = entry.At; t.LastActor = entry.Actor;
+                break;
+            }
             case Types.KeyRedeemed:
             {
                 var k = Types.Deserialize<KeyRedeemed>(entry.Payload);

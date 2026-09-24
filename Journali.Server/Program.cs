@@ -68,6 +68,9 @@ Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} m
 var instanz = new Instanz(db);   // Kennung dieser Instanz — steht in der Lizenz, geht nicht in die Sicherung
 builder.Services.AddSingleton(instanz);
 var licences = new Licences(dataDir, new LicenceStore(db), instanz) { ErsterTag = () => catalog.ErsterTag };   // ohne Lizenz: Test ab dem ersten Eintrag
+// Abo über den Lizenzserver (Taloan, 24.09.2026): JOURNALI_LIZENZSERVER, geprüft mit JOURNALI_LICENCE_KEY; der Shop-Schlüssel liegt in jobs/secrets.json
+var abos = new Abos(instanz, dataDir, new HttpClient { Timeout = TimeSpan.FromSeconds(20) },
+    () => Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER"), () => Environment.GetEnvironmentVariable("JOURNALI_LICENCE_KEY"));
 catalog.LicenceDir = dataDir;
 catalog.Licences = licences;
 catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
@@ -80,6 +83,7 @@ _ = Task.Run(async () =>
     {
         await Task.Delay(TimeSpan.FromHours(1));
         try { catalog.With((_, _, _) => catalog.LimitsAusLizenz()); } catch { }
+        try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
     }
 });
 
@@ -274,7 +278,7 @@ LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz);   // Schl
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
 TeamApi.Map(api, jobDir);   // Teams: Kostenstelle der KI — Schlüssel, Verbuchung, Führung
 AiApi.Map(api, jobDir);     // KI über den Server: Schlüssel des zahlenden Teams; begrenzt wird hier nichts
-LicenceApi.Map(api, licences);      // Lizenz einspielen und ansehen
+LicenceApi.Map(api, licences, abos);      // Lizenz einspielen und ansehen
 FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/

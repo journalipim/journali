@@ -498,6 +498,24 @@ gelesen und als **ungeprüft** ausgewiesen — es wird nichts vorgetäuscht. Ein
 (`instance`, Tabelle `instanz`) sie nennt; eine `licence.json` von früher wird beim ersten Start übernommen und entfernt.
 Lizenz, Kennung und Anforderungen gehen **nicht** in die Vollsicherung — eine wiederhergestellte Instanz ist eine neue.
 
+### Abo über den Lizenzserver (Taloan, 24.09.2026)
+
+Ein Team mit Abo aus dem Shop (Lemon Squeezy) fügt den **Lizenzschlüssel aus dem Shop** in dasselbe Feld ein
+(⚙ Einstellungen → Team → Lizenz); der Knopf heisst dann „⚿ Abo verbinden · Team“. Der Server schickt eine mit dem
+Schlüsselpaar der Instanz signierte Anfrage an den Lizenzserver und legt dessen signierte Antwort als
+`EntitlementReceived` ins Journal des Teams: Tarif, Grenzen, Status, bezahlt bis, gilt ohne neue Abfrage bis.
+Stündlich sieht er nach und fragt neu, wenn der letzte Stand älter als 20 Stunden ist. Ein Stand gilt bis zum
+früheren von „bezahlt bis“ und „ausgestellt + 7 Tage“ — ohne Verbindung also höchstens eine Woche; danach gilt, was
+das Team ohne Abo hat. Ein Abo hebt die Grenzen an, senkt nie; sein Tarif zählt für den höchsten Tarif der Instanz.
+
+| Umgebung | Bedeutung |
+|---|---|
+| `JOURNALI_LIZENZSERVER` | Adresse des Lizenzservers, z. B. `https://lizenz.<domain>` — ohne sie kein Abo |
+| `JOURNALI_LICENCE_KEY` | öffentlicher Schlüssel des Ausstellers (steht in der Verwaltung des Lizenzservers unter *Einstellungen*) — prüft Lizenz, Schlüssel und Abo-Stand; ohne ihn wird angenommen, aber als ungeprüft vermerkt |
+
+Der Lizenzschlüssel aus dem Shop liegt beim Server (`jobs/secrets.json`, `abo:<team>`), nie im Journal; er geht mit
+der Vollsicherung (Zugänge) mit. Der Lizenzserver selbst liegt in einem eigenen, privaten Repository.
+
 ### Schlüssel — Reset und Limit, signiert angefordert
 
 Zusätzlich zur Lizenz gibt es Schlüssel, einmal einlösbar, an die Instanz gebunden, **ohne Team** —

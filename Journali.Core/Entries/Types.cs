@@ -139,6 +139,8 @@ public static class Types
     public const string AiUsed = "AiUsed";
     /// <summary>Ein Lizenzschlüssel wurde für ein Team eingelöst (Strom <c>team:&lt;key&gt;</c>) — einmal je Schlüssel.</summary>
     public const string KeyRedeemed = "KeyRedeemed";
+    /// <summary>Der Stand eines Abos, vom Lizenzserver signiert bestätigt (Taloan, 24.09.2026) — Strom team:&lt;key&gt;.</summary>
+    public const string EntitlementReceived = "EntitlementReceived";
     public const string RoleDefined = "RoleDefined";
     public const string RoleRetired = "RoleRetired";
 
@@ -685,6 +687,14 @@ public sealed record TeamRetired();
 /// im Journal und nicht in einer Formel, die sich später ändern könnte.</para>
 /// </summary>
 public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly? Until = null, int EntriesWeek = 0, int EntriesMonth = 0, int Days = 0, int Carried = 0, string? Plan = null);
+
+/// <summary>
+/// Der Stand eines Abos, wie ihn der Lizenzserver signiert bestätigt hat (Taloan, 24.09.2026): Tarif, Grenzen, Status,
+/// bezahlt bis, gilt ohne neue Abfrage bis (+7 Tage), Fingerabdruck der Anfrage, Signatur. Die Instanz fragt täglich;
+/// jede Antwort ist ein Eintrag — so lassen sich Grenzen und Tarif jederzeit aus dem Journal neu aufbauen.
+/// </summary>
+public sealed record EntitlementReceived(string Instance, string Team, string Plan, int EntriesWeek, int EntriesMonth, string Status,
+    DateOnly PaidUntil, DateTimeOffset Issued, DateTimeOffset ValidUntil, string Request, string? Sig = null, bool Geprueft = false);
 
 /// <summary>Ein KI-Aufruf, wie er wirklich stattgefunden hat: Anbieter, Modell, Person, Token hin und zurück. Strom
 /// <c>ai-usage:&lt;team&gt;</c> — gezählt wird beim Team, das zahlt (also beim schlüsselführenden), damit die Rechnung stimmt.</summary>

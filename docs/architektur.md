@@ -210,6 +210,9 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   Pro (+ Pro+), Enterprise, Unlimited; drei Monate Enterprise ab dem ersten Journaleintrag; Plugins und
   Publikationsbäume nach dem höchsten Tarif der Instanz; Reset getrennt für Pro und Enterprise; Sichern von Hand
   unter ⇅ B&R. Im Shop: Varianten Pro, Pro+, Enterprise, Unlimited (die Testvariante „Ultimate“ entfällt).
+- ~~Lizenzserver~~ gebaut 24.09.2026 — eigenes, privates Repo `besitzer/journali-lizenz` (journali als Submodul, nur
+  `Journali.Core`: `Licensing/Vertrag.cs`, `Tarife.cs`). In journali: `Abos.cs`, `EntitlementReceived`, das eine Feld
+  erkennt den Shop-Schlüssel; Betrieb in `docs/betrieb.md` → *Abo über den Lizenzserver*.
 - **Tarife als Abo über Lemon Squeezy**. Heute: Anforderung und Schlüssel werden kopiert (`KeyRequests.cs`,
   `LicenceKeys.cs`, `docs/betrieb.md` → Schlüssel).
 

@@ -10,7 +10,7 @@ import { store } from '../src/store.js'
 const LicenceSettings = (await import('../src/components/LicenceSettings.vue')).default
 
 /// Server mit einer offenen und einer eingelösten Anforderung
-function server({ fehler = null } = {}) {
+function server({ fehler = null, lizenzserver = true, abos = [] } = {}) {
   const gesendet = []
   const anforderungen = [
     { id: 'k-1', kind: 'limit', week: 30000, month: 100000, days: 30, created: '2026-09-23T10:00:00Z', text: '{"anforderung":"…1","sig":"x"}', team: null },
@@ -21,7 +21,8 @@ function server({ fehler = null } = {}) {
     const method = opt.method ?? 'GET'
     if (method !== 'GET') gesendet.push({ method, path, body: JSON.parse(opt.body) })
     let status = 200, body
-    if (path === '/api/licence' && method === 'GET') body = { plan: 'enterprise', instanz: 'abc', entriesWeek: 200000, entriesMonth: 1000000, validUntil: '2026-12-23', trial: true, tarif: { key: 'enterprise', label: 'Enterprise' }, instanzTarif: { key: 'enterprise', label: 'Enterprise', pubTrees: null }, pubTrees: 3 }
+    if (path === '/api/licence' && method === 'GET') body = { plan: 'enterprise', instanz: 'abc', entriesWeek: 200000, entriesMonth: 1000000, validUntil: '2026-12-23', trial: true, tarif: { key: 'enterprise', label: 'Enterprise' }, instanzTarif: { key: 'enterprise', label: 'Enterprise', pubTrees: null }, pubTrees: 3, lizenzserver, abos }
+    else if (path === '/api/licence/abo') body = { team: 'de', plan: 'enterprise', planLabel: 'Enterprise', status: 'active', paidUntil: '2026-10-24', geprueft: true }
     else if (path === '/api/licence') body = { plan: 'Gross', geprueft: true }
     else if (path === '/api/licence/requests' && method === 'GET') body = anforderungen
     else if (path === '/api/licence/requests') body = [{ id: 'k-2', hash: 'h', text: '{"anforderung":"neu","sig":"z"}' }]
@@ -180,4 +181,48 @@ test('Ohne Recht zur Anwenderverwaltung weder Feld noch Schlüssel', async () =>
   assert.equal(w.find('.schluessel').exists(), false)
   assert.equal(w.find('.eingabe').exists(), false)
   w.unmount()
+})
+
+// Abo über den Lizenzserver (Taloan, 24.09.2026): der Lizenzschlüssel aus dem Shop kommt in dasselbe Feld
+const ABO_KEY = '495C1AF0-1CFB-4C24-824E-A46A6242841D'
+
+test('Ein Lizenzschlüssel aus dem Shop verbindet das Abo des oben gewählten Teams', async () => {
+  const gesendet = server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  await w.find('.eingabe').setValue('Ihr Lizenzschlüssel: ' + ABO_KEY + '\n')
+  assert.match(knopf(w).text(), /Abo verbinden · Deutschland/)
+  assert.equal(knopf(w).attributes('disabled'), undefined)
+  await knopf(w).trigger('click'); await flushPromises()
+  assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/abo').body }, { team: 'de', key: ABO_KEY })
+  assert.equal(gesendet.some(g => g.path === '/api/licence/keys' || g.path === '/api/licence'), false, 'das Abo ging als Schlüssel oder Lizenz hinaus')
+  assert.match(w.find('.said').text(), /✓ Abo Enterprise · bezahlt bis 2026-10-24/)
+  w.unmount()
+})
+
+test('Ohne Lizenzserver lässt sich kein Abo verbinden', async () => {
+  server({ lizenzserver: false }); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  await w.find('.eingabe').setValue(ABO_KEY)
+  assert.ok(knopf(w).attributes('disabled') !== undefined)
+  assert.match(knopf(w).attributes('title'), /Kein Lizenzserver/)
+  w.unmount()
+})
+
+test('Wer über ein anderes Team abrechnet, verbindet kein Abo', async () => {
+  server(); admin()
+  const w = mount(LicenceSettings, { props: { team: IT } }); await flushPromises()
+  await w.find('.eingabe').setValue(ABO_KEY)
+  assert.ok(knopf(w).attributes('disabled') !== undefined)
+  w.unmount()
+})
+
+test('Der Stand des Abos steht bei der Lizenz — abgelaufen rot', async () => {
+  server({ abos: [{ team: 'de', teamLabel: 'Deutschland', plan: 'enterprise', planLabel: 'Enterprise', status: 'active', paidUntil: '2026-10-24', issued: '2026-09-24T10:00:00Z', gilt: true, geprueft: true }] }); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.match(w.find('tr.abo').text().replace(/\s+/g, ' '), /Abo · Deutschland.*Enterprise · bezahlt bis 2026-10-24/)
+  w.unmount()
+  server({ abos: [{ team: 'de', teamLabel: 'Deutschland', plan: 'enterprise', planLabel: 'Enterprise', status: 'expired', paidUntil: '2026-09-20', issued: '2026-09-24T10:00:00Z', gilt: false, geprueft: true }] })
+  const v = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.ok(v.find('tr.abo .neg').exists(), 'ein abgelaufenes Abo steht nicht rot da')
+  v.unmount()
 })

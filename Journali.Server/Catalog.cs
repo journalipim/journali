@@ -243,7 +243,7 @@ public sealed class Catalog
     private Entry Apply(Entry entry)
     {
         // Teams und Mitgliedschaften verschieben, wer auf wessen Rechnung geht — der mitgeführte Stand gilt dann nicht mehr
-        if (entry.Type is Types.TeamDefined or Types.TeamRetired or Types.UserDefined or Types.UserRetired or Types.KeyRedeemed) _stand.Clear();
+        if (entry.Type is Types.TeamDefined or Types.TeamRetired or Types.UserDefined or Types.UserRetired or Types.KeyRedeemed or Types.EntitlementReceived) _stand.Clear();
         _model.Apply(entry);
         _tree.Apply(entry);
         _relations.Apply(entry);

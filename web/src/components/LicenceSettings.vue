@@ -51,13 +51,33 @@ const inhalt = computed(() => {
   if (a < 0 || b <= a) return null
   try { const o = JSON.parse(t.slice(a, b + 1)); return o && typeof o === 'object' && !Array.isArray(o) ? { text: t.slice(a, b + 1), o } : null } catch { return null }
 })
-const was = computed(() => !inhalt.value ? null : inhalt.value.o.kind && inhalt.value.o.request ? 'schluessel' : inhalt.value.o.anforderung ? null : 'lizenz')
+// Ein Lizenzschlüssel aus dem Shop (Abo, Taloan 24.09.2026) ist kein JSON, sondern eine Kennung wie 495C1AF0-1CFB-…
+const ABO = /\b[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\b/i
+const aboKey = computed(() => inhalt.value ? null : eingabe.value.match(ABO)?.[0] ?? null)
+const was = computed(() => !inhalt.value ? (aboKey.value ? 'abo' : null) : inhalt.value.o.kind && inhalt.value.o.request ? 'schluessel' : inhalt.value.o.anforderung ? null : 'lizenz')
+// Der Stand des Abos für das oben gewählte Team
+const aboTeam = computed(() => lic.value?.abos?.find(a => a.team === props.team?.key) ?? null)
 const knopf = computed(() =>
-  was.value === 'schluessel' ? { text: t_('⚿ Einlösen · {0}', [props.team?.label ?? '']), aus: !eigenes.value,
+  was.value === 'abo' ? { text: t_('⚿ Abo verbinden · {0}', [props.team?.label ?? '']), aus: !eigenes.value || !lic.value?.lizenzserver,
+      title: !lic.value?.lizenzserver ? t_('Kein Lizenzserver eingestellt') : eigenes.value ? t_('Abo für {0} verbinden', [props.team.label]) : t_('{0} rechnet über ein anderes Team ab', [props.team?.label ?? t_('Dieses Team')]) }
+  : was.value === 'schluessel' ? { text: t_('⚿ Einlösen · {0}', [props.team?.label ?? '']), aus: !eigenes.value,
       title: eigenes.value ? t_('Schlüssel für {0} einlösen', [props.team.label]) : t_('{0} rechnet über ein anderes Team ab', [props.team?.label ?? t_('Dieses Team')]) }
   : was.value === 'lizenz' ? { text: t_('⚿ Lizenz einspielen'), aus: false, title: t_('Lizenz dieser Instanz ersetzen') }
   : { text: t_('⚿ Übernehmen'), aus: true, title: eingabe.value.trim() ? t_('weder Lizenz noch Schlüssel') : t_('Lizenz oder Schlüssel einfügen') })
-const uebernehmen = () => was.value === 'schluessel' ? einloesen() : was.value === 'lizenz' ? einspielen() : null
+const uebernehmen = () => was.value === 'abo' ? verbinden() : was.value === 'schluessel' ? einloesen() : was.value === 'lizenz' ? einspielen() : null
+
+/// Abo verbinden: der Server fragt den Lizenzserver und legt den bestätigten Stand ins Journal des Teams
+async function verbinden() {
+  if (!aboKey.value || !eigenes.value) return
+  try {
+    const r = await api.post('/api/licence/abo', { team: props.team.key, key: aboKey.value })
+    eingabe.value = ''
+    said.value = t_('✓ Abo {0} · bezahlt bis {1}', [r.planLabel, r.paidUntil]) + (r.geprueft ? '' : ' · ' + t_('ungeprüft'))
+    await load(); await store.poll(true)
+    emit('eingespielt')
+  }
+  catch (e) { said.value = '✗ ' + e.message }
+}
 
 /// Offene Anforderung wegwerfen — eine eingelöste weist der Server ab
 async function wirfWeg(a) {
@@ -125,6 +145,8 @@ async function kopiere(text) {
       </tr>
       <tr v-if="lic?.instanzTarif" class="tarif"><td class="muted" :title="$t('Der höchste Tarif der Instanz: nach ihm richten sich Plugins und Publikationsbäume.')">{{ $t("◆ Tarif") }}</td>
         <td>{{ lic.instanzTarif.label }}<span v-if="lic.trial && !lic.abgelaufen" class="muted">{{ ' ' + $t("· Test") }}</span></td><td></td></tr>
+      <tr v-if="aboTeam" class="abo"><td class="muted" :title="$t('Stand des Abos vom Lizenzserver, täglich aufgefrischt')">{{ $t("◆ Abo · {0}", [aboTeam.teamLabel]) }}</td>
+        <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('bezahlt bis {0}', [aboTeam.paidUntil]) }}</span><span v-if="!aboTeam.gilt" class="neg">{{ ' · ' + $t('abgelaufen') }}</span><span v-else-if="!aboTeam.geprueft" class="warn">{{ ' · ' + $t('ungeprüft') }}</span></td><td></td></tr>
       <tr v-if="lic?.validUntil"><td class="muted">{{ $t("gültig bis") }}</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
       <tr v-if="lic?.instanzTarif" class="baeume"><td class="muted" :title="$t('Publikationsbäume: vorhanden / erlaubt')">{{ $t("▣ Publikationsbäume") }}</td>
         <td class="mono">{{ lic.pubTrees ?? 0 }} / {{ lic.instanzTarif.pubTrees ?? '∞' }}</td><td></td></tr>
