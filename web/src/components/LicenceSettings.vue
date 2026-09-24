@@ -70,6 +70,18 @@ const knopf = computed(() =>
   : { text: t_('⚿ Übernehmen'), aus: true, title: eingabe.value.trim() ? t_('weder Lizenz noch Schlüssel') : t_('Lizenz oder Schlüssel einfügen') })
 const uebernehmen = () => was.value === 'abo' ? verbinden() : was.value === 'schluessel' ? einloesen() : was.value === 'lizenz' ? einspielen() : null
 
+/// Den Stand des Abos sofort neu holen — mit dem Shop-Schlüssel, den der Server sich gemerkt hat
+async function auffrischen() {
+  if (!aboTeam.value) return
+  try {
+    const r = await api.post(`/api/licence/abo/${encodeURIComponent(aboTeam.value.team)}/auffrischen`, {})
+    said.value = t_('✓ Abo {0} · gültig bis {1}', [r.planLabel, r.paidUntil])
+    await load(); await store.poll(true)
+    emit('eingespielt')
+  }
+  catch (e) { said.value = '✗ ' + e.message }
+}
+
 /// Abo verbinden: der Server fragt den Lizenzserver und legt den bestätigten Stand ins Journal des Teams
 async function verbinden() {
   if (!aboKey.value || !eigenes.value) return
@@ -150,7 +162,8 @@ async function kopiere(text) {
       <tr v-if="lic?.instanzTarif" class="tarif"><td class="muted" :title="$t('Der höchste Tarif der Instanz: nach ihm richten sich Plugins und Publikationsbäume.')">{{ $t("◆ Tarif") }}</td>
         <td>{{ lic.instanzTarif.label }}<span v-if="lic.trial && !lic.abgelaufen" class="muted">{{ ' ' + $t("· Test") }}</span></td><td></td></tr>
       <tr v-if="aboTeam" class="abo"><td class="muted" :title="$t('Stand des Abos vom Lizenzserver, täglich aufgefrischt')">{{ $t("◆ Abo · {0}", [aboTeam.teamLabel]) }}</td>
-        <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [aboTeam.paidUntil]) }}</span><span v-if="!aboTeam.gilt" class="neg">{{ ' · ' + $t('abgelaufen') }}</span><span v-else-if="!aboTeam.geprueft" class="warn">{{ ' · ' + $t('ungeprüft') }}</span></td><td></td></tr>
+        <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [aboTeam.paidUntil]) }}</span><span v-if="!aboTeam.geprueft" class="neg" :title="$t('Ohne passende Signatur zählt der Stand nicht.')">{{ ' · ' + $t('ungeprüft') }}</span><span v-else-if="!aboTeam.gilt" class="neg">{{ ' · ' + (aboTeam.status === 'entzogen' ? $t('entzogen') : $t('abgelaufen')) }}</span></td>
+        <td><button v-if="darf() && lic.lizenzserver && aboTeam.team === team?.key" class="x auffrischen" :title="$t('Stand vom Lizenzserver neu holen')" @click="auffrischen">↻</button></td></tr>
       <tr v-if="lic?.validUntil"><td class="muted">{{ $t("gültig bis") }}</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
       <tr v-if="lic?.instanzTarif" class="baeume"><td class="muted" :title="$t('Publikationsbäume: vorhanden / erlaubt')">{{ $t("▣ Publikationsbäume") }}</td>
         <td class="mono">{{ lic.pubTrees ?? 0 }} / {{ lic.instanzTarif.pubTrees ?? '∞' }}</td><td></td></tr>

@@ -73,6 +73,15 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         return (stand, null);
     }
 
+    /// <summary>Ein Team sofort neu fragen — mit dem gemerkten Shop-Schlüssel (nach einem Eingriff in der Verwaltung des
+    /// Lizenzservers soll niemand 20 Stunden warten).</summary>
+    public async Task<(EntitlementReceived? Stand, string? Fehler)> AuffrischenAsync(Catalog c, string team, string actor, CancellationToken ct = default)
+    {
+        if (!Secrets.Get(jobsDir, SecretKey(team)).TryGetValue("key", out var key) || string.IsNullOrWhiteSpace(key))
+            return (null, $"Für {team} ist kein Shop-Schlüssel hinterlegt.");
+        return await VerbindenAsync(c, team, key, actor, ct);
+    }
+
     /// <summary>Alle Teams mit Abo, deren Stand älter als <see cref="Auffrischen"/> ist, neu fragen. Liefert, wie viele es waren.</summary>
     public async Task<int> AuffrischenAsync(Catalog c, CancellationToken ct = default)
     {

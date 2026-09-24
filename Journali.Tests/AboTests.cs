@@ -205,6 +205,20 @@ public class AboTests
         Assert.Equal(2, w.Server.Anfragen);
     }
 
+    /// <summary>Nach einem Eingriff in der Verwaltung des Lizenzservers: sofort neu fragen, mit dem gemerkten Schlüssel.</summary>
+    [Fact]
+    public async Task Ein_Team_sofort_auffrischen()
+    {
+        var w = new Welt();
+        Assert.Contains("kein Shop-Schlüssel", (await w.Abos.AuffrischenAsync(w.C, "de", "taloan")).Fehler);
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        w.Server.Plan = "pro";                                                  // von Hand geändert — ohne 20 Stunden zu warten
+        var (stand, fehler) = await w.Abos.AuffrischenAsync(w.C, "de", "taloan");
+        Assert.Null(fehler);
+        Assert.Equal("pro", stand!.Plan);
+        Assert.Equal("pro", w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo!.Plan));
+    }
+
     [Fact]
     public void Der_juengste_Stand_gilt_auch_wenn_ein_aelterer_spaeter_kommt()
     {

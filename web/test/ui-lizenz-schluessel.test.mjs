@@ -23,6 +23,7 @@ function server({ fehler = null, lizenzserver = true, abos = [] } = {}) {
     let status = 200, body
     if (path === '/api/licence' && method === 'GET') body = { plan: 'enterprise', instanz: 'abc', entriesWeek: 200000, entriesMonth: 1000000, validUntil: '2026-12-23', trial: true, tarif: { key: 'enterprise', label: 'Enterprise' }, instanzTarif: { key: 'enterprise', label: 'Enterprise', pubTrees: null }, pubTrees: 3, lizenzserver, abos }
     else if (path === '/api/licence/abo') body = { team: 'de', plan: 'enterprise', planLabel: 'Enterprise', status: 'active', paidUntil: '2026-10-24', geprueft: true }
+    else if (path === '/api/licence/abo/de/auffrischen') body = { team: 'de', plan: 'pro', planLabel: 'Pro', status: 'active', paidUntil: '2026-11-24', geprueft: true }
     else if (path === '/api/licence') body = { plan: 'Gross', geprueft: true }
     else if (path === '/api/licence/requests' && method === 'GET') body = anforderungen
     else if (path === '/api/licence/requests') body = [{ id: 'k-2', hash: 'h', text: '{"anforderung":"neu","sig":"z"}' }]
@@ -232,6 +233,35 @@ test('Wer über ein anderes Team abrechnet, verbindet kein Abo', async () => {
   await w.find('.eingabe').setValue(ABO_KEY)
   assert.ok(knopf(w).attributes('disabled') !== undefined)
   w.unmount()
+})
+
+test('↻ holt den Stand des Abos sofort neu — nach einem Eingriff auf dem Lizenzserver', async () => {
+  const abo = { team: 'de', teamLabel: 'Deutschland', plan: 'enterprise', planLabel: 'Enterprise', status: 'active', paidUntil: '2026-10-24', issued: '2026-09-24T10:00:00Z', gilt: true, geprueft: true }
+  const gesendet = server({ abos: [abo] }); admin()
+  let eingespielt = 0
+  const w = mount(LicenceSettings, { props: { team: DE, onEingespielt: () => eingespielt++ } }); await flushPromises()
+  await w.find('tr.abo button.auffrischen').trigger('click'); await flushPromises()
+  assert.ok(gesendet.some(g => g.method === 'POST' && g.path === '/api/licence/abo/de/auffrischen'), 'nicht aufgefrischt')
+  assert.match(w.find('.said').text(), /✓ Abo Pro · gültig bis 2026-11-24/)
+  assert.equal(eingespielt, 1, 'die Limits darunter werden nicht neu geladen')
+  w.unmount()
+  // ohne das Recht users, bei einem anderen Team oder ohne Lizenzserver: kein Knopf
+  admin(['read'])
+  const v = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(v.find('tr.abo button.auffrischen').exists(), false)
+  v.unmount()
+})
+
+test('Ein entzogenes oder ungeprüftes Abo steht rot da', async () => {
+  const abo = { team: 'de', teamLabel: 'Deutschland', plan: 'pro', planLabel: 'Pro', paidUntil: '2026-09-23', issued: '2026-09-24T10:00:00Z' }
+  server({ abos: [{ ...abo, status: 'entzogen', gilt: false, geprueft: true }] }); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.match(w.find('tr.abo .neg').text(), /entzogen/)
+  w.unmount()
+  server({ abos: [{ ...abo, status: 'active', gilt: false, geprueft: false }] })
+  const v = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.match(v.find('tr.abo .neg').text(), /ungeprüft/)
+  v.unmount()
 })
 
 test('Der Stand des Abos steht bei der Lizenz — abgelaufen rot', async () => {

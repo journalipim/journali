@@ -52,6 +52,15 @@ public static class LicenceApi
             return Results.Ok(new { stand.Team, stand.Plan, planLabel = c.Tarife.Von(stand.Plan)?.Label ?? stand.Plan, stand.Status, stand.PaidUntil, stand.Geprueft });
         });
 
+        // Auffrischen: den Stand eines Teams sofort neu holen, mit dem gemerkten Shop-Schlüssel
+        api.MapPost("/licence/abo/{team}/auffrischen", async (string team, HttpRequest req, Catalog c, CancellationToken ct) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            var (stand, fehler) = await abos.AuffrischenAsync(c, team, actor, ct);
+            if (stand is null) return Bad(fehler ?? "Abo nicht aufgefrischt.");
+            return Results.Ok(new { stand.Team, stand.Plan, planLabel = c.Tarife.Von(stand.Plan)?.Label ?? stand.Plan, stand.Status, stand.PaidUntil, stand.Geprueft });
+        });
+
         // Einspielen: die Datei kommt so, wie sie ausgestellt wurde — Signatur inbegriffen
         api.MapPut("/licence", (Licence body, HttpRequest req, Catalog c) =>
         {
