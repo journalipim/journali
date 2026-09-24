@@ -8,12 +8,12 @@ public sealed record Tarif(string Key, string Label, int Rang, int Week, int Mon
 }
 
 /// <summary>
-/// Die Tarife (Taloan, 24.09.2026). Grenzen je Woche und Monat hängen am Team (am Ende der Zahlerkette); Plugins und
+/// Die Tarife. Grenzen je Woche und Monat hängen am Team (am Ende der Zahlerkette); Plugins und
 /// Publikationsbäume gelten für die ganze Instanz — nach dem höchsten Tarif, den sie hat („wenn Team 1 Pro hat und
 /// Team 2 Enterprise: der höchste gilt für alle“).
 /// <list type="bullet">
 /// <item><b>Kostenlos</b> — 10 000 / 50 000, Tabelle (CSV, Excel, JSON), das Excel-Add-in, OnlyOffice, Ableitungen
-/// (Vorschaubilder) und Export (Taloan, 24.09.2026: „schon in kostenlos“), ein Publikationsbaum. Ableitungen und Export
+/// (Vorschaubilder) und Export, ein Publikationsbaum. Ableitungen und Export
 /// laufen als Job — der Tasker ist darum dabei, startet aber nur Jobs erlaubter Plugins; gesichert wird von Hand
 /// (Einstellungen → B&amp;R), die Sicherung als Job gehört zu Pro.</item>
 /// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM,
@@ -54,8 +54,7 @@ public static class Tarife
     public static Tarif Hoeher(Tarif a, Tarif b) => b.Rang > a.Rang ? b : a;
 
     /// <summary>
-    /// Zu welchem Reset gehört dieser Tarif? Reset-Schlüssel gibt es getrennt für Pro und Enterprise (Taloan,
-    /// 24.09.2026). Pro+ ist Pro mit allen Plugins; kostenlos gibt es keinen Reset, Unlimited braucht keinen.
+    /// Zu welchem Reset gehört dieser Tarif? Reset-Schlüssel gibt es getrennt für Pro und Enterprise. Pro+ ist Pro mit allen Plugins; kostenlos gibt es keinen Reset, Unlimited braucht keinen.
     /// </summary>
     public static string? ResetFuer(Tarif t) => t.Key switch { "pro" or "proplus" => Pro.Key, "enterprise" => Enterprise.Key, _ => null };
 }

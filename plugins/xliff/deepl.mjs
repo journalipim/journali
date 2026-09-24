@@ -1,4 +1,4 @@
-// DeepL als Anbieter (Taloan, 21.09.2026: „DeepL als eigener Anbieter neben der KI“) — als Job, nie im Browser: der Schlüssel liegt
+// DeepL als Anbieter — als Job, nie im Browser: der Schlüssel liegt
 // beim Server am Profil (🔒), nie im Journal. Holt die offenen Einheiten der Sprachrichtung aus dem Profil (/api/translate/units),
 // übersetzt in Stapeln (HTML-Attribute mit tag_handling=html), schreibt über /api/translate/import zurück — mit dem Hash der
 // Quelle, also nie über eine Quelle, die sich zwischendurch geändert hat. Das Wörterbuch (Terms) geht als Glossar-Kontext mit.

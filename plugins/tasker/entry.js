@@ -1,11 +1,11 @@
-// Basis-Plugin tasker (Taloan, 19.09.2026): ⏱ Jobs — Grundfunktion der Gruppe Jobs und zugleich ihr Container: Prozess-Plugins
+// Basis-Plugin tasker: ⏱ Jobs — Grundfunktion der Gruppe Jobs und zugleich ihr Container: Prozess-Plugins
 // (backup, export, json, ixp, datasheet) laufen hier als Job (requires: ["tasker"]). Jobs laufen im Server, nicht im Browser;
 // regelmässig (cron) oder von Hand;
 // hier verwalten, überwachen, Logs lesen. Ein Job = ein Prozess-Plugin (process im Manifest) mit Parametern.
 // API: /api/jobs (JobApi.cs), Läufe und Ausgang im Journal (job:<key>), Log als Datei beim Server.
 /// Braucht dieser Prozess zwingend ein Profil? Steht „leer“ im Namen des Feldes („Profil — … (leer = Werte unten)“),
 /// geht es auch ohne: dann stehen die Werte im Job selbst. Sonst kann der Job ohne Profil nicht laufen
-/// (Taloan, 23.09.2026: die Sicherung liess sich ohne Profil nicht speichern, obwohl das Feld „(leer)“ anbietet).
+///.
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 export function profilPflicht(profileDef) {
@@ -14,7 +14,7 @@ export function profilPflicht(profileDef) {
 
 /// Nächste Seite des Assistenten in dieser Richtung, die etwas zeigt — oder null, wenn keine mehr kommt.
 /// `voll` sagt je Seite, ob sie Inhalt hat: ohne Fächer gibt es keine Ablage, ohne Parameter kein „Womit“
-/// (Taloan, 23.09.2026: „erst nach Aussuchen von Plugin/Profil steht ja fest, was ich als Nächstes anzeige“).
+///.
 export function naechsteSeite(voll, schritt, richtung) {
   for (let i = schritt + richtung; i >= 0 && i < voll.length; i += richtung) if (voll[i]) return i
   return null
@@ -22,8 +22,7 @@ export function naechsteSeite(voll, schritt, richtung) {
 
 /// Gehört dieser Parameter in den Job-Dialog? Das sagt das Plugin selbst, im Manifest, mit `"perJob"` am Parameter:
 /// `true` = am Job einzustellen (steht immer da), `false` = gehört ins Profil (steht nur da, solange kein Profil
-/// gewählt ist — dann gibt es keine andere Quelle). Der Tasker fragt, er rät nicht (Taloan, 23.09.2026: „das Plugin
-/// muss das wissen und einfordern“).
+/// gewählt ist — dann gibt es keine andere Quelle). Der Tasker fragt, er rät nicht.
 /// Sagt ein Manifest nichts, steht der Parameter da: der Tasker versteckt nichts, was er nicht versteht — ein
 /// verborgenes Pflichtfeld, das niemand setzen kann, wäre der schlimmere Fehler.
 export function stelle(def, profilGewaehlt) {
@@ -31,7 +30,7 @@ export function stelle(def, profilGewaehlt) {
 }
 
 /// Welche Fächer ein Job benutzt: liest er Dateien, gibt es in/, done/ und failed/; schreibt er, gibt es out/.
-/// (Taloan, 23.09.2026: ein Sicherungsjob legt nur ab — dann von in/ und failed/ zu sprechen, führt in die Irre.)
+///
 export function fachNames(files, params = {}) {
   const out = []
   if (nutztFach(files?.in, params)) out.push('in/', 'done/', 'failed/')
@@ -50,8 +49,7 @@ export function nutztFach(spec, params = {}) {
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'html') e.innerHTML = v; else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
 const when = iso => iso ? new Date(iso).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
 const STATUS = { ok: ['✓', 'pos'], warn: ['⚠', 'warn'], failed: ['✗', 'neg'], timeout: ['⏱✗', 'neg'], cancelled: ['⊘', 'muted'] }
-// Zeitplan-Assistent (Taloan, 19.09.: wie der Terminplaner in Outlook — Wochentage ankreuzen, „jeden zweiten“, „3. Sonntag“ —
-// oder ein cron-Ausdruck). Intern ist es immer cron: fünf Felder, dazu ein sechstes dN:Datum / wN:Datum für „alle N Tage/Wochen ab“
+// Zeitplan-Assistent. Intern ist es immer cron: fünf Felder, dazu ein sechstes dN:Datum / wN:Datum für „alle N Tage/Wochen ab“
 // (JobRunner.cs, Cron). Tag und Wochentag gelten zusammen: „15-21 * 0“ = 3. Sonntag im Monat.
 const DAYS = [['1', 'Mo'], ['2', 'Di'], ['3', 'Mi'], ['4', 'Do'], ['5', 'Fr'], ['6', 'Sa'], ['0', 'So']]
 const NTH = [['*', 'jeden'], ['1-7', '1.'], ['8-14', '2.'], ['15-21', '3.'], ['22-28', '4.']]
@@ -124,7 +122,7 @@ const PRESETS = [['', t('nur von Hand')], ['*/15 * * * *', 'alle 15 min'], ['0 *
 async function mount(root, ctx) {
   const { api, store, tree, dialog } = ctx
   if (!tree.loaded) await tree.load()
-  const st = { jobs: [], plugins: [], cur: null, detail: null, log: '', timer: null, edit: null, plugin: new URLSearchParams(location.search).get('plugin') || '' }   // plugin: Liste nur mit den Jobs dieses Plugins (aus „Jobs verwalten“, Taloan)
+  const st = { jobs: [], plugins: [], cur: null, detail: null, log: '', timer: null, edit: null, plugin: new URLSearchParams(location.search).get('plugin') || '' }   // plugin: Liste nur mit den Jobs dieses Plugins (aus „Jobs verwalten“)
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const list = el('div', { class: 'scroll', style: 'flex:0 0 auto;max-height:45%' })
@@ -171,7 +169,7 @@ async function mount(root, ctx) {
   }
   async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
   async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(`⊘ ${j.label} abgebrochen`); await load() } catch (e) { store.toast(e.message) } }
-  // Anhalten und weiter (Taloan, 23.09.2026): der Lauf wartet beim nächsten Stapel, statt zu sterben
+  // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben
   async function pause(j) { try { await api.post(`/api/jobs/${j.key}/pause`); store.toast(t('⏸ {0} hält beim nächsten Stapel an', [j.label])); await load() } catch (e) { store.toast(e.message) } }
   async function resume(j) { try { await api.post(`/api/jobs/${j.key}/resume`); store.toast(t('▶ {0} läuft weiter', [j.label]), 'ok'); await load() } catch (e) { store.toast(e.message) } }
   async function toggle(j) { try { await api.post(`/api/jobs/${j.key}`, { enabled: !j.enabled }, 'PUT'); await load() } catch (e) { store.toast(e.message) } }
@@ -207,7 +205,7 @@ async function mount(root, ctx) {
     }
     if (!d.runs.length) tbl.append(el('tr', {}, el('td', { class: 'muted', style: 'padding:8px' }, t('noch kein Lauf — ▶ startet einen'))))
     runs.append(tbl)
-    // Fächer (Taloan, 21.09.): Eingang wartend, verarbeitet (✓ ✗, Duplikat grau), Ausgaben (★ latest) — aus /api/jobs/<key>/files
+    // Fächer: Eingang wartend, verarbeitet (✓ ✗, Duplikat grau), Ausgaben (★ latest) — aus /api/jobs/<key>/files
     const files = el('div', { style: 'border-top:1px solid var(--line);padding:6px 8px;font-size:12px;max-height:40%;overflow:auto;display:none' })
     if (d.files || d.waiting || d.consumed || d.written) {
       files.style.display = ''
@@ -230,7 +228,7 @@ async function mount(root, ctx) {
     detail.style.display = 'flex'; detail.style.flexDirection = 'column'
   }
 
-  // ---- Generischer Profil-Editor (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen — entsprechend muss die GUI der Plugins ausgebaut werden“):
+  // ---- Generischer Profil-Editor:
   // für Prozesse ohne eigene Ansicht ("profile": "generic" im Manifest). Formular aus den Parametern — ohne profile, Dateien/Verzeichnisse
   // (Sache des Taskers) und Geheimnisse (am Profil beim Server, 🔒). Gespeichert als profile:<name> in den Daten des Plugins (Journal).
   function profileEditor(p, defs, current, onDone) {
@@ -311,16 +309,16 @@ async function mount(root, ctx) {
     const isNew = !j
     const keyIn = el('input', { type: 'text', value: j?.key ?? '', placeholder: 'key (a-z, 0-9, _)', style: 'width:100%' }); if (!isNew) keyIn.disabled = true
     const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: t('Bezeichnung'), style: 'width:100%' })
-    // ein Eintrag je Dienst (Taloan: mehrere Dienste je Plugin); Wert = plugin|service
+    // ein Eintrag je Dienst; Wert = plugin|service
     const svcId = p => `${p.key}|${p.service ?? ''}`
     const svcLabel = p => (typeof p.label === 'string' ? p.label : L(p.label)) || p.key
     const pluginSel = el('select', { style: 'width:100%' },
       ...[...st.plugins].sort((a, b) => svcLabel(a).localeCompare(svcLabel(b), 'de'))
-        .map(p => el('option', { value: svcId(p), title: p.description ?? '' }, svcLabel(p))))   // nur der Name (Taloan: zu viel Text)
+        .map(p => el('option', { value: svcId(p), title: p.description ?? '' }, svcLabel(p))))   // nur der Name
     const pluginHint = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
     if (j) pluginSel.value = `${j.plugin}|${j.service ?? ''}`
     else if (preset) { pluginSel.value = preset; if (pluginSel.value !== preset) pluginSel.value = st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|')) ? svcId(st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|'))) : pluginSel.value }
-    const sched = scheduleAssistant(j?.schedule ?? '', () => {})   // Zeitplan-Assistent (Taloan) statt Vorgaben-Liste
+    const sched = scheduleAssistant(j?.schedule ?? '', () => {})   // Zeitplan-Assistent statt Vorgaben-Liste
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
     // Mit welcher Rolle der Lauf arbeitet: davon hängen seine Rechte ab (eine Sicherung braucht „Anwender und Rollen“).
     // Sichtbar nur für die Rollenverwaltung — sonst wäre ein Job ein Weg zu fremden Rechten.
@@ -330,7 +328,7 @@ async function mount(root, ctx) {
       for (const r of rs) rolleSel.append(el('option', { value: r.key }, r.label || r.key))
       rolleSel.value = j?.role ?? ''
     }).catch(() => {})
-    // Fächer (docs/tasker-dateien.md, Taloan: der Tasker besitzt die Ablage): Basis, Aufbewahrung, latest, Archiv — nur bei Prozessen mit files im Manifest
+    // Fächer (docs/tasker-dateien.md): Basis, Aufbewahrung, latest, Archiv — nur bei Prozessen mit files im Manifest
     const fBase = el('input', { type: 'text', value: j?.files?.base ?? '', placeholder: t('leer = jobs/<key> beim Server'), style: 'flex:1' })
     const fachLabelEl = el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, t('Fächer · Basis'))
     const fBaseBtn = el('button', { type: 'button', title: t('Basis der Fächer auf dem Server wählen'), onclick: () => ctx.filePicker({ value: fBase.value, dirOnly: true, title: t('📁 Basis der Fächer (in/, done/, failed/, out/)'), onPick: v => { fBase.value = v } }) }, '📁')
@@ -350,9 +348,9 @@ async function mount(root, ctx) {
       paramsBox.innerHTML = ''
       const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
       pluginHint.textContent = p?.description ?? ''; pluginHint.title = pluginHint.textContent
-      // Mit Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen — Ziel im Baum beim Import, Quelle vom Baum beim Export“):
+      // Mit Profil:
       // im Dialog stehen dann nur Profil, Dateien/Verzeichnisse und Schalter. Ohne gewähltes Profil sind seine Felder
-      // die einzige Quelle und stehen hier (Taloan, 23.09.)
+      // die einzige Quelle und stehen hier
       const profileDef = defs.find(d => d.type === 'profile' || d.key === 'profile')
       const hasProfile = !!profileDef && !!profilWert
       let secretNote = null
@@ -360,30 +358,30 @@ async function mount(root, ctx) {
       const noteSecret = (profileName) => { if (!secretNote || !p) return; if (!profileName) { secretNote.textContent = ''; profileSecrets = []; check(); return } api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(profileName)}`).then(r => { profileSecrets = r.keys; secretNote.textContent = r.keys.length ? t('🔒 am Profil hinterlegt: {0}', [r.keys.join(', ')]) : t('🔒 am Profil nichts hinterlegt — in der Ansicht des Plugins (🔒) oder unten setzen'); check() }).catch(() => { secretNote.textContent = ''; profileSecrets = []; check() }) }
       for (const d of defs) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
-        // sichtbar bleiben: Profil, Dateien/Verzeichnisse (Taloan: „das Einzige, was der Tasker können muss“), Schalter; Baum-Ziel/-Quelle, Texte, Geheimnisse: aus dem Profil
+        // sichtbar bleiben: Profil, Dateien/Verzeichnisse, Schalter; Baum-Ziel/-Quelle, Texte, Geheimnisse: aus dem Profil
         // was im Profil steht, wird im Profil gepflegt — hier erscheint es gar nicht
         if (stelle(d, hasProfile) === 'aus') continue
         const append = (...nodes) => paramsBox.append(...nodes)
         let inp
         if (d.type === 'node') {
-          // Auswahlbaum (Taloan): Wert ist die Knoten-Id, sichtbar der Name; „leer“ wählbar (⌂)
+          // Auswahlbaum: Wert ist die Knoten-Id, sichtbar der Name; „leer“ wählbar (⌂)
           inp = { value: cur }
           const shown = el('span', { class: 'muted' }, cur ? tree.byId.get(cur)?.label ?? cur : '(leer)')
           const box = el('div')
           ctx.treePicker(box, { value: cur || null, roles: ['group', 'product'], height: 180, allowRoot: true, onPick: r => { inp.value = r?.id ?? ''; shown.textContent = r ? r.label : '(leer)' } })
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), box)
         } else if (d.type === 'pub') {
-          // Publikationsbaum (Taloan, 21.09.: Export-Job an der Ausleitung): Dropdown der Bäume, leer = keiner
+          // Publikationsbaum: Dropdown der Bäume, leer = keiner
           inp = el('select', {}, el('option', { value: '' }, t('(keiner — Teilbaum unten)')), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`)))
           inp.value = cur
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
         } else if (d.type === 'path' || d.type === 'dir') {
-          // Pfad auf dem Server (Taloan, 21.09.: „Gibt's hier wohl auch nen Browser?“): Textfeld plus 📁 — der Dateibrowser der Oberfläche (ctx.filePicker, /api/files)
+          // Pfad auf dem Server: Textfeld plus 📁 — der Dateibrowser der Oberfläche (ctx.filePicker, /api/files)
           inp = el('input', { type: 'text', value: cur, placeholder: d.type === 'dir' ? t('Verzeichnis auf dem Server') : t('Datei, Verzeichnis oder URL'), style: 'flex:1' })
           const pick = el('button', { type: 'button', title: d.type === 'dir' ? t('Verzeichnis auf dem Server wählen') : t('Datei oder Verzeichnis auf dem Server wählen'), onclick: () => ctx.filePicker({ value: inp.value, dirOnly: d.type === 'dir', onPick: v => { inp.value = v } }) }, '📁')
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, pick))
         } else if (d.type === 'profile' || d.key === 'profile') {
-          // Profil des Plugins (Taloan, 21.09.: „was muss man hier eingeben?“ / „muss ich jedes einzeln aufzählen?“): jeder Parameter profile
+          // Profil des Plugins: jeder Parameter profile
           // wird ein Dropdown der gespeicherten Profile — profile:<name> (json, xport) und config:<name> (ProfileBar: ixp, solr) im Plugin-Strom
           inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, /leer/.test(d.label) ? '(leer)' : t('— Profil —')))
           if (profilWert) inp.append(el('option', { value: profilWert }, profilWert)); inp.value = profilWert
@@ -414,7 +412,7 @@ async function mount(root, ctx) {
       aktualisiereFaecher()
       if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, t('Dieses Plugin hat keine Parameter.')))
     }
-    // Speichern nur, wenn der Job laufen kann (Taloan, 21.09.: „speichern deaktiviert, solange ein Profil nicht ausführbar ist“):
+    // Speichern nur, wenn der Job laufen kann:
     // key, Profil (wenn der Prozess eines hat), Dateien/Verzeichnisse, Geheimnis (am Job oder am Profil hinterlegt)
     let profileSecrets = []
     let markieren = null   // wird gesetzt, sobald die Schrittleiste steht (weiter unten)

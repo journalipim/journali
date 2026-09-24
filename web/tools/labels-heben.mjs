@@ -1,4 +1,4 @@
-// Bezeichnungen des Modells folgen der Oberflächensprache (Taloan, 24.09.2026): statt `a.label?.de || a.key` steht
+// Bezeichnungen des Modells folgen der Oberflächensprache: statt `a.label?.de || a.key` steht
 // `$L(a.label) || a.key` in Vorlagen bzw. `L(a.label) || a.key` im Skript — L nimmt die Sprache der Oberfläche, dann de,
 // dann die erste vorhandene. Zuweisungen (a.label.de = v) und v-model bleiben: das sind die Felder, in denen je Sprache
 // gepflegt wird. Ausdruck vor `.label` wird rückwärts gelesen (Bezeichner, ., ?., Klammern).

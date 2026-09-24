@@ -37,11 +37,11 @@ import { t as t_ } from '../i18n.js'
 import { L } from '../i18n.js'
 const journalW = paneWidth('journal', 420)
 
-const props = defineProps({ id: String, pub: { type: String, default: null }, pubRubric: { type: String, default: null } })   // pubRubric: Rubrik, in der der Verweis hängt (für den Stand)   // pub: Id des Publikationsbaums — Ansicht als Verweis (Taloan, 21.09.)
+const props = defineProps({ id: String, pub: { type: String, default: null }, pubRubric: { type: String, default: null } })   // pubRubric: Rubrik, in der der Verweis hängt (für den Stand)   // pub: Id des Publikationsbaums — Ansicht als Verweis
 // Im Publikationsbaum ist der Verweis ein Fenster auf den Pflegeknoten: Pflegewerte nur lesen (auch als admin — geändert wird an der Quelle),
 // pflegbar nur, was eine Gruppe an einer Rubrik dieses Baums mitbringt (z. B. SEO fürs Web)
 const pubTree = computed(() => props.pub ? tree.byId.get(props.pub) : null)
-// Kopierte Rubrik (Taloan, 21.09.: „im Pflegebaum Überschriften gepflegt — die Rubrik zeigt nichts davon“): die Pflegewerte der Quellgruppe,
+// Kopierte Rubrik: die Pflegewerte der Quellgruppe,
 // aufgelöst wie in der Tabelle (geerbt zählt), je Spalte der Ansicht — nur zu lesen, geändert wird an der Quelle
 const sourceRows = ref([])
 async function loadSource() {
@@ -57,11 +57,11 @@ async function loadSource() {
 }
 const router = useRouter()
 const route = useRoute()
-// ?group=<key> (Taloan, 22.09.: aus dem Baummenü direkt in die ETIM-Gruppe): bei Reitern der Reiter, bei der Liste hinscrollen
+// ?group=<key>: bei Reitern der Reiter, bei der Liste hinscrollen
 async function focusGroup() {
   const g = route.query.group; if (!g || !node.value) return
   await nextTick()
-  // die Gruppe gilt am Knoten, aber die gewählte Sicht zeigt sie nicht (Taloan, 22.09.: „Sprungziel zu einer Gruppe, die es hier gar nicht gibt“): Sicht auf „alle“
+  // die Gruppe gilt am Knoten, aber die gewählte Sicht zeigt sie nicht: Sicht auf „alle“
   if (!blocks.value.some(b => b.key === g) && (node.value.groups ?? []).some(x => x.key === g) && store.viewKey[node.value.role]) { setView(''); await nextTick() }
   if (!blocks.value.some(b => b.key === g)) { store.toast(t_('Gruppe {0} gilt an diesem Knoten nicht', [g])); return }
   if (store.layout === 'tabs') tab.value = g
@@ -92,8 +92,8 @@ const columns = computed(() => {
   return cols
 })
 function setCells(cells) { store.viewCells = cells; store.save() }
-// erst hier — der Getter läuft sofort und braucht node und columns (TDZ: „Cannot access before initialization“, jede Knotenansicht tot; Taloan, 21.09.)
-// Stand (Taloan, 21.09., „A“): Rubrik oder der Verweis erbt den Stand der nächsten Rubrik darüber — Pflegewerte dann wie bei #n
+// erst hier — der Getter läuft sofort und braucht node und columns (TDZ: „Cannot access before initialization“, jede Knotenansicht tot)
+// Stand: Rubrik oder der Verweis erbt den Stand der nächsten Rubrik darüber — Pflegewerte dann wie bei #n
 const pubStand = computed(() => { if (!props.pub) return null; const start = node.value?.role === 'rubric' ? tree.byId.get(props.id) : tree.byId.get(props.pubRubric); for (let n = start; n; n = tree.byId.get(n.parent)) if (n.stand != null) return { stand: n.stand, from: n }; return null })
 const standAt = ref(null)   // Datum des Journaleintrags #n
 watch(pubStand, async s => { standAt.value = null; if (!s) return; try { standAt.value = (await api.get(`/api/journal/${s.stand}`)).at } catch {} }, { immediate: true })
@@ -116,8 +116,7 @@ watch(() => [node.value?.source, columns.value.length, pubStand.value?.stand], l
 const headGroups = computed(() => { const out = []; for (const c of columns.value) { const g = out.find(x => x.channel === c.channel); g ? g.n++ : out.push({ channel: c.channel, n: 1 }) } return out })
 
 // ---- Attributsicht je Knotentyp
-// Sichten: die aus dem Modell und die flüchtigen der Plugins (Taloan, 22.09.2026: ad hoc, nicht im Journal —
-// ein Plugin sagt je Knoten, welche Gruppen und Attribute in welcher Reihenfolge zu sehen sind)
+// Sichten: die aus dem Modell und die flüchtigen der Plugins
 const pluginViews = computed(() => {
   plugins.rev   // hängt am Zähler: lädt ein Plugin seine Daten nach, rechnet die Ansicht neu
   const row = tree.byId.get(props.id); if (!row || !node.value) return []
@@ -141,10 +140,10 @@ const view = computed(() => views.value.find(v => v.key === store.viewKey[node.v
 const orderView = computed(() => view.value ?? views.value.find(v => v.key === 'defaultview_' + node.value?.role) ?? null)
 function setView(k) { store.viewKey = { ...store.viewKey, [node.value.role]: k }; store.save() }
 function setLayout(l) { store.layout = l; store.save() }
-// Abschnitte (attributes, axes, media, relations, groups, releases) per Klick aufs Band auf-/zuklappen (Taloan, 17.09.)
+// Abschnitte (attributes, axes, media, relations, groups, releases) per Klick aufs Band auf-/zuklappen
 const open = k => !store.collapsed.includes(k)
 function toggle(k) { store.collapsed = open(k) ? [...store.collapsed, k] : store.collapsed.filter(x => x !== k); store.save() }
-// Pfad: Schrift verkleinern, bis er in eine Zeile passt (13 → 10 px), statt umzubrechen (Taloan)
+// Pfad: Schrift verkleinern, bis er in eine Zeile passt (13 → 10 px), statt umzubrechen
 const pathEl = ref(null)
 async function fitPath() {
   await nextTick(); const el = pathEl.value; if (!el) return
@@ -156,7 +155,7 @@ async function fitPath() {
 watch(() => [props.id, path.value?.length, node.value?.label], fitPath)
 onMounted(() => { fitPath(); window.addEventListener('resize', fitPath) })
 onUnmounted(() => window.removeEventListener('resize', fitPath))
-// Filter am Knoten (Taloan, 20.09.: ein Dropdown, weitere Filter für Editoren kommen dazu); Namen von Taloan
+// Filter am Knoten
 const SCOPES = [
   { key: 'all', label: t_('Alle Attribute'), title: t_('alles, was am Knoten anliegt — gesperrtes (⌀) sichtbar') },
   { key: 'can', label: t_('Editierbare Attribute'), title: t_('was auf dieser Ebene änderbar ist') },
@@ -168,7 +167,7 @@ function setScope(s) { store.scope = s; store.save() }
 const DEPTH = { group: 0, product: 1, variant: 2 }
 const ROLES = ['group', 'product', 'variant']
 const canAt = (a, gdef, role) => (!a.levels || a.levels.includes(role)) && (!gdef?.activeFrom || DEPTH[role] >= DEPTH[gdef.activeFrom])
-// Attributnamen: Bezeichnung → Key → beides (Taloan: Vorlagen nutzen die Keys, da darf man nicht raten)
+// Attributnamen: Bezeichnung → Key → beides
 function cycleNames() { store.attrNames = { label: 'key', key: 'both', both: 'label' }[store.attrNames] ?? 'label'; store.save() }
 const NAMES_TITLE = { label: t_('Technische Keys zeigen'), key: t_('Bezeichnung und Key zeigen'), both: t_('Nur Bezeichnung zeigen') }
 
@@ -176,13 +175,12 @@ const NAMES_TITLE = { label: t_('Technische Keys zeigen'), key: t_('Bezeichnung 
 const blocks = computed(() => {
   if (!model.value || !node.value) return []
   const eff = node.value.groups ?? []               // [{ key, from, fromLabel, active, attributes }]
-  // Eine flüchtige Sicht darf ihre Abschnitte selbst bestimmen (Taloan, 22.09.2026: ETIM gruppiert nach Klassenmenge —
-  // „gilt für alle drei Klassen darunter“ oben, dann die Merkmale der einzelnen). Attribute quer über die Gruppen.
+  // Eine flüchtige Sicht darf ihre Abschnitte selbst bestimmen. Attribute quer über die Gruppen.
   if (view.value?.custom?.length) return customBlocks(view.value.custom, eff)
   const byKey = new Map(eff.map(g => [g.key, g]))
   const ov = orderView.value
   const order = ov ? ov.items.map(it => it.group).filter(k => byKey.has(k)) : eff.map(g => g.key)
-  // „komplett“: Gruppen, die die Standardsicht nicht nennt, unten dran. Eine gewählte Sicht zeigt nur ihre Gruppen (Taloan, 17.09.).
+  // „komplett“: Gruppen, die die Standardsicht nicht nennt, unten dran. Eine gewählte Sicht zeigt nur ihre Gruppen.
   if (ov && !view.value) for (const g of eff) if (!order.includes(g.key)) order.push(g.key)
   const req = k => model.value.attributes.find(a => a.key === k)?.required
   const built = order.map(k => {
@@ -201,10 +199,10 @@ const blocks = computed(() => {
     if (store.scope === 'only') defs = defs.filter(a => !ROLES.some(r => r !== role && canAt(a, def, r)))
     return { key: k, label: L(def?.label) || k, activeFrom: def?.activeFrom, from: g.from, fromLabel: g.fromLabel, fromRole: g.fromRole, active: g.active, defs }
   }).filter(b => b.defs.length && (store.scope === 'all' || b.active))
-    // „komplett“: gesperrte Gruppen ans Ende (Taloan, 17.09.); in einer Sicht bleibt deren Reihenfolge.
+    // „komplett“: gesperrte Gruppen ans Ende; in einer Sicht bleibt deren Reihenfolge.
     .sort((x, y) => view.value ? 0 : (x.active === y.active ? 0 : x.active ? -1 : 1))
   // Ein Plugin darf eine Gruppe gliedern: die Gruppe bleibt ein Reiter, seine Teile werden Zwischenüberschriften darin
-  // (Taloan, 22.09.2026: „nicht jede Kombination als eigener Tab“).
+  //.
   return built.map(b => {
     const rep = pluginViews.value.find(v => v.replaces === b.key && v.custom?.length)
     return rep ? withSections(b, rep.custom) : b
@@ -261,7 +259,7 @@ function matches(def, block) {
   if (def.type === 'rows') return Object.values(node.value?.rows?.[def.key] ?? {}).length > 0 && [...own.value.entries()].some(([k, v]) => k.startsWith(def.key + '|') && String(v ?? '').toLowerCase().includes(q))
   return columns.value.some(c => enabled(def, c, block) && cellText(def, c).toLowerCase().includes(q))
 }
-// „nur Fehlendes“ (Taloan, 21.09.: „freigeben sollte auf die Attribute filtern, an denen es mangelt — sonst such ich mir nen Wolf“):
+// „nur Fehlendes“:
 // nach einer gescheiterten Freigabe die Pflichtwerte, die für den Kanal fehlen (Vollständigkeit ohne Master), als Filter; Klick auf den Chip hebt ihn auf
 const missingOnly = ref(null)   // { channel, keys: Set<attr>, cells: Set<'attr/locale'> }
 function showMissing(channel) {
@@ -279,7 +277,7 @@ const isMissing = (def, c) => !!missingOnly.value && missingOnly.value.cells.has
 const hitCount = computed(() => filteredBlocks.value.reduce((n, b) => n + b.defs.length, 0))
 const shownBlocks = computed(() => store.layout === 'tabs' && !attrFilter.value.trim() ? filteredBlocks.value.filter(b => b.key === tab.value) : filteredBlocks.value)
 // Breite der Namensspalte: gemessen am längsten sichtbaren Namen (Bezeichnung + abgegrauter Key), 180–360 px — nichts
-// wird abgeschnitten (Taloan); der Rest der Breite gehört den Werten
+// wird abgeschnitten; der Rest der Breite gehört den Werten
 const measure = (() => { let ctx = null; return (s, font) => { ctx ??= document.createElement('canvas').getContext('2d'); ctx.font = font; return ctx.measureText(s).width } })()
 const attrColWidth = computed(() => {
   let w = 0
@@ -287,7 +285,7 @@ const attrColWidth = computed(() => {
     const label = store.label(def), key = store.attrNames !== 'label' ? def.key : ''
     w = Math.max(w, (label ? measure(label, '13px system-ui, "Segoe UI", sans-serif') : 0) + (key ? measure(key, '11px ui-monospace, Consolas, monospace') + 6 : 0) + (def.unit ? measure(' ' + def.unit, '13px system-ui') : 0))
   }
-  return Math.ceil(Math.max(180, Math.min(360, w + 48)))   // Stern, Innenabstand, Pflichtpunkt — Deckel 360 (Taloan: 560 ist harter Tobak), darüber Ellipse an der Bezeichnung, der Key bleibt ganz
+  return Math.ceil(Math.max(180, Math.min(360, w + 48)))   // Stern, Innenabstand, Pflichtpunkt — Deckel 360, darüber Ellipse an der Bezeichnung, der Key bleibt ganz
 })
 
 // ---- Werte
@@ -323,9 +321,9 @@ function key(a, l, c, row) { return `${a}|${l ?? ''}|${c ?? ''}${row ? '|' + row
 function ownValue(a, col) { return own.value.get(key(a, col.locale, col.channel)) ?? null }
 // wirksamer Wert eines Attributs ohne Achse am Knoten: eigen, sonst vom nächsten Vorfahren (für Bedingungen: etim_class)
 function effectiveValue(a) { const k = key(a, null, null); if (own.value.has(k)) return own.value.get(k); for (const { m } of ancestorMaps.value) if (m.has(k)) return m.get(k); return null }
-// Achsenwert einer Variante ohne eigenen Attributwert (beim Anlegen vergeben): steht in der Zelle, Bearbeiten schreibt den Attributwert — der wird zum Achsenwert (Taloan, 20.09.: kein Schloss mehr)
+// Achsenwert einer Variante ohne eigenen Attributwert (beim Anlegen vergeben): steht in der Zelle, Bearbeiten schreibt den Attributwert — der wird zum Achsenwert
 function ownOrAxis(def, col) { return ownValue(def.key, col) ?? axisValue(def.key, col) }
-// Kette je Achse (Taloan, 20.09.): Wert → Fallback(s) → Master → Stern; erst der Kanal, dann die Sprache — wie Node.Chain im Kern
+// Kette je Achse: Wert → Fallback(s) → Master → Stern; erst der Kanal, dann die Sprache — wie Node.Chain im Kern
 const localeFb = computed(() => Object.fromEntries((model.value?.locales ?? []).filter(l => l.fallback).map(l => [l.code, l.fallback])))
 const channelFb = computed(() => Object.fromEntries((model.value?.channels ?? []).filter(c => c.fallback).map(c => [c.key, c.fallback])))
 function chain(v, m, fb) { if (v == null) return [null]; const out = [v]; const seen = new Set([v]); let cur = v; for (let i = 0; i < 8 && fb[cur] && !seen.has(fb[cur]); i++) { cur = fb[cur]; seen.add(cur); out.push(cur) } if (m && !seen.has(m)) out.push(m); out.push(null); return out }
@@ -336,7 +334,7 @@ function fallback(m, a, col) {
 }
 const ancestorMaps = computed(() => (node.value?.ancestors ?? []).map(an => ({ an, m: valueMap(an.values) })))
 // Wie Tree.Resolve: hier (genaue Achse, ohne Kanal, ohne Sprache), dann den Pfad hinauf — nur wenn das Attribut vererbbar ist.
-// Sprachabhängig (Taloan, 17.09.): * ist der sprachneutrale Grundtext (SAP-Kurzbezeichnung) und änderbar;
+// Sprachabhängig: * ist der sprachneutrale Grundtext (ERP-Kurzbezeichnung) und änderbar;
 // leer zeigt * den Master (◌). Kette je Sprache: eigen → Master → * → dasselbe bei den Vorfahren (wenn vererbbar).
 // Rückgabe: { value, from (Vorfahr oder null), master (true = kommt aus der Mastersprache) }
 function resolveIn(m, def, col) {
@@ -379,7 +377,7 @@ const shownLabel = computed(() => tree.byId.get(props.id)?.label ?? props.id)
 const star = key => (node.value?.stars ?? []).find(s => s.attribute === key) ?? null
 const starOwn = key => star(key)?.from === props.id
 const nextStar = key => (node.value?.stars ?? []).find(x => x.attribute === key && x.from !== props.id) ?? null   // das ★, das nach dem Wegnehmen gilt
-// Tooltip „Objekt Verb (Erläuterung)“; der Vorfahr wird beim Namen genannt, nie „von oben“ (Taloan, 22.09.)
+// Tooltip „Objekt Verb (Erläuterung)“; der Vorfahr wird beim Namen genannt, nie „von oben“
 function starTitle(def) {
   const s = star(def.key), name = store.name(def)
   if (!s) return t_('Ab hier mit „{0}“ benennen', [name])
@@ -393,8 +391,8 @@ const freeGroups = computed(() => (model.value?.groups ?? []).filter(g => !(node
 // Gruppen heissen überall gleich: Label wie im Reiter, Schlüssel nur im Tooltip.
 const groupLabel = k => L(model.value?.groups.find(x => x.key === k)?.label) || k
 const groupLocked = k => { const g = model.value?.groups.find(x => x.key === k); return g?.activeFrom && node.value && !(node.value.groups ?? []).find(x => x.key === k)?.active }
-// Angehängte Gruppen zum Lesen sortiert (Taloan, 18.09.): alphabetisch nach Label, gesperrte ⌀ ans Ende — die Reihenfolge im Journal ist die des Anhängens und bedeutet nichts
-// Gruppe hängt schon weiter oben (Taloan, 22.09.: „jetzt habe ich sie in beiden drin“) — die hier ist überflüssig
+// Angehängte Gruppen zum Lesen sortiert: alphabetisch nach Label, gesperrte ⌀ ans Ende — die Reihenfolge im Journal ist die des Anhängens und bedeutet nichts
+// Gruppe hängt schon weiter oben — die hier ist überflüssig
 const fromAbove = g => path.value.find(a => (a.groups ?? '').split(',').includes(g)) ?? null
 const attachedSorted = computed(() => [...(node.value?.attachedGroups ?? [])].sort((a, b) => (groupLocked(a) ? 1 : 0) - (groupLocked(b) ? 1 : 0) || groupLabel(a).localeCompare(groupLabel(b), 'de', { sensitivity: 'base' })))
 
@@ -407,16 +405,16 @@ async function load() {
     entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}`)).reverse()
     ladeAusJournal()
   } catch (e) {
-    if (e.message.startsWith('404')) router.push(router.currentRoute.value.path.startsWith('/pub') ? '/pub' : '/tree')   // Knoten weg: in derselben Ansicht bleiben (Taloan, 21.09.: „springt ganz raus“)
+    if (e.message.startsWith('404')) router.push(router.currentRoute.value.path.startsWith('/pub') ? '/pub' : '/tree')   // Knoten weg: in derselben Ansicht bleiben
     else store.toast(e.message)
   }
 }
 onMounted(load)
 function onKey(e) {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
-  // im grossen Editor (contenteditable) oder in einem Overlay gilt Esc dort — nicht den Knoten verlassen (Taloan: „klick – Anzeige – Esc“ warf den Knoten raus)
+  // im grossen Editor (contenteditable) oder in einem Overlay gilt Esc dort — nicht den Knoten verlassen
   if (e.target.isContentEditable || e.target.closest?.('.editor, .overlay, .dialog')) return
-  if (document.querySelector('.overlay, .dialog')) return   // offener Editor, auch wenn der Fokus woanders liegt (Taloan, 22.09.: Esc warf den Knoten raus)
+  if (document.querySelector('.overlay, .dialog')) return   // offener Editor, auch wenn der Fokus woanders liegt
   if (e.key === 'Escape') router.push(router.currentRoute.value.path.startsWith('/pub') ? '/pub' : '/tree')
   else if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undo() }
   else if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo() }
@@ -435,7 +433,7 @@ async function command(fn, rethrow = false) {
 }
 const nodeUrl = () => `/api/nodes/${encodeURIComponent(props.id)}`
 // Rückgängig/Wiederholen je Knoten: das Journal bleibt append-only — der alte Wert wird als neuer Eintrag geschrieben.
-// Schritte JE KNOTEN (Taloan): ↶ hier macht rückgängig, was an diesem Knoten geändert wurde — auch wenn man zwischendurch
+// Schritte JE KNOTEN: ↶ hier macht rückgängig, was an diesem Knoten geändert wurde — auch wenn man zwischendurch
 // woanders war; nie die drei Schritte eines anderen Knotens. Der Stapel liegt im Store, weil NodeView je Knoten neu gebaut
 // wird (:key=id). Ein Rückzug landet im Stapel des Vaters — dort steht man danach, dort holt ↶ ihn zurück.
 const stacksOf = id => (store.undo[id] ??= { history: [], redo: [] })
@@ -451,7 +449,7 @@ const setValue = (def, col, value, row = null) => {
   history.value.push({ kind: 'value', node: props.id, def, col, row, before, after: value }); redoStack.value.length = 0
   return writeValue(def, col, value, row)
 }
-// Mouseover auf ↶/↷ (Taloan): was würde der Schritt tun — Attribut, Spalte, alter → neuer Wert; und wie viele Schritte noch
+// Mouseover auf ↶/↷: was würde der Schritt tun — Attribut, Spalte, alter → neuer Wert; und wie viele Schritte noch
 function stepTitle(h, verb, n, key, redo = false) {
   if (!h) return redo ? t_('nichts zu wiederholen') : t_('nichts rückgängig zu machen')
   if (h.kind === 'retire') return redo ? t_('{0}{1} wieder zurückziehen ({2})', [h.label, h.count > 1 ? ' ' + t_('mit {0} darunter', [h.count - 1]) : '', key]) : `${h.label}${h.count > 1 ? ` mit ${h.count - 1} darunter` : ''} wiederherstellen  (${key})`
@@ -459,7 +457,7 @@ function stepTitle(h, verb, n, key, redo = false) {
   const from = redo ? h.before : h.after, to = redo ? h.after : h.before
   return `${store.name(h.def)}${h.col?.label ? ' · ' + h.col.label : ''}${h.row ? ' · Zeile ' + h.row : ''}: ${show(from)} → ${show(to)}  (${key})`
 }
-// Rückzug als Schritt (Taloan: nach dem Löschen sagte ↶ „nichts rückgängig“): Rückgängig holt über den Stapel zurück,
+// Rückzug als Schritt: Rückgängig holt über den Stapel zurück,
 // Wiederholen zieht wieder zurück; danach steht die Ansicht wieder auf dem Knoten
 async function undoRetire(h) {
   try {
@@ -510,12 +508,12 @@ const relBlocks = computed(() => {
   return [...out.values()].sort((a, b) => a.type.localeCompare(b.type))
 })
 const relCount = computed(() => (rels.value.out?.length ?? 0) + (rels.value.in?.length ?? 0))
-// zurück in den Publikationsbaum, aus dem wir gekommen sind (Taloan, 21.09.): der Weg steht im Store
+// zurück in den Publikationsbaum, aus dem wir gekommen sind: der Weg steht im Store
 function backToPub() { const b = store.pubBack; store.pubBack = null; if (b) router.push(b.path) }
 const relValue = (r, def) => { const loc = def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null; return r.values.find(v => v.attribute === def.key && (v.locale ?? null) === loc && !v.channel)?.value ?? null }
 const setRelValue = (r, def, v) => command(() => api.post(`/api/relations/${r.id}/attributes`, { attribute: def.key, locale: def.perLocale ? (viewLocales.value[0] ?? locales.value[0]) : null, value: v }))
 const retireRel = r => command(() => api.del(`/api/relations/${r.id}`))
-// „Bilder der Subitems durch Vererbung ersetzen“ (Taloan, 18.09.): die eigenen Medien dieses Knotens werden vererbt (inherit=true);
+// „Bilder der Subitems durch Vererbung ersetzen“: die eigenen Medien dieses Knotens werden vererbt (inherit=true);
 // an allen Nachfahren werden Zuordnungen zu DEMSELBEN Medium (gleicher Typ) gelöst — aber nur, wenn der Nachfahr danach kein
 // eigenes Medium dieses Typs mehr hätte (sonst bräche sein eigenes die Vererbung, und das gleiche Bild wäre weg). Ein Stapel.
 const inheriting = ref('')
@@ -535,7 +533,7 @@ async function inheritToSubitems() {
       else if ((rk.inherited ?? []).length) already.push(k)
     }
     const toInherit = own.filter(r => relValueRaw(r, 'inherit') !== 'true'), alreadyOn = own.length - toInherit.length
-    // Der Dialog sagt, was ist — auch wenn nichts zu tun bleibt (Taloan, 18.09.: „0 hier auf vererben?“)
+    // Der Dialog sagt, was ist — auch wenn nichts zu tun bleibt
     const list = [
       ...(alreadyOn ? [t_('{0} {1} hier schon auf „vererben“', [alreadyOn, alreadyOn === 1 ? t_('Medium ist') : t_('Medien sind')])] : []),
       ...(already.length ? [t_('{0} Subitems erben bereits', [already.length])] : []),
@@ -543,8 +541,7 @@ async function inheritToSubitems() {
     const nothing = !toInherit.length && !retire.length
     const ok = await dialog.confirm({
       title: t_('Medien an {0} Subitems vererben?', [below.length]),
-      // zwei Dinge, getrennt gesagt (Taloan, 20.09.: „wenn nicht ersetzt wird, brauch ich vererben auch nicht?“ — doch: Vererben bringt die
-      // Medien an die Subitems; Ersetzen räumt nur auf, wenn ein Subitem dasselbe Medium schon fest hat). Rot nur, wo etwas gelöst wird.
+      // zwei Dinge, getrennt gesagt. Rot nur, wo etwas gelöst wird.
       warn: nothing ? t_('nichts zu tun') : retire.length ? t_('{0} feste {1} an Subitems werden gelöst (sie erben dann)', [retire.length, retire.length === 1 ? t_('Zuordnung') : t_('Zuordnungen')]) : '',
       list, text: nothing ? '' : t_('{0} {1} von hier {2} auf „vererben“ gesetzt — {3} Subitems zeigen {4} danach als geerbt (gestrichelt).{5}', [toInherit.length, toInherit.length === 1 ? t_('Medium') : t_('Medien'), toInherit.length === 1 ? 'wird' : 'werden', below.length, toInherit.length === 1 ? 'es' : 'sie', retire.length ? '' : ' ' + t_('Keine feste Zuordnung an Subitems ist betroffen.')]), ok: nothing ? 'OK' : t_('↓ Vererben') })
     if (!ok || nothing) return
@@ -566,7 +563,7 @@ const relTypesFromHere = computed(() => relTypes.value.filter(t => !isMediaType(
 // ---- Medien (20): Relationen zu Medien (image, document …) als Kacheln; hochladen per Ablegen oder Knopf, oder aus der Bibliothek wählen
 // geerbte Medien (Server: inherited) — Kacheln ohne Bearbeitung, mit Herkunft; ein eigenes Medium desselben Typs bricht die Vererbung
 const inheritedMedia = computed(() => (rels.value.inherited ?? []).map(x => ({ ...x.relation, from: x.from })))
-// Stopps (Taloan, 18.09.): ein geerbtes Medium wird hier nicht „entfernt“, sondern gestoppt — eine Zuordnung zum selben Medium mit stop=true
+// Stopps: ein geerbtes Medium wird hier nicht „entfernt“, sondern gestoppt — eine Zuordnung zum selben Medium mit stop=true
 const stopped = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.type) && relValueRaw(r, 'stop') === 'true'))
 async function stopInherited(r) { await command(async () => { const e = await api.post('/api/relations', { type: r.type, from: props.id, to: r.other.id }); await api.post(`/api/relations/${e.stream}/attributes`, { attribute: 'stop', value: 'true' }); return e }) }
 const mediaRels = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.type) && relValueRaw(r, 'stop') !== 'true').sort((a, b) => (Number(relValueRaw(a, 'position')) || 9e9) - (Number(relValueRaw(b, 'position')) || 9e9) || a.lastNumber - b.lastNumber))
@@ -589,7 +586,7 @@ async function uploadMedia(files) {
   } catch (e) { store.toast(e.message) }
   finally { busy.value = false; mediaDrag.value = false }
 }
-// Aus der Bibliothek zuordnen (Taloan, 21.09.: Ordner, Suche, Mehrfachauswahl wie in ▨ Medien) — eine Relation je Medium; „gibt es schon“ wird übergangen
+// Aus der Bibliothek zuordnen — eine Relation je Medium; „gibt es schon“ wird übergangen
 async function linkMedia(picked) {
   mediaPick.value.open = false
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
@@ -604,7 +601,7 @@ async function linkMedia(picked) {
 }
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`
 
-// Workflows (27, Taloan 21.09.): je geltendem Workflow der Zustand und die Übergänge, die meine Rolle gehen darf; Notiz-Pflicht → Dialog
+// Workflows (27): je geltendem Workflow der Zustand und die Übergänge, die meine Rolle gehen darf; Notiz-Pflicht → Dialog
 const workflows = ref([])
 const wfColor = c => ({ pos: 'var(--pos)', neg: 'var(--neg)', warn: 'var(--warn)', accent: 'var(--accent)', muted: 'var(--muted)' })[c] ?? (c && /^#/.test(c) ? c : 'var(--muted)')
 function wfBlocked(t) {
@@ -633,12 +630,12 @@ async function wfEffect(eff) {
   await command(() => k === 'release' ? api.post(`${nodeUrl()}/releases`, { channel: a, locale: null }) : k === 'revoke' ? api.del(`${nodeUrl()}/releases?channel=${encodeURIComponent(a)}`) : setStatus(a))
   api.get(`${nodeUrl()}/workflow`).then(w => { workflows.value = w }).catch(() => {})
 }
-// Verlauf eines Workflows am Knoten (Taloan, 21.09.): jeder Schritt mit Zeit, Wer, Schritt, Zustand, Notiz — aus dem Journalstrom des Knotens
+// Verlauf eines Workflows am Knoten: jeder Schritt mit Zeit, Wer, Schritt, Zustand, Notiz — aus dem Journalstrom des Knotens
 async function wfHistory(w) {
   const label = k => L(w.states?.find(s => s.key === k)?.label) || k
   let src = entries.value; let title = t_('Verlauf „{0}“ · {1}', [L(w.label) || w.workflow, shownLabel.value])
   if (w.inheritedFrom) { try { src = (await api.get(`/api/streams/${encodeURIComponent(w.inheritedFrom.id)}`)).reverse(); title = t_('Verlauf „{0}“ · geerbt von „{1}“', [L(w.label) || w.workflow, w.inheritedFrom.label]) } catch { src = [] } }
-  // nach Datum gruppiert (Taloan, 21.09.: „in Firmen dauert es manchmal 4 Wochen“): Datumszeile, darunter die Schritte mit Uhrzeit
+  // nach Datum gruppiert: Datumszeile, darunter die Schritte mit Uhrzeit
   const list = src.filter(e => (e.type === 'WorkflowStateSet' || e.type === 'WorkflowAssigned') && e.payload?.workflow === w.workflow)
   const rows = []; let day = null
   for (const e of list) {
@@ -654,7 +651,7 @@ async function wfClear(w, locale = null) {
   api.get(`${nodeUrl()}/workflow`).then(x => { workflows.value = x }).catch(() => {})
 }
 async function wfAssign(w) {
-  // Vorschlagsliste (Taloan, 21.09.: „oder soll ich alles auswendig wissen?“): Personen mit einer Rolle des nächsten Schritts zuerst, dann die anderen
+  // Vorschlagsliste: Personen mit einer Rolle des nächsten Schritts zuerst, dann die anderen
   let people = []; try { people = await api.get('/api/auth/people') } catch {}
   const roles = new Set(w.all.flatMap(t => t.roles ?? []))
   const fits = p => roles.size === 0 || roles.has(p.role) || p.role === 'admin'
@@ -671,7 +668,7 @@ async function wfAssign(w) {
 // Variantenachsen am Produkt — änderbar, solange es keine Varianten hat (ProductAxesSet).
 const addAxis = ref('')
 // Achsen setzen; ist das Ergebnis nicht eindeutig, fragt der Server — nach Hinweisdialog mit force: die betroffenen Varianten verlieren
-// ihre Achsenzuordnung, die Werte bleiben (Taloan, 20.09.: neue Achsen immer zufügen, ungültige immer entfernen können)
+// ihre Achsenzuordnung, die Werte bleiben
 async function setAxes(axes) {
   try { await command(() => api.post(`${nodeUrl()}/axes`, { axes }, 'PUT'), true) }
   catch (e) {
@@ -681,7 +678,7 @@ async function setAxes(axes) {
     await command(() => api.post(`${nodeUrl()}/axes`, { axes, force: true }, 'PUT'))
   }
 }
-// Achse dazu mit Varianten (Taloan, 20.09.): Werte prüfen — leere zählen nicht —, nicht eindeutig → Warnung, nächste Achse ist Pflicht, so lange
+// Achse dazu mit Varianten: Werte prüfen — leere zählen nicht —, nicht eindeutig → Warnung, nächste Achse ist Pflicht, so lange
 // bis die Kombination eindeutig ist; dann alle zufügen oder abbrechen
 const wiz = ref(null)   // { axes: [...], dupes: [{ combo, n }], empty: n, next: '' }
 async function axisCheck(axes) {
@@ -701,12 +698,12 @@ async function axisAdd() {
   try { const r = await axisCheck(axes); wiz.value = { axes, ...r, next: '' } } catch (e) { store.toast(e.message) }
 }
 async function axisCommit() { if (!wiz.value || wiz.value.dupes.length) return; const axes = wiz.value.axes; wiz.value = null; await setAxes(axes) }
-// nur Attribute, die an den Varianten gelten (Taloan, 20.09.): Gruppen am Pfad (node.groups), Attribut an der Variante erlaubt
+// nur Attribute, die an den Varianten gelten: Gruppen am Pfad (node.groups), Attribut an der Variante erlaubt
 const atVariant = computed(() => { const s = new Set(); for (const g of node.value?.groups ?? []) { const def = model.value?.groups.find(x => x.key === g.key); if (def?.activeFrom && def.activeFrom !== 'group' && def.activeFrom !== 'product' && def.activeFrom !== 'variant') continue; for (const k of g.attributes ?? []) s.add(k) } return s })
 const axisChoices = computed(() => (model.value?.attributes ?? []).filter(a => ['enum', 'text', 'integer'].includes(a.type) && !a.multiple && !(node.value?.axes ?? []).includes(a.key) && atVariant.value.has(a.key) && (!a.levels || a.levels.includes('variant')))
   .sort((a, b) => (a.type === 'enum' ? 0 : 1) - (b.type === 'enum' ? 0 : 1) || (L(a.label) ?? a.key).localeCompare(L(b.label) ?? b.key, 'de')))
 function attachAdd() { const g = addGroup.value; if (!g) return; addGroup.value = ''; attach([...node.value.attachedGroups, g]) }
-// Kategorien gibt es in der Oberfläche nicht mehr (Taloan, 17.09.): kein zweiter Baum — ein Knoten in mehreren Ästen wird ein
+// Kategorien gibt es in der Oberfläche nicht mehr: kein zweiter Baum — ein Knoten in mehreren Ästen wird ein
 // „Symlink“, Kanalbäume (Web, Print) werden eigene, rein logische Bäume. Die Einträge CategoryAssigned/Removed bleiben (Journal).
 function toggleRelease(channel, locale) {
   const q = `channel=${encodeURIComponent(channel)}` + (locale ? `&locale=${encodeURIComponent(locale)}` : '')
@@ -715,7 +712,7 @@ function toggleRelease(channel, locale) {
 function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
 async function retire() {
   const kids = node.value.children
-  // immer fragen (Taloan: der 🗑 oben fragte gar nicht) — eigener Dialog statt window.confirm
+  // immer fragen — eigener Dialog statt window.confirm
   const label = tree.byId.get(props.id)?.label ?? props.id
   const b = tree.below(props.id)
   if (!await dialog.confirm({ title: t_('{0} {1} zurückziehen?', [icon(node.value.role), label]), warn: b.total ? t_('Mit allen {0} Knoten darunter: {1}', [b.total, b.summary]) : '', list: b.names, ok: b.total ? t_('🗑 {0} Knoten zurückziehen', [b.total + 1]) : t_('🗑 Zurückziehen'), danger: true })) return
@@ -780,11 +777,11 @@ function cellMenu(e, def, col, block) {
     </div>
 
     <div class="scroll" v-if="model">
-    <!-- Alles rollt mit, die Bänder kleben oben (sticky) — nichts verschwindet hinter einem festen Kopf (Taloan, 17.09.).
+    <!-- Alles rollt mit, die Bänder kleben oben (sticky) — nichts verschwindet hinter einem festen Kopf.
          Die Sicht (Sprachen, Kanal, Attributsicht, Anordnung) gehört zum Abschnitt Attribute — darum unter dessen Band. -->
     <h2 class="band" @click="toggle('attributes')"><span class="caret">{{ open('attributes') ? '▾' : '▸' }}</span>{{ $t("▤ Attribute") + ' ' }}<span class="muted">{{ $t("· {0} Gruppen · {1} Attribute", [blocks.length, blocks.reduce((n, b) => n + b.defs.length, 0)]) }}</span></h2>
     <template v-if="open('attributes')">
-    <!-- Leiste in drei Gruppen (Taloan, 20.09.): WAS gezeigt wird (Sprachen, Kanal, Sicht, Filter, Suche) · WIE es angeordnet ist (flach/Reiter) · WIE es beschriftet ist (Namen) -->
+    <!-- Leiste in drei Gruppen: WAS gezeigt wird (Sprachen, Kanal, Sicht, Filter, Suche) · WIE es angeordnet ist (flach/Reiter) · WIE es beschriftet ist (Namen) -->
     <div class="toolbar view">
       <MatrixPicker :model-value="store.viewCells" @update:model-value="setCells" :locales="locales" :channels="channels" :master-locale="master" :master-channel="masterChannel" />
       <span class="sep">·</span>
@@ -836,7 +833,7 @@ function cellMenu(e, def, col, block) {
             </td>
           </tr>
           <template v-for="def in b.defs" :key="def.key">
-          <!-- Zwischenüberschrift innerhalb einer Gruppe (Taloan, 22.09.2026: ETIM nach Klassen) -->
+          <!-- Zwischenüberschrift innerhalb einer Gruppe -->
           <tr v-if="def.divider" class="sub-row"><td class="sub" :colspan="columns.length + 1">{{ def.divider }}</td></tr>
           <tr v-else-if="def.type === 'formula' || def.type === 'template'">
             <td class="attr" :title="def.key + (def.type === 'template' ? ' ' + $t('— Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut') : ' ' + $t('— Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet'))"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span></div></td>
@@ -995,7 +992,7 @@ function cellMenu(e, def, col, block) {
               <button class="x" @click="wfHistory(w)" :title="$t('Verlauf anzeigen')">≡</button>
             </td>
           </tr>
-          <!-- Workflow je Sprache (Taloan, 22.09.): eine Zeile je Sprache — Französisch in Korrektur, Deutsch freigegeben -->
+          <!-- Workflow je Sprache: eine Zeile je Sprache — Französisch in Korrektur, Deutsch freigegeben -->
           <tr v-if="w.perLocale">
             <td class="attr muted" :title="$t('Dieser Workflow läuft je Sprache: jede Sprache geht ihren eigenen Weg, und die Wirkung eines Schritts (Freigabe) trifft nur sie.')">{{ $t("🗣 je Sprache") }}</td>
             <td><WorkflowLocales :wf="w" @step="(loc, t) => wfStep(w, t, loc)" @clear="loc => wfClear(w, loc)" /></td>
@@ -1004,7 +1001,7 @@ function cellMenu(e, def, col, block) {
         </tbody></table>
         </template>
       </div>
-      <!-- Bänder der Plugins (nodeBands, Taloan 22.09.): ETIM-Stand u. a. — beim Gegenstand, nicht im Plugin -->
+      <!-- Bänder der Plugins (nodeBands): ETIM-Stand u. a. — beim Gegenstand, nicht im Plugin -->
       <PluginBands v-if="node.role !== 'rubric'" :id="id" :role="node.role" />
       <div class="section" v-if="node.role !== 'group' && node.role !== 'rubric'">
         <h2 @click="toggle('releases')" :title="$t('Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig heisst keine Freigabe.')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>{{ $t("✓ Freigaben") }}</h2>
@@ -1108,7 +1105,7 @@ function cellMenu(e, def, col, block) {
 .grp { display: inline-flex; align-items: center; gap: 4px; }
 /* Filter-Dropdown: leuchtet, wenn ein Filter wirkt */
 select.on { color: var(--accent); border-color: var(--accent); }
-/* Pfad bricht nicht um — wird er zu lang, schrumpft die Schrift (fitPath), notfalls Ellipse an den Gliedern (Taloan) */
+/* Pfad bricht nicht um — wird er zu lang, schrumpft die Schrift (fitPath), notfalls Ellipse an den Gliedern */
 .path { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
 .path .crumb, .path h1 { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .path .crumb, .path h1 { flex: 0 1 auto; }
@@ -1116,13 +1113,13 @@ select.on { color: var(--accent); border-color: var(--accent); }
 .crumb { color: var(--muted); }
 .crumb:hover { color: var(--accent); }
 .meta { font-size: 12px; min-height: 28px; }
-/* Sicht-Zeile klebt unter dem Band, damit Sprachen, Sicht und Suchfeld beim Rollen bleiben (Taloan) */
+/* Sicht-Zeile klebt unter dem Band, damit Sprachen, Sicht und Suchfeld beim Rollen bleiben */
 .view { gap: 4px; font-size: 12px; min-height: 30px; height: 31px; box-sizing: border-box; flex-wrap: nowrap; overflow: hidden; position: sticky; top: 26px; z-index: 3; background: var(--pane); }
 /* Mastersprache: fett und in Akzentfarbe — in der Sicht und im Spaltenkopf */
 .view-chip.master { font-weight: 700; }
 th.master { color: var(--accent); font-weight: 700; }
 .view select, .view button { font-size: 12px; padding: 1px 6px; }
-/* Reiter: einzeilig, klein, umbrechend — mit Echtdaten sind es zwanzig und mehr (Taloan, 17.09.) */
+/* Reiter: einzeilig, klein, umbrechend — mit Echtdaten sind es zwanzig und mehr */
 .tabs { display: flex; flex-wrap: wrap; gap: 2px; padding: 4px 8px 0; border-bottom: 1px solid var(--line); background: var(--bg); }
 .tabbtn { border: 1px solid var(--line); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--bg); color: var(--muted); padding: 1px 8px; font-size: 12px; line-height: 18px; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .tabbtn .n { font-size: 10px; }
@@ -1130,7 +1127,7 @@ th.master { color: var(--accent); font-weight: 700; }
 .tabbtn.on { background: var(--pane); color: var(--accent); border-color: var(--accent); }
 .tabbtn.locked { opacity: .6; }
 .cell-box.disabled.ro { background: none; color: var(--muted); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* Pflegewert im Publikationsbaum: lesbar, nicht schraffiert */
-/* Abschnitte des Knotens: dieselbe Stufe wie ein Gruppenkopf im Gitter — Band in Akzentfarbe mit Oberkante (Taloan, 17.09.) */
+/* Abschnitte des Knotens: dieselbe Stufe wie ein Gruppenkopf im Gitter — Band in Akzentfarbe mit Oberkante */
 .section { padding: 0 8px 10px; border-top: 0; }
 .relblock { margin-bottom: 8px; }
 .section.over { outline: 2px dashed var(--accent); outline-offset: -4px; }
@@ -1159,7 +1156,7 @@ table.values tr.chan th { top: 57px; }   /* Band 26 + Sicht-Zeile 31 */
 table.values tr.loc th { top: 80px; }    /* darunter die Sprachzeile (Kanalzeile 23) */
 table.values tr.chan th { text-align: center; height: 23px; box-sizing: border-box; border-bottom: 1px solid var(--line); }
 table.values tr.chan th:first-child { text-align: left; }
-/* Gruppenköpfe (Taloan, 17.09.): eine Stufe unter der Abschnittsüberschrift, darum nicht dasselbe Band —
+/* Gruppenköpfe: eine Stufe unter der Abschnittsüberschrift, darum nicht dasselbe Band —
    Zellton mit Akzentkante links, Name in Akzentfarbe; gesperrte zurückgenommen (gedämpft, 🔒). */
 .cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
 .cell-box.formula .res { font-weight: 600; }
@@ -1174,13 +1171,13 @@ table.values tr.chan th:first-child { text-align: left; }
 .group-row.locked td:first-child { border-left-color: var(--line); }
 .group-row.locked .warn { color: var(--muted); font-weight: 400; }
 td.attr { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-/* technischer Key neben der Bezeichnung: abgegraut, Schreibmaschine (Taloan) */
+/* technischer Key neben der Bezeichnung: abgegraut, Schreibmaschine */
 td.attr .key { font-family: var(--mono); font-size: 11px; margin-left: 6px; flex: 0 0 auto; }
-/* Namenszelle als Zeile: Bezeichnung darf mit Ellipse enden, der Key nie (Taloan: nicht raten) */
-/* die Zelle bleibt Tabellenzelle (sonst stimmen die Zeilenhöhen nicht mehr, Taloan) — der Flex-Kasten ist ein Div darin */
+/* Namenszelle als Zeile: Bezeichnung darf mit Ellipse enden, der Key nie */
+/* die Zelle bleibt Tabellenzelle (sonst stimmen die Zeilenhöhen nicht mehr) — der Flex-Kasten ist ein Div darin */
 td.attr .nm { display: flex; align-items: center; gap: 4px; min-width: 0; }
 td.attr .lbl { flex: 0 1 auto; min-width: 2em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* ★ Name im Baum: hohl = nicht gesetzt, blau = geerbt (von oben), gelb = hier gesetzt, halb durchsichtig = gesetzt, gilt hier nicht (Taloan, 17.09.) */
+/* ★ Name im Baum: hohl = nicht gesetzt, blau = geerbt (von oben), gelb = hier gesetzt, halb durchsichtig = gesetzt, gilt hier nicht */
 .star { border: 0; background: none; padding: 0 2px 0 0; color: var(--muted); opacity: .45; cursor: pointer; font-size: 12px; line-height: 1; }
 tr:hover .star { opacity: 1; }
 .star.idle { opacity: .5; }

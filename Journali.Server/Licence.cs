@@ -6,14 +6,13 @@ using System.Text.Json.Serialization;
 namespace Journali.Server;
 
 /// <summary>
-/// Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“ · „selbst wenn Team B über Team A abrechnet, kann A
-/// nichts limitieren“). Sie sagt, was diese Anlage darf — nicht der Administrator und schon gar nicht ein anderes Team:
+/// Die Lizenz. Sie sagt, was diese Anlage darf — nicht der Administrator und schon gar nicht ein anderes Team:
 /// <list type="bullet">
 /// <item><c>EntriesWeek</c>, <c>EntriesMonth</c>: wie viele Einträge ins Journal gehen dürfen.</item>
-/// <item><c>CountFrom</c>: ab wann gezählt wird (Taloan, 23.09.2026). Was davor im Journal steht, bleibt stehen und
+/// <item><c>CountFrom</c>: ab wann gezählt wird. Was davor im Journal steht, bleibt stehen und
 /// zählt nicht mehr mit — zurücksetzen lässt sich ein Journal nicht, aber eine Lizenz darf einen Anfang setzen.</item>
 /// Mehr steht nicht darin: was ein Team an KI verbraucht, geht an seinen Anbieter und nicht an journali — dort gibt
-/// es nichts zu lizenzieren (Taloan, 23.09.2026). Die Felder <c>AiTokensMonth</c> und <c>AiTokensDay</c> bleiben als
+/// es nichts zu lizenzieren. Die Felder <c>AiTokensMonth</c> und <c>AiTokensDay</c> bleiben als
 /// Altlast stehen und werden nicht mehr ausgewertet.
 /// </list>
 /// Sie liegt als <c>licence.json</c> im Datenverzeichnis, neben <c>auth.json</c> und <c>mail.json</c> — nie im Journal:
@@ -35,11 +34,11 @@ public sealed record Licence(
     Dictionary<string, TeamLimit>? Teams = null,
     /// <summary>Für welche Instanz sie gilt (Kennung) — leer heisst: für jede (Lizenzen von vor dem 23.09.2026).</summary>
     string? Instance = null,
-    /// <summary>Die Testlizenz einer neuen Instanz (Taloan, 24.09.2026) — von ihr selbst angelegt, nicht ausgestellt.</summary>
+    /// <summary>Die Testlizenz einer neuen Instanz — von ihr selbst angelegt, nicht ausgestellt.</summary>
     bool? Trial = null,
     string? Sig = null)
 {
-    /// <summary>Tarif Kostenlos (Taloan, 24.09.2026): ohne Lizenz, nach dem Test und wenn eine Lizenz abgelaufen ist.</summary>
+    /// <summary>Tarif Kostenlos: ohne Lizenz, nach dem Test und wenn eine Lizenz abgelaufen ist.</summary>
     public static readonly Licence Frei = new(Core.Projections.Tarife.Free.Key, null, null, Core.Projections.Limits.Week, Core.Projections.Limits.Month);
 
     /// <summary>Der Tarif dieser Lizenz — <c>plan</c> nennt ihn; Lizenzen von vor den Tarifen gelten als Kostenlos.</summary>
@@ -51,8 +50,7 @@ public sealed record Licence(
     internal static readonly JsonSerializerOptions Json = new() { WriteIndented = true, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull, PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 }
 
-/// <summary>Was ein einzelnes Team laut Lizenz darf (Taloan, 23.09.2026: „es kann entweder eigene Limits kaufen oder
-/// über ein anderes Team deren Limits mitnutzen“) — gekauft heisst: in der Lizenz genannt.</summary>
+/// <summary>Was ein einzelnes Team laut Lizenz darf — gekauft heisst: in der Lizenz genannt.</summary>
 public sealed record TeamLimit(int EntriesWeek = 0, int EntriesMonth = 0);
 
 public static class LicenceFile
@@ -71,8 +69,7 @@ public static class LicenceFile
         catch (Exception e) { return (Licence.Frei, false, "Lizenz nicht lesbar: " + e.Message); }
         if (lic is null) return (Licence.Frei, false, "Lizenz leer");
         if (lic.Abgelaufen) return (lic, false, $"abgelaufen am {lic.ValidUntil:dd.MM.yyyy}");
-        // Auf eine andere Instanz ausgestellt: es gilt Kostenlos (Taloan, 23.09.2026 — sonst würde aus einer
-        // Sicherung und drei Wiederherstellungen aus einer Lizenz vier)
+        // Auf eine andere Instanz ausgestellt: es gilt Kostenlos
         if (lic.Instance is { Length: > 0 } fuer && instanz is { Length: > 0 } hier && !string.Equals(fuer, hier, StringComparison.OrdinalIgnoreCase))
             return (Licence.Frei, false, $"ausgestellt für eine andere Instanz ({fuer})");
         var (ok, grund) = Pruefe(lic);
@@ -86,7 +83,7 @@ public static class LicenceFile
 }
 
 /// <summary>
-/// Eine Prüfung für alles, was der Lizenzgeber ausstellt — Lizenz und Schlüssel (Taloan, 23.09.2026). Nur, wenn ein
+/// Eine Prüfung für alles, was der Lizenzgeber ausstellt — Lizenz und Schlüssel. Nur, wenn ein
 /// öffentlicher Schlüssel hinterlegt ist (<c>JOURNALI_LICENCE_KEY</c>); ohne ihn: gelesen, aber ungeprüft.
 /// </summary>
 public static class Signatur
@@ -108,8 +105,7 @@ public static class Signatur
 }
 
 /// <summary>
-/// Hält die Lizenz zur Laufzeit. Sie steht in der Datenbank (Taloan, 23.09.2026: „jegliche eingespielte Lizenz kommt
-/// signiert und verschlüsselt in einen Container — die DB"), damit sie in jeder Sicherung mitfährt und nicht
+/// Hält die Lizenz zur Laufzeit. Sie steht in der Datenbank, damit sie in jeder Sicherung mitfährt und nicht
 /// verschwindet; eine Datei aus der Zeit davor wird beim ersten Lesen übernommen.
 /// </summary>
 public sealed class Licences(string dir, LicenceStore? store = null, Instanz? instanz = null)
@@ -120,8 +116,7 @@ public sealed class Licences(string dir, LicenceStore? store = null, Instanz? in
     public string? InstanzId => instanz?.Id;
 
     /// <summary>
-    /// Der Tag des ersten Eintrags im Journal (Taloan, 24.09.2026: „im Log ist ja der Tag des ersten Starts festgehalten —
-    /// wird in den automatisch erstellten Lizenzkey gebrannt und gesichert“). Gesetzt, legt eine Instanz ohne Lizenz
+    /// Der Tag des ersten Eintrags im Journal. Gesetzt, legt eine Instanz ohne Lizenz
     /// ihre Testlizenz selbst an: Enterprise für <see cref="Core.Projections.Tarife.TestMonate"/> Monate ab diesem Tag.
     /// Er kommt aus dem Journal und fährt mit jeder Sicherung mit — eine wiederhergestellte Instanz fängt den Test
     /// nicht von vorn an.
@@ -161,7 +156,7 @@ public sealed class Licences(string dir, LicenceStore? store = null, Instanz? in
             store.Schreib(JsonSerializer.Serialize(ausDatei.Lic, Licence.Json), "system");
             try { File.Delete(LicenceFile.PathOf(dir)); } catch { }
         }
-        // Gar keine Lizenz: die Instanz legt ihre Testlizenz an und hält sie fest wie jede andere (Taloan, 24.09.2026)
+        // Gar keine Lizenz: die Instanz legt ihre Testlizenz an und hält sie fest wie jede andere
         if (ausDatei.Lic == Licence.Frei && ErsterTag is { } ersterTag)
         {
             var ab = ersterTag() ?? DateOnly.FromDateTime(DateTime.Today);

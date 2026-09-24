@@ -1,4 +1,4 @@
-// Basis-Plugin da (Taloan, 19.09.2026): ✓ Datenqualität — Grundfunktion der Gruppe Datenanalyse und zugleich ihr Container:
+// Basis-Plugin da: ✓ Datenqualität — Grundfunktion der Gruppe Datenanalyse und zugleich ihr Container:
 // dpp, ppwr hängen daran (requires: ["da"]) und liefern Regeln über checks. Prüft einen Teilbaum gegen Regeln und zeigt die Befunde als Liste (Schwere, Knoten,
 // Attribut, Meldung) mit Sprung zum Knoten. Eingebaute Regeln unten; weitere Regeln liefern Plugins über `checks`
 // (ctx.checks). Welche Regeln laufen, steht im Journal (ctx.data „settings“ unter plugin:dq).
@@ -67,7 +67,7 @@ async function mount(root, ctx) {
   const rules = new Set(sett.rules)
   const state = { root: localStorage.getItem('journali.dq.root') || tree.rows.find(r => !r.parent)?.id, result: null, filter: 'all', q: '' }
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
-  // Teilbaum per Auswahlbaum (Taloan): Knopf zeigt den gewählten, Klick klappt den Baum darunter auf; ?node= aus dem Kontextmenü
+  // Teilbaum per Auswahlbaum: Knopf zeigt den gewählten, Klick klappt den Baum darunter auf; ?node= aus dem Kontextmenü
   const fromMenu = new URLSearchParams(location.search).get('node'); if (fromMenu && tree.byId.has(fromMenu)) { state.root = fromMenu; localStorage.setItem('journali.dq.root', fromMenu); history.replaceState(null, '', location.pathname) }
   const rootLabel = id => { const r = tree.byId.get(id); return r ? `${r.role === 'group' ? '▣' : r.role === 'product' ? '▦' : '◆'} ${r.label}` : t_('Teilbaum wählen') }
   const rootIn = el('button', { class: 'x', title: t_('Teilbaum wählen (Gruppe oder Produkt)') }, rootLabel(state.root))

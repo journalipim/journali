@@ -1,5 +1,4 @@
-// Einstellungen → B&R (Taloan, 24.09.2026: „dann doch wieder eine manuelle Backup-Funktion in die Einstellungen, und den
-// Restore-Tab umbenennen in B&R“). Sichern von Hand und zurück; der Fall, der schiefging: Einspielen brach mit
+// Einstellungen → B&R. Sichern von Hand und zurück; der Fall, der schiefging: Einspielen brach mit
 // „mit is not defined“ ab, weil die Auswahl, was mitgeht, fehlte.
 import test from 'node:test'
 import assert from 'node:assert/strict'

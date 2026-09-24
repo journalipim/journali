@@ -1,5 +1,4 @@
-// Status setzen — hier und, wenn gewünscht, im ganzen Teilbaum (Taloan, 23.09.2026: „das Setzen eines Status in einem
-// übergeordneten Knoten muss ähnlich funktionieren wie bei Windows: auch für Subitems? ja nein“).
+// Status setzen — hier und, wenn gewünscht, im ganzen Teilbaum.
 // Der Status selbst vererbt sich nicht (pflegestruktur 33) — er wird beim Setzen weitergereicht, einmal, als Stapel.
 // Ein Knoten ohne Kinder fragt nicht; gefragt wird nur, wo es etwas zu entscheiden gibt.
 import { tree } from './tree.js'

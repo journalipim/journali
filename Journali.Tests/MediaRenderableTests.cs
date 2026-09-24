@@ -5,7 +5,7 @@ using Journali.Core.Projections;
 namespace Journali.Tests;
 
 /// <summary>
-/// Wer bekommt eine Vorschau (Taloan, 23.09.2026: „bau die pdf thumbs“)? Bilder schon immer, ein PDF seit heute — seine
+/// Wer bekommt eine Vorschau? Bilder schon immer, ein PDF seit heute — seine
 /// erste Seite wird die Kachel. Ein PDF bleibt dabei ein Dokument: die Bibliothek gruppiert weiter nach
 /// <see cref="Medium.IsImage"/>, nur das Rechnen richtet sich nach <see cref="Medium.IsRenderable"/>.
 /// </summary>

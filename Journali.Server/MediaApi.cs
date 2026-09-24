@@ -52,7 +52,7 @@ public static class MediaApi
                 return sorted.Take(Math.Clamp(limit, 1, 5000)).Select(x => MediaView.Of(x.m, x.used)).ToList();
             }));
 
-        // Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren, wie ein interner Dateimanager“)
+        // Medienordner
         api.MapGet("/media/folders", (Catalog c) => c.With((_, _, _) =>
         {
             var count = c.Media.All.Values.Where(m => m.Folder is not null).GroupBy(m => m.Folder!).ToDictionary(g => g.Key, g => g.Count());
@@ -82,7 +82,7 @@ public static class MediaApi
             return Results.File(stream, m.Mime, enableRangeProcessing: true);
         });
 
-        // Vorschau (Taloan, 19.09.: Kacheln luden Originale): Schlüssel sha.thumb im Store; rechnet der erste Betrachter (MediaThumb.vue) und legt sie per PUT ab.
+        // Vorschau: Schlüssel sha.thumb im Store; rechnet der erste Betrachter (MediaThumb.vue) und legt sie per PUT ab.
         api.MapGet("/media/{id}/thumb", async (string id, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {
             var m = c.With((_, _, _) => c.Media.All.GetValueOrDefault(id));
@@ -121,7 +121,7 @@ public static class MediaApi
             return Results.Ok(new { ok = true });
         });
 
-        // Was im Speicher liegt (Taloan, 23.09.2026: „kann man hier nicht noch mehr Statistiken abfragen“). Zwei Zahlen
+        // Was im Speicher liegt. Zwei Zahlen
         // sehen ähnlich aus und sind es nicht: total sind alle Assets, renderable nur die, aus denen sich eine Vorschau
         // rechnen lässt (Bild oder PDF) — daran misst sich der Stand der Ableitungen.
         api.MapGet("/media/stats", (Catalog c) => c.With((_, _, _) =>
@@ -157,7 +157,7 @@ public static class MediaApi
             foreach (var (mid, sha, name) in all) if (!await store.ExistsAsync(sha, ct)) missing.Add(new { id = mid, sha256 = sha, name });
             return Results.Ok(new { total = all.Count, missing });
         });
-        // Kopierlauf zwischen Treibern (Taloan: Wechsel von Postgres nach S3 ohne neue Ids): alles aus `from` (Angabe wie JOURNALI_MEDIA), was hier fehlt
+        // Kopierlauf zwischen Treibern: alles aus `from` (Angabe wie JOURNALI_MEDIA), was hier fehlt
         api.MapPost("/media/copy", async (CopyRequest body, HttpRequest req, SwitchableMediaStore store, CancellationToken ct) =>
         {
             if (Actor(req) is null) return ActorMissing();
@@ -188,7 +188,7 @@ public static class MediaApi
                 var m = c.Media.All[entry.Stream];
                 return (View: MediaView.Of(m, 0), Existed: false);
             });
-            if (!result.Existed && result.View.Renderable) DeriveApi.Kick(c, runner, actor);   // Vorschauen rechnen lassen (Taloan: „muss alles bereitliegen“)
+            if (!result.Existed && result.View.Renderable) DeriveApi.Kick(c, runner, actor);   // Vorschauen rechnen lassen
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         }).DisableAntiforgery();
 
@@ -216,7 +216,7 @@ public static class MediaApi
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         });
 
-        // Einstellungen → Storage (Taloan, 19.09.): Treiber lesen (ohne Geheimnis), prüfen, speichern (media.json im Datenverzeichnis, nie im Journal)
+        // Einstellungen → Storage: Treiber lesen (ohne Geheimnis), prüfen, speichern (media.json im Datenverzeichnis, nie im Journal)
         api.MapGet("/media/store", async (SwitchableMediaStore store, Catalog c, CancellationToken ct) =>
         {
             var total = c.With((_, _, _) => c.Media.All.Count);
@@ -255,7 +255,7 @@ public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime
     bool Renderable = false, bool HasThumb = false)
 {
     /// <summary>Kachel: Bilder haben immer eine, ein PDF erst, wenn der derive-Job seine erste Seite gerechnet hat
-    /// (Taloan, 23.09.2026). Die Oberfläche fragt danach, statt aus dem Mime zu raten.</summary>
+    ///. Die Oberfläche fragt danach, statt aus dem Mime zu raten.</summary>
     public static MediaView Of(Medium m, int used) => new(m.Id, m.Sha256, m.Bytes, m.Mime, m.Name, m.IsImage, ValueView.Of(m).ToList(),
         m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor, m.Folder,
         m.IsRenderable, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset));

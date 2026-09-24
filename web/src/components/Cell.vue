@@ -1,7 +1,7 @@
 <script setup>
 // Eine Zelle mit Inline-Bearbeitung. Tab fokussiert; Klick öffnet mit dem Cursor
 // am Ende, Enter/F2 mit dem bisherigen Wert vorselektiert, Tippen hängt an den
-// bisherigen Wert an (überschreibt nie, Taloan 17.09.). Enter speichert, Esc
+// bisherigen Wert an (überschreibt nie). Enter speichert, Esc
 // verwirft, Tab speichert und springt weiter.
 import { ref, nextTick, watch, onUnmounted } from 'vue'
 import AiBar from './AiBar.vue'
@@ -14,17 +14,17 @@ const props = defineProps({
   origin: String,         // woher der geerbte Wert kommt (Anzeige im Tooltip)
   mark: String,           // kleines Zeichen rechts in der Zelle (⟳ = Übersetzung zu überarbeiten)
   markTitle: String,
-  markClick: Function,    // Klick auf das Zeichen (◌ = Master-Text als eigene Übersetzung übernehmen, Taloan 21.09.)
+  markClick: Function,    // Klick auf das Zeichen (◌ = Master-Text als eigene Übersetzung übernehmen)
   source: Object,         // Beleg am Wert (ValueSourced): { source, title, note, method, checkedAt, actor, stale } — ↗ in der Zelle, Klick öffnet die URL
   clickEdit: { type: Boolean, default: true },   // false (Tabelle): Klick markiert nur, Doppelklick bearbeitet
   node: String, locale: String, label: String,    // für ✦ KI im grossen Editor
-  suggest: Array,         // Ergänzung beim Tippen wie in Excel: Werte, die es in der Spalte schon gibt (Taloan, 20.09.); der Rest steht markiert, Enter nimmt ihn
+  suggest: Array,         // Ergänzung beim Tippen wie in Excel: Werte, die es in der Spalte schon gibt; der Rest steht markiert, Enter nimmt ihn
 })
 const emit = defineEmits(['save'])
 
 const editing = ref(false)
 const openMode = ref('edit')
-// Langer Text (Taloan): Enter/F2/Doppelklick öffnet einen grossen Editor statt der einzeiligen Eingabe
+// Langer Text: Enter/F2/Doppelklick öffnet einen grossen Editor statt der einzeiligen Eingabe
 const big = ref(false)
 const area = ref(null)
 const panelId = 'aip-' + Math.random().toString(36).slice(2, 8)   // Behälter für die KI-Leiste in diesem Editor
@@ -34,13 +34,13 @@ async function openBig() {
   big.value = true; await nextTick(); area.value?.focus()
 }
 function saveBig() { big.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value); nextTick(() => box.value?.focus()) }
-// Ergebnis der KI: ersetzen oder an der Schreibmarke ergänzen (Taloan, 22.09.)
+// Ergebnis der KI: ersetzen oder an der Schreibmarke ergänzen
 function fromAi({ text, mode }) {
   const t = area.value
   if (mode === 'insert' && t) { const i = t.selectionStart ?? draft.value.length, j = t.selectionEnd ?? i; draft.value = draft.value.slice(0, i) + text + draft.value.slice(j); return }
   draft.value = text
 }
-// Esc und Strg+Enter gelten im offenen grossen Editor, egal wo der Fokus steht (Taloan, 22.09.)
+// Esc und Strg+Enter gelten im offenen grossen Editor, egal wo der Fokus steht
 function onWinKey(e) {
   if (!big.value) return
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelBig() }

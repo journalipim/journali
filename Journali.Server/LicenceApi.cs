@@ -4,7 +4,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Die Lizenz ansehen und einspielen (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“). Sie ist kein Stammdatum,
+/// Die Lizenz ansehen und einspielen. Sie ist kein Stammdatum,
 /// das man pflegt — sie kommt von aussen und wird eingespielt; darum liegt sie als Datei im Datenverzeichnis und nicht
 /// im Journal. Lesen darf jeder, der lesen darf: die Grenzen betreffen alle. Einspielen: Recht <c>users</c>.
 /// </summary>
@@ -22,7 +22,7 @@ public static class LicenceApi
                 l.Plan, l.Holder, validUntil = roh.ValidUntil, l.EntriesWeek, l.EntriesMonth, l.CountFrom, l.AiTokensMonth, l.AiTokensDay,
                 geprueft = licences.Geprueft, grund = licences.Grund, abgelaufen = roh.Abgelaufen, ort = licences.Ort,
                 instanz = licences.InstanzId,
-                // der Tarif (Taloan, 24.09.2026): aus der Lizenz, der Test, und was für die ganze Instanz gilt
+                // der Tarif: aus der Lizenz, der Test, und was für die ganze Instanz gilt
                 tarif = new { key = l.Tarif.Key, label = l.Tarif.Label }, trial = roh.Trial == true, trialPlan = roh.Tarif.Label,
                 instanzTarif = new { key = t.Key, label = t.Label, pubTrees = t.PubTrees == Tarife.Ohne ? (int?)null : t.PubTrees },
                 pubTrees = baeume,

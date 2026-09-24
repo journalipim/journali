@@ -1,4 +1,4 @@
-// Der grosse Texteditor und seine KI-Leiste (Taloan, 22.09.2026). Geprüft wird, was schiefging: die Leiste klappte nach jedem
+// Der grosse Texteditor und seine KI-Leiste. Geprüft wird, was schiefging: die Leiste klappte nach jedem
 // Lauf zu, sie legte sich über den Text, Esc warf den Knoten raus, das Ergebnis ersetzte immer alles.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -29,7 +29,7 @@ test('KI-Leiste: öffnet, bleibt nach einem Lauf offen und steht im Fluss (verde
   const bar = document.querySelector('.aibar')
   assert.ok(bar, 'nach dem Klick ist die Leiste da')
   assert.ok(!floats(bar), 'die Leiste steht im Fluss — sie schiebt den Text, statt ihn zu verdecken')
-  // wo sie hängt, nicht nur wie sie liegt (Taloan, 22.09.: „und das hast du getestet?“) — im Werkzeugbalken quetscht sie die Knöpfe
+  // wo sie hängt, nicht nur wie sie liegt — im Werkzeugbalken quetscht sie die Knöpfe
   assert.ok(!bar.closest('.toolbar'), 'die Leiste hängt NICHT im Werkzeugbalken')
   const tb = document.querySelector('.editor .toolbar.fmt')
   assert.ok(tb && (tb.compareDocumentPosition(bar) & 4) !== 0, 'sie steht hinter dem Werkzeugbalken, also darunter')
@@ -40,7 +40,7 @@ test('KI-Leiste: öffnet, bleibt nach einem Lauf offen und steht im Fluss (verde
   for (const s of ['überarbeiten', 'Verbessern', 'Kürzen', 'Ausführlicher', 'erzeugen', '@ Liste aus Produktdaten', '@ Marketingtext sachlich', '@ Marketingtext emotional', '@ Marketingtext vergleichend', 'Ergebnis', 'Text ersetzen', 'Am Cursor ergänzen'])
     assert.ok(t.includes(s), `„${s}“ fehlt in der Leiste: ${t}`)
   await domButton('Verbessern').trigger(); await flushPromises()
-  assert.ok(document.querySelector('.aibar'), 'nach dem Lauf bleibt die Leiste offen (Taloan, 22.09.)')
+  assert.ok(document.querySelector('.aibar'), 'nach dem Lauf bleibt die Leiste offen')
   w.unmount()
 })
 
@@ -65,7 +65,7 @@ test('Esc schliesst den Editor, auch wenn der Fokus nicht darin steht', async ()
   document.body.focus?.()
   press('Escape')                     // Fokus irgendwo — der Editor muss trotzdem zugehen
   await flushPromises()
-  assert.ok(!document.querySelector('.overlay'), 'nach Esc ist der Editor zu (Taloan, 22.09.: sonst verlässt Esc den Knoten)')
+  assert.ok(!document.querySelector('.overlay'), 'nach Esc ist der Editor zu')
   w.unmount()
 })
 

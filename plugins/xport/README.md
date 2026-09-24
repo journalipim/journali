@@ -43,7 +43,7 @@ Je Produkt: `id`, `role`, `sku`, `name`, `status`, `parentId`, `path` (Liste id/
 aus dem Profil und, wenn das Plugin etim wirksam ist, aus der ETIM-Klasse am Knoten;
 dazu `etim.classCode`), `children` (eine Ebene, ohne Kinder), `axes`.
 
-## Quelle: Publikationsbaum oder Teilbaum (Taloan, 22.09.2026)
+## Quelle: Publikationsbaum oder Teilbaum
 
 Ein BMEcat ist eine Publikationsstrecke: das Profil nennt einen **Publikationsbaum** (`pub`) —
 es gehen nur ausgeleitete Produkte hinaus (Freigabe für den Kanal, Markt, Stand;

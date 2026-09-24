@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Eindeutig als Merkmal (Taloan, 21.09.2026: „SKU ist ein Attribut wie jedes andere — Kennung raus, alles über eindeutig“): beliebig
+// Eindeutig als Merkmal: beliebig
 // viele Attribute, jedes für sich eindeutig; die eindeutigen Werte sind die Schlüssel eines Knotens (keys, Name ohne ★, Kopie ohne sie).
 public class UniqueTests
 {

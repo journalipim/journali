@@ -5,8 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// journali-Token (Taloan, 23.09.2026: „durch die Nutzung von journali werden journali tokens verbraucht, bis hin zu den
-// 20/100 limits“ · „dadurch werden die journali tokens auf das andere team mit angerechnet“). Gezählt wird je Urheber;
+// journali-Token. Gezählt wird je Urheber;
 // wem das zugerechnet wird, sagt sein Team — und dessen Zahler. KI ist ein anderes Thema und wird hier nicht begrenzt.
 public class JournaliTokenTests
 {
@@ -16,7 +15,7 @@ public class JournaliTokenTests
         c.With((_, _, write) =>
         {
             write("t", Teams.Stream + "es", Types.TeamDefined, new TeamDefined("Spanien", KeysFrom: Model.InitTeam, Managers: ["pablo"]), null);
-            write("t", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true, Model.InitTeam), null);
+            write("t", Users.Stream + "u1", Types.UserDefined, new UserDefined("U1", null, "admin", true, Model.InitTeam), null);
             write("t", Users.Stream + "pablo", Types.UserDefined, new UserDefined("Pablo", null, "editor", true, "es"), null);
             return 0;
         });
@@ -38,11 +37,11 @@ public class JournaliTokenTests
     public void Gezaehlt_wird_je_Urheber()
     {
         var c = Welt();
-        Pflege(c, "taloan", 3);
+        Pflege(c, "u1", 3);
         Pflege(c, "pablo", 5);
-        Assert.Equal(3, Summe(c, "taloan"));
+        Assert.Equal(3, Summe(c, "u1"));
         Assert.Equal(5, Summe(c, "pablo"));
-        Assert.Equal(8, Summe(c, "taloan", "pablo"));
+        Assert.Equal(8, Summe(c, "u1", "pablo"));
         Assert.Equal(0, Summe(c, "niemand"));
     }
 
@@ -56,7 +55,7 @@ public class JournaliTokenTests
         var aufRechnung = c.With((_, _, _) => c.Teams.Dependents(Model.InitTeam)
             .SelectMany(t => c.Users.All.Values.Where(u => u.Team == t)).Select(u => u.Key).ToHashSet());
         Assert.Contains("pablo", aufRechnung);
-        Assert.Contains("taloan", aufRechnung);
+        Assert.Contains("u1", aufRechnung);
         Assert.Equal(4, Summe(c, aufRechnung.ToArray()));
     }
 
@@ -76,8 +75,8 @@ public class JournaliTokenTests
     public void Ansehen_zaehlt_nicht_mit()
     {
         var c = Welt();
-        var vorher = Summe(c, "taloan");
-        c.With((_, _, write) => write("taloan", Model.LocaleStream + "fr", Types.LocaleDefined, new LocaleDefinition("fr", "Französisch"), null).Number);
-        Assert.Equal(vorher, Summe(c, "taloan"));   // Modellpflege ist kein Tagesgeschäft
+        var vorher = Summe(c, "u1");
+        c.With((_, _, write) => write("u1", Model.LocaleStream + "fr", Types.LocaleDefined, new LocaleDefinition("fr", "Französisch"), null).Number);
+        Assert.Equal(vorher, Summe(c, "u1"));   // Modellpflege ist kein Tagesgeschäft
     }
 }

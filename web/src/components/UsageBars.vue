@@ -1,10 +1,9 @@
 <script setup>
 // Zwei Balken — Woche und Monat — und darunter der Verlauf. Ein Balken ist ein Füllstand und füllt sich mit dem,
-// was genutzt wurde (Taloan, 23.09.2026); was noch verfügbar ist, steht als Zeile darüber und im Tooltip (Taloan, 22.09.2026: „ein Tageslimit
-// ist Unsinn, macht man 3 Testimporte und muss aufhören“; „wir machen Woche und Monat“). Der Tag wird trotzdem
+// was genutzt wurde; was noch verfügbar ist, steht als Zeile darüber und im Tooltip. Der Tag wird trotzdem
 // gezählt: er steht als Zahl in der Leiste und ist im Verlauf die feinste Auflösung.
 // Gezählt wird nur das Tagesgeschäft — Import, Pflege, Ausleitung. Modellieren, Strukturieren, Kataloge und Betrieb
-// stehen als graue Zahl daneben (Taloan, 22.09.: „Datenmodellierung … würde ich nicht zählen“). Gezählt wird, was ins Journal geht; Lesen und Exportieren kosten nichts.
+// stehen als graue Zahl daneben. Gezählt wird, was ins Journal geht; Lesen und Exportieren kosten nichts.
 // Die Zahlen kommen aus /api/usage — das Abbild zählt je Tag mit, auch rückwirkend für alles, was schon im Journal steht.
 import { computed } from 'vue'
 import { t } from '../i18n.js'
@@ -12,7 +11,7 @@ import { t } from '../i18n.js'
 const props = defineProps({ usage: Object, history: Array, period: { type: String, default: 'day' }, busy: Boolean })
 const emit = defineEmits(['period'])
 
-const PARTS = [['week', t('▤ Woche')], ['month', t('▦ Monat')]]   // kein Tageslimit (Taloan, 22.09.2026)
+const PARTS = [['week', t('▤ Woche')], ['month', t('▦ Monat')]]   // kein Tageslimit
 const HIST = [['day', '◷ Tag'], ['week', t('▤ Woche')], ['month', t('▦ Monat')]]
 const n = v => v >= 2147483647 ? '∞' : (v ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
 const frei = p => p?.max >= 2147483647 ? p.max : Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
@@ -65,7 +64,7 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
 
 <style scoped>
 .usage { max-width: 620px; }
-/* feste Spalten: die Zahlen springen nicht, wenn sie wachsen (Taloan, 22.09.) */
+/* feste Spalten: die Zahlen springen nicht, wenn sie wachsen */
 .bar-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
 .lbl { width: 80px; flex: none; font-size: 12px; }
 .track { flex: 1; height: 10px; background: var(--line); border-radius: 5px; overflow: hidden; }
@@ -76,7 +75,7 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
 .num.pos { color: var(--pos); } .num.warn { color: var(--warn); } .num.neg { color: var(--neg); }
 .chips { display: flex; align-items: center; gap: 4px; margin: 10px 0 4px; }
 .grow { flex: 1; }
-/* Verlauf: feste Höhe mit Scrollbar-Platz, damit der Abschnitt nicht springt (Taloan, 22.09.) */
+/* Verlauf: feste Höhe mit Scrollbar-Platz, damit der Abschnitt nicht springt */
 .hist { height: 180px; overflow-y: auto; scrollbar-gutter: stable; border-top: 1px solid var(--line); padding-top: 4px; }
 .hrow { display: flex; align-items: center; gap: 8px; padding: 1px 0; }
 .hlbl { width: 120px; flex: none; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

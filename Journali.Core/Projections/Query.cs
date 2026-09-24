@@ -4,18 +4,18 @@ using Journali.Core.Entries;
 namespace Journali.Core.Projections;
 
 /// <summary>
-/// Suche mit Bedingungen (docs/pflegestruktur.md, Taloan 17.09.2026): eine Zeile aus
+/// Suche mit Bedingungen (docs/pflegestruktur.md): eine Zeile aus
 /// Chips <c>key:value</c> und freiem Text, alles UND. Englische Schlüssel:
 /// <c>attr:function</c> (eigener Wert da) · <c>attr:function=*sku*</c> (Muster, * beliebig) ·
 /// <c>attr:function=</c> (kein eigener Wert) · <c>empty:name/en</c> (auch geerbt nichts) ·
 /// <c>incomplete:web</c> · <c>role:variant</c> · <c>status:active</c> · <c>group:logistics</c> (gilt hier) ·
-/// <c>under:&lt;id&gt;</c> · <c>by:Taloan</c> · <c>since:2026-09-10</c> · Text wie bisher.
-/// Medien und Relationen (Taloan, 18.09.): <c>media:any</c> (hat Medien) · <c>media:image</c> / <c>media:document</c> (Relationstyp) ·
+/// <c>under:&lt;id&gt;</c> · <c>by:<name></c> · <c>since:2026-09-10</c> · Text wie bisher.
+/// Medien und Relationen: <c>media:any</c> (hat Medien) · <c>media:image</c> / <c>media:document</c> (Relationstyp) ·
 /// <c>media:*.pdf</c> oder <c>media:logo</c> (Name des Mediums, * beliebig) · <c>rel:any</c> / <c>rel:accessory</c> (Relation dieses Typs, ein- oder ausgehend) ·
 /// <c>rel:accessory=250R</c> / <c>rel:any=p-0f58</c> (der Partner der Relation: Name, SKU, Id oder Wert enthält …, * beliebig).
-/// <c>folder:Wakol</c> (Taloan, 21.09.: ein Medium des Knotens liegt in diesem Medienordner oder darunter — Name mit *, Pfad mit /, oder Id) · <c>folder:none</c> (ohne Ordner).
+/// <c>folder:Wakol</c> · <c>folder:none</c> (ohne Ordner).
 /// <c>wf:review</c> / <c>wf:translation=to_translate</c> (27): Knoten in diesem Workflow-Zustand.
-/// Ein Minus davor verneint (Taloan: „das Gegenteil“): <c>-empty:function</c>, <c>-role:variant</c>, <c>-Wort</c>.
+/// Ein Minus davor verneint: <c>-empty:function</c>, <c>-role:variant</c>, <c>-Wort</c>.
 /// </summary>
 public sealed class Query
 {
@@ -85,7 +85,7 @@ public sealed class Query
                 {
                     // media:any | media:<relationstyp> | media:<namensmuster> — Medien hängen über Relationen am Knoten (Ziel m-…)
                     if (relations is null || media is null) return (false, null);
-                    // ein Stopp (stop=true) ist kein Medium des Knotens — dort steht es gerade NICHT zur Verfügung (Taloan, 18.09.)
+                    // ein Stopp (stop=true) ist kein Medium des Knotens — dort steht es gerade NICHT zur Verfügung
                     var mine = relations.From(n.Id).Where(r => media.All.ContainsKey(r.To) && !(r.Values.TryGetValue(new Axis("stop", null, null), out var st) && st == "true")).Select(r => (Rel: r, Medium: media.All[r.To])).ToList();
                     if (mine.Count == 0) return (false, null);
                     if (value.Length == 0 || value.Equals("any", StringComparison.OrdinalIgnoreCase)) { hit ??= $"🖼 {mine.Count} Medien"; break; }

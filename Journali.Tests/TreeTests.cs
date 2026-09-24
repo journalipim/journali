@@ -5,7 +5,7 @@ using Journali.Core.Projections;
 namespace Journali.Tests;
 
 // Kern ohne Server: Journal im Speicher füllen, Abbilder bauen, ablesen. Die Fälle sind die, die in der Bedienung
-// schiefgingen (Taloan, 21.09.: „Use Cases durchtesten — dafür bist du da“).
+// schiefgingen.
 public class TreeTests
 {
     private static (MemoryJournal journal, ModelCatalog model, Tree tree) Build(Action<MemoryJournal> fill)
@@ -25,7 +25,7 @@ public class TreeTests
     public void Geltung_am_Vater_gesetzt_erbt_das_Produkt_und_die_Variante()
     {
         // Batteriepass (dpp_scope = [battery], vererbbar, Liste) an der Gruppe „HP EliteBook“ — das Produkt darunter
-        // sagt „battery“, die Variante auch, und beide wissen, woher (Taloan, 21.09.: Prüfung sagte „gilt hier nicht“)
+        // sagt „battery“, die Variante auch, und beide wissen, woher
         var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product); var v = Ids.New(Roles.Variant);
         var (_, model, tree) = Build(j =>
         {
@@ -95,7 +95,7 @@ public class TreeTests
     [Fact]
     public void Platz_unter_den_Geschwistern_kommt_aus_NodeOrdered()
     {
-        // Reihenfolge per Ziehen (Taloan, 21.09.): NodeOrdered setzt den Platz, ohne Eintrag bleibt er leer (alphabetisch in der Oberfläche)
+        // Reihenfolge per Ziehen: NodeOrdered setzt den Platz, ohne Eintrag bleibt er leer (alphabetisch in der Oberfläche)
         var root = Ids.New(Roles.Rubric); var a = Ids.New(Roles.Rubric); var b = Ids.New(Roles.Rubric);
         var (journal, _, tree) = Build(j =>
         {
@@ -114,7 +114,7 @@ public class TreeTests
     [Fact]
     public void Gruppe_an_der_Rubrik_gilt_fuer_die_Verweise_darunter()
     {
-        // Web-Redakteur hängt „seo“ an seinen Baum (Taloan, 21.09.): das verwiesene Produkt und seine Variante bekommen die Gruppe — mit Herkunft Rubrik;
+        // Web-Redakteur hängt „seo“ an seinen Baum: das verwiesene Produkt und seine Variante bekommen die Gruppe — mit Herkunft Rubrik;
         // ein zweiter Baum ohne die Gruppe (Print) kennt sie nicht; die Pflegegruppe kommt zuerst
         var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product); var v = Ids.New(Roles.Variant);
         var web = Ids.New(Roles.Rubric); var laptops = Ids.New(Roles.Rubric); var print = Ids.New(Roles.Rubric);
@@ -182,7 +182,7 @@ public class TreeTests
     [Fact]
     public void Fallback_Sprache_mit_Wert_zaehlt_als_vollstaendig_Master_nicht()
     {
-        // Taloan, 21.09.: „wenn eine Fallback-Sprache eingerichtet ist und die einen Wert hat, darf das kein Blocker sein“ — fr-ch → fr-fr zählt;
+        // „wenn eine Fallback-Sprache eingerichtet ist und die einen Wert hat, darf das kein Blocker sein“ — fr-ch → fr-fr zählt;
         // der Master (de) zählt nicht (17.09.: eine fehlende Übersetzung ist fehlend, auch wenn der Master sie hätte)
         var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product); var v = Ids.New(Roles.Variant);
         var (_, model, tree) = Build(j =>
@@ -205,7 +205,7 @@ public class TreeTests
     [Fact]
     public void Beleg_pending_bleibt_auch_ohne_Wert()
     {
-        // „angefragt bei herbert bis 2026-10-04“ am leeren Wert — der Beleg steht, der Wert nicht (Taloan, 21.09.: „wo ist der Herbert“)
+        // „angefragt bei herbert bis 2026-10-04“ am leeren Wert — der Beleg steht, der Wert nicht
         var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product); var v = Ids.New(Roles.Variant);
         var (_, _, tree) = Build(j =>
         {
@@ -223,7 +223,7 @@ public class TreeTests
     [Fact]
     public void Beleg_pending_bleibt_auch_ohne_Quelle()
     {
-        // ✓ ohne „bei wem“ (falscher Klick, Taloan 21.09.: „was, wenn man mal was Falsches anklickt“): die Anfrage bleibt, die Quelle ist leer —
+        // ✓ ohne „bei wem“ (falscher Klick): die Anfrage bleibt, die Quelle ist leer —
         // vorher nahm die leere Quelle den Beleg stumm weg, die Oberfläche zeigte trotzdem ⏳
         var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product);
         var (journal, _, tree) = Build(j =>

@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-d92a6a72] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-d92a6a72]:hover { color: var(--neg);\n}\n.sources[data-v-d92a6a72] { gap: 4px;\n}\n.form[data-v-d92a6a72] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-d92a6a72] { display: flex; gap: 4px;\n}\n.src .node[data-v-d92a6a72] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-d92a6a72] { background: var(--accent-soft);\n}\n.src .node.current[data-v-d92a6a72], .src .node[data-v-d92a6a72]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-d92a6a72] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-d92a6a72] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-d92a6a72] { color: var(--muted);\n}\n.node.product .icon[data-v-d92a6a72] { color: var(--accent);\n}\n.node.variant .icon[data-v-d92a6a72] { color: var(--warn);\n}\n.label[data-v-d92a6a72] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-d92a6a72] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-d92a6a72] { width: 100%;\n}\n.form-grid td[data-v-d92a6a72] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-d92a6a72]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-d92a6a72] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-d92a6a72] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-d92a6a72] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-d92a6a72] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\r\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-34165bad] { border: 0; background: none; color: var(--muted); padding: 0 4px;\n}\n.x[data-v-34165bad]:hover { color: var(--neg);\n}\n.sources[data-v-34165bad] { gap: 4px;\n}\n.form[data-v-34165bad] { padding: 6px 8px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px;\n}\n.row[data-v-34165bad] { display: flex; gap: 4px;\n}\n.src .node[data-v-34165bad] { display: flex; align-items: center; gap: 4px; height: 24px; white-space: nowrap; padding-right: 8px; outline: none;\n}\n.src .node.on[data-v-34165bad] { background: var(--accent-soft);\n}\n.src .node.current[data-v-34165bad], .src .node[data-v-34165bad]:focus { box-shadow: inset 2px 0 0 var(--accent);\n}\n.twisty[data-v-34165bad] { width: 12px; color: var(--muted); font-size: 11px; cursor: pointer;\n}\n.icon[data-v-34165bad] { width: 16px; text-align: center;\n}\n.node.group .icon[data-v-34165bad] { color: var(--muted);\n}\n.node.product .icon[data-v-34165bad] { color: var(--accent);\n}\n.node.variant .icon[data-v-34165bad] { color: var(--warn);\n}\n.label[data-v-34165bad] { overflow: hidden; text-overflow: ellipsis;\n}\n.count[data-v-34165bad] { margin-left: auto; font-size: 11px;\n}\n.form-grid[data-v-34165bad] { width: 100%;\n}\n.form-grid td[data-v-34165bad] { white-space: normal; vertical-align: middle; height: 30px; padding: 2px 4px;\n}\n.form-grid td[data-v-34165bad]:first-child { padding-left: 8px; white-space: nowrap;\n}\n.form-grid select[data-v-34165bad] { margin-right: 8px; min-width: 220px;\n}\n.val[data-v-34165bad] { max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;\n}\n.section[data-v-34165bad] { padding: 10px 8px; border-top: 1px solid var(--line);\n}\n.section h2[data-v-34165bad] { font-size: 12px; margin: 0 0 6px; color: var(--muted); font-weight: 600;\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -1112,7 +1112,7 @@ const _sfc_main = {
             min: 240,
             max: 800
           }, null, 8, ["modelValue"]),
-          createCommentVNode(" Der angeklickte Knoten: nur dann, sonst gehört der Platz dem Plan (Taloan, 17.09.) "),
+          createCommentVNode(" Der angeklickte Knoten: nur dann, sonst gehört der Platz dem Plan "),
           current.value ? (openBlock(), createElementBlock("div", _hoisted_19, [
             createElementVNode("div", _hoisted_20, [
               createElementVNode(
@@ -1143,7 +1143,7 @@ const _sfc_main = {
               }, "×", 8, _hoisted_22)
             ]),
             createElementVNode("div", _hoisted_23, [
-              createCommentVNode(" kein nacktes <template> hier: Vue 3 rendert es als echtes <template>-Element, dessen Inhalt unsichtbar ist (Taloan, 17.09.: „mittlere Spalte leer“) "),
+              createCommentVNode(" kein nacktes <template> hier: Vue 3 rendert es als echtes <template>-Element, dessen Inhalt unsichtbar ist "),
               createElementVNode("div", _hoisted_24, [
                 current.value.product_number ? (openBlock(), createElementBlock(
                   "span",
@@ -1866,7 +1866,7 @@ const _sfc_main = {
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-d92a6a72"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-34165bad"]]);
 const entry = {
   views: [{ path: "import", topic: "import", label: t("Solr"), icon: "⇩", component: View }]
 };

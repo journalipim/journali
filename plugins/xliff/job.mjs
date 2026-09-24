@@ -1,7 +1,7 @@
-// Plugin xliff als Job (Taloan, 21.09.2026): export — das Paket schnüren (Auftrag im Journal + XLIFF nach out/, Fächer des
+// Plugin xliff als Job: export — das Paket schnüren (Auftrag im Journal + XLIFF nach out/, Fächer des
 // Taskers, latest für die Agentur); import — übersetzte XLIFF-Dateien aus in/ zurückschreiben. Alles Datenthematische steht
 // im Profil (⇄ Übersetzung → 💾): Sprachen, Kanal, Umfang, Attribute, Teilbaum.
-// Der Zeitplan des Jobs ist der eine Auslöser (Taloan, 22.09.2026: „bei den meisten wöchentlich, bei anderen einmal nachts“),
+// Der Zeitplan des Jobs ist der eine Auslöser,
 // der Übergang „Version der Mastersprache“ der andere — beide rufen dasselbe.
 // Aufruf: node job.mjs <journali> <actor> export <profile> <dir> | node job.mjs <journali> <actor> import <profile> <source> [force]
 import fs from 'node:fs'

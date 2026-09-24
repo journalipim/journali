@@ -1,4 +1,4 @@
-// Umwandlung je Spalte (Taloan, 21.09.2026): jede Kette rein, Beispiele aus dem OpenDXP-Vergleich (Einheiten, Ja/Nein, Datum, Verbinden)
+// Umwandlung je Spalte: jede Kette rein, Beispiele aus dem Vergleich mit anderen Systemen (Einheiten, Ja/Nein, Datum, Verbinden)
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { apply, describe } from '../src/transform.js'
@@ -16,7 +16,7 @@ test('Wahrheitswert, Datum, Ersetzen, Aufteilen, Verbinden', () => {
   assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'vorhanden'), 'true')
   assert.equal(apply([{ op: 'boolean', yes: 'vorhanden' }], 'x'), 'false')   // das Feld ersetzt die Vorgabe (vorbelegt, Benutzer streicht oder ergänzt)
   assert.equal(apply([{ op: 'boolean' }], 'nein'), 'false')
-  assert.equal(apply([{ op: 'boolean' }], 'T'), 'true'); assert.equal(apply([{ op: 'boolean' }], 'F'), 'false')   // T/F (Taloan)
+  assert.equal(apply([{ op: 'boolean' }], 'T'), 'true'); assert.equal(apply([{ op: 'boolean' }], 'F'), 'false')   // T/F
   assert.equal(apply([{ op: 'date' }], '21.09.2026'), '2026-09-21')
   assert.equal(apply([{ op: 'date', format: 'MM/dd/yyyy' }], '09/21/2026'), '2026-09-21')
   assert.equal(apply([{ op: 'date' }], '21.09.26'), '2026-09-21')                      // zweistelliges Jahr

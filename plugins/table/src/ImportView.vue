@@ -1,5 +1,5 @@
 <script setup>
-// ⇩ Import → Tabelle (Basis-Plugin table; Taloan, 17.09.2026): eine Tabelle aus Datei (CSV, Excel, JSON — die Quelle liefert ein Plugin
+// ⇩ Import → Tabelle (Basis-Plugin table): eine Tabelle aus Datei (CSV, Excel, JSON — die Quelle liefert ein Plugin
 // über importers) oder aus der Zwischenablage; der Datenmapper (mapper.js) schlägt die Zuordnung vor, der Mensch
 // richtet nach, der Plan sagt, was passiert, der Stapel schreibt. Profile (Zuordnung, Ziel, Rolle) im Journal.
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
@@ -11,7 +11,7 @@ const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } 
 const leftW = paneWidth('import.table', 720)
 const router = useRouter()
 const route = useRoute()
-// Knotenmodus (Taloan, 17.09.: Rechtsklick auf Gruppe/Produkt → Excel importieren): die Tabelle passt 1:1 zum Knoten —
+// Knotenmodus: die Tabelle passt 1:1 zum Knoten —
 // Ziel und Rolle sind fest, jede Spalte muss ein Attribut sein, das dort für die Kinder gilt; nichts Neues wird angelegt.
 const fixed = ref(null)         // { row, childRole, allowed: Set<attr> }
 async function fixNode(id) {
@@ -45,7 +45,7 @@ const say = m => log.value.unshift(`${new Date().toLocaleTimeString('de-DE')} ${
 
 const attrs = computed(() => (model.value?.attributes ?? []).filter(a => a.type !== 'rows'))
 const targetPick = ref(false)
-// Ziel per Auswahlbaum (Taloan): ohne Ziel steht der Baum offen, mit Ziel ein Chip — Klick auf den Chip klappt ihn wieder auf
+// Ziel per Auswahlbaum: ohne Ziel steht der Baum offen, mit Ziel ein Chip — Klick auf den Chip klappt ihn wieder auf
 function pickTarget(r) { target.value = r; targetPick.value = false; planned.value = null }
 
 // ---- Quelle
@@ -53,7 +53,7 @@ function pickTarget(r) { target.value = r; targetPick.value = false; planned.val
 // ein File aus <input type=file> ist ein Schnappschuss und lässt sich nach einer Änderung nicht mehr lesen.
 const fileHandle = ref(null)
 const canPick = typeof window.showOpenFilePicker === 'function'
-// Zuletzt gewählte Dateien (Taloan, 21.09.): 5 Chips im Ablagebereich — mit Handle wieder zu öffnen, hineingezogene nur dem Namen nach
+// Zuletzt gewählte Dateien: 5 Chips im Ablagebereich — mit Handle wieder zu öffnen, hineingezogene nur dem Namen nach
 const recent = ref([])
 async function loadRecent() { recent.value = await recentFiles.list('table') }
 async function remember(name, handle) { await recentFiles.remember('table', name, handle); await loadRecent() }
@@ -78,7 +78,7 @@ async function reloadFile() {
   } else document.querySelector('#table-file-input')?.click()
 }
 async function takeFile(file, keepSheet = false) {
-  // Rohdaten-JSON (Knotenbaum { model, node } oder Knoten mit id/role/values) gehört in den JSON-Import, nicht in die Tabelle (Taloan)
+  // Rohdaten-JSON (Knotenbaum { model, node } oder Knoten mit id/role/values) gehört in den JSON-Import, nicht in die Tabelle
   if (/\.json$/i.test(file.name)) {
     try { const j = JSON.parse(await file.text()); const n = j?.node ?? j; if (n && !Array.isArray(n) && n.id && n.role && Array.isArray(n.values)) { store.toast(t_('Knotenbaum erkannt → JSON-Import'), 'ok'); store.pendingImport = { file, parent: target.value || null }; router.push('/p/json/import'); return } } catch { /* dann wie eine Tabelle */ }
   }
@@ -95,12 +95,12 @@ async function takeFile(file, keepSheet = false) {
     if (sheet && source.value?.sheets?.some(s => s.name === sheet)) pickSheet(sheet)
   } catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
-// Zuordnung des gewählten Profils — gilt auch für eine Datei, die erst danach kommt (Taloan, 21.09.: „Profil gespeichert, raus, rein, Datei gedroppt — wo ist meine Funktion?“)
+// Zuordnung des gewählten Profils — gilt auch für eine Datei, die erst danach kommt
 let profileMapping = null
 function applyProfile() {
   if (!profileMapping) return
   for (const m of mapping.value) { const s = profileMapping[m.column]; if (s) Object.assign(m, JSON.parse(JSON.stringify(s))) }
-  // Datei geladen, Profil darübergelegt = der Ausgangsstand — nicht „geändert“ (Taloan, 21.09.: „kommt sofort die Meldung, ist das richtig?“ — nein)
+  // Datei geladen, Profil darübergelegt = der Ausgangsstand — nicht „geändert“
   setTimeout(() => window.dispatchEvent(new CustomEvent('journali:profile-applied')), 0)
 }
 function setSource(t) {
@@ -113,7 +113,7 @@ function setSource(t) {
 }
 function pickSheet(name) { const s = source.value.sheets.find(x => x.name === name); if (!s) return; setSource({ ...source.value, sheet: name, columns: s.columns, rows: s.rows }) }
 function takePaste() { const t = parseDelimited(pasteText.value); if (!t.columns.length) return; setSource({ ...t, name: t_('Zwischenablage') }); pasteText.value = '' }
-// Strg+V irgendwo in der Ansicht (kein Eingabefeld): die Zwischenablage als Tabelle — die eigene Zeile dafür ist weg (Taloan, 21.09.)
+// Strg+V irgendwo in der Ansicht (kein Eingabefeld): die Zwischenablage als Tabelle — die eigene Zeile dafür ist weg
 function onPasteAnywhere(e) {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName) || e.target.isContentEditable) return
   const text = e.clipboardData?.getData('text/plain') ?? ''
@@ -123,14 +123,14 @@ function onPasteAnywhere(e) {
 async function onDrop(e) {
   dragOver.value = false
   // mit Handle, wenn der Browser es hergibt (Chrome/Edge: getAsFileSystemHandle) — dann ist die Datei später wieder zu öffnen
-  // Datei und Handle-Anfrage SOFORT greifen — nach dem ersten await ist der DataTransfer leer (Taloan, 21.09.: „liest nichts mehr ein“)
+  // Datei und Handle-Anfrage SOFORT greifen — nach dem ersten await ist der DataTransfer leer
   const f = e.dataTransfer.files?.[0]; if (!f) return
   const item = e.dataTransfer.items?.[0]
   const handleP = item?.getAsFileSystemHandle ? item.getAsFileSystemHandle().catch(() => null) : Promise.resolve(null)
   let h = null; try { const x = await handleP; if (x?.kind === 'file') h = x } catch {}
   fileHandle.value = h; await takeFile(f); remember(f.name, h)
 }
-// ↻ Zuordnung neu vorschlagen: bewusst OHNE das Profil — sonst tut der Knopf nichts (Taloan, 21.09.: „funktioniert nicht“); Kennung ändern behält es
+// ↻ Zuordnung neu vorschlagen: bewusst OHNE das Profil — sonst tut der Knopf nichts; Kennung ändern behält es
 function resuggest(keepProfile = false) { if (source.value) { mapping.value = strictify(suggest(source.value.columns, source.value.rows, model.value, { external: external.value || null })); if (keepProfile) applyProfile() } planned.value = null }
 // Knotenmodus: was nicht zum Knoten passt, wird übergangen und gezählt — Vorlage vom Knoten exportieren, dann passt es
 function strictify(m) {
@@ -148,10 +148,9 @@ const unknown = computed(() => mapping.value.filter(m => m.unknown).length)
 // ---- Zuordnung: Zeile je Spalte
 const TARGETS = [['attr', t_('Attribut')], ['new', t_('neues Attribut')], ['status', t_('Status')], ['id', 'journali-Id'], ['external', t_('externe Kennung')], ['parent', t_('Elternteil')], ['skip', t_('übergehen')]]
 const sample = (i) => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => String(v ?? '').trim() !== '').slice(0, 3).map(v => String(v).slice(0, 30)).join(' · ')
-// Umwandlung je Spalte (Taloan, 21.09., OpenDXP-Importer: „Werte umwandeln, in die Daten eingreifen“): Kette in m.steps, Editor je Zeile, Vorschau der Beispiele
+// Umwandlung je Spalte: Kette in m.steps, Editor je Zeile, Vorschau der Beispiele
 const stepsOpen = ref(null)   // Spalte, deren Kette gerade offen ist
-// Zuordnung als Zeilen (eine je Spalte) oder als Spalten wie in Excel — nach rechts scrollen statt nach unten (Taloan, 21.09.:
-// „was hindert mich, endlos nach rechts zu scrollen?“ — nichts; beides bleibt lesbar, die Felder werden nie mehr gequetscht)
+// Zuordnung als Zeilen (eine je Spalte) oder als Spalten wie in Excel — nach rechts scrollen statt nach unten
 const layout = ref(localStorage.getItem('journali.import.layout') || 'rows')
 function setLayout(l) { layout.value = l; localStorage.setItem('journali.import.layout', l) }
 const samples = i => source.value.rows.slice(0, 200).map(r => r[i]).filter(v => String(v ?? '').trim() !== '').slice(0, 3).map(v => String(v).slice(0, 40))
@@ -163,7 +162,7 @@ function delStep(m, i) { m.steps.splice(i, 1); if (!m.steps.length) delete m.ste
 function moveStep(m, i, d) { const j = i + d; if (j < 0 || j >= m.steps.length) return; [m.steps[i], m.steps[j]] = [m.steps[j], m.steps[i]]; planned.value = null }
 const preview = (m, i) => { const rows = source.value.rows.slice(0, 200).filter(r => String(r[i] ?? '').trim() !== '').slice(0, 3); const cols = source.value.columns; return rows.map(r => String(transform.apply(m.steps, r[i], { get: c => { const j = cols.indexOf(c); return j < 0 ? '' : r[j] } })).slice(0, 30)).join(' · ') }
 const stepsText = m => m.steps?.length ? transform.describe(m.steps) : ''
-// Ziel Status (Taloan, 22.09.): Quellwert → Status aus dem Modell als Tabelle; gespeichert als Schritt „map“ (alt=neu; …) und damit im Profil
+// Ziel Status: Quellwert → Status aus dem Modell als Tabelle; gespeichert als Schritt „map“ (alt=neu; …) und damit im Profil
 const distinctValues = m => { const i = source.value?.columns.indexOf(m.column) ?? -1; const set = new Set(); if (i < 0) return []; for (const r of source.value.rows) { const v = String(r[i] ?? '').trim(); if (v) set.add(v); if (set.size >= 60) break } return [...set] }
 const mapStep = m => { let s = (m.steps ?? []).find(x => x.op === 'map'); if (!s) (m.steps ??= []).push(s = { op: 'map', pairs: '', other: '' }); return s }
 const pairsOf = s => Object.fromEntries(String(s.pairs ?? '').split(';').map(p => p.split('=')).filter(p => p.length === 2).map(([a, b]) => [a.trim().toLowerCase(), b.trim()]))
@@ -172,18 +171,17 @@ function setStatusFor(m, v, key) { const s = mapStep(m); const p = Object.fromEn
 function onTarget(m) { planned.value = null; if (m.target === 'status') { mapStep(m); stepsOpen.value = m.column }; if (m.target === 'attr' && !m.attribute) m.attribute = attrs.value[0]?.key ?? null; if (m.target === 'new' && !m.newKey) m.newKey = m.column.toLowerCase().replace(/[^a-z0-9]+/g, '_'); syncLocale(m) }
 function syncLocale(m) { const a = attrs.value.find(x => x.key === m.attribute); if (m.target === 'attr' && a && !a.perLocale) m.locale = null; if (m.target === 'attr' && a?.perLocale && !m.locale) m.locale = model.value?.masterLocale ?? locales.value[0] }
 const uniqueKeys = computed(() => new Set((model.value?.attributes ?? []).filter(a => a.unique).map(a => a.key)))
-const keyColumn = computed(() => mapping.value.find(m => ['id', 'external'].includes(m.target) || (m.target === 'attr' && uniqueKeys.value.has(m.attribute))))   // eindeutige Attribute finden (Taloan, 21.09.)
-// Eigene Ids in der Datei (Taloan, 21.09.: „dann dürfen id und parent auf keinen Fall änderbar sein — stillschweigend versteckt, und den Baum
-// braucht man nicht auszusuchen“): trägt die Id-Spalte Ids, die es im Baum gibt, sind id und parent fest und weg aus der Zuordnung;
+const keyColumn = computed(() => mapping.value.find(m => ['id', 'external'].includes(m.target) || (m.target === 'attr' && uniqueKeys.value.has(m.attribute))))   // eindeutige Attribute finden
+// Eigene Ids in der Datei: trägt die Id-Spalte Ids, die es im Baum gibt, sind id und parent fest und weg aus der Zuordnung;
 // das Ziel braucht es nur für Zeilen, deren Id der Baum nicht kennt (neu) — dann sagt es die Analyse
-// Id + Wurzel (Taloan, 21.09.: „zwei Datenbanken, per Excel übertragen — ein Zufallstreffer bei der Id reicht nicht“): nennt die Datei
+// Id + Wurzel: nennt die Datei
 // journali_root, gilt eine Id nur, wenn der Knoten hier unter genau dieser Wurzel hängt; sonst ist die Zeile fremd (neu)
 const rootOfNode = id => { const a = tree.ancestors(id); return a.length ? a[0].id : id }
 const idOk = row => { const m = mapping.value.find(x => x.target === 'id'); if (!m) return false; const i = mapping.value.indexOf(m); const id = String(row[i] ?? '').trim(); if (!tree.byId.has(id)) return false; const ir = mapping.value.findIndex(x => x.target === 'root'); const want = ir >= 0 ? String(row[ir] ?? '').trim() : (m.root ?? ''); return !want || rootOfNode(id) === want }
 const idLocked = computed(() => { if (!source.value || !mapping.value.some(x => x.target === 'id')) return false; return source.value.rows.slice(0, 200).some(idOk) })
 const unknownIds = computed(() => idLocked.value ? source.value.rows.filter(r => !idOk(r)).length : 0)
 const foreignRoot = computed(() => { if (!source.value) return 0; const m = mapping.value.find(x => x.target === 'id'); if (!m) return 0; const i = mapping.value.indexOf(m); if (!m.root && !mapping.value.some(x => x.target === 'root')) return 0; return source.value.rows.filter(r => tree.byId.has(String(r[i] ?? '').trim()) && !idOk(r)).length })
-// gesperrt: alle eigenen Spalten (journali_*, id, parent, role, status) verschwinden aus der Zuordnung (Taloan, 21.09.: „beim Import verstecken“)
+// gesperrt: alle eigenen Spalten (journali_*, id, parent, role, status) verschwinden aus der Zuordnung
 const visibleMapping = computed(() => idLocked.value ? mapping.value.filter(m => !m.internal && m.target !== 'id' && m.target !== 'parent' && m.target !== 'root') : mapping.value.filter(m => m.target !== 'root'))
 const groups = computed(() => model.value?.groups ?? [])
 // Schreiben erst, wenn nichts mehr im Weg steht: ungültige Zellen (korrigieren), neue Spalten ohne Gruppe, im Knotenmodus gar keine ungültigen
@@ -196,11 +194,11 @@ const blockers = computed(() => {
 })
 // Korrektur einer Zelle direkt in der Quelle; danach neu analysieren
 const changeTab = ref('update'); const openRow = ref(null)
-// Vorschau öffnet den ersten Reiter, in dem etwas steht (Taloan, 21.09.: „2 neue Zeilen, aber nichts angezeigt“ — der Reiter stand auf „geändert“)
+// Vorschau öffnet den ersten Reiter, in dem etwas steht
 watch(() => planned.value?.stats, st => { if (!st) return; changeTab.value = st.create ? 'create' : st.update ? 'update' : 'unchanged'; openRow.value = null })
 const attrLabel = key => { const a = attrs.value.find(x => x.key === key) ?? store.model?.attributes?.find(x => x.key === key); return L(a?.label) || key }
 function fixCell(inv, v) { source.value.rows[inv.row][inv.column] = v; planned.value = { ...planned.value, stale: true } }
-// Was das Attribut erwartet (Taloan, 21.09.: „warum ganze Zahl?“ — weil das Attribut so definiert ist; das steht jetzt dabei)
+// Was das Attribut erwartet
 const TYPE_DE = { text: t_('Text'), html: 'HTML', integer: t_('ganze Zahl'), decimal: t_('Zahl'), boolean: 'ja/nein', date: t_('Datum'), enum: t_('Listenwert') }
 function typeHint(inv) { const a = attrs.value.find(x => x.key === inv.key) ?? store.model?.attributes?.find(x => x.key === inv.key); return a ? t_('Attribut {0} ist {1}{2}{3} — im Modell änderbar', [a.key, TYPE_DE[a.type] ?? a.type, a.multiple ? ', mehrfach' : '', a.list ? ' ' + t_('(Liste') + ' ' + a.list + ')' : '']) : t_('Attribut {0}', [inv.key]) }
 
@@ -215,8 +213,7 @@ async function analyse() {
     const keys = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.attribute))]
     const locs = [...new Set(mapping.value.filter(m => m.target === 'attr').map(m => m.locale ?? ''))]
     const existing = new Map()
-    // Bestand nur für die Zeilen holen, die es schon gibt (Taloan, 21.09.: „darf das Vergleichen bei 11 Zeilen eine Minute dauern?“ — vorher die
-    // ganze Wurzel tief): gefunden über Id, externe Kennung oder ein eindeutiges Attribut; je Elternteil ein Aufruf (die Subitems als Tabelle), je Sprache
+    // Bestand nur für die Zeilen holen, die es schon gibt: gefunden über Id, externe Kennung oder ein eindeutiges Attribut; je Elternteil ein Aufruf (die Subitems als Tabelle), je Sprache
     const iId = mapping.value.findIndex(m => m.target === 'id'), iExt = mapping.value.findIndex(m => m.target === 'external')
     const keyCols = mapping.value.map((m, i) => m.target === 'attr' && uniqueKeys.value.has(m.attribute) && !m.locale ? i : -1).filter(i => i >= 0)
     const byKey = new Map(); for (const r of tree.rows) for (const [k, v] of Object.entries(r.keys ?? {})) byKey.set(k + '\u0001' + String(v).trim(), r)
@@ -255,7 +252,7 @@ async function run() {
   busy.value = 'schreibe …'; result.value = null
   try {
     for (const a of p.newAttributes) await api.post(`/api/model/attributes/${a.key}`, a, 'PUT')
-    // neue Listenwerte zuerst (Taloan, 20.09.): Schlüssel normiert, Bezeichnung in allen Sprachen der Text der Datei
+    // neue Listenwerte zuerst: Schlüssel normiert, Bezeichnung in allen Sprachen der Text der Datei
     let nlv = 0
     for (const [list, vals] of Object.entries(p.stats.newListValues ?? {})) for (const [key, label] of Object.entries(vals)) { await api.post(`/api/model/lists/${list}/values/${encodeURIComponent(key)}`, { value: key, label: Object.fromEntries(model.value.locales.map(l => [l.code, label])) }, 'PUT'); nlv++ }
     if (nlv) say(t_('{0} Listenwerte angelegt', [nlv]))
@@ -332,7 +329,7 @@ onMounted(async () => {
     </ImportHead>
     <div class="scroll">
       <div v-if="!keyColumn && source" class="muted" style="font-size:12px;padding:6px 8px">{{ $t("⚠ Keine Schlüsselspalte (Id, SKU, Kennung) — jede Zeile wird neu angelegt.") }}</div>
-      <!-- Lücke bei ausgeblendeten Spalten (Taloan, 21.09.): sieht aus wie unser Export, aber die Id-Spalte fehlt — in Excel entfernt oder ohne die versteckten Spalten weitergegeben -->
+      <!-- Lücke bei ausgeblendeten Spalten: sieht aus wie unser Export, aber die Id-Spalte fehlt — in Excel entfernt oder ohne die versteckten Spalten weitergegeben -->
       <div v-if="source && mapping.some(m => m.internal) && !mapping.some(m => m.target === 'id')" class="warn" style="font-size:12px;padding:6px 8px">{{ $t("⚠ Das ist ein journali-Export, aber die Spalte") + ' ' }}<code>journali_id_…</code>{{ ' ' + $t("fehlt (ausgeblendete Spalten gelöscht oder nur die sichtbaren kopiert?). Ohne Ids werden Zeilen über SKU gefunden — oder neu angelegt, mit Dubletten.") }}</div>
       <div v-if="unknown" class="warn" style="font-size:12px;padding:6px 8px">{{ $t("⚠ {0} Spalten passen nicht zu diesem Knoten und werden übergangen — Vorlage per Rechtsklick am Knoten exportieren, dann stimmen die Spalten.", [unknown]) }}</div>
 
@@ -410,7 +407,7 @@ onMounted(async () => {
                     <span v-else-if="f === 'decimal'" class="fld"><span class="muted">{{ $t("Dezimalzeichen") }}</span><select v-model="s.decimal" @change="planned = null"><option :value="undefined">{{ $t("raten") }}</option><option value=",">{{ $t("Komma") }}</option><option value=".">{{ $t("Punkt") }}</option></select></span>
                     <span v-else-if="f === 'format'" class="fld"><span class="muted">{{ $t("Quelle im Format") }}</span><select v-model="s.format" @change="planned = null"><option v-for="[k, l] in transform.DATE_FORMATS" :key="k" :value="k">{{ l }}</option></select></span>
                     <span v-else class="fld"><span class="muted">{{ FIELD_LABEL[f] ?? f }}</span><input type="text" v-model="s[f]" :placeholder="FIELD_HINT[f] ?? f" :title="(FIELD_HINT[f] ?? f) + ' — ' + opHint(s.op)" @input="planned = null" :style="f === 'pairs' || f === 'columns' || f === 'index' || f === 'then' || f === 'else' || f === 'yes' ? 'width:250px' : 'width:130px'" /></span>
-                    <select v-if="f === 'columns'" :value="''" :title="$t('Spalte anklicken statt tippen (Taloan, 21.09.) — wird mit Komma angehängt')" @change="addColumn(s, $event.target.value); $event.target.value = ''"><option value="">{{ $t("+ Spalte …") }}</option><option value="{}">{{ $t("{} · diese Spalte") }}</option><option v-for="c in source.columns" :key="c" :value="c">{{ c }}</option></select>
+                    <select v-if="f === 'columns'" :value="''" :title="$t('Spalte anklicken statt tippen — wird mit Komma angehängt')" @change="addColumn(s, $event.target.value); $event.target.value = ''"><option value="">{{ $t("+ Spalte …") }}</option><option value="{}">{{ $t("{} · diese Spalte") }}</option><option v-for="c in source.columns" :key="c" :value="c">{{ c }}</option></select>
                   </template>
                   <span class="muted" style="font-size:11px">{{ opHint(s.op) }}</span>
                   <span class="grow" />
@@ -452,7 +449,7 @@ onMounted(async () => {
             </tr>
           </tbody></table>
         </div>
-        <!-- Was passiert, je Zeile (Taloan, 21.09.): Reiter neu / geändert / unverändert, je Knoten die Werte alt → neu -->
+        <!-- Was passiert, je Zeile: Reiter neu / geändert / unverändert, je Knoten die Werte alt → neu -->
         <div v-if="planned.stats.changes?.length" class="section" style="margin-top:8px;padding:0">
           <h2 class="step-band" style="margin:0 0 4px;gap:4px">{{ $t("Vorschau") + ' ' }}<span class="tabs"><button :class="{ on: changeTab === 'create' }" @click="changeTab = 'create'" class="pos">{{ $t("+{0} neu", [planned.stats.create]) }}</button><button :class="{ on: changeTab === 'update' }" @click="changeTab = 'update'" class="warn">{{ $t("{0} geändert", [planned.stats.update]) }}</button><button :class="{ on: changeTab === 'unchanged' }" @click="changeTab = 'unchanged'" class="muted">{{ $t("{0} unverändert", [planned.stats.unchanged]) }}</button></span></h2>
           <table class="grid" style="width:100%">
@@ -487,7 +484,7 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen (Taloan, 21.09.) */
+/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen */
 .section { overflow-x: auto; }
 table.map { min-width: 960px; }
 /* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */
@@ -506,7 +503,7 @@ table.cols tr.sample td { white-space: nowrap; font-size: 12px; }
 .tstep select, .tstep input[type=text] { font-size: 12px; }
 .fld { display: inline-flex; gap: 4px; align-items: center; font-size: 11px; }
 /* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */
-/* Reiter, die wie Reiter aussehen (Taloan, 21.09.: „ach so, das kann man anklicken“) */
+/* Reiter, die wie Reiter aussehen */
 .tabs { display: inline-flex; gap: 0; margin-left: 8px; }
 .tabs button { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0; }
 .tabs button:first-child { border-radius: 6px 0 0 6px; } .tabs button:last-child { border-radius: 0 6px 6px 0; }
@@ -516,13 +513,13 @@ table.diff td { font-size: 12px; white-space: normal; }
 table.diff td.old { color: var(--muted); text-decoration: line-through; max-width: 300px; }
 table.diff td.new { color: var(--pos); max-width: 300px; }      /* neuer Wert (vorher keiner) */
 table.diff td.chg { color: var(--warn); max-width: 300px; }      /* geänderter Wert */
-/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist (Taloan, 21.09.) */
+/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist */
 .x.on { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px; }
 .section { padding: 8px; border-bottom: 1px solid var(--line); }
 .section h2 { font-size: 12px; margin: 0 0 6px; font-weight: 600; }
 .section h2 .muted { font-weight: 400; }
 .drop.over { outline: 2px dashed var(--accent); outline-offset: -2px; }
-/* ohne Datei ein grosser Ablagebereich (Taloan, 21.09.: „höher“) */
+/* ohne Datei ein grosser Ablagebereich */
 .drop.empty { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap; }
 .recent { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal; }
 .recent .chip { cursor: pointer; }

@@ -25,12 +25,11 @@ public static class TreeApi
         // Nachfahren — als Zeilen, die Attribute als Spalten, Werte wie in der Knotenansicht aufgelöst (geerbt zählt,
         // own sagt, ob der Wert am Knoten selbst steht). role filtert die Zeilen; attributes (a,b,c) die Spalten,
         // sonst alle Attribute, die an der Rolle der Zeilen gelten. locale/channel = die Achse; ohne = Grundwert.
-        // self: der Knoten selbst als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt (Taloan, 21.09.: Geltung am Vater gesetzt,
-        // Prüfung am Kind sah „gilt hier nicht“, weil das Kind nur seine eigenen Werte las)
+        // self: der Knoten selbst als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt
         api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false, bool self = false, long? at = null) =>
             c.With((liveModel, liveTree, _) =>
             {
-                var (model, tree) = at is { } n ? c.AsOf(n) : (liveModel, liveTree);   // at: der Stand von damals (Taloan, 21.09., Publikation eingefroren)
+                var (model, tree) = at is { } n ? c.AsOf(n) : (liveModel, liveTree);   // at: der Stand von damals
                 if (!tree.Nodes.TryGetValue(id, out var root)) return Results.NotFound();
                 var nodes = (deep ? tree.DescendantsDeepestFirst(id).Reverse() : tree.Children(id)).Where(n => role is null || n.Role == role).ToList();
                 if (self) nodes.Insert(0, root);
@@ -42,14 +41,14 @@ public static class TreeApi
                 {
                     row = NodeRow.Of(tree, model, n),
                     // Spalten, die an diesem Knoten nicht gelten (Gruppe erst ab tieferer Rolle, Attribut nicht erlaubt) —
-                    // bei deep ist die Spaltenliste die Vereinigung über alle Knoten (Datenqualität, Taloan)
+                    // bei deep ist die Spaltenliste die Vereinigung über alle Knoten (Datenqualität)
                     inactive = cols.Where(a => !CompletenessRules.ActiveAttributes(tree, model, n).Any(x => x.Key == a.Key)).Select(a => a.Key).ToList(),
                     values = cols.ToDictionary(a => a.Key, a =>
                     {
                         var (v, from) = tree.Resolve(model, n, a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null);
                         // Formel/Vorlage: das Ergebnis zeigen, nicht das Skript — die Spalte ist in der Tabelle ohnehin gesperrt
                         if (a.IsComputed) v = tree.Compute(model, n, a, locale);
-                        // Beleg am Wert (auch ohne Wert: „angefragt bei … bis …“ — Taloan, 20.09.: ein gültiger Zustand statt rotem Feld)
+                        // Beleg am Wert (auch ohne Wert: „angefragt bei … bis …“)
                         return new { value = v, own = from is not null && from.Id == n.Id, from = from is not null && from.Id != n.Id ? from.Id : null, source = SourceView.Of(n, new Axis(a.Key, a.PerLocale ? locale : null, a.PerChannel ? channel : null)) };
                     }),
                 }).ToList();
@@ -71,9 +70,9 @@ public static class TreeApi
         api.MapPost("/groups", (GroupCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateGroup(x, b.Parent, b.Label, b.Name)));
         api.MapPut("/groups/{id}/label", (string id, GroupRenamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RenameGroup(x, id, b.Label)));   // Altlast
         api.MapPut("/nodes/{id}/name", (string id, NodeNamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Rename(x, id, b.Name)));
-        // Publikationsbäume (Taloan, 20.09.2026): Wurzel = Baum eines Kanals (× Markt), Rubriken darunter, Pflegeknoten per Verweis
+        // Publikationsbäume: Wurzel = Baum eines Kanals (× Markt), Rubriken darunter, Pflegeknoten per Verweis
         api.MapGet("/pub", (Catalog c) => c.With((model, tree, _) => tree.PubTrees.Select(n => new { n.Id, n.Channel, n.Market, label = NodeRow.LabelOf(tree, model, n), rubrics = CountRubrics(tree, n), placed = CountPlaced(tree, n) }).ToList()));
-        // Ausleitung (Taloan, 21.09.): je Produkt im Baum drin/draussen mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Publication.cs)
+        // Ausleitung: je Produkt im Baum drin/draussen mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Publication.cs)
         api.MapGet("/pub/{id}/export", (string id, Catalog c, string? locale = null) => c.With((model, tree, _) =>
         {
             if (!tree.Nodes.TryGetValue(id, out var root) || root.Role != Roles.Rubric || root.Parent is not null) return Results.NotFound();
@@ -88,11 +87,11 @@ public static class TreeApi
         }));
         api.MapPost("/rubrics", (RubricCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateRubric(x, b.Parent, b.Label, b.Name, b.Channel, b.Market)));
         api.MapPut("/rubrics/{id}/tree", (string id, PubTreeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetPubTree(x, id, b.Channel, b.Market)));
-        // Stand (Taloan, 21.09.): {journalNumber: n} einfrieren bei n, {now: true} bei jetzt, {} = live
+        // Stand: {journalNumber: n} einfrieren bei n, {now: true} bei jetzt, {} = live
         api.MapPut("/rubrics/{id}/stand", (string id, StandBody b, HttpRequest req, Catalog c) => { var head = c.Head; return Run(req, c, x => Commands.SetStand(x, id, b.Now == true ? head : b.JournalNumber, head)); });
         api.MapPost("/rubrics/{id}/place", (string id, NodePlaced b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Place(x, id, b.Node, b.Order)));
         api.MapDelete("/rubrics/{id}/place/{node}", (string id, string node, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Unplace(x, id, node)));
-        // Regel-Verweise (Taloan, 21.09.): setzen (Id leer = neu), entfernen, Vorschau (ungespeichert) und Auflösung der gespeicherten
+        // Regel-Verweise: setzen (Id leer = neu), entfernen, Vorschau (ungespeichert) und Auflösung der gespeicherten
         api.MapPut("/rubrics/{id}/rules", (string id, PubRule b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetRule(x, id, b)));
         api.MapDelete("/rubrics/{id}/rules/{rule}", (string id, string rule, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RemoveRule(x, id, rule)));
         api.MapGet("/rubrics/{id}/rules/preview", (string id, Catalog c, string kind, string? under = null, string? role = null, string? name = null, string? attribute = null, string? value = null, string? groupBy = null) =>
@@ -116,9 +115,9 @@ public static class TreeApi
         api.MapPut("/nodes/{id}/groups", (string id, GroupsAttached b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AttachGroups(x, id, b.Groups)));
         api.MapPost("/variants", (VariantCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateVariant(x, b.Product, b.AxisValues)));
         api.MapPost("/nodes/{id}/move", (string id, NodeMoved b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Move(x, id, b.Parent)));
-        // Einordnen: unter parent (null = Wurzeln) vor den Knoten before (null = ans Ende) — umhängen und Platz in einem (Taloan, 21.09.)
+        // Einordnen: unter parent (null = Wurzeln) vor den Knoten before (null = ans Ende) — umhängen und Platz in einem
         api.MapPost("/nodes/{id}/order", (string id, OrderBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Order(x, id, b.Parent, b.Before)));
-        // recursive ohne Vorgabe = Pflichtparameter: ohne ?recursive antwortete ASP.NET mit 400 als Text („Microsoft.AspNetCore…“), Taloan
+        // recursive ohne Vorgabe = Pflichtparameter: ohne ?recursive antwortete ASP.NET mit 400 als Text („Microsoft.AspNetCore…“)
         api.MapDelete("/nodes/{id}", (string id, HttpRequest req, Catalog c, bool recursive = false) =>
         {
             if (!recursive) return Run(req, c, x => Commands.Retire(x, id));
@@ -136,7 +135,7 @@ public static class TreeApi
             });
             return result.Count < 0 ? Results.NotFound() : Results.Ok(new { retired = result.Count, batch = result.Batch });
         });
-        // Wiederherstellen (Taloan): den Knoten, mit recursive auch die zurückgezogenen Knoten darunter — von oben nach unten, ein Stapel
+        // Wiederherstellen: den Knoten, mit recursive auch die zurückgezogenen Knoten darunter — von oben nach unten, ein Stapel
         api.MapPost("/nodes/{id}/restore", (string id, HttpRequest req, Catalog c, bool recursive = false) =>
         {
             if (!recursive) return Run(req, c, x => Commands.Restore(x, id));
@@ -156,9 +155,9 @@ public static class TreeApi
             });
             return result.Count < 0 ? Results.NotFound() : result.Error is not null ? Results.BadRequest(new { error = result.Error }) : Results.Ok(new { restored = result.Count, batch = result.Batch });
         });
-        // Rückgängig je Aktion (Taloan): ein Stapel = eine Aktion (Rückzug, Tabellen-Sitzung, Import). Undo.cs plant die
+        // Rückgängig je Aktion: ein Stapel = eine Aktion (Rückzug, Tabellen-Sitzung, Import). Undo.cs plant die
         // Schritte (alter Wert je Achse, Status, Name, Platz, Wiederherstellen) und schreibt sie als neuen Stapel.
-        // Rückgängig am Knoten (Taloan, 23.09.2026): was zuletzt hier geändert wurde, aus dem Journal zurückholen.
+        // Rückgängig am Knoten: was zuletzt hier geändert wurde, aus dem Journal zurückholen.
         // Der Stapel in der Oberfläche lebt nur in der Sitzung; das Journal weiss es auch danach noch.
         api.MapGet("/nodes/{id}/undo", (string id, IJournal j, Catalog c) => c.With((model, tree, _) =>
         {
@@ -198,7 +197,7 @@ public static class TreeApi
             return result.Error is not null ? Results.BadRequest(new { error = result.Error })
                 : Results.Ok(new { undone = result.Done, failed = result.Failed, skipped = result.Skipped, batch = undo });
         });
-        // Vorschau fürs Mouseover (Taloan): was würde Rückgängig tun? Schritte in Worten, Urheber, Übersprungenes
+        // Vorschau fürs Mouseover: was würde Rückgängig tun? Schritte in Worten, Urheber, Übersprungenes
         api.MapGet("/batches/{batch}/preview", (string batch, IJournal j, Catalog c) =>
             c.With((model, tree, _) =>
             {
@@ -276,7 +275,7 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
         n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null, n.Stand, n.Role == Roles.Rubric && n.Rules.Count > 0 ? n.Rules : null,
         n.HasStatus);
 
-    /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle, Taloan): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
+    /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
     /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>
     public static string? LabelAttributeOf(Tree tree, ModelCatalog model, Node n)
     {
@@ -393,7 +392,7 @@ public sealed record NodeView(string Id, string Role, string? Parent, Labels Lab
         CompletenessRules.ActiveAttributes(tree, model, n).Where(a => a.IsComputed)
             .SelectMany(a => a.PerLocale ? model.Locales.Keys.Select(l => new ComputedView(a.Key, tree.Compute(model, n, a, l), l)) : [new ComputedView(a.Key, tree.Compute(model, n, a, null), null)]).ToList(),
         n.Categories.Order().ToList(), n.Releases.ToList(),
-        // Freigaben, die über den Fallback-Kanal gelten (Sortiment geerbt, Taloan 20.09.) — nur die, die nicht eigen sind
+        // Freigaben, die über den Fallback-Kanal gelten (Sortiment geerbt) — nur die, die nicht eigen sind
         model.Channels.Keys.SelectMany(ch => new string?[] { null }.Concat(model.Locales.Keys).Select(l => (ch, l, via: tree.ReleasedVia(n, ch, l))))
             .Where(x => x.via is not null && x.via != x.ch).Select(x => new ReleasedVia(x.ch, x.l, x.via!)).ToList(),
         CompletenessRules.Of(tree, model, n),

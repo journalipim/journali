@@ -5,14 +5,12 @@ using Journali.Core.Journal;
 namespace Journali.Server;
 
 /// <summary>
-/// Lokaler Spiegel des Journals (Taloan, 21.09.2026: Start dauerte 31 s — davon 30 s Lesen über das Netz aus Postgres,
-/// 1 s Anwenden). Jeder Eintrag, der einmal gelesen oder geschrieben wurde, landet als JSON-Zeile in einer Datei im
+/// Lokaler Spiegel des Journals. Jeder Eintrag, der einmal gelesen oder geschrieben wurde, landet als JSON-Zeile in einer Datei im
 /// Datenverzeichnis; beim nächsten Start kommt <see cref="ReadAfter"/> bis zum Spiegelstand von der Platte und nur der
 /// Rest aus der Datenbank. Der Spiegel ist ein Cache, keine Wahrheit: er wird gegen die Datenbank geprüft (letzter
 /// Eintrag muss dort gleich sein, die Nummern müssen lückenlos sein) und bei jeder Abweichung verworfen — dann liest
 /// der Start wie bisher alles aus der Datenbank. Alles andere (Ströme, Stapel, Zuletzt, Kopf) geht direkt zur Datenbank.
-/// <para>Was je Eintrag kostet, wächst mit dem Journal (Taloan, 24.09.2026: „ich will verhindern, dass ein Serverstart nach
-/// zwei Jahren Nutzung zu einem halben Tag Betriebsausfall führt“). Gemessen an 125 096 Einträgen: 50 000 anhängen mit
+/// <para>Was je Eintrag kostet, wächst mit dem Journal. Gemessen an 125 096 Einträgen: 50 000 anhängen mit
 /// der Datei je Eintrag auf und zu 7 417 ms, in einem offenen Strom 87 ms; den ganzen Spiegel entschlüsseln 2 162 ms,
 /// nur die Zeilen lesen 365 ms. Darum: eine Datei je Vorgang, nicht je Eintrag; beim Start nur die letzte Zeile
 /// entschlüsseln; beim Lesen Zeilen vor dem gesuchten Stand an ihrer Nummer erkennen, ohne sie zu entschlüsseln.</para>

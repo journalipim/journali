@@ -58,7 +58,7 @@ test('leerer Text ergibt keine Abschnitte', () => {
   assert.deepEqual(chunk('   \n\n  '), [])
 })
 
-// Am echten Datenblatt gelernt (Tridonic TALEXXdriver, Taloan 22.09.2026) — die drei Fälle, die dort schiefgingen
+// Am echten Datenblatt gelernt (Tridonic TALEXXdriver) — die drei Fälle, die dort schiefgingen
 test('Tabellenzeilen sind keine Überschriften', () => {
   assert.ok(!isHeading('Netzspannungsbereich 220 – 240 V'))
   assert.ok(!isHeading('Leistungsaufnahme im Stand-by 0,16 W'))

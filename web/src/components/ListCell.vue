@@ -1,11 +1,11 @@
 <script setup>
-// Zelle für vermehrbare Attribute (multiple — Taloan, 20.09.2026: „ich brauch hier + − [umsortieren]“): die Werte als Liste,
+// Zelle für vermehrbare Attribute (multiple): die Werte als Liste,
 // je Zeile ein Griff zum Umsortieren (ziehen), das Feld (bei enum eine Auswahl) und −; unten +. Enter im letzten Feld fügt
 // eine Zeile an, Esc verwirft, Speichern schreibt die Liste (kommagetrennt, wie bisher AttributeSet.values). Geerbt zeigt kursiv.
 import { ref, nextTick } from 'vue'
 import { NEW, mayAddListValue, ensureListValue } from '../lists.js'
 import { store } from '../store.js'
-// list: Schlüssel der Werteliste — „+ neuer Wert …“ macht die Zeile zum Textfeld, ✓ legt den Wert an (Taloan, 20.09.: ad hoc wie in Excel)
+// list: Schlüssel der Werteliste — „+ neuer Wert …“ macht die Zeile zum Textfeld, ✓ legt den Wert an
 const props = defineProps({ value: String, inherited: String, disabled: Boolean, options: Array, labelOf: Function, title: String, check: Function, list: String })   // check(wert) → Fehlertext oder null
 const free = ref(new Set())   // Zeilen, die bei enum als Text eingegeben werden (neuer Wert)
 function onRowChange(i) { if (rows.value[i] === NEW) { rows.value[i] = ''; free.value = new Set([...free.value, i]); nextTick(() => focusRow(i)) } }
@@ -15,7 +15,7 @@ const box = ref(null)
 const editor = ref(null)
 const rows = ref([])          // Entwurf: Strings
 const drag = ref(null)        // Index der gezogenen Zeile
-const error = ref(null)       // { i, message } — ✓ meckert sofort (Taloan, 20.09.), nicht erst der Server danach
+const error = ref(null)       // { i, message } — ✓ meckert sofort, nicht erst der Server danach
 const split = s => String(s ?? '').split(',').map(x => x.trim()).filter(Boolean)
 const label = v => props.labelOf ? props.labelOf(v) : v
 const shown = () => split(props.value ?? props.inherited)
@@ -36,7 +36,7 @@ async function save() {
 }
 function cancel() { open.value = false; error.value = null }
 function onKey(e, i) {
-  // Enter: neue Zeile darunter, Cursor dorthin (Taloan); ↑ ↓ wechseln die Zeile
+  // Enter: neue Zeile darunter, Cursor dorthin; ↑ ↓ wechseln die Zeile
   if (e.key === 'Enter') { e.preventDefault(); add(i + 1) }
   else if (e.key === 'ArrowDown') { e.preventDefault(); focusRow(Math.min(rows.value.length - 1, i + 1)) }
   else if (e.key === 'ArrowUp') { e.preventDefault(); focusRow(Math.max(0, i - 1)) }

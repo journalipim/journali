@@ -1,4 +1,4 @@
-// Plugin geo (Taloan, 19.09.2026: „ein Plugin, das GEO-optimierte Daten vorschlägt“): aus den echten Produktdaten schlägt die KI
+// Plugin geo: aus den echten Produktdaten schlägt die KI
 // Texte vor, die Suchmaschinen und KI-Antworten gern zitieren — ein Definitionssatz, eine Kurzbeschreibung, Fragen & Antworten,
 // Suchbegriffe. Je Feld ein Zielattribut (gemerkt im Journal, Plugin-Daten „targets“); „übernehmen“ schreibt den Wert an den
 // Knoten. Dazu Schema.org-Product-JSON-LD aus den Daten (ohne KI). Braucht einen KI-Schlüssel aus den Einstellungen.
@@ -95,7 +95,7 @@ async function mount(root, ctx) {
   return () => {}
 }
 
-// Prüfregeln (Taloan: „mit heuristischen Mitteln Texte erkennen, die für GEO nicht geeignet sind“) — laufen in ✓ Datenqualität,
+// Prüfregeln — laufen in ✓ Datenqualität,
 // ohne KI. Beschreibend = text/html-Attribut mit längerem Wert oder Schlüssel/Label wie description, beschreibung, text, merkmal, seo.
 const DESC = /beschreib|description|text|merkmal|feature|seo|intro|teaser|content|inhalt/i
 const SUPER = /\b(beste[rsn]?|einzigartig|revolutionär|perfekt|unschlagbar|weltklasse|premium-?qualität|best|unique|revolutionary|perfect|unbeatable|world-?class|ultimate)\b/i

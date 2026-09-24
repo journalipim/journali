@@ -1,4 +1,4 @@
-// Einstellungen → API-Token (Taloan, 22.09.2026: „es gibt übrigens einen Absturz wenn ich auf den copy knopf klicke“).
+// Einstellungen → API-Token.
 // Ursache war ein Browser-Global im Template: Vue löst dort jeden Namen gegen die Komponente auf, „navigator“ wurde
 // zu undefined. Hier wird der Knopf wirklich geklickt — einmal mit Zwischenablage, einmal ohne (http auf einem
 // fremden Rechner hat keine): beides darf nicht abstürzen und muss etwas sagen.
@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { mount, flushPromises, button } from './ui.mjs'
 import { store } from '../src/store.js'
 
-// Das Konto steht seit dem 23.09.2026 für sich (Taloan: „hier habe ich alles quer gemischt“) — der Token-Knopf ist dort
+// Das Konto steht seit dem 23.09.2026 für sich — der Token-Knopf ist dort
 const AccountSettings = (await import('../src/components/AccountSettings.vue')).default
 const TOKEN = 'jt_probe_1234567890'
 
@@ -16,7 +16,7 @@ function fakeServer() {
   globalThis.fetch = async (url, opts) => {
     const body = String(url).endsWith('/api/auth/tokens') && opts?.method === 'POST'
       ? { token: TOKEN, label: 'Probe', hint: 'Nur jetzt sichtbar — als Authorization: Bearer <token> senden.' }
-      : String(url).endsWith('/api/auth/me') ? { user: 'taloan', role: 'admin', rights: [], tokens: [] } : []
+      : String(url).endsWith('/api/auth/me') ? { user: 'u1', role: 'admin', rights: [], tokens: [] } : []
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }
   }
 }

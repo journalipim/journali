@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Status als Vokabular im Modell (Taloan, 22.09.2026): frei benennbar, je Sprache; SetStatus nimmt nur, was das Modell kennt;
+// Status als Vokabular im Modell: frei benennbar, je Sprache; SetStatus nimmt nur, was das Modell kennt;
 // die Saat bringt draft/active/discontinued, zurückgezogene sät sie nicht wieder.
 public class StatusTests
 {
@@ -38,7 +38,7 @@ public class StatusTests
         var w = new World();
         var bad = Commands.SetStatus(w.Ctx, w.P, "review");
         Assert.NotNull(bad.Error); Assert.Contains("draft, active, discontinued", bad.Error);
-        // Taloans Beispiel: SAP 300 → Überprüfung, 501 → Verkauf weltweit
+        // die Beispiel: ERP 300 → Überprüfung, 501 → Verkauf weltweit
         w.J.Append("t", Journali.Core.Entries.Model.StatusStream + "review", Types.StatusDefined, Types.Serialize(new StatusDefinition("review", Labels.Of("Überprüfung", "Review"), "warn", "◐", 15)));
         w.J.Append("t", Journali.Core.Entries.Model.StatusStream + "sale_world", Types.StatusDefined, Types.Serialize(new StatusDefinition("sale_world", Labels.Of("Verkauf weltweit", "Sale worldwide"), "pos", "●", 25)));
         w.Catch();
@@ -59,9 +59,8 @@ public class StatusTests
         Assert.NotNull(Commands.SetStatus(w.Ctx, w.P, "discontinued").Error);
     }
 
-    // Status an der Gruppe (Taloan, 23.09.2026: „neue Produktgruppe, Markteinführung: redaktionell kann alles freigegeben
-    // sein, vorbereitet, trotzdem noch kein Verkaufsstart“). Er gilt für die Gruppe selbst und vererbt sich nicht —
-    // „der Status ist kein Workflow-Kriterium, sondern lediglich ein Attribut, das wir weitergeben“ (Taloan).
+    // Status an der Gruppe. Er gilt für die Gruppe selbst und vererbt sich nicht —
+    // „der Status ist kein Workflow-Kriterium, sondern lediglich ein Attribut, das wir weitergeben“.
     [Fact]
     public void Eine_Gruppe_hat_erst_einen_Status_wenn_jemand_ihn_setzt()
     {

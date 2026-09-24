@@ -5,8 +5,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Vorschau-Presets und Ableitungen (Taloan, 21.09.2026: „in den Einstellungen definieren, welche Ableitungen beim Bilder-Import
-/// automatisch berechnet werden, in welchen Grössen — 200-MB-TIFFs rechnet man nicht live um, das muss alles bereitliegen“).
+/// Vorschau-Presets und Ableitungen.
 /// Presets stehen im Journal (Strom media-preset:&lt;key&gt;), gerechnet wird nie im Serverprozess: das Prozess-Plugin <c>derive</c>
 /// (Node + sharp) holt sich über <c>/api/media/pending</c>, was fehlt, lädt das Original, rechnet, und legt das Ergebnis mit
 /// <c>PUT /api/media/{id}/derived/{preset}</c> ab — der Server speichert die Bytes unter <c>sha.&lt;preset&gt;</c> und schreibt den
@@ -39,7 +38,7 @@ public static class DeriveApi
                 if (q is < 1 or > 100) return Bad("Qualität: 1 bis 100.");
                 var label = b.Label is { Count: > 0 } ? b.Label : cur?.Label ?? Labels.Of(key, key);
                 write(actor, Media.PresetStream + key, Types.MediaPresetDefined, new MediaPresetDefined(label, w, h, format, q, b.Auto ?? cur?.Auto ?? true), null);
-                // Was jetzt fehlt, rechnet der Job — niemand soll dafür eine Seite aufsuchen (Taloan, 23.09.2026)
+                // Was jetzt fehlt, rechnet der Job — niemand soll dafür eine Seite aufsuchen
                 var (job, _) = Kick(c, runner, actor);
                 return Results.Ok(new { preset = View(c, c.Media.Presets[key]), job });
             });

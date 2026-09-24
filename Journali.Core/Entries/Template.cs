@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 namespace Journali.Core.Entries;
 
 /// <summary>
-/// Vorlagen-Attribute (Taloan, 17.09.2026 — „fang mit den Vorlagen an“): Textbausteine aus Attributen,
+/// Vorlagen-Attribute: Textbausteine aus Attributen,
 /// ohne KI und ohne Skript — für Redakteure, nicht Techniker. Der Wert des Attributs am Knoten ist die
 /// Vorlage (je Sprache, wenn so definiert), das Ergebnis wird beim Lesen gebaut wie bei der Formel.
 ///

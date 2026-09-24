@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Freigabe über den Workflow (Taloan, 21.09.: „als Web-Redakteur schick ich das zur Freigabe — funzt nicht“): „freigeben“ am Produkt
+// Freigabe über den Workflow: „freigeben“ am Produkt
 // gibt jede vollständige Variante für den Kanal frei; unvollständige nennen, was fehlt.
 public class ReleaseTests
 {
@@ -47,7 +47,7 @@ public class ReleaseTests
     [Fact]
     public void Schritt_mit_Freigabe_bleibt_aus_wenn_keine_Variante_vollstaendig_ist()
     {
-        // Taloan, 21.09.: „Schritt gegangen, Wirkung nicht“ ist kein Zustand — freigeben ohne vollständige Variante → der Knoten bleibt in Prüfung
+        // „Schritt gegangen, Wirkung nicht“ ist kein Zustand — freigeben ohne vollständige Variante → der Knoten bleibt in Prüfung
         var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
         var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
         Assert.Null(Commands.WorkflowStep(ctx(), w.P, "review", "submit", null).Error);
@@ -63,7 +63,7 @@ public class ReleaseTests
     [Fact]
     public void Produktzustand_bleibt_die_Ausleitung_folgt_den_Varianten()
     {
-        // Taloan, 21.09.: „die Produktseite darf nicht raus, wenn keine Variante freigegeben ist — das muss aus den Daten kommen“:
+        // „die Produktseite darf nicht raus, wenn keine Variante freigegeben ist — das muss aus den Daten kommen“:
         // der Workflow-Zustand am Produkt bleibt redaktionell, die Ausleitung leitet aus den Varianten ab — ohne Freigabe weg, mit Freigabe wieder da
         var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
         var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
@@ -83,7 +83,7 @@ public class ReleaseTests
     [Fact]
     public void Variante_im_eigenen_Weg_gibt_der_Vater_nicht_frei()
     {
-        // Taloan, 21.09.: „ein Produkt mit einer Variante, die nicht freigegeben ist, kann ich auch nicht freigeben“ — Variante in Entwurf (wieder geöffnet):
+        // „ein Produkt mit einer Variante, die nicht freigegeben ist, kann ich auch nicht freigeben“ — Variante in Entwurf (wieder geöffnet):
         // freigeben am Produkt bleibt aus und nennt sie; erst wenn die Variante ihren Weg zu Ende geht, geht das Produkt
         var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
         var ctx = () => new Ctx { Model = w.Model, Tree = w.Tree, Relations = w.Relations, Media = w.Media, Workflows = wfs, Write = (s, ty, pl) => { var e = w.J.Append("t", s, ty, Types.Serialize(pl)); w.Catch(); Projector.CatchUp(w.J, wfs); return e; } };
@@ -104,7 +104,7 @@ public class ReleaseTests
     [Fact]
     public void Variante_ohne_eigenen_Schritt_folgt_dem_Produkt()
     {
-        // Taloan, 21.09.: „alle Varianten zeigen Entwurf“, obwohl das Produkt freigegeben ist — ohne eigenen Eintrag gilt der Zustand des Vaters
+        // „alle Varianten zeigen Entwurf“, obwohl das Produkt freigegeben ist — ohne eigenen Eintrag gilt der Zustand des Vaters
         var w = new World(); var wfs = new Workflows(); Projector.CatchUp(w.J, wfs);
         var wf = wfs.All["review"]; string? parentOf(string id) => w.Tree.Nodes.GetValueOrDefault(id)?.Parent;
         Assert.Equal(("draft", null), wfs.StateOf(w.V1, wf, parentOf));
@@ -113,7 +113,7 @@ public class ReleaseTests
         w.J.Append("t", w.V1, Types.WorkflowStateSet, Types.Serialize(new WorkflowStateSet("review", "rework", "reject", "x"))); Projector.CatchUp(w.J, wfs);
         Assert.Equal(("rework", null), wfs.StateOf(w.V1, wf, parentOf));            // eigener Schritt schlägt den Vater
         Assert.Equal(("approved", w.P), wfs.StateOf(w.V2, wf, parentOf));           // die andere folgt weiter
-        // eigenen Zustand aufheben → erbt wieder (Taloan, 22.09.)
+        // eigenen Zustand aufheben → erbt wieder
         w.J.Append("t", w.V1, Types.WorkflowStateSet, Types.Serialize(new WorkflowStateSet("review", null, null, "↑ erbt"))); Projector.CatchUp(w.J, wfs);
         Assert.Null(wfs.Own(w.V1, wf));
         Assert.Equal(("approved", w.P), wfs.StateOf(w.V1, wf, parentOf));
@@ -122,7 +122,7 @@ public class ReleaseTests
     [Fact]
     public void Eskalation_nach_n_Tagen_duerfen_auch_andere_Rollen()
     {
-        // Taloan, 21.09.: „alle Redakteure im Urlaub — jemand muss freigeben“: freigeben darf admin; nach 3 Tagen in Prüfung auch manager
+        // „alle Redakteure im Urlaub — jemand muss freigeben“: freigeben darf admin; nach 3 Tagen in Prüfung auch manager
         var t = new WfTransition("approve", "review", "approved", Labels.Of("freigeben", "Approve"), ["admin"], false, ["release:web"], 3, ["manager"]);
         var since = new DateTimeOffset(2026, 9, 21, 0, 0, 0, TimeSpan.Zero);
         Assert.False(Commands.Escalated(t, "manager", since, since.AddDays(2)));

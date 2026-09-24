@@ -22,21 +22,21 @@ Eintrag übergeht das Abbild.
 |---|---|---|
 | `GroupCreated` | `parent?`, `name?`, `label{}` | Produktgruppe; `parent` null = Wurzel. `name` = Name im Baum; `label{}` je Sprache ist Altlast und füllt `name`, wenn er fehlt |
 | `GroupRenamed` | `label{}` | **Altlast** (17.09.2026): heute `NodeNamed`; bleibt lesbar |
-| `NodeNamed` | `name?` | eigener Name im Baum, jede Rolle, einsprachig; leer = weg, die Automatik benennt (docs/pflegestruktur.md, 17). **Zählt** als Datenpflege (Taloan, 23.09.2026: „Namen vergeben ist auch Werte verändern“) — bis dahin stand es bei der Struktur |
+| `NodeNamed` | `name?` | eigener Name im Baum, jede Rolle, einsprachig; leer = weg, die Automatik benennt (docs/pflegestruktur.md, 17). **Zählt** als Datenpflege — bis dahin stand es bei der Struktur |
 | `LabelAttributeSet` | `attribute?` | das ★: welches Attribut ab hier nach unten die Knoten ohne eigenen Namen benennt; jeder Knoten darunter darf es neu setzen; null = weg, es gilt wieder das der Vorfahren |
 | `ProductCreated` | `group`, `axes[]?` | Produkt unter einer Gruppe; `axes` = wonach es variiert (Attribute, optional). `family` ist Altlast und bleibt leer |
 | `ProductAxesSet` | `axes[]` | Variantenachsen (ganze Liste) — auch mit Varianten (20.09.2026): eine neue Achse nimmt an jeder Variante deren eigenen Wert des Attributs — leere zählen nicht, die Variante bleibt dann ohne Achsenwert und bekommt ihn, sobald der Wert gesetzt wird (`AttributeSet` des Achsenattributs an der Variante = Achsenwert); die Kombination aller Achsen je Produkt bleibt eindeutig (vollständige Kombinationen) — sonst Rückfrage; mit `force` verlieren die doppelten Varianten ihre Achsenzuordnung (Werte bleiben, sie zählen nicht, bis sie unterscheidbar sind); eine entfallene Achse schreibt ihren Wert vorher als `AttributeSet` an die Variante, damit nichts verloren geht |
 | `VariantCreated` | `product`, `axisValues{}` | Variante — das Verkaufbare; je Produktachse ein Wert, Kombination je Produkt eindeutig |
-| `RubricCreated` | `parent?`, `label{}`, `name?`, `channel?`, `market?` | Rubrik eines Publikationsbaums (Taloan, 20.09.2026; Strom `k-…`, Rolle `rubric`). Ohne `parent` die Wurzel = der Baum eines Kanals, optional für einen Markt (Maximalstruktur; Ausleitungen filtern über das Attribut `markets`). Rubriken tragen Werte wie jeder Knoten (Texte, Bilder, SEO); NodeNamed/NodeMoved/NodeRetired/AttributeSet gelten |
+| `RubricCreated` | `parent?`, `label{}`, `name?`, `channel?`, `market?` | Rubrik eines Publikationsbaums. Ohne `parent` die Wurzel = der Baum eines Kanals, optional für einen Markt (Maximalstruktur; Ausleitungen filtern über das Attribut `markets`). Rubriken tragen Werte wie jeder Knoten (Texte, Bilder, SEO); NodeNamed/NodeMoved/NodeRetired/AttributeSet gelten |
 | `PubTreeSet` | `channel`, `market?` | Kanal und Markt der Wurzel ändern |
-| `PubStandSet` | `journalNumber?` | Stand einer Rubrik oder Wurzel (Taloan, 21.09.2026, „A“): eingefroren bei #n — alles darunter liest die Pflege wie damals (Ausleitung, Knotenansicht, Export-Job); die nächste Rubrik mit eigenem Stand übersteuert; null = live. Kein Kopieren, ein Zeiger; aktualisieren = neuer Zeiger. `PUT /api/rubrics/{id}/stand` `{now:true}` / `{journalNumber}` / `{}` |
-| `RulePlaced` | `rule{id, kind, under?, role?, name?, attribute?, value?, groupBy?, label?}` | Regel-Verweis an einer Rubrik (Taloan, 21.09.2026: Ersatzteilkatalog aus 20 Produktgruppen — „alles, worauf das zutrifft“). `kind` name: Gruppen (`role` group) oder Produkte namens `name` unter `under`; `kind` attribute: Produkte, deren wirksamer Wert von `attribute` gleich `value` ist (geerbt zählt, Listen: enthält). `groupBy` none · parent (Produktgruppe darüber) · attr:&lt;key&gt;. Aufgelöst beim Lesen (`Rules.cs`), im Baum des Stands; nichts wird kopiert. Gleiche `id` ersetzt. `PUT /api/rubrics/{id}/rules`, Vorschau `GET …/rules/preview?kind=…`, Auflösung `GET …/rules/expand` |
+| `PubStandSet` | `journalNumber?` | Stand einer Rubrik oder Wurzel: eingefroren bei #n — alles darunter liest die Pflege wie damals (Ausleitung, Knotenansicht, Export-Job); die nächste Rubrik mit eigenem Stand übersteuert; null = live. Kein Kopieren, ein Zeiger; aktualisieren = neuer Zeiger. `PUT /api/rubrics/{id}/stand` `{now:true}` / `{journalNumber}` / `{}` |
+| `RulePlaced` | `rule{id, kind, under?, role?, name?, attribute?, value?, groupBy?, label?}` | Regel-Verweis an einer Rubrik. `kind` name: Gruppen (`role` group) oder Produkte namens `name` unter `under`; `kind` attribute: Produkte, deren wirksamer Wert von `attribute` gleich `value` ist (geerbt zählt, Listen: enthält). `groupBy` none · parent (Produktgruppe darüber) · attr:&lt;key&gt;. Aufgelöst beim Lesen (`Rules.cs`), im Baum des Stands; nichts wird kopiert. Gleiche `id` ersetzt. `PUT /api/rubrics/{id}/rules`, Vorschau `GET …/rules/preview?kind=…`, Auflösung `GET …/rules/expand` |
 | `RuleRemoved` | `id` | Regel weg — die Treffer verschwinden aus der Rubrik, der Pflegebaum bleibt |
-| `PlaceNamed` | `node`, `name?` | Anzeigename eines Verweises in dieser Rubrik (Taloan, 21.09.2026: 20 Verweise „Ersatzteile“ intern „Rasenmäher“ nennen) — nur für den Überblick, nie für die Ausgabe (die nimmt Attribute); leer = Pflegename |
+| `PlaceNamed` | `node`, `name?` | Anzeigename eines Verweises in dieser Rubrik — nur für den Überblick, nie für die Ausgabe (die nimmt Attribute); leer = Pflegename |
 | `NodePlaced` | `node`, `order?` | Verweis: Produktgruppe oder Produkt hängt in dieser Rubrik (Strom = Rubrik); derselbe Knoten darf in mehreren Rubriken hängen; keine Vererbung darüber. `order` = Platz in der Rubrik |
 | `NodeUnplaced` | `node` | Verweis weg |
 | `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, Rubrik unter Rubrik, sonst unter Gruppe; nie unter sich selbst) |
-| `NodeOrdered` | `order` | Platz unter den Geschwistern (Rubriken; Taloan, 21.09.2026 — Reihenfolge per Ziehen). Ohne Eintrag alphabetisch |
+| `NodeOrdered` | `order` | Platz unter den Geschwistern (Rubriken). Ohne Eintrag alphabetisch |
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles — das Abbild legt ihn in den Papierkorb |
 | `NodeRestored` | — | Knoten zurück aus dem Papierkorb, mit allem, was er hatte (Werte, Gruppen, Kennungen); der Vater muss im Baum stehen. Rückgängig je Aktion über den Stapel: `POST /api/batches/{batch}/undo` holt genau die Knoten des Stapels zurück |
 | `StatusSet` | `status` (Schlüssel aus dem Status-Vokabular des Modells) | Produkt und Variante; Gruppe hat keinen. Saat: draft, active, discontinued |
@@ -93,7 +93,7 @@ Die Datei liegt ausserhalb (Store, Hash-adressiert); im Journal nur das Ding
 | `MediaFiled` | `folder` (Ordner-Id oder null) | Medium in einen Ordner der Bibliothek gelegt (null = kein Ordner) |
 | `MediaDerived` | `preset`, `width`, `height`, `bytes`, `fingerprint` | Ableitung nach Preset liegt im Store (`sha.<preset>`); anderer Fingerabdruck als das Preset = neu rechnen |
 
-Vorschau-Presets (Strom `media-preset:<key>`, Taloan 21.09.2026): `MediaPresetDefined {label, width, height, format, quality, auto}` ·
+Vorschau-Presets (Strom `media-preset:<key>`): `MediaPresetDefined {label, width, height, format, quality, auto}` ·
 `MediaPresetRetired`. API: `GET/PUT/DELETE /api/media/presets[/{key}]` (Recht Modell), `GET /api/media/pending`,
 `PUT /api/media/{id}/derived/{preset}` (Bytes, Köpfe X-Width/X-Height/X-Fingerprint), `GET /api/media/{id}/{preset}`, `POST /api/media/derive`.
 
@@ -105,7 +105,7 @@ Belege je Datei — die Dateien selbst liegen in den Fächern, nicht im Journal:
 | `JobFileConsumed` | `run` (leer bei Duplikat), `name`, `hash`, `bytes`, `status` ok/failed/duplicate, `mediaId?` | Eingang verarbeitet; `ok`-Hashes merkt das Abbild — gleicher Inhalt läuft nie zweimal |
 | `JobFileWritten` | `run`, `name` (mit Laufordner), `hash`, `bytes`, `latest`, `mediaId?` | Ausgabe geschrieben (`latest`: auch unter dem stabilen Namen) |
 
-Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren, wie ein interner Dateimanager“) — Strom
+Medienordner — Strom
 `mf-…`, nur zum Organisieren der Bibliothek; sagt nichts über Verwendung (Relationen) oder Datei (Store):
 
 | Typ | Nutzdaten | Wirkung |
@@ -120,8 +120,8 @@ Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisiere
 | Typ | Nutzdaten | Wirkung im Abbild |
 |---|---|---|
 | `AttributeSet` | `attribute`, `locale?`, `channel?`, `value` oder `values[]` (mehrfach), `row?` | Wert auf dieser Achse; der letzte gewinnt. Leerer `value` / leere `values` = eigener Wert weg, Fallback gilt wieder. `row`: Zelle einer Zeile eines vermehrbaren Attributs |
-| `TranslationMarked` | `attribute`, `locale` (Ziel), `channel?`, `row?`, `sourceHash`, `sourceAt`, `order?` | Übersetzung, die Marke (30; Taloan 22.09.2026): gegen **diese** Quellfassung ist der Zielwert übersetzt. Daraus kommt der Zustand einer Einheit — Hash gleich = fertig, ungleich = im Rückstand, auch wenn der Zieltext gerade erst geschrieben wurde (ein überholter Rücklauf wird eingespielt, nicht verworfen) |
-| `ValueSourced` | `attribute`, `locale?`, `channel?`, `row?`, `source`, `title?`, `note?`, `method?` (web, ai, rule, import, manual, pending), `checkedAt?` | **Beleg am Wert** (20.09.2026): woher der Wert auf dieser Achse stammt — URL oder Text (Datenblatt, Katalogseite), Weg, Prüfdatum (leer = Tag des Eintrags). Leere `source` = Beleg weg. Wird der Wert danach geändert, meldet die Sicht den Beleg als veraltet (`stale`). Die Anreicherung schreibt ihn im selben Stapel wie den Wert | `pending` (Taloan, 20.09.): noch kein Wert, aber angefragt — `source` = bei wem, `checkedAt` = Wiedervorlage; die Datenanalyse zeigt ⏳ statt rot, überfällig nach dem Datum
+| `TranslationMarked` | `attribute`, `locale` (Ziel), `channel?`, `row?`, `sourceHash`, `sourceAt`, `order?` | Übersetzung, die Marke (30): gegen **diese** Quellfassung ist der Zielwert übersetzt. Daraus kommt der Zustand einer Einheit — Hash gleich = fertig, ungleich = im Rückstand, auch wenn der Zieltext gerade erst geschrieben wurde (ein überholter Rücklauf wird eingespielt, nicht verworfen) |
+| `ValueSourced` | `attribute`, `locale?`, `channel?`, `row?`, `source`, `title?`, `note?`, `method?` (web, ai, rule, import, manual, pending), `checkedAt?` | **Beleg am Wert** (20.09.2026): woher der Wert auf dieser Achse stammt — URL oder Text (Datenblatt, Katalogseite), Weg, Prüfdatum (leer = Tag des Eintrags). Leere `source` = Beleg weg. Wird der Wert danach geändert, meldet die Sicht den Beleg als veraltet (`stale`). Die Anreicherung schreibt ihn im selben Stapel wie den Wert | `pending`: noch kein Wert, aber angefragt — `source` = bei wem, `checkedAt` = Wiedervorlage; die Datenanalyse zeigt ⏳ statt rot, überfällig nach dem Datum
 | `RowAdded` | `attribute`, `row` | neue Zeile eines vermehrbaren Attributs (`type: rows`); Kennung `r-…` vergibt der Server |
 | `RowRemoved` | `attribute`, `row` | Zeile weg, samt ihren Zellen im Abbild |
 | `RowOrdered` | `attribute`, `rows[]` | Reihenfolge; ungenannte Zeilen hinten dran |
@@ -138,7 +138,7 @@ dann ohne Kanal, dann ohne Sprache. Ein Wert auf `de/web` überschreibt also
 `de`, das wiederum `*`. Die Variantenebene (Modell → Farbe → Grösse) fehlt
 noch — sie kommt als eigene Achse dazu, nicht als neuer Typ.
 
-## Ausleitung eines Publikationsbaums (Taloan, 21.09.2026 — entschieden)
+## Ausleitung eines Publikationsbaums
 
 `GET /api/pub/{id}/export?locale=` — je Produkt im Baum (Verweis selbst oder über eine verwiesene Gruppe) ausgeleitet oder zurückgehalten,
 mit Grund (`Journali.Core/Projections/Publication.cs`, Tests `PublicationTests`):
@@ -151,7 +151,7 @@ mit Grund (`Journali.Core/Projections/Publication.cs`, Tests `PublicationTests`)
 
 Die Oberfläche (⇶ Publikation) zeigt je Baum „n ausgeleitet · m zurückgehalten“ und die Liste mit Gründen.
 
-**Attributgruppen am Publikationsbaum (Taloan, 21.09.2026 — entschieden):** eine Gruppe, die an einer Rubrik hängt
+**Attributgruppen am Publikationsbaum:** eine Gruppe, die an einer Rubrik hängt
 (`GroupsAttached` am `k-…`-Knoten), gilt für alles, was darunter verwiesen ist — am Verweis selbst oder an einem Vorfahren
 (`Tree.EffectiveGroups`, Herkunft = die Rubrik). So hängt der Web-Redakteur „SEO“ an seinen Baum und pflegt es dort, auf der
 Kanalachse seines Baums; ein Print-Baum ohne die Gruppe kennt sie nicht. **Pflegewerte sind in der Publikation nur lesbar,
@@ -168,21 +168,21 @@ Eintrag trägt die **ganze** Definition, der letzte je Strom gewinnt; ein
 | Strom | Typ | Nutzdaten |
 |---|---|---|
 | `locale:<code>` | `LocaleDefined` / `LocaleRetired` | `code`, `label` — zurückziehen nicht für die Mastersprache und nicht die letzte; Werte auf ihr bleiben im Journal |
-| `status:<key>` | `StatusDefined` / `StatusRetired` | Status-Vokabular (Taloan, 22.09.2026): `key`, `label{}` je Sprache, `color` (muted, pos, neg, warn, accent), `icon`, `order`. Lebenszyklus am Markt, nicht Redaktion (das ist der Workflow). `draft` bleibt (Startstatus neuer Knoten); zurückziehen nur, wenn kein Knoten ihn trägt und kein Workflow ihn als Wirkung `status:<key>` nennt; zurückgezogene sät `SeedMissing` nicht wieder. Der Import bildet Fremdstatus (SAP-Materialstatus 300/400/500/501) über die Umwandlung „Tabelle“ auf einen Schlüssel ab (Ziel „Status“, `status.set` im Stapel) |
+| `status:<key>` | `StatusDefined` / `StatusRetired` | Status-Vokabular: `key`, `label{}` je Sprache, `color` (muted, pos, neg, warn, accent), `icon`, `order`. Lebenszyklus am Markt, nicht Redaktion (das ist der Workflow). `draft` bleibt (Startstatus neuer Knoten); zurückziehen nur, wenn kein Knoten ihn trägt und kein Workflow ihn als Wirkung `status:<key>` nennt; zurückgezogene sät `SeedMissing` nicht wieder. Der Import bildet Fremdstatus (Materialstatus des ERP 300/400/500/501) über die Umwandlung „Tabelle“ auf einen Schlüssel ab (Ziel „Status“, `status.set` im Stapel) |
 | `channel:<key>` | `ChannelDefined` / `ChannelRetired` | `key`, `label{}` — zurückziehen nur, wenn kein Attribut ihn nennt (channels, required) |
-| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `unique` (eindeutig über den Baum, Taloan 21.09.2026 — Text/Zahl, einwertig, auch eine Achse; einschalten mit doppelten Werten im Bestand wird verweigert — erst bereinigen; eindeutige Werte sind die Schlüssel des Knotens: `keys` in der Baumzeile, Name der Variante ohne ★, finden beim Tabellen-Import, kommen beim Kopieren nicht mit), `type` (text, html, integer, decimal, boolean, date, enum, **rows**, **formula** — der Wert ist ein Skript wie JavaScript, gepflegt wie jeder Wert, auch geerbt und je Sprache; das Ergebnis wird beim Lesen gerechnet: `$schlüssel` liest andere Attribute, Variablen, if/else, return, Vorlagen `…${…}…`, `+ - * / % **`, `== != < <= > >=`, `&& || !`, `?:`, `??`, round trunc floor ceil abs min max sqrt format · len upper lower capitalize title trim trimstart trimend squeeze left right substr indexof contains startswith endswith count replace split repeat reverse padleft padright regextest regexmatch regexreplace striphtml escapehtml nl2br slug str number · isblank coalesce; der Server prüft die Syntax beim Setzen; `Formula.cs`), `unit?` (muss es unter `unit:` geben), `group` (Attributgruppe), `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `inheritable` (Wert vererbt sich nach unten; Vorgabe nein), `required{kanal: [sprachen] oder ["*"]}?` (Pflicht — gilt überall gleich, Eineindeutigkeit), `levels[]?` (Ausnahme: an welchen Knotentypen; null = Regel der Gruppe), `columns[]?` (bei rows), `pattern?` (nur text: regulärer Ausdruck, dem jeder Wert ganz genügen muss — E-Mail, Telefon, EAN …; Vorlagen im Modell; `patternHint?` steht in der Fehlermeldung), `releaseWatch?` (Freigabesteuerung, Taloan 22.09.2026: `always` = jede Änderung zählt als Eingriff in Prüfung und Freigabe, `never` = nie, leer = wie die Gruppe) |
-| `group:<key>` | `AttributeGroupDefined` / `AttributeGroupRetired` | `key`, `label{}`, `activeFrom?` (group, product, variant: ab welchem Knotentyp Werte erfasst werden; darüber sichtbar, gesperrt), `releaseWatch?` (Freigabesteuerung, Taloan 22.09.2026: `auto`/leer = zählt, wenn die Gruppe ein Pflichtfeld hat, `always` = immer, `never` = nie; das Attribut überschreibt die Gruppe; `ModelCatalog.Watched` ist die eine Auskunft, die Wirkung sagt der Workflow). Gruppen hängen an Knoten (`GroupsAttached`) |
+| `attribute:<key>` | `AttributeDefined` | `key`, `label{}`, `unique` (eindeutig über den Baum), `type` (text, html, integer, decimal, boolean, date, enum, **rows**, **formula** — der Wert ist ein Skript wie JavaScript, gepflegt wie jeder Wert, auch geerbt und je Sprache; das Ergebnis wird beim Lesen gerechnet: `$schlüssel` liest andere Attribute, Variablen, if/else, return, Vorlagen `…${…}…`, `+ - * / % **`, `== != < <= > >=`, `&& || !`, `?:`, `??`, round trunc floor ceil abs min max sqrt format · len upper lower capitalize title trim trimstart trimend squeeze left right substr indexof contains startswith endswith count replace split repeat reverse padleft padright regextest regexmatch regexreplace striphtml escapehtml nl2br slug str number · isblank coalesce; der Server prüft die Syntax beim Setzen; `Formula.cs`), `unit?` (muss es unter `unit:` geben), `group` (Attributgruppe), `axes[]` (locale, channel), `channels[]?`, `list?`, `multiple`, `inheritable` (Wert vererbt sich nach unten; Vorgabe nein), `required{kanal: [sprachen] oder ["*"]}?` (Pflicht — gilt überall gleich, Eineindeutigkeit), `levels[]?` (Ausnahme: an welchen Knotentypen; null = Regel der Gruppe), `columns[]?` (bei rows), `pattern?` (nur text: regulärer Ausdruck, dem jeder Wert ganz genügen muss — E-Mail, Telefon, EAN …; Vorlagen im Modell; `patternHint?` steht in der Fehlermeldung), `releaseWatch?` (Freigabesteuerung) |
+| `group:<key>` | `AttributeGroupDefined` / `AttributeGroupRetired` | `key`, `label{}`, `activeFrom?` (group, product, variant: ab welchem Knotentyp Werte erfasst werden; darüber sichtbar, gesperrt), `releaseWatch?` (Freigabesteuerung). Gruppen hängen an Knoten (`GroupsAttached`) |
 | `relation:<key>` | `RelationTypeDefined` / `RelationTypeRetired` | `key`, `label{}`, `reverse{}` (Bezeichnung vom Ziel aus), `from[]?`/`to[]?` (erlaubte Rollen, null = alle), `group?` (Attributgruppe der Werte an der Relation). Saatgut: accessory, component (Gruppe relation_component mit `quantity`), related |
-| `locale:<code>` / `channel:<key>` | `LocaleDefined` / `ChannelDefined` mit `fallback` (Taloan, 20.09.2026) | Fallback: Sprache bzw. Kanal, deren Wert gilt, wenn diese keinen hat — in der Kette vor dem Master (`fr-ch → fr-fr → de → *`); beim Kanal gilt der Fallback auch für Freigaben (Sortiment: `shop_cn` ohne eigene Freigabe → die von `shop_tr`, `Tree.ReleasedVia`). Codes dürfen `-` tragen |
-| `settings:master_channel` | `MasterChannelDefined` | `key` — der Masterkanal (Saatgut `web`, Taloan 20.09.2026): bekommt die Werte des Sterns (ohne Kanal) und kann sie überschreiben; die anderen Kanäle beziehen ihren Wert aus ihm — Fallback-Kette je Achse Wert → Master → Stern, Kanal vor Sprache (`Node.Fallback`); die Vollständigkeit zählt ohne Master |
+| `locale:<code>` / `channel:<key>` | `LocaleDefined` / `ChannelDefined` mit `fallback` | Fallback: Sprache bzw. Kanal, deren Wert gilt, wenn diese keinen hat — in der Kette vor dem Master (`fr-ch → fr-fr → de → *`); beim Kanal gilt der Fallback auch für Freigaben (Sortiment: `shop_cn` ohne eigene Freigabe → die von `shop_tr`, `Tree.ReleasedVia`). Codes dürfen `-` tragen |
+| `settings:master_channel` | `MasterChannelDefined` | `key` — der Masterkanal (Saatgut `web`): bekommt die Werte des Sterns (ohne Kanal) und kann sie überschreiben; die anderen Kanäle beziehen ihren Wert aus ihm — Fallback-Kette je Achse Wert → Master → Stern, Kanal vor Sprache (`Node.Fallback`); die Vollständigkeit zählt ohne Master |
 | `translation:<key>` | `TranslationOrdered` / `TranslationReturned` | Übersetzung, das Paket (30): `from`, `to`, `units[]` (Id, `sourceHash`, `targetHash`), `root?`, `channel?`, `attributes[]?`, `scope`, `note?` — ein Zeiger ins Journal, die XLIFF-Datei ist nur die Kopie für unterwegs. Der Rücklauf schliesst ihn: `written`, `behind` (kam überholt zurück, bleibt offen), `conflicts` (Ziel hier geändert), `skipped` |
-| `settings:sku_attribute` | `SkuAttributeDefined` | **ausser Kraft** (Taloan, 21.09.2026, am selben Tag: „Kennung raus, alles über eindeutig“) — die Abbilder überlesen ihn; jedes Attribut mit `unique` ist ein Schlüssel |
+| `settings:sku_attribute` | `SkuAttributeDefined` | **ausser Kraft** — die Abbilder überlesen ihn; jedes Attribut mit `unique` ist ein Schlüssel |
 | `settings:master_locale` | `MasterLocaleDefined` | `code` — die Mastersprache (Saatgut `de`): Pflichtfelder beim Anlegen werden in ihr erfasst; liegt ihr Wert nach dem einer anderen Sprache (Eintragsnummer), gilt die als „zu überarbeiten“ — abgeleitet, kein eigener Eintrag |
 | `settings:label:<role>` | `TreeLabelDefined` | **Altlast** (17.09.2026): Name im Baum je Knotentyp — ersetzt durch das ★ am Knoten (`LabelAttributeSet`); bleibt lesbar, wird nicht mehr gesät |
 | `view:<key>` | `ViewDefined` / `ViewRetired` | `key`, `label{}`, `level` (Knotentyp, Pflicht), `items[]` je `{group, order[]?}` — **nur diese** Gruppen, in dieser Reihenfolge; darin Attribute in Reihenfolge, ungenannte Attribute hängen unten an ihrer Gruppe |
 | `unit:<key>` | `UnitDefined` / `UnitRetired` | `key`, `label{}`, `quantity` (mass, length, volume, data, count …), `factor` zur Basiseinheit der Grösse (Basis = 1) — Saatgut: kg g m cm mm in l ml GB MB TB pc |
 | `attribute:<key>` | `AttributeRetired` | `key` — nicht ein ★ |
-| `list:<key>` | `ListDefined` / `ListRetired` | `key`, `label{}`, `columns[]?` (eigene Felder je Eintrag, z. B. ral), `closed?` (Taloan, 20.09.2026: geschlossen — Werte aus einer Quelle wie ETIM, kein „+ neuer Wert“ in der Zelle, Werte zufügen nur mit Modell-Recht) — zurückziehen nur, wenn kein Attribut die Liste benutzt |
+| `list:<key>` | `ListDefined` / `ListRetired` | `key`, `label{}`, `columns[]?` (eigene Felder je Eintrag, z. B. ral), `closed?` — zurückziehen nur, wenn kein Attribut die Liste benutzt |
 | `list:<key>` | `ListValueDefined` | `value`, `label{}`, `extra{}?`, `order` |
 | `list:<key>` | `ListValueRetired` | `value` |
 | `family:<key>` | `FamilyDefined` / `FamilyRetired` | **Altlast** (16.09.2026): Familien sind durch Attributgruppen am Baum ersetzt; der Typ bleibt lesbar, wird nicht mehr geschrieben |
@@ -203,8 +203,7 @@ erlaubte Kanäle, Werteliste), im Journal steht immer ein String.
 
 ## Nutzung — kein eigener Eintrag
 
-Jeder Eintrag trägt seit dem 22.09.2026 eine **Art** (Spalte `kind`, Taloan:
-„eine neue Spalte, die die Art des Eintrags kategorisiert“): `model`,
+Jeder Eintrag trägt seit dem 22.09.2026 eine **Art** (Spalte `kind`): `model`,
 `structure`, `data`, `publish`, `reference`, `setup`, `ops` (`Kinds` im Kern).
 Die Art ist ein Fakt und steht für immer im Eintrag — ob sie **zählt**, sagt
 der Tarif und darf sich ändern, ohne die Vergangenheit anzufassen. Wer
@@ -231,7 +230,7 @@ pflegen zählt aber sehr wohl, auch an einer Rubrik: das ist keine
 Datenmodellierung), die **Klassenzuweisung** (ETIM), **Referenzdaten von
 aussen** (`PluginDataSet` eines Katalogs samt seinen Wertelisten) und
 **Einrichtung und Betrieb** (Plugins, Jobs mit Protokoll, gerechnete
-Vorschauen, Benutzer, Rollen). Gemessen an Taloans Journal (17.–22.09.2026):
+Vorschauen, Benutzer, Rollen). Gemessen an die Journal (17.–22.09.2026):
 32 597 von 68 351 Einträgen zählen — der ETIM-Katalog am 20.09. schlug mit
 29 183 nicht zählenden zu Buche. Woche (ab Montag) und Monat werden aus den
 Tagen gerechnet. Es schreibt selbst nichts und braucht keinen
@@ -239,12 +238,11 @@ Eintragstyp — der Verlauf steht damit auch rückwirkend für alles da, was sch
 im Journal liegt. `GET /api/usage?history=day|week|month&limit=n` liefert je
 Periode `used`, `max`, `start`, `resetAt` und den Verlauf; die Grenzen stehen
 vorerst als Annahme in `Limits` (20 000 in der Woche, 100 000 im Monat; **kein
-Tageslimit** — Taloan, 22.09.2026: „macht man 3 Testimporte und muss aufhören“).
+Tageslimit**).
 Zum Messen, was eine Einzelperson braucht; keine Lizenz, keine Sperre. **Lesen und Exportieren zählen nicht mit**, weil die
 Endpunkte nichts schreiben (`/api/pub/{id}/export` und `/api/nodes/{id}/table`
 sind `MapGet` und verwerfen den Writer). **Die Betriebsspur der Jobläufe zählt ebenfalls nicht** (`JobRunStarted`,
-`JobRunFinished`, `JobFileConsumed`, `JobFileWritten` stehen in `Usage.Free`;
-Taloan, 22.09.2026: „Sicherung kostet nix“) — was ein Job an Daten schreibt,
+`JobRunFinished`, `JobFileConsumed`, `JobFileWritten` stehen in `Usage.Free`) — was ein Job an Daten schreibt,
 zählt weiterhin: ein Import einen Eintrag je geändertem Wert, ein
 Wiederholungsimport ohne Änderung gar keinen. Angezeigt wird das in den Einstellungen als
 drei Fortschrittsbalken mit Verlauf (`UsageBars.vue`).
@@ -311,7 +309,7 @@ steht im Kopf `X-Actor`.
 
 ## Versionen — am Knotenstrom
 
-Taloan, 19.09.2026: eine Freigabe ist eine Version; nach aussen zählt das Belegdokument (Haftung: „welche Unterlagen galten vor
+eine Freigabe ist eine Version; nach aussen zählt das Belegdokument (Haftung: „welche Unterlagen galten vor
 5 Jahren“), das Journal ist das Register. Nichts wird kopiert oder gelöscht; zurückgezogen wird nur markiert.
 
 | Typ | Payload | Bedeutung |
@@ -325,25 +323,25 @@ mit den Werten von damals — eigene Werte des Knotens, nicht die Welt von damal
 
 ## Benutzer — Strom `user:<key>`
 
-Taloan, 19.09.2026: Benutzer und Rollen. Wer es gibt und welche Rolle gilt, steht im Journal; Passwörter, API-Token und
+Benutzer und Rollen. Wer es gibt und welche Rolle gilt, steht im Journal; Passwörter, API-Token und
 Sitzungen liegen in `auth.json` im Datenverzeichnis — nie im Journal (Regel wie bei `secrets.json`).
 
 | Typ | Payload | Bedeutung |
 |---|---|---|
 | `UserDefined` | `name`, `email`, `role` (Schlüssel einer Rolle), `enabled` | der Benutzer — der letzte Eintrag gilt ganz |
 | `UserRetired` | — | entfernt; Einträge, die er geschrieben hat, bleiben (X-Actor) |
-| `UserDefined` … `team?` | Team (Taloan, 23.09.2026): wessen KI-Schlüssel gelten und auf wessen Rechnung es läuft. Leer = es gilt das erste Team |
-| `UserPrefsSet` | `prefs{}` — Werte als JSON-Text | was die Person für sich eingestellt hat (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“): Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Nur Genanntes wird gesetzt, leerer Wert nimmt einen Schlüssel weg — ein Wechsel der Darstellung ist ein kleiner Eintrag. Der **Fensterzustand** bleibt im Browser (Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste): er ändert sich ständig und gehört zum Gerät. Geschrieben über `PUT /api/auth/me/prefs`, jeder für sich, ohne besonderes Recht |
+| `UserDefined` … `team?` | Team: wessen KI-Schlüssel gelten und auf wessen Rechnung es läuft. Leer = es gilt das erste Team |
+| `UserPrefsSet` | `prefs{}` — Werte als JSON-Text | was die Person für sich eingestellt hat: Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Nur Genanntes wird gesetzt, leerer Wert nimmt einen Schlüssel weg — ein Wechsel der Darstellung ist ein kleiner Eintrag. Der **Fensterzustand** bleibt im Browser (Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste): er ändert sich ständig und gehört zum Gerät. Geschrieben über `PUT /api/auth/me/prefs`, jeder für sich, ohne besonderes Recht |
 
 ## Teams — Strom `team:<key>`
 
-Taloan, 23.09.2026: „dann richten wir die neue Ebene Teams ein → je Team gibt es Limits und API-Keys, Benutzer gehören einem
+„dann richten wir die neue Ebene Teams ein → je Team gibt es Limits und API-Keys, Benutzer gehören einem
 Team an.“ Ein Team ist die **Kostenstelle der KI**. Die Schlüssel selbst stehen nie im Journal — sie liegen im
 Datenverzeichnis (`secrets.json` unter `team:<key>`), wie Mailpasswort und Job-Token. Ein Team ist die Kostenstelle:
 hier steht, wie der Verbrauch angerechnet wird — über ein eigenes Kontingent oder über das eines anderen Teams
 (`keysFrom`). Auch das **Modell** je Anbieter steht am Team (`models`), denn es bestimmt Kosten und Güte.
 
-**Wer was darf** (Taloan, 23.09.2026): Ein Team legt **nur der Administrator** an, und dabei benennt er mindestens einen
+**Wer was darf**: Ein Team legt **nur der Administrator** an, und dabei benennt er mindestens einen
 **Teammanager** (`managers`) — notfalls sich selbst. Der Manager führt sein Team: Bezeichnung, Schlüssel, Modell, und er
 trägt Mitglieder ein und aus (`POST`/`DELETE /api/teams/<key>/members/<user>`). **Eintragen kann er nur, wer in keinem
 Team ist** (`GET /api/teams/free`); wer wechseln will, wird erst ausgetragen und ist so lange teamlos. Die **Grenzen**
@@ -352,17 +350,17 @@ Schlüssel, keine Grenze, keine KI; neue Benutzer stehen darum im Init Team.
 
 | Typ | Payload | Bedeutung |
 |---|---|---|
-| `TeamDefined` | `label`, `note?`, `monthlyTokens`, `dailyTokens`, `includedTokens`, `keysFrom?`, `enabled`, `managers[]`, `models{}`, `entriesWeek`, `entriesMonth` | das Team. `managers[]` führt es — führen und dazugehören sind zweierlei: man kann Manager mehrerer Teams sein, Mitglied aber nur eines (`user:<key>.team`, Taloan 23.09.2026). `keysFrom` verweist auf das Team, dessen Kontingent gilt; die Kette darf länger sein, **Kreise nicht** (a→b→a) — geprüft beim Setzen (`Teams.WaereKreis`), und `Teams.Payer` folgt ihr bis zum Ende. `monthlyTokens` **warnt** nur; `dailyTokens` ist die **Reissleine** (weist ab — sie soll den Amoklauf stoppen, nicht die Arbeit); `includedTokens` ist das **Grundrauschen** und gibt es nur am **ersten** Team (Taloan: „sonst lege ich mir 20 Teams an und habe 20× Grundrauschen“); `keysFrom` heisst: dieses Team benutzt die Schlüssel eines anderen mit — eine Stufe, keine Kette, und dann gelten dessen Grenzen für die Summe |
+| `TeamDefined` | `label`, `note?`, `monthlyTokens`, `dailyTokens`, `includedTokens`, `keysFrom?`, `enabled`, `managers[]`, `models{}`, `entriesWeek`, `entriesMonth` | das Team. `managers[]` führt es — führen und dazugehören sind zweierlei: man kann Manager mehrerer Teams sein, Mitglied aber nur eines (`user:<key>.team`). `keysFrom` verweist auf das Team, dessen Kontingent gilt; die Kette darf länger sein, **Kreise nicht** (a→b→a) — geprüft beim Setzen (`Teams.WaereKreis`), und `Teams.Payer` folgt ihr bis zum Ende. `monthlyTokens` **warnt** nur; `dailyTokens` ist die **Reissleine** (weist ab — sie soll den Amoklauf stoppen, nicht die Arbeit); `includedTokens` ist das **Grundrauschen** und gibt es nur am **ersten** Team; `keysFrom` heisst: dieses Team benutzt die Schlüssel eines anderen mit — eine Stufe, keine Kette, und dann gelten dessen Grenzen für die Summe |
 | `TeamRetired` | — | entfernt; der Verbrauch bleibt stehen, er ist eine Tatsache |
-| `KeyRedeemed` | `id`, `kind` (`reset` \| `limit`), `from`, `until?`, `entriesWeek`, `entriesMonth`, `days`, `carried`, `plan?` (seit 24.09.2026: der Tarif — beim Limit das Paket, beim Reset pro \| enterprise) | ein Lizenzschlüssel, für dieses Team eingelöst (Taloan 23.09.2026) — jede `id` einmal, egal für welches Team. `reset` setzt den Zählbeginn des Teams auf diesen Eintrag (Tag `from`, der spätere gewinnt; was an dem Tag vorher gezählt war, hält `Usage.Cuts` fest und zieht es ab); `limit` gilt von `from` bis `until` und hebt Woche/Monat an, senkt nie. `carried` = Tage, die aus einem laufenden Limit nach Restvolumen übernommen wurden (schon in `until` enthalten). Zählt nie |
+| `KeyRedeemed` | `id`, `kind` (`reset` \| `limit`), `from`, `until?`, `entriesWeek`, `entriesMonth`, `days`, `carried`, `plan?` (seit 24.09.2026: der Tarif — beim Limit das Paket, beim Reset pro \| enterprise) | ein Lizenzschlüssel, für dieses Team eingelöst — jede `id` einmal, egal für welches Team. `reset` setzt den Zählbeginn des Teams auf diesen Eintrag (Tag `from`, der spätere gewinnt; was an dem Tag vorher gezählt war, hält `Usage.Cuts` fest und zieht es ab); `limit` gilt von `from` bis `until` und hebt Woche/Monat an, senkt nie. `carried` = Tage, die aus einem laufenden Limit nach Restvolumen übernommen wurden (schon in `until` enthalten). Zählt nie |
 
 ## KI-Verbrauch — Strom `ai-usage:<team>`
 
 | Typ | Payload | Bedeutung |
 |---|---|---|
-| `AiUsed` | `provider`, `model`, `user?`, `in`, `out`, `calls`, `day?`, `onBehalfOf?`, `bytesIn`, `bytesOut`, `purpose?` | ein Aufruf, wie er stattgefunden hat — festgehalten beim **zahlenden** Team (`onBehalfOf` nennt das Team, für das gearbeitet wurde). `bytesIn`/`bytesOut` sind das **Austauschvolumen**: was journali an den Anbieter geschickt und von ihm zurückbekommen hat, selbst gemessen (Taloan, 23.09.2026). `in`/`out` trugen bis dahin die Tokenzahlen des Anbieters und bleiben nur stehen, weil ein Eintragstyp für immer ist — gefüllt werden sie nicht mehr |
+| `AiUsed` | `provider`, `model`, `user?`, `in`, `out`, `calls`, `day?`, `onBehalfOf?`, `bytesIn`, `bytesOut`, `purpose?` | ein Aufruf, wie er stattgefunden hat — festgehalten beim **zahlenden** Team (`onBehalfOf` nennt das Team, für das gearbeitet wurde). `bytesIn`/`bytesOut` sind das **Austauschvolumen**: was journali an den Anbieter geschickt und von ihm zurückbekommen hat, selbst gemessen. `in`/`out` trugen bis dahin die Tokenzahlen des Anbieters und bleiben nur stehen, weil ein Eintragstyp für immer ist — gefüllt werden sie nicht mehr |
 
-**API-Token am Team** (Taloan, 23.09.2026): ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung ihres
+**API-Token am Team**: ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung ihres
 Teams — darum sieht das Team, welche es gibt, und kann sie widerrufen (`GET`/`DELETE /api/teams/<key>/tokens[/<id>]`,
 Recht `team` fürs eigene, `users` für alle). Der Token selbst steht nirgends: in `auth.json` liegt nur sein Hash, gezeigt
 wird die Kennung. Wer kein eigenes Team hat, zählt zum ersten — dort fällt er auch bei der KI hin.
@@ -373,11 +371,11 @@ eigenen Vertrag benutzt (Schlüssel im Browser, Einstellungen → KI), fragt wei
 
 ## Rollen — Strom `role:<key>`
 
-Taloan, 20.09.2026: Rollen sind Daten, Rechte sind Code. Das Vokabular der Rechte (`Rights`: read, write, retire,
+Rollen sind Daten, Rechte sind Code. Das Vokabular der Rechte (`Rights`: read, write, retire,
 release, model, plugins, jobs, storage, **team**, users) ist fest; welche Rolle welche hat, steht hier. Saatgut: admin,
 manager, editor, reader, **teamadmin** (docs/betrieb.md).
 
-`team` (Taloan, 23.09.2026: „dann brauchen wir Team-Admins — als Rolle“) heisst: **das eigene** Team pflegen — Bezeichnung,
+`team` heisst: **das eigene** Team pflegen — Bezeichnung,
 Grenzen, KI-Schlüssel, Verbrauch. Neue Teams anlegen, Teams löschen, das Grundkontingent und die Zuordnung von Personen
 bleiben bei `users`; sonst könnte sich ein Team-Admin Mitglieder in die eigene Kasse holen oder sich an eine fremde hängen.
 Wer `users` hat, darf ohnehin alles, was `team` verlangt.
@@ -391,7 +389,7 @@ Wer `users` hat, darf ohnehin alles, was `team` verlangt.
 
 | Typ | Nutzlast | Bedeutung |
 |---|---|---|
-| `JobDefined` | `label`, `plugin`, `service` (Dienst aus `processes[]`, leer = `process`), `params{}`, `schedule` (cron „m h tag monat wochentag“, dazu `dN:Datum`/`wN:Datum` = alle N Tage/Wochen; leer = nur von Hand), `enabled`, `timeoutMinutes`, `role?`, `owner?` | der Job — Plugin mit Prozess und Parametern; Geheimnisse (`secret: true` im Manifest) stehen nicht hier, sondern in `jobs/secrets.json` beim Server. `role` sagt, mit welcher Rolle der Lauf arbeitet (null = `editor` wie bisher) — setzen darf sie nur, wer Anwender und Rollen verwaltet. `owner` ist der Anwender, auf dessen Kontingent der Lauf geht (Taloan, 23.09.2026): ein Import, der an den Tasker abgegeben wird, zählt bei dem, der ihn abgegeben hat; geplante Jobs gehören niemandem und laufen wie bisher |
+| `JobDefined` | `label`, `plugin`, `service` (Dienst aus `processes[]`, leer = `process`), `params{}`, `schedule` (cron „m h tag monat wochentag“, dazu `dN:Datum`/`wN:Datum` = alle N Tage/Wochen; leer = nur von Hand), `enabled`, `timeoutMinutes`, `role?`, `owner?` | der Job — Plugin mit Prozess und Parametern; Geheimnisse (`secret: true` im Manifest) stehen nicht hier, sondern in `jobs/secrets.json` beim Server. `role` sagt, mit welcher Rolle der Lauf arbeitet (null = `editor` wie bisher) — setzen darf sie nur, wer Anwender und Rollen verwaltet. `owner` ist der Anwender, auf dessen Kontingent der Lauf geht: ein Import, der an den Tasker abgegeben wird, zählt bei dem, der ihn abgegeben hat; geplante Jobs gehören niemandem und laufen wie bisher |
 | `JobRetired` | — | Job weg; seine Läufe bleiben im Journal |
 | `JobRunStarted` | `run`, `trigger` (schedule, manual) | Lauf begonnen — Urheber `job:<key>` |
 | `JobRunFinished` | `run`, `status` (ok, failed, timeout, cancelled), `exit`, `seconds`, `summary`, `logBytes` | Lauf zu Ende; das Log liegt als Datei `jobs/<key>/<run>.log` |

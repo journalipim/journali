@@ -51,7 +51,7 @@ Einheit steckt im ETIM-Attribut. Der Kontext bekommt `features` (`code`, `values
 `label`) und `etim.classCode`. Startvorlage „ETIM BMEcat 5.0“ in xport — geprüft gegen
 `bmecat_etim_501.xsd`: gültig.
 
-## Der Weg (Taloan, 22.09.2026 — pflegestruktur.md 29)
+## Der Weg
 
 ETIM ist Klassifikation, kein Export (Leiste: ⌗ Klassifikation). Bedient wird am Knoten: das Band
 ⌗ ETIM in der Knotenansicht (Beitragspunkt `nodeBands`) zeigt die Stufen mit Zahlen, jede springt

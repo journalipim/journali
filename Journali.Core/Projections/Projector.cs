@@ -23,8 +23,7 @@ public static class Projector
     }
 
     /// <summary>
-    /// Alle Abbilder in EINEM Durchlauf durchs Journal (Taloan, 20.09.: der Start las das Journal achtmal — mit 17 000 ETIM-Klassen
-    /// à 5 KB je Lauf 75 MB, der Server „startete nicht“). Ab der kleinsten Stand-Nummer; jedes Abbild bekommt nur, was ihm fehlt.
+    /// Alle Abbilder in EINEM Durchlauf durchs Journal. Ab der kleinsten Stand-Nummer; jedes Abbild bekommt nur, was ihm fehlt.
     /// Liefert, wie viele Einträge gelesen wurden.
     /// </summary>
     public static int CatchUpAll(IJournal journal, params IProjection[] projections) => CatchUpAll(journal, out _, projections);
@@ -34,7 +33,7 @@ public static class Projector
 
     /// <summary>
     /// Wie oben, dazu ein Fortschritt: alle 1000 Einträge (Anzahl gelesen, Nummer des letzten) — damit der Start nicht
-    /// minutenlang stumm ist (Taloan, 21.09.: „damit man sieht, ob was vorangeht“).
+    /// minutenlang stumm ist.
     /// </summary>
     public static int CatchUpAll(IJournal journal, out Timing timing, Action<int, long>? progress, params IProjection[] projections)
     {

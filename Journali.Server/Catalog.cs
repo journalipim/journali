@@ -10,9 +10,9 @@ namespace Journali.Server;
 /// Schritt nach — unter einer Sperre, damit kein Leser einen halben Stand sieht.
 /// Beim Start werden die Abbilder aus dem Journal neu gebaut; sie sind nie das Original.
 /// </summary>
-/// <summary>Der Urheber hat kein Kontingent — der Eintrag würde journali-Token kosten (Taloan, 23.09.2026).</summary>
+/// <summary>Der Urheber hat kein Kontingent — der Eintrag würde journali-Token kosten.</summary>
 public sealed class KeinKontingentException() : InvalidOperationException("Kontingent aufgebraucht — nichts gespeichert.");
-/// <summary>Der Tarif erlaubt es nicht (Taloan, 24.09.2026) — z. B. ein weiterer Publikationsbaum. Wird zu 403 wie das Kontingent.</summary>
+/// <summary>Der Tarif erlaubt es nicht — z. B. ein weiterer Publikationsbaum. Wird zu 403 wie das Kontingent.</summary>
 public sealed class TarifException(string message) : InvalidOperationException(message);
 
 public sealed class Catalog
@@ -32,7 +32,7 @@ public sealed class Catalog
     private Teams _teams = new();
     private Usage _usage = new();
     /// <summary>
-    /// Zwei Sperren statt einer (Taloan, 23.09.2026: „alles ist super langsam“ während eines Imports).
+    /// Zwei Sperren statt einer.
     /// <c>_write</c> lässt nur einen Schreiber zur Zeit prüfen, anhängen und anwenden — das bleibt eine Einheit.
     /// <c>_state</c> schützt die Abbilder: Leser kommen parallel hinein, exklusiv wird es nur für das Anwenden eines
     /// Eintrags. Der Weg zur Datenbank liegt ausserhalb von <c>_state</c>; dort wurde vorher gewartet, während alles
@@ -64,7 +64,7 @@ public sealed class Catalog
     private Licence Lizenz => Licences?.Lic ?? LicenceFile.Load(LicenceDir ?? "").Lic;
 
     /// <summary>
-    /// Der Tarif der Instanz (Taloan, 24.09.2026: „der höchste Tarif gilt für alle“): der höhere von Lizenz und dem
+    /// Der Tarif der Instanz: der höhere von Lizenz und dem
     /// höchsten Tarif, den ein Team heute per Schlüssel hat. Nach ihm richten sich Plugins und Publikationsbäume.
     /// </summary>
     public Tarif InstanzTarif => Lesend(TarifOhneSperre);
@@ -82,10 +82,10 @@ public sealed class Catalog
         return _teams.TarifAt(team, heute) is { } t ? Tarife.Hoeher(basis, t) : basis;
     }
 
-    /// <summary>Der Tag des ersten Eintrags — der Test einer neuen Instanz zählt ab ihm (Taloan, 24.09.2026).</summary>
+    /// <summary>Der Tag des ersten Eintrags — der Test einer neuen Instanz zählt ab ihm.</summary>
     public DateOnly? ErsterTag => Lesend(() => _usage.AllPerDay.Count == 0 ? (DateOnly?)null : _usage.AllPerDay.Keys.Min());
 
-    /// <summary>Was der Tarif verbietet, wirft (Taloan, 24.09.2026): ein Publikationsbaum mehr, als er erlaubt.</summary>
+    /// <summary>Was der Tarif verbietet, wirft: ein Publikationsbaum mehr, als er erlaubt.</summary>
     private void PruefeTarif(string type, object? payload)
     {
         if (type != Types.RubricCreated || payload is not RubricCreated { Parent: null }) return;
@@ -100,7 +100,7 @@ public sealed class Catalog
     private IReadOnlyList<(string Name, IProjection Projection)> Parts => [("Model", _model), ("Tree", _tree), ("Relations", _relations), ("Media", _media), ("Plugins", _plugins), ("Jobs", _jobs), ("Versions", _versions), ("Users", _users), ("Workflows", _workflows), ("Translations", _translations), ("Usage", _usage), ("Teams", _teams)];
 
     /// <summary>
-    /// Schnappschuss der Abbilder (Taloan, 21.09.2026): vor dem Rebuild laden — dann liest der Start nur den Rest ab #n.
+    /// Schnappschuss der Abbilder: vor dem Rebuild laden — dann liest der Start nur den Rest ab #n.
     /// Liefert #n oder 0 (keine Datei, anderer Bau, Journal passt nicht — Datei ist dann weg).
     /// </summary>
     public long LoadSnapshot(string path)
@@ -126,7 +126,7 @@ public sealed class Catalog
     public int Rebuild(out Projector.Timing timing, Action<int, long>? progress)
     {
         Projector.Timing? gemessen = null;
-        // ein Durchlauf für alle Abbilder — nicht acht (Taloan, 20.09.: Start hing mit 55 000 Einträgen, davon 17 000 ETIM-Klassen)
+        // ein Durchlauf für alle Abbilder — nicht acht
         int n;
         lock (_write) n = Aendernd(() =>
         {
@@ -141,7 +141,7 @@ public sealed class Catalog
 
     /// <summary>
     /// Saatgut nachsäen: jeder Modell-Strom, den es noch nicht gibt (Sprachen,
-    /// Kanäle, die ersten Attribute). Was Taloan schon geändert hat, bleibt.
+    /// Kanäle, die ersten Attribute). Was schon geändert wurde, bleibt.
     /// </summary>
     public int SeedMissing()
     {
@@ -166,7 +166,7 @@ public sealed class Catalog
                     Types.MasterLocaleDefined => _model.MasterLocale is not null,
                     Types.MasterChannelDefined => _model.MasterChannel is not null,
                     Types.RelationTypeDefined => _model.RelationTypes.ContainsKey(key),
-                    Types.MediaPresetDefined => _media.PresetEver(key),   // auch wenn Taloan es zurückgezogen hat — nicht wieder säen
+                    Types.MediaPresetDefined => _media.PresetEver(key),   // auch wenn es zurückgezogen wurde — nicht wieder säen
                     Types.WorkflowDefined => _workflows.Ever(key),
                     _ => true,
                 };
@@ -178,7 +178,7 @@ public sealed class Catalog
             // wenn die Übergänge noch die der Saat sind (der Anwender hat nichts geändert)
             if (_workflows.All.TryGetValue("review", out var rv) && rv.Transitions.Count == 5 && rv.Transitions.All(x => x.Effects is null or { Length: 0 }))
                 foreach (var s in Model.Seeds().Where(s => s.Stream == Workflows.Stream + "review")) { Apply(_journal.Append("system", s.Stream, s.Type, s.Payload)); n++; }
-            // Rollen (Taloan, 20.09.): vorbelegt, was fehlt — was der Anwender geändert oder entfernt hat, bleibt so (nur admin kommt immer wieder)
+            // Rollen: vorbelegt, was fehlt — was der Anwender geändert oder entfernt hat, bleibt so (nur admin kommt immer wieder)
             var hadRoles = _users.Roles.Count > 0;   // vorher: nur ein leeres Journal bekommt alle Saatgut-Rollen (ein bewusst entferntes kommt nicht wieder), admin immer
             foreach (var (key, role) in Rights.Seeds())
             {
@@ -186,26 +186,24 @@ public sealed class Catalog
                 if (key != "admin" && hadRoles) continue;
                 Apply(_journal.Append("system", Users.RoleStream + key, Types.RoleDefined, Types.Serialize(role))); n++;
             }
-            // Das Init Team (Taloan, 23.09.2026: „es gibt immer ein Standardteam, das ist das allererste, das auch das
-            // Grundrauschen bekommt und Init Team heisst; das kann man nicht löschen, nur umbenennen, und es muss im
-            // initialen Default-Set einer Neuinstallation drin sein“). Wer kein eigenes Team trägt, arbeitet hier.
+            // Das Init Team. Wer kein eigenes Team trägt, arbeitet hier.
             if (_teams.All.Count == 0)
             {
-                // Die Limits der Lizenz liegen hier; jedes weitere Team startet bei 0 (Taloan, 23.09.2026)
+                // Die Limits der Lizenz liegen hier; jedes weitere Team startet bei 0
                 var lic = Lizenz;
                 Apply(_journal.Append("system", Teams.Stream + Model.InitTeam, Types.TeamDefined, Types.Serialize(
                     new TeamDefined("Init Team", EntriesWeek: lic.EntriesWeek, EntriesMonth: lic.EntriesMonth, MonthlyTokens: lic.AiTokensMonth, DailyTokens: lic.AiTokensDay)))); n++;
             }
-            // Bestandsbenutzer ins Init Team (Taloan, 23.09.2026: „standardmässig sind Benutzer im Init Team“). Einmalig und
+            // Bestandsbenutzer ins Init Team. Einmalig und
             // nur, solange überhaupt noch niemand ein Team trägt — teamlos ist sonst ein gewollter Zustand (ausgetragen).
             if (_teams.Primary is { } erstesTeam && _users.All.Count > 0 && _users.All.Values.All(u => u.Team is null))
                 foreach (var u in _users.All.Values.OrderBy(u => u.Key).ToList())
                 {
                     Apply(_journal.Append("system", Users.Stream + u.Key, Types.UserDefined, Types.Serialize(new UserDefined(u.Name, u.Email, u.Role, u.Enabled, erstesTeam.Key)))); n++;
                 }
-            // Das erste Team trägt die Limits der Lizenz (Taloan, 23.09.2026) — eine Anlage von vorher hat noch keine
+            // Das erste Team trägt die Limits der Lizenz — eine Anlage von vorher hat noch keine
             n += LimitsAusLizenz();
-            // Ein Team ohne Führung ist unbedienbar (Taloan, 23.09.2026: „lässt sich immer noch nicht einstellen“) — die
+            // Ein Team ohne Führung ist unbedienbar — die
             // Anlage repariert das selbst: der erste Benutzer mit dem Recht „Benutzer und Rollen“ führt es.
             if (_teams.Primary is { Managers.Length: 0 } ohne && _users.All.Count > 0)
             {
@@ -214,7 +212,7 @@ public sealed class Catalog
                 {
                     Apply(_journal.Append("system", Teams.Stream + ohne.Key, Types.TeamDefined, Types.Serialize(
                         new TeamDefined(ohne.Label, ohne.Note, ohne.MonthlyTokens, ohne.DailyTokens, ohne.Enabled, ohne.KeysFrom, ohne.IncludedTokens, [admin.Key], ohne.Models, ohne.EntriesWeek, ohne.EntriesMonth)))); n++;
-                    // Wer führt, gehört hinein (Taloan, 23.09.2026)
+                    // Wer führt, gehört hinein
                     if (admin.Team is null)
                     {
                         Apply(_journal.Append("system", Users.Stream + admin.Key, Types.UserDefined, Types.Serialize(new UserDefined(admin.Name, admin.Email, admin.Role, admin.Enabled, ohne.Key)))); n++;
@@ -268,7 +266,7 @@ public sealed class Catalog
     /// <summary>Das Abbild der Versionen — nur innerhalb von <see cref="With"/> anfassen.</summary>
     public Versions Versions => _versions;
     /// <summary>
-    /// Das erste Team trägt die Limits der Lizenz (Taloan, 23.09.2026: „deshalb hat das Init Team diese Limits“).
+    /// Das erste Team trägt die Limits der Lizenz.
     /// Läuft beim Start und noch einmal, wenn eine Lizenz eingespielt wird — sonst müsste man dafür neu starten.
     /// Angefasst wird nur, was der Administrator nicht selbst schon gesetzt hat: 0/0 heisst „noch nie zugeteilt“.
     /// </summary>
@@ -305,13 +303,13 @@ public sealed class Catalog
     public Workflows Workflows => _workflows;
     /// <summary>Das Abbild der Übersetzung (30): Marken und Aufträge — nur innerhalb von <see cref="With"/> anfassen.</summary>
     public Translations Translations => _translations;
-    /// <summary>Das Abbild der Teams (Taloan, 23.09.2026): Grenzen und KI-Verbrauch — nur innerhalb von <see cref="With"/> anfassen.</summary>
+    /// <summary>Das Abbild der Teams: Grenzen und KI-Verbrauch — nur innerhalb von <see cref="With"/> anfassen.</summary>
     public Teams Teams => _teams;
 
-    /// <summary>Nutzung je Tag (Taloan, 22.09.2026) — Fortschritt in den Einstellungen.</summary>
+    /// <summary>Nutzung je Tag — Fortschritt in den Einstellungen.</summary>
     public TResult ReadUsage<TResult>(Func<Usage, TResult> read) => Lesend(() => read(_usage));
 
-    // Stand bei #n (Versionen, Taloan: „eine Version ist ein Zeiger ins Journal“): Modell und Baum von damals, frisch aus dem
+    // Stand bei #n (Versionen): Modell und Baum von damals, frisch aus dem
     // Journal gebaut — ohne die Sperre, das Journal ist nur lesend. Die letzten Stände bleiben im Speicher (teuer bei grossem Journal).
     private readonly Dictionary<long, (ModelCatalog Model, Tree Tree)> _asOf = new();
     public (ModelCatalog Model, Tree Tree) AsOf(long number)
@@ -352,15 +350,14 @@ public sealed class Catalog
     }
 
     /// <summary>
-    /// Kostet dieser Eintrag journali-Token, und hat sein Urheber keine (Taloan, 23.09.2026: „jede Anfrage, die
-    /// journali-Token kostet“)? Gezählt wird, was <see cref="Kinds.Counts"/> nennt — Datenpflege und Ausleitung.
+    /// Kostet dieser Eintrag journali-Token, und hat sein Urheber keine? Gezählt wird, was <see cref="Kinds.Counts"/> nennt — Datenpflege und Ausleitung.
     /// Modellieren, Strukturieren, Kataloge, Einrichtung und Betrieb kosten nichts und gehen auch ohne Kontingent.
     /// Das Kontingent steht am Ende der Zahlerkette; wer kein Anwender ist (Jobs, Saatgut, „system“), ist nicht gemeint.
     /// </summary>
     private bool KeinKontingent(string actor, string type)
     {
         if (!Kinds.Billable(null, type)) return false;
-        // Ein Joblauf schreibt als job:<key> — gezählt wird beim Anwender, dem der Job gehört (Taloan, 23.09.2026),
+        // Ein Joblauf schreibt als job:<key> — gezählt wird beim Anwender, dem der Job gehört,
         // und er lässt der Handarbeit eine Reserve: bis 90 %, nicht bis zum letzten Eintrag.
         var vomJob = actor.StartsWith("job:", StringComparison.Ordinal);
         if (vomJob && _jobs.All.GetValueOrDefault(actor[4..])?.Owner is { Length: > 0 } eigner) actor = eigner;
@@ -372,7 +369,7 @@ public sealed class Catalog
         var (kw, km) = _teams.LimitAt(zahlerKey, heute);                   // zugeteilt, angehoben durch einen Limit-Schlüssel
         if (kw <= 0 && km <= 0) return true;
 
-        // Aufgebraucht ist dasselbe wie keins (Taloan, 23.09.2026) — Woche und Monat, jede Grenze für sich
+        // Aufgebraucht ist dasselbe wie keins — Woche und Monat, jede Grenze für sich
         if (!_stand.TryGetValue(zahlerKey, out var stand) || stand.Tag != heute)
         {
             var ab = _teams.CountFrom(zahlerKey, ZaehltAb);                // ein Reset-Schlüssel verschiebt den Zählbeginn
@@ -394,7 +391,7 @@ public sealed class Catalog
     public delegate Entry Writer(string actor, string stream, string type, object payload, string? batch);
 
     /// <summary>
-    /// Ein Stapel als <b>eine</b> Transaktion (Taloan, 23.09.2026: „der Import belegt so fett Zeit“). Einzeln kostet
+    /// Ein Stapel als <b>eine</b> Transaktion. Einzeln kostet
     /// jeder Eintrag in Postgres eine eigene Transaktion mit Tabellensperre und <c>MAX(number)</c>; ein Import mit
     /// Zehntausenden Einträgen bezahlt das Zehntausende Male. Hier bekommen die Einträge fortlaufende Nummern am
     /// aktuellen Kopf und werden sofort angewendet — der nächste Befehl muss den vorigen sehen —, geschrieben wird

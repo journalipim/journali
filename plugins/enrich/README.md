@@ -2,7 +2,7 @@
 
 Stand 20.09.2026. Braucht `da`. Ansicht: ✓ Datenanalyse → ⌕ Anreicherung; Knoten-Menü „Anreichern“.
 
-Taloan, 20.09.2026: „Im Gegensatz zu DPP und PPWR geht es um Produktdaten von Produkten, die nicht
+„Im Gegensatz zu DPP und PPWR geht es um Produktdaten von Produkten, die nicht
 meine Produkte sind, die ich aber handle“ — die Daten liegen beim Hersteller (Webseite,
 Datenblatt, Katalog), nicht im eigenen Bestand. Werkzeuge wie onedot füllen solche Lücken per
 KI und Internetrecherche; hier macht das die KI des Nutzers mit dessen Schlüssel (Einstellungen → KI: welche Anbieter eingerichtet sind, steht dort),

@@ -7,7 +7,7 @@ using Journali.Core.Journal;
 namespace Journali.Core.Projections;
 
 /// <summary>
-/// Schnappschuss der Abbilder (Taloan, 21.09.2026: „Schnappschüsse der Abbilder → ja“; docs/architektur.md „Offen“): der Stand
+/// Schnappschuss der Abbilder: der Stand
 /// aller Abbilder bei Eintrag #n als eine JSON-Datei. Beim nächsten Start werden die Abbilder daraus geladen und nur der Rest
 /// ab #n aus dem Journal angewandt — bei Millionen Einträgen ist das Anwenden (~18 µs je Eintrag) sonst der Start. Der
 /// Schnappschuss ist wie der Spiegel des Journals ein Cache, keine Wahrheit: er trägt den Bau-Stempel des Kerns (jede neue

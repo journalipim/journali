@@ -1,6 +1,6 @@
 <script setup>
-// Übersicht eines Themas (Taloan, 18.09.2026): nach Klick auf ⇩ Import (⇪ Export, ▤ Datenblatt, ✓ Datenanalyse, ⌁ Werkzeuge)
-// wählt man hier das Plugin, das man ausführen will — als Kacheln (Taloan: „zeitgemässer“): Symbol gross, Name,
+// Übersicht eines Themas: nach Klick auf ⇩ Import (⇪ Export, ▤ Datenblatt, ✓ Datenanalyse, ⌁ Werkzeuge)
+// wählt man hier das Plugin, das man ausführen will — als Kacheln: Symbol gross, Name,
 // ein Satz aus dem Manifest, unten Plugin und Fassung. Kein festes Spaltenlayout für alle: jede Ansicht hat ihr eigenes.
 import { computed, watchEffect } from 'vue'
 import { useRouter } from 'vue-router'
@@ -10,7 +10,7 @@ import { L } from '../i18n.js'
 const props = defineProps({ topic: String })
 const t = computed(() => TOPICS.find(x => x.key === props.topic))
 const list = computed(() => entries.value[props.topic] ?? [])
-// genau ein Eintrag: gleich dorthin — die Übersicht hätte nur eine Kachel (Taloan)
+// genau ein Eintrag: gleich dorthin — die Übersicht hätte nur eine Kachel
 const router = useRouter()
 watchEffect(() => { if (plugins.loaded && list.value.length === 1) router.replace(list.value[0].to) })
 const meta = key => plugins.list.find(p => p.key === key)

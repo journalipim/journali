@@ -1,4 +1,4 @@
-// Zielbaum zum Auswählen (Taloan, 19.09.: „Auswahl nach Name??? echt?“): überall, wo ein Knoten gewählt wird — Export,
+// Zielbaum zum Auswählen: überall, wo ein Knoten gewählt wird — Export,
 // JSON-Import, Jobs, Datenblatt —, derselbe aufklappbare Baum wie links: Gruppen, Produkte, wahlweise Varianten;
 // Klick wählt, ▸/▾ klappt, Suchfeld filtert und klappt Treffer auf. Reines DOM, damit es Ansichten (Vue) und Plugins
 // gleich benutzen können (ctx.treePicker).
@@ -6,7 +6,7 @@ import { tree, icon } from './tree.js'
 import { t } from './i18n.js'
 
 /// mount(container, { value, roles: ['group','product'], onPick(row), height }) → { set(id), refresh() }
-/// multi: true (Taloan: „mit selektierbaren Knoten“) — Haken je Knoten, ein Haken gilt für den Teilbaum; onChange(ids)
+/// multi: true — Haken je Knoten, ein Haken gilt für den Teilbaum; onChange(ids)
 export function treePicker(container, { value = null, values = [], roles = ['group', 'product'], onPick = () => {}, onChange = () => {}, height = 240, allowRoot = false, multi = false } = {}) {
   const open = new Set()
   const picked = new Set(values)

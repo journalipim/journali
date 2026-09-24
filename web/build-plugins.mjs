@@ -1,4 +1,4 @@
-// Gebaute Plugins (Taloan, 19.09.2026): jedes plugins/<key>/src/entry.js wird mit Vite zu plugins/<key>/entry.js —
+// Gebaute Plugins: jedes plugins/<key>/src/entry.js wird mit Vite zu plugins/<key>/entry.js —
 // Vue-Einzeldateikomponenten (.vue) inklusive, Stile eingebettet. Die Importe `vue`, `vue-router` und `journali`
 // werden nicht gebündelt, sondern auf window.journali (web/src/host.js) umgebogen: Plugin und Oberfläche teilen
 // dieselben Instanzen. Aufruf: `npm run build:plugins` (auch Teil von `npm run build`), `node build-plugins.mjs <key>`

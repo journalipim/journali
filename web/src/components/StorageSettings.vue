@@ -1,15 +1,15 @@
 <script setup>
-// Zwei Dinge, die verschiedenen Leuten gehören (Taloan, 23.09.2026): der <b>Speicher</b> (Treiber, Zugang, Umzug) und die
+// Zwei Dinge, die verschiedenen Leuten gehören: der <b>Speicher</b> (Treiber, Zugang, Umzug) und die
 // <b>Assets</b> (Vorschau-Ableitungen, Bestand). Der Schalter sagt, welcher Teil gezeigt wird — die Logik bleibt eine.
 defineProps({ teil: { type: String, default: 'speicher' } })
-// Einstellungen → Storage (Taloan, 19.09.2026: „wo ich das alles einstellen kann“): Treiber des Assetspeichers — Postgres,
+// Einstellungen → Storage: Treiber des Assetspeichers — Postgres,
 // Verzeichnis, S3 (Garage, MinIO, AWS, R2 …); prüfen, speichern (media.json beim
 // Server, nie im Journal), Fehlbestand sehen, Blobs von einem anderen Speicher herüberkopieren.
 import { ref, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
-import { filePicker } from '../filePicker.js'   // Dateibrowser des Servers — derselbe wie bei den Jobs (Taloan, 21.09.)
+import { filePicker } from '../filePicker.js'   // Dateibrowser des Servers — derselbe wie bei den Jobs
 import { t } from '../i18n.js'
 import { L } from '../i18n.js'
 
@@ -30,7 +30,7 @@ const kb = b => {
 const copyFrom = ref({ driver: 'file', path: 'media', bucket: '', endpoint: '', key: '', secret: '', region: 'garage', pathStyle: true })
 const copyResult = ref(null)
 
-// Vorschau-Presets (Taloan, 21.09.: „in den Einstellungen Basics definieren, welche Ableitungen beim Bilder-Import automatisch berechnet werden“)
+// Vorschau-Presets
 const presets = ref([]); const presetBusy = ref('')
 const FORMATS = ['webp', 'jpeg', 'png', 'avif']
 async function loadPresets() { try { presets.value = (await api.get('/api/media/presets')).map(p => ({ ...p, labelDe: L(p.label) ?? p.key })) } catch (e) { store.toast(e.message) } }

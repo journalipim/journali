@@ -9,7 +9,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Benutzer und Rollen (Taloan, 19.09.2026: Voraussetzung für Workflow-Zuständigkeiten und Hosting). Wer es gibt und welche Rolle
+/// Benutzer und Rollen. Wer es gibt und welche Rolle
 /// gilt, steht im Journal (Strom <c>user:&lt;key&gt;</c>, UserDefined/UserRetired — nachvollziehbar wie alles). Was geheim ist —
 /// Passwort-Hashes, API-Token, Sitzungen — liegt in <c>auth.json</c> im Datenverzeichnis, nie im Journal (Regel wie bei
 /// secrets.json). Solange kein Benutzer angelegt ist, bleibt der Server offen wie bisher (X-Actor frei) — der erste
@@ -45,7 +45,7 @@ public static class Auth
     public sealed record TokenRec(string User, string Label, DateTimeOffset At);
 
     /// <summary>Die Token dieser Personen — Kennung (Anfang des Hashes), Bezeichnung, wann, wem. Der Token selbst steht nirgends,
-    /// auch nicht hier: in der Datei liegt nur sein Hash (Taloan, 23.09.2026, Teams: die Token der Mitglieder gehören zum Team).</summary>
+    /// auch nicht hier: in der Datei liegt nur sein Hash.</summary>
     public static List<(string Id, string User, string Label, DateTimeOffset At)> TokensOf(string dir, IReadOnlySet<string> users) =>
         With(dir, s => s.Tokens.Where(t => users.Contains(t.Value.User)).OrderByDescending(t => t.Value.At)
             .Select(t => (t.Key[..12], t.Value.User, t.Value.Label, t.Value.At)).ToList());
@@ -118,7 +118,7 @@ public static class Auth
         return null;
     }
 
-    /// <summary>Welches Recht braucht diese Anfrage? Null = eigenes Konto, immer erlaubt. Die Rollen sagen dann, wer es hat (Taloan, 20.09.: Rollen sind Daten, Rechte sind Code).</summary>
+    /// <summary>Welches Recht braucht diese Anfrage? Null = eigenes Konto, immer erlaubt. Die Rollen sagen dann, wer es hat.</summary>
     public static string? Needed(HttpRequest req)
     {
         var path = req.Path.Value ?? ""; var method = req.Method;
@@ -139,13 +139,12 @@ public static class Auth
         if (path.StartsWith("/api/licence") && !read) return Rights.Users;   // einspielen, Schlüssel einlösen
         if (path.StartsWith("/api/licence/requests")) return Rights.Users;     // Anforderungen, auch lesend
         if (read) return Rights.Read;
-        if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege (Taloan, 20.09.: ad hoc wie in Excel)
+        if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege
         if (path.StartsWith("/api/model")) return Rights.Model;
         if (path.StartsWith("/api/workflows/") && method is "PUT" or "DELETE") return Rights.Model;   // Workflow definieren = Modell; Schritte sind Schreiben
         if (path.StartsWith("/api/plugins") && path.Contains("/secrets/")) return Rights.Write;   // Token am Profil: wer importiert, hinterlegt ihn (der Wert bleibt beim Server)
         if (path.StartsWith("/api/plugins") && !path.Contains("/data/") && !path.EndsWith("/data") && !path.EndsWith("/run")) return Rights.Plugins;   // Plugin-Daten (auch der Sammel-PUT …/data) sind Pflege
-        // Wiederherstellen aus einer Sicherung ist Systemsache (Taloan, 23.09.2026: „ein Restore muss nicht regelmässig
-        // ausgeführt werden und ist eine Systemsache“) — nicht zu verwechseln mit dem Zurückholen eines Knotens
+        // Wiederherstellen aus einer Sicherung ist Systemsache — nicht zu verwechseln mit dem Zurückholen eines Knotens
         // Rückgängig am Knoten schreibt einen Wert zurück — das darf, wer pflegen darf (der Stapel-Undo bleibt Rückzug)
         if (path.StartsWith("/api/nodes/") && path.EndsWith("/undo")) return Rights.Write;
         if (path.Contains("/retire") || path.Contains("/restore") || path.Contains("/undo") || (method == "DELETE" && path.StartsWith("/api/nodes/") && path.Count(ch => ch == '/') == 3)) return Rights.Retire;
@@ -153,15 +152,14 @@ public static class Auth
         return Rights.Write;
     }
     public static bool Allowed(Catalog c, string role, HttpRequest req) => Needed(req) is not { } need || RightsOf(c, role).Contains(need)
-        || (need == Rights.Team && RightsOf(c, role).Contains(Rights.Users))   // wer Benutzer und Rollen verwaltet, verwaltet auch Teams (Taloan, 23.09.)
+        || (need == Rights.Team && RightsOf(c, role).Contains(Rights.Users))   // wer Benutzer und Rollen verwaltet, verwaltet auch Teams
         || (req.Path.StartsWithSegments("/api/files") && RightsOf(c, role).Contains(Rights.Storage));   // der Dateibrowser dient auch dem Medienspeicher
     /// <summary>Hat der Anfragende dieses Recht? Ohne Benutzer (offen) ja; sonst die Rolle aus der Sitzung (Middleware legt sie in Items).</summary>
     public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && (RightsOf(c, role).Contains(right) || (right == Rights.Team && RightsOf(c, role).Contains(Rights.Users))));
 
     /// <summary>
     /// Hat dieser Anwender ein Kontingent? Ohne eines kostet nichts mehr etwas dürfen: die Sperre selbst sitzt am
-    /// Schreibpfad (<c>Catalog</c>), weil erst dort feststeht, ob ein Eintrag journali-Token kostet (Taloan, 23.09.2026:
-    /// „jede Anfrage, die journali-Token kostet“). Hier steht sie nur für die Anzeige.
+    /// Schreibpfad (<c>Catalog</c>), weil erst dort feststeht, ob ein Eintrag journali-Token kostet. Hier steht sie nur für die Anzeige.
     /// </summary>
     public static bool HatKontingent(Catalog c, string? wer, bool fuerJob = false) => c.With((_, _, _) =>
     {
@@ -196,8 +194,7 @@ public static class Auth
     };
 
     /// <summary>
-    /// Ausgesperrt (Taloan, 21.09.2026: Benutzer im Journal, aber kein auth.json im Datenverzeichnis dieses Rechners — „Benutzer
-    /// oder Passwort falsch“ bei jedem Versuch): mit JOURNALI_ADMIN_PASSWORD in der Umgebung setzt der Start das Passwort von
+    /// Ausgesperrt: mit JOURNALI_ADMIN_PASSWORD in der Umgebung setzt der Start das Passwort von
     /// <paramref name="user"/> (Vorgabe admin) neu und legt den Benutzer an, wenn es ihn nicht gibt. Wer die Umgebung des Servers
     /// setzen kann, hat ohnehin Zugriff auf auth.json. Danach die Variable wieder entfernen.
     /// </summary>
@@ -229,7 +226,7 @@ public static class Auth
             return Results.Ok(new { user = who.Value.User, role = who.Value.Role, rights = RightsOf(c, who.Value.Role).ToArray(), name = u?.Name, email = u?.Email, team = u?.Team, prefs = u?.Prefs, tokens });
         });
 
-        // Eigene Einstellungen (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“): jeder für sich, kein Recht nötig.
+        // Eigene Einstellungen: jeder für sich, kein Recht nötig.
         // Geschickt wird nur, was sich ändert; leerer Wert nimmt einen Schlüssel weg.
         api.MapPut("/auth/me/prefs", (PrefsBody body, HttpContext ctx, Catalog c) =>
         {
@@ -254,7 +251,7 @@ public static class Auth
             if (Enabled(c)) return Bad("Es gibt schon Anwender.");
             var key = Key(body.User); if (key is null) return Bad("Anmeldename: a-z, 0-9, ., _, - (2–40 Zeichen).");
             if (Blank(body.Password) is not { Length: >= 8 } pw) return Bad("Passwort: mindestens 8 Zeichen.");
-            // der erste Administrator gehört ins Init Team und führt es; ändern darf er das jederzeit (Taloan, 23.09.2026)
+            // der erste Administrator gehört ins Init Team und führt es; ändern darf er das jederzeit
             var initTeam = c.With((_, _, _) => c.Teams.Primary);
             c.With((_, _, write) =>
             {
@@ -310,7 +307,7 @@ public static class Auth
         });
 
         // Verwaltung (admin): Liste, anlegen/ändern, Passwort setzen, sperren, entfernen
-        api.MapGet("/auth/people", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.All.Values.Where(u => u.Enabled).OrderBy(u => u.Name ?? u.Key).Select(u => new { u.Key, u.Name, u.Role }).ToList())));   // Zuweisung (Taloan, 21.09.: Vorschlagsliste statt auswendig)
+        api.MapGet("/auth/people", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.All.Values.Where(u => u.Enabled).OrderBy(u => u.Name ?? u.Key).Select(u => new { u.Key, u.Name, u.Role }).ToList())));   // Zuweisung
         api.MapGet("/auth/users", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.All.Values.OrderBy(u => u.Key).Select(u => new { u.Key, u.Name, u.Email, u.Role, u.Enabled, u.Team, u.LastAt, u.LastActor, hasPassword = With(dir, s => s.Passwords.ContainsKey(u.Key)) }).ToList())));
         api.MapPut("/auth/users/{key}", (string key, UserBody body, HttpRequest req, Catalog c) =>
         {
@@ -321,14 +318,14 @@ public static class Auth
             var role = Blank(body.Role) ?? cur?.Role ?? (roles.Contains("editor") ? "editor" : roles.FirstOrDefault(r => r != "admin") ?? "admin"); if (!roles.Contains(role)) return Bad($"Rolle: {string.Join(", ", roles)}");
             var enabled = body.Enabled ?? cur?.Enabled ?? true;
             if (cur is not null && cur.Enabled && IsAdmin(c, cur.Role) && (!IsAdmin(c, role) || !enabled) && AdminsLeft(c) <= 1) return Bad("Der letzte Administrator (Recht „Anwender und Rollen“) bleibt.");
-            // Team (Taloan, 23.09.2026): wessen Schlüssel gelten und auf wessen Rechnung die KI läuft — leerer Wert nimmt die Zuordnung weg
+            // Team: wessen Schlüssel gelten und auf wessen Rechnung die KI läuft — leerer Wert nimmt die Zuordnung weg
             var team = body.Team is null ? cur?.Team : Blank(body.Team);
             if (team is { } t && c.With((_, _, _) => c.Teams.Get(t)) is null) return Bad($"Unbekanntes Team {t}.");
             c.With((_, _, write) => write(actor, Stream + k, Types.UserDefined, new UserDefined(Blank(body.Name) ?? cur?.Name ?? k, Blank(body.Email) ?? cur?.Email, role, enabled, team), null));
             if (Blank(body.Password) is { } pw) { if (pw.Length < 8) return Bad("Passwort: mindestens 8 Zeichen."); With(dir, s => { s.Passwords[k] = Hash(pw); return 0; }, save: true); }
             return Results.Ok(c.With((_, _, _) => c.Users.All[k]));
         });
-        // Rollen (Taloan, 20.09.): Namen und Rechte bestimmt der Anwender; das Vokabular der Rechte ist Code
+        // Rollen: Namen und Rechte bestimmt der Anwender; das Vokabular der Rechte ist Code
         api.MapGet("/auth/rights", () => Results.Ok(Rights.All.Select(r => new { key = r, label = Rights.Label[r] }).ToList()));
         api.MapGet("/auth/roles", (Catalog c) => Results.Ok(c.With((_, _, _) => c.Users.Roles.Values.OrderBy(r => r.Key).Select(r => new { r.Key, r.Label, rights = r.Rights.Order().ToArray(), users = c.Users.All.Values.Count(u => u.Role == r.Key), r.LastAt, r.LastActor }).ToList())));
         api.MapPut("/auth/roles/{key}", (string key, RoleBody body, HttpRequest req, Catalog c) =>

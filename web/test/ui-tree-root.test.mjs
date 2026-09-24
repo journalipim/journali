@@ -1,5 +1,4 @@
-// Neue Gruppe: unter dem offenen Knoten oder an der Wurzel (Taloan, 23.09.2026, zweimal gefragt: „wo lege ich einen
-// neuen Master-Knoten auf dieser ersten Ebene an“). Bisher ging das nur, wenn kein Knoten offen war — und offen heisst:
+// Neue Gruppe: unter dem offenen Knoten oder an der Wurzel. Bisher ging das nur, wenn kein Knoten offen war — und offen heisst:
 // steht in der Adresse, wohin das Baum-Symbol ausdrücklich zurückführt. Jetzt ist es im Dialog umschaltbar.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,7 +14,7 @@ function welt() {
   tree.rows = [tree.byId.get('g1')]
   tree.loaded = true
   tree.load = async () => {}
-  store.actor = 'taloan'
+  store.actor = 'u1'
   store.model = { masterLocale: 'de', locales: [{ code: 'de' }], attributes: [], groups: [], statuses: [] }
   // start() fragt den Vater nach seinen Attributgruppen — hier hat er keine
   globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => JSON.stringify({ groups: [] }) })

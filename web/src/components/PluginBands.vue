@@ -1,5 +1,5 @@
 <script setup>
-// Bänder der Plugins in der Knotenansicht (Taloan, 22.09.2026: „die Bedienung erfolgt an anderer Stelle — beim Gegenstand“):
+// Bänder der Plugins in der Knotenansicht:
 // Beitragspunkt nodeBands — ein Plugin zeichnet je Knoten eine Zeile (head: Zusammenfassung und Knöpfe) und, wenn es will,
 // einen Körper darunter (body). Wie das Workflow-Band: Überschrift klappt den Körper auf und zu. Das Plugin bekommt denselben
 // ctx wie seine Ansichten; bei Knotenwechsel wird abgebaut und neu gezeichnet.

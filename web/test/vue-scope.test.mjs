@@ -1,5 +1,4 @@
-// Schleifenvariablen dürfen nur innerhalb ihrer Schleife benutzt werden (Taloan, 22.09.2026: „Cannot read properties of
-// undefined (reading 'perLocale')“ — die Zeile „je Sprache“ stand hinter dem </tr> der v-for-Zeile, also ausserhalb).
+// Schleifenvariablen dürfen nur innerhalb ihrer Schleife benutzt werden.
 // Der Bau merkt das nicht und der Vue-Compiler warnt nicht: er übersetzt den Namen still zu _ctx.<name>, und erst im
 // Browser stürzt die Ansicht ab. Genau daran erkennt der Prüfer den Fehler — kein DOM nötig.
 import test from 'node:test'
@@ -40,8 +39,7 @@ test('keine Schleifenvariable ausserhalb ihrer Schleife', () => {
   assert.deepEqual(misses, [], 'Schleifenvariable ausserhalb der Schleife benutzt')
 })
 
-// Browser-Globale im Template (Taloan, 22.09.2026: „Absturz wenn ich auf den copy knopf klicke" — im Token-Dialog stand
-// @click="navigator.clipboard.writeText(…)"). Vue löst im Template jeden Namen gegen die Komponente auf; nur eine kurze
+// Browser-Globale im Template. Vue löst im Template jeden Namen gegen die Komponente auf; nur eine kurze
 // Liste (Math, JSON, Date …) geht ans echte Global. „navigator" wird still zu _ctx.navigator — undefined, Absturz beim
 // Klick. Solche Aufrufe gehören ins Setup.
 const BROWSER_GLOBALS = ['navigator', 'window', 'document', 'location', 'localStorage', 'sessionStorage', 'fetch', 'alert', 'confirm', 'history', 'screen']

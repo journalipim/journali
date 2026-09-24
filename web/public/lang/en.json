@@ -63,7 +63,6 @@
  "↶ Wiederherstellen": "↶ Restore",
  "die letzte Definition vor dem Zurückziehen noch einmal schreiben": "write the last definition before the retirement again",
  "Keine Einträge": "No entries",
- "Hilfe: Website, später Forum und Fehlermeldungen auf Git": "Help: website, later forum and bug reports on Git",
  "Ctrl+Enter": "Ctrl+Enter",
  "speichern ·": "save ·",
  "Esc": "Esc",
@@ -2017,5 +2016,12 @@
  "⌂ an der Wurzel": "⌂ at the root",
  "an der Wurzel": "at the root",
  "— Variantenachse": "— variant axis",
- "Name angeheftet (kursiv) — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen": "Name pinned (italic) — the ★ automatic does not apply here. Right-click → Unpin naming"
+ "Name angeheftet (kursiv) — die ★-Automatik gilt hier nicht. Rechtsklick → Benennung lösen": "Name pinned (italic) — the ★ automatic does not apply here. Right-click → Unpin naming",
+ "Hilfe: Kapitel zu dieser Ansicht, alle Kapitel, Website, GitHub": "Help: chapter for this view, all chapters, website, GitHub",
+ "? Hilfe zu dieser Ansicht": "? Help for this view",
+ "Alle Kapitel": "All chapters",
+ "? Hilfe": "? Help",
+ "Suche in allen Kapiteln": "Search all chapters",
+ "Keine Kapitel gebaut — npm run build in web/.": "No chapters built — npm run build in web/.",
+ "Kapitel links wählen.": "Choose a chapter on the left."
 }

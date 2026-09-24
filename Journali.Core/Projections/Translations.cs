@@ -34,9 +34,7 @@ public sealed class TranslationOrder
 }
 
 /// <summary>
-/// Abbild der Übersetzung (docs/pflegestruktur.md 30; Taloan, 22.09.2026: „so sammelt sich ein Kontingent im
-/// Übersetzungsspeicher an … und irgendwann kommt der Auftrag zurück und es gibt schon wieder etliche Änderungen am
-/// Original“). Zwei Dinge stehen hier: die <b>Marken</b> (je Knoten und Zielachse: gegen welche Quellfassung ist
+/// Abbild der Übersetzung (docs/pflegestruktur.md 30). Zwei Dinge stehen hier: die <b>Marken</b> (je Knoten und Zielachse: gegen welche Quellfassung ist
 /// übersetzt) und die <b>Aufträge</b> (Strom <c>translation:&lt;key&gt;</c>). Der „Übersetzungsspeicher“ ist kein
 /// Behälter — er ist die Frage „Marke gegen jetzt“, und darum ist zehnmal geändert ein Posten, nicht zehn.
 /// </summary>

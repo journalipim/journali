@@ -1,8 +1,7 @@
-// Umwandlung je Spalte im Datenmapper (Taloan, 21.09.2026, Blick in den OpenDXP-Importer: „für jedes Feld eine Zuordnung — aber
-// ich kann Werte umwandeln und manipulieren … zwischendurch in die Daten eingreifen“): zwischen Quelle und Ziel eine Kette
+// Umwandlung je Spalte im Datenmapper: zwischen Quelle und Ziel eine Kette
 // kleiner Schritte, in der Zuordnung gespeichert (m.steps) und damit im Profil. Rein, ohne Zustand, im Browser und im Test.
 // Jeder Schritt: { op, …felder }. Reihenfolge = Kette. Leere Eingabe bleibt leer, ausser static/default/combine sagen etwas.
-// Liegt beim Basis-Plugin table (Taloan, 22.09.: ƒ auch in der ETIM-Zuordnung, die im Job läuft): web/src/transform.js reicht es durch,
+// Liegt beim Basis-Plugin table: web/src/transform.js reicht es durch,
 // Prozess-Plugins importieren ../table/transform.mjs — plugins/ ist im Container ein Bind-Mount, web/src nicht.
 
 export const OPS = [
@@ -31,7 +30,7 @@ export const opHint = op => OPS.find(o => o[0] === op)?.[2] ?? ''
 const S = v => v == null ? '' : String(v)
 export const YES_DEFAULT = 'ja, yes, true, 1, x, wahr, y, t, j'
 
-/// Datumsformate (Taloan, 21.09.: „drei Varianten sind viel zu wenig — Unix-Zeit etc.“): Schlüssel → Bezeichnung
+/// Datumsformate: Schlüssel → Bezeichnung
 export const DATE_FORMATS = [
   ['auto', 'raten (ISO, deutsch, Unix, Excel …)'],
   ['dd.MM.yyyy', 'TT.MM.JJJJ (deutsch, auch TT.MM.JJ)'], ['dd/MM/yyyy', 'TT/MM/JJJJ (britisch)'], ['MM/dd/yyyy', 'MM/TT/JJJJ (US)'], ['dd-MM-yyyy', 'TT-MM-JJJJ'],
@@ -103,7 +102,7 @@ export function apply(steps, value, ctx = {}) {
         }
         case 'boolean': {
           if (v.trim() === '') break
-          // das Feld steht vorbelegt mit den Vorgabewörtern, der Benutzer ergänzt oder streicht (Taloan, 21.09.); leer = Vorgabe
+          // das Feld steht vorbelegt mit den Vorgabewörtern, der Benutzer ergänzt oder streicht; leer = Vorgabe
           const yes = S(st.yes || st.true || YES_DEFAULT).split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
           v = yes.includes(v.trim().toLowerCase()) ? 'true' : 'false'; break
         }

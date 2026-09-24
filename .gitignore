@@ -2,6 +2,8 @@ bin/
 obj/
 # Oberfläche: web/ wird nach Journali.Server/wwwroot gebaut
 Journali.Server/wwwroot/
+# Hilfe: help/<code>/*.md wird von web/build-help.mjs nach web/public/help/ gerendert
+web/public/help/
 web/node_modules/
 *.user
 # Passwort für compose.yaml — nur .env.example gehört ins Repo.

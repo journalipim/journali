@@ -1,4 +1,4 @@
-// Einstellungen → Allgemein (Taloan, 23.09.2026: „admin Eingabefeld kann jetzt weg → wir haben User-System“).
+// Einstellungen → Allgemein.
 // Ohne Anmeldung ist der Name das Einzige, was in jedem Eintrag als Urheber steht — da muss das Feld bleiben.
 // Mit Anmeldung kommt der Urheber aus der Sitzung; dann hätte das Feld nichts zu sagen und steht auch nicht da.
 import test from 'node:test'
@@ -27,11 +27,11 @@ function feld(w) {
 test('ohne Anmeldung steht der Name da — er ist der einzige Urheber', async () => {
   stiller_server()
   store.auth = { known: true, enabled: false, setup: false, user: null, role: null, name: null }
-  store.actor = 'taloan'
+  store.actor = 'u1'
   const w = mount(SettingsView); await flushPromises()
   const f = feld(w)
   assert.ok(f && f.exists(), 'das Namensfeld fehlt, obwohl es keine Anmeldung gibt')
-  assert.equal(f.element.value, 'taloan')
+  assert.equal(f.element.value, 'u1')
   w.unmount()
 })
 
@@ -56,11 +56,10 @@ test('Speichern rührt den Urheber nicht an, solange es eine Anmeldung gibt', as
   w.unmount()
 })
 
-// Die Serveradresse ist keine Anwendersache (Taloan, 23.09.2026: „stell dir mal vor, die Anwender geben hier einfach eine
-// andere URL ein und arbeiten auf anderen Servern“). Die Oberfläche fragt den Server, der sie ausgeliefert hat.
+// Die Serveradresse ist keine Anwendersache. Die Oberfläche fragt den Server, der sie ausgeliefert hat.
 test('auf der Ich-Seite steht keine Serveradresse', async () => {
   stiller_server()
-  store.auth = { known: true, enabled: true, setup: false, user: 'taloan', role: 'admin', rights: ['read'] }
+  store.auth = { known: true, enabled: true, setup: false, user: 'u1', role: 'admin', rights: ['read'] }
   const w = mount(SettingsView); await flushPromises(); await flushPromises()
   assert.ok(!w.text().includes('Server, der diese Seite liefert'), 'kein Feld für eine andere Adresse')
   assert.ok(!w.findAll('tr').some(r => /🖧 Server/.test(r.text())), 'und keine Zeile dafür')
@@ -68,7 +67,7 @@ test('auf der Ich-Seite steht keine Serveradresse', async () => {
 })
 
 test('eine alte Adresse aus dem Browser wirkt nicht weiter', async () => {
-  try { localStorage.setItem('journali.settings', JSON.stringify({ server: 'http://fremder:8080', actor: 'taloan' })) } catch {}
+  try { localStorage.setItem('journali.settings', JSON.stringify({ server: 'http://fremder:8080', actor: 'u1' })) } catch {}
   const frisch = (await import('../src/store.js?neu=' + Date.now())).store
   assert.equal(frisch.server, '', 'was früher gespeichert wurde, wird verworfen')
 })

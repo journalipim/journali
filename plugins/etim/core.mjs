@@ -1,10 +1,10 @@
-// Plugin etim — Kern ohne DOM (Taloan, 19.09.2026: ETIM/BMEcat-Export; die Freigaben liegen frei unter etim.de/daten/downloads).
+// Plugin etim — Kern ohne DOM.
 // Liest eine ETIM-Freigabe im IXF 3.1 (XSD: etim-international.com/etimixf/31 — Units, Features, Values, Groups, Classes,
 // je Klasse Features mit UnitCode und erlaubten Values), legt je übernommener Klasse einen Datensatz an (class:<EC>, alles
 // aufgelöst: Namen, Typ, Einheit, Werte — damit Job und Prüfung nichts nachschlagen müssen) und löst je Produkt die ETIM-Attribute
 // aus den zugeordneten Attributen auf, wie die ETIM-BMEcat-Guideline 5.0 sie will: Logical true/false, Numeric mit Punkt,
 // Range zwei FVALUE, Alphanumeric der EV-Code, unbekannt „-“ mit FVALUE_DETAILS UN. Kein FUNIT — die Einheit steckt im ETIM-Attribut.
-// Zuordnung mit ƒ (Taloan, 22.09.: „viele Werte existieren schon, nur nicht in der Form, wie das ETIM-Attribut sie braucht“): ein Eintrag
+// Zuordnung mit ƒ: ein Eintrag
 // der Zuordnung ist ein Schlüssel oder { to, steps } — die Kette aus plugins/table/transform.mjs läuft vor der Auflösung.
 import { apply as applySteps } from '../table/transform.mjs'
 
@@ -115,7 +115,7 @@ export function mapEntry(map, code) {
 /// Rohwert durch die Kette der Zuordnung (leer bleibt leer, ausser die Kette sagt etwas)
 export const throughSteps = (steps, raw) => steps ? applySteps(steps, raw == null ? '' : Array.isArray(raw) ? raw.join(', ') : String(raw)) : raw
 
-/// Ausführung einer Freigabe aus dem Dateinamen (Taloan, 22.09.2026: „davon gibt es allein bei ETIM 9 sechs Stück“):
+/// Ausführung einer Freigabe aus dem Dateinamen:
 /// ETIM-9.0-ALL-SECTORS-IXF-NO-CHANGE-CODES-METRIC-EI-2022-12-05.xml → all-sectors-no-change-codes-metric-ei.
 /// Ohne Dateinamen leer — dann ist der Schlüssel nur die Nummer (Altbestand).
 export function variantOf(file) {
@@ -186,11 +186,10 @@ export async function featuresOf(pctx, cfg) {
   return { classCode: code, features, known: true, version: cls.release?.name ?? null, filled, total, completeness: total ? Math.round(filled * 100 / total) : 0 }
 }
 
-/// Sperre für den Export (Taloan, 20.09.: „der Export führt stillschweigend die Analyse aus, bevor er tätig wird“ — und: „ob die Attribute
-/// gefüllt sind, verantwortet der Anwender über Pflichtfelder; aber die Struktur muss da und zugeordnet sein“): null = bestanden, sonst der
+/// Sperre für den Export: null = bestanden, sonst der
 /// Grund. Geprüft wird die Struktur: Klasse am Knoten, Klasse übernommen, je ETIM-Attribut ein Attribut, das am Knoten gilt (Gruppe am Pfad).
 /// Leere oder unpassende Werte sperren nicht — sie gehen als „-“/UN hinaus und werden gezählt (Kopf: stats).
-/// Regeln der Ausleitung (BMEcat-Profil, Taloan 22.09.): requireClass = ohne Klasse sperren (sonst geht das Produkt ohne ETIM-Attribute hinaus);
+/// Regeln der Ausleitung (BMEcat-Profil): requireClass = ohne Klasse sperren (sonst geht das Produkt ohne ETIM-Attribute hinaus);
 /// minCompleteness = Prozent der ETIM-Attribute, die gefüllt sein müssen (0 = keine Schwelle) — die Empfänger rechnen genau das;
 /// strict = ein Wert, der nicht zum ETIM-Attribut passt, sperrt (sonst geht er als „-“/UN hinaus und wird gezählt).
 export async function gate(pctx, cfg) {
@@ -215,7 +214,7 @@ export async function gate(pctx, cfg) {
   return why || null
 }
 
-/// Bereit? (Taloan, 22.09.2026: „hänge ich eine Klasse an einen Knoten, muss sichergestellt sein, dass die Attribute existieren“)
+/// Bereit?
 /// Prüft, was zum Pflegen dieser Klasse an diesem Knoten fehlt: Attribute im Modell und die Gruppe am Pfad.
 export function readiness({ cls, map, hasAttr, groupOn = true, groupExists = true }) {
   const missing = (cls?.features ?? []).filter(f => !hasAttr(mapEntry(map, f.code).key))
@@ -224,10 +223,9 @@ export function readiness({ cls, map, hasAttr, groupOn = true, groupExists = tru
 
 export const TYPE_LABEL = { Alphanumeric: 'Liste', Numeric: 'Zahl', Range: 'Bereich', Logical: 'Ja/Nein' }
 
-/// Eine Rechnung für Zahlen und Befunde (Taloan, 22.09.2026: die Klassentabelle sagte „9 von 175“, die Prüfung „keine Befunde“ —
-/// das waren zwei Wege). rows: Zeilen aus /table ({ row, values, inactive }); jede Zeile zählt in IHRER Klasse.
+/// Eine Rechnung für Zahlen und Befunde. rows: Zeilen aus /table ({ row, values, inactive }); jede Zeile zählt in IHRER Klasse.
 /// Liefert { byClass: [{ code, nodes, filled, cells, bad, pct }], sum, findings } — dieselben Zahlen, die die Befunde belegen.
-/// complete: auch vollständige Knoten in die Liste (Band — Taloan, 22.09.: „die Unterknoten wurden aufgeschlüsselt“); false = nur, wo etwas fehlt
+/// complete: auch vollständige Knoten in die Liste (Band); false = nur, wo etwas fehlt
 export function audit({ rows, classAttr, classes, map, locale = 'de', hasAttr = () => true, complete = false }) {
   const featsOf = cls => cls.features.map(f => { const m = mapEntry(map, f.code); return { f, key: m.key, steps: m.steps, has: hasAttr(m.key) } })
   const byCode = new Map(); const acc = new Map(); const findings = []
@@ -247,7 +245,7 @@ export function audit({ rows, classAttr, classes, map, locale = 'de', hasAttr = 
       if (v === null) { a.bad++; findings.push({ node: r.row, attribute: x.f.code, label: nameOf(x.f.name, locale), message: `„${raw}“ passt nicht (${TYPE_LABEL[x.f.type] ?? x.f.type}${x.f.type === 'Alphanumeric' ? ': ' + x.f.values.slice(0, 6).map(y => nameOf(y.name, locale)).join(', ') + (x.f.values.length > 6 ? ' …' : '') : ''})`, go: 'node', severity: 'warn' }) }
       else if (!v.unknown) { a.filled++; filled++ }
     }
-    // gleiche Lage bündeln (Taloan, 22.09.: 35 Zeilen „nicht verfügbar“ nach dem Entfernen der Gruppe): bis drei einzeln, darüber eine Zeile
+    // gleiche Lage bündeln: bis drei einzeln, darüber eine Zeile
     const many = (list, one, all, title) => {
       if (!list.length) return
       if (list.length <= 3) for (const x of list) findings.push({ node: r.row, attribute: x.f.code, label: nameOf(x.f.name, locale), message: one(x), title, go: 'map', severity: 'info' })
@@ -287,15 +285,15 @@ export function checkNode({ values, columns, classes, cfg, inactive = [] }) {
     if (r === null) out.push({ attribute: key, go: 'node', message: `${f.code} ${nameOf(f.name, cfg.locale)}: „${values[key]?.value}“ passt nicht (${f.type}${f.type === 'Alphanumeric' ? ': ' + f.values.slice(0, 6).map(v => nameOf(v.name, cfg.locale)).join(', ') + (f.values.length > 6 ? ' …' : '') : ''})`, severity: 'warn' })
     else if (!r.unknown) filled++
   }
-  // Zusammenfassung je Knoten (Taloan, 22.09.: „was heisst belegt?“): gefüllt = ein Wert, den das ETIM-Attribut lesen kann; ohne Spalte = kein
+  // Zusammenfassung je Knoten: gefüllt = ein Wert, den das ETIM-Attribut lesen kann; ohne Spalte = kein
   // Attribut im Modell oder es gilt an diesem Knoten nicht (Gruppe nicht am Pfad, Rolle) — mit Namen, damit man weiss, welche
   const noCol = cls.features.filter(f => !columns.some(c => c.key === mapEntry(cfg.map, f.code).key))
   const mapped = cls.features.length - noCol.length
-  // je ETIM-Attribut ein Fund, Feld = das ETIM-Attribut (EF-Code) — beanstandet ist aus ETIM-Sicht das EF, das sich nicht füllen lässt (Taloan, 22.09.)
+  // je ETIM-Attribut ein Fund, Feld = das ETIM-Attribut (EF-Code) — beanstandet ist aus ETIM-Sicht das EF, das sich nicht füllen lässt
   const notHere = noCol.filter(f => inactive.includes(mapEntry(cfg.map, f.code).key)), noAttr = noCol.filter(f => !inactive.includes(mapEntry(cfg.map, f.code).key))
   for (const f of notHere) out.push({ attribute: f.code, message: `zugeordnetes Attribut ${mapEntry(cfg.map, f.code).key} ist an diesem Knoten nicht verfügbar`, label: nameOf(f.name, cfg.locale), go: 'map', code: f.code, title: 'das zugeordnete Attribut gibt es im Modell, aber nicht an diesem Knoten: seine Gruppe hängt nicht am Pfad, oder es ist auf andere Rollen beschränkt (Modell → Attribut → verwendbar in der Hierarchie)', severity: 'info' })
   for (const f of noAttr) out.push({ attribute: f.code, message: 'nicht zugeordnet — kein Attribut im Modell', label: nameOf(f.name, cfg.locale), go: 'map', code: f.code, title: '⇄ zuordnen oder ＋ anlegen (Band ⌗ ETIM am Knoten)', severity: 'info' })
-  // Fortschritt statt Aufzählung (Taloan, 22.09.): „2 von 34 gefüllt“ mit Balken und Prozent — die Einzelprozente lassen sich im Baum hochrechnen
+  // Fortschritt statt Aufzählung: „2 von 34 gefüllt“ mit Balken und Prozent — die Einzelprozente lassen sich im Baum hochrechnen
   const pct = mapped ? Math.round(filled * 1000 / mapped) / 10 : 0
   if (filled < mapped) out.push({ attribute: null, go: 'node', message: `${filled} von ${mapped} gefüllt · ${String(pct).replace('.', ',')} %`, progress: { filled, total: mapped, pct }, title: 'gefüllt = ein Wert, den das ETIM-Attribut lesen kann (Zahl, Ja/Nein, Listenwert) — gelesen wird das zugeordnete Attribut; leer geht als „-“/UN in den BMEcat', severity: 'info' })
   return out

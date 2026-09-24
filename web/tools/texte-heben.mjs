@@ -1,5 +1,4 @@
-// Hebt feste deutsche Texte aus den Vorlagen (.vue) in $t('…') — Stufe 1 der Oberflächensprache (Taloan, 24.09.2026:
-// der deutsche Text ist der Schlüssel). Mechanisch, über den Syntaxbaum der Vorlage, nicht über reguläre Ausdrücke:
+// Hebt feste deutsche Texte aus den Vorlagen (.vue) in $t('…') — Stufe 1 der Oberflächensprache. Mechanisch, über den Syntaxbaum der Vorlage, nicht über reguläre Ausdrücke:
 //   title="Text"        → :title="$t('Text')"        (auch placeholder, alt, aria-label)
 //   >Text {{ x }} mehr< → >{{ $t('Text {0} mehr', [x]) }}<   (ein Schlüssel je zusammenhängendem Stück, Ausdrücke als Platzhalter)
 // Nicht angefasst, sondern gemeldet: Zeichenketten in Ausdrücken (:title="cond ? 'a' : 'b'", v-for über Beschriftungen)

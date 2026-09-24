@@ -6,8 +6,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Rohdaten eines Teilbaums hin und zurück (Taloan, 18.09.2026: „alles, was ich in JSON exportiere, muss so wiederherstellbar
-/// sein — Teilbaum exportieren, löschen, importieren, alles wie vorher“). Darum ROH: eigene Werte je Achse (nicht geerbt,
+/// Rohdaten eines Teilbaums hin und zurück. Darum ROH: eigene Werte je Achse (nicht geerbt,
 /// nicht aufgelöst), Formeln und Vorlagen als Skript (nicht als Ergebnis), Zeilen, Gruppen, Name, Stern, Status, Kennungen.
 /// Import: gibt es den Knoten, wird er angeglichen; liegt er im Papierkorb, wird er zurückgeholt und angeglichen; sonst neu
 /// angelegt (neue Id, Kinder folgen). Was drinsteht, wird übernommen — nur Unterschiede werden geschrieben, ein Stapel.
@@ -21,11 +20,11 @@ public static class TransferApi
     {
         [JsonIgnore] public string? Family { get; init; }
     }
-    /// <summary>Die Modellteile, die der Teilbaum benutzt — damit ein Import in ein anderes System die Definitionen mitbringt (Taloan).</summary>
+    /// <summary>Die Modellteile, die der Teilbaum benutzt — damit ein Import in ein anderes System die Definitionen mitbringt.</summary>
     public sealed record RawModel(List<AttributeGroupDefinition> Groups, List<AttributeDefinition> Attributes, List<RawList> Lists, List<UnitDefinition> Units);
     public sealed record RawList(string Key, Labels Label, string[]? Columns, List<ListValueDefinition> Values);
     public sealed record RawExport(RawModel Model, RawNode Node);
-    /// <summary>Zuordnung aus dem Import-Manager (Taloan): JSON-Key → vorhandenes Attribut/Gruppe, oder neu (mit Präfix). Fehlt ein Key hier, gilt: gleicher Key.</summary>
+    /// <summary>Zuordnung aus dem Import-Manager: JSON-Key → vorhandenes Attribut/Gruppe, oder neu (mit Präfix). Fehlt ein Key hier, gilt: gleicher Key.</summary>
     public sealed record ImportMap(Dictionary<string, string>? Attributes = null, Dictionary<string, string>? Groups = null, string? Prefix = null);
     public sealed record ImportBody(RawNode Node, string? Parent = null, RawModel? Model = null, ImportMap? Map = null, bool DryRun = false);
 

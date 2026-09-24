@@ -17,7 +17,7 @@ async function request(method, path, body) {
   const text = await res.text()
   // HTML statt JSON = der Server kennt diesen Pfad nicht und liefert die Oberfläche aus — fast immer eine alte Serverfassung.
   if (text.trimStart().startsWith('<')) throw new Error(`Server kennt ${method} ${path.split('?')[0]} nicht — Server neu starten (tools\\server restart)?`)
-  // kein JSON (Ausnahme oder 400 als Text vom Server): die erste Zeile als Meldung, nicht „Unexpected token“ (Taloan)
+  // kein JSON (Ausnahme oder 400 als Text vom Server): die erste Zeile als Meldung, nicht „Unexpected token“
   let data = null
   try { data = text ? JSON.parse(text) : null } catch { throw new Error(`${res.status}: ${text.split(/\r?\n/)[0].slice(0, 200)}`) }
   // 401 mit login: Sitzung fehlt oder abgelaufen — zur Anmeldung, der Weg zurück wird gemerkt
@@ -28,13 +28,13 @@ async function request(method, path, body) {
 
 export const api = {
   get: (path) => request('GET', path),
-  // Grosser Stapel in Happen (Taloan, 18.09.: „nirgendwo ein Fortschritt“): je Happen ein POST /api/batch, dazwischen
+  // Grosser Stapel in Happen: je Happen ein POST /api/batch, dazwischen
   // Fortschritt (store.progress + onProgress). Refs (@n1) aus früheren Happen werden vor dem Senden durch die echten
   // Ids ersetzt — der Server kennt Refs nur innerhalb eines Aufrufs. Liefert dieselbe Form wie ein einzelner Stapel.
   // Solange ein Stapel läuft, warnt der Browser vor dem Schliessen (beforeunload); was gesendet ist, schreibt der Server zu Ende.
   // continueOnError: der fehlgeschlagene Befehl wird übersprungen (errors[] sammelt sie), der Rest wird geschrieben —
-  // sonst verliert ein Import wegen EINES Fehlers alles danach (Taloan, 18.09.: 7 von 11 Gruppen fehlten). Das Überspringen
-  // macht der Server (?skipErrors=true, Taloan 21.09.: eindeutige Werte) — ein Aufruf je Happen, nicht eine Runde je Fehler.
+  // sonst verliert ein Import wegen EINES Fehlers alles danach. Das Überspringen
+  // macht der Server (?skipErrors=true) — ein Aufruf je Happen, nicht eine Runde je Fehler.
   // maxErrorPercent (Regel im Import-Profil): scheitern mehr als so viel Prozent der bisher gesendeten Befehle (ab 5 Fehlern), wird abgebrochen
   batchChunked: async (commands, { batch = null, size = 500, onProgress = null, label = 'schreibe', continueOnError = false, maxErrorPercent = 0 } = {}) => {
     const refs = new Map()

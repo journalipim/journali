@@ -1,6 +1,5 @@
 <script setup>
-// Workflow je Sprache (Taloan, 22.09.2026: „Französisch in Korrektur, Deutsch freigegeben“ — sonst blockiert eine fehlende
-// Übersetzung alles andere). Eine Zeile je Sprache: Zustand, die erlaubten Schritte, ↑ Erben, wenn hier ein eigener steht.
+// Workflow je Sprache. Eine Zeile je Sprache: Zustand, die erlaubten Schritte, ↑ Erben, wenn hier ein eigener steht.
 // Eigene Komponente, damit sie geprüft werden kann (web/test/ui-workflow.test.mjs) — NodeView bleibt schlank.
 const props = defineProps({ wf: { type: Object, required: true } })
 const emit = defineEmits(['step', 'clear'])

@@ -75,8 +75,7 @@ public class CachedJournalTests
         finally { if (File.Exists(path)) File.Delete(path); }
     }
 
-    // Was je Eintrag kostet, wächst mit dem Journal (Taloan, 24.09.2026: „ich will verhindern, dass ein Serverstart nach
-    // zwei Jahren Nutzung zu einem halben Tag Betriebsausfall führt“). Gemessen: 50 000 nachholen mit der Datei je Eintrag
+    // Was je Eintrag kostet, wächst mit dem Journal. Gemessen: 50 000 nachholen mit der Datei je Eintrag
     // auf und zu 7,4 s, in einem Strom 87 ms.
     [Fact]
     public void Nachholen_schreibt_viele_Eintraege_in_einem_Zug()

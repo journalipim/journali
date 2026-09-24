@@ -5,8 +5,7 @@ using Npgsql;
 namespace Journali.Server;
 
 /// <summary>
-/// Einstellung des Medienspeichers (Taloan, 19.09.2026: „in den Einstellungen ein Tab Storage, wo ich das alles einstellen
-/// kann“): liegt als <c>media.json</c> im Datenverzeichnis des Servers (JOURNALI_JOBS, neben secrets.json) — nie im Journal
+/// Einstellung des Medienspeichers: liegt als <c>media.json</c> im Datenverzeichnis des Servers (JOURNALI_JOBS, neben secrets.json) — nie im Journal
 /// (Geheimnis), nie im Repo. Fehlt die Datei, gilt die Umgebung (JOURNALI_MEDIA …). Umschalten im Betrieb: der
 /// <see cref="SwitchableMediaStore"/> tauscht den Treiber aus; die Blobs zieht danach der Kopierlauf.
 /// </summary>

@@ -1,11 +1,11 @@
-// Art der Arbeit in der Journalansicht (Taloan, 22.09.2026: „eine neue Spalte, die die Art des Eintrags kategorisiert“):
+// Art der Arbeit in der Journalansicht:
 // je Zeile ein Symbol, gezählte Arten hervorgehoben; im Stapelkopf die Arten des ganzen Stapels.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount } from './ui.mjs'
 
 const EntryList = (await import('../src/components/EntryList.vue')).default
-const e = (number, type, kind, batch = null) => ({ number, at: '2026-09-22T08:00:00Z', actor: 'taloan', stream: 'v-1', type, kind, batch, payload: {} })
+const e = (number, type, kind, batch = null) => ({ number, at: '2026-09-22T08:00:00Z', actor: 'u1', stream: 'v-1', type, kind, batch, payload: {} })
 
 test('je Eintrag ein Symbol für die Art, mit Tooltip', () => {
   const w = mount(EntryList, { props: { entries: [e(3, 'AttributeSet', 'data'), e(2, 'AttributeDefined', 'model'), e(1, 'PluginDataSet', 'reference')] } })

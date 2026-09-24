@@ -1,11 +1,10 @@
-// KI-Unterstützung (Taloan, 18.09.2026): Plugins (Datenqualität, DPP, PPWR, ETIM, Anreicherung, GEO, Editor) holen Vorschläge
-// von der KI, wenn ein Schlüssel hinterlegt ist. Der hängt seit dem 23.09.2026 am **Team** und liegt beim Server (Taloan:
-// „wieso sind die KI-Schlüssel immer noch auf der Ich-Seite?“) — nie im Journal, nie im Browser. Ohne Team und ohne
+// KI-Unterstützung: Plugins (Datenqualität, DPP, PPWR, ETIM, Anreicherung, GEO, Editor) holen Vorschläge
+// von der KI, wenn ein Schlüssel hinterlegt ist. Der hängt seit dem 23.09.2026 am **Team** und liegt beim Server — nie im Journal, nie im Browser. Ohne Team und ohne
 // Schlüssel arbeiten die Plugins autark, regelbasiert; journali selbst bietet keine KI an.
-// Kein Anbieter ist im Code bevorzugt (Taloan, 20.09.): Texte sagen „KI“; wo es auf den Anbieter ankommt, zählt ai.active() auf,
+// Kein Anbieter ist im Code bevorzugt: Texte sagen „KI“; wo es auf den Anbieter ankommt, zählt ai.active() auf,
 // welche eingerichtet sind, und ai.label() nennt den gewählten mit Modell.
 //
-// Zwei Wege (Taloan, 23.09.2026, Teams): liegt am Team ein Schlüssel, fragt der Server (POST /api/ai/ask) — der Schlüssel bleibt
+// Zwei Wege: liegt am Team ein Schlüssel, fragt der Server (POST /api/ai/ask) — der Schlüssel bleibt
 // dort, jeder Aufruf wird beim zahlenden Team gezählt, Grenzen greifen, und auch Jobs können KI. Wer seinen eigenen Vertrag
 // benutzen will, trägt hier einen Schlüssel ein: dann fragt der Browser wieder direkt, es zählt niemand mit, und er zahlt selbst.
 import { reactive } from 'vue'
@@ -70,7 +69,7 @@ export const ai = reactive({
   busy: 0,
   lastError: '',
   lastSources: [],      // Quellen (url, title) der letzten Antwort mit web: true
-  // Verbrauch, seit wann (Taloan, 22.09.): Token kosten Geld — die Statuszeile zeigt sie; „zurücksetzen“ im Tooltip der Einstellungen
+  // Verbrauch, seit wann: Token kosten Geld — die Statuszeile zeigt sie; „zurücksetzen“ im Tooltip der Einstellungen
 
   providers: PROVIDERS,
   // Was das Team stellt (GET /api/ai/state): { team, label, payer, providers[], models, ready }
@@ -94,7 +93,7 @@ export const ai = reactive({
   save() { try { localStorage.setItem(KEY, JSON.stringify({ accounts: this.accounts, provider: this.provider })) } catch {} },
 
   // Eine Frage, eine Antwort. json: true → die Antwort wird als JSON gelesen (Code-Zäune werden entfernt).
-  // web: true → die KI darf im Internet suchen (Herstellerseiten, Datenblätter — Taloan, 20.09.: Daten fremder Produkte ergänzen);
+  // web: true → die KI darf im Internet suchen (Herstellerseiten, Datenblätter);
   // die Quellen der Antwort stehen danach in lastSources. Kostet je Suche extra beim Anbieter.
   async ask({ system = '', user, json = false, maxTokens = 2000, temperature = 0, web = false, maxSearches = 5, purpose = '' }) {
     if (!this.server?.ready) throw new Error(this.server?.team ? t_('Für Team „{0}“ ist kein KI-Schlüssel hinterlegt', [this.server.label ?? this.server.team]) : t_('Kein Team — ohne Team keine KI'))

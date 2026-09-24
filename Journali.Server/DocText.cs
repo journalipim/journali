@@ -4,8 +4,7 @@ using NpgsqlTypes;
 namespace Journali.Server;
 
 /// <summary>
-/// Der Text der Dokumente (Taloan, 22.09.2026: „ich kann zwar per OCR nach konkreten Worten suchen, aber eine semantische
-/// Suche ist nicht möglich“ — pflegestruktur §32). Am Knoten hängen Datenblätter und Zertifikate; für uns waren sie bisher
+/// Der Text der Dokumente. Am Knoten hängen Datenblätter und Zertifikate; für uns waren sie bisher
 /// eine Blackbox: <c>MediaCreated</c> kennt Hash, Grösse, Mime und Name, nicht den Inhalt.
 /// <para>Das hier ist <b>abgeleitet</b>, nicht Wahrheit: Text und Abschnitte entstehen aus einer Datei, die
 /// hash-adressiert im Medienspeicher liegt, und lassen sich jederzeit neu herstellen. Deshalb eigene Tabelle neben dem
@@ -106,8 +105,7 @@ public sealed class DocText
     }
 
     /// <summary>
-    /// Text, wie Postgres ihn annimmt (Taloan, 23.09.2026, am Tridonic-Archiv: „invalid byte sequence for encoding UTF8:
-    /// 0x00“). Ein PDF mit kaputter Zeichentabelle liefert Nullbytes mitten im Text; <c>text</c> in Postgres verträgt
+    /// Text, wie Postgres ihn annimmt. Ein PDF mit kaputter Zeichentabelle liefert Nullbytes mitten im Text; <c>text</c> in Postgres verträgt
     /// kein 0x00, und ein einziges davon lässt das ganze Dokument scheitern. Weg damit — und gleich auch die übrigen
     /// Steuerzeichen ausser Tabulator und Zeilenumbruch: sie sind nie Text, stehen aber im Ausschnitt eines Treffers.
     /// Leer bleibt leer (null), damit die Spalte NULL bekommt und nicht einen leeren String.
@@ -122,8 +120,7 @@ public sealed class DocText
     }
 
     /// <summary>Alle Dokumente, die beim Lesen scheiterten, wieder freigeben — der Job nimmt sie in der nächsten Runde
-    /// erneut. Ohne das bliebe ein Fehler für immer stehen, auch wenn die Ursache längst behoben ist (Taloan, 23.09.2026:
-    /// Nullbyte). Ein erkannter Scan bleibt draussen, der wartet auf OCR und nicht auf eine neue Serverfassung.</summary>
+    /// erneut. Ohne das bliebe ein Fehler für immer stehen, auch wenn die Ursache längst behoben ist. Ein erkannter Scan bleibt draussen, der wartet auf OCR und nicht auf eine neue Serverfassung.</summary>
     public async Task<int> RetryFailedAsync(CancellationToken ct = default)
     {
         if (_db is null) return 0;

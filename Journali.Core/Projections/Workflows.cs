@@ -4,7 +4,7 @@ using Journali.Core.Journal;
 namespace Journali.Core.Projections;
 
 /// <summary>
-/// Workflows (docs/pflegestruktur.md 27; Taloan, 21.09.2026: „brauchen wir auf jeden Fall — Designer, Freigaben, Korrekturschleifen“):
+/// Workflows (docs/pflegestruktur.md 27):
 /// der Bearbeitungszustand über dem Status. Ein Workflow (Strom <c>workflow:&lt;key&gt;</c>) hat freie Zustände und Übergänge;
 /// ein Übergang trägt die Rollen, die ihn gehen dürfen, ob eine Notiz Pflicht ist (Korrekturschleife) und Wirkungen
 /// (<c>release:web</c>, <c>revoke:web</c>, <c>status:active</c>). Am Knoten steht je Workflow genau ein Zustand
@@ -20,7 +20,7 @@ public sealed class WorkflowDef
     /// <summary>Für welche Knotentypen (leer = alle Pflegeknoten) und Familien (leer = alle) der Workflow gilt.</summary>
     public string[] Roles { get; set; } = [];
     public string[] Families { get; set; } = [];
-    /// <summary>Je Sprache ein eigener Zustand (Taloan, 22.09.2026: „Französisch in Korrektur, Deutsch freigegeben“).
+    /// <summary>Je Sprache ein eigener Zustand.
     /// Der Zustand ohne Sprache bleibt daneben gültig — er ist der des Knotens.</summary>
     public bool PerLocale { get; set; }
     public long LastNumber { get; set; }
@@ -59,7 +59,7 @@ public sealed class Workflows : IProjection
     /// <summary>Der wirksame Zustand eines Knotens in einem Workflow: gesetzt oder Start. Mit Sprache bei einem Workflow je Sprache.</summary>
     public string StateOf(string nodeId, WorkflowDef wf, string? locale = null) => Own(nodeId, wf, locale) ?? wf.Start;
     /// <summary>Eigener Zustand am Knoten, null = nie gesetzt. Bei einem Workflow je Sprache fällt die Sprache auf den Zustand ohne Sprache zurück —
-    /// so gilt jeder Eintrag von früher weiter (Taloan, 22.09.2026).</summary>
+    /// so gilt jeder Eintrag von früher weiter.</summary>
     public string? Own(string nodeId, WorkflowDef wf, string? locale = null)
     {
         if (!_nodes.TryGetValue(nodeId, out var d)) return null;
@@ -69,7 +69,7 @@ public sealed class Workflows : IProjection
     /// <summary>Die Sprachen, für die an diesem Knoten ein eigener Zustand steht (nur bei einem Workflow je Sprache).</summary>
     public IEnumerable<string> LocalesAt(string nodeId, WorkflowDef wf) =>
         _nodes.TryGetValue(nodeId, out var d) ? d.Keys.Where(k => k.StartsWith(wf.Key + "@", StringComparison.Ordinal)).Select(k => k[(wf.Key.Length + 1)..]) : [];
-    /// <summary>Wirksamer Zustand: eigener, sonst der des nächsten Vorfahren mit eigenem (Variante folgt dem Produkt, Produkt der Gruppe — Taloan, 21.09.2026),
+    /// <summary>Wirksamer Zustand: eigener, sonst der des nächsten Vorfahren mit eigenem (Variante folgt dem Produkt, Produkt der Gruppe),
     /// sonst Start. Liefert auch, von wem er kommt (null = eigen oder Start).</summary>
     public (string State, string? From) StateOf(string nodeId, WorkflowDef wf, Func<string, string?> parentOf, string? locale = null)
     {

@@ -55,7 +55,7 @@ public sealed class PostgresJournal : IJournal
             );
             CREATE INDEX IF NOT EXISTS journal_stream ON journal (stream, number);
             ALTER TABLE journal ADD COLUMN IF NOT EXISTS batch TEXT;
-            -- Art der Arbeit (Taloan, 22.09.2026): model, structure, data, publish, reference, setup, ops.
+            -- Art der Arbeit: model, structure, data, publish, reference, setup, ops.
             -- Alte Einträge bleiben leer; wer sie liest, leitet die Art aus dem Typ ab (Kinds.Of).
             ALTER TABLE journal ADD COLUMN IF NOT EXISTS kind TEXT;
             CREATE INDEX IF NOT EXISTS journal_kind_at ON journal (kind, at);
@@ -133,8 +133,7 @@ public sealed class PostgresJournal : IJournal
     }
 
     /// <summary>
-    /// Eine Sicherung zurückschreiben (Taloan, 23.09.2026: „neuer Docker irgendwo, Sicherung einspielen, muss das System
-    /// wiederherstellen“). Die Einträge behalten Nummer, Zeit und Urheber — sonst wäre es ein neuer Stand.
+    /// Eine Sicherung zurückschreiben. Die Einträge behalten Nummer, Zeit und Urheber — sonst wäre es ein neuer Stand.
     /// Nur in ein leeres Journal: sonst kollidierten die Nummern.
     /// </summary>
     public int RestoreAll(IEnumerable<Entry> entries)

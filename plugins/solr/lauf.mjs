@@ -1,4 +1,4 @@
-// Der Ablauf eines Solr-Imports — einmal, für beide Wege (Taloan, 23.09.2026: „node, kein Python“).
+// Der Ablauf eines Solr-Imports — einmal, für beide Wege.
 // Die Ansicht im Browser und der Job auf dem Server rufen dieselben Funktionen; sie unterscheiden sich nur in der
 // Umgebung, die sie mitbringen: wie man Solr fragt, wie man journali fragt, und wohin der Fortschritt geht.
 //

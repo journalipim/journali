@@ -7,8 +7,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Journali.Tests;
 
-// Übersetzungsspeicher, Paket und Rückkehr (docs/pflegestruktur.md 30; Taloan, 22.09.2026: „irgendwann kommt der Auftrag zurück
-// und man stellt fest, dass es schon wieder etliche Änderungen am Original gibt“). Geprüft wird genau das, woran es in der
+// Übersetzungsspeicher, Paket und Rückkehr (docs/pflegestruktur.md 30). Geprüft wird genau das, woran es in der
 // Praxis scheitert: die Marke sagt, gegen welche Quellfassung übersetzt ist — und ein überholter Rücklauf wird eingespielt,
 // nicht verworfen.
 public class TranslationOrderTests
@@ -57,7 +56,7 @@ public class TranslationOrderTests
         var (c, p) = World();
         var unit = TranslateApi.UnitId(p, "name", null, null);
         var sentHash = Open(c).Single().SourceHash;
-        // während der Auftrag draussen ist, schreibt die Redaktion weiter (Taloan: „speichern und speichern und speichern“)
+        // während der Auftrag draussen ist, schreibt die Redaktion weiter
         c.With((_, _, write) => write("t", p, Types.AttributeSet, new AttributeSet("name", "de", null, "Gerät X1 Pro", null), null).Number);
         var back = Body(TranslateApi.Import(c, "agentur", "de", "en", [new TranslateApi.ImportUnit(unit, "Device X1", sentHash)], false));
         Assert.Equal(1, back.GetProperty("written").GetInt32());            // nicht verworfen — sie ist besser als nichts
@@ -82,7 +81,7 @@ public class TranslationOrderTests
         var unit = TranslateApi.UnitId(p, "name", null, null);
         var hash = Open(c).Single().SourceHash;
         TranslateApi.Import(c, "agentur", "de", "en", [new TranslateApi.ImportUnit(unit, "Device X1", hash)], false);
-        // der lokal Verantwortliche bessert nach (Taloan: „muss nur noch von einem lokal Verantwortlichen abgenommen werden“)
+        // der lokal Verantwortliche bessert nach
         c.With((_, _, write) => write("t", p, Types.AttributeSet, new AttributeSet("name", "en", null, "Device X1 (UK)", null), null).Number);
         var late = Body(TranslateApi.Import(c, "agentur", "de", "en", [new TranslateApi.ImportUnit(unit, "Device X1", hash)], false));
         Assert.Equal(1, late.GetProperty("conflicts").GetInt32());
@@ -110,7 +109,7 @@ public class TranslationOrderTests
     public void Die_Version_der_Mastersprache_schnuert_das_Paket()
     {
         var (c, p) = World();
-        // zweiter Auslöser neben dem Zeitplan (Taloan, 22.09.2026): ein Übergang mit der Wirkung translate:<sprache>
+        // zweiter Auslöser neben dem Zeitplan: ein Übergang mit der Wirkung translate:<sprache>
         var def = new WorkflowDefined(Labels.Of("Fassung", "Release"), [new("draft", Labels.Of("Entwurf", "Draft")), new("final", Labels.Of("final", "final"), null, true)],
             [new("finalize", "draft", "final", Labels.Of("final", "finalize"), null, false, ["translate:en"])], "draft", ["product"]);
         Outcome Run(Func<Ctx, Outcome> cmd) => c.With((model, tree, write) => cmd(new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Translations = c.Translations, Write = (s, t, pl) => write("t", s, t, pl, null) }));

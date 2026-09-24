@@ -1,4 +1,4 @@
-// Zuletzt gewählte Dateien je Import (Taloan, 21.09.2026: „eine History der letzten 5 Dateien“). Über den Datei-Dialog gewählte
+// Zuletzt gewählte Dateien je Import. Über den Datei-Dialog gewählte
 // Dateien (File System Access API, Chrome/Edge) werden als Handle in IndexedDB gemerkt und lassen sich wieder öffnen — der
 // Browser fragt einmal nach Leserecht. Hineingezogene Dateien haben kein Handle: nur der Name bleibt, zum Wiedererkennen.
 const DB = 'journali', STORE = 'recentFiles'

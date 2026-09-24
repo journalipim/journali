@@ -1,6 +1,4 @@
-// journali sagt nichts über fremde Token und Kosten (Taloan, 23.09.2026: „wir machen keine Aussagen über fremd
-// entstandene und verbrauchte Tokens + Kosten“ · „was, wenn hier bei uns 2k steht — der ist happy, schaut in sein
-// API-Konto, und dort stehen 2 Mio?“). Der Anwender gibt seinen Schlüssel ein und nutzt ihn; abgerechnet wird beim
+// journali sagt nichts über fremde Token und Kosten. Der Anwender gibt seinen Schlüssel ein und nutzt ihn; abgerechnet wird beim
 // Anbieter. Geprüft wird, dass nichts davon zurückkommt — weder gezählt noch gezeigt.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -43,8 +41,7 @@ test('ohne Team und ohne Schlüssel sagt journali nur, dass es nicht geht', asyn
   await assert.rejects(() => ai.ask({ user: 'hallo' }), /Team/)
 })
 
-// Was journali sehr wohl sagen darf (Taloan, 23.09.2026: „wir können das Byte-Volumen zählen, das wir hinschicken, und
-// das Byte-Volumen, das wir zurückkriegen … also KI-Austauschvolumen“): die eigene Messung. Bytes hin, Bytes zurück.
+// Was journali sehr wohl sagen darf: die eigene Messung. Bytes hin, Bytes zurück.
 test('der Zustand nennt das Austauschvolumen — gemessen, nicht geschätzt', async () => {
   server()
   const s = await ai.loadState()

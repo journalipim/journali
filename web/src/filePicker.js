@@ -1,5 +1,4 @@
-// Dateibrowser des Servers (Taloan, 21.09.2026: „Gibt's hier wohl auch nen Browser?“ — und „die beiden Verzeichnisbrowser
-// zusammenlegen“): ein Fenster für alles, was ein Pfad auf dem Server ist — Verzeichnis des Medienspeichers, Quelle eines
+// Dateibrowser des Servers: ein Fenster für alles, was ein Pfad auf dem Server ist — Verzeichnis des Medienspeichers, Quelle eines
 // Imports, Ziel eines Exports. Blättert über /api/files (FileApi.cs): Wurzeln (Datenverzeichnis, Programm, Laufwerke),
 // hoch, hinein, Dateien neueste zuerst. Reines DOM wie treePicker, damit Ansichten (Vue) und Plugins (ctx.filePicker) es
 // gleich benutzen. dirOnly: nur Verzeichnisse wählbar (Exportziel, Medienspeicher), sonst Datei oder Verzeichnis.

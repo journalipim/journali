@@ -5,8 +5,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Wiederherstellen aus einer Sicherung (Taloan, 23.09.2026: „unter Einstellungen sollten wir ein Restore anbieten —
-/// nicht als Plugin, oder?“). Nicht als Plugin, weil ein Plugin fehlen oder aus sein kann — und genau dann, wenn
+/// Wiederherstellen aus einer Sicherung. Nicht als Plugin, weil ein Plugin fehlen oder aus sein kann — und genau dann, wenn
 /// wiederhergestellt werden muss, ist oft nichts eingerichtet.
 /// <para>Gelesen wird, was das Plugin <c>backup</c> schreibt: Rohdaten-JSON eines Teilbaums mit Modellteil
 /// (<see cref="TransferApi.RawExport"/>), auch gzip-gepackt (.json.gz). Geschrieben wird über denselben Weg wie der

@@ -1,5 +1,5 @@
-// Datenmapper: Vorschlag je Spalte — Fälle aus der Bedienung (Taloan, 21.09.: Re-Import des eigenen Exports); sku ist eindeutig (unique) und
-// findet damit vorhandene Knoten — wie jedes andere eindeutige Attribut (Taloan: „alles über eindeutig“)
+// Datenmapper: Vorschlag je Spalte — Fälle aus der Bedienung; sku ist eindeutig (unique) und
+// findet damit vorhandene Knoten — wie jedes andere eindeutige Attribut
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { suggest } from '../src/mapper.js'
@@ -41,7 +41,7 @@ test('journali_<feld>_<wurzel>: Wurzel aus dem Spaltenkopf, interne Spalten erka
   assert.equal(m[3].attribute, 'sku'); assert.equal(m[6].attribute, 'name')
 })
 
-test('kopierte Zeilen mit versteckter Id: andere SKU → neuer Knoten, gleiche SKU → übergangen (Taloans Datei)', async () => {
+test('kopierte Zeilen mit versteckter Id: andere SKU → neuer Knoten, gleiche SKU → übergangen (die Datei)', async () => {
   const { plan } = await import('../src/mapper.js')
   const columns = ['journali_id_g-1', 'journali_parent_g-1', 'sku', 'name_de']
   // Original steht NICHT zuerst (ausgeschnitten und als erste eingefügt): erkannt wird es über die SKU des Knotens, nicht über die Zeile
@@ -84,7 +84,7 @@ test('jedes eindeutige Attribut findet den Knoten — auch matnr statt sku, und 
   assert.equal(p.stats.update, 1); assert.equal(p.stats.create, 1)   // 100 gefunden über matnr, 200 neu; ean (nicht eindeutig) findet nichts
 })
 
-test('Vorschau prüft Eindeutigkeit: Wert eines anderen Knotens und doppelt in der Datei sind ungültige Zellen (Taloan, 21.09.)', async () => {
+test('Vorschau prüft Eindeutigkeit: Wert eines anderen Knotens und doppelt in der Datei sind ungültige Zellen', async () => {
   const { plan } = await import('../src/mapper.js')
   const columns = ['journali_id_g-1', 'sku', 'name_de']
   const rows = [['v-1', '053797', 'ok — eigener Wert'], ['v-2', '053797', 'fremd — gehört v-1'], ['', 'NEU', 'neu'], ['', 'NEU', 'doppelt in der Datei']]
@@ -101,7 +101,7 @@ test('Vorschau prüft Eindeutigkeit: Wert eines anderen Knotens und doppelt in d
   assert.ok(!p.commands.some(c => c.op === 'attribute.set' && c.args.node === 'v-2' && c.args.attribute === 'sku'), 'der fremde Wert wird nicht geschrieben')
 })
 
-test('Status aus dem Modell: SAP-Materialstatus über die Tabelle abgebildet (Taloan, 22.09.: 300→Überprüfung, 400→Freigabe, 500/501→Verkauf)', async () => {
+test('Status aus dem Modell: Materialstatus des ERP über die Tabelle abgebildet', async () => {
   const { plan } = await import('../src/mapper.js')
   const m2 = { ...model, statuses: [{ key: 'draft', label: { de: 'Entwurf' } }, { key: 'review', label: { de: 'Überprüfung' } }, { key: 'released', label: { de: 'Freigabe' } }, { key: 'sale_de', label: { de: 'Verkauf DE' } }, { key: 'sale_world', label: { de: 'Verkauf weltweit' } }] }
   const columns = ['sku', 'status', 'name_de']

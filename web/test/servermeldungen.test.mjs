@@ -1,5 +1,4 @@
-// Was der Server dem Anwender sagt (Taloan, 23.09.2026: „wer sind die Menschen, mit denen wir hier reden? Wenn du den
-// Teller nicht leer gegessen hast, darfst du abends nicht fernsehen?“). Eine Meldung sagt, **was ist** — nicht, was
+// Was der Server dem Anwender sagt. Eine Meldung sagt, **was ist** — nicht, was
 // der Anwender zu tun hat: kein „bitte“, kein „erst …“, kein Ratschlag. Und höchstens ein Satz; wer mehr erklären
 // will, schreibt es in die Dokumentation.
 // Geprüft wird, was wirklich in der Oberfläche landet: Bad("…") und error = "…" aus Journali.Server.

@@ -1,4 +1,4 @@
-// Massenbearbeitung von Attributen (Taloan, 22.09.2026). Der Kern der Prüfung ist der Stand der Auswahl:
+// Massenbearbeitung von Attributen. Der Kern der Prüfung ist der Stand der Auswahl:
 // „alle an“, „alle aus“ oder „gemischt · 69 von 70 an“ — und dass ein Klick durchschaltet (gemischt → alle an → alle aus).
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -23,8 +23,8 @@ test('alle gleich: der Stand sagt „alle an“, die Kachel ist voll', () => {
   assert.match(rowOf(w, 'vererbbar').text(), /alle an/)
 })
 
-test('gemischt wird gezeigt — Kachel gestrichelt, Zahl dahinter (Taloan, 22.09.)', () => {
-  // 69 Attribute ohne Produktgruppe, eines mit — genau Taloans Fall
+test('gemischt wird gezeigt — Kachel gestrichelt, Zahl dahinter', () => {
+  // 69 Attribute ohne Produktgruppe, eines mit — genau die Fall
   const attrs = [...Array(69)].map((_, i) => A('ef' + i, { levels: ['product', 'variant'] })).concat(A('etim_class'))
   const w = mount(AttrBulk, { props: { ...base, attrs } })
   const chip = chipOf(w, '▣ Produktgruppe')

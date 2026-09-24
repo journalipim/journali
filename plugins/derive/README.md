@@ -6,8 +6,7 @@ Was fehlt, sagt `GET /api/media/pending`; das Ergebnis geht mit `PUT /api/media/
 in den Medienspeicher (`sha.<preset>`), der Server schreibt den Beleg `MediaDerived`. Ausliefern:
 `GET /api/media/{id}/{preset}`.
 
-Warum ein Prozess: 200-MB-TIFFs aus der Konstruktion rechnet man nicht live und nicht im Serverprozess
-(Taloan, 21.09.2026). sharp (libvips) liest TIFF, PNG, JPEG, WebP, AVIF, GIF, SVG und streamt grosse Bilder.
+Warum ein Prozess: 200-MB-TIFFs aus der Konstruktion rechnet man nicht live und nicht im Serverprozess. sharp (libvips) liest TIFF, PNG, JPEG, WebP, AVIF, GIF, SVG und streamt grosse Bilder.
 
 ## Einrichten
 

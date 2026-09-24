@@ -1,5 +1,4 @@
-// Plugin docs (Taloan, 22.09.2026: „man kann etliche PDFs an einen Knoten droppen — die werden im Hintergrund nach und
-// nach gelesen und stehen dann für Chatbots oder die interne Recherche bereit“): liest den Text der Dokumente und legt
+// Plugin docs: liest den Text der Dokumente und legt
 // ihn in den Index (pflegestruktur §32).
 // Aufruf: node job.mjs <journali> <actor> [limit] — der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
 // Holt /api/docs/status?pending=1 (was noch keinen Text hat), lädt die Datei, liest sie je nach Art, schneidet sie in
@@ -49,7 +48,7 @@ async function pdfPages(bytes) {
 
 /// Alles, was wir lesen können, wird zu Abschnitten — PDF seitenweise, der Rest am Stück.
 /// Liefert auch den Zustand: „scan“ heisst, das PDF hat keine Textebene — der Text steckt in Bildern und bräuchte OCR
-/// (Taloan, 22.09.2026). Ohne diese Unterscheidung sähe ein Scan aus wie ein leeres Dokument.
+///. Ohne diese Unterscheidung sähe ein Scan aus wie ein leeres Dokument.
 async function read(medium, bytes) {
   const mime = medium.mime ?? ''
   if (mime === 'application/pdf') {

@@ -1,4 +1,4 @@
-// Plugin rag (Taloan, 19.09.2026: „könnten wir nicht RAG-Services unterstützen?“): exportiert je Knoten ein sauberes,
+// Plugin rag: exportiert je Knoten ein sauberes,
 // zitierfähiges Dokument für Vektor-Stores und RAG-Dienste — Markdown je Knoten und eine nodes.jsonl (Id, Rolle, Pfad,
 // SKU, Sprache, Text, Version, Belege). Keine Datenbank anzapfen, kein Parsen von Datenblättern: das Journal liefert
 // den Stand, die Version die Zitierstelle. Aufruf: node job.mjs <journali> <actor> [root] [dir] [role] [locales] [withVersions]

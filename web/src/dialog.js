@@ -1,4 +1,4 @@
-// Ein Dialog für die ganze Oberfläche statt window.confirm/prompt (Taloan, 18.09.: „hässlicher Browser-Dialog“).
+// Ein Dialog für die ganze Oberfläche statt window.confirm/prompt.
 // dialog.confirm({ title, text, ok, danger }) → true/false; dialog.prompt({ title, text, value, placeholder }) → Text oder null.
 // Enter bestätigt, Esc bricht ab; der Rest der Oberfläche ist solange gesperrt. Eingehängt in App.vue (Dialog.vue).
 import { reactive } from 'vue'

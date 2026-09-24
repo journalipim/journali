@@ -5,8 +5,8 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Teams (Taloan, 23.09.2026: „je Team gibt es Limits und API-Keys, Benutzer gehören einem Team an“). Geprüft wird vor allem
-// das Leck, das Taloan selbst gesehen hat: „dann lege ich mir 20 Teams an und habe 20× Grundrauschen“ — ein Team ohne eigene
+// Teams. Geprüft wird vor allem
+// das Leck — ein Team ohne eigene
 // Schlüssel hat kein eigenes Kontingent, es hängt am Zahler.
 public class TeamTests
 {
@@ -17,14 +17,14 @@ public class TeamTests
         {
             write("t", Teams.Stream + Model.InitTeam, Types.TeamDefined, new TeamDefined("Init Team", null, MonthlyTokens: 100_000, DailyTokens: 50_000, IncludedTokens: 200_000), null);
             write("t", Teams.Stream + "es", Types.TeamDefined, new TeamDefined("Spanien", null, KeysFrom: Model.InitTeam), null);
-            write("t", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true, Model.InitTeam), null);
+            write("t", Users.Stream + "u1", Types.UserDefined, new UserDefined("U1", null, "admin", true, Model.InitTeam), null);
             write("t", Users.Stream + "pablo", Types.UserDefined, new UserDefined("Pablo", null, "editor", true, "es"), null);
             return 0;
         });
         return c;
     }
-    /// <summary>Ein KI-Aufruf mit gemessenem Volumen — hin die Hälfte, zurück der Rest (Taloan, 23.09.2026).</summary>
-    private static void Verbrauch(Catalog c, string team, int bytes, string user = "taloan", string? fuer = null, string? anlass = null) =>
+    /// <summary>Ein KI-Aufruf mit gemessenem Volumen — hin die Hälfte, zurück der Rest.</summary>
+    private static void Verbrauch(Catalog c, string team, int bytes, string user = "u1", string? fuer = null, string? anlass = null) =>
         c.With((_, _, write) => write(user, Teams.UsageStream + team, Types.AiUsed, new AiUsed("anthropic", "claude-sonnet-5", user, 0, 0, 1, DateOnly.FromDateTime(DateTime.Today).ToString("yyyy-MM-dd"), fuer, bytes / 2, bytes - bytes / 2, anlass), null));
 
     [Fact]
@@ -46,7 +46,7 @@ public class TeamTests
         // ein weiteres Team am selben Zahler bringt keinen weiteren Freibetrag — der Topf ist derselbe
         c.With((_, _, write) => write("t", Teams.Stream + "fr", Types.TeamDefined, new TeamDefined("Frankreich", null, KeysFrom: Model.InitTeam), null));
         Verbrauch(c, Model.InitTeam, 1000, "pablo", fuer: "es");
-        Verbrauch(c, Model.InitTeam, 500, "taloan");
+        Verbrauch(c, Model.InitTeam, 500, "u1");
         Assert.Equal(1500, c.With((_, _, _) => c.Teams.Day(Model.InitTeam, DateOnly.FromDateTime(DateTime.Today)).Bytes));
         Assert.Equal(0, c.With((_, _, _) => c.Teams.Day("es", DateOnly.FromDateTime(DateTime.Today)).Bytes));   // gemessen wird beim Zahler
     }
@@ -56,7 +56,7 @@ public class TeamTests
     {
         var c = World();
         Verbrauch(c, Model.InitTeam, 1000, "pablo", fuer: "es", anlass: "uebersetzung");
-        Verbrauch(c, Model.InitTeam, 400, "taloan", anlass: "editor");
+        Verbrauch(c, Model.InitTeam, 400, "u1", anlass: "editor");
         var tag = c.With((_, _, _) => c.Teams.Day(Model.InitTeam, DateOnly.FromDateTime(DateTime.Today)));
         Assert.Equal(2, tag.Calls);
         Assert.Equal(1400, tag.Bytes);
@@ -64,7 +64,7 @@ public class TeamTests
         Assert.Equal(700, tag.BytesOut);
         Assert.Equal(0, tag.In);                          // Tokenzahlen des Anbieters schreibt journali nicht mehr
         Assert.Equal(1000, tag.ByUser["pablo"]);
-        Assert.Equal(400, tag.ByUser["taloan"]);
+        Assert.Equal(400, tag.ByUser["u1"]);
         Assert.Equal(1400, tag.ByProvider["anthropic"]);
         Assert.Equal(1000, tag.ByPurpose["uebersetzung"]);
         Assert.Equal(1400, c.With((_, _, _) => c.Teams.Month(Model.InitTeam, DateTime.Today.ToString("yyyy-MM"))));
@@ -87,7 +87,7 @@ public class TeamTests
         var c = World();
         Assert.Equal("es", c.With((_, _, _) => c.Users.All["pablo"].Team));
         Assert.Equal("es", TeamApi.TeamOf(c, "pablo"));
-        // wer ausgetragen wurde, ist teamlos — und teamlos heisst 0 (Taloan, 23.09.2026), kein stilles Zurückfallen auf Team 1
+        // wer ausgetragen wurde, ist teamlos — und teamlos heisst 0, kein stilles Zurückfallen auf Team 1
         c.With((_, _, write) => write("t", Users.Stream + "gast", Types.UserDefined, new UserDefined("Gast", null, "reader"), null));
         Assert.Null(c.With((_, _, _) => c.Users.All["gast"].Team));
         Assert.Null(TeamApi.TeamOf(c, "gast"));
@@ -102,7 +102,7 @@ public class TeamTests
         // die Mitgliederzahl von Team 1 nimmt die ohne eigenes Team mit — sonst hätte niemand Zugriff auf ihre Token
         var mitglieder = c.With((_, _, _) => c.Users.All.Values.Where(u => u.Team == Model.InitTeam || u.Team is null).Select(u => u.Key).ToHashSet());
         Assert.Contains("gast", mitglieder);
-        Assert.Contains("taloan", mitglieder);
+        Assert.Contains("u1", mitglieder);
         Assert.DoesNotContain("pablo", mitglieder);   // Pablo hat ein eigenes Team
     }
 
@@ -131,7 +131,7 @@ public class TeamTests
         var c = World();
         c.With((_, _, write) => write("t", Teams.Stream + "es", Types.TeamDefined, new TeamDefined("Spanien", null, KeysFrom: Model.InitTeam, Managers: ["pablo"]), null));
         Assert.True(c.With((_, _, _) => c.Teams.Leads("es", "pablo")));
-        Assert.False(c.With((_, _, _) => c.Teams.Leads("es", "taloan")));
+        Assert.False(c.With((_, _, _) => c.Teams.Leads("es", "u1")));
         Assert.Equal(["es"], c.With((_, _, _) => c.Teams.Led("pablo").Select(t => t.Key).ToArray()));
         // ausgetragen heisst teamlos: kein Team, also kein Schlüssel, keine Grenze, keine KI
         c.With((_, _, write) => write("t", Users.Stream + "pablo", Types.UserDefined, new UserDefined("Pablo", null, "editor", true, null), null));
@@ -145,7 +145,7 @@ public class TeamTests
     {
         var c = World();
         c.With((_, _, write) => write("t", Teams.Stream + Model.InitTeam, Types.TeamDefined,
-            new TeamDefined("Init Team", Managers: ["taloan"], Models: new() { ["anthropic"] = "claude-opus-5" }), null));
+            new TeamDefined("Init Team", Managers: ["u1"], Models: new() { ["anthropic"] = "claude-opus-5" }), null));
         Assert.Equal("claude-opus-5", c.With((_, _, _) => c.Teams.Get(Model.InitTeam)!.Models["anthropic"]));
     }
 

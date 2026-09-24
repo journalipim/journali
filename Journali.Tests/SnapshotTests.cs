@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Schnappschuss der Abbilder (Taloan, 21.09.2026): Stand bei #n als Datei, beim Start nur der Rest — und das Ergebnis muss dem
+// Schnappschuss der Abbilder: Stand bei #n als Datei, beim Start nur der Rest — und das Ergebnis muss dem
 // vollen Aufbau aus dem Journal gleichen: Baum, Werte (auch geerbt), Relationen mit Werten, Medien, Ordner, Publikation, Jobs, Benutzer.
 public class SnapshotTests
 {
@@ -37,7 +37,7 @@ public class SnapshotTests
             write("t", mrel, Types.AttributeSet, new AttributeSet("inherit", null, null, "true", null), null);
             write("t", Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(null, new(), "Web", "web", null), null);
             write("t", Jobs.Stream + "nightly", Types.JobDefined, new JobDefined("Nightly", "backup", new() { ["dir"] = "x" }, "0 2 * * *", true, 30, null), null);
-            write("t", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "admin", true), null);
+            write("t", Users.Stream + "u1", Types.UserDefined, new UserDefined("U1", null, "admin", true), null);
             write("t", "plugin:backup", Types.PluginDataSet, new PluginDataSet("profile:a", "{\"root\":\"" + root + "\"}"), null);
             write("t", v1, Types.VersionCreated, new VersionCreated(1, 5, "web", "de", "erste"), null);
             write("t", v1, Types.VersionDocumentAdded, new VersionDocumentAdded(1, "datasheet", medium, "abc123", "application/pdf", "blatt.pdf", 10, null), null);

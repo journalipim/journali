@@ -6,8 +6,7 @@ using Journali.Core.Projections;
 namespace Journali.Server;
 
 /// <summary>
-/// Die Fächer eines Jobs (docs/tasker-dateien.md, Taloan 21.09.2026: „den Dateinamen müsste der Tasker übernehmen — welche Datei
-/// ist dran, welche war schon, wohin damit“): der Tasker besitzt die Ablage, das Plugin den Inhalt. Je Job vier Fächer unter
+/// Die Fächer eines Jobs (docs/tasker-dateien.md): der Tasker besitzt die Ablage, das Plugin den Inhalt. Je Job vier Fächer unter
 /// der Basis (Vorgabe jobs/&lt;key&gt;, je Job ein Share): <c>in/</c> Eingang, <c>done/</c> verarbeitet, <c>failed/</c> gescheitert
 /// (mit Log daneben), <c>out/</c> Ausgaben. Das Manifest sagt nur, was der Prozess frisst und schreibt:
 /// <code>"files": { "in": { "pattern": "*.json;*.json.gz", "mode": "one|all", "order": "name|time", "required": true, "param": "source" },
@@ -77,10 +76,10 @@ public sealed class JobFach
             inDir = Fach(job, "in"); Directory.CreateDirectory(inDir); Directory.CreateDirectory(Fach(job, "done")); Directory.CreateDirectory(Fach(job, "failed"));
             foreach (var f in Candidates(inDir, spec).ToList())
             {
-                if ((DateTime.UtcNow - f.LastWriteTimeUtc).TotalSeconds < 3) continue;   // wird gerade geschrieben (SAP, SFTP) — nächster Takt
+                if ((DateTime.UtcNow - f.LastWriteTimeUtc).TotalSeconds < 3) continue;   // wird gerade geschrieben (ERP, SFTP) — nächster Takt
                 var hash = Sha(f.FullName);
                 if (job.ConsumedHashes.Contains(hash))
-                {   // Duplikat nach Inhalt: nach done/, Beleg ohne Lauf, kein Import (Taloan: „wie merke ich mir, was schon importiert wurde“)
+                {   // Duplikat nach Inhalt: nach done/, Beleg ohne Lauf, kein Import
                     var target = Unique(Path.Combine(Fach(job, "done"), $"{DateTimeOffset.Now:yyyyMMdd-HHmmss}-dup-{f.Name}"));
                     File.Move(f.FullName, target);
                     journal(Types.JobFileConsumed, new JobFileConsumed("", f.Name, hash, f.Length, "duplicate"));
@@ -148,7 +147,7 @@ public sealed class JobFach
             catch (Exception e) { log($"Ausgabe {name}: {e.Message}"); }
         }
         if (latest)
-        {   // Kopie, kein Link (Taloan: Links auf Shares sind heikel) — der stabile Name für den, der abholt
+        {   // Kopie, kein Link — der stabile Name für den, der abholt
             try
             {
                 if (plan.Many)

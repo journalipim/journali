@@ -1,5 +1,4 @@
-// Export mit Vorlagen (Taloan, 19.09.2026: „viele gehen nach Standard, verschiedene Versionen, und Kunden haben eigene
-// Definitionen“ — also Vorlagen als Daten statt ein Plugin je Format). Dieselbe Schreibweise wie die Vorlagen-Attribute
+// Export mit Vorlagen. Dieselbe Schreibweise wie die Vorlagen-Attribute
 // (Template.cs): {feld}, Zusätze {feld|unit|2|dec2|upper|plain|xml|raw|max80|or:name}, [ … ] fällt weg, wenn ein Platzhalter darin leer ist.
 // Dazu Schleifen {#name} … {/name} über products, children, media, features, rows.<attribut>, locales — und {^name} … {/name}
 // für „wenn leer“. Werte werden je Ausgabeart entkommen (xml: &<>"; csv: Anführungszeichen; json: JSON-String) — {x|raw} lässt sie roh.
@@ -116,7 +115,7 @@ export async function contextOf(env, id, { locale, mapping = {}, depth = 0, with
   // ETIM & Co.: features = [{ code, attr, unit? }] aus dem Profil → ETIM-Attribute mit Wert aus dem Attribut
   let features = (env.features ?? []).map(fe => { const a = attr[fe.attr]; return a ? { code: fe.code, value: a.value, values: [a.value], unit: fe.unit ?? a.unit ?? null, details: null, label: a.label } : null }).filter(Boolean)
   const active = new Set((n.groups ?? []).filter(g => g.active).flatMap(g => g.attributes ?? []))   // welche Attribute hier gelten (Gruppe am Pfad, an dieser Rolle aktiv)
-  // sku = der erste Schlüssel (eindeutiger Wert) — für Vorlagen, die {{sku}} sagen; keys = alle (Taloan, 21.09.)
+  // sku = der erste Schlüssel (eindeutiger Wert) — für Vorlagen, die {{sku}} sagen; keys = alle
   const ctx = { id, role: n.role, sku: Object.values(row?.keys ?? {})[0] ?? '', keys: row?.keys ?? {}, name: row?.label ?? n.name ?? id, status: n.status, parentId: row?.parent ?? null, features, active, path: crumbs, pathText: crumbs.map(c => c.name).join(' / '), locale, attr, label, rows, f, media, axes: n.axisValues ?? {}, today: new Date().toISOString().slice(0, 10), now: new Date().toISOString() }
   if (env.featuresOf) { const r = await env.featuresOf(ctx); if (r) { const codes = new Set(r.features.map(f => f.code)); ctx.features = [...features.filter(f => !codes.has(f.code)), ...r.features]; ctx.etim = { classCode: r.classCode, known: r.known, version: r.version ?? null, filled: r.filled ?? 0, total: r.total ?? 0, completeness: r.completeness ?? 0 } } }
   if (withChildren && depth === 0) { const kids = tree.kids(id); ctx.children = []; for (const k of kids) ctx.children.push(await contextOf(env, k.id, { locale, mapping, depth: 1, withChildren: false, withMedia })) }
@@ -132,7 +131,7 @@ export function needs(template) {
 }
 
 /// Alle Knoten eines Teilbaums (nach Rolle) als Produktkontexte + Kopf
-/// pub (Taloan, 22.09.: „der BMEcat-Export setzt auf einen Publikationsbaum auf“): Id eines Publikationsbaums — dann kommen die Produkte
+/// pub: Id eines Publikationsbaums — dann kommen die Produkte
 /// aus seiner Ausleitung (GET /api/pub/{id}/export: nur ausgeleitete, mit Rubrikenpfad), die Rubriken werden die Kataloggruppen,
 /// parentId/path je Produkt zeigen auf die Rubrik statt auf den Pflegebaum. Ohne pub wie bisher: Teilbaum des Pflegebaums (root).
 export async function build(env, { root, pub = null, role = 'product', locale, mapping = {}, vars = {}, features = [], limit = 0, say }) {
@@ -161,15 +160,15 @@ export async function build(env, { root, pub = null, role = 'product', locale, m
     say?.(`${i + 1}/${targets.length} ${r.label}`)
     const p = await contextOf(env, r.id, { locale, mapping })
     if (r.rubric) { const gid = x => x.id || 'v-' + String(x.label ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-'); p.path = r.rubric.map(x => ({ id: gid(x), name: x.label })); p.pathText = p.path.map(c => c.name).join(' / '); p.parentId = p.path[p.path.length - 1]?.id ?? null }
-    // Sperre (Taloan, 20.09.): der Export führt die Analyse aus, bevor er tätig wird — ein Knoten, der sie nicht besteht, sperrt den Export
+    // Sperre: der Export führt die Analyse aus, bevor er tätig wird — ein Knoten, der sie nicht besteht, sperrt den Export
     if (env.gate) { const why = await env.gate(p); if (why) failed.push(`${r.label}${r.keys ? ' (' + Object.values(r.keys).join(' · ') + ')' : ''}: ${why}`) }
     products.push(p)
   }
   if (failed.length) throw new Error(`Export verweigert — ${failed.length} von ${targets.length} Knoten ohne Struktur (✓ Datenanalyse → ⌗ ETIM-Attribute):\n` + failed.slice(0, 8).join('\n') + (failed.length > 8 ? `\n… und ${failed.length - 8} weitere` : ''))
-  // Werte sind Sache des Anwenders (Taloan, 20.09.: Pflichtfelder) — nur zählen und melden, nicht sperren
+  // Werte sind Sache des Anwenders — nur zählen und melden, nicht sperren
   const stats = { unknown: 0, bad: 0, classified: 0, completeness: 0, held: pubInfo?.out ?? 0 }
   for (const p of products) for (const f of p.features ?? []) { if (f.bad != null) stats.bad++; else if (f.details) stats.unknown++ }
-  // Vollständigkeit (Taloan, 22.09.: das rechnen die Empfänger): Ø über die klassifizierten Produkte, in Prozent
+  // Vollständigkeit: Ø über die klassifizierten Produkte, in Prozent
   const cl = products.filter(p => p.etim?.known); stats.classified = cl.length
   stats.completeness = cl.length ? Math.round(cl.reduce((s, p) => s + (p.etim.completeness ?? 0), 0) / cl.length) : 0
   const groups = pubGroups ?? tree.rows.filter(r => r.role === 'group' && (root ? r.id === root || under(r.id) : true)).map(g => { const parent = g.parent && (g.id === root ? null : g.parent); const children = tree.kids(g.id).filter(k => k.role === 'group').map(k => ({ id: k.id, name: k.label })); return { id: g.id, name: g.label, parent, children, type: !parent ? 'root' : children.length ? 'node' : 'leaf' } })

@@ -38,7 +38,7 @@ public static class PluginApi
         return found;
     }
 
-    /// <summary>Die Dienste eines Plugins (Taloan, 19.09.: mehrere je Plugin): <c>process</c> (Schlüssel "") und/oder <c>processes[]</c> mit <c>key</c>.</summary>
+    /// <summary>Die Dienste eines Plugins: <c>process</c> (Schlüssel "") und/oder <c>processes[]</c> mit <c>key</c>.</summary>
     public static IEnumerable<(string Key, JsonElement Proc)> Processes(JsonElement raw)
     {
         if (raw.TryGetProperty("process", out var one) && one.ValueKind == JsonValueKind.Object) yield return ("", one);
@@ -53,7 +53,7 @@ public static class PluginApi
         return all.Where(x => x.Key == service).Select(x => (JsonElement?)x.Proc).FirstOrDefault();
     }
 
-    /// <summary>Was ein Plugin braucht (Manifest <c>requires</c>, Taloan 19.09.2026: Basis-Plugins sind der Container ihrer Ergänzungen).</summary>
+    /// <summary>Was ein Plugin braucht (Manifest <c>requires</c>).</summary>
     public static string[] Requires(JsonElement raw) => raw.TryGetProperty("requires", out var r) && r.ValueKind == JsonValueKind.Array
         ? r.EnumerateArray().Select(x => x.GetString() ?? "").Where(x => x.Length > 0).ToArray() : Array.Empty<string>();
 
@@ -103,7 +103,7 @@ public static class PluginApi
                         installed = s is not null, version = s?.Version, enabled = s?.Enabled ?? false,
                         update = m is not null && s is not null && m.Version != s.Version,
                         lastAt = s?.LastAt, lastActor = s?.LastActor,
-                        // der Tarif der Instanz erlaubt es (Taloan, 24.09.2026) — sonst nicht ladbar, nicht einschaltbar
+                        // der Tarif der Instanz erlaubt es — sonst nicht ladbar, nicht einschaltbar
                         allowed = tarif.Erlaubt(k), tarif = Tarife.Alle.FirstOrDefault(t => t.Erlaubt(k))?.Key,
                     };
                 }).ToList();
@@ -218,7 +218,7 @@ public static class PluginApi
         return (p.ExitCode, text);
     }
 
-    /// <summary>Gehört das Plugin nicht zum Tarif der Instanz: 403 mit dem Tarif, der es hat (Taloan, 24.09.2026).</summary>
+    /// <summary>Gehört das Plugin nicht zum Tarif der Instanz: 403 mit dem Tarif, der es hat.</summary>
     public static IResult? NichtImTarif(Catalog c, string key)
     {
         var t = c.InstanzTarif;
@@ -233,7 +233,7 @@ public static class PluginApi
         if (on && NichtImTarif(c, key) is { } nein) return nein;
         return c.With((_, _, write) => c.Plugins.All.TryGetValue(key, out var s)
             ? on && Requires(JsonDocument.Parse(s.Manifest).RootElement).Where(r => !(c.Plugins.All.TryGetValue(r, out var b) && b.Enabled)).ToList() is { Count: > 0 } missing
-                ? Bad($"{key} braucht {string.Join(", ", missing)} — zuerst einschalten.")   // Ergänzung ohne Basis (Taloan)
+                ? Bad($"{key} braucht {string.Join(", ", missing)} — zuerst einschalten.")   // Ergänzung ohne Basis
             : s.Enabled == on ? Results.Ok(new { unchanged = true })
                 : Results.Ok(EntryView.Of(write(actor, Plugins.Stream + key, on ? Types.PluginEnabled : Types.PluginDisabled, on ? new PluginEnabled() : new PluginDisabled(), null)))
             : Results.NotFound());

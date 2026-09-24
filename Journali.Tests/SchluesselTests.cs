@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Lizenzschlüssel (Taloan, 23.09.2026): einmal einlösbar, an die Instanz gebunden, kein Team eingeprägt. Zwei Arten,
+// Lizenzschlüssel: einmal einlösbar, an die Instanz gebunden, kein Team eingeprägt. Zwei Arten,
 // kombinierbar — Reset (zählt ab dem Einlösen neu) und Limit (höheres Kontingent für eine Dauer ab dem Einlösen).
 // Ein laufendes Limit wird nach Restvolumen umgerechnet, ein Limit überschreibt keinen Reset.
 // Und: eingelöst wird nur, was diese Instanz selbst signiert angefordert hat („PGP quasi“).

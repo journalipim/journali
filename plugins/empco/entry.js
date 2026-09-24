@@ -1,5 +1,4 @@
-// Plugin empco (Taloan, 19.09.2026: „analysiert Produkttexte auf Greenwashing-Kritikalität anhand eines öffentlichen
-// Kriterienkatalogs“): Prüfregeln in ✓ Datenqualität — jede Regel des Katalogs (catalog.js, Richtlinie (EU) 2024/825)
+// Plugin empco: Prüfregeln in ✓ Datenqualität — jede Regel des Katalogs (catalog.js, Richtlinie (EU) 2024/825)
 // prüft Text- und HTML-Attribute je Sprache; Befund nennt Attribut, Begriff und den Anker in der Richtlinie. Ohne KI.
 // Die Ansicht zeigt den Katalog mit Quellen und lässt einen Teilbaum durchsehen. Später (Workflow-Designer): Befunde
 // werden Beanstandungen am Feld und schicken den Knoten in die Überarbeitung.

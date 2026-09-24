@@ -1,5 +1,5 @@
 // Rechenteil der Sicherung — hier steht, was sich ohne Server prüfen lässt (wie bei docs/core.mjs).
-// Anlass: „Cannot access 'count' before initialization" (Taloan, 23.09.2026). Die Zählung rief sich selbst auf, bevor
+// Anlass: „Cannot access 'count' before initialization". Die Zählung rief sich selbst auf, bevor
 // ihr Name gebunden war; jede Sicherung eines Baums mit Kindern schlug fehl — also jede echte Sicherung.
 
 /// Knoten eines Teilbaums zählen: der Knoten selbst und alles darunter, beliebig tief.

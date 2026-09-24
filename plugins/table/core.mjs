@@ -1,4 +1,4 @@
-// Tabellen-Export, der Kern (Basis-Plugin table, Taloan 19.09.2026; der Job dazu ist das Plugin export, es braucht table):
+// Tabellen-Export, der Kern (Basis-Plugin table):
 // ein Teilbaum als Tabelle — Spalten id, role, parent, journali_label (Name im Baum, nur Anzeige), status, Achsen, eindeutige Attribute (Schlüssel) zuerst,
 // dann die Attribute (je Sprache eine Spalte key_de, key_en; ohne Sprachachse key). Genau die Form, die ⇩ Import → Tabelle
 // wieder liest. Kein DOM: env = { api: { get }, model }. Browser (browser.js) und Job (plugins/export/job.mjs) benutzen ihn.
@@ -17,14 +17,14 @@ export async function build(env, { root, role = '', locales, ownOnly = false, vi
   const v = model.views.find(x => x.key === viewKey)
   if (v) { const order = v.items.flatMap(it => it.order ?? []); const groups = new Map(model.groups.map(g => [g.key, g.attributes])); const wanted = new Set([...order, ...v.items.flatMap(it => it.group ? groups.get(it.group) ?? [] : [])]); cols = cols.filter(c => wanted.has(c.key)).sort((a, b) => (order.indexOf(a.key) + 1 || 999) - (order.indexOf(b.key) + 1 || 999)) }
   cols = cols.filter(c => c.type !== 'rows' && !c.computed)
-  cols = [...cols.filter(c => c.unique), ...cols.filter(c => !c.unique)]   // Schlüssel (eindeutig) zuerst — sie finden beim Import den Knoten wieder (Taloan, 21.09.)
+  cols = [...cols.filter(c => c.unique), ...cols.filter(c => !c.unique)]   // Schlüssel (eindeutig) zuerst — sie finden beim Import den Knoten wieder
   const axes = [...new Set(nodes.flatMap(r => Object.keys(r.row.axisValues ?? {})))]
-  // journali_root (Taloan, 21.09.): die Wurzel des Baums — Id + Wurzel macht die Zeile über Datenbanken hinweg eineindeutig; der Import prüft beides
+  // journali_root: die Wurzel des Baums — Id + Wurzel macht die Zeile über Datenbanken hinweg eineindeutig; der Import prüft beides
   let rootId = root
   try { const all = await api.get('/api/tree'); const byId = new Map((Array.isArray(all) ? all : all.rows ?? []).map(r => [r.id, r])); for (let p = byId.get(root)?.parent; p; p = byId.get(p)?.parent) rootId = p } catch {}
-  // eigene Spalten (Taloan, 21.09.): journali_<feld>_<wurzel> — die Wurzel steckt im Spaltenkopf. Sichtbar und vorne, nicht ausgeblendet („sonst sieht der
+  // eigene Spalten: journali_<feld>_<wurzel> — die Wurzel steckt im Spaltenkopf. Sichtbar und vorne, nicht ausgeblendet („sonst sieht der
   // Anwender nicht mal, was er tut“ — kopierte Zeilen nehmen die Id mit) und nicht ganz rechts („bei 180 Spalten kommt er da nie hin“); der Kommentar am Kopf erklärt es
-  // Taloans Ausweg (21.09.): nur die Id-Spalte sichtbar — sie erklärt, was der Anwender tut; parent, role, status ausgeblendet (Kopieren ändert sie nicht)
+  // die Ausweg (21.09.): nur die Id-Spalte sichtbar — sie erklärt, was der Anwender tut; parent, role, status ausgeblendet (Kopieren ändert sie nicht)
   const sysCol = (sys, note) => ({ key: `journali_${sys}_${rootId}`, sys, note, hidden: sys !== 'id' && sys !== 'label' })
   const columns = [sysCol('id', 'journali-Id des Knotens — nicht ändern. Zeile kopiert? Dann diese Zelle leeren, sonst erkennt der Import die Kopie an den Werten'), sysCol('parent', 'Elternteil (journali-Id) — nicht ändern'), sysCol('role', 'Knotentyp — nur zum Lesen'), sysCol('status', 'Status — nur zum Lesen'),
     sysCol('label', 'Name im Baum — nur zum Lesen'), ...extra.map(x => ({ key: x.key, of: x.of })), ...axes.map(a => ({ key: 'axis:' + a })),
@@ -43,7 +43,7 @@ export function toCsv({ columns, rows }) {
   return '﻿' + [columns.map(c => c.key).join(';'), ...rows.map(r => r.map(esc).join(';'))].join('\r\n')
 }
 export function toJson({ columns, rows }) { return JSON.stringify(rows.map(r => Object.fromEntries(columns.map((c, i) => [c.key, r[i] === '' ? null : r[i]]))), null, 1) }
-// JSON als Baum (Taloan: „einfach nur eine flache Liste, keine Struktur“): der Teilbaum verschachtelt, je Knoten
+// JSON als Baum: der Teilbaum verschachtelt, je Knoten
 // id, role, name, status, axes, attributes (je Sprache verschachtelt: { de, en }; die Schlüssel stehen darin), children
 export function toJsonTree({ columns, rows }) {
   const byId = new Map()
@@ -69,11 +69,11 @@ export function toJsonTree({ columns, rows }) {
 /// Excel-Arbeitsmappe (SheetJS X aus dem Plugin xlsx): Blatt „Daten“, wahlweise ein Blatt „Legende“ (Zeilen)
 export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten') {
   const ws = X.utils.aoa_to_sheet([columns.map(c => c.key), ...rows])
-  ws['!cols'] = columns.map(c => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)), hidden: !!c.hidden }))   // parent/role/status ausgeblendet, Id sichtbar (Taloan, 21.09.)
-  // Pflicht und Achsen am Spaltenkopf kennzeichnen (Taloan, 20.09.: „das hätte ich gerne in der Excel gekennzeichnet“): SheetJS schreibt
+  ws['!cols'] = columns.map(c => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)), hidden: !!c.hidden }))   // parent/role/status ausgeblendet, Id sichtbar
+  // Pflicht und Achsen am Spaltenkopf kennzeichnen: SheetJS schreibt
   // keine Farben, aber Kommentare — rotes Dreieck in Excel, Text beim Zeigen; die Legende sagt es ausserdem
   columns.forEach((c, i) => { const req = c.def?.required; const note = c.note ?? (req && typeof req === 'object' && Object.keys(req).length ? 'Pflicht: ' + Object.entries(req).map(([ch, l]) => `${ch} ${l.join(',')}`).join(' · ') : req ? 'Pflicht' : null); if (!note) return; const ref = X.utils.encode_cell({ r: 0, c: i }); ws[ref] ??= { t: 's', v: c.key }; ws[ref].c = [{ a: 'journali', t: note }]; ws[ref].c.hidden = true })
-  // Komfort (Taloan, 20.09.): Autofilter über Kopf und Daten — Sortieren und Filtern in Excel sofort da; eine echte „Tabelle“ (ListObject)
+  // Komfort: Autofilter über Kopf und Daten — Sortieren und Filtern in Excel sofort da; eine echte „Tabelle“ (ListObject)
   // schreibt die freie SheetJS-Fassung nicht, Excel: Einfügen → Tabelle auf dem Bereich
   if (columns.length) ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, rows.length), c: columns.length - 1 } }) }
   const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, sheet)

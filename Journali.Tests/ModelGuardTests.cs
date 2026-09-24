@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Typwechsel mit Bestand (Taloan, 21.09.2026: „ich kann wirklich den Datentyp ändern, obwohl schon Werte erfasst sind?“): der Server
+// Typwechsel mit Bestand: der Server
 // zählt vorher, was nicht mehr passt — Typ, mehrfach → einfach, Achse weg, Werteliste.
 public class ModelGuardTests
 {

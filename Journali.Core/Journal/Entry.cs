@@ -12,7 +12,7 @@ namespace Journali.Core.Journal;
 /// <param name="Payload">Nutzdaten als JSON. Die Form hängt von <see cref="Type"/> ab.</param>
 /// <param name="Batch">Stapelkennung: alle Einträge einer Aktion (Import, Einfügen aus Excel) tragen dieselbe — Rückgängig je Aktion.</param>
 /// <param name="Kind">Art der Arbeit (<c>model</c>, <c>structure</c>, <c>data</c>, <c>publish</c>, <c>reference</c>, <c>setup</c>, <c>ops</c>;
-/// Taloan, 22.09.2026). Ein Fakt, kein Preis — ob eine Art zählt, sagt der Tarif und darf sich ändern. Wer schreibt, darf sie
+/// ). Ein Fakt, kein Preis — ob eine Art zählt, sagt der Tarif und darf sich ändern. Wer schreibt, darf sie
 /// mitgeben; fehlt sie (so auch bei allen Einträgen von vor dieser Spalte), leitet <c>Kinds.Of(Type)</c> sie aus dem Typ ab.</param>
 public sealed record Entry(
     long Number,

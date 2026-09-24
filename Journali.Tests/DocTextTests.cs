@@ -3,8 +3,7 @@ using Journali.Server;
 namespace Journali.Tests;
 
 /// <summary>
-/// Text, der nach Postgres geht (Taloan, 23.09.2026, beim Lesen des Tridonic-Archivs: „invalid byte sequence for
-/// encoding UTF8: 0x00“). Ein PDF mit kaputter Zeichentabelle bringt Nullbytes mit; <c>text</c> verträgt kein 0x00,
+/// Text, der nach Postgres geht. Ein PDF mit kaputter Zeichentabelle bringt Nullbytes mit; <c>text</c> verträgt kein 0x00,
 /// und ein einziges davon liess das ganze Dokument scheitern — der Job hakte es als Fehler ab und versuchte es nie
 /// wieder. Geprüft wird hier die Säuberung allein, ohne Datenbank.
 /// </summary>

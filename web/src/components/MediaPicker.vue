@@ -1,5 +1,5 @@
 <script setup>
-// Medien aus der Bibliothek wählen (Taloan, 21.09.2026: „Medien am Knoten aus der Bibliothek zuordnen“): dasselbe Bild wie
+// Medien aus der Bibliothek wählen: dasselbe Bild wie
 // ▨ Medien — links die Ordner, Mitte Kacheln mit Suche und Sortierung, Mehrfachauswahl per Klick (Strg nicht nötig),
 // unten der Relationstyp und „✓ zuordnen“. Was schon am Knoten hängt, ist ausgegraut. Ein Fenster über allem; Esc schliesst.
 // props: types = Relationstypen zu Medien, die von diesem Knotentyp ausgehen [{key,label}]; exclude = Medien-Ids, die schon hängen

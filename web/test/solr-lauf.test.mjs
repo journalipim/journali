@@ -1,4 +1,4 @@
-// Der Ablauf eines Solr-Imports (Taloan, 23.09.2026: „node, kein Python“ — und: der Import gehört in den Tasker).
+// Der Ablauf eines Solr-Imports.
 // Er steht seit heute in plugins/solr/lauf.mjs und wird von beiden Wegen benutzt: von der Ansicht im Browser und vom
 // Job auf dem Server. Genau deshalb lässt er sich hier prüfen, ohne Browser und ohne Solr: die Umgebung ist ein
 // Fake-Client und eine Fake-API, und geprüft wird, was an Befehlen herauskommt.

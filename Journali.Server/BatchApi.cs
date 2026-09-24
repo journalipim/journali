@@ -12,7 +12,7 @@ namespace Journali.Server;
 /// spätere Befehle verweisen mit <c>@ref</c> darauf. Beim ersten Fehler
 /// hält der Stapel an; was davor geschrieben wurde, steht im Journal (append-only)
 /// und in der Antwort — der Aufrufer sieht, wie weit er kam. Mit <c>?skipErrors=true</c>
-/// (Importe mit der Regel „überspringen“, Taloan 21.09.2026: eindeutige Werte) wird ein
+/// (Importe mit der Regel „überspringen“) wird ein
 /// fehlgeschlagener Befehl übersprungen und in <c>skipped</c> genannt, der Rest läuft —
 /// jeder Befehl ist für sich ganz oder gar nicht, ein Fehler schreibt nichts.
 /// </summary>
@@ -58,7 +58,7 @@ public static class BatchApi
                             "variant.create" => Commands.CreateVariant(ctx, a.Id("product"), a.Map("axisValues")),
                             "node.move" => Commands.Move(ctx, a.Node(), a.Id("parent")),
                             "node.retire" => Commands.Retire(ctx, a.Node()),
-                            "node.order" => Commands.Order(ctx, a.Node(), a.Id("parent"), a.Id("before")),   // Tabellenbearbeitung: Zeilen verschieben (Taloan, 21.09.)
+                            "node.order" => Commands.Order(ctx, a.Node(), a.Id("parent"), a.Id("before")),   // Tabellenbearbeitung: Zeilen verschieben
                             "status.set" => Commands.SetStatus(ctx, a.Node(), a.Str("status")),
                             "attribute.set" => Commands.SetAttribute(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Str("value"), a.Strings("values"), a.Id("row")),
                             "value.source" => Commands.SourceValue(ctx, a.Node(), a.Str("attribute"), a.Str("locale"), a.Str("channel"), a.Id("row"), a.Str("source"), a.Str("title"), a.Str("note"), a.Str("method"), a.Str("checkedAt")),

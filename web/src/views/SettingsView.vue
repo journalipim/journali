@@ -1,10 +1,8 @@
 <script setup>
-// Einstellungen: ein Reiter je Sache, sichtbar nach Recht (Taloan, 23.09.2026: „im Moment ist alles durcheinander wie es
-// gewachsen ist“ · „die Seite Anlage heisst völlig bescheuert und wirft alles Kraut und Rüben durcheinander — im Grunde
-// ist das der Tab für den Administrator, den wir jetzt in seine Bestandteile zerlegen“):
-// ◐ Ich · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ⇅ B&R (Sichern und Wiederherstellen, Taloan 24.09.2026).
+// Einstellungen: ein Reiter je Sache, sichtbar nach Recht:
+// ◐ Ich · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ⇅ B&R (Sichern und Wiederherstellen).
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
-// Speicher selbst nicht heranmuss (Taloan, 23.09.2026).
+// Speicher selbst nicht heranmuss.
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
 import { ref, onMounted, onUnmounted } from 'vue'
 import { store } from '../store.js'
@@ -67,7 +65,7 @@ async function save() {
       <h2 :title="$t('Gilt auf diesem Rechner; Darstellung und Sicht folgen der Anmeldung an jeden Rechner.')">{{ $t("◐ Dieser Rechner") }}</h2>
       <table class="grid form">
         <tbody>
-          <!-- Der Name steht nur ohne Anmeldung hier (Taloan, 23.09.2026: „kann jetzt weg, wir haben ein Benutzersystem“) —
+          <!-- Der Name steht nur ohne Anmeldung hier —
                mit Benutzern kommt der Urheber aus der Sitzung und das Feld hätte nichts zu sagen. -->
           <tr v-if="!store.auth.enabled">
             <td class="muted">{{ $t("👤 Name") }}</td>
@@ -81,7 +79,7 @@ async function save() {
             </td>
             <td class="muted">{{ $t("System folgt der Windows-Einstellung.") }}</td>
           </tr>
-          <!-- Oberflächensprache (Taloan, 24.09.2026): hängt an der Person, nicht am Rechner; die Sprachen sind die Dateien unter lang/, nicht die des Modells -->
+          <!-- Oberflächensprache: hängt an der Person, nicht am Rechner; die Sprachen sind die Dateien unter lang/, nicht die des Modells -->
           <tr>
             <td class="muted">{{ $t("🗣 Sprache") }}</td>
             <td>

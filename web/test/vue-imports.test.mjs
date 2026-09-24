@@ -1,5 +1,4 @@
-// Jede .vue-Datei muss importieren, was sie aus Vue benutzt (Taloan, 22.09.2026: „führt zum Absturz“ — watch und onUnmounted
-// waren benutzt, aber nicht importiert; der Bau merkt das nicht, erst der Browser). Kein DOM nötig, reine Textprüfung.
+// Jede .vue-Datei muss importieren, was sie aus Vue benutzt. Kein DOM nötig, reine Textprüfung.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import fs from 'node:fs'
@@ -23,8 +22,7 @@ test('jede .vue-Datei importiert, was sie aus Vue benutzt', () => {
   assert.deepEqual(misses, [], 'benutzt, aber nicht importiert')
 })
 
-// Dasselbe für die eigenen Module (Taloan, 22.09.2026: „plugins is not defined“ — die Ansicht stürzte ab, weil ein
-// Modul benutzt, aber nicht importiert war; der Bau merkt das nicht). Geprüft wird auf `name.` im Script.
+// Dasselbe für die eigenen Module. Geprüft wird auf `name.` im Script.
 const MODULES = ['store', 'api', 'tree', 'dialog', 'menu', 'plugins', 'ai', 'lists', 'transform', 'mapper']
 
 test('jede .vue-Datei importiert die eigenen Module, die sie benutzt', () => {

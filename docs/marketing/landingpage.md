@@ -2,7 +2,7 @@
 
 Stand 19.09.2026. Übergabe an Marketing. Alles hier ist aus dem gebauten Stand abgeleitet —
 keine Kundennamen, keine erfundenen Zahlen. Stellen mit **[zu klären]** braucht eine Entscheidung
-von Taloan, bevor sie online gehen.
+bevor sie online gehen.
 
 ---
 
@@ -18,7 +18,7 @@ von Taloan, bevor sie online gehen.
 | **Sekundär** | Produktdatenmanagement, Produktinformationsmanagement, PIM Software Mittelstand, PIM Docker, Datenblatt generieren, Produktdaten Versionierung, Digitaler Produktpass PIM |
 | **Long-Tail** | „PIM System selbst hosten“, „Produktdaten revisionssicher“, „Excel Import Produktdaten“, „Datenblatt automatisch aus Produktdaten“, „PIM mit Änderungshistorie“, „PPWR Verpackungsdaten pflegen“ |
 | **Tonalität** | Sachlich, konkret, kurze Sätze. Keine Superlative. Zahlen und Fakten statt Adjektive (passt zur Oberfläche: Symbole und Zahlen statt Wörter). |
-| **CTA** | „Stand der Entwicklung“ — in Entwicklung, Snapshots als Neuigkeiten, Kontakt über das Impressum (Taloan, 19.09.) |
+| **CTA** | „Stand der Entwicklung“ — in Entwicklung, Snapshots als Neuigkeiten, Kontakt über das Impressum |
 
 ---
 
@@ -86,7 +86,7 @@ Docker Compose mit PostgreSQL — fertig. Medien wahlweise in Postgres, im Datei
 
 ### H2: Gebaut für Object Storage, KI und RAG. (Kicker: Bereit für das, was jetzt zählt)
 
-Taloan, 19.09.: „ruhig auf dicke Hose“ — aber alles hier ist gebaut:
+„ruhig auf dicke Hose“ — aber alles hier ist gebaut:
 - **S3 Object Storage ready** — Medien in Postgres, Dateisystem oder S3-kompatibel (Garage, MinIO, AWS, R2, Hetzner); Umschalten in den Einstellungen, Kopierlauf.
 - **KI-ready** — KI angebunden, Anbieter nach Wahl (eigener Schlüssel); Plugins holen Vorschläge (DPP/PPWR/ETIM-Zuordnungen, Prüfungen, Anreicherung mit Internetrecherche). Schlüssel beim Nutzer.
 - **Content-Generierung** — Vorlagen (regelbasiert) + Plugin `geo`: Definitionssatz, Beschreibung, FAQ, Suchbegriffe per KI, übernommen nur per Klick.
@@ -94,7 +94,7 @@ Taloan, 19.09.: „ruhig auf dicke Hose“ — aber alles hier ist gebaut:
 - **RAG-ready** — Plugin `rag`: Markdown + nodes.jsonl je Produkt/Sprache mit Version und Belegen, als Job.
 - **Digitaler Produktpass** — ESPR/PPWR-Prüfungen als Plugins.
 
-Motto (Taloan): **„Hier entsteht etwas ganz Großes — und ihr seid dabei.“** — steht in der Micro-Zeile unter dem Aufmacher.
+Motto: **„Hier entsteht etwas ganz Großes — und ihr seid dabei.“** — steht in der Micro-Zeile unter dem Aufmacher.
 
 ---
 
@@ -157,7 +157,7 @@ journali befindet sich in intensiver Entwicklung. Was hier steht, ist gebaut und
 
 Sie wollen journali früh sehen oder mit eigenen Daten ausprobieren? Kontakt über das Impressum.
 
-*(Taloan, 19.09.: kein Verkaufs-CTA — ehrlich „in Entwicklung“, Snapshots als Neuigkeiten. Hero-Knopf: „Stand der Entwicklung“.)*
+**
 
 ---
 

@@ -24,8 +24,8 @@ const router = useRouter()
 const q = ref('')
 const search = ref(null)
 const hits = ref(new Map())   // Server-Suche: id → Fundstelle
-// Suche mit Bedingungen (Taloan): Chips key:value in der Zeile; Vorschläge am Cursor wie in einer IDE —
-// ohne ':' die Schlüssel, danach die passenden Werte. Kein Formular (Taloan: "gut gemeint, schlecht gemacht").
+// Suche mit Bedingungen: Chips key:value in der Zeile; Vorschläge am Cursor wie in einer IDE —
+// ohne ':' die Schlüssel, danach die passenden Werte. Kein Formular.
 const hasTerms = computed(() => /(^|\s)-?[a-z]+:/.test(q.value))
 const KEYS = [
   ['attr:', t_('Attribut hat eigenen Wert · =Muster · = leer')], ['empty:', t_('fehlt, auch geerbt nicht (Attribut/Sprache)')],
@@ -102,7 +102,7 @@ function onSearchKey(e) {
 }
 // Erkannte Bedingungen als Chips (× nimmt sie raus); freier Text bleibt nur in der Zeile
 const terms = computed(() => q.value.split(/\s+/).filter(w => /^-?[a-z]+:/.test(w)))
-// „setTimeout“ gibt es in Vue-Vorlagen nicht (Absturz „K.setTimeout is not a function“, Taloan) — darum hier
+// „setTimeout“ gibt es in Vue-Vorlagen nicht (Absturz „K.setTimeout is not a function“) — darum hier
 function hideSugg() { setTimeout(() => { sugg.value = [] }, 150) }
 function dropTerm(t) { q.value = q.value.split(/\s+/).filter(w => w !== t).join(' ') }
 let searchTimer = null
@@ -165,7 +165,7 @@ function openTable(path) {
 }
 function open(row) { router.push(`/tree/${row.id}`) }
 
-// ---- Die Auswahl (Taloan, 17.09.; Wort „Auswahl“ statt „Menge“): Strg+Klick sammelt, Shift+Klick nimmt den Bereich
+// ---- Die Auswahl: Strg+Klick sammelt, Shift+Klick nimmt den Bereich
 // der sichtbaren Zeilen, „☑ Treffer“ nimmt alle sichtbaren (z. B. ein Suchergebnis). Ein einfacher Klick öffnet nur — die Auswahl bleibt.
 const picked = ref(new Set())
 const pickAnchor = ref(null)
@@ -205,7 +205,7 @@ const linkMatches = computed(() => {
 })
 // Welche der Auswahl sind für Typ und Richtung erlaubt, welche gibt es schon?
 const linkRows = computed(() => {
-  // ohne Ziel (⇄ aus der Leiste: Ziel wird erst gesucht) keine Zeilen — sonst l.target.id auf null (Taloan, 17.09.: Absturz)
+  // ohne Ziel (⇄ aus der Leiste: Ziel wird erst gesucht) keine Zeilen — sonst l.target.id auf null
   const l = link.value, t = linkType.value; if (!l || !t || !l.target) return []
   const targetFirst = l.dir === 'target-first'   // Ziel → Eintrag (Ziel hat Zubehör: Eintrag)
   return pickedRows.value.map(r => {
@@ -260,8 +260,8 @@ function onListKey(e) {
   else if (e.key === 'End' && rows.length) open(rows[rows.length - 1].r)
 }
 function countBelow(id) { let n = 0; for (const k of tree.kids(id)) n += 1 + countBelow(k.id); return n }
-// Wiederherstellen (Taloan): der Knoten mit allem, was darunter zurückgezogen wurde — die Einträge bleiben, es kommt NodeRestored dazu
-// Zurückgezogene Wurzel (Taloan): der Rückzug liegt im Stapel '' — den gibt es in keiner Knotenansicht, also hier in der Baum-Leiste
+// Wiederherstellen: der Knoten mit allem, was darunter zurückgezogen wurde — die Einträge bleiben, es kommt NodeRestored dazu
+// Zurückgezogene Wurzel: der Rückzug liegt im Stapel '' — den gibt es in keiner Knotenansicht, also hier in der Baum-Leiste
 const rootUndo = computed(() => { const h = store.undo['']?.history ?? []; return h.length ? h[h.length - 1] : null })
 async function undoRoot() { const s = store.undo['']; const h = s?.history.pop(); if (!h) return; s.redo.push(h); await restore(h.id, h.batch) }
 async function restore(id, batch) {
@@ -282,11 +282,11 @@ async function retire(r) {
     await tree.load(); if (props.id === r.id || !tree.byId.has(props.id)) router.push(r.parent ? `/tree/${r.parent}` : '/tree')
   } catch (e) { store.toast(e.message) }
 }
-// Umhängen per Drag & Drop (Taloan, 17.09.): Zeile ziehen, auf einer Zeile ablegen = darunter hängen.
+// Umhängen per Drag & Drop: Zeile ziehen, auf einer Zeile ablegen = darunter hängen.
 // Dieselben Regeln wie der Server (Commands.Move): Variante unter Produkt, sonst unter Gruppe, nie unter sich selbst.
 const dragId = ref(null)
 const dropId = ref(null)
-// Zugeklappte Äste öffnen sich, wenn man beim Ziehen eine Weile darüber steht (Taloan, 17.09.).
+// Zugeklappte Äste öffnen sich, wenn man beim Ziehen eine Weile darüber steht.
 let hoverTimer = null, hoverId = null
 function hoverOpen(r) {
   if (hoverId === r.id) return
@@ -302,11 +302,11 @@ function canDrop(src, target) {
 }
 // Ziehen: gehört die Zeile zur Auswahl, zieht die ganze Auswahl mit. Shift beim Ablegen = verknüpfen statt umhängen.
 // effectAllowed 'all': mit gedrückter Shift-Taste erzwingt Windows/Chrome den Effekt „move“, mit Strg „copy“ — passt der nicht zu
-// effectAllowed, zeigt der Browser das Verbotsschild und liefert kein drop (Taloan, 17.09.). Was Shift bedeutet, entscheiden wir selbst.
+// effectAllowed, zeigt der Browser das Verbotsschild und liefert kein drop. Was Shift bedeutet, entscheiden wir selbst.
 function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'all'; e.dataTransfer.setData('text/plain', r.id) }
 const dragIds = () => picked.value.has(dragId.value) ? [...picked.value] : [dragId.value]
 function onDragOver(e, r) {
-  // Datei aus dem Explorer (JSON) auf einen Knoten: der JSON-Import startet mit diesem Ziel (Taloan)
+  // Datei aus dem Explorer (JSON) auf einen Knoten: der JSON-Import startet mit diesem Ziel
   if (!dragId.value && e.dataTransfer?.types?.includes('Files')) { if (r.role !== 'variant') { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dropId.value = r.id } else dropId.value = null; return }
   const src = tree.byId.get(dragId.value)
   if (src) hoverOpen(r)
@@ -319,7 +319,7 @@ async function onDrop(e, r) {
     dropId.value = null; const f = e.dataTransfer.files[0]
     if (r.role === 'variant') { store.toast(t_('Ziel muss eine Gruppe oder ein Produkt sein')); return }
     if (/\.json(\.gz)?$/i.test(f.name)) { store.pendingImport = { file: f, parent: r.id }; router.push('/p/json/import'); return }
-    // Tabelle (Excel, CSV, …): in den Tabellen-Import mit diesem Ziel, Analyse läuft sofort (Taloan, 20.09.)
+    // Tabelle (Excel, CSV, …): in den Tabellen-Import mit diesem Ziel, Analyse läuft sofort
     if (plugins.importerFor(f.name) || /\.(csv|txt|tsv)$/i.test(f.name)) { if (!plugins.enabled('table')) { store.toast(t_('Tabellen-Import ist aus (⌁ Plugins → table)')); return } store.pendingImport = { file: f, parent: r.id, analyse: true }; router.push('/p/table/import'); return }
     store.toast(t_('Kein Importer für {0} — JSON, Excel, CSV; andere Formate über ⌁ Plugins', [f.name])); return
   }
@@ -331,7 +331,7 @@ async function onDrop(e, r) {
   }
   let moved = 0, below = 0
   try {
-    // Vorher prüfen, ob eigene Werte am neuen Ort verwaisen (orphans.js) — derselbe Dialog wie beim JSON-Import (Taloan, 18.09.)
+    // Vorher prüfen, ob eigene Werte am neuen Ort verwaisen (orphans.js) — derselbe Dialog wie beim JSON-Import
     const todo = ids.map(id => tree.byId.get(id)).filter(src => canDrop(src, r))
     if (!todo.length) return
     const have = await groupsAt(r.id)
@@ -353,7 +353,7 @@ async function onDrop(e, r) {
     await store.poll(true); await tree.load(); tree.expand(r.id)
   } catch (e) { store.toast(e.message) }
 }
-// Auswahl: Status für alle, Zurückziehen für alle — je Knoten ein Aufruf; ein Dialog vorher mit den Zahlen (Taloan, 18.09.)
+// Auswahl: Status für alle, Zurückziehen für alle — je Knoten ein Aufruf; ein Dialog vorher mit den Zahlen
 // Workflows im Kontextmenü (27): ein Untermenü ⚑ mit allen Übergängen der Workflows, die für den Knotentyp gelten — für die Auswahl;
 // der Server prüft je Knoten Zustand und Rolle, das Ergebnis sagt „n von m“
 const wfDefs = ref([])
@@ -384,7 +384,7 @@ async function retireAll(rows) {
   await tree.load(); if (!tree.byId.has(props.id)) router.push('/tree')
 }
 async function setStatus(r, status) {
-  // fragt bei Subitems „auch für die n Subitems?" (status.js, Taloan 23.09.2026)
+  // fragt bei Subitems „auch für die n Subitems?" (status.js)
   try { await setStatusScoped(r, status) } catch (e) { store.toast(e.message) }
 }
 // Eigener Name im Baum (jede Rolle) = angeheftet (📌); leer = Automatik (★ Attribut, bei Varianten SKU/Achsen, sonst Id).
@@ -405,13 +405,13 @@ async function duplicate(r, deep) {
   } catch (e) { store.toast(e.message) }
 }
 // Rechtsklick: was man mit diesem Knoten tun kann — die Tastenkürzel gelten im Menü.
-// Was unter einem Knoten liegt, heisst „Subitems“ — nicht „Kinder“ (Taloan, 17.09.)
+// Was unter einem Knoten liegt, heisst „Subitems“ — nicht „Kinder“
 const below = () => t_('Subitems')
 async function contextMenu(e, r) {
   e.preventDefault()   // vor dem await — sonst kommt das Browsermenü
   router.push(`/tree/${r.id}`)
   const kids = tree.kids(r.id).length
-  // Mehrfachauswahl (Taloan, 18.09.): liegt die Zeile in der Auswahl, gilt das Menü für die ganze Auswahl — Zurückziehen, Status,
+  // Mehrfachauswahl: liegt die Zeile in der Auswahl, gilt das Menü für die ganze Auswahl — Zurückziehen, Status,
   // Duplizieren für alle; was nur einzeln geht (Umbenennen, Tabelle, Plugins), ist ausgegraut mit Hinweis
   const sel = picked.value.has(r.id) && picked.value.size > 1 ? pickedRows.value : null
   const only1 = sel ? { disabled: true, hint: t_('nur einzeln ({0} ausgewählt)', [sel.length]) } : {}
@@ -428,9 +428,9 @@ async function contextMenu(e, r) {
   const offen = (x, s) => x.role !== 'rubric' && (x.hasStatus === false || x.status !== s)
   const st = s => (sel ? sel.some(x => offen(x, s)) : offen(r, s))
     ? { label: store.statusText(s) + (sel ? ` (${sel.filter(x => offen(x, s)).length})` : ''), action: () => sel ? setStatusAll(sel.filter(x => offen(x, s)), s) : setStatus(r, s) } : null
-  // Aufgeräumt (Taloan): kein Neu-anlegen (die Knöpfe oben), kein Auf-/Zuklappen, kein Id kopieren (Id steht im Tooltip und im Kopf);
+  // Aufgeräumt: kein Neu-anlegen (die Knöpfe oben), kein Auf-/Zuklappen, kein Id kopieren (Id steht im Tooltip und im Kopf);
   // Plugin-Einträge je Plugin in einem Untermenü
-  // Plugin-Einträge nach Thema (Taloan, 18.09.: „Menü komprimieren“): ein Untermenü je Thema — Import, Export, Datenblatt,
+  // Plugin-Einträge nach Thema: ein Untermenü je Thema — Import, Export, Datenblatt,
   // Datenanalyse — darin alles dazu, quer über die Plugins. Das Thema nennt die Aktion (topic), sonst die Art des Plugins (kind).
   const TOPICS = [['import', t_('⇩ Import')], ['export', t_('⇪ Export')], ['datasheet', t_('▤ Datenblatt')], ['analysis', t_('✓ Datenanalyse')], ['classification', t_('⌗ Klassifikation')], ['jobs', t_('⏱ Jobs')], ['tools', t_('⌁ Werkzeuge')]]
   const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', classification: 'classification' }
@@ -441,16 +441,16 @@ async function contextMenu(e, r) {
     const kind = plugins.list.find(p => p.key === a.key)?.manifest?.kind
     add(a.topic ?? KIND_TOPIC[kind] ?? 'tools', { key: a.key, order: a.order, label: a._label, icon: a.icon || '⌁', hint: typeof a.hint === 'function' ? a.hint(r) : a.hint ?? a.key, action: () => Promise.resolve(a.run(r.id, { ...plugins.ctx(a.key), tree })).catch(e => store.toast(`${a.key}: ${e.message}`)) })
   }
-  // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und da (Taloan, 19.09.)
+  // Excel am Knoten, Tabellen-Export, Datenqualität kommen als nodeActions der Basis-Plugins table und da
   if (r.role !== 'variant' && plugins.enabled('json')) add('import', { label: t_('JSON-Rohdaten hierher importieren …'), icon: '⇩', hint: 'json', action: () => { const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json'; i.onchange = () => { if (i.files[0]) { store.pendingImport = { file: i.files[0], parent: r.id }; router.push('/p/json/import') } }; i.click() } })
   const topicMenus = TOPICS.filter(([k]) => byTopic.has(k)).map(([k, label]) => ({ label: label.slice(2), icon: label.slice(0, 1), items: plugins.sorted(byTopic.get(k), k, x => x.label), ...(picked.value.has(r.id) && picked.value.size > 1 ? { disabled: true, hint: t_('nur einzeln') } : {}) }))
   menu.open(e, [
     { label: t_('Umbenennen'), icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : t_('★ Automatik'), action: () => rename(r), ...only1 },
-    // Symbol ist der Pin — bei beiden (Taloan: der Pin gehört zu „lösen“); der Hinweis rechts sagt, was danach gilt
+    // Symbol ist der Pin — bei beiden; der Hinweis rechts sagt, was danach gilt
     { label: r.name ? t_('Benennung lösen') : t_('Benennung fixieren'), icon: '📌', key: 'f', hint: r.name ? t_('★ gilt wieder') : r.label, action: () => fix(r), ...only1 },
     { sep: true },
-    // Massenbearbeitung wie in Excel (Taloan, 17.09.): die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
-    // Taloan (17.09.): eigenes Fenster, Excel-ähnlich pflegen, Schliessen übernimmt — Popup blockiert? dann im Hauptfenster
+    // Massenbearbeitung wie in Excel: die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
+    // eigenes Fenster, Excel-ähnlich pflegen, Schliessen übernimmt — Popup blockiert? dann im Hauptfenster
     r.role !== 'variant' && kids ? { label: t_('Subitems tabellarisch bearbeiten ({0})', [kids]), icon: '⊞', key: 'b', hint: t_('↗ Fenster'), action: () => openTable(`/table/${r.id}?popup=1`), ...only1 } : null,
     r.role === 'group' && kids ? { label: t_('Alle Varianten darunter tabellarisch bearbeiten'), icon: '⊞', key: 'w', hint: t_('↗ Fenster'), action: () => openTable(`/table/${r.id}?role=variant&deep=1&popup=1`) } : null,
     (r.role !== 'variant' && kids) ? { sep: true } : null,
@@ -458,7 +458,7 @@ async function contextMenu(e, r) {
         : { label: t_('Duplizieren'), icon: '⧉', key: 'd', hint: t_('ohne SKU/Freigaben'), disabled: r.role === 'variant' && Object.keys(r.axisValues).length > 0, action: () => duplicate(r, false) },
     !sel && r.role !== 'variant' && kids ? { label: t_('Mit {0} darunter duplizieren', [countBelow(r.id)]), icon: '⧉', key: 't', action: () => duplicate(r, true) } : null,
     { sep: true },
-    ...(r.role !== 'rubric' ? [...(store.model?.statuses ?? []).map(s => st(s.key)), { sep: true }] : []),   // Status aus dem Modell (Taloan, 22.09.; seit 23.09. auch an Gruppen)
+    ...(r.role !== 'rubric' ? [...(store.model?.statuses ?? []).map(s => st(s.key)), { sep: true }] : []),   // Status aus dem Modell
     ...(wfItems.length ? [{ label: t_('Workflow') + (sel ? ` (${sel.length})` : ''), icon: '⚑', items: wfItems }, { sep: true }] : []),
     { label: picked.value.has(r.id) ? t_('Abwählen') : t_('Auswählen'), icon: '☑', key: 'm', hint: 'Strg+Klick', action: () => { const s = new Set(picked.value); s.has(r.id) ? s.delete(r.id) : s.add(r.id); picked.value = s } },
     picked.value.size ? { label: t_('Auswahl aufheben ({0})', [picked.value.size]), icon: '☐', key: 'Escape', hint: 'Esc', action: () => { picked.value = new Set() } } : null,
@@ -471,7 +471,7 @@ async function contextMenu(e, r) {
 }
 function onGlobalKey(e) {
   if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); search.value?.focus() }
-  // Esc hebt die Auswahl auf (wenn kein Dialog offen ist) — Taloan, 17.09.: „Wie löse ich eine Selektion wieder auf?“
+  // Esc hebt die Auswahl auf (wenn kein Dialog offen ist) — „Wie löse ich eine Selektion wieder auf?“
   if (e.key === 'Escape' && picked.value.size && !creating.value && !link.value && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) { e.preventDefault(); picked.value = new Set() }
 }
 onMounted(() => window.addEventListener('keydown', onGlobalKey))
@@ -491,7 +491,7 @@ const productTarget = computed(() => {
 function attrDef(key) { return store.model?.attributes.find(a => a.key === key) }
 function listValues(key) { const d = attrDef(key); return (store.model?.lists.find(l => l.key === d?.list)?.values ?? []) }
 
-// Anlegen (Taloan, 17.09.): ein Dialog mit den Pflichtfeldern — die Attribute, die am neuen Knoten gelten
+// Anlegen: ein Dialog mit den Pflichtfeldern — die Attribute, die am neuen Knoten gelten
 // (Gruppen am Pfad des Elternknotens, dort aktiv) und für irgendeinen Kanal Pflicht sind, sprachabhängige
 // nur in der Mastersprache. Erst wenn alles gefüllt ist, wird geschrieben: Anlegen + Werte als ein Stapel.
 const DEPTH = { group: 0, product: 1, variant: 2 }
@@ -516,7 +516,7 @@ async function start(kind) {
       .filter(a => !(kind === 'variant' && (productTarget.value?.axes ?? []).includes(a.key)))   // Achsenwerte fragt der Dialog ohnehin
       .map(a => ({ def: a, locale: a.perLocale ? master.value : null }))
   } catch (e) { store.toast(e.message) }
-  // Cursor gleich ins erste Feld — autofocus greift bei nachträglich eingefügten Elementen nicht (Taloan, 17.09.)
+  // Cursor gleich ins erste Feld — autofocus greift bei nachträglich eingefügten Elementen nicht
   await nextTick(); dialog.value?.querySelector('input, select')?.focus()
 }
 const dialog = ref(null)
@@ -579,7 +579,7 @@ function onDialogKey(e) {
       </template>
     </div>
 
-    <!-- Verknüpfen: Auswahl → Ziel, dann Typ und Richtung (Taloan, 17.09.) -->
+    <!-- Verknüpfen: Auswahl → Ziel, dann Typ und Richtung -->
     <div v-if="link" class="overlay" @click.self="link = null" @keydown="onLinkKey">
       <div class="dialog" style="min-width:640px;max-width:92vw">
         <div class="toolbar"><h1>{{ $t("⇄ {0} Einträge verknüpfen", [pickedRows.length]) }}</h1><span class="grow" /><button class="x" @click="link = null" :title="$t('Esc')">×</button></div>
@@ -724,7 +724,7 @@ function onDialogKey(e) {
 .node.variant .icon { color: var(--warn); }
 .label { overflow: hidden; text-overflow: ellipsis; }
 .axis { font-size: 11px; }
-/* angehefteter Name: kursiv, kein Symbol — die Information ist klein (Taloan, 17.09.) */
+/* angehefteter Name: kursiv, kein Symbol — die Information ist klein */
 .label.pinned { font-style: italic; }
 .hit { font-size: 11px; overflow: hidden; text-overflow: ellipsis; max-width: 45%; }
 .count { margin-left: auto; font-size: 11px; }

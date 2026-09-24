@@ -11,7 +11,7 @@ namespace Journali.Server;
 /// <summary>
 /// Wo die Bytes liegen (docs/pflegestruktur.md, 20): ausserhalb des Journals, adressiert über den SHA-256 der Datei.
 /// Das Journal kennt nur den Hash (<c>MediaCreated</c>); gleiche Bytes = gleicher Hash = dieselbe Datei, unveränderlich.
-/// Der Treiber ist Konfiguration, nicht Bauzeit (Taloan, 19.09.2026: „Datenbank auf Azure, Assets im günstigen Object Storage“):
+/// Der Treiber ist Konfiguration, nicht Bauzeit:
 /// <c>JOURNALI_MEDIA</c> = <c>postgres</c> (Vorgabe — Tabelle <c>media_blob</c> neben dem Journal, ein Paket = lauffähig),
 /// ein Verzeichnis, oder <c>s3://bucket</c> (Garage, MinIO, AWS, R2, Hetzner …). Ein Journal, ein Speicher — wer wechselt,
 /// kopiert einmal herüber (POST /api/media/copy). Einstellung: media.json (Einstellungen → Storage) oder die Umgebung.

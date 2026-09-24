@@ -12,6 +12,7 @@ import MediaView from './views/MediaView.vue'
 import PluginsView from './views/PluginsView.vue'
 import PluginHost from './views/PluginHost.vue'
 import SettingsView from './views/SettingsView.vue'
+import HelpView from './views/HelpView.vue'
 
 export const router = createRouter({
   history: createWebHistory(),
@@ -25,7 +26,7 @@ export const router = createRouter({
     { path: '/table/:id', component: TableEditView, props: r => ({ id: r.params.id, role: r.query.role, deep: r.query.deep, attrs: r.query.attrs }) },   // attrs: nur diese Spalten (ETIM: die Merkmale einer Klasse)
     { path: '/journal', component: JournalView },
     { path: '/model', component: ModelView },
-    // Themen (Taloan, 18.09.): erst das Thema, dann das Plugin — /import ist die Übersicht, die Quellen liegen darunter
+    // Themen: erst das Thema, dann das Plugin — /import ist die Übersicht, die Quellen liegen darunter
     { path: '/import', component: HubView, props: { topic: 'import' } },
     { path: '/export', component: HubView, props: { topic: 'export' } },
     { path: '/datasheet', component: HubView, props: { topic: 'datasheet' } },
@@ -42,11 +43,13 @@ export const router = createRouter({
     { path: '/plugins', component: PluginsView },
     { path: '/p/:key/:path', component: PluginHost },
     { path: '/settings', component: SettingsView },
+    { path: '/help', component: HelpView },   // Hilfe in der Instanz (24.09.2026): Kapitel aus help/<code>/
+    { path: '/help/:chapter', component: HelpView, props: true },
     { path: '/login', component: LoginView },
   ],
 })
 
-// Wache (Taloan, 19.09.): mit Benutzern ohne Sitzung → /login; ohne Benutzer bleibt alles offen
+// Wache: mit Benutzern ohne Sitzung → /login; ohne Benutzer bleibt alles offen
 router.beforeEach(async to => {
   if (to.path === '/login') return true
   if (!store.auth.known) await store.loadAuth()

@@ -3,7 +3,7 @@ using Journali.Core.Entries;
 namespace Journali.Core.Projections;
 
 /// <summary>
-/// Regel-Verweise (Taloan, 21.09.2026: Ersatzteilkatalog aus 20 Produktgruppen — „alles, worauf das zutrifft“ statt 20 Handgriffe).
+/// Regel-Verweise.
 /// Eine Rubrik trägt Regeln (<see cref="PubRule"/>, Eintrag <c>RulePlaced</c>); beim Lesen füllt sich die Rubrik:
 ///   Art <c>name</c>:      Gruppen (oder Produkte) unter <c>under</c>, deren Name gleich <c>name</c> ist — eine getroffene Gruppe kommt mit allem darunter.
 ///   Art <c>attribute</c>: Produkte unter <c>under</c>, deren wirksamer Wert (geerbt zählt) von <c>attribute</c> gleich <c>value</c> ist

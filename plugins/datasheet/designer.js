@@ -1,4 +1,4 @@
-// Datenblatt-Designer, WYSIWYG (Taloan, 18.09.2026): Seite wie gedruckt, Bausteine per Drag & Drop —
+// Datenblatt-Designer, WYSIWYG: Seite wie gedruckt, Bausteine per Drag & Drop —
 // Abschnitte mit 1–4 Spalten, darin Attributgruppen (als Wertetabelle), einzelne Attribute, Bild, Text,
 // Variantentabelle, Seitenumbruch. Die Palette zeigt die Attributgruppen und Attribute AB EINEM KNOTEN,
 // einschliesslich allem, was an seinen Kindern vorkommt (Server: /table?deep=true). Das Layout ist JSON im
@@ -70,7 +70,7 @@ function renderItem(it, d, model, edit, ctx) {
       if (edit) { e.contentEditable = 'true'; e.addEventListener('input', () => { it.html = e.innerHTML; ctx.dirty() }); e.addEventListener('mousedown', ev => ev.stopPropagation()) }
       break
     case 'variants': {
-      // Datentabelle (Taloan): eine Zeile je Subitem — Varianten am Produkt, Produkte an der Gruppe; Spalten aus einer Gruppe, einzeln oder die Achsen
+      // Datentabelle: eine Zeile je Subitem — Varianten am Produkt, Produkte an der Gruppe; Spalten aus einer Gruppe, einzeln oder die Achsen
       const vs = d.children ?? d.variants ?? []
       const axes = [...new Set(vs.flatMap(v => (v.axes ?? []).map(a => a.key)))]
       const cols = it.group ? model.attributes.filter(a => a.group === it.group && !['rows', 'html'].includes(a.type)).map(a => a.key) : it.attrs?.length ? it.attrs : axes
@@ -196,7 +196,7 @@ const DESIGNER_CSS = `
   .dsd .ds-item:hover > .ds-x, .dsd .ds-blk:hover > .ds-x { display: block; }
   .dsd .ds-blk { position: relative; border: 1px solid transparent; border-radius: 3px; }
   .dsd .ds-blk:hover { border-color: rgba(37,99,235,.35); } .dsd .ds-blk.sel { border-color: #2563eb; } .dsd .ds-blk.over { border-top: 2px solid #2563eb; }
-  /* Griff (Taloan, 18.09.: „erreiche ihn nicht — verschwindet, wenn die Maus hinkommt“): er sass ausserhalb des Blocks und war nur bei
+  /* Griff: er sass ausserhalb des Blocks und war nur bei
      Hover des Blocks da; auf dem Weg dorthin verliess die Maus den Block. Jetzt immer da (blass), kräftig bei Hover — und der
      Block reicht nach links bis unter den Griff, damit der Hover nicht abreisst. */
   .dsd .ds-blk { margin-left: -18px; padding-left: 18px; }
@@ -220,7 +220,7 @@ export async function mountDesigner(root, ctx) {
   const nameSel = el('select', {}, ...['standard', ...names.filter(n => n !== 'standard')].map(n => el('option', { value: n }, n)))
   const nameIn = el('input', { type: 'text', placeholder: 'neuer Name', style: 'width:110px' })
   const roleSel = role => { const s = el('select', { title: `Vorlage für ${role}` }, ...['standard', ...names.filter(n => n !== 'standard')].map(n => el('option', { value: n }, n))); s.value = sett[role] ?? 'standard'; s.addEventListener('change', async () => { sett[role] = s.value; await ctx.data.set('settings', sett); store.toast(`${role} → ${s.value}`, 'ok') }); return s }
-  // Knoten per Auswahlbaum (Taloan): Knopf zeigt den gewählten, Klick klappt den Baum darunter auf
+  // Knoten per Auswahlbaum: Knopf zeigt den gewählten, Klick klappt den Baum darunter auf
   const nodeBtn = el('button', { class: 'x', title: 'Knoten für die Vorschau wählen' }, st.node ? `${{ group: '▣', product: '▦', variant: '◆' }[tree.byId.get(st.node)?.role] ?? ''} ${tree.byId.get(st.node)?.label ?? ''}` : '🔍 Knoten wählen')
   const pick = el('div', { class: 'picker', style: 'position:absolute;right:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
   ctx.treePicker(pick, { value: st.node, roles: ['group', 'product', 'variant'], height: 300, onPick: r => { st.node = r.id; nodeBtn.textContent = `${{ group: '▣', product: '▦', variant: '◆' }[r.role]} ${r.label}`; pick.style.display = 'none'; localStorage.setItem('journali.datasheet.node', r.id); reload() } })
@@ -406,7 +406,7 @@ export async function mountDesigner(root, ctx) {
       const [d, t, n] = await Promise.all([dataOf(ctx, st.node, st.locale), api.get(`/api/nodes/${encodeURIComponent(st.node)}/table?deep=true&locale=${st.locale}`), api.get(`/api/nodes/${encodeURIComponent(st.node)}`)])
       d.types = Object.fromEntries(model.attributes.map(a => [a.key, a.type])); d.locale = st.locale; d.cache = {}
       // Palette: die Attribute, die AM KNOTEN gelten (seine aktiven Gruppen) — plus alles, was an den Nachfahren vorkommt (table?deep).
-      // Nur die Nachfahren zu nehmen liess an einer Variante (kein Kind) die Palette leer (Taloan, 18.09.)
+      // Nur die Nachfahren zu nehmen liess an einer Variante (kein Kind) die Palette leer
       const own = (n.groups ?? []).filter(g => g.active).flatMap(g => g.attributes).map(k => model.attributes.find(a => a.key === k)).filter(Boolean)
       const seen = new Set(); const cols = []
       for (const c of [...own, ...t.columns]) if (!seen.has(c.key)) { seen.add(c.key); cols.push(c) }

@@ -8,20 +8,18 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Der KI-Weg über den Server (Taloan, 23.09.2026, zu Teams: „je Team gibt es Limits und API-Keys“). Bis dahin fragte der
+/// Der KI-Weg über den Server. Bis dahin fragte der
 /// Browser den Anbieter selbst, mit dem Schlüssel aus dem localStorage — dann kann niemand zählen, niemand begrenzen, und
 /// ein Job kann gar keine KI. Liegt der Schlüssel am Team, muss der Server fragen:
 /// <list type="bullet">
 /// <item>Der Schlüssel bleibt beim Server (Datenverzeichnis, nie im Journal, nie im Browser).</item>
 /// <item>Jeder Aufruf wird festgehalten — beim <b>zahlenden</b> Team, mit Anbieter, Modell, Person und Anlass
-/// (<c>AiUsed</c>), dazu das <b>gemessene Volumen</b>: Bytes hin, Bytes zurück (Taloan, 23.09.2026).</item>
-/// <item>Keine Tokenzahl, keine Kosten, keine Umrechnung (Taloan, 23.09.2026: „was jedes Team an KI-Tokens auf den Putz
-/// haut, ist journali völlig egal“). Was journali sagt, hat journali selbst gemessen.</item>
+/// (<c>AiUsed</c>), dazu das <b>gemessene Volumen</b>: Bytes hin, Bytes zurück.</item>
+/// <item>Keine Tokenzahl, keine Kosten, keine Umrechnung. Was journali sagt, hat journali selbst gemessen.</item>
 /// <item>Begrenzt wird hier nichts.</item>
 /// <item>Jobs können KI, weil sie ein Token haben und damit einen Anwender — also ein Team.</item>
 /// </list>
-/// Einen anderen Weg gibt es seit dem 23.09.2026 nicht mehr (Taloan: „wieso sind die KI-Schlüssel immer noch auf der
-/// Ich-Seite?“) — auch das Modell steht am Team, denn es bestimmt Kosten und Güte. Ohne Team: keine KI.
+/// Einen anderen Weg gibt es seit dem 23.09.2026 nicht mehr — auch das Modell steht am Team, denn es bestimmt Kosten und Güte. Ohne Team: keine KI.
 /// </summary>
 public static class AiApi
 {

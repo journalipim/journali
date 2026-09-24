@@ -1,6 +1,6 @@
 # journali — Arbeitsregeln
 
-Taloan ist alleiniger Entwickler und schreibt deutsch. Antworten auf Deutsch.
+Ein Entwickler, Projektsprache Deutsch. Antworten auf Deutsch.
 Code englisch, Kommentare und Dokumentation deutsch.
 
 ## Regel 1: Keine Behauptung ohne Beleg im selben Zug
@@ -23,14 +23,24 @@ billig, geänderte teuer, gelöschte unmöglich. **Auch das Modell** (Sprachen,
 Kanäle, Einheiten, Attributgruppen, Attribute, Wörterbücher, Sichten) steht
 im Journal, nie im Code:
 `Model.Seeds()` ist nur das Saatgut für ein leeres Journal.
-`docs/pflegestruktur.md` ist der Entwurf dazu; Entscheidungen von Taloan
+`docs/pflegestruktur.md` ist der Entwurf dazu; Entscheidungen
 stehen dort als solche markiert.
+
+## Regel 3: Keine Namen, keine Zitate, keine fremden Produkte
+
+Das Projekt ist abstrakt. Nirgends — nicht in Oberflächentexten, nicht in Kommentaren, nicht in
+Dokumenten, nicht in Commits — steht ein Name, ein Zitat oder eine Beschreibung, wer sich etwas
+gewünscht oder entschieden hat. Eine Entscheidung wird sachlich begründet und trägt höchstens ein
+Datum. Fremde Produkte und Firmen kommen nicht als Vergleich oder Massstab vor; technische Namen
+angebundener Systeme (Solr, Excel, OnlyOffice, DeepL, ETIM, Postgres, Docker) sind davon nicht
+gemeint. In Commits keine Zeile „Co-Authored-By“ — es gibt einen Beitragenden.
+`web/tools/namen-entfernen.py` räumt Altbestand auf.
 
 ## Arbeitsweise
 
 - **Keine Pausen bei Mehrfachaufträgen.** Alles durcharbeiten, erst am Ende
   berichten.
-- **Das Programm nie selbst starten.** Läuft es (Taloan hat es gestartet),
+- **Das Programm nie selbst starten.** Läuft es,
   dürfen die Endpunkte mit curl geprüft werden.
 - **Änderungen mit Python-Patchskripten** über das Write-Werkzeug, nicht mit
   Bash-Heredocs. Anker eindeutig (`assert count == 1`), BOM und CRLF je
@@ -38,11 +48,11 @@ stehen dort als solche markiert.
 - **Nach jedem `git pull`:** `npm install` in `web/` (die andere Sitzung bringt neue Pakete mit — sonst
   brechen Tests mit `ERR_MODULE_NOT_FOUND`), dann `dotnet build -c Release` und beide Testläufe.
 - **Vor dem Commit:** `dotnet build -c Release` mit 0 Fehlern, `dotnet test Journali.Tests` (Kern) und
-  `npm test` in `web/` grün. **Oberfläche wird geprüft, nicht vorgeführt** (Taloan, 22.09.): jeder Dialog und jedes
+  `npm test` in `web/` grün. **Oberfläche wird geprüft, nicht vorgeführt**: jeder Dialog und jedes
   Fenster, das wir anfassen, bekommt einen Test in `web/test/ui-*.test.mjs` — echtes DOM (happy-dom), echte Komponente
-  (@vue/test-utils, `test/vue-loader.mjs` übersetzt .vue), Klicks und Tasten wie beim Anwender; Hilfen in `test/ui.mjs`. **Use Cases testen, nicht Taloan klicken lassen:**
-  jeder Fall, der in der Bedienung schiefging, wird ein Test (Taloan, 21.09.).
-- **Anwender & Rollen:** In der Oberfläche heisst eine Person **Anwender** (Taloan, 23.09.), nie Benutzer.
+  (@vue/test-utils, `test/vue-loader.mjs` übersetzt .vue), Klicks und Tasten wie beim Anwender; Hilfen in `test/ui.mjs`. **Use Cases testen, nicht von Hand klicken lassen:**
+  jeder Fall, der in der Bedienung schiefging, wird ein Test.
+- **Anwender & Rollen:** In der Oberfläche heisst eine Person **Anwender**, nie Benutzer.
   Identität/Rolle im Journal (`user:<key>`), Rollen mit Rechten im Journal (`role:<key>`,
   Vokabular `Rights` im Kern, `Auth.Needed` sagt je Anfrage das Recht), Passwörter/Token/Sitzungen
   in `auth.json` im Datenverzeichnis (`Auth.cs`). Ohne Anwender offen; mit Anwendern kommt
@@ -60,7 +70,7 @@ stehen dort als solche markiert.
   Protokolle, die man nicht selbst schreibt: **Npgsql** (Datenbank) und
   **MailKit** (SMTP, seit 23.09. — `SmtpClient` aus .NET kann kein implizites TLS
   auf 465, und bei vielen Hostern ist das der einzige Weg). Weitere Pakete sind
-  eine Entscheidung von Taloan, nicht eine Bequemlichkeit.
+  eine Entscheidung, nicht eine Bequemlichkeit.
   `PostgresJournal` hinter `IJournal`, `Catalog` als einziger
   Schreibpfad (Eintrag + Abbilder `ModelCatalog` und `Tree` unter einer
   Sperre), `ModelApi` und `TreeApi` unter `/api`, Oberfläche aus `wwwroot`;
@@ -86,7 +96,7 @@ stehen dort als solche markiert.
   (Profil, Pfade, Schalter) — ein Parameter mit `perJob: true` bleibt immer sichtbar.
   **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,
   Ansichten oder READMEs — die gehören in ein Profil. **Kein Name, kein Zitat**
-  in dem, was der Anwender liest (Taloan, 23.09.), und **keine Belehrung**: eine
+  in dem, was der Anwender liest, und **keine Belehrung**: eine
   Beschreibung sagt sachlich, was das Plugin tut und was es braucht — keine
   Begründung, kein Beispiel aus dem Alltag, keine Rechtfertigung („ein 200-MB-TIFF
   rechnet man nicht um, während jemand wartet“ gehört in den Quelltext, nicht ins
@@ -96,38 +106,36 @@ stehen dort als solche markiert.
   Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im
   Tooltip — **ein sichtbarer Text ist höchstens ein Satz**, alles Weitere steht in
   `title=` (Prüfstand `sichtbare-texte.test.mjs`). Positiv grün, negativ rot.
-  **Eine Meldung sagt, was ist — nicht, was der Anwender zu tun hat** (Taloan,
-  23.09.: „wer sind die Menschen, mit denen wir hier reden? Wenn du den Teller
-  nicht leer gegessen hast, darfst du abends nicht fernsehen?“). Kein „bitte“,
+  **Eine Meldung sagt, was ist — nicht, was der Anwender zu tun hat**. Kein „bitte“,
   kein „erst …“, kein Ratschlag; ein Satz. Gilt auch für die Meldungen des
   Servers — Prüfstand `servermeldungen.test.mjs` liest `Bad("…")` und `error = "…"`
   aus `Journali.Server`.
-  **Eine Überschrift ist ein Name und eine Zahl** (Taloan, 23.09.): der Beisatz nach
+  **Eine Überschrift ist ein Name und eine Zahl**: der Beisatz nach
   dem `·` zählt auf oder zählt ab — er erklärt nichts, begründet nichts, bewertet
   nichts („· gemessen, nicht geschätzt“ ist die Antwort auf einen Einwand, den
   niemand erhoben hat). Wer erklären will, schreibt es in `title=` der Überschrift.
   Prüfstand: `ui-section-stil.test.mjs`.
-  **Grenzen stehen positiv da** (Taloan, 23.09.): „Verfügbare Limits“, nicht „Nutzung
+  **Grenzen stehen positiv da**: „Verfügbare Limits“, nicht „Nutzung
   gegen die Limits“; „verfügbarer Speicherplatz“, nicht „gemessen gegen die
   Speicherplatzgrenze“. **Ein Balken ist trotzdem ein Füllstand und füllt sich** mit
-  dem, was genutzt wurde (Taloan, 23.09.) — Zahl, Balken und Prozent zeigen dasselbe.
+  dem, was genutzt wurde — Zahl, Balken und Prozent zeigen dasselbe.
   Was verfügbar ist, steht als eigene Zeile darüber und im Tooltip. Angst macht eine
   Oberfläche nirgends.
-  **Einstellungen: ein Reiter je Sache** (Taloan, 23.09.): ◐ Ich (Darstellung, Sicht,
+  **Einstellungen: ein Reiter je Sache**: ◐ Ich (Darstellung, Sicht,
   dieser Rechner, mein Konto mit Passwort und **meinen API-Token** — die gehören zur
   Person, nicht zum Team) · ◍ Team (Mitglieder, KI-Schlüssel, journali-Token gegen die
   Limits **und die Lizenz** — Limits und Gekauftes hängen am Team) · ◈ IAM
   (Anwenderkonten, Rollen, Rechte, Teams anlegen) · ⚑ Workflows · ▨ Storage ·
   ▩ Assets (Ableitungen, Bestand — getrennt, weil das später auch ein Medienmanager
   pflegen darf) · ✉ Mail · ⇅ B&R (Sichern von Hand und zurück — jeder Tarif; als
-  Zeitplan ist es ein Job des Plugins `backup`, ab Pro; Taloan 24.09.) · ⚑ Workflows.
-  **Tarife** (Taloan, 24.09.): `Tarife.cs` im Kern — Kostenlos, Pro, Pro+, Enterprise,
+  Zeitplan ist es ein Job des Plugins `backup`, ab Pro) · ⚑ Workflows.
+  **Tarife**: `Tarife.cs` im Kern — Kostenlos, Pro, Pro+, Enterprise,
   Unlimited. Grenzen je Team, Plugins und Publikationsbäume nach dem höchsten Tarif der
   Instanz; drei Monate Enterprise ab dem ersten Journaleintrag.
-  Die Abschnitte des Team-Tabs stehen fest (Taloan, 23.09.): ◍ {Teamname} · ⚿ journali
+  Die Abschnitte des Team-Tabs stehen fest: ◍ {Teamname} · ⚿ journali
   Lizenz · ✦ journali Limits · ✧ KI API Keys · ✧ KI Austauschvolumen — erst, was
   journali betrifft, dann die fremde KI.
-  **Was der Rechner selbst tun kann, tut er** (Taloan, 23.09.): kein Knopf, zu dem
+  **Was der Rechner selbst tun kann, tut er**: kein Knopf, zu dem
   jemand regelmässig hingehen muss. Ableitungen rechnet der Job nach jedem Hochladen
   **und** nach jeder Preset-Änderung; der Knopf ist der Nachzieher, nicht der Weg.
   Grundsatz: **wer mit seinen Rechten, Rollen und seinem Team hierher kommt, sieht,
@@ -139,18 +147,17 @@ stehen dort als solche markiert.
   **Init Team** mit (`team:init`, `Model.InitTeam`): nicht löschbar, umbenennbar,
   trägt das Grundkontingent; der erste Administrator gehört hinein, und wer kein
   eigenes Team trägt, arbeitet dort.
-  **Ohne Kontingent keine Pflege** (Taloan, 23.09.): abgewiesen wird **jeder Eintrag,
+  **Ohne Kontingent keine Pflege**: abgewiesen wird **jeder Eintrag,
   der journali-Token kostet** (`Kinds.Counts`: Datenpflege und Ausleitung) — nicht
   jede schreibende Anfrage. Modellieren, Strukturieren, Kataloge, Einrichtung und
   Betrieb kosten nichts und gehen weiter. Die Sperre sitzt am **Schreibpfad**
   (`Catalog.With` → `KeinKontingentException` → 403), weil erst dort der Eintragstyp
   feststeht. Kein Kontingent hat, wer in keinem Team ist oder dessen Zahlerkette bei
   0 endet; Jobs (`job:<key>`) und das System sind nicht gemeint.
-  **Die Limits ergeben sich aus der Lizenz** (Taloan, 23.09.: „es gibt hier nichts
-  einzustellen“) — nirgends ein Eingabefeld: das Init Team trägt die Limits der
+  **Die Limits ergeben sich aus der Lizenz** — nirgends ein Eingabefeld: das Init Team trägt die Limits der
   Anlage, jedes weitere hat, was die Lizenz ihm namentlich zuschreibt (`teams` in
   `licence.json`), sonst nichts; dann rechnet es über ein anderes Team ab.
-  **Führen und dazugehören sind zweierlei** (Taloan, 23.09.): man kann Manager
+  **Führen und dazugehören sind zweierlei**: man kann Manager
   mehrerer Teams sein, aber **Mitglied nur eines** — der IT-Administrator von
   Südeuropa führt Spanien, Frankreich und Portugal und sitzt in Team Deutschland.
   Die Balken in der Statusleiste zeigen immer das Team der **Mitgliedschaft**, am

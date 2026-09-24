@@ -8,8 +8,7 @@ using NpgsqlTypes;
 namespace Journali.Server;
 
 /// <summary>
-/// Eine Schlüssel-Anforderung dieser Instanz (Taloan, 23.09.2026: „die Lizenzanforderung muss vom Server signiert sein,
-/// daraufhin wird sie von der Shopseite genehmigt — zurücksigniert — und nur dann vom Aussteller akzeptiert. PGP quasi“).
+/// Eine Schlüssel-Anforderung dieser Instanz.
 /// <para>Der Weg eines Schlüssels:</para>
 /// <list type="number">
 /// <item>Die Instanz schreibt die Anforderung (Art, Grenzen, Dauer) und signiert sie mit ihrem eigenen Schlüsselpaar.

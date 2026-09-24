@@ -6,7 +6,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Versionen (Taloan, 19.09.2026): eine Freigabe ist eine Version — Zeiger auf den Journalstand plus eingefrorene Belege,
+/// Versionen: eine Freigabe ist eine Version — Zeiger auf den Journalstand plus eingefrorene Belege,
 /// die nach draussen gingen (das zählt in der Haftungsfrage). Belege liefern Erzeuger-Plugins (Manifest <c>renderer</c>:
 /// ein Prozess-Dienst, der das Dokument rendert, per POST /api/media hochlädt und hier anhängt). „Stand bei Version n“
 /// ist eine reine Lesesicht (Journal bis dahin abgespielt); Zurückrollen schreibt vorwärts — eigene Werte des Knotens
@@ -135,7 +135,7 @@ public static class VersionApi
 
     private static string Key(DiffRow r) => r.Kind == "value" ? $"{r.Attribute}|{r.Locale}|{r.Channel}|{r.Row}" : r.Kind;
 
-    /// <summary>Eigene Werte damals (Journal bis #n) gegen heute — nur dieser Knoten, geerbt bleibt aussen vor (Taloan: nicht die Welt von damals).</summary>
+    /// <summary>Eigene Werte damals (Journal bis #n) gegen heute — nur dieser Knoten, geerbt bleibt aussen vor.</summary>
     public static List<DiffRow>? Diff(Catalog c, string id, long number)
     {
         var (thenModel, thenTree) = c.AsOf(number);

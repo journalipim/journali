@@ -8,12 +8,9 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Mailserver (Taloan, 23.09.2026: „was wir in den Settings noch brauchen, ist eine Mailserver-Konfiguration zum
-/// Versenden von Mails“). Liegt als <c>mail.json</c> im Datenverzeichnis, neben <c>media.json</c> und
+/// Mailserver. Liegt als <c>mail.json</c> im Datenverzeichnis, neben <c>media.json</c> und
 /// <c>auth.json</c> — nie im Journal, denn da steht ein Passwort drin.
-/// <para>Gesendet wird mit MailKit — das zweite Paket im Server neben Npgsql (Taloan, 23.09.2026, auf den Hinweis, dass
-/// implizites TLS auf 465 fehlte: „ich weiss zwar, was ich kann, aber nicht, was die anderen für Möglichkeiten
-/// haben“). Damit gehen alle drei Wege: ohne Verschlüsselung (25), STARTTLS (587) und implizites TLS (465).</para>
+/// <para>Gesendet wird mit MailKit — das zweite Paket im Server neben Npgsql. Damit gehen alle drei Wege: ohne Verschlüsselung (25), STARTTLS (587) und implizites TLS (465).</para>
 /// </summary>
 public sealed record MailConfig(
     string? Host = null,

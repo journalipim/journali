@@ -1,5 +1,4 @@
-// Spiegel und Schnappschuss stellt der Administrator ein (Taloan, 24.09.2026: „ich möchte das nicht per
-// Umgebungsvariablen, sondern in den Admin-Settings einstellen können“). Dort steht auch, was die beiden Dateien
+// Spiegel und Schnappschuss stellt der Administrator ein. Dort steht auch, was die beiden Dateien
 // gerade kosten — die Frage kam mit: „habe ich dann eine 3-GB-Postgres und daneben noch mal einen 3-GB-Cache?“
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -30,7 +29,7 @@ function server({ betrieb = BETRIEB } = {}) {
   return calls
 }
 const ruhe = async () => { for (let i = 0; i < 5; i++) { await flushPromises(); await new Promise(r => setTimeout(r, 0)) } }
-const admin = () => { store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'storage', 'model'] } }
+const admin = () => { store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'storage', 'model'] } }
 
 test('der Speicher-Reiter sagt, was Spiegel und Schnappschuss kosten', async () => {
   server(); admin()

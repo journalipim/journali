@@ -1,4 +1,4 @@
-// Breiten der Fenster je Ansicht, gemerkt im localStorage (Taloan, 17.09.: Aufteilung änderbar, Breiten gespeichert).
+// Breiten der Fenster je Ansicht, gemerkt im localStorage.
 import { ref, watch } from 'vue'
 
 export function paneWidth(key, fallback) {

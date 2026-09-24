@@ -4,11 +4,10 @@ const pending = new Map()
 </script>
 
 <script setup>
-// Vorschaubild eines Mediums (Taloan, 19.09.2026: die Kacheln luden 189 Originale): GET /api/media/{id}/thumb — gibt es
+// Vorschaubild eines Mediums: GET /api/media/{id}/thumb — gibt es
 // noch keine Vorschau, rechnet dieser Browser sie aus dem Original (Canvas, längste Seite 256 px, WebP) und legt sie
 // per PUT im Store ab; ab dann kommt sie fertig. Kein Bildpaket im Server nötig — die Arbeit macht der erste Betrachter.
-// Nur bei Bildern: ein PDF kann der Browser nicht in ein <img> laden (Taloan, 23.09.2026 — die erste Seite rechnet der
-// Job „Werkzeug: Vorschauen rechnen“). Fehlt sie dort noch, bleibt es beim Symbol, statt in jeder Kachel zu scheitern.
+// Nur bei Bildern: ein PDF kann der Browser nicht in ein <img> laden. Fehlt sie dort noch, bleibt es beim Symbol, statt in jeder Kachel zu scheitern.
 import { ref, watch } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'

@@ -3,7 +3,7 @@ using Journali.Core.Entries;
 namespace Journali.Server;
 
 /// <summary>
-/// Dokumentensuche unter /api/docs (pflegestruktur §32; Taloan, 22.09.2026: „in welchem Datenblatt haben wir …“).
+/// Dokumentensuche unter /api/docs (pflegestruktur §32).
 /// Der Text der Dokumente liegt abgeleitet neben dem Journal (<see cref="DocText"/>); hier steht nur, wie man ihn
 /// hineinbekommt und wieder herausfindet. Ein Treffer zeigt immer auf <b>Dokument und Knoten</b> — das ist der
 /// Unterschied zu jeder allgemeinen Dokumentensuche: das PDF hängt am Produkt.
@@ -13,7 +13,7 @@ public static class DocsApi
     /// <summary>Was ein Job wissen muss, um nur Neues zu lesen: das Medium, sein Hash und ob es schon im Index steht.</summary>
     public sealed record Pending(string Id, string Name, string Mime, string Sha256, long Bytes, bool Indexed);
     /// <summary>Was der Leser abliefert: die Abschnitte, dazu der Zustand — <c>text</c>, <c>scan</c> (keine Textebene,
-    /// OCR nötig; Taloan, 22.09.2026) oder <c>fehler</c> — und die Seitenzahl.</summary>
+    /// OCR nötig) oder <c>fehler</c> — und die Seitenzahl.</summary>
     public sealed record PutBody(string? Sha256, List<DocText.Chunk>? Chunks, string? State, int? Pages, string? Note);
 
     /// <summary>Womit wir umgehen können — den Rest (Bilder, Videos) liest kein Textwerkzeug.</summary>
@@ -55,8 +55,7 @@ public static class DocsApi
         api.MapDelete("/docs/{id}", async (string id, DocText docs, CancellationToken ct) =>
             Results.Ok(new { removed = await docs.RemoveAsync(id, ct) }));
 
-        // Gescheiterte wieder freigeben: der Job liest sie in der nächsten Runde erneut (Taloan, 23.09.2026 — ein Nullbyte
-        // im PDF liess das Dokument scheitern; nach der Reparatur muss es einen Weg zurück geben)
+        // Gescheiterte wieder freigeben: der Job liest sie in der nächsten Runde erneut
         api.MapPost("/docs/retry", async (DocText docs, CancellationToken ct) =>
         {
             if (!docs.Ready) return ModelApi.Bad("Ohne Postgres gibt es keinen Dokumentindex.");

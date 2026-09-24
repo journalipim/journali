@@ -1,6 +1,6 @@
 // Ein Kontextmenü für die ganze Oberfläche: wer eines braucht, ruft
 // menu.open(event, items). Einträge: { label, icon?, key?, action, disabled?, danger? }, { sep: true }
-// oder ein Untermenü { label, icon?, items: [...] } (Plugins je Plugin, Taloan).
+// oder ein Untermenü { label, icon?, items: [...] } (Plugins je Plugin).
 import { reactive } from 'vue'
 
 export const menu = reactive({

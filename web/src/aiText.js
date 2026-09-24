@@ -1,4 +1,4 @@
-// KI im Editor (Taloan, 19.09.2026: „im Editor hätte ich auch den KI-Button erwartet“): ein Text der Zelle wird mit den
+// KI im Editor: ein Text der Zelle wird mit den
 // echten Produktdaten des Knotens an die KI gegeben — verbessern, kürzen, ausführlicher, neu aus den Daten, eigene
 // Anweisung. Ergebnis landet im Entwurf; gespeichert wird erst mit Speichern. Schlüssel des Nutzers (ai.js), nur auf Klick.
 import { api } from './api.js'
@@ -8,7 +8,7 @@ import { ai } from './ai.js'
 import { t } from './i18n.js'
 import { L } from './i18n.js'
 
-// Zwei Sorten (Taloan, 22.09.2026): den vorhandenen Text ÜBERARBEITEN — oder etwas Neues ERZEUGEN (mit @ gekennzeichnet).
+// Zwei Sorten: den vorhandenen Text ÜBERARBEITEN — oder etwas Neues ERZEUGEN (mit @ gekennzeichnet).
 // [key, Bezeichnung, Anweisung, Gruppe: 'edit' | 'gen']
 export const PRESETS = [
   ['improve', t('Verbessern'), t('Verbessere Stil, Klarheit und Rechtschreibung. Inhalt und Fakten bleiben, Länge etwa gleich.'), 'edit'],
@@ -35,7 +35,7 @@ export async function facts(nodeId, locale) {
     let v = d.type === 'formula' ? n.computed.find(c => c.attribute === d.key)?.value ?? null : look(own, d.key, loc)
     if (v == null && d.inheritable) for (const m of anc) { v = look(m, d.key, loc); if (v != null) break }
     if (v == null || v === '') continue
-    // Listenwerte als Wort, nicht als Code (Taloan, 22.09.: „Betriebssystem EV007944 — ist das neu?“): Bezeichnung in der Sprache,
+    // Listenwerte als Wort, nicht als Code: Bezeichnung in der Sprache,
     // sonst in irgendeiner; nur wenn es gar keine gibt, bleibt der Code stehen. Ein Wert ohne Bezeichnung taugt nicht für einen Text.
     if (d.type === 'enum') {
       const list = model.lists.find(x => x.key === d.list)

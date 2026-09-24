@@ -19,10 +19,10 @@ public interface IJournal
     /// <summary>Alle Einträge eines Stroms, in Reihenfolge.</summary>
     IEnumerable<Entry> ReadStream(string stream);
 
-    /// <summary>Alle Einträge eines Stapels (eine Aktion: Rückzug eines Teilbaums, Import, Tabelle …), in Reihenfolge — für Rückgängig je Aktion (Taloan).</summary>
+    /// <summary>Alle Einträge eines Stapels (eine Aktion: Rückzug eines Teilbaums, Import, Tabelle …), in Reihenfolge — für Rückgängig je Aktion.</summary>
     IEnumerable<Entry> ReadBatch(string batch);
 
-    /// <summary>Die letzten <paramref name="limit"/> Einträge eines Typs, neueste zuerst (Taloan, 20.09.: zuletzt Zurückgezogenes zum Wiederherstellen anbieten).</summary>
+    /// <summary>Die letzten <paramref name="limit"/> Einträge eines Typs, neueste zuerst.</summary>
     IEnumerable<Entry> ReadRecent(string type, int limit);
 
     /// <summary>Nummer des letzten Eintrags; 0 bei leerem Journal.</summary>
@@ -30,7 +30,7 @@ public interface IJournal
 
     /// <summary>
     /// Einträge einer Sicherung zurückschreiben — unverändert, mit ihren Nummern, Zeiten und Urhebern
-    /// (Taloan, 23.09.2026: „neue DB oder purge ⇒ wiederherstellen“). Kein fachlicher Schreibweg: hier entsteht nichts
+    ///. Kein fachlicher Schreibweg: hier entsteht nichts
     /// Neues, hier kommt zurück, was schon einmal geschrieben wurde. Darum nur in ein leeres Journal — sonst
     /// kollidierten die Nummern, und aus zwei Wahrheiten würde keine.
     /// </summary>

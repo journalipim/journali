@@ -1,5 +1,4 @@
-// Die Sicherung scheiterte an sich selbst (Taloan, 23.09.2026, Lauf 08:23: „✗ Cannot access 'count' before
-// initialization“). Die Zählung war als sofort aufgerufene Funktion geschrieben, die sich rekursiv beim eigenen
+// Die Sicherung scheiterte an sich selbst. Die Zählung war als sofort aufgerufene Funktion geschrieben, die sich rekursiv beim eigenen
 // Namen nannte — den es zu dem Zeitpunkt noch nicht gab. Ein Baum ohne Kinder lief durch, jeder echte nicht:
 // die Sicherung brach ab, bevor eine Datei geschrieben war.
 import test from 'node:test'

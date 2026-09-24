@@ -1,5 +1,4 @@
-// Der Rahmen für gebaute Plugins (Taloan, 19.09.2026: Basis-Plugins wie Tabelle, Datenanalyse, Jobs liegen in plugins/
-// und werden ohne neues Image ausgetauscht — ihre Ansichten sind Vue-Komponenten). Ein gebautes Plugin importiert
+// Der Rahmen für gebaute Plugins. Ein gebautes Plugin importiert
 // `vue`, `vue-router` und `journali`; der Bau (web/build-plugins.mjs) biegt diese Importe auf window.journali um,
 // so dass Plugin und Oberfläche dieselben Instanzen teilen — ein Vue, ein Router, ein Baum, ein Store.
 import * as vue from 'vue'

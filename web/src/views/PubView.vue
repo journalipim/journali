@@ -1,5 +1,5 @@
 <script setup>
-// ⇶ Publikation (Taloan, 20.09.2026): links die Publikationsbäume — je Kanal (× Markt) die Maximalstruktur aus Rubriken, darin
+// ⇶ Publikation: links die Publikationsbäume — je Kanal (× Markt) die Maximalstruktur aus Rubriken, darin
 // Produktgruppen und Produkte per Verweis (↗); rechts der gewählte Knoten (Rubrik mit ihren Texten, oder der verwiesene
 // Pflegeknoten). Ableiten aus dem Pflegebaum als Start, danach frei umbauen: ziehen = Rubrik oder Verweis umhängen,
 // Rechtsklick = Rubrik/Verweis/Ableiten/Entfernen (nur aus dem Publikationsbaum — der Pflegebaum bleibt). „nicht einsortiert“ zählt die Produkte, die in diesem Baum nirgends hängen.
@@ -18,7 +18,7 @@ import { t as t_ } from '../i18n.js'
 import { L } from '../i18n.js'
 const pubW = paneWidth('pub', 340)
 const srcW = paneWidth('pubsrc', 300)
-// Pflegebaum links einklappbar (Taloan, 21.09.) — Stand gemerkt
+// Pflegebaum links einklappbar — Stand gemerkt
 const srcOpen = ref(localStorage.getItem('journali.pubsrc.open') !== '0')
 watch(srcOpen, v => localStorage.setItem('journali.pubsrc.open', v ? '1' : '0'))
 const props = defineProps({ id: String })
@@ -41,9 +41,9 @@ const rows = computed(() => {
     out.push({ r, depth, isOpen, has, kind: 'rubric', n: placed.length })
     if (!isOpen) return
     for (const k of tree.kids(r.id)) walk(k, depth + 1)
-    // Anzeige (Taloan, 21.09.: 20 Verweise „Ersatzteile“): Anzeigename, sonst Pflegename — und wo Geschwister gleich heissen, der Vater dazu
+    // Anzeige: Anzeigename, sonst Pflegename — und wo Geschwister gleich heissen, der Vater dazu
     const dup = new Set(placed.map(p => p.label).filter((l, i, a) => a.indexOf(l) !== i))
-    // Regel-Verweise (Taloan, 21.09.): je Regel eine ⚙-Zeile; aufgeklappt die Gliederungen und Treffer, wie der Server sie auflöst (Rules.cs)
+    // Regel-Verweise: je Regel eine ⚙-Zeile; aufgeklappt die Gliederungen und Treffer, wie der Server sie auflöst (Rules.cs)
     for (const rule of r.rules ?? []) {
       const ex = expanded.value.has(r.id + '/' + rule.id); const res = ruleResults.value[r.id]?.find(x => x.rule.id === rule.id)?.result
       out.push({ r: { id: r.id + '/' + rule.id, label: ruleLabel(rule) }, depth: depth + 1, kind: 'rule', rubric: r.id, rule, isOpen: ex, has: true, n: res ? res.products : null })
@@ -107,12 +107,12 @@ async function removeRule(rubricId, rule) {
   if (!await dialog.confirm({ title: t_('Regel entfernen?'), text: ruleLabel(rule) + ' ' + t_('— Treffer verschwinden aus dieser Rubrik; im Pflegebaum ändert sich nichts.'), ok: t_('✕ Entfernen'), danger: true })) return
   await run(() => api.del(`/api/rubrics/${encodeURIComponent(rubricId)}/rules/${encodeURIComponent(rule.id)}`))
 }
-// Ausleitung (Taloan, 21.09.): je Produkt im Baum ausgeleitet oder zurückgehalten, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
+// Ausleitung: je Produkt im Baum ausgeleitet oder zurückgehalten, mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Server: Publication.cs)
 const exp = ref(null); const showExport = ref(false); const expOnly = ref('out')
 async function loadExport() { if (!current.value) { exp.value = null; return } try { exp.value = await api.get(`/api/pub/${encodeURIComponent(current.value.id)}/export`) } catch (e) { exp.value = null } }
 watch([current, () => tree.rows], loadExport, { immediate: true })
 const expRows = computed(() => !exp.value ? [] : exp.value.rows.filter(r => expOnly.value === 'all' || (expOnly.value === 'in') === r.in))
-// Links der Pflegebaum (Taloan, 21.09.: „links mein Pflegebaum, rechts der Publikationsbaum, und ich ziehe die Äste rüber, wie ich sie brauche“):
+// Links der Pflegebaum:
 // Gruppen und Produkte, aufklappbar, ziehbar; ✓ = in diesem Publikationsbaum schon enthalten (selbst oder über einen Vorfahren als Verweis)
 const srcExpanded = ref(new Set(JSON.parse(localStorage.getItem('journali.pubsrc.expanded') || '[]')))
 function srcToggle(id) { srcExpanded.value.has(id) ? srcExpanded.value.delete(id) : srcExpanded.value.add(id); srcExpanded.value = new Set(srcExpanded.value); localStorage.setItem('journali.pubsrc.expanded', JSON.stringify([...srcExpanded.value])) }
@@ -208,7 +208,7 @@ async function editTree(r) {
   await run(() => post(`/api/rubrics/${encodeURIComponent(r.id)}/tree`, { channel, market: market || null }, 'PUT'))
 }
 // Ziehen: Rubrik auf Rubrik = umhängen; Verweis auf Rubrik = Verweis umhängen
-const drag = ref(null); const dropId = ref(null); const dropPos = ref('into')   // into · before · after — Einfügelinie zwischen den Zeilen (Taloan, 21.09.)
+const drag = ref(null); const dropId = ref(null); const dropPos = ref('into')   // into · before · after — Einfügelinie zwischen den Zeilen
 function onDragStart(e, row) { if (row.kind === 'rule' || row.kind === 'vgroup' || row.kind === 'ruled') { e.preventDefault(); return } drag.value = row; e.dataTransfer.effectAllowed = 'move' }
 function onSrcDragStart(e, row) { drag.value = { kind: 'src', r: row.r }; e.dataTransfer.effectAllowed = 'copy' }
 function onDragOver(e, row) {
@@ -245,7 +245,7 @@ function open(row, e) {
   }
   sel.value = new Set(); router.push(row.kind === 'placed' ? { path: `/pub/${row.r.id}`, query: { in: row.rubric } } : `/pub/${row.r.id}`)
 }
-// Stand (Taloan, 21.09., „A“): Zeiger auf eine Journalnummer an Rubrik oder Wurzel — alles darunter liest die Pflege wie damals; live = kein Zeiger
+// Stand: Zeiger auf eine Journalnummer an Rubrik oder Wurzel — alles darunter liest die Pflege wie damals; live = kein Zeiger
 function standOf(r) { for (let n = r; n; n = tree.byId.get(n.parent)) if (n.stand != null) return { stand: n.stand, from: n }; return null }
 async function setStand(r, mode) {
   if (mode === 'live' && !await dialog.confirm({ title: `Stand #${r.stand} von „${r.label}“ aufheben?`, text: t_('Ab hier nach unten gilt wieder der aktuelle Pflegestand.'), ok: t_('○ Aufheben') })) return

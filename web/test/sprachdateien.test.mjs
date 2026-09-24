@@ -36,7 +36,7 @@ test('t(): Schlüssel ist die Nachricht, Platzhalter aus Liste und Objekt, fehle
   const { i18n, t, setLang } = await import('../src/i18n.js')
   assert.equal(t('Knoten wählen — oder oben anlegen.'), 'Knoten wählen — oder oben anlegen.')
   assert.equal(t('{0} von {1}', [3, 7]), '3 von 7')
-  assert.equal(t('Hallo {name}', { name: 'Taloan' }), 'Hallo Taloan')
+  assert.equal(t('Hallo {name}', { name: 'Welt' }), 'Hallo Welt')
   assert.equal(t('Preis: {0} € · a | b'), 'Preis: {0} € · a | b', 'Sonderzeichen bleiben, ein Platzhalter ohne Wert auch')
   i18n.global.setLocaleMessage('en', { 'Knoten wählen — oder oben anlegen.': 'Pick a node — or create one above.', '{0} von {1}': '{0} of {1}' })
   i18n.global.locale.value = 'en'
@@ -47,7 +47,7 @@ test('t(): Schlüssel ist die Nachricht, Platzhalter aus Liste und Objekt, fehle
   assert.equal(await setLang('xx'), 'de', 'unbekannter Code → Vorgabe')
 })
 
-test('L(): Bezeichnungen des Modells folgen der Oberflächensprache, dann Deutsch, dann die erste (Taloan, 24.09.)', async () => {
+test('L(): Bezeichnungen des Modells folgen der Oberflächensprache, dann Deutsch, dann die erste', async () => {
   const { i18n, L } = await import('../src/i18n.js')
   const w = { de: 'Gewicht', en: 'Weight' }
   i18n.global.locale.value = 'de'

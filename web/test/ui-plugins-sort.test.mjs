@@ -1,4 +1,4 @@
-// Plugin-Liste sortieren (Taloan, 23.09.2026: „Spaltenköpfe, damit ich die Plugins sortieren kann“). Vier Spalten,
+// Plugin-Liste sortieren. Vier Spalten,
 // Klick dreht die Richtung. Key ist die Vorgabe und zugleich der zweite Schlüssel — gleiche Fassung oder gleicher
 // Zustand bleiben dadurch vorhersehbar statt zufällig.
 import test from 'node:test'

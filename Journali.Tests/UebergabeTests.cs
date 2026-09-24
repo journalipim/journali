@@ -5,8 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Ein Lauf, der an den Tasker abgegeben wird, gehört dem, der ihn abgegeben hat (Taloan, 23.09.2026: „sobald ich bei
-// einem Import auf Schreiben klicke, sollte der Job an den Tasker übergeben werden“). Sonst liefe ein Import als Job
+// Ein Lauf, der an den Tasker abgegeben wird, gehört dem, der ihn abgegeben hat. Sonst liefe ein Import als Job
 // am Kontingent vorbei: der Urheber `job:<key>` ist kein Anwender, und die Sperre greift nur bei Anwendern.
 public class UebergabeTests
 {
@@ -16,7 +15,7 @@ public class UebergabeTests
         c.With((_, _, write) =>
         {
             write("t", Users.Stream + "frei", Types.UserDefined, new UserDefined("Frei", null, "editor"), null);                       // kein Team
-            write("t", Users.Stream + "taloan", Types.UserDefined, new UserDefined("Taloan", null, "editor", true, Model.InitTeam), null);
+            write("t", Users.Stream + "u1", Types.UserDefined, new UserDefined("U1", null, "editor", true, Model.InitTeam), null);
             return 0;
         });
         return c;
@@ -36,7 +35,7 @@ public class UebergabeTests
     public void Der_Lauf_geht_auf_das_Kontingent_seines_Eigentuemers()
     {
         var c = Welt();
-        Job(c, "solr_import", "taloan");                       // Taloan hat ein Team mit Kontingent
+        Job(c, "solr_import", "u1"); // u1 hat ein Team mit Kontingent
         Assert.True(Schreibt(c, "job:solr_import"));
     }
 
@@ -63,9 +62,9 @@ public class UebergabeTests
     {
         var j = new MemoryJournal();
         var c = new Catalog(j); c.Rebuild(); c.SeedMissing();
-        Job(c, "solr_import", "taloan");
-        Assert.Equal("taloan", c.With((_, _, _) => c.Jobs.All["solr_import"].Owner));
+        Job(c, "solr_import", "u1");
+        Assert.Equal("u1", c.With((_, _, _) => c.Jobs.All["solr_import"].Owner));
         var wieder = new Catalog(j); wieder.Rebuild();
-        Assert.Equal("taloan", wieder.With((_, _, _) => wieder.Jobs.All["solr_import"].Owner));
+        Assert.Equal("u1", wieder.With((_, _, _) => wieder.Jobs.All["solr_import"].Owner));
     }
 }

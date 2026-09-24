@@ -1,6 +1,5 @@
 <script setup>
-// Das Journal, neueste zuerst, lebendig: beim Einhängen die letzten CHUNK Einträge (Taloan, 20.09.: „wo ist mein Journal?“ — vorher kamen
-// die ersten 10 000 ab Nummer 1, das Neueste nie), bei jedem neuen Serverstand nur die Einträge nach der letzten bekannten Nummer;
+// Das Journal, neueste zuerst, lebendig: beim Einhängen die letzten CHUNK Einträge, bei jedem neuen Serverstand nur die Einträge nach der letzten bekannten Nummer;
 // ältere in Stücken nach unten (⇣ ältere).
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
@@ -41,7 +40,7 @@ async function older() {
 }
 watch(() => store.head, pull)
 
-// Art der Arbeit als Filter (Taloan, 22.09.2026): eine Kachel je Art, mehrere gleichzeitig; leer = alles
+// Art der Arbeit als Filter: eine Kachel je Art, mehrere gleichzeitig; leer = alles
 const KINDS = [['data', t('✎ Pflege')], ['publish', t('⇶ Ausleitung')], ['model', t('◫ Modell')], ['structure', t('▤ Struktur')], ['reference', t('⇩ Referenz')], ['setup', t('⚙ Einrichtung')], ['ops', t('⏱ Betrieb')]]
 const kinds = ref(new Set())
 const toggleKind = k => { const s = new Set(kinds.value); s.has(k) ? s.delete(k) : s.add(k); kinds.value = s }

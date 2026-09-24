@@ -1,5 +1,5 @@
 <script setup>
-// Konfigurationen je Import-Plugin (Taloan, 17.09.2026): mehrere benannte Profile (Quelle, Wurzel, Ziel, Zuordnung …),
+// Konfigurationen je Import-Plugin: mehrere benannte Profile (Quelle, Wurzel, Ziel, Zuordnung …),
 // gespeichert im Journal unter plugin:<key> als PluginDataSet „config:<name>“ — damit gelten sie für alle, nicht nur
 // für diesen Browser, und jede Änderung ist nachvollziehbar. get() liefert den Stand der Ansicht, set(obj) stellt ihn her.
 import { ref, onMounted, onUnmounted } from 'vue'
@@ -15,8 +15,7 @@ const names = ref([])
 const current = ref('')
 const name = ref('')
 const busy = ref(false)
-// Ungespeichert? (Taloan, 21.09.: „ich ändere unten Regeln und vergesse das Profil zu speichern“ — und: „automatisch speichern nervt,
-// ich will eine Vorlage auch mal nur mit zwei geänderten Werten benutzen, ohne sie dauerhaft zu ändern“): der Stand der Ansicht (get())
+// Ungespeichert?: der Stand der Ansicht (get())
 // wird jede Sekunde mit dem gespeicherten verglichen; weicht er ab, schwebt unten eine Leiste — speichern, als neues Profil, verwerfen,
 // oder ✕ (Leiste weg, Änderungen bleiben im Browser; bei der nächsten Änderung kommt sie wieder). Nichts speichert sich von selbst.
 const saved = ref('')          // JSON des gespeicherten Standes
@@ -42,7 +41,7 @@ async function load() {
   if (last && names.value.includes(last)) await apply(last)
 }
 async function apply(n) {
-  // „— Profil —“: Felder leeren (set(null)), nichts gemerkt — Taloan, 17.09.
+  // „— Profil —“: Felder leeren (set(null)), nichts gemerkt —
   if (!n) { current.value = ''; name.value = ''; localStorage.removeItem(`journali.profile.${props.plugin}.${props.scope}`); props.set(null); return }
   busy.value = true
   try { const data = await api.get(`/api/plugins/${props.plugin}/data/${encodeURIComponent(PREFIX + n)}`); props.set(data ?? {}); current.value = n; name.value = n; localStorage.setItem(`journali.profile.${props.plugin}.${props.scope}`, n); setTimeout(() => { saved.value = snapshot(); dirty.value = false }, 0) }
@@ -87,7 +86,7 @@ defineExpose({ load })
     <button class="x" @click="remove" :disabled="!current || busy" :title="$t('Profil löschen')">✕</button>
     <span v-if="dirty" class="unsaved" :title="$t('der Stand hier weicht vom gespeicherten Profil ab')">{{ $t("● geändert") }}</span>
   </div>
-  <!-- schwebende Leiste unten (Taloan, 21.09.): geändert — speichern, als neues, verwerfen oder weg damit -->
+  <!-- schwebende Leiste unten: geändert — speichern, als neues, verwerfen oder weg damit -->
   <Teleport to="body">
     <div v-if="showBar()" class="savebar">
       <span>{{ current ? $t('Profil „{0}“ geändert', [current]) : $t('Einstellungen geändert — noch kein Profil') }}</span>
@@ -104,5 +103,5 @@ defineExpose({ load })
 .savebar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 60; display: flex; gap: 8px; align-items: center; padding: 8px 14px; background: var(--pane); border: 1px solid var(--warn); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.45); font-size: 13px; }
 .savebar .x { border: 0; background: none; color: var(--muted); padding: 0 4px; }
 .profiles { display: flex; align-items: center; gap: 4px; }
-.profiles select { min-width: 160px; max-width: 260px; }   /* Profilnamen lesbar (Taloan, 21.09.) */
+.profiles select { min-width: 160px; max-width: 260px; }   /* Profilnamen lesbar */
 </style>

@@ -1,7 +1,7 @@
-// Themen statt Plugins in der Leiste (Taloan, 18.09.2026): die linken Symbole gruppieren nach Funktion — Import, Export,
+// Themen statt Plugins in der Leiste: die linken Symbole gruppieren nach Funktion — Import, Export,
 // Datenblatt, Datenanalyse, Jobs, Werkzeuge. Ein Klick öffnet die Übersicht des Themas (HubView), dort wählt man das Plugin;
 // hat ein Thema genau einen Eintrag, führt das Symbol direkt hin. Kein Plugin bekommt ein eigenes Symbol. Basis-Plugins
-// (Manifest base: [Gruppen], Taloan 19.09.) besitzen ihre Gruppe: sie ist in der Leiste, solange die Basis an ist. Das Thema einer Ansicht nennt das Plugin (view.topic) oder ergibt sich
+// (Manifest base: [Gruppen]) besitzen ihre Gruppe: sie ist in der Leiste, solange die Basis an ist. Das Thema einer Ansicht nennt das Plugin (view.topic) oder ergibt sich
 // aus der Art des Plugins (manifest.kind); das Kontextmenü des Baums ordnet die Knoten-Aktionen genauso.
 import { computed } from 'vue'
 import { plugins } from './plugins.js'
@@ -13,8 +13,8 @@ export const TOPICS = [
   { key: 'export', to: '/export', icon: '⇪', label: t_('Export') },
   { key: 'datasheet', to: '/datasheet', icon: '▤', label: t_('Datenblatt') },
   { key: 'analysis', to: '/analysis', icon: '✓', label: t_('Datenanalyse') },
-  { key: 'translate', to: '/translate', icon: '⇄', label: t_('Übersetzung') },   // Übersetzungsmanagement (Taloan, 21.09.: „haben wir noch gar nicht“)
-  { key: 'classification', to: '/classification', icon: '⌗', label: t_('Klassifikation') },   // ETIM heute, ECLASS/UNSPSC morgen — Klasse → ETIM-Attribute → Werte (Taloan, 22.09.: kein Export)
+  { key: 'translate', to: '/translate', icon: '⇄', label: t_('Übersetzung') },   // Übersetzungsmanagement
+  { key: 'classification', to: '/classification', icon: '⌗', label: t_('Klassifikation') },   // ETIM heute, ECLASS/UNSPSC morgen — Klasse → ETIM-Attribute → Werte
   { key: 'tools', to: '/tools', icon: '⌁', label: t_('Werkzeuge') },
   { key: 'jobs', to: '/jobs', icon: '⏱', label: t_('Jobs') },
 ]

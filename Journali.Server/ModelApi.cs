@@ -15,7 +15,7 @@ public static partial class ModelApi
 {
     [GeneratedRegex("^[a-z][a-z0-9_]*$")]
     private static partial Regex KeyPattern();
-    // Sprach- und Kanalschlüssel dürfen einen Bindestrich tragen (fr-ch, Taloan 20.09.) — Attributschlüssel nicht (Vorlagen, Formeln)
+    // Sprach- und Kanalschlüssel dürfen einen Bindestrich tragen (fr-ch) — Attributschlüssel nicht (Vorlagen, Formeln)
     [GeneratedRegex("^[a-z][a-z0-9_-]*$")]
     private static partial Regex CodePattern();
     public static bool ValidCode(string key) => CodePattern().IsMatch(key);
@@ -28,7 +28,7 @@ public static partial class ModelApi
 
         m.MapGet("/", (Catalog c) => c.ReadModel(View));
 
-        // Zuletzt Zurückgezogenes je Bereich (Taloan, 20.09.: „bis zu 5 zur Wiederherstellung anbieten — weiter zurück muss man ins Journal“):
+        // Zuletzt Zurückgezogenes je Bereich:
         // nur Schlüssel, die im Abbild noch fehlen; wer was sehen darf (admin alles, sonst nur Eigenes), entscheidet die Oberfläche am Akteur
         m.MapGet("/retired", (string kind, IJournal j, Catalog c, int limit = 5) =>
         {
@@ -124,7 +124,7 @@ public static partial class ModelApi
                 return users.Count > 0 ? Bad($"{key} wird benutzt von: {string.Join(", ", users)}") : write(Model.ChannelStream + key, Types.ChannelRetired, new ChannelRetired(key));
             }));
 
-        // Status-Vokabular (Taloan, 22.09.2026): frei benennbar, je Sprache; draft bleibt (Startstatus neuer Knoten)
+        // Status-Vokabular: frei benennbar, je Sprache; draft bleibt (Startstatus neuer Knoten)
         m.MapPut("/statuses/{key}", (string key, StatusDefinition body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidCode, (model, write) => write(Model.StatusStream + key, Types.StatusDefined, body with { Key = key, Label = body.Label ?? new() })));
         m.MapDelete("/statuses/{key}", (string key, HttpRequest req, Catalog c) =>
@@ -159,7 +159,7 @@ public static partial class ModelApi
                 }
                 if (def.Required is { Count: 0 }) def = def with { Required = null };
                 if (!AttributeTypes.All.Contains(def.Type)) return Bad($"Unbekannter Typ: {def.Type}");
-                // Was zum Typ nicht passt, fällt stillschweigend weg (Taloan, 17.09.: kein Fehler für Felder, die nicht infrage kommen) —
+                // Was zum Typ nicht passt, fällt stillschweigend weg —
                 // ein Typwechsel nimmt Muster, Einheit, Werteliste, Spalten, Achsen, mehrfach mit, wo sie nicht gelten.
                 var number = def.Type is AttributeTypes.Integer or AttributeTypes.Decimal;
                 def = def with
@@ -181,11 +181,11 @@ public static partial class ModelApi
                 }
                 if (def.Axes?.Except([Axes.Locale, Axes.Channel]).Any() ?? false) return Bad("Achsen: nur locale und channel.");
                 if (def.Channels?.Except(model.Channels.Keys).Any() ?? false) return Bad("Unbekannter Kanal in channels.");
-                // Ein Typwechsel darf unvollständig sein (Taloan, 17.09.: Durchschalten ohne Fehler) — enum ohne Liste, rows ohne Spalten;
+                // Ein Typwechsel darf unvollständig sein — enum ohne Liste, rows ohne Spalten;
                 // Werte setzen geht dann noch nicht, das Modell zeigt den fehlenden Teil an.
                 if (def.List is not null && !model.Lists.ContainsKey(def.List)) return Bad($"Werteliste {def.List} gibt es nicht.");
                 if (def.Unit is not null && !model.Units.ContainsKey(def.Unit)) return Bad($"Unbekannte Einheit: {def.Unit} — unter Einheiten anlegen.");
-                // Typwechsel mit Bestand (Taloan, 21.09.: „ich kann wirklich den Datentyp ändern, obwohl schon Werte erfasst sind?“): erst gegen die
+                // Typwechsel mit Bestand: erst gegen die
                 // vorhandenen Werte prüfen — was zum neuen Typ (oder ohne die Achse) nicht mehr passt, wird gezählt und der Wechsel verweigert;
                 // ?force=true schreibt trotzdem (die Werte bleiben im Journal, lesen sie sich dann als Text ohne Prüfung — die Datenanalyse findet sie)
                 // eindeutig einschalten mit Doppelten im Bestand: kein force — das Merkmal wäre sonst eine Lüge
@@ -297,7 +297,7 @@ public static partial class ModelApi
                 : body.Factor <= 0 ? Bad("factor muss > 0 sein.")
                 : write(Model.UnitStream + key, Types.UnitDefined, body with { Key = key, Label = body.Label ?? new(), Quantity = body.Quantity.Trim().ToLowerInvariant() })));
 
-        // Wörterbuch (9): Begriff → Text je Sprache — Glossar und Gedächtnis der Übersetzung (Taloan, 21.09.)
+        // Wörterbuch (9): Begriff → Text je Sprache — Glossar und Gedächtnis der Übersetzung
         m.MapGet("/terms", (Catalog c) => c.With((model, _, _) => model.Terms.Values.OrderBy(t => t.Key).Select(t => new { t.Key, text = t.Text, t.Note, t.LastNumber }).ToList()));
         m.MapPut("/terms/{key}", (string key, TermDefined body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
@@ -341,7 +341,7 @@ public static partial class ModelApi
         if (!changed) return null;
         var count = 0; var examples = new List<string>();
         var tree = c.With((_, t, _) => t);   // die Sperre ist schon gehalten (Command läuft in With) — Monitor ist wiedereintrittsfähig
-        // eindeutig wird eingeschaltet (Taloan, 21.09.): jeder Wert, den es schon an einem anderen Knoten gibt, zählt — sonst wäre das Merkmal eine Lüge
+        // eindeutig wird eingeschaltet: jeder Wert, den es schon an einem anderen Knoten gibt, zählt — sonst wäre das Merkmal eine Lüge
         if (!before.Unique && after.Unique)
         {
             var ax = new Axis(before.Key, null, null); var seen = new Dictionary<string, Node>();

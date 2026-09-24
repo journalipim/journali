@@ -1,6 +1,6 @@
 <script setup>
-// Zwei schmale Balken in der Statusleiste (Taloan, 22.09.2026): Woche und Monat. Ein Balken füllt sich mit dem, was
-// genutzt wurde (Taloan, 23.09.2026); was noch verfügbar ist, sagt der Tooltip.
+// Zwei schmale Balken in der Statusleiste: Woche und Monat. Ein Balken füllt sich mit dem, was
+// genutzt wurde; was noch verfügbar ist, sagt der Tooltip.
 // Zahlen aus /api/health (läuft ohnehin alle 3 s); Klick führt in die Einstellungen.
 import { computed } from 'vue'
 import { t } from '../i18n.js'
@@ -9,7 +9,7 @@ const props = defineProps({ usage: Object })   // { week: {used,max}, month: {us
 const PARTS = [['week', '▤'], ['month', '▦']]
 const n = v => v >= 2147483647 ? '∞' : (v ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
 const frei = p => p?.max >= 2147483647 ? p.max : Math.max(0, (p?.max ?? 0) - (p?.used ?? 0))
-/// Ohne Kontingent (max 0) ist alles aufgebraucht — 0 ist sofort erreicht (Taloan, 23.09.2026)
+/// Ohne Kontingent (max 0) ist alles aufgebraucht — 0 ist sofort erreicht
 const pct = p => p?.max ? Math.min(100, Math.round((p.used / p.max) * 100)) : 100
 /// Viel Luft ist grün; wird es eng, gelb; ist das Kontingent voll, rot
 const tone = p => pct(p) >= 90 ? 'neg' : pct(p) >= 70 ? 'warn' : 'pos'
@@ -28,13 +28,13 @@ const label = key => key === 'week' ? t('Woche') : t('Monat')
 </template>
 
 <style scoped>
-/* feste Breiten: die Leiste wackelt nicht, wenn die Zahlen wachsen (Taloan, 22.09.) */
-.usage-mini { display: inline-flex; align-items: center; gap: 22px; }   /* Abstand zwischen den Gruppen: sonst weiss niemand, welche Zahl zu welchem Balken gehört (Taloan, 23.09.) */
+/* feste Breiten: die Leiste wackelt nicht, wenn die Zahlen wachsen */
+.usage-mini { display: inline-flex; align-items: center; gap: 22px; }   /* Abstand zwischen den Gruppen: sonst weiss niemand, welche Zahl zu welchem Balken gehört */
 .u { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
 .ico { font-size: 11px; opacity: .7; }
 .track { width: 44px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
 .fill { display: block; height: 100%; }
 .fill.pos { background: var(--pos); } .fill.warn { background: var(--warn); } .fill.neg { background: var(--neg); }
-.pc { width: 34px; text-align: left; font-size: 11px; }   /* links: die Zahl gehört an ihren Balken, nicht an den nächsten (Taloan, 23.09.) */
+.pc { width: 34px; text-align: left; font-size: 11px; }   /* links: die Zahl gehört an ihren Balken, nicht an den nächsten */
 .pc.pos { color: var(--muted); } .pc.warn { color: var(--warn); } .pc.neg { color: var(--neg); }
 </style>

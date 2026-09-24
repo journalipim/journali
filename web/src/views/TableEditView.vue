@@ -1,5 +1,5 @@
 <script setup>
-// Massenbearbeitung wie in Excel (Taloan, 17.09.2026): die Kinder eines Knotens — oder alle Nachfahren einer Rolle —
+// Massenbearbeitung wie in Excel: die Kinder eines Knotens — oder alle Nachfahren einer Rolle —
 // als Zeilen, Attribute als Spalten; Zellen wie in der Knotenansicht, Änderungen sammeln sich (gelb) und gehen als
 // ein Stapel ins Journal. Einfügen aus Excel (Tab-getrennt) füllt ab der markierten Zelle nach rechts und unten.
 // Quelle: GET /api/nodes/{id}/table — Werte aufgelöst (geerbt kursiv), eigene Werte kennt der Server (own).
@@ -19,9 +19,9 @@ import HtmlCell from '../components/HtmlCell.vue'
 import { t as t_ } from '../i18n.js'
 import { L } from '../i18n.js'
 
-const props = defineProps({ id: String, role: String, deep: String, attrs: String })   // attrs: Spalten fest vorgegeben (Taloan, 22.09.: ETIM-Merkmale einer Klasse)
+const props = defineProps({ id: String, role: String, deep: String, attrs: String })   // attrs: Spalten fest vorgegeben
 const router = useRouter()
-// Eigenes Fenster (Taloan, 17.09.): Schliessen übernimmt die Änderungen — ohne Nachfrage, ohne Speichern-Knopf drücken
+// Eigenes Fenster: Schliessen übernimmt die Änderungen — ohne Nachfrage, ohne Speichern-Knopf drücken
 const popup = !!useRoute().query.popup
 const model = computed(() => store.model)
 const locales = computed(() => model.value?.locales.map(l => l.code) ?? [])
@@ -52,13 +52,13 @@ watch(locale, load)
 onMounted(async () => { if (!tree.loaded) await tree.load(); load() })
 
 // Spalten: nach Sicht geordnet (und beschränkt), sonst alle in Gruppenreihenfolge des Modells; Achsen der Variante sind fest
-// Feste Spalten sind virtuelle Spalten in derselben Liste (Taloan: ★-Spalte links fest, je Zeile ihr eigenes Attribut):
+// Feste Spalten sind virtuelle Spalten in derselben Liste:
 // #label = die Zelle des ★-Attributs der Zeile (bearbeitbar), #sku und #axes nur lesend. Ein Attribut, das ALLE Zeilen
 // benennt, steht rechts nicht noch einmal.
 const VIRTUAL = [
   { key: '#label', virtual: 'label', type: 'text', label: { de: '★' } },
 ]
-// Kein ★ (auch kein geerbtes) und kein fixierter Name: die erste Spalte (Taloan)
+// Kein ★ (auch kein geerbtes) und kein fixierter Name: die erste Spalte
 const labelKeyOf = r => r.row.labelAttribute ?? (r.row.name ? null : baseColumns.value[0]?.key ?? null)
 const labelCol = r => { const k = labelKeyOf(r); return k ? data.value?.columns.find(c => c.key === k) ?? null : null }
 const commonDef = computed(() => commonLabel.value ? data.value?.columns.find(x => x.key === commonLabel.value) : null)
@@ -71,11 +71,11 @@ const headTitle = c => c.virtual === 'label'
 const eff = (r, c) => c.virtual === 'label' ? labelCol(r) : c
 const commonLabel = computed(() => { const keys = new Set((data.value?.rows ?? []).map(labelKeyOf)); return keys.size === 1 && !keys.has(null) ? [...keys][0] : null })
 const columns = computed(() => [...VIRTUAL, ...attrColumns.value])
-// Reihenfolge wie in der Excel-Vorlage (Taloan, 20.09.): Achsen, dann Pflicht, dann der Rest; in einer Sicht gilt deren Reihenfolge
+// Reihenfolge wie in der Excel-Vorlage: Achsen, dann Pflicht, dann der Rest; in einer Sicht gilt deren Reihenfolge
 const axisKeys = computed(() => new Set(childRole.value === 'variant' ? (data.value?.node?.axes ?? tree.byId.get(props.id)?.axes ?? []) : []))
 const isReq = c => !!c.required && (typeof c.required !== 'object' || Object.keys(c.required).length > 0)
 const kindOf = c => c.virtual ? '' : c.unique ? 'info' : axisKeys.value.has(c.key) ? 'axis' : isReq(c) ? 'required' : ''   // eindeutig = Schlüssel, grau wie im Export
-// Spaltenfilter (Taloan, 20.09.): das Feld neben der Sicht sucht Spalten (Name oder Schlüssel), nicht Inhalte
+// Spaltenfilter: das Feld neben der Sicht sucht Spalten (Name oder Schlüssel), nicht Inhalte
 const colMatch = c => { const q = filter.value.trim().toLowerCase(); return !q || store.name(c).toLowerCase().includes(q) || c.key.toLowerCase().includes(q) }
 const tab = ref('')   // '' = alle, sonst Schlüssel der Attributgruppe
 const tabs = computed(() => { const keys = new Set((data.value?.columns ?? []).map(c => c.key)); return (model.value?.groups ?? []).map(g => ({ key: g.key, label: L(g.label) || g.label?.en || g.key, n: (g.attributes ?? []).filter(k => keys.has(k)).length })).filter(g => g.n > 0) })
@@ -117,7 +117,7 @@ function set(r, c0, v) {
   if ((val || null) === cur) m.delete(k); else m.set(k, val)
   dirty.value = m
 }
-// Offene Änderungen: geänderte Zellen, neue, gelöschte, verschobene Zeilen — alles geht als ein Stapel (Taloan, 21.09.)
+// Offene Änderungen: geänderte Zellen, neue, gelöschte, verschobene Zeilen — alles geht als ein Stapel
 const fresh = computed(() => rows.value.filter(r => r.isNew).length)
 const retired = computed(() => rows.value.filter(r => r.retired && !r.isNew).length)
 const moved = computed(() => rows.value.filter(r => r.moved && !r.retired).length)
@@ -130,7 +130,7 @@ async function save() {
     const commands = commandsOf()
     const res = await api.post('/api/batch', { commands: commands.map(({ _key, ...c }) => c), batch: 'tab-' + Date.now().toString(36) })
     if (res.error) {
-      // Fehler (Taloan, 21.09.: „SKU 14 gibt es schon — 0 geschrieben, und alle Änderungen waren weg“): was nicht geschrieben wurde, bleibt
+      // Fehler: was nicht geschrieben wurde, bleibt
       // als Änderung stehen (grün, Zähler), damit man es korrigiert — nur die geschriebenen Zellen fallen aus der Liste
       const written = new Set(commands.slice(0, res.results.length).map(c => c._key).filter(Boolean))
       const keep = new Map([...dirty.value].filter(([k]) => !written.has(k)))
@@ -181,7 +181,7 @@ function commandsOf() {
     if (isNew && !v) continue
     out.push({ op: 'attribute.set', args: { node: isNew ? '@' + node : node, attribute, locale: d?.perLocale ? locale.value : null, value: v }, _key: k })   // _key: welche Zelle — bleibt bei einem Fehler stehen
   }
-  // gelöschte Zeilen (Taloan, 21.09.: Rechtsklick → löschen), dann die Reihenfolge der verschobenen — beide erst jetzt, im selben Stapel
+  // gelöschte Zeilen, dann die Reihenfolge der verschobenen — beide erst jetzt, im selben Stapel
   for (const r of data.value.rows) if (r.retired && !r.isNew) out.push({ op: 'node.retire', args: { node: r.row.id }, _key: 'retire|' + r.row.id })
   if (props.deep !== '1') out.push(...orderCommands(data.value.rows, props.id))
   return out
@@ -205,7 +205,7 @@ function onPaste(e) {
   e.preventDefault()
   const tr = td.parentElement; const ri = rows.value.findIndex(r => r.row.id === tr.dataset.id); const ci = [...tr.children].indexOf(td) - FIXED
   if (ri < 0 || ci < 0) return
-  // ein einzelner Wert (Taloan, 21.09.: „Strg+C, Zeile runter, Strg+V — nichts“): in die Zelle, oder in den ganzen markierten Bereich wie in Excel
+  // ein einzelner Wert: in die Zelle, oder in den ganzen markierten Bereich wie in Excel
   if (!text.includes('\t') && !text.includes('\n')) {
     const v = text.trim(); const s0 = sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1) ? sel.value : { r0: ri, r1: ri, c0: ci, c1: ci }
     let n = 0, locked = 0, bad = 0
@@ -214,7 +214,7 @@ function onPaste(e) {
     return
   }
   const lines = text.replace(/\r/g, '').split('\n').filter((l, i, a) => l !== '' || i < a.length - 1)
-  // Spaltenlage bleibt wie in Excel (Taloan): gesperrte Zellen werden ausgelassen, nicht übersprungen
+  // Spaltenlage bleibt wie in Excel: gesperrte Zellen werden ausgelassen, nicht übersprungen
   let n = 0, locked = 0, bad = 0
   lines.forEach((line, dy) => {
     const r = rows.value[ri + dy]; if (!r) return
@@ -224,9 +224,9 @@ function onPaste(e) {
 }
 const FIXED = 1   // vorn die Zeilenspalte (Nummer, Zeile markieren), dann alle Spalten in einer Liste (virtuelle voran): td-Index = FIXED + Spaltenindex
 const ROWSEL_W = 40
-// Spaltenbreite wie Excel-Autofit (Taloan: „viel zu breit“): längster sichtbarer Wert oder Kopf, 70–260 px; am Kopfrand ziehbar
+// Spaltenbreite wie Excel-Autofit: längster sichtbarer Wert oder Kopf, 70–260 px; am Kopfrand ziehbar
 const widths = ref({})   // key → px (von Hand gezogen)
-// gemessen, nicht geschätzt (Taloan: „0537…“ bei sechs Zeichen): Textbreite im Zellfont + Innenabstand der Box
+// gemessen, nicht geschätzt: Textbreite im Zellfont + Innenabstand der Box
 const measure = (() => { let ctx = null; return (s, font) => { ctx ??= document.createElement('canvas').getContext('2d'); ctx.font = font; return ctx.measureText(s).width } })()
 const autoWidth = computed(() => {
   const out = {}
@@ -243,7 +243,7 @@ const colWidth = c => widths.value[c.key] ?? autoWidth.value[c.key] ?? 120
 const tableWidth = computed(() => ROWSEL_W + columns.value.reduce((s, c) => s + colWidth(c), 0))
 function startResize(e, c) { e.preventDefault(); e.stopPropagation(); drag = { kind: 'resize', key: c.key, x: e.clientX, w: colWidth(c) } }
 
-// ---- Bereich wie in Excel (Taloan): Klick = Anker, Shift+Klick = Rechteck, Strg+A = alles; Zeilen/Spalten als Indizes
+// ---- Bereich wie in Excel: Klick = Anker, Shift+Klick = Rechteck, Strg+A = alles; Zeilen/Spalten als Indizes
 // über die sichtbaren Zeilen und die Attributspalten (columns), Achsen und gesperrte Spalten werden beim Schreiben übersprungen.
 const sel = ref(null)          // { r0, c0, r1, c1 } normalisiert
 const anchor = ref(null)
@@ -254,10 +254,10 @@ function cellAt(el) {
   const tr = td.parentElement; const ri = rows.value.findIndex(r => r.row.id === tr.dataset.id); const ci = [...tr.children].indexOf(td) - FIXED
   return ri < 0 || ci < 0 ? null : { ri, ci }
 }
-// Maus wie in Excel (Taloan): Drücken und Ziehen zieht den Bereich auf — kein Textmarkieren des Browsers;
+// Maus wie in Excel: Drücken und Ziehen zieht den Bereich auf — kein Textmarkieren des Browsers;
 // das Ausfüllkästchen (kleines Quadrat unten rechts am Bereich) zieht die Werte nach unten.
 let drag = null   // { kind: 'select' | 'fill' | 'resize' | 'rows' | 'rowsel', base }
-// ---- Ganze Zeilen (Taloan, 21.09.): Klick in die Zeilenspalte markiert die Zeile, Strg dazu/weg, Shift den Bereich; ziehen über
+// ---- Ganze Zeilen: Klick in die Zeilenspalte markiert die Zeile, Strg dazu/weg, Shift den Bereich; ziehen über
 // unmarkierte Zeilen zieht die Auswahl auf, ziehen an markierten Zeilen verschiebt sie (Strich zeigt den Platz).
 // Rechtsklick auf eine Zeile öffnet das Menü: kopieren, einfügen, duplizieren, verschieben, löschen.
 const rowSel = ref(new Set())   // Ids der markierten Zeilen
@@ -351,7 +351,7 @@ function duplicateRows() {
   const at = rows.value.indexOf(picked[picked.length - 1]) + 1
   pasteRowsText(picked.map(rowText).join('\n'), at)
 }
-// Rechtsklick auf eine Zeile (Taloan, 21.09.): nicht markierte Zeile wird erst markiert, dann das Menü
+// Rechtsklick auf eine Zeile: nicht markierte Zeile wird erst markiert, dann das Menü
 function onRowMenu(e, ri) {
   if (e.target.closest('input, textarea, select, .cell-input')) return
   const r = rows.value[ri]; if (!r) return
@@ -407,7 +407,7 @@ async function placeHandle() {
   handle.value = { top: a.bottom - b.top + scrollBox.value.scrollTop - 4, left: a.right - b.left + scrollBox.value.scrollLeft - 4 }
 }
 watch(sel, placeHandle, { deep: true })
-// auch wenn sich die Spalten verschieben — ein neuer Wert macht die Spalte breiter (Autofit), gezogene Breite, Filter (Taloan)
+// auch wenn sich die Spalten verschieben — ein neuer Wert macht die Spalte breiter (Autofit), gezogene Breite, Filter
 watch([tableWidth, dirty, rows], placeHandle)
 const norm = (a, b) => ({ r0: Math.min(a.ri, b.ri), r1: Math.max(a.ri, b.ri), c0: Math.min(a.ci, b.ci), c1: Math.max(a.ci, b.ci) })
 const inSel = (ri, ci) => (!!sel.value && ri >= sel.value.r0 && ri <= sel.value.r1 && ci >= sel.value.c0 && ci <= sel.value.c1) || (rowSel.value.size > 0 && rowSel.value.has(rows.value[ri]?.row.id))
@@ -436,7 +436,7 @@ function write(r, c0, text) {
   set(r, c, t); return 'ok'
 }
 const textOf = (r, c) => shown(r, c) ?? inherited(r, c) ?? ''
-// Ergänzungsvorschläge einer Spalte (Taloan, 20.09.): die Werte, die es in der Spalte schon gibt — nur Text, nicht bei langem Text
+// Ergänzungsvorschläge einer Spalte: die Werte, die es in der Spalte schon gibt — nur Text, nicht bei langem Text
 const suggestionsOf = c => { const seen = new Set(); for (const r of rows.value) { const v = String(textOf(r, c) ?? '').trim(); if (v && v.length <= 80 && !v.includes('\n')) seen.add(v) } return [...seen].sort((a, b) => a.localeCompare(b, 'de')) }
 // Strg+D: oberste Zelle des Bereichs in alle darunter; bei einer Zelle: die Zelle darüber hinein
 function fillDown() {
@@ -471,7 +471,7 @@ function fillSeries() {
   store.toast(t_('Reihe: {0} Zellen — noch nicht gespeichert', [n]))
 }
 // Entf: eigene Werte im Bereich löschen (geerbte bleiben, sie sind nicht hier)
-// Entf: eigene Werte im Bereich löschen — und sagen, warum nichts passiert (Taloan): gesperrt (Formel, Vorlage, Achse,
+// Entf: eigene Werte im Bereich löschen — und sagen, warum nichts passiert: gesperrt (Formel, Vorlage, Achse,
 // gilt hier nicht) oder geerbt (der Wert steht am Vorfahren, hier gibt es nichts zu löschen)
 function clearSel() {
   let n = 0, locked = 0, inheritedN = 0
@@ -531,7 +531,7 @@ function onKey(e) {
   const editing = e.target.classList?.contains('cell-input')
   // im Eingabefeld: Enter speichert (macht die Zelle) und springt nach unten, Tab nach rechts
   if (editing && (e.key === 'Enter' || e.key === 'Tab') && !e.shiftKey) { commitAndMove(e, e.key === 'Enter' ? 1 : 0, e.key === 'Tab' ? 1 : 0); return }
-  // Pfeile in der Eingabe (Taloan): hoch/runter übernehmen und wechseln; links/rechts nur, wenn die Zelle durch Tippen
+  // Pfeile in der Eingabe: hoch/runter übernehmen und wechseln; links/rechts nur, wenn die Zelle durch Tippen
   // geöffnet wurde (Excel: Eingeben-Modus) oder der Cursor schon am Rand steht (Bearbeiten-Modus: F2, Doppelklick)
   if (editing && e.key.startsWith('Arrow')) {
     const typed = e.target.dataset.mode === 'typed', len = e.target.value.length
@@ -569,13 +569,13 @@ function onKey(e) {
   else if (e.key === 'Delete' && sel.value && (sel.value.r0 !== sel.value.r1 || sel.value.c0 !== sel.value.c1 || !canWrite(rows.value[sel.value.r0], columns.value[sel.value.c0]))) { e.preventDefault(); clearSel() }
   else if (e.key === 'Escape' && (sel.value || rowSel.value.size)) { sel.value = null; rowSel.value = new Set() }
 }
-// Enter auf einer markierten Zelle (nicht in der Eingabe) springt nach unten wie in Excel, Umschalt+Enter nach oben (Taloan, 21.09.) —
+// Enter auf einer markierten Zelle (nicht in der Eingabe) springt nach unten wie in Excel, Umschalt+Enter nach oben —
 // vor der Zelle selbst (capture), die Enter sonst als „bearbeiten“ nimmt; bearbeiten bleibt F2, Doppelklick oder tippen
 function onEnterCapture(e) {
   if (e.key !== 'Enter' || e.ctrlKey || e.altKey) return
   const t = e.target
   if (!t?.closest?.('td.cell') || t.classList?.contains('cell-input') || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return
-  // in der letzten Zeile: Enter hängt eine neue Zeile an und springt hinein (Taloan, 21.09.)
+  // in der letzten Zeile: Enter hängt eine neue Zeile an und springt hinein
   const at = cellAt(t)
   if (at && !e.shiftKey && at.ri === rows.value.length - 1 && data.value && props.deep !== '1') { e.preventDefault(); e.stopPropagation(); addRow(); nextTick(() => { const to = focusCell(rows.value.length - 1, at.ci); if (to) { anchor.value = to; sel.value = norm(to, to) } }); return }
   if (move(e, e.shiftKey ? -1 : 1, 0)) e.stopPropagation()
@@ -681,12 +681,12 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
 .crumb { color: var(--muted); text-decoration: none; }
 .crumb:hover { color: var(--text); }
 .tab th.ro { color: var(--muted); font-style: italic; }
-/* Kopf wie im Excel-Export (Taloan, 20.09.): Pflicht dunkelrot, Achse dunkelgrün, Kennung dunkelgrau — weisse Schrift */
+/* Kopf wie im Excel-Export: Pflicht dunkelrot, Achse dunkelgrün, Kennung dunkelgrau — weisse Schrift */
 .tab th.required { background: #c00000; color: #fff; font-style: normal; }
 .tab th.axis { background: #375623; color: #fff; font-style: normal; }
 .tab th.info { background: #595959; color: #fff; font-style: normal; }
 .tab th .suffix { margin-left: 5px; font-size: 10px; font-weight: normal; opacity: .6; }
-/* Tabellengefühl (Taloan): Zellen dicht an dicht mit Gitterlinien statt Kästchen mit Luft; Zeilen flacher */
+/* Tabellengefühl: Zellen dicht an dicht mit Gitterlinien statt Kästchen mit Luft; Zeilen flacher */
 .tab th, .tab td { padding: 0; border-right: 1px solid var(--line); height: 24px; }
 .tab th { padding: 0 6px; }
 .tab td.attr, .tab td.mono { padding: 0 6px; }
@@ -694,7 +694,7 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
 .tab :deep(.cell-box), .tab :deep(.cell-input), .tab :deep(.cell-select), .tab :deep(.cell-date) { height: 24px; border-radius: 0; border-color: transparent; background: transparent; }
 .tab :deep(.cell-box:focus) { border-color: var(--accent); background: transparent; }
 .tab :deep(.cell-input) { border-color: var(--accent); background: var(--pane); }
-/* Zeilenspalte (Nummer) und die Namensspalte daneben bleiben beim Rollen nach rechts stehen — man muss wissen, was man bearbeitet (Taloan) */
+/* Zeilenspalte (Nummer) und die Namensspalte daneben bleiben beim Rollen nach rechts stehen — man muss wissen, was man bearbeitet */
 .tab th:first-child, .tab :deep(td:first-child) { position: sticky; left: 0; z-index: 2; background: var(--pane); }
 .tab th:nth-child(2), .tab :deep(td:nth-child(2)) { position: sticky; left: 40px; z-index: 2; background: var(--bg); box-shadow: 1px 0 0 var(--line); }
 .tab :deep(td.label .cell-box:not(.locked)) { font-weight: 600; }

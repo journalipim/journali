@@ -1,4 +1,4 @@
-// Der Datenmapper (Taloan, 17.09.2026): Spalten einer Tabelle (CSV, Excel, JSON, Zwischenablage — die Quelle liefert
+// Der Datenmapper: Spalten einer Tabelle (CSV, Excel, JSON, Zwischenablage — die Quelle liefert
 // ein Plugin) auf das Modell abbilden, mit so viel Verstand wie möglich:
 //   - Spalte → Attribut über Schlüssel, Label (alle Sprachen), Synonyme, normalisierte Namen, Ähnlichkeit
 //   - Sprache aus dem Spaltennamen (name_de, Name (EN), name.en)
@@ -106,11 +106,11 @@ export function convert(raw, def, model) {
 }
 
 // Passt der (schon umgeformte) Wert zum Typ? null = ja, sonst der Grund. Was hier durchfällt, kommt nicht in den Stapel:
-// im Knotenmodus wird die Datei abgelehnt, im Assistenten muss die Zelle korrigiert werden (Taloan, 17.09.).
+// im Knotenmodus wird die Datei abgelehnt, im Assistenten muss die Zelle korrigiert werden.
 export function validate(v, def, model) {
   if (v == null || v === '') return null
   switch (def?.type) {
-    // Grund ohne den ganzen Wert (Taloan, 21.09.: „den Grund sieht man erst einen Kilometer rechts“) — der Wert steht daneben
+    // Grund ohne den ganzen Wert — der Wert steht daneben
     case 'integer': return /^[+-]?\d+$/.test(v) ? null : t_('keine ganze Zahl')
     case 'decimal': return /^[+-]?\d+(\.\d+)?$/.test(v) ? null : t_('keine Zahl')
     case 'boolean': return v === 'true' || v === 'false' ? null : t_('nicht ja/nein')
@@ -141,7 +141,7 @@ export function matchListValue(s, def, model) {
 //   { column, target, attribute?, locale?, newType?, newKey?, score, why }
 //   target: 'attr' (vorhandenes Attribut) | 'new' (neues Attribut) | 'id' | 'parent' | 'external' | 'skip'
 //   (Altlast 'sku' aus gespeicherten Profilen: wird beim Planen wie 'attr' auf ein eindeutiges Attribut gleichen Namens gelesen)
-//   Ein Attribut mit unique (Taloan, 21.09.: „alles über eindeutig“) findet vorhandene Knoten über seinen Wert — SKU, EAN, MATNR, jedes für sich.
+//   Ein Attribut mit unique findet vorhandene Knoten über seinen Wert — SKU, EAN, MATNR, jedes für sich.
 export function suggest(columns, rows, model, { locales = null, external = null } = {}) {
   const locs = locales ?? (model?.locales ?? []).map(l => l.code)
   const attrs = model?.attributes ?? []
@@ -156,7 +156,7 @@ export function suggest(columns, rows, model, { locales = null, external = null 
     const out = { column: col, target: 'skip', attribute: null, locale, newType: sniff.type === 'id' ? 'text' : sniff.type, newKey: n, score: 0, why: '', sniff }
     const pick = (target, attribute, score, why) => { if (score > out.score) Object.assign(out, { target, attribute, score, why }) }
     // 0. Spalten des eigenen Exports (Plugin export): role/status/journali_label sind Anzeige, axis_<key> ist die Achse
-    // eigene Spalten (Taloan, 21.09.): journali_<feld>_<wurzel> — die Wurzel steht im Kopf; alte Form (id, parent, role, status, journali_label, journali_root) weiter
+    // eigene Spalten: journali_<feld>_<wurzel> — die Wurzel steht im Kopf; alte Form (id, parent, role, status, journali_label, journali_root) weiter
     // Wurzel-Ids sind nicht immer g-<hex> (Saatgut: g-mastertree) — alles nach journali_<feld>_ ist die Wurzel
     const own = String(col).trim().match(/^journali_(id|parent|role|status|label|root)(?:_(.+))?$/i)
     if (own) {
@@ -167,12 +167,12 @@ export function suggest(columns, rows, model, { locales = null, external = null 
       else out.why = t_('Exportspalte, nur Anzeige')
       return out
     }
-    if (n === 'status') { out.target = 'status'; out.why = t_('Status — Schlüssel oder Tabelle → Status'); return out }   // Fremdstatus (SAP 300/400 …) über die Umwandlung „Tabelle“ abbilden (Taloan, 22.09.)
+    if (n === 'status') { out.target = 'status'; out.why = t_('Status — Schlüssel oder Tabelle → Status'); return out }   // Fremdstatus (ERP 300/400 …) über die Umwandlung „Tabelle“ abbilden
     if (n === 'role' || n === 'journali_label') { out.internal = true; out.why = t_('Exportspalte, nur Anzeige'); return out }
     if (n === 'journali_root') { out.target = 'root'; out.internal = true; out.why = t_('Wurzel — macht die Id eineindeutig'); return out }
     if (n.startsWith('axis_') && attrs.some(a => norm(a.key) === n.slice(5))) pick('attr', attrs.find(a => norm(a.key) === n.slice(5)).key, 1, t_('Variantenachse'))
     // 1. Schlüsselspalten
-    // Elternteil vor der Id-Erkennung: eine Spalte „parent“ voller p-…-Ids ist der Vater, nicht die Id des Knotens (Taloan, 21.09.: „doppelt — warum?“)
+    // Elternteil vor der Id-Erkennung: eine Spalte „parent“ voller p-…-Ids ist der Vater, nicht die Id des Knotens
     if (SYNONYMS.parent.includes(n)) pick('parent', null, n.startsWith('parent') || sniff.type === 'id' ? 1 : 0.85, t_('Elternteil (SKU oder Id des Produkts / der Gruppe)'))
     if (sniff.type === 'id' || n === 'id' || n === 'journali_id') pick('id', null, 1, 'journali-Id')
     if (external && (n === norm(external) || n === norm(external) + '_id' || n === 'external' || n === 'externe_kennung' || n === 'remote_id')) pick('external', null, 0.95, t_('Kennung {0}', [external]))
@@ -213,14 +213,14 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const col = t => mapping.findIndex(m => m.target === t)
   // Schlüsselspalten: eigene Ziele — und jedes eindeutige Attribut (wird geschrieben und findet zugleich)
   const iId = col('id'), iParent = col('parent'), iExt = col('external'), iRoot = col('root')
-  // Id + Wurzel (Taloan, 21.09.): nennt die Datei journali_root, zählt eine Id nur unter genau dieser Wurzel — sonst fremde Datenbank, die Zeile ist neu
+  // Id + Wurzel: nennt die Datei journali_root, zählt eine Id nur unter genau dieser Wurzel — sonst fremde Datenbank, die Zeile ist neu
   const rootOf = id => { const a = tree.ancestors?.(id) ?? []; return a.length ? a[0].id : id }
   const uniq = new Set((model.attributes ?? []).filter(a => a.unique).map(a => a.key))
   // Altlast: Ziel 'sku' aus alten Profilen = das eindeutige Attribut sku, wenn es eins gibt
   mapping = mapping.map(m => m.target === 'sku' ? (uniq.has('sku') ? { ...m, target: 'attr', attribute: 'sku' } : { ...m, target: 'skip' }) : m)
   const keyCols = mapping.map((m, i) => m.target === 'attr' && uniq.has(m.attribute) && !m.locale ? i : -1).filter(i => i >= 0)   // Spalten eindeutiger Attribute
   const raw = (row, i) => i < 0 ? null : (Array.isArray(row) ? row[i] : row[columns[i]])
-  // Umwandlung je Spalte (transform.js, Taloan 21.09.: „zwischendurch in die Daten eingreifen“) — vor Typprüfung und Schreiben
+  // Umwandlung je Spalte (transform.js) — vor Typprüfung und Schreiben
   const cell = (row, i) => { if (i < 0) return null; const steps = mapping[i]?.steps; const v = raw(row, i); return steps?.length ? applySteps(steps, v, { get: c => { const j = columns.indexOf(c); return j < 0 ? '' : raw(row, j) } }) : v }
   const byKey = new Map(); const byExt = new Map()   // byKey: „attribut\u0001wert“ → Zeile
   for (const r of tree.rows) { for (const [k, v] of Object.entries(r.keys ?? {})) byKey.set(k + '\u0001' + String(v).trim(), r); if (external && r.external?.[external]) byExt.set(String(r.external[external]), r) }
@@ -228,7 +228,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const keysOf = row => { const o = {}; for (const i of keyCols) { const v = String(cell(row, i) ?? '').trim(); if (v) o[mapping[i].attribute] = v } return o }
   const keyText = row => Object.values(keysOf(row))[0] ?? ''
   const findKey = row => { for (const [k, v] of Object.entries(keysOf(row))) { const hit = byKey.get(k + '\u0001' + v); if (hit) return { node: hit, k, v } } return null }
-  // Eindeutig (Taloan, 21.09.: „Import-Plugins müssen auf Eindeutigkeit prüfen“): ein Wert eines eindeutigen Attributs darf weder einem anderen
+  // Eindeutig: ein Wert eines eindeutigen Attributs darf weder einem anderen
   // Knoten im Bestand gehören noch zweimal in der Datei stehen — der Server lehnt es ohnehin ab, hier steht es schon in der Vorschau
   const seenUnique = new Map()   // „attribut\u0001wert“ → Zeile, die ihn zuerst hatte
   const uniqueBad = (def, v, node, ri) => {
@@ -246,7 +246,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
     if (!key || attrs.has(key)) { m.target = attrs.has(key) ? 'attr' : 'skip'; m.attribute = key; continue }
     const have = newAttrs.get(key)
     if (have) { if (m.locale) have.axes = ['locale']; continue }
-    // Gruppe ist Pflicht (Taloan, 17.09.): ohne Attributgruppe kein neues Attribut — der Plan meldet es, der Import wartet
+    // Gruppe ist Pflicht: ohne Attributgruppe kein neues Attribut — der Plan meldet es, der Import wartet
     newAttrs.set(key, { key, label: { de: splitLocale(m.column, (model.locales ?? []).map(l => l.code)).base, en: splitLocale(m.column, (model.locales ?? []).map(l => l.code)).base }, type: m.newType === 'enum' ? 'text' : (m.newType || 'text'), group: m.newGroup || null, axes: m.locale ? ['locale'] : [], inheritable: false })
   }
   const requiredNew = [...newAttrs.values()].filter(a => !a.group).map(a => a.key)
@@ -254,9 +254,9 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
 
   // Zeilennummern in Meldungen sind Excel-Zeilen (Kopfzeile = 1)
   const combos = new Map()   // je Produkt die Achsen-Kombinationen (Bestand + Datei)
-  // changes: je Zeile, was passiert — zum Anschauen vor dem Schreiben (Taloan, 21.09.: „die geänderten und die neuen anschauen“)
+  // changes: je Zeile, was passiert — zum Anschauen vor dem Schreiben
   const commands = []; const stats = { rows: rows.length, create: 0, update: 0, unchanged: 0, values: 0, skipped: 0, problems: [], invalid: [], missingGroup: requiredNew, newListValues: {}, changes: [] }
-  // Listenwerte, die es noch nicht gibt (Taloan, 20.09.: „Werte sollten zugefügt werden — genau dazu ist die Excel-Bearbeitung da“): der Plan
+  // Listenwerte, die es noch nicht gibt: der Plan
   // merkt sie je Liste (Schlüssel = normierter Text, Bezeichnung = der Text), das Schreiben legt sie vor dem Stapel an
   const conv = (raw, def) => {
     let v = convert(raw, def, model)
@@ -269,15 +269,14 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
   const targetGroups = new Set()
   // Pflichtattribute der Kindrolle (irgendein Kanal verlangt sie): beim Anlegen müssen sie da sein
   const requiredFor = r => [...attrs.values()].filter(a => a.required && Object.keys(a.required).length && (!a.levels || a.levels.includes(r)) && a.type !== 'rows' && a.type !== 'formula' && a.type !== 'html')
-  // Lücke bei ausgeblendeten Spalten (Taloan, 21.09.: „der Anwender nimmt die letzte Zeile, fügt sie mehrfach ein, ändert Werte — und kopiert die
-  // versteckte Id mit … oder schneidet sie aus und fügt sie als erste ein“): dieselbe Id mehrmals in der Datei. Die Reihenfolge sagt nichts.
+  // Lücke bei ausgeblendeten Spalten: dieselbe Id mehrmals in der Datei. Die Reihenfolge sagt nichts.
   // Das Original ist die Zeile, die zum Knoten im Bestand passt: erst die SKU des Knotens, sonst die Zeile mit den meisten gleichen Werten.
   // Alle anderen sind Kopien → neue Knoten (Id fällt weg, gemeldet); eine Kopie ohne jede Änderung (gleiche SKU wie das Original) ist ein Duplikat und wird übergangen.
   const byIdRows = new Map()
   rows.forEach((row, ri) => { const id = String(cell(row, iId) ?? '').trim(); if (id) { if (!byIdRows.has(id)) byIdRows.set(id, []); byIdRows.get(id).push(ri) } })
   const similarity = (row, nodeId) => { const cur = existing?.get(nodeId); if (!cur) return 0; let n = 0; mapping.forEach((m, ci) => { if (m.target !== 'attr') return; const def = attrs.get(m.attribute); if (!def) return; const k = `${def.key}|${def.perLocale ? m.locale ?? '' : ''}`; if (k in cur && String(cur[k] ?? '') === String(convert(cell(row, ci), def, model) ?? '')) n++ }); return n }
   const dropId = new Map(), dupRow = new Set()   // Zeilen, deren Id nicht zählt (Kopie: Zeile → Text fürs Protokoll) / die ganz übergangen werden (Duplikat)
-  stats.notes = []   // Hinweise, keine Fehler (Taloan, 21.09.: rot und „neu“ neben „0 neu“ war verwirrend)
+  stats.notes = []   // Hinweise, keine Fehler
   for (const [id, ris] of byIdRows) {
     if (ris.length < 2) continue
     const node = tree.byId.get(id)
@@ -311,14 +310,14 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       if (r !== 'variant' && parent.role !== 'group') { stats.problems.push(t_('Zeile {0}: {1} braucht eine Gruppe als Elternteil, „{2}“ ist {3}', [ri + 2, r, parent.label, parent.role])); stats.skipped++; return }
       // Pflicht beim Anlegen: was die Rolle verlangt, muss die Zeile mitbringen (Achsen prüft der Variantenzweig)
       const miss = requiredFor(r).filter(a => !(parent.axes ?? []).includes(a.key) && !mapping.some((m, ci) => (m.target === 'attr' && m.attribute === a.key) && convert(cell(row, ci), a, model) != null)).map(a => a.key)
-      // die Meldung nennt die Spalte der Datei, nicht nur das Attribut (Taloan, 20.09.: „ich habe keine Spalte name in der Excel“ — es war name_de)
+      // die Meldung nennt die Spalte der Datei, nicht nur das Attribut
       if (miss.length) { const colOf = k => { const cs = mapping.filter(m => m.target === 'attr' && m.attribute === k).map(m => m.column); return cs.length ? t_('{0} (Spalte {1} leer)', [k, cs.join(' / ')]) : t_('{0} (keine Spalte zugeordnet)', [k]) }; stats.problems.push(t_('Zeile {0}: Pflicht fehlt — {1}', [ri + 2, miss.map(colOf).join(', ')])); stats.skipped++; return }
       ref = `r${ri}`
       if (r === 'variant') {
         const axisValues = {}
         for (const a of parent.axes ?? []) { const m = mapping.find(x => x.target === 'attr' && x.attribute === a); const v = m ? conv(cell(row, mapping.indexOf(m)), attrs.get(a)) : null; if (v == null) { stats.problems.push(t_('Zeile {0}: Achse {1} fehlt', [ri + 2, a])); } else axisValues[a] = v }
         if (Object.keys(axisValues).length < (parent.axes ?? []).length) { stats.skipped++; return }
-        // Kombination aller Achsen je Produkt eindeutig (Taloan, 20.09.): gegen den Bestand und gegen die Datei selbst — der Server prüft es auch, aber erst beim Schreiben
+        // Kombination aller Achsen je Produkt eindeutig: gegen den Bestand und gegen die Datei selbst — der Server prüft es auch, aber erst beim Schreiben
         if ((parent.axes ?? []).length) {
           const combo = parent.axes.map(a => axisValues[a]).join('\u0001')
           if (!combos.has(parent.id)) combos.set(parent.id, new Set((tree?.rows ?? []).filter(x => x.role === 'variant' && x.parent === parent.id).map(x => parent.axes.map(a => x.axisValues?.[a] ?? '').join('\u0001'))))
@@ -353,7 +352,7 @@ export function plan({ columns, rows, mapping, model, tree, target, role, existi
       diffs.push({ attribute: def.key, locale: loc, from: cur ? cur[k] ?? null : null, to: v ?? null })
       changed++
     })
-    // Status (Taloan, 22.09.): Spalte → Status-Schlüssel des Modells, meist über die Umwandlung „Werte ersetzen nach Tabelle“ (SAP 300 → review …);
+    // Status: Spalte → Status-Schlüssel des Modells, meist über die Umwandlung „Werte ersetzen nach Tabelle“ (ERP 300 → review …);
     // ein Wert, der kein Status ist, wird gemeldet und nicht geschrieben
     const iSt = mapping.findIndex(m => m.target === 'status')
     if (iSt >= 0 && (node ? node.role : newRole) !== 'group') {
@@ -408,7 +407,7 @@ export function fromObjects(list) {
   return { columns, rows: rows.map(r => columns.map(c => r[c] ?? '')) }
 }
 
-// ---- Die Spalten, die unter einem Knoten für seine Kinder gelten (Taloan, 17.09.: „eine Excel passt immer 1:1 zum Importknoten“):
+// ---- Die Spalten, die unter einem Knoten für seine Kinder gelten:
 // Attribute der Gruppen, die am Knoten gelten (angehängt oder geerbt) und an der Kindrolle aktiv sind (activeFrom),
 // erlaubt an der Rolle (levels), ohne Zeilen- und Formelattribute. Vorlage, Export und strenger Import nehmen dieselbe Liste.
 export const DEPTH = { group: 0, product: 1, variant: 2 }
@@ -432,9 +431,9 @@ export function childColumns(model, nodeView, childRole, axes, locales) {
   const attrs = all.filter(a => !a.unique)
   const isReq = a => !!a.required && (typeof a.required !== 'object' || Object.keys(a.required).length > 0)   // am Knoten ist required schon ein Ja/Nein
   const cols = a => a.perLocale ? locales.map(l => ({ key: `${a.key}_${l}`, attr: a.key, locale: l, def: a })) : [{ key: a.key, attr: a.key, def: a }]
-  // Pflicht direkt nach id, sku und Achsen (Taloan, 20.09.) — was fehlen darf, steht hinten
+  // Pflicht direkt nach id, sku und Achsen — was fehlen darf, steht hinten
   return [{ key: 'id', note: t_('leer = neu anlegen; gefüllt = diesen Knoten ändern') },
-    ...all.filter(a => a.unique).flatMap(a => cols(a).map(c => ({ ...c, note: t_('eindeutig — findet vorhandene Knoten, wenn id leer ist') }))),   // Schlüssel (Taloan, 21.09.); Pflicht, wenn das Attribut Pflicht ist
+    ...all.filter(a => a.unique).flatMap(a => cols(a).map(c => ({ ...c, note: t_('eindeutig — findet vorhandene Knoten, wenn id leer ist') }))),   // Schlüssel; Pflicht, wenn das Attribut Pflicht ist
     ...(childRole === 'variant' ? (axes ?? []).map(a => ({ key: 'axis:' + a, note: t_('Variantenachse — Pflicht beim Anlegen'), attr: a })) : []),
     ...attrs.filter(isReq).flatMap(cols), ...attrs.filter(a => !isReq(a)).flatMap(cols)]
 }

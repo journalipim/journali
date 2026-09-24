@@ -3,7 +3,7 @@ namespace Journali.Core.Entries;
 /// <summary>
 /// Ströme des Modells und das Saatgut für ein leeres Journal. Das Modell
 /// selbst steht im Journal (docs/pflegestruktur.md, Grundsatz); dies hier
-/// ist nur, womit ein neues Journal anfängt (Taloan, 17.09.2026): Einheiten,
+/// ist nur, womit ein neues Journal anfängt: Einheiten,
 /// zwei Sprachen, zwei Kanäle, Gruppen mastergroup/logistics/physical, Werteliste
 /// Farben mit RAL, Sicht DefaultView je Knotentyp, Wurzelknoten „MasterTree“.
 /// Fehlende Ströme werden bei jedem Start nachgesät (Catalog.SeedMissing).
@@ -23,13 +23,13 @@ public static class Model
     public const string LabelStream = "settings:label:";
     public const string MasterLocaleStream = "settings:master_locale";
     public const string MasterChannelStream = "settings:master_channel";
-    /// <summary>Das Team, das jede Anlage mitbringt (Taloan, 23.09.2026): nicht löschbar, umbenennbar; hierher fällt, wer kein eigenes trägt.</summary>
+    /// <summary>Das Team, das jede Anlage mitbringt: nicht löschbar, umbenennbar; hierher fällt, wer kein eigenes trägt.</summary>
     public const string InitTeam = "init";
     public const string RelationStream = "relation:";
     /// <summary>Gruppe der Werte am Medium (20).</summary>
     public const string MediaGroup = "media";
 
-    /// <summary>Das Saatgut-Attribut SKU — eindeutig (unique) wie jedes andere Schlüsselattribut; im Code sonst nichts Besonderes (Taloan, 21.09.2026).</summary>
+    /// <summary>Das Saatgut-Attribut SKU — eindeutig (unique) wie jedes andere Schlüsselattribut; im Code sonst nichts Besonderes.</summary>
     public const string SkuAttribute = "sku";
 
     /// <summary>Der Wurzelknoten des Saatguts — feste Id, damit er nur einmal entsteht.</summary>
@@ -46,7 +46,7 @@ public static class Model
         yield return new(MasterChannelStream, Types.MasterChannelDefined, Types.Serialize(new MasterChannelDefined("web")));
         yield return new(ChannelStream + "web", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("web", Labels.Of("Web", "Web"))));
         yield return new(ChannelStream + "print", Types.ChannelDefined, Types.Serialize(new ChannelDefinition("print", Labels.Of("Print", "Print"))));
-        // Status-Saat (Taloan, 22.09.2026): die drei bisherigen — danach frei erweiterbar (z. B. Überprüfung, Freigabe, Verkauf DE, Verkauf weltweit)
+        // Status-Saat: die drei bisherigen — danach frei erweiterbar (z. B. Überprüfung, Freigabe, Verkauf DE, Verkauf weltweit)
         yield return new(StatusStream + "draft", Types.StatusDefined, Types.Serialize(new StatusDefinition("draft", Labels.Of("Entwurf", "Draft"), "muted", "○", 10)));
         yield return new(StatusStream + "active", Types.StatusDefined, Types.Serialize(new StatusDefinition("active", Labels.Of("aktiv", "active"), "pos", "●", 20)));
         yield return new(StatusStream + "discontinued", Types.StatusDefined, Types.Serialize(new StatusDefinition("discontinued", Labels.Of("ausgelaufen", "discontinued"), "neg", "✗", 30)));
@@ -78,7 +78,7 @@ public static class Model
         foreach (var g in groups)
             yield return new(GroupStream + g.Key, Types.AttributeGroupDefined, Types.Serialize(g));
 
-        // Märkte (Taloan, 21.09.2026, Ausleitung): Liste ohne Saatwerte — der Anwender trägt seine Länder ein; Spalte fallback = ein Markt bekommt
+        // Märkte: Liste ohne Saatwerte — der Anwender trägt seine Länder ein; Spalte fallback = ein Markt bekommt
         // das Sortiment seines Fallback-Markts, solange er nichts Eigenes sagt. Attribut markets (mehrfach, vererbbar) am Verkaufbaren; leer = überall.
         yield return new(ListStream + Projections.Publication.MarketList, Types.ListDefined, Types.Serialize(new ListDefinition(Projections.Publication.MarketList, Labels.Of("Märkte", "Markets"), [Projections.Publication.FallbackColumn])));
         // Werteliste Farben: Eintrag = Farbe mit Namen je Sprache und RAL-Nummer (RAL Classic).
@@ -118,19 +118,19 @@ public static class Model
         yield return new(RelationStream + "related", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("related", Labels.Of("Verwandt", "Related"), Labels.Of("Verwandt", "Related"), Symmetric: true)));
         yield return new(RelationStream + "bom", Types.RelationTypeDefined, Types.Serialize(new RelationTypeDefinition("bom", Labels.Of("Stückliste", "Bill of materials"), Labels.Of("Stückliste von", "Part of"), Group: "relation_component")));
 
-        // Workflows (27, Taloan 21.09.2026): Redaktion mit Korrekturschleife, und „zur Übersetzung“ — Saatgut, in den Einstellungen änderbar
+        // Workflows (27): Redaktion mit Korrekturschleife, und „zur Übersetzung“ — Saatgut, in den Einstellungen änderbar
         yield return new(Projections.Workflows.Stream + "review", Types.WorkflowDefined, Types.Serialize(new WorkflowDefined(Labels.Of("Redaktion", "Editorial"),
             [new("draft", Labels.Of("Entwurf", "Draft"), "muted"), new("review", Labels.Of("Prüfung", "Review"), "warn"), new("rework", Labels.Of("Korrektur", "Rework"), "neg"), new("approved", Labels.Of("Freigegeben", "Approved"), "pos", true)],
             [new("submit", "draft", "review", Labels.Of("zur Prüfung", "Submit")), new("resubmit", "rework", "review", Labels.Of("erneut zur Prüfung", "Resubmit")),
-             new("reject", "review", "rework", Labels.Of("zurück zur Korrektur", "Reject"), null, true), new("approve", "review", "approved", Labels.Of("freigeben", "Approve"), ["admin"], false, ["release:web"]),   // Wirkung: Freigabe für web an allen vollständigen Varianten (Taloan, 21.09.)
+             new("reject", "review", "rework", Labels.Of("zurück zur Korrektur", "Reject"), null, true), new("approve", "review", "approved", Labels.Of("freigeben", "Approve"), ["admin"], false, ["release:web"]),   // Wirkung: Freigabe für web an allen vollständigen Varianten
              new("reopen", "approved", "draft", Labels.Of("zurückziehen", "Withdraw"), ["admin"], true, ["revoke:web"])], "draft")));
         yield return new(Projections.Workflows.Stream + "translation", Types.WorkflowDefined, Types.Serialize(new WorkflowDefined(Labels.Of("Übersetzung", "Translation"),
             [new("none", Labels.Of("nicht angefordert", "Not requested"), "muted"), new("to_translate", Labels.Of("zur Übersetzung", "To translate"), "warn"), new("translated", Labels.Of("übersetzt", "Translated"), "accent"), new("checked", Labels.Of("geprüft", "Checked"), "pos", true)],
             [new("request", "none", "to_translate", Labels.Of("zur Übersetzung geben", "Request translation")), new("done", "to_translate", "translated", Labels.Of("übersetzt", "Translated")),
              new("check", "translated", "checked", Labels.Of("geprüft", "Checked")), new("back", "translated", "to_translate", Labels.Of("zurück zur Übersetzung", "Back to translation"), null, true),
-             new("again", "checked", "to_translate", Labels.Of("erneut zur Übersetzung", "Translate again"))], "none", null, null, PerLocale: true)));   // je Sprache ein Zustand (Taloan, 22.09.2026): „Französisch in Korrektur, Deutsch freigegeben“
+             new("again", "checked", "to_translate", Labels.Of("erneut zur Übersetzung", "Translate again"))], "none", null, null, PerLocale: true)));   // je Sprache ein Zustand: „Französisch in Korrektur, Deutsch freigegeben“
 
-        // Vorschau-Presets (Taloan, 21.09.2026): was beim Import je Bild vorausberechnet wird — Saatgut, in den Einstellungen änderbar
+        // Vorschau-Presets: was beim Import je Bild vorausberechnet wird — Saatgut, in den Einstellungen änderbar
         yield return new(Projections.Media.PresetStream + "thumb", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Kachel", "Tile"), 256, 256, "webp", 80)));
         yield return new(Projections.Media.PresetStream + "web", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Web", "Web"), 1200, 1200, "webp", 82)));
         yield return new(Projections.Media.PresetStream + "print", Types.MediaPresetDefined, Types.Serialize(new MediaPresetDefined(Labels.Of("Druck", "Print"), 3000, 3000, "jpeg", 90)));
@@ -142,7 +142,7 @@ public static class Model
         yield return new(GroupStream + "relation_media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("relation_media", Labels.Of("Medienzuordnung", "Media link"))));
         yield return new(AttributeStream + "position", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("position", Labels.Of("Reihenfolge", "Position"), AttributeTypes.Integer, Group: "relation_media")));
         yield return new(AttributeStream + "usage", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("usage", Labels.Of("Verwendung", "Usage"), AttributeTypes.Text, Group: "relation_media")));
-        // Vererbung von Medien (Taloan, 18.09.2026, entschieden): ein Medium mit inherit=true gilt an allen Subitems — als Ableitung, ohne
+        // Vererbung von Medien: ein Medium mit inherit=true gilt an allen Subitems — als Ableitung, ohne
         // Kopie. Ein geerbtes Medium lässt sich an keiner Ebene „entfernen“, nur die Vererbung stoppen: eine Zuordnung zum selben
         // Medium mit stop=true an einem Knoten nimmt es dort und an allem darunter heraus (wieder lösen = wieder da).
         yield return new(AttributeStream + "inherit", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("inherit", Labels.Of("an Subitems vererben", "inherit to subitems"), AttributeTypes.Boolean, Group: "relation_media")));
@@ -157,7 +157,7 @@ public static class Model
             var (de, en) = viewNames[role];
             yield return new(ViewStream + "defaultview_" + role, Types.ViewDefined, Types.Serialize(new ViewDefinition("defaultview_" + role, Labels.Of("DefaultView" + de, "DefaultView" + en), items, role)));
         }
-        // Sicht „Verkaufbares“ (Taloan, 20.09.2026: bei 180 Attributen sieht niemand, welche fünf die Variante selbst trägt): nur die Gruppen,
+        // Sicht „Verkaufbares“: nur die Gruppen,
         // in denen das Verkaufbare typischerweise eigene Werte hat — Kennungen, Logistik, Physisches; der Anwender passt sie an seine Gruppen an
         yield return new(ViewStream + "sellable", Types.ViewDefined, Types.Serialize(new ViewDefinition("sellable", Labels.Of("Verkaufbares", "Sellable"), [new ViewItem("logistics"), new ViewItem("physical")], Roles.Variant)));
     }

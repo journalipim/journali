@@ -7,8 +7,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Vollsicherung und Wiederherstellung (Taloan, 23.09.2026: „neuer Docker irgendwo, Sicherung einspielen, muss das
-/// System wiederherstellen, soweit die Assets im Postgres liegen“). Der Unterschied zu <c>pg_dump</c>: dieses Format
+/// Vollsicherung und Wiederherstellung. Der Unterschied zu <c>pg_dump</c>: dieses Format
 /// hängt an nichts — nicht an der Postgres-Fassung, nicht am Schema, nicht am Treiber des Medienspeichers.
 /// <para>Eine Sicherung ist ein Verzeichnis: <c>journal.ndjson.gz</c> (ein Eintrag je Zeile, mit Nummer, Zeit,
 /// Urheber), <c>media/</c> (die Blobs, benannt nach ihrem Schlüssel) und <c>backup.json</c> (Zeitpunkt, Anzahl,
@@ -21,15 +20,13 @@ public static class BackupApi
     public sealed record Body(string Dir, bool Media = true, bool Config = true, bool Plugins = true);
 
     /// <summary>
-    /// Was neben dem Journal liegt und ohne das ein wiederhergestelltes System nicht läuft (Taloan, 23.09.2026:
-    /// „wo liegen denn Rollen und Rechte, Workflows usw.?“ — die stehen im Journal; diese drei Dateien nicht):
+    /// Was neben dem Journal liegt und ohne das ein wiederhergestelltes System nicht läuft:
     /// <c>auth.json</c> (Passwort-Hashes, API-Token, Sitzungen), <c>media.json</c> (Speicher-Einstellung, bei S3 mit
     /// Zugangsdaten), <c>mail.json</c> (Mailserver mit Passwort), <c>jobs/secrets.json</c> (Token der Jobs). Wer sie mitsichert, hat Geheimnisse in der Sicherung
     /// — wie im Datenverzeichnis selbst. Wer sie weglässt, kommt in ein wiederhergestelltes System nicht hinein.
     /// </summary>
     /// <remarks>
-    /// Die Lizenz ist <b>nicht</b> dabei (Taloan, 23.09.2026: „ich mache eine Sicherung, mache drei neue isolierte
-    /// Instanzen und restore dreimal — dann habe ich aus einer Lizenz vier gemacht“). Sie steht in der Datenbank, auf
+    /// Die Lizenz ist <b>nicht</b> dabei. Sie steht in der Datenbank, auf
     /// die Kennung dieser Instanz ausgestellt; eine wiederhergestellte Instanz bekommt eine neue Kennung und läuft im
     /// Testbetrieb, bis eine Lizenz für sie ausgestellt wird.
     /// </remarks>
@@ -179,8 +176,7 @@ public static class BackupApi
     public sealed record Meta(DateTimeOffset At, long Entries, long Media, long Bytes, string? Storage, string Actor, int Config = 0, int Plugins = 0);
 
     /// <summary>
-    /// Ein Plugin-Verzeichnis kopieren — ohne <c>node_modules</c> (Taloan, 23.09.2026: „sogar die Plugins sollten mit
-    /// rein“). Die Pakete bleiben draussen: sie sind für ein Betriebssystem gebaut — sharp und pdfjs bringen
+    /// Ein Plugin-Verzeichnis kopieren — ohne <c>node_modules</c>. Die Pakete bleiben draussen: sie sind für ein Betriebssystem gebaut — sharp und pdfjs bringen
     /// Binärdateien mit, die auf einem anderen Rechner nicht laufen. Ein <c>npm install</c> stellt sie her, die
     /// Fassungen stehen in package-lock.json, die mitkommt.
     /// </summary>

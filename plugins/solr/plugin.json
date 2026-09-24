@@ -6,8 +6,8 @@
     "en": "Import: Solr"
   },
   "description": {
-    "de": "Solr-Kern (infolox/prodexa-Export): Baum, Attribute, Relationen — Ansicht im Browser (JSONP) und Skript für grosse Läufe.",
-    "en": "Solr core (infolox/prodexa export): tree, attributes, relations — browser view (JSONP) and a script for big runs."
+    "de": "Solr-Kern (Export eines anderen PIM): Baum, Attribute, Relationen — Ansicht im Browser (JSONP) und Skript für grosse Läufe.",
+    "en": "Solr core ( export): tree, attributes, relations — browser view (JSONP) and a script for big runs."
   },
   "kind": "import",
   "runs": "browser",

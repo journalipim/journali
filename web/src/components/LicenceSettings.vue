@@ -1,7 +1,7 @@
 <script setup>
-// Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“). Sie wird nicht gepflegt, sondern eingespielt —
+// Die Lizenz. Sie wird nicht gepflegt, sondern eingespielt —
 // darum eine Datei, kein Stammdatum. Was sie sagt, gilt für die ganze Anlage: Einträge je Woche und Monat, das
-// Was ein Team an KI verbraucht, geht an seinen Anbieter — journali lizenziert das nicht (Taloan, 23.09.2026).
+// Was ein Team an KI verbraucht, geht an seinen Anbieter — journali lizenziert das nicht.
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
@@ -26,13 +26,13 @@ async function load() {
 }
 onMounted(load)
 
-// Schlüssel (Taloan, 23.09.2026): die Instanz fordert an und signiert, der Shop gibt frei, der Aussteller stellt aus —
+// Schlüssel: die Instanz fordert an und signiert, der Shop gibt frei, der Aussteller stellt aus —
 // eingelöst wird nur, was hier angefordert wurde. Auf Vorrat und ohne Team; das Team wählt die IT beim Einlösen.
 const anforderungen = ref([])
 const einloesungen = ref([])
 const pakete = ref([])
 const neu = ref({ wahl: 'reset:pro', count: 1 })   // wahl: 'reset:<tarif>' oder der Schlüssel eines Pakets
-// Reset getrennt für Pro und Enterprise (Taloan, 24.09.2026)
+// Reset getrennt für Pro und Enterprise
 const RESETS = [['pro', 'Pro'], ['enterprise', t_('Enterprise')]]
 const paketTitel = p => `${zahl(p.week)} / Woche · ${zahl(p.month)} / Monat · ${p.days} Tage`
 const paketName = k => pakete.value.find(p => p.key === k)?.label ?? RESETS.find(r => r[0] === k)?.[1] ?? k

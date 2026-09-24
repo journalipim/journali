@@ -3,9 +3,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Spiegel und Schnappschuss: zwei Dateien, die den Start schnell machen und sonst nichts bedeuten (Taloan, 24.09.2026:
-/// „habe ich dann eine 3-GB-Postgres und daneben noch mal einen 3-GB-Cache?“ — ja, und deshalb soll man es abschalten
-/// können, ohne an die Umgebung zu gehen). Die Einstellung steht in <c>betrieb.json</c> und gilt ab dem nächsten Start;
+/// Spiegel und Schnappschuss: zwei Dateien, die den Start schnell machen und sonst nichts bedeuten. Die Einstellung steht in <c>betrieb.json</c> und gilt ab dem nächsten Start;
 /// die Dateien selbst lassen sich sofort wegwerfen — beide sind Kopien, keine Wahrheit.
 /// </summary>
 public static class BetriebApi

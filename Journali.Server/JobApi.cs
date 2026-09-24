@@ -6,7 +6,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Jobs verwalten (Plugin tasker, Taloan 19.09.2026): anlegen/ändern, an/aus, jetzt starten, abbrechen, Läufe und Logs.
+/// Jobs verwalten (Plugin tasker): anlegen/ändern, an/aus, jetzt starten, abbrechen, Läufe und Logs.
 /// Die Definition steht im Journal (job:&lt;key&gt;), Geheimnisse in jobs/secrets.json; der JobRunner führt aus.
 /// </summary>
 public static class JobApi
@@ -23,7 +23,7 @@ public static class JobApi
         api.MapGet("/jobs/plugins", (Catalog c) =>
         {
             var manifests = PluginApi.Scan(runner.PluginDir);
-            // eine Zeile je Dienst (Taloan: mehrere Dienste je Plugin): label des Dienstes, sonst des Plugins
+            // eine Zeile je Dienst: label des Dienstes, sonst des Plugins
             return c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled && manifests.ContainsKey(p.Key))
                 .SelectMany(p => PluginApi.Processes(manifests[p.Key].Raw).Select(x => new
                 {
@@ -36,7 +36,7 @@ public static class JobApi
                 })).ToList());
         });
 
-        // Geheimnisse am Profil eines Plugins (Taloan, 21.09.: Token gehört zum Profil, dann braucht der Job kein Feld): PUT {values:{token:…}} setzt (leer = weg),
+        // Geheimnisse am Profil eines Plugins: PUT {values:{token:…}} setzt (leer = weg),
         // GET sagt nur, welche Schlüssel gesetzt sind — der Wert verlässt den Server nie
         api.MapGet("/plugins/{key}/secrets/{name}", (string key, string name) => Results.Ok(new { keys = Secrets.Get(runner.Dir, Secrets.ProfileKey(key, name)).Keys.Order().ToList() }));
         api.MapPut("/plugins/{key}/secrets/{name}", (string key, string name, ProfileSecrets body, HttpRequest req) =>
@@ -100,8 +100,7 @@ public static class JobApi
             var run = runner.Start(key, "manual", out var error);
             return run is null ? Bad(error ?? "nicht gestartet") : Results.Ok(new { run });
         });
-        // Einen Lauf an den Tasker abgeben (Taloan, 23.09.2026: „dass der Job an den Tasker übergeben wurde, wo ich ihn
-        // abbrechen kann“). Der Job entsteht oder wird aktualisiert, gehört dem Anfragenden — auf sein Kontingent geht,
+        // Einen Lauf an den Tasker abgeben. Der Job entsteht oder wird aktualisiert, gehört dem Anfragenden — auf sein Kontingent geht,
         // was der Lauf schreibt — und läuft sofort los. Wer pflegen darf, darf das; es ist dieselbe Arbeit, nur nebenan.
         api.MapPost("/jobs/{key}/uebergabe", (string key, UebergabeBody body, HttpRequest req, Catalog c) =>
         {
@@ -125,7 +124,7 @@ public static class JobApi
             return run is null ? Bad(error ?? "nicht gestartet") : Results.Ok(new { job = key, run });
         });
 
-        // Anhalten und weiter (Taloan, 23.09.2026): der Lauf wartet beim nächsten Stapel, statt zu sterben.
+        // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben.
         api.MapPost("/jobs/{key}/pause", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing()
             : runner.Pause(key) ? Results.Ok(new { paused = true }) : Bad("Der Job läuft nicht."));
         api.MapPost("/jobs/{key}/resume", (string key, HttpRequest req) => Actor(req) is null ? ActorMissing()
@@ -133,7 +132,7 @@ public static class JobApi
         // Was der Lauf selbst zwischen zwei Stapeln fragt — er kennt nur seinen Jobschlüssel
         api.MapGet("/jobs/{key}/signal", (string key, Catalog c) =>
         {
-            // Ein volles Kontingent hält den Lauf an, statt ihn sterben zu lassen (Taloan, 23.09.2026). Fortgesetzt wird
+            // Ein volles Kontingent hält den Lauf an, statt ihn sterben zu lassen. Fortgesetzt wird
             // er nur von Hand — sonst nähmen wartende Jobs das neue Kontingent im selben Moment wieder weg.
             var eigner = c.With((_, _, _) => c.Jobs.All.GetValueOrDefault(key)?.Owner);
             if (eigner is not null && !Auth.HatKontingent(c, eigner, fuerJob: true)) runner.Pause(key, "Kontingent");

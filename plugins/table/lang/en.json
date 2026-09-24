@@ -158,7 +158,7 @@
  "Beispiele": "Examples",
  "Umwandlung: Schritte zwischen Quelle und Ziel (Zahl, Ja/Nein, Datum, Ersetzen, Aufteilen, Verbinden, Bedingung …)": "Transformation: steps between source and target (number, yes/no, date, replace, split, join, condition …)",
  "Attributgruppe — Pflicht: ohne Gruppe gilt das Attribut nirgends": "Attribute group — required: without a group the attribute applies nowhere",
- "Spalte anklicken statt tippen (Taloan, 21.09.) — wird mit Komma angehängt": "Click a column instead of typing — appended with a comma",
+ "Spalte anklicken statt tippen — wird mit Komma angehängt": "Click a column instead of typing — appended with a comma",
  "nach oben": "up",
  "nach unten": "down",
  "Schritt entfernen": "Remove step",

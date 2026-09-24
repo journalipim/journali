@@ -5,7 +5,7 @@ using Journali.Core.Projections;
 namespace Journali.Server;
 
 /// <summary>
-/// Rückgängig je Aktion (Taloan, 18.09.2026): ein Stapel (batch) verbindet die Einträge einer Aktion — Rückzug eines
+/// Rückgängig je Aktion: ein Stapel (batch) verbindet die Einträge einer Aktion — Rückzug eines
 /// Teilbaums, Tabellen-Sitzung, Import. Rückgängig schreibt neue Einträge, die den Stand VOR dem Stapel wiederherstellen;
 /// das Journal bleibt lückenlos, der Rückgängig-Schritt ist selbst ein Stapel und damit wieder rückgängig-fähig.
 /// Je Strom und Achse zählt der erste Eintrag des Stapels: sein Vorgänger im Strom ist der alte Stand.
@@ -29,8 +29,7 @@ public static class Undo
     }
 
     /// <summary>
-    /// Der letzte rücknehmbare Schritt an einem Knoten (Taloan, 23.09.2026: „ich habe Name rausgelöscht, wollte das
-    /// rückgängig machen, geht aber nicht“) — aus dem Journal, nicht aus dem Browser. Der Strom wird rückwärts
+    /// Der letzte rücknehmbare Schritt an einem Knoten — aus dem Journal, nicht aus dem Browser. Der Strom wird rückwärts
     /// gelesen, bis ein Eintrag dabei ist, den wir tragen; alles andere (Anlegen, Gruppen, Relationen) wird
     /// übersprungen. Ein Rückgängig ist selbst ein Eintrag und damit wieder rücknehmbar.
     /// </summary>

@@ -73,4 +73,4 @@ export default {
     ] },
   ],
 }
-// Ob der Batteriepass gilt, sagt allein die Geltung am Knoten (dpp_scope = battery, Schritt 0) — kein Namensraten daneben (Taloan, 21.09.)
+// Ob der Batteriepass gilt, sagt allein die Geltung am Knoten (dpp_scope = battery, Schritt 0) — kein Namensraten daneben

@@ -1,6 +1,4 @@
-// Plugin docs — Ansicht „Dokumente durchsuchen" (Taloan, 22.09.2026: „Firmen haben Marketingdokumente, Vorteils-
-// argumentationen, Datenblätter, Kataloge irgendwo rumliegen … man dropt sie an einen Knoten, sie werden im
-// Hintergrund gelesen und stehen dann bereit"). Gesucht wird über den Volltextindex des Servers (/api/docs/search):
+// Plugin docs — Ansicht „Dokumente durchsuchen". Gesucht wird über den Volltextindex des Servers (/api/docs/search):
 // Wörter, Zahlen, Normbezeichnungen. Jeder Treffer zeigt Dokument, Seite, Textstelle — und den Knoten, an dem es hängt.
 // Gelesen wird von einem Job (job.mjs); diese Ansicht sagt auch, wie viel schon im Index steht und was noch fehlt.
 
@@ -80,7 +78,7 @@ async function mount(root, ctx) {
           : null,
         el('span', { class: 'grow' }),
         el('span', { class: 'muted', style: 'font-size:12px' }, st.status?.ready === false ? t_('✗ kein Index') : `${(st.status?.media ?? 0).toLocaleString('de-DE')} Dokumente · ${(st.status?.chunks ?? 0).toLocaleString('de-DE')} Abschnitte`),
-        // Scans haben keine Textebene — der Text steckt in Bildern und bräuchte OCR (Taloan, 22.09.2026)
+        // Scans haben keine Textebene — der Text steckt in Bildern und bräuchte OCR
         st.status?.scans ? el('span', { class: 'warn', style: 'font-size:12px', title: t_('PDFs ohne Textebene: der Text steckt in Bildern und ist erst nach OCR durchsuchbar') }, t_('◌ {0} brauchen OCR', [st.status.scans])) : null,
         st.status?.errors ? el('button', {
           class: 'x neg', style: 'font-size:12px',

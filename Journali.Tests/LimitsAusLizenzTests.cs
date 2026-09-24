@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Das Init Team trägt die Limits der Lizenz (Taloan, 23.09.2026). In einer Anlage, die älter ist als die Limits, stand
+// Das Init Team trägt die Limits der Lizenz. In einer Anlage, die älter ist als die Limits, stand
 // dort 0/0, während die Lizenz 20.000/100.000 sagte — die Reparatur lief nie, weil sie an LicenceDir hing und das
 // Saatgut vor dessen Zuweisung startete. Sie hängt jetzt an nichts mehr und lässt sich auch später aufrufen.
 public class LimitsAusLizenzTests
@@ -44,10 +44,10 @@ public class LimitsAusLizenzTests
     [Fact]
     public void Die_Lizenz_gewinnt_auch_gegen_eingetippte_Werte()
     {
-        // „Es gibt hier nichts einzustellen! Die Limits ergeben sich aus der Lizenz“ (Taloan, 23.09.2026)
+        // „Es gibt hier nichts einzustellen! Die Limits ergeben sich aus der Lizenz“
         var j = Altanlage();
         var c = new Catalog(j); c.Rebuild();
-        c.With((_, _, write) => write("taloan", Teams.Stream + Model.InitTeam, Types.TeamDefined, new TeamDefined("Init Team", EntriesWeek: 500, EntriesMonth: 900), null));
+        c.With((_, _, write) => write("u1", Teams.Stream + Model.InitTeam, Types.TeamDefined, new TeamDefined("Init Team", EntriesWeek: 500, EntriesMonth: 900), null));
         c.SeedMissing();
         Assert.Equal(Limits.Week, c.With((_, _, _) => c.Teams.Primary!.EntriesWeek));
         Assert.Equal(Limits.Month, c.With((_, _, _) => c.Teams.Primary!.EntriesMonth));
@@ -58,7 +58,7 @@ public class LimitsAusLizenzTests
     {
         var j = Altanlage();
         var c = new Catalog(j); c.Rebuild();
-        c.With((_, _, write) => write("taloan", Teams.Stream + "es", Types.TeamDefined, new TeamDefined("Spanien"), null));
+        c.With((_, _, write) => write("u1", Teams.Stream + "es", Types.TeamDefined, new TeamDefined("Spanien"), null));
         c.SeedMissing();
         Assert.Equal(Limits.Week, c.With((_, _, _) => c.Teams.Get(Model.InitTeam)!.EntriesWeek));
         Assert.Equal(0, c.With((_, _, _) => c.Teams.Get("es")!.EntriesWeek));   // jedes weitere Team startet bei 0

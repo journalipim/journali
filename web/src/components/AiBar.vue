@@ -1,13 +1,13 @@
 <script setup>
 // ✦ KI-Leiste im Editor: ÜBERARBEITEN (Verbessern, Kürzen, Ausführlicher) und ERZEUGEN (@ Liste aus Produktdaten,
 // @ Marketingtext sachlich/emotional/vergleichend) — dazu eine eigene Anweisung. Das Ergebnis geht in den Entwurf:
-// entweder ersetzt es ihn oder es wird an der Schreibmarke ergänzt (Taloan, 22.09.2026); gespeichert wird erst mit Speichern.
+// entweder ersetzt es ihn oder es wird an der Schreibmarke ergänzt; gespeichert wird erst mit Speichern.
 import { ref } from 'vue'
 import { ai } from '../ai.js'
 import { store } from '../store.js'
 import { PRESETS, rewrite } from '../aiText.js'
 
-// panel: Auswahl eines Behälters im Editor — dort steht die Leiste im Fluss und schiebt den Text nach unten (Taloan, 22.09.)
+// panel: Auswahl eines Behälters im Editor — dort steht die Leiste im Fluss und schiebt den Text nach unten
 const props = defineProps({ current: String, html: Boolean, label: String, locale: String, node: String, panel: String })
 const emit = defineEmits(['result'])
 const open = ref(false); const busy = ref(''); const own = ref('')
@@ -18,7 +18,7 @@ const gens = PRESETS.filter(p => p[3] === 'gen')
 async function run(instruction) {
   if (!instruction) return
   busy.value = `fragt ${ai.label()} …`
-  // die Leiste bleibt offen (Taloan, 22.09.: „lass das offen“) — man arbeitet meist mehrere Schritte hintereinander
+  // die Leiste bleibt offen — man arbeitet meist mehrere Schritte hintereinander
   try { emit('result', { text: await rewrite({ instruction, current: props.current, html: props.html, label: props.label, locale: props.locale, node: props.node }), mode: mode.value }); own.value = '' }
   catch (e) { store.toast(e.message) } finally { busy.value = '' }
 }
@@ -26,10 +26,10 @@ async function run(instruction) {
 
 <template>
   <button class="ai" :class="{ on: open }" @mousedown.prevent @click="open = !open" :title="ai.available() ? $t('Text mit der KI (') + ai.label() + $t(') bearbeiten — mit den Produktdaten dieses Knotens; jede Anfrage kostet Token') : $t('KI-Schlüssel fehlt — ⚙ Einstellungen → KI')" :disabled="!ai.available()">{{ $t("✦ KI") }}</button>
-  <!-- echtes Teleport (Taloan, 22.09.): die Leiste gehört in den Behälter des Editors, nicht in den Werkzeugbalken -->
+  <!-- echtes Teleport: die Leiste gehört in den Behälter des Editors, nicht in den Werkzeugbalken -->
   <Teleport v-if="panel" :to="panel" defer>   <!-- defer: der Behälter entsteht erst nach dem Werkzeugbalken -->
     <div v-if="open" class="aibar flow" @mousedown.stop>
-    <!-- Beschriftungen als Überschrift über der Reihe, nicht daneben (Taloan, 22.09.: unterschiedlich lang = unordentlich) -->
+    <!-- Beschriftungen als Überschrift über der Reihe, nicht daneben -->
     <div class="col">
       <span class="muted lbl">{{ $t("überarbeiten") }}</span>
       <div class="grp"><button v-for="[k, l, hint] in edits" :key="k" class="x" @click="run(k)" :title="hint" :disabled="!!busy">{{ l }}</button></div>

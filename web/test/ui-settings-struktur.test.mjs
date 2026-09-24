@@ -1,6 +1,4 @@
-// Einstellungen: ein Reiter je Sache (Taloan, 23.09.2026: „die Seite Anlage heisst völlig bescheuert und wirft alles Kraut
-// und Rüben durcheinander — im Grunde ist das der Tab für den Administrator, den wir jetzt in seine Bestandteile zerlegen:
-// Workflows, Storage, Assets, Backup & Recovery, Rollen & Rechte“). Wer mit seinen Rechten hierher kommt, sieht, was er
+// Einstellungen: ein Reiter je Sache. Wer mit seinen Rechten hierher kommt, sieht, was er
 // sehen oder ändern darf — alles andere nicht.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -14,7 +12,7 @@ function server() {
   globalThis.fetch = async url => {
     const path = String(url).replace(/^https?:\/\/[^/]+/, '').split('?')[0]
     const body = listen.some(l => path.endsWith(l)) ? []
-      : { user: 'taloan', role: 'admin', rights: [], tokens: [], prefs: {}, config: {}, ready: false, locales: [], channels: [], attributes: [], groups: [], statuses: [], lists: [], history: [], days: [] }
+      : { user: 'u1', role: 'admin', rights: [], tokens: [], prefs: {}, config: {}, ready: false, locales: [], channels: [], attributes: [], groups: [], statuses: [], lists: [], history: [], days: [] }
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }
   }
 }
@@ -22,7 +20,7 @@ const ruhe = async () => { for (let i = 0; i < 4; i++) { await flushPromises(); 
 const reiter = w => w.findAll('.tab').map(t => t.text())
 async function sicht(rights, enabled = true) {
   server()
-  store.auth = { known: true, enabled, setup: false, user: 'taloan', role: 'r', name: 'D', rights }
+  store.auth = { known: true, enabled, setup: false, user: 'u1', role: 'r', name: 'D', rights }
   const w = mount(SettingsView); await ruhe()
   return w
 }
@@ -72,7 +70,7 @@ test('ohne Anmeldung gibt es kein Team — und der Urheber steht bei mir', async
   await ruhe(); w.unmount()
 })
 
-// Ein Klick auf die Zahlen in der Leiste führt dorthin, wo sie ausführlich stehen (Taloan, 23.09.2026) — auch wenn die
+// Ein Klick auf die Zahlen in der Leiste führt dorthin, wo sie ausführlich stehen — auch wenn die
 // Einstellungen schon offen sind: der Reiter folgt der Sprungmarke.
 test('die Sprungmarke trifft ihren Reiter, auch bei offener Seite', async () => {
   const w = await sicht(['read', 'users', 'model', 'team'])

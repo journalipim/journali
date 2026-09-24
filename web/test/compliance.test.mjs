@@ -1,4 +1,4 @@
-// Prüfkern der Datenanalyse: die Fälle, die in der Bedienung schiefgingen (Taloan, 21.09.: „dafür bist du da — Use Cases durchtesten“).
+// Prüfkern der Datenanalyse: die Fälle, die in der Bedienung schiefgingen.
 // Läuft ohne Browser und ohne Server: `npm test` in web/ (node --test).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -17,7 +17,7 @@ const model = {
 const mapping = { gtin: { to: 'ean' }, model_number: { to: 'sku' }, trade_name: { to: 'name' }, batch: { to: 'dpp_batch' }, battery_chemistry: { to: 'akku_typ' }, battery_capacity: { to: 'dpp_battery_capacity' } }
 const V = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, typeof v === 'object' && v !== null ? v : { value: v }]))
 
-// Baum wie bei Taloan: Gruppe „HP EliteBook“ → Produkt „HP EliteBook 6 G1q“ → Variante. Geprüft wird am Produkt (erste Zeile = es selbst).
+// Baum: Gruppe „HP EliteBook“ → Produkt „HP EliteBook 6 G1q“ → Variante. Geprüft wird am Produkt (erste Zeile = es selbst).
 const product = { id: 'p-1', role: 'product', label: 'HP EliteBook 6 G1q', parent: 'g-1' }
 const variant = { id: 'v-1', role: 'variant', label: 'HP EliteBook 6 G1q · 16 GB', parent: 'p-1' }
 const rows = (scope, extra = {}) => [

@@ -76,24 +76,24 @@ public static class Commands
     }
 
     /// <summary>Variantenachsen eines Produkts setzen (ganze Liste) — nur ohne Varianten, denn deren Achsenwerte sind fest.</summary>
-    /// <param name="force">Uneindeutige Kombinationen hinnehmen (Taloan, 20.09.: nach Hinweisdialog) — die betroffenen Varianten verlieren ihre Achsenzuordnung, die Werte bleiben.</param>
+    /// <param name="force">Uneindeutige Kombinationen hinnehmen — die betroffenen Varianten verlieren ihre Achsenzuordnung, die Werte bleiben.</param>
     public static Outcome SetAxes(Ctx c, string id, string[]? axes, bool force = false)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
         if (n.Role != Roles.Product) return Outcome.Bad("Nur ein Produkt hat Variantenachsen.");
         var clean = axes?.Select(a => a.Trim()).Where(a => a.Length > 0).Distinct().ToArray() ?? [];
         if (clean.Except(c.Model.Attributes.Keys).Any()) return Outcome.Bad("Variantenachse muss ein Attribut sein.");
-        // Die Achse muss an den Varianten gelten (Taloan, 20.09.: „konnte eine Achse zufügen, die bei der Variante gar nicht zur Verfügung steht“):
+        // Die Achse muss an den Varianten gelten:
         // Gruppe am Pfad des Produkts, an der Variante aktiv, Attribut an der Variante erlaubt
         var atVariant = c.Tree.EffectiveGroups(n).Where(g => c.Model.GroupActiveAt(g.Group, Roles.Variant)).SelectMany(g => c.Model.AttributesOf(g.Group)).Where(a => a.AllowedAt(Roles.Variant)).Select(a => a.Key).ToHashSet();
-        foreach (var a in clean.Except(n.Axes)) if (!atVariant.Contains(a)) return Outcome.Bad(   // nur neue Achsen — eine vorhandene muss sich entfernen lassen (Taloan, 20.09.: Sackgasse)
+        foreach (var a in clean.Except(n.Axes)) if (!atVariant.Contains(a)) return Outcome.Bad(   // nur neue Achsen — eine vorhandene muss sich entfernen lassen
             $"{a} gilt an den Varianten von „{n.Name ?? id}“ nicht — die Gruppe des Attributs hängt nicht am Pfad oder ist an Varianten nicht aktiv.");
-        // Mit Varianten (Taloan, 20.09.: „im Nachhinein kann man keine Achse zufügen — warum nicht?“): eine neue Achse nimmt an jeder Variante
+        // Mit Varianten: eine neue Achse nimmt an jeder Variante
         // deren eigenen Wert des Attributs — der muss da sein; danach muss die Kombination der Achsenwerte je Produkt eindeutig sein.
         var variants = c.Tree.Children(id).ToList();
         if (variants.Count > 0)
         {
-            // leere Felder zählen nicht (Taloan, 20.09.): eine Variante ohne Wert bleibt ohne Achsenwert — eindeutig sein müssen die vollständigen Kombinationen.
+            // leere Felder zählen nicht: eine Variante ohne Wert bleibt ohne Achsenwert — eindeutig sein müssen die vollständigen Kombinationen.
             // Uneindeutig? Ohne force eine Rückfrage; mit force verlieren die betroffenen Varianten ihre Achsenzuordnung (Projektion), Werte bleiben.
             if (clean.Length > 0 && !force)
             {
@@ -136,14 +136,14 @@ public static class Commands
         // mit Achsen ist die Kombination je Produkt eindeutig.
         if (product.Axes.Length > 0 && c.Tree.Children(product.Id).Any(s => s.AxisValues.Count == values.Count && s.AxisValues.All(kv => values.TryGetValue(kv.Key, out var x) && x == kv.Value)))
             return Outcome.Bad("Diese Variante gibt es schon.");
-        // eine eindeutige Achse (SKU als Achse, Taloan 21.09.): der Achsenwert darf es nirgends im Baum schon geben
+        // eine eindeutige Achse (SKU als Achse): der Achsenwert darf es nirgends im Baum schon geben
         foreach (var (axis, v) in values)
             if (c.Model.Attributes.TryGetValue(axis, out var ad) && ad.Unique && c.Tree.WithOwnValue(axis, v).FirstOrDefault() is { } other)
                 return Outcome.Bad($"{ad.Label.GetValueOrDefault("de") ?? axis} {v} gibt es schon: {NodeRow.LabelOf(c.Tree, c.Model, other)} ({other.Id}).");
         return Outcome.Ok(c.Write(Ids.New(Roles.Variant), Types.VariantCreated, new VariantCreated(product.Id, values)));
     }
 
-    // ---- Publikationsbaum (Taloan, 20.09.2026): Rubriken sind Knoten, Pflegeknoten hängen per Verweis darin
+    // ---- Publikationsbaum: Rubriken sind Knoten, Pflegeknoten hängen per Verweis darin
     public static Outcome CreateRubric(Ctx c, string? parent, Labels? label, string? name = null, string? channel = null, string? market = null)
     {
         parent = Blank(parent); channel = Blank(channel); market = Blank(market);
@@ -151,7 +151,7 @@ public static class Commands
         if (parent is null && (channel is null || !c.Model.Channels.ContainsKey(channel))) return Outcome.Bad("Ein Publikationsbaum gehört zu einem Kanal.");
         if (parent is not null) { channel = null; market = null; }
         if (string.IsNullOrWhiteSpace(name) && (label is null || label.Count == 0)) return Outcome.Bad("Name fehlt.");
-        // Zwei Bäume mit gleichem Namen für denselben Kanal × Markt sind nicht zu unterscheiden (Taloan, 21.09.: „der bestehende wird überschrieben“ — es war ein zweiter)
+        // Zwei Bäume mit gleichem Namen für denselben Kanal × Markt sind nicht zu unterscheiden
         if (parent is null && c.Tree.PubTrees.Any(r => r.Channel == channel && r.Market == market && string.Equals(r.Name, Blank(name), StringComparison.OrdinalIgnoreCase)))
             return Outcome.Bad($"Es gibt schon einen Publikationsbaum „{name}“ für {channel}{(market is null ? "" : " · " + market)} — anderer Name, oder den vorhandenen weiter benutzen.");
         return Outcome.Ok(c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(parent, label ?? new(), Blank(name), channel, market)));
@@ -226,7 +226,7 @@ public static class Commands
     }
 
     /// <summary>
-    /// Aus dem Pflegebaum ableiten (Taloan, 20.09.: „den Pflegebaum als Grundlage nehmen und dann umbauen“): unter der Rubrik entsteht je
+    /// Aus dem Pflegebaum ableiten: unter der Rubrik entsteht je
     /// Produktgruppe unter <paramref name="from"/> eine Rubrik (rekursiv), jedes Produkt wird ein Verweis. Danach ist der Baum entkoppelt.
     /// Liefert die Zahl der Einträge.
     /// </summary>
@@ -240,7 +240,7 @@ public static class Commands
         string NameOf(Node g) { var l = NodeRow.LabelOf(c.Tree, c.Model, g); return l == g.Id ? (g.Name ?? g.Id) : l; }   // wie die Oberfläche den Knoten zeigt
         void Walk(string target, Node g)
         {
-            foreach (var child in c.Tree.Children(g.Id).OrderBy(NameOf, StringComparer.OrdinalIgnoreCase))   // wie im Baum: nach dem sichtbaren Namen (Taloan, 21.09.: „umsortiert nach irgendwas“)
+            foreach (var child in c.Tree.Children(g.Id).OrderBy(NameOf, StringComparer.OrdinalIgnoreCase))   // wie im Baum: nach dem sichtbaren Namen
             {
                 if (child.Role == Roles.Group)
                 {
@@ -250,7 +250,7 @@ public static class Commands
                 else if (child.Role == Roles.Product) { last = c.Write(target, Types.NodePlaced, new NodePlaced(child.Id)); n++; }
             }
         }
-        // self (Taloan, 21.09.: Ast von links nach rechts ziehen): die Gruppe selbst wird Rubrik, ihr Aufbau darunter
+        // self: die Gruppe selbst wird Rubrik, ihr Aufbau darunter
         if (self) { var e = c.Write(Ids.New(Roles.Rubric), Types.RubricCreated, new RubricCreated(rubric, new Labels(src.Label), NameOf(src), Source: src.Id)); n++; last = e; Walk(e.Stream, src); }
         else Walk(rubric, src);
         count = n;
@@ -305,8 +305,7 @@ public static class Commands
     }
 
     /// <summary>
-    /// Status eines Knotens setzen — seit dem 23.09.2026 auch an einer Gruppe (Taloan: „neue Produktgruppe,
-    /// Markteinführung: redaktionell kann alles freigegeben sein, vorbereitet, trotzdem noch kein Verkaufsstart").
+    /// Status eines Knotens setzen — seit dem 23.09.2026 auch an einer Gruppe.
     /// Er gilt für den Knoten selbst und vererbt sich nicht: die Gruppe sagt etwas über sich, jedes Produkt über sich.
     /// </summary>
     public static Outcome SetStatus(Ctx c, string id, string? status)
@@ -352,14 +351,14 @@ public static class Commands
         if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad($"Unbekannter Kanal: {channel}");
         if (channel is not null && def.Channels is { } only && !only.Contains(channel)) return Outcome.Bad($"{def.Key} gibt es nur für: {string.Join(", ", only)}");
         if (CheckValue(c.Model, def, ref value, ref values) is { } error) return Outcome.Bad(error);
-        // Achsenattribut an einer Variante (Taloan, 20.09.: Lücken später füllen): der Wert wird ihr Achsenwert — die Kombination muss eindeutig bleiben
+        // Achsenattribut an einer Variante: der Wert wird ihr Achsenwert — die Kombination muss eindeutig bleiben
         if (n.Role == Roles.Variant && n.Parent is { } pid && c.Tree.Nodes.TryGetValue(pid, out var prod) && prod.Axes.Contains(def.Key) && locale is null && channel is null && row is null && value is not null)
         {
             var mine = prod.Axes.Select(a => a == def.Key ? value : n.AxisValues.GetValueOrDefault(a)).ToList();
             if (mine.All(x => !string.IsNullOrEmpty(x)) && c.Tree.Children(pid).Any(s => s.Id != n.Id && prod.Axes.All(a => s.AxisValues.TryGetValue(a, out var x) && x == mine[Array.IndexOf(prod.Axes, a)])))
                 return Outcome.Bad($"Diese Variante gibt es schon ({string.Join(", ", mine)}).");
         }
-        // Eindeutig (Merkmal unique, Taloan 21.09.): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern
+        // Eindeutig (Merkmal unique): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern
         if (def.Unique && value is not null && locale is null && channel is null && row is null && c.Tree.WithOwnValue(def.Key, value).FirstOrDefault(o => o.Id != n.Id) is { } other)
             return Outcome.Bad($"{def.Label.GetValueOrDefault("de") ?? def.Key} {value} gibt es schon: {NodeRow.LabelOf(c.Tree, c.Model, other)} ({other.Id}).");
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row)));
@@ -424,10 +423,10 @@ public static class Commands
         if (!c.Model.Channels.ContainsKey(channel ?? "")) return Outcome.Bad("channel fehlt oder unbekannt.");
         locale = Blank(locale);
         if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad($"Unbekannte Sprache: {locale}");
-        // Am Produkt (Workflow „freigeben“, Taloan 21.09.): jede vollständige Variante wird freigegeben; keine vollständige = nichts, mit dem, was fehlt
+        // Am Produkt (Workflow „freigeben“): jede vollständige Variante wird freigegeben; keine vollständige = nichts, mit dem, was fehlt
         if (n.Role is Roles.Product or Roles.Group)
         {
-            var variants = c.Tree.DescendantsDeepestFirst(n.Id).Where(v => v.Role == Roles.Variant).ToList();   // Gruppe: alles Verkaufbare darunter (Taloan, 21.09.)
+            var variants = c.Tree.DescendantsDeepestFirst(n.Id).Where(v => v.Role == Roles.Variant).ToList();   // Gruppe: alles Verkaufbare darunter
             if (variants.Count == 0) return Outcome.Bad("Keine Variante — Freigabe gibt es nur am Verkaufbaren.");
             Entry? last = null; var failed = new List<string>();
             foreach (var v in variants)
@@ -452,7 +451,7 @@ public static class Commands
     public static Outcome RevokeRelease(Ctx c, string id, string channel, string? locale)
     {
         if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
-        // Am Produkt oder an der Gruppe (Taloan, 21.09.: „die Freigabe hätte ich am Produkt zurückziehen müssen“): alle freigegebenen Varianten darunter
+        // Am Produkt oder an der Gruppe: alle freigegebenen Varianten darunter
         if (n.Role is Roles.Product or Roles.Group)
         {
             Entry? last = null;
@@ -597,7 +596,7 @@ public static class Commands
     public static Outcome RetireMedium(Ctx c, string id) =>
         c.Media.All.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.MediaRetired, new MediaRetired())) : Outcome.Missing;
 
-    // ---- Workflows (27, Taloan 21.09.2026): ein Schritt gehen — Zustand, Rolle, Notiz, Wirkungen
+    // ---- Workflows (27): ein Schritt gehen — Zustand, Rolle, Notiz, Wirkungen
 
     public static Outcome DefineWorkflow(Ctx c, string key, WorkflowDefined d)
     {
@@ -613,7 +612,7 @@ public static class Commands
             if (!keys.Contains(t.From) || !keys.Contains(t.To)) return Outcome.Bad($"Übergang {t.Key}: von/nach muss ein Zustand sein.");
             if (t.EscalateAfterDays is { } ed && ed < 0) return Outcome.Bad($"Übergang {t.Key}: Eskalation nach n Tagen, n ≥ 0.");
             foreach (var e in t.Effects ?? []) if (!((e.StartsWith("release:") || e.StartsWith("revoke:")) && (e[(e.IndexOf(':') + 1)..] == "*" || c.Model.Channels.ContainsKey(e[(e.IndexOf(':') + 1)..])) || (e.StartsWith("status:") && c.Model.Statuses.ContainsKey(e[7..]))
-                // translate:<sprache> (30, Taloan 22.09.2026): schnürt das Übersetzungspaket — derselbe Auftrag wie beim Job nach Zeitplan
+                // translate:<sprache> (30): schnürt das Übersetzungspaket — derselbe Auftrag wie beim Job nach Zeitplan
                 || (e.StartsWith("translate:") && (e[10..] == "*" || (c.Model.Locales.ContainsKey(e[10..]) && e[10..] != c.Model.MasterLocale)))))
                 return Outcome.Bad($"Übergang {t.Key}: Wirkung „{e}“ unbekannt (release:<kanal>, revoke:<kanal>, status:<{string.Join('|', c.Model.StatusesOrdered.Select(s => s.Key))}>, translate:<sprache>).");
         }
@@ -638,7 +637,7 @@ public static class Commands
 
     /// <summary>Einen Schritt gehen: Übergang muss vom aktuellen Zustand ausgehen, die Rolle ihn dürfen, die Notiz da sein — dann Zustand und Wirkungen.</summary>
     /// <summary>Fehlender Pflichtwert „attr/locale“ mit Grund: steht nur über Master oder Fallback da → „nur Master-Text, Übersetzung fehlt“.</summary>
-    /// <summary>Fehlende Pflichtwerte als Zeilen (Taloan, 21.09.): „Name (name) fehlt in → en, fr“ — je Attribut eine Zeile, Sprachen gesammelt;
+    /// <summary>Fehlende Pflichtwerte als Zeilen: „Name (name) fehlt in → en, fr“ — je Attribut eine Zeile, Sprachen gesammelt;
     /// steht der Wert nur über den Master da: „fehlt (nur Master-Text) in → en“.</summary>
     private static IEnumerable<string> MissingLines(Ctx c, Node v, IEnumerable<string> missing)
     {
@@ -681,7 +680,7 @@ public static class Commands
                 }
                 if (problems.Count > 0)
                 {
-                    // gleiche Gründe zusammen, je Grund höchstens 5 SKUs — sonst wird aus 50 Varianten ein roter Bildschirm (Taloan, 21.09.)
+                    // gleiche Gründe zusammen, je Grund höchstens 5 SKUs — sonst wird aus 50 Varianten ein roter Bildschirm
                     // Variante: je Zeile ein Grund; Produkt/Gruppe: je Zeile Grund und die Varianten (höchstens 5 genannt)
                     var lines = n.Role == Roles.Variant
                         ? problems.Select(x => "• " + x.Why)
@@ -715,7 +714,7 @@ public static class Commands
         {
             var i = eff.IndexOf(':'); var kind = eff[..i]; var arg = eff[(i + 1)..];
             if (kind == "translate") { if (OrderTranslation(c, id, arg) is { Error: { } te }) return Outcome.Bad($"Der Schritt wurde ausgeführt, die Wirkung {eff} nicht: {te}"); continue; }
-            foreach (var ch in kind is "release" or "revoke" && arg == "*" ? c.Model.Channels.Keys.ToList() : [arg])   // * = alle Kanäle (Taloan, 21.09.)
+            foreach (var ch in kind is "release" or "revoke" && arg == "*" ? c.Model.Channels.Keys.ToList() : [arg])   // * = alle Kanäle
             {
                 var r = kind switch { "release" => GrantRelease(c, id, ch, locale), "revoke" => RevokeRelease(c, id, ch, locale), "status" => SetStatus(c, id, ch), _ => Outcome.Bad(eff) };
                 if (r.Error is { } err && !err.Contains("schon")) return Outcome.Bad($"Der Schritt wurde ausgeführt, die Wirkung {eff} nicht: {err}");
@@ -725,8 +724,7 @@ public static class Commands
     }
 
     /// <summary>
-    /// Wirkung <c>translate:&lt;sprache&gt;</c> (30; Taloan, 22.09.2026: „spätestens wenn der Redakteur der Mastersprache eine Version
-    /// macht“): aus dem Rückstand unter diesem Knoten ein Paket schnüren — derselbe Auftrag wie beim Job nach Zeitplan, nur ein
+    /// Wirkung <c>translate:&lt;sprache&gt;</c> (30): aus dem Rückstand unter diesem Knoten ein Paket schnüren — derselbe Auftrag wie beim Job nach Zeitplan, nur ein
     /// anderer Auslöser. <c>*</c> = jede Zielsprache. Ist nichts offen, geschieht nichts (kein leerer Auftrag).
     /// </summary>
     public static Outcome OrderTranslation(Ctx c, string id, string locales)
@@ -767,7 +765,7 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.WorkflowAssigned, new WorkflowAssigned(workflow, Blank(user))));
     }
 
-    // ---- Medienordner (Taloan, 21.09.2026: „wie ein interner Dateimanager“)
+    // ---- Medienordner
 
     public static Outcome CreateMediaFolder(Ctx c, string? name, string? parent)
     {
@@ -796,7 +794,7 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.MediaFolderMoved, new MediaFolderMoved(parent)));
     }
 
-    /// <summary>Nur leer — was drin ist, erst verschieben (Taloan: kein stilles Aufräumen, das Journal soll jede Ablage nennen).</summary>
+    /// <summary>Nur leer — was drin ist, erst verschieben.</summary>
     public static Outcome RetireMediaFolder(Ctx c, string id)
     {
         if (!c.Media.Folders.ContainsKey(id)) return Outcome.Missing;

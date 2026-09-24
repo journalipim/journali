@@ -3,8 +3,7 @@ using System.Text.Json;
 namespace Journali.Server;
 
 /// <summary>
-/// Was der Start tut, bevor es ein Journal gibt (Taloan, 24.09.2026: „ich möchte das nicht per Umgebungsvariablen,
-/// sondern in den Admin-Settings einstellen können“). Genau deshalb steht es <b>nicht</b> im Journal: Spiegel und
+/// Was der Start tut, bevor es ein Journal gibt. Genau deshalb steht es <b>nicht</b> im Journal: Spiegel und
 /// Schnappschuss entscheiden, wie das Journal überhaupt gelesen wird. Die Datei liegt als <c>betrieb.json</c> im
 /// Datenverzeichnis, neben <c>media.json</c> und <c>mail.json</c>.
 /// <para>Ohne Datei gilt die Umgebung (<c>JOURNALI_JOURNAL_CACHE=off</c>, <c>JOURNALI_SNAPSHOT=off</c>) und sonst

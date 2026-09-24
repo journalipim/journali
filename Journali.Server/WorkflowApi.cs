@@ -5,7 +5,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Workflows (27, Taloan 21.09.2026): Definitionen (Einstellungen → Workflows), Zustand und erlaubte Übergänge je Knoten (Band
+/// Workflows (27): Definitionen (Einstellungen → Workflows), Zustand und erlaubte Übergänge je Knoten (Band
 /// „Workflow“ in der Knotenansicht), ein Schritt gehen, Zuständigkeit, und „Meine Aufgaben“ — alle Knoten, deren nächster
 /// Schritt meiner Rolle (oder mir) gehört. Der Verlauf steht im Journal des Knotens.
 /// </summary>
@@ -26,14 +26,14 @@ public static class WorkflowApi
         api.MapGet("/workflows/tasks", (HttpRequest req, Catalog c, string? workflow = null, string? state = null, int limit = 500) => c.With((model, tree, _) =>
         {
             var role = req.HttpContext.Items["role"] as string; var user = req.HttpContext.Items["user"] as string;
-            // leere Parameter = alle (Taloan, 21.09.: „Korrektur dem admin zugewiesen — aber der hat nichts zu tun“: die Oberfläche schickt workflow= und state= leer)
+            // leere Parameter = alle
             if (string.IsNullOrWhiteSpace(workflow)) workflow = null; if (string.IsNullOrWhiteSpace(state)) state = null;
             var out_ = new List<(DateTimeOffset? Since, object Row)>();
             foreach (var wf in c.Workflows.All.Values.Where(w => workflow is null || w.Key == workflow))
             {
                 foreach (var n in tree.Nodes.Values.Where(wf.AppliesTo))
                 {
-                    // je Sprache eine Aufgabe, wo es einen eigenen Sprachzustand gibt (Taloan, 22.09.2026); sonst wie bisher eine je Knoten
+                    // je Sprache eine Aufgabe, wo es einen eigenen Sprachzustand gibt; sonst wie bisher eine je Knoten
                     var slots = wf.PerLocale ? c.Workflows.LocalesAt(n.Id, wf).OrderBy(l => l).Select(l => (string?)l).DefaultIfEmpty(null).ToList() : [null];
                     foreach (var loc in slots)
                     {
@@ -65,7 +65,7 @@ public static class WorkflowApi
                 return new
                 {
                     perLocale = wf.PerLocale,
-                    // je Sprache ein eigener Zustand (Taloan, 22.09.2026: „Französisch in Korrektur, Deutsch freigegeben“) — ohne eigenen gilt der des Knotens
+                    // je Sprache ein eigener Zustand — ohne eigenen gilt der des Knotens
                     locales = !wf.PerLocale ? null : model.Locales.Keys.OrderBy(l => l == model.MasterLocale ? 0 : 1).ThenBy(l => l).Select(l =>
                     {
                         var (ls, lfrom) = c.Workflows.StateOf(id, wf, x => tree.Nodes.GetValueOrDefault(x)?.Parent, l);
@@ -81,7 +81,7 @@ public static class WorkflowApi
                     since = nw?.At, actor = nw?.Actor, note = nw?.Note, transition = nw?.Transition, assigned = nw?.Assigned,
                     inheritedFrom = inheritedFrom is null ? null : new { id = inheritedFrom, label = NodeRow.LabelOf(tree, model, tree.Nodes[inheritedFrom]), role = tree.Nodes[inheritedFrom].Role },   // Zustand vom Vater (Variante folgt dem Produkt)
                     // Wirkungen des Schritts, der hierher führte, die (noch) nicht eingetreten sind — z. B. „Freigegeben“ ohne Freigabe für web
-                    // (Taloan, 21.09.: „wieso steht das immer noch in der Liste?“ — der Schritt lief, als die Saat noch keine Wirkung hatte)
+                    //
                     pending = Pending(c, tree, model, n, wf, nw?.Transition),
                     states = wf.States.Select(s => new { s.Key, s.Label, s.Color, s.Final }).ToList(),
                     transitions = Commands.Allowed(c.Workflows, wf, id, role, null, tree).Select(t => new { t.Key, t.Label, t.To, t.NoteRequired, t.Effects, toLabel = wf.State(t.To)?.Label, blocked = Commands.Blocker(ctxRead, n, t) }).ToList(),
@@ -90,8 +90,7 @@ public static class WorkflowApi
                 };
             }).ToList());
         }));
-        // Ausstehende Wirkung je Zustand: { effect, why, canFix } — canFix false, wenn eine Variante den Weg bewusst zurückging (Taloan, 21.09.:
-        // Variante „wieder geöffnet“ → das Produkt darf die Freigabe nicht einfach nachholen, das würde die Variante wieder freigeben)
+        // Ausstehende Wirkung je Zustand: { effect, why, canFix } — canFix false, wenn eine Variante den Weg bewusst zurückging
         static List<object> Pending(Catalog c, Tree tree, ModelCatalog model, Node n, WorkflowDef wf, string? transition)
         {
             var t = wf.Transitions.FirstOrDefault(x => x.Key == transition); if (t?.Effects is null) return [];
@@ -113,12 +112,12 @@ public static class WorkflowApi
                 var back = n.Role != Roles.Variant && kind == "release"
                     ? sellables.Where(v => c.Workflows.Own(v.Id, wf) is { } o && o != t.To).Select(v => $"{NodeRow.LabelOf(tree, model, v)}: {wf.State(c.Workflows.StateOf(v.Id, wf))?.Label.GetValueOrDefault("de") ?? c.Workflows.StateOf(v.Id, wf)}").ToList()
                     : [];
-                // Produkt/Gruppe mit Freigabe-Zustand, aber ohne freigegebene Variante: die Ausleitung lässt es weg — Tatsache zeigen, nicht den Zustand ändern (Taloan, 21.09.)
+                // Produkt/Gruppe mit Freigabe-Zustand, aber ohne freigegebene Variante: die Ausleitung lässt es weg — Tatsache zeigen, nicht den Zustand ändern
                 pending.Add(new { effect = eff, canFix = back.Count == 0 && n.Role == Roles.Variant, why = back.Count > 0 ? string.Join(" · ", back) : null });
             }
             return pending;
         }
-        // Für die Mehrfachauswahl (Taloan, 21.09.: „ich kann Schritte wählen, die gar nicht passen“): je Übergang, wie viele der Knoten ihn jetzt gehen können
+        // Für die Mehrfachauswahl: je Übergang, wie viele der Knoten ihn jetzt gehen können
         api.MapPost("/workflows/applicable", (IdsBody body, HttpRequest req, Catalog c) => c.With((model, tree, _) =>
         {
             var role = req.HttpContext.Items["role"] as string;

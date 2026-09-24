@@ -1,5 +1,5 @@
 <script setup>
-// Versionen am Knoten (Taloan, 19.09.2026): Freigabe = Version — Zeiger auf den Journalstand plus eingefrorene Belege der
+// Versionen am Knoten: Freigabe = Version — Zeiger auf den Journalstand plus eingefrorene Belege der
 // Erzeuger-Plugins (Datenblatt …). „Stand ansehen“ vergleicht die eigenen Werte von damals mit heute; „Zurückrollen“ zeigt den
 // Plan und schreibt dann vorwärts (Stapel, rückgängig machbar). Zurückziehen markiert nur.
 import { ref, computed, watch } from 'vue'

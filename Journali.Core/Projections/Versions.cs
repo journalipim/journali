@@ -18,7 +18,7 @@ public sealed class VersionDocument
 }
 
 /// <summary>
-/// Eine Version eines Knotens (Taloan, 19.09.2026: „wenn ich einen Artikel freigebe, zeige ich damit eine Version“): ein Zeiger
+/// Eine Version eines Knotens: ein Zeiger
 /// auf den Journalstand (alles bis dahin ist der Stand — auch das Modell von damals) plus die eingefrorenen Belege, die nach
 /// draussen gingen. Nichts wird kopiert, nichts gelöscht; zurückgezogen wird eine Version nur markiert.
 /// </summary>

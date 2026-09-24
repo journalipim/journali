@@ -1,4 +1,4 @@
-// Verwaiste Werte vorher sehen (Taloan, 18.09.: „der Import hat mich nicht gewarnt“ — „vereinheitlichen, bei D&D auch prüfen“):
+// Verwaiste Werte vorher sehen:
 // Ein Teilbaum kommt an einen neuen Ort (Umhängen im Baum, JSON-Import). Seine eigenen Werte brauchen Attributgruppen;
 // gelten die am neuen Ort nicht (weder am Ziel und dessen Pfad noch am Wurzelknoten des Teilbaums selbst), wären die
 // Werte dort verwaist. Diese Prüfung sagt, welche Gruppen fehlen und wie viele Attribute daran hängen; der Dialog

@@ -1,4 +1,4 @@
-// JSON-Export als Job (Taloan, 19.09.2026: „json export auch als job“): ein Teilbaum als Datei in ein Verzeichnis —
+// JSON-Export als Job: ein Teilbaum als Datei in ein Verzeichnis —
 // Rohdaten (wiederherstellbar, mit Modellteil; GET /api/nodes/{id}/export), ausgewerteter Baum oder flache Liste
 // (derselbe Kern wie ⇪ Export → Tabelle, plugins/table/core.mjs). Ohne root alle Wurzeln, je Wurzel eine Datei;
 // behält je Wurzel und Job die letzten n. Aufruf: node export-job.mjs <journali> <actor> [root] [dir] [format] [locales] [ownOnly] [gzip] [keep]

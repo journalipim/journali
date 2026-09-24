@@ -1,5 +1,5 @@
-// Plugin derive (Taloan, 21.09.2026: „das muss alles bereitliegen“): fehlende Ableitungen nach den Vorschau-Presets rechnen.
-// Bilder mit sharp; ein PDF bekommt seine erste Seite als Kachel (Taloan, 23.09.2026: „bau die pdf thumbs“) — gerendert mit
+// Plugin derive: fehlende Ableitungen nach den Vorschau-Presets rechnen.
+// Bilder mit sharp; ein PDF bekommt seine erste Seite als Kachel — gerendert mit
 // pdfjs auf eine Leinwand, dann derselbe Weg wie bei einem Bild.
 // Aufruf: node job.mjs <journali> <actor> [limit] [preset] — der JobRunner setzt die Werte auch als JOURNALI_* in die Umgebung.
 // Holt /api/media/pending (Preset-Spezifikation je Bild), lädt das Original in eine Temp-Datei (grosse TIFFs nicht in den Speicher),
@@ -22,7 +22,7 @@ const headers = { 'X-Actor': actor, ...(E.JOURNALI_TOKEN ? { Authorization: 'Bea
 let sharp
 try { sharp = (await import('sharp')).default } catch (e) { console.error('✗ sharp fehlt — im Plugin-Verzeichnis einmal „npm install“ ausführen (' + e.message + ')'); process.exit(1) }
 
-/// Erste Seite eines PDF als PNG (Taloan, 23.09.2026). Einmal je Datei in der grössten gebrauchten Kante gerendert —
+/// Erste Seite eines PDF als PNG. Einmal je Datei in der grössten gebrauchten Kante gerendert —
 /// die Presets rechnen dann aus diesem Bild weiter, statt das PDF mehrfach zu öffnen. Weisser Grund: ein Datenblatt
 /// ist auf Papier gedacht, durchsichtig sähe in der Kachel aus wie ein Fehler.
 async function pdfFirstPage(file, edge) {

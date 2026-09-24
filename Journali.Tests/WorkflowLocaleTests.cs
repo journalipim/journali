@@ -5,8 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Workflow je Sprache (docs/pflegestruktur.md 30; Taloan, 22.09.2026: „dann kann er keine Version freigeben, bis die
-// französische Übersetzung da ist“ — also läuft der Übersetzungsworkflow je Sprache, und die Wirkung trifft nur sie).
+// Workflow je Sprache (docs/pflegestruktur.md 30).
 public class WorkflowLocaleTests
 {
     private sealed class World

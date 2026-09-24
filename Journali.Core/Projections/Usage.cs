@@ -4,8 +4,7 @@ using Journali.Core.Journal;
 namespace Journali.Core.Projections;
 
 /// <summary>
-/// Nutzung: wie viele Einträge an welchem Tag ins Journal gingen (Taloan, 22.09.2026: „zeige mir in den Einstellungen
-/// einen Fortschrittsbalken — täglich, wöchentlich, monatlich“). Gezählt wird, was geschrieben wird; Lesen und
+/// Nutzung: wie viele Einträge an welchem Tag ins Journal gingen. Gezählt wird, was geschrieben wird; Lesen und
 /// Exportieren kosten nichts (die Endpunkte schreiben nicht). Woche und Monat werden aus den Tagen gerechnet, die
 /// Historie steht damit von selbst da — auch rückwirkend für ein bestehendes Journal, ohne einen einzigen eigenen
 /// Eintrag. Der Tag ist die Ortszeit des Servers, die Woche beginnt am Montag.
@@ -21,11 +20,11 @@ public sealed class Usage : IProjection
     public Dictionary<DateOnly, int> PerDay { get; } = new();
     /// <summary>Alle Einträge je Tag, auch Modell, Struktur, Kataloge und Betrieb — zum Vergleich in der Anzeige.</summary>
     public Dictionary<DateOnly, int> AllPerDay { get; } = new();
-    /// <summary>Tagesgeschäft je Tag und Urheber (Taloan, 23.09.2026): daraus wird, was ein Team verbraucht hat. Das Team
+    /// <summary>Tagesgeschäft je Tag und Urheber: daraus wird, was ein Team verbraucht hat. Das Team
     /// steht nicht im Eintrag — es kann wechseln; wer heute zu wem gehört, sagt das Abbild der Benutzer.</summary>
     public Dictionary<DateOnly, Dictionary<string, int>> PerDayActor { get; } = new();
     /// <summary>
-    /// Stand beim Einlösen eines Schlüssels (Taloan, 23.09.2026), je Eintragsnummer: der Tag und was an ihm bis dahin je
+    /// Stand beim Einlösen eines Schlüssels, je Eintragsnummer: der Tag und was an ihm bis dahin je
     /// Urheber gezählt war. Ein Reset gilt ab seinem Eintrag, nicht ab seinem Tag — was am selben Tag vorher geschah,
     /// wird damit abgezogen (<see cref="Sum(IReadOnlySet{string}, DateOnly, DateOnly, long?)"/>).
     /// </summary>
@@ -85,7 +84,7 @@ public sealed class Usage : IProjection
         return n;
     }
 
-    /// <summary>Der Anfang eines Zeitraums — nie vor dem Zählbeginn der Lizenz (Taloan, 23.09.2026).</summary>
+    /// <summary>Der Anfang eines Zeitraums — nie vor dem Zählbeginn der Lizenz.</summary>
     public static DateOnly Ab(DateOnly anfang, DateOnly? zaehltAb) => zaehltAb is { } z && z > anfang ? z : anfang;
 
     public int Day(DateOnly d, bool all = false) => (all ? AllPerDay : PerDay).GetValueOrDefault(d);
@@ -122,15 +121,14 @@ public sealed class Usage : IProjection
 public sealed record UsageCut(DateOnly Day, Dictionary<string, int> Counts);
 
 /// <summary>
-/// Die Grenzen des Testbetriebs: Woche und Monat (Taloan, 22.09.2026). <b>Kein Tageslimit</b> — „macht man 3 Testimporte
+/// Die Grenzen des Testbetriebs: Woche und Monat. <b>Kein Tageslimit</b> — „macht man 3 Testimporte
 /// und muss aufhören“; der Tag wird gezählt und im Verlauf gezeigt, begrenzt wird er nicht. Im Betrieb kommen die
-/// Grenzen aus der Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“); ohne Lizenz gelten diese hier.
+/// Grenzen aus der Lizenz; ohne Lizenz gelten diese hier.
 /// </summary>
 public static class Limits
 {
     /// <summary>
-    /// Was ein Joblauf dem Menschen übriglässt (Taloan, 23.09.2026: „der Job sollte das Kontingent nicht bis zum letzten
-    /// Limit ausreizen, sondern ein Stück für die Anwender freilassen, sagen wir 10 %“). Ein Import im Hintergrund darf
+    /// Was ein Joblauf dem Menschen übriglässt. Ein Import im Hintergrund darf
     /// also bis 90 % gehen; die letzten 10 % gehören der Handarbeit.
     /// </summary>
     public const double JobReserve = 0.10;
@@ -138,6 +136,6 @@ public static class Limits
     /// <summary>Die Grenze für einen Joblauf: das Kontingent ohne die Reserve.</summary>
     public static int FuerJob(int grenze) => grenze <= 0 ? grenze : (int)Math.Floor(grenze * (1 - JobReserve));
 
-    public const int Week = 10_000;    // Tarif Kostenlos (Taloan, 24.09.2026) — bis dahin 20 000 / 100 000
+    public const int Week = 10_000;    // Tarif Kostenlos — bis dahin 20 000 / 100 000
     public const int Month = 50_000;
 }

@@ -1,6 +1,6 @@
 <script setup>
 // Das Menü selbst: an der Mausposition, im Fenster gehalten, Esc/Klick daneben schliesst,
-// ↑↓ Enter wählen. Untermenüs (Taloan: Plugin-Einträge je Plugin): { label, icon, items } — Hover, Klick oder →
+// ↑↓ Enter wählen. Untermenüs: { label, icon, items } — Hover, Klick oder →
 // öffnet rechts daneben, ← schliesst es; Buchstaben gelten im gerade offenen Menü. Einmal in App.vue eingehängt.
 import { ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { menu } from '../menu.js'

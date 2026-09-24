@@ -1,5 +1,5 @@
 <script setup>
-// ⇩ Import aus einem Solr-Kern (infolox/prodexa-Export): links der Quellbaum,
+// ⇩ Import aus einem Solr-Kern (Export eines anderen PIM): links der Quellbaum,
 // Knoten für Knoten beim Aufklappen nachgeladen (Haken = Teilbaum); in der Mitte
 // der gewählte Knoten mit allem, was er hat; rechts der Plan und der Stapel.
 // Solr lesen geht per JSONP im Browser; geschrieben wird nur über /api/model und /api/batch.
@@ -13,7 +13,7 @@ const srcW = paneWidth('import.src', 340)
 const router = useRouter()
 
 const saved = JSON.parse(localStorage.getItem('journali.import.solr') || '{}')
-const base = ref(saved.base || '')   // keine Vorgabe — das Plugin ist allgemein, Kundendaten gehören nicht ins Repo (Taloan, 17.09.)
+const base = ref(saved.base || '')   // keine Vorgabe — das Plugin ist allgemein, Kundendaten gehören nicht ins Repo
 const target = ref(saved.target || '')
 const skipText = ref(saved.skip || '')
 const persist = () => localStorage.setItem('journali.import.solr', JSON.stringify({ base: base.value, target: target.value, skip: skipText.value, auto: connected.value }))
@@ -53,7 +53,7 @@ const umgebung = {
 }
 
 // Profile (ProfileBar): Quelle, Ziel, Auslassungen und die angehakten Wurzeln — im Journal unter plugin:solr
-// root: die angehakten Wurzeln mit Komma — so heisst der Parameter des Jobs; der JobRunner füllt ihn aus dem Profil (Taloan, 21.09.: alles im Profil)
+// root: die angehakten Wurzeln mit Komma — so heisst der Parameter des Jobs; der JobRunner füllt ihn aus dem Profil
 const profileGet = () => ({ base: base.value, target: target.value, skip: skipText.value, checked: [...checked.value], root: [...checked.value].join(',') })
 async function profileSet(p) {
   if (!p) {   // „— Profil —“: alles leer, Quelle zu
@@ -197,7 +197,7 @@ async function runRelations() {
 }
 
 // ---- Schreiben: Modell, dann Wurzel + Gruppen, dann je Produkt ein Stapel (unter der Obergrenze)
-/// Der Lauf geht an den Tasker: dort läuft er weiter, auch wenn dieses Fenster zugeht (Taloan, 23.09.2026).
+/// Der Lauf geht an den Tasker: dort läuft er weiter, auch wenn dieses Fenster zugeht.
 const JOB = 'solr_import'
 async function run() {
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
@@ -254,11 +254,11 @@ async function run() {
   </div>
 
   <Splitter v-model="srcW" :min="240" :max="800" />
-  <!-- Der angeklickte Knoten: nur dann, sonst gehört der Platz dem Plan (Taloan, 17.09.) -->
+  <!-- Der angeklickte Knoten: nur dann, sonst gehört der Platz dem Plan -->
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar"><h1>{{ icon(roleOf(current)) + ' ' + (current.name || current.master_id) }}</h1><span class="mono muted">{{ current.master_id }}</span><span class="grow" /><button class="x" @click="current = null" :title="$t('zuklappen')">×</button></div>
     <div class="scroll">
-        <!-- kein nacktes <template> hier: Vue 3 rendert es als echtes <template>-Element, dessen Inhalt unsichtbar ist (Taloan, 17.09.: „mittlere Spalte leer“) -->
+        <!-- kein nacktes <template> hier: Vue 3 rendert es als echtes <template>-Element, dessen Inhalt unsichtbar ist -->
         <div class="toolbar meta muted">
           <span v-if="current.product_number">{{ $t("SKU {0}", [current.product_number]) }}</span>
           <span v-if="current.main_level != null">{{ $t("· Ebene {0}", [current.main_level]) }}</span>

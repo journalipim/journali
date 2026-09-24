@@ -5,9 +5,9 @@ using System.Text.RegularExpressions;
 namespace Journali.Core.Entries;
 
 /// <summary>
-/// Kombinierte Attribute (Taloan, 17.09.2026): ein Attribut mit <see cref="AttributeDefinition.Formula"/> hat
+/// Kombinierte Attribute: ein Attribut mit <see cref="AttributeDefinition.Formula"/> hat
 /// keinen eigenen Wert im Journal — die Formel ist ein kleines Skript, das beim Lesen läuft und
-/// den Wert liefert. Wer damit arbeitet, ist Techniker (Taloan): also eine Skriptsprache wie
+/// den Wert liefert. Wer damit arbeitet, ist Techniker: also eine Skriptsprache wie
 /// JavaScript/PHP, mehrzeilig, einrückbar, englische Namen — keine Excel-Einzeiler, keine
 /// übersetzten Funktionsnamen.
 ///
@@ -115,7 +115,7 @@ public static class Formula
         private readonly List<string> _keys = new();
         private readonly HashSet<string> _vars = new();   // zugewiesene Variablen — ein Name davor ist ein Tippfehler
         private static readonly HashSet<string> Functions = ["round", "trunc", "floor", "ceil", "abs", "min", "max", "sqrt", "len", "upper", "lower", "trim", "left", "right", "contains", "replace", "split", "pad", "number", "str", "format", "isblank", "coalesce",
-            // Textformatierung (Taloan, 17.09.) — Namen wie in JavaScript, klein geschrieben
+            // Textformatierung — Namen wie in JavaScript, klein geschrieben
             "substr", "indexof", "startswith", "endswith", "capitalize", "title", "repeat", "padleft", "padright", "trimstart", "trimend", "squeeze", "regextest", "regexmatch", "regexreplace", "escapehtml", "striphtml", "slug", "nl2br", "count", "reverse"];
 
         public Prog Program()

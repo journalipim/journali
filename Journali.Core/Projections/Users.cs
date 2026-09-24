@@ -11,7 +11,7 @@ public sealed class UserState
     public string? Email { get; set; }
     public string Role { get; set; } = "editor";
     public bool Enabled { get; set; } = true;
-    /// <summary>Team (Taloan, 23.09.2026): wessen KI-Schlüssel gelten und auf wessen Rechnung es läuft. Null = kein Team, keine KI über den Server.</summary>
+    /// <summary>Team: wessen KI-Schlüssel gelten und auf wessen Rechnung es läuft. Null = kein Team, keine KI über den Server.</summary>
     public string? Team { get; set; }
     public long LastNumber { get; set; }
     public DateTimeOffset LastAt { get; set; }
@@ -31,7 +31,7 @@ public sealed class RoleState
     public string LastActor { get; set; } = "";
 }
 
-/// <summary>Abbild „die Benutzer“ (Taloan, 19.09.2026: Benutzer und Rollen): Strom <c>user:&lt;key&gt;</c>. Der letzte UserDefined gilt ganz; UserRetired nimmt ihn weg.</summary>
+/// <summary>Abbild „die Benutzer“: Strom <c>user:&lt;key&gt;</c>. Der letzte UserDefined gilt ganz; UserRetired nimmt ihn weg.</summary>
 public sealed class Users : IProjection
 {
     private readonly Dictionary<string, UserState> _all = new();

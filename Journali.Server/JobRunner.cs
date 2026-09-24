@@ -7,8 +7,7 @@ using Journali.Core.Projections;
 namespace Journali.Server;
 
 /// <summary>
-/// Jobs laufen im Server, nicht im Browser (Taloan, 19.09.2026: „Jobs wie Import dürfen nicht vom offenen Browserfenster
-/// abhängen“). Ein Job ist ein Prozess-Plugin mit Parametern; der Runner startet ihn als Kindprozess (nie im
+/// Jobs laufen im Server, nicht im Browser. Ein Job ist ein Prozess-Plugin mit Parametern; der Runner startet ihn als Kindprozess (nie im
 /// Serverprozess selbst), schreibt die Ausgabe in eine Logdatei unter JOURNALI_JOBS und die Eckdaten ins Journal
 /// (JobRunStarted/JobRunFinished). Der Zeitplan ist cron mit fünf Feldern, geprüft je Minute; je Job läuft höchstens
 /// ein Lauf zugleich. Geheimnisse (Token) stehen in jobs/secrets.json, nie im Journal, und gehen als {param} an den Prozess.
@@ -92,11 +91,11 @@ public sealed class JobRunner : BackgroundService
         var token = Auth.IssueServiceToken(actor, job.Role);   // gilt fuer diesen Lauf (JOURNALI_TOKEN); der Prozess schickt ihn als Bearer
         var values = new Dictionary<string, string>(job.Params) { ["journali"] = Origin, ["actor"] = actor, ["job"] = key, ["run"] = run, ["token"] = token };
         foreach (var (k, v) in Secrets.Get(Dir, key)) values[k] = v;
-        // Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen“): profile:<name> (sonst config:<name>) aus den Plugin-Daten im Journal
+        // Profil: profile:<name> (sonst config:<name>) aus den Plugin-Daten im Journal
         // füllt jeden Parameter des Manifests, den der Job nicht selbst setzt — Ziel im Baum, Teilbaum, Format, Sprachen …
         if (job.Params.TryGetValue("profile", out var profName) && profName is { Length: > 0 } && ProfileOf(state, profName) is { } profile)
             foreach (var (k, v) in ProfileValues(proc, profile)) if (!values.TryGetValue(k, out var have) || have.Length == 0) values[k] = v;
-        // Geheimnisse am Profil (Taloan, 21.09.: „alle Infos müssen im Profil vorliegen“ — der Token liegt beim Server, am Profil, nicht im Journal):
+        // Geheimnisse am Profil:
         // füllen, was der Job selbst nicht gesetzt hat
         if (job.Params.TryGetValue("profile", out var prof) && prof is { Length: > 0 })
             foreach (var (k, v) in Secrets.Get(Dir, Secrets.ProfileKey(job.Plugin, prof))) if (!values.TryGetValue(k, out var have) || have.Length == 0) values[k] = v;
@@ -182,7 +181,7 @@ public sealed class JobRunner : BackgroundService
     }
 
     private readonly HashSet<string> _cancelled = new();
-    /// <summary>Wer gerade warten soll und warum (Taloan, 23.09.2026). Im Speicher: nach einem Neustart läuft ohnehin nichts mehr.</summary>
+    /// <summary>Wer gerade warten soll und warum. Im Speicher: nach einem Neustart läuft ohnehin nichts mehr.</summary>
     private readonly Dictionary<string, string> _paused = new();
 
     /// <summary>
@@ -283,7 +282,7 @@ public static class Secrets
 }
 
 /// <summary>cron mit fünf Feldern: Minute Stunde Tag Monat Wochentag — *, n, a-b, */n, a,b; Wochentag 0–7 (0 und 7 = Sonntag).
-/// Tag und Wochentag gelten zusammen (UND) — „15-21 * 0“ ist der 3. Sonntag im Monat. Sechstes Feld (Taloan, 19.09.: „jeden zweiten“):
+/// Tag und Wochentag gelten zusammen (UND) — „15-21 * 0“ ist der 3. Sonntag im Monat. Sechstes Feld:
 /// dN:JJJJ-MM-TT = nur alle N Tage ab dem Datum, wN:JJJJ-MM-TT = nur alle N Wochen ab dem Datum (Woche = 7 Tage ab Anker).</summary>
 public sealed class Cron
 {

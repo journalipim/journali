@@ -1,5 +1,4 @@
-// Solr-Import als Job (Taloan, 23.09.2026: „node, kein Python“ · „sobald ich auf Schreiben klicke, sollte der Job an den
-// Tasker übergeben werden“). Derselbe Ablauf wie in der Ansicht — er steht in lauf.mjs und wird hier nur mit einer
+// Solr-Import als Job. Derselbe Ablauf wie in der Ansicht — er steht in lauf.mjs und wird hier nur mit einer
 // anderen Umgebung aufgerufen: Solr per fetch statt JSONP, journali über die API mit dem Dienst-Token des Laufs.
 //
 // Aufruf: node job.mjs <journali> <actor> — alles Weitere aus der Umgebung (der JobRunner setzt JOURNALI_*):
@@ -86,7 +85,7 @@ const api = {
 }
 
 /// Modell und Baum, wie die Ansicht sie aus dem Store nimmt — hier frisch von der API
-/// Anhalten zwischen zwei Stapeln (Taloan, 23.09.2026): weil jemand pausiert hat — oder weil das Kontingent voll ist.
+/// Anhalten zwischen zwei Stapeln: weil jemand pausiert hat — oder weil das Kontingent voll ist.
 /// Ein voller Zähler beendet den Lauf nicht; er wartet auf den Wochen- oder Monatswechsel oder auf eine neue Lizenz.
 const jobKey = (E.JOURNALI_JOB || '').trim()
 let grundVorher = ''

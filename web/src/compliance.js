@@ -1,4 +1,4 @@
-// Prüfkataloge (Taloan, 18.09.2026: „Plugins für DPP und PPWR — prüfen, Best-Guess-Vorschläge, autark oder mit KI“):
+// Prüfkataloge:
 // Ein Katalog (das Plugin liefert ihn) beschreibt die Datenpunkte einer Vorschrift — Schlüssel, Bezeichnung, Pflichtgrad,
 // Typ, Einheit, Hinweis, Synonyme, Rollen, Prüfregel. Die Maschine hier ist für alle Kataloge dieselbe:
 //   1. Zuordnung Datenpunkt → Attribut im Modell (Best Guess über Schlüssel, Label, Synonyme; im Journal gemerkt: „mapping“)
@@ -25,7 +25,7 @@ export function guessMapping(catalog, model) {
   const index = attrs.map(a => ({ a, names: [norm(a.key), ...Object.values(a.label ?? {}).map(norm)].filter(Boolean) }))
   const out = {}
   for (const g of catalog.groups) for (const it of g.items) {
-    // feste Zuordnung (Katalog nennt das Attribut, z. B. ETIM ef… → ef…): nie raten — „Height ≈ Gewicht (80 %)“ war Unsinn (Taloan, 20.09.)
+    // feste Zuordnung (Katalog nennt das Attribut, z. B. ETIM ef… → ef…): nie raten — „Height ≈ Gewicht (80 %)“ war Unsinn
     if (it.to !== undefined) { const ok = it.to && attrs.some(a => a.key === it.to); out[it.key] = { to: ok ? it.to : '', why: ok ? 'fest' : t_('kein Attribut'), sure: ok, fixed: true }; continue }
     const wanted = [it.key, ...(it.synonyms ?? [])].map(norm)
     let best = null, score = 0, why = ''
@@ -46,14 +46,14 @@ const sameKind = (want, have) => want === have || (want === 'decimal' && have ==
 export async function check(catalog, mapping, rootId, say = () => {}) {
   const model = store.model
   const locale = model.masterLocale ?? model.locales[0]?.code ?? 'de'
-  // Schritt 0 (Taloan, 20.09.: „der Anwender legt fest, was für den Knoten gilt — Richtlinie oder Sondergruppe“): Gruppen des Katalogs mit
+  // Schritt 0: Gruppen des Katalogs mit
   // scope gelten nur an Knoten, deren Geltungsattribut (vererbbar, z. B. dpp_scope = battery) die Geltung nennt
   const scopeAttr = catalog.groups.some(g => g.scope) ? `${catalog.key}_scope` : null
   const keys = [...new Set([...Object.values(mapping).map(m => m.to).filter(Boolean), ...(scopeAttr && model.attributes.some(a => a.key === scopeAttr) ? [scopeAttr] : [])])]
   say('lese …')
   const t = await api.get(`/api/nodes/${encodeURIComponent(rootId)}/table?deep=true&self=true&locale=${locale}${keys.length ? '&attributes=' + encodeURIComponent(keys.join(',')) : ''}`)
   const root = t.node
-  // Wurzel als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt (Taloan, 21.09.: Geltung am Vater, Prüfung am Kind sagte „gilt hier nicht“).
+  // Wurzel als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt.
   // Älterer Server ohne self: wie bisher nur die eigenen Werte der Wurzel (Listenwerte stehen dort in values, nicht value)
   const selfRow = root ? t.rows.find(r => r.row.id === root.id) : null
   const rows = [root && !selfRow ? { row: root, values: {} } : null, ...t.rows].filter(Boolean)
@@ -77,7 +77,7 @@ function vals(res, n, mapping) { const o = {}; for (const it of res.items) { con
 
 // Mit KI: je Knoten die leeren Pflicht-Datenpunkte, dazu die vorhandenen Werte des Knotens (alle Attribute) — die KI schlägt vor,
 // mit Sicherheit und Begründung; nichts wird geschrieben, der Mensch hakt ab.
-// web: true (Taloan, 20.09.2026: Produkte, die ich handle, nicht herstelle — die Daten stehen beim Hersteller, nicht bei mir):
+// web: true:
 // die KI sucht im Internet nach Hersteller, Typ, EAN und liest Datenblätter; jeder Vorschlag nennt seine Quelle.
 export async function aiSuggestions(catalog, mapping, res, nodeIds, say = () => {}, { web = false } = {}) {
   const out = []; const model = store.model
@@ -104,7 +104,7 @@ export async function aiSuggestions(catalog, mapping, res, nodeIds, say = () => 
 }
 
 // Vorschläge schreiben: attribute.set je Vorschlag (nur zugeordnete Datenpunkte) und dazu der Beleg (value.source: Quelle, Weg,
-// Prüfdatum — Taloan, 20.09.: „Quelle: URL, geprüft am …“ am Wert, nicht nur am Vorschlag), ein Stapel
+// Prüfdatum), ein Stapel
 export async function applySuggestions(list, mapping, locale) {
   const model = store.model; const today = new Date().toISOString().slice(0, 10)
   const commands = list.filter(s => s.item && mapping[s.item.key]?.to).flatMap(s => {
@@ -136,7 +136,7 @@ export async function createAttributes(catalog, items, mapping) {
   for (const it of items) {
     if (catalog.createAttribute) { const key = await catalog.createAttribute(it); if (key) mapping[it.key] = { to: key, why: 'angelegt', sure: true }; continue }   // der Katalog weiß es besser (etim: Listen, Einheiten)
     const key = (catalog.prefix ?? '') + it.key.replace(/[^a-z0-9_]/g, '_')
-    // Einheit: vorhandene nehmen (Schlüssel oder Bezeichnung), sonst anlegen — „Unbekannte Einheit: %“ war der Abbruch (Taloan, 20.09.)
+    // Einheit: vorhandene nehmen (Schlüssel oder Bezeichnung), sonst anlegen — „Unbekannte Einheit: %“ war der Abbruch
     const unit = it.unit ? await ensureUnit(it.unit) : null
     const body = { key, label: { de: it.label, en: it.labelEn ?? it.label }, type: it.type === 'enum' && !it.values ? 'text' : (it.type ?? 'text'), group: gkey, unit, axes: it.perLocale ? ['locale'] : [], inheritable: !!it.inheritable, required: it.level === 'must' && it.requiredChannels ? it.requiredChannels : null }
     await api.post(`/api/model/attributes/${key}`, body, 'PUT')
@@ -179,7 +179,7 @@ async function suggestScopes(catalog, rootRow, scopes, have) {
   return { items: scopes.map(s => items.find(x => x.key === s.key)).filter(Boolean), ai: usedAi, class: clsText }
 }
 
-// Ebene wählen (Taloan, 20.09.: „wir wissen nicht, wo der Anwender anfängt“): der Pfad von der Wurzel bis zum Knoten als Chips —
+// Ebene wählen: der Pfad von der Wurzel bis zum Knoten als Chips —
 // je Ebene Produkte darunter, Untergruppen, Knoten mit anderem Wert (≠). Empfehlung: die höchste Ebene ohne Untergruppen und ohne
 // Widerspruch. Liefert die gewählte Zeile oder null. attr/wanted: welches Attribut und welcher Wert gesetzt werden soll (für ≠).
 async function pickLevel(row, title, { attr = null, wanted = null } = {}) {
@@ -226,7 +226,7 @@ export async function mount(root, ctx, catalog) {
   const st = { root: localStorage.getItem(`journali.cmp.${catalog.key}.root`) || tree.rows.find(r => !r.parent)?.id, mapping: null, res: null, sugg: [], filter: 'all', picked: new Set(), levels: new Set(['must', 'should', 'may']), only: 'all' }
   const saved = await ctx.data.get('mapping')
   const savedGroup = await ctx.data.get('group').catch(() => null); if (typeof savedGroup === 'string' && savedGroup) catalog.groupKey = savedGroup
-  // Abgelehnte Vorschläge zur Geltung („nein“ zu „Vorschlag ja“) je Knoten — gemerkt, damit die Frage nicht wiederkommt (Taloan, 21.09.)
+  // Abgelehnte Vorschläge zur Geltung („nein“ zu „Vorschlag ja“) je Knoten — gemerkt, damit die Frage nicht wiederkommt
   st.declined = (await ctx.data.get('scopes_declined').catch(() => null)) ?? {}
   const decline = async (nodeId, key, on) => { const l = new Set(st.declined[nodeId] ?? []); on ? l.add(key) : l.delete(key); st.declined[nodeId] = [...l]; await ctx.data.set('scopes_declined', st.declined).catch(() => {}) }
   st.mapping = guessMapping(catalog, model)
@@ -236,19 +236,19 @@ export async function mount(root, ctx, catalog) {
   const status = el('span', { class: 'muted' }); const say = m => { status.textContent = m; status.className = String(m).startsWith('✗') ? 'fehler' : 'muted' }
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 12px' })
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)
-  // Teilbaum per Auswahlbaum (Taloan: statt Namenssuche); Knopf zeigt den gewählten, Klick klappt den Baum auf
+  // Teilbaum per Auswahlbaum; Knopf zeigt den gewählten, Klick klappt den Baum auf
   const rootLabel = id => { const r = tree.byId.get(id); return r ? `${r.role === 'group' ? '▣' : r.role === 'product' ? '▦' : '◆'} ${r.label}` : t_('Teilbaum wählen') }
   const rootIn = el('button', { class: 'x', title: t_('Teilbaum wählen (Gruppe oder Produkt)') }, rootLabel(st.root))
   const pick = el('div', { class: 'picker', style: 'position:absolute;left:0;top:28px;z-index:5;width:380px;display:none;padding:6px;background:var(--pane)' })
   treePicker(pick, { value: st.root, roles: ['group', 'product'], height: 300, onPick: r => { st.root = r.id; rootIn.textContent = rootLabel(r.id); pick.style.display = 'none'; localStorage.setItem(`journali.cmp.${catalog.key}.root`, r.id); run() } })
   rootIn.addEventListener('click', () => { pick.style.display = pick.style.display === 'none' ? 'block' : 'none' })
   const s1 = el('div'), s2 = el('div'), s3 = el('div')
-  // Keine Rechtsberatung (Taloan, 20.09.: „bei allen Berichten dick fett“): Kataloge, Vorschläge und Geltungen sind Hinweise und Empfehlungen —
+  // Keine Rechtsberatung: Kataloge, Vorschläge und Geltungen sind Hinweise und Empfehlungen —
   // verbindlich ist der Rechtstext; die Einordnung verantwortet der Anwender. Steht in jeder Prüfansicht oben, fett, und in jedem Bericht.
   const disclaimer = el('div', { class: 'warn', style: 'font-weight:700;font-size:12px;padding:4px 8px;border-bottom:1px solid var(--line)', title: t_('Die Datenpunkte, Hinweise, Fristen und Vorschläge (auch der KI) sind eine Arbeitshilfe nach bestem Wissen — keine Rechtsberatung. Massgeblich ist der Rechtstext (Quelle oben); ob und wie eine Vorschrift für ein Produkt gilt, entscheidet der Anwender.') },
     t_('⚠ Keine Rechtsberatung — Datenpunkte, Fristen, Geltungen und Vorschläge sind Hinweise und Empfehlungen. Massgeblich ist der Rechtstext ({0}).', [catalog.sourceLabel ?? t_('Quelle')]))
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, `${catalog.icon ?? '✓'} ${catalog.label}`), el('a', { href: catalog.source, target: '_blank', class: 'muted', style: 'font-size:12px', title: t_('Quelle') }, catalog.sourceLabel ?? t_('Quelle ↗')), el('span', { class: 'grow' }), status), disclaimer, body)
-  body.append(s2, s3, s1)   // 1 Prüfen · 2 Ergebnis · 3 Modell — erst der Knoten, dann was fehlt, dann das Modell dazu (Taloan, 20.09.)
+  body.append(s2, s3, s1)   // 1 Prüfen · 2 Ergebnis · 3 Modell — erst der Knoten, dann was fehlt, dann das Modell dazu
 
   // -- 1 Zuordnung
   function drawMapping() {
@@ -263,7 +263,7 @@ export async function mount(root, ctx, catalog) {
     s1.append(b1)
     if (!st.mapOpen) return
     s1.append(el('div', { class: 'muted', style: 'font-size:12px;margin-bottom:6px' }, t_('Modellpflege, unabhängig vom Knoten: welches Attribut im Modell den Datenpunkt hat. Fehlt eines, hier anlegen — ob es am Knoten gilt (Gruppe am Pfad), sagt das Ergebnis oben mit ⊘.') + ' ' + (catalog.description ?? '')))
-    // Filter (Taloan, 18.09.): Pflichtgrad an/aus, dazu nur zugeordnete / nur offene
+    // Filter: Pflichtgrad an/aus, dazu nur zugeordnete / nur offene
     const all = catalog.groups.flatMap(g => g.items)
     const cnt = lv => all.filter(it => it.level === lv).length
     const chip = (on, label, title, fn) => el('span', { class: 'view-chip' + (on ? ' on' : ''), title, onclick: fn }, label)
@@ -292,7 +292,7 @@ export async function mount(root, ctx, catalog) {
           el('td', {}, el('b', {}, it.label), el('div', { class: 'mono muted', style: 'font-size:11px' }, it.key)),
           el('td', { class: 'muted' }, `${it.type ?? 'text'}${it.unit ? ' ' + it.unit : ''}`),
           el('td', {}, sel, el('div', { class: 'muted', style: 'font-size:11px' }, m?.why ?? '')),
-          // Sondergruppe ohne Geltung am geprüften Knoten (Taloan, 20.09.: „warum fehlen die 4?“): nichts fehlt — sie gilt hier nicht, darum wurde nichts angelegt
+          // Sondergruppe ohne Geltung am geprüften Knoten: nichts fehlt — sie gilt hier nicht, darum wurde nichts angelegt
           el('td', { class: 'muted', style: 'font-size:12px;white-space:normal' }, g.scope && st.res && !st.res.items.some(x => x.key === it.key && st.res.byItem.get(x.key).na < st.res.nodes.length) ? el('span', { class: 'warn' }, t_('gilt am geprüften Knoten nicht (Geltung „{0}“ nicht gesetzt) — darum kein Attribut nötig', [g.scope.label])) : (it.hint ?? ''))))
       }
     }
@@ -315,7 +315,7 @@ export async function mount(root, ctx, catalog) {
     try {
       st.res = await check(catalog, st.mapping, st.root, say)
       if (catalog.autoCreate) {
-        // Modellpflege automatisch (Taloan, 20.09.: der Anwender wählt die Klasse und füllt Werte — Attribute und Gruppe sind Sache des Programms):
+        // Modellpflege automatisch:
         // fehlende Attribute, die an mindestens einem geprüften Knoten gelten, anlegen; die Gruppe des Katalogs an die Wurzel des Teilbaums
         let again = false
         const need = st.res.items.filter(it => !st.mapping[it.key]?.to && st.res.byItem.get(it.key).na < st.res.nodes.length)
@@ -405,7 +405,7 @@ export async function mount(root, ctx, catalog) {
     const sum = el('table', { class: 'grid', style: 'width:auto' }, el('thead', {}, el('tr', {}, el('th', {}, t_('Datenpunkt')), el('th', { class: 'num' }, '✓'), el('th', { class: 'num' }, 'leer'), el('th', { class: 'num' }, '✗'), el('th', {}, ''))))
     const sb = el('tbody'); sum.append(sb)
     // Datenpunkte, die an keinem geprüften Knoten gelten (Rolle, Klasse), stehen nicht in der Liste — ein Notebook bekommt keine
-    // Leitungsschutzschalter-Merkmale vorgehalten (Taloan, 20.09.); eine Zeile nennt, wie viele es sind
+    // Leitungsschutzschalter-Merkmale vorgehalten; eine Zeile nennt, wie viele es sind
     const hidden = r.nodes.length ? r.items.filter(it => r.byItem.get(it.key).na === r.nodes.length) : []
     // fehlendes Attribut: in der Zeile zuordnen (Auswahl) oder anlegen — nicht „siehe unter 3“
     const mapCell = it => {
@@ -416,7 +416,7 @@ export async function mount(root, ctx, catalog) {
       return el('span', { style: 'display:inline-flex;gap:4px;align-items:center' }, sel, mk)
     }
     const unm = r.items.filter(it => !st.mapping[it.key]?.to && !hidden.includes(it))
-    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? t_('{0} selbst, {1} über die Varianten darunter', [c.ok, c.below]) : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), style: c.empty || c.pending ? 'cursor:pointer;text-decoration:underline dotted' : '', onclick: c.empty || c.pending ? () => fillList(it) : null, title: c.empty ? t_('{0} leer eintragen (Knoten für Knoten, Wert oder „angefragt bei …“)', [c.empty]) + (c.inactive ? ' ' + t_('· {0} ohne gültiges Attribut', [c.inactive]) : '') : c.inactive ? t_('davon {0} ohne gültiges Attribut (Gruppe nicht am Pfad)', [c.inactive]) : '' }, String(c.empty + c.inactive), c.pending ? el('span', { class: 'warn', title: t_('{0} Anfragen anzeigen (bei wem, bis wann)', [c.pending]) }, ` ⏳${c.pending}`) : null), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand (Taloan, 20.09.: eine 0 ist nicht grün): grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
+    for (const it of r.items) { const c = r.byItem.get(it.key); const to = st.mapping[it.key]?.to; if (hidden.includes(it)) continue; sb.append(el('tr', {}, el('td', {}, `${it.level === 'must' ? '●' : it.level === 'should' ? '◐' : '○'} ${it.label} `, infoBtn(it)), el('td', { class: 'num ' + (c.ok + c.below ? 'pos' : 'muted'), title: c.below ? t_('{0} selbst, {1} über die Varianten darunter', [c.ok, c.below]) : '' }, String(c.ok + c.below)), el('td', { class: 'num ' + (c.empty + c.inactive ? (it.level === 'must' ? 'neg' : 'warn') : 'muted'), style: c.empty || c.pending ? 'cursor:pointer;text-decoration:underline dotted' : '', onclick: c.empty || c.pending ? () => fillList(it) : null, title: c.empty ? t_('{0} leer eintragen (Knoten für Knoten, Wert oder „angefragt bei …“)', [c.empty]) + (c.inactive ? ' ' + t_('· {0} ohne gültiges Attribut', [c.inactive]) : '') : c.inactive ? t_('davon {0} ohne gültiges Attribut (Gruppe nicht am Pfad)', [c.inactive]) : '' }, String(c.empty + c.inactive), c.pending ? el('span', { class: 'warn', title: t_('{0} Anfragen anzeigen (bei wem, bis wann)', [c.pending]) }, ` ⏳${c.pending}`) : null), el('td', { class: 'num ' + (c.bad ? 'neg' : 'muted') }, String(c.bad)), el('td', { class: to ? 'muted' : it.level === 'must' ? 'neg' : it.level === 'should' ? 'warn' : 'muted', style: 'font-size:11px' }, to ? '' : mapCell(it)))) }   // Farbe sagt den Stand: grün nur, wo etwas erfüllt ist; leer/kein Attribut bei Pflicht rot, bei empfohlen orange
     if (hidden.length) sb.append(el('tr', {}, el('td', { class: 'muted', colspan: '5' }, t_('… {0} weitere Datenpunkte gelten an keinem der {1} Knoten (andere Klasse oder Rolle)', [hidden.length, r.nodes.length]))))
     // Gruppe fürs Anlegen: wählbar (vorhandene oder neuer Schlüssel), je Katalog gemerkt — steht am Knopf und in jeder Zeile
     const grpSel = el('select', { title: t_('Attributgruppe, in der fehlende Attribute angelegt werden — vorhandene wählen oder neu') }, ...[...new Set([catalog.groupKey, ...(model.groups ?? []).map(g => g.key)])].map(k => el('option', { value: k }, `${L((model.groups ?? []).find(g => g.key === k)?.label) || (k === catalog.groupKey ? catalog.groupLabel || k : k)} (${k})${(model.groups ?? []).some(g => g.key === k) ? '' : ' — neu'}`)), el('option', { value: '__new__' }, t_('+ neue Gruppe …')))
@@ -449,7 +449,7 @@ export async function mount(root, ctx, catalog) {
           await store.poll(true); await tree.load(); await run()
         } catch (e) { store.toast(e.message) }
       }
-      // Eine Zeile je Sonderregel, keine Frage, die schon beantwortet ist (Taloan, 21.09.: „was für eine Bedienung“):
+      // Eine Zeile je Sonderregel, keine Frage, die schon beantwortet ist:
       //   Stand und Vorschlag einig → Aussage mit Grund und „ändern“ · uneinig → die Frage mit beiden Seiten · kein Vorschlag → ja/nein
       s3.append(line)
       const rowsBox = el('div', { style: 'margin:2px 0 6px' }); s3.append(rowsBox)
@@ -480,14 +480,14 @@ export async function mount(root, ctx, catalog) {
     }
     const inactiveN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
     const emptyN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'empty').length, 0), badN = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'bad').length, 0)
-    // Der Assistent (Taloan, 20.09.): Analyse → Deltas (zuordnen/anlegen, in welcher Gruppe) → Gruppe im Baum anhängen → erneut → bis alles zugeordnet ist oder der Anwender aufgibt
+    // Der Assistent: Analyse → Deltas (zuordnen/anlegen, in welcher Gruppe) → Gruppe im Baum anhängen → erneut → bis alles zugeordnet ist oder der Anwender aufgibt
     const pendN = r.nodes.reduce((k, x) => k + (x.pending ?? 0), 0), overN = r.nodes.reduce((k, x) => k + (x.overdue ?? 0), 0)
     const next = unm.length ? t_('Schritt: {0} Datenpunkte ohne Attribut — unten zuordnen oder anlegen', [unm.length]) : inactiveN ? t_('Schritt: die Gruppe im Baum anhängen — dann erneut prüfen') : (emptyN || badN) ? t_('Zuordnung vollständig — {0} leere{1} Werte füllen (Klick auf die Zahl „leer“ oder in die Zelle der Knoten-Tabelle){2}', [emptyN, badN ? `, ${badN} falsche` : '', pendN ? ` · ⏳ ${pendN} angefragt${overN ? `, ${overN} überfällig` : ''}` : '']) : pendN ? t_('⏳ {0} angefragt{1} — sonst alles da', [pendN, overN ? t_(', {0} überfällig', [overN]) : '']) : t_('✓ alles zugeordnet und gefüllt')
     s3.append(el('div', { class: 'chips', style: 'margin:4px 0;font-weight:600' }, el('span', { class: unm.length || inactiveN ? 'warn' : (emptyN || badN) ? '' : 'pos' }, next)))
     if (unm.length) s3.append(el('div', { class: 'chips', style: 'margin:4px 0' }, el('button', { class: 'primary', onclick: async () => { if (!(await dialog.confirm({ title: t_('{0} Attribute anlegen?', [unm.length]), warn: t_('Gruppe „{0}“', [catalog.groupKey]), list: unm.map(it => `${(catalog.prefix ?? '') + it.key} · ${it.label}`), ok: t_('+ Anlegen') }))) return; say(t_('lege an …')); try { await createAttributes(catalog, unm, st.mapping); await remember(); say(''); await run() } catch (e) { store.toast(e.message); say('✗ ' + e.message) } } }, t_('+ {0} fehlende Attribute anlegen', [unm.length])), el('span', { class: 'muted' }, t_('in Gruppe')), grpSel))
     if (catalog.summary) { const s = catalog.summary(r, st.mapping, ctx); if (s) s3.append(el('div', { class: 'chips', style: 'margin-top:6px' }, s)) }
     if (r.inactiveGroups?.size) {
-      // Schritt: die Gruppe hängt an keinem Knoten des Pfads — WO im Baum sie hängen soll, sagt der Anwender (Taloan, 20.09.); Vorgabe: der geprüfte Knoten
+      // Schritt: die Gruppe hängt an keinem Knoten des Pfads — WO im Baum sie hängen soll, sagt der Anwender; Vorgabe: der geprüfte Knoten
       const groups = [...r.inactiveGroups]; let target = tree.byId.get(st.root)
       const n = r.nodes.reduce((k, x) => k + Object.values(x.states).filter(s => s === 'inactive').length, 0)
       const tBtn = el('button', { class: 'x', title: t_('Knoten wählen, an dem die Gruppe hängen soll — gilt für alles darunter') }, `${target ? `${target.label}` : 'Knoten wählen'} ▾`)
@@ -505,14 +505,14 @@ export async function mount(root, ctx, catalog) {
     // je Knoten: Matrix
     const items = r.items.filter(it => st.mapping[it.key]?.to && st.levels.has(it.level))
     const tbl = el('table', { class: 'grid', style: 'width:auto;margin-top:8px' })
-    // wenige Spalten (≤ 6): Köpfe waagerecht wie überall — gedreht nur, wenn es eng wird (Taloan, 20.09.: „wieso ist das so gross?“)
+    // wenige Spalten (≤ 6): Köpfe waagerecht wie überall — gedreht nur, wenn es eng wird
     const rotate = items.length > 6
     const headH = Math.min(110, 16 + 5.6 * Math.max(4, ...items.map(it => Math.min(22, it.label.length))))
     tbl.append(el('thead', {}, el('tr', {}, el('th', { style: 'width:28px' }, el('input', { type: 'checkbox', title: t_('alle für KI-Vorschläge'), onchange: e => { st.picked = e.target.checked ? new Set(r.nodes.map(n => n.row.id)) : new Set(); drawResult() } })), el('th', { style: 'width:300px' }, t_('Knoten')), el('th', { class: 'num', style: 'width:60px' }, t_('Pflicht')), ...(catalog.rowNote ? [el('th', { style: 'width:150px' }, '')] : []), ...items.map(it => rotate
       ? el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'height:auto;vertical-align:bottom;padding:4px 2px' }, el('div', { style: 'writing-mode:vertical-rl;transform:rotate(180deg);height:' + headH + 'px;font-weight:400;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' }, it.label.slice(0, 22)))
       : el('th', { title: `${it.label} → ${st.mapping[it.key].to}`, style: 'font-weight:400;font-size:11px;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:2px 6px' }, it.label)))))
     const tb = el('tbody'); tbl.append(tb)
-    // Einrückung nach Tiefe im geprüften Teilbaum (Taloan, 20.09.: keine flache Liste, die sich nur am Symbol unterscheidet)
+    // Einrückung nach Tiefe im geprüften Teilbaum
     const inRun = new Map(r.nodes.map(n => [n.row.id, n.row.parent]))
     const depthOf = id => { let d = 0; for (let p = inRun.get(id); p && inRun.has(p); p = inRun.get(p)) d++; return d }
     for (const n of r.nodes) {

@@ -1,4 +1,4 @@
-// Prüfstand für Oberflächenteile (Taloan, 22.09.2026: „bau dir Prüfroutinen, dass ich nicht jeden Mist selbst testen muss“).
+// Prüfstand für Oberflächenteile.
 // Gilt für alle Dialoge und Fenster, die wir anfassen: hier steht der Rahmen, die Prüfungen je Bauteil stehen in ui-*.test.mjs.
 // Ein echtes DOM (happy-dom) und die Vue-Testwerkzeuge — die Bauteile werden wirklich gezeichnet und bedient.
 import { Window } from 'happy-dom'

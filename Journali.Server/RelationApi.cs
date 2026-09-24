@@ -12,12 +12,12 @@ namespace Journali.Server;
 public static class RelationApi
 {
     /// <summary>
-    /// Geerbte Medien (Taloan, 18.09.2026): Medien-Relationen der Vorfahren mit inherit=true, der nächste Vorfahr zuerst.
+    /// Geerbte Medien: Medien-Relationen der Vorfahren mit inherit=true, der nächste Vorfahr zuerst.
     /// Je Relationstyp gilt die nächste Ebene, die etwas hat: hat der Knoten selbst ein Medium dieses Typs, erbt er keins;
     /// sonst zählt der nächste Vorfahr mit vererbten Medien dieses Typs — darunterliegende Vorfahren nicht mehr.
     /// </summary>
     /// <summary>
-    /// Geerbte Medien (Taloan, 18.09.2026, entschieden): Medien-Zuordnungen der Vorfahren mit inherit=true, als Ableitung — je
+    /// Geerbte Medien: Medien-Zuordnungen der Vorfahren mit inherit=true, als Ableitung — je
     /// Medium. Ein geerbtes Medium lässt sich an keiner Ebene entfernen, nur stoppen: eine Zuordnung zum selben Medium mit
     /// stop=true am Knoten oder einem näheren Vorfahren nimmt es dort und darunter heraus. Eigene und geerbte bestehen
     /// nebeneinander; ein Medium, das der Knoten selbst zugeordnet hat, wird nicht noch einmal als geerbt gezeigt.

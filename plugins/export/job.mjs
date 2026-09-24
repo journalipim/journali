@@ -1,7 +1,7 @@
-// Tabellen-Export als Job (Taloan, 19.09.2026: „Export-Plugins jobfertig“): ein Teilbaum als Excel oder CSV in ein
+// Tabellen-Export als Job: ein Teilbaum als Excel oder CSV in ein
 // Verzeichnis — derselbe Kern wie ⇪ Export → Tabelle (plugins/table/core.mjs). Behält die letzten n Dateien je Wurzel.
 // Aufruf: node job.mjs <journali> <actor> <root> <dir> [format] [locales] [role] [view] [ownOnly] [keep] [pub] — oder JOURNALI_*.
-// pub (Taloan, 21.09.2026): Publikationsbaum statt Teilbaum — exportiert wird die Ausleitung (GET /api/pub/{id}/export: Freigabe für den Kanal,
+// pub: Publikationsbaum statt Teilbaum — exportiert wird die Ausleitung (GET /api/pub/{id}/export: Freigabe für den Kanal,
 // Markt in den Verkaufsländern), Werte auf der Kanalachse des Baums, je Zeile der Rubrikpfad; was zurückgehalten wird, steht mit Grund im Protokoll.
 import fs from 'node:fs'
 import path from 'node:path'
@@ -45,7 +45,7 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
       for (const v of r.variants) if (v.in) { only.add(v.id); pathOf.set(v.id, [...(pathOf.get(v.id) ?? []), p]) }
     }
     console.log(`Ausleitung ${x.tree.label} · ${channel}${x.tree.market ? ' · ' + x.tree.market : ''}: ${x.in} Produkte ausgeleitet, ${x.out} zurückgehalten`)
-    // Stand (Taloan, 21.09.): ein Stand für alles, was ausgeleitet wird → die Werte von damals; gemischte Stände je Rubrik → Werte live, mit Hinweis
+    // Stand: ein Stand für alles, was ausgeleitet wird → die Werte von damals; gemischte Stände je Rubrik → Werte live, mit Hinweis
     const stands = [...new Set(x.rows.filter(r => r.in).map(r => r.stand ?? 0))]
     if (stands.length === 1 && stands[0]) { at = stands[0]; console.log(`Stand #${at}: Werte wie damals`) }
     else if (stands.length > 1) console.log(`⚠ gemischte Stände je Rubrik (${stands.map(s => s ? '#' + s : 'live').join(', ')}) — Zugehörigkeit je Stand, Werte live`)
@@ -58,7 +58,7 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
     const t = await build({ api, model }, { root: r.id, role, locales: locs, ownOnly, viewKey, channel, only, at, extra: pathOf ? [{ key: 'rubric', of: id => (pathOf.get(id) ?? []).join(' | ') }] : [], say: m => console.log(m) })
     if (only && !t.count) { console.log(`${r.label}: nichts in der Ausleitung`); continue }
     const safe = String(r.file ?? r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
-    const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.${format === 'csv' ? 'csv' : 'xlsx'}`)   // Job-Key davor: Stände je Job (Taloan)
+    const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.${format === 'csv' ? 'csv' : 'xlsx'}`)   // Job-Key davor: Stände je Job
     if (format === 'csv') fs.writeFileSync(file, toCsv(t), 'utf8')
     else fs.writeFileSync(file, Buffer.from(X.write(workbook(X, t), { type: 'array', bookType: 'xlsx' })))
     console.log(`${file}: ${t.count} Zeilen, ${t.columns.length} Spalten, ${(fs.statSync(file).size / 1024).toFixed(0)} KB`)

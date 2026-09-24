@@ -1,4 +1,4 @@
-// Datenblätter als Job (Taloan, 19.09.2026): für einen Teilbaum je Knoten ein fertiges Blatt als HTML in ein Verzeichnis —
+// Datenblätter als Job: für einen Teilbaum je Knoten ein fertiges Blatt als HTML in ein Verzeichnis —
 // dieselbe Wiedergabe wie „Datenblatt erstellen“ (designer.js, Layout der Rolle oder ein benanntes), dazu index.html.
 // Aufruf: node job.js <journali> <actor> <root> <dir> [role] [layout] [locale] — oder JOURNALI_* aus der Umgebung.
 import fs from 'node:fs'

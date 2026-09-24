@@ -1,6 +1,6 @@
 <script setup>
 // Einträge als dichte Zeilen: Nummer, Zeit, Urheber, [Strom], Typ, Inhalt.
-// Stapel (Taloan, 18.09.): aufeinanderfolgende Einträge derselben Aktion (batch) stehen als EIN Block — eine Kopfzeile
+// Stapel: aufeinanderfolgende Einträge derselben Aktion (batch) stehen als EIN Block — eine Kopfzeile
 // mit Anzahl, Urheber, Zeit, aufklappbar, mit ↶ Rückgängig für die ganze Aktion; Mouseover zeigt, was der Schritt täte.
 import { reactive, ref, computed } from 'vue'
 import { when, describe, api } from '../api.js'
@@ -9,7 +9,7 @@ import { tree } from '../tree.js'
 import { restoreModel, canRestoreModel, mayRestore } from '../modelRestore.js'
 import { t } from '../i18n.js'
 const props = defineProps({ entries: Array, showStream: { type: Boolean, default: false } })
-// Art des Eintrags (Taloan, 22.09.2026): ein Symbol je Art, Tooltip nennt sie ausgeschrieben; „zählt“ ist Datenpflege und Ausleitung
+// Art des Eintrags: ein Symbol je Art, Tooltip nennt sie ausgeschrieben; „zählt“ ist Datenpflege und Ausleitung
 const KINDS = { model: ['◫', t('Datenmodellierung')], structure: ['▤', t('Struktur')], data: ['✎', t('Datenpflege · zählt')], publish: ['⇶', t('Ausleitung · zählt')], reference: ['⇩', t('Referenzdaten')], setup: ['⚙', t('Einrichtung')], ops: ['⏱', t('Betrieb')] }
 const kindIcon = k => KINDS[k]?.[0] ?? '·'
 const kindText = k => KINDS[k]?.[1] ?? (k ?? 'unbekannt')

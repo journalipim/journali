@@ -1,4 +1,4 @@
-// ETIM-Freigaben kommen als Zip (Taloan, 22.09.2026) — der Dateiknopf in der Oberfläche liest sie jetzt selbst.
+// ETIM-Freigaben kommen als Zip — der Dateiknopf in der Oberfläche liest sie jetzt selbst.
 // Geprüft wird mit einem echten, hier gebauten Zip: Zentralverzeichnis lesen, grösste .xml/.ixf finden, im Browser
 // entpacken (DecompressionStream). Dieselben Funktionen benutzt der Prozess fetch.mjs.
 import test from 'node:test'

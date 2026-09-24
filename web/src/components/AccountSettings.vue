@@ -1,6 +1,5 @@
 <script setup>
-// Mein Konto (Taloan, 23.09.2026: „hier habe ich alles quer gemischt — Einstellungen für mein eigenes Konto und die
-// Verwaltung der Benutzer und Rechte“): Passwort und die eigenen API-Token. Wer sonst im System arbeitet, steht unter
+// Mein Konto: Passwort und die eigenen API-Token. Wer sonst im System arbeitet, steht unter
 // ⚙ Anlage — das ist Verwaltung, nicht mein Konto.
 import { ref, onMounted } from 'vue'
 import { api, when } from '../api.js'

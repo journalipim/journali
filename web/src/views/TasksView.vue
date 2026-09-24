@@ -1,5 +1,5 @@
 <script setup>
-// ⚑ Aufgaben (27, Taloan 21.09.2026): alle Knoten, deren nächster Workflow-Schritt meiner Rolle (oder mir) gehört — nach Alter im
+// ⚑ Aufgaben (27): alle Knoten, deren nächster Workflow-Schritt meiner Rolle (oder mir) gehört — nach Alter im
 // Zustand; Filter je Workflow und Zustand; der Schritt direkt aus der Zeile (Notiz-Pflicht → Dialog). Der Rest ist die Knotenansicht.
 import { ref, computed, onMounted } from 'vue'
 import { api, when } from '../api.js'
@@ -17,7 +17,7 @@ async function load() {
   try { defs.value = await api.get('/api/workflows'); tasks.value = await api.get(`/api/workflows/tasks?workflow=${wf.value}&state=${state.value}`) } catch (e) { store.toast(e.message) }
   busy.value = ''
 }
-// Zuweisen aus der Liste (Taloan, 21.09.): Vorschlagsliste wie am Knoten — Personen mit der Rolle des nächsten Schritts zuerst
+// Zuweisen aus der Liste: Vorschlagsliste wie am Knoten — Personen mit der Rolle des nächsten Schritts zuerst
 let people = null
 async function assign(t) {
   if (!people) { try { people = await api.get('/api/auth/people') } catch { people = [] } }

@@ -5,8 +5,7 @@ using Journali.Core.Projections;
 namespace Journali.Tests;
 
 /// <summary>
-/// Eine Sicherung zurückspielen (Taloan, 23.09.2026: „was man WIRKLICH als Sicherung braucht, ist: neue DB oder purge
-/// ⇒ wiederherstellen“ / „neuer Docker irgendwo, Sicherung einspielen, muss das System wiederherstellen“).
+/// Eine Sicherung zurückspielen.
 /// Entscheidend ist, dass nichts Neues entsteht: die Einträge kommen mit ihren Nummern, Zeiten und Urhebern zurück,
 /// und die Abbilder ergeben denselben Stand. Sonst wäre es eine Kopie, keine Wiederherstellung.
 /// </summary>
@@ -17,10 +16,10 @@ public class RestoreTests
         var j = new MemoryJournal();
         foreach (var s in Model.Seeds()) j.Append("system", s.Stream, s.Type, s.Payload);
         var g = Ids.New(Roles.Group);
-        j.Append("taloan", g, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("Leuchten", "Luminaires"))));
+        j.Append("u1", g, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("Leuchten", "Luminaires"))));
         var p = Ids.New(Roles.Product);
-        j.Append("taloan", p, Types.ProductCreated, Types.Serialize(new ProductCreated(g)));
-        j.Append("taloan", p, Types.StatusSet, Types.Serialize(new StatusSet("active")), "b-1");
+        j.Append("u1", p, Types.ProductCreated, Types.Serialize(new ProductCreated(g)));
+        j.Append("u1", p, Types.StatusSet, Types.Serialize(new StatusSet("active")), "b-1");
         return j;
     }
 
@@ -73,7 +72,7 @@ public class RestoreTests
         var neu = new MemoryJournal();
         neu.RestoreAll(alt.ReadAfter(0).ToList());
 
-        var weiter = neu.Append("taloan", Ids.New(Roles.Group), Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("Neu", "New"))));
+        var weiter = neu.Append("u1", Ids.New(Roles.Group), Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("Neu", "New"))));
         Assert.Equal(alt.Head + 1, weiter.Number);   // die Zählung läuft weiter, nicht von vorn
     }
 }

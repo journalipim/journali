@@ -1,6 +1,5 @@
 <script setup>
-// ▨ Medien (docs/pflegestruktur.md, 20): links die Ordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren,
-// wie ein interner Dateimanager — sortieren, gruppieren“), in der Mitte die Bibliothek als Kacheln (Suche, Sortierung,
+// ▨ Medien (docs/pflegestruktur.md, 20): links die Ordner, in der Mitte die Bibliothek als Kacheln (Suche, Sortierung,
 // Gruppierung, Mehrfachauswahl, Ziehen in einen Ordner, Hochladen per Knopf oder Ablegen), rechts das gewählte Medium —
 // Datei, Werte (Alt-Text, Rechte), Ordner, wo es hängt. Die Bytes liegen im Store des Servers; hier laufen nur /api/media.
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
@@ -144,7 +143,7 @@ async function fileMedia(ids, target) {
   await store.poll(true); await loadFolders(); await load()
   store.toast(`${todo.length} ${todo.length === 1 ? 'Medium' : 'Medien'} → ${target ? pathOf(target).map(f => f.name).join(' › ') : 'ohne Ordner'}`, 'ok')
 }
-// Verschieben nur durch Ziehen auf einen Ordner links (Taloan, 21.09.: ein Knopf „verschieben“ in der Leiste verwirrt — weg damit)
+// Verschieben nur durch Ziehen auf einen Ordner links
 
 // ---- Hochladen: in den gerade gezeigten Ordner
 async function upload(files) {

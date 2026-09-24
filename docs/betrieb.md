@@ -39,8 +39,7 @@ gleichen Namens übersteuert sie.
 ## Medien
 
 Die Bytes liegen ausserhalb des Journals, adressiert über den SHA-256; das Journal
-kennt nur den Hash. **Wo** sie liegen, ist ein Treiber per `JOURNALI_MEDIA`
-(Taloan, 19.09.2026: Datenbank z. B. auf Azure, Assets im günstigen Object Storage):
+kennt nur den Hash. **Wo** sie liegen, ist ein Treiber per `JOURNALI_MEDIA`:
 
 | `JOURNALI_MEDIA` | Treiber |
 |---|---|
@@ -130,7 +129,7 @@ ersten Stufe). Für den Server gibt es zwei Wege:
    als `/app`, Befehl `dotnet Journali.Server.dll`, Port 8080, dieselben
    Umgebungsvariablen. Änderung = neu publishen, Container neu starten.
 
-**Keine Debugsymbole in der Auslieferung** (Taloan, 22.09.2026): Image und
+**Keine Debugsymbole in der Auslieferung**: Image und
 Publish-Ordner werden mit `-p:DebugType=none -p:DebugSymbols=false` gebaut,
 also ohne `.pdb`. Das nimmt einem Leser die Dateipfade und Zeilennummern; die
 DLLs sind IL und bleiben mit einem Dekompilierer lesbar (Namen und Logik, ohne
@@ -160,8 +159,7 @@ legt den ersten Administrator an (`POST /api/auth/setup`); ab dann braucht alles
 (`Authorization: Bearer …`), und der Urheber jedes Eintrags kommt aus der Sitzung — der Client kann
 `X-Actor` nicht mehr wählen.
 
-**Rollen sind Daten, Rechte sind Code** (Taloan, 20.09.2026: „wie die Rollen heißen und was sie können,
-überlassen wir dem Anwender — wir legen sinnvolle vor“). Das Rechte-Vokabular (`Rights` im Kern) ist fest,
+**Rollen sind Daten, Rechte sind Code**. Das Rechte-Vokabular (`Rights` im Kern) ist fest,
 weil der Server jedes Recht prüfen muss (`Auth.Needed`: welche Anfrage welches Recht braucht):
 
 | Recht | erlaubt |
@@ -200,8 +198,7 @@ und sagt es in der Konsole. Danach die Variable wieder entfernen.
 
 ## KI
 
-journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt
-(Taloan, 20.09.2026). Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis
+journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt. Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis
 des Servers (`jobs/secrets.json` unter `team:<key>`), nie im Journal und nie im Browser. Gefragt wird
 über `POST /api/ai/ask`: der Server nimmt den Schlüssel des **zahlenden** Teams (`keysFrom`) und das
 dort eingetragene Modell. Ohne Team keine KI; dasselbe gilt für Jobs, die über ihr `JOURNALI_TOKEN`
@@ -209,8 +206,7 @@ einen Anwender und damit ein Team haben. Eingerichtet werden können **Anthropic
 (`api.anthropic.com`) und **OpenAI** (`api.openai.com`); weitere sind ein Eintrag in `AiApi.Call`.
 Der Anbieter bleibt Vertragspartner des Kunden — abgerechnet wird dort.
 
-**Über Tokens und Kosten sagt journali nichts** (Taloan, 23.09.2026: „wir machen keine Aussagen über
-fremd entstandene und verbrauchte Tokens + Kosten“). Was der Anbieter meldet, wird weder gespeichert
+**Über Tokens und Kosten sagt journali nichts**. Was der Anbieter meldet, wird weder gespeichert
 noch angezeigt. Was journali sagt, hat journali selbst gemessen: das **KI-Austauschvolumen** in
 Bytes — was hingeschickt und was zurückgekommen ist. Es steht als Kennzahl in der Statuszeile
 (Monat, KB/MB/GB) und auf der Teamseite je Tag, aufgeschlüsselt nach Anlass (Editor, Übersetzung,
@@ -262,7 +258,7 @@ die Datenbank: die Plugin-Verzeichnisse und die Dateien im Datenverzeichnis
 (`auth.json`, `media.json`, `jobs/secrets.json`) liegen im Dateisystem und fehlen.
 Wer so sichert, muss das Volume mitnehmen.
 
-**Die Vollsicherung** — von Hand unter ⚙ Einstellungen → ⇅ B&R (jeder Tarif, Taloan 24.09.2026) oder als Zeitplan
+**Die Vollsicherung** — von Hand unter ⚙ Einstellungen → ⇅ B&R (jeder Tarif) oder als Zeitplan
 mit dem Plugin `backup` im Tasker (ab Pro); beide rufen `POST /api/backup` — schreibt einen
 Satz, der an nichts hängt — nicht an der Postgres-Fassung, nicht am Schema:
 
@@ -307,8 +303,7 @@ Index `journal_stream (stream, number)` für `ReadStream`.
 ### Start und der lokale Spiegel
 
 Beim Start baut der Server alle Abbilder aus dem Journal neu (`Catalog.Rebuild`); die Startzeile sagt, wo die
-Zeit hingeht: `61242 Einträge in 31556 ms — lesen 30326 ms · anwenden Plugins 728 ms, Tree 199 ms …` (Taloan,
-21.09.2026). Das Anwenden ist billig; das Lesen über das Netz aus Postgres nicht. Darum führt der Server einen
+Zeit hingeht: `61242 Einträge in 31556 ms — lesen 30326 ms · anwenden Plugins 728 ms, Tree 199 ms …`. Das Anwenden ist billig; das Lesen über das Netz aus Postgres nicht. Darum führt der Server einen
 **lokalen Spiegel** des Journals (`CachedJournal`): `journal-<host>-<port>-<db>.cache.jsonl` im Datenverzeichnis
 (`JOURNALI_JOBS`), eine JSON-Zeile je Eintrag. Beim Start kommt alles bis zum Spiegelstand von der Platte, nur der
 Rest aus der Datenbank; jeder gelesene oder geschriebene Eintrag wird angehängt. Der Spiegel ist ein Cache, keine
@@ -316,13 +311,13 @@ Wahrheit: beim Start wird sein letzter Eintrag gegen die Datenbank geprüft (Num
 die Nummernfolge auf Lücken — bei jeder Abweichung wird die Datei verworfen und alles aus der Datenbank gelesen.
 Datei löschen ist jederzeit erlaubt. An und aus steht in ⚙ Einstellungen → ▨ Storage → ▨ Start (dort auch die
 Grösse und der Papierkorb); ohne `betrieb.json` zählt `JOURNALI_JOURNAL_CACHE=off`.
-Was je Eintrag kostet, wächst mit dem Journal (Taloan, 24.09.2026): die Datei ist einmal je Vorgang offen, nicht je
+Was je Eintrag kostet, wächst mit dem Journal: die Datei ist einmal je Vorgang offen, nicht je
 Eintrag; beim Start wird nur die letzte Zeile entschlüsselt (lückenlos = erste Zeile #1 und so viele Zeilen wie die
 letzte Nummer); Zeilen vor dem gesuchten Stand werden an ihrer Nummer erkannt, ohne sie zu entschlüsseln; eine beim
 Absturz halb geschriebene letzte Zeile wird abgeschnitten statt den Spiegel zu verwerfen. Gemessen an 125 096
 Einträgen: Start prüfen 207 ms (vorher ~2,2 s), 50 000 nachholen 127 ms (vorher 7,4 s allein fürs Schreiben).
 
-**Schnappschuss der Abbilder** (Taloan, 21.09.2026 — gegen das Anwenden, ~18 µs je Eintrag): `snapshot-<host>-<port>-<db>.json`
+**Schnappschuss der Abbilder**: `snapshot-<host>-<port>-<db>.json`
 im Datenverzeichnis, der Stand aller Abbilder bei #n (`Snapshot.cs` im Kern: System.Text.Json über die Abbild-Klassen samt
 privater Felder). Beim Start werden die Abbilder daraus geladen und nur der Rest ab #n angewandt; geschrieben wird er im
 Hintergrund nach dem Start und beim Beenden. Auch er ist ein Cache: er trägt den Bau-Stempel des Kerns (neue Fassung =
@@ -347,9 +342,7 @@ Parameter (`process.params`: `key`, `label`, `type`, `default`, `secret`) — Ty
 `node` (Auswahlbaum, Wert ist die Knoten-Id), `pub` (Publikationsbaum), `profile` (Dropdown der gespeicherten
 Profile des Plugins — `profile:<name>` oder `config:<name>` im Plugin-Strom; jeder Parameter mit `key: profile`
 bekommt es auch ohne den Typ), `dir` (Verzeichnis auf dem Server) und
-`path` (Datei, Verzeichnis oder URL). **Alles im Profil** (Taloan, 21.09.2026: „die Profile definiere ich im Plugin —
-alle Infos müssen deshalb im Profil vorliegen; das Einzige, was der Tasker bei dateibasierten Importen und Exporten
-können muss, ist Verzeichnis/Datei; Ziel im Baum beim Import, Quelle vom Baum beim Export stehen im Profil“): hat ein
+`path` (Datei, Verzeichnis oder URL). **Alles im Profil**: hat ein
 Prozess einen Parameter `profile`, zeigt der Job-Dialog nur Profil, Dateien/Verzeichnisse und Schalter; Baumknoten,
 Texte und Geheimnisse stehen unter „Überschreiben (leer = wie im Profil)“. Der JobRunner liest `profile:<name>`
 (sonst `config:<name>`) aus den Plugin-Daten und füllt jeden Manifest-Parameter gleichen Namens, den der Job nicht
@@ -357,7 +350,7 @@ selbst setzt — die Prozesse selbst bleiben, wie sie sind. Plugins mit eigener 
 (IXP, JSON-Import, Solr, Vorlagen-Export — Solr: Kern, Ziel, angehakte Wurzeln als `root` mit Komma, übergangene
 Schlüssel); Prozesse ohne Ansicht tragen `"profile": "generic"` und bekommen im Job-Dialog
 ✎ — ein Formular aus ihren Parametern (Tabellen-Export, Backup, RAG, Datenblatt-Job, JSON-Export).
-**Fächer** (`docs/tasker-dateien.md`, Taloan 21.09.2026): Prozesse mit `files` im Manifest bekommen je Job `in/`, `done/`,
+**Fächer** (`docs/tasker-dateien.md`): Prozesse mit `files` im Manifest bekommen je Job `in/`, `done/`,
 `failed/`, `out/` unter einer Basis (Vorgabe `jobs/<key>`, je Job ein Share). Der Tasker wählt den Eingang (Muster,
 eine oder alle Dateien, Duplikat nach SHA-256 → `done/…-dup-…` ohne Lauf; leerer Eingang → kein Lauf), füllt
 `{inFile}`/`{inDir}`/`{outFile}`/`{outDir}` und den genannten Parameter (`source`, `dir`), wenn der Job ihn leer lässt,
@@ -372,11 +365,11 @@ Geheimnisse (Token) gehören nie ins Journal, also nicht ins Profil selbst — s
 unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht Jobs oder Storage; Oberfläche
 `web/src/filePicker.js`, Plugins über `ctx.filePicker`): Wurzeln sind das Datenverzeichnis, das Programm und die
 Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im
-Browser (Taloan, 21.09.2026).
+Browser.
 
 ## Lizenz — Tabelle `licence` in der Datenbank
 
-Die Grenzen dieser Anlage stehen in der Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“), nicht in der Hand
+Die Grenzen dieser Anlage stehen in der Lizenz, nicht in der Hand
 des Administrators und schon gar nicht bei einem anderen Team:
 
 | Feld | Bedeutung |
@@ -387,7 +380,7 @@ des Administrators und schon gar nicht bei einem anderen Team:
 | `plan`, `holder`, `validUntil` | Bezeichnung, Inhaber, Ablauf |
 | `aiTokensMonth`, `aiTokensDay` | Altlast, wird nicht mehr ausgewertet |
 
-### Tarife (Taloan, 24.09.2026)
+### Tarife
 
 `Journali.Core/Projections/Tarife.cs` ist die eine Tabelle; `plan` in Lizenz, Anforderung und Schlüssel nennt den Tarif.
 
@@ -418,15 +411,14 @@ Was eine Lizenz darf, ist einen **Anfang setzen**: `countFrom` verschiebt den Z�
 zählt nicht mehr mit. Das ist auch der Weg nach einer Migration, deren Altdaten keine Pflege waren.
 
 Die Limits liegen am **Init Team**; jedes weitere Team hat, was die Lizenz ihm unter `teams` zuschreibt, sonst nichts —
-dann rechnet es über ein anderes Team ab. Eingestellt wird hier nichts (Taloan: „es gibt hier nichts einzustellen“).
+dann rechnet es über ein anderes Team ab. Eingestellt wird hier nichts.
 
 **Ohne Kontingent keine Pflege**: Einträge, die zählen, weist der Server ab (403), sobald der Zähler voll ist.
 Ein **Joblauf** hört schon bei 90 % auf (`Limits.JobReserve`) — die letzten 10 % gehören der Handarbeit — und er
 **pausiert**, statt zu sterben. Fortgesetzt wird er nur von Hand: sonst nähmen wartende Jobs das neue Kontingent im
 selben Moment wieder weg.
 
-Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts (Taloan: „wer den
-Komfort der Kontrolle will, muss Teams mit eigenem Kontingent bilden“). Teams ohne eigenen Schlüssel arbeiten über den
+Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts. Teams ohne eigenen Schlüssel arbeiten über den
 Schlüssel der Anlage (`secrets.json` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das KI-Limit.
 
 Echtheit: `sig` ist eine ECDSA-P-256-Signatur (SHA-256, Base64) über die Felder ohne `sig`. Geprüft wird sie, sobald
@@ -438,7 +430,7 @@ Lizenz, Kennung und Anforderungen gehen **nicht** in die Vollsicherung — eine 
 
 ### Schlüssel — Reset und Limit, signiert angefordert
 
-Zusätzlich zur Lizenz gibt es Schlüssel (Taloan, 23.09.2026), einmal einlösbar, an die Instanz gebunden, **ohne Team** —
+Zusätzlich zur Lizenz gibt es Schlüssel, einmal einlösbar, an die Instanz gebunden, **ohne Team** —
 die zentrale IT legt sie auf Vorrat und wählt das Team beim Einlösen:
 
 | Art | Wirkung |
@@ -446,14 +438,14 @@ die zentrale IT legt sie auf Vorrat und wählt das Team beim Einlösen:
 | `reset` | das Team zählt ab dem Einlösen neu — ab dem Eintrag, nicht ab dem Tag: was am selben Tag vorher gezählt war, zieht `Usage.Cuts` ab (verschiebt nur den Zählbeginn des Teams, nie den der Instanz) |
 | `limit` | `entriesWeek`/`entriesMonth` für `days` Tage ab dem Einlösen; hebt an, senkt nie. Läuft schon eines, wird dessen **Restvolumen** in Tage des neuen umgerechnet und angehängt (`Schluessel.Bis`) |
 
-Ein Limit wird als **Paket** angefordert, nie mit freien Zahlen (Taloan, 23.09.2026): `pro`, `ultimate`, `enterprise`
+Ein Limit wird als **Paket** angefordert, nie mit freien Zahlen: `pro`, `ultimate`, `enterprise`
 (`Schluessel.Pakete`, `GET /api/licence/packages`); die Anforderung trägt `plan` und die Zahlen des Pakets. Die Zahlen
 der Pakete sind vorläufig.
 
 Beide sind kombinierbar; ein Limit überschreibt keinen Reset. Eingelöst wird beim Team, das sein Kontingent selbst
 trägt — wer über ein anderes abrechnet, bekommt den Schlüssel dort.
 
-Der Weg eines Schlüssels (Taloan: „PGP quasi“):
+Der Weg eines Schlüssels:
 
 1. **Anfordern** (⚷ Anfordern, Recht `users`): die Instanz schreibt die Anforderung — `id`, `kind`, Grenzen, `days`,
    `instance`, `pub` — und signiert sie mit ihrem eigenen Schlüsselpaar (ECDSA P-256, entsteht mit der Kennung, liegt

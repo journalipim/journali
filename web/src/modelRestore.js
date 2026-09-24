@@ -1,4 +1,4 @@
-// Modell-Zurückziehen rückgängig (Taloan, 20.09.2026): ein „…Retired“ wird nie gelöscht, sondern kompensiert — die letzte Definition
+// Modell-Zurückziehen rückgängig: ein „…Retired“ wird nie gelöscht, sondern kompensiert — die letzte Definition
 // vor dem Zurückziehen steht im Strom und wird noch einmal geschrieben. Wertelisten bekommen ihre Werte mit (Stand beim Zurückziehen).
 // Benutzt vom Journal (Knopf am Eintrag) und vom Modell (↶ im Listenkopf: die letzten bis zu 5 je Bereich).
 import { api } from './api.js'

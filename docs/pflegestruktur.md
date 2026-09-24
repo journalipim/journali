@@ -6,7 +6,7 @@ Sprache/Kanal nicht reichen. Hier steht, woraus das Modell besteht, wie das
 Beispiel darauf abgebildet wird, und welche Eintragstypen das braucht. Erst
 wenn das steht, wird gebaut.
 
-**Entschieden (Taloan, 16.09.2026):**
+**Entschieden:**
 
 - Der Strom ist eine **interne Id**, nie die SKU.
 - Die Pflegehierarchie ist **Produktgruppe → Produktgruppe → … →
@@ -61,8 +61,8 @@ bullet_points = `text` mehrfach mit Achsen locale+channel).
 
 **Sprachabhängig** ist kein Typ, sondern die Achse `locale` in `axes`:
 `title` hat sie (ein Wert je Sprache), `weight` nicht (ein Wert für alle).
-**`*` bei Sprachachse** (Taloan, 17.09.2026) ist der **sprachneutrale
-Grundtext** — wie die 35-Zeichen-Kurzbezeichnung aus SAP, während `de` der
+**`*` bei Sprachachse** ist der **sprachneutrale
+Grundtext** — wie die 35-Zeichen-Kurzbezeichnung aus ERP, während `de` der
 ausgeschriebene Titel ist. Die Zelle ist änderbar; solange sie leer ist,
 zeigt sie gedämpft den Master mit „◌ de". Kette je Sprache: eigener Wert →
 Master → `*` → dasselbe bei den Vorfahren (wenn vererbbar). Drei Zustände
@@ -70,29 +70,29 @@ sichtbar: eigener Wert · ◌ aus dem Master (nicht übersetzt) · ⟳ zu
 überarbeiten (übersetzt, aber der Master ist neuer). Leer ist eine Zelle
 nur, wenn auch Master und `*` leer sind. Die Vollständigkeit für `en` zählt
 weiter je Sprache. Ohne Sprachachse ist `*` die eine Zelle.
-**Kanäle genauso** (Taloan, 20.09.2026): Sprachen und Kanäle sind eine Matrix
+**Kanäle genauso**: Sprachen und Kanäle sind eine Matrix
 mit je einem Stern. Es gibt eine Mastersprache und einen **Masterkanal**; der
 Master bekommt die Werte des Sterns und kann sie überschreiben; abgeleitete
 Sprachen bzw. Kanäle beziehen ihren Wert aus dem Master. Kette je Achse:
 eigener Wert → Fallback → Master → `*`, der Kanal fällt vor der Sprache
-(`de/print` → `de/web` → `de` → … → `*`). **Fallback** (Taloan, 20.09.2026):
+(`de/print` → `de/web` → `de` → … → `*`). **Fallback**:
 eine Sprache oder ein Kanal kann eine andere Ausprägung nennen, die vor dem
 Master gilt — `fr-ch` → `fr-fr`, `shop_ch` → `shop_de`. Beim Kanal gilt der
 Fallback auch für die Freigaben: das Sortiment von fr-ch ist das von fr-fr,
 solange fr-ch nichts Eigenes sagt. Die Vollständigkeit zählt ohne Master.
 
-**Status ist Vokabular** (Taloan, 22.09.2026): der Status eines Produkts oder
+**Status ist Vokabular**: der Status eines Produkts oder
 einer Variante ist der Lebenszyklus am Markt (Entwurf, aktiv, ausgelaufen —
 oder Überprüfung, Freigabe, Verkauf DE, Verkauf weltweit), nicht die
 Redaktion (das ist der Workflow). Die Status stehen im Modell unter Basics:
 frei benennbar, Name je eingerichteter Sprache, Symbol, Farbe, Reihenfolge.
 `draft` ist der Startstatus neuer Knoten und bleibt. Ein Workflow kann einen
 Status als Wirkung setzen (`status:<key>`); der Import bildet einen
-Fremdstatus (SAP-Materialstatus 300 → Überprüfung, 501 → Verkauf weltweit)
+Fremdstatus (Materialstatus des ERP 300 → Überprüfung, 501 → Verkauf weltweit)
 im Ziel „Status“ über eine Wertetabelle auf einen Schlüssel ab — die
 Tabelle ist eine Umwandlung der Spalte und damit Teil des Profils.
 
-**Ausleitung (Taloan, 21.09.2026, entschieden):** ein Publikationsbaum nennt
+**Ausleitung:** ein Publikationsbaum nennt
 Kanal und optional Markt. Drin ist ein Produkt, wenn eine Variante für den
 Kanal freigegeben ist (Kanal-Fallback zählt) und der Markt des Baums in den
 Verkaufsländern (`markets`, vererbbar, leer = überall) steht — oder in der
@@ -103,8 +103,7 @@ Gründe: `docs/eintraege.md` → Ausleitung, `Publication.cs`.
 
 > Der Sinn: bei Farbe nicht „rot" als Text, sondern ein Eintrag aus der
 > Liste. Erweitere ich den Eintrag um ein Feld (RAL), ist das über den
-> Verweis schon da. (Taloan, 17.09.2026 — deshalb wieder „Werteliste", nicht
-> „Wörterbuch".)
+> Verweis schon da.
 
 Eine Liste hat **Spalten** (`ListDefinition.columns`, z. B. `ral`, `hex`),
 jeder Eintrag füllt sie in `extra`. Saatgut: `color` mit 20 Farben de/en
@@ -115,7 +114,7 @@ Marke, Farbe, Betriebssystem, Relationstyp, Medienrolle: ein Schlüssel je
 Wert, Label je Sprache, optional Zusatzfelder (Farbe: Hexcode). Eine
 Werteliste ist ein Strom, jeder Wert ein Eintrag `ListValueDefined`.
 
-### 3. ~~Familie~~ → Attributgruppen am Baum (entschieden, Taloan, 17.09.2026)
+### 3. ~~Familie~~ → Attributgruppen am Baum (entschieden)
 
 > Nach den Beschreibungen ist eine Familie definiert durch meine Baumstruktur.
 > Supermaster bekommt Name (Pflicht) und Beschreibung; Hardware darunter fügt
@@ -155,7 +154,7 @@ hat genau eine Familie. Die Familie sagt:
 - welche **Variantenachsen** erlaubt sind: Smartphone = Farbe, Speicher;
   Stiefel = Farbe, Grösse; Kabel = keine. Das Produkt wählt daraus.
 
-### 4. Kategorie — entschieden: weggelassen (Taloan, 17.09.2026)
+### 4. Kategorie — entschieden: weggelassen
 
 Es gibt keinen Kategoriebaum neben dem Pflegebaum. Stattdessen:
 
@@ -187,7 +186,7 @@ family)`, `VariantCreated(product, sku, axisValues)`; Umhängen später
 Eindeutigkeitsprüfung — die „kleine synchrone Prüf-Projektion" aus
 `architektur.md`.
 
-**Entscheidung Taloan (21.09.2026):** Die SKU ist ein Attribut wie jedes
+**Entscheidung (21.09.2026):** Die SKU ist ein Attribut wie jedes
 andere („bei anderen heisst es MATNR"). Es gibt **kein Kennungsattribut** —
 nur das Merkmal **eindeutig** (`unique`) an der Attributdefinition: Text/Zahl,
 einwertig, auch eine Variantenachse; beliebig viele je Modell, jedes für sich
@@ -307,7 +306,7 @@ Dazu kommt, was heute fehlt:
 - **Kein Code im Server:** Plugins laufen nie im Prozess. Isolation, eigene
   Sprache, eigenes Deployment; die Kosten sind ein HTTP-Aufruf.
 
-**Präfix je Quellsystem** (Taloan, 17.09.2026): ein Import legt neue
+**Präfix je Quellsystem**: ein Import legt neue
 Attribute als `<prefix><key>` an und sammelt sie in der Gruppe
 `<prefix>import` — so kollidieren `title` aus IXP und `title` aus Solr nicht,
 und man sieht dem Attribut die Herkunft an. Das Präfix steht im Profil
@@ -322,7 +321,7 @@ id}` auf dem Knotenstrom, Abbild hält `(system, id) → Knoten`. Und der
 
 ### 12. Massendatenpflege wie in Excel
 
-**Gebaut (17.09.2026, Taloan: „so bin ich doch nicht schnell"):** Cursor wie in Excel
+**Gebaut (17.09.2026):** Cursor wie in Excel
 (Pfeile, Shift+Pfeil Bereich, Enter speichert und springt nach unten, Tab nach
 rechts, Tippen überschreibt, F2), Strg+D runterziehen, Strg+Shift+D Reihe
 fortsetzen (Zahlen, Art-001), Strg+H Suchen & Ersetzen (Bereich/Tabelle,
@@ -333,8 +332,7 @@ der Engpass war das fehlende Cursor-Modell, nicht der Client.
 Excel, Knoten suchen, Tabelle ins Blatt laden, in Excel pflegen, „Geändertes
 speichern" schreibt nur die Differenz zum Schnappschuss als einen Stapel.
 Manifest unter `/plugins/excel/manifest.xml` (Origin vom Server eingesetzt);
-auf der rossibox braucht es HTTPS. **OnlyOffice-Plugin** (`plugins/onlyoffice`,
-Taloan: „hab ich eh installiert"): gleiche Bedienung als Seitenleiste in
+auf der rossibox braucht es HTTPS. **OnlyOffice-Plugin** (`plugins/onlyoffice`): gleiche Bedienung als Seitenleiste in
 OnlyOffice Tabellen, Installation über den Plugin-Manager mit
 `/plugins/onlyoffice/package.plugin` (ZIP vom Server), Schnappschuss im
 versteckten Blatt `_journali`. Der xlsx-Roundtrip bleibt der Weg, der nichts
@@ -366,7 +364,7 @@ eine Sperre) — und genau der ist auch der Importweg für Plugins.
 
 ### 13. Vermehrbare Attribute — entschieden
 
-Taloans Name für das, was OpenDXP objectbricks / fieldcollections / table
+die Name für das, was ein anderes PIM objectbricks / fieldcollections / table
 nennt: ein Satz zusammengehöriger Felder, der **n-mal** an einem Knoten
 vorkommt, mit Reihenfolge und Identität je Zeile.
 
@@ -402,8 +400,6 @@ Ein einfaches Attribut mit `multiple: true` (Keywords) bleibt der
 Sonderfall „eine Spalte, keine Identität" — die Liste ist ein Wert.
 
 ### 14. Einheiten (`unit:<key>`) — Grundstock da
-
-Taloan: „Einheiten müssen auch konfiguriert werden, evtl. mit Umrechnung."
 Eine Einheit gehört zu einer **Grösse** (mass, length, volume, data, count …)
 und hat einen **Faktor zur Basiseinheit** dieser Grösse (kg = 1, g = 0.001,
 in = 0.0254 m). `UnitDefined{key, label{}, quantity, factor}`; ein Attribut
@@ -416,7 +412,7 @@ Umrechnung ist Anzeige und Export: Sicht „zeige Gewicht in g" rechnet
 Zoll statt Zentimeter. Noch nicht gebaut: die Umrechnung in der Zelle und
 je Kanal (Feld `unit` an der Kanal- oder Sichtdefinition).
 
-### 15. Sichten (`view:<key>`) — entschieden (Taloan, 16.09.2026)
+### 15. Sichten (`view:<key>`) — entschieden
 
 > Die Reihenfolge gehört in eine Sicht. Später hat einer nur redaktionelle
 > Sichten, der andere auch technische Werte, der Dritte vielleicht Preise —
@@ -459,7 +455,7 @@ Altlast), sondern eigener Name am Knoten oder das ★ am Pfad.
 So gebaut (17.09.2026): ⊞ Modell → Attributsichten mit Drag & Drop; im
 Knoten Sicht je Knotentyp, ☰ flach / ⧉ Reiter, Filter Alle · Editierbare · Nur hier editierbare Attribute.
 
-### 21. Suche mit Bedingungen (Taloan, 17.09.2026)
+### 21. Suche mit Bedingungen
 
 > Ich wusste, dass ich in einem Knoten schon mal etwas bei einem
 > Funktionsattribut eingetragen hatte — auf die Wurzel gehen und nach dem
@@ -468,17 +464,16 @@ Knoten Sicht je Knotentyp, ☰ flach / ⧉ Reiter, Filter Alle · Editierbare ·
 Die Textsuche findet Text; die Frage „wo steht bei Attribut X überhaupt
 etwas?" ist eine Frage nach der Struktur. Deshalb im Baum-Suchfeld Chips
 `key:value` (englisch, alles UND) mit Vorschlägen am Cursor (Schlüssel, dann
-Werte — der Baukasten war „gut gemeint, schlecht gemacht“, Taloan); ein Minus
-davor verneint (`-empty:function`, `-role:variant`, `-Wort` — Taloan: „das
-Gegenteil“), Klick auf den Chip dreht um: `attr:function` (eigener Wert da) · `attr:function=*sku*`
+Werte — der Baukasten war „gut gemeint, schlecht gemacht“); ein Minus
+davor verneint (`-empty:function`, `-role:variant`, `-Wort`), Klick auf den Chip dreht um: `attr:function` (eigener Wert da) · `attr:function=*sku*`
 (Muster) · `attr:x=` (kein eigener Wert) · `empty:name/en` (auch geerbt
 nichts) · `incomplete:web` · `role:variant` · `status:active` ·
-`group:logistics` (gilt hier) · `under:<id>` · `by:Taloan` ·
+`group:logistics` (gilt hier) · `under:<id>` · `by:<name>` ·
 `since:2026-09-10` · freier Text. Rechnet der Server (`Query.cs`), Treffer
 wie bisher im Baum mit Pfad und Fundstelle. Offen: gespeicherte Suchen →
 virtueller Ordner.
 
-## 22. Vorlagen — Textbausteine ohne KI (Taloan, 17.09.2026)
+## 22. Vorlagen — Textbausteine ohne KI
 
 > Content generieren, automatische Beschreibungen — braucht man dafür KI?
 
@@ -499,7 +494,7 @@ ungespeicherte Zellen, nie automatisch; ins Journal mit Urheber `ki:<modell>`
 und Stapel; Modell austauschbar (API-Schlüssel bleibt im Browser, oder lokal
 Ollama auf der rossibox).
 
-## 26. Benutzer & Rollen — gebaut (Taloan, 19.09.2026)
+## 26. Benutzer & Rollen — gebaut
 
 Voraussetzung für Workflow-Zuständigkeiten und Hosting. Identität und Rolle im Journal (`UserDefined`),
 Geheimnisse in `auth.json` beim Server. Drei Rollen (admin, editor, reader); Rechte als Pfad-Regeln in
@@ -508,9 +503,9 @@ und setzt `X-Actor` aus der Sitzung. Sitzungen per Cookie, API-Token je Nutzer f
 Dienst-Token je Job-Lauf. Offen: SSO/OIDC, Passwort-Zurücksetzen per Mail, Rollen je Teilbaum,
 Workflow-Rollen (Prüfer, Freigeber) darüber. Details: `docs/betrieb.md`.
 
-## 25. Versionen — gebaut (Taloan, 19.09.2026)
+## 25. Versionen — gebaut
 
-Taloans Bild aus dem letzten PIM: das Datenblatt dient der Endkontrolle, bei „Version erzeugen“ läuft ein
+die Bild aus dem letzten PIM: das Datenblatt dient der Endkontrolle, bei „Version erzeugen“ läuft ein
 Belegerzeuger (dort InBetween/InDesign → PDF/A), das Ergebnis wird mit der Version weggespeichert; für die
 Haftungsfrage zählt nur das Dokument, das nach draussen ging, nicht der Datenbankstand. Entschieden:
 
@@ -523,8 +518,7 @@ Haftungsfrage zählt nur das Dokument, das nach draussen ging, nicht der Datenba
   `datasheet` liefert das HTML-Blatt mit Belegfuss (Version, Stand, Datum); PDF/A ist ein weiterer Erzeuger
   (Headless-Chromium), InBetween ein dritter — ohne Änderung am Kern.
 - **Stand ansehen** (`GET …/versions/{nr}/diff`): Journal bis `journalNumber` abgespielt (`Catalog.AsOf`, die
-  letzten Stände im Speicher), eigene Werte damals gegen heute — geerbte Werte und Baumposition zählen nicht
-  (Taloan: „nicht die Welt von damals, sondern die Beschreibung von Artikel X“).
+  letzten Stände im Speicher), eigene Werte damals gegen heute — geerbte Werte und Baumposition zählen nicht.
 - **Zurückrollen** (`POST …/rollback`, erst `dryRun`): Plan mit allem, was gesetzt würde, und allem, was aussen vor
   bleibt (Attribut gibt es nicht mehr, gilt hier nicht, Zeilen vermehrbarer Attribute); dann ein Stapel vorwärts —
   wie `git revert`, nie `reset`; rückgängig machbar. Eine neue Version ist kein Schnitt: alle Deltas bleiben.
@@ -533,7 +527,7 @@ Haftungsfrage zählt nur das Dokument, das nach draussen ging, nicht der Datenba
 - Noch offen: Benutzer und Rollen (Zuständigkeit), Workflow-Zustände über dem Status, grafischer Designer,
   Lebensdauer-Regel für Bytes, Ausdünnen des Journals nur nach Ablauf einer beschlossenen Frist (nie aus Platzgründen).
 
-## 23. Jobs — fest eingebaut (Taloan, 19.09.2026; erst Plugin tasker, dann Grundfunktion: „dauerhaft in der Leiste“)
+## 23. Jobs — fest eingebaut
 
 > Jobs wie Import dürfen nicht vom offenen Browserfenster abhängen; regelmässige
 > Ausführung; Überwachung, Verwaltung, Logs.
@@ -550,14 +544,14 @@ Liste mit Zeitplan, nächstem und letztem Lauf, ▶ jetzt, ⊘ abbrechen, an/aus
 Läufe mit Log (lebendig, solange er läuft). Erstes Prozess-Plugin: `backup`
 (Rohdaten-JSON je Wurzel, behält n Stände).
 
-**Entschieden (Taloan, 19.09.): alle Importe sind als Job ausführbar, anhand
+**Entschieden: alle Importe sind als Job ausführbar, anhand
 gespeicherter Profile.** Der Token liegt dann als `secret`-Parameter des Jobs
 in `secrets.json` beim Server — nicht im Profil, nicht im Journal (die eine
 Ausnahme von 19). Der IXP-Import hat dafür einen Kern (`plugins/ixp/core.mjs`),
 den Browser und Prozess (`job.mjs`) gleich benutzen: dieselbe Analyse, derselbe
 Stapel, dieselben Regeln.
 
-## 24. Regeln eines Imports — was passiert bei was (Taloan, 19.09.2026)
+## 24. Regeln eines Imports — was passiert bei was
 
 > Die Schwierigkeit, was jetzt neu dazukommt, ist die Fehlerbehandlung bzw.
 > Vorab-Einstellungen im jeweiligen Plugin: was passiert bei was?
@@ -582,7 +576,7 @@ Der Ausgang eines Laufs: `ok`, `warn` (übersprungene Befehle), `failed`,
 Log sagt, welcher Befehl warum. Dieselbe Tabelle gilt für Solr und Tabellen,
 sobald sie einen Prozess haben (offen).
 
-## 27. Workflow — Entwurf (Taloan, 21.09.2026: „brauchen wir auf jeden Fall — Workflow-Designer mit Freigaben, Korrekturschleifen etc.“)
+## 27. Workflow — Entwurf
 
 **Gebaut 21.09.2026 (Kern und erste Oberfläche):** `Workflows.cs` (Abbild), `WorkflowApi.cs`, Befehle in `Commands.cs`, Eintragstypen
 wie unten, Saatgut „Redaktion“ (Entwurf → Prüfung → Korrektur ⟲ → freigegeben; freigeben nur admin) und „Übersetzung“ (nicht
@@ -591,7 +585,7 @@ die Auswahl, Einstellungen → ⚑ Workflows (Skizze + Tabellen, kein Ziehen von
 ⚑ Aufgaben in der Leiste, Suche `wf:`. ⇄ Übersetzung filtert auf „zur Übersetzung“ und schaltet nach dem Schreiben weiter.
 Entschieden vorerst so: ein Workflow gilt für Knotentypen (und Familien), mehrere Workflows nebeneinander; Zuständigkeit je
 Person über `WorkflowAssigned` (Aufgaben zeigen nur mir Zugewiesenes oder Unzugewiesenes); keine Fristen; Rubriken der
-Publikation nicht — Taloans Antworten auf die vier Fragen unten stehen aus.
+Publikation nicht — die Antworten auf die vier Fragen unten stehen aus.
 
 Entwurf:
 
@@ -613,7 +607,7 @@ Vorschlag, Journal (alles Modell, nichts im Code):
   (Korrekturschleife: „zurück an Redaktion“ ohne Grund gibt es nicht) und **Wirkungen** (`effects`): `release:<kanal>`,
   `revoke:<kanal>`, `status:<wert>`, `version` — so ist „Freigabe“ ein Übergang, der `ReleaseGranted` schreibt, statt
   eines eigenen Knopfs. Freigabe je Kanal (25/18) bleibt die Wahrheit für die Ausleitung; der Workflow ist der Weg dorthin.
-- **Designer** (Taloan: „Workflow Designer“): Zustände als Kacheln, Übergänge als Pfeile (SVG, Ziehen von Kachel zu
+- **Designer**: Zustände als Kacheln, Übergänge als Pfeile (SVG, Ziehen von Kachel zu
   Kachel), je Pfeil Rolle, Notiz-Pflicht, Wirkungen; Vorlagen „Vier-Augen“, „Redaktion–Prüfung–Freigabe“. Speichert
   `WorkflowDefined`.
 - **Am Knoten**: Band „Workflow“ mit Zustand, den erlaubten Übergängen als Knöpfe (nur die der eigenen Rolle), Notiz,
@@ -623,24 +617,24 @@ Vorschlag, Journal (alles Modell, nichts im Code):
 - Rechte: `Auth` prüft an `POST /api/nodes/{id}/workflow/{transition}` die Rolle des Übergangs; `Rights.Release`
   bleibt für die Wirkung `release:` nötig.
 
-Entscheidungen von Taloan: ein Workflow je Familie oder einer für alle? Zuständigkeit je Person (`WorkflowAssigned`) oder nur
+Entscheidungen: ein Workflow je Familie oder einer für alle? Zuständigkeit je Person (`WorkflowAssigned`) oder nur
 je Rolle? Fristen je Zustand (Erinnerung, Eskalation) — jetzt oder später? Gilt der Workflow auch für Rubriken der
 Publikation (Freigabe eines Kanalbaums)?
 
-**Produkt und Varianten (Taloan, 21.09.2026, entschieden):** Freigaben hängen an Varianten. „freigeben“ am Produkt oder an
+**Produkt und Varianten:** Freigaben hängen an Varianten. „freigeben“ am Produkt oder an
 der Gruppe gibt alle vollständigen Varianten darunter frei — ausser denen, die in ihrem eigenen Workflow nicht am Ende stehen
 (Entwurf, Prüfung, Korrektur): die überfährt der Vater nicht; ist keine freigebbar, bleibt der Schritt aus und nennt sie.
 Zurücknehmen am Produkt trifft alle Varianten. Der Workflow-Zustand des Produkts ist redaktionell und wird vom System nicht
 verändert; ob die Produktseite rausgeht, entscheidet die Ausleitung aus den Varianten (keine freigegeben = nicht ausgeleitet,
 wieder eine = wieder da — nichts zu merken). Das Band zeigt die Tatsache: „⚠ nicht ausgeleitet“.
 
-**Eskalation (Taloan, 21.09.2026, gebaut):** je Übergang optional „nach n Tagen an Rollen“ (`EscalateAfterDays`,
+**Eskalation:** je Übergang optional „nach n Tagen an Rollen“ (`EscalateAfterDays`,
 `EscalateRoles`, leer = jede Rolle mit Schreibrecht): steht ein Knoten so lange im Ausgangszustand, dürfen auch diese
 Rollen den Schritt gehen — alle Redakteure im Urlaub, der Manager gibt frei. Am Knoten steht „⏰ Eskalation ab ⟨Datum⟩ → manager“,
 nach Ablauf „⏰ eskaliert“; die Aufgabenliste (⚑ Workflows) zeigt den Schritt dann auch diesen Rollen. Kein Timer nötig:
 der Vergleich läuft beim Lesen (Commands.Allowed/Escalated).
 
-## 28. Übersetzungsmanagement — gebaut (Taloan, 21.09.2026, Blick in OpenDXP: „haben wir noch gar nicht“)
+## 28. Übersetzungsmanagement — gebaut
 
 Die Zelle kannte die Zustände schon (◌ nicht übersetzt, ⟳ Master neuer); jetzt gibt es den Prozess darum: **Einheiten**
 je Sprachrichtung — Knoten × sprachabhängiges Textattribut × Kanal × Zeile mit eigenem Quelltext — und ihr Zustand
@@ -657,14 +651,12 @@ Import aus in/ (Duplikat nach Hash). Tests `TranslateTests`. Offen: Übersetzung
 Dazu seit 22.09.2026 (30): `POST /api/translate/order` (Paket schnüren, mit `format=xliff` gleich die Datei) und
 `GET /api/translate/orders` (was draussen ist, was zurückkam).
 
-## Messlatte: OpenDXP
-
-Taloan: „Unter dem, was OpenDXP kann, brauchen wir gar nicht erst zu landen."
-Was OpenDXP für Datenobjekte anbietet (aus der Doku, Stand 16.09.2026,
+## Messlatte: ein anderes PIM
+Was ein anderes PIM für Datenobjekte anbietet (aus der Doku, Stand 16.09.2026,
 `docs.opendxp.io/docs/core-framework/Objects/Object_Classes/Data_Types/`),
 und wo es hier landet:
 
-| OpenDXP | journali |
+| ein anderes PIM | journali |
 |---|---|
 | input, textarea, wysiwyg | `text`, `text` mehrzeilig, `html` |
 | numeric, quantity value | `integer`/`decimal` mit `unit` |
@@ -692,10 +684,10 @@ Wo journali darüber liegt: Historie ohne Versionstabellen, Delta-Export
 ab Nummer, jedes Abbild neu baubar, Platzhaltertexte als Ableitung,
 Vollständigkeit je Kanal × Sprache als Regel im Modell.
 
-Dazu fünf Punkte, die Taloan aus einer OpenDXP-Zusammenfassung nachgereicht
+Dazu fünf Punkte, die nachgereicht wurden
 hat (16.09.2026):
 
-| OpenDXP | journali |
+| ein anderes PIM | journali |
 |---|---|
 | Datenmodell im Browser per Drag-and-Drop, Tabellen und Oberfläche entstehen daraus | Modell-Ansicht (Schritt 1): Definition als Gitterzeile, das Produktgitter baut sich aus dem Modell. Kein Drag-and-Drop; Reihenfolge und Gruppen kommen aus der Familie. Keine Tabellen zu erzeugen — das Journal ist schemafrei, das Abbild rechnet |
 | API-first, REST/GraphQL, Anbindung ERP/CRM/PLM | `/api` + Delta ab Nummer (11). GraphQL: fehlt; kommt, wenn ein Abnehmer es braucht |
@@ -703,31 +695,31 @@ hat (16.09.2026):
 | Datendichtes ExtJS-Backend für Power-User, komplexe Gitter | genau das Ziel der Oberfläche: Gitter, Zelle, Tastatur, kein Formular; Massenpflege (12) |
 | Suche über Millionen Datensätze, Elasticsearch/OpenSearch asynchron | der Suchindex ist ein Abbild, das dasselbe Journal liest (`architektur.md`). Erst Postgres-Volltext im Abbild, OpenSearch als Plugin/Abbild, wenn die Menge es verlangt |
 
-### Funktionsvergleich, Stand 21.09.2026 (Taloan: „lohnt mal einen Blick“)
+### Funktionsvergleich, Stand 21.09.2026
 
 Quellen: `docs.opendxp.io` (Overview, Objects, Assets, Tools and Features, Bundles) und `opendxp.io/en/platform/components/pim`,
 gelesen am 21.09.2026. Die Tabelle von oben (16.09.) bleibt als Geschichte; hier der Stand nach fünf Tagen Bauen.
-Was OpenDXP als Bundle hat, ist bei uns ein Plugin — beides ausserhalb des Kerns.
+Was ein anderes PIM als Bundle hat, ist bei uns ein Plugin — beides ausserhalb des Kerns.
 
-| Bereich | OpenDXP | journali heute | Urteil |
+| Bereich | ein anderes PIM | journali heute | Urteil |
 |---|---|---|---|
 | Datenmodell | Klassen-Editor im Browser, Vererbung, Classification Store, Object Bricks, Localized Fields | Modell im Journal (Sprachen, Kanäle, Einheiten, Gruppen, Attribute, Listen, Sichten), Familien, Gruppen ab Ebene, Vererbung entlang des Baums, Achsen Sprache × Kanal je Attribut, vermehrbare Attribute, Formeln und Skripte, ETIM-Klassen | gleichauf; Modelländerungen sind bei uns Einträge mit Historie |
 | Varianten | Variants als Objekte mit Vererbung vom Parent | Produkt → Varianten mit Achsen (eindeutige Kombination), geerbte Werte, Achsenassistent | gleichauf |
 | Historie/Versionen | Versionen je Objekt (Tabelle), Auto-Save | das Journal selbst (jeder Wert, jede Struktur), Versionen als Zeiger ins Journal, Abbild zu #n | journali vorn — vollständig, ohne Versionstabelle |
-| Rechte | Benutzer, Rollen, Rechte je Klasse/Feld/Layout, Permission Analyzer, 2FA | Benutzer, Rollen mit 9 Rechten (Lesen, Schreiben, Zurückziehen, Freigabe, Modell, Plugins, Jobs, Storage, Benutzer), Sitzungen, Dienst-Token je Job | OpenDXP vorn: Rechte je Feld/Teilbaum, 2FA, SSO fehlen |
-| Workflow | Workflow Management (Zustände, Übergänge, Rollen) | Status + Freigabe je Kanal (mit Sortiment über den Vater); keine freien Zustände, keine Zuständigkeiten | OpenDXP vorn |
-| Publikation | Multichannel über Output-Channels, Dokumente (CMS) | Publikationsbäume je Kanal × Markt (Rubriken, Verweise, Arbeitsname, kopierte Rubrik), Ausleitungsregel Freigabe × Markt; kein CMS | anders: wir leiten aus, OpenDXP rendert Seiten |
-| DAM | Ordner, Metadaten, 200+ Vorschauen, Thumbnail-Pipelines, Bildbearbeitung, Fokuspunkt, WebDAV, Versionen | Medien nach Hash mit Werten (Alt-Text, Rechte), Ordnerbaum, Sortieren/Gruppieren, Vererbung an Subitems mit „unterbunden“, Store Postgres/Verzeichnis/S3, eine Vorschau (Browser rechnet) | OpenDXP vorn: Presets, Bildbearbeitung, Metadaten aus der Datei (EXIF/IPTC), Videovorschau |
+| Rechte | Benutzer, Rollen, Rechte je Klasse/Feld/Layout, Permission Analyzer, 2FA | Benutzer, Rollen mit 9 Rechten (Lesen, Schreiben, Zurückziehen, Freigabe, Modell, Plugins, Jobs, Storage, Benutzer), Sitzungen, Dienst-Token je Job | ein anderes PIM vorn: Rechte je Feld/Teilbaum, 2FA, SSO fehlen |
+| Workflow | Workflow Management (Zustände, Übergänge, Rollen) | Status + Freigabe je Kanal (mit Sortiment über den Vater); keine freien Zustände, keine Zuständigkeiten | ein anderes PIM vorn |
+| Publikation | Multichannel über Output-Channels, Dokumente (CMS) | Publikationsbäume je Kanal × Markt (Rubriken, Verweise, Arbeitsname, kopierte Rubrik), Ausleitungsregel Freigabe × Markt; kein CMS | anders: wir leiten aus, ein anderes PIM rendert Seiten |
+| DAM | Ordner, Metadaten, 200+ Vorschauen, Thumbnail-Pipelines, Bildbearbeitung, Fokuspunkt, WebDAV, Versionen | Medien nach Hash mit Werten (Alt-Text, Rechte), Ordnerbaum, Sortieren/Gruppieren, Vererbung an Subitems mit „unterbunden“, Store Postgres/Verzeichnis/S3, eine Vorschau (Browser rechnet) | ein anderes PIM vorn: Presets, Bildbearbeitung, Metadaten aus der Datei (EXIF/IPTC), Videovorschau |
 | Import-Pipeline | Data Importer: je Feld eine Transformationskette (Data Types, Manipulation: Combine, Conditional, Explode, Trim, Replace, Static …) | Datenmapper mit **Umwandlung je Spalte** (`transform.js`, 21.09.: trim, ersetzen, Zahl aus „22 mm“, Ja/Nein, Datum, aufteilen, Spalten verbinden, fester Wert, wenn leer, Werte übersetzen, Bedingung, HTML), Kette im Profil, Vorschau je Spalte; danach die Prüfung des Attributtyps | gleichauf für Tabellen; Geo/Galerie-Typen fehlen |
 | Massenpflege | Grid mit Spaltenkonfiguration, Batch-Edit, CSV/XLSX-Export und -Import im Grid | Tabellenansicht je Knoten (Inline, Tastatur), Excel/CSV/JSON-Import mit Datenmapper und strengem 1:1-Rundlauf, Office-Aufgabenbereiche (Excel, OnlyOffice) | gleichauf; Office-Seitenleiste haben sie nicht |
 | Datenqualität | Validierung je Feld (Pflicht, Muster), Bundles | Regeln je Kanal × Sprache (Vollständigkeit), Datenanalyse-Plugins: DPP, PPWR, Empowering Consumers, GEO-Texte, Anreicherung mit KI | journali vorn — Regelwerke, nicht nur Feldprüfung |
 | KI | Bundles (Übersetzung, Verschlagwortung, Anreicherung) | KI mehrere Anbieter, Schlüssel nur im Browser; Vorschläge nie ohne Bestätigung; Herkunft je Wert | gleichauf, anderer Grundsatz (Herkunft sichtbar) |
 | Import/Export | Data Hub (GraphQL, REST), Import-Bundle, Grid-Export | `/api` mit Delta ab Nummer, Plugins: CSV, XLSX, JSON, IXP, Solr, Vorlagen-Export (BMEcat 2005/ETIM 5, Google Merchant, JSON), RAG-Export, Backup; Jobs mit Profil | GraphQL fehlt; Vorlagen-Export haben sie nicht im Kern |
-| Suche | Advanced Object Search, Elasticsearch/OpenSearch-Bundle | Suche im Abbild mit Begriffen (`media:`, `rel:`, Status, Attribute); kein Volltextindex | OpenDXP vorn bei Millionen Datensätzen |
+| Suche | Advanced Object Search, Elasticsearch/OpenSearch-Bundle | Suche im Abbild mit Begriffen (`media:`, `rel:`, Status, Attribute); kein Volltextindex | ein anderes PIM vorn bei Millionen Datensätzen |
 | Jobs/Automatisierung | Scheduling (Veröffentlichung), Maintenance, Symfony Messenger | Jobs als Kindprozesse (cron, von Hand), Profile, Geheimnisse beim Server; Fächer in/done (Entwurf) | gleichauf; terminierte Freigabe fehlt |
 | Betrieb | Symfony/PHP, MySQL/MariaDB, Redis, Elasticsearch optional; Docker | .NET 8, Postgres, ein Prozess, Plugins als Bind-Mount, lokaler Journal-Spiegel; Docker | journali leichter; Schnappschüsse der Abbilder fehlen noch |
 | API-Erweiterung | PHP-Bundles im Prozess, Events | Plugins nie im Serverprozess (Browser-Modul oder Kindprozess), nur über `/api` | Grundsatzentscheid: Stabilität vor Tiefe |
-| Werkzeuge | Notes & Events, Tags, Perspectives, Custom Reports, Glossary, Notifications, PDF-Rendering, Cloning | Journal lebendig daneben (statt Notes/Events), Sichten je Rolle (statt Perspectives), Wörterbuch (statt Glossary), Datenblatt HTML + Designer (PDF-Stapel offen), Duplizieren; keine Tags, keine Reports, keine Benachrichtigungen | OpenDXP breiter; das meiste davon bei uns nicht Gegenstand oder Plugin-Stoff |
+| Werkzeuge | Notes & Events, Tags, Perspectives, Custom Reports, Glossary, Notifications, PDF-Rendering, Cloning | Journal lebendig daneben (statt Notes/Events), Sichten je Rolle (statt Perspectives), Wörterbuch (statt Glossary), Datenblatt HTML + Designer (PDF-Stapel offen), Duplizieren; keine Tags, keine Reports, keine Benachrichtigungen | ein anderes PIM breiter; das meiste davon bei uns nicht Gegenstand oder Plugin-Stoff |
 | CMS, E-Commerce, CDP | Documents, E-Commerce-Framework, Kundenobjekte | nicht Gegenstand | bewusst nicht |
 
 Kurz: **vorn** sind wir bei Historie, Regelwerken (DQ/Compliance), Ausleitung je Kanal × Markt, Office-Anbindung und
@@ -768,16 +760,16 @@ Was das JSON nicht hat und ein PIM braucht: Familie (welche Attribute
 überhaupt), Pflichtfelder je Kanal, Variantenebenen, Werte-Herkunft
 (Import vs. Hand), Freigabe je Sprache.
 
-## 29. Klassifikation und BMEcat — gebaut (Taloan, 22.09.2026: „ETIM ist eine Klassifikation, kein Exporttyp“)
+## 29. Klassifikation und BMEcat — gebaut
 
-**Wording (Taloan, 22.09.2026):** Im PIM gibt es zwei gängige Paare — *Attribut → Wert* oder
+**Wording:** Im PIM gibt es zwei gängige Paare — *Attribut → Wert* oder
 *Merkmal → Ausprägung*. journali hat sich mit Attributen und Attributgruppen auf das erste
 festgelegt: wir sprechen von **Attributen** und ihren **Werten**, nie von Merkmalen oder
 Ausprägungen. Ein ETIM-Merkmal heisst darum **ETIM-Attribut** (EF-Code) und wird einem Attribut
 des Modells **zugeordnet** — „nicht zugeordnet“ statt „Merkmal ohne Attribut“ („ein Attribut ohne
 Attribut“); Werte sind leer oder gefüllt.
 
-**Trennschnitt (Taloans Entscheidung):** ETIM hilft nur, Produktgruppen und Produkte Klassen
+**Trennschnitt (die Entscheidung):** ETIM hilft nur, Produktgruppen und Produkte Klassen
 zuzuordnen und die Merkmale als Attribute bereitzustellen. Der **BMEcat-Export setzt auf einen
 Publikationsbaum auf** — welche Produkte, welche Rubriken, welche Reihenfolge, ist der Baum;
 Freigabe, Markt und Stand gelten wie bei jeder Publikation. Damit entfällt jede
@@ -790,23 +782,19 @@ Export-Konfiguration im Klassifikations-Plugin („welche Klassen, ab welcher St
   (ETIM-Grundsatz); mehrere Klassifikationen zugleich sind mehrere Systeme.
 - **Klasse an der Produktgruppe, erbt** (Regelfall), Ausnahme am Produkt; an der Variante nicht.
   Die Gruppe des Systems gilt überall (die Klasse muss an der Gruppe stehen dürfen), die
-  Merkmale nur an Produkt und Variante (`levels`) — normale Vererbung reicht (Taloan: Punkt 5).
+  Merkmale nur an Produkt und Variante (`levels`) — normale Vererbung reicht.
 - **Zuordnung statt Anlegen:** Standard ist ein vorhandenes Attribut des Kunden (`breite`,
-  `farbe`) mit **ƒ** — dieselbe Umwandlungskette wie im Datenmapper (`plugins/table/transform.mjs`,
-  Taloan: „die Werte existieren schon, nur nicht in der Form“): Einheit umrechnen, ja/x → Ja/Nein,
+  `farbe`) mit **ƒ** — dieselbe Umwandlungskette wie im Datenmapper (`plugins/table/transform.mjs`): Einheit umrechnen, ja/x → Ja/Nein,
   Text → EV-Code nach Tabelle, von/bis verbinden. Ein eigenes `ef…`-Attribut ist der Ausweg; ab
   dann ist es das Attribut des Kunden, das die nächste Klassifikation wiederverwendet. Die
   Zuordnung (`map`: Schlüssel oder `{ to, steps }`) ist Modellwahrheit, einmal je Journal —
   **kein Profil im Klassifikations-Plugin**; eine aktive Release, Wechsel = Abgleich.
-- **Bedient wird beim Gegenstand, nicht im Plugin** (Taloan, 22.09.: „nicht jedes Plugin muss beim
-  Klick etwas ausführen — manche sind Wissens-/Funktions-Plugins, die Bedienung erfolgt an
-  anderer Stelle“). Neuer Beitragspunkt **`nodeBands`**: ein Plugin zeichnet je Knoten ein Band in
+- **Bedient wird beim Gegenstand, nicht im Plugin**. Neuer Beitragspunkt **`nodeBands`**: ein Plugin zeichnet je Knoten ein Band in
   der Knotenansicht (`mount({ head, body }, nodeId, ctx)`, wie das Workflow-Band). Das Band
   ⌗ ETIM zeigt in einer Zeile Klasse (eigen/geerbt, ≠ abweichende darunter) · Attribute n/m
   (zugeordnet, ƒ, fehlend) · Daten % gefüllt (leer, passen nicht) und springt ins vorhandene
   Werkzeug: Zuweisen-Dialog, Zuordnung (auf die Klasse gefiltert), **Subitems-Tabelle mit genau
-  den Spalten der Klasse** (`/table/<id>?attrs=…`, Taloan: „wir haben im Baum die Tabellenansicht,
-  Excel — der Dialog ist grenzwertig“), Prüfung mit Funden im Körper. Die Ansicht des Plugins
+  den Spalten der Klasse** (`/table/<id>?attrs=…`), Prüfung mit Funden im Körper. Die Ansicht des Plugins
   ist nur, was das Plugin selbst ist: Quelle und Versionen, Klassen in Gebrauch, Attribute,
   Zuordnung mit ƒ. Die eigene Tabelle des Dialogs ist weg.
 
@@ -832,9 +820,9 @@ ist noch nicht als Prüfung gebaut; ETIM xChange wäre eine zweite Vorlage auf d
 Umwandlungskette; `web/src/transform.js` reicht sie durch, Jobs importieren sie relativ
 (`../table/transform.mjs`) — `plugins/` ist im Container ein Bind-Mount, `web/src` nicht.
 
-## 30. Freigabesteuerung — Modellteil gebaut (Taloan, 22.09.2026: „ich möchte dass das Freigabe Monitoring heisst — oder besser noch Freigabesteuerung“)
+## 30. Freigabesteuerung — Modellteil gebaut
 
-Die Frage dahinter (Taloan): „wenn ich die Beschreibung ändere und die Redaktion hatte vorher
+Die Frage dahinter: „wenn ich die Beschreibung ändere und die Redaktion hatte vorher
 schon eine Freigabe — darf das überhaupt dann noch auf freigegeben stehen?“ Drei Hebel, die
 man nicht verwechseln darf:
 
@@ -845,8 +833,7 @@ man nicht verwechseln darf:
 Die Freigabesteuerung sagt nur das eine: **zählt diese Wertänderung als Eingriff, der Prüfung
 und Freigabe berührt?** Was dann geschieht, sagt der Workflow — die beiden bleiben getrennt.
 
-**Gestellt wird sie je Attributgruppe, überschrieben je Attribut** (Taloan: „Man sollte bei jeder
-Attributgruppe einstellen können … und je Attribut überschreiben“):
+**Gestellt wird sie je Attributgruppe, überschrieben je Attribut**:
 
 | Stufe | Werte | Bedeutung |
 |---|---|---|
@@ -859,16 +846,16 @@ eine Auskunft (Attribut schlägt Gruppe, sonst Gruppe, sonst Pflichtfeld-Automat
 Werte in `ModelApi`, Zeile „⚑ Freigabesteuerung“ in der Modellpflege an Gruppe und Attribut,
 Kennzeichen ⚑/⚐ in den Listen, `ReleaseWatchTests`.
 
-**Die Wirkung ist noch nicht gebaut.** Entschieden ist (Taloan, 22.09.): zählt die Änderung, wird
+**Die Wirkung ist noch nicht gebaut.** Entschieden ist: zählt die Änderung, wird
 die Freigabe zurückgenommen und der Zustand fällt auf die Stufe vor der Freigabe zurück. Offen
 bleiben die Quelle der Änderung (Importprofil gegen Mensch — je Profil einstellbar) und die
-**Rollenregel** (Taloan): kein Zurückstufen, wenn die ändernde Rolle den Weg von der
+**Rollenregel**: kein Zurückstufen, wenn die ändernde Rolle den Weg von der
 Rückfallstufe bis zur Freigabe ohnehin allein gehen könnte — das Vier-Augen-Prinzip fällt dann
 aus dem Graphen heraus, statt als zweite Regel danebenzustehen.
 
 ### Übersetzung — offene Frage, Praxis als Vorschlag
 
-Taloan, 22.09.: „Wann gibt man eine Übersetzung in den Workflow und nach welcher Menge der
+„Wann gibt man eine Übersetzung in den Workflow und nach welcher Menge der
 Änderungen? … Will ein französischer Übersetzer 3000 Übersetzungsaufträge kriegen mit jeweils
 einem Wort?“ **Aus Erfahrung, nicht aus diesem Code belegt** (TMS-Welt: Trados, memoQ,
 Smartling, Phrase):
@@ -890,11 +877,9 @@ Smartling, Phrase):
    Freigabesteuerung — `never` an einem Attribut heisst auch: kein Übersetzungsbedarf.
 
 Der Übersetzer bekommt zum Auftrag immer drei Dinge: alte Quelle, neue Quelle, bisherige
-Übersetzung. Entschieden ist davon nichts — Taloans Wort fehlt.
+Übersetzung. Entschieden ist davon nichts — die Wort fehlt.
 
-### Die vier Blockaden aus der Praxis (Taloan, 22.09.2026)
-
-Taloan: „Er speichert und speichert und speichert und irgendwann sagt er final … dann kann er
+### Die vier Blockaden aus der Praxis
 keine Version freigeben, bis die französische Übersetzung da ist … Fallbacksprachen sind auch
 nicht die Lösung, man will nicht mitten in der französischen Webseite deutsche Texte …
 viele Übersetzungen laufen heute mit KI und müssen nur noch von einem lokal Verantwortlichen
@@ -912,11 +897,9 @@ in `Workflows.cs`, Schlüssel `_nodes[knoten][workflow]`). „Redaktion Französ
 Deutsch freigegeben“ gibt es damit heute nicht. Zu bauen wäre: ein Workflow darf als *je
 Sprache* gekennzeichnet sein, dann trägt `WorkflowStateSet` eine Sprache (leer = gilt für alle,
 also bleibt jeder heutige Eintrag gültig). Das ist der eine Eingriff — Freigabe, Version und
-Rollen können es schon. **Taloans Wort fehlt.**
+Rollen können es schon. **die Wort fehlt.**
 
-### Der Übersetzungsspeicher, das Paket und die Rückkehr (Taloan, 22.09.2026)
-
-Taloan: „Wenn der Redakteur jeden Tag eine neue Version raushaut, überschreibt die neue Version
+### Der Übersetzungsspeicher, das Paket und die Rückkehr
 die alte, und so sammelt sich ein Kontingent im Übersetzungsspeicher an … spätestens wenn der
 Redakteur der Mastersprache eine Version macht oder nach einer vorgegebenen Zeit — bei den
 meisten wöchentlich, bei anderen einmal nachts — wird daraus ein Übersetzungsauftrag …
@@ -925,7 +908,7 @@ Original gibt.“
 
 **1. Der Speicher ist keine zweite Datenhaltung, sondern eine Marke.** Je Knoten, Attribut und
 Sprache steht im Journal, bis zu welcher Journalnummer übersetzt wurde. Offen ist alles, was
-sich seither geändert hat — eine Abfrage, kein Behälter. Damit ist Taloans „die neue Version
+sich seither geändert hat — eine Abfrage, kein Behälter. Damit ist die „die neue Version
 überschreibt die alte“ geschenkt: verglichen wird immer *Marke gegen jetzt*, nie ein Stapel von
 Änderungen. Zehnmal geändert ist ein Posten, nicht zehn. Kein Schreibpfad am Journal vorbei.
 
@@ -949,7 +932,7 @@ am Hash entschieden, nicht am Gefühl:
 | Zielwert wurde inzwischen von Hand geändert | **nur hier** ein Mensch: Konflikt zeigen, beide Fassungen nebeneinander |
 
 Nie: den Auftrag verwerfen, weil er „nicht mehr aktuell“ ist. Genau daraus entsteht das
-Hamsterrad, das Taloan beschreibt — wer immer den ganzen Text neu übersetzen lässt, holt den
+Hamsterrad — wer immer den ganzen Text neu übersetzen lässt, holt den
 Rückstand nie ein; wer nur die Differenz nachbestellt, schon.
 
 **Nebenbei fällt eine Zahl ab:** weil jeder Wert seinen Quell-Hash kennt, steht je Sprache der
@@ -960,7 +943,7 @@ weitergezogen“ bleibt nur für die Agenturstrecke übrig.
 **Gebaut** (22.09.2026): der Eintrag für die Marke, das Abbild, der Auftrag, der Rücklauf mit den
 drei Fällen, die Workflow-Achse — siehe die Tabelle unten.
 
-### Gebaut am 22.09.2026 (Taloan: „ja, bau das“)
+### Gebaut am 22.09.2026
 
 Vorweg eine Berichtigung: „gebaut ist nichts“ stimmte nicht — Einheiten, XLIFF hin und zurück, Gedächtnis, Wörterbuch und
 die Jobs gab es seit dem 21.09. Gebaut wurde das, was gefehlt hat:
@@ -980,7 +963,7 @@ Geprüft: `TranslationOrderTests` (Zeiger und Rücklauf, überholt bleibt offen,
 Wirkung am Übergang, Auftrag in der Datei), `WorkflowLocaleTests` (je Sprache, ohne `perLocale` unverändert, Wirkung trifft
 nur die Sprache), `web/test/ui-workflow.test.mjs` (eine Zeile je Sprache, Klick schickt die Sprache mit, gesperrte Schritte).
 
-**Noch nicht gebaut** (Taloans Wort fehlt): die Bagatellgrenze (Normalisieren vor dem Vergleich, Abstand statt „ungleich“),
+**Noch nicht gebaut** (die Wort fehlt): die Bagatellgrenze (Normalisieren vor dem Vergleich, Abstand statt „ungleich“),
 das Häkchen „unwesentliche Änderung“ am Wert, die Fallback-Regel je Kanal („letzte freigegebene Fassung der Zielsprache
 ausliefern“) und die KI-Strecke als Abnahme-Workflow (die Übersetzung gibt es schon, der Zustand „maschinell übersetzt“
 noch nicht).
@@ -1025,7 +1008,7 @@ Definitionen ins Journal.
   SKU unter Produkt. Geerbte Werte stehen kursiv mit Herkunft im Tooltip
   („von X-Series").
 
-## 31. MCP — der Assistent spricht mit dem PIM (Entwurf; Taloan, 22.09.2026: „warum können wir keinen RAG-Service anbieten? oder einen MCP-Serverdienst?“)
+## 31. MCP — der Assistent spricht mit dem PIM (Entwurf)
 
 Der Export einer Wissensbasis (Plugin `rag`) liefert Dateien für fremde
 Systeme. Das Gegenstück fehlt: ein Assistent, der **live** fragt statt eine
@@ -1061,16 +1044,14 @@ den Tasker oder direkt vom Assistenten (stdio). Zwei Betriebsarten:
 | `modell` | Attribute, Gruppen, Sprachen, Kanäle, Status — damit der Assistent die Begriffe kennt | `GET /api/model` |
 | `ausleitung` | was ein Publikationsbaum gerade ausleitet (Kanal, Markt, Freigabe) | `GET /api/pub/{id}/export` |
 
-**Nur lesen — entschieden (Taloan, 22.09.2026: „MCP als readonly, sonst ist das
-doch zu krass“).** Der Dienst schreibt nicht. Ein Assistent, der selbst Werte
+**Nur lesen — entschieden.** Der Dienst schreibt nicht. Ein Assistent, der selbst Werte
 setzt, erzeugt Einträge, die niemand angefordert hat; Vertrauen entsteht
 zuerst am Lesen. Nachrüstbar bleibt es jederzeit, weil jeder Eintrag ohnehin
 seinen Akteur trägt: Schreiben käme dann als eigene Werkzeuge
 (`wert_setzen`, `klasse_zuweisen`) mit eigener Rolle, damit im Journal steht,
 dass es die KI war — und es zählte als Tagesgeschäft.
 
-**Zugang und Menge — entschieden (Taloan, 22.09.2026: „Admin kann Tokens
-erzeugen und Rate Limits festlegen je Token“).** Der Assistent meldet sich mit
+**Zugang und Menge — entschieden.** Der Assistent meldet sich mit
 einem API-Token an, und dieses Token gehört nicht dem Anwender, sondern wird
 vom Administrator ausgegeben — mit einer Grenze daran. Damit beantwortet sich
 auch die Frage nach der Antwortgrösse: nicht der Dienst rät, wie viel gut
@@ -1093,8 +1074,7 @@ Obergrenze im Dienst), der Missbrauch gedeckelt (ein Assistent in einer
 Schleife kostet dann den Kunden nichts ausser einer Fehlermeldung), und der
 Administrator sieht, wer wie viel zieht.
 
-**Eigener Container — entschieden (Taloan, 22.09.2026: „MCP muss in einem
-eigenen Container laufen, da eventuell mit DMZ und nach aussen hin offen“).**
+**Eigener Container — entschieden.**
 Der Dienst ist das einzige Stück, das von aussen erreichbar sein soll; der
 Server mit dem Journal bleibt innen. Daraus folgt die Bauform:
 
@@ -1111,8 +1091,7 @@ Server mit dem Journal bleibt innen. Daraus folgt die Bauform:
   nach dem Sperren des Tokens nichts mehr.
 - **Nichts liegen lassen.** Keine Token auf Platte, Protokoll ohne Werte (nur
   Werkzeug, Dauer, Ergebnisgrösse).
-- **Cache: nur was weder Rechte noch Aktualität berührt** (Taloan, 22.09.2026:
-  „kein Cache?“). Gegen einen Datencache sprechen drei Dinge: zwei Anwender
+- **Cache: nur was weder Rechte noch Aktualität berührt**. Gegen einen Datencache sprechen drei Dinge: zwei Anwender
   mit verschiedenen Rollen sehen verschiedene Daten — ein gemeinsamer Cache
   leckt; „immer aktuell" ist das Hauptargument gegenüber dem Export und wäre
   damit dahin; und in der DMZ lägen Produktdaten auf einem Rechner, der von
@@ -1140,7 +1119,7 @@ Hitze aus?"). Für „hol mir Produkt X" ist MCP genauer, weil es exakt
 antwortet statt ähnlich. Beim Nachziehen hilft das Journal: der Index merkt
 sich die Journalnummer und bettet nur ein, was seitdem geschrieben wurde.
 
-## 32. Dokumente durchsuchbar machen — Entwurf (Taloan, 22.09.2026: „ich kann zwar eventuell per OCR nach konkreten Worten suchen, aber eine semantische Suche ist nicht möglich“)
+## 32. Dokumente durchsuchbar machen — Entwurf
 
 Am Knoten hängen Datenblätter, Sicherheitsdatenblätter, Zertifikate,
 Verarbeitungshinweise. Für uns sind sie heute eine Blackbox: `MediaCreated`
@@ -1217,7 +1196,7 @@ ist dann zugleich das Werkzeug `aehnlich` für den MCP-Dienst (§31).
    Freigabe nur an der Variante. Ansicht ▣ Baum links (↑↓←→, Filter, Pfad
    aufgeklappt), Anlegen inline, Knoten mit Pfad, Status, Achsenwert 🔒,
    geerbt kursiv mit Herkunft. **Sicht** statt Matrix: gewählte Sprachen +
-   ein Kanal als Spalten (Taloan: 27 Sprachen × 6 Kanäle passen nicht)
+   ein Kanal als Spalten
 3. ~~Typisierte Zellen, Vollständigkeit, vermehrbare Attribute~~ 16.09.2026:
    Zellen für date (Datumsfeld) und html (Editor: Quelltext + Vorschau,
    Ctrl+Enter); `CompletenessRules` je Kanal × Sprache aus den Pflichtfeldern
@@ -1241,7 +1220,7 @@ ist dann zugleich das Werkzeug `aehnlich` für den MCP-Dienst (§31).
    Fortschritt bei grossen Bäumen, Token-Anmeldung
 10. Anmeldung und Rechte (je Familie/Attribut/Kanal)
 
-## Offen — Taloans Wort
+## Offen — die Wort
 
 - ~~Kategorie als zweiter Baum?~~ Entschieden, siehe 4: keine Kategorien;
   Symlink für Knoten in mehreren Ästen, Kanalbäume als eigene logische Bäume.
@@ -1259,7 +1238,7 @@ ist dann zugleich das Werkzeug `aehnlich` für den MCP-Dienst (§31).
   (Vorschlag) oder nie?
 - DAM: eigener Baustein oder Plugin?
 
-### 17. Name im Baum — entschieden (Taloan, 17.09.2026)
+### 17. Name im Baum — entschieden
 
 Der Baum ist zuerst ein Verzeichnisbaum ohne Dateien: jeder Knoten kann von
 Hand benannt werden (`NodeNamed`, einsprachig, jede Rolle; Rechtsklick →
@@ -1276,8 +1255,7 @@ Reihenfolge (`NodeRow.LabelOf`):
    anderen Sprachen, dann ohne Sprache; geerbt zählt; eine Werteliste zeigt
    ihr Label); sonst das nächste ★ weiter oben. So benennt ein ★ auf SKU an
    einer Gruppe die Varianten darunter, während Produkte und Gruppen beim ★
-   auf `name` von weiter oben bleiben (Taloan, 17.09.2026: „bei 4 unsicher" —
-   so entschieden);
+   auf `name` von weiter oben bleiben;
 3. Variante: SKU, sonst die Achsenwerte;
 4. die interne Id — der Mindest-Fallback, den es immer gibt.
 
@@ -1290,15 +1268,14 @@ aus dem Attribut `name` fest im Code (dasselbe Problem; wer sein Attribut
 Sperre: ein Attribut, das irgendwo das ★ trägt, lässt sich nicht zurückziehen
 — erst das ★ umsetzen (`DELETE /api/model/attributes/{key}` nennt den Knoten).
 
-Mehrsprachig ist der eigene Name nicht (Vorbild Pimcore `key`; Akeneo,
-Ergonode und OpenPIM führen Kategorienamen je Sprache). Ob der Baum der
-Oberflächensprache folgen soll, ist offen — Taloan: „vielleicht gerade das,
+Mehrsprachig ist der eigene Name nicht . Ob der Baum der
+Oberflächensprache folgen soll, ist offen
 vielleicht gerade nicht". Der automatische Name nimmt heute fest `de` zuerst.
 
 Saatgut: das ★ steht an `g-mastertree` auf `name`; ein leeres Journal benennt
 damit alles darunter nach seinem Namen, bis jemand es umsetzt.
 
-### 18. Relationen — gebaut (Taloan, 17.09.2026: „bau mal gleich")
+### 18. Relationen — gebaut
 
 Andere PIMs haben Relationen und attributierte Relationen; die Solr-Quelle
 zeigt es: 109 376 `complex_relation`-Dokumente (Konfigurator: „in diesen
@@ -1332,9 +1309,9 @@ Medienknoten), und der Import der Solr-Relationen (`*_doc_rel` am Knoten,
 `complex_relation` als attributierte Kante — beide Enden müssen importiert
 sein; mit 109 k Kanten ein eigener Lauf).
 
-### 19. Plugins — gebaut (Taloan, 17.09.2026: „echte Verwaltung", „jetzt die Plugin-Verwaltung bauen")
+### 19. Plugins — gebaut
 
-Taloans Bild: Plugins werden installiert, aktiviert, gelöscht, haben eine
+die Bild: Plugins werden installiert, aktiviert, gelöscht, haben eine
 Versionsnummer; es werden viele. Genannt: Datenqualität (dpp, ppwr), Export
 (BMEcat, Excel, JSON), Benutzerwerkzeuge (Datenblatt als PDF/Excel,
 Massenbearbeitung mit Excel-Funktionen, OCR), Import (ixp, solr).
@@ -1378,8 +1355,7 @@ Ansichten erscheinen in der Leiste, Aktionen im Kontextmenü des Baums.
 Der Solr-Import ist zugleich Prozess-Plugin (`job.mjs`); Ansicht und Job teilen
 sich Ablauf (`lauf.mjs`) und Abbildung (`solr.js`).
 
-**Basis-Plugins (Taloan, 19.09.2026: „einerseits mit einer eigenen Basisfunktion
-ausgestattet und gleichzeitig der Container für Ergänzungs-Plugins“).** Der
+**Basis-Plugins.** Der
 Rahmen im Image ist klein (Journal, Baum, Modell, Medien, Verwaltung, Dienste);
 alles, was man häufiger erweitert oder korrigiert, liegt in `plugins/` und wird im
 Container per Bind-Mount ausgetauscht — ohne neues Image. Ein Basis-Plugin nennt
@@ -1398,9 +1374,7 @@ DOM-Plugins. `ctx.use('table').tableExport` gibt einem Plugin das Modul eines
 anderen. Alte Pfade (`/import/table`, `/export/table`, `/import/ixp`,
 `/import/solr`, `/analysis/dq`) leiten auf `/p/<key>/…` weiter.
 
-**Ausbau (Taloan, 17.09.2026: „Importe, Massenbearbeitung, Datenblatt,
-Datenmapper, Datenqualität — als Plugins, einzeln ausliefer- und auslagerbar;
-je Import-Plugin mehrere Konfigurationen"):**
+**Ausbau:**
 
 - **Plugin-Daten im Journal**: `PluginDataSet {name, value}` auf
   `plugin:<key>` — benannte JSON-Datensätze (Vorlagen, Profile, Regeln),
@@ -1436,9 +1410,9 @@ das Skript als Programm), Befunde der Qualitätsprüfer dauerhaft (heute:
 Liste im Browser, CSV), Export-Plugins (BMEcat, Excel, JSON) über
 `/api/nodes/{id}/table`, Datenblatt als PDF-Stapel.
 
-### 20. Medien — gebaut (Taloan, 17.09.2026: „ausserhalb", „fang mit den Medien an")
+### 20. Medien — gebaut
 
-**Vererbung (Taloan, 18.09.2026 — entschieden):** ein Medium am Knoten
+**Vererbung:** ein Medium am Knoten
 bekommt an seiner Zuordnung den Schalter `inherit` („an Subitems
 vererben“, Gruppe `relation_media`). Dann gilt es an allen Knoten
 darunter — als *geerbtes* Medium (gestrichelte Kachel, kursiv, mit
@@ -1447,7 +1421,7 @@ Eigene und geerbte Medien bestehen nebeneinander. **Ein geerbtes Medium
 lässt sich an keiner Ebene entfernen, nur unterbinden:** ⛔ am
 Knoten legt eine Zuordnung zum selben Medium mit `stop=true` an — damit ist
 es dort und an allem darunter weg; den Stopp lösen (×) bringt es zurück.
-**Bedeutung (Taloan: „Verwendung und Vererbung unterbunden“):** an dieser Ebene steht das Medium *nicht
+**Bedeutung:** an dieser Ebene steht das Medium *nicht
 zur Verfügung* — auch nicht für Exporte, Datenblätter, Suche (`media:`).
 Ein Stopp ist keine Zuordnung, nur eine Sperre; wer Medien eines Knotens
 liest, lässt Zuordnungen mit `stop=true` aus.
@@ -1456,8 +1430,7 @@ Der Server liefert `inherited` in `GET /api/nodes/{id}/relations`. Modell
 IXP-Import nutzt das: hat ein Subitem dasselbe Bild wie sein Elternteil,
 wird es dort vererbt und am Subitem nicht eigens zugeordnet.
 
-**Ordner (Taloan, 21.09.2026: „Medienorga: sortieren, gruppieren — Strukturbaum, um Medien dort zu organisieren, wie ein
-interner Dateimanager“):** die Bibliothek hat einen eigenen Ordnerbaum (Strom `mf-…`, `MediaFolderCreated/Renamed/Moved/
+**Ordner:** die Bibliothek hat einen eigenen Ordnerbaum (Strom `mf-…`, `MediaFolderCreated/Renamed/Moved/
 Retired`), ein Medium liegt in höchstens einem Ordner (`MediaFiled` am Medium, null = ohne Ordner). Die Ordner sind
 reine Organisation — nichts über Verwendung (das sind die Relationen) oder Datei (Store) — und gehen nie in die Ausleitung.
 Regeln: gleicher Name je Ebene nur einmal, nicht in sich selbst verschieben, löschen nur leer (kein stilles Aufräumen —
@@ -1468,11 +1441,10 @@ oder „⌂ ohne Ordner“ ziehen, „📁 verschieben …“ für die Auswahl, 
 Bibliothek …“ (Abschnitt Medien) öffnet dasselbe Bild als Fenster — Ordner, Suche, Mehrfachauswahl, Relationstyp
 (automatisch: Bild → `image`, sonst `document`), was schon hängt ist ausgegraut. Suche: `folder:<Name|Pfad|Id>` (samt Unterordnern), `folder:none`.
 
-Taloan: Binärdaten nicht in die Datenbank — später skalieren, woanders
+Binärdaten nicht in die Datenbank — später skalieren, woanders
 speichern. Einverstanden; das Journal bleibt schlank.
 
-- **Die Datei liegt ausserhalb**, der Ort ist ein Treiber (Taloan, 19.09.2026:
-  „Datenbank auf Azure, Assets im günstigeren Object Storage“): `postgres`
+- **Die Datei liegt ausserhalb**, der Ort ist ein Treiber: `postgres`
   (Vorgabe, Tabelle `media_blob` neben dem Journal — ein Paket ist lauffähig),
   Verzeichnis, `s3://` (Garage/MinIO/AWS/R2, ohne SDK); ein Journal, ein
   Speicher (eine „Ursprung“-Brücke für Zweitinstanzen war gebaut und wieder
@@ -1501,9 +1473,7 @@ Gebaut: `MediaCreated`/`MediaRetired`, Abbild `Media`, `FileMediaStore`
 im Knoten der Abschnitt „🖼 Medien" (Kacheln mit Werten an der Kante,
 Ablegen lädt hoch und verknüpft, „aus Medien wählen").
 
-**Vorschau-Presets — gebaut 21.09.2026** (Taloan: „in den Einstellungen Basics definieren, welche Ableitungen beim Bilder-Import
-automatisch berechnet werden, in welchen Größen … 200-MB-TIFFs aus der Konstruktion, davon 20 in ein Dokument, für 1000
-Artikel live umrechnen — nee, das muss alles bereitliegen“): Presets im Journal (`media-preset:<key>`,
+**Vorschau-Presets — gebaut 21.09.2026**: Presets im Journal (`media-preset:<key>`,
 `MediaPresetDefined`: Kante B × H eingepasst, Format webp/jpeg/png/avif, Qualität, auto), Saatgut `thumb` 256, `web` 1200,
 `print` 3000 jpeg. Gerechnet wird nie im Server: das Prozess-Plugin `derive` (Node + sharp/libvips, liest TIFF) holt
 `GET /api/media/pending`, rechnet, legt per `PUT /api/media/{id}/derived/{preset}` ab (Store `sha.<preset>`, Beleg
@@ -1516,9 +1486,9 @@ skaliert), Medienimport aus der Quelle (Solr: `images` als
 `multi_image_rel`, Pfade unter `suppliers/…` — braucht einen Basis-URL),
 Medien im Baum (eigener Ast) oder nur am Knoten.
 
-## 33. Status auch an Gruppen — entschieden und gebaut (Taloan, 23.09.2026)
+## 33. Status auch an Gruppen — entschieden und gebaut
 
-**Die Entscheidung (Taloan):** „Ich finde es wohl richtig, wenn Gruppen auch Status
+**Die Entscheidung:** „Ich finde es wohl richtig, wenn Gruppen auch Status
 haben können. Beispiel: neue PG, Markteinführung: redaktionell kann alles
 freigegeben sein, vorbereitet, trotzdem noch kein Verkaufsstart."
 
@@ -1547,7 +1517,7 @@ einer Gruppe nur, wenn sie einen hat; ein Import setzt ihn an einer Gruppe nur,
 wenn die Datei wirklich einen mitbringt — ein Export von früher trug an jeder
 Gruppe `draft`, und daraus sollen keine Einträge entstehen.
 
-**Weitergeben beim Setzen (Taloan):** „Das Setzen eines Status in einem übergeordneten
+**Weitergeben beim Setzen:** „Das Setzen eines Status in einem übergeordneten
 Knoten muss ähnlich funktionieren wie bei Windows: auch für Subitems? ja nein.“
 Also kein Vererben, sondern ein Weiterreichen im Moment des Setzens: hat der Knoten
 Subitems, fragt der Dialog „‹Status› setzen?“ mit dem Schalter „auch für die n

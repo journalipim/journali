@@ -1,4 +1,4 @@
-// Einstellungen → Team → Lizenz (Taloan, 23.09.2026): anfordern (die Instanz signiert), kopieren, den ausgestellten
+// Einstellungen → Team → Lizenz: anfordern (die Instanz signiert), kopieren, den ausgestellten
 // Schlüssel für das oben gewählte Team einlösen. Lizenz und Schlüssel kommen in dasselbe Feld mit einem Knopf
 // („ich habe zwei Eingabefelder mit jeweils einem Knopf — ich brauche eins“) — der Knopf sagt, was damit geschieht.
 // Geprüft wird, was die Oberfläche schickt und was sie danach zeigt.

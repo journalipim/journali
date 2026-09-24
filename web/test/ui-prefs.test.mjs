@@ -1,4 +1,4 @@
-// Eigene Einstellungen (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“): Darstellung, Sicht und Umfang
+// Eigene Einstellungen: Darstellung, Sicht und Umfang
 // folgen der Person an jeden Rechner; der Fensterzustand bleibt am Gerät. Geprüft wird, was wirklich hinausgeht.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -20,7 +20,7 @@ const warten = async () => { await flushPromises(); await new Promise(r => setTi
 
 test('mit Anmeldung geht die Darstellung an den Benutzer — nur das Geänderte', async () => {
   const calls = server()
-  store.auth = { known: true, enabled: true, setup: false, user: 'taloan', role: 'admin', name: 'Taloan', rights: ['read'] }
+  store.auth = { known: true, enabled: true, setup: false, user: 'u1', role: 'admin', name: 'U1', rights: ['read'] }
   store._prefsSent = null
   store.theme = 'dark'
   store.save(); await warten()
@@ -48,7 +48,7 @@ test('ohne Anmeldung bleibt alles im Browser', async () => {
 })
 
 test('beim Anmelden schlagen die Einstellungen der Person die des Browsers', async () => {
-  server({ enabled: true, setup: false, user: 'taloan', role: 'admin', name: 'Taloan', rights: ['read'], prefs: { theme: '"dark"', viewLocales: '["de","fr"]', scope: '"only"' } })
+  server({ enabled: true, setup: false, user: 'u1', role: 'admin', name: 'U1', rights: ['read'], prefs: { theme: '"dark"', viewLocales: '["de","fr"]', scope: '"only"' } })
   store.theme = 'light'; store.viewLocales = ['de', 'en']; store.scope = 'all'; store._prefsSent = null
   await store.loadAuth(); await flushPromises()
   assert.equal(store.theme, 'dark')
@@ -59,7 +59,7 @@ test('beim Anmelden schlagen die Einstellungen der Person die des Browsers', asy
 
 test('was am Gerät hängt, geht nicht an den Benutzer', async () => {
   const calls = server()
-  store.auth = { known: true, enabled: true, setup: false, user: 'taloan', role: 'admin', name: 'Taloan', rights: ['read'] }
+  store.auth = { known: true, enabled: true, setup: false, user: 'u1', role: 'admin', name: 'U1', rights: ['read'] }
   store._prefsSent = null
   store.save(); await warten()   // Ausgangsstand festhalten
   const vorher = calls.filter(c => c.path === '/api/auth/me/prefs').length

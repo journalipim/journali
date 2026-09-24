@@ -1,4 +1,4 @@
-// Client für einen Solr-Kern (infolox/prodexa-Export) — plugins/solr/README.md.
+// Client für einen Solr-Kern (Export eines anderen PIM) — plugins/solr/README.md.
 // Solr schickt keinen CORS-Kopf, antwortet aber auf json.wrf mit JSONP: ein <script>-Tag
 // je Anfrage, nur Lesen. Im Job auf dem Server geht es ohne das: dort fragt fetch (holenMitFetch).
 // Die Abbildung steht hier einmal und gilt für beide Wege.
@@ -43,7 +43,7 @@ export const holenMitFetch = async url => {
   return res.json()
 }
 
-/// Ein Solr-Kern. `holen` ist der Weg zur Quelle: im Browser JSONP, im Job fetch (Taloan, 23.09.2026: node, kein Python).
+/// Ein Solr-Kern. `holen` ist der Weg zur Quelle: im Browser JSONP, im Job fetch.
 export function solr(core, holen = jsonp) {
   const base = core.replace(/\/+$/, '')
   const NODES = '(type:group OR type:product OR type:productVariant)'

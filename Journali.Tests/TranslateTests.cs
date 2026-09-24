@@ -7,8 +7,8 @@ using Microsoft.AspNetCore.Http;
 
 namespace Journali.Tests;
 
-// Übersetzungsmanagement (Taloan, 21.09.2026): Einheiten je Sprachrichtung (fehlend, veraltet, fertig), XLIFF 2.0 hin und zurück.
-// Der Rückweg verwirft seit 22.09.2026 nichts mehr (Taloan: „und irgendwann kommt der Auftrag zurück …“) — eine überholte
+// Übersetzungsmanagement: Einheiten je Sprachrichtung (fehlend, veraltet, fertig), XLIFF 2.0 hin und zurück.
+// Der Rückweg verwirft seit 22.09.2026 nichts mehr — eine überholte
 // Übersetzung wird eingespielt und bleibt im Rückstand; die drei Fälle stehen in TranslationOrderTests.
 public class TranslateTests
 {

@@ -21,7 +21,7 @@ var connection = new NpgsqlConnectionStringBuilder(
 if (builder.Configuration["JOURNALI_DB_PASSWORD"] is { Length: > 0 } password)
     connection.Password = password;
 
-// Datenbank nicht erreichbar: ein Satz mit Host und Port statt Stacktrace, Ende mit Fehlercode (Taloan, 21.09.)
+// Datenbank nicht erreichbar: ein Satz mit Host und Port statt Stacktrace, Ende mit Fehlercode
 try { PostgresJournal.EnsureDatabase(connection.ConnectionString); }
 catch (NpgsqlException e) when (e.InnerException is System.Net.Sockets.SocketException || e.IsTransient)
 {
@@ -34,20 +34,20 @@ pg.EnsureSchema();
 // Datenverzeichnis (JOURNALI_JOBS): Jobs, Geheimnisse, Medien-Einstellung — und der lokale Spiegel des Journals
 var dataDir = Path.GetFullPath(builder.Configuration["JOURNALI_JOBS"] ?? Path.Combine(builder.Environment.ContentRootPath, "jobs"));
 Directory.CreateDirectory(dataDir);
-// Spiegel und Schnappschuss stellt der Administrator ein (Taloan, 24.09.2026) — betrieb.json im Datenverzeichnis,
+// Spiegel und Schnappschuss stellt der Administrator ein — betrieb.json im Datenverzeichnis,
 // ohne Datei zählt die Umgebung (JOURNALI_JOURNAL_CACHE=off, JOURNALI_SNAPSHOT=off). Gelesen wird das hier, vor dem
 // Journal: der Spiegel entscheidet, wie das Journal überhaupt gelesen wird.
 var betrieb = BetriebConfigFile.Effektiv(dataDir, builder.Configuration);
 var cachePath = Path.Combine(dataDir, $"journal-{connection.Host}-{connection.Port}-{connection.Database}.cache.jsonl");
 IJournal journal = betrieb.JournalCache ? new CachedJournal(pg, cachePath) : pg;
 var catalog = new Catalog(journal);
-// Schnappschuss der Abbilder (Taloan, 21.09.: bei Millionen Einträgen ist das Anwenden der Start): Stand #n als Datei, der Start liest nur den Rest;
+// Schnappschuss der Abbilder: Stand #n als Datei, der Start liest nur den Rest;
 // JOURNALI_SNAPSHOT=off schaltet ihn ab. Geschrieben nach dem Start (im Hintergrund) und beim Beenden.
 var snapshotPath = betrieb.Snapshot ? Path.Combine(dataDir, $"snapshot-{connection.Host}-{connection.Port}-{connection.Database}.json") : null;
 var snapshotAt = snapshotPath is null ? 0 : catalog.LoadSnapshot(snapshotPath);
-Console.WriteLine($"journali: Journal wird gelesen …{(snapshotAt > 0 ? $" (Schnappschuss bis #{snapshotAt})" : "")}{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (Spiegel bis #{cj.CachedHead}, Rest aus der Datenbank)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist (Taloan, 20.09.)
+Console.WriteLine($"journali: Journal wird gelesen …{(snapshotAt > 0 ? $" (Schnappschuss bis #{snapshotAt})" : "")}{(journal is CachedJournal cj && cj.CachedHead > 0 ? $" (Spiegel bis #{cj.CachedHead}, Rest aus der Datenbank)" : "")}");   // vor dem Logger — damit der Start nicht stumm ist
 var sw0 = System.Diagnostics.Stopwatch.StartNew();
-// Fortschritt etwa je Sekunde (Taloan, 21.09.: „damit man sieht, ob was vorangeht“) — Ziel ist der Kopf des Journals
+// Fortschritt etwa je Sekunde — Ziel ist der Kopf des Journals
 var head0 = journal.Head; var mirror0 = journal is CachedJournal c0 ? c0.CachedHead : 0; var lastTick = 0L;
 void Progress(int n, long number, bool final)
 {
@@ -57,15 +57,15 @@ void Progress(int n, long number, bool final)
     Console.WriteLine($"journali:   … #{number} von #{head0} ({Math.Min(100, number * 100 / Math.Max(1, head0))} %, {n} Einträge, {sw0.Elapsed.TotalSeconds:0} s, {src})");
 }
 var rebuilt = catalog.Rebuild(out var timing, (n, number) => Progress(n, number, false));
-if (lastTick > 0) Progress(rebuilt, journal.Head, true);   // der Allerletzte bei 100 % (Taloan, 21.09.)
+if (lastTick > 0) Progress(rebuilt, journal.Head, true);   // der Allerletzte bei 100 %
 void WriteSnapshot(string why)
 {
     if (snapshotPath is null) return;
     try { var sw = System.Diagnostics.Stopwatch.StartNew(); var n = catalog.SaveSnapshot(snapshotPath); if (n > 0) Console.WriteLine($"journali: Schnappschuss bis #{n} geschrieben ({sw.ElapsedMilliseconds} ms, {why})"); }
     catch (Exception e) { Console.WriteLine($"journali: Schnappschuss nicht geschrieben — {e.Message}"); }
 }
-Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht (Taloan, 21.09.)
-// Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“) liegt signiert und verschlüsselt in der Datenbank
+Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} ms — {timing}");   // wo die Zeit hingeht
+// Die Lizenz liegt signiert und verschlüsselt in der Datenbank
 // („jegliche eingespielte Lizenz kommt signiert und verschlüsselt in einen Container — die DB“); eine Datei von früher
 // wird beim ersten Lesen übernommen. Muss vor dem Saatgut stehen: daraus bekommt das Init Team seine Limits.
 var instanz = new Instanz(db);   // Kennung dieser Instanz — steht in der Lizenz, geht nicht in die Sicherung
@@ -76,7 +76,7 @@ catalog.Licences = licences;
 catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird
 var seeded = catalog.SeedMissing();
 // Läuft eine Lizenz (oder der Test) im Betrieb ab, gilt Kostenlos — das Init Team trägt dann dessen Limits. Stündlich
-// nachsehen; LimitsAusLizenz schreibt nur, wenn sich etwas ändert (Taloan, 24.09.2026)
+// nachsehen; LimitsAusLizenz schreibt nur, wenn sich etwas ändert
 _ = Task.Run(async () =>
 {
     while (true)
@@ -92,7 +92,7 @@ builder.Services.AddSingleton<IJournal>(journal);
 builder.Services.AddSingleton(catalog);
 
 // Medien: Treiber per JOURNALI_MEDIA — postgres (Vorgabe: Tabelle media_blob neben dem Journal), Verzeichnis, s3://bucket
-// (docs/betrieb.md). Taloan, 19.09.: Datenbank hier, Assets im Object Storage; ein Journal, ein Speicher.
+// (docs/betrieb.md). Datenbank hier, Assets im Object Storage; ein Journal, ein Speicher.
 // Einstellung: media.json im Datenverzeichnis (Einstellungen → Storage), sonst die Umgebung
 var mediaStore = new SwitchableMediaStore(MediaConfigFile.Load(dataDir) ?? MediaConfig.FromEnv(builder.Configuration), db, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("media"), builder.Environment.ContentRootPath);
 builder.Services.AddSingleton(db);
@@ -108,7 +108,7 @@ var pluginDir = builder.Configuration["JOURNALI_PLUGINS"]
 pluginDir = Path.GetFullPath(pluginDir);
 var autoInstalled = PluginApi.AutoInstall(catalog, pluginDir);
 
-// Jobs (Plugin tasker, Taloan 19.09.): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
+// Jobs (Plugin tasker): laufen im Server als Kindprozesse, unabhängig vom Browser; Logs und Geheimnisse
 // unter JOURNALI_JOBS (Vorgabe jobs/ neben dem Programm, im Repo ignoriert)
 var jobDir = dataDir;
 builder.Services.AddSingleton(licences);
@@ -133,9 +133,9 @@ app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Edi
 // Die Adresse, unter der Jobs den Server erreichen: die, mit der die Oberfläche kommt (localhost:5000 oder rossibox)
 app.Use(async (ctx, next) => { if (ctx.Request.Path.StartsWithSegments("/api")) jobRunner.Origin = $"{ctx.Request.Scheme}://{ctx.Request.Host}"; await next(); });
 
-// Benutzer & Rollen (Taloan, 19.09.): ohne Benutzer offen wie bisher; mit Benutzern Sitzung oder Token noetig, X-Actor kommt aus der Sitzung
+// Benutzer & Rollen: ohne Benutzer offen wie bisher; mit Benutzern Sitzung oder Token noetig, X-Actor kommt aus der Sitzung
 app.Use(Auth.Middleware(catalog, dataDir));
-// Kein Kontingent: der Schreibpfad wirft, die Antwort sagt es sachlich (Taloan, 23.09.2026) — nicht als Serverfehler
+// Kein Kontingent: der Schreibpfad wirft, die Antwort sagt es sachlich — nicht als Serverfehler
 app.Use(async (ctx, next) =>
 {
     try { await next(); }
@@ -146,7 +146,7 @@ app.Use(async (ctx, next) =>
     }
 });
 
-// Was hier wirklich läuft (Taloan, 23.09.2026): beides einmal beim Start lesen. Der Zeitstempel der Datei ändert sich
+// Was hier wirklich läuft: beides einmal beim Start lesen. Der Zeitstempel der Datei ändert sich
 // beim nächsten Bau — wer ihn bei jedem Aufruf liest, meldet einen Stand, den er gar nicht geladen hat.
 var gebautAm = System.IO.File.GetLastWriteTimeUtc(typeof(Program).Assembly.Location);
 var fassung = typeof(Program).Assembly.GetName().Version?.ToString(3);
@@ -162,12 +162,12 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
 {
     head = c.Head,
     nodes = c.Read(t => t.Nodes.Count),
-    // Nutzung für die Statusleiste (Taloan, 22.09.2026): Woche und Monat, mehr steht in den Einstellungen.
-    // Wessen Nutzung (Taloan, 23.09.2026): „die beiden kleinen Balken oben sollen dem Anwender anzeigen, was für ein
+    // Nutzung für die Statusleiste: Woche und Monat, mehr steht in den Einstellungen.
+    // Wessen Nutzung: „die beiden kleinen Balken oben sollen dem Anwender anzeigen, was für ein
     // Verbrauchsstand in seinem Team ist“ — das Team der Mitgliedschaft, am Ende der Zahlerkette. Auch beim
     // Administrator: er führt vielleicht viele Teams, gehört aber genau einem an.
     usage = Nutzung(req, c),
-    built = gebautAm,      // Stand der LAUFENDEN Fassung — einmal beim Start gelesen (Taloan, 21.09.)
+    built = gebautAm,      // Stand der LAUFENDEN Fassung — einmal beim Start gelesen
     version = fassung,     // die Fassung, die läuft — steht oben in der Leiste
 });
 
@@ -193,7 +193,7 @@ object? Nutzung(HttpRequest req, Catalog c)
                 week = Teil(u.Between(Usage.Ab(Usage.WeekStart(today), catalog.ZaehltAb), today), licences.Lic.EntriesWeek, woche, "Instanz"),
                 month = Teil(u.Between(Usage.Ab(Usage.MonthStart(today), catalog.ZaehltAb), today), licences.Lic.EntriesMonth, monat, "Instanz"),
             });
-        // Kein Team: Kontingent 0 — die Balken stehen voll und rot, denn 0 ist sofort erreicht (Taloan, 23.09.2026)
+        // Kein Team: Kontingent 0 — die Balken stehen voll und rot, denn 0 ist sofort erreicht
         if (TeamApi.TeamOf(c, ich) is not { } mein || c.Teams.Get(mein) is null)
             return c.ReadUsage(u => new
             {
@@ -214,7 +214,7 @@ object? Nutzung(HttpRequest req, Catalog c)
     });
 }
 
-// Nutzung (Taloan, 22.09.2026): was pro Tag, Woche, Monat ins Journal ging — die Grenzen sind vorerst Annahmen zum Messen,
+// Nutzung: was pro Tag, Woche, Monat ins Journal ging — die Grenzen sind vorerst Annahmen zum Messen,
 // keine Lizenz. Lesen und Exportieren zählen nicht mit, weil sie nichts schreiben.
 api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.ReadUsage(u =>
 {
@@ -227,7 +227,7 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
     {
         today = today.ToString("yyyy-MM-dd"),
         head = c.Head,
-        day = Part("day", u.Day(today), 0, today, today.AddDays(1)),   // ohne Grenze: nur die Zahl (Taloan, 22.09.2026)
+        day = Part("day", u.Day(today), 0, today, today.AddDays(1)),   // ohne Grenze: nur die Zahl
         week = Part("week", u.Between(Usage.Ab(Usage.WeekStart(today), c.ZaehltAb), today), licences.Lic.EntriesWeek, Usage.WeekStart(today), Usage.WeekStart(today).AddDays(7)),
         month = Part("month", u.Between(Usage.Ab(Usage.MonthStart(today), c.ZaehltAb), today), licences.Lic.EntriesMonth, Usage.MonthStart(today), Usage.MonthStart(today).AddMonths(1)),
         // daneben, was gar nicht zählt (Modell, Struktur, Kataloge, Betrieb) — zum Vergleich beim Messen
@@ -248,16 +248,16 @@ MediaApi.Map(api);
 DeriveApi.Map(api);   // Vorschau-Presets und Ableitungen (Plugin derive rechnet)
 TranslateApi.Map(api);
 WorkflowApi.Map(api);   // Workflows (27): Definitionen, Zustand je Knoten, Schritte, Meine Aufgaben   // Übersetzungsmanagement: Einheiten je Sprachrichtung, Rückweg mit Quellprüfung (Plugin xliff)
-VersionApi.Map(api, pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("versions"));   // Versionen (Taloan, 19.09.)
+VersionApi.Map(api, pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("versions"));   // Versionen
 PluginApi.Map(api, pluginDir);
 BatchApi.Map(api);
-TransferApi.Map(api);   // Rohdaten eines Teilbaums hin und zurück (JSON, wiederherstellbar — Taloan)
-RestoreApi.Map(api);   // Teilbaum aus einer Rohdaten-Datei zurueck (Einstellungen, kein Plugin — Taloan, 23.09.)
-BackupApi.Map(api, journal, dataDir, pluginDir);   // Vollsicherung: Journal, Medien, Zugänge, Plugins — zurück in ein leeres System (Taloan, 23.09.)
-MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail, Taloan 23.09.)
-LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz);   // Schlüssel: signiert anfordern, einlösen — Reset oder Limit, an die Instanz gebunden, einmal (Taloan, 23.09.)
+TransferApi.Map(api);   // Rohdaten eines Teilbaums hin und zurück (JSON, wiederherstellbar)
+RestoreApi.Map(api);   // Teilbaum aus einer Rohdaten-Datei zurueck (Einstellungen, kein Plugin)
+BackupApi.Map(api, journal, dataDir, pluginDir);   // Vollsicherung: Journal, Medien, Zugänge, Plugins — zurück in ein leeres System
+MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail)
+LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz);   // Schlüssel: signiert anfordern, einlösen — Reset oder Limit, an die Instanz gebunden, einmal
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
-TeamApi.Map(api, jobDir);   // Teams (Taloan, 23.09.): Kostenstelle der KI — Schlüssel, Verbuchung, Führung
+TeamApi.Map(api, jobDir);   // Teams: Kostenstelle der KI — Schlüssel, Verbuchung, Führung
 AiApi.Map(api, jobDir);     // KI über den Server: Schlüssel des zahlenden Teams; begrenzt wird hier nichts
 LicenceApi.Map(api, licences);      // Lizenz einspielen und ansehen
 FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
@@ -288,7 +288,7 @@ app.MapGet("/plugins/{key}/{**path}", (string key, string path, HttpContext ctx)
         return Results.Text(File.ReadAllText(file).Replace("{{ORIGIN}}", origin), "application/xml");
     }
     var mime = ext switch { ".js" or ".mjs" => "text/javascript", ".json" => "application/json", ".css" => "text/css", ".md" => "text/markdown", ".png" => "image/png", ".svg" => "image/svg+xml", ".html" => "text/html", _ => "application/octet-stream" };
-    // Plugin-Dateien nie aus dem Browser-Cache: sonst laeuft nach einem Update das alte Modul weiter (F5 muss reichen, Taloan)
+    // Plugin-Dateien nie aus dem Browser-Cache: sonst laeuft nach einem Update das alte Modul weiter (F5 muss reichen)
     ctx.Response.Headers.CacheControl = "no-cache";
     return Results.File(file, mime);
 });

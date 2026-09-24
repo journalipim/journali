@@ -1,4 +1,4 @@
-// JSON-Import als Job (Taloan, 19.09.2026: „import json → als Job einrichten“): eine Rohdaten-Datei (.json oder .json.gz,
+// JSON-Import als Job: eine Rohdaten-Datei (.json oder .json.gz,
 // Pfad oder URL; bei einem Verzeichnis die neueste Datei) mit einem gespeicherten Profil des JSON-Imports (Zuordnung,
 // Präfix, Ziel) einspielen — POST /api/nodes/import, ein Stapel. Rückgabe: 0 = ok, 3 = mit Fehlern, 1 = gescheitert.
 // Aufruf: node job.mjs <journali> <actor> <source> [profile] [parent] [dryRun] — oder JOURNALI_* aus der Umgebung.

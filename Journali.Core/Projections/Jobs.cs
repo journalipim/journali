@@ -58,7 +58,7 @@ public sealed class JobState
 }
 
 /// <summary>
-/// Abbild „die Jobs“ (Taloan, 19.09.2026, Plugin tasker): Strom <c>job:&lt;key&gt;</c>. Was ein Job ist, wann er läuft
+/// Abbild „die Jobs“: Strom <c>job:&lt;key&gt;</c>. Was ein Job ist, wann er läuft
 /// und wie jeder Lauf ausging, steht im Journal — nachvollziehbar wie alles andere. Die Ausgabe eines Laufs (das Log)
 /// liegt als Datei neben dem Programm (JOURNALI_JOBS), im Journal nur ihre Grösse; Geheimnisse (Token) nie im Journal.
 /// </summary>

@@ -4,10 +4,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build && node build-plugins.mjs",
+    "dev": "node build-help.mjs && vite",
+    "build": "node build-help.mjs && vite build && node build-plugins.mjs",
     "test": "node --import ./test/vue-loader.mjs --test \"test/**/*.test.mjs\"",
-    "build:web": "vite build",
+    "build:web": "node build-help.mjs && vite build",
+    "build:help": "node build-help.mjs",
     "build:plugins": "node build-plugins.mjs",
     "preview": "vite preview"
   },

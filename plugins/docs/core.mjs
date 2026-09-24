@@ -1,13 +1,11 @@
-// Plugin docs — Kern ohne Node-Abhängigkeiten (Taloan, 22.09.2026: „Firmen haben Marketingdokumente, Vorteils-
-// argumentationen, Datenblätter, Kataloge irgendwo rumliegen … man kann etliche PDFs an einen Knoten droppen, die
-// werden im Hintergrund nach und nach gelesen und stehen dann für Chatbots oder die interne Recherche bereit“).
+// Plugin docs — Kern ohne Node-Abhängigkeiten.
 // Hier steht, wie aus Text Abschnitte werden — das Lesen der Dateiformate macht job.mjs.
 // Abschnitte statt ganzer Dokumente: ein 40-seitiges Datenblatt ist als Ganzes für die Suche wertlos, und ein Treffer
 // soll „Seite 4" sagen können (pflegestruktur §32).
 
 /// Eine Zeile ist eine Überschrift, wenn sie kurz ist, nicht auf einen Satzschluss endet und nicht wie Fliesstext
 /// oder eine Tabellenzeile aussieht. Letzteres ist in Datenblättern der Normalfall: „Netzspannungsbereich 220 – 240 V"
-/// ist ein Wert, keine Überschrift (Taloan, 22.09.2026, am Tridonic-Datenblatt gesehen).
+/// ist ein Wert, keine Überschrift.
 const HEADING = /^[^\n]{3,80}$/
 export function isHeading(line) {
   const s = line.trim()
@@ -50,7 +48,7 @@ export function chunk(text, { max = 900, min = 120, page = null } = {}) {
   const out = []
   let heading = null, buf = []
   // Eine Überschrift, auf die kein Text folgt, ist keine — sie wird selbst zum Abschnitt. Sonst verschwände sie
-  // (kurze Stichpunkte wie „Lösemittelfrei" sehen aus wie Überschriften; Taloan, 22.09.2026: Vorteilsargumentationen).
+  // (kurze Stichpunkte wie „Lösemittelfrei" sehen aus wie Überschriften).
   const flush = () => {
     const body = buf.join('\n').trim()
     buf = []
@@ -87,7 +85,7 @@ export function numbered(chunks) {
 
 /// Zeilen, die auf vielen Seiten gleich stehen, sind Kopf- oder Fusszeile — sie gehören nicht in jeden Abschnitt.
 /// Erkannt wird an der Wiederholung, nicht an der Position: „www.tridonic.com1Änderungen vorbehalten" steht auf
-/// jeder Seite des Datenblatts (Taloan, 22.09.2026, echtes Beispiel).
+/// jeder Seite des Datenblatts.
 export function dropRunningLines(pages, { minPages = 3, share = 0.6 } = {}) {
   const list = pages.map(p => String(p ?? ''))
   if (list.length < minPages) return list

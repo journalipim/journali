@@ -1,8 +1,7 @@
 namespace Journali.Core.Entries;
 
 /// <summary>
-/// Die Art eines Journaleintrags (Taloan, 22.09.2026: „eine neue Spalte, die die Art des Eintrags kategorisiert —
-/// modelling, dataedit usw.“): <b>was für eine Arbeit</b> der Eintrag war. Das ist ein Fakt und steht für immer
+/// Die Art eines Journaleintrags: <b>was für eine Arbeit</b> der Eintrag war. Das ist ein Fakt und steht für immer
 /// im Eintrag (Spalte <c>kind</c>) — im Gegensatz zu der Frage, ob er <i>zählt</i>: die beantwortet der Tarif und
 /// darf sich ändern, ohne die Vergangenheit anzufassen.
 /// <para>Wer schreibt, darf die Art mitgeben (ein Plugin weiss besser als der Kern, was es tut). Fehlt sie —
@@ -27,7 +26,7 @@ public static class Kinds
 
     public static readonly IReadOnlyList<string> All = [Model, Structure, Data, Publish, Reference, Setup, Ops];
 
-    /// <summary>Was im Tagesgeschäft zählt (Taloan, 22.09.2026: „ein PIM lebt von Importen, Datenpflege und Exporten“).</summary>
+    /// <summary>Was im Tagesgeschäft zählt.</summary>
     public static readonly IReadOnlySet<string> Counts = new HashSet<string> { Data, Publish };
 
     /// <summary>Zählt dieser Eintrag? Ohne eigene Art entscheidet der Typ.</summary>
@@ -38,7 +37,7 @@ public static class Kinds
     {
         // Datenpflege
         Types.AttributeSet or Types.ValueSourced or Types.RowAdded or Types.RowRemoved or Types.RowOrdered
-            or Types.NodeNamed          // einen Knoten benennen ist Pflege (Taloan, 23.09.2026), nicht Gerüst
+            or Types.NodeNamed          // einen Knoten benennen ist Pflege, nicht Gerüst
             or Types.ProductCreated or Types.VariantCreated or Types.NodeRetired or Types.NodeRestored
             or Types.StatusSet or Types.ExternalLinked or Types.ExternalUnlinked
             or Types.MediaCreated or Types.MediaRetired or Types.MediaFiled

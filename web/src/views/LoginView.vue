@@ -1,5 +1,5 @@
 <script setup>
-// Anmeldung (Taloan, 19.09.2026: Benutzer & Rollen). Gibt es noch keinen Benutzer, wird hier der erste Administrator angelegt —
+// Anmeldung. Gibt es noch keinen Benutzer, wird hier der erste Administrator angelegt —
 // danach ist der Server gesperrt und der Urheber jedes Eintrags kommt aus der Sitzung.
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'

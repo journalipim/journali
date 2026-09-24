@@ -1,5 +1,4 @@
-// Ein Abschnitt sieht überall gleich aus (Taloan, 23.09.2026: „wieso sehen Schriften etc. hier komplett anders aus als in
-// anderen Tabs?“). Die Regel stand vierfach scoped in einzelnen Ansichten; wer sie nicht kopiert hatte — Mail, Sicherung —
+// Ein Abschnitt sieht überall gleich aus. Die Regel stand vierfach scoped in einzelnen Ansichten; wer sie nicht kopiert hatte — Mail, Sicherung —
 // bekam die Vorgabe des Browsers: riesige fette Überschrift. Jetzt steht sie einmal in style.css, und dieser Prüfstand
 // hält sie dort: eine neue Einstellungsseite erbt sie, ohne dass jemand daran denken muss.
 import test from 'node:test'
@@ -24,8 +23,7 @@ test('sie ist ein farbiges Band — nicht nur graue Schrift', () => {
   assert.match(regel, /border-top: 2px solid var\(--accent\)/, 'die Kante fehlt')
 })
 
-// Eine Überschrift ist ein Name und eine Zahl (Taloan, 23.09.2026: „konntest du dich nicht beherrschen, bei einem neuen
-// Dialogelement irgendeinen Rotz dazuzulabern … gemessen, nicht geschätzt“). Der Beisatz nach dem · zählt auf oder
+// Eine Überschrift ist ein Name und eine Zahl. Der Beisatz nach dem · zählt auf oder
 // zählt ab. Wer erklären will, schreibt es in title= — dort gilt die Längengrenze aus sichtbare-texte.test.mjs.
 // Erkannt wird ein Satzfragment an seinen Funktionswörtern und an Verben: beide haben in einem Namen nichts zu suchen.
 const FRAGMENT = /(^|\s)(der|die|das|des|dem|den|dieser|diese|dieses|diesem|über|gegen|statt|nicht|sondern|bei|für|nach|ohne|hier|oben|unten|wie|als|gelten|ziehen|zählen|zählt|misst|gemessen|geschätzt|läuft|steht|gehört)(\s|$)/i

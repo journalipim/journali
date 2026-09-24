@@ -1,7 +1,7 @@
 namespace Journali.Core.Projections;
 
 /// <summary>
-/// Die Rechnung hinter den Lizenzschlüsseln (Taloan, 23.09.2026). Zwei Arten, beide nur an die Instanz gebunden, beide
+/// Die Rechnung hinter den Lizenzschlüsseln. Zwei Arten, beide nur an die Instanz gebunden, beide
 /// einmal einlösbar, beide kombinierbar:
 /// <list type="bullet">
 /// <item><c>reset</c> — das Team zählt ab dem Einlösen neu. Sofort, einmalig.</item>
@@ -9,7 +9,7 @@ namespace Journali.Core.Projections;
 /// (Schlüssel auf Vorrat verfallen nicht in der Schublade).</item>
 /// </list>
 /// Läuft beim Einlösen eines Limit-Schlüssels schon einer, geht nichts verloren: „ab sofort würde den Anwender um die
-/// Laufzeit einer anderen Limit-Lizenz betrügen — müsste also umgerechnet werden“ (Taloan). Umgerechnet wird nach
+/// Laufzeit einer anderen Limit-Lizenz betrügen — müsste also umgerechnet werden“. Umgerechnet wird nach
 /// <b>Restvolumen</b>: was vom laufenden übrig ist, wird in Tage des neuen umgerechnet und hinten angehängt.
 /// </summary>
 public static class Schluessel
@@ -22,8 +22,7 @@ public static class Schluessel
     public sealed record Paket(string Key, string Label, int Week, int Month, int Days);
 
     /// <summary>
-    /// Die Pakete, die angefordert werden können (Taloan, 23.09.2026: „wir geben verschiedene Kombinationen vor, aber
-    /// keine freien Eingabefelder“) — die Tarife ausser Kostenlos (<see cref="Tarife"/>, Taloan 24.09.2026), je 30 Tage.
+    /// Die Pakete, die angefordert werden können — die Tarife ausser Kostenlos (<see cref="Tarife"/>), je 30 Tage.
     /// </summary>
     public static readonly Paket[] Pakete = [.. Tarife.Alle.Where(t => t.Rang > 0).Select(t => new Paket(t.Key, t.Label, t.Week, t.Month, 30))];
     public static Paket? PaketVon(string? key) => Pakete.FirstOrDefault(p => p.Key == key);

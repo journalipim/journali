@@ -3,8 +3,7 @@
 namespace Journali.Server;
 
 /// <summary>
-/// Dateibrowser des Servers (Taloan, 21.09.2026: „Gibt's hier wohl auch nen Browser?“ — und „die beiden Verzeichnisbrowser
-/// zusammenlegen“): ein Endpunkt für alles, was ein Pfad auf dem Server ist — Verzeichnis des Medienspeichers (Einstellungen →
+/// Dateibrowser des Servers: ein Endpunkt für alles, was ein Pfad auf dem Server ist — Verzeichnis des Medienspeichers (Einstellungen →
 /// Storage), Quelle eines Imports, Ziel eines Exports (Jobs). Ein Verzeichnis: Unterverzeichnisse, Dateien (Größe, Zeit, neueste
 /// zuerst), Vater, die Wurzeln (Datenverzeichnis, Programm, Laufwerke) und <c>blobs</c> (Hash-Ordner, zwei Zeichen — sieht nach
 /// einem Medienspeicher aus). Leer = Datenverzeichnis. Versteckte Einträge bleiben weg. Recht: Jobs oder Storage (Auth).

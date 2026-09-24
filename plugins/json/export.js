@@ -1,4 +1,4 @@
-// JSON-Export (Taloan, 19.09.2026: „JSON sind strukturierte Daten, nicht Tabelle“): ein Teilbaum als
+// JSON-Export: ein Teilbaum als
 // Rohdaten (wiederherstellbar, mit Modellteil — der JSON-Import und der Job lesen es), als ausgewerteter Baum
 // (verschachtelt, Werte aufgelöst — für Abnehmer) oder als flache Liste (ausgewertet). Tabellen (xlsx, csv) macht das Plugin export.
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v) } for (const k of kids) e.append(k); return e }
@@ -17,7 +17,7 @@ export async function mountExport(root, ctx) {
   const remember = () => ctx.data.set('export', { format: st.format, locales: st.locales, ownOnly: st.ownOnly, gzip: st.gzip }).catch(() => {})
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
-  // Auswahlbaum (Taloan) statt Suche nach Name
+  // Auswahlbaum statt Suche nach Name
   const chosen = el('div', { class: 'muted', style: 'margin:2px 0 4px' }, st.root ? `${ICON[tree.byId.get(st.root)?.role] ?? ''} ${tree.byId.get(st.root)?.label ?? ''}` : 'im Baum wählen')
   const treeBox = el('div')
   ctx.treePicker(treeBox, { value: st.root, roles: ['group', 'product', 'variant'], height: 220, onPick: r => { st.root = r.id; chosen.textContent = `${ICON[r.role]} ${r.label}`; localStorage.setItem('journali.export.root', r.id) } })

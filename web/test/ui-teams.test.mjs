@@ -1,6 +1,4 @@
-// Die Teamseite (Taloan, 23.09.2026: „auf der Teamseite sehe ich alles, was zu meinem Team gehört, wer alles zu meinem Team
-// gehört; wenn ich der Teamadministrator bin, kann ich da auch die API-Schlüssel eingeben. Teams anlegen kann man hier
-// aber nicht“). Geprüft wird genau das: Mitglieder, Schlüssel, Token, Verbrauch, Nutzung — und kein Anlegen.
+// Die Teamseite. Geprüft wird genau das: Mitglieder, Schlüssel, Token, Verbrauch, Nutzung — und kein Anlegen.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises } from './ui.mjs'
@@ -11,11 +9,11 @@ const TeamsSettings = (await import('../src/components/TeamsSettings.vue')).defa
 const TeamsAdmin = (await import('../src/components/TeamsAdmin.vue')).default
 
 const TEAMS = [
-  { key: 'init', label: 'Init Team', primary: true, entriesWeek: 20000, entriesMonth: 100000, keys: ['anthropic'], keysFrom: null, includedTokens: 200000, monthlyTokens: 100000, dailyTokens: 50000, month: 80000, today: 1200, calls: 7, members: 3, payer: 'init', managers: ['taloan'], models: { anthropic: 'claude-sonnet-5' } },
+  { key: 'init', label: 'Init Team', primary: true, entriesWeek: 20000, entriesMonth: 100000, keys: ['anthropic'], keysFrom: null, includedTokens: 200000, monthlyTokens: 100000, dailyTokens: 50000, month: 80000, today: 1200, calls: 7, members: 3, payer: 'init', managers: ['u1'], models: { anthropic: 'claude-sonnet-5' } },
   { key: 'es', label: 'Spanien', primary: false, entriesWeek: 0, entriesMonth: 0, keys: [], keysFrom: 'init', includedTokens: 0, monthlyTokens: 0, dailyTokens: 0, month: 0, today: 0, calls: 0, members: 2, payer: 'init', managers: ['pablo'], models: {} },
 ]
 const MITGLIEDER = [
-  { key: 'taloan', name: 'Taloan', role: 'admin', enabled: true, own: true, lastAt: '2026-09-23T07:00:00Z' },
+  { key: 'u1', name: 'U1', role: 'admin', enabled: true, own: true, lastAt: '2026-09-23T07:00:00Z' },
   { key: 'gast', name: 'Gast', role: 'reader', enabled: true, own: false, lastAt: null },
 ]
 
@@ -30,7 +28,7 @@ function server(teams = TEAMS) {
       : path.endsWith('/tokens/journali') ? { team: 'init', payer: 'init', payerLabel: 'Init Team', limits: { week: 20000, month: 100000 }, used: { week: 5913, month: 5981, day: 1526 }, mine: { week: 0, month: 0 }, head: 74939, today: '2026-09-23', resetWeek: '2026-09-28', resetMonth: '2026-10-01', history: [{ start: '2026-09-23', count: 1526, all: 1526 }] }
       : path === '/api/usage' ? { week: { used: 1, max: 10 }, month: { used: 2, max: 20 }, history: [] }
       : path === '/api/teams/free' ? [{ key: 'neu', name: 'Neu Person', role: 'editor' }]
-      : path === '/api/auth/people' ? [{ key: 'taloan', name: 'Taloan', role: 'admin' }, { key: 'pablo', name: 'Pablo', role: 'editor' }]
+      : path === '/api/auth/people' ? [{ key: 'u1', name: 'U1', role: 'admin' }, { key: 'pablo', name: 'Pablo', role: 'editor' }]
       : path === '/api/licence' ? { plan: 'Testbetrieb', entriesWeek: 20000, entriesMonth: 100000, aiTokensMonth: 0, aiTokensDay: 0, geprueft: false }
       : path === '/api/teams' ? teams
       : opts.method === 'PUT' ? teams[0] : {}
@@ -41,11 +39,11 @@ function server(teams = TEAMS) {
 const ruhe = async () => { for (let i = 0; i < 5; i++) { await flushPromises(); await new Promise(r => setTimeout(r, 0)) } }
 
 test('die Teamseite zeigt, wer dazugehört und womit gearbeitet wird — über KI-Kosten sagt sie nichts', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
   assert.match(t, /Init Team/)
-  assert.match(t, /Taloan/, 'die Mitglieder stehen da')
+  assert.match(t, /U1/, 'die Mitglieder stehen da')
   assert.match(t, /Gast/, 'auch wer kein eigenes Team trägt')
   assert.match(t, /anthropic/, 'die eingerichteten Anbieter')
   assert.ok(!/Excel Laptop/.test(t), 'API-Token gehören zur Person, nicht zum Team')
@@ -60,7 +58,7 @@ test('die Teamseite zeigt, wer dazugehört und womit gearbeitet wird — über K
 })
 
 test('der Fragezeichen-Knopf sagt, was auf die Limits geht und was nicht', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
   await w.findAll('button').find(b => b.text() === '?').trigger('click'); await ruhe()
   assert.match(dialog.title, /journali Limits/, 'die Hilfe gehört zu den journali-Token, nicht zur KI')
@@ -73,7 +71,7 @@ test('der Fragezeichen-Knopf sagt, was auf die Limits geht und was nicht', async
 })
 
 test('das Austauschvolumen steht hin und zurück getrennt da — in Bytes, nie in Tokens', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
   assert.match(t, /Austauschvolumen/, 'der Abschnitt heißt so')
@@ -84,9 +82,9 @@ test('das Austauschvolumen steht hin und zurück getrennt da — in Bytes, nie i
   await ruhe(); w.unmount()
 })
 
-// Namen und Reihenfolge der Abschnitte stehen fest (Taloan, 23.09.2026) — erst, was journali betrifft, dann die KI
+// Namen und Reihenfolge der Abschnitte stehen fest — erst, was journali betrifft, dann die KI
 test('die Abschnitte stehen in der vereinbarten Folge', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
   const h = w.findAll('h2').map(x => x.text().replace(/\s+/g, ' ').replace(' ?', ''))
   assert.equal(h.length, 5)
@@ -96,7 +94,7 @@ test('die Abschnitte stehen in der vereinbarten Folge', async () => {
 })
 
 test('der Team-Admin hinterlegt den Schlüssel; er kommt nie zurück', async () => {
-  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
   await w.find('input[type=password]').setValue('sk-ant-geheim')
   await w.findAll('button').find(b => b.text() === '🔒').trigger('click'); await ruhe()
@@ -117,7 +115,7 @@ test('ein Leser sieht sein Team, ändert aber nichts', async () => {
 })
 
 test('Teams anlegen steht bei den Personen — das erste Team lässt sich nicht entfernen', async () => {
-  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'users'] }
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'users'] }
   const w = mount(TeamsAdmin); await ruhe()
   const zeilen = w.findAll('tbody tr')
   assert.match(zeilen[0].text(), /①/, 'das erste Team ist zu erkennen')
@@ -126,7 +124,7 @@ test('Teams anlegen steht bei den Personen — das erste Team lässt sich nicht 
   assert.equal(zeilen[0].findAll('input[type=number]').length, 0, 'die Limits ergeben sich aus der Lizenz — hier gibt es nichts einzustellen')
   assert.match(zeilen[0].text(), /20\.000/, 'sie stehen trotzdem da')
   await w.find('input[placeholder="neues Team"]').setValue('Frankreich')
-  await w.findAll('select').at(-1).setValue('taloan')   // ohne Führung legt der Server kein Team an
+  await w.findAll('select').at(-1).setValue('u1')   // ohne Führung legt der Server kein Team an
   await w.findAll('button').find(b => b.text() === '+').trigger('click'); await ruhe()
   const put = calls.find(c => c.path === '/api/teams/frankreich' && c.method === 'PUT')
   assert.ok(put, 'das Team wurde nicht angelegt')
@@ -134,10 +132,10 @@ test('Teams anlegen steht bei den Personen — das erste Team lässt sich nicht 
   await ruhe(); w.unmount()
 })
 
-// Der Verlauf gehört zum Team (Taloan, 23.09.2026: „heute 1.526 … noch nichts aufgezeichnet“) — die Balken bekamen ein
+// Der Verlauf gehört zum Team — die Balken bekamen ein
 // selbstgebautes Objekt ohne Verlauf, und die Zeile darunter behauptete, es gäbe keinen.
 test('die Balken des Teams kennen ihren Verlauf und ihren Journalstand', async () => {
-  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'teamadmin', rights: ['read', 'team'] }
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'teamadmin', rights: ['read', 'team'] }
   const w = mount(TeamsSettings); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
   assert.ok(calls.some(c => c.path.endsWith('/tokens/journali') && /history=/.test(c.query ?? '')) || true, 'der Verlauf wird mitgeholt')
@@ -147,10 +145,9 @@ test('die Balken des Teams kennen ihren Verlauf und ihren Journalstand', async (
   await ruhe(); w.unmount()
 })
 
-// Eine eingespielte Lizenz ändert die Limits des Teams (Taloan, 23.09.2026: „der obere ist aktualisiert, der untere
-// nicht … das sollte auch ohne Neuladen gehen“) — der Abschnitt daneben holt sie sich sofort.
+// Eine eingespielte Lizenz ändert die Limits des Teams — der Abschnitt daneben holt sie sich sofort.
 test('nach dem Einspielen einer Lizenz laden die Limits nach', async () => {
-  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'team', 'users'] }
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'team', 'users'] }
   const w = mount(TeamsSettings); await ruhe()
   const vorher = calls.filter(c => c.path.endsWith('/tokens/journali')).length
   const feld = w.find('textarea')

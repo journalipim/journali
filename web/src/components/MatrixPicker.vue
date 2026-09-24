@@ -1,6 +1,5 @@
 <script setup>
-// Spaltenwahl als Matrix (Taloan, 20.09.: „wie das Tabelle-einfügen-Dropdown in der Textverarbeitung, nur ankreuzen wie
-// ein Lottoschein“): Zeilen die Sprachen, Spalten die Kanäle, je ein Stern (ohne Sprache / ohne Kanal). Jede Zelle
+// Spaltenwahl als Matrix: Zeilen die Sprachen, Spalten die Kanäle, je ein Stern (ohne Sprache / ohne Kanal). Jede Zelle
 // einzeln wählbar — Kanal web mit de und en, Kanal print nur mit de. Kopf einer Zeile/Spalte kreuzt die ganze Reihe an
 // oder ab. */* ist immer da: der eine Wert. Der Wert ist eine Liste von „sprache|kanal“ ('' = Stern).
 import { ref, computed, onMounted, onUnmounted } from 'vue'

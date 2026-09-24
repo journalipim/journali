@@ -25,7 +25,7 @@ public sealed class Medium
     public string LastActor { get; set; } = "";
     public int Entries { get; set; }
     public bool IsImage => Mime.StartsWith("image/", StringComparison.OrdinalIgnoreCase);
-    /// <summary>Woraus sich ein Vorschaubild rechnen lässt (Taloan, 23.09.2026: „bau die pdf thumbs“). Bilder schon immer;
+    /// <summary>Woraus sich ein Vorschaubild rechnen lässt. Bilder schon immer;
     /// ein PDF bekommt seine erste Seite als Kachel. Bleibt trotzdem ein Dokument — <see cref="IsImage"/> sagt weiterhin,
     /// was ein Bild ist (Gruppierung in der Bibliothek, Anzeige des Originals).</summary>
     public bool IsRenderable => IsImage || Mime.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
@@ -37,7 +37,7 @@ public sealed class Medium
 
 public sealed record Derived(int Width, int Height, long Bytes, string Fingerprint, long Number);
 
-/// <summary>Ein Vorschau-Preset (Taloan, 21.09.2026). Strom <c>media-preset:&lt;key&gt;</c>.</summary>
+/// <summary>Ein Vorschau-Preset. Strom <c>media-preset:&lt;key&gt;</c>.</summary>
 public sealed class MediaPreset
 {
     public required string Key { get; init; }
@@ -53,7 +53,7 @@ public sealed class MediaPreset
     public string Mime => Format switch { "jpeg" or "jpg" => "image/jpeg", "png" => "image/png", "avif" => "image/avif", _ => "image/webp" };
 }
 
-/// <summary>Ein Medienordner (Taloan, 21.09.2026): Name, Vater (null = oberste Ebene). Strom <c>mf-…</c>.</summary>
+/// <summary>Ein Medienordner: Name, Vater (null = oberste Ebene). Strom <c>mf-…</c>.</summary>
 public sealed class MediaFolder
 {
     public required string Id { get; init; }

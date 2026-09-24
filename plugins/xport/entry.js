@@ -1,5 +1,4 @@
-// Plugin xport (Taloan, 19.09.2026: BMEcat/ETIM — „viele gehen nach Standard, verschiedene Versionen, und Kunden haben eigene
-// Definitionen“): Export mit Vorlage. Die Vorlage ist Daten (Text mit {feldern}, Schleifen, [optional]) und steht mit
+// Plugin xport: Export mit Vorlage. Die Vorlage ist Daten (Text mit {feldern}, Schleifen, [optional]) und steht mit
 // Zuordnung, Kopfwerten, ETIM-Attributen, Teilbaum und Sprache in einem Profil (profile:<name> im Journal). Die Ansicht macht
 // die Vorschau (erste Produkte) und lädt herunter; der Job (job.mjs) schreibt dasselbe Profil regelmäßig in ein Verzeichnis.
 // Startvorlagen unter templates/: BMEcat 2005 mit ETIM-Attributen, Google Merchant, JSON. Der Kern (core.mjs) ist DOM-frei.
@@ -32,7 +31,7 @@ async function mount(root, ctx) {
   const model = store.model
   const attrs = model.attributes.filter(a => a.type !== 'rows')
   const lbl = a => a.label?.[model.masterLocale] || L(a.label) || a.key
-  // pub: Publikationsbaum als Quelle (Taloan, 22.09.: „der BMEcat-Export setzt auf einen Publikationsbaum auf“) — dann zählt root nicht;
+  // pub: Publikationsbaum als Quelle — dann zählt root nicht;
   // rules: Regeln der Ausleitung für ETIM (unbekannt, Klasse Pflicht, Vollständigkeit, streng) — im Profil, nicht im ETIM-Plugin
   const RULES = { unknownAs: 'UN', requireClass: false, minCompleteness: 0, strict: false }
   const st = { name: '', template: '', mode: 'xml', fileName: 'export-{date}.xml', etim: true, root: localStorage.getItem('journali.xport.root') || tree.rows.find(r => !r.parent)?.id, pub: localStorage.getItem('journali.xport.pub') || '', role: 'product', locale: model.masterLocale ?? 'de', mapping: {}, vars: {}, features: [], starter: '', rules: { ...RULES } }
@@ -40,7 +39,7 @@ async function mount(root, ctx) {
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
 
-  // Profile (Taloan: als Job einrichten → Profil speichern, der Job nimmt den Namen)
+  // Profile
   const profSel = el('select', { title: t_('gespeichertes Profil laden') }); const profIn = el('input', { placeholder: t_('Profil'), style: 'width:130px', title: t_('Name des Profils — der Job (⏱ Jobs → Export: Vorlage) nimmt ihn') })
   async function loadProfiles(keep) { const names = (await ctx.data.list().catch(() => [])).filter(n => n.startsWith('profile:')).map(n => n.slice(8)); profSel.innerHTML = ''; profSel.append(el('option', { value: '' }, names.length ? t_('— Profil —') : t_('— kein Profil —'))); for (const n of names) profSel.append(el('option', { value: n }, n)); if (keep) profSel.value = keep }
   profSel.addEventListener('change', async () => { const n = profSel.value; if (!n) return; const p = await ctx.data.get('profile:' + n); if (!p) return; Object.assign(st, { name: n, template: p.template ?? '', mode: p.mode ?? 'xml', fileName: p.fileName ?? st.fileName, root: p.root || st.root, pub: p.pub ?? '', role: p.role ?? 'product', locale: p.locale ?? st.locale, mapping: p.mapping ?? {}, vars: p.vars ?? {}, features: p.features ?? [], starter: p.starter ?? '', etim: p.etim !== false, rules: { ...RULES, ...(p.rules ?? {}) } }); profIn.value = n; tplBox.value = st.template; picker.set(st.root); drawSettings(); say(`Profil „${n}“ geladen`) })
@@ -96,7 +95,7 @@ async function mount(root, ctx) {
     if (/\{#features\}/.test(st.template)) {
       needsBody.append(step('ETIM-Attribute', 'Code → Attribut (ETIM & Co.)'))
       if (ctx.plugins.active('etim')) {
-        // Regeln der Ausleitung (Taloan, 22.09.): hier im Profil, nicht im ETIM-Plugin — die Klassifikation weiss nichts von Empfängern
+        // Regeln der Ausleitung: hier im Profil, nicht im ETIM-Plugin — die Klassifikation weiss nichts von Empfängern
         const unk = el('select', { style: 'width:100%', onchange: e => { st.rules.unknownAs = e.target.value } }, el('option', { value: 'UN' }, t_('„-“ + UN unbekannt (Guideline)')), el('option', { value: 'NA' }, t_('„-“ + NA nicht anwendbar')), el('option', { value: 'skip' }, 'weglassen')); unk.value = st.rules.unknownAs ?? 'UN'
         const req = el('input', { type: 'checkbox' }); req.checked = !!st.rules.requireClass; req.addEventListener('change', () => { st.rules.requireClass = req.checked })
         const strict = el('input', { type: 'checkbox' }); strict.checked = !!st.rules.strict; strict.addEventListener('change', () => { st.rules.strict = strict.checked })
@@ -121,7 +120,7 @@ async function mount(root, ctx) {
     const roleSel = el('select', { style: 'width:100%', onchange: e => { st.role = e.target.value } }, el('option', { value: 'product' }, t_('▦ Produkte')), el('option', { value: 'variant' }, t_('◆ Varianten')), el('option', { value: 'group' }, t_('▣ Gruppen')), el('option', { value: 'all' }, t_('alle Knoten'))); roleSel.value = st.role
     const locBox = el('div', { class: 'chips' }); for (const l of model.locales) { const chip = el('span', { class: 'view-chip' + (st.locale === l.code ? ' on' : ''), onclick: () => { st.locale = l.code; for (const c of locBox.children) c.classList.toggle('on', c.textContent === l.code) } }, l.code); locBox.append(chip) }
     settingsBody.innerHTML = ''
-    // Quelle (Taloan, 22.09.): ein Publikationsbaum — nur Ausgeleitetes, Rubriken als Kataloggruppen — oder ein Teilbaum des Pflegebaums
+    // Quelle: ein Publikationsbaum — nur Ausgeleitetes, Rubriken als Kataloggruppen — oder ein Teilbaum des Pflegebaums
     const pubSel = el('select', { style: 'width:100%', title: t_('Publikationsbaum: es gehen nur ausgeleitete Produkte hinaus (Freigabe, Markt, Stand), die Rubriken werden die Kataloggruppen'), onchange: e => { st.pub = e.target.value; localStorage.setItem('journali.xport.pub', st.pub); treeBox.style.display = st.pub ? 'none' : ''; chosen.style.display = st.pub ? 'none' : '' } },
       el('option', { value: '' }, pubTrees.length ? t_('— Teilbaum des Pflegebaums —') : t_('— keine Publikationsbäume —')), ...pubTrees.map(t => el('option', { value: t.id }, `${t.label}${t.channel ? ' · ' + t.channel : ''}${t.market ? ' · ' + t.market : ''} · ${t.placed ?? 0}`)))
     pubSel.value = pubTrees.some(t => t.id === st.pub) ? st.pub : ''; if (!pubSel.value) st.pub = ''
@@ -141,7 +140,7 @@ async function mount(root, ctx) {
     try {
       const env = { api, model, tree: { rows: tree.rows, byId: tree.byId, kids: id => tree.rows.filter(r => (r.parent ?? '') === (id ?? '')) }, server: location.origin }
       const etim = st.etim !== false && ctx.plugins.active('etim') ? ctx.use('etim') : null   // ETIM-Attribute aus der ETIM-Klasse am Knoten
-      if (etim?.featuresOf) env.featuresOf = pctx => etim.featuresOf(pctx, st.rules)   // Regeln der Ausleitung aus dem Profil (Taloan, 22.09.)
+      if (etim?.featuresOf) env.featuresOf = pctx => etim.featuresOf(pctx, st.rules)   // Regeln der Ausleitung aus dem Profil
       if (etim?.gate && /\{#features\}/.test(st.template)) env.gate = pctx => etim.gate(pctx, st.rules)   // Vorlage braucht ETIM-Attribute → Analyse muss bestehen
       const t0 = performance.now()
       const cx = await build(env, { root: st.root, pub: st.pub || null, role: st.role, locale: st.locale, mapping: st.mapping, vars: st.vars, features: st.features, limit: all ? 0 : 3, say: m => say(m) })

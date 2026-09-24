@@ -1,4 +1,4 @@
-// Das ETIM-Band wirklich zeichnen (Taloan, 22.09.2026: „schau dir selbst an, was du gebaut hast“): ein Minimal-DOM und eine
+// Das ETIM-Band wirklich zeichnen: ein Minimal-DOM und eine
 // gefälschte /api — der Test liest den Text, der im Band steht, statt zu vermuten. Ohne Browser, ohne Server.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -31,7 +31,7 @@ const CLASS = {
   ],
 }
 
-// zweite Klasse unter derselben Gruppe (Taloan, 22.09.): Wi-Fi und Farbe teilen sich beide, „Klebekraft“ hat nur sie
+// zweite Klasse unter derselben Gruppe: Wi-Fi und Farbe teilen sich beide, „Klebekraft“ hat nur sie
 const CLASS2 = {
   code: 'EC000529', name: { de: 'Adhesive' }, group: { code: 'G2', name: { de: 'Klebstoffe' } }, synonyms: {},
   features: [
@@ -43,7 +43,7 @@ const TREE = [
   { id: 'g-1', role: 'group', label: 'Mobile Geräte', parent: null },
   { id: 'p-1', role: 'product', label: 'HP Notebook 255 G10', parent: 'g-1' },
   { id: 'v-1', role: 'variant', label: 'a', parent: 'p-1' }, { id: 'v-2', role: 'variant', label: 'b', parent: 'p-1' }, { id: 'v-3', role: 'variant', label: 'c', parent: 'p-1' },
-  { id: 'p-2', role: 'product', label: 'Klebstoff', parent: 'g-1' },   // eigene Klasse — unter der Gruppe gelten damit zwei (Taloan, 22.09.)
+  { id: 'p-2', role: 'product', label: 'Klebstoff', parent: 'g-1' },   // eigene Klasse — unter der Gruppe gelten damit zwei
 ]
 const VALUES = {   // eigene Werte je Knoten
   'p-1': { etim_class: 'EC004718', ef008851: 'true' },
@@ -122,7 +122,7 @@ test('Band am Produkt: Kopfzeile, Klassentabelle und je Unterknoten eine Zeile',
   console.log('\n--- Kopf ---\n' + h + '\n--- Körper ---\n' + b + '\n')
 })
 
-test('Gruppe entfernt (Sackgasse, Taloan 22.09.): eine Zeile statt 35, Warnung und der Weg zurück im Band', async () => {
+test('Gruppe entfernt (Sackgasse): eine Zeile statt 35, Warnung und der Weg zurück im Band', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const band = mod.default.nodeBands[0]
   // die Gruppe etim hängt nirgends mehr: kein ETIM-Attribut gilt an den Knoten
@@ -141,7 +141,7 @@ test('Gruppe entfernt (Sackgasse, Taloan 22.09.): eine Zeile statt 35, Warnung u
   Object.assign(INACTIVE, JSON.parse(before)); NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
 })
 
-test('Gruppe ganz gelöscht: der Knopf legt sie neu an (Taloan, 22.09.: „ich habe überhaupt keine Attributgruppe zur Verfügung“)', async () => {
+test('Gruppe ganz gelöscht: der Knopf legt sie neu an', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const band = mod.default.nodeBands[0]
   const groups = MODEL.groups; MODEL.groups = groups.filter(g => g.key !== 'etim')   // Gruppe aus dem Modell entfernt
@@ -155,7 +155,7 @@ test('Gruppe ganz gelöscht: der Knopf legt sie neu an (Taloan, 22.09.: „ich h
   MODEL.groups = groups; NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
 })
 
-test('Klassengliederung statt fester Sicht (Taloan, 22.09.): Abschnitte nach Klassenzugehörigkeit, nichts im Modell', async () => {
+test('Klassengliederung statt fester Sicht: Abschnitte nach Klassenzugehörigkeit, nichts im Modell', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const put = []
   const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { put.push([p, b, m]); return {} } } }
@@ -168,7 +168,7 @@ test('Klassengliederung statt fester Sicht (Taloan, 22.09.): Abschnitte nach Kla
   assert.ok(nv?.blocks, 'nodeViews mit blocks fehlt')
   const pctx = { model: ctx.store.model, tree: ctx.tree }
 
-  // der Abschnitt tritt an die Stelle der Attributgruppe — keine Sicht zum Wählen (Taloan, 22.09.)
+  // der Abschnitt tritt an die Stelle der Attributgruppe — keine Sicht zum Wählen
   assert.equal(nv.replaces, 'etim')
   assert.equal(nv.label, undefined, 'keine eigene Sicht in der Auswahl')
   const one = nv.blocks({ id: 'p-1', role: 'product' }, pctx)
@@ -177,7 +177,7 @@ test('Klassengliederung statt fester Sicht (Taloan, 22.09.): Abschnitte nach Kla
   assert.match(one[1].title, /⌗ EC004718 Laptop/)
   assert.ok(one[1].keys.includes('ef008851') && one[1].keys.includes('tastatur_name'))
 
-  // zwei Klassen unterhalb: gemeinsame Merkmale zuerst, dann die der einzelnen (Taloans Skizze)
+  // zwei Klassen unterhalb: gemeinsame Merkmale zuerst, dann die der einzelnen (die Skizze)
   const zwei = nv.blocks({ id: 'g-1', role: 'group' }, pctx)
   const titel = zwei.map(b => b.title)
   assert.equal(titel[0], '⌗ ETIM-Klasse')
@@ -190,7 +190,7 @@ test('Klassengliederung statt fester Sicht (Taloan, 22.09.): Abschnitte nach Kla
   assert.equal(nv.blocks({ id: 'gibtsnicht', role: 'product' }, pctx), null)
 })
 
-test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt (Taloan, 22.09.: „api is not defined“)', async () => {
+test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const calls = []; const errors = []
   const ctx2 = { ...ctx, api: { ...ctx.api, post: async (p, b, m) => { calls.push([p, m ?? 'POST']); return {} } }, store: { ...ctx.store, toast: (t, k) => { if (k !== 'ok') errors.push(t) }, poll: async () => {}, save() {}, viewKey: {} }, dialog: { confirm: async () => true } }
@@ -207,7 +207,7 @@ test('jeder Knopf im Band lässt sich drücken, ohne dass etwas fehlt (Taloan, 2
   NODE_GROUPS.push({ key: 'etim', active: true, attributes: ['etim_class', 'ef008851', 'ef000008', 'ef000007'] })
 })
 
-test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen (Taloan, 22.09.)', async () => {
+test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const calls = []
   const groups = MODEL.groups; MODEL.groups = groups.filter(g => g.key !== 'etim')   // Gruppe fehlt im Modell
@@ -222,7 +222,7 @@ test('install beim Einschalten: Gruppe etim anlegen und an die Wurzel hängen (T
   MODEL.groups = groups; g1.parent = null; TREE.splice(TREE.indexOf(rootRow), 1)
 })
 
-test('Namenskollision (Taloan, 22.09.): fremde Gruppe etim wird nicht übernommen — ETIM weicht aus', async () => {
+test('Namenskollision: fremde Gruppe etim wird nicht übernommen — ETIM weicht aus', async () => {
   const mod = await import('../../plugins/etim/entry.js')
   const calls = []
   const groups = MODEL.groups, attrs = MODEL.attributes

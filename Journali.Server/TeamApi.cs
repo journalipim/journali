@@ -5,14 +5,13 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Teams (Taloan, 23.09.2026: „dann richten wir die neue Ebene Teams ein → je Team gibt es Limits und API-Keys, Benutzer
-/// gehören einem Team an“). Ein Team ist die Kostenstelle der KI: an ihm hängen die Schlüssel (im Datenverzeichnis, nie im
+/// Teams. Ein Team ist die Kostenstelle der KI: an ihm hängen die Schlüssel (im Datenverzeichnis, nie im
 /// Journal), die Grenzen und der Verbrauch.
 /// <list type="bullet">
-/// <item><b>Das Inklusivkontingent gibt es einmal</b> (Taloan: „dann lege ich mir 20 Teams an und habe 20× Grundrauschen“):
+/// <item><b>Das Inklusivkontingent gibt es einmal</b>:
 /// <c>includedTokens</c> lässt sich nur dort setzen. Jedes weitere Team bringt entweder eigene Schlüssel mit — dann zahlt es
 /// selbst — oder es hängt an einem Zahler (<c>keysFrom</c>), und dessen Grenzen gelten für die Summe.</item>
-/// <item><b>Wer was darf</b> (Taloan, 23.09.2026): <em>Nur der Administrator legt ein Team an</em>, und dabei benennt er
+/// <item><b>Wer was darf</b>: <em>Nur der Administrator legt ein Team an</em>, und dabei benennt er
 /// mindestens einen <b>Teammanager</b> — notfalls sich selbst. Der Manager führt sein Team: Bezeichnung, Grenzen,
 /// Schlüssel, und er trägt Mitglieder ein und aus. <b>Eintragen kann er nur, wer in keinem Team ist</b>; wer wechseln
 /// will, wird erst ausgetragen und ist so lange teamlos. Die Limits und <c>keysFrom</c> bleiben beim
@@ -61,19 +60,17 @@ public static class TeamApi
                 {
                     if (cur is null) return Bad("Ein neues Team legt der Administrator an.");
                     if (!fuehrt) return Bad("Dieses Team führst du nicht.");
-                    // Die Grenzen setzt der Administrator (Taloan, 23.09.2026: „das wäre schön, wenn jeder seine Werte selbst
-                    // festlegen könnte, oder?“) — ein Manager, der sein eigenes Budget schreibt, ist keine Grenze.
+                    // Die Grenzen setzt der Administrator — ein Manager, der sein eigenes Budget schreibt, ist keine Grenze.
                     if (body.IncludedTokens is not null && body.IncludedTokens != cur.IncludedTokens) return Bad("Das Grundkontingent setzt der Administrator.");
                     if (body.MonthlyTokens is not null && body.MonthlyTokens != cur.MonthlyTokens) return Bad("Die Limits ergeben sich aus der Lizenz.");
                     if (body.DailyTokens is not null && body.DailyTokens != cur.DailyTokens) return Bad("Die Limits ergeben sich aus der Lizenz.");
                     if (body.KeysFrom is not null && Blank(body.KeysFrom) != cur.KeysFrom) return Bad("Woher die Schlüssel kommen, entscheidet der Administrator.");
                     if (body.Managers is not null) return Bad("Wer das Team führt, bestimmt der Administrator.");
                 }
-                // Ein Team ohne Manager gibt es nicht (Taloan, 23.09.2026): beim Anlegen benennt der Administrator mindestens einen
+                // Ein Team ohne Manager gibt es nicht: beim Anlegen benennt der Administrator mindestens einen
                 var managers = body.Managers?.Select(Blank).OfType<string>().Distinct().ToArray() ?? cur?.Managers ?? [];
-                // Wer ein Team führt, gehört hinein (Taloan, 23.09.2026) — sonst steht die Führung neben dem Team statt darin
-                // Führen und dazugehören sind zweierlei (Taloan, 23.09.2026: „man kann zwar Manager von mehreren Teams
-                // sein, aber nur Mitglied von einem Team“) — wer schon ein Team hat, bleibt dort und führt trotzdem.
+                // Wer ein Team führt, gehört hinein — sonst steht die Führung neben dem Team statt darin
+                // Führen und dazugehören sind zweierlei — wer schon ein Team hat, bleibt dort und führt trotzdem.
                 foreach (var m in managers)
                     if (c.Users.All.GetValueOrDefault(m) is null) return Bad($"Unbekannter Anwender {m}.");
                 if (managers.Length == 0 && cur is null && c.Users.All.Count > 0) return Bad("Mindestens ein Teammanager — notfalls du selbst.");
@@ -82,11 +79,11 @@ public static class TeamApi
                 if (keysFrom is { } f)
                 {
                     if (c.Teams.Get(f) is not { } zahler) return Bad($"Unbekanntes Team {f}.");
-                    // Ein Kreis hätte kein Ende (Taloan, 23.09.2026: „wir müssen zirkuläre Bezüge beim Verbrauch verhindern“)
+                    // Ein Kreis hätte kein Ende
                     if (c.Teams.WaereKreis(key, f)) return Bad($"„{zahler.Label}“ rechnet am Ende wieder über dieses Team ab — das ist ein Kreis.");
                 }
                 var included = body.IncludedTokens ?? cur?.IncludedTokens ?? 0;
-                // Das Inklusivkontingent gibt es einmal, am ersten Team (Taloan, 23.09.2026): sonst wäre jedes neue Team ein neuer Freibetrag
+                // Das Inklusivkontingent gibt es einmal, am ersten Team: sonst wäre jedes neue Team ein neuer Freibetrag
                 var ersteres = c.Teams.Primary;
                 if (included > 0 && ersteres is not null && ersteres.Key != key) return Bad($"Das Grundkontingent hat „{ersteres.Label}“ — das erste Team.");
                 if (Blank(body.Label) is null && cur is null) return Bad("Bezeichnung fehlt.");
@@ -94,7 +91,7 @@ public static class TeamApi
                     if (v is < 0) return Bad($"Grenze {n}: 0 oder mehr (0 = keine).");
                 var modelle = cur?.Models is { Count: > 0 } mm ? new Dictionary<string, string>(mm) : new Dictionary<string, string>();
                 foreach (var (a, m) in body.Models ?? new()) { if (string.IsNullOrWhiteSpace(m)) modelle.Remove(a); else modelle[a] = m!; }
-                // Die Limits ergeben sich aus der Lizenz (Taloan, 23.09.2026) — hier gibt es nichts einzustellen
+                // Die Limits ergeben sich aus der Lizenz — hier gibt es nichts einzustellen
                 if ((body.EntriesWeek is { } bw && bw != (cur?.EntriesWeek ?? 0)) || (body.EntriesMonth is { } bm && bm != (cur?.EntriesMonth ?? 0)))
                     return Bad("Die Limits ergeben sich aus der Lizenz.");
                 var def = new TeamDefined(Blank(body.Label) ?? cur!.Label, body.Note is null ? cur?.Note : Blank(body.Note),
@@ -137,7 +134,7 @@ public static class TeamApi
             return Results.Ok(new { keys = Secrets.Get(jobsDir, SecretKey(key)).Keys.Order().ToList() });
         });
 
-        // Wer zum Team gehört (Taloan, 23.09.2026: „auf der Teamseite sehe ich, wer alles zu meinem Team gehört“)
+        // Wer zum Team gehört
         api.MapGet("/teams/{key}/members", (string key, HttpRequest req, Catalog c) => c.With((_, _, _) =>
         {
             if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
@@ -148,7 +145,7 @@ public static class TeamApi
                 .Select(u => new { u.Key, u.Name, u.Role, u.Enabled, own = u.Team == key, u.LastAt }).ToList());
         }));
 
-        // Mitglieder eintragen und austragen (Taloan, 23.09.2026): eintragen nur, wer in keinem Team ist — wer wechseln will,
+        // Mitglieder eintragen und austragen: eintragen nur, wer in keinem Team ist — wer wechseln will,
         // wird erst ausgetragen und ist so lange teamlos. Das verhindert, dass zwei Manager sich Leute wegnehmen.
         api.MapPost("/teams/{key}/members/{user}", (string key, string user, HttpRequest req, Catalog c) =>
         {
@@ -184,7 +181,7 @@ public static class TeamApi
             Results.Ok(c.Users.All.Values.Where(u => u.Enabled && u.Team is null).OrderBy(u => u.Name ?? u.Key)
                 .Select(u => new { u.Key, u.Name, u.Role }).ToList())));
 
-        // Die Token der Mitglieder (Taloan, 23.09.2026): ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung
+        // Die Token der Mitglieder: ein Token arbeitet mit den Rechten seiner Person und auf die Rechnung
         // ihres Teams — darum sieht das Team, welche es gibt, und kann sie widerrufen. Der Token selbst steht nirgends.
         api.MapGet("/teams/{key}/tokens", (string key, HttpRequest req, Catalog c) =>
         {
@@ -205,7 +202,7 @@ public static class TeamApi
         });
 
         // Die journali-Token eines Teams: was seine Mitglieder geschrieben haben, gegen seine Limits. Rechnet es über
-        // ein anderes Team ab, zählt alles dort zusammen (Taloan, 23.09.2026).
+        // ein anderes Team ab, zählt alles dort zusammen.
         api.MapGet("/teams/{key}/tokens/journali", (string key, HttpRequest req, Catalog c, string? history = null, int limit = 90) =>
         {
             if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");

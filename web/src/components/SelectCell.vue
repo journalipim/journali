@@ -1,11 +1,11 @@
 <script setup>
 // Zelle für enum: Auswahl aus einer Werteliste. Leer = eigener Wert weg.
-// required: keine leere Auswahl (Typ, Knotentyp) — sonst wäre „—“ ein sinnloser Wert (Taloan, 17.09.)
-// clickEdit=false (Tabelle, Taloan): Zellbox wie bei Text — Klick markiert nur, Doppelklick/Enter/F2 öffnet die Liste,
+// required: keine leere Auswahl (Typ, Knotentyp) — sonst wäre „—“ ein sinnloser Wert
+// clickEdit=false (Tabelle): Zellbox wie bei Text — Klick markiert nur, Doppelklick/Enter/F2 öffnet die Liste,
 // ein getippter Buchstabe springt zur nächsten passenden Option, Entf leert. Das native <select> erscheint nur zum Wählen.
 // list (Schlüssel der Werteliste): „+ neuer Wert …“ am Ende der Liste — ein Text, Enter legt den Wert an und wählt ihn
-// (Taloan, 20.09.: ad hoc zufügen wie in Excel); passt ein getippter Buchstabe auf keine Option, beginnt damit ein neuer Wert.
-// Grosse Listen (> 20, z. B. 5 640 ETIM-Klassen — Taloan, 20.09.: „wo habe ich die Chance, die Klasse festzulegen?“): statt <select>
+//; passt ein getippter Buchstabe auf keine Option, beginnt damit ein neuer Wert.
+// Grosse Listen (> 20, z. B. 5 640 ETIM-Klassen): statt <select>
 // ein Suchfeld — tippen filtert über Wert und Bezeichnung, ↑↓ wählen, Enter nimmt, Esc schliesst.
 import { ref, computed, nextTick } from 'vue'
 import { NEW, mayAddListValue, ensureListValue } from '../lists.js'

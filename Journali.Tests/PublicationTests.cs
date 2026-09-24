@@ -4,7 +4,7 @@ using Journali.Core.Projections;
 
 namespace Journali.Tests;
 
-// Ausleitungsregel (Taloan, 21.09.: „bau die Ausleitungsregel mit Markt und Freigabe“): Freigabe je Kanal (mit Fallback), Markt in den
+// Ausleitungsregel: Freigabe je Kanal (mit Fallback), Markt in den
 // Verkaufsländern (geerbt, mit Fallback-Kette), Produkt drin, wenn eine Variante drin ist.
 public class PublicationTests
 {
@@ -122,7 +122,7 @@ public class PublicationTests
     [Fact]
     public void Stand_eingefroren_liest_die_Pflege_wie_damals()
     {
-        // Taloan, 21.09. („A“): Katalog schliesst → Stand einfrieren; was danach in der Pflege passiert, ist im Katalog nicht drin —
+        // („A“): Katalog schliesst → Stand einfrieren; was danach in der Pflege passiert, ist im Katalog nicht drin —
         // Freigabe zurückgenommen: eingefroren trotzdem drin; neues Produkt: eingefroren „noch nicht vorhanden“; live sieht beides
         var w = new World(); w.Release(w.V1);
         var head = w.J.Head;
@@ -162,7 +162,7 @@ public class PublicationTests
         Assert.Equal((9L, sub), (w.Tree.StandOf(w.Tree.Nodes[sub]).Stand, w.Tree.StandOf(w.Tree.Nodes[sub]).From!.Id));
     }
 
-    // ---- Regel-Verweise (Taloan, 21.09.: Ersatzteilkatalog aus 20 Produktgruppen)
+    // ---- Regel-Verweise
     private sealed class Spares
     {
         public MemoryJournal J = new(); public ModelCatalog Cat = new(); public Tree Tree = new();

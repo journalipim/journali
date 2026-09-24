@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Ein Stapel ist eine Transaktion (Taloan, 23.09.2026: „der Import belegt so fett Zeit, mein Rechner läuft auf 90 %“).
+// Ein Stapel ist eine Transaktion.
 // Einzeln kostet jeder Eintrag in Postgres eine eigene Transaktion mit Tabellensperre und MAX(number) — ein Import
 // mit Zehntausenden Einträgen bezahlt das Zehntausende Male. Geprüft wird: es wird einmal geschrieben, die Befehle
 // sehen einander trotzdem, und die Nummern stimmen hinterher.
@@ -35,9 +35,9 @@ public class StapelTests
         var c = new Catalog(j); c.Rebuild();
         var vorher = j.Einzeln;
 
-        c.WithBatch("taloan", "b-1", (_, _, write) =>
+        c.WithBatch("u1", "b-1", (_, _, write) =>
         {
-            for (var i = 0; i < 500; i++) write("taloan", "n-" + i, Types.NodeMoved, new NodeMoved("g-1"), "b-1");
+            for (var i = 0; i < 500; i++) write("u1", "n-" + i, Types.NodeMoved, new NodeMoved("g-1"), "b-1");
             return 0;
         });
 
@@ -69,9 +69,9 @@ public class StapelTests
         var j = new ZaehlendesJournal();
         var c = new Catalog(j); c.Rebuild();
         var nummern = new List<long>();
-        c.WithBatch("taloan", "b-3", (_, _, write) =>
+        c.WithBatch("u1", "b-3", (_, _, write) =>
         {
-            for (var i = 0; i < 20; i++) nummern.Add(write("taloan", "n-" + i, Types.NodeMoved, new NodeMoved("g-1"), "b-3").Number);
+            for (var i = 0; i < 20; i++) nummern.Add(write("u1", "n-" + i, Types.NodeMoved, new NodeMoved("g-1"), "b-3").Number);
             return 0;
         });
         Assert.Equal(Enumerable.Range(1, 20).Select(x => (long)x), nummern);

@@ -1,8 +1,7 @@
 # Oberflächensprache und Hilfe — Plan
 
-Stand 24.09.2026, Entwurf. Auslöser: die Screenshots für Lemon Squeezy (Taloan: „was ich komplett bisher vergessen
-habe, ist die Oberflächensprache — zumindest Englisch müssen wir anbieten“) und der Wunsch nach einer Hilfe in der
-laufenden Instanz, die die Community übersetzen kann. Entscheidungen von Taloan sind als solche markiert; alles andere
+Stand 24.09.2026, Entwurf. Auslöser: die Screenshots für Lemon Squeezy und der Wunsch nach einer Hilfe in der
+laufenden Instanz, die die Community übersetzen kann. Entscheidungen sind als solche markiert; alles andere
 ist Vorschlag.
 
 ## Was heute da ist
@@ -39,7 +38,7 @@ ist Vorschlag.
   Übersetzung sichtbar ungültig — das ist richtig so. Platzhalter wie `{n}` bleiben im Schlüssel.
   *Alternative:* sprechende Schlüssel (`tree.pick_node`) — sauberer, aber Wochen Handarbeit für denselben Effekt.
 - **Kein Paket.** `web/src/i18n.js` mit `t()`, Laden der Datei, Umschalten zur Laufzeit — unter 60 Zeilen. vue-i18n
-  wäre ein Paket und damit eine Entscheidung von Taloan; gebraucht wird es nicht (Plural und Datum kommen über `Intl`).
+  wäre ein Paket und damit eine Entscheidung; gebraucht wird es nicht (Plural und Datum kommen über `Intl`).
 - **Sprache der Person**: `prefs.lang`, Vorgabe aus `navigator.language`, die Anmeldeseite folgt dem Browser. Die
   Sprachen der Oberfläche sind eine eigene Liste (was es an `lang/*.json` gibt), nicht die Sprachen des Modells —
   wer in `fr` pflegt, bedient trotzdem eine englische Oberfläche, wenn es kein `fr.json` gibt.
@@ -68,7 +67,7 @@ ist Vorschlag.
   Kapitel in einer Sprache, kommt das englische, dann das deutsche.
 - **Beim Bau nach HTML**: `node build-help.mjs` rendert nach `wwwroot/help/<code>/<slug>.html` plus `index.json`
   (Titel, Reihenfolge). Zur Laufzeit braucht es dann kein Markdown-Paket; beim Bau eines (`marked`, nur
-  devDependency — Entscheidung Taloan; sonst ein eigener kleiner Renderer für Überschrift, Absatz, Liste, Link, Bild,
+  devDependency — sonst ein eigener kleiner Renderer für Überschrift, Absatz, Liste, Link, Bild,
   Code).
 - **Ansicht `/help/:kapitel`**: links die Kapitel, rechts der Text, Suche über alle Kapitel (Text ist ja da).
 - **Kontextsensitiv, billig**: jede Ansicht nennt ihr Kapitel (`help: 'baum'` im Routeneintrag bzw. im
@@ -109,11 +108,10 @@ der Prüfstand `kein-name.test.mjs` liest auch `help/`.
 
 - README als Installationsanleitung: Voraussetzungen, `compose.yaml`, Umgebungsvariablen, erster Start mit
   `JOURNALI_ADMIN_PASSWORD`, Update, Sicherung; Verweis auf die Hilfe in der Instanz.
-- Discussions statt Forum, Issues statt Support-Postfach (Taloan, 24.09.2026: kein eigenes Forum, keine
-  Nutzungsbedingungen, keine Moderation).
+- Discussions statt Forum, Issues statt Support-Postfach.
 - `LICENSE` in der Wurzel (heute gibt es keine), Lizenzhinweis im Startbanner und unter Hilfe → Lizenz.
 
-## Entschieden (Taloan, 24.09.2026)
+## Entschieden
 
 1. **Schlüssel = deutscher Text.** Keine de.json — die Quellen sind die Referenz; `tools/texte-pruefen.mjs` sagt je
    Sprache, was fehlt und was verwaist ist; `test/sprachdateien.test.mjs` hält die Dateien sauber.
@@ -121,7 +119,7 @@ der Prüfstand `kein-name.test.mjs` liest auch `help/`.
    flachem Auflöser (Punkte im Schlüssel). Fehlt ein Schlüssel, ist er selbst die Nachricht — der Rückfall auf Deutsch.
 3. **`marked` als devDependency** für die Hilfe beim Bau.
 4. **Lizenz: Elastic License 2.0 plus veröffentlichte Zusatzerlaubnis für Hosting.** Nicht AGPL — sie erlaubt Forks,
-   die Limits entfernen und neu veröffentlichen (Taloan: das soll verboten sein). ELv2 verbietet genau das Umgehen der
+   die Limits entfernen und neu veröffentlichen. ELv2 verbietet genau das Umgehen der
    Lizenzschlüssel-Funktion; das Hosting-Verbot der ELv2 hebt die Zusatzerlaubnis auf — Hoster (etwa Hetzner) dürfen
    journali als Paket anbieten, die Tarife kaufen die Kunden weiter bei journali. Einzelne Verträge daneben bleiben
    möglich, solange journali alleiniger Rechteinhaber ist (Beitragsvereinbarung/CLA für Beiträge). Keine Rechtsberatung.

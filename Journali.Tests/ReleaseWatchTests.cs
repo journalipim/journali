@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Freigabesteuerung (Taloan, 22.09.2026): zählt eine Wertänderung als Eingriff in Prüfung und Freigabe?
+// Freigabesteuerung: zählt eine Wertänderung als Eingriff in Prüfung und Freigabe?
 // Gruppe: auto (Pflichtfeld in der Gruppe) · immer · nie — Attribut: wie die Gruppe · immer · nie.
 public class ReleaseWatchTests
 {
@@ -49,7 +49,7 @@ public class ReleaseWatchTests
     public void Attribut_schlaegt_die_Gruppe()
     {
         var c = World();
-        // in einer zählenden Gruppe ein Attribut ausnehmen (Taloan: Preis stört keine Redaktionsfreigabe)
+        // in einer zählenden Gruppe ein Attribut ausnehmen
         c.With((m, _, write) => write("t", Model.AttributeStream + "langtext", Types.AttributeDefined, m.Attributes["langtext"] with { ReleaseWatch = ReleaseWatch.Never }, null));
         Assert.False(c.With((m, _, _) => m.Watched("langtext")));
         Assert.True(c.With((m, _, _) => m.Watched("kurztext")));

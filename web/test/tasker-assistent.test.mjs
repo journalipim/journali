@@ -1,7 +1,6 @@
-// Der Job-Dialog als Assistent (Taloan, 23.09.2026: „jetzt hab ich Glück, dass ich so gerade noch an meine Buttons dran
-// komme — wie wäre es damit, das auf verschiedene Tabs aufzuteilen, wie ein Assistent mit ← →“). Vier Schritte:
+// Der Job-Dialog als Assistent. Vier Schritte:
 // ① Was, ② Womit, ③ Ablage, ④ Wann. Welche davon es gibt, steht erst nach der Wahl von Plugin und Profil fest
-// (Taloan: „denn auch erst nach Aussuchen von Plugin/Profil steht ja fest, was ich als Nächstes anzeige“) — ein Prozess
+// — ein Prozess
 // ohne Fächer hat keine Ablage, einer ohne Parameter kein „Womit“. Leere Seiten werden übersprungen, nicht gezeigt.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -32,8 +31,7 @@ test('ein Prozess ganz ohne Parameter: von „Was" direkt zu „Wann"', () => {
   assert.equal(naechsteSeite(nurRahmen, 3, -1), 0)
 })
 
-// Eine Meldung gehoert auf den Schritt, auf dem man sie beheben kann (Taloan, 23.09.2026: „eine Meldung, die ich in
-// diesem Schritt gar nicht beheben kann?“). Dahinter steckte ein zweiter Fehler: die Sicherung liess sich ohne
+// Eine Meldung gehoert auf den Schritt, auf dem man sie beheben kann. Dahinter steckte ein zweiter Fehler: die Sicherung liess sich ohne
 // Profil nicht speichern, obwohl ihr Feld ausdruecklich „(leer = Werte unten)“ anbietet.
 test('ein Profil, das leer sein darf, ist keine Pflicht', () => {
   assert.equal(profilPflicht({ label: 'Profil — ✎ hier anlegen: Teilbaum, Format, Sprachen … (leer = Werte unten)' }), false)

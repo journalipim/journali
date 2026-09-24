@@ -1,6 +1,5 @@
-// Zwei schmale Balken in der Statusleiste (Taloan, 22.09.2026: „mach mir oben in die Leiste neben die KI-Nutzung 2
-// Balken für Woche und Monat“). Ein Balken füllt sich mit dem, was genutzt wurde (Taloan, 23.09.2026); was verfügbar
-// ist, sagt der Tooltip. Die Prozentzahl steht links an ihrem eigenen Balken — nicht am nächsten (Taloan, 23.09.2026).
+// Zwei schmale Balken in der Statusleiste. Ein Balken füllt sich mit dem, was genutzt wurde; was verfügbar
+// ist, sagt der Tooltip. Die Prozentzahl steht links an ihrem eigenen Balken — nicht am nächsten.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, textOf } from './ui.mjs'
@@ -46,8 +45,7 @@ test('ohne Zahlen bleibt die Leiste leer, statt zu wackeln', () => {
   assert.equal(textOf(w), '')
 })
 
-// Kein Kontingent ist nicht „unbegrenzt“, sondern „voll“ (Taloan, 23.09.2026: „die Balken bei hundert Prozent und rot,
-// weil die Limits 0 sind und 0 ist sofort erreicht“).
+// Kein Kontingent ist nicht „unbegrenzt“, sondern „voll“.
 test('ohne Kontingent stehen die Balken voll und rot', () => {
   const w = mount(UsageMini, { props: { usage: { week: { used: 12, max: 0, scope: 'kein Team' }, month: { used: 40, max: 0, scope: 'kein Team' } } } })
   const fills = w.findAll('.fill')

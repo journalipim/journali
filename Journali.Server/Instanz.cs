@@ -5,16 +5,14 @@ using NpgsqlTypes;
 namespace Journali.Server;
 
 /// <summary>
-/// Die Kennung dieser Anlage (Taloan, 23.09.2026: „d. h. ein Server muss irgendwie fälschungssicher eine eigene GUID
-/// haben“). Sie entsteht beim ersten Start, steht in der Datenbank und geht <b>nicht</b> in die Sicherung — eine
-/// wiederhergestellte Anlage bekommt darum eine neue. Das löst den Fall, den Taloan beschrieben hat: „ich mache eine
-/// Sicherung, mache drei neue isolierte Instanzen und restore dreimal — dann habe ich aus einer Lizenz vier gemacht.“
+/// Die Kennung dieser Anlage. Sie entsteht beim ersten Start, steht in der Datenbank und geht <b>nicht</b> in die Sicherung — eine
+/// wiederhergestellte Anlage bekommt darum eine neue. Das löst den Fall der Vervielfältigung
 /// Mit eigener Kennung je Anlage gilt eine Lizenz nur dort, wofür sie ausgestellt wurde.
 /// <para><b>Was fälschungssicher hier heisst.</b> Wer die Datenbank besitzt, kann die Kennung ändern — dagegen hilft
 /// nichts, was im selben Container liegt. Sie ist kein Schloss, sondern ein Name: sie macht Vervielfältigung zu einer
 /// bewussten Handlung statt zu einem Nebeneffekt der Wiederherstellung, und sie gibt beiden Seiten etwas, worüber sie
 /// reden können — beim Ausstellen der Lizenz, beim Support, bei einer späteren Aktivierung
-/// (Taloan: der Onlineweg ist erst zumutbar, „bis er kommerziell wird, indem er die 20k/100k erweitern will“).</para>
+///.</para>
 /// </summary>
 public sealed class Instanz(NpgsqlDataSource? db)
 {

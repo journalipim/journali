@@ -1,4 +1,4 @@
-# Solr (infolox/prodexa-Export) — Quelle für den Import
+# Solr (Export eines anderen PIM) — Quelle für den Import
 
 Stand 17.09.2026. Untersucht an einer Kundeninstanz (Adresse nicht im Repo)
 — Solr 7.7.3 im Standalone-Modus (kein SolrCloud), ein Kern `products`,

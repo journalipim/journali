@@ -1,4 +1,4 @@
-// ETIM-Kern (Taloan, 22.09.: Zuordnung mit ƒ, Vollständigkeit, Regeln der Ausleitung) — ohne DOM, wie im Job
+// ETIM-Kern — ohne DOM, wie im Job
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { featuresOf, gate, checkNode, mapEntry, resolveValue } from '../../plugins/etim/core.mjs'
@@ -65,7 +65,7 @@ test('resolveValue bleibt: Range, Zahl mit Komma, EV-Name in irgendeiner Sprache
   assert.equal(resolveValue(cls.features[2], 'lila'), null)
 })
 
-test('Bedingung „leer → 0, sonst 1“ auf ein Ja/Nein-Merkmal: ohne Wert false, mit irgendetwas true (Taloan, 22.09.)', async () => {
+test('Bedingung „leer → 0, sonst 1“ auf ein Ja/Nein-Merkmal: ohne Wert false, mit irgendetwas true', async () => {
   const steps = [{ op: 'when', test: 'empty', then: '0', else: '1' }]
   const m = { EF003105: { to: 'tastatur_name', steps } }
   const c = { code: 'EC1', name: {}, features: [{ code: 'EF003105', type: 'Logical', name: { de: 'Numerische Tastatur' }, values: [] }] }
@@ -77,7 +77,7 @@ test('Bedingung „leer → 0, sonst 1“ auf ein Ja/Nein-Merkmal: ohne Wert fal
   assert.equal(none.filled, 1, 'die Kette macht aus leer einen Wert — gefüllt')
 })
 
-test('audit: eine Rechnung für Zahlen und Befunde — die Tabelle je Klasse und die Liste sagen dasselbe (Taloan, 22.09.)', async () => {
+test('audit: eine Rechnung für Zahlen und Befunde — die Tabelle je Klasse und die Liste sagen dasselbe', async () => {
   const { audit } = await import('../../plugins/etim/core.mjs')
   const classes = new Map([[cls.code, cls]])
   const rows = [
@@ -106,7 +106,7 @@ test('audit: eine Rechnung für Zahlen und Befunde — die Tabelle je Klasse und
   assert.equal(a.sum.nodes, 2); assert.equal(a.sum.filled, 5); assert.equal(a.sum.cells, 7)
 })
 
-test('Freigabe-Schlüssel: Nummer und Ausführung (Taloan, 22.09.: ETIM 9 gibt es sechsmal)', async () => {
+test('Freigabe-Schlüssel: Nummer und Ausführung', async () => {
   const { variantOf, releaseKey } = await import('../../plugins/etim/core.mjs')
   assert.equal(variantOf('ETIM-9.0-ALL-SECTORS-IXF-NO-CHANGE-CODES-METRIC-EI-2022-12-05.xml'), 'all-sectors-no-change-codes-metric-ei')
   assert.equal(variantOf('ETIM-9.0-HVACPLUMBING-IXF-NO-CHANGE-CODES-METRIC-ITALIAN-2023-01-16.xml'), 'hvacplumbing-no-change-codes-metric-italian')
@@ -116,7 +116,7 @@ test('Freigabe-Schlüssel: Nummer und Ausführung (Taloan, 22.09.: ETIM 9 gibt e
   assert.equal(releaseKey({ key: 'schon-gesetzt', version: '9' }), 'schon-gesetzt')
 })
 
-test('readiness: was zum Pflegen einer Klasse an einem Knoten fehlt (Taloan, 22.09.)', async () => {
+test('readiness: was zum Pflegen einer Klasse an einem Knoten fehlt', async () => {
   const { readiness } = await import('../../plugins/etim/core.mjs')
   const all = k => true, none = k => false
   assert.deepEqual(readiness({ cls, map, hasAttr: all }).ready, true)

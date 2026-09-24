@@ -1,4 +1,4 @@
-// Tabellen-Export im Browser (Basis-Plugin table, Taloan 19.09.): der Kern liegt in core.mjs (auch für den Job im Plugin export),
+// Tabellen-Export im Browser (Basis-Plugin table): der Kern liegt in core.mjs (auch für den Job im Plugin export),
 // hier das Browser-Drumherum — Herunterladen, SheetJS laden, Excel am Knoten (Vorlage / Export mit Legende).
 import { api, store, tree, mapper } from 'journali'
 import { build as coreBuild, toCsv, toJson, toJsonTree, workbook } from './core.mjs'
@@ -11,7 +11,7 @@ export const download = (blob, name) => { const a = document.createElement('a');
 const XLSX_URL = '/plugins/xlsx/xlsx.mjs'
 export const loadXlsx = () => import(/* @vite-ignore */ XLSX_URL)
 const POLISH_URL = '/plugins/xlsx/polish.mjs'
-// Komfort-Excel (Taloan, 20.09.): Kopf fett, Pflicht rot, Achsen blau, echte Tabelle mit Filter und Streifen, erste Zeile fest — nachträglich in die Datei
+// Komfort-Excel: Kopf fett, Pflicht rot, Achsen blau, echte Tabelle mit Filter und Streifen, erste Zeile fest — nachträglich in die Datei
 async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
   const raw = X.write(wb, { type: 'array', bookType: 'xlsx' })
   try { const { polish } = await import(/* @vite-ignore */ POLISH_URL); return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null }) }
@@ -23,7 +23,7 @@ export async function toXlsx(table, sheet = t_('Daten')) {
   return polished(X, workbook(X, table, null, sheet), table.columns, table.rows.length, sheet)
 }
 
-// ---- Excel am Knoten (Taloan, 17.09.: Rechtsklick auf Gruppe/Produkt → Vorlage, Varianten/Produkte exportieren, Excel importieren):
+// ---- Excel am Knoten:
 // dieselben Spalten in allen drei — id, sku, Achsen, dann die Attribute, die hier eine Ebene tiefer gelten (childColumns).
 // Blatt „Legende“ erklärt jede Spalte (Label, Typ, Pflicht, Einheit, Listenwerte). Der Import am selben Knoten ist streng.
 async function nodeColumns(nodeId) {

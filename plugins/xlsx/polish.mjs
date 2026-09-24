@@ -1,4 +1,4 @@
-// Komfort-Excel (Taloan, 20.09.2026: „Pflicht sichtbar, Autofilter, als Tabelle formatiert“): die freie SheetJS-Fassung schreibt weder
+// Komfort-Excel: die freie SheetJS-Fassung schreibt weder
 // Farben noch Tabellen. Also nachträglich in die fertige .xlsx (ein Zip aus XML): Kopfzeile fett, Pflichtspalten rot, Achsen dunkelgrün,
 // eine echte Excel-Tabelle (ListObject mit Streifen und Filter) über den Bereich, erste Zeile eingefroren. Ohne Bibliothek —
 // das Zip lesen wir selbst (SheetJS legt die Teile unkomprimiert ab; komprimierte nimmt DecompressionStream) und schreiben es neu.
@@ -39,7 +39,7 @@ const colRef = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s
 export async function polish(buf, { columns, rowCount = 0, sheet = 'xl/worksheets/sheet1.xml', tableName = 'Daten', legend = null }) {
   const files = await unzip(buf)
   await polishSheet(files, { columns, rowCount, sheet, tableName, tableId: 1 })
-  // die Legende (Blatt 2) ebenfalls als Tabelle — Pflicht/Eindeutig ganz links zum Filtern (Taloan, 20.09.)
+  // die Legende (Blatt 2) ebenfalls als Tabelle — Pflicht/Eindeutig ganz links zum Filtern
   if (legend && files.has('xl/worksheets/sheet2.xml')) await polishSheet(files, { columns: legend.columns.map(k => ({ key: k })), rowCount: legend.rowCount, sheet: 'xl/worksheets/sheet2.xml', tableName: 'Legende', tableId: 2 })
   return zip(files)
 }

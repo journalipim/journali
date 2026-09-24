@@ -1,4 +1,4 @@
-// Tarife in der Oberfläche (Taloan, 24.09.2026): ein Plugin ausserhalb des Tarifs der Instanz steht mit dem Tarif da,
+// Tarife in der Oberfläche: ein Plugin ausserhalb des Tarifs der Instanz steht mit dem Tarif da,
 // der es hat, lädt nicht und lässt sich nicht einschalten; Unlimited heisst ∞ und ein Balken, der nicht rot wird.
 import test from 'node:test'
 import assert from 'node:assert/strict'

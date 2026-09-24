@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren, wie ein interner Dateimanager“):
+// Medienordner:
 // Ordner anlegen, verschachteln, Medien ablegen, nicht in sich selbst, nur leer löschen.
 public class MediaFolderTests
 {

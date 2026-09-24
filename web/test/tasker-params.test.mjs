@@ -1,6 +1,4 @@
-// Das Plugin sagt, was am Job eingestellt wird — der Tasker rät nicht (Taloan, 23.09.2026: „der Tasker muss nicht von
-// sich aus wissen: oh das ist das Backup-Plugin, da brauch ich keine Fächer. Das Plugin muss das wissen und
-// einfordern“ / „ein fremdentwickeltes Plugin, dessen Funktion wir nicht kennen — was soll der Tasker dann machen?“).
+// Das Plugin sagt, was am Job eingestellt wird — der Tasker rät nicht.
 // Im Manifest steht `perJob` je Parameter: true = am Job, false = gehört ins Profil. Ohne Profil steht auch das
 // Profil-Zeug da, denn dann gibt es keine andere Quelle. Fehlt die Angabe, zeigt der Tasker den Parameter.
 import test from 'node:test'

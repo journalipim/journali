@@ -8,13 +8,13 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Übersetzungsmanagement (Taloan, 21.09.2026, Blick in OpenDXP: „Übersetzungsmanagement ist etwas, was wir noch gar nicht haben“):
+/// Übersetzungsmanagement:
 /// die Einheiten einer Sprachrichtung — je Knoten × sprachabhängiges Textattribut × Kanal × Zeile der eigene Quelltext, der
 /// eigene Zieltext und der Zustand: <c>missing</c> (kein Ziel), <c>stale</c> (Ziel da, aber die Quelle ist seither neuer — ⟳ wie in
 /// der Zelle), <c>done</c>. Vererbte Werte gehören dem Vorfahren und tauchen dort auf. Das Plugin <c>xliff</c> macht daraus XLIFF 2.0
 /// für Agenturen und CAT-Werkzeuge, liest es zurück und lässt die KI vorübersetzen.
 ///
-/// Der Rückweg (Taloan, 22.09.2026: „irgendwann kommt der Auftrag zurück und es gibt schon wieder etliche Änderungen am Original“)
+/// Der Rückweg
 /// entscheidet je Einheit am Fingerabdruck — und verwirft nie einen Auftrag:
 /// <list type="bullet">
 /// <item>Quelle seit dem Auftrag unverändert → schreiben, Marke auf jetzt: fertig.</item>
@@ -66,7 +66,7 @@ public static class TranslateApi
         var wanted = Blank(attributes)?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet();
         var defs = model.Attributes.Values.Where(a => a.PerLocale && a.Type is AttributeTypes.Text or AttributeTypes.Html && (wanted is null || wanted.Contains(a.Key))).ToList();
         var nodes = (Blank(root) is { } r ? (tree.Nodes.TryGetValue(r, out var rn) ? new[] { rn }.Concat(tree.DescendantsDeepestFirst(r)) : []) : tree.Nodes.Values).Where(n => n.Role != Roles.Rubric);
-        // nur Knoten in einem Workflow-Zustand (27: „zur Übersetzung“) — Taloan, 21.09.
+        // nur Knoten in einem Workflow-Zustand (27: „zur Übersetzung“) —
         if (workflows is not null && Blank(wf) is { } wfKey && workflows.All.TryGetValue(wfKey, out var wfDef) && Blank(wfState) is { } wantedState)
             nodes = nodes.Where(n => wfDef.AppliesTo(n) && workflows.StateOf(n.Id, wfDef) == wantedState);
         var units = new List<Unit>();
@@ -91,7 +91,7 @@ public static class TranslateApi
                 }
             }
         }
-        // Gedächtnis dazu — nur für offene Einheiten (Taloan, 21.09.: „Übersetzungsgedächtnis über das Wörterbuch“)
+        // Gedächtnis dazu — nur für offene Einheiten
         if (units.Any(u => u.State != "done"))
         {
             var mem = Memory(model, tree, from, to);

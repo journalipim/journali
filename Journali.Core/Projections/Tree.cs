@@ -28,7 +28,7 @@ public sealed class Node
     public Dictionary<string, string> AxisValues { get; } = new(); // Variante
     public string Status { get; set; } = Statuses.Draft;
     /// <summary>Nummer des Eintrags, der den Status setzte — 0 heisst: nie gesetzt. Nötig, seit auch Gruppen einen
-    /// Status haben dürfen (Taloan, 23.09.2026): <see cref="Status"/> ist mit „draft“ vorbelegt, und eine Gruppe, die nie
+    /// Status haben dürfen: <see cref="Status"/> ist mit „draft“ vorbelegt, und eine Gruppe, die nie
     /// jemand angefasst hat, ist kein Entwurf — sie hat schlicht keinen.</summary>
     public long StatusAt { get; set; }
     /// <summary>Hat dieser Knoten einen eigenen Status? Produkte und Varianten immer (sie beginnen als Entwurf),
@@ -61,7 +61,7 @@ public sealed class Node
     public int Entries { get; set; }
 
     /// <summary>
-    /// Eigener Wert auf der Achse, sonst weniger spezifisch — nur dieser Knoten. Kette je Achse (Taloan, 20.09.): eigener Wert →
+    /// Eigener Wert auf der Achse, sonst weniger spezifisch — nur dieser Knoten. Kette je Achse: eigener Wert →
     /// Master → Stern; der Kanal fällt zuerst, dann die Sprache. Ohne Master (null) nur eigen → Stern. Listen zählen als Wert (verbunden mit Komma).
     /// </summary>
     public string? Own(string attribute, string? locale, string? channel, string? row = null, string? masterLocale = null, string? masterChannel = null, IReadOnlyDictionary<string, string>? localeFallback = null, IReadOnlyDictionary<string, string>? channelFallback = null)
@@ -155,7 +155,7 @@ public sealed class Tree : IProjection
     /// <summary>
     /// Wert am Knoten oder — wenn <paramref name="inheritable"/> — von oben geerbt; liefert auch, woher. Je Knoten die ganze Fallback-Kette
     /// (Master, Stern), erst dann der nächste Vorfahr. <paramref name="masters"/> = false: ohne Master — für die Vollständigkeit, die je Sprache
-    /// und Kanal zählt (Taloan, 17.09.: eine fehlende Übersetzung ist fehlend, auch wenn der Master sie hätte).
+    /// und Kanal zählt.
     /// </summary>
     public (string? Value, Node? From) Resolve(Node node, string attribute, string? locale, string? channel, bool inheritable = true, bool masters = true)
     {
@@ -169,7 +169,7 @@ public sealed class Tree : IProjection
 
     /// <summary>
     /// Freigabe (Sortiment) für Kanal × Sprache: eigene Freigabe (genau oder für alle Sprachen), sonst die des Fallback-Kanals
-    /// (Taloan, 20.09.: ein Markt bekommt das Sortiment seines Fallback-Markts). Kein Master-Fallback — eine Freigabe für web ist keine für print.
+    ///. Kein Master-Fallback — eine Freigabe für web ist keine für print.
     /// Liefert den Kanal, über den sie gilt (null = keine).
     /// </summary>
     public string? ReleasedVia(Node node, string channel, string? locale)
@@ -213,7 +213,7 @@ public sealed class Tree : IProjection
         return Entries.Template.Render(template, slot, locale);
     }
 
-    /// <summary>Ein beliebiges Skript im Kontext des Knotens rechnen — der Editor zeigt so das momentane Ergebnis beim Tippen (Taloan, 17.09.).</summary>
+    /// <summary>Ein beliebiges Skript im Kontext des Knotens rechnen — der Editor zeigt so das momentane Ergebnis beim Tippen.</summary>
     public string? Evaluate(ModelCatalog model, Node node, string? script, string? locale, out string? error, int depth = 0)
     {
         error = null;
@@ -241,7 +241,7 @@ public sealed class Tree : IProjection
         foreach (var n in chain)
             foreach (var g in n.Groups)
                 if (seen.Add(g)) result.Add((g, n));
-        // Publikationsbäume (Taloan, 21.09.2026): eine Gruppe an einer Rubrik gilt für alles, was darunter verwiesen ist — der Web-Redakteur hängt
+        // Publikationsbäume: eine Gruppe an einer Rubrik gilt für alles, was darunter verwiesen ist — der Web-Redakteur hängt
         // „SEO“ an seinen Baum und pflegt es dort; ein Print-Baum ohne die Gruppe kennt sie nicht. Verweis am Knoten selbst oder an einem Vorfahren.
         if (node.Role != Roles.Rubric)
             foreach (var n in chain)
@@ -329,7 +329,7 @@ public sealed class Tree : IProjection
     }
 
     /// <summary>Alle Knoten mit diesem eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) oder als Achsenwert — Eindeutigkeitsprüfung
-    /// für jedes Attribut mit dem Merkmal unique (Taloan, 21.09.2026); Achsenwerte zählen mit, weil eine Achse eindeutig sein kann (SKU als Achse).</summary>
+    /// für jedes Attribut mit dem Merkmal unique; Achsenwerte zählen mit, weil eine Achse eindeutig sein kann (SKU als Achse).</summary>
     public IEnumerable<Node> WithOwnValue(string attribute, string value)
     {
         var ax = new Axis(attribute, null, null);
@@ -467,7 +467,7 @@ public sealed class Tree : IProjection
                 break;
             case Types.ProductAxesSet:
                 n.Axes = Types.Deserialize<ProductAxesSet>(entry.Payload).Axes.Distinct().ToArray();
-                // vorhandene Varianten: neue Achse ← eigener Wert des Attributs; entfallene Achse weg (Taloan, 20.09.: Achsen auch nachträglich)
+                // vorhandene Varianten: neue Achse ← eigener Wert des Attributs; entfallene Achse weg
                 foreach (var v in Children(n.Id).Where(x => x.Role == Roles.Variant))
                 {
                     foreach (var ax in n.Axes) if (!v.AxisValues.ContainsKey(ax) && v.Values.TryGetValue(new Axis(ax, null, null), out var own) && own.Length > 0) v.AxisValues[ax] = own;
@@ -529,7 +529,7 @@ public sealed class Tree : IProjection
                 else if (string.IsNullOrEmpty(a.Value)) n.Values.Remove(axis);
                 else n.Values[axis] = a.Value;
                 if (n.Values.ContainsKey(axis) || n.Lists.ContainsKey(axis)) n.SetAt[axis] = entry.Number; else n.SetAt.Remove(axis);
-                // Achsenattribut an einer Variante: der Wert ist ihr Achsenwert, sobald das Produkt die Achse hat (Taloan, 20.09.: Lücken später füllen)
+                // Achsenattribut an einer Variante: der Wert ist ihr Achsenwert, sobald das Produkt die Achse hat
                 if (n.Role == Roles.Variant && a.Locale is null && a.Channel is null && a.Row is null && n.Parent is { } pp && _nodes.TryGetValue(pp, out var prod) && prod.Axes.Contains(a.Attribute))
                 { if (string.IsNullOrEmpty(a.Value)) n.AxisValues.Remove(a.Attribute); else n.AxisValues[a.Attribute] = a.Value; }
                 break;

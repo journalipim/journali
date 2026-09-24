@@ -5,9 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Führen und dazugehören sind zweierlei (Taloan, 23.09.2026: „man kann zwar Manager von mehreren Teams sein, aber nur
-// Mitglied von einem Team“ · „der IT-Administrator von Südeuropa kann Manager von Spanien, Frankreich und Portugal
-// sein; wenn er in der Zentrale sitzt, ist er wahrscheinlich Mitglied von Team Deutschland“).
+// Führen und dazugehören sind zweierlei.
 // Dazu die Kette: ein Team kann über ein anderes abrechnen, das selbst über ein drittes abrechnet — am Ende steht
 // immer ein Kontingent. Was nicht sein darf, ist ein Kreis (a→b→a, a→b→c→a).
 public class TeamKetteTests

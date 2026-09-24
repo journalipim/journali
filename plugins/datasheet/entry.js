@@ -1,4 +1,4 @@
-// Plugin datasheet (Taloan, 17.09.2026): Datenblatt für Produkte und Varianten. Seit 18.09. WYSIWYG-Designer (designer.js:
+// Plugin datasheet: Datenblatt für Produkte und Varianten. Seit 18.09. WYSIWYG-Designer (designer.js:
 // Seite, Drag & Drop, Abschnitte mit Spalten, Attributgruppen ab einem Knoten inkl. Kinder); der HTML-Vorlagen-Editor
 // hier bleibt als zweiter Weg („HTML-Vorlage“) — alte Vorlagen gehen weiter.
 import { mountDesigner as mountWysiwyg, layoutFor, renderSheet, preloadCompare } from './designer.js'
@@ -135,7 +135,7 @@ export async function dataOf(ctx, id, locale, depth = 0) {
   const axes = Object.entries(n.axisValues ?? {}).map(([k, v]) => ({ key: k, label: label[k] ?? k, value: defs.get(k)?.type === 'enum' ? (model.lists.find(x => x.key === defs.get(k).list)?.values.find(y => y.value === v)?.label?.[locale] ?? v) : v }))
   const row = ctx.tree.byId.get(id)
   const out = { id, role: n.role, name: row?.label ?? n.name ?? id, sku: attr.sku ?? row?.sku ?? '', status: n.status, today: new Date().toLocaleDateString(locale === 'de' ? 'de-DE' : 'en-GB'), attr, label, unit, groups, images, image: images[0]?.url ?? null, axes, variants: [] }
-  // Subitems (Taloan): am Produkt die Varianten, an der Gruppe die Produkte — für Datentabelle und Vergleich; Varianten heissen weiter variants
+  // Subitems: am Produkt die Varianten, an der Gruppe die Produkte — für Datentabelle und Vergleich; Varianten heissen weiter variants
   if (depth === 0) { const kids = ctx.tree.kids(id); out.children = await Promise.all(kids.map(k => dataOf(ctx, k.id, locale, 1))); out.variants = out.children.filter(c => c.role === 'variant') }
   return out
 }
@@ -156,7 +156,7 @@ function openSheet(html, title) {
 }
 
 // ---- Designer
-// el: im Browser echte Elemente; ohne DOM (Job, Node) ein Ersatz, der nur outerHTML kann — die Wiedergabe des Blatts braucht nicht mehr (Taloan, 19.09.: Datenblätter als Job)
+// el: im Browser echte Elemente; ohne DOM (Job, Node) ein Ersatz, der nur outerHTML kann — die Wiedergabe des Blatts braucht nicht mehr
 const escHtml = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 const VOID = new Set(['img', 'br', 'hr', 'input', 'meta', 'link'])
 function elText(tag, attrs = {}, ...kids) {
@@ -230,7 +230,7 @@ async function mountDesigner(root, ctx) {
 export default {
   views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '▤', mount: mountWysiwyg }, { path: 'html', label: 'Datenblatt: HTML-Vorlage', icon: '‹›', mount: mountDesigner }],
   nodeActions: [{
-    // an jeder Rolle — auch die Gruppe hat ein Blatt (Datentabelle/Vergleich der Produkte darunter); Layout je Rolle (Taloan, 18.09.: „wo ist Datenblatt geblieben?“)
+    // an jeder Rolle — auch die Gruppe hat ein Blatt (Datentabelle/Vergleich der Produkte darunter); Layout je Rolle
     label: t_('Datenblatt erstellen'), icon: '▤',
     async run(nodeId, ctx) {
       const row = ctx.tree.byId.get(nodeId); if (!row) return
@@ -243,7 +243,7 @@ export default {
       openSheet(renderSheet(l.layout, d, ctx.store.model), t_('Datenblatt {0}', [row.label]))
     },
   }, {
-    // Designer mit diesem Knoten als Vorschau (Taloan, 18.09.: „erstellen und designen“)
+    // Designer mit diesem Knoten als Vorschau
     label: t_('Datenblatt designen …'), icon: '✎',
     run(nodeId, ctx) { localStorage.setItem('journali.datasheet.node', nodeId); ctx.go?.('/p/datasheet/designer') },
   }],

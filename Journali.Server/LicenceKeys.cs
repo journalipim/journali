@@ -7,9 +7,7 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Ein Lizenzschlüssel, wie ihn der Lizenzgeber ausstellt (Taloan, 23.09.2026: „ein Schlüssel erhält eine einmalig
-/// verwendbare Id — wenn die zentrale IT sich zehn Sicherheits-Reset-Schlüssel auf Vorrat legt und bei Bedarf
-/// verteilt, darf da keine Teambindung eingeprägt sein, sondern nur eine Systembindung“).
+/// Ein Lizenzschlüssel, wie ihn der Lizenzgeber ausstellt.
 /// <para>Er nennt die Instanz, für die er gilt, aber kein Team — das wählt die IT beim Einlösen. Die Art sagt, was
 /// er tut (<see cref="Schluessel.Reset"/> oder <see cref="Schluessel.Limit"/>), bei einem Limit auch wie viel und
 /// wie lange. <c>Request</c> ist der Fingerabdruck der Anforderung, zu der er ausgestellt wurde (<see cref="KeyRequests"/>);
@@ -24,7 +22,7 @@ public sealed record LicenceKey(
     int Days = 0,
     DateOnly? Issued = null,
     string? Request = null,
-    /// <summary>Der Tarif (Taloan, 24.09.2026): beim Limit das Paket, beim Reset, für welchen Tarif er gilt (pro | enterprise).</summary>
+    /// <summary>Der Tarif: beim Limit das Paket, beim Reset, für welchen Tarif er gilt (pro | enterprise).</summary>
     string? Plan = null,
     string? Sig = null)
 {
@@ -40,7 +38,7 @@ public static class LicenceKeys
     /// ohne Schreiben geht: Art, Id, Instanz, die Anforderung dazu, schon eingelöst, das Team — und ob das Team sein
     /// Kontingent selbst trägt. <paramref name="anforderung"/> ist die eigene Anforderung mit der Id des Schlüssels,
     /// <paramref name="pub"/> der öffentliche Schlüssel dieser Instanz, <paramref name="teamTarif"/> der Tarif des Teams
-    /// (für den Reset: getrennt für Pro und Enterprise, Taloan 24.09.2026).
+    /// (für den Reset: getrennt für Pro und Enterprise).
     /// </summary>
     public static string? Fehler(LicenceKey k, string team, string? instanz, Teams teams, SignedRequest? anforderung, string? pub, Tarif? teamTarif = null)
     {
@@ -61,7 +59,7 @@ public static class LicenceKeys
         if (teams.Get(team) is not { } t) return $"Team „{team}“ gibt es nicht.";
         // wer über ein anderes Team abrechnet, hat kein eigenes Kontingent — der Schlüssel gehört dorthin
         if (teams.Payer(team) is { } zahler && zahler != team) return $"„{t.Label}“ rechnet über „{teams.Get(zahler)?.Label ?? zahler}“ ab — den Schlüssel dort einlösen.";
-        // Reset Pro für Teams mit Pro (und Pro+), Reset Enterprise für Enterprise (Taloan, 24.09.2026)
+        // Reset Pro für Teams mit Pro (und Pro+), Reset Enterprise für Enterprise
         if (art == Schluessel.Reset && k.Plan is { } fuer && teamTarif is { } tt && Tarife.ResetFuer(tt) != fuer)
             return $"Reset {Tarife.Von(fuer)?.Label ?? fuer} gilt nicht für Tarif {tt.Label} („{t.Label}“).";
         if (art == Schluessel.Limit)
@@ -111,7 +109,7 @@ public static class LicenceKeys
             if (body.Count is < 1 or > 20) return Bad("Anzahl: 1 bis 20.");
             var paket = art == Schluessel.Limit ? Schluessel.PaketVon(body.Plan) : null;
             if (art == Schluessel.Limit && paket is null) return Bad($"Paket: {string.Join(", ", Schluessel.Pakete.Select(p => p.Key))}.");
-            // Reset: getrennt für Pro und Enterprise (Taloan, 24.09.2026)
+            // Reset: getrennt für Pro und Enterprise
             if (art == Schluessel.Reset && body.Plan is not (Tarife.ProKey or Tarife.EnterpriseKey)) return Bad($"Reset: {Tarife.ProKey} oder {Tarife.EnterpriseKey}.");
             var neu = Enumerable.Range(0, body.Count)
                 .Select(_ => paket is { } p ? anforderungen.Neu(art, p.Week, p.Month, p.Days, actor, p.Key) : anforderungen.Neu(art, 0, 0, 0, actor, body.Plan)).ToList();

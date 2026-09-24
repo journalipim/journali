@@ -3,7 +3,7 @@ using Journali.Core.Entries;
 namespace Journali.Core.Projections;
 
 /// <summary>
-/// Ausleitung eines Publikationsbaums (Taloan, 21.09.2026: „bau die Ausleitungsregel mit Markt und Freigabe“).
+/// Ausleitung eines Publikationsbaums.
 /// Der Baum (Wurzel-Rubrik) nennt Kanal und optional Markt. Was darin steht (Rubriken, Verweise auf Produkte und Gruppen),
 /// ist die Maximalstruktur; die Regel sagt je Verkaufbarem, ob es in die Ausleitung kommt — mit Grund, wenn nicht:
 ///   1. Freigabe: die Variante ist für den Kanal freigegeben (ReleaseGranted; Kanal-Fallback zählt, docs/pflegestruktur.md).
@@ -73,7 +73,7 @@ public static class Publication
     /// Die Ausleitung eines Baums: Rubriken in Baumfolge, darin die Verweise — ein Produkt direkt, eine verwiesene Gruppe mit allen Produkten darunter
     /// (Pflegebaum-Aufbau als Unterrubriken). Jedes Produkt einmal je Rubrik, in der es hängt.
     /// </summary>
-    /// <param name="at">Stand bei #n (Taloan, 21.09.2026, „A“): liefert Modell und Baum von damals; eingefrorene Rubriken entscheiden damit —
+    /// <param name="at">Stand bei #n: liefert Modell und Baum von damals; eingefrorene Rubriken entscheiden damit —
     /// Freigaben, Verkaufsländer, Varianten wie am Stichtag. Ohne <paramref name="at"/> zählt ein Stand nicht (live).</param>
     public static IEnumerable<ProductRow> Export(Tree tree, ModelCatalog model, Node root, string? locale = null, Func<long, (ModelCatalog Model, Tree Tree)>? at = null)
     {
@@ -90,7 +90,7 @@ public static class Publication
                 if (!tree.Nodes.TryGetValue(id, out var n)) continue;   // toter Verweis
                 foreach (var row in Placed(n, here, stand, null)) yield return row;
             }
-            // Regel-Verweise (Taloan, 21.09.): Treffer im Baum des Stands, gegliedert; die Gliederung wird Pfadglied
+            // Regel-Verweise: Treffer im Baum des Stands, gegliedert; die Gliederung wird Pfadglied
             foreach (var rule in rubric.Rules)
             {
                 var (m, tr) = Src(stand);

@@ -1,5 +1,5 @@
-// Zwei Balken in den Einstellungen (Taloan, 22.09.2026): Woche und Monat, mit dem Genutzten, dem Kontingent und dem
-// Anteil, darunter der Verlauf. Ein Balken füllt sich mit dem Verbrauch (Taloan, 23.09.2026); was verfügbar ist, steht
+// Zwei Balken in den Einstellungen: Woche und Monat, mit dem Genutzten, dem Kontingent und dem
+// Anteil, darunter der Verlauf. Ein Balken füllt sich mit dem Verbrauch; was verfügbar ist, steht
 // als Zeile darüber. Kein Tageslimit („macht man 3 Testimporte und muss aufhören“), der Tag steht nur als Zahl.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -14,7 +14,7 @@ const usage = {
   month: { key: 'month', used: 97000, max: 100000, start: '2026-09-01', resetAt: '2026-10-01' },
   all: { day: 5788, week: 45000, month: 131000 },   // darin: Modell, Struktur, Kataloge, Betrieb — die zählen nicht
 }
-// echte Tage aus Taloans Journal: am 20.09. kam der ETIM-Katalog (29.371 Einträge, davon 724 Tagesgeschäft)
+// echte Tage aus die Journal: am 20.09. kam der ETIM-Katalog (29.371 Einträge, davon 724 Tagesgeschäft)
 const history = [{ start: '2026-09-22', count: 47, all: 5788 }, { start: '2026-09-21', count: 1306, all: 1323 }, { start: '2026-09-20', count: 724, all: 29371 }]
 
 test('zwei Balken — Woche und Monat — mit Genutztem, Kontingent und Anteil', () => {

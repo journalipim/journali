@@ -10,8 +10,8 @@ export function analyze({ catalog, mapping, model, rows, locale = 'de', scopeAtt
   const defs = new Map(model.attributes.map(a => [a.key, a]))
   const result = { nodes: [], items, byItem: new Map(), unmapped: items.filter(it => !mapping[it.key]?.to), locale }
   for (const it of items) result.byItem.set(it.key, { ok: 0, empty: 0, bad: 0, na: 0, below: 0, inactive: 0, pending: 0 })
-  result.inactiveGroups = new Set()   // Gruppen, die im Teilbaum fehlen (Taloan, 20.09.: „kein Schutzart-Attribut am Knoten“ — die Gruppe hängt nicht am Pfad)
-  // Vollständigkeit zählt am Verkaufbaren (Taloan, 20.09.: „muss an der Variante sein — wie ich sie pflege, ist eine andere Sache“):
+  result.inactiveGroups = new Set()   // Gruppen, die im Teilbaum fehlen
+  // Vollständigkeit zählt am Verkaufbaren:
   // ein Knoten mit Kindern gilt als belegt (↓), wenn alle Blätter darunter den Datenpunkt haben — ob er ihn selbst hat, ist egal.
   const kids = new Map(); for (const r of rows) { const p = r.row.parent ?? ''; if (!kids.has(p)) kids.set(p, []); kids.get(p).push(r) }
   const ids = new Set(rows.map(r => r.row.id))

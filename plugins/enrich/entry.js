@@ -1,5 +1,4 @@
-// Plugin enrich (Taloan, 20.09.2026: „ein Enrichment-Plugin“ — Produkte, die ich handle, nicht herstelle: die Daten stehen beim
-// Hersteller, in Datenblättern, Katalogen, nicht in meinem Bestand. Wie onedot, nur mit dem eigenen KI-Schlüssel):
+// Plugin enrich:
 // Man wählt die Attribute, die fehlen dürfen nicht, und einen Teilbaum — die Prüfmaschine der Oberfläche (ctx.compliance, dieselbe
 // wie DPP/PPWR/ETIM) zeigt je Knoten, was leer ist, und holt Vorschläge: aus Regeln, von der KI aus den vorhandenen Werten,
 // oder mit Recherche im Internet (Hersteller, Typ, EAN → Datenblatt) — jeder Wert mit Quelle, nichts wird ohne Haken geschrieben.

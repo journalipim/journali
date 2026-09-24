@@ -42,7 +42,7 @@ Pflege-Client  ──Befehle──▶  Schreibmodell (normalisiert, synchron)
 
 Keine Schicht spricht mit einer anderen ausser über die Pfeile. Shops und
 externe Werkzeuge gehen nie auf die Pflege-Datenbank, sondern auf ihr
-eigenes Abbild — dasselbe Muster wie SAP BW für Auswertungen, nur für
+eigenes Abbild — dasselbe Muster wie ERP BW für Auswertungen, nur für
 Ausgabe.
 
 ## Der Schreibpfad (pragmatische Mitte)
@@ -119,7 +119,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
 - DSGVO beisst sich mit „nie löschen" — für Produkte selten, für Nutzer
   im `Actor`-Feld schon.
 - Suche über freie Attribute: EAV in MySQL ist quälend; JSON-Spalte plus
-  Suchindex als Abbild ist die übliche Antwort (Akeneo macht es so).
+  Suchindex als Abbild ist die übliche Antwort (andere Systeme macht es so).
 
 ## Offen
 
@@ -132,14 +132,12 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
 - ~~Vokabular der Eintragstypen~~ erste fünf in `docs/eintraege.md`; wächst
 - Vollständigkeitsregeln je Familie × Kanal × Sprache
 - ~~Schnappschüsse der Abbilder~~ gebaut 21.09.2026 (`Snapshot.cs`, `docs/betrieb.md`) — dazu der lokale Spiegel des Journals;
-  der Aufbau las vorher alles; bei ~25 000 Einträgen am Tag innerhalb eines Jahres nötig. Ausdünnen des Journals dagegen nicht (Taloan, 19.09.2026):
+  der Aufbau las vorher alles; bei ~25 000 Einträgen am Tag innerhalb eines Jahres nötig. Ausdünnen des Journals dagegen nicht:
   ein Eintrag ist für immer; höchstens nach Ablauf einer beschlossenen Frist Einzelschritte zwischen zwei Versionen
   zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
 - ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Rollen je Teilbaum, Workflow-Rollen
 - Import/Export — in der Praxis die Hälfte des Systems
-- **Das wachsende Journal** (Taloan, 24.09.2026: „ich will verhindern, dass ein Serverstart nach zwei Jahren Nutzung zu
-  einem halben Tag Betriebsausfall führt, weil man nur darauf wartet, dass der Server vier Stunden lang das Journal
-  von Anfang an aufarbeitet“ — „das wird jeder IT-Leiter fragen“). Nicht die Grösse ist das Problem, sondern die
+- **Das wachsende Journal**. Nicht die Grösse ist das Problem, sondern die
   **Zahl** der Einträge: die Startzeit darf nicht von der Länge des Journals abhängen.
 
   *So startet der Server heute:* mit Schnappschuss (`Catalog.LoadSnapshot`) lädt er den Stand aller Abbilder bis #n
@@ -174,8 +172,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
      fällt nur, wenn sich ein Abbild wirklich ändert. Geschrieben regelmässig (etwa stündlich) und beim Beenden. Ein
      Start = Stand laden + Einträge seit dem letzten Schnappschuss; die Dauer hängt am heutigen Datenbestand, nicht an
      der Geschichte.
-  3. **Das Akkordeon** (Taloan: „die Einträge einer Epoche, sagen wir der letzten 12 Monate, liegen vollständig vor,
-     und alles, was dahinter liegt, wird monatlich verdichtet und zugeklappt“) — die Obergrenze für den schlimmsten
+  3. **Das Akkordeon** — die Obergrenze für den schlimmsten
      Fall:
      ```
      │◄──────── zugeklappt: je Monat ein Fach ────────►│◄──── offen: die letzten 12 Monate ────►│
@@ -203,9 +200,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   Pro (+ Pro+), Enterprise, Unlimited; drei Monate Enterprise ab dem ersten Journaleintrag; Plugins und
   Publikationsbäume nach dem höchsten Tarif der Instanz; Reset getrennt für Pro und Enterprise; Sichern von Hand
   unter ⇅ B&R. Im Shop: Varianten Pro, Pro+, Enterprise, Unlimited (die Testvariante „Ultimate“ entfällt).
-- **Tarife als Abo über Lemon Squeezy** (Taloan, 23.09.2026: „später wird kein Text mehr zum Kopieren sein … wer das
-  System nutzen will, will eine automatische Verlängerung — man stellt einen Modus ein wie bei Claude, und wenn man
-  nicht mehr will, muss man aktiv werden“). Heute: Anforderung und Schlüssel werden kopiert (`KeyRequests.cs`,
+- **Tarife als Abo über Lemon Squeezy**. Heute: Anforderung und Schlüssel werden kopiert (`KeyRequests.cs`,
   `LicenceKeys.cs`, `docs/betrieb.md` → Schlüssel).
 
   *Was Lemon Squeezy übernimmt* (Dokumentation gelesen am 23.09.2026): Abo-Ablauf mit `status`
@@ -238,16 +233,16 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   Server mit PHP/MySQL; PHP signiert ECDSA im DER-Format, journali erwartet r‖s — umwandeln oder die .NET-Seite
   umstellen.
 
-  *Entschieden (Taloan, 23.09.2026):* **Abo je Team** — wegen der Kostenstellen. Wer zentral abrechnen will, legt
+  *Entschieden:* **Abo je Team** — wegen der Kostenstellen. Wer zentral abrechnen will, legt
   das Abo aufs Init Team; die anderen Teams rechnen über es ab (`keysFrom`, Zahlerkette). Damit gehört ein
   Lizenzschlüssel von Lemon Squeezy zu einem Team: aktiviert wird er für Instanz *und* Team (`instance_name` =
   Instanz-Kennung und Team), mit `activation_limit` 1 — derselbe Schlüssel nicht für ein zweites Team. Eingelöst
   wird wie heute beim Team, das sein Kontingent selbst trägt.
 
-  *Entschieden (Taloan, 23.09.2026):* ohne Verbindung zum Lizenzserver gilt der letzte signierte Stand noch
+  *Entschieden:* ohne Verbindung zum Lizenzserver gilt der letzte signierte Stand noch
   **7 Tage**, danach der Testbetrieb.
 
-  *Entschieden (Taloan, 23.09.2026):* **der Weg zum Kopieren bleibt** — für Instanzen ohne Internet, neben dem Abo.
+  *Entschieden:* **der Weg zum Kopieren bleibt** — für Instanzen ohne Internet, neben dem Abo.
   Die IT erzeugt die signierte Anforderung, trägt sie hinaus, reicht sie im Shop ein und bekommt einen signierten
   Schlüssel mit fester Laufzeit zurück (im Voraus bezahlt, z. B. ein Jahr); eingefügt wird er ins selbe Feld.
   Gebaut ist dieser Weg (`KeyRequests.cs`, `LicenceKeys.cs`); beim Abo-Umbau bleibt er erhalten.
@@ -275,11 +270,11 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     unten schreibt die Verrechnung den Rest gut. „Mit Verrechnung am Periodenende“ hiesse einen Monat auf Kredit,
     „ohne Verrechnung“ den Rest des Monats im höheren Tarif umsonst.
 
-  *Preise und Laufzeiten (Taloan, 24.09.2026 — Überlegung, noch nicht im Shop):*
+  *Preise und Laufzeiten:*
   - Zielgruppe sind Firmen, nicht Privatleute; nach drei Monaten Test soll klar sein, ob journali passt. Wer es
     ernsthaft einsetzt, soll bei **Enterprise oder Unlimited** landen; Pro und Pro+ sind die Stufen für den, der vor
     dem Preis zurückschreckt. Kostenlos ist das Auffangnetz nach dem Test, kein Privattarif.
-  - Die Grenzen lenken stärker als der Preis: gezählt wird jeder Wert (ein SAP-Import mit 50 000 Zeilen × 200 Spalten
+  - Die Grenzen lenken stärker als der Preis: gezählt wird jeder Wert (ein ERP-Import mit 50 000 Zeilen × 200 Spalten
     wären 10 Millionen Einträge, `UsageTests.cs`). Wer alle Teams über das Init Team abrechnet, teilt **ein**
     Kontingent — zentral abrechnen führt damit zu Unlimited. Darum später Unlimited höher, etwa **399 €**, die übrigen
     Preise bleiben (Pro 29 €, Pro+ 29 + 29 €, Enterprise 99 €). Unlimited kostet journali nichts extra — es läuft auf
@@ -292,7 +287,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     wiederholten Rabatt auf die erste Jahreszahlung (Rabatte zählen in Monaten, auch beim Jahresabo: „12“ = die erste
     Jahreszahlung, „24“ = die ersten zwei); danach verlängert es sich zum vollen Preis. Eher als eigenes Produkt, damit
     es im Kundenportal nicht als Wechselziel erscheint.
-  - **Wechseln ja, erstatten nein — Gutschrift** (Taloan: „aber nicht mit Erstattung, sondern mit Gutschrift“). Das ist
+  - **Wechseln ja, erstatten nein — Gutschrift**. Das ist
     das Verhalten von Lemon Squeezy: „If downgrading a subscription, we'll issue a credit which is then applied on the
     next invoice“ (API, Update a Subscription). Wer vom Einführungs-Jahr auf Enterprise monatlich wechselt, bekommt den
     unverbrauchten Rest als Guthaben, mit dem die folgenden Rechnungen verrechnet werden.

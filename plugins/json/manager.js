@@ -1,6 +1,4 @@
-// JSON-Import-Manager (Taloan, 18.09.2026: „wie der IXP-Import: JSON analysieren, zeigen, was drin ist — neue Attribute,
-// neue Gruppen — anlegen oder auf Bestehendes mappen, nach Möglichkeit automatisch nach best guess, und sagen, wo die
-// Struktur ansetzt“). Liest das Rohdaten-Format ({ model, node } aus dem Export) — ein Teilbaum aus einem anderen
+// JSON-Import-Manager. Liest das Rohdaten-Format ({ model, node } aus dem Export) — ein Teilbaum aus einem anderen
 // journali oder aus einem Fremdsystem, das dieses Format schreibt. Schritte: 1 Datei · 2 Modell zuordnen · 3 Ziel · 4 Einspielen.
 // Der Server (POST /api/nodes/import mit map) schreibt die Zuordnung um und legt nur an, was auf „neu“ steht.
 
@@ -27,8 +25,7 @@ export async function mountManager(root, ctx) {
   const st = { file: null, raw: null, node: null, count: 0, mapA: {}, mapG: {}, prefix: '', parent: null, existing: 0, missing: [], attachMissing: true }
   // Zielgruppen wie der Server (TransferApi.Remap G()): zugeordnet → Ziel; im Modell → gleich; sonst Präfix + Key
   const G = k => st.mapG[k]?.to || (model.groups.some(g => g.key === k) ? k : st.prefix + k)
-  // Welche Attributgruppen brauchen die Werte des Baums — und welche davon gelten am Ziel nicht? (Taloan, 18.09.: der Import
-  // warnte nicht, danach waren etliche Werte verwaist.) Am Ziel gelten: die Gruppen am Zielknoten und seinem Pfad; dazu
+  // Welche Attributgruppen brauchen die Werte des Baums — und welche davon gelten am Ziel nicht? Am Ziel gelten: die Gruppen am Zielknoten und seinem Pfad; dazu
   // die, die der importierte Wurzelknoten selbst mitbringt.
   async function findMissing() {
     st.missing = []
@@ -49,7 +46,7 @@ export async function mountManager(root, ctx) {
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 12px' })
-  // Profil (Taloan: „als Job einrichten“): Zuordnung, Präfix, Ziel unter profile:<name> im Journal — der Job (job.mjs) nimmt es
+  // Profil: Zuordnung, Präfix, Ziel unter profile:<name> im Journal — der Job (job.mjs) nimmt es
   const profSel = el('select', {}, el('option', { value: '' }, '— Profil —'))
   const profIn = el('input', { type: 'text', placeholder: 'Name', style: 'width:110px' })
   async function loadProfiles() { try { const names = (await ctx.data.list()).filter(n => n.startsWith('profile:')).map(n => n.slice(8)); profSel.innerHTML = ''; profSel.append(el('option', { value: '' }, '— Profil —'), ...names.map(n => el('option', { value: n }, n))) } catch {} }
@@ -147,7 +144,7 @@ export async function mountManager(root, ctx) {
     s3.innerHTML = ''
     s3.append(band('3 · Ziel — wo die Struktur ansetzt'))
     const n = st.raw.node
-    // Zielbaum (Taloan: „wie kommt ein Anwender an die Id?“): Gruppen und Produkte als Baum, Klick wählt; Varianten sind kein Ziel
+    // Zielbaum: Gruppen und Produkte als Baum, Klick wählt; Varianten sind kein Ziel
     const open = new Set((st.parent ? [...tree.ancestors(st.parent).map(a => a.id), st.parent] : []).concat(tree.rows.filter(r => !r.parent).map(r => r.id)))
     const box = el('div', { style: 'margin-top:4px;width:min(520px,100%)' })
     const roles = n.role === 'variant' ? ['product'] : ['group']
@@ -166,7 +163,7 @@ export async function mountManager(root, ctx) {
     s4.append(band('4 · Einspielen'))
     s4.append(el('div', { class: 'muted', style: 'font-size:12px;line-height:1.6' },
       `${st.count} Knoten → ${st.parent ? tree.byId.get(st.parent)?.label : 'Wurzel'} · neu im Modell: ${newG.length} Gruppen, ${newA.length} Attribute${st.prefix ? ` (Präfix ${st.prefix})` : ''}${unsure ? ` · ${unsure} unsichere Zuordnungen (gelb) — bitte prüfen` : ''} · ein Stapel, rückgängig im Journal`))
-    // Verwaiste Werte: die Warnung samt Schalter steht im Dialog beim Einspielen (Taloan, 18.09.: wie beim Umhängen im Baum)
+    // Verwaiste Werte: die Warnung samt Schalter steht im Dialog beim Einspielen
     s4.append(el('button', { class: 'primary', style: 'margin-top:6px', onclick: run }, `⇩ ${st.count} Knoten einspielen`))
   }
   async function run() {

@@ -1,4 +1,4 @@
-// Assets und Wiederherstellen (Taloan, 23.09.2026). Drei Dinge werden geprüft:
+// Assets und Wiederherstellen. Drei Dinge werden geprüft:
 // „Ausserdem sprechen wir von Assets und nicht Medien“ — das Wort steht überall, wo der Anwender liest.
 // „Warum widersprechen sich die beiden Zahlen“ — 936 sind die ableitbaren, 937 alle; die Ansicht sagt jetzt, welche.
 // „Warum ist Sichern hier immer noch drin … ich wollte lediglich das Restore haben“ — das Sichern ist ein Job.
@@ -37,7 +37,7 @@ function server({ missing = { total: 937, missing: [] }, stats = STATS } = {}) {
 const ruhe = async () => { for (let i = 0; i < 5; i++) { await flushPromises(); await new Promise(r => setTimeout(r, 0)) } }
 
 test('der Bestand nennt Zahl, Grösse und Arten — nicht nur, wie viele da liegen', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'model', 'storage'] }
+  server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'model', 'storage'] }
   const w = mount(StorageSettings, { props: { teil: 'assets' } }); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
   assert.match(t, /937 Assets/, 'die Zahl steht in der Überschrift')
@@ -50,7 +50,7 @@ test('der Bestand nennt Zahl, Grösse und Arten — nicht nur, wie viele da lieg
 })
 
 test('die beiden Zahlen widersprechen sich nicht — die eine zählt alle, die andere die ableitbaren', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'model', 'storage'] }
+  server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'model', 'storage'] }
   const w = mount(StorageSettings, { props: { teil: 'assets' } }); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
   assert.match(t, /ableitbar\s*936 von 937/, 'die Ansicht sagt, welche Zahl wozu gehört')
@@ -61,7 +61,7 @@ test('die beiden Zahlen widersprechen sich nicht — die eine zählt alle, die a
 })
 
 test('der Fehlbestand spricht von Assets', async () => {
-  server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'model', 'storage'] }
+  server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'model', 'storage'] }
   const w = mount(StorageSettings, { props: { teil: 'assets' } }); await ruhe()
   await w.findAll('button').find(b => b.text() === 'Fehlbestand zählen').trigger('click'); await ruhe()
   assert.match(w.text().replace(/\s+/g, ' '), /alle 937 Assets vorhanden/)
@@ -70,7 +70,7 @@ test('der Fehlbestand spricht von Assets', async () => {
 
 test('B&R: sichern und wiederherstellen — gesichert wird erst auf Knopfdruck', async () => {
   // bis 23.09.2026 stand hier nur der Weg zurück; seit 24.09.2026 wird wieder von Hand gesichert (Tarif Kostenlos hat keinen Tasker)
-  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'users', 'storage'] }
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'users', 'storage'] }
   const w = mount(RestoreSettings); await ruhe()
   const t = w.text().replace(/\s+/g, ' ')
   assert.ok(w.findAll('button').some(b => /Sichern/.test(b.text())), 'der Knopf, der sichert, fehlt')
@@ -82,10 +82,9 @@ test('B&R: sichern und wiederherstellen — gesichert wird erst auf Knopfdruck',
   await ruhe(); w.unmount()
 })
 
-// Ableitungen rechnet der Job, nicht der Mensch (Taloan, 23.09.2026: „ob jedes Mal ein Manager an diese Stelle gehen und
-// auf den Knopf jetzt rechnen drücken muss“). Beim Speichern eines Presets stösst der Server ihn selbst an.
+// Ableitungen rechnet der Job, nicht der Mensch. Beim Speichern eines Presets stösst der Server ihn selbst an.
 test('ein geändertes Preset stösst den Job an — der Knopf ist nur der Nachzieher', async () => {
-  const calls = server(); store.auth = { known: true, enabled: true, user: 'taloan', role: 'admin', rights: ['read', 'model', 'storage'] }
+  const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'model', 'storage'] }
   const w = mount(StorageSettings, { props: { teil: 'assets' } }); await ruhe()
   const feld = w.findAll('input[type=number]')[0]
   await feld.setValue(512); await feld.trigger('change'); await ruhe()

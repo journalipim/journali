@@ -5,7 +5,7 @@ using Journali.Core.Projections;
 
 namespace Journali.Tests;
 
-// Nutzung je Tag, Woche, Monat (Taloan, 22.09.2026: „zeige mir drei Fortschrittsbalken … und schreib die Werte fort“).
+// Nutzung je Tag, Woche, Monat.
 // Gezählt wird jeder Journaleintrag — Lesen und Exportieren erzeugen keine, also kosten sie nichts.
 public class UsageTests
 {
@@ -88,7 +88,7 @@ public class UsageTests
         u.Apply(new Entry(++n, at, "job", "job:backup", Types.JobRunStarted, "{}"));
         u.Apply(new Entry(++n, at, "job", "job:backup", Types.JobFileWritten, "{}"));
         u.Apply(new Entry(++n, at, "job", "job:backup", Types.JobRunFinished, "{}"));
-        Assert.Equal(0, u.Day(new DateOnly(2026, 9, 22)));   // Sicherung kostet nichts (Taloan, 22.09.2026)
+        Assert.Equal(0, u.Day(new DateOnly(2026, 9, 22)));   // Sicherung kostet nichts
         Assert.Equal(3, u.LastApplied);                       // gelesen hat das Abbild sie trotzdem
 
         // was der Job an Daten schreibt, zählt: ein Import setzt Werte
@@ -96,11 +96,11 @@ public class UsageTests
         Assert.Equal(1, u.Day(new DateOnly(2026, 9, 22)));
     }
 
-    // Taloans Fälle vom 22.09.2026, einer nach dem anderen — so steht die Rechnung, bevor ein Preis daran hängt
+    // die Fälle vom 22.09.2026, einer nach dem anderen — so steht die Rechnung, bevor ein Preis daran hängt
     [Theory]
     [InlineData(Types.CategoryAssigned, "p-1", false)]      // ETIM-Klasse zuweisen
     [InlineData(Types.AttributeDefined, "attribute:ef1", false)]  // die Attribute dafür anlegen
-    [InlineData(Types.AttributeSet, "v-1", true)]           // SAP-Import: 50 000 Zeilen × 200 Spalten — jeder Wert
+    [InlineData(Types.AttributeSet, "v-1", true)]           // ERP-Import: 50 000 Zeilen × 200 Spalten — jeder Wert
     [InlineData(Types.VariantCreated, "v-1", true)]         // … und die Artikel, die dabei entstehen
     [InlineData(Types.AttributeSet, "p-1", true)]           // einen Wert ändern
     [InlineData(Types.RubricCreated, "k-1", false)]         // Publikationsbaum anlegen
@@ -171,12 +171,12 @@ public class UsageTests
     [Fact]
     public void Grenzen_sind_Woche_und_Monat_kein_Tag()
     {
-        // ohne Lizenz gelten diese Werte (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“)
-        Assert.Equal(10_000, Limits.Week);        // Tarif Kostenlos (Taloan, 24.09.2026)
+        // ohne Lizenz gelten diese Werte
+        Assert.Equal(10_000, Limits.Week);        // Tarif Kostenlos
         Assert.Equal(50_000, Limits.Month);
         Assert.Equal(Limits.Week, Licence.Frei.EntriesWeek);
         Assert.Equal(Limits.Month, Licence.Frei.EntriesMonth);
         Assert.Equal(0, Licence.Frei.AiTokensMonth);   // kein Grundrauschen ohne Lizenz
-        // Kein Tageslimit (Taloan, 22.09.2026) — sonst steht man nach drei Testimporten still
+        // Kein Tageslimit — sonst steht man nach drei Testimporten still
     }
 }

@@ -1,6 +1,6 @@
 # Tasker: Dateien rund um die Jobs
 
-**Gebaut 21.09.2026** (Taloan: „Tasker-Dateien → ja“): `JobFach.cs` (Fächer, Auswahl, Duplikat, Aufräumen, latest,
+**Gebaut 21.09.2026**: `JobFach.cs` (Fächer, Auswahl, Duplikat, Aufräumen, latest,
 Aufbewahrung, Archiv), `JobRunner` (vor und nach dem Lauf), `JobFiles` in `JobDefined`, Belege `JobFileConsumed` /
 `JobFileWritten` im Abbild `Jobs`, `GET /api/jobs/{key}/files`, Fächer im Job-Dialog und Dateien im Job-Detail (tasker 1.3.0),
 Tests `JobFachTests`. Abweichungen vom Entwurf unten: der Vertrag heisst `files.in.param` / `files.out.param` — der
@@ -8,11 +8,11 @@ Tasker füllt den **vorhandenen** Parameter (`source`, `dir`), wenn der Job ihn 
 unverändert, und ein Job kann weiterhin einen festen Pfad nennen. Ausgaben: alle Export-Prozesse sind `many: true` —
 `{outDir}` ist der Laufordner `out/<key>-<JJJJMMTT>-<HHMMSS>-<lauf>/`, das Plugin benennt darin wie bisher, der Tasker
 belegt jede Datei; `latest` ist der Ordner `out/<key>-latest/` (Kopie). Eingänge, die in den letzten 3 s geschrieben
-wurden, bleiben liegen (SAP/SFTP schreibt noch). Die vier offenen Entscheidungen sind wie vorgeschlagen umgesetzt.
+wurden, bleiben liegen (ERP/SFTP schreibt noch). Die vier offenen Entscheidungen sind wie vorgeschlagen umgesetzt.
 
-Entwurf (Taloan, 21.09.2026):
+Entwurf:
 
-Taloan, 21.09.2026: „Das Plugin macht die inhaltliche Sache, aber den Dateinamen
+„Das Plugin macht die inhaltliche Sache, aber den Dateinamen
 müsste der Tasker übernehmen. Beim Import: welche Datei ist dran, welche war
 schon, wohin damit — ein Around-Management des Taskers, nicht des Plugins.“
 
@@ -30,11 +30,11 @@ bekommt vom Tasker konkrete Pfade und liest oder schreibt genau dort — nie
 ein Verzeichnis, nie eine Namensregel, nie ein „neueste Datei“.
 
 Je Job vier Fächer unter `jobs/<key>/` (Basis `JOURNALI_JOBS`, je Job
-überschreibbar, z. B. auf ein Share, auf dem SAP ablegt):
+überschreibbar, z. B. auf ein Share, auf dem ERP ablegt):
 
 | Fach | Wer schreibt | Was |
 |---|---|---|
-| `in/` | die Aussenwelt (SAP, SFTP, Hand) | Eingang, wartet auf einen Lauf |
+| `in/` | die Aussenwelt (ERP, SFTP, Hand) | Eingang, wartet auf einen Lauf |
 | `done/` | Tasker | verarbeitete Eingänge, umbenannt mit Lauf und Zeit — der Beleg |
 | `failed/` | Tasker | Eingänge, deren Lauf scheiterte, mit dem Log daneben |
 | `out/` | das Plugin, über `{outFile}` | Ausgaben, benannt vom Tasker |
@@ -71,7 +71,7 @@ wartenden), `files.in.order: name | time`. Der Tasker
 3. **Duplikat**: derselbe Hash steht schon als `JobFileConsumed` im Journal →
    die Datei wandert nach `done/` mit Vermerk „schon verarbeitet in Lauf …“,
    ohne Lauf. Das ist das „wie merke ich mir, was schon importiert wurde“:
-   nicht am Dateinamen (SAP nennt sie vielleicht immer gleich), sondern am
+   nicht am Dateinamen (ERP nennt sie vielleicht immer gleich), sondern am
    Inhalt;
 4. startet das Plugin mit `{inFile}` (oder `{inDir}` bei `all`);
 5. Erfolg → `done/<JJJJMMTT-HHMMSS>-<lauf>-<originalname>`, Eintrag
@@ -87,7 +87,7 @@ Das Plugin tut nur eins: die Datei lesen, die es bekommt.
 Medienspeicher** ein: der Tasker legt die verarbeitete Datei zusätzlich als
 Medium ab (Postgres-Blob, Verzeichnis oder S3 — was `JOURNALI_MEDIA` sagt,
 `docs/betrieb.md` → Medien), mit Verweis im Journal. Damit ist die
-SAP-Lieferung vom 21.09. 00:30 auch dann noch da, wenn das Share
+ERP-Lieferung vom 21.09. 00:30 auch dann noch da, wenn das Share
 aufgeräumt wurde. Dasselbe für Ausgaben, wenn ein Export als
 Nachweis gelten soll (Katalogstand, Datenblatt-Lauf).
 
@@ -126,13 +126,13 @@ umgestellt sind (`export`, `backup`, `json` Import/Export, `rag`, `ixp`).
 Holen und Bringen über Netz (SFTP, HTTP, Mail) — das ist ein eigener,
 kleiner Schritt vor `in/` bzw. nach `out/` („Transport“), den man je Job
 anschalten kann, wenn er gebraucht wird. Erst die Fächer, dann der
-Transport; SAP legt heute ohnehin auf ein Share.
+Transport; ERP legt heute ohnehin auf ein Share.
 
-## Entschieden (21.09.2026, wie vorgeschlagen — Taloan: „Tasker-Dateien → ja“)
+## Entschieden (21.09.2026, wie vorgeschlagen)
 
 - `latest` ist eine **Kopie** (Links auf Shares sind heikel).
 - Duplikat nach Hash: **sichtbar** im Detail (≡, grau, „ohne Lauf“), Datei nach `done/…-dup-…`.
-- Fach-Basis je Job frei wählbar (absoluter Pfad auf dem Server, 📁 im Dialog) — für das Share, auf dem SAP ablegt.
+- Fach-Basis je Job frei wählbar (absoluter Pfad auf dem Server, 📁 im Dialog) — für das Share, auf dem ERP ablegt.
 - Archiv im Medienspeicher: Vorgabe **aus**, je Job an.
 
 Offen: Transport (SFTP/HTTP/Mail vor `in/` und nach `out/`); `keep` der Plugins (`export`, `backup`, `json`) ist noch

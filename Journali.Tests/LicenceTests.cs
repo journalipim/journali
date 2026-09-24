@@ -2,8 +2,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Die Lizenz (Taloan, 23.09.2026: „die Grenzen setzt der Lizenzkey“ · „selbst wenn Team B über Team A abrechnet, kann A
-// nichts limitieren“ · „wer den Komfort der Kontrolle will, muss Teams mit eigenem Kontingent bilden“).
+// Die Lizenz.
 public class LicenceTests
 {
     private static string Frisch()
@@ -17,7 +16,7 @@ public class LicenceTests
     {
         var dir = Frisch();
         var (lic, geprueft, grund) = LicenceFile.Load(dir);
-        Assert.Equal("free", lic.Plan);          // Tarif Kostenlos (Taloan, 24.09.2026)
+        Assert.Equal("free", lic.Plan);          // Tarif Kostenlos
         Assert.Equal(10_000, lic.EntriesWeek);
         Assert.Equal(50_000, lic.EntriesMonth);
         Assert.Equal(0, lic.AiTokensMonth);   // kein Grundrauschen, solange keine Lizenz da ist
@@ -48,7 +47,7 @@ public class LicenceTests
         var l = new Licences(dir);
         l.Neu(new Licence("Alt", null, DateOnly.FromDateTime(DateTime.Today.AddDays(-1)), 1, 2, null, 3, 4));
         Assert.True(l.Roh.Abgelaufen);            // eingespielt ist sie noch — zum Anzeigen
-        Assert.Equal(Licence.Frei, l.Lic);        // es gilt Kostenlos (Taloan, 24.09.2026)
+        Assert.Equal(Licence.Frei, l.Lic);        // es gilt Kostenlos
         Assert.False(l.Geprueft);
         Assert.Contains("abgelaufen", l.Grund);
         Directory.Delete(dir, true);

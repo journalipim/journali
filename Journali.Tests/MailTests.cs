@@ -3,8 +3,7 @@ using Journali.Server;
 namespace Journali.Tests;
 
 /// <summary>
-/// Mailserver (Taloan, 23.09.2026: „was wir in den Settings noch brauchen, ist eine Mailserver-Konfiguration zum
-/// Versenden von Mails“). Die Einstellung liegt als Datei beim Server, nie im Journal — da steht ein Passwort drin.
+/// Mailserver. Die Einstellung liegt als Datei beim Server, nie im Journal — da steht ein Passwort drin.
 /// Geprüft wird, was ohne Netz prüfbar ist: dass das Passwort nie hinausgeht, dass ein Speichern es nicht durch
 /// Sternchen ersetzt, und dass ohne Einstellung nichts gesendet wird statt still zu scheitern.
 /// </summary>

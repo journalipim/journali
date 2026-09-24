@@ -1,4 +1,4 @@
-// Basis-Plugin table (Taloan, 19.09.2026): ⇩ Import → Tabelle und ⇪ Export → Tabelle — die Grundfunktion der Gruppen Import
+// Basis-Plugin table: ⇩ Import → Tabelle und ⇪ Export → Tabelle — die Grundfunktion der Gruppen Import
 // und Export und zugleich ihr Container: Quellen (csv, xlsx, json) und Ziele hängen sich hier an (requires: ["table"]).
 // Gebaut mit web/build-plugins.mjs → ../entry.js (Vue-Ansichten, Stile eingebettet).
 import ImportView from './ImportView.vue'
@@ -13,7 +13,7 @@ export default {
     { path: 'import', topic: 'import', label: t('Tabelle'), icon: '⊞', hint: t('CSV, Excel, JSON, Zwischenablage — mit Datenmapper'), component: ImportView },
     { path: 'export', topic: 'export', label: t('Tabelle'), icon: '⊞', hint: t('Excel, CSV — die Form, die der Tabellenimport liest'), component: ExportView },
   ],
-  // Excel am Knoten (Taloan, 17.09.: Rechtsklick auf Gruppe/Produkt → Vorlage, Subitems exportieren, Excel importieren)
+  // Excel am Knoten
   nodeActions: [
     { topic: 'export', roles, icon: '⇪', label: (r, below) => t('Excel: Vorlage für {0}', [below]), run: id => tableExport.nodeWorkbook(id, false).catch(e => store.toast(e.message)) },
     { topic: 'export', roles, icon: '⇪', label: (r, below) => `Excel: ${below} exportieren`, run: id => tableExport.nodeWorkbook(id, true).catch(e => store.toast(e.message)) },

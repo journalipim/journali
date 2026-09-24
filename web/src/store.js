@@ -6,7 +6,7 @@ import { setLang, browserLang, L } from './i18n.js'   // Oberflächensprache (24
 // der Serverstand (head) wird alle 3 s abgefragt — darauf hängen Live-Listen.
 const saved = JSON.parse(localStorage.getItem('journali.settings') || '{}')
 
-// Was der Person folgt und nicht dem Gerät (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“):
+// Was der Person folgt und nicht dem Gerät:
 // Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Sie stehen am Benutzer im
 // Journal (UserPrefsSet) und kommen mit der Anmeldung an jedem Rechner mit. Alles andere ist Fensterzustand und bleibt
 // im Browser: Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste, zuletzt gewählter Knoten.
@@ -16,34 +16,34 @@ const USER_PREFS = ['theme', 'lang', 'viewLocales', 'viewCells', 'viewKey', 'lay
 function cellsFrom(locales, channels) { const out = ['|']; for (const c of ['', ...channels]) for (const l of ['', ...locales]) out.push(`${l}|${c}`); return [...new Set(out)] }
 
 export const store = reactive({
-  pubBack: null,   // { path, label } — woher man aus der Publikation in den Pflegebaum kam (Schnellweg zurück, Taloan 21.09.)
+  pubBack: null,   // { path, label } — woher man aus der Publikation in den Pflegebaum kam (Schnellweg zurück)
   actor: saved.actor || '',
-  // Die Oberfläche fragt immer den Server, der sie ausgeliefert hat (Taloan, 23.09.2026) — kein Feld, keine
+  // Die Oberfläche fragt immer den Server, der sie ausgeliefert hat — kein Feld, keine
   // gespeicherte Adresse. Was früher hier stand, wird beim Laden verworfen.
   server: '',
   theme: saved.theme || 'system',   // system | light | dark
   lang: saved.lang || null,          // Oberflächensprache der Person; null = die des Browsers (i18n.browserLang)
   viewLocales: saved.viewLocales || ['de', 'en'],   // erste Sprache: Bezeichnungen (store.name); die Spalten kommen aus viewCells
-  // Spalten der Knotenansicht als Matrix Sprache × Kanal (Taloan, 20.09.): Liste „sprache|kanal“, '' = Stern; '|' (der eine Wert) ist immer dabei.
+  // Spalten der Knotenansicht als Matrix Sprache × Kanal: Liste „sprache|kanal“, '' = Stern; '|' (der eine Wert) ist immer dabei.
   // Alte Einstellungen (Sprachen × Kanäle) werden beim ersten Start übernommen.
   viewCells: saved.viewCells ?? cellsFrom(saved.viewLocales || ['de', 'en'], saved.viewChannels ?? (saved.viewChannel ? [saved.viewChannel] : [])),
   journalOpen: saved.journalOpen ?? true,           // Journal neben dem Knoten auf- oder zugeklappt
   lastNode: sessionStorage.getItem('journali.lastNode') || null,
-  progress: null,        // { done, total, text } — laufender Stapel; Balken oben in der Oberfläche (App.vue)   // zuletzt gewählter Knoten — ▣ Baum in der Leiste kehrt dorthin zurück (Taloan, 18.09.)
+  progress: null,        // { done, total, text } — laufender Stapel; Balken oben in der Oberfläche (App.vue)   // zuletzt gewählter Knoten — ▣ Baum in der Leiste kehrt dorthin zurück
   viewKey: (saved.viewKey && typeof saved.viewKey === 'object') ? saved.viewKey : {},   // gewählte Sicht je Knotentyp
   layout: saved.layout ?? 'flat',                    // flat | tabs
-  // Umfang am Knoten (Taloan, 20.09.): 'all' = total (alles, was anliegt, gesperrtes sichtbar) · 'can' = auf dieser Ebene änderbar ·
+  // Umfang am Knoten: 'all' = total (alles, was anliegt, gesperrtes sichtbar) · 'can' = auf dieser Ebene änderbar ·
   // 'only' = nur auf dieser Ebene änderbar (weder darüber noch darunter erlaubt). Drei Stufen, jede in der vorigen enthalten.
   scope: saved.scope ?? (saved.editableOnly ? 'can' : 'all'),
-  attrNames: saved.attrNames ?? 'label',             // Attributnamen: label | key | both (Taloan: Vorlagen nutzen die Keys)
-  railOrder: Array.isArray(saved.railOrder) ? saved.railOrder : null,   // Reihenfolge der Leiste links (Taloan: selbst sortieren), 'spacer' trennt oben/unten
-  railOff: Array.isArray(saved.railOff) ? saved.railOff : [],   // Plugins, die nicht in der Leiste sind (Taloan, 19.09.: je Plugin einstellbar; aus = gar nicht in der Leiste, nur über ⌁ Plugins)
-  undo: {},                                         // ↶/↷ je Knoten: id → { history, redo } — im Store, weil NodeView je Knoten neu gebaut wird (Taloan)
+  attrNames: saved.attrNames ?? 'label',             // Attributnamen: label | key | both
+  railOrder: Array.isArray(saved.railOrder) ? saved.railOrder : null,   // Reihenfolge der Leiste links, 'spacer' trennt oben/unten
+  railOff: Array.isArray(saved.railOff) ? saved.railOff : [],   // Plugins, die nicht in der Leiste sind
+  undo: {},                                         // ↶/↷ je Knoten: id → { history, redo } — im Store, weil NodeView je Knoten neu gebaut wird
   pendingImport: null,                              // { file, parent } — JSON-Datei, die der JSON-Import gleich öffnen soll (Baum-Drop, Menü, Tabellenimport)
-  attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel (Taloan), nicht gespeichert
-  collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : ['axes', 'groups', 'versions'],   // Organisatorisches zu, bis der Anwender es anders will (Taloan, 20.09.)   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
+  attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel, nicht gespeichert
+  collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : ['axes', 'groups', 'versions'],   // Organisatorisches zu, bis der Anwender es anders will   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
   online: null,          // null = noch nicht gefragt, sonst true/false
-  // Anmeldung (Taloan, 19.09.): enabled = es gibt Benutzer (Server gesperrt), setup = noch keiner (ersten Admin anlegen), user/role aus der Sitzung
+  // Anmeldung: enabled = es gibt Benutzer (Server gesperrt), setup = noch keiner (ersten Admin anlegen), user/role aus der Sitzung
   auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null, rights: null },
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
@@ -59,14 +59,13 @@ export const store = reactive({
   etag: null,           // ETag der index.html beim Laden — ändert er sich, liegt eine neue Fassung
   stale: false,
 
-  // Name eines Attributs/einer Gruppe/einer Liste in der Anzeige: Bezeichnung in der Oberflächensprache (Taloan, 24.09.2026:
-  // „das erste“ — nicht mehr die erste Sicht-Sprache; Fallback de, erste vorhandene, Key), technischer Key, oder beides — je attrNames
+  // Name eines Attributs/einer Gruppe/einer Liste in der Anzeige: Bezeichnung in der Oberflächensprache, technischer Key, oder beides — je attrNames
   label(def) {
     if (!def) return ''
     if (this.attrNames === 'key') return ''   // im Key-Modus steht nur der Key (die Ansicht zeigt ihn abgegraut daneben)
     return L(def.label) || def.key
   },
-  // Status-Vokabular aus dem Modell (Taloan, 22.09.2026): Definition, Text in der Sicht-Sprache, Symbol; Farbe als Token (pos, neg, muted, warn, accent)
+  // Status-Vokabular aus dem Modell: Definition, Text in der Sicht-Sprache, Symbol; Farbe als Token (pos, neg, muted, warn, accent)
   status(key) { return (this.model?.statuses ?? []).find(s => s.key === key) ?? null },
   statusLabel(key) { const s = this.status(key); return s ? (L(s.label) || s.key) : (key ?? '') },
   statusText(key) { const s = this.status(key); return s ? `${s.icon ? s.icon + ' ' : ''}${this.statusLabel(key)}` : (key ?? '') },
@@ -121,7 +120,7 @@ export const store = reactive({
       const s = await api.get('/api/auth/state'); this.auth = { known: true, ...s }
       if (s.enabled && s.user) { this.actor = s.user; this.applyPrefs(s.prefs) }   // die Einstellungen der Person schlagen die des Browsers
     } catch { this.auth = { ...this.auth, known: true } }
-    // Was das Team an KI stellt (Taloan, 23.09.): Schlüssel am Team → der Server fragt für uns
+    // Was das Team an KI stellt: Schlüssel am Team → der Server fragt für uns
     try { const { ai } = await import('./ai.js'); await ai.loadState() } catch {}
     return this.auth
   },
@@ -134,8 +133,8 @@ export const store = reactive({
       const changed = h.head !== this.head
       this.head = h.head
       this.nodes = h.nodes
-      this.usage = h.usage ?? null   // Nutzung für die Statusleiste (Taloan, 22.09.)
-      // Fassung und Bau (Taloan, 23.09.): kurz oben, lang im Tooltip
+      this.usage = h.usage ?? null   // Nutzung für die Statusleiste
+      // Fassung und Bau: kurz oben, lang im Tooltip
       this.version = h.version ?? ''
       if (h.built) {
         const d = new Date(h.built)
@@ -143,7 +142,7 @@ export const store = reactive({
         this.build = `${zz(d.getDate())}${zz(d.getMonth() + 1)}.${zz(d.getHours())}${zz(d.getMinutes())}`
         this.builtAt = d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
       }
-      // der Stand des Teams — einmal je Minute, nicht bei jedem Puls: andere im Team verbrauchen auch (Taloan, 23.09.)
+      // der Stand des Teams — einmal je Minute, nicht bei jedem Puls: andere im Team verbrauchen auch
       if (this.auth.enabled && this.auth.user && Date.now() - (this._aiAt ?? 0) > 60000) {
         this._aiAt = Date.now()
         import('./ai.js').then(({ ai }) => ai.loadState()).catch(() => {})
@@ -179,7 +178,7 @@ export const store = reactive({
 
   // action: { label, run } — ein Knopf im Toast (↶ wiederherstellen); der Toast bleibt dann länger
   toast(text, kind = 'error', action = null) {
-    // lange Meldungen (Listen) gehören in ein Fenster mit Scrollbar, nicht in einen Toast (Taloan, 21.09.: „in den paar Sekunden lesen?“)
+    // lange Meldungen (Listen) gehören in ein Fenster mit Scrollbar, nicht in einen Toast
     if (kind === 'error' && (String(text).length > 160 || String(text).includes('\n')) && this.longError) { this.longError(String(text)); return }
     const t = { id: Date.now() + Math.random(), text, kind, action }
     this.toasts.push(t)

@@ -19,7 +19,7 @@ public static class Types
     public const string NodeMoved = "NodeMoved";
     public const string NodeOrdered = "NodeOrdered";
     public const string NodeRetired = "NodeRetired";
-    /// <summary>Zurückgezogenen Knoten zurückholen — mit allem, was er hatte (Taloan: „kein Rückgängig nach Löschen?“).</summary>
+    /// <summary>Zurückgezogenen Knoten zurückholen — mit allem, was er hatte.</summary>
     public const string NodeRestored = "NodeRestored";
     public const string StatusSet = "StatusSet";
     public const string GroupsAttached = "GroupsAttached";
@@ -33,14 +33,13 @@ public static class Types
     // Medien (docs/pflegestruktur.md, 20): eigener Strom m-…, die Bytes liegen ausserhalb (Hash)
     public const string MediaCreated = "MediaCreated";
     public const string MediaRetired = "MediaRetired";
-    // Medienordner (Taloan, 21.09.2026: „Strukturbaum, um Medien dort zu organisieren, wie ein interner Dateimanager“): Strom mf-…
+    // Medienordner: Strom mf-…
     public const string MediaFolderCreated = "MediaFolderCreated";
     public const string MediaFolderRenamed = "MediaFolderRenamed";
     public const string MediaFolderMoved = "MediaFolderMoved";
     public const string MediaFolderRetired = "MediaFolderRetired";
     public const string MediaFiled = "MediaFiled";   // am Medium: in welchem Ordner es liegt
-    // Vorschau-Presets (Taloan, 21.09.2026: „in den Einstellungen definieren, welche Ableitungen beim Import automatisch berechnet werden —
-    // 200-MB-TIFFs aus der Konstruktion rechnet man nicht live um; das muss alles bereitliegen“): Strom media-preset:<key>
+    // Vorschau-Presets: Strom media-preset:<key>
     public const string MediaPresetDefined = "MediaPresetDefined";
     public const string MediaPresetRetired = "MediaPresetRetired";
     public const string MediaDerived = "MediaDerived";   // am Medium: Ableitung nach Preset liegt im Store (sha.<preset>)
@@ -64,7 +63,7 @@ public static class Types
     public const string LocaleRetired = "LocaleRetired";
     public const string ChannelDefined = "ChannelDefined";
     public const string ChannelRetired = "ChannelRetired";
-    public const string StatusDefined = "StatusDefined";   // Status-Vokabular (Taloan, 22.09.2026)
+    public const string StatusDefined = "StatusDefined";   // Status-Vokabular
     public const string StatusRetired = "StatusRetired";
     public const string AttributeDefined = "AttributeDefined";
     public const string AttributeRetired = "AttributeRetired";
@@ -81,22 +80,22 @@ public static class Types
     public const string ViewRetired = "ViewRetired";
     public const string UnitDefined = "UnitDefined";
     public const string UnitRetired = "UnitRetired";
-    // Wörterbuch (docs/pflegestruktur.md 9; Taloan 21.09.2026 „Übersetzungsgedächtnis über das Wörterbuch“): Strom term:<key>
+    // Wörterbuch (docs/pflegestruktur.md 9): Strom term:<key>
     public const string TermDefined = "TermDefined";
     public const string TermRetired = "TermRetired";
-    // Workflows (docs/pflegestruktur.md 27, Taloan 21.09.2026): Strom workflow:<key>; am Knoten der Schritt und die Zuständigkeit
+    // Workflows (docs/pflegestruktur.md 27): Strom workflow:<key>; am Knoten der Schritt und die Zuständigkeit
     public const string WorkflowDefined = "WorkflowDefined";
     public const string WorkflowRetired = "WorkflowRetired";
     public const string WorkflowStateSet = "WorkflowStateSet";
     public const string WorkflowAssigned = "WorkflowAssigned";
-    // Übersetzung (docs/pflegestruktur.md 30, Taloan 22.09.2026): die Marke am Knoten, der Auftrag im Strom translation:<key>
+    // Übersetzung (docs/pflegestruktur.md 30): die Marke am Knoten, der Auftrag im Strom translation:<key>
     public const string TranslationMarked = "TranslationMarked";
     public const string TranslationOrdered = "TranslationOrdered";
     public const string TranslationReturned = "TranslationReturned";
     public const string MasterLocaleDefined = "MasterLocaleDefined";
     public const string MasterChannelDefined = "MasterChannelDefined";
     public const string SkuAttributeDefined = "SkuAttributeDefined";
-    /// <summary>Publikationsbaum (Taloan, 20.09.2026): Rubriken und Verweise.</summary>
+    /// <summary>Publikationsbaum: Rubriken und Verweise.</summary>
     public const string RubricCreated = "RubricCreated";
     public const string PubTreeSet = "PubTreeSet";
     public const string PubStandSet = "PubStandSet";
@@ -115,26 +114,26 @@ public static class Types
     public const string PluginRemoved = "PluginRemoved";
     public const string PluginDataSet = "PluginDataSet";      // benannter Datensatz eines Plugins (Vorlage, Zuordnung, Regel) — JSON-Text
 
-    // Jobs (Plugin tasker, Taloan 19.09.2026): Strom job:<key> — Definition, jeder Lauf mit Ausgang; das Log liegt als Datei
+    // Jobs (Plugin tasker): Strom job:<key> — Definition, jeder Lauf mit Ausgang; das Log liegt als Datei
     public const string JobDefined = "JobDefined";
     public const string JobRetired = "JobRetired";
     public const string JobRunStarted = "JobRunStarted";
     public const string JobRunFinished = "JobRunFinished";
-    // Fächer des Taskers (docs/tasker-dateien.md, Taloan 21.09.2026): Belege je Datei — die Dateien selbst liegen nicht im Journal
+    // Fächer des Taskers (docs/tasker-dateien.md): Belege je Datei — die Dateien selbst liegen nicht im Journal
     public const string JobFileConsumed = "JobFileConsumed";
     public const string JobFileWritten = "JobFileWritten";
 
-    // Versionen (Taloan, 19.09.2026: Freigabe = Version, nach draussen zaehlt das Belegdokument): am Knotenstrom —
+    // Versionen: am Knotenstrom —
     // Zeiger auf den Journalstand, eingefrorene Belege (hash-adressiert im Medienspeicher), zurueckgezogen nur markiert
     public const string VersionCreated = "VersionCreated";
     public const string VersionDocumentAdded = "VersionDocumentAdded";
     public const string VersionWithdrawn = "VersionWithdrawn";
 
-    // Benutzer (Taloan, 19.09.2026: Benutzer und Rollen): Strom user:<key> — wer es gibt und welche Rolle; Passwoerter nie im Journal
+    // Benutzer: Strom user:<key> — wer es gibt und welche Rolle; Passwoerter nie im Journal
     public const string UserDefined = "UserDefined";
     public const string UserRetired = "UserRetired";
     public const string UserPrefsSet = "UserPrefsSet";
-    // Teams (Taloan, 23.09.2026): Strom team:<key>; der KI-Verbrauch je Team unter ai-usage:<team>
+    // Teams: Strom team:<key>; der KI-Verbrauch je Team unter ai-usage:<team>
     public const string TeamDefined = "TeamDefined";
     public const string TeamRetired = "TeamRetired";
     public const string AiUsed = "AiUsed";
@@ -167,7 +166,7 @@ public static class Roles
     public const string Group = "group";
     public const string Product = "product";
     public const string Variant = "variant";
-    /// <summary>Rubrik (Taloan, 20.09.2026): Knoten eines Publikationsbaums — Wurzel = der Baum eines Kanals (× Markt), darunter Rubriken;
+    /// <summary>Rubrik: Knoten eines Publikationsbaums — Wurzel = der Baum eines Kanals (× Markt), darunter Rubriken;
     /// Produktgruppen und Produkte hängen per Verweis darin (NodePlaced), nie als Kinder — keine Vererbung über den Publikationsbaum.
     /// Rubriken tragen eigene Werte (Texte, Bilder, SEO) wie jeder Knoten.</summary>
     public const string Rubric = "rubric";
@@ -181,8 +180,7 @@ public static class Roles
 }
 
 /// <summary>Status eines Produkts oder einer Variante: Lebenszyklus am Markt (nicht Redaktion — das ist der Workflow). Das Vokabular
-/// steht im Modell (<see cref="StatusDefinition"/>, Strom <c>status:&lt;key&gt;</c>; Taloan, 22.09.2026: frei benennbar, je Sprache übersetzt,
-/// beim Import aus einem Fremdstatus abgebildet). <see cref="Draft"/> ist der Startstatus neuer Knoten und bleibt immer im Modell.</summary>
+/// steht im Modell (<see cref="StatusDefinition"/>, Strom <c>status:&lt;key&gt;</c>). <see cref="Draft"/> ist der Startstatus neuer Knoten und bleibt immer im Modell.</summary>
 public static class Statuses
 {
     public const string Draft = "draft";
@@ -218,7 +216,7 @@ public sealed record LabelAttributeSet(string? Attribute);
 /// <summary>Erster Eintrag eines Produkts: unter welcher Gruppe, wonach es variiert (Attribute, optional). <paramref name="Family"/> ist Altlast.</summary>
 public sealed record ProductCreated(string Group, string? Family = null, string[]? Axes = null);
 
-/// <summary>Variantenachsen eines Produkts nachträglich (ganze Liste) — nur, solange es keine Varianten hat (Taloan, 17.09.2026).</summary>
+/// <summary>Variantenachsen eines Produkts nachträglich (ganze Liste) — nur, solange es keine Varianten hat.</summary>
 public sealed record ProductAxesSet(string[] Axes, bool Force = false);
 
 /// <summary>Erster Eintrag einer Variante: je Variantenachse des Produkts ein Wert.</summary>
@@ -226,7 +224,7 @@ public sealed record VariantCreated(string Product, Dictionary<string, string> A
 
 public sealed record NodeMoved(string Parent);
 
-/// <summary>Platz unter den Geschwistern (Rubriken eines Publikationsbaums; Taloan, 21.09.2026). Ohne Eintrag: alphabetisch.</summary>
+/// <summary>Platz unter den Geschwistern (Rubriken eines Publikationsbaums). Ohne Eintrag: alphabetisch.</summary>
 public sealed record NodeOrdered(int Order);
 
 /// <summary>Knoten weg — nur ohne Kinder. Das Journal behält alles, das Abbild nimmt ihn heraus.</summary>
@@ -257,7 +255,7 @@ public sealed record MediaCreated(string Sha256, long Bytes, string Mime, string
 public sealed record MediaRetired();
 
 /// <summary>
-/// Medienordner (Taloan, 21.09.2026): ein Strukturbaum nur zum Organisieren der Bibliothek — wie ein Dateimanager. Ein Ordner
+/// Medienordner: ein Strukturbaum nur zum Organisieren der Bibliothek — wie ein Dateimanager. Ein Ordner
 /// hat einen Namen und einen Vater (null = oberste Ebene); ein Medium liegt in höchstens einem Ordner. Die Ordner sagen nichts
 /// über die Verwendung (das sind die Relationen) und nichts über die Datei (die liegt im Store).
 /// </summary>
@@ -270,7 +268,7 @@ public sealed record MediaFolderRetired();
 public sealed record MediaFiled(string? Folder);
 
 /// <summary>
-/// Vorschau-Preset (Taloan, 21.09.2026): Ableitung eines Bildes, die beim Import für jedes Bild vorausberechnet wird — Kante
+/// Vorschau-Preset: Ableitung eines Bildes, die beim Import für jedes Bild vorausberechnet wird — Kante
 /// in Pixeln (längste Seite, Bild wird eingepasst, nie vergrössert), Format webp | jpeg | png, Qualität 1–100. Im Journal, weil
 /// die Ableitung Teil der Ausleitung ist (Datenblatt, Shop nehmen <c>/api/media/{id}/{preset}</c>); der Store hält die Bytes
 /// unter <c>sha.&lt;preset&gt;</c>, gerechnet vom Prozess-Plugin <c>derive</c> (nie im Serverprozess).
@@ -301,7 +299,7 @@ public sealed record RowAdded(string Attribute, string Row);
 public sealed record RowRemoved(string Attribute, string Row);
 
 /// <summary>
-/// Beleg an einem Wert (Taloan, 20.09.2026: „Quelle: URL, geprüft am …“ — Anreicherung fremder Produktdaten, Recherche der KI):
+/// Beleg an einem Wert:
 /// woher der Wert auf dieser Achse stammt. <paramref name="Source"/> ist eine URL oder ein Text (Datenblatt, Katalogseite);
 /// <paramref name="Method"/> web | ai | rule | import | manual; <paramref name="CheckedAt"/> Datum der Prüfung (ISO, leer = Tag des Eintrags).
 /// Leere <paramref name="Source"/> = Beleg weg. Ändert sich der Wert später (AttributeSet danach), gilt der Beleg als veraltet — das Abbild zeigt es.
@@ -329,10 +327,10 @@ public sealed class Labels : Dictionary<string, string>
     public static Labels Of(string de, string en) => new() { ["de"] = de, ["en"] = en };
 }
 
-/// <param name="Fallback">Fallback (Taloan, 20.09.2026): Sprache, deren Wert gilt, wenn diese keinen hat — vor dem Master (fr_ch → fr_fr → Master → *). Optional, alte Einträge ohne.</param>
+/// <param name="Fallback">Fallback: Sprache, deren Wert gilt, wenn diese keinen hat — vor dem Master (fr_ch → fr_fr → Master → *). Optional, alte Einträge ohne.</param>
 public sealed record LocaleDefinition(string Code, string Label, string? Fallback = null);
 
-/// <param name="Fallback">Fallback (Taloan, 20.09.2026): Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Master.</param>
+/// <param name="Fallback">Fallback: Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Master.</param>
 public sealed record ChannelDefinition(string Key, Labels Label, string? Fallback = null);
 
 /// <summary>Die Typen eines Attributs; je Typ eine Zelle in der Oberfläche.</summary>
@@ -348,7 +346,7 @@ public static class AttributeTypes
     /// <summary>Vermehrbar: n Zeilen aus Spalten, die selbst Attribute sind (13).</summary>
     public const string Rows = "rows";
     /// <summary>
-    /// Formel (Taloan, 17.09.2026): der Wert ist ein Skript (<see cref="Entries.Formula"/>), gepflegt wie jeder
+    /// Formel: der Wert ist ein Skript (<see cref="Entries.Formula"/>), gepflegt wie jeder
     /// andere Wert am Knoten — auch geerbt, auch je Sprache; das Ergebnis wird beim Lesen gerechnet.
     /// </summary>
     public const string Formula = "formula";
@@ -382,9 +380,9 @@ public static class Axes
 /// <param name="Columns">bei <c>rows</c>: die Spalten, jede ein Attribut</param>
 /// <param name="Inheritable">Wert vererbt sich nach unten (Kategorie ja, Name nein). Vorgabe nein.</param>
 /// <param name="Required">Pflicht je Kanal: Sprachen oder "*" — gilt überall gleich (Eineindeutigkeit)</param>
-/// <param name="Pattern">Muster (regulärer Ausdruck), dem jeder Wert genügen muss — Telefon, E-Mail, EAN … (Taloan, 17.09.2026); nur bei text</param>
+/// <param name="Pattern">Muster (regulärer Ausdruck), dem jeder Wert genügen muss — Telefon, E-Mail, EAN …; nur bei text</param>
 /// <param name="PatternHint">was das Muster verlangt, für die Fehlermeldung („+49 30 1234567")</param>
-/// <param name="When">Bedingung (Taloan, 20.09.2026): gilt an einem Knoten nur, wenn das genannte Attribut dort (wirksam, geerbt zählt) einen der Werte hat — Klassifikationen: Merkmal nur bei seiner Klasse. Null = immer.</param>
+/// <param name="When">Bedingung: gilt an einem Knoten nur, wenn das genannte Attribut dort (wirksam, geerbt zählt) einen der Werte hat — Klassifikationen: Merkmal nur bei seiner Klasse. Null = immer.</param>
 public sealed record AttributeDefinition(
     string Key,
     Labels Label,
@@ -405,10 +403,10 @@ public sealed record AttributeDefinition(
     bool Unique = false,
     string? ReleaseWatch = null)
 {
-    /// <summary>Eindeutig (Taloan, 21.09.2026): kein zweiter Knoten mit demselben eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) —
+    /// <summary>Eindeutig: kein zweiter Knoten mit demselben eigenen Wert auf dem Stern (ohne Sprache, ohne Kanal) —
     /// SKU, EAN, MATNR, Artikelnummer, beliebig viele je Modell, jedes für sich. Eindeutige Werte sind die Schlüssel eines Knotens:
     /// sie benennen die Variante ohne ★, stehen als <c>keys</c> in der Baumzeile (Suche, Auswahl), finden beim Tabellen-Import den
-    /// Knoten wieder und kommen beim Kopieren nicht mit. Ein „Kennungsattribut“ gibt es nicht (Taloan: „alles über eindeutig“).</summary>
+    /// Knoten wieder und kommen beim Kopieren nicht mit. Ein „Kennungsattribut“ gibt es nicht.</summary>
     public bool IsUnique => Unique;
     /// <summary>Typ formula oder template: der Wert ist Skript bzw. Vorlage, das Ergebnis wird beim Lesen gerechnet.</summary>
     public bool IsComputed => Type is AttributeTypes.Formula or AttributeTypes.Template;
@@ -426,7 +424,7 @@ public sealed record AttributeRetired(string Key);
 /// referenziertes Ding mit Eigenschaften, nicht ein Wort; ein Attribut, das auf die Liste
 /// zeigt, sieht damit auch diese Felder.
 /// </summary>
-/// <param name="Closed">geschlossen (Taloan, 20.09.2026): die Werte kommen aus einer Quelle (ETIM, Norm) — kein Zufügen von Hand in der Zelle; Pflege nur über das Modell oder die Quelle</param>
+/// <param name="Closed">geschlossen: die Werte kommen aus einer Quelle (ETIM, Norm) — kein Zufügen von Hand in der Zelle; Pflege nur über das Modell oder die Quelle</param>
 public sealed record ListDefinition(string Key, Labels Label, string[]? Columns = null, bool Closed = false);
 
 /// <param name="Extra">Zusatzfelder je Wert, z. B. Farbe: {"hex": "#000000"}</param>
@@ -464,7 +462,7 @@ public sealed record AttributeGroupDefinition(string Key, Labels Label, string? 
 }
 
 /// <summary>
-/// Freigabesteuerung (Taloan, 22.09.2026): zählt eine Wertänderung in dieser Gruppe als Eingriff, der Prüfung und Freigabe berührt?
+/// Freigabesteuerung: zählt eine Wertänderung in dieser Gruppe als Eingriff, der Prüfung und Freigabe berührt?
 /// <c>auto</c> (leer): ja, wenn die Gruppe mindestens ein Pflichtfeld hat · <c>always</c>: immer · <c>never</c>: nie.
 /// Am Attribut zusätzlich <c>null</c> = wie die Gruppe. WAS dann geschieht (Zustand zurück, Freigabe zurücknehmen, nur anzeigen),
 /// sagt der Workflow — der Schalter sagt nur, ob die Änderung zählt.
@@ -509,19 +507,18 @@ public sealed record TermDefined(Labels Text, string? Note = null);
 public sealed record TermRetired();
 
 /// <summary>Zustand eines Workflows (27): Key, Text je Sprache, Farbe (Token oder Hex), Final = Ende des Wegs.</summary>
-public sealed record WfState(string Key, Labels Label, string? Color = null, bool Final = false, int? X = null, int? Y = null);   // X/Y: Lage im Designer (Taloan, 21.09.2026), null = Reihe
+public sealed record WfState(string Key, Labels Label, string? Color = null, bool Final = false, int? X = null, int? Y = null);   // X/Y: Lage im Designer, null = Reihe
 /// <summary>Übergang: von → nach, wer ihn gehen darf (Rollen; leer = jede Rolle mit Schreibrecht), Notiz Pflicht (Korrekturschleife),
 /// Wirkungen: <c>release:&lt;kanal&gt;</c>, <c>revoke:&lt;kanal&gt;</c>, <c>status:&lt;wert&gt;</c>.</summary>
-public sealed record WfTransition(string Key, string From, string To, Labels Label, string[]? Roles = null, bool NoteRequired = false, string[]? Effects = null, int? EscalateAfterDays = null, string[]? EscalateRoles = null, string? FromPort = null, string? ToPort = null, int? LabelX = null, int? LabelY = null, int[]? Route = null);   // Route: Stützpunkte x,y,x,y … des Pfeilwegs aus dem Layout (dagre), null = Bogen. LabelX/Y: Lage der Beschriftung im Designer (null = auf dem Bogen). FromPort/ToPort: Andockpunkt „seite:anteil“ (top:0.25), null = automatisch. Eskalation (Taloan, 21.09.2026): nach n Tagen im Zustand dürfen auch EscalateRoles (leer = jede Rolle mit Schreibrecht)
+public sealed record WfTransition(string Key, string From, string To, Labels Label, string[]? Roles = null, bool NoteRequired = false, string[]? Effects = null, int? EscalateAfterDays = null, string[]? EscalateRoles = null, string? FromPort = null, string? ToPort = null, int? LabelX = null, int? LabelY = null, int[]? Route = null);   // Route: Stützpunkte x,y,x,y … des Pfeilwegs aus dem Layout (dagre), null = Bogen. LabelX/Y: Lage der Beschriftung im Designer (null = auf dem Bogen). FromPort/ToPort: Andockpunkt „seite:anteil“ (top:0.25), null = automatisch. Eskalation: nach n Tagen im Zustand dürfen auch EscalateRoles (leer = jede Rolle mit Schreibrecht)
 /// <summary>Ein Workflow: Zustände, Übergänge, Start; gilt für Knotentypen (Roles) und Familien (leer = alle).</summary>
-public sealed record WorkflowDefined(Labels Label, List<WfState> States, List<WfTransition> Transitions, string? Start = null, string[]? Roles = null, string[]? Families = null, bool PerLocale = false);   // PerLocale (Taloan, 22.09.2026): je Sprache ein eigener Zustand — „Französisch in Korrektur, Deutsch freigegeben“
+public sealed record WorkflowDefined(Labels Label, List<WfState> States, List<WfTransition> Transitions, string? Start = null, string[]? Roles = null, string[]? Families = null, bool PerLocale = false);   // PerLocale: je Sprache ein eigener Zustand — „Französisch in Korrektur, Deutsch freigegeben“
 public sealed record WorkflowRetired();
 /// <summary>Am Knoten: ein Schritt gegangen — der Zustand danach, der Übergang, die Notiz.</summary>
-public sealed record WorkflowStateSet(string Workflow, string? State, string? Transition = null, string? Note = null, string? Locale = null);   // State leer = eigenen Zustand aufheben, es gilt wieder der geerbte (Taloan, 22.09.2026). Locale nur bei PerLocale-Workflows; leer = der Zustand des Knotens (jeder Eintrag von früher bleibt gültig)
+public sealed record WorkflowStateSet(string Workflow, string? State, string? Transition = null, string? Note = null, string? Locale = null);   // State leer = eigenen Zustand aufheben, es gilt wieder der geerbte. Locale nur bei PerLocale-Workflows; leer = der Zustand des Knotens (jeder Eintrag von früher bleibt gültig)
 
 /// <summary>
-/// Übersetzung, die Marke (docs/pflegestruktur.md 30; Taloan, 22.09.2026: „irgendwann kommt der Auftrag zurück und es gibt schon
-/// wieder etliche Änderungen am Original“): der Zielwert in <see cref="Locale"/> ist gegen <em>diese</em> Quellfassung übersetzt
+/// Übersetzung, die Marke (docs/pflegestruktur.md 30): der Zielwert in <see cref="Locale"/> ist gegen <em>diese</em> Quellfassung übersetzt
 /// (<see cref="SourceHash"/>, gesetzt bei Journalnummer <see cref="SourceAt"/>). Nicht „wann zuletzt geschrieben“, sondern
 /// „gegen was übersetzt“ — daran hängt der Rückstand: ist die Quelle seither weitergezogen, bleibt die Einheit offen,
 /// obwohl der Zieltext frisch geschrieben wurde. Der Strom ist der Knoten.
@@ -542,42 +539,42 @@ public sealed record TranslationReturned(int Written, int Behind, int Conflicts,
 /// <summary>Am Knoten: Zuständigkeit für den nächsten Schritt — eine Person (Benutzer-Key) oder null (die Rolle des Übergangs).</summary>
 public sealed record WorkflowAssigned(string Workflow, string? User);
 
-/// <summary>Werteliste, Sprache, Kanal aus dem Abbild (20.09.2026 — Taloan: „zurückziehen“ überall gleich). Werte auf dieser Sprache/diesem Kanal bleiben im Journal.</summary>
+/// <summary>Werteliste, Sprache, Kanal aus dem Abbild (20.09.2026). Werte auf dieser Sprache/diesem Kanal bleiben im Journal.</summary>
 public sealed record ListRetired(string Key);
 public sealed record LocaleRetired(string Code);
 public sealed record ChannelRetired(string Key);
 
 /// <summary>
-/// Die Mastersprache (Taloan, 17.09.2026): Strom <c>settings:master_locale</c>. Pflichtfelder beim Anlegen
+/// Die Mastersprache: Strom <c>settings:master_locale</c>. Pflichtfelder beim Anlegen
 /// werden in ihr erfasst; ändert sich ein sprachabhängiger Wert in ihr, gelten die anderen Sprachen
 /// als „zu überarbeiten“ (abgeleitet aus den Eintragsnummern, kein eigener Eintrag).
 /// </summary>
 public sealed record MasterLocaleDefined(string Code);
 
 /// <summary>
-/// Der Masterkanal (Taloan, 20.09.2026): Strom <c>settings:master_channel</c>. Sprachen und Kanäle sind eine Matrix mit
+/// Der Masterkanal: Strom <c>settings:master_channel</c>. Sprachen und Kanäle sind eine Matrix mit
 /// je einem Stern (ohne Sprache / ohne Kanal). Der Master bekommt die Werte des Sterns und kann sie überschreiben;
 /// abgeleitete Kanäle beziehen ihren Wert aus dem Masterkanal — wie abgeleitete Sprachen aus der Mastersprache.
 /// </summary>
 public sealed record MasterChannelDefined(string Key);
 
 /// <summary>
-/// Ausser Kraft (Taloan, 21.09.2026, noch am selben Tag: „Kennung raus, alles über eindeutig“): Strom <c>settings:sku_attribute</c>
+/// Ausser Kraft: Strom <c>settings:sku_attribute</c>
 /// sollte das eine Kennungsattribut benennen. Es gibt keines mehr — jedes Attribut mit <c>unique</c> ist ein Schlüssel. Der Typ bleibt,
 /// weil Eintragstypen für immer sind; die Abbilder überlesen ihn.
 /// </summary>
 public sealed record SkuAttributeDefined(string Key);
 
 /// <summary>
-/// Erster Eintrag einer Rubrik (Taloan, 20.09.2026). Ohne Parent ist sie die Wurzel eines Publikationsbaums: die Maximalstruktur
+/// Erster Eintrag einer Rubrik. Ohne Parent ist sie die Wurzel eines Publikationsbaums: die Maximalstruktur
 /// eines Kanals, optional für einen Markt — Ausleitungen filtern über das Attribut markets, nicht über eigene Bäume.
 /// </summary>
-public sealed record RubricCreated(string? Parent, Labels Label, string? Name = null, string? Channel = null, string? Market = null, string? Source = null);   // Source: die Pflegegruppe, aus der die Rubrik kopiert wurde (Taloan, 21.09.2026)
+public sealed record RubricCreated(string? Parent, Labels Label, string? Name = null, string? Channel = null, string? Market = null, string? Source = null);   // Source: die Pflegegruppe, aus der die Rubrik kopiert wurde
 
 /// <summary>Kanal und Markt der Wurzel ändern.</summary>
 public sealed record PubTreeSet(string? Channel, string? Market);
 
-/// <summary>Stand einer Rubrik (Taloan, 21.09.2026, „A“): eingefroren bei Journalnummer n — alles darunter liest die Pflege wie damals; null = live.
+/// <summary>Stand einer Rubrik: eingefroren bei Journalnummer n — alles darunter liest die Pflege wie damals; null = live.
 /// Gilt ab hier nach unten, die nächste Rubrik mit eigenem Stand übersteuert. Kein Kopieren: ein Zeiger, aktualisieren = neuer Zeiger.</summary>
 public sealed record PubStandSet(long? JournalNumber);
 
@@ -586,13 +583,13 @@ public sealed record NodePlaced(string Node, int? Order = null);
 
 public sealed record NodeUnplaced(string Node);
 
-/// <summary>Regel-Verweis (Taloan, 21.09.2026): „alles, worauf das zutrifft“ — kind name (Gruppen/Produkte namens name unter under) oder
+/// <summary>Regel-Verweis: „alles, worauf das zutrifft“ — kind name (Gruppen/Produkte namens name unter under) oder
 /// attribute (Produkte mit attribute = value, geerbt zählt); role group|product; groupBy none | parent | attr:&lt;key&gt;. Rules.cs.</summary>
 public sealed record PubRule(string Id, string Kind, string? Under, string? Role = null, string? Name = null, string? Attribute = null, string? Value = null, string? GroupBy = null, string? Label = null);
 public sealed record RulePlaced(PubRule Rule);
 public sealed record RuleRemoved(string Id);
 
-/// <summary>Anzeigename eines Verweises in dieser Rubrik (Taloan, 21.09.2026): nur für den Überblick im Publikationsbaum, nie für die Ausgabe. Leer = Pflegename.</summary>
+/// <summary>Anzeigename eines Verweises in dieser Rubrik: nur für den Überblick im Publikationsbaum, nie für die Ausgabe. Leer = Pflegename.</summary>
 public sealed record PlaceNamed(string Node, string? Name);
 
 /// <summary>
@@ -600,7 +597,7 @@ public sealed record PlaceNamed(string Node, string? Name);
 /// vom Ziel aus („Zubehör von"); <paramref name="From"/>/<paramref name="To"/> schränken die Rollen ein
 /// (null = alle); <paramref name="Group"/> ist die Attributgruppe, deren Attribute an der Relation
 /// stehen (Menge, Slot …) — ohne Gruppe hat die Relation keine Werte. <paramref name="Symmetric"/>
-/// (Taloan, 17.09.2026: „Richtung beidseitig"): die Relation liest sich von beiden Enden gleich
+///: die Relation liest sich von beiden Enden gleich
 /// („verwandt"), es gibt sie je Paar nur einmal; sonst einseitig mit Lesart hin (<paramref name="Label"/>,
 /// „hat Zubehör") und zurück (<paramref name="Reverse"/>, „ist Zubehör von").
 /// </summary>
@@ -622,20 +619,19 @@ public sealed record PluginDataSet(string Name, string? Value);
 
 /// <summary>Ein Job: Plugin mit Prozess, Parameter (ohne Geheimnisse — die liegen in jobs/secrets.json), Zeitplan als cron
 /// „m h dom mon dow“ (leer = nur von Hand), an/aus, Zeitgrenze. Der letzte Eintrag gilt ganz.
-/// Service (Taloan, 19.09.: mehrere Dienste je Plugin): Schlüssel aus processes[] im Manifest; leer = der eine process.</summary>
+/// Service: Schlüssel aus processes[] im Manifest; leer = der eine process.</summary>
 /// <summary>
-/// Ein Job. <paramref name="Role"/> sagt, mit welcher Rolle der Lauf arbeitet (Taloan, 23.09.2026: der Sicherungsjob
-/// scheiterte an „Rolle editor darf das nicht“) — null heisst wie bisher editor. Setzen darf sie nur, wer Anwender
+/// Ein Job. <paramref name="Role"/> sagt, mit welcher Rolle der Lauf arbeitet — null heisst wie bisher editor. Setzen darf sie nur, wer Anwender
 /// und Rollen verwaltet; sonst könnte sich jeder über einen Job Rechte verschaffen.
-/// <para><paramref name="Owner"/> ist der Anwender, auf dessen Kontingent der Lauf geht (Taloan, 23.09.2026) — sonst
+/// <para><paramref name="Owner"/> ist der Anwender, auf dessen Kontingent der Lauf geht — sonst
 /// liefe ein Import als Job daran vorbei: der Urheber <c>job:&lt;key&gt;</c> ist kein Anwender.</para>
 /// </summary>
 public sealed record JobDefined(string Label, string Plugin, Dictionary<string, string>? Params, string? Schedule, bool Enabled = true, int? TimeoutMinutes = null, string? Service = null, JobFiles? Files = null, string? Role = null, string? Owner = null);
 
 /// <summary>
 /// Fächer eines Jobs (docs/tasker-dateien.md): <c>Base</c> = Verzeichnis mit in/, done/, failed/, out/ (leer = jobs/&lt;key&gt;;
-/// ein Share, auf dem SAP ablegt, ist erlaubt), <c>Keep</c> = Aufbewahrung der Ausgaben („10“ Läufe, „30d“ Tage, leer = alle),
-/// <c>Latest</c> = nach jedem erfolgreichen Lauf eine Kopie unter stabilem Namen (Kopie, kein Link — Taloan), <c>Archive</c> =
+/// ein Share, auf dem ERP ablegt, ist erlaubt), <c>Keep</c> = Aufbewahrung der Ausgaben („10“ Läufe, „30d“ Tage, leer = alle),
+/// <c>Latest</c> = nach jedem erfolgreichen Lauf eine Kopie unter stabilem Namen (Kopie, kein Link), <c>Archive</c> =
 /// verarbeitete Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher (Vorgabe aus).
 /// </summary>
 public sealed record JobFiles(string? Base = null, string? Keep = null, bool Latest = false, bool Archive = false);
@@ -658,34 +654,32 @@ public sealed record VersionDocumentAdded(int Nr, string Kind, string MediaId, s
 public sealed record VersionWithdrawn(int Nr, string? Reason);
 
 /// <summary>Benutzer: Anzeigename, E-Mail, Rolle (admin | editor | reader), an/aus. Der letzte Eintrag gilt ganz. Kein Geheimnis hier (auth.json).</summary>
-public sealed record UserDefined(string Name, string? Email, string Role, bool Enabled = true, string? Team = null);   // Team (Taloan, 23.09.2026): wessen Schlüssel und wessen Rechnung
+public sealed record UserDefined(string Name, string? Email, string Role, bool Enabled = true, string? Team = null);   // Team: wessen Schlüssel und wessen Rechnung
 
 /// <summary>
-/// Ein Team (Taloan, 23.09.2026: „je Team gibt es Limits und API-Keys, Benutzer gehören einem Team an“). Die Schlüssel selbst
+/// Ein Team. Die Schlüssel selbst
 /// stehen nie im Journal — sie liegen im Datenverzeichnis unter <c>team:&lt;key&gt;</c>, wie Mailpasswort und Job-Token.
 /// <para><b>Ein Team ist kein Guthaben.</b> Wer keinen eigenen Schlüssel hinterlegt, zahlt nichts selbst, sondern benutzt den
 /// eines anderen Teams (<see cref="KeysFrom"/>) — und dann gilt dessen Reissleine für die Summe aller, die daran hängen.
-/// Sonst wäre ein neues Team ein neuer Freibetrag (Taloan: „dann lege ich mir 20 Teams an und habe 20× Grundrauschen“).</para>
+/// Sonst wäre ein neues Team ein neuer Freibetrag.</para>
 /// <para><see cref="MonthlyTokens"/> warnt nur; <see cref="DailyTokens"/> weist ab. Die Reissleine soll den Amoklauf stoppen
 /// (Schleife im Job), nicht die Arbeit: hoch ansetzen. Ein Budget, das sperrt, erzeugt Streit statt Steuerung.</para>
 /// </summary>
 public sealed record TeamDefined(string Label, string? Note = null, long MonthlyTokens = 0, long DailyTokens = 0, bool Enabled = true, string? KeysFrom = null, long IncludedTokens = 0, string[]? Managers = null, Dictionary<string, string>? Models = null, int EntriesWeek = 0, int EntriesMonth = 0);
 // EntriesWeek/EntriesMonth und MonthlyTokens/DailyTokens sind die Limits, die der Administrator aus der Lizenz verteilt
-// (Taloan, 23.09.2026: „Kunden kaufen keine Tokens, sondern Limits“). Das Init Team trägt die der Lizenz, jedes weitere
+//. Das Init Team trägt die der Lizenz, jedes weitere
 // startet bei 0. IncludedTokens ist die Altlast des ersten Entwurfs — die Lizenz sagt, was inklusive ist.
-// IncludedTokens: das Grundrauschen — nur am ersten Team. Managers (Taloan, 23.09.2026): „nur der Administrator kann ein neues
+// IncludedTokens: das Grundrauschen — nur am ersten Team. Managers: „nur der Administrator kann ein neues
 // Team erstellen, und dazu muss er mindestens einen zum Teammanager machen, notfalls sich selbst. Der Teammanager kann
 // Benutzer seinem Team zufügen — aber nur Benutzer, die in keinem Team sind — und sie wieder entfernen.“
 public sealed record TeamRetired();
 
 /// <summary>
-/// Ein Schlüssel wurde eingelöst (Taloan, 23.09.2026: „ein Schlüssel erhält eine einmalig verwendbare Id — wenn die
-/// zentrale IT sich zehn Schlüssel auf Vorrat legt und bei Bedarf verteilt, darf da keine Teambindung eingeprägt
-/// sein, sondern nur eine Systembindung“). Das Team entscheidet sich erst hier, beim Einlösen.
+/// Ein Schlüssel wurde eingelöst. Das Team entscheidet sich erst hier, beim Einlösen.
 /// <para><paramref name="Kind"/>: <c>reset</c> — das Team zählt ab <paramref name="From"/> neu; <c>limit</c> — das
 /// Team hat von <paramref name="From"/> bis <paramref name="Until"/> (beide eingeschlossen) mindestens
 /// <paramref name="EntriesWeek"/>/<paramref name="EntriesMonth"/>. Beide Arten sind kombinierbar, und keine
-/// überschreibt die andere: ein Reset setzt nur den Zählbeginn, ein Limit nur das Kontingent (Taloan).</para>
+/// überschreibt die andere: ein Reset setzt nur den Zählbeginn, ein Limit nur das Kontingent.</para>
 /// <para><paramref name="Until"/> ist schon umgerechnet: lief beim Einlösen ein anderer Limit-Schlüssel, ist sein
 /// Restvolumen in Tage dieses Schlüssels umgerechnet und angehängt (<paramref name="Carried"/>). So steht die Rechnung
 /// im Journal und nicht in einer Formel, die sich später ändern könnte.</para>
@@ -696,7 +690,7 @@ public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly
 /// <c>ai-usage:&lt;team&gt;</c> — gezählt wird beim Team, das zahlt (also beim schlüsselführenden), damit die Rechnung stimmt.</summary>
 /// <summary>
 /// Ein KI-Aufruf, wie er stattgefunden hat. <paramref name="BytesIn"/> und <paramref name="BytesOut"/> sind das, was
-/// journali gemessen hat: die Bytes der Anfrage und der Antwort auf der eigenen Leitung (Taloan, 23.09.2026). Über
+/// journali gemessen hat: die Bytes der Anfrage und der Antwort auf der eigenen Leitung. Über
 /// Tokens und Kosten sagt journali nichts — <paramref name="In"/> und <paramref name="Out"/> trugen bis dahin die
 /// Tokenzahlen des Anbieters und bleiben nur deshalb stehen, weil ein Eintragstyp für immer ist; gefüllt werden sie
 /// nicht mehr. <paramref name="Purpose"/> sagt, welche Funktion gefragt hat.
@@ -704,7 +698,7 @@ public sealed record KeyRedeemed(string Id, string Kind, DateOnly From, DateOnly
 public sealed record AiUsed(string Provider, string Model, string? User, int In, int Out, int Calls = 1, string? Day = null, string? OnBehalfOf = null, long BytesIn = 0, long BytesOut = 0, string? Purpose = null);
 
 /// <summary>
-/// Was ein Benutzer für sich eingestellt hat (Taloan, 23.09.2026: „Darstellung sollte auch userspezifisch sein“) — Darstellung,
+/// Was ein Benutzer für sich eingestellt hat — Darstellung,
 /// Sichtsprachen, Zellen, Sicht je Knotentyp, Umfang, Attributnamen. Sie folgen der Person an jeden Rechner, darum stehen sie
 /// im Journal und nicht im Browser. Nur Genanntes wird gesetzt, leerer Wert nimmt einen Schlüssel wieder weg; die Werte sind
 /// JSON als Text, damit ein neuer Schalter keinen neuen Eintragstyp braucht.
@@ -714,7 +708,7 @@ public sealed record AiUsed(string Provider, string Model, string? User, int In,
 public sealed record UserPrefsSet(Dictionary<string, string> Prefs);
 
 /// <summary>
-/// Eine Rolle (Taloan, 20.09.2026: „wie die Rollen heißen und was sie können, überlassen wir dem Anwender — wir legen sinnvolle vor“):
+/// Eine Rolle:
 /// Strom <c>role:&lt;key&gt;</c>, Bezeichnung und die Rechte aus dem festen Vokabular <see cref="Rights"/>. Der letzte Eintrag gilt ganz.
 /// </summary>
 public sealed record RoleDefined(string Label, string[] Rights);
@@ -732,7 +726,7 @@ public static class Rights
     public const string Jobs = "jobs";         // Jobs anlegen, starten, Logs
     public const string Storage = "storage";   // Medien-Speicher einstellen und kopieren
     public const string Users = "users";       // Benutzer und Rollen verwalten
-    public const string Team = "team";         // das eigene Team: KI-Schlüssel hinterlegen, Grenzen setzen, Verbrauch sehen (Taloan, 23.09.2026: „dann brauchen wir Team-Admins — als Rolle“)
+    public const string Team = "team";         // das eigene Team: KI-Schlüssel hinterlegen, Grenzen setzen, Verbrauch sehen
     public static readonly string[] All = [Read, Write, Retire, Release, Model, Plugins, Jobs, Storage, Team, Users];
     public static readonly Dictionary<string, string> Label = new()
     {
@@ -744,7 +738,7 @@ public static class Rights
     {
         yield return ("admin", new RoleDefined("Administrator", All));
         yield return ("manager", new RoleDefined("PIM-Manager", [Read, Write, Retire, Release, Model, Jobs]));
-        // Team-Admin (Taloan, 23.09.2026): pflegt sein eigenes Team — Schlüssel, Grenzen, Verbrauch. Neue Teams und die Zuordnung
+        // Team-Admin: pflegt sein eigenes Team — Schlüssel, Grenzen, Verbrauch. Neue Teams und die Zuordnung
         // von Personen bleiben bei „Benutzer und Rollen“; sonst könnte sich jeder Mitglieder in seine Kasse holen.
         yield return ("teamadmin", new RoleDefined("Team-Admin", [Read, Write, Team]));
         yield return ("editor", new RoleDefined("PIM-Editor", [Read, Write, Retire, Release]));

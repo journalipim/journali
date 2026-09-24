@@ -1,5 +1,5 @@
 <script setup>
-// ⇪ Export → Tabelle (Basis-Plugin table, Taloan 19.09.2026 — wie ⇩ Import → Tabelle): ein Teilbaum als Excel oder CSV,
+// ⇪ Export → Tabelle (Basis-Plugin table): ein Teilbaum als Excel oder CSV,
 // genau in der Form, die der Tabellenimport wieder liest. Strukturierte Daten (JSON) macht das Plugin json.
 // Als Job: Plugin export (Prozess) mit denselben Einstellungen — ⏱ Jobs → + Job → Export: Tabelle.
 import { ref, computed, onMounted } from 'vue'
@@ -10,7 +10,7 @@ import { t as t_ } from 'journali'
 
 const route = useRoute()
 const saved = JSON.parse(localStorage.getItem('journali.export.table') || '{}')
-// mehrere Teilbäume mit Haken (Taloan: „mit selektierbaren Knoten“) — Zeilen aller gewählten, jeder Knoten einmal
+// mehrere Teilbäume mit Haken — Zeilen aller gewählten, jeder Knoten einmal
 const roots = ref(route.query.node ? [route.query.node] : (saved.roots ?? []))
 const role = ref(saved.role ?? '')
 const locales = ref(saved.locales ?? [store.model?.masterLocale ?? 'de'])

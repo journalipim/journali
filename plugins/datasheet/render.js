@@ -1,4 +1,4 @@
-// Belegerzeuger (Taloan, 19.09.2026: „Version erzeugen → finales Datenblatt wird mit der Version weggespeichert“): rendert für
+// Belegerzeuger: rendert für
 // einen Knoten das Datenblatt (Layout der Rolle oder ein benanntes), lädt es als Medium hoch (POST /api/media, hash-adressiert,
 // unveränderlich) und hängt es an die Version (POST /api/nodes/{id}/versions/{nr}/documents). Heute HTML; ein PDF/A-Erzeuger
 // ist dasselbe Muster mit anderem Rendering. Aufruf durch den Server bei „Version erzeugen“ oder von Hand:

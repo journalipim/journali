@@ -1,7 +1,6 @@
 <script setup>
 // Teams verwalten (Recht users): anlegen, entfernen, Limits eintragen, wer für wen zahlt. Das gehört zu den Personen —
-// wer im Team ist, was es verbraucht und welche Schlüssel es hat, steht auf der Teamseite (Taloan, 23.09.2026:
-// „Teams anlegen kann man hier aber nicht“).
+// wer im Team ist, was es verbraucht und welche Schlüssel es hat, steht auf der Teamseite.
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'

@@ -1,5 +1,5 @@
 <script setup>
-// Skript-Editor für kombinierte Attribute (Taloan, 17.09.): Monospace, Syntaxfarben, ? mit allen
+// Skript-Editor für kombinierte Attribute: Monospace, Syntaxfarben, ? mit allen
 // Möglichkeiten (und den Attributen zum Einfügen), Syntaxprüfung beim Tippen über den Server.
 // Übernehmen geht nur, wenn die Prüfung stimmt — ein halbes Skript darf nie ins Attribut.
 // Wer unterbrochen wird, behält den Entwurf im Browser (localStorage) und macht später weiter.
@@ -7,7 +7,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { api } from '../api.js'
 import { L } from '../i18n.js'
 
-// node/locale: der Knoten, an dem das Skript gerechnet wird — dann zeigt der Fuss das momentane Ergebnis statt einer Erklärung (Taloan, 17.09.)
+// node/locale: der Knoten, an dem das Skript gerechnet wird — dann zeigt der Fuss das momentane Ergebnis statt einer Erklärung
 const props = defineProps({ modelValue: String, title: String, draftKey: String, attributes: Array, type: String, node: String, locale: String })
 const emit = defineEmits(['save', 'close'])
 
@@ -47,10 +47,10 @@ function insert(s) {
   text.value = text.value.slice(0, a) + s + text.value.slice(b)
   nextTick(() => { el.focus(); el.selectionStart = el.selectionEnd = a + s.length })
 }
-// ---- Vorschläge (Taloan, 17.09.): $ oder @ tippen zeigt die Attribute, Buchstaben filtern, ↑↓ wählen,
+// ---- Vorschläge: $ oder @ tippen zeigt die Attribute, Buchstaben filtern, ↑↓ wählen,
 // Enter/Tab fügt $schlüssel ein (ein getipptes @ wird dabei zu $ — @ ist keine Syntax, nur der Griff).
 const ac = ref({ open: false, items: [], i: 0, start: 0, top: 0, left: 0 })
-// Vorlage (Taloan): { tippen zeigt die Attribute, Enter fügt {schlüssel} ein — keine Funktionen, keine Schlüsselwörter
+// Vorlage: { tippen zeigt die Attribute, Enter fügt {schlüssel} ein — keine Funktionen, keine Schlüsselwörter
 const isTemplate = computed(() => props.type === 'template')
 // Funktionen mit Signatur — dieselbe Liste wie Formula.cs; ab zwei getippten Buchstaben vorgeschlagen
 const SIGS = { round: 'round(x, n)', trunc: 'trunc(x)', floor: 'floor(x)', ceil: 'ceil(x)', abs: 'abs(x)', min: 'min(a, b)', max: 'max(a, b)', sqrt: 'sqrt(x)',
@@ -168,7 +168,7 @@ function highlightTemplate(src) {
   return out + esc(src.slice(last))
 }
 const highlighted = computed(() => (isTemplate.value ? highlightTemplate(text.value) : highlight(text.value)) + '\n')
-// Hilfe (Taloan, 17.09.): je Zeile ein Baustein mit Syntaxfarben, Klick fügt ihn ein; kein „·“ mehr
+// Hilfe: je Zeile ein Baustein mit Syntaxfarben, Klick fügt ihn ein; kein „·“ mehr
 const HELP = [
   ['Attribut lesen', [['$key', 'Wert am Knoten — geerbt zählt, Text in der Sprache der Spalte. $ tippen zeigt die Liste']]],
   ['Werte', [['42', 'Zahl'], ['"Text"', 'Text'], ['`Vorlage ${$key}`', 'Vorlage mit Ausdrücken'], ['true', ''], ['false', ''], ['null', 'kein Wert']]],

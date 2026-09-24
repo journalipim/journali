@@ -1,7 +1,7 @@
 <script setup>
 // Einstellungen → ⚙ Anlage → Anwender und Rollen (Recht users): wer im System arbeitet, welche Rolle und welches Team.
-// Rollen (Taloan, 20.09.): Namen und Rechte bestimmt der Anwender — Tabelle Rollen × Rechte, Saatgut admin/manager/editor/reader.
-// Das eigene Konto (Passwort, API-Token) steht unter ◐ Ich — Verwaltung und eigenes Konto sind zweierlei (Taloan, 23.09.2026).
+// Rollen: Namen und Rechte bestimmt der Anwender — Tabelle Rollen × Rechte, Saatgut admin/manager/editor/reader.
+// Das eigene Konto (Passwort, API-Token) steht unter ◐ Ich — Verwaltung und eigenes Konto sind zweierlei.
 import { ref, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
@@ -16,7 +16,7 @@ const form = ref(null)   // { key, name, email, role, password, isNew }
 async function load() {
   try { me.value = await api.get('/api/auth/me') } catch { me.value = null }
   try { rights.value = await api.get('/api/auth/rights'); roles.value = await api.get('/api/auth/roles') } catch (e) { store.toast(e.message) }
-  try { teams.value = await api.get('/api/teams') } catch { teams.value = [] }   // Team = Kostenstelle der KI (Taloan, 23.09.)
+  try { teams.value = await api.get('/api/teams') } catch { teams.value = [] }   // Team = Kostenstelle der KI
   if (isAdmin()) { try { users.value = await api.get('/api/auth/users') } catch (e) { store.toast(e.message) } }
 }
 function edit(u) { form.value = u ? { key: u.key, name: u.name, email: u.email ?? '', role: u.role, team: u.team ?? '', password: '', isNew: false } : { key: '', name: '', email: '', role: 'editor', team: '', password: '', isNew: true } }

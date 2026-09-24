@@ -1,4 +1,4 @@
-// Lädt .vue-Dateien im Test (Taloan, 22.09.2026: Prüfroutinen statt Handproben). Node kennt .vue nicht — dieser Haken
+// Lädt .vue-Dateien im Test. Node kennt .vue nicht — dieser Haken
 // übersetzt eine Einzeldatei-Komponente mit @vue/compiler-sfc, genau wie der Bau es tut: Skript und Vorlage zusammen,
 // Stile bleiben draussen (sie werden nicht geprüft), scoped-Kennzeichen bleibt erhalten.
 import { registerHooks } from 'node:module'

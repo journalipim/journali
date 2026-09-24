@@ -1,4 +1,4 @@
-// Was der Anwender liest (Taloan, 23.09.2026). Kein Name, kein wörtliches Zitat: „also bitte nicht meinen Namen +
+// Was der Anwender liest. Kein Name, kein wörtliches Zitat: „also bitte nicht meinen Namen +
 // wörtliche Kommentare in der Plugin-Beschreibung“. Und keine Ratschläge: „Diese Selbsterkenntnissachen gehören
 // nirgendwo öffentlich im Programm — wir schreiben ja beim Backup auch nicht hin: es ist immer gut, mehrere davon zu
 // haben.“ Ein Text sagt, was die Sache tut; nicht, warum sie gut ist, und nicht, wie sie entstanden ist.
@@ -52,8 +52,7 @@ test('kein Name und kein Ratschlag in den Ansichten', () => {
   assert.deepEqual(misses, [], 'Name oder Ratschlag in einem sichtbaren Text')
 })
 
-// Länge als Grenze (Taloan, 23.09.2026: „das Wesentliche ist, dass ich überall solche Labersätze finde, die im
-// Zweifelsfall den Anwender falsch leiten → zu Datenverlust führen können; das ist viel kritischer“). Ein Tooltip
+// Länge als Grenze. Ein Tooltip
 // sagt, was geschieht — Bedingung und Folge, sonst nichts. Wer mehr braucht, schreibt es in die Dokumentation.
 // Ausgenommen sind Referenzen, die wirklich eine Liste sind: Suchbedingungen, Vorlagen-Platzhalter, Gesten im
 // Designer. Sie stehen hier namentlich, damit die Ausnahme eine Entscheidung bleibt und nicht einreisst.
@@ -63,7 +62,7 @@ const REFERENZEN = [
   /\{#products\}/,        // xport: die Platzhalter einer Vorlage
   /Kachel von innen ziehen/,   // WorkflowSettings: die Gesten im Designer
   /m h tag monat/,        // Zeitplan: die Felder eines cron-Ausdrucks
-  /Austauschvolumen \(mengenbasiert\)/,   // die Kennzahl oben: Wortlaut von Taloan (23.09.2026)
+  /Austauschvolumen \(mengenbasiert\)/,   // die Kennzahl oben: fester Wortlaut
 ]
 
 test('kein sichtbarer Text laenger als die Grenze', () => {
@@ -73,8 +72,7 @@ test('kein sichtbarer Text laenger als die Grenze', () => {
   assert.deepEqual(misses, [], `sichtbarer Text laenger als ${GRENZE} Zeichen`)
 })
 
-// Sichtbarer Text ist höchstens ein Satz (Taloan, 23.09.2026: „und hier habe ich schon wieder KI-blabla“; CLAUDE.md:
-// „Symbole und Zahlen statt Wörter in Kacheln, Knöpfen, Zeilen; Sätze nur im Tooltip“). Wer erklären will, schreibt es
+// Sichtbarer Text ist höchstens ein Satz. Wer erklären will, schreibt es
 // in title= — dort gilt die Grenze oben. Abkürzungen (z. B., u. a.) sind kein Satzende.
 const ABK = /\b(z|u|d|o|i|s|g|ca|bzw|Nr|evtl|ggf|usw|etc|vgl|Abs|Art)\.\s*$/
 test('sichtbarer Text ist hoechstens ein Satz — Erklaerungen gehoeren in den Tooltip', () => {
@@ -121,8 +119,7 @@ function satz(roh) {
     .sort((a, b) => b.length - a.length)[0] ?? ''
 }
 
-// Fester sichtbarer Text ist kurz (Taloan, 23.09.2026: „merkste was?“ — nach dem dritten Screenshot mit demselben
-// Muster). Was erklärt, gehört in title=; in der Zeile steht, was die Sache ist. Gerechnete Meldungen ({{ … }})
+// Fester sichtbarer Text ist kurz. Was erklärt, gehört in title=; in der Zeile steht, was die Sache ist. Gerechnete Meldungen ({{ … }})
 // sind Daten, keine Erklärung — sie zählen hier nicht mit.
 const SICHTBAR = 60
 test('fester sichtbarer Text bleibt kurz — Erklärungen stehen im Tooltip', () => {

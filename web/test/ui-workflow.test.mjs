@@ -1,4 +1,4 @@
-// Workflow je Sprache in der Knotenansicht (Taloan, 22.09.2026: „Französisch in Korrektur, Deutsch freigegeben“).
+// Workflow je Sprache in der Knotenansicht.
 // Geprüft wird die Leiste selbst: eine Zeile je Sprache, der eigene Zustand, die erlaubten Schritte — und dass ein Klick
 // die Sprache mitschickt (sonst geht der Schritt an den ganzen Knoten und reisst die anderen Sprachen mit).
 import test from 'node:test'
@@ -10,7 +10,7 @@ const WorkflowLocales = (await import('../src/components/WorkflowLocales.vue')).
 const wf = {
   workflow: 'translation', label: { de: 'Übersetzung' }, perLocale: true, state: 'none',
   locales: [
-    { locale: 'de', master: true, state: 'checked', stateLabel: { de: 'geprüft' }, color: 'pos', own: true, since: '2026-09-22T08:00:00Z', actor: 'taloan', transitions: [{ key: 'again', label: { de: 'erneut zur Übersetzung' }, to: 'to_translate', toLabel: { de: 'zur Übersetzung' } }] },
+    { locale: 'de', master: true, state: 'checked', stateLabel: { de: 'geprüft' }, color: 'pos', own: true, since: '2026-09-22T08:00:00Z', actor: 'u1', transitions: [{ key: 'again', label: { de: 'erneut zur Übersetzung' }, to: 'to_translate', toLabel: { de: 'zur Übersetzung' } }] },
     { locale: 'fr', master: false, state: 'to_translate', stateLabel: { de: 'zur Übersetzung' }, color: 'warn', own: true, note: 'Agentur', transitions: [{ key: 'done', label: { de: 'übersetzt' }, to: 'translated', toLabel: { de: 'übersetzt' } }] },
     { locale: 'en', master: false, state: 'none', stateLabel: { de: 'nicht angefordert' }, color: 'muted', own: false, transitions: [{ key: 'request', label: { de: 'zur Übersetzung geben' }, to: 'to_translate', toLabel: { de: 'zur Übersetzung' } }] },
   ],

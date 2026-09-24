@@ -6,8 +6,7 @@ using NpgsqlTypes;
 namespace Journali.Server;
 
 /// <summary>
-/// Die Lizenz in der Datenbank statt als Datei daneben (Taloan, 23.09.2026: „jegliche eingespielte Lizenz kommt signiert
-/// und verschlüsselt in einen Container — die DB“). Anlass war ihr Verschwinden: fehlt die Datei, gilt still der
+/// Die Lizenz in der Datenbank statt als Datei daneben. Anlass war ihr Verschwinden: fehlt die Datei, gilt still der
 /// Testbetrieb, und der Zählbeginn aus der Lizenz ist weg — der Zähler springt zurück auf „alles seit jeher“.
 /// <para>In der Datenbank fährt sie überall mit: im <c>pg_dump</c>, im Journal-Snapshot des Betriebs, und in unserer
 /// Vollsicherung. Eine Datei im Datenverzeichnis wird beim ersten Start noch gelesen und übernommen.</para>

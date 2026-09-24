@@ -1,7 +1,6 @@
 <script setup>
-// Massenbearbeitung von Attributen (Taloan, 22.09.2026: „jetzt wäre natürlich schön, wenn ich Massenbearbeitung von
-// Attributen machen könnte“): je Zeile eine Eigenschaft. Jede Zeile zeigt zuerst den **Stand der Auswahl** — alle an,
-// alle aus oder gemischt mit Zahl (Taloan: „wo Werte gemischt sind, sollte das angezeigt werden“) — und schaltet beim
+// Massenbearbeitung von Attributen: je Zeile eine Eigenschaft. Jede Zeile zeigt zuerst den **Stand der Auswahl** — alle an,
+// alle aus oder gemischt mit Zahl — und schaltet beim
 // Klick durch: gemischt → alle an → alle aus → alle an. Geschrieben wird draussen; die Leiste meldet nur { kind, value }.
 import { ref, computed } from 'vue'
 import { t } from '../i18n.js'
@@ -90,7 +89,7 @@ const go = (kind, value) => emit('apply', { kind, value })
 </template>
 
 <style scoped>
-/* feste Spalten: die Zeilen stehen untereinander, nichts springt (Taloan, 22.09.) */
+/* feste Spalten: die Zeilen stehen untereinander, nichts springt */
 .bulk { max-width: 720px; }
 .row { display: flex; align-items: center; gap: 8px; padding: 3px 0; min-width: 0; }
 .lbl { width: 150px; flex: none; font-size: 12px; }

@@ -1,6 +1,5 @@
 <script setup>
-// Einstellungen → B&R, Sichern und Wiederherstellen (Taloan, 24.09.2026: „dann doch wieder eine manuelle Backup-Funktion
-// in die Einstellungen, und den Restore-Tab umbenennen in B&R“). Sichern von Hand gehört zu jedem Tarif; als Zeitplan
+// Einstellungen → B&R, Sichern und Wiederherstellen. Sichern von Hand gehört zu jedem Tarif; als Zeitplan
 // ist es ein Job des Plugins backup (Tasker, ab Pro) — beide rufen POST /api/backup. Oben die Vollsicherung hin und
 // zurück (zurück nur in ein leeres System), unten der einzelne Teilbaum aus einer Rohdaten-Datei.
 import { ref, onMounted } from 'vue'

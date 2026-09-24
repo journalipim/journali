@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Fächer des Taskers (docs/tasker-dateien.md, Taloan 21.09.2026): Eingang wählen, Duplikat nach Hash ohne Lauf, nach done/ bzw. failed/,
+// Fächer des Taskers (docs/tasker-dateien.md): Eingang wählen, Duplikat nach Hash ohne Lauf, nach done/ bzw. failed/,
 // Ausgaben benennen, latest kopieren, Aufbewahrung — und die Belege im Journal.
 public class JobFachTests
 {

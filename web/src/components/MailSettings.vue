@@ -1,6 +1,5 @@
 <script setup>
-// Einstellungen → Mail (Taloan, 23.09.2026: „was wir in den Settings noch brauchen, ist eine Mailserver-Konfiguration
-// zum Versenden von Mails"). Liegt als mail.json im Datenverzeichnis, nie im Journal — da steht ein Passwort drin.
+// Einstellungen → Mail. Liegt als mail.json im Datenverzeichnis, nie im Journal — da steht ein Passwort drin.
 // Das Passwort kommt maskiert zurück; wer es nicht anfasst, lässt es stehen.
 import { ref, onMounted } from 'vue'
 import { api } from '../api.js'

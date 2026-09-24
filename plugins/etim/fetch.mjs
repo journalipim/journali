@@ -1,4 +1,4 @@
-// ETIM-Freigaben holen (Taloan, 20.09.2026: „alles ist öffentlich abrufbar — warum muss ich IXF neu einlesen?“). Läuft als
+// ETIM-Freigaben holen. Läuft als
 // Kindprozess des Servers (Browser-Plugins dürfen etim-international.com wegen CORS nicht lesen), spricht nur über /api.
 //   node fetch.mjs <journali> <actor> list                → JSON: die Freigaben der Download-Seite (IXF, alle Sektoren zuerst)
 //   node fetch.mjs <journali> <actor> load <url> <langs>  → Zip oder XML laden, IXF lesen, alle Klassen (Sprachen des Modells)
@@ -46,7 +46,7 @@ async function load(probe = false) {
   const languages = [...new Set(rel.classes.slice(0, 200).flatMap(c => Object.keys(c.name)))]
   if (probe) { out({ name: h.name, number: h.number, date: h.date, classes: rel.classes.length, features: rel.features.size, languages, file, mb: +(buf.length / 1048576).toFixed(1) }); return }
   const ver = String(h.number ?? '0')
-  const variant = variantOf(file); const key = [ver, variant].filter(Boolean).join('-')   // Ausführung im Schlüssel (Taloan, 22.09.)
+  const variant = variantOf(file); const key = [ver, variant].filter(Boolean).join('-')   // Ausführung im Schlüssel
   const CH = 400; let done = 0
   for (let i = 0; i < rel.classes.length; i += CH) {
     const items = {}

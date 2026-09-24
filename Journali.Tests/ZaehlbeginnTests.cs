@@ -2,10 +2,9 @@ using Journali.Core.Projections;
 
 namespace Journali.Tests;
 
-// Ein Journal lässt sich nicht zurücksetzen (Taloan, 23.09.2026: „bau mir einen Lizenzschlüssel, der die verbrauchten
-// Tokens zurücksetzt“) — der Verbrauch sind die Einträge, und die bleiben. Was eine Lizenz sagen darf, ist, **ab wann**
+// Ein Journal lässt sich nicht zurücksetzen — der Verbrauch sind die Einträge, und die bleiben. Was eine Lizenz sagen darf, ist, **ab wann**
 // gezählt wird: `countFrom`. Alles davor bleibt stehen und zählt nicht mehr mit.
-// Dazu die Reserve: ein Joblauf lässt der Handarbeit die letzten 10 % (Taloan, 23.09.2026).
+// Dazu die Reserve: ein Joblauf lässt der Handarbeit die letzten 10 %.
 public class ZaehlbeginnTests
 {
     [Fact]

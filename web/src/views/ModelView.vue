@@ -1,5 +1,5 @@
 <script setup>
-// Das Modell (Taloans Struktur, 17.09.2026), überall dieselbe Aufteilung wie im Baum:
+// Das Modell (die Struktur, 17.09.2026), überall dieselbe Aufteilung wie im Baum:
 //   links die Abschnitte, in der Mitte eine schmale Liste (Key, Name, Kennzahlen als
 //   Symbole), rechts das gewählte Ding mit allen Feldern und seinem Inhalt.
 //   Struktur: Attributgruppen · Attribute · Wertelisten · Attributsichten
@@ -50,7 +50,7 @@ const newValue = ref('')
 const addViewGroup = ref('')
 const roleLabel = { group: t('▣ Produktgruppe'), product: t('▦ Produkt'), variant: t('◆ Variante') }
 const roles = ['group', 'product', 'variant']
-// Muster-Vorlagen (Taloan, 17.09.: Telefon, E-Mail „bis zu dem, was üblich ist“) — ganzer Wert muss passen
+// Muster-Vorlagen — ganzer Wert muss passen
 const PATTERNS = [
   { key: 'email', label: t('@ E-Mail'), re: String.raw`[^\s@]+@[^\s@]+\.[A-Za-z]{2,}` },
   { key: 'phone', label: t('☎ Telefon'), re: String.raw`\+?[0-9][0-9 \-/().]{5,}[0-9]` },
@@ -65,14 +65,14 @@ const PATTERNS = [
 ]
 const TYPES = ['text', 'html', 'integer', 'decimal', 'boolean', 'date', 'enum', 'rows', 'formula', 'template']
 const TYPE_SYM = { text: 'Aa', html: '‹›', integer: '12', decimal: '1.5', boolean: '☑', date: '📅', enum: '☰', rows: '⊞', formula: 'ƒ', template: '{}' }
-const TYPE_LABEL = { rows: t('rows · Tabelle (Zeilen aus Spalten)') }   // „vermehrbar“ heißt in der Oberfläche multiple (Taloan, 20.09.); rows ist die Tabelle
+const TYPE_LABEL = { rows: t('rows · Tabelle (Zeilen aus Spalten)') }   // „vermehrbar“ heißt in der Oberfläche multiple; rows ist die Tabelle
 const sec = computed(() => sections.find(s => s.key === section.value))
 
 async function send(fn) {
   if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
   try { await fn(); await store.poll(true) } catch (e) { store.toast(e.message) }
 }
-// Typwechsel mit Bestand (Taloan, 21.09.): der Server verweigert, wenn vorhandene Werte nicht mehr passen — nachfragen, dann mit force
+// Typwechsel mit Bestand: der Server verweigert, wenn vorhandene Werte nicht mehr passen — nachfragen, dann mit force
 const put = (path, body) => send(async () => {
   try { await api.post(path, body, 'PUT') }
   catch (e) {
@@ -102,11 +102,11 @@ const rows = computed(() => {
   const m = model.value; if (!m) return []
   switch (section.value) {
     case 'groups': return (m.groups ?? []).map(g => ({ key: g.key, label: anyLabel(g.label), right: [`⊞ ${g.attributes.length}`, g.activeFrom ? `🔒 ${icon(g.activeFrom)}` : '', g.releaseWatch === 'always' ? '⚑' : g.releaseWatch === 'never' ? '⚐' : g.watched ? '⚑ auto' : ''], _: g })).sort(byKey)
-    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.unique ? '①' : '', a.releaseWatch === 'always' ? '⚑' : a.releaseWatch === 'never' ? '⚐' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label (Taloan); ① eindeutig
+    case 'attributes': return m.attributes.map(a => ({ key: a.key, label: anyLabel(a.label), right: [TYPE_SYM[a.type] ?? a.type, a.unique ? '①' : '', a.releaseWatch === 'always' ? '⚑' : a.releaseWatch === 'never' ? '⚐' : '', a.pattern ? '⌗' : '', a.multiple ? '≣' : '', a.perLocale ? '🗣' : '', a.perChannel ? '⇶' : '', a.group ? '▤ ' + groupLabel(a.group) : ''], _: a })).sort(byKey)   // Gruppe mit Label; ① eindeutig
     case 'lists': return m.lists.map(l => ({ key: l.key, label: anyLabel(l.label), right: [`☰ ${l.values.length}`], _: l })).sort(byKey)
     case 'views': return (m.views ?? []).map(v => ({ key: v.key, label: anyLabel(v.label), right: [icon(v.level), `▤ ${v.items.length}`], _: v })).sort(byKey)
     case 'units': return (m.units ?? []).map(u => ({ key: u.key, label: L(u.label), right: [u.quantity, `× ${u.factor}`], _: u })).sort(byKey)
-    // rechts nur, was eingeschränkt ist — keine Symbolketten (Taloan: „komische Zeichen“): „→ Medium“, „Produkt → Variante“, „⇄ beidseitig“, Gruppe mit Label
+    // rechts nur, was eingeschränkt ist — keine Symbolketten: „→ Medium“, „Produkt → Variante“, „⇄ beidseitig“, Gruppe mit Label
     case 'relationTypes': return (m.relationTypes ?? []).map(r => {
       const names = xs => xs.map(x => x === 'media' ? t('Medium') : roleLabel[x] ?? x).join('/')
       const ends = (r.from ? names(r.from) + ' ' : '') + (r.symmetric ? '⇄' : '→') + (r.to ? ' ' + names(r.to) : '')
@@ -168,7 +168,7 @@ function blockFor(k) {
     default: return ''
   }
 }
-// ↶ im Listenkopf (Taloan, 20.09.): die letzten bis zu 5 zurückgezogenen dieses Bereichs zum Wiederherstellen — admin alles, sonst nur
+// ↶ im Listenkopf: die letzten bis zu 5 zurückgezogenen dieses Bereichs zum Wiederherstellen — admin alles, sonst nur
 // Eigenes; weiter zurück in der Historie: das Journal
 async function restoreMenu(e) {
   e.preventDefault()
@@ -183,7 +183,7 @@ async function restoreMenu(e) {
     { label: t('Ältere im Journal zeigen'), icon: '≡', action: () => router.push({ path: '/journal', query: { q: sec.value.label === t('Relationen') ? 'RelationTypeRetired' : section.value === 'groups' ? 'AttributeGroupRetired' : section.value === 'attributes' ? 'AttributeRetired' : section.value === 'lists' ? 'ListRetired' : section.value === 'views' ? 'ViewRetired' : section.value === 'units' ? 'UnitRetired' : section.value === 'locales' ? 'LocaleRetired' : 'ChannelRetired' } }) },
   ])
 }
-// Kontextmenü der Liste — wie im Baum: Rechtsklick, „zurückziehen“ für die Zeile oder die Auswahl (Taloan, 20.09.)
+// Kontextmenü der Liste — wie im Baum: Rechtsklick, „zurückziehen“ für die Zeile oder die Auswahl
 function rowMenu(e, r) {
   if (!sel.value.has(r.key)) { sel.value = new Set([r.key]); cur.value = r.key; anchor.value = r.key }
   const keys = [...sel.value]; const p = removePath[section.value]
@@ -193,7 +193,7 @@ function rowMenu(e, r) {
     { label: keys.length > 1 ? t('{0} {1} gewählt', [keys.length, sec.value.label]) : `${sec.value.one} ${label}`, disabled: true },
     { sep: true },
     { label: t('Schlüssel kopieren'), icon: '⧉', key: 'c', action: () => navigator.clipboard?.writeText(keys.join(', ')) },
-    // Gruppe mit ihren Attributen (Taloan, 22.09.: sonst blockt „Zurückziehen“ mit „hat noch Attribute“ und man löscht einzeln)
+    // Gruppe mit ihren Attributen
     section.value === 'groups' && keys.length === 1 && blockFor(keys[0]) ? { label: t('Gruppe mit {0} Attributen zurückziehen', [(model.value?.attributes ?? []).filter(a => a.group === keys[0]).length]), icon: '✕', hint: t('Werte bleiben im Journal'), danger: true, action: () => removeGroupDeep(keys[0]) } : null,
     p ? { label: keys.length > 1 ? t('{0} zurückziehen', [keys.length]) : t('Zurückziehen'), icon: '✕', key: 'Delete', disabled: blocked.length > 0, hint: blocked.length ? `${blocked[0][0]}: ${blocked[0][1]}` : '', action: () => keys.length > 1 ? bulkRemove() : removeCur() }
       : null,
@@ -233,7 +233,7 @@ const groupSet = (col, v) => {
 const groupAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group === curGroup.value?.key))
 const otherAttrs = computed(() => (model.value?.attributes ?? []).filter(a => a.group !== curGroup.value?.key).sort((x, y) => (x.group ?? '').localeCompare(y.group ?? '') || x.key.localeCompare(y.key)))
 function assign(a, gkey) { return put(`/api/model/attributes/${a.key}`, { ...a, group: gkey }) }
-// Zuordnen in der Masse (Taloan: nicht hunderte einzeln im Dropdown): Filter nach Text und Herkunft
+// Zuordnen in der Masse: Filter nach Text und Herkunft
 // (ohne Gruppe / eine Gruppe), Haken, dann alle Gehakten in einem Rutsch.
 const pickText = ref('')
 const pickFrom = ref('')            // '' = alle, '-' = ohne Gruppe, sonst Gruppenschlüssel
@@ -273,7 +273,7 @@ function attrWith(a0, col, v) {
   return a
 }
 const attrSet = (col, v) => put(`/api/model/attributes/${curAttr.value.key}`, attrWith(curAttr.value, col, v))
-// Massenbearbeitung (Taloan, 22.09.2026): eine Eigenschaft, alle Gewählten. Geschrieben wird je Attribut die ganze
+// Massenbearbeitung: eine Eigenschaft, alle Gewählten. Geschrieben wird je Attribut die ganze
 // Definition (so will es die API) — aber verändert wird nur das eine Feld, den Rest nimmt attrWith unverändert mit.
 const bulkBusy = ref('')
 const bulkAttrs = computed(() => (model.value?.attributes ?? []).filter(x => sel.value.has(x.key)))
@@ -303,8 +303,7 @@ async function bulkRemove() {
   sel.value = new Set(); cur.value = null
 }
 const busy = ref(false)
-// Gruppe mit allem, was darin hängt (Taloan, 22.09.: „zuerst alle Attribute rauslösen, dann die Gruppe, dann jedes Attribut einzeln —
-// Wahnsinn“): erst die Attribute zurückziehen, dann die Gruppe. Was gesperrt ist (★-Attribut, Kennung), bleibt stehen und wird genannt.
+// Gruppe mit allem, was darin hängt: erst die Attribute zurückziehen, dann die Gruppe. Was gesperrt ist (★-Attribut, Kennung), bleibt stehen und wird genannt.
 async function removeGroupDeep(key = null) {
   const g = key ? (model.value?.groups ?? []).find(x => x.key === key) : curGroup.value; if (!g) return
   const attrs = (model.value?.attributes ?? []).filter(a => a.group === g.key)
@@ -449,16 +448,16 @@ const localeFallback = v => put(`/api/model/locales/${curLocale.value.code}`, { 
 const channelFallback = v => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: curChannel.value.label ?? {}, fallback: v || null })
 const setMaster = () => put('/api/model/master-locale', { code: curLocale.value.code })
 const setMasterChannel = () => put('/api/model/master-channel', { key: curChannel.value.key })
-// eindeutig (Taloan, 21.09.: „SKU ist ein Attribut wie jedes andere — alles über eindeutig“): Text/Zahl, einwertig; beliebig viele je Modell
-// Freigabesteuerung (Taloan, 22.09.): Bezeichnungen der Werte — leer am Attribut heisst „wie die Gruppe“
+// eindeutig: Text/Zahl, einwertig; beliebig viele je Modell
+// Freigabesteuerung: Bezeichnungen der Werte — leer am Attribut heisst „wie die Gruppe“
 const watchLabel = v => ({ '': t('wie die Gruppe'), auto: t('automatisch (wenn Pflichtfeld in der Gruppe)'), always: 'immer', never: 'nie' })[v ?? ''] ?? v
 const canBeUnique = a => a && ['text', 'integer', 'decimal'].includes(a.type) && !a.multiple
-// Status (Taloan, 22.09.): Name je eingerichteter Sprache, Symbol, Farbe, Reihenfolge — die ganze Definition je Eintrag
+// Status: Name je eingerichteter Sprache, Symbol, Farbe, Reihenfolge — die ganze Definition je Eintrag
 const STATUS_COLORS = [['muted', 'grau'], ['pos', t('grün')], ['neg', 'rot'], ['warn', 'gelb'], ['accent', 'blau']]
 const statusPut = patch => put(`/api/model/statuses/${curStatus.value.key}`, { key: curStatus.value.key, label: curStatus.value.label ?? {}, color: curStatus.value.color ?? null, icon: curStatus.value.icon ?? null, order: curStatus.value.order ?? 0, ...patch })
 const statusName = (l, v) => statusPut({ label: { ...(curStatus.value.label || {}), [l]: v } })
 const channelSet = (l, v) => put(`/api/model/channels/${curChannel.value.key}`, { key: curChannel.value.key, label: { ...(curChannel.value.label || {}), [l]: v }, fallback: curChannel.value.fallback ?? null })
-// Hilfe zur Formel — ein Skript wie JavaScript (Taloan, 17.09.)
+// Hilfe zur Formel — ein Skript wie JavaScript
 const groupLabel = k => L(model.value.groups.find(g => g.key === k)?.label) || k
 const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) || k
 </script>
@@ -534,7 +533,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
           <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
           <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curGroup.label?.en ?? null" @save="v => groupSet('label_en', v)" /></tr>
-          <!-- Freigabesteuerung (Taloan, 22.09.): zählt eine Wertänderung in dieser Gruppe als Eingriff in Prüfung und Freigabe? -->
+          <!-- Freigabesteuerung: zählt eine Wertänderung in dieser Gruppe als Eingriff in Prüfung und Freigabe? -->
           <tr><td class="attr" :title="$t('Zählt eine Wertänderung hier als Eingriff in Prüfung und Freigabe? automatisch = ja, wenn die Gruppe ein Pflichtfeld hat')">{{ $t("⚑ Freigabesteuerung") }}</td><SelectCell :value="curGroup.releaseWatch ?? 'auto'" :options="['auto', 'always', 'never']" :label-of="watchLabel" required @save="v => groupSet('releaseWatch', v === 'auto' ? null : v)" /></tr>
           <tr><td class="attr" :title="$t('ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.')">{{ $t("🔒 aktiv ab") }}</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
         </tbody></table>
@@ -583,7 +582,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">{{ $t("⚖ Einheit") }}</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
           <tr v-if="curAttr.type === 'enum'"><td class="attr">{{ $t("☰ Werteliste") }}<span v-if="!curAttr.list" class="warn" :title="$t('ohne Werteliste lässt sich kein Wert setzen')"> ●</span></td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
           <tr v-if="curAttr.type === 'rows'"><td class="attr" :title="$t('Spalten, jede ein Attribut, kommagetrennt')">{{ $t("≣ Spalten") }}<span v-if="!(curAttr.columns ?? []).length" class="warn" :title="$t('ohne Spalten hat eine Zeile nichts')"> ●</span></td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
-          <!-- nur, was zum Typ passt (Taloan, 17.09.): Muster bei Text; Einheit bei Zahlen; Werteliste bei enum; Spalten bei rows -->
+          <!-- nur, was zum Typ passt: Muster bei Text; Einheit bei Zahlen; Werteliste bei enum; Spalten bei rows -->
           <tr v-if="curAttr.type === 'text'"><td class="attr" :title="$t('Muster als regulärer Ausdruck — jeder Wert muss ganz dazu passen')">{{ $t("⌗ Muster") }}</td><Cell :value="curAttr.pattern ?? null" @save="v => attrSet('pattern', v || null)" />
             <td style="padding-left:6px"><select :value="''" @change="e => { const p = PATTERNS.find(x => x.key === e.target.value); if (p) attrSet('pattern', p.re); e.target.value = '' }" :title="$t('ein übliches Muster einsetzen')"><option value="">{{ $t("Vorlage …") }}</option><option v-for="p in PATTERNS" :key="p.key" :value="p.key">{{ p.label }}</option></select></td></tr>
           <tr v-if="curAttr.type === 'text' && curAttr.pattern"><td class="attr" :title="$t('steht in der Fehlermeldung statt des Musters')">{{ $t("⌗ Hinweis") }}</td><Cell :value="curAttr.patternHint ?? null" @save="v => attrSet('patternHint', v || null)" /></tr>
@@ -591,7 +590,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr class="sub"><td colspan="3">{{ $t("↓ Wert") }}</td></tr>
           <tr><td class="attr" :title="$t('Zählt eine Änderung dieses Attributs als Eingriff in Prüfung und Freigabe? Leer = wie die Gruppe.')">{{ $t("⚑ Freigabesteuerung") }}</td><SelectCell :value="curAttr.releaseWatch ?? ''" :options="['', 'always', 'never']" :label-of="watchLabel" @save="v => attrSet('releaseWatch', v || null)" /></tr>
           <tr><td class="attr" :title="$t('Wert vererbt sich nach unten (Kategorie ja, Name nein)')">{{ $t("↓ vererbbar") }}</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
-          <!-- eindeutig (Taloan, 21.09.): kein zweiter Knoten mit demselben Wert — SKU, EAN, MATNR, auch eine Achse; beliebig viele, jedes für sich -->
+          <!-- eindeutig: kein zweiter Knoten mit demselben Wert — SKU, EAN, MATNR, auch eine Achse; beliebig viele, jedes für sich -->
           <tr v-if="canBeUnique(curAttr) || curAttr.unique"><td class="attr" :title="$t('kein zweiter Knoten mit demselben Wert (SKU, EAN) — einschalten geht nur ohne Doppelte im Bestand; eine Kopie übernimmt ihn nicht')">{{ $t("① eindeutig") }}</td>
             <ToggleCell :value="b(curAttr.unique)" @save="v => attrSet('unique', v === 'true')" /></tr>
           <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" :title="$t('vermehrbar: mehrere Werte — in der Zelle als Liste mit + − und Umsortieren')">{{ $t("≣ vermehrbar") }}</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
@@ -617,7 +616,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
           <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curList.label?.de ?? null" @save="v => listSet('label_de', v)" /></tr>
           <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curList.label?.en ?? null" @save="v => listSet('label_en', v)" /></tr>
           <tr><td class="attr" :title="$t('geschlossen: nur Werte aus der Quelle (ETIM, Norm) — in der Zelle kein „+ neuer Wert“')">{{ $t("⌀ geschlossen") }}</td><ToggleCell :value="curList.closed ? 'true' : 'false'" @save="v => listSet('closed', v)" /></tr>
-          <!-- Spalten als Chips (Taloan): × nimmt eine weg (Werte bleiben im Journal), + Spalte fragt nach dem Key -->
+          <!-- Spalten als Chips: × nimmt eine weg (Werte bleiben im Journal), + Spalte fragt nach dem Key -->
           <tr><td class="attr" :title="$t('eigene Felder je Eintrag (z. B. ral, hex) — Werte einer entfernten Spalte bleiben im Journal')">{{ $t("Spalten") }}</td>
             <td class="cell"><div class="chips" style="min-height:24px">
               <span v-for="c in curList.columns ?? []" :key="c" class="chip mono">{{ c }}<button @click="listColumns((curList.columns ?? []).filter(x => x !== c))" :title="$t('Spalte {0} entfernen — die Werte bleiben im Journal', [c])">×</button></span>
@@ -716,7 +715,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
       </div>
     </template>
 
-    <!-- Status (Taloan, 22.09.) -->
+    <!-- Status -->
     <template v-else-if="section === 'statuses' && curStatus">
       <div class="toolbar"><h1 :style="curStatus.color ? `color:var(--${curStatus.color})` : ''">{{ curStatus.icon }} {{ curStatus.key }}</h1><span v-if="curStatus.key === 'draft'" class="muted">{{ $t("Startstatus neuer Knoten") }}</span><span class="grow" /></div>
       <div class="scroll">
@@ -752,7 +751,7 @@ const attrLabel = k => L(model.value.attributes.find(a => a.key === k)?.label) |
 .li.current { box-shadow: inset 2px 0 0 var(--accent); }
 .li .k { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--muted); max-width: 140px; flex: 0 0 auto; overflow: hidden; text-overflow: ellipsis; }
 .li .l { flex: 1 1 auto; min-width: 4em; overflow: hidden; text-overflow: ellipsis; }
-/* rechte Seite (Rollen, Gruppe) gibt zuerst nach — Key und Name bleiben lesbar (Taloan: „compone… Bestand…“) */
+/* rechte Seite (Rollen, Gruppe) gibt zuerst nach — Key und Name bleiben lesbar */
 .li .r { margin-left: auto; font-size: 11px; color: var(--muted); display: flex; gap: 6px; flex: 0 1 auto; min-width: 0; overflow: hidden; }
 .li .r > span { overflow: hidden; text-overflow: ellipsis; }
 /* Das Formular rechts: Bezeichnung links, Wert rechts, dieselben Zellen wie im Knoten */

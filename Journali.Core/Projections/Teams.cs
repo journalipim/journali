@@ -12,8 +12,7 @@ public sealed class TeamState
     public string? Note { get; set; }
     /// <summary>Warnschwelle je Monat in Token (0 = keine). Sie sperrt nicht — sie zeigt und warnt.</summary>
     public long MonthlyTokens { get; set; }
-    /// <summary>Das Grundrauschen je Monat (Taloan, 23.09.2026: „Team 1 hat Grundrauschen, jedes neue Team hat keins —
-    /// wer Teams braucht, hat eindeutig Business-Interesse“): Inklusivtoken ohne eigenen Schlüssel. Nur das erste Team
+    /// <summary>Das Grundrauschen je Monat: Inklusivtoken ohne eigenen Schlüssel. Nur das erste Team
     /// darf es haben, sonst wäre ein neues Team ein neuer Freibetrag. Aufgebraucht heisst hier wirklich Schluss.</summary>
     public long IncludedTokens { get; set; }
     /// <summary>Reissleine je Tag in Token (0 = keine): hier wird abgewiesen. Hoch ansetzen — sie soll den Amoklauf stoppen, nicht die Arbeit.</summary>
@@ -21,7 +20,7 @@ public sealed class TeamState
     public bool Enabled { get; set; } = true;
     /// <summary>Benutzt die Schlüssel dieses Teams mit (null = eigene). Wer keine eigenen hat, hat auch kein eigenes Kontingent.</summary>
     public string? KeysFrom { get; set; }
-    /// <summary>Wer dieses Team führt (Taloan, 23.09.2026): trägt Mitglieder ein und aus, pflegt Schlüssel und Grenzen.
+    /// <summary>Wer dieses Team führt: trägt Mitglieder ein und aus, pflegt Schlüssel und Grenzen.
     /// Ein Team ohne Manager gibt es nicht — der Administrator benennt beim Anlegen mindestens einen.</summary>
     public string[] Managers { get; set; } = [];
     /// <summary>Welches Modell je Anbieter gefragt wird — das bestimmt Kosten und Güte, also gehört es zum Team.</summary>
@@ -53,7 +52,7 @@ public sealed record Redemption(string Id, string Kind, string Team, DateOnly Fr
 
 /// <summary>Ein Tag KI: Aufrufe und das gemessene Volumen, aufgeschlüsselt nach Anbieter, Person und Anlass.
 /// <see cref="In"/> und <see cref="Out"/> sind die Tokenzahlen alter Einträge — sie wachsen nicht mehr und werden
-/// nirgends ausgewertet (Taloan, 23.09.2026: journali äussert sich nicht zu fremden Tokens).</summary>
+/// nirgends ausgewertet.</summary>
 public sealed class UsageDay
 {
     public long Calls { get; set; }
@@ -70,8 +69,7 @@ public sealed class UsageDay
 }
 
 /// <summary>
-/// Abbild „Teams“ (Taloan, 23.09.2026: „dann richten wir die neue Ebene Teams ein → je Team gibt es Limits und API-Keys,
-/// Benutzer gehören einem Team an“). Strom <c>team:&lt;key&gt;</c>. Hier steht auch der KI-Verbrauch je Team und Tag
+/// Abbild „Teams“. Strom <c>team:&lt;key&gt;</c>. Hier steht auch der KI-Verbrauch je Team und Tag
 /// (<see cref="AiUsed"/>, Strom <c>ai-usage:&lt;team&gt;</c>): wer zahlt, ist damit eine Frage der Buchung — nicht der Sperre.
 /// </summary>
 public sealed class Teams : IProjection
@@ -88,8 +86,7 @@ public sealed class Teams : IProjection
     public TeamState? Primary => _all.Values.OrderBy(t => t.CreatedNumber).FirstOrDefault();
 
     /// <summary>
-    /// Wer zahlt: das Team selbst, oder am Ende der Kette das, dessen Kontingent gilt (Taloan, 23.09.2026: „das Team
-    /// kann wiederum auf ein anderes Team verweisen; auf jeden Fall kommt man irgendwann an Limits“). Ein Kreis
+    /// Wer zahlt: das Team selbst, oder am Ende der Kette das, dessen Kontingent gilt. Ein Kreis
     /// (a→b→a) endet hier beim zuletzt gesehenen Team, statt die Anwendung stehenzulassen — verhindert wird er
     /// beim Setzen. Darum bringt ein Team ohne eigenes Kontingent keins dazu: alle hängen am selben Zahler.
     /// </summary>
@@ -137,7 +134,7 @@ public sealed class Teams : IProjection
         return w is null ? (t.EntriesWeek, t.EntriesMonth) : (Math.Max(t.EntriesWeek, w.Week), Math.Max(t.EntriesMonth, w.Month));
     }
 
-    /// <summary>Der Tarif, den ein eingelöster Limit-Schlüssel diesem Team an dem Tag gibt — null ohne (Taloan, 24.09.2026).</summary>
+    /// <summary>Der Tarif, den ein eingelöster Limit-Schlüssel diesem Team an dem Tag gibt — null ohne.</summary>
     public Tarif? TarifAt(string team, DateOnly d) =>
         _all.GetValueOrDefault(team)?.Windows.Where(x => x.Gilt(d)).Select(x => Tarife.Von(x.Plan)).Where(x => x is not null)
             .Aggregate((Tarif?)null, (a, b) => a is null ? b : Tarife.Hoeher(a, b!));

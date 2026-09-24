@@ -1,7 +1,7 @@
 <script setup>
 // Zelle für html: in der Zelle nur der Anfang des Textes (‹› = HTML), Enter oder Doppelklick
 // öffnet den Editor — einfacher Schreibmodus (fett, kursiv, Listen, Überschrift, Link) mit
-// Umschalter auf den Quelltext (Taloan, 17.09.). Ctrl+Enter speichert, Esc verwirft.
+// Umschalter auf den Quelltext. Ctrl+Enter speichert, Esc verwirft.
 import { ref, computed, nextTick, watch, onUnmounted } from 'vue'
 import { dialog } from '../dialog.js'
 import AiBar from './AiBar.vue'
@@ -33,7 +33,7 @@ async function edit() {
 }
 function save() { syncFromRich(); open.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value) }
 function cancel() { open.value = false }
-// Esc und Strg+Enter gelten im offenen Editor, egal wo der Fokus steht (Taloan, 22.09.)
+// Esc und Strg+Enter gelten im offenen Editor, egal wo der Fokus steht
 function onWinKey(e) {
   if (!open.value) return
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancel() }
@@ -42,7 +42,7 @@ function onWinKey(e) {
 watch(open, v => v ? window.addEventListener('keydown', onWinKey, true) : window.removeEventListener('keydown', onWinKey, true))
 onUnmounted(() => window.removeEventListener('keydown', onWinKey, true))
 // ✦ KI: neuer Text in den Entwurf — Schreibmodus zeigt ihn sofort, Quelltext ebenso
-// Ergebnis der KI: ersetzen oder an der Schreibmarke ergänzen (Taloan, 22.09.)
+// Ergebnis der KI: ersetzen oder an der Schreibmarke ergänzen
 function fromAi({ text, mode }) {
   if (mode === 'insert' && !source.value && rich.value) { rich.value.focus(); document.execCommand('insertHTML', false, text); syncFromRich(); return }
   if (mode === 'insert' && source.value && area.value) { const t = area.value, i = t.selectionStart ?? draft.value.length; draft.value = draft.value.slice(0, i) + text + draft.value.slice(t.selectionEnd ?? i); return }

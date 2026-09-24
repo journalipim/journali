@@ -5,7 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Workflows (27, Taloan 21.09.2026): Zustände und Übergänge aus dem Journal, Schritt nur vom richtigen Zustand, Rolle, Notiz-Pflicht,
+// Workflows (27): Zustände und Übergänge aus dem Journal, Schritt nur vom richtigen Zustand, Rolle, Notiz-Pflicht,
 // Wirkungen (release/status), Aufgaben, Suche wf:.
 public class WorkflowTests
 {

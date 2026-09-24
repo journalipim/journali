@@ -1,4 +1,4 @@
-// Vorlagen-Export auf einem Publikationsbaum (Taloan, 22.09.: „der BMEcat-Export setzt auf einen Publikationsbaum auf“) — Kern ohne DOM
+// Vorlagen-Export auf einem Publikationsbaum — Kern ohne DOM
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { build } from '../../plugins/xport/core.mjs'

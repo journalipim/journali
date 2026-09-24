@@ -5,8 +5,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Leser warten nicht auf Schreiber (Taloan, 23.09.2026: „ich habe einen Solr-Import gestartet und alles ist super
-// langsam“). Gemessen war damals: /api/health 25 Sekunden ohne Antwort bei 0 CPU — der Halter der einen Sperre
+// Leser warten nicht auf Schreiber. Gemessen war damals: /api/health 25 Sekunden ohne Antwort bei 0 CPU — der Halter der einen Sperre
 // wartete auf die Datenbank, und jeder Lesezugriff stand dahinter. Hier steht dieselbe Lage nachgestellt: ein
 // Journal, dessen Append hängt, und daneben jemand, der lesen will.
 public class SperreTests

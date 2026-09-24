@@ -6,7 +6,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Die Rolle eines Jobs (Taloan, 23.09.2026): der Sicherungsjob scheiterte mit „403 Rolle editor darf das nicht (Anwender
+// Die Rolle eines Jobs: der Sicherungsjob scheiterte mit „403 Rolle editor darf das nicht (Anwender
 // und Rollen)“. Ein Dienst-Token bekam hart editor — /api/backup verlangt aber users. Jetzt steht am Job, mit welcher
 // Rolle er läuft; ohne Angabe bleibt es bei editor, damit sich an bestehenden Jobs nichts ändert.
 public class JobRolleTests

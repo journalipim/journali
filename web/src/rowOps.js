@@ -1,5 +1,4 @@
-// Zeilenoperationen der Tabellenbearbeitung (Taloan, 21.09.2026: „vorne ganze Zeilen markieren, Strg/Shift, Rechtsklick:
-// löschen, kopieren, einfügen, verschieben“) — rein, ohne Vue, damit sie sich prüfen lassen.
+// Zeilenoperationen der Tabellenbearbeitung — rein, ohne Vue, damit sie sich prüfen lassen.
 // Zeilen sind { row: { id }, isNew?, retired?, moved? }; alles hier ändert nur die Liste, geschrieben wird beim Speichern.
 
 /// Verschiebt die Zeilen mit den Ids vor den Platz `to` (Index in der alten Liste; rows.length = ans Ende).

@@ -1,5 +1,5 @@
 <script setup>
-// Auswahlbaum als Vue-Baustein (Taloan): v-model = Knoten-Id; darunter dasselbe DOM wie in Plugins (treePicker.js)
+// Auswahlbaum als Vue-Baustein: v-model = Knoten-Id; darunter dasselbe DOM wie in Plugins (treePicker.js)
 import { ref, onMounted, watch } from 'vue'
 import { treePicker } from '../treePicker.js'
 const props = defineProps({ modelValue: [String, Array], roles: { type: Array, default: () => ['group', 'product'] }, height: { type: Number, default: 240 }, allowRoot: Boolean, multi: Boolean })

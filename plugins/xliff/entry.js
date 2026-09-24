@@ -1,8 +1,8 @@
-// Plugin xliff (Taloan, 21.09.2026, Blick in OpenDXP: „Übersetzungsmanagement ist etwas, was wir noch gar nicht haben“):
+// Plugin xliff:
 // ⇄ Übersetzung — je Sprachrichtung die Einheiten (Knoten × Textattribut × Kanal): fehlend, veraltet (⟳ Quelle neuer), fertig.
 // 1 Sprachen und Umfang · 2 Teilbaum · 3 Einheiten (Tabelle, Ziel direkt eintragen, ✦ KI vorübersetzen, 💾 schreiben,
 // ⇪ XLIFF 2.0 für Agentur/CAT, 📦 Paket schnüren) · Aufträge (was draussen ist) · 4 XLIFF zurück.
-// Das Paket (30, Taloan 22.09.2026) ist ein Auftrag im Journal — ein Zeiger mit den Fingerabdrücken, die hinausgingen; kommt er
+// Das Paket (30) ist ein Auftrag im Journal — ein Zeiger mit den Fingerabdrücken, die hinausgingen; kommt er
 // überholt zurück, wird er trotzdem eingespielt und die Differenz bleibt im Rückstand (⟳), statt alles neu zu bestellen.
 // Der Server rechnet die Einheiten (TranslateApi.cs) und schreibt XLIFF; hier nur Bedienung. Als Job: Export in out/, Import aus in/.
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
@@ -26,7 +26,7 @@ async function mount(root, ctx) {
   const body = el('div', { class: 'scroll', style: 'flex:1;padding:0 8px 12px' })
   const band = t => el('div', { class: 'step-band', style: 'margin:10px -8px 6px' }, t)
 
-  // ---- Profil (alles Datenthematische im Profil — Taloan): Sprachen, Kanal, Umfang, Attribute, Teilbaum; der Job nimmt es
+  // ---- Profil (alles Datenthematische im Profil): Sprachen, Kanal, Umfang, Attribute, Teilbaum; der Job nimmt es
   const profSel = el('select', {}, el('option', { value: '' }, t_('— Profil —')))
   const profIn = el('input', { type: 'text', placeholder: t_('Name'), style: 'width:110px' })
   async function loadProfiles() { try { const names = (await ctx.data.list()).filter(n => n.startsWith('profile:')).map(n => n.slice(8)); profSel.innerHTML = ''; profSel.append(el('option', { value: '' }, t_('— Profil —')), ...names.map(n => el('option', { value: n }, n))) } catch {} }
@@ -36,7 +36,7 @@ async function mount(root, ctx) {
     await ctx.data.set('profile:' + n, { from: st.from, to: st.to, channel: st.channel, scope: st.scope, root: st.root, attributes: [...st.attrs].join(',') })
     await loadProfiles(); profSel.value = n; store.toast(t_('Profil „{0}“ gespeichert — als Job: ⏱ Jobs → + Job → XLIFF-Export / XLIFF-Import', [n]), 'ok')
   }
-  // DeepL-Schlüssel am Profil beim Server (Taloan: DeepL als Anbieter — als Job, nie im Browser; Schlüssel nie im Journal)
+  // DeepL-Schlüssel am Profil beim Server
   const keyIn = el('input', { type: 'password', placeholder: t_('DeepL-Schlüssel'), title: t_('wird beim Server am Profil hinterlegt (jobs/secrets.json), nie im Journal — der Job „DeepL-Übersetzung“ nimmt ihn'), style: 'width:150px' })
   const keyBtn = el('button', { class: 'x', title: t_('DeepL-Schlüssel am Profil hinterlegen'), onclick: async () => { const n = (profIn.value || profSel.value).trim(); if (!n) { store.toast(t_('erst ein Profil benennen und speichern')); return } if (!keyIn.value) { store.toast(t_('Schlüssel fehlt')); return } try { await api.post(`/api/plugins/xliff/secrets/${encodeURIComponent(n)}`, { values: { key: keyIn.value } }, 'PUT'); keyIn.value = ''; store.toast(t_('DeepL-Schlüssel am Profil „{0}“ hinterlegt — Job: ⏱ Jobs → + Job → DeepL-Übersetzung', [n]), 'ok') } catch (e) { store.toast(e.message) } } }, '🔒')
   root.append(el('div', { class: 'toolbar' }, el('h1', {}, t_('⇄ Übersetzung')), el('span', { class: 'sep' }, '·'), profSel, profIn, el('button', { class: 'x', title: t_('Sprachen, Umfang, Attribute und Teilbaum als Profil speichern (für Jobs)'), onclick: saveProfile }, '💾'), el('span', { class: 'sep' }, '·'), keyIn, keyBtn, el('span', { class: 'grow' }), status), body)

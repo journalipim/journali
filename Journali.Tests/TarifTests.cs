@@ -6,7 +6,7 @@ using Journali.Server;
 
 namespace Journali.Tests;
 
-// Tarife (Taloan, 24.09.2026): Kostenlos, Pro, Pro+, Enterprise, Unlimited. Grenzen hängen am Team, Plugins und
+// Tarife: Kostenlos, Pro, Pro+, Enterprise, Unlimited. Grenzen hängen am Team, Plugins und
 // Publikationsbäume gelten für die Instanz nach ihrem höchsten Tarif. Jede neue Instanz hat drei Monate Enterprise,
 // gezählt ab dem ersten Eintrag im Journal. Reset-Schlüssel gibt es getrennt für Pro und Enterprise.
 public class TarifTests

@@ -1,7 +1,7 @@
 <script setup>
-// Einstellungen → Workflows (27, Taloan 21.09.2026: „Workflow-Designer mit Freigaben, Korrekturschleifen“): je Workflow die Zustände
+// Einstellungen → Workflows (27): je Workflow die Zustände
 // (Kacheln in der Skizze), die Übergänge (Pfeile: von → nach, Rolle, Notiz-Pflicht, Wirkungen) und wofür er gilt. Alles im Journal
-// (WorkflowDefined); Speichern schreibt die ganze Definition. Die Grafik ist die Arbeitsfläche (Taloan, 21.09.: „verschieben und anordnen“):
+// (WorkflowDefined); Speichern schreibt die ganze Definition. Die Grafik ist die Arbeitsfläche:
 // Kacheln frei ziehen (Lage wird gespeichert), vom ● auf eine andere Kachel ziehen = Übergang, Klick markiert die Zeile, Entf löscht.
 import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
@@ -45,7 +45,7 @@ function delState(i) { const w = cur.value; const k = w.states[i].key; if (w.tra
 function addTransition() { const w = cur.value; const k = 'step' + (w.transitions.length + 1); w.transitions.push({ key: k, label: { de: k, en: k }, from: w.states[0]?.key ?? '', to: w.states[1]?.key ?? w.states[0]?.key ?? '', roles: [], noteRequired: false, effects: [], escalateAfterDays: null, escalateRoles: [] }); touch() }
 const selState = ref(null), selTrans = ref(null)   // markierte Zeile (Grafik ↔ Tabelle)
 const W = 150, H = 46, GRID = 20
-// Andockpunkte (Taloan, 21.09.): je Seite 0 · ¼ · ½ · ¾ · 1 — Ecken, Mitten, Viertel; Schlüssel „seite:anteil“
+// Andockpunkte: je Seite 0 · ¼ · ½ · ¾ · 1 — Ecken, Mitten, Viertel; Schlüssel „seite:anteil“
 const PORTS = [] ; for (const side of ['top', 'bottom', 'left', 'right']) for (const f of [0, 0.25, 0.5, 0.75, 1]) PORTS.push(`${side}:${f}`)
 function portXY(p, key) { const [side, f] = key.split(':'); const a = Number(f); return side === 'top' ? { x: p.x + W * a, y: p.y } : side === 'bottom' ? { x: p.x + W * a, y: p.y + H } : side === 'left' ? { x: p.x, y: p.y + H * a } : { x: p.x + W, y: p.y + H * a } }
 // nächster Andockpunkt der Kachel zu einem Punkt
@@ -68,7 +68,7 @@ function stateDown(i, e) {
   drag.value = { kind: 'move', i, dx: p.x - w.states[i].x, dy: p.y - w.states[i].y }
 }
 function linkDown(i, e, port = 'right:0.75') { selState.value = i; const q = portXY(posOf(cur.value.states[i], i), port); drag.value = { kind: 'link', i, port, x: q.x, y: q.y, tx: q.x, ty: q.y, snapJ: null, snapPort: null } }
-// Einschnappen (Taloan, 21.09.): der nächste Andockpunkt irgendeiner Kachel (ausser der Startkachel des Pfeils), wenn er näher als 24 px ist
+// Einschnappen: der nächste Andockpunkt irgendeiner Kachel (ausser der Startkachel des Pfeils), wenn er näher als 24 px ist
 function snapTo(pt, exceptI) {
   const w = cur.value; let best = null
   w.states.forEach((s, j) => { if (j === exceptI) return; const p = posOf(s, j); for (const k of PORTS) { const q = portXY(p, k); const d = Math.hypot(q.x - pt.x, q.y - pt.y); if (d < 24 && (!best || d < best.d)) best = { j, port: k, x: q.x, y: q.y, d } } })
@@ -131,7 +131,7 @@ function stateMenu(e, i) {
   ])
 }
 function canvasUp() { const d = drag.value; if (d && (d.kind === 'link' || d.kind === 'reattach') && d.snapJ != null) { portUp(d.snapJ, d.snapPort); return } drag.value = null }
-// Kräfte-Layout (Taloan, 21.09.: „sowas kann der Algo nicht?“ — die symmetrische Form kommt aus einem Federmodell, nicht aus Ebenen):
+// Kräfte-Layout:
 // Kanten sind Federn mit Wunschlänge, Kacheln stossen sich ab, der Start zieht nach links, die Enden nach rechts; 400 Schritte, dann Raster.
 function forceLayout() {
   const w = cur.value; const n = w.states.length; if (!n) return
