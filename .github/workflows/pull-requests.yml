@@ -1,0 +1,21 @@
+# Der Quelltext ist zum Lesen und Herunterladen da; Änderungen werden nicht über Pull Requests angenommen.
+# Jeder Pull Request bekommt einen Hinweis und wird geschlossen. Ergänzungen sind Plugins — siehe docs/plugins-zertifizierung.md.
+name: pull-requests
+on:
+  pull_request_target:
+    types: [opened, reopened]
+permissions:
+  pull-requests: write
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo
+            const issue_number = context.payload.pull_request.number
+            await github.rest.issues.createComment({ owner, repo, issue_number, body:
+              'This repository does not take pull requests. The source is published for reading and personal use; ' +
+              'extensions are plugins (see docs/plugins-zertifizierung.md), and questions go to Discussions.' })
+            await github.rest.pulls.update({ owner, repo, pull_number: issue_number, state: 'closed' })

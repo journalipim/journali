@@ -94,6 +94,9 @@ gemeint. In Commits keine Zeile „Co-Authored-By“ — es gibt einen Beitragen
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`); im Job-Dialog steht bei gewähltem Profil nur, was am Job hängt
   (Profil, Pfade, Schalter) — ein Parameter mit `perJob: true` bleibt immer sichtbar.
+  **Zertifikat:** `certificate.json` neben dem Manifest (`docs/plugins-zertifizierung.md`); wer ein Plugin
+  ändert, signiert es vor dem Commit neu (`node tools/plugin-cert.mjs sign <key>`, nach dem Bau) — der Kern-Test
+  `Eingebaute_Plugins_mit_Zertifikat_sind_gueltig` prüft alle Siegel im Repo. Der private Schlüssel liegt nie im Repo.
   **Keine Kundendaten** (Adressen, Wurzeln) in Manifesten,
   Ansichten oder READMEs — die gehören in ein Profil. **Kein Name, kein Zitat**
   in dem, was der Anwender liest, und **keine Belehrung**: eine

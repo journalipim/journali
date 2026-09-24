@@ -27,6 +27,16 @@ Ein **Basis-Plugin** bringt die Grundfunktion einer Gruppe der Leiste mit und is
 
 Welche Plugins sich installieren und einschalten lassen, hängt am Tarif der Instanz: Kostenlos enthält Tabelle, Excel-Add-in, OnlyOffice, Vorschauen und Export; Pro dazu Datenblatt, Übersetzung, Vorlagen-Export, ETIM, Datenanalyse und Sicherung als Job; ab Pro+ alle. Es zählt der höchste Tarif, den ein Team der Instanz hat.
 
+## Zertifizierte Plugins
+
+Ein zertifiziertes Plugin trägt neben dem Manifest ein vom Herausgeber signiertes Zertifikat: Schlüssel, Fassung und
+ein Hash über alle Dateien. ⌁ Plugins zeigt es als ❖ mit dem Ausstellungsdatum; wird eine Datei verändert, steht ⚠ mit
+dem Grund. Ein Plugin ohne Zertifikat läuft genauso und trägt kein Zeichen.
+
+Der **Katalog** unter der Liste zeigt, was der Herausgeber an zertifizierten Plugins hat. ⇩ holen lädt das Zip auf den
+Server, der das Siegel prüft und das Verzeichnis unter plugins/ ablegt; ↑ steht, wenn dort eine neuere Fassung liegt.
+Danach wird das Plugin wie jedes andere installiert und eingeschaltet. Ohne Verbindung ist der Katalog leer.
+
 ## Profile
 
 Ein Import- oder Export-Plugin speichert seine Einstellungen als Profil im Journal, für alle sichtbar. Zugangsdaten am Profil liegen beim Server. Ein Profil ist die Grundlage, um denselben Lauf als Job zu wiederholen.

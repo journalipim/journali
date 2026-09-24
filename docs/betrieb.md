@@ -367,6 +367,14 @@ unter Einstellungen → Storage (`GET /api/files?path=…`, `FileApi.cs`, Recht 
 Laufwerke; versteckte Einträge bleiben weg. Die Pfade gelten auf dem Rechner, auf dem der Server läuft — nicht im
 Browser.
 
+## Zertifizierte Plugins
+
+Ein `certificate.json` neben `plugin.json`, signiert vom Herausgeber (ECDSA P-256 über Schlüssel, Fassung und den Hash
+aller Dateien). `PluginSeal.cs` prüft es bei jedem Lesen der Platte; `GET /api/plugins` liefert `certified`,
+`sealIssued`, `sealIssuer`, `sealReason`. Öffentlicher Schlüssel: `PluginSeal.DefaultKey`, überschreibbar mit
+`JOURNALI_PLUGIN_KEY`. Katalog: `GET /api/plugins/catalog` und `POST /api/plugins/catalog/{key}/fetch`
+(`JOURNALI_PLUGIN_CATALOG`, Vorgabe der Katalog auf GitHub). Alles Weitere: `docs/plugins-zertifizierung.md`.
+
 ## Lizenz — Tabelle `licence` in der Datenbank
 
 Die Grenzen dieser Anlage stehen in der Lizenz, nicht in der Hand

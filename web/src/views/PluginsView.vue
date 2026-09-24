@@ -19,7 +19,7 @@ const busy = ref('')
 // Symbol in der Leiste je Plugin: Einstellung des Nutzers, nicht des Plugins
 // Jobs je Plugin (für „Jobs verwalten“): einmal geladen, wenn der Tasker an ist
 const jobs = ref([])
-onMounted(async () => { try { jobs.value = await api.get('/api/jobs') } catch {} })
+onMounted(async () => { try { jobs.value = await api.get('/api/jobs') } catch {}; await loadCatalog() })
 const jobCount = key => jobs.value.filter(j => j.plugin === key).length
 // Leisten-Schalter nur, wenn das Plugin seine Gruppe allein bildet
 const railToggle = key => plugins.views.some(v => v.key === key && !baseTopics.value.has(topicOf(key, v.topic)) && (entries.value[topicOf(key, v.topic)] ?? []).every(e => e.plugin === key))
@@ -39,7 +39,7 @@ const kinds = computed(() => [...new Set(plugins.list.map(p => p.manifest?.kind)
 const shown = computed(() => {
   const s = q.value.trim().toLowerCase()
   const list = plugins.list.filter(p => (!kindFilter.value || p.manifest?.kind === kindFilter.value)
-    && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : !p.installed))
+    && (!stateFilter.value || (stateFilter.value === 'on' ? p.enabled : stateFilter.value === 'off' ? p.installed && !p.enabled : stateFilter.value === 'update' ? p.update : stateFilter.value === 'cert' ? p.certified : !p.installed))
     && (!s || p.key.includes(s) || label(p.manifest).toLowerCase().includes(s) || (L(p.manifest?.description) ?? '').toLowerCase().includes(s) || (p.manifest?.kind ?? '').includes(s)))
   return [...list].sort((a, b) => cmp(a, b) || a.key.localeCompare(b.key, 'de'))
 })
@@ -67,6 +67,20 @@ const TARIF = { free: t('Kostenlos'), pro: 'Pro', proplus: 'Pro+', enterprise: t
 const tarifOf = p => TARIF[p.tarif] ?? p.tarif ?? ''
 const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? t('— nicht installiert') : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : t('◐ an, Basis aus')
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
+// Siegel: zertifiziert (❖), Siegel gebrochen (⚠ — Zertifikat da, aber Dateien, Fassung oder Signatur passen nicht), sonst nichts
+const sealOf = p => p.certified ? '❖' : p.sealReason ? '⚠' : ''
+const sealTitle = p => p.certified ? t('zertifiziert · {0}', [p.sealIssued ?? '']) : p.sealReason ? t('Siegel gebrochen: {0}', [p.sealReason]) : ''
+// Katalog des Herausgebers: was es an zertifizierten Plugins gibt — holen legt das Verzeichnis unter plugins/ ab, installiert wird danach wie sonst
+const catalog = ref(null)
+async function loadCatalog(fresh = false) { try { catalog.value = await api.get('/api/plugins/catalog' + (fresh ? '?fresh=true' : '')) } catch (e) { catalog.value = { plugins: [], error: e.message } } }
+const catalogRows = computed(() => (catalog.value?.plugins ?? []).map(c => ({ ...c, key: c.entry.key, newer: c.onDisk && verCmp(c.entry.version, c.diskVersion) > 0 })))
+async function fetchPlugin(key) {
+  if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
+  busy.value = '…'
+  try { await api.post(`/api/plugins/catalog/${key}/fetch`, {}); await plugins.load(); await loadCatalog(); cur.value = key }
+  catch (e) { store.toast(e.message) }
+  finally { busy.value = '' }
+}
 // Ein/Aus: Einschalten braucht die Basis; Ausschalten einer Basis nimmt die Ergänzungen mit
 async function toggle(p) {
   if (!p.enabled) { const m = missing(p.key); if (m.length) { store.toast(t('braucht {0} — zuerst einschalten', [m.join(', ')])); return } await act(`/api/plugins/${p.key}/enable`); return }
@@ -94,7 +108,7 @@ function pick(k) { cur.value = k }
       <input v-model="q" type="search" :placeholder="$t('🔍 Key, Name, Beschreibung')" style="flex:1;min-width:120px" @keydown.esc="q = ''" />
       <span v-for="k in kinds" :key="k" class="view-chip" :class="{ on: kindFilter === k }" @click="kindFilter = kindFilter === k ? '' : k" :title="'Art: ' + k">{{ KIND[k] ?? k }}</span>
       <span class="sep">·</span>
-      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
+      <span v-for="[v, l] in [['on', '● an'], ['off', '○ aus'], ['update', $t('↑ Update')], ['new', $t('⇩ nicht installiert')], ['cert', $t('❖ zertifiziert')]]" :key="v" class="view-chip" :class="{ on: stateFilter === v }" @click="stateFilter = stateFilter === v ? '' : v">{{ l }}</span>
     </div>
     <div class="li head">
       <span class="k" :title="$t('nach Key sortieren{0}', [sortBy === 'key' ? ' ' + $t('— Klick dreht die Richtung') : ''])" @click="sortByCol('key')">{{ $t("Key{0}", [caret('key')]) }}</span>
@@ -112,10 +126,24 @@ function pick(k) { cur.value = k }
           <span v-if="p.version" class="mono">{{ p.version }}</span>
           <span v-if="p.update" class="warn" :title="$t('auf der Platte: {0}', [p.diskVersion])">↑ {{ p.diskVersion }}</span>
           <span v-if="!p.onDisk" class="neg" :title="$t('Verzeichnis fehlt')">✗</span>
+          <span v-if="sealOf(p)" class="seal" :class="p.certified ? 'pos' : 'neg'" :title="sealTitle(p)">{{ sealOf(p) }}</span>
           <span :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'">{{ stateOf(p) }}</span>
         </span>
       </div>
       <div v-if="plugins.loaded && !plugins.list.length" class="empty"><span :title="$t('Ein Verzeichnis mit plugin.json unter plugins/ anlegen.')">{{ $t("Kein Plugin") }}</span></div>
+    </div>
+    <div class="catalog" v-if="catalog">
+      <div class="li head"><span :title="catalog.url">{{ $t("◇ Katalog · {0}", [catalogRows.length]) }}</span><span class="grow" /><span class="x" :title="$t('Katalog neu laden')" @click="loadCatalog(true)">↻</span></div>
+      <div v-if="catalog.error" class="li muted" :title="catalog.error">{{ $t("nicht erreichbar") }}</div>
+      <div v-for="c in catalogRows" :key="c.key" class="li" :title="$L(c.entry.description) || ''">
+        <span class="k">{{ c.key }}</span>
+        <span class="l">{{ $L(c.entry.label) || c.key }}</span>
+        <span class="r">
+          <span class="mono">{{ c.entry.version }}</span>
+          <span v-if="c.onDisk && !c.newer" class="pos" :title="$t('liegt unter plugins/')">✓</span>
+          <button v-else class="mini" :title="c.newer ? $t('neue Fassung holen: {0} → {1}', [c.diskVersion, c.entry.version]) : $t('Zip laden, Siegel prüfen, nach plugins/ legen')" @click.stop="fetchPlugin(c.key)">{{ c.newer ? '↑ ' + c.entry.version : $t('⇩ holen') }}</button>
+        </span>
+      </div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><span :title="$t('Stand im Journal unter plugin:<key>')">{{ $t("plugins/<key>/plugin.json") }}</span></div>
   </div>
@@ -138,6 +166,8 @@ function pick(k) { cur.value = k }
     <div class="toolbar meta muted">
       <span>{{ $t("Fassung {0}", [current.version ?? '—']) }}</span><span v-if="current.diskVersion && current.diskVersion !== current.version">{{ $t("· auf der Platte {0}", [current.diskVersion]) }}</span>
       <span v-if="!current.onDisk" class="neg">{{ $t("· Verzeichnis plugins/{0} fehlt", [current.key]) }}</span>
+      <span v-if="current.certified" class="pos seal" :title="$t('Siegel des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert')">{{ $t("· ❖ zertifiziert {0}", [current.sealIssued ?? '']) }}</span>
+      <span v-else-if="current.sealReason" class="neg seal" :title="current.sealReason">{{ $t("· ⚠ Siegel gebrochen") }}</span>
       <span class="grow" /><span v-if="current.lastAt">{{ when(current.lastAt) }} 👤 {{ current.lastActor }}</span>
     </div>
     <div class="scroll">
@@ -169,6 +199,13 @@ function pick(k) { cur.value = k }
           <span v-if="svc.params?.length">{{ $t("Parameter: {0}.", [svc.params.map(p => p.label || p.key).join(' · ')]) }}</span></div>
         <div class="chips" style="padding:6px 0"><router-link class="primary" :to="`/p/tasker/jobs?new=${current.key}${svc.key ? '&service=' + svc.key : ''}`" custom v-slot="{ navigate }"><button class="primary" :disabled="!current.enabled" :title="$t('neuer Job mit diesem Plugin — der Assistent unter ⏱ Jobs')" @click="navigate">{{ $t("⏱ Als Job einrichten") }}</button></router-link><router-link :to="`/p/tasker/jobs?plugin=${current.key}`" custom v-slot="{ navigate }"><button :title="$t('die Jobs dieses Plugins unter ⏱ Jobs — Zeitplan, Läufe, Logs')" @click="navigate">{{ $t("⏱ Jobs verwalten") }}<span v-if="jobCount(current.key)" class="muted"> · {{ jobCount(current.key) }}</span></button></router-link><span class="muted" style="font-size:12px"><span :title="$t('Zeitplan oder nur von Hand; Parameter, Geheimnisse und Logs stehen beim Job.')">{{ $t("Zeitplan · Parameter beim Job") }}</span></span></div>
       </div>
+      <div class="section" v-if="current.certified || current.sealReason">
+        <h2>{{ $t("❖ Zertifikat") }} <span class="mono muted">{{ $t("plugins/{0}/certificate.json", [current.key]) }}</span></h2>
+        <div class="muted" style="font-size:12px;line-height:1.6">
+          <span v-if="current.certified" :title="$t('ausgestellt vom Herausgeber; jede Änderung an den Dateien bricht das Siegel')">{{ $t("❖ {0} · {1}", [current.sealIssuer ?? '', current.sealIssued ?? '']) }}</span>
+          <span v-else class="neg">{{ current.sealReason }}</span>
+        </div>
+      </div>
       <div class="section">
         <h2>{{ $t("Manifest") + ' ' }}<span class="mono muted">{{ $t("plugins/{0}/plugin.json", [current.key]) }}</span></h2>
         <pre class="out">{{ JSON.stringify(manifest, null, 2) }}</pre>
@@ -196,4 +233,7 @@ function pick(k) { cur.value = k }
 .form td.attr { white-space: nowrap; color: var(--muted); }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
 .x:hover { color: var(--neg); }
+.seal { font-size: 12px; }
+.catalog { border-top: 1px solid var(--line); max-height: 40%; overflow: auto; }
+.mini { font-size: 11px; padding: 0 6px; height: 20px; }
 </style>

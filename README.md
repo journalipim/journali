@@ -19,6 +19,12 @@ Abbild wird neu gebaut statt repariert.
 
 Ausführlich: [docs/architektur.md](docs/architektur.md).
 
+## Quelltext und Beiträge
+
+Der Quelltext ist zum Lesen, Herunterladen und Betreiben da (Lizenz: [LICENSE](LICENSE)). Pull Requests werden
+nicht angenommen und automatisch geschlossen. Ergänzungen sind Plugins; wer ein Plugin in den Katalog bringen
+will, findet den Weg in [docs/plugins-zertifizierung.md](docs/plugins-zertifizierung.md).
+
 ## Aufbau
 
 | Projekt | Zweck |

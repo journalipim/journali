@@ -15,7 +15,7 @@ namespace Journali.Server;
 /// </summary>
 public static class PluginApi
 {
-    public sealed record Manifest(string Key, string Version, JsonElement Raw);
+    public sealed record Manifest(string Key, string Version, JsonElement Raw, PluginSeal.Seal Seal);
 
     /// <summary>Alle plugin.json unter dem Verzeichnis, nach Schlüssel.</summary>
     public static Dictionary<string, Manifest> Scan(string dir)
@@ -31,7 +31,8 @@ public static class PluginApi
                 var raw = JsonDocument.Parse(File.ReadAllText(file)).RootElement.Clone();
                 var key = raw.TryGetProperty("key", out var k) ? k.GetString() ?? "" : "";
                 if (!ValidKey(key) || key != Path.GetFileName(d)) continue;   // Schlüssel = Verzeichnisname, sonst übergangen
-                found[key] = new Manifest(key, raw.TryGetProperty("version", out var v) ? v.GetString() ?? "0" : "0", raw);
+                var version = raw.TryGetProperty("version", out var v) ? v.GetString() ?? "0" : "0";
+                found[key] = new Manifest(key, version, raw, PluginSeal.Check(d, key, version));
             }
             catch (JsonException) { }
         }
@@ -84,6 +85,7 @@ public static class PluginApi
 
     public static void Map(RouteGroupBuilder api, string dir)
     {
+        PluginCatalogApi.Map(api, dir);   // vor /plugins/{key}: „catalog" ist kein Plugin
         // Liste: alles auf der Platte, mit Stand aus dem Journal — und Journal-Einträge, deren Verzeichnis fehlt
         api.MapGet("/plugins", (Catalog c) =>
         {
@@ -105,6 +107,8 @@ public static class PluginApi
                         lastAt = s?.LastAt, lastActor = s?.LastActor,
                         // der Tarif der Instanz erlaubt es — sonst nicht ladbar, nicht einschaltbar
                         allowed = tarif.Erlaubt(k), tarif = Tarife.Alle.FirstOrDefault(t => t.Erlaubt(k))?.Key,
+                        // das Siegel: zertifiziert, oder warum nicht (leer ohne Zertifikat)
+                        certified = m?.Seal.Certified ?? false, sealIssued = m?.Seal.Issued, sealIssuer = m?.Seal.Issuer, sealReason = m?.Seal.Grund,
                     };
                 }).ToList();
             });
