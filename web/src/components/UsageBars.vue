@@ -43,8 +43,8 @@ const histLabel = s => props.period === 'month' ? new Date(s + 'T00:00:00').toLo
       <span v-for="[key, label] in HIST" :key="key" class="view-chip" :class="{ on: period === key }"
         @click="emit('period', key)" :title="`Verlauf je ${label.slice(2)} anzeigen`">{{ label }}</span>
       <span class="grow" />
-      <span class="muted" style="font-size:12px" :title="`heute ${n(usage?.day?.used)} Tagesgeschäft von ${n(usage?.all?.day)} Einträgen — ohne Grenze`">heute {{ n(usage?.day?.used) }}</span>
-      <span class="muted" style="font-size:12px">· Journal #{{ n(usage?.head) }}</span>
+      <span class="muted" style="font-size:12px" :title="`heute ${n(usage?.day?.used)} Tagesgeschäft von ${n(usage?.all?.day)} Einträgen — ohne Grenze`">{{ $t("heute {0}", [n(usage?.day?.used)]) }}</span>
+      <span class="muted" style="font-size:12px">{{ $t("· Journal #{0}", [n(usage?.head)]) }}</span>
     </div>
 
     <div class="hist">

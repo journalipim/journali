@@ -128,35 +128,35 @@ async function austragen(m) {
 </script>
 
 <template>
-  <div v-if="!team" class="section muted">kein Team</div>
+  <div v-if="!team" class="section muted">{{ $t("kein Team") }}</div>
   <template v-else>
     <div class="section">
       <h2>◍ {{ team.label }}
-        <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" title="Init Team: bleibt, trägt die Limits der Lizenz"> ①</span></span>
+        <span class="muted">· {{ mitglieder.length }}<span v-if="team.primary" class="accent" :title="$t('Init Team: bleibt, trägt die Limits der Lizenz')"> ①</span></span>
         <select v-if="teams.length > 1" v-model="gewaehlt" style="margin-left:8px" @change="details">
           <option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option>
         </select>
       </h2>
       <table class="grid" style="width:auto">
-        <thead><tr><th>Person</th><th>Rolle</th><th>zuletzt</th><th></th></tr></thead>
+        <thead><tr><th>{{ $t("Person") }}</th><th>{{ $t("Rolle") }}</th><th>{{ $t("zuletzt") }}</th><th></th></tr></thead>
         <tbody>
           <tr v-for="m in mitglieder" :key="m.key" class="row">
             <td>{{ m.name || m.key }} <span class="mono muted" style="font-size:12px">{{ m.key }}</span>
-              <span v-if="(team.managers ?? []).includes(m.key)" class="accent" title="führt dieses Team">★</span>
-              <span v-if="!m.enabled" class="neg" title="gesperrt">⊘</span></td>
+              <span v-if="(team.managers ?? []).includes(m.key)" class="accent" :title="$t('führt dieses Team')">★</span>
+              <span v-if="!m.enabled" class="neg" :title="$t('gesperrt')">⊘</span></td>
             <td class="muted">{{ m.role }}</td>
             <td class="muted">{{ m.lastAt ? new Date(m.lastAt).toLocaleDateString() : '' }}</td>
-            <td><button v-if="fuehrt && !(team.managers ?? []).includes(m.key)" class="x" title="aus dem Team austragen" @click="austragen(m)">✕</button></td>
+            <td><button v-if="fuehrt && !(team.managers ?? []).includes(m.key)" class="x" :title="$t('aus dem Team austragen')" @click="austragen(m)">✕</button></td>
           </tr>
-          <tr v-if="!mitglieder.length"><td colspan="4" class="muted">niemand</td></tr>
+          <tr v-if="!mitglieder.length"><td colspan="4" class="muted">{{ $t("niemand") }}</td></tr>
           <tr v-if="fuehrt">
             <td colspan="4" class="row" style="gap:6px">
-              <select v-model="dazu" style="width:200px" title="Eintragen lässt sich nur, wer in keinem Team ist">
+              <select v-model="dazu" style="width:200px" :title="$t('Eintragen lässt sich nur, wer in keinem Team ist')">
                 <option value="">—</option>
                 <option v-for="f in frei" :key="f.key" :value="f.key">{{ f.name || f.key }} · {{ f.role }}</option>
               </select>
-              <button class="x" title="in das Team eintragen" :disabled="!dazu" @click="eintragen">+</button>
-              <span v-if="!frei.length" class="muted" style="font-size:12px" title="Wer wechseln soll, wird erst in seinem Team ausgetragen">niemand teamlos</span>
+              <button class="x" :title="$t('in das Team eintragen')" :disabled="!dazu" @click="eintragen">+</button>
+              <span v-if="!frei.length" class="muted" style="font-size:12px" :title="$t('Wer wechseln soll, wird erst in seinem Team ausgetragen')">{{ $t("niemand teamlos") }}</span>
             </td>
           </tr>
         </tbody>
@@ -167,29 +167,26 @@ async function austragen(m) {
     <LicenceSettings :team="team" @eingespielt="details" />
 
     <div class="section">
-      <h2>✦ journali Limits
-        <button class="x" title="Was gezählt wird" @click="hilfeToken">?</button>
+      <h2>{{ $t("✦ journali Limits") + ' ' }}<button class="x" :title="$t('Was gezählt wird')" @click="hilfeToken">?</button>
       </h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
-          <td class="muted" title="Was diesem Team in diesem Zeitraum noch zur Verfügung steht">Verfügbar</td>
+          <td class="muted" :title="$t('Was diesem Team in diesem Zeitraum noch zur Verfügung steht')">{{ $t("Verfügbar") }}</td>
           <td class="mono">
-            <span :class="freiTon('week')">▤ {{ zahl(rest('week')) }} / Woche</span> ·
-            <span :class="freiTon('month')">▦ {{ zahl(rest('month')) }} / Monat</span>
+            <span :class="freiTon('week')">{{ $t("▤ {0} / Woche", [zahl(rest('week'))]) }}</span> ·
+            <span :class="freiTon('month')">{{ $t("▦ {0} / Monat", [zahl(rest('month'))]) }}</span>
           </td>
-          <td class="muted" style="font-size:12px"><span v-if="!jt?.limits?.week && !jt?.limits?.month">kein eigenes Kontingent</span></td>
+          <td class="muted" style="font-size:12px"><span v-if="!jt?.limits?.week && !jt?.limits?.month">{{ $t("kein eigenes Kontingent") }}</span></td>
         </tr>
         <tr>
-          <td class="muted" title="Das Kontingent dieses Teams — der Administrator trägt es aus der Lizenz ein">Kontingent</td>
-          <td class="mono muted">
-            ▤ {{ zahl(jt?.limits?.week) }} / Woche · ▦ {{ zahl(jt?.limits?.month) }} / Monat
-          </td>
+          <td class="muted" :title="$t('Das Kontingent dieses Teams — der Administrator trägt es aus der Lizenz ein')">{{ $t("Kontingent") }}</td>
+          <td class="mono muted">{{ ' ' + $t("▤ {0} / Woche · ▦ {1} / Monat", [zahl(jt?.limits?.week), zahl(jt?.limits?.month)]) + ' ' }}</td>
           <td class="muted" style="font-size:12px">
-            <span v-if="jt && jt.payer !== jt.team">gemeinsam mit {{ jt.payerLabel }} · eigener Anteil ▦ {{ zahl(jt.mine?.month) }}</span>
+            <span v-if="jt && jt.payer !== jt.team">{{ $t("gemeinsam mit {0} · eigener Anteil ▦ {1}", [jt.payerLabel, zahl(jt.mine?.month)]) }}</span>
           </td>
         </tr>
         <tr>
-          <td class="muted" title="Was die Mitglieder in diesem Zeitraum geschrieben haben">Genutzt</td>
+          <td class="muted" :title="$t('Was die Mitglieder in diesem Zeitraum geschrieben haben')">{{ $t("Genutzt") }}</td>
           <td class="mono muted">
             ▤ {{ zahl(jt?.used?.week) }} · ▦ {{ zahl(jt?.used?.month) }}
           </td>
@@ -200,28 +197,28 @@ async function austragen(m) {
     </div>
 
     <div class="section">
-      <h2 title="Schlüssel und Modell dieses Teams; der Schlüssel bleibt beim Server.">✧ KI API Keys</h2>
+      <h2 :title="$t('Schlüssel und Modell dieses Teams; der Schlüssel bleibt beim Server.')">{{ $t("✧ KI API Keys") }}</h2>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
-          <td class="muted">Schlüssel</td>
+          <td class="muted">{{ $t("Schlüssel") }}</td>
           <td>
             <span v-for="k in team.keys" :key="k" class="chip" style="margin-right:4px">{{ k }}
-              <button v-if="fuehrt" class="x" title="Schlüssel entfernen" @click="schluesselWeg(k)">×</button>
+              <button v-if="fuehrt" class="x" :title="$t('Schlüssel entfernen')" @click="schluesselWeg(k)">×</button>
             </span>
             <span v-if="!team.keys.length && team.keysFrom" class="muted" :title="`zahlt über ${team.keysFrom}`">↑ {{ team.keysFrom }}</span>
-            <span v-else-if="!team.keys.length" class="neg" title="ohne Schlüssel keine KI über den Server">—</span>
+            <span v-else-if="!team.keys.length" class="neg" :title="$t('ohne Schlüssel keine KI über den Server')">—</span>
           </td>
           <td v-if="fuehrt" class="row" style="gap:4px">
             <select v-model="keyIn.anbieter" style="width:110px"><option v-for="[k, l] in ANBIETER" :key="k" :value="k">{{ l }}</option></select>
-            <input v-model="keyIn.wert" type="password" placeholder="Schlüssel" style="width:150px" @keydown.enter="schluessel" />
-            <button class="x" title="Schlüssel hinterlegen — er bleibt beim Server, nie im Journal, nie im Browser" @click="schluessel">🔒</button>
+            <input v-model="keyIn.wert" type="password" :placeholder="$t('Schlüssel')" style="width:150px" @keydown.enter="schluessel" />
+            <button class="x" :title="$t('Schlüssel hinterlegen — er bleibt beim Server, nie im Journal, nie im Browser')" @click="schluessel">🔒</button>
           </td><td v-else></td>
         </tr>
         <tr v-for="k in team.keys" :key="'m' + k">
-          <td class="muted" :title="`welches Modell ${k} fragt — es bestimmt Kosten und Güte`">Modell {{ k }}</td>
+          <td class="muted" :title="`welches Modell ${k} fragt — es bestimmt Kosten und Güte`">{{ $t("Modell {0}", [k]) }}</td>
           <td>
             <select :value="team.models?.[k] ?? ''" :disabled="!fuehrt" style="width:220px" @change="modell(k, $event.target.value)">
-              <option value="">— Vorgabe —</option>
+              <option value="">{{ $t("— Vorgabe —") }}</option>
               <option v-for="m in (MODELLE[k] ?? [])" :key="m" :value="m">{{ m }}</option>
             </select>
           </td><td></td>
@@ -229,19 +226,19 @@ async function austragen(m) {
       </tbody></table>
       <table class="grid form" style="width:auto"><colgroup><col style="width:150px" /><col style="width:320px" /><col /></colgroup><tbody>
         <tr>
-          <td class="muted" title="Wessen Schlüssel dieses Team benutzt">Schlüssel von</td>
+          <td class="muted" :title="$t('Wessen Schlüssel dieses Team benutzt')">{{ $t("Schlüssel von") }}</td>
           <td>
-            <span v-if="team.keys.length" class="pos">diesem Team</span>
-            <span v-else-if="team.keysFrom" class="muted">Team {{ team.keysFrom }}</span>
-            <span v-else class="neg">keiner hinterlegt</span>
+            <span v-if="team.keys.length" class="pos">{{ $t("diesem Team") }}</span>
+            <span v-else-if="team.keysFrom" class="muted">{{ $t("Team {0}", [team.keysFrom]) }}</span>
+            <span v-else class="neg">{{ $t("keiner hinterlegt") }}</span>
           </td><td></td>
         </tr>
       </tbody></table>
     </div>
 
     <div class="section">
-      <h2 title="Was journali an den Anbieter geschickt und von ihm zurückbekommen hat; über Tokens und Kosten sagt journali nichts.">✧ KI Austauschvolumen</h2>
-      <table v-if="tage.length" class="grid" style="width:auto"><thead><tr><th style="width:110px">Tag</th><th class="num" style="width:70px">Aufrufe</th><th class="num" style="width:90px" title="hingeschickt">↑ hin</th><th class="num" style="width:90px" title="zurückbekommen">↓ zurück</th><th class="num" style="width:90px">Σ</th><th>Anlass</th></tr></thead><tbody>
+      <h2 :title="$t('Was journali an den Anbieter geschickt und von ihm zurückbekommen hat; über Tokens und Kosten sagt journali nichts.')">{{ $t("✧ KI Austauschvolumen") }}</h2>
+      <table v-if="tage.length" class="grid" style="width:auto"><thead><tr><th style="width:110px">{{ $t("Tag") }}</th><th class="num" style="width:70px">{{ $t("Aufrufe") }}</th><th class="num" style="width:90px" :title="$t('hingeschickt')">{{ $t("↑ hin") }}</th><th class="num" style="width:90px" :title="$t('zurückbekommen')">{{ $t("↓ zurück") }}</th><th class="num" style="width:90px">Σ</th><th>{{ $t("Anlass") }}</th></tr></thead><tbody>
         <tr v-for="t in tage" :key="t.day" class="row">
           <td class="mono">{{ t.day }}</td>
           <td class="num mono">{{ t.calls }}</td>
@@ -251,7 +248,7 @@ async function austragen(m) {
           <td class="muted" style="font-size:12px">{{ Object.entries(t.byPurpose ?? {}).map(([a, v]) => `${a} ${kb(v)}`).join(' · ') }}</td>
         </tr>
       </tbody></table>
-      <div v-else class="muted" style="font-size:12px">noch nichts gemessen</div>
+      <div v-else class="muted" style="font-size:12px">{{ $t("noch nichts gemessen") }}</div>
     </div>
   </template>
 </template>

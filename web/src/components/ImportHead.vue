@@ -9,10 +9,10 @@ const NAMES = { ixp: 'IXP', solr: 'Solr', table: 'Tabelle' }
 </script>
 
 <template>
-  <div class="toolbar"><h1><router-link to="/import" class="crumb" title="zur Übersicht Import">⇩ Import</router-link> › {{ NAMES[source] ?? source }}</h1><span class="grow" /><span v-if="busy" class="busy">⏳ {{ busy }}</span><slot name="status" /></div>
+  <div class="toolbar"><h1><router-link to="/import" class="crumb" :title="$t('zur Übersicht Import')">{{ $t("⇩ Import") }}</router-link> › {{ NAMES[source] ?? source }}</h1><span class="grow" /><span v-if="busy" class="busy">⏳ {{ busy }}</span><slot name="status" /></div>
   <table class="grid form"><colgroup><col style="width:84px" /><col /></colgroup><tbody>
-    <tr class="step"><td colspan="2">1 · Quelle</td></tr>
-    <tr><td class="attr">Profil</td><td><ProfileBar :key="plugin" :plugin="plugin" :get="get" :set="set" /></td></tr>
+    <tr class="step"><td colspan="2">{{ $t("1 · Quelle") }}</td></tr>
+    <tr><td class="attr">{{ $t("Profil") }}</td><td><ProfileBar :key="plugin" :plugin="plugin" :get="get" :set="set" /></td></tr>
     <slot />
   </tbody></table>
 </template>

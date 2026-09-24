@@ -59,17 +59,17 @@ function dropOn(i) { const from = drag.value; drag.value = null; if (from == nul
     </div>
     <div v-if="open" ref="editor" class="editor" @mousedown.stop>
       <div v-for="(v, i) in rows" :key="i" class="lrow" :class="{ over: drag != null && drag !== i }" @dragover.prevent @drop="dropOn(i)">
-        <span class="grip" draggable="true" title="ziehen: umsortieren" @dragstart="drag = i" @dragend="drag = null">⋮⋮</span>
-        <select v-if="options && !free.has(i)" v-model="rows[i]" @keydown="onKey($event, i)" @change="onRowChange(i)"><option value="">—</option><option v-for="o in options" :key="o" :value="o">{{ label(o) }}</option><option v-if="mayAddListValue(list)" :value="NEW">+ neuer Wert …</option></select>
+        <span class="grip" draggable="true" :title="$t('ziehen: umsortieren')" @dragstart="drag = i" @dragend="drag = null">⋮⋮</span>
+        <select v-if="options && !free.has(i)" v-model="rows[i]" @keydown="onKey($event, i)" @change="onRowChange(i)"><option value="">—</option><option v-for="o in options" :key="o" :value="o">{{ label(o) }}</option><option v-if="mayAddListValue(list)" :value="NEW">{{ $t("+ neuer Wert …") }}</option></select>
         <input v-else v-model="rows[i]" :class="{ bad: error?.i === i }" :placeholder="free.has(i) ? 'neuer Wert' : ''" @keydown="onKey($event, i)" @input="error = null" />
-        <button class="x" title="Zeile entfernen" tabindex="-1" @click="remove(i)">−</button>
+        <button class="x" :title="$t('Zeile entfernen')" tabindex="-1" @click="remove(i)">−</button>
       </div>
       <div v-if="error" class="neg" style="font-size:12px;padding:2px 4px">✗ {{ error.message }}</div>
       <div class="bar">
-        <button class="x" title="Zeile anfügen" @click="add()">+</button>
+        <button class="x" :title="$t('Zeile anfügen')" @click="add()">+</button>
         <span class="grow" />
-        <button class="x" title="verwerfen (Esc)" @click="cancel">✕</button>
-        <button class="primary" title="speichern" @click="save">✓</button>
+        <button class="x" :title="$t('verwerfen (Esc)')" @click="cancel">✕</button>
+        <button class="primary" :title="$t('speichern')" @click="save">✓</button>
       </div>
     </div>
   </td>

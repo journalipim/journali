@@ -463,7 +463,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
 <template>
   <div class="pane" style="width:190px;flex:none">
-    <div class="toolbar"><h1>⊞ Modell</h1></div>
+    <div class="toolbar"><h1>{{ $t("⊞ Modell") }}</h1></div>
     <div class="sections">
       <template v-for="part in ['Struktur', 'Basics']" :key="part">
         <div class="part">{{ part }}</div>
@@ -479,25 +479,25 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
   <div class="pane" :style="`width:${listW}px;flex:none`" v-if="model">
     <div class="toolbar"><h1>{{ sec.icon }} {{ sec.label }}</h1><span class="muted">{{ shown.length }}</span><span class="muted" :title="sec.hint">ⓘ</span><span class="grow" /></div>
     <div class="toolbar" style="gap:4px">
-      <input v-model="filter" type="search" placeholder="🔍 Suche in Key und Name" style="flex:1;min-width:0" />
+      <input v-model="filter" type="search" :placeholder="$t('🔍 Suche in Key und Name')" style="flex:1;min-width:0" />
       <input v-model="newKey" type="text" :placeholder="addPlaceholder[section]" style="width:130px" @keydown.enter="add" />
-      <button class="primary" :disabled="!newKey.trim()" @click="add" title="anlegen">+</button>
-      <button v-if="removePath[section]" class="x" @click="restoreMenu" title="zuletzt zurückgezogene wiederherstellen (bis zu 5; weiter zurück: Journal)">↶</button>
+      <button class="primary" :disabled="!newKey.trim()" @click="add" :title="$t('anlegen')">+</button>
+      <button v-if="removePath[section]" class="x" @click="restoreMenu" :title="$t('zuletzt zurückgezogene wiederherstellen (bis zu 5; weiter zurück: Journal)')">↶</button>
     </div>
     <!-- Filter: Eigenschaften, je Abschnitt andere; leer = alles -->
     <div class="toolbar flt" v-if="['attributes', 'groups', 'views', 'units'].includes(section)">
       <template v-if="section === 'attributes'">
-        <select v-model="flt.group" title="Gruppe"><option value="">▤ alle</option><option value="-">— ohne Gruppe</option><option v-for="g in model.groups" :key="g.key" :value="g.key">▤ {{ g.key }}</option></select>
-        <select v-model="flt.type" title="Typ"><option value="">Typ</option><option v-for="t in TYPES" :key="t" :value="t">{{ TYPE_SYM[t] }} {{ t }}</option></select>
-        <button :class="{ primary: flt.locale }" @click="flt.locale = !flt.locale" title="nur sprachabhängige">🗣</button>
-        <button :class="{ primary: flt.channel }" @click="flt.channel = !flt.channel" title="nur kanalabhängige">⇶</button>
-        <button :class="{ primary: flt.multiple }" @click="flt.multiple = !flt.multiple" title="nur vermehrbare">≣</button>
+        <select v-model="flt.group" :title="$t('Gruppe')"><option value="">{{ $t("▤ alle") }}</option><option value="-">{{ $t("— ohne Gruppe") }}</option><option v-for="g in model.groups" :key="g.key" :value="g.key">▤ {{ g.key }}</option></select>
+        <select v-model="flt.type" :title="$t('Typ')"><option value="">{{ $t("Typ") }}</option><option v-for="t in TYPES" :key="t" :value="t">{{ TYPE_SYM[t] }} {{ t }}</option></select>
+        <button :class="{ primary: flt.locale }" @click="flt.locale = !flt.locale" :title="$t('nur sprachabhängige')">🗣</button>
+        <button :class="{ primary: flt.channel }" @click="flt.channel = !flt.channel" :title="$t('nur kanalabhängige')">⇶</button>
+        <button :class="{ primary: flt.multiple }" @click="flt.multiple = !flt.multiple" :title="$t('nur vermehrbare')">≣</button>
       </template>
-      <select v-else-if="section === 'groups'" v-model="flt.activeFrom" title="aktiv ab"><option value="">🔒 alle</option><option value="-">überall aktiv</option><option v-for="r in roles" :key="r" :value="r">🔒 ab {{ roleLabel[r] }}</option></select>
-      <select v-else-if="section === 'views'" v-model="flt.level" title="Knotentyp"><option value="">alle Knotentypen</option><option v-for="r in roles" :key="r" :value="r">{{ roleLabel[r] }}</option></select>
-      <select v-else-if="section === 'units'" v-model="flt.quantity" title="Grösse"><option value="">alle Grössen</option><option v-for="q in quantities" :key="q" :value="q">{{ q }}</option></select>
+      <select v-else-if="section === 'groups'" v-model="flt.activeFrom" :title="$t('aktiv ab')"><option value="">{{ $t("🔒 alle") }}</option><option value="-">{{ $t("überall aktiv") }}</option><option v-for="r in roles" :key="r" :value="r">{{ $t("🔒 ab {0}", [roleLabel[r]]) }}</option></select>
+      <select v-else-if="section === 'views'" v-model="flt.level" :title="$t('Knotentyp')"><option value="">{{ $t("alle Knotentypen") }}</option><option v-for="r in roles" :key="r" :value="r">{{ roleLabel[r] }}</option></select>
+      <select v-else-if="section === 'units'" v-model="flt.quantity" :title="$t('Grösse')"><option value="">{{ $t("alle Grössen") }}</option><option v-for="q in quantities" :key="q" :value="q">{{ q }}</option></select>
       <span class="grow" />
-      <button v-if="filtered" class="x" @click="resetFlt" title="Filter zurücksetzen">✗ {{ shown.length }}</button>
+      <button v-if="filtered" class="x" @click="resetFlt" :title="$t('Filter zurücksetzen')">✗ {{ shown.length }}</button>
     </div>
     <div class="scroll list" tabindex="0" @keydown="onListKey">
       <div v-for="r in shown" :key="r.key" class="li" :class="{ selected: sel.has(r.key), current: cur === r.key }" @click="pick($event, r)" @contextmenu="rowMenu($event, r)" :title="r.key">
@@ -507,7 +507,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       </div>
       <div v-if="!shown.length" class="empty">{{ filter ? 'Nichts zu „' + filter + '“' : 'Noch nichts — oben anlegen.' }}</div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>Shift</kbd>/<kbd>Strg</kbd>+Klick mehrere · {{ count }} gewählt</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>{{ $t("Shift") }}</kbd>/<kbd>{{ $t("Strg") }}</kbd>{{ $t("+Klick mehrere · {0} gewählt", [count]) }}</div>
   </div>
 
   <Splitter v-if="model" v-model="listW" :min="220" :max="800" />
@@ -515,7 +515,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
   <div class="pane" style="flex:1" v-if="model">
     <!-- Stapel -->
     <template v-if="many">
-      <div class="toolbar"><h1>{{ count }} {{ sec.label }} gewählt</h1><span class="grow" /><button @click="sel = new Set()">Keine</button></div>
+      <div class="toolbar"><h1>{{ $t("{0} {1} gewählt", [count, sec.label]) }}</h1><span class="grow" /><button @click="sel = new Set()">{{ $t("Keine") }}</button></div>
       <div class="scroll">
         <div class="section">
           <AttrBulk v-if="section === 'attributes'" :attrs="bulkAttrs" :groups="model.groups" :units="model.units" :roles="roles"
@@ -530,32 +530,32 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <div class="toolbar"><h1>▤ {{ curGroup.label?.de || curGroup.key }}</h1><span class="mono muted">{{ curGroup.key }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr><td class="attr">Name de</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
-          <tr><td class="attr">Name en</td><Cell :value="curGroup.label?.en ?? null" @save="v => groupSet('label_en', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curGroup.label?.de ?? null" @save="v => groupSet('label_de', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curGroup.label?.en ?? null" @save="v => groupSet('label_en', v)" /></tr>
           <!-- Freigabesteuerung (Taloan, 22.09.): zählt eine Wertänderung in dieser Gruppe als Eingriff in Prüfung und Freigabe? -->
-          <tr><td class="attr" title="Zählt eine Wertänderung hier als Eingriff in Prüfung und Freigabe? automatisch = ja, wenn die Gruppe ein Pflichtfeld hat">⚑ Freigabesteuerung</td><SelectCell :value="curGroup.releaseWatch ?? 'auto'" :options="['auto', 'always', 'never']" :label-of="watchLabel" required @save="v => groupSet('releaseWatch', v === 'auto' ? null : v)" /></tr>
-          <tr><td class="attr" title="ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.">🔒 aktiv ab</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
+          <tr><td class="attr" :title="$t('Zählt eine Wertänderung hier als Eingriff in Prüfung und Freigabe? automatisch = ja, wenn die Gruppe ein Pflichtfeld hat')">{{ $t("⚑ Freigabesteuerung") }}</td><SelectCell :value="curGroup.releaseWatch ?? 'auto'" :options="['auto', 'always', 'never']" :label-of="watchLabel" required @save="v => groupSet('releaseWatch', v === 'auto' ? null : v)" /></tr>
+          <tr><td class="attr" :title="$t('ab welchem Knotentyp Werte erfasst werden; leer = überall. Darüber sichtbar, aber gesperrt.')">{{ $t("🔒 aktiv ab") }}</td><SelectCell :value="curGroup.activeFrom ?? ''" :options="roles" :label-of="k => roleLabel[k]" @save="v => groupSet('activeFrom', v)" /></tr>
         </tbody></table>
         <div class="section">
-          <h2>⊞ Attribute: {{ groupAttrs.length }} <span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="`Gruppe und ihre ${groupAttrs.length} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben`">✕ Gruppe mit {{ groupAttrs.length }} Attributen</button></h2>
+          <h2>{{ $t("⊞ Attribute: {0}", [groupAttrs.length]) + ' ' }}<span class="grow" /><button class="x" :disabled="busy" @click="removeGroupDeep" :title="`Gruppe und ihre ${groupAttrs.length} Attribute zurückziehen — Werte bleiben im Journal, ★-Attribute und das Kennungsattribut bleiben`">{{ $t("✕ Gruppe mit {0} Attributen", [groupAttrs.length]) }}</button></h2>
           <div class="chips">
             <span v-for="a in groupAttrs" :key="a.key" class="chip" :title="`${a.key} · ${a.type}${a.multiple ? ' ≣' : ''}${a.perLocale ? ' 🗣' : ''}`">
               <a href="#" @click.prevent="goto('attributes', a.key)">{{ a.label?.de || a.key }}</a>
-              <button @click="assign(a, null)" title="aus der Gruppe nehmen — das Attribut bleibt, ohne Gruppe gilt es an keinem Knoten">×</button>
+              <button @click="assign(a, null)" :title="$t('aus der Gruppe nehmen — das Attribut bleibt, ohne Gruppe gilt es an keinem Knoten')">×</button>
             </span>
           </div>
         </div>
         <div class="section">
-          <h2>+ Attribute zuordnen <span class="muted">· {{ pickRows.length }} von {{ otherAttrs.length }}</span></h2>
+          <h2>{{ $t("+ Attribute zuordnen") + ' ' }}<span class="muted">{{ $t("· {0} von {1}", [pickRows.length, otherAttrs.length]) }}</span></h2>
           <div class="chips" style="margin-bottom:6px">
-            <input v-model="pickText" type="search" placeholder="Filter" style="width:180px" />
-            <select v-model="pickFrom" style="width:240px" title="Herkunft: ohne Gruppe oder aus welcher Gruppe">
-              <option value="">alle Herkünfte</option>
+            <input v-model="pickText" type="search" :placeholder="$t('Filter')" style="width:180px" />
+            <select v-model="pickFrom" style="width:240px" :title="$t('Herkunft: ohne Gruppe oder aus welcher Gruppe')">
+              <option value="">{{ $t("alle Herkünfte") }}</option>
               <option v-for="[g, n] in pickSources" :key="g" :value="g">{{ g === '-' ? '— ohne Gruppe' : '▤ ' + groupLabel(g) + ' · ' + g }} ({{ n }})</option>
             </select>
-            <button @click="picked = new Set(pickRows.map(a => a.key))" :disabled="!pickRows.length">alle {{ pickRows.length }}</button>
-            <button @click="picked = new Set()" :disabled="!picked.size">Keine</button>
-            <button class="primary" :disabled="!picked.size" @click="assignPicked">→ {{ picked.size }} zuordnen</button>
+            <button @click="picked = new Set(pickRows.map(a => a.key))" :disabled="!pickRows.length">{{ $t("alle {0}", [pickRows.length]) }}</button>
+            <button @click="picked = new Set()" :disabled="!picked.size">{{ $t("Keine") }}</button>
+            <button class="primary" :disabled="!picked.size" @click="assignPicked">{{ $t("→ {0} zuordnen", [picked.size]) }}</button>
           </div>
           <div class="picker">
             <label v-for="a in pickRows" :key="a.key" class="pick" :class="{ on: picked.has(a.key) }">
@@ -563,7 +563,7 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
               <span class="l">{{ a.label?.de || a.key }}</span><span class="mono muted k">{{ a.key }}</span>
               <span class="muted r">{{ TYPE_SYM[a.type] ?? a.type }} {{ a.group ? '▤ ' + a.group : '— ohne Gruppe' }}</span>
             </label>
-            <div v-if="!pickRows.length" class="empty">Nichts zu „{{ pickText }}“</div>
+            <div v-if="!pickRows.length" class="empty">{{ $t("Nichts zu „{0}“", [pickText]) }}</div>
           </div>
         </div>
       </div>
@@ -571,36 +571,36 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
 
     <!-- Attribut -->
     <template v-else-if="section === 'attributes' && curAttr">
-      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span v-if="curAttr.unique" class="chip" title="eindeutig: kein zweiter Knoten mit demselben Wert — der Wert ist ein Schlüssel des Knotens">① eindeutig</span><span class="grow" /></div>
+      <div class="toolbar"><h1>⊞ {{ curAttr.label?.de || curAttr.key }}</h1><span class="mono muted">{{ curAttr.key }}</span><span v-if="curAttr.unique" class="chip" :title="$t('eindeutig: kein zweiter Knoten mit demselben Wert — der Wert ist ein Schlüssel des Knotens')">{{ $t("① eindeutig") }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr><td class="attr">Name de</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
-          <tr><td class="attr">Name en</td><Cell :value="curAttr.label?.en ?? null" @save="v => attrSet('label_en', v)" /></tr>
-          <tr><td class="attr">Typ</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${TYPE_LABEL[t] ?? t}`" required @save="v => attrSet('type', v)" /></tr>
-          <tr><td class="attr" title="Gruppe in der Pflege — ohne Gruppe gilt das Attribut an keinem Knoten">▤ Gruppe</td><SelectCell :value="curAttr.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => attrSet('group', v || null)" /></tr>
-          <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">⚖ Einheit</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
-          <tr v-if="curAttr.type === 'enum'"><td class="attr">☰ Werteliste<span v-if="!curAttr.list" class="warn" title="ohne Werteliste lässt sich kein Wert setzen"> ●</span></td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
-          <tr v-if="curAttr.type === 'rows'"><td class="attr" title="Spalten, jede ein Attribut, kommagetrennt">≣ Spalten<span v-if="!(curAttr.columns ?? []).length" class="warn" title="ohne Spalten hat eine Zeile nichts"> ●</span></td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curAttr.label?.de ?? null" @save="v => attrSet('label_de', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curAttr.label?.en ?? null" @save="v => attrSet('label_en', v)" /></tr>
+          <tr><td class="attr">{{ $t("Typ") }}</td><SelectCell :value="curAttr.type" :options="TYPES" :label-of="t => `${TYPE_SYM[t]} ${TYPE_LABEL[t] ?? t}`" required @save="v => attrSet('type', v)" /></tr>
+          <tr><td class="attr" :title="$t('Gruppe in der Pflege — ohne Gruppe gilt das Attribut an keinem Knoten')">{{ $t("▤ Gruppe") }}</td><SelectCell :value="curAttr.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => attrSet('group', v || null)" /></tr>
+          <tr v-if="curAttr.type === 'integer' || curAttr.type === 'decimal'"><td class="attr">{{ $t("⚖ Einheit") }}</td><SelectCell :value="curAttr.unit ?? ''" :options="(model.units ?? []).map(u => u.key)" @save="v => attrSet('unit', v || null)" /></tr>
+          <tr v-if="curAttr.type === 'enum'"><td class="attr">{{ $t("☰ Werteliste") }}<span v-if="!curAttr.list" class="warn" :title="$t('ohne Werteliste lässt sich kein Wert setzen')"> ●</span></td><SelectCell :value="curAttr.list ?? ''" :options="model.lists.map(l => l.key)" @save="v => attrSet('list', v || null)" /></tr>
+          <tr v-if="curAttr.type === 'rows'"><td class="attr" :title="$t('Spalten, jede ein Attribut, kommagetrennt')">{{ $t("≣ Spalten") }}<span v-if="!(curAttr.columns ?? []).length" class="warn" :title="$t('ohne Spalten hat eine Zeile nichts')"> ●</span></td><Cell :value="(curAttr.columns ?? []).join(', ') || null" @save="v => attrSet('columns', v)" /></tr>
           <!-- nur, was zum Typ passt (Taloan, 17.09.): Muster bei Text; Einheit bei Zahlen; Werteliste bei enum; Spalten bei rows -->
-          <tr v-if="curAttr.type === 'text'"><td class="attr" title="Muster als regulärer Ausdruck — jeder Wert muss ganz dazu passen">⌗ Muster</td><Cell :value="curAttr.pattern ?? null" @save="v => attrSet('pattern', v || null)" />
-            <td style="padding-left:6px"><select :value="''" @change="e => { const p = PATTERNS.find(x => x.key === e.target.value); if (p) attrSet('pattern', p.re); e.target.value = '' }" title="ein übliches Muster einsetzen"><option value="">Vorlage …</option><option v-for="p in PATTERNS" :key="p.key" :value="p.key">{{ p.label }}</option></select></td></tr>
-          <tr v-if="curAttr.type === 'text' && curAttr.pattern"><td class="attr" title="steht in der Fehlermeldung statt des Musters">⌗ Hinweis</td><Cell :value="curAttr.patternHint ?? null" @save="v => attrSet('patternHint', v || null)" /></tr>
-          <tr v-if="curAttr.type !== 'rows'"><td class="attr" title="der Wert ist je Sprache verschieden">🗣 sprachabhängig</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
-          <tr class="sub"><td colspan="3">↓ Wert</td></tr>
-          <tr><td class="attr" title="Zählt eine Änderung dieses Attributs als Eingriff in Prüfung und Freigabe? Leer = wie die Gruppe.">⚑ Freigabesteuerung</td><SelectCell :value="curAttr.releaseWatch ?? ''" :options="['', 'always', 'never']" :label-of="watchLabel" @save="v => attrSet('releaseWatch', v || null)" /></tr>
-          <tr><td class="attr" title="Wert vererbt sich nach unten (Kategorie ja, Name nein)">↓ vererbbar</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
+          <tr v-if="curAttr.type === 'text'"><td class="attr" :title="$t('Muster als regulärer Ausdruck — jeder Wert muss ganz dazu passen')">{{ $t("⌗ Muster") }}</td><Cell :value="curAttr.pattern ?? null" @save="v => attrSet('pattern', v || null)" />
+            <td style="padding-left:6px"><select :value="''" @change="e => { const p = PATTERNS.find(x => x.key === e.target.value); if (p) attrSet('pattern', p.re); e.target.value = '' }" :title="$t('ein übliches Muster einsetzen')"><option value="">{{ $t("Vorlage …") }}</option><option v-for="p in PATTERNS" :key="p.key" :value="p.key">{{ p.label }}</option></select></td></tr>
+          <tr v-if="curAttr.type === 'text' && curAttr.pattern"><td class="attr" :title="$t('steht in der Fehlermeldung statt des Musters')">{{ $t("⌗ Hinweis") }}</td><Cell :value="curAttr.patternHint ?? null" @save="v => attrSet('patternHint', v || null)" /></tr>
+          <tr v-if="curAttr.type !== 'rows'"><td class="attr" :title="$t('der Wert ist je Sprache verschieden')">{{ $t("🗣 sprachabhängig") }}</td><ToggleCell :value="b(curAttr.perLocale)" @save="v => attrSet('locale', v === 'true')" /></tr>
+          <tr class="sub"><td colspan="3">{{ $t("↓ Wert") }}</td></tr>
+          <tr><td class="attr" :title="$t('Zählt eine Änderung dieses Attributs als Eingriff in Prüfung und Freigabe? Leer = wie die Gruppe.')">{{ $t("⚑ Freigabesteuerung") }}</td><SelectCell :value="curAttr.releaseWatch ?? ''" :options="['', 'always', 'never']" :label-of="watchLabel" @save="v => attrSet('releaseWatch', v || null)" /></tr>
+          <tr><td class="attr" :title="$t('Wert vererbt sich nach unten (Kategorie ja, Name nein)')">{{ $t("↓ vererbbar") }}</td><ToggleCell :value="b(curAttr.inheritable)" @save="v => attrSet('inheritable', v === 'true')" /></tr>
           <!-- eindeutig (Taloan, 21.09.): kein zweiter Knoten mit demselben Wert — SKU, EAN, MATNR, auch eine Achse; beliebig viele, jedes für sich -->
-          <tr v-if="canBeUnique(curAttr) || curAttr.unique"><td class="attr" title="kein zweiter Knoten mit demselben Wert (SKU, EAN) — einschalten geht nur ohne Doppelte im Bestand; eine Kopie übernimmt ihn nicht">① eindeutig</td>
+          <tr v-if="canBeUnique(curAttr) || curAttr.unique"><td class="attr" :title="$t('kein zweiter Knoten mit demselben Wert (SKU, EAN) — einschalten geht nur ohne Doppelte im Bestand; eine Kopie übernimmt ihn nicht')">{{ $t("① eindeutig") }}</td>
             <ToggleCell :value="b(curAttr.unique)" @save="v => attrSet('unique', v === 'true')" /></tr>
-          <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" title="vermehrbar: mehrere Werte — in der Zelle als Liste mit + − und Umsortieren">≣ vermehrbar</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
-          <tr class="sub"><td colspan="3" title="Pflicht: ohne Wert keine Freigabe in diesem Kanal">⇶ Kanal · Pflicht für die Freigabe</td></tr>
-          <tr v-if="!['rows', 'formula', 'template'].includes(curAttr.type)"><td class="attr" title="der Wert ist je Kanal verschieden">⇶ kanalabhängig</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
-          <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für die Freigabe im Kanal ${c.key} — je Sprache, oder * für alle Sprachen; nichts = keine Pflicht`">● Pflicht {{ c.key }}</td>
+          <tr v-if="!['rows', 'formula', 'template', 'boolean', 'html'].includes(curAttr.type)"><td class="attr" :title="$t('vermehrbar: mehrere Werte — in der Zelle als Liste mit + − und Umsortieren')">{{ $t("≣ vermehrbar") }}</td><ToggleCell :value="b(curAttr.multiple)" @save="v => attrSet('multiple', v === 'true')" /></tr>
+          <tr class="sub"><td colspan="3" :title="$t('Pflicht: ohne Wert keine Freigabe in diesem Kanal')">{{ $t("⇶ Kanal · Pflicht für die Freigabe") }}</td></tr>
+          <tr v-if="!['rows', 'formula', 'template'].includes(curAttr.type)"><td class="attr" :title="$t('der Wert ist je Kanal verschieden')">{{ $t("⇶ kanalabhängig") }}</td><ToggleCell :value="b(curAttr.perChannel)" @save="v => attrSet('channel', v === 'true')" /></tr>
+          <tr v-for="c in model.channels" :key="c.key"><td class="attr" :title="`Pflicht für die Freigabe im Kanal ${c.key} — je Sprache, oder * für alle Sprachen; nichts = keine Pflicht`">{{ $t("● Pflicht {0}", [c.key]) }}</td>
             <td colspan="2"><div class="chips" style="padding:2px 4px">
-              <span class="view-chip" :class="{ on: reqHas(c.key, '*') }" title="in allen Sprachen Pflicht" @click="reqToggle(c.key, '*')">* alle</span>
+              <span class="view-chip" :class="{ on: reqHas(c.key, '*') }" :title="$t('in allen Sprachen Pflicht')" @click="reqToggle(c.key, '*')">{{ $t("* alle") }}</span>
               <template v-if="curAttr.perLocale"><span v-for="l in model.locales" :key="l.code" class="view-chip" :class="{ on: reqHas(c.key, l.code) }" :title="`Pflicht in ${l.code}`" @click="reqToggle(c.key, l.code)">{{ l.code }}</span></template>
             </div></td></tr>
-          <tr class="sub"><td colspan="3">▣ Verwendbar in der Hierarchie</td></tr>
+          <tr class="sub"><td colspan="3">{{ $t("▣ Verwendbar in der Hierarchie") }}</td></tr>
           <tr v-for="r in roles" :key="r"><td class="attr" :title="`Ausnahme: an ${roleLabel[r]} setzbar (sonst gilt die Regel der Gruppe)`">{{ roleLabel[r] }}</td><ToggleCell :value="b(!curAttr.levels || curAttr.levels.includes(r))" @save="v => attrSet('lv_' + r, v === 'true')" /></tr>
         </tbody></table>
       </div>
@@ -609,18 +609,18 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
     <!-- Werteliste -->
     <template v-else-if="section === 'lists' && curList">
       <div class="toolbar"><h1>☰ {{ curList.label?.de || curList.key }}</h1><span class="mono muted">{{ curList.key }}</span><span class="muted">· {{ valueRows.length }}</span><span class="grow" />
-        <input v-model="newValue" type="text" placeholder="neuer Wert" style="width:140px" @keydown.enter="valueAdd" /><button class="primary" :disabled="!newValue.trim()" @click="valueAdd">+ Wert</button></div>
+        <input v-model="newValue" type="text" :placeholder="$t('neuer Wert')" style="width:140px" @keydown.enter="valueAdd" /><button class="primary" :disabled="!newValue.trim()" @click="valueAdd">{{ $t("+ Wert") }}</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr><td class="attr">Name de</td><Cell :value="curList.label?.de ?? null" @save="v => listSet('label_de', v)" /></tr>
-          <tr><td class="attr">Name en</td><Cell :value="curList.label?.en ?? null" @save="v => listSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="geschlossen: nur Werte aus der Quelle (ETIM, Norm) — in der Zelle kein „+ neuer Wert“">⌀ geschlossen</td><ToggleCell :value="curList.closed ? 'true' : 'false'" @save="v => listSet('closed', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curList.label?.de ?? null" @save="v => listSet('label_de', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curList.label?.en ?? null" @save="v => listSet('label_en', v)" /></tr>
+          <tr><td class="attr" :title="$t('geschlossen: nur Werte aus der Quelle (ETIM, Norm) — in der Zelle kein „+ neuer Wert“')">{{ $t("⌀ geschlossen") }}</td><ToggleCell :value="curList.closed ? 'true' : 'false'" @save="v => listSet('closed', v)" /></tr>
           <!-- Spalten als Chips (Taloan): × nimmt eine weg (Werte bleiben im Journal), + Spalte fragt nach dem Key -->
-          <tr><td class="attr" title="eigene Felder je Eintrag (z. B. ral, hex) — Werte einer entfernten Spalte bleiben im Journal">Spalten</td>
+          <tr><td class="attr" :title="$t('eigene Felder je Eintrag (z. B. ral, hex) — Werte einer entfernten Spalte bleiben im Journal')">{{ $t("Spalten") }}</td>
             <td class="cell"><div class="chips" style="min-height:24px">
               <span v-for="c in curList.columns ?? []" :key="c" class="chip mono">{{ c }}<button @click="listColumns((curList.columns ?? []).filter(x => x !== c))" :title="`Spalte ${c} entfernen — die Werte bleiben im Journal`">×</button></span>
-              <input v-if="newCol !== null" v-model="newCol" class="cell-input" style="width:120px;height:22px" placeholder="key, z. B. hex" autofocus @keydown.enter.prevent="addColumn" @keydown.esc="newCol = null" @blur="addColumn" />
-              <button v-else class="x" @click="newCol = ''" title="Spalte hinzufügen">+ Spalte</button>
+              <input v-if="newCol !== null" v-model="newCol" class="cell-input" style="width:120px;height:22px" :placeholder="$t('key, z. B. hex')" autofocus @keydown.enter.prevent="addColumn" @keydown.esc="newCol = null" @blur="addColumn" />
+              <button v-else class="x" @click="newCol = ''" :title="$t('Spalte hinzufügen')">{{ $t("+ Spalte") }}</button>
             </div></td></tr>
         </tbody></table>
         <EditGrid :columns="valueCols" :rows="valueRows" row-key="value" removable @change="valueChange" @remove="r => del(`/api/model/lists/${curList.key}/values/${encodeURIComponent(r.value)}`)" />
@@ -630,28 +630,28 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
     <!-- Attributsicht -->
     <template v-else-if="section === 'views' && curView">
       <div class="toolbar"><h1>◫ {{ curView.label?.de || curView.key }}</h1><span class="mono muted">{{ curView.key }}</span><span class="grow" />
-        <button @click="viewFillAll" title="Alle am Knotentyp aktiven Gruppen übernehmen">⇊ Alle Gruppen</button>
-        <select v-model="addViewGroup" style="width:190px"><option value="">▤ Gruppe …</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
-        <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">+ Dazu</button>
+        <button @click="viewFillAll" :title="$t('Alle am Knotentyp aktiven Gruppen übernehmen')">{{ $t("⇊ Alle Gruppen") }}</button>
+        <select v-model="addViewGroup" style="width:190px"><option value="">{{ $t("▤ Gruppe …") }}</option><option v-for="g in freeViewGroups" :key="g.key" :value="g.key">{{ g.locked ? '🔒 ' : '' }}{{ g.key }}{{ g.locked ? ' · ab ' + roleLabel[g.from] : '' }}</option></select>
+        <button class="primary" :disabled="!addViewGroup" @click="viewGroupAdd">{{ $t("+ Dazu") }}</button>
         </div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr><td class="attr">Name de</td><Cell :value="curView.label?.de ?? null" @save="v => viewSet('label_de', v)" /></tr>
-          <tr><td class="attr">Name en</td><Cell :value="curView.label?.en ?? null" @save="v => viewSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="eine Sicht gilt für einen Knotentyp">Knotentyp</td><SelectCell :value="curView.level" :options="roles" :label-of="k => roleLabel[k]" required @save="v => viewSet('level', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curView.label?.de ?? null" @save="v => viewSet('label_de', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curView.label?.en ?? null" @save="v => viewSet('label_en', v)" /></tr>
+          <tr><td class="attr" :title="$t('eine Sicht gilt für einen Knotentyp')">{{ $t("Knotentyp") }}</td><SelectCell :value="curView.level" :options="roles" :label-of="k => roleLabel[k]" required @save="v => viewSet('level', v)" /></tr>
         </tbody></table>
         <div class="viewedit">
-          <div class="muted" style="font-size:12px;margin-bottom:6px">▤ {{ viewItems.length }} Gruppen · Drag & Drop: Gruppen und Attribute darin</div>
+          <div class="muted" style="font-size:12px;margin-bottom:6px">{{ $t("▤ {0} Gruppen · Drag & Drop: Gruppen und Attribute darin", [viewItems.length]) }}</div>
           <div v-for="it in viewItems" :key="it.group" class="vgroup" draggable="true" @dragstart="onDragStart($event, { group: it.group })" @dragover="onDragOver" @drop="onDrop({ group: it.group })">
             <div class="vhead"><span class="handle">⋮⋮</span> ▤ {{ groupLabel(it.group) }} <span class="muted mono">{{ it.group }}</span>
-              <span class="muted" v-if="model.groups.find(g => g.key === it.group)?.activeFrom"> · 🔒 ab {{ roleLabel[model.groups.find(g => g.key === it.group).activeFrom] }}</span>
+              <span class="muted" v-if="model.groups.find(g => g.key === it.group)?.activeFrom">{{ ' ' + $t("· 🔒 ab {0}", [roleLabel[model.groups.find(g => g.key === it.group).activeFrom]]) }}</span>
               <span class="grow" /><button class="x" @click.stop="viewGroupRemove(it.group)">×</button></div>
             <div v-for="k in orderedAttrs(it)" :key="k" class="vattr" draggable="true" @dragstart.stop="onDragStart($event, { group: it.group, key: k })" @dragover="onDragOver" @drop.stop="onDrop({ group: it.group, key: k })">
               <span class="handle">⋮⋮</span> {{ attrLabel(k) }} <span class="muted mono">{{ k }}</span>
-              <span v-if="!(it.order ?? []).includes(k)" class="muted" title="neu in der Gruppe — hängt unten an, bis du es einsortierst">· neu</span>
+              <span v-if="!(it.order ?? []).includes(k)" class="muted" :title="$t('neu in der Gruppe — hängt unten an, bis du es einsortierst')">{{ $t("· neu") }}</span>
             </div>
           </div>
-          <div v-if="!viewItems.length" class="empty">Leer — „⇊ alle Gruppen“ oder einzeln dazu, dann ziehen.</div>
+          <div v-if="!viewItems.length" class="empty">{{ $t("Leer — „⇊ alle Gruppen“ oder einzeln dazu, dann ziehen.") }}</div>
         </div>
       </div>
     </template>
@@ -661,16 +661,16 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <div class="toolbar"><h1>⇄ {{ curRel.label?.de || curRel.key }}</h1><span class="mono muted">{{ curRel.key }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr><td class="attr">Name de</td><Cell :value="curRel.label?.de ?? null" @save="v => relSet('label_de', v)" /></tr>
-          <tr><td class="attr">Name en</td><Cell :value="curRel.label?.en ?? null" @save="v => relSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="beidseitig: gleiche Lesart von beiden Enden, je Paar einmal · einseitig: eigene Rücklesart (hat Zubehör / ist Zubehör von)">⇄ beidseitig</td><ToggleCell :value="b(!!curRel.symmetric)" @save="v => relSet('symmetric', v === 'true')" /></tr>
-          <tr v-if="!curRel.symmetric"><td class="attr" title="Bezeichnung vom Ziel aus gesehen („Zubehör von“)">← umgekehrt de</td><Cell :value="curRel.reverse?.de ?? null" @save="v => relSet('reverse_de', v)" /></tr>
-          <tr v-if="!curRel.symmetric"><td class="attr">← umgekehrt en</td><Cell :value="curRel.reverse?.en ?? null" @save="v => relSet('reverse_en', v)" /></tr>
-          <tr v-for="r in roles" :key="'f' + r"><td class="attr" :title="`darf von ${roleLabel[r]} ausgehen`">von {{ roleLabel[r] }}</td><ToggleCell :value="b(!curRel.from || curRel.from.includes(r))" @save="v => relSet('from_' + r, v === 'true')" /></tr>
-          <tr v-for="r in [...roles, 'media']" :key="'t' + r"><td class="attr" :title="`darf zu ${roleLabel[r] ?? '🖼 Medium'} führen`">zu {{ roleLabel[r] ?? '🖼 Medium' }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
-          <tr><td class="attr" title="Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte">▤ Werte aus Gruppe</td><SelectCell :value="curRel.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => relSet('group', v || null)" /></tr>
+          <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curRel.label?.de ?? null" @save="v => relSet('label_de', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curRel.label?.en ?? null" @save="v => relSet('label_en', v)" /></tr>
+          <tr><td class="attr" :title="$t('beidseitig: gleiche Lesart von beiden Enden, je Paar einmal · einseitig: eigene Rücklesart (hat Zubehör / ist Zubehör von)')">{{ $t("⇄ beidseitig") }}</td><ToggleCell :value="b(!!curRel.symmetric)" @save="v => relSet('symmetric', v === 'true')" /></tr>
+          <tr v-if="!curRel.symmetric"><td class="attr" :title="$t('Bezeichnung vom Ziel aus gesehen („Zubehör von“)')">{{ $t("← umgekehrt de") }}</td><Cell :value="curRel.reverse?.de ?? null" @save="v => relSet('reverse_de', v)" /></tr>
+          <tr v-if="!curRel.symmetric"><td class="attr">{{ $t("← umgekehrt en") }}</td><Cell :value="curRel.reverse?.en ?? null" @save="v => relSet('reverse_en', v)" /></tr>
+          <tr v-for="r in roles" :key="'f' + r"><td class="attr" :title="`darf von ${roleLabel[r]} ausgehen`">{{ $t("von {0}", [roleLabel[r]]) }}</td><ToggleCell :value="b(!curRel.from || curRel.from.includes(r))" @save="v => relSet('from_' + r, v === 'true')" /></tr>
+          <tr v-for="r in [...roles, 'media']" :key="'t' + r"><td class="attr" :title="`darf zu ${roleLabel[r] ?? '🖼 Medium'} führen`">{{ $t("zu {0}", [roleLabel[r] ?? '🖼 Medium']) }}</td><ToggleCell :value="b(!curRel.to || curRel.to.includes(r))" @save="v => relSet('to_' + r, v === 'true')" /></tr>
+          <tr><td class="attr" :title="$t('Attributgruppe, deren Attribute an der Relation stehen (Menge, Slot …); ohne Gruppe hat die Relation keine Werte')">{{ $t("▤ Werte aus Gruppe") }}</td><SelectCell :value="curRel.group ?? ''" :options="model.groups.map(g => g.key)" :label-of="groupLabel" @save="v => relSet('group', v || null)" /></tr>
         </tbody></table>
-        <div class="section muted" style="font-size:12px" v-if="curRel.group">⊞ an der Relation: {{ model.attributes.filter(a => a.group === curRel.group).map(a => a.label?.de || a.key).join(', ') || '— die Gruppe hat noch keine Attribute' }}</div>
+        <div class="section muted" style="font-size:12px" v-if="curRel.group">{{ $t("⊞ an der Relation: {0}", [model.attributes.filter(a => a.group === curRel.group).map(a => a.label?.de || a.key).join(', ') || '— die Gruppe hat noch keine Attribute']) }}</div>
       </div>
     </template>
 
@@ -679,57 +679,57 @@ const attrLabel = k => model.value.attributes.find(a => a.key === k)?.label?.de 
       <div class="toolbar"><h1>⚖ {{ curUnit.key }}</h1><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr><td class="attr">Name de</td><Cell :value="curUnit.label?.de ?? null" @save="v => unitSet('label_de', v)" /></tr>
-          <tr><td class="attr">Name en</td><Cell :value="curUnit.label?.en ?? null" @save="v => unitSet('label_en', v)" /></tr>
-          <tr><td class="attr" title="mass, length, volume, data, count …">Grösse</td><Cell :value="curUnit.quantity ?? null" @save="v => unitSet('quantity', v)" /></tr>
-          <tr><td class="attr" title="Faktor zur Basiseinheit der Grösse (Basis = 1)">× Basis</td><Cell :value="String(curUnit.factor)" @save="v => unitSet('factor', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curUnit.label?.de ?? null" @save="v => unitSet('label_de', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curUnit.label?.en ?? null" @save="v => unitSet('label_en', v)" /></tr>
+          <tr><td class="attr" :title="$t('mass, length, volume, data, count …')">{{ $t("Grösse") }}</td><Cell :value="curUnit.quantity ?? null" @save="v => unitSet('quantity', v)" /></tr>
+          <tr><td class="attr" :title="$t('Faktor zur Basiseinheit der Grösse (Basis = 1)')">{{ $t("× Basis") }}</td><Cell :value="String(curUnit.factor)" @save="v => unitSet('factor', v)" /></tr>
         </tbody></table>
       </div>
     </template>
 
     <!-- Sprache -->
     <template v-else-if="section === 'locales' && curLocale">
-      <div class="toolbar"><h1>🗣 {{ curLocale.code }}</h1><span v-if="model.masterLocale === curLocale.code" class="warn">★ Mastersprache</span><span class="grow" />
-        <button v-if="model.masterLocale !== curLocale.code" class="primary" @click="setMaster" title="Pflichtfelder werden in der Mastersprache erfasst — ändert sich dort ein Wert, gelten die anderen Sprachen als zu überarbeiten (⟳)">★ Zur Mastersprache machen</button></div>
+      <div class="toolbar"><h1>🗣 {{ curLocale.code }}</h1><span v-if="model.masterLocale === curLocale.code" class="warn">{{ $t("★ Mastersprache") }}</span><span class="grow" />
+        <button v-if="model.masterLocale !== curLocale.code" class="primary" @click="setMaster" :title="$t('Pflichtfelder werden in der Mastersprache erfasst — ändert sich dort ein Wert, gelten die anderen Sprachen als zu überarbeiten (⟳)')">{{ $t("★ Zur Mastersprache machen") }}</button></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr><td class="attr">Name</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>
-          <tr><td class="attr" title="Sprache, deren Wert gilt, wenn diese keinen hat — vor der Mastersprache (fr-ch → fr-fr → Master → *)">↩ Fallback</td><SelectCell :value="curLocale.fallback ?? ''" :options="model.locales.map(l => l.code).filter(c => c !== curLocale.code)" @save="localeFallback" /></tr>
+          <tr><td class="attr">{{ $t("Name") }}</td><Cell :value="curLocale.label ?? null" @save="localeSet" /></tr>
+          <tr><td class="attr" :title="$t('Sprache, deren Wert gilt, wenn diese keinen hat — vor der Mastersprache (fr-ch → fr-fr → Master → *)')">{{ $t("↩ Fallback") }}</td><SelectCell :value="curLocale.fallback ?? ''" :options="model.locales.map(l => l.code).filter(c => c !== curLocale.code)" @save="localeFallback" /></tr>
         </tbody></table>
-        <div class="section muted" style="font-size:12px" title="Pflichtfelder werden in der Mastersprache erfasst; ändert sich dort ein sprachabhängiger Wert, steht in den anderen ⟳.">★ Mastersprache: {{ model.masterLocale ?? '—' }} · Pflichtfelder beim Anlegen · ändert sie sich: ⟳ in den anderen Sprachen</div>
+        <div class="section muted" style="font-size:12px" :title="$t('Pflichtfelder werden in der Mastersprache erfasst; ändert sich dort ein sprachabhängiger Wert, steht in den anderen ⟳.')">{{ $t("★ Mastersprache: {0} · Pflichtfelder beim Anlegen · ändert sie sich: ⟳ in den anderen Sprachen", [model.masterLocale ?? '—']) }}</div>
       </div>
     </template>
 
     <!-- Kanal -->
     <template v-else-if="section === 'channels' && curChannel">
-      <div class="toolbar"><h1>⇶ {{ curChannel.key }}</h1><span v-if="model.masterChannel === curChannel.key" class="warn">★ Masterkanal</span><span class="grow" />
-        <button v-if="model.masterChannel !== curChannel.key" class="primary" @click="setMasterChannel" title="Der Masterkanal bekommt die Werte des Sterns (ohne Kanal) und kann sie überschreiben; die anderen Kanäle beziehen ihren Wert aus ihm">★ Zum Masterkanal machen</button>
+      <div class="toolbar"><h1>⇶ {{ curChannel.key }}</h1><span v-if="model.masterChannel === curChannel.key" class="warn">{{ $t("★ Masterkanal") }}</span><span class="grow" />
+        <button v-if="model.masterChannel !== curChannel.key" class="primary" @click="setMasterChannel" :title="$t('Der Masterkanal bekommt die Werte des Sterns (ohne Kanal) und kann sie überschreiben; die anderen Kanäle beziehen ihren Wert aus ihm')">{{ $t("★ Zum Masterkanal machen") }}</button>
       </div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr><td class="attr">Name de</td><Cell :value="curChannel.label?.de ?? null" @save="v => channelSet('de', v)" /></tr>
-          <tr><td class="attr">Name en</td><Cell :value="curChannel.label?.en ?? null" @save="v => channelSet('en', v)" /></tr>
-          <tr><td class="attr" title="Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Masterkanal">↩ Fallback</td><SelectCell :value="curChannel.fallback ?? ''" :options="model.channels.map(c => c.key).filter(k => k !== curChannel.key)" @save="channelFallback" /></tr>
+          <tr><td class="attr">{{ $t("Name de") }}</td><Cell :value="curChannel.label?.de ?? null" @save="v => channelSet('de', v)" /></tr>
+          <tr><td class="attr">{{ $t("Name en") }}</td><Cell :value="curChannel.label?.en ?? null" @save="v => channelSet('en', v)" /></tr>
+          <tr><td class="attr" :title="$t('Kanal, dessen Werte und Freigaben (Sortiment) gelten, wenn dieser keine hat — vor dem Masterkanal')">{{ $t("↩ Fallback") }}</td><SelectCell :value="curChannel.fallback ?? ''" :options="model.channels.map(c => c.key).filter(k => k !== curChannel.key)" @save="channelFallback" /></tr>
         </tbody></table>
       </div>
     </template>
 
     <!-- Status (Taloan, 22.09.) -->
     <template v-else-if="section === 'statuses' && curStatus">
-      <div class="toolbar"><h1 :style="curStatus.color ? `color:var(--${curStatus.color})` : ''">{{ curStatus.icon }} {{ curStatus.key }}</h1><span v-if="curStatus.key === 'draft'" class="muted">Startstatus neuer Knoten</span><span class="grow" /></div>
+      <div class="toolbar"><h1 :style="curStatus.color ? `color:var(--${curStatus.color})` : ''">{{ curStatus.icon }} {{ curStatus.key }}</h1><span v-if="curStatus.key === 'draft'" class="muted">{{ $t("Startstatus neuer Knoten") }}</span><span class="grow" /></div>
       <div class="scroll">
         <table class="grid form"><colgroup><col style="width:150px" /><col style="width:260px" /></colgroup><tbody>
-          <tr v-for="l in model.locales" :key="l.code"><td class="attr">Name {{ l.code }}</td><Cell :value="curStatus.label?.[l.code] ?? null" @save="v => statusName(l.code, v)" /></tr>
-          <tr><td class="attr" title="ein Zeichen: steht im Baum und in Listen">Symbol</td><Cell :value="curStatus.icon ?? null" @save="v => statusPut({ icon: v || null })" /></tr>
-          <tr><td class="attr">Farbe</td><SelectCell :value="curStatus.color ?? ''" :options="STATUS_COLORS.map(c => c[0])" :label-of="v => Object.fromEntries(STATUS_COLORS)[v] ?? v" @save="v => statusPut({ color: v || null })" /></tr>
-          <tr><td class="attr" title="Sortierung in Auswahl und Menü (aufsteigend)">Reihenfolge</td><Cell :value="String(curStatus.order ?? 0)" @save="v => statusPut({ order: Number(v) || 0 })" /></tr>
+          <tr v-for="l in model.locales" :key="l.code"><td class="attr">{{ $t("Name {0}", [l.code]) }}</td><Cell :value="curStatus.label?.[l.code] ?? null" @save="v => statusName(l.code, v)" /></tr>
+          <tr><td class="attr" :title="$t('ein Zeichen: steht im Baum und in Listen')">{{ $t("Symbol") }}</td><Cell :value="curStatus.icon ?? null" @save="v => statusPut({ icon: v || null })" /></tr>
+          <tr><td class="attr">{{ $t("Farbe") }}</td><SelectCell :value="curStatus.color ?? ''" :options="STATUS_COLORS.map(c => c[0])" :label-of="v => Object.fromEntries(STATUS_COLORS)[v] ?? v" @save="v => statusPut({ color: v || null })" /></tr>
+          <tr><td class="attr" :title="$t('Sortierung in Auswahl und Menü (aufsteigend)')">{{ $t("Reihenfolge") }}</td><Cell :value="String(curStatus.order ?? 0)" @save="v => statusPut({ order: Number(v) || 0 })" /></tr>
         </tbody></table>
       </div>
     </template>
 
-    <div v-else class="empty">{{ sec.one }} links wählen — oder oben anlegen.</div>
+    <div v-else class="empty">{{ $t("{0} links wählen — oder oben anlegen.", [sec.one]) }}</div>
   </div>
-  <div v-else class="empty">Modell wird geladen …</div>
+  <div v-else class="empty">{{ $t("Modell wird geladen …") }}</div>
 </template>
 
 <style scoped>

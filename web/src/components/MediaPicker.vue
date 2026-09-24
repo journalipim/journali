@@ -50,37 +50,37 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 <template>
   <div class="mp-overlay" @mousedown.self="emit('close')">
     <div class="mp">
-      <div class="toolbar"><h1>▨ Aus der Bibliothek zuordnen</h1><span class="muted">{{ title }} · {{ items.length }}</span><span class="grow" /><button class="x" @click="emit('close')" title="schliessen (Esc)">✕</button></div>
+      <div class="toolbar"><h1>{{ $t("▨ Aus der Bibliothek zuordnen") }}</h1><span class="muted">{{ title }} · {{ items.length }}</span><span class="grow" /><button class="x" @click="emit('close')" :title="$t('schliessen (Esc)')">✕</button></div>
       <div class="mp-body">
         <div class="mp-folders scroll">
-          <div class="pick" :class="{ on: folder === 'all' }" @click="pickFolder('all')">▦ Alle <span class="muted cnt">{{ folders.total }}</span></div>
-          <div class="pick" :class="{ on: folder === '-' }" @click="pickFolder('-')">⌂ ohne Ordner <span class="muted cnt">{{ folders.unfiled }}</span></div>
+          <div class="pick" :class="{ on: folder === 'all' }" @click="pickFolder('all')">{{ $t("▦ Alle") + ' ' }}<span class="muted cnt">{{ folders.total }}</span></div>
+          <div class="pick" :class="{ on: folder === '-' }" @click="pickFolder('-')">{{ $t("⌂ ohne Ordner") + ' ' }}<span class="muted cnt">{{ folders.unfiled }}</span></div>
           <div v-for="r in rows" :key="r.f.id" class="pick" :class="{ on: folder === r.f.id }" :style="`padding-left:${8 + r.depth * 14}px`" @click="pickFolder(r.f.id)">
             <span class="muted caret" @click.stop="toggle(r.f.id)">{{ r.kids ? (open.has(r.f.id) ? '▾' : '▸') : '' }}</span>📁 {{ r.f.name }} <span class="muted cnt">{{ r.f.media }}</span>
           </div>
-          <label class="muted" style="display:block;padding:6px 8px;font-size:12px"><input type="checkbox" v-model="deep" @change="load" /> mit Unterordnern</label>
+          <label class="muted" style="display:block;padding:6px 8px;font-size:12px"><input type="checkbox" v-model="deep" @change="load" />{{ ' ' + $t("mit Unterordnern") }}</label>
         </div>
         <div class="mp-main">
           <div class="toolbar" style="gap:4px">
-            <input v-model="q" type="search" placeholder="🔍 Name, Id, Werte" style="flex:1;min-width:0" @input="search" autofocus />
-            <select v-model="sort" @change="load" title="Sortierung"><option value="recent">zuletzt geändert</option><option value="name">Name</option><option value="date">Datum</option><option value="size">Größe</option><option value="used">Verwendung</option></select>
-            <button class="x" @click="all" title="Alle sichtbaren wählen">Alle</button><button class="x" @click="sel = new Set()" title="Auswahl leeren">Keine</button>
+            <input v-model="q" type="search" :placeholder="$t('🔍 Name, Id, Werte')" style="flex:1;min-width:0" @input="search" autofocus />
+            <select v-model="sort" @change="load" :title="$t('Sortierung')"><option value="recent">{{ $t("zuletzt geändert") }}</option><option value="name">{{ $t("Name") }}</option><option value="date">{{ $t("Datum") }}</option><option value="size">{{ $t("Größe") }}</option><option value="used">{{ $t("Verwendung") }}</option></select>
+            <button class="x" @click="all" :title="$t('Alle sichtbaren wählen')">{{ $t("Alle") }}</button><button class="x" @click="sel = new Set()" :title="$t('Auswahl leeren')">{{ $t("Keine") }}</button>
           </div>
           <div class="scroll tiles">
             <div v-for="m in items" :key="m.id" class="tile" :class="{ sel: sel.has(m.id), dim: excluded.has(m.id) }" @click="click(m)" :title="excluded.has(m.id) ? `${m.name} — hängt schon hier` : `${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}`">
               <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" /><div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
               <div class="name">{{ m.name }}</div>
             </div>
-            <div v-if="!items.length" class="empty">nichts</div>
+            <div v-if="!items.length" class="empty">{{ $t("nichts") }}</div>
           </div>
         </div>
       </div>
       <div class="toolbar mp-foot">
-        <span class="muted">Relation</span>
-        <select v-model="type" :title="'Relationstyp der Zuordnung — automatisch: Bild → image, sonst document'"><option value="auto">automatisch</option><option v-for="t in types" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
+        <span class="muted">{{ $t("Relation") }}</span>
+        <select v-model="type" :title="'Relationstyp der Zuordnung — automatisch: Bild → image, sonst document'"><option value="auto">{{ $t("automatisch") }}</option><option v-for="t in types" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
         <span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span>
-        <button @click="emit('close')">Abbrechen</button>
-        <button class="primary" :disabled="!sel.size" @click="done">✓ {{ sel.size || '' }} zuordnen</button>
+        <button @click="emit('close')">{{ $t("Abbrechen") }}</button>
+        <button class="primary" :disabled="!sel.size" @click="done">{{ $t("✓ {0} zuordnen", [sel.size || '']) }}</button>
       </div>
     </div>
   </div>

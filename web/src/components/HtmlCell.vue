@@ -77,30 +77,30 @@ function onEditKey(e) {
     <Teleport to="body">
       <div v-if="open" class="overlay" @mousedown.self="cancel">
         <div class="editor" @keydown="onEditKey">
-          <div class="toolbar"><h1>‹› {{ title }}</h1><span class="grow" /><kbd>Ctrl+Enter</kbd> speichern · <kbd>Esc</kbd> verwerfen</div>
+          <div class="toolbar"><h1>‹› {{ title }}</h1><span class="grow" /><kbd>{{ $t("Ctrl+Enter") }}</kbd>{{ ' ' + $t("speichern ·") + ' ' }}<kbd>{{ $t("Esc") }}</kbd>{{ ' ' + $t("verwerfen") }}</div>
           <div class="toolbar fmt" v-if="!source">
-            <button @mousedown.prevent="cmd('formatBlock', 'p')" title="Absatz">¶</button>
-            <button @mousedown.prevent="cmd('formatBlock', 'h2')" title="Überschrift">H2</button>
-            <button @mousedown.prevent="cmd('formatBlock', 'h3')" title="Überschrift klein">H3</button>
+            <button @mousedown.prevent="cmd('formatBlock', 'p')" :title="$t('Absatz')">¶</button>
+            <button @mousedown.prevent="cmd('formatBlock', 'h2')" :title="$t('Überschrift')">H2</button>
+            <button @mousedown.prevent="cmd('formatBlock', 'h3')" :title="$t('Überschrift klein')">H3</button>
             <span class="sep">·</span>
-            <button @mousedown.prevent="cmd('bold')" title="fett (Ctrl+B)"><b>B</b></button>
-            <button @mousedown.prevent="cmd('italic')" title="kursiv (Ctrl+I)"><i>I</i></button>
-            <button @mousedown.prevent="cmd('underline')" title="unterstrichen"><u>U</u></button>
+            <button @mousedown.prevent="cmd('bold')" :title="$t('fett (Ctrl+B)')"><b>B</b></button>
+            <button @mousedown.prevent="cmd('italic')" :title="$t('kursiv (Ctrl+I)')"><i>I</i></button>
+            <button @mousedown.prevent="cmd('underline')" :title="$t('unterstrichen')"><u>U</u></button>
             <span class="sep">·</span>
-            <button @mousedown.prevent="cmd('insertUnorderedList')" title="Liste">•≡</button>
-            <button @mousedown.prevent="cmd('insertOrderedList')" title="nummerierte Liste">1≡</button>
-            <button @mousedown.prevent="link()" title="Link">🔗</button>
+            <button @mousedown.prevent="cmd('insertUnorderedList')" :title="$t('Liste')">•≡</button>
+            <button @mousedown.prevent="cmd('insertOrderedList')" :title="$t('nummerierte Liste')">1≡</button>
+            <button @mousedown.prevent="link()" :title="$t('Link')">🔗</button>
             <span class="sep">·</span>
-            <button @mousedown.prevent="cmd('removeFormat')" title="Formatierung entfernen">✗ Format entfernen</button>
+            <button @mousedown.prevent="cmd('removeFormat')" :title="$t('Formatierung entfernen')">{{ $t("✗ Format entfernen") }}</button>
             <span class="grow" />
             <AiBar :current="draft" html :label="label || title" :locale="locale" :node="node" :panel="'#' + panelId" @result="fromAi" />
-            <button @click="toggleSource" title="HTML-Quelltext zeigen">‹› Quelltext</button>
+            <button @click="toggleSource" :title="$t('HTML-Quelltext zeigen')">{{ $t("‹› Quelltext") }}</button>
           </div>
-          <div class="toolbar fmt" v-else><span class="muted">HTML-Quelltext</span><span class="grow" /><button class="primary" @click="toggleSource" title="zurück zum Schreibmodus">✎ Schreiben</button></div>
+          <div class="toolbar fmt" v-else><span class="muted">{{ $t("HTML-Quelltext") }}</span><span class="grow" /><button class="primary" @click="toggleSource" :title="$t('zurück zum Schreibmodus')">{{ $t("✎ Schreiben") }}</button></div>
           <div :id="panelId"></div>
           <div ref="rich" v-if="!source" class="rich" contenteditable="true" spellcheck="true" @input="syncFromRich"></div>
           <textarea v-else ref="area" v-model="draft" spellcheck="false"></textarea>
-          <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0"><span class="muted" style="font-size:12px">{{ plainLen(draft) }} Zeichen</span><span class="grow" /><button @click="cancel">Verwerfen</button><button class="primary" @click="save">Speichern</button></div>
+          <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0"><span class="muted" style="font-size:12px">{{ $t("{0} Zeichen", [plainLen(draft)]) }}</span><span class="grow" /><button @click="cancel">{{ $t("Verwerfen") }}</button><button class="primary" @click="save">{{ $t("Speichern") }}</button></div>
         </div>
       </div>
     </Teleport>

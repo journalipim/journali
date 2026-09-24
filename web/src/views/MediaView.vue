@@ -179,33 +179,33 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 
 <template>
   <div class="pane" :style="`width:${foldersW}px;flex:none`">
-    <div class="toolbar"><h1>📁 Ordner</h1><span class="grow" /><button class="x" @click="newFolder(null)" title="neuer Ordner auf der obersten Ebene">+</button></div>
+    <div class="toolbar"><h1>{{ $t("📁 Ordner") }}</h1><span class="grow" /><button class="x" @click="newFolder(null)" :title="$t('neuer Ordner auf der obersten Ebene')">+</button></div>
     <div class="scroll ftree">
-      <div class="pick" :class="{ on: folder === 'all' }" @click="pickFolder('all')" title="alle Medien der Bibliothek">▦ Alle <span class="muted cnt">{{ folders.total }}</span></div>
-      <div class="pick" :class="{ on: folder === '-', over: dragTarget === '-' }" @click="pickFolder('-')" title="Medien, die in keinem Ordner liegen — hierher ziehen nimmt sie aus ihrem Ordner"
-        @dragover="canDrop(null) && ($event.preventDefault(), dragTarget = '-')" @dragleave="dragTarget = null" @drop="dropOn(null, $event)">⌂ ohne Ordner <span class="muted cnt">{{ folders.unfiled }}</span></div>
+      <div class="pick" :class="{ on: folder === 'all' }" @click="pickFolder('all')" :title="$t('alle Medien der Bibliothek')">{{ $t("▦ Alle") + ' ' }}<span class="muted cnt">{{ folders.total }}</span></div>
+      <div class="pick" :class="{ on: folder === '-', over: dragTarget === '-' }" @click="pickFolder('-')" :title="$t('Medien, die in keinem Ordner liegen — hierher ziehen nimmt sie aus ihrem Ordner')"
+        @dragover="canDrop(null) && ($event.preventDefault(), dragTarget = '-')" @dragleave="dragTarget = null" @drop="dropOn(null, $event)">{{ $t("⌂ ohne Ordner") + ' ' }}<span class="muted cnt">{{ folders.unfiled }}</span></div>
       <div v-for="r in rows" :key="r.f.id" class="pick" :class="{ on: folder === r.f.id, over: dragTarget === r.f.id }" :style="`padding-left:${8 + r.depth * 14}px`"
         draggable="true" @dragstart="dragFolder(r.f, $event)" @dragend="dragEnd"
         @dragover="canDrop(r.f.id) && ($event.preventDefault(), dragTarget = r.f.id)" @dragleave="dragTarget = null" @drop="dropOn(r.f.id, $event)"
         @click="pickFolder(r.f.id)" :title="`${r.f.media} hier · ${below(r.f.id)} mit Unterordnern — ziehen: Ordner verschieben`">
         <span class="muted caret" @click.stop="toggle(r.f.id)">{{ r.kids ? (open.has(r.f.id) ? '▾' : '▸') : '' }}</span>
         <span class="fname">📁 {{ r.f.name }}</span><span class="muted cnt">{{ deep ? below(r.f.id) : r.f.media }}</span>
-        <span class="acts"><button class="x" @click.stop="newFolder(r.f.id)" title="Unterordner anlegen">+</button><button class="x" @click.stop="renameFolder(r.f)" title="umbenennen">✎</button><button class="x" @click.stop="deleteFolder(r.f)" title="löschen (nur leer)">🗑</button></span>
+        <span class="acts"><button class="x" @click.stop="newFolder(r.f.id)" :title="$t('Unterordner anlegen')">+</button><button class="x" @click.stop="renameFolder(r.f)" :title="$t('umbenennen')">✎</button><button class="x" @click.stop="deleteFolder(r.f)" :title="$t('löschen (nur leer)')">🗑</button></span>
       </div>
-      <div v-if="!rows.length" class="empty" style="padding:12px 8px"><span title="+ legt einen an; Kacheln lassen sich hineinziehen.">Noch kein Ordner</span></div>
+      <div v-if="!rows.length" class="empty" style="padding:12px 8px"><span :title="$t('+ legt einen an; Kacheln lassen sich hineinziehen.')">{{ $t("Noch kein Ordner") }}</span></div>
     </div>
-    <div class="toolbar" style="font-size:12px"><label title="Ordner zeigt auch, was in seinen Unterordnern liegt"><input type="checkbox" v-model="deep" /> mit Unterordnern</label></div>
+    <div class="toolbar" style="font-size:12px"><label :title="$t('Ordner zeigt auch, was in seinen Unterordnern liegt')"><input type="checkbox" v-model="deep" />{{ ' ' + $t("mit Unterordnern") }}</label></div>
   </div>
   <Splitter v-model="foldersW" :min="140" :max="500" />
 
   <div class="pane" :style="`width:${listW}px;flex:none`" @dragover.prevent="!dragKind && (dragOver = true)" @dragleave="dragOver = false" @drop.prevent="onDrop" :class="{ over: dragOver }">
-    <div class="toolbar"><h1>▨ {{ folderTitle }}</h1><span class="muted">{{ items.length }}</span><span v-if="sel.size > 1" class="chip" title="Auswahl — Esc löst sie; Strg+A wählt alle">{{ sel.size }} gewählt</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
+    <div class="toolbar"><h1>▨ {{ folderTitle }}</h1><span class="muted">{{ items.length }}</span><span v-if="sel.size > 1" class="chip" :title="$t('Auswahl — Esc löst sie; Strg+A wählt alle')">{{ $t("{0} gewählt", [sel.size]) }}</span><span class="grow" /><span v-if="busy" class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:4px">
-      <input v-model="q" type="search" placeholder="🔍 Name, Id, Werte" style="flex:1;min-width:0" @input="search" />
-      <select v-model="sort" title="Sortierung — nur die Anzeige"><option v-for="[k, l] in SORTS" :key="k" :value="k">{{ l }}</option></select>
+      <input v-model="q" type="search" :placeholder="$t('🔍 Name, Id, Werte')" style="flex:1;min-width:0" @input="search" />
+      <select v-model="sort" :title="$t('Sortierung — nur die Anzeige')"><option v-for="[k, l] in SORTS" :key="k" :value="k">{{ l }}</option></select>
       <button class="x" @click="desc = !desc" :title="desc ? 'Aufsteigend sortieren' : 'Absteigend sortieren'">{{ desc ? '↓' : '↑' }}</button>
-      <select v-model="group" title="Gruppierung — nur die Anzeige; der Ordnerfilter ist die Liste links"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
-      <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? 'Dateien hochladen — oder hierher ziehen' : `hochladen in „${folderTitle}“ — oder hierher ziehen`">⇧ Hochladen</button>
+      <select v-model="group" :title="$t('Gruppierung — nur die Anzeige; der Ordnerfilter ist die Liste links')"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
+      <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? 'Dateien hochladen — oder hierher ziehen' : `hochladen in „${folderTitle}“ — oder hierher ziehen`">{{ $t("⇧ Hochladen") }}</button>
       <input ref="fileInput" type="file" multiple style="display:none" @change="upload([...$event.target.files]); $event.target.value = ''" />
     </div>
     <div class="scroll">
@@ -228,9 +228,9 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar"><h1>▨ {{ current.name }}</h1><span class="mono muted">{{ current.id }}</span><span class="grow" />
-      <a :href="`/api/media/${current.id}/file`" target="_blank" class="muted" title="Datei öffnen">↗ Datei</a>
+      <a :href="`/api/media/${current.id}/file`" target="_blank" class="muted" :title="$t('Datei öffnen')">{{ $t("↗ Datei") }}</a>
       <button class="x" @click="retire(current)" :title="sel.size > 1 ? `${sel.size} gewählte Medien zurückziehen (die Dateien bleiben im Store)` : 'Medium zurückziehen (die Datei bleibt im Store)'">🗑</button></div>
-    <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>· ⇄ {{ current.used }} Knoten</span>
+    <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>{{ $t("· ⇄ {0} Knoten", [current.used]) }}</span>
       <span :title="current.folder ? 'Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen' : 'in keinem Ordner — Kachel auf einen Ordner links ziehen'">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
       <span class="grow" /><span>≡ {{ current.entries }} · #{{ current.lastNumber }} · {{ when(current.lastAt) }} · {{ current.lastActor }}</span></div>
     <div class="scroll">
@@ -239,12 +239,12 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
       <div class="preview" v-else-if="current.hasThumb"><img :src="`/api/media/${current.id}/thumb`" alt="" /></div>
       <table class="grid form"><colgroup><col style="width:150px" /><col style="width:320px" /></colgroup><tbody>
         <tr v-for="d in mediaAttrs" :key="d.key"><td class="attr" :title="d.key">{{ d.label?.de || d.key }}<span v-if="d.perLocale" class="muted"> {{ master }}</span></td><Cell :value="value(current, d)" @save="v => setValue(current, d, v)" /></tr>
-        <tr><td class="attr muted">SHA-256</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
+        <tr><td class="attr muted">{{ $t("SHA-256") }}</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
         <tr v-for="(v, k) in current.external" :key="k"><td class="attr muted">⇩ {{ k }}</td><td class="mono muted">{{ v }}</td></tr>
       </tbody></table>
     </div>
   </div>
-  <div v-else class="pane" style="flex:1"><div class="empty">Medium in der Mitte wählen — oder hochladen.</div></div>
+  <div v-else class="pane" style="flex:1"><div class="empty">{{ $t("Medium in der Mitte wählen — oder hochladen.") }}</div></div>
 </template>
 
 <style scoped>

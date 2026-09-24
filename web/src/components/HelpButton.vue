@@ -8,5 +8,5 @@ function open(e) { menu.open(e, helpItems()) }
 </script>
 
 <template>
-  <button class="help" title="Hilfe: Website, später Forum und Fehlermeldungen auf Git" @click="open">?</button>
+  <button class="help" :title="$t('Hilfe: Website, später Forum und Fehlermeldungen auf Git')" @click="open">?</button>
 </template>

@@ -51,37 +51,37 @@ onMounted(load)
 
 <template>
   <div class="section" v-if="isAdmin()">
-    <h2>👥 Anwender <span class="muted" title="Passwörter liegen beim Server (auth.json), nie im Journal.">· {{ users.length }}</span></h2>
+    <h2>{{ $t("👥 Anwender") + ' ' }}<span class="muted" :title="$t('Passwörter liegen beim Server (auth.json), nie im Journal.')">· {{ users.length }}</span></h2>
     <table class="grid" style="width:100%">
-      <thead><tr><th style="width:120px">Anwender</th><th>Name</th><th>E-Mail</th><th style="width:80px">Rolle</th><th style="width:90px" title="Wessen Schlüssel gelten und welchem Team die Nutzung zugeordnet wird">Team</th><th style="width:60px"></th><th style="width:150px">zuletzt</th><th style="width:130px"></th></tr></thead>
+      <thead><tr><th style="width:120px">{{ $t("Anwender") }}</th><th>{{ $t("Name") }}</th><th>{{ $t("E-Mail") }}</th><th style="width:80px">{{ $t("Rolle") }}</th><th style="width:90px" :title="$t('Wessen Schlüssel gelten und welchem Team die Nutzung zugeordnet wird')">{{ $t("Team") }}</th><th style="width:60px"></th><th style="width:150px">{{ $t("zuletzt") }}</th><th style="width:130px"></th></tr></thead>
       <tbody>
         <tr v-for="u in users" :key="u.key" :class="{ off: !u.enabled }">
           <td class="mono">{{ u.key }}</td><td>{{ u.name }}</td><td class="muted">{{ u.email ?? '' }}</td><td :title="u.role">{{ roles.find(r => r.key === u.role)?.label || u.role }}</td>
           <td :class="u.team ? '' : 'muted'" :title="u.team ? `Team ${u.team}` : 'kein eigenes Team — es gilt Team 1'">{{ teams.find(t => t.key === u.team)?.label || u.team || '①' }}</td>
           <td><button class="toggle" :class="{ on: u.enabled, off: !u.enabled }" @click="toggle(u)" :title="u.enabled ? 'Sperren (jetzt aktiv)' : 'Freischalten (jetzt gesperrt)'">{{ u.enabled ? '✓' : '✗' }}</button></td>
           <td class="muted" style="font-size:12px">{{ when(u.lastAt) }} 👤 {{ u.lastActor }}</td>
-          <td class="row" style="gap:4px"><button class="x" @click="edit(u)">✎</button><button class="x" @click="remove(u)" :disabled="u.key === store.auth.user" title="entfernen">🗑</button></td>
+          <td class="row" style="gap:4px"><button class="x" @click="edit(u)">✎</button><button class="x" @click="remove(u)" :disabled="u.key === store.auth.user" :title="$t('entfernen')">🗑</button></td>
         </tr>
       </tbody>
     </table>
-    <div class="row" style="gap:6px;margin-top:6px"><button class="primary" @click="edit(null)">＋ Anwender</button></div>
+    <div class="row" style="gap:6px;margin-top:6px"><button class="primary" @click="edit(null)">{{ $t("＋ Anwender") }}</button></div>
     <div v-if="form" class="picker" style="padding:8px;margin-top:6px">
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-        <input v-model="form.key" type="text" placeholder="benutzername" style="width:140px" :disabled="!form.isNew" />
-        <input v-model="form.name" type="text" placeholder="Anzeigename" style="width:180px" />
-        <input v-model="form.email" type="email" placeholder="E-Mail" style="width:200px" />
+        <input v-model="form.key" type="text" :placeholder="$t('benutzername')" style="width:140px" :disabled="!form.isNew" />
+        <input v-model="form.name" type="text" :placeholder="$t('Anzeigename')" style="width:180px" />
+        <input v-model="form.email" type="email" :placeholder="$t('E-Mail')" style="width:200px" />
         <select v-model="form.role"><option v-for="r in roles" :key="r.key" :value="r.key">{{ r.label || r.key }} · {{ r.key }}</option></select>
-        <select v-model="form.team" title="Kostenstelle der KI — leer: es gilt das erste Team"><option value="">— Team 1 —</option><option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option></select>
+        <select v-model="form.team" :title="$t('Kostenstelle der KI — leer: es gilt das erste Team')"><option value="">{{ $t("— Team 1 —") }}</option><option v-for="t in teams" :key="t.key" :value="t.key">{{ t.label }}</option></select>
         <input v-model="form.password" type="password" autocomplete="new-password" :placeholder="form.isNew ? 'Passwort (Pflicht)' : 'neues Passwort (leer = bleibt)'" style="width:200px" />
-        <button class="primary" @click="save">Speichern</button><button @click="form = null">Abbrechen</button>
+        <button class="primary" @click="save">{{ $t("Speichern") }}</button><button @click="form = null">{{ $t("Abbrechen") }}</button>
       </div>
     </div>
   </div>
 
   <div class="section" v-if="isAdmin()">
-    <h2>◈ Rollen <span class="muted" title="Welche Rechte eine Rolle hat, bestimmen Sie; Rechtsklick zieht eine Rolle zurück.">· {{ roles.length }}</span></h2>
+    <h2>{{ $t("◈ Rollen") + ' ' }}<span class="muted" :title="$t('Welche Rechte eine Rolle hat, bestimmen Sie; Rechtsklick zieht eine Rolle zurück.')">· {{ roles.length }}</span></h2>
     <table class="grid" style="width:auto">
-      <thead><tr><th style="width:110px">Rolle</th><th style="width:160px">Bezeichnung</th><th v-for="rt in rights" :key="rt.key" style="text-align:center;min-width:64px" :title="rt.key">{{ rt.label }}</th><th style="width:70px" class="num">Anwender</th></tr></thead>
+      <thead><tr><th style="width:110px">{{ $t("Rolle") }}</th><th style="width:160px">{{ $t("Bezeichnung") }}</th><th v-for="rt in rights" :key="rt.key" style="text-align:center;min-width:64px" :title="rt.key">{{ rt.label }}</th><th style="width:70px" class="num">{{ $t("Anwender") }}</th></tr></thead>
       <tbody>
         <tr v-for="r in roles" :key="r.key" @contextmenu="roleMenu($event, r)">
           <td class="mono">{{ r.key }}</td>
@@ -91,7 +91,7 @@ onMounted(load)
         </tr>
       </tbody>
     </table>
-    <div class="row" style="gap:6px;margin-top:6px"><input v-model="newRole" type="text" placeholder="neue Rolle (key)" style="width:180px" @keydown.enter="roleAdd" /><button class="primary" :disabled="!newRole.trim()" @click="roleAdd">＋ Rolle</button></div>
+    <div class="row" style="gap:6px;margin-top:6px"><input v-model="newRole" type="text" :placeholder="$t('neue Rolle (key)')" style="width:180px" @keydown.enter="roleAdd" /><button class="primary" :disabled="!newRole.trim()" @click="roleAdd">{{ $t("＋ Rolle") }}</button></div>
   </div>
 </template>
 

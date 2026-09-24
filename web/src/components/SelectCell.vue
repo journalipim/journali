@@ -84,7 +84,7 @@ function onKey(e) {
 <template>
   <td class="cell" :style="open && big ? 'position:relative;overflow:visible;z-index:5' : ''">
     <div v-if="disabled" class="cell-box disabled"></div>
-    <input v-else-if="adding" ref="inp" v-model="draft" class="cell-input" placeholder="neuer Wert — Enter legt an" @keydown="onNewKey" @blur="commitNew" />
+    <input v-else-if="adding" ref="inp" v-model="draft" class="cell-input" :placeholder="$t('neuer Wert — Enter legt an')" @keydown="onNewKey" @blur="commitNew" />
     <template v-else-if="big">
       <div v-if="!open" ref="box" class="cell-box" :class="{ inherited: value == null && inherited != null }" tabindex="0"
         :title="value == null && inherited != null ? 'geerbt — Enter wählt' : `${options.length} Werte — Enter oder Tippen sucht`"
@@ -92,15 +92,15 @@ function onKey(e) {
       <template v-else>
         <input ref="qIn" v-model="q" class="cell-input" :placeholder="groupOf ? `suchen in ${options.length} — oder unten blättern` : `suchen in ${options.length} …`" @input="idx = 0" @keydown="onSearchKey" @blur="close" />
         <div class="drop" @mousedown.prevent>
-          <div v-if="!required && !q" class="hit muted" :class="{ on: idx === -1 }" @click="pick('')">— leer</div>
+          <div v-if="!required && !q" class="hit muted" :class="{ on: idx === -1 }" @click="pick('')">{{ $t("— leer") }}</div>
           <template v-if="browsing && grp == null">
             <div v-for="[g, n] in groups" :key="g" class="hit grp" @click="grp = g; idx = 0">▸ {{ g }} <span class="muted">{{ n }}</span></div>
           </template>
           <div v-else-if="browsing" class="hit grp" @click="grp = null; idx = 0">‹ {{ grp }}</div>
           <template v-if="!(browsing && grp == null)">
           <div v-for="(o, i) in hits" :key="o" class="hit" :class="{ on: i === idx, cur: o === (value ?? inherited) }" @mousemove="idx = i" @click="pick(o)"><span class="mono muted">{{ o }}</span> {{ label(o) }}</div>
-          <div v-if="!hits.length" class="hit muted">nichts zu „{{ q }}“{{ mayAddListValue(list) ? ' — Enter legt es als neuen Wert an' : '' }}</div>
-          <div v-else-if="hits.length === 40" class="hit muted">… weiter eingrenzen</div>
+          <div v-if="!hits.length" class="hit muted">{{ $t("nichts zu „{0}“{1}", [q, mayAddListValue(list) ? ' — Enter legt es als neuen Wert an' : '']) }}</div>
+          <div v-else-if="hits.length === 40" class="hit muted">{{ $t("… weiter eingrenzen") }}</div>
           </template>
         </div>
       </template>
@@ -112,7 +112,7 @@ function onKey(e) {
       :value="value ?? inherited ?? ''" @change="pick($event.target.value)" @blur="clickEdit || (open = false)" @keydown.esc.prevent="clickEdit || close()">
       <option v-if="!required" value="">{{ inherited != null ? '' : '—' }}</option>
       <option v-for="o in options" :key="o" :value="o">{{ labelOf ? labelOf(o) : o }}</option>
-      <option v-if="mayAddListValue(list)" :value="NEW">+ neuer Wert …</option>
+      <option v-if="mayAddListValue(list)" :value="NEW">{{ $t("+ neuer Wert …") }}</option>
     </select>
   </td>
 </template>

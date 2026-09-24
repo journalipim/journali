@@ -41,10 +41,10 @@ const go = (kind, value) => emit('apply', { kind, value })
 <template>
   <div class="bulk">
     <div class="row">
-      <span class="lbl">▤ Gruppe</span>
+      <span class="lbl">{{ $t("▤ Gruppe") }}</span>
       <span class="picks">
-        <select v-model="group" style="width:260px" title="Attributgruppe der Gewählten setzen">
-          <option value="">wählen …</option>
+        <select v-model="group" style="width:260px" :title="$t('Attributgruppe der Gewählten setzen')">
+          <option value="">{{ $t("wählen …") }}</option>
           <option v-for="g in groups" :key="g.key" :value="g.key">{{ g.label?.de || g.key }} · {{ g.key }}</option>
         </select>
         <span class="muted state">{{ [...new Set(attrs.map(a => a.group || '—'))].slice(0, 3).join(' · ') }}{{ new Set(attrs.map(a => a.group || '—')).size > 3 ? ' …' : '' }}</span>
@@ -53,7 +53,7 @@ const go = (kind, value) => emit('apply', { kind, value })
     </div>
 
     <div class="row">
-      <span class="lbl" title="an welchen Knotentypen das Attribut gepflegt werden darf">▣▦◆ Ebenen</span>
+      <span class="lbl" :title="$t('an welchen Knotentypen das Attribut gepflegt werden darf')">{{ $t("▣▦◆ Ebenen") }}</span>
       <span class="picks">
         <span v-for="r in roles" :key="r" class="view-chip" :class="{ on: levelState[r].all, mixed: levelState[r].mixed }"
           @click="!busy && go('lv_' + r, nextOf(levelState[r]))"
@@ -66,17 +66,17 @@ const go = (kind, value) => emit('apply', { kind, value })
     <div class="row" v-for="[key, label, hint] in FLAGS" :key="key">
       <span class="lbl" :title="hint">{{ label }}</span>
       <span class="picks">
-        <button class="x" :class="{ on: flagState[key].all }" :disabled="!!busy" @click="go(key, true)" :title="`${hint} — an allen ${count} einschalten`">✓ an</button>
-        <button class="x" :class="{ on: flagState[key].none }" :disabled="!!busy" @click="go(key, false)" :title="`${hint} — an allen ${count} ausschalten`">✗ aus</button>
+        <button class="x" :class="{ on: flagState[key].all }" :disabled="!!busy" @click="go(key, true)" :title="`${hint} — an allen ${count} einschalten`">{{ $t("✓ an") }}</button>
+        <button class="x" :class="{ on: flagState[key].none }" :disabled="!!busy" @click="go(key, false)" :title="`${hint} — an allen ${count} ausschalten`">{{ $t("✗ aus") }}</button>
         <span class="muted state" :class="{ warn: flagState[key].mixed }">{{ stateText(flagState[key]) }}</span>
       </span>
     </div>
 
     <div class="row" v-if="numericOnly">
-      <span class="lbl">⚖ Einheit</span>
+      <span class="lbl">{{ $t("⚖ Einheit") }}</span>
       <span class="picks">
-        <select v-model="unit" style="width:260px" title="Einheit der Gewählten setzen (nur Zahlen)">
-          <option value="">wählen …</option>
+        <select v-model="unit" style="width:260px" :title="$t('Einheit der Gewählten setzen (nur Zahlen)')">
+          <option value="">{{ $t("wählen …") }}</option>
           <option v-for="u in units" :key="u.key" :value="u.key">{{ u.label?.de || u.key }} · {{ u.quantity }}</option>
         </select>
         <span class="muted state">{{ [...new Set(attrs.map(a => a.unit || '—'))].slice(0, 3).join(' · ') }}</span>

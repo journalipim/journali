@@ -53,11 +53,11 @@ function pick(e, r) {
           <SelectCell v-else-if="c.type === 'select'" :value="r[c.key] ?? ''" :options="typeof c.options === 'function' ? c.options(r) : c.options" :label-of="c.labelOf" @save="v => emit('change', r, c.key, v || null)" @click.stop />
           <Cell v-else :value="r[c.key] ?? null" @save="v => emit('change', r, c.key, v)" @click.stop />
         </template>
-        <td v-if="removable" class="num"><button class="x" title="entfernen" @click.stop="emit('remove', r)">×</button></td>
+        <td v-if="removable" class="num"><button class="x" :title="$t('entfernen')" @click.stop="emit('remove', r)">×</button></td>
       </tr>
     </tbody>
   </table>
-  <div v-if="!rows.length" class="empty">Noch nichts</div>
+  <div v-if="!rows.length" class="empty">{{ $t("Noch nichts") }}</div>
 </template>
 
 <style scoped>

@@ -278,18 +278,18 @@ onMounted(() => { if (!tree.loaded) tree.load() })
 
 <template>
   <div class="pub-theme">
-  <div v-if="!srcOpen" class="pane" style="width:30px;flex:none;align-items:center;padding-top:6px;cursor:pointer" title="Pflegebaum aufklappen" @click="srcOpen = true">
-    <span class="muted">▸</span><span class="muted" style="writing-mode:vertical-rl;margin-top:8px;font-size:12px">▣ Pflegebaum</span>
+  <div v-if="!srcOpen" class="pane" style="width:30px;flex:none;align-items:center;padding-top:6px;cursor:pointer" :title="$t('Pflegebaum aufklappen')" @click="srcOpen = true">
+    <span class="muted">▸</span><span class="muted" style="writing-mode:vertical-rl;margin-top:8px;font-size:12px">{{ $t("▣ Pflegebaum") }}</span>
   </div>
   <div v-else class="pane" :style="`width:${srcW}px;flex:none`">
     <div class="toolbar">
-      <button class="x" title="Pflegebaum einklappen" @click="srcOpen = false">◂</button>
-      <h1>▣ Pflegebaum</h1>
+      <button class="x" :title="$t('Pflegebaum einklappen')" @click="srcOpen = false">◂</button>
+      <h1>{{ $t("▣ Pflegebaum") }}</h1>
       <span class="grow" />
-      <span class="view-chip" :class="{ on: dropMode === 'copy' }" @click="dropMode = 'copy'" title="Gruppe als Rubrik mit Aufbau übernehmen (danach frei umbaubar)">⇊ kopieren</span>
-      <span class="view-chip" :class="{ on: dropMode === 'ref' }" @click="dropMode = 'ref'" title="Gruppe als Verweis übernehmen (folgt dem Pflegebaum)">↗ verweisen</span>
+      <span class="view-chip" :class="{ on: dropMode === 'copy' }" @click="dropMode = 'copy'" :title="$t('Gruppe als Rubrik mit Aufbau übernehmen (danach frei umbaubar)')">{{ $t("⇊ kopieren") }}</span>
+      <span class="view-chip" :class="{ on: dropMode === 'ref' }" @click="dropMode = 'ref'" :title="$t('Gruppe als Verweis übernehmen (folgt dem Pflegebaum)')">{{ $t("↗ verweisen") }}</span>
     </div>
-    <div class="toolbar" style="border-bottom:1px solid var(--line)"><input v-model="srcFilter" placeholder="filtern" style="width:100%" /></div>
+    <div class="toolbar" style="border-bottom:1px solid var(--line)"><input v-model="srcFilter" :placeholder="$t('filtern')" style="width:100%" /></div>
     <div class="scroll tree">
       <div v-for="row in srcRows" :key="row.r.id" class="node" :style="`padding-left:${8 + row.depth * 16}px`" draggable="true" @dragstart="onSrcDragStart($event, row)" :title="row.path ?? row.r.id" @dblclick="router.push(`/tree/${row.r.id}`)">
         <span class="twisty" :class="{ leaf: !row.has }" @click.stop="srcToggle(row.r.id)">{{ row.has ? (row.isOpen ? '▾' : '▸') : '' }}</span>
@@ -299,64 +299,64 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-if="current && inTree(row.r.id)" class="pos count" :title="`in „${current.label}“ als Verweis enthalten`">✓</span>
       </div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">Ast nach rechts auf eine Rubrik ziehen · Doppelklick öffnet</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">{{ $t("Ast nach rechts auf eine Rubrik ziehen · Doppelklick öffnet") }}</div>
   </div>
   <Splitter v-if="srcOpen" v-model="srcW" :min="200" :max="600" />
   <div class="pane" :style="`width:${pubW}px;flex:none`">
     <div class="toolbar">
-      <h1>⇶ Publikation</h1>
-      <select v-if="trees.length" v-model="treeKey" title="Publikationsbaum — je Kanal (× Markt) die Maximalstruktur">
-        <option v-for="t in trees" :key="t.id" :value="t.id">{{ t.label }} · {{ t.channel }}{{ t.market ? '/' + t.market : '' }} · {{ tree.below(t.id).total }} Rubriken</option>
+      <h1>{{ $t("⇶ Publikation") }}</h1>
+      <select v-if="trees.length" v-model="treeKey" :title="$t('Publikationsbaum — je Kanal (× Markt) die Maximalstruktur')">
+        <option v-for="t in trees" :key="t.id" :value="t.id">{{ $t("{0} · {1}{2} · {3} Rubriken", [t.label, t.channel, t.market ? '/' + t.market : '', tree.below(t.id).total]) }}</option>
       </select>
-      <button class="x" @click="newTree" title="neuer Publikationsbaum">+</button>
+      <button class="x" @click="newTree" :title="$t('neuer Publikationsbaum')">+</button>
       <span class="grow" />
       <button v-if="exp" :class="{ primary: showExport }" @click="showExport = !showExport; showUnplaced = false" :title="`Ausleitung anzeigen (${exp.in} ausgeleitet, ${exp.out} zurückgehalten)`"><span class="pos">{{ exp.in }}</span> <span :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</span></button>
       <button v-if="current && unplaced.length" :class="{ primary: showUnplaced }" @click="showUnplaced = !showUnplaced; showExport = false" :title="`${unplaced.length} noch nicht einsortierte Produkte anzeigen`">⚠ {{ unplaced.length }}</button>
     </div>
     <div v-if="showExport && exp" class="unplaced">
-      <div class="toolbar" style="white-space:nowrap" title="Ausgeleitet wird, was für den Kanal freigegeben ist und den Markt des Baums in seinen Verkaufsländern hat (leer = überall)">
-        <span class="view-chip pos" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'" title="wird ausgeleitet">ausgeleitet <b class="pos">{{ exp.in }}</b></span>
-        <span class="view-chip" :class="{ on: expOnly === 'out', neg: exp.out > 0 }" @click="expOnly = 'out'" title="wird nicht ausgeleitet — mit Grund">zurückgehalten <b :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</b></span>
-        <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">alle <b class="muted">{{ exp.in + exp.out }}</b></span></div>
+      <div class="toolbar" style="white-space:nowrap" :title="$t('Ausgeleitet wird, was für den Kanal freigegeben ist und den Markt des Baums in seinen Verkaufsländern hat (leer = überall)')">
+        <span class="view-chip pos" :class="{ on: expOnly === 'in' }" @click="expOnly = 'in'" :title="$t('wird ausgeleitet')">{{ $t("ausgeleitet") + ' ' }}<b class="pos">{{ exp.in }}</b></span>
+        <span class="view-chip" :class="{ on: expOnly === 'out', neg: exp.out > 0 }" @click="expOnly = 'out'" :title="$t('wird nicht ausgeleitet — mit Grund')">{{ $t("zurückgehalten") + ' ' }}<b :class="exp.out ? 'neg' : 'muted'">{{ exp.out }}</b></span>
+        <span class="view-chip" :class="{ on: expOnly === 'all' }" @click="expOnly = 'all'">{{ $t("alle") + ' ' }}<b class="muted">{{ exp.in + exp.out }}</b></span></div>
       <div class="scroll" style="max-height:240px">
         <div v-for="r in expRows" :key="r.path.map(x => x.id).join('/') + r.product.id" class="node" :title="r.path.map(x => x.label).join(' › ') + (r.why.length ? '\n' + r.why.join('\n') : '')" @click="router.push(`/pub/${r.product.id}`)">
           <span :class="r.in ? 'pos' : 'neg'" style="width:14px;text-align:center">{{ r.in ? '✓' : '✗' }}</span>
           <span class="icon">▦</span><span class="label">{{ r.product.label }}</span>
           <span class="muted" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:6px">{{ r.in ? r.path.slice(1).map(x => x.label).join(' › ') : r.why.join(' · ') }}</span>
-          <button class="x" style="margin-left:auto" title="im Pflegebaum öffnen (freigeben, pflegen); ⇶ bringt dich zurück" @click.stop="store.pubBack = { path: $route.fullPath, label: current.label }; router.push(`/tree/${r.product.id}`)">▣</button>
+          <button class="x" style="margin-left:auto" :title="$t('im Pflegebaum öffnen (freigeben, pflegen); ⇶ bringt dich zurück')" @click.stop="store.pubBack = { path: $route.fullPath, label: current.label }; router.push(`/tree/${r.product.id}`)">▣</button>
         </div>
         <div v-if="!expRows.length" class="empty" style="padding:10px">{{ expOnly === 'out' ? 'nichts zurückgehalten — alles im Baum wird ausgeleitet' : 'nichts' }}</div>
       </div>
     </div>
     <div v-if="ruleBox" class="picker-box" style="padding:8px">
-      <div class="toolbar" style="padding:0 0 6px"><b>⚙ Regel in „{{ ruleBox.rubric.label }}“</b><span class="grow" /><button class="x" @click="ruleBox = null">✕</button></div>
+      <div class="toolbar" style="padding:0 0 6px"><b>{{ $t("⚙ Regel in „{0}“", [ruleBox.rubric.label]) }}</b><span class="grow" /><button class="x" @click="ruleBox = null">✕</button></div>
       <div class="chips" style="margin-bottom:6px">
-        <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'name' }" @click="ruleBox.rule.kind = 'name'" title="Knoten nach Namen treffen (eine Gruppe kommt mit allem darunter)">nach Name</span>
-        <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'attribute' }" @click="ruleBox.rule.kind = 'attribute'; ruleBox.rule.role = 'product'" title="Produkte, deren Wert (geerbt zählt) passt">nach Wert</span>
+        <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'name' }" @click="ruleBox.rule.kind = 'name'" :title="$t('Knoten nach Namen treffen (eine Gruppe kommt mit allem darunter)')">{{ $t("nach Name") }}</span>
+        <span class="view-chip" :class="{ on: ruleBox.rule.kind === 'attribute' }" @click="ruleBox.rule.kind = 'attribute'; ruleBox.rule.role = 'product'" :title="$t('Produkte, deren Wert (geerbt zählt) passt')">{{ $t("nach Wert") }}</span>
       </div>
       <div v-if="ruleBox.rule.kind === 'name'" class="chips" style="margin-bottom:6px">
-        <select v-model="ruleBox.rule.role"><option value="group">Gruppen</option><option value="product">Produkte</option></select>
-        <input v-model="ruleBox.rule.name" placeholder="Name, z. B. Ersatzteile" style="flex:1" />
+        <select v-model="ruleBox.rule.role"><option value="group">{{ $t("Gruppen") }}</option><option value="product">{{ $t("Produkte") }}</option></select>
+        <input v-model="ruleBox.rule.name" :placeholder="$t('Name, z. B. Ersatzteile')" style="flex:1" />
       </div>
       <div v-else class="chips" style="margin-bottom:6px">
-        <select v-model="ruleBox.rule.attribute" style="max-width:200px"><option value="">Attribut …</option><option v-for="a in (store.model?.attributes ?? []).filter(a => !['rows', 'formula', 'template'].includes(a.type))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }}</option></select>
-        <span class="muted">=</span><input v-model="ruleBox.rule.value" placeholder="Wert" style="flex:1" />
+        <select v-model="ruleBox.rule.attribute" style="max-width:200px"><option value="">{{ $t("Attribut …") }}</option><option v-for="a in (store.model?.attributes ?? []).filter(a => !['rows', 'formula', 'template'].includes(a.type))" :key="a.key" :value="a.key">{{ a.label?.de || a.key }}</option></select>
+        <span class="muted">=</span><input v-model="ruleBox.rule.value" :placeholder="$t('Wert')" style="flex:1" />
       </div>
-      <div class="muted" style="font-size:12px;margin-bottom:2px">unter</div>
+      <div class="muted" style="font-size:12px;margin-bottom:2px">{{ $t("unter") }}</div>
       <TreePicker v-model="ruleBox.rule.under" :roles="['group']" :height="160" />
       <div class="chips" style="margin-top:6px">
-        <span class="muted" style="font-size:12px">gliedern</span>
-        <select v-model="ruleBox.rule.groupBy"><option value="none">flach</option><option value="parent">nach Produktgruppe darüber</option><option v-for="a in (store.model?.attributes ?? []).filter(a => ['text', 'enum'].includes(a.type))" :key="a.key" :value="'attr:' + a.key">nach {{ a.label?.de || a.key }}</option></select>
+        <span class="muted" style="font-size:12px">{{ $t("gliedern") }}</span>
+        <select v-model="ruleBox.rule.groupBy"><option value="none">{{ $t("flach") }}</option><option value="parent">{{ $t("nach Produktgruppe darüber") }}</option><option v-for="a in (store.model?.attributes ?? []).filter(a => ['text', 'enum'].includes(a.type))" :key="a.key" :value="'attr:' + a.key">{{ $t("nach {0}", [a.label?.de || a.key]) }}</option></select>
       </div>
       <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0;margin-top:8px;padding:6px 0 0">
         <span v-if="ruleBox.preview?.error" class="neg" style="font-size:12px">{{ ruleBox.preview.error }}</span>
-        <span v-else-if="ruleBox.preview" :class="ruleBox.preview.hits ? 'pos' : 'warn'" style="font-size:12px">trifft {{ ruleBox.preview.hits }} {{ ruleBox.rule.kind === 'name' && ruleBox.rule.role === 'group' ? 'Gruppen' : 'Produkte' }}{{ ruleBox.preview.groups ? ` in ${ruleBox.preview.groups} Gliederungen` : '' }} · {{ ruleBox.preview.products }} Produkte</span>
+        <span v-else-if="ruleBox.preview" :class="ruleBox.preview.hits ? 'pos' : 'warn'" style="font-size:12px">{{ $t("trifft {0} {1}{2} · {3} Produkte", [ruleBox.preview.hits, ruleBox.rule.kind === 'name' && ruleBox.rule.role === 'group' ? 'Gruppen' : 'Produkte', ruleBox.preview.groups ? ` in ${ruleBox.preview.groups} Gliederungen` : '', ruleBox.preview.products]) }}</span>
         <span v-else class="muted" style="font-size:12px">…</span>
-        <span class="grow" /><button class="primary" :disabled="!ruleBox.preview || ruleBox.preview.error" @click="saveRule">⚙ Speichern</button>
+        <span class="grow" /><button class="primary" :disabled="!ruleBox.preview || ruleBox.preview.error" @click="saveRule">{{ $t("⚙ Speichern") }}</button>
       </div>
     </div>
     <div v-if="showUnplaced" class="unplaced">
-      <div class="toolbar"><span class="muted">{{ unplaced.length }} Produkte noch nicht einsortiert</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `Alle ${unplaced.length} in „${selRubric.label}“ einsortieren` : 'erst eine Rubrik anklicken'">alle in {{ selRubric ? '„' + selRubric.label + '“' : 'Rubrik …' }}</button></div>
+      <div class="toolbar"><span class="muted">{{ $t("{0} Produkte noch nicht einsortiert", [unplaced.length]) }}</span><span class="grow" /><button class="x" :disabled="!selRubric" @click="placeUnplaced(unplaced.map(r => r.id))" :title="selRubric ? `Alle ${unplaced.length} in „${selRubric.label}“ einsortieren` : 'erst eine Rubrik anklicken'">{{ $t("alle in {0}", [selRubric ? '„' + selRubric.label + '“' : 'Rubrik …']) }}</button></div>
       <div class="scroll" style="max-height:200px">
         <div v-for="r in unplaced" :key="r.id" class="node" :title="tree.ancestors(r.id).map(a => a.label).join(' › ')">
           <span class="icon">{{ icon(r.role) }}</span><span class="label">{{ r.label }}</span><span class="grow" />
@@ -379,14 +379,14 @@ onMounted(() => { if (!tree.loaded) tree.load() })
         <span v-if="row.kind === 'ruled' && row.r.role === 'group'" class="muted count">{{ row.products }}</span>
         <span v-if="row.kind === 'placed' && row.r.role === 'group'" class="muted count" :title="`Produktgruppe mit ${tree.below(row.r.id).total} darunter`">{{ tree.below(row.r.id).total }}</span>
       </div>
-      <div v-if="!trees.length" class="empty">Kein Publikationsbaum.<div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="newTree">+ Publikationsbaum</button></div><div class="muted" style="margin-top:6px;font-size:12px"><span title="Danach Äste aus dem Pflegebaum links herüberziehen.">Name, Kanal, optional Markt</span></div></div>
-      <div v-else-if="rows.length === 1" class="empty">Noch leer — einen Ast aus dem Pflegebaum links auf „{{ current.label }}“ ziehen.<div class="chips" style="justify-content:center;margin-top:8px"><button class="x" @click="newRubric(current)" title="eine leere Rubrik anlegen, z. B. für eigene Gliederung">+ Rubrik</button></div></div>
+      <div v-if="!trees.length" class="empty">{{ $t("Kein Publikationsbaum.") }}<div class="chips" style="justify-content:center;margin-top:8px"><button class="primary" @click="newTree">{{ $t("+ Publikationsbaum") }}</button></div><div class="muted" style="margin-top:6px;font-size:12px"><span :title="$t('Danach Äste aus dem Pflegebaum links herüberziehen.')">{{ $t("Name, Kanal, optional Markt") }}</span></div></div>
+      <div v-else-if="rows.length === 1" class="empty">{{ $t("Noch leer — einen Ast aus dem Pflegebaum links auf „{0}“ ziehen.", [current.label]) }}<div class="chips" style="justify-content:center;margin-top:8px"><button class="x" @click="newRubric(current)" :title="$t('eine leere Rubrik anlegen, z. B. für eigene Gliederung')">{{ $t("+ Rubrik") }}</button></div></div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><span title="Ziehen von links übernimmt, hier ziehen hängt um; Strg-Klick wählt mehrere.">▥ Rubrik · ↗ Verweis · ziehen, Strg-Klick, Rechtsklick</span></div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><span :title="$t('Ziehen von links übernimmt, hier ziehen hängt um; Strg-Klick wählt mehrere.')">{{ $t("▥ Rubrik · ↗ Verweis · ziehen, Strg-Klick, Rechtsklick") }}</span></div>
   </div>
   <Splitter v-model="pubW" :min="220" :max="800" />
   <NodeView v-if="id" :id="id" :key="id" :pub="current?.id ?? null" :pub-rubric="$route.query.in ?? null" />
-  <div v-else class="pane" style="flex:1"><div class="empty"><span title="Texte und Bilder stehen hier wie an jedem Knoten.">Rubrik wählen</span></div></div>
+  <div v-else class="pane" style="flex:1"><div class="empty"><span :title="$t('Texte und Bilder stehen hier wie an jedem Knoten.')">{{ $t("Rubrik wählen") }}</span></div></div>
   </div>
 </template>
 

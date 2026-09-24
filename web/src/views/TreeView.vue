@@ -550,11 +550,11 @@ function onDialogKey(e) {
 <template>
   <div class="pane" :style="`width:${treeW}px;flex:none`">
     <div class="toolbar">
-      <h1>▣ Baum</h1>
+      <h1>{{ $t("▣ Baum") }}</h1>
       <span class="muted">{{ tree.rows.length }}</span>
-      <input ref="search" v-model="q" type="search" placeholder="Suche in allem  /" style="flex:1;min-width:0" autocomplete="off"
+      <input ref="search" v-model="q" type="search" :placeholder="$t('Suche in allem /')" style="flex:1;min-width:0" autocomplete="off"
         @input="suggest" @focus="suggest" @click="suggest" @blur="hideSugg" @keydown="onSearchKey"
-        title="Text — oder Bedingungen (Vorschläge beim Tippen): attr:function · attr:function=*sku* · attr:x= (leer) · empty:name/en · incomplete:web · role:variant · status:active · group:logistics · under:<id> · by:<name> · since:2026-09-10" />
+        :title="$t('Text — oder Bedingungen (Vorschläge beim Tippen): attr:function · attr:function=*sku* · attr:x= (leer) · empty:name/en · incomplete:web · role:variant · status:active · group:logistics · under:<id> · by:<name> · since:2026-09-10')" />
     </div>
     <div v-if="sugg.length" class="sugg">
       <div v-for="(s, i) in sugg" :key="s.value" class="sugg-row" :class="{ on: i === suggIdx }" @mousedown.prevent="accept(s)" @mousemove="suggIdx = i">
@@ -562,50 +562,50 @@ function onDialogKey(e) {
       </div>
     </div>
     <div v-if="terms.length" class="chips terms">
-      <span v-for="t in terms" :key="t" class="chip mono" :class="{ not: t.startsWith('-') }" :title="t.startsWith('-') ? 'Verneinung aufheben' : 'Verneinen (Gegenteil)'" @click="q = q.split(/\s+/).map(w => w === t ? (t.startsWith('-') ? t.slice(1) : '-' + t) : w).join(' ')">{{ t }}<button @click.stop="dropTerm(t)" @click="dropTerm(t)" title="Bedingung entfernen">×</button></span>
+      <span v-for="t in terms" :key="t" class="chip mono" :class="{ not: t.startsWith('-') }" :title="t.startsWith('-') ? 'Verneinung aufheben' : 'Verneinen (Gegenteil)'" @click="q = q.split(/\s+/).map(w => w === t ? (t.startsWith('-') ? t.slice(1) : '-' + t) : w).join(' ')">{{ t }}<button @click.stop="dropTerm(t)" @click="dropTerm(t)" :title="$t('Bedingung entfernen')">×</button></span>
     </div>
     <div class="toolbar create">
       <button @click="start('group')" :title="groupTarget ? `Gruppe unter ${groupTarget.label} anlegen (im Dialog auf die Wurzel umschaltbar — ein neuer Baum)` : 'Gruppe an der Wurzel anlegen (ein neuer Baum)'">+ ▣</button>
       <button @click="start('product')" :disabled="!groupTarget" :title="groupTarget ? `Produkt unter ${groupTarget.label}` : 'erst eine Gruppe wählen'">+ ▦</button>
       <button @click="start('variant')" :disabled="!productTarget" :title="productTarget ? `Variante unter ${productTarget.label}` : 'erst ein Produkt wählen'">+ ◆</button>
       <span class="grow" />
-      <button v-if="rootUndo" class="x" @click="undoRoot" :title="`↶ ${rootUndo.label}${rootUndo.count > 1 ? ` mit ${rootUndo.count - 1} darunter` : ''} wiederherstellen (Wurzel)`">↶ Wurzel</button>
-      <button v-if="q" @click="pickVisible" title="Alle sichtbaren Treffer auswählen">☑ Treffer wählen</button>
+      <button v-if="rootUndo" class="x" @click="undoRoot" :title="`↶ ${rootUndo.label}${rootUndo.count > 1 ? ` mit ${rootUndo.count - 1} darunter` : ''} wiederherstellen (Wurzel)`">{{ $t("↶ Wurzel") }}</button>
+      <button v-if="q" @click="pickVisible" :title="$t('Alle sichtbaren Treffer auswählen')">{{ $t("☑ Treffer wählen") }}</button>
       <template v-if="picked.size">
-        <span class="chip" title="die Auswahl — Strg+Klick sammelt, Shift+Klick nimmt den Bereich; × oder Esc hebt sie auf">☑ {{ picked.size }} <button @click="picked = new Set()" title="Auswahl aufheben (Esc)">×</button></span>
-        <button class="primary" @click="openLink(null)" title="die Auswahl mit einem Ziel verknüpfen (oder mit Shift auf ein Ziel ziehen)">⇄</button>
+        <span class="chip" :title="$t('die Auswahl — Strg+Klick sammelt, Shift+Klick nimmt den Bereich; × oder Esc hebt sie auf')">☑ {{ picked.size }} <button @click="picked = new Set()" :title="$t('Auswahl aufheben (Esc)')">×</button></span>
+        <button class="primary" @click="openLink(null)" :title="$t('die Auswahl mit einem Ziel verknüpfen (oder mit Shift auf ein Ziel ziehen)')">⇄</button>
       </template>
     </div>
 
     <!-- Verknüpfen: Auswahl → Ziel, dann Typ und Richtung (Taloan, 17.09.) -->
     <div v-if="link" class="overlay" @click.self="link = null" @keydown="onLinkKey">
       <div class="dialog" style="min-width:640px;max-width:92vw">
-        <div class="toolbar"><h1>⇄ {{ pickedRows.length }} Einträge verknüpfen</h1><span class="grow" /><button class="x" @click="link = null" title="Esc">×</button></div>
+        <div class="toolbar"><h1>{{ $t("⇄ {0} Einträge verknüpfen", [pickedRows.length]) }}</h1><span class="grow" /><button class="x" @click="link = null" :title="$t('Esc')">×</button></div>
         <table class="grid form"><colgroup><col style="width:130px" /><col /></colgroup><tbody>
-          <tr><td class="attr">Ziel</td><td>
-            <span v-if="link.target" class="chip">{{ icon(link.target.role) }} {{ link.target.label }} <button @click="link.target = null; link.existing = null" title="anderes Ziel">×</button></span>
-            <input v-else v-model="link.q" type="search" placeholder="🔍 Name, SKU, Id" style="width:320px" autofocus />
+          <tr><td class="attr">{{ $t("Ziel") }}</td><td>
+            <span v-if="link.target" class="chip">{{ icon(link.target.role) }} {{ link.target.label }} <button @click="link.target = null; link.existing = null" :title="$t('anderes Ziel')">×</button></span>
+            <input v-else v-model="link.q" type="search" :placeholder="$t('🔍 Name, SKU, Id')" style="width:320px" autofocus />
             <div v-if="!link.target && linkMatches.length" class="picker" style="max-width:420px">
               <div v-for="m in linkMatches" :key="m.id" class="pick" @click="link.target = m; link.q = ''; loadExisting()">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ tree.keyText(m) || m.id }}</span></div>
             </div>
           </td></tr>
-          <tr><td class="attr">Relation</td><td>
+          <tr><td class="attr">{{ $t("Relation") }}</td><td>
             <select v-model="link.type" style="width:260px"><option v-for="t in relTypes" :key="t.key" :value="t.key">{{ t.symmetric ? '⇄' : '→' }} {{ t.label?.de || t.key }}{{ t.group ? ' · ▤ ' + t.group : '' }}</option></select>
             <span v-if="linkType" class="muted" style="margin-left:8px">{{ linkType.symmetric ? 'beidseitig — liest sich von beiden Enden gleich' : 'einseitig — zwei Lesarten' }}</span>
           </td></tr>
-          <tr v-if="linkType && link.target"><td class="attr">Richtung</td><td class="dirs">
+          <tr v-if="linkType && link.target"><td class="attr">{{ $t("Richtung") }}</td><td class="dirs">
             <label :class="{ on: link.dir === 'target-first' }"><input type="radio" value="target-first" v-model="link.dir" />
-              <b>{{ link.target.label }}</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ pickedRows.length }} Einträge</b>
-              <div v-if="!linkType.symmetric" class="muted reading">die Einträge sind „{{ linkType.reverse?.de || '…' }}“ {{ link.target.label }}</div></label>
+              <b>{{ link.target.label }}</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ $t("{0} Einträge", [pickedRows.length]) }}</b>
+              <div v-if="!linkType.symmetric" class="muted reading">{{ $t("die Einträge sind „{0}“ {1}", [linkType.reverse?.de || '…', link.target.label]) }}</div></label>
             <label v-if="!linkType.symmetric" :class="{ on: link.dir === 'set-first' }"><input type="radio" value="set-first" v-model="link.dir" />
-              <b>{{ pickedRows.length }} Einträge</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ link.target.label }}</b>
-              <div class="muted reading">{{ link.target.label }} ist „{{ linkType.reverse?.de || '…' }}“ jedes Eintrags</div></label>
+              <b>{{ $t("{0} Einträge", [pickedRows.length]) }}</b> — {{ linkType.label?.de || linkType.key }} → <b>{{ link.target.label }}</b>
+              <div class="muted reading">{{ $t("{0} ist „{1}“ jedes Eintrags", [link.target.label, linkType.reverse?.de || '…']) }}</div></label>
           </td></tr>
         </tbody></table>
         <div class="scroll" style="max-height:340px">
           <table class="grid" style="width:auto">
-            <thead><tr><th style="width:320px">Eintrag</th><th v-for="a in linkAttrs" :key="a.key" style="width:140px" :title="a.key">{{ a.label?.de || a.key }}<span v-if="a.unit" class="muted"> {{ a.unit }}</span></th><th style="width:120px"></th></tr>
-              <tr v-if="linkAttrs.length" class="muted"><td style="font-size:11px;padding:2px 8px">für alle:</td><td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input type="text" style="width:100%" :placeholder="a.label?.de || a.key" @change="fillAll(a.key, $event.target.value)" /></td><td></td></tr>
+            <thead><tr><th style="width:320px">{{ $t("Eintrag") }}</th><th v-for="a in linkAttrs" :key="a.key" style="width:140px" :title="a.key">{{ a.label?.de || a.key }}<span v-if="a.unit" class="muted"> {{ a.unit }}</span></th><th style="width:120px"></th></tr>
+              <tr v-if="linkAttrs.length" class="muted"><td style="font-size:11px;padding:2px 8px">{{ $t("für alle:") }}</td><td v-for="a in linkAttrs" :key="a.key" style="padding:2px 4px"><input type="text" style="width:100%" :placeholder="a.label?.de || a.key" @change="fillAll(a.key, $event.target.value)" /></td><td></td></tr>
             </thead>
             <tbody>
               <tr v-for="x in linkRows" :key="x.r.id" :class="{ muted: !x.ok || x.exists }">
@@ -617,9 +617,9 @@ function onDialogKey(e) {
           </table>
         </div>
         <div class="chips" style="padding:8px">
-          <button class="primary" :disabled="!link.target || !linkType || !linkCount" @click="runLink">⇄ {{ linkCount }} verknüpfen</button>
-          <button @click="link = null">Abbrechen</button>
-          <span class="grow" /><span class="muted">ein Stapel · <kbd>Esc</kbd></span>
+          <button class="primary" :disabled="!link.target || !linkType || !linkCount" @click="runLink">{{ $t("⇄ {0} verknüpfen", [linkCount]) }}</button>
+          <button @click="link = null">{{ $t("Abbrechen") }}</button>
+          <span class="grow" /><span class="muted">{{ $t("ein Stapel ·") + ' ' }}<kbd>{{ $t("Esc") }}</kbd></span>
         </div>
       </div>
     </div>
@@ -644,16 +644,16 @@ function onDialogKey(e) {
             <td class="attr" :title="r.def.key + (r.locale ? ' · ' + r.locale : '')">● {{ r.def.label?.de || r.def.key }}<span v-if="r.locale" class="muted">&nbsp;{{ r.locale }}</span></td>
             <td>
               <select v-if="r.def.type === 'enum'" v-model="vals[r.def.key]" style="width:100%"><option value="">…</option><option v-for="v in listValues(r.def.key)" :key="v.value" :value="v.value">{{ v.label?.de || v.value }}</option></select>
-              <select v-else-if="r.def.type === 'boolean'" v-model="vals[r.def.key]" style="width:100%"><option value="">…</option><option value="true">✓ ja</option><option value="false">✗ nein</option></select>
+              <select v-else-if="r.def.type === 'boolean'" v-model="vals[r.def.key]" style="width:100%"><option value="">…</option><option value="true">{{ $t("✓ ja") }}</option><option value="false">{{ $t("✗ nein") }}</option></select>
               <input v-else v-model="vals[r.def.key]" :type="r.def.type === 'date' ? 'date' : 'text'" style="width:100%" :placeholder="r.def.multiple ? 'kommagetrennt' : ''" :autofocus="i === 0" />
             </td>
           </tr>
         </tbody></table>
-        <div v-if="!required.length && !(creating === 'variant' && productTarget.axes.length)" class="muted" style="padding:6px 8px;font-size:12px"><span title="Anlegen, dann rechts pflegen.">Keine Pflichtfelder an diesem Knotentyp</span></div>
+        <div v-if="!required.length && !(creating === 'variant' && productTarget.axes.length)" class="muted" style="padding:6px 8px;font-size:12px"><span :title="$t('Anlegen, dann rechts pflegen.')">{{ $t("Keine Pflichtfelder an diesem Knotentyp") }}</span></div>
         <div class="chips" style="padding:8px">
-          <button class="primary" :disabled="!complete" @click="create">Anlegen</button>
-          <button @click="creating = null">Abbrechen</button>
-          <span class="grow" /><span class="muted"><kbd>Enter</kbd> · <kbd>Esc</kbd></span>
+          <button class="primary" :disabled="!complete" @click="create">{{ $t("Anlegen") }}</button>
+          <button @click="creating = null">{{ $t("Abbrechen") }}</button>
+          <span class="grow" /><span class="muted"><kbd>{{ $t("Enter") }}</kbd> · <kbd>{{ $t("Esc") }}</kbd></span>
         </div>
       </div>
     </div>
@@ -671,17 +671,16 @@ function onDialogKey(e) {
         <span v-if="r.status && r.status !== 'draft' && store.status(r.status)" :style="store.statusStyle(r.status)" :title="store.statusLabel(r.status)">{{ store.status(r.status).icon }}</span>
         <span v-if="tree.kids(r.id).length" class="muted count">{{ tree.kids(r.id).length }}</span>
       </div>
-      <div v-if="tree.loaded && !tree.rows.length" class="empty">Leer — oben <b>+ ▣</b> legt die erste Gruppe an.</div>
-      <div v-else-if="q && !visible.length" class="empty">Nichts zu „{{ q }}“</div>
+      <div v-if="tree.loaded && !tree.rows.length" class="empty">{{ $t("Leer — oben") + ' ' }}<b>+ ▣</b>{{ ' ' + $t("legt die erste Gruppe an.") }}</div>
+      <div v-else-if="q && !visible.length" class="empty">{{ $t("Nichts zu „{0}“", [q]) }}</div>
     </div>
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>Entf</kbd> zurückziehen · <kbd>/</kbd> Suche · <kbd>Strg</kbd>+Klick auswählen · ziehen = umhängen, mit <kbd>Shift</kbd> = verknüpfen · <i>kursiv</i> = angeheftet
-    </div>
+      <kbd>↑</kbd><kbd>↓</kbd> · <kbd>{{ $t("Entf") }}</kbd>{{ ' ' + $t("zurückziehen ·") + ' ' }}<kbd>/</kbd>{{ ' ' + $t("Suche ·") + ' ' }}<kbd>{{ $t("Strg") }}</kbd>{{ $t("+Klick auswählen · ziehen = umhängen, mit") + ' ' }}<kbd>{{ $t("Shift") }}</kbd>{{ ' ' + $t("= verknüpfen ·") + ' ' }}<i>{{ $t("kursiv") }}</i>{{ ' ' + $t("= angeheftet") + ' ' }}</div>
   </div>
 
   <Splitter v-model="treeW" :min="200" :max="800" />
   <NodeView v-if="id" :id="id" :key="id" />
-  <div v-else class="pane" style="flex:1"><div class="empty">Knoten wählen — oder oben anlegen.</div></div>
+  <div v-else class="pane" style="flex:1"><div class="empty">{{ $t("Knoten wählen — oder oben anlegen.") }}</div></div>
 </template>
 
 <style scoped>

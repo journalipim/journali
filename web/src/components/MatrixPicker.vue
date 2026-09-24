@@ -33,7 +33,7 @@ onUnmounted(() => { document.removeEventListener('mousedown', onDoc); document.r
 
 <template>
   <span ref="box" class="mp">
-    <button :class="{ primary: open }" @click="openPop" title="Spalten: Sprache × Kanal — ankreuzen, was als Spalte steht"><span class="sum">⊞ {{ summary }}</span></button>
+    <button :class="{ primary: open }" @click="openPop" :title="$t('Spalten: Sprache × Kanal — ankreuzen, was als Spalte steht')"><span class="sum">⊞ {{ summary }}</span></button>
     <div v-if="open" class="pop" :style="`top:${at.top}px;left:${at.left}px`">
       <table>
         <thead><tr><th></th><th v-for="c in cols" :key="c ?? '*'" class="hd" :class="{ master: c && c === masterChannel }" :title="c ? (c === masterChannel ? 'Masterkanal — ganze Spalte an/aus' : `Kanal ${c} — ganze Spalte an/aus`) : 'ohne Kanal — ganze Spalte an/aus'" @click="toggleCol(c)">{{ c ?? '*' }}</th></tr></thead>

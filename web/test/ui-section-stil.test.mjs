@@ -4,6 +4,7 @@
 // hält sie dort: eine neue Einstellungsseite erbt sie, ohne dass jemand daran denken muss.
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { entfalten } from './texte.mjs'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -32,7 +33,7 @@ test('der Beisatz einer Überschrift zählt auf — er erklärt nicht', () => {
   const misses = []
   for (const f of walk(src)) {
     const roh = fs.readFileSync(f, 'utf8')
-    const tpl = roh.slice(0, roh.indexOf('<style') < 0 ? roh.length : roh.indexOf('<style')).replace(/<!--[\s\S]*?-->/g, '')
+    const tpl = entfalten(roh.slice(0, roh.indexOf('<style') < 0 ? roh.length : roh.indexOf('<style')).replace(/<!--[\s\S]*?-->/g, ''))
     for (const kopf of tpl.match(/<h2[\s\S]*?<\/h2>/g) ?? []) {
       const sichtbar = kopf.replace(/\stitle="[^"]*"/g, '').replace(/\{\{[^}]*\}\}/g, '#').replace(/<[^>]*>/g, ' ')
       const bei = sichtbar.split('·').slice(1).join(' ').replace(/[#⊞▤▦◷✧✦⚿▨▩◍◈⚑↺⎘◆✓⇄👥👤⚠✉]/g, ' ').trim()

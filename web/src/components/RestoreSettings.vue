@@ -109,46 +109,46 @@ onMounted(lies)
 
 <template>
   <div class="section">
-    <h2 title="Vollsicherung in ein Verzeichnis auf dem Server; zurück nur in ein leeres System.">⇅ Sichern und wiederherstellen <span class="muted">· Journal, Assets, Zugänge, Plugins</span></h2>
+    <h2 :title="$t('Vollsicherung in ein Verzeichnis auf dem Server; zurück nur in ein leeres System.')">{{ $t("⇅ Sichern und wiederherstellen") + ' ' }}<span class="muted">{{ $t("· Journal, Assets, Zugänge, Plugins") }}</span></h2>
 
     <div class="row" style="gap:6px;margin-bottom:6px">
-      <input v-model="dir" type="text" placeholder="Verzeichnis der Sicherung" style="flex:1" @keydown.enter="lies" />
-      <button title="Verzeichnis auf dem Server wählen" @click="filePicker({ value: dir, dirOnly: true, onPick: v => { dir = v; lies() } })">📁</button>
-      <button :disabled="!!busy" @click="lies">Lesen</button>
+      <input v-model="dir" type="text" :placeholder="$t('Verzeichnis der Sicherung')" style="flex:1" @keydown.enter="lies" />
+      <button :title="$t('Verzeichnis auf dem Server wählen')" @click="filePicker({ value: dir, dirOnly: true, onPick: v => { dir = v; lies() } })">📁</button>
+      <button :disabled="!!busy" @click="lies">{{ $t("Lesen") }}</button>
     </div>
 
     <table v-if="stand?.hier" class="grid"><tbody>
-      <tr><td class="muted" style="width:130px">dieses System</td>
-        <td>{{ n(stand.hier.entries) }} Einträge · {{ n(stand.hier.media) }} Assets · Speicher {{ stand.hier.storage }}</td></tr>
-      <tr><td class="muted">im Verzeichnis</td>
-        <td v-if="stand.dort">{{ n(stand.dort.entries) }} Einträge · {{ n(stand.dort.media) }} Assets ({{ kb(stand.dort.bytes) }}) · {{ stand.dort.config }} Dateien · {{ stand.dort.plugins }} Plugins · {{ when(stand.dort.at) }}</td>
-        <td v-else class="muted">keine Sicherung</td></tr>
+      <tr><td class="muted" style="width:130px">{{ $t("dieses System") }}</td>
+        <td>{{ $t("{0} Einträge · {1} Assets · Speicher {2}", [n(stand.hier.entries), n(stand.hier.media), stand.hier.storage]) }}</td></tr>
+      <tr><td class="muted">{{ $t("im Verzeichnis") }}</td>
+        <td v-if="stand.dort">{{ $t("{0} Einträge · {1} Assets ({2}) · {3} Dateien · {4} Plugins · {5}", [n(stand.dort.entries), n(stand.dort.media), kb(stand.dort.bytes), stand.dort.config, stand.dort.plugins, when(stand.dort.at)]) }}</td>
+        <td v-else class="muted">{{ $t("keine Sicherung") }}</td></tr>
     </tbody></table>
 
     <div class="row mit" style="gap:12px;align-items:center;margin-top:6px">
-      <label title="Assets aus der Datenbank; S3 und Verzeichnisse sichert der Betrieb"><input v-model="mit.media" type="checkbox" /> ▨ Assets</label>
-      <label title="Anmeldungen, Token, Speicher- und Mail-Einstellungen"><input v-model="mit.config" type="checkbox" /> ⚿ Zugänge</label>
-      <label title="Plugin-Verzeichnisse ohne node_modules"><input v-model="mit.plugins" type="checkbox" /> ⌁ Plugins</label>
+      <label :title="$t('Assets aus der Datenbank; S3 und Verzeichnisse sichert der Betrieb')"><input v-model="mit.media" type="checkbox" />{{ ' ' + $t("▨ Assets") }}</label>
+      <label :title="$t('Anmeldungen, Token, Speicher- und Mail-Einstellungen')"><input v-model="mit.config" type="checkbox" />{{ ' ' + $t("⚿ Zugänge") }}</label>
+      <label :title="$t('Plugin-Verzeichnisse ohne node_modules')"><input v-model="mit.plugins" type="checkbox" />{{ ' ' + $t("⌁ Plugins") }}</label>
     </div>
 
     <div class="row" style="gap:8px;align-items:center;margin-top:8px">
-      <button class="primary sichern" :disabled="!!busy || !dir.trim()" title="Vollsicherung in dieses Verzeichnis schreiben" @click="sichern">⇩ Sichern</button>
+      <button class="primary sichern" :disabled="!!busy || !dir.trim()" :title="$t('Vollsicherung in dieses Verzeichnis schreiben')" @click="sichern">{{ $t("⇩ Sichern") }}</button>
       <button :disabled="!!busy || !stand?.dort || (stand.hier?.entries ?? 0) > 0"
         :title="!stand?.dort ? 'keine Sicherung im Verzeichnis' : stand.hier.entries > 0 ? `hier stehen ${n(stand.hier.entries)} Einträge` : 'Sicherung einspielen'"
-        @click="zurueck">↺ Einspielen</button>
-      <span v-if="(stand?.hier?.entries ?? 0) > 0" class="muted" style="font-size:12px">dieses System ist nicht leer</span>
-      <span v-else-if="stand && !stand.dort" class="muted" style="font-size:12px">keine Sicherung im Verzeichnis</span>
+        @click="zurueck">{{ $t("↺ Einspielen") }}</button>
+      <span v-if="(stand?.hier?.entries ?? 0) > 0" class="muted" style="font-size:12px">{{ $t("dieses System ist nicht leer") }}</span>
+      <span v-else-if="stand && !stand.dort" class="muted" style="font-size:12px">{{ $t("keine Sicherung im Verzeichnis") }}</span>
     </div>
     <div v-if="said" :class="said.startsWith('✗') ? 'fehler' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
   </div>
 
   <div class="section">
-    <h2>↺ Teilbaum einspielen <span class="muted">· einzelne Datei, Rohdaten-JSON</span></h2>
+    <h2>{{ $t("↺ Teilbaum einspielen") + ' ' }}<span class="muted">{{ $t("· einzelne Datei, Rohdaten-JSON") }}</span></h2>
 
     <div class="row" style="gap:6px;margin-bottom:6px">
-      <input v-model="tdir" type="text" placeholder="Verzeichnis" style="flex:1" @keydown.enter="ladeTeilbaum" />
-      <button title="Verzeichnis auf dem Server wählen" @click="filePicker({ value: tdir, dirOnly: true, onPick: v => { tdir = v; ladeTeilbaum() } })">📁</button>
-      <button @click="ladeTeilbaum">Lesen</button>
+      <input v-model="tdir" type="text" :placeholder="$t('Verzeichnis')" style="flex:1" @keydown.enter="ladeTeilbaum" />
+      <button :title="$t('Verzeichnis auf dem Server wählen')" @click="filePicker({ value: tdir, dirOnly: true, onPick: v => { tdir = v; ladeTeilbaum() } })">📁</button>
+      <button @click="ladeTeilbaum">{{ $t("Lesen") }}</button>
     </div>
 
     <table v-if="files.length" class="grid"><tbody>
@@ -160,9 +160,9 @@ onMounted(lies)
     </tbody></table>
 
     <div v-if="gewaehlt" class="row" style="gap:8px;margin-top:8px;align-items:center">
-      <button @click="pruefen">Prüfen</button>
-      <button v-if="probe" class="primary" @click="einspielen">↺ Einspielen</button>
-      <span v-if="probe" class="muted" style="font-size:12px">{{ probe.created }} neu · {{ probe.updated }} angeglichen · {{ probe.restored }} zurückgeholt<template v-if="probe.model"> · {{ probe.model }} Modellteile</template></span>
+      <button @click="pruefen">{{ $t("Prüfen") }}</button>
+      <button v-if="probe" class="primary" @click="einspielen">{{ $t("↺ Einspielen") }}</button>
+      <span v-if="probe" class="muted" style="font-size:12px">{{ $t("{0} neu · {1} angeglichen · {2} zurückgeholt", [probe.created, probe.updated, probe.restored]) }}<template v-if="probe.model">{{ ' ' + $t("· {0} Modellteile", [probe.model]) }}</template></span>
     </div>
 
     <div v-if="tsaid" :class="tsaid.startsWith('✗') ? 'fehler' : 'pos'" style="font-size:12px;margin-top:6px">{{ tsaid }}</div>

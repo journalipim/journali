@@ -123,7 +123,7 @@ function onEditKey(e) {
         <div class="big">
           <textarea ref="area" v-model="draft" @keydown="onBigKey" spellcheck="false"></textarea>
           <div :id="panelId"></div>
-          <div class="toolbar"><span class="muted" style="font-size:12px">{{ draft.length }} Zeichen · Strg+Enter speichert · Esc verwirft</span><span class="grow" /><AiBar :panel="'#' + panelId" :current="draft" :html="false" :label="label" :locale="locale" :node="node" @result="fromAi" /><button @click="cancelBig">Verwerfen</button><button class="primary" @click="saveBig">Speichern</button></div>
+          <div class="toolbar"><span class="muted" style="font-size:12px">{{ $t("{0} Zeichen · Strg+Enter speichert · Esc verwirft", [draft.length]) }}</span><span class="grow" /><AiBar :panel="'#' + panelId" :current="draft" :html="false" :label="label" :locale="locale" :node="node" @result="fromAi" /><button @click="cancelBig">{{ $t("Verwerfen") }}</button><button class="primary" @click="saveBig">{{ $t("Speichern") }}</button></div>
         </div>
       </div>
     </Teleport>

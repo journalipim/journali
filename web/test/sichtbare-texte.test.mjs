@@ -9,6 +9,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import { parse } from 'vue/compiler-sfc'
+import { entfalten } from './texte.mjs'   // $t('…') → der Text, den der Anwender liest (Oberflächensprache, 24.09.2026)
 
 const NAMEN = /\bTaloan\b/
 /// Wendungen, mit denen ein Programm anfängt zu raten, zu werben oder zu belehren
@@ -38,7 +39,7 @@ test('kein Name und kein Ratschlag in den Ansichten', () => {
   for (const f of walk(root, '.vue')) {
     const { descriptor } = parse(fs.readFileSync(f, 'utf8'), { filename: f })
     // Template ohne HTML-Kommentare: alles hier ist entweder Text oder Tooltip
-    const tpl = (descriptor.template?.content ?? '').replace(/<!--[\s\S]*?-->/g, '')
+    const tpl = entfalten((descriptor.template?.content ?? '').replace(/<!--[\s\S]*?-->/g, ''))
     if (NAMEN.test(tpl) || RAT.test(tpl)) misses.push(`${path.basename(f)}: im Template`)
     // Script: nur Zeichenketten, nicht die Kommentare daneben
     const script = (descriptor.scriptSetup?.content ?? '') + (descriptor.script?.content ?? '')
@@ -80,7 +81,7 @@ test('sichtbarer Text ist hoechstens ein Satz — Erklaerungen gehoeren in den T
   const misses = []
   for (const f of walk(root, '.vue')) {
     const { descriptor } = parse(fs.readFileSync(f, 'utf8'), { filename: f })
-    const tpl = (descriptor.template?.content ?? '').replace(/<!--[\s\S]*?-->/g, '')
+    const tpl = entfalten((descriptor.template?.content ?? '').replace(/<!--[\s\S]*?-->/g, ''))
     for (const m of tpl.matchAll(/>([^<>]{40,})</g)) {
       const t = m[1].replace(/\{\{[^}]*\}\}/g, 'x').replace(/\s+/g, ' ').trim()
       for (const punkt of [...t.matchAll(/[.!?]["“»)]?\s+(?=[A-ZÄÖÜ])/g)]) {
@@ -101,7 +102,7 @@ function pluginDateien() {
 
 /// title= und placeholder= in Vorlagen wie in Skripten; Kommentarzeilen zählen nicht
 function pruefe(f, txt, misses) {
-  for (const zeile of txt.split('\n')) {
+  for (const zeile of entfalten(txt).split('\n')) {
     if (/^\s*\/\//.test(zeile)) continue
     for (const m of zeile.matchAll(/(?:title|placeholder)\s*[=:]\s*['"]([^'"]{100,})['"]/g)) {
       const s = satz(m[1])
@@ -128,7 +129,7 @@ test('fester sichtbarer Text bleibt kurz — Erklärungen stehen im Tooltip', ()
   const lang = []
   for (const f of walk(root, '.vue')) {
     const { descriptor } = parse(fs.readFileSync(f, 'utf8'), { filename: f })
-    const tpl = (descriptor.template?.content ?? '').replace(/<!--[\s\S]*?-->/g, '')
+    const tpl = entfalten((descriptor.template?.content ?? '').replace(/<!--[\s\S]*?-->/g, ''))
     for (const m of tpl.matchAll(/>([^<>{}]{30,})</g)) {
       const t = m[1].replace(/\s+/g, ' ').trim()
       if (t.length > SICHTBAR) lang.push(`${path.basename(f)}: ${t.length} Zeichen — „${t.slice(0, 60)}…“`)

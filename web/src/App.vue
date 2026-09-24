@@ -85,11 +85,11 @@ function railDrop(target) {
     <!-- Fortschritt eines laufenden Stapels (Taloan, 18.09.): dünner Balken ganz oben, dazu Zahl — sichtbar in jeder Ansicht -->
     <div v-if="store.progress" class="progress" :title="`${store.progress.text} … ${store.progress.done} von ${store.progress.total} — Fenster offen lassen`">
       <div class="bar" :style="`width:${Math.round(store.progress.done / Math.max(1, store.progress.total) * 100)}%`" />
-      <span class="txt">{{ store.progress.text }} … {{ store.progress.done }} / {{ store.progress.total }} — Fenster offen lassen</span>
+      <span class="txt">{{ $t("{0} … {1} / {2} — Fenster offen lassen", [store.progress.text, store.progress.done, store.progress.total]) }}</span>
     </div>
     <nav class="rail" v-if="!route.query.popup">
       <!-- Logo: web/public/logo.png (Taloan, 17.09.2026) — Vite legt public/ neben die Seite -->
-      <router-link to="/tree" class="rail-logo" title="journali PIM"><img :src="'/logo-128.png'" alt="journali PIM" onerror="this.style.display='none'" /></router-link>
+      <router-link to="/tree" class="rail-logo" :title="$t('journali PIM')"><img :src="'/logo-128.png'" :alt="$t('journali PIM')" onerror="this.style.display='none'" /></router-link>
       <template v-for="n in railItems" :key="n.to">
         <div v-if="n.to === 'spacer'" class="rail-spacer" :class="{ over: dragKey }" @dragover.prevent @drop="railDrop('spacer')" />
         <router-link v-else :to="n.href ?? n.to" class="rail-item" :class="{ active: n.topic ? topicOfPath(route.path) === n.topic : route.path.startsWith(n.to), dragging: dragKey === n.to }"
@@ -107,30 +107,30 @@ function railDrop(target) {
     </nav>
 
     <main class="content">
-      <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">✗ Diese Ansicht ist abgestürzt</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">▣ Zum Baum</button> <button @click="reload">↻ Neu laden</button></div></div>
+      <div v-if="crashed" class="pane" style="flex:1"><div class="empty"><div class="neg" style="font-weight:600">{{ $t("✗ Diese Ansicht ist abgestürzt") }}</div><div class="mono muted" style="margin:8px 0">{{ crashed }}</div><button class="primary" @click="crashed = null; $router.push('/tree')">{{ $t("▣ Zum Baum") }}</button> <button @click="reload">{{ $t("↻ Neu laden") }}</button></div></div>
       <router-view v-else />
     </main>
 
     <header class="status" v-if="!route.query.popup">
-      <span class="brand" title="journali PIM">journali PIM</span>
+      <span class="brand" :title="$t('journali PIM')">{{ $t("journali PIM") }}</span>
       <!-- Version und Bau statt eines zweiten Lämpchens (Taloan, 23.09.2026) — das in der Leiste links sagt dasselbe -->
       <span v-if="store.online" class="mono muted" :title="`journali ${store.version ?? ''} · gebaut ${store.builtAt}`">{{ store.version }}<span v-if="store.build"> ·{{ store.build }}</span></span>
       <span v-else class="dot" :class="{ offline: store.online === false }">●</span>
       <span class="mono">#{{ store.head }}</span>
       <span class="sep">·</span>
       <span>▣ {{ store.nodes }}</span>
-      <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings#teams" class="muted" title="Nutzung anzeigen"><UsageMini :usage="store.usage" /></router-link></template>
+      <template v-if="store.usage"><span class="sep">·</span><router-link to="/settings#teams" class="muted" :title="$t('Nutzung anzeigen')"><UsageMini :usage="store.usage" /></router-link></template>
       <!-- Ohne Team gibt es kein Kontingent — und damit keine Pflege (Taloan, 23.09.2026) -->
-      <template v-else-if="store.auth.enabled && store.auth.user"><span class="sep">·</span><router-link to="/settings#teams" class="warn" title="Ohne Kontingent weist der Server jede Änderung ab; es kommt aus der Lizenz oder von einem Team, über das abgerechnet wird.">◍ {{ store.auth.team ? 'kein Kontingent' : 'kein Team' }}</router-link></template>
+      <template v-else-if="store.auth.enabled && store.auth.user"><span class="sep">·</span><router-link to="/settings#teams" class="warn" :title="$t('Ohne Kontingent weist der Server jede Änderung ab; es kommt aus der Lizenz oder von einem Team, über das abgerechnet wird.')">◍ {{ store.auth.team ? 'kein Kontingent' : 'kein Team' }}</router-link></template>
       <!-- KI-Austauschvolumen (Taloan, 23.09.2026): was journali hingeschickt und zurückbekommen hat — gemessen, nicht geschätzt -->
       <template v-if="ai.server?.ready"><span class="sep">·</span><router-link to="/settings#teams" class="ai"
-        title="KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt."
-        >✧ KI {{ kb(ai.server.volume?.month) }}</router-link></template>
+        :title="$t('KI Austauschvolumen (mengenbasiert) — Diese Kennzahl gibt an, welche Datenmenge mit KIs über deren APIs ausgetauscht wurden (Senden+Empfangen). Wird zum Monatsbeginn zurückgesetzt.')"
+        >{{ $t("✧ KI {0}", [kb(ai.server.volume?.month)]) }}</router-link></template>
       <span class="grow" />
-      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" title="Neue Fassung der Oberfläche laden">↻ Neue Fassung</button>
-      <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="'Rolle ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" title="abmelden">⏻</button></template>
+      <button v-if="store.stale" class="primary" style="padding:0 8px;height:20px;font-size:12px" @click="reload" :title="$t('Neue Fassung der Oberfläche laden')">{{ $t("↻ Neue Fassung") }}</button>
+      <template v-if="store.auth.enabled && store.auth.user"><span class="actor" :title="'Rolle ' + store.auth.role + ' · ' + (store.auth.rights ?? []).join(', ')">👤 {{ store.auth.name || store.auth.user }} <span class="muted">· {{ store.auth.role }}</span></span><button class="x" style="height:20px;padding:0 6px;font-size:12px" @click="logout" :title="$t('abmelden')">⏻</button></template>
       <span v-else-if="store.actor" class="actor">👤 {{ store.actor }}</span>
-      <router-link v-else to="/settings" class="warn">👤 Name fehlt → Einstellungen</router-link>
+      <router-link v-else to="/settings" class="warn">{{ $t("👤 Name fehlt → Einstellungen") }}</router-link>
       <!-- Hilfe (Taloan, 24.09.2026): ein ? ganz rechts, dahinter die Links — Website, später Forum und Fehlermeldungen auf Git -->
       <HelpButton />
     </header>

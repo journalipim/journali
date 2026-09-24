@@ -9,7 +9,7 @@ const saved = JSON.parse(localStorage.getItem('journali.settings') || '{}')
 // Darstellung, Sichtsprachen, Zellen, Sicht je Knotentyp, Anordnung, Umfang, Attributnamen. Sie stehen am Benutzer im
 // Journal (UserPrefsSet) und kommen mit der Anmeldung an jedem Rechner mit. Alles andere ist Fensterzustand und bleibt
 // im Browser: Serveradresse, Journal auf/zu, zugeklappte Abschnitte, Reihenfolge der Leiste, zuletzt gewählter Knoten.
-const USER_PREFS = ['theme', 'viewLocales', 'viewCells', 'viewKey', 'layout', 'scope', 'attrNames']
+const USER_PREFS = ['theme', 'lang', 'viewLocales', 'viewCells', 'viewKey', 'layout', 'scope', 'attrNames']   // lang: Oberflächensprache (24.09.2026)
 
 // Sprachen × Kanäle als Zellenliste (Stern je Achse dazu)
 function cellsFrom(locales, channels) { const out = ['|']; for (const c of ['', ...channels]) for (const l of ['', ...locales]) out.push(`${l}|${c}`); return [...new Set(out)] }
@@ -21,6 +21,7 @@ export const store = reactive({
   // gespeicherte Adresse. Was früher hier stand, wird beim Laden verworfen.
   server: '',
   theme: saved.theme || 'system',   // system | light | dark
+  lang: saved.lang || null,          // Oberflächensprache der Person; null = die des Browsers (i18n.browserLang)
   viewLocales: saved.viewLocales || ['de', 'en'],   // erste Sprache: Bezeichnungen (store.name); die Spalten kommen aus viewCells
   // Spalten der Knotenansicht als Matrix Sprache × Kanal (Taloan, 20.09.): Liste „sprache|kanal“, '' = Stern; '|' (der eine Wert) ist immer dabei.
   // Alte Einstellungen (Sprachen × Kanäle) werden beim ersten Start übernommen.
@@ -75,7 +76,7 @@ export const store = reactive({
     return this.attrNames === 'key' ? def.key : this.attrNames === 'both' ? `${label} ⟨${def.key}⟩` : label
   },
   save() {
-    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, theme: this.theme, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
+    localStorage.setItem('journali.settings', JSON.stringify({ actor: this.actor, theme: this.theme, lang: this.lang, viewLocales: this.viewLocales, viewCells: this.viewCells, journalOpen: this.journalOpen, viewKey: this.viewKey, layout: this.layout, scope: this.scope, attrNames: this.attrNames, railOrder: this.railOrder, railOff: this.railOff, collapsed: this.collapsed }))
     this.applyTheme()
     this.savePrefs()
   },
@@ -102,7 +103,12 @@ export const store = reactive({
     }
     this._prefsSent = Object.fromEntries(USER_PREFS.map(k => [k, JSON.stringify(this[k] ?? null)]))
     this.applyTheme()
+    this.applyLang()
   },
+
+  /// Oberflächensprache setzen: gewählt oder die des Browsers; die Sprachdatei holt i18n.setLang
+  setLang(code) { this.lang = code; this.save(); this.savePrefs(); this.applyLang() },
+  applyLang() { import('./i18n.js').then(m => m.setLang(this.lang || m.browserLang())) },
 
   applyTheme() {
     if (this.theme === 'system') delete document.documentElement.dataset.theme

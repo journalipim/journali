@@ -201,11 +201,11 @@ const HELP_TEMPLATE = [
       <div class="editor">
         <div class="toolbar">
           <h1>{{ isTemplate ? '{}' : 'ƒ' }} {{ title }}</h1>
-          <span v-if="check.ok" class="pos" title="Syntax stimmt">✓ {{ check.keys.length ? 'liest ' + check.keys.map(k => isTemplate ? '{' + k + '}' : '$' + k).join(', ') : 'ok' }}</span>
+          <span v-if="check.ok" class="pos" :title="$t('Syntax stimmt')">✓ {{ check.keys.length ? 'liest ' + check.keys.map(k => isTemplate ? '{' + k + '}' : '$' + k).join(', ') : 'ok' }}</span>
           <span v-else class="neg" :title="check.error">✗ {{ check.error }}</span>
           <span class="grow" />
-          <span v-if="draftAt" class="warn" title="Entwurf im Browser — noch nicht im Attribut">✎ Entwurf</span>
-          <button :class="{ primary: help }" @click="help = !help" title="Was geht hier?">?</button>
+          <span v-if="draftAt" class="warn" :title="$t('Entwurf im Browser — noch nicht im Attribut')">{{ $t("✎ Entwurf") }}</span>
+          <button :class="{ primary: help }" @click="help = !help" :title="$t('Was geht hier?')">?</button>
         </div>
         <div class="body">
           <div class="code">
@@ -219,19 +219,19 @@ const HELP_TEMPLATE = [
           </div>
           <div v-if="help" class="help">
             <div v-for="[h, items] in (isTemplate ? HELP_TEMPLATE : HELP)" :key="h" class="hrow"><b>{{ h }}</b>
-              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" title="Einfügen"><code class="hs" v-html="isTemplate ? highlightTemplate(code) : highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
+              <div v-for="[code, note] in items" :key="code" class="hitem" @click="insert(code)" :title="$t('Einfügen')"><code class="hs" v-html="isTemplate ? highlightTemplate(code) : highlight(code)"></code><span v-if="note" class="muted">{{ note }}</span></div>
             </div>
-            <div class="hrow"><b>Beispiel</b><pre class="hs ex" @click="insert(EXAMPLE)" title="Beispiel einfügen" v-html="isTemplate ? highlightTemplate(EXAMPLE) : highlight(EXAMPLE)"></pre></div>
+            <div class="hrow"><b>{{ $t("Beispiel") }}</b><pre class="hs ex" @click="insert(EXAMPLE)" :title="$t('Beispiel einfügen')" v-html="isTemplate ? highlightTemplate(EXAMPLE) : highlight(EXAMPLE)"></pre></div>
           </div>
         </div>
         <div class="toolbar" style="border-top:1px solid var(--line);border-bottom:0">
           <span v-if="check.runtime" class="neg" style="font-size:12px" :title="check.runtime">✗ {{ check.runtime }}</span>
           <span v-else-if="props.node && check.ok && text.trim()" class="result" :class="{ muted: check.value == null }" :title="check.value == null ? 'kein Ergebnis — ein gelesener Wert fehlt hier' : 'momentanes Ergebnis an diesem Knoten'">= {{ check.value ?? '—' }}</span>
-          <span v-else class="muted" style="font-size:12px"><kbd>Ctrl+Enter</kbd> übernehmen · <kbd>Esc</kbd> schliessen (Entwurf bleibt)</span>
+          <span v-else class="muted" style="font-size:12px"><kbd>{{ $t("Ctrl+Enter") }}</kbd>{{ ' ' + $t("übernehmen ·") + ' ' }}<kbd>{{ $t("Esc") }}</kbd>{{ ' ' + $t("schliessen (Entwurf bleibt)") }}</span>
           <span class="grow" />
-          <button v-if="draftAt" @click="discardDraft" title="zurück zum Stand im Attribut">Entwurf verwerfen</button>
-          <button @click="emit('close')">Schliessen</button>
-          <button class="primary" :disabled="!check.ok" @click="save" :title="check.ok ? 'ins Attribut übernehmen' : 'erst die Syntax richten'">Übernehmen</button>
+          <button v-if="draftAt" @click="discardDraft" :title="$t('zurück zum Stand im Attribut')">{{ $t("Entwurf verwerfen") }}</button>
+          <button @click="emit('close')">{{ $t("Schliessen") }}</button>
+          <button class="primary" :disabled="!check.ok" @click="save" :title="check.ok ? 'ins Attribut übernehmen' : 'erst die Syntax richten'">{{ $t("Übernehmen") }}</button>
         </div>
       </div>
     </div>

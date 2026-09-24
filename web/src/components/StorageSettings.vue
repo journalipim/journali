@@ -109,54 +109,54 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
 
 <template>
   <div class="section" v-if="teil === 'speicher'">
-    <h2>▨ Assetspeicher <span class="muted">· aktiv: <span class="mono">{{ state.kind }}</span> · {{ state.total }} Assets<span v-if="state.error" class="neg"> · ✗ {{ state.error }}</span></span></h2>
+    <h2>{{ $t("▨ Assetspeicher") + ' ' }}<span class="muted">{{ $t("· aktiv:") + ' ' }}<span class="mono">{{ state.kind }}</span>{{ ' ' + $t("· {0} Assets", [state.total]) }}<span v-if="state.error" class="neg"> · ✗ {{ state.error }}</span></span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /><col /></colgroup><tbody>
-      <tr><td class="muted" title="Bytes werden nach SHA-256 abgelegt; das Journal kennt nur den Hash, der Treiber ist wechselbar.">Treiber</td><td><select v-model="cfg.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td>
+      <tr><td class="muted" :title="$t('Bytes werden nach SHA-256 abgelegt; das Journal kennt nur den Hash, der Treiber ist wechselbar.')">{{ $t("Treiber") }}</td><td><select v-model="cfg.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td>
         <td></td></tr>
-      <tr v-if="cfg.driver === 'file'"><td class="muted" title="Vom Server aus gesehen — im Container z. B. /data/media.">Verzeichnis</td><td>
-        <div class="row"><input v-model="cfg.path" type="text" style="flex:1" placeholder="media (relativ zum Server) oder /data/media" /><button class="x" @click="filePicker({ value: cfg.path, dirOnly: true, title: '📁 Verzeichnis des Assetspeichers (auf dem Server)', onPick: p => { cfg.path = p } })" title="Verzeichnis auswählen">…</button></div>
+      <tr v-if="cfg.driver === 'file'"><td class="muted" :title="$t('Vom Server aus gesehen — im Container z. B. /data/media.')">{{ $t("Verzeichnis") }}</td><td>
+        <div class="row"><input v-model="cfg.path" type="text" style="flex:1" :placeholder="$t('media (relativ zum Server) oder /data/media')" /><button class="x" @click="filePicker({ value: cfg.path, dirOnly: true, title: '📁 Verzeichnis des Assetspeichers (auf dem Server)', onPick: p => { cfg.path = p } })" :title="$t('Verzeichnis auswählen')">…</button></div>
       </td><td></td></tr>
       <template v-if="cfg.driver === 's3'">
-        <tr><td class="muted" title="Garage: 3900 ist die S3-API.">Endpoint</td><td><input v-model="cfg.endpoint" type="text" style="width:100%" placeholder="http://garage:3900" /></td><td></td></tr>
-        <tr><td class="muted">Bucket</td><td><input v-model="cfg.bucket" type="text" style="width:100%" placeholder="journali" /></td><td></td></tr>
-        <tr><td class="muted">Key</td><td><input v-model="cfg.key" type="text" style="width:100%" placeholder="GK…" autocomplete="off" /></td><td></td></tr>
-        <tr><td class="muted" title="Liegt nur in media.json beim Server, nie im Journal.">Secret</td><td><input v-model="cfg.secret" type="password" style="width:100%" autocomplete="new-password" /></td><td></td></tr>
-        <tr><td class="muted">Region</td><td class="row" style="gap:10px"><input v-model="cfg.region" type="text" style="width:160px" placeholder="garage" /><label><input type="checkbox" v-model="cfg.pathStyle" /> Pfad-Stil (endpoint/bucket/…)</label></td><td></td></tr>
+        <tr><td class="muted" :title="$t('Garage: 3900 ist die S3-API.')">{{ $t("Endpoint") }}</td><td><input v-model="cfg.endpoint" type="text" style="width:100%" :placeholder="$t('http://garage:3900')" /></td><td></td></tr>
+        <tr><td class="muted">{{ $t("Bucket") }}</td><td><input v-model="cfg.bucket" type="text" style="width:100%" :placeholder="$t('journali')" /></td><td></td></tr>
+        <tr><td class="muted">{{ $t("Key") }}</td><td><input v-model="cfg.key" type="text" style="width:100%" :placeholder="$t('GK…')" autocomplete="off" /></td><td></td></tr>
+        <tr><td class="muted" :title="$t('Liegt nur in media.json beim Server, nie im Journal.')">{{ $t("Secret") }}</td><td><input v-model="cfg.secret" type="password" style="width:100%" autocomplete="new-password" /></td><td></td></tr>
+        <tr><td class="muted">{{ $t("Region") }}</td><td class="row" style="gap:10px"><input v-model="cfg.region" type="text" style="width:160px" :placeholder="$t('garage')" /><label><input type="checkbox" v-model="cfg.pathStyle" />{{ ' ' + $t("Pfad-Stil (endpoint/bucket/…)") }}</label></td><td></td></tr>
       </template>
-      <tr><td></td><td class="row"><button @click="check">Prüfen</button><button class="primary" @click="save">Speichern</button><span :class="String(probe || busy || '').startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
+      <tr><td></td><td class="row"><button @click="check">{{ $t("Prüfen") }}</button><button class="primary" @click="save">{{ $t("Speichern") }}</button><span :class="String(probe || busy || '').startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ probe || busy }}</span></td><td></td></tr>
     </tbody></table>
   </div>
 
   <div class="section" v-if="teil === 'speicher' && betrieb">
-    <h2 title="Zwei Kopien, die den Start schnell machen: der Spiegel hält die Journaleinträge, der Schnappschuss die fertigen Abbilder.">▨ Start <span class="muted">· Spiegel und Schnappschuss</span></h2>
+    <h2 :title="$t('Zwei Kopien, die den Start schnell machen: der Spiegel hält die Journaleinträge, der Schnappschuss die fertigen Abbilder.')">{{ $t("▨ Start") + ' ' }}<span class="muted">{{ $t("· Spiegel und Schnappschuss") }}</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:150px" /><col /></colgroup><tbody>
       <tr>
-        <td class="muted" title="Jeder gelesene Eintrag liegt als Zeile auf der Platte; der Start holt nur den Rest aus der Datenbank.">Spiegel</td>
-        <td><label><input type="checkbox" :checked="betrieb.journalCache" @change="setzeBetrieb('journalCache', $event.target.checked)" /> an</label></td>
+        <td class="muted" :title="$t('Jeder gelesene Eintrag liegt als Zeile auf der Platte; der Start holt nur den Rest aus der Datenbank.')">{{ $t("Spiegel") }}</td>
+        <td><label><input type="checkbox" :checked="betrieb.journalCache" @change="setzeBetrieb('journalCache', $event.target.checked)" />{{ ' ' + $t("an") }}</label></td>
         <td class="muted mono" style="font-size:12px">
           <span v-if="betrieb.spiegel.da">{{ kb(betrieb.spiegel.bytes) }}
-            <button class="x" title="wegwerfen — beim nächsten Start wird neu gelesen" @click="wirfWeg('spiegel')">🗑</button>
+            <button class="x" :title="$t('wegwerfen — beim nächsten Start wird neu gelesen')" @click="wirfWeg('spiegel')">🗑</button>
           </span>
-          <span v-else>keine Datei</span>
+          <span v-else>{{ $t("keine Datei") }}</span>
         </td>
       </tr>
       <tr>
-        <td class="muted" title="Der Stand aller Abbilder als Datei; ohne ihn liest der Start das Journal von vorn.">Schnappschuss</td>
-        <td><label><input type="checkbox" :checked="betrieb.snapshot" @change="setzeBetrieb('snapshot', $event.target.checked)" /> an</label></td>
+        <td class="muted" :title="$t('Der Stand aller Abbilder als Datei; ohne ihn liest der Start das Journal von vorn.')">{{ $t("Schnappschuss") }}</td>
+        <td><label><input type="checkbox" :checked="betrieb.snapshot" @change="setzeBetrieb('snapshot', $event.target.checked)" />{{ ' ' + $t("an") }}</label></td>
         <td class="muted mono" style="font-size:12px">
           <span v-if="betrieb.schnappschuss.da">{{ kb(betrieb.schnappschuss.bytes) }}
-            <button class="x" title="wegwerfen — beim nächsten Start wird neu gelesen" @click="wirfWeg('schnappschuss')">🗑</button>
+            <button class="x" :title="$t('wegwerfen — beim nächsten Start wird neu gelesen')" @click="wirfWeg('schnappschuss')">🗑</button>
           </span>
-          <span v-else>keine Datei</span>
+          <span v-else>{{ $t("keine Datei") }}</span>
         </td>
       </tr>
-      <tr><td></td><td colspan="2" class="muted" style="font-size:12px">Eine Änderung gilt ab dem nächsten Start.<span v-if="!betrieb.eingestellt"> Bisher aus der Umgebung.</span></td></tr>
+      <tr><td></td><td colspan="2" class="muted" style="font-size:12px">{{ $t("Eine Änderung gilt ab dem nächsten Start.") }}<span v-if="!betrieb.eingestellt">{{ ' ' + $t("Bisher aus der Umgebung.") }}</span></td></tr>
     </tbody></table>
   </div>
 
   <div class="section" v-if="teil === 'assets'">
-    <h2 title="Für jedes ableitbare Asset vorausgerechnet, nie live; rechnet das Plugin derive nach jedem Hochladen.">▨ Vorschau-Presets <span class="muted">· Ableitungen</span></h2>
-    <table class="grid form" style="width:auto"><thead><tr><th>Key</th><th>Bezeichnung</th><th title="längste Seite wird eingepasst, nie vergrößert">max B × H</th><th>Format</th><th>Qualität</th><th title="beim Import automatisch rechnen">auto</th><th title="gerechnet / ableitbare Assets (Bild, PDF)">Stand</th><th></th></tr></thead><tbody>
+    <h2 :title="$t('Für jedes ableitbare Asset vorausgerechnet, nie live; rechnet das Plugin derive nach jedem Hochladen.')">{{ $t("▨ Vorschau-Presets") + ' ' }}<span class="muted">{{ $t("· Ableitungen") }}</span></h2>
+    <table class="grid form" style="width:auto"><thead><tr><th>{{ $t("Key") }}</th><th>{{ $t("Bezeichnung") }}</th><th :title="$t('längste Seite wird eingepasst, nie vergrößert')">{{ $t("max B × H") }}</th><th>{{ $t("Format") }}</th><th>{{ $t("Qualität") }}</th><th :title="$t('beim Import automatisch rechnen')">{{ $t("auto") }}</th><th :title="$t('gerechnet / ableitbare Assets (Bild, PDF)')">{{ $t("Stand") }}</th><th></th></tr></thead><tbody>
       <tr v-for="p in presets" :key="p.key">
         <td class="mono">{{ p.key }}</td>
         <td><input v-model="p.labelDe" type="text" style="width:140px" @change="savePreset(p)" /></td>
@@ -168,30 +168,30 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
         <td><button class="x" @click="deletePreset(p)" :disabled="p.key === 'thumb'" :title="p.key === 'thumb' ? 'Kachel der Bibliothek — bleibt' : 'Preset entfernen'">🗑</button></td>
       </tr>
     </tbody></table>
-    <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">+ Preset</button><button @click="derive" :disabled="!!presetBusy" title="Der Job läuft nach jedem Hochladen und nach jeder Änderung an einem Preset von selbst; hier von Hand.">▶ Jetzt rechnen</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
+    <div class="row" style="gap:8px;margin-top:6px"><button @click="newPreset">{{ $t("+ Preset") }}</button><button @click="derive" :disabled="!!presetBusy" :title="$t('Der Job läuft nach jedem Hochladen und nach jeder Änderung an einem Preset von selbst; hier von Hand.')">{{ $t("▶ Jetzt rechnen") }}</button><span class="muted" style="font-size:12px">{{ presetBusy }}</span></div>
   </div>
 
   <div class="section" v-if="teil === 'assets'">
-    <h2>▨ Bestand <span v-if="stats" class="muted">· {{ n(stats.total) }} Assets · {{ kb(stats.bytes) }}</span></h2>
+    <h2>{{ $t("▨ Bestand") + ' ' }}<span v-if="stats" class="muted">{{ $t("· {0} Assets · {1}", [n(stats.total), kb(stats.bytes)]) }}</span></h2>
     <table v-if="stats" class="grid form" style="width:auto;margin-bottom:8px"><colgroup><col style="width:150px" /><col style="width:260px" /><col /></colgroup><tbody>
-      <tr><td class="muted" title="Alle Assets im Journal, nach Art des Inhalts">Arten</td>
+      <tr><td class="muted" :title="$t('Alle Assets im Journal, nach Art des Inhalts')">{{ $t("Arten") }}</td>
         <td class="mono">{{ stats.kinds.map(k => `${k.art} ${n(k.count)}`).join(' · ') }}</td>
         <td class="muted" style="font-size:12px">{{ stats.kinds.map(k => `${k.art} ${kb(k.bytes)}`).join(' · ') }}</td></tr>
-      <tr><td class="muted" title="Bild oder PDF — nur daraus rechnet sich eine Vorschau; der Stand oben misst sich daran">ableitbar</td>
-        <td class="mono">{{ n(stats.renderable) }} von {{ n(stats.total) }}</td>
-        <td class="muted" style="font-size:12px">davon Bilder {{ n(stats.images) }}</td></tr>
-      <tr><td class="muted" title="Gerechnete Vorschauen über alle Presets — sie liegen zusätzlich im Speicher">Ableitungen</td>
+      <tr><td class="muted" :title="$t('Bild oder PDF — nur daraus rechnet sich eine Vorschau; der Stand oben misst sich daran')">{{ $t("ableitbar") }}</td>
+        <td class="mono">{{ $t("{0} von {1}", [n(stats.renderable), n(stats.total)]) }}</td>
+        <td class="muted" style="font-size:12px">{{ $t("davon Bilder {0}", [n(stats.images)]) }}</td></tr>
+      <tr><td class="muted" :title="$t('Gerechnete Vorschauen über alle Presets — sie liegen zusätzlich im Speicher')">{{ $t("Ableitungen") }}</td>
         <td class="mono">{{ n(stats.derived?.count) }}</td>
         <td class="muted" style="font-size:12px">{{ kb(stats.derived?.bytes) }}</td></tr>
-      <tr><td class="muted" title="An keinem Knoten und in keiner Relation — sie liegen nur in der Bibliothek">ohne Verwendung</td>
+      <tr><td class="muted" :title="$t('An keinem Knoten und in keiner Relation — sie liegen nur in der Bibliothek')">{{ $t("ohne Verwendung") }}</td>
         <td :class="stats.unused ? 'warn mono' : 'mono'">{{ n(stats.unused) }}</td>
-        <td class="muted" style="font-size:12px"><span v-if="stats.unfiled">{{ n(stats.unfiled) }} in keinem Ordner</span></td></tr>
-      <tr><td class="muted" title="Gleiche Bytes unter mehreren Assets — im Speicher liegen sie nur einmal">gleicher Inhalt</td>
+        <td class="muted" style="font-size:12px"><span v-if="stats.unfiled">{{ $t("{0} in keinem Ordner", [n(stats.unfiled)]) }}</span></td></tr>
+      <tr><td class="muted" :title="$t('Gleiche Bytes unter mehreren Assets — im Speicher liegen sie nur einmal')">{{ $t("gleicher Inhalt") }}</td>
         <td class="mono">{{ n(stats.shared) }}</td>
         <td class="muted" style="font-size:12px">{{ (stats.largest ?? []).map(g => `${g.name} ${kb(g.bytes)}`).join(' · ') }}</td></tr>
     </tbody></table>
     <div class="row" style="gap:8px;align-items:center">
-      <button :disabled="!!zaehlBusy" @click="findMissing">Fehlbestand zählen</button>
+      <button :disabled="!!zaehlBusy" @click="findMissing">{{ $t("Fehlbestand zählen") }}</button>
       <span v-if="zaehlBusy" class="muted" style="font-size:12px">{{ zaehlBusy }}</span>
       <span v-else-if="missing" :class="missing.missing.length ? 'neg' : 'pos'">{{ missing.missing.length ? `✗ ${missing.missing.length} von ${missing.total} Assets fehlen im Speicher` : `✓ alle ${missing.total} Assets vorhanden` }}</span>
     </div>
@@ -199,22 +199,22 @@ onMounted(() => { load(); loadStats(); ladeBetrieb() })
   </div>
 
   <div class="section" v-if="teil === 'speicher'">
-    <h2 title="Holt die Assets eines anderen Speichers, die hier fehlen — nach einem Treiberwechsel oder aus einem alten Verzeichnis.">▨ Assetmigration <span class="muted">· fehlende Assets</span></h2>
+    <h2 :title="$t('Holt die Assets eines anderen Speichers, die hier fehlen — nach einem Treiberwechsel oder aus einem alten Verzeichnis.')">{{ $t("▨ Assetmigration") + ' ' }}<span class="muted">{{ $t("· fehlende Assets") }}</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:120px" /><col style="width:460px" /></colgroup><tbody>
-      <tr><td class="muted">Quelle</td><td><select v-model="copyFrom.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td></tr>
-      <tr v-if="copyFrom.driver === 'file'"><td class="muted">Verzeichnis</td><td>
-        <div class="row"><input v-model="copyFrom.path" type="text" style="flex:1" /><button class="x" @click="filePicker({ value: copyFrom.path, dirOnly: true, title: '📁 Verzeichnis des alten Speichers (auf dem Server)', onPick: p => { copyFrom.path = p } })" title="Verzeichnis auswählen">📁</button></div>
+      <tr><td class="muted">{{ $t("Quelle") }}</td><td><select v-model="copyFrom.driver" style="width:100%"><option v-for="[v, l] in DRIVERS" :key="v" :value="v">{{ l }}</option></select></td></tr>
+      <tr v-if="copyFrom.driver === 'file'"><td class="muted">{{ $t("Verzeichnis") }}</td><td>
+        <div class="row"><input v-model="copyFrom.path" type="text" style="flex:1" /><button class="x" @click="filePicker({ value: copyFrom.path, dirOnly: true, title: '📁 Verzeichnis des alten Speichers (auf dem Server)', onPick: p => { copyFrom.path = p } })" :title="$t('Verzeichnis auswählen')">📁</button></div>
       </td></tr>
       <template v-if="copyFrom.driver === 's3'">
-        <tr><td class="muted">Endpoint</td><td><input v-model="copyFrom.endpoint" type="text" style="width:100%" /></td></tr>
-        <tr><td class="muted">Bucket</td><td><input v-model="copyFrom.bucket" type="text" style="width:100%" /></td></tr>
-        <tr><td class="muted">Key</td><td><input v-model="copyFrom.key" type="text" style="width:100%" autocomplete="off" /></td></tr>
-        <tr><td class="muted" title="Liegt nur in media.json beim Server, nie im Journal.">Secret</td><td><input v-model="copyFrom.secret" type="password" style="width:100%" autocomplete="new-password" /></td></tr>
-        <tr><td class="muted">Region</td><td><input v-model="copyFrom.region" type="text" style="width:160px" /></td></tr>
+        <tr><td class="muted">{{ $t("Endpoint") }}</td><td><input v-model="copyFrom.endpoint" type="text" style="width:100%" /></td></tr>
+        <tr><td class="muted">{{ $t("Bucket") }}</td><td><input v-model="copyFrom.bucket" type="text" style="width:100%" /></td></tr>
+        <tr><td class="muted">{{ $t("Key") }}</td><td><input v-model="copyFrom.key" type="text" style="width:100%" autocomplete="off" /></td></tr>
+        <tr><td class="muted" :title="$t('Liegt nur in media.json beim Server, nie im Journal.')">{{ $t("Secret") }}</td><td><input v-model="copyFrom.secret" type="password" style="width:100%" autocomplete="new-password" /></td></tr>
+        <tr><td class="muted">{{ $t("Region") }}</td><td><input v-model="copyFrom.region" type="text" style="width:160px" /></td></tr>
       </template>
-      <tr><td></td><td class="row"><button class="primary" :disabled="!!kopierBusy" @click="copy">⇥ Kopieren</button>
+      <tr><td></td><td class="row"><button class="primary" :disabled="!!kopierBusy" @click="copy">{{ $t("⇥ Kopieren") }}</button>
         <span v-if="kopierBusy" class="muted" style="font-size:12px">{{ kopierBusy }}</span>
-        <span v-else-if="copyResult" class="muted" style="font-size:12px">{{ copyResult.copied }} kopiert · {{ copyResult.skipped }} bereits vorhanden<span v-if="copyResult.failed" class="neg"> · {{ copyResult.failed }} fehlgeschlagen</span></span></td></tr>
+        <span v-else-if="copyResult" class="muted" style="font-size:12px">{{ $t("{0} kopiert · {1} bereits vorhanden", [copyResult.copied, copyResult.skipped]) }}<span v-if="copyResult.failed" class="neg">{{ ' ' + $t("· {0} fehlgeschlagen", [copyResult.failed]) }}</span></span></td></tr>
     </tbody></table>
   </div>
 </template>

@@ -14,7 +14,7 @@ function down(e) {
 </script>
 
 <template>
-  <div class="splitter" @mousedown="down" title="ziehen: Breite ändern" />
+  <div class="splitter" @mousedown="down" :title="$t('ziehen: Breite ändern')" />
 </template>
 
 <style scoped>

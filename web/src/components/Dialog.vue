@@ -18,7 +18,7 @@ function onKey(e) {
         <div class="title">{{ dialog.title }}</div>
         <div v-if="dialog.warn" class="warnline">⚠ {{ dialog.warn }}</div>
         <div v-if="dialog.kind === 'help'" class="keys-box"><table class="keys"><tr v-for="([k, what], i) in dialog.list" :key="i"><td class="k"><kbd>{{ k }}</kbd></td><td>{{ what }}</td></tr></table></div>
-        <div v-else-if="dialog.list.length" class="list mono"><div v-for="(l, i) in dialog.list.slice(0, 8)" :key="i">{{ l }}</div><div v-if="dialog.list.length > 8" class="muted">… und {{ dialog.list.length - 8 }} weitere</div></div>
+        <div v-else-if="dialog.list.length" class="list mono"><div v-for="(l, i) in dialog.list.slice(0, 8)" :key="i">{{ l }}</div><div v-if="dialog.list.length > 8" class="muted">{{ $t("… und {0} weitere", [dialog.list.length - 8]) }}</div></div>
         <div v-if="dialog.text" class="text muted">{{ dialog.text }}</div>
         <label v-if="dialog.option" class="option"><input type="checkbox" v-model="dialog.option.checked" /> {{ dialog.option.label }}</label>
         <select v-if="dialog.kind === 'prompt' && dialog.choices" ref="field" v-model="dialog.value" style="width:100%;margin-top:10px"><option v-for="c in dialog.choices" :key="c.value" :value="c.value">{{ c.label }}</option></select>

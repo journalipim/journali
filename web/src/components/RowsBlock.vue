@@ -43,14 +43,14 @@ function move(i, d) {
         <component v-for="c in columns" :key="c.key" :is="cellType(c)" :value="val(c, row)" :options="c.type === 'enum' ? listOptions(c) : undefined" :list="c.type === 'enum' ? c.list : undefined"
           :title="c.label?.de || c.key" @save="v => emit('set', c, row, v)" />
         <td class="num ops">
-          <button class="x" @click="move(i, -1)" :disabled="i === 0" title="nach oben">↑</button>
-          <button class="x" @click="move(i, 1)" :disabled="i === rows.length - 1" title="nach unten">↓</button>
-          <button class="x" @click="emit('remove', row)" title="Zeile entfernen">×</button>
+          <button class="x" @click="move(i, -1)" :disabled="i === 0" :title="$t('nach oben')">↑</button>
+          <button class="x" @click="move(i, 1)" :disabled="i === rows.length - 1" :title="$t('nach unten')">↓</button>
+          <button class="x" @click="emit('remove', row)" :title="$t('Zeile entfernen')">×</button>
         </td>
       </tr>
     </tbody>
   </table>
-  <div class="chips" style="padding:4px 8px"><button @click="emit('add')">+ Zeile</button><span class="muted">{{ rows.length }}</span></div>
+  <div class="chips" style="padding:4px 8px"><button @click="emit('add')">{{ $t("+ Zeile") }}</button><span class="muted">{{ rows.length }}</span></div>
 </template>
 
 <style scoped>

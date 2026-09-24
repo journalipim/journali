@@ -77,23 +77,23 @@ defineExpose({ load })
 <template>
   <div class="profiles" :title="`Konfigurationen des Plugins ${plugin} — im Journal (plugin:${plugin}), für alle`">
     <span class="muted">⚙</span>
-    <select :value="current" @change="apply($event.target.value)" :disabled="busy" title="gespeichertes Profil laden">
-      <option value="">— Profil —</option>
+    <select :value="current" @change="apply($event.target.value)" :disabled="busy" :title="$t('gespeichertes Profil laden')">
+      <option value="">{{ $t("— Profil —") }}</option>
       <option v-for="n in names" :key="n" :value="n">{{ n }}</option>
     </select>
-    <input v-model="name" type="text" placeholder="Name" style="width:200px" title="Name zum Speichern (neu oder vorhanden = überschreiben)" @keydown.enter="save" />
+    <input v-model="name" type="text" :placeholder="$t('Name')" style="width:200px" :title="$t('Name zum Speichern (neu oder vorhanden = überschreiben)')" @keydown.enter="save" />
     <button class="x" @click="save()" :disabled="busy" :title="name && name !== current ? `als „${name}“ speichern` : 'Profil speichern (überschreiben)'">💾</button>
-    <button class="x" @click="remove" :disabled="!current || busy" title="Profil löschen">✕</button>
-    <span v-if="dirty" class="unsaved" title="der Stand hier weicht vom gespeicherten Profil ab">● geändert</span>
+    <button class="x" @click="remove" :disabled="!current || busy" :title="$t('Profil löschen')">✕</button>
+    <span v-if="dirty" class="unsaved" :title="$t('der Stand hier weicht vom gespeicherten Profil ab')">{{ $t("● geändert") }}</span>
   </div>
   <!-- schwebende Leiste unten (Taloan, 21.09.): geändert — speichern, als neues, verwerfen oder weg damit -->
   <Teleport to="body">
     <div v-if="showBar()" class="savebar">
       <span>{{ current ? `Profil „${current}“ geändert` : 'Einstellungen geändert — noch kein Profil' }}</span>
-      <button v-if="current" class="primary" @click="save()" :disabled="busy" title="das gewählte Profil überschreiben">💾 Speichern</button>
-      <button @click="saveAs" :disabled="busy" title="unter neuem Namen speichern — das gewählte Profil bleibt, wie es war">Als neues Profil speichern …</button>
-      <button v-if="current" @click="discard" :disabled="busy" title="zurück zum gespeicherten Stand">↶ Verwerfen</button>
-      <button class="x" @click="dismissed = snapshot()" title="Leiste schliessen — gespeichert wird nichts">✕</button>
+      <button v-if="current" class="primary" @click="save()" :disabled="busy" :title="$t('das gewählte Profil überschreiben')">{{ $t("💾 Speichern") }}</button>
+      <button @click="saveAs" :disabled="busy" :title="$t('unter neuem Namen speichern — das gewählte Profil bleibt, wie es war')">{{ $t("Als neues Profil speichern …") }}</button>
+      <button v-if="current" @click="discard" :disabled="busy" :title="$t('zurück zum gespeicherten Stand')">{{ $t("↶ Verwerfen") }}</button>
+      <button class="x" @click="dismissed = snapshot()" :title="$t('Leiste schliessen — gespeichert wird nichts')">✕</button>
     </div>
   </Teleport>
 </template>

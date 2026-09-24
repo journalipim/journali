@@ -23,15 +23,15 @@ async function go() {
 <template>
   <div class="pane" style="flex:1;display:grid;place-items:center">
     <form class="box" @submit.prevent="go">
-      <div class="row" style="gap:10px;align-items:center;margin-bottom:14px"><img src="/logo-128.png" width="36" height="36" alt="" style="border-radius:8px" /><b style="font-size:18px">journali</b></div>
+      <div class="row" style="gap:10px;align-items:center;margin-bottom:14px"><img src="/logo-128.png" width="36" height="36" alt="" style="border-radius:8px" /><b style="font-size:18px">{{ $t("journali") }}</b></div>
       <template v-if="store.auth.setup">
-        <h2>Ersten Administrator anlegen</h2>
-        <p class="muted" style="font-size:12px;margin:0 0 10px" title="Bearbeiter, Rollen und API-Token stehen danach unter ⚙ Einstellungen. Das Passwort liegt nur beim Server (auth.json), nie im Journal.">Danach braucht jeder Zugriff eine Anmeldung</p>
+        <h2>{{ $t("Ersten Administrator anlegen") }}</h2>
+        <p class="muted" style="font-size:12px;margin:0 0 10px" :title="$t('Bearbeiter, Rollen und API-Token stehen danach unter ⚙ Einstellungen. Das Passwort liegt nur beim Server (auth.json), nie im Journal.')">{{ $t("Danach braucht jeder Zugriff eine Anmeldung") }}</p>
       </template>
-      <h2 v-else>Anmelden</h2>
-      <label>Anmeldename<input v-model="user" type="text" autocomplete="username" autofocus placeholder="a-z, 0-9, ., _, -" /></label>
-      <label v-if="store.auth.setup">Anzeigename<input v-model="name" type="text" autocomplete="name" placeholder="steht als Urheber im Journal" /></label>
-      <label>Passwort<input v-model="password" type="password" :autocomplete="store.auth.setup ? 'new-password' : 'current-password'" placeholder="mindestens 8 Zeichen" /></label>
+      <h2 v-else>{{ $t("Anmelden") }}</h2>
+      <label>{{ $t("Anmeldename") }}<input v-model="user" type="text" autocomplete="username" autofocus placeholder="a-z, 0-9, ., _, -" /></label>
+      <label v-if="store.auth.setup">{{ $t("Anzeigename") }}<input v-model="name" type="text" autocomplete="name" :placeholder="$t('steht als Urheber im Journal')" /></label>
+      <label>{{ $t("Passwort") }}<input v-model="password" type="password" :autocomplete="store.auth.setup ? 'new-password' : 'current-password'" :placeholder="$t('mindestens 8 Zeichen')" /></label>
       <div v-if="error" class="neg" style="font-size:13px;margin:6px 0">✗ {{ error }}</div>
       <button class="primary" type="submit" :disabled="busy" style="width:100%;margin-top:8px">{{ store.auth.setup ? 'Anlegen und anmelden' : 'Anmelden' }}</button>
     </form>

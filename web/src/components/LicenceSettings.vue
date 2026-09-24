@@ -103,32 +103,32 @@ async function kopiere(text) {
 
 <template>
   <div class="section">
-    <h2>⚿ journali Lizenz <span v-if="lic?.holder" class="muted">· {{ lic.holder }}</span></h2>
+    <h2>{{ $t("⚿ journali Lizenz") + ' ' }}<span v-if="lic?.holder" class="muted">· {{ lic.holder }}</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:200px" /><col /></colgroup><tbody>
       <tr>
-        <td class="muted">Stand</td>
+        <td class="muted">{{ $t("Stand") }}</td>
         <td>
-          <span v-if="lic?.abgelaufen" class="neg">● abgelaufen</span>
-          <span v-else-if="lic?.geprueft" class="pos">● geprüft</span>
-          <span v-else class="warn">● ungeprüft</span>
+          <span v-if="lic?.abgelaufen" class="neg">{{ $t("● abgelaufen") }}</span>
+          <span v-else-if="lic?.geprueft" class="pos">{{ $t("● geprüft") }}</span>
+          <span v-else class="warn">{{ $t("● ungeprüft") }}</span>
         </td>
         <td class="muted">{{ lic?.grund ?? '' }}</td>
       </tr>
-      <tr v-if="lic?.instanzTarif" class="tarif"><td class="muted" title="Der höchste Tarif der Instanz: nach ihm richten sich Plugins und Publikationsbäume.">◆ Tarif</td>
-        <td>{{ lic.instanzTarif.label }}<span v-if="lic.trial && !lic.abgelaufen" class="muted"> · Test</span></td><td></td></tr>
-      <tr v-if="lic?.validUntil"><td class="muted">gültig bis</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
-      <tr v-if="lic?.instanzTarif" class="baeume"><td class="muted" title="Publikationsbäume: vorhanden / erlaubt">▣ Publikationsbäume</td>
+      <tr v-if="lic?.instanzTarif" class="tarif"><td class="muted" :title="$t('Der höchste Tarif der Instanz: nach ihm richten sich Plugins und Publikationsbäume.')">{{ $t("◆ Tarif") }}</td>
+        <td>{{ lic.instanzTarif.label }}<span v-if="lic.trial && !lic.abgelaufen" class="muted">{{ ' ' + $t("· Test") }}</span></td><td></td></tr>
+      <tr v-if="lic?.validUntil"><td class="muted">{{ $t("gültig bis") }}</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
+      <tr v-if="lic?.instanzTarif" class="baeume"><td class="muted" :title="$t('Publikationsbäume: vorhanden / erlaubt')">{{ $t("▣ Publikationsbäume") }}</td>
         <td class="mono">{{ lic.pubTrees ?? 0 }} / {{ lic.instanzTarif.pubTrees ?? '∞' }}</td><td></td></tr>
-      <tr><td class="muted" title="journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.">▤ Token / Woche</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
-      <tr><td class="muted" title="journali-Token je Monat: jede Pflege schreibt einen Eintrag ins Journal.">▦ Token / Monat</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
-      <tr v-if="lic?.countFrom"><td class="muted" title="Was vor diesem Tag im Journal steht, zählt nicht mehr mit.">◷ gezählt ab</td><td class="mono">{{ lic.countFrom }}</td><td></td></tr>
-      <tr v-if="lic?.instanz"><td class="muted" title="Diese Instanz. Eine Lizenz wird auf diese Kennung ausgestellt und gilt nur hier.">⌗ Instanz</td>
+      <tr><td class="muted" :title="$t('journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▤ Token / Woche") }}</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
+      <tr><td class="muted" :title="$t('journali-Token je Monat: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▦ Token / Monat") }}</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
+      <tr v-if="lic?.countFrom"><td class="muted" :title="$t('Was vor diesem Tag im Journal steht, zählt nicht mehr mit.')">{{ $t("◷ gezählt ab") }}</td><td class="mono">{{ lic.countFrom }}</td><td></td></tr>
+      <tr v-if="lic?.instanz"><td class="muted" :title="$t('Diese Instanz. Eine Lizenz wird auf diese Kennung ausgestellt und gilt nur hier.')">{{ $t("⌗ Instanz") }}</td>
         <td class="mono" style="user-select:all">{{ lic.instanz }}</td>
-        <td><button class="x" title="Kennung kopieren" @click="kopiere(lic.instanz)">⧉</button></td></tr>
+        <td><button class="x" :title="$t('Kennung kopieren')" @click="kopiere(lic.instanz)">⧉</button></td></tr>
     </tbody></table>
 
     <div v-if="darf()" class="uebernahme" style="margin-top:8px">
-      <textarea v-model="eingabe" class="eingabe" rows="4" style="width:100%;max-width:640px" placeholder="Lizenz oder Schlüssel"></textarea>
+      <textarea v-model="eingabe" class="eingabe" rows="4" style="width:100%;max-width:640px" :placeholder="$t('Lizenz oder Schlüssel')"></textarea>
       <div class="row" style="gap:8px;margin-top:4px">
         <button class="primary" :disabled="knopf.aus" :title="knopf.title" @click="uebernehmen">{{ knopf.text }}</button>
         <span class="said" :class="said.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ said }}</span>
@@ -136,25 +136,25 @@ async function kopiere(text) {
     </div>
 
     <div v-if="darf()" class="schluessel" style="margin-top:16px">
-      <h3>⚷ Schlüssel</h3>
+      <h3>{{ $t("⚷ Schlüssel") }}</h3>
       <div class="row anfordern" style="gap:6px;flex-wrap:wrap;align-items:center">
         <select v-model="neu.wahl" class="wahl">
-          <option v-for="[k, l] in RESETS" :key="'reset:' + k" :value="'reset:' + k">↺ Reset {{ l }}</option>
+          <option v-for="[k, l] in RESETS" :key="'reset:' + k" :value="'reset:' + k">{{ $t("↺ Reset {0}", [l]) }}</option>
           <option v-for="p in pakete" :key="p.key" :value="p.key">⇡ {{ p.label }} · {{ paketTitel(p) }}</option>
         </select>
-        <select v-model.number="neu.count" class="anzahl" title="Anzahl Anforderungen">
+        <select v-model.number="neu.count" class="anzahl" :title="$t('Anzahl Anforderungen')">
           <option v-for="n in [1, 2, 5, 10]" :key="n" :value="n">× {{ n }}</option>
         </select>
-        <button @click="anfordern" title="Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren">⚷ Anfordern</button>
+        <button @click="anfordern" :title="$t('Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren')">{{ $t("⚷ Anfordern") }}</button>
         <span class="said-anf" :class="saidAnf.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ saidAnf }}</span>
       </div>
       <div v-if="angefordert" class="row" style="gap:6px;margin-top:4px;align-items:flex-start">
         <textarea class="angefordert mono" readonly rows="3" style="width:100%;max-width:640px" :value="angefordert"></textarea>
-        <button class="x" title="Anforderung kopieren" @click="kopiere(angefordert)">⧉</button>
+        <button class="x" :title="$t('Anforderung kopieren')" @click="kopiere(angefordert)">⧉</button>
       </div>
 
       <table v-if="anforderungen.length" class="grid anforderungen" style="width:auto;margin-top:8px"><thead><tr>
-        <th>Id</th><th>Art</th><th>angefordert</th><th>eingelöst</th><th>Team</th><th>gilt bis</th><th></th>
+        <th>{{ $t("Id") }}</th><th>{{ $t("Art") }}</th><th>{{ $t("angefordert") }}</th><th>{{ $t("eingelöst") }}</th><th>{{ $t("Team") }}</th><th>{{ $t("gilt bis") }}</th><th></th>
       </tr></thead><tbody>
         <tr v-for="a in anforderungen" :key="a.id">
           <td class="mono">{{ a.id }}</td>
@@ -167,8 +167,8 @@ async function kopiere(text) {
             <td></td>
           </template>
           <template v-else>
-            <td class="muted">● offen</td><td></td><td></td>
-            <td><button class="x" title="Anforderung kopieren" @click="kopiere(a.text)">⧉</button></td>
+            <td class="muted">{{ $t("● offen") }}</td><td></td><td></td>
+            <td><button class="x" :title="$t('Anforderung kopieren')" @click="kopiere(a.text)">⧉</button></td>
           </template>
         </tr>
       </tbody></table>

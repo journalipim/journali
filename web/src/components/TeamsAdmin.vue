@@ -52,15 +52,15 @@ async function entfernen(t) {
 
 <template>
   <div class="section">
-    <h2>◍ Teams <span class="muted" title="Die Limits kommen aus der Lizenz: das Init Team trägt sie, jedes weitere startet bei 0.">· {{ teams.length }}</span></h2>
+    <h2>{{ $t("◍ Teams") + ' ' }}<span class="muted" :title="$t('Die Limits kommen aus der Lizenz: das Init Team trägt sie, jedes weitere startet bei 0.')">· {{ teams.length }}</span></h2>
     <table class="grid" style="width:auto">
       <thead>
         <tr>
-          <th>Team</th>
-          <th title="Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus">★ Teammanager</th>
-          <th title="Woher die Token kommen: eigenes Kontingent oder das eines anderen Teams">Token</th>
-          <th class="num" title="journali-Token je Woche — aus der Lizenz, hier nicht einstellbar">▤ Woche ⊞</th>
-          <th class="num" title="journali-Token je Monat — aus der Lizenz, hier nicht einstellbar">▦ Monat ⊞</th>
+          <th>{{ $t("Team") }}</th>
+          <th :title="$t('Wer das Team führt: Schlüssel, Modell, Mitglieder ein und aus')">{{ $t("★ Teammanager") }}</th>
+          <th :title="$t('Woher die Token kommen: eigenes Kontingent oder das eines anderen Teams')">{{ $t("Token") }}</th>
+          <th class="num" :title="$t('journali-Token je Woche — aus der Lizenz, hier nicht einstellbar')">{{ $t("▤ Woche ⊞") }}</th>
+          <th class="num" :title="$t('journali-Token je Monat — aus der Lizenz, hier nicht einstellbar')">{{ $t("▦ Monat ⊞") }}</th>
           <th>👤</th><th></th>
         </tr>
       </thead>
@@ -69,13 +69,13 @@ async function entfernen(t) {
           <td>
             <input type="text" :value="t.label" style="width:140px" @change="speichern(t, 'label', $event.target.value)" />
             <span class="mono muted" style="font-size:12px"> {{ t.key }}</span>
-            <span v-if="t.primary" class="accent" title="Init Team: bleibt, trägt die Limits der Lizenz"> ①</span>
+            <span v-if="t.primary" class="accent" :title="$t('Init Team: bleibt, trägt die Limits der Lizenz')"> ①</span>
           </td>
           <td>
             <span v-for="m in (t.managers ?? [])" :key="m" class="chip" style="margin-right:4px">{{ leute.find(p => p.key === m)?.name || m }}
-              <button class="x" title="Führung abgeben" @click="fuehrung(t, m, false)">×</button>
+              <button class="x" :title="$t('Führung abgeben')" @click="fuehrung(t, m, false)">×</button>
             </span>
-            <select value="" style="width:130px" title="jemanden zur Führung dazunehmen" @change="fuehrung(t, $event.target.value, true); $event.target.value = ''">
+            <select value="" style="width:130px" :title="$t('jemanden zur Führung dazunehmen')" @change="fuehrung(t, $event.target.value, true); $event.target.value = ''">
               <option value="">+</option>
               <option v-for="p in leute.filter(p => !(t.managers ?? []).includes(p.key))" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
             </select>
@@ -83,30 +83,30 @@ async function entfernen(t) {
           <td>
             <select :value="t.keysFrom ?? ''" :disabled="t.keys.length > 0" :title="t.keys.length ? 'eigene Schlüssel hinterlegt' : 'woher die Token kommen'"
                     @change="speichern(t, 'keysFrom', $event.target.value)">
-              <option value="">eigenes Kontingent</option>
-              <option v-for="z in teams.filter(x => x.key !== t.key)" :key="z.key" :value="z.key">über Team {{ z.label }}</option>
+              <option value="">{{ $t("eigenes Kontingent") }}</option>
+              <option v-for="z in teams.filter(x => x.key !== t.key)" :key="z.key" :value="z.key">{{ $t("über Team {0}", [z.label]) }}</option>
             </select>
           </td>
           <td class="num mono" :class="t.entriesWeek ? '' : 'muted'">{{ n(t.entriesWeek) }}</td>
           <td class="num mono" :class="t.entriesMonth ? '' : 'muted'">{{ n(t.entriesMonth) }}</td>
           <td class="muted" :title="`${t.members} im Team`">{{ t.members }}</td>
-          <td><button v-if="!t.primary" class="x" title="Team entfernen" @click="entfernen(t)">✕</button></td>
+          <td><button v-if="!t.primary" class="x" :title="$t('Team entfernen')" @click="entfernen(t)">✕</button></td>
         </tr>
         <tr>
-          <td><input v-model="neu" type="text" placeholder="neues Team" style="width:140px" @keydown.enter="anlegen" /></td>
+          <td><input v-model="neu" type="text" :placeholder="$t('neues Team')" style="width:140px" @keydown.enter="anlegen" /></td>
           <td>
-            <select v-model="neuManager" style="width:130px" title="Wer führt es? Notfalls du selbst.">
-              <option value="">— Teammanager —</option>
+            <select v-model="neuManager" style="width:130px" :title="$t('Wer führt es? Notfalls du selbst.')">
+              <option value="">{{ $t("— Teammanager —") }}</option>
               <option v-for="p in leute" :key="p.key" :value="p.key">{{ p.name || p.key }}</option>
             </select>
           </td>
-          <td colspan="5"><button class="x" title="Team anlegen" @click="anlegen">+</button></td>
+          <td colspan="5"><button class="x" :title="$t('Team anlegen')" @click="anlegen">+</button></td>
         </tr>
       </tbody>
     </table>
     <div v-if="lizenz" style="display:flex;gap:16px;align-items:baseline;margin-top:6px;font-size:12px">
-      <span class="muted">aus der Lizenz vergeben</span>
-      <span class="mono" :class="zuviel ? 'neg' : ''" title="Summe der Kontingente aller Teams gegen die Lizenz">▤ {{ n(verteilt.week) }} / {{ n(lizenz.entriesWeek) }} ⊞</span>
+      <span class="muted">{{ $t("aus der Lizenz vergeben") }}</span>
+      <span class="mono" :class="zuviel ? 'neg' : ''" :title="$t('Summe der Kontingente aller Teams gegen die Lizenz')">▤ {{ n(verteilt.week) }} / {{ n(lizenz.entriesWeek) }} ⊞</span>
       <span class="mono" :class="zuviel ? 'neg' : ''">▦ {{ n(verteilt.month) }} / {{ n(lizenz.entriesMonth) }} ⊞</span>
     </div>
   </div>

@@ -31,20 +31,20 @@ async function dropToken(t) { try { await api.del(`/api/auth/tokens/${t.id}`); a
 
 <template>
   <div class="section">
-    <h2>👤 Zugangsdaten <span class="muted">· {{ me?.name || store.auth.user }} · {{ store.auth.role }}<span v-if="me?.team"> · ◍ {{ me.team }}</span></span></h2>
+    <h2>{{ $t("👤 Zugangsdaten") + ' ' }}<span class="muted">· {{ me?.name || store.auth.user }} · {{ store.auth.role }}<span v-if="me?.team"> · ◍ {{ me.team }}</span></span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:140px" /><col style="width:300px" /><col /></colgroup><tbody>
-      <tr><td class="muted">aktuelles Passwort</td><td><input v-model="pw.current" type="password" autocomplete="current-password" style="width:100%" /></td><td></td></tr>
-      <tr><td class="muted">neues Passwort</td><td><input v-model="pw.password" type="password" autocomplete="new-password" style="width:100%" placeholder="mindestens 8 Zeichen" /></td><td></td></tr>
-      <tr><td class="muted">wiederholen</td><td><input v-model="pw.again" type="password" autocomplete="new-password" style="width:100%" /></td>
-        <td class="row" style="gap:8px"><button class="primary" @click="changePw">Passwort ändern</button><span :class="String(pwState ?? '').startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ pwState }}</span></td></tr>
+      <tr><td class="muted">{{ $t("aktuelles Passwort") }}</td><td><input v-model="pw.current" type="password" autocomplete="current-password" style="width:100%" /></td><td></td></tr>
+      <tr><td class="muted">{{ $t("neues Passwort") }}</td><td><input v-model="pw.password" type="password" autocomplete="new-password" style="width:100%" :placeholder="$t('mindestens 8 Zeichen')" /></td><td></td></tr>
+      <tr><td class="muted">{{ $t("wiederholen") }}</td><td><input v-model="pw.again" type="password" autocomplete="new-password" style="width:100%" /></td>
+        <td class="row" style="gap:8px"><button class="primary" @click="changePw">{{ $t("Passwort ändern") }}</button><span :class="String(pwState ?? '').startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ pwState }}</span></td></tr>
     </tbody></table>
   </div>
 
   <div class="section">
-    <h2>⚿ API-Token <span class="muted" title="Authorization: Bearer — nur beim Anlegen sichtbar. Ein Token arbeitet mit meinen Rechten; was damit geschrieben wird, ist meinem Team zugeordnet.">· Excel-Add-in, OnlyOffice, Skripte</span></h2>
+    <h2>{{ $t("⚿ API-Token") + ' ' }}<span class="muted" :title="$t('Authorization: Bearer — nur beim Anlegen sichtbar. Ein Token arbeitet mit meinen Rechten; was damit geschrieben wird, ist meinem Team zugeordnet.')">{{ $t("· Excel-Add-in, OnlyOffice, Skripte") }}</span></h2>
     <div class="row" style="gap:6px;margin-bottom:6px">
-      <input v-model="tokenLabel" type="text" placeholder="Bezeichnung (z. B. Excel Laptop)" style="width:260px" />
-      <button class="primary" @click="makeToken">＋ Token</button>
+      <input v-model="tokenLabel" type="text" :placeholder="$t('Bezeichnung (z. B. Excel Laptop)')" style="width:260px" />
+      <button class="primary" @click="makeToken">{{ $t("＋ Token") }}</button>
     </div>
     <div v-if="newToken" class="picker" style="padding:8px;margin-bottom:6px">
       <b>{{ newToken.label }}</b> · <span class="mono" style="user-select:all">{{ newToken.token }}</span>
@@ -52,8 +52,8 @@ async function dropToken(t) { try { await api.del(`/api/auth/tokens/${t.id}`); a
       <div class="muted" style="font-size:12px">{{ newToken.hint }}</div>
     </div>
     <div class="chips">
-      <span v-for="t in me?.tokens ?? []" :key="t.id" class="chip" :title="when(t.at)">{{ t.label }} <button @click="dropToken(t)" title="Token widerrufen">×</button></span>
-      <span v-if="!me?.tokens?.length" class="muted" style="font-size:12px">keine</span>
+      <span v-for="t in me?.tokens ?? []" :key="t.id" class="chip" :title="when(t.at)">{{ t.label }} <button @click="dropToken(t)" :title="$t('Token widerrufen')">×</button></span>
+      <span v-if="!me?.tokens?.length" class="muted" style="font-size:12px">{{ $t("keine") }}</span>
     </div>
   </div>
 </template>

@@ -218,50 +218,50 @@ onMounted(load)
 
 <template>
   <div class="section">
-    <h2 title="Der Bearbeitungszustand über dem Status: Zustände, Übergänge mit Rolle, Notiz-Pflicht und Wirkung.">⚑ Workflows <span class="muted">· Zustände und Übergänge</span></h2>
+    <h2 :title="$t('Der Bearbeitungszustand über dem Status: Zustände, Übergänge mit Rolle, Notiz-Pflicht und Wirkung.')">{{ $t("⚑ Workflows") + ' ' }}<span class="muted">{{ $t("· Zustände und Übergänge") }}</span></h2>
     <div class="row" style="gap:6px;align-items:center;margin-bottom:8px">
       <span v-for="w in list" :key="w.key" class="view-chip" :class="{ on: cur?.key === w.key }" @click="pick(w)" :title="w.key">{{ w.label?.de || w.key }}</span>
-      <button class="x" @click="add" title="neuer Workflow">+</button>
+      <button class="x" @click="add" :title="$t('neuer Workflow')">+</button>
       <span class="grow" />
-      <button v-if="cur" class="primary" :disabled="!dirty" @click="save">💾 Speichern</button>
-      <button v-if="cur" class="x" @click="remove" title="Workflow entfernen">🗑</button>
+      <button v-if="cur" class="primary" :disabled="!dirty" @click="save">{{ $t("💾 Speichern") }}</button>
+      <button v-if="cur" class="x" @click="remove" :title="$t('Workflow entfernen')">🗑</button>
     </div>
     <template v-if="cur">
       <div class="row" style="gap:12px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
-        <label>Bezeichnung <input v-model="cur.label.de" type="text" style="width:160px" @input="touch" /></label>
-        <label>Start <select v-model="cur.start" @change="touch"><option v-for="s in cur.states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }}</option></select></label>
-        <span class="muted">gilt für</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
-        <label title="Je Sprache ein eigener Zustand — ein Schritt wirkt dann nur auf diese Sprache"><input type="checkbox" v-model="cur.perLocale" @change="touch" /> 🗣 je Sprache</label>
-        <span class="muted" style="font-size:11px">(nichts angehakt = alle)</span>
+        <label>{{ $t("Bezeichnung") + ' ' }}<input v-model="cur.label.de" type="text" style="width:160px" @input="touch" /></label>
+        <label>{{ $t("Start") + ' ' }}<select v-model="cur.start" @change="touch"><option v-for="s in cur.states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }}</option></select></label>
+        <span class="muted">{{ $t("gilt für") }}</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
+        <label :title="$t('Je Sprache ein eigener Zustand — ein Schritt wirkt dann nur auf diese Sprache')"><input type="checkbox" v-model="cur.perLocale" @change="touch" />{{ ' ' + $t("🗣 je Sprache") }}</label>
+        <span class="muted" style="font-size:11px">{{ $t("(nichts angehakt = alle)") }}</span>
       </div>
       <div v-if="sketch" class="row" style="gap:6px;align-items:center;margin-bottom:6px">
-        <button @click="addStateAt" title="Zustand anlegen">+ Zustand</button>
-        <button @click="forceLayout" title="Zustände automatisch anordnen (Andockpunkte bleiben)">⟲ Anordnen</button>
-        <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" title="Markiertes löschen (auch Entf)">✕</button>
+        <button @click="addStateAt" :title="$t('Zustand anlegen')">{{ $t("+ Zustand") }}</button>
+        <button @click="forceLayout" :title="$t('Zustände automatisch anordnen (Andockpunkte bleiben)')">{{ $t("⟲ Anordnen") }}</button>
+        <button v-if="selState != null || selTrans != null" class="x" @click="delSelected" :title="$t('Markiertes löschen (auch Entf)')">✕</button>
         <span class="grow" />
-        <span class="x" style="cursor:help" title="Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht">?</span>
+        <span class="x" style="cursor:help" :title="$t('Kachel von innen ziehen = verschieben · vom Kachelrand auf eine andere Kachel ziehen = Übergang (schnappt am Rand ein) · Pfeil markieren, Ende anfassen = umhängen · Beschriftung ziehen, Doppelklick = bearbeiten · Kachel doppelklicken = umbenennen · Entf löscht')">?</span>
       </div>
       <svg v-if="sketch" ref="svgEl" tabindex="0" :viewBox="`0 0 ${sketch.width} ${sketch.height}`" :style="`width:100%;max-width:${sketch.width}px;height:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;margin-bottom:8px;outline:none;user-select:none`" font-size="11" font-family="system-ui"
         @mousemove="canvasMove" @mouseup="canvasUp" @mouseleave="canvasUp" @keydown.delete.prevent="delSelected" @keydown.backspace.prevent="delSelected" @mousedown.self="selState = null; selTrans = null">
         <defs><pattern id="wf-grid" :width="GRID" :height="GRID" patternUnits="userSpaceOnUse"><path :d="`M ${GRID} 0 L 0 0 0 ${GRID}`" fill="none" stroke="var(--line)" stroke-width="0.5" opacity="0.6" /></pattern><marker id="wf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)" /></marker></defs>
         <rect x="0" y="0" :width="sketch.width" :height="sketch.height" fill="url(#wf-grid)" @mousedown="selState = null; selTrans = null" />
-        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null" @contextmenu.prevent.stop="arrowMenu($event, n)"><path :d="a.d" fill="none" :stroke="selTrans === n || a.temp ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n || a.temp ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'" stroke="var(--bg)" stroke-width="4" paint-order="stroke" stroke-linejoin="round" style="cursor:move;user-select:none" @mousedown.stop.prevent="labelDown(n, $event)" @dblclick.stop="editLabel(n)"><title>ziehen = verschieben · Doppelklick = bearbeiten</title><tspan :x="a.lx">{{ a.t.label?.de || a.t.key }}</tspan><tspan v-if="a.t.roles.length" :x="a.lx" dy="1.15em" fill="var(--muted)">{{ a.t.roles.join(' / ') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" :x="a.lx" dy="1.15em" fill="var(--warn)">⏰ nach {{ a.t.escalateAfterDays }} d{{ a.t.escalateRoles?.length ? ' → ' + a.t.escalateRoles.join('/') : '' }}</tspan></text></g>
-        <g v-if="selTrans != null && sketch.arrows[selTrans]"><circle :cx="sketch.arrows[selTrans].p1.x" :cy="sketch.arrows[selTrans].p1.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'from', $event)"><title>Anfang umhängen</title></circle><circle :cx="sketch.arrows[selTrans].p2.x" :cy="sketch.arrows[selTrans].p2.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'to', $event)"><title>Ende umhängen</title></circle></g>
+        <g v-for="(a, n) in sketch.arrows" :key="a.t.key" style="cursor:pointer" @click="selTrans = n; selState = null" @contextmenu.prevent.stop="arrowMenu($event, n)"><path :d="a.d" fill="none" :stroke="selTrans === n || a.temp ? 'var(--accent)' : 'var(--muted)'" :stroke-width="selTrans === n || a.temp ? 2 : 1.2" marker-end="url(#wf-arrow)" :stroke-dasharray="a.t.noteRequired ? '4 3' : ''" /><path :d="a.d" fill="none" stroke="transparent" stroke-width="12" /><text :x="a.lx" :y="a.ly" :text-anchor="a.anchor ?? 'middle'" :fill="selTrans === n ? 'var(--accent)' : 'var(--text)'" stroke="var(--bg)" stroke-width="4" paint-order="stroke" stroke-linejoin="round" style="cursor:move;user-select:none" @mousedown.stop.prevent="labelDown(n, $event)" @dblclick.stop="editLabel(n)"><title>{{ $t("ziehen = verschieben · Doppelklick = bearbeiten") }}</title><tspan :x="a.lx">{{ a.t.label?.de || a.t.key }}</tspan><tspan v-if="a.t.roles.length" :x="a.lx" dy="1.15em" fill="var(--muted)">{{ a.t.roles.join(' / ') }}</tspan><tspan v-if="a.t.escalateAfterDays != null" :x="a.lx" dy="1.15em" fill="var(--warn)">{{ $t("⏰ nach {0} d{1}", [a.t.escalateAfterDays, a.t.escalateRoles?.length ? ' → ' + a.t.escalateRoles.join('/') : '']) }}</tspan></text></g>
+        <g v-if="selTrans != null && sketch.arrows[selTrans]"><circle :cx="sketch.arrows[selTrans].p1.x" :cy="sketch.arrows[selTrans].p1.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'from', $event)"><title>{{ $t("Anfang umhängen") }}</title></circle><circle :cx="sketch.arrows[selTrans].p2.x" :cy="sketch.arrows[selTrans].p2.y" r="5" fill="var(--accent)" style="cursor:move" @mousedown.stop.prevent="endDown(selTrans, 'to', $event)"><title>{{ $t("Ende umhängen") }}</title></circle></g>
         <g v-for="(s, i) in cur.states" :key="s.key" :style="drag?.kind === 'move' ? 'cursor:grabbing' : hoverEdge === i ? 'cursor:crosshair' : 'cursor:grab'" @mousemove="stateHover(i, $event)" @mouseleave="hoverEdge === i && (hoverEdge = null)" @mousedown.prevent.stop="stateDown(i, $event)" @contextmenu.prevent.stop="stateMenu($event, i)" @mouseup.stop="stateUp(i, $event)" @dblclick="editState(i)">
           <rect :x="sketch.pos[i].x" :y="sketch.pos[i].y" :width="W" :height="H" rx="6" :fill="selState === i ? 'var(--accent-soft)' : 'var(--pane)'" :stroke="hoverEdge === i ? 'var(--accent)' : color(s.color)" :stroke-width="hoverEdge === i ? 2.5 : s.key === cur.start ? 2.5 : 1.5" />
           <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 20" text-anchor="middle" fill="var(--text)" font-weight="600">{{ s.label?.de || s.key }}</text>
-          <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 36" text-anchor="middle" fill="var(--muted)">{{ s.count ?? 0 }} Knoten{{ s.final ? ' · Ende' : '' }}{{ s.key === cur.start ? ' · Start' : '' }}</text>
-          <circle v-if="s.key === cur.start" :cx="sketch.pos[i].x - 12" :cy="sketch.pos[i].y + H / 2" r="5" fill="var(--text)"><title>Start</title></circle>
+          <text :x="sketch.pos[i].x + W / 2" :y="sketch.pos[i].y + 36" text-anchor="middle" fill="var(--muted)">{{ $t("{0} Knoten{1}{2}", [s.count ?? 0, s.final ? ' · Ende' : '', s.key === cur.start ? ' · Start' : '']) }}</text>
+          <circle v-if="s.key === cur.start" :cx="sketch.pos[i].x - 12" :cy="sketch.pos[i].y + H / 2" r="5" fill="var(--text)"><title>{{ $t("Start") }}</title></circle>
           <g v-if="s.final"><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="6" fill="none" stroke="var(--text)" stroke-width="1.5" /><circle :cx="sketch.pos[i].x + W + 12" :cy="sketch.pos[i].y + H / 2" r="3" fill="var(--text)" /></g>
           <circle v-if="drag?.snapJ === i" :cx="drag.tx" :cy="drag.ty" r="5" fill="none" stroke="var(--accent)" stroke-width="2" />
         </g>
       </svg>
       <div class="row" style="gap:32px;align-items:flex-start;flex-wrap:wrap;margin-top:12px">
-        <table class="grid form" style="width:auto;margin-bottom:16px"><thead><tr><th colspan="6">Zustände <button class="x" @click="addState" title="Zustand hinzufügen">+</button></th></tr><tr><th>Key</th><th>Bezeichnung</th><th>Farbe</th><th title="Ende des Wegs">Ende</th><th>Knoten</th><th></th></tr></thead><tbody>
+        <table class="grid form" style="width:auto;margin-bottom:16px"><thead><tr><th colspan="6">{{ $t("Zustände") + ' ' }}<button class="x" @click="addState" :title="$t('Zustand hinzufügen')">+</button></th></tr><tr><th>{{ $t("Key") }}</th><th>{{ $t("Bezeichnung") }}</th><th>{{ $t("Farbe") }}</th><th :title="$t('Ende des Wegs')">{{ $t("Ende") }}</th><th>{{ $t("Knoten") }}</th><th></th></tr></thead><tbody>
           <tr v-for="(s, i) in cur.states" :key="i" :class="{ selected: selState === i }" @click="selState = i; selTrans = null"><td><input v-model="s.key" type="text" class="mono" style="width:100px" @input="touch" /></td><td><input v-model="s.label.de" type="text" style="width:140px" @input="touch" /></td>
             <td><select v-model="s.color" @change="touch"><option v-for="[c, l] in COLORS" :key="c" :value="c">{{ l }}</option></select></td><td><input type="checkbox" v-model="s.final" @change="touch" /></td><td class="muted">{{ s.count }}</td><td><button class="x" @click="delState(i)">×</button></td></tr>
         </tbody></table>
-        <table class="grid form" style="width:auto"><thead><tr><th colspan="9">Übergänge <button class="x" @click="addTransition" title="Übergang hinzufügen">+</button></th></tr><tr><th>Key</th><th>Bezeichnung</th><th>von</th><th>nach</th><th title="wer darf; nichts = jede Rolle mit Schreibrecht (admin immer)">Rollen</th><th title="Korrekturschleife: der Schritt braucht eine Notiz">Notiz</th><th title="Eskalation: nach n Tagen dürfen auch diese Rollen (keine = alle)">⏰ nach Tagen an</th><th title="was der Schritt auslöst">Wirkung</th><th></th></tr></thead><tbody>
+        <table class="grid form" style="width:auto"><thead><tr><th colspan="9">{{ $t("Übergänge") + ' ' }}<button class="x" @click="addTransition" :title="$t('Übergang hinzufügen')">+</button></th></tr><tr><th>{{ $t("Key") }}</th><th>{{ $t("Bezeichnung") }}</th><th>{{ $t("von") }}</th><th>{{ $t("nach") }}</th><th :title="$t('wer darf; nichts = jede Rolle mit Schreibrecht (admin immer)')">{{ $t("Rollen") }}</th><th :title="$t('Korrekturschleife: der Schritt braucht eine Notiz')">{{ $t("Notiz") }}</th><th :title="$t('Eskalation: nach n Tagen dürfen auch diese Rollen (keine = alle)')">{{ $t("⏰ nach Tagen an") }}</th><th :title="$t('was der Schritt auslöst')">{{ $t("Wirkung") }}</th><th></th></tr></thead><tbody>
           <tr v-for="(t, i) in cur.transitions" :key="i" :class="{ selected: selTrans === i }" @click="selTrans = i; selState = null"><td><input v-model="t.key" type="text" class="mono" style="width:90px" @input="touch" /></td><td><input v-model="t.label.de" type="text" style="width:150px" @input="touch" /></td>
             <td><select v-model="t.from" @change="touch"><option v-for="s in cur.states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }}</option></select></td>
             <td><select v-model="t.to" @change="touch"><option v-for="s in cur.states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }}</option></select></td>
@@ -273,7 +273,7 @@ onMounted(load)
         </tbody></table>
       </div>
     </template>
-    <div v-else class="muted">Noch kein Workflow — + legt einen an.</div>
+    <div v-else class="muted">{{ $t("Noch kein Workflow — + legt einen an.") }}</div>
   </div>
 </template>
 

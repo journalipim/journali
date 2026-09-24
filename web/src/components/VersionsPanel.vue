@@ -66,20 +66,20 @@ const KIND = { datasheet: '▤ Datenblatt', sds: '⚠ Sicherheitsdatenblatt' }
 <template>
   <div class="vers">
     <div class="row" style="gap:6px;align-items:center;margin-bottom:4px">
-      <button class="primary" @click="openForm" :disabled="!!form" title="Stand jetzt einfrieren — Belege erzeugen die Erzeuger-Plugins">＋ Version</button>
+      <button class="primary" @click="openForm" :disabled="!!form" :title="$t('Stand jetzt einfrieren — Belege erzeugen die Erzeuger-Plugins')">{{ $t("＋ Version") }}</button>
       <span class="muted" style="font-size:12px">{{ busy || (versions.length ? `${versions.length} · Aufbewahrung ab Erzeugung` : 'noch keine — eine Version ist ein Zeiger auf den Journalstand plus die Belege, die nach draussen gingen') }}</span>
     </div>
     <div v-if="form" class="picker" style="padding:8px;margin-bottom:6px">
       <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center">
-        <select v-model="form.channel" title="Kanal — mit Kanal wird Vollständigkeit geprüft"><option value="">Kanal: alle</option><option v-for="c in channels" :key="c" :value="c">{{ c }}</option></select>
-        <select v-model="form.locale" title="Sprache des Belegs"><option value="">Sprache: wie eingestellt</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select>
-        <input v-model="form.note" type="text" placeholder="Anmerkung (z. B. Anlass)" style="flex:1;min-width:160px" />
-        <label class="muted" style="font-size:12px">aufbewahren <input v-model="form.retentionYears" type="number" min="1" max="100" style="width:56px" /> Jahre</label>
-        <button class="primary" @click="create">Version erzeugen</button><button @click="form = null">Abbrechen</button>
+        <select v-model="form.channel" :title="$t('Kanal — mit Kanal wird Vollständigkeit geprüft')"><option value="">{{ $t("Kanal: alle") }}</option><option v-for="c in channels" :key="c" :value="c">{{ c }}</option></select>
+        <select v-model="form.locale" :title="$t('Sprache des Belegs')"><option value="">{{ $t("Sprache: wie eingestellt") }}</option><option v-for="l in locales" :key="l" :value="l">{{ l }}</option></select>
+        <input v-model="form.note" type="text" :placeholder="$t('Anmerkung (z. B. Anlass)')" style="flex:1;min-width:160px" />
+        <label class="muted" style="font-size:12px">{{ $t("aufbewahren") + ' ' }}<input v-model="form.retentionYears" type="number" min="1" max="100" style="width:56px" />{{ ' ' + $t("Jahre") }}</label>
+        <button class="primary" @click="create">{{ $t("Version erzeugen") }}</button><button @click="form = null">{{ $t("Abbrechen") }}</button>
       </div>
     </div>
     <table v-if="versions.length" class="grid" style="width:100%">
-      <thead><tr><th style="width:36px">Nr</th><th style="width:140px">wann · wer</th><th style="width:90px">Kanal · Sprache</th><th>Belege</th><th style="width:70px">Stand</th><th style="width:150px"></th></tr></thead>
+      <thead><tr><th style="width:36px">{{ $t("Nr") }}</th><th style="width:140px">{{ $t("wann · wer") }}</th><th style="width:90px">{{ $t("Kanal · Sprache") }}</th><th>{{ $t("Belege") }}</th><th style="width:70px">{{ $t("Stand") }}</th><th style="width:150px"></th></tr></thead>
       <tbody>
         <template v-for="v in [...versions].reverse()" :key="v.nr">
           <tr :class="{ off: v.withdrawn }">
@@ -88,26 +88,26 @@ const KIND = { datasheet: '▤ Datenblatt', sds: '⚠ Sicherheitsdatenblatt' }
             <td class="mono muted">{{ v.channel || '*' }} · {{ v.locale || '*' }}</td>
             <td>
               <a v-for="d in v.documents" :key="d.kind + d.renderer" :href="d.url" target="_blank" class="chip" :title="`${d.name} · ${d.mime} · ${(d.bytes / 1024).toFixed(0)} KB · ${d.renderer ?? ''}`">{{ KIND[d.kind] ?? d.kind }}</a>
-              <span v-if="!v.documents.length" class="muted" style="font-size:12px">noch kein Beleg <button class="x" @click="render(v)" title="Erzeuger nochmal laufen lassen">↻</button></span>
+              <span v-if="!v.documents.length" class="muted" style="font-size:12px">{{ $t("noch kein Beleg") + ' ' }}<button class="x" @click="render(v)" :title="$t('Erzeuger nochmal laufen lassen')">↻</button></span>
               <span v-if="v.note" class="muted" style="font-size:12px"> · {{ v.note }}</span>
             </td>
             <td class="mono muted" :title="'Journal bis #' + v.journalNumber">#{{ v.journalNumber }}</td>
             <td class="row" style="gap:4px">
-              <button class="x" @click="showDiff(v)" :class="{ primary: diffOf?.nr === v.nr }" title="eigene Werte damals gegen heute">≠ Stand</button>
-              <button class="x" @click="planRollback(v)" title="Werte von damals wieder setzen — erst der Plan">↶</button>
-              <button v-if="!v.withdrawn" class="x" @click="withdraw(v)" title="zurückziehen (bleibt sichtbar)">⊘</button>
+              <button class="x" @click="showDiff(v)" :class="{ primary: diffOf?.nr === v.nr }" :title="$t('eigene Werte damals gegen heute')">{{ $t("≠ Stand") }}</button>
+              <button class="x" @click="planRollback(v)" :title="$t('Werte von damals wieder setzen — erst der Plan')">↶</button>
+              <button v-if="!v.withdrawn" class="x" @click="withdraw(v)" :title="$t('zurückziehen (bleibt sichtbar)')">⊘</button>
             </td>
           </tr>
           <tr v-if="diffOf?.nr === v.nr"><td colspan="6" style="padding:4px 8px">
-            <div class="muted" style="font-size:12px;margin-bottom:4px">Stand bei Version {{ v.nr }} (#{{ v.journalNumber }}) gegen heute · {{ diffOf.changed }} anders · geerbte Werte zählen nicht — nur dieser Knoten</div>
-            <table class="grid" style="width:100%"><thead><tr><th>Attribut</th><th style="width:110px">Achse</th><th>damals</th><th>heute</th></tr></thead>
+            <div class="muted" style="font-size:12px;margin-bottom:4px">{{ $t("Stand bei Version {0} (#{1}) gegen heute · {2} anders · geerbte Werte zählen nicht — nur dieser Knoten", [v.nr, v.journalNumber, diffOf.changed]) }}</div>
+            <table class="grid" style="width:100%"><thead><tr><th>{{ $t("Attribut") }}</th><th style="width:110px">{{ $t("Achse") }}</th><th>{{ $t("damals") }}</th><th>{{ $t("heute") }}</th></tr></thead>
               <tbody><tr v-for="r in diffOf.rows.filter(x => !x.same)" :key="r.kind + r.attribute + r.locale + r.channel + r.row" :title="r.note ?? ''">
                 <td>{{ r.kind === 'value' ? label(r.attribute) : r.kind === 'name' ? 'Name' : r.kind === 'status' ? 'Status' : 'Anzeigename' }}<span v-if="r.note" class="neg"> ⚠</span></td>
                 <td class="mono muted">{{ axisText(r) }}</td><td class="pos">{{ r.then ?? '—' }}</td><td class="muted">{{ r.now ?? '—' }}</td></tr>
-                <tr v-if="!diffOf.rows.some(x => !x.same)"><td colspan="4" class="muted">identisch</td></tr></tbody></table>
+                <tr v-if="!diffOf.rows.some(x => !x.same)"><td colspan="4" class="muted">{{ $t("identisch") }}</td></tr></tbody></table>
           </td></tr>
           <tr v-if="plan?.nr === v.nr"><td colspan="6" style="padding:4px 8px">
-            <div class="row" style="gap:8px;align-items:center;margin-bottom:4px"><b>Plan: auf Version {{ v.nr }} zurückrollen</b><span class="pos">{{ plan.plan.length }} setzen</span><span v-if="plan.skipped.length" class="muted">{{ plan.skipped.length }} aussen vor</span><span class="grow" /><button class="primary" :disabled="!plan.plan.length" @click="rollback">↶ Zurückrollen</button><button @click="plan = null">×</button></div>
+            <div class="row" style="gap:8px;align-items:center;margin-bottom:4px"><b>{{ $t("Plan: auf Version {0} zurückrollen", [v.nr]) }}</b><span class="pos">{{ $t("{0} setzen", [plan.plan.length]) }}</span><span v-if="plan.skipped.length" class="muted">{{ $t("{0} aussen vor", [plan.skipped.length]) }}</span><span class="grow" /><button class="primary" :disabled="!plan.plan.length" @click="rollback">{{ $t("↶ Zurückrollen") }}</button><button @click="plan = null">×</button></div>
             <table class="grid" style="width:100%"><tbody>
               <tr v-for="r in plan.plan" :key="'p' + r.kind + r.attribute + r.locale + r.channel"><td>{{ r.kind === 'value' ? label(r.attribute) : r.kind }}</td><td class="mono muted" style="width:110px">{{ axisText(r) }}</td><td class="muted">{{ r.now ?? '—' }}</td><td>→ <b>{{ r.then ?? '— (leeren)' }}</b></td></tr>
               <tr v-for="r in plan.skipped" :key="'s' + r.kind + r.attribute + r.locale + r.channel" class="off"><td>{{ r.kind === 'value' ? label(r.attribute) : r.kind }}</td><td class="mono muted" style="width:110px">{{ axisText(r) }}</td><td class="muted" colspan="2">⚠ {{ r.note }}</td></tr>

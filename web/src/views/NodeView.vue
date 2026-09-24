@@ -750,7 +750,7 @@ function cellMenu(e, def, col, block) {
         <router-link :to="`/tree/${a.id}`" class="crumb">{{ icon(a.role) }} {{ a.label }}</router-link><span class="sep">›</span>
       </template>
       <h1>{{ icon(node.role) }} {{ shownLabel }}</h1>
-      <button v-if="props.pub && node.role !== 'rubric'" class="x" title="Knoten im Pflegebaum öffnen (⇶ führt zurück)" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">▣ Pflegebaum</button>
+      <button v-if="props.pub && node.role !== 'rubric'" class="x" :title="$t('Knoten im Pflegebaum öffnen (⇶ führt zurück)')" @click="store.pubBack = { path: $route.fullPath, label: pubTree?.label ?? 'Publikation' }; router.push(`/tree/${id}`)">{{ $t("▣ Pflegebaum") }}</button>
       <button v-else-if="!props.pub && store.pubBack" class="x" :title="`zurück zur Publikation „${store.pubBack.label}“`" @click="backToPub">⇶ {{ store.pubBack.label }}</button>
       <span class="grow" />
       <select v-if="node.role !== 'rubric'" :value="node.hasStatus === false ? '' : node.status" @change="pickStatus($event.target.value)" class="status"
@@ -758,7 +758,7 @@ function cellMenu(e, def, col, block) {
         :title="node.hasStatus === false ? 'Kein Status — eine Gruppe bekommt einen, sobald jemand ihn setzt' : `Status: ${store.statusLabel(node.status)}`">
         <option v-if="node.hasStatus === false" value="" disabled>–</option>
         <option v-for="s in (store.model?.statuses ?? [])" :key="s.key" :value="s.key">{{ store.statusText(s.key) }}</option>
-        <option v-if="node.status && node.hasStatus !== false && !store.status(node.status)" :value="node.status">{{ node.status }} (nicht im Modell)</option>
+        <option v-if="node.status && node.hasStatus !== false && !store.status(node.status)" :value="node.status">{{ $t("{0} (nicht im Modell)", [node.status]) }}</option>
       </select>
       <button class="x" @click="store.journalOpen = !store.journalOpen; store.save()" :title="store.journalOpen ? 'Journal zuklappen' : 'Journal aufklappen'">{{ store.journalOpen ? '≡▸' : '◂≡' }}</button>
       <button class="x" @click="undo" :disabled="!history.length && !ausJournal?.possible"
@@ -769,9 +769,9 @@ function cellMenu(e, def, col, block) {
     <div class="toolbar meta muted">
       <span class="mono">{{ node.id }}</span>
       <span>· {{ roleLabel[node.role] }}</span>
-      <span v-if="node.role === 'product' && node.axes.length">· variiert nach {{ node.axes.map(axisLabel).join(', ') }}</span>
+      <span v-if="node.role === 'product' && node.axes.length">{{ $t("· variiert nach {0}", [node.axes.map(axisLabel).join(', ')]) }}</span>
       <span v-if="node.role === 'variant'">· <span v-for="(v, a) in node.axisValues" :key="a" class="chip">{{ axisLabel(a) }}: {{ v }}</span></span>
-      <span v-if="node.children">· {{ node.children }} Subitems</span>
+      <span v-if="node.children">{{ $t("· {0} Subitems", [node.children]) }}</span>
       <span class="grow" />
       <span>≡ {{ node.entries }} · #{{ node.lastNumber }} {{ when(node.lastAt) }} 👤 {{ node.lastActor }}</span>
       <span v-if="busy">…</span>
@@ -780,29 +780,29 @@ function cellMenu(e, def, col, block) {
     <div class="scroll" v-if="model">
     <!-- Alles rollt mit, die Bänder kleben oben (sticky) — nichts verschwindet hinter einem festen Kopf (Taloan, 17.09.).
          Die Sicht (Sprachen, Kanal, Attributsicht, Anordnung) gehört zum Abschnitt Attribute — darum unter dessen Band. -->
-    <h2 class="band" @click="toggle('attributes')"><span class="caret">{{ open('attributes') ? '▾' : '▸' }}</span>▤ Attribute <span class="muted">· {{ blocks.length }} Gruppen · {{ blocks.reduce((n, b) => n + b.defs.length, 0) }} Attribute</span></h2>
+    <h2 class="band" @click="toggle('attributes')"><span class="caret">{{ open('attributes') ? '▾' : '▸' }}</span>{{ $t("▤ Attribute") + ' ' }}<span class="muted">{{ $t("· {0} Gruppen · {1} Attribute", [blocks.length, blocks.reduce((n, b) => n + b.defs.length, 0)]) }}</span></h2>
     <template v-if="open('attributes')">
     <!-- Leiste in drei Gruppen (Taloan, 20.09.): WAS gezeigt wird (Sprachen, Kanal, Sicht, Filter, Suche) · WIE es angeordnet ist (flach/Reiter) · WIE es beschriftet ist (Namen) -->
     <div class="toolbar view">
       <MatrixPicker :model-value="store.viewCells" @update:model-value="setCells" :locales="locales" :channels="channels" :master-locale="master" :master-channel="masterChannel" />
       <span class="sep">·</span>
-      <span class="grp" title="Zeilen: Attributsicht und Filter">
+      <span class="grp" :title="$t('Zeilen: Attributsicht und Filter')">
         <select :value="store.viewKey[node.role] ?? ''" @change="setView($event.target.value)" :title="`Attributsicht für ${roleLabel[node.role]} — ⊞ Modell → Attributsichten`">
-          <option value="">◫ komplett</option>
+          <option value="">{{ $t("◫ komplett") }}</option>
           <option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option>
         </select>
         <router-link :to="{ path: '/model', query: { section: 'views', key: orderView?.key } }" class="x edit" :title="orderView ? `${orderView.key} bearbeiten → Modell → Attributsichten` : '→ Modell → Attributsichten'">✎</router-link>
-        <select :value="store.scope" @change="setScope($event.target.value)" :class="{ on: store.scope !== 'all' }" title="Filter — was von den Attributen gezeigt wird">
+        <select :value="store.scope" @change="setScope($event.target.value)" :class="{ on: store.scope !== 'all' }" :title="$t('Filter — was von den Attributen gezeigt wird')">
           <option v-for="f in SCOPES" :key="f.key" :value="f.key" :title="f.title">{{ f.label }}</option>
         </select>
-        <input ref="findBox" v-model="attrFilter" type="search" placeholder="Attribut oder Wert" style="width:200px;font-size:12px" title="Suche im Sichtbaren: Attributname und die Werte der gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert" @keydown.esc="attrFilter = ''" />
+        <input ref="findBox" v-model="attrFilter" type="search" :placeholder="$t('Attribut oder Wert')" style="width:200px;font-size:12px" :title="$t('Suche im Sichtbaren: Attributname und die Werte der gezeigten Spalten; bei Reitern über alle Gruppen; Esc leert')" @keydown.esc="attrFilter = ''" />
         <span v-if="attrFilter" class="muted">{{ hitCount }}</span>
-        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="`Filter aufheben (zeigt wieder alle Attribute)`" @click="missingOnly = null">✗ fehlt für {{ missingOnly.channel }} <b>{{ missingOnly.cells.size }}</b></span>
+        <span v-if="missingOnly" class="view-chip on neg" style="cursor:pointer" :title="`Filter aufheben (zeigt wieder alle Attribute)`" @click="missingOnly = null">{{ $t("✗ fehlt für {0}", [missingOnly.channel]) + ' ' }}<b>{{ missingOnly.cells.size }}</b></span>
       </span>
       <span class="grow" />
-      <span class="grp" title="Anordnung der Gruppen">
-        <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" title="Gruppen untereinander">☰</button>
-        <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" title="Gruppen als Reiter">⧉</button>
+      <span class="grp" :title="$t('Anordnung der Gruppen')">
+        <button :class="{ primary: store.layout === 'flat' }" @click="setLayout('flat')" :title="$t('Gruppen untereinander')">☰</button>
+        <button :class="{ primary: store.layout === 'tabs' }" @click="setLayout('tabs')" :title="$t('Gruppen als Reiter')">⧉</button>
       </span>
       <span class="sep">·</span>
       <button :class="{ primary: store.attrNames !== 'label' }" @click="cycleNames" :title="NAMES_TITLE[store.attrNames]">{{ store.attrNames === 'key' ? '⌨ key' : store.attrNames === 'both' ? '⌨ Aa⟨key⟩' : 'Aa' }}</button>
@@ -817,7 +817,7 @@ function cellMenu(e, def, col, block) {
         <colgroup><col :style="`width:${attrColWidth}px`" /><col v-for="c in columns" :key="c.label" style="width:220px" /></colgroup>
         <thead>
           <tr class="chan">
-            <th rowspan="2">Attribut</th>
+            <th rowspan="2">{{ $t("Attribut") }}</th>
             <th v-for="g in headGroups" :key="g.channel ?? '*'" :colspan="g.n" :class="{ master: g.channel && g.channel === masterChannel }" :title="g.channel ? (g.channel === masterChannel ? 'Masterkanal — bekommt die Werte des Sterns, die anderen Kanäle beziehen ihren Wert aus ihm' : `Kanal ${g.channel} — ohne eigenen Wert gilt der Masterkanal`) : 'ohne Kanal — der Stern: gilt, wo kein Kanal etwas anderes sagt'">{{ g.channel ?? '*' }}</th>
           </tr>
           <tr class="loc">
@@ -829,15 +829,15 @@ function cellMenu(e, def, col, block) {
             <td :colspan="columns.length + 1">
               {{ b.label }}
               <router-link v-if="!b.custom" :to="{ path: '/model', query: { section: 'groups', key: b.key } }" class="muted edit" :title="`${b.key} bearbeiten → Modell → Attributgruppen`">✎</router-link>
-              <span v-if="!b.custom" class="muted from" :title="b.fromRole === 'rubric' ? `Gruppe an Rubrik ${b.fromLabel}` : (props.pub ? `Gruppe an ${b.fromLabel} · nur lesen` : `Gruppe hängt an ${b.fromLabel}`)">· von {{ b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel }}{{ props.pub && b.fromRole !== 'rubric' ? ' · nur lesen' : '' }}</span>
-              <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">· ⌀ ab {{ roleLabel[b.activeFrom] }}</span>
+              <span v-if="!b.custom" class="muted from" :title="b.fromRole === 'rubric' ? `Gruppe an Rubrik ${b.fromLabel}` : (props.pub ? `Gruppe an ${b.fromLabel} · nur lesen` : `Gruppe hängt an ${b.fromLabel}`)">{{ $t("· von {0}{1}", [b.from === id ? 'hier' : (b.fromRole === 'rubric' ? '▥ ' : '') + b.fromLabel, props.pub && b.fromRole !== 'rubric' ? ' · nur lesen' : '']) }}</span>
+              <span v-if="!b.active" class="warn" :title="`Werte erst ab ${roleLabel[b.activeFrom]} — hier nur sichtbar`">{{ $t("· ⌀ ab {0}", [roleLabel[b.activeFrom]]) }}</span>
             </td>
           </tr>
           <template v-for="def in b.defs" :key="def.key">
           <!-- Zwischenüberschrift innerhalb einer Gruppe (Taloan, 22.09.2026: ETIM nach Klassen) -->
           <tr v-if="def.divider" class="sub-row"><td class="sub" :colspan="columns.length + 1">{{ def.divider }}</td></tr>
           <tr v-else-if="def.type === 'formula' || def.type === 'template'">
-            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" title="Pflicht">●</span></div></td>
+            <td class="attr" :title="def.key + (def.type === 'template' ? ' — Vorlage: Textbaustein {key}[ … ] aus Attributen, Ergebnis wird gebaut' : ' — Formel: der Wert ist ein Skript, das Ergebnis wird gerechnet')"><div class="nm">{{ def.type === 'template' ? '{}' : 'ƒ' }} <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span></div></td>
             <template v-for="c in columns" :key="c.label">
               <td v-if="!enabled(def, c, b)" class="cell" :title="props.pub && b.fromRole !== 'rubric' ? 'Pflegewert · ändern im Pflegebaum' : ''"><div class="cell-box disabled" :class="{ ro: props.pub && b.fromRole !== 'rubric' }">{{ props.pub && b.fromRole !== 'rubric' ? roValue(def, c) : '' }}</div></td>
               <td v-else class="cell">
@@ -851,7 +851,7 @@ function cellMenu(e, def, col, block) {
             </template>
           </tr>
           <tr v-else-if="def.type === 'rows'">
-            <td class="attr" :title="def.key"><div class="nm"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">≣ Zeilen</span><span v-if="def.required" class="warn" title="Pflicht: mindestens eine Zeile">●</span></div></td>
+            <td class="attr" :title="def.key"><div class="nm"><span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span> <span class="muted">{{ $t("≣ Zeilen") }}</span><span v-if="def.required" class="warn" :title="$t('Pflicht: mindestens eine Zeile')">●</span></div></td>
             <td :colspan="columns.length" style="padding:0">
               <RowsBlock v-if="b.active" :def="def" :rows="node.rows?.[def.key] ?? []" :values="own" :locale="viewLocales[0] ?? locales[0]"
                 @set="(col, row, v) => setValue(col, { locale: col.perLocale ? (viewLocales[0] ?? locales[0]) : null, channel: null }, v, row)"
@@ -865,10 +865,10 @@ function cellMenu(e, def, col, block) {
               <span class="lbl">{{ store.label(def) }}</span><span v-if="store.attrNames !== 'label'" class="key muted">{{ def.key }}</span>
               <span v-if="def.unit" class="muted">{{ def.unit }}</span>
               <span v-if="def.pattern" class="muted" :title="`Muster: ${def.patternHint || def.pattern}`">⌗</span>
-              <span v-if="def.multiple" class="muted" title="vermehrbar: mehrere Werte, Liste in der Zelle">≣</span>
-              <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" title="Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig">⌖</span>
+              <span v-if="def.multiple" class="muted" :title="$t('vermehrbar: mehrere Werte, Liste in der Zelle')">≣</span>
+              <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" :title="$t('Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig')">⌖</span>
               <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? 'Vererbung wiederherstellen (eigener Wert wird durch den geerbten ersetzt)' : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
-              <span v-if="def.required" class="warn" title="Pflicht">●</span>
+              <span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span>
               <span v-if="def.hereLocked" class="warn" :title="`nicht an ${roleLabel[node.role]} — verwendbar an: ${(def.levels ?? []).map(r => roleLabel[r]).join(', ')}`">⌀</span>
               <span v-else-if="def.whenLocked" class="warn" :title="`gilt nur bei ${store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute })} = ${def.when.values.slice(0, 6).join(', ')}${def.when.values.length > 6 ? ' …' : ''}`">⌀</span>
             </div></td>
@@ -887,20 +887,20 @@ function cellMenu(e, def, col, block) {
           </template>
         </tbody>
       </table>
-      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="`Stand #${pubStand.stand}, gesetzt an „${pubStand.from.label}“ (Rechtsklick auf die Rubrik ändert ihn)`">❄ Stand #{{ pubStand.stand }}{{ standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '' }} · von „{{ pubStand.from.label }}“</span></div>
+      <div v-if="pubStand" class="chips" style="margin:6px 0;font-size:12px"><span class="warn" :title="`Stand #${pubStand.stand}, gesetzt an „${pubStand.from.label}“ (Rechtsklick auf die Rubrik ändert ihn)`">{{ $t("❄ Stand #{0}{1} · von „{2}“", [pubStand.stand, standAt ? ' · ' + new Date(standAt).toLocaleString('de-DE', { dateStyle: 'medium', timeStyle: 'short' }) : '', pubStand.from.label]) }}</span></div>
       <table v-if="sourceRows.length" class="grid values" :style="`width:${180 + columns.length * 220}px;margin-top:8px`">
         <tbody>
-          <tr class="group-row locked"><td :colspan="1 + columns.length"><span class="muted">▣ Pflegewerte von „{{ node.sourceLabel }}“ · nur lesen</span> <router-link :to="`/tree/${node.source}`" class="x edit" title="im Pflegebaum öffnen — dort ändern">▣</router-link></td></tr>
+          <tr class="group-row locked"><td :colspan="1 + columns.length"><span class="muted">{{ $t("▣ Pflegewerte von „{0}“ · nur lesen", [node.sourceLabel]) }}</span> <router-link :to="`/tree/${node.source}`" class="x edit" :title="$t('im Pflegebaum öffnen — dort ändern')">▣</router-link></td></tr>
           <tr v-for="r in sourceRows" :key="r.def.key"><td class="attr"><span :title="r.def.key">{{ store.label(r.def) }}</span></td>
-            <td v-for="(c, i) in columns" :key="c.label" class="cell" title="Pflegewert · ändern im Pflegebaum"><div class="cell-box disabled ro">{{ r.cells[i] ?? '' }}</div></td></tr>
+            <td v-for="(c, i) in columns" :key="c.label" class="cell" :title="$t('Pflegewert · ändern im Pflegebaum')"><div class="cell-box disabled ro">{{ r.cells[i] ?? '' }}</div></td></tr>
         </tbody>
       </table>
-      <div v-if="!blocks.length && !sourceRows.length && props.pub && node.role === 'rubric'" class="empty" title="an der Wurzel angehängt gilt sie für alle Rubriken und Verweise darunter, hier nur ab dieser Rubrik">Keine Attributgruppe — unten anhängen.</div>
-      <div v-else-if="!blocks.length" class="empty"><span title="Unten eine anhängen, oder oben am Pfad.">Keine Attributgruppe gilt hier</span></div>
+      <div v-if="!blocks.length && !sourceRows.length && props.pub && node.role === 'rubric'" class="empty" :title="$t('an der Wurzel angehängt gilt sie für alle Rubriken und Verweise darunter, hier nur ab dieser Rubrik')">{{ $t("Keine Attributgruppe — unten anhängen.") }}</div>
+      <div v-else-if="!blocks.length" class="empty"><span :title="$t('Unten eine anhängen, oder oben am Pfad.')">{{ $t("Keine Attributgruppe gilt hier") }}</span></div>
     </template>
 
       <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files])">
-        <h2 @click="toggle('media')" title="Dateien hierher ziehen legt sie an diesem Knoten ab."><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>▩ Assets <span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length"> · {{ inheritedMedia.length }} geerbt</template></span></h2>
+        <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
         <template v-if="open('media')">
         <div class="tiles">
           <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${relType(r.type)?.label?.de || r.type}`">
@@ -910,32 +910,32 @@ function cellMenu(e, def, col, block) {
               <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? 'gilt dann an allen Subitems — bis eines die Vererbung stoppt' : d.key">{{ d.label?.de || d.key }}</td>
                 <ToggleCell v-if="d.type === 'boolean'" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /><Cell v-else :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>
             </tbody></table>
-            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" title="wird an die Subitems vererbt"> · ↓ vererbt</span><button class="x" style="float:right" @click="retireRel(r)" title="Zuordnung lösen (das Medium bleibt in der Bibliothek)">×</button></div>
+            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" :title="$t('wird an die Subitems vererbt')">{{ ' ' + $t("· ↓ vererbt") }}</span><button class="x" style="float:right" @click="retireRel(r)" :title="$t('Zuordnung lösen (das Medium bleibt in der Bibliothek)')">×</button></div>
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
           <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="`geerbt von ${r.from.label} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems`">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name muted"><i>{{ r.other.label }}</i></div>
-            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" title="zum Knoten, an dem das Medium hängt">↑ {{ r.from.label }}</router-link>
-              <button class="x" style="float:right" @click="stopInherited(r)" title="Medium hier und an allen Subitems sperren (rücknehmbar)">⛔</button></div>
+            <div class="muted meta">{{ relType(r.type)?.label?.de || r.type }} · <router-link :to="`/tree/${r.from.id}`" class="muted" :title="$t('zum Knoten, an dem das Medium hängt')">↑ {{ r.from.label }}</router-link>
+              <button class="x" style="float:right" @click="stopInherited(r)" :title="$t('Medium hier und an allen Subitems sperren (rücknehmbar)')">⛔</button></div>
           </div>
         </div>
         <div v-if="stopped.length" class="chips" style="margin-top:6px">
-          <span class="muted" style="font-size:12px" title="von oben vererbt — hier und an allem darunter gesperrt">⛔ Verwendung und Vererbung unterbunden:</span>
-          <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt`">{{ r.other.label }} <button @click="retireRel(r)" title="wieder zulassen — das Medium gilt dann wieder als geerbt">×</button></span>
+          <span class="muted" style="font-size:12px" :title="$t('von oben vererbt — hier und an allem darunter gesperrt')">{{ $t("⛔ Verwendung und Vererbung unterbunden:") }}</span>
+          <span v-for="r in stopped" :key="r.id" class="chip" :title="`${r.other.label} — von oben vererbt; hier und darunter weder verwendet noch weitervererbt`">{{ r.other.label }} <button @click="retireRel(r)" :title="$t('wieder zulassen — das Medium gilt dann wieder als geerbt')">×</button></span>
         </div>
         <div class="chips" style="margin-top:6px" v-if="mediaTypes.length">
-          <button class="primary" @click="mediaFile.click()">⇧ Hochladen</button>
-          <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" title="Aufräumen: die Medien hier auf „vererben“ setzen und gleiche feste Zuordnungen an den Subitems lösen — sie erben dann">{{ inheriting || '↓ feste Bilder der Subitems durch Vererbung ersetzen' }}</button>
+          <button class="primary" @click="mediaFile.click()">{{ $t("⇧ Hochladen") }}</button>
+          <button v-if="mediaRels.length && node.children" @click="inheritToSubitems" :disabled="!!inheriting" :title="$t('Aufräumen: die Medien hier auf „vererben“ setzen und gleiche feste Zuordnungen an den Subitems lösen — sie erben dann')">{{ inheriting || '↓ feste Bilder der Subitems durch Vererbung ersetzen' }}</button>
           <input ref="mediaFile" type="file" multiple style="display:none" @change="uploadMedia([...$event.target.files]); $event.target.value = ''" />
-          <button @click="mediaPick.open = true" title="Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl">▨ Aus der Bibliothek wählen …</button>
+          <button @click="mediaPick.open = true" :title="$t('Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl')">{{ $t("▨ Aus der Bibliothek wählen …") }}</button>
         </div>
         <MediaPicker v-if="mediaPick.open" :types="mediaTypes" :exclude="[...mediaRels, ...stopped].map(r => r.other.id)" @pick="linkMedia" @close="mediaPick.open = false" />
         </template>
       </div>
 
       <div class="section" v-if="node.role !== 'rubric' && !props.pub">
-        <h2 @click="toggle('relations')"><span class="caret">{{ open('relations') ? '▾' : '▸' }}</span>⇄ Relationen <span class="muted">· {{ relCount }}</span></h2>
+        <h2 @click="toggle('relations')"><span class="caret">{{ open('relations') ? '▾' : '▸' }}</span>{{ $t("⇄ Relationen") + ' ' }}<span class="muted">· {{ relCount }}</span></h2>
         <template v-if="open('relations')">
         <div v-for="b in relBlocks" :key="b.type" class="relblock">
           <table class="grid" style="width:auto">
@@ -943,34 +943,34 @@ function cellMenu(e, def, col, block) {
             <tbody>
               <tr v-for="r in b.out" :key="r.id" :title="r.id">
                 <td class="muted">→ {{ relType(b.type)?.label?.de || b.type }}</td>
-                <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" title="Knoten zurückgezogen">✗ {{ r.other.id }}</span></td>
+                <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" :title="$t('Knoten zurückgezogen')">✗ {{ r.other.id }}</span></td>
                 <Cell v-for="d in relGroupAttrs(b.type)" :key="d.key" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" />
-                <td class="num"><button class="x" @click="retireRel(r)" title="Relation zurückziehen">×</button></td>
+                <td class="num"><button class="x" @click="retireRel(r)" :title="$t('Relation zurückziehen')">×</button></td>
               </tr>
               <tr v-for="r in b.in" :key="r.id" :title="r.id">
                 <td class="muted">{{ relType(b.type)?.symmetric ? '⇄' : '←' }} {{ relType(b.type)?.symmetric ? (relType(b.type)?.label?.de || b.type) : (relType(b.type)?.reverse?.de || relType(b.type)?.label?.de || b.type) }}</td>
-                <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" title="Knoten zurückgezogen">✗ {{ r.other.id }}</span></td>
+                <td><router-link v-if="!r.other.missing" :to="`/tree/${r.other.id}`">{{ icon(r.other.role) }} {{ r.other.label }}</router-link><span v-else class="neg" :title="$t('Knoten zurückgezogen')">✗ {{ r.other.id }}</span></td>
                 <td v-for="d in relGroupAttrs(b.type)" :key="d.key" class="muted">{{ relValue(r, d) ?? '' }}</td>
-                <td class="num"><button class="x" @click="retireRel(r)" title="Relation zurückziehen">×</button></td>
+                <td class="num"><button class="x" @click="retireRel(r)" :title="$t('Relation zurückziehen')">×</button></td>
               </tr>
             </tbody>
           </table>
         </div>
         <div class="chips" style="margin-top:6px">
-          <select v-model="newRel.type" style="width:170px" title="Relationstyp — ⊞ Modell → Relationen"><option value="">⇄ Typ …</option><option v-for="t in relTypesFromHere" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
-          <input v-model="newRel.q" type="search" placeholder="🔍 Ziel: Name, SKU, Id" style="width:240px" :disabled="!newRel.type" @input="newRel.to = null" />
+          <select v-model="newRel.type" style="width:170px" :title="$t('Relationstyp — ⊞ Modell → Relationen')"><option value="">{{ $t("⇄ Typ …") }}</option><option v-for="t in relTypesFromHere" :key="t.key" :value="t.key">{{ t.label?.de || t.key }}</option></select>
+          <input v-model="newRel.q" type="search" :placeholder="$t('🔍 Ziel: Name, SKU, Id')" style="width:240px" :disabled="!newRel.type" @input="newRel.to = null" />
           <span v-if="newRel.to" class="chip">→ {{ tree.byId.get(newRel.to)?.label }} <button @click="newRel.to = null; newRel.q = ''">×</button></span>
-          <button class="primary" :disabled="!newRel.type || !newRel.to" @click="addRel">Verbinden</button>
+          <button class="primary" :disabled="!newRel.type || !newRel.to" @click="addRel">{{ $t("Verbinden") }}</button>
         </div>
         <div v-if="newRel.q && !newRel.to" class="picker" style="max-width:520px">
           <div v-for="m in relMatches" :key="m.id" class="pick" @click="newRel.to = m.id; newRel.q = m.label">{{ icon(m.role) }} {{ m.label }}<span class="muted mono" style="margin-left:auto;font-size:11px">{{ tree.keyText(m) || m.id }}</span></div>
-          <div v-if="!relMatches.length" class="muted" style="padding:4px 8px;font-size:12px">nichts zu „{{ newRel.q }}“</div>
+          <div v-if="!relMatches.length" class="muted" style="padding:4px 8px;font-size:12px">{{ $t("nichts zu „{0}“", [newRel.q]) }}</div>
         </div>
         </template>
       </div>
 
       <div class="section" v-if="workflows.length">
-        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>⚑ Workflow <span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ w.label?.de || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : 'nicht ausgeleitet').join(' · ')"> ⚠</span></span></span></h2>
+        <h2 @click="toggle('workflow')"><span class="caret">{{ open('workflow') ? '▾' : '▸' }}</span>{{ $t("⚑ Workflow") + ' ' }}<span class="muted">· <span v-for="(w, i) in workflows" :key="w.workflow"><span v-if="i"> · </span>{{ w.label?.de || w.workflow }}: <span :style="`color:${wfColor(w.color)};font-weight:600`">{{ w.stateLabel?.de || w.state }}</span><span v-if="w.pending?.length" class="warn" :title="w.pending.map(pe => pe.canFix ? effLabel(pe.effect) : 'nicht ausgeleitet').join(' · ')"> ⚠</span></span></span></h2>
         <template v-if="open('workflow')">
         <table class="grid form"><colgroup><col style="width:150px" /><col /></colgroup><tbody>
           <template v-for="w in workflows" :key="w.workflow">
@@ -979,23 +979,23 @@ function cellMenu(e, def, col, block) {
             <td style="display:flex;gap:6px;flex-wrap:nowrap;align-items:center;width:100%;box-sizing:border-box;overflow:hidden">
               <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="(w.inheritedFrom ? `Zustand geerbt von ${w.inheritedFrom.role === 'product' ? 'Produkt' : 'Gruppe'} „${w.inheritedFrom.label}“ · ` : '') + (w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : 'Startzustand')">{{ w.stateLabel?.de || w.state }}<span v-if="w.inheritedFrom" class="muted"> ↑</span></span>
               <button v-for="t in w.transitions" :key="t.key" :class="{ blocked: t.blocked }" @click="t.blocked ? wfBlocked(t) : wfStep(w, t)" :title="t.blocked ? t.blocked : `→ ${t.toLabel?.de || t.to}${t.noteRequired ? ' · Notiz Pflicht' : ''}${t.effects?.length ? ' · ' + t.effects.join(', ') : ''}`">{{ t.blocked ? '⊘ ' : '' }}{{ t.label?.de || t.key }} →</button>
-              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" title="Vererbung wiederherstellen (eigener Zustand wird aufgehoben)">↑ Erben</button>
+              <button v-if="!w.inheritedFrom && w.since && node.parent" class="x" @click="wfClear(w)" :title="$t('Vererbung wiederherstellen (eigener Zustand wird aufgehoben)')">{{ $t("↑ Erben") }}</button>
               <span v-for="t in w.all.filter(t => t.escalateAfterDays != null)" :key="'esc' + t.key" :class="t.escalated ? 'warn' : 'muted'" style="font-size:12px;flex:0 0 auto;white-space:nowrap" :title="`${t.escalated ? 'eskaliert seit' : 'eskaliert am'} ${t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : '—'} an ${(t.escalateRoles ?? []).join(', ') || 'alle Rollen'} · Schritt „${t.label?.de || t.key}“`">⏰ {{ t.escalatesAt ? new Date(t.escalatesAt).toLocaleDateString('de-DE') : t.escalateAfterDays + ' d' }}</span>
-              <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">nächster Schritt: {{ w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ') }}</span>
-              <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">Ende des Wegs</span>
+              <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" :title="w.all.map(t => `${t.label?.de || t.key}: ${(t.roles ?? []).join(', ') || 'jede Rolle'}`).join(' · ')">{{ $t("nächster Schritt: {0}", [w.all.map(t => (t.roles ?? []).join('/') || 'Rolle mit Schreibrecht').join(', ')]) }}</span>
+              <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">{{ $t("Ende des Wegs") }}</span>
               <span class="grow" />
               <template v-for="pe in (w.pending ?? [])" :key="pe.effect">
                 <button v-if="pe.canFix" class="x warn" @click="wfEffect(pe.effect)" :title="`Wirkung „${effLabel(pe.effect)}“ nachholen (Schritt „${w.transition}“ hat sie nicht ausgeführt)`">⚠ {{ effLabel(pe.effect) }}</button>
-                <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben${pe.why ? ' · ' + pe.why : ''}`">⚠ nicht ausgeleitet</span>
+                <span v-else class="warn" style="font-size:12px" :title="`${pe.effect.split(':')[1]}: keine Variante freigegeben${pe.why ? ' · ' + pe.why : ''}`">{{ $t("⚠ nicht ausgeleitet") }}</span>
               </template>
               <span v-if="w.note" class="muted" :title="w.transition ? `Notiz zum Schritt „${w.transition}“: ${w.note}` : w.note" style="flex:0 0 300px;width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-left:auto;text-align:right">✎ {{ w.note }} <span class="mono">· {{ w.actor }}</span></span>
               <button class="x" @click="wfAssign(w)" :title="w.assigned ? `Zuständigen ändern (jetzt ${w.assigned})` : 'Zuständigen zuweisen'">{{ w.assigned ? '👤 ' + w.assigned : '👤' }}</button>
-              <button class="x" @click="wfHistory(w)" title="Verlauf anzeigen">≡</button>
+              <button class="x" @click="wfHistory(w)" :title="$t('Verlauf anzeigen')">≡</button>
             </td>
           </tr>
           <!-- Workflow je Sprache (Taloan, 22.09.): eine Zeile je Sprache — Französisch in Korrektur, Deutsch freigegeben -->
           <tr v-if="w.perLocale">
-            <td class="attr muted" title="Dieser Workflow läuft je Sprache: jede Sprache geht ihren eigenen Weg, und die Wirkung eines Schritts (Freigabe) trifft nur sie.">🗣 je Sprache</td>
+            <td class="attr muted" :title="$t('Dieser Workflow läuft je Sprache: jede Sprache geht ihren eigenen Weg, und die Wirkung eines Schritts (Freigabe) trifft nur sie.')">{{ $t("🗣 je Sprache") }}</td>
             <td><WorkflowLocales :wf="w" @step="(loc, t) => wfStep(w, t, loc)" @clear="loc => wfClear(w, loc)" /></td>
           </tr>
           </template>
@@ -1005,10 +1005,10 @@ function cellMenu(e, def, col, block) {
       <!-- Bänder der Plugins (nodeBands, Taloan 22.09.): ETIM-Stand u. a. — beim Gegenstand, nicht im Plugin -->
       <PluginBands v-if="node.role !== 'rubric'" :id="id" :role="node.role" />
       <div class="section" v-if="node.role !== 'group' && node.role !== 'rubric'">
-        <h2 @click="toggle('releases')" title="Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig heisst keine Freigabe."><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>✓ Freigaben</h2>
+        <h2 @click="toggle('releases')" :title="$t('Vollständigkeit aus der Pflicht der aktiven Attribute; unvollständig heisst keine Freigabe.')"><span class="caret">{{ open('releases') ? '▾' : '▸' }}</span>{{ $t("✓ Freigaben") }}</h2>
         <template v-if="open('releases')">
         <table class="grid releases">
-          <thead><tr><th>Kanal</th><th v-if="node.role === 'variant'">*</th><th v-for="l in locales" :key="l">{{ l }}</th></tr></thead>
+          <thead><tr><th>{{ $t("Kanal") }}</th><th v-if="node.role === 'variant'">*</th><th v-for="l in locales" :key="l">{{ l }}</th></tr></thead>
           <tbody>
             <tr v-for="ch in channels" :key="ch">
               <td class="mono muted">{{ ch }}</td>
@@ -1018,7 +1018,7 @@ function cellMenu(e, def, col, block) {
               <td v-for="l in locales" :key="l" class="rel">
                 <button v-if="node.role === 'variant'" class="toggle" :class="{ on: released(ch, l), via: !released(ch, l) && releasedVia(ch, l) }" :disabled="!released(ch, l) && !!incomplete(ch, l)" :title="releasedVia(ch, l) && !released(ch, l) ? `Eigens freigeben (bisher über das Sortiment von ${releasedVia(ch, l)})` : incomplete(ch, l) ? 'fehlt: ' + incomplete(ch, l).missing.join(', ') : ''" @click="toggleRelease(ch, l)">{{ released(ch, l) ? '✓' : releasedVia(ch, l) ? '◌' : '·' }}</button>
                 <span v-if="completeness(ch, l)" class="mono" :class="completeness(ch, l).missing.length ? 'neg' : 'pos'" :title="completeness(ch, l).missing.length ? 'fehlt: ' + completeness(ch, l).missing.join(', ') : 'vollständig'">{{ completeness(ch, l).filled }}/{{ completeness(ch, l).required }}</span>
-                <span v-else class="muted" title="hier ist nichts Pflicht">–</span>
+                <span v-else class="muted" :title="$t('hier ist nichts Pflicht')">–</span>
               </td>
             </tr>
           </tbody>
@@ -1027,20 +1027,20 @@ function cellMenu(e, def, col, block) {
       </div>
 
       <div class="section" v-if="node.orphans?.length">
-        <h2 class="warn">⚠ Verwaiste Werte</h2>
-        <div class="muted"><span title="Werte für Attribute, die hier über keine Gruppe gelten — etwa nach dem Umhängen.">Eigene Werte ohne Gruppe:</span> <span class="mono">{{ node.orphans.join(', ') }}</span> — Gruppe anhängen, dann gelten sie wieder.</div>
+        <h2 class="warn">{{ $t("⚠ Verwaiste Werte") }}</h2>
+        <div class="muted"><span :title="$t('Werte für Attribute, die hier über keine Gruppe gelten — etwa nach dem Umhängen.')">{{ $t("Eigene Werte ohne Gruppe:") }}</span> <span class="mono">{{ node.orphans.join(', ') }}</span>{{ ' ' + $t("— Gruppe anhängen, dann gelten sie wieder.") }}</div>
       </div>
 
       <div class="section" v-if="node.role === 'product' && !props.pub">
-        <h2 @click="toggle('axes')" title="Sichern Eindeutigkeit in den gewählten Attributen über alle Varianten."><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>◆ Variantenachsen</h2>
+        <h2 @click="toggle('axes')" :title="$t('Sichern Eindeutigkeit in den gewählten Attributen über alle Varianten.')"><span class="caret">{{ open('axes') ? '▾' : '▸' }}</span>{{ $t("◆ Variantenachsen") }}</h2>
         <template v-if="open('axes')">
         <table v-if="node.axes.length" class="grid" style="width:auto">
-          <thead><tr><th style="width:180px">Achse</th><th style="width:260px">Attribut</th><th style="width:30px"></th></tr></thead>
+          <thead><tr><th style="width:180px">{{ $t("Achse") }}</th><th style="width:260px">{{ $t("Attribut") }}</th><th style="width:30px"></th></tr></thead>
           <tbody>
             <tr v-for="(k, i) in node.axes" :key="k" :title="k">
               <td class="muted">{{ i + 1 }}. {{ axisLabel(k) }}</td>
               <td><router-link :to="{ path: '/model', query: { section: 'attributes', key: k } }" class="mono">{{ k }}</router-link></td>
-              <td class="num"><button class="x" @click="setAxes(node.axes.filter(x => x !== k))" title="Achse entfernen — ihr Wert bleibt als Attributwert an den Varianten">×</button></td>
+              <td class="num"><button class="x" @click="setAxes(node.axes.filter(x => x !== k))" :title="$t('Achse entfernen — ihr Wert bleibt als Attributwert an den Varianten')">×</button></td>
             </tr>
           </tbody>
         </table>
@@ -1049,19 +1049,19 @@ function cellMenu(e, def, col, block) {
           <button class="primary" :disabled="!addAxis" @click="axisAdd">{{ wiz ? 'prüfen' : 'dazu' }}</button>
         </div>
         <div v-if="wiz" class="picker" style="padding:8px;margin-top:6px">
-          <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">· {{ wiz.total }} Varianten{{ wiz.empty ? `, ${wiz.empty} ohne Wert (zählen nicht)` : '' }}</span></div>
-          <div v-if="wiz.dupes.length" class="warn" style="margin-top:6px">⚠ nicht eindeutig — <span v-for="d in wiz.dupes.slice(0, 6)" :key="d.combo" class="chip" style="margin-right:4px">{{ d.combo }} × {{ d.n }}</span>{{ wiz.dupes.length > 6 ? ` … ${wiz.dupes.length}` : '' }} → oben eine weitere Achse wählen und prüfen</div>
-          <div v-else class="pos" style="margin-top:6px">✓ eindeutig</div>
-          <div class="chips" style="margin-top:6px"><button class="primary" :disabled="wiz.dupes.length > 0" @click="axisCommit">Achsen hinzufügen</button><button @click="wiz = null">Abbrechen</button></div>
+          <div class="chips"><span v-for="k in wiz.axes" :key="k" class="chip" :class="{ on: !node.axes.includes(k) }">{{ axisLabel(k) }}</span><span class="muted" style="font-size:12px">{{ $t("· {0} Varianten{1}", [wiz.total, wiz.empty ? `, ${wiz.empty} ohne Wert (zählen nicht)` : '']) }}</span></div>
+          <div v-if="wiz.dupes.length" class="warn" style="margin-top:6px">{{ $t("⚠ nicht eindeutig —") + ' ' }}<span v-for="d in wiz.dupes.slice(0, 6)" :key="d.combo" class="chip" style="margin-right:4px">{{ d.combo }} × {{ d.n }}</span>{{ $t("{0} → oben eine weitere Achse wählen und prüfen", [wiz.dupes.length > 6 ? ` … ${wiz.dupes.length}` : '']) }}</div>
+          <div v-else class="pos" style="margin-top:6px">{{ $t("✓ eindeutig") }}</div>
+          <div class="chips" style="margin-top:6px"><button class="primary" :disabled="wiz.dupes.length > 0" @click="axisCommit">{{ $t("Achsen hinzufügen") }}</button><button @click="wiz = null">{{ $t("Abbrechen") }}</button></div>
         </div>
         </template>
       </div>
 
       <div class="section" v-if="!props.pub || node.role === 'rubric'">
-        <h2 @click="toggle('groups')" title="Hier angehängt, gelten sie ab hier nach unten; geerbte stehen oben mit ihrer Herkunft."><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>▤ Attributgruppen ab diesem Knoten</h2>
+        <h2 @click="toggle('groups')" :title="$t('Hier angehängt, gelten sie ab hier nach unten; geerbte stehen oben mit ihrer Herkunft.')"><span class="caret">{{ open('groups') ? '▾' : '▸' }}</span>{{ $t("▤ Attributgruppen ab diesem Knoten") }}</h2>
         <template v-if="open('groups')">
         <table v-if="attachedSorted.length" class="grid" style="width:auto">
-          <thead><tr><th style="width:180px">Gruppe</th><th style="width:260px">gilt</th><th style="width:30px"></th></tr></thead>
+          <thead><tr><th style="width:180px">{{ $t("Gruppe") }}</th><th style="width:260px">{{ $t("gilt") }}</th><th style="width:30px"></th></tr></thead>
           <tbody>
             <tr v-for="g in attachedSorted" :key="g" :title="g">
               <td><router-link :to="{ path: '/model', query: { section: 'groups', key: g } }">▤ {{ groupLabel(g) }}</router-link></td>
@@ -1071,21 +1071,20 @@ function cellMenu(e, def, col, block) {
           </tbody>
         </table>
         <div class="chips" style="margin-top:6px">
-          <select v-model="addGroup" style="width:200px"><option value="">+ Gruppe …</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ g.label?.de || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
-          <button class="primary" :disabled="!addGroup" @click="attachAdd">Anhängen</button>
+          <select v-model="addGroup" style="width:200px"><option value="">{{ $t("+ Gruppe …") }}</option><option v-for="g in freeGroups" :key="g.key" :value="g.key" :title="g.key">{{ g.label?.de || g.key }}{{ g.activeFrom ? ' (ab ' + roleLabel[g.activeFrom] + ')' : '' }}</option></select>
+          <button class="primary" :disabled="!addGroup" @click="attachAdd">{{ $t("Anhängen") }}</button>
         </div>
         </template>
       </div>
 
       <div class="section" v-if="node.role !== 'rubric' && !props.pub">
-        <h2 @click="toggle('versions')"><span class="caret">{{ open('versions') ? '▾' : '▸' }}</span>⎘ Versionen <span class="muted"><span title="Stand einfrieren, Belege der Erzeuger, Stand ansehen, zurückrollen.">· eingefrorene Stände</span></span></h2>
+        <h2 @click="toggle('versions')"><span class="caret">{{ open('versions') ? '▾' : '▸' }}</span>{{ $t("⎘ Versionen") + ' ' }}<span class="muted"><span :title="$t('Stand einfrieren, Belege der Erzeuger, Stand ansehen, zurückrollen.')">{{ $t("· eingefrorene Stände") }}</span></span></h2>
         <VersionsPanel v-if="open('versions')" :id="id" :role="node.role" @changed="load(); store.poll(true)" />
       </div>
     </div>
 
     <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px">
-      <kbd>Tab</kbd> Zelle · <kbd>Enter</kbd> bearbeiten/speichern · <kbd>Esc</kbd> verwerfen · <kbd>Entf</kbd> <span title="Eigenen Wert löschen · schraffiert = Achse gibt es nicht · ⌀ = Gruppe hier nicht aktiv">löschen · schraffiert · ⌀</span> <i>kursiv</i> = geerbt
-    </div>
+      <kbd>{{ $t("Tab") }}</kbd>{{ ' ' + $t("Zelle ·") + ' ' }}<kbd>{{ $t("Enter") }}</kbd>{{ ' ' + $t("bearbeiten/speichern ·") + ' ' }}<kbd>{{ $t("Esc") }}</kbd>{{ ' ' + $t("verwerfen ·") + ' ' }}<kbd>{{ $t("Entf") }}</kbd> <span :title="$t('Eigenen Wert löschen · schraffiert = Achse gibt es nicht · ⌀ = Gruppe hier nicht aktiv')">{{ $t("löschen · schraffiert · ⌀") }}</span> <i>{{ $t("kursiv") }}</i>{{ ' ' + $t("= geerbt") + ' ' }}</div>
   </div>
   <div v-else class="pane" style="flex:3"><div class="empty">…</div></div>
 
@@ -1095,11 +1094,11 @@ function cellMenu(e, def, col, block) {
     :attributes="(model?.attributes ?? []).filter(a => a.key !== scriptCell.def.key && a.type !== 'rows' && a.type !== 'html')"
     @save="v => { setValue(scriptCell.def, scriptCell.col, v); scriptCell = null }" @close="scriptCell = null" />
   <div v-if="store.journalOpen" class="pane" :style="`width:${journalW}px;flex:none`">
-    <div class="toolbar"><h1>≡ Journal</h1><span class="muted mono">{{ id }}</span><span class="muted">{{ entries.length }}</span><span class="grow" /><button class="x" @click="store.journalOpen = false; store.save()" title="Journal zuklappen">▸</button></div>
+    <div class="toolbar"><h1>{{ $t("≡ Journal") }}</h1><span class="muted mono">{{ id }}</span><span class="muted">{{ entries.length }}</span><span class="grow" /><button class="x" @click="store.journalOpen = false; store.save()" :title="$t('Journal zuklappen')">▸</button></div>
     <div class="scroll"><EntryList :entries="entries" /></div>
   </div>
-  <div v-else class="pane rail-pane" @click="store.journalOpen = true; store.save()" title="Journal aufklappen">
-    <span class="vert">◂ ≡ Journal · {{ entries.length }}</span>
+  <div v-else class="pane rail-pane" @click="store.journalOpen = true; store.save()" :title="$t('Journal aufklappen')">
+    <span class="vert">{{ $t("◂ ≡ Journal · {0}", [entries.length]) }}</span>
   </div>
 </template>
 

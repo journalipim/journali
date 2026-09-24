@@ -57,13 +57,13 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
     <thead>
       <tr>
         <th class="num">#</th>
-        <th>Zeit</th>
+        <th>{{ $t("Zeit") }}</th>
         <th>👤</th>
         <th v-if="showStream">▦</th>
-        <th title="Art der Arbeit">◧</th>
-        <th>Typ</th>
-        <th>Inhalt</th>
-        <th title="Stapel">⧉</th>
+        <th :title="$t('Art der Arbeit')">◧</th>
+        <th>{{ $t("Typ") }}</th>
+        <th>{{ $t("Inhalt") }}</th>
+        <th :title="$t('Stapel')">⧉</th>
       </tr>
     </thead>
     <tbody>
@@ -72,11 +72,11 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
           <td class="num mono muted">{{ r.first.number }}–{{ r.last.number }}</td>
           <td class="mono muted">{{ when(r.last.at) }}</td>
           <td>{{ r.last.actor }}</td>
-          <td v-if="showStream" class="muted">{{ new Set(r.group.map(g => g.stream)).size }} Ströme</td>
+          <td v-if="showStream" class="muted">{{ $t("{0} Ströme", [new Set(r.group.map(g => g.stream)).size]) }}</td>
           <td class="muted" :title="[...new Set(r.group.map(g => kindText(g.kind)))].join(' · ')">{{ [...new Set(r.group.map(g => kindIcon(g.kind)))].join('') }}</td>
-          <td class="muted">{{ open[r.batch] ? '▾' : '▸' }} ⧉ Stapel</td>
-          <td><b>{{ r.group.length }} Einträge</b> <span class="muted">· {{ typeText(r.types) }}</span>
-            <button class="x" style="margin-left:8px" @click.stop="undo(r.batch)" @mouseenter="preview(r.batch)" :title="previews[r.batch] ?? 'lade Vorschau …'">↶ Rückgängig</button>
+          <td class="muted">{{ $t("{0} ⧉ Stapel", [open[r.batch] ? '▾' : '▸']) }}</td>
+          <td><b>{{ $t("{0} Einträge", [r.group.length]) }}</b> <span class="muted">· {{ typeText(r.types) }}</span>
+            <button class="x" style="margin-left:8px" @click.stop="undo(r.batch)" @mouseenter="preview(r.batch)" :title="previews[r.batch] ?? 'lade Vorschau …'">{{ $t("↶ Rückgängig") }}</button>
           </td>
           <td class="mono muted" :title="'Stapel ' + r.batch">{{ r.batch.slice(2, 6) }}</td>
         </tr>
@@ -89,15 +89,15 @@ async function restoreEntry(e) { try { const k = await restoreModel(e); store.to
           <td class="muted">{{ r.e.type }}</td>
           <td :class="{ pos: r.e.type.endsWith('Granted') || r.e.type.endsWith('Assigned') || r.e.type.endsWith('Created'), neg: r.e.type.endsWith('Revoked') || r.e.type.endsWith('Removed') || r.e.type.endsWith('Retired') }">
             {{ describe(r.e) }}
-            <button v-if="r.e.type === 'NodeRetired' && !r.inGroup && !tree.byId.has(r.e.stream)" class="x" style="margin-left:8px" @click="undo(r.e.batch, r.e.stream)" @mouseenter="preview(r.e.batch, r.e.stream)" :title="previews[r.e.batch ?? r.e.stream] ?? 'lade Vorschau …'">↶ Wiederherstellen</button>
-            <button v-else-if="!r.inGroup && canRestoreModel(r.e) && mayRestore(r.e)" class="x" style="margin-left:8px" @click="restoreEntry(r.e)" title="die letzte Definition vor dem Zurückziehen noch einmal schreiben">↶ Wiederherstellen</button>
+            <button v-if="r.e.type === 'NodeRetired' && !r.inGroup && !tree.byId.has(r.e.stream)" class="x" style="margin-left:8px" @click="undo(r.e.batch, r.e.stream)" @mouseenter="preview(r.e.batch, r.e.stream)" :title="previews[r.e.batch ?? r.e.stream] ?? 'lade Vorschau …'">{{ $t("↶ Wiederherstellen") }}</button>
+            <button v-else-if="!r.inGroup && canRestoreModel(r.e) && mayRestore(r.e)" class="x" style="margin-left:8px" @click="restoreEntry(r.e)" :title="$t('die letzte Definition vor dem Zurückziehen noch einmal schreiben')">{{ $t("↶ Wiederherstellen") }}</button>
           </td>
           <td class="mono muted" :title="r.e.batch ? 'Stapel ' + r.e.batch : ''">{{ r.e.batch ? r.e.batch.slice(2, 6) : '' }}</td>
         </tr>
       </template>
     </tbody>
   </table>
-  <div v-if="!entries.length" class="empty">Keine Einträge</div>
+  <div v-if="!entries.length" class="empty">{{ $t("Keine Einträge") }}</div>
 </template>
 
 <style scoped>

@@ -59,15 +59,15 @@ const kindCount = k => entries.value.filter(e => e.kind === k).length
 <template>
   <div class="pane" style="flex:1">
     <div class="toolbar">
-      <h1>≡ Journal</h1>
+      <h1>{{ $t("≡ Journal") }}</h1>
       <span class="muted" :title="oldest ? `geladen ab #${oldest}` : ''">{{ shown.length }}{{ shown.length !== entries.length ? ' / ' + entries.length : '' }}{{ oldest && oldest > 1 ? ` · ab #${oldest}` : '' }}</span>
-      <input v-model="filter" type="search" placeholder="Filter: Strom, Typ, Name, Inhalt" style="width:300px" />
+      <input v-model="filter" type="search" :placeholder="$t('Filter: Strom, Typ, Name, Inhalt')" style="width:300px" />
       <span v-for="[k, label] in KINDS" :key="k" class="view-chip" :class="{ on: kinds.has(k) }" @click="toggleKind(k)" :title="`${kindCount(k)} Einträge dieser Art anzeigen`">{{ label }}</span>
       <span class="grow" />
       <span class="muted mono">#{{ store.head }}</span>
     </div>
     <div class="scroll"><EntryList :entries="shown" show-stream />
-      <div v-if="oldest && oldest > 1" class="chips" style="padding:8px"><button class="x" :disabled="loadingOlder" @click="older" title="die nächsten älteren Einträge laden">⇣ ältere{{ loadingOlder ? ' …' : ` (vor #${oldest})` }}</button></div>
+      <div v-if="oldest && oldest > 1" class="chips" style="padding:8px"><button class="x" :disabled="loadingOlder" @click="older" :title="$t('die nächsten älteren Einträge laden')">{{ $t("⇣ ältere{0}", [loadingOlder ? ' …' : ` (vor #${oldest})`]) }}</button></div>
     </div>
   </div>
 </template>

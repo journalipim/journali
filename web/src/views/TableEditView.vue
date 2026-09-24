@@ -599,44 +599,44 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
       <span v-if="moved" class="chip" :title="`${moved} Zeilen verschoben — speichern schreibt die Reihenfolge`">↕ {{ moved }}</span>
       <span v-if="rowSel.size" class="chip" :title="`${rowSel.size} Zeilen markiert — Rechtsklick für kopieren, einfügen, verschieben, löschen`">▤ {{ rowSel.size }}</span>
       <template v-if="popup">
-        <button class="primary" :disabled="!!busy" @click="applyAndClose" title="Änderungen als ein Stapel ins Journal und Fenster schliessen — Schliessen über X tut dasselbe">✓ Übernehmen &amp; schliessen</button>
-        <button :disabled="!!busy" @click="discardAndClose" title="Änderungen verwerfen und Fenster schliessen">✗ Verwerfen</button>
+        <button class="primary" :disabled="!!busy" @click="applyAndClose" :title="$t('Änderungen als ein Stapel ins Journal und Fenster schliessen — Schliessen über X tut dasselbe')">{{ $t("✓ Übernehmen & schliessen") }}</button>
+        <button :disabled="!!busy" @click="discardAndClose" :title="$t('Änderungen verwerfen und Fenster schliessen')">{{ $t("✗ Verwerfen") }}</button>
       </template>
       <template v-else>
-        <button class="primary" :disabled="!hasChanges || !!busy" @click="save" title="alle Änderungen als ein Stapel ins Journal (Strg+S)">💾 Speichern</button>
-        <button :disabled="!hasChanges" @click="discard" title="Änderungen verwerfen — auch gelöschte und verschobene Zeilen">Verwerfen</button>
+        <button class="primary" :disabled="!hasChanges || !!busy" @click="save" :title="$t('alle Änderungen als ein Stapel ins Journal (Strg+S)')">{{ $t("💾 Speichern") }}</button>
+        <button :disabled="!hasChanges" @click="discard" :title="$t('Änderungen verwerfen — auch gelöschte und verschobene Zeilen')">{{ $t("Verwerfen") }}</button>
       </template>
     </div>
     <div class="toolbar view">
-      <span class="muted">Sprache</span>
+      <span class="muted">{{ $t("Sprache") }}</span>
       <span v-for="l in locales" :key="l" class="view-chip" :class="{ on: locale === l }" @click="locale = l">{{ l }}</span>
       <span class="sep">·</span>
-      <select v-model="viewKey" title="Attributsicht: welche Spalten, in welcher Reihenfolge"><option value="">◫ alle Attribute ({{ data.columns.length }})</option><option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option></select>
-      <input v-model="filter" type="search" placeholder="Spalte …" style="width:160px" title="Spalten nach Name oder Schlüssel filtern" />
-      <span v-if="filter" class="muted">{{ attrColumns.length }} von {{ data.columns.length }}</span>
+      <select v-model="viewKey" :title="$t('Attributsicht: welche Spalten, in welcher Reihenfolge')"><option value="">{{ $t("◫ alle Attribute ({0})", [data.columns.length]) }}</option><option v-for="v in views" :key="v.key" :value="v.key">◫ {{ v.label?.de || v.key }}</option></select>
+      <input v-model="filter" type="search" :placeholder="$t('Spalte …')" style="width:160px" :title="$t('Spalten nach Name oder Schlüssel filtern')" />
+      <span v-if="filter" class="muted">{{ $t("{0} von {1}", [attrColumns.length, data.columns.length]) }}</span>
       <span class="grow" />
-      <button v-if="props.deep !== '1'" @click="addRow" :title="`neue ${roleLabel[childRole]?.replace(/n$/, '') ?? 'Zeile'} unter ${data?.node?.label ?? ''} — Werte eintragen, speichern legt den Knoten an`">+ Zeile</button>
-      <button @click="fillDown" :disabled="!sel" title="Oberste Zelle des Bereichs in alle darunter füllen (Strg+D)">⇩ Füllen</button>
-      <button @click="fillSeries" :disabled="!sel" title="Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)">⇣ Reihe fortsetzen</button>
-      <button class="x" title="Bedienung" @click="dialog.help({ title: 'Tabelle bedienen', rows: HELP })">?</button>
+      <button v-if="props.deep !== '1'" @click="addRow" :title="`neue ${roleLabel[childRole]?.replace(/n$/, '') ?? 'Zeile'} unter ${data?.node?.label ?? ''} — Werte eintragen, speichern legt den Knoten an`">{{ $t("+ Zeile") }}</button>
+      <button @click="fillDown" :disabled="!sel" :title="$t('Oberste Zelle des Bereichs in alle darunter füllen (Strg+D)')">{{ $t("⇩ Füllen") }}</button>
+      <button @click="fillSeries" :disabled="!sel" :title="$t('Reihe fortsetzen: 1, 2 → 3, 4 · Art-001 → Art-002 (Strg+Shift+D)')">{{ $t("⇣ Reihe fortsetzen") }}</button>
+      <button class="x" :title="$t('Bedienung')" @click="dialog.help({ title: 'Tabelle bedienen', rows: HELP })">?</button>
     </div>
     <div class="toolbar replace">
       <span class="muted">⇄</span>
-      <input ref="repFind" v-model="rep.find" type="text" placeholder="suchen (Strg+H)" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="rep.find = ''; rep.with = ''" />
-      <input v-model="rep.with" type="text" placeholder="ersetzen durch" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="rep.find = ''; rep.with = ''" />
-      <label><input type="checkbox" v-model="rep.all" /> ganze Tabelle</label>
-      <label><input type="checkbox" v-model="rep.caseSensitive" /> Gross/Klein</label>
-      <label><input type="checkbox" v-model="rep.whole" /> ganze Zelle</label>
+      <input ref="repFind" v-model="rep.find" type="text" :placeholder="$t('suchen (Strg+H)')" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="rep.find = ''; rep.with = ''" />
+      <input v-model="rep.with" type="text" :placeholder="$t('ersetzen durch')" style="width:180px" @keydown.enter="replaceAll" @keydown.esc="rep.find = ''; rep.with = ''" />
+      <label><input type="checkbox" v-model="rep.all" />{{ ' ' + $t("ganze Tabelle") }}</label>
+      <label><input type="checkbox" v-model="rep.caseSensitive" />{{ ' ' + $t("Gross/Klein") }}</label>
+      <label><input type="checkbox" v-model="rep.whole" />{{ ' ' + $t("ganze Zelle") }}</label>
       <span class="muted">{{ rep.find ? replaceHits + ' Treffer' + (rep.all || !sel ? '' : ' im Bereich') : '' }}</span>
-      <button class="primary" :disabled="!replaceHits" @click="replaceAll">Alle ersetzen</button>
+      <button class="primary" :disabled="!replaceHits" @click="replaceAll">{{ $t("Alle ersetzen") }}</button>
     </div>
     <div class="scroll" ref="scrollBox" style="position:relative">
-      <div v-if="handle" class="fill-handle" :style="`top:${handle.top}px;left:${handle.left}px`" title="Ausfüllkästchen: nach unten ziehen füllt — ein Wert wiederholt sich, zwei Zahlen setzen die Reihe fort" />
+      <div v-if="handle" class="fill-handle" :style="`top:${handle.top}px;left:${handle.left}px`" :title="$t('Ausfüllkästchen: nach unten ziehen füllt — ein Wert wiederholt sich, zwei Zahlen setzen die Reihe fort')" />
       <table class="grid values tab" :style="`width:${tableWidth}px`">
         <colgroup><col :style="`width:${ROWSEL_W}px`" /><col v-for="c in columns" :key="c.key" :style="`width:${colWidth(c)}px`" /></colgroup>
         <thead><tr>
-          <th class="rowsel" title="Alle Zeilen markieren" style="position:sticky">▤</th>
-          <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="[{ ro: !editable(c) && c.virtual !== 'label' }, kindOf(c)]" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="suffix" title="sprachabhängig — Spalte zeigt die gewählte Sprache">{{ locale }}</span><span v-if="c.unit" class="suffix">{{ c.unit }}</span><span class="col-resize" title="Breite ziehen · Doppelklick = Autofit" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
+          <th class="rowsel" :title="$t('Alle Zeilen markieren')" style="position:sticky">▤</th>
+          <th v-for="c in columns" :key="c.key" :title="headTitle(c)" :class="[{ ro: !editable(c) && c.virtual !== 'label' }, kindOf(c)]" style="position:sticky">{{ headText(c) }}<span v-if="headLocale(c)" class="suffix" :title="$t('sprachabhängig — Spalte zeigt die gewählte Sprache')">{{ locale }}</span><span v-if="c.unit" class="suffix">{{ c.unit }}</span><span class="col-resize" :title="$t('Breite ziehen · Doppelklick = Autofit')" @mousedown="startResize($event, c)" @dblclick.stop="delete widths[c.key]; widths = { ...widths }" /></th>
         </tr></thead>
         <tbody>
           <tr v-for="(r, ri) in rows" :key="r.row.id" :data-id="r.row.id" :class="{ del: r.retired, 'drop-before': dropAt === ri, 'drop-after': dropAt === rows.length && ri === rows.length - 1 }" @contextmenu="onRowMenu($event, ri)">
@@ -646,8 +646,8 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
               <td v-if="c.virtual === 'label' && !labelCol(r)" class="cell label" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="r.row.name ? 'fixierter Name (Rechtsklick im Baum → Benennung lösen)' : 'kein ★-Attribut gilt hier — Name aus SKU/Achsen/Id'">{{ icon(r.row.role) }} {{ r.row.label }}</div></td>
               <SelectCell v-else-if="c.virtual === 'label' && labelCol(r).type === 'enum' && !labelCol(r).multiple" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(labelCol(r))?.values.map(v => v.value) ?? []" :label-of="labelOf(labelCol(r))" :required="!!labelCol(r).required" :list="labelCol(r).list" @save="v => set(r, c, v)" />
               <Cell v-else-if="c.virtual === 'label'" :click-edit="false" class="label" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :origin="`★ ${labelCol(r).label?.de || labelCol(r).key}`" :suggest="suggestionsOf(c)" @save="v => set(r, c, v)" />
-              <td v-else-if="c.virtual" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked mono" tabindex="0" title="Variantenachsen — fest">{{ inherited(r, c) ?? '' }}</div></td>
-              <td v-else-if="inactive(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box disabled" tabindex="0" title="gilt an diesem Knoten nicht"></div></td>
+              <td v-else-if="c.virtual" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked mono" tabindex="0" :title="$t('Variantenachsen — fest')">{{ inherited(r, c) ?? '' }}</div></td>
+              <td v-else-if="inactive(r, c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box disabled" tabindex="0" :title="$t('gilt an diesem Knoten nicht')"></div></td>
               <td v-else-if="!editable(c)" class="cell" :class="{ sel: inSel(ri, ci) }"><div class="cell-box locked" tabindex="0" :title="c.type + ' — in der Knotenansicht bearbeiten'" @dblclick="popup || router.push(`/tree/${r.row.id}`)">{{ (shown(r, c) ?? inherited(r, c) ?? '').toString().replace(/<[^>]+>/g, ' ').slice(0, 80) }}</div></td>
               <ToggleCell v-else-if="c.type === 'boolean'" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" @save="v => set(r, c, v)" />
               <SelectCell v-else-if="c.type === 'enum' && !c.multiple" :click-edit="false" :class="{ dirty: dirty.has(key(r, c)), sel: inSel(ri, ci) }" :value="shown(r, c)" :inherited="inherited(r, c)" :options="listOf(c)?.values.map(v => v.value) ?? []" :label-of="labelOf(c)" :required="!!c.required" :list="c.list" @save="v => set(r, c, v)" />
@@ -658,10 +658,10 @@ const labelOf = c => v => { const l = listOf(c)?.values.find(x => x.value === v)
           </tr>
         </tbody>
       </table>
-      <div v-if="!data.rows.length" class="empty">Keine {{ roleLabel[childRole] }} unter {{ data.node.label }}.</div>
+      <div v-if="!data.rows.length" class="empty">{{ $t("Keine {0} unter {1}.", [roleLabel[childRole], data.node.label]) }}</div>
     </div>
     <div v-if="tabs.length > 1" class="toolbar sheets">
-      <span class="sheet" :class="{ on: !tab }" @click="tab = ''" title="alle Attribute">alle</span>
+      <span class="sheet" :class="{ on: !tab }" @click="tab = ''" :title="$t('alle Attribute')">{{ $t("alle") }}</span>
       <span v-for="g in tabs" :key="g.key" class="sheet" :class="{ on: tab === g.key }" @click="tab = g.key" :title="`${g.label} ⟨${g.key}⟩ · ${g.n} Spalten`"><span class="lbl">{{ g.label }}</span> <span class="muted">{{ g.n }}</span></span>
     </div>
   </div>

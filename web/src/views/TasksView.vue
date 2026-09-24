@@ -38,15 +38,15 @@ onMounted(load)
 
 <template>
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>⚑ Aufgaben</h1><span class="muted">{{ tasks.length }}</span><span class="grow" /><span class="muted">{{ busy }}</span></div>
+    <div class="toolbar"><h1>{{ $t("⚑ Aufgaben") }}</h1><span class="muted">{{ tasks.length }}</span><span class="grow" /><span class="muted">{{ busy }}</span></div>
     <div class="toolbar" style="gap:6px">
-      <select v-model="wf" @change="state = ''; load()"><option value="">alle Workflows</option><option v-for="d in defs" :key="d.key" :value="d.key">{{ d.label?.de || d.key }}</option></select>
-      <select v-model="state" @change="load" :disabled="!wf" title="Zustand — leer: alles, wo meine Rolle dran ist"><option value="">wo ich dran bin</option><option v-for="s in states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }} ({{ s.count }})</option></select>
-      <button class="x" @click="load" title="neu laden">⟳</button>
+      <select v-model="wf" @change="state = ''; load()"><option value="">{{ $t("alle Workflows") }}</option><option v-for="d in defs" :key="d.key" :value="d.key">{{ d.label?.de || d.key }}</option></select>
+      <select v-model="state" @change="load" :disabled="!wf" :title="$t('Zustand — leer: alles, wo meine Rolle dran ist')"><option value="">{{ $t("wo ich dran bin") }}</option><option v-for="s in states" :key="s.key" :value="s.key">{{ s.label?.de || s.key }} ({{ s.count }})</option></select>
+      <button class="x" @click="load" :title="$t('neu laden')">⟳</button>
     </div>
     <div class="scroll">
       <table class="grid" style="width:100%">
-        <thead><tr><th>Knoten</th><th>Workflow</th><th>Zustand</th><th>seit</th><th>Notiz</th><th>zuständig</th><th>Schritt</th></tr></thead>
+        <thead><tr><th>{{ $t("Knoten") }}</th><th>{{ $t("Workflow") }}</th><th>{{ $t("Zustand") }}</th><th>{{ $t("seit") }}</th><th>{{ $t("Notiz") }}</th><th>{{ $t("zuständig") }}</th><th>{{ $t("Schritt") }}</th></tr></thead>
         <tbody>
           <tr v-for="t in tasks" :key="t.node + t.workflow" class="row">
             <td style="max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><router-link :to="`/tree/${t.node}`" :title="`${t.label} · ${t.node}`">{{ icon(t.role) }} {{ t.label }}</router-link></td>
@@ -59,7 +59,7 @@ onMounted(load)
           </tr>
         </tbody>
       </table>
-      <div v-if="!tasks.length && !busy" class="empty"><span title="Kein Knoten wartet auf einen Schritt deiner Rolle.">Nichts zu tun</span></div>
+      <div v-if="!tasks.length && !busy" class="empty"><span :title="$t('Kein Knoten wartet auf einen Schritt deiner Rolle.')">{{ $t("Nichts zu tun") }}</span></div>
     </div>
   </div>
 </template>

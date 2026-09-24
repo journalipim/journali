@@ -54,34 +54,34 @@ onMounted(lies)
 
 <template>
   <div class="section">
-    <h2>✉ Mailserver <span class="muted">· SMTP</span></h2>
+    <h2>{{ $t("✉ Mailserver") + ' ' }}<span class="muted">{{ $t("· SMTP") }}</span></h2>
 
     <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:340px" /></colgroup><tbody>
-      <tr><td class="attr">Server</td><td><input v-model="c.host" type="text" placeholder="smtp.beispiel.de" style="width:100%" /></td></tr>
-      <tr><td class="attr">Verschlüsselung</td><td>
+      <tr><td class="attr">{{ $t("Server") }}</td><td><input v-model="c.host" type="text" :placeholder="$t('smtp.beispiel.de')" style="width:100%" /></td></tr>
+      <tr><td class="attr">{{ $t("Verschlüsselung") }}</td><td>
         <select :value="c.security" style="width:150px" @change="security($event.target.value)">
-          <option value="starttls">STARTTLS</option>
-          <option value="ssl">TLS (implizit)</option>
-          <option value="none">keine</option>
+          <option value="starttls">{{ $t("STARTTLS") }}</option>
+          <option value="ssl">{{ $t("TLS (implizit)") }}</option>
+          <option value="none">{{ $t("keine") }}</option>
         </select>
-        <span class="muted" style="margin-left:10px;font-size:12px">Port</span>
+        <span class="muted" style="margin-left:10px;font-size:12px">{{ $t("Port") }}</span>
         <input v-model.number="c.port" type="number" min="1" max="65535" style="width:80px;margin-left:6px" />
       </td></tr>
-      <tr><td class="attr">Kennung</td><td><input v-model="c.user" type="text" autocomplete="off" style="width:100%" /></td></tr>
-      <tr><td class="attr">Passwort</td><td><input v-model="c.password" type="password" autocomplete="new-password" placeholder="unverändert" style="width:100%" /></td></tr>
-      <tr><td class="attr">Absender</td><td><input v-model="c.from" type="text" placeholder="pim@beispiel.de" style="width:100%" /></td></tr>
-      <tr><td class="attr">Anzeigename</td><td><input v-model="c.fromName" type="text" placeholder="journali PIM" style="width:100%" /></td></tr>
-      <tr><td class="attr">Antwort an</td><td><input v-model="c.replyTo" type="text" placeholder="leer = Absender" style="width:100%" /></td></tr>
+      <tr><td class="attr">{{ $t("Kennung") }}</td><td><input v-model="c.user" type="text" autocomplete="off" style="width:100%" /></td></tr>
+      <tr><td class="attr">{{ $t("Passwort") }}</td><td><input v-model="c.password" type="password" autocomplete="new-password" :placeholder="$t('unverändert')" style="width:100%" /></td></tr>
+      <tr><td class="attr">{{ $t("Absender") }}</td><td><input v-model="c.from" type="text" :placeholder="$t('pim@beispiel.de')" style="width:100%" /></td></tr>
+      <tr><td class="attr">{{ $t("Anzeigename") }}</td><td><input v-model="c.fromName" type="text" :placeholder="$t('journali PIM')" style="width:100%" /></td></tr>
+      <tr><td class="attr">{{ $t("Antwort an") }}</td><td><input v-model="c.replyTo" type="text" :placeholder="$t('leer = Absender')" style="width:100%" /></td></tr>
     </tbody></table>
 
     <div class="row" style="gap:8px;margin-top:8px;align-items:center">
       <button class="primary" :disabled="!!busy" @click="speichern">{{ busy || '💾 Speichern' }}</button>
       <span class="grow" />
-      <input v-model="probe" type="text" placeholder="Probe an …" style="width:220px" @keydown.enter="testen" />
-      <button :disabled="!!busy || !ready" :title="ready ? 'eine Probe senden' : 'erst Server und Absender eintragen'" @click="testen">✉ Probe</button>
+      <input v-model="probe" type="text" :placeholder="$t('Probe an …')" style="width:220px" @keydown.enter="testen" />
+      <button :disabled="!!busy || !ready" :title="ready ? 'eine Probe senden' : 'erst Server und Absender eintragen'" @click="testen">{{ $t("✉ Probe") }}</button>
     </div>
 
     <div v-if="said" :class="said.startsWith('✗') ? 'fehler' : 'pos'" style="font-size:12px;margin-top:6px">{{ said }}</div>
-    <div v-if="!ready" class="muted" style="font-size:12px;margin-top:6px">Ohne Server und Absender sendet journali nichts.</div>
+    <div v-if="!ready" class="muted" style="font-size:12px;margin-top:6px">{{ $t("Ohne Server und Absender sendet journali nichts.") }}</div>
   </div>
 </template>
