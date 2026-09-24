@@ -354,6 +354,17 @@ if (snapshotPath is not null)
 {
     if (rebuilt > 0) _ = Task.Run(() => WriteSnapshot("nach dem Start"));   // im Hintergrund — der Start wartet nicht
     app.Lifetime.ApplicationStopping.Register(() => WriteSnapshot("beim Beenden"));
+    // Stündlich, wenn Neues dazukam (Taloan, 24.09.2026): nach einem Absturz ist höchstens eine Stunde nachzuspielen,
+    // nicht alles seit dem letzten Start
+    _ = Task.Run(async () =>
+    {
+        var zuletzt = catalog.Head;
+        while (true)
+        {
+            await Task.Delay(TimeSpan.FromHours(1));
+            try { var kopf = catalog.Head; if (kopf > zuletzt) { WriteSnapshot("stündlich"); zuletzt = kopf; } } catch { }
+        }
+    });
 }
 app.Run();
 return 0;

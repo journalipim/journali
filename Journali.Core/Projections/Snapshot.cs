@@ -20,8 +20,12 @@ namespace Journali.Core.Projections;
 /// </summary>
 public static class Snapshot
 {
-    /// <summary>Bau-Stempel: ändert sich mit jedem Bau des Kerns — die Abbilder könnten anders rechnen.</summary>
-    public static string Stamp => typeof(Snapshot).Assembly.ManifestModule.ModuleVersionId.ToString("N");
+    /// <summary>
+    /// Stempel: der Fingerabdruck der Kern-Logik (<see cref="Fingerabdruck"/>) — ändert sich, wenn die Abbilder anders
+    /// rechnen könnten, nicht bei jedem Commit (Taloan, 24.09.2026). Einmal je Prozess gerechnet.
+    /// </summary>
+    public static string Stamp => _stamp ??= Fingerabdruck.Von(typeof(Snapshot).Assembly);
+    private static string? _stamp;
 
     public static readonly JsonSerializerOptions Options = new()
     {

@@ -362,8 +362,11 @@ Einträgen: Start prüfen 207 ms (vorher ~2,2 s), 50 000 nachholen 127 ms (vorhe
 **Schnappschuss der Abbilder**: `snapshot-<host>-<port>-<db>.json`
 im Datenverzeichnis, der Stand aller Abbilder bei #n (`Snapshot.cs` im Kern: System.Text.Json über die Abbild-Klassen samt
 privater Felder). Beim Start werden die Abbilder daraus geladen und nur der Rest ab #n angewandt; geschrieben wird er im
-Hintergrund nach dem Start und beim Beenden. Auch er ist ein Cache: er trägt den Bau-Stempel des Kerns (neue Fassung =
-alter Schnappschuss fällt) und der Eintrag #n wird gegen das Journal geprüft; bei Abweichung wird die Datei gelöscht.
+Hintergrund nach dem Start, stündlich (wenn Neues dazukam) und beim Beenden. Auch er ist ein Cache: er trägt den
+Fingerabdruck der Kern-Logik (`Fingerabdruck.cs`: Typen, Felder, Code der Methoden, Verweise als Namen — Taloan, 24.09.2026)
+und fällt, wenn die Abbilder anders rechnen könnten; nicht bei einem neuen Commit, nicht bei Kommentaren, nicht bei
+Änderungen an Server oder Oberfläche. Bis dahin war es die ModuleVersionId des Kerns, und in ihr steckte der Git-Commit —
+jeder Commit liess ihn fallen. Der Eintrag #n wird gegen das Journal geprüft; bei Abweichung wird die Datei gelöscht.
 An und aus ebenfalls in ⚙ Einstellungen → ▨ Storage → ▨ Start; ohne `betrieb.json` zählt `JOURNALI_SNAPSHOT=off`.
 Startzeile: „Schnappschuss bis #n“.
 

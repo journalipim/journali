@@ -174,7 +174,11 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
      beim Start nicht alles entschlüsseln: letzte Zeile vom Dateiende, Lückenprüfung über Zeilenzahl = letzte
      Nummer, Zeilen vor dem Schnappschuss überspringen, ohne sie zu entschlüsseln. Sofort spürbar bei jedem Start und
      jedem Rechnerwechsel.
-  2. **Ein Schnappschuss, der Updates überlebt** — stabiles Format mit eigener Formatnummer statt Build-Stempel; er
+  2. ~~**Ein Schnappschuss, der Updates überlebt**~~ gebaut 24.09.2026 (`Fingerabdruck.cs`, 122 ms je Start): der
+     Stempel ist der Fingerabdruck der Kern-Logik statt der ModuleVersionId — in der steckte der Git-Commit, jeder Commit
+     liess den Schnappschuss fallen. Gemessen an vier Bauten: anderer Commit und nur ein Kommentar → gleicher Stempel,
+     eine Konstante geändert → anderer. Dazu stündlich geschrieben. Ursprünglicher Plan: stabiles Format mit eigener
+     Formatnummer statt Build-Stempel; er
      fällt nur, wenn sich ein Abbild wirklich ändert. Geschrieben regelmässig (etwa stündlich) und beim Beenden. Ein
      Start = Stand laden + Einträge seit dem letzten Schnappschuss; die Dauer hängt am heutigen Datenbestand, nicht an
      der Geschichte.
