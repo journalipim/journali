@@ -10,7 +10,11 @@ import { dialog } from '../dialog.js'
 
 const emit = defineEmits(['eingespielt'])
 // Das Team, das oben im Team-Reiter gewählt ist — für es wird ein Schlüssel eingelöst
-const props = defineProps({ team: { type: Object, default: null } })
+// limits: das Kontingent dieses Teams ({ week, month }) — dieselben Zahlen wie unter ✦ journali Limits. Die Lizenz allein
+// sagt weniger, sobald ein Abo das Team anhebt (Lizenz Kostenlos, Abo Pro: es gilt Pro); ohne limits die der Lizenz.
+// Rechnet das Team über ein anderes ab, fallen die beiden Zeilen weg (25.09.2026): seine Limits sind dann die des
+// Zahlers und stehen unter ✦ journali Limits — mit seiner Lizenz haben sie nichts zu tun.
+const props = defineProps({ team: { type: Object, default: null }, limits: { type: Object, default: null } })
 // Einlösen nur beim Team, das sein Kontingent selbst trägt; wer über ein anderes abrechnet, bekommt keinen Schlüssel
 const eigenes = computed(() => !!props.team && (props.team.payer ?? props.team.key) === props.team.key)
 const lic = ref(null)
@@ -72,7 +76,7 @@ async function verbinden() {
   try {
     const r = await api.post('/api/licence/abo', { team: props.team.key, key: aboKey.value })
     eingabe.value = ''
-    said.value = t_('✓ Abo {0} · bezahlt bis {1}', [r.planLabel, r.paidUntil]) + (r.geprueft ? '' : ' · ' + t_('ungeprüft'))
+    said.value = t_('✓ Abo {0} · gültig bis {1}', [r.planLabel, r.paidUntil]) + (r.geprueft ? '' : ' · ' + t_('ungeprüft'))
     await load(); await store.poll(true)
     emit('eingespielt')
   }
@@ -146,12 +150,12 @@ async function kopiere(text) {
       <tr v-if="lic?.instanzTarif" class="tarif"><td class="muted" :title="$t('Der höchste Tarif der Instanz: nach ihm richten sich Plugins und Publikationsbäume.')">{{ $t("◆ Tarif") }}</td>
         <td>{{ lic.instanzTarif.label }}<span v-if="lic.trial && !lic.abgelaufen" class="muted">{{ ' ' + $t("· Test") }}</span></td><td></td></tr>
       <tr v-if="aboTeam" class="abo"><td class="muted" :title="$t('Stand des Abos vom Lizenzserver, täglich aufgefrischt')">{{ $t("◆ Abo · {0}", [aboTeam.teamLabel]) }}</td>
-        <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('bezahlt bis {0}', [aboTeam.paidUntil]) }}</span><span v-if="!aboTeam.gilt" class="neg">{{ ' · ' + $t('abgelaufen') }}</span><span v-else-if="!aboTeam.geprueft" class="warn">{{ ' · ' + $t('ungeprüft') }}</span></td><td></td></tr>
+        <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [aboTeam.paidUntil]) }}</span><span v-if="!aboTeam.gilt" class="neg">{{ ' · ' + $t('abgelaufen') }}</span><span v-else-if="!aboTeam.geprueft" class="warn">{{ ' · ' + $t('ungeprüft') }}</span></td><td></td></tr>
       <tr v-if="lic?.validUntil"><td class="muted">{{ $t("gültig bis") }}</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
       <tr v-if="lic?.instanzTarif" class="baeume"><td class="muted" :title="$t('Publikationsbäume: vorhanden / erlaubt')">{{ $t("▣ Publikationsbäume") }}</td>
         <td class="mono">{{ lic.pubTrees ?? 0 }} / {{ lic.instanzTarif.pubTrees ?? '∞' }}</td><td></td></tr>
-      <tr><td class="muted" :title="$t('journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▤ Token / Woche") }}</td><td class="mono">{{ zahl(lic?.entriesWeek) }}</td><td></td></tr>
-      <tr><td class="muted" :title="$t('journali-Token je Monat: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▦ Token / Monat") }}</td><td class="mono">{{ zahl(lic?.entriesMonth) }}</td><td></td></tr>
+      <tr v-if="!team || eigenes"><td class="muted" :title="$t('journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▤ Token / Woche") }}</td><td class="mono woche" :title="$t('Kontingent von {0} · Lizenz der Instanz {1}', [team?.label ?? '', zahl(lic?.entriesWeek)])">{{ zahl(limits?.week ?? lic?.entriesWeek) }}</td><td></td></tr>
+      <tr v-if="!team || eigenes"><td class="muted" :title="$t('journali-Token je Monat: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▦ Token / Monat") }}</td><td class="mono monat" :title="$t('Kontingent von {0} · Lizenz der Instanz {1}', [team?.label ?? '', zahl(lic?.entriesMonth)])">{{ zahl(limits?.month ?? lic?.entriesMonth) }}</td><td></td></tr>
       <tr v-if="lic?.countFrom"><td class="muted" :title="$t('Was vor diesem Tag im Journal steht, zählt nicht mehr mit.')">{{ $t("◷ gezählt ab") }}</td><td class="mono">{{ lic.countFrom }}</td><td></td></tr>
       <tr v-if="lic?.instanz"><td class="muted" :title="$t('Diese Instanz. Eine Lizenz wird auf diese Kennung ausgestellt und gilt nur hier.')">{{ $t("⌗ Instanz") }}</td>
         <td class="mono" style="user-select:all">{{ lic.instanz }}</td>

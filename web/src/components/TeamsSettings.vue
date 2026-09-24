@@ -164,7 +164,7 @@ async function austragen(m) {
     </div>
 
 
-    <LicenceSettings :team="team" @eingespielt="details" />
+    <LicenceSettings :team="team" :limits="jt?.limits" @eingespielt="details" />
 
     <div class="section">
       <h2>{{ $t("✦ journali Limits") + ' ' }}<button class="x" :title="$t('Was gezählt wird')" @click="hilfeToken">?</button>

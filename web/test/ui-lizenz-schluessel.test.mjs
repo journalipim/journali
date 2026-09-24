@@ -69,6 +69,24 @@ test('Angefordert wird ein Paket — keine freien Zahlen', async () => {
   w.unmount()
 })
 
+test('Token je Woche und Monat: das Kontingent des Teams, nicht die Lizenz allein', async () => {
+  // 25.09.2026: Lizenz Kostenlos (10.000 / 50.000), Abo Pro am Init Team — oben stand 10.000, unter den Limits 50.000
+  server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE, limits: { week: 50000, month: 250000 } } }); await flushPromises()
+  assert.equal(w.find('td.woche').text(), '50.000')
+  assert.equal(w.find('td.monat').text(), '250.000')
+  assert.match(w.find('td.woche').attributes('title'), /200\.000/, 'der Wert der Lizenz steht nicht im Tooltip')
+  w.unmount()
+  const ohne = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(ohne.find('td.woche').text(), '200.000', 'ohne Kontingent gilt die Lizenz')
+  ohne.unmount()
+  // Italien rechnet über Deutschland ab: seine Limits sind die des Zahlers — oben stehen keine
+  const it = mount(LicenceSettings, { props: { team: IT, limits: { week: 50000, month: 250000 } } }); await flushPromises()
+  assert.equal(it.find('td.woche').exists(), false, 'Token je Woche bei einem Team, das über ein anderes abrechnet')
+  assert.equal(it.find('td.monat').exists(), false, 'Token je Monat bei einem Team, das über ein anderes abrechnet')
+  it.unmount()
+})
+
 test('Reset getrennt für Pro und Enterprise', async () => {
   const gesendet = server(); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
@@ -195,7 +213,7 @@ test('Ein Lizenzschlüssel aus dem Shop verbindet das Abo des oben gewählten Te
   await knopf(w).trigger('click'); await flushPromises()
   assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/abo').body }, { team: 'de', key: ABO_KEY })
   assert.equal(gesendet.some(g => g.path === '/api/licence/keys' || g.path === '/api/licence'), false, 'das Abo ging als Schlüssel oder Lizenz hinaus')
-  assert.match(w.find('.said').text(), /✓ Abo Enterprise · bezahlt bis 2026-10-24/)
+  assert.match(w.find('.said').text(), /✓ Abo Enterprise · gültig bis 2026-10-24/)
   w.unmount()
 })
 
@@ -219,7 +237,7 @@ test('Wer über ein anderes Team abrechnet, verbindet kein Abo', async () => {
 test('Der Stand des Abos steht bei der Lizenz — abgelaufen rot', async () => {
   server({ abos: [{ team: 'de', teamLabel: 'Deutschland', plan: 'enterprise', planLabel: 'Enterprise', status: 'active', paidUntil: '2026-10-24', issued: '2026-09-24T10:00:00Z', gilt: true, geprueft: true }] }); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  assert.match(w.find('tr.abo').text().replace(/\s+/g, ' '), /Abo · Deutschland.*Enterprise · bezahlt bis 2026-10-24/)
+  assert.match(w.find('tr.abo').text().replace(/\s+/g, ' '), /Abo · Deutschland.*Enterprise · gültig bis 2026-10-24/)
   w.unmount()
   server({ abos: [{ team: 'de', teamLabel: 'Deutschland', plan: 'enterprise', planLabel: 'Enterprise', status: 'expired', paidUntil: '2026-09-20', issued: '2026-09-24T10:00:00Z', gilt: false, geprueft: true }] })
   const v = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
