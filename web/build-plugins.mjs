@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url'
 const here = dirname(fileURLToPath(import.meta.url))
 const pluginsDir = resolve(here, '..', 'plugins')
 // muss zu web/src/host.js passen
-const HOST_NAMES = ['api', 'store', 'tree', 'icon', 'mapper', 'transform', 'recentFiles', 'dialog', 'treePicker', 'paneWidth', 'plugins', 'menu', 'orphans', 'compliance', 'ai', 'Splitter', 'ImportHead', 'ProfileBar', 'TreePicker']
+const HOST_NAMES = ['api', 'store', 'tree', 'icon', 'mapper', 'transform', 'recentFiles', 'dialog', 'treePicker', 'paneWidth', 'plugins', 'menu', 'orphans', 'compliance', 'ai', 'i18n', 't', 'setLang', 'LANGS', 'Splitter', 'ImportHead', 'ProfileBar', 'TreePicker']
 const WINDOW = { vue: 'vue', 'vue-router': 'vueRouter' }
 
 /// vue, vue-router, journali → window.journali.*
