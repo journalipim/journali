@@ -2,6 +2,8 @@
 rem Entwicklung auf dem PC: tools\server start | stop | restart | status | web | build
 rem start   - Server per dotnet run in eigenem Fenster "journali" (localhost:5000); das Fenster bleibt nach dem
 rem           Ende offen, damit man sieht, warum. Ohne Datenbank zeigt http://localhost:5000 die Einrichtung
+rem           Umgebung aus Journali.Server\Properties\launchSettings.json (dotnet run liest sie), darunter
+rem           JOURNALI_LIZENZSERVER
 rem stop    - beendet Journali.Server.exe
 rem status  - GET /api/health
 rem web     - Vite-Entwicklungsserver in eigenem Fenster (localhost:5173, Hot Reload,

@@ -150,12 +150,13 @@ async function kopiere(text) {
   <div class="section">
     <h2>{{ $t("⚿ journali Lizenz") + ' ' }}<span v-if="lic?.holder" class="muted">· {{ lic.holder }}</span></h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:200px" /><col /></colgroup><tbody>
-      <tr>
+      <!-- Nur Signiertes zählt: eine Lizenz ohne passende Signatur ist eingespielt, gilt aber nicht — es gilt Kostenlos -->
+      <tr class="stand">
         <td class="muted">{{ $t("Stand") }}</td>
         <td>
           <span v-if="lic?.abgelaufen" class="neg">{{ $t("● abgelaufen") }}</span>
           <span v-else-if="lic?.geprueft" class="pos">{{ $t("● geprüft") }}</span>
-          <span v-else class="warn">{{ $t("● ungeprüft") }}</span>
+          <span v-else class="muted">{{ $t("● Kostenlos") }}</span>
         </td>
         <td class="muted">{{ lic?.grund ?? '' }}</td>
       </tr>
@@ -164,7 +165,7 @@ async function kopiere(text) {
       <tr v-if="aboTeam" class="abo"><td class="muted" :title="$t('Stand des Abos vom Lizenzserver, täglich aufgefrischt')">{{ $t("◆ Abo · {0}", [aboTeam.teamLabel]) }}</td>
         <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [aboTeam.paidUntil]) }}</span><span v-if="!aboTeam.geprueft" class="neg" :title="$t('Ohne passende Signatur zählt der Stand nicht.')">{{ ' · ' + $t('ungeprüft') }}</span><span v-else-if="!aboTeam.gilt" class="neg">{{ ' · ' + (aboTeam.status === 'entzogen' ? $t('entzogen') : $t('abgelaufen')) }}</span></td>
         <td><button v-if="darf() && lic.lizenzserver && aboTeam.team === team?.key" class="x auffrischen" :title="$t('Stand vom Lizenzserver neu holen')" @click="auffrischen">↻</button></td></tr>
-      <tr v-if="lic?.validUntil"><td class="muted">{{ $t("gültig bis") }}</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
+      <tr v-if="lic?.validUntil && lic?.geprueft" class="gueltig"><td class="muted">{{ $t("gültig bis") }}</td><td class="mono">{{ lic.validUntil }}</td><td></td></tr>
       <tr v-if="lic?.instanzTarif" class="baeume"><td class="muted" :title="$t('Publikationsbäume: vorhanden / erlaubt')">{{ $t("▣ Publikationsbäume") }}</td>
         <td class="mono">{{ lic.pubTrees ?? 0 }} / {{ lic.instanzTarif.pubTrees ?? '∞' }}</td><td></td></tr>
       <tr v-if="!team || eigenes"><td class="muted" :title="$t('journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▤ Token / Woche") }}</td><td class="mono woche" :title="$t('Kontingent von {0} · Lizenz der Instanz {1}', [team?.label ?? '', zahl(lic?.entriesWeek)])">{{ zahl(limits?.week ?? lic?.entriesWeek) }}</td><td></td></tr>

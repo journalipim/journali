@@ -10,7 +10,7 @@ import { store } from '../src/store.js'
 const LicenceSettings = (await import('../src/components/LicenceSettings.vue')).default
 
 /// Server mit einer offenen und einer eingelösten Anforderung
-function server({ fehler = null, lizenzserver = true, abos = [] } = {}) {
+function server({ fehler = null, lizenzserver = true, abos = [], lizenz = {} } = {}) {
   const gesendet = []
   const anforderungen = [
     { id: 'k-1', kind: 'limit', week: 30000, month: 100000, days: 30, created: '2026-09-23T10:00:00Z', text: '{"anforderung":"…1","sig":"x"}', team: null },
@@ -21,7 +21,7 @@ function server({ fehler = null, lizenzserver = true, abos = [] } = {}) {
     const method = opt.method ?? 'GET'
     if (method !== 'GET') gesendet.push({ method, path, body: JSON.parse(opt.body) })
     let status = 200, body
-    if (path === '/api/licence' && method === 'GET') body = { plan: 'enterprise', instanz: 'abc', entriesWeek: 200000, entriesMonth: 1000000, validUntil: '2026-12-23', trial: true, tarif: { key: 'enterprise', label: 'Enterprise' }, instanzTarif: { key: 'enterprise', label: 'Enterprise', pubTrees: null }, pubTrees: 3, lizenzserver, abos }
+    if (path === '/api/licence' && method === 'GET') body = { plan: 'enterprise', instanz: 'abc', entriesWeek: 200000, entriesMonth: 1000000, validUntil: '2026-12-23', trial: true, geprueft: true, tarif: { key: 'enterprise', label: 'Enterprise' }, instanzTarif: { key: 'enterprise', label: 'Enterprise', pubTrees: null }, pubTrees: 3, lizenzserver, abos, ...lizenz }
     else if (path === '/api/licence/abo') body = { team: 'de', plan: 'enterprise', planLabel: 'Enterprise', status: 'active', paidUntil: '2026-10-24', geprueft: true }
     else if (path === '/api/licence/abo/de/auffrischen') body = { team: 'de', plan: 'pro', planLabel: 'Pro', status: 'active', paidUntil: '2026-11-24', geprueft: true }
     else if (path === '/api/licence') body = { plan: 'Gross', geprueft: true }
@@ -249,6 +249,24 @@ test('↻ holt den Stand des Abos sofort neu — nach einem Eingriff auf dem Liz
   admin(['read'])
   const v = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   assert.equal(v.find('tr.abo button.auffrischen').exists(), false)
+  v.unmount()
+})
+
+/// Nur Signiertes zählt (25.09.2026): eine Lizenz ohne passende Signatur gilt nicht — die Zeile sagt, was gilt, und
+/// ein „gültig bis“ dieser Lizenz steht nicht da. Gemeldet am 25.09.: oben stand weiter „ungeprüft“.
+test('Eine Lizenz ohne passende Signatur: es gilt Kostenlos', async () => {
+  server({ lizenz: { geprueft: false, grund: 'keine Signatur', validUntil: '2026-10-23', trial: false } }); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  const stand = w.find('tr.stand').text().replace(/\s+/g, ' ')
+  assert.match(stand, /Kostenlos/)
+  assert.doesNotMatch(stand, /ungeprüft/)
+  assert.match(stand, /keine Signatur/)
+  assert.equal(w.find('tr.gueltig').exists(), false, 'das Datum einer Lizenz, die nicht gilt')
+  w.unmount()
+  server(); admin()
+  const v = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.match(v.find('tr.stand').text(), /geprüft/)
+  assert.match(v.find('tr.gueltig').text(), /2026-12-23/)
   v.unmount()
 })
 
