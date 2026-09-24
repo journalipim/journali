@@ -1,0 +1,4 @@
+{
+ "JSON: Rohdaten sichern (mit {0})": "JSON: back up raw data (with {0})",
+ "JSON: Liste von Objekten erwartet (oder { rows: [...] })": "JSON: a list of objects expected (or { rows: [...] })"
+}

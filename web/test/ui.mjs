@@ -22,7 +22,8 @@ const vtu = await import('@vue/test-utils')
 // Oberflächensprache (24.09.2026): $t in jeder Vorlage — im Test immer deutsch, der Schlüssel ist der Text
 // vue-i18n warnt im Entwicklungsbau vor dem eigenen Nachrichten-Übersetzer — gewollt, also still (vor dem Laden!)
 const warn = console.warn; console.warn = (...a) => { if (!String(a[0]).includes('Custom Message Compiler')) warn(...a) }
-const { i18n } = await import('../src/i18n.js')
+const { i18n, t } = await import('../src/i18n.js')
+globalThis.journali = Object.assign(globalThis.journali ?? {}, { i18n, t })   // was Plugins im Browser aus window.journali bekommen
 vtu.config.global.plugins = [...(vtu.config.global.plugins ?? []), i18n]
 export const { mount, flushPromises } = vtu
 

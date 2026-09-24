@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import fs from 'node:fs'
 import path from 'node:path'
 import './ui.mjs'
-import { stand, quellSchluessel } from '../tools/texte-pruefen.mjs'
+import { stand, quellSchluessel, pluginKeys } from '../tools/texte-pruefen.mjs'
 import { entfalten, schluessel } from './texte.mjs'
 
 const langDir = new URL('../public/lang', import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')
@@ -17,6 +17,14 @@ test('jede Sprachdatei ist JSON mit Zeichenketten, ohne verwaiste und ohne leere
     const s = stand(code)
     assert.deepEqual(s.verwaist.slice(0, 5), [], `${code}: Einträge ohne Schlüssel im Quelltext`)
     assert.deepEqual(s.leer.slice(0, 5), [], `${code}: leere Übersetzungen`)
+  }
+})
+
+test('jede Sprachdatei eines Plugins passt zu dessen Quellen', () => {
+  for (const p of pluginKeys()) for (const code of codes) {
+    const s = stand(code, p)
+    assert.deepEqual(s.verwaist.slice(0, 5), [], `${p}/${code}: Einträge ohne Schlüssel im Quelltext`)
+    assert.deepEqual(s.leer.slice(0, 5), [], `${p}/${code}: leere Übersetzungen`)
   }
 })
 

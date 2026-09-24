@@ -4,6 +4,7 @@
 // Wörter, Zahlen, Normbezeichnungen. Jeder Treffer zeigt Dokument, Seite, Textstelle — und den Knoten, an dem es hängt.
 // Gelesen wird von einem Job (job.mjs); diese Ansicht sagt auch, wie viel schon im Index steht und was noch fehlt.
 
+const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 function el(tag, attrs = {}, ...kids) {
   const e = document.createElement(tag)
   for (const [k, v] of Object.entries(attrs)) {
@@ -43,7 +44,7 @@ async function mount(root, ctx) {
     try {
       const r = await api.post('/api/docs/retry', {})
       await loadStatus()
-      say(r.freed ? `${r.freed} wieder freigegeben — beim nächsten Lauf des Jobs „Werkzeug: Dokumente lesen“` : 'nichts freizugeben')
+      say(r.freed ? t_('{0} wieder freigegeben — beim nächsten Lauf des Jobs „Werkzeug: Dokumente lesen“', [r.freed]) : t_('nichts freizugeben'))
     } catch (e) { say('✗ ' + e.message) }
   }
 
@@ -55,7 +56,7 @@ async function mount(root, ctx) {
     try {
       const r = await api.get(`/api/docs/search?q=${encodeURIComponent(q)}&limit=60${st.under ? `&under=${encodeURIComponent(st.under)}` : ''}`)
       st.hits = r.hits ?? []
-      st.said = r.ready === false ? '✗ Kein Dokumentindex — der Server läuft ohne Postgres' : `${st.hits.length} Treffer`
+      st.said = r.ready === false ? t_('✗ Kein Dokumentindex — der Server läuft ohne Postgres') : t_('{0} Treffer', [st.hits.length])
     } catch (e) { st.hits = []; st.said = '✗ ' + e.message }
     finally { st.busy = false; draw() }
   }
@@ -63,7 +64,7 @@ async function mount(root, ctx) {
   function draw() {
     root.innerHTML = ''
     const input = el('input', {
-      type: 'search', value: st.q, placeholder: 'suchen in Datenblättern, Anleitungen, Katalogen — Wörter, Zahlen, Normen',
+      type: 'search', value: st.q, placeholder: t_('suchen in Datenblättern, Anleitungen, Katalogen — Wörter, Zahlen, Normen'),
       style: 'width:520px',
       oninput: e => { st.q = e.target.value },
       onkeydown: e => { if (e.key === 'Enter') search() },
@@ -71,22 +72,22 @@ async function mount(root, ctx) {
     const unterBaum = st.under ? tree.byId.get(st.under) : null
     root.append(
       el('div', { class: 'toolbar' },
-        el('h1', {}, '⌕ Dokumente'),
+        el('h1', {}, t_('⌕ Dokumente')),
         input,
-        el('button', { class: 'primary', onclick: search, title: 'Im Text der Dokumente suchen' }, st.busy ? '…' : 'Suchen'),
+        el('button', { class: 'primary', onclick: search, title: t_('Im Text der Dokumente suchen') }, st.busy ? '…' : t_('Suchen')),
         unterBaum
-          ? el('span', { class: 'view-chip on', title: `nur Dokumente unter „${unterBaum.label}“ · Klick hebt es auf`, onclick: () => { st.under = null; search() } }, `${ICON[unterBaum.role] ?? ''} ${unterBaum.label} ×`)
+          ? el('span', { class: 'view-chip on', title: t_('nur Dokumente unter „{0}“ · Klick hebt es auf', [unterBaum.label]), onclick: () => { st.under = null; search() } }, `${ICON[unterBaum.role] ?? ''} ${unterBaum.label} ×`)
           : null,
         el('span', { class: 'grow' }),
-        el('span', { class: 'muted', style: 'font-size:12px' }, st.status?.ready === false ? '✗ kein Index' : `${(st.status?.media ?? 0).toLocaleString('de-DE')} Dokumente · ${(st.status?.chunks ?? 0).toLocaleString('de-DE')} Abschnitte`),
+        el('span', { class: 'muted', style: 'font-size:12px' }, st.status?.ready === false ? t_('✗ kein Index') : `${(st.status?.media ?? 0).toLocaleString('de-DE')} Dokumente · ${(st.status?.chunks ?? 0).toLocaleString('de-DE')} Abschnitte`),
         // Scans haben keine Textebene — der Text steckt in Bildern und bräuchte OCR (Taloan, 22.09.2026)
-        st.status?.scans ? el('span', { class: 'warn', style: 'font-size:12px', title: 'PDFs ohne Textebene: der Text steckt in Bildern und ist erst nach OCR durchsuchbar' }, `◌ ${st.status.scans} brauchen OCR`) : null,
+        st.status?.scans ? el('span', { class: 'warn', style: 'font-size:12px', title: t_('PDFs ohne Textebene: der Text steckt in Bildern und ist erst nach OCR durchsuchbar') }, t_('◌ {0} brauchen OCR', [st.status.scans])) : null,
         st.status?.errors ? el('button', {
           class: 'x neg', style: 'font-size:12px',
-          title: 'Gescheiterte Dokumente freigeben (der Job liest sie beim nächsten Lauf erneut) — der Grund steht im Protokoll des Jobs',
+          title: t_('Gescheiterte Dokumente freigeben (der Job liest sie beim nächsten Lauf erneut) — der Grund steht im Protokoll des Jobs'),
           onclick: freigeben,
         }, `✗ ${st.status.errors}`) : null,
-        el('button', { class: 'x', title: 'Stand neu lesen', onclick: async () => { await loadStatus(); draw() } }, '⟳'),
+        el('button', { class: 'x', title: t_('Stand neu lesen'), onclick: async () => { await loadStatus(); draw() } }, '⟳'),
       ),
       el('div', { class: 'scroll' }, body()),
     )
@@ -97,19 +98,19 @@ async function mount(root, ctx) {
     if (st.said.startsWith('✗')) return el('div', { class: 'empty neg' }, st.said)
     if (!st.hits.length) {
       return el('div', { class: 'empty' }, st.q.trim()
-        ? `Nichts zu „${st.q.trim()}“ — andere Wörter, oder das Dokument ist noch nicht gelesen (Job „Werkzeug: Dokumente lesen“).`
-        : 'Suchwort eingeben. Gesucht wird im Text der Dokumente, die an den Knoten hängen.')
+        ? t_('Nichts zu „{0}“ — andere Wörter, oder das Dokument ist noch nicht gelesen (Job „Werkzeug: Dokumente lesen“).', [st.q.trim()])
+        : t_('Suchwort eingeben. Gesucht wird im Text der Dokumente, die an den Knoten hängen.'))
     }
     const list = el('div', { class: 'list' })
     for (const h of st.hits) {
       const knoten = (h.nodes ?? []).map(n => el('a', {
-        class: 'link', title: `${n.id} im Baum öffnen`,
+        class: 'link', title: t_('{0} im Baum öffnen', [n.id]),
         onclick: () => ctx.go?.(`/tree/${encodeURIComponent(n.id)}`),
       }, `${ICON[n.role] ?? ''} ${n.label}`))
       list.append(el('div', { class: 'hit', style: 'padding:8px 10px;border-bottom:1px solid var(--line)' },
         el('div', { style: 'display:flex;gap:8px;align-items:baseline;min-width:0' },
           el('a', { class: 'link', href: `/api/media/${encodeURIComponent(h.media)}/file`, target: '_blank', rel: 'noopener', title: h.mime ?? '' }, h.name),
-          h.page ? el('span', { class: 'muted', style: 'font-size:12px;flex:0 0 auto' }, `Seite ${h.page}`) : null,
+          h.page ? el('span', { class: 'muted', style: 'font-size:12px;flex:0 0 auto' }, t_('Seite {0}', [h.page])) : null,
           h.heading ? el('span', { class: 'muted', style: 'font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, `· ${h.heading}`) : null,
           el('span', { class: 'grow' }),
           ...knoten,
@@ -131,9 +132,9 @@ async function mount(root, ctx) {
 }
 
 export default {
-  views: [{ path: 'search', label: 'Dokumente', icon: '⌕', topic: 'tools', hint: 'Im Text der Dokumente suchen — Datenblätter, Anleitungen, Kataloge; gelesen wird vom Job „Werkzeug: Dokumente lesen“', mount }],
+  views: [{ path: 'search', label: t_('Dokumente'), icon: '⌕', topic: 'tools', hint: t_('Im Text der Dokumente suchen — Datenblätter, Anleitungen, Kataloge; gelesen wird vom Job „Werkzeug: Dokumente lesen“'), mount }],
   nodeActions: [{
-    label: 'In Dokumenten suchen', icon: '⌕', topic: 'tools', roles: ['group', 'product', 'variant'],
+    label: t_('In Dokumenten suchen'), icon: '⌕', topic: 'tools', roles: ['group', 'product', 'variant'],
     run(nodeId, ctx) { localStorage.setItem('journali.docs.under', nodeId); ctx.go?.('/p/docs/search') },
   }],
 }

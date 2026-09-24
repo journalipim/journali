@@ -1,5 +1,6 @@
 import { reactive } from 'vue'
 import { api } from './api.js'
+import { setLang, browserLang } from './i18n.js'   // Oberflächensprache (24.09.2026)
 
 // Ein Zustand für die ganze Oberfläche. Einstellungen liegen im localStorage,
 // der Serverstand (head) wird alle 3 s abgefragt — darauf hängen Live-Listen.
@@ -108,7 +109,7 @@ export const store = reactive({
 
   /// Oberflächensprache setzen: gewählt oder die des Browsers; die Sprachdatei holt i18n.setLang
   setLang(code) { this.lang = code; this.save(); this.savePrefs(); this.applyLang() },
-  applyLang() { import('./i18n.js').then(m => m.setLang(this.lang || m.browserLang())) },
+  applyLang() { setLang(this.lang || browserLang()) },
 
   applyTheme() {
     if (this.theme === 'system') delete document.documentElement.dataset.theme

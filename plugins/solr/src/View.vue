@@ -8,6 +8,7 @@ import { api, store, tree, icon, plugins, Splitter, ImportHead, TreePicker, pane
 import { useRouter } from 'vue-router'
 import { solr, SYSTEM, roleOf, ownValues, DEFAULT_SKIP, TYPES, REL_GROUP } from '../solr.js'
 import { plane, schreibe, planeRelationen, schreibeRelationen } from '../lauf.mjs'
+import { t as t_ } from 'journali'
 const srcW = paneWidth('import.src', 340)
 const router = useRouter()
 
@@ -83,11 +84,11 @@ async function connect() {
     expanded.value = new Set(); checked.value = new Set(); plan.value = null; result.value = null; current.value = null
     connected.value = true
     persist()
-    busy.value = 'lade Attribut-Definitionen …'
+    busy.value = t_('lade Attribut-Definitionen …')
     pdefs.value = await client.propertyDefs()
     say(`verbunden: ${total.value} Dokumente, ${roots.length} Wurzeln, ${Object.keys(pdefs.value).length} Attribut-Definitionen`)
     for (const r of [...rows.value]) await expand(r)
-  } catch (e) { store.toast(e.message); say('Fehler: ' + e.message); connected.value = false }
+  } catch (e) { store.toast(e.message); say(t_('Fehler:') + ' ' + e.message); connected.value = false }
   finally { busy.value = '' }
 }
 
@@ -156,13 +157,13 @@ function gewaehlt() {
 }
 
 async function analyse() {
-  if (!checked.value.size) { store.toast('Nichts angehakt'); return }
+  if (!checked.value.size) { store.toast(t_('Nichts angehakt')); return }
   busy.value = 'lade …'; plan.value = null; result.value = null
   try {
     const { wurzeln, eltern, anzahl } = gewaehlt()
     const p = await plane({ client, umgebung, wurzeln, eltern, skip: skip.value, pdefs: pdefs.value })
     plan.value = { ...p, picked: anzahl }
-  } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
+  } catch (e) { store.toast(e.message); say(t_('Fehler:') + ' ' + e.message) }
   finally { busy.value = '' }
 }
 const counts = computed(() => {
@@ -173,15 +174,15 @@ const counts = computed(() => {
 
 // ---- Relationen (18): zweiter Lauf nach den Knoten — Kanten aus *_doc_rel und den complex_relation-Dokumenten
 async function analyseRelations() {
-  if (!checked.value.size) { store.toast('Nichts angehakt'); return }
+  if (!checked.value.size) { store.toast(t_('Nichts angehakt')); return }
   busy.value = 'lade …'; relPlan.value = null; relResult.value = null
   try {
     relPlan.value = await planeRelationen({ client, umgebung, wurzeln: gewaehlt().wurzeln })
-  } catch (e) { store.toast(e.message); say('Fehler: ' + e.message) }
+  } catch (e) { store.toast(e.message); say(t_('Fehler:') + ' ' + e.message) }
   finally { busy.value = '' }
 }
 async function runRelations() {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   if (!relPlan.value) return
   busy.value = 'schreibe …'; relResult.value = null
   let written = 0, batches = 0
@@ -191,7 +192,7 @@ async function runRelations() {
     relResult.value = { written, batches, error: null }
     await store.poll(true)
     relPlan.value = null
-  } catch (e) { relResult.value = { written, batches, error: e.message }; store.toast(e.message); say('Fehler: ' + e.message) }
+  } catch (e) { relResult.value = { written, batches, error: e.message }; store.toast(e.message); say(t_('Fehler:') + ' ' + e.message) }
   finally { busy.value = '' }
 }
 
@@ -199,9 +200,9 @@ async function runRelations() {
 /// Der Lauf geht an den Tasker: dort läuft er weiter, auch wenn dieses Fenster zugeht (Taloan, 23.09.2026).
 const JOB = 'solr_import'
 async function run() {
-  if (!store.actor) { store.toast('👤 Name fehlt → Einstellungen'); return }
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   if (!plan.value) return
-  busy.value = 'übergebe …'; result.value = null
+  busy.value = t_('übergebe …'); result.value = null
   try {
     const { wurzeln } = gewaehlt()
     const r = await api.post(`/api/jobs/${JOB}/uebergabe`, {
@@ -217,12 +218,12 @@ async function run() {
       },
     })
     result.value = { job: r.job, run: r.run, error: null }
-    say(`an den Tasker übergeben · Lauf ${r.run}`)
-    store.toast('▶ An den Tasker übergeben', 'ok', { label: '⏱ Jobs', title: 'Fortschritt, Abbrechen und das Protokoll', run: () => router.push('/p/tasker/jobs') })
+    say(t_('an den Tasker übergeben · Lauf {0}', [r.run]))
+    store.toast(t_('▶ An den Tasker übergeben'), 'ok', { label: t_('⏱ Jobs'), title: t_('Fortschritt, Abbrechen und das Protokoll'), run: () => router.push('/p/tasker/jobs') })
     plan.value = null
   } catch (e) {
     result.value = { error: e.message }
-    store.toast(e.message); say('Fehler: ' + e.message)
+    store.toast(e.message); say(t_('Fehler:') + ' ' + e.message)
   } finally { busy.value = '' }
 }
 </script>
@@ -231,130 +232,130 @@ async function run() {
   <div class="pane" :style="`width:${srcW}px;flex:none`">
     <ImportHead source="solr" plugin="solr" :busy="busy" :get="profileGet" :set="profileSet">
       <template #status><span v-if="connected" class="muted" :title="base">☰ {{ total }}</span></template>
-      <tr><td class="attr">Quelle</td><td class="row">
-        <input v-model="base" type="text" placeholder="https://…/solr/<kern>" title="URL des Solr-Kerns" @keydown.enter="connect" />
-        <button class="primary" @click="connect" :disabled="!!busy">Verbinden</button>
+      <tr><td class="attr">{{ $t("Quelle") }}</td><td class="row">
+        <input v-model="base" type="text" :placeholder="$t('https://…/solr/<kern>')" :title="$t('URL des Solr-Kerns')" @keydown.enter="connect" />
+        <button class="primary" @click="connect" :disabled="!!busy">{{ $t("Verbinden") }}</button>
       </td></tr>
     </ImportHead>
-    <div class="step-band">2 · Auswahl <span class="muted">· Haken = Teilbaum, Klick zeigt den Knoten</span><span class="grow" /><span class="muted">{{ checked.size }} gewählt</span></div>
+    <div class="step-band">{{ $t("2 · Auswahl") + ' ' }}<span class="muted">{{ $t("· Haken = Teilbaum, Klick zeigt den Knoten") }}</span><span class="grow" /><span class="muted">{{ $t("{0} gewählt", [checked.size]) }}</span></div>
     <div class="scroll src">
       <div v-for="r in visible" :key="r.doc.id" class="node" :class="[roleOf(r.doc), { on: checked.has(r.doc.id) || checkedAbove(r), current: current?.id === r.doc.id }]"
         :style="`padding-left:${6 + r.depth * 14}px`" :title="r.doc.master_id" tabindex="0" :data-id="r.doc.id" @click="show(r)" @keydown="onKey($event, r)">
         <span class="twisty" @click.stop="toggle(r)">{{ roleOf(r.doc) === 'variant' || r.kids === 0 ? '' : (expanded.has(r.doc.id) ? '▾' : '▸') }}</span>
-        <input type="checkbox" :checked="checked.has(r.doc.id) || checkedAbove(r)" :disabled="checkedAbove(r)" @click.stop @change="check(r)" title="Teilbaum importieren" />
+        <input type="checkbox" :checked="checked.has(r.doc.id) || checkedAbove(r)" :disabled="checkedAbove(r)" @click.stop @change="check(r)" :title="$t('Teilbaum importieren')" />
         <span class="icon">{{ icon(roleOf(r.doc)) }}</span>
         <span class="label">{{ r.doc.name || r.doc.remote_id || r.doc.master_id }}</span>
-        <span v-if="known.has(r.doc.master_id)" class="pos" title="schon in journali">✓</span>
+        <span v-if="known.has(r.doc.master_id)" class="pos" :title="$t('schon in journali')">✓</span>
         <span v-if="r.kids" class="muted count">{{ r.kids }}</span>
       </div>
-      <div v-if="!connected" class="empty">Verbinden — Solr liest sich ohne Anmeldung.</div>
+      <div v-if="!connected" class="empty">{{ $t("Verbinden — Solr liest sich ohne Anmeldung.") }}</div>
     </div>
-    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> · <kbd>Leer</kbd> Haken · Klick zeigt den Knoten · {{ checked.size }} gewählt</div>
+    <div class="toolbar hint muted" style="border-top:1px solid var(--line);border-bottom:0;font-size:12px"><kbd>↑</kbd><kbd>↓</kbd> · <kbd>→</kbd><kbd>←</kbd> · <kbd>{{ $t("Leer") }}</kbd>{{ ' ' + $t("Haken · Klick zeigt den Knoten · {0} gewählt", [checked.size]) }}</div>
   </div>
 
   <Splitter v-model="srcW" :min="240" :max="800" />
   <!-- Der angeklickte Knoten: nur dann, sonst gehört der Platz dem Plan (Taloan, 17.09.) -->
   <div class="pane" style="flex:1" v-if="current">
-    <div class="toolbar"><h1>{{ icon(roleOf(current)) + ' ' + (current.name || current.master_id) }}</h1><span class="mono muted">{{ current.master_id }}</span><span class="grow" /><button class="x" @click="current = null" title="zuklappen">×</button></div>
+    <div class="toolbar"><h1>{{ icon(roleOf(current)) + ' ' + (current.name || current.master_id) }}</h1><span class="mono muted">{{ current.master_id }}</span><span class="grow" /><button class="x" @click="current = null" :title="$t('zuklappen')">×</button></div>
     <div class="scroll">
         <!-- kein nacktes <template> hier: Vue 3 rendert es als echtes <template>-Element, dessen Inhalt unsichtbar ist (Taloan, 17.09.: „mittlere Spalte leer“) -->
         <div class="toolbar meta muted">
-          <span v-if="current.product_number">SKU {{ current.product_number }}</span>
-          <span v-if="current.main_level != null">· Ebene {{ current.main_level }}</span>
-          <span v-if="current.info__changedOn__dateTime">· geändert {{ current.info__changedOn__dateTime.slice(0, 10) }}</span>
-          <span v-if="known.has(current.master_id)">· <router-link :to="`/tree/${known.get(current.master_id).id}`" class="pos">✓ in journali →</router-link></span>
+          <span v-if="current.product_number">{{ $t("SKU {0}", [current.product_number]) }}</span>
+          <span v-if="current.main_level != null">{{ $t("· Ebene {0}", [current.main_level]) }}</span>
+          <span v-if="current.info__changedOn__dateTime">{{ $t("· geändert {0}", [current.info__changedOn__dateTime.slice(0, 10)]) }}</span>
+          <span v-if="known.has(current.master_id)">· <router-link :to="`/tree/${known.get(current.master_id).id}`" class="pos">{{ $t("✓ in journali →") }}</router-link></span>
         </div>
         <table class="grid">
-          <thead><tr><th>Solr</th><th>Typ</th><th>→ Attribut</th><th>Wert</th></tr></thead>
+          <thead><tr><th>{{ $t("Solr") }}</th><th>{{ $t("Typ") }}</th><th>{{ $t("→ Attribut") }}</th><th>{{ $t("Wert") }}</th></tr></thead>
           <tbody>
             <tr v-for="v in currentValues" :key="v.key">
               <td class="mono" :title="v.section ? `${v.label ?? ''} · ${v.section}` : ''">{{ v.key }}</td>
               <td class="muted">{{ v.type }}</td>
-              <td :class="attrs.has(v.attr) ? '' : 'warn'" :title="attrs.has(v.attr) ? 'Attribut vorhanden' : 'wird angelegt' + (v.section ? ' in ' + v.section : '')">{{ v.attr }}<span v-if="!attrs.has(v.attr)" class="muted"> +</span></td>
+              <td :class="attrs.has(v.attr) ? '' : 'warn'" :title="attrs.has(v.attr) ? $t('Attribut vorhanden') : $t('wird angelegt') + (v.section ? ' in ' + v.section : '')">{{ v.attr }}<span v-if="!attrs.has(v.attr)" class="muted"> +</span></td>
               <td class="val" :title="v.value">{{ v.value.replace(/<[^>]+>/g, ' ').slice(0, 160) }}</td>
             </tr>
           </tbody>
         </table>
-        <p v-if="currentSkipped.length" class="muted" style="padding:0 8px;font-size:12px">übergangen: {{ currentSkipped.join(', ') }}</p>
+        <p v-if="currentSkipped.length" class="muted" style="padding:0 8px;font-size:12px">{{ $t("übergangen: {0}", [currentSkipped.join(', ')]) }}</p>
     </div>
   </div>
 
   <div class="pane" style="flex:1">
-    <div class="toolbar"><h1>3 · Plan</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">Analysieren</button><button class="primary" @click="run" :disabled="!plan || !!busy">Schreiben</button></div>
+    <div class="toolbar"><h1>{{ $t("3 · Plan") }}</h1><span class="grow" /><button class="primary" @click="analyse" :disabled="!connected || !checked.size || !!busy">{{ $t("Analysieren") }}</button><button class="primary" @click="run" :disabled="!plan || !!busy">{{ $t("Schreiben") }}</button></div>
     <div class="scroll">
       <table class="grid form-grid"><colgroup><col style="width:84px" /><col /></colgroup>
         <tbody>
-          <tr><td class="muted">Ziel ▣</td><td>
-            <div class="muted" style="margin-bottom:4px">{{ target ? '▣ ' + (tree.byId.get(target)?.label ?? target) : '⌂ Wurzel' }} · angehakte Wurzeln kommen hier unter; tiefere unter ihre importierten Eltern</div>
+          <tr><td class="muted">{{ $t("Ziel ▣") }}</td><td>
+            <div class="muted" style="margin-bottom:4px">{{ $t("{0} · angehakte Wurzeln kommen hier unter; tiefere unter ihre importierten Eltern", [target ? '▣ ' + (tree.byId.get(target)?.label ?? target) : $t('⌂ Wurzel')]) }}</div>
             <TreePicker v-model="target" :roles="['group']" allow-root :height="180" @pick="persist" />
           </td></tr>
-          <tr><td class="muted">Übergehen</td><td>
-            <input v-model="skipText" type="text" placeholder="weitere Schlüssel, Muster mit *" style="width:260px" @change="persist" />
-            <span class="muted">immer: {{ DEFAULT_SKIP.join(', ') }}, Relationen, Medien</span>
+          <tr><td class="muted">{{ $t("Übergehen") }}</td><td>
+            <input v-model="skipText" type="text" :placeholder="$t('weitere Schlüssel, Muster mit *')" style="width:260px" @change="persist" />
+            <span class="muted">{{ $t("immer: {0}, Relationen, Medien", [DEFAULT_SKIP.join(', ')]) }}</span>
           </td></tr>
         </tbody>
       </table>
       <template v-if="plan">
         <table class="grid" style="width:auto">
-          <thead><tr><th></th><th class="num pos">neu</th><th class="num">vorhanden</th></tr></thead>
+          <thead><tr><th></th><th class="num pos">{{ $t("neu") }}</th><th class="num">{{ $t("vorhanden") }}</th></tr></thead>
           <tbody>
             <tr v-for="r in ['group', 'product', 'variant']" :key="r"><td>{{ icon(r) }} {{ r }}</td><td class="num pos">{{ counts[r][0] }}</td><td class="num">{{ counts[r][1] }}</td></tr>
           </tbody>
         </table>
         <div class="section" v-if="plan.needs.newAttrs.size || plan.needs.newGroups.size">
-          <h2>Neu im Modell: ▤ {{ plan.needs.newGroups.size }} · ⊞ {{ plan.needs.newAttrs.size }}<span v-if="plan.needs.raise.size" class="warn"> · {{ plan.needs.raise.size }} Gruppen „aktiv ab“ anheben: {{ [...plan.needs.raise].map(([k, r]) => `${k} → ${r ?? 'überall'}`).join(', ') }}</span></h2>
+          <h2>{{ $t("Neu im Modell: ▤ {0} · ⊞ {1}", [plan.needs.newGroups.size, plan.needs.newAttrs.size]) }}<span v-if="plan.needs.raise.size" class="warn">{{ ' ' + $t("· {0} Gruppen „aktiv ab“ anheben: {1}", [plan.needs.raise.size, [...plan.needs.raise].map(([k, r]) => `${k} → ${r ?? 'überall'}`).join(', ')]) }}</span></h2>
           <table class="grid">
-            <thead><tr><th>Attribut</th><th>Typ</th><th>▤ Gruppe</th><th class="num">#</th></tr></thead>
+            <thead><tr><th>{{ $t("Attribut") }}</th><th>{{ $t("Typ") }}</th><th>{{ $t("▤ Gruppe") }}</th><th class="num">#</th></tr></thead>
             <tbody>
               <tr v-for="[k, d] in plan.needs.newAttrs" :key="k">
                 <td :title="k">{{ d.label.de }} <span class="mono muted">{{ k }}</span></td>
                 <td class="muted">{{ d.type }}{{ d.multiple ? ' ≣' : '' }}{{ d.axes ? ' 🗣' : '' }}</td>
-                <td :class="{ pos: plan.needs.newGroups.has(d.group) }" :title="plan.needs.newGroups.get(d.group)?.label">{{ d.group }}<span v-if="plan.needs.newGroups.get(d.group)?.activeFrom" class="muted"> · ab {{ icon(plan.needs.newGroups.get(d.group).activeFrom) }}</span></td>
+                <td :class="{ pos: plan.needs.newGroups.has(d.group) }" :title="plan.needs.newGroups.get(d.group)?.label">{{ d.group }}<span v-if="plan.needs.newGroups.get(d.group)?.activeFrom" class="muted">{{ ' ' + $t("· ab {0}", [icon(plan.needs.newGroups.get(d.group).activeFrom)]) }}</span></td>
                 <td class="num">{{ plan.needs.counts.get(k) }}</td>
               </tr>
             </tbody>
           </table>
         </div>
         <div class="section">
-          <h2>Knoten</h2>
+          <h2>{{ $t("Knoten") }}</h2>
           <table class="grid">
             <tbody>
               <tr v-for="it in plan.items" :key="it.doc.id">
-                <td :title="it.doc.master_id">{{ icon(it.role) }} {{ it.doc.name || it.doc.master_id }}<span v-if="it.doc.pseudo" class="muted"> · Sammelprodukt</span></td>
-                <td><router-link v-if="it.existing" :to="`/tree/${it.existing.id}`" class="muted">vorhanden →</router-link><span v-else class="pos">neu</span></td>
+                <td :title="it.doc.master_id">{{ icon(it.role) }} {{ it.doc.name || it.doc.master_id }}<span v-if="it.doc.pseudo" class="muted">{{ ' ' + $t("· Sammelprodukt") }}</span></td>
+                <td><router-link v-if="it.existing" :to="`/tree/${it.existing.id}`" class="muted">{{ $t("vorhanden →") }}</router-link><span v-else class="pos">{{ $t("neu") }}</span></td>
               </tr>
             </tbody>
           </table>
         </div>
       </template>
       <div class="section">
-        <h2>⇄ Relationen <span class="muted">· zweiter Lauf, wenn die Knoten drin sind (beide Enden müssen importiert sein)</span></h2>
+        <h2>{{ $t("⇄ Relationen") + ' ' }}<span class="muted">{{ $t("· zweiter Lauf, wenn die Knoten drin sind (beide Enden müssen importiert sein)") }}</span></h2>
         <div class="chips">
-          <button class="primary" @click="analyseRelations" :disabled="!connected || !checked.size || !!busy">⇄ analysieren</button>
-          <button class="primary" @click="runRelations" :disabled="!relPlan || !!busy">⇄ schreiben</button>
-          <span v-if="relPlan" class="muted">{{ relPlan.docs }} Knoten mit Kanten · {{ relPlan.cmds }} Befehle<span v-if="relPlan.needs.missingFrom" class="warn"> · {{ relPlan.needs.missingFrom }} Quellen nicht importiert</span></span>
+          <button class="primary" @click="analyseRelations" :disabled="!connected || !checked.size || !!busy">{{ $t("⇄ analysieren") }}</button>
+          <button class="primary" @click="runRelations" :disabled="!relPlan || !!busy">{{ $t("⇄ schreiben") }}</button>
+          <span v-if="relPlan" class="muted">{{ $t("{0} Knoten mit Kanten · {1} Befehle", [relPlan.docs, relPlan.cmds]) }}<span v-if="relPlan.needs.missingFrom" class="warn">{{ ' ' + $t("· {0} Quellen nicht importiert", [relPlan.needs.missingFrom]) }}</span></span>
         </div>
         <table v-if="relPlan" class="grid" style="width:auto;margin-top:6px">
-          <thead><tr><th>Typ</th><th class="num pos">neu</th><th class="num">vorhanden</th><th class="num warn">geändert</th><th class="num neg">Ziel fehlt</th><th class="num muted">auf sich selbst</th></tr></thead>
+          <thead><tr><th>{{ $t("Typ") }}</th><th class="num pos">{{ $t("neu") }}</th><th class="num">{{ $t("vorhanden") }}</th><th class="num warn">{{ $t("geändert") }}</th><th class="num neg">{{ $t("Ziel fehlt") }}</th><th class="num muted">{{ $t("auf sich selbst") }}</th></tr></thead>
           <tbody>
             <tr v-for="[t, s] in relPlan.needs.stats" :key="t"><td>⇄ {{ t }}<span v-if="relPlan.needs.newTypes.has(t)" class="pos"> +</span></td><td class="num pos">{{ s.neu }}</td><td class="num">{{ s.gleich }}</td><td class="num warn">{{ s.geaendert }}</td><td class="num neg">{{ s.zielFehlt }}</td><td class="num muted">{{ s.selbst }}</td></tr>
           </tbody>
         </table>
-        <p v-if="relPlan?.needs.newAttrs.size" class="muted" style="font-size:12px">Neu in ▤ {{ REL_GROUP }}: {{ [...relPlan.needs.newAttrs.keys()].join(', ') }}</p>
+        <p v-if="relPlan?.needs.newAttrs.size" class="muted" style="font-size:12px">{{ $t("Neu in ▤ {0}: {1}", [REL_GROUP, [...relPlan.needs.newAttrs.keys()].join(', ')]) }}</p>
         <div v-if="relResult" style="margin-top:6px">
-          <div v-if="relResult.error" class="neg">{{ relResult.error }} — {{ relResult.written }} Einträge davor geschrieben.</div>
-          <div v-else-if="relResult.written" class="pos">{{ relResult.written }} Einträge in {{ relResult.batches }} Stapeln</div>
-          <div v-else class="muted">Nichts zu schreiben.</div>
+          <div v-if="relResult.error" class="neg">{{ $t("{0} — {1} Einträge davor geschrieben.", [relResult.error, relResult.written]) }}</div>
+          <div v-else-if="relResult.written" class="pos">{{ $t("{0} Einträge in {1} Stapeln", [relResult.written, relResult.batches]) }}</div>
+          <div v-else class="muted">{{ $t("Nichts zu schreiben.") }}</div>
         </div>
       </div>
       <div v-if="result" class="section">
-        <h2>Ergebnis</h2>
+        <h2>{{ $t("Ergebnis") }}</h2>
         <div v-if="result.error" class="neg">{{ result.error }}</div>
-        <div v-else-if="result.job" class="pos">an den Tasker übergeben · Lauf <span class="mono">{{ result.run }}</span> → <router-link to="/p/tasker/jobs">⏱ Jobs</router-link></div>
-        <div v-else class="muted">Nichts zu schreiben.</div>
+        <div v-else-if="result.job" class="pos">{{ $t("an den Tasker übergeben · Lauf") + ' ' }}<span class="mono">{{ result.run }}</span> → <router-link to="/p/tasker/jobs">{{ $t("⏱ Jobs") }}</router-link></div>
+        <div v-else class="muted">{{ $t("Nichts zu schreiben.") }}</div>
       </div>
       <div class="section">
-        <h2>Protokoll</h2>
+        <h2>{{ $t("Protokoll") }}</h2>
         <div v-for="(l, i) in log" :key="i" class="mono muted" style="font-size:11px">{{ l }}</div>
       </div>
     </div>

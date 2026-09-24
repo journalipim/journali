@@ -1,0 +1,21 @@
+{
+ "Vorlage": "Template",
+ "Name": "Name",
+ "Name zum Speichern": "Name to save under",
+ "Sprache der Vorschau": "Language of the preview",
+ "🔍 Knoten für die Vorschau": "🔍 Node for the preview",
+ "Vorlage für {0}": "Template for {0}",
+ "Datenblatt: {0} → {1}": "Data sheet: {0} → {1}",
+ "<pre style=\"color:#b91c1c\">{0}</pre>": "<pre style=\"color:#b91c1c\">{0}</pre>",
+ "Vorlage „{0}“ löschen?": "Delete template “{0}”?",
+ "🗑 Löschen": "🗑 Delete",
+ "? Platzhalter": "? Placeholders",
+ "Vorlage speichern (Strg+S) — im Journal, für alle": "Save template (Ctrl+S) — in the journal, for everyone",
+ "Vorlage löschen": "Delete template",
+ "Datenblatt": "Data sheet",
+ "im neuen Fenster öffnen → drucken / PDF": "open in a new window → print / PDF",
+ "⎙ öffnen": "⎙ open",
+ "Datenblatt erstellen": "Create data sheet",
+ "Datenblatt {0}": "Data sheet {0}",
+ "Datenblatt designen …": "Design data sheet …"
+}

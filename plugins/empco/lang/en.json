@@ -1,0 +1,20 @@
+{
+ "Teilbaum wählen": "Choose a subtree",
+ "{0} Befunde in {1} Knoten": "{0} findings in {1} nodes",
+ "{0} Kriterienkatalog": "{0} Criteria catalogue",
+ "· {0} Regeln · heuristisch, keine Rechtsberatung · Quellen:": "· {0} rules · heuristic, not legal advice · sources:",
+ "Regel": "Rule",
+ "Was zu tun ist": "What to do",
+ "Anker": "Anchor",
+ "Muster": "Pattern",
+ "Teilbaum wählen und prüfen — dieselben Regeln laufen auch in ✓ Datenqualität mit allen anderen.": "Choose a subtree and check — the same rules also run in ✓ Data quality with all the others.",
+ "Knoten": "Node",
+ "Feld": "Field",
+ "Befund": "Finding",
+ "Befunde": "Findings",
+ "· {0} in {1} Knoten · ✗ {2} · ⚠ {3} · ℹ {4}": "· {0} in {1} nodes · ✗ {2} · ⚠ {3} · ℹ {4}",
+ "✓ keine Befunde": "✓ no findings",
+ "▶ prüfen": "▶ check",
+ "Greenwashing-Kritikalität von Produkttexten nach Richtlinie (EU) 2024/825 — Kriterienkatalog, Prüfung je Teilbaum, Regeln in der Datenqualität": "Greenwashing criticality of product texts under Directive (EU) 2024/825 — criteria catalogue, check per subtree, rules in data quality",
+ "EmpCo prüfen": "Check EmpCo"
+}

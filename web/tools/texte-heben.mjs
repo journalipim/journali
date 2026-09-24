@@ -21,6 +21,11 @@ const WORT = /[A-Za-zÄÖÜäöüß]{2,}/           // ohne Buchstaben ist es ke
 const ATTRS = new Set(['title', 'placeholder', 'alt', 'aria-label'])
 const NIE = new Set(['pre', 'code', 'script', 'style', 'textarea'])   // Inhalt bleibt, wie er ist
 
+/// Vorlagen der Plugins: plugins/<key>/src/*.vue (entry.js ist Bauergebnis)
+export const pluginVorlagen = () => {
+  const dir = path.join(ROOT, '..', 'plugins')
+  return fs.readdirSync(dir).flatMap(k => fs.existsSync(path.join(dir, k, 'src')) ? walk(path.join(dir, k, 'src')) : [])
+}
 const walk = d => fs.readdirSync(d, { withFileTypes: true })
   .flatMap(e => e.isDirectory() ? (e.name === 'node_modules' ? [] : walk(path.join(d, e.name))) : e.name.endsWith('.vue') ? [path.join(d, e.name)] : [])
 
@@ -101,7 +106,7 @@ export function heben(source, filename) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]).endsWith('texte-heben.mjs')) {
-  const list = files.length ? files.map(f => path.resolve(f)) : walk(path.join(ROOT, 'src'))
+  const list = files.length ? files.map(f => path.resolve(f)) : argv.includes('--plugins') ? pluginVorlagen() : walk(path.join(ROOT, 'src'))
   let total = 0; const alle = new Set(); const hand = []
   for (const f of list) {
     const raw = fs.readFileSync(f)

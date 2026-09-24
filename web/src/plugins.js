@@ -40,6 +40,7 @@ import { filePicker } from './filePicker.js'
 import { treePicker } from './treePicker.js'
 import * as orphans from './orphans.js'
 import * as compliance from './compliance.js'
+import { registerPluginLang } from './i18n.js'
 import { ai } from './ai.js'
 import { t } from './i18n.js'
 
@@ -65,6 +66,7 @@ export const plugins = reactive({
     for (const p of order) {
       const m = p.manifest ?? {}
       if (!this.active(p.key) || m.runs !== 'browser' || !m.entry || this.modules.has(p.key)) continue
+      await registerPluginLang(p.key)   // Oberflächensprache (24.09.2026): plugins/<key>/lang/<code>.json vor dem Modul
       try { this.modules.set(p.key, (await import(/* @vite-ignore */ `/plugins/${p.key}/${m.entry}`)).default ?? {}) }
       catch (e) { store.toast(t('Plugin {0}: {1}', [p.key, e.message])) }
     }
@@ -122,6 +124,7 @@ export const plugins = reactive({
     const base = `/api/plugins/${key}/data/`
     return {
       api, store, tree, mapper, dialog, orphans, compliance, ai, plugins: this, treePicker, filePicker,
+      t,                                                                        // Oberflächensprache: t('deutscher Text', [werte])
       touch: () => { this.rev++ },                                             // „meine Daten stehen“ — Ansichten neu rechnen
       use: k => this.modules.get(k) ?? null,                                    // Modul eines anderen Plugins (Basis-Plugin)
       plugin: { key, version: p?.version, base: `/plugins/${key}/` },

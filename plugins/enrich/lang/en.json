@@ -1,0 +1,16 @@
+{
+ "Muster: {0}": "Pattern: {0}",
+ "ohne Gruppe": "no group",
+ "Anreicherung": "Enrichment",
+ "Websuche ↗": "Web search ↗",
+ "{0} Attribute gewählt. Fehlende Werte: aus Regeln ableiten, von der KI aus den vorhandenen Werten vorschlagen lassen — oder für Handelsware im Internet recherchieren (Herstellerseite, Datenblatt; je Wert die Quelle). Übernommen wird nur, was angehakt ist.": "{0} attributes selected. Missing values: derive from rules, let the AI suggest them from the existing values — or research merchandise on the internet (manufacturer page, data sheet; the source per value). Only what is ticked is applied.",
+ "Oben Attribute wählen, die gefüllt sein sollen.": "Choose the attributes above that should be filled.",
+ "{0} Attribute": "{0} attributes",
+ "{0} — Klick entfernt": "{0} — click removes",
+ "Attribute wählen, die gefüllt sein sollen": "Choose the attributes that should be filled",
+ "+ Attribute": "+ Attributes",
+ "Gruppe abwählen": "Deselect group",
+ "ganze Gruppe wählen": "select the whole group",
+ "Fehlende Werte gewählter Attribute finden und ergänzen — aus Regeln, KI oder Recherche im Internet (Handelsware: Herstellerdaten, Datenblätter), je Wert mit Quelle": "Find and add missing values of selected attributes — from rules, AI or internet research (merchandise: manufacturer data, data sheets), each value with its source",
+ "Anreichern": "Enrich"
+}

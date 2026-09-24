@@ -2,6 +2,7 @@
 // hier das Browser-Drumherum — Herunterladen, SheetJS laden, Excel am Knoten (Vorlage / Export mit Legende).
 import { api, store, tree, mapper } from 'journali'
 import { build as coreBuild, toCsv, toJson, toJsonTree, workbook } from './core.mjs'
+const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 
 export { toCsv, toJson, toJsonTree }
 export const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000) }
@@ -13,10 +14,10 @@ const POLISH_URL = '/plugins/xlsx/polish.mjs'
 async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
   const raw = X.write(wb, { type: 'array', bookType: 'xlsx' })
   try { const { polish } = await import(/* @vite-ignore */ POLISH_URL); return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null }) }
-  catch (e) { console.warn('Excel ohne Politur:', e.message); return new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }
+  catch (e) { console.warn(t_('Excel ohne Politur:'), e.message); return new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }
 }
 export const build = opts => coreBuild({ api, model: store.model }, opts)
-export async function toXlsx(table, sheet = 'Daten') {
+export async function toXlsx(table, sheet = t_('Daten')) {
   const X = await loadXlsx()
   return polished(X, workbook(X, table, null, sheet), table.columns, table.rows.length, sheet)
 }
@@ -33,7 +34,7 @@ async function nodeColumns(nodeId) {
 }
 function legend(columns) {
   const model = store.model
-  const rows = [['Pflicht', 'Spalte', 'Label', 'Typ', 'Einheit', 'Sprache', 'Werte / Hinweis']]
+  const rows = [[t_('Pflicht'), t_('Spalte'), t_('Label'), 'Typ', t_('Einheit'), t_('Sprache'), 'Werte / Hinweis']]
   for (const c of columns) {
     const d = c.def ?? (c.attr ? model.attributes.find(a => a.key === c.attr) : null)
     const list = d?.list ? model.lists.find(l => l.key === d.list) : null
@@ -54,6 +55,6 @@ export async function nodeWorkbook(nodeId, withData) {
   const lg = legend(columns)
   const wb = workbook(X, { columns, rows: data }, lg)
   const name = `${row.label}-${childRole}${withData ? '' : '-vorlage'}`.replace(/[^\w.-]+/g, '_') + '.xlsx'
-  download(await polished(X, wb, columns, data.length, childRole === 'variant' ? 'Varianten' : childRole === 'product' ? 'Produkte' : 'Gruppen', lg), name)
-  store.toast(`⇪ ${name}: ${columns.length} Spalten${withData ? `, ${data.length} Zeilen` : ''}`)
+  download(await polished(X, wb, columns, data.length, childRole === 'variant' ? t_('Varianten') : childRole === 'product' ? t_('Produkte') : t_('Gruppen'), lg), name)
+  store.toast(t_('⇪ {0}: {1} Spalten{2}', [name, columns.length, withData ? t_(', {0} Zeilen', [data.length]) : '']))
 }

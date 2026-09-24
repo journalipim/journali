@@ -36,6 +36,24 @@ export const i18n = createI18n({
 export const t = (key, params) => i18n.global.t(key, params ?? {})
 
 const loaded = new Set([DEFAULT_LANG])
+// Plugins bringen ihre Sprachdateien mit: plugins/<key>/lang/<code>.json — der Server liefert sie wie das Modul
+// (GET /plugins/{key}/{path}). Registriert beim Laden des Plugins; beim Sprachwechsel werden alle nachgeladen.
+const pluginKeys = new Set()
+const pluginLoaded = new Set()   // `${key}/${code}`
+async function ladePlugin(key, code) {
+  const id = `${key}/${code}`
+  if (code === DEFAULT_LANG || pluginLoaded.has(id)) return
+  pluginLoaded.add(id)
+  try {
+    const r = await fetch(`/plugins/${encodeURIComponent(key)}/lang/${code}.json`)
+    if (r.ok) i18n.global.mergeLocaleMessage(code, await r.json())
+  } catch { /* ohne Datei bleibt es beim Schlüssel */ }
+}
+/// Ein Plugin anmelden: seine Sprachdatei für die aktuelle Sprache kommt jetzt, die anderen beim Wechsel
+export async function registerPluginLang(key) {
+  pluginKeys.add(key)
+  await ladePlugin(key, i18n.global.locale.value)
+}
 
 /// Sprache umschalten; die Datei kommt einmal vom Server. Unbekannter Code → Vorgabe.
 export async function setLang(code) {
@@ -47,6 +65,7 @@ export async function setLang(code) {
     } catch { /* ohne Datei bleibt es beim Schlüssel, also deutsch */ }
     loaded.add(code)
   }
+  await Promise.all([...pluginKeys].map(k => ladePlugin(k, code)))
   i18n.global.locale.value = code
   document.documentElement.lang = code
   return code

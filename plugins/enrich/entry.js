@@ -4,6 +4,7 @@
 // wie DPP/PPWR/ETIM) zeigt je Knoten, was leer ist, und holt Vorschläge: aus Regeln, von der KI aus den vorhandenen Werten,
 // oder mit Recherche im Internet (Hersteller, Typ, EAN → Datenblatt) — jeder Wert mit Quelle, nichts wird ohne Haken geschrieben.
 // Der Katalog ist hier kein Gesetz, sondern die Auswahl des Nutzers (ctx.data „attributes“).
+const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 function el(tag, attrs = {}, ...kids) { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) { if (k === 'style') e.style.cssText = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'class') e.className = v; else e.setAttribute(k, v) } for (const c of kids.flat()) if (c != null) e.append(c.nodeType ? c : String(c)); return e }
 const TYPE = { integer: 'decimal', decimal: 'decimal', boolean: 'boolean', date: 'date', enum: 'enum', text: 'text', html: 'text' }
 
@@ -18,14 +19,14 @@ function buildCatalog(model, keys, locale) {
       key: a.key, label: lbl(a), level: 'must', type: TYPE[a.type] ?? 'text', unit: a.unit ?? null, perLocale: !!a.perLocale,
       values: list ? list.values.map(v => v.label?.[locale] || v.label?.de || v.value) : null,
       synonyms: [a.key, ...Object.values(a.label ?? {})],
-      hint: a.pattern ? `Muster: ${a.patternHint || a.pattern}` : a.type === 'html' ? 'HTML-Text' : '',
+      hint: a.pattern ? t('Muster: {0}', [a.patternHint || a.pattern]) : a.type === 'html' ? 'HTML-Text' : '',
     })
   }
-  const groups = [...byGroup.entries()].map(([g, items]) => ({ key: g || 'none', label: model.groups?.find(x => x.key === g)?.label?.[locale] || g || 'ohne Gruppe', items }))
+  const groups = [...byGroup.entries()].map(([g, items]) => ({ key: g || 'none', label: model.groups?.find(x => x.key === g)?.label?.[locale] || g || t('ohne Gruppe'), items }))
   return {
-    key: 'enrich', label: 'Anreicherung', icon: '⌕', source: 'https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/web-search-tool', sourceLabel: 'Websuche ↗',
-    description: keys.length ? `${keys.length} Attribute gewählt. Fehlende Werte: aus Regeln ableiten, von der KI aus den vorhandenen Werten vorschlagen lassen — oder für Handelsware im Internet recherchieren (Herstellerseite, Datenblatt; je Wert die Quelle). Übernommen wird nur, was angehakt ist.` : 'Oben Attribute wählen, die gefüllt sein sollen.',
-    groupKey: 'enrich', groupLabel: 'Anreicherung', prefix: '',
+    key: 'enrich', label: t('Anreicherung'), icon: '⌕', source: 'https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/web-search-tool', sourceLabel: t('Websuche ↗'),
+    description: keys.length ? t('{0} Attribute gewählt. Fehlende Werte: aus Regeln ableiten, von der KI aus den vorhandenen Werten vorschlagen lassen — oder für Handelsware im Internet recherchieren (Herstellerseite, Datenblatt; je Wert die Quelle). Übernommen wird nur, was angehakt ist.', [keys.length]) : t('Oben Attribute wählen, die gefüllt sein sollen.'),
+    groupKey: 'enrich', groupLabel: t('Anreicherung'), prefix: '',
     groups,
   }
 }
@@ -46,9 +47,9 @@ async function mount(root, ctx) {
   function drawHead() {
     head.innerHTML = ''
     const chosen = model.attributes.filter(a => st.keys.includes(a.key))
-    const bar = el('div', { class: 'chips' }, el('b', {}, `${chosen.length} Attribute`),
-      ...chosen.map(a => el('span', { class: 'view-chip on', title: `${a.key} — Klick entfernt`, onclick: () => { st.keys = st.keys.filter(k => k !== a.key); remember(); drawHead(); remount() } }, lbl(a), ' ✕')),
-      el('button', { class: 'x', title: 'Attribute wählen, die gefüllt sein sollen', onclick: () => { st.open = !st.open; drawHead() } }, st.open ? '▴ fertig' : '+ Attribute'))
+    const bar = el('div', { class: 'chips' }, el('b', {}, t('{0} Attribute', [chosen.length])),
+      ...chosen.map(a => el('span', { class: 'view-chip on', title: t('{0} — Klick entfernt', [a.key]), onclick: () => { st.keys = st.keys.filter(k => k !== a.key); remember(); drawHead(); remount() } }, lbl(a), ' ✕')),
+      el('button', { class: 'x', title: t('Attribute wählen, die gefüllt sein sollen'), onclick: () => { st.open = !st.open; drawHead() } }, st.open ? '▴ fertig' : t('+ Attribute')))
     head.append(bar)
     if (!st.open) return
     const q = el('input', { type: 'search', placeholder: 'filtern', value: st.q, style: 'width:200px;margin:6px 0', oninput: e => { st.q = e.target.value; drawList() } })
@@ -60,7 +61,7 @@ async function mount(root, ctx) {
       const groups = new Map(); for (const a of attrs) { const g = a.group || ''; if (!groups.has(g)) groups.set(g, []); groups.get(g).push(a) }
       for (const [g, as] of groups) {
         const all = as.every(a => st.keys.includes(a.key))
-        list.append(el('div', { class: 'chips', style: 'margin:3px 0' }, el('span', { class: 'muted', style: 'font-size:12px;width:140px;cursor:pointer', title: all ? 'Gruppe abwählen' : 'ganze Gruppe wählen', onclick: () => { st.keys = all ? st.keys.filter(k => !as.some(a => a.key === k)) : [...new Set([...st.keys, ...as.map(a => a.key)])]; remember(); drawHead(); remount() } }, `▤ ${model.groups?.find(x => x.key === g)?.label?.[locale] || g || 'ohne Gruppe'}`),
+        list.append(el('div', { class: 'chips', style: 'margin:3px 0' }, el('span', { class: 'muted', style: 'font-size:12px;width:140px;cursor:pointer', title: all ? t('Gruppe abwählen') : t('ganze Gruppe wählen'), onclick: () => { st.keys = all ? st.keys.filter(k => !as.some(a => a.key === k)) : [...new Set([...st.keys, ...as.map(a => a.key)])]; remember(); drawHead(); remount() } }, `▤ ${model.groups?.find(x => x.key === g)?.label?.[locale] || g || 'ohne Gruppe'}`),
           ...as.map(a => el('span', { class: 'view-chip' + (st.keys.includes(a.key) ? ' on' : ''), title: `${a.key} · ${a.type}`, onclick: () => { st.keys = st.keys.includes(a.key) ? st.keys.filter(k => k !== a.key) : [...st.keys, a.key]; remember(); drawHead(); remount() } }, lbl(a)))))
       }
     }
@@ -71,6 +72,6 @@ async function mount(root, ctx) {
 }
 
 export default {
-  views: [{ path: 'enrich', label: 'Anreicherung', icon: '⌕', topic: 'analysis', hint: 'Fehlende Werte gewählter Attribute finden und ergänzen — aus Regeln, KI oder Recherche im Internet (Handelsware: Herstellerdaten, Datenblätter), je Wert mit Quelle', mount }],
-  nodeActions: [{ label: 'Anreichern', icon: '⌕', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.enrich.root', id); ctx.go?.('/p/enrich/enrich?run=1') } }],
+  views: [{ path: 'enrich', label: t('Anreicherung'), icon: '⌕', topic: 'analysis', hint: t('Fehlende Werte gewählter Attribute finden und ergänzen — aus Regeln, KI oder Recherche im Internet (Handelsware: Herstellerdaten, Datenblätter), je Wert mit Quelle'), mount }],
+  nodeActions: [{ label: t('Anreichern'), icon: '⌕', topic: 'analysis', roles: ['group', 'product'], run(id, ctx) { localStorage.setItem('journali.cmp.enrich.root', id); ctx.go?.('/p/enrich/enrich?run=1') } }],
 }

@@ -163,9 +163,18 @@ function skript(source, filename) {
   if (!r.keys.length) return { source, edits: 0, keys: [] }
   let neu = r.src
   // Import dazu, wenn er fehlt
+  // Woher t kommt: Oberfläche aus i18n.js; gebaute Plugins (src/) aus 'journali' (Shim auf window.journali);
+  // Plugins ohne Bau (entry.js, browser.js) direkt aus window.journali — ein Import geht dort nicht
+  const inPlugins = filename.replace(/\\/g, '/').includes('/plugins/')
+  const gebaut = inPlugins && /\/plugins\/[^/]+\/src\//.test(filename.replace(/\\/g, '/'))
   const rel = path.relative(path.dirname(filename), path.join(ROOT, 'src', 'i18n.js')).replace(/\\/g, '/')
-  const imp = `import { ${name === 't' ? 't' : 't as t_'} } from '${rel.startsWith('.') ? rel : './' + rel}'`
-  if (!new RegExp(`import\\s*\\{[^}]*\\b${name === 't' ? 't\\b(?!\\s+as)' : 't as t_'}[^}]*\\}\\s*from\\s*['"][^'"]*i18n\\.js['"]`).test(neu)) {
+  const imp = !inPlugins ? `import { ${name === 't' ? 't' : 't as t_'} } from '${rel.startsWith('.') ? rel : './' + rel}'`
+    : gebaut ? `import { ${name === 't' ? 't' : 't as t_'} } from 'journali'`
+    : `const ${name} = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\\{(\\w+)\\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar`
+  const schon = !inPlugins ? new RegExp(`import\\s*\\{[^}]*\\b${name === 't' ? 't\\b(?!\\s+as)' : 't as t_'}[^}]*\\}\\s*from\\s*['"][^'"]*i18n\\.js['"]`)
+    : gebaut ? new RegExp(`import\\s*\\{[^}]*\\b${name === 't' ? 't\\b(?!\\s+as)' : 't as t_'}[^}]*\\}\\s*from\\s*['"]journali['"]`)
+    : new RegExp(`const ${name} = \\(k, p\\) => globalThis\\.journali`)
+  if (!schon.test(neu)) {
     const lines = neu.split('\n')
     let last = -1
     for (let k = 0; k < lines.length; k++) if (/^import\s/.test(lines[k])) last = k
@@ -190,11 +199,22 @@ function syntaxOk(source, filename) {
   } catch (e) { return e.message }
 }
 
+/// Browserdateien der Plugins: src/** (gebaute Plugins), sonst entry.js; dazu browser.js. Prozess-Skripte (Node) bleiben draussen.
+export const pluginDateien = () => {
+  const dir = path.join(ROOT, '..', 'plugins')
+  return fs.readdirSync(dir).flatMap(k => {
+    const d = path.join(dir, k); const out = []
+    if (fs.existsSync(path.join(d, 'src'))) out.push(...walk(path.join(d, 'src')))
+    else if (fs.existsSync(path.join(d, 'entry.js'))) out.push(path.join(d, 'entry.js'))
+    if (fs.existsSync(path.join(d, 'browser.js'))) out.push(path.join(d, 'browser.js'))
+    return out
+  })
+}
 const walk = d => fs.readdirSync(d, { withFileTypes: true })
   .flatMap(e => e.isDirectory() ? (e.name === 'node_modules' ? [] : walk(path.join(d, e.name))) : /\.(vue|js)$/.test(e.name) ? [path.join(d, e.name)] : [])
 
 if (process.argv[1] && path.resolve(process.argv[1]).endsWith('texte-heben-ausdruecke.mjs')) {
-  const list = (files.length ? files.map(f => path.resolve(f)) : walk(path.join(ROOT, 'src'))).filter(f => !f.endsWith('i18n.js'))
+  const list = (files.length ? files.map(f => path.resolve(f)) : argv.includes('--plugins') ? pluginDateien() : walk(path.join(ROOT, 'src'))).filter(f => !f.endsWith('i18n.js'))
   let total = 0; const alle = new Set(); const kaputt = []
   for (const f of list) {
     const raw = fs.readFileSync(f)

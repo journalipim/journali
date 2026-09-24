@@ -1,0 +1,23 @@
+{
+ "{0} wieder freigegeben — beim nächsten Lauf des Jobs „Werkzeug: Dokumente lesen“": "{0} released again — on the next run of the job “Tool: Read documents”",
+ "nichts freizugeben": "nothing to release",
+ "✗ Kein Dokumentindex — der Server läuft ohne Postgres": "✗ No document index — the server runs without Postgres",
+ "{0} Treffer": "{0} hits",
+ "suchen in Datenblättern, Anleitungen, Katalogen — Wörter, Zahlen, Normen": "search in data sheets, manuals, catalogues — words, numbers, standards",
+ "⌕ Dokumente": "⌕ Documents",
+ "Im Text der Dokumente suchen": "Search the text of the documents",
+ "Suchen": "Search",
+ "nur Dokumente unter „{0}“ · Klick hebt es auf": "only documents under “{0}” · click removes it",
+ "✗ kein Index": "✗ no index",
+ "PDFs ohne Textebene: der Text steckt in Bildern und ist erst nach OCR durchsuchbar": "PDFs without a text layer: the text is in images and becomes searchable only after OCR",
+ "◌ {0} brauchen OCR": "◌ {0} need OCR",
+ "Gescheiterte Dokumente freigeben (der Job liest sie beim nächsten Lauf erneut) — der Grund steht im Protokoll des Jobs": "Release failed documents (the job reads them again on its next run) — the reason is in the job's log",
+ "Stand neu lesen": "Reload state",
+ "Nichts zu „{0}“ — andere Wörter, oder das Dokument ist noch nicht gelesen (Job „Werkzeug: Dokumente lesen“).": "Nothing for “{0}” — other words, or the document has not been read yet (job “Tool: Read documents”).",
+ "Suchwort eingeben. Gesucht wird im Text der Dokumente, die an den Knoten hängen.": "Enter a search term. The text of the documents attached to the nodes is searched.",
+ "{0} im Baum öffnen": "Open {0} in the tree",
+ "Seite {0}": "Page {0}",
+ "Dokumente": "Documents",
+ "Im Text der Dokumente suchen — Datenblätter, Anleitungen, Kataloge; gelesen wird vom Job „Werkzeug: Dokumente lesen“": "Search the text of the documents — data sheets, manuals, catalogues; read by the job “Tool: Read documents”",
+ "In Dokumenten suchen": "Search in documents"
+}

@@ -6,6 +6,7 @@
 /// Braucht dieser Prozess zwingend ein Profil? Steht „leer“ im Namen des Feldes („Profil — … (leer = Werte unten)“),
 /// geht es auch ohne: dann stehen die Werte im Job selbst. Sonst kann der Job ohne Profil nicht laufen
 /// (Taloan, 23.09.2026: die Sicherung liess sich ohne Profil nicht speichern, obwohl das Feld „(leer)“ anbietet).
+const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 export function profilPflicht(profileDef) {
   return !!profileDef && !/leer/.test(profileDef.label ?? '')
 }
@@ -53,7 +54,7 @@ const STATUS = { ok: ['✓', 'pos'], warn: ['⚠', 'warn'], failed: ['✗', 'neg
 // (JobRunner.cs, Cron). Tag und Wochentag gelten zusammen: „15-21 * 0“ = 3. Sonntag im Monat.
 const DAYS = [['1', 'Mo'], ['2', 'Di'], ['3', 'Mi'], ['4', 'Do'], ['5', 'Fr'], ['6', 'Sa'], ['0', 'So']]
 const NTH = [['*', 'jeden'], ['1-7', '1.'], ['8-14', '2.'], ['15-21', '3.'], ['22-28', '4.']]
-const MODES = [['manual', 'nur von Hand'], ['minutes', 'alle … Minuten'], ['hourly', 'stündlich'], ['daily', 'täglich'], ['weekly', 'wöchentlich'], ['monthly', 'monatlich'], ['cron', 'cron-Ausdruck']]
+const MODES = [['manual', t('nur von Hand')], ['minutes', 'alle … Minuten'], ['hourly', t('stündlich')], ['daily', t('täglich')], ['weekly', t('wöchentlich')], ['monthly', 'monatlich'], ['cron', 'cron-Ausdruck']]
 const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const monday = () => { const d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return iso(d) }
 function fromCron(s) {
@@ -90,24 +91,24 @@ function scheduleAssistant(initial, onChange) {
   const modeSel = el('select', { style: 'width:100%' }, ...MODES.map(([v, l]) => el('option', { value: v }, l))); modeSel.value = f.mode
   const num = (key, min, max, w = 56) => { const i = el('input', { type: 'number', value: String(f[key]), min: String(min), max: String(max), style: `width:${w}px` }); i.addEventListener('input', () => { f[key] = i.value; emit() }); return i }
   const time = () => el('span', { style: 'display:inline-flex;align-items:center;gap:4px' }, 'um ', num('hour', 0, 23), ':', num('minute', 0, 59))
-  const cronIn = el('input', { type: 'text', value: f.cron, placeholder: 'm h tag monat wochentag [dN:datum | wN:datum]', style: 'width:100%' }); cronIn.addEventListener('input', () => { f.cron = cronIn.value; emit() })
+  const cronIn = el('input', { type: 'text', value: f.cron, placeholder: t('m h tag monat wochentag [dN:datum | wN:datum]'), style: 'width:100%' }); cronIn.addEventListener('input', () => { f.cron = cronIn.value; emit() })
   const shown = el('div', { class: 'mono muted', style: 'font-size:11px;margin-top:4px' })
   const body = el('div', { style: 'margin-top:6px;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:13px' })
   function draw() {
     body.innerHTML = ''
     switch (f.mode) {
-      case 'minutes': body.append('alle ', num('every', 1, 59), ' Minuten'); break
-      case 'hourly': body.append('alle ', num('every', 1, 23), ' Stunden, zur Minute ', num('minute', 0, 59)); break
-      case 'daily': body.append('alle ', num('every', 1, 365), ' Tage ', time()); break
+      case 'minutes': body.append('alle ', num('every', 1, 59), ' ' + t('Minuten')); break
+      case 'hourly': body.append('alle ', num('every', 1, 23), ' ' + t('Stunden, zur Minute') + ' ', num('minute', 0, 59)); break
+      case 'daily': body.append('alle ', num('every', 1, 365), ' ' + t('Tage') + ' ', time()); break
       case 'weekly': {
         const nthSel = el('select', {}, ...NTH.map(([v, l]) => el('option', { value: v }, l))); nthSel.value = f.nth; nthSel.addEventListener('change', () => { f.nth = nthSel.value; draw(); emit() })
         body.append(nthSel)
         for (const [v, l] of DAYS) { const cb = el('input', { type: 'checkbox' }); cb.checked = f.days.has(v); cb.addEventListener('change', () => { cb.checked ? f.days.add(v) : f.days.delete(v); emit() }); body.append(el('label', { class: 'chip', style: 'cursor:pointer' }, cb, ' ' + l)) }
-        if (f.nth === '*') body.append(el('span', {}, ', alle '), num('every', 1, 52), ' Wochen ')
-        else body.append(el('span', { class: 'muted' }, 'im Monat '))
+        if (f.nth === '*') body.append(el('span', {}, ', alle '), num('every', 1, 52), ' ' + t('Wochen') + ' ')
+        else body.append(el('span', { class: 'muted' }, t('im Monat') + ' '))
         body.append(time()); break
       }
-      case 'monthly': body.append('am ', num('dom', 1, 31), '. alle ', num('every', 1, 12), ' Monate ', time()); break
+      case 'monthly': body.append('am ', num('dom', 1, 31), '. alle ', num('every', 1, 12), ' ' + t('Monate') + ' ', time()); break
       case 'cron': body.append(cronIn); break
     }
     emit(false)
@@ -117,7 +118,7 @@ function scheduleAssistant(initial, onChange) {
   box.append(modeSel, body, shown); draw()
   return { el: box, value: () => toCron(f) }
 }
-const PRESETS = [['', 'nur von Hand'], ['*/15 * * * *', 'alle 15 min'], ['0 * * * *', 'stündlich'], ['0 2 * * *', 'täglich 02:00'], ['30 6 * * 1-5', 'Mo–Fr 06:30'], ['0 3 * * 0', 'sonntags 03:00'], ['0 4 1 * *', 'monatlich am 1. 04:00']]
+const PRESETS = [['', t('nur von Hand')], ['*/15 * * * *', 'alle 15 min'], ['0 * * * *', t('stündlich')], ['0 2 * * *', t('täglich 02:00')], ['30 6 * * 1-5', 'Mo–Fr 06:30'], ['0 3 * * 0', 'sonntags 03:00'], ['0 4 1 * *', t('monatlich am 1. 04:00')]]
 
 async function mount(root, ctx) {
   const { api, store, tree, dialog } = ctx
@@ -127,10 +128,10 @@ async function mount(root, ctx) {
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const list = el('div', { class: 'scroll', style: 'flex:0 0 auto;max-height:45%' })
   const detail = el('div', { class: 'scroll', style: 'flex:1;border-top:1px solid var(--line)' })
-  const filterChip = el('span', { class: 'chip', title: 'nur Jobs dieses Plugins — × zeigt alle', style: 'cursor:default' })
-  const drawFilter = () => { filterChip.innerHTML = ''; filterChip.style.display = st.plugin ? '' : 'none'; if (st.plugin) filterChip.append(`Plugin ${st.plugin} `, el('button', { onclick: () => { st.plugin = ''; drawFilter(); drawList() } }, '×')) }
+  const filterChip = el('span', { class: 'chip', title: t('nur Jobs dieses Plugins — × zeigt alle'), style: 'cursor:default' })
+  const drawFilter = () => { filterChip.innerHTML = ''; filterChip.style.display = st.plugin ? '' : 'none'; if (st.plugin) filterChip.append(t('Plugin {0}', [st.plugin]) + ' ', el('button', { onclick: () => { st.plugin = ''; drawFilter(); drawList() } }, '×')) }
   drawFilter()
-  root.append(el('div', { class: 'toolbar' }, el('h1', {}, '⏱ Jobs'), el('button', { class: 'primary', onclick: () => openEdit(st.plugin ? { plugin: st.plugin, _new: true } : null) }, '+ Job'), filterChip, el('span', { class: 'grow' }), status), list, detail)
+  root.append(el('div', { class: 'toolbar' }, el('h1', {}, t('⏱ Jobs')), el('button', { class: 'primary', onclick: () => openEdit(st.plugin ? { plugin: st.plugin, _new: true } : null) }, '+ Job'), filterChip, el('span', { class: 'grow' }), status), list, detail)
 
   async function load() {
     try { [st.jobs, st.plugins] = await Promise.all([api.get('/api/jobs'), api.get('/api/jobs/plugins')]) } catch (e) { say('✗ ' + e.message); return }
@@ -142,14 +143,14 @@ async function mount(root, ctx) {
   function drawList() {
     list.innerHTML = ''
     const jobs = st.plugin ? st.jobs.filter(j => j.plugin === st.plugin) : st.jobs
-    if (!jobs.length) { list.append(el('div', { class: 'empty' }, st.plugin ? `Noch kein Job mit Plugin ${st.plugin} — „+ Job“ legt einen an.` : st.plugins.length ? 'Noch kein Job — „+ Job“ legt einen an.' : 'Kein Plugin mit Prozess installiert — Jobs brauchen eins.')); return }
+    if (!jobs.length) { list.append(el('div', { class: 'empty' }, st.plugin ? t('Noch kein Job mit Plugin {0} — „+ Job“ legt einen an.', [st.plugin]) : st.plugins.length ? t('Noch kein Job — „+ Job“ legt einen an.') : t('Kein Plugin mit Prozess installiert — Jobs brauchen eins.'))); return }
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
-    tbl.append(el('thead', {}, el('tr', {}, el('th', {}, ''), el('th', {}, 'Job'), el('th', {}, 'Plugin'), el('th', {}, 'Zeitplan'), el('th', {}, 'nächster Lauf'), el('th', {}, 'letzter Lauf'), el('th', {}, ''))))
+    tbl.append(el('thead', {}, el('tr', {}, el('th', {}, ''), el('th', {}, 'Job'), el('th', {}, t('Plugin')), el('th', {}, t('Zeitplan')), el('th', {}, t('nächster Lauf')), el('th', {}, t('letzter Lauf')), el('th', {}, ''))))
     const tb = el('tbody')
     for (const j of jobs) {
       const [sym, cls] = j.running && j.paused ? ['⏸', 'warn'] : j.running ? ['▶', 'warn'] : STATUS[j.last?.status] ?? ['·', 'muted']
       const tr = el('tr', { class: 'row' + (st.cur === j.key ? ' selected' : ''), style: 'cursor:default', onclick: () => { st.cur = j.key; drawList(); loadDetail(j.key) } },
-        el('td', { class: cls, title: j.running ? 'läuft' : j.last?.status ?? 'noch nie gelaufen' }, sym),
+        el('td', { class: cls, title: j.running ? t('läuft') : j.last?.status ?? t('noch nie gelaufen') }, sym),
         el('td', {}, el('b', {}, j.label), el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, j.key)),
         el('td', { class: 'muted' }, j.plugin + (j.service ? '/' + j.service : '')),
         el('td', { title: j.schedule ?? '' }, j.enabled ? j.scheduleText : el('span', { class: 'muted' }, '○ aus')),
@@ -157,12 +158,12 @@ async function mount(root, ctx) {
         el('td', { class: 'muted', title: j.last?.summary ?? '' }, j.last ? `${when(j.last.startedAt)} · ${j.last.seconds}s` : ''),
         el('td', { style: 'white-space:nowrap' },
           j.running && j.paused ? el('button', { class: 'x', title: `wartet (${j.pauseReason ?? 'von Hand'}) — weiter`, onclick: ev => { ev.stopPropagation(); resume(j) } }, '▶')
-            : j.running ? el('button', { class: 'x', title: 'anhalten (wartet beim nächsten Stapel)', onclick: ev => { ev.stopPropagation(); pause(j) } }, '⏸')
-            : el('button', { class: 'x', title: 'jetzt starten', onclick: ev => { ev.stopPropagation(); run(j) } }, '▶'),
+            : j.running ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); pause(j) } }, '⏸')
+            : el('button', { class: 'x', title: t('jetzt starten'), onclick: ev => { ev.stopPropagation(); run(j) } }, '▶'),
           j.running ? el('button', { class: 'x', title: 'abbrechen', onclick: ev => { ev.stopPropagation(); cancel(j) } }, '⊘') : el('span', { style: 'display:inline-block;width:22px' }),
-          el('button', { class: 'x', title: j.enabled ? 'ausschalten (Zeitplan ruht)' : 'einschalten', onclick: ev => { ev.stopPropagation(); toggle(j) } }, j.enabled ? '●' : '○'),
+          el('button', { class: 'x', title: j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', onclick: ev => { ev.stopPropagation(); toggle(j) } }, j.enabled ? '●' : '○'),
           el('button', { class: 'x', title: 'bearbeiten', onclick: ev => { ev.stopPropagation(); openEdit(j) } }, '✎'),
-          el('button', { class: 'x', title: 'Job entfernen (Läufe bleiben im Journal)', onclick: ev => { ev.stopPropagation(); remove(j) } }, '🗑')))
+          el('button', { class: 'x', title: t('Job entfernen (Läufe bleiben im Journal)'), onclick: ev => { ev.stopPropagation(); remove(j) } }, '🗑')))
       tb.append(tr)
     }
     tbl.append(tb); list.append(tbl)
@@ -170,10 +171,10 @@ async function mount(root, ctx) {
   async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
   async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(`⊘ ${j.label} abgebrochen`); await load() } catch (e) { store.toast(e.message) } }
   // Anhalten und weiter (Taloan, 23.09.2026): der Lauf wartet beim nächsten Stapel, statt zu sterben
-  async function pause(j) { try { await api.post(`/api/jobs/${j.key}/pause`); store.toast(`⏸ ${j.label} hält beim nächsten Stapel an`); await load() } catch (e) { store.toast(e.message) } }
-  async function resume(j) { try { await api.post(`/api/jobs/${j.key}/resume`); store.toast(`▶ ${j.label} läuft weiter`, 'ok'); await load() } catch (e) { store.toast(e.message) } }
+  async function pause(j) { try { await api.post(`/api/jobs/${j.key}/pause`); store.toast(t('⏸ {0} hält beim nächsten Stapel an', [j.label])); await load() } catch (e) { store.toast(e.message) } }
+  async function resume(j) { try { await api.post(`/api/jobs/${j.key}/resume`); store.toast(t('▶ {0} läuft weiter', [j.label]), 'ok'); await load() } catch (e) { store.toast(e.message) } }
   async function toggle(j) { try { await api.post(`/api/jobs/${j.key}`, { enabled: !j.enabled }, 'PUT'); await load() } catch (e) { store.toast(e.message) } }
-  async function remove(j) { if (!await dialog.confirm({ title: `Job „${j.label}“ entfernen?`, ok: '🗑 Entfernen', danger: true })) return; try { await api.del(`/api/jobs/${j.key}`); if (st.cur === j.key) { st.cur = null; detail.innerHTML = '' } await load() } catch (e) { store.toast(e.message) } }
+  async function remove(j) { if (!await dialog.confirm({ title: `Job „${j.label}“ entfernen?`, ok: t('🗑 Entfernen'), danger: true })) return; try { await api.del(`/api/jobs/${j.key}`); if (st.cur === j.key) { st.cur = null; detail.innerHTML = '' } await load() } catch (e) { store.toast(e.message) } }
 
   // ---- Detail: Läufe und Log
   async function loadDetail(key) {
@@ -188,14 +189,14 @@ async function mount(root, ctx) {
   let logRun = null
   async function loadLog(key, run) {
     logRun = run
-    try { const r = await fetch(`${store.server}/api/jobs/${key}/runs/${run}/log?tail=400`); logBox.textContent = (await r.text()) || '(noch keine Ausgabe)'; logBox.scrollTop = logBox.scrollHeight } catch { logBox.textContent = '' }
+    try { const r = await fetch(`${store.server}/api/jobs/${key}/runs/${run}/log?tail=400`); logBox.textContent = (await r.text()) || t('(noch keine Ausgabe)'); logBox.scrollTop = logBox.scrollHeight } catch { logBox.textContent = '' }
     for (const b of detail.querySelectorAll('.runrow')) b.classList.toggle('selected', b.dataset.run === run)
   }
   function drawDetail() {
     detail.innerHTML = ''
     const d = st.detail; if (!d) return
-    const head = el('div', { class: 'toolbar', style: 'gap:10px' }, el('b', {}, d.label), el('span', { class: 'muted' }, `${d.plugin} · ${d.scheduleText} · Zeitgrenze ${d.timeoutMinutes} min${d.role ? ' · Rolle ' + d.role : ''}`),
-      el('span', { class: 'muted mono', style: 'font-size:11px' }, Object.entries(d.params).map(([k, v]) => `${k}=${v}`).join(' ')), d.secrets.length ? el('span', { class: 'chip', title: 'Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal' }, `🔒 ${d.secrets.join(', ')}`) : '')
+    const head = el('div', { class: 'toolbar', style: 'gap:10px' }, el('b', {}, d.label), el('span', { class: 'muted' }, t('{0} · {1} · Zeitgrenze {2} min{3}', [d.plugin, d.scheduleText, d.timeoutMinutes, d.role ? ' ' + t('· Rolle') + ' ' + d.role : ''])),
+      el('span', { class: 'muted mono', style: 'font-size:11px' }, Object.entries(d.params).map(([k, v]) => `${k}=${v}`).join(' ')), d.secrets.length ? el('span', { class: 'chip', title: t('Geheimnisse liegen beim Server (jobs/secrets.json), nicht im Journal') }, `🔒 ${d.secrets.join(', ')}`) : '')
     const runs = el('div', { style: 'width:340px;border-right:1px solid var(--line);overflow:auto' })
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
     for (const r of d.runs) {
@@ -203,7 +204,7 @@ async function mount(root, ctx) {
       tbl.append(el('tr', { class: 'row runrow' + (r.id === logRun ? ' selected' : ''), 'data-run': r.id, style: 'cursor:default', onclick: () => loadLog(d.key, r.id), title: r.summary ?? '' },
         el('td', { class: cls }, sym), el('td', { class: 'muted' }, when(r.startedAt)), el('td', { class: 'muted' }, r.trigger === 'schedule' ? '⏱' : '👤'), el('td', { class: 'muted' }, r.seconds != null ? r.seconds + 's' : '…'), el('td', { class: 'muted', style: 'max-width:140px;overflow:hidden;text-overflow:ellipsis' }, r.summary ?? '')))
     }
-    if (!d.runs.length) tbl.append(el('tr', {}, el('td', { class: 'muted', style: 'padding:8px' }, 'noch kein Lauf — ▶ startet einen')))
+    if (!d.runs.length) tbl.append(el('tr', {}, el('td', { class: 'muted', style: 'padding:8px' }, t('noch kein Lauf — ▶ startet einen'))))
     runs.append(tbl)
     // Fächer (Taloan, 21.09.): Eingang wartend, verarbeitet (✓ ✗, Duplikat grau), Ausgaben (★ latest) — aus /api/jobs/<key>/files
     const files = el('div', { style: 'border-top:1px solid var(--line);padding:6px 8px;font-size:12px;max-height:40%;overflow:auto;display:none' })
@@ -215,13 +216,13 @@ async function mount(root, ctx) {
         const col = (title, rows, empty) => el('div', { style: 'flex:1;min-width:200px' }, el('div', { style: 'font-weight:600;margin-bottom:2px' }, title), rows.length ? el('table', { class: 'grid', style: 'width:100%' }, ...rows) : el('div', { class: 'muted' }, empty))
         const cols = []
         if (f.uses.in) {
-          cols.push(col(`Eingang · ${f.waiting.length} wartend`, f.waiting.map(w => el('tr', { class: 'row', title: `${w.name} · ${size(w.bytes)} · ${when(w.at)}` }, el('td', {}, w.name), el('td', { class: 'muted', style: 'text-align:right' }, size(w.bytes)))), 'nichts in in/ — ▶ läuft dann nicht'),
-            col(`Verarbeitet · ${f.consumed.length}`, f.consumed.map(c => el('tr', { class: 'row' + (c.status === 'duplicate' ? ' muted' : ''), style: c.run ? 'cursor:pointer' : '', title: `${c.name} · ${size(c.bytes)} · ${when(c.at)} · ${c.status}${c.run ? ' · Lauf ' + c.run : ' · ohne Lauf'}${c.mediaId ? ' · archiviert ' + c.mediaId : ''}\nSHA-256 ${c.hash}`, onclick: () => { if (c.run) loadLog(d.key, c.run) } },
-              el('td', { class: c.status === 'ok' ? 'pos' : c.status === 'failed' ? 'neg' : 'muted', style: 'width:18px' }, c.status === 'ok' ? '✓' : c.status === 'failed' ? '✗' : '≡'), el('td', {}, c.name), el('td', { class: 'muted', style: 'text-align:right;white-space:nowrap' }, when(c.at)))), 'noch nichts verarbeitet'))
+          cols.push(col(`Eingang · ${f.waiting.length} wartend`, f.waiting.map(w => el('tr', { class: 'row', title: `${w.name} · ${size(w.bytes)} · ${when(w.at)}` }, el('td', {}, w.name), el('td', { class: 'muted', style: 'text-align:right' }, size(w.bytes)))), t('nichts in in/ — ▶ läuft dann nicht')),
+            col(t('Verarbeitet · {0}', [f.consumed.length]), f.consumed.map(c => el('tr', { class: 'row' + (c.status === 'duplicate' ? ' muted' : ''), style: c.run ? 'cursor:pointer' : '', title: `${c.name} · ${size(c.bytes)} · ${when(c.at)} · ${c.status}${c.run ? ' · Lauf ' + c.run : ' · ohne Lauf'}${c.mediaId ? ' · archiviert ' + c.mediaId : ''}\nSHA-256 ${c.hash}`, onclick: () => { if (c.run) loadLog(d.key, c.run) } },
+              el('td', { class: c.status === 'ok' ? 'pos' : c.status === 'failed' ? 'neg' : 'muted', style: 'width:18px' }, c.status === 'ok' ? '✓' : c.status === 'failed' ? '✗' : '≡'), el('td', {}, c.name), el('td', { class: 'muted', style: 'text-align:right;white-space:nowrap' }, when(c.at)))), t('noch nichts verarbeitet')))
         }
-        if (f.uses.out) cols.push(col(`Ausgaben · ${f.written.length}${f.latest.length ? ' · ★ ' + f.latest.join(', ') : ''}`, f.written.map(o => el('tr', { class: 'row', style: 'cursor:pointer', title: `${o.name} · ${size(o.bytes)} · ${when(o.at)} · Lauf ${o.run}${o.latest ? ' · auch als latest' : ''}${o.mediaId ? ' · archiviert ' + o.mediaId : ''}\nSHA-256 ${o.hash}`, onclick: () => loadLog(d.key, o.run) },
-          el('td', { style: 'width:18px' }, o.latest ? '★' : '·'), el('td', {}, o.name), el('td', { class: 'muted', style: 'text-align:right;white-space:nowrap' }, `${size(o.bytes)} · ${when(o.at)}`))), 'noch keine Ausgabe'))
-        files.append(el('div', { class: 'muted', style: 'margin-bottom:4px' }, `📁 ${f.base}`, f.files?.keep ? ` · Aufbewahrung ${f.files.keep}` : ' · Aufbewahrung: alle', f.files?.latest ? ' · latest' : '', f.files?.archive ? ' · Archiv' : ''), el('div', { style: 'display:flex;gap:16px;flex-wrap:wrap' }, ...cols))
+        if (f.uses.out) cols.push(col(t('Ausgaben · {0}{1}', [f.written.length, f.latest.length ? ' · ★ ' + f.latest.join(', ') : '']), f.written.map(o => el('tr', { class: 'row', style: 'cursor:pointer', title: `${o.name} · ${size(o.bytes)} · ${when(o.at)} · Lauf ${o.run}${o.latest ? ' · auch als latest' : ''}${o.mediaId ? ' · archiviert ' + o.mediaId : ''}\nSHA-256 ${o.hash}`, onclick: () => loadLog(d.key, o.run) },
+          el('td', { style: 'width:18px' }, o.latest ? '★' : '·'), el('td', {}, o.name), el('td', { class: 'muted', style: 'text-align:right;white-space:nowrap' }, `${size(o.bytes)} · ${when(o.at)}`))), t('noch keine Ausgabe')))
+        files.append(el('div', { class: 'muted', style: 'margin-bottom:4px' }, `📁 ${f.base}`, f.files?.keep ? ' ' + t('· Aufbewahrung {0}', [f.files.keep]) : ' · Aufbewahrung: alle', f.files?.latest ? ' · latest' : '', f.files?.archive ? ' ' + t('· Archiv') : ''), el('div', { style: 'display:flex;gap:16px;flex-wrap:wrap' }, ...cols))
       }).catch(() => { files.style.display = 'none' })
     }
     detail.append(head, el('div', { style: 'display:flex;flex:1;min-height:0' }, runs, logBox), files)
@@ -235,8 +236,8 @@ async function mount(root, ctx) {
     const fields = defs.filter(d => !(d.type === 'profile' || d.key === 'profile' || d.type === 'path' || d.type === 'dir'))
     const box = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50' })
     const dlg = el('div', { style: 'width:560px;max-height:90vh;overflow:auto;background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px' })
-    const sel = el('select', { style: 'flex:1' }, el('option', { value: '' }, '— neues Profil —'))
-    const nameIn = el('input', { type: 'text', placeholder: 'Name des Profils', style: 'flex:1' })
+    const sel = el('select', { style: 'flex:1' }, el('option', { value: '' }, t('— neues Profil —')))
+    const nameIn = el('input', { type: 'text', placeholder: t('Name des Profils'), style: 'flex:1' })
     const form = el('div'); const inputs = {}; let secretKeys = []
     const status = el('span', { class: 'muted', style: 'font-size:12px' })
     const close = () => box.remove()
@@ -246,7 +247,7 @@ async function mount(root, ctx) {
         const cur = data[d.key] ?? d.default ?? ''
         let inp
         if (d.secret) {
-          inp = el('input', { type: 'password', placeholder: secretKeys.includes(d.key) ? '•••••• (hinterlegt — leer lassen = behalten)' : 'geheim — bleibt beim Server, am Profil', style: 'width:100%' })
+          inp = el('input', { type: 'password', placeholder: secretKeys.includes(d.key) ? t('•••••• (hinterlegt — leer lassen = behalten)') : t('geheim — bleibt beim Server, am Profil'), style: 'width:100%' })
           form.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label + ' 🔒'), inp)
         } else if (d.type === 'node') {
           inp = { value: cur }
@@ -267,7 +268,7 @@ async function mount(root, ctx) {
         inputs[d.key] = inp
       }
     }
-    const loadNames = async keep => { const names = (await api.get(`/api/plugins/${p.key}/data?prefix=profile:`).catch(() => [])).map(n => n.slice(8)); sel.innerHTML = ''; sel.append(el('option', { value: '' }, '— neues Profil —'), ...names.map(n => el('option', { value: n }, n))); sel.value = keep && names.includes(keep) ? keep : '' }
+    const loadNames = async keep => { const names = (await api.get(`/api/plugins/${p.key}/data?prefix=profile:`).catch(() => [])).map(n => n.slice(8)); sel.innerHTML = ''; sel.append(el('option', { value: '' }, t('— neues Profil —')), ...names.map(n => el('option', { value: n }, n))); sel.value = keep && names.includes(keep) ? keep : '' }
     const loadOne = async n => {
       nameIn.value = n
       if (!n) { secretKeys = []; draw({}); return }
@@ -277,7 +278,7 @@ async function mount(root, ctx) {
     }
     sel.addEventListener('change', () => loadOne(sel.value))
     const save = async () => {
-      const n = nameIn.value.trim(); if (!n || n.includes(':')) { store.toast('Name fehlt (ohne Doppelpunkt)'); return }
+      const n = nameIn.value.trim(); if (!n || n.includes(':')) { store.toast(t('Name fehlt (ohne Doppelpunkt)')); return }
       const data = {}, secrets = {}
       for (const d of fields) { const v = inputs[d.key]?.value ?? ''; if (d.secret) { if (v) secrets[d.key] = v } else if (v !== '') data[d.key] = d.type === 'boolean' ? v === 'true' : v }
       try {
@@ -288,13 +289,13 @@ async function mount(root, ctx) {
     }
     const del = async () => {
       const n = sel.value; if (!n) return
-      if (!await dialog.confirm({ title: `Profil „${n}“ löschen?`, text: 'Jobs, die es nennen, laufen dann ohne diese Werte.', ok: '🗑 Löschen', danger: true })) return
+      if (!await dialog.confirm({ title: t('Profil „{0}“ löschen?', [n]), text: t('Jobs, die es nennen, laufen dann ohne diese Werte.'), ok: t('🗑 Löschen'), danger: true })) return
       try { await api.del(`/api/plugins/${p.key}/data/${encodeURIComponent('profile:' + n)}`); await api.del(`/api/plugins/${p.key}/secrets/${encodeURIComponent(n)}`).catch(() => {}); await loadNames(''); await loadOne(''); onDone?.('') } catch (e) { store.toast(e.message) }
     }
-    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, `✎ Profile · ${(typeof p.label === 'string' ? p.label : p.label?.de) || p.key}`),
-      el('div', { style: 'display:flex;gap:6px' }, sel, nameIn, el('button', { type: 'button', class: 'x', title: 'Profil löschen', onclick: del }, '🗑')),
+    dlg.append(el('div', { style: 'font-weight:600;font-size:14px' }, t('✎ Profile · {0}', [(typeof p.label === 'string' ? p.label : p.label?.de) || p.key])),
+      el('div', { style: 'display:flex;gap:6px' }, sel, nameIn, el('button', { type: 'button', class: 'x', title: t('Profil löschen'), onclick: del }, '🗑')),
       form,
-      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;align-items:center' }, status, el('span', { class: 'grow' }), el('button', { type: 'button', onclick: close }, 'Abbrechen'), el('button', { type: 'button', class: 'primary', onclick: save }, '💾 Speichern')))
+      el('div', { style: 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;align-items:center' }, status, el('span', { class: 'grow' }), el('button', { type: 'button', onclick: close }, t('Abbrechen')), el('button', { type: 'button', class: 'primary', onclick: save }, t('💾 Speichern'))))
     box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) close() })
     document.body.append(box)
     loadNames(current).then(() => loadOne(current || ''))
@@ -308,7 +309,7 @@ async function mount(root, ctx) {
     if (j?._new) { preset = j.plugin + '|' + (j.service ?? ''); j = null }   // aus ⌁ Plugins: neuer Job mit diesem Plugin (und Dienst)
     const isNew = !j
     const keyIn = el('input', { type: 'text', value: j?.key ?? '', placeholder: 'key (a-z, 0-9, _)', style: 'width:100%' }); if (!isNew) keyIn.disabled = true
-    const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: 'Bezeichnung', style: 'width:100%' })
+    const labelIn = el('input', { type: 'text', value: j?.label ?? '', placeholder: t('Bezeichnung'), style: 'width:100%' })
     // ein Eintrag je Dienst (Taloan: mehrere Dienste je Plugin); Wert = plugin|service
     const svcId = p => `${p.key}|${p.service ?? ''}`
     const svcLabel = p => (typeof p.label === 'string' ? p.label : p.label?.de) || p.key
@@ -323,24 +324,24 @@ async function mount(root, ctx) {
     // Mit welcher Rolle der Lauf arbeitet: davon hängen seine Rechte ab (eine Sicherung braucht „Anwender und Rollen“).
     // Sichtbar nur für die Rollenverwaltung — sonst wäre ein Job ein Weg zu fremden Rechten.
     const darfRolle = store.can('users')
-    const rolleSel = el('select', { style: 'width:180px', title: 'Rechte des Laufs; leer = editor' }, el('option', { value: '' }, '— editor —'))
+    const rolleSel = el('select', { style: 'width:180px', title: t('Rechte des Laufs; leer = editor') }, el('option', { value: '' }, '— editor —'))
     if (darfRolle) api.get('/api/auth/roles').then(rs => {
       for (const r of rs) rolleSel.append(el('option', { value: r.key }, r.label || r.key))
       rolleSel.value = j?.role ?? ''
     }).catch(() => {})
     // Fächer (docs/tasker-dateien.md, Taloan: der Tasker besitzt die Ablage): Basis, Aufbewahrung, latest, Archiv — nur bei Prozessen mit files im Manifest
-    const fBase = el('input', { type: 'text', value: j?.files?.base ?? '', placeholder: 'leer = jobs/<key> beim Server', style: 'flex:1' })
-    const fachLabelEl = el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, 'Fächer · Basis')
-    const fBaseBtn = el('button', { type: 'button', title: 'Basis der Fächer auf dem Server wählen', onclick: () => ctx.filePicker({ value: fBase.value, dirOnly: true, title: '📁 Basis der Fächer (in/, done/, failed/, out/)', onPick: v => { fBase.value = v } }) }, '📁')
-    const fKeep = el('input', { type: 'text', value: j?.files?.keep ?? '', placeholder: 'alle', style: 'width:90px', title: 'Aufbewahrung: 10 = die letzten 10 Läufe, 30d = 30 Tage, leer = alle' })
+    const fBase = el('input', { type: 'text', value: j?.files?.base ?? '', placeholder: t('leer = jobs/<key> beim Server'), style: 'flex:1' })
+    const fachLabelEl = el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, t('Fächer · Basis'))
+    const fBaseBtn = el('button', { type: 'button', title: t('Basis der Fächer auf dem Server wählen'), onclick: () => ctx.filePicker({ value: fBase.value, dirOnly: true, title: t('📁 Basis der Fächer (in/, done/, failed/, out/)'), onPick: v => { fBase.value = v } }) }, '📁')
+    const fKeep = el('input', { type: 'text', value: j?.files?.keep ?? '', placeholder: 'alle', style: 'width:90px', title: t('Aufbewahrung: 10 = die letzten 10 Läufe, 30d = 30 Tage, leer = alle') })
     const fLatest = el('input', { type: 'checkbox' }); fLatest.checked = j?.files?.latest ?? true
     const fArchive = el('input', { type: 'checkbox' }); fArchive.checked = j?.files?.archive ?? false
     const fachBox = el('div', { style: 'display:none' },
       fachLabelEl, el('div', { style: 'display:flex;gap:4px' }, fBase, fBaseBtn),
       el('div', { style: 'display:flex;gap:14px;align-items:center;margin-top:6px;flex-wrap:wrap' },
-        el('label', { style: 'display:flex;gap:6px;align-items:center' }, el('span', { class: 'muted' }, 'Aufbewahrung'), fKeep),
-        el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'nach jedem Lauf eine Kopie unter festem Namen: <key>-latest' }, fLatest, 'latest'),
-        el('label', { style: 'display:flex;gap:6px;align-items:center', title: 'Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher ablegen' }, fArchive, 'Archiv im Medienspeicher')))
+        el('label', { style: 'display:flex;gap:6px;align-items:center' }, el('span', { class: 'muted' }, t('Aufbewahrung')), fKeep),
+        el('label', { style: 'display:flex;gap:6px;align-items:center', title: t('nach jedem Lauf eine Kopie unter festem Namen: <key>-latest') }, fLatest, 'latest'),
+        el('label', { style: 'display:flex;gap:6px;align-items:center', title: t('Eingänge und Ausgaben zusätzlich als Medium im Medienspeicher ablegen') }, fArchive, t('Archiv im Medienspeicher'))))
     const paramsBox = el('div')
     const paramInputs = {}
     let profilWert = j?.params?.profile ?? ''   // welches Profil gewählt ist; ohne Profil stehen seine Werte im Dialog
@@ -355,7 +356,7 @@ async function mount(root, ctx) {
       const hasProfile = !!profileDef && !!profilWert
       let secretNote = null
       profileSecrets = []
-      const noteSecret = (profileName) => { if (!secretNote || !p) return; if (!profileName) { secretNote.textContent = ''; profileSecrets = []; check(); return } api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(profileName)}`).then(r => { profileSecrets = r.keys; secretNote.textContent = r.keys.length ? `🔒 am Profil hinterlegt: ${r.keys.join(', ')}` : '🔒 am Profil nichts hinterlegt — in der Ansicht des Plugins (🔒) oder unten setzen'; check() }).catch(() => { secretNote.textContent = ''; profileSecrets = []; check() }) }
+      const noteSecret = (profileName) => { if (!secretNote || !p) return; if (!profileName) { secretNote.textContent = ''; profileSecrets = []; check(); return } api.get(`/api/plugins/${p.key}/secrets/${encodeURIComponent(profileName)}`).then(r => { profileSecrets = r.keys; secretNote.textContent = r.keys.length ? t('🔒 am Profil hinterlegt: {0}', [r.keys.join(', ')]) : t('🔒 am Profil nichts hinterlegt — in der Ansicht des Plugins (🔒) oder unten setzen'); check() }).catch(() => { secretNote.textContent = ''; profileSecrets = []; check() }) }
       for (const d of defs) {
         const cur = j?.params?.[d.key] ?? d.default ?? ''
         // sichtbar bleiben: Profil, Dateien/Verzeichnisse (Taloan: „das Einzige, was der Tasker können muss“), Schalter; Baum-Ziel/-Quelle, Texte, Geheimnisse: aus dem Profil
@@ -372,28 +373,28 @@ async function mount(root, ctx) {
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label, ' · ', shown), box)
         } else if (d.type === 'pub') {
           // Publikationsbaum (Taloan, 21.09.: Export-Job an der Ausleitung): Dropdown der Bäume, leer = keiner
-          inp = el('select', {}, el('option', { value: '' }, '(keiner — Teilbaum unten)'), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`)))
+          inp = el('select', {}, el('option', { value: '' }, t('(keiner — Teilbaum unten)')), ...(tree.pubTrees ?? []).map(r => el('option', { value: r.id }, `${r.label} · ${r.channel}${r.market ? '/' + r.market : ''}`)))
           inp.value = cur
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), inp)
         } else if (d.type === 'path' || d.type === 'dir') {
           // Pfad auf dem Server (Taloan, 21.09.: „Gibt's hier wohl auch nen Browser?“): Textfeld plus 📁 — der Dateibrowser der Oberfläche (ctx.filePicker, /api/files)
-          inp = el('input', { type: 'text', value: cur, placeholder: d.type === 'dir' ? 'Verzeichnis auf dem Server' : 'Datei, Verzeichnis oder URL', style: 'flex:1' })
-          const pick = el('button', { type: 'button', title: d.type === 'dir' ? 'Verzeichnis auf dem Server wählen' : 'Datei oder Verzeichnis auf dem Server wählen', onclick: () => ctx.filePicker({ value: inp.value, dirOnly: d.type === 'dir', onPick: v => { inp.value = v } }) }, '📁')
+          inp = el('input', { type: 'text', value: cur, placeholder: d.type === 'dir' ? t('Verzeichnis auf dem Server') : t('Datei, Verzeichnis oder URL'), style: 'flex:1' })
+          const pick = el('button', { type: 'button', title: d.type === 'dir' ? t('Verzeichnis auf dem Server wählen') : t('Datei oder Verzeichnis auf dem Server wählen'), onclick: () => ctx.filePicker({ value: inp.value, dirOnly: d.type === 'dir', onPick: v => { inp.value = v } }) }, '📁')
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, pick))
         } else if (d.type === 'profile' || d.key === 'profile') {
           // Profil des Plugins (Taloan, 21.09.: „was muss man hier eingeben?“ / „muss ich jedes einzeln aufzählen?“): jeder Parameter profile
           // wird ein Dropdown der gespeicherten Profile — profile:<name> (json, xport) und config:<name> (ProfileBar: ixp, solr) im Plugin-Strom
-          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, /leer/.test(d.label) ? '(leer)' : '— Profil —'))
+          inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, /leer/.test(d.label) ? '(leer)' : t('— Profil —')))
           if (profilWert) inp.append(el('option', { value: profilWert }, profilWert)); inp.value = profilWert
           api.get(`/api/plugins/${p.key}/data`).then(all => {
             const names = [...new Set(all.filter(x => /^(profile|config):/.test(x)).map(x => x.replace(/^(profile|config):/, '')))].sort((a, b) => a.localeCompare(b, 'de'))
             for (const n of names) if (n !== cur) inp.append(el('option', { value: n }, n))
-            if (!names.length && !cur) inp.title = 'noch kein Profil gespeichert — in der Ansicht des Plugins anlegen'
+            if (!names.length && !cur) inp.title = t('noch kein Profil gespeichert — in der Ansicht des Plugins anlegen')
           }).catch(() => {})
           inp.addEventListener('change', () => { profilWert = inp.value; noteSecret(inp.value); drawParams(); check(); zeige(schritt) })
           secretNote = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px' })
           // Prozess ohne eigene Ansicht (export, backup, rag, Datenblatt-Job, JSON-Export): Profile hier anlegen — ein Formular aus den Parametern des Manifests
-          const editBtn = p?.profile === 'generic' ? el('button', { type: 'button', class: 'x', title: 'Profile dieses Prozesses anlegen und ändern', onclick: () => profileEditor(p, defs, inp.value, n => { drawParams(); const sel = paramInputs.profile; if (sel && n) { if (![...sel.options].some(o => o.value === n)) sel.append(el('option', { value: n }, n)); sel.value = n; noteSecret(n) } }) }, '✎') : ''
+          const editBtn = p?.profile === 'generic' ? el('button', { type: 'button', class: 'x', title: t('Profile dieses Prozesses anlegen und ändern'), onclick: () => profileEditor(p, defs, inp.value, n => { drawParams(); const sel = paramInputs.profile; if (sel && n) { if (![...sel.options].some(o => o.value === n)) sel.append(el('option', { value: n }, n)); sel.value = n; noteSecret(n) } }) }, '✎') : ''
           paramsBox.append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, editBtn), secretNote)
           if (cur) noteSecret(cur)
         } else if (d.type === 'boolean') {
@@ -401,7 +402,7 @@ async function mount(root, ctx) {
           Object.defineProperty(inp, 'value', { get() { return this.checked ? 'true' : 'false' }, configurable: true })
           paramsBox.append(el('label', { style: 'display:flex;gap:6px;align-items:center;margin-top:8px' }, inp, d.label))
         } else {
-          inp = el('input', { type: d.secret ? 'password' : d.type === 'number' ? 'number' : 'text', value: d.secret ? '' : cur, placeholder: d.secret ? (j?.secrets?.includes(d.key) ? '•••••• (gesetzt — leer lassen = behalten)' : hasProfile ? 'leer = am Profil hinterlegt' : 'geheim — bleibt beim Server') : '', style: 'width:100%' })
+          inp = el('input', { type: d.secret ? 'password' : d.type === 'number' ? 'number' : 'text', value: d.secret ? '' : cur, placeholder: d.secret ? (j?.secrets?.includes(d.key) ? t('•••••• (gesetzt — leer lassen = behalten)') : hasProfile ? t('leer = am Profil hinterlegt') : t('geheim — bleibt beim Server')) : '', style: 'width:100%' })
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label + (d.secret ? ' 🔒' : '')), inp)
         }
         paramInputs[d.key] = inp
@@ -410,7 +411,7 @@ async function mount(root, ctx) {
 
       // nur die Fächer nennen, die dieses Plugin wirklich benutzt: wer nur schreibt, hat kein in/ und kein failed/
       aktualisiereFaecher()
-      if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, 'Dieses Plugin hat keine Parameter.'))
+      if (!defs.length) paramsBox.append(el('div', { class: 'muted', style: 'margin-top:8px' }, t('Dieses Plugin hat keine Parameter.')))
     }
     // Speichern nur, wenn der Job laufen kann (Taloan, 21.09.: „speichern deaktiviert, solange ein Profil nicht ausführbar ist“):
     // key, Profil (wenn der Prozess eines hat), Dateien/Verzeichnisse, Geheimnis (am Job oder am Profil hinterlegt)
@@ -423,27 +424,27 @@ async function mount(root, ctx) {
       const namen = p?.files ? fachNames(p.files, werte) : []
       fachBox.style.display = namen.length ? '' : 'none'
       if (namen.length) {
-        fachLabelEl.textContent = `Fächer · Basis (${namen.join(', ')})`
-        fBaseBtn.title = `Basis der Fächer auf dem Server wählen (${namen.join(', ')})`
+        fachLabelEl.textContent = t('Fächer · Basis ({0})', [namen.join(', ')])
+        fBaseBtn.title = t('Basis der Fächer auf dem Server wählen ({0})', [namen.join(', ')])
       }
     }
     let schritt = 0        // welche Seite gerade sichtbar ist — check() zeigt nur deren Meldungen
-    const saveBtn = el('button', { class: 'primary', onclick: () => save() }, '💾 Speichern')
+    const saveBtn = el('button', { class: 'primary', onclick: () => save() }, t('💾 Speichern'))
     const why = el('span', { class: 'neg', style: 'font-size:12px;align-self:center;flex:1' })
     function check() {
       const p = st.plugins.find(x => svcId(x) === pluginSel.value); const defs = p?.params ?? []
       const reasons = []   // { text, seite } — die Seite, auf der es zu beheben ist
       const fehlt = (text, seite) => reasons.push({ text, seite })
-      if (isNew && !keyIn.value.trim()) fehlt('Key fehlt', 0)
+      if (isNew && !keyIn.value.trim()) fehlt(t('Key fehlt'), 0)
       const profileDef = defs.find(d => d.type === 'profile' || d.key === 'profile')
       const profile = paramInputs.profile?.value ?? ''
       // „(leer = Werte unten)“ im Feldnamen heisst: ohne Profil geht es auch, dann stehen die Werte im Job
-      if (!profile && profilPflicht(profileDef)) fehlt('Profil fehlt — in der Ansicht des Plugins speichern' + (p?.profile === 'generic' ? ' oder ✎' : ''), 1)
+      if (!profile && profilPflicht(profileDef)) fehlt(t('Profil fehlt — in der Ansicht des Plugins speichern') + (p?.profile === 'generic' ? ' oder ✎' : ''), 1)
       for (const d of defs) {
         const v = paramInputs[d.key]?.value ?? ''
         // mit Fächern kommt die Datei aus in/ bzw. geht nach out/ — dann ist der Parameter nicht Pflicht
         if ((d.type === 'path' || d.type === 'dir') && !v && !(d.type === 'dir' ? p?.files?.out : p?.files?.in)) fehlt(`${d.type === 'dir' ? 'Verzeichnis' : 'Quelle'} fehlt`, 1)
-        if (d.secret && !v && !j?.secrets?.includes(d.key) && !profileSecrets.includes(d.key)) fehlt(`${d.label.split(' —')[0]} fehlt — am Profil hinterlegen (🔒)`, 1)
+        if (d.secret && !v && !j?.secrets?.includes(d.key) && !profileSecrets.includes(d.key)) fehlt(t('{0} fehlt — am Profil hinterlegen (🔒)', [d.label.split(' —')[0]]), 1)
       }
       saveBtn.disabled = reasons.length > 0; saveBtn.title = reasons.map(r => r.text).join(' · ')
       // unten steht nur, was auf dieser Seite zu beheben ist; die anderen Seiten bekommen ein ✗ in der Leiste
@@ -458,7 +459,7 @@ async function mount(root, ctx) {
     const save = async () => {
       if (!check()) return
       const key = (isNew ? keyIn.value : j.key).trim().toLowerCase().replace(/[^a-z0-9_]/g, '_')
-      if (!key) { store.toast('key fehlt'); return }
+      if (!key) { store.toast(t('key fehlt')); return }
       const params = {}
       for (const [k, inp] of Object.entries(paramInputs)) if (inp.value !== '' || inp.type !== 'password') params[k] = inp.value
       const schedule = sched.value()
@@ -471,10 +472,10 @@ async function mount(root, ctx) {
     // ---- Assistent: vier Schritte statt einer Seite, die über den Bildschirm hinauswächst ----
     const lab = text => el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, text)
     const seiten = [
-      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab('Bezeichnung'), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint) },
-      { name: '② Womit', box: el('div', {}, paramsBox), leer: () => !paramsBox.childElementCount },
-      { name: '③ Ablage', box: el('div', {}, fachBox), leer: () => fachBox.style.display === 'none' },
-      { name: '④ Wann', box: el('div', {}, lab('Zeitplan'), sched.el, lab('Zeitgrenze (min)'), timeoutIn, ...(darfRolle ? [lab('Rolle des Laufs'), rolleSel] : [])) },
+      { name: '① Was', box: el('div', {}, lab('Key'), keyIn, lab(t('Bezeichnung')), labelIn, lab('Plugin (Prozess)'), pluginSel, pluginHint) },
+      { name: t('② Womit'), box: el('div', {}, paramsBox), leer: () => !paramsBox.childElementCount },
+      { name: t('③ Ablage'), box: el('div', {}, fachBox), leer: () => fachBox.style.display === 'none' },
+      { name: t('④ Wann'), box: el('div', {}, lab(t('Zeitplan')), sched.el, lab('Zeitgrenze (min)'), timeoutIn, ...(darfRolle ? [lab(t('Rolle des Laufs')), rolleSel] : [])) },
     ]
     const chips = seiten.map((s, i) => el('span', { class: 'view-chip', style: 'cursor:pointer', title: s.name.slice(2), onclick: () => zeige(i) }, s.name))
     /// Seiten mit offenen Punkten tragen ein ✗ und sagen im Tooltip, was fehlt — anklickbar, dort steht es dann unten
@@ -485,7 +486,7 @@ async function mount(root, ctx) {
       c.title = offen.length ? offen.map(r => r.text).join(' · ') : seiten[i].name.slice(2)
     })
     const bühne = el('div', { style: 'min-height:240px;max-height:min(56vh,520px);overflow:auto;padding-right:4px' })
-    const zurück = el('button', { type: 'button', title: 'zurück', onclick: () => blättern(-1) }, '←')
+    const zurück = el('button', { type: 'button', title: t('zurück'), onclick: () => blättern(-1) }, '←')
     const vor = el('button', { type: 'button', title: 'weiter', onclick: () => blättern(1) }, '→')
     /// hat diese Seite etwas zu zeigen? (ohne Fächer keine Ablage, ohne Parameter kein Womit)
     const voll = i => !seiten[i].leer?.()
@@ -515,7 +516,7 @@ async function mount(root, ctx) {
       el('div', { style: 'display:flex;gap:4px;margin:8px 0;flex-wrap:wrap' }, ...chips),
       bühne,
       el('div', { style: 'display:flex;align-items:center;gap:8px;margin-top:14px' },
-        zurück, vor, el('span', { style: 'flex:1' }), why, el('button', { onclick: () => box.remove() }, 'Abbrechen'), saveBtn))
+        zurück, vor, el('span', { style: 'flex:1' }), why, el('button', { onclick: () => box.remove() }, t('Abbrechen')), saveBtn))
     kopfSetzen(); zeige(0)
     box.append(dlg); box.addEventListener('mousedown', e => { if (e.target === box) box.remove() })
     document.body.append(box); (isNew ? keyIn : labelIn).focus()
@@ -531,5 +532,5 @@ async function mount(root, ctx) {
 }
 
 export default {
-  views: [{ path: 'jobs', topic: 'jobs', label: 'Jobs', icon: '⏱', hint: 'im Server, Zeitplan, Läufe, Logs', mount }],
+  views: [{ path: 'jobs', topic: 'jobs', label: t('Jobs'), icon: '⏱', hint: t('im Server, Zeitplan, Läufe, Logs'), mount }],
 }

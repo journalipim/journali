@@ -2,6 +2,7 @@
 // Seite, Drag & Drop, Abschnitte mit Spalten, Attributgruppen ab einem Knoten inkl. Kinder); der HTML-Vorlagen-Editor
 // hier bleibt als zweiter Weg („HTML-Vorlage“) — alte Vorlagen gehen weiter.
 import { mountDesigner as mountWysiwyg, layoutFor, renderSheet, preloadCompare } from './designer.js'
+const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
 // Vorlagen sind HTML mit Platzhaltern (unten), liegen im Journal (ctx.data, „template:<name>“), je Rolle eine
 // Zuordnung („settings“). Der Designer: links Vorlage (Text), rechts die Vorschau an einem gewählten Knoten;
 // „Datenblatt“ im Kontextmenü des Baums öffnet das fertige Blatt in einem neuen Fenster (drucken → PDF).
@@ -177,13 +178,13 @@ async function mountDesigner(root, ctx) {
   const names = await templates(ctx); const sett = await settings(ctx)
   const last = localStorage.getItem('journali.datasheet.node'); if (last && tree.byId.get(last)) state.node = last
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
-  const nameSel = el('select', { title: 'Vorlage' }); const nameIn = el('input', { type: 'text', placeholder: 'Name', style: 'width:120px', title: 'Name zum Speichern' })
-  const localeSel = el('select', { title: 'Sprache der Vorschau' }); for (const l of store.model?.locales ?? []) localeSel.append(el('option', { value: l.code }, l.code)); localeSel.value = state.locale
-  const nodeIn = el('input', { type: 'search', placeholder: '🔍 Knoten für die Vorschau', style: 'width:260px' }); const pick = el('div', { class: 'picker', style: 'position:absolute;z-index:5;width:380px;display:none' })
+  const nameSel = el('select', { title: t_('Vorlage') }); const nameIn = el('input', { type: 'text', placeholder: t_('Name'), style: 'width:120px', title: t_('Name zum Speichern') })
+  const localeSel = el('select', { title: t_('Sprache der Vorschau') }); for (const l of store.model?.locales ?? []) localeSel.append(el('option', { value: l.code }, l.code)); localeSel.value = state.locale
+  const nodeIn = el('input', { type: 'search', placeholder: t_('🔍 Knoten für die Vorschau'), style: 'width:260px' }); const pick = el('div', { class: 'picker', style: 'position:absolute;z-index:5;width:380px;display:none' })
   const status = el('span', { class: 'muted', style: 'font-size:12px' })
   const ta = el('textarea', { spellcheck: 'false', wrap: 'off', style: 'flex:1;width:100%;box-sizing:border-box;font:12px ui-monospace,Consolas,monospace;resize:none;border:0;padding:8px;background:var(--pane);color:var(--text)' })
   const frame = el('iframe', { style: 'flex:1;width:100%;border:0;background:#fff' })
-  const roleSel = role => { const s = el('select', { title: `Vorlage für ${role}` }); for (const n of ['standard', ...names.filter(x => x !== 'standard')]) s.append(el('option', { value: n }, n)); s.value = sett[role] ?? 'standard'; s.addEventListener('change', async () => { sett[role] = s.value; await ctx.data.set('settings', sett); store.toast(`Datenblatt: ${role} → ${s.value}`) }); return s }
+  const roleSel = role => { const s = el('select', { title: t_('Vorlage für {0}', [role]) }); for (const n of ['standard', ...names.filter(x => x !== 'standard')]) s.append(el('option', { value: n }, n)); s.value = sett[role] ?? 'standard'; s.addEventListener('change', async () => { sett[role] = s.value; await ctx.data.set('settings', sett); store.toast(t_('Datenblatt: {0} → {1}', [role, s.value])) }); return s }
   function fillNames() { nameSel.innerHTML = ''; for (const n of ['standard', ...names.filter(x => x !== 'standard')]) nameSel.append(el('option', { value: n }, n)); nameSel.value = state.name }
   async function loadTemplate(name) { const t = await ctx.data.get(T + name); state.name = name; state.html = t?.html ?? DEFAULT_TEMPLATE; ta.value = state.html; nameIn.value = name; state.dirty = false; preview() }
   let timer = null
@@ -191,7 +192,7 @@ async function mountDesigner(root, ctx) {
     if (!state.node) { frame.srcdoc = '<p style="font:13px system-ui;color:#6b7280;padding:16px">Knoten wählen → Vorschau</p>'; return }
     status.textContent = 'rendere …'
     try { const t0 = performance.now(); frame.srcdoc = await sheet(ctx, state.node, ta.value, localeSel.value); status.textContent = `${Math.round(performance.now() - t0)} ms` }
-    catch (e) { frame.srcdoc = `<pre style="color:#b91c1c">${e.message}</pre>`; status.textContent = '✗' }
+    catch (e) { frame.srcdoc = t_('<pre style="color:#b91c1c">{0}</pre>', [e.message]); status.textContent = '✗' }
   }
   ta.addEventListener('input', () => { state.dirty = true; clearTimeout(timer); timer = setTimeout(preview, 400) })
   ta.addEventListener('keydown', e => { if (e.key === 'Tab') { e.preventDefault(); const s = ta.selectionStart; ta.setRangeText('  ', s, ta.selectionEnd, 'end') } if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); save() } })
@@ -201,7 +202,7 @@ async function mountDesigner(root, ctx) {
     if (!names.includes(name)) { names.push(name); fillNames() }
     state.name = name; nameSel.value = name; state.dirty = false; store.toast(`💾 Vorlage „${name}“ gespeichert`)
   }
-  async function remove() { if (state.name === 'standard' || !await ctx.dialog.confirm({ title: `Vorlage „${state.name}“ löschen?`, ok: '🗑 Löschen', danger: true })) return; await ctx.data.del(T + state.name); names.splice(names.indexOf(state.name), 1); fillNames(); loadTemplate('standard') }
+  async function remove() { if (state.name === 'standard' || !await ctx.dialog.confirm({ title: t_('Vorlage „{0}“ löschen?', [state.name]), ok: t_('🗑 Löschen'), danger: true })) return; await ctx.data.del(T + state.name); names.splice(names.indexOf(state.name), 1); fillNames(); loadTemplate('standard') }
   nodeIn.addEventListener('input', () => {
     const q = nodeIn.value.trim().toLowerCase(); pick.innerHTML = ''
     const hits = q ? tree.rows.filter(r => r.role !== 'group' && (r.label.toLowerCase().includes(q) || (r.sku ?? '').toLowerCase().includes(q) || r.id.includes(q))).slice(0, 12) : []
@@ -211,13 +212,13 @@ async function mountDesigner(root, ctx) {
   nodeIn.addEventListener('blur', () => setTimeout(() => pick.style.display = 'none', 150))
   if (state.node) nodeIn.value = tree.byId.get(state.node)?.label ?? ''
   nameSel.addEventListener('change', () => loadTemplate(nameSel.value)); localeSel.addEventListener('change', preview)
-  const help = el('details', { style: 'font-size:12px' }, el('summary', { class: 'muted' }, '? Platzhalter'),
+  const help = el('details', { style: 'font-size:12px' }, el('summary', { class: 'muted' }, t_('? Platzhalter')),
     el('pre', { style: 'white-space:pre-wrap;margin:4px 0', html: '{{name}} {{sku}} {{id}} {{today}} · {{attr.key}} {{attr.key@en}} {{label.key}} {{unit.key}} · {{{attr.description}}} (HTML roh)\n{{#if image}}&lt;img src="{{image}}"&gt;{{/if}} · {{#each images}}{{url}}{{/each}}\n{{#each groups}}{{label}} {{#each attributes}}{{label}}: {{value}} {{unit}}{{/each}}{{/each}}\n{{#each variants}}{{sku}} {{name}} {{#each axes}}{{label}}: {{value}}{{/each}}{{/each}} · {{../name}} = Ebene hinauf · {{else}}' }),
     el('div', { class: 'chips' }, ...(store.model?.attributes ?? []).slice(0, 400).map(a => el('span', { class: 'chip', style: 'cursor:pointer', title: `${a.label?.de ?? ''} · ${a.type}`, onclick: () => { const s = ta.selectionStart; ta.setRangeText(a.type === 'html' ? `{{{attr.${a.key}}}}` : `{{attr.${a.key}}}`, s, ta.selectionEnd, 'end'); ta.focus(); ta.dispatchEvent(new Event('input')) } }, a.key))))
   root.append(
-    el('div', { class: 'toolbar' }, el('h1', {}, '▤ Datenblatt-Designer'), nameSel, nameIn, el('button', { class: 'primary', onclick: save, title: 'Vorlage speichern (Strg+S) — im Journal, für alle' }, '💾'), el('button', { class: 'x', onclick: remove, title: 'Vorlage löschen' }, '✕'),
+    el('div', { class: 'toolbar' }, el('h1', {}, '▤ Datenblatt-Designer'), nameSel, nameIn, el('button', { class: 'primary', onclick: save, title: t_('Vorlage speichern (Strg+S) — im Journal, für alle') }, '💾'), el('button', { class: 'x', onclick: remove, title: t_('Vorlage löschen') }, '✕'),
       el('span', { class: 'sep' }, '·'), el('span', { class: 'muted' }, 'Rolle → Vorlage:'), el('span', { class: 'muted' }, '▣'), roleSel('group'), el('span', { class: 'muted' }, '▦'), roleSel('product'), el('span', { class: 'muted' }, '◆'), roleSel('variant'),
-      el('span', { class: 'grow' }), el('span', { style: 'position:relative' }, nodeIn, pick), localeSel, el('button', { onclick: () => { if (state.node) sheet(ctx, state.node, ta.value, localeSel.value).then(h => openSheet(h, 'Datenblatt')) }, title: 'im neuen Fenster öffnen → drucken / PDF' }, '⎙ öffnen'), status),
+      el('span', { class: 'grow' }), el('span', { style: 'position:relative' }, nodeIn, pick), localeSel, el('button', { onclick: () => { if (state.node) sheet(ctx, state.node, ta.value, localeSel.value).then(h => openSheet(h, t_('Datenblatt'))) }, title: t_('im neuen Fenster öffnen → drucken / PDF') }, t_('⎙ öffnen')), status),
     el('div', { style: 'display:flex;flex:1;min-height:0' },
       el('div', { style: 'flex:1;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)' }, ta, el('div', { style: 'padding:4px 8px;border-top:1px solid var(--line);max-height:180px;overflow:auto' }, help)),
       el('div', { style: 'flex:1;display:flex;flex-direction:column;min-width:0' }, frame)))
@@ -229,20 +230,20 @@ export default {
   views: [{ path: 'designer', label: 'Datenblatt-Designer', icon: '▤', mount: mountWysiwyg }, { path: 'html', label: 'Datenblatt: HTML-Vorlage', icon: '‹›', mount: mountDesigner }],
   nodeActions: [{
     // an jeder Rolle — auch die Gruppe hat ein Blatt (Datentabelle/Vergleich der Produkte darunter); Layout je Rolle (Taloan, 18.09.: „wo ist Datenblatt geblieben?“)
-    label: 'Datenblatt erstellen', icon: '▤',
+    label: t_('Datenblatt erstellen'), icon: '▤',
     async run(nodeId, ctx) {
       const row = ctx.tree.byId.get(nodeId); if (!row) return
       // Layout der Rolle (WYSIWYG); gibt es keins, aber eine HTML-Vorlage dieses Namens, die
       const l = await layoutFor(ctx, row.role)
       const hasLayout = (await ctx.data.get('layout:' + l.name)) != null, hasHtml = (await ctx.data.get(T + l.name)) != null
-      if (!hasLayout && hasHtml) { const t = await templateFor(ctx, row.role); openSheet(await sheet(ctx, nodeId, t.html, t.locale), `Datenblatt ${row.label}`); return }
+      if (!hasLayout && hasHtml) { const t = await templateFor(ctx, row.role); openSheet(await sheet(ctx, nodeId, t.html, t.locale), t_('Datenblatt {0}', [row.label])); return }
       const d = await dataOf(ctx, nodeId, l.locale); d.types = Object.fromEntries(ctx.store.model.attributes.map(a => [a.key, a.type])); d.locale = l.locale
       await preloadCompare(ctx, l.layout, d, l.locale)
-      openSheet(renderSheet(l.layout, d, ctx.store.model), `Datenblatt ${row.label}`)
+      openSheet(renderSheet(l.layout, d, ctx.store.model), t_('Datenblatt {0}', [row.label]))
     },
   }, {
     // Designer mit diesem Knoten als Vorschau (Taloan, 18.09.: „erstellen und designen“)
-    label: 'Datenblatt designen …', icon: '✎',
+    label: t_('Datenblatt designen …'), icon: '✎',
     run(nodeId, ctx) { localStorage.setItem('journali.datasheet.node', nodeId); ctx.go?.('/p/datasheet/designer') },
   }],
   // für andere Plugins (Export als PDF-Stapel o. ä.)
