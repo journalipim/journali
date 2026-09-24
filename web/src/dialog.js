@@ -1,5 +1,6 @@
 // Ein Dialog für die ganze Oberfläche statt window.confirm/prompt.
-// dialog.confirm({ title, text, ok, danger }) → true/false; dialog.prompt({ title, text, value, placeholder }) → Text oder null.
+// dialog.confirm({ title, text, ok, danger }) → true/false; dialog.prompt({ title, text, value, placeholder, secret }) → Text oder null.
+// secret: true macht ein Passwortfeld — die Eingabe steht dann nicht lesbar auf dem Schirm.
 // Enter bestätigt, Esc bricht ab; der Rest der Oberfläche ist solange gesperrt. Eingehängt in App.vue (Dialog.vue).
 import { reactive } from 'vue'
 import { t } from './i18n.js'
@@ -22,8 +23,8 @@ export const dialog = reactive({
   help({ title, rows = [], text = '' }) {
     return new Promise(resolve => { Object.assign(this, { open: true, kind: 'help', title, text, warn: '', list: rows, ok: t('Schliessen'), cancel: '', danger: false, option: null, _resolve: resolve }) })
   },
-  prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = t('Abbrechen'), warn = '', danger = false, choices = null }) {   // choices: [{ value, label }] → Auswahl statt Eingabe
-    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'prompt', title, text, warn, list: [], value, placeholder, ok, cancel, danger, option: null, choices, _resolve: resolve }) })
+  prompt({ title, text = '', value = '', placeholder = '', ok = 'OK', cancel = t('Abbrechen'), warn = '', danger = false, choices = null, secret = false }) {   // choices: [{ value, label }] → Auswahl statt Eingabe
+    return new Promise(resolve => { Object.assign(this, { open: true, kind: 'prompt', title, text, warn, list: [], value, placeholder, ok, cancel, danger, option: null, choices, secret, _resolve: resolve }) })
   },
   done(yes) {
     const r = this._resolve; this.open = false; this._resolve = null

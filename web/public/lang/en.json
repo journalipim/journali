@@ -2477,9 +2477,7 @@
  "✓ kopiert": "✓ copied",
  "in die Zwischenablage": "to the clipboard",
  "wieder verdecken": "hide again",
- "eigenes Passwort": "your own password",
  "Anzeigen": "Show",
- "verlangt das eigene Passwort; nach einer Minute wieder verdeckt": "asks for your own password; hidden again after a minute",
  "◉ anzeigen": "◉ show",
  "Die Anzeige verlangt eine Anmeldung.": "Showing it requires a login.",
  "Passwort falsch.": "Password is wrong.",
@@ -2501,5 +2499,9 @@
  "Spalte breiter oder schmaler ziehen; Doppelklick setzt zurück": "drag the column wider or narrower; double-click resets",
  "Unbekannter Tarif {0} — bekannt sind: {1}": "Unknown tier {0} — known are: {1}",
  "◆ mein Tarif": "◆ my tier",
- "nur, was diese Anlage verwenden darf — mit den anderen Filtern zusammen": "only what this installation may use — together with the other filters"
+ "nur, was diese Anlage verwenden darf — mit den anderen Filtern zusammen": "only what this installation may use — together with the other filters",
+ "Datenbankpasswort anzeigen": "Show the database password",
+ "Die Anzeige verlangt das Anmeldepasswort von {0}.": "Showing it requires the login password of {0}.",
+ "Anmeldepasswort": "Login password",
+ "fragt nach dem eigenen Anmeldepasswort; nach einer Minute wieder verdeckt": "asks for your own login password; hidden again after a minute"
 }

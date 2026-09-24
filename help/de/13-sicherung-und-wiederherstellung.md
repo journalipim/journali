@@ -9,8 +9,8 @@ Eine Sicherung ist eine Vollsicherung in ein Verzeichnis auf dem Server: das Jou
 ## Die Datenbank selbst sichern
 
 Wer die Datenbank mit eigenen Mitteln sichert, findet ihre Verbindung unter ⚙ Einstellungen → ⇅ B&R → **⛁ Datenbank**:
-Host, Port, Datenbank und Anmeldename. Das Passwort ist verdeckt; anzeigen verlangt das eigene Passwort, und nach einer
-Minute ist es wieder verdeckt. Den Abschnitt sieht, wer Anwender und Rollen verwaltet.
+Host, Port, Datenbank und Anmeldename. Das Passwort ist verdeckt; anzeigen fragt in einem eigenen Fenster nach dem eigenen
+Anmeldepasswort, und nach einer Minute ist es wieder verdeckt. Den Abschnitt sieht, wer Anwender und Rollen verwaltet.
 
 ## Als Job
 

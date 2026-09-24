@@ -22,7 +22,7 @@ function onKey(e) {
         <div v-if="dialog.text" class="text muted">{{ dialog.text }}</div>
         <label v-if="dialog.option" class="option"><input type="checkbox" v-model="dialog.option.checked" /> {{ dialog.option.label }}</label>
         <select v-if="dialog.kind === 'prompt' && dialog.choices" ref="field" v-model="dialog.value" style="width:100%;margin-top:10px"><option v-for="c in dialog.choices" :key="c.value" :value="c.value">{{ c.label }}</option></select>
-        <input v-else-if="dialog.kind === 'prompt'" ref="field" v-model="dialog.value" class="cell-input" style="width:100%;margin-top:10px" :placeholder="dialog.placeholder" />
+        <input v-else-if="dialog.kind === 'prompt'" ref="field" v-model="dialog.value" class="cell-input" style="width:100%;margin-top:10px" :placeholder="dialog.placeholder" :type="dialog.secret ? 'password' : 'text'" :autocomplete="dialog.secret ? 'current-password' : 'off'" />
         <div class="buttons">
           <button v-if="dialog.cancel" @click="dialog.done(false)">{{ dialog.cancel }}</button>
           <button ref="okBtn" :class="dialog.danger ? 'danger' : 'primary'" @click="dialog.done(true)">{{ dialog.ok }}</button>

@@ -59,8 +59,8 @@ Wer die Datenbank selbst sichert, braucht es. Zwei Wege:
 docker compose exec server cat /run/journali/db-password
 ```
 
-oder ⚙ Einstellungen → ⇅ B&R → **⛁ Datenbank**: Host, Port, Datenbank, Anmeldename — und das Passwort nach erneuter
-Eingabe des eigenen (Recht `users`, `GET /api/backup/db`, `POST /api/backup/db/password`). Nach einer Minute ist es
+oder ⚙ Einstellungen → ⇅ B&R → **⛁ Datenbank**: Host, Port, Datenbank, Anmeldename — und das Passwort nach Eingabe des eigenen
+Anmeldepassworts in einem eigenen Fenster (Recht `users`, `GET /api/backup/db`, `POST /api/backup/db/password`). Nach einer Minute ist es
 wieder verdeckt; jede Anzeige steht im Serverlog.
 
 Ohne die Datenbank aus dem Paket (eigener Cluster) fällt der Dienst `db-passwort` weg: dann setzt man `JOURNALI_DB`

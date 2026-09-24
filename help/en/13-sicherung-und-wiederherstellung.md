@@ -9,7 +9,7 @@ A backup is a full backup into a directory on the server: the journal with all e
 ## Backing up the database itself
 
 Whoever backs up the database with their own tools finds its connection under ⚙ Settings → ⇅ B&R → **⛁ Database**:
-host, port, database and login name. The password is hidden; showing it asks for your own password, and after a minute
+host, port, database and login name. The password is hidden; showing it asks in a separate window for your own login password, and after a minute
 it is hidden again. The section is visible to whoever manages users and roles.
 
 ## As a job
