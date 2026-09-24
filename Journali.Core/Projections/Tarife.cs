@@ -5,6 +5,9 @@ public sealed record Tarif(string Key, string Label, int Rang, int Week, int Mon
 {
     public bool Erlaubt(string plugin) => Plugins is null || Plugins.Contains(plugin);
     public bool Unbegrenzt => Week == Tarife.Ohne && Month == Tarife.Ohne;
+    /// <summary>Laufen Jobs nach einem Zeitplan? Ab Pro. Kostenlos startet sie von Hand — die Arbeit machen sie gleich,
+    /// nur eben dann, wenn jemand darauf drückt.</summary>
+    public bool Zeitplan => Rang > 0;
 }
 
 /// <summary>
@@ -13,7 +16,7 @@ public sealed record Tarif(string Key, string Label, int Rang, int Week, int Mon
 /// Team 2 Enterprise: der höchste gilt für alle“).
 /// <list type="bullet">
 /// <item><b>Kostenlos</b> — 10 000 / 50 000, Tabelle (CSV, Excel, JSON), das Excel-Add-in, OnlyOffice, Ableitungen
-/// (Vorschaubilder) und Export, ein Publikationsbaum. Ableitungen und Export
+/// (Vorschaubilder) und Export, ein Publikationsbaum; Jobs nur von Hand, ein Zeitplan gehört zu Pro. Ableitungen und Export
 /// laufen als Job — der Tasker ist darum dabei, startet aber nur Jobs erlaubter Plugins; gesichert wird von Hand
 /// (Einstellungen → B&amp;R), die Sicherung als Job gehört zu Pro.</item>
 /// <item><b>Pro</b> — 50 000 / 250 000, dazu Datenblatt, Übersetzung (XLIFF), BMEcat (Export nach Vorlage), ETIM,

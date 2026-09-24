@@ -90,11 +90,13 @@ function toCron(f) {
     default: return f.cron.trim()
   }
 }
-/// Baut den Assistenten; onChange(cron) bei jeder Änderung; value() = aktueller Ausdruck
-function scheduleAssistant(initial, onChange) {
-  const f = fromCron(initial)
+/// Baut den Assistenten; onChange(cron) bei jeder Änderung; value() = aktueller Ausdruck.
+/// Ohne den Tarif für Zeitpläne steht nur „nur von Hand" zur Wahl — der Server nähme einen Zeitplan ohnehin nicht an.
+function scheduleAssistant(initial, onChange, zeitplaene = true) {
+  const f = zeitplaene ? fromCron(initial) : { ...fromCron(''), mode: 'manual' }
   const box = el('div', { class: 'sched' })
-  const modeSel = el('select', { style: 'width:100%' }, ...MODES.map(([v, l]) => el('option', { value: v }, l))); modeSel.value = f.mode
+  const moden = zeitplaene ? MODES : MODES.filter(([v]) => v === 'manual')
+  const modeSel = el('select', { style: 'width:100%', title: zeitplaene ? '' : t('Ein Zeitplan gehört zum Tarif Pro. Von Hand läuft der Job in jedem Tarif.') }, ...moden.map(([v, l]) => el('option', { value: v }, l))); modeSel.value = f.mode
   const num = (key, min, max, w = 56) => { const i = el('input', { type: 'number', value: String(f[key]), min: String(min), max: String(max), style: `width:${w}px` }); i.addEventListener('input', () => { f[key] = i.value; emit() }); return i }
   const time = () => el('span', { style: 'display:inline-flex;align-items:center;gap:4px' }, 'um ', num('hour', 0, 23), ':', num('minute', 0, 59))
   const cronIn = el('input', { type: 'text', value: f.cron, placeholder: t('m h tag monat wochentag [dN:datum | wN:datum]'), style: 'width:100%' }); cronIn.addEventListener('input', () => { f.cron = cronIn.value; emit() })
@@ -159,7 +161,10 @@ async function mount(root, ctx) {
         el('td', { class: cls, title: j.running ? t('läuft') : j.last?.status ?? t('noch nie gelaufen') }, sym),
         el('td', {}, el('b', {}, j.label), el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, j.key)),
         el('td', { class: zu(j) ? 'warn' : 'muted', title: zu(j) ? grund(j) : '' }, j.plugin + (j.service ? '/' + j.service : '') + (zu(j) ? ' ◇' : '')),
-        el('td', { title: j.schedule ?? '' }, j.enabled ? j.scheduleText : el('span', { class: 'muted' }, '○ aus')),
+        el('td', { title: j.schedule && store.tarif?.schedules === false ? t('Ein Zeitplan gehört zum Tarif Pro. Von Hand läuft der Job in jedem Tarif.') : j.schedule ?? '' },
+          !j.enabled ? el('span', { class: 'muted' }, '○ aus')
+            : j.schedule && store.tarif?.schedules === false ? el('span', { class: 'warn' }, j.scheduleText + ' ◇')
+            : j.scheduleText),
         el('td', { class: 'muted' }, j.nextDue ? when(j.nextDue) : ''),
         el('td', { class: 'muted', title: j.last?.summary ?? '' }, j.last ? `${when(j.last.startedAt)} · ${j.last.seconds}s` : ''),
         el('td', { style: 'white-space:nowrap' },
@@ -332,7 +337,7 @@ async function mount(root, ctx) {
     const pluginHint = el('div', { class: 'muted', style: 'font-size:12px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis' })
     if (j) pluginSel.value = `${j.plugin}|${j.service ?? ''}`
     else if (preset) { pluginSel.value = preset; if (pluginSel.value !== preset) pluginSel.value = st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|')) ? svcId(st.plugins.find(p => svcId(p).startsWith(preset.split('|')[0] + '|'))) : pluginSel.value }
-    const sched = scheduleAssistant(j?.schedule ?? '', () => {})   // Zeitplan-Assistent statt Vorgaben-Liste
+    const sched = scheduleAssistant(j?.schedule ?? '', () => {}, store.tarif?.schedules !== false)   // Zeitplan-Assistent statt Vorgaben-Liste
     const timeoutIn = el('input', { type: 'number', value: String(j?.timeoutMinutes ?? 60), min: '1', max: '1440', style: 'width:90px' })
     // Mit welcher Rolle der Lauf arbeitet: davon hängen seine Rechte ab (eine Sicherung braucht „Anwender und Rollen“).
     // Sichtbar nur für die Rollenverwaltung — sonst wäre ein Job ein Weg zu fremden Rechten.

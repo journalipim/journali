@@ -2510,5 +2510,6 @@
  "📁 Rohdaten-JSON auf dem Server": "📁 Raw-data JSON on the server",
  "Datei auf dem Server wählen": "Choose a file on the server",
  "keine Datei gewählt": "no file chosen",
- "Verzeichnis": "Directory"
+ "Verzeichnis": "Directory",
+ "Ein Zeitplan gehört zum Tarif {0} — diese Instanz hat {1}.": "A schedule belongs to tier {0} — this instance has {1}."
 }

@@ -178,4 +178,12 @@ public class TarifTests
         Assert.Equal(Tarife.Free.Week, new Licence("gibtsnicht", null, null, 999_999).Week);
         Assert.Equal((Tarife.Free.Week, Tarife.Free.Month), (Licence.Frei.Week, Licence.Frei.Month));
     }
+
+    /// <summary>Zeitpläne gibt es ab Pro; von Hand läuft ein Job in jedem Tarif.</summary>
+    [Fact]
+    public void Ein_Zeitplan_gehoert_ab_Pro_dazu()
+    {
+        Assert.False(Tarife.Free.Zeitplan);
+        foreach (var t in Tarife.Alle.Where(x => x.Rang > 0)) Assert.True(t.Zeitplan, t.Key);
+    }
 }

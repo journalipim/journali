@@ -1,5 +1,4 @@
 {
- "Tabelle": "Table",
  "CSV, Excel, JSON, Zwischenablage — mit Datenmapper": "CSV, Excel, JSON, clipboard — with data mapper",
  "Excel, CSV — die Form, die der Tabellenimport liest": "Excel, CSV — the form the table import reads",
  "Excel: Vorlage für {0}": "Excel: template for {0}",
@@ -158,7 +157,6 @@
  "Beispiele": "Examples",
  "Umwandlung: Schritte zwischen Quelle und Ziel (Zahl, Ja/Nein, Datum, Ersetzen, Aufteilen, Verbinden, Bedingung …)": "Transformation: steps between source and target (number, yes/no, date, replace, split, join, condition …)",
  "Attributgruppe — Pflicht: ohne Gruppe gilt das Attribut nirgends": "Attribute group — required: without a group the attribute applies nowhere",
- "Spalte anklicken statt tippen — wird mit Komma angehängt": "Click a column instead of typing — appended with a comma",
  "nach oben": "up",
  "nach unten": "down",
  "Schritt entfernen": "Remove step",
@@ -203,5 +201,7 @@
  "Label": "Label",
  "Einheit": "Unit",
  "⇪ {0}: {1} Spalten{2}": "⇪ {0}: {1} columns{2}",
- ", {0} Zeilen": ", {0} rows"
+ ", {0} Zeilen": ", {0} rows",
+ "Tabellen-Import": "Table import",
+ "Tabellen-Export": "Table export"
 }

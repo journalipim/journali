@@ -4178,8 +4178,8 @@ const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v
 const roles = ["group", "product"];
 const entry = {
   views: [
-    { path: "import", topic: "import", label: t("Tabelle"), icon: "⊞", hint: t("CSV, Excel, JSON, Zwischenablage — mit Datenmapper"), component: ImportView },
-    { path: "export", topic: "export", label: t("Tabelle"), icon: "⊞", hint: t("Excel, CSV — die Form, die der Tabellenimport liest"), component: ExportView }
+    { path: "import", topic: "import", label: t("Tabellen-Import"), icon: "⊞", hint: t("CSV, Excel, JSON, Zwischenablage — mit Datenmapper"), component: ImportView },
+    { path: "export", topic: "export", label: t("Tabellen-Export"), icon: "⊞", hint: t("Excel, CSV — die Form, die der Tabellenimport liest"), component: ExportView }
   ],
   // Excel am Knoten
   nodeActions: [

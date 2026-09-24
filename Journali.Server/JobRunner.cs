@@ -55,6 +55,8 @@ public sealed class JobRunner : BackgroundService
         if (now <= _lastMinute) return;
         var from = _lastMinute.AddMinutes(1); if ((now - from).TotalMinutes > 5) from = now.AddMinutes(-5);
         _lastMinute = now;
+        // Ohne den Tarif dafür läuft nichts nach Zeitplan — von Hand geht weiter
+        if (!_catalog.InstanzTarif.Zeitplan) return;
         var jobs = _catalog.With((_, _, _) => _catalog.Jobs.All.Values.Where(j => j.Enabled && j.Schedule is not null).Select(j => (j.Key, j.Schedule!)).ToList());
         foreach (var (key, schedule) in jobs)
         {

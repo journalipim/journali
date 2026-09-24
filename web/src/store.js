@@ -46,6 +46,7 @@ export const store = reactive({
   // Anmeldung: enabled = es gibt Benutzer (Server gesperrt), setup = noch keiner (ersten Admin anlegen), user/role aus der Sitzung
   auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null, rights: null },
   dbDown: false,   // Datenbank im Betrieb nicht erreichbar (503 mit db: false)
+  tarif: null,     // { key, label, schedules } aus /api/health
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,
@@ -135,6 +136,7 @@ export const store = reactive({
       this.head = h.head
       this.nodes = h.nodes
       this.usage = h.usage ?? null   // Nutzung für die Statusleiste
+      this.tarif = h.tarif ?? null   // Tarif der Instanz: was die Oberfläche überhaupt anbietet
       // Fassung und Bau: kurz oben, lang im Tooltip
       this.version = h.version ?? ''
       if (h.built) {

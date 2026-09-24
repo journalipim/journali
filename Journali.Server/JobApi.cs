@@ -58,6 +58,9 @@ public static class JobApi
             if (Actor(req) is not { } actor) return ActorMissing();
             if (!ValidKey(key)) return Bad("key: a-z, 0-9, _");
             if (body.Schedule is { Length: > 0 } s && !Cron.TryParse(s, out _)) return Bad("Zeitplan: cron mit fünf Feldern „m h tag monat wochentag“, z. B. „0 2 * * *“ = täglich 02:00.");
+            // Zeitplan ab Pro; von Hand läuft ein Job in jedem Tarif
+            if (body.Schedule is { Length: > 0 } && !c.InstanzTarif.Zeitplan)
+                return Results.Json(ModelApi.Err("Ein Zeitplan gehört zum Tarif {0} — diese Instanz hat {1}.", Tarife.Pro.Label, c.InstanzTarif.Label), statusCode: 403);
             var manifests = PluginApi.Scan(runner.PluginDir);
             return c.With((_, _, write) =>
             {

@@ -181,6 +181,8 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
     usage = Nutzung(req, c),
     built = gebautAm,      // Stand der LAUFENDEN Fassung — einmal beim Start gelesen
     version = fassung,     // die Fassung, die läuft — steht oben in der Leiste
+    // der Tarif dieser Instanz: die Oberfläche richtet sich danach, was sie überhaupt anbietet
+    tarif = new { key = catalog.InstanzTarif.Key, label = catalog.InstanzTarif.Label, schedules = catalog.InstanzTarif.Zeitplan },
 });
 
 /// <summary>Die Zahlen der Statusleiste — für die Anlage oder für das eigene Team, je nachdem, wer fragt.</summary>
