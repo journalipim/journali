@@ -286,6 +286,10 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   *Vorbereitet (23.09.2026):* der Strato-vServer — Ubuntu 26.04 LTS, aktuell, automatische Sicherheitsupdates,
   Firewall des Kundenmenüs lässt nur 22, 80, 443 durch, SSH nur mit Schlüssel, NPMplus als Reverse Proxy (Verwaltung
   nur über SSH-Tunnel). Der Lizenzserver bekommt dort einen eigenen Proxy-Eintrag mit Certbot.
+  *Sein Name (25.09.2026):* eine Subdomain der Produktdomain, per A-Record auf den vServer. Sie steht als Konstante
+  im Kern (`Aussteller.Adresse`) und damit auf Dauer in jedem ausgelieferten Bau: der Name muss bleiben, solange
+  eine Instanz läuft, der Server dahinter darf über DNS wechseln. Getrennt von jedem privaten Rechner — sonst kann
+  kein Prüfstand unterscheiden, ob ein Name im Repo die Lizenzadresse ist oder ein Versehen (Regel 5).
   *Geprüft im Testmodus (23.09.2026, ein Abo-Produkt mit drei Varianten, zwei Testkäufe, Aufrufe per curl):*
   - `activate` und `validate` gehen **ohne API-Schlüssel**; die Antwort trägt **keine Signatur** (weder im Rumpf
     noch in den Kopfzeilen) — der Lizenzserver signiert selbst.

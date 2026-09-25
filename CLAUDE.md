@@ -170,6 +170,8 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   höchsten Tarif der Instanz; drei Monate Enterprise ab dem ersten Journaleintrag (Test-Tarif und -Monate im Blatt).
   **Nur Signiertes zählt**: Lizenz, Schlüssel, Abo-Stand und Tarifblatt gelten nur mit der Signatur des eingebauten
   Lizenzserver-Schlüssels (`Core.Licensing.Aussteller`); `JOURNALI_LICENCE_KEY` nur im Debug-Bau (Prüf-Aussteller).
+  Auch **seine Adresse ist eingebaut** (`Aussteller.Adresse`) — eine Instanz frischt ihr Abo ohne Einrichtung auf,
+  und der Name bleibt, während der Server dahinter wechseln darf (DNS). `JOURNALI_LIZENZSERVER` nur im Debug-Bau.
   Die Abschnitte des Team-Tabs stehen fest: ◍ {Teamname} · ⚿ journali
   Lizenz · ✦ journali Limits · ✧ KI API Keys · ✧ KI Austauschvolumen — erst, was
   journali betrifft, dann die fremde KI.

@@ -78,10 +78,18 @@ Console.WriteLine($"journali: {rebuilt} Einträge in {sw0.ElapsedMilliseconds} m
 var instanz = new Instanz(db);   // Kennung dieser Instanz — steht in der Lizenz, geht nicht in die Sicherung
 builder.Services.AddSingleton(instanz);
 var licences = new Licences(dataDir, new LicenceStore(db), instanz) { ErsterTag = () => catalog.ErsterTag, Tarife = () => catalog.Tarife };   // ohne Lizenz: Test ab dem ersten Eintrag
-// Abo über den Lizenzserver: JOURNALI_LIZENZSERVER; geprüft wird mit dem eingebauten Schlüssel (Aussteller). Der
-// Shop-Schlüssel liegt in jobs/secrets.json
-var abos = new Abos(instanz, dataDir, new HttpClient { Timeout = TimeSpan.FromSeconds(20) },
-    () => Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER"));
+// Abo über den Lizenzserver: seine Adresse ist eingebaut (Core.Licensing.Aussteller.Adresse), geprüft wird mit
+// seinem eingebauten Schlüssel. Der Shop-Schlüssel liegt in jobs/secrets.json
+var lizenzserver = Journali.Core.Licensing.Aussteller.Adresse;
+#if DEBUG
+// Nur im Debug-Bau: gegen einen Lizenzserver der Entwicklung arbeiten. Der Release-Bau fragt immer den eingebauten
+if (Environment.GetEnvironmentVariable("JOURNALI_LIZENZSERVER") is { } eigener)
+{
+    lizenzserver = eigener.Trim();
+    Console.WriteLine($"journali: Lizenzserver aus JOURNALI_LIZENZSERVER: {(lizenzserver.Length is 0 ? "keiner" : lizenzserver)} (Debug-Bau)");
+}
+#endif
+var abos = new Abos(instanz, dataDir, new HttpClient { Timeout = TimeSpan.FromSeconds(20) }, () => lizenzserver);
 catalog.LicenceDir = dataDir;
 catalog.Licences = licences;
 catalog.ZaehltAb = licences.Lic.CountFrom;   // ab wann gezählt wird

@@ -49,6 +49,20 @@ test('keine private IP im Repo', () => {
   assert.deepEqual(treffer, [], 'eine private IP gehört nicht in ein Repo, das veröffentlicht wird')
 })
 
+// Seit die Lizenzadresse eine eigene Domain hat (25.09.2026), laesst sich das eine vom anderen unterscheiden:
+// der Name des privaten Rechners darf nirgends stehen, die Lizenzadresse genau an der einen Stelle im Quelltext.
+test('kein Name eines privaten Rechners im Repo', () => {
+  const treffer = bestand.filter(([, s]) => /rossibox/i.test(s)).map(([p]) => p)
+  assert.deepEqual(treffer, [], 'der eigene Rechner gehoert nicht in ein Repo, das veroeffentlicht wird')
+})
+
+test('die Adresse des Lizenzservers steht nur an einer Stelle im Quelltext', () => {
+  const quelltext = /\.(cs|js|mjs|vue|json|ya?ml)$/i
+  const treffer = bestand.filter(([p, s]) => quelltext.test(p) && /lizenz\.journali\.de/i.test(s)).map(([p]) => p)
+  assert.deepEqual(treffer, ['Journali.Core/Licensing/Vertrag.cs'],
+    'die Adresse gehoert zum eingebauten Schluessel — zweimal geschrieben heisst einmal vergessen')
+})
+
 test('Regel 5 steht in CLAUDE.md', () => {
   const s = text('CLAUDE.md')
   assert.match(s, /## Regel 5: Der Lizenzserver bleibt draussen/,

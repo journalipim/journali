@@ -50,6 +50,14 @@ public static class Signaturen
 /// </summary>
 public static class Aussteller
 {
+    /// <summary>
+    /// Die Adresse des Lizenzservers. Sie steht hier und nicht in der Umgebung: eine Instanz soll ein Abo ohne
+    /// Einrichtung auffrischen können, und der Name bleibt, während der Server dahinter wechseln darf (DNS).
+    /// Sie schützt nichts — das tut <see cref="Oeffentlich"/>: wer die Anfrage woandershin lenkt, bekommt keinen
+    /// Stand, den journali annimmt. Nur der Debug-Bau darf sie überschreiben (<c>JOURNALI_LIZENZSERVER</c>).
+    /// </summary>
+    public const string Adresse = "https://lizenz.journali.de";
+
     /// <summary>Der öffentliche Schlüssel des Lizenzservers (SubjectPublicKeyInfo, Base64).</summary>
     public const string Oeffentlich = "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8e7YORKhRzDQN+tBGTKCtu6ClvPuA5hgZMieASqnaZ8DzRX+mQo2rduxrGzGJOah8Xr5/BspH4p7oBvqEfm9uw==";
 

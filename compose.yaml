@@ -62,10 +62,6 @@ services:
       # Wechsel ohne neue Ids: POST /api/media/copy {from: "<alte Angabe>"} kopiert die Blobs (docs/betrieb.md)
       JOURNALI_MEDIA: postgres
       JOURNALI_JOBS: /data/jobs
-      # Abo über den Lizenzserver (docs/betrieb.md → Abo): die Adresse steht in .env, siehe .env.example. Seinen
-      # öffentlichen Schlüssel kennt journali selbst (eingebaut) — Lizenz, Schlüssel, Abo-Stand und Tarifblatt
-      # zählen nur mit seiner Signatur. Ohne Adresse läuft alles weiter, nur ein Abo geht nicht.
-      JOURNALI_LIZENZSERVER: ${JOURNALI_LIZENZSERVER:-}
     volumes:
       # nur fuer JOURNALI_MEDIA: /data/media (Verzeichnis-Treiber)
       - journali-media:/data/media

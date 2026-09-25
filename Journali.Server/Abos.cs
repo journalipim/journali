@@ -11,7 +11,8 @@ namespace Journali.Server;
 /// <summary>
 /// Das Abo eines Teams über den Lizenzserver (Taloan, 24.09.2026: „jetzt bauen wir den Lizenzserver“ — Abo je Team, ohne
 /// Verbindung gilt der letzte Stand 7 Tage). Der Lizenzschlüssel aus dem Shop kommt ins eine Feld; die Instanz schickt
-/// eine signierte Anfrage an <c>JOURNALI_LIZENZSERVER</c> und bekommt einen signierten Stand zurück, der als
+/// eine signierte Anfrage an den eingebauten Lizenzserver (<see cref="Aussteller.Adresse"/>) und bekommt einen
+/// signierten Stand zurück, der als
 /// <see cref="Types.EntitlementReceived"/> ins Journal des Teams geht. Täglich wird aufgefrischt.
 /// <para>Geprüft wird die Antwort gegen die Anfrage (Fingerabdruck, Instanz, Team) und die Signatur des Lizenzservers
 /// (<see cref="Aussteller"/>, eingebaut) — ohne passende Signatur wird nichts übernommen (25.09.2026). Das Tarifblatt,
@@ -33,7 +34,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
     public async Task<(EntitlementReceived? Stand, string? Fehler)> VerbindenAsync(Catalog c, string team, string key, string actor, CancellationToken ct = default)
     {
         var adresse = lizenzserver();
-        if (string.IsNullOrWhiteSpace(adresse)) return (null, "Kein Lizenzserver eingestellt (JOURNALI_LIZENZSERVER).");
+        if (string.IsNullOrWhiteSpace(adresse)) return (null, "Kein Lizenzserver eingebaut.");
         key = key.Trim();
         if (key.Length is < 8 or > 100) return (null, "Kein Lizenzschlüssel.");
         var zahler = c.With((_, _, _) => c.Teams.Get(team) is null ? null : c.Teams.Payer(team));
@@ -89,7 +90,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
     public async Task<string?> EinloesenAsync(string keyId, string team, CancellationToken ct = default)
     {
         var adresse = lizenzserver();
-        if (string.IsNullOrWhiteSpace(adresse)) return "Kein Lizenzserver eingestellt (JOURNALI_LIZENZSERVER).";
+        if (string.IsNullOrWhiteSpace(adresse)) return "Kein Lizenzserver eingebaut.";
         var r = new KeyRequest("e-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant(), Einloesung.Art, instanz.Id, instanz.PublicKey,
             Created: Jetzt, Team: team, Key: keyId);
         var rumpf = JsonSerializer.Serialize(r, KeyRequest.Json);

@@ -499,9 +499,10 @@ Stündlich sieht er nach und fragt neu, wenn der letzte Stand älter als 20 Stun
 früheren von „bezahlt bis“ und „ausgestellt + 7 Tage“ — ohne Verbindung also höchstens eine Woche; danach gilt, was
 das Team ohne Abo hat. Ein Abo hebt die Grenzen an, senkt nie; sein Tarif zählt für den höchsten Tarif der Instanz.
 
-| Umgebung | Bedeutung |
-|---|---|
-| `JOURNALI_LIZENZSERVER` | Adresse des Lizenzservers, z. B. `https://lizenz.<domain>` — ohne sie kein Abo |
+Die Adresse des Lizenzservers ist eingebaut (`Core.Licensing.Aussteller.Adresse`) — nichts einzustellen, und im
+Release-Bau nicht zu ändern. Sie schützt nichts; das tut der eingebaute Schlüssel daneben: wer die Anfrage
+woandershin lenkt, bekommt keinen Stand, den journali annimmt. Nur der Debug-Bau nimmt `JOURNALI_LIZENZSERVER`
+an, damit die Entwicklung gegen einen eigenen Lizenzserver arbeiten kann.
 
 Ein Stand ohne passende Signatur wird nicht übernommen. Mit jedem Stand kommt das **Tarifblatt** des Lizenzservers.
 
