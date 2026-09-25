@@ -120,6 +120,18 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   Sprachen, Sicht) — angelegt in der Ansicht des Plugins, nie im Job-Dialog: 180 Spalten mit Transformationen
   richtet dort niemand ein. **Am Job steht, WOHIN und WANN** (Verzeichnis, Dateiname, Zeitplan): dasselbe Profil
   darf wöchentlich in das eine und täglich in ein anderes Verzeichnis schreiben.
+  **Vier Achsen, die nicht vermischt werden** (25.09.2026):
+  1. **Format** — CSV, Excel, JSON, BMEcat nach Vorlage. Das ist das Plugin.
+  2. **Transport** — wie die Bytes kommen: Dateisystem, HTTP, WebDAV, die API eines Fremdsystems. Eine CSV über
+     WebDAV ist dieselbe CSV wie eine vom Laufwerk; der Transport gehört nicht ins Format.
+  3. **Inhalt** — Zuordnung, Ziel im Baum, Umfang, Sprachen. Das ist das Profil.
+  4. **Ablage und Zeit** — Verzeichnis, Dateiname, Zeitplan, Trockenlauf. Das ist der Job.
+
+  *Gebaut ist davon:* beim Transport das Dateisystem (Pfad auf dem Server, bei Jobs die Fächer `in/` und `out/`),
+  dazu HTTP als Quelle beim JSON-Import. Plugins mit eigener Quelle (`ixp`, `solr`) bringen ihren Zugang selbst mit:
+  er gehört zur Quelle und steht im Profil, das Geheimnis beim Server (`/api/plugins/{key}/secrets/{name}`,
+  `jobs/secrets.json`) — nie im Journal, denn dort lässt sich nichts löschen. Ein allgemeiner Transportweg mit
+  eigenem Zugang, den jedes Format-Plugin nutzen kann, ist noch nicht gebaut.
   **Ein Format, ein Plugin**: `csv`, `excel` und `json` bringen Import **und** Export ihres Formats mit — ihre Art
   ist `io` (⇵ Import / Export), nicht `import`. `ixp` und `solr` sind nur Import. Die Schlüssel der Office-Add-ins
   heißen `exceladdin` und `ooaddin` (25.09.2026), damit `excel` das Formatplugin ist.
