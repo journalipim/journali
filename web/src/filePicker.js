@@ -16,8 +16,12 @@ export function ordnerName(s) {
   return /[\\/:*?"<>|]/.test(n) ? null : n
 }
 
-/// filePicker({ value, dirOnly, title, onPick(path) }) — öffnet das Fenster; onPick bekommt den gewählten Pfad
-export function filePicker({ value = '', dirOnly = false, title = null, onPick = () => {} } = {}) {
+/// filePicker({ value, dirOnly, title, zugang, onPick(path) }) — öffnet das Fenster; onPick bekommt den gewählten Pfad.
+/// zugang: der Zugang, über den geblaettert wird (DriverApi) — ohne Angabe das Dateisystem dieses Servers.
+export function filePicker({ value = '', dirOnly = false, title = null, zugang = '', onPick = () => {} } = {}) {
+  // Ohne Zugang der kurze Weg zum Dateisystem dieses Servers; mit Zugang über den Treiber (DriverApi)
+  const basis = zugang ? `/api/drivers/${encodeURIComponent(zugang)}/files` : '/api/files'
+  const dirWeg = zugang ? `/api/drivers/${encodeURIComponent(zugang)}/dir` : '/api/files/dir'
   const box = el('div', { style: 'position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:50' })
   const dlg = el('div', { style: 'width:min(860px,96vw);height:min(560px,90vh);background:var(--pane);border:1px solid var(--line);border-radius:8px;padding:12px 14px;font-size:13px;display:flex;flex-direction:column;gap:6px' })
   const pathIn = el('input', { type: 'text', class: 'pfad', onkeydown: e => { if (e.key === 'Enter') go(pathIn.value) } })
@@ -34,7 +38,7 @@ export function filePicker({ value = '', dirOnly = false, title = null, onPick =
     const { dialog } = await import('./dialog.js')
     const name = ordnerName(await dialog.prompt({ title: t_('Neuer Ordner'), text: cur?.path ?? '', placeholder: t_('Name') }))
     if (!name) return
-    try { const r = await api.post('/api/files/dir', { path: cur.path, name }); await go(r.path) }
+    try { const r = await api.post(dirWeg, { path: cur.path, name }); await go(r.path) }
     catch (e) { status.textContent = e.message }
   }
   const umbenennen = async () => {
@@ -44,12 +48,12 @@ export function filePicker({ value = '', dirOnly = false, title = null, onPick =
     const alt = ziel.split(/[\\/]/).filter(Boolean).pop() ?? ''
     const name = ordnerName(await dialog.prompt({ title: t_('Ordner umbenennen'), text: ziel, value: alt, placeholder: t_('Name') }))
     if (!name || name === alt) return
-    try { const r = await api.post('/api/files/dir', { path: ziel, name }, 'PUT'); await go(chosen ? cur.path : r.path) }
+    try { const r = await api.post(dirWeg, { path: ziel, name }, 'PUT'); await go(chosen ? cur.path : r.path) }
     catch (e) { status.textContent = e.message }
   }
   const go = async p => {
     try {
-      const d = await api.get('/api/files' + (p ? '?path=' + encodeURIComponent(p) : ''))
+      const d = await api.get(basis + (p ? '?path=' + encodeURIComponent(p) : ''))
       cur = d; chosen = null; pathIn.value = d.path
       status.textContent = t_('{0} Ordner · {1} Dateien (neueste zuerst)', [d.dirs.length, d.files.length]) + (d.blobs ? ' ' + t_('· sieht nach einem Medienspeicher aus ({0} Hash-Ordner)', [d.blobs]) : '')
       rootsSel.innerHTML = ''; for (const r of d.roots) rootsSel.append(el('option', { value: r.path }, r.label))

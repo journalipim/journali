@@ -1,0 +1,16 @@
+{
+  "key": "driver",
+  "version": "1.0.0",
+  "label": {
+    "de": "Zugänge",
+    "en": "Accesses"
+  },
+  "description": {
+    "de": "Verwaltet die Zugänge, mit denen andere Plugins an ihre Daten kommen: das Dateisystem des Servers, später FTP und WebDAV, dazu Anmeldungen an MySQL, Solr und IXP. Ein Plugin fragt nach einem Zugang seiner Art und bekommt Adresse und Anmeldung, ohne sie selbst zu verwalten. Wer Dateien liefert, bekommt einen Browser; eine Anmeldung hat keine Verzeichnisse — der Zugang ist keine Schicht über der Datenbank. Die Felder stehen im Journal, das Passwort beim Server und geht nie an den Browser.",
+    "en": "Manages the accesses other plugins use to reach their data: the server's file system, later FTP and WebDAV, plus logins for MySQL, Solr and IXP. A plugin asks for an access of its kind and gets address and credentials without managing them itself. Accesses that deliver files get a browser; a login has no directories — an access is not a layer over the database. Fields live in the journal, the password stays on the server and never reaches the browser."
+  },
+  "kind": "tool",
+  "runs": "browser",
+  "entry": "entry.js",
+  "autoInstall": true
+}

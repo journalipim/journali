@@ -11,6 +11,7 @@ import * as transform from './transform.js'
 import { recentFiles } from './recentFiles.js'
 import { dialog } from './dialog.js'
 import { treePicker } from './treePicker.js'
+import { filePicker } from './filePicker.js'
 import { paneWidth } from './panes.js'
 import { plugins } from './plugins.js'
 import { menu } from './menu.js'
@@ -24,5 +25,5 @@ import ProfileBar from './components/ProfileBar.vue'
 import TreePicker from './components/TreePicker.vue'
 
 /// Was ein Plugin mit `import { … } from 'journali'` bekommt — die Namen stehen auch in web/build-plugins.mjs (Shim)
-export const host = { vue, vueRouter, api, store, tree, icon, mapper, transform, recentFiles, dialog, treePicker, paneWidth, plugins, menu, orphans, compliance, ai, i18n, t, L, setLang, LANGS, Splitter, ImportHead, ProfileBar, TreePicker }
+export const host = { vue, vueRouter, api, store, tree, icon, mapper, transform, recentFiles, dialog, treePicker, filePicker, paneWidth, plugins, menu, orphans, compliance, ai, i18n, t, L, setLang, LANGS, Splitter, ImportHead, ProfileBar, TreePicker }
 window.journali = host
