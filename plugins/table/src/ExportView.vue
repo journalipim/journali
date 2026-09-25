@@ -38,9 +38,12 @@ async function run(downloadIt) {
     table.value = t; busy.value = `${t.count} Zeilen · ${t.columns.length} Spalten`
     if (!downloadIt) return
     const name = `${rootRows.value.map(r => r.label).join('+') || 'export'}-${role.value || 'alle'}-${locales.value.join('-')}`.replace(/[^\w.-]+/g, '_').slice(0, 80)
+    let gekuerzt = 0
     if (format.value === 'csv') download(new Blob([toCsv(t)], { type: 'text/csv;charset=utf-8' }), name + '.csv')
-    else download(await toXlsx(t), name + '.xlsx')
-    store.toast(t_('⇪ {0} Zeilen exportiert', [t.count]), 'ok')
+    else { const b = await toXlsx(t); gekuerzt = b.gekuerzt ?? 0; download(b, name + '.xlsx') }
+    // Excel nimmt nur 32767 Zeichen je Zelle — was länger war, steht gekürzt in der Datei
+    if (gekuerzt) store.toast(t_('⇪ {0} Zeilen exportiert, {1} Zellen auf 32767 Zeichen gekürzt', [t.count, gekuerzt]))
+    else store.toast(t_('⇪ {0} Zeilen exportiert', [t.count]), 'ok')
   } catch (e) { busy.value = '✗ ' + e.message; store.toast(e.message) }
 }
 </script>

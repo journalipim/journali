@@ -66,8 +66,27 @@ export function toJsonTree({ columns, rows }) {
   const strip = o => { delete o.parent; if (!o.children.length) delete o.children; else o.children.forEach(strip); if (!Object.keys(o.axes).length) delete o.axes; return o }
   return JSON.stringify(roots.length === 1 ? strip(roots[0]) : roots.map(strip), null, 1)
 }
-/// Excel-Arbeitsmappe (SheetJS X aus dem Plugin xlsx): Blatt „Daten“, wahlweise ein Blatt „Legende“ (Zeilen)
+/// Excel nimmt höchstens so viele Zeichen in eine Zelle. Ein längerer Wert liess bisher den ganzen Export
+/// scheitern („Text length must not exceed 32767 characters“) — jetzt wird gekürzt und gesagt, wie oft.
+export const ZellenGrenze = 32767
+
+/// Kürzt jede Zelle auf die Grenze. Liefert die Zeilen und wie viele Zellen gekürzt wurden; die Hälfte des
+/// Kennzeichens steht am Ende, damit man im Blatt sieht, dass dort etwas fehlt.
+export function kuerzeZellen(rows) {
+  let gekuerzt = 0
+  const raus = rows.map(r => r.map(v => {
+    if (typeof v !== 'string' || v.length <= ZellenGrenze) return v
+    gekuerzt++
+    return v.slice(0, ZellenGrenze - 1) + '\u2026'
+  }))
+  return { rows: raus, gekuerzt }
+}
+
+/// Excel-Arbeitsmappe (SheetJS X aus dem Plugin xlsx): Blatt „Daten“, wahlweise ein Blatt „Legende“ (Zeilen).
+/// Zu lange Werte werden gekürzt; <c>wb.gekuerzt</c> sagt, wie viele Zellen es betraf.
 export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten') {
+  const gek = kuerzeZellen(rows)
+  rows = gek.rows
   const ws = X.utils.aoa_to_sheet([columns.map(c => c.key), ...rows])
   ws['!cols'] = columns.map(c => ({ wch: Math.min(40, Math.max(8, c.key.length + 2)), hidden: !!c.hidden }))   // parent/role/status ausgeblendet, Id sichtbar
   // Pflicht und Achsen am Spaltenkopf kennzeichnen: SheetJS schreibt
@@ -77,6 +96,7 @@ export function workbook(X, { columns, rows }, legendRows = null, sheet = 'Daten
   // schreibt die freie SheetJS-Fassung nicht, Excel: Einfügen → Tabelle auf dem Bereich
   if (columns.length) ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, rows.length), c: columns.length - 1 } }) }
   const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, sheet)
+  wb.gekuerzt = gek.gekuerzt
   if (legendRows) { const lg = X.utils.aoa_to_sheet(legendRows); lg['!cols'] = [{ wch: 8 }, { wch: 24 }, { wch: 28 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 60 }]; lg['!autofilter'] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(1, legendRows.length - 1), c: legendRows[0].length - 1 } }) }; X.utils.book_append_sheet(wb, lg, 'Legende') }
   return wb
 }

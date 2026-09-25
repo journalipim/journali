@@ -20,7 +20,11 @@ async function polished(X, wb, columns, rowCount, tableName, legendRows = null) 
 export const build = opts => coreBuild({ api, model: store.model }, opts)
 export async function toXlsx(table, sheet = t_('Daten')) {
   const X = await loadXlsx()
-  return polished(X, workbook(X, table, null, sheet), table.columns, table.rows.length, sheet)
+  const wb = workbook(X, table, null, sheet)
+  const blob = await polished(X, wb, table.columns, table.rows.length, sheet)
+  // Der Aufrufer sagt dem Anwender, wenn Excel etwas nicht aufnehmen konnte
+  blob.gekuerzt = wb.gekuerzt
+  return blob
 }
 
 // ---- Excel am Knoten:
