@@ -40,10 +40,13 @@ public static class DriverApi
     /// <summary>Ein eingerichteter Zugang, wie er im Journal steht (ohne Geheimnis).</summary>
     public sealed record Zugang(string Key, string Art, string Label, Dictionary<string, string> Felder);
 
+    /// <summary>Was die Oberfläche schickt. <c>Geheim</c> geht nur hinein — zurück kommen nur die Namen.</summary>
+    public sealed record ZugangBody(string? Art, string? Label, Dictionary<string, string>? Felder, Dictionary<string, string?>? Geheim);
+
     private const string Plugin = "driver";
     private const string Praefix = "zugang:";
 
-    public static void Map(RouteGroupBuilder api, string dataDir, IHostEnvironment env)
+    public static void Map(RouteGroupBuilder api, string dataDir, IHostEnvironment env, string jobsDir)
     {
         // Welche Arten es gibt — die Oberfläche baut daraus das Formular je Zugang
         api.MapGet("/drivers/arten", () => Results.Ok(Arten.Select(a => new { a.Key, a.Label, a.Dateien, a.Felder, a.Geheim })));
@@ -54,8 +57,44 @@ public static class DriverApi
         {
             var alle = Alle(c).Where(z => art is not { Length: > 0 } || z.Art == art)
                 .Where(z => !dateien || (ArtVon(z.Art)?.Dateien ?? false))
-                .Select(z => new { z.Key, z.Art, z.Label, dateien = ArtVon(z.Art)?.Dateien ?? false });
+                .Select(z => new
+                {
+                    z.Key, z.Art, z.Label, z.Felder,
+                    dateien = ArtVon(z.Art)?.Dateien ?? false,
+                    geheim = Secrets.Get(jobsDir, Secrets.ProfileKey(Plugin, z.Key)).Keys.Order().ToList(),   // nur die Namen
+                });
             return Results.Ok(alle);
+        });
+
+        // Einrichten und ändern. Die offenen Felder gehen ins Journal, das Geheimnis in den Tresor beim Server —
+        // nie ins Journal, denn dort lässt sich nichts löschen. Ein Geheimnis kommt von hier nie zurück
+        api.MapPut("/drivers/{zugang}", (string zugang, ZugangBody body, HttpRequest req, Catalog c) =>
+        {
+            if (ModelApi.Actor(req) is not { } actor) return ModelApi.ActorMissing();
+            if (zugang == Lokal) return Bad("Der Zugang {0} ist eingebaut und lässt sich nicht ändern.", Lokal);
+            if (FileApi.Name(zugang) is null) return Bad("Name des Zugangs: ohne Trennzeichen, nicht leer.");
+            if (ArtVon(body.Art) is not { } art) return Bad("Art {0} gibt es nicht.", body.Art ?? "");
+            var felder = new Dictionary<string, string>();
+            foreach (var f in art.Felder) if (body.Felder?.GetValueOrDefault(f) is { Length: > 0 } v) felder[f] = v.Trim();
+            var z = new Zugang(zugang, art.Key, body.Label is { Length: > 0 } l ? l.Trim() : zugang, felder);
+            var json = JsonSerializer.Serialize(z, Json);
+            var eintrag = c.With((_, _, write) => write(actor, Plugins.Stream + Plugin, Types.PluginDataSet, new PluginDataSet(Praefix + zugang, json), null));
+            // Geheimnisse: nur die, die die Art kennt, und nur wenn etwas mitkam — leer lassen behält das alte
+            if (body.Geheim is { Count: > 0 })
+            {
+                var neu = art.Geheim.Where(g => body.Geheim.ContainsKey(g)).ToDictionary(g => g, g => body.Geheim[g]);
+                if (neu.Count > 0) Secrets.Set(jobsDir, Secrets.ProfileKey(Plugin, zugang), neu);
+            }
+            return Results.Ok(new { z.Key, z.Art, z.Label, geheim = Secrets.Get(jobsDir, Secrets.ProfileKey(Plugin, zugang)).Keys.Order(), nummer = eintrag.Number });
+        });
+
+        api.MapDelete("/drivers/{zugang}", (string zugang, HttpRequest req, Catalog c) =>
+        {
+            if (ModelApi.Actor(req) is not { } actor) return ModelApi.ActorMissing();
+            if (zugang == Lokal) return Bad("Der Zugang {0} ist eingebaut.", Lokal);
+            c.With((_, _, write) => write(actor, Plugins.Stream + Plugin, Types.PluginDataSet, new PluginDataSet(Praefix + zugang, null), null));
+            foreach (var a in Arten) Secrets.Set(jobsDir, Secrets.ProfileKey(Plugin, zugang), a.Geheim.ToDictionary(g => g, _ => (string?)null));
+            return Results.Ok(new { entfernt = zugang });
         });
 
         // Auflisten — nur bei einem Zugang, der Dateien liefert
