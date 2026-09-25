@@ -5,7 +5,7 @@
 // Was exportiert wird, steht im Profil; Verzeichnis, Dateiname und Zeitplan stehen am Job.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { store, tree, icon, plugins, TreePicker } from 'journali'
+import { store, tree, icon, plugins, TreePicker, ProfileBar } from 'journali'
 import { build, toCsv, toXlsx, download } from '../browser.js'
 import { t as t_ } from 'journali'
 
@@ -18,9 +18,25 @@ const locales = ref(saved.locales ?? [store.model?.masterLocale ?? 'de'])
 const ownOnly = ref(saved.ownOnly ?? false)
 const viewKey = ref(saved.viewKey ?? '')
 // festesFormat: die Kachel nennt das Format (CSV-Export, Excel-Export) — dann gibt es hier nichts zu wählen
-const props = defineProps({ festesFormat: { type: String, default: '' } })
+// plugin: das Format-Plugin dieser Kachel (csv, excel) — dort liegt das Profil unter dem Dienst export
+const props = defineProps({ festesFormat: { type: String, default: '' }, plugin: { type: String, default: 'table' } })
+const plugin = props.plugin
 const format = ref(props.festesFormat || saved.format || 'excel')
 const rootRows = computed(() => roots.value.map(id => tree.byId.get(id)).filter(Boolean))
+
+// Profil: WAS exportiert wird. Verzeichnis, Dateiname und Zeitplan stehen am Job, nicht hier —
+// dasselbe Profil darf woechentlich in das eine und taeglich in ein anderes Verzeichnis schreiben
+const profileGet = () => ({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value })
+function profileSet(p) {
+  if (!p) return
+  roots.value = Array.isArray(p.roots) ? p.roots : (p.roots ? [p.roots] : roots.value)
+  role.value = p.role ?? ''
+  if (Array.isArray(p.locales) && p.locales.length) locales.value = p.locales
+  ownOnly.value = !!p.ownOnly
+  viewKey.value = p.viewKey ?? ''
+  table.value = null
+  persist()
+}
 const busy = ref(''); const table = ref(null)
 const persist = () => localStorage.setItem('journali.export.table', JSON.stringify({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, format: format.value }))
 onMounted(async () => { if (!tree.loaded) await tree.load(); if (!roots.value.length) roots.value = tree.rows.filter(r => !r.parent).slice(0, 1).map(r => r.id) })
@@ -57,6 +73,7 @@ async function run(downloadIt) {
       <span class="grow" /><span :class="String(busy ?? '').startsWith('✗') ? 'fehler' : 'muted'">{{ busy }}</span></div>
     <table class="grid form"><colgroup><col style="width:84px" /><col /></colgroup><tbody>
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">{{ $t("1 · Was") }}</td></tr>
+      <tr><td class="attr">{{ $t("Profil") }}</td><td><ProfileBar :key="plugin + '/export'" :plugin="plugin" scope="export" :get="profileGet" :set="profileSet" /></td></tr>
       <tr><td class="attr">{{ $t("Teilbaum") }}</td><td>
         <div class="chips" style="margin:2px 0 4px"><span v-for="r in rootRows" :key="r.id" class="chip">{{ icon(r.role) }} {{ r.label }}</span><span v-if="!rootRows.length" class="muted">{{ $t("Teilbäume anhaken — ein Haken gilt für alles darunter") }}</span></div>
         <TreePicker v-model="roots" multi :height="220" />

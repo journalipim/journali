@@ -67,7 +67,8 @@ export async function lauf(format) {
   // Das Profil: dieselbe Form, die die Ansicht speichert (config:<name> im Plugin-Strom)
   const plugin = format === 'csv' ? 'csv' : 'excel'
   let profil
-  try { profil = await api.get(`/api/plugins/${plugin}/data/${encodeURIComponent('config:' + profilName)}`) }
+  // Das Profil des Dienstes: import:<name> beim Format-Plugin — ein Exportprofil steht in einem anderen Namensraum
+  try { profil = await api.get(`/api/plugins/${plugin}/data/${encodeURIComponent('import:' + profilName)}`) }
   catch { throw new Error(`Profil ${profilName} gibt es beim Plugin ${plugin} nicht`) }
   if (!profil?.mapping) throw new Error(`Profil ${profilName} hat keine Zuordnung`)
 

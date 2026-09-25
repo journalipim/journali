@@ -4,7 +4,9 @@
 // Beschriftungsspalte: Profil zuerst, darunter die Zeilen der Quelle (Slot). Nichts verschiebt sich beim Wechsel.
 import ProfileBar from './ProfileBar.vue'
 import { t } from '../i18n.js'
-defineProps({ source: String, plugin: String, busy: String, get: Function, set: Function })
+// scope: der Dienst, zu dem das Profil gehört (import, export) — getrennte Namensräume im selben Plugin-Strom,
+// damit ein Exportprofil nicht in der Importauswahl steht (25.09.2026)
+defineProps({ source: String, plugin: String, busy: String, get: Function, set: Function, scope: { type: String, default: 'config' } })
 // Keine Reiter mehr über die Quellen hinweg: das Thema ⇩ Import ist die Übersicht, hier nur der Krümel zurück
 const NAMES = { ixp: 'IXP', solr: t('Solr'), table: t('Tabelle') }
 </script>
@@ -13,7 +15,7 @@ const NAMES = { ixp: 'IXP', solr: t('Solr'), table: t('Tabelle') }
   <div class="toolbar"><h1><router-link to="/import" class="crumb" :title="$t('zur Übersicht Import')">{{ $t("⇩ Import") }}</router-link> › {{ NAMES[source] ?? source }}</h1><span class="grow" /><span v-if="busy" class="busy">⏳ {{ busy }}</span><slot name="status" /></div>
   <table class="grid form"><colgroup><col style="width:84px" /><col /></colgroup><tbody>
     <tr class="step"><td colspan="2">{{ $t("1 · Quelle") }}</td></tr>
-    <tr><td class="attr">{{ $t("Profil") }}</td><td><ProfileBar :key="plugin" :plugin="plugin" :get="get" :set="set" /></td></tr>
+    <tr><td class="attr">{{ $t("Profil") }}</td><td><ProfileBar :key="plugin + '/' + scope" :plugin="plugin" :scope="scope" :get="get" :set="set" /></td></tr>
     <slot />
   </tbody></table>
 </template>

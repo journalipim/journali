@@ -120,6 +120,9 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   Sprachen, Sicht) — angelegt in der Ansicht des Plugins, nie im Job-Dialog: 180 Spalten mit Transformationen
   richtet dort niemand ein. **Am Job steht, WOHIN und WANN** (Verzeichnis, Dateiname, Zeitplan): dasselbe Profil
   darf wöchentlich in das eine und täglich in ein anderes Verzeichnis schreiben.
+  **Ein Profil gehört einem Dienst**, nicht nur einem Plugin: es heißt `<dienst>:<name>` im Strom des Format-Plugins
+  (`import:abc` bei `csv`), damit ein Exportprofil nicht in der Importauswahl steht. Der Tasker zeigt nur die des
+  gewählten Dienstes und legt keine an — das tut die Ansicht des Plugins.
   **Vier Achsen, die nicht vermischt werden** (25.09.2026):
   1. **Format** — CSV, Excel, JSON, BMEcat nach Vorlage. Das ist das Plugin.
   2. **Transport** — wie die Bytes kommen: Dateisystem, HTTP, WebDAV, die API eines Fremdsystems. Eine CSV über

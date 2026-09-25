@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen */\n.section[data-v-c888de9d] { overflow-x: auto;\n}\ntable.map[data-v-c888de9d] { min-width: 960px;\n}\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-c888de9d] { overflow-x: auto;\n}\ntable.cols[data-v-c888de9d] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-c888de9d] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-c888de9d] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-c888de9d] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-c888de9d] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-c888de9d] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-c888de9d] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-c888de9d] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-c888de9d] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-c888de9d] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-c888de9d], .tstep input[type=text][data-v-c888de9d] { font-size: 12px;\n}\n.fld[data-v-c888de9d] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n/* Reiter, die wie Reiter aussehen */\n.tabs[data-v-c888de9d] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-c888de9d] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-c888de9d]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-c888de9d]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-c888de9d]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-c888de9d] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-c888de9d] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-c888de9d] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-c888de9d] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-c888de9d] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist */\n.x.on[data-v-c888de9d] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-c888de9d] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-c888de9d] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-c888de9d] { font-weight: 400;\n}\n.drop.over[data-v-c888de9d] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n/* ohne Datei ein grosser Ablagebereich */\n.drop.empty[data-v-c888de9d] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-c888de9d] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-c888de9d] { cursor: pointer;\n}\n.recent .chip.dim[data-v-c888de9d] { opacity: .55; cursor: default;\n}\n.btn[data-v-c888de9d] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-c888de9d] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-c888de9d] { opacity: .5;\n}\n.samples[data-v-c888de9d] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-c888de9d] { font-size: 13px;\n}\n.out[data-v-c888de9d] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-c888de9d] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-c888de9d] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-c888de9d]:hover { background: var(--hover);\n}\n\n.form[data-v-ce532da1] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-ce532da1] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-ce532da1] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-ce532da1] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-ce532da1] { flex: 1; min-width: 0;\n}\n.tab[data-v-ce532da1] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-ce532da1], .tab.router-link-active[data-v-ce532da1] { background: var(--accent-soft); color: var(--text);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen */\n.section[data-v-a94e46ff] { overflow-x: auto;\n}\ntable.map[data-v-a94e46ff] { min-width: 960px;\n}\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-a94e46ff] { overflow-x: auto;\n}\ntable.cols[data-v-a94e46ff] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-a94e46ff] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-a94e46ff] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-a94e46ff] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-a94e46ff] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-a94e46ff] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-a94e46ff] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-a94e46ff] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-a94e46ff] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-a94e46ff] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-a94e46ff], .tstep input[type=text][data-v-a94e46ff] { font-size: 12px;\n}\n.fld[data-v-a94e46ff] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n/* Reiter, die wie Reiter aussehen */\n.tabs[data-v-a94e46ff] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-a94e46ff] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-a94e46ff]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-a94e46ff]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-a94e46ff]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-a94e46ff] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-a94e46ff] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-a94e46ff] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-a94e46ff] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-a94e46ff] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist */\n.x.on[data-v-a94e46ff] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-a94e46ff] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-a94e46ff] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-a94e46ff] { font-weight: 400;\n}\n.drop.over[data-v-a94e46ff] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n/* ohne Datei ein grosser Ablagebereich */\n.drop.empty[data-v-a94e46ff] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-a94e46ff] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-a94e46ff] { cursor: pointer;\n}\n.recent .chip.dim[data-v-a94e46ff] { opacity: .55; cursor: default;\n}\n.btn[data-v-a94e46ff] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-a94e46ff] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-a94e46ff] { opacity: .5;\n}\n.samples[data-v-a94e46ff] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-a94e46ff] { font-size: 13px;\n}\n.out[data-v-a94e46ff] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-a94e46ff] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-a94e46ff] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-a94e46ff]:hover { background: var(--hover);\n}\n\n.form[data-v-819aa7a3] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-819aa7a3] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-819aa7a3] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-819aa7a3] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-819aa7a3] { flex: 1; min-width: 0;\n}\n.tab[data-v-819aa7a3] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-819aa7a3], .tab.router-link-active[data-v-819aa7a3] { background: var(--accent-soft); color: var(--text);\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -44,6 +44,7 @@ const t = h.t;
 const L$1 = h.L;
 const Splitter = h.Splitter;
 const ImportHead = h.ImportHead;
+const ProfileBar = h.ProfileBar;
 const TreePicker = h.TreePicker;
 const _export_sfc = (sfc, props) => {
   const target = sfc.__vccOpts || sfc;
@@ -107,7 +108,7 @@ const _hoisted_35$1 = {
   style: { "font-size": "12px" }
 };
 const _hoisted_36$1 = { key: 6 };
-const _hoisted_37 = { class: "attr" };
+const _hoisted_37$1 = { class: "attr" };
 const _hoisted_38 = {
   class: "row",
   style: { "margin-bottom": "4px" }
@@ -543,11 +544,12 @@ const _hoisted_267 = {
 };
 const _sfc_main$2 = {
   __name: "ImportView",
-  props: { nur: { type: Array, default: () => [] }, paste: { type: Boolean, default: false } },
+  props: { nur: { type: Array, default: () => [] }, paste: { type: Boolean, default: false }, plugin: { type: String, default: "table" } },
   setup(__props) {
     const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } = mapper;
     const leftW = paneWidth("import.table", 720);
     const props = __props;
+    const plugin = props.plugin;
     const router = useRouter();
     const route = useRoute();
     const fixed = ref(null);
@@ -1052,7 +1054,8 @@ const _sfc_main$2 = {
             [
               createVNode(unref(ImportHead), {
                 source: "table",
-                plugin: "table",
+                plugin: unref(plugin),
+                scope: "import",
                 busy: busy.value,
                 get: profileGet,
                 set: profileSet
@@ -1334,7 +1337,7 @@ const _sfc_main$2 = {
                   !fixed.value && !(idLocked.value && !unknownIds.value) ? (openBlock(), createElementBlock("tr", _hoisted_36$1, [
                     createElementVNode(
                       "td",
-                      _hoisted_37,
+                      _hoisted_37$1,
                       toDisplayString(_ctx.$t("Ziel")),
                       1
                       /* TEXT */
@@ -1446,7 +1449,7 @@ const _sfc_main$2 = {
                 ]),
                 _: 1
                 /* STABLE */
-              }, 8, ["busy"]),
+              }, 8, ["plugin", "busy"]),
               createElementVNode("div", _hoisted_52, [
                 !keyColumn.value && source.value ? (openBlock(), createElementBlock(
                   "div",
@@ -3427,7 +3430,7 @@ const _sfc_main$2 = {
     };
   }
 };
-const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-c888de9d"]]);
+const ImportView = /* @__PURE__ */ _export_sfc(_sfc_main$2, [["__scopeId", "data-v-a94e46ff"]]);
 async function build$1(env, { root, role = "", locales, ownOnly = false, viewKey = "", channel = "", only = null, extra = [], at = null, say }) {
   const { api: api2, model } = env;
   const byLocale = /* @__PURE__ */ new Map();
@@ -3672,60 +3675,61 @@ const _hoisted_5$1 = {
   style: { "display": "table-cell", "height": "24px" }
 };
 const _hoisted_6$1 = { class: "attr" };
-const _hoisted_7$1 = {
+const _hoisted_7$1 = { class: "attr" };
+const _hoisted_8$1 = {
   class: "chips",
   style: { "margin": "2px 0 4px" }
 };
-const _hoisted_8$1 = {
+const _hoisted_9$1 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_9$1 = { class: "attr" };
-const _hoisted_10$1 = { value: "" };
-const _hoisted_11$1 = { value: "group" };
-const _hoisted_12$1 = { value: "product" };
-const _hoisted_13$1 = { value: "variant" };
-const _hoisted_14$1 = { class: "attr" };
-const _hoisted_15$1 = { class: "chips" };
-const _hoisted_16$1 = ["onClick"];
-const _hoisted_17$1 = { class: "attr" };
-const _hoisted_18$1 = { value: "" };
-const _hoisted_19$1 = ["value"];
-const _hoisted_20$1 = { class: "attr" };
-const _hoisted_21$1 = { class: "step" };
-const _hoisted_22$1 = {
+const _hoisted_10$1 = { class: "attr" };
+const _hoisted_11$1 = { value: "" };
+const _hoisted_12$1 = { value: "group" };
+const _hoisted_13$1 = { value: "product" };
+const _hoisted_14$1 = { value: "variant" };
+const _hoisted_15$1 = { class: "attr" };
+const _hoisted_16$1 = { class: "chips" };
+const _hoisted_17$1 = ["onClick"];
+const _hoisted_18$1 = { class: "attr" };
+const _hoisted_19$1 = { value: "" };
+const _hoisted_20$1 = ["value"];
+const _hoisted_21$1 = { class: "attr" };
+const _hoisted_22$1 = { class: "step" };
+const _hoisted_23$1 = {
   colspan: "2",
   class: "step-band",
   style: { "display": "table-cell", "height": "24px" }
 };
-const _hoisted_23$1 = { key: 0 };
-const _hoisted_24$1 = { class: "attr" };
-const _hoisted_25$1 = { value: "excel" };
-const _hoisted_26 = { value: "csv" };
-const _hoisted_27 = { class: "row" };
-const _hoisted_28 = ["onClick", "title"];
+const _hoisted_24$1 = { key: 0 };
+const _hoisted_25$1 = { class: "attr" };
+const _hoisted_26 = { value: "excel" };
+const _hoisted_27 = { value: "csv" };
+const _hoisted_28 = { class: "row" };
 const _hoisted_29 = ["onClick", "title"];
-const _hoisted_30 = { class: "step-band" };
-const _hoisted_31 = { class: "muted" };
-const _hoisted_32 = { class: "scroll" };
-const _hoisted_33 = {
+const _hoisted_30 = ["onClick", "title"];
+const _hoisted_31 = { class: "step-band" };
+const _hoisted_32 = { class: "muted" };
+const _hoisted_33 = { class: "scroll" };
+const _hoisted_34 = {
   key: 0,
   class: "grid",
   style: { "width": "auto" }
 };
-const _hoisted_34 = ["title"];
-const _hoisted_35 = {
+const _hoisted_35 = ["title"];
+const _hoisted_36 = {
   key: 1,
   class: "muted",
   style: { "padding": "8px" }
 };
-const _hoisted_36 = {
+const _hoisted_37 = {
   key: 2,
   class: "empty"
 };
 const _sfc_main$1 = {
   __name: "ExportView",
-  props: { festesFormat: { type: String, default: "" } },
+  props: { festesFormat: { type: String, default: "" }, plugin: { type: String, default: "table" } },
   setup(__props) {
     const route = useRoute();
     const saved = JSON.parse(localStorage.getItem("journali.export.table") || "{}");
@@ -3735,8 +3739,20 @@ const _sfc_main$1 = {
     const ownOnly = ref(saved.ownOnly ?? false);
     const viewKey = ref(saved.viewKey ?? "");
     const props = __props;
+    const plugin = props.plugin;
     const format = ref(props.festesFormat || saved.format || "excel");
     const rootRows = computed(() => roots.value.map((id) => tree.byId.get(id)).filter(Boolean));
+    const profileGet = () => ({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value });
+    function profileSet(p) {
+      if (!p) return;
+      roots.value = Array.isArray(p.roots) ? p.roots : p.roots ? [p.roots] : roots.value;
+      role.value = p.role ?? "";
+      if (Array.isArray(p.locales) && p.locales.length) locales.value = p.locales;
+      ownOnly.value = !!p.ownOnly;
+      viewKey.value = p.viewKey ?? "";
+      table.value = null;
+      persist();
+    }
     const busy = ref("");
     const table = ref(null);
     const persist = () => localStorage.setItem("journali.export.table", JSON.stringify({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, format: format.value }));
@@ -3882,12 +3898,30 @@ const _sfc_main$1 = {
               createElementVNode(
                 "td",
                 _hoisted_6$1,
+                toDisplayString(_ctx.$t("Profil")),
+                1
+                /* TEXT */
+              ),
+              createElementVNode("td", null, [
+                (openBlock(), createBlock(unref(ProfileBar), {
+                  key: unref(plugin) + "/export",
+                  plugin: unref(plugin),
+                  scope: "export",
+                  get: profileGet,
+                  set: profileSet
+                }, null, 8, ["plugin"]))
+              ])
+            ]),
+            createElementVNode("tr", null, [
+              createElementVNode(
+                "td",
+                _hoisted_7$1,
                 toDisplayString(_ctx.$t("Teilbaum")),
                 1
                 /* TEXT */
               ),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_7$1, [
+                createElementVNode("div", _hoisted_8$1, [
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
@@ -3908,7 +3942,7 @@ const _sfc_main$1 = {
                   )),
                   !rootRows.value.length ? (openBlock(), createElementBlock(
                     "span",
-                    _hoisted_8$1,
+                    _hoisted_9$1,
                     toDisplayString(_ctx.$t("Teilbäume anhaken — ein Haken gilt für alles darunter")),
                     1
                     /* TEXT */
@@ -3925,7 +3959,7 @@ const _sfc_main$1 = {
             createElementVNode("tr", null, [
               createElementVNode(
                 "td",
-                _hoisted_9$1,
+                _hoisted_10$1,
                 toDisplayString(_ctx.$t("Knoten")),
                 1
                 /* TEXT */
@@ -3941,28 +3975,28 @@ const _sfc_main$1 = {
                   [
                     createElementVNode(
                       "option",
-                      _hoisted_10$1,
+                      _hoisted_11$1,
                       toDisplayString(_ctx.$t("alle Knoten darunter")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode(
                       "option",
-                      _hoisted_11$1,
+                      _hoisted_12$1,
                       toDisplayString(_ctx.$t("▣ nur Gruppen")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode(
                       "option",
-                      _hoisted_12$1,
+                      _hoisted_13$1,
                       toDisplayString(_ctx.$t("▦ nur Produkte")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode(
                       "option",
-                      _hoisted_13$1,
+                      _hoisted_14$1,
                       toDisplayString(_ctx.$t("◆ nur Varianten")),
                       1
                       /* TEXT */
@@ -3978,13 +4012,13 @@ const _sfc_main$1 = {
             createElementVNode("tr", null, [
               createElementVNode(
                 "td",
-                _hoisted_14$1,
+                _hoisted_15$1,
                 toDisplayString(_ctx.$t("Sprachen")),
                 1
                 /* TEXT */
               ),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_15$1, [
+                createElementVNode("div", _hoisted_16$1, [
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
@@ -3993,7 +4027,7 @@ const _sfc_main$1 = {
                         key: l.code,
                         class: normalizeClass(["view-chip", { on: locales.value.includes(l.code) }]),
                         onClick: ($event) => toggleLocale(l.code)
-                      }, toDisplayString(l.code), 11, _hoisted_16$1);
+                      }, toDisplayString(l.code), 11, _hoisted_17$1);
                     }),
                     128
                     /* KEYED_FRAGMENT */
@@ -4004,7 +4038,7 @@ const _sfc_main$1 = {
             createElementVNode("tr", null, [
               createElementVNode(
                 "td",
-                _hoisted_17$1,
+                _hoisted_18$1,
                 toDisplayString(_ctx.$t("Attribute")),
                 1
                 /* TEXT */
@@ -4020,7 +4054,7 @@ const _sfc_main$1 = {
                   [
                     createElementVNode(
                       "option",
-                      _hoisted_18$1,
+                      _hoisted_19$1,
                       toDisplayString(_ctx.$t("◫ alle Attribute")),
                       1
                       /* TEXT */
@@ -4032,7 +4066,7 @@ const _sfc_main$1 = {
                         return openBlock(), createElementBlock("option", {
                           key: v.key,
                           value: v.key
-                        }, "◫ " + toDisplayString(_ctx.$L(v.label) || v.key) + " (" + toDisplayString(v.level) + ")", 9, _hoisted_19$1);
+                        }, "◫ " + toDisplayString(_ctx.$L(v.label) || v.key) + " (" + toDisplayString(v.level) + ")", 9, _hoisted_20$1);
                       }),
                       128
                       /* KEYED_FRAGMENT */
@@ -4048,7 +4082,7 @@ const _sfc_main$1 = {
             createElementVNode("tr", null, [
               createElementVNode(
                 "td",
-                _hoisted_20$1,
+                _hoisted_21$1,
                 toDisplayString(_ctx.$t("Werte")),
                 1
                 /* TEXT */
@@ -4076,19 +4110,19 @@ const _sfc_main$1 = {
                 ])
               ])
             ]),
-            createElementVNode("tr", _hoisted_21$1, [
+            createElementVNode("tr", _hoisted_22$1, [
               createElementVNode(
                 "td",
-                _hoisted_22$1,
+                _hoisted_23$1,
                 toDisplayString(_ctx.$t("2 · Wie")),
                 1
                 /* TEXT */
               )
             ]),
-            !__props.festesFormat ? (openBlock(), createElementBlock("tr", _hoisted_23$1, [
+            !__props.festesFormat ? (openBlock(), createElementBlock("tr", _hoisted_24$1, [
               createElementVNode(
                 "td",
-                _hoisted_24$1,
+                _hoisted_25$1,
                 toDisplayString(_ctx.$t("Format")),
                 1
                 /* TEXT */
@@ -4104,14 +4138,14 @@ const _sfc_main$1 = {
                   [
                     createElementVNode(
                       "option",
-                      _hoisted_25$1,
+                      _hoisted_26,
                       toDisplayString(_ctx.$t("Excel (.xlsx)")),
                       1
                       /* TEXT */
                     ),
                     createElementVNode(
                       "option",
-                      _hoisted_26,
+                      _hoisted_27,
                       toDisplayString(_ctx.$t("CSV (; UTF-8, Excel-tauglich)")),
                       1
                       /* TEXT */
@@ -4133,7 +4167,7 @@ const _sfc_main$1 = {
                 /* CACHED */
               )),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_27, [
+                createElementVNode("div", _hoisted_28, [
                   createElementVNode(
                     "button",
                     {
@@ -4162,7 +4196,7 @@ const _sfc_main$1 = {
                       createElementVNode("button", {
                         onClick: navigate,
                         title: _ctx.$t("denselben Export regelmäßig in ein Verzeichnis — Dienst „export“ des Format-Plugins")
-                      }, toDisplayString(_ctx.$t("⏱ als Job")), 9, _hoisted_28)
+                      }, toDisplayString(_ctx.$t("⏱ als Job")), 9, _hoisted_29)
                     ]),
                     _: 1
                     /* STABLE */
@@ -4176,7 +4210,7 @@ const _sfc_main$1 = {
                       createElementVNode("button", {
                         onClick: navigate,
                         title: _ctx.$t("die Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs")
-                      }, toDisplayString(_ctx.$t("⏱ Jobs verwalten")), 9, _hoisted_29)
+                      }, toDisplayString(_ctx.$t("⏱ Jobs verwalten")), 9, _hoisted_30)
                     ]),
                     _: 1
                     /* STABLE */
@@ -4186,7 +4220,7 @@ const _sfc_main$1 = {
             ])
           ])
         ]),
-        createElementVNode("div", _hoisted_30, [
+        createElementVNode("div", _hoisted_31, [
           createTextVNode(
             toDisplayString(_ctx.$t("3 · Vorschau") + " "),
             1
@@ -4194,14 +4228,14 @@ const _sfc_main$1 = {
           ),
           createElementVNode(
             "span",
-            _hoisted_31,
+            _hoisted_32,
             toDisplayString(_ctx.$t("· erste 200 Zeilen")),
             1
             /* TEXT */
           )
         ]),
-        createElementVNode("div", _hoisted_32, [
-          table.value ? (openBlock(), createElementBlock("table", _hoisted_33, [
+        createElementVNode("div", _hoisted_33, [
+          table.value ? (openBlock(), createElementBlock("table", _hoisted_34, [
             createElementVNode("thead", null, [
               createElementVNode("tr", null, [
                 (openBlock(true), createElementBlock(
@@ -4211,7 +4245,7 @@ const _sfc_main$1 = {
                     return openBlock(), createElementBlock("th", {
                       key: c.key,
                       title: c.attr ? `${c.attr} · ${c.locale}` : c.key
-                    }, toDisplayString(c.key), 9, _hoisted_34);
+                    }, toDisplayString(c.key), 9, _hoisted_35);
                   }),
                   128
                   /* KEYED_FRAGMENT */
@@ -4252,14 +4286,14 @@ const _sfc_main$1 = {
           ])) : createCommentVNode("v-if", true),
           table.value && table.value.rows.length > 200 ? (openBlock(), createElementBlock(
             "div",
-            _hoisted_35,
+            _hoisted_36,
             toDisplayString(_ctx.$t("… {0} weitere Zeilen in der Datei", [table.value.rows.length - 200])),
             1
             /* TEXT */
           )) : createCommentVNode("v-if", true),
           !table.value ? (openBlock(), createElementBlock(
             "div",
-            _hoisted_36,
+            _hoisted_37,
             toDisplayString(_ctx.$t("Teilbaum wählen, dann Vorschau oder herunterladen.")),
             1
             /* TEXT */
@@ -4269,7 +4303,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-ce532da1"]]);
+const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-819aa7a3"]]);
 const IdSpalte = "journali_id";
 const ebeneSpalte = (n) => `Ebene ${n}`;
 function pfadVon(byId, id, wurzel) {
@@ -4834,11 +4868,11 @@ const roles = ["group", "product"];
 const datenRoles = ["product"];
 const entry = {
   views: [
-    { path: "import", topic: "import", order: 10, needs: "csv", label: t("CSV-Import"), icon: "⊞", hint: t("CSV und TSV — mit Datenmapper"), component: ImportView, props: { nur: [".csv", ".tsv", ".txt"] } },
-    { path: "import-xlsx", topic: "import", order: 11, needs: "excel", label: t("Excel-Import"), icon: "⊞", hint: t("Arbeitsmappen (.xlsx) — mit Datenmapper"), component: ImportView, props: { nur: [".xlsx", ".xlsm"] } },
+    { path: "import", topic: "import", order: 10, needs: "csv", label: t("CSV-Import"), icon: "⊞", hint: t("CSV und TSV — mit Datenmapper"), component: ImportView, props: { nur: [".csv", ".tsv", ".txt"], plugin: "csv" } },
+    { path: "import-xlsx", topic: "import", order: 11, needs: "excel", label: t("Excel-Import"), icon: "⊞", hint: t("Arbeitsmappen (.xlsx) — mit Datenmapper"), component: ImportView, props: { nur: [".xlsx", ".xlsm"], plugin: "excel" } },
     { path: "import-paste", topic: "import", order: 90, label: t("Zwischenablage"), icon: "⎘", hint: t("aus Excel kopieren und hier einfügen — erste Zeile sind die Spaltennamen"), component: ImportView, props: { paste: true } },
-    { path: "export", topic: "export", order: 10, needs: "csv", label: t("CSV-Export"), icon: "⊞", hint: t("CSV (; UTF-8) — die Form, die der CSV-Import liest"), component: ExportView, props: { festesFormat: "csv" } },
-    { path: "export-xlsx", topic: "export", order: 11, needs: "excel", label: t("Excel-Export"), icon: "⊞", hint: t("Arbeitsmappe (.xlsx) — die Form, die der Excel-Import liest"), component: ExportView, props: { festesFormat: "excel" } },
+    { path: "export", topic: "export", order: 10, needs: "csv", label: t("CSV-Export"), icon: "⊞", hint: t("CSV (; UTF-8) — die Form, die der CSV-Import liest"), component: ExportView, props: { festesFormat: "csv", plugin: "csv" } },
+    { path: "export-xlsx", topic: "export", order: 11, needs: "excel", label: t("Excel-Export"), icon: "⊞", hint: t("Arbeitsmappe (.xlsx) — die Form, die der Excel-Import liest"), component: ExportView, props: { festesFormat: "excel", plugin: "excel" } },
     { path: "struktur", topic: "export", order: 20, label: t("Struktur"), icon: "⑂", hint: t("den Baum als Tabelle heraus, in Excel entwerfen, in einem Zug hinein — ohne Inhalte"), component: _sfc_main }
   ],
   // Excel am Knoten

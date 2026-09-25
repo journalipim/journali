@@ -401,11 +401,16 @@ async function mount(root, ctx) {
           append(el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, d.label), el('div', { style: 'display:flex;gap:4px' }, inp, pick))
         } else if (d.type === 'profile' || d.key === 'profile') {
           // Profil des Plugins: jeder Parameter profile
-          // wird ein Dropdown der gespeicherten Profile — profile:<name> (json, xport) und config:<name> (ProfileBar: ixp, solr) im Plugin-Strom
+          // wird ein Dropdown der gespeicherten Profile. Angelegt werden sie in der Ansicht des Plugins, nicht hier:
+          // 180 Spalten mit Umwandlungen richtet niemand in einem Job-Dialog ein (25.09.2026)
           inp = el('select', { style: 'width:100%' }, el('option', { value: '' }, /leer/.test(d.label) ? '(leer)' : t('— Profil —')))
           if (profilWert) inp.append(el('option', { value: profilWert }, profilWert)); inp.value = profilWert
           api.get(`/api/plugins/${p.key}/data`).then(all => {
-            const names = [...new Set(all.filter(x => /^(profile|config):/.test(x)).map(x => x.replace(/^(profile|config):/, '')))].sort((a, b) => a.localeCompare(b, 'de'))
+            // Nur die Profile DIESES Dienstes: sie heissen <dienst>:<name> (import, export) im Plugin-Strom.
+            // Aeltere liegen unter profile: oder config: ohne Dienst — die zeigt ein Plugin mit nur einem Dienst
+            const dienst = (p.service ?? '').trim()
+            const eigen = dienst ? new RegExp('^' + dienst + ':') : /^(profile|config):/
+            const names = [...new Set(all.filter(x => eigen.test(x)).map(x => x.replace(eigen, '')))].sort((a, b) => a.localeCompare(b, 'de'))
             for (const n of names) if (n !== cur) inp.append(el('option', { value: n }, n))
             if (!names.length && !cur) inp.title = t('noch kein Profil gespeichert — in der Ansicht des Plugins anlegen')
           }).catch(() => {})

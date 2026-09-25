@@ -11,7 +11,10 @@ const { suggest, plan: makePlan, parseDelimited, childAttributes, childRoleOf } 
 const leftW = paneWidth('import.table', 720)
 // Die Kachel sagt, womit begonnen wird: `nur` sind die Endungen im Dateidialog (CSV-Import, Excel-Import),
 // `paste` heisst Zwischenablage — dann steht das Einfügefeld offen und die Dateizeile bleibt weg.
-const props = defineProps({ nur: { type: Array, default: () => [] }, paste: { type: Boolean, default: false } })
+// plugin: das Format-Plugin dieser Kachel (csv, excel) — dort liegt das Profil, getrennt je Dienst.
+// Die Zwischenablage hat kein Format und bleibt beim Basis-Plugin
+const props = defineProps({ nur: { type: Array, default: () => [] }, paste: { type: Boolean, default: false }, plugin: { type: String, default: 'table' } })
+const plugin = props.plugin
 const router = useRouter()
 const route = useRoute()
 // Knotenmodus: die Tabelle passt 1:1 zum Knoten —
@@ -303,7 +306,7 @@ onMounted(async () => {
 
 <template>
   <div class="pane" :style="`width:${leftW}px;flex:none`">
-    <ImportHead source="table" plugin="table" :busy="busy" :get="profileGet" :set="profileSet">
+    <ImportHead source="table" :plugin="plugin" scope="import" :busy="busy" :get="profileGet" :set="profileSet">
       <tr v-if="paste"><td class="attr">{{ $t("Einfügen") }}</td><td>
         <textarea v-model="pasteText" rows="4" style="width:100%" :placeholder="$t('aus Excel kopieren und hier einfügen — erste Zeile sind die Spaltennamen')" @paste.stop />
         <div class="row" style="margin-top:4px"><button class="primary" :disabled="!pasteText.trim()" @click="takePaste">{{ $t("⎘ Übernehmen") }}</button>
