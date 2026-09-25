@@ -43,6 +43,27 @@ Keine Bilder, keine Metaphern, keine gehobene Sprache: ein Tarif **enthält** ei
 eine Grenze **gilt** (sie „steht“ nicht da), ein Wert **wird gelöscht** (er „verschwindet“ nicht). Wo ein
 gewöhnliches Wort reicht, steht das gewöhnliche Wort.
 
+## Regel 5: Der Lizenzserver bleibt draussen
+
+Zwei Repos, und sie gehen verschiedene Wege:
+
+| Repo | Gitea (privat) | GitHub (öffentlich) |
+|---|---|---|
+| `journali` | `origin` | `github` |
+| `journali-lizenz` | `origin` | **nie** |
+
+Dieses Repo wird veröffentlicht (ELv2) und hat darum beide Fernablagen — ein Commit geht nach `origin` **und**
+nach `github`. Der Lizenzserver liegt ausschliesslich auf der Gitea und bekommt keine zweite Fernablage. **Nichts von dort kommt hierher** — kein Quelltext, kein privater
+Ausstellerschlüssel, keine Datenbankzugänge, kein Webhook-Geheimnis, keine Shop-Varianten, keine Anleitung zum
+vServer. Was journali braucht, ist das gemeinsame Format (`Journali.Core/Licensing/Vertrag.cs`) und der
+**öffentliche** Schlüssel des Ausstellers (`Core.Licensing.Aussteller`); beides entsteht hier, nicht dort.
+
+Umgekehrt bindet das Lizenz-Repo journali als Submodul `extern/journali` ein: dort wird nicht gearbeitet und
+nicht gepusht. Eine Änderung am gemeinsamen Format entsteht hier, das Submodul zieht sie nach.
+
+Genauso wenig gehören **eigene Adressen** in ein öffentliches Repo: Hostname, IP und Domain der Entwicklungs-
+und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, nicht der eigene Server.
+
 ## Arbeitsweise
 
 - **Keine Pausen bei Mehrfachaufträgen.** Alles durcharbeiten, erst am Ende

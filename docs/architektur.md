@@ -213,6 +213,10 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
 - ~~Lizenzserver~~ gebaut 24.09.2026 — eigenes, privates Repo `besitzer/journali-lizenz` (journali als Submodul, nur
   `Journali.Core`: `Licensing/Vertrag.cs`, `Tarife.cs`). In journali: `Abos.cs`, `EntitlementReceived`, das eine Feld
   erkennt den Shop-Schlüssel; Betrieb in `docs/betrieb.md` → *Abo über den Lizenzserver*.
+  **Die Trennung ist beabsichtigt und gilt in eine Richtung** (Regel 5 in `CLAUDE.md`): journali wird veröffentlicht,
+  der Lizenzserver nicht. Hier stehen das Format und der **öffentliche** Ausstellerschlüssel; der private Schlüssel,
+  die Zugänge, die Shop-Varianten und die Verwaltung stehen dort und kommen nie hierher. Im Lizenz-Repo wird am
+  Submodul `extern/journali` nicht gearbeitet — eine Änderung am Format entsteht hier und wird dort nachgezogen.
 - ~~Tarife vom Lizenzserver, nur Signiertes zählt~~ entschieden und gebaut 25.09.2026. Stand vorher: nur die Grenzen
   eines Abos kamen signiert vom Lizenzserver; Plugins, Publikationsbäume, Lizenzgrenzen, Pakete, Kostenlos und der Test
   steckten in `Tarife.cs` — eine Änderung, auch eine Senkung zusammen mit dem Preis, hätte jede Instanz erst mit einem
