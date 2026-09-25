@@ -113,7 +113,13 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   **Basis-Plugins** (`base: [Gruppen]`) bringen die Grundfunktion einer Gruppe der Leiste
   mit und sind der Container für Ergänzungen (`requires`): `table` (Import/Export Tabelle),
   `da` (Datenanalyse), `tasker` (Jobs). Ergänzungen: `csv`, `excel`, `json`, `ixp`, `solr` →
-  table; `dpp`, `ppwr` → da; `backup`, `export` (Job) → tasker; `datasheet` eigene Gruppe.
+  table; `dpp`, `ppwr` → da; `backup` (Job) → tasker; `datasheet` eigene Gruppe.
+  **Ein Format, ein Plugin — auch als Job**: `csv` und `excel` bringen ihren Dienst `export` selbst mit
+  (`export-job.mjs`, Kern in `table/export-job.mjs`); ein eigenes Plugin, das das Format als Parameter führt, gibt
+  es nicht mehr (25.09.2026). **Im Profil steht, WAS** exportiert oder importiert wird (Teilbaum, Zuordnung,
+  Sprachen, Sicht) — angelegt in der Ansicht des Plugins, nie im Job-Dialog: 180 Spalten mit Transformationen
+  richtet dort niemand ein. **Am Job steht, WOHIN und WANN** (Verzeichnis, Dateiname, Zeitplan): dasselbe Profil
+  darf wöchentlich in das eine und täglich in ein anderes Verzeichnis schreiben.
   **Ein Format, ein Plugin**: `csv`, `excel` und `json` bringen Import **und** Export ihres Formats mit — ihre Art
   ist `io` (⇵ Import / Export), nicht `import`. `ixp` und `solr` sind nur Import. Die Schlüssel der Office-Add-ins
   heißen `exceladdin` und `ooaddin` (25.09.2026), damit `excel` das Formatplugin ist.

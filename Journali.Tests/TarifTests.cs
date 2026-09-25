@@ -24,7 +24,7 @@ public class TarifTests
         Assert.Equal((50_000, 250_000, 5), (Tarife.ProPlus.Week, Tarife.ProPlus.Month, Tarife.ProPlus.PubTrees));
         Assert.Equal((200_000, 1_000_000, Tarife.Ohne), (Tarife.Enterprise.Week, Tarife.Enterprise.Month, Tarife.Enterprise.PubTrees));
         Assert.True(Tarife.Unlimited.Unbegrenzt);
-        foreach (var k in new[] { "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "export", "tasker" }) Assert.True(Tarife.Free.Erlaubt(k), k);
+        foreach (var k in new[] { "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "tasker" }) Assert.True(Tarife.Free.Erlaubt(k), k);
         Assert.False(Tarife.Free.Erlaubt("backup"));                             // kostenlos sichert man von Hand (B&R)
         foreach (var k in new[] { "datasheet", "xliff", "xport", "etim", "tasker" }) Assert.True(Tarife.Pro.Erlaubt(k), k);
         Assert.False(Tarife.Pro.Erlaubt("dpp"));

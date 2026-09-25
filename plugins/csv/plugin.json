@@ -13,7 +13,109 @@
   "runs": "browser",
   "entry": "entry.js",
   "requires": [
-    "table"
+    "table",
+    "tasker"
   ],
-  "autoInstall": true
+  "autoInstall": true,
+  "processes": [
+    {
+      "command": "node",
+      "args": [
+        "export-job.mjs",
+        "{journali}",
+        "{actor}",
+        "{root}",
+        "{dir}",
+        "{name}",
+        "{locales}",
+        "{role}",
+        "{view}",
+        "{ownOnly}",
+        "{keep}",
+        "{pub}"
+      ],
+      "description": "Teilbaum oder Ausleitung eines Publikationsbaums als CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben",
+      "profile": "generic",
+      "files": {
+        "out": {
+          "many": true,
+          "param": "dir"
+        }
+      },
+      "params": [
+        {
+          "key": "profile",
+          "label": "Profil — in der Ansicht des Plugins anlegen (Teilbaum, Sprachen, Sicht …)",
+          "type": "profile",
+          "default": "",
+          "perJob": true
+        },
+        {
+          "key": "pub",
+          "label": "Publikationsbaum (Ausleitung: freigegeben für den Kanal, im Markt verkauft; leer = Teilbaum unten)",
+          "type": "pub",
+          "default": "",
+          "perJob": false
+        },
+        {
+          "key": "root",
+          "label": "Teilbaum (nur ohne Publikationsbaum; leer = alle Wurzeln)",
+          "type": "node",
+          "default": "",
+          "perJob": false
+        },
+        {
+          "key": "dir",
+          "label": "Verzeichnis — leer = Fach out/ des Jobs (Fächer)",
+          "type": "dir",
+          "default": "export",
+          "perJob": true
+        },
+        {
+          "key": "name",
+          "label": "Dateiname — {wurzel} {id} {zeit} {format}; leer = <Wurzel>-<Id>-<Zeit>",
+          "type": "text",
+          "default": "",
+          "perJob": true
+        },
+        {
+          "key": "locales",
+          "label": "Sprachen (Codes, mit Komma; leer = Leitsprache)",
+          "type": "text",
+          "default": "",
+          "perJob": false
+        },
+        {
+          "key": "role",
+          "label": "Knoten: group, product, variant oder leer = alle",
+          "type": "text",
+          "default": "",
+          "perJob": false
+        },
+        {
+          "key": "view",
+          "label": "Sicht (Schlüssel; leer = alle Attribute)",
+          "type": "text",
+          "default": "",
+          "perJob": false
+        },
+        {
+          "key": "ownOnly",
+          "label": "nur eigene Werte (geerbte leer lassen)",
+          "type": "boolean",
+          "default": "false",
+          "perJob": false
+        },
+        {
+          "key": "keep",
+          "label": "so viele Stände behalten (je Wurzel, dieser Job)",
+          "type": "number",
+          "default": "14",
+          "perJob": false
+        }
+      ],
+      "key": "export",
+      "label": "Export: CSV"
+    }
+  ]
 }

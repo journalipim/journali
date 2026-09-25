@@ -87,7 +87,7 @@ public static class Tarife
     /// <summary>Keine Grenze — für Unlimited (Woche, Monat) und Publikationsbäume ab Enterprise.</summary>
     public const int Ohne = int.MaxValue;
 
-    private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "export", "tasker"];
+    private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "tasker"];
 
     public static readonly Tarif Free = new("free", "Kostenlos", 0, 10_000, 50_000, 1, new HashSet<string>(Basis));
     public static readonly Tarif Pro = new("pro", "Pro", 1, 50_000, 250_000, 5,

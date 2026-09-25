@@ -1,7 +1,8 @@
 <script setup>
 // ⇪ Export → Tabelle (Basis-Plugin table): ein Teilbaum als Excel oder CSV,
 // genau in der Form, die der Tabellenimport wieder liest. Strukturierte Daten (JSON) macht das Plugin json.
-// Als Job: Plugin export (Prozess) mit denselben Einstellungen — ⏱ Jobs → + Job → Tabelle (Job).
+// Als Job: der Dienst „export“ des Format-Plugins (csv, excel) — ⏱ Jobs → + Job → CSV bzw. Excel → Export.
+// Was exportiert wird, steht im Profil; Verzeichnis, Dateiname und Zeitplan stehen am Job.
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { store, tree, icon, plugins, TreePicker } from 'journali'
@@ -67,7 +68,7 @@ async function run(downloadIt) {
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">{{ $t("2 · Wie") }}</td></tr>
       <tr v-if="!festesFormat"><td class="attr">{{ $t("Format") }}</td><td><select v-model="format" @change="persist" style="width:100%"><option value="excel">{{ $t("Excel (.xlsx)") }}</option><option value="csv">{{ $t("CSV (; UTF-8, Excel-tauglich)") }}</option></select></td></tr>
       <tr><td class="attr"></td><td><div class="row"><button @click="run(false)">{{ $t("Vorschau") }}</button><button class="primary" @click="run(true)">{{ $t("⇪ herunterladen") }}</button>
-        <router-link v-if="plugins.enabled('export')" to="/p/tasker/jobs?new=export" custom v-slot="{ navigate }"><button @click="navigate" :title="$t('denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)')">{{ $t("⏱ als Job") }}</button></router-link><router-link v-if="plugins.enabled('export')" to="/p/tasker/jobs?plugin=export" custom v-slot="{ navigate }"><button @click="navigate" :title="$t('die Export-Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs')">{{ $t("⏱ Jobs verwalten") }}</button></router-link></div></td></tr>
+        <router-link v-if="plugins.enabled('tasker')" :to="`/p/tasker/jobs?new=${format === 'csv' ? 'csv' : 'excel'}&service=export`" custom v-slot="{ navigate }"><button @click="navigate" :title="$t('denselben Export regelmäßig in ein Verzeichnis — Dienst „export“ des Format-Plugins')">{{ $t("⏱ als Job") }}</button></router-link><router-link v-if="plugins.enabled('tasker')" to="/p/tasker/jobs" custom v-slot="{ navigate }"><button @click="navigate" :title="$t('die Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs')">{{ $t("⏱ Jobs verwalten") }}</button></router-link></div></td></tr>
     </tbody></table>
     <div class="step-band">{{ $t("3 · Vorschau") + ' ' }}<span class="muted">{{ $t("· erste 200 Zeilen") }}</span></div>
     <div class="scroll">
