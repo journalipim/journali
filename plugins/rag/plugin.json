@@ -75,7 +75,7 @@
         "label": "freigegebene Version und Belege mitgeben",
         "type": "boolean",
         "default": "true",
-        "perJob": true
+        "perJob": false
       }
     ]
   },

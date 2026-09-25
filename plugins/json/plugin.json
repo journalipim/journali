@@ -135,7 +135,7 @@
           "label": "nur eigene Werte (geerbte leer lassen) — nur tree/flat",
           "type": "boolean",
           "default": "false",
-          "perJob": true
+          "perJob": false
         },
         {
           "key": "gzip",
