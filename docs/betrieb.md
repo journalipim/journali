@@ -433,18 +433,12 @@ aller Dateien). `PluginSeal.cs` prüft es bei jedem Lesen der Platte; `GET /api/
 `JOURNALI_PLUGIN_KEY`. Katalog: `GET /api/plugins/catalog` und `POST /api/plugins/catalog/{key}/fetch`
 (`JOURNALI_PLUGIN_CATALOG`, Vorgabe der Katalog auf GitHub). Alles Weitere: `docs/plugins-zertifizierung.md`.
 
-## Lizenz — Tabelle `licence` in der Datenbank
+## Lizenz — je Team
 
-Die Grenzen dieser Anlage stehen in der Lizenz, nicht in der Hand
-des Administrators und schon gar nicht bei einem anderen Team:
-
-| Feld | Bedeutung |
-|---|---|
-| `entriesWeek`, `entriesMonth` | journali-Token je Woche und Monat (gezählt werden Datenpflege und Ausleitung) |
-| `countFrom` | ab wann gezählt wird — was davor im Journal steht, zählt nicht mehr mit |
-| `teams` | Kontingente einzelner Teams: `{"es": {"entriesWeek": 5000, "entriesMonth": 20000}}` |
-| `plan`, `holder`, `validUntil` | Bezeichnung, Inhaber, Ablauf |
-| `aiTokensMonth`, `aiTokensDay` | Altlast, wird nicht mehr ausgewertet |
+Eine Lizenz für die ganze Instanz gibt es nicht (seit 25.09.2026): jede gehört einem Team. Ein Team bekommt Tarif und
+Grenzen durch ein **Abo** (Shop-Schlüssel, Lizenzserver) oder einen **Schlüssel zum Kopieren** (Reset oder Limit), den
+es selbst einlöst. Das **Init Team** hat dazu den **Test** einer neuen Instanz; danach gilt für es Kostenlos. Jedes
+weitere Team ohne Abo und Schlüssel hat nichts und rechnet über ein anderes ab. Eingestellt wird hier nichts.
 
 ### Tarife
 
@@ -459,29 +453,24 @@ des Administrators und schon gar nicht bei einem anderen Team:
 | Unlimited (`unlimited`) | ohne Grenze | ohne Grenze | alle |
 
 - **Grenzen** hängen am Team (am Ende der Zahlerkette). **Plugins und Publikationsbäume** gelten für die ganze
-  Instanz nach ihrem **höchsten** Tarif — Lizenz oder ein eingelöster Schlüssel irgendeines Teams
+  Instanz nach ihrem **höchsten** Tarif — Test, Abo oder eingelöster Schlüssel irgendeines Teams
   (`Catalog.InstanzTarif`). Ein Plugin ausserhalb des Tarifs lädt nicht, lässt sich nicht installieren, einschalten
   oder als Job starten (403); ein Publikationsbaum zu viel wird am Schreibpfad abgewiesen (`TarifException`, 403).
-- **Test:** eine Instanz ohne Lizenz legt ihre Testlizenz selbst an — Enterprise für drei Monate ab dem ersten
-  Eintrag im Journal (`trial: true`), festgehalten wie jede Lizenz. Der erste Tag kommt aus dem Journal und fährt mit
-  jeder Sicherung mit: eine wiederhergestellte Instanz fängt den Test nicht von vorn an.
-- **Abgelaufen** (Test oder Lizenz) gilt **Kostenlos** — auch im laufenden Betrieb; stündlich zieht der Server die
-  Limits des Init Teams nach (`LimitsAusLizenz`).
-- Lizenzen von vor den Tarifen (ohne bekannten `plan`) gelten als Kostenlos — mit dessen Grenzen.
-- **Die Grenzen sagt der Tarif** (`Tarife.cs`), nicht die Lizenz (seit 25.09.2026): was „Kostenlos“ heisst, bedeutet in
-  jeder Anlage dasselbe. Die Felder `entriesWeek`/`entriesMonth` bleiben im signierten Rumpf stehen, damit ältere
-  Lizenzen gültig bleiben, werden aber nicht mehr ausgewertet; zu lesen sind sie als `Licence.Week`/`.Month`. Was ein
-  einzelnes Team darüber hinaus hat, steht weiter in `teams`, und ein Limit-Schlüssel gibt zeitlich etwas dazu.
+- **Test des Init Teams:** die Instanz legt ihn selbst an — der Test-Tarif des Tarifblatts (Saatgut: Enterprise) für
+  seine Testmonate (Saatgut: drei) ab dem ersten Eintrag im Journal; gespeichert in der Tabelle `licence`
+  (`trial: true`). Er gilt höchstens bis erster Tag + Testmonate, gleich was gespeichert ist. Der erste Tag kommt aus
+  dem Journal und fährt mit jeder Sicherung mit: eine wiederhergestellte Instanz fängt den Test nicht von vorn an.
+- **Nach dem Test** gilt für das Init Team **Kostenlos** — auch im laufenden Betrieb; stündlich zieht der Server seine
+  Limits nach (`LimitsAusLizenz`).
+- **Die Grenzen sagt der Tarif** (Tarifblatt, Saatgut `Tarife.cs`): was „Kostenlos“ heisst, bedeutet in jeder Anlage
+  dasselbe. Ein Limit-Schlüssel oder ein Abo gibt einem Team zeitlich mehr.
 - **Reset-Schlüssel** gibt es getrennt für Pro (gilt für Pro und Pro+) und Enterprise; kostenlos gibt es keinen,
   Unlimited braucht keinen.
 - Unlimited steht in den Zahlen als `int.MaxValue` (`Tarife.Ohne`); die Oberfläche zeigt ∞.
 
 **Der Verbrauch lässt sich nicht zurücksetzen** — er sind die Einträge im Journal, und das Journal ist die Wahrheit.
-Was eine Lizenz darf, ist einen **Anfang setzen**: `countFrom` verschiebt den Zählbeginn, alles davor bleibt stehen und
-zählt nicht mehr mit. Das ist auch der Weg nach einer Migration, deren Altdaten keine Pflege waren.
-
-Die Limits liegen am **Init Team**; jedes weitere Team hat, was die Lizenz ihm unter `teams` zuschreibt, sonst nichts —
-dann rechnet es über ein anderes Team ab. Eingestellt wird hier nichts.
+Was ein **Reset-Schlüssel** darf, ist einen **Anfang setzen**: das Team zählt ab dem Einlösen neu, alles davor bleibt
+stehen und zählt nicht mehr mit. Das ist auch der Weg nach einer Migration, deren Altdaten keine Pflege waren.
 
 **Ohne Kontingent keine Pflege**: Einträge, die zählen, weist der Server ab (403), sobald der Zähler voll ist.
 Ein **Joblauf** hört schon bei 90 % auf (`Limits.JobReserve`) — die letzten 10 % gehören der Handarbeit — und er
@@ -491,16 +480,13 @@ selben Moment wieder weg.
 Ein Team mit **eigenem Schlüssel** rechnet beim Anbieter selbst ab — dort begrenzt journali nichts. Teams ohne eigenen Schlüssel arbeiten über den
 Schlüssel der Anlage (Tresor `secrets` unter `licence`, ersatzweise `JOURNALI_AI_KEY`) und zählen gegen das KI-Limit.
 
-Echtheit: `sig` ist eine ECDSA-P-256-Signatur (SHA-256, Base64) über die Felder ohne `sig`, geprüft mit dem
+Echtheit: Schlüssel, Abo-Stand und Tarifblatt tragen eine ECDSA-P-256-Signatur (SHA-256, Base64), geprüft mit dem
 öffentlichen Schlüssel des Lizenzservers, der in journali eingebaut ist (`Core.Licensing.Aussteller`). **Nur
-Signiertes zählt** (seit 25.09.2026): eine Lizenz ohne passende Signatur wird nicht angenommen; eine, die schon
-eingespielt ist, gilt als Kostenlos. Ausgenommen ist die Testlizenz, die die Instanz selbst anlegt — sie gilt nach der
-Regel (Test-Tarif des Tarifblatts, höchstens erster Eintrag + Testmonate), nicht nach dem, was in ihr steht. Im
-Debug-Bau (`dotnet run`) nimmt `JOURNALI_LICENCE_KEY` einen Prüf-Aussteller für die Entwicklung dazu; der Release-Bau
-kennt die Variable nicht. Einspielen: ⚙ Einstellungen → Teams →
-⚿ Lizenz (Recht `users`). Sie liegt verschlüsselt in der Tabelle `licence` und gilt nur für die Instanz, deren Kennung
-(`instance`, Tabelle `instanz`) sie nennt; eine `licence.json` von früher wird beim ersten Start übernommen und entfernt.
-Lizenz, Kennung und Anforderungen gehen **nicht** in die Vollsicherung — eine wiederhergestellte Instanz ist eine neue.
+Signiertes zählt** (seit 25.09.2026). Eine Lizenzdatei von früher, die noch in der Tabelle `licence` steht, zählt
+nicht, wenn ihre Signatur nicht passt; eingespielt wird keine mehr. Im Debug-Bau (`dotnet run`) nimmt
+`JOURNALI_LICENCE_KEY` einen Prüf-Aussteller für die Entwicklung dazu; der Release-Bau kennt die Variable nicht.
+Test, Kennung (`instance`, Tabelle `instanz`) und Anforderungen gehen **nicht** in die Vollsicherung — eine
+wiederhergestellte Instanz ist eine neue.
 
 ### Abo über den Lizenzserver (Taloan, 24.09.2026)
 

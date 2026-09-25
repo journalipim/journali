@@ -4,9 +4,8 @@ using static Journali.Server.ModelApi;
 namespace Journali.Server;
 
 /// <summary>
-/// Die Lizenz ansehen und einspielen. Sie ist kein Stammdatum,
-/// das man pflegt — sie kommt von aussen und wird eingespielt; darum liegt sie als Datei im Datenverzeichnis und nicht
-/// im Journal. Lesen darf jeder, der lesen darf: die Grenzen betreffen alle. Einspielen: Recht <c>users</c>.
+/// Was an Lizenz gilt: der Test des Init Teams, die Abos der Teams, der Tarif der Instanz. Lesen darf jeder, der lesen
+/// darf: die Grenzen betreffen alle. Abo verbinden und auffrischen: Recht <c>users</c>.
 /// </summary>
 public static class LicenceApi
 {
@@ -60,22 +59,7 @@ public static class LicenceApi
             if (stand is null) return Bad(fehler ?? "Abo nicht aufgefrischt.");
             return Results.Ok(new { stand.Team, stand.Plan, planLabel = c.Tarife.Von(stand.Plan)?.Label ?? stand.Plan, stand.Status, stand.PaidUntil, stand.Geprueft });
         });
-
-        // Einspielen: die Datei kommt so, wie sie ausgestellt wurde — Signatur inbegriffen
-        api.MapPut("/licence", (Licence body, HttpRequest req, Catalog c) =>
-        {
-            if (Actor(req) is not { } actor) return ActorMissing();
-            if (body.AiTokensMonth < 0 || body.AiTokensDay < 0) return Bad("Grenzen: 0 oder mehr.");
-            // Die Grenzen kommen aus dem Tarif — eine Lizenz mit unbekanntem Tarif wäre Kostenlos, und das sagt sie besser vorher
-            if (body.Plan is { Length: > 0 } p && c.Tarife.Von(p) is null) return Bad("Unbekannter Tarif {0} — bekannt sind: {1}", p, string.Join(", ", c.Tarife.Alle.Select(x => x.Key)));
-            // Nur Signiertes zählt (25.09.2026) — eine Lizenz ohne passende Signatur gälte als Kostenlos; die Testlizenz legt die Instanz selbst an
-            if (body.Trial == true) return Bad("Die Testlizenz legt die Instanz selbst an.");
-            if (Core.Licensing.Aussteller.Pruefe(body.Rumpf, body.Sig) is (false, var warum)) return Bad("Lizenz nicht angenommen: {0}", warum ?? "");
-            licences.Neu(body, actor);
-            // Das Init Team trägt die Limits der Lizenz — es soll sie sofort haben und nicht erst nach einem Neustart.
-            // LimitsAusLizenz setzt dabei auch den Zählbeginn und wirft den mitgeführten Stand weg.
-            var uebernommen = c.With((_, _, _) => c.LimitsAusLizenz()) > 0;
-            return Results.Ok(new { licences.Lic.Plan, licences.Lic.ValidUntil, geprueft = licences.Geprueft, grund = licences.Grund, uebernommen });
-        });
+        // Eine Lizenz für die ganze Instanz wird nicht eingespielt (25.09.2026): jede gehört einem Team — Abo
+        // (/licence/abo) oder Schlüssel zum Kopieren (/licence/keys). Übrig ist der Test des Init Teams (Licences).
     }
 }

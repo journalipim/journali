@@ -58,7 +58,8 @@ const inhalt = computed(() => {
 // Ein Lizenzschlüssel aus dem Shop (Abo, Taloan 24.09.2026) ist kein JSON, sondern eine Kennung wie 495C1AF0-1CFB-…
 const ABO = /\b[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\b/i
 const aboKey = computed(() => inhalt.value ? null : eingabe.value.match(ABO)?.[0] ?? null)
-const was = computed(() => !inhalt.value ? (aboKey.value ? 'abo' : null) : inhalt.value.o.kind && inhalt.value.o.request ? 'schluessel' : inhalt.value.o.anforderung ? null : 'lizenz')
+// Eine Lizenz für die ganze Instanz gibt es nicht (25.09.2026): jede gehört einem Team — Abo oder Schlüssel zum Kopieren
+const was = computed(() => !inhalt.value ? (aboKey.value ? 'abo' : null) : inhalt.value.o.kind && inhalt.value.o.request ? 'schluessel' : null)
 // Der Stand des Abos für das oben gewählte Team
 const aboTeam = computed(() => lic.value?.abos?.find(a => a.team === props.team?.key) ?? null)
 const knopf = computed(() =>
@@ -66,9 +67,8 @@ const knopf = computed(() =>
       title: !lic.value?.lizenzserver ? t_('Kein Lizenzserver eingestellt') : eigenes.value ? t_('Abo für {0} verbinden', [props.team.label]) : t_('{0} rechnet über ein anderes Team ab', [props.team?.label ?? t_('Dieses Team')]) }
   : was.value === 'schluessel' ? { text: t_('⚿ Einlösen · {0}', [props.team?.label ?? '']), aus: !eigenes.value,
       title: eigenes.value ? t_('Schlüssel für {0} einlösen', [props.team.label]) : t_('{0} rechnet über ein anderes Team ab', [props.team?.label ?? t_('Dieses Team')]) }
-  : was.value === 'lizenz' ? { text: t_('⚿ Lizenz einspielen'), aus: false, title: t_('Lizenz dieser Instanz ersetzen') }
-  : { text: t_('⚿ Übernehmen'), aus: true, title: eingabe.value.trim() ? t_('weder Lizenz noch Schlüssel') : t_('Lizenz oder Schlüssel einfügen') })
-const uebernehmen = () => was.value === 'abo' ? verbinden() : was.value === 'schluessel' ? einloesen() : was.value === 'lizenz' ? einspielen() : null
+  : { text: t_('⚿ Übernehmen'), aus: true, title: eingabe.value.trim() ? t_('kein Schlüssel') : t_('Schlüssel aus dem Shop oder zum Kopieren einfügen') })
+const uebernehmen = () => was.value === 'abo' ? verbinden() : was.value === 'schluessel' ? einloesen() : null
 
 /// Den Stand des Abos sofort neu holen — mit dem Shop-Schlüssel, den der Server sich gemerkt hat
 async function auffrischen() {
@@ -127,18 +127,6 @@ async function einloesen() {
 const art = k => k === 'reset' ? '↺' : '⇡'
 const zahl = n => n >= 2147483647 ? '∞' : (n ?? 0).toLocaleString('de-DE')   // Unlimited: keine Grenze
 
-async function einspielen() {
-  if (!inhalt.value) return
-  try {
-    const r = await api.post('/api/licence', inhalt.value.o, 'PUT')
-    eingabe.value = ''
-    said.value = r.geprueft ? t_('✓ eingespielt und geprüft') : `✓ eingespielt · ${r.grund ?? ''}`
-    await load(); await store.poll(true)
-    emit('eingespielt')   // die Limits daneben hängen an der Lizenz — sie sollen es sofort zeigen
-  }
-  catch (e) { said.value = '✗ ' + e.message }
-}
-
 /// Die Kennung dieser Instanz kopieren — ohne Zwischenablage bleibt sie markierbar stehen
 async function kopiere(text) {
   try { await navigator.clipboard.writeText(text); store.toast('kopiert', 'ok') }
@@ -148,7 +136,7 @@ async function kopiere(text) {
 
 <template>
   <div class="section">
-    <h2>{{ $t("⚿ journali Lizenz") + ' ' }}<span v-if="lic?.holder" class="muted">· {{ lic.holder }}</span></h2>
+    <h2>{{ $t("⚿ journali Lizenz") }}</h2>
     <table class="grid form" style="width:auto"><colgroup><col style="width:170px" /><col style="width:200px" /><col /></colgroup><tbody>
       <!-- Eine Instanz hat keine Lizenz — jede gehört einem Team (25.09.2026): Abo und Schlüssel stehen beim Team. Übrig bleibt
            der Test einer neuen Instanz; er gehört zum Init Team und steht nur dort, solange er läuft. -->
@@ -170,7 +158,7 @@ async function kopiere(text) {
     </tbody></table>
 
     <div v-if="darf()" class="uebernahme" style="margin-top:8px">
-      <textarea v-model="eingabe" class="eingabe" rows="4" style="width:100%;max-width:640px" :placeholder="$t('Lizenz oder Schlüssel')"></textarea>
+      <textarea v-model="eingabe" class="eingabe" rows="4" style="width:100%;max-width:640px" :placeholder="$t('Schlüssel')"></textarea>
       <div class="row" style="gap:8px;margin-top:4px">
         <button class="primary" :disabled="knopf.aus" :title="knopf.title" @click="uebernehmen">{{ knopf.text }}</button>
         <span class="said" :class="said.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ said }}</span>

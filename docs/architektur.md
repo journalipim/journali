@@ -226,6 +226,8 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     signiert, mit Fassung; kommt mit jedem Abo-Stand und jedem Schlüssel. `Tarife.cs` ist nur noch das Saatgut.
   - **Senken ab der nächsten Verlängerung**, erhöhen sofort: der Lizenzserver merkt sich je Abo, was er für die
     laufende Periode zugesagt hat, und liefert bis zu ihrem Ende nicht weniger.
+  - **Keine Lizenz der Instanz**: jede gehört einem Team — Abo oder Schlüssel zum Kopieren. Das Einspielen einer
+    Lizenzdatei (`PUT /api/licence`) ist entfernt; übrig ist der Test des Init Teams, danach Kostenlos.
   - **Eingriffe am Abo** in der Verwaltung des Lizenzservers: entziehen (Betrug), gültig bis von Hand verlängern,
     Tarif ändern (z. B. Pro bezahlt, Enterprise gewährt). Sie wirken beim nächsten Auffrischen der Instanz; ohne
     Verbindung gilt ihr letzter Stand höchstens bis zum Ende der Kulanz. Schlüssel zum Kopieren lassen sich nicht

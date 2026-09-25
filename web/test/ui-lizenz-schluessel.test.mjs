@@ -144,16 +144,15 @@ test('Ein Schlüssel wird für das oben gewählte Team eingelöst — das Team s
   w.unmount()
 })
 
-test('Eine Lizenz wird eingespielt, nicht eingelöst', async () => {
+/// Eine Lizenz für die ganze Instanz gibt es nicht (25.09.2026) — eine Lizenzdatei wird nicht angenommen.
+test('Eine Lizenzdatei wird nicht angenommen', async () => {
   const gesendet = server(); admin()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
-  await w.find('.eingabe').setValue('{"plan":"Gross","entriesWeek":50000,"sig":"x"}')
-  assert.match(knopf(w).text(), /Lizenz einspielen/)
+  await w.find('.eingabe').setValue('{"plan":"unlimited","entriesWeek":50000,"sig":"x"}')
+  assert.ok(knopf(w).attributes('disabled') !== undefined, 'eine Lizenzdatei lässt sich übernehmen')
+  assert.match(knopf(w).attributes('title'), /kein Schlüssel/)
   await knopf(w).trigger('click'); await flushPromises()
-  const put = gesendet.find(g => g.path === '/api/licence')
-  assert.equal(put?.method, 'PUT')
-  assert.equal(put.body.plan, 'Gross')
-  assert.equal(gesendet.some(g => g.path === '/api/licence/keys'), false)
+  assert.equal(gesendet.some(g => g.path === '/api/licence' || g.path === '/api/licence/keys'), false)
   w.unmount()
 })
 

@@ -171,10 +171,10 @@ gewöhnliches Wort reicht, steht das gewöhnliche Wort.
   (`Catalog.With` → `KeinKontingentException` → 403), weil erst dort der Eintragstyp
   feststeht. Kein Kontingent hat, wer in keinem Team ist oder dessen Zahlerkette bei
   0 endet; Jobs (`job:<key>`) und das System sind nicht gemeint.
-  **Die Limits ergeben sich aus dem Tarif der Lizenz** — nirgends ein Eingabefeld, und die Lizenz trägt keine eigenen
-  Zahlen (`Tarife.cs` sagt sie; `Licence.Week`/`.Month`): das Init Team trägt die Limits der
-  Anlage, jedes weitere hat, was die Lizenz ihm namentlich zuschreibt (`teams` in
-  `licence.json`), sonst nichts; dann rechnet es über ein anderes Team ab.
+  **Eine Instanz hat keine Lizenz — jede gehört einem Team**: ein Abo (Shop-Schlüssel) oder ein Schlüssel zum
+  Kopieren, den das Team selbst einlöst. Die Limits ergeben sich aus dem Tarif — nirgends ein Eingabefeld. Das Init
+  Team hat den Test einer neuen Instanz (Test-Tarif, Testmonate ab dem ersten Eintrag), danach Kostenlos; jedes
+  weitere hat nur, was Abo oder Schlüssel ihm geben, sonst rechnet es über ein anderes Team ab.
   **Führen und dazugehören sind zweierlei**: man kann Manager
   mehrerer Teams sein, aber **Mitglied nur eines** — der IT-Administrator von
   Südeuropa führt Spanien, Frankreich und Portugal und sitzt in Team Deutschland.
