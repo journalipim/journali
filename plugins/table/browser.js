@@ -1,6 +1,6 @@
 // Tabellen-Export im Browser (Basis-Plugin table): der Kern liegt in core.mjs (auch für den Job im Plugin export),
 // hier das Browser-Drumherum — Herunterladen, SheetJS laden, Excel am Knoten (Vorlage / Export mit Legende).
-import { api, store, tree, mapper } from 'journali'
+import { api, store, tree, mapper, plugins } from 'journali'
 import { build as coreBuild, toCsv, toJson, toJsonTree, workbook } from './core.mjs'
 const L = l => globalThis.journali?.L ? globalThis.journali.L(l) : (l?.de ?? Object.values(l ?? {})[0] ?? '')   // Bezeichnung in der Oberflächensprache
 const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : String(k).replace(/\{(\w+)\}/g, (m, i) => p?.[i] ?? m)   // Oberflächensprache: spät gebunden, im Test ohne Fenster ladbar
@@ -18,6 +18,18 @@ async function polished(X, wb, columns, rowCount, tableName, legendRows = null) 
   catch (e) { console.warn(t_('Excel ohne Politur:'), e.message); return new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }
 }
 export const build = opts => coreBuild({ api, model: store.model }, opts)
+
+/// Eine Tabellendatei lesen (Excel über das Plugin xlsx, sonst CSV/TSV) — liefert Kopfzeile und Zeilen.
+/// Für die Struktur reicht das erste Blatt: sie hat nur eines.
+export async function leseDatei(file) {
+  const imp = plugins.importerFor(file.name)
+  let t
+  if (imp) t = await imp.parse(file, plugins.ctx(imp.key))
+  else if (/\.(csv|txt|tsv)$/i.test(file.name)) t = mapper.parseDelimited(await file.text())
+  else throw new Error(t_('Kein Importer für {0} — Plugin für dieses Format einschalten (⌿ Plugins)', [file.name]))
+  const blatt = t.sheets?.[0] ?? t
+  return { kopf: blatt.columns ?? [], zeilen: blatt.rows ?? [] }
+}
 export async function toXlsx(table, sheet = t_('Daten')) {
   const X = await loadXlsx()
   const wb = workbook(X, table, null, sheet)
