@@ -108,10 +108,10 @@
         },
         {
           "key": "keep",
-          "label": "so viele Stände behalten (je Wurzel, dieser Job)",
+          "label": "so viele Staende behalten (je Wurzel, dieser Job)",
           "type": "number",
           "default": "14",
-          "perJob": false
+          "perJob": true
         }
       ],
       "key": "export",
