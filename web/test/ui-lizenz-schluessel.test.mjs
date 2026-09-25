@@ -144,6 +144,18 @@ test('Ein Schlüssel wird für das oben gewählte Team eingelöst — das Team s
   w.unmount()
 })
 
+/// Ein Schlüssel, den der Lizenzserver von sich aus ausstellt, hat keine Anforderung — er nennt die Instanz (25.09.2026).
+test('Ein Schlüssel ohne Anforderung wird eingelöst', async () => {
+  const gesendet = server(); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  const direkt = '{"id":"k-direkt","kind":"limit","instance":"abc","entriesWeek":50000,"days":30,"plan":"pro","sig":"a=="}'
+  await w.find('.eingabe').setValue('-----BEGIN JOURNALI KEY-----\n' + direkt + '\n-----END JOURNALI KEY-----')
+  assert.match(knopf(w).text(), /Einlösen · Deutschland/)
+  await knopf(w).trigger('click'); await flushPromises()
+  assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/keys').body }, { key: direkt, team: 'de' })
+  w.unmount()
+})
+
 /// Eine Lizenz für die ganze Instanz gibt es nicht (25.09.2026) — eine Lizenzdatei wird nicht angenommen.
 test('Eine Lizenzdatei wird nicht angenommen', async () => {
   const gesendet = server(); admin()

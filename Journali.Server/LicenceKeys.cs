@@ -24,13 +24,18 @@ public static class LicenceKeys
         if (string.IsNullOrWhiteSpace(k.Instance)) return "Der Schlüssel nennt keine Instanz.";
         if (instanz is { Length: > 0 } hier && !string.Equals(k.Instance, hier, StringComparison.OrdinalIgnoreCase))
             return $"Ausgestellt für eine andere Instanz ({k.Instance}).";
-        // nur, was diese Instanz selbst angefordert hat — und genau das
-        if (anforderung?.Inhalt is not { } a) return $"Zu Schlüssel {k.Id} gibt es hier keine Anforderung.";
-        if (!string.Equals(k.Request, anforderung.Hash, StringComparison.OrdinalIgnoreCase)) return "Der Schlüssel gehört nicht zu dieser Anforderung.";
-        if (anforderung.Pruefe() is (false, var warum)) return warum;
-        if (a.Instance != instanz || a.Pub != pub) return "Die Anforderung stammt von einer anderen Instanz.";
-        if (a.Kind != k.Kind) return $"Angefordert: {a.Kind}, ausgestellt: {k.Kind}.";
-        if (a.Plan != k.Plan) return $"Angefordert: {a.Plan ?? "ohne Tarif"}, ausgestellt: {k.Plan ?? "ohne Tarif"}.";
+        // Ein Schlüssel zu einer Anforderung: nur, was diese Instanz selbst angefordert hat — und genau das. Ein Schlüssel
+        // ohne Anforderung (vom Lizenzserver von sich aus ausgestellt, 25.09.2026) ist allein an die Instanz gebunden: ihre
+        // Kennung steht im signierten Rumpf, und eingelöst wird jede Id einmal.
+        if (k.Request is not null)
+        {
+            if (anforderung?.Inhalt is not { } a) return $"Zu Schlüssel {k.Id} gibt es hier keine Anforderung.";
+            if (!string.Equals(k.Request, anforderung.Hash, StringComparison.OrdinalIgnoreCase)) return "Der Schlüssel gehört nicht zu dieser Anforderung.";
+            if (anforderung.Pruefe() is (false, var warum)) return warum;
+            if (a.Instance != instanz || a.Pub != pub) return "Die Anforderung stammt von einer anderen Instanz.";
+            if (a.Kind != k.Kind) return $"Angefordert: {a.Kind}, ausgestellt: {k.Kind}.";
+            if (a.Plan != k.Plan) return $"Angefordert: {a.Plan ?? "ohne Tarif"}, ausgestellt: {k.Plan ?? "ohne Tarif"}.";
+        }
         if (teams.Eingeloest(k.Id)) return $"Schlüssel {k.Id} ist schon eingelöst.";
         if (teams.Get(team) is not { } t) return $"Team „{team}“ gibt es nicht.";
         // wer über ein anderes Team abrechnet, hat kein eigenes Kontingent — der Schlüssel gehört dorthin
@@ -59,7 +64,7 @@ public static class LicenceKeys
     /// <summary>Angefordert wird Reset oder ein Paket — die Zahlen kommen aus dem Paket, nie aus der Anfrage.</summary>
     public sealed record RequestBody(string? Kind, string? Plan, int Count = 1);
 
-    public static void Map(RouteGroupBuilder api, Licences licences, KeyRequests anforderungen, Instanz instanz)
+    public static void Map(RouteGroupBuilder api, Licences licences, KeyRequests anforderungen, Instanz instanz, Abos abos)
     {
         // Anforderungen: auf Vorrat, ohne Team — das Team kommt beim Einlösen
         api.MapGet("/licence/requests", (Catalog c) =>
@@ -111,7 +116,7 @@ public static class LicenceKeys
         }).ToList())));
 
         // Einlösen: Schlüssel und Team — geschrieben wird in einem Zug, damit derselbe Schlüssel nicht zweimal durchgeht
-        api.MapPost("/licence/keys", (Body body, HttpRequest req, Catalog c) =>
+        api.MapPost("/licence/keys", async (Body body, HttpRequest req, Catalog c, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             LicenceKey? k;
@@ -125,6 +130,14 @@ public static class LicenceKeys
             c.NimmTarifblatt(k.Blatt, actor);
             var heute = DateOnly.FromDateTime(DateTime.Now);
             var anforderung = anforderungen.Get(k.Id);
+            // Ein Schlüssel ohne Anforderung (vom Lizenzserver von sich aus ausgestellt) wird dort eingelöst — erst prüft
+            // journali, was es selbst prüfen kann, dann vermerkt der Lizenzserver das Einlösen; ohne seine Bestätigung nicht
+            if (k.Request is null)
+            {
+                var vorab = c.With((_, _, _) => Fehler(k, team, licences.InstanzId, c.Teams, anforderung, instanz.PublicKey, c.Teams.Get(team) is null ? null : c.TeamTarif(team)));
+                if (vorab is not null) return Bad(vorab);
+                if (await abos.EinloesenAsync(k.Id!, team, ct) is { } nein) return Bad(nein);
+            }
             var ergebnis = c.With((_, _, write) =>
             {
                 var tarif = c.Teams.Get(team) is null ? null : c.TeamTarif(team);

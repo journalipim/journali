@@ -92,6 +92,21 @@ public class SchluesselTests
         Assert.Contains("keine Anforderung", Einloesen(c, i, a, k, "de"));
     }
 
+    /// <summary>
+    /// Ein Schlüssel, den der Lizenzserver von sich aus ausstellt (25.09.2026), hat keine Anforderung: er gilt für die
+    /// Instanz, deren Kennung er nennt, und jede Id einmal.
+    /// </summary>
+    [Fact]
+    public void Ein_Schluessel_ohne_Anforderung_gilt_fuer_seine_Instanz()
+    {
+        var c = Welt(); var i = new Instanz(null); var a = new KeyRequests(null, i);
+        var k = new LicenceKey("k-direkt", Schluessel.Limit, i.Id, 50_000, 250_000, 30, Heute, Request: null, Plan: "pro");
+        Assert.Contains("andere Instanz", Einloesen(c, i, a, k with { Instance = "11111111-2222-3333-4444-555555555555" }, "de"));
+        Assert.Null(Einloesen(c, i, a, k, "de"));
+        Assert.Equal((50_000, 250_000), c.With((_, _, _) => c.Teams.LimitAt("de", Heute)));
+        Assert.Contains("schon eingelöst", Einloesen(c, i, a, k, "de"));
+    }
+
     [Fact]
     public void Der_Schluessel_muss_zur_Anforderung_passen()
     {

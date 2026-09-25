@@ -239,3 +239,24 @@ public sealed record Entitlement(
     public bool GiltAm(DateTimeOffset jetzt) =>
         ValidUntil is { } v && jetzt <= v && PaidUntil is { } p && DateOnly.FromDateTime(jetzt.LocalDateTime) <= p;
 }
+
+/// <summary>
+/// Die Bestätigung des Lizenzservers, dass ein Schlüssel ohne Anforderung eingelöst ist (25.09.2026): ein Schlüssel, den
+/// der Lizenzserver von sich aus ausstellt, wird beim Einlösen dort vermerkt — ein zweites Einlösen scheitert, auch nach
+/// einer Wiederherstellung der Instanz. Antwort auf eine signierte Anfrage der Instanz (<see cref="Art"/>: Schlüssel-Id
+/// in <see cref="KeyRequest.Key"/>, Team in <see cref="KeyRequest.Team"/>), signiert mit dem Lizenzschlüssel.
+/// </summary>
+public sealed record Einloesung(
+    string? Id = null,
+    string? Instance = null,
+    string? Team = null,
+    DateTimeOffset? At = null,
+    /// <summary>Fingerabdruck der Anfrage — die Bestätigung gehört zu genau einer.</summary>
+    string? Request = null,
+    string? Sig = null)
+{
+    /// <summary>Die Art der Anfrage (<see cref="KeyRequest.Kind"/>).</summary>
+    public const string Art = "einloesen";
+    public static JsonSerializerOptions Json => Signaturen.Json;
+    [JsonIgnore] public string Rumpf => JsonSerializer.Serialize(this with { Sig = null }, Json);
+}

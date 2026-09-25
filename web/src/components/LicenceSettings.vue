@@ -59,7 +59,7 @@ const inhalt = computed(() => {
 const ABO = /\b[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}\b/i
 const aboKey = computed(() => inhalt.value ? null : eingabe.value.match(ABO)?.[0] ?? null)
 // Eine Lizenz für die ganze Instanz gibt es nicht (25.09.2026): jede gehört einem Team — Abo oder Schlüssel zum Kopieren
-const was = computed(() => !inhalt.value ? (aboKey.value ? 'abo' : null) : inhalt.value.o.kind && inhalt.value.o.request ? 'schluessel' : null)
+const was = computed(() => !inhalt.value ? (aboKey.value ? 'abo' : null) : inhalt.value.o.kind && inhalt.value.o.sig && (inhalt.value.o.request || inhalt.value.o.instance) ? 'schluessel' : null)
 // Der Stand des Abos für das oben gewählte Team
 const aboTeam = computed(() => lic.value?.abos?.find(a => a.team === props.team?.key) ?? null)
 const knopf = computed(() =>

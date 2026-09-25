@@ -82,6 +82,35 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         return await VerbindenAsync(c, team, key, actor, ct);
     }
 
+    /// <summary>
+    /// Einen Schlüssel ohne Anforderung beim Lizenzserver einlösen: er vermerkt ihn für diese Instanz und dieses Team und
+    /// bestätigt signiert. Liefert null, wenn er bestätigt hat, sonst den Grund. Ohne Bestätigung wird nicht eingelöst.
+    /// </summary>
+    public async Task<string?> EinloesenAsync(string keyId, string team, CancellationToken ct = default)
+    {
+        var adresse = lizenzserver();
+        if (string.IsNullOrWhiteSpace(adresse)) return "Kein Lizenzserver eingestellt (JOURNALI_LIZENZSERVER).";
+        var r = new KeyRequest("e-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant(), Einloesung.Art, instanz.Id, instanz.PublicKey,
+            Created: Jetzt, Team: team, Key: keyId);
+        var rumpf = JsonSerializer.Serialize(r, KeyRequest.Json);
+        var anfrage = new SignedRequest(rumpf, Convert.ToBase64String(instanz.Signiere(rumpf)));
+        HttpResponseMessage res;
+        try { res = await http.PostAsync(new Uri(new Uri(adresse.TrimEnd('/') + "/"), "v1/einloesen"), new StringContent(anfrage.Text, Encoding.UTF8, "application/json"), ct); }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return "Lizenzserver nicht erreichbar: " + ex.Message; }
+        var text = await res.Content.ReadAsStringAsync(ct);
+        if (!res.IsSuccessStatusCode)
+        {
+            try { if (JsonDocument.Parse(text).RootElement.TryGetProperty("error", out var f)) return f.GetString(); } catch (JsonException) { }
+            return $"Lizenzserver: {(int)res.StatusCode}";
+        }
+        Einloesung? e;
+        try { e = JsonSerializer.Deserialize<Einloesung>(text, new JsonSerializerOptions(JsonSerializerDefaults.Web)); }
+        catch (JsonException) { return "Antwort des Lizenzservers unlesbar."; }
+        if (e is null || e.Request != anfrage.Hash || e.Id != keyId || e.Instance != instanz.Id || e.Team != team) return "Die Antwort gehört nicht zu dieser Anfrage.";
+        if (!Aussteller.Pruefe(e.Rumpf, e.Sig).Ok) return "Die Signatur des Lizenzservers passt nicht.";
+        return null;
+    }
+
     /// <summary>Alle Teams mit Abo, deren Stand älter als <see cref="Auffrischen"/> ist, neu fragen. Liefert, wie viele es waren.</summary>
     public async Task<int> AuffrischenAsync(Catalog c, CancellationToken ct = default)
     {

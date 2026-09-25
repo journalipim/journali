@@ -285,11 +285,11 @@ RestoreApi.Map(api);   // Teilbaum aus einer Rohdaten-Datei zurueck (Einstellung
 BackupApi.Map(api, journal, dataDir, pluginDir);
 DatenbankApi.Map(api, ziel, dataDir, app.Logger);   // ⇅ B&R → Datenbank: Verbindung und Passwort (für die eigene Sicherung)   // Vollsicherung: Journal, Medien, Zugänge, Plugins — zurück in ein leeres System
 MailApi.Map(api, mailer);   // Mailserver einstellen und eine Probe senden (Einstellungen → Mail)
-LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz);   // Schlüssel: signiert anfordern, einlösen — Reset oder Limit, an die Instanz gebunden, einmal
+LicenceKeys.Map(api, licences, new KeyRequests(db, instanz), instanz, abos);   // Schlüssel: signiert anfordern, einlösen — Reset oder Limit, an die Instanz gebunden, einmal
 JobApi.Map(api, jobRunner);   // Jobs: Definition, Läufe, Logs (Plugin tasker)
 TeamApi.Map(api, jobDir);   // Teams: Kostenstelle der KI — Schlüssel, Verbuchung, Führung
 AiApi.Map(api, jobDir);     // KI über den Server: Schlüssel des zahlenden Teams; begrenzt wird hier nichts
-LicenceApi.Map(api, licences, abos);      // Lizenz einspielen und ansehen
+LicenceApi.Map(api, licences, abos);      // Lizenz ansehen, Abo verbinden und auffrischen
 FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/
