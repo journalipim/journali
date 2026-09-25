@@ -186,7 +186,7 @@ public static class Auth
         if (path.StartsWith("/api/media/store") || path.StartsWith("/api/media/copy")) return Rights.Storage;
         if (path.StartsWith("/api/betrieb")) return Rights.Storage;   // Spiegel und Schnappschuss: Ablage, kein Modell
         if (path.StartsWith("/api/media/presets") && !read) return Rights.Model;   // Vorschau-Presets sind Modell
-        if (path.StartsWith("/api/files")) return Rights.Jobs;   // Dateibrowser des Servers: Jobs — oder Storage (Allowed)
+        if (path.StartsWith("/api/files") || path.StartsWith("/api/drivers")) return Rights.Jobs;   // Dateibrowser und Zugänge: Jobs — oder Storage (Allowed)
         if (path.StartsWith("/api/jobs") && (path.EndsWith("/uebergabe") || path.EndsWith("/pause") || path.EndsWith("/resume"))) return Rights.Write;   // einen Import abgeben und anhalten ist Pflege, kein Jobbau
         if (path.StartsWith("/api/jobs") && path.EndsWith("/signal")) return Rights.Read;   // der Lauf fragt selbst, ob er warten soll
         if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
@@ -208,7 +208,7 @@ public static class Auth
     }
     public static bool Allowed(Catalog c, string role, HttpRequest req) => Needed(req) is not { } need || RightsOf(c, role).Contains(need)
         || (need == Rights.Team && RightsOf(c, role).Contains(Rights.Users))   // wer Benutzer und Rollen verwaltet, verwaltet auch Teams
-        || (req.Path.StartsWithSegments("/api/files") && RightsOf(c, role).Contains(Rights.Storage));   // der Dateibrowser dient auch dem Medienspeicher
+        || ((req.Path.StartsWithSegments("/api/files") || req.Path.StartsWithSegments("/api/drivers")) && RightsOf(c, role).Contains(Rights.Storage));   // der Dateibrowser dient auch dem Medienspeicher
     /// <summary>Hat der Anfragende dieses Recht? Ohne Benutzer (offen) ja; sonst die Rolle aus der Sitzung (Middleware legt sie in Items).</summary>
     public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && (RightsOf(c, role).Contains(right) || (right == Rights.Team && RightsOf(c, role).Contains(Rights.Users))));
 

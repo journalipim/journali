@@ -299,6 +299,7 @@ TeamApi.Map(api, jobDir);   // Teams: Kostenstelle der KI — Schlüssel, Verbuc
 AiApi.Map(api, jobDir);     // KI über den Server: Schlüssel des zahlenden Teams; begrenzt wird hier nichts
 LicenceApi.Map(api, licences, abos);      // Lizenz ansehen, Abo verbinden und auffrischen
 FileApi.Map(api, dataDir, builder.Environment);   // Dateibrowser des Servers: Storage-Verzeichnis, Job-Quellen und -Ziele
+DriverApi.Map(api, dataDir, builder.Environment);   // Zugänge: dieselben Dateien über einen benannten Zugang, später auch ferne
 
 // Dateien der Plugins (Browser-Plugins: ihr Modul, Bilder, Unterlagen) — nur lesend, nur unter plugins/
 app.MapGet("/plugins/{key}/{**path}", (string key, string path, HttpContext ctx) =>
