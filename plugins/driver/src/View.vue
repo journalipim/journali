@@ -14,6 +14,9 @@ const form = ref({ key: '', art: 'ftp', label: '', felder: {}, geheim: {} })
 const bearbeitet = ref('')
 
 const art = computed(() => arten.value.find(a => a.key === form.value.art) ?? null)
+// Anlegen laesst sich nur, was es als Art gibt und was nicht schon eingebaut ist. Steht hier nichts, gibt es
+// heute nur den lokalen Zugang — dann zeigt die Ansicht das, statt ein Formular ohne Auswahl anzubieten
+const anlegbar = computed(() => arten.value.filter(a => a.key !== 'file'))
 
 async function laden() {
   try {
@@ -26,7 +29,7 @@ onMounted(laden)
 
 function neu() {
   bearbeitet.value = ''
-  form.value = { key: '', art: arten.value.find(a => a.key !== 'file')?.key ?? 'ftp', label: '', felder: {}, geheim: {} }
+  form.value = { key: '', art: anlegbar.value[0]?.key ?? '', label: '', felder: {}, geheim: {} }
 }
 function bearbeiten(z) {
   bearbeitet.value = z.key
@@ -81,13 +84,14 @@ function browsen(z) {
     </tbody></table>
 
     <div class="step-band">{{ bearbeitet ? $t("Zugang ändern") : $t("Neuer Zugang") }}</div>
-    <table class="grid form"><colgroup><col style="width:120px" /><col /></colgroup><tbody>
+    <div v-if="!anlegbar.length" class="empty">{{ $t("Nur das Dateisystem dieses Servers — weitere Arten kommen, sobald ihr Treiber steht.") }}</div>
+    <table v-else class="grid form"><colgroup><col style="width:120px" /><col /></colgroup><tbody>
       <tr><td class="attr">{{ $t("Name") }}</td><td>
         <input v-model="form.key" :readonly="!!bearbeitet" :placeholder="$t('kurz, ohne Leerzeichen — z. B. archiv-ftp')" style="width:240px" />
       </td></tr>
       <tr><td class="attr">{{ $t("Art") }}</td><td>
         <select v-model="form.art" :disabled="!!bearbeitet" style="width:240px">
-          <option v-for="a in arten.filter(x => x.key !== 'file')" :key="a.key" :value="a.key">{{ a.label }}</option>
+          <option v-for="a in anlegbar" :key="a.key" :value="a.key">{{ a.label }}</option>
         </select>
         <span v-if="art" class="muted">{{ ' ' + (art.dateien ? $t('liefert Dateien') : $t('nur Anmeldung')) }}</span>
       </td></tr>

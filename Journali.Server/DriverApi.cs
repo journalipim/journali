@@ -22,17 +22,19 @@ public static class DriverApi
     /// <summary>Der eingebaute Zugang: das Dateisystem des Servers. Immer da, ohne Einrichtung, ohne Geheimnis.</summary>
     public const string Lokal = "lokal";
 
-    /// <summary>Die Arten, die es gibt, und ihre Felder. <c>Dateien</c> sagt, ob der Zugang auflisten kann.</summary>
+    /// <summary>Eine Art von Zugang und ihre Felder. <c>Dateien</c> sagt, ob der Zugang auflisten kann.</summary>
     public sealed record Art(string Key, string Label, bool Dateien, string[] Felder, string[] Geheim);
 
+    /// <summary>
+    /// Was es gibt. <b>Nur was wirklich trägt</b> — eine Art, die noch nicht umgesetzt ist, steht hier nicht:
+    /// angeboten wird nichts, was beim Anklicken „ist noch nicht gebaut“ antwortet (25.09.2026).
+    /// <para>Vorgesehen, sobald der jeweilige Treiber steht: <c>ftp</c> und <c>webdav</c> (liefern Dateien),
+    /// <c>mysql</c>, <c>solr</c> und <c>ixp</c> (nur Anmeldung). Für die letzten beiden gibt es die Plugins schon,
+    /// sie führen ihren Zugang aber noch selbst.</para>
+    /// </summary>
     public static readonly IReadOnlyList<Art> Arten =
     [
         new("file", "Dateisystem des Servers", true, [], []),
-        new("ftp", "FTP", true, ["host", "port", "benutzer", "pfad"], ["passwort"]),
-        new("webdav", "WebDAV", true, ["url", "benutzer", "pfad"], ["passwort"]),
-        new("mysql", "MySQL", false, ["host", "port", "datenbank", "benutzer"], ["passwort"]),
-        new("solr", "Solr", false, ["url", "core"], ["token"]),
-        new("ixp", "IXP", false, ["url"], ["token"]),
     ];
 
     public static Art? ArtVon(string? key) => Arten.FirstOrDefault(a => a.Key == key);
@@ -100,19 +102,15 @@ public static class DriverApi
         // Auflisten — nur bei einem Zugang, der Dateien liefert
         api.MapGet("/drivers/{zugang}/files", (string zugang, Catalog c, string? path) =>
             MitDatei(c, zugang, out var fehler) is { } z
-                ? z.Art == "file" ? FileApi.Files(dataDir, env.ContentRootPath, path)
-                  : Bad("Zugang {0}: {1} ist noch nicht gebaut.", zugang, z.Art)
-                : fehler);
+                ? FileApi.Files(dataDir, env.ContentRootPath, path) : fehler);
 
         api.MapPost("/drivers/{zugang}/dir", (string zugang, FileApi.NeuBody body, HttpRequest req, Catalog c) =>
             MitDatei(c, zugang, out var fehler) is { } z
-                ? z.Art == "file" ? FileApi.NeuesVerzeichnis(body, req) : Bad("Zugang {0}: {1} ist noch nicht gebaut.", zugang, z.Art)
-                : fehler);
+                ? FileApi.NeuesVerzeichnis(body, req) : fehler);
 
         api.MapPut("/drivers/{zugang}/dir", (string zugang, FileApi.UmbenennenBody body, HttpRequest req, Catalog c) =>
             MitDatei(c, zugang, out var fehler) is { } z
-                ? z.Art == "file" ? FileApi.VerzeichnisUmbenennen(body, req) : Bad("Zugang {0}: {1} ist noch nicht gebaut.", zugang, z.Art)
-                : fehler);
+                ? FileApi.VerzeichnisUmbenennen(body, req) : fehler);
     }
 
     /// <summary>Alle Zugänge: der eingebaute zuerst, dann die eingerichteten aus dem Journal.</summary>

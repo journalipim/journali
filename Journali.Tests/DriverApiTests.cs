@@ -21,17 +21,15 @@ public class DriverApiTests
         Assert.Empty(art.Geheim);
     }
 
-    [Theory]
-    [InlineData("ftp", true)]
-    [InlineData("webdav", true)]
-    [InlineData("mysql", false)]
-    [InlineData("solr", false)]
-    [InlineData("ixp", false)]
-    public void Jede_Art_sagt_ob_sie_Dateien_liefert(string key, bool dateien)
+    [Fact]
+    public void Angeboten_wird_nur_was_traegt()
     {
-        var art = DriverApi.ArtVon(key);
-        Assert.NotNull(art);
-        Assert.Equal(dateien, art!.Dateien);
+        // Eine Art, die noch nicht umgesetzt ist, steht nicht in der Liste: sonst waehlt jemand FTP und bekommt
+        // beim ersten Klick „ist noch nicht gebaut“ (25.09.2026)
+        Assert.All(DriverApi.Arten, a => Assert.Equal("file", a.Key));
+        Assert.Null(DriverApi.ArtVon("ftp"));
+        Assert.Null(DriverApi.ArtVon("webdav"));
+        Assert.Null(DriverApi.ArtVon("mysql"));
     }
 
     [Fact]
@@ -43,23 +41,9 @@ public class DriverApiTests
     }
 
     [Fact]
-    public void Jede_Anmeldung_nennt_ihr_Geheimnis_und_haelt_es_aus_den_offenen_Feldern_heraus()
+    public void Ein_Geheimnis_steht_nie_unter_den_offenen_Feldern()
     {
-        foreach (var a in DriverApi.Arten.Where(x => x.Felder.Length > 0))
-        {
-            // Ein Geheimnis steht nie unter den offenen Feldern: die gehen ins Journal, das Geheimnis zum Server
-            Assert.Empty(a.Felder.Intersect(a.Geheim));
-            Assert.All(a.Geheim, g => Assert.Contains(g, new[] { "passwort", "token" }));
-        }
-    }
-
-    [Fact]
-    public void Datenbanken_und_Endpunkte_haben_keine_Verzeichnisse()
-    {
-        // Der Treiber ist keine Schicht ueber der Datenbank — er kennt kein SQL und keinen Index.
-        // Was nicht Dateien liefert, hat auch keinen Browser
-        foreach (var a in DriverApi.Arten.Where(x => !x.Dateien))
-            Assert.Contains("benutzer", a.Felder.Concat(["benutzer"]));   // eine Anmeldung hat Felder, keine Pfade
-        Assert.DoesNotContain(DriverApi.Arten.Where(x => !x.Dateien), a => a.Felder.Contains("pfad"));
+        // Die offenen Felder gehen ins Journal, das Geheimnis zum Server. Gilt fuer jede Art, die je dazukommt
+        Assert.All(DriverApi.Arten, a => Assert.Empty(a.Felder.Intersect(a.Geheim)));
     }
 }

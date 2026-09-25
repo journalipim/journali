@@ -73,3 +73,18 @@ test('beim Aendern bleibt das Passwortfeld leer und behaelt das hinterlegte', as
     assert.match(pw[0].attributes('placeholder') ?? '', /hinterlegt/)
   } finally { ende() }
 })
+
+test('gibt es nur den eingebauten Zugang, steht kein leeres Formular da', async () => {
+  const get = api.get
+  api.get = async (p) => (p === '/api/drivers/arten'
+    ? [{ key: 'file', label: 'Dateisystem des Servers', dateien: true, felder: [], geheim: [] }]
+    : [{ key: 'lokal', art: 'file', label: '⌂ Dieser Server', felder: {}, dateien: true, geheim: [] }])
+  try {
+    const { default: View } = await import('../../plugins/driver/src/View.vue')
+    const w = mount(View)
+    await new Promise(r => setTimeout(r, 0)); await w.vm.$nextTick()
+    // Angeboten wird nur, was traegt: ohne weitere Art gibt es nichts anzulegen
+    assert.match(w.text(), /weitere Arten kommen/)
+    assert.equal(w.findAll('input[type=password]').length, 0)
+  } finally { api.get = get }
+})

@@ -129,7 +129,8 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
 
   **Zugänge** (Plugin `driver`, `DriverApi.cs`, `/api/drivers`): ein Plugin fragt nach einem Zugang seiner Art
   („gib mir die vom Typ mysql“) statt selbst nach Adresse und Passwort. Zwei Sorten: einer, der **Dateien liefert**
-  (`file`, ftp, webdav) — mit Auflisten und Browser —, und einer, der nur **Anmeldung** ist (mysql, solr, ixp).
+  — mit Auflisten und Browser —, und einer, der nur **Anmeldung** ist. **Angeboten wird nur, was trägt**: heute
+  allein `file`; ftp, webdav, mysql, solr und ixp stehen erst in der Liste, wenn ihr Treiber gebaut ist.
   Der Zugang ist **keine Schicht über der Datenbank**: er kennt kein SQL und keinen Index, das Plugin weiß, was es
   mit seiner Verbindung tut. Die offenen Felder stehen im Journal, das **Geheimnis beim Server** (Tresor) und geht
   **nur an einen Prozess**, nie an den Browser — die Liste nennt bloß seinen Namen. `lokal` ist eingebaut.

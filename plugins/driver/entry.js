@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-8778d65b] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-8778d65b]:hover { color: var(--accent);\n}\n.form td.attr[data-v-8778d65b] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n.x[data-v-4a6f7231] { border: 0; background: none; color: var(--muted); padding: 0 4px; cursor: pointer;\n}\n.x[data-v-4a6f7231]:hover { color: var(--accent);\n}\n.form td.attr[data-v-4a6f7231] { white-space: nowrap; color: var(--muted);\n}\n";document.head.append(s)})();
 const m = window.journali.vue;
 const Fragment = m.Fragment;
 const computed = m.computed;
@@ -43,24 +43,31 @@ const _hoisted_9 = ["title", "onClick"];
 const _hoisted_10 = ["title", "onClick"];
 const _hoisted_11 = ["title", "onClick"];
 const _hoisted_12 = { class: "step-band" };
-const _hoisted_13 = { class: "grid form" };
-const _hoisted_14 = { class: "attr" };
-const _hoisted_15 = ["readonly", "placeholder"];
-const _hoisted_16 = { class: "attr" };
-const _hoisted_17 = ["disabled"];
-const _hoisted_18 = ["value"];
-const _hoisted_19 = {
+const _hoisted_13 = {
+  key: 0,
+  class: "empty"
+};
+const _hoisted_14 = {
+  key: 1,
+  class: "grid form"
+};
+const _hoisted_15 = { class: "attr" };
+const _hoisted_16 = ["readonly", "placeholder"];
+const _hoisted_17 = { class: "attr" };
+const _hoisted_18 = ["disabled"];
+const _hoisted_19 = ["value"];
+const _hoisted_20 = {
   key: 0,
   class: "muted"
 };
-const _hoisted_20 = { class: "attr" };
-const _hoisted_21 = ["placeholder"];
-const _hoisted_22 = { class: "attr" };
-const _hoisted_23 = ["onUpdate:modelValue"];
-const _hoisted_24 = { class: "attr" };
-const _hoisted_25 = ["onUpdate:modelValue", "placeholder"];
-const _hoisted_26 = { class: "muted" };
-const _hoisted_27 = { class: "row" };
+const _hoisted_21 = { class: "attr" };
+const _hoisted_22 = ["placeholder"];
+const _hoisted_23 = { class: "attr" };
+const _hoisted_24 = ["onUpdate:modelValue"];
+const _hoisted_25 = { class: "attr" };
+const _hoisted_26 = ["onUpdate:modelValue", "placeholder"];
+const _hoisted_27 = { class: "muted" };
+const _hoisted_28 = { class: "row" };
 const _sfc_main = {
   __name: "View",
   setup(__props) {
@@ -70,6 +77,7 @@ const _sfc_main = {
     const form = ref({ key: "", art: "ftp", label: "", felder: {}, geheim: {} });
     const bearbeitet = ref("");
     const art = computed(() => arten.value.find((a) => a.key === form.value.art) ?? null);
+    const anlegbar = computed(() => arten.value.filter((a) => a.key !== "file"));
     async function laden() {
       try {
         arten.value = await api.get("/api/drivers/arten");
@@ -82,7 +90,7 @@ const _sfc_main = {
     onMounted(laden);
     function neu() {
       bearbeitet.value = "";
-      form.value = { key: "", art: arten.value.find((a) => a.key !== "file")?.key ?? "ftp", label: "", felder: {}, geheim: {} };
+      form.value = { key: "", art: anlegbar.value[0]?.key ?? "", label: "", felder: {}, geheim: {} };
     }
     function bearbeiten(z) {
       bearbeitet.value = z.key;
@@ -269,7 +277,13 @@ const _sfc_main = {
           1
           /* TEXT */
         ),
-        createElementVNode("table", _hoisted_13, [
+        !anlegbar.value.length ? (openBlock(), createElementBlock(
+          "div",
+          _hoisted_13,
+          toDisplayString(_ctx.$t("Nur das Dateisystem dieses Servers — weitere Arten kommen, sobald ihr Treiber steht.")),
+          1
+          /* TEXT */
+        )) : (openBlock(), createElementBlock("table", _hoisted_14, [
           _cache[6] || (_cache[6] = createElementVNode(
             "colgroup",
             null,
@@ -284,7 +298,7 @@ const _sfc_main = {
             createElementVNode("tr", null, [
               createElementVNode(
                 "td",
-                _hoisted_14,
+                _hoisted_15,
                 toDisplayString(_ctx.$t("Name")),
                 1
                 /* TEXT */
@@ -295,7 +309,7 @@ const _sfc_main = {
                   readonly: !!bearbeitet.value,
                   placeholder: _ctx.$t("kurz, ohne Leerzeichen — z. B. archiv-ftp"),
                   style: { "width": "240px" }
-                }, null, 8, _hoisted_15), [
+                }, null, 8, _hoisted_16), [
                   [vModelText, form.value.key]
                 ])
               ])
@@ -303,7 +317,7 @@ const _sfc_main = {
             createElementVNode("tr", null, [
               createElementVNode(
                 "td",
-                _hoisted_16,
+                _hoisted_17,
                 toDisplayString(_ctx.$t("Art")),
                 1
                 /* TEXT */
@@ -317,21 +331,21 @@ const _sfc_main = {
                   (openBlock(true), createElementBlock(
                     Fragment,
                     null,
-                    renderList(arten.value.filter((x) => x.key !== "file"), (a) => {
+                    renderList(anlegbar.value, (a) => {
                       return openBlock(), createElementBlock("option", {
                         key: a.key,
                         value: a.key
-                      }, toDisplayString(a.label), 9, _hoisted_18);
+                      }, toDisplayString(a.label), 9, _hoisted_19);
                     }),
                     128
                     /* KEYED_FRAGMENT */
                   ))
-                ], 8, _hoisted_17), [
+                ], 8, _hoisted_18), [
                   [vModelSelect, form.value.art]
                 ]),
                 art.value ? (openBlock(), createElementBlock(
                   "span",
-                  _hoisted_19,
+                  _hoisted_20,
                   toDisplayString(" " + (art.value.dateien ? _ctx.$t("liefert Dateien") : _ctx.$t("nur Anmeldung"))),
                   1
                   /* TEXT */
@@ -341,7 +355,7 @@ const _sfc_main = {
             createElementVNode("tr", null, [
               createElementVNode(
                 "td",
-                _hoisted_20,
+                _hoisted_21,
                 toDisplayString(_ctx.$t("Bezeichnung")),
                 1
                 /* TEXT */
@@ -351,7 +365,7 @@ const _sfc_main = {
                   "onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => form.value.label = $event),
                   placeholder: _ctx.$t("wie es in der Auswahl steht"),
                   style: { "width": "240px" }
-                }, null, 8, _hoisted_21), [
+                }, null, 8, _hoisted_22), [
                   [vModelText, form.value.label]
                 ])
               ])
@@ -363,7 +377,7 @@ const _sfc_main = {
                 return openBlock(), createElementBlock("tr", { key: f }, [
                   createElementVNode(
                     "td",
-                    _hoisted_22,
+                    _hoisted_23,
                     toDisplayString(f),
                     1
                     /* TEXT */
@@ -373,7 +387,7 @@ const _sfc_main = {
                       "onUpdate:modelValue": ($event) => form.value.felder[f] = $event,
                       style: { "width": "240px" },
                       autocomplete: "off"
-                    }, null, 8, _hoisted_23), [
+                    }, null, 8, _hoisted_24), [
                       [vModelText, form.value.felder[f]]
                     ])
                   ])
@@ -389,7 +403,7 @@ const _sfc_main = {
                 return openBlock(), createElementBlock("tr", { key: g }, [
                   createElementVNode(
                     "td",
-                    _hoisted_24,
+                    _hoisted_25,
                     toDisplayString(g),
                     1
                     /* TEXT */
@@ -401,12 +415,12 @@ const _sfc_main = {
                       autocomplete: "new-password",
                       style: { "width": "240px" },
                       placeholder: bearbeitet.value ? _ctx.$t("hinterlegt — leer lassen, um es zu behalten") : ""
-                    }, null, 8, _hoisted_25), [
+                    }, null, 8, _hoisted_26), [
                       [vModelText, form.value.geheim[g]]
                     ]),
                     createElementVNode(
                       "span",
-                      _hoisted_26,
+                      _hoisted_27,
                       toDisplayString(" " + _ctx.$t("bleibt beim Server, nie im Journal")),
                       1
                       /* TEXT */
@@ -426,7 +440,7 @@ const _sfc_main = {
                 /* CACHED */
               )),
               createElementVNode("td", null, [
-                createElementVNode("div", _hoisted_27, [
+                createElementVNode("div", _hoisted_28, [
                   createElementVNode(
                     "button",
                     {
@@ -451,12 +465,12 @@ const _sfc_main = {
               ])
             ])
           ])
-        ])
+        ]))
       ]);
     };
   }
 };
-const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-8778d65b"]]);
+const View = /* @__PURE__ */ _export_sfc(_sfc_main, [["__scopeId", "data-v-4a6f7231"]]);
 const entry = {
   views: [{ path: "zugaenge", topic: "tools", label: t("Zugänge"), icon: "⌁", hint: t("Dateisystem, FTP, WebDAV, Anmeldungen an MySQL, Solr, IXP — einmal einrichten, von jedem Plugin nutzbar"), component: View }]
 };
