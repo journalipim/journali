@@ -17,7 +17,7 @@ versteckten Blatt `_journali` — Datei speichern, später weiterpflegen, geht.
 
 Da das Plugin dann lokal aus dem Plugin-Ordner läuft, ruft es den Server per
 `fetch` von einem anderen Origin auf — der Server erlaubt das im
-Entwicklungsmodus (CORS offen); für den Betrieb auf der rossibox muss der
+Entwicklungsmodus (CORS offen); für den Betrieb auf einem Server muss der
 Origin des Editors erlaubt sein.
 
 ## Bedienung

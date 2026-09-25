@@ -332,7 +332,7 @@ der Engpass war das fehlende Cursor-Modell, nicht der Client.
 Excel, Knoten suchen, Tabelle ins Blatt laden, in Excel pflegen, „Geändertes
 speichern" schreibt nur die Differenz zum Schnappschuss als einen Stapel.
 Manifest unter `/plugins/excel/manifest.xml` (Origin vom Server eingesetzt);
-auf der rossibox braucht es HTTPS. **OnlyOffice-Plugin** (`plugins/onlyoffice`): gleiche Bedienung als Seitenleiste in
+auf einem Server im Netz braucht es HTTPS. **OnlyOffice-Plugin** (`plugins/onlyoffice`): gleiche Bedienung als Seitenleiste in
 OnlyOffice Tabellen, Installation über den Plugin-Manager mit
 `/plugins/onlyoffice/package.plugin` (ZIP vom Server), Schnappschuss im
 versteckten Blatt `_journali`. Der xlsx-Roundtrip bleibt der Weg, der nichts
@@ -492,7 +492,7 @@ Dann **KI** als Plugin `ki` (offen): Profil je Zielattribut (Quellattribute,
 Sprache, Ton, Modell), läuft über die Tabelle — Vorschläge landen als
 ungespeicherte Zellen, nie automatisch; ins Journal mit Urheber `ki:<modell>`
 und Stapel; Modell austauschbar (API-Schlüssel bleibt im Browser, oder lokal
-Ollama auf der rossibox).
+Ollama im eigenen Netz).
 
 ## 26. Benutzer & Rollen — gebaut
 

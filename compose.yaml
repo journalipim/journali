@@ -3,8 +3,8 @@
 # oder: docker compose exec server cat /run/journali/db-password
 # Das Server-Image kommt fertig von ghcr.io (`docker compose pull`, Workflow .github/workflows/docker.yml);
 # wer aus dem Checkout baut, nimmt `docker compose up --build` — dann entsteht dasselbe Image unter demselben Namen.
-# Auf der rossibox mit vorhandenem postgresql18-Template: nur `server` nehmen
-# und JOURNALI_DB auf localhost:7432 zeigen lassen (docs/betrieb.md).
+# Gegen eine schon vorhandene Datenbank: nur `server` nehmen und JOURNALI_DB dorthin zeigen lassen
+# (compose.extern.yaml, docs/betrieb.md).
 services:
   # Einmal je Start, fertig in einem Augenblick: liegt noch kein Passwort im Volume journali-secrets, entsteht eines —
   # aus .env, wenn dort JOURNALI_DB_PASSWORD steht (bestehende Anlagen), sonst zufällig. Danach bleibt es, wie es ist:
@@ -62,9 +62,10 @@ services:
       # Wechsel ohne neue Ids: POST /api/media/copy {from: "<alte Angabe>"} kopiert die Blobs (docs/betrieb.md)
       JOURNALI_MEDIA: postgres
       JOURNALI_JOBS: /data/jobs
-      # Abo über den Lizenzserver (docs/betrieb.md → Abo). Seinen öffentlichen Schlüssel kennt journali selbst
-      # (eingebaut) — Lizenz, Schlüssel, Abo-Stand und Tarifblatt zählen nur mit seiner Signatur.
-      JOURNALI_LIZENZSERVER: ${JOURNALI_LIZENZSERVER:-https://lizenz.rossibox.de}
+      # Abo über den Lizenzserver (docs/betrieb.md → Abo): die Adresse steht in .env, siehe .env.example. Seinen
+      # öffentlichen Schlüssel kennt journali selbst (eingebaut) — Lizenz, Schlüssel, Abo-Stand und Tarifblatt
+      # zählen nur mit seiner Signatur. Ohne Adresse läuft alles weiter, nur ein Abo geht nicht.
+      JOURNALI_LIZENZSERVER: ${JOURNALI_LIZENZSERVER:-}
     volumes:
       # nur fuer JOURNALI_MEDIA: /data/media (Verzeichnis-Treiber)
       - journali-media:/data/media

@@ -3,7 +3,7 @@
 Aufgabenbereich in Excel, der direkt mit `/api` spricht. Kein Code im Server;
 die Dateien liegen unter `plugins/excel/` und werden wie jedes Plugin unter
 `/plugins/excel/…` ausgeliefert. Das Manifest bekommt den Origin des Servers
-beim Abruf eingesetzt (`{{ORIGIN}}` → `http://localhost:5000` oder die rossibox).
+beim Abruf eingesetzt (`{{ORIGIN}}` → `http://localhost:5000` oder der Server im Netz).
 
 ## Einrichten (Excel für Windows, einmalig)
 
@@ -15,8 +15,8 @@ beim Abruf eingesetzt (`{{ORIGIN}}` → `http://localhost:5000` oder die rossibo
 3. Einfügen → Meine Add-Ins → Freigegebener Ordner → journali.
 
 Excel im Web / neues Excel: Einfügen → Add-Ins → Mein Add-In hochladen → manifest.xml.
-Office verlangt HTTPS — ausser für `localhost`. Auf der rossibox braucht der
-Server also ein Zertifikat (Reverse Proxy), sonst lädt Excel den Bereich nicht.
+Office verlangt HTTPS — ausser für `localhost`. Auf einem Server im Netz braucht
+er also ein Zertifikat (Reverse Proxy), sonst lädt Excel den Bereich nicht.
 
 ## Bedienung
 

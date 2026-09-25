@@ -142,7 +142,7 @@ app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}
 
 app.UseCors();   // auch im Betrieb: das OnlyOffice-Plugin ruft /api aus dem Editor-Origin; noch keine Anmeldung, daher offen
 
-// Die Adresse, unter der Jobs den Server erreichen: die, mit der die Oberfläche kommt (localhost:5000 oder rossibox)
+// Die Adresse, unter der Jobs den Server erreichen: die, mit der die Oberfläche kommt (localhost:5000 oder der Host im Netz)
 app.Use(async (ctx, next) => { if (ctx.Request.Path.StartsWithSegments("/api")) jobRunner.Origin = $"{ctx.Request.Scheme}://{ctx.Request.Host}"; await next(); });
 
 // Datenbank im Betrieb weg: eine Meldung statt eines Serverfehlers — die Oberfläche zeigt sie oben, bis wieder eine

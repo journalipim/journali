@@ -63,7 +63,7 @@ test('was am Gerät hängt, geht nicht an den Benutzer', async () => {
   store._prefsSent = null
   store.save(); await warten()   // Ausgangsstand festhalten
   const vorher = calls.filter(c => c.path === '/api/auth/me/prefs').length
-  store.server = 'http://localhost:8080'
+  store.server = 'http://beispiel.invalid:8080'
   store.journalOpen = false
   store.collapsed = ['axes']
   store.railOff = ['etim']

@@ -141,18 +141,19 @@ curl -s -X POST localhost:5000/api/nodes/v-213865ea/attributes -H "X-Actor: anna
 curl -s "localhost:5000/api/journal?after=0"
 ```
 
-## Auf der rossibox (Unraid)
+## Gegen eine vorhandene Datenbank (Unraid und ähnliche)
 
-Die Datenbank ist das Template `postgresql18` aus den Community Apps
-(Host-Port 7432, Nutzer `postgres`, Daten unter `/mnt/cache/appdata/postgresql18`).
+Steht die Datenbank schon — auf Unraid etwa das Template `postgresql18` aus den
+Community Apps (Nutzer `postgres`) —, bringt das Paket keine zweite mit.
+Host und Port kommen aus `.env` (`JOURNALI_DB_HOST`, `JOURNALI_DB_PORT`).
 
 Der Server bringt die Oberfläche mit (Dockerfile baut sie mit Node in der
 ersten Stufe). Für den Server gibt es zwei Wege:
 
 1. **Image** — `Dockerfile` im Repo, gegen die vorhandene Datenbank mit
-   `compose.rossibox.yaml`: auf der rossibox im Checkout `cp .env.example .env`,
-   Passwort eintragen, `docker compose -f compose.rossibox.yaml up --build -d`
-   → `http://rossibox:8080`. Das Image baut die Oberfläche selbst (Node-Stufe),
+   `compose.extern.yaml`: auf dem Server im Checkout `cp .env.example .env`,
+   Host, Port und Passwort eintragen, `docker compose -f compose.extern.yaml up --build -d`
+   → `http://<host>:8080`. Das Image baut die Oberfläche selbst (Node-Stufe),
    die Plugins kommen per Bind-Mount aus dem Checkout, Jobs/Storage-Einstellung
    liegen im Volume `journali-jobs`. Neuer Stand = `git pull` und dasselbe
    Kommando; nur Plugin-Änderungen brauchen kein neues Image. Alle Prozess-Plugins

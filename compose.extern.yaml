@@ -1,13 +1,14 @@
-# Nur der Server — gegen die vorhandene Datenbank auf der rossibox (Template postgresql18, Host-Port 7432).
-# Aufruf auf der rossibox im Checkout:  docker compose -f compose.rossibox.yaml up --build -d
-# Passwort in .env (JOURNALI_DB_PASSWORD), siehe .env.example. Danach http://rossibox:8080
+# Nur der Server — gegen eine Datenbank, die es schon gibt (auf Unraid etwa das Template postgresql18).
+# Aufruf auf dem Server im Checkout:  docker compose -f compose.extern.yaml up --build -d
+# Host, Port und Passwort stehen in .env (JOURNALI_DB_HOST, JOURNALI_DB_PORT, JOURNALI_DB_PASSWORD),
+# siehe .env.example. Danach http://<host>:8080
 services:
   server:
     build: .
     ports:
       - "8080:8080"
     environment:
-      JOURNALI_DB: Host=localhost;Port=7432;Database=journali;Username=postgres
+      JOURNALI_DB: Host=${JOURNALI_DB_HOST};Port=${JOURNALI_DB_PORT:-5432};Database=journali;Username=postgres
       JOURNALI_DB_PASSWORD: ${JOURNALI_DB_PASSWORD}
       # Medien: postgres = Tabelle media_blob in derselben Datenbank — dann sehen PC und Container dasselbe.
       # Umstellen jederzeit unter ⚙ Einstellungen → ▨ Storage (media.json im Volume journali-jobs).
