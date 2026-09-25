@@ -2,8 +2,8 @@
   "key": "export",
   "version": "1.3.0",
   "label": {
-    "de": "Export: Tabelle",
-    "en": "Export: Table"
+    "de": "Tabelle (Job)",
+    "en": "Table (job)"
   },
   "description": {
     "de": "Job zu ⇪ Export → Tabelle (Basis-Plugin table): dieselbe Tabelle regelmäßig als Excel oder CSV in ein Verzeichnis — je Wurzel eine Datei, die letzten n bleiben. Mit Publikationsbaum: nur die Ausleitung (Freigabe für den Kanal, Markt in den Verkaufsländern), je Zeile der Rubrikpfad. Braucht table (Kern) und tasker (Jobs).",
@@ -68,7 +68,7 @@
         "key": "format",
         "label": "Format (xlsx oder csv)",
         "type": "text",
-        "default": "xlsx",
+        "default": "excel",
         "perJob": false
       },
       {

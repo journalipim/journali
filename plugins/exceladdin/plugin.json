@@ -1,0 +1,16 @@
+{
+  "key": "exceladdin",
+  "version": "0.1.0",
+  "label": {
+    "de": "Excel-Add-in",
+    "en": "Excel add-in"
+  },
+  "description": {
+    "de": "Aufgabenbereich in Excel (Office.js): Knoten suchen, Subitems oder alle Varianten darunter als Tabelle ins Blatt laden (Sicht, Sprache), in Excel pflegen — ausfüllen, Reihen, Formeln, Suchen & Ersetzen —, dann Speichern schreibt nur die geänderten Zellen als einen Stapel ins Journal. Spricht direkt mit /api; Manifest unter /plugins/exceladdin/manifest.xml.",
+    "en": "Task pane in Excel (Office.js): find a node, load its children or all variants below as a table (view, locale), edit in Excel, then Save writes only changed cells as one batch. Talks to /api directly; manifest at /plugins/exceladdin/manifest.xml."
+  },
+  "kind": "edit",
+  "runs": "office",
+  "entry": "taskpane.html",
+  "autoInstall": true
+}

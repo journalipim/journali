@@ -90,7 +90,7 @@ defineExpose({ wurzel, tabelle, vorschau, bauen, einspielen })
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">{{ $t("2 · Heraus") }}</td></tr>
       <tr><td class="attr"></td><td><div class="row">
         <button @click="bauen">{{ $t("Vorschau") }}</button>
-        <button class="primary" @click="herunterladen('xlsx')">{{ $t("⇪ Excel") }}</button>
+        <button class="primary" @click="herunterladen('excel')">{{ $t("⇪ Excel") }}</button>
         <button @click="herunterladen('csv')">{{ $t("⇪ CSV") }}</button>
         <span class="muted">{{ $t("eine Spalte je Ebene, eine Zeile je Gruppe") }}</span>
       </div></td></tr>

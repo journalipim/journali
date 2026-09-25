@@ -50,5 +50,5 @@ watch(() => props.id, load, { immediate: true })
 <template>
   <img v-if="!failed" :src="src" loading="lazy" alt="" @error="onError" />
   <div v-else-if="self" class="doc neg" :title="$t('Datei fehlt im Medienspeicher — Ursprung oder Kopierlauf (docs/betrieb.md)')">✗</div>
-  <div v-else class="doc" :title="$t('Noch keine Vorschau — der Job „Werkzeug: Vorschauen rechnen“ rechnet die erste Seite')">▤</div>
+  <div v-else class="doc" :title="$t('Noch keine Vorschau — der Job „Vorschauen rechnen“ rechnet die erste Seite')">▤</div>
 </template>

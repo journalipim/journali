@@ -26,7 +26,9 @@ const jobCount = key => jobs.value.filter(j => j.plugin === key).length
 // Leisten-Schalter nur, wenn das Plugin seine Gruppe allein bildet
 const railToggle = key => plugins.views.some(v => v.key === key && !baseTopics.value.has(topicOf(key, v.topic)) && (entries.value[topicOf(key, v.topic)] ?? []).every(e => e.plugin === key))
 function toggleRail(key) { const s = new Set(store.railOff); s.has(key) ? s.delete(key) : s.add(key); store.railOff = [...s]; store.save() }
-const KIND = { import: t('⇩ Import'), export: t('⇧ Export'), quality: t('✓ Qualität'), tool: t('⌁ Werkzeug'), output: t('▤ Ausgabe'), edit: t('✎ Pflege'), classification: t('⌗ Klassifikation') }
+// io: Import und Export desselben Formats in einem Plugin (table, csv, excel, json) — vorher stand dort „Import“,
+// obwohl sie beides können (25.09.2026)
+const KIND = { io: t('⇵ Import / Export'), import: t('⇩ Import'), export: t('⇧ Export'), quality: t('✓ Qualität'), tool: t('⌁ Werkzeug'), output: t('▤ Ausgabe'), edit: t('✎ Pflege'), classification: t('⌗ Klassifikation') }
 const TOPIC_LABEL = { import: t('⇩ Import'), export: t('⇪ Export'), analysis: t('✓ Datenanalyse'), jobs: t('⏱ Jobs'), datasheet: t('▤ Datenblatt'), tools: t('⌁ Werkzeuge') }
 const current = computed(() => plugins.list.find(p => p.key === cur.value) ?? null)
 const manifest = computed(() => current.value?.manifest ?? {})
@@ -167,7 +169,7 @@ function pick(k) { cur.value = k }
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar">
       <h1>⌁ {{ label(manifest) || current.key }}</h1><span class="mono muted">{{ current.key }}</span>
-      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? $t('⚙ Prozess') : manifest.runs === 'office' ? (current.key === 'onlyoffice' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : $t('▭ Browser') }}{{ services.length ? ' + ⚙ ' + (services.length > 1 ? services.length + ' ' + $t('Dienste') : $t('Prozess')) : '' }}</span>
+      <span class="muted">· {{ KIND[manifest.kind] ?? manifest.kind }} · {{ manifest.runs === 'process' ? $t('⚙ Prozess') : manifest.runs === 'office' ? (current.key === 'ooaddin' ? '▤ OnlyOffice' : '▤ Excel-Add-in') : $t('▭ Browser') }}{{ services.length ? ' + ⚙ ' + (services.length > 1 ? services.length + ' ' + $t('Dienste') : $t('Prozess')) : '' }}</span>
       <span class="grow" />
       <template v-if="current.onDisk && !current.installed"><button class="primary" :disabled="current.allowed === false" :title="current.allowed === false ? $t('Tarif {0}', [tarifOf(current)]) : ''" @click="act(`/api/plugins/${current.key}/install`)">{{ $t("⇩ installieren {0}", [current.diskVersion]) }}</button></template>
       <template v-else-if="current.installed">
@@ -195,11 +197,11 @@ function pick(k) { cur.value = k }
         <span v-for="r in manifest.requires ?? []" :key="r" class="chip" :class="{ neg: !plugins.active(r) }" :title="plugins.active(r) ? $t('braucht dieses Plugin — ist an') : $t('braucht dieses Plugin — ist aus, daher ohne Wirkung')" style="cursor:pointer" @click="pick(r)">{{ $t("braucht {0}", [r]) }}</span>
         <span v-for="d in plugins.dependents(current.key)" :key="d" class="chip muted" :title="$t('hängt an diesem Plugin — geht mit aus')" style="cursor:pointer" @click="pick(d)">↳ {{ d }}</span>
       </div>
-      <div class="section" v-if="manifest.runs === 'office' && current.key === 'onlyoffice'">
+      <div class="section" v-if="manifest.runs === 'office' && current.key === 'ooaddin'">
         <h2>{{ $t("▤ In OnlyOffice einrichten") }}</h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ ' ' + $t("Paket:") + ' ' }}<a :href="`/plugins/${current.key}/package.plugin`" download="journali.plugin">{{ $t("journali.plugin herunterladen") }}</a> <span :title="$t('In OnlyOffice: Tabellen → Plugins → Plugin-Manager → Plugin hinzufügen.')">{{ $t("— einbinden") }}</span>{{ ' ' + $t("· Anleitung:") + ' ' }}<a :href="`/plugins/${current.key}/README.md`" target="_blank">{{ $t("README") }}</a>{{ $t(". Leiste:") + ' ' }}<a :href="`/plugins/${current.key}/index.html`" target="_blank">{{ $t("index.html") }}</a>{{ ' ' + $t("(ausserhalb von OnlyOffice nur zur Ansicht).") + ' ' }}</div>
       </div>
-      <div class="section" v-if="manifest.runs === 'office' && current.key !== 'onlyoffice'">
+      <div class="section" v-if="manifest.runs === 'office' && current.key !== 'ooaddin'">
         <h2>{{ $t("▤ In Excel einrichten") }}</h2>
         <div class="muted" style="font-size:12px;line-height:1.6">{{ ' ' + $t("Manifest:") + ' ' }}<a :href="`/plugins/${current.key}/manifest.xml`" download="manifest.xml">{{ $t("manifest.xml herunterladen") }}</a> <span :title="$t('In Excel über einen vertrauenswürdigen Add-In-Katalog (freigegebener Ordner) oder „Mein Add-In hochladen“.')">{{ $t("— einbinden") }}</span>{{ ' ' + $t("· Anleitung:") + ' ' }}<a :href="`/plugins/${current.key}/README.md`" target="_blank">{{ $t("README") }}</a>{{ $t(". Aufgabenbereich:") + ' ' }}<a :href="`/plugins/${current.key}/taskpane.html`" target="_blank">{{ $t("taskpane.html") }}</a> <span :title="$t('Ausserhalb von Excel nur zur Ansicht.')">{{ $t("· Ansicht") }}</span>{{ ' ' + $t("· HTTPS ausser für localhost") + ' ' }}</div>
       </div>

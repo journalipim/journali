@@ -2,8 +2,8 @@
   "key": "backup",
   "version": "2.0.0",
   "label": {
-    "de": "Werkzeug: Sicherung",
-    "en": "Tool: Backup"
+    "de": "Sicherung",
+    "en": "Backup"
   },
   "description": {
     "de": "Sichert das ganze System in ein Verzeichnis: Journal (alle Einträge), Medien, die Dateien neben dem Journal (auth.json, media.json, jobs/secrets.json) und die Plugin-Verzeichnisse ohne node_modules. Zurück geht die Sicherung in ein leeres System — Einstellungen → Sicherung. Je Lauf ein Ordner mit Zeitstempel, ältere werden nach keep weggeräumt.",

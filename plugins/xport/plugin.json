@@ -2,8 +2,8 @@
   "key": "xport",
   "version": "1.0.0",
   "label": {
-    "de": "Export: Vorlagen",
-    "en": "Export: Templates"
+    "de": "Vorlagen",
+    "en": "Templates"
   },
   "description": {
     "de": "Export nach Vorlage: die Vorlage ist Text mit {feldern}, Schleifen und optionalen Abschnitten und steht mit Zuordnung, Kopfwerten, Merkmalen (ETIM), Teilbaum und Sprache in einem Profil. Startvorlagen: BMEcat 2005 mit ETIM-Merkmalen, Google Merchant, JSON — oder die eigene Definition eines Kunden. Vorschau und Herunterladen in der Oberfläche, als Job regelmäßig in ein Verzeichnis. Ohne Datenbankzugriff, alles über /api.",

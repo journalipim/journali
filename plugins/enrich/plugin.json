@@ -2,8 +2,8 @@
   "key": "enrich",
   "version": "1.0.0",
   "label": {
-    "de": "Qualität: Anreicherung (KI)",
-    "en": "Quality: Enrichment (AI)"
+    "de": "Anreicherung (KI)",
+    "en": "Enrichment (AI)"
   },
   "description": {
     "de": "Fehlende Werte gewählter Attribute finden und ergänzen — für Handelsware, deren Daten beim Hersteller liegen: Vorschläge aus Regeln, von der KI aus den vorhandenen Werten, oder mit Recherche im Internet (Hersteller, Typ, EAN → Datenblatt, Katalog), jeder Wert mit Quelle und Sicherheit. Nichts wird ohne Haken geschrieben; übernommen wird als ein Stapel ins Journal. Eigener KI-Schlüssel (Einstellungen → KI), journali bietet keine KI an.",

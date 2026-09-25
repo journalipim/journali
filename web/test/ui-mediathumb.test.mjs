@@ -1,6 +1,6 @@
 // Kachel eines Mediums. Bei einem Bild rechnet der Browser die Vorschau
 // notfalls selbst aus dem Original; bei einem PDF geht das nicht — ein PDF lädt nicht in ein <img>, der Versuch würde
-// in jeder Kachel scheitern. Dort wartet die Kachel auf den Job „Werkzeug: Vorschauen rechnen“ und zeigt solange ▤.
+// in jeder Kachel scheitern. Dort wartet die Kachel auf den Job „Vorschauen rechnen“ und zeigt solange ▤.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises } from './ui.mjs'

@@ -1,4 +1,4 @@
-(function(){const s=document.createElement('style');s.textContent="\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen */\n.section[data-v-c888de9d] { overflow-x: auto;\n}\ntable.map[data-v-c888de9d] { min-width: 960px;\n}\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-c888de9d] { overflow-x: auto;\n}\ntable.cols[data-v-c888de9d] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-c888de9d] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-c888de9d] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-c888de9d] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-c888de9d] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-c888de9d] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-c888de9d] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-c888de9d] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-c888de9d] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-c888de9d] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-c888de9d], .tstep input[type=text][data-v-c888de9d] { font-size: 12px;\n}\n.fld[data-v-c888de9d] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n/* Reiter, die wie Reiter aussehen */\n.tabs[data-v-c888de9d] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-c888de9d] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-c888de9d]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-c888de9d]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-c888de9d]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-c888de9d] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-c888de9d] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-c888de9d] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-c888de9d] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-c888de9d] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist */\n.x.on[data-v-c888de9d] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-c888de9d] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-c888de9d] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-c888de9d] { font-weight: 400;\n}\n.drop.over[data-v-c888de9d] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n/* ohne Datei ein grosser Ablagebereich */\n.drop.empty[data-v-c888de9d] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-c888de9d] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-c888de9d] { cursor: pointer;\n}\n.recent .chip.dim[data-v-c888de9d] { opacity: .55; cursor: default;\n}\n.btn[data-v-c888de9d] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-c888de9d] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-c888de9d] { opacity: .5;\n}\n.samples[data-v-c888de9d] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-c888de9d] { font-size: 13px;\n}\n.out[data-v-c888de9d] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-c888de9d] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-c888de9d] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-c888de9d]:hover { background: var(--hover);\n}\n\n.form[data-v-2e0e9b0e] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-2e0e9b0e] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-2e0e9b0e] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-2e0e9b0e] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-2e0e9b0e] { flex: 1; min-width: 0;\n}\n.tab[data-v-2e0e9b0e] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-2e0e9b0e], .tab.router-link-active[data-v-2e0e9b0e] { background: var(--accent-soft); color: var(--text);\n}\n";document.head.append(s)})();
+(function(){const s=document.createElement('style');s.textContent="\n/* Zuordnung als Zeilen: feste Mindestbreite, im schmalen Fenster nach rechts scrollen statt Felder quetschen */\n.section[data-v-c888de9d] { overflow-x: auto;\n}\ntable.map[data-v-c888de9d] { min-width: 960px;\n}\n/* Zuordnung als Spalten (wie Excel): erste Spalte klebt, jede Dateispalte 200 px */\n.colsWrap[data-v-c888de9d] { overflow-x: auto;\n}\ntable.cols[data-v-c888de9d] { border-collapse: separate; border-spacing: 0;\n}\ntable.cols th.stick[data-v-c888de9d] { position: sticky; left: 0; background: var(--pane); z-index: 1; width: 70px; min-width: 70px; border-right: 1px solid var(--line); box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); text-align: left; color: var(--muted); font-weight: 600; font-size: 11px; vertical-align: top;\n}\ntable.cols td[data-v-c888de9d] { min-width: 200px; max-width: 200px; vertical-align: top; overflow: hidden; text-overflow: ellipsis;\n}\ntable.cols td.off[data-v-c888de9d] { opacity: .5;\n}\ntable.cols tr.sample td[data-v-c888de9d] { white-space: nowrap; font-size: 12px;\n}\n.layout button[data-v-c888de9d] { border: 1px solid var(--line); background: none; color: var(--muted); padding: 1px 8px; font-size: 11px; font-weight: 400;\n}\n.layout button.on[data-v-c888de9d] { background: var(--accent-soft); color: var(--text); border-color: var(--accent);\n}\n/* Umwandlung je Spalte (ƒ): Kette unter der Zeile */\n.steps-row td[data-v-c888de9d] { background: var(--bg); padding: 4px 8px 6px 30px;\n}\n.tsteps[data-v-c888de9d] { display: flex; flex-direction: column; gap: 3px;\n}\n.tstep[data-v-c888de9d] { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 12px;\n}\n.tstep select[data-v-c888de9d], .tstep input[type=text][data-v-c888de9d] { font-size: 12px;\n}\n.fld[data-v-c888de9d] { display: inline-flex; gap: 4px; align-items: center; font-size: 11px;\n}\n/* Vorschau: Reiter neu / geändert / unverändert; Werte alt → neu */\n/* Reiter, die wie Reiter aussehen */\n.tabs[data-v-c888de9d] { display: inline-flex; gap: 0; margin-left: 8px;\n}\n.tabs button[data-v-c888de9d] { border: 1px solid var(--line); background: var(--bg); padding: 2px 12px; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 0;\n}\n.tabs button[data-v-c888de9d]:first-child { border-radius: 6px 0 0 6px;\n}\n.tabs button[data-v-c888de9d]:last-child { border-radius: 0 6px 6px 0;\n}\n.tabs button[data-v-c888de9d]:hover { background: var(--hover);\n}\n.tabs button.on[data-v-c888de9d] { background: var(--accent); color: #fff !important; border-color: var(--accent);\n}\ntable.diff td[data-v-c888de9d] { font-size: 12px; white-space: normal;\n}\ntable.diff td.old[data-v-c888de9d] { color: var(--muted); text-decoration: line-through; max-width: 300px;\n}\ntable.diff td.new[data-v-c888de9d] { color: var(--pos); max-width: 300px;\n}      /* neuer Wert (vorher keiner) */\ntable.diff td.chg[data-v-c888de9d] { color: var(--warn); max-width: 300px;\n}      /* geänderter Wert */\n/* ƒ leuchtet, wenn eine Umwandlung hinterlegt ist */\n.x.on[data-v-c888de9d] { background: var(--accent); color: #fff; font-weight: 700; border-radius: 4px; padding: 0 6px;\n}\n.section[data-v-c888de9d] { padding: 8px; border-bottom: 1px solid var(--line);\n}\n.section h2[data-v-c888de9d] { font-size: 12px; margin: 0 0 6px; font-weight: 600;\n}\n.section h2 .muted[data-v-c888de9d] { font-weight: 400;\n}\n.drop.over[data-v-c888de9d] { outline: 2px dashed var(--accent); outline-offset: -2px;\n}\n/* ohne Datei ein grosser Ablagebereich */\n.drop.empty[data-v-c888de9d] { min-height: 84px; border: 2px dashed var(--line); border-radius: 6px; margin: 4px 0; flex-wrap: wrap;\n}\n.recent[data-v-c888de9d] { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; white-space: normal;\n}\n.recent .chip[data-v-c888de9d] { cursor: pointer;\n}\n.recent .chip.dim[data-v-c888de9d] { opacity: .55; cursor: default;\n}\n.btn[data-v-c888de9d] { display: inline-block; padding: 2px 10px; border-radius: 6px; cursor: pointer;\n}\n.map td[data-v-c888de9d] { vertical-align: top; padding: 3px 4px;\n}\n.map tr.off td[data-v-c888de9d] { opacity: .5;\n}\n.samples[data-v-c888de9d] { font-size: 11px; white-space: normal; max-width: 260px;\n}\n.stats[data-v-c888de9d] { font-size: 13px;\n}\n.out[data-v-c888de9d] { font-size: 11px; max-height: 400px; overflow: auto; background: var(--bg); padding: 6px; border-radius: 6px;\n}\n.picker[data-v-c888de9d] { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px;\n}\n.pick[data-v-c888de9d] { display: flex; align-items: center; gap: 8px; height: 24px; padding: 0 8px; white-space: nowrap; cursor: pointer;\n}\n.pick[data-v-c888de9d]:hover { background: var(--hover);\n}\n\n.form[data-v-510b41ba] { width: 100%; border-bottom: 1px solid var(--line);\n}\n.form td[data-v-510b41ba] { height: 30px; vertical-align: middle; white-space: normal; padding: 2px 4px;\n}\n.form td.attr[data-v-510b41ba] { color: var(--muted); white-space: nowrap; padding-left: 8px;\n}\n.row[data-v-510b41ba] { display: flex; gap: 6px; align-items: center;\n}\n.row > input[data-v-510b41ba] { flex: 1; min-width: 0;\n}\n.tab[data-v-510b41ba] { padding: 2px 10px; border-radius: 4px; color: var(--muted); text-decoration: none; font-size: 13px;\n}\n.tab.on[data-v-510b41ba], .tab.router-link-active[data-v-510b41ba] { background: var(--accent-soft); color: var(--text);\n}\n";document.head.append(s)})();
 const m$1 = window.journali.vue;
 const Fragment = m$1.Fragment;
 const computed = m$1.computed;
@@ -3571,14 +3571,14 @@ const download = (blob, name) => {
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 1e3);
 };
-const XLSX_URL = "/plugins/xlsx/xlsx.mjs";
+const XLSX_URL = "/plugins/excel/xlsx.mjs";
 const loadXlsx = () => import(
   /* @vite-ignore */
   XLSX_URL
 );
-const POLISH_URL = "/plugins/xlsx/polish.mjs";
+const POLISH_URL = "/plugins/excel/polish.mjs";
 async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
-  const raw = X.write(wb, { type: "array", bookType: "xlsx" });
+  const raw = X.write(wb, { type: "array", bookType: "excel" });
   try {
     const { polish } = await import(
       /* @vite-ignore */
@@ -3700,7 +3700,7 @@ const _hoisted_22$1 = {
 };
 const _hoisted_23$1 = { key: 0 };
 const _hoisted_24$1 = { class: "attr" };
-const _hoisted_25$1 = { value: "xlsx" };
+const _hoisted_25$1 = { value: "excel" };
 const _hoisted_26 = { value: "csv" };
 const _hoisted_27 = { class: "row" };
 const _hoisted_28 = ["onClick", "title"];
@@ -3735,7 +3735,7 @@ const _sfc_main$1 = {
     const ownOnly = ref(saved.ownOnly ?? false);
     const viewKey = ref(saved.viewKey ?? "");
     const props = __props;
-    const format = ref(props.festesFormat || saved.format || "xlsx");
+    const format = ref(props.festesFormat || saved.format || "excel");
     const rootRows = computed(() => roots.value.map((id) => tree.byId.get(id)).filter(Boolean));
     const busy = ref("");
     const table = ref(null);
@@ -4269,7 +4269,7 @@ const _sfc_main$1 = {
     };
   }
 };
-const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-2e0e9b0e"]]);
+const ExportView = /* @__PURE__ */ _export_sfc(_sfc_main$1, [["__scopeId", "data-v-510b41ba"]]);
 const IdSpalte = "journali_id";
 const ebeneSpalte = (n) => `Ebene ${n}`;
 function pfadVon(byId, id, wurzel) {
@@ -4459,9 +4459,9 @@ const _hoisted_25 = {
 };
 const _sfc_main = {
   __name: "StrukturView",
-  setup(__props) {
+  setup(__props, { expose: __expose }) {
     const route = useRoute();
-    const wurzel = ref(route.query.node ? [route.query.node] : []);
+    const wurzel = ref(route?.query?.node ? [route.query.node] : []);
     const busy = ref("");
     const tabelle = ref(null);
     const vorschau = ref(null);
@@ -4538,6 +4538,7 @@ const _sfc_main = {
         store.toast(e.message);
       }
     }
+    __expose({ wurzel, tabelle, vorschau, bauen, einspielen });
     return (_ctx, _cache) => {
       return openBlock(), createElementBlock("div", _hoisted_1, [
         createElementVNode("div", _hoisted_2, [
@@ -4647,7 +4648,7 @@ const _sfc_main = {
                     "button",
                     {
                       class: "primary",
-                      onClick: _cache[1] || (_cache[1] = ($event) => herunterladen("xlsx"))
+                      onClick: _cache[1] || (_cache[1] = ($event) => herunterladen("excel"))
                     },
                     toDisplayString(_ctx.$t("⇪ Excel")),
                     1
@@ -4834,10 +4835,10 @@ const datenRoles = ["product"];
 const entry = {
   views: [
     { path: "import", topic: "import", order: 10, needs: "csv", label: t("CSV-Import"), icon: "⊞", hint: t("CSV und TSV — mit Datenmapper"), component: ImportView, props: { nur: [".csv", ".tsv", ".txt"] } },
-    { path: "import-xlsx", topic: "import", order: 11, needs: "xlsx", label: t("Excel-Import"), icon: "⊞", hint: t("Arbeitsmappen (.xlsx) — mit Datenmapper"), component: ImportView, props: { nur: [".xlsx", ".xlsm"] } },
+    { path: "import-xlsx", topic: "import", order: 11, needs: "excel", label: t("Excel-Import"), icon: "⊞", hint: t("Arbeitsmappen (.xlsx) — mit Datenmapper"), component: ImportView, props: { nur: [".xlsx", ".xlsm"] } },
     { path: "import-paste", topic: "import", order: 90, label: t("Zwischenablage"), icon: "⎘", hint: t("aus Excel kopieren und hier einfügen — erste Zeile sind die Spaltennamen"), component: ImportView, props: { paste: true } },
     { path: "export", topic: "export", order: 10, needs: "csv", label: t("CSV-Export"), icon: "⊞", hint: t("CSV (; UTF-8) — die Form, die der CSV-Import liest"), component: ExportView, props: { festesFormat: "csv" } },
-    { path: "export-xlsx", topic: "export", order: 11, needs: "xlsx", label: t("Excel-Export"), icon: "⊞", hint: t("Arbeitsmappe (.xlsx) — die Form, die der Excel-Import liest"), component: ExportView, props: { festesFormat: "xlsx" } },
+    { path: "export-xlsx", topic: "export", order: 11, needs: "excel", label: t("Excel-Export"), icon: "⊞", hint: t("Arbeitsmappe (.xlsx) — die Form, die der Excel-Import liest"), component: ExportView, props: { festesFormat: "excel" } },
     { path: "struktur", topic: "export", order: 20, label: t("Struktur"), icon: "⑂", hint: t("den Baum als Tabelle heraus, in Excel entwerfen, in einem Zug hinein — ohne Inhalte"), component: _sfc_main }
   ],
   // Excel am Knoten

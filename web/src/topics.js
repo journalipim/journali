@@ -20,7 +20,8 @@ export const TOPICS = [
 ]
 // Gruppen, die ein eingeschaltetes Basis-Plugin besitzt (table: import, export; da: analysis; tasker: jobs) — immer in der Leiste
 export const baseTopics = computed(() => new Set(plugins.list.filter(p => p.enabled && Array.isArray(p.manifest?.base)).flatMap(p => p.manifest.base)))
-export const KIND_TOPIC = { import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', edit: 'tools', tool: 'tools', classification: 'classification' }
+// io bringt beides mit; ohne eigenes Thema an der Ansicht zaehlt Import - die Export-Kacheln nennen ihr Thema selbst
+export const KIND_TOPIC = { io: 'import', import: 'import', export: 'export', output: 'datasheet', quality: 'analysis', edit: 'tools', tool: 'tools', classification: 'classification' }
 
 export function topicOf(key, explicit = null) {
   if (explicit) return explicit

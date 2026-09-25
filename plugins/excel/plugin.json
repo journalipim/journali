@@ -1,16 +1,19 @@
 {
   "key": "excel",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "label": {
-    "de": "Pflege: Excel-Add-in",
-    "en": "Editing: Excel add-in"
+    "de": "Excel",
+    "en": "Excel"
   },
   "description": {
-    "de": "Aufgabenbereich in Excel (Office.js): Knoten suchen, Subitems oder alle Varianten darunter als Tabelle ins Blatt laden (Sicht, Sprache), in Excel pflegen — ausfüllen, Reihen, Formeln, Suchen & Ersetzen —, dann Speichern schreibt nur die geänderten Zellen als einen Stapel ins Journal. Spricht direkt mit /api; Manifest unter /plugins/excel/manifest.xml.",
-    "en": "Task pane in Excel (Office.js): find a node, load its children or all variants below as a table (view, locale), edit in Excel, then Save writes only changed cells as one batch. Talks to /api directly; manifest at /plugins/excel/manifest.xml."
+    "de": "Excel-Arbeitsmappen (.xlsx, .xls, .ods) als Tabelle für ⇩ Import → Tabelle — jedes Blatt wählbar, erste Zeile = Spaltennamen. Liest SheetJS (xlsx.mjs, Apache-2.0) im Browser.",
+    "en": "Excel workbooks (.xlsx, .xls, .ods) as a table — any sheet, first row = column names. Uses SheetJS (xlsx.mjs, Apache-2.0) in the browser."
   },
-  "kind": "edit",
-  "runs": "office",
-  "entry": "taskpane.html",
+  "kind": "io",
+  "runs": "browser",
+  "entry": "entry.js",
+  "requires": [
+    "table"
+  ],
   "autoInstall": true
 }

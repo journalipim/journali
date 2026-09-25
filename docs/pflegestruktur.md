@@ -328,13 +328,13 @@ fortsetzen (Zahlen, Art-001), Strg+H Suchen & Ersetzen (Bereich/Tabelle,
 Gross/Klein, ganze Zelle), Entf leert, Strg+C/V mit Excel. Kein Browser-Limit:
 der Engpass war das fehlende Cursor-Modell, nicht der Client.
 
-**Excel-Add-in** (Plugin `excel`, Office.js, 17.09.2026): Aufgabenbereich in
+**Excel-Add-in** (Plugin `exceladdin`, Office.js, 17.09.2026): Aufgabenbereich in
 Excel, Knoten suchen, Tabelle ins Blatt laden, in Excel pflegen, „Geändertes
 speichern" schreibt nur die Differenz zum Schnappschuss als einen Stapel.
-Manifest unter `/plugins/excel/manifest.xml` (Origin vom Server eingesetzt);
+Manifest unter `/plugins/exceladdin/manifest.xml` (Origin vom Server eingesetzt);
 auf einem Server im Netz braucht es HTTPS. **OnlyOffice-Plugin** (`plugins/onlyoffice`): gleiche Bedienung als Seitenleiste in
 OnlyOffice Tabellen, Installation über den Plugin-Manager mit
-`/plugins/onlyoffice/package.plugin` (ZIP vom Server), Schnappschuss im
+`/plugins/ooaddin/package.plugin` (ZIP vom Server), Schnappschuss im
 versteckten Blatt `_journali`. Der xlsx-Roundtrip bleibt der Weg, der nichts
 voraussetzt.
 
@@ -1395,7 +1395,7 @@ anderen. Alte Pfade (`/import/table`, `/export/table`, `/import/ixp`,
   Typ aus den Werten; Werte normalisiert (Dezimalkomma, ja/nein, Datum,
   Listenwert über Label); vorhandene Knoten über Id, SKU, externe Kennung →
   nur Änderungen; Plan vor dem Schreiben.
-- **Mitgelieferte Plugins**: `csv`, `json`, `xlsx` (SheetJS, Apache-2.0)
+- **Mitgelieferte Plugins**: `csv`, `json`, `excel` (SheetJS, Apache-2.0)
   als Importer; `datasheet` (Vorlagen mit Platzhaltern, Designer, Blatt
   im Kontextmenü); `dq` (Regeln, Befunde je Teilbaum, Sprung zum Knoten; seit 19.09. Basis-Plugin `da`).
 - **Im Kern statt Plugin**, weil es der Pflegeweg selbst ist:

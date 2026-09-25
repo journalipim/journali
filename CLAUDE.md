@@ -112,8 +112,13 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   Prozess-Plugins als Kindprozess des Servers, beide nur über `/api`.
   **Basis-Plugins** (`base: [Gruppen]`) bringen die Grundfunktion einer Gruppe der Leiste
   mit und sind der Container für Ergänzungen (`requires`): `table` (Import/Export Tabelle),
-  `da` (Datenanalyse), `tasker` (Jobs). Ergänzungen: `csv`, `xlsx`, `json`, `ixp`, `solr` →
+  `da` (Datenanalyse), `tasker` (Jobs). Ergänzungen: `csv`, `excel`, `json`, `ixp`, `solr` →
   table; `dpp`, `ppwr` → da; `backup`, `export` (Job) → tasker; `datasheet` eigene Gruppe.
+  **Ein Format, ein Plugin**: `csv`, `excel` und `json` bringen Import **und** Export ihres Formats mit — ihre Art
+  ist `io` (⇵ Import / Export), nicht `import`. `ixp` und `solr` sind nur Import. Die Schlüssel der Office-Add-ins
+  heißen `exceladdin` und `ooaddin` (25.09.2026), damit `excel` das Formatplugin ist.
+  **Kein Präfix in der Bezeichnung**: die Art steht als eigene Spalte in ⑁ Plugins — ein Plugin heißt „Sicherung“,
+  nicht „Werkzeug: Sicherung“.
   Plugins mit Vue-Ansichten haben `src/` und ein gebautes `entry.js` (im Repo; `npm run
   build` in `web/` baut Oberfläche und Plugins, `node build-plugins.mjs <key>` eines) —
   sie importieren `vue`, `vue-router`, `journali` und teilen die Instanzen der Oberfläche

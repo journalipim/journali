@@ -166,7 +166,7 @@
  "Abbrechen": "Cancel",
  "✓ {0} zuordnen": "✓ Assign {0}",
  "Datei fehlt im Medienspeicher — Ursprung oder Kopierlauf (docs/betrieb.md)": "File missing in the media store — origin or copy run (docs/betrieb.md)",
- "Noch keine Vorschau — der Job „Werkzeug: Vorschauen rechnen“ rechnet die erste Seite": "No preview yet — the job “Tool: Derive previews” renders the first page",
+ "Noch keine Vorschau — der Job „Vorschauen rechnen“ rechnet die erste Seite": "No preview yet — the job “Derive previews” renders the first page",
  "gespeichertes Profil laden": "load a saved profile",
  "— Profil —": "— Profile —",
  "Name zum Speichern (neu oder vorhanden = überschreiben)": "Name to save under (new, or existing = overwrite)",

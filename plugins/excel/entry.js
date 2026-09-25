@@ -7,7 +7,7 @@ async function lib(ctx) { if (!XLSX) XLSX = await import(ctx.plugin.base + 'xlsx
 
 export default {
   importers: [{
-    key: 'xlsx', label: t('Excel'), accept: ['.xlsx', '.xlsm', '.xls', '.ods'],
+    key: 'excel', label: t('Excel'), accept: ['.xlsx', '.xlsm', '.xls', '.ods'],
     async parse(file, ctx) {
       const X = await lib(ctx)
       const wb = X.read(await file.arrayBuffer(), { type: 'array', cellDates: true })

@@ -35,7 +35,7 @@ export const DATE_FORMATS = [
   ['auto', 'raten (ISO, deutsch, Unix, Excel …)'],
   ['dd.MM.yyyy', 'TT.MM.JJJJ (deutsch, auch TT.MM.JJ)'], ['dd/MM/yyyy', 'TT/MM/JJJJ (britisch)'], ['MM/dd/yyyy', 'MM/TT/JJJJ (US)'], ['dd-MM-yyyy', 'TT-MM-JJJJ'],
   ['yyyy-MM-dd', 'JJJJ-MM-TT (ISO, auch mit Uhrzeit)'], ['yyyy/MM/dd', 'JJJJ/MM/TT'], ['yyyyMMdd', 'JJJJMMTT'],
-  ['unix', 'Unix-Zeit in Sekunden'], ['unixms', 'Unix-Zeit in Millisekunden'], ['excel', 'Excel-Zahl (Tage seit 1900)'],
+  ['unix', 'Unix-Zeit in Sekunden'], ['unixms', 'Unix-Zeit in Millisekunden'], ['exceladdin', 'Excel-Zahl (Tage seit 1900)'],
 ]
 const pad = n => String(n).padStart(2, '0')
 const iso = (y, m, d) => { const yy = Number(y), mm = Number(m), dd = Number(d); if (!(mm >= 1 && mm <= 12 && dd >= 1 && dd <= 31)) return null; const Y = yy < 100 ? (yy < 70 ? 2000 + yy : 1900 + yy) : yy; return `${Y}-${pad(mm)}-${pad(dd)}` }
@@ -55,12 +55,12 @@ export function parseDate(t, format = 'auto') {
       case 'yyyyMMdd': return (m = t.match(/^(\d{4})(\d{2})(\d{2})$/)) ? iso(m[1], m[2], m[3]) : null
       case 'unix': return /^-?\d{9,11}$/.test(t) ? fromEpoch(Number(t) * 1000) : null
       case 'unixms': return /^-?\d{12,14}$/.test(t) ? fromEpoch(Number(t)) : null
-      case 'excel': { if (!/^\d{1,6}(\.\d+)?$/.test(t)) return null; const n = Number(t); if (n < 60 || n > 2958465) return null; return fromEpoch(Date.UTC(1899, 11, 30) + Math.floor(n) * 864e5) }   // Excel: Tag 1 = 1.1.1900, mit dem 1900-Schaltjahr-Fehler ab Tag 60
+      case 'exceladdin': { if (!/^\d{1,6}(\.\d+)?$/.test(t)) return null; const n = Number(t); if (n < 60 || n > 2958465) return null; return fromEpoch(Date.UTC(1899, 11, 30) + Math.floor(n) * 864e5) }   // Excel: Tag 1 = 1.1.1900, mit dem 1900-Schaltjahr-Fehler ab Tag 60
       default: return null
     }
   }
   if (f !== 'auto') return tryF(f)
-  for (const fmt of ['yyyy-MM-dd', 'yyyy/MM/dd', 'yyyyMMdd', 'dd.MM.yyyy', 'dd-MM-yyyy', 'dd/MM/yyyy', 'unixms', 'unix', 'excel']) { const r = tryF(fmt); if (r) return r }
+  for (const fmt of ['yyyy-MM-dd', 'yyyy/MM/dd', 'yyyyMMdd', 'dd.MM.yyyy', 'dd-MM-yyyy', 'dd/MM/yyyy', 'unixms', 'unix', 'exceladdin']) { const r = tryF(fmt); if (r) return r }
   return null
 }
 const fill = (t, v) => S(t).replace(/\{\}/g, v)

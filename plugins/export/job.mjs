@@ -13,7 +13,7 @@ const server = (serverArg || E.JOURNALI_JOURNALI || 'http://localhost:5000').rep
 const actor = actorArg || E.JOURNALI_ACTOR || 'job:export'
 const root = rootArg || E.JOURNALI_ROOT || ''
 const dir = path.resolve(dirArg || E.JOURNALI_DIR || 'export')
-const format = (fmtArg || E.JOURNALI_FORMAT || 'xlsx').toLowerCase()
+const format = (fmtArg || E.JOURNALI_FORMAT || 'excel').toLowerCase()
 const locales = (locArg || E.JOURNALI_LOCALES || '').split(/[,\s]+/).filter(Boolean)
 const role = roleArg || E.JOURNALI_ROLE || ''
 const viewKey = viewArg || E.JOURNALI_VIEW || ''
@@ -31,7 +31,7 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
   fs.mkdirSync(dir, { recursive: true })
   const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
   let X = null
-  if (format === 'xlsx') X = await import(new URL('../xlsx/xlsx.mjs', import.meta.url).href)
+  if (format === 'excel') X = await import(new URL('../xlsx/xlsx.mjs', import.meta.url).href)
   // Ausleitung eines Publikationsbaums: die Zeilen sind die ausgeleiteten Produkte (und ihre ausgeleiteten Varianten), je Rubrik einmal; die Pflegebaum-Wurzeln liefern die Tabelle
   let roots, only = null, pathOf = null, channel = '', at = null
   if (pub) {
@@ -58,9 +58,9 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
     const t = await build({ api, model }, { root: r.id, role, locales: locs, ownOnly, viewKey, channel, only, at, extra: pathOf ? [{ key: 'rubric', of: id => (pathOf.get(id) ?? []).join(' | ') }] : [], say: m => console.log(m) })
     if (only && !t.count) { console.log(`${r.label}: nichts in der Ausleitung`); continue }
     const safe = String(r.file ?? r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 40)
-    const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.${format === 'csv' ? 'csv' : 'xlsx'}`)   // Job-Key davor: Stände je Job
+    const file = path.join(dir, `${jobKey}${safe}-${r.id}-${stamp}.${format === 'csv' ? 'csv' : 'excel'}`)   // Job-Key davor: Stände je Job
     if (format === 'csv') fs.writeFileSync(file, toCsv(t), 'utf8')
-    else fs.writeFileSync(file, Buffer.from(X.write(workbook(X, t), { type: 'array', bookType: 'xlsx' })))
+    else fs.writeFileSync(file, Buffer.from(X.write(workbook(X, t), { type: 'array', bookType: 'excel' })))
     console.log(`${file}: ${t.count} Zeilen, ${t.columns.length} Spalten, ${(fs.statSync(file).size / 1024).toFixed(0)} KB`)
     const old = fs.readdirSync(dir).filter(f => f.startsWith(jobKey) && f.includes(`-${r.id}-`) && /\.(xlsx|csv)$/.test(f)).sort()
     for (const f of old.slice(0, Math.max(0, old.length - keep))) { fs.unlinkSync(path.join(dir, f)); console.log(`alt entfernt: ${f}`) }

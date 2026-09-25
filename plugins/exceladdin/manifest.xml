@@ -12,7 +12,7 @@
   <Description DefaultValue="Produktdaten aus journali im Blatt pflegen: laden, in Excel bearbeiten, nur Geändertes zurückschreiben."/>
   <IconUrl DefaultValue="{{ORIGIN}}/logo-32.png"/>
   <HighResolutionIconUrl DefaultValue="{{ORIGIN}}/logo-128.png"/>
-  <SupportUrl DefaultValue="{{ORIGIN}}/plugins/excel/README.md"/>
+  <SupportUrl DefaultValue="{{ORIGIN}}/plugins/exceladdin/README.md"/>
   <AppDomains>
     <AppDomain>{{ORIGIN}}</AppDomain>
   </AppDomains>
@@ -20,7 +20,7 @@
     <Host Name="Workbook"/>
   </Hosts>
   <DefaultSettings>
-    <SourceLocation DefaultValue="{{ORIGIN}}/plugins/excel/taskpane.html"/>
+    <SourceLocation DefaultValue="{{ORIGIN}}/plugins/exceladdin/taskpane.html"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -65,7 +65,7 @@
         <bt:Image id="journali.Icon80" DefaultValue="{{ORIGIN}}/logo-128.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="journali.Taskpane" DefaultValue="{{ORIGIN}}/plugins/excel/taskpane.html"/>
+        <bt:Url id="journali.Taskpane" DefaultValue="{{ORIGIN}}/plugins/exceladdin/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="journali.Group.Label" DefaultValue="journali"/>

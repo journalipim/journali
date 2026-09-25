@@ -13,7 +13,7 @@ function welt() {
   plugins.list = [
     { key: 'csv', version: '1.0.0', installed: true, enabled: true, onDisk: true, manifest: { kind: 'import', label: { de: 'Import: CSV / TSV' } } },
     { key: 'etim', version: '2.0.0', installed: true, enabled: true, onDisk: true, manifest: { kind: 'class', label: { de: 'Klassifikation: ETIM' } } },
-    { key: 'excel', version: '0.1.0', installed: true, enabled: false, onDisk: true, manifest: { kind: 'tool', label: { de: 'Pflege: Excel-Add-in' } } },
+    { key: 'exceladdin', version: '0.1.0', installed: true, enabled: false, onDisk: true, manifest: { kind: 'tool', label: { de: 'Pflege: Excel-Add-in' } } },
     { key: 'xliff', version: '1.10.0', installed: true, enabled: true, onDisk: true, manifest: { kind: 'tool', label: { de: 'Werkzeug: Übersetzung (XLIFF)' } } },
     { key: 'rag', version: '1.0.0', installed: false, enabled: false, onDisk: true, manifest: { kind: 'export', label: { de: 'Export: KI-Wissensbasis' } } },
   ]
@@ -32,7 +32,7 @@ test('Vorgabe ist der Key, aufsteigend', async () => {
   welt()
   const w = mount(PluginsView, { global: { stubs: { RouterLink: true, 'router-link': true, Splitter: true } } })
   await flushPromises()
-  assert.deepEqual(keys(w), ['csv', 'etim', 'excel', 'rag', 'xliff'])
+  assert.deepEqual(keys(w), ['csv', 'etim', 'exceladdin', 'rag', 'xliff'])
   assert.match(kopf(w, 'Key').text(), /▴/)
 })
 
@@ -42,7 +42,7 @@ test('Klick auf denselben Kopf dreht die Richtung', async () => {
   await flushPromises()
   await kopf(w, 'Key').trigger('click')
   await flushPromises()
-  assert.deepEqual(keys(w), ['xliff', 'rag', 'excel', 'etim', 'csv'])
+  assert.deepEqual(keys(w), ['xliff', 'rag', 'exceladdin', 'etim', 'csv'])
   assert.match(kopf(w, 'Key').text(), /▾/)
 })
 
@@ -53,7 +53,7 @@ test('Fassung sortiert nach Zahlen, nicht nach Zeichen', async () => {
   await kopf(w, 'Fassung').trigger('click')
   await flushPromises()
   // 1.10.0 steht über 1.0.0 — als Zeichenkette wäre es umgekehrt
-  assert.deepEqual(keys(w), ['excel', 'csv', 'rag', 'xliff', 'etim'])
+  assert.deepEqual(keys(w), ['exceladdin', 'csv', 'rag', 'xliff', 'etim'])
 })
 
 test('Bezeichnung und Zustand sortieren nach dem, was man sieht', async () => {
@@ -62,10 +62,10 @@ test('Bezeichnung und Zustand sortieren nach dem, was man sieht', async () => {
   await flushPromises()
   await kopf(w, 'Bezeichnung').trigger('click')
   await flushPromises()
-  assert.deepEqual(keys(w), ['rag', 'csv', 'etim', 'excel', 'xliff'])
+  assert.deepEqual(keys(w), ['rag', 'csv', 'etim', 'exceladdin', 'xliff'])
 
   await kopf(w, 'Zustand').trigger('click')
   await flushPromises()
   // an (csv, etim, xliff nach Key), dann aus (excel), dann nicht installiert (rag)
-  assert.deepEqual(keys(w), ['csv', 'etim', 'xliff', 'excel', 'rag'])
+  assert.deepEqual(keys(w), ['csv', 'etim', 'xliff', 'exceladdin', 'rag'])
 })

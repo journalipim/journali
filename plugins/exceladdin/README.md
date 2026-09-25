@@ -1,13 +1,13 @@
 # Excel-Add-in (Office.js)
 
 Aufgabenbereich in Excel, der direkt mit `/api` spricht. Kein Code im Server;
-die Dateien liegen unter `plugins/excel/` und werden wie jedes Plugin unter
-`/plugins/excel/…` ausgeliefert. Das Manifest bekommt den Origin des Servers
+die Dateien liegen unter `plugins/exceladdin/` und werden wie jedes Plugin unter
+`/plugins/exceladdin/…` ausgeliefert. Das Manifest bekommt den Origin des Servers
 beim Abruf eingesetzt (`{{ORIGIN}}` → `http://localhost:5000` oder der Server im Netz).
 
 ## Einrichten (Excel für Windows, einmalig)
 
-1. Manifest holen: `http://localhost:5000/plugins/excel/manifest.xml` als
+1. Manifest holen: `http://localhost:5000/plugins/exceladdin/manifest.xml` als
    Datei speichern (z. B. `C:\journali-addin\manifest.xml`).
 2. Ordner freigeben und in Excel als Katalog eintragen: Datei → Optionen →
    Trust Center → Einstellungen → Vertrauenswürdige Add-In-Kataloge →

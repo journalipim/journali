@@ -9,7 +9,7 @@
     "de": "Textdateien mit Trennzeichen (; , Tab |) als Tabelle für ⇩ Import → Tabelle; Trennzeichen und Zeichensatz (UTF-8, Windows-1252) werden erkannt.",
     "en": "Delimited text files (; , tab |) as a table for the table import; delimiter and charset (UTF-8, Windows-1252) are detected."
   },
-  "kind": "import",
+  "kind": "io",
   "runs": "browser",
   "entry": "entry.js",
   "requires": [

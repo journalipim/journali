@@ -1,8 +1,8 @@
 {
  "key": "solr",
  "version": "1.2.0",
- "hash": "0b605dda4d9442af6cbf32162fef95a07d11ccc56348d2f883da93d0f45f2039",
- "issued": "2026-09-24",
+ "hash": "782e13c7e1272d4e3d3ac2512880ebaaa622b6ec5b261e3f689482bd471540d0",
+ "issued": "2026-09-25",
  "issuer": "journali",
- "sig": "so4zHgBTcU20d114ykxnHxcBMNY3bsfBRzkrXfsjlMucuAJq1TkxV2tLRdef9x/KG+aHC0ssLgYmnhsQL/Cgpg=="
+ "sig": "n4m4OqjUd7NdY2SkG3lGP5HlNFpJnne9jNRuxJ/kPNMq4bpMLLyRdFUiaBvSGw5qSdufKYFoHsul9ys2frN5Xw=="
 }

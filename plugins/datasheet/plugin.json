@@ -2,8 +2,8 @@
   "key": "datasheet",
   "version": "2.3.0",
   "label": {
-    "de": "Ausgabe: Datenblatt",
-    "en": "Output: Data sheet"
+    "de": "Datenblatt",
+    "en": "Data sheet"
   },
   "description": {
     "de": "Datenblatt-Designer, WYSIWYG: Seite wie gedruckt, Bausteine per Drag & Drop — Abschnitte mit 1–4 Spalten, Attributgruppen und Attribute ab einem Knoten (inkl. allem darunter), Bild, Text, Variantentabelle, Seitenumbruch; Layouts im Journal, je Rolle zugeordnet; „Datenblatt“ im Kontextmenü des Baums öffnet das Blatt zum Drucken/PDF. HTML-Vorlagen mit Platzhaltern bleiben als zweiter Weg. Als Job: Datenblätter eines Teilbaums als HTML in ein Verzeichnis. Belegerzeuger: bei „Version erzeugen“ liefert es das Datenblatt als eingefrorenen Beleg (HTML; PDF/A als eigener Erzeuger).",

@@ -8,13 +8,13 @@ import { plugins } from '../src/plugins.js'
 const TABLE = {
   views: [
     { path: 'import', topic: 'import', order: 10, needs: 'csv', label: 'CSV-Import', props: { nur: ['.csv'] } },
-    { path: 'import-xlsx', topic: 'import', order: 11, needs: 'xlsx', label: 'Excel-Import', props: { nur: ['.xlsx'] } },
+    { path: 'import-xlsx', topic: 'import', order: 11, needs: 'excel', label: 'Excel-Import', props: { nur: ['.xlsx'] } },
     { path: 'import-paste', topic: 'import', order: 20, label: 'Zwischenablage', props: { paste: true } },
     { path: 'export', topic: 'export', order: 10, needs: 'csv', label: 'CSV-Export', props: { festesFormat: 'csv' } },
   ],
 }
 async function welt(an) {
-  plugins.list = ['table', 'csv', 'xlsx'].map(key => ({ key, installed: true, enabled: an.includes(key), allowed: true, manifest: { runs: 'browser', entry: 'entry.js', base: key === 'table' ? ['import'] : undefined } }))
+  plugins.list = ['table', 'csv', 'excel'].map(key => ({ key, installed: true, enabled: an.includes(key), allowed: true, manifest: { runs: 'browser', entry: 'entry.js', base: key === 'table' ? ['import'] : undefined } }))
   plugins.modules = new Map([['table', TABLE]])
   plugins.installNew = async () => {}
   const orig = plugins.list
@@ -26,13 +26,13 @@ async function welt(an) {
 }
 
 test('ohne das Format-Plugin fehlt seine Kachel; die Zwischenablage bleibt immer', async () => {
-  assert.deepEqual(await welt(['table', 'csv', 'xlsx']), ['CSV-Import', 'Excel-Import', 'Zwischenablage', 'CSV-Export'])
+  assert.deepEqual(await welt(['table', 'csv', 'excel']), ['CSV-Import', 'Excel-Import', 'Zwischenablage', 'CSV-Export'])
   assert.deepEqual(await welt(['table', 'csv']), ['CSV-Import', 'Zwischenablage', 'CSV-Export'], 'Excel ist aus')
   assert.deepEqual(await welt(['table']), ['Zwischenablage'], 'ohne Formate bleibt nur die Zwischenablage')
 })
 
 test('jede Kachel bringt ihre festen Eigenschaften mit — daraus wird das vorgewählte Format', async () => {
-  await welt(['table', 'csv', 'xlsx'])
+  await welt(['table', 'csv', 'excel'])
   const v = l => plugins.views.find(x => x.label === l)
   assert.deepEqual(v('CSV-Import').props, { nur: ['.csv'] })
   assert.deepEqual(v('Zwischenablage').props, { paste: true })

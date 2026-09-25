@@ -17,10 +17,10 @@ const datenRoles = ['product']
 export default {
   views: [
     { path: 'import', topic: 'import', order: 10, needs: 'csv', label: t('CSV-Import'), icon: '⊞', hint: t('CSV und TSV — mit Datenmapper'), component: ImportView, props: { nur: ['.csv', '.tsv', '.txt'] } },
-    { path: 'import-xlsx', topic: 'import', order: 11, needs: 'xlsx', label: t('Excel-Import'), icon: '⊞', hint: t('Arbeitsmappen (.xlsx) — mit Datenmapper'), component: ImportView, props: { nur: ['.xlsx', '.xlsm'] } },
+    { path: 'import-xlsx', topic: 'import', order: 11, needs: 'excel', label: t('Excel-Import'), icon: '⊞', hint: t('Arbeitsmappen (.xlsx) — mit Datenmapper'), component: ImportView, props: { nur: ['.xlsx', '.xlsm'] } },
     { path: 'import-paste', topic: 'import', order: 90, label: t('Zwischenablage'), icon: '⎘', hint: t('aus Excel kopieren und hier einfügen — erste Zeile sind die Spaltennamen'), component: ImportView, props: { paste: true } },
     { path: 'export', topic: 'export', order: 10, needs: 'csv', label: t('CSV-Export'), icon: '⊞', hint: t('CSV (; UTF-8) — die Form, die der CSV-Import liest'), component: ExportView, props: { festesFormat: 'csv' } },
-    { path: 'export-xlsx', topic: 'export', order: 11, needs: 'xlsx', label: t('Excel-Export'), icon: '⊞', hint: t('Arbeitsmappe (.xlsx) — die Form, die der Excel-Import liest'), component: ExportView, props: { festesFormat: 'xlsx' } },
+    { path: 'export-xlsx', topic: 'export', order: 11, needs: 'excel', label: t('Excel-Export'), icon: '⊞', hint: t('Arbeitsmappe (.xlsx) — die Form, die der Excel-Import liest'), component: ExportView, props: { festesFormat: 'excel' } },
     { path: 'struktur', topic: 'export', order: 20, label: t('Struktur'), icon: '⑂', hint: t('den Baum als Tabelle heraus, in Excel entwerfen, in einem Zug hinein — ohne Inhalte'), component: StrukturView },
   ],
   // Excel am Knoten

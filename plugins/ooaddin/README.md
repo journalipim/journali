@@ -8,7 +8,7 @@ versteckten Blatt `_journali` — Datei speichern, später weiterpflegen, geht.
 
 ## Installieren (OnlyOffice Desktop Editors)
 
-1. Paket holen: `http://localhost:5000/plugins/onlyoffice/package.plugin`
+1. Paket holen: `http://localhost:5000/plugins/ooaddin/package.plugin`
    (der Server packt das Verzeichnis als ZIP im OnlyOffice-Format) und als
    `journali.plugin` speichern.
 2. OnlyOffice: Tabelle öffnen → Reiter **Plugins** → **Plugin-Manager**

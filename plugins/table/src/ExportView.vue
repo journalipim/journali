@@ -1,7 +1,7 @@
 <script setup>
 // ⇪ Export → Tabelle (Basis-Plugin table): ein Teilbaum als Excel oder CSV,
 // genau in der Form, die der Tabellenimport wieder liest. Strukturierte Daten (JSON) macht das Plugin json.
-// Als Job: Plugin export (Prozess) mit denselben Einstellungen — ⏱ Jobs → + Job → Export: Tabelle.
+// Als Job: Plugin export (Prozess) mit denselben Einstellungen — ⏱ Jobs → + Job → Tabelle (Job).
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { store, tree, icon, plugins, TreePicker } from 'journali'
@@ -18,7 +18,7 @@ const ownOnly = ref(saved.ownOnly ?? false)
 const viewKey = ref(saved.viewKey ?? '')
 // festesFormat: die Kachel nennt das Format (CSV-Export, Excel-Export) — dann gibt es hier nichts zu wählen
 const props = defineProps({ festesFormat: { type: String, default: '' } })
-const format = ref(props.festesFormat || saved.format || 'xlsx')
+const format = ref(props.festesFormat || saved.format || 'excel')
 const rootRows = computed(() => roots.value.map(id => tree.byId.get(id)).filter(Boolean))
 const busy = ref(''); const table = ref(null)
 const persist = () => localStorage.setItem('journali.export.table', JSON.stringify({ roots: roots.value, role: role.value, locales: locales.value, ownOnly: ownOnly.value, viewKey: viewKey.value, format: format.value }))
@@ -65,7 +65,7 @@ async function run(downloadIt) {
       <tr><td class="attr">{{ $t("Attribute") }}</td><td><select v-model="viewKey" @change="persist" style="width:100%"><option value="">{{ $t("◫ alle Attribute") }}</option><option v-for="v in store.model?.views ?? []" :key="v.key" :value="v.key">◫ {{ $L(v.label) || v.key }} ({{ v.level }})</option></select></td></tr>
       <tr><td class="attr">{{ $t("Werte") }}</td><td><label><input type="checkbox" v-model="ownOnly" @change="persist" />{{ ' ' + $t("nur eigene Werte (geerbte leer lassen)") }}</label></td></tr>
       <tr class="step"><td colspan="2" class="step-band" style="display:table-cell;height:24px">{{ $t("2 · Wie") }}</td></tr>
-      <tr v-if="!festesFormat"><td class="attr">{{ $t("Format") }}</td><td><select v-model="format" @change="persist" style="width:100%"><option value="xlsx">{{ $t("Excel (.xlsx)") }}</option><option value="csv">{{ $t("CSV (; UTF-8, Excel-tauglich)") }}</option></select></td></tr>
+      <tr v-if="!festesFormat"><td class="attr">{{ $t("Format") }}</td><td><select v-model="format" @change="persist" style="width:100%"><option value="excel">{{ $t("Excel (.xlsx)") }}</option><option value="csv">{{ $t("CSV (; UTF-8, Excel-tauglich)") }}</option></select></td></tr>
       <tr><td class="attr"></td><td><div class="row"><button @click="run(false)">{{ $t("Vorschau") }}</button><button class="primary" @click="run(true)">{{ $t("⇪ herunterladen") }}</button>
         <router-link v-if="plugins.enabled('export')" to="/p/tasker/jobs?new=export" custom v-slot="{ navigate }"><button @click="navigate" :title="$t('denselben Export regelmäßig als Datei in ein Verzeichnis — Plugin export (Prozess)')">{{ $t("⏱ als Job") }}</button></router-link><router-link v-if="plugins.enabled('export')" to="/p/tasker/jobs?plugin=export" custom v-slot="{ navigate }"><button @click="navigate" :title="$t('die Export-Jobs unter ⏱ Jobs — Zeitplan, Läufe, Logs')">{{ $t("⏱ Jobs verwalten") }}</button></router-link></div></td></tr>
     </tbody></table>

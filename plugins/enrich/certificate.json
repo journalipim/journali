@@ -1,8 +1,8 @@
 {
  "key": "enrich",
  "version": "1.0.0",
- "hash": "7698a8bbad1f1b6a709f497a870a769af3c073f1e71f83b3770cf580cb1bd60d",
- "issued": "2026-09-24",
+ "hash": "08ce91988d2357caf4920f6f9b5cf736abfbe0322da15ed4b8af1da2af39d4fc",
+ "issued": "2026-09-25",
  "issuer": "journali",
- "sig": "4q44aODy4pAT36eRLZFb1kD8plkIkcH0qjxLy2SAqn//HjvBk5Bp/qmOW6qTrZ5U2fboT7Pl/xhqEt/vG7+kKQ=="
+ "sig": "3vLVdIN+OPDfc8+pQGFppj4EW3JGTRPOco/z29+sjTNgAf+a3OXVcs6FAwRS+Sh+gu27Um8MfG9pnOBm4i2cCw=="
 }

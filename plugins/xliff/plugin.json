@@ -2,8 +2,8 @@
   "key": "xliff",
   "version": "1.1.0",
   "label": {
-    "de": "Werkzeug: Übersetzung (XLIFF)",
-    "en": "Tool: Translation (XLIFF)"
+    "de": "Übersetzung (XLIFF)",
+    "en": "Translation (XLIFF)"
   },
   "description": {
     "de": "Übersetzungsmanagement: je Sprachrichtung die Einheiten (Knoten × Textattribut × Kanal) — fehlend, veraltet (Quelle seither geändert), fertig; Ziele direkt eintragen, mit der KI vorübersetzen, XLIFF 2.0 für Agentur und CAT-Werkzeug exportieren und zurücklesen (nur bei unveränderter Quelle). Als Job: Export in das Fach out/, Import aus in/.",

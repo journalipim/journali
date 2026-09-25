@@ -2,8 +2,8 @@
   "key": "solr",
   "version": "1.2.0",
   "label": {
-    "de": "Import: Solr",
-    "en": "Import: Solr"
+    "de": "Solr",
+    "en": "Solr"
   },
   "description": {
     "de": "Solr-Kern (Export eines anderen PIM): Baum, Attribute, Relationen — Ansicht im Browser (JSONP) und Skript für grosse Läufe.",

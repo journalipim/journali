@@ -42,7 +42,7 @@ async function mount(root, ctx) {
     try {
       const r = await api.post('/api/docs/retry', {})
       await loadStatus()
-      say(r.freed ? t_('{0} wieder freigegeben — beim nächsten Lauf des Jobs „Werkzeug: Dokumente lesen“', [r.freed]) : t_('nichts freizugeben'))
+      say(r.freed ? t_('{0} wieder freigegeben — beim nächsten Lauf des Jobs „Dokumente lesen“', [r.freed]) : t_('nichts freizugeben'))
     } catch (e) { say('✗ ' + e.message) }
   }
 
@@ -96,7 +96,7 @@ async function mount(root, ctx) {
     if (st.said.startsWith('✗')) return el('div', { class: 'empty neg' }, st.said)
     if (!st.hits.length) {
       return el('div', { class: 'empty' }, st.q.trim()
-        ? t_('Nichts zu „{0}“ — andere Wörter, oder das Dokument ist noch nicht gelesen (Job „Werkzeug: Dokumente lesen“).', [st.q.trim()])
+        ? t_('Nichts zu „{0}“ — andere Wörter, oder das Dokument ist noch nicht gelesen (Job „Dokumente lesen“).', [st.q.trim()])
         : t_('Suchwort eingeben. Gesucht wird im Text der Dokumente, die an den Knoten hängen.'))
     }
     const list = el('div', { class: 'list' })
@@ -130,7 +130,7 @@ async function mount(root, ctx) {
 }
 
 export default {
-  views: [{ path: 'search', label: t_('Dokumente'), icon: '⌕', topic: 'tools', hint: t_('Im Text der Dokumente suchen — Datenblätter, Anleitungen, Kataloge; gelesen wird vom Job „Werkzeug: Dokumente lesen“'), mount }],
+  views: [{ path: 'search', label: t_('Dokumente'), icon: '⌕', topic: 'tools', hint: t_('Im Text der Dokumente suchen — Datenblätter, Anleitungen, Kataloge; gelesen wird vom Job „Dokumente lesen“'), mount }],
   nodeActions: [{
     label: t_('In Dokumenten suchen'), icon: '⌕', topic: 'tools', roles: ['group', 'product', 'variant'],
     run(nodeId, ctx) { localStorage.setItem('journali.docs.under', nodeId); ctx.go?.('/p/docs/search') },

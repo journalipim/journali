@@ -1,8 +1,8 @@
 {
  "key": "dpp",
  "version": "1.0.0",
- "hash": "9c4c40bb6d6e52f1991b9f7d46d90dc4d4854b971a5be36a9bd1a14b468a9b66",
- "issued": "2026-09-24",
+ "hash": "17c57137afb7be1309fc3a3492566d7cc7f977bf135021961e7a15f921d8777d",
+ "issued": "2026-09-25",
  "issuer": "journali",
- "sig": "mytVaf3ncFRli5sPrJpjQF+TxtspXBTWyAyBismCiAQR3vQUnx+kUcWwovUAxNN28TY5UMsG/uK3mxWg38ePnQ=="
+ "sig": "XG5K3PTHI7BhcLMlm4PaYLpgGB2w7AtQKUku+bia1OOLXbtoDzsfbRS/LI1flBoYxH6ohQkVActrcppSwEXpeA=="
 }

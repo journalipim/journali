@@ -23,7 +23,7 @@ test('Wahrheitswert, Datum, Ersetzen, Aufteilen, Verbinden', () => {
   assert.equal(apply([{ op: 'date' }], '2026-09-21T10:30:00Z'), '2026-09-21')          // ISO mit Uhrzeit, raten
   assert.equal(apply([{ op: 'date' }], '1790000000'), '2026-09-21')                    // Unix-Sekunden (2026-09-21 14:13 UTC)
   assert.equal(apply([{ op: 'date', format: 'unixms' }], '1790000000000'), '2026-09-21')
-  assert.equal(apply([{ op: 'date', format: 'excel' }], '46286'), '2026-09-21')        // Excel-Zahl
+  assert.equal(apply([{ op: 'date', format: 'exceladdin' }], '46286'), '2026-09-21')        // Excel-Zahl
   assert.equal(apply([{ op: 'date' }], '46286'), '2026-09-21')                         // raten: Excel
   assert.equal(apply([{ op: 'date', format: 'dd/MM/yyyy' }], '21/09/2026'), '2026-09-21')
   assert.equal(apply([{ op: 'date' }], 'kein Datum'), 'kein Datum')

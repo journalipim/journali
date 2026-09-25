@@ -8,12 +8,12 @@ const t_ = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : Stri
 export { toCsv, toJson, toJsonTree }
 export const download = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000) }
 // SheetJS kommt zur Laufzeit aus dem Plugin xlsx (nicht gebündelt) — der Pfad als Variable, damit Vite ihn nicht auflöst
-const XLSX_URL = '/plugins/xlsx/xlsx.mjs'
+const XLSX_URL = '/plugins/excel/xlsx.mjs'
 export const loadXlsx = () => import(/* @vite-ignore */ XLSX_URL)
-const POLISH_URL = '/plugins/xlsx/polish.mjs'
+const POLISH_URL = '/plugins/excel/polish.mjs'
 // Komfort-Excel: Kopf fett, Pflicht rot, Achsen blau, echte Tabelle mit Filter und Streifen, erste Zeile fest — nachträglich in die Datei
 async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
-  const raw = X.write(wb, { type: 'array', bookType: 'xlsx' })
+  const raw = X.write(wb, { type: 'array', bookType: 'excel' })
   try { const { polish } = await import(/* @vite-ignore */ POLISH_URL); return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null }) }
   catch (e) { console.warn(t_('Excel ohne Politur:'), e.message); return new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }
 }
