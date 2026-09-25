@@ -3578,7 +3578,7 @@ const loadXlsx = () => import(
 );
 const POLISH_URL = "/plugins/excel/polish.mjs";
 async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
-  const raw = X.write(wb, { type: "array", bookType: "excel" });
+  const raw = X.write(wb, { type: "array", bookType: "xlsx" });
   try {
     const { polish } = await import(
       /* @vite-ignore */

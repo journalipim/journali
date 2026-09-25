@@ -13,7 +13,7 @@ export const loadXlsx = () => import(/* @vite-ignore */ XLSX_URL)
 const POLISH_URL = '/plugins/excel/polish.mjs'
 // Komfort-Excel: Kopf fett, Pflicht rot, Achsen blau, echte Tabelle mit Filter und Streifen, erste Zeile fest — nachträglich in die Datei
 async function polished(X, wb, columns, rowCount, tableName, legendRows = null) {
-  const raw = X.write(wb, { type: 'array', bookType: 'excel' })
+  const raw = X.write(wb, { type: 'array', bookType: 'xlsx' })
   try { const { polish } = await import(/* @vite-ignore */ POLISH_URL); return await polish(raw, { columns, rowCount, tableName, legend: legendRows ? { columns: legendRows[0], rowCount: legendRows.length - 1 } : null }) }
   catch (e) { console.warn(t_('Excel ohne Politur:'), e.message); return new Blob([raw], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }) }
 }
