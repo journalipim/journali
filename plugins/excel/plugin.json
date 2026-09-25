@@ -19,6 +19,51 @@
   "autoInstall": true,
   "processes": [
     {
+      "key": "import",
+      "command": "node",
+      "args": [
+        "import-job.mjs",
+        "{journali}",
+        "{actor}",
+        "{source}",
+        "{profile}",
+        "{dryRun}"
+      ],
+      "files": {
+        "in": {
+          "pattern": "*.xlsx;*.xlsm",
+          "mode": "one",
+          "order": "name",
+          "param": "source"
+        }
+      },
+      "params": [
+        {
+          "key": "profile",
+          "label": "Profil — in der Ansicht des Plugins anlegen (Zuordnung, Ziel im Baum, Rolle)",
+          "type": "profile",
+          "default": "",
+          "perJob": true
+        },
+        {
+          "key": "source",
+          "label": "Quelle: Datei oder Verzeichnis (dann die neueste) — leer = Fach in/ des Jobs",
+          "type": "path",
+          "default": "",
+          "perJob": true
+        },
+        {
+          "key": "dryRun",
+          "label": "Trockenlauf (nur rechnen, nichts schreiben)",
+          "type": "boolean",
+          "default": "false",
+          "perJob": true
+        }
+      ],
+      "label": "Import: Excel",
+      "description": "Eine Excel-Datei mit einem gespeicherten Profil des Excel-Imports einspielen — Zuordnung, Ziel im Baum und Rolle stehen im Profil"
+    },
+    {
       "command": "node",
       "args": [
         "export-job.mjs",

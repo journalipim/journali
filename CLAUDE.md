@@ -127,6 +127,13 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   3. **Inhalt** — Zuordnung, Ziel im Baum, Umfang, Sprachen. Das ist das Profil.
   4. **Ablage und Zeit** — Verzeichnis, Dateiname, Zeitplan, Trockenlauf. Das ist der Job.
 
+  **Zugänge** (Plugin `driver`, `DriverApi.cs`, `/api/drivers`): ein Plugin fragt nach einem Zugang seiner Art
+  („gib mir die vom Typ mysql“) statt selbst nach Adresse und Passwort. Zwei Sorten: einer, der **Dateien liefert**
+  (`file`, ftp, webdav) — mit Auflisten und Browser —, und einer, der nur **Anmeldung** ist (mysql, solr, ixp).
+  Der Zugang ist **keine Schicht über der Datenbank**: er kennt kein SQL und keinen Index, das Plugin weiß, was es
+  mit seiner Verbindung tut. Die offenen Felder stehen im Journal, das **Geheimnis beim Server** (Tresor) und geht
+  **nur an einen Prozess**, nie an den Browser — die Liste nennt bloß seinen Namen. `lokal` ist eingebaut.
+
   *Gebaut ist davon:* beim Transport das Dateisystem (Pfad auf dem Server, bei Jobs die Fächer `in/` und `out/`),
   dazu HTTP als Quelle beim JSON-Import. Plugins mit eigener Quelle (`ixp`, `solr`) bringen ihren Zugang selbst mit:
   er gehört zur Quelle und steht im Profil, das Geheimnis beim Server (`/api/plugins/{key}/secrets/{name}`,
