@@ -216,8 +216,13 @@ Image zieht dadurch nur dieser eine Server; für andere Rechner im Netz bräucht
    Passwort aus Schritt 1, Benutzer `postgres`) und legt den ersten Administrator an.
 
 Die Vorlage bringt Port 8080, das Datenverzeichnis (`/data/jobs` → `appdata/journali`: Verbindung zur Datenbank, Jobs,
-Schnappschuss, Spiegel) und `JOURNALI_MEDIA` mit. Ein neuer Stand: Push auf `master`, dann in Unraid *Check for
-Updates* → *Apply Update*.
+Schnappschuss, Spiegel) und `JOURNALI_MEDIA` mit.
+
+**Ein neuer Stand:** Push auf `master` — der Runner baut, und das Image liegt danach fertig im Docker des Servers.
+Dann im Docker-Tab von *Basic View* auf *Advanced View* umschalten und am Container **force update** klicken; er wird
+mit dem neuen Image neu erstellt. Unraid meldet den Stand dieser Registry nicht von selbst („not available" statt
+„update ready"): es fragt Registries fest über `https` ab (`DockerClient.php`), die eigene Gitea spricht http. Am Image
+und am Aktualisieren ändert das nichts — nur die Anzeige bleibt leer.
 
 **Für alle:** dieselbe Vorlage mit `ghcr.io/journalipim/journali:latest` (öffentliches Paket) in einem öffentlichen
 Repo, angemeldet bei den Community Applications.
