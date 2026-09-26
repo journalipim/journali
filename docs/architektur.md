@@ -249,6 +249,13 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     Journal, damit jeder Server der Anlage sie kennt); registriert holt sie das Blatt über `POST /v1/tarife` —
     signierte Anfrage mit Instanz und öffentlichem Schlüssel, sonst nichts. Wer ablehnt, schickt nichts hinaus; ein Team
     mit Abo spricht ohnehin mit dem Lizenzserver, dann kommt das Blatt mit.
+  - **Der Weg von Hand ist freizugeben** (26.09.2026): Anforderung erzeugen und Schlüssel einfügen setzen einen Kontakt
+    zum Support voraus, weil sie erklärungsbedürftig sind. Der Lizenzserver gibt sie je Instanz frei (Instanzseite,
+    Einstellung `vonhand:<instanz>`); die Freigabe reist signiert mit der Tarifantwort (`TarifeAntwort`, `Freigabe` —
+    gebunden an Instanz und Fingerabdruck der Anfrage) und gilt bis zum nächsten Abruf. Ohne Freigabe steht in der
+    Oberfläche nicht einmal der Schalter; der Knopf darin heisst **Generieren**, denn er erzeugt die Anforderung.
+    *Entschieden:* eine Anlage **ganz ohne Verbindung** bekommt diesen Weg nicht — sie müsste die Freigabe eingeben,
+    und dafür müsste ein Feld dastehen, das es ohne Freigabe nicht gibt. Irgendwo ist Schluss.
   - **Eingriffe am Abo** in der Verwaltung des Lizenzservers: entziehen (Betrug), gültig bis von Hand verlängern,
     Tarif ändern (z. B. Pro bezahlt, Enterprise gewährt). Sie wirken beim nächsten Auffrischen der Instanz; ohne
     Verbindung gilt ihr letzter Stand höchstens bis zum Ende der Kulanz. Schlüssel zum Kopieren lassen sich nicht
