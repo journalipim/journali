@@ -52,8 +52,7 @@ const navBottom = [
   { to: '/settings', icon: '⚙', label: t_('Einstellungen'), key: '6' },
 ]
 // Die Leiste als eine Liste (oben … spacer … unten), Reihenfolge aus den Einstellungen; Neues (Plugin-Ansichten) kommt vor den Spacer
-// Was unter ⌁ Plugins ansteht: Aktualisierungen (Platte neuer als installiert) und noch nicht installierte Plugins
-const pluginNews = computed(() => plugins.list.flatMap(p => p.update ? [`↑ ${p.key}: ${p.version} → ${p.diskVersion}`] : p.onDisk && !p.installed ? [t_('⇩ {0}: nicht installiert', [p.key])] : []))
+const pluginNews = computed(() => plugins.news())
 async function logout() { await store.logout(); router.push('/login') }
 // Kürzel oder Hinweis in Klammern — Plugin-Ansichten haben oft keines von beiden, dann keine Klammer (vorher „(undefined)“, 24.09.2026)
 const railTitle = n => t_('{0}{1} — ziehen sortiert um', [n.label, n.key ? '  (Alt+' + n.key + ')' : n.hint ? '  (' + n.hint + ')' : '']) + (n.to === '/plugins' && pluginNews.value.length ? '\n' + pluginNews.value.join('\n') : '')
@@ -99,7 +98,7 @@ function railDrop(target) {
           :title="railTitle(n)" draggable="true"
           @dragstart="dragKey = n.to" @dragend="dragKey = null" @dragover.prevent @drop="railDrop(n.to)">
           <span class="icon">{{ n.icon }}</span>
-          <!-- Lämpchen: ein Plugin hat eine neuere Fassung auf der Platte oder ist noch nicht installiert -->
+          <!-- Lämpchen: ein Plugin hat eine neuere Fassung auf der Platte als installiert ist -->
           <span v-if="n.to === '/plugins' && pluginNews.length" class="lamp" />
         </router-link>
       </template>

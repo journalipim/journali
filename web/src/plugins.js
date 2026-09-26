@@ -99,6 +99,9 @@ export const plugins = reactive({
     this.loaded = true   // erst jetzt: vorher sähe die Übersicht eines Themas nur den ersten Eintrag und leitete dorthin
   },
   enabled(key) { return this.active(key) },
+  /// Was unter ⌁ Plugins ansteht — eine Zeile je Update: auf der Platte liegt eine neuere Fassung, als installiert ist.
+  /// Ein Plugin, das nur daliegt und nie installiert wurde, steht nicht an; dafür leuchtet kein Lämpchen (26.09.2026).
+  news() { return this.list.filter(p => p.update).map(p => `↑ ${p.key}: ${p.version} → ${p.diskVersion}`) },
   // Reihenfolge innerhalb eines Themas: 1. explizites order (Ansicht/Aktion, sonst Manifest; Vorgabe 50), 2. die Basis
   // des Themas, 3. Art: Prüfungen („… prüfen“) vor Vorschlägen („… vorschlagen“, „Anreichern“) vor dem Rest,
   // 4. Bezeichnung. Damit stehen die Kataloge (DPP, EmpCo, ETIM, PPWR) beisammen, und wer eine Reihenfolge nennt,
