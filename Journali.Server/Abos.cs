@@ -30,6 +30,12 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
 
     private DateTimeOffset? _blattGeholt;
 
+    /// <summary>
+    /// Hat der Lizenzserver dieser Instanz den Weg von Hand freigegeben (Anforderungen und Schlüssel zum Kopieren)? Der
+    /// Stand kommt mit dem Tarifblatt und gilt bis zum nächsten Abruf; ohne Abruf gibt es ihn nicht.
+    /// </summary>
+    public bool VonHand { get; private set; }
+
     private DateTimeOffset Jetzt => (uhr ?? TimeProvider.System).GetUtcNow();
 
     /// <summary>Ist ein Lizenzserver eingestellt?</summary>
@@ -138,12 +144,15 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
             try { if (JsonDocument.Parse(text).RootElement.TryGetProperty("error", out var f)) return f.GetString(); } catch (JsonException) { }
             return $"Lizenzserver: {(int)res.StatusCode}";
         }
-        Tarifblatt? b;
-        try { b = JsonSerializer.Deserialize<Tarifblatt>(text, new JsonSerializerOptions(JsonSerializerDefaults.Web)); }
+        TarifeAntwort? a;
+        try { a = JsonSerializer.Deserialize<TarifeAntwort>(text, new JsonSerializerOptions(JsonSerializerDefaults.Web)); }
         catch (JsonException) { return "Antwort des Lizenzservers unlesbar."; }
-        if (b is null) return "Antwort des Lizenzservers leer.";
+        if (a?.Blatt is null) return "Antwort des Lizenzservers leer.";
         _blattGeholt = Jetzt;
-        c.NimmTarifblatt(b, "system");
+        // Der Weg von Hand gilt nur mit Signatur des Lizenzservers und nur für diese Instanz und diese Anfrage
+        VonHand = a.Freigabe is { VonHand: true, Sig: not null } frei && frei.Instance == instanz.Id && frei.Request == anfrage.Hash
+            && Aussteller.Pruefe(frei.Rumpf, frei.Sig).Ok;
+        c.NimmTarifblatt(a.Blatt, "system");
         return null;
     }
 

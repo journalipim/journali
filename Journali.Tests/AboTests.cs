@@ -32,6 +32,10 @@ public class AboTests
 
         /// <summary>Wie oft das Tarifblatt allein geholt wurde (ohne Abo, ohne Schlüssel).</summary>
         public int Blattanfragen;
+        /// <summary>Gibt dieser Lizenzserver der Instanz den Weg von Hand frei?</summary>
+        public bool VonHand;
+        /// <summary>Signiert er die Freigabe mit seinem Schlüssel? (Sonst zählt sie nicht.)</summary>
+        public bool FreigabeEcht = true;
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
@@ -43,8 +47,12 @@ public class AboTests
                 Assert.Equal(Tarifabruf.Art, anfrage.Inhalt!.Kind);
                 Assert.Null(anfrage.Inhalt.Team);                               // sie nennt nur Instanz und Schlüssel
                 Assert.Null(anfrage.Inhalt.Key);
+                var frei = new Freigabe(anfrage.Inhalt.Instance, VonHand, Jetzt, anfrage.Hash);
+                using var wer = FreigabeEcht ? null : ECDsa.Create(ECCurve.NamedCurves.nistP256);
+                var antwort = new TarifeAntwort(Blatt ?? Tarifblaetter(Aussteller, 1, z => z),
+                    frei with { Sig = Signaturen.Signiere(wer ?? Aussteller, frei.Rumpf) });
                 return new HttpResponseMessage(HttpStatusCode.OK)
-                { Content = new StringContent(JsonSerializer.Serialize(Blatt ?? Tarifblaetter(Aussteller, 1, z => z), new JsonSerializerOptions(JsonSerializerDefaults.Web))) };
+                { Content = new StringContent(JsonSerializer.Serialize(antwort, new JsonSerializerOptions(JsonSerializerDefaults.Web))) };
             }
             Anfragen++;
             Assert.EndsWith("/v1/stand", request.RequestUri.AbsolutePath);
@@ -234,6 +242,27 @@ public class AboTests
         w.Uhr.Jetzt = Jetzt + Abos.Auffrischen + TimeSpan.FromMinutes(1);
         await w.Abos.AuffrischenAsync(w.C);
         Assert.Equal(1, w.Server.Blattanfragen);
+    }
+
+    /// <summary>
+    /// Der Weg von Hand (Anforderung erzeugen, Schlüssel einfügen) steht erst, wenn der Lizenzserver ihn dieser Instanz
+    /// freigibt (26.09.2026) — er ist erklärungsbedürftig und setzt einen Kontakt voraus. Nur signiert zählt er.
+    /// </summary>
+    [Fact]
+    public async Task Den_Weg_von_Hand_gibt_der_Lizenzserver_frei()
+    {
+        var w = new Welt();
+        Assert.Null(await w.Abos.TarifblattAsync(w.C));
+        Assert.False(w.Abos.VonHand);                                           // niemand hat ihn freigegeben
+
+        w.Server.VonHand = true;
+        Assert.Null(await w.Abos.TarifblattAsync(w.C));
+        Assert.True(w.Abos.VonHand);
+
+        // eine Freigabe, die ein anderer signiert hat, zählt nicht
+        w.Server.FreigabeEcht = false;
+        Assert.Null(await w.Abos.TarifblattAsync(w.C));
+        Assert.False(w.Abos.VonHand);
     }
 
     /// <summary>Eine abgelaufene Aktion gilt nicht mehr — und eine mit fremder Signatur kommt gar nicht erst ins Journal.</summary>

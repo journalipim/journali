@@ -29,7 +29,7 @@ function server(teams = TEAMS) {
       : path === '/api/usage' ? { week: { used: 1, max: 10 }, month: { used: 2, max: 20 }, history: [] }
       : path === '/api/teams/free' ? [{ key: 'neu', name: 'Neu Person', role: 'editor' }]
       : path === '/api/auth/people' ? [{ key: 'u1', name: 'U1', role: 'admin' }, { key: 'pablo', name: 'Pablo', role: 'editor' }]
-      : path === '/api/licence' ? { plan: 'Testbetrieb', entriesWeek: 20000, entriesMonth: 100000, aiTokensMonth: 0, aiTokensDay: 0, geprueft: false }
+      : path === '/api/licence' ? { plan: 'Testbetrieb', entriesWeek: 20000, entriesMonth: 100000, aiTokensMonth: 0, aiTokensDay: 0, geprueft: false, vonHand: true }
       : path === '/api/teams' ? teams
       : opts.method === 'PUT' ? teams[0] : {}
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }

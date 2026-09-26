@@ -113,7 +113,7 @@
  "↺ Reset {0}": "↺ Reset {0}",
  "Anzahl Anforderungen": "Number of requests",
  "Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren": "Create a request and sign it with this instance's key",
- "⚷ Anfordern": "⚷ Request",
+ "⚷ Generieren": "⚷ Generate",
  "Anforderung kopieren": "Copy request",
  "Id": "Id",
  "Art": "Kind",

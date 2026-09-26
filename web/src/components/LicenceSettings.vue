@@ -224,11 +224,11 @@ async function kopiere(text) {
       <span v-if="r.bis" class="bis muted">{{ $t('bis {0}', [r.bis]) }}</span>
     </div>
 
-    <div v-if="darf()" class="hand" style="margin-top:12px">
+    <div v-if="darf() && lic?.vonHand" class="hand" style="margin-top:12px">
       <button class="x von-hand" :title="$t('Schlüssel einfügen und Anforderungen — für eine Anlage ohne Verbindung zum Lizenzserver')" @click="vonHand = !vonHand">{{ (vonHand ? '● ' : '○ ') + $t("⚷ Von Hand") }}</button>
     </div>
 
-    <div v-if="darf() && vonHand" class="uebernahme" style="margin-top:8px">
+    <div v-if="darf() && lic?.vonHand && vonHand" class="uebernahme" style="margin-top:8px">
       <textarea v-model="eingabe" class="eingabe" rows="4" style="width:100%;max-width:640px" :placeholder="$t('Schlüssel')"></textarea>
       <div class="row" style="gap:8px;margin-top:4px">
         <button class="primary" :disabled="knopf.aus" :title="knopf.title" @click="uebernehmen">{{ knopf.text }}</button>
@@ -236,7 +236,7 @@ async function kopiere(text) {
       </div>
     </div>
 
-    <div v-if="darf() && vonHand" class="schluessel" style="margin-top:16px">
+    <div v-if="darf() && lic?.vonHand && vonHand" class="schluessel" style="margin-top:16px">
       <h3>{{ $t("⚷ Schlüssel") }}</h3>
       <div class="row anfordern" style="gap:6px;flex-wrap:wrap;align-items:center">
         <select v-model="neu.wahl" class="wahl">
@@ -246,7 +246,7 @@ async function kopiere(text) {
         <select v-model.number="neu.count" class="anzahl" :title="$t('Anzahl Anforderungen')">
           <option v-for="n in [1, 2, 5, 10]" :key="n" :value="n">× {{ n }}</option>
         </select>
-        <button @click="anfordern" :title="$t('Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren')">{{ $t("⚷ Anfordern") }}</button>
+        <button @click="anfordern" :title="$t('Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren')">{{ $t("⚷ Generieren") }}</button>
         <span class="said-anf" :class="saidAnf.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ saidAnf }}</span>
       </div>
       <div v-if="angefordert" class="row" style="gap:6px;margin-top:4px;align-items:flex-start">

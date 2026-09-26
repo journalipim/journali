@@ -17,7 +17,7 @@ function server(routen = {}) {
     const path = String(url).replace(/^https?:\/\/[^/]+/, '')
     calls.push({ path, method: opts.method ?? 'GET' })
     const feste = {
-      '/api/licence': { lic: { plan: 'free' }, geprueft: false },
+      '/api/licence': { lic: { plan: 'free' }, geprueft: false, vonHand: true },
       '/api/licence/requests': [OFFEN, EINGELOEST],
       '/api/licence/keys': [{ id: 'k-bbb', kind: 'limit', team: 'init', from: '2026-09-23', until: '2026-10-23' }],
       '/api/licence/packages': [{ key: 'pro', label: 'Pro', week: 50000, month: 250000, days: 30 }],

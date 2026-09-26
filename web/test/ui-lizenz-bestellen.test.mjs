@@ -20,7 +20,7 @@ function server({ kauf = KAUF, lizenzserver = true, abos = [], rabatte = [] } = 
     let body = {}
     if (path === '/api/licence' && method === 'GET')
       body = { plan: 'free', instanz: 'inst-7', entriesWeek: 10000, entriesMonth: 50000, geprueft: true, trial: false,
-        tarif: { key: 'free', label: 'Kostenlos' }, instanzTarif: { key: 'free', label: 'Kostenlos', pubTrees: 1 }, pubTrees: 0, lizenzserver, kauf, rabatte, abos }
+        tarif: { key: 'free', label: 'Kostenlos' }, instanzTarif: { key: 'free', label: 'Kostenlos', pubTrees: 1 }, pubTrees: 0, lizenzserver, kauf, rabatte, abos, vonHand: true }
     else if (path === '/api/licence/abo/de/auffrischen') body = { team: 'de', plan: 'pro', planLabel: 'Pro', status: 'active', paidUntil: '2026-10-26', geprueft: true }
     else if (path === '/api/licence/requests' || path === '/api/licence/keys' || path === '/api/licence/packages') body = []
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }

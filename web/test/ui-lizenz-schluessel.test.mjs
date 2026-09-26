@@ -10,7 +10,7 @@ import { store } from '../src/store.js'
 const LicenceSettings = (await import('../src/components/LicenceSettings.vue')).default
 
 /// Server mit einer offenen und einer eingelösten Anforderung
-function server({ fehler = null, lizenzserver = true, abos = [], lizenz = {} } = {}) {
+function server({ fehler = null, lizenzserver = true, abos = [], lizenz = {}, vonHand = true } = {}) {
   const gesendet = []
   const anforderungen = [
     { id: 'k-1', kind: 'limit', week: 30000, month: 100000, days: 30, created: '2026-09-23T10:00:00Z', text: '{"anforderung":"…1","sig":"x"}', team: null },
@@ -21,7 +21,7 @@ function server({ fehler = null, lizenzserver = true, abos = [], lizenz = {} } =
     const method = opt.method ?? 'GET'
     if (method !== 'GET') gesendet.push({ method, path, body: JSON.parse(opt.body) })
     let status = 200, body
-    if (path === '/api/licence' && method === 'GET') body = { plan: 'enterprise', instanz: 'abc', entriesWeek: 200000, entriesMonth: 1000000, validUntil: '2026-12-23', trial: true, geprueft: true, tarif: { key: 'enterprise', label: 'Enterprise' }, instanzTarif: { key: 'enterprise', label: 'Enterprise', pubTrees: null }, pubTrees: 3, lizenzserver, abos, ...lizenz }
+    if (path === '/api/licence' && method === 'GET') body = { plan: 'enterprise', instanz: 'abc', entriesWeek: 200000, entriesMonth: 1000000, validUntil: '2026-12-23', trial: true, geprueft: true, tarif: { key: 'enterprise', label: 'Enterprise' }, instanzTarif: { key: 'enterprise', label: 'Enterprise', pubTrees: null }, pubTrees: 3, lizenzserver, vonHand, abos, ...lizenz }
     else if (path === '/api/licence/abo') body = { team: 'de', plan: 'enterprise', planLabel: 'Enterprise', status: 'active', paidUntil: '2026-10-24', geprueft: true }
     else if (path === '/api/licence/abo/de/auffrischen') body = { team: 'de', plan: 'pro', planLabel: 'Pro', status: 'active', paidUntil: '2026-11-24', geprueft: true }
     else if (path === '/api/licence') body = { plan: 'Gross', geprueft: true }
@@ -68,7 +68,7 @@ test('Angefordert wird ein Paket — keine freien Zahlen', async () => {
   ], 'die Pakete stehen ohne ihre Werte da')
   await wahl.setValue('enterprise')
   await w.find('.anfordern select.anzahl').setValue('5')
-  await button(w, 'Anfordern').trigger('click'); await flushPromises()
+  await button(w, 'Generieren').trigger('click'); await flushPromises()
   const post = gesendet.find(g => g.path === '/api/licence/requests')
   assert.ok(post, 'keine Anforderung gesendet')
   assert.deepEqual({ ...post.body }, { kind: 'limit', plan: 'enterprise', count: 5 })
@@ -97,10 +97,10 @@ test('Token je Woche und Monat: das Kontingent des Teams, nicht die Lizenz allei
 test('Reset getrennt für Pro und Enterprise', async () => {
   const gesendet = server(); admin()
   const w = await montiere({ team: DE })
-  await button(w, 'Anfordern').trigger('click'); await flushPromises()
+  await button(w, 'Generieren').trigger('click'); await flushPromises()
   assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/requests').body }, { kind: 'reset', plan: 'pro', count: 1 })
   await w.find('.anfordern select.wahl').setValue('reset:enterprise')
-  await button(w, 'Anfordern').trigger('click'); await flushPromises()
+  await button(w, 'Generieren').trigger('click'); await flushPromises()
   assert.deepEqual({ ...gesendet.filter(g => g.path === '/api/licence/requests')[1].body }, { kind: 'reset', plan: 'enterprise', count: 1 })
   w.unmount()
 })
@@ -208,6 +208,17 @@ test('Ein abgelehnter Schlüssel sagt, warum — rot und fett', async () => {
   await knopf(w).trigger('click'); await flushPromises()
   assert.match(w.find('.said').text(), /✗ Zu Schlüssel k-9 gibt es hier keine Anforderung/)
   assert.ok(w.find('.said').classes().includes('fehler'), 'die Fehlermeldung ist nicht rot und fett')
+  w.unmount()
+})
+
+// Der Weg von Hand ist erklärungsbedürftig und setzt einen Kontakt voraus: er steht erst da, wenn der Lizenzserver ihn
+// dieser Instanz freigegeben hat (26.09.2026).
+test('Ohne Freigabe des Lizenzservers steht der Weg von Hand nicht da', async () => {
+  server({ vonHand: false }); admin()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(w.find('button.von-hand').exists(), false, 'der Schalter steht da, ohne dass er frei ist')
+  assert.equal(w.find('.uebernahme').exists(), false)
+  assert.equal(w.find('.schluessel').exists(), false)
   w.unmount()
 })
 

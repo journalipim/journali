@@ -92,6 +92,28 @@ public static class Tarifabruf
 }
 
 /// <summary>
+/// Was der Lizenzserver auf eine Tarifanfrage antwortet: das Blatt für alle, dazu was für diese eine Instanz gilt.
+/// </summary>
+public sealed record TarifeAntwort(Tarifblatt Blatt, Freigabe? Freigabe = null);
+
+/// <summary>
+/// Was der Lizenzserver dieser Instanz erlaubt (26.09.2026). <see cref="VonHand"/>: der Weg über kopierte Anforderungen
+/// und Schlüssel. Er ist erklärungsbedürftig und setzt einen Kontakt voraus — darum gibt ihn der Support je Instanz
+/// frei, und in der Oberfläche steht er erst dann. Signiert, damit ihn niemand sich selbst gibt.
+/// </summary>
+public sealed record Freigabe(
+    string? Instance = null,
+    bool VonHand = false,
+    DateTimeOffset? At = null,
+    /// <summary>Fingerabdruck der Anfrage — die Freigabe gehört zu genau einer.</summary>
+    string? Request = null,
+    string? Sig = null)
+{
+    public static JsonSerializerOptions Json => Signaturen.Json;
+    [JsonIgnore] public string Rumpf => JsonSerializer.Serialize(this with { Sig = null }, Json);
+}
+
+/// <summary>
 /// Eine Aktion des Shops: ein Rabattcode, der Satz, der dazu beim Bestellen steht, und bis wann er gilt (null: ohne Ende).
 /// </summary>
 public sealed record RabattZeile(string Code, string Text, DateOnly? Bis = null)

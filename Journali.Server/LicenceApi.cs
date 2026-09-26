@@ -39,6 +39,8 @@ public static class LicenceApi
                 pubTrees = baeume,
                 // die Abos der Teams (Taloan, 24.09.2026): letzter Stand vom Lizenzserver, und ob er heute gilt
                 lizenzserver = abos.Eingestellt, registriert = c.Registriert,
+                // Der Weg von Hand steht nur da, wenn der Lizenzserver ihn dieser Instanz freigegeben hat (26.09.2026)
+                vonHand = abos.VonHand,
                 abos = c.With((_, _, _) => c.Teams.All.Values.Where(x => x.Abo is not null).Select(x => new
                 {
                     team = x.Key, teamLabel = x.Label, plan = x.Abo!.Plan, planLabel = liste.Von(x.Abo.Plan)?.Label ?? x.Abo.Plan, status = x.Abo.Status,
