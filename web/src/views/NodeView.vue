@@ -791,7 +791,7 @@ function cellMenu(e, def, col, block) {
       <span v-if="node.role === 'variant'">· <span v-for="(v, a) in node.axisValues" :key="a" class="chip">{{ axisLabel(a) }}: {{ v }}</span></span>
       <span v-if="node.children">{{ $t("· {0} Subitems", [node.children]) }}</span>
       <span class="grow" />
-      <span>≡ {{ node.entries }} · #{{ node.lastNumber }} {{ when(node.lastAt) }} 👤 {{ node.lastActor }}</span>
+      <span>≡ {{ node.entries }} · #{{ node.lastNumber }} 👤 {{ node.lastActor }} {{ when(node.lastAt) }}</span>
       <!-- Wer sonst gerade hier ist: ein Zeichen je Person, pulsierend — Präsenz, keine Sperre (26.09.2026) -->
       <span v-for="p in store.presence" :key="p.key" class="hier" :title="$t('{0} ist auch hier', [p.name])">👤</span>
       <span v-if="busy">…</span>
