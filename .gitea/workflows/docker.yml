@@ -5,7 +5,8 @@
 # und `docker push` führt also der Docker des Servers aus. Daher zwei Adressen für dieselbe Gitea:
 #   git clone  — GITHUB_SERVER_URL, so wie der Job-Container sie sieht
 #   Registry   — 127.0.0.1:<Port>, so wie der Docker des Hosts sie sieht; ohne https nimmt Docker nur localhost an
-# Keine JS-Aktionen (kein actions/checkout): docker:cli bringt kein Node mit. Einrichtung: docs/betrieb.md → Unraid.
+# docker:cli ist Alpine: kein Node (darum keine JS-Aktionen, `git clone` statt actions/checkout) und kein bash (darum
+# `shell: sh`, kein ${x:0:7} und `base64 | tr` statt `base64 -w0`). Einrichtung: docs/betrieb.md → Unraid.
 name: docker
 on:
   push:
@@ -16,6 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: bauen und in die Registry der Gitea
+        shell: sh
         env:
           TOKEN: ${{ secrets.REGISTRY_TOKEN || secrets.GITEA_TOKEN }}
         run: |
@@ -24,12 +26,13 @@ jobs:
           registry="127.0.0.1:${gitea##*:}"
           besitzer=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')
           bild="$registry/$besitzer/journali"
-          auth=$(printf '%s:%s' "$GITHUB_ACTOR" "$TOKEN" | base64 -w0)
+          kurz=$(echo "$GITHUB_SHA" | cut -c1-7)
+          auth=$(printf '%s:%s' "$GITHUB_ACTOR" "$TOKEN" | base64 | tr -d '\n')
           git -c http.extraheader="Authorization: Basic $auth" clone --depth 1 -b "$GITHUB_REF_NAME" "$gitea/$GITHUB_REPOSITORY.git" quelle
           cd quelle
           echo "$TOKEN" | docker login "$registry" -u "$GITHUB_ACTOR" --password-stdin
-          docker build --pull -t "$bild:latest" -t "$bild:sha-${GITHUB_SHA:0:7}" .
+          docker build --pull -t "$bild:latest" -t "$bild:sha-$kurz" .
           docker push "$bild:latest"
-          docker push "$bild:sha-${GITHUB_SHA:0:7}"
-          docker image rm "$bild:sha-${GITHUB_SHA:0:7}" || true
+          docker push "$bild:sha-$kurz"
+          docker image rm "$bild:sha-$kurz" || true
           echo "Image: $bild:latest"
