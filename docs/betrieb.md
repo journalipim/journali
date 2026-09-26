@@ -201,16 +201,18 @@ Image zieht dadurch nur dieser eine Server; für andere Rechner im Netz bräucht
      Den Socket reicht der Runner selbst in den Job-Container — ihn zusätzlich über `container.options` zu binden,
      lässt den Job mit „Duplicate mount point“ scheitern. Das Job-Image `docker:cli` (168 MB) bringt Docker und git mit,
      aber kein Node: darum kommt der Workflow ohne JS-Aktionen aus (`git clone` statt `actions/checkout`).
-4. **Bauen** — ein Push auf `master` (oder im Repo *Actions* → `docker` → *Ausführen*). Angemeldet wird sich mit dem
-   Token, das Gitea dem Lauf mitgibt; reicht es für die Registry nicht, ein Zugangstoken mit `write:package` anlegen und
-   im Repo unter *Einstellungen* → *Actions* → *Geheimnisse* als `REGISTRY_TOKEN` hinterlegen. Danach steht das Paket
-   `journali` unter *Pakete*.
-5. **Vorlage** — `unraid/journali.xml` auf den USB-Stick des Servers kopieren
+4. **Token für die Registry** — das Token, das Gitea einem Lauf mitgibt, darf keine Pakete schreiben
+   (`docker login` antwortet mit `unauthorized`). Ein Zugangstoken mit `write:package` anlegen
+   (*Einstellungen* → *Anwendungen*, oder `gitea admin user generate-access-token --scopes write:package`) und im Repo
+   unter *Einstellungen* → *Actions* → *Geheimnisse* als `REGISTRY_TOKEN` hinterlegen.
+5. **Bauen** — ein Push auf `master` (oder im Repo *Actions* → `docker` → *Ausführen*). Danach steht das Paket
+   `journali` unter *Pakete*; lesen darf es jeder, der den Besitzer sehen darf — der Server zieht es also ohne Anmeldung.
+6. **Vorlage** — `unraid/journali.xml` auf den USB-Stick des Servers kopieren
    (`config/plugins/dockerMan/templates-user/my-journali.xml`) und `Repository` auf
    `127.0.0.1:<Gitea-Port>/<besitzer>/journali:latest` stellen.
-6. **Installieren** — *Docker* → *Add Container* → *Template*: `journali` → *Apply*. Danach steht die App auch unter
+7. **Installieren** — *Docker* → *Add Container* → *Template*: `journali` → *Apply*. Danach steht die App auch unter
    *Apps* → *Previous Apps*.
-7. **Einrichten** — *WebUI* öffnen: der Einrichtungsdialog fragt die Datenbank ab (Host = Adresse des Servers, Port und
+8. **Einrichten** — *WebUI* öffnen: der Einrichtungsdialog fragt die Datenbank ab (Host = Adresse des Servers, Port und
    Passwort aus Schritt 1, Benutzer `postgres`) und legt den ersten Administrator an.
 
 Die Vorlage bringt Port 8080, das Datenverzeichnis (`/data/jobs` → `appdata/journali`: Verbindung zur Datenbank, Jobs,
