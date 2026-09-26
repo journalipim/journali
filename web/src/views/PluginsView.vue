@@ -143,7 +143,7 @@ function pick(k) { cur.value = k }
           <!-- feste Spalten: Art, Fassung, Siegel, Zustand — damit sie untereinander stehen, gleich wie lang die Bezeichnung ist -->
           <span class="c-art muted" :title="p.manifest?.kind ?? ''">{{ artOf(p) }}</span>
           <span class="c-ver mono">{{ p.version ?? '' }}<span v-if="p.update" class="warn" :title="$t('auf der Platte: {0}', [p.diskVersion])"> ↑</span></span>
-          <span class="c-seal"><span v-if="sealOf(p)" class="seal" :class="p.certified ? 'pos' : 'neg'" :title="sealTitle(p)">{{ sealOf(p) }}</span></span>
+          <span class="c-seal"><span v-if="p.installed && sealOf(p)" class="seal" :class="p.certified ? 'pos' : 'neg'" :title="sealTitle(p)">{{ sealOf(p) }}</span></span>
           <span class="c-state" :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'" :title="stateOf(p)">{{ stateOf(p) }}<span v-if="!p.onDisk" class="neg" :title="$t('Verzeichnis fehlt')"> ✗</span></span>
         </span>
       </div>

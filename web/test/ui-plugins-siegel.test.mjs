@@ -174,3 +174,14 @@ test('„mein Tarif" zeigt nur, was erlaubt ist — und nur, wenn überhaupt etw
     w2.unmount()
   } finally { api.get = orig }
 })
+
+/// Ein Plugin, das nur auf der Platte liegt, zeigt kein Siegel — nicht installiert braucht kein Lämpchen (26.09.2026).
+test('das Siegel steht nur bei installierten Plugins', async () => {
+  welt()
+  const w = mount(PluginsView); await flushPromises()
+  const zeile = k => w.findAll('.scroll .li').find(li => li.find('.k').text() === k)
+  assert.equal(zeile('csv').find('.c-seal .seal').exists(), true, 'installiert und zertifiziert: kein Siegel')
+  assert.equal(zeile('mine').find('.c-seal .seal').exists(), false, 'nicht installiert: trotzdem ein Lämpchen')
+  w.unmount()
+})
+
