@@ -428,7 +428,7 @@ async function load(fremd = false) {
 onMounted(load)
 // Präsenz: solange dieser Knoten offen ist, geht er mit dem Puls hinaus — und der Server sagt, wer sonst noch hier ist
 watch(() => props.id, id => { store.ort = id; store.presence = []; store.poll(true) }, { immediate: true })
-onUnmounted(() => { store.ort = null; store.presence = [] })
+onUnmounted(() => { if (store.ort === props.id) { store.ort = null; store.presence = [] } })
 function onKey(e) {
   if (['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)) return
   // im grossen Editor (contenteditable) oder in einem Overlay gilt Esc dort — nicht den Knoten verlassen
