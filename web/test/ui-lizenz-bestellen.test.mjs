@@ -117,13 +117,11 @@ test('Der Kaufweg steht vorn, das Einfügen von Hand ist zugeklappt', async () =
   server(); anwender(['users']); fenster()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
   assert.equal(w.find('.uebernahme').exists(), false, 'das Eingabefeld steht offen da')
-  assert.equal(w.find('.schluessel').exists(), false, 'die Anforderungen stehen offen da')
   assert.ok(w.find('button.bestellen-knopf').exists(), 'der Kaufweg fehlt')
 
   // wer von Hand arbeitet, klappt es auf
   await w.find('button.von-hand').trigger('click'); await flushPromises()
   assert.ok(w.find('.uebernahme .eingabe').exists())
-  assert.ok(w.find('.schluessel').exists())
   w.unmount()
 })
 

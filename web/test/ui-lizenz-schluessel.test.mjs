@@ -1,7 +1,7 @@
-// Einstellungen → Team → Lizenz: anfordern (die Instanz signiert), kopieren, den ausgestellten
-// Schlüssel für das oben gewählte Team einlösen. Lizenz und Schlüssel kommen in dasselbe Feld mit einem Knopf
-// („ich habe zwei Eingabefelder mit jeweils einem Knopf — ich brauche eins“) — der Knopf sagt, was damit geschieht.
-// Geprüft wird, was die Oberfläche schickt und was sie danach zeigt.
+// Einstellungen → Team → Lizenz: einen Schlüssel für das oben gewählte Team einlösen. Lizenz und Schlüssel kommen in
+// dasselbe Feld mit einem Knopf („ich habe zwei Eingabefelder mit jeweils einem Knopf — ich brauche eins“) — der Knopf
+// sagt, was damit geschieht. Angefordert wird nichts mehr (26.09.2026): wer einen Schlüssel braucht, hat vorher Kontakt,
+// und der Support stellt ihn für die Instanz aus. Geprüft wird, was die Oberfläche schickt und was sie danach zeigt.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { mount, flushPromises, button } from './ui.mjs'
@@ -53,26 +53,14 @@ async function montiere(props) {
   return w
 }
 
-test('Angefordert wird ein Paket — keine freien Zahlen', async () => {
+// Der Anforderungsweg ist weg (26.09.2026): „wenn ich sowieso hier einen Lizenzschlüssel erstellen kann für eine
+// bestimmte Instanz — wozu braucht die Instanz überhaupt noch das Anfordernfeld?“
+test('Angefordert wird nichts mehr', async () => {
   const gesendet = server(); admin()
   const w = await montiere({ team: DE })
-  assert.equal(w.findAll('.anfordern input').length, 0, 'beim Anfordern stehen freie Eingabefelder')
-  const wahl = w.find('.anfordern select.wahl')
-  assert.deepEqual(wahl.findAll('option').map(o => o.text().replace(/\s+/g, ' ')), [
-    '↺ Reset Pro',
-    '↺ Reset Enterprise',
-    '⇡ Pro · 50.000 / Woche · 250.000 / Monat · 30 Tage',
-    '⇡ Pro+ · 50.000 / Woche · 250.000 / Monat · 30 Tage · alle Core-Plugins',
-    '⇡ Enterprise · 200.000 / Woche · 1.000.000 / Monat · 30 Tage · alle Core-Plugins',
-    '⇡ Unlimited · ∞ / Woche · ∞ / Monat · 30 Tage · alle Core-Plugins',
-  ], 'die Pakete stehen ohne ihre Werte da')
-  await wahl.setValue('enterprise')
-  await w.find('.anfordern select.anzahl').setValue('5')
-  await button(w, 'Generieren').trigger('click'); await flushPromises()
-  const post = gesendet.find(g => g.path === '/api/licence/requests')
-  assert.ok(post, 'keine Anforderung gesendet')
-  assert.deepEqual({ ...post.body }, { kind: 'limit', plan: 'enterprise', count: 5 })
-  assert.equal(w.find('textarea.angefordert').element.value, '{"anforderung":"neu","sig":"z"}')
+  assert.equal(w.find('.anfordern').exists(), false, 'die Anforderung steht noch da')
+  assert.equal(w.findAll('button').filter(b => /Generieren|Anfordern/.test(b.text())).length, 0)
+  assert.equal(gesendet.some(g => g.path === '/api/licence/requests'), false)
   w.unmount()
 })
 
@@ -94,17 +82,6 @@ test('Token je Woche und Monat: das Kontingent des Teams, nicht die Lizenz allei
   it.unmount()
 })
 
-test('Reset getrennt für Pro und Enterprise', async () => {
-  const gesendet = server(); admin()
-  const w = await montiere({ team: DE })
-  await button(w, 'Generieren').trigger('click'); await flushPromises()
-  assert.deepEqual({ ...gesendet.find(g => g.path === '/api/licence/requests').body }, { kind: 'reset', plan: 'pro', count: 1 })
-  await w.find('.anfordern select.wahl').setValue('reset:enterprise')
-  await button(w, 'Generieren').trigger('click'); await flushPromises()
-  assert.deepEqual({ ...gesendet.filter(g => g.path === '/api/licence/requests')[1].body }, { kind: 'reset', plan: 'enterprise', count: 1 })
-  w.unmount()
-})
-
 test('Tarif, Test und Publikationsbäume stehen bei der Lizenz', async () => {
   server(); admin()
   const w = await montiere({ team: DE })
@@ -113,17 +90,15 @@ test('Tarif, Test und Publikationsbäume stehen bei der Lizenz', async () => {
   w.unmount()
 })
 
-test('Eine Tabelle: je Anforderung eine Zeile, eingelöst steht in derselben Zeile', async () => {
+test('Eine Tabelle: je eingelöstem Schlüssel eine Zeile', async () => {
   // „jedes Mal raten, welche Tabelle denn nun was für eine Tabelle ist“
   server(); admin()
   const w = await montiere({ team: DE })
-  assert.equal(w.findAll('table').length, 2, 'neben Lizenz und Anforderungen steht noch eine Tabelle')
-  const zeilen = w.findAll('table.anforderungen tbody tr')
-  assert.equal(zeilen.length, 2)
-  assert.match(zeilen[0].text(), /offen/)
-  assert.ok(zeilen[0].find('button').exists(), 'offene Anforderung ohne Kopierknopf')
-  assert.match(zeilen[1].text(), /Reset.*✓ 2026-09-22.*Deutschland/)
-  assert.equal(zeilen[1].find('button').exists(), false, 'eine eingelöste Anforderung lässt sich noch kopieren')
+  assert.equal(w.findAll('table').length, 2, 'neben Lizenz und Schlüsseln steht noch eine Tabelle')
+  const zeilen = w.findAll('table.eingeloest tbody tr')
+  assert.equal(zeilen.length, 1)
+  assert.deepEqual(zeilen[0].findAll('td').map(c => c.text()), ['k-0', '↺ Reset', '✓ 2026-09-22', 'Deutschland', ''])
+  assert.equal(zeilen[0].find('button').exists(), false, 'in der Liste steht ein Knopf')
   w.unmount()
 })
 

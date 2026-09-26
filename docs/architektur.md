@@ -254,6 +254,10 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     Einstellung `vonhand:<instanz>`); die Freigabe reist signiert mit der Tarifantwort (`TarifeAntwort`, `Freigabe` —
     gebunden an Instanz und Fingerabdruck der Anfrage) und gilt bis zum nächsten Abruf. Ohne Freigabe steht in der
     Oberfläche nicht einmal der Schalter; der Knopf darin heisst **Generieren**, denn er erzeugt die Anforderung.
+    *Entschieden (26.09.2026):* die Instanz **fordert nichts mehr an**. Der Support kennt ihre Kennung aus dem Kontakt
+    und stellt den Schlüssel in der Verwaltung direkt für sie aus (`AusstellenFuer`); die Oberfläche hat nur noch das
+    Feld zum Einfügen und die Liste dessen, was eingelöst ist. Die Endpunkte `/api/licence/requests` und die Seite
+    *Anforderung* im Lizenzserver haben damit keinen Erzeuger mehr.
     *Entschieden:* eine Anlage **ganz ohne Verbindung** bekommt diesen Weg nicht — sie müsste die Freigabe eingeben,
     und dafür müsste ein Feld dastehen, das es ohne Freigabe nicht gibt. Irgendwo ist Schluss.
   - **Eingriffe am Abo** in der Verwaltung des Lizenzservers: entziehen (Betrug), gültig bis von Hand verlängern,

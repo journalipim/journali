@@ -62,27 +62,13 @@ function bestellen(rabatt = null) {
 async function load() {
   try { lic.value = await api.get('/api/licence') } catch (e) { store.toast(e.message) }
   if (!darf()) return
-  try {
-    const [a, e, p] = await Promise.all([api.get('/api/licence/requests'), api.get('/api/licence/keys'), api.get('/api/licence/packages')])
-    anforderungen.value = a; einloesungen.value = e; pakete.value = p
-  } catch (e) { store.toast(e.message) }
+  try { einloesungen.value = await api.get('/api/licence/keys') } catch (e) { store.toast(e.message) }
 }
 onMounted(load)
 
-// Schlüssel: die Instanz fordert an und signiert, der Shop gibt frei, der Aussteller stellt aus —
-// eingelöst wird nur, was hier angefordert wurde. Auf Vorrat und ohne Team; das Team wählt die IT beim Einlösen.
-const anforderungen = ref([])
+// Was hier eingelöst wurde. Eine Anforderung erzeugt die Instanz nicht mehr (26.09.2026): wer einen Schlüssel braucht,
+// hat vorher Kontakt, und der Support stellt ihn für die Instanz aus — die Kennung steht oben. Einlösen bleibt.
 const einloesungen = ref([])
-const pakete = ref([])
-const neu = ref({ wahl: 'reset:pro', count: 1 })   // wahl: 'reset:<tarif>' oder der Schlüssel eines Pakets
-// Reset getrennt für Pro und Enterprise
-const RESETS = [['pro', 'Pro'], ['enterprise', t_('Enterprise')]]
-const paketTitel = p => `${zahl(p.week)} / Woche · ${zahl(p.month)} / Monat · ${p.days} Tage${p.alle ? ' · alle Core-Plugins' : ''}`
-const paketName = k => pakete.value.find(p => p.key === k)?.label ?? RESETS.find(r => r[0] === k)?.[1] ?? k
-const artName = a => a.kind === 'reset' ? t_('Reset{0}', [a.plan ? ' ' + paketName(a.plan) : '']) : a.plan ? paketName(a.plan) : t_('Limit')
-const einloesung = id => einloesungen.value.find(e => e.id === id)
-const angefordert = ref('')
-const saidAnf = ref('')
 
 // Eingefügt wird, was im Fenster steht — auch Zeilen davor und danach (Konsole, BEGIN/END-Marker). Gemeint ist das
 // JSON von der ersten { bis zur letzten }. Ein Schlüssel trägt Art und Fingerabdruck der Anforderung; eine Anforderung
@@ -133,24 +119,6 @@ async function verbinden() {
     emit('eingespielt')
   }
   catch (e) { said.value = '✗ ' + e.message }
-}
-
-/// Offene Anforderung wegwerfen — eine eingelöste weist der Server ab
-async function wirfWeg(a) {
-  if (!await dialog.confirm({ title: t_('Anforderung {0} wegwerfen?', [a.id]), warn: t_('Ein Schlüssel dazu lässt sich dann nicht mehr einlösen.'), ok: t_('Wegwerfen') })) return
-  try { await api.del(`/api/licence/requests/${encodeURIComponent(a.id)}`); await load() }
-  catch (e) { store.toast(e.message) }
-}
-
-async function anfordern() {
-  try {
-    const { wahl, count } = neu.value
-    const r = await api.post('/api/licence/requests', wahl.startsWith('reset:') ? { kind: 'reset', plan: wahl.slice(6), count } : { kind: 'limit', plan: wahl, count })
-    angefordert.value = r.length === 1 ? r[0].text : '[' + r.map(x => x.text).join(',\n') + ']'
-    saidAnf.value = `✓ ${r.length} angefordert`
-    await load()
-  }
-  catch (e) { saidAnf.value = '✗ ' + e.message }
 }
 
 async function einloesen() {
@@ -236,44 +204,20 @@ async function kopiere(text) {
       </div>
     </div>
 
-    <div v-if="darf() && lic?.vonHand && vonHand" class="schluessel" style="margin-top:16px">
-      <h3>{{ $t("⚷ Schlüssel") }}</h3>
-      <div class="row anfordern" style="gap:6px;flex-wrap:wrap;align-items:center">
-        <select v-model="neu.wahl" class="wahl">
-          <option v-for="[k, l] in RESETS" :key="'reset:' + k" :value="'reset:' + k">{{ $t("↺ Reset {0}", [l]) }}</option>
-          <option v-for="p in pakete" :key="p.key" :value="p.key">⇡ {{ p.label }} · {{ paketTitel(p) }}</option>
-        </select>
-        <select v-model.number="neu.count" class="anzahl" :title="$t('Anzahl Anforderungen')">
-          <option v-for="n in [1, 2, 5, 10]" :key="n" :value="n">× {{ n }}</option>
-        </select>
-        <button @click="anfordern" :title="$t('Anforderung erstellen und mit dem Schlüssel dieser Instanz signieren')">{{ $t("⚷ Generieren") }}</button>
-        <span class="said-anf" :class="saidAnf.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ saidAnf }}</span>
-      </div>
-      <div v-if="angefordert" class="row" style="gap:6px;margin-top:4px;align-items:flex-start">
-        <textarea class="angefordert mono" readonly rows="3" style="width:100%;max-width:640px" :value="angefordert"></textarea>
-        <button class="x" :title="$t('Anforderung kopieren')" @click="kopiere(angefordert)">⧉</button>
-      </div>
-
-      <table v-if="anforderungen.length" class="grid anforderungen" style="width:auto;margin-top:8px"><thead><tr>
-        <th>{{ $t("Id") }}</th><th>{{ $t("Art") }}</th><th>{{ $t("angefordert") }}</th><th>{{ $t("eingelöst") }}</th><th>{{ $t("Team") }}</th><th>{{ $t("gilt bis") }}</th><th></th>
+    <!-- Was hier eingelöst wurde. Angefordert wird nichts mehr: der Support stellt den Schlüssel für diese Instanz aus -->
+    <div v-if="darf() && lic?.vonHand && vonHand && einloesungen.length" class="schluessel" style="margin-top:16px">
+      <h3>{{ $t("⚷ Schlüssel · {0}", [einloesungen.length]) }}</h3>
+      <table class="grid eingeloest" style="width:auto"><thead><tr>
+        <th>{{ $t("Id") }}</th><th>{{ $t("Art") }}</th><th>{{ $t("eingelöst") }}</th><th>{{ $t("Team") }}</th><th>{{ $t("gilt bis") }}</th>
       </tr></thead><tbody>
-        <tr v-for="a in anforderungen" :key="a.id">
-          <td class="mono">{{ a.id }}</td>
-          <td :title="a.kind === 'limit' ? paketTitel(a) : $t('Das Team zählt ab dem Einlösen neu.')">{{ art(a.kind) }} {{ artName(a) }}</td>
-          <td class="mono">{{ String(a.created).slice(0, 10) }}</td>
-          <template v-if="a.team">
-            <td class="mono pos">✓ {{ einloesung(a.id)?.from ?? '' }}</td>
-            <td>{{ a.teamLabel }}</td>
-            <td class="mono" :title="einloesung(a.id)?.carried ? $t('+{0} Tage aus dem laufenden Limit', [einloesung(a.id).carried]) : ''">{{ einloesung(a.id)?.until ?? '' }}<template v-if="einloesung(a.id)?.carried"> (+{{ einloesung(a.id).carried }})</template></td>
-            <td></td>
-          </template>
-          <template v-else>
-            <td class="muted">{{ $t("● offen") }}</td><td></td><td></td>
-            <td style="white-space:nowrap"><button class="x" :title="$t('Anforderung kopieren')" @click="kopiere(a.text)">⧉</button><button class="x neg" :title="$t('Anforderung wegwerfen — ein Schlüssel dazu lässt sich dann nicht mehr einlösen')" @click="wirfWeg(a)">🗑</button></td>
-          </template>
+        <tr v-for="e in einloesungen" :key="e.id">
+          <td class="mono">{{ e.id }}</td>
+          <td>{{ art(e.kind) }} {{ e.kind === 'reset' ? $t('Reset') : $t('Limit') }}</td>
+          <td class="mono pos">✓ {{ e.from }}</td>
+          <td>{{ e.teamLabel ?? e.team }}</td>
+          <td class="mono" :title="e.carried ? $t('+{0} Tage aus dem laufenden Limit', [e.carried]) : ''">{{ e.until ?? '' }}<template v-if="e.carried"> (+{{ e.carried }})</template></td>
         </tr>
       </tbody></table>
-
     </div>
   </div>
 </template>
