@@ -140,10 +140,10 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
 builder.Services.ConfigureHttpJsonOptions(o =>
     o.SerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
 
-// Vite-Entwicklungsserver (localhost:5173) darf direkt auf die API, wenn
-// in den Einstellungen ein anderer Server eingetragen ist als der eigene.
-if (builder.Environment.IsDevelopment())
-    builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+// CORS gilt in jeder Umgebung (app.UseCors unten): das OnlyOffice-Plugin ruft /api aus dem Editor-Origin, der
+// Vite-Entwicklungsserver (localhost:5173) aus seinem. Registriert war der Dienst bis 26.09.2026 nur in Development —
+// ohne launchSettings.json (Development) und im Paket brach der Start mit „Unable to resolve ICorsService“ ab.
+builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 app.Logger.LogInformation("Abbilder aus {Count} Einträgen gebaut, Stand #{Head}, Saatgut {Seeded}, Medien: {Media}, Plugins unter {Plugins} ({Auto} neu installiert)", rebuilt, catalog.Head, seeded, mediaStore.Kind, pluginDir, autoInstalled);
