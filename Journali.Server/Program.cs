@@ -119,6 +119,9 @@ if (betrieb.NachziehenSekunden > 0)
         }
     });
 
+// Wer gerade wo arbeitet (26.09.2026) — flüchtig, neben dem Journal; die Oberfläche meldet es mit ihrem Puls
+var presence = new Presence(db);
+
 var mailer = new Mailer(dataDir);   // Mailversand (Einstellungen → Mail)
 builder.Services.AddSingleton(mailer);
 builder.Services.AddSingleton<IJournal>(journal);
@@ -219,7 +222,21 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
     version = fassung,     // die Fassung, die läuft — steht oben in der Leiste
     // der Tarif dieser Instanz: die Oberfläche richtet sich danach, was sie überhaupt anbietet
     tarif = new { key = catalog.InstanzTarif.Key, label = catalog.InstanzTarif.Label, schedules = catalog.InstanzTarif.Zeitplan },
+    // wer sonst noch dort ist, wo der Fragende gerade steht (?ort=<Knoten oder Ansicht>) — leer ohne Angabe
+    presence = Dort(req, c),
 });
+
+/// <summary>Der Puls der Präsenz: „ich bin hier“ und wer sonst noch — mit Namen, wie die Oberfläche sie zeigt.</summary>
+object[] Dort(HttpRequest req, Catalog c)
+{
+    var ort = req.Query["ort"].FirstOrDefault();
+    if (string.IsNullOrWhiteSpace(ort)) return [];
+    var ich = req.HttpContext.Items["user"] as string;
+    if (string.IsNullOrEmpty(ich) && Auth.Enabled(c)) ich = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
+    var andere = presence.Puls(ich, ort, DateTimeOffset.UtcNow);
+    if (andere.Count == 0) return [];
+    return c.With((_, _, _) => andere.Select(a => (object)new { key = a, name = c.Users.All.GetValueOrDefault(a)?.Name ?? a }).ToArray());
+}
 
 /// <summary>Die Zahlen der Statusleiste — für die Anlage oder für das eigene Team, je nachdem, wer fragt.</summary>
 object? Nutzung(HttpRequest req, Catalog c)

@@ -2,7 +2,7 @@
 // Die Teamseite. Ein Team ist eine Gruppe von
 // Personen, die am Gesamtsystem mitarbeitet — hier steht, wer dazugehört, womit die Gruppe arbeitet und was sie verbraucht.
 // Teams anlegen und entfernen gehört nicht hierher, sondern zu den Personen (👤 Anwender & Rollen).
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
@@ -80,6 +80,13 @@ async function details() {
   try { tage.value = (await api.get(`/api/teams/${p}/usage?days=14`)).days ?? [] } catch { tage.value = [] }
 }
 onMounted(load)
+// Ein neuer Journalstand kann von hier kommen oder von einem anderen Anwender — auch von einem anderen Server
+// (26.09.2026: Teams, die woanders geändert wurden, standen hier veraltet). Nicht nachladen, solange jemand tippt:
+// sonst verschwindet die halbe Eingabe unter den Fingern.
+watch(() => store.head, () => {
+  if (document.activeElement?.closest?.('.section')?.querySelector('input:focus, select:focus, textarea:focus')) return
+  load()
+})
 
 async function schluessel() {
   if (!keyIn.value.wert) { store.toast(t_('Schlüssel fehlt')); return }

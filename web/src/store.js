@@ -50,6 +50,10 @@ export const store = reactive({
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,
+  /// Wo dieser Anwender gerade steht (ein Knoten, eine Ansicht) — geht mit dem Puls hinaus
+  ort: null,
+  /// Wer sonst noch dort ist: [{ key, name }] — vom Server, alle 3 s frisch
+  presence: [],
   nodes: 0,
   usage: null,
   version: '',      // Fassung des Servers — steht oben in der Leiste
@@ -130,12 +134,13 @@ export const store = reactive({
 
   async poll(force = false) {
     try {
-      const h = await api.get('/api/health')
+      const h = await api.get('/api/health' + (this.ort ? `?ort=${encodeURIComponent(this.ort)}` : ''))
       this.online = true
       const changed = h.head !== this.head
       this.head = h.head
       this.nodes = h.nodes
       this.usage = h.usage ?? null   // Nutzung für die Statusleiste
+      this.presence = h.presence ?? []   // wer sonst noch dort ist, wo dieser Anwender steht
       this.tarif = h.tarif ?? null   // Tarif der Instanz: was die Oberfläche überhaupt anbietet
       // Fassung und Bau: kurz oben, lang im Tooltip
       this.version = h.version ?? ''
