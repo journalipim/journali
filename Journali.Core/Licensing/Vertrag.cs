@@ -81,8 +81,12 @@ public static class Aussteller
     }
 }
 
-/// <summary>Ein Tarif, wie ihn das Tarifblatt nennt. <see cref="Plugins"/> null = alle.</summary>
-public sealed record TarifZeile(string Key, string Label, int Rang, int Week, int Month, int PubTrees, string[]? Plugins = null);
+/// <summary>
+/// Ein Tarif, wie ihn das Tarifblatt nennt. <see cref="Plugins"/> null = alle. <see cref="Kauf"/> ist die Adresse des
+/// Shops für diesen Tarif (26.09.2026): sie steht hier, damit eine Instanz sie kennt, ohne dass jemand sie einträgt —
+/// wer ein Team führt, bestellt damit Kontingent, und der Kauf findet über den Lizenzserver zum Team zurück.
+/// </summary>
+public sealed record TarifZeile(string Key, string Label, int Rang, int Week, int Month, int PubTrees, string[]? Plugins = null, string? Kauf = null);
 
 /// <summary>
 /// Was im Tarifblatt steht: alle Tarife mit Grenzen, Publikationsbäumen und Plugins, dazu welcher Tarif wie viele Monate
