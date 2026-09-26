@@ -240,6 +240,15 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     (`Aktivierung.Key`). Die Instanz fragt darum **ohne Schlüssel** (`Abos.VerbindenAsync` mit leerem `key`), der
     Lizenzserver findet das Abo über Instanz und Team. Niemand fügt einen Schlüssel ein, und keiner liegt in der Instanz.
     Den Stand eines Teams holen darf, wer es führt (Recht `team`, `TeamApi.Fuehrt`); verbinden von Hand bleibt `users`.
+  - **Aktionen des Shops** (26.09.2026): der Shop kennt keinen Streichpreis, nur Rabattcodes — die Dokumentation nennt
+    `checkout[discount_code]` als einzigen Weg. Darum stehen die Aktionen im Tarifblatt (`RabattZeile`: Code, Wirkung,
+    gültig bis) und die Oberfläche zeigt je Aktion einen grünen Kasten mit Code zum Kopieren und einem Knopf, der den
+    Shop mit diesem Code öffnet. Abgelaufenes liefert der Server gar nicht erst aus.
+  - **Registrierung beim Lizenzserver** (26.09.2026): eine Anlage ohne Abo sprach nie mit ihm und erfuhr darum nichts
+    von Tarifen und Aktionen. Jetzt wird **einmal gefragt** (`registrierung.js`, Antwort als `RegistrationSet` im
+    Journal, damit jeder Server der Anlage sie kennt); registriert holt sie das Blatt über `POST /v1/tarife` —
+    signierte Anfrage mit Instanz und öffentlichem Schlüssel, sonst nichts. Wer ablehnt, schickt nichts hinaus; ein Team
+    mit Abo spricht ohnehin mit dem Lizenzserver, dann kommt das Blatt mit.
   - **Eingriffe am Abo** in der Verwaltung des Lizenzservers: entziehen (Betrug), gültig bis von Hand verlängern,
     Tarif ändern (z. B. Pro bezahlt, Enterprise gewährt). Sie wirken beim nächsten Auffrischen der Instanz; ohne
     Verbindung gilt ihr letzter Stand höchstens bis zum Ende der Kulanz. Schlüssel zum Kopieren lassen sich nicht

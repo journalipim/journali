@@ -47,6 +47,7 @@ export const store = reactive({
   auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null, rights: null },
   dbDown: false,   // Datenbank im Betrieb nicht erreichbar (503 mit db: false)
   tarif: null,     // { key, label, schedules } aus /api/health
+  registriert: null,   // beim Lizenzserver registriert? null = noch nicht gefragt (App.vue fragt einmal)
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,
@@ -142,6 +143,7 @@ export const store = reactive({
       this.usage = h.usage ?? null   // Nutzung für die Statusleiste
       this.presence = h.presence ?? []   // wer sonst noch dort ist, wo dieser Anwender steht
       this.tarif = h.tarif ?? null   // Tarif der Instanz: was die Oberfläche überhaupt anbietet
+      this.registriert = h.registriert ?? null   // beim Lizenzserver: null = noch nicht gefragt
       // Fassung und Bau: kurz oben, lang im Tooltip
       this.version = h.version ?? ''
       if (h.built) {

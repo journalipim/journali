@@ -22,22 +22,38 @@ const said = ref('')
 const darf = () => store.can('users')
 /// Das Team führen: ein Teammanager bestellt sein Kontingent selbst (26.09.2026); der Administrator darf es überall
 const fuehrt = computed(() => store.can('users') || (store.can('team') && (props.team?.managers ?? []).includes(store.auth.user)))
-/// Die Adresse des Shops mit Instanz und Team daran. Es ist eine Adresse für alle Tarife — den Tarif wählt der
-/// Anwender im Shop, und was er kauft, findet über den Lizenzserver zu diesem Team zurück.
-const kaufAdresse = computed(() => {
+/// Die Adresse des Shops mit Instanz und Team daran — und, wenn eine Aktion gewählt ist, mit ihrem Rabattcode. Es ist
+/// eine Adresse für alle Tarife: den Tarif wählt der Anwender im Shop, und was er kauft, findet über den Lizenzserver
+/// zu diesem Team zurück.
+function kaufAdresse(rabatt = null) {
   if (!lic.value?.kauf || !lic.value?.instanz || !props.team) return null
   let u
   try { u = new URL(lic.value.kauf) } catch { return null }
   u.searchParams.set('checkout[custom][instanz]', lic.value.instanz)
   u.searchParams.set('checkout[custom][team]', props.team.key)
+  if (rabatt?.code) u.searchParams.set('checkout[discount_code]', rabatt.code)
   return u.toString()
-})
+}
+const kannBestellen = computed(() => !!kaufAdresse())
+/// Die Aktionen des Shops, die heute gelten — je eine steht als eigener Knopf da, mit ihrem Code an der Adresse
+const rabatte = computed(() => lic.value?.rabatte ?? [])
+
+/// Registrierung umstellen: registriert holt die Anlage das Tarifblatt, ohne spricht sie nicht mit dem Lizenzserver
+async function registrierung(ja) {
+  try {
+    const r = await api.post('/api/licence/registrierung', { ja })
+    said.value = r.fehler ? '✗ ' + r.fehler : '✓ ' + (ja ? t_('registriert') : t_('nicht registriert'))
+    await load(); await store.poll(true)
+  }
+  catch (e) { said.value = '✗ ' + e.message }
+}
 
 /// Bestellen: den Shop öffnen. Der Kauf meldet sich beim Lizenzserver, ↻ holt den Stand
-function bestellen() {
-  if (!kaufAdresse.value) return
-  window.open(kaufAdresse.value, '_blank', 'noopener')
-  said.value = '✓ ' + t_('Shop geöffnet')
+function bestellen(rabatt = null) {
+  const url = kaufAdresse(rabatt)
+  if (!url) return
+  window.open(url, '_blank', 'noopener')
+  said.value = '✓ ' + (rabatt ? t_('Shop geöffnet · Code {0}', [rabatt.code]) : t_('Shop geöffnet'))
 }
 
 async function load() {
@@ -155,6 +171,15 @@ async function kopiere(text) {
 }
 </script>
 
+<style scoped>
+/* Eine Aktion des Shops: grün, weil sie etwas gibt. Ein Kasten je Aktion, darin Wirkung, Code und die beiden Knöpfe. */
+.aktion { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding: 6px 10px; max-width: 640px;
+  border: 1px solid var(--pos); border-radius: 6px; background: color-mix(in srgb, var(--pos) 12%, var(--pane)); }
+.aktion .wirkung { flex: 1; }
+.aktion .code { font-family: var(--mono, monospace); font-weight: 600; letter-spacing: .04em; }
+.aktion .bis { font-size: 12px; white-space: nowrap; }
+</style>
+
 <template>
   <div class="section">
     <h2>{{ $t("⚿ journali Lizenz") }}</h2>
@@ -173,16 +198,27 @@ async function kopiere(text) {
       <tr v-if="!team || eigenes"><td class="muted" :title="$t('journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▤ Token / Woche") }}</td><td class="mono woche" :title="$t('Kontingent von {0} · Lizenz der Instanz {1}', [team?.label ?? '', zahl(lic?.entriesWeek)])">{{ zahl(limits?.week ?? lic?.entriesWeek) }}</td><td></td></tr>
       <tr v-if="!team || eigenes"><td class="muted" :title="$t('journali-Token je Monat: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▦ Token / Monat") }}</td><td class="mono monat" :title="$t('Kontingent von {0} · Lizenz der Instanz {1}', [team?.label ?? '', zahl(lic?.entriesMonth)])">{{ zahl(limits?.month ?? lic?.entriesMonth) }}</td><td></td></tr>
       <tr v-if="lic?.countFrom"><td class="muted" :title="$t('Was vor diesem Tag im Journal steht, zählt nicht mehr mit.')">{{ $t("◷ gezählt ab") }}</td><td class="mono">{{ lic.countFrom }}</td><td></td></tr>
+      <tr v-if="darf() && lic?.lizenzserver" class="registrierung"><td class="muted" :title="$t('Registriert holt diese Anlage Tarife und Aktionen des Shops und nennt dabei ihre Kennung.')">{{ $t("⇄ Lizenzserver") }}</td>
+        <td><button class="x" :class="lic.registriert ? 'pos' : 'muted'" :title="lic.registriert ? $t('Registrierung zurücknehmen') : $t('Diese Anlage registrieren')" @click="registrierung(!lic.registriert)">{{ lic.registriert ? $t("● registriert") : $t("○ nicht registriert") }}</button></td><td></td></tr>
       <tr v-if="lic?.instanz"><td class="muted" :title="$t('Diese Instanz. Eine Lizenz wird auf diese Kennung ausgestellt und gilt nur hier.')">{{ $t("⌗ Instanz") }}</td>
         <td class="mono" style="user-select:all">{{ lic.instanz }}</td>
         <td><button class="x" :title="$t('Kennung kopieren')" @click="kopiere(lic.instanz)">⧉</button></td></tr>
     </tbody></table>
 
     <!-- Kontingent bestellen: Instanz und Team hängen am Buy-Link, der Kauf findet über den Lizenzserver zum Team zurück -->
-    <div v-if="fuehrt && eigenes && kaufAdresse && lic?.lizenzserver" class="bestellen row" style="gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
-      <button class="primary bestellen-knopf" :title="$t('Shop öffnen — der Kauf gehört danach {0}', [team?.label ?? ''])" @click="bestellen">{{ $t("⚿ Bestellen · {0}", [team?.label ?? '']) }}</button>
+    <div v-if="fuehrt && eigenes && kannBestellen && lic?.lizenzserver" class="bestellen row" style="gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
+      <button class="primary bestellen-knopf" :title="$t('Shop öffnen — der Kauf gehört danach {0}', [team?.label ?? ''])" @click="bestellen()">{{ $t("⚿ Bestellen · {0}", [team?.label ?? '']) }}</button>
       <button v-if="!aboTeam" class="x holen" :title="$t('Stand vom Lizenzserver holen')" @click="auffrischen">↻</button>
       <span v-if="!darf()" class="said" :class="said.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ said }}</span>
+    </div>
+
+    <!-- Die Aktionen des Shops: der Shop kennt keinen Streichpreis, nur Codes — die Wirkung steht hier, der Code daneben -->
+    <div v-for="r in rabatte" :key="r.code" class="aktion" :title="r.bis ? $t('gültig bis {0}', [r.bis]) : ''">
+      <span class="wirkung">{{ '✦ ' + r.text }}</span>
+      <code class="code" style="user-select:all">{{ r.code }}</code>
+      <button class="x kopieren" :title="$t('Rabattcode kopieren')" @click="kopiere(r.code)">⧉</button>
+      <button v-if="fuehrt && eigenes && kannBestellen && lic?.lizenzserver" class="x mit-code" :title="$t('Shop mit diesem Code öffnen')" @click="bestellen(r)">⚿</button>
+      <span v-if="r.bis" class="bis muted">{{ $t('bis {0}', [r.bis]) }}</span>
     </div>
 
     <div v-if="darf()" class="uebernahme" style="margin-top:8px">

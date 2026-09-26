@@ -28,6 +28,8 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
     /// <summary>Nach so langer Zeit wird der Stand eines Teams neu geholt.</summary>
     public static readonly TimeSpan Auffrischen = TimeSpan.FromHours(20);
 
+    private DateTimeOffset? _blattGeholt;
+
     private DateTimeOffset Jetzt => (uhr ?? TimeProvider.System).GetUtcNow();
 
     /// <summary>Ist ein Lizenzserver eingestellt?</summary>
@@ -115,10 +117,45 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         return null;
     }
 
+    /// <summary>
+    /// Das Tarifblatt holen, ohne Abo und ohne Schlüssel (26.09.2026): eine frische Anlage kennt sonst weder die Tarife
+    /// des Shops noch seine Aktionen, weil sie den Lizenzserver erst beim ersten Kauf fragen würde. Die Anfrage nennt
+    /// Instanz und öffentlichen Schlüssel, sonst nichts. Übernommen wird nur ein neueres Blatt mit gültiger Signatur.
+    /// </summary>
+    public async Task<string?> TarifblattAsync(Catalog c, CancellationToken ct = default)
+    {
+        var adresse = lizenzserver();
+        if (string.IsNullOrWhiteSpace(adresse)) return "Kein Lizenzserver eingebaut.";
+        var r = new KeyRequest("t-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant(), Tarifabruf.Art, instanz.Id, instanz.PublicKey, Created: Jetzt);
+        var rumpf = JsonSerializer.Serialize(r, KeyRequest.Json);
+        var anfrage = new SignedRequest(rumpf, Convert.ToBase64String(instanz.Signiere(rumpf)));
+        HttpResponseMessage res;
+        try { res = await http.PostAsync(new Uri(new Uri(adresse.TrimEnd('/') + "/"), "v1/tarife"), new StringContent(anfrage.Text, Encoding.UTF8, "application/json"), ct); }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { return "Lizenzserver nicht erreichbar: " + ex.Message; }
+        var text = await res.Content.ReadAsStringAsync(ct);
+        if (!res.IsSuccessStatusCode)
+        {
+            try { if (JsonDocument.Parse(text).RootElement.TryGetProperty("error", out var f)) return f.GetString(); } catch (JsonException) { }
+            return $"Lizenzserver: {(int)res.StatusCode}";
+        }
+        Tarifblatt? b;
+        try { b = JsonSerializer.Deserialize<Tarifblatt>(text, new JsonSerializerOptions(JsonSerializerDefaults.Web)); }
+        catch (JsonException) { return "Antwort des Lizenzservers unlesbar."; }
+        if (b is null) return "Antwort des Lizenzservers leer.";
+        _blattGeholt = Jetzt;
+        c.NimmTarifblatt(b, "system");
+        return null;
+    }
+
     /// <summary>Alle Teams mit Abo, deren Stand älter als <see cref="Auffrischen"/> ist, neu fragen. Liefert, wie viele es waren.</summary>
     public async Task<int> AuffrischenAsync(Catalog c, CancellationToken ct = default)
     {
         if (!Eingestellt) return 0;
+        // Das Tarifblatt zuerst, auch ohne Abo — aber nur, wenn die Anlage registriert ist oder ohnehin ein Abo hat:
+        // wer nicht registriert ist, schickt nichts hinaus (26.09.2026).
+        var darf = c.Registriert == true || c.With((_, _, _) => c.Teams.All.Values.Any(x => x.Abo is not null));
+        if (darf && (_blattGeholt is not { } zuvor || Jetzt - zuvor >= Auffrischen))
+            if (await TarifblattAsync(c, ct) is { } fehler) Console.WriteLine($"journali: Tarifblatt nicht geholt — {fehler}");
         var teams = c.With((_, _, _) => c.Teams.All.Values.Select(t => (t.Key, t.Abo?.Issued)).ToList());
         var n = 0;
         foreach (var (team, zuletzt) in teams)

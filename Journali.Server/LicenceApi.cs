@@ -11,6 +11,7 @@ namespace Journali.Server;
 public static class LicenceApi
 {
     public sealed record AboBody(string? Team, string? Key);
+    public sealed record RegistrierungBody(bool Ja);
 
     public static void Map(RouteGroupBuilder api, Licences licences, Abos abos)
     {
@@ -32,10 +33,12 @@ public static class LicenceApi
                 instanzTarif = new { key = t.Key, label = t.Label, pubTrees = t.PubTrees == Tarife.Ohne ? (int?)null : t.PubTrees },
                 // Die Adresse des Shops aus dem Tarifblatt: die Oberfläche hängt Instanz und Team daran, und was gekauft
                 // wird, findet über den Lizenzserver zum Team zurück — niemand fügt danach etwas ein.
+                // Die Aktionen nur, solange sie gelten: danach steht nichts da und nichts hängt an der Adresse
                 kauf = liste.Kauf,
+                rabatte = liste.RabatteAm(DateOnly.FromDateTime(DateTime.Now)).Select(r => new { r.Code, r.Text, r.Bis }).ToList(),
                 pubTrees = baeume,
                 // die Abos der Teams (Taloan, 24.09.2026): letzter Stand vom Lizenzserver, und ob er heute gilt
-                lizenzserver = abos.Eingestellt,
+                lizenzserver = abos.Eingestellt, registriert = c.Registriert,
                 abos = c.With((_, _, _) => c.Teams.All.Values.Where(x => x.Abo is not null).Select(x => new
                 {
                     team = x.Key, teamLabel = x.Label, plan = x.Abo!.Plan, planLabel = liste.Von(x.Abo.Plan)?.Label ?? x.Abo.Plan, status = x.Abo.Status,
@@ -64,6 +67,16 @@ public static class LicenceApi
             if (stand is null) return Bad(fehler ?? "Abo nicht aufgefrischt.");
             return Results.Ok(new { stand.Team, stand.Plan, planLabel = c.Tarife.Von(stand.Plan)?.Label ?? stand.Plan, stand.Status, stand.PaidUntil, stand.Geprueft });
         });
+        // Registrieren: die Anlage holt das Tarifblatt beim Lizenzserver und kennt damit Tarife und Aktionen des Shops.
+        // Gefragt wird einmal; ein Nein bleibt ein Nein, bis es hier geändert wird.
+        api.MapPost("/licence/registrierung", async (RegistrierungBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            c.Registrierung(body.Ja, actor);
+            var fehler = body.Ja ? await abos.TarifblattAsync(c, ct) : null;
+            return Results.Ok(new { registriert = body.Ja, tarifblatt = c.Tarife.Fassung, fehler });
+        });
+
         // Eine Lizenz für die ganze Instanz wird nicht eingespielt (25.09.2026): jede gehört einem Team — Abo
         // (/licence/abo) oder Schlüssel zum Kopieren (/licence/keys). Übrig ist der Test des Init Teams (Licences).
     }

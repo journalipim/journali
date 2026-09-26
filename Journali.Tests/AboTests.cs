@@ -30,12 +30,24 @@ public class AboTests
         public string Pub => Signaturen.Oeffentlich(Aussteller);
         public Tarifblatt? Blatt;
 
+        /// <summary>Wie oft das Tarifblatt allein geholt wurde (ohne Abo, ohne Schlüssel).</summary>
+        public int Blattanfragen;
+
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
         {
-            Anfragen++;
-            Assert.EndsWith("/v1/stand", request.RequestUri!.AbsolutePath);
             var anfrage = JsonSerializer.Deserialize<SignedRequest>(await request.Content!.ReadAsStringAsync(ct), KeyRequest.Json)!;
             Assert.True(anfrage.Pruefe().Ok);                                   // die Instanz signiert ihre Anfrage
+            if (request.RequestUri!.AbsolutePath.EndsWith("/v1/tarife"))
+            {
+                Blattanfragen++;
+                Assert.Equal(Tarifabruf.Art, anfrage.Inhalt!.Kind);
+                Assert.Null(anfrage.Inhalt.Team);                               // sie nennt nur Instanz und Schlüssel
+                Assert.Null(anfrage.Inhalt.Key);
+                return new HttpResponseMessage(HttpStatusCode.OK)
+                { Content = new StringContent(JsonSerializer.Serialize(Blatt ?? Tarifblaetter(Aussteller, 1, z => z), new JsonSerializerOptions(JsonSerializerDefaults.Web))) };
+            }
+            Anfragen++;
+            Assert.EndsWith("/v1/stand", request.RequestUri.AbsolutePath);
             if (Fehler is not null) return new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent(JsonSerializer.Serialize(new { error = Fehler })) };
             var r = anfrage.Inhalt!;
             LetzterKey = r.Key;
@@ -166,11 +178,79 @@ public class AboTests
         Assert.Equal(12_000, w.C.Tarife.Free.Week);
     }
 
-    private static Tarifblatt Blatt(ECDsa mit, long fassung, Func<TarifZeile, TarifZeile> aendern)
+    private static Tarifblatt Blatt(ECDsa mit, long fassung, Func<TarifZeile, TarifZeile> aendern) => Tarifblaetter(mit, fassung, aendern);
+
+    /// <summary>Ein signiertes Blatt aus dem Saatgut — mit geänderten Zeilen und, wenn genannt, Aktionen des Shops.</summary>
+    private static Tarifblatt Tarifblaetter(ECDsa mit, long fassung, Func<TarifZeile, TarifZeile> aendern, RabattZeile[]? rabatte = null)
     {
         var b = Tarife.Saat.AlsBlatt(fassung, Jetzt);
-        var text = JsonSerializer.Serialize(b with { Tarife = [.. b.Tarife.Select(aendern)] }, TarifblattInhalt.Json);
+        var text = JsonSerializer.Serialize(b with { Tarife = [.. b.Tarife.Select(aendern)], Rabatte = rabatte }, TarifblattInhalt.Json);
         return new Tarifblatt(text, Signaturen.Signiere(mit, text));
+    }
+
+    /// <summary>
+    /// Registriert holt die Instanz das Tarifblatt auch ohne Abo und ohne Schlüssel (26.09.2026): eine frische Anlage
+    /// kennt sonst weder die Grenzen der Tarife noch die Aktionen des Shops, weil sie erst beim ersten Kauf fragen würde.
+    /// </summary>
+    [Fact]
+    public async Task Das_Tarifblatt_kommt_auch_ohne_Abo()
+    {
+        var w = new Welt();
+        w.C.Registrierung(true, "taloan");
+        w.Server.Blatt = Tarifblaetter(w.Server.Aussteller, 4, z => z, [new RabattZeile("START50", "Einführung bis Ende Oktober", new DateOnly(2026, 10, 31))]);
+        Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));                   // kein Team hat ein Abo
+        Assert.Equal(0, w.Server.Anfragen);                                     // nach einem Stand fragt niemand
+        Assert.Equal(1, w.Server.Blattanfragen);                                // nach dem Blatt schon
+        Assert.Equal(4, w.C.Tarife.Fassung);
+        Assert.Equal("START50", w.C.Tarife.RabatteAm(Heute).Single().Code);
+
+        // und nicht bei jedem Durchlauf: erst wieder, wenn es alt ist
+        await w.Abos.AuffrischenAsync(w.C);
+        Assert.Equal(1, w.Server.Blattanfragen);
+        w.Uhr.Jetzt = Jetzt + Abos.Auffrischen + TimeSpan.FromMinutes(1);
+        await w.Abos.AuffrischenAsync(w.C);
+        Assert.Equal(2, w.Server.Blattanfragen);
+    }
+
+    /// <summary>
+    /// Ohne Registrierung geht nichts hinaus (26.09.2026): wer nicht zugestimmt hat, dessen Anlage fragt auch nicht nach
+    /// dem Tarifblatt. Ein Team mit Abo spricht ohnehin mit dem Lizenzserver — dann kommt das Blatt mit.
+    /// </summary>
+    [Fact]
+    public async Task Ohne_Registrierung_fragt_die_Anlage_nicht()
+    {
+        var w = new Welt();
+        Assert.Null(w.C.Registriert);                                           // noch niemand gefragt
+        Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));
+        Assert.Equal(0, w.Server.Blattanfragen);
+
+        w.C.Registrierung(false, "taloan");
+        Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));
+        Assert.Equal(0, w.Server.Blattanfragen);
+        Assert.False(w.C.Registriert);
+
+        // ein Abo ist Zustimmung genug: dafür spricht die Anlage ohnehin mit dem Lizenzserver
+        await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        w.Uhr.Jetzt = Jetzt + Abos.Auffrischen + TimeSpan.FromMinutes(1);
+        await w.Abos.AuffrischenAsync(w.C);
+        Assert.Equal(1, w.Server.Blattanfragen);
+    }
+
+    /// <summary>Eine abgelaufene Aktion gilt nicht mehr — und eine mit fremder Signatur kommt gar nicht erst ins Journal.</summary>
+    [Fact]
+    public async Task Eine_abgelaufene_Aktion_gilt_nicht()
+    {
+        var w = new Welt();
+        w.Server.Blatt = Tarifblaetter(w.Server.Aussteller, 2, z => z,
+            [new RabattZeile("ALT", "abgelaufen", Heute.AddDays(-1)), new RabattZeile("JETZT", "gilt noch", Heute), new RabattZeile("IMMER", "ohne Ende")]);
+        Assert.Null(await w.Abos.TarifblattAsync(w.C));
+        Assert.Equal(["JETZT", "IMMER"], w.C.Tarife.RabatteAm(Heute).Select(r => r.Code));
+
+        using var fremd = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        w.Server.Blatt = Tarifblaetter(fremd, 9, z => z, [new RabattZeile("FREMD", "nicht signiert")]);
+        Assert.Null(await w.Abos.TarifblattAsync(w.C));
+        Assert.Equal(2, w.C.Tarife.Fassung);
+        Assert.DoesNotContain("FREMD", w.C.Tarife.Rabatte.Select(r => r.Code));
     }
 
     [Fact]

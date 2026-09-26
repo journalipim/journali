@@ -5,6 +5,7 @@ import ContextMenu from './components/ContextMenu.vue'
 import Dialog from './components/Dialog.vue'
 import { useRoute, useRouter } from 'vue-router'
 import { plugins } from './plugins.js'
+import { frageNachRegistrierung } from './registrierung.js'
 import { TOPICS, entries, baseTopics, topicOfPath } from './topics.js'
 import { ai } from './ai.js'
 import UsageMini from './components/UsageMini.vue'
@@ -28,6 +29,9 @@ const crashed = ref(null)
 onErrorCaptured(e => { crashed.value = e?.message ?? String(e); console.error(e); return false })
 watch(() => route.fullPath, () => { crashed.value = null })
 onMounted(() => { plugins.load() })
+
+// Registrierung beim Lizenzserver: einmal fragen (registrierung.js sagt, wann und was)
+watch(() => [store.registriert, store.auth.user, store.auth.rights], () => { frageNachRegistrierung() }, { immediate: true })
 plugins.beobachte(store)   // nach der Anmeldung und nach einem neuen Serverstand neu laden — sonst fehlen Gruppen in der Leiste
 onMounted(() => window.addEventListener('keydown', e => {
   if (e.altKey && !e.ctrlKey && [...nav, ...navBottom].some(n => n.key === e.key)) {

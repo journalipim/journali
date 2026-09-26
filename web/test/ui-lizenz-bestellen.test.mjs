@@ -11,7 +11,7 @@ const LicenceSettings = (await import('../src/components/LicenceSettings.vue')).
 
 const KAUF = 'https://shop.example/checkout/buy/a92048e1'
 
-function server({ kauf = KAUF, lizenzserver = true, abos = [] } = {}) {
+function server({ kauf = KAUF, lizenzserver = true, abos = [], rabatte = [] } = {}) {
   const gesendet = []
   globalThis.fetch = async (url, opt = {}) => {
     const path = String(url).replace(/^https?:\/\/[^/]+/, '').split('?')[0]
@@ -20,7 +20,7 @@ function server({ kauf = KAUF, lizenzserver = true, abos = [] } = {}) {
     let body = {}
     if (path === '/api/licence' && method === 'GET')
       body = { plan: 'free', instanz: 'inst-7', entriesWeek: 10000, entriesMonth: 50000, geprueft: true, trial: false,
-        tarif: { key: 'free', label: 'Kostenlos' }, instanzTarif: { key: 'free', label: 'Kostenlos', pubTrees: 1 }, pubTrees: 0, lizenzserver, kauf, abos }
+        tarif: { key: 'free', label: 'Kostenlos' }, instanzTarif: { key: 'free', label: 'Kostenlos', pubTrees: 1 }, pubTrees: 0, lizenzserver, kauf, rabatte, abos }
     else if (path === '/api/licence/abo/de/auffrischen') body = { team: 'de', plan: 'pro', planLabel: 'Pro', status: 'active', paidUntil: '2026-10-26', geprueft: true }
     else if (path === '/api/licence/requests' || path === '/api/licence/keys' || path === '/api/licence/packages') body = []
     return { ok: true, status: 200, text: async () => JSON.stringify(body) }
@@ -75,6 +75,46 @@ test('Eine Adresse mit eigenen Werten behält sie', async () => {
   const u = new URL(offen[0].url)
   assert.equal(u.searchParams.get('embed'), '1')
   assert.equal(u.searchParams.get('checkout[custom][team]'), 'de')
+  w.unmount()
+})
+
+// Der Shop kennt keinen Streichpreis, nur Rabattcodes (Dokumentation, 26.09.2026) — die Aktion steht darum bei uns:
+// je Aktion ein Knopf mit ihrem Satz, und ihr Code hängt an der Adresse.
+test('Eine Aktion steht als grüner Kasten da: Wirkung, Code zum Kopieren, Shop mit Code', async () => {
+  const rabatte = [
+    { code: 'START50', text: 'Einführung · 50 % im ersten Jahr', bis: '2026-10-31' },
+    { code: 'DREI', text: 'Drei Monate geschenkt', bis: null },
+  ]
+  server({ rabatte }); anwender(['team', 'read']); const offen = fenster()
+  const kopiert = []
+  globalThis.navigator.clipboard = { writeText: async s => { kopiert.push(s) } }
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  const kaesten = w.findAll('.aktion')
+  assert.equal(kaesten.length, 2)
+  assert.match(kaesten[0].find('.wirkung').text(), /✦ Einführung · 50 % im ersten Jahr/)
+  assert.equal(kaesten[0].find('code.code').text(), 'START50', 'der Rabattcode steht nicht im Kasten')
+  assert.match(kaesten[0].find('.bis').text(), /2026-10-31/)
+  assert.equal(kaesten[1].find('.bis').exists(), false, 'ohne Ende steht kein Datum da')
+
+  // der Code lässt sich kopieren
+  await kaesten[0].find('button.kopieren').trigger('click'); await flushPromises()
+  assert.deepEqual(kopiert, ['START50'])
+
+  await kaesten[0].find('button.mit-code').trigger('click'); await flushPromises()
+  assert.equal(new URL(offen[0].url).searchParams.get('checkout[discount_code]'), 'START50')
+  assert.equal(new URL(offen[0].url).searchParams.get('checkout[custom][team]'), 'de')
+  assert.match(w.find('.bestellen .said').text(), /Code START50/)
+
+  // der gewöhnliche Knopf bleibt ohne Code
+  await button(w, 'Bestellen').trigger('click'); await flushPromises()
+  assert.equal(new URL(offen[1].url).searchParams.get('checkout[discount_code]'), null)
+  w.unmount()
+})
+
+test('Ohne Aktion steht kein Kasten', async () => {
+  server(); anwender(['team', 'read']); fenster()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(w.findAll('.aktion').length, 0)
   w.unmount()
 })
 

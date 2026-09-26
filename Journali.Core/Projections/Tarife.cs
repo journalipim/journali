@@ -19,13 +19,15 @@ public sealed class Tarifliste
 {
     private readonly string _testTarif;
 
-    public Tarifliste(long fassung, IEnumerable<Tarif> tarife, string testTarif, int testMonate, string? kauf = null)
+    public Tarifliste(long fassung, IEnumerable<Tarif> tarife, string testTarif, int testMonate, string? kauf = null,
+        IEnumerable<Licensing.RabattZeile>? rabatte = null)
     {
         Fassung = fassung;
         Alle = [.. tarife.OrderBy(x => x.Rang)];
         _testTarif = testTarif;
         TestMonate = testMonate;
         Kauf = kauf;
+        Rabatte = [.. rabatte ?? []];
     }
 
     /// <summary>Fassung des Tarifblatts — 0 für das Saatgut.</summary>
@@ -36,6 +38,11 @@ public sealed class Tarifliste
     public int TestMonate { get; }
     /// <summary>Die Adresse des Shops — eine für alle Tarife; null, wenn das Blatt keine nennt.</summary>
     public string? Kauf { get; }
+    /// <summary>Die Aktionen des Shops: Code, Satz, bis wann.</summary>
+    public IReadOnlyList<Licensing.RabattZeile> Rabatte { get; }
+
+    /// <summary>Die Aktionen, die an diesem Tag gelten.</summary>
+    public IReadOnlyList<Licensing.RabattZeile> RabatteAm(DateOnly heute) => [.. Rabatte.Where(r => r.Gilt(heute))];
 
     /// <summary>Der Tarif zu einem Schlüssel — null, wenn es ihn nicht gibt.</summary>
     public Tarif? Von(string? key) => Alle.FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.OrdinalIgnoreCase));
@@ -55,12 +62,12 @@ public sealed class Tarifliste
     /// <summary>Aus dem Inhalt eines (geprüften) Tarifblatts.</summary>
     public static Tarifliste Aus(Licensing.TarifblattInhalt b) =>
         new(b.Fassung, b.Tarife.Select(z => new Tarif(z.Key, z.Label, z.Rang, z.Week, z.Month, z.PubTrees, z.Plugins is null ? null : new HashSet<string>(z.Plugins))),
-            b.TestTarif, b.TestMonate, b.Kauf);
+            b.TestTarif, b.TestMonate, b.Kauf, b.Rabatte);
 
     /// <summary>Als Inhalt eines Tarifblatts — so legt der Lizenzserver seine erste Fassung aus dem Saatgut an.</summary>
     public Licensing.TarifblattInhalt AlsBlatt(long fassung, DateTimeOffset ausgestellt) =>
         new(fassung, ausgestellt, Test.Key, TestMonate,
-            [.. Alle.Select(t => new Licensing.TarifZeile(t.Key, t.Label, t.Rang, t.Week, t.Month, t.PubTrees, t.Plugins?.Order().ToArray()))], Kauf);
+            [.. Alle.Select(t => new Licensing.TarifZeile(t.Key, t.Label, t.Rang, t.Week, t.Month, t.PubTrees, t.Plugins?.Order().ToArray()))], Kauf, Rabatte.Count == 0 ? null : [.. Rabatte]);
 }
 
 /// <summary>

@@ -81,6 +81,25 @@ public static class Aussteller
     }
 }
 
+/// <summary>
+/// Das Tarifblatt holen, ohne etwas zu besitzen (26.09.2026): eine Instanz kennt sonst weder Grenzen noch Aktionen des
+/// Shops, solange niemand gekauft hat. Die Anfrage nennt nur Instanz und öffentlichen Schlüssel und ist signiert; die
+/// Antwort ist das signierte Blatt.
+/// </summary>
+public static class Tarifabruf
+{
+    public const string Art = "tarife";
+}
+
+/// <summary>
+/// Eine Aktion des Shops: ein Rabattcode, der Satz, der dazu beim Bestellen steht, und bis wann er gilt (null: ohne Ende).
+/// </summary>
+public sealed record RabattZeile(string Code, string Text, DateOnly? Bis = null)
+{
+    /// <summary>Gilt die Aktion an diesem Tag?</summary>
+    public bool Gilt(DateOnly heute) => Bis is null || Bis >= heute;
+}
+
 /// <summary>Ein Tarif, wie ihn das Tarifblatt nennt. <see cref="Plugins"/> null = alle.</summary>
 public sealed record TarifZeile(string Key, string Label, int Rang, int Week, int Month, int PubTrees, string[]? Plugins = null);
 
@@ -91,8 +110,12 @@ public sealed record TarifZeile(string Key, string Label, int Rang, int Week, in
 /// je Tarif und Laufzeit einer Variante, und die Variante hat keine eigene Adresse. Sie steht hier, damit eine Instanz
 /// den Shop kennt, ohne dass jemand sie einträgt; wer ein Team führt, bestellt damit Kontingent, und was gekauft wird,
 /// findet über den Lizenzserver zum Team zurück.</para>
+/// <para><see cref="Rabatte"/> sind die Aktionen des Shops (26.09.2026): je Zeile ein Rabattcode, der Satz dazu und
+/// bis wann. Der Shop kennt keinen Streichpreis — er kennt nur Codes; der Code hängt beim Bestellen an der Adresse
+/// (<c>checkout[discount_code]</c>), und was er wert ist, sagt der Satz.</para>
 /// </summary>
-public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, string TestTarif, int TestMonate, TarifZeile[] Tarife, string? Kauf = null)
+public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, string TestTarif, int TestMonate, TarifZeile[] Tarife,
+    string? Kauf = null, RabattZeile[]? Rabatte = null)
 {
     public static JsonSerializerOptions Json => Signaturen.Json;
 
@@ -114,6 +137,12 @@ public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, 
         if (!Tarife.Any(z => z.Key == TestTarif)) return $"Test-Tarif {TestTarif} fehlt.";
         if (TestMonate is < 0 or > 24) return "Testmonate: 0 bis 24.";
         if (Kauf is { Length: > 0 } k && !(Uri.TryCreate(k, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps)) return "Kauf ist keine https-Adresse.";
+        foreach (var r in Rabatte ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(r.Code) || r.Code.Length > 64 || r.Code.Any(char.IsWhiteSpace)) return "Rabattcode: bis 64 Zeichen, ohne Leerzeichen.";
+            if (string.IsNullOrWhiteSpace(r.Text) || r.Text.Length > 200) return $"Rabatt {r.Code}: ein Satz, bis 200 Zeichen.";
+        }
+        if (Rabatte is { Length: > 0 } && Rabatte.Select(r => r.Code).Distinct(StringComparer.OrdinalIgnoreCase).Count() != Rabatte.Length) return "Ein Rabattcode steht doppelt.";
         return null;
     }
 }

@@ -88,6 +88,12 @@ public sealed class Teams : IProjection
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, Tarifliste> Gelesen = new();
     public long LastApplied { get; private set; }
 
+    /// <summary>
+    /// Ist diese Anlage beim Lizenzserver registriert? null: noch nicht gefragt. Registriert holt sie das Tarifblatt und
+    /// kennt damit die Aktionen des Shops; ohne spricht sie nur, wenn ein Team ein Abo hat.
+    /// </summary>
+    public bool? Registriert { get; private set; }
+
     /// <summary>Die Tarife dieser Instanz: aus dem höchsten echten Tarifblatt im Journal, sonst das Saatgut.</summary>
     public Tarifliste Tarife => _blatt is { } b && _blattSig is { } s
         ? Gelesen.GetOrAdd(b + "\n" + s, _ => new Licensing.Tarifblatt(b, s).Pruefe().Inhalt is { } i ? Tarifliste.Aus(i) : Projections.Tarife.Saat)
@@ -210,6 +216,11 @@ public sealed class Teams : IProjection
             var who = string.IsNullOrEmpty(d.User) ? entry.Actor : d.User;
             if (!string.IsNullOrEmpty(who)) u.ByUser[who] = u.ByUser.GetValueOrDefault(who) + t;
             if (!string.IsNullOrEmpty(d.Purpose)) u.ByPurpose[d.Purpose] = u.ByPurpose.GetValueOrDefault(d.Purpose) + t;
+            return;
+        }
+        if (entry.Type == Types.RegistrationSet)
+        {
+            Registriert = Types.Deserialize<RegistrationSet>(entry.Payload).Registered;
             return;
         }
         if (entry.Type == Types.TarifeReceived)

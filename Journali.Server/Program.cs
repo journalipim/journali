@@ -98,6 +98,8 @@ var seeded = catalog.SeedMissing();
 // nachsehen; LimitsAusLizenz schreibt nur, wenn sich etwas ändert
 _ = Task.Run(async () =>
 {
+    // Einmal gleich nach dem Start: sonst kennt eine frische Anlage die Tarife und Aktionen des Shops erst nach einer Stunde
+    try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
     while (true)
     {
         await Task.Delay(TimeSpan.FromHours(1));
@@ -224,6 +226,8 @@ api.MapGet("/health", (HttpRequest req, Catalog c) => new
     tarif = new { key = catalog.InstanzTarif.Key, label = catalog.InstanzTarif.Label, schedules = catalog.InstanzTarif.Zeitplan },
     // wer sonst noch dort ist, wo der Fragende gerade steht (?ort=<Knoten oder Ansicht>) — leer ohne Angabe
     presence = Dort(req, c),
+    // Registrierung beim Lizenzserver: null = noch nicht gefragt. Die Oberfläche fragt dann einmal (Recht users).
+    registriert = c.Registriert,
 });
 
 /// <summary>Der Puls der Präsenz: „ich bin hier“ und wer sonst noch — mit Namen, wie die Oberfläche sie zeigt.</summary>

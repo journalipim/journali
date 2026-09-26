@@ -105,8 +105,22 @@ public sealed class Catalog
                 return true;
             });
     }
-    /// <summary>Der Strom der Tarifblätter.</summary>
+    /// <summary>Der Strom der Tarifblätter — dort steht auch, ob die Anlage registriert ist.</summary>
     public const string TarifStrom = "tarife";
+
+    /// <summary>Die Antwort auf die Frage nach der Registrierung festhalten (26.09.2026). Gefragt wird einmal.</summary>
+    public void Registrierung(bool ja, string actor)
+    {
+        lock (_write)
+            Aendernd(() =>
+            {
+                Apply(_journal.Append(actor, TarifStrom, Types.RegistrationSet, Types.Serialize(new RegistrationSet(ja))));
+                return true;
+            });
+    }
+
+    /// <summary>Ist die Anlage registriert? null: noch nicht gefragt.</summary>
+    public bool? Registriert => Lesend(() => _teams.Registriert);
 
     /// <summary>Der Tag des ersten Eintrags — der Test einer neuen Instanz zählt ab ihm.</summary>
     public DateOnly? ErsterTag => Lesend(() => _usage.AllPerDay.Count == 0 ? (DateOnly?)null : _usage.AllPerDay.Keys.Min());

@@ -143,6 +143,7 @@ public static class Types
     public const string EntitlementReceived = "EntitlementReceived";
     /// <summary>Ein Tarifblatt des Lizenzservers, signiert (25.09.2026) — Strom <c>tarife</c>. Die höchste echte Fassung gilt.</summary>
     public const string TarifeReceived = "TarifeReceived";
+    public const string RegistrationSet = "RegistrationSet";
     public const string RoleDefined = "RoleDefined";
     public const string RoleRetired = "RoleRetired";
 
@@ -705,6 +706,14 @@ public sealed record EntitlementReceived(string Instance, string Team, string Pl
 /// das Abbild prüft sie selbst, ein Eintrag ohne passende Signatur ändert nichts.
 /// </summary>
 public sealed record TarifeReceived(string Blatt, string Sig);
+
+/// <summary>
+/// Ob diese Anlage beim Lizenzserver registriert ist (26.09.2026). Registriert heisst: sie holt dort das Tarifblatt und
+/// nennt dabei ihre Kennung und ihren öffentlichen Schlüssel — damit kennt sie die Tarife und die Aktionen des Shops.
+/// Nicht registriert heisst: sie spricht nicht mit ihm, solange kein Team ein Abo hat. Gefragt wird einmal; die Antwort
+/// steht im Journal, damit jeder Server dieser Anlage sie kennt und niemand zweimal gefragt wird.
+/// </summary>
+public sealed record RegistrationSet(bool Registered);
 
 /// <summary>Ein KI-Aufruf, wie er wirklich stattgefunden hat: Anbieter, Modell, Person, Token hin und zurück. Strom
 /// <c>ai-usage:&lt;team&gt;</c> — gezählt wird beim Team, das zahlt (also beim schlüsselführenden), damit die Rechnung stimmt.</summary>
