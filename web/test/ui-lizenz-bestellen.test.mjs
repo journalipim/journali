@@ -111,6 +111,22 @@ test('Eine Aktion steht als grüner Kasten da: Wirkung, Code zum Kopieren, Shop 
   w.unmount()
 })
 
+// 26.09.2026 gemeldet: das Eingabefeld für einen Schlüssel stand ganz vorn und liess jemanden nach einem Code suchen,
+// den er nicht hat — der Kaufweg war ein Knopf dazwischen. Jetzt steht der Kauf vorn, der Weg von Hand ist zugeklappt.
+test('Der Kaufweg steht vorn, das Einfügen von Hand ist zugeklappt', async () => {
+  server(); anwender(['users']); fenster()
+  const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()
+  assert.equal(w.find('.uebernahme').exists(), false, 'das Eingabefeld steht offen da')
+  assert.equal(w.find('.schluessel').exists(), false, 'die Anforderungen stehen offen da')
+  assert.ok(w.find('button.bestellen-knopf').exists(), 'der Kaufweg fehlt')
+
+  // wer von Hand arbeitet, klappt es auf
+  await w.find('button.von-hand').trigger('click'); await flushPromises()
+  assert.ok(w.find('.uebernahme .eingabe').exists())
+  assert.ok(w.find('.schluessel').exists())
+  w.unmount()
+})
+
 test('Ohne Aktion steht kein Kasten', async () => {
   server(); anwender(['team', 'read']); fenster()
   const w = mount(LicenceSettings, { props: { team: DE } }); await flushPromises()

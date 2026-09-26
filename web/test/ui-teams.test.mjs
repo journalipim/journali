@@ -150,6 +150,7 @@ test('nach dem Einlösen eines Schlüssels laden die Limits nach', async () => {
   const calls = server(); store.auth = { known: true, enabled: true, user: 'u1', role: 'admin', rights: ['read', 'team', 'users'] }
   const w = mount(TeamsSettings); await ruhe()
   const vorher = calls.filter(c => c.path.endsWith('/tokens/journali')).length
+  await w.find('button.von-hand').trigger('click'); await ruhe()   // Schlüssel einfügen steht zugeklappt da
   const feld = w.find('textarea')
   await feld.setValue('{"id":"k-1","kind":"limit","request":"ab12","sig":"a=="}')
   await w.findAll('button').find(b => /Einlösen/.test(b.text())).trigger('click'); await ruhe()   // ein Feld für Abo und Schlüssel

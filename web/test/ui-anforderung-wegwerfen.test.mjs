@@ -39,6 +39,8 @@ test('offene Anforderung wegwerfen — mit Rückfrage; eine eingelöste hat kein
   try {
     const w = mount(LicenceSettings, { props: { team: { key: 'init', label: 'Init Team' } } })
     await flushPromises()
+    // der Weg von Hand steht zugeklappt da (26.09.2026) — aufklappen wie der Anwender
+    await w.find('button.von-hand').trigger('click'); await flushPromises()
     assert.ok(!zeile(w, 'k-bbb').find('button.neg').exists(), 'eine eingelöste Anforderung wirft niemand weg')
     await zeile(w, 'k-aaa').find('button.neg').trigger('click')
     await flushPromises()
@@ -58,6 +60,8 @@ test('wer die Rückfrage abbricht, wirft nichts weg', async () => {
   try {
     const w = mount(LicenceSettings, { props: { team: { key: 'init', label: 'Init Team' } } })
     await flushPromises()
+    // der Weg von Hand steht zugeklappt da (26.09.2026) — aufklappen wie der Anwender
+    await w.find('button.von-hand').trigger('click'); await flushPromises()
     await zeile(w, 'k-aaa').find('button.neg').trigger('click')
     await flushPromises()
     assert.ok(!calls.some(c => c.method === 'DELETE'))

@@ -2492,6 +2492,8 @@
  "⚿ Bestellen · {0}": "⚿ Order · {0}",
  "Shop öffnen — der Kauf gehört danach {0}": "Open the shop — the purchase then belongs to {0}",
  "Shop geöffnet": "Shop opened",
+ "⚷ Von Hand": "⚷ By hand",
+ "Schlüssel einfügen und Anforderungen — für eine Anlage ohne Verbindung zum Lizenzserver": "Paste keys and create requests — for an installation without a connection to the licence server",
  "Diese Anlage beim Lizenzserver registrieren?": "Register this installation with the licence server?",
  "Sie holt dort Tarife und Aktionen des Shops und nennt dabei ihre Kennung.": "It fetches plans and shop offers there, naming its own id.",
  "Registrieren": "Register",

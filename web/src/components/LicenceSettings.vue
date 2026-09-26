@@ -19,6 +19,9 @@ const props = defineProps({ team: { type: Object, default: null }, limits: { typ
 const eigenes = computed(() => !!props.team && (props.team.payer ?? props.team.key) === props.team.key)
 const lic = ref(null)
 const said = ref('')
+/// Der Weg von Hand — Schlüssel einfügen und Anforderungen — steht zugeklappt da: gekauft wird mit dem Knopf oben
+/// (26.09.2026). Das Eingabefeld war das Erste, was jemand sah, und liess ihn nach einem Code suchen, den er nicht hat.
+const vonHand = ref(false)
 const darf = () => store.can('users')
 /// Das Team führen: ein Teammanager bestellt sein Kontingent selbst (26.09.2026); der Administrator darf es überall
 const fuehrt = computed(() => store.can('users') || (store.can('team') && (props.team?.managers ?? []).includes(store.auth.user)))
@@ -221,7 +224,11 @@ async function kopiere(text) {
       <span v-if="r.bis" class="bis muted">{{ $t('bis {0}', [r.bis]) }}</span>
     </div>
 
-    <div v-if="darf()" class="uebernahme" style="margin-top:8px">
+    <div v-if="darf()" class="hand" style="margin-top:12px">
+      <button class="x von-hand" :title="$t('Schlüssel einfügen und Anforderungen — für eine Anlage ohne Verbindung zum Lizenzserver')" @click="vonHand = !vonHand">{{ (vonHand ? '● ' : '○ ') + $t("⚷ Von Hand") }}</button>
+    </div>
+
+    <div v-if="darf() && vonHand" class="uebernahme" style="margin-top:8px">
       <textarea v-model="eingabe" class="eingabe" rows="4" style="width:100%;max-width:640px" :placeholder="$t('Schlüssel')"></textarea>
       <div class="row" style="gap:8px;margin-top:4px">
         <button class="primary" :disabled="knopf.aus" :title="knopf.title" @click="uebernehmen">{{ knopf.text }}</button>
@@ -229,7 +236,7 @@ async function kopiere(text) {
       </div>
     </div>
 
-    <div v-if="darf()" class="schluessel" style="margin-top:16px">
+    <div v-if="darf() && vonHand" class="schluessel" style="margin-top:16px">
       <h3>{{ $t("⚷ Schlüssel") }}</h3>
       <div class="row anfordern" style="gap:6px;flex-wrap:wrap;align-items:center">
         <select v-model="neu.wahl" class="wahl">
