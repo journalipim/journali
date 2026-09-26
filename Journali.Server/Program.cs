@@ -106,6 +106,19 @@ _ = Task.Run(async () =>
     }
 });
 
+// Mehrere Server auf einer Datenbank (26.09.2026): was ein anderer ins Journal geschrieben hat, in die eigenen
+// Abbilder holen. Der Takt steht in betrieb.json (JOURNALI_NACHZIEHEN, Sekunden; 0 = nicht nachziehen — dann sieht
+// dieser Server fremde Einträge erst beim Neustart).
+if (betrieb.NachziehenSekunden > 0)
+    _ = Task.Run(async () =>
+    {
+        while (true)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(betrieb.NachziehenSekunden));
+            try { catalog.Nachziehen(); } catch (Exception e) { Console.WriteLine($"journali: nicht nachgezogen — {e.Message}"); }
+        }
+    });
+
 var mailer = new Mailer(dataDir);   // Mailversand (Einstellungen → Mail)
 builder.Services.AddSingleton(mailer);
 builder.Services.AddSingleton<IJournal>(journal);

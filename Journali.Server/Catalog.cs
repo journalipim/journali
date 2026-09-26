@@ -166,6 +166,24 @@ public sealed class Catalog
     }
 
     /// <summary>
+    /// Was seit dem letzten Mal im Journal steht, in die Abbilder holen — auch Einträge, die ein anderer Server
+    /// geschrieben hat (26.09.2026: zwei Server auf einer Datenbank sahen einander nicht, bis einer neu startete).
+    /// Liefert, wie viele Einträge dazukamen. Der eigene Schreibpfad wendet seine Einträge weiter selbst an; dies hier
+    /// holt nur, was von aussen kam, und läuft unter derselben Sperre — niemand sieht die Abbilder halb nachgezogen.
+    /// </summary>
+    public int Nachziehen()
+    {
+        lock (_write)
+            return Aendernd(() =>
+            {
+                var n = Projector.CatchUpAll(_journal, out _, (Action<int, long>?)null,
+                    _model, _relations, _media, _plugins, _jobs, _versions, _users, _workflows, _translations, _usage, _teams, _tree);
+                if (n > 0) _stand.Clear();   // Teams, Mitgliedschaften und Schlüssel können dabei gewesen sein
+                return n;
+            });
+    }
+
+    /// <summary>
     /// Saatgut nachsäen: jeder Modell-Strom, den es noch nicht gibt (Sprachen,
     /// Kanäle, die ersten Attribute). Was schon geändert wurde, bleibt.
     /// </summary>

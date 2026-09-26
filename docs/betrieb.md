@@ -419,6 +419,23 @@ jeder Commit liess ihn fallen. Der Eintrag #n wird gegen das Journal geprüft; b
 An und aus ebenfalls in ⚙ Einstellungen → ▨ Storage → ▨ Start; ohne `betrieb.json` zählt `JOURNALI_SNAPSHOT=off`.
 Startzeile: „Schnappschuss bis #n“.
 
+## Mehrere Server auf einer Datenbank
+
+Ein Server wendet an, was er selbst schreibt, und liest das Journal sonst nur beim Start. Laufen zwei Server auf
+derselben Datenbank (etwa auf dem Server und am Arbeitsplatz), sah deshalb keiner die Einträge des anderen, bis er neu
+startete — auch das Journalfenster blieb leer, denn es fragt denselben Server (26.09.2026).
+
+**Nachziehen** holt, was von aussen kam: `Catalog.Nachziehen()` liest ab dem eigenen Stand weiter und wendet alles an,
+unter derselben Sperre wie das Schreiben — niemand sieht die Abbilder halb nachgezogen. Der Takt steht in
+`betrieb.json` (`nachziehenSekunden`, Vorgabe 2); ohne Datei zählt `JOURNALI_NACHZIEHEN=<Sekunden>`. 0 schaltet es ab:
+dann sieht dieser Server fremde Einträge erst beim Neustart. Die Oberfläche merkt es von selbst — sie fragt `/api/health`
+alle drei Sekunden, und ein neuer Stand lässt Modell, Knotenansicht und Journalfenster nachladen.
+
+Was das **nicht** löst: zwei Anwender, die gleichzeitig dasselbe Feld ändern. Beide Einträge stehen im Journal, der
+spätere gilt — niemand wird gewarnt, nichts geht verloren. Ein **Stapel** (Import, Massenänderung) merkt dagegen, wenn
+ein anderer Server dazwischenschreibt: die Nummern passen dann nicht mehr, und die Abbilder werden neu gebaut
+(`Catalog.cs`, `NeuAufbauen`) — richtig, aber bei grossem Journal teuer.
+
 ## Jobs (fest eingebaut: ⏱ Jobs)
 
 Jobs laufen im Server als Kindprozesse (`JobRunner`), unabhängig vom
