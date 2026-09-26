@@ -306,6 +306,8 @@ async function setSource(def, col) {
 const master = computed(() => model.value?.masterLocale ?? locales.value[0] ?? null)
 const masterChannel = computed(() => model.value?.masterChannel ?? null)
 const ownAt = computed(() => { const m = new Map(); for (const v of node.value?.values ?? []) m.set(key(v.attribute, v.locale, v.channel, v.row), v.number ?? 0); return m })
+/// Blitzt diese Zelle gerade? — als Klasse am Aufruf, Vue reicht sie an das <td> der Zellkomponente durch
+const frischCls = (def, col, row) => ({ frisch: frisch.value.has(key(def.key, col.locale, col.channel, row)) })
 function stale(def, col) {
   if (!def.perLocale || !col.locale || col.locale === master.value) return false
   const mine = ownAt.value.get(key(def.key, col.locale, col.channel)); if (!mine) return false
@@ -397,13 +399,27 @@ const fromAbove = g => path.value.find(a => (a.groups ?? '').split(',').includes
 const attachedSorted = computed(() => [...(node.value?.attachedGroups ?? [])].sort((a, b) => (groupLocked(a) ? 1 : 0) - (groupLocked(b) ? 1 : 0) || groupLabel(a).localeCompare(groupLabel(b), 'de', { sensitivity: 'base' })))
 
 // ---- Laden
-async function load() {
+/// Zellen, die gerade von aussen geändert wurden — sie blitzen kurz auf (26.09.2026). Der Schlüssel ist derselbe wie
+/// in own/ownAt; nach FRISCH_MS ist er wieder weg. Eigene Änderungen blitzen nicht: dafür steht fremd auf false.
+const frisch = ref(new Set())
+const FRISCH_MS = 2000
+function frischMerken(vorher) {
+  const neu = []
+  for (const [k, nummer] of ownAt.value) if ((vorher.get(k) ?? 0) < nummer) neu.push(k)
+  if (!neu.length) return
+  frisch.value = new Set([...frisch.value, ...neu])
+  setTimeout(() => { const s = new Set(frisch.value); for (const k of neu) s.delete(k); frisch.value = s }, FRISCH_MS)
+}
+
+async function load(fremd = false) {
+  const vorher = fremd ? new Map(ownAt.value) : null
   try {
     node.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}`)
     rels.value = await api.get(`/api/nodes/${encodeURIComponent(props.id)}/relations`)
     api.get(`/api/nodes/${encodeURIComponent(props.id)}/workflow`).then(w => { workflows.value = w }).catch(() => { workflows.value = [] })
     entries.value = (await api.get(`/api/streams/${encodeURIComponent(props.id)}`)).reverse()
     ladeAusJournal()
+    if (vorher) frischMerken(vorher)
   } catch (e) {
     if (e.message.startsWith('404')) router.push(router.currentRoute.value.path.startsWith('/pub') ? '/pub' : '/tree')   // Knoten weg: in derselben Ansicht bleiben
     else store.toast(e.message)
@@ -421,7 +437,7 @@ function onKey(e) {
 }
 onMounted(() => window.addEventListener('keydown', onKey))
 onUnmounted(() => window.removeEventListener('keydown', onKey))
-watch(() => store.head, h => { if (h > (entries.value[0]?.number ?? 0)) load() })
+watch(() => store.head, h => { if (h > (entries.value[0]?.number ?? 0)) load(true) })
 
 // ---- Befehle
 async function command(fn, rethrow = false) {
@@ -872,13 +888,13 @@ function cellMenu(e, def, col, block) {
               <span v-else-if="def.whenLocked" class="warn" :title="$t('gilt nur bei {0} = {1}{2}', [store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute }), def.when.values.slice(0, 6).join(', '), def.when.values.length > 6 ? ' …' : ''])">⌀</span>
             </div></td>
             <template v-for="c in columns" :key="c.label">
-              <ToggleCell v-if="def.type === 'boolean'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <ListCell v-else-if="def.multiple" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="def.type === 'enum' ? listOptions(def) : null" :label-of="def.type === 'enum' ? listLabel(def) : null" :list="def.list" :check="v => validate(convert(v, def, store.model), def, store.model)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <SelectCell v-else-if="def.type === 'enum'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="listOptions(def)" :label-of="listLabel(def)" :list="def.list" :group-of="listGroup(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <DateCell v-else-if="def.type === 'date'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <HtmlCell v-else-if="def.type === 'html'" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
+              <ToggleCell v-if="def.type === 'boolean'" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <ListCell v-else-if="def.multiple" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="def.type === 'enum' ? listOptions(def) : null" :label-of="def.type === 'enum' ? listLabel(def) : null" :list="def.list" :check="v => validate(convert(v, def, store.model), def, store.model)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <SelectCell v-else-if="def.type === 'enum'" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :options="listOptions(def)" :label-of="listLabel(def)" :list="def.list" :group-of="listGroup(def)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <DateCell v-else-if="def.type === 'date'" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
+              <HtmlCell v-else-if="def.type === 'html'" :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :title="`${store.name(def)} · ${c.label}`" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
-              <Cell v-else :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
+              <Cell v-else :class="frischCls(def, c)" :value="ownOrAxis(def, c)" :inherited="inherited(def, c).value" :disabled="!enabled(def, c, b)" :node="id" :locale="c.locale ?? null" :label="store.label(def)"
                 :mark="stale(def, c) ? '⟳' : (inherited(def, c).master && ownValue(def.key, c) == null ? '◌' : null)" :mark-title="stale(def, c) ? $t('zu überarbeiten · {0} später geändert', [master]) : (c.locale ? $t('{0}-Text als Übersetzung übernehmen', [master]) : $t('{0}-Text als Grundtext übernehmen', [master]))" :mark-click="!stale(def, c) && inherited(def, c).master && ownValue(def.key, c) == null ? () => setValue(def, c, inherited(def, c).value) : null"
                 :origin="inherited(def, c).from ? `${icon(inherited(def, c).from.role)} ${inherited(def, c).from.label}` : null" :source="sourceOf(def, c)" @save="v => setValue(def, c, v)" @contextmenu="cellMenu($event, def, c, b)" />
             </template>
@@ -1158,6 +1174,12 @@ table.values tr.chan th { text-align: center; height: 23px; box-sizing: border-b
 table.values tr.chan th:first-child { text-align: left; }
 /* Gruppenköpfe: eine Stufe unter der Abschnittsüberschrift, darum nicht dasselbe Band —
    Zellton mit Akzentkante links, Name in Akzentfarbe; gesperrte zurückgenommen (gedämpft, 🔒). */
+/* Von aussen geändert: die Zelle blitzt kurz auf — jemand anders (oder ein anderer Server) hat hier geschrieben */
+.cell.frisch { animation: frisch 2s ease-out; }
+@keyframes frisch {
+  0%   { background: color-mix(in srgb, var(--a) 45%, transparent); }
+  100% { background: transparent; }
+}
 .cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
 .cell-box.formula .res { font-weight: 600; }
 .cell-box.formula .src { font: 11px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
