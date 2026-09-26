@@ -191,6 +191,8 @@ public static class Auth
         if (path.StartsWith("/api/jobs") && path.EndsWith("/signal")) return Rights.Read;   // der Lauf fragt selbst, ob er warten soll
         if (path.StartsWith("/api/jobs")) return read && !path.Contains("/log") && !path.Contains("/runs") ? Rights.Read : Rights.Jobs;
         if (path.StartsWith("/api/restore") || path.StartsWith("/api/backup") || path.StartsWith("/api/mail")) return Rights.Users;   // Systemsache, auch lesend
+        // Den Stand des eigenen Teams holen darf, wer es führt (26.09.2026: er bestellt sein Kontingent selbst) — welches Team, prüft LicenceApi
+        if (path.StartsWith("/api/licence/abo/") && path.EndsWith("/auffrischen")) return Rights.Team;
         if (path.StartsWith("/api/licence") && !read) return Rights.Users;   // einspielen, Schlüssel einlösen
         if (path.StartsWith("/api/licence/requests")) return Rights.Users;     // Anforderungen, auch lesend
         if (read) return Rights.Read;

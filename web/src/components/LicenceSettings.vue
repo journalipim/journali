@@ -2,7 +2,7 @@
 // Die Lizenz. Sie wird nicht gepflegt, sondern eingespielt —
 // darum eine Datei, kein Stammdatum. Was sie sagt, gilt für die ganze Anlage: Einträge je Woche und Monat, das
 // Was ein Team an KI verbraucht, geht an seinen Anbieter — journali lizenziert das nicht.
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { t as t_ } from '../i18n.js'
@@ -20,6 +20,31 @@ const eigenes = computed(() => !!props.team && (props.team.payer ?? props.team.k
 const lic = ref(null)
 const said = ref('')
 const darf = () => store.can('users')
+/// Das Team führen: ein Teammanager bestellt sein Kontingent selbst (26.09.2026); der Administrator darf es überall
+const fuehrt = computed(() => store.can('users') || (store.can('team') && (props.team?.managers ?? []).includes(store.auth.user)))
+/// Die Tarife, die der Shop verkauft — Adresse je Tarif aus dem Tarifblatt, nach Rang aufsteigend
+const kaufbar = computed(() => lic.value?.kaufbar ?? [])
+const wahlTarif = ref('')
+watch(kaufbar, k => { if (!k.some(x => x.key === wahlTarif.value)) wahlTarif.value = k[0]?.key ?? '' }, { immediate: true })
+
+/// Die Adresse des Shops mit Instanz und Team daran: der Kauf findet über den Lizenzserver allein zum Team zurück
+function kaufAdresse(key) {
+  const tarif = kaufbar.value.find(x => x.key === key)
+  if (!tarif?.kauf || !lic.value?.instanz || !props.team) return null
+  let u
+  try { u = new URL(tarif.kauf) } catch { return null }
+  u.searchParams.set('checkout[custom][instanz]', lic.value.instanz)
+  u.searchParams.set('checkout[custom][team]', props.team.key)
+  return u.toString()
+}
+
+/// Bestellen: den Shop öffnen. Der Kauf meldet sich beim Lizenzserver, ↻ holt den Stand
+function bestellen() {
+  const url = kaufAdresse(wahlTarif.value)
+  if (!url) { said.value = '✗ ' + t_('Kein Shop für diesen Tarif'); return }
+  window.open(url, '_blank', 'noopener')
+  said.value = '✓ ' + t_('Shop geöffnet · {0}', [kaufbar.value.find(x => x.key === wahlTarif.value)?.label ?? ''])
+}
 
 async function load() {
   try { lic.value = await api.get('/api/licence') } catch (e) { store.toast(e.message) }
@@ -70,11 +95,13 @@ const knopf = computed(() =>
   : { text: t_('⚿ Übernehmen'), aus: true, title: eingabe.value.trim() ? t_('kein Schlüssel') : t_('Schlüssel aus dem Shop oder zum Kopieren einfügen') })
 const uebernehmen = () => was.value === 'abo' ? verbinden() : was.value === 'schluessel' ? einloesen() : null
 
-/// Den Stand des Abos sofort neu holen — mit dem Shop-Schlüssel, den der Server sich gemerkt hat
+/// Den Stand des Abos sofort neu holen — mit dem Shop-Schlüssel, den der Server sich gemerkt hat, oder ohne (dann hat
+/// ihn der Lizenzserver aus dem Kauf). Gilt für das oben gewählte Team, auch wenn es noch keinen Stand hat.
+const standTeam = computed(() => props.team?.key ?? aboTeam.value?.team ?? null)
 async function auffrischen() {
-  if (!aboTeam.value) return
+  if (!standTeam.value) return
   try {
-    const r = await api.post(`/api/licence/abo/${encodeURIComponent(aboTeam.value.team)}/auffrischen`, {})
+    const r = await api.post(`/api/licence/abo/${encodeURIComponent(standTeam.value)}/auffrischen`, {})
     said.value = t_('✓ Abo {0} · gültig bis {1}', [r.planLabel, r.paidUntil])
     await load(); await store.poll(true)
     emit('eingespielt')
@@ -144,7 +171,7 @@ async function kopiere(text) {
         <td>{{ lic.instanzTarif.label }}<span v-if="lic.trial && !lic.abgelaufen" class="muted">{{ ' ' + $t("· Test") }}</span></td><td></td></tr>
       <tr v-if="aboTeam" class="abo"><td class="muted" :title="$t('Stand des Abos vom Lizenzserver, täglich aufgefrischt')">{{ $t("◆ Abo · {0}", [aboTeam.teamLabel]) }}</td>
         <td :title="$t('zuletzt bestätigt {0}', [String(aboTeam.issued).slice(0, 16).replace('T', ' ')])">{{ aboTeam.planLabel }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [aboTeam.paidUntil]) }}</span><span v-if="!aboTeam.geprueft" class="neg" :title="$t('Ohne passende Signatur zählt der Stand nicht.')">{{ ' · ' + $t('ungeprüft') }}</span><span v-else-if="!aboTeam.gilt" class="neg">{{ ' · ' + (aboTeam.status === 'entzogen' ? $t('entzogen') : $t('abgelaufen')) }}</span></td>
-        <td><button v-if="darf() && lic.lizenzserver && aboTeam.team === team?.key" class="x auffrischen" :title="$t('Stand vom Lizenzserver neu holen')" @click="auffrischen">↻</button></td></tr>
+        <td><button v-if="fuehrt && lic.lizenzserver && aboTeam.team === team?.key" class="x auffrischen" :title="$t('Stand vom Lizenzserver neu holen')" @click="auffrischen">↻</button></td></tr>
       <tr v-if="lic?.trial && lic?.geprueft && team?.primary" class="test"><td class="muted" :title="$t('Test einer neuen Instanz, ab dem ersten Eintrag im Journal')">{{ $t("◆ Test · {0}", [team.label]) }}</td>
         <td>{{ lic.tarif?.label }}<span class="muted">{{ ' · ' + $t('gültig bis {0}', [lic.validUntil]) }}</span></td><td></td></tr>
       <tr v-if="lic?.instanzTarif" class="baeume"><td class="muted" :title="$t('Publikationsbäume: vorhanden / erlaubt')">{{ $t("▣ Publikationsbäume") }}</td>
@@ -156,6 +183,16 @@ async function kopiere(text) {
         <td class="mono" style="user-select:all">{{ lic.instanz }}</td>
         <td><button class="x" :title="$t('Kennung kopieren')" @click="kopiere(lic.instanz)">⧉</button></td></tr>
     </tbody></table>
+
+    <!-- Kontingent bestellen: Instanz und Team hängen am Buy-Link, der Kauf findet über den Lizenzserver zum Team zurück -->
+    <div v-if="fuehrt && eigenes && kaufbar.length && lic?.lizenzserver" class="bestellen row" style="gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
+      <select v-model="wahlTarif" class="wahl tarif-wahl" :title="$t('Tarif')">
+        <option v-for="k in kaufbar" :key="k.key" :value="k.key">{{ k.label }} · {{ zahl(k.week) }} / {{ zahl(k.month) }}</option>
+      </select>
+      <button class="primary bestellen-knopf" :title="$t('Shop öffnen — der Kauf gehört danach {0}', [team?.label ?? ''])" @click="bestellen">{{ $t("⚿ Bestellen · {0}", [team?.label ?? '']) }}</button>
+      <button v-if="!aboTeam" class="x holen" :title="$t('Stand vom Lizenzserver holen')" @click="auffrischen">↻</button>
+      <span v-if="!darf()" class="said" :class="said.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ said }}</span>
+    </div>
 
     <div v-if="darf()" class="uebernahme" style="margin-top:8px">
       <textarea v-model="eingabe" class="eingabe" rows="4" style="width:100%;max-width:640px" :placeholder="$t('Schlüssel')"></textarea>

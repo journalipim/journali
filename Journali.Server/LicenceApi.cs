@@ -5,7 +5,8 @@ namespace Journali.Server;
 
 /// <summary>
 /// Was an Lizenz gilt: der Test des Init Teams, die Abos der Teams, der Tarif der Instanz. Lesen darf jeder, der lesen
-/// darf: die Grenzen betreffen alle. Abo verbinden und auffrischen: Recht <c>users</c>.
+/// darf: die Grenzen betreffen alle. Abo verbinden: Recht <c>users</c>; den Stand eines Teams holen darf auch, wer das
+/// Team führt — er bestellt sein Kontingent selbst (26.09.2026).
 /// </summary>
 public static class LicenceApi
 {
@@ -29,6 +30,10 @@ public static class LicenceApi
                 tarif = new { key = lt.Key, label = lt.Label }, trial = roh.Trial == true, trialPlan = roh.TarifIn(liste).Label,
                 tarifblatt = liste.Fassung,
                 instanzTarif = new { key = t.Key, label = t.Label, pubTrees = t.PubTrees == Tarife.Ohne ? (int?)null : t.PubTrees },
+                // Die Tarife, die der Shop verkauft: Adresse je Tarif aus dem Tarifblatt. Die Oberfläche hängt Instanz
+                // und Team daran, der Kauf findet über den Lizenzserver zum Team zurück — niemand fügt danach etwas ein.
+                kaufbar = liste.Alle.Where(x => !string.IsNullOrWhiteSpace(x.Kauf))
+                    .Select(x => new { x.Key, x.Label, x.Rang, x.Week, x.Month, kauf = x.Kauf }).ToList(),
                 pubTrees = baeume,
                 // die Abos der Teams (Taloan, 24.09.2026): letzter Stand vom Lizenzserver, und ob er heute gilt
                 lizenzserver = abos.Eingestellt,
@@ -55,6 +60,7 @@ public static class LicenceApi
         api.MapPost("/licence/abo/{team}/auffrischen", async (string team, HttpRequest req, Catalog c, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
+            if (!TeamApi.Fuehrt(req, c, team)) return Bad("Dieses Team führst du nicht.");
             var (stand, fehler) = await abos.AuffrischenAsync(c, team, actor, ct);
             if (stand is null) return Bad(fehler ?? "Abo nicht aufgefrischt.");
             return Results.Ok(new { stand.Team, stand.Plan, planLabel = c.Tarife.Von(stand.Plan)?.Label ?? stand.Plan, stand.Status, stand.PaidUntil, stand.Geprueft });

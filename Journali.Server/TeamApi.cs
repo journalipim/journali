@@ -32,7 +32,7 @@ public static class TeamApi
         c.With((_, _, _) => user is { Length: > 0 } u ? c.Users.All.GetValueOrDefault(u)?.Team : null);
 
     /// <summary>Darf der Anfragende dieses Team führen? Der Administrator immer; sonst nur sein Manager (Recht <c>team</c>).</summary>
-    private static bool Fuehrt(HttpRequest req, Catalog c, string team) =>
+    public static bool Fuehrt(HttpRequest req, Catalog c, string team) =>
         Auth.Has(req, c, Rights.Users) || (Auth.Has(req, c, Rights.Team) && c.With((_, _, _) => c.Teams.Leads(team, req.HttpContext.Items["user"] as string)));
 
     public static void Map(RouteGroupBuilder api, string jobsDir)

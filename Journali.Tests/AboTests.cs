@@ -25,6 +25,8 @@ public class AboTests
         public string Plan = "enterprise";
         public string? Fehler;
         public int Anfragen;
+        /// <summary>Der Schlüssel der letzten Anfrage — null, wenn sie keinen nannte (Kauf aus der Oberfläche).</summary>
+        public string? LetzterKey;
         public string Pub => Signaturen.Oeffentlich(Aussteller);
         public Tarifblatt? Blatt;
 
@@ -36,6 +38,7 @@ public class AboTests
             Assert.True(anfrage.Pruefe().Ok);                                   // die Instanz signiert ihre Anfrage
             if (Fehler is not null) return new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent(JsonSerializer.Serialize(new { error = Fehler })) };
             var r = anfrage.Inhalt!;
+            LetzterKey = r.Key;
             var t = Tarife.Saat.Von(Plan)!;
             var e = new Entitlement(r.Instance, r.Team, t.Key, t.Week, t.Month, "active", Heute.AddDays(30), Jetzt, Jetzt + Entitlement.Kulanz, anfrage.Hash, Blatt: Blatt);
             e = Antwort(anfrage, e with { Sig = Signaturen.Signiere(Aussteller, e.Rumpf) });
@@ -210,12 +213,35 @@ public class AboTests
     public async Task Ein_Team_sofort_auffrischen()
     {
         var w = new Welt();
-        Assert.Contains("kein Shop-Schlüssel", (await w.Abos.AuffrischenAsync(w.C, "de", "taloan")).Fehler);
         await w.Abos.VerbindenAsync(w.C, "de", Key, "taloan");
+        Assert.Equal(Key, w.Server.LetzterKey);
         w.Server.Plan = "pro";                                                  // von Hand geändert — ohne 20 Stunden zu warten
         var (stand, fehler) = await w.Abos.AuffrischenAsync(w.C, "de", "taloan");
         Assert.Null(fehler);
         Assert.Equal("pro", stand!.Plan);
+        Assert.Equal("pro", w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo!.Plan));
+    }
+
+    /// <summary>
+    /// Kontingent aus der Oberfläche bestellt (26.09.2026): Instanz und Team hängen am Buy-Link, der Lizenzserver behält
+    /// den Schlüssel. Die Instanz fragt darum ohne Schlüssel und hinterlegt keinen — und wird weiter aufgefrischt.
+    /// </summary>
+    [Fact]
+    public async Task Nach_einem_Kauf_fragt_die_Instanz_ohne_Schluessel()
+    {
+        var w = new Welt();
+        Assert.Equal(0, await w.Abos.AuffrischenAsync(w.C));                   // ohne Stand und ohne Schlüssel fragt niemand
+        Assert.Equal(0, w.Server.Anfragen);
+
+        var (stand, fehler) = await w.Abos.AuffrischenAsync(w.C, "de", "taloan");
+        Assert.Null(fehler);
+        Assert.Equal("enterprise", stand!.Plan);
+        Assert.Null(w.Server.LetzterKey);                                       // die Anfrage nennt nur Instanz und Team
+        Assert.False(Secrets.Get(w.Dir, Abos.SecretKey("de")).ContainsKey("key"));
+
+        w.Uhr.Jetzt = Jetzt + Abos.Auffrischen + TimeSpan.FromMinutes(1);
+        w.Server.Plan = "pro";
+        Assert.Equal(1, await w.Abos.AuffrischenAsync(w.C));                   // ein Team mit Stand wird auch ohne Schlüssel gefragt
         Assert.Equal("pro", w.C.With((_, _, _) => w.C.Teams.Get("de")!.Abo!.Plan));
     }
 
