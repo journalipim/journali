@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!--
+  Unraid-Vorlage für journali (docs/betrieb.md → Unraid). Dieselbe Vorlage für jede Registry — nur Repository ändert sich:
+  die eigene Gitea (<host>:<port>/<besitzer>/journali:latest, gebaut von .gitea/workflows/docker.yml) oder ghcr.io.
+  Die Datenbank ist eine eigene App (Postgres 18); die Verbindung gibt man beim ersten Aufruf im Einrichtungsdialog ein,
+  sie steht danach in db.json im Datenverzeichnis.
+-->
+<Container version="2">
+  <Name>journali</Name>
+  <Repository>ghcr.io/journalipim/journali:latest</Repository>
+  <Registry>https://github.com/journalipim/journali/pkgs/container/journali</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://journali.de</Support>
+  <Project>https://journali.de</Project>
+  <Overview>journali — Produktinformationen pflegen: ein Journal als Wahrheit, Modell, Baum, Übersetzung, Publikation und Plugins. Braucht eine PostgreSQL-Datenbank (Version 18, eigene App); die Verbindung wird beim ersten Aufruf im Einrichtungsdialog eingetragen.</Overview>
+  <Category>Productivity: Tools:</Category>
+  <WebUI>http://[IP]:[PORT:8080]/</WebUI>
+  <TemplateURL/>
+  <Icon>https://journali.de/logo-128.png</Icon>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <Requires>PostgreSQL 18 (eigene App, z. B. postgresql18 aus den Community Apps)</Requires>
+  <Config Name="Oberfläche" Target="8080" Default="8080" Mode="tcp" Description="Port der Oberfläche" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
+  <Config Name="Daten" Target="/data/jobs" Default="/mnt/user/appdata/journali" Mode="rw" Description="Datenverzeichnis: Verbindung zur Datenbank (db.json), Jobs, Schnappschuss, Spiegel des Journals" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/journali</Config>
+  <Config Name="JOURNALI_JOBS" Target="JOURNALI_JOBS" Default="/data/jobs" Mode="" Description="Datenverzeichnis im Container — passt zum Pfad Daten" Type="Variable" Display="advanced" Required="true" Mask="false">/data/jobs</Config>
+  <Config Name="JOURNALI_MEDIA" Target="JOURNALI_MEDIA" Default="postgres" Mode="" Description="Wo Medien liegen: postgres (in der Datenbank), ein Verzeichnis oder s3://bucket" Type="Variable" Display="advanced" Required="true" Mask="false">postgres</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Berlin" Mode="" Description="Zeitzone" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Berlin</Config>
+</Container>

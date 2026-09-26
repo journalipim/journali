@@ -174,6 +174,38 @@ Kommentare) — technisch dagegen hülfe nur NativeAOT. Den Rest regeln Lizenz
 und Vertrag. Die Oberfläche geht ohnehin minifiziert und ohne Source Maps
 heraus; die Plugins liegen als Quelltext im Image, das ist so gewollt.
 
+## Unraid — als App
+
+journali läuft auf Unraid wie jede andere App: eine Vorlage (`unraid/journali.xml`) für den Server, die Datenbank als
+eigene App. Das Image kommt aus einer Registry — für alle aus `ghcr.io` (Community Applications), für den eigenen
+Betrieb aus der Container-Registry der Gitea, gebaut von `.gitea/workflows/docker.yml` bei jedem Push auf `master`.
+Unraid meldet dann einen neuen Stand wie bei jeder App („update ready“).
+
+**Einmal einrichten (eigene Gitea):**
+
+1. **Datenbank** — *Apps* → `postgresql18` installieren, Passwort für `postgres` setzen, Port 5432.
+2. **Gitea Actions** — im Repo *Einstellungen* → Actions einschalten. *Administration* → *Actions* → *Runners* →
+   *Neuen Runner erstellen*: das Registrierungs-Token kopieren.
+3. **Runner** — auf Unraid einen Container aus `gitea/act_runner` mit `GITEA_INSTANCE_URL` (Adresse der Gitea),
+   `GITEA_RUNNER_REGISTRATION_TOKEN` (aus Schritt 2), Pfad `/data` → `appdata/act_runner` und
+   `/var/run/docker.sock` → `/var/run/docker.sock`. Über den Socket baut der Job im Docker des Unraid.
+4. **Zugang zur Registry** — in der Gitea unter *Einstellungen* → *Anwendungen* ein Token mit `write:package`; im Repo
+   *Einstellungen* → *Actions* → *Geheimnisse*: `REGISTRY_TOKEN` = dieses Token.
+5. **Registry ohne https** — die Gitea spricht http; Docker auf Unraid muss sie dafür als `insecure-registries` kennen.
+   *Zu prüfen auf dem Unraid:* wo die Unraid-Fassung die Einstellung des Docker-Dienstes dauerhaft hält.
+6. **Erstes Image** — ein Push auf `master` (oder im Repo *Actions* → `docker` → *Ausführen*); unter *Pakete* steht
+   danach `journali`.
+7. **Vorlage** — `unraid/journali.xml` auf den USB-Stick des Unraid kopieren (Freigabe `flash`):
+   `config/plugins/dockerMan/templates-user/my-journali.xml`, und `Repository` auf das Image der Gitea stellen
+   (`<host>:<port>/<besitzer>/journali:latest`).
+8. **Installieren** — *Docker* → *Add Container* → *Template*: `journali` → *Apply*. Danach steht die App auch unter
+   *Apps* → *Previous Apps*.
+9. **Einrichten** — *WebUI* öffnen: der Einrichtungsdialog fragt die Datenbank ab (Host = Adresse des Unraid, Port
+   5432, Benutzer `postgres`, Passwort aus Schritt 1) und legt den ersten Administrator an.
+
+**Für alle:** dieselbe Vorlage mit `ghcr.io/journalipim/journali:latest` (öffentliches Paket) in einem öffentlichen
+Repo, angemeldet bei den Community Applications (Support-Thread im Unraid-Forum).
+
 ## Verteilen
 
 **Image:** `ghcr.io/journalipim/journali` — `latest` ist der Stand von `master`, `1.2.3`/`1.2`/`1` ein Tag `v1.2.3`,
