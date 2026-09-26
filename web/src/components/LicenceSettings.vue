@@ -201,11 +201,11 @@ async function kopiere(text) {
       <tr v-if="!team || eigenes"><td class="muted" :title="$t('journali-Token je Woche: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▤ Token / Woche") }}</td><td class="mono woche" :title="$t('Kontingent von {0} · Lizenz der Instanz {1}', [team?.label ?? '', zahl(lic?.entriesWeek)])">{{ zahl(limits?.week ?? lic?.entriesWeek) }}</td><td></td></tr>
       <tr v-if="!team || eigenes"><td class="muted" :title="$t('journali-Token je Monat: jede Pflege schreibt einen Eintrag ins Journal.')">{{ $t("▦ Token / Monat") }}</td><td class="mono monat" :title="$t('Kontingent von {0} · Lizenz der Instanz {1}', [team?.label ?? '', zahl(lic?.entriesMonth)])">{{ zahl(limits?.month ?? lic?.entriesMonth) }}</td><td></td></tr>
       <tr v-if="lic?.countFrom"><td class="muted" :title="$t('Was vor diesem Tag im Journal steht, zählt nicht mehr mit.')">{{ $t("◷ gezählt ab") }}</td><td class="mono">{{ lic.countFrom }}</td><td></td></tr>
-      <tr v-if="darf() && lic?.lizenzserver" class="registrierung"><td class="muted" :title="$t('Registriert holt diese Anlage Tarife und Aktionen des Shops und nennt dabei ihre Kennung.')">{{ $t("⇄ Lizenzserver") }}</td>
-        <td><button class="x" :class="lic.registriert ? 'pos' : 'muted'" :title="lic.registriert ? $t('Registrierung zurücknehmen') : $t('Diese Anlage registrieren')" @click="registrierung(!lic.registriert)">{{ lic.registriert ? $t("● registriert") : $t("○ nicht registriert") }}</button></td><td></td></tr>
-      <tr v-if="lic?.instanz"><td class="muted" :title="$t('Diese Instanz. Eine Lizenz wird auf diese Kennung ausgestellt und gilt nur hier.')">{{ $t("⌗ Instanz") }}</td>
+      <tr v-if="lic?.instanz" class="instanz"><td class="muted" :title="$t('Diese Instanz. Eine Lizenz wird auf diese Kennung ausgestellt und gilt nur hier.')">{{ $t("⌗ Instanz") }}</td>
         <td class="mono" style="user-select:all">{{ lic.instanz }}</td>
         <td><button class="x" :title="$t('Kennung kopieren')" @click="kopiere(lic.instanz)">⧉</button></td></tr>
+      <tr v-if="darf() && lic?.lizenzserver" class="registrierung"><td class="muted" :title="$t('Registriert holt diese Anlage Tarife und Aktionen des Shops und nennt dabei ihre Kennung.')">{{ $t("⇄ Lizenzserver") }}</td>
+        <td><button class="x" :class="lic.registriert ? 'pos' : 'muted'" :title="lic.registriert ? $t('Registrierung zurücknehmen') : $t('Diese Anlage registrieren')" @click="registrierung(!lic.registriert)">{{ lic.registriert ? $t("● registriert") : $t("○ nicht registriert") }}</button></td><td></td></tr>
     </tbody></table>
 
     <!-- Kontingent bestellen: Instanz und Team hängen am Buy-Link, der Kauf findet über den Lizenzserver zum Team zurück -->

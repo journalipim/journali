@@ -66,6 +66,22 @@ test('Ein Nein geht auch hinaus — und bleibt', async () => {
   assert.equal(nochmal.length, 0)
 })
 
+// 26.09.2026 gemeldet: die Frage stand bei jedem Laden da, auch bei einer registrierten Anlage — der Anfangswert im
+// Store war derselbe wie „noch nicht gefragt“, und der Dialog kam, bevor /api/health antwortete.
+test('Solange der Server nichts gesagt hat, fragt niemand', async () => {
+  server({ registriert: true }); anwender(['users']); _wiederFragen()
+  store.registriert = undefined
+  const gefragt = antwortet(true)
+  assert.equal(await frageNachRegistrierung(), false)
+  assert.equal(gefragt.length, 0, 'gefragt, bevor der Stand da war')
+
+  // erst der Stand vom Server, dann die Frage — und eine registrierte Anlage fragt gar nicht
+  await store.poll(true)
+  assert.equal(store.registriert, true)
+  assert.equal(await frageNachRegistrierung(), false)
+  assert.equal(gefragt.length, 0)
+})
+
 test('Wer die Anlage nicht verwaltet, wird nicht gefragt', async () => {
   server(); anwender(['read', 'write']); _wiederFragen(); store.registriert = null
   const gefragt = antwortet(true)
@@ -81,6 +97,19 @@ test('Die Zeile im Lizenzabschnitt stellt die Antwort um', async () => {
   assert.match(knopf.text(), /nicht registriert/)
   await knopf.trigger('click'); await flushPromises()
   assert.deepEqual(gesendet.find(g => g.pfad === '/api/licence/registrierung').body, { ja: true })
+  w.unmount()
+})
+
+// Erst die eigene Kennung, dann, was der Lizenzserver von ihr weiss — in dieser Reihenfolge liest es sich (26.09.2026)
+test('Die Instanz steht vor dem Lizenzserver', async () => {
+  server({ registriert: true }); anwender(['users'])
+  store.poll = async () => {}
+  const w = mount(LicenceSettings, { props: { team: { key: 'de', label: 'Deutschland', payer: 'de' } } }); await flushPromises()
+  const zeilen = w.findAll('tbody tr')
+  const instanz = zeilen.findIndex(z => z.classes().includes('instanz'))
+  const server_ = zeilen.findIndex(z => z.classes().includes('registrierung'))
+  assert.ok(instanz >= 0 && server_ >= 0, 'eine der beiden Zeilen fehlt')
+  assert.ok(instanz < server_, 'der Lizenzserver steht vor der Instanz')
   w.unmount()
 })
 

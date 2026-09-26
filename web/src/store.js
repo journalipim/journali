@@ -47,7 +47,10 @@ export const store = reactive({
   auth: { known: false, enabled: false, setup: false, user: null, role: null, name: null, rights: null },
   dbDown: false,   // Datenbank im Betrieb nicht erreichbar (503 mit db: false)
   tarif: null,     // { key, label, schedules } aus /api/health
-  registriert: null,   // beim Lizenzserver registriert? null = noch nicht gefragt (App.vue fragt einmal)
+  // beim Lizenzserver registriert? undefined = noch nichts vom Server gehört, null = noch niemand gefragt, sonst die
+  // Antwort. Der Unterschied zählt: mit null als Anfangswert fragte der Dialog bei jedem Laden, bevor /api/health
+  // antwortete — auch bei einer längst registrierten Anlage (26.09.2026).
+  registriert: undefined,
   // Darf ich das? Ohne Benutzer alles; sonst nach den Rechten der Rolle (Vokabular: read, write, retire, release, model, plugins, jobs, storage, users)
   can(right) { return !this.auth.enabled || !this.auth.user ? true : (this.auth.rights ?? []).includes(right) },
   head: 0,

@@ -9,7 +9,8 @@ import { t as t_ } from './i18n.js'
 
 let gefragt = false
 
-/// Einmal fragen, wenn noch niemand geantwortet hat. Liefert true, wenn gefragt wurde.
+/// Einmal fragen, wenn noch niemand geantwortet hat. Liefert true, wenn gefragt wurde. Solange der Server noch nichts
+/// gesagt hat (undefined), wird nicht gefragt — sonst stünde die Frage bei jedem Laden da.
 export async function frageNachRegistrierung() {
   if (gefragt || store.registriert !== null || !store.can('users')) return false
   gefragt = true
