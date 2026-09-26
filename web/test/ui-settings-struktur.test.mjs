@@ -27,20 +27,20 @@ async function sicht(rights, enabled = true) {
 
 test('ein Leser sieht sich und sein Team — sonst nichts', async () => {
   const w = await sicht(['read'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '◍ Team'])
+  assert.deepEqual(reiter(w), ['◐ Mein Account', '◍ Team'])
   await ruhe(); w.unmount()
 })
 
 test('der Administrator sieht die Bestandteile einzeln, nicht als Sammelseite', async () => {
   const w = await sicht(['read', 'users', 'storage', 'model', 'team'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '◍ Team', '◈ IAM', '⚑ Workflows', '▨ Storage', '▩ Assets', '✉ Mail', '⇅ B&R'])
+  assert.deepEqual(reiter(w), ['◐ Mein Account', '◍ Team', '◈ IAM', '⚑ Workflows', '▨ Storage', '▩ Assets', '✉ Mail', '⇅ B&R'])
   assert.ok(!reiter(w).some(r => /Anlage/.test(r)), 'die Sammelseite gibt es nicht mehr')
   await ruhe(); w.unmount()
 })
 
 test('Assets ohne Storage: die Ableitungsgrössen ja, der Speicher nicht', async () => {
   const w = await sicht(['read', 'model'])
-  assert.deepEqual(reiter(w), ['◐ Ich', '◍ Team', '⚑ Workflows', '▩ Assets'])
+  assert.deepEqual(reiter(w), ['◐ Mein Account', '◍ Team', '⚑ Workflows', '▩ Assets'])
   await w.findAll('.tab').find(t => t.text() === '▩ Assets').trigger('click'); await ruhe()
   const t = w.text()
   assert.match(t, /Vorschau-Presets/, 'die Grössen stehen hier')
@@ -74,7 +74,7 @@ test('ohne Anmeldung gibt es kein Team — und der Urheber steht bei mir', async
 // Einstellungen schon offen sind: der Reiter folgt der Sprungmarke.
 test('die Sprungmarke trifft ihren Reiter, auch bei offener Seite', async () => {
   const w = await sicht(['read', 'users', 'model', 'team'])
-  assert.equal(w.findAll('.tab.on')[0].text(), '◐ Ich', 'ohne Marke beginnt es bei mir')
+  assert.equal(w.findAll('.tab.on')[0].text(), '◐ Mein Account', 'ohne Marke beginnt es bei mir')
   location.hash = '#teams'
   window.dispatchEvent(new window.HashChangeEvent('hashchange'))
   await ruhe()

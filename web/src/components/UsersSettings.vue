@@ -1,7 +1,7 @@
 <script setup>
 // Einstellungen → ⚙ Anlage → Anwender und Rollen (Recht users): wer im System arbeitet, welche Rolle und welches Team.
 // Rollen: Namen und Rechte bestimmt der Anwender — Tabelle Rollen × Rechte, Saatgut admin/manager/editor/reader.
-// Das eigene Konto (Passwort, API-Token) steht unter ◐ Ich — Verwaltung und eigenes Konto sind zweierlei.
+// Das eigene Konto (Passwort, API-Token) steht unter ◐ Mein Account — Verwaltung und eigenes Konto sind zweierlei.
 import { ref, onMounted } from 'vue'
 import { api, when } from '../api.js'
 import { store } from '../store.js'

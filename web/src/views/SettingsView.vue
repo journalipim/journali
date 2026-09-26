@@ -1,6 +1,6 @@
 <script setup>
 // Einstellungen: ein Reiter je Sache, sichtbar nach Recht:
-// ◐ Ich · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ⇅ B&R (Sichern und Wiederherstellen).
+// ◐ Mein Account · ◍ Team (mit der Lizenz) · ◈ IAM (Konten, Rollen, Rechte, Teams) · ⚑ Workflows · ▨ Storage · ▩ Assets · ✉ Mail · ⇅ B&R (Sichern und Wiederherstellen).
 // Storage und Assets sind getrennt, weil die Ableitungsgrössen später auch ein Medienmanager pflegen darf, der an den
 // Speicher selbst nicht heranmuss.
 // Wer mit seinen Rechten und seinem Team hierher kommt, sieht, was er sehen oder ändern darf — alles andere nicht.
@@ -44,7 +44,7 @@ async function save() {
 <template>
   <div class="pane" style="flex:1">
     <div class="toolbar"><h1>{{ $t("⚙ Einstellungen") }}</h1>
-      <span class="tab" :class="{ on: tab === 'ich' }" @click="tab = 'ich'" :title="$t('gilt nur für mich')">{{ $t("◐ Ich") }}</span>
+      <span class="tab" :class="{ on: tab === 'ich' }" @click="tab = 'ich'" :title="$t('gilt nur für mich')">{{ $t("◐ Mein Account") }}</span>
       <span v-if="store.auth.enabled" class="tab" :class="{ on: tab === 'team' }" @click="tab = 'team'" :title="$t('die Gruppe, in der ich arbeite')">{{ $t("◍ Team") }}</span>
       <span v-if="store.can('users')" class="tab" :class="{ on: tab === 'users' }" @click="tab = 'users'" :title="$t('Anwenderkonten, Rollen, Rechte und Teams')">{{ $t("◈ IAM") }}</span>
       <span v-if="store.can('model')" class="tab" :class="{ on: tab === 'workflows' }" @click="tab = 'workflows'" :title="$t('Zustände und Übergänge über den Daten')">{{ $t("⚑ Workflows") }}</span>

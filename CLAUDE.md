@@ -190,7 +190,7 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   dem, was genutzt wurde — Zahl, Balken und Prozent zeigen dasselbe.
   Was verfügbar ist, steht als eigene Zeile darüber und im Tooltip. Angst macht eine
   Oberfläche nirgends.
-  **Einstellungen: ein Reiter je Sache**: ◐ Ich (Darstellung, Sicht,
+  **Einstellungen: ein Reiter je Sache**: ◐ Mein Account (Darstellung, Sicht,
   dieser Rechner, mein Konto mit Passwort und **meinen API-Token** — die gehören zur
   Person, nicht zum Team) · ◍ Team (Mitglieder, KI-Schlüssel, journali-Token gegen die
   Limits **und die Lizenz** — Limits und Gekauftes hängen am Team) · ◈ IAM

@@ -19,7 +19,7 @@ ist Vorschlag.
   Zusammen rund 2 300 Texte. Zweisprachig sind heute nur Modell-Saatgut (`Labels.Of(de, en)`), die Plugin-Manifeste
   (`label`/`description` je Sprache) und die Werte im Journal.
 - Anwender-Einstellungen liegen je Person im Journal (`PUT /api/auth/me/prefs`, `store.applyPrefs`) — dort gehört die
-  Sprache hin (◐ Ich → Dieser Rechner ist falsch: die Sprache hängt an der Person, nicht am Rechner).
+  Sprache hin (◐ Mein Account → Dieser Rechner ist falsch: die Sprache hängt an der Person, nicht am Rechner).
 - Hilfe: ?-Knöpfe an einigen Stellen (Kurzhilfe je Ansicht), seit heute der ?-Knopf in der Kopfzeile mit Links
   (`web/src/help.js`: journali.de; journalipim.de/.com zeigen nur dorthin).
 - Prüfstände, die auf die deutschen Texte bauen: `sichtbare-texte.test.mjs`, `servermeldungen.test.mjs`,
@@ -50,7 +50,7 @@ ist Vorschlag.
 
 ### Vorgehen
 
-1. `i18n.js`, Sprachwahl unter ◐ Ich, `de.json` als Referenz — plus ein Skript `web/tools/texte-heben.mjs`, das
+1. `i18n.js`, Sprachwahl unter ◐ Mein Account, `de.json` als Referenz — plus ein Skript `web/tools/texte-heben.mjs`, das
    `title="…"`, Templatetext und die JS-Strings mechanisch nach `t('…')` umschreibt und `de.json` daraus füllt.
    Prüfstand: kein deutscher Text mehr ausserhalb von `t()` (Umlaute, Artikel), jeder Schlüssel in `en.json` existiert
    in `de.json`, kein Schlüssel in `de.json` ohne Verwendung.
@@ -126,7 +126,7 @@ der Prüfstand `kein-name.test.mjs` liest auch `help/`.
 5. **Adressen** für Docker-Image und Git kommen, sobald es sie gibt (Platzhalter in `help.js`).
 6. **Servermeldungen bleiben deutsch** bis Stufe 3.
 
-Stand: Stufe 1 gebaut am 24.09.2026 — `web/src/i18n.js`, Sprachwahl unter ◐ Ich (`store.lang`, an der Person),
+Stand: Stufe 1 gebaut am 24.09.2026 — `web/src/i18n.js`, Sprachwahl unter ◐ Mein Account (`store.lang`, an der Person),
 `tools/texte-heben.mjs` hat 1 059 Stellen in 48 Vorlagen nach `$t('…')` gehoben (925 Schlüssel); 279 Stellen mit Text in
 Ausdrücken und die Strings im `<script>` sind Handarbeit (Liste: `node tools/texte-heben.mjs --dry`). `public/lang/en.json`
 ist die erste Sprachdatei.
