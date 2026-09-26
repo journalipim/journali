@@ -793,7 +793,7 @@ function cellMenu(e, def, col, block) {
       <span class="grow" />
       <span>≡ {{ node.entries }} · #{{ node.lastNumber }} {{ when(node.lastAt) }} 👤 {{ node.lastActor }}</span>
       <!-- Wer sonst gerade hier ist: ein Zeichen je Person, pulsierend — Präsenz, keine Sperre (26.09.2026) -->
-      <span v-for="p in store.presence" :key="p.key" class="hier" :title="$t('{0} ist auch hier', [p.name])">{{ (p.name || p.key).slice(0, 2).toUpperCase() }}</span>
+      <span v-for="p in store.presence" :key="p.key" class="hier" :title="$t('{0} ist auch hier', [p.name])">👤</span>
       <span v-if="busy">…</span>
     </div>
 
@@ -1185,9 +1185,9 @@ table.values tr.chan th:first-child { text-align: left; }
   0%   { background: color-mix(in srgb, var(--a) 45%, transparent); }
   100% { background: transparent; }
 }
-.hier { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; margin-left: 4px; border-radius: 50%;
-  background: var(--a); color: #fff; font: 600 10px/1 var(--sans); animation: hier 2s ease-in-out infinite; vertical-align: middle; }
-@keyframes hier { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--a) 60%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--a) 0%, transparent); } }
+/* Wer sonst gerade hier ist: je Person ein Personensymbol, pulsierend, gelb — hier arbeitet noch jemand (26.09.2026) */
+.hier { margin-left: 4px; color: var(--warn); animation: hier 1.8s ease-in-out infinite; }
+@keyframes hier { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
 .cell-box.formula { display: flex; gap: 8px; align-items: baseline; cursor: pointer; }
 .cell-box.formula .res { font-weight: 600; }
 .cell-box.formula .src { font: 11px var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
