@@ -62,17 +62,12 @@ async function save() {
     <div class="scroll" v-else-if="tab === 'users'"><UsersSettings /><TeamsAdmin /></div>
 
     <div class="scroll" v-else>
+      <!-- Getrennt (26.09.2026): Darstellung, Sprache und Sicht hängen an der Person und folgen der Anmeldung an jeden
+           Rechner (UserPrefsSet im Journal). Am Gerät bleibt nur, was das Gerät betrifft — darunter. -->
       <div class="section">
-      <h2 :title="$t('Gilt auf diesem Rechner; Darstellung und Sicht folgen der Anmeldung an jeden Rechner.')">{{ $t("◐ Dieser Rechner") }}</h2>
+      <h2 :title="$t('Folgt der Anmeldung an jeden Rechner.')">{{ $t("◐ Meine Ansicht") }}</h2>
       <table class="grid form">
         <tbody>
-          <!-- Der Name steht nur ohne Anmeldung hier —
-               mit Benutzern kommt der Urheber aus der Sitzung und das Feld hätte nichts zu sagen. -->
-          <tr v-if="!store.auth.enabled">
-            <td class="muted">{{ $t("👤 Name") }}</td>
-            <td><input v-model="actor" type="text" style="width:240px" :placeholder="$t('steht als Urheber in jedem Eintrag')" @keydown.enter="save" /></td>
-            <td class="muted" :title="$t('Bis es eine Anmeldung gibt, steht dieser Name als Urheber in jedem Eintrag.')">{{ $t("Urheber jedes Eintrags") }}</td>
-          </tr>
           <tr>
             <td class="muted">{{ $t("◐ Darstellung") }}</td>
             <td>
@@ -94,6 +89,21 @@ async function save() {
               <MatrixPicker :model-value="store.viewCells" @update:model-value="v => { store.viewCells = v; store.save() }" :locales="store.model.locales.map(l => l.code)" :channels="store.model.channels.map(c => c.key)" :master-locale="store.model.masterLocale" :master-channel="store.model.masterChannel" />
             </td>
             <td class="muted" :title="$t('Welche Zellen der Matrix Sprache × Kanal als Spalten stehen. Im Knoten jederzeit umschaltbar.')">{{ $t("Spalten der Matrix Sprache × Kanal") }}</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="section">
+      <h2 :title="$t('Gilt nur auf diesem Rechner, nicht für die Person.')">{{ $t("▭ Dieser Rechner") }}</h2>
+      <table class="grid form">
+        <tbody>
+          <!-- Der Name steht nur ohne Anmeldung hier —
+               mit Benutzern kommt der Urheber aus der Sitzung und das Feld hätte nichts zu sagen. -->
+          <tr v-if="!store.auth.enabled">
+            <td class="muted">{{ $t("👤 Name") }}</td>
+            <td><input v-model="actor" type="text" style="width:240px" :placeholder="$t('steht als Urheber in jedem Eintrag')" @keydown.enter="save" /></td>
+            <td class="muted" :title="$t('Bis es eine Anmeldung gibt, steht dieser Name als Urheber in jedem Eintrag.')">{{ $t("Urheber jedes Eintrags") }}</td>
           </tr>
           <tr>
             <td class="muted">{{ $t("Stand") }}</td>

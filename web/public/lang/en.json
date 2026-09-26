@@ -1,4 +1,8 @@
 {
+ "◐ Meine Ansicht": "◐ My view",
+ "Folgt der Anmeldung an jeden Rechner.": "Follows the sign-in to every computer.",
+ "▭ Dieser Rechner": "▭ This computer",
+ "Gilt nur auf diesem Rechner, nicht für die Person.": "Applies to this computer only, not to the person.",
  "{0} … {1} / {2} — Fenster offen lassen": "{0} … {1} / {2} — keep this window open",
  "journali PIM": "journali PIM",
  "✗ Diese Ansicht ist abgestürzt": "✗ This view has crashed",
@@ -818,8 +822,6 @@
  "ausgehender Mailserver": "outgoing mail server",
  "✉ Mail": "✉ Mail",
  "Sichern und wiederherstellen": "Backup and restore",
- "Gilt auf diesem Rechner; Darstellung und Sicht folgen der Anmeldung an jeden Rechner.": "Applies on this computer; appearance and view follow the login to every computer.",
- "◐ Dieser Rechner": "◐ This computer",
  "👤 Name": "👤 Name",
  "steht als Urheber in jedem Eintrag": "appears as author in every entry",
  "Bis es eine Anmeldung gibt, steht dieser Name als Urheber in jedem Eintrag.": "Until there is a login, this name appears as author in every entry.",
