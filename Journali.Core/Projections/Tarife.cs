@@ -1,7 +1,7 @@
 namespace Journali.Core.Projections;
 
 /// <summary>Ein Tarif: Grenzen je Woche und Monat, wie viele Publikationsbäume, welche Plugins (null = alle).</summary>
-public sealed record Tarif(string Key, string Label, int Rang, int Week, int Month, int PubTrees, IReadOnlySet<string>? Plugins, string? Kauf = null)
+public sealed record Tarif(string Key, string Label, int Rang, int Week, int Month, int PubTrees, IReadOnlySet<string>? Plugins)
 {
     public bool Erlaubt(string plugin) => Plugins is null || Plugins.Contains(plugin);
     public bool Unbegrenzt => Week == Tarife.Ohne && Month == Tarife.Ohne;
@@ -19,12 +19,13 @@ public sealed class Tarifliste
 {
     private readonly string _testTarif;
 
-    public Tarifliste(long fassung, IEnumerable<Tarif> tarife, string testTarif, int testMonate)
+    public Tarifliste(long fassung, IEnumerable<Tarif> tarife, string testTarif, int testMonate, string? kauf = null)
     {
         Fassung = fassung;
         Alle = [.. tarife.OrderBy(x => x.Rang)];
         _testTarif = testTarif;
         TestMonate = testMonate;
+        Kauf = kauf;
     }
 
     /// <summary>Fassung des Tarifblatts — 0 für das Saatgut.</summary>
@@ -33,6 +34,8 @@ public sealed class Tarifliste
     public IReadOnlyList<Tarif> Alle { get; }
     /// <summary>So lange gilt der Test einer neuen Instanz, gezählt ab dem ersten Eintrag im Journal.</summary>
     public int TestMonate { get; }
+    /// <summary>Die Adresse des Shops — eine für alle Tarife; null, wenn das Blatt keine nennt.</summary>
+    public string? Kauf { get; }
 
     /// <summary>Der Tarif zu einem Schlüssel — null, wenn es ihn nicht gibt.</summary>
     public Tarif? Von(string? key) => Alle.FirstOrDefault(t => string.Equals(t.Key, key, StringComparison.OrdinalIgnoreCase));
@@ -51,13 +54,13 @@ public sealed class Tarifliste
 
     /// <summary>Aus dem Inhalt eines (geprüften) Tarifblatts.</summary>
     public static Tarifliste Aus(Licensing.TarifblattInhalt b) =>
-        new(b.Fassung, b.Tarife.Select(z => new Tarif(z.Key, z.Label, z.Rang, z.Week, z.Month, z.PubTrees, z.Plugins is null ? null : new HashSet<string>(z.Plugins), z.Kauf)),
-            b.TestTarif, b.TestMonate);
+        new(b.Fassung, b.Tarife.Select(z => new Tarif(z.Key, z.Label, z.Rang, z.Week, z.Month, z.PubTrees, z.Plugins is null ? null : new HashSet<string>(z.Plugins))),
+            b.TestTarif, b.TestMonate, b.Kauf);
 
     /// <summary>Als Inhalt eines Tarifblatts — so legt der Lizenzserver seine erste Fassung aus dem Saatgut an.</summary>
     public Licensing.TarifblattInhalt AlsBlatt(long fassung, DateTimeOffset ausgestellt) =>
         new(fassung, ausgestellt, Test.Key, TestMonate,
-            [.. Alle.Select(t => new Licensing.TarifZeile(t.Key, t.Label, t.Rang, t.Week, t.Month, t.PubTrees, t.Plugins?.Order().ToArray(), t.Kauf))]);
+            [.. Alle.Select(t => new Licensing.TarifZeile(t.Key, t.Label, t.Rang, t.Week, t.Month, t.PubTrees, t.Plugins?.Order().ToArray()))], Kauf);
 }
 
 /// <summary>

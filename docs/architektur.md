@@ -232,9 +232,10 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     laufende Periode zugesagt hat, und liefert bis zu ihrem Ende nicht weniger.
   - **Keine Lizenz der Instanz**: jede gehört einem Team — Abo oder Schlüssel zum Kopieren. Das Einspielen einer
     Lizenzdatei (`PUT /api/licence`) ist entfernt; übrig ist der Test des Init Teams, danach Kostenlos.
-  - **Kontingent bestellen aus der Oberfläche** (26.09.2026): wer ein Team führt, wählt im Abschnitt ⚿ journali Lizenz
-    einen Tarif und öffnet den Shop. Die Kauf-Adresse steht je Tarif im Tarifblatt (`TarifZeile.Kauf`); die Oberfläche
-    hängt `checkout[custom][instanz]` und `checkout[custom][team]` daran. Der Shop meldet den neuen Schlüssel als
+  - **Kontingent bestellen aus der Oberfläche** (26.09.2026): wer ein Team führt, öffnet im Abschnitt ⚿ journali Lizenz
+    den Shop. Die Adresse steht im Tarifblatt (`TarifblattInhalt.Kauf`) — **eine** für alle Tarife, weil der Shop ein
+    Produkt mit je Tarif und Laufzeit einer Variante führt und eine Variante keine eigene Adresse hat; den Tarif wählt
+    der Anwender im Shop. Die Oberfläche hängt `checkout[custom][instanz]` und `checkout[custom][team]` daran. Der Shop meldet den neuen Schlüssel als
     `license_key_created` mit diesen Daten zurück — der Lizenzserver aktiviert ihn selbst und **behält** ihn
     (`Aktivierung.Key`). Die Instanz fragt darum **ohne Schlüssel** (`Abos.VerbindenAsync` mit leerem `key`), der
     Lizenzserver findet das Abo über Instanz und Team. Niemand fügt einen Schlüssel ein, und keiner liegt in der Instanz.

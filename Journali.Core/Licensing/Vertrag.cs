@@ -81,18 +81,18 @@ public static class Aussteller
     }
 }
 
-/// <summary>
-/// Ein Tarif, wie ihn das Tarifblatt nennt. <see cref="Plugins"/> null = alle. <see cref="Kauf"/> ist die Adresse des
-/// Shops für diesen Tarif (26.09.2026): sie steht hier, damit eine Instanz sie kennt, ohne dass jemand sie einträgt —
-/// wer ein Team führt, bestellt damit Kontingent, und der Kauf findet über den Lizenzserver zum Team zurück.
-/// </summary>
-public sealed record TarifZeile(string Key, string Label, int Rang, int Week, int Month, int PubTrees, string[]? Plugins = null, string? Kauf = null);
+/// <summary>Ein Tarif, wie ihn das Tarifblatt nennt. <see cref="Plugins"/> null = alle.</summary>
+public sealed record TarifZeile(string Key, string Label, int Rang, int Week, int Month, int PubTrees, string[]? Plugins = null);
 
 /// <summary>
 /// Was im Tarifblatt steht: alle Tarife mit Grenzen, Publikationsbäumen und Plugins, dazu welcher Tarif wie viele Monate
 /// als Test gilt. <see cref="Fassung"/> zählt hoch — eine ältere Fassung ersetzt nie eine neuere.
+/// <para><see cref="Kauf"/> ist die Adresse des Shops (26.09.2026): eine für alle Tarife — der Shop führt ein Produkt mit
+/// je Tarif und Laufzeit einer Variante, und die Variante hat keine eigene Adresse. Sie steht hier, damit eine Instanz
+/// den Shop kennt, ohne dass jemand sie einträgt; wer ein Team führt, bestellt damit Kontingent, und was gekauft wird,
+/// findet über den Lizenzserver zum Team zurück.</para>
 /// </summary>
-public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, string TestTarif, int TestMonate, TarifZeile[] Tarife)
+public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, string TestTarif, int TestMonate, TarifZeile[] Tarife, string? Kauf = null)
 {
     public static JsonSerializerOptions Json => Signaturen.Json;
 
@@ -113,6 +113,7 @@ public sealed record TarifblattInhalt(long Fassung, DateTimeOffset Ausgestellt, 
         if (!Tarife.Any(z => z.Rang == 0)) return "Kein Tarif mit Rang 0 (Kostenlos).";
         if (!Tarife.Any(z => z.Key == TestTarif)) return $"Test-Tarif {TestTarif} fehlt.";
         if (TestMonate is < 0 or > 24) return "Testmonate: 0 bis 24.";
+        if (Kauf is { Length: > 0 } k && !(Uri.TryCreate(k, UriKind.Absolute, out var u) && u.Scheme == Uri.UriSchemeHttps)) return "Kauf ist keine https-Adresse.";
         return null;
     }
 }

@@ -2,7 +2,7 @@
 // Die Lizenz. Sie wird nicht gepflegt, sondern eingespielt —
 // darum eine Datei, kein Stammdatum. Was sie sagt, gilt für die ganze Anlage: Einträge je Woche und Monat, das
 // Was ein Team an KI verbraucht, geht an seinen Anbieter — journali lizenziert das nicht.
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { api } from '../api.js'
 import { store } from '../store.js'
 import { t as t_ } from '../i18n.js'
@@ -22,28 +22,22 @@ const said = ref('')
 const darf = () => store.can('users')
 /// Das Team führen: ein Teammanager bestellt sein Kontingent selbst (26.09.2026); der Administrator darf es überall
 const fuehrt = computed(() => store.can('users') || (store.can('team') && (props.team?.managers ?? []).includes(store.auth.user)))
-/// Die Tarife, die der Shop verkauft — Adresse je Tarif aus dem Tarifblatt, nach Rang aufsteigend
-const kaufbar = computed(() => lic.value?.kaufbar ?? [])
-const wahlTarif = ref('')
-watch(kaufbar, k => { if (!k.some(x => x.key === wahlTarif.value)) wahlTarif.value = k[0]?.key ?? '' }, { immediate: true })
-
-/// Die Adresse des Shops mit Instanz und Team daran: der Kauf findet über den Lizenzserver allein zum Team zurück
-function kaufAdresse(key) {
-  const tarif = kaufbar.value.find(x => x.key === key)
-  if (!tarif?.kauf || !lic.value?.instanz || !props.team) return null
+/// Die Adresse des Shops mit Instanz und Team daran. Es ist eine Adresse für alle Tarife — den Tarif wählt der
+/// Anwender im Shop, und was er kauft, findet über den Lizenzserver zu diesem Team zurück.
+const kaufAdresse = computed(() => {
+  if (!lic.value?.kauf || !lic.value?.instanz || !props.team) return null
   let u
-  try { u = new URL(tarif.kauf) } catch { return null }
+  try { u = new URL(lic.value.kauf) } catch { return null }
   u.searchParams.set('checkout[custom][instanz]', lic.value.instanz)
   u.searchParams.set('checkout[custom][team]', props.team.key)
   return u.toString()
-}
+})
 
 /// Bestellen: den Shop öffnen. Der Kauf meldet sich beim Lizenzserver, ↻ holt den Stand
 function bestellen() {
-  const url = kaufAdresse(wahlTarif.value)
-  if (!url) { said.value = '✗ ' + t_('Kein Shop für diesen Tarif'); return }
-  window.open(url, '_blank', 'noopener')
-  said.value = '✓ ' + t_('Shop geöffnet · {0}', [kaufbar.value.find(x => x.key === wahlTarif.value)?.label ?? ''])
+  if (!kaufAdresse.value) return
+  window.open(kaufAdresse.value, '_blank', 'noopener')
+  said.value = '✓ ' + t_('Shop geöffnet')
 }
 
 async function load() {
@@ -185,10 +179,7 @@ async function kopiere(text) {
     </tbody></table>
 
     <!-- Kontingent bestellen: Instanz und Team hängen am Buy-Link, der Kauf findet über den Lizenzserver zum Team zurück -->
-    <div v-if="fuehrt && eigenes && kaufbar.length && lic?.lizenzserver" class="bestellen row" style="gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
-      <select v-model="wahlTarif" class="wahl tarif-wahl" :title="$t('Tarif')">
-        <option v-for="k in kaufbar" :key="k.key" :value="k.key">{{ k.label }} · {{ zahl(k.week) }} / {{ zahl(k.month) }}</option>
-      </select>
+    <div v-if="fuehrt && eigenes && kaufAdresse && lic?.lizenzserver" class="bestellen row" style="gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
       <button class="primary bestellen-knopf" :title="$t('Shop öffnen — der Kauf gehört danach {0}', [team?.label ?? ''])" @click="bestellen">{{ $t("⚿ Bestellen · {0}", [team?.label ?? '']) }}</button>
       <button v-if="!aboTeam" class="x holen" :title="$t('Stand vom Lizenzserver holen')" @click="auffrischen">↻</button>
       <span v-if="!darf()" class="said" :class="said.startsWith('✗') ? 'fehler' : 'muted'" style="font-size:12px">{{ said }}</span>

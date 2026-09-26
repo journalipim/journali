@@ -30,10 +30,9 @@ public static class LicenceApi
                 tarif = new { key = lt.Key, label = lt.Label }, trial = roh.Trial == true, trialPlan = roh.TarifIn(liste).Label,
                 tarifblatt = liste.Fassung,
                 instanzTarif = new { key = t.Key, label = t.Label, pubTrees = t.PubTrees == Tarife.Ohne ? (int?)null : t.PubTrees },
-                // Die Tarife, die der Shop verkauft: Adresse je Tarif aus dem Tarifblatt. Die Oberfläche hängt Instanz
-                // und Team daran, der Kauf findet über den Lizenzserver zum Team zurück — niemand fügt danach etwas ein.
-                kaufbar = liste.Alle.Where(x => !string.IsNullOrWhiteSpace(x.Kauf))
-                    .Select(x => new { x.Key, x.Label, x.Rang, x.Week, x.Month, kauf = x.Kauf }).ToList(),
+                // Die Adresse des Shops aus dem Tarifblatt: die Oberfläche hängt Instanz und Team daran, und was gekauft
+                // wird, findet über den Lizenzserver zum Team zurück — niemand fügt danach etwas ein.
+                kauf = liste.Kauf,
                 pubTrees = baeume,
                 // die Abos der Teams (Taloan, 24.09.2026): letzter Stand vom Lizenzserver, und ob er heute gilt
                 lizenzserver = abos.Eingestellt,
