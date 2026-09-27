@@ -67,6 +67,25 @@ public class VektorenTests
     }
 
     [Fact]
+    public void Je_Sprache_des_Modells_ein_Text_je_Knoten()
+    {
+        var c = new Catalog(new MemoryJournal()); c.Rebuild(); c.SeedMissing();
+        var texte = SemanticApi.KnotenTexte(c);
+        Assert.Equal(["de", "en"], texte.Where(t => t.Node == Model.RootNode).Select(t => t.Locale).Order());
+        Assert.StartsWith("MasterTree\nProduct group", texte.Single(t => t.Node == Model.RootNode && t.Locale == "en").Text);
+    }
+
+    [Fact]
+    public void Der_Job_eines_Uebergangs_zaehlt_nur_wenn_es_ihn_gibt()
+    {
+        var wf = new WorkflowDef { Key = "review", Transitions = [new WfTransition("approve", "review", "approved", Labels.Of("freigeben", "approve"), Job: "export_web"), new WfTransition("reject", "review", "rework", Labels.Of("zurück", "back"))] };
+        Assert.Equal("export_web", WorkflowApi.JobOf(wf, "approve", k => k == "export_web"));
+        Assert.Null(WorkflowApi.JobOf(wf, "approve", _ => false));   // kein solcher Job im Tasker
+        Assert.Null(WorkflowApi.JobOf(wf, "reject", _ => true));     // kein Job am Übergang
+        Assert.Null(WorkflowApi.JobOf(null, "approve", _ => true));
+    }
+
+    [Fact]
     public void Offen_sind_Knoten_ohne_Vektor_oder_mit_anderem_Hash_weg_sind_die_ohne_Knoten()
     {
         var texte = new List<SemanticApi.KnotenText> { new("p1", "de", "aaa", "x"), new("p2", "de", "bbb", "y"), new("p3", "de", "ccc", "z") };

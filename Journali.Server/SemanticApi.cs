@@ -56,13 +56,15 @@ public static class SemanticApi
         return known.Keys.Select(k => k.Node).Where(n => !da.Contains(n)).Distinct().ToList();
     }
 
-    /// <summary>Die Texte aller Pflegeknoten in der Leitsprache, mit Hash.</summary>
+    /// <summary>Die Texte aller Pflegeknoten, je Sprache des Modells einer, mit Hash — ein Knoten mit französischen Werten
+    /// wird auf Französisch gefunden, nicht nur über die Leitsprache.</summary>
     public static List<KnotenText> KnotenTexte(Catalog c) => c.With((model, tree, _) =>
     {
-        var loc = model.MasterLocale ?? "de";
+        var locs = model.Locales.Keys.OrderBy(x => x, StringComparer.Ordinal).ToList();
+        if (locs.Count == 0) locs = [model.MasterLocale ?? "de"];
         return tree.Nodes.Values.Where(n => n.Role is Roles.Group or Roles.Product or Roles.Variant)
             .OrderBy(n => n.Id, StringComparer.Ordinal)
-            .Select(n => { var t = NodeText.Of(model, tree, n, loc); return new KnotenText(n.Id, loc, NodeText.Hash(t), t); }).ToList();
+            .SelectMany(n => locs.Select(loc => { var t = NodeText.Of(model, tree, n, loc); return new KnotenText(n.Id, loc, NodeText.Hash(t), t); })).ToList();
     });
 
     /// <summary>
@@ -187,10 +189,10 @@ public static class SemanticApi
         });
 
         // Ähnliche Knoten: aus dem eigenen Vektor, ohne neue Einbettung — known sagt, ob der Knoten schon einen hat
-        api.MapGet("/nodes/{id}/similar", async (string id, Catalog c, Vectors vectors, Embedder embedder, int limit = 8, CancellationToken ct = default) =>
+        api.MapGet("/nodes/{id}/similar", async (string id, Catalog c, Vectors vectors, Embedder embedder, int limit = 8, string? locale = null, CancellationToken ct = default) =>
         {
             if (!vectors.Ready) return Results.Ok(new { ready = false, reason = vectors.Reason, known = false, hits = Array.Empty<object>() });
-            var loc = c.ReadModel(m => m.MasterLocale) ?? "de";
+            var loc = Blank(locale) ?? c.ReadModel(m => m.MasterLocale) ?? "de";
             var (known, hits) = await vectors.SimilarNodesAsync(embedder.Model, id, loc, limit, ct);
             return Results.Ok(new { ready = true, reason = (string?)null, known, hits = KnotenView(c, hits) });
         });

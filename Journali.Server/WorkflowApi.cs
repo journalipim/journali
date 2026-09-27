@@ -15,7 +15,24 @@ public static class WorkflowApi
     public sealed record IdsBody(string[]? Ids);
     public sealed record AssignBody(string? User);
 
-    public static void Map(RouteGroupBuilder api)
+    /// <summary>Der Job, den ein Übergang anstösst (34 I): am Übergang genannt und im Tasker vorhanden — sonst null.</summary>
+    public static string? JobOf(WorkflowDef? wf, string transition, Func<string, bool> jobExists) =>
+        wf?.Transitions.FirstOrDefault(t => t.Key == transition)?.Job is { Length: > 0 } job && jobExists(job) ? job : null;
+
+    /// <summary>
+    /// Nach einem gelungenen Schritt den Job des Übergangs starten. Läuft er schon, ist das kein Fehler — er findet den
+    /// neuen Stand in seiner nächsten Runde. Ein Fehler beim Start hält den Schritt nicht auf: der steht im Journal.
+    /// </summary>
+    public static void Nachlauf(IResult r, Catalog c, JobRunner runner, HttpRequest req, string wf, string transition)
+    {
+        if (r is not Microsoft.AspNetCore.Http.HttpResults.Ok<EntryView>) return;
+        var job = c.With((_, _, _) => JobOf(c.Workflows.All.GetValueOrDefault(wf), transition, k => c.Jobs.All.TryGetValue(k, out var j) && j.Enabled));
+        if (job is null) return;
+        runner.Origin = $"{req.Scheme}://{req.Host}";
+        runner.Start(job, "workflow", out _);
+    }
+
+    public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
         api.MapGet("/workflows", (Catalog c) => c.With((_, tree, _) => c.Workflows.All.Values.OrderBy(w => w.Key).Select(w => View(c, tree, w)).ToList()));
         api.MapPut("/workflows/{key}", (string key, WorkflowDefined body, HttpRequest req, Catalog c) =>
@@ -135,7 +152,11 @@ public static class WorkflowApi
             return Results.Ok(out_);
         }));
         api.MapPost("/nodes/{id}/workflow/{wf}/{transition}", (string id, string wf, string transition, StepBody? body, HttpRequest req, Catalog c, string? locale = null) =>
-            TreeApi.Run(req, c, x => Commands.WorkflowStep(x, id, wf, transition, body?.Note, locale)));
+        {
+            var r = TreeApi.Run(req, c, x => Commands.WorkflowStep(x, id, wf, transition, body?.Note, locale));
+            Nachlauf(r, c, runner, req, wf, transition);   // die Brücke: ein Übergang mit job startet ihn
+            return r;
+        });
         api.MapDelete("/nodes/{id}/workflow/{wf}", (string id, string wf, HttpRequest req, Catalog c, string? locale = null) => TreeApi.Run(req, c, x => Commands.ClearWorkflowState(x, id, wf, locale)));   // eigenen Zustand aufheben → erben
         api.MapPut("/nodes/{id}/workflow/{wf}/assign", (string id, string wf, AssignBody body, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.AssignWorkflow(x, id, wf, body.User)));

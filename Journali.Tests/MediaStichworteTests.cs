@@ -49,8 +49,8 @@ public class MediaStichworteTests
         Assert.Equal(AttributeTypes.Enum, def.Type);
         Assert.Equal(Model.KeywordList, def.List);
         Assert.True(def.Multiple);
-        // Die Liste beginnt leer — die Stichwörter sind die des Kunden, nicht unsere
-        Assert.Empty(w.Cat.Lists[Model.KeywordList].Values);
+        // Die Stichwörter sind die des Kunden, nicht unsere — bis auf eines: „Text erkennen“ stellt ein Bild zur Texterkennung (34 J)
+        Assert.Equal(new[] { Model.OcrKeyword }, w.Cat.Lists[Model.KeywordList].Values.Keys.ToArray());
     }
 
     [Fact]

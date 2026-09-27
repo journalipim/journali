@@ -44,6 +44,22 @@ public class DocsScansTests
     }
 
     [Fact]
+    public void Ein_Bild_mit_Stichwort_Text_erkennen_ist_ein_Scan_bis_der_Index_es_kennt()
+    {
+        var media = new Media(); long n = 0;
+        media.Apply(new Entry(++n, DateTimeOffset.UtcNow, "t", "b1", Types.MediaCreated, Types.Serialize(new MediaCreated("s1", 10, "image/jpeg", "scan.jpg"))));
+        media.Apply(new Entry(++n, DateTimeOffset.UtcNow, "t", "b2", Types.MediaCreated, Types.Serialize(new MediaCreated("s2", 10, "image/jpeg", "foto.jpg"))));
+        media.Apply(new Entry(++n, DateTimeOffset.UtcNow, "t", "b1", Types.AttributeSet, Types.Serialize(new AttributeSet(Model.KeywordAttribute, null, null, null, [Model.OcrKeyword]))));
+        var leer = new Dictionary<string, (string Sha, string State)>();
+        Assert.Equal(["b1"], DocsApi.Scans(leer, media.All.Values, 10).Select(s => s.Id));   // das Foto ohne Stichwort nicht
+        var erkannt = new Dictionary<string, (string Sha, string State)> { ["b1"] = ("s1", DocText.States.Text) };
+        Assert.Empty(DocsApi.Scans(erkannt, media.All.Values, 10));                          // erkannt: erledigt
+        var alt = new Dictionary<string, (string Sha, string State)> { ["b1"] = ("anders", DocText.States.Text) };
+        Assert.Equal(["b1"], DocsApi.Scans(alt, media.All.Values, 10).Select(s => s.Id));    // neue Fassung: wieder offen
+        Assert.Contains(Model.Seeds(), s => s.Type == Types.ListValueDefined && s.Stream == Model.ListStream + Model.KeywordList && s.Payload.Contains("\"ocr\""));
+    }
+
+    [Fact]
     public void Aelteste_zuerst_und_begrenzt()
     {
         var media = Mit(("m1", "a"), ("m2", "b"), ("m3", "c"));

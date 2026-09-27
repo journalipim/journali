@@ -1676,9 +1676,12 @@ Zustand mit. Kein neuer Eintragstyp. Der Schritt (`Commands.WorkflowStepMedium`,
 prüft Übergang, Rolle, Eskalation und Notizpflicht wie am Knoten — ohne Vater (kein Erben), ohne Blocker und **ohne
 Wirkungen**: `release`, `revoke`, `status`, `translate` sind Knotensache; die Oberfläche sagt es am Knopf („am Asset
 ohne Wirkung“). Zuständiger wie am Knoten (`…/assign`). Bibliothek: Abschnitt ⚑ Workflow rechts, Facette je
-Zustand (`state=<wf>:<zustand>`), Fahne in der Farbe des Zustands an der Kachel. **Offen:** dass ein nicht freigegebenes
-Bild nicht ausgeleitet wird — der Zustand steht in `MediaView.Workflow`, die Erzeuger müssen ihn lesen (Siegel); und ein
-Übergang, der einen Job anstösst (`WfTransition.job`), als Brücke zu Import und Export.
+Zustand (`state=<wf>:<zustand>`), Fahne in der Farbe des Zustands an der Kachel. **Gebaut (27.09.2026):** die
+Brücke zu Import und Export — `WfTransition.Job` nennt einen Job des Tasker, und nach einem gelungenen Schritt startet
+er (`WorkflowApi.Nachlauf`, am Knoten wie am Asset; läuft er schon, findet er den neuen Stand in seiner nächsten Runde;
+ein Fehler beim Start hält den Schritt nicht auf). In den Workflow-Einstellungen steht er als Spalte „⏱ Job“ je
+Übergang. **Offen:** dass ein nicht freigegebenes Bild nicht ausgeleitet wird — der Zustand steht in
+`MediaView.Workflow`, die Erzeuger müssen ihn lesen (Siegel).
 
 **J. Texterkennung (OCR) — gebaut (27.09.2026).** Der Volltext liegt **je Medium** (`DocText.cs`, `media_text`), und
 der Zustand `scan` bedeutet „ohne Textebene — wartet auf OCR“. `GET /api/docs/scans` ist die offene Postenliste:
@@ -1691,9 +1694,10 @@ Abgelegt wird mit `PUT /api/docs/{id}`, `state: text`, `note: "ocr · Vertrauen 
 Text wird `fehler` mit dem Grund, damit es nicht in jeder Runde wiederkommt (`/docs/retry` gibt es frei). Die
 Sprachdaten kommen beim ersten Lauf nach `plugins/ocr/.cache` (Volume). Kein Systemjob: die Erkennung ist teuer und
 eine Entscheidung je Anlage. Damit wird ein gescanntes Datenblatt durchsuchbar, einbettbar (35) und seine Tabellen
-werden Attribute (L). Offen und eine Entscheidung: **Bilder**. Der Leser nimmt nur Dokumente in den Index
-(`Readable`); jedes Bild zu erkennen kostet viel und bringt bei Produktfotos nichts. Der Erkenner kann Bilder, sobald
-sie in der Liste stehen — ein Stichwort oder Ordner „Text erkennen“ wäre der Weg, sie ausdrücklich hineinzustellen.
+werden Attribute (L). **Bilder** kommen ausdrücklich: das gesäte Stichwort „Text erkennen“ (`ocr`, Werteliste `keyword`) stellt ein Bild in
+die Liste der Texterkennung (`DocsApi.IstScan`), solange der Index es nicht zu seinem Hash kennt; der Zähler in
+⌕ Dokumente zählt sie mit. Der Leser nimmt weiterhin nur Dokumente (`Readable`) — jedes Bild zu erkennen kostet viel
+und bringt bei Produktfotos nichts.
 
 **K. Ablegen auf einem Knoten.** Heute nimmt der Baum nur JSON und Tabellen an (`TreeView.vue`); ein Bild oder PDF
 auf einen Knoten gezogen bringt „Kein Importer für …“. Zu bauen: ein Asset, das auf einen Knoten fällt, wird
@@ -1799,8 +1803,8 @@ Export (34 J).
 
 **Offen.**
 
-- Nur die Leitsprache wird je Knoten eingebettet; ein mehrsprachiges Modell findet trotzdem über Sprachen hinweg,
-  aber ein Knoten mit nur englischen Werten hat wenig Text.
+- ~~Nur die Leitsprache~~ — je Sprache des Modells ein Text und ein Vektor je Knoten (27.09.2026); `/nodes/semantic`
+  und `/nodes/{id}/similar` nehmen `locale`, Vorgabe die Leitsprache.
 - Kein Index auf den Vektorspalten (HNSW braucht eine feste Dimension): bis einige zehntausend Abschnitte ist die
   genaue Suche schnell genug; darüber ein Index je Modell.
 - ~~Ein Systemjob-Balken im Tasker~~ — gebaut (27.09.2026): `GET /api/jobs/plugins` gibt `system` und `progress`

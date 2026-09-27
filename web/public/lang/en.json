@@ -2655,5 +2655,7 @@
  "Erweiterung vector fehlt in dieser Datenbank.": "Extension vector is missing in this database.",
  "q fehlt.": "q is missing.",
  "{0} ist kein Systemjob.": "{0} is not a system job.",
- "Plugin {0} ist nicht installiert oder aus (⌁ Plugins).": "Plugin {0} is not installed or switched off (⌁ Plugins)."
+ "Plugin {0} ist nicht installiert oder aus (⌁ Plugins).": "Plugin {0} is not installed or switched off (⌁ Plugins).",
+ "Ein Job des Tasker, der nach diesem Schritt startet — die Brücke zu Import und Export": "A job of the tasker that starts after this step — the bridge to import and export",
+ "⏱ Job": "⏱ Job"
 }

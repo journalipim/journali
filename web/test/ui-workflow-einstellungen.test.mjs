@@ -20,7 +20,7 @@ function welt(wf) {
   const rufe = []
   globalThis.fetch = async (url, opt = {}) => {
     const pfad = String(url); rufe.push({ pfad, methode: opt.method ?? 'GET', body: opt.body ? JSON.parse(opt.body) : null })
-    const antwort = pfad.endsWith('/api/workflows') ? [wf] : pfad.includes('/api/auth/roles') ? [{ key: 'admin' }] : {}
+    const antwort = pfad.endsWith('/api/workflows') ? [wf] : pfad.includes('/api/auth/roles') ? [{ key: 'admin' }] : pfad.endsWith('/api/jobs') ? [{ key: 'export_web', label: 'Export Web' }] : {}
     return { ok: true, status: 200, text: async () => JSON.stringify(antwort), json: async () => antwort }
   }
   return rufe
@@ -54,4 +54,21 @@ test('Asset wieder weg: der Rest bleibt', async () => {
   await haken(w, 'media').setValue(false); await flushPromises()
   await w.findAll('button').find(b => /Speichern/.test(b.text())).trigger('click'); await flushPromises()
   assert.deepEqual(rufe.find(r => r.methode === 'PUT').body.roles, ['product'])
+})
+
+/// Die Brücke zu Import und Export (34 I): ein Übergang darf einen Job des Tasker anstossen — gewählt aus den Jobs, gespeichert am Übergang.
+test('ein Übergang bekommt einen Job aus dem Tasker; gespeichert wird sein Schlüssel', async () => {
+  const rufe = welt(WF(null))
+  const w = mount(WorkflowSettings); await flushPromises()
+  const zeile = w.findAll('tbody tr').find(tr => tr.find('input.mono')?.element.value === 'release')
+  const auswahl = zeile.findAll('select').at(-1)
+  assert.ok(auswahl.findAll('option').some(o => o.text() === 'Export Web'), 'die Jobs des Tasker stehen zur Wahl')
+  await auswahl.setValue('export_web'); await flushPromises()
+  await w.findAll('button').find(b => /Speichern/.test(b.text())).trigger('click'); await flushPromises()
+  const put = rufe.find(r => r.methode === 'PUT' && /\/api\/workflows\/bild$/.test(r.pfad))
+  assert.equal(put.body.transitions[0].job, 'export_web')
+  // ohne Wahl bleibt es null — kein leerer Text am Übergang
+  await auswahl.setValue(''); await flushPromises()
+  await w.findAll('button').find(b => /Speichern/.test(b.text())).trigger('click'); await flushPromises()
+  assert.equal(rufe.filter(r => r.methode === 'PUT').at(-1).body.transitions[0].job, null)
 })

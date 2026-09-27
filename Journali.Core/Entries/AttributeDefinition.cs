@@ -31,6 +31,8 @@ public static class Model
     /// <summary>Die Werteliste der Stichwörter und das vermehrbare Attribut am Medium, das aus ihr wählt.</summary>
     public const string KeywordList = "keyword";
     public const string KeywordAttribute = "keywords";
+    /// <summary>Das eine gesäte Stichwort: ein Bild damit steht ausdrücklich zur Texterkennung (34 J) — Bilder kommen sonst nie in den Dokumentindex.</summary>
+    public const string OcrKeyword = "ocr";
     /// <summary>Fristen am Medium (Datum, Gruppe media) und die Werteliste der Lizenzen.</summary>
     public const string ValidFrom = "valid_from";
     public const string ValidUntil = "valid_until";
@@ -153,6 +155,8 @@ public static class Model
         // nebeneinander und keine Facette fasst sie zusammen. Die Liste beginnt leer; neue Werte legt die Zelle an
         // („+ neuer Wert …“), und weil sie im Modell steht, ist sie übersetzbar.
         yield return new(ListStream + KeywordList, Types.ListDefined, Types.Serialize(new ListDefinition(KeywordList, Labels.Of("Stichwörter", "Keywords"))));
+        // Ein Wert ist gesät: „Text erkennen“ stellt ein Bild in die Liste der Texterkennung (34 J) — sonst nähme der Erkenner nie ein Bild
+        yield return new(ListStream + KeywordList, Types.ListValueDefined, Types.Serialize(new ListValueDefinition(OcrKeyword, Labels.Of("Text erkennen", "Recognise text"))));
         yield return new(AttributeStream + KeywordAttribute, Types.AttributeDefined, Types.Serialize(
             new AttributeDefinition(KeywordAttribute, Labels.Of("Stichwörter", "Keywords"), AttributeTypes.Enum, Group: MediaGroup, List: KeywordList, Multiple: true)));
         // Fristen und Rechte (27.09.2026): ein Bild gilt von … bis; Lizenz aus einer Werteliste (beginnt leer), Quelle als Text.

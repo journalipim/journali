@@ -34,9 +34,23 @@ public static class DocsApi
     /// das Medium wieder zum Fall des Lesers, nicht des Erkenners.
     /// </summary>
     public static List<Scan> Scans(IReadOnlyDictionary<string, (string Sha, string State)> known, IEnumerable<Journali.Core.Projections.Medium> media, int limit) =>
-        media.Where(m => known.TryGetValue(m.Id, out var k) && k.State == DocText.States.Scan && k.Sha == m.Sha256)
+        media.Where(m => IstScan(known, m))
             .OrderBy(m => m.CreatedAt).Take(Math.Clamp(limit, 1, 5000))
             .Select(m => new Scan(m.Id, m.Name, m.Mime, m.Sha256, m.Bytes, null)).ToList();
+
+    /// <summary>Wartet auf Texterkennung: ein Dokument, das der Leser als <c>scan</c> kennt — oder ein Bild mit dem Stichwort
+    /// „Text erkennen“ (<see cref="Model.OcrKeyword"/>), solange der Index es nicht zu seinem Hash erkannt oder verworfen hat.
+    /// Bilder stehen sonst nie im Index (<see cref="Readable"/>); das Stichwort stellt eines ausdrücklich hinein (34 J).</summary>
+    public static bool IstScan(IReadOnlyDictionary<string, (string Sha, string State)> known, Journali.Core.Projections.Medium m)
+    {
+        var bekannt = known.TryGetValue(m.Id, out var k) && k.Sha == m.Sha256;
+        if (bekannt && k.State == DocText.States.Scan) return true;
+        return ZurErkennung(m) && !bekannt;
+    }
+
+    /// <summary>Ein Bild, das ausdrücklich zur Texterkennung steht: Stichwort <c>ocr</c> am Medium.</summary>
+    public static bool ZurErkennung(Journali.Core.Projections.Medium m) =>
+        m.Mime.StartsWith("image/") && m.Lists.Where(kv => kv.Key.Attribute == Model.KeywordAttribute).SelectMany(kv => kv.Value).Contains(Model.OcrKeyword);
 
     /// <summary>Womit wir umgehen können — den Rest (Bilder, Videos) liest kein Textwerkzeug.</summary>
     private static bool Readable(string mime) =>
@@ -50,8 +64,10 @@ public static class DocsApi
         api.MapGet("/docs/status", async (Catalog c, DocText docs, bool pending = false, int limit = 500, CancellationToken ct = default) =>
         {
             if (!docs.Ready) return Results.Ok(new { ready = false, media = 0, chunks = 0L, scans = 0, errors = 0, pending = Array.Empty<Pending>() });
-            var (media, chunks, scans, errors) = await docs.StatsAsync(ct);
-            var known = pending ? await docs.IndexedAsync(ct) : new();
+            var (media, chunks, scansIndex, errors) = await docs.StatsAsync(ct);
+            var known = await docs.IndexedAsync(ct);
+            // dazu die Bilder mit Stichwort „Text erkennen“, die der Index noch nicht kennt — sie zählen als Scan
+            var scans = scansIndex + c.Read(_ => c.Media.All.Values.Count(m => ZurErkennung(m) && !(known.TryGetValue(m.Id, out var k) && k.Sha == m.Sha256)));
             // offen ist, was noch nie gelesen wurde oder sich seither geändert hat — ein erkannter Scan nicht (sonst
             // versuchte der Job ihn in jeder Runde erneut; er wartet auf OCR)
             var list = pending

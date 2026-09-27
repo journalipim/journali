@@ -19,7 +19,7 @@ public static class MediaWorkflowApi
     public static List<MediaState> States(Catalog c, Medium m) => c.Workflows.All.Values.Where(w => w.AppliesToMedium()).OrderBy(w => w.Key)
         .Select(wf => { var st = c.Workflows.StateOf(m.Id, wf); return new MediaState(wf.Key, wf.Label, st, wf.State(st)?.Label, wf.State(st)?.Color, wf.State(st)?.Final ?? false); }).ToList();
 
-    public static void Map(RouteGroupBuilder api)
+    public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
         // Was am Asset gilt: je Workflow der Zustand, die Schritte, die meine Rolle gehen darf, und wer sonst dran ist
         api.MapGet("/media/{id}/workflow", (string id, HttpRequest req, Catalog c) => c.With((model, _, _) =>
@@ -41,7 +41,11 @@ public static class MediaWorkflowApi
             }).ToList());
         }));
         api.MapPost("/media/{id}/workflow/{wf}/{transition}", (string id, string wf, string transition, WorkflowApi.StepBody? body, HttpRequest req, Catalog c, string? locale = null) =>
-            TreeApi.Run(req, c, x => Commands.WorkflowStepMedium(x, id, wf, transition, body?.Note, locale)));
+        {
+            var r = TreeApi.Run(req, c, x => Commands.WorkflowStepMedium(x, id, wf, transition, body?.Note, locale));
+            WorkflowApi.Nachlauf(r, c, runner, req, wf, transition);   // die Brücke gilt auch am Asset
+            return r;
+        });
         api.MapPut("/media/{id}/workflow/{wf}/assign", (string id, string wf, WorkflowApi.AssignBody body, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.AssignWorkflowMedium(x, id, wf, body.User)));
     }
