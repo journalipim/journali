@@ -10,6 +10,7 @@
 | Attributgruppe | Bündel von Attributen, das an einem Knoten hängt und nach unten gilt |
 | Ausleitung | was aus einem Publikationsbaum hinausgeht |
 | Beleg | Quelle eines Werts, oder ein Dokument an einer Version |
+| Einbettung | eine Liste von 384 Zahlen, die das Modell aus einem Text rechnet: seine Lage im Raum der Bedeutungen. Grundlage der Suche nach Sinn; abgeleitet, nie im Journal |
 | Eintrag | eine Zeile im Journal: Nummer, Zeit, Urheber, Strom, Typ, Inhalt |
 | Fassung | Version eines Plugins oder des Servers |
 | Freigabe | Erlaubnis, eine Variante in einem Kanal auszuleiten |
@@ -29,9 +30,12 @@
 | Stapel | mehrere Einträge, die zusammen geschrieben wurden; Rückgängig nimmt einen Stapel |
 | Stern | der Wert ohne Sprache und ohne Kanal |
 | Strom | die Einträge eines Knotens, Attributs, Anwenders oder Plugins |
+| Suche nach Sinn | findet Abschnitte und Knoten, die dasselbe meinen wie die Frage, über die Nähe ihrer Einbettungen; zeigt Ähnlichkeit in Prozent, hat immer Treffer |
 | Team | Gruppe von Personen, an der Kontingent und KI-Schlüssel hängen |
+| Texterkennung | macht aus einem gescannten Dokument (Bild von Text) durchsuchbaren Text; Job des Plugins ocr, lokal auf dem Server |
 | Token | journali-Token: ein Eintrag, der zählt; API-Token: Zugang für Skripte und Add-ins |
 | Variante | verkaufsfähiges Blatt unter einem Produkt, mit SKU und Achsenwerten |
+| Vektor | siehe Einbettung |
 | Verweis | ein Knoten des Pflegebaums in einer Rubrik, der dem Pflegebaum folgt |
 | Version | eingefrorener Stand eines Knotens mit Belegen und Aufbewahrung |
 | Wertelist | erlaubte Werte eines Attributs, mit Bezeichnung je Sprache und eigenen Spalten |

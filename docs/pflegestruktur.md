@@ -1761,6 +1761,48 @@ meint, steht in 35.
 Anbieter — kein Schlüssel, kein Volumen, dafür Rechenzeit auf dem Server; und der Umfang ist voll: Dokumente, Knoten,
 die Frage an die Dokumente.
 
+**In Worten, bevor es technisch wird.** Eine Einbettung ist eine Liste von Zahlen, hier 384, die ein Modell aus einem
+Text rechnet. Sie ist die Lage des Textes in einem Raum der Bedeutungen: zwei Texte, die dasselbe meinen, liegen dort
+nah beieinander, auch wenn sie kein Wort teilen; zwei, die nichts miteinander zu tun haben, liegen fern. „Nah“ heisst
+ein kleiner Winkel zwischen den beiden Zahlenreihen (Kosinusabstand, 0 = gleich, 1 = ohne Bezug); die Vektoren des
+Modells sind auf Länge 1 normiert, darum ist der Kosinus dasselbe wie das Skalarprodukt. Eine Suche nach Sinn ist
+darum keine Frage „gefunden oder nicht“, sondern „wie nah“ — sie hat immer Treffer, auch schwache, und die Oberfläche
+zeigt die Nähe als Prozent. Die 384 kommen vom Modell: `multilingual-e5-small` hat 384 Ausgänge; ein grösseres Modell
+hätte 768 oder 1024, wäre etwas genauer und mehrfach so teuer in Zeit und Platz. Für Datenblätter und Produktnamen
+reicht klein, und klein läuft auf jedem Server ohne Grafikkarte.
+
+**Das lokale Modell: was es ist, woher es kommt.** Es ist keine Chat-KI, sondern ein Einbettungsmodell — es antwortet
+nicht, es misst. Technisch eine ONNX-Datei (quantisiert, etwa 120 MB) mit Wortschatz und Tokenizer, gerechnet in
+Node über `@huggingface/transformers` mit der eingebauten ONNX-Laufzeit (CPU). Es wird **nicht mit journali
+ausgeliefert**: der erste Lauf des Jobs `embed` holt es vom Hugging-Face-Hub nach `plugins/embed/.cache` (im Paket
+das Volume `journali-embed-cache`); danach liest jeder Start es von dort, ohne Netz. Ein Server ohne Netz bekommt das
+Verzeichnis kopiert. Der Name des Modells steht am Server (`JOURNALI_EMBED_MODEL`) und am Job (`model`), beide
+gleich; ein anderes Modell rechnet alles neu, weil seine Zahlen nicht in denselben Raum fallen. Dasselbe Muster gilt
+für die Texterkennung: `tesseract.js` holt die Sprachdaten (`deu`, `eng`) beim ersten Lauf nach `plugins/ocr/.cache`.
+Nur die **Frage an die Dokumente** ist eine Chat-KI — und die ist nicht lokal, sondern der Schlüssel des Teams.
+
+**Wege, die erwogen wurden, und warum nicht.**
+
+- *Einbettungen bei einem Anbieter (OpenAI, Embeddings-Endpunkt) über den Schlüssel des Teams.* Wäre die kleinere
+  Änderung im Server gewesen (ein Endpunkt neben `/ai/ask`). Verworfen, weil ohne Schlüssel nichts testbar wäre,
+  jede Einbettung Volumen kostet und ein Bestandswechsel des Anbieters alle Vektoren entwertet. Der Anbieter kann als
+  zweiter Weg dazukommen: der Job müsste nur einen anderen `embed()` rufen.
+- *Ein fremder Vektor-Store (der Export des Plugins `rag`).* Der Export bleibt und gibt jetzt auch den Text der
+  Dokumente mit. Als einziger Weg verworfen, weil dann die Suche nach Sinn nicht in journali stattfände — sie
+  gehört neben den Volltext, in dieselbe Datenbank, mit denselben Rechten (Sichtbarkeit je Rolle gilt auch hier).
+- *Das Modell im Server rechnen (ONNX-Laufzeit als NuGet-Paket).* Verworfen: ein weiteres Paket im Server wäre eine
+  Entscheidung gegen die Regel „Pakete nur für Protokolle“, und das Modell gehört dem Plugin, das auch den Stapel
+  rechnet — zwei Laufzeiten für dasselbe Modell wären eine Quelle von Abweichungen.
+- *Die Frage je Suche über einen Job einbetten.* Ein Prozessstart mit Modellladen je Frage, ein bis zwei Sekunden.
+  Verworfen für den vorgehaltenen Kindprozess (`Embedder.cs`), der das Modell einmal lädt und je Zeile antwortet —
+  die eine dokumentierte Ausnahme von „Plugins nur über /api“.
+- *Treffer nach Wert mischen (Volltext-Rang und Kosinusabstand addieren).* Verworfen, weil die zwei Skalen nichts
+  miteinander zu tun haben; Reciprocal Rank Fusion zählt je Reihe nur den Platz.
+- *Eine feste Dimension an der Spalte (`vector(384)`).* Verworfen, weil das Modell wechseln darf; darum eine
+  Spalte ohne Dimension, das Modell je Zeile und je Modell ein Teilindex über den Ausdruck `embedding::vector(N)`.
+- *Bilder einbetten.* Ein anderes Modell (Bild zu Vektor, mehrsprachig zu Text). Nicht verworfen, nur nicht gebaut:
+  ein eigener Schritt mit eigenem Modell und eigener Entscheidung.
+
 **Was ein Vektor ist und wo er liegt.** Je Abschnitt eines Dokuments (`media_text`) und je Pflegeknoten in der
 Leitsprache eine Einbettung: `media_vector (media, sha256, seq, model, embedding)`, `node_vector (node, locale, hash,
 model, embedding)` — `Vectors.cs`. **Abgeleitet** wie der Text: aus Text und Modell jederzeit neu zu rechnen, darum

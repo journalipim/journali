@@ -326,7 +326,12 @@ Plugin-Verzeichnis `npm install` (im Paket liegen die Pakete im Image), das Plug
 des Plugins anlegen und laufen lassen — der erste Lauf holt das Modell (etwa 120 MB) nach `plugins/embed/.cache`
 (Volume `journali-embed-cache`); danach braucht nichts mehr das Netz. Für Suchfragen hält der Server einen
 Kindprozess `node plugins/embed/serve.mjs` vor (`Embedder.cs`). Ein anderes Modell: `JOURNALI_EMBED_MODEL` am Server
-**und** der Parameter `model` des Jobs, beide gleich. Die **Frage an die Dokumente** (⌕ Dokumente → Fragen,
+**und** der Parameter `model` des Jobs, beide gleich. **Was lokal heisst:** das Modell ist eine Datei (ONNX, etwa 120 MB)
+und läuft in Node auf der CPU des Servers; kein Dienst, kein Schlüssel, keine Grafikkarte. Es kommt nicht mit dem
+Image, sondern beim ersten Lauf aus dem Netz nach `.cache`. **Ohne Netz:** das Verzeichnis `plugins/embed/.cache` von
+einem Rechner mit Netz kopieren (im Paket in das Volume `journali-embed-cache`); dasselbe für die Sprachdaten der
+Texterkennung in `plugins/ocr/.cache`. Die Suche nach Sinn braucht danach nichts von aussen — nur die Frage an die
+Dokumente ist ein KI-Aufruf über den Schlüssel des Teams. Die **Frage an die Dokumente** (⌕ Dokumente → Fragen,
 `POST /api/docs/ask`) ist dagegen ein KI-Aufruf über den Schlüssel des Teams, gezählt wie jeder andere (Anlass `docs`).
 
 ## Plugins im Container
