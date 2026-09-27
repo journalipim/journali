@@ -175,6 +175,14 @@ async function retire(m) {
   cur.value = null; sel.value = new Set(); await store.poll(true); await loadFolders(); await load()
 }
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`
+
+// ---- Ansehen und Öffnen
+/// Ein PDF zeigt der Browser selbst — dafür braucht es kein Plugin, nur den Rahmen um die Datei.
+const istPdf = m => (m?.mime ?? '') === 'application/pdf'
+/// Megapixel aus der Pixelzahl, mit Komma wie im Deutschen
+const mp = n => (n / 1_000_000).toFixed(1).replace('.', ',')
+/// Die Datei in einem neuen Fenster — was damit geschieht, entscheidet der Rechner des Anwenders.
+const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener')
 </script>
 
 <template>
@@ -213,7 +221,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
         <div v-if="group" class="ghead"><span>{{ g.key }}</span><span class="muted">{{ g.items.length }}</span></div>
         <div class="tiles">
           <div v-for="m in g.items" :key="m.id" class="tile" :class="{ current: cur === m.id, sel: sel.has(m.id) }" draggable="true" @dragstart="dragTiles(m, $event)" @dragend="dragEnd"
-            @click="clickTile(m, $event)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nStrg-Klick nimmt dazu, Umschalt-Klick den Bereich — ziehen in einen Ordner`">
+            @click="clickTile(m, $event)" @dblclick="oeffnen(m)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nStrg-Klick nimmt dazu, Umschalt-Klick den Bereich — ziehen in einen Ordner, Doppelklick öffnet die Datei`">
             <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" />
             <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
             <div class="name">{{ m.name }}</div>
@@ -234,11 +242,30 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
       <span :title="current.folder ? $t('Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen') : $t('in keinem Ordner — Kachel auf einen Ordner links ziehen')">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
       <span class="grow" /><span>≡ {{ current.entries }} · #{{ current.lastNumber }} · {{ when(current.lastAt) }} · {{ current.lastActor }}</span></div>
     <div class="scroll">
-      <div class="preview" v-if="current.isImage"><img :src="`/api/media/${current.id}/file`" alt="" /></div>
-      <!-- kein Bild, aber eine gerechnete Vorschau (PDF): die erste Seite zeigen, das Original hängt am Namen -->
+      <!-- Ein PDF ganz: der Browser bringt seine Anzeige mit, es braucht kein Plugin dafür. Die gerechnete
+           erste Seite bleibt die Kachel in der Liste. -->
+      <div class="preview" v-if="istPdf(current)"><iframe class="pdf" :src="`/api/media/${current.id}/file#view=FitH`" :title="current.name"></iframe></div>
+      <div class="preview" v-else-if="current.isImage"><img :src="`/api/media/${current.id}/file`" alt="" /></div>
+      <!-- kein Bild und kein PDF, aber eine gerechnete Vorschau: die erste Seite zeigen, das Original hängt am Namen -->
       <div class="preview" v-else-if="current.hasThumb"><img :src="`/api/media/${current.id}/thumb`" alt="" /></div>
       <table class="grid form"><colgroup><col style="width:150px" /><col style="width:320px" /></colgroup><tbody>
         <tr v-for="d in mediaAttrs" :key="d.key"><td class="attr" :title="d.key">{{ $L(d.label) || d.key }}<span v-if="d.perLocale" class="muted"> {{ master }}</span></td><Cell :value="value(current, d)" @save="v => setValue(current, d, v)" /></tr>
+        <!-- Gemessen, nicht gepflegt: was der Server aus dem Kopf der Datei liest (MediaProbed) -->
+        <tr><td class="attr muted" :title="$t('Mass des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.')">{{ $t("▭ Maß") }}</td>
+          <td v-if="current.probe?.width" class="mono">{{ current.probe.width }} × {{ current.probe.height }} px<span class="muted">{{ ' · ' + mp(current.pixels) + ' MP' }}</span></td>
+          <td v-else class="muted" :title="current.probe ? $t('Kein Format, das der Server aus dem Kopf liest.') : $t('Der Job probe liest die Masse nach.')">—</td></tr>
+        <tr v-if="current.probe?.dpi"><td class="attr muted">{{ $t("Auflösung") }}</td><td class="mono">{{ current.probe.dpi }} dpi</td></tr>
+        <tr v-if="current.probe?.space"><td class="attr muted">{{ $t("Farbraum") }}</td><td class="mono">{{ current.probe.space }}</td></tr>
+        <tr v-if="current.probe && current.probe.alpha !== null"><td class="attr muted">{{ $t("Transparenz") }}</td><td>{{ current.probe.alpha ? '✓' : '–' }}</td></tr>
+        <!-- Woher es kam (MediaSourced); ohne Herkunft wurde es von Hand hochgeladen -->
+        <tr><td class="attr muted" :title="$t('Die Schnittstelle und das Profil, aus denen das Asset kam.')">{{ $t("↓ Herkunft") }}</td>
+          <td v-if="current.source?.plugin || current.source?.profile">{{ current.source.plugin ?? '—' }}<span v-if="current.source.profile" class="muted">{{ ' · ' + current.source.profile }}</span></td>
+          <td v-else class="muted">{{ $t("von Hand") }}</td></tr>
+        <tr v-if="current.source?.ref"><td class="attr muted">{{ $t("Bezug") }}</td><td class="mono muted" style="font-size:11px">{{ current.source.ref }}</td></tr>
+        <tr v-if="current.source?.job"><td class="attr muted">{{ $t("Job") }}</td><td class="mono muted">{{ current.source.job }}</td></tr>
+        <tr v-if="current.source?.from"><td class="attr muted">{{ $t("Abstammung") }}</td>
+          <td><button class="x mono" @click="cur = current.source.from" :title="$t('zu dem Medium, aus dem dieses entstand')">{{ '▨ ' + current.source.from }}</button></td></tr>
+        <tr><td class="attr muted">{{ $t("Angelegt") }}</td><td class="muted">{{ when(current.createdAt) + ' · ' + current.createdBy }}</td></tr>
         <tr><td class="attr muted">{{ $t("SHA-256") }}</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
         <tr v-for="(v, k) in current.external" :key="k"><td class="attr muted">⇩ {{ k }}</td><td class="mono muted">{{ v }}</td></tr>
       </tbody></table>
@@ -268,6 +295,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 .tile .meta { font-size: 11px; }
 .preview { padding: 8px; }
 .preview img { max-width: 100%; max-height: 360px; border-radius: 4px; background: var(--bg); }
+.preview iframe.pdf { width: 100%; height: 480px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
 .form { width: auto; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
