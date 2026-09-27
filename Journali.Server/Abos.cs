@@ -52,7 +52,7 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         if (string.IsNullOrWhiteSpace(adresse)) return (null, "Kein Lizenzserver eingebaut.");
         key = key?.Trim() ?? "";
         if (key.Length > 0 && key.Length is < 8 or > 100) return (null, "Kein Lizenzschlüssel.");
-        var zahler = c.With((_, _, _) => c.Teams.Get(team) is null ? null : c.Teams.Payer(team));
+        var zahler = c.Lesen((_, _) => c.Teams.Get(team) is null ? null : c.Teams.Payer(team));
         if (zahler is null) return (null, $"Team „{team}“ gibt es nicht.");
         if (zahler != team) return (null, "Das Team rechnet über ein anderes Team ab.");
 
@@ -162,10 +162,10 @@ public sealed class Abos(Instanz instanz, string jobsDir, HttpClient http, Func<
         if (!Eingestellt) return 0;
         // Das Tarifblatt zuerst, auch ohne Abo — aber nur, wenn die Anlage registriert ist oder ohnehin ein Abo hat:
         // wer nicht registriert ist, schickt nichts hinaus (26.09.2026).
-        var darf = c.Registriert == true || c.With((_, _, _) => c.Teams.All.Values.Any(x => x.Abo is not null));
+        var darf = c.Registriert == true || c.Lesen((_, _) => c.Teams.All.Values.Any(x => x.Abo is not null));
         if (darf && (_blattGeholt is not { } zuvor || Jetzt - zuvor >= Auffrischen))
             if (await TarifblattAsync(c, ct) is { } fehler) Console.WriteLine($"journali: Tarifblatt nicht geholt — {fehler}");
-        var teams = c.With((_, _, _) => c.Teams.All.Values.Select(t => (t.Key, t.Abo?.Issued)).ToList());
+        var teams = c.Lesen((_, _) => c.Teams.All.Values.Select(t => (t.Key, t.Abo?.Issued)).ToList());
         var n = 0;
         foreach (var (team, zuletzt) in teams)
         {

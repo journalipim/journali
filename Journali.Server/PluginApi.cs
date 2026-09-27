@@ -91,7 +91,7 @@ public static class PluginApi
         {
             var disk = Scan(dir);
             var tarif = c.InstanzTarif;
-            return c.With((_, _, _) =>
+            return c.Lesen((_, _) =>
             {
                 var state = c.Plugins.All;
                 var keys = disk.Keys.Union(state.Keys).Order();
@@ -141,7 +141,7 @@ public static class PluginApi
         // Lesen darf jeder; Schreiben braucht X-Actor. Leerer Wert = weg.
         // Namen — oder mit ?values=true&prefix=… die Datensätze selbst als ein JSON-Objekt { name: wert } (etim: alle Klassen einer Version)
         api.MapGet("/plugins/{key}/data", (string key, Catalog c, string? prefix = null, bool values = false) =>
-            c.With((_, _, _) =>
+            c.Lesen((_, _) =>
             {
                 var data = c.Plugins.All.TryGetValue(key, out var p) ? p.Data : new Dictionary<string, string>();
                 var names = data.Keys.Where(n => prefix is null || n.StartsWith(prefix)).Order().ToList();
@@ -151,7 +151,7 @@ public static class PluginApi
                 return Results.Text(sb.Append('}').ToString(), "application/json");
             }));
         api.MapGet("/plugins/{key}/data/{name}", (string key, string name, Catalog c) =>
-            c.With((_, _, _) => c.Plugins.All.TryGetValue(key, out var p) && p.Data.TryGetValue(name, out var v)
+            c.Lesen((_, _) => c.Plugins.All.TryGetValue(key, out var p) && p.Data.TryGetValue(name, out var v)
                 ? Results.Text(v, "application/json") : Results.NotFound()));
         api.MapPut("/plugins/{key}/data/{name}", async (string key, string name, HttpRequest req, Catalog c, CancellationToken ct) =>
         {
@@ -189,7 +189,7 @@ public static class PluginApi
         api.MapPost("/plugins/{key}/run", async (string key, RunRequest body, HttpRequest req, Catalog c, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            var state = c.With((_, _, _) => c.Plugins.All.GetValueOrDefault(key));
+            var state = c.Lesen((_, _) => c.Plugins.All.GetValueOrDefault(key));
             if (state is null || !state.Enabled) return Bad("Plugin {0} ist nicht installiert oder aus.", key);
             if (NichtImTarif(c, key) is { } nein) return nein;
             if (!Scan(dir).TryGetValue(key, out var m) || !m.Raw.TryGetProperty("process", out var proc)) return Bad("Plugin {0} hat keinen Prozess.", key);

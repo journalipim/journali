@@ -53,7 +53,7 @@ public static class RelationApi
         // export=true: die Sicht der Ausleitung — ein Medium, das heute nicht gilt (Frist) oder nicht freigegeben ist
         // (Medien-Workflow), fehlt in out und inherited. Die Erzeuger (xport, rag, Datenblatt) fragen so; die Pflege sieht alles.
         api.MapGet("/nodes/{id}/relations", (string id, HttpRequest req, Catalog c, bool export = false) =>
-            c.With((model, tree, _) =>
+            c.Lesen((model, tree) =>
             {
                 if (!tree.Nodes.ContainsKey(id)) return null;
                 var s = Auth.Sicht(req);
@@ -69,7 +69,7 @@ public static class RelationApi
             }) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapGet("/relations/{id}", (string id, Catalog c) =>
-            c.With((model, tree, _) => c.Relations.All.TryGetValue(id, out var r) ? RelationView.Of(tree, model, c.Media, r, "out", c.Workflows) : null) is { } v ? Results.Ok(v) : Results.NotFound());
+            c.Lesen((model, tree) => c.Relations.All.TryGetValue(id, out var r) ? RelationView.Of(tree, model, c.Media, r, "out", c.Workflows) : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapPost("/relations", (RelationCreated b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.CreateRelation(x, b.Type, b.From, b.To)));
         api.MapDelete("/relations/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireRelation(x, id)));

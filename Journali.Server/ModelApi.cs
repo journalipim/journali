@@ -38,7 +38,7 @@ public static partial class ModelApi
                 "units" => Types.UnitRetired, "relationTypes" => Types.RelationTypeRetired, "locales" => Types.LocaleRetired, "channels" => Types.ChannelRetired, "statuses" => Types.StatusRetired, _ => null,
             };
             if (type is null) return Bad("kind: attributes, groups, lists, views, units, relationTypes, locales, channels oder statuses.");
-            return c.With((model, _, _) =>
+            return c.Lesen((model, _) =>
             {
                 bool Missing(string stream) { var key = stream[(stream.IndexOf(':') + 1)..]; return kind switch
                 {
@@ -82,7 +82,7 @@ public static partial class ModelApi
             var isTemplate = body.Type == AttributeTypes.Template;
             var (keys, error) = isTemplate ? Template.Check(body.Formula ?? "") : Formula.Check(body.Formula ?? "");
             if (error is not null || body.Node is null) return Results.Ok(new { ok = error is null, error, keys, value = (string?)null, runtime = (string?)null });
-            return c.With((model, tree, _) =>
+            return c.Lesen((model, tree) =>
             {
                 if (!tree.Nodes.TryGetValue(body.Node, out var node)) return Results.Ok(new { ok = true, error, keys, value = (string?)null, runtime = (string?)"Knoten unbekannt" });
                 string? runtime = null;
@@ -298,7 +298,7 @@ public static partial class ModelApi
                 : write(Model.UnitStream + key, Types.UnitDefined, body with { Key = key, Label = body.Label ?? new(), Quantity = body.Quantity.Trim().ToLowerInvariant() })));
 
         // Wörterbuch (9): Begriff → Text je Sprache — Glossar und Gedächtnis der Übersetzung
-        m.MapGet("/terms", (Catalog c) => c.With((model, _, _) => model.Terms.Values.OrderBy(t => t.Key).Select(t => new { t.Key, text = t.Text, t.Note, t.LastNumber }).ToList()));
+        m.MapGet("/terms", (Catalog c) => c.Lesen((model, _) => model.Terms.Values.OrderBy(t => t.Key).Select(t => new { t.Key, text = t.Text, t.Note, t.LastNumber }).ToList()));
         m.MapPut("/terms/{key}", (string key, TermDefined body, HttpRequest req, Catalog c) =>
             Command(req, c, key, ValidKey, (model, write) =>
                 body.Text is not { Count: > 0 } || body.Text.Values.All(string.IsNullOrWhiteSpace) ? Bad("text: mindestens eine Sprache.")
@@ -340,7 +340,7 @@ public static partial class ModelApi
             || (before.PerLocale && !after.PerLocale) || (before.PerChannel && !after.PerChannel) || (!before.Unique && after.Unique);
         if (!changed) return null;
         var count = 0; var examples = new List<string>();
-        var tree = c.With((_, t, _) => t);   // die Sperre ist schon gehalten (Command läuft in With) — Monitor ist wiedereintrittsfähig
+        var tree = c.Lesen((_, t) => t);   // die Sperre ist schon gehalten (Command läuft in With) — Monitor ist wiedereintrittsfähig
         // eindeutig wird eingeschaltet: jeder Wert, den es schon an einem anderen Knoten gibt, zählt — sonst wäre das Merkmal eine Lüge
         if (!before.Unique && after.Unique)
         {

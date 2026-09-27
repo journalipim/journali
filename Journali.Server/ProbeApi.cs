@@ -25,7 +25,7 @@ public static class ProbeApi
     public static void Map(RouteGroupBuilder api)
     {
         // Wie viele Posten offen sind, und wie viele nur 0 × 0 bekamen (unbekanntes Format)
-        api.MapGet("/media/probe", (Catalog c) => c.With((_, _, _) => Results.Ok(new
+        api.MapGet("/media/probe", (Catalog c) => c.Lesen((_, _) => Results.Ok(new
         {
             offen = c.Media.Unprobed().Count(),
             unbekannt = c.Media.Unknown().Count(),
@@ -38,7 +38,7 @@ public static class ProbeApi
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             var n = Math.Clamp(limit, 1, 5000);
-            var offen = c.With((_, _, _) => (again ? c.Media.Unknown() : c.Media.Unprobed()).Take(n).Select(m => (m.Id, m.Sha256)).ToList());
+            var offen = c.Lesen((_, _) => (again ? c.Media.Unknown() : c.Media.Unprobed()).Take(n).Select(m => (m.Id, m.Sha256)).ToList());
             int gelesen = 0, unbekannt = 0, fehlt = 0;
             foreach (var (id, sha) in offen)
             {
@@ -50,7 +50,7 @@ public static class ProbeApi
                     default: fehlt++; break;
                 }
             }
-            return c.With((_, _, _) => Results.Ok(new { gelesen, unbekannt, fehlt, offen = again ? c.Media.Unknown().Count() : c.Media.Unprobed().Count() }));
+            return c.Lesen((_, _) => Results.Ok(new { gelesen, unbekannt, fehlt, offen = again ? c.Media.Unknown().Count() : c.Media.Unprobed().Count() }));
         });
 
         // Von Hand anstossen (Einstellungen → Assets); der Server tut es nach jedem Hochladen selbst
@@ -97,7 +97,7 @@ public static class ProbeApi
     /// </summary>
     public static (string? Job, string? Error) Kick(Catalog c, JobRunner runner, string actor)
     {
-        var (job, pluginOn) = c.With((_, _, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == PluginKey && j.Enabled)?.Key,
+        var (job, pluginOn) = c.Lesen((_, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == PluginKey && j.Enabled)?.Key,
             c.Plugins.All.TryGetValue(PluginKey, out var p) && p.Enabled));
         if (job is null)
         {

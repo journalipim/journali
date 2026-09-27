@@ -31,7 +31,7 @@ public static class TransferApi
     public static void Map(RouteGroupBuilder api)
     {
         api.MapGet("/nodes/{id}/export", (string id, Catalog c, bool deep = true) =>
-            c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var n) ? Results.Ok(new RawExport(UsedModel(model, tree, n, deep), Raw(tree, n, deep))) : Results.NotFound()));
+            c.Lesen((model, tree) => tree.Nodes.TryGetValue(id, out var n) ? Results.Ok(new RawExport(UsedModel(model, tree, n, deep), Raw(tree, n, deep))) : Results.NotFound()));
 
         api.MapPost("/nodes/import", (ImportBody body, HttpRequest req, Catalog c) =>
             Actor(req) is not { } actor ? ActorMissing() : Einspielen(c, actor, body));

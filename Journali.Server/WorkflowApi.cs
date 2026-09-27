@@ -26,7 +26,7 @@ public static class WorkflowApi
     public static void Nachlauf(IResult r, Catalog c, JobRunner runner, HttpRequest req, string wf, string transition)
     {
         if (r is not Microsoft.AspNetCore.Http.HttpResults.Ok<EntryView>) return;
-        var job = c.With((_, _, _) => JobOf(c.Workflows.All.GetValueOrDefault(wf), transition, k => c.Jobs.All.TryGetValue(k, out var j) && j.Enabled));
+        var job = c.Lesen((_, _) => JobOf(c.Workflows.All.GetValueOrDefault(wf), transition, k => c.Jobs.All.TryGetValue(k, out var j) && j.Enabled));
         if (job is null) return;
         runner.Origin = $"{req.Scheme}://{req.Host}";
         runner.Start(job, "workflow", out _);
@@ -34,13 +34,13 @@ public static class WorkflowApi
 
     public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
-        api.MapGet("/workflows", (Catalog c) => c.With((_, tree, _) => c.Workflows.All.Values.OrderBy(w => w.Key).Select(w => View(c, tree, w)).ToList()));
+        api.MapGet("/workflows", (Catalog c) => c.Lesen((_, tree) => c.Workflows.All.Values.OrderBy(w => w.Key).Select(w => View(c, tree, w)).ToList()));
         api.MapPut("/workflows/{key}", (string key, WorkflowDefined body, HttpRequest req, Catalog c) =>
             !ValidKey(key) ? Bad("Key: a-z, 0-9, _.") : TreeApi.Run(req, c, x => Commands.DefineWorkflow(x, key, body)));
         api.MapDelete("/workflows/{key}", (string key, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireWorkflow(x, key)));
 
         // Meine Aufgaben: Knoten, an denen meine Rolle (oder ich) jetzt einen Schritt gehen darf — nach Alter im Zustand
-        api.MapGet("/workflows/tasks", (HttpRequest req, Catalog c, string? workflow = null, string? state = null, int limit = 500) => c.With((model, tree, _) =>
+        api.MapGet("/workflows/tasks", (HttpRequest req, Catalog c, string? workflow = null, string? state = null, int limit = 500) => c.Lesen((model, tree) =>
         {
             var role = req.HttpContext.Items["role"] as string; var user = req.HttpContext.Items["user"] as string;
             // leere Parameter = alle
@@ -71,7 +71,7 @@ public static class WorkflowApi
         }));
 
         // Am Knoten: je geltendem Workflow Zustand, Verlaufskopf, erlaubte Übergänge für meine Rolle
-        api.MapGet("/nodes/{id}/workflow", (string id, HttpRequest req, Catalog c) => c.With((model, tree, _) =>
+        api.MapGet("/nodes/{id}/workflow", (string id, HttpRequest req, Catalog c) => c.Lesen((model, tree) =>
         {
             if (!tree.Nodes.TryGetValue(id, out var n)) return Results.NotFound();
             var role = req.HttpContext.Items["role"] as string;
@@ -135,7 +135,7 @@ public static class WorkflowApi
             return pending;
         }
         // Für die Mehrfachauswahl: je Übergang, wie viele der Knoten ihn jetzt gehen können
-        api.MapPost("/workflows/applicable", (IdsBody body, HttpRequest req, Catalog c) => c.With((model, tree, _) =>
+        api.MapPost("/workflows/applicable", (IdsBody body, HttpRequest req, Catalog c) => c.Lesen((model, tree) =>
         {
             var role = req.HttpContext.Items["role"] as string;
             var ctxRead = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Workflows = c.Workflows, Write = (_, _, _) => throw new InvalidOperationException("nur lesen") };

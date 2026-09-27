@@ -105,7 +105,7 @@ public static class AiApi
     public static void Map(RouteGroupBuilder api, string jobsDir)
     {
         // Was die Oberfläche wissen muss: welches Team zahlt, welche Anbieter eingerichtet sind, wie viel schon verbraucht ist
-        api.MapGet("/ai/state", (HttpRequest req, Catalog c) => c.With((_, _, _) =>
+        api.MapGet("/ai/state", (HttpRequest req, Catalog c) => c.Lesen((_, _) =>
         {
             var team = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
             if (team is null || c.Teams.Get(team) is not { } t) return Results.Ok(new { team = (string?)null, ready = false, reason = "kein Team" });
@@ -141,7 +141,7 @@ public static class AiApi
         HttpRequest req, Catalog c, string jobsDir, string? wantProvider, string? wantModel, string? system, string frage, int maxTokens, bool web, int maxSearches, string? purpose, CancellationToken ct)
     {
         if (Actor(req) is not { } actor) return (ActorMissing(), "", [], "", "", "", "");
-        var (fehler, team, zahler, provider, key) = c.With((_, _, _) =>
+        var (fehler, team, zahler, provider, key) = c.Lesen((_, _) =>
         {
             var mein = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
             if (mein is null || c.Teams.Get(mein) is not { Enabled: true } t) return (Bad("Kein Team — ohne Team gibt es keine KI über den Server."), "", "", "", "");
@@ -154,7 +154,7 @@ public static class AiApi
         });
         if (fehler is not null) return (fehler, "", [], "", "", "", "");
 
-        var amTeam = c.With((_, _, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
+        var amTeam = c.Lesen((_, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
         var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5" : "gpt-5");
         try
         {

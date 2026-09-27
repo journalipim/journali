@@ -29,16 +29,16 @@ public static class TeamApi
     public static string SecretKey(string team) => "team:" + team;
     /// <summary>Das Team, auf dessen Rechnung dieser Benutzer arbeitet — null, wenn er in keinem ist (dann gilt 0).</summary>
     public static string? TeamOf(Catalog c, string? user) =>
-        c.With((_, _, _) => user is { Length: > 0 } u ? c.Users.All.GetValueOrDefault(u)?.Team : null);
+        c.Lesen((_, _) => user is { Length: > 0 } u ? c.Users.All.GetValueOrDefault(u)?.Team : null);
 
     /// <summary>Darf der Anfragende dieses Team führen? Der Administrator immer; sonst nur sein Manager (Recht <c>team</c>).</summary>
     public static bool Fuehrt(HttpRequest req, Catalog c, string team) =>
-        Auth.Has(req, c, Rights.Users) || (Auth.Has(req, c, Rights.Team) && c.With((_, _, _) => c.Teams.Leads(team, req.HttpContext.Items["user"] as string)));
+        Auth.Has(req, c, Rights.Users) || (Auth.Has(req, c, Rights.Team) && c.Lesen((_, _) => c.Teams.Leads(team, req.HttpContext.Items["user"] as string)));
 
     public static void Map(RouteGroupBuilder api, string jobsDir)
     {
         // Übersicht: wer es gibt, Grenzen, Verbrauch heute und diesen Monat, welche Anbieter Schlüssel haben
-        api.MapGet("/teams", (HttpRequest req, Catalog c) => c.With((_, _, _) =>
+        api.MapGet("/teams", (HttpRequest req, Catalog c) => c.Lesen((_, _) =>
         {
             var heute = DateOnly.FromDateTime(DateTime.Today); var monat = heute.ToString("yyyy-MM");
             var wer = req.HttpContext.Items["user"] as string;
@@ -129,13 +129,13 @@ public static class TeamApi
         {
             if (Actor(req) is null) return ActorMissing();
             if (!Fuehrt(req, c, key)) return Bad("Dieses Team führst du nicht.");
-            if (c.With((_, _, _) => c.Teams.Get(key)) is null) return Results.NotFound();
+            if (c.Lesen((_, _) => c.Teams.Get(key)) is null) return Results.NotFound();
             Secrets.Set(jobsDir, SecretKey(key), body.Keys ?? new());
             return Results.Ok(new { keys = Secrets.Get(jobsDir, SecretKey(key)).Keys.Order().ToList() });
         });
 
         // Wer zum Team gehört
-        api.MapGet("/teams/{key}/members", (string key, HttpRequest req, Catalog c) => c.With((_, _, _) =>
+        api.MapGet("/teams/{key}/members", (string key, HttpRequest req, Catalog c) => c.Lesen((_, _) =>
         {
             if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
             if (c.Teams.Get(key) is null) return Results.NotFound();
@@ -177,7 +177,7 @@ public static class TeamApi
         });
 
         // Wer noch in keinem Team ist — nur diese lassen sich eintragen
-        api.MapGet("/teams/free", (HttpRequest req, Catalog c) => c.With((_, _, _) =>
+        api.MapGet("/teams/free", (HttpRequest req, Catalog c) => c.Lesen((_, _) =>
             Results.Ok(c.Users.All.Values.Where(u => u.Enabled && u.Team is null).OrderBy(u => u.Name ?? u.Key)
                 .Select(u => new { u.Key, u.Name, u.Role }).ToList())));
 
@@ -206,7 +206,7 @@ public static class TeamApi
         api.MapGet("/teams/{key}/tokens/journali", (string key, HttpRequest req, Catalog c, string? history = null, int limit = 90) =>
         {
             if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
-            return c.With((_, _, _) =>
+            return c.Lesen((_, _) =>
             {
                 if (c.Teams.Get(key) is not { } t) return Results.NotFound();
                 var zahler = c.Teams.Payer(key);
@@ -246,7 +246,7 @@ public static class TeamApi
         });
 
         // Verbrauch der letzten Tage — je Anbieter und je Person, damit die Rechnung nachvollziehbar ist
-        api.MapGet("/teams/{key}/usage", (string key, HttpRequest req, Catalog c, int days = 30) => c.With((_, _, _) =>
+        api.MapGet("/teams/{key}/usage", (string key, HttpRequest req, Catalog c, int days = 30) => c.Lesen((_, _) =>
         {
             if (!Darf(req, c, key)) return Bad("Das ist nicht dein Team.");
             if (c.Teams.Get(key) is null) return Results.NotFound();
@@ -260,13 +260,13 @@ public static class TeamApi
     }
 
     /// <summary>Wer zu diesem Team gehört. Null = kein solches Team. Teamlose gehören nirgends dazu — sie haben 0.</summary>
-    private static HashSet<string>? Mitglieder(Catalog c, string key) => c.With((_, _, _) =>
+    private static HashSet<string>? Mitglieder(Catalog c, string key) => c.Lesen((_, _) =>
         c.Teams.Get(key) is null ? null : c.Users.All.Values.Where(u => u.Team == key).Select(u => u.Key).ToHashSet());
 
     /// <summary>Darf der Anfragende dieses Team sehen? Sein eigenes, eines, das er führt — oder alles als Administrator.</summary>
     private static bool Darf(HttpRequest req, Catalog c, string team) =>
         Auth.Has(req, c, Rights.Users) || team == TeamOf(c, req.HttpContext.Items["user"] as string)
-        || c.With((_, _, _) => c.Teams.Leads(team, req.HttpContext.Items["user"] as string));
+        || c.Lesen((_, _) => c.Teams.Leads(team, req.HttpContext.Items["user"] as string));
 
     private static object View(Catalog c, string jobsDir, TeamState t, DateOnly heute, string monat)
     {

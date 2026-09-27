@@ -41,7 +41,7 @@ public static class LicenceApi
                 lizenzserver = abos.Eingestellt, registriert = c.Registriert,
                 // Der Weg von Hand steht nur da, wenn der Lizenzserver ihn dieser Instanz freigegeben hat (26.09.2026)
                 vonHand = abos.VonHand,
-                abos = c.With((_, _, _) => c.Teams.All.Values.Where(x => x.Abo is not null).Select(x => new
+                abos = c.Lesen((_, _) => c.Teams.All.Values.Where(x => x.Abo is not null).Select(x => new
                 {
                     team = x.Key, teamLabel = x.Label, plan = x.Abo!.Plan, planLabel = liste.Von(x.Abo.Plan)?.Label ?? x.Abo.Plan, status = x.Abo.Status,
                     paidUntil = x.Abo.PaidUntil, validUntil = x.Abo.ValidUntil, issued = x.Abo.Issued, geprueft = x.Abo.Geprueft,

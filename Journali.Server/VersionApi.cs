@@ -24,7 +24,7 @@ public static class VersionApi
     public static void Map(RouteGroupBuilder api, string pluginDir, ILogger log)
     {
         api.MapGet("/nodes/{id}/versions", (string id, Catalog c) =>
-            c.With((_, tree, _) => tree.Nodes.ContainsKey(id) ? Results.Ok(c.Versions.Of(id).Select(View).ToList()) : Results.NotFound()));
+            c.Lesen((_, tree) => tree.Nodes.ContainsKey(id) ? Results.Ok(c.Versions.Of(id).Select(View).ToList()) : Results.NotFound()));
 
         // Version erzeugen: Vollständigkeit wie bei der Freigabe (wenn Kanal genannt), dann VersionCreated mit dem Stand jetzt;
         // danach die Erzeuger — jeder rendert seinen Beleg und hängt ihn an (asynchron; die Liste zeigt, was schon da ist).
@@ -59,7 +59,7 @@ public static class VersionApi
         api.MapPost("/nodes/{id}/versions/{nr:int}/render", (string id, int nr, HttpRequest req, Catalog c, IHostApplicationLifetime life) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            if (c.With((_, _, _) => c.Versions.Get(id, nr)) is null) return Results.NotFound();
+            if (c.Lesen((_, _) => c.Versions.Get(id, nr)) is null) return Results.NotFound();
             var origin = $"{req.Scheme}://{req.Host}";
             _ = Task.Run(() => RenderAsync(c, pluginDir, id, nr, actor, origin, log, life.ApplicationStopping));
             return Results.Ok(new { started = Renderers(pluginDir, c).Select(r => r.Key).ToList() });
@@ -97,7 +97,7 @@ public static class VersionApi
         // Stand bei Version n gegen heute: Name, Status, eigene Werte (Achse für Achse)
         api.MapGet("/nodes/{id}/versions/{nr:int}/diff", (string id, int nr, Catalog c) =>
         {
-            var v = c.With((_, _, _) => c.Versions.Get(id, nr));
+            var v = c.Lesen((_, _) => c.Versions.Get(id, nr));
             if (v is null) return Results.NotFound();
             var rows = Diff(c, id, v.JournalNumber);
             return rows is null ? Results.NotFound(new { error = "Knoten gab es bei diesem Stand nicht." }) : Results.Ok(new { version = View(v), rows, changed = rows.Count(r => !r.Same) });
@@ -107,7 +107,7 @@ public static class VersionApi
         api.MapPost("/nodes/{id}/versions/{nr:int}/rollback", (string id, int nr, RollbackBody body, HttpRequest req, Catalog c) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            var v = c.With((_, _, _) => c.Versions.Get(id, nr));
+            var v = c.Lesen((_, _) => c.Versions.Get(id, nr));
             if (v is null) return Results.NotFound();
             var rows = Diff(c, id, v.JournalNumber);
             if (rows is null) return Results.NotFound(new { error = "Knoten gab es bei diesem Stand nicht." });
@@ -143,7 +143,7 @@ public static class VersionApi
     {
         var (thenModel, thenTree) = c.AsOf(number);
         if (!thenTree.Nodes.TryGetValue(id, out var then)) return null;
-        return c.With((model, tree, _) =>
+        return c.Lesen((model, tree) =>
         {
             if (!tree.Nodes.TryGetValue(id, out var now)) return null;
             var rows = new List<DiffRow>();
@@ -212,7 +212,7 @@ public static class VersionApi
     private static List<(string Key, string Kind, JsonElement Proc)> Renderers(string pluginDir, Catalog c)
     {
         var manifests = PluginApi.Scan(pluginDir);
-        var on = c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled).Select(p => p.Key).ToHashSet());
+        var on = c.Lesen((_, _) => c.Plugins.All.Values.Where(p => p.Enabled).Select(p => p.Key).ToHashSet());
         var list = new List<(string, string, JsonElement)>();
         foreach (var m in manifests.Values)
         {

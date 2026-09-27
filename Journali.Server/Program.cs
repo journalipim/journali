@@ -103,7 +103,7 @@ _ = Task.Run(async () =>
     while (true)
     {
         await Task.Delay(TimeSpan.FromHours(1));
-        try { catalog.With((_, _, _) => catalog.LimitsAusLizenz()); } catch { }
+        try { catalog.Lesen((_, _) => catalog.LimitsAusLizenz()); } catch { }
         try { await abos.AuffrischenAsync(catalog); } catch (Exception e) { Console.WriteLine($"journali: Abos nicht aufgefrischt — {e.Message}"); }
     }
 });
@@ -241,7 +241,7 @@ object[] Dort(HttpRequest req, Catalog c)
     if (string.IsNullOrEmpty(ich) && Auth.Enabled(c)) ich = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
     var andere = presence.Puls(ich, ort, DateTimeOffset.UtcNow);
     if (andere.Count == 0) return [];
-    return c.With((_, _, _) => andere.Select(a => (object)new { key = a, name = c.Users.All.GetValueOrDefault(a)?.Name ?? a }).ToArray());
+    return c.Lesen((_, _) => andere.Select(a => (object)new { key = a, name = c.Users.All.GetValueOrDefault(a)?.Name ?? a }).ToArray());
 }
 
 /// <summary>Die Zahlen der Statusleiste — für die Anlage oder für das eigene Team, je nachdem, wer fragt.</summary>
@@ -257,7 +257,7 @@ object? Nutzung(HttpRequest req, Catalog c)
     // /health ist von der Sperre ausgenommen (es antwortet auch ohne Sitzung) — wer fragt, lösen wir hier selbst auf
     var ich = req.HttpContext.Items["user"] as string;
     if (string.IsNullOrEmpty(ich) && Auth.Enabled(c)) ich = Auth.Resolve(req.HttpContext, c, dataDir)?.User;
-    return c.With((_, _, _) =>
+    return c.Lesen((_, _) =>
     {
         // Ohne Anmeldung (offene Anlage) gilt die Lizenz
         if (string.IsNullOrEmpty(ich))

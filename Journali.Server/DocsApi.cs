@@ -147,7 +147,7 @@ public static class DocsApi
             }
             var wortMap = worte.ToDictionary(h => (h.Media, h.Seq)); var sinnMap = sinn.ToDictionary(x => (x.Media, x.Seq));
             var reihe = SemanticApi.Rrf(worte.Select(h => (h.Media, h.Seq)), sinn.Select(x => (x.Media, x.Seq))).Take(n).ToList();
-            var view = c.With((model, tree, _) => reihe.Select(r =>
+            var view = c.Lesen((model, tree) => reihe.Select(r =>
             {
                 wortMap.TryGetValue(r.Key, out var w); sinnMap.TryGetValue(r.Key, out var x);
                 return HitView(c, model, tree, r.Key.Media, r.Key.Seq, w?.Page ?? x?.Page, w?.Heading ?? x?.Heading, w?.Snippet ?? Ausschnitt(x!.Body), w?.Rank ?? 0, x is null ? null : Math.Round(1 - x.Distance, 4));
@@ -167,7 +167,7 @@ public static class DocsApi
     }
 
     /// <summary>Die Medien eines Teilbaums: was an den Knoten darunter hängt (Relationen zeigen auf das Medium).</summary>
-    public static HashSet<string> Unter(Catalog c, string under) => c.With((_, tree, _) =>
+    public static HashSet<string> Unter(Catalog c, string under) => c.Lesen((_, tree) =>
     {
         var ids = new HashSet<string> { under };
         var stack = new Stack<string>([under]);

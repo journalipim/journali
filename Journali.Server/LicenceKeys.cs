@@ -70,7 +70,7 @@ public static class LicenceKeys
         api.MapGet("/licence/requests", (Catalog c) =>
         {
             var alle = anforderungen.Alle();
-            return c.With((_, _, _) => Results.Ok(alle.Select(z =>
+            return c.Lesen((_, _) => Results.Ok(alle.Select(z =>
             {
                 var r = z.Signiert.Inhalt;
                 var e = c.Teams.Einloesungen.FirstOrDefault(x => x.Id == r?.Id);
@@ -103,14 +103,14 @@ public static class LicenceKeys
         {
             if (Actor(req) is null) return ActorMissing();
             if (anforderungen.Get(id) is null) return Results.NotFound();
-            if (c.With((_, _, _) => c.Teams.Einloesungen.Any(x => x.Id == id))) return Bad("{0} ist eingelöst.", id);
+            if (c.Lesen((_, _) => c.Teams.Einloesungen.Any(x => x.Id == id))) return Bad("{0} ist eingelöst.", id);
             return anforderungen.Loesche(id) ? Results.Ok(new { removed = id }) : Results.NotFound();
         });
 
         // alle: das Paket enthält alle Plugins (Pro+, Enterprise, Unlimited) — steht in der Auswahl (Taloan, 24.09.2026)
         api.MapGet("/licence/packages", (Catalog c) => { var liste = c.Tarife; return Results.Ok(liste.Pakete.Select(p => new { p.Key, p.Label, week = p.Week, month = p.Month, days = p.Days, alle = liste.Von(p.Key)?.Plugins is null })); });
 
-        api.MapGet("/licence/keys", (Catalog c) => c.With((_, _, _) => Results.Ok(c.Teams.Einloesungen.Select(r => new
+        api.MapGet("/licence/keys", (Catalog c) => c.Lesen((_, _) => Results.Ok(c.Teams.Einloesungen.Select(r => new
         {
             r.Id, r.Kind, r.Team, teamLabel = c.Teams.Get(r.Team)?.Label ?? r.Team, r.From, r.Until, week = r.Week, month = r.Month, r.Days, r.Carried, r.Actor, r.At, r.Plan,
         }).ToList())));
@@ -134,7 +134,7 @@ public static class LicenceKeys
             // journali, was es selbst prüfen kann, dann vermerkt der Lizenzserver das Einlösen; ohne seine Bestätigung nicht
             if (k.Request is null)
             {
-                var vorab = c.With((_, _, _) => Fehler(k, team, licences.InstanzId, c.Teams, anforderung, instanz.PublicKey, c.Teams.Get(team) is null ? null : c.TeamTarif(team)));
+                var vorab = c.Lesen((_, _) => Fehler(k, team, licences.InstanzId, c.Teams, anforderung, instanz.PublicKey, c.Teams.Get(team) is null ? null : c.TeamTarif(team)));
                 if (vorab is not null) return Bad(vorab);
                 if (await abos.EinloesenAsync(k.Id!, team, ct) is { } nein) return Bad(nein);
             }

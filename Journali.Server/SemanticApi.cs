@@ -58,7 +58,24 @@ public static class SemanticApi
 
     /// <summary>Die Texte aller Pflegeknoten, je Sprache des Modells einer, mit Hash — ein Knoten mit französischen Werten
     /// wird auf Französisch gefunden, nicht nur über die Leitsprache.</summary>
-    public static List<KnotenText> KnotenTexte(Catalog c) => c.Lesen((model, tree) =>
+    /// <summary>
+    /// Der Text jedes Knotens, einmal je Journalstand gerechnet (27.09.2026). Vorher baute ihn jede Anfrage neu — bei
+    /// 2 253 Knoten je Sprache mit Hash, und die Jobansicht fragt den Stand alle fünf Sekunden: die Anlage rechnete
+    /// dauernd an derselben Liste und hielt dabei die Lesesperre, hinter der jeder Schreibvorgang wartet. Solange kein
+    /// Eintrag dazukommt, ändert sich kein Text — der Stand des Journals ist darum der ganze Schlüssel.
+    /// </summary>
+    private static (long Head, List<KnotenText> Liste) _texte = (-1, []);
+
+    public static List<KnotenText> KnotenTexte(Catalog c)
+    {
+        var head = c.Head;
+        if (_texte.Head == head) return _texte.Liste;
+        var liste = Berechne(c);
+        _texte = (head, liste);
+        return liste;
+    }
+
+    private static List<KnotenText> Berechne(Catalog c) => c.Lesen((model, tree) =>
     {
         var locs = model.Locales.Keys.OrderBy(x => x, StringComparer.Ordinal).ToList();
         if (locs.Count == 0) locs = [model.MasterLocale ?? "de"];

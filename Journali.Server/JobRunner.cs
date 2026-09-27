@@ -57,7 +57,7 @@ public sealed class JobRunner : BackgroundService
         _lastMinute = now;
         // Ohne den Tarif dafür läuft nichts nach Zeitplan — von Hand geht weiter
         if (!_catalog.InstanzTarif.Zeitplan) return;
-        var jobs = _catalog.With((_, _, _) => _catalog.Jobs.All.Values.Where(j => j.Enabled && j.Schedule is not null).Select(j => (j.Key, j.Schedule!)).ToList());
+        var jobs = _catalog.Lesen((_, _) => _catalog.Jobs.All.Values.Where(j => j.Enabled && j.Schedule is not null).Select(j => (j.Key, j.Schedule!)).ToList());
         foreach (var (key, schedule) in jobs)
         {
             if (!Cron.TryParse(schedule, out var cron)) continue;
@@ -82,9 +82,9 @@ public sealed class JobRunner : BackgroundService
     {
         error = null;
         lock (_gate) if (_running.ContainsKey(key)) { error = "läuft schon"; return null; }
-        var job = _catalog.With((_, _, _) => _catalog.Jobs.All.GetValueOrDefault(key));
+        var job = _catalog.Lesen((_, _) => _catalog.Jobs.All.GetValueOrDefault(key));
         if (job is null) { error = "unbekannter Job"; return null; }
-        var state = _catalog.With((_, _, _) => _catalog.Plugins.All.GetValueOrDefault(job.Plugin));
+        var state = _catalog.Lesen((_, _) => _catalog.Plugins.All.GetValueOrDefault(job.Plugin));
         if (state is null || !state.Enabled) { error = $"Plugin {job.Plugin} ist nicht installiert oder aus"; return null; }
         if (!_catalog.InstanzTarif.Erlaubt(job.Plugin)) { error = $"Plugin {job.Plugin} gehört nicht zum Tarif {_catalog.InstanzTarif.Label}"; return null; }
         if (!PluginApi.Scan(_pluginDir).TryGetValue(job.Plugin, out var m) || PluginApi.ProcessOf(m.Raw, job.Service) is not { } proc) { error = $"Plugin {job.Plugin} hat keinen Prozess {job.Service}"; return null; }

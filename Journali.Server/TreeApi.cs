@@ -17,13 +17,13 @@ public static class TreeApi
         // ---- Lesen -----------------------------------------------------------
 
         // Der Baum in der Sicht der Rolle: Knoten, die sie nicht sieht (NodeRestricted am Pfad), fehlen samt allem darunter
-        api.MapGet("/tree", (HttpRequest req, Catalog c) => c.With((model, tree, _) => { var s = Auth.Sicht(req); return tree.Nodes.Values.Where(n => tree.Visible(n, s.Role, s.Admin)).Select(n => NodeRow.Of(tree, model, n)).ToList(); }));
+        api.MapGet("/tree", (HttpRequest req, Catalog c) => c.Lesen((model, tree) => { var s = Auth.Sicht(req); return tree.Nodes.Values.Where(n => tree.Visible(n, s.Role, s.Admin)).Select(n => NodeRow.Of(tree, model, n)).ToList(); }));
 
         // Sichtbar für Rollen (27.09.2026): ab hier abwärts; leer = für alle
         api.MapPut("/nodes/{id}/roles", (string id, RolesBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RestrictNode(x, id, b.Roles)));
 
         api.MapGet("/nodes/{id}", (string id, Catalog c) =>
-            c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var n) ? NodeView.Of(tree, model, n) : null)
+            c.Lesen((model, tree) => tree.Nodes.TryGetValue(id, out var n) ? NodeView.Of(tree, model, n) : null)
                 is { } view ? Results.Ok(view) : Results.NotFound());
 
         // Tabelle unter einem Knoten (Massenpflege, Export, Datenqualität): die Kinder — oder mit deep=true alle
@@ -32,7 +32,7 @@ public static class TreeApi
         // sonst alle Attribute, die an der Rolle der Zeilen gelten. locale/channel = die Achse; ohne = Grundwert.
         // self: der Knoten selbst als erste Zeile, aufgelöst wie die Nachfahren — geerbt zählt
         api.MapGet("/nodes/{id}/table", (string id, Catalog c, string? role = null, string? attributes = null, string? locale = null, string? channel = null, bool deep = false, bool self = false, long? at = null) =>
-            c.With((liveModel, liveTree, _) =>
+            c.Lesen((liveModel, liveTree) =>
             {
                 var (model, tree) = at is { } n ? c.AsOf(n) : (liveModel, liveTree);   // at: der Stand von damals
                 if (!tree.Nodes.TryGetValue(id, out var root)) return Results.NotFound();
@@ -64,10 +64,10 @@ public static class TreeApi
         api.MapGet("/search", (string q, HttpRequest req, Catalog c, int limit = 200) =>
             string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2
                 ? Results.BadRequest(new { error = "q: mindestens 2 Zeichen." })
-                : Results.Ok(c.With((model, tree, _) => tree.Query(model, q.Trim(), c.Relations, c.Media, c.Workflows).Where(h => tree.Visible(h.Node, Auth.Sicht(req).Role, Auth.Sicht(req).Admin)).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
+                : Results.Ok(c.Lesen((model, tree) => tree.Query(model, q.Trim(), c.Relations, c.Media, c.Workflows).Where(h => tree.Visible(h.Node, Auth.Sicht(req).Role, Auth.Sicht(req).Admin)).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
 
         api.MapGet("/nodes/external/{system}/{externalId}", (string system, string externalId, Catalog c) =>
-            c.With((model, tree, _) => tree.ByExternal(system, externalId) is { } n ? NodeView.Of(tree, model, n) : null)
+            c.Lesen((model, tree) => tree.ByExternal(system, externalId) is { } n ? NodeView.Of(tree, model, n) : null)
                 is { } view ? Results.Ok(view) : Results.NotFound());
 
         // ---- Befehle: genau ein Eintrag je Aufruf ------------------------------
@@ -76,9 +76,9 @@ public static class TreeApi
         api.MapPut("/groups/{id}/label", (string id, GroupRenamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RenameGroup(x, id, b.Label)));   // Altlast
         api.MapPut("/nodes/{id}/name", (string id, NodeNamed b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Rename(x, id, b.Name)));
         // Publikationsbäume: Wurzel = Baum eines Kanals (× Markt), Rubriken darunter, Pflegeknoten per Verweis
-        api.MapGet("/pub", (Catalog c) => c.With((model, tree, _) => tree.PubTrees.Select(n => new { n.Id, n.Channel, n.Market, label = NodeRow.LabelOf(tree, model, n), rubrics = CountRubrics(tree, n), placed = CountPlaced(tree, n) }).ToList()));
+        api.MapGet("/pub", (Catalog c) => c.Lesen((model, tree) => tree.PubTrees.Select(n => new { n.Id, n.Channel, n.Market, label = NodeRow.LabelOf(tree, model, n), rubrics = CountRubrics(tree, n), placed = CountPlaced(tree, n) }).ToList()));
         // Ausleitung: je Produkt im Baum drin/draussen mit Grund — Freigabe für den Kanal, Markt in den Verkaufsländern (Publication.cs)
-        api.MapGet("/pub/{id}/export", (string id, Catalog c, string? locale = null) => c.With((model, tree, _) =>
+        api.MapGet("/pub/{id}/export", (string id, Catalog c, string? locale = null) => c.Lesen((model, tree) =>
         {
             if (!tree.Nodes.TryGetValue(id, out var root) || root.Role != Roles.Rubric || root.Parent is not null) return Results.NotFound();
             var rows = Publication.Export(tree, model, root, locale, c.AsOf).Select(r => new
@@ -100,8 +100,8 @@ public static class TreeApi
         api.MapPut("/rubrics/{id}/rules", (string id, PubRule b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetRule(x, id, b)));
         api.MapDelete("/rubrics/{id}/rules/{rule}", (string id, string rule, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RemoveRule(x, id, rule)));
         api.MapGet("/rubrics/{id}/rules/preview", (string id, Catalog c, string kind, string? under = null, string? role = null, string? name = null, string? attribute = null, string? value = null, string? groupBy = null) =>
-            c.With((model, tree, _) => Results.Ok(RuleView(tree, model, new PubRule("", kind, under, role, name, attribute, value, groupBy)))));
-        api.MapGet("/rubrics/{id}/rules/expand", (string id, Catalog c) => c.With((model, tree, _) =>
+            c.Lesen((model, tree) => Results.Ok(RuleView(tree, model, new PubRule("", kind, under, role, name, attribute, value, groupBy)))));
+        api.MapGet("/rubrics/{id}/rules/expand", (string id, Catalog c) => c.Lesen((model, tree) =>
         {
             if (!tree.Nodes.TryGetValue(id, out var r) || r.Role != Roles.Rubric) return Results.NotFound();
             var (stand, _) = tree.StandOf(r);
@@ -111,9 +111,9 @@ public static class TreeApi
         api.MapPut("/rubrics/{id}/place/{node}/name", (string id, string node, NameBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.NamePlace(x, id, node, b.Name)));   // Anzeigename, intern
         api.MapPost("/rubrics/{id}/derive", (string id, DeriveBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.Derive(x, id, b.From, b.Self, out _)));
         // die Verweise einer Rubrik als Zeilen (tote Verweise auf zurückgezogene Knoten fallen weg) und wo ein Pflegeknoten überall hängt
-        api.MapGet("/rubrics/{id}/placed", (string id, Catalog c) => c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var r) && r.Role == Roles.Rubric
+        api.MapGet("/rubrics/{id}/placed", (string id, Catalog c) => c.Lesen((model, tree) => tree.Nodes.TryGetValue(id, out var r) && r.Role == Roles.Rubric
             ? Results.Ok(r.Placed.Select(p => tree.Nodes.GetValueOrDefault(p)).Where(n => n is not null).Select(n => NodeRow.Of(tree, model, n!)).ToList()) : Results.NotFound()));
-        api.MapGet("/nodes/{id}/placed-in", (string id, Catalog c) => c.With((model, tree, _) => tree.PlacedIn(id).Select(r => new { r.Id, label = NodeRow.LabelOf(tree, model, r), tree = tree.PubTreeOf(r).Id, path = string.Join(" › ", tree.Ancestors(r).Reverse().Append(r).Select(a => NodeRow.LabelOf(tree, model, a))) }).ToList()));
+        api.MapGet("/nodes/{id}/placed-in", (string id, Catalog c) => c.Lesen((model, tree) => tree.PlacedIn(id).Select(r => new { r.Id, label = NodeRow.LabelOf(tree, model, r), tree = tree.PubTreeOf(r).Id, path = string.Join(" › ", tree.Ancestors(r).Reverse().Append(r).Select(a => NodeRow.LabelOf(tree, model, a))) }).ToList()));
         api.MapPut("/nodes/{id}/label-attribute", (string id, LabelAttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetLabelAttribute(x, id, b.Attribute)));
         api.MapPost("/products", (ProductCreated b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.CreateProduct(x, b.Group, b.Axes)));
         api.MapPut("/nodes/{id}/axes", (string id, ProductAxesSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAxes(x, id, b.Axes, b.Force)));
@@ -164,7 +164,7 @@ public static class TreeApi
         // Schritte (alter Wert je Achse, Status, Name, Platz, Wiederherstellen) und schreibt sie als neuen Stapel.
         // Rückgängig am Knoten: was zuletzt hier geändert wurde, aus dem Journal zurückholen.
         // Der Stapel in der Oberfläche lebt nur in der Sitzung; das Journal weiss es auch danach noch.
-        api.MapGet("/nodes/{id}/undo", (string id, IJournal j, Catalog c) => c.With((model, tree, _) =>
+        api.MapGet("/nodes/{id}/undo", (string id, IJournal j, Catalog c) => c.Lesen((model, tree) =>
         {
             if (!tree.Nodes.ContainsKey(id) && !tree.Retired.ContainsKey(id)) return Results.NotFound();
             var plan = Undo.LetzterAmKnoten(j, model, tree, id);
@@ -204,7 +204,7 @@ public static class TreeApi
         });
         // Vorschau fürs Mouseover: was würde Rückgängig tun? Schritte in Worten, Urheber, Übersprungenes
         api.MapGet("/batches/{batch}/preview", (string batch, IJournal j, Catalog c) =>
-            c.With((model, tree, _) =>
+            c.Lesen((model, tree) =>
             {
                 var plan = Undo.Of(j, model, tree, batch);
                 return Results.Ok(new { plan.Entries, plan.Actor, plan.At, steps = plan.Steps.Select(s => new { s.Stream, s.Kind, s.What }).ToList(), plan.Skipped });

@@ -637,7 +637,13 @@ async function mount(root, ctx) {
   const q = new URLSearchParams(location.search); const wanted = q.get('new')
   if (wanted && st.plugins.some(p => p.key === wanted)) { history.replaceState(null, '', location.pathname); openEdit({ plugin: wanted, service: q.get('service') ?? '', _new: true }) }
   else if (st.plugin) history.replaceState(null, '', location.pathname)
-  const poll = setInterval(() => { if (st.jobs.some(j => j.running) || Object.values(st.progress).some(p => p && p.ready !== false && p.offen > 0)) load() }, 5000)
+  // Während ein Job läuft, alle fünf Sekunden; sonst einmal je Minute. Offene Posten allein waren kein guter Grund:
+  // sie bleiben offen, bis jemand den Job startet, und jede Abfrage kostet den Server Arbeit (27.09.2026).
+  let runde = 0
+  const poll = setInterval(() => {
+    runde++
+    if (st.jobs.some(j => j.running) || runde % 12 === 0) load()
+  }, 5000)
   return () => { clearInterval(poll); clearTimeout(st.timer) }
 }
 

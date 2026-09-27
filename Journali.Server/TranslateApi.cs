@@ -175,7 +175,7 @@ public static class TranslateApi
         // XLIFF 2.0 herunterladen — Browser (Agentur, CAT-Werkzeug) und Job (Fach out/)
         api.MapGet("/translate/xliff", (Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 50000, string? wf = null, string? wfState = null) =>
         {
-            var (err, f, t, units, xml) = c.With((model, tree, _) =>
+            var (err, f, t, units, xml) = c.Lesen((model, tree) =>
             {
                 var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState, c.Translations);
                 return (r.Error, r.From, r.To, r.Units.Count, r.Error is null ? ToXliff(r.From, r.To, r.Units, "journali:" + (Blank(root) ?? "*")) : "");
@@ -198,7 +198,7 @@ public static class TranslateApi
 
         // Einheiten: root (leer = alle Wurzeln), from/to (Sprachen), channel (leer = alle Kanäle des Attributs), attributes (Keys mit Komma, leer = alle Textattribute mit Sprachachse), scope = missing | stale | open (beide) | all
         api.MapGet("/translate/units", (Catalog c, string? root = null, string? from = null, string? to = null, string? channel = null, string? attributes = null, string scope = "open", int limit = 5000, string? wf = null, string? wfState = null) =>
-            c.With((model, tree, _) =>
+            c.Lesen((model, tree) =>
             {
                 var r = Collect(model, tree, root, from, to, channel, attributes, scope, limit, c.Workflows, wf, wfState, c.Translations);
                 if (r.Error is not null) return r.Error;
@@ -207,7 +207,7 @@ public static class TranslateApi
             }));
 
         // Übersicht je Sprache (für die Ansicht): wie viele Einheiten fehlen / sind veraltet / fertig — je Zielsprache gegen den Master
-        api.MapGet("/translate/status", (Catalog c, string? root = null) => c.With((model, tree, _) =>
+        api.MapGet("/translate/status", (Catalog c, string? root = null) => c.Lesen((model, tree) =>
         {
             var from = model.MasterLocale; if (from is null) return Results.Ok(new { from, locales = Array.Empty<object>() });
             var defs = model.Attributes.Values.Where(a => a.PerLocale && a.Type is AttributeTypes.Text or AttributeTypes.Html).Select(a => a.Key).ToHashSet();
@@ -260,7 +260,7 @@ public static class TranslateApi
         });
 
         // Was draussen ist und was zurückkam
-        api.MapGet("/translate/orders", (Catalog c, string? state = null, int limit = 100) => c.With((_, _, _) =>
+        api.MapGet("/translate/orders", (Catalog c, string? state = null, int limit = 100) => c.Lesen((_, _) =>
             Results.Ok(c.Translations.Orders.Values
                 .Where(o => Blank(state) is not { } s || (s == "open" ? !o.Returned : o.Returned))
                 .OrderByDescending(o => o.Number).Take(Math.Clamp(limit, 1, 1000))

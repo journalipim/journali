@@ -30,7 +30,7 @@ public static class MediaWorkflowApi
     public static void Map(RouteGroupBuilder api, JobRunner runner)
     {
         // Was am Asset gilt: je Workflow der Zustand, die Schritte, die meine Rolle gehen darf, und wer sonst dran ist
-        api.MapGet("/media/{id}/workflow", (string id, HttpRequest req, Catalog c) => c.With((model, _, _) =>
+        api.MapGet("/media/{id}/workflow", (string id, HttpRequest req, Catalog c) => c.Lesen((model, _) =>
         {
             if (!c.Media.All.TryGetValue(id, out var m)) return Results.NotFound();
             var role = req.HttpContext.Items["role"] as string;

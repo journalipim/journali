@@ -93,7 +93,7 @@ public static class MediaApi
         // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
         api.MapGet("/media", (HttpRequest req, Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
             int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null, bool superseded = false, string? valid = null, string? state = null) =>
-            c.With((model, tree, _) =>
+            c.Lesen((model, tree) =>
             {
                 var all = Gefiltert(c, Auth.Sicht(req), q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid, state);
                 var rows = all.Select(m => (m, used: c.Relations.To(m.Id).Count()));
@@ -119,7 +119,7 @@ public static class MediaApi
         api.MapGet("/media/facets", (HttpRequest req, Catalog c, string? q = null, string? folder = null, bool deep = false,
             int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null,
             bool superseded = false, string? valid = null, string? state = null) =>
-            c.With((model, _, _) =>
+            c.Lesen((model, _) =>
             {
                 var alle = Gefiltert(c, Auth.Sicht(req), q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid, state).ToList();
                 var liste = model.Lists.GetValueOrDefault(Model.KeywordList);
@@ -149,7 +149,7 @@ public static class MediaApi
         // Vorschläge für Stichwörter an einem Medium. Bei automatischem Import verschlagwortet niemand von Hand —
         // darum schlägt der Server vor, was er sehen kann, und ein Mensch nimmt an. Erst das Annehmen ist Pflege.
         api.MapGet("/media/{id}/suggestions", (string id, Catalog c, int limit = 12) =>
-            c.With((model, tree, _) =>
+            c.Lesen((model, tree) =>
             {
                 if (!c.Media.All.TryGetValue(id, out var m)) return (IResult)Results.NotFound();
                 var liste = model.Lists.GetValueOrDefault(Model.KeywordList);
@@ -179,7 +179,7 @@ public static class MediaApi
             }));
 
         // Medienordner
-        api.MapGet("/media/folders", (HttpRequest req, Catalog c) => c.With((_, _, _) =>
+        api.MapGet("/media/folders", (HttpRequest req, Catalog c) => c.Lesen((_, _) =>
         {
             var s = Auth.Sicht(req);
             var sichtbar = c.Media.All.Values.Where(m => c.Media.Visible(m, s.Role, s.Admin)).ToList();
@@ -200,21 +200,21 @@ public static class MediaApi
         api.MapPut("/media/{id}/folder", (string id, FolderBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.FileMedium(x, id, b.Folder)));
 
         api.MapGet("/media/{id}", (string id, Catalog c) =>
-            c.With((_, _, _) => c.Media.All.TryGetValue(id, out var m) ? MediaView.Of(m, c.Relations.To(m.Id).Count()) : null) is { } v ? Results.Ok(v) : Results.NotFound());
+            c.Lesen((_, _) => c.Media.All.TryGetValue(id, out var m) ? MediaView.Of(m, c.Relations.To(m.Id).Count()) : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         // Die Datei: Hash-adressiert und unveränderlich, darf ewig im Cache bleiben.
         // Verwendungsnachweis: an welchen Knoten dieses Asset hängt. Dieselbe Form wie die Relationen eines Knotens
         // (RelationView, Richtung „in“) — das andere Ende ist dann der Knoten. Ein Stopp (stop=true) ist keine
         // Verwendung, sondern eine Sperre; er steht mit in der Liste und die Oberfläche kennzeichnet ihn.
         api.MapGet("/media/{id}/usage", (string id, HttpRequest req, Catalog c) =>
-            c.With((model, tree, _) => c.Media.All.ContainsKey(id)
+            c.Lesen((model, tree) => c.Media.All.ContainsKey(id)
                 ? c.Relations.To(id).Where(r => !tree.Nodes.TryGetValue(r.From, out var nn) || tree.Visible(nn, Auth.Sicht(req).Role, Auth.Sicht(req).Admin))   // Knoten, die die Rolle nicht sieht, nennt der Nachweis nicht
                     .OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList()
                 : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapGet("/media/{id}/file", async (string id, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {
-            var m = c.With((_, _, _) => c.Media.All.GetValueOrDefault(id));
+            var m = c.Lesen((_, _) => c.Media.All.GetValueOrDefault(id));
             if (m is null) return Results.NotFound();
             var stream = await store.OpenAsync(m.Sha256, ct);
             if (stream is null) return Results.NotFound(Err("Datei {0} fehlt im Store.", m.Sha256));
@@ -225,7 +225,7 @@ public static class MediaApi
         // Vorschau: Schlüssel sha.thumb im Store; rechnet der erste Betrachter (MediaThumb.vue) und legt sie per PUT ab.
         api.MapGet("/media/{id}/thumb", async (string id, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {
-            var m = c.With((_, _, _) => c.Media.All.GetValueOrDefault(id));
+            var m = c.Lesen((_, _) => c.Media.All.GetValueOrDefault(id));
             if (m is null) return Results.NotFound();
             var stream = await store.OpenAsync(m.Sha256 + ".thumb", ct);
             if (stream is null) return Results.NotFound();
@@ -235,7 +235,7 @@ public static class MediaApi
         api.MapPut("/media/{id}/thumb", async (string id, HttpRequest req, Catalog c, IMediaStore store, CancellationToken ct) =>
         {
             if (Actor(req) is null) return ActorMissing();
-            var m = c.With((_, _, _) => c.Media.All.GetValueOrDefault(id));
+            var m = c.Lesen((_, _) => c.Media.All.GetValueOrDefault(id));
             if (m is null) return Results.NotFound();
             if (req.ContentLength > 400_000) return Bad("Vorschau höchstens 400 KB.");
             if (!(req.ContentType ?? "").StartsWith("image/")) return Bad("Vorschau: image/webp erwartet.");
@@ -264,7 +264,7 @@ public static class MediaApi
         // Was im Speicher liegt. Zwei Zahlen
         // sehen ähnlich aus und sind es nicht: total sind alle Assets, renderable nur die, aus denen sich eine Vorschau
         // rechnen lässt (Bild oder PDF) — daran misst sich der Stand der Ableitungen.
-        api.MapGet("/media/stats", (Catalog c) => c.With((_, _, _) =>
+        api.MapGet("/media/stats", (Catalog c) => c.Lesen((_, _) =>
         {
             var alle = c.Media.All.Values.ToList();
             static string Art(string mime) =>
@@ -292,7 +292,7 @@ public static class MediaApi
         // Fehlbestand: Assets, deren Bytes im Store fehlen (z. B. zweite Instanz ohne Ursprung, oder Treiber gewechselt ohne Kopierlauf)
         api.MapGet("/media/missing", async (Catalog c, IMediaStore store, CancellationToken ct) =>
         {
-            var all = c.With((_, _, _) => c.Media.All.Values.Select(m => (m.Id, m.Sha256, m.Name)).ToList());
+            var all = c.Lesen((_, _) => c.Media.All.Values.Select(m => (m.Id, m.Sha256, m.Name)).ToList());
             var missing = new List<object>();
             foreach (var (mid, sha, name) in all) if (!await store.ExistsAsync(sha, ct)) missing.Add(new { id = mid, sha256 = sha, name });
             return Results.Ok(new { total = all.Count, missing });
@@ -369,7 +369,7 @@ public static class MediaApi
         // Einstellungen → Storage: Treiber lesen (ohne Geheimnis), prüfen, speichern (media.json im Datenverzeichnis, nie im Journal)
         api.MapGet("/media/store", async (SwitchableMediaStore store, Catalog c, CancellationToken ct) =>
         {
-            var total = c.With((_, _, _) => c.Media.All.Count);
+            var total = c.Lesen((_, _) => c.Media.All.Count);
             return Results.Ok(new { kind = store.Kind, config = store.Config.Masked(), total, error = await store.ProbeAsync(ct) });
         });
         api.MapPost("/media/store/probe", async (MediaConfig body, SwitchableMediaStore store, CancellationToken ct) =>

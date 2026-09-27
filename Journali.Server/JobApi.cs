@@ -26,7 +26,7 @@ public static class JobApi
             var tarif = c.InstanzTarif;
             // eine Zeile je Dienst: label des Dienstes, sonst des Plugins. Nur Plugins, die der Tarif enthält —
             // mit den anderen lässt sich kein Job anlegen, also stehen sie auch nicht zur Auswahl
-            return c.With((_, _, _) => c.Plugins.All.Values.Where(p => p.Enabled && tarif.Erlaubt(p.Key) && manifests.ContainsKey(p.Key))
+            return c.Lesen((_, _) => c.Plugins.All.Values.Where(p => p.Enabled && tarif.Erlaubt(p.Key) && manifests.ContainsKey(p.Key))
                 .SelectMany(p => PluginApi.Processes(manifests[p.Key].Raw).Select(x => new
                 {
                     key = p.Key, service = x.Key, version = p.Version,
@@ -50,7 +50,7 @@ public static class JobApi
             if (!Tarife.Systemjobs.Contains(plugin)) return Bad("{0} ist kein Systemjob.", plugin);
             var manifests = PluginApi.Scan(runner.PluginDir);
             if (!manifests.TryGetValue(plugin, out var m) || PluginApi.ProcessOf(m.Raw, null) is not { } proc) return Bad("Plugin {0} hat keinen Prozess.", plugin);
-            var (job, on, locale) = c.With((model, _, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == plugin && j.Enabled)?.Key,
+            var (job, on, locale) = c.Lesen((model, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == plugin && j.Enabled)?.Key,
                 c.Plugins.All.TryGetValue(plugin, out var st) && st.Enabled, model.MasterLocale ?? "de"));
             if (job is null)
             {
@@ -82,8 +82,8 @@ public static class JobApi
         });
         api.MapDelete("/plugins/{key}/secrets/{name}", (string key, string name, HttpRequest req) => { if (Actor(req) is null) return ActorMissing(); Secrets.Remove(runner.Dir, Secrets.ProfileKey(key, name)); return Results.Ok(new { keys = Array.Empty<string>() }); });
 
-        api.MapGet("/jobs", (Catalog c) => c.With((_, _, _) => c.Jobs.All.Values.OrderBy(j => j.Label).Select(j => View(j, runner)).ToList()));
-        api.MapGet("/jobs/{key}", (string key, Catalog c) => c.With((_, _, _) => c.Jobs.All.TryGetValue(key, out var j) ? Results.Ok(View(j, runner, all: true)) : Results.NotFound()));
+        api.MapGet("/jobs", (Catalog c) => c.Lesen((_, _) => c.Jobs.All.Values.OrderBy(j => j.Label).Select(j => View(j, runner)).ToList()));
+        api.MapGet("/jobs/{key}", (string key, Catalog c) => c.Lesen((_, _) => c.Jobs.All.TryGetValue(key, out var j) ? Results.Ok(View(j, runner, all: true)) : Results.NotFound()));
 
         api.MapPut("/jobs/{key}", (string key, JobBody body, HttpRequest req, Catalog c) =>
         {
@@ -174,7 +174,7 @@ public static class JobApi
         {
             // Ein volles Kontingent hält den Lauf an, statt ihn sterben zu lassen. Fortgesetzt wird
             // er nur von Hand — sonst nähmen wartende Jobs das neue Kontingent im selben Moment wieder weg.
-            var eigner = c.With((_, _, _) => c.Jobs.All.GetValueOrDefault(key)?.Owner);
+            var eigner = c.Lesen((_, _) => c.Jobs.All.GetValueOrDefault(key)?.Owner);
             if (eigner is not null && !Auth.HatKontingent(c, eigner, fuerJob: true)) runner.Pause(key, "Kontingent");
             return Results.Ok(new { paused = runner.IsPaused(key), running = runner.IsRunning(key), reason = runner.PauseReason(key) });
         });
@@ -186,7 +186,7 @@ public static class JobApi
         api.MapGet("/jobs/{key}/files", (string key, Catalog c) =>
         {
             if (!ValidKey(key)) return Results.NotFound();
-            var j = c.With((_, _, _) => c.Jobs.All.GetValueOrDefault(key));
+            var j = c.Lesen((_, _) => c.Jobs.All.GetValueOrDefault(key));
             if (j is null) return Results.NotFound();
             var manifests = PluginApi.Scan(runner.PluginDir);
             var proc = manifests.TryGetValue(j.Plugin, out var m) ? PluginApi.ProcessOf(m.Raw, j.Service) : null;

@@ -20,7 +20,7 @@ public static class DeriveApi
 
     public static void Map(RouteGroupBuilder api)
     {
-        api.MapGet("/media/presets", (Catalog c) => c.With((_, _, _) => c.Media.Presets.Values.OrderBy(p => p.Key).Select(p => View(c, p)).ToList()));
+        api.MapGet("/media/presets", (Catalog c) => c.Lesen((_, _) => c.Media.Presets.Values.OrderBy(p => p.Key).Select(p => View(c, p)).ToList()));
         api.MapPut("/media/presets/{key}", (string key, PresetBody b, HttpRequest req, Catalog c, JobRunner runner) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
@@ -56,7 +56,7 @@ public static class DeriveApi
         });
 
         // Was fehlt (für das Plugin derive): je Bild und Preset — oder nur ein Preset. Höchstens `limit` Bilder je Aufruf.
-        api.MapGet("/media/pending", (Catalog c, string? preset = null, int limit = 200) => c.With((_, _, _) =>
+        api.MapGet("/media/pending", (Catalog c, string? preset = null, int limit = 200) => c.Lesen((_, _) =>
         {
             var presets = c.Media.Presets.Values.Where(p => p.Auto && (preset is null || p.Key == preset)).ToList();
             var items = new List<object>();
@@ -70,7 +70,7 @@ public static class DeriveApi
         api.MapPut("/media/{id}/derived/{preset}", async (string id, string preset, HttpRequest req, Catalog c, IMediaStore store, CancellationToken ct) =>
         {
             if (Actor(req) is not { } actor) return ActorMissing();
-            var (m, p) = c.With((_, _, _) => (c.Media.All.GetValueOrDefault(id), c.Media.Presets.GetValueOrDefault(preset)));
+            var (m, p) = c.Lesen((_, _) => (c.Media.All.GetValueOrDefault(id), c.Media.Presets.GetValueOrDefault(preset)));
             if (m is null || p is null) return Results.NotFound();
             if (!(req.ContentType ?? "").StartsWith("image/")) return Bad("Bild erwartet (image/…).");
             if (!int.TryParse(req.Headers["X-Width"], out var w) || !int.TryParse(req.Headers["X-Height"], out var h)) return Bad("Köpfe X-Width und X-Height fehlen.");
@@ -85,7 +85,7 @@ public static class DeriveApi
         // Ausliefern: GET /api/media/{id}/{preset} — liegt nichts vor, 404 (der Aufrufer nimmt dann /file oder wartet auf den Job)
         api.MapGet("/media/{id}/{preset}", async (string id, string preset, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {
-            var (m, p) = c.With((_, _, _) => (c.Media.All.GetValueOrDefault(id), c.Media.Presets.GetValueOrDefault(preset)));
+            var (m, p) = c.Lesen((_, _) => (c.Media.All.GetValueOrDefault(id), c.Media.Presets.GetValueOrDefault(preset)));
             if (m is null || p is null) return Results.NotFound();
             var stream = await store.OpenAsync(m.Sha256 + "." + p.Key, ct);
             if (stream is null) return Results.NotFound(Err("Ableitung {0} liegt noch nicht vor.", preset));
@@ -115,7 +115,7 @@ public static class DeriveApi
     /// </summary>
     public static (string? Job, string? Error) Kick(Catalog c, JobRunner runner, string actor)
     {
-        var (job, pluginOn) = c.With((_, _, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == PluginKey && j.Enabled)?.Key, c.Plugins.All.TryGetValue(PluginKey, out var p) && p.Enabled));
+        var (job, pluginOn) = c.Lesen((_, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == PluginKey && j.Enabled)?.Key, c.Plugins.All.TryGetValue(PluginKey, out var p) && p.Enabled));
         if (job is null)
         {
             if (!pluginOn) return (null, "Plugin derive ist nicht installiert oder aus (⌁ Plugins).");

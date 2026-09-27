@@ -133,7 +133,7 @@ public static class DriverApi
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private static IEnumerable<(string Name, string Json)> Daten(Catalog c) =>
-        c.With((_, _, _) => c.Plugins.All.TryGetValue(Plugin, out var p)
+        c.Lesen((_, _) => c.Plugins.All.TryGetValue(Plugin, out var p)
             ? p.Data.Select(kv => (kv.Key, kv.Value)).ToList() : []);
 
     /// <summary>Den Zugang holen und prüfen, dass er Dateien liefert. Sonst steht der Grund in <paramref name="fehler"/>.</summary>
