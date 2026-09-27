@@ -12,7 +12,7 @@ import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
 import { groupsAt, neededByNode, missingGroups, confirmMove } from '../orphans.js'
 import { plugins } from '../plugins.js'
-import { mediaTypesFor, attachFiles, meldung as medienMeldung, IST_ASSET } from '../media.js'
+import { mediaTypesFor, attachFiles, meldung as medienMeldung, IST_ASSET, IST_DOKUMENT } from '../media.js'
 import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
@@ -325,6 +325,7 @@ async function dropAssets(files, r) {
   const erg = await attachFiles(files, r.id, typen)
   for (const f of erg.fehler) store.toast(f)
   if (erg.zugeordnet) { store.toast(medienMeldung(erg), 'ok'); store.poll(true); tree.load() }
+  return erg
 }
 
 async function onDrop(e, r) {
@@ -346,7 +347,11 @@ async function onDrop(e, r) {
         store.pendingImport = { file: f, parent: r.id, analyse: true }; router.push('/p/table/import'); return
       }
     }
-    await dropAssets(files, r); return
+    const erg = await dropAssets(files, r)
+    // Mit Strg wird ein Dokument ausgewertet (34 L): die Knotenansicht fragt, welche Tabellenzeilen Attribute werden
+    const dokumente = (e.ctrlKey || e.metaKey) ? (erg?.medien ?? []).filter(m => IST_DOKUMENT.test(m.name)).map(m => m.id) : []
+    if (dokumente.length) { store.pendingDocTables = { node: r.id, media: dokumente }; router.push(`/tree/${r.id}`) }
+    return
   }
   const ids = dragIds()
   dragId.value = null; dropId.value = null; hoverStop()

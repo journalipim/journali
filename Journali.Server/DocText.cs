@@ -1,5 +1,6 @@
 using Npgsql;
 using NpgsqlTypes;
+using System.Text.Json;
 
 namespace Journali.Server;
 
@@ -49,6 +50,18 @@ public sealed class DocText
                 note    TEXT,
                 at      TIMESTAMPTZ NOT NULL DEFAULT now()
             );
+            -- Tabellen im Dokument (27.09.2026, 34 L): je Tabelle die Zeilen als Zellen — technische Daten, Schlüssel links,
+            -- Wert rechts. Abgeleitet wie der Text: der Leser findet sie beim selben Lesen, der Dialog am Knoten fragt sie ab.
+            CREATE TABLE IF NOT EXISTS media_table (
+                media   TEXT        NOT NULL,
+                sha256  TEXT        NOT NULL,
+                seq     INT         NOT NULL,
+                page    INT,
+                heading TEXT,
+                rows    JSONB       NOT NULL,
+                at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+                PRIMARY KEY (media, seq)
+            );
             """, conn);
         cmd.ExecuteNonQuery();
     }
@@ -58,6 +71,9 @@ public sealed class DocText
     /// <summary>Ein Abschnitt: Reihenfolge im Dokument, Seite (wenn bekannt), Überschrift darüber, der Text.</summary>
     public sealed record Chunk(int Seq, int? Page, string? Heading, string Body);
 
+    /// <summary>Eine Tabelle im Dokument: Reihenfolge, Seite, Überschrift darüber, die Zeilen als Zellen (erste Zelle der Schlüssel).</summary>
+    public sealed record Table(int Seq, int? Page, string? Heading, List<string[]> Rows);
+
     /// <summary>Treffer: Medium, Abschnitt und ein Ausschnitt mit den gefundenen Wörtern.</summary>
     public sealed record Hit(string Media, string Sha256, int Seq, int? Page, string? Heading, string Snippet, double Rank);
 
@@ -65,7 +81,7 @@ public sealed class DocText
     public static class States { public const string Text = "text"; public const string Scan = "scan"; public const string Error = "fehler"; }
 
     /// <summary>Text eines Mediums ersetzen (erst weg, dann neu) — dasselbe Dokument wird nie zweimal gelesen, der Hash sagt es.</summary>
-    public async Task PutAsync(string media, string sha256, IReadOnlyList<Chunk> chunks, string state = States.Text, int? pages = null, string? note = null, CancellationToken ct = default)
+    public async Task PutAsync(string media, string sha256, IReadOnlyList<Chunk> chunks, string state = States.Text, int? pages = null, string? note = null, IReadOnlyList<Table>? tables = null, CancellationToken ct = default)
     {
         if (_db is null) throw new InvalidOperationException("Ohne Postgres gibt es keinen Dokumentindex.");
         await using var conn = await _db.OpenConnectionAsync(ct);
@@ -87,6 +103,22 @@ public sealed class DocText
             ph.Value = (object?)Clean(chunk.Heading) ?? DBNull.Value;
             pb.Value = Clean(chunk.Body) ?? "";
             await ins.ExecuteNonQueryAsync(ct);
+        }
+        // Tabellen: erst weg, dann neu — wie der Text, und im selben Vorgang
+        await using (var delT = new NpgsqlCommand("DELETE FROM media_table WHERE media = @m", conn, tx))
+        {
+            delT.Parameters.AddWithValue("m", media);
+            await delT.ExecuteNonQueryAsync(ct);
+        }
+        foreach (var t in tables ?? [])
+        {
+            if (t.Rows is not { Count: > 0 }) continue;
+            await using var insT = new NpgsqlCommand("INSERT INTO media_table (media, sha256, seq, page, heading, rows) VALUES (@m, @s, @q, @p, @h, @r)", conn, tx);
+            insT.Parameters.AddWithValue("m", media); insT.Parameters.AddWithValue("s", sha256); insT.Parameters.AddWithValue("q", t.Seq);
+            insT.Parameters.AddWithValue("p", (object?)t.Page ?? DBNull.Value);
+            insT.Parameters.AddWithValue("h", (object?)Clean(t.Heading) ?? DBNull.Value);
+            insT.Parameters.Add("r", NpgsqlDbType.Jsonb).Value = JsonSerializer.Serialize(t.Rows.Select(r => r.Select(c => Clean(c) ?? "").ToArray()));
+            await insT.ExecuteNonQueryAsync(ct);
         }
         await using (var doc = new NpgsqlCommand("""
             INSERT INTO media_text_doc (media, sha256, state, pages, chunks, note, at)
@@ -146,9 +178,32 @@ public sealed class DocText
     {
         if (_db is null) return 0;
         await using var conn = await _db.OpenConnectionAsync(ct);
-        await using var cmd = new NpgsqlCommand("DELETE FROM media_text WHERE media = @m; DELETE FROM media_text_doc WHERE media = @m;", conn);
+        await using var cmd = new NpgsqlCommand("DELETE FROM media_text WHERE media = @m; DELETE FROM media_table WHERE media = @m; DELETE FROM media_text_doc WHERE media = @m;", conn);
         cmd.Parameters.AddWithValue("m", media);
         return await cmd.ExecuteNonQueryAsync(ct);
+    }
+
+    /// <summary>Die Tabellen eines Dokuments mit dem Stand des Index: Zustand und Hash, den der Leser kannte. Ohne Zustand
+    /// ist das Dokument noch nicht gelesen — der Dialog wartet dann auf den Job, statt leere Tabellen zu zeigen.</summary>
+    public async Task<(string? State, string? Sha256, List<Table> Tables)> TablesAsync(string media, CancellationToken ct = default)
+    {
+        var tables = new List<Table>();
+        if (_db is null) return (null, null, tables);
+        await using var conn = await _db.OpenConnectionAsync(ct);
+        string? state = null, sha = null;
+        await using (var doc = new NpgsqlCommand("SELECT state, sha256 FROM media_text_doc WHERE media = @m", conn))
+        {
+            doc.Parameters.AddWithValue("m", media);
+            await using var r = await doc.ExecuteReaderAsync(ct);
+            if (await r.ReadAsync(ct)) { state = r.GetString(0); sha = r.GetString(1); }
+        }
+        await using var cmd = new NpgsqlCommand("SELECT seq, page, heading, rows::text FROM media_table WHERE media = @m ORDER BY seq", conn);
+        cmd.Parameters.AddWithValue("m", media);
+        await using var rd = await cmd.ExecuteReaderAsync(ct);
+        while (await rd.ReadAsync(ct))
+            tables.Add(new Table(rd.GetInt32(0), rd.IsDBNull(1) ? null : rd.GetInt32(1), rd.IsDBNull(2) ? null : rd.GetString(2),
+                JsonSerializer.Deserialize<List<string[]>>(rd.GetString(3)) ?? []));
+        return (state, sha, tables);
     }
 
     /// <summary>Wortsuche über alle Abschnitte; <paramref name="media"/> schränkt auf bestimmte Medien ein (die Treffer eines Teilbaums).</summary>

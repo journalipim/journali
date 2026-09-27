@@ -1,13 +1,13 @@
 {
   "key": "docs",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "label": {
     "de": "Dokumente lesen",
     "en": "Read documents"
   },
   "description": {
-    "de": "Liest den Text aus den Dokumenten am Knoten (PDF je Seite, Text, HTML, Markdown, XML), schneidet ihn in Abschnitte und legt ihn in den Dokumentindex für die Volltextsuche (⌕ Dokumente). Läuft als Job im Hintergrund und holt nach, was noch fehlt; abgeleitete Daten, nichts davon geht ins Journal.",
-    "en": "Extracts text from documents attached to nodes (PDF per page, text, HTML, Markdown, XML), splits it into sections and fills the document index — so that \"which data sheet says …\" becomes answerable. Runs as a background job; derived data, never written to the journal."
+    "de": "Liest den Text aus den Dokumenten am Knoten (PDF je Seite, Text, HTML, Markdown, XML), schneidet ihn in Abschnitte und legt ihn in den Dokumentindex für die Volltextsuche (⌕ Dokumente); Tabellen mit Schlüssel und Wert legt er daneben, für die Übernahme in Attribute. Läuft als Job im Hintergrund und holt nach, was noch fehlt; abgeleitete Daten, nichts davon geht ins Journal.",
+    "en": "Extracts text from documents attached to nodes (PDF per page, text, HTML, Markdown, XML), splits it into sections and fills the document index for full-text search (⌕ Documents); key/value tables are stored alongside, for transfer into attributes. Runs as a background job; derived data, never written to the journal."
   },
   "kind": "tool",
   "runs": "process",

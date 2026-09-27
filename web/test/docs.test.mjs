@@ -97,3 +97,44 @@ test('Zwerge werden zusammengelegt, die Überschrift bleibt im Text', () => {
   assert.match(p[0].body, /Schnittstellen: DALI, DSI/, 'die Überschrift des Zwergs steht im Text')
   assert.equal(p[1].page, 2)
 })
+
+// ---- Tabellen (27.09.2026, 34 L): Zellen aus der x-Lage, Schlüssel/Wert-Zeilen, Tabellen mit Überschrift
+import { cellsOf, findTables, pairsFromText, isKeyValueRow, numberedTables } from '../../plugins/docs/core.mjs'
+
+test('Zellen: ein Sprung nach rechts trennt, ein Wortabstand nicht', () => {
+  // „Netzspannung“ (x 40–110) … „220 – 240 V“ ab x 300
+  const items = [{ x: 40, w: 70, str: 'Netzspannung' }, { x: 300, w: 60, str: '220 – 240 ' }, { x: 361, w: 8, str: 'V' }]
+  assert.deepEqual(cellsOf(items), ['Netzspannung', '220 – 240 V'])
+  assert.deepEqual(cellsOf([{ x: 40, w: 30, str: 'Der ' }, { x: 71, w: 40, str: 'Klebstoff' }]), ['Der Klebstoff'])
+  assert.deepEqual(cellsOf([{ str: 'ohne Lage' }, { str: ' bleibt eins' }]), ['ohne Lage bleibt eins'])
+})
+
+test('eine Zeile Schlüssel/Wert: Name links, Wert rechts — kein Satz, keine Einzelzelle', () => {
+  assert.ok(isKeyValueRow(['Gewicht', '1,2 kg']))
+  assert.ok(isKeyValueRow(['Netzspannung:', '220 – 240 V']))
+  assert.ok(!isKeyValueRow(['Seite 1 von 3']))
+  assert.ok(!isKeyValueRow(['Der Klebstoff ist lösemittelfrei und wird mit der Zahnspachtel aufgetragen.', 'x']))
+  assert.ok(!isKeyValueRow(['12', 'Stück']), 'ein Schlüssel beginnt mit einem Buchstaben')
+})
+
+test('drei Zeilen hintereinander sind eine Tabelle, die Überschrift davor gehört dazu; zwei sind keine', () => {
+  const seite = [
+    ['Technische Daten'],
+    ['Gewicht', '1,2 kg'], ['Durchmesser:', '22 mm'], ['Farbe', 'blau'],
+    ['Der Klebstoff ist lösemittelfrei.'],
+    ['Seite', '1'], ['von', '3'],
+  ]
+  const t = findTables([seite])
+  assert.equal(t.length, 1)
+  assert.equal(t[0].heading, 'Technische Daten'); assert.equal(t[0].page, 1)
+  assert.deepEqual(t[0].rows, [['Gewicht', '1,2 kg'], ['Durchmesser', '22 mm'], ['Farbe', 'blau']], 'der Doppelpunkt am Schlüssel geht')
+  assert.deepEqual(numberedTables(t).map(x => x.seq), [0])
+})
+
+test('aus blossem Text: „Schlüssel: Wert“, Tabulator oder zwei Leerzeichen', () => {
+  const text = 'Technische Daten\nGewicht: 1,2 kg\nBreite\t22 mm\nFarbe  blau\n\nDer Klebstoff ist lösemittelfrei.'
+  const t = pairsFromText(text)
+  assert.equal(t.length, 1); assert.equal(t[0].page, null)
+  assert.deepEqual(t[0].rows, [['Gewicht', '1,2 kg'], ['Breite', '22 mm'], ['Farbe', 'blau']])
+  assert.deepEqual(pairsFromText('Hinweis: bitte lesen\nNoch einer: ja'), [], 'zwei Zeilen sind keine Tabelle')
+})

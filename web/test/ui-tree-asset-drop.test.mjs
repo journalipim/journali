@@ -152,3 +152,25 @@ test('ohne Relationstyp zu Medien im Modell wird nichts angelegt', async () => {
   assert.equal(rufe.filter(r => r.pfad.endsWith('/api/media')).length, 0)
   assert.match(store.toasts.at(-1)?.text ?? '', /Kein Relationstyp/)
 })
+
+/// Mit Strg wird ein Dokument ausgewertet (34 L): der Baum merkt sich die Dokumente und springt zum Knoten — die
+/// Knotenansicht fragt dann, welche Tabellenzeilen Attribute werden. Ein Bild hat keine Tabellen.
+test('mit Strg wird ein Dokument ausgewertet: Auftrag im Store, Sprung zum Knoten', async () => {
+  welt(); const rufe = server()
+  const { w, router } = baum(); await flushPromises()
+  const zeile = w.findAll('.node').find(n => n.attributes('title') === 'p1')
+  await zeile.trigger('drop', { dataTransfer: { files: [datei('datenblatt.pdf', 'application/pdf'), datei('vorne.jpg', 'image/jpeg')], types: ['Files'], getData: () => '' }, ctrlKey: true })
+  await flushPromises()
+  assert.equal(rufe.filter(r => r.pfad.endsWith('/api/media') && r.methode === 'POST').length, 2, 'beide werden angehängt')
+  assert.equal(store.pendingDocTables?.node, 'p1')
+  assert.equal(store.pendingDocTables?.media.length, 1, 'nur das Dokument, nicht das Bild')
+  assert.equal(router.path, '/tree/p1')
+  store.pendingDocTables = null
+})
+
+test('ohne Strg bleibt es beim Anhängen', async () => {
+  welt(); server()
+  const { w } = baum(); await flushPromises()
+  await ablegen(w, 'p1', [datei('datenblatt.pdf', 'application/pdf')])
+  assert.equal(store.pendingDocTables, null)
+})

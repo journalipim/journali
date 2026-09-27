@@ -28,7 +28,8 @@ import RowsBlock from '../components/RowsBlock.vue'
 import VersionsPanel from '../components/VersionsPanel.vue'
 import MediaThumb from '../components/MediaThumb.vue'
 import MediaPicker from '../components/MediaPicker.vue'
-import { mediaTypesFor, attachFiles, meldung as medienMeldung } from '../media.js'
+import DocTables from '../components/DocTables.vue'
+import { mediaTypesFor, attachFiles, meldung as medienMeldung, IST_DOKUMENT } from '../media.js'
 import EntryList from '../components/EntryList.vue'
 import ScriptEditor from '../components/ScriptEditor.vue'
 import Splitter from '../components/Splitter.vue'
@@ -592,6 +593,9 @@ const mediaTypes = computed(() => mediaTypesFor(model.value, node.value?.role))
 const mediaDrag = ref(false)
 const mediaFile = ref(null)
 const mediaPick = ref({ open: false })   // ▨ aus der Bibliothek … (MediaPicker)
+// ▦ Tabellen aus dem Dokument (34 L): { media: [ids] } öffnet den Dialog — nach einem Strg-Drop hier oder im Baum
+const docTables = ref(null)
+watch(() => store.pendingDocTables, p => { if (p && p.node === props.id) { docTables.value = { media: p.media }; store.pendingDocTables = null } }, { immediate: true })
 
 // ---- Reihenfolge der Assets: ziehen statt Zahlen tippen.
 // Die Reihenfolge steht als Wert „position“ an der Zuordnung (relation_media). Beim Ablegen bekommt jede
@@ -618,13 +622,16 @@ async function mediaDrop(r) {
     if (String(relValueRaw(rel, 'position') ?? '') !== String(n + 1)) await setRelValue(rel, def, String(n + 1))
   await load()
 }
-async function uploadMedia(files) {
+/// auswerten: mit Strg abgelegt — die Tabellen der Dokumente werden danach zur Übernahme angeboten
+async function uploadMedia(files, auswerten = false) {
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true
   try {
     const erg = await attachFiles(files, props.id, mediaTypes.value)
     for (const f of erg.fehler) store.toast(f)
     if (erg.zugeordnet) store.toast(medienMeldung(erg), 'ok')
+    const dokumente = auswerten ? (erg.medien ?? []).filter(m => IST_DOKUMENT.test(m.name)).map(m => m.id) : []
+    if (dokumente.length) docTables.value = { media: dokumente }
     await load(); store.poll(true)
   } catch (e) { store.toast(e.message) }
   finally { busy.value = false; mediaDrag.value = false }
@@ -943,8 +950,8 @@ function cellMenu(e, def, col, block) {
       <div v-else-if="!blocks.length" class="empty"><span :title="$t('Unten eine anhängen, oder oben am Pfad.')">{{ $t("Keine Attributgruppe gilt hier") }}</span></div>
     </template>
 
-      <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files])">
-        <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
+      <div class="section" :class="{ over: mediaDrag }" @dragover.prevent="mediaDrag = true" @dragleave="mediaDrag = false" @drop.prevent="uploadMedia([...$event.dataTransfer.files], $event.ctrlKey || $event.metaKey)">
+        <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab. Mit Strg werden die Tabellen eines Dokuments ausgewertet.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
         <template v-if="open('media')">
         <div class="tiles">
           <div v-for="(r, i) in mediaRels" :key="r.id" class="tile" :class="{ first: i === 0, drop: mediaDropId === r.id, dragging: mediaDragId === r.id }"
@@ -978,6 +985,7 @@ function cellMenu(e, def, col, block) {
           <button @click="mediaPick.open = true" :title="$t('Medien aus der Bibliothek zuordnen — Ordner, Suche, Mehrfachauswahl')">{{ $t("▨ Aus der Bibliothek wählen …") }}</button>
         </div>
         <MediaPicker v-if="mediaPick.open" :types="mediaTypes" :exclude="[...mediaRels, ...stopped].map(r => r.other.id)" @pick="linkMedia" @close="mediaPick.open = false" />
+        <DocTables v-if="docTables" :node="node" :media="docTables.media" @close="docTables = null" @done="docTables = null; load(); store.poll(true)" />
         </template>
       </div>
 

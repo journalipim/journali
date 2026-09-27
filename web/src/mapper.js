@@ -437,3 +437,57 @@ export function childColumns(model, nodeView, childRole, axes, locales) {
     ...(childRole === 'variant' ? (axes ?? []).map(a => ({ key: 'axis:' + a, note: t_('Variantenachse — Pflicht beim Anlegen'), attr: a })) : []),
     ...attrs.filter(isReq).flatMap(cols), ...attrs.filter(a => !isReq(a)).flatMap(cols)]
 }
+
+// ---- Lage Schlüssel/Wert (27.09.2026, pflegestruktur 34 L): eine technische Tabelle ist eine gedrehte Tabelle — Attribut
+// links, Wert rechts, die Einheit oft im Wert. Für die Tabellen aus einem Dokument (Plugin docs, Dialog DocTables).
+
+/// Die feste Gruppe für Attribute, die aus einem Dokument entstehen — später im Modell einzuordnen.
+export const DOC_GROUP = 'from_document'
+
+/// Einheit aus einem Wert: „22 mm“ → { number: '22', unit: 'mm' } — nur, wenn das Modell die Einheit kennt (Schlüssel
+/// oder Bezeichnung, ohne Gross/Klein). Sonst null: „3 Stück“ ohne Einheit pc im Modell bleibt Text.
+export function splitUnit(raw, model) {
+  const s = String(raw ?? '').trim()
+  const m = s.match(/^([+-]?\d[\d.,\s']*?)\s*([A-Za-zµΩ°%][A-Za-z0-9µΩ°%²³/]{0,7})$/)
+  if (!m) return null
+  const u = m[2].toLowerCase()
+  const unit = (model?.units ?? []).find(x => x.key.toLowerCase() === u || Object.values(x.label ?? {}).some(l => String(l ?? '').toLowerCase() === u))
+  return unit ? { number: m[1].trim(), unit: unit.key } : null
+}
+
+/// Ein Schlüssel für ein neues Attribut: a-z, 0-9, _, beginnt mit einem Buchstaben, höchstens 40 Zeichen.
+export function keyOf(label) {
+  let k = norm(label).slice(0, 40).replace(/_+$/, '')
+  if (!k) return ''
+  if (!/^[a-z]/.test(k)) k = 'a_' + k
+  return k.slice(0, 40).replace(/_+$/, '')
+}
+
+/// Je Paar ein Vorschlag: target attr | new | skip; attribute, newKey, newType, unit, converted (der Wert, wie er
+/// geschrieben würde), error (warum er so nicht geht), why. role: Knotentyp — ein Attribut, das dort nicht gilt, wird
+/// übersprungen. Schlüsselspalten (Id, Elternteil, Status …) gibt es in dieser Lage nicht: sie werden übersprungen.
+export function suggestPairs(pairs, model, { role = null } = {}) {
+  const keys = pairs.map(p => p.key)
+  const split = pairs.map(p => splitUnit(p.value, model))
+  const values = pairs.map((p, i) => split[i]?.number ?? p.value)
+  return suggest(keys, [values], model).map((s, i) => {
+    const p = pairs[i]
+    const out = { key: p.key, value: p.value, number: split[i]?.number ?? null, target: 'skip', attribute: null, newKey: keyOf(p.key), newType: s.newType, unit: split[i]?.unit ?? null, converted: null, error: null, why: s.why }
+    if (split[i] && !['integer', 'decimal'].includes(out.newType)) out.newType = /[.,]\d/.test(split[i].number) ? 'decimal' : 'integer'
+    if (out.newType === 'enum' || out.newType === 'html') out.newType = 'text'
+    if (s.why === 'doppelt') return out
+    if (['id', 'parent', 'status', 'external', 'root'].includes(s.target)) { out.why = t_('keine Schlüsselspalte in dieser Lage'); return out }
+    if (s.target === 'attr') {
+      const def = (model?.attributes ?? []).find(a => a.key === s.attribute)
+      if (def && role && def.levels && !def.levels.includes(role)) { out.why = t_('{0} gilt nicht für {1}', [def.key, role]); return out }
+      if (def) { out.target = 'attr'; out.attribute = def.key; out.converted = convert(values[i], def, model); out.error = validate(out.converted, def, model); return out }
+    }
+    if (!out.newKey || !String(p.value ?? '').trim()) { out.why = out.why || t_('leer'); return out }
+    out.target = 'new'; out.why = t_('neu als {0}', [out.newType])
+    out.converted = convert(values[i], { type: out.newType }, model)
+    out.error = validate(out.converted, { type: out.newType }, model)
+    // passt der Wert nicht zum geratenen Typ, ist er Text — ein falsches Attribut ist teurer als ein unscharfes
+    if (out.error) { out.newType = 'text'; out.converted = p.value; out.error = null; out.unit = null; out.why = t_('neu als {0}', ['text']) }
+    return out
+  })
+}

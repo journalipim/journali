@@ -14,7 +14,13 @@ public static class DocsApi
     public sealed record Pending(string Id, string Name, string Mime, string Sha256, long Bytes, bool Indexed);
     /// <summary>Was der Leser abliefert: die Abschnitte, dazu der Zustand — <c>text</c>, <c>scan</c> (keine Textebene,
     /// OCR nötig) oder <c>fehler</c> — und die Seitenzahl.</summary>
-    public sealed record PutBody(string? Sha256, List<DocText.Chunk>? Chunks, string? State, int? Pages, string? Note);
+    public sealed record PutBody(string? Sha256, List<DocText.Chunk>? Chunks, string? State, int? Pages, string? Note, List<DocText.Table>? Tables = null);
+
+    /// <summary>Was der Leser an Tabellen abliefert, bereinigt: nur Tabellen mit Zeilen, nur Zeilen mit zwei Zellen —
+    /// eine Zeile mit einer Zelle ist Text, kein Schlüssel/Wert (27.09.2026).</summary>
+    public static List<DocText.Table> Tabellen(IEnumerable<DocText.Table>? tables) =>
+        (tables ?? []).Select(t => t with { Rows = (t.Rows ?? []).Where(r => r is { Length: >= 2 } && !string.IsNullOrWhiteSpace(r[0])).ToList() })
+            .Where(t => t.Rows.Count > 0).Select((t, i) => t with { Seq = i }).ToList();
 
     /// <summary>Was ein Erkenner wissen muss: das Medium im Zustand <c>scan</c>, sein Hash, Name, Art, Seiten.</summary>
     public sealed record Scan(string Id, string Name, string Mime, string Sha256, long Bytes, int? Pages);
@@ -74,8 +80,21 @@ public static class DocsApi
             if (medium is null) return Results.NotFound();
             var chunks = (body.Chunks ?? []).Where(x => !string.IsNullOrWhiteSpace(x.Body)).ToList();
             var state = body.State switch { DocText.States.Scan => DocText.States.Scan, DocText.States.Error => DocText.States.Error, _ => chunks.Count > 0 ? DocText.States.Text : DocText.States.Scan };
-            await docs.PutAsync(id, body.Sha256 ?? medium.Sha256, chunks, state, body.Pages, body.Note, ct);
-            return Results.Ok(new { id, chunks = chunks.Count, state });
+            var tables = Tabellen(body.Tables);
+            await docs.PutAsync(id, body.Sha256 ?? medium.Sha256, chunks, state, body.Pages, body.Note, tables, ct);
+            return Results.Ok(new { id, chunks = chunks.Count, state, tables = tables.Count });
+        });
+
+        // Die Tabellen eines Dokuments (34 L): für den Dialog am Knoten. state null = noch nicht gelesen (oder eine
+        // neue Fassung seit dem Lesen) — der Dialog stösst den Job an und fragt nach.
+        api.MapGet("/docs/{id}/tables", async (string id, Catalog c, DocText docs, CancellationToken ct) =>
+        {
+            if (!docs.Ready) return Results.Ok(new { ready = false, state = (string?)null, tables = Array.Empty<DocText.Table>() });
+            var medium = c.Read(_ => c.Media.All.GetValueOrDefault(id));
+            if (medium is null) return Results.NotFound();
+            var (state, sha, tables) = await docs.TablesAsync(id, ct);
+            var aktuell = sha == medium.Sha256;
+            return Results.Ok(new { ready = true, state = aktuell ? state : null, tables = aktuell ? tables : [] });
         });
 
         api.MapDelete("/docs/{id}", async (string id, DocText docs, CancellationToken ct) =>

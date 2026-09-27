@@ -19,6 +19,8 @@ const BILD = /\.(jpe?g|png|gif|webp|avif|bmp|tiff?|svg)$/i
 /// Und was insgesamt als Asset gemeint ist: Bilder und Dokumente. Ein Asset geht nie in einen
 /// Tabellen-Import, auch wenn ein Plugin die Endung kennt.
 export const IST_ASSET = /\.(jpe?g|png|gif|webp|avif|bmp|tiff?|svg|pdf)$/i
+/// Ein Dokument, dessen Tabellen der Leser (Plugin docs) finden kann — mit Strg abgelegt, werden sie ausgewertet (34 L).
+export const IST_DOKUMENT = /\.(pdf|txt|html?|md|xml)$/i
 
 /// Welcher Typ für dieses Bild oder Dokument: ein Bild wird ein Bild, alles andere ein Dokument.
 function typeFor(bild, types) {
@@ -55,17 +57,19 @@ export async function attachMedia(medien, nodeId, types) {
  * Dateien als Assets anlegen und dem Knoten zuordnen.
  *
  * Gibt zurück, was geschah: `neu` (angelegt), `bekannt` (dieselbe Datei lag schon im Speicher — derselbe Hash
- * ist dasselbe Medium), `zugeordnet` und `fehler` (je Datei eine Meldung). Eine Zuordnung, die es schon gibt,
+ * ist dasselbe Medium), `zugeordnet`, `fehler` (je Datei eine Meldung) und `medien` (Id und Name je angelegter
+ * Datei — wer danach mehr mit ihnen tut, braucht die Ids). Eine Zuordnung, die es schon gibt,
  * ist kein Fehler: dann hängt das Medium eben schon dort.
  */
 export async function attachFiles(files, nodeId, types) {
-  const ergebnis = { neu: 0, bekannt: 0, zugeordnet: 0, fehler: [] }
+  const ergebnis = { neu: 0, bekannt: 0, zugeordnet: 0, fehler: [], medien: [] }
   for (const f of files) {
     const type = typeForFile(f, types)
     if (!type) { ergebnis.fehler.push(t_('Kein Relationstyp zu Medien für diesen Knotentyp')); break }
     try {
       const m = await api.upload('/api/media', f)
       m.existed ? ergebnis.bekannt++ : ergebnis.neu++
+      ergebnis.medien.push({ id: m.id, name: f.name, existed: !!m.existed })
       try {
         await api.post('/api/relations', { type, from: nodeId, to: m.id })
         ergebnis.zugeordnet++

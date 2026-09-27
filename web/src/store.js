@@ -40,6 +40,7 @@ export const store = reactive({
   railOff: Array.isArray(saved.railOff) ? saved.railOff : [],   // Plugins, die nicht in der Leiste sind
   undo: {},                                         // ↶/↷ je Knoten: id → { history, redo } — im Store, weil NodeView je Knoten neu gebaut wird
   pendingImport: null,                              // { file, parent } — JSON-Datei, die der JSON-Import gleich öffnen soll (Baum-Drop, Menü, Tabellenimport)
+  pendingDocTables: null,                           // { node, media: [ids] } — Strg-Drop im Baum: die Knotenansicht öffnet den Dialog „Tabellen aus dem Dokument“
   attrFilter: '',                                   // Suchfeld im Knoten — bleibt beim Knotenwechsel, nicht gespeichert
   collapsed: Array.isArray(saved.collapsed) ? saved.collapsed : ['axes', 'groups', 'versions'],   // Organisatorisches zu, bis der Anwender es anders will   // zugeklappte Abschnitte am Knoten (attributes, media, relations, …)
   online: null,          // null = noch nicht gefragt, sonst true/false

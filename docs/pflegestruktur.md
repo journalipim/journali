@@ -1696,31 +1696,38 @@ auf einen Knoten gezogen bringt „Kein Importer für …“. Zu bauen: ein Asse
 angelegt, verarbeitet (Masse, Ableitungen, Text) **und** dem Knoten zugeordnet. Das ist der kürzeste Weg von der
 Datei zum Produkt und sollte der erste Block der Oberfläche sein.
 
-**L. Technische Tabellen aus einem Dokument — Entwurf (27.09.2026).** Mit gedrückter Steuerungstaste auf einen
-Knoten gezogen, soll ein technisches Dokument nicht nur angehängt, sondern **ausgewertet** werden: Tabellen darin
-erkennen, Zeilen als Attribut/Wert lesen, den Attributen des Knotens zuordnen — und wo es keines gibt, das Attribut
-im selben Schritt anlegen lassen. Es läuft nie ohne Bestätigung: ein falsch erkanntes Attribut ist teurer als ein
-nicht erkanntes.
+**L. Technische Tabellen aus einem Dokument — gebaut (27.09.2026).** Mit gedrückter Steuerungstaste auf einen
+Knoten gezogen (Baum oder Medienband), wird ein Dokument nicht nur angehängt, sondern **ausgewertet**: Tabellen darin
+werden Zeilen Schlüssel/Wert, den Attributen des Knotens zugeordnet — und wo es keines gibt, entsteht das Attribut im
+selben Schritt. Es läuft nie ohne Bestätigung: ein falsch erkanntes Attribut ist teurer als ein nicht erkanntes.
 
-Der Weg in vier Schritten, und was davon steht:
+Die vier Schritte, wie sie stehen:
 
-1. **Anhängen** — gebaut (K): die Datei wird ein Asset am Knoten. Mit Strg kommt danach Schritt 2.
-2. **Tabellen finden** — fehlt. `DocText` liefert Text und Abschnitte (`Chunk {page, heading, body}`), aber keine
-   Zellen. Ein Erkenner für Tabellen in PDF ist ein Prozess-Plugin (dieselbe Lage wie die Texterkennung, J): es
-   liest die Datei und liefert je gefundener Tabelle Zeilen und Spalten — als Vorschlag, nicht als Wert.
-3. **Zuordnen** — vorhanden für Tabellen: der Datenmapper (`mapper.js`) hat `suggest(columns, rows, model)` für
-   die Zuordnung auf Attribute mit Synonymen und Ähnlichkeit, `sniffType` für den Typ, `convert` und `validate` für
-   den Wert, `plan` für den Stapel. Eine technische Tabelle ist nur gedreht: Attribut in der ersten Spalte, Wert in
-   der zweiten, Einheit oft im Wert („22 mm“ — `transform.js` kennt „Zahl aus Text“). Der Mapper braucht dafür eine
-   Lage „Schlüssel/Wert“ neben „Spalten“.
-4. **Bestätigen** — der Dialog: je Zeile Attribut (gefunden, oder „neu anlegen als …“ mit Typ und Einheit aus
-   `sniffType`), Wert, Übernehmen ja/nein. Erst ✓ schreibt: `AttributeDefined` für neue Attribute (Modell, zählt
-   nicht), dann `AttributeSet` je Wert (Pflege, zählt). Ein Stapel, wie beim Import.
+1. **Anhängen** (K): die Datei wird ein Asset am Knoten. Mit Strg merkt sich der Baum die Dokumente
+   (`store.pendingDocTables`) und springt zum Knoten; das Medienband öffnet den Dialog direkt.
+2. **Tabellen finden** — Teil von `docs`, nicht ein eigenes Plugin: ein Dokument wird einmal gelesen. Der Leser behält
+   je Textstück die x-Lage; ein Sprung nach rechts trennt Zellen (`cellsOf`), drei oder mehr Zeilen Schlüssel/Wert
+   hintereinander sind eine Tabelle, die Überschrift davor gehört dazu (`findTables`); bei Textdateien gilt „Schlüssel:
+   Wert“ (`pairsFromText`). Die Tabellen liegen neben dem Text (`media_table`, `DocText.Table`), abgeleitet wie er, und
+   kommen mit demselben `PUT /api/docs/{id}` (`tables`). `GET /api/docs/{id}/tables` liefert sie mit dem Zustand des
+   Index; **ohne Zustand ist das Dokument noch nicht gelesen** — der Dialog stösst dann den Job des Plugins `docs`
+   einmal an (`POST /api/jobs/{key}/run`) und fragt alle drei Sekunden nach, bis zu zwei Minuten. Der Job läuft im
+   Hintergrund; der Dialog wartet auf ihn, nicht der Anwender.
+3. **Zuordnen** — der Mapper hat die Lage „Schlüssel/Wert“ (`suggestPairs`): derselbe Vorschlag wie je Spalte
+   (Schlüssel, Bezeichnung, Synonym, Ähnlichkeit), die Einheit aus dem Wert (`splitUnit`: „22 mm“ → 22, `mm`, nur
+   wenn das Modell die Einheit kennt), der Typ aus dem Wert, der Wert umgeformt und geprüft. Schlüsselspalten (Id,
+   Elternteil, Status) gibt es in dieser Lage nicht. Passt der Wert nicht zum geratenen Typ, wird das Attribut Text.
+4. **Bestätigen** — `DocTables.vue`: je Zeile Haken, Schlüssel und Rohwert aus dem Dokument, das Attribut (gefunden,
+   „+ neu: key“ oder nichts), Typ und Einheit eines neuen, der Wert, wie er geschrieben wird, und der Grund. Erst ✓
+   schreibt, in dieser Reihenfolge: `PUT /api/model/attributes/{key}` je neuem Attribut (Modell, zählt nicht) in der
+   **festen Gruppe `from_document` („aus Dokument“)** — eine Entscheidung: der Dialog fragt nicht je Attribut nach
+   der Gruppe, eingeordnet wird später im Modell; dann `PUT /api/nodes/{id}/groups`, wenn die Gruppe am Pfad noch
+   nicht gilt; dann **ein Stapel** `attribute.set` (`POST /api/batch?skipErrors=true`, Pflege, zählt) — was der
+   Server ablehnt, steht als Meldung je Zeile, der Rest wird geschrieben.
 
-Zu entscheiden, bevor gebaut wird: ob ein neues Attribut aus einem Dokument in eine **feste Gruppe** kommt
-(„aus Dokument“, später einzuordnen) oder der Dialog die Gruppe je Attribut fragt; und ob der Erkenner ein eigenes
-Plugin ist oder Teil von `docs` (dann liefert der Leser Tabellen gleich mit, und die Texterkennung J ebenso).
-Empfehlung: feste Gruppe, und Tabellen als Teil von `docs` — ein Dokument wird einmal gelesen, nicht dreimal.
+Offen: Tabellen mit mehr als zwei Spalten (Varianten je Spalte) werden heute als Schlüssel plus zusammengezogener Wert
+gelesen; eine Zuordnung Spalte → Variante wäre der nächste Schritt. Und ein Bild von einer Tabelle (Scan) braucht erst
+die Texterkennung (J).
 
 ### Semantische Suche — was heute wirklich da ist
 

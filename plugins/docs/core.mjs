@@ -116,3 +116,58 @@ export function fromHtml(html) {
     .replace(/&(amp|lt|gt|quot|#39|apos|nbsp);/g, (_, e) => ({ amp: '&', lt: '<', gt: '>', quot: '"', '#39': "'", apos: "'", nbsp: ' ' })[e])
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
 }
+
+// ---- Tabellen (27.09.2026, pflegestruktur 34 L): technische Daten stehen in Dokumenten als Schlüssel links, Wert rechts.
+// Der Leser findet sie beim selben Lesen wie den Text und legt sie neben ihn; der Dialog am Knoten macht daraus Attribute.
+
+/// Zellen einer Zeile aus den Textstücken mit ihrer x-Lage: ein Sprung nach rechts, der grösser ist als ein
+/// Wortabstand, trennt zwei Zellen. Stücke ohne Lage werden eine Zelle.
+export function cellsOf(items, { gap = 14 } = {}) {
+  const cells = []; let cur = '', end = null
+  for (const it of items) {
+    const s = String(it.str ?? '').replace(/\n/g, ' ')
+    const x = Number(it.x ?? 0), w = Number(it.w ?? 0)
+    if (end !== null && x - end > gap && cur.trim()) { cells.push(cur.trim()); cur = '' }
+    cur += s
+    end = Math.max(end ?? x, x + w)
+  }
+  if (cur.trim()) cells.push(cur.trim())
+  return cells
+}
+
+/// Eine Zeile Schlüssel/Wert: links ein Name (beginnt mit einem Buchstaben, höchstens acht Wörter, kein Satzende), rechts ein Wert.
+const KEY = /^[A-Za-zÄÖÜäöüß][^\n]{1,60}$/
+export function isKeyValueRow(cells) {
+  if (!Array.isArray(cells) || cells.length < 2) return false
+  const k = String(cells[0] ?? '').trim().replace(/:$/, ''), v = cells.slice(1).map(c => String(c ?? '').trim()).filter(Boolean).join(' ')
+  return KEY.test(k) && !/[.;]$/.test(k) && k.split(/\s+/).length <= 8 && v.length > 0 && v.length <= 120
+}
+
+/// Tabellen in den Zeilen der Seiten: drei oder mehr Zeilen Schlüssel/Wert hintereinander sind eine Tabelle, die
+/// Überschrift ist die letzte Überschrift davor. Eine einzelne Zeile ist keine — „Seite 3 von 10“ sähe sonst aus wie
+/// ein Wert. pageRows: je Seite die Zeilen als Zellen.
+export function findTables(pageRows, { minRows = 3 } = {}) {
+  const out = []
+  pageRows.forEach((lines, pi) => {
+    let heading = null, run = []
+    const flush = () => { if (run.length >= minRows) out.push({ page: pi + 1, heading, rows: run.map(c => [String(c[0]).trim().replace(/:$/, ''), ...c.slice(1).map(x => String(x ?? '').trim())]) }); run = [] }
+    for (const cells of lines) {
+      if (isKeyValueRow(cells)) { run.push(cells); continue }
+      flush()
+      const text = cells.join(' ').trim()
+      if (isHeading(text)) heading = text
+    }
+    flush()
+  })
+  return out
+}
+
+/// Schlüssel/Wert aus blossem Text (Textdateien, HTML): „Gewicht: 1,2 kg“, „Breite<TAB>22 mm“, zwei Leerzeichen dazwischen.
+const KV = /^([A-Za-zÄÖÜäöüß][^:\t]{1,60}?)\s*(?::|\t| {2,})\s*(\S.{0,119})$/
+export function pairsFromText(text, { minRows = 3 } = {}) {
+  const lines = String(text ?? '').replace(/\r\n?/g, '\n').split('\n').map(l => { const m = l.trim().match(KV); return m ? [m[1].trim(), m[2].trim()] : [l.trim()] })
+  return findTables([lines], { minRows }).map(t => ({ ...t, page: null }))
+}
+
+/// Tabellen fortlaufend nummerieren — die Reihenfolge im Dokument bleibt erhalten
+export function numberedTables(tables) { return tables.map((t, i) => ({ seq: i, page: t.page ?? null, heading: t.heading ?? null, rows: t.rows })) }

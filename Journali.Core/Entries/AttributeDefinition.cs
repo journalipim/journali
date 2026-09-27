@@ -35,6 +35,8 @@ public static class Model
     public const string ValidFrom = "valid_from";
     public const string ValidUntil = "valid_until";
     public const string LicenceList = "licence";
+    /// <summary>Die feste Gruppe für Attribute, die aus einem Dokument entstehen (34 L) — später im Modell einzuordnen.</summary>
+    public const string DocGroup = "from_document";
 
     /// <summary>Das Saatgut-Attribut SKU — eindeutig (unique) wie jedes andere Schlüsselattribut; im Code sonst nichts Besonderes.</summary>
     public const string SkuAttribute = "sku";
@@ -81,6 +83,7 @@ public static class Model
             new("mastergroup", Labels.Of("MasterGroup", "MasterGroup")),
             new("logistics", Labels.Of("Logistik", "Logistics"), ActiveFrom: Roles.Variant),
             new("physical", Labels.Of("Physisch", "Physical")),
+            new(DocGroup, Labels.Of("aus Dokument", "From document")),
         ];
         foreach (var g in groups)
             yield return new(GroupStream + g.Key, Types.AttributeGroupDefined, Types.Serialize(g));
