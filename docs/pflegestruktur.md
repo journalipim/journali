@@ -1577,10 +1577,10 @@ Tarif statt an/aus, und einmal ausgeschaltet liesse er sich nicht wieder einscha
 die Schlüssel aus `Tarife.Systemjobs` immer, unabhängig vom Blatt. Die Marke `system: true` im Manifest ist etwas
 anderes: sie sagt dem Tasker, dass der Job dauerhaft in der Liste steht.
 
-**Offen: was Abbrechen bei einem Systemjob heissen soll.** Bricht man einen Lauf ab, dessen Runde noch 800 offene
-Posten vor sich hat, ist die Absicht meist „jetzt nicht weiter“ und nicht „nie wieder“. Der Job endet, die Posten
-bleiben offen, und der nächste Start nimmt sie wieder — das ist heute so und vermutlich richtig. Zu klären bleibt,
-ob es daneben ein „diesen Posten nie“ braucht (ein Bild, das jeden Lauf scheitern lässt) und wie das aussieht.
+**Entschieden (27.09.2026): Abbrechen bei einem Systemjob heisst anhalten bis zum nächsten Start.** Der Job endet,
+die Posten bleiben offen, der nächste Start nimmt sie wieder; der Knopf im Tasker bleibt, sein Text sagt genau das
+(`abbruchText`). Ein „diesen Posten nie“ braucht es nicht: ein Bild, das der Leser nicht kennt, bekommt seinen Eintrag
+mit Mass 0 × 0, ein Dokument ohne Text seinen Zustand `fehler` — beides ist erledigt, nicht offen.
 
 ### Gebaut am 27.09.2026 (Block A)
 
@@ -1664,9 +1664,8 @@ Oberfläche zeigt ohne das Recht weder Datei-Link noch PDF-Rahmen noch Zuschnitt
 fehlt. **Fristen:** `valid_from`, `valid_until` (Datum), `licence` (Werteliste, beginnt leer), `source` (Text) in der
 Gruppe `media`. Die Regel `Medium.GueltigAm(tag)` beantworten Bibliothek (`valid`, `expired`, Facette
 „abgelaufen“, Filter `valid=yes|no|expired`), Knoten (⌛ an der Kachel) und Relationen (`RelationEnd.Valid`) gleich.
-**Offen und den Plugins überlassen:** dass ein abgelaufenes Bild aus Export und Datenblatt fällt — `RelationEnd.Valid`
-sagt es ihnen, die Erzeuger müssen es lesen (Siegel). Rechte je Ordner: gebaut (27.09.2026, siehe H),
-nicht hier.
+**Gebaut (27.09.2026):** ein abgelaufenes Bild fällt aus der Ausleitung — `GET /api/nodes/{id}/relations?export=true`
+lässt es weg, `xport` und `rag` fragen so (siehe I: `RelationView.Ausleitbar`). Rechte je Ordner: gebaut, siehe H.
 
 **H, Nachtrag — Rechte je Ordner gebaut (27.09.2026), zusammen mit „Rollen je Teilbaum“.** Ein Ordner der Bibliothek
 nennt Rollen, die ihn sehen (`MediaFolderRestricted {roles[]}` am Ordnerstrom, 🔒 am Ordner); das gilt für seine
@@ -1818,8 +1817,13 @@ Export (34 J).
 
 - ~~Nur die Leitsprache~~ — je Sprache des Modells ein Text und ein Vektor je Knoten (27.09.2026); `/nodes/semantic`
   und `/nodes/{id}/similar` nehmen `locale`, Vorgabe die Leitsprache.
-- Kein Index auf den Vektorspalten (HNSW braucht eine feste Dimension): bis einige zehntausend Abschnitte ist die
-  genaue Suche schnell genug; darüber ein Index je Modell.
+- ~~Kein Index auf den Vektorspalten~~ — gebaut (27.09.2026): je Modell und Dimension ein HNSW-Teilindex über
+  `embedding::vector(N)` mit `WHERE model = '…'` (`Vectors.EnsureIndexAsync`, nach jeder Ablage, einmal je Prozess).
+  Die Suche fragt mit demselben Ausdruck und dem Modell als Wortlaut, sonst nähme der Planer den Teilindex nicht;
+  ein Modellname darf darum nur Bezeichnerzeichen tragen (`ModelLiteral`). Scheitert der Index (Zeilen mit anderer
+  Dimension unter demselben Modell), bleibt die Suche genau und langsam, der Grund steht in `GET /api/docs/embed`
+  (`indexError`). HNSW ist näherungsweise: mit `ef_search` 40 (Vorgabe) fehlt selten ein Treffer am Rand — für die
+  Suche nach Sinn ist das die richtige Seite des Tauschs.
 - ~~Ein Systemjob-Balken im Tasker~~ — gebaut (27.09.2026): `GET /api/jobs/plugins` gibt `system` und `progress`
   aus dem Manifest mit, der Tasker zeigt oben je Systemjob eine Zeile mit Balken (erledigt von gesamt), den Zahlen
   und ▶; `POST /api/jobs/system/{plugin}/run` legt den Job an, wenn es keinen gibt, und startet ihn (wie

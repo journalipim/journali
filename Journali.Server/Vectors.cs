@@ -69,6 +69,57 @@ public sealed class Vectors
         return sb.Append(']').ToString();
     }
 
+    /// <summary>Die Umkehrung von <see cref="Literal"/>: <c>[0.1,0.2]</c> wird ein Vektor — für den eigenen Vektor eines Knotens.</summary>
+    public static float[] ParseLiteral(string s) =>
+        s.Trim().TrimStart('[').TrimEnd(']').Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+
+    // ---- Der Index (27.09.2026) -------------------------------------------------------------
+    // HNSW braucht eine feste Dimension; die Spalte hat keine, weil das Modell wechseln darf. Darum je Modell und
+    // Dimension ein Teilindex über den Ausdruck embedding::vector(N) mit WHERE model = '…'. Die Suche muss genau so
+    // fragen — mit demselben Ausdruck und dem Modell als Wortlaut im SQL, nicht als Parameter: ein Teilindex gilt nur,
+    // wenn der Planer die Bedingung beweisen kann, und einen Parameter kann er nicht beweisen. Ein Modellname ist ein
+    // Bezeichner (Buchstaben, Ziffern, _ . / : -), sonst wird er abgewiesen — so kommt kein SQL in den Wortlaut.
+
+    private readonly HashSet<(string Table, string Model, int Dims)> _indexed = new();
+    /// <summary>Warum der letzte Index nicht entstand (Zeilen mit anderer Dimension unter demselben Modell) — null, wenn alles gut ging.</summary>
+    public string? IndexError { get; private set; }
+
+    /// <summary>Der Modellname als SQL-Wortlaut — nur Bezeichnerzeichen, sonst eine Ausnahme.</summary>
+    public static string ModelLiteral(string model)
+    {
+        if (string.IsNullOrEmpty(model) || model.Length > 200 || !model.All(ch => char.IsAsciiLetterOrDigit(ch) || ch is '_' or '.' or '/' or ':' or '-'))
+            throw new InvalidOperationException("Modellname ungültig.");
+        return "'" + model + "'";
+    }
+
+    /// <summary>Ein gültiger, stabiler Indexname je Tabelle, Modell und Dimension.</summary>
+    public static string IndexName(string table, string model, int dims)
+    {
+        var hash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(model)))[..8].ToLowerInvariant();
+        return $"{table}_hnsw_{dims}_{hash}";
+    }
+
+    /// <summary>Den Teilindex anlegen, wenn er fehlt — einmal je Prozess und Kombination. Scheitert er (eine Zeile mit anderer
+    /// Dimension unter demselben Modell), bleibt die Suche genau und langsam; der Grund steht in <see cref="IndexError"/>.</summary>
+    private async Task EnsureIndexAsync(NpgsqlConnection conn, string table, string model, int dims, CancellationToken ct)
+    {
+        if (dims <= 0 || dims > 16000) return;
+        lock (_indexed) if (!_indexed.Add((table, model, dims))) return;
+        try
+        {
+            await using var cmd = new NpgsqlCommand($"CREATE INDEX IF NOT EXISTS {IndexName(table, model, dims)} ON {table} USING hnsw ((embedding::vector({dims})) vector_cosine_ops) WHERE model = {ModelLiteral(model)}", conn);
+            cmd.CommandTimeout = 600;
+            await cmd.ExecuteNonQueryAsync(ct);
+            IndexError = null;
+        }
+        catch (Exception e)
+        {
+            lock (_indexed) _indexed.Remove((table, model, dims));
+            IndexError = e.Message;
+        }
+    }
+
     /// <summary>Was ein Modell für ein Medium sinnvoll aufnimmt: Überschrift und Text, sonst nur der Text.</summary>
     public static string Passage(string? heading, string body) => string.IsNullOrWhiteSpace(heading) ? body : heading + "\n" + body;
 
@@ -119,6 +170,7 @@ public sealed class Vectors
             n += await cmd.ExecuteNonQueryAsync(ct);
         }
         await tx.CommitAsync(ct);
+        if (items.FirstOrDefault(i => i.Vector is { Length: > 0 }) is { } erster) await EnsureIndexAsync(conn, "media_vector", model, erster.Vector.Length, ct);
         return n;
     }
 
@@ -129,16 +181,16 @@ public sealed class Vectors
         if (!Ready) return list;
         var only = media is { Count: > 0 };
         await using var conn = await _db!.OpenConnectionAsync(ct);
+        var dims = query.Length;
         await using var cmd = new NpgsqlCommand($"""
-            SELECT v.media, t.sha256, v.seq, t.page, t.heading, t.body, v.embedding <=> @q::vector AS d
+            SELECT v.media, t.sha256, v.seq, t.page, t.heading, t.body, v.embedding::vector({dims}) <=> @q::vector({dims}) AS d
             FROM media_vector v
             JOIN media_text t ON t.media = v.media AND t.seq = v.seq AND t.sha256 = v.sha256
-            WHERE v.model = @model{(only ? " AND v.media = ANY(@ids)" : "")}
-            ORDER BY d, v.media, v.seq
+            WHERE v.model = {ModelLiteral(model)}{(only ? " AND v.media = ANY(@ids)" : "")}
+            ORDER BY v.embedding::vector({dims}) <=> @q::vector({dims}), v.media, v.seq
             LIMIT @n
             """, conn);
         cmd.Parameters.AddWithValue("q", Literal(query));
-        cmd.Parameters.AddWithValue("model", model);
         cmd.Parameters.AddWithValue("n", Math.Clamp(limit, 1, 500));
         if (only) cmd.Parameters.Add("ids", NpgsqlDbType.Array | NpgsqlDbType.Text).Value = media!.ToArray();
         await using var r = await cmd.ExecuteReaderAsync(ct);
@@ -202,6 +254,7 @@ public sealed class Vectors
             }
         }
         await tx.CommitAsync(ct);
+        if (items.FirstOrDefault(i => i.Vector is { Length: > 0 }) is { } erster) await EnsureIndexAsync(conn, "node_vector", model, erster.Vector.Length, ct);
         return n;
     }
 
@@ -211,12 +264,13 @@ public sealed class Vectors
         var list = new List<KnotenTreffer>();
         if (!Ready) return list;
         await using var conn = await _db!.OpenConnectionAsync(ct);
+        var dims = query.Length;
         await using var cmd = new NpgsqlCommand($"""
-            SELECT node, locale, embedding <=> @q::vector AS d FROM node_vector
-            WHERE model = @model AND locale = @l{(exclude is null ? "" : " AND node <> @x")}
-            ORDER BY d, node LIMIT @n
+            SELECT node, locale, embedding::vector({dims}) <=> @q::vector({dims}) AS d FROM node_vector
+            WHERE model = {ModelLiteral(model)} AND locale = @l{(exclude is null ? "" : " AND node <> @x")}
+            ORDER BY embedding::vector({dims}) <=> @q::vector({dims}), node LIMIT @n
             """, conn);
-        cmd.Parameters.AddWithValue("q", Literal(query)); cmd.Parameters.AddWithValue("model", model); cmd.Parameters.AddWithValue("l", locale);
+        cmd.Parameters.AddWithValue("q", Literal(query)); cmd.Parameters.AddWithValue("l", locale);
         cmd.Parameters.AddWithValue("n", Math.Clamp(limit, 1, 200));
         if (exclude is not null) cmd.Parameters.AddWithValue("x", exclude);
         await using var r = await cmd.ExecuteReaderAsync(ct);
@@ -227,23 +281,16 @@ public sealed class Vectors
     /// <summary>Die Knoten, die einem Knoten am nächsten stehen — aus seinem eigenen Vektor, ohne neue Einbettung.</summary>
     public async Task<(bool Known, List<KnotenTreffer> Hits)> SimilarNodesAsync(string model, string node, string locale, int limit, CancellationToken ct = default)
     {
-        var list = new List<KnotenTreffer>();
-        if (!Ready) return (false, list);
-        await using var conn = await _db!.OpenConnectionAsync(ct);
-        await using var cmd = new NpgsqlCommand("""
-            SELECT b.node, b.locale, a.embedding <=> b.embedding AS d
-            FROM node_vector a JOIN node_vector b ON b.model = a.model AND b.locale = a.locale AND b.node <> a.node
-            WHERE a.node = @n AND a.locale = @l AND a.model = @model
-            ORDER BY d, b.node LIMIT @k
-            """, conn);
-        cmd.Parameters.AddWithValue("n", node); cmd.Parameters.AddWithValue("l", locale); cmd.Parameters.AddWithValue("model", model);
-        cmd.Parameters.AddWithValue("k", Math.Clamp(limit, 1, 200));
-        await using var r = await cmd.ExecuteReaderAsync(ct);
-        while (await r.ReadAsync(ct)) list.Add(new KnotenTreffer(r.GetString(0), r.GetString(1), r.GetDouble(2)));
-        if (list.Count > 0) return (true, list);
-        await using var known = new NpgsqlCommand("SELECT 1 FROM node_vector WHERE node = @n AND locale = @l AND model = @model", conn);
-        known.Parameters.AddWithValue("n", node); known.Parameters.AddWithValue("l", locale); known.Parameters.AddWithValue("model", model);
-        return (await known.ExecuteScalarAsync(ct) is not null, list);
+        if (!Ready) return (false, []);
+        string? eigen;
+        await using (var conn = await _db!.OpenConnectionAsync(ct))
+        {
+            await using var cmd = new NpgsqlCommand("SELECT embedding::text FROM node_vector WHERE node = @n AND locale = @l AND model = @model", conn);
+            cmd.Parameters.AddWithValue("n", node); cmd.Parameters.AddWithValue("l", locale); cmd.Parameters.AddWithValue("model", model);
+            eigen = await cmd.ExecuteScalarAsync(ct) as string;
+        }
+        if (eigen is null) return (false, []);
+        return (true, await SearchNodesAsync(model, ParseLiteral(eigen), locale, limit, node, ct));
     }
 
     /// <summary>Zahlen für die Anzeige und den Balken: Abschnitte gesamt und mit Vektor zu diesem Modell, Knoten mit Vektor.</summary>

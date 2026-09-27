@@ -106,7 +106,7 @@ public static class SemanticApi
             var known = await vectors.NodeHashesAsync(m, ct);
             var texte = KnotenTexte(c);
             var offeneKnoten = PendingNodes(texte, known).Count;
-            return Results.Ok(new { ready = true, reason = (string?)null, model = m, plugin = embedder.Available, pluginReason = embedder.Reason,
+            return Results.Ok(new { ready = true, reason = (string?)null, model = m, plugin = embedder.Available, pluginReason = embedder.Reason, indexError = vectors.IndexError,
                 chunks, embedded, nodes = nodesDone, nodesTotal = texte.Count, offen = (chunks - embedded) + offeneKnoten, gelesen = embedded + nodesDone, total = chunks + texte.Count });
         });
 

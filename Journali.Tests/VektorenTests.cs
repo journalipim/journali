@@ -44,6 +44,22 @@ public class VektorenTests
     }
 
     [Fact]
+    public void Der_Index_je_Modell_und_Dimension_hat_einen_gueltigen_Namen_und_nur_Bezeichner_im_Wortlaut()
+    {
+        var name = Vectors.IndexName("media_vector", "Xenova/multilingual-e5-small", 384);
+        Assert.Matches("^media_vector_hnsw_384_[0-9a-f]{8}$", name);
+        Assert.Equal(name, Vectors.IndexName("media_vector", "Xenova/multilingual-e5-small", 384));
+        Assert.NotEqual(name, Vectors.IndexName("media_vector", "anderes/modell", 384));
+        Assert.Equal("'Xenova/multilingual-e5-small'", Vectors.ModelLiteral("Xenova/multilingual-e5-small"));
+        Assert.Throws<InvalidOperationException>(() => Vectors.ModelLiteral("x' OR 1=1 --"));
+        Assert.Throws<InvalidOperationException>(() => Vectors.ModelLiteral(""));
+        // die Schreibweise hin und zurück
+        float[] v = [0.5f, -1f, 0.25f];
+        Assert.Equal(v, Vectors.ParseLiteral(Vectors.Literal(v)));
+        Assert.Equal(v, Vectors.ParseLiteral("[0.5, -1, 0.25]"));
+    }
+
+    [Fact]
     public void Der_Text_eines_Knotens_nennt_Name_Rolle_Pfad_und_Werte_mit_Bezeichnung_und_Einheit()
     {
         var j = new MemoryJournal();
