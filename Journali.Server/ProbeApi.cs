@@ -40,16 +40,29 @@ public static class ProbeApi
             var n = Math.Clamp(limit, 1, 5000);
             var offen = c.Lesen((_, _) => (again ? c.Media.Unknown() : c.Media.Unprobed()).Take(n).Select(m => (m.Id, m.Sha256)).ToList());
             int gelesen = 0, unbekannt = 0, fehlt = 0;
+            // Erst alle Köpfe lesen — das dauert und braucht keine Sperre —, dann in einem Zug schreiben. Einzeln
+            // geschrieben nahm jeder der 200 Posten die Schreibsperre und schrieb einzeln in die Datenbank; dazwischen
+            // kam kein Leser mehr durch, und die Oberfläche stand sekundenlang (27.09.2026 gemessen: bis 19 s).
+            var gemessen = new List<(string Id, MediaProbed Probe)>();
             foreach (var (id, sha) in offen)
             {
                 ct.ThrowIfCancellationRequested();
-                switch (await EinsAsync(c, store, id, sha, actor, ct))
-                {
-                    case Ergebnis.Gelesen: gelesen++; break;
-                    case Ergebnis.Unbekannt: unbekannt++; break;
-                    default: fehlt++; break;
-                }
+                var probe = await KopfAsync(store, sha, ct);
+                if (probe is null) { fehlt++; continue; }
+                gemessen.Add((id, probe));
             }
+            if (gemessen.Count > 0)
+                c.With((_, _, write) =>
+                {
+                    foreach (var (id, probe) in gemessen)
+                    {
+                        if (!c.Media.All.TryGetValue(id, out var m)) { fehlt++; continue; }   // inzwischen zurückgezogen
+                        if (m.Probe is { Width: > 0 }) { gelesen++; continue; }               // ein anderer Lauf war schneller
+                        write(actor, id, Types.MediaProbed, probe, null);
+                        if (probe.Width > 0) gelesen++; else unbekannt++;
+                    }
+                    return 0;
+                });
             return c.Lesen((_, _) => Results.Ok(new { gelesen, unbekannt, fehlt, offen = again ? c.Media.Unknown().Count() : c.Media.Unprobed().Count() }));
         });
 
@@ -68,19 +81,25 @@ public static class ProbeApi
     /// Einen Kopf lesen und festhalten, was darin stand. Gelesen wird aus dem Store, nicht aus der Anfrage:
     /// derselbe Weg gilt dann fürs Hochladen, fürs Holen und fürs Nachlesen im Bestand.
     /// </summary>
-    private static async Task<Ergebnis> EinsAsync(Catalog c, IMediaStore store, string id, string sha, string actor, CancellationToken ct)
+    /// <summary>Den Kopf einer Datei lesen und ausmessen — ohne Sperre, das dauert. Null: die Bytes fehlen im Store.</summary>
+    private static async Task<MediaProbed?> KopfAsync(IMediaStore store, string sha, CancellationToken ct)
     {
         byte[] kopf;
         try
         {
             var stream = await store.OpenAsync(sha, ct);
-            if (stream is null) return Ergebnis.Fehlt;   // Bytes fehlen im Store — /api/media/missing zeigt das
+            if (stream is null) return null;   // Bytes fehlen im Store — /api/media/missing zeigt das
             await using (stream) kopf = await MediaProbe.KopfAsync(stream, ct);
         }
         catch (OperationCanceledException) { throw; }
-        catch (IOException) { return Ergebnis.Fehlt; }
+        catch (IOException) { return null; }
         // Unbekanntes Format: 0 × 0 halten wir fest, damit der Posten nicht offen bleibt
-        var probe = MediaProbe.Lies(kopf) ?? new MediaProbed(0, 0);
+        return MediaProbe.Lies(kopf) ?? new MediaProbed(0, 0);
+    }
+
+    private static async Task<Ergebnis> EinsAsync(Catalog c, IMediaStore store, string id, string sha, string actor, CancellationToken ct)
+    {
+        if (await KopfAsync(store, sha, ct) is not { } probe) return Ergebnis.Fehlt;
         return c.With((_, _, write) =>
         {
             if (!c.Media.All.TryGetValue(id, out var m)) return Ergebnis.Fehlt;   // inzwischen zurückgezogen
