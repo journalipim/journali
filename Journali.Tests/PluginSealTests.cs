@@ -89,18 +89,44 @@ public class PluginSealTests
     [Fact]
     public void Core_Plugins_mit_Zertifikat_sind_gueltig()
     {
-        var root = AppContext.BaseDirectory;
-        string? plugins = null;
-        for (var d = new DirectoryInfo(root); d is not null; d = d.Parent) { var p = Path.Combine(d.FullName, "plugins"); if (File.Exists(Path.Combine(p, "table", "plugin.json"))) { plugins = p; break; } }
-        Assert.NotNull(plugins);
+        var plugins = PluginVerzeichnis();
         var broken = new List<string>();
-        foreach (var dir in Directory.GetDirectories(plugins!))
+        foreach (var dir in Directory.GetDirectories(plugins))
         {
             if (!File.Exists(Path.Combine(dir, PluginSeal.FileName))) continue;
-            var m = PluginApi.Scan(plugins!)[Path.GetFileName(dir)];
+            var m = PluginApi.Scan(plugins)[Path.GetFileName(dir)];
             if (!m.Seal.Certified) broken.Add($"{m.Key}: {m.Seal.Grund}");
         }
         Assert.Empty(broken);
+    }
+
+    /// <summary>
+    /// Jedes ausgelieferte Plugin hat ein Siegel (27.09.2026): ein <b>fehlendes</b> fiel bis dahin niemandem auf — der
+    /// Prüfstand oben sah nur die, die schon eines hatten, und ein neues Plugin rutschte ungesiegelt durch.
+    /// Signiert wird mit <c>node tools/plugin-cert.mjs sign &lt;key&gt;</c>, nach dem Bau.
+    /// </summary>
+    [Fact]
+    public void Jedes_Core_Plugin_hat_ein_Zertifikat()
+    {
+        var plugins = PluginVerzeichnis();
+        var ohne = Directory.GetDirectories(plugins)
+            .Where(d => File.Exists(Path.Combine(d, "plugin.json")) && !File.Exists(Path.Combine(d, PluginSeal.FileName)))
+            .Select(Path.GetFileName)
+            .Order()
+            .ToList();
+        Assert.Empty(ohne);
+    }
+
+    /// <summary>Das Verzeichnis <c>plugins/</c> im Repo — gesucht vom Bau aufwärts.</summary>
+    private static string PluginVerzeichnis()
+    {
+        for (var d = new DirectoryInfo(AppContext.BaseDirectory); d is not null; d = d.Parent)
+        {
+            var p = Path.Combine(d.FullName, "plugins");
+            if (File.Exists(Path.Combine(p, "table", "plugin.json"))) return p;
+        }
+        Assert.Fail("plugins/ nicht gefunden");
+        return "";
     }
 
     [Fact]
