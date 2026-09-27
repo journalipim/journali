@@ -32,7 +32,11 @@ async function save() {
   // neue Werte (Textzeilen bei enum) zuerst anlegen — danach prüft check wie sonst
   if (props.list && free.value.size) { for (const i of free.value) { const x = rows.value[i].trim(); if (!x) continue; try { rows.value[i] = await ensureListValue(props.list, x) } catch (e) { error.value = { i, message: e.message }; focusRow(i); return } } free.value = new Set() }
   if (props.check) for (const [i, x] of rows.value.entries()) { const m = x.trim() ? props.check(x.trim()) : null; if (m) { error.value = { i, message: m }; focusRow(i); return } }
-  open.value = false; const v = rows.value.map(x => x.trim()).filter(Boolean).join(','); if (v !== (props.value ?? '')) emit('save', v)
+  open.value = false
+  const v = rows.value.map(x => x.trim()).filter(Boolean).join(',')
+  // Leer über einem geerbten Wert heisst „hier gilt nichts“ und geht hinaus, obwohl der eigene Wert schon leer war
+  // (27.09.2026: dieselbe Stelle wie in Cell.vue — die Knotenansicht macht daraus einen eigenen leeren Wert)
+  if (v !== (props.value ?? '') || (v === '' && props.value == null && props.inherited != null)) emit('save', v)
 }
 function cancel() { open.value = false; error.value = null }
 function onKey(e, i) {

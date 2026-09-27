@@ -19,9 +19,10 @@ const MODELL = {
   attributes: [
     { key: 'name', label: { de: 'Name' }, type: 'text', group: 'basis', inheritable: true },
     { key: 'farbe', label: { de: 'Farbe' }, type: 'enum', list: 'farben', group: 'basis', inheritable: true },
+    { key: 'laender', label: { de: 'Länder' }, type: 'enum', list: 'farben', group: 'basis', inheritable: true, multiple: true },
   ],
 }
-const GRUPPE = [{ key: 'basis', from: 'g1', fromLabel: 'Mastertree', active: true, attributes: ['name', 'farbe'] }]
+const GRUPPE = [{ key: 'basis', from: 'g1', fromLabel: 'Mastertree', active: true, attributes: ['name', 'farbe', 'laender'] }]
 const KNOTEN = { id: 'p1', role: 'product', label: 'Bohrer', status: 'draft', children: 0, axes: [], attachedGroups: [], values: [], groups: GRUPPE }
 /// Der Vorfahr trägt beide Werte — das Produkt erbt sie
 const VORFAHR = {
@@ -29,6 +30,7 @@ const VORFAHR = {
   values: [
     { attribute: 'name', locale: null, channel: null, value: 'Modellname', row: null },
     { attribute: 'farbe', locale: null, channel: null, value: 'rot', row: null },
+    { attribute: 'laender', locale: null, channel: null, values: ['rot', 'blau'], row: null },
   ],
 }
 
@@ -116,5 +118,22 @@ test('↓ an der Attributzeile stellt die Vererbung wieder her', async () => {
   assert.equal(posts.length, 1)
   assert.match(posts[0].pfad, /\/api\/nodes\/p1\/attributes$/, 'der Rückweg ging als „hier gilt nichts“ hinaus')
   assert.equal(posts[0].rumpf.value, '')
+  w.unmount()
+})
+
+// Dieselbe Stelle in der Listenzelle: ein mehrfaches Attribut, dessen Wert von oben kommt — die Zeilen leeren und ✓
+test('Listenzelle: alle Zeilen leeren schreibt „hier gilt nichts“', async () => {
+  const { w, rufe } = await knoten()
+  const zl = zeile(w, 'Länder')
+  await zl.find('.cell-box').trigger('keydown', { key: 'Enter' }); await flushPromises()
+  // jede Zeile leeren, dann ✓
+  for (const feld of zl.findAll('select, input')) if (feld.element.tagName === 'SELECT') await feld.setValue(''); else await feld.setValue('')
+  const ok = zl.findAll('button').find(b => b.text() === '✓')
+  assert.ok(ok, 'der Knopf zum Übernehmen fehlt')
+  await ok.trigger('click'); await flushPromises()
+  const posts = raus(rufe)
+  assert.equal(posts.length, 1, 'beim Leeren ging nichts hinaus')
+  assert.match(posts[0].pfad, /\/api\/nodes\/p1\/attributes\/clear$/)
+  assert.equal(posts[0].rumpf.attribute, 'laender')
   w.unmount()
 })
