@@ -1665,8 +1665,17 @@ fehlt. **Fristen:** `valid_from`, `valid_until` (Datum), `licence` (Werteliste, 
 Gruppe `media`. Die Regel `Medium.GueltigAm(tag)` beantworten Bibliothek (`valid`, `expired`, Facette
 „abgelaufen“, Filter `valid=yes|no|expired`), Knoten (⌛ an der Kachel) und Relationen (`RelationEnd.Valid`) gleich.
 **Offen und den Plugins überlassen:** dass ein abgelaufenes Bild aus Export und Datenblatt fällt — `RelationEnd.Valid`
-sagt es ihnen, die Erzeuger müssen es lesen (Siegel). Rechte je Ordner: mit „Rollen je Teilbaum“ (`architektur.md`),
+sagt es ihnen, die Erzeuger müssen es lesen (Siegel). Rechte je Ordner: gebaut (27.09.2026, siehe H),
 nicht hier.
+
+**H, Nachtrag — Rechte je Ordner gebaut (27.09.2026), zusammen mit „Rollen je Teilbaum“.** Ein Ordner der Bibliothek
+nennt Rollen, die ihn sehen (`MediaFolderRestricted {roles[]}` am Ordnerstrom, 🔒 am Ordner); das gilt für seine
+Unterordner und die Medien darin, bis ein Unterordner eigene nennt. Dieselbe Mechanik am Baum: `NodeRestricted` am
+Knoten („Sichtbar für Rollen …“ im Kontextmenü), ab dort abwärts. Leer = für alle. Administratoren (Recht `users`)
+und der Dienst der Jobs sehen immer alles; ohne Anmeldung gilt nichts davon. Die Sperre sitzt zentral: ein Knoten,
+Medium oder Ordner, den die Rolle nicht sieht, ist 403 (`Auth.Sichtbar`, jeder Pfad), und die Listen filtern in
+derselben Sicht (`Auth.Sicht`: Baum, Suche, Bibliothek, Facetten, Ordner, Relationen, Verwendung). Kein gesperrter
+Abschnitt, kein Hinweis auf Verborgenes — wer es nicht sieht, sieht es nicht.
 
 **I. Workflows für Assets — gebaut (27.09.2026), Weg (a).** Derselbe Workflow: `roles` darf `media` enthalten —
 **nur ausdrücklich**, eine leere Liste heisst „alle Pflegeknoten“, nicht „auch jedes Bild“ (`WorkflowDef.AppliesToMedium`;

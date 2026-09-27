@@ -51,6 +51,16 @@ function toggle(id) { open.value.has(id) ? open.value.delete(id) : open.value.ad
 function pickFolder(id) { folder.value = id; localStorage.setItem('journali.media.folder', id); sel.value = new Set(); load() }
 watch(deep, v => { localStorage.setItem('journali.media.deep', v ? 'on' : 'off'); load() })
 async function loadFolders() { try { folders.value = await api.get('/api/media/folders') } catch (e) { store.toast(e.message) } }
+/// Sichtbar für Rollen (27.09.2026): der Ordner, seine Unterordner und die Medien darin — nur für diese Rollen. Leer = für alle.
+async function restrictFolder(f) {
+  let rollen = []
+  try { rollen = (await api.get('/api/auth/roles')).map(r => r.key) } catch { rollen = [] }
+  const eingabe = await dialog.prompt({ title: t_('Sichtbar für Rollen — {0}', [f.name]), text: t_('Rollen mit Komma, leer = für alle. Administratoren sehen immer alles.') + (rollen.length ? ' · ' + rollen.join(', ') : ''), value: (f.roles ?? []).join(', '), placeholder: rollen.join(', '), ok: t_('✓ Setzen') })
+  if (eingabe === null) return
+  const roles = eingabe.split(/[,\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean)
+  try { await api.post(`/api/media/folders/${encodeURIComponent(f.id)}/roles`, { roles }, 'PUT'); await loadFolders(); store.toast(roles.length ? t_('{0}: sichtbar für {1}', [f.name, roles.join(', ')]) : t_('{0}: sichtbar für alle', [f.name]), 'ok') }
+  catch (e) { store.toast(e.message) }
+}
 
 async function newFolder(parent = null) {
   const name = await dialog.prompt({ title: t_('Ordner anlegen'), text: parent ? `in „${byId.value.get(parent)?.name}“` : t_('oberste Ebene'), placeholder: t_('Name'), ok: t_('+ Anlegen') })
@@ -362,8 +372,8 @@ const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id
         @dragover="canDrop(r.f.id) && ($event.preventDefault(), dragTarget = r.f.id)" @dragleave="dragTarget = null" @drop="dropOn(r.f.id, $event)"
         @click="pickFolder(r.f.id)" :title="$t('{0} hier · {1} mit Unterordnern — ziehen: Ordner verschieben', [r.f.media, below(r.f.id)])">
         <span class="muted caret" @click.stop="toggle(r.f.id)">{{ r.kids ? (open.has(r.f.id) ? '▾' : '▸') : '' }}</span>
-        <span class="fname">📁 {{ r.f.name }}</span><span class="muted cnt">{{ deep ? below(r.f.id) : r.f.media }}</span>
-        <span class="acts"><button class="x" @click.stop="newFolder(r.f.id)" :title="$t('Unterordner anlegen')">+</button><button class="x" @click.stop="renameFolder(r.f)" :title="$t('umbenennen')">✎</button><button class="x" @click.stop="deleteFolder(r.f)" :title="$t('löschen (nur leer)')">🗑</button></span>
+        <span class="fname">📁 {{ r.f.name }}<span v-if="r.f.roles?.length" class="lock" :title="$t('sichtbar nur für: {0}', [r.f.roles.join(', ')])">{{ ' 🔒' }}</span></span><span class="muted cnt">{{ deep ? below(r.f.id) : r.f.media }}</span>
+        <span class="acts"><button class="x" @click.stop="newFolder(r.f.id)" :title="$t('Unterordner anlegen')">+</button><button class="x" @click.stop="renameFolder(r.f)" :title="$t('umbenennen')">✎</button><button class="x" @click.stop="restrictFolder(r.f)" :title="$t('sichtbar für Rollen …')">🔒</button><button class="x" @click.stop="deleteFolder(r.f)" :title="$t('löschen (nur leer)')">🗑</button></span>
       </div>
       <div v-if="!rows.length" class="empty" style="padding:12px 8px"><span :title="$t('+ legt einen an; Kacheln lassen sich hineinziehen.')">{{ $t("Noch kein Ordner") }}</span></div>
     </div>

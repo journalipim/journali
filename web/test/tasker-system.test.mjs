@@ -49,3 +49,13 @@ test('der Block: Balken als Füllstand, Zahlen, ▶ startet das Nachholen — ei
   assert.deepEqual(gestartet, ['embed'])
   assert.equal(box2.querySelector('.fill').style.width, '0%')
 })
+
+// Abbrechen eines Systemjobs ist Anhalten (27.09.2026): die offenen Posten bleiben offen, der Text sagt es
+import { abbruchText } from '../../plugins/tasker/entry.js'
+test('bei einem Systemjob heisst Abbrechen anhalten bis zum nächsten Start', () => {
+  const plugins = [{ key: 'probe', system: true }, { key: 'csv', system: false }]
+  const s = abbruchText({ plugin: 'probe', label: 'Masse' }, plugins)
+  assert.match(s.title, /anhalten bis zum nächsten Start/); assert.match(s.toast, /Masse angehalten/)
+  const n = abbruchText({ plugin: 'csv', label: 'Export' }, plugins)
+  assert.equal(n.title, 'abbrechen'); assert.match(n.toast, /Export abgebrochen/)
+})

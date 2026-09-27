@@ -84,6 +84,8 @@ public sealed class MediaFolder
     public required string Id { get; init; }
     public required string Name { get; set; }
     public string? Parent { get; set; }
+    /// <summary>Rollen, die diesen Ordner samt Unterordnern und Medien sehen (MediaFolderRestricted); leer = keine eigene Einschränkung.</summary>
+    public string[] VisibleTo { get; set; } = [];
     public long LastNumber { get; set; }
 }
 
@@ -118,6 +120,19 @@ public sealed class Media : IProjection
 
     public IReadOnlyDictionary<string, Medium> All => _all;
     public IReadOnlyDictionary<string, MediaFolder> Folders => _folders;
+
+    /// <summary>Die Einschränkung, die an einem Ordner gilt: die eigene, sonst die des nächsten Elternordners mit einer; null = für alle.</summary>
+    public string[]? FolderRestriction(string? folderId)
+    {
+        var seen = new HashSet<string>();
+        for (var id = folderId; id is not null && seen.Add(id) && _folders.TryGetValue(id, out var f); id = f.Parent)
+            if (f.VisibleTo.Length > 0) return f.VisibleTo;
+        return null;
+    }
+    /// <summary>Sieht diese Rolle den Ordner? Ohne Anmeldung und als Administrator immer.</summary>
+    public bool FolderVisible(string? folderId, string? role, bool admin = false) => role is null || admin || FolderRestriction(folderId) is not { } r || r.Contains(role);
+    /// <summary>Sieht diese Rolle das Medium? Ein Medium ohne Ordner sieht jeder; sonst gilt der Ordner (27.09.2026).</summary>
+    public bool Visible(Medium m, string? role, bool admin = false) => FolderVisible(m.Folder, role, admin);
 
     /// <summary>Ordner unter diesem (null = oberste Ebene), nach Name.</summary>
     public IEnumerable<MediaFolder> SubFolders(string? parent) => _folders.Values.Where(f => f.Parent == parent).OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
@@ -177,6 +192,9 @@ public sealed class Media : IProjection
                 return;
             case Types.MediaFolderMoved:
                 if (_folders.TryGetValue(entry.Stream, out var fm)) { fm.Parent = Types.Deserialize<MediaFolderMoved>(entry.Payload).Parent; fm.LastNumber = entry.Number; }
+                return;
+            case Types.MediaFolderRestricted:
+                if (_folders.TryGetValue(entry.Stream, out var fx)) { fx.VisibleTo = Types.Deserialize<MediaFolderRestricted>(entry.Payload).Roles?.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToArray() ?? []; fx.LastNumber = entry.Number; }
                 return;
             case Types.MediaFolderRetired:
                 if (_folders.Remove(entry.Stream))

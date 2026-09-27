@@ -56,7 +56,8 @@ public static class Kinds
             or Types.RubricCreated or Types.PubTreeSet or Types.PubStandSet
             or Types.NodePlaced or Types.NodeUnplaced or Types.PlaceNamed
             or Types.RulePlaced or Types.RuleRemoved
-            or Types.MediaFolderCreated or Types.MediaFolderRenamed or Types.MediaFolderMoved or Types.MediaFolderRetired => Structure,
+            or Types.MediaFolderCreated or Types.MediaFolderRenamed or Types.MediaFolderMoved or Types.MediaFolderRetired
+            or Types.NodeRestricted or Types.MediaFolderRestricted => Structure,
 
         // Referenzdaten von aussen
         Types.PluginDataSet or Types.ListValueDefined or Types.ListValueRetired => Reference,

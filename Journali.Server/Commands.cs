@@ -52,6 +52,17 @@ public static class Commands
         IsRole(c.Tree, id, Roles.Group) ? Outcome.Ok(c.Write(id, Types.GroupRenamed, new GroupRenamed(label ?? new()))) : Outcome.Missing;
 
     /// <summary>Eigener Name im Baum, jede Rolle; leer = weg, die Automatik greift wieder.</summary>
+    /// <summary>Sichtbar für Rollen (27.09.2026): leer = für alle. Geprüft wird die Form der Schlüssel, nicht ihr Bestand —
+    /// eine Rolle, die es noch nicht gibt, sperrt bis dahin alle ausser Administratoren; das ist gewollt und sichtbar.</summary>
+    public static Outcome RestrictNode(Ctx c, string id, string[]? roles)
+    {
+        if (!c.Tree.Nodes.ContainsKey(id)) return Outcome.Missing;
+        var list = Rollen(roles);
+        if (list.Any(r => !ModelApi.ValidKey(r))) return Outcome.Bad("Rollen: nur a-z, 0-9, _.");
+        return Outcome.Ok(c.Write(id, Types.NodeRestricted, new NodeRestricted(list)));
+    }
+    private static string[] Rollen(string[]? roles) => (roles ?? []).Select(r => r.Trim().ToLowerInvariant()).Where(r => r.Length > 0).Distinct().ToArray();
+
     public static Outcome Rename(Ctx c, string id, string? name) =>
         c.Tree.Nodes.ContainsKey(id) ? Outcome.Ok(c.Write(id, Types.NodeNamed, new NodeNamed(Blank(name)))) : Outcome.Missing;
 
@@ -840,6 +851,15 @@ public static class Commands
         if (parent is not null && !c.Media.Folders.ContainsKey(parent)) return Outcome.Bad("Vater: Ordner gibt es nicht.");
         if (c.Media.SubFolders(parent).Any(f => string.Equals(f.Name, n, StringComparison.OrdinalIgnoreCase))) return Outcome.Bad("„{0}“ gibt es hier schon.", n);
         return Outcome.Ok(c.Write(Ids.MediaFolder(), Types.MediaFolderCreated, new MediaFolderCreated(n, parent)));
+    }
+
+    /// <summary>Sichtbar für Rollen am Ordner (27.09.2026): gilt für Unterordner und Medien darin; leer = für alle.</summary>
+    public static Outcome RestrictMediaFolder(Ctx c, string id, string[]? roles)
+    {
+        if (!c.Media.Folders.ContainsKey(id)) return Outcome.Missing;
+        var list = Rollen(roles);
+        if (list.Any(r => !ModelApi.ValidKey(r))) return Outcome.Bad("Rollen: nur a-z, 0-9, _.");
+        return Outcome.Ok(c.Write(id, Types.MediaFolderRestricted, new MediaFolderRestricted(list)));
     }
 
     public static Outcome RenameMediaFolder(Ctx c, string id, string? name)

@@ -2657,5 +2657,15 @@
  "{0} ist kein Systemjob.": "{0} is not a system job.",
  "Plugin {0} ist nicht installiert oder aus (⌁ Plugins).": "Plugin {0} is not installed or switched off (⌁ Plugins).",
  "Ein Job des Tasker, der nach diesem Schritt startet — die Brücke zu Import und Export": "A job of the tasker that starts after this step — the bridge to import and export",
- "⏱ Job": "⏱ Job"
+ "⏱ Job": "⏱ Job",
+ "Sichtbar für Rollen — {0}": "Visible to roles — {0}",
+ "Rollen mit Komma, leer = für alle. Administratoren sehen immer alles.": "Roles separated by commas, empty = for everyone. Administrators always see everything.",
+ "✓ Setzen": "✓ Set",
+ "{0}: sichtbar für {1}": "{0}: visible to {1}",
+ "{0}: sichtbar für alle": "{0}: visible to everyone",
+ "sichtbar nur für: {0}": "visible only to: {0}",
+ "sichtbar für Rollen …": "visible to roles …",
+ "Sichtbar für Rollen …": "Visible to roles …",
+ "Rollen: nur a-z, 0-9, _.": "Roles: only a-z, 0-9, _.",
+ "Für Rolle {0} nicht sichtbar.": "Not visible to role {0}."
 }

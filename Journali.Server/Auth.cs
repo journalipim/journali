@@ -261,8 +261,32 @@ public static class Auth
         if (!Allowed(c, who.Value.Role, ctx.Request)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("Rolle {0} darf das nicht ({1}).", who.Value.Role, Rights.Label.GetValueOrDefault(Needed(ctx.Request) ?? "") ?? Needed(ctx.Request))); return; }
         ctx.Request.Headers["X-Actor"] = who.Value.User;   // der Urheber kommt aus der Sitzung, nicht vom Client
         ctx.Items["user"] = who.Value.User; ctx.Items["role"] = who.Value.Role;
+        // Sichtbarkeit (27.09.2026): ein Knoten oder Medium, das diese Rolle nicht sieht, ist für sie nicht da — 403, egal welcher Weg.
+        // Administratoren (Recht users) und der Dienst der Jobs sehen alles; die Listen filtern selbst (Auth.Sicht).
+        var admin = who.Value.Role == "$service" || IsAdmin(c, who.Value.Role);
+        ctx.Items["admin"] = admin;
+        if (!admin && !Sichtbar(c, who.Value.Role, path)) { ctx.Response.StatusCode = 403; await ctx.Response.WriteAsJsonAsync(Err("Für Rolle {0} nicht sichtbar.", who.Value.Role)); return; }
         await next();
     };
+
+    /// <summary>Die Sicht dieser Anfrage: Rolle (null = keine Anmeldung) und ob sie alles sieht. Liest nur, was die Sperre
+    /// hinterlegt hat — ohne Sperre auf das Abbild, darum auch innerhalb von <c>c.With</c> unbedenklich.</summary>
+    public static (string? Role, bool Admin) Sicht(HttpRequest req) => (req.HttpContext.Items["role"] as string, req.HttpContext.Items["admin"] is true);
+
+    /// <summary>Zeigt der Pfad auf einen Knoten, ein Medium oder einen Ordner, den diese Rolle nicht sieht? Ein Pfadstück, das kein
+    /// bekanntes Ding ist (<c>folders</c>, <c>facets</c>, <c>semantic</c> …), sperrt nichts — der Endpunkt entscheidet selbst.</summary>
+    public static bool Sichtbar(Catalog c, string role, string path)
+    {
+        var teile = path.Split('/', StringSplitOptions.RemoveEmptyEntries);   // api, nodes|media, id, …
+        if (teile.Length < 3) return true;
+        return teile[1] switch
+        {
+            "nodes" => c.With((_, tree, _) => !tree.Nodes.TryGetValue(teile[2], out var n) || tree.Visible(n, role)),
+            "media" when teile[2] == "folders" && teile.Length > 3 => c.With((_, _, _) => c.Media.FolderVisible(teile[3], role)),
+            "media" => c.With((_, _, _) => !c.Media.All.TryGetValue(teile[2], out var m) || c.Media.Visible(m, role)),
+            _ => true,
+        };
+    }
 
     /// <summary>
     /// Ausgesperrt: mit JOURNALI_ADMIN_PASSWORD in der Umgebung setzt der Start das Passwort von

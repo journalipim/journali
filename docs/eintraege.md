@@ -36,6 +36,7 @@ Eintrag übergeht das Abbild.
 | `NodePlaced` | `node`, `order?` | Verweis: Produktgruppe oder Produkt hängt in dieser Rubrik (Strom = Rubrik); derselbe Knoten darf in mehreren Rubriken hängen; keine Vererbung darüber. `order` = Platz in der Rubrik |
 | `NodeUnplaced` | `node` | Verweis weg |
 | `NodeMoved` | `parent` | Umhängen (Variante unter Produkt, Rubrik unter Rubrik, sonst unter Gruppe; nie unter sich selbst) |
+| `NodeRestricted` | `roles[]?` | Sichtbar für diese Rollen — ab hier abwärts, bis ein Nachfahre eigene nennt; leer = für alle (27.09.2026). Administratoren (Recht `users`) und der Dienst der Jobs sehen immer alles; ohne Anmeldung gilt keine Einschränkung |
 | `NodeOrdered` | `order` | Platz unter den Geschwistern (Rubriken). Ohne Eintrag alphabetisch |
 | `NodeRetired` | — | Knoten aus dem Abbild (nur ohne Kinder); das Journal behält alles — das Abbild legt ihn in den Papierkorb |
 | `NodeRestored` | — | Knoten zurück aus dem Papierkorb, mit allem, was er hatte (Werte, Gruppen, Kennungen); der Vater muss im Baum stehen. Rückgängig je Aktion über den Stapel: `POST /api/batches/{batch}/undo` holt genau die Knoten des Stapels zurück |
@@ -117,6 +118,7 @@ Medienordner — Strom
 | `MediaFolderRenamed` | `name` | umbenannt |
 | `MediaFolderMoved` | `parent` | anderer Vater (nicht in sich selbst) |
 | `MediaFolderRetired` | — | Ordner weg — nur leer; das Abbild schiebt Reste eine Ebene hoch |
+| `MediaFolderRestricted` | `roles[]?` | Sichtbar für diese Rollen — der Ordner, seine Unterordner und die Medien darin, bis ein Unterordner eigene nennt; leer = für alle (27.09.2026) |
 
 ## Werte an einem Knoten
 
@@ -267,6 +269,7 @@ steht im Kopf `X-Actor`.
 | `PUT /api/nodes/{id}/groups` `{groups[]}` | `GroupsAttached` |
 | `POST /api/variants` `{product, axisValues{}}` | `VariantCreated` — genau die Produktachsen, Werte geprüft, Kombination eindeutig |
 | `POST /api/nodes/{id}/move` `{parent}` | `NodeMoved` |
+| `PUT /api/nodes/{id}/roles` `{roles[]}` | `NodeRestricted` — sichtbar für Rollen; `PUT /api/media/folders/{id}/roles` ebenso `MediaFolderRestricted`. Listen (`/api/tree`, `/api/search`, `/api/media`, `/api/media/folders`, Relationen, Verwendung) zeigen nur, was die Rolle sieht; ein einzelnes Ding, das sie nicht sieht, ist 403 (`Auth.Sichtbar`) |
 | `POST /api/nodes/{id}/order` `{parent?, before?}` | `NodeMoved` (wenn der Vater wechselt) + `NodeOrdered` je Geschwister, dessen Platz sich ändert |
 | `DELETE /api/nodes/{id}` | `NodeRetired` — nur ohne Kinder |
 | `POST /api/nodes/{id}/status` `{status}` | `StatusSet` |

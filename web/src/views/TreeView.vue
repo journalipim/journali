@@ -437,6 +437,16 @@ async function duplicate(r, deep) {
 // Rechtsklick: was man mit diesem Knoten tun kann — die Tastenkürzel gelten im Menü.
 // Was unter einem Knoten liegt, heisst „Subitems“ — nicht „Kinder“
 const below = () => t_('Subitems')
+/// Sichtbar für Rollen (27.09.2026): dieser Knoten und alles darunter — nur für diese Rollen, bis ein Nachfahre eigene nennt. Leer = für alle.
+async function restrict(r) {
+  let rollen = []
+  try { rollen = (await api.get('/api/auth/roles')).map(x => x.key) } catch { rollen = [] }
+  const eingabe = await ask.prompt({ title: t_('Sichtbar für Rollen — {0}', [r.label]), text: t_('Rollen mit Komma, leer = für alle. Administratoren sehen immer alles.') + (rollen.length ? ' · ' + rollen.join(', ') : ''), value: (r.visibleTo ?? []).join(', '), placeholder: rollen.join(', '), ok: t_('✓ Setzen') })
+  if (eingabe === null) return
+  const roles = eingabe.split(/[,\s]+/).map(x => x.trim().toLowerCase()).filter(Boolean)
+  try { await api.post(`/api/nodes/${encodeURIComponent(r.id)}/roles`, { roles }, 'PUT'); await store.poll(true); await tree.load(); store.toast(roles.length ? t_('{0}: sichtbar für {1}', [r.label, roles.join(', ')]) : t_('{0}: sichtbar für alle', [r.label]), 'ok') }
+  catch (e) { store.toast(e.message) }
+}
 async function contextMenu(e, r) {
   e.preventDefault()   // vor dem await — sonst kommt das Browsermenü
   router.push(`/tree/${r.id}`)
@@ -478,6 +488,7 @@ async function contextMenu(e, r) {
     { label: t_('Umbenennen'), icon: '✎', key: 'u', hint: r.name ? '📌 fixiert' : t_('★ Automatik'), action: () => rename(r), ...only1 },
     // Symbol ist der Pin — bei beiden; der Hinweis rechts sagt, was danach gilt
     { label: r.name ? t_('Benennung lösen') : t_('Benennung fixieren'), icon: '📌', key: 'f', hint: r.name ? t_('★ gilt wieder') : r.label, action: () => fix(r), ...only1 },
+    { label: t_('Sichtbar für Rollen …'), icon: '🔒', key: 's', hint: r.visibleTo?.length ? r.visibleTo.join(', ') : t_('alle'), action: () => restrict(r), ...only1 },
     { sep: true },
     // Massenbearbeitung wie in Excel: die Kinder als Tabelle — beim Produkt die Varianten, bei der Gruppe die Produkte, dazu alle Varianten darunter
     // eigenes Fenster, Excel-ähnlich pflegen, Schliessen übernimmt — Popup blockiert? dann im Hauptfenster

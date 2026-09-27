@@ -102,5 +102,9 @@
  "offen": "pending",
  "{0} von {1} erledigt · {2} offen": "{0} of {1} done · {2} pending",
  "jetzt nachholen": "catch up now",
- "▶ {0} holt nach": "▶ {0} is catching up"
+ "▶ {0} holt nach": "▶ {0} is catching up",
+ "anhalten bis zum nächsten Start — die offenen Posten bleiben offen": "stop until the next start — the pending items stay pending",
+ "⊘ {0} angehalten — die offenen Posten bleiben offen": "⊘ {0} stopped — the pending items stay pending",
+ "abbrechen": "cancel",
+ "⊘ {0} abgebrochen": "⊘ {0} cancelled"
 }

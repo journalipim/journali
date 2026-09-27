@@ -11,11 +11,16 @@ namespace Journali.Server;
 /// </summary>
 public static class TreeApi
 {
+    public sealed record RolesBody(string[]? Roles);
     public static void Map(RouteGroupBuilder api)
     {
         // ---- Lesen -----------------------------------------------------------
 
-        api.MapGet("/tree", (Catalog c) => c.With((model, tree, _) => tree.Nodes.Values.Select(n => NodeRow.Of(tree, model, n)).ToList()));
+        // Der Baum in der Sicht der Rolle: Knoten, die sie nicht sieht (NodeRestricted am Pfad), fehlen samt allem darunter
+        api.MapGet("/tree", (HttpRequest req, Catalog c) => c.With((model, tree, _) => { var s = Auth.Sicht(req); return tree.Nodes.Values.Where(n => tree.Visible(n, s.Role, s.Admin)).Select(n => NodeRow.Of(tree, model, n)).ToList(); }));
+
+        // Sichtbar für Rollen (27.09.2026): ab hier abwärts; leer = für alle
+        api.MapPut("/nodes/{id}/roles", (string id, RolesBody b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.RestrictNode(x, id, b.Roles)));
 
         api.MapGet("/nodes/{id}", (string id, Catalog c) =>
             c.With((model, tree, _) => tree.Nodes.TryGetValue(id, out var n) ? NodeView.Of(tree, model, n) : null)
@@ -56,10 +61,10 @@ public static class TreeApi
             }));
 
         // Suche über Label, SKU, Id und Werte; liefert Zeilen mit Fundstelle.
-        api.MapGet("/search", (string q, Catalog c, int limit = 200) =>
+        api.MapGet("/search", (string q, HttpRequest req, Catalog c, int limit = 200) =>
             string.IsNullOrWhiteSpace(q) || q.Trim().Length < 2
                 ? Results.BadRequest(new { error = "q: mindestens 2 Zeichen." })
-                : Results.Ok(c.With((model, tree, _) => tree.Query(model, q.Trim(), c.Relations, c.Media, c.Workflows).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
+                : Results.Ok(c.With((model, tree, _) => tree.Query(model, q.Trim(), c.Relations, c.Media, c.Workflows).Where(h => tree.Visible(h.Node, Auth.Sicht(req).Role, Auth.Sicht(req).Admin)).Take(Math.Clamp(limit, 1, 1000)).Select(h => new { row = NodeRow.Of(tree, model, h.Node), hit = h.Hit }).ToList())));
 
         api.MapGet("/nodes/external/{system}/{externalId}", (string system, string externalId, Catalog c) =>
             c.With((model, tree, _) => tree.ByExternal(system, externalId) is { } n ? NodeView.Of(tree, model, n) : null)
@@ -269,13 +274,13 @@ public sealed record NodeRow(string Id, string Role, string? Parent, string Labe
     Dictionary<string, string> AxisValues, string Status, Dictionary<string, string>? Keys, Dictionary<string, string> External,
     int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? LabelAttribute = null,
     string? Channel = null, string? Market = null, string[]? Placed = null, int? Order = null, string? Source = null, Dictionary<string, string>? PlacedNames = null, long? Stand = null, List<PubRule>? Rules = null,
-    bool HasStatus = true)
+    bool HasStatus = true, string[]? VisibleTo = null)
 {
     public static NodeRow Of(Tree tree, ModelCatalog model, Node n) => new(
         n.Id, n.Role, n.Parent, LabelOf(tree, model, n), n.Name, n.Groups.Length > 0 ? string.Join(",", n.Groups) : null, n.Axes, n.AxisValues, n.Status,
         tree.KeysOf(model, n), n.External, n.Entries, n.LastNumber, n.LastAt, n.LastActor, LabelAttributeOf(tree, model, n),
         n.Channel, n.Market, n.Role == Roles.Rubric ? n.Placed.ToArray() : null, n.Order, n.Source, n.Role == Roles.Rubric && n.PlacedNames.Count > 0 ? n.PlacedNames : null, n.Stand, n.Role == Roles.Rubric && n.Rules.Count > 0 ? n.Rules : null,
-        n.HasStatus);
+        n.HasStatus, n.VisibleTo.Length > 0 ? n.VisibleTo : null);
 
     /// <summary>Das ★-Attribut, das diesen Knoten benennt (Tabelle): null bei fixiertem Namen; sonst das nächste ★ am Pfad,
     /// das hier gilt und einen Wert hat — hat keins einen Wert, das nächste, das hier gilt (dann benennt der Wert, sobald er da ist).</summary>

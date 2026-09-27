@@ -48,6 +48,15 @@ export function systemBlock(rows, onRun) {
   return box
 }
 
+/// Abbrechen heisst bei einem Systemjob nur anhalten (27.09.2026): die offenen Posten stehen im Journal und im Index,
+/// der nächste Start findet dieselben. Der Knopf bleibt, der Text sagt, was er tut.
+export function abbruchText(job, plugins) {
+  const system = (plugins ?? []).some(p => p.key === job?.plugin && p.system)
+  return system
+    ? { title: t('anhalten bis zum nächsten Start — die offenen Posten bleiben offen'), toast: t('⊘ {0} angehalten — die offenen Posten bleiben offen', [job?.label ?? '']) }
+    : { title: t('abbrechen'), toast: t('⊘ {0} abgebrochen', [job?.label ?? '']) }
+}
+
 export function jobGesperrt(job, aktiv) {
   return !(typeof aktiv === 'function' ? aktiv(job?.plugin) : true)
 }
@@ -218,7 +227,7 @@ async function mount(root, ctx) {
             : j.running && j.paused ? el('button', { class: 'x', title: `wartet (${j.pauseReason ?? 'von Hand'}) — weiter`, onclick: ev => { ev.stopPropagation(); resume(j) } }, '▶')
             : j.running ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); pause(j) } }, '⏸')
             : el('button', { class: 'x', title: t('jetzt starten'), onclick: ev => { ev.stopPropagation(); run(j) } }, '▶'),
-          j.running && !zu(j) ? el('button', { class: 'x', title: 'abbrechen', onclick: ev => { ev.stopPropagation(); cancel(j) } }, '⊘') : el('span', { style: 'display:inline-block;width:22px' }),
+          j.running && !zu(j) ? el('button', { class: 'x', title: abbruchText(j, st.plugins).title, onclick: ev => { ev.stopPropagation(); cancel(j) } }, '⊘') : el('span', { style: 'display:inline-block;width:22px' }),
           el('button', { class: 'x', title: zu(j) ? grund(j) : j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) toggle(j) } }, j.enabled ? '●' : '○'),
           el('button', { class: 'x', title: zu(j) ? grund(j) : 'bearbeiten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) openEdit(j) } }, '✎'),
           el('button', { class: 'x', title: t('Job entfernen (Läufe bleiben im Journal)'), onclick: ev => { ev.stopPropagation(); remove(j) } }, '🗑')))
@@ -232,7 +241,7 @@ async function mount(root, ctx) {
     ? t('Dieses Plugin ist in deinem Tarif nicht verfügbar. Du kannst den Job löschen, aber nicht ausführen.')
     : t('Dieses Plugin ist nicht aktiviert. Du kannst den Job löschen, aber nicht ausführen.')
   async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
-  async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(`⊘ ${j.label} abgebrochen`); await load() } catch (e) { store.toast(e.message) } }
+  async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(abbruchText(j, st.plugins).toast); await load() } catch (e) { store.toast(e.message) } }
   // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben
   async function pause(j) { try { await api.post(`/api/jobs/${j.key}/pause`); store.toast(t('⏸ {0} hält beim nächsten Stapel an', [j.label])); await load() } catch (e) { store.toast(e.message) } }
   async function resume(j) { try { await api.post(`/api/jobs/${j.key}/resume`); store.toast(t('▶ {0} läuft weiter', [j.label]), 'ok'); await load() } catch (e) { store.toast(e.message) } }

@@ -28,11 +28,13 @@ public static class MediaApi
     /// Der Filter der Bibliothek an einer Stelle: Liste und Facetten müssen denselben nehmen, sonst zählen die
     /// Facetten etwas anderes, als die Liste zeigt.
     /// </summary>
-    private static IEnumerable<Medium> Gefiltert(Catalog c, string? q, string? folder, bool deep, int minW, int minH,
+    private static IEnumerable<Medium> Gefiltert(Catalog c, (string? Role, bool Admin) sicht, string? q, string? folder, bool deep, int minW, int minH,
         string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword, bool superseded = false, string? valid = null, string? state = null)
     {
         // Abgelöste Fassungen bleiben im Abbild, damit Belege und Versionen sie auflösen — die Bibliothek zeigt sie nur auf Wunsch
         var all = superseded ? c.Media.All.Values.AsEnumerable() : c.Media.Current;
+        // Sichtbarkeit (27.09.2026): ein Medium in einem Ordner, den die Rolle nicht sieht, ist für sie nicht da
+        all = all.Where(m => c.Media.Visible(m, sicht.Role, sicht.Admin));
         // Frist: "yes" = gilt heute, "no" = gilt heute nicht (abgelaufen oder noch nicht), "expired" = abgelaufen
         var heute = DateOnly.FromDateTime(DateTime.Now);
         if (valid == "yes") all = all.Where(m => m.GueltigAm(heute));
@@ -89,11 +91,11 @@ public static class MediaApi
     {
         // Liste, neueste zuerst; q sucht in Name und Werten
         // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
-        api.MapGet("/media", (Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
+        api.MapGet("/media", (HttpRequest req, Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
             int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null, bool superseded = false, string? valid = null, string? state = null) =>
             c.With((model, tree, _) =>
             {
-                var all = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid, state);
+                var all = Gefiltert(c, Auth.Sicht(req), q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid, state);
                 var rows = all.Select(m => (m, used: c.Relations.To(m.Id).Count()));
                 var down = desc ?? (sort is null or "recent" or "date" or "size" or "used" or "pixels" or "created");   // Neuestes/Grösstes/Meistgenutztes zuerst, Namen A→Z
                 Func<(Medium m, int used), object> key = sort switch
@@ -114,12 +116,12 @@ public static class MediaApi
 
         // Facetten: wonach sich filtern lässt, mit Anzahl. Gezählt wird über denselben Filter wie die Liste —
         // die Zahlen gehören zu dem, was zu sehen ist, nicht zur ganzen Bibliothek.
-        api.MapGet("/media/facets", (Catalog c, string? q = null, string? folder = null, bool deep = false,
+        api.MapGet("/media/facets", (HttpRequest req, Catalog c, string? q = null, string? folder = null, bool deep = false,
             int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null,
             bool superseded = false, string? valid = null, string? state = null) =>
             c.With((model, _, _) =>
             {
-                var alle = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid, state).ToList();
+                var alle = Gefiltert(c, Auth.Sicht(req), q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid, state).ToList();
                 var liste = model.Lists.GetValueOrDefault(Model.KeywordList);
                 var stichwort = new Dictionary<string, int>(StringComparer.Ordinal);
                 foreach (var m in alle) foreach (var k in Stichworte(m)) stichwort[k] = stichwort.GetValueOrDefault(k) + 1;
@@ -177,15 +179,20 @@ public static class MediaApi
             }));
 
         // Medienordner
-        api.MapGet("/media/folders", (Catalog c) => c.With((_, _, _) =>
+        api.MapGet("/media/folders", (HttpRequest req, Catalog c) => c.With((_, _, _) =>
         {
-            var count = c.Media.All.Values.Where(m => m.Folder is not null).GroupBy(m => m.Folder!).ToDictionary(g => g.Key, g => g.Count());
+            var s = Auth.Sicht(req);
+            var sichtbar = c.Media.All.Values.Where(m => c.Media.Visible(m, s.Role, s.Admin)).ToList();
+            var count = sichtbar.Where(m => m.Folder is not null).GroupBy(m => m.Folder!).ToDictionary(g => g.Key, g => g.Count());
             return new
             {
-                total = c.Media.All.Count, unfiled = c.Media.All.Values.Count(m => m.Folder is null),
-                folders = c.Media.Folders.Values.OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).Select(f => new { f.Id, f.Name, f.Parent, media = count.GetValueOrDefault(f.Id) }).ToList(),
+                total = sichtbar.Count, unfiled = sichtbar.Count(m => m.Folder is null),
+                // Ordner, die die Rolle nicht sieht, fehlen — mit allem darunter; roles: die eigene Einschränkung des Ordners
+                folders = c.Media.Folders.Values.Where(f => c.Media.FolderVisible(f.Id, s.Role, s.Admin)).OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase)
+                    .Select(f => new { f.Id, f.Name, f.Parent, media = count.GetValueOrDefault(f.Id), roles = f.VisibleTo }).ToList(),
             };
         }));
+        api.MapPut("/media/folders/{id}/roles", (string id, TreeApi.RolesBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RestrictMediaFolder(x, id, b.Roles)));
         api.MapPost("/media/folders", (FolderBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.CreateMediaFolder(x, b.Name, b.Parent)));
         api.MapPut("/media/folders/{id}/name", (string id, FolderBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RenameMediaFolder(x, id, b.Name)));
         api.MapPut("/media/folders/{id}/parent", (string id, FolderBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.MoveMediaFolder(x, id, b.Parent)));
@@ -199,9 +206,10 @@ public static class MediaApi
         // Verwendungsnachweis: an welchen Knoten dieses Asset hängt. Dieselbe Form wie die Relationen eines Knotens
         // (RelationView, Richtung „in“) — das andere Ende ist dann der Knoten. Ein Stopp (stop=true) ist keine
         // Verwendung, sondern eine Sperre; er steht mit in der Liste und die Oberfläche kennzeichnet ihn.
-        api.MapGet("/media/{id}/usage", (string id, Catalog c) =>
+        api.MapGet("/media/{id}/usage", (string id, HttpRequest req, Catalog c) =>
             c.With((model, tree, _) => c.Media.All.ContainsKey(id)
-                ? c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList()
+                ? c.Relations.To(id).Where(r => !tree.Nodes.TryGetValue(r.From, out var nn) || tree.Visible(nn, Auth.Sicht(req).Role, Auth.Sicht(req).Admin))   // Knoten, die die Rolle nicht sieht, nennt der Nachweis nicht
+                    .OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList()
                 : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapGet("/media/{id}/file", async (string id, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>

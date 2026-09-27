@@ -37,6 +37,8 @@ public sealed class Node
     public Dictionary<string, string> External { get; } = new();   // Quellsystem → Kennung dort
     /// <summary>Attributgruppen, die hier angehängt sind; die Definition vererbt sich nach unten.</summary>
     public string[] Groups { get; set; } = [];
+    /// <summary>Rollen, die diesen Knoten und alles darunter sehen (NodeRestricted); leer = keine eigene Einschränkung.</summary>
+    public string[] VisibleTo { get; set; } = [];
     public Dictionary<Axis, string> Values { get; } = new();
     /// <summary>Je Achse die Nummer des Eintrags, der den Wert zuletzt setzte — für „zu überarbeiten“ gegen die Mastersprache.</summary>
     public Dictionary<Axis, long> SetAt { get; } = new();
@@ -146,6 +148,18 @@ public sealed class Tree : IProjection
     public (long? Stand, Node? From) StandOf(Node rubric) { for (var n = rubric; n is not null; n = n.Parent is { } p && _nodes.TryGetValue(p, out var up) ? up : null) if (n.Stand is { } s) return (s, n); return (null, null); }
 
     /// <summary>Der Pfad von den Eltern bis zur Wurzel.</summary>
+    /// <summary>Die Einschränkung, die an diesem Knoten gilt: die eigene, sonst die des nächsten Vorfahren mit einer; null = für alle.</summary>
+    public string[]? RestrictionOf(Node n)
+    {
+        if (n.VisibleTo.Length > 0) return n.VisibleTo;
+        foreach (var a in Ancestors(n)) if (a.VisibleTo.Length > 0) return a.VisibleTo;
+        return null;
+    }
+
+    /// <summary>Sieht diese Rolle den Knoten? Ohne Anmeldung (Rolle null) und als Administrator immer; sonst nur, wenn keine
+    /// Einschränkung am Pfad gilt oder sie die Rolle nennt (27.09.2026).</summary>
+    public bool Visible(Node n, string? role, bool admin = false) => role is null || admin || RestrictionOf(n) is not { } r || r.Contains(role);
+
     public IEnumerable<Node> Ancestors(Node node)
     {
         for (var p = node.Parent; p is not null && _nodes.TryGetValue(p, out var n); p = n.Parent)
@@ -485,6 +499,9 @@ public sealed class Tree : IProjection
             case Types.LabelAttributeSet:
                 var la = Types.Deserialize<LabelAttributeSet>(entry.Payload).Attribute;
                 n.LabelAttribute = string.IsNullOrWhiteSpace(la) ? null : la.Trim();
+                break;
+            case Types.NodeRestricted:
+                n.VisibleTo = Types.Deserialize<NodeRestricted>(entry.Payload).Roles?.Where(r => !string.IsNullOrWhiteSpace(r)).Distinct().ToArray() ?? [];
                 break;
             case Types.NodeMoved:
                 Unlink(n);

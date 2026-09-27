@@ -135,7 +135,7 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
   der Aufbau las vorher alles; bei ~25 000 Einträgen am Tag innerhalb eines Jahres nötig. Ausdünnen des Journals dagegen nicht:
   ein Eintrag ist für immer; höchstens nach Ablauf einer beschlossenen Frist Einzelschritte zwischen zwei Versionen
   zu einem Stand verdichten — mit eigenem Eintrag, nie aus Platzgründen (~5 MB je 25 000 Einträge)
-- ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Rollen je Teilbaum, Workflow-Rollen
+- ~~Benutzer und Rollen~~ gebaut 19.09.2026 (`Auth.cs`, `docs/betrieb.md`); offen: SSO, Workflow-Rollen; ~~Rollen je Teilbaum~~ gebaut 27.09.2026 (`NodeRestricted`, `MediaFolderRestricted`, `Auth.Sichtbar`)
 - Import/Export — in der Praxis die Hälfte des Systems
 - **Status mit Geltungsdatum.** Ein Status (aktiv, ausgelaufen) soll ab einem Datum gelten,
   in der Zukunft wie in der Vergangenheit. Entwurf: `StatusSet` bekommt ein optionales

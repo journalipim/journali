@@ -294,6 +294,13 @@ Einrichtungscode eingeben. Ohne Browser: einmalig mit `JOURNALI_ADMIN_PASSWORD=<
 `JOURNALI_ADMIN_USER`, Vorgabe `admin`) starten: der Start setzt das Passwort neu, legt den Benutzer an, wenn er fehlt,
 und sagt es in der Konsole. Danach die Variable wieder entfernen.
 
+### Sichtbar für Rollen
+
+Ein Teilbaum oder ein Ordner der Bibliothek kann Rollen nennen, die ihn sehen (Kontextmenü im Baum „Sichtbar für
+Rollen …“, 🔒 am Ordner). Es gilt ab dort abwärts, bis ein Nachfahre eigene Rollen nennt; leer heisst für alle.
+Rollen mit dem Recht `users` und die Jobs sehen immer alles; ohne Anwender gilt keine Einschränkung. Wer etwas nicht
+sieht, bekommt es nirgends: nicht in Listen, nicht in der Suche, nicht als Datei (403).
+
 ## KI
 
 journali bietet keine KI an und hat keinen eigenen Schlüssel; kein Anbieter ist im Code bevorzugt. Der Schlüssel liegt **am Team** (⚙ Einstellungen → ◍ Team), im Datenverzeichnis

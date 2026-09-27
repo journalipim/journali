@@ -22,7 +22,7 @@ public static class RelationApi
     /// stop=true am Knoten oder einem näheren Vorfahren nimmt es dort und darunter heraus. Eigene und geerbte bestehen
     /// nebeneinander; ein Medium, das der Knoten selbst zugeordnet hat, wird nicht noch einmal als geerbt gezeigt.
     /// </summary>
-    private static List<object> Inherited(Tree tree, ModelCatalog model, Catalog c, string id, bool export = false)
+    private static List<object> Inherited(Tree tree, ModelCatalog model, Catalog c, string id, bool export = false, (string? Role, bool Admin) sicht = default)
     {
         if (!tree.Nodes.TryGetValue(id, out var node)) return new();
         var mediaTypes = model.RelationTypes.Values.Where(t => t.To is not null && t.To.Contains(Roles.Media)).Select(t => t.Key).ToHashSet();
@@ -41,6 +41,7 @@ public static class RelationApi
                 if (!Flag(r, "inherit") || blocked.Contains(key) || !seen.Add(key)) continue;
                 var view = RelationView.Of(tree, model, c.Media, r, "out", c.Workflows);
                 if (export && !RelationView.Ausleitbar(view.Other)) continue;   // abgelaufen oder nicht freigegeben: nicht in die Ausleitung
+                if (c.Media.All.TryGetValue(r.To, out var mm) && !c.Media.Visible(mm, sicht.Role, sicht.Admin)) continue;   // Ordner, den die Rolle nicht sieht
                 outList.Add(new { relation = view, from = new { a.Id, Label = NodeRow.LabelOf(tree, model, a) } });
             }
         }
@@ -51,15 +52,21 @@ public static class RelationApi
     {
         // export=true: die Sicht der Ausleitung — ein Medium, das heute nicht gilt (Frist) oder nicht freigegeben ist
         // (Medien-Workflow), fehlt in out und inherited. Die Erzeuger (xport, rag, Datenblatt) fragen so; die Pflege sieht alles.
-        api.MapGet("/nodes/{id}/relations", (string id, Catalog c, bool export = false) =>
-            c.With((model, tree, _) => tree.Nodes.ContainsKey(id)
-                ? new
+        api.MapGet("/nodes/{id}/relations", (string id, HttpRequest req, Catalog c, bool export = false) =>
+            c.With((model, tree, _) =>
+            {
+                if (!tree.Nodes.ContainsKey(id)) return null;
+                var s = Auth.Sicht(req);
+                // das andere Ende, das die Rolle nicht sieht (Knoten in einem gesperrten Teilbaum, Medium in einem gesperrten Ordner), fehlt
+                bool Sichtbar(RelationView v) => v.Other.Role == Roles.Media ? !c.Media.All.TryGetValue(v.Other.Id, out var m) || c.Media.Visible(m, s.Role, s.Admin)
+                    : !tree.Nodes.TryGetValue(v.Other.Id, out var n) || tree.Visible(n, s.Role, s.Admin);
+                return new
                 {
-                    @out = c.Relations.From(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "out", c.Workflows)).Where(v => !export || RelationView.Ausleitbar(v.Other)).ToList(),
-                    @in = c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).ToList(),
-                    inherited = Inherited(tree, model, c, id, export),
-                }
-                : null) is { } v ? Results.Ok(v) : Results.NotFound());
+                    @out = c.Relations.From(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "out", c.Workflows)).Where(v => Sichtbar(v) && (!export || RelationView.Ausleitbar(v.Other))).ToList(),
+                    @in = c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in", c.Workflows)).Where(Sichtbar).ToList(),
+                    inherited = Inherited(tree, model, c, id, export, s),
+                };
+            }) is { } v ? Results.Ok(v) : Results.NotFound());
 
         api.MapGet("/relations/{id}", (string id, Catalog c) =>
             c.With((model, tree, _) => c.Relations.All.TryGetValue(id, out var r) ? RelationView.Of(tree, model, c.Media, r, "out", c.Workflows) : null) is { } v ? Results.Ok(v) : Results.NotFound());

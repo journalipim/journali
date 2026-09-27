@@ -17,6 +17,7 @@ public static class Types
     public const string ProductCreated = "ProductCreated";
     public const string VariantCreated = "VariantCreated";
     public const string NodeMoved = "NodeMoved";
+    public const string NodeRestricted = "NodeRestricted";
     public const string NodeOrdered = "NodeOrdered";
     public const string NodeRetired = "NodeRetired";
     /// <summary>Zurückgezogenen Knoten zurückholen — mit allem, was er hatte.</summary>
@@ -38,6 +39,7 @@ public static class Types
     public const string MediaFolderRenamed = "MediaFolderRenamed";
     public const string MediaFolderMoved = "MediaFolderMoved";
     public const string MediaFolderRetired = "MediaFolderRetired";
+    public const string MediaFolderRestricted = "MediaFolderRestricted";
     public const string MediaFiled = "MediaFiled";   // am Medium: in welchem Ordner es liegt
     // Vorschau-Presets: Strom media-preset:<key>
     public const string MediaPresetDefined = "MediaPresetDefined";
@@ -232,6 +234,9 @@ public sealed record ProductAxesSet(string[] Axes, bool Force = false);
 public sealed record VariantCreated(string Product, Dictionary<string, string> AxisValues);
 
 public sealed record NodeMoved(string Parent);
+/// <summary>Sichtbar für diese Rollen — ab hier abwärts, bis ein Nachfahre eigene nennt. Leer oder null = für alle (27.09.2026).
+/// Wer eine Rolle mit dem Recht <c>users</c> hat, sieht immer alles; ohne Anmeldung gilt keine Einschränkung.</summary>
+public sealed record NodeRestricted(string[]? Roles);
 
 /// <summary>Platz unter den Geschwistern (Rubriken eines Publikationsbaums). Ohne Eintrag: alphabetisch.</summary>
 public sealed record NodeOrdered(int Order);
@@ -273,6 +278,8 @@ public sealed record MediaFolderRenamed(string Name);
 public sealed record MediaFolderMoved(string? Parent);
 /// <summary>Ordner weg — nur leer (keine Unterordner, keine Medien); das prüft der Befehl.</summary>
 public sealed record MediaFolderRetired();
+/// <summary>Sichtbar für diese Rollen — der Ordner, seine Unterordner und die Medien darin, bis ein Unterordner eigene nennt. Leer = für alle.</summary>
+public sealed record MediaFolderRestricted(string[]? Roles);
 /// <summary>Am Medium: in diesen Ordner gelegt (null = kein Ordner).</summary>
 public sealed record MediaFiled(string? Folder);
 
