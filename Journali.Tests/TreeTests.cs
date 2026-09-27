@@ -21,6 +21,71 @@ public class TreeTests
     private static void Define(MemoryJournal j, AttributeDefinition d) =>
         j.Append("t", Model.AttributeStream + d.Key, Types.AttributeDefined, Types.Serialize(d));
 
+    /// <summary>
+    /// Ausdrücklich leer (27.09.2026): „wenn ich den geerbten Wert mit nichts überschreiben will, wird das nicht
+    /// gespeichert“ — ein leerer <see cref="AttributeSet"/> nimmt nur den eigenen Wert weg, danach gilt der geerbte
+    /// wieder. <see cref="AttributeCleared"/> setzt einen eigenen leeren Wert: er bricht die Vererbung.
+    /// </summary>
+    [Fact]
+    public void Ausdruecklich_leer_bricht_die_Vererbung()
+    {
+        var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product);
+        var (journal, model, tree) = Build(j =>
+        {
+            Define(j, new AttributeDefinition("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "basis", Inheritable: true));
+            j.Append("t", g, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("Gruppe", "Group"))));
+            j.Append("t", p, Types.ProductCreated, Types.Serialize(new ProductCreated(g)));
+            j.Append("t", g, Types.AttributeSet, Types.Serialize(new AttributeSet("name", null, null, "geerbt")));
+        });
+        Assert.Equal(("geerbt", g), Lies(tree, model, p));
+
+        // ausdrücklich leer: der eigene Wert ist "" — der geerbte gilt nicht mehr
+        journal.Append("t", p, Types.AttributeCleared, Types.Serialize(new AttributeCleared("name", null, null)));
+        tree = Neu(journal);
+        Assert.Equal(("", p), Lies(tree, model, p));
+        Assert.Equal("", tree.Nodes[p].Own("name", null, null));
+
+        // der leere AttributeSet nimmt ihn wieder weg — dann erbt der Knoten wie zuvor
+        journal.Append("t", p, Types.AttributeSet, Types.Serialize(new AttributeSet("name", null, null, "")));
+        tree = Neu(journal);
+        Assert.Equal(("geerbt", g), Lies(tree, model, p));
+
+        // und ein richtiger Wert hebt ein ausdrückliches Leer auf
+        journal.Append("t", p, Types.AttributeCleared, Types.Serialize(new AttributeCleared("name", null, null)));
+        journal.Append("t", p, Types.AttributeSet, Types.Serialize(new AttributeSet("name", null, null, "eigen")));
+        tree = Neu(journal);
+        Assert.Equal(("eigen", p), Lies(tree, model, p));
+    }
+
+    /// <summary>Ein ausdrücklich leerer Wert zählt nicht als gefüllt — sonst wäre die Vollständigkeit geschönt.</summary>
+    [Fact]
+    public void Ausdruecklich_leer_ist_nicht_gefuellt()
+    {
+        var g = Ids.New(Roles.Group); var p = Ids.New(Roles.Product);
+        var (journal, model, tree) = Build(j =>
+        {
+            Define(j, new AttributeDefinition("name", Labels.Of("Name", "Name"), AttributeTypes.Text, Group: "basis", Inheritable: true,
+                Required: new Dictionary<string, string[]> { ["web"] = ["*"] }));
+            j.Append("t", g, Types.GroupCreated, Types.Serialize(new GroupCreated(null, Labels.Of("Gruppe", "Group"))));
+            j.Append("t", p, Types.ProductCreated, Types.Serialize(new ProductCreated(g)));
+            j.Append("t", g, Types.AttributeSet, Types.Serialize(new AttributeSet("name", null, null, "geerbt")));
+            j.Append("t", p, Types.AttributeCleared, Types.Serialize(new AttributeCleared("name", null, null)));
+        });
+        var def = model.Attributes["name"];
+        Assert.Contains("name", CompletenessRules.Check(tree, model, tree.Nodes[p], [def], "web", null).Missing);
+        Assert.DoesNotContain("name", CompletenessRules.Check(tree, model, tree.Nodes[g], [def], "web", null).Missing);
+    }
+
+    /// <summary>Das Abbild aus dem Journal neu bauen — nach einem angehängten Eintrag.</summary>
+    private static Tree Neu(MemoryJournal j) { var t = new Tree(); Projector.CatchUp(j, t); return t; }
+
+    /// <summary>Wirksamer Wert und woher er kommt.</summary>
+    private static (string?, string?) Lies(Tree tree, ModelCatalog model, string node)
+    {
+        var (v, from) = tree.Resolve(model, tree.Nodes[node], "name", null, null);
+        return (v, from?.Id);
+    }
+
     [Fact]
     public void Geltung_am_Vater_gesetzt_erbt_das_Produkt_und_die_Variante()
     {

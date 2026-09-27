@@ -52,6 +52,7 @@ public static class Types
 
     // Werte an einem Knoten
     public const string AttributeSet = "AttributeSet";
+    public const string AttributeCleared = "AttributeCleared";
     public const string ValueSourced = "ValueSourced";
     public const string RowAdded = "RowAdded";
     public const string RowRemoved = "RowRemoved";
@@ -335,6 +336,15 @@ public sealed record ExternalUnlinked(string System);
 /// Leerer Wert = eigener Wert weg, Fallback gilt wieder.
 /// </summary>
 public sealed record AttributeSet(string Attribute, string? Locale, string? Channel, string? Value, string[]? Values = null, string? Row = null);
+
+/// <summary>
+/// Hier gilt ausdrücklich nichts (27.09.2026): ein eigener, leerer Wert auf dieser Achse. Er bricht die Vererbung wie
+/// jeder eigene Wert — der geerbte gilt nicht mehr, und die Zelle bleibt leer. Zu unterscheiden von
+/// <see cref="AttributeSet"/> mit leerem Wert: das nimmt den eigenen Wert weg, danach gilt der geerbte wieder.
+/// <para>Beides wird gebraucht: „dieses Produkt heisst bewusst nicht wie sein Modell“ ist etwas anderes als „hier steht
+/// nichts Eigenes“. Zurück zur Vererbung führt das ↓ an der Attributzeile.</para>
+/// </summary>
+public sealed record AttributeCleared(string Attribute, string? Locale, string? Channel, string? Row = null);
 
 /// <summary>Neue Zeile eines vermehrbaren Attributs; die Zellen kommen per <see cref="AttributeSet"/> mit <c>row</c>.</summary>
 public sealed record RowAdded(string Attribute, string Row);

@@ -518,6 +518,16 @@ public sealed class Tree : IProjection
             case Types.GroupsAttached:
                 n.Groups = Types.Deserialize<GroupsAttached>(entry.Payload).Groups.Distinct().ToArray();
                 break;
+            case Types.AttributeCleared:
+            {
+                // Ausdrücklich leer: ein eigener Wert, der nichts ist — Own() findet ihn und erbt darum nicht weiter.
+                var cl = Types.Deserialize<AttributeCleared>(entry.Payload);
+                var cx = new Axis(cl.Attribute, cl.Locale, cl.Channel, cl.Row);
+                n.Lists.Remove(cx);
+                n.Values[cx] = "";
+                n.SetAt[cx] = entry.Number;
+                break;
+            }
             case Types.AttributeSet:
                 var a = Types.Deserialize<AttributeSet>(entry.Payload);
                 var axis = new Axis(a.Attribute, a.Locale, a.Channel, a.Row);

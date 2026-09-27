@@ -370,6 +370,33 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values, row)));
     }
 
+    /// <summary>
+    /// Ausdrücklich leer: hier gilt nichts, obwohl oben etwas steht (27.09.2026). Geprüft wird wie beim Setzen —
+    /// Knoten, Attribut, Achsen, gilt das Attribut hier. Geschrieben wird <see cref="Types.AttributeCleared"/>.
+    /// </summary>
+    public static Outcome ClearAttribute(Ctx c, string id, string? attribute, string? locale, string? channel, string? row = null)
+    {
+        if (!c.Tree.Nodes.TryGetValue(id, out var n)) return Outcome.Missing;
+        if (string.IsNullOrWhiteSpace(attribute)) return Outcome.Bad("attribute fehlt.");
+        if (!c.Model.Attributes.TryGetValue(attribute, out var def)) return Outcome.Bad("Unbekanntes Attribut: {0}", attribute);
+        if (def.Type == AttributeTypes.Rows) return Outcome.Bad("{0} ist vermehrbar — Zeilen über RowAdded, Zellen mit row.", def.Key);
+        row = Blank(row);
+        if (row is null && !CompletenessRules.ActiveAttributes(c.Tree, c.Model, n).Any(a => a.Key == def.Key))
+            return Outcome.Bad(WhyNotActive(c, n, def));
+        if (row is not null)
+        {
+            var owner = n.Rows.FirstOrDefault(kv => kv.Value.Contains(row)).Key;
+            if (owner is null) return Outcome.Bad("Zeile {0} gibt es hier nicht.", row);
+            if (!(c.Model.Attributes.GetValueOrDefault(owner)?.Columns?.Contains(def.Key) ?? false)) return Outcome.Bad("{0} ist keine Spalte von {1}.", def.Key, owner);
+        }
+        locale = Blank(locale);
+        channel = Blank(channel);
+        if ((locale is not null && !def.PerLocale) || (channel is not null && !def.PerChannel)) return Outcome.Bad("{0} hat diese Achse nicht.", def.Key);
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad("Unbekannte Sprache: {0}", locale);
+        if (channel is not null && !c.Model.Channels.ContainsKey(channel)) return Outcome.Bad("Unbekannter Kanal: {0}", channel);
+        return Outcome.Ok(c.Write(id, Types.AttributeCleared, new AttributeCleared(def.Key, locale, channel, row)));
+    }
+
     /// <summary>Warum ein Attribut an diesem Knoten nicht erfassbar ist — für die Fehlermeldung.</summary>
     private static string WhyNotActive(Ctx c, Node n, AttributeDefinition def)
     {

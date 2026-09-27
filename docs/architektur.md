@@ -264,6 +264,14 @@ Rauschen, `ReleaseGranted` bleibt). Zwei Fallen:
     Tarif ändern (z. B. Pro bezahlt, Enterprise gewährt). Sie wirken beim nächsten Auffrischen der Instanz; ohne
     Verbindung gilt ihr letzter Stand höchstens bis zum Ende der Kulanz. Schlüssel zum Kopieren lassen sich nicht
     entziehen — sie haben eine feste Laufzeit.
+- **Ausdrücklich leer** (27.09.2026): ein Wert kann hier absichtlich nichts sein, obwohl ein Vorfahr (oder die
+  Mastersprache) etwas sagt. Bisher hiess leer immer „eigener Wert weg", und der geerbte kam zurück — in der Textzelle
+  ging beim Leeren sogar gar nichts hinaus. Jetzt gibt es `AttributeCleared` (Strom des Knotens): das Abbild legt einen
+  eigenen, leeren Wert an (`Values[axis] = ""`), der die Vererbung bricht wie jeder eigene Wert. `AttributeSet` mit
+  leerem Wert bleibt der Rückweg — das ist, was das ↓ an der Attributzeile und „Eigenen Wert löschen" schicken.
+  Die Oberfläche entscheidet danach, ob ohne den eigenen Wert noch etwas gälte (`gaelteOhneEigenen`): nur dann wird
+  geleert statt gelöscht. Ein ausdrücklich leerer Wert zählt in der Vollständigkeit **nicht** als gefüllt.
+
 - **Tarife als Abo über Lemon Squeezy**. Heute: Anforderung und Schlüssel werden kopiert (`KeyRequests.cs`,
   `LicenceKeys.cs`, `docs/betrieb.md` → Schlüssel).
 

@@ -215,6 +215,8 @@ public static class TreeApi
         });
         api.MapPost("/nodes/{id}/status", (string id, StatusSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetStatus(x, id, b.Status)));
         api.MapPost("/nodes/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SetAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values, b.Row)));
+        // Ausdrücklich leer: hier gilt nichts, auch wenn oben etwas steht. Zurück zur Vererbung führt ein leerer AttributeSet.
+        api.MapPost("/nodes/{id}/attributes/clear", (string id, AttributeCleared b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.ClearAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Row)));
         // Beleg an einem Wert: Quelle (URL oder Text), Weg, Prüfdatum — leere Quelle nimmt den Beleg weg
         api.MapPost("/nodes/{id}/sources", (string id, ValueSourced b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.SourceValue(x, id, b.Attribute, b.Locale, b.Channel, b.Row, b.Source, b.Title, b.Note, b.Method, b.CheckedAt)));
         api.MapPost("/nodes/{id}/rows", (string id, RowAdded b, HttpRequest req, Catalog c) => Run(req, c, x => Commands.AddRow(x, id, b.Attribute)));

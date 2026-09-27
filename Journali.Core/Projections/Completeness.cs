@@ -61,7 +61,8 @@ public static class CompletenessRules
                 required++;
                 var ok = def.Type == AttributeTypes.Rows
                     ? node.Rows.TryGetValue(def.Key, out var rows) && rows.Count > 0
-                    : tree.Resolve(node, def.Key, def.PerLocale ? l : null, def.PerChannel ? channel : null, def.Inheritable, masters: false).Value is not null;
+                    // ein ausdrücklich leerer Wert (AttributeCleared) zählt nicht als gefüllt — er sagt, dass hier nichts gilt
+                    : tree.Resolve(node, def.Key, def.PerLocale ? l : null, def.PerChannel ? channel : null, def.Inheritable, masters: false).Value is { Length: > 0 };
                 if (!ok) missing.Add(def.PerLocale ? $"{def.Key}/{l}" : def.Key);
             }
         }

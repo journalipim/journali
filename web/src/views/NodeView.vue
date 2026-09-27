@@ -465,10 +465,34 @@ async function ladeAusJournal() {
 }
 const history = computed(() => stacksOf(props.id).history)
 const redoStack = computed(() => stacksOf(props.id).redo)
+// Einen Wert setzen. Leer über einem geerbten Wert heisst „hier gilt nichts“ (27.09.2026) und wird als eigener leerer
+// Wert geschrieben — sonst käme der geerbte zurück, und das Löschen sah aus, als würde es nicht gespeichert. Zurück zur
+// Vererbung führt das ↓ an der Attributzeile und „Eigenen Wert löschen“ im Kontextmenü (beide rufen unsetValue).
 const setValue = (def, col, value, row = null) => {
-  const before = own.value.get(key(def.key, col.locale, col.channel, row)) ?? ''
+  const k = key(def.key, col.locale, col.channel, row)
+  const before = own.value.get(k) ?? ''
+  if ((value === '' || value == null) && gaelteOhneEigenen(def, col)) return clearValue(def, col, row, before)
   history.value.push({ kind: 'value', node: props.id, def, col, row, before, after: value }); redoStack.value.length = 0
   return writeValue(def, col, value, row)
+}
+/// Stünde hier etwas, wenn der eigene Wert auf genau dieser Achse wegfiele? Der Master- oder Sternwert am Knoten
+/// selbst zählt dazu, und bei vererbbaren Attributen die Vorfahren. Nur dann heisst Leeren „hier gilt nichts“.
+function gaelteOhneEigenen(def, col) {
+  if (fallback(own.value, def.key, col) != null) return true
+  if (!def.inheritable) return false
+  for (const { m } of ancestorMaps.value) if (resolveIn(m, def, col)) return true
+  return false
+}
+/// Hier gilt nichts: ein eigener leerer Wert, der die Vererbung bricht
+const clearValue = (def, col, row = null, before = '') => {
+  history.value.push({ kind: 'clear', node: props.id, def, col, row, before, after: '' }); redoStack.value.length = 0
+  return writeClear(def, col, row)
+}
+/// Eigenen Wert weg — der geerbte gilt wieder
+const unsetValue = (def, col, row = null) => {
+  const before = own.value.get(key(def.key, col.locale, col.channel, row)) ?? ''
+  history.value.push({ kind: 'value', node: props.id, def, col, row, before, after: '' }); redoStack.value.length = 0
+  return writeValue(def, col, '', row)
 }
 // Mouseover auf ↶/↷: was würde der Schritt tun — Attribut, Spalte, alter → neuer Wert; und wie viele Schritte noch
 function stepTitle(h, verb, n, key, redo = false) {
@@ -503,11 +527,18 @@ function undo() {
   if (!h) { if (ausJournal.value?.possible) undoAusJournal(); return }
   redoStack.value.push(h); h.kind === 'retire' ? undoRetire(h) : writeValue(h.def, h.col, h.before, h.row, h.node)
 }
-function redo() { const h = redoStack.value.pop(); if (!h) return; history.value.push(h); h.kind === 'retire' ? redoRetire(h) : writeValue(h.def, h.col, h.after, h.row, h.node) }
+function redo() {
+  const h = redoStack.value.pop(); if (!h) return; history.value.push(h)
+  if (h.kind === 'retire') return redoRetire(h)
+  if (h.kind === 'clear') return writeClear(h.def, h.col, h.row, h.node)
+  writeValue(h.def, h.col, h.after, h.row, h.node)
+}
 const writeValue = (def, col, value, row = null, node = props.id) => command(() =>
   api.post(`/api/nodes/${encodeURIComponent(node)}/attributes`, def.multiple
     ? { attribute: def.key, locale: col.locale, channel: col.channel, values: value.split(',').map(s => s.trim()).filter(Boolean), row }
     : { attribute: def.key, locale: col.locale, channel: col.channel, value, row }))
+const writeClear = (def, col, row = null, node = props.id) => command(() =>
+  api.post(`/api/nodes/${encodeURIComponent(node)}/attributes/clear`, { attribute: def.key, locale: col.locale, channel: col.channel, row }))
 const addRow = def => command(() => api.post(`${nodeUrl()}/rows`, { attribute: def.key, row: '' }))
 const removeRow = (def, row) => command(() => api.del(`${nodeUrl()}/rows/${def.key}/${row}`))
 const orderRows = (def, rows) => command(() => api.post(`${nodeUrl()}/rows/${def.key}`, { attribute: def.key, rows }, 'PUT'))
@@ -782,7 +813,7 @@ function cellMenu(e, def, col, block) {
   menu.open(e, [
     { label: `${store.name(def)} · ${col.label}`, disabled: true },
     { sep: true },
-    { label: t_('Eigenen Wert löschen'), icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? t_('kein eigener') : (inh.value != null ? t_('geerbter gilt wieder') : ''), action: () => setValue(def, col, '') },
+    { label: t_('Eigenen Wert löschen'), icon: '✗', key: 'Delete', disabled: ownV == null, hint: ownV == null ? t_('kein eigener') : (inh.value != null ? t_('geerbter gilt wieder') : ''), action: () => unsetValue(def, col) },
     inh.from ? { label: t_('Herkunft {0} {1} öffnen', [icon(inh.from.role), inh.from.label]), icon: '↑', key: 'h', action: () => router.push(`/tree/${inh.from.id}`) } : null,
     { label: t_('Wert kopieren'), icon: '⧉', key: 'c', disabled: shown == null, action: () => navigator.clipboard?.writeText(shown ?? '') },
     { label: sourceOf(def, col) ? t_('Quelle ändern …') : t_('Quelle angeben …'), icon: '↗', key: 'q', hint: sourceOf(def, col) ? `${sourceOf(def, col).method} · ${sourceOf(def, col).checkedAt}` : t_('Beleg am Wert'), disabled: ownV == null, action: () => setSource(def, col) },
@@ -918,7 +949,7 @@ function cellMenu(e, def, col, block) {
               <span v-if="def.pattern" class="muted" :title="$t('Muster: {0}', [def.patternHint || def.pattern])">⌗</span>
               <span v-if="def.multiple" class="muted" :title="$t('vermehrbar: mehrere Werte, Liste in der Zelle')">≣</span>
               <span v-if="node.role === 'variant' && def.key in (node.axisValues ?? {})" class="muted" :title="$t('Variantenachse — der Wert unterscheidet die Varianten; die Kombination bleibt eindeutig')">⌖</span>
-              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? $t('Vererbung wiederherstellen (eigener Wert wird durch den geerbten ersetzt)') : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => setValue(def, c, ''))">↓</span>
+              <span v-if="def.inheritable" :class="columns.some(c => ownValue(def.key, c) != null) ? 'warn' : 'muted'" :style="columns.some(c => ownValue(def.key, c) != null) ? 'cursor:pointer' : ''" :title="columns.some(c => ownValue(def.key, c) != null) ? $t('Vererbung wiederherstellen (eigener Wert wird durch den geerbten ersetzt)') : 'vererbbar'" @click="columns.filter(c => ownValue(def.key, c) != null).forEach(c => unsetValue(def, c))">↓</span>
               <span v-if="def.required" class="warn" :title="$t('Pflicht')">●</span>
               <span v-if="def.hereLocked" class="warn" :title="$t('nicht an {0} — verwendbar an: {1}', [roleLabel[node.role], (def.levels ?? []).map(r => roleLabel[r]).join(', ')])">⌀</span>
               <span v-else-if="def.whenLocked" class="warn" :title="$t('gilt nur bei {0} = {1}{2}', [store.label(model.attributes.find(x => x.key === def.when.attribute) ?? { key: def.when.attribute }), def.when.values.slice(0, 6).join(', '), def.when.values.length > 6 ? ' …' : ''])">⌀</span>

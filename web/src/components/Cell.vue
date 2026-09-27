@@ -33,7 +33,11 @@ async function openBig() {
   draft.value = props.value ?? props.inherited ?? ''
   big.value = true; await nextTick(); area.value?.focus()
 }
-function saveBig() { big.value = false; if (draft.value !== (props.value ?? '')) emit('save', draft.value); nextTick(() => box.value?.focus()) }
+function saveBig() {
+  big.value = false
+  if (draft.value !== (props.value ?? '') || (draft.value === '' && props.value == null && props.inherited != null)) emit('save', draft.value)
+  nextTick(() => box.value?.focus())
+}
 // Ergebnis der KI: ersetzen oder an der Schreibmarke ergänzen
 function fromAi({ text, mode }) {
   const t = area.value
@@ -87,7 +91,9 @@ function commit() {
   if (!editing.value) return   // blur nach Enter kommt ein zweites Mal
   const v = draft.value
   editing.value = false
-  if (v !== (props.value ?? '')) emit('save', v)
+  // Leer über einem geerbten Wert heisst „hier gilt nichts“ und geht hinaus, obwohl der eigene Wert schon leer war
+  // (27.09.2026: gemeldet als „wird nicht gespeichert“)
+  if (v !== (props.value ?? '') || (v === '' && props.value == null && props.inherited != null)) emit('save', v)
 }
 
 function cancel() { editing.value = false }

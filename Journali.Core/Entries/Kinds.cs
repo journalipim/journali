@@ -36,7 +36,7 @@ public static class Kinds
     public static string Of(string type) => type switch
     {
         // Datenpflege
-        Types.AttributeSet or Types.ValueSourced or Types.RowAdded or Types.RowRemoved or Types.RowOrdered
+        Types.AttributeSet or Types.AttributeCleared or Types.ValueSourced or Types.RowAdded or Types.RowRemoved or Types.RowOrdered
             or Types.NodeNamed          // einen Knoten benennen ist Pflege, nicht Gerüst
             or Types.ProductCreated or Types.VariantCreated or Types.NodeRetired or Types.NodeRestored
             or Types.StatusSet or Types.ExternalLinked or Types.ExternalUnlinked
