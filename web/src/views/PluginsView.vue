@@ -76,7 +76,10 @@ function sortByCol(col) { if (sortBy.value === col) sortDesc.value = !sortDesc.v
 // Tarife: was nicht zum Tarif der Instanz gehört, steht mit dem Tarif da, der es hat
 const TARIF = { free: t('Kostenlos'), pro: 'Pro', proplus: 'Pro+', enterprise: t('Enterprise'), unlimited: t('Unlimited') }
 const tarifOf = p => TARIF[p.tarif] ?? p.tarif ?? ''
-const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? t('— nicht installiert') : !p.enabled ? '○ aus' : plugins.active(p.key) ? '● an' : t('◐ an, Basis aus')
+const stateOf = p => p.allowed === false ? `◇ ${tarifOf(p)}` : !p.installed ? t('— nicht installiert') : !p.enabled ? '○ aus'
+  : !plugins.active(p.key) ? t('◐ an, Basis aus') : plugins.bereit(p.key)?.ready === false ? t('◑ an, nicht bereit') : '● an'
+/// Warum ein eingeschaltetes Plugin nicht arbeiten kann — der Satz kommt vom Plugin selbst (Manifest `health`)
+const notReady = p => plugins.bereit(p.key)?.ready === false ? (plugins.bereit(p.key).reason || t('nicht bereit')) : ''
 const missing = key => plugins.requires(key).filter(r => !plugins.active(r))   // was fehlt, damit es wirkt
 // Siegel: ❖ für ein Original (Signatur des Herausgebers passt, keine Datei geändert), ⚠ für ein gebrochenes, sonst
 // nichts. Nach aussen heisst ❖ nicht „zertifiziert“ — das klänge nach einer Prüfstelle —, sondern: es ist ein Original.
@@ -104,11 +107,11 @@ async function toggle(p) {
   await act(`/api/plugins/${p.key}/disable`)
 }
 
-onMounted(async () => { await plugins.load(); if (!cur.value) cur.value = plugins.list[0]?.key ?? null })
+onMounted(async () => { await plugins.load(); if (!cur.value) cur.value = plugins.list[0]?.key ?? null; await plugins.pruefeZustand() })
 async function act(path, method = 'POST') {
   if (!store.actor) { store.toast(t('👤 Name fehlt → Einstellungen')); return }
   busy.value = '…'
-  try { method === 'DELETE' ? await api.del(path) : await api.post(path, {}); await store.poll(true); await plugins.load() }
+  try { method === 'DELETE' ? await api.del(path) : await api.post(path, {}); await store.poll(true); await plugins.load(); await plugins.pruefeZustand() }
   catch (e) { store.toast(e.message) }
   finally { busy.value = '' }
 }
@@ -144,7 +147,7 @@ function pick(k) { cur.value = k }
           <span class="c-art muted" :title="p.manifest?.kind ?? ''">{{ artOf(p) }}</span>
           <span class="c-ver mono">{{ p.version ?? '' }}<span v-if="p.update" class="warn" :title="$t('auf der Platte: {0}', [p.diskVersion])"> ↑</span></span>
           <span class="c-seal"><span v-if="p.installed && sealOf(p)" class="seal" :class="p.certified ? 'pos' : 'neg'" :title="sealTitle(p)">{{ sealOf(p) }}</span></span>
-          <span class="c-state" :class="p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'" :title="stateOf(p)">{{ stateOf(p) }}<span v-if="!p.onDisk" class="neg" :title="$t('Verzeichnis fehlt')"> ✗</span></span>
+          <span class="c-state" :class="notReady(p) ? 'warn' : p.enabled && plugins.active(p.key) ? 'pos' : p.enabled ? 'warn' : 'muted'" :title="notReady(p) || stateOf(p)">{{ stateOf(p) }}<span v-if="!p.onDisk" class="neg" :title="$t('Verzeichnis fehlt')"> ✗</span></span>
         </span>
       </div>
       <div v-if="plugins.loaded && !plugins.list.length" class="empty"><span :title="$t('Ein Verzeichnis mit plugin.json unter plugins/ anlegen.')">{{ $t("Kein Plugin") }}</span></div>
@@ -185,6 +188,7 @@ function pick(k) { cur.value = k }
       <span>{{ $t("Fassung {0}", [current.version ?? '—']) }}</span><span v-if="current.diskVersion && current.diskVersion !== current.version">{{ $t("· auf der Platte {0}", [current.diskVersion]) }}</span>
       <span v-if="!current.onDisk" class="neg">{{ $t("· Verzeichnis plugins/{0} fehlt", [current.key]) }}</span>
       <span v-if="current.allowed === false && current.enabled" class="warn" :title="$t('Der Stand im Journal bleibt: kommt der Tarif zurück, wirkt es wieder.')">{{ $t("· aktiviert, ohne Wirkung") }}</span>
+      <span v-if="notReady(current)" class="warn nichtbereit">{{ '· ' + notReady(current) }}</span>
       <span v-if="current.certified" class="pos seal" :title="$t('Signatur des Herausgebers: Schlüssel, Fassung und alle Dateien sind unverändert')">· ❖ {{ sealName(current) }}</span>
       <span v-else-if="current.sealReason" class="neg seal" :title="current.sealReason">{{ $t("· ⚠ Siegel gebrochen") }}</span>
       <span class="grow" /><span v-if="current.lastAt">{{ when(current.lastAt) }} 👤 {{ current.lastActor }}</span>

@@ -156,7 +156,11 @@ und Betriebsrechner. Eine Beispieladresse ist `localhost` oder ein Platzhalter, 
   (`web/src/host.js`). Im Container liegt `plugins/` als Bind-Mount: austauschen ohne Image
   Beitragspunkte: views (mit `needs` — die Kachel erscheint nur, solange das genannte Plugin wirkt — und `props`),
   nodeActions, importers, checks, nodeBands (Band in der Knotenansicht),
-  install(ctx) (einmal beim Einschalten: legt an, was das Plugin braucht); Plugin-Daten im
+  install(ctx) (einmal beim Einschalten: legt an, was das Plugin braucht);
+  **`health` im Manifest** (27.09.2026): die Adresse eines Endpunkts, der `{ ready, reason }` sagt — für Plugins mit
+  Voraussetzungen, die niemand in journali setzt (eine Erweiterung der Datenbank, ein Modell, ein erreichbarer Dienst).
+  ⑁ Plugins fragt ihn für jedes wirkende Plugin und zeigt den Zustand in der Spalte: `◑ an, nicht bereit`, der Grund im
+  Tooltip und im Kopf. So steht die Voraussetzung nicht als Satz in der Beschreibung, sondern als Zustand da; Plugin-Daten im
   Journal (`PluginDataSet`, `ctx.data`); Profile je Import-Plugin
   (`ProfileBar`); im Job-Dialog steht bei gewähltem Profil nur, was am Job hängt
   (Profil, Pfade, Schalter) — ein Parameter mit `perJob: true` bleibt immer sichtbar.

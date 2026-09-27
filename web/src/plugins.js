@@ -102,6 +102,26 @@ export const plugins = reactive({
   /// Was unter ⌁ Plugins ansteht — eine Zeile je Update: auf der Platte liegt eine neuere Fassung, als installiert ist.
   /// Ein Plugin, das nur daliegt und nie installiert wurde, steht nicht an; dafür leuchtet kein Lämpchen (26.09.2026).
   news() { return this.list.filter(p => p.update).map(p => `↑ ${p.key}: ${p.version} → ${p.diskVersion}`) },
+  // Kann ein Plugin arbeiten? Wer Voraussetzungen hat, die niemand in journali setzt (eine Erweiterung der Datenbank,
+  // ein Modell, ein erreichbarer Dienst), nennt im Manifest unter `health` einen Endpunkt, der { ready, reason } sagt
+  // (27.09.2026). Vorher stand das nur als Satz in der Beschreibung, und wer es nicht las, wartete auf einen Job, der
+  // nichts tun konnte. Gefragt wird nur für Plugins, die wirken, und nur, wenn jemand die Liste ansieht.
+  zustand: new Map(),     // key → { ready, reason }
+  bereit(key) { return this.zustand.get(key) ?? null },
+  async pruefeZustand(keys = null) {
+    const wen = (keys ?? this.list.map(p => p.key)).filter(k => {
+      const p = this.list.find(x => x.key === k)
+      return p?.manifest?.health && this.active(k)
+    })
+    for (const k of this.list.map(p => p.key)) if (!wen.includes(k)) this.zustand.delete(k)
+    await Promise.all(wen.map(async k => {
+      const p = this.list.find(x => x.key === k)
+      try {
+        const r = await api.get(p.manifest.health)
+        this.zustand.set(k, { ready: r?.ready !== false, reason: r?.ready === false ? (r.reason ?? '') : '' })
+      } catch (e) { this.zustand.set(k, { ready: false, reason: e.message }) }
+    }))
+  },
   // Reihenfolge innerhalb eines Themas: 1. explizites order (Ansicht/Aktion, sonst Manifest; Vorgabe 50), 2. die Basis
   // des Themas, 3. Art: Prüfungen („… prüfen“) vor Vorschlägen („… vorschlagen“, „Anreichern“) vor dem Rest,
   // 4. Bezeichnung. Damit stehen die Kataloge (DPP, EmpCo, ETIM, PPWR) beisammen, und wer eine Reihenfolge nennt,

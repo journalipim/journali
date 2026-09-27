@@ -17,6 +17,7 @@
   ],
   "system": true,
   "progress": "/api/docs/embed",
+  "health": "/api/docs/embed",
   "process": {
     "command": "node",
     "args": [
