@@ -1944,7 +1944,6 @@
  "stellt {0} Knoten wieder her: {1} {2}{3}": "restores {0} nodes: {1} {2}{3}",
  "Ziel muss eine Gruppe oder ein Produkt sein": "The target must be a group or a product",
  "Tabellen-Import ist aus (⌁ Plugins → table)": "Table import is off (⌁ Plugins → table)",
- "Kein Importer für {0} — JSON, Excel, CSV; andere Formate über ⌁ Plugins": "No importer for {0} — JSON, Excel, CSV; other formats via ⌁ Plugins",
  "jedem verschobenen Eintrag": "every moved entry",
  "Umhängen": "Move",
  "Notiz ist Pflicht — was ist zu tun?": "A note is required — what needs doing?",
@@ -2522,5 +2521,8 @@
  "Verzeichnis": "Directory",
  "Ein Zeitplan gehört zum Tarif {0} — diese Instanz hat {1}.": "A schedule belongs to tier {0} — this instance has {1}.",
  "nach Art sortieren — gleiche Arten stehen dann beisammen{0}": "sort by kind — same kinds stand together{0}",
- "Art{0}": "Kind{0}"
+ "Art{0}": "Kind{0}",
+ "{0} angelegt": "{0} created",
+ "{0} lagen schon im Speicher": "{0} were already in the store",
+ "{0} zugeordnet": "{0} attached"
 }

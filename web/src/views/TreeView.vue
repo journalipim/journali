@@ -12,6 +12,7 @@ import { tree, icon } from '../tree.js'
 import { menu } from '../menu.js'
 import { groupsAt, neededByNode, missingGroups, confirmMove } from '../orphans.js'
 import { plugins } from '../plugins.js'
+import { mediaTypesFor, attachFiles, meldung as medienMeldung, IST_ASSET } from '../media.js'
 import NodeView from './NodeView.vue'
 import Splitter from '../components/Splitter.vue'
 import { paneWidth } from '../panes.js'
@@ -306,22 +307,46 @@ function canDrop(src, target) {
 function onDragStart(e, r) { dragId.value = r.id; e.dataTransfer.effectAllowed = 'all'; e.dataTransfer.setData('text/plain', r.id) }
 const dragIds = () => picked.value.has(dragId.value) ? [...picked.value] : [dragId.value]
 function onDragOver(e, r) {
-  // Datei aus dem Explorer (JSON) auf einen Knoten: der JSON-Import startet mit diesem Ziel
-  if (!dragId.value && e.dataTransfer?.types?.includes('Files')) { if (r.role !== 'variant') { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dropId.value = r.id } else dropId.value = null; return }
+  // Dateien: jede Zeile nimmt sie an. Ein Asset darf auch an eine Variante; nur Tabellen und JSON brauchen
+  // eine Gruppe oder ein Produkt, und das sagt onDrop, wenn es soweit ist.
+  if (!dragId.value && e.dataTransfer?.types?.includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; dropId.value = r.id; return }
   const src = tree.byId.get(dragId.value)
   if (src) hoverOpen(r)
   const ok = e.shiftKey ? dragIds().some(id => id !== r.id) : dragIds().some(id => canDrop(tree.byId.get(id), r))
   if (!ok) { dropId.value = null; return }
   e.preventDefault(); e.dataTransfer.dropEffect = e.shiftKey ? 'move' : e.ctrlKey ? 'copy' : 'move'; dropId.value = r.id
 }
+/// Dateien als Assets an diesen Knoten: anlegen und zuordnen. Die Masse liest danach der Job probe, die
+/// Vorschauen rechnet derive — darauf wartet hier niemand.
+async function dropAssets(files, r) {
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
+  const typen = mediaTypesFor(store.model, r.role)
+  if (!typen.length) { store.toast(t_('Kein Relationstyp zu Medien für diesen Knotentyp')); return }
+  const erg = await attachFiles(files, r.id, typen)
+  for (const f of erg.fehler) store.toast(f)
+  if (erg.zugeordnet) { store.toast(medienMeldung(erg), 'ok'); store.poll(true); tree.load() }
+}
+
 async function onDrop(e, r) {
   if (!dragId.value && e.dataTransfer?.files?.length) {
-    dropId.value = null; const f = e.dataTransfer.files[0]
-    if (r.role === 'variant') { store.toast(t_('Ziel muss eine Gruppe oder ein Produkt sein')); return }
-    if (/\.json(\.gz)?$/i.test(f.name)) { store.pendingImport = { file: f, parent: r.id }; router.push('/p/json/import'); return }
-    // Tabelle (Excel, CSV, …): in den Tabellen-Import mit diesem Ziel, Analyse läuft sofort
-    if (plugins.importerFor(f.name) || /\.(csv|txt|tsv)$/i.test(f.name)) { if (!plugins.enabled('table')) { store.toast(t_('Tabellen-Import ist aus (⌁ Plugins → table)')); return } store.pendingImport = { file: f, parent: r.id, analyse: true }; router.push('/p/table/import'); return }
-    store.toast(t_('Kein Importer für {0} — JSON, Excel, CSV; andere Formate über ⌁ Plugins', [f.name])); return
+    dropId.value = null
+    const files = [...e.dataTransfer.files]
+    const f = files[0]
+    // Bilder und Dokumente sind Assets — sie gehen nie in einen Tabellen-Import, auch wenn ein Plugin die
+    // Endung kennt. Alles Weitere: JSON und Tabellen in ihren Import, der Rest wird ebenfalls ein Asset.
+    if (!IST_ASSET.test(f.name)) {
+      if (/\.json(\.gz)?$/i.test(f.name)) {
+        if (r.role === 'variant') { store.toast(t_('Ziel muss eine Gruppe oder ein Produkt sein')); return }
+        store.pendingImport = { file: f, parent: r.id }; router.push('/p/json/import'); return
+      }
+      // Tabelle (Excel, CSV, …): in den Tabellen-Import mit diesem Ziel, Analyse läuft sofort
+      if (plugins.importerFor(f.name) || /\.(csv|txt|tsv)$/i.test(f.name)) {
+        if (r.role === 'variant') { store.toast(t_('Ziel muss eine Gruppe oder ein Produkt sein')); return }
+        if (!plugins.enabled('table')) { store.toast(t_('Tabellen-Import ist aus (⌁ Plugins → table)')); return }
+        store.pendingImport = { file: f, parent: r.id, analyse: true }; router.push('/p/table/import'); return
+      }
+    }
+    await dropAssets(files, r); return
   }
   const ids = dragIds()
   dragId.value = null; dropId.value = null; hoverStop()

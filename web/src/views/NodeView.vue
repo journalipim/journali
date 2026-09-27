@@ -28,6 +28,7 @@ import RowsBlock from '../components/RowsBlock.vue'
 import VersionsPanel from '../components/VersionsPanel.vue'
 import MediaThumb from '../components/MediaThumb.vue'
 import MediaPicker from '../components/MediaPicker.vue'
+import { mediaTypesFor, attachFiles, meldung as medienMeldung } from '../media.js'
 import EntryList from '../components/EntryList.vue'
 import ScriptEditor from '../components/ScriptEditor.vue'
 import Splitter from '../components/Splitter.vue'
@@ -587,20 +588,17 @@ const stopped = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.
 async function stopInherited(r) { await command(async () => { const e = await api.post('/api/relations', { type: r.type, from: props.id, to: r.other.id }); await api.post(`/api/relations/${e.stream}/attributes`, { attribute: 'stop', value: 'true' }); return e }) }
 const mediaRels = computed(() => (rels.value.out ?? []).filter(r => isMediaType(r.type) && relValueRaw(r, 'stop') !== 'true').sort((a, b) => (Number(relValueRaw(a, 'position')) || 9e9) - (Number(relValueRaw(b, 'position')) || 9e9) || a.lastNumber - b.lastNumber))
 const relValueRaw = (r, key) => r.values.find(v => v.attribute === key && !v.locale && !v.channel)?.value ?? null
-const mediaTypes = computed(() => relTypes.value.filter(t => isMediaType(t.key) && (!t.from || t.from.includes(node.value?.role))))
+const mediaTypes = computed(() => mediaTypesFor(model.value, node.value?.role))
 const mediaDrag = ref(false)
 const mediaFile = ref(null)
 const mediaPick = ref({ open: false })   // ▨ aus der Bibliothek … (MediaPicker)
-const typeFor = file => (file.type || '').startsWith('image/') && mediaTypes.value.some(t => t.key === 'image') ? 'image' : (mediaTypes.value.find(t => t.key === 'document') ?? mediaTypes.value[0])?.key
 async function uploadMedia(files) {
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true
   try {
-    for (const f of files) {
-      const m = await api.upload('/api/media', f)
-      const type = typeFor(f); if (!type) { store.toast(t_('Kein Relationstyp zu Medien für diesen Knotentyp')); break }
-      try { await api.post('/api/relations', { type, from: props.id, to: m.id }) } catch (e) { if (!e.message.includes('schon')) throw e }
-    }
+    const erg = await attachFiles(files, props.id, mediaTypes.value)
+    for (const f of erg.fehler) store.toast(f)
+    if (erg.zugeordnet) store.toast(medienMeldung(erg), 'ok')
     await load(); store.poll(true)
   } catch (e) { store.toast(e.message) }
   finally { busy.value = false; mediaDrag.value = false }
