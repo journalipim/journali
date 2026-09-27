@@ -1617,11 +1617,15 @@ erst ein Wert, wenn ihn jemand annimmt (dann zählt er auch).
 braucht kein Plugin dafür, nur den Rahmen um `GET /api/media/{id}/file`. Doppelklick öffnet das Asset in einem
 neuen Fenster; was damit geschieht, entscheidet das Betriebssystem des Anwenders.
 
-**D. Zuschnitt und Ausrichten.** Im Browser auf einer Leinwand, weil dort schon die Kacheln gerechnet werden.
-**Ein Medium ist unveränderlich** — der Zuschnitt ergibt darum ein **neues** Medium mit `MediaSourced.From` auf das
-Original. Kein Überschreiben, keine verlorene Fassung, und die Abstammung ist lesbar. Offen: ob es daneben einen
-*nicht zerstörenden* Zuschnitt braucht (ein Rechteck am Medium, das die Presets anwenden) — das ist der Weg für
-„quadratische Kachel ohne abgeschnittenen Kopf“ und wäre ein eigener Eintragstyp plus eine Änderung an `derive`.
+**D. Zuschnitt und Ausrichten — gebaut (27.09.2026).** Im Browser auf einer Leinwand (`CropEditor.vue`), so wie
+dieser Browser schon die Kacheln rechnet. Zwei Drehungen, weil sie zwei Dinge sind: ⟲ ⟳ in Vierteln für ein quer
+stehendes Foto, ein feiner Winkel (±15°) zum Ausrichten eines schiefen Scans. Der Ausschnitt gilt im gedrehten
+Bild in Pixeln des Originals; gerechnet wird in voller Auflösung, die Vorschau ist nur verkleinert. **Ein Medium
+ist unveränderlich** — das Ergebnis ist ein **neues** Medium, hochgeladen mit `from` = Original (`MediaSourced.From`,
+die Abstammung), im Format des Originals, wenn der Browser es schreibt (JPEG, PNG, WebP), sonst PNG. Wahlweise
+ersetzt es das Original gleich als neue Fassung (F) — dann wandern die Zuordnungen. Offen bleibt der *nicht
+zerstörende* Zuschnitt (ein Rechteck am Medium, das die Presets anwenden — „quadratische Kachel ohne
+abgeschnittenen Kopf“): ein eigener Eintragstyp und eine Änderung an `derive`, die nur mit Siegel geht.
 
 **E. Belege ins DAM — gebaut (27.09.2026).** Bis dahin legte der Erzeuger das Datenblatt als Medium an und hängte
 es per `VersionDocumentAdded` nur an die **Version**: in der Bibliothek ohne Ordner und Herkunft, am Produkt gar

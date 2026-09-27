@@ -73,8 +73,10 @@ export const api = {
     return { batch: batchId, results, error, errors, refs }
   },
   /// Datei hochladen (multipart, Feld file) — X-Actor wie bei jedem Befehl.
-  upload: async (path, file) => {
+  /// fields: weitere Formularfelder — die Herkunft beim Anlegen (from, plugin, profile, job, ref)
+  upload: async (path, file, fields = null) => {
     const fd = new FormData(); fd.append('file', file, file.name)
+    for (const [k, v] of Object.entries(fields ?? {})) if (v != null && v !== '') fd.append(k, String(v))
     let res
     try { res = await fetch(store.server + path, { method: 'POST', headers: { 'X-Actor': store.actor }, body: fd }) } catch { throw new Error(t('Server nicht erreichbar')) }
     const data = await res.json().catch(() => null)

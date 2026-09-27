@@ -10,6 +10,7 @@ import { dialog } from '../dialog.js'
 import { menu } from '../menu.js'
 import { mediaTypesFor, attachMedia, meldung as medienMeldung } from '../media.js'
 import TreePicker from '../components/TreePicker.vue'
+import CropEditor from '../components/CropEditor.vue'
 import Cell from '../components/Cell.vue'
 import ListCell from '../components/ListCell.vue'
 import SelectCell from '../components/SelectCell.vue'
@@ -246,9 +247,20 @@ function contextMenu(e, m) {
   menu.open(e, [
     { label: n > 1 ? t_('{0} Assets zuordnen …', [n]) : t_('Zuordnen …'), icon: '⇄', action: () => zuordnenOeffnen(m) },
     n === 1 && !m.supersededBy ? { label: t_('Neue Fassung hochladen …'), icon: '⇪', action: () => neueFassung(m) } : null,
+    n === 1 && m.isImage ? { label: t_('Zuschneiden und ausrichten …'), icon: '✂', action: () => zuschneiden(m) } : null,
     { sep: true },
     { label: n > 1 ? t_('{0} Assets zurückziehen', [n]) : t_('Zurückziehen'), icon: '🗑', danger: true, action: () => retire(m) },
   ])
+}
+
+// ---- Zuschneiden und Ausrichten (CropEditor): nur Bilder; das Ergebnis ist ein neues Medium mit Abstammung
+const cropFuer = ref(null)
+function zuschneiden(m) { if (m?.isImage) cropFuer.value = m }
+async function zugeschnitten({ neu, fassung }) {
+  cropFuer.value = null
+  store.toast(fassung ? t_('{0} ersetzt durch {1}', [current.value?.name ?? '', neu.name]) : t_('{0} angelegt', [1]), 'ok')
+  cur.value = neu.id
+  await store.poll(true); await loadFolders(); await load()
 }
 
 // ---- Neue Fassung: die Datei wird ein neues Medium (ein Medium ist unveränderlich), dann ersetzt es das alte —
@@ -379,6 +391,7 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar"><h1>▨ {{ current.name }}</h1><span class="mono muted">{{ current.id }}</span><span class="grow" />
       <a :href="`/api/media/${current.id}/file`" target="_blank" class="muted" :title="$t('Datei öffnen')">{{ $t("↗ Datei") }}</a>
+      <button v-if="current.isImage" class="x" @click="zuschneiden(current)" :title="$t('Zuschneiden und ausrichten — das Ergebnis ist ein neues Medium')">✂</button>
       <button class="x" @click="retire(current)" :title="sel.size > 1 ? $t('{0} gewählte Medien zurückziehen (die Dateien bleiben im Store)', [sel.size]) : $t('Medium zurückziehen (die Datei bleibt im Store)')">🗑</button></div>
     <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>{{ $t("· ⇄ {0} Knoten", [current.used]) }}</span>
       <span :title="current.folder ? $t('Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen') : $t('in keinem Ordner — Kachel auf einen Ordner links ziehen')">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
@@ -443,6 +456,8 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
     </div>
   </div>
   <div v-else class="pane" style="flex:1"><div class="empty">{{ $t("Medium in der Mitte wählen — oder hochladen.") }}</div></div>
+
+  <CropEditor v-if="cropFuer" :medium="cropFuer" @done="zugeschnitten" @close="cropFuer = null" />
 
   <!-- Zuordnen: ein Knoten aus dem Baum, dann eine Relation je gewähltem Asset -->
   <div v-if="zuordnen" class="zu-overlay" @mousedown.self="zuordnen = null">
