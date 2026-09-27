@@ -1655,15 +1655,57 @@ Hauptbild. Offen: `usage` ist Freitext. Eine Werteliste (Hauptbild, Detail, Verp
 die Rolle zuverlässig lesen — aber der Typ eines bestehenden Attributs ändert sich nicht ohne Weiteres, und die
 Werte, die in Anlagen schon als Text stehen, müssten mit. Das ist eine Entscheidung, keine Kleinigkeit.
 
-**H. Rechte.** Das Vokabular ist heute grob: `read`, `write`, `retire`, `release`, `model`, `plugins`, `jobs`,
-`storage`, `users`, `team` (`Types.cs`, `Rights`). Ein DAM braucht mehr: **Herunterladen** als eigenes Recht (sehen
-ist nicht haben), Rechte **je Ordner** statt nur global, und die lizenzrechtliche Seite — Lizenz, Quelle,
-Nutzungsrecht je Kanal, Ablaufdatum. Das Ablaufdatum hängt am offenen Punkt „Status mit Geltungsdatum“
-(`architektur.md`): ein abgelaufenes Bild soll aus der Ausleitung fallen, nicht aus dem Journal.
+**H. Rechte und Fristen — Entscheidungsvorlage (27.09.2026).** Befund: das Vokabular ist grob — `read`, `write`,
+`retire`, `release`, `model`, `plugins`, `jobs`, `storage`, `users`, `team` (`Types.cs`, `Rights`). Eine Datei zu
+laden braucht heute nur `read`: `Auth.Needed` fällt für jede lesende Anfrage auf `Rights.Read` zurück
+(`Auth.cs:198`), auch für `/api/media/{id}/file`. Eine Rolle trägt ihre Rechte als Liste (`RoleDefined {label,
+rights[]}`), und das Abbild behält nur Rechte, die `Rights.All` kennt (`Users.cs:57`). Daraus folgt der Haken:
+**ein neues Recht hat keine bestehende Rolle** — führt man `download` ein, lädt am nächsten Morgen niemand mehr
+eine Datei, bis alle Rollen nachgepflegt sind. Und die Jobs: `derive`, `probe` und `docs` lesen Dateien mit einem
+Dienst-Token, dessen Rechte auf `ServiceRights` begrenzt sind (`Auth.cs:24`: read, write, retire, release) — ein
+Recht `download` müsste dort mit hinein, sonst rechnet kein Job mehr eine Vorschau.
 
-**I. Workflows für Assets.** `Workflows.AppliesTo(Node n)` nimmt einen Knoten — ein Medium ist keiner. Freigabe
-eines Bildes, Benachrichtigung, „von der Produktion ins Web“ gehen damit heute nicht. Zu entscheiden: ob Workflows
-auf Medien erweitert werden oder ob die Freigabe eines Assets etwas anderes ist als die eines Produkts.
+Drei Fragen, je eine Entscheidung:
+
+1. **Herunterladen als eigenes Recht.** Optionen: (a) `download` als neues Recht, das `/api/media/{id}/file`,
+   `/{preset}` und `/blob/{key}` schützt, mit der Regel „wer `write` hat, hat `download`“ als Übergang — dann
+   verliert niemand etwas, der pflegt, und nur reine Leser brauchen es ausdrücklich; (b) kein eigenes Recht, sondern
+   Herunterladen = `read`, wie heute. Empfehlung: (a) mit der Übergangsregel im Kern (`Rights.Implied`), nicht in
+   jeder Rolle; `ServiceRights` um `download` erweitern.
+2. **Rechte je Ordner.** Das ist dieselbe Frage wie „Rollen je Teilbaum“ in `architektur.md` (offen seit dem
+   Bau von Benutzer und Rollen) und sollte mit ihr entschieden werden, nicht getrennt für Medien. Ein Ordner der
+   Bibliothek trüge dann eine Liste von Rollen, die ihn sehen — ein neuer Eintragstyp am Ordnerstrom
+   (`MediaFolderRestricted {roles[]}`), das Abbild filtert je Anfrage. Ohne diese Entscheidung bleibt die
+   Bibliothek für alle Leser gleich.
+3. **Fristen.** Ein Ablaufdatum am Medium (`valid_until`, Datum, Gruppe `media`) ist als Attribut trivial. Der
+   Wert liegt darin, dass ein abgelaufenes Bild **aus der Ausleitung fällt** und in der Bibliothek als abgelaufen
+   steht — nicht aus dem Journal. Das ist der offene Punkt „Status mit Geltungsdatum“ (`architektur.md`): dieselbe
+   Mechanik, die einen Status ab einem Datum gelten lässt, lässt ein Recht bis zu einem Datum gelten. Empfehlung:
+   beides zusammen bauen, mit einer Regel im Abbild („gilt am Tag X?“), die Exporte, Datenblatt und Bibliothek
+   gleich beantworten. Dazu Lizenz und Quelle als Attribute (`licence`, Werteliste; `source`, Text) — gepflegt,
+   zählen.
+
+**I. Workflows für Assets — Entscheidungsvorlage (27.09.2026).** Befund: ein Workflow gilt für Knotentypen und
+Familien (`WorkflowDefined {roles[], families[]}`), `AppliesTo(Node n)` schliesst Rubriken aus — ein Medium ist
+kein Knoten (`Workflows.cs:28`). Der Zustand steht am Knotenstrom (`WorkflowStateSet`), je Sprache, wenn der
+Workflow es will. Freigabe eines Bildes, Benachrichtigung, „von der Produktion ins Web“ gehen damit nicht.
+
+Zwei Wege, und sie schliessen sich aus:
+
+- **(a) Derselbe Workflow, auch für Medien.** `roles` darf `media` enthalten (die Rolle gibt es schon als Ziel einer
+  Relation), `WorkflowStateSet` wird am Medienstrom `m-…` geschrieben, das Abbild `Workflows` nimmt Medienströme
+  an, `AppliesTo` bekommt eine Fassung für ein Medium. **Kein neuer Eintragstyp.** Die Bibliothek bekommt eine
+  Facette „Zustand“, die Ausleitung liest ihn wie am Knoten (ein nicht freigegebenes Bild geht nicht mit).
+  Übergänge mit Rollen und Notizpflicht gelten unverändert. Was fehlt: Benachrichtigung — die gibt es auch am
+  Knoten nicht; das ist ein eigener Punkt (Mail bei Übergang, `Mail.cs` ist da).
+- **(b) Eine eigene Freigabe für Assets.** Ein Eintragstyp `MediaReleased {channel?, locale?}` wie `ReleaseGranted`
+  am Knoten — einfacher, aber ein zweites Vokabular für dieselbe Sache, und Übergänge, Rollen und Notizen müssten
+  ein zweites Mal entstehen.
+
+Empfehlung: (a). Es ist weniger Code, kein neuer Typ, und wer die Freigabe eines Produkts versteht, versteht die
+eines Bildes. Die automatischen Importe und Exporte („von der Produktion ins Web“) sind keine Workflow-Frage,
+sondern Jobs mit Profil — die gibt es; ein Übergang, der einen Job anstösst, wäre die Brücke (`WfTransition`
+bekäme ein `job`).
 
 **J. Texterkennung (OCR) — Serverseite gebaut (27.09.2026), Erkenner offen.** Der Volltext liegt schon **je
 Medium** (`DocText.cs`, Tabelle `media_text`), PDFs werden gelesen und durchsucht, und der Zustand `scan` bedeutet
@@ -1681,13 +1723,31 @@ auf einen Knoten gezogen bringt „Kein Importer für …“. Zu bauen: ein Asse
 angelegt, verarbeitet (Masse, Ableitungen, Text) **und** dem Knoten zugeordnet. Das ist der kürzeste Weg von der
 Datei zum Produkt und sollte der erste Block der Oberfläche sein.
 
-**L. Technische Tabellen aus einem Dokument — Entwurf.** Mit gedrückter Steuerungstaste auf einen Knoten gezogen,
-soll ein technisches Dokument nicht nur angehängt, sondern **ausgewertet** werden: Tabellen darin erkennen, Zeilen
-als Attribut/Wert lesen, den Attributen des Knotens zuordnen — und wo es keines gibt, das Attribut im selben
-Schritt anlegen lassen. Die Bausteine dafür stehen: `DocText` liefert Text und Abschnitte, der Datenmapper hat die
-Umwandlung je Spalte (`transform.js`), das Modell kann Attribute anlegen. Was fehlt, ist die Erkennung „das ist
-eine Tabelle technischer Daten“ und der Dialog davor — es wird nie ohne Bestätigung laufen, denn ein falsch
-erkanntes Attribut ist teurer als ein nicht erkanntes.
+**L. Technische Tabellen aus einem Dokument — Entwurf (27.09.2026).** Mit gedrückter Steuerungstaste auf einen
+Knoten gezogen, soll ein technisches Dokument nicht nur angehängt, sondern **ausgewertet** werden: Tabellen darin
+erkennen, Zeilen als Attribut/Wert lesen, den Attributen des Knotens zuordnen — und wo es keines gibt, das Attribut
+im selben Schritt anlegen lassen. Es läuft nie ohne Bestätigung: ein falsch erkanntes Attribut ist teurer als ein
+nicht erkanntes.
+
+Der Weg in vier Schritten, und was davon steht:
+
+1. **Anhängen** — gebaut (K): die Datei wird ein Asset am Knoten. Mit Strg kommt danach Schritt 2.
+2. **Tabellen finden** — fehlt. `DocText` liefert Text und Abschnitte (`Chunk {page, heading, body}`), aber keine
+   Zellen. Ein Erkenner für Tabellen in PDF ist ein Prozess-Plugin (dieselbe Lage wie die Texterkennung, J): es
+   liest die Datei und liefert je gefundener Tabelle Zeilen und Spalten — als Vorschlag, nicht als Wert.
+3. **Zuordnen** — vorhanden für Tabellen: der Datenmapper (`mapper.js`) hat `suggest(columns, rows, model)` für
+   die Zuordnung auf Attribute mit Synonymen und Ähnlichkeit, `sniffType` für den Typ, `convert` und `validate` für
+   den Wert, `plan` für den Stapel. Eine technische Tabelle ist nur gedreht: Attribut in der ersten Spalte, Wert in
+   der zweiten, Einheit oft im Wert („22 mm“ — `transform.js` kennt „Zahl aus Text“). Der Mapper braucht dafür eine
+   Lage „Schlüssel/Wert“ neben „Spalten“.
+4. **Bestätigen** — der Dialog: je Zeile Attribut (gefunden, oder „neu anlegen als …“ mit Typ und Einheit aus
+   `sniffType`), Wert, Übernehmen ja/nein. Erst ✓ schreibt: `AttributeDefined` für neue Attribute (Modell, zählt
+   nicht), dann `AttributeSet` je Wert (Pflege, zählt). Ein Stapel, wie beim Import.
+
+Zu entscheiden, bevor gebaut wird: ob ein neues Attribut aus einem Dokument in eine **feste Gruppe** kommt
+(„aus Dokument“, später einzuordnen) oder der Dialog die Gruppe je Attribut fragt; und ob der Erkenner ein eigenes
+Plugin ist oder Teil von `docs` (dann liefert der Leser Tabellen gleich mit, und die Texterkennung J ebenso).
+Empfehlung: feste Gruppe, und Tabellen als Teil von `docs` — ein Dokument wird einmal gelesen, nicht dreimal.
 
 ### Semantische Suche — was heute wirklich da ist
 
