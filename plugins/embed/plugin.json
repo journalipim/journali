@@ -6,8 +6,8 @@
     "en": "Embeddings (vectors)"
   },
   "description": {
-    "de": "Rechnet mit einem lokalen Modell je Abschnitt eines Dokuments und je Knoten einen Vektor und legt ihn in die Datenbank (Erweiterung vector) — die Grundlage für die Suche nach Sinn in ⌕ Dokumente, die Frage an die Dokumente und das Band „Ähnliche Knoten“. Läuft als Job im Hintergrund und holt nach, was noch fehlt; für Suchanfragen hält der Server einen zweiten Prozess dieses Plugins vor. Braucht npm install im Plugin-Verzeichnis; das Modell wird beim ersten Lauf geladen (etwa 120 MB) und bleibt im Verzeichnis .cache. Abgeleitete Daten, nichts davon geht ins Journal.",
-    "en": "Computes one vector per document section and per node with a local model and stores it in the database (extension vector) — the basis for searching by meaning in ⌕ Documents, asking the documents, and the band “Similar nodes”. Runs as a background job and catches up on what is missing; for search queries the server keeps a second process of this plugin. Needs npm install in the plugin directory; the model is downloaded on the first run (about 120 MB) and stays in the .cache directory. Derived data, nothing goes into the journal."
+    "de": "Rechnet je Abschnitt eines Dokuments und je Knoten einen Vektor — die Grundlage für die Suche nach Sinn in ⌕ Dokumente, die Frage an die Dokumente und das Band „Ähnliche Knoten“. Läuft als Job und holt nach, was fehlt. Braucht eine Datenbank mit Vektoren und ein Modell, das beim ersten Lauf geladen wird (etwa 120 MB).",
+    "en": "Computes one vector per document section and per node — the basis for searching by meaning in ⌕ Documents, asking the documents, and the band “Similar nodes”. Runs as a job and catches up on what is missing. Needs a database with vectors and a model that is downloaded on the first run (about 120 MB)."
   },
   "kind": "tool",
   "runs": "process",
