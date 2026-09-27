@@ -548,13 +548,15 @@ public sealed class Tree : IProjection
             case Types.AttributeSet:
                 var a = Types.Deserialize<AttributeSet>(entry.Payload);
                 var axis = new Axis(a.Attribute, a.Locale, a.Channel, a.Row);
-                // Leer = eigener Wert weg, der Fallback gilt wieder.
+                // Leer = eigener Wert weg, der Fallback gilt wieder — auch ein ausdrückliches Leer (AttributeCleared,
+                // das als "" in Values steht) geht damit weg; sonst bliebe die Vererbung gebrochen (27.09.2026).
                 if (a.Values is { } list)
                 {
-                    if (list.Length == 0) n.Lists.Remove(axis); else n.Lists[axis] = list;
+                    if (list.Length == 0) { n.Lists.Remove(axis); n.Values.Remove(axis); }
+                    else { n.Lists[axis] = list; n.Values.Remove(axis); }
                 }
-                else if (string.IsNullOrEmpty(a.Value)) n.Values.Remove(axis);
-                else n.Values[axis] = a.Value;
+                else if (string.IsNullOrEmpty(a.Value)) { n.Values.Remove(axis); n.Lists.Remove(axis); }
+                else { n.Values[axis] = a.Value; n.Lists.Remove(axis); }
                 if (n.Values.ContainsKey(axis) || n.Lists.ContainsKey(axis)) n.SetAt[axis] = entry.Number; else n.SetAt.Remove(axis);
                 // Achsenattribut an einer Variante: der Wert ist ihr Achsenwert, sobald das Produkt die Achse hat
                 if (n.Role == Roles.Variant && a.Locale is null && a.Channel is null && a.Row is null && n.Parent is { } pp && _nodes.TryGetValue(pp, out var prod) && prod.Axes.Contains(a.Attribute))
