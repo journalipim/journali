@@ -1,0 +1,47 @@
+{
+  "key": "embed",
+  "version": "1.0.0",
+  "label": {
+    "de": "Einbettungen (Vektoren)",
+    "en": "Embeddings (vectors)"
+  },
+  "description": {
+    "de": "Rechnet mit einem lokalen Modell je Abschnitt eines Dokuments und je Knoten einen Vektor und legt ihn in die Datenbank (Erweiterung vector) — die Grundlage für die Suche nach Sinn in ⌕ Dokumente, die Frage an die Dokumente und das Band „Ähnliche Knoten“. Läuft als Job im Hintergrund und holt nach, was noch fehlt; für Suchanfragen hält der Server einen zweiten Prozess dieses Plugins vor. Braucht npm install im Plugin-Verzeichnis; das Modell wird beim ersten Lauf geladen (etwa 120 MB) und bleibt im Verzeichnis .cache. Abgeleitete Daten, nichts davon geht ins Journal.",
+    "en": "Computes one vector per document section and per node with a local model and stores it in the database (extension vector) — the basis for searching by meaning in ⌕ Documents, asking the documents, and the band “Similar nodes”. Runs as a background job and catches up on what is missing; for search queries the server keeps a second process of this plugin. Needs npm install in the plugin directory; the model is downloaded on the first run (about 120 MB) and stays in the .cache directory. Derived data, nothing goes into the journal."
+  },
+  "kind": "tool",
+  "runs": "process",
+  "entry": "entry.js",
+  "requires": [
+    "tasker"
+  ],
+  "system": true,
+  "progress": "/api/docs/embed",
+  "process": {
+    "command": "node",
+    "args": [
+      "job.mjs",
+      "{journali}",
+      "{actor}",
+      "{limit}",
+      "{model}"
+    ],
+    "description": "Abschnitte und Knoten ohne Vektor einbetten, in Runden, bis nichts mehr offen ist",
+    "params": [
+      {
+        "key": "limit",
+        "label": "Posten je Runde",
+        "type": "number",
+        "default": "64",
+        "perJob": true
+      },
+      {
+        "key": "model",
+        "label": "Modell (Hugging Face, ONNX) — dasselbe wie am Server (JOURNALI_EMBED_MODEL)",
+        "type": "text",
+        "default": "Xenova/multilingual-e5-small",
+        "perJob": false
+      }
+    ]
+  }
+}

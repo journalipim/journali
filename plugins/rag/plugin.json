@@ -1,12 +1,12 @@
 {
   "key": "rag",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "label": {
     "de": "KI-Wissensbasis",
     "en": "AI knowledge base"
   },
   "description": {
-    "de": "Exportiert je Knoten ein sauberes, zitierfähiges Dokument für Vektor-Stores und RAG-Dienste: Markdown je Knoten und nodes.jsonl mit Id, Pfad, SKU, Sprache, Werten, freigegebener Version und Belegen — als Job, regelmäßig, in ein Verzeichnis. Kein Datenbankzugriff von aussen nötig.",
+    "de": "Exportiert je Knoten ein sauberes, zitierfähiges Dokument für Vektor-Stores und RAG-Dienste: Markdown je Knoten und nodes.jsonl mit Id, Pfad, SKU, Sprache, Werten, freigegebener Version, Belegen und dem Text der Dokumente am Knoten — als Job, regelmäßig, in ein Verzeichnis. Kein Datenbankzugriff von aussen nötig.",
     "en": "Exports one clean, citable document per node for vector stores and RAG services (Markdown + nodes.jsonl with metadata, released version and documents) — as a scheduled job."
   },
   "kind": "export",
@@ -24,7 +24,8 @@
       "{dir}",
       "{role}",
       "{locales}",
-      "{withVersions}"
+      "{withVersions}",
+      "{withDocs}"
     ],
     "description": "Dokumente je Knoten (Markdown + nodes.jsonl) für RAG in ein Verzeichnis",
     "profile": "generic",
@@ -73,6 +74,13 @@
       {
         "key": "withVersions",
         "label": "freigegebene Version und Belege mitgeben",
+        "type": "boolean",
+        "default": "true",
+        "perJob": false
+      },
+      {
+        "key": "withDocs",
+        "label": "Text der Dokumente am Knoten mitgeben (aus dem Dokumentindex)",
         "type": "boolean",
         "default": "true",
         "perJob": false

@@ -97,8 +97,8 @@ public static class DocsApi
             return Results.Ok(new { ready = true, state = aktuell ? state : null, tables = aktuell ? tables : [] });
         });
 
-        api.MapDelete("/docs/{id}", async (string id, DocText docs, CancellationToken ct) =>
-            Results.Ok(new { removed = await docs.RemoveAsync(id, ct) }));
+        api.MapDelete("/docs/{id}", async (string id, DocText docs, Vectors vectors, CancellationToken ct) =>
+            Results.Ok(new { removed = await docs.RemoveAsync(id, ct) + await vectors.RemoveMediaAsync(id, ct) }));
 
         // Gescheiterte wieder freigeben: der Job liest sie in der nächsten Runde erneut
         api.MapPost("/docs/retry", async (DocText docs, CancellationToken ct) =>
@@ -107,44 +107,74 @@ public static class DocsApi
             return Results.Ok(new { freed = await docs.RetryFailedAsync(ct) });
         });
 
-        // Suche: Wörter, Zahlen, Normen. under=<knoten> schränkt auf die Dokumente eines Teilbaums ein.
-        api.MapGet("/docs/search", async (string q, Catalog c, DocText docs, int limit = 50, string? under = null, CancellationToken ct = default) =>
+        // Suche: Wörter, Zahlen, Normen — mode=text (Vorgabe). mode=semantic sucht nach Sinn über die Vektoren (35),
+        // mode=hybrid verschneidet beides (RRF: der Platz je Reihe zählt, nicht der Wert). under=<knoten> schränkt auf
+        // die Dokumente eines Teilbaums ein. warning sagt, warum es beim Sinn nicht ging — die Wörter kommen trotzdem.
+        api.MapGet("/docs/search", async (string q, Catalog c, DocText docs, Vectors vectors, Embedder embedder, int limit = 50, string? under = null, string mode = "text", CancellationToken ct = default) =>
         {
             if (!docs.Ready) return Results.Ok(new { ready = false, hits = Array.Empty<object>() });
-            // Medien des Teilbaums: was an den Knoten darunter hängt (Relationen zeigen auf das Medium)
             HashSet<string>? only = null;
             if (!string.IsNullOrWhiteSpace(under))
             {
-                only = c.With((_, tree, _) =>
-                {
-                    var ids = new HashSet<string> { under };
-                    var stack = new Stack<string>([under]);
-                    while (stack.Count > 0) foreach (var kid in tree.Children(stack.Pop())) { if (ids.Add(kid.Id)) stack.Push(kid.Id); }
-                    var media = new HashSet<string>();
-                    foreach (var r in c.Relations.All.Values) if (ids.Contains(r.From)) media.Add(r.To);
-                    return media;
-                });
-                if (only.Count == 0) return Results.Ok(new { ready = true, hits = Array.Empty<object>() });
+                only = Unter(c, under);
+                if (only.Count == 0) return Results.Ok(new { ready = true, mode, warning = (string?)null, hits = Array.Empty<object>() });
             }
-            var hits = await docs.SearchAsync(q, limit, only, ct);
-            // Treffer anreichern: Name des Dokuments und die Knoten, an denen es hängt
-            var view = c.With((model, tree, _) => hits.Select(h =>
+            var n = Math.Clamp(limit, 1, 500);
+            var worte = mode == "semantic" ? [] : await docs.SearchAsync(q, n, only, ct);
+            List<Vectors.Treffer> sinn = []; string? warnung = null;
+            if (mode is "semantic" or "hybrid")
             {
-                var m = c.Media.All.GetValueOrDefault(h.Media);
-                var nodes = c.Relations.To(h.Media)
-                    .Select(r => tree.Nodes.GetValueOrDefault(r.From))
-                    .Where(n => n is not null)
-                    .DistinctBy(n => n!.Id)
-                    .Take(5)
-                    .Select(n => new { id = n!.Id, n.Role, label = NodeRow.LabelOf(tree, model, n) })
-                    .ToList();
-                return new
-                {
-                    media = h.Media, name = m?.Name ?? h.Media, mime = m?.Mime, h.Page, h.Heading,
-                    snippet = h.Snippet, rank = Math.Round(h.Rank, 4), nodes,
-                };
+                if (!vectors.Ready) warnung = vectors.Reason;
+                else if (!embedder.Available) warnung = embedder.Reason;
+                else try { var (model, vec) = await embedder.EmbedAsync(q, "query", ct); sinn = await vectors.SearchChunksAsync(model, vec, n, only, ct); }
+                    catch (Exception e) { warnung = e.Message; }
+            }
+            var wortMap = worte.ToDictionary(h => (h.Media, h.Seq)); var sinnMap = sinn.ToDictionary(x => (x.Media, x.Seq));
+            var reihe = SemanticApi.Rrf(worte.Select(h => (h.Media, h.Seq)), sinn.Select(x => (x.Media, x.Seq))).Take(n).ToList();
+            var view = c.With((model, tree, _) => reihe.Select(r =>
+            {
+                wortMap.TryGetValue(r.Key, out var w); sinnMap.TryGetValue(r.Key, out var x);
+                return HitView(c, model, tree, r.Key.Media, r.Key.Seq, w?.Page ?? x?.Page, w?.Heading ?? x?.Heading, w?.Snippet ?? Ausschnitt(x!.Body), w?.Rank ?? 0, x is null ? null : Math.Round(1 - x.Distance, 4));
             }).ToList());
-            return Results.Ok(new { ready = true, hits = view });
+            return Results.Ok(new { ready = true, mode, warning = warnung, hits = view });
         });
+
+        // Der Text eines Dokuments, wie der Index ihn hat — für den Export (Plugin rag) und zum Nachlesen
+        api.MapGet("/docs/{id}/text", async (string id, Catalog c, DocText docs, CancellationToken ct) =>
+        {
+            if (!docs.Ready) return Results.Ok(new { ready = false, state = (string?)null, chunks = Array.Empty<DocText.Chunk>() });
+            if (c.Read(_ => c.Media.All.GetValueOrDefault(id)) is not { } medium) return Results.NotFound();
+            var (state, sha, chunks) = await docs.ChunksAsync(id, ct);
+            var aktuell = sha == medium.Sha256;
+            return Results.Ok(new { ready = true, state = aktuell ? state : null, chunks = aktuell ? chunks : [] });
+        });
+    }
+
+    /// <summary>Die Medien eines Teilbaums: was an den Knoten darunter hängt (Relationen zeigen auf das Medium).</summary>
+    public static HashSet<string> Unter(Catalog c, string under) => c.With((_, tree, _) =>
+    {
+        var ids = new HashSet<string> { under };
+        var stack = new Stack<string>([under]);
+        while (stack.Count > 0) foreach (var kid in tree.Children(stack.Pop())) { if (ids.Add(kid.Id)) stack.Push(kid.Id); }
+        var media = new HashSet<string>();
+        foreach (var r in c.Relations.All.Values) if (ids.Contains(r.From)) media.Add(r.To);
+        return media;
+    });
+
+    /// <summary>Der Anfang eines Abschnitts als Ausschnitt — die Sinnsuche hat keine Fundstellen zu markieren.</summary>
+    public static string Ausschnitt(string body, int max = 240) => body.Length <= max ? body : body[..max].TrimEnd() + " …";
+
+    /// <summary>Ein Treffer zeigt immer auf Dokument und Knoten: Name des Dokuments und die Knoten, an denen es hängt.</summary>
+    public static object HitView(Catalog c, Journali.Core.Projections.ModelCatalog model, Journali.Core.Projections.Tree tree, string media, int seq, int? page, string? heading, string snippet, double rank, double? score)
+    {
+        var m = c.Media.All.GetValueOrDefault(media);
+        var nodes = c.Relations.To(media)
+            .Select(r => tree.Nodes.GetValueOrDefault(r.From))
+            .Where(n => n is not null)
+            .DistinctBy(n => n!.Id)
+            .Take(5)
+            .Select(n => new { id = n!.Id, n.Role, label = NodeRow.LabelOf(tree, model, n) })
+            .ToList();
+        return new { media, name = m?.Name ?? media, mime = m?.Mime, seq, page, heading, snippet, rank = Math.Round(rank, 4), score, nodes };
     }
 }

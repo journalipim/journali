@@ -235,8 +235,9 @@ das Paket ist so sichtbar wie das Repo, `docker pull` ohne Anmeldung braucht ein
 `compose.yaml` nennt das Image und behält `build: .` — `docker compose pull` holt es, `docker compose up --build`
 baut es aus dem Checkout unter demselben Namen. Neuer Stand: `docker compose pull && docker compose up -d`.
 
-`compose.yaml` ist das ganze Paket: Server + `postgres:18` mit eigenem
-Volume. Plugins kommen per Bind-Mount `./plugins:/app/plugins` vom Host:
+`compose.yaml` ist das ganze Paket: Server + `pgvector/pgvector:pg18` (PostgreSQL 18 mit der Erweiterung
+`vector` für die Vektoren, pflegestruktur 35) mit eigenem Volume. Wer eine eigene Datenbank ohne die Erweiterung
+betreibt, verliert nichts als die Suche nach Sinn — `GET /api/docs/embed` sagt es. Plugins kommen per Bind-Mount `./plugins:/app/plugins` vom Host:
 eine Datei dort tauschen aktualisiert das Plugin ohne neues Image (der
 Server liest Manifeste und Module bei jedem Zugriff, `no-cache`; eine neue
 Fassung erscheint unter ⌁ Plugins als ↑ Update). Prozess-Plugins brauchen
@@ -310,21 +311,34 @@ Bytes — was hingeschickt und was zurückgekommen ist. Es steht als Kennzahl in
 Klassifikation, Prüfung, Geodaten). Begrenzt wird nichts. Die Recherche im Internet nutzt das
 Suchwerkzeug des Anbieters und wird dort je Suche berechnet.
 
+### Vektoren und die Frage an die Dokumente
+
+Die Suche nach Sinn braucht **keinen** Schlüssel: das Plugin `embed` rechnet die Vektoren mit einem lokalen Modell
+(`Xenova/multilingual-e5-small`, ONNX) und legt sie in die Datenbank (Erweiterung `vector`). Einrichten: im
+Plugin-Verzeichnis `npm install` (im Paket liegen die Pakete im Image), das Plugin einschalten, im Tasker einen Job
+des Plugins anlegen und laufen lassen — der erste Lauf holt das Modell (etwa 120 MB) nach `plugins/embed/.cache`
+(Volume `journali-embed-cache`); danach braucht nichts mehr das Netz. Für Suchfragen hält der Server einen
+Kindprozess `node plugins/embed/serve.mjs` vor (`Embedder.cs`). Ein anderes Modell: `JOURNALI_EMBED_MODEL` am Server
+**und** der Parameter `model` des Jobs, beide gleich. Die **Frage an die Dokumente** (⌕ Dokumente → Fragen,
+`POST /api/docs/ask`) ist dagegen ein KI-Aufruf über den Schlüssel des Teams, gezählt wie jeder andere (Anlass `docs`).
+
 ## Plugins im Container
 
-Das Image ist autark: es bringt alle Plugins mit, dazu die Pakete der beiden, die
-welche brauchen (`derive` mit sharp, `docs` mit pdfjs) und die Node-Binärdatei.
+Das Image ist autark: es bringt alle Plugins mit, dazu die Pakete der drei, die
+welche brauchen (`derive` mit sharp, `docs` mit pdfjs, `embed` mit transformers) und die Node-Binärdatei.
 Ein `docker run` allein genügt, nichts wird nachgeladen.
 
 `compose.yaml` legt zusätzlich `./plugins` vom Host darüber, damit ein Plugin ohne
 neues Image ausgetauscht werden kann. Ein Bind-Mount **überdeckt** aber alles
-darunter — auch die `node_modules` aus dem Image. Darum holen zwei benannte
-Volumes genau diese zwei Ordner zurück:
+darunter — auch die `node_modules` aus dem Image. Darum holen benannte
+Volumes genau diese Ordner zurück, dazu das Modell von `embed`:
 
 ```yaml
 - ./plugins:/app/plugins
 - journali-derive-modules:/app/plugins/derive/node_modules
 - journali-docs-modules:/app/plugins/docs/node_modules
+- journali-embed-modules:/app/plugins/embed/node_modules
+- journali-embed-cache:/app/plugins/embed/.cache
 ```
 
 Sie werden beim ersten Start aus dem Image gefüllt. Wer die Pakete eines Plugins

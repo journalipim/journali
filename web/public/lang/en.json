@@ -2648,5 +2648,10 @@
  "keine Schlüsselspalte in dieser Lage": "no key column in this layout",
  "{0} gilt nicht für {1}": "{0} does not apply to {1}",
  "leer": "empty",
- "Dateien hierher ziehen legt sie an diesem Knoten ab. Mit Strg werden die Tabellen eines Dokuments ausgewertet.": "Dropping files here attaches them to this node. With Ctrl, the tables of a document are evaluated."
+ "Dateien hierher ziehen legt sie an diesem Knoten ab. Mit Strg werden die Tabellen eines Dokuments ausgewertet.": "Dropping files here attaches them to this node. With Ctrl, the tables of a document are evaluated.",
+ "Der Einbetter antwortet nicht.": "The embedder does not answer.",
+ "Der Einbetter liefert keinen Vektor.": "The embedder returns no vector.",
+ "Der Einbetter startet nicht.": "The embedder does not start.",
+ "Erweiterung vector fehlt in dieser Datenbank.": "Extension vector is missing in this database.",
+ "q fehlt.": "q is missing."
 }

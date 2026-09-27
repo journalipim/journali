@@ -99,17 +99,17 @@ public static class Tarife
     public const int Ohne = int.MaxValue;
 
     /// <summary>
-    /// Systemjobs: sie rechnen und messen, was jede Anlage braucht — die Vorschauen und die Masse der Dateien.
+    /// Systemjobs: sie rechnen und messen, was jede Anlage braucht — die Vorschauen, die Masse der Dateien, die Vektoren.
     /// Das ist Betrieb, kein Merkmal eines Tarifs, und darum sind sie in jedem erlaubt.
     /// <para>Die Ausnahme steht hier und nicht nur in <see cref="Basis"/>, weil im Betrieb das signierte Tarifblatt
     /// gilt und nicht das Saatgut: ein Blatt, das einen neuen Systemjob noch nicht kennt, sperrte ihn sonst aus. In
     /// der Liste stünde dann der Tarif, der ihn enthält, statt an/aus — und einmal ausgeschaltet liesse er sich nicht
     /// wieder einschalten (27.09.2026).</para>
     /// </summary>
-    public static readonly IReadOnlySet<string> Systemjobs = new HashSet<string> { "derive", "probe" };
+    public static readonly IReadOnlySet<string> Systemjobs = new HashSet<string> { "derive", "probe", "embed" };
 
     // Die Systemjobs stehen auch hier: das Saatgut soll dasselbe sagen wie die Ausnahme darüber.
-    private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "probe", "tasker", "driver"];
+    private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "probe", "embed", "tasker", "driver"];
 
     public static readonly Tarif Free = new("free", "Kostenlos", 0, 10_000, 50_000, 1, new HashSet<string>(Basis));
     public static readonly Tarif Pro = new("pro", "Pro", 1, 50_000, 250_000, 5,

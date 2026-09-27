@@ -1,4 +1,4 @@
-# Das ganze Paket: Server + PostgreSQL 18. Das Datenbankpasswort erzeugt der erste Start (Dienst db-passwort) —
+# Das ganze Paket: Server + PostgreSQL 18 mit der Erweiterung vector (Image pgvector/pgvector — für die Vektoren, 35). Das Datenbankpasswort erzeugt der erste Start (Dienst db-passwort) —
 # oder er nimmt JOURNALI_DB_PASSWORD aus .env, wenn dort eines steht. Ansehen: ⚙ Einstellungen → ⇅ B&R → Datenbank,
 # oder: docker compose exec server cat /run/journali/db-password
 # Das Server-Image kommt fertig von ghcr.io (`docker compose pull`, Workflow .github/workflows/docker.yml);
@@ -10,7 +10,7 @@ services:
   # aus .env, wenn dort JOURNALI_DB_PASSWORD steht (bestehende Anlagen), sonst zufällig. Danach bleibt es, wie es ist:
   # Postgres übernimmt ein Passwort nur beim allerersten Start.
   db-passwort:
-    image: postgres:18
+    image: pgvector/pgvector:pg18
     entrypoint: ["sh", "-c"]
     command:
       - |
@@ -27,7 +27,7 @@ services:
     restart: "no"
 
   db:
-    image: postgres:18
+    image: pgvector/pgvector:pg18
     environment:
       POSTGRES_PASSWORD_FILE: /run/journali/db-password
     volumes:
@@ -72,10 +72,13 @@ services:
       # Plugins vom Host: Datei tauschen = Plugin aktualisiert (Server liest sie bei jedem Zugriff, no-cache);
       # neue Fassung unter ⌁ Plugins → ↑ aktualisieren. Kein neues Image noetig
       - ./plugins:/app/plugins
-      # ... aber ein Bind-Mount ueberdeckt alles darunter, auch die node_modules aus dem Image. Diese zwei Plugins
-      # brauchen Pakete (sharp, pdfjs); ihre Ordner kommen darum aus dem Image zurueck, damit es autark bleibt
+      # ... aber ein Bind-Mount ueberdeckt alles darunter, auch die node_modules aus dem Image. Diese drei Plugins
+      # brauchen Pakete (sharp, pdfjs, transformers); ihre Ordner kommen darum aus dem Image zurueck, damit es autark bleibt
       - journali-derive-modules:/app/plugins/derive/node_modules
       - journali-docs-modules:/app/plugins/docs/node_modules
+      # embed: Pakete aus dem Image, dazu das Modell (.cache), das der erste Lauf holt — es soll kein zweites Mal geladen werden
+      - journali-embed-modules:/app/plugins/embed/node_modules
+      - journali-embed-cache:/app/plugins/embed/.cache
     depends_on:
       db:
         condition: service_healthy
@@ -85,6 +88,8 @@ volumes:
   journali-secrets:
   journali-media:
   journali-jobs:
-  # Pakete der zwei Plugins, die welche brauchen — beim ersten Start aus dem Image gefuellt
+  # Pakete der drei Plugins, die welche brauchen — beim ersten Start aus dem Image gefuellt; dazu das Modell von embed
   journali-derive-modules:
   journali-docs-modules:
+  journali-embed-modules:
+  journali-embed-cache:

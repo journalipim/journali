@@ -19,5 +19,21 @@
  "Seite {0}": "Page {0}",
  "Dokumente": "Documents",
  "Im Text der Dokumente suchen — Datenblätter, Anleitungen, Kataloge; gelesen wird vom Job „Dokumente lesen“": "Search the text of the documents — data sheets, manuals, catalogues; read by the job “Read documents”",
- "In Dokumenten suchen": "Search in documents"
+ "In Dokumenten suchen": "Search in documents",
+ "Wörter, Zahlen, Normen — der Volltext": "words, numbers, standards — the full text",
+ "Wörter": "Words",
+ "nach Sinn — über die Vektoren des Plugins „Einbettungen“": "by meaning — via the vectors of the plugin “Embeddings”",
+ "Sinn": "Meaning",
+ "Wörter und Sinn, verschnitten": "words and meaning, merged",
+ "Beides": "Both",
+ "Vektoren für die Suche nach Sinn — Job „Einbettungen“": "vectors for the search by meaning — job “Embeddings”",
+ "◌ ohne Vektoren": "◌ no vectors",
+ "· {0} von {1} Abschnitten mit Vektor": "· {0} of {1} sections with a vector",
+ "Frage an die Dokumente — die Antwort nennt ihre Quellen": "Ask the documents — the answer names its sources",
+ "Die besten Abschnitte gehen an die KI des Teams; die Antwort trägt je Aussage die Nummer ihrer Quelle": "The best sections go to the team's AI; each statement in the answer carries the number of its source",
+ "Fragen": "Ask",
+ "Antwort schliessen": "close answer",
+ "Nichts in den Dokumenten dazu": "Nothing about that in the documents",
+ "Ähnlichkeit nach Sinn": "similarity by meaning",
+ "Die Suche nach Sinn ging nicht — gefunden wurde über die Wörter": "The search by meaning did not work — found via the words"
 }

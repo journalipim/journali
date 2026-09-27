@@ -5,7 +5,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-const [,, serverArg, actorArg, rootArg, dirArg, roleArg, locArg, verArg] = process.argv
+const [,, serverArg, actorArg, rootArg, dirArg, roleArg, locArg, verArg, docsArg] = process.argv
 const E = process.env
 const server = (serverArg || E.JOURNALI_JOURNALI || 'http://localhost:5000').replace(/\/+$/, '')
 const actor = actorArg || E.JOURNALI_ACTOR || 'job:rag'
@@ -14,6 +14,7 @@ const dir = path.resolve(dirArg || E.JOURNALI_DIR || 'rag')
 const roleFilter = roleArg || E.JOURNALI_ROLE || 'product'
 const locales = (locArg || E.JOURNALI_LOCALES || '').split(/[,\s]+/).filter(Boolean)
 const withVersions = (verArg || E.JOURNALI_WITHVERSIONS || 'true') === 'true'
+const withDocs = (docsArg || E.JOURNALI_WITHDOCS || 'true') === 'true'   // der Text der Dokumente am Knoten aus dem Dokumentindex (34 J)
 const headers = { 'X-Actor': actor, ...(process.env.JOURNALI_TOKEN ? { Authorization: 'Bearer ' + process.env.JOURNALI_TOKEN } : {}) }   // mit Benutzern: Dienst-Token des Laufs
 const api = { get: async p => { const r = await fetch(server + p, { headers }); if (!r.ok) throw new Error(`${p}: ${r.status} ${await r.text()}`); return r.json() } }
 
@@ -36,6 +37,17 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
     const look = (m, k, loc) => m.get(`${k}|${loc}|`) ?? (loc ? m.get(`${k}||`) : null) ?? null
     let version = null
     if (withVersions) { try { const vs = await api.get(`/api/nodes/${encodeURIComponent(r.id)}/versions`); version = [...vs].reverse().find(v => !v.withdrawn) ?? null } catch { } }
+    // Die Dokumente am Knoten mit ihrem Text aus dem Index (GET /api/docs/{id}/text): erst damit hat ein fremder
+    // Store die Datenblätter — bisher stand nur ihre Adresse im Export. Nicht gelesene bleiben eine Adresse.
+    const texte = []
+    if (withDocs) {
+      try {
+        const rels = await api.get(`/api/nodes/${encodeURIComponent(r.id)}/relations`)
+        for (const rel of (rels.out ?? []).filter(x => x.other?.role === 'media')) {
+          try { const t = await api.get(`/api/docs/${encodeURIComponent(rel.other.id)}/text`); if (t.chunks?.length) texte.push({ id: rel.other.id, name: rel.other.label, chunks: t.chunks.slice(0, 200) }) } catch { }
+        }
+      } catch { }
+    }
     for (const locale of locs) {
       const facts = []
       for (const d of model.attributes) {
@@ -53,10 +65,11 @@ const api = { get: async p => { const r = await fetch(server + p, { headers }); 
       const md = [`# ${title}`, '', `${ROLE[r.role] ?? r.role} · ${crumbs.join(' › ')}${r.keys ? ' · ' + Object.entries(r.keys).map(([k, v]) => `${k} ${v}`).join(' · ') : ''} · Sprache ${locale}`,
         version ? `Version ${version.nr} · Stand #${version.journalNumber} · ${new Date(version.at).toISOString().slice(0, 10)}` : `Stand #${node.lastNumber ?? ''} (keine freigegebene Version)`, '',
         ...facts.map(f => `- **${f.label}:** ${f.value}${f.unit ? ' ' + f.unit : ''}`),
+        ...texte.flatMap(d => ['', `## Dokument: ${d.name}`, ...d.chunks.map(c => (c.page ? `(Seite ${c.page}) ` : '') + (c.heading ? `**${c.heading}** ` : '') + c.body)]),
         ...(version?.documents?.length ? ['', '## Belege', ...version.documents.map(d => `- ${d.kind}: ${server}${d.url} (${d.name})`)] : [])].join('\n')
       const file = path.join(dir, `${String(r.label ?? r.id).replace(/[^\w.-]+/g, '_').slice(0, 60)}-${r.id}-${locale}.md`)
       fs.writeFileSync(file, md, 'utf8')
-      lines.push(JSON.stringify({ id: r.id, role: r.role, title, path: crumbs, keys: r.keys ?? null, locale, version: version ? { nr: version.nr, journalNumber: version.journalNumber, at: version.at, documents: version.documents.map(d => ({ kind: d.kind, url: server + d.url })) } : null, url: `${server}/tree/${r.id}`, text: md, facts: Object.fromEntries(facts.map(f => [f.key, f.value + (f.unit ? ' ' + f.unit : '')])) }))
+      lines.push(JSON.stringify({ id: r.id, role: r.role, title, path: crumbs, keys: r.keys ?? null, locale, docs: texte.map(d => ({ id: d.id, name: d.name, chunks: d.chunks.length })), version: version ? { nr: version.nr, journalNumber: version.journalNumber, at: version.at, documents: version.documents.map(d => ({ kind: d.kind, url: server + d.url })) } : null, url: `${server}/tree/${r.id}`, text: md, facts: Object.fromEntries(facts.map(f => [f.key, f.value + (f.unit ? ' ' + f.unit : '')])) }))
       n++
     }
     if (n % 25 === 0) console.log(`${n} …`)

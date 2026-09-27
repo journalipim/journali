@@ -1729,16 +1729,76 @@ Offen: Tabellen mit mehr als zwei Spalten (Varianten je Spalte) werden heute als
 gelesen; eine Zuordnung Spalte → Variante wäre der nächste Schritt. Und ein Bild von einer Tabelle (Scan) braucht erst
 die Texterkennung (J).
 
-### Semantische Suche — was heute wirklich da ist
+### Semantische Suche
 
-Zur Klarstellung, weil das leicht zu verwechseln ist:
+Volltext (Postgres `tsvector` je Medium, `DocText`) findet Wörter, Zahlen, Normen und Kennungen. Alles, was Sinn
+meint, steht in 35.
 
-- **Volltext, gebaut.** Postgres `tsvector` je Medium (`DocText`), exakt bei Zahlen, Normen und Kennungen, ohne
-  Modell und ohne Kosten. Gesucht wird darin über ⌕ Dokumente.
-- **Vektorsuche: nicht gebaut.** Kein pgvector, keine Einbettungen, nichts Semantisches im Server. `DocText.cs`
-  hält das ausdrücklich als „kommt später daneben“ fest.
-- **Das Plugin `rag` ist ein Export**, kein Index: es schreibt je Knoten Markdown und `nodes.jsonl` in ein
-  Verzeichnis, für einen **fremden** Vektor-Store. Es exportiert **Knoten**, nicht Dokumente — Belege stehen darin
-  nur als Adresse, ihr Text geht nicht mit. Wer PDF-Inhalte in einem RAG haben will, hat sie heute also nicht
-  darüber, sondern müsste den Text aus `media_text` mit ausgeben. Das ist eine kleine Ergänzung am `rag`-Job und
-  gehört zu Block J.
+## 35. Vektoren — Suche nach Sinn, Frage an die Dokumente, ähnliche Knoten (27.09.2026)
+
+**Entschieden und gebaut.** Drei Entscheidungen davor: das Paket wechselt auf das Image `pgvector/pgvector:pg18`
+(PostgreSQL 18 mit der Erweiterung `vector`); das Modell läuft **lokal** in einem Prozess-Plugin, nicht bei einem
+Anbieter — kein Schlüssel, kein Volumen, dafür Rechenzeit auf dem Server; und der Umfang ist voll: Dokumente, Knoten,
+die Frage an die Dokumente.
+
+**Was ein Vektor ist und wo er liegt.** Je Abschnitt eines Dokuments (`media_text`) und je Pflegeknoten in der
+Leitsprache eine Einbettung: `media_vector (media, sha256, seq, model, embedding)`, `node_vector (node, locale, hash,
+model, embedding)` — `Vectors.cs`. **Abgeleitet** wie der Text: aus Text und Modell jederzeit neu zu rechnen, darum
+eigene Tabellen neben dem Journal, nie ein Eintrag. Die Spalte `embedding` hat keine feste Dimension; das Modell
+steht je Zeile, gesucht wird nur unter dem eigenen (`Xenova/multilingual-e5-small`, 384 Dimensionen; ein anderes
+Modell rechnet alles neu). Ohne Erweiterung ist der Server nicht kaputt: `Vectors.Ready` ist falsch, der Grund steht
+in der Antwort, die Wortsuche läuft weiter.
+
+**Wer rechnet.** Das Plugin `embed` (`plugins/embed`, `@huggingface/transformers`, ONNX, `dtype q8`). Zwei Prozesse
+aus demselben Modul:
+
+- **Der Job** (`job.mjs`) ist ein Systemjob wie `probe`: `GET /api/docs/embed/pending` nennt die offenen Posten —
+  Abschnitte ohne Vektor zu ihrem Hash und Modell, Knoten, deren Text (`NodeText.Of`) einen anderen Hash hat als der
+  eingebettete, dazu Knoten, die es nicht mehr gibt —, der Job bettet in Stapeln von 16 ein und schreibt
+  `PUT /api/docs/embed`. Die Liste ist eine Frage an die Tabellen, kein Bestand: ein abgebrochener Lauf lässt sie
+  offen, der nächste findet dieselben. Anhalten über `/signal` wie bei `probe`. `GET /api/docs/embed` zählt (`offen`,
+  `gelesen`, `total` wie bei `probe`).
+- **Der Einbetter** (`serve.mjs`) beantwortet Suchfragen: eine Frage muss in denselben Raum wie die Abschnitte, und das
+  Modell gehört dem Plugin. Der Server hält darum **einen** Kindprozess vor (`Embedder.cs`), startet ihn beim ersten
+  Bedarf, fragt je Zeile JSON über stdin/stdout (`{text, kind}` → `{model, dims, vector}`) und startet ihn nach einem
+  Absturz neu. Das ist die eine Ausnahme von „Plugins nur über /api“ (CLAUDE.md), und sie ist begründet: der Weg über
+  einen Job wäre je Frage ein Prozessstart mit Modellladen.
+
+Das Modell kommt beim ersten Lauf aus dem Netz (etwa 120 MB) nach `plugins/embed/.cache` und bleibt dort (Volume
+`journali-embed-cache`; `JOURNALI_EMBED_CACHE` setzt den Ort). Danach braucht nichts mehr das Netz. Servername des
+Modells: `JOURNALI_EMBED_MODEL`, Vorgabe dieselbe wie im Parameter des Jobs — beide müssen dasselbe sagen.
+
+**Suche.** `GET /api/docs/search?mode=text|semantic|hybrid`. `text` ist, was war. `semantic` bettet die Frage ein
+und sortiert nach Kosinusabstand (`score` = 1 − Abstand am Treffer, der Ausschnitt ist der Anfang des Abschnitts).
+`hybrid` verschneidet beide Reihen mit Reciprocal Rank Fusion (`SemanticApi.Rrf`): je Reihe zählt der Platz, nicht
+der Wert, denn Volltext-Rang und Abstand sind nicht vergleichbar; was in beiden vorn steht, steht vorn. Geht der Sinn
+nicht (Erweiterung, Plugin, Prozess), sagt `warning` warum, und die Wörter kommen trotzdem. In ⌕ Dokumente stehen die
+drei als Chips „Wörter · Sinn · Beides“, die Wahl bleibt im Browser.
+
+**Frage an die Dokumente.** `POST /api/docs/ask {q, under?, k}`: die besten `k` Abschnitte (hybrid; der Wort-Treffer
+holt sich seinen ganzen Abschnitt, `DocText.ChunkAsync`) gehen nummeriert als Auszüge an die KI des zahlenden Teams
+(`AiApi.AskAsync`, derselbe Weg und dieselbe Zählung wie `/ai/ask`, Anlass `docs`). Die Anweisung: nur aus den
+Auszügen, jede Aussage mit ihrer Nummer, ein Satz, wenn nichts drinsteht, Sprache der Frage. Die Antwort trägt
+`sources`: Nummer, Dokument, Seite, Überschrift, die Knoten, an denen es hängt. Ohne Schlüssel am Team kommt die
+Meldung, die auch `/ai/ask` gibt. Der Sinn braucht keinen Schlüssel — die Frage schon: sie ist ein KI-Aufruf.
+
+**Knoten.** Der Text eines Knotens (`NodeText.Of`): Name, Rolle, Pfad, dann je Attribut Bezeichnung und Wert in der
+Leitsprache — Listenwerte als Bezeichnung, HTML ohne Tags, Einheit dahinter; Formeln, Vorlagen und Zeilen nicht.
+Derselbe Inhalt wie das Markdown des Plugins `rag`, ohne Auszeichnung. `GET /api/nodes/semantic?q` findet Knoten nach
+Sinn; `GET /api/nodes/{id}/similar` die nächsten aus dem eigenen Vektor, ohne neue Einbettung — als Band
+„≈ Ähnliche Knoten“ in der Knotenansicht (Plugin `embed`, `entry.js`). `known` sagt, ob der Knoten schon einen
+Vektor hat.
+
+**Export.** Das Plugin `rag` gibt mit `withDocs` (Vorgabe an) den Text der Dokumente am Knoten mit
+(`GET /api/docs/{id}/text`, Abschnitt „## Dokument: …“, `docs` in `nodes.jsonl`) — bisher stand nur ihre Adresse im
+Export (34 J).
+
+**Offen.**
+
+- Nur die Leitsprache wird je Knoten eingebettet; ein mehrsprachiges Modell findet trotzdem über Sprachen hinweg,
+  aber ein Knoten mit nur englischen Werten hat wenig Text.
+- Kein Index auf den Vektorspalten (HNSW braucht eine feste Dimension): bis einige zehntausend Abschnitte ist die
+  genaue Suche schnell genug; darüber ein Index je Modell.
+- Ein Systemjob-Balken im Tasker, der die Zahlen von `/api/docs/embed` (und `/api/media/probe`) zeigt, fehlt noch
+  — das Manifestfeld `progress` steht, gelesen wird es nicht.
+- Bilder haben keinen Text und darum keinen Vektor; Bildeinbettungen (ein anderes Modell) wären ein eigener Schritt.

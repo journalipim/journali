@@ -294,6 +294,11 @@ steht im Kopf `X-Actor`.
 | `POST /api/media/probe` `?limit&again` | `MediaProbed` je gelesenem Kopf; `GET /api/media/probe` zählt die offenen Posten |
 | `GET /api/media/{id}/workflow` · `POST …/workflow/{wf}/{transition}` `{note?}` · `PUT …/workflow/{wf}/assign` `{user}` | `WorkflowStateSet` / `WorkflowAssigned` am Medienstrom — derselbe Workflow wie am Knoten, wenn seine Rollen `media` nennen; ohne Wirkungen |
 | `GET /api/docs/scans` `?limit` | kein Eintrag — die offene Postenliste der Texterkennung (Dokumente im Zustand `scan`); der Erkenner liefert über `PUT /api/docs/{id}` mit `state: text`, `note: "ocr"` |
+| `GET /api/docs/search` `?q&mode=text|semantic|hybrid&under` | kein Eintrag — Wörter, Sinn (Vektoren) oder beides verschnitten; `warning` sagt, warum der Sinn nicht ging |
+| `GET /api/docs/{id}/text` | kein Eintrag — die Abschnitte eines Dokuments aus dem Index (Plugin rag, Nachlesen) |
+| `GET /api/docs/embed`, `GET /api/docs/embed/pending`, `PUT /api/docs/embed` | kein Eintrag — Stand, offene Postenliste und Ablage der Vektoren (Systemjob `embed`, Tabellen `media_vector`, `node_vector`) |
+| `POST /api/docs/ask` `{q, under?, k}` | `AiUsed` am zahlenden Team (Anlass `docs`) — die Frage an die Dokumente mit Quellen |
+| `GET /api/nodes/semantic` `?q`, `GET /api/nodes/{id}/similar` | kein Eintrag — Knoten nach Sinn, ähnliche Knoten aus dem eigenen Vektor |
 | `GET /api/docs/{id}/tables` | kein Eintrag — die Tabellen eines Dokuments (Schlüssel/Wert, abgeleitet, `media_table`) mit dem Zustand des Index; `state` null = noch nicht gelesen. Der Leser liefert sie mit `PUT /api/docs/{id}` (`tables`). Die Übernahme in Attribute schreibt `AttributeDefined` (Gruppe `from_document`) und `AttributeSet` über die bestehenden Wege |
 | `POST /api/media/{id}/supersede` `{by}` | `MediaSuperseded` am Vorgänger, dazu je Zuordnung `RelationCreated` am Nachfolger und `RelationRetired` am Vorgänger, `MediaSourced{from}` am Nachfolger; `GET /api/media?superseded=true` zeigt abgelöste mit |
 | `POST /api/media/folders` `{name, parent?}` · `PUT …/{id}/name` `{name}` · `PUT …/{id}/parent` `{parent}` · `DELETE …/{id}` | `MediaFolderCreated` / `MediaFolderRenamed` / `MediaFolderMoved` / `MediaFolderRetired`; `GET /api/media/folders` liest, `GET /api/media?folder=&deep=&sort=&desc=` filtert und sortiert |

@@ -136,6 +136,7 @@ var mediaStore = new SwitchableMediaStore(MediaConfigFile.Load(dataDir) ?? Media
 builder.Services.AddSingleton(db);
 builder.Services.AddSingleton(mediaStore);
 builder.Services.AddSingleton(new DocText(db));   // Text der Dokumente: abgeleitet, eigene Tabelle neben dem Journal (pflegestruktur 32)
+builder.Services.AddSingleton(new Vectors(db));   // Vektoren je Abschnitt und Knoten (pgvector): abgeleitet, gerechnet vom Plugin embed (35)
 builder.Services.AddSingleton<IMediaStore>(mediaStore);
 builder.Services.AddHttpClient("media", h => { h.Timeout = TimeSpan.FromMinutes(2); h.DefaultRequestHeaders.UserAgent.ParseAdd("journali/1.0"); });   // Medien von URL holen (Import)
 
@@ -152,6 +153,7 @@ var jobDir = dataDir;
 builder.Services.AddSingleton(licences);
 var jobRunner = new JobRunner(catalog, pluginDir, jobDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger<JobRunner>()) { Store = mediaStore };   // Store: Archiv der Fächer
 builder.Services.AddSingleton(jobRunner);
+builder.Services.AddSingleton(new Embedder(pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("embed")));   // eine Suchfrage einbetten: Kindprozess plugins/embed/serve.mjs
 builder.Services.AddHostedService(sp => sp.GetRequiredService<JobRunner>());
 
 // Umlaute lesbar lassen statt \u00fc — das Journal ist zum Anschauen da.
@@ -310,6 +312,7 @@ api.MapGet("/usage", (Catalog c, string? history = null, int limit = 90) => c.Re
 
 ModelApi.Map(api);
 DocsApi.Map(api);
+SemanticApi.Map(api, jobDir);   // Vektoren (35): offene Postenliste für embed, Frage an die Dokumente, ähnliche Knoten
 
 // ---- Baum: Knoten, Werte, Kategorien, Freigaben — einzeln und im Stapel ---------
 

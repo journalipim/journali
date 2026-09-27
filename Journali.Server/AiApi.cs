@@ -125,33 +125,45 @@ public static class AiApi
         // Die eine Frage — mit dem Schlüssel des zahlenden Teams, gezählt bei ihm
         api.MapPost("/ai/ask", async (AskBody body, HttpRequest req, Catalog c, CancellationToken ct) =>
         {
-            if (Actor(req) is not { } actor) return ActorMissing();
+            if (Actor(req) is not { } _) return ActorMissing();
             if (Blank(body.User) is not { } frage) return Bad("user fehlt.");
-            var (fehler, team, zahler, provider, key) = c.With((_, _, _) =>
-            {
-                var mein = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
-                if (mein is null || c.Teams.Get(mein) is not { Enabled: true } t) return (Bad("Kein Team — ohne Team gibt es keine KI über den Server."), "", "", "", "");
-                var zahlerKey = c.Teams.Payer(mein); var zt = c.Teams.Get(zahlerKey)!;
-                if (!zt.Enabled) return (Bad("Das zahlende Team „{0}“ ist abgeschaltet.", zt.Label), "", "", "", "");
-                var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahlerKey));
-                var p = Blank(body.Provider) is { } want && keys.ContainsKey(want) ? want : keys.Keys.OrderBy(x => x).FirstOrDefault();
-                if (p is null) return (Bad("Für „{0}“ ist kein KI-Schlüssel hinterlegt.", zt.Label), "", "", "", "");
-                return ((IResult?)null, mein, zahlerKey, p, keys[p]);
-            });
-            if (fehler is not null) return fehler;
-
-            var amTeam = c.With((_, _, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
-            var model = Blank(amTeam) ?? Blank(body.Model) ?? (provider == "anthropic" ? "claude-sonnet-5" : "gpt-5");
-            try
-            {
-                var (text, sources, hin, zurueck) = await Call(provider, key, model, Blank(body.System), frage, Math.Clamp(body.MaxTokens ?? 2000, 1, 64000), body.Web == true, Math.Clamp(body.MaxSearches ?? 5, 1, 20), ct);
-                var heute = DateOnly.FromDateTime(DateTime.Today);
-                var anlass = Blank(body.Purpose);
-                c.With((_, _, write) => write(actor, Teams.UsageStream + zahler, Types.AiUsed,
-                    new AiUsed(provider, model, actor, 0, 0, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team, hin, zurueck, anlass), null));
-                return Results.Ok(new { text, sources, team, payer = zahler, provider, model });
-            }
-            catch (Exception e) { return Bad(e.Message); }
+            var r = await AskAsync(req, c, jobsDir, body.Provider, body.Model, Blank(body.System), frage, Math.Clamp(body.MaxTokens ?? 2000, 1, 64000), body.Web == true, Math.Clamp(body.MaxSearches ?? 5, 1, 20), Blank(body.Purpose), ct);
+            return r.Fehler ?? Results.Ok(new { text = r.Text, sources = r.Sources, team = r.Team, payer = r.Payer, provider = r.Provider, model = r.Model });
         });
+    }
+
+    /// <summary>
+    /// Die Frage an die KI als Methode — für <c>/ai/ask</c> und für andere Wege im Server (die Frage an die Dokumente,
+    /// 35). Team und Schlüssel wie oben beschrieben, gezählt beim zahlenden Team. Ohne Team oder Schlüssel kommt der
+    /// Fehler als fertige Antwort zurück.
+    /// </summary>
+    public static async Task<(IResult? Fehler, string Text, List<object> Sources, string Team, string Payer, string Provider, string Model)> AskAsync(
+        HttpRequest req, Catalog c, string jobsDir, string? wantProvider, string? wantModel, string? system, string frage, int maxTokens, bool web, int maxSearches, string? purpose, CancellationToken ct)
+    {
+        if (Actor(req) is not { } actor) return (ActorMissing(), "", [], "", "", "", "");
+        var (fehler, team, zahler, provider, key) = c.With((_, _, _) =>
+        {
+            var mein = TeamApi.TeamOf(c, req.HttpContext.Items["user"] as string);
+            if (mein is null || c.Teams.Get(mein) is not { Enabled: true } t) return (Bad("Kein Team — ohne Team gibt es keine KI über den Server."), "", "", "", "");
+            var zahlerKey = c.Teams.Payer(mein); var zt = c.Teams.Get(zahlerKey)!;
+            if (!zt.Enabled) return (Bad("Das zahlende Team „{0}“ ist abgeschaltet.", zt.Label), "", "", "", "");
+            var keys = Secrets.Get(jobsDir, TeamApi.SecretKey(zahlerKey));
+            var p = Blank(wantProvider) is { } want && keys.ContainsKey(want) ? want : keys.Keys.OrderBy(x => x).FirstOrDefault();
+            if (p is null) return (Bad("Für „{0}“ ist kein KI-Schlüssel hinterlegt.", zt.Label), "", "", "", "");
+            return ((IResult?)null, mein, zahlerKey, p, keys[p]);
+        });
+        if (fehler is not null) return (fehler, "", [], "", "", "", "");
+
+        var amTeam = c.With((_, _, _) => c.Teams.Get(zahler)?.Models.GetValueOrDefault(provider));
+        var model = Blank(amTeam) ?? Blank(wantModel) ?? (provider == "anthropic" ? "claude-sonnet-5" : "gpt-5");
+        try
+        {
+            var (text, sources, hin, zurueck) = await Call(provider, key, model, system, frage, maxTokens, web, Math.Max(1, maxSearches), ct);
+            var heute = DateOnly.FromDateTime(DateTime.Today);
+            c.With((_, _, write) => write(actor, Teams.UsageStream + zahler, Types.AiUsed,
+                new AiUsed(provider, model, actor, 0, 0, 1, heute.ToString("yyyy-MM-dd"), team == zahler ? null : team, hin, zurueck, purpose), null));
+            return (null, text, sources, team, zahler, provider, model);
+        }
+        catch (Exception e) { return (Bad(e.Message), "", [], "", "", "", ""); }
     }
 }

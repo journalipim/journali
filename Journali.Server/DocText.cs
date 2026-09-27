@@ -206,6 +206,38 @@ public sealed class DocText
         return (state, sha, tables);
     }
 
+    /// <summary>Die Abschnitte eines Dokuments in Reihenfolge, mit Zustand und Hash — für den Export (Plugin rag) und die
+    /// Frage an die Dokumente (35).</summary>
+    public async Task<(string? State, string? Sha256, List<Chunk> Chunks)> ChunksAsync(string media, CancellationToken ct = default)
+    {
+        var chunks = new List<Chunk>();
+        if (_db is null) return (null, null, chunks);
+        await using var conn = await _db.OpenConnectionAsync(ct);
+        string? state = null, sha = null;
+        await using (var doc = new NpgsqlCommand("SELECT state, sha256 FROM media_text_doc WHERE media = @m", conn))
+        {
+            doc.Parameters.AddWithValue("m", media);
+            await using var r = await doc.ExecuteReaderAsync(ct);
+            if (await r.ReadAsync(ct)) { state = r.GetString(0); sha = r.GetString(1); }
+        }
+        await using var cmd = new NpgsqlCommand("SELECT seq, page, heading, body FROM media_text WHERE media = @m ORDER BY seq", conn);
+        cmd.Parameters.AddWithValue("m", media);
+        await using var rd = await cmd.ExecuteReaderAsync(ct);
+        while (await rd.ReadAsync(ct)) chunks.Add(new Chunk(rd.GetInt32(0), rd.IsDBNull(1) ? null : rd.GetInt32(1), rd.IsDBNull(2) ? null : rd.GetString(2), rd.GetString(3)));
+        return (state, sha, chunks);
+    }
+
+    /// <summary>Ein Abschnitt ganz — der Treffer der Wortsuche hat nur den Ausschnitt.</summary>
+    public async Task<Chunk?> ChunkAsync(string media, int seq, CancellationToken ct = default)
+    {
+        if (_db is null) return null;
+        await using var conn = await _db.OpenConnectionAsync(ct);
+        await using var cmd = new NpgsqlCommand("SELECT seq, page, heading, body FROM media_text WHERE media = @m AND seq = @q", conn);
+        cmd.Parameters.AddWithValue("m", media); cmd.Parameters.AddWithValue("q", seq);
+        await using var rd = await cmd.ExecuteReaderAsync(ct);
+        return await rd.ReadAsync(ct) ? new Chunk(rd.GetInt32(0), rd.IsDBNull(1) ? null : rd.GetInt32(1), rd.IsDBNull(2) ? null : rd.GetString(2), rd.GetString(3)) : null;
+    }
+
     /// <summary>Wortsuche über alle Abschnitte; <paramref name="media"/> schränkt auf bestimmte Medien ein (die Treffer eines Teilbaums).</summary>
     public async Task<List<Hit>> SearchAsync(string query, int limit = 50, IReadOnlyCollection<string>? media = null, CancellationToken ct = default)
     {

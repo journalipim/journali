@@ -23,6 +23,13 @@ WORKDIR /docs
 COPY plugins/docs/package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 
+# Plugin embed (Vektoren mit lokalem Modell): @huggingface/transformers mit onnxruntime als Linux-Installation — wie bei derive.
+# Das Modell selbst kommt nicht ins Image: der erste Lauf holt es nach .cache (compose: Volume journali-embed-cache)
+FROM node:22-bookworm-slim AS embed
+WORKDIR /embed
+COPY plugins/embed/package.json ./
+RUN npm install --omit=dev --no-audit --no-fund
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 COPY Journali.Core/Journali.Core.csproj Journali.Core/
@@ -44,6 +51,7 @@ COPY --from=build /app .
 COPY plugins/ ./plugins/
 COPY --from=derive /derive/node_modules ./plugins/derive/node_modules
 COPY --from=docs /docs/node_modules ./plugins/docs/node_modules
+COPY --from=embed /embed/node_modules ./plugins/embed/node_modules
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Journali.Server.dll"]

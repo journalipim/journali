@@ -1,0 +1,9 @@
+{
+  "name": "journali-plugin-embed",
+  "private": true,
+  "type": "module",
+  "description": "Einbettungen mit einem lokalen Modell (ONNX) für journali — npm install im Plugin-Verzeichnis, das Modell kommt beim ersten Lauf nach .cache",
+  "dependencies": {
+    "@huggingface/transformers": "^3.5.0"
+  }
+}
