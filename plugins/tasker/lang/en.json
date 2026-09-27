@@ -95,5 +95,12 @@
  "im Server, Zeitplan, Läufe, Logs": "in the server, schedule, runs, logs",
  "Dieses Plugin ist in deinem Tarif nicht verfügbar. Du kannst den Job löschen, aber nicht ausführen.": "This plugin is not included in your tier. You can delete the job but not run it.",
  "Dieses Plugin ist nicht aktiviert. Du kannst den Job löschen, aber nicht ausführen.": "This plugin is not activated. You can delete the job but not run it.",
- "Ein Zeitplan gehört zum Tarif Pro. Von Hand läuft der Job in jedem Tarif.": "A schedule belongs to the Pro tier. Running it by hand works in every tier."
+ "Ein Zeitplan gehört zum Tarif Pro. Von Hand läuft der Job in jedem Tarif.": "A schedule belongs to the Pro tier. Running it by hand works in every tier.",
+ "Systemjobs laufen in jedem Tarif. Die offenen Posten stehen im Journal und im Index; ein Lauf holt nach, was fehlt.": "System jobs run in every plan. The pending items live in the journal and the index; a run catches up on what is missing.",
+ "⚙ Systemjobs": "⚙ System jobs",
+ "nicht bereit": "not ready",
+ "offen": "pending",
+ "{0} von {1} erledigt · {2} offen": "{0} of {1} done · {2} pending",
+ "jetzt nachholen": "catch up now",
+ "▶ {0} holt nach": "▶ {0} is catching up"
 }

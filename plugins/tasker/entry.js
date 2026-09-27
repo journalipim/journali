@@ -11,6 +11,43 @@ const t = (k, p) => globalThis.journali?.t ? globalThis.journali.t(k, p) : Strin
 /// Was mit einem Job noch geht: wirkt sein Plugin nicht (nicht installiert, aus, oder nicht im Tarif), bleibt nur
 /// das Entfernen — starten, anhalten, ein/aus und bearbeiten sind gesperrt. Der Server lehnt sie ohnehin ab; hier
 /// sieht man es, bevor man klickt. `aktiv` ist plugins.active aus der Oberfläche.
+/// Die Systemjobs (probe, embed, derive) als Zeilen für den Balken oben im Tasker (27.09.2026): je Plugin mit
+/// system im Manifest eine Zeile, der Fortschritt aus seinem progress-Endpunkt (gelesen, offen, total), der Job dazu,
+/// wenn es einen gibt. Ein Plugin mit mehreren Diensten steht einmal.
+export function systemRows(plugins, jobs, progress = {}) {
+  const seen = new Set(); const rows = []
+  for (const p of plugins ?? []) {
+    if (!p.system || seen.has(p.key)) continue
+    seen.add(p.key)
+    const pr = progress?.[p.key] ?? null
+    const total = Number(pr?.total ?? 0), gelesen = Number(pr?.gelesen ?? 0), offen = Number(pr?.offen ?? 0)
+    const label = (globalThis.journali?.L ? globalThis.journali.L(p.label) : null) || p.label?.de || (typeof p.label === 'string' ? p.label : '') || p.key
+    rows.push({ plugin: p.key, label, progress: pr, ready: pr ? pr.ready !== false : null, total, gelesen, offen, pct: pr && pr.ready !== false && total > 0 ? Math.round(gelesen / total * 100) : null, job: (jobs ?? []).find(j => j.plugin === p.key) ?? null })
+  }
+  return rows
+}
+
+/// Der Block der Systemjobs: je Zeile Name, Balken (Füllstand: erledigt von gesamt), die Zahlen, ▶ zum Nachholen.
+/// Kein Job dazu ist kein Hindernis — der Server legt ihn beim ersten ▶ an.
+export function systemBlock(rows, onRun) {
+  const box = el('div', { class: 'sysjobs', style: 'border-bottom:1px solid var(--line)' })
+  box.append(el('div', { class: 'muted', style: 'font-size:11px;padding:4px 10px', title: t('Systemjobs laufen in jedem Tarif. Die offenen Posten stehen im Journal und im Index; ein Lauf holt nach, was fehlt.') }, t('⚙ Systemjobs')))
+  for (const r of rows) {
+    const laeuft = !!r.job?.running
+    const zahlen = r.ready === false ? el('span', { class: 'muted', style: 'font-size:12px', title: r.progress?.reason ?? r.progress?.pluginReason ?? '' }, t('nicht bereit'))
+      : r.progress ? el('span', { class: 'mono muted', style: 'font-size:12px;white-space:nowrap' }, `${r.gelesen.toLocaleString('de-DE')} / ${r.total.toLocaleString('de-DE')}${r.offen ? ` · ${r.offen.toLocaleString('de-DE')} ${t('offen')}` : ''}`)
+      : el('span', { class: 'muted', style: 'font-size:12px' }, '…')
+    const bar = el('div', { class: 'sysbar', style: 'flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden;min-width:80px' },
+      el('div', { class: 'fill', style: `width:${r.pct ?? 0}%;height:100%;background:var(--accent)` }))
+    box.append(el('div', { class: 'sysrow', 'data-plugin': r.plugin, style: 'display:flex;gap:10px;align-items:center;padding:3px 10px', title: r.progress ? t('{0} von {1} erledigt · {2} offen', [r.gelesen, r.total, r.offen]) : '' },
+      el('span', { style: 'flex:0 0 220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' }, r.label, el('span', { class: 'mono muted', style: 'margin-left:6px;font-size:11px' }, r.plugin)),
+      bar, zahlen,
+      laeuft ? el('span', { class: 'warn', style: 'font-size:12px;width:22px;text-align:center', title: t('läuft') }, '▶')
+        : el('button', { class: 'x', title: t('jetzt nachholen'), disabled: r.ready === false, onclick: () => onRun?.(r.plugin) }, '▶')))
+  }
+  return box
+}
+
 export function jobGesperrt(job, aktiv) {
   return !(typeof aktiv === 'function' ? aktiv(job?.plugin) : true)
 }
@@ -131,7 +168,7 @@ const PRESETS = [['', t('nur von Hand')], ['*/15 * * * *', 'alle 15 min'], ['0 *
 async function mount(root, ctx) {
   const { api, store, tree, dialog } = ctx
   if (!tree.loaded) await tree.load()
-  const st = { jobs: [], plugins: [], cur: null, detail: null, log: '', timer: null, edit: null, plugin: new URLSearchParams(location.search).get('plugin') || '' }   // plugin: Liste nur mit den Jobs dieses Plugins (aus „Jobs verwalten“)
+  const st = { jobs: [], plugins: [], progress: {}, cur: null, detail: null, log: '', timer: null, edit: null, plugin: new URLSearchParams(location.search).get('plugin') || '' }   // plugin: Liste nur mit den Jobs dieses Plugins (aus „Jobs verwalten“)
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const list = el('div', { class: 'scroll', style: 'flex:0 0 auto;max-height:45%' })
@@ -143,13 +180,21 @@ async function mount(root, ctx) {
 
   async function load() {
     try { [st.jobs, st.plugins] = await Promise.all([api.get('/api/jobs'), api.get('/api/jobs/plugins')]) } catch (e) { say('✗ ' + e.message); return }
+    // der Stand der Systemjobs: je Plugin sein progress-Endpunkt — einer, der nicht antwortet, ist kein Grund, nichts zu zeigen
+    const sys = [...new Map(st.plugins.filter(p => p.system && p.progress).map(p => [p.key, p.progress])).entries()]
+    st.progress = Object.fromEntries(await Promise.all(sys.map(async ([key, url]) => [key, await api.get(url).catch(e => ({ ready: false, reason: e.message }))])))
     drawList()
     if (st.cur) await loadDetail(st.cur)
     const running = st.jobs.filter(j => j.running).length
     say(`${st.jobs.length} Jobs · ${st.jobs.filter(j => j.enabled && j.schedule).length} geplant${running ? ` · ${running} laufen` : ''}`)
   }
+  async function runSystem(plugin) {
+    try { await api.post(`/api/jobs/system/${encodeURIComponent(plugin)}/run`); store.toast(t('▶ {0} holt nach', [plugin]), 'ok'); await load(); watch() } catch (e) { store.toast(e.message) }
+  }
   function drawList() {
     list.innerHTML = ''
+    const sys = systemRows(st.plugins, st.jobs, st.progress).filter(r => !st.plugin || r.plugin === st.plugin)
+    if (sys.length) list.append(systemBlock(sys, runSystem))
     const jobs = st.plugin ? st.jobs.filter(j => j.plugin === st.plugin) : st.jobs
     if (!jobs.length) { list.append(el('div', { class: 'empty' }, st.plugin ? t('Noch kein Job mit Plugin {0} — „+ Job“ legt einen an.', [st.plugin]) : st.plugins.length ? t('Noch kein Job — „+ Job“ legt einen an.') : t('Kein Plugin mit Prozess installiert — Jobs brauchen eins.'))); return }
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
@@ -550,7 +595,7 @@ async function mount(root, ctx) {
   const q = new URLSearchParams(location.search); const wanted = q.get('new')
   if (wanted && st.plugins.some(p => p.key === wanted)) { history.replaceState(null, '', location.pathname); openEdit({ plugin: wanted, service: q.get('service') ?? '', _new: true }) }
   else if (st.plugin) history.replaceState(null, '', location.pathname)
-  const poll = setInterval(() => { if (st.jobs.some(j => j.running)) load() }, 5000)
+  const poll = setInterval(() => { if (st.jobs.some(j => j.running) || Object.values(st.progress).some(p => p && p.ready !== false && p.offen > 0)) load() }, 5000)
   return () => { clearInterval(poll); clearTimeout(st.timer) }
 }
 

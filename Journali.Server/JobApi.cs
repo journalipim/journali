@@ -35,7 +35,39 @@ public static class JobApi
                     description = x.Proc.TryGetProperty("description", out var d) ? d.GetString() : null,
                     profile = x.Proc.TryGetProperty("profile", out var pr) ? pr.GetString() : null,   // "generic": Profile im Tasker anlegen (✎)
                     files = x.Proc.TryGetProperty("files", out var fi) ? fi : (JsonElement?)null,   // Fächer-Vertrag (in/out) — der Dialog zeigt dann die Fächer
+                    // Systemjob (probe, embed, derive): immer sichtbar im Tasker, mit Balken aus progress (GET, liefert offen/gelesen/total)
+                    system = manifests[p.Key].Raw.TryGetProperty("system", out var sy) && sy.ValueKind == JsonValueKind.True,
+                    progress = manifests[p.Key].Raw.TryGetProperty("progress", out var pg) && pg.ValueKind == JsonValueKind.String ? pg.GetString() : null,
                 })).ToList());
+        });
+
+        // Einen Systemjob von Hand nachholen lassen (Tasker, Balken der Systemjobs). Gibt es keinen Job des Plugins, entsteht
+        // einer mit den Vorgaben des Manifests; läuft er schon, ist das kein Fehler — er findet die neuen Posten in seiner
+        // nächsten Runde. Derselbe Weg wie ProbeApi.Kick, für jeden Systemjob.
+        api.MapPost("/jobs/system/{plugin}/run", (string plugin, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (!Tarife.Systemjobs.Contains(plugin)) return Bad("{0} ist kein Systemjob.", plugin);
+            var manifests = PluginApi.Scan(runner.PluginDir);
+            if (!manifests.TryGetValue(plugin, out var m) || PluginApi.ProcessOf(m.Raw, null) is not { } proc) return Bad("Plugin {0} hat keinen Prozess.", plugin);
+            var (job, on, locale) = c.With((model, _, _) => (c.Jobs.All.Values.FirstOrDefault(j => j.Plugin == plugin && j.Enabled)?.Key,
+                c.Plugins.All.TryGetValue(plugin, out var st) && st.Enabled, model.MasterLocale ?? "de"));
+            if (job is null)
+            {
+                if (!on) return Bad("Plugin {0} ist nicht installiert oder aus (⌁ Plugins).", plugin);
+                var label = plugin;
+                if (m.Raw.TryGetProperty("label", out var l) && l.ValueKind == JsonValueKind.Object)
+                    label = (l.TryGetProperty(locale, out var ll) ? ll.GetString() : null) ?? (l.TryGetProperty("de", out var ld) ? ld.GetString() : null) ?? plugin;
+                var defaults = new Dictionary<string, string>();
+                if (proc.TryGetProperty("params", out var ps) && ps.ValueKind == JsonValueKind.Array)
+                    foreach (var x in ps.EnumerateArray())
+                        if (x.TryGetProperty("key", out var k) && k.GetString() is { Length: > 0 } key && x.TryGetProperty("default", out var d) && d.ValueKind == JsonValueKind.String) defaults[key] = d.GetString() ?? "";
+                c.With((_, _, write) => write(actor, Jobs.Stream + plugin, Types.JobDefined, new JobDefined(label, plugin, defaults, null, true, 120, null), null));
+                job = plugin;
+            }
+            runner.Origin = $"{req.Scheme}://{req.Host}";
+            var run = runner.Start(job, "manual", out var error);
+            return run is not null || error == "läuft schon" ? Results.Ok(new { job, run }) : Bad(error ?? "nicht gestartet");
         });
 
         // Geheimnisse am Profil eines Plugins: PUT {values:{token:…}} setzt (leer = weg),

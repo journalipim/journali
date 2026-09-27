@@ -2653,5 +2653,7 @@
  "Der Einbetter liefert keinen Vektor.": "The embedder returns no vector.",
  "Der Einbetter startet nicht.": "The embedder does not start.",
  "Erweiterung vector fehlt in dieser Datenbank.": "Extension vector is missing in this database.",
- "q fehlt.": "q is missing."
+ "q fehlt.": "q is missing.",
+ "{0} ist kein Systemjob.": "{0} is not a system job.",
+ "Plugin {0} ist nicht installiert oder aus (⌁ Plugins).": "Plugin {0} is not installed or switched off (⌁ Plugins)."
 }

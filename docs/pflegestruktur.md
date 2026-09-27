@@ -1799,6 +1799,8 @@ Export (34 J).
   aber ein Knoten mit nur englischen Werten hat wenig Text.
 - Kein Index auf den Vektorspalten (HNSW braucht eine feste Dimension): bis einige zehntausend Abschnitte ist die
   genaue Suche schnell genug; darüber ein Index je Modell.
-- Ein Systemjob-Balken im Tasker, der die Zahlen von `/api/docs/embed` (und `/api/media/probe`) zeigt, fehlt noch
-  — das Manifestfeld `progress` steht, gelesen wird es nicht.
+- ~~Ein Systemjob-Balken im Tasker~~ — gebaut (27.09.2026): `GET /api/jobs/plugins` gibt `system` und `progress`
+  aus dem Manifest mit, der Tasker zeigt oben je Systemjob eine Zeile mit Balken (erledigt von gesamt), den Zahlen
+  und ▶; `POST /api/jobs/system/{plugin}/run` legt den Job an, wenn es keinen gibt, und startet ihn (wie
+  `ProbeApi.Kick`, für jeden Systemjob). Der Balken ist ein Füllstand, wie in CLAUDE.md verlangt.
 - Bilder haben keinen Text und darum keinen Vektor; Bildeinbettungen (ein anderes Modell) wären ein eigener Schritt.
