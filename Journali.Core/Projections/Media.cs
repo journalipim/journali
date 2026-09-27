@@ -41,6 +41,10 @@ public sealed class Medium
     public DateTimeOffset CreatedAt { get; set; }
     /// <summary>Wer es anlegte. Bei einem Job <c>job:&lt;key&gt;</c>.</summary>
     public string CreatedBy { get; set; } = "";
+    /// <summary>Das Medium, das dieses ersetzt (MediaSuperseded) — dann bietet die Bibliothek dieses nicht mehr an.</summary>
+    public string? SupersededBy { get; set; }
+    /// <summary>Das Medium, das dieses ablöste — gesetzt am Nachfolger, wenn er im Abbild ist.</summary>
+    public string? Supersedes { get; set; }
     /// <summary>Pixel des Originals — zum Sortieren und Filtern („mindestens 2000 px“). 0 ohne gelesenen Kopf.</summary>
     public long Pixels => Probe is { } p ? (long)p.Width * p.Height : 0;
 }
@@ -91,6 +95,8 @@ public sealed class Media : IProjection
 
     /// <summary>Medien, denen eine aktuelle Ableitung nach diesem Preset fehlt (nie gerechnet oder Preset seither geändert).</summary>
     public IEnumerable<Medium> Pending(MediaPreset preset) => _all.Values.Where(m => m.IsRenderable && (!m.Derived.TryGetValue(preset.Key, out var d) || d.Fingerprint != preset.Fingerprint));
+    /// <summary>Die Medien, die die Bibliothek anbietet: ohne die, die ein Nachfolger abgelöst hat.</summary>
+    public IEnumerable<Medium> Current => _all.Values.Where(m => m.SupersededBy is null);
     /// <summary>Medien, deren Kopf noch nicht gelesen wurde — die offene Postenliste des Jobs <c>probe</c>.</summary>
     public IEnumerable<Medium> Unprobed() => _all.Values.Where(m => m.Probe is null);
     /// <summary>Medien, deren Kopf gelesen wurde, ohne ein bekanntes Format zu ergeben (Mass 0 × 0).
@@ -191,6 +197,11 @@ public sealed class Media : IProjection
                     break;
                 case Types.MediaProbed:
                     m.Probe = Types.Deserialize<MediaProbed>(entry.Payload);
+                    break;
+                case Types.MediaSuperseded:
+                    var by = Types.Deserialize<MediaSuperseded>(entry.Payload).By;
+                    m.SupersededBy = by;
+                    if (_all.TryGetValue(by, out var nachfolger)) nachfolger.Supersedes = m.Id;
                     break;
                 case Types.MediaSourced:
                     // Nur gesetzte Felder übernehmen: ein zweiter Eintrag ergänzt die Herkunft, er löscht sie nicht

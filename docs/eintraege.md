@@ -92,6 +92,9 @@ Die Datei liegt ausserhalb (Store, Hash-adressiert); im Journal nur das Ding
 | `ExternalLinked` / `ExternalUnlinked` | wie am Knoten | Kennung aus der Quelle |
 | `MediaFiled` | `folder` (Ordner-Id oder null) | Medium in einen Ordner der Bibliothek gelegt (null = kein Ordner) |
 | `MediaDerived` | `preset`, `width`, `height`, `bytes`, `fingerprint` | Ableitung nach Preset liegt im Store (`sha.<preset>`); anderer Fingerabdruck als das Preset = neu rechnen |
+| `MediaProbed` | `width`, `height`, `dpi?`, `space?`, `alpha?` | was im Kopf der Datei steht — gelesen vom Server, Job `probe` treibt an; 0 × 0 = kein bekanntes Format. Art Betrieb, zählt nicht |
+| `MediaSourced` | `plugin?`, `profile?`, `job?`, `ref?`, `from?` | woher es kam: Schnittstelle, Profil, Job, Bezug an der Quelle; `from` = Medium, aus dem es entstand. Ergänzt, löscht nicht. Art Betrieb |
+| `MediaSuperseded` | `by` | am Vorgänger: `by` ersetzt es — die Zuordnungen sind an den Nachfolger gewandert, die Bibliothek bietet den Vorgänger nicht mehr an, das Abbild behält ihn |
 
 Vorschau-Presets (Strom `media-preset:<key>`): `MediaPresetDefined {label, width, height, format, quality, auto}` ·
 `MediaPresetRetired`. API: `GET/PUT/DELETE /api/media/presets[/{key}]` (Recht Modell), `GET /api/media/pending`,
@@ -287,6 +290,9 @@ steht im Kopf `X-Actor`.
 | `POST /api/media/{id}/attributes` `{attribute, locale?, value | values[]}` | `AttributeSet` am Medium (Gruppe `media`) |
 | `PUT /api/media/{id}/external/{system}` `{id}` | `ExternalLinked` am Medium |
 | `PUT /api/media/{id}/folder` `{folder}` | `MediaFiled` (null = kein Ordner) |
+| `PUT /api/media/{id}/source` `{plugin?, profile?, job?, ref?, from?}` | `MediaSourced` — nachtragen; `POST /api/media` und `/media/fetch` nehmen dieselben Felder beim Anlegen |
+| `POST /api/media/probe` `?limit&again` | `MediaProbed` je gelesenem Kopf; `GET /api/media/probe` zählt die offenen Posten |
+| `POST /api/media/{id}/supersede` `{by}` | `MediaSuperseded` am Vorgänger, dazu je Zuordnung `RelationCreated` am Nachfolger und `RelationRetired` am Vorgänger, `MediaSourced{from}` am Nachfolger; `GET /api/media?superseded=true` zeigt abgelöste mit |
 | `POST /api/media/folders` `{name, parent?}` · `PUT …/{id}/name` `{name}` · `PUT …/{id}/parent` `{parent}` · `DELETE …/{id}` | `MediaFolderCreated` / `MediaFolderRenamed` / `MediaFolderMoved` / `MediaFolderRetired`; `GET /api/media/folders` liest, `GET /api/media?folder=&deep=&sort=&desc=` filtert und sortiert |
 | `POST /api/journal` `{actor, stream, type, payload}` | roh, für Import und Werkzeuge — keine Prüfung |
 | `PUT /api/nodes/{id}/external/{system}` `{id}` | `ExternalLinked` |

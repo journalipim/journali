@@ -40,7 +40,7 @@ public static class Kinds
             or Types.NodeNamed          // einen Knoten benennen ist Pflege, nicht Gerüst
             or Types.ProductCreated or Types.VariantCreated or Types.NodeRetired or Types.NodeRestored
             or Types.StatusSet or Types.ExternalLinked or Types.ExternalUnlinked
-            or Types.MediaCreated or Types.MediaRetired or Types.MediaFiled
+            or Types.MediaCreated or Types.MediaRetired or Types.MediaFiled or Types.MediaSuperseded
             or Types.RelationCreated or Types.RelationRetired => Data,
 
         // Ausleitung

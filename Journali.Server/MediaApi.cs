@@ -29,9 +29,10 @@ public static class MediaApi
     /// Facetten etwas anderes, als die Liste zeigt.
     /// </summary>
     private static IEnumerable<Medium> Gefiltert(Catalog c, string? q, string? folder, bool deep, int minW, int minH,
-        string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword)
+        string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword, bool superseded = false)
     {
-        var all = c.Media.All.Values.AsEnumerable();
+        // Abgelöste Fassungen bleiben im Abbild, damit Belege und Versionen sie auflösen — die Bibliothek zeigt sie nur auf Wunsch
+        var all = superseded ? c.Media.All.Values.AsEnumerable() : c.Media.Current;
         if (!string.IsNullOrWhiteSpace(q))
         {
             var s = q.Trim();
@@ -78,10 +79,10 @@ public static class MediaApi
         // Liste, neueste zuerst; q sucht in Name und Werten
         // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
         api.MapGet("/media", (Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
-            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null) =>
+            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null, bool superseded = false) =>
             c.With((model, tree, _) =>
             {
-                var all = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword);
+                var all = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword, superseded);
                 var rows = all.Select(m => (m, used: c.Relations.To(m.Id).Count()));
                 var down = desc ?? (sort is null or "recent" or "date" or "size" or "used" or "pixels" or "created");   // Neuestes/Grösstes/Meistgenutztes zuerst, Namen A→Z
                 Func<(Medium m, int used), object> key = sort switch
@@ -377,6 +378,8 @@ public static class MediaApi
         });
 
         api.MapDelete("/media/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireMedium(x, id)));
+        // Fassung: dieses Medium durch ein anderes ersetzen — die Zuordnungen wandern, der Vorgänger bleibt auflösbar
+        api.MapPost("/media/{id}/supersede", (string id, SupersedeBody b, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.SupersedeMedium(x, id, b.By)));
         api.MapPost("/media/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.SetMediumAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values)));
         api.MapPut("/media/{id}/external/{system}", (string id, string system, ExternalLinked b, HttpRequest req, Catalog c) =>
@@ -390,16 +393,18 @@ public sealed record FolderBody(string? Name, string? Parent, string? Folder);
 public sealed record CopyRequest(MediaConfig? From);
 /// <summary>Herkunft nachtragen: Schnittstelle, Profil, Job, Bezug an der Quelle, Medium der Abstammung.</summary>
 public sealed record SourceBody(string? Plugin, string? Profile, string? Job, string? Ref, string? From);
+/// <summary>Fassung: das Medium, das dieses ersetzt.</summary>
+public sealed record SupersedeBody(string? By);
 
 public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime, string Name, bool IsImage, List<ValueView> Values,
     Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Folder,
     bool Renderable = false, bool HasThumb = false, MediaProbed? Probe = null, MediaSourced? Source = null,
-    DateTimeOffset CreatedAt = default, string CreatedBy = "", long Pixels = 0)
+    DateTimeOffset CreatedAt = default, string CreatedBy = "", long Pixels = 0, string? SupersededBy = null, string? Supersedes = null)
 {
     /// <summary>Kachel: Bilder haben immer eine, ein PDF erst, wenn der derive-Job seine erste Seite gerechnet hat
     ///. Die Oberfläche fragt danach, statt aus dem Mime zu raten.</summary>
     public static MediaView Of(Medium m, int used) => new(m.Id, m.Sha256, m.Bytes, m.Mime, m.Name, m.IsImage, ValueView.Of(m).ToList(),
         m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor, m.Folder,
         m.IsRenderable, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset),
-        m.Probe, m.Source, m.CreatedAt, m.CreatedBy, m.Pixels);
+        m.Probe, m.Source, m.CreatedAt, m.CreatedBy, m.Pixels, m.SupersededBy, m.Supersedes);
 }

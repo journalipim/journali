@@ -217,6 +217,7 @@ const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB
 const facets = ref(null)
 const keyword = ref('')          // '' = alle, '-' = ohne Stichwort, sonst Komma-Liste
 const plugin = ref('')           // '' = alle, '-' = von Hand
+const superseded = ref(false)    // abgelöste Fassungen mit zeigen
 async function loadFacets() {
   try { facets.value = await api.get(`/api/media/facets?${filterQuery()}`) } catch (e) { store.toast(e.message) }
 }
@@ -224,7 +225,7 @@ async function loadFacets() {
 function filterQuery() {
   const f = folder.value === 'all' ? '' : folder.value
   return `q=${encodeURIComponent(q.value.trim())}&folder=${encodeURIComponent(f)}&deep=${deep.value}`
-    + `&keyword=${encodeURIComponent(keyword.value)}&plugin=${encodeURIComponent(plugin.value)}`
+    + `&keyword=${encodeURIComponent(keyword.value)}&plugin=${encodeURIComponent(plugin.value)}&superseded=${superseded.value}`
 }
 /// Ein Stichwort an- oder abwählen; mehrere gelten zusammen.
 function toggleKeyword(k) {
@@ -244,9 +245,32 @@ function contextMenu(e, m) {
   const n = betroffene(m).length
   menu.open(e, [
     { label: n > 1 ? t_('{0} Assets zuordnen …', [n]) : t_('Zuordnen …'), icon: '⇄', action: () => zuordnenOeffnen(m) },
+    n === 1 && !m.supersededBy ? { label: t_('Neue Fassung hochladen …'), icon: '⇪', action: () => neueFassung(m) } : null,
     { sep: true },
     { label: n > 1 ? t_('{0} Assets zurückziehen', [n]) : t_('Zurückziehen'), icon: '🗑', danger: true, action: () => retire(m) },
   ])
+}
+
+// ---- Neue Fassung: die Datei wird ein neues Medium (ein Medium ist unveränderlich), dann ersetzt es das alte —
+// die Zuordnungen wandern, der Vorgänger bleibt für Belege und Versionen auflösbar, die Liste zeigt ihn nicht mehr.
+const fassungFuer = ref(null)     // das Medium, das ersetzt wird — solange der Dateidialog offen ist
+const fassungInput = ref(null)
+function neueFassung(m) { fassungFuer.value = m; fassungInput.value?.click() }
+async function fassungGewaehlt(files) {
+  const alt = fassungFuer.value; fassungFuer.value = null
+  const f = files[0]
+  if (!alt || !f) return
+  if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
+  busy.value = t_('neue Fassung …')
+  try {
+    const neu = await api.upload('/api/media', f)
+    if (neu.id === alt.id) { store.toast(t_('Dieselbe Datei — keine neue Fassung')); return }
+    await api.post(`/api/media/${alt.id}/supersede`, { by: neu.id })
+    store.toast(t_('{0} ersetzt durch {1}', [alt.name, neu.name]), 'ok')
+    cur.value = neu.id
+    await store.poll(true); await loadFolders(); await load()
+  } catch (e) { store.toast(e.message) }
+  finally { busy.value = '' }
 }
 
 // ---- Zuordnen: Knoten wählen, dann eine Relation je Medium
@@ -321,9 +345,12 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
       <select v-model="group" :title="$t('Gruppierung — nur die Anzeige; der Ordnerfilter ist die Liste links')"><option v-for="[k, l] in GROUPS" :key="k" :value="k">{{ l }}</option></select>
       <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? $t('Dateien hochladen — oder hierher ziehen') : $t('hochladen in „{0}“ — oder hierher ziehen', [folderTitle])">{{ $t("⇧ Hochladen") }}</button>
       <input ref="fileInput" type="file" multiple style="display:none" @change="upload([...$event.target.files]); $event.target.value = ''" />
+      <input ref="fassungInput" type="file" style="display:none" @change="fassungGewaehlt([...$event.target.files]); $event.target.value = ''" />
     </div>
     <!-- Facetten: anklicken schränkt ein, nochmal klicken hebt auf; mehrere Stichwörter gelten zusammen -->
     <div v-if="facets" class="toolbar facets">
+      <span class="chip" :class="{ on: superseded }" @click="superseded = !superseded; load()"
+        :title="$t('Abgelöste Fassungen mit zeigen — sie bleiben für Belege und Versionen auflösbar')">{{ $t("abgelöste") }}</span>
       <span v-for="h in facets.herkunft" :key="'h' + h.key" class="chip" :class="{ on: plugin === h.key }" @click="togglePlugin(h.key)"
         :title="h.key === '-' ? $t('von Hand hochgeladen') : $t('über die Schnittstelle {0} gekommen', [h.key])">{{ (h.key === '-' ? $t('von Hand') : h.key) + ' ' }}<span class="muted">{{ h.n }}</span></span>
       <span v-if="facets.ohneStichwort" class="chip" :class="{ on: keywordAktiv('-') }" @click="toggleKeyword('-')"
@@ -335,7 +362,7 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
       <template v-for="g in grouped" :key="g.key">
         <div v-if="group" class="ghead"><span>{{ g.key }}</span><span class="muted">{{ g.items.length }}</span></div>
         <div class="tiles">
-          <div v-for="m in g.items" :key="m.id" class="tile" :class="{ current: cur === m.id, sel: sel.has(m.id) }" draggable="true" @dragstart="dragTiles(m, $event)" @dragend="dragEnd"
+          <div v-for="m in g.items" :key="m.id" class="tile" :class="{ current: cur === m.id, sel: sel.has(m.id), abgeloest: m.supersededBy }" draggable="true" @dragstart="dragTiles(m, $event)" @dragend="dragEnd"
             @click="clickTile(m, $event)" @dblclick="oeffnen(m)" @contextmenu="contextMenu($event, m)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nStrg-Klick nimmt dazu, Umschalt-Klick den Bereich — ziehen in einen Ordner, Doppelklick öffnet die Datei`">
             <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" />
             <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
@@ -391,6 +418,11 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
         <tr v-if="current.source?.from"><td class="attr muted">{{ $t("Abstammung") }}</td>
           <td><button class="x mono" @click="cur = current.source.from" :title="$t('zu dem Medium, aus dem dieses entstand')">{{ '▨ ' + current.source.from }}</button></td></tr>
         <tr><td class="attr muted">{{ $t("Angelegt") }}</td><td class="muted">{{ when(current.createdAt) + ' · ' + current.createdBy }}</td></tr>
+        <!-- Fassungen: der Vorgänger sagt, wer ihn ablöste; der Nachfolger, wen er ablöste. Beides ein Sprung. -->
+        <tr v-if="current.supersededBy"><td class="attr muted">{{ $t("ersetzt durch") }}</td>
+          <td><button class="x mono ersetzt" @click="superseded = true; cur = current.supersededBy; load()" :title="$t('zur aktuellen Fassung')">{{ '▨ ' + current.supersededBy }}</button></td></tr>
+        <tr v-if="current.supersedes"><td class="attr muted">{{ $t("ersetzt") }}</td>
+          <td><button class="x mono" @click="superseded = true; cur = current.supersedes; load()" :title="$t('zur abgelösten Fassung — sie bleibt für Belege und Versionen auflösbar')">{{ '▨ ' + current.supersedes }}</button></td></tr>
         <tr><td class="attr muted">{{ $t("SHA-256") }}</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
         <tr v-for="(v, k) in current.external" :key="k"><td class="attr muted">⇩ {{ k }}</td><td class="mono muted">{{ v }}</td></tr>
       </tbody></table>
@@ -443,6 +475,7 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
 .tile:hover { background: var(--hover); }
 .tile.sel { border-color: var(--accent); }
 .tile.current { border-color: var(--accent); background: var(--accent-soft); }
+.tile.abgeloest { opacity: .55; border-style: dashed; }
 .tile img, .tile .doc { width: 110px; height: 90px; object-fit: contain; display: grid; place-items: center; background: var(--bg); border-radius: 4px; color: var(--muted); font-size: 12px; }
 .tile .name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
 .tile .meta { font-size: 11px; }

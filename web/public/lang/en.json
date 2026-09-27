@@ -2579,5 +2579,20 @@
  "vorgeschlagen · {0} — Klick nimmt an": "suggested · {0} — click accepts",
  "ziehen: Reihenfolge ändern": "drag: change the order",
  "steht an erster Stelle — die Ausleitung nimmt sie als Hauptbild": "stands first — exports take it as the main image",
- "Das Modell kennt keine Reihenfolge an der Medienzuordnung": "The model has no order on the media link"
+ "Das Modell kennt keine Reihenfolge an der Medienzuordnung": "The model has no order on the media link",
+ "Neue Fassung hochladen …": "Upload a new version …",
+ "neue Fassung …": "new version …",
+ "Dieselbe Datei — keine neue Fassung": "Same file — not a new version",
+ "{0} ersetzt durch {1}": "{0} replaced by {1}",
+ "abgelöste": "superseded",
+ "Abgelöste Fassungen mit zeigen — sie bleiben für Belege und Versionen auflösbar": "Also show superseded versions — they stay resolvable for documents and versions",
+ "ersetzt durch": "replaced by",
+ "ersetzt": "replaces",
+ "zur aktuellen Fassung": "to the current version",
+ "zur abgelösten Fassung — sie bleibt für Belege und Versionen auflösbar": "to the superseded version — it stays resolvable for documents and versions",
+ "by: Medium gibt es nicht.": "by: medium does not exist.",
+ "Ein Medium ersetzt sich nicht selbst.": "A medium does not replace itself.",
+ "{0} ist schon ersetzt — durch {1}.": "{0} is already replaced — by {1}.",
+ "{0} ist selbst schon ersetzt — durch {1}.": "{0} is itself already replaced — by {1}.",
+ "Zuordnung an {0}: {1}": "Link at {0}: {1}"
 }

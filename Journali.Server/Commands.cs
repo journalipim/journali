@@ -834,6 +834,41 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.AttributeSet, new AttributeSet(def.Key, locale, channel, value, values)));
     }
 
+    /// <summary>
+    /// Ein Medium durch ein anderes ersetzen (Fassung, 27.09.2026). Der Nachfolger muss es geben, darf nicht selbst
+    /// abgelöst sein und nicht der Vorgänger sein; der Vorgänger darf nur einmal abgelöst werden — eine Kette
+    /// a → b → c entsteht, indem b später selbst abgelöst wird.
+    /// <para>Im selben Zug wandern die Zuordnungen: je Relation zum Vorgänger eine neue zum Nachfolger (gleicher Typ,
+    /// gleicher Knoten, dieselben Werte — Reihenfolge, Verwendung, Vererbung, Stopp), dann wird die alte gelöst.
+    /// Gibt es die neue schon, bleibt sie. Der Nachfolger bekommt <c>MediaSourced.From</c> auf den Vorgänger: die
+    /// Abstammung ist damit in beide Richtungen lesbar.</para>
+    /// </summary>
+    public static Outcome SupersedeMedium(Ctx c, string id, string? by)
+    {
+        if (!c.Media.All.TryGetValue(id, out var alt)) return Outcome.Missing;
+        if (Blank(by) is not { } neuId || !c.Media.All.TryGetValue(neuId, out var neu)) return Outcome.Bad("by: Medium gibt es nicht.");
+        if (neuId == id) return Outcome.Bad("Ein Medium ersetzt sich nicht selbst.");
+        if (alt.SupersededBy is { } schon) return Outcome.Bad("{0} ist schon ersetzt — durch {1}.", id, schon);
+        if (neu.SupersededBy is { } weiter) return Outcome.Bad("{0} ist selbst schon ersetzt — durch {1}.", neuId, weiter);
+        // Zuordnungen wandern: neu anlegen, Werte mitnehmen, alt lösen
+        foreach (var r in c.Relations.To(id).ToList())
+        {
+            var vorhanden = c.Relations.From(r.From).FirstOrDefault(x => x.Type == r.Type && x.To == neuId);
+            var zielId = vorhanden?.Id;
+            if (zielId is null)
+            {
+                var o = CreateRelation(c, r.Type, r.From, neuId);
+                if (o.Entry is null) return Outcome.Bad("Zuordnung an {0}: {1}", r.From, o.Error ?? "?");
+                zielId = o.Entry.Stream;
+                foreach (var (axis, wert) in r.Values) SetRelationAttribute(c, zielId, axis.Attribute, axis.Locale, axis.Channel, wert, null);
+                foreach (var (axis, liste) in r.Lists) SetRelationAttribute(c, zielId, axis.Attribute, axis.Locale, axis.Channel, null, liste);
+            }
+            RetireRelation(c, r.Id);
+        }
+        c.Write(neuId, Types.MediaSourced, new MediaSourced(From: id));
+        return Outcome.Ok(c.Write(id, Types.MediaSuperseded, new MediaSuperseded(neuId)));
+    }
+
     public static Outcome LinkMediumExternal(Ctx c, string id, string? system, string? externalId)
     {
         if (!c.Media.All.TryGetValue(id, out var m)) return Outcome.Missing;

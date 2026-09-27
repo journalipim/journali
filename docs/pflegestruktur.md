@@ -1631,9 +1631,16 @@ Ordner bleibt) und die Zuordnung am Knoten (`image` für ein Bild, sonst `docume
 kein Fehler). Was davon nicht geht, hält den Beleg nicht auf — der Eintrag an der Version bleibt die Wahrheit,
 die Hinweise gehen an den Erzeuger zurück. Die Zuordnung zählt als Pflege, die Herkunft nicht.
 
-**F. Fassungen.** „Ein neues Bild ist ein neues Medium“ bleibt richtig. Was fehlt, ist „dieses ersetzt jenes“: ein
-Eintrag, der die Zuordnungen mitnimmt, und eine Bibliothek, die den Vorgänger nicht mehr anbietet, ohne ihn zu
-löschen (die Ausleitung von vorletzter Woche muss weiter auflösbar sein).
+**F. Fassungen — gebaut (27.09.2026).** „Ein neues Bild ist ein neues Medium“ bleibt richtig. „Dieses ersetzt
+jenes“ ist ein Eintrag am Vorgänger (`MediaSuperseded {by}`, Art Datenpflege). Der Befehl dazu
+(`Commands.SupersedeMedium`, `POST /api/media/{id}/supersede`) legt im selben Zug je Zuordnung eine neue am
+Nachfolger an — gleicher Typ, gleicher Knoten, dieselben Werte (Reihenfolge, Verwendung, Vererbung, Stopp) — und
+löst die alte; der Nachfolger bekommt `MediaSourced.from` auf den Vorgänger, die Abstammung ist in beide
+Richtungen lesbar. Der Vorgänger **bleibt im Abbild**: Belege, Versionen und die Ausleitung von damals nennen ihn
+weiter und lösen ihn auf. Nur die Bibliothek bietet ihn nicht mehr an (`Media.Current`; `?superseded=true` zeigt
+ihn). Ein Vorgänger wird nur einmal abgelöst, ein Nachfolger darf nicht selbst abgelöst sein — eine Kette
+a → b → c entsteht, indem b später selbst abgelöst wird. In der Bibliothek: Kontextmenü „Neue Fassung
+hochladen …“ (Datei → Medium → ersetzen), rechts „ersetzt durch“ und „ersetzt“ als Sprung.
 
 **G. Rolle und Reihenfolge am Produkt — Reihenfolge gebaut (27.09.2026).** Berichtigung: die Gruppe
 `relation_media` trug schon `position` (Reihenfolge, Zahl) und `usage` (Verwendung, Text), nicht nur `inherit`

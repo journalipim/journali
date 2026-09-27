@@ -45,6 +45,7 @@ public static class Types
     public const string MediaDerived = "MediaDerived";   // am Medium: Ableitung nach Preset liegt im Store (sha.<preset>)
     public const string MediaProbed = "MediaProbed";      // am Medium: was im Kopf der Datei steht (Mass, Auflösung, Farbraum)
     public const string MediaSourced = "MediaSourced";    // am Medium: woher es kam (Schnittstelle, Profil, Job, Bezug)
+    public const string MediaSuperseded = "MediaSuperseded";   // am Vorgänger: dieses Medium ersetzt es — die Zuordnungen sind gewandert
     public const string LabelAttributeSet = "LabelAttributeSet";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
@@ -308,6 +309,17 @@ public sealed record MediaProbed(int Width, int Height, int? Dpi = null, string?
 /// ist Teil des Imports, der schon mit <c>MediaCreated</c> zählt.</para>
 /// </summary>
 public sealed record MediaSourced(string? Plugin = null, string? Profile = null, string? Job = null, string? Ref = null, string? From = null);
+
+/// <summary>
+/// Am Vorgänger: das Medium <c>By</c> ersetzt dieses. „Ein neues Bild ist ein neues Medium“ bleibt richtig — ein
+/// Medium ist unveränderlich —, aber ein Nachfolger war bis dahin ein fremdes Asset: die Zuordnungen am Knoten
+/// wanderten nicht mit, und die Bibliothek zeigte beide. Der Eintrag sagt, wer wen ablöst; der Befehl dazu legt die
+/// Zuordnungen am Nachfolger neu an (mit ihren Werten) und löst sie am Vorgänger, im selben Zug.
+/// <para>Der Vorgänger bleibt im Abbild: eine Ausleitung von damals, ein Beleg, eine Version nennen ihn weiter, und
+/// sie müssen ihn auflösen können. Nur die Bibliothek bietet ihn nicht mehr an. Art „Datenpflege“: es ist die
+/// Aussage eines Menschen, kein Messwert.</para>
+/// </summary>
+public sealed record MediaSuperseded(string By);
 
 /// <summary>Externe Kennung je Quellsystem (Import): beim zweiten Lauf Update statt Neuanlage.</summary>
 public sealed record ExternalLinked(string System, string Id);
