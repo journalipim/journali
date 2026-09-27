@@ -592,6 +592,32 @@ const mediaTypes = computed(() => mediaTypesFor(model.value, node.value?.role))
 const mediaDrag = ref(false)
 const mediaFile = ref(null)
 const mediaPick = ref({ open: false })   // ▨ aus der Bibliothek … (MediaPicker)
+
+// ---- Reihenfolge der Assets: ziehen statt Zahlen tippen.
+// Die Reihenfolge steht als Wert „position“ an der Zuordnung (relation_media). Beim Ablegen bekommt jede
+// Kachel ihre neue Nummer, 1 … n — geschrieben wird nur, was sich ändert.
+const mediaDragId = ref(null)
+const mediaDropId = ref(null)
+function mediaDragStart(e, r) { mediaDragId.value = r.id; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', r.id) }
+function mediaDragOver(e, r) {
+  if (!mediaDragId.value || r.id === mediaDragId.value) return
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move'; mediaDropId.value = r.id
+}
+function mediaDragEnd() { mediaDragId.value = null; mediaDropId.value = null }
+async function mediaDrop(r) {
+  const von = mediaDragId.value
+  mediaDragEnd()
+  if (!von || von === r.id) return
+  const liste = [...mediaRels.value]
+  const i = liste.findIndex(x => x.id === von), j = liste.findIndex(x => x.id === r.id)
+  if (i < 0 || j < 0) return
+  liste.splice(j, 0, ...liste.splice(i, 1))
+  const def = relGroupAttrs(liste[0].type).find(d => d.key === 'position')
+  if (!def) { store.toast(t_('Das Modell kennt keine Reihenfolge an der Medienzuordnung')); return }
+  for (const [n, rel] of liste.entries())
+    if (String(relValueRaw(rel, 'position') ?? '') !== String(n + 1)) await setRelValue(rel, def, String(n + 1))
+  await load()
+}
 async function uploadMedia(files) {
   if (!store.actor) { store.toast(t_('👤 Name fehlt → Einstellungen')); return }
   busy.value = true
@@ -921,14 +947,17 @@ function cellMenu(e, def, col, block) {
         <h2 @click="toggle('media')" :title="$t('Dateien hierher ziehen legt sie an diesem Knoten ab.')"><span class="caret">{{ open('media') ? '▾' : '▸' }}</span>{{ $t("▩ Assets") + ' ' }}<span class="muted">· {{ mediaRels.length }}<template v-if="inheritedMedia.length">{{ ' ' + $t("· {0} geerbt", [inheritedMedia.length]) }}</template></span></h2>
         <template v-if="open('media')">
         <div class="tiles">
-          <div v-for="r in mediaRels" :key="r.id" class="tile" :title="`${r.other.label} · ${r.other.mime ?? ''} · ${$L(relType(r.type)?.label) || r.type}`">
+          <div v-for="(r, i) in mediaRels" :key="r.id" class="tile" :class="{ first: i === 0, drop: mediaDropId === r.id, dragging: mediaDragId === r.id }"
+            draggable="true" @dragstart="mediaDragStart($event, r)" @dragover="mediaDragOver($event, r)" @dragleave="mediaDropId === r.id && (mediaDropId = null)"
+            @drop.prevent="mediaDrop(r)" @dragend="mediaDragEnd"
+            :title="`${r.other.label} · ${r.other.mime ?? ''} · ${$L(relType(r.type)?.label) || r.type}\n${$t('ziehen: Reihenfolge ändern')}`">
             <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
             <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
               <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? $t('gilt dann an allen Subitems — bis eines die Vererbung stoppt') : d.key">{{ $L(d.label) || d.key }}</td>
                 <ToggleCell v-if="d.type === 'boolean'" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /><Cell v-else :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>
             </tbody></table>
-            <div class="muted meta">{{ $L(relType(r.type)?.label) || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" :title="$t('wird an die Subitems vererbt')">{{ ' ' + $t("· ↓ vererbt") }}</span><button class="x" style="float:right" @click="retireRel(r)" :title="$t('Zuordnung lösen (das Medium bleibt in der Bibliothek)')">×</button></div>
+            <div class="muted meta"><span v-if="i === 0" class="pos1" :title="$t('steht an erster Stelle — die Ausleitung nimmt sie als Hauptbild')">{{ '① ' }}</span>{{ $L(relType(r.type)?.label) || r.type }}<span v-if="relValueRaw(r, 'inherit') === 'true'" :title="$t('wird an die Subitems vererbt')">{{ ' ' + $t("· ↓ vererbt") }}</span><button class="x" style="float:right" @click="retireRel(r)" :title="$t('Zuordnung lösen (das Medium bleibt in der Bibliothek)')">×</button></div>
           </div>
           <!-- geerbte Medien: kursiv, gedämpft, mit Herkunft — hier nicht änderbar; ein eigenes Medium dieses Typs bricht die Vererbung -->
           <div v-for="r in inheritedMedia" :key="'inh-' + r.id" class="tile inherited" :title="$t('geerbt von {0} — nicht löschbar; ⛔ sperrt es hier und an allen Subitems', [r.from.label])">
@@ -1157,6 +1186,10 @@ th.master { color: var(--accent); font-weight: 700; }
 .tile .name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 4px 0; }
 .tile .name a { text-decoration: none; }
 .tile .meta { font-size: 11px; margin-top: 2px; }
+.tile.first { border-color: var(--accent); }
+.tile.drop { outline: 2px dashed var(--accent); outline-offset: -2px; }
+.tile.dragging { opacity: .5; }
+.tile .pos1 { color: var(--accent); }
 .relblock a { color: inherit; text-decoration: none; }
 .relblock a:hover { text-decoration: underline; }
 .picker { max-height: 240px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: var(--pane); margin-top: 4px; }

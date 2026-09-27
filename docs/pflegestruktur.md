@@ -1633,10 +1633,14 @@ Zuordnung an Produkt oder Variante.
 Eintrag, der die Zuordnungen mitnimmt, und eine Bibliothek, die den Vorgänger nicht mehr anbietet, ohne ihn zu
 löschen (die Ausleitung von vorletzter Woche muss weiter auflösbar sein).
 
-**G. Rolle und Reihenfolge am Produkt.** Die Mediengruppe trägt heute nur `inherit` und `stop`. Hauptbild, Detail,
-Verpackung, Explosionszeichnung und eine Sortierung fehlen — vorgesehen war das als `MediaOrdered` (6), gebaut ist
-die Zuordnung als Relation, und eine Relation kann eigene Werte tragen. Es braucht also keinen neuen Eintragstyp,
-nur zwei Attribute in `relation_media` und eine Oberfläche dafür.
+**G. Rolle und Reihenfolge am Produkt — Reihenfolge gebaut (27.09.2026).** Berichtigung: die Gruppe
+`relation_media` trug schon `position` (Reihenfolge, Zahl) und `usage` (Verwendung, Text), nicht nur `inherit`
+und `stop`, und die Kacheln am Knoten sortierten nach `position`. Was fehlte, war die Bedienung: die Reihenfolge
+liess sich nur als Zahl tippen. Jetzt ziehen die Kacheln — beim Ablegen bekommt jede ihre Nummer 1 … n,
+geschrieben wird nur, was sich ändert; die erste ist als solche gekennzeichnet (①), die Ausleitung nimmt sie als
+Hauptbild. Offen: `usage` ist Freitext. Eine Werteliste (Hauptbild, Detail, Verpackung, Zeichnung) liesse Exporte
+die Rolle zuverlässig lesen — aber der Typ eines bestehenden Attributs ändert sich nicht ohne Weiteres, und die
+Werte, die in Anlagen schon als Text stehen, müssten mit. Das ist eine Entscheidung, keine Kleinigkeit.
 
 **H. Rechte.** Das Vokabular ist heute grob: `read`, `write`, `retire`, `release`, `model`, `plugins`, `jobs`,
 `storage`, `users`, `team` (`Types.cs`, `Rights`). Ein DAM braucht mehr: **Herunterladen** als eigenes Recht (sehen
