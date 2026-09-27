@@ -272,6 +272,12 @@ table.grid tr.row:focus { outline: none; }
 .section h2 .muted { font-weight: 400; }
 .section h2 button.x { height: 18px; padding: 0 5px; margin-left: 4px; vertical-align: middle; }
 
+/* Handlungen am Ende einer Zeile (Jobs, Läufe): feste Plätze, damit die Symbole untereinander stehen. Sie sind
+   verschieden breit — ▶ ⏸ ⊘ ● ✎ sind Zeichen, 🗑 ist ein Emoji —, und je nach Zustand gibt es andere. */
+td.tun { white-space: nowrap; text-align: right; }
+td.tun > * { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 22px; padding: 0; margin-left: 2px; font-size: 13px; line-height: 1; }
+td.tun > .leer { visibility: hidden; }
+
 .chips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .chip {
   display: inline-flex; align-items: center; gap: 4px;

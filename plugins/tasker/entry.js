@@ -252,14 +252,16 @@ async function mount(root, ctx) {
             : j.scheduleText),
         el('td', { class: 'muted' }, j.nextDue ? when(j.nextDue) : ''),
         el('td', { class: 'muted', title: j.last?.summary ?? '' }, j.last ? `${when(j.last.startedAt)} · ${j.last.seconds}s` : ''),
-        el('td', { style: 'white-space:nowrap' },
+        // Fünf feste Plätze: starten/anhalten, abbrechen, an/aus, bearbeiten, entfernen. Fehlt einer, bleibt sein Platz
+        // leer — sonst rücken die Symbole je Zustand hin und her (27.09.2026: „krumm und schief angeordnet“).
+        el('td', { class: 'tun' },
           // Wirkt das Plugin nicht, bleibt nur 🗑 — der Server lehnt den Rest ohnehin ab
           zu(j) ? el('button', { class: 'x', title: grund(j), disabled: true }, '▶')
-            : j.running && j.paused ? el('button', { class: 'x', title: `wartet (${j.pauseReason ?? 'von Hand'}) — weiter`, onclick: ev => { ev.stopPropagation(); resume(j) } }, '▶')
-            : j.running ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); pause(j) } }, '⏸')
-            : el('button', { class: 'x', title: t('jetzt starten'), onclick: ev => { ev.stopPropagation(); run(j) } }, '▶'),
-          j.running && !zu(j) ? el('button', { class: 'x', title: abbruchText(j, st.plugins).title, onclick: ev => { ev.stopPropagation(); cancel(j) } }, '⊘') : el('span', { style: 'display:inline-block;width:22px' }),
-          el('button', { class: 'x', title: zu(j) ? grund(j) : j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) toggle(j) } }, j.enabled ? '●' : '○'),
+            : j.running && j.paused ? el('button', { class: 'x', title: `wartet (${j.pauseReason ?? 'von Hand'}) — weiter`, onclick: ev => { ev.stopPropagation(); tut(ev, () => resume(j)) } }, '▶')
+            : j.running ? el('button', { class: 'x', title: t('anhalten (wartet beim nächsten Stapel)'), onclick: ev => { ev.stopPropagation(); tut(ev, () => pause(j)) } }, '⏸')
+            : el('button', { class: 'x', title: t('jetzt starten'), onclick: ev => { ev.stopPropagation(); tut(ev, () => run(j)) } }, '▶'),
+          j.running && !zu(j) ? el('button', { class: 'x', title: abbruchText(j, st.plugins).title, onclick: ev => { ev.stopPropagation(); tut(ev, () => cancel(j)) } }, '⊘') : el('span', { class: 'x leer' }),
+          el('button', { class: 'x', title: zu(j) ? grund(j) : j.enabled ? t('ausschalten (Zeitplan ruht)') : 'einschalten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) tut(ev, () => toggle(j)) } }, j.enabled ? '●' : '○'),
           el('button', { class: 'x', title: zu(j) ? grund(j) : 'bearbeiten', disabled: zu(j), onclick: ev => { ev.stopPropagation(); if (!zu(j)) openEdit(j) } }, '✎'),
           el('button', { class: 'x', title: t('Job entfernen (Läufe bleiben im Journal)'), onclick: ev => { ev.stopPropagation(); remove(j) } }, '🗑')))
       tb.append(tr)
@@ -271,6 +273,14 @@ async function mount(root, ctx) {
   const grund = j => (ctx.plugins?.list ?? []).find(p => p.key === j.plugin)?.allowed === false
     ? t('Dieses Plugin ist in deinem Tarif nicht verfügbar. Du kannst den Job löschen, aber nicht ausführen.')
     : t('Dieses Plugin ist nicht aktiviert. Du kannst den Job löschen, aber nicht ausführen.')
+  // Ein Klick sagt sofort, dass er angekommen ist: der Knopf wird blind und trägt ⋯, bis die Antwort da ist. Ohne das
+  // sah ein langsamer Server aus wie ein toter Knopf, und es wurde mehrfach geklickt (27.09.2026 gemeldet).
+  async function tut(ev, f) {
+    const b = ev?.currentTarget
+    const alt = b?.textContent
+    if (b) { b.disabled = true; b.textContent = '⋯' }
+    try { await f() } finally { if (b?.isConnected) { b.disabled = false; b.textContent = alt } }
+  }
   async function run(j) { try { await api.post(`/api/jobs/${j.key}/run`); store.toast(`▶ ${j.label} gestartet`, 'ok'); st.cur = j.key; await load(); watch() } catch (e) { store.toast(e.message) } }
   async function cancel(j) { try { await api.post(`/api/jobs/${j.key}/cancel`); store.toast(abbruchText(j, st.plugins).toast); await load() } catch (e) { store.toast(e.message) } }
   // Anhalten und weiter: der Lauf wartet beim nächsten Stapel, statt zu sterben
