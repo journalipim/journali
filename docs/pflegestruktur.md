@@ -1655,35 +1655,18 @@ Hauptbild. Offen: `usage` ist Freitext. Eine Werteliste (Hauptbild, Detail, Verp
 die Rolle zuverlässig lesen — aber der Typ eines bestehenden Attributs ändert sich nicht ohne Weiteres, und die
 Werte, die in Anlagen schon als Text stehen, müssten mit. Das ist eine Entscheidung, keine Kleinigkeit.
 
-**H. Rechte und Fristen — Entscheidungsvorlage (27.09.2026).** Befund: das Vokabular ist grob — `read`, `write`,
-`retire`, `release`, `model`, `plugins`, `jobs`, `storage`, `users`, `team` (`Types.cs`, `Rights`). Eine Datei zu
-laden braucht heute nur `read`: `Auth.Needed` fällt für jede lesende Anfrage auf `Rights.Read` zurück
-(`Auth.cs:198`), auch für `/api/media/{id}/file`. Eine Rolle trägt ihre Rechte als Liste (`RoleDefined {label,
-rights[]}`), und das Abbild behält nur Rechte, die `Rights.All` kennt (`Users.cs:57`). Daraus folgt der Haken:
-**ein neues Recht hat keine bestehende Rolle** — führt man `download` ein, lädt am nächsten Morgen niemand mehr
-eine Datei, bis alle Rollen nachgepflegt sind. Und die Jobs: `derive`, `probe` und `docs` lesen Dateien mit einem
-Dienst-Token, dessen Rechte auf `ServiceRights` begrenzt sind (`Auth.cs:24`: read, write, retire, release) — ein
-Recht `download` müsste dort mit hinein, sonst rechnet kein Job mehr eine Vorschau.
-
-Drei Fragen, je eine Entscheidung:
-
-1. **Herunterladen als eigenes Recht.** Optionen: (a) `download` als neues Recht, das `/api/media/{id}/file`,
-   `/{preset}` und `/blob/{key}` schützt, mit der Regel „wer `write` hat, hat `download`“ als Übergang — dann
-   verliert niemand etwas, der pflegt, und nur reine Leser brauchen es ausdrücklich; (b) kein eigenes Recht, sondern
-   Herunterladen = `read`, wie heute. Empfehlung: (a) mit der Übergangsregel im Kern (`Rights.Implied`), nicht in
-   jeder Rolle; `ServiceRights` um `download` erweitern.
-2. **Rechte je Ordner.** Das ist dieselbe Frage wie „Rollen je Teilbaum“ in `architektur.md` (offen seit dem
-   Bau von Benutzer und Rollen) und sollte mit ihr entschieden werden, nicht getrennt für Medien. Ein Ordner der
-   Bibliothek trüge dann eine Liste von Rollen, die ihn sehen — ein neuer Eintragstyp am Ordnerstrom
-   (`MediaFolderRestricted {roles[]}`), das Abbild filtert je Anfrage. Ohne diese Entscheidung bleibt die
-   Bibliothek für alle Leser gleich.
-3. **Fristen.** Ein Ablaufdatum am Medium (`valid_until`, Datum, Gruppe `media`) ist als Attribut trivial. Der
-   Wert liegt darin, dass ein abgelaufenes Bild **aus der Ausleitung fällt** und in der Bibliothek als abgelaufen
-   steht — nicht aus dem Journal. Das ist der offene Punkt „Status mit Geltungsdatum“ (`architektur.md`): dieselbe
-   Mechanik, die einen Status ab einem Datum gelten lässt, lässt ein Recht bis zu einem Datum gelten. Empfehlung:
-   beides zusammen bauen, mit einer Regel im Abbild („gilt am Tag X?“), die Exporte, Datenblatt und Bibliothek
-   gleich beantworten. Dazu Lizenz und Quelle als Attribute (`licence`, Werteliste; `source`, Text) — gepflegt,
-   zählen.
+**H. Rechte und Fristen — gebaut (27.09.2026).** Entschieden nach der Vorlage: **`download`** ist ein Recht
+(„Herunterladen“). Es braucht, wer die Datei selbst, ein Preset oder einen Blob lädt (`Auth.IstDatei`); Kachel,
+Angaben und Listen sieht, wer liest. **Wer pflegt, lädt** — die Regel steht im Kern (`Rights.Implies`,
+`Rights.Effective`), nicht in den Rollen; die Regel „wer Anwender verwaltet, führt Teams“ ist dorthin gezogen.
+Der Leser aus dem Saatgut lädt nicht. Jobs laden (`ServiceRights`), sonst rechnete kein Job eine Vorschau. Die
+Oberfläche zeigt ohne das Recht weder Datei-Link noch PDF-Rahmen noch Zuschnitt — kein gesperrter Knopf, der Weg
+fehlt. **Fristen:** `valid_from`, `valid_until` (Datum), `licence` (Werteliste, beginnt leer), `source` (Text) in der
+Gruppe `media`. Die Regel `Medium.GueltigAm(tag)` beantworten Bibliothek (`valid`, `expired`, Facette
+„abgelaufen“, Filter `valid=yes|no|expired`), Knoten (⌛ an der Kachel) und Relationen (`RelationEnd.Valid`) gleich.
+**Offen und den Plugins überlassen:** dass ein abgelaufenes Bild aus Export und Datenblatt fällt — `RelationEnd.Valid`
+sagt es ihnen, die Erzeuger müssen es lesen (Siegel). Rechte je Ordner: mit „Rollen je Teilbaum“ (`architektur.md`),
+nicht hier.
 
 **I. Workflows für Assets — Entscheidungsvorlage (27.09.2026).** Befund: ein Workflow gilt für Knotentypen und
 Familien (`WorkflowDefined {roles[], families[]}`), `AppliesTo(Node n)` schliesst Rubriken aus — ein Medium ist

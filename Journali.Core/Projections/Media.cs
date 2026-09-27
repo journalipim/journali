@@ -45,6 +45,17 @@ public sealed class Medium
     public string? SupersededBy { get; set; }
     /// <summary>Das Medium, das dieses ablöste — gesetzt am Nachfolger, wenn er im Abbild ist.</summary>
     public string? Supersedes { get; set; }
+    /// <summary>Ein Datum aus einem eigenen Wert (ohne Achse) — null, wenn keiner steht oder er kein Datum ist.</summary>
+    private DateOnly? Datum(string attribute) =>
+        Values.TryGetValue(new Axis(attribute, null, null, null), out var v) && DateOnly.TryParse(v, System.Globalization.CultureInfo.InvariantCulture, out var d) ? d : null;
+    /// <summary>
+    /// Gilt das Medium an diesem Tag? Die Frist steht als Wert (<c>valid_from</c>, <c>valid_until</c>); ohne Wert gilt es
+    /// immer. Dieselbe Frage beantworten Bibliothek, Knoten und Relationen — abgelaufen fällt aus der Ausleitung, nicht
+    /// aus dem Journal.
+    /// </summary>
+    public bool GueltigAm(DateOnly tag) => (Datum(Model.ValidFrom) is not { } von || tag >= von) && (Datum(Model.ValidUntil) is not { } bis || tag <= bis);
+    /// <summary>Abgelaufen: die Frist ist vorbei. Noch nicht gültig ist etwas anderes und steht nicht hier.</summary>
+    public bool Abgelaufen(DateOnly tag) => Datum(Model.ValidUntil) is { } bis && tag > bis;
     /// <summary>Pixel des Originals — zum Sortieren und Filtern („mindestens 2000 px“). 0 ohne gelesenen Kopf.</summary>
     public long Pixels => Probe is { } p ? (long)p.Width * p.Height : 0;
 }

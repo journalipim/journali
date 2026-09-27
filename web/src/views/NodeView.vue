@@ -951,8 +951,8 @@ function cellMenu(e, def, col, block) {
             draggable="true" @dragstart="mediaDragStart($event, r)" @dragover="mediaDragOver($event, r)" @dragleave="mediaDropId === r.id && (mediaDropId = null)"
             @drop.prevent="mediaDrop(r)" @dragend="mediaDragEnd"
             :title="`${r.other.label} · ${r.other.mime ?? ''} · ${$L(relType(r.type)?.label) || r.type}\n${$t('ziehen: Reihenfolge ändern')}`">
-            <a :href="`/api/media/${r.other.id}/file`" target="_blank"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
-            <div class="name"><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
+            <a :href="store.can('download') ? `/api/media/${r.other.id}/file` : null" :target="store.can('download') ? '_blank' : null"><MediaThumb v-if="r.other.isImage || r.other.hasThumb" :id="r.other.id" :self="r.other.isImage" /><div v-else class="doc">{{ (r.other.mime ?? '').split('/')[1]?.slice(0, 6) || '📄' }}</div></a>
+            <div class="name"><span v-if="r.other.valid === false" class="neg" :title="$t('gilt heute nicht — fällt aus der Ausleitung')">⌛ </span><router-link :to="`/media`" class="muted">{{ r.other.label }}</router-link></div>
             <table class="grid" style="width:auto;margin:0"><tbody>
               <tr v-for="d in relGroupAttrs(r.type).filter(d => d.key !== 'stop')" :key="d.key"><td class="muted" style="font-size:11px;padding:0 4px" :title="d.key === 'inherit' ? $t('gilt dann an allen Subitems — bis eines die Vererbung stoppt') : d.key">{{ $L(d.label) || d.key }}</td>
                 <ToggleCell v-if="d.type === 'boolean'" :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /><Cell v-else :value="relValue(r, d)" @save="v => setRelValue(r, d, v)" /></tr>

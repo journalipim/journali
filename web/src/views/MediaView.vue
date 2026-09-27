@@ -219,6 +219,7 @@ const facets = ref(null)
 const keyword = ref('')          // '' = alle, '-' = ohne Stichwort, sonst Komma-Liste
 const plugin = ref('')           // '' = alle, '-' = von Hand
 const superseded = ref(false)    // abgelöste Fassungen mit zeigen
+const valid = ref('')            // '' = alle, 'expired' = nur abgelaufene
 async function loadFacets() {
   try { facets.value = await api.get(`/api/media/facets?${filterQuery()}`) } catch (e) { store.toast(e.message) }
 }
@@ -226,7 +227,7 @@ async function loadFacets() {
 function filterQuery() {
   const f = folder.value === 'all' ? '' : folder.value
   return `q=${encodeURIComponent(q.value.trim())}&folder=${encodeURIComponent(f)}&deep=${deep.value}`
-    + `&keyword=${encodeURIComponent(keyword.value)}&plugin=${encodeURIComponent(plugin.value)}&superseded=${superseded.value}`
+    + `&keyword=${encodeURIComponent(keyword.value)}&plugin=${encodeURIComponent(plugin.value)}&superseded=${superseded.value}&valid=${valid.value}`
 }
 /// Ein Stichwort an- oder abwählen; mehrere gelten zusammen.
 function toggleKeyword(k) {
@@ -247,7 +248,7 @@ function contextMenu(e, m) {
   menu.open(e, [
     { label: n > 1 ? t_('{0} Assets zuordnen …', [n]) : t_('Zuordnen …'), icon: '⇄', action: () => zuordnenOeffnen(m) },
     n === 1 && !m.supersededBy ? { label: t_('Neue Fassung hochladen …'), icon: '⇪', action: () => neueFassung(m) } : null,
-    n === 1 && m.isImage ? { label: t_('Zuschneiden und ausrichten …'), icon: '✂', action: () => zuschneiden(m) } : null,
+    n === 1 && m.isImage && store.can('download') ? { label: t_('Zuschneiden und ausrichten …'), icon: '✂', action: () => zuschneiden(m) } : null,
     { sep: true },
     { label: n > 1 ? t_('{0} Assets zurückziehen', [n]) : t_('Zurückziehen'), icon: '🗑', danger: true, action: () => retire(m) },
   ])
@@ -324,7 +325,7 @@ const istPdf = m => (m?.mime ?? '') === 'application/pdf'
 /// Megapixel aus der Pixelzahl, mit Komma wie im Deutschen
 const mp = n => (n / 1_000_000).toFixed(1).replace('.', ',')
 /// Die Datei in einem neuen Fenster — was damit geschieht, entscheidet der Rechner des Anwenders.
-const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener')
+const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id}/file`, '_blank', 'noopener') }
 </script>
 
 <template>
@@ -365,6 +366,8 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
         :title="$t('Abgelöste Fassungen mit zeigen — sie bleiben für Belege und Versionen auflösbar')">{{ $t("abgelöste") }}</span>
       <span v-for="h in facets.herkunft" :key="'h' + h.key" class="chip" :class="{ on: plugin === h.key }" @click="togglePlugin(h.key)"
         :title="h.key === '-' ? $t('von Hand hochgeladen') : $t('über die Schnittstelle {0} gekommen', [h.key])">{{ (h.key === '-' ? $t('von Hand') : h.key) + ' ' }}<span class="muted">{{ h.n }}</span></span>
+      <span v-if="facets.abgelaufen" class="chip neg" :class="{ on: valid === 'expired' }" @click="valid = valid === 'expired' ? '' : 'expired'; load()"
+        :title="$t('Assets, deren Frist vorbei ist — sie bleiben im Journal, fallen aber aus der Ausleitung')">{{ $t("abgelaufen") + ' ' }}<span class="muted">{{ facets.abgelaufen }}</span></span>
       <span v-if="facets.ohneStichwort" class="chip" :class="{ on: keywordAktiv('-') }" @click="toggleKeyword('-')"
         :title="$t('Assets, an denen kein Stichwort steht')">{{ $t("ohne Stichwort") + ' ' }}<span class="muted">{{ facets.ohneStichwort }}</span></span>
       <span v-for="k in facets.stichworte" :key="'k' + k.key" class="chip" :class="{ on: keywordAktiv(k.key) }" @click="toggleKeyword(k.key)"
@@ -374,12 +377,12 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
       <template v-for="g in grouped" :key="g.key">
         <div v-if="group" class="ghead"><span>{{ g.key }}</span><span class="muted">{{ g.items.length }}</span></div>
         <div class="tiles">
-          <div v-for="m in g.items" :key="m.id" class="tile" :class="{ current: cur === m.id, sel: sel.has(m.id), abgeloest: m.supersededBy }" draggable="true" @dragstart="dragTiles(m, $event)" @dragend="dragEnd"
+          <div v-for="m in g.items" :key="m.id" class="tile" :class="{ current: cur === m.id, sel: sel.has(m.id), abgeloest: m.supersededBy, ungueltig: m.valid === false }" draggable="true" @dragstart="dragTiles(m, $event)" @dragend="dragEnd"
             @click="clickTile(m, $event)" @dblclick="oeffnen(m)" @contextmenu="contextMenu($event, m)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nStrg-Klick nimmt dazu, Umschalt-Klick den Bereich — ziehen in einen Ordner, Doppelklick öffnet die Datei`">
             <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" />
             <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
             <div class="name">{{ m.name }}</div>
-            <div class="muted meta">{{ kb(m.bytes) }}<span v-if="m.used"> · ⇄ {{ m.used }}</span><span v-if="folder === 'all' && m.folder && group !== 'folder'" :title="pathOf(m.folder).map(f => f.name).join(' › ')"> · 📁</span></div>
+            <div class="muted meta"><span v-if="m.valid === false" class="neg" :title="m.expired ? $t('abgelaufen — fällt aus der Ausleitung') : $t('gilt noch nicht')">⌛ </span>{{ kb(m.bytes) }}<span v-if="m.used"> · ⇄ {{ m.used }}</span><span v-if="folder === 'all' && m.folder && group !== 'folder'" :title="pathOf(m.folder).map(f => f.name).join(' › ')"> · 📁</span></div>
           </div>
         </div>
       </template>
@@ -390,8 +393,9 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
 
   <div class="pane" style="flex:1" v-if="current">
     <div class="toolbar"><h1>▨ {{ current.name }}</h1><span class="mono muted">{{ current.id }}</span><span class="grow" />
-      <a :href="`/api/media/${current.id}/file`" target="_blank" class="muted" :title="$t('Datei öffnen')">{{ $t("↗ Datei") }}</a>
-      <button v-if="current.isImage" class="x" @click="zuschneiden(current)" :title="$t('Zuschneiden und ausrichten — das Ergebnis ist ein neues Medium')">✂</button>
+      <!-- Laden darf, wer das Recht hat — sehen ist nicht haben; ohne Recht fehlt der Weg, nicht nur der Knopf -->
+      <a v-if="store.can('download')" :href="`/api/media/${current.id}/file`" target="_blank" class="muted" :title="$t('Datei öffnen')">{{ $t("↗ Datei") }}</a>
+      <button v-if="current.isImage && store.can('download')" class="x" @click="zuschneiden(current)" :title="$t('Zuschneiden und ausrichten — das Ergebnis ist ein neues Medium')">✂</button>
       <button class="x" @click="retire(current)" :title="sel.size > 1 ? $t('{0} gewählte Medien zurückziehen (die Dateien bleiben im Store)', [sel.size]) : $t('Medium zurückziehen (die Datei bleibt im Store)')">🗑</button></div>
     <div class="toolbar meta muted"><span>{{ current.mime }}</span><span>· {{ kb(current.bytes) }}</span><span>{{ $t("· ⇄ {0} Knoten", [current.used]) }}</span>
       <span :title="current.folder ? $t('Ordner — zum Verschieben die Kachel auf einen Ordner links ziehen') : $t('in keinem Ordner — Kachel auf einen Ordner links ziehen')">· 📁 {{ current.folder ? pathOf(current.folder).map(f => f.name).join(' › ') : '—' }}</span>
@@ -399,8 +403,8 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
     <div class="scroll">
       <!-- Ein PDF ganz: der Browser bringt seine Anzeige mit, es braucht kein Plugin dafür. Die gerechnete
            erste Seite bleibt die Kachel in der Liste. -->
-      <div class="preview" v-if="istPdf(current)"><iframe class="pdf" :src="`/api/media/${current.id}/file#view=FitH`" :title="current.name"></iframe></div>
-      <div class="preview" v-else-if="current.isImage"><img :src="`/api/media/${current.id}/file`" alt="" /></div>
+      <div class="preview" v-if="istPdf(current) && store.can('download')"><iframe class="pdf" :src="`/api/media/${current.id}/file#view=FitH`" :title="current.name"></iframe></div>
+      <div class="preview" v-else-if="current.isImage && store.can('download')"><img :src="`/api/media/${current.id}/file`" alt="" /></div>
       <!-- kein Bild und kein PDF, aber eine gerechnete Vorschau: die erste Seite zeigen, das Original hängt am Namen -->
       <div class="preview" v-else-if="current.hasThumb"><img :src="`/api/media/${current.id}/thumb`" alt="" /></div>
       <table class="grid form"><colgroup><col style="width:150px" /><col style="width:320px" /></colgroup><tbody>
@@ -491,6 +495,7 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
 .tile.sel { border-color: var(--accent); }
 .tile.current { border-color: var(--accent); background: var(--accent-soft); }
 .tile.abgeloest { opacity: .55; border-style: dashed; }
+.tile.ungueltig { border-color: var(--neg); }
 .tile img, .tile .doc { width: 110px; height: 90px; object-fit: contain; display: grid; place-items: center; background: var(--bg); border-radius: 4px; color: var(--muted); font-size: 12px; }
 .tile .name { font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
 .tile .meta { font-size: 11px; }

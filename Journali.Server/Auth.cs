@@ -20,8 +20,10 @@ public static class Auth
 {
     public const string Stream = "user:";
     /// <summary>Rechte einer Rolle aus dem Journal; das Dienst-Token der Jobs bekommt die Rolle editor — fehlt sie, das feste Minimum zum Pflegen.</summary>
-    public static IReadOnlySet<string> RightsOf(Catalog c, string role) => role == "$service" ? ServiceRights : c.With((_, _, _) => c.Users.RightsOf(role));
-    private static readonly HashSet<string> ServiceRights = [Rights.Read, Rights.Write, Rights.Retire, Rights.Release];
+    /// <summary>Die wirksamen Rechte einer Rolle — mit dem, was ein Recht einschliesst (<see cref="Rights.Implies"/>).</summary>
+    public static IReadOnlySet<string> RightsOf(Catalog c, string role) => Rights.Effective(role == "$service" ? ServiceRights : c.With((_, _, _) => c.Users.RightsOf(role)));
+    // Jobs lesen Dateien: derive rechnet Vorschauen, probe liest Köpfe, docs liest Text — darum download
+    private static readonly HashSet<string> ServiceRights = [Rights.Read, Rights.Write, Rights.Retire, Rights.Release, Rights.Download];
     /// <summary>Darf ein Benutzer mit dieser Rolle Benutzer verwalten? („Administrator“ heißt: das Recht users)</summary>
     public static bool IsAdmin(Catalog c, string role) => RightsOf(c, role).Contains(Rights.Users);
     private static int AdminsLeft(Catalog c) => c.With((_, _, _) => c.Users.All.Values.Count(u => u.Enabled && c.Users.RightsOf(u.Role).Contains(Rights.Users)));
@@ -195,6 +197,7 @@ public static class Auth
         if (path.StartsWith("/api/licence/abo/") && path.EndsWith("/auffrischen")) return Rights.Team;
         if (path.StartsWith("/api/licence") && !read) return Rights.Users;   // einspielen, Schlüssel einlösen
         if (path.StartsWith("/api/licence/requests")) return Rights.Users;     // Anforderungen, auch lesend
+        if (read && IstDatei(path)) return Rights.Download;   // die Datei selbst, ein Preset, ein Blob — sehen ist nicht haben
         if (read) return Rights.Read;
         if (path.StartsWith("/api/model/lists/") && (path.Contains("/values/") || path.EndsWith("/values")) && method == "PUT") return Rights.Write;   // Listenwert(e) zufügen ist Pflege
         if (path.StartsWith("/api/model")) return Rights.Model;
@@ -208,11 +211,22 @@ public static class Auth
         if (path.Contains("/release") || path.StartsWith("/api/versions") || path.Contains("/versions")) return Rights.Release;
         return Rights.Write;
     }
+    /// <summary>
+    /// Unter /api/media: die Bytes einer Datei — <c>/{id}/file</c>, <c>/{id}/{preset}</c>, <c>/blob/{key}</c>. Nicht die Kachel
+    /// (<c>thumb</c>), nicht die Angaben, nicht die Listen: die sieht, wer liest.
+    /// </summary>
+    public static bool IstDatei(string path)
+    {
+        if (!path.StartsWith("/api/media/")) return false;
+        var teile = path["/api/media/".Length..].Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (teile.Length == 2 && teile[0] == "blob") return true;
+        return teile.Length == 2 && teile[1] is not ("thumb" or "usage" or "suggestions" or "workflow" or "tables");
+    }
+
     public static bool Allowed(Catalog c, string role, HttpRequest req) => Needed(req) is not { } need || RightsOf(c, role).Contains(need)
-        || (need == Rights.Team && RightsOf(c, role).Contains(Rights.Users))   // wer Benutzer und Rollen verwaltet, verwaltet auch Teams
         || ((req.Path.StartsWithSegments("/api/files") || req.Path.StartsWithSegments("/api/drivers")) && RightsOf(c, role).Contains(Rights.Storage));   // der Dateibrowser dient auch dem Medienspeicher
     /// <summary>Hat der Anfragende dieses Recht? Ohne Benutzer (offen) ja; sonst die Rolle aus der Sitzung (Middleware legt sie in Items).</summary>
-    public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && (RightsOf(c, role).Contains(right) || (right == Rights.Team && RightsOf(c, role).Contains(Rights.Users))));
+    public static bool Has(HttpRequest req, Catalog c, string right) => !Enabled(c) || (req.HttpContext.Items["role"] is string role && RightsOf(c, role).Contains(right));
 
     /// <summary>
     /// Hat dieser Anwender ein Kontingent? Ohne eines kostet nichts mehr etwas dürfen: die Sperre selbst sitzt am

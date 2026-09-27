@@ -794,12 +794,33 @@ public static class Rights
     public const string Storage = "storage";   // Medien-Speicher einstellen und kopieren
     public const string Users = "users";       // Benutzer und Rollen verwalten
     public const string Team = "team";         // das eigene Team: KI-Schlüssel hinterlegen, Grenzen setzen, Verbrauch sehen
-    public static readonly string[] All = [Read, Write, Retire, Release, Model, Plugins, Jobs, Storage, Team, Users];
+    /// <summary>Herunterladen (27.09.2026): die Datei selbst und ihre Ableitungen — sehen ist nicht haben. Kacheln und
+    /// die Angaben sieht, wer liest; das Original, ein Preset und die Blobs lädt, wer dieses Recht hat.</summary>
+    public const string Download = "download";
+    public static readonly string[] All = [Read, Write, Retire, Release, Model, Plugins, Jobs, Storage, Team, Users, Download];
     public static readonly Dictionary<string, string> Label = new()
     {
         [Read] = "Lesen", [Write] = "Pflegen", [Retire] = "Zurückziehen", [Release] = "Freigeben, Versionen", [Model] = "Modell ändern",
         [Plugins] = "Plugins verwalten", [Jobs] = "Jobs", [Storage] = "Storage", [Team] = "Teammanager", [Users] = "Anwender und Rollen",
+        [Download] = "Herunterladen",
     };
+    /// <summary>
+    /// Was ein Recht mit einschliesst. Ein neues Recht hat keine bestehende Rolle — führte man <c>download</c> ein, ohne dass
+    /// <c>write</c> es einschliesst, lüde am nächsten Morgen niemand mehr eine Datei, bis jede Rolle nachgepflegt ist. Darum
+    /// steht die Regel hier im Kern und nicht in den Rollen: wer pflegt, lädt; wer Anwender verwaltet, führt auch Teams.
+    /// </summary>
+    public static readonly Dictionary<string, string[]> Implies = new()
+    {
+        [Write] = [Download],
+        [Users] = [Team],
+    };
+    /// <summary>Die wirksamen Rechte einer Rolle: die eigenen und alles, was sie einschliessen.</summary>
+    public static IReadOnlySet<string> Effective(IEnumerable<string> own)
+    {
+        var set = new HashSet<string>(own);
+        foreach (var r in set.ToList()) if (Implies.TryGetValue(r, out var mehr)) set.UnionWith(mehr);
+        return set;
+    }
     /// <summary>Vorbelegte Rollen — Saatgut für ein leeres Journal; der Anwender ändert, ergänzt, entfernt sie (nur „admin“ bleibt als Schlüssel bekannt).</summary>
     public static IEnumerable<(string Key, RoleDefined Role)> Seeds()
     {

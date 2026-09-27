@@ -31,6 +31,10 @@ public static class Model
     /// <summary>Die Werteliste der Stichwörter und das vermehrbare Attribut am Medium, das aus ihr wählt.</summary>
     public const string KeywordList = "keyword";
     public const string KeywordAttribute = "keywords";
+    /// <summary>Fristen am Medium (Datum, Gruppe media) und die Werteliste der Lizenzen.</summary>
+    public const string ValidFrom = "valid_from";
+    public const string ValidUntil = "valid_until";
+    public const string LicenceList = "licence";
 
     /// <summary>Das Saatgut-Attribut SKU — eindeutig (unique) wie jedes andere Schlüsselattribut; im Code sonst nichts Besonderes.</summary>
     public const string SkuAttribute = "sku";
@@ -148,6 +152,14 @@ public static class Model
         yield return new(ListStream + KeywordList, Types.ListDefined, Types.Serialize(new ListDefinition(KeywordList, Labels.Of("Stichwörter", "Keywords"))));
         yield return new(AttributeStream + KeywordAttribute, Types.AttributeDefined, Types.Serialize(
             new AttributeDefinition(KeywordAttribute, Labels.Of("Stichwörter", "Keywords"), AttributeTypes.Enum, Group: MediaGroup, List: KeywordList, Multiple: true)));
+        // Fristen und Rechte (27.09.2026): ein Bild gilt von … bis; Lizenz aus einer Werteliste (beginnt leer), Quelle als Text.
+        // Die Regel dazu (Medium.GueltigAm) beantworten Bibliothek, Knoten und Relationen gleich: abgelaufen heisst
+        // nicht weg — es fällt aus der Ausleitung, nicht aus dem Journal.
+        yield return new(AttributeStream + ValidFrom, Types.AttributeDefined, Types.Serialize(new AttributeDefinition(ValidFrom, Labels.Of("Gilt ab", "Valid from"), AttributeTypes.Date, Group: MediaGroup)));
+        yield return new(AttributeStream + ValidUntil, Types.AttributeDefined, Types.Serialize(new AttributeDefinition(ValidUntil, Labels.Of("Gilt bis", "Valid until"), AttributeTypes.Date, Group: MediaGroup)));
+        yield return new(ListStream + LicenceList, Types.ListDefined, Types.Serialize(new ListDefinition(LicenceList, Labels.Of("Lizenzen", "Licences"))));
+        yield return new(AttributeStream + "licence", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("licence", Labels.Of("Lizenz", "Licence"), AttributeTypes.Enum, Group: MediaGroup, List: LicenceList)));
+        yield return new(AttributeStream + "source", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("source", Labels.Of("Quelle", "Source"), AttributeTypes.Text, Group: MediaGroup)));
         yield return new(GroupStream + "relation_media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("relation_media", Labels.Of("Medienzuordnung", "Media link"))));
         yield return new(AttributeStream + "position", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("position", Labels.Of("Reihenfolge", "Position"), AttributeTypes.Integer, Group: "relation_media")));
         yield return new(AttributeStream + "usage", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("usage", Labels.Of("Verwendung", "Usage"), AttributeTypes.Text, Group: "relation_media")));

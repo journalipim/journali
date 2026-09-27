@@ -70,7 +70,7 @@ public static class RelationApi
 }
 
 /// <summary>Das andere Ende einer Relation: Knoten oder Medium (dann mit Typ und Bild-Flag) — oder verwaist, wenn es weg ist.</summary>
-public sealed record RelationEnd(string Id, string? Role, string Label, bool Missing, string? Mime = null, bool IsImage = false, long Bytes = 0, bool HasThumb = false);
+public sealed record RelationEnd(string Id, string? Role, string Label, bool Missing, string? Mime = null, bool IsImage = false, long Bytes = 0, bool HasThumb = false, bool Valid = true);
 
 /// <summary>Eine Relation aus Sicht eines Knotens: Richtung, das andere Ende, die Werte.</summary>
 public sealed record RelationView(string Id, string Type, string From, string To, string Dir, RelationEnd Other, List<ValueView> Values,
@@ -82,7 +82,7 @@ public sealed record RelationView(string Id, string Type, string From, string To
         var other = tree.Nodes.TryGetValue(otherId, out var n)
             ? new RelationEnd(n.Id, n.Role, NodeRow.LabelOf(tree, model, n), false)
             : media.All.TryGetValue(otherId, out var m)
-                ? new RelationEnd(m.Id, Roles.Media, m.Name, false, m.Mime, m.IsImage, m.Bytes, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset))
+                ? new RelationEnd(m.Id, Roles.Media, m.Name, false, m.Mime, m.IsImage, m.Bytes, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset), m.GueltigAm(DateOnly.FromDateTime(DateTime.Now)))
                 : new RelationEnd(otherId, null, otherId, true);
         return new(r.Id, r.Type, r.From, r.To, dir, other, ValueView.Of(r).ToList(), r.External, r.Entries, r.LastNumber, r.LastAt, r.LastActor);
     }

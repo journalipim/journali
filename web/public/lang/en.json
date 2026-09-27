@@ -2612,5 +2612,9 @@
  "als weiteres Asset anlegen — das Original bleibt, wie es ist": "create as a further asset — the original stays as it is",
  "✓ Neues Asset": "✓ New asset",
  "anlegen und das Original damit ersetzen — die Zuordnungen wandern mit": "create and replace the original with it — the links move along",
- "✓ Neue Fassung": "✓ New version"
+ "✓ Neue Fassung": "✓ New version",
+ "Assets, deren Frist vorbei ist — sie bleiben im Journal, fallen aber aus der Ausleitung": "Assets whose term has ended — they stay in the journal but drop out of exports",
+ "abgelaufen — fällt aus der Ausleitung": "expired — drops out of exports",
+ "gilt noch nicht": "not valid yet",
+ "gilt heute nicht — fällt aus der Ausleitung": "not valid today — drops out of exports"
 }

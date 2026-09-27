@@ -29,10 +29,15 @@ public static class MediaApi
     /// Facetten etwas anderes, als die Liste zeigt.
     /// </summary>
     private static IEnumerable<Medium> Gefiltert(Catalog c, string? q, string? folder, bool deep, int minW, int minH,
-        string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword, bool superseded = false)
+        string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword, bool superseded = false, string? valid = null)
     {
         // Abgelöste Fassungen bleiben im Abbild, damit Belege und Versionen sie auflösen — die Bibliothek zeigt sie nur auf Wunsch
         var all = superseded ? c.Media.All.Values.AsEnumerable() : c.Media.Current;
+        // Frist: "yes" = gilt heute, "no" = gilt heute nicht (abgelaufen oder noch nicht), "expired" = abgelaufen
+        var heute = DateOnly.FromDateTime(DateTime.Now);
+        if (valid == "yes") all = all.Where(m => m.GueltigAm(heute));
+        else if (valid == "no") all = all.Where(m => !m.GueltigAm(heute));
+        else if (valid == "expired") all = all.Where(m => m.Abgelaufen(heute));
         if (!string.IsNullOrWhiteSpace(q))
         {
             var s = q.Trim();
@@ -79,10 +84,10 @@ public static class MediaApi
         // Liste, neueste zuerst; q sucht in Name und Werten
         // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
         api.MapGet("/media", (Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
-            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null, bool superseded = false) =>
+            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null, bool superseded = false, string? valid = null) =>
             c.With((model, tree, _) =>
             {
-                var all = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword, superseded);
+                var all = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid);
                 var rows = all.Select(m => (m, used: c.Relations.To(m.Id).Count()));
                 var down = desc ?? (sort is null or "recent" or "date" or "size" or "used" or "pixels" or "created");   // Neuestes/Grösstes/Meistgenutztes zuerst, Namen A→Z
                 Func<(Medium m, int used), object> key = sort switch
@@ -123,6 +128,7 @@ public static class MediaApi
                     stichworte = stichwort.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
                         .Select(kv => new { key = kv.Key, label = liste?.Values.GetValueOrDefault(kv.Key)?.Label, n = kv.Value }).ToList(),
                     ohneStichwort = alle.Count(m => !Stichworte(m).Any()),
+                    abgelaufen = alle.Count(m => m.Abgelaufen(DateOnly.FromDateTime(DateTime.Now))),
                     total = alle.Count,
                 });
             }));
@@ -399,12 +405,14 @@ public sealed record SupersedeBody(string? By);
 public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime, string Name, bool IsImage, List<ValueView> Values,
     Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Folder,
     bool Renderable = false, bool HasThumb = false, MediaProbed? Probe = null, MediaSourced? Source = null,
-    DateTimeOffset CreatedAt = default, string CreatedBy = "", long Pixels = 0, string? SupersededBy = null, string? Supersedes = null)
+    DateTimeOffset CreatedAt = default, string CreatedBy = "", long Pixels = 0, string? SupersededBy = null, string? Supersedes = null,
+    bool Valid = true, bool Expired = false)
 {
     /// <summary>Kachel: Bilder haben immer eine, ein PDF erst, wenn der derive-Job seine erste Seite gerechnet hat
     ///. Die Oberfläche fragt danach, statt aus dem Mime zu raten.</summary>
     public static MediaView Of(Medium m, int used) => new(m.Id, m.Sha256, m.Bytes, m.Mime, m.Name, m.IsImage, ValueView.Of(m).ToList(),
         m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor, m.Folder,
         m.IsRenderable, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset),
-        m.Probe, m.Source, m.CreatedAt, m.CreatedBy, m.Pixels, m.SupersededBy, m.Supersedes);
+        m.Probe, m.Source, m.CreatedAt, m.CreatedBy, m.Pixels, m.SupersededBy, m.Supersedes,
+        m.GueltigAm(DateOnly.FromDateTime(DateTime.Now)), m.Abgelaufen(DateOnly.FromDateTime(DateTime.Now)));
 }
