@@ -147,6 +147,19 @@ Steht die Datenbank schon — auf Unraid etwa das Template `postgresql18` aus de
 Community Apps (Nutzer `postgres`) —, bringt das Paket keine zweite mit.
 Host und Port kommen aus `.env` (`JOURNALI_DB_HOST`, `JOURNALI_DB_PORT`).
 
+**Die Erweiterung `vector` in einer vorhandenen Datenbank.** Sie wird für die Suche nach Sinn, die Frage an die
+Dokumente und das Band „Ähnliche Knoten“ gebraucht; ohne sie läuft der Rest. Der Weg ist **das Image tauschen**, nicht
+die Erweiterung nachinstallieren: `pgvector/pgvector:pg18` ist `postgres:18` mit der Erweiterung, dasselbe
+Datenverzeichnis und dieselben Umgebungsvariablen. Auf Unraid also am vorhandenen Container das *Repository* auf
+`pgvector/pgvector:pg18` stellen und *Apply* drücken — der Container wird neu erzeugt, das Volume bleibt, die Daten
+bleiben. Die Erweiterung selbst legt journali beim ersten Start an (`Vectors.cs`: `CREATE EXTENSION IF NOT EXISTS
+vector`); dafür braucht der Datenbankbenutzer das Recht dazu (`postgres` hat es).
+
+Ein `apt-get install postgresql-18-pgvector` im laufenden Container tut es auch — aber nur bis zum nächsten Update:
+Unraid erzeugt den Container dann aus dem Image neu, und die Erweiterung fehlt wieder. Die Fassung der Hauptversion
+muss beim Tausch dieselbe bleiben (18 → `pg18`); ein Wechsel der Hauptversion ist ein eigener Vorgang mit Dump und
+Rückspielen.
+
 Der Server bringt die Oberfläche mit (Dockerfile baut sie mit Node in der
 ersten Stufe). Für den Server gibt es zwei Wege:
 
