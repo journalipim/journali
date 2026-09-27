@@ -70,12 +70,15 @@ public static class VersionApi
         {
             if (Actor(req) is not { } actor) return ActorMissing();
             if (Blank(body.Kind) is not { } kind || Blank(body.MediaId) is not { } mediaId) return Bad("kind und mediaId sind Pflicht.");
-            return c.With((_, _, write) =>
+            return c.With((model, tree, write) =>
             {
                 if (c.Versions.Get(id, nr) is null) return Results.NotFound();
                 if (!c.Media.All.TryGetValue(mediaId, out var m)) return Bad("Medium {0} unbekannt.", mediaId);
                 write(actor, id, Types.VersionDocumentAdded, new VersionDocumentAdded(nr, kind, m.Id, m.Sha256, m.Mime, m.Name, m.Bytes, Blank(body.Renderer)), null);
-                return Results.Ok(View(c.Versions.Get(id, nr)!));
+                // Und ins DAM: Herkunft, Ordner, Zuordnung — im selben Zug, damit nichts halb dasteht
+                var ctx = new Ctx { Model = model, Tree = tree, Relations = c.Relations, Media = c.Media, Write = (stream, type, payload) => write(actor, stream, type, payload, null) };
+                var hinweise = BelegInsDam(ctx, id, nr, m, Blank(body.Renderer));
+                return Results.Ok(new { version = View(c.Versions.Get(id, nr)!), hinweise });
             });
         });
 
@@ -161,6 +164,48 @@ public static class VersionApi
             }
             return rows;
         });
+    }
+
+    /// <summary>Der Ordner der Bibliothek, in den erzeugte Belege gelegt werden — auf der obersten Ebene, wird angelegt, wenn er fehlt.</summary>
+    public const string BelegOrdner = "Belege";
+
+    /// <summary>
+    /// Ein erzeugter Beleg ist ein reguläres Asset (27.09.2026). Bis dahin hing er nur an der Version: in der
+    /// Bibliothek ohne Ordner und ohne Herkunft, und am Produkt gar nicht — im Medienband des Knotens erschien er nicht.
+    /// Jetzt bekommt er drei Dinge, im selben Zug wie der Eintrag an der Version:
+    /// <list type="number">
+    /// <item>seine <b>Herkunft</b> (<c>MediaSourced</c>): der Erzeuger als Plugin, die Version als Bezug;</item>
+    /// <item>den <b>Ordner</b> „Belege“ — nur, wenn er noch in keinem liegt; einen Ordner, den jemand gewählt hat, nimmt ihm niemand;</item>
+    /// <item>die <b>Zuordnung</b> am Knoten: ein Bild als <c>image</c>, sonst <c>document</c> — sofern das Modell den Typ hat und er von
+    /// diesem Knotentyp ausgehen darf. Gibt es sie schon, ist das kein Fehler.</item>
+    /// </list>
+    /// Was davon nicht geht, hält den Beleg nicht auf: der Eintrag an der Version bleibt die Wahrheit, und die Hinweise
+    /// gehen zurück an den Erzeuger, der sie in sein Log schreibt.
+    /// </summary>
+    public static List<string> BelegInsDam(Ctx ctx, string nodeId, int nr, Medium m, string? renderer)
+    {
+        var hinweise = new List<string>();
+        // 1. Herkunft — ergänzt, löscht nichts
+        ctx.Write(m.Id, Types.MediaSourced, new MediaSourced(Plugin: renderer, Ref: $"version:{nodeId}/{nr}"));
+        // 2. Ordner
+        if (m.Folder is null)
+        {
+            var ordner = ctx.Media.SubFolders(null).FirstOrDefault(f => string.Equals(f.Name, BelegOrdner, StringComparison.OrdinalIgnoreCase))?.Id;
+            if (ordner is null)
+            {
+                var o = Commands.CreateMediaFolder(ctx, BelegOrdner, null);
+                if (o.Entry is { } e) ordner = e.Stream; else hinweise.Add($"Ordner {BelegOrdner}: {o.Error}");
+            }
+            if (ordner is not null && Commands.FileMedium(ctx, m.Id, ordner) is { Error: { } f }) hinweise.Add($"Ordner: {f}");
+        }
+        // 3. Zuordnung
+        var typ = ctx.Model.RelationTypes.Values
+            .Where(t => (t.To ?? []).Contains(Roles.Media) && (ctx.Tree.Nodes.TryGetValue(nodeId, out var n) && t.FromAllowed(n.Role)))
+            .OrderBy(t => t.Key == (m.IsImage ? "image" : "document") ? 0 : 1).FirstOrDefault();
+        if (typ is null) { hinweise.Add("Zuordnung: das Modell hat keinen Relationstyp zu Medien für diesen Knoten."); return hinweise; }
+        var r = Commands.CreateRelation(ctx, typ.Key, nodeId, m.Id);
+        if (r.Error is { } fehler && !fehler.Contains("schon")) hinweise.Add($"Zuordnung: {fehler}");
+        return hinweise;
     }
 
     /// <summary>Erzeuger: Plugins mit <c>renderer: { kind, service }</c> im Manifest, installiert und an.</summary>

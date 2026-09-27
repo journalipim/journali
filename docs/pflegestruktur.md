@@ -1623,11 +1623,13 @@ Original. Kein Überschreiben, keine verlorene Fassung, und die Abstammung ist l
 *nicht zerstörenden* Zuschnitt braucht (ein Rechteck am Medium, das die Presets anwenden) — das ist der Weg für
 „quadratische Kachel ohne abgeschnittenen Kopf“ und wäre ein eigener Eintragstyp plus eine Änderung an `derive`.
 
-**E. Belege ins DAM.** Heute legt der Erzeuger das Datenblatt als Medium an und hängt es per
-`VersionDocumentAdded` an die **Version** (`VersionApi.cs`). Damit ist es in der Bibliothek, aber ohne Ordner, ohne
-Kennzeichnung und **nicht** als Zuordnung am Produkt — im Medienband des Knotens erscheint es nicht. Zu bauen:
-der Beleg wird ein reguläres Asset (Ordner, Herkunft `Plugin: datasheet`, `Ref` = Version) **und** bekommt seine
-Zuordnung an Produkt oder Variante.
+**E. Belege ins DAM — gebaut (27.09.2026).** Bis dahin legte der Erzeuger das Datenblatt als Medium an und hängte
+es per `VersionDocumentAdded` nur an die **Version**: in der Bibliothek ohne Ordner und Herkunft, am Produkt gar
+nicht. Jetzt bekommt der Beleg im selben Zug (`VersionApi.BelegInsDam`) seine Herkunft (`MediaSourced`, Plugin =
+Erzeuger, Bezug = `version:<knoten>/<nr>`), den Ordner „Belege" (angelegt, wenn er fehlt — ein schon gewählter
+Ordner bleibt) und die Zuordnung am Knoten (`image` für ein Bild, sonst `document`; gibt es sie schon, ist das
+kein Fehler). Was davon nicht geht, hält den Beleg nicht auf — der Eintrag an der Version bleibt die Wahrheit,
+die Hinweise gehen an den Erzeuger zurück. Die Zuordnung zählt als Pflege, die Herkunft nicht.
 
 **F. Fassungen.** „Ein neues Bild ist ein neues Medium“ bleibt richtig. Was fehlt, ist „dieses ersetzt jenes“: ein
 Eintrag, der die Zuordnungen mitnimmt, und eine Bibliothek, die den Vorgänger nicht mehr anbietet, ohne ihn zu
