@@ -3,6 +3,7 @@
 // Gruppierung, Mehrfachauswahl, Ziehen in einen Ordner, Hochladen per Knopf oder Ablegen), rechts das gewählte Medium —
 // Datei, Werte (Alt-Text, Rechte), Ordner, wo es hängt. Die Bytes liegen im Store des Servers; hier laufen nur /api/media.
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
@@ -176,6 +177,21 @@ async function retire(m) {
 }
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`
 
+// ---- Verwendungsnachweis: an welchen Knoten dieses Asset hängt
+const router = useRouter()
+const usage = ref([])
+const ICON = { group: '▣', product: '▦', variant: '◆', rubric: '❖' }
+/// Ein Stopp ist keine Verwendung, sondern eine Sperre an diesem Knoten und allem darunter.
+const istStopp = r => (r.values ?? []).some(v => v.attribute === 'stop' && v.value === 'true')
+async function loadUsage() {
+  usage.value = []
+  if (!cur.value) return
+  try { usage.value = await api.get(`/api/media/${cur.value}/usage`) } catch (e) { store.toast(e.message) }
+}
+watch(cur, loadUsage, { immediate: true })
+/// Zum Knoten springen — der Baum öffnet ihn.
+const springe = r => router.push(`/tree/${r.other.id}`)
+
 // ---- Ansehen und Öffnen
 /// Ein PDF zeigt der Browser selbst — dafür braucht es kein Plugin, nur den Rahmen um die Datei.
 const istPdf = m => (m?.mime ?? '') === 'application/pdf'
@@ -269,6 +285,20 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
         <tr><td class="attr muted">{{ $t("SHA-256") }}</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
         <tr v-for="(v, k) in current.external" :key="k"><td class="attr muted">⇩ {{ k }}</td><td class="mono muted">{{ v }}</td></tr>
       </tbody></table>
+
+      <!-- Wo das Asset hängt. Ein Klick springt zum Knoten; ein Stopp steht mit dabei, denn er erklärt, warum es
+           dort trotz Vererbung nicht gilt. -->
+      <h2 class="use-h">{{ $t("⇄ Verwendung") + ' ' }}<span class="muted">{{ '· ' + usage.length }}</span></h2>
+      <div v-if="!usage.length" class="empty" style="padding:8px">{{ $t("An keinem Knoten") }}</div>
+      <div v-else class="uses">
+        <div v-for="r in usage" :key="r.id" class="use" :class="{ stopp: istStopp(r) }" @click="springe(r)"
+          :title="$t('zum Knoten springen — {0}', [r.other.id])">
+          <span class="ico">{{ ICON[r.other.role] ?? '▪' }}</span>
+          <span class="lbl">{{ r.other.label }}</span>
+          <span class="muted typ">{{ r.type }}</span>
+          <span v-if="istStopp(r)" class="muted" :title="$t('hier und darunter unterbunden — keine Verwendung')">⛔</span>
+        </div>
+      </div>
     </div>
   </div>
   <div v-else class="pane" style="flex:1"><div class="empty">{{ $t("Medium in der Mitte wählen — oder hochladen.") }}</div></div>
@@ -297,6 +327,13 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
 .preview img { max-width: 100%; max-height: 360px; border-radius: 4px; background: var(--bg); }
 .preview iframe.pdf { width: 100%; height: 480px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }
 .form { width: auto; }
+.use-h { font-size: 13px; padding: 12px 8px 4px; margin: 0; border-top: var(--line); }
+.uses { padding: 0 8px 8px; }
+.use { display: flex; gap: 6px; align-items: baseline; padding: 3px 4px; border-radius: 4px; cursor: pointer; }
+.use:hover { background: var(--hover); }
+.use.stopp .lbl { text-decoration: line-through; }
+.use .lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.use .typ { font-size: 11px; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
 .x:hover { color: var(--text); }

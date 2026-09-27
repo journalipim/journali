@@ -90,6 +90,14 @@ public static class MediaApi
             c.With((_, _, _) => c.Media.All.TryGetValue(id, out var m) ? MediaView.Of(m, c.Relations.To(m.Id).Count()) : null) is { } v ? Results.Ok(v) : Results.NotFound());
 
         // Die Datei: Hash-adressiert und unveränderlich, darf ewig im Cache bleiben.
+        // Verwendungsnachweis: an welchen Knoten dieses Asset hängt. Dieselbe Form wie die Relationen eines Knotens
+        // (RelationView, Richtung „in“) — das andere Ende ist dann der Knoten. Ein Stopp (stop=true) ist keine
+        // Verwendung, sondern eine Sperre; er steht mit in der Liste und die Oberfläche kennzeichnet ihn.
+        api.MapGet("/media/{id}/usage", (string id, Catalog c) =>
+            c.With((model, tree, _) => c.Media.All.ContainsKey(id)
+                ? c.Relations.To(id).OrderBy(r => r.Type).ThenBy(r => r.LastNumber).Select(r => RelationView.Of(tree, model, c.Media, r, "in")).ToList()
+                : null) is { } v ? Results.Ok(v) : Results.NotFound());
+
         api.MapGet("/media/{id}/file", async (string id, Catalog c, IMediaStore store, HttpResponse res, CancellationToken ct) =>
         {
             var m = c.With((_, _, _) => c.Media.All.GetValueOrDefault(id));
