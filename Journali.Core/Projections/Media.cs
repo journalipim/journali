@@ -33,6 +33,16 @@ public sealed class Medium
     public string? Folder { get; set; }
     /// <summary>Ableitungen nach Preset (MediaDerived): Preset → Mass, Grösse, Fingerabdruck des Presets zur Zeit des Rechnens.</summary>
     public Dictionary<string, Derived> Derived { get; } = new();
+    /// <summary>Was im Kopf der Datei steht (MediaProbed); null = noch nicht gelesen oder Format unbekannt.</summary>
+    public MediaProbed? Probe { get; set; }
+    /// <summary>Woher das Medium kam (MediaSourced); null = von Hand hochgeladen.</summary>
+    public MediaSourced? Source { get; set; }
+    /// <summary>Wann es angelegt wurde — das Importdatum. Steht im ersten Eintrag, nicht im Rumpf.</summary>
+    public DateTimeOffset CreatedAt { get; set; }
+    /// <summary>Wer es anlegte. Bei einem Job <c>job:&lt;key&gt;</c>.</summary>
+    public string CreatedBy { get; set; } = "";
+    /// <summary>Pixel des Originals — zum Sortieren und Filtern („mindestens 2000 px“). 0 ohne gelesenen Kopf.</summary>
+    public long Pixels => Probe is { } p ? (long)p.Width * p.Height : 0;
 }
 
 public sealed record Derived(int Width, int Height, long Bytes, string Fingerprint, long Number);
@@ -81,6 +91,11 @@ public sealed class Media : IProjection
 
     /// <summary>Medien, denen eine aktuelle Ableitung nach diesem Preset fehlt (nie gerechnet oder Preset seither geändert).</summary>
     public IEnumerable<Medium> Pending(MediaPreset preset) => _all.Values.Where(m => m.IsRenderable && (!m.Derived.TryGetValue(preset.Key, out var d) || d.Fingerprint != preset.Fingerprint));
+    /// <summary>Medien, deren Kopf noch nicht gelesen wurde — die offene Postenliste des Jobs <c>probe</c>.</summary>
+    public IEnumerable<Medium> Unprobed() => _all.Values.Where(m => m.Probe is null);
+    /// <summary>Medien, deren Kopf gelesen wurde, ohne ein bekanntes Format zu ergeben (Mass 0 × 0).
+    /// Eine neue Fassung des Servers kennt vielleicht mehr — <c>again=true</c> liest sie erneut.</summary>
+    public IEnumerable<Medium> Unknown() => _all.Values.Where(m => m.Probe is { Width: 0 });
     /// <summary>Liegt die Ableitung aktuell vor?</summary>
     public bool HasDerived(Medium m, MediaPreset preset) => m.Derived.TryGetValue(preset.Key, out var d) && d.Fingerprint == preset.Fingerprint;
 
@@ -157,7 +172,7 @@ public sealed class Media : IProjection
         if (entry.Type == Types.MediaCreated)
         {
             var mc = Types.Deserialize<MediaCreated>(entry.Payload);
-            m = new Medium { Id = entry.Stream, Sha256 = mc.Sha256, Bytes = mc.Bytes, Mime = mc.Mime, Name = mc.Name };
+            m = new Medium { Id = entry.Stream, Sha256 = mc.Sha256, Bytes = mc.Bytes, Mime = mc.Mime, Name = mc.Name, CreatedAt = entry.At, CreatedBy = entry.Actor };
             _all[entry.Stream] = m;
             _bySha[mc.Sha256] = m.Id;
         }
@@ -173,6 +188,16 @@ public sealed class Media : IProjection
                 case Types.MediaDerived:
                     var md = Types.Deserialize<MediaDerived>(entry.Payload);
                     m.Derived[md.Preset] = new Derived(md.Width, md.Height, md.Bytes, md.Fingerprint, entry.Number);
+                    break;
+                case Types.MediaProbed:
+                    m.Probe = Types.Deserialize<MediaProbed>(entry.Payload);
+                    break;
+                case Types.MediaSourced:
+                    // Nur gesetzte Felder übernehmen: ein zweiter Eintrag ergänzt die Herkunft, er löscht sie nicht
+                    var ms = Types.Deserialize<MediaSourced>(entry.Payload);
+                    m.Source = m.Source is { } vor
+                        ? new MediaSourced(ms.Plugin ?? vor.Plugin, ms.Profile ?? vor.Profile, ms.Job ?? vor.Job, ms.Ref ?? vor.Ref, ms.From ?? vor.From)
+                        : ms;
                     break;
                 case Types.MediaRetired:
                     _all.Remove(m.Id);

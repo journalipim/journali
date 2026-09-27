@@ -12,6 +12,13 @@ namespace Journali.Server;
 /// </summary>
 public static class MediaApi
 {
+    /// <summary>Eine Herkunft aus den Angaben, oder null, wenn keine gemacht wurde.</summary>
+    private static MediaSourced? Herkunft(string? plugin, string? profile, string? job, string? bezug, string? from)
+    {
+        var h = new MediaSourced(Blank(plugin), Blank(profile), Blank(job), Blank(bezug), Blank(from));
+        return h is { Plugin: null, Profile: null, Job: null, Ref: null, From: null } ? null : h;
+    }
+
     /// <summary>Das maskierte Geheimnis aus der Anzeige („••••“) heisst: das gespeicherte behalten.</summary>
     private static MediaConfig Unmask(MediaConfig body, MediaConfig current) =>
         body.Secret is null || body.Secret.StartsWith("••") ? body with { Secret = current.Secret } : body;
@@ -20,7 +27,8 @@ public static class MediaApi
     {
         // Liste, neueste zuerst; q sucht in Name und Werten
         // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
-        api.MapGet("/media", (Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null) =>
+        api.MapGet("/media", (Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
+            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null) =>
             c.With((model, tree, _) =>
             {
                 var all = c.Media.All.Values.AsEnumerable();
@@ -30,6 +38,14 @@ public static class MediaApi
                     all = all.Where(m => m.Name.Contains(s, StringComparison.OrdinalIgnoreCase) || m.Id.Contains(s, StringComparison.OrdinalIgnoreCase)
                         || m.Values.Values.Any(v => v.Contains(s, StringComparison.OrdinalIgnoreCase)));
                 }
+                // Mass: nur was einen gelesenen Kopf hat, kann die Grenze halten — ein ungelesenes Medium fällt heraus
+                if (minW > 0) all = all.Where(m => m.Probe is { } p && p.Width >= minW);
+                if (minH > 0) all = all.Where(m => m.Probe is { } p && p.Height >= minH);
+                // Herkunft: "-" sind die von Hand hochgeladenen, sonst der Schlüssel der Schnittstelle
+                if (plugin == "-") all = all.Where(m => m.Source?.Plugin is null);
+                else if (!string.IsNullOrWhiteSpace(plugin)) all = all.Where(m => string.Equals(m.Source?.Plugin, plugin, StringComparison.OrdinalIgnoreCase));
+                if (from is { } f0) all = all.Where(m => m.CreatedAt >= f0);
+                if (to is { } t0) all = all.Where(m => m.CreatedAt <= t0);
                 if (folder == "-") all = all.Where(m => m.Folder is null);
                 else if (!string.IsNullOrWhiteSpace(folder))
                 {
@@ -37,13 +53,15 @@ public static class MediaApi
                     all = all.Where(m => m.Folder is { } f && set.Contains(f));
                 }
                 var rows = all.Select(m => (m, used: c.Relations.To(m.Id).Count()));
-                var down = desc ?? (sort is null or "recent" or "date" or "size" or "used");   // Neuestes/Grösstes/Meistgenutztes zuerst, Namen A→Z
+                var down = desc ?? (sort is null or "recent" or "date" or "size" or "used" or "pixels" or "created");   // Neuestes/Grösstes/Meistgenutztes zuerst, Namen A→Z
                 Func<(Medium m, int used), object> key = sort switch
                 {
                     "name" => x => x.m.Name,
                     "size" => x => x.m.Bytes,
                     "used" => x => x.used,
                     "date" => x => x.m.LastAt,
+                    "pixels" => x => x.m.Pixels,
+                    "created" => x => x.m.CreatedAt,
                     _ => x => x.m.LastNumber,
                 };
                 var sorted = sort == "name"
@@ -181,13 +199,19 @@ public static class MediaApi
             var (sha, bytes) = await store.PutAsync(file.OpenReadStream(), ct);
             var mime = string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType;
             var name = Path.GetFileName(file.FileName);
+            // Herkunft: wer über eine Schnittstelle hochlädt, sagt es hier — sonst bleibt das Medium ohne Herkunft (von Hand)
+            var quelle = Herkunft(form["plugin"], form["profile"], form["job"], form["ref"], form["from"]);
             var result = c.With((_, _, write) =>
             {
                 if (c.Media.BySha(sha) is { } have) return (View: MediaView.Of(have, c.Relations.To(have.Id).Count()), Existed: true);
                 var entry = write(actor, Ids.Media(), Types.MediaCreated, new MediaCreated(sha, bytes, mime, name), null);
+                if (quelle is { } h) write(actor, entry.Stream, Types.MediaSourced, h, null);
                 var m = c.Media.All[entry.Stream];
                 return (View: MediaView.Of(m, 0), Existed: false);
             });
+            // Der Kopf wird nicht hier gelesen: bei tausend Assets wartete der Import sonst auf tausend Lesevorgänge.
+            // Der Job probe holt es nach; läuft er schon, findet er das neue Medium in seiner nächsten Runde.
+            if (!result.Existed) ProbeApi.Kick(c, runner, actor);
             if (!result.Existed && result.View.Renderable) DeriveApi.Kick(c, runner, actor);   // Vorschauen rechnen lassen
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         }).DisableAntiforgery();
@@ -206,12 +230,16 @@ public static class MediaApi
             var mime = res.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
             var fromPath = Uri.UnescapeDataString(Path.GetFileName(uri.AbsolutePath));
             var name = Blank(body.Name) ?? (fromPath.Length > 0 ? fromPath : "datei");
+            // Bezug ist die Adresse, von der es kam — ohne sie wäre später nicht zu sagen, woher das Bild stammt
+            var quelle = Herkunft(body.Plugin, body.Profile, body.Job, Blank(body.Ref) ?? uri.ToString(), body.From);
             var result = c.With((_, _, write) =>
             {
                 if (c.Media.BySha(sha) is { } have) return (View: MediaView.Of(have, c.Relations.To(have.Id).Count()), Existed: true);
                 var entry = write(actor, Ids.Media(), Types.MediaCreated, new MediaCreated(sha, bytes, mime, name), null);
+                if (quelle is { } h) write(actor, entry.Stream, Types.MediaSourced, h, null);
                 return (View: MediaView.Of(c.Media.All[entry.Stream], 0), Existed: false);
             });
+            if (!result.Existed) ProbeApi.Kick(c, runner, actor);
             if (!result.Existed && result.View.Renderable) DeriveApi.Kick(c, runner, actor);
             return Results.Ok(new { result.View.Id, result.View.Sha256, result.View.Bytes, result.View.Mime, result.View.Name, existed = result.Existed });
         });
@@ -237,6 +265,21 @@ public static class MediaApi
             return Results.Ok(new { kind = store.Kind, config = store.Config.Masked() });
         });
 
+        // Herkunft nachtragen — für Bestand, der vor dieser Fassung ohne sie entstand, und für Importeure, die das
+        // Medium erst anlegen und dann wissen, aus welchem Profil es kam. Gesetzte Felder ergänzen, nichts wird gelöscht.
+        api.MapPut("/media/{id}/source", (string id, SourceBody b, HttpRequest req, Catalog c) =>
+        {
+            if (Actor(req) is not { } actor) return ActorMissing();
+            if (Herkunft(b.Plugin, b.Profile, b.Job, b.Ref, b.From) is not { } h) return Bad("Herkunft: plugin, profile, job, ref oder from.");
+            return c.With((_, _, write) =>
+            {
+                if (!c.Media.All.ContainsKey(id)) return Results.NotFound();
+                if (h.From is { } q && !c.Media.All.ContainsKey(q)) return Bad("Medium {0} unbekannt.", q);
+                write(actor, id, Types.MediaSourced, h, null);
+                return Results.Ok(MediaView.Of(c.Media.All[id], c.Relations.To(id).Count()));
+            });
+        });
+
         api.MapDelete("/media/{id}", (string id, HttpRequest req, Catalog c) => TreeApi.Run(req, c, x => Commands.RetireMedium(x, id)));
         api.MapPost("/media/{id}/attributes", (string id, AttributeSet b, HttpRequest req, Catalog c) =>
             TreeApi.Run(req, c, x => Commands.SetMediumAttribute(x, id, b.Attribute, b.Locale, b.Channel, b.Value, b.Values)));
@@ -246,17 +289,21 @@ public static class MediaApi
 }
 
 /// <summary>Ein Medium in der Antwort — plus, an wie vielen Knoten es hängt.</summary>
-public sealed record FetchRequest(string? Url, string? Name);
+public sealed record FetchRequest(string? Url, string? Name, string? Plugin = null, string? Profile = null, string? Job = null, string? Ref = null, string? From = null);
 public sealed record FolderBody(string? Name, string? Parent, string? Folder);
 public sealed record CopyRequest(MediaConfig? From);
+/// <summary>Herkunft nachtragen: Schnittstelle, Profil, Job, Bezug an der Quelle, Medium der Abstammung.</summary>
+public sealed record SourceBody(string? Plugin, string? Profile, string? Job, string? Ref, string? From);
 
 public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime, string Name, bool IsImage, List<ValueView> Values,
     Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Folder,
-    bool Renderable = false, bool HasThumb = false)
+    bool Renderable = false, bool HasThumb = false, MediaProbed? Probe = null, MediaSourced? Source = null,
+    DateTimeOffset CreatedAt = default, string CreatedBy = "", long Pixels = 0)
 {
     /// <summary>Kachel: Bilder haben immer eine, ein PDF erst, wenn der derive-Job seine erste Seite gerechnet hat
     ///. Die Oberfläche fragt danach, statt aus dem Mime zu raten.</summary>
     public static MediaView Of(Medium m, int used) => new(m.Id, m.Sha256, m.Bytes, m.Mime, m.Name, m.IsImage, ValueView.Of(m).ToList(),
         m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor, m.Folder,
-        m.IsRenderable, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset));
+        m.IsRenderable, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset),
+        m.Probe, m.Source, m.CreatedAt, m.CreatedBy, m.Pixels);
 }

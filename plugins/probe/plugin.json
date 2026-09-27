@@ -1,0 +1,47 @@
+{
+  "key": "probe",
+  "version": "1.0.0",
+  "label": {
+    "de": "Masse der Dateien lesen",
+    "en": "Read file dimensions"
+  },
+  "description": {
+    "de": "Liest aus dem Kopf jeder Datei Mass in Pixeln, Auflösung, Farbraum und Transparenz und hält sie am Medium fest — die Grundlage für Filter wie „mindestens 2000 px“. Der Server liest, der Job stösst ihn in Runden an, bis nichts mehr offen ist. Die offenen Posten stehen im Journal: ein abgebrochener Lauf nimmt beim nächsten Mal dort wieder auf, wo er stand. Kein npm install.",
+    "en": "Reads pixel dimensions, resolution, colour space and transparency from each file's header and records them at the medium — the basis for filters such as \"at least 2000 px\". The server reads, the job drives it in rounds until nothing is left. Pending items live in the journal, so a cancelled run resumes where it stopped. No npm install."
+  },
+  "kind": "tool",
+  "runs": "process",
+  "requires": [
+    "tasker"
+  ],
+  "autoInstall": true,
+  "system": true,
+  "progress": "/api/media/probe",
+  "process": {
+    "command": "node",
+    "args": [
+      "job.mjs",
+      "{journali}",
+      "{actor}",
+      "{limit}",
+      "{again}"
+    ],
+    "description": "Köpfe der Dateien in Runden lesen, bis nichts mehr offen ist",
+    "params": [
+      {
+        "key": "limit",
+        "label": "Dateien je Runde",
+        "type": "number",
+        "default": "200",
+        "perJob": true
+      },
+      {
+        "key": "again",
+        "label": "auch die mit unbekanntem Format erneut lesen",
+        "type": "boolean",
+        "default": "false",
+        "perJob": true
+      }
+    ]
+  }
+}

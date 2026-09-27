@@ -43,6 +43,8 @@ public static class Types
     public const string MediaPresetDefined = "MediaPresetDefined";
     public const string MediaPresetRetired = "MediaPresetRetired";
     public const string MediaDerived = "MediaDerived";   // am Medium: Ableitung nach Preset liegt im Store (sha.<preset>)
+    public const string MediaProbed = "MediaProbed";      // am Medium: was im Kopf der Datei steht (Mass, Auflösung, Farbraum)
+    public const string MediaSourced = "MediaSourced";    // am Medium: woher es kam (Schnittstelle, Profil, Job, Bezug)
     public const string LabelAttributeSet = "LabelAttributeSet";
     public const string ExternalLinked = "ExternalLinked";
     public const string ExternalUnlinked = "ExternalUnlinked";
@@ -282,6 +284,30 @@ public sealed record MediaPresetDefined(Labels Label, int Width, int Height, str
 public sealed record MediaPresetRetired();
 /// <summary>Am Medium: Ableitung nach diesem Preset liegt im Store — mit Mass und Grösse; <c>Fingerprint</c> = Kante/Format/Qualität, damit ein geändertes Preset neu rechnet.</summary>
 public sealed record MediaDerived(string Preset, int Width, int Height, long Bytes, string Fingerprint);
+
+/// <summary>
+/// Am Medium: was im Kopf der Datei steht — Mass in Pixeln, Auflösung in Punkten je Zoll, Farbraum, Transparenz.
+/// Kein gepflegter Wert, sondern eine Eigenschaft der Bytes: der Server liest sie beim Hochladen
+/// (<c>MediaProbe</c>) und schreibt sie einmal. Darum Art „Betrieb“ — sie kostet kein Kontingent, so wie die
+/// Ableitung keines kostet.
+/// <para>Das Mass ist das des fertigen Bildes: steht ein JPEG nach EXIF quer, sind Breite und Höhe schon
+/// getauscht — dieselbe Ansicht, die auch die Ableitung rechnet.</para>
+/// <para><c>Dpi</c>, <c>Space</c> und <c>Alpha</c> bleiben null, wo der Kopf sie nicht nennt.</para>
+/// </summary>
+public sealed record MediaProbed(int Width, int Height, int? Dpi = null, string? Space = null, bool? Alpha = null);
+
+/// <summary>
+/// Am Medium: woher es kam. Ein Asset, das eine Schnittstelle von sich aus geholt hat, ist ohne diese Angabe
+/// nicht mehr zuzuordnen — darum setzt sie der Importeur beim Anlegen, nicht ein Mensch später.
+/// <para><c>Plugin</c> ist der Schlüssel der Schnittstelle (<c>csv</c>, <c>ixp</c>, <c>solr</c>, <c>json</c>),
+/// <c>Profile</c> das benutzte Profil in seiner Schreibweise <c>&lt;dienst&gt;:&lt;name&gt;</c>, <c>Job</c> der
+/// Job, in dessen Lauf es geschah, <c>Ref</c> der Bezug an der Quelle (Adresse, Dateiname, Kennung dort).</para>
+/// <para><c>From</c> nennt das Medium, aus dem dieses entstand — ein Zuschnitt oder eine Ausrichtung ergibt ein
+/// neues Medium, weil ein Medium unveränderlich ist; <c>From</c> hält die Abstammung fest.</para>
+/// <para>Das Datum steht nicht darin: es ist die Zeit des Eintrags. Art „Betrieb“ — die Herkunft festzuhalten
+/// ist Teil des Imports, der schon mit <c>MediaCreated</c> zählt.</para>
+/// </summary>
+public sealed record MediaSourced(string? Plugin = null, string? Profile = null, string? Job = null, string? Ref = null, string? From = null);
 
 /// <summary>Externe Kennung je Quellsystem (Import): beim zweiten Lauf Update statt Neuanlage.</summary>
 public sealed record ExternalLinked(string System, string Id);

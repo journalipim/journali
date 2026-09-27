@@ -69,7 +69,7 @@ public static class Kinds
 
         // Betrieb
         Types.JobRunStarted or Types.JobRunFinished or Types.JobFileConsumed or Types.JobFileWritten
-            or Types.MediaDerived => Ops,
+            or Types.MediaDerived or Types.MediaProbed or Types.MediaSourced => Ops,
 
         // alles Übrige ist Modell (Attribute, Gruppen, Sichten, Listen, Sprachen, Kanäle, Status, Einheiten,
         // Relationstypen, Workflows, Wörterbuch, Master-Einstellungen) — und ein neuer Typ zählt nie ungefragt

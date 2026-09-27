@@ -317,6 +317,7 @@ TreeApi.Map(api);
 RelationApi.Map(api);
 MediaApi.Map(api);
 DeriveApi.Map(api);   // Vorschau-Presets und Ableitungen (Plugin derive rechnet)
+ProbeApi.Map(api);   // Masse der Dateien: der Server liest, der Job probe treibt an (Tasker führt ihn)
 TranslateApi.Map(api);
 WorkflowApi.Map(api);   // Workflows (27): Definitionen, Zustand je Knoten, Schritte, Meine Aufgaben   // Übersetzungsmanagement: Einheiten je Sprachrichtung, Rückweg mit Quellprüfung (Plugin xliff)
 VersionApi.Map(api, pluginDir, LoggerFactory.Create(b => b.AddConsole()).CreateLogger("versions"));   // Versionen

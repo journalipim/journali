@@ -1528,3 +1528,148 @@ einzeln geschrieben, mehrere als Stapel (`web/src/status.js`, Prüfstand
 
 **Offen:** Rubriken bleiben aussen vor (Publikationsknoten, kein Lebenszyklus am
 Markt) — weder im Wähler noch als Subitem.
+
+## 34. DAM — die Bibliothek wird ein Bestand, nicht eine Liste (27.09.2026)
+
+**Der Befund.** Was heute steht (20), ist eine sortierbare Liste mit Ordnerbaum und einer Zuordnung an den Knoten.
+Das trägt ein PIM, für ein DAM ist es zu wenig: die Bibliothek weiss von einer Datei nur Hash, Grösse, Mime und
+Name, an Metadaten gibt es zwei Attribute (`alt_text` je Sprache, `copyright`), und woher ein automatisch geholtes
+Asset kam, steht nirgends.
+
+**Nicht Gegenstand:** Videoumwandlung. Es geht um Bilder und Dokumente — darum DAM, nicht MAM.
+
+### Der Grundsatz: gepflegt oder gemessen
+
+Zwei Sorten Angaben, und sie gehen verschiedene Wege:
+
+| | Beispiel | Eintrag | Kontingent |
+|---|---|---|---|
+| **gemessen** — Eigenschaft der Bytes | Mass, Auflösung, Farbraum, Seitenzahl, erkannter Text | eigener Typ, Art `Ops` | zählt **nicht** |
+| **gepflegt** — Aussage eines Menschen | Alt-Text, Rechte, Stichwörter, Freigabe | `AttributeSet`, Art `Data` | zählt |
+
+Der Grund ist nicht Ordnungsliebe: `AttributeSet` zählt gegen das Kontingent (`Kinds.cs`). Läse man EXIF von
+50 000 Bildern als Attributwerte, verbrauchte das Auslesen das Kontingent des Kunden für Arbeit, die niemand
+getan hat. Was aus der Datei kommt, ist darum nie ein `AttributeSet`. Übernimmt ein Mensch eine gelesene Angabe
+in einen gepflegten Wert (IPTC-Urheber → `copyright`), ist *das* Pflege und zählt — zu Recht.
+
+### Offene Posten statt Warteschlange — entschieden
+
+Alle diese Arbeiten sind Serverarbeit an vielen Assets: Köpfe lesen, Ableitungen rechnen, Text ziehen, Texterkennung.
+Ein Import von tausend Assets darf nicht darauf warten. Und ein Abbruch, ein Absturz, ein Neustart darf nichts
+verlieren.
+
+**Die Lösung braucht keine Warteschlange.** Die offene Postenliste ist eine *Frage an das Abbild*: offen ist, was
+den Eintrag noch nicht hat. `Media.Unprobed()` sind die Medien ohne `MediaProbed`, `Media.Pending(preset)` die ohne
+aktuelle Ableitung. Daraus folgt alles, was sonst gebaut werden müsste:
+
+- **Wiederaufnahme** ist nichts, was es gibt — es gibt nur „noch offen“. Kein Zustand stirbt mit dem Prozess.
+- **Neustart** ändert nichts: dieselbe Frage, dieselbe Antwort.
+- **Doppelt arbeiten** ist ausgeschlossen: wer den Eintrag hat, ist nicht mehr offen.
+
+**Ein Systemjob je Art von Arbeit** — nicht ein Sammeljob. Masse lesen ist `probe`, Ableitungen sind `derive`,
+Texterkennung wird ein dritter. Damit nimmt Abbrechen nie fremde Arbeit mit: wer die Texterkennung anhält, hält
+nicht das Lesen der Masse an. Geführt werden sie vom Tasker, der Anhalten, Fortsetzen, Abbrechen und Zeitplan
+schon kann (`JobRunner.Pause/Resume/Cancel`); ein Lauf stirbt beim Anhalten nicht, er wartet beim nächsten Stapel.
+
+**Offen: was Abbrechen bei einem Systemjob heissen soll.** Bricht man einen Lauf ab, dessen Runde noch 800 offene
+Posten vor sich hat, ist die Absicht meist „jetzt nicht weiter“ und nicht „nie wieder“. Der Job endet, die Posten
+bleiben offen, und der nächste Start nimmt sie wieder — das ist heute so und vermutlich richtig. Zu klären bleibt,
+ob es daneben ein „diesen Posten nie“ braucht (ein Bild, das jeden Lauf scheitern lässt) und wie das aussieht.
+
+### Gebaut am 27.09.2026 (Block A)
+
+**`MediaProbed(Width, Height, Dpi?, Space?, Alpha?)`** — was im Kopf der Datei steht. Gelesen wird **im Server**
+(`MediaProbe.cs`), ohne Paket: ein Dateikopf ist eine Handvoll Felder an festen Stellen. JPEG, PNG, GIF, WebP, BMP,
+TIFF. Bei JPEG und TIFF tauscht die EXIF-Orientierung Breite und Höhe, damit die Bibliothek dasselbe Mass nennt
+wie die Ableitung (`derive` dreht mit `rotate()`). Ein unbekanntes Format bekommt den Eintrag mit 0 × 0 — sonst
+bliebe der Posten für immer offen und jede Runde läse ihn erneut; `again=true` liest diese erneut, wenn eine neue
+Fassung mehr Formate kennt.
+
+Damit ist das Mass des **Originals** überhaupt zum ersten Mal bekannt: bisher stand es nur an der Ableitung. Erst
+dadurch lässt sich nach „mindestens 2000 px“ filtern.
+
+**`MediaSourced(Plugin?, Profile?, Job?, Ref?, From?)`** — woher das Asset kam. Die Schnittstelle, das benutzte
+Profil (`<dienst>:<name>`), der Job, der Bezug an der Quelle (Adresse, Dateiname, Kennung dort). Gesetzt vom
+Importeur beim Anlegen, nicht von einem Menschen später; ein zweiter Eintrag **ergänzt** und löscht nichts.
+`From` nennt das Medium, aus dem dieses entstand — ein Zuschnitt ergibt ein neues Medium, weil ein Medium
+unveränderlich ist, und `From` hält die Abstammung fest. Das Importdatum steht nicht im Rumpf: es ist die Zeit
+des Eintrags (`Medium.CreatedAt`, `CreatedBy`).
+
+**Job `probe`** (Plugin, `system: true`, `progress: /api/media/probe`) treibt das Lesen in Runden an, bis nichts
+mehr offen ist; der Server stösst ihn nach jedem Hochladen und Holen an. Neue Filter in der Liste: `minW`, `minH`,
+`plugin` (`-` = von Hand hochgeladen), `from`/`to` über das Importdatum; neue Sortierung `pixels` und `created`.
+
+### Reihenfolge der weiteren Blöcke
+
+**B. Verschlagwortung und Facetten.** Stichwörter als Mehrfachwert am Medium (Werteliste im Modell, damit sie
+gepflegt und übersetzbar sind), Facetten in der Bibliothek über Art, Mass, Datum, Herkunft, Stichwort, Rechtestand.
+Dazu **Vorschläge**: bei automatischem Import pflegt niemand von Hand, also schlägt die Oberfläche vor — aus dem
+Dateinamen, aus IPTC/XMP, aus dem Knoten, an dem das Asset hängt, und aus dem erkannten Text. Ein Vorschlag wird
+erst ein Wert, wenn ihn jemand annimmt (dann zählt er auch).
+
+**C. Ansehen und Öffnen.** Ein PDF bekommt eine Vorschau in der Oberfläche — der Browser kann PDF selbst, es
+braucht kein Plugin dafür, nur den Rahmen um `GET /api/media/{id}/file`. Doppelklick öffnet das Asset in einem
+neuen Fenster; was damit geschieht, entscheidet das Betriebssystem des Anwenders.
+
+**D. Zuschnitt und Ausrichten.** Im Browser auf einer Leinwand, weil dort schon die Kacheln gerechnet werden.
+**Ein Medium ist unveränderlich** — der Zuschnitt ergibt darum ein **neues** Medium mit `MediaSourced.From` auf das
+Original. Kein Überschreiben, keine verlorene Fassung, und die Abstammung ist lesbar. Offen: ob es daneben einen
+*nicht zerstörenden* Zuschnitt braucht (ein Rechteck am Medium, das die Presets anwenden) — das ist der Weg für
+„quadratische Kachel ohne abgeschnittenen Kopf“ und wäre ein eigener Eintragstyp plus eine Änderung an `derive`.
+
+**E. Belege ins DAM.** Heute legt der Erzeuger das Datenblatt als Medium an und hängt es per
+`VersionDocumentAdded` an die **Version** (`VersionApi.cs`). Damit ist es in der Bibliothek, aber ohne Ordner, ohne
+Kennzeichnung und **nicht** als Zuordnung am Produkt — im Medienband des Knotens erscheint es nicht. Zu bauen:
+der Beleg wird ein reguläres Asset (Ordner, Herkunft `Plugin: datasheet`, `Ref` = Version) **und** bekommt seine
+Zuordnung an Produkt oder Variante.
+
+**F. Fassungen.** „Ein neues Bild ist ein neues Medium“ bleibt richtig. Was fehlt, ist „dieses ersetzt jenes“: ein
+Eintrag, der die Zuordnungen mitnimmt, und eine Bibliothek, die den Vorgänger nicht mehr anbietet, ohne ihn zu
+löschen (die Ausleitung von vorletzter Woche muss weiter auflösbar sein).
+
+**G. Rolle und Reihenfolge am Produkt.** Die Mediengruppe trägt heute nur `inherit` und `stop`. Hauptbild, Detail,
+Verpackung, Explosionszeichnung und eine Sortierung fehlen — vorgesehen war das als `MediaOrdered` (6), gebaut ist
+die Zuordnung als Relation, und eine Relation kann eigene Werte tragen. Es braucht also keinen neuen Eintragstyp,
+nur zwei Attribute in `relation_media` und eine Oberfläche dafür.
+
+**H. Rechte.** Das Vokabular ist heute grob: `read`, `write`, `retire`, `release`, `model`, `plugins`, `jobs`,
+`storage`, `users`, `team` (`Types.cs`, `Rights`). Ein DAM braucht mehr: **Herunterladen** als eigenes Recht (sehen
+ist nicht haben), Rechte **je Ordner** statt nur global, und die lizenzrechtliche Seite — Lizenz, Quelle,
+Nutzungsrecht je Kanal, Ablaufdatum. Das Ablaufdatum hängt am offenen Punkt „Status mit Geltungsdatum“
+(`architektur.md`): ein abgelaufenes Bild soll aus der Ausleitung fallen, nicht aus dem Journal.
+
+**I. Workflows für Assets.** `Workflows.AppliesTo(Node n)` nimmt einen Knoten — ein Medium ist keiner. Freigabe
+eines Bildes, Benachrichtigung, „von der Produktion ins Web“ gehen damit heute nicht. Zu entscheiden: ob Workflows
+auf Medien erweitert werden oder ob die Freigabe eines Assets etwas anderes ist als die eines Produkts.
+
+**J. Texterkennung (OCR).** Der Volltext liegt schon **je Medium** (`DocText.cs`, Tabelle `media_text`), PDFs werden
+gelesen und durchsucht, und der Zustand `scan` bedeutet dort bereits „ohne Textebene — wartet auf OCR“. Es fehlt
+allein der Erkenner: ein Prozess-Plugin, das für Medien im Zustand `scan` Text erzeugt und in denselben Index legt.
+Damit wird auch ein gescanntes Datenblatt durchsuchbar. Bilder ebenso, sobald sie im Index stehen dürfen.
+
+**K. Ablegen auf einem Knoten.** Heute nimmt der Baum nur JSON und Tabellen an (`TreeView.vue`); ein Bild oder PDF
+auf einen Knoten gezogen bringt „Kein Importer für …“. Zu bauen: ein Asset, das auf einen Knoten fällt, wird
+angelegt, verarbeitet (Masse, Ableitungen, Text) **und** dem Knoten zugeordnet. Das ist der kürzeste Weg von der
+Datei zum Produkt und sollte der erste Block der Oberfläche sein.
+
+**L. Technische Tabellen aus einem Dokument — Entwurf.** Mit gedrückter Steuerungstaste auf einen Knoten gezogen,
+soll ein technisches Dokument nicht nur angehängt, sondern **ausgewertet** werden: Tabellen darin erkennen, Zeilen
+als Attribut/Wert lesen, den Attributen des Knotens zuordnen — und wo es keines gibt, das Attribut im selben
+Schritt anlegen lassen. Die Bausteine dafür stehen: `DocText` liefert Text und Abschnitte, der Datenmapper hat die
+Umwandlung je Spalte (`transform.js`), das Modell kann Attribute anlegen. Was fehlt, ist die Erkennung „das ist
+eine Tabelle technischer Daten“ und der Dialog davor — es wird nie ohne Bestätigung laufen, denn ein falsch
+erkanntes Attribut ist teurer als ein nicht erkanntes.
+
+### Semantische Suche — was heute wirklich da ist
+
+Zur Klarstellung, weil das leicht zu verwechseln ist:
+
+- **Volltext, gebaut.** Postgres `tsvector` je Medium (`DocText`), exakt bei Zahlen, Normen und Kennungen, ohne
+  Modell und ohne Kosten. Gesucht wird darin über ⌕ Dokumente.
+- **Vektorsuche: nicht gebaut.** Kein pgvector, keine Einbettungen, nichts Semantisches im Server. `DocText.cs`
+  hält das ausdrücklich als „kommt später daneben“ fest.
+- **Das Plugin `rag` ist ein Export**, kein Index: es schreibt je Knoten Markdown und `nodes.jsonl` in ein
+  Verzeichnis, für einen **fremden** Vektor-Store. Es exportiert **Knoten**, nicht Dokumente — Belege stehen darin
+  nur als Adresse, ihr Text geht nicht mit. Wer PDF-Inhalte in einem RAG haben will, hat sie heute also nicht
+  darüber, sondern müsste den Text aus `media_text` mit ausgeben. Das ist eine kleine Ergänzung am `rag`-Job und
+  gehört zu Block J.
