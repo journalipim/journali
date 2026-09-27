@@ -4,7 +4,8 @@ namespace Journali.Tests;
 
 /// <summary>
 /// Der Dateibrowser legt Verzeichnisse an und benennt sie um — mehr nicht. Ein Name darf kein Pfad sein und keine
-/// Zeichen enthalten, die das Dateisystem nicht nimmt; sonst schöbe ein Name wie „..\andere“ das Verzeichnis woanders hin.
+/// Zeichen enthalten, die ein Dateisystem nicht nimmt; sonst schöbe ein Name wie „..\andere“ das Verzeichnis woanders hin.
+/// Die Liste gilt auf jedem System gleich, auch wo das Dateisystem mehr erlaubt.
 /// </summary>
 public class FileApiTests
 {
@@ -20,7 +21,8 @@ public class FileApiTests
     [InlineData(".")]
     [InlineData("..")]
     [InlineData("../andere")]
-    [InlineData("..\andere")]
+    [InlineData("..\\andere")]
+    [InlineData("unter\u0007ordner")]
     [InlineData("unter/ordner")]
     [InlineData("C:")]
     [InlineData("was?")]

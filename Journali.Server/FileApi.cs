@@ -61,13 +61,22 @@ public static class FileApi
         catch (IOException e) { return Bad(e.Message); }
     }
 
-    /// <summary>Ein Verzeichnisname: keine Trenn- und Sonderzeichen, kein Pfad, nicht . oder ..</summary>
+    /// <summary>
+    /// Ein Verzeichnisname: keine Trenn- und Sonderzeichen, kein Steuerzeichen, kein Pfad, nicht . oder ..
+    /// <para>Die Liste steht fest und kommt nicht aus <c>Path.GetInvalidFileNameChars()</c>: die liefert je
+    /// Betriebssystem etwas anderes — unter Windows die neun Zeichen, unter Linux nur <c>\0</c> und <c>/</c>. journali
+    /// laeuft im Linux-Container, seine Verzeichnisse liegen aber auch auf Freigaben und in Sicherungen, die ein
+    /// Windows-Rechner liest. Darum gilt die strengere Liste ueberall — dieselbe, die die Meldung nennt.</para>
+    /// </summary>
     public static string? Name(string? s)
     {
         var n = (s ?? "").Trim();
         if (n.Length is 0 or > 120 || n is "." or "..") return null;
-        return n.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0 || n.Contains('/') || n.Contains('\\') ? null : n;
+        return n.IndexOfAny(Verboten) >= 0 || n.Any(char.IsControl) ? null : n;
     }
+
+    /// <summary>Zeichen, die in keinem Verzeichnisnamen stehen — die Trenner beider Systeme und was Windows verbietet.</summary>
+    private static readonly char[] Verboten = ['\\', '/', ':', '*', '?', '"', '<', '>', '|'];
 
     internal static IResult Files(string dataDir, string contentRoot, string? path)
     {
