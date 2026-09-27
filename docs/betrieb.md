@@ -176,8 +176,8 @@ heraus; die Plugins liegen als Quelltext im Image, das ist so gewollt.
 
 ## Unraid — als App
 
-journali läuft auf Unraid wie jede andere App: eine Vorlage (`unraid/journali.xml`) für den Server, die Datenbank als
-eigene App. Das Image kommt aus einer Registry — für alle aus `ghcr.io` (Community Applications), für den eigenen
+journali läuft auf Unraid wie jede andere App: eine Vorlage (`unraid/journali.xml`) für den Server, eine zweite
+(`unraid/journali-db.xml`) für die Datenbank. Das Image kommt aus einer Registry — für alle aus `ghcr.io` (Community Applications), für den eigenen
 Betrieb aus der Container-Registry der eigenen Gitea, gebaut von `.gitea/workflows/docker.yml` bei jedem Push auf
 `master`. Unraid meldet einen neuen Stand dann wie bei jeder App.
 
@@ -188,8 +188,12 @@ Image zieht dadurch nur dieser eine Server; für andere Rechner im Netz bräucht
 
 **Einmal einrichten:**
 
-1. **Datenbank** — *Apps* → `postgresql18` installieren, Passwort für `postgres` setzen. Der Port der App ist frei
-   wählbar (Vorgabe 5432); er wird beim Einrichten von journali gebraucht.
+1. **Datenbank** — `unraid/journali-db.xml` auf den USB-Stick kopieren (`config/plugins/dockerMan/templates-user/`)
+   und als Vorlage installieren: Image `pgvector/pgvector:pg18`, also Postgres 18 **mit der Erweiterung `vector`**.
+   Passwort für `postgres` setzen; der Port ist frei wählbar (Vorgabe 5432) und wird beim Einrichten von journali
+   gebraucht. Die Erweiterung selbst legt journali beim ersten Start an (`Vectors.cs`: `CREATE EXTENSION IF NOT
+   EXISTS vector`) — ohne sie läuft alles ausser der Suche nach Sinn, der Frage an die Dokumente und dem Band
+   „Ähnliche Knoten“. Eine vorhandene `postgresql18`-App tut es also auch, nur eben ohne diese drei.
 2. **Actions einschalten** — im Repo *Einstellungen* → *Actions*.
 3. **Runner** — ein Container `act_runner` aus `gitea/act_runner:latest`:
    - `GITEA_INSTANCE_URL` = Adresse der Gitea, `GITEA_RUNNER_NAME` = frei,
@@ -214,6 +218,9 @@ Image zieht dadurch nur dieser eine Server; für andere Rechner im Netz bräucht
    *Apps* → *Previous Apps*.
 8. **Einrichten** — *WebUI* öffnen: der Einrichtungsdialog fragt die Datenbank ab (Host = Adresse des Servers, Port und
    Passwort aus Schritt 1, Benutzer `postgres`) und legt den ersten Administrator an.
+9. **Vektoren** — in ⑁ Plugins `embed` einschalten und im Tasker den Job starten. Der erste Lauf holt das Modell
+   (etwa 120 MB) nach `.cache` im Plugin-Verzeichnis und dauert darum länger; die Laufzeit für ONNX steckt schon im
+   Image (`Dockerfile`, Stufe `embed`).
 
 Die Vorlage bringt Port 8080, das Datenverzeichnis (`/data/jobs` → `appdata/journali`: Verbindung zur Datenbank, Jobs,
 Schnappschuss, Spiegel) und `JOURNALI_MEDIA` mit.

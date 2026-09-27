@@ -2,8 +2,10 @@
 <!--
   Unraid-Vorlage für journali (docs/betrieb.md → Unraid). Dieselbe Vorlage für jede Registry — nur Repository ändert sich:
   die eigene Gitea (<host>:<port>/<besitzer>/journali:latest, gebaut von .gitea/workflows/docker.yml) oder ghcr.io.
-  Die Datenbank ist eine eigene App (Postgres 18); die Verbindung gibt man beim ersten Aufruf im Einrichtungsdialog ein,
-  sie steht danach in db.json im Datenverzeichnis.
+  Die Datenbank ist eine eigene App: Postgres 18 mit der Erweiterung vector (unraid/journali-db.xml, Image
+  pgvector/pgvector:pg18). Die Verbindung gibt man beim ersten Aufruf im Einrichtungsdialog ein, sie steht danach in
+  db.json im Datenverzeichnis. Ohne die Erweiterung läuft journali, nur die Suche nach Sinn und die Frage an die
+  Dokumente fehlen.
 -->
 <Container version="2">
   <Name>journali</Name>
@@ -15,7 +17,7 @@
   <Privileged>false</Privileged>
   <Support>https://journali.de</Support>
   <Project>https://journali.de</Project>
-  <Overview>journali — Produktinformationen pflegen: ein Journal als Wahrheit, Modell, Baum, Übersetzung, Publikation und Plugins. Braucht eine PostgreSQL-Datenbank (Version 18, eigene App); die Verbindung wird beim ersten Aufruf im Einrichtungsdialog eingetragen.</Overview>
+  <Overview>journali — Produktinformationen pflegen: ein Journal als Wahrheit, Modell, Baum, Übersetzung, Publikation und Plugins. Braucht eine PostgreSQL-Datenbank als eigene App (journali-db, Postgres 18 mit der Erweiterung vector); die Verbindung wird beim ersten Aufruf im Einrichtungsdialog eingetragen.</Overview>
   <Category>Productivity: Tools:</Category>
   <WebUI>http://[IP]:[PORT:8080]/</WebUI>
   <TemplateURL/>
@@ -23,7 +25,7 @@
   <ExtraParams>--restart unless-stopped</ExtraParams>
   <PostArgs/>
   <CPUset/>
-  <Requires>PostgreSQL 18 (eigene App, z. B. postgresql18 aus den Community Apps)</Requires>
+  <Requires>journali-db: PostgreSQL 18 mit der Erweiterung vector (Image pgvector/pgvector:pg18, Vorlage unraid/journali-db.xml)</Requires>
   <Config Name="Oberfläche" Target="8080" Default="8080" Mode="tcp" Description="Port der Oberfläche" Type="Port" Display="always" Required="true" Mask="false">8080</Config>
   <Config Name="Daten" Target="/data/jobs" Default="/mnt/user/appdata/journali" Mode="rw" Description="Datenverzeichnis: Verbindung zur Datenbank (db.json), Jobs, Schnappschuss, Spiegel des Journals" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/journali</Config>
   <Config Name="JOURNALI_JOBS" Target="JOURNALI_JOBS" Default="/data/jobs" Mode="" Description="Datenverzeichnis im Container — passt zum Pfad Daten" Type="Variable" Display="advanced" Required="true" Mask="false">/data/jobs</Config>
