@@ -16,6 +16,22 @@ public static class DocsApi
     /// OCR nötig) oder <c>fehler</c> — und die Seitenzahl.</summary>
     public sealed record PutBody(string? Sha256, List<DocText.Chunk>? Chunks, string? State, int? Pages, string? Note);
 
+    /// <summary>Was ein Erkenner wissen muss: das Medium im Zustand <c>scan</c>, sein Hash, Name, Art, Seiten.</summary>
+    public sealed record Scan(string Id, string Name, string Mime, string Sha256, long Bytes, int? Pages);
+
+    /// <summary>
+    /// Die offene Postenliste der Texterkennung (27.09.2026): Dokumente, die der Leser als <c>scan</c> erkannt hat —
+    /// keine Textebene, ein Bild von Text. Sie stehen im Index mit diesem Zustand, damit der Leser sie nicht in jeder
+    /// Runde erneut versucht; hier holt sie der Erkenner. Auch diese Liste ist kein eigener Bestand, sondern eine Frage
+    /// an den Index — ein abgebrochener Lauf lässt sie offen, der nächste findet dieselben. Liefert der Erkenner Text
+    /// (<c>PUT /api/docs/{id}</c> mit <c>state: text</c>), ist der Posten erledigt; ein neuer Hash (neue Fassung) macht
+    /// das Medium wieder zum Fall des Lesers, nicht des Erkenners.
+    /// </summary>
+    public static List<Scan> Scans(IReadOnlyDictionary<string, (string Sha, string State)> known, IEnumerable<Journali.Core.Projections.Medium> media, int limit) =>
+        media.Where(m => known.TryGetValue(m.Id, out var k) && k.State == DocText.States.Scan && k.Sha == m.Sha256)
+            .OrderBy(m => m.CreatedAt).Take(Math.Clamp(limit, 1, 5000))
+            .Select(m => new Scan(m.Id, m.Name, m.Mime, m.Sha256, m.Bytes, null)).ToList();
+
     /// <summary>Womit wir umgehen können — den Rest (Bilder, Videos) liest kein Textwerkzeug.</summary>
     private static bool Readable(string mime) =>
         mime is "application/pdf" or "text/plain" or "text/html" or "text/markdown"
@@ -38,6 +54,16 @@ public static class DocsApi
                     .Where(p => !p.Indexed).Take(Math.Clamp(limit, 1, 5000)).ToList())
                 : [];
             return Results.Ok(new { ready = true, media, chunks, scans, errors, pending = list });
+        });
+
+        // Die Scans: was auf Texterkennung wartet. Der Erkenner holt die Liste, lädt die Datei, erkennt, und legt den
+        // Text per PUT /api/docs/{id} ab — derselbe Weg wie der Leser, mit note "ocr".
+        api.MapGet("/docs/scans", async (Catalog c, DocText docs, int limit = 200, CancellationToken ct = default) =>
+        {
+            if (!docs.Ready) return Results.Ok(new { ready = false, scans = Array.Empty<Scan>() });
+            var known = await docs.IndexedAsync(ct);
+            var list = c.Read(_ => Scans(known, c.Media.All.Values, limit));
+            return Results.Ok(new { ready = true, scans = list });
         });
 
         // Text eines Dokuments ablegen — ersetzt, was da war (der Hash sagt, ob es sich überhaupt geändert hat)

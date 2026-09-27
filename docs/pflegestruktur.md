@@ -1665,10 +1665,16 @@ Nutzungsrecht je Kanal, Ablaufdatum. Das Ablaufdatum hängt am offenen Punkt „
 eines Bildes, Benachrichtigung, „von der Produktion ins Web“ gehen damit heute nicht. Zu entscheiden: ob Workflows
 auf Medien erweitert werden oder ob die Freigabe eines Assets etwas anderes ist als die eines Produkts.
 
-**J. Texterkennung (OCR).** Der Volltext liegt schon **je Medium** (`DocText.cs`, Tabelle `media_text`), PDFs werden
-gelesen und durchsucht, und der Zustand `scan` bedeutet dort bereits „ohne Textebene — wartet auf OCR“. Es fehlt
-allein der Erkenner: ein Prozess-Plugin, das für Medien im Zustand `scan` Text erzeugt und in denselben Index legt.
-Damit wird auch ein gescanntes Datenblatt durchsuchbar. Bilder ebenso, sobald sie im Index stehen dürfen.
+**J. Texterkennung (OCR) — Serverseite gebaut (27.09.2026), Erkenner offen.** Der Volltext liegt schon **je
+Medium** (`DocText.cs`, Tabelle `media_text`), PDFs werden gelesen und durchsucht, und der Zustand `scan` bedeutet
+„ohne Textebene — wartet auf OCR“. Neu ist die offene Postenliste dafür: `GET /api/docs/scans` nennt die Dokumente
+im Zustand `scan` mit dem Hash, den der Index kennt (`DocsApi.Scans`) — eine Frage an den Index, kein Bestand; ein
+abgebrochener Lauf lässt sie offen. **Der Erkenner ist ein Prozess-Plugin und entsteht lokal** (Siegel): er holt
+`/api/docs/scans`, lädt `/api/media/{id}/file`, erkennt, und legt den Text per `PUT /api/docs/{id}` ab — mit
+`state: text` und `note: "ocr"`, derselbe Weg wie der Leser (`plugins/docs/job.mjs`). Damit wird ein gescanntes
+Datenblatt durchsuchbar. Offen und eine Entscheidung: **Bilder**. Der Leser nimmt nur Dokumente (`Readable`); jedes
+Bild zu erkennen kostet viel und bringt bei Produktfotos nichts. Ein Weg wäre ein Stichwort oder Ordner „Text
+erkennen“, das Bilder ausdrücklich in die Liste stellt.
 
 **K. Ablegen auf einem Knoten.** Heute nimmt der Baum nur JSON und Tabellen an (`TreeView.vue`); ein Bild oder PDF
 auf einen Knoten gezogen bringt „Kein Importer für …“. Zu bauen: ein Asset, das auf einen Knoten fällt, wird
