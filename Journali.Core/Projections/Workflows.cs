@@ -26,6 +26,9 @@ public sealed class WorkflowDef
     public long LastNumber { get; set; }
     public WfState? State(string key) => States.FirstOrDefault(s => s.Key == key);
     public bool AppliesTo(Node n) => n.Role != Entries.Roles.Rubric && (Roles.Length == 0 || Roles.Contains(n.Role)) && (Families.Length == 0 || (n.Family is { } f && Families.Contains(f)));
+    /// <summary>Gilt der Workflow für Assets (27.09.2026)? Nur ausdrücklich: eine leere Liste heisst „alle Pflegeknoten“,
+    /// nicht „auch jedes Bild“. Der Zustand steht dann am Medienstrom, ohne Vererbung — ein Medium hat keinen Vater.</summary>
+    public bool AppliesToMedium() => Roles.Contains(Entries.Roles.Media);
 }
 
 /// <summary>Zustand eines Knotens in einem Workflow — der letzte Schritt. Bei einem Workflow je Sprache trägt er die Sprache.</summary>
@@ -124,6 +127,7 @@ public sealed class Workflows : IProjection
                 break;
             }
             case Types.NodeRetired:
+            case Types.MediaRetired:   // ein Medium führt seinen Zustand am eigenen Strom — weg mit dem Medium
                 _nodes.Remove(entry.Stream);
                 break;
         }

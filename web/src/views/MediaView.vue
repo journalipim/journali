@@ -17,7 +17,7 @@ import SelectCell from '../components/SelectCell.vue'
 import Splitter from '../components/Splitter.vue'
 import MediaThumb from '../components/MediaThumb.vue'
 import { paneWidth } from '../panes.js'
-import { t as t_ } from '../i18n.js'
+import { t as t_, L } from '../i18n.js'
 
 const foldersW = paneWidth('media.folders', 220)
 const listW = paneWidth('media.list', 560)
@@ -227,7 +227,7 @@ async function loadFacets() {
 function filterQuery() {
   const f = folder.value === 'all' ? '' : folder.value
   return `q=${encodeURIComponent(q.value.trim())}&folder=${encodeURIComponent(f)}&deep=${deep.value}`
-    + `&keyword=${encodeURIComponent(keyword.value)}&plugin=${encodeURIComponent(plugin.value)}&superseded=${superseded.value}&valid=${valid.value}`
+    + `&keyword=${encodeURIComponent(keyword.value)}&plugin=${encodeURIComponent(plugin.value)}&superseded=${superseded.value}&valid=${valid.value}&state=${encodeURIComponent(state.value)}`
 }
 /// Ein Stichwort an- oder abwählen; mehrere gelten zusammen.
 function toggleKeyword(k) {
@@ -304,6 +304,28 @@ async function zuordnenAusfuehren() {
   } finally { busy.value = '' }
 }
 
+// ---- Workflow am Asset: derselbe wie am Knoten, wenn seine Rollen „media“ nennen
+const wfs = ref([])
+async function loadWorkflow() {
+  wfs.value = []
+  if (!cur.value) return
+  try { wfs.value = await api.get(`/api/media/${cur.value}/workflow`) } catch { /* ohne Workflow kein Abschnitt */ }
+}
+watch(cur, loadWorkflow, { immediate: true })
+const wfColor = c => ({ pos: 'var(--pos)', neg: 'var(--neg)', warn: 'var(--warn)', accent: 'var(--accent)', muted: 'var(--muted)' })[c] ?? (c && /^#/.test(c) ? c : 'var(--muted)')
+async function wfStep(w, t) {
+  let note = null
+  if (t.noteRequired) {
+    note = await dialog.prompt({ title: `${L(t.label) || t.key} → ${L(t.toLabel) || t.to}`, text: t_('Notiz (Pflicht)'), placeholder: t_('Notiz'), ok: `⚑ ${L(t.label) || t.key}` })
+    if (note === null) return
+    if (!note.trim()) { store.toast(t_('Notiz ist Pflicht bei diesem Schritt')); return }
+  }
+  try { await api.post(`/api/media/${cur.value}/workflow/${w.workflow}/${t.key}`, { note: note || null }); await store.poll(true); await loadWorkflow(); await load() }
+  catch (e) { store.toast(e.message) }
+}
+const state = ref('')            // '' = alle, sonst "workflow:zustand"
+function toggleState(k) { state.value = state.value === k ? '' : k; return load() }
+
 // ---- Verwendungsnachweis: an welchen Knoten dieses Asset hängt
 const router = useRouter()
 const usage = ref([])
@@ -366,6 +388,8 @@ const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id
         :title="$t('Abgelöste Fassungen mit zeigen — sie bleiben für Belege und Versionen auflösbar')">{{ $t("abgelöste") }}</span>
       <span v-for="h in facets.herkunft" :key="'h' + h.key" class="chip" :class="{ on: plugin === h.key }" @click="togglePlugin(h.key)"
         :title="h.key === '-' ? $t('von Hand hochgeladen') : $t('über die Schnittstelle {0} gekommen', [h.key])">{{ (h.key === '-' ? $t('von Hand') : h.key) + ' ' }}<span class="muted">{{ h.n }}</span></span>
+      <span v-for="z in facets.zustaende ?? []" :key="'z' + z.key" class="chip" :class="{ on: state === z.key }" :style="`border-color:${wfColor(z.color)}`" @click="toggleState(z.key)"
+        :title="$t('Workflow „{0}“: nur Assets im Zustand „{1}“', [$L(z.label) || z.workflow, $L(z.stateLabel) || z.state])">{{ '⚑ ' + ($L(z.stateLabel) || z.state) + ' ' }}<span class="muted">{{ z.n }}</span></span>
       <span v-if="facets.abgelaufen" class="chip neg" :class="{ on: valid === 'expired' }" @click="valid = valid === 'expired' ? '' : 'expired'; load()"
         :title="$t('Assets, deren Frist vorbei ist — sie bleiben im Journal, fallen aber aus der Ausleitung')">{{ $t("abgelaufen") + ' ' }}<span class="muted">{{ facets.abgelaufen }}</span></span>
       <span v-if="facets.ohneStichwort" class="chip" :class="{ on: keywordAktiv('-') }" @click="toggleKeyword('-')"
@@ -382,7 +406,7 @@ const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id
             <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" />
             <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
             <div class="name">{{ m.name }}</div>
-            <div class="muted meta"><span v-if="m.valid === false" class="neg" :title="m.expired ? $t('abgelaufen — fällt aus der Ausleitung') : $t('gilt noch nicht')">⌛ </span>{{ kb(m.bytes) }}<span v-if="m.used"> · ⇄ {{ m.used }}</span><span v-if="folder === 'all' && m.folder && group !== 'folder'" :title="pathOf(m.folder).map(f => f.name).join(' › ')"> · 📁</span></div>
+            <div class="muted meta"><span v-for="z in m.workflow ?? []" :key="z.workflow" :style="`color:${wfColor(z.color)}`" :title="`${$L(z.label) || z.workflow}: ${$L(z.stateLabel) || z.state}`">⚑ </span><span v-if="m.valid === false" class="neg" :title="m.expired ? $t('abgelaufen — fällt aus der Ausleitung') : $t('gilt noch nicht')">⌛ </span>{{ kb(m.bytes) }}<span v-if="m.used"> · ⇄ {{ m.used }}</span><span v-if="folder === 'all' && m.folder && group !== 'folder'" :title="pathOf(m.folder).map(f => f.name).join(' › ')"> · 📁</span></div>
           </div>
         </div>
       </template>
@@ -443,6 +467,20 @@ const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id
         <tr><td class="attr muted">{{ $t("SHA-256") }}</td><td class="mono muted" style="font-size:11px">{{ current.sha256 }}</td></tr>
         <tr v-for="(v, k) in current.external" :key="k"><td class="attr muted">⇩ {{ k }}</td><td class="mono muted">{{ v }}</td></tr>
       </tbody></table>
+
+      <!-- Der Workflow am Asset: Zustand, die Schritte, die meine Rolle gehen darf — wie am Knoten -->
+      <template v-if="wfs.length">
+        <h2 class="use-h">{{ $t("⚑ Workflow") + ' ' }}<span class="muted">{{ '· ' + wfs.length }}</span></h2>
+        <div v-for="w in wfs" :key="w.workflow" class="wf">
+          <span class="muted wf-name" :title="w.workflow">{{ $L(w.label) || w.workflow }}</span>
+          <span class="chip" :style="`border-color:${wfColor(w.color)};color:${wfColor(w.color)}`" :title="w.since ? `seit ${when(w.since)} · ${w.actor}${w.transition ? ' · Schritt ' + w.transition : ''}` : $t('Startzustand')">{{ $L(w.stateLabel) || w.state }}</span>
+          <button v-for="t in w.transitions" :key="t.key" @click="wfStep(w, t)"
+            :title="`→ ${$L(t.toLabel) || t.to}${t.noteRequired ? ' · ' + $t('Notiz Pflicht') : ''}${t.effects?.length ? ' · ' + $t('am Asset ohne Wirkung: {0}', [t.effects.join(', ')]) : ''}`">{{ ($L(t.label) || t.key) + ' →' }}</button>
+          <span v-if="!w.transitions.length && w.all.length" class="muted" style="font-size:12px" :title="w.all.map(t => `${$L(t.label) || t.key}: ${(t.roles ?? []).join(', ') || $t('jede Rolle')}`).join(' · ')">{{ $t("nächster Schritt: {0}", [w.all.map(t => (t.roles ?? []).join('/') || $t('Rolle mit Schreibrecht')).join(', ')]) }}</span>
+          <span v-if="!w.transitions.length && !w.all.length" class="muted" style="font-size:12px">{{ $t("Ende des Wegs") }}</span>
+          <span v-if="w.note" class="muted wf-note" :title="w.note">✎ {{ w.note }}</span>
+        </div>
+      </template>
 
       <!-- Wo das Asset hängt. Ein Klick springt zum Knoten; ein Stopp steht mit dabei, denn er erklärt, warum es
            dort trotz Vererbung nicht gilt. -->
@@ -510,6 +548,9 @@ const oeffnen = m => { if (store.can('download')) window.open(`/api/media/${m.id
 .use.stopp .lbl { text-decoration: line-through; }
 .use .lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .use .typ { font-size: 11px; }
+.wf { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 3px 8px; }
+.wf .wf-name { min-width: 90px; font-size: 12px; }
+.wf .wf-note { font-size: 12px; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .facets { flex-wrap: wrap; gap: 4px; padding-top: 0; }
 .facets .chip { cursor: pointer; }
 .facets .chip.on { background: var(--accent-soft); border-color: var(--accent); }

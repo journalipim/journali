@@ -292,6 +292,7 @@ steht im Kopf `X-Actor`.
 | `PUT /api/media/{id}/folder` `{folder}` | `MediaFiled` (null = kein Ordner) |
 | `PUT /api/media/{id}/source` `{plugin?, profile?, job?, ref?, from?}` | `MediaSourced` — nachtragen; `POST /api/media` und `/media/fetch` nehmen dieselben Felder beim Anlegen |
 | `POST /api/media/probe` `?limit&again` | `MediaProbed` je gelesenem Kopf; `GET /api/media/probe` zählt die offenen Posten |
+| `GET /api/media/{id}/workflow` · `POST …/workflow/{wf}/{transition}` `{note?}` · `PUT …/workflow/{wf}/assign` `{user}` | `WorkflowStateSet` / `WorkflowAssigned` am Medienstrom — derselbe Workflow wie am Knoten, wenn seine Rollen `media` nennen; ohne Wirkungen |
 | `GET /api/docs/scans` `?limit` | kein Eintrag — die offene Postenliste der Texterkennung (Dokumente im Zustand `scan`); der Erkenner liefert über `PUT /api/docs/{id}` mit `state: text`, `note: "ocr"` |
 | `POST /api/media/{id}/supersede` `{by}` | `MediaSuperseded` am Vorgänger, dazu je Zuordnung `RelationCreated` am Nachfolger und `RelationRetired` am Vorgänger, `MediaSourced{from}` am Nachfolger; `GET /api/media?superseded=true` zeigt abgelöste mit |
 | `POST /api/media/folders` `{name, parent?}` · `PUT …/{id}/name` `{name}` · `PUT …/{id}/parent` `{parent}` · `DELETE …/{id}` | `MediaFolderCreated` / `MediaFolderRenamed` / `MediaFolderMoved` / `MediaFolderRetired`; `GET /api/media/folders` liest, `GET /api/media?folder=&deep=&sort=&desc=` filtert und sortiert |

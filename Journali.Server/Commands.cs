@@ -764,6 +764,39 @@ public static class Commands
         return Outcome.Ok(c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, null, null, $"↑ erbt „{wf.State(state)?.Label.GetValueOrDefault("de") ?? state}“", locale)));
     }
 
+    /// <summary>
+    /// Ein Schritt an einem Asset (27.09.2026). Wie am Knoten — Übergang vom aktuellen Zustand, Rolle darf ihn, Notiz
+    /// da —, aber ohne Vater (kein Erben), ohne Blocker (die prüfen Pflichtwerte eines Knotens) und ohne Wirkungen:
+    /// <c>release</c>, <c>revoke</c>, <c>status</c>, <c>translate</c> sind Knotensache und gelten am Medium nicht.
+    /// </summary>
+    public static Outcome WorkflowStepMedium(Ctx c, string id, string workflow, string transition, string? note, string? locale = null)
+    {
+        if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad("Unbekannter Workflow {0}.", workflow);
+        if (!c.Media.All.ContainsKey(id)) return Outcome.Missing;
+        if (!wf.AppliesToMedium()) return Outcome.Bad("Workflow „{0}“ gilt nicht für Assets.", wf.Label.GetValueOrDefault("de") ?? wf.Key);
+        locale = Blank(locale);
+        if (locale is not null && !wf.PerLocale) return Outcome.Bad("Workflow „{0}“ läuft nicht je Sprache.", wf.Label.GetValueOrDefault("de") ?? wf.Key);
+        if (locale is not null && !c.Model.Locales.ContainsKey(locale)) return Outcome.Bad("Unbekannte Sprache: {0}", locale);
+        var t = wf.Transitions.FirstOrDefault(x => x.Key == transition);
+        if (t is null) return Outcome.Bad("Unbekannter Übergang {0}.", transition);
+        var state = c.Workflows.StateOf(id, wf, locale);
+        if (t.From != state) return Outcome.Bad("„{0}“ geht von {1} aus, das Asset ist in {2}{3}.", t.Label.GetValueOrDefault("de") ?? t.Key, t.From, state, (locale is null ? "" : " (" + locale + ")"));
+        var since = c.Workflows.Of(id).GetValueOrDefault(Workflows.Slot(wf.Key, wf.PerLocale ? locale : null))?.At;
+        if (c.Role is { } role && role != "admin" && t.Roles is { Length: > 0 } && !t.Roles.Contains(role) && !Escalated(t, role, since, DateTimeOffset.UtcNow)) return Outcome.Bad("Rolle {0} darf „{1}“ nicht (erlaubt: {2}).", role, t.Label.GetValueOrDefault("de") ?? t.Key, string.Join(", ", t.Roles));
+        note = Blank(note);
+        if (t.NoteRequired && note is null) return Outcome.Bad("Notiz ist Pflicht bei diesem Schritt (was ist zu tun?).");
+        return Outcome.Ok(c.Write(id, Types.WorkflowStateSet, new WorkflowStateSet(workflow, t.To, t.Key, note, locale)));
+    }
+
+    /// <summary>Zuständigen an einem Asset setzen — wie am Knoten.</summary>
+    public static Outcome AssignWorkflowMedium(Ctx c, string id, string workflow, string? user)
+    {
+        if (c.Workflows is null || !c.Workflows.All.TryGetValue(workflow, out var wf)) return Outcome.Bad("Unbekannter Workflow {0}.", workflow);
+        if (!c.Media.All.ContainsKey(id)) return Outcome.Missing;
+        if (!wf.AppliesToMedium()) return Outcome.Bad("Workflow „{0}“ gilt nicht für Assets.", wf.Label.GetValueOrDefault("de") ?? wf.Key);
+        return Outcome.Ok(c.Write(id, Types.WorkflowAssigned, new WorkflowAssigned(workflow, Blank(user))));
+    }
+
     public static Outcome AssignWorkflow(Ctx c, string id, string workflow, string? user)
     {
         if (c.Workflows is null || !c.Workflows.All.ContainsKey(workflow)) return Outcome.Bad("Unbekannter Workflow {0}.", workflow);

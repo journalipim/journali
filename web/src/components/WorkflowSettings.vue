@@ -13,7 +13,15 @@ import { L } from '../i18n.js'
 
 const list = ref([]); const cur = ref(null); const roles = ref([]); const dirty = ref(false)
 const COLORS = [['muted', 'grau'], ['warn', 'gelb'], ['neg', 'rot'], ['accent', 'blau'], ['pos', t_('grün')]]
-const ROLES = [['group', t_('▣ Gruppe')], ['product', t_('▦ Produkt')], ['variant', t_('◆ Variante')]]
+const ROLES = [['group', t_('▣ Gruppe')], ['product', t_('▦ Produkt')], ['variant', t_('◆ Variante')], ['media', t_('▩ Asset')]]
+/// Assets gelten nur ausdrücklich: eine leere Liste heisst „alle Pflegeknoten“, nicht „auch jedes Bild“. Wer Assets
+/// dazunimmt, während die Liste leer ist, behält die Knoten — sonst gälte der Workflow plötzlich nur noch für Bilder.
+const gilt = k => k === 'media' ? cur.value.roles.includes('media') : (!cur.value.roles.length || cur.value.roles.includes(k))
+function toggleRole(k) {
+  const r = cur.value.roles
+  if (k === 'media' && !r.includes('media') && !r.length) r.push('group', 'product', 'variant')
+  toggleIn(r, k)
+}
 const EFFECTS = computed(() => { const m = store.model; const out = []; out.push(['release:*', t_('Freigabe alle Kanäle')], ['revoke:*', t_('Freigabe alle Kanäle zurück')]); for (const c of m?.channels ?? []) { out.push([`release:${c.key}`, t_('Freigabe {0}', [c.key])], [`revoke:${c.key}`, t_('Freigabe {0} zurück', [c.key])]) } for (const s of m?.statuses ?? []) out.push([`status:${s.key}`, t_('Status {0}', [store.statusLabel(s.key)])]); out.push(['translate:*', t_('📦 Übersetzungspaket schnüren (alle Sprachen)')]); for (const l of m?.locales ?? []) if (l.code !== m?.masterLocale) out.push([`translate:${l.code}`, t_('📦 Übersetzungspaket {0}', [l.code])]); return out })
 async function load() { try { list.value = await api.get('/api/workflows'); if (cur.value) cur.value = clone(list.value.find(w => w.key === cur.value.key) ?? list.value[0] ?? null); else cur.value = clone(list.value[0] ?? null) } catch (e) { store.toast(e.message) } try { roles.value = (await api.get('/api/auth/roles')).map(r => r.key) } catch { roles.value = ['admin', 'editor'] } }
 const clone = w => w ? JSON.parse(JSON.stringify({ key: w.key, label: w.label ?? {}, start: w.start, roles: w.roles ?? [], families: w.families ?? [], perLocale: !!w.perLocale, states: w.states.map(s => ({ key: s.key, label: s.label ?? {}, color: s.color ?? 'muted', final: !!s.final, x: s.x ?? null, y: s.y ?? null, count: s.count ?? 0 })), transitions: w.transitions.map(t => ({ key: t.key, label: t.label ?? {}, from: t.from, to: t.to, roles: t.roles ?? [], noteRequired: !!t.noteRequired, effects: t.effects ?? [], escalateAfterDays: t.escalateAfterDays ?? null, escalateRoles: t.escalateRoles ?? [], fromPort: t.fromPort ?? null, toPort: t.toPort ?? null, labelX: t.labelX ?? null, labelY: t.labelY ?? null, route: null })) })) : null
@@ -232,7 +240,7 @@ onMounted(load)
       <div class="row" style="gap:12px;align-items:center;margin-bottom:6px;flex-wrap:wrap">
         <label>{{ $t("Bezeichnung") + ' ' }}<input v-model="cur.label.de" type="text" style="width:160px" @input="touch" /></label>
         <label>{{ $t("Start") + ' ' }}<select v-model="cur.start" @change="touch"><option v-for="s in cur.states" :key="s.key" :value="s.key">{{ $L(s.label) || s.key }}</option></select></label>
-        <span class="muted">{{ $t("gilt für") }}</span><label v-for="[k, l] in ROLES" :key="k" :title="k"><input type="checkbox" :checked="!cur.roles.length || cur.roles.includes(k)" @change="toggleIn(cur.roles, k)" /> {{ l }}</label>
+        <span class="muted">{{ $t("gilt für") }}</span><label v-for="[k, l] in ROLES" :key="k" :title="k === 'media' ? $t('gilt auch für Assets — der Zustand steht am Medium, ohne Vererbung; Wirkungen eines Schritts gelten dort nicht') : k"><input type="checkbox" :checked="gilt(k)" @change="toggleRole(k)" /> {{ l }}</label>
         <label :title="$t('Je Sprache ein eigener Zustand — ein Schritt wirkt dann nur auf diese Sprache')"><input type="checkbox" v-model="cur.perLocale" @change="touch" />{{ ' ' + $t("🗣 je Sprache") }}</label>
         <span class="muted" style="font-size:11px">{{ $t("(nichts angehakt = alle)") }}</span>
       </div>

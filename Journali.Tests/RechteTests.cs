@@ -27,6 +27,7 @@ public class RechteTests
     [InlineData("/api/media", Rights.Read)]
     [InlineData("/api/media/folders", Rights.Read)]
     [InlineData("/api/media/facets", Rights.Read)]
+    [InlineData("/api/media/m-1/workflow", Rights.Read)]         // den Zustand sieht, wer liest
     public void Die_Datei_braucht_download_die_Kachel_nur_lesen(string pfad, string recht) => Assert.Equal(recht, Braucht(pfad));
 
     [Fact]

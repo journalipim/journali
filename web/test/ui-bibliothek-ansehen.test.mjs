@@ -31,6 +31,7 @@ function welt(medien, verwendung = {}) {
     const pfad = String(url)
     const usage = pfad.match(/\/api\/media\/([^/]+)\/usage/)
     const antwort = usage ? (verwendung[usage[1]] ?? [])
+      : /\/workflow$/.test(pfad) ? []
       : pfad.includes('/api/media/folders') ? { total: medien.length, unfiled: medien.length, folders: [] }
       : medien
     return { ok: true, status: 200, text: async () => JSON.stringify(antwort), json: async () => antwort }

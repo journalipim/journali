@@ -29,7 +29,7 @@ public static class MediaApi
     /// Facetten etwas anderes, als die Liste zeigt.
     /// </summary>
     private static IEnumerable<Medium> Gefiltert(Catalog c, string? q, string? folder, bool deep, int minW, int minH,
-        string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword, bool superseded = false, string? valid = null)
+        string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword, bool superseded = false, string? valid = null, string? state = null)
     {
         // Abgelöste Fassungen bleiben im Abbild, damit Belege und Versionen sie auflösen — die Bibliothek zeigt sie nur auf Wunsch
         var all = superseded ? c.Media.All.Values.AsEnumerable() : c.Media.Current;
@@ -38,6 +38,12 @@ public static class MediaApi
         if (valid == "yes") all = all.Where(m => m.GueltigAm(heute));
         else if (valid == "no") all = all.Where(m => !m.GueltigAm(heute));
         else if (valid == "expired") all = all.Where(m => m.Abgelaufen(heute));
+        // Zustand: "workflow:zustand" — der wirksame Zustand des Assets in diesem Workflow (Start, wenn nie ein Schritt ging)
+        if (!string.IsNullOrWhiteSpace(state) && state.IndexOf(':') is var i and > 0 && c.Workflows.All.TryGetValue(state[..i], out var wfx) && wfx.AppliesToMedium())
+        {
+            var soll = state[(i + 1)..];
+            all = all.Where(m => c.Workflows.StateOf(m.Id, wfx) == soll);
+        }
         if (!string.IsNullOrWhiteSpace(q))
         {
             var s = q.Trim();
@@ -84,10 +90,10 @@ public static class MediaApi
         // Liste, neueste zuerst; q sucht in Name und Werten
         // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
         api.MapGet("/media", (Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
-            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null, bool superseded = false, string? valid = null) =>
+            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null, bool superseded = false, string? valid = null, string? state = null) =>
             c.With((model, tree, _) =>
             {
-                var all = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid);
+                var all = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid, state);
                 var rows = all.Select(m => (m, used: c.Relations.To(m.Id).Count()));
                 var down = desc ?? (sort is null or "recent" or "date" or "size" or "used" or "pixels" or "created");   // Neuestes/Grösstes/Meistgenutztes zuerst, Namen A→Z
                 Func<(Medium m, int used), object> key = sort switch
@@ -103,16 +109,17 @@ public static class MediaApi
                 var sorted = sort == "name"
                     ? (down ? rows.OrderByDescending(x => x.m.Name, StringComparer.OrdinalIgnoreCase) : rows.OrderBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase))
                     : (down ? rows.OrderByDescending(key).ThenBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase) : rows.OrderBy(key).ThenBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase));
-                return sorted.Take(Math.Clamp(limit, 1, 5000)).Select(x => MediaView.Of(x.m, x.used)).ToList();
+                return sorted.Take(Math.Clamp(limit, 1, 5000)).Select(x => MediaView.Of(x.m, x.used, MediaWorkflowApi.States(c, x.m))).ToList();
             }));
 
         // Facetten: wonach sich filtern lässt, mit Anzahl. Gezählt wird über denselben Filter wie die Liste —
         // die Zahlen gehören zu dem, was zu sehen ist, nicht zur ganzen Bibliothek.
         api.MapGet("/media/facets", (Catalog c, string? q = null, string? folder = null, bool deep = false,
-            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null) =>
+            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null,
+            bool superseded = false, string? valid = null, string? state = null) =>
             c.With((model, _, _) =>
             {
-                var alle = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword).ToList();
+                var alle = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword, superseded, valid, state).ToList();
                 var liste = model.Lists.GetValueOrDefault(Model.KeywordList);
                 var stichwort = new Dictionary<string, int>(StringComparer.Ordinal);
                 foreach (var m in alle) foreach (var k in Stichworte(m)) stichwort[k] = stichwort.GetValueOrDefault(k) + 1;
@@ -129,6 +136,10 @@ public static class MediaApi
                         .Select(kv => new { key = kv.Key, label = liste?.Values.GetValueOrDefault(kv.Key)?.Label, n = kv.Value }).ToList(),
                     ohneStichwort = alle.Count(m => !Stichworte(m).Any()),
                     abgelaufen = alle.Count(m => m.Abgelaufen(DateOnly.FromDateTime(DateTime.Now))),
+                    // Zustände je Workflow, der für Assets gilt — Schlüssel "workflow:zustand" für den Filter
+                    zustaende = alle.SelectMany(m => MediaWorkflowApi.States(c, m)).GroupBy(s => (s.Workflow, s.State))
+                        .Select(g => new { key = g.Key.Workflow + ":" + g.Key.State, workflow = g.Key.Workflow, label = g.First().Label, state = g.Key.State, stateLabel = g.First().StateLabel, color = g.First().Color, n = g.Count() })
+                        .OrderBy(x => x.workflow).ThenByDescending(x => x.n).ToList(),
                     total = alle.Count,
                 });
             }));
@@ -406,13 +417,13 @@ public sealed record MediaView(string Id, string Sha256, long Bytes, string Mime
     Dictionary<string, string> External, int Used, int Entries, long LastNumber, DateTimeOffset LastAt, string LastActor, string? Folder,
     bool Renderable = false, bool HasThumb = false, MediaProbed? Probe = null, MediaSourced? Source = null,
     DateTimeOffset CreatedAt = default, string CreatedBy = "", long Pixels = 0, string? SupersededBy = null, string? Supersedes = null,
-    bool Valid = true, bool Expired = false)
+    bool Valid = true, bool Expired = false, List<MediaWorkflowApi.MediaState>? Workflow = null)
 {
     /// <summary>Kachel: Bilder haben immer eine, ein PDF erst, wenn der derive-Job seine erste Seite gerechnet hat
     ///. Die Oberfläche fragt danach, statt aus dem Mime zu raten.</summary>
-    public static MediaView Of(Medium m, int used) => new(m.Id, m.Sha256, m.Bytes, m.Mime, m.Name, m.IsImage, ValueView.Of(m).ToList(),
+    public static MediaView Of(Medium m, int used, List<MediaWorkflowApi.MediaState>? workflow = null) => new(m.Id, m.Sha256, m.Bytes, m.Mime, m.Name, m.IsImage, ValueView.Of(m).ToList(),
         m.External, used, m.Entries, m.LastNumber, m.LastAt, m.LastActor, m.Folder,
         m.IsRenderable, m.IsImage || m.Derived.ContainsKey(Media.ThumbPreset),
         m.Probe, m.Source, m.CreatedAt, m.CreatedBy, m.Pixels, m.SupersededBy, m.Supersedes,
-        m.GueltigAm(DateOnly.FromDateTime(DateTime.Now)), m.Abgelaufen(DateOnly.FromDateTime(DateTime.Now)));
+        m.GueltigAm(DateOnly.FromDateTime(DateTime.Now)), m.Abgelaufen(DateOnly.FromDateTime(DateTime.Now)), workflow);
 }

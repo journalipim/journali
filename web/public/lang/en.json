@@ -2616,5 +2616,13 @@
  "Assets, deren Frist vorbei ist — sie bleiben im Journal, fallen aber aus der Ausleitung": "Assets whose term has ended — they stay in the journal but drop out of exports",
  "abgelaufen — fällt aus der Ausleitung": "expired — drops out of exports",
  "gilt noch nicht": "not valid yet",
- "gilt heute nicht — fällt aus der Ausleitung": "not valid today — drops out of exports"
+ "gilt heute nicht — fällt aus der Ausleitung": "not valid today — drops out of exports",
+ "▩ Asset": "▩ Asset",
+ "gilt auch für Assets — der Zustand steht am Medium, ohne Vererbung; Wirkungen eines Schritts gelten dort nicht": "also applies to assets — the state lives at the medium, without inheritance; step effects do not apply there",
+ "Notiz (Pflicht)": "Note (required)",
+ "Workflow „{0}“: nur Assets im Zustand „{1}“": "Workflow \"{0}\": only assets in state \"{1}\"",
+ "am Asset ohne Wirkung: {0}": "no effect at an asset: {0}",
+ "jede Rolle": "any role",
+ "Workflow „{0}“ gilt nicht für Assets.": "Workflow \"{0}\" does not apply to assets.",
+ "„{0}“ geht von {1} aus, das Asset ist in {2}{3}.": "\"{0}\" starts from {1}, the asset is in {2}{3}."
 }

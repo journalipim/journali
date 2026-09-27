@@ -1668,27 +1668,17 @@ Gruppe `media`. Die Regel `Medium.GueltigAm(tag)` beantworten Bibliothek (`valid
 sagt es ihnen, die Erzeuger müssen es lesen (Siegel). Rechte je Ordner: mit „Rollen je Teilbaum“ (`architektur.md`),
 nicht hier.
 
-**I. Workflows für Assets — Entscheidungsvorlage (27.09.2026).** Befund: ein Workflow gilt für Knotentypen und
-Familien (`WorkflowDefined {roles[], families[]}`), `AppliesTo(Node n)` schliesst Rubriken aus — ein Medium ist
-kein Knoten (`Workflows.cs:28`). Der Zustand steht am Knotenstrom (`WorkflowStateSet`), je Sprache, wenn der
-Workflow es will. Freigabe eines Bildes, Benachrichtigung, „von der Produktion ins Web“ gehen damit nicht.
-
-Zwei Wege, und sie schliessen sich aus:
-
-- **(a) Derselbe Workflow, auch für Medien.** `roles` darf `media` enthalten (die Rolle gibt es schon als Ziel einer
-  Relation), `WorkflowStateSet` wird am Medienstrom `m-…` geschrieben, das Abbild `Workflows` nimmt Medienströme
-  an, `AppliesTo` bekommt eine Fassung für ein Medium. **Kein neuer Eintragstyp.** Die Bibliothek bekommt eine
-  Facette „Zustand“, die Ausleitung liest ihn wie am Knoten (ein nicht freigegebenes Bild geht nicht mit).
-  Übergänge mit Rollen und Notizpflicht gelten unverändert. Was fehlt: Benachrichtigung — die gibt es auch am
-  Knoten nicht; das ist ein eigener Punkt (Mail bei Übergang, `Mail.cs` ist da).
-- **(b) Eine eigene Freigabe für Assets.** Ein Eintragstyp `MediaReleased {channel?, locale?}` wie `ReleaseGranted`
-  am Knoten — einfacher, aber ein zweites Vokabular für dieselbe Sache, und Übergänge, Rollen und Notizen müssten
-  ein zweites Mal entstehen.
-
-Empfehlung: (a). Es ist weniger Code, kein neuer Typ, und wer die Freigabe eines Produkts versteht, versteht die
-eines Bildes. Die automatischen Importe und Exporte („von der Produktion ins Web“) sind keine Workflow-Frage,
-sondern Jobs mit Profil — die gibt es; ein Übergang, der einen Job anstösst, wäre die Brücke (`WfTransition`
-bekäme ein `job`).
+**I. Workflows für Assets — gebaut (27.09.2026), Weg (a).** Derselbe Workflow: `roles` darf `media` enthalten —
+**nur ausdrücklich**, eine leere Liste heisst „alle Pflegeknoten“, nicht „auch jedes Bild“ (`WorkflowDef.AppliesToMedium`;
+der Designer bietet „▩ Asset“ an und behält die Knoten, wenn er es zu einer leeren Liste zufügt). Der Zustand steht am
+Medienstrom (`WorkflowStateSet` auf `m-…`), das Abbild kannte den Weg schon; ein zurückgezogenes Medium nimmt seinen
+Zustand mit. Kein neuer Eintragstyp. Der Schritt (`Commands.WorkflowStepMedium`, `POST /api/media/{id}/workflow/{wf}/{t}`)
+prüft Übergang, Rolle, Eskalation und Notizpflicht wie am Knoten — ohne Vater (kein Erben), ohne Blocker und **ohne
+Wirkungen**: `release`, `revoke`, `status`, `translate` sind Knotensache; die Oberfläche sagt es am Knopf („am Asset
+ohne Wirkung“). Zuständiger wie am Knoten (`…/assign`). Bibliothek: Abschnitt ⚑ Workflow rechts, Facette je
+Zustand (`state=<wf>:<zustand>`), Fahne in der Farbe des Zustands an der Kachel. **Offen:** dass ein nicht freigegebenes
+Bild nicht ausgeleitet wird — der Zustand steht in `MediaView.Workflow`, die Erzeuger müssen ihn lesen (Siegel); und ein
+Übergang, der einen Job anstösst (`WfTransition.job`), als Brücke zu Import und Export.
 
 **J. Texterkennung (OCR) — Serverseite gebaut (27.09.2026), Erkenner offen.** Der Volltext liegt schon **je
 Medium** (`DocText.cs`, Tabelle `media_text`), PDFs werden gelesen und durchsucht, und der Zustand `scan` bedeutet
