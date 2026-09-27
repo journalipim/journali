@@ -28,6 +28,9 @@ public static class Model
     public const string RelationStream = "relation:";
     /// <summary>Gruppe der Werte am Medium (20).</summary>
     public const string MediaGroup = "media";
+    /// <summary>Die Werteliste der Stichwörter und das vermehrbare Attribut am Medium, das aus ihr wählt.</summary>
+    public const string KeywordList = "keyword";
+    public const string KeywordAttribute = "keywords";
 
     /// <summary>Das Saatgut-Attribut SKU — eindeutig (unique) wie jedes andere Schlüsselattribut; im Code sonst nichts Besonderes.</summary>
     public const string SkuAttribute = "sku";
@@ -139,6 +142,12 @@ public static class Model
         yield return new(GroupStream + "media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("media", Labels.Of("Medium", "Medium"))));
         yield return new(AttributeStream + "alt_text", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("alt_text", Labels.Of("Alt-Text", "Alt text"), AttributeTypes.Text, Group: "media", Axes: [Axes.Locale])));
         yield return new(AttributeStream + "copyright", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("copyright", Labels.Of("Rechte", "Copyright"), AttributeTypes.Text, Group: "media")));
+        // Stichwörter: eine Werteliste im Modell, kein Freitext — sonst stehen „Bohrer“, „bohrer“ und „Bohrer “
+        // nebeneinander und keine Facette fasst sie zusammen. Die Liste beginnt leer; neue Werte legt die Zelle an
+        // („+ neuer Wert …“), und weil sie im Modell steht, ist sie übersetzbar.
+        yield return new(ListStream + KeywordList, Types.ListDefined, Types.Serialize(new ListDefinition(KeywordList, Labels.Of("Stichwörter", "Keywords"))));
+        yield return new(AttributeStream + KeywordAttribute, Types.AttributeDefined, Types.Serialize(
+            new AttributeDefinition(KeywordAttribute, Labels.Of("Stichwörter", "Keywords"), AttributeTypes.Enum, Group: MediaGroup, List: KeywordList, Multiple: true)));
         yield return new(GroupStream + "relation_media", Types.AttributeGroupDefined, Types.Serialize(new AttributeGroupDefinition("relation_media", Labels.Of("Medienzuordnung", "Media link"))));
         yield return new(AttributeStream + "position", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("position", Labels.Of("Reihenfolge", "Position"), AttributeTypes.Integer, Group: "relation_media")));
         yield return new(AttributeStream + "usage", Types.AttributeDefined, Types.Serialize(new AttributeDefinition("usage", Labels.Of("Verwendung", "Usage"), AttributeTypes.Text, Group: "relation_media")));

@@ -11,6 +11,8 @@ import { menu } from '../menu.js'
 import { mediaTypesFor, attachMedia, meldung as medienMeldung } from '../media.js'
 import TreePicker from '../components/TreePicker.vue'
 import Cell from '../components/Cell.vue'
+import ListCell from '../components/ListCell.vue'
+import SelectCell from '../components/SelectCell.vue'
 import Splitter from '../components/Splitter.vue'
 import MediaThumb from '../components/MediaThumb.vue'
 import { paneWidth } from '../panes.js'
@@ -90,10 +92,10 @@ const grouped = computed(() => {
 
 async function load() {
   try {
-    const f = folder.value === 'all' ? '' : folder.value
-    items.value = await api.get(`/api/media?q=${encodeURIComponent(q.value.trim())}&limit=2000&folder=${encodeURIComponent(f)}&deep=${deep.value}&sort=${sort.value}&desc=${desc.value}`)
+    items.value = await api.get(`/api/media?limit=2000&sort=${sort.value}&desc=${desc.value}&${filterQuery()}`)
     if (cur.value && !items.value.some(m => m.id === cur.value)) cur.value = null
   } catch (e) { store.toast(e.message) }
+  await loadFacets()
 }
 onMounted(async () => { await loadFolders(); await load() })
 let t = null
@@ -166,10 +168,41 @@ async function upload(files) {
   if (same) store.toast(t_('{0} davon gab es schon (gleiche Datei)', [same]), 'ok')
 }
 function onDrop(e) { dragOver.value = false; if (dragKind.value) { dragKind.value = ''; return } upload([...e.dataTransfer.files]) }
-const value = (m, def) => { const loc = def.perLocale ? master.value : null; return m.values.find(v => v.attribute === def.key && (v.locale ?? null) === loc && !v.channel)?.value ?? null }
+/// Der eigene Wert auf der Achse — bei einem vermehrbaren Attribut die Liste, kommagetrennt wie in der Zelle.
+const value = (m, def) => {
+  const loc = def.perLocale ? master.value : null
+  const v = m.values.find(x => x.attribute === def.key && (x.locale ?? null) === loc && !x.channel)
+  return (def.multiple ? v?.values?.join(', ') : v?.value) ?? null
+}
 async function setValue(m, def, v) {
-  try { await api.post(`/api/media/${m.id}/attributes`, { attribute: def.key, locale: def.perLocale ? master.value : null, value: v }); await store.poll(true); await load() }
+  const rumpf = { attribute: def.key, locale: def.perLocale ? master.value : null }
+  if (def.multiple) rumpf.values = String(v ?? '').split(',').map(x => x.trim()).filter(Boolean)
+  else rumpf.value = v
+  try { await api.post(`/api/media/${m.id}/attributes`, rumpf); await store.poll(true); await load(); await loadSuggestions() }
   catch (e) { store.toast(e.message) }
+}
+/// Werte und Bezeichnungen einer Werteliste des Modells — wie in der Knotenansicht.
+const listOptions = def => (model.value?.lists?.find(l => l.key === def.list)?.values ?? []).map(v => v.value)
+const listLabel = def => {
+  const vals = model.value?.lists?.find(l => l.key === def.list)?.values ?? []
+  return v => { const l = vals.find(x => x.value === v)?.label; return l?.[master.value] || l?.de || l?.en || Object.values(l ?? {}).find(Boolean) || v }
+}
+
+// ---- Vorschläge für Stichwörter: bei automatischem Import verschlagwortet niemand von Hand
+const suggestions = ref([])
+async function loadSuggestions() {
+  suggestions.value = []
+  if (!cur.value) return
+  try { suggestions.value = await api.get(`/api/media/${cur.value}/suggestions`) } catch { /* Vorschläge sind keine Pflicht */ }
+}
+watch(cur, loadSuggestions, { immediate: true })
+/// Einen Vorschlag annehmen — erst das ist Pflege, und erst das zählt.
+async function annehmen(v) {
+  const def = mediaAttrs.value.find(a => a.key === 'keywords')
+  if (!def || !current.value) return
+  const jetzt = (value(current.value, def) ?? '').split(',').map(x => x.trim()).filter(Boolean)
+  if (jetzt.includes(v.key)) return
+  await setValue(current.value, def, [...jetzt, v.key].join(', '))
 }
 async function retire(m) {
   const ids = sel.value.size > 1 && sel.value.has(m.id) ? [...sel.value] : [m.id]
@@ -179,6 +212,29 @@ async function retire(m) {
   cur.value = null; sel.value = new Set(); await store.poll(true); await loadFolders(); await load()
 }
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`
+
+// ---- Facetten: wonach sich filtern lässt, mit Anzahl. Sie zählen über denselben Filter wie die Liste.
+const facets = ref(null)
+const keyword = ref('')          // '' = alle, '-' = ohne Stichwort, sonst Komma-Liste
+const plugin = ref('')           // '' = alle, '-' = von Hand
+async function loadFacets() {
+  try { facets.value = await api.get(`/api/media/facets?${filterQuery()}`) } catch (e) { store.toast(e.message) }
+}
+/// Die Bedingungen, die Liste und Facetten gemeinsam haben
+function filterQuery() {
+  const f = folder.value === 'all' ? '' : folder.value
+  return `q=${encodeURIComponent(q.value.trim())}&folder=${encodeURIComponent(f)}&deep=${deep.value}`
+    + `&keyword=${encodeURIComponent(keyword.value)}&plugin=${encodeURIComponent(plugin.value)}`
+}
+/// Ein Stichwort an- oder abwählen; mehrere gelten zusammen.
+function toggleKeyword(k) {
+  if (k === '-') { keyword.value = keyword.value === '-' ? '' : '-'; return load() }
+  const jetzt = keyword.value === '-' ? [] : keyword.value.split(',').filter(Boolean)
+  keyword.value = (jetzt.includes(k) ? jetzt.filter(x => x !== k) : [...jetzt, k]).join(',')
+  return load()
+}
+const keywordAktiv = k => k === '-' ? keyword.value === '-' : keyword.value !== '-' && keyword.value.split(',').filter(Boolean).includes(k)
+function togglePlugin(k) { plugin.value = plugin.value === k ? '' : k; return load() }
 
 // ---- Kontextmenü: für die Kachel unter dem Zeiger, oder für die Auswahl, wenn sie dazugehört
 /// Auf welche Medien wirkt ein Befehl an dieser Kachel? Die Auswahl, wenn die Kachel darin liegt — sonst sie allein.
@@ -266,6 +322,15 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
       <button class="primary" @click="fileInput.click()" :title="folder === 'all' || folder === '-' ? $t('Dateien hochladen — oder hierher ziehen') : $t('hochladen in „{0}“ — oder hierher ziehen', [folderTitle])">{{ $t("⇧ Hochladen") }}</button>
       <input ref="fileInput" type="file" multiple style="display:none" @change="upload([...$event.target.files]); $event.target.value = ''" />
     </div>
+    <!-- Facetten: anklicken schränkt ein, nochmal klicken hebt auf; mehrere Stichwörter gelten zusammen -->
+    <div v-if="facets" class="toolbar facets">
+      <span v-for="h in facets.herkunft" :key="'h' + h.key" class="chip" :class="{ on: plugin === h.key }" @click="togglePlugin(h.key)"
+        :title="h.key === '-' ? $t('von Hand hochgeladen') : $t('über die Schnittstelle {0} gekommen', [h.key])">{{ (h.key === '-' ? $t('von Hand') : h.key) + ' ' }}<span class="muted">{{ h.n }}</span></span>
+      <span v-if="facets.ohneStichwort" class="chip" :class="{ on: keywordAktiv('-') }" @click="toggleKeyword('-')"
+        :title="$t('Assets, an denen kein Stichwort steht')">{{ $t("ohne Stichwort") + ' ' }}<span class="muted">{{ facets.ohneStichwort }}</span></span>
+      <span v-for="k in facets.stichworte" :key="'k' + k.key" class="chip" :class="{ on: keywordAktiv(k.key) }" @click="toggleKeyword(k.key)"
+        :title="$t('nur Assets mit diesem Stichwort — mehrere gelten zusammen')">{{ ($L(k.label) || k.key) + ' ' }}<span class="muted">{{ k.n }}</span></span>
+    </div>
     <div class="scroll">
       <template v-for="g in grouped" :key="g.key">
         <div v-if="group" class="ghead"><span>{{ g.key }}</span><span class="muted">{{ g.items.length }}</span></div>
@@ -299,7 +364,17 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
       <!-- kein Bild und kein PDF, aber eine gerechnete Vorschau: die erste Seite zeigen, das Original hängt am Namen -->
       <div class="preview" v-else-if="current.hasThumb"><img :src="`/api/media/${current.id}/thumb`" alt="" /></div>
       <table class="grid form"><colgroup><col style="width:150px" /><col style="width:320px" /></colgroup><tbody>
-        <tr v-for="d in mediaAttrs" :key="d.key"><td class="attr" :title="d.key">{{ $L(d.label) || d.key }}<span v-if="d.perLocale" class="muted"> {{ master }}</span></td><Cell :value="value(current, d)" @save="v => setValue(current, d, v)" /></tr>
+        <template v-for="d in mediaAttrs" :key="d.key">
+          <tr><td class="attr" :title="d.key">{{ $L(d.label) || d.key }}<span v-if="d.perLocale" class="muted"> {{ master }}</span></td>
+            <ListCell v-if="d.multiple" :value="value(current, d)" :options="d.type === 'enum' ? listOptions(d) : null" :label-of="d.type === 'enum' ? listLabel(d) : null" :list="d.list" @save="v => setValue(current, d, v)" />
+            <SelectCell v-else-if="d.type === 'enum'" :value="value(current, d)" :options="listOptions(d)" :label-of="listLabel(d)" :list="d.list" @save="v => setValue(current, d, v)" />
+            <Cell v-else :value="value(current, d)" @save="v => setValue(current, d, v)" /></tr>
+          <!-- Vorschläge stehen unter dem Feld, das sie füllen: ein Klick nimmt an, und erst das ist Pflege -->
+          <tr v-if="d.key === 'keywords' && suggestions.length"><td></td><td class="sug">
+            <span v-for="v in suggestions" :key="v.key" class="chip" @click="annehmen(v)"
+              :title="$t('vorgeschlagen · {0} — Klick nimmt an', [v.why])">{{ '+ ' + ($L(v.label) || v.key) }}</span>
+          </td></tr>
+        </template>
         <!-- Gemessen, nicht gepflegt: was der Server aus dem Kopf der Datei liest (MediaProbed) -->
         <tr><td class="attr muted" :title="$t('Mass des fertigen Bildes — eine EXIF-Drehung ist eingerechnet.')">{{ $t("▭ Maß") }}</td>
           <td v-if="current.probe?.width" class="mono">{{ current.probe.width }} × {{ current.probe.height }} px<span class="muted">{{ ' · ' + mp(current.pixels) + ' MP' }}</span></td>
@@ -382,6 +457,11 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
 .use.stopp .lbl { text-decoration: line-through; }
 .use .lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .use .typ { font-size: 11px; }
+.facets { flex-wrap: wrap; gap: 4px; padding-top: 0; }
+.facets .chip { cursor: pointer; }
+.facets .chip.on { background: var(--accent-soft); border-color: var(--accent); }
+.sug { padding: 2px 4px 6px; }
+.sug .chip { cursor: pointer; margin-right: 4px; }
 .zu-overlay { position: fixed; inset: 0; background: #0008; display: grid; place-items: center; z-index: 50; }
 .zu { width: 480px; max-width: 92vw; background: var(--pane); border: 1px solid var(--line); border-radius: 8px; }
 .form td.attr { white-space: nowrap; color: var(--muted); }

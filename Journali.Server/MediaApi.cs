@@ -12,6 +12,56 @@ namespace Journali.Server;
 /// </summary>
 public static class MediaApi
 {
+    /// <summary>Die Stichwörter eines Mediums — der vermehrbare Wert steht in den Listen, nicht in den Werten.</summary>
+    private static IEnumerable<string> Stichworte(Medium m) =>
+        m.Lists.Where(kv => kv.Key.Attribute == Model.KeywordAttribute).SelectMany(kv => kv.Value).Distinct(StringComparer.Ordinal);
+
+    /// <summary>Die Wörter eines Dateinamens, klein und ohne Endung — „DS_TE-0105_de.pdf“ wird zu ds, te, 0105, de.</summary>
+    private static HashSet<string> Worte(string name)
+    {
+        var ohneEndung = System.IO.Path.GetFileNameWithoutExtension(name) ?? name;
+        return System.Text.RegularExpressions.Regex.Split(ohneEndung.ToLowerInvariant(), @"[^\p{L}\p{N}]+")
+            .Where(w => w.Length > 1).ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Der Filter der Bibliothek an einer Stelle: Liste und Facetten müssen denselben nehmen, sonst zählen die
+    /// Facetten etwas anderes, als die Liste zeigt.
+    /// </summary>
+    private static IEnumerable<Medium> Gefiltert(Catalog c, string? q, string? folder, bool deep, int minW, int minH,
+        string? plugin, DateTimeOffset? from, DateTimeOffset? to, string? keyword)
+    {
+        var all = c.Media.All.Values.AsEnumerable();
+        if (!string.IsNullOrWhiteSpace(q))
+        {
+            var s = q.Trim();
+            all = all.Where(m => m.Name.Contains(s, StringComparison.OrdinalIgnoreCase) || m.Id.Contains(s, StringComparison.OrdinalIgnoreCase)
+                || m.Values.Values.Any(v => v.Contains(s, StringComparison.OrdinalIgnoreCase)));
+        }
+        // Mass: nur was einen gelesenen Kopf hat, kann die Grenze halten — ein ungelesenes Medium fällt heraus
+        if (minW > 0) all = all.Where(m => m.Probe is { } p && p.Width >= minW);
+        if (minH > 0) all = all.Where(m => m.Probe is { } p && p.Height >= minH);
+        // Herkunft: "-" sind die von Hand hochgeladenen, sonst der Schlüssel der Schnittstelle
+        if (plugin == "-") all = all.Where(m => m.Source?.Plugin is null);
+        else if (!string.IsNullOrWhiteSpace(plugin)) all = all.Where(m => string.Equals(m.Source?.Plugin, plugin, StringComparison.OrdinalIgnoreCase));
+        if (from is { } f0) all = all.Where(m => m.CreatedAt >= f0);
+        if (to is { } t0) all = all.Where(m => m.CreatedAt <= t0);
+        // Stichwörter: mehrere mit Komma, und sie gelten zusammen — "-" sind die ohne jedes
+        if (keyword == "-") all = all.Where(m => !Stichworte(m).Any());
+        else if (!string.IsNullOrWhiteSpace(keyword))
+        {
+            var noetig = keyword.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            all = all.Where(m => { var hat = Stichworte(m).ToHashSet(StringComparer.Ordinal); return noetig.All(hat.Contains); });
+        }
+        if (folder == "-") all = all.Where(m => m.Folder is null);
+        else if (!string.IsNullOrWhiteSpace(folder))
+        {
+            var set = deep ? c.Media.FolderAndBelow(folder).ToHashSet() : new HashSet<string> { folder };
+            all = all.Where(m => m.Folder is { } f && set.Contains(f));
+        }
+        return all;
+    }
+
     /// <summary>Eine Herkunft aus den Angaben, oder null, wenn keine gemacht wurde.</summary>
     private static MediaSourced? Herkunft(string? plugin, string? profile, string? job, string? bezug, string? from)
     {
@@ -28,30 +78,10 @@ public static class MediaApi
         // Liste, neueste zuerst; q sucht in Name und Werten
         // Bibliothek: folder = Ordner-Id | "-" (ohne Ordner) | leer (alle); deep = mit Unterordnern; sort = recent | name | size | used | date; desc
         api.MapGet("/media", (Catalog c, string? q = null, int limit = 200, string? folder = null, bool deep = false, string? sort = null, bool? desc = null,
-            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null) =>
+            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null) =>
             c.With((model, tree, _) =>
             {
-                var all = c.Media.All.Values.AsEnumerable();
-                if (!string.IsNullOrWhiteSpace(q))
-                {
-                    var s = q.Trim();
-                    all = all.Where(m => m.Name.Contains(s, StringComparison.OrdinalIgnoreCase) || m.Id.Contains(s, StringComparison.OrdinalIgnoreCase)
-                        || m.Values.Values.Any(v => v.Contains(s, StringComparison.OrdinalIgnoreCase)));
-                }
-                // Mass: nur was einen gelesenen Kopf hat, kann die Grenze halten — ein ungelesenes Medium fällt heraus
-                if (minW > 0) all = all.Where(m => m.Probe is { } p && p.Width >= minW);
-                if (minH > 0) all = all.Where(m => m.Probe is { } p && p.Height >= minH);
-                // Herkunft: "-" sind die von Hand hochgeladenen, sonst der Schlüssel der Schnittstelle
-                if (plugin == "-") all = all.Where(m => m.Source?.Plugin is null);
-                else if (!string.IsNullOrWhiteSpace(plugin)) all = all.Where(m => string.Equals(m.Source?.Plugin, plugin, StringComparison.OrdinalIgnoreCase));
-                if (from is { } f0) all = all.Where(m => m.CreatedAt >= f0);
-                if (to is { } t0) all = all.Where(m => m.CreatedAt <= t0);
-                if (folder == "-") all = all.Where(m => m.Folder is null);
-                else if (!string.IsNullOrWhiteSpace(folder))
-                {
-                    var set = deep ? c.Media.FolderAndBelow(folder).ToHashSet() : new HashSet<string> { folder };
-                    all = all.Where(m => m.Folder is { } f && set.Contains(f));
-                }
+                var all = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword);
                 var rows = all.Select(m => (m, used: c.Relations.To(m.Id).Count()));
                 var down = desc ?? (sort is null or "recent" or "date" or "size" or "used" or "pixels" or "created");   // Neuestes/Grösstes/Meistgenutztes zuerst, Namen A→Z
                 Func<(Medium m, int used), object> key = sort switch
@@ -68,6 +98,64 @@ public static class MediaApi
                     ? (down ? rows.OrderByDescending(x => x.m.Name, StringComparer.OrdinalIgnoreCase) : rows.OrderBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase))
                     : (down ? rows.OrderByDescending(key).ThenBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase) : rows.OrderBy(key).ThenBy(x => x.m.Name, StringComparer.OrdinalIgnoreCase));
                 return sorted.Take(Math.Clamp(limit, 1, 5000)).Select(x => MediaView.Of(x.m, x.used)).ToList();
+            }));
+
+        // Facetten: wonach sich filtern lässt, mit Anzahl. Gezählt wird über denselben Filter wie die Liste —
+        // die Zahlen gehören zu dem, was zu sehen ist, nicht zur ganzen Bibliothek.
+        api.MapGet("/media/facets", (Catalog c, string? q = null, string? folder = null, bool deep = false,
+            int minW = 0, int minH = 0, string? plugin = null, DateTimeOffset? from = null, DateTimeOffset? to = null, string? keyword = null) =>
+            c.With((model, _, _) =>
+            {
+                var alle = Gefiltert(c, q, folder, deep, minW, minH, plugin, from, to, keyword).ToList();
+                var liste = model.Lists.GetValueOrDefault(Model.KeywordList);
+                var stichwort = new Dictionary<string, int>(StringComparer.Ordinal);
+                foreach (var m in alle) foreach (var k in Stichworte(m)) stichwort[k] = stichwort.GetValueOrDefault(k) + 1;
+                return Results.Ok(new
+                {
+                    art = new[]
+                    {
+                        new { key = "image", label = "Bilder", n = alle.Count(m => m.IsImage) },
+                        new { key = "doc", label = "Dokumente", n = alle.Count(m => !m.IsImage) },
+                    },
+                    herkunft = alle.GroupBy(m => m.Source?.Plugin ?? "-").OrderByDescending(g => g.Count()).ThenBy(g => g.Key, StringComparer.Ordinal)
+                        .Select(g => new { key = g.Key, n = g.Count() }).ToList(),
+                    stichworte = stichwort.OrderByDescending(kv => kv.Value).ThenBy(kv => kv.Key, StringComparer.Ordinal)
+                        .Select(kv => new { key = kv.Key, label = liste?.Values.GetValueOrDefault(kv.Key)?.Label, n = kv.Value }).ToList(),
+                    ohneStichwort = alle.Count(m => !Stichworte(m).Any()),
+                    total = alle.Count,
+                });
+            }));
+
+        // Vorschläge für Stichwörter an einem Medium. Bei automatischem Import verschlagwortet niemand von Hand —
+        // darum schlägt der Server vor, was er sehen kann, und ein Mensch nimmt an. Erst das Annehmen ist Pflege.
+        api.MapGet("/media/{id}/suggestions", (string id, Catalog c, int limit = 12) =>
+            c.With((model, tree, _) =>
+            {
+                if (!c.Media.All.TryGetValue(id, out var m)) return (IResult)Results.NotFound();
+                var liste = model.Lists.GetValueOrDefault(Model.KeywordList);
+                if (liste is null) return Results.Ok(Array.Empty<object>());
+                var schon = Stichworte(m).ToHashSet(StringComparer.Ordinal);
+                var treffer = new Dictionary<string, string>(StringComparer.Ordinal);   // Wert → warum
+
+                // 1. aus dem Dateinamen: ein Wort daraus ist der Wert oder steht in einer seiner Bezeichnungen
+                var worte = Worte(m.Name);
+                foreach (var v in liste.Values.Values)
+                {
+                    if (schon.Contains(v.Value) || treffer.ContainsKey(v.Value)) continue;
+                    if (worte.Contains(v.Value.ToLowerInvariant()) || v.Label.Values.Any(l => worte.Contains(l.ToLowerInvariant())))
+                        treffer[v.Value] = "Dateiname";
+                }
+                // 2. von den Nachbarn: was an denselben Knoten hängt, ist meist dasselbe Thema
+                foreach (var r in c.Relations.To(m.Id))
+                    foreach (var nachbar in c.Relations.From(r.From).Select(x => c.Media.All.GetValueOrDefault(x.To)).OfType<Medium>())
+                    {
+                        if (nachbar.Id == m.Id) continue;
+                        foreach (var k in Stichworte(nachbar))
+                            if (!schon.Contains(k) && !treffer.ContainsKey(k) && liste.Values.ContainsKey(k)) treffer[k] = "am selben Knoten";
+                    }
+
+                return Results.Ok(treffer.Take(Math.Clamp(limit, 1, 100))
+                    .Select(kv => new { key = kv.Key, label = liste.Values.GetValueOrDefault(kv.Key)?.Label, why = kv.Value }).ToList());
             }));
 
         // Medienordner

@@ -2570,5 +2570,11 @@
  "ungeprüft": "unverified",
  "abgelaufen": "expired",
  "{0} ist auch hier": "{0} is here too",
- "⇵ Import / Export": "⇵ Import / Export"
+ "⇵ Import / Export": "⇵ Import / Export",
+ "von Hand hochgeladen": "uploaded by hand",
+ "über die Schnittstelle {0} gekommen": "came in through the {0} interface",
+ "ohne Stichwort": "no keyword",
+ "Assets, an denen kein Stichwort steht": "Assets with no keyword",
+ "nur Assets mit diesem Stichwort — mehrere gelten zusammen": "only assets with this keyword — several apply together",
+ "vorgeschlagen · {0} — Klick nimmt an": "suggested · {0} — click accepts"
 }
