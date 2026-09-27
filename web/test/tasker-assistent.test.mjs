@@ -4,7 +4,8 @@
 // ohne Fächer hat keine Ablage, einer ohne Parameter kein „Womit“. Leere Seiten werden übersprungen, nicht gezeigt.
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { naechsteSeite, profilPflicht } from '../../plugins/tasker/entry.js'
+import './ui.mjs'   // echtes DOM (happy-dom) — der Fokustest braucht eines
+import { naechsteSeite, profilPflicht, seiteZeigen } from '../../plugins/tasker/entry.js'
 
 const ALLE = [true, true, true, true]
 
@@ -46,4 +47,33 @@ test('ohne diesen Hinweis bleibt es Pflicht', () => {
 test('kein Profil-Feld, keine Pflicht', () => {
   assert.equal(profilPflicht(undefined), false)
   assert.equal(profilPflicht(null), false)
+})
+
+// 27.09.2026 gemeldet: „wenn ich etwas eintippe, springt der Cursor bei jedem Buchstaben in ein anderes Feld“. Jedes
+// `input` im Dialog ruft die Prüfung, und die stellte die Seite neu auf die Bühne — das Neueinhängen nahm dem Feld den
+// Fokus. Dieselbe Seite wird darum nicht mehr angefasst.
+test('dieselbe Seite bleibt hängen — der Fokus im Feld auch', () => {
+  const buehne = document.createElement('div')
+  const seite = document.createElement('div')
+  const feld = document.createElement('input')
+  seite.append(feld)
+  document.body.append(buehne)
+
+  assert.equal(seiteZeigen(buehne, seite), true, 'die erste Seite muss eingehängt werden')
+  feld.focus()
+  assert.equal(document.activeElement, feld)
+
+  assert.equal(seiteZeigen(buehne, seite), false, 'dieselbe Seite wurde noch einmal eingehängt')
+  assert.equal(document.activeElement, feld, 'der Fokus ging beim Tippen verloren')
+  assert.equal(buehne.childElementCount, 1)
+})
+
+test('eine andere Seite kommt auf die Bühne, die alte geht', () => {
+  const buehne = document.createElement('div')
+  const eins = document.createElement('div'); eins.textContent = 'eins'
+  const zwei = document.createElement('div'); zwei.textContent = 'zwei'
+  seiteZeigen(buehne, eins)
+  assert.equal(seiteZeigen(buehne, zwei), true)
+  assert.equal(buehne.childElementCount, 1)
+  assert.equal(buehne.firstChild.textContent, 'zwei')
 })

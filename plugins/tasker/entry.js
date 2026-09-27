@@ -68,6 +68,16 @@ export function profilPflicht(profileDef) {
 /// Nächste Seite des Assistenten in dieser Richtung, die etwas zeigt — oder null, wenn keine mehr kommt.
 /// `voll` sagt je Seite, ob sie Inhalt hat: ohne Fächer gibt es keine Ablage, ohne Parameter kein „Womit“
 ///.
+/// Die Bühne auf diese Seite stellen — und zwar nur, wenn dort eine andere steht. Sonst nimmt das Neueinhängen dem
+/// Eingabefeld den Fokus, und beim Tippen sprang der Cursor nach jedem Buchstaben weg (27.09.2026 gemeldet): jedes
+/// `input` im Dialog ruft die Prüfung, und die zeigt die Seite neu.
+export function seiteZeigen(buehne, box) {
+  if (buehne.firstChild === box) return false
+  buehne.innerHTML = ''
+  buehne.append(box)
+  return true
+}
+
 export function naechsteSeite(voll, schritt, richtung) {
   for (let i = schritt + richtung; i >= 0 && i < voll.length; i += richtung) if (voll[i]) return i
   return null
@@ -570,8 +580,7 @@ async function mount(root, ctx) {
     function zeige(i) {
       if (!voll(i)) { const ersatz = naechsteSeite(seiten.map((_, n) => voll(n)), i, -1) ?? naechsteSeite(seiten.map((_, n) => voll(n)), i, 1); if (ersatz === null) return; i = ersatz }
       schritt = i
-      bühne.innerHTML = ''
-      bühne.append(seiten[i].box)
+      seiteZeigen(bühne, seiten[i].box)
       seiten.forEach((s, n) => { chips[n].style.display = voll(n) ? '' : 'none'; chips[n].classList.toggle('on', n === i) })
       check()   // die Meldung unten gilt der Seite, die man gerade sieht
       const sichtbar = seiten.map((_, n) => voll(n))
