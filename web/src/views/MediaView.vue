@@ -7,6 +7,9 @@ import { useRouter } from 'vue-router'
 import { api, when } from '../api.js'
 import { store } from '../store.js'
 import { dialog } from '../dialog.js'
+import { menu } from '../menu.js'
+import { mediaTypesFor, attachMedia, meldung as medienMeldung } from '../media.js'
+import TreePicker from '../components/TreePicker.vue'
 import Cell from '../components/Cell.vue'
 import Splitter from '../components/Splitter.vue'
 import MediaThumb from '../components/MediaThumb.vue'
@@ -177,6 +180,37 @@ async function retire(m) {
 }
 const kb = b => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} kB` : `${(b / 1048576).toFixed(1)} MB`
 
+// ---- Kontextmenü: für die Kachel unter dem Zeiger, oder für die Auswahl, wenn sie dazugehört
+/// Auf welche Medien wirkt ein Befehl an dieser Kachel? Die Auswahl, wenn die Kachel darin liegt — sonst sie allein.
+const betroffene = m => sel.value.size > 1 && sel.value.has(m.id) ? items.value.filter(x => sel.value.has(x.id)) : [m]
+function contextMenu(e, m) {
+  if (!sel.value.has(m.id)) { cur.value = m.id; sel.value = new Set([m.id]) }
+  const n = betroffene(m).length
+  menu.open(e, [
+    { label: n > 1 ? t_('{0} Assets zuordnen …', [n]) : t_('Zuordnen …'), icon: '⇄', action: () => zuordnenOeffnen(m) },
+    { sep: true },
+    { label: n > 1 ? t_('{0} Assets zurückziehen', [n]) : t_('Zurückziehen'), icon: '🗑', danger: true, action: () => retire(m) },
+  ])
+}
+
+// ---- Zuordnen: Knoten wählen, dann eine Relation je Medium
+const zuordnen = ref(null)   // { medien, node, role } — offen, solange gesetzt
+function zuordnenOeffnen(m) { zuordnen.value = { medien: betroffene(m), node: null, role: null } }
+function zuordnenZiel(r) { zuordnen.value.node = r?.id ?? null; zuordnen.value.role = r?.role ?? null }
+const zuordnenTypen = computed(() => zuordnen.value?.role ? mediaTypesFor(model.value, zuordnen.value.role) : [])
+async function zuordnenAusfuehren() {
+  const z = zuordnen.value
+  if (!z?.node) return
+  busy.value = t_('zuordnen …')
+  try {
+    const erg = await attachMedia(z.medien, z.node, zuordnenTypen.value)
+    for (const f of erg.fehler) store.toast(f)
+    if (erg.zugeordnet) store.toast(medienMeldung(erg), 'ok')
+    zuordnen.value = null
+    await store.poll(true); await load(); await loadUsage()
+  } finally { busy.value = '' }
+}
+
 // ---- Verwendungsnachweis: an welchen Knoten dieses Asset hängt
 const router = useRouter()
 const usage = ref([])
@@ -237,7 +271,7 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
         <div v-if="group" class="ghead"><span>{{ g.key }}</span><span class="muted">{{ g.items.length }}</span></div>
         <div class="tiles">
           <div v-for="m in g.items" :key="m.id" class="tile" :class="{ current: cur === m.id, sel: sel.has(m.id) }" draggable="true" @dragstart="dragTiles(m, $event)" @dragend="dragEnd"
-            @click="clickTile(m, $event)" @dblclick="oeffnen(m)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nStrg-Klick nimmt dazu, Umschalt-Klick den Bereich — ziehen in einen Ordner, Doppelklick öffnet die Datei`">
+            @click="clickTile(m, $event)" @dblclick="oeffnen(m)" @contextmenu="contextMenu($event, m)" :title="`${m.name} · ${kb(m.bytes)} · ${m.mime}${m.folder ? ' · 📁 ' + pathOf(m.folder).map(f => f.name).join(' › ') : ''}\nStrg-Klick nimmt dazu, Umschalt-Klick den Bereich — ziehen in einen Ordner, Doppelklick öffnet die Datei`">
             <MediaThumb v-if="m.isImage || m.hasThumb" :id="m.id" :self="m.isImage" />
             <div v-else class="doc">{{ m.mime.split('/')[1]?.slice(0, 6) || '▤' }}</div>
             <div class="name">{{ m.name }}</div>
@@ -302,6 +336,20 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
     </div>
   </div>
   <div v-else class="pane" style="flex:1"><div class="empty">{{ $t("Medium in der Mitte wählen — oder hochladen.") }}</div></div>
+
+  <!-- Zuordnen: ein Knoten aus dem Baum, dann eine Relation je gewähltem Asset -->
+  <div v-if="zuordnen" class="zu-overlay" @mousedown.self="zuordnen = null">
+    <div class="zu">
+      <div class="toolbar"><h1>{{ $t("⇄ Zuordnen") + ' ' }}<span class="muted">{{ '· ' + zuordnen.medien.length }}</span></h1><span class="grow" />
+        <button class="x" @click="zuordnen = null" :title="$t('schliessen')">✕</button></div>
+      <TreePicker :model-value="zuordnen.node" :roles="['group', 'product', 'variant']" :height="300" @pick="zuordnenZiel" />
+      <div class="toolbar">
+        <span class="muted" style="font-size:12px" :title="$t('Ein Bild wird als Bild zugeordnet, alles andere als Dokument.')">{{ zuordnenTypen.map(t => $L(t.label) || t.key).join(' · ') || $t("Kein Relationstyp zu Medien für diesen Knotentyp") }}</span>
+        <span class="grow" />
+        <button class="primary" :disabled="!zuordnen.node || !zuordnenTypen.length" @click="zuordnenAusfuehren">{{ $t("✓ Zuordnen") }}</button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -334,6 +382,8 @@ const oeffnen = m => window.open(`/api/media/${m.id}/file`, '_blank', 'noopener'
 .use.stopp .lbl { text-decoration: line-through; }
 .use .lbl { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .use .typ { font-size: 11px; }
+.zu-overlay { position: fixed; inset: 0; background: #0008; display: grid; place-items: center; z-index: 50; }
+.zu { width: 480px; max-width: 92vw; background: var(--pane); border: 1px solid var(--line); border-radius: 8px; }
 .form td.attr { white-space: nowrap; color: var(--muted); }
 .x { border: 0; background: none; color: var(--muted); padding: 0 3px; }
 .x:hover { color: var(--text); }
