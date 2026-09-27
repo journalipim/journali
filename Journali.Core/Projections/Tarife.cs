@@ -3,7 +3,8 @@ namespace Journali.Core.Projections;
 /// <summary>Ein Tarif: Grenzen je Woche und Monat, wie viele Publikationsbäume, welche Plugins (null = alle).</summary>
 public sealed record Tarif(string Key, string Label, int Rang, int Week, int Month, int PubTrees, IReadOnlySet<string>? Plugins)
 {
-    public bool Erlaubt(string plugin) => Plugins is null || Plugins.Contains(plugin);
+    /// <summary>Enthält dieser Tarif das Plugin? Ein Systemjob (<see cref="Tarife.Systemjobs"/>) immer.</summary>
+    public bool Erlaubt(string plugin) => Tarife.Systemjobs.Contains(plugin) || Plugins is null || Plugins.Contains(plugin);
     public bool Unbegrenzt => Week == Tarife.Ohne && Month == Tarife.Ohne;
     /// <summary>Laufen Jobs nach einem Zeitplan? Ab Pro. Kostenlos startet sie von Hand — die Arbeit machen sie gleich,
     /// nur eben dann, wenn jemand darauf drückt.</summary>
@@ -97,8 +98,17 @@ public static class Tarife
     /// <summary>Keine Grenze — für Unlimited (Woche, Monat) und Publikationsbäume ab Enterprise.</summary>
     public const int Ohne = int.MaxValue;
 
-    // derive und probe sind Systemjobs: sie rechnen die Vorschauen und lesen die Masse der Dateien. Ohne sie
-    // fehlten der Bibliothek in jedem Tarif die Grundangaben — darum gehören sie in die Basis, nicht in ein Paket.
+    /// <summary>
+    /// Systemjobs: sie rechnen und messen, was jede Anlage braucht — die Vorschauen und die Masse der Dateien.
+    /// Das ist Betrieb, kein Merkmal eines Tarifs, und darum sind sie in jedem erlaubt.
+    /// <para>Die Ausnahme steht hier und nicht nur in <see cref="Basis"/>, weil im Betrieb das signierte Tarifblatt
+    /// gilt und nicht das Saatgut: ein Blatt, das einen neuen Systemjob noch nicht kennt, sperrte ihn sonst aus. In
+    /// der Liste stünde dann der Tarif, der ihn enthält, statt an/aus — und einmal ausgeschaltet liesse er sich nicht
+    /// wieder einschalten (27.09.2026).</para>
+    /// </summary>
+    public static readonly IReadOnlySet<string> Systemjobs = new HashSet<string> { "derive", "probe" };
+
+    // Die Systemjobs stehen auch hier: das Saatgut soll dasselbe sagen wie die Ausnahme darüber.
     private static readonly string[] Basis = ["table", "csv", "excel", "json", "exceladdin", "ooaddin", "derive", "probe", "tasker", "driver"];
 
     public static readonly Tarif Free = new("free", "Kostenlos", 0, 10_000, 50_000, 1, new HashSet<string>(Basis));

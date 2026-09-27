@@ -183,6 +183,29 @@ public class TarifTests
         Assert.NotNull(PluginApi.NichtImTarif(c, "dpp"));
     }
 
+    /// <summary>
+    /// Ein Systemjob hängt nicht am Tarif (27.09.2026). Im Betrieb gilt das signierte Tarifblatt, nicht das Saatgut —
+    /// ein Blatt, das einen neuen Systemjob noch nicht kennt, sperrte ihn sonst aus: in der Liste stünde der Tarif
+    /// statt an/aus, und einmal ausgeschaltet liesse er sich nicht wieder einschalten.
+    /// </summary>
+    [Fact]
+    public void Ein_Systemjob_gilt_auch_ohne_Eintrag_im_Tarifblatt()
+    {
+        var j = new MemoryJournal();
+        var c = new Catalog(j); c.Rebuild(); c.SeedMissing();
+        // ein Blatt, dem probe in jedem Tarif fehlt — so sieht eine Anlage aus, deren Blatt älter ist als das Plugin
+        Assert.True(c.NimmTarifblatt(PruefAussteller.Blatt(2, z => z.Plugins is null ? z : z with { Plugins = [.. z.Plugins.Where(k => k != "probe")] }), "t"));
+        Assert.DoesNotContain("probe", c.Tarife.Free.Plugins!);
+
+        Assert.Null(PluginApi.NichtImTarif(c, "probe"));
+        Assert.Null(PluginApi.NichtImTarif(c, "derive"));
+        Assert.True(c.InstanzTarif.Erlaubt("probe"));
+        // und der niedrigste Tarif, der ihn enthält, ist der kostenlose — nicht der erste mit „alle Plugins“
+        Assert.Equal(c.Tarife.Free.Key, c.Tarife.Ab("probe")?.Key);
+        // an der Sperre für alles andere ändert das nichts
+        Assert.NotNull(PluginApi.NichtImTarif(c, "dpp"));
+    }
+
     /// <summary>Die Grenzen sagt der Tarif, nicht die Lizenz: was „Kostenlos“ heisst, soll überall dasselbe bedeuten.
     /// Eine Lizenz mit eigenen Zahlen im Rumpf (bis 25.09.2026 möglich) ändert daran nichts.</summary>
     [Fact]

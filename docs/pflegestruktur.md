@@ -1571,6 +1571,12 @@ Texterkennung wird ein dritter. Damit nimmt Abbrechen nie fremde Arbeit mit: wer
 nicht das Lesen der Masse an. Geführt werden sie vom Tasker, der Anhalten, Fortsetzen, Abbrechen und Zeitplan
 schon kann (`JobRunner.Pause/Resume/Cancel`); ein Lauf stirbt beim Anhalten nicht, er wartet beim nächsten Stapel.
 
+**Ein Systemjob hängt nicht am Tarif** (27.09.2026). Im Betrieb gilt das signierte Tarifblatt, nicht das Saatgut in
+`Tarife.cs` — ein Blatt, das einen neuen Systemjob noch nicht kennt, sperrte ihn sonst aus: in ⑁ Plugins stünde der
+Tarif statt an/aus, und einmal ausgeschaltet liesse er sich nicht wieder einschalten. Darum erlaubt `Tarif.Erlaubt`
+die Schlüssel aus `Tarife.Systemjobs` immer, unabhängig vom Blatt. Die Marke `system: true` im Manifest ist etwas
+anderes: sie sagt dem Tasker, dass der Job dauerhaft in der Liste steht.
+
 **Offen: was Abbrechen bei einem Systemjob heissen soll.** Bricht man einen Lauf ab, dessen Runde noch 800 offene
 Posten vor sich hat, ist die Absicht meist „jetzt nicht weiter“ und nicht „nie wieder“. Der Job endet, die Posten
 bleiben offen, und der nächste Start nimmt sie wieder — das ist heute so und vermutlich richtig. Zu klären bleibt,
