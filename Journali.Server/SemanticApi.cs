@@ -58,7 +58,7 @@ public static class SemanticApi
 
     /// <summary>Die Texte aller Pflegeknoten, je Sprache des Modells einer, mit Hash — ein Knoten mit französischen Werten
     /// wird auf Französisch gefunden, nicht nur über die Leitsprache.</summary>
-    public static List<KnotenText> KnotenTexte(Catalog c) => c.With((model, tree, _) =>
+    public static List<KnotenText> KnotenTexte(Catalog c) => c.Lesen((model, tree) =>
     {
         var locs = model.Locales.Keys.OrderBy(x => x, StringComparer.Ordinal).ToList();
         if (locs.Count == 0) locs = [model.MasterLocale ?? "de"];
@@ -88,7 +88,7 @@ public static class SemanticApi
         return (system, sb.ToString().TrimEnd());
     }
 
-    private static object KnotenView(Catalog c, IEnumerable<Vectors.KnotenTreffer> hits) => c.With((model, tree, _) =>
+    private static object KnotenView(Catalog c, IEnumerable<Vectors.KnotenTreffer> hits) => c.Lesen((model, tree) =>
         hits.Where(h => tree.Nodes.ContainsKey(h.Node)).Select(h =>
         {
             var n = tree.Nodes[h.Node];
@@ -164,7 +164,7 @@ public static class SemanticApi
             var (system, user) = Prompt(frage, auszuege, namen);
             var r = await AiApi.AskAsync(req, c, jobsDir, null, null, system, user, 1500, false, 1, "docs", ct);
             if (r.Fehler is not null) return r.Fehler;
-            var sources = c.With((model, tree, _) => auszuege.Select((a, i) => new
+            var sources = c.Lesen((model, tree) => auszuege.Select((a, i) => new
             {
                 n = i + 1, media = a.Media, name = namen[a.Media], a.Page, a.Heading, a.Seq,
                 nodes = c.Relations.To(a.Media).Select(rel => tree.Nodes.GetValueOrDefault(rel.From)).Where(x => x is not null).DistinctBy(x => x!.Id).Take(5)

@@ -106,5 +106,8 @@
  "anhalten bis zum nächsten Start — die offenen Posten bleiben offen": "stop until the next start — the pending items stay pending",
  "⊘ {0} angehalten — die offenen Posten bleiben offen": "⊘ {0} stopped — the pending items stay pending",
  "abbrechen": "cancel",
- "⊘ {0} abgebrochen": "⊘ {0} cancelled"
+ "⊘ {0} abgebrochen": "⊘ {0} cancelled",
+ "⋯ Jobs werden geholt": "⋯ fetching jobs",
+ "⋯ speichert": "⋯ saving",
+ "⋯": "⋯"
 }

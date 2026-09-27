@@ -5,7 +5,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import './ui.mjs'   // echtes DOM (happy-dom) — der Fokustest braucht eines
-import { naechsteSeite, profilPflicht, seiteZeigen } from '../../plugins/tasker/entry.js'
+import { naechsteSeite, profilPflicht, seiteZeigen, leerText } from '../../plugins/tasker/entry.js'
 
 const ALLE = [true, true, true, true]
 
@@ -76,4 +76,18 @@ test('eine andere Seite kommt auf die Bühne, die alte geht', () => {
   assert.equal(seiteZeigen(buehne, zwei), true)
   assert.equal(buehne.childElementCount, 1)
   assert.equal(buehne.firstChild.textContent, 'zwei')
+})
+
+// 27.09.2026 gemeldet: „das leere Fenster ist blöde, ich fühle mich genötigt auf + Job zu klicken, obwohl ich nur
+// warten muss“. Die Liste wurde erst gezeichnet, nachdem auch der Stand aller Systemjobs da war — und einer davon
+// rechnet eine offene Postenliste aus. Jetzt steht dort, dass geholt wird.
+test('solange geholt wird, steht das in der Liste — nicht „kein Job“', () => {
+  assert.equal(leerText({ geladen: false, plugins: [], jobs: [], plugin: '' }), 'laedt')
+  assert.equal(leerText({ geladen: false, plugins: [{ key: 'embed' }], jobs: [], plugin: '' }), 'laedt')
+})
+
+test('danach sagt die Liste den Grund', () => {
+  assert.equal(leerText({ geladen: true, plugins: [{ key: 'embed' }], jobs: [], plugin: '' }), 'kein-job')
+  assert.equal(leerText({ geladen: true, plugins: [], jobs: [], plugin: '' }), 'kein-prozess-plugin')
+  assert.equal(leerText({ geladen: true, plugins: [{ key: 'embed' }], jobs: [], plugin: 'embed' }), 'kein-job-fuer-plugin')
 })

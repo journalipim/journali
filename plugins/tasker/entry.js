@@ -68,6 +68,15 @@ export function profilPflicht(profileDef) {
 /// Nächste Seite des Assistenten in dieser Richtung, die etwas zeigt — oder null, wenn keine mehr kommt.
 /// `voll` sagt je Seite, ob sie Inhalt hat: ohne Fächer gibt es keine Ablage, ohne Parameter kein „Womit“
 ///.
+/// Was in der Liste steht, solange kein Job da ist: erst der Hinweis, dass geholt wird — vorher stand das Fenster leer
+/// da und sah aus, als gäbe es nichts zu tun (27.09.2026 gemeldet: „ich fühle mich genötigt, auf + Job zu klicken,
+/// obwohl ich nur warten muss“). Danach der Grund: kein Prozess-Plugin, kein Job zum Filter, gar kein Job.
+export function leerText(st) {
+  if (!st.geladen) return 'laedt'
+  if (st.plugin) return 'kein-job-fuer-plugin'
+  return st.plugins.length ? 'kein-job' : 'kein-prozess-plugin'
+}
+
 /// Die Bühne auf diese Seite stellen — und zwar nur, wenn dort eine andere steht. Sonst nimmt das Neueinhängen dem
 /// Eingabefeld den Fokus, und beim Tippen sprang der Cursor nach jedem Buchstaben weg (27.09.2026 gemeldet): jedes
 /// `input` im Dialog ruft die Prüfung, und die zeigt die Seite neu.
@@ -187,7 +196,7 @@ const PRESETS = [['', t('nur von Hand')], ['*/15 * * * *', 'alle 15 min'], ['0 *
 async function mount(root, ctx) {
   const { api, store, tree, dialog } = ctx
   if (!tree.loaded) await tree.load()
-  const st = { jobs: [], plugins: [], progress: {}, cur: null, detail: null, log: '', timer: null, edit: null, plugin: new URLSearchParams(location.search).get('plugin') || '' }   // plugin: Liste nur mit den Jobs dieses Plugins (aus „Jobs verwalten“)
+  const st = { jobs: [], plugins: [], progress: {}, cur: null, detail: null, log: '', timer: null, edit: null, geladen: false, plugin: new URLSearchParams(location.search).get('plugin') || '' }   // plugin: Liste nur mit den Jobs dieses Plugins (aus „Jobs verwalten“)
   root.style.cssText = 'display:flex;flex-direction:column;height:100%;padding:0'
   const status = el('span', { class: 'muted' }); const say = m => status.textContent = m
   const list = el('div', { class: 'scroll', style: 'flex:0 0 auto;max-height:45%' })
@@ -199,13 +208,17 @@ async function mount(root, ctx) {
 
   async function load() {
     try { [st.jobs, st.plugins] = await Promise.all([api.get('/api/jobs'), api.get('/api/jobs/plugins')]) } catch (e) { say('✗ ' + e.message); return }
-    // der Stand der Systemjobs: je Plugin sein progress-Endpunkt — einer, der nicht antwortet, ist kein Grund, nichts zu zeigen
-    const sys = [...new Map(st.plugins.filter(p => p.system && p.progress).map(p => [p.key, p.progress])).entries()]
-    st.progress = Object.fromEntries(await Promise.all(sys.map(async ([key, url]) => [key, await api.get(url).catch(e => ({ ready: false, reason: e.message }))])))
+    st.geladen = true
     drawList()
     if (st.cur) await loadDetail(st.cur)
     const running = st.jobs.filter(j => j.running).length
     say(`${st.jobs.length} Jobs · ${st.jobs.filter(j => j.enabled && j.schedule).length} geplant${running ? ` · ${running} laufen` : ''}`)
+    // Der Stand der Systemjobs kommt nach: je Plugin sein progress-Endpunkt, und einer davon rechnet eine offene
+    // Postenliste aus. Darauf wartet niemand mehr — die Liste steht schon, die Balken füllen sich, sobald es da ist.
+    const sys = [...new Map(st.plugins.filter(p => p.system && p.progress).map(p => [p.key, p.progress])).entries()]
+    if (!sys.length) return
+    Promise.all(sys.map(async ([key, url]) => [key, await api.get(url).catch(e => ({ ready: false, reason: e.message }))]))
+      .then(paare => { st.progress = Object.fromEntries(paare); drawList() })
   }
   async function runSystem(plugin) {
     try { await api.post(`/api/jobs/system/${encodeURIComponent(plugin)}/run`); store.toast(t('▶ {0} holt nach', [plugin]), 'ok'); await load(); watch() } catch (e) { store.toast(e.message) }
@@ -215,7 +228,15 @@ async function mount(root, ctx) {
     const sys = systemRows(st.plugins, st.jobs, st.progress).filter(r => !st.plugin || r.plugin === st.plugin)
     if (sys.length) list.append(systemBlock(sys, runSystem))
     const jobs = st.plugin ? st.jobs.filter(j => j.plugin === st.plugin) : st.jobs
-    if (!jobs.length) { list.append(el('div', { class: 'empty' }, st.plugin ? t('Noch kein Job mit Plugin {0} — „+ Job“ legt einen an.', [st.plugin]) : st.plugins.length ? t('Noch kein Job — „+ Job“ legt einen an.') : t('Kein Plugin mit Prozess installiert — Jobs brauchen eins.'))); return }
+    if (!jobs.length) {
+      const was = leerText(st)
+      list.append(el('div', { class: 'empty' },
+        was === 'laedt' ? t('⋯ Jobs werden geholt')
+        : was === 'kein-job-fuer-plugin' ? t('Noch kein Job mit Plugin {0} — „+ Job“ legt einen an.', [st.plugin])
+        : was === 'kein-job' ? t('Noch kein Job — „+ Job“ legt einen an.')
+        : t('Kein Plugin mit Prozess installiert — Jobs brauchen eins.')))
+      return
+    }
     const tbl = el('table', { class: 'grid', style: 'width:100%' })
     tbl.append(el('thead', {}, el('tr', {}, el('th', {}, ''), el('th', {}, 'Job'), el('th', {}, t('Plugin')), el('th', {}, t('Zeitplan')), el('th', {}, t('nächster Lauf')), el('th', {}, t('letzter Lauf')), el('th', {}, ''))))
     const tb = el('tbody')
@@ -550,11 +571,13 @@ async function mount(root, ctx) {
       const params = {}
       for (const [k, inp] of Object.entries(paramInputs)) if (inp.value !== '' || inp.type !== 'password') params[k] = inp.value
       const schedule = sched.value()
+      const alt = saveBtn.textContent
+      saveBtn.disabled = true; saveBtn.textContent = t('⋯ speichert')
       try {
         const files = fachBox.style.display === 'none' ? null : { base: fBase.value.trim() || null, keep: fKeep.value.trim() || null, latest: fLatest.checked, archive: fArchive.checked }
         await api.post(`/api/jobs/${key}`, { label: labelIn.value.trim() || key, plugin: pluginSel.value.split('|')[0], service: pluginSel.value.split('|')[1] || '', params, schedule, enabled: j?.enabled ?? true, timeoutMinutes: Number(timeoutIn.value) || 60, files, ...(darfRolle ? { role: rolleSel.value } : {}) }, 'PUT')
         store.toast(`Job „${labelIn.value || key}“ gespeichert`, 'ok'); box.remove(); st.cur = key; await load()
-      } catch (e) { store.toast(e.message) }
+      } catch (e) { store.toast(e.message); saveBtn.disabled = false; saveBtn.textContent = alt }
     }
     // ---- Assistent: vier Schritte statt einer Seite, die über den Bildschirm hinauswächst ----
     const lab = text => el('label', { style: 'display:block;margin-top:8px;color:var(--muted)' }, text)
@@ -608,6 +631,7 @@ async function mount(root, ctx) {
     document.body.append(box); (isNew ? keyIn : labelIn).focus()
   }
 
+  drawList(); say(t('⋯'))   // sofort etwas zeigen: das Holen dauert, und ein leeres Fenster sieht aus wie „nichts da“
   await load()
   // aus ⌁ Plugins „Als Job einrichten“: ?new=<plugin> öffnet den Dialog mit diesem Plugin
   const q = new URLSearchParams(location.search); const wanted = q.get('new')
